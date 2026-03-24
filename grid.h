@@ -130,7 +130,7 @@ inline auto get_ejecta_kinetic_energy() {
   return E_kin;
 }
 
-inline auto get_prop_gridtype() -> GridType {
+DEVICE_FUNC inline auto get_prop_gridtype() -> GridType {
   if (GRID_TYPE == GridType::AUTODETECT) {
     assert_testmodeonly(grid::get_model_gridtype() != GridType::AUTODETECT);
     return get_model_gridtype();
