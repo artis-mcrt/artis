@@ -200,6 +200,60 @@ auto get_cell_r_inner(const int cellindex, const GridType prop_gridtype) -> doub
 
 [[gnu::pure]] DEVICE_FUNC auto get_propgridtype() -> GridType { return GRID_TYPE.value_or(get_modelgridtype()); }
 
+// how much do we change the cellindex to move along a coordinately axis (e.g., the x, y, z directions, or r
+// direction)
+[[gnu::pure]] [[nodiscard]] auto get_coordcellindexincrement(const int axis) -> int {
+  switch (axis) {
+    case 0:
+      return 1;
+
+    case 1:
+      return ncoordgrid[0];
+
+    case 2:
+      return ncoordgrid[0] * ncoordgrid[1];
+
+    default:
+      if constexpr (TESTMODE) {
+        assert_testmodeonly(false);
+      } else {
+        __builtin_unreachable();
+      }
+  }
+}
+
+// convert a cell index number into an integer (x,y,z or r) coordinate index from 0 to ncoordgrid[axis]
+[[gnu::pure]] [[nodiscard]] auto get_cellcoordpointnum(const int cellindex, const int axis) -> int {
+  const auto prop_gridtype = get_propgridtype();
+  if (prop_gridtype == GridType::CARTESIAN3D || prop_gridtype == GridType::CYLINDRICAL2D) {
+    switch (axis) {
+      // 3D Cartesian: increment x first, then y, then z
+      // 2D Cylindrical: increment r first, then z
+      case 0:
+        return cellindex % ncoordgrid[0];
+
+      case 1:
+        return (cellindex / ncoordgrid[0]) % ncoordgrid[1];
+
+      case 2:
+        return (cellindex / (ncoordgrid[0] * ncoordgrid[1])) % ncoordgrid[2];
+
+      default:
+        if constexpr (TESTMODE) {
+          assert_testmodeonly(false);
+        } else {
+          __builtin_unreachable();
+        }
+    }
+  }
+
+  if (prop_gridtype == GridType::SPHERICAL1D) {
+    return cellindex;
+  }
+
+  assert_always(false);
+}
+
 void set_ffegrp(const int modelgridindex, float x) {
   if (!(x >= 0.)) {
     printlnlog("WARNING: Fe-group mass fraction {:g} is negative in cell {}", x, modelgridindex);
@@ -1442,60 +1496,6 @@ template <BoundaryType boundarytype, size_t S1>
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_cellcoordmin(const int cellindex, const int axis) -> double {
   return propcell_pos_min[cellindex][axis];
   // return - coordmax[axis] + (2 * get_cellcoordpointnum(cellindex, axis) * coordmax[axis] / ncoordgrid[axis]);
-}
-
-// how much do we change the cellindex to move along a coordinately axis (e.g., the x, y, z directions, or r
-// direction)
-[[gnu::pure]] [[nodiscard]] auto get_coordcellindexincrement(const int axis) -> int {
-  switch (axis) {
-    case 0:
-      return 1;
-
-    case 1:
-      return ncoordgrid[0];
-
-    case 2:
-      return ncoordgrid[0] * ncoordgrid[1];
-
-    default:
-      if constexpr (TESTMODE) {
-        assert_testmodeonly(false);
-      } else {
-        __builtin_unreachable();
-      }
-  }
-}
-
-// convert a cell index number into an integer (x,y,z or r) coordinate index from 0 to ncoordgrid[axis]
-[[gnu::pure]] [[nodiscard]] auto get_cellcoordpointnum(const int cellindex, const int axis) -> int {
-  const auto prop_gridtype = get_propgridtype();
-  if (prop_gridtype == GridType::CARTESIAN3D || prop_gridtype == GridType::CYLINDRICAL2D) {
-    switch (axis) {
-      // 3D Cartesian: increment x first, then y, then z
-      // 2D Cylindrical: increment r first, then z
-      case 0:
-        return cellindex % ncoordgrid[0];
-
-      case 1:
-        return (cellindex / ncoordgrid[0]) % ncoordgrid[1];
-
-      case 2:
-        return (cellindex / (ncoordgrid[0] * ncoordgrid[1])) % ncoordgrid[2];
-
-      default:
-        if constexpr (TESTMODE) {
-          assert_testmodeonly(false);
-        } else {
-          __builtin_unreachable();
-        }
-    }
-  }
-
-  if (prop_gridtype == GridType::SPHERICAL1D) {
-    return cellindex;
-  }
-
-  assert_always(false);
 }
 
 auto get_rho_tmin(const int modelgridindex) -> float { return modelgrid_input[modelgridindex].rhoinit; }

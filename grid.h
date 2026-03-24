@@ -44,9 +44,7 @@ void set_elements_uppermost_ion(int nonemptymgi, int element, int uppermost_ion)
 [[gnu::pure]] [[nodiscard]] auto get_propcell_volume_tmin(int cellindex) -> double;
 [[gnu::pure]] [[nodiscard]] auto get_cellcoordmax(int cellindex, int axis) -> double;
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_cellcoordmin(int cellindex, int axis) -> double;
-[[gnu::pure]] [[nodiscard]] auto get_cellcoordpointnum(int cellindex, int axis) -> int;
 [[gnu::pure]] [[nodiscard]] auto get_cellradialposmid(int cellindex) -> double;
-[[gnu::pure]] [[nodiscard]] auto get_coordcellindexincrement(int axis) -> int;
 [[gnu::pure]] [[nodiscard]] auto get_rho_tmin(int modelgridindex) -> float;
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_rho(std::ptrdiff_t nonemptymgi) -> float;
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_nne(int nonemptymgi) -> float;
