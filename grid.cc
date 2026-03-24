@@ -1203,6 +1203,7 @@ auto get_poscoordpointnum(const double pos, const double time, const int axis) -
   }
 
   assert_always(false);
+  return {NAN, NAN, NAN};
 }
 
 // get the velocity in the grid coordinate system from the xyz position and direction
