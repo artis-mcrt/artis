@@ -2203,23 +2203,26 @@ auto get_ndo_nonempty(const int rank) -> int {
 void init_grid(const int my_rank) {
   // The cells will be ordered by x then y, then z. Call a routine that
   // sets up the initial positions and widths of the cells.
-
-  if (get_propgridtype() == GridType::CARTESIAN3D) {
-    setup_grid_cartesian_3d();
-  } else if (get_propgridtype() == GridType::CYLINDRICAL2D) {
-    setup_grid_cylindrical_2d();
-  } else if (get_propgridtype() == GridType::SPHERICAL1D) {
-    setup_grid_spherical_1d();
-  } else {
-    assert_always(false);
+  const auto prop_gridtype = get_propgridtype();
+  switch (prop_gridtype) {
+    case GridType::CARTESIAN3D:
+      setup_grid_cartesian_3d();
+      break;
+    case GridType::CYLINDRICAL2D:
+      setup_grid_cylindrical_2d();
+      break;
+    case GridType::SPHERICAL1D:
+      setup_grid_spherical_1d();
+      break;
+    default:
+      assert_always(false);
   }
   propcell_mgi.resize(ngrid, -1);
 
-  printlnlog("propagation grid: {}-dimensional {}", get_ndim(get_propgridtype()),
-             get_grid_type_name(get_propgridtype()));
+  printlnlog("propagation grid: {}-dimensional {}", get_ndim(prop_gridtype), get_grid_type_name(prop_gridtype));
 
-  for (int d = 0; d < get_ndim(get_propgridtype()); d++) {
-    printlnlog("    coordinate {} '{}': cells have {} position values", d, get_coordlabel(get_propgridtype(), d),
+  for (int d = 0; d < get_ndim(prop_gridtype); d++) {
+    printlnlog("    coordinate {} '{}': cells have {} position values", d, get_coordlabel(prop_gridtype, d),
                ncoordgrid[d]);
   }
   printlnlog("    total propagation cells: {}", ngrid);
@@ -2233,7 +2236,7 @@ void init_grid(const int my_rank) {
   globals::rho_crit = ME * CLIGHT * 56 * MH / (PI * QE * QE * globals::rho_crit_para * 3000e-8 * globals::tmin);
   printlnlog("grid_init: rho_crit = {:g} [g/cm3]", globals::rho_crit);
 
-  if (get_modelgridtype() == get_propgridtype()) {
+  if (get_modelgridtype() == prop_gridtype) {
     if (get_modelgridtype() == GridType::CARTESIAN3D) {
       assert_always(ncoord_model[0] == ncoordgrid[0]);
       assert_always(ncoord_model[1] == ncoordgrid[1]);
@@ -2242,10 +2245,10 @@ void init_grid(const int my_rank) {
 
     map_modeltogrid_direct();
   } else if (get_modelgridtype() == GridType::SPHERICAL1D) {
-    assert_always(get_propgridtype() == GridType::CARTESIAN3D);
+    assert_always(prop_gridtype == GridType::CARTESIAN3D);
     map_1dmodelto3dgrid();
   } else if (get_modelgridtype() == GridType::CYLINDRICAL2D) {
-    assert_always(get_propgridtype() == GridType::CARTESIAN3D);
+    assert_always(prop_gridtype == GridType::CARTESIAN3D);
     map_2dmodelto3dgrid();
   } else {
     assert_always(false);
@@ -2283,7 +2286,7 @@ void init_grid(const int my_rank) {
   // when mapping 1D spherical or 2D cylindrical model onto cubic grid, scale up the
   // radioactive abundances to account for the missing masses in
   // the model cells that are not associated with any propagation cells
-  if (get_propgridtype() == GridType::CARTESIAN3D && get_modelgridtype() == GridType::SPHERICAL1D &&
+  if (prop_gridtype == GridType::CARTESIAN3D && get_modelgridtype() == GridType::SPHERICAL1D &&
       globals::rank_in_node == 0) {
     for (int nucindex = 0; nucindex < decay::get_num_nuclides(); nucindex++) {
       if (totmassnuclide[nucindex] <= 0) {
