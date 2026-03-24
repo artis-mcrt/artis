@@ -8,7 +8,6 @@
 #include <cstdlib>
 #include <utility>
 
-#include "atomic.h"
 #include "constants.h"
 #include "globals.h"
 #include "grid.h"
