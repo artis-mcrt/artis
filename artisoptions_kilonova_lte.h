@@ -9,7 +9,7 @@
 
 constexpr int MPKTS = 15000;
 
-constexpr auto GRID_TYPE = GridType::CARTESIAN3D;
+constexpr auto GRID_TYPE = GridType::AUTODETECT;
 constexpr int CUBOID_NCOORDGRID_X = 50;
 constexpr int CUBOID_NCOORDGRID_Y = 50;
 constexpr int CUBOID_NCOORDGRID_Z = 50;
