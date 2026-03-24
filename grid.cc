@@ -781,20 +781,26 @@ auto read_model_columns(std::istream& fmodel) -> std::tuple<std::vector<std::str
 }
 
 auto get_inputcellvolume(const int mgi) -> double {
-  if (get_modelgridtype() == GridType::SPHERICAL1D) {
-    const double v_inner = (mgi == 0) ? 0. : vout_model[mgi - 1];
-    return (pow(vout_model[mgi], 3) - pow(v_inner, 3)) * 4 * PI * pow(globals::tmin, 3) / 3.;
+  switch (get_modelgridtype()) {
+    case GridType::SPHERICAL1D: {
+      const double v_inner = (mgi == 0) ? 0. : vout_model[mgi - 1];
+      return (pow(vout_model[mgi], 3) - pow(v_inner, 3)) * 4 * PI * pow(globals::tmin, 3) / 3.;
+    }
+
+    case GridType::CYLINDRICAL2D: {
+      const int n_r = mgi % ncoord_model[0];
+      const double delta_rcyl = globals::vmax * t_model / ncoord_model[0];
+      const double delta_z = 2. * globals::vmax * t_model / ncoord_model[1];
+      return pow(globals::tmin / t_model, 3) * delta_z * PI *
+             (pow((n_r + 1) * delta_rcyl, 2) - pow(n_r * delta_rcyl, 2));
+    }
+
+    case GridType::CARTESIAN3D: {
+      // Assumes cells are cubes here - all same volume.
+      return pow((2 * globals::vmax * globals::tmin), 3) / (ncoordgrid[0] * ncoordgrid[1] * ncoordgrid[2]);
+    }
   }
-  if (get_modelgridtype() == GridType::CYLINDRICAL2D) {
-    const int n_r = mgi % ncoord_model[0];
-    const double delta_rcyl = globals::vmax * t_model / ncoord_model[0];
-    const double delta_z = 2. * globals::vmax * t_model / ncoord_model[1];
-    return pow(globals::tmin / t_model, 3) * delta_z * PI * (pow((n_r + 1) * delta_rcyl, 2) - pow(n_r * delta_rcyl, 2));
-  }
-  if (get_modelgridtype() == GridType::CARTESIAN3D) {
-    // Assumes cells are cubes here - all same volume.
-    return pow((2 * globals::vmax * globals::tmin), 3) / (ncoordgrid[0] * ncoordgrid[1] * ncoordgrid[2]);
-  }
+
   assert_always(false);
   return NAN;
 }
