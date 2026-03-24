@@ -1187,43 +1187,42 @@ auto get_poscoordpointnum(const double pos, const double time, const int axis) -
 
 // Convert a position in Cartesian xyz to the grid coordinate system (which might the same, or 2D cylindrical or 1D
 // spherical)
-[[nodiscard]] constexpr auto get_gridcoords_from_xyz(const Vec3d& pos_xyz) {
-  if constexpr (get_prop_gridtype() == GridType::CARTESIAN3D) {
+[[nodiscard]] constexpr auto get_gridcoords_from_xyz(const Vec3d& pos_xyz, const GridType gridtype) -> Vec3d {
+  if (gridtype == GridType::CARTESIAN3D) {
     return pos_xyz;
   }
 
-  if constexpr (get_prop_gridtype() == GridType::CYLINDRICAL2D) {
-    return std::array<double, 2>{std::sqrt(pow2(pos_xyz[0]) + pow2(pos_xyz[1])), pos_xyz[2]};
+  if (gridtype == GridType::CYLINDRICAL2D) {
+    return {std::sqrt(pow2(pos_xyz[0]) + pow2(pos_xyz[1])), pos_xyz[2], NAN};
   }
 
-  if constexpr (get_prop_gridtype() == GridType::SPHERICAL1D) {
-    return std::array<double, 1>{vec_len(pos_xyz)};
+  if (gridtype == GridType::SPHERICAL1D) {
+    return {vec_len(pos_xyz), NAN, NAN};
   }
 
   assert_always(false);
 }
 
 // get the velocity in the grid coordinate system from the xyz position and direction
-[[nodiscard]] constexpr auto get_gridcoords_vel_from_xyz_pos_dir(
-    const Vec3d& pos_xyz, const Vec3d& dir_xyz,
-    const std::array<double, get_ndim(get_prop_gridtype())>& pktposgridcoord) {
-  if constexpr (get_prop_gridtype() == GridType::CARTESIAN3D) {
+[[nodiscard]] constexpr auto get_gridcoords_vel_from_xyz_pos_dir(const Vec3d& pos_xyz, const Vec3d& dir_xyz,
+                                                                 const std::span<const double> pktposgridcoord,
+                                                                 const GridType gridtype) -> Vec3d {
+  if (gridtype == GridType::CARTESIAN3D) {
     // keep xyz Cartesian coordinates
     return Vec3d{dir_xyz[0] * CLIGHT_PROP, dir_xyz[1] * CLIGHT_PROP, dir_xyz[2] * CLIGHT_PROP};
   }
-  if constexpr (get_prop_gridtype() == GridType::CYLINDRICAL2D) {
+  if (gridtype == GridType::CYLINDRICAL2D) {
     // xy plane radial velocity
     // z velocity
-    return std::array<double, 2>{
-        ((pos_xyz[0] * dir_xyz[0]) + (pos_xyz[1] * dir_xyz[1])) / pktposgridcoord[0] * CLIGHT_PROP,
-        dir_xyz[2] * CLIGHT_PROP};
+    return {((pos_xyz[0] * dir_xyz[0]) + (pos_xyz[1] * dir_xyz[1])) / pktposgridcoord[0] * CLIGHT_PROP,
+            dir_xyz[2] * CLIGHT_PROP, NAN};
   }
-  if constexpr (get_prop_gridtype() == GridType::SPHERICAL1D) {
+  if (gridtype == GridType::SPHERICAL1D) {
     // the only coordinate is radius from the origin
-    return std::array<double, 1>{dot(pos_xyz, dir_xyz) / pktposgridcoord[0] * CLIGHT_PROP};
-  } else {
-    assert_always(false);
+    return {dot(pos_xyz, dir_xyz) / pktposgridcoord[0] * CLIGHT_PROP, NAN, NAN};
   }
+
+  assert_always(false);
 }
 
 // find the closest forward distance to the intersection of a ray with an expanding spherical shell (pos and dir are
@@ -2338,7 +2337,7 @@ auto get_totmassnuclide_tmodel(const int z, const int a) -> double { return totm
 
 // identify the cell index from an (x,y,z) position and a time.
 [[nodiscard]] DEVICE_FUNC auto get_cellindex_from_pos(const Vec3d& pos, const double time) -> int {
-  auto posgridcoords = get_gridcoords_from_xyz(pos);
+  auto posgridcoords = get_gridcoords_from_xyz(pos, grid::get_prop_gridtype());
   int cellindex = 0;
   for (int d = 0; d < get_ndim(get_prop_gridtype()); d++) {
     if (std::abs(posgridcoords[d]) > (globals::vmax * time)) {
@@ -2371,15 +2370,15 @@ auto get_totmassnuclide_tmodel(const int z, const int a) -> double { return totm
   // d is used to loop over the coordinate indices 0,1,2 for x,y,z
 
   // the following vector are in grid coordinates, so either x,y,z (3D) or r (1D), or r_xy, z (2D)
-  static_assert(get_ndim(get_prop_gridtype()) <= 3);
+  constexpr auto prop_gridtype = get_prop_gridtype();
 
-  const auto pktposgridcoord = get_gridcoords_from_xyz(pos);
+  const auto pktposgridcoord = get_gridcoords_from_xyz(pos, prop_gridtype);
 
   // dir * CLIGHT_PROP converted from xyz to grid coordinates
-  const auto pktvelgridcoord = get_gridcoords_vel_from_xyz_pos_dir(pos, dir, pktposgridcoord);
+  const auto pktvelgridcoord = get_gridcoords_vel_from_xyz_pos_dir(pos, dir, pktposgridcoord, prop_gridtype);
 
   const auto cellcoordmax = [cellindex]() {
-    auto _cellcoordmax = std::array<double, get_ndim(get_prop_gridtype())>{};  // position at time tmin
+    auto _cellcoordmax = std::array<double, 3>{};  // position at time tmin
     for (int d = 0; d < get_ndim(get_prop_gridtype()); d++) {
       _cellcoordmax[d] = grid::get_cellcoordmax(cellindex, d);
     }
