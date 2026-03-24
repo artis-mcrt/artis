@@ -10,7 +10,6 @@
 #include "constants.h"
 #include "globals.h"
 #include "packet.h"
-#include "sn3d.h"
 #include "stats.h"
 
 namespace grid {
@@ -130,13 +129,7 @@ inline auto get_ejecta_kinetic_energy() {
   return E_kin;
 }
 
-DEVICE_FUNC inline auto get_propgridtype() -> GridType {
-  if (GRID_TYPE == GridType::AUTODETECT) {
-    assert_testmodeonly(grid::get_modelgridtype() != GridType::AUTODETECT);
-    return get_modelgridtype();
-  }
-  return GRID_TYPE;
-}
+DEVICE_FUNC inline auto get_propgridtype() -> GridType { return GRID_TYPE.value_or(get_modelgridtype()); }
 
 }  // namespace grid
 

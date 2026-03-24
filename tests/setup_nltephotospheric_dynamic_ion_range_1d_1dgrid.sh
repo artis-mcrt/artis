@@ -22,7 +22,7 @@ cd $runfolder
 
 sed -i'' -e 's/constexpr int MPKTS.*/constexpr int MPKTS = 400;/g' artisoptions.h
 
-sed -i'' -e 's/constexpr auto GRID_TYPE.*/constexpr auto GRID_TYPE = GridType::SPHERICAL1D;/g' artisoptions.h
+sed -i'' -e 's/constexpr std::optional<GridType> GRID_TYPE.*/constexpr std::optional<GridType> GRID_TYPE = GridType::SPHERICAL1D;/g' artisoptions.h
 
 sed -i'' -e 's/constexpr int NLTEITER.*/constexpr int NLTEITER = 2;/g' artisoptions.h
 

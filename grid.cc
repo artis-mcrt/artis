@@ -47,7 +47,8 @@ namespace {
 
 std::array<int, 3> ncoordgrid{0, 0, 0};  // propagation grid dimensions
 
-GridType model_type = GridType::AUTODETECT;
+GridType model_type{};
+
 ptrdiff_t npts_model = 0;  // number of model grid cells
 ptrdiff_t nonempty_npts_model = 0;  // number of allocated non-empty model grid cells
 
