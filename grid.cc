@@ -175,6 +175,19 @@ void read_possible_yefile() {
   }
 }
 
+// get the minimum value of a coordinate at globals::tmin (xyz or radial coords) of a propagation cell
+// e.g., the minimum x position in xyz coords, or the minimum radius
+[[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_cellcoordmin(const int cellindex, const int axis) -> double {
+  return propcell_pos_min[cellindex][axis];
+  // return - coordmax[axis] + (2 * get_cellcoordpointnum(cellindex, axis) * coordmax[axis] / ncoordgrid[axis]);
+}
+
+// get the maximum position value of a coordinate axis at globals::tmin (xyz or radial coords) of a propagation cell
+// e.g., the maximum x position in xyz coords, or the maximum radius in spherical 1D
+[[gnu::pure]] [[nodiscard]] auto get_cellcoordmax(const int cellindex, const int axis) -> double {
+  return get_cellcoordmin(cellindex, axis) + propcell_width_tmin(cellindex, axis);
+}
+
 // return the inner radius (or equivalent) of a propagation cell at time tmin
 auto get_cell_r_inner(const int cellindex, const GridType prop_gridtype) -> double {
   if (prop_gridtype == GridType::SPHERICAL1D) {
@@ -1483,19 +1496,6 @@ template <BoundaryType boundarytype, size_t S1>
   }
   assert_always(false);
   return {NAN, NAN, NAN};
-}
-
-// get the maximum position value of a coordinate axis at globals::tmin (xyz or radial coords) of a propagation cell
-// e.g., the maximum x position in xyz coords, or the maximum radius in spherical 1D
-[[gnu::pure]] [[nodiscard]] auto get_cellcoordmax(const int cellindex, const int axis) -> double {
-  return get_cellcoordmin(cellindex, axis) + propcell_width_tmin(cellindex, axis);
-}
-
-// get the minimum value of a coordinate at globals::tmin (xyz or radial coords) of a propagation cell
-// e.g., the minimum x position in xyz coords, or the minimum radius
-[[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_cellcoordmin(const int cellindex, const int axis) -> double {
-  return propcell_pos_min[cellindex][axis];
-  // return - coordmax[axis] + (2 * get_cellcoordpointnum(cellindex, axis) * coordmax[axis] / ncoordgrid[axis]);
 }
 
 auto get_rho_tmin(const int modelgridindex) -> float { return modelgrid_input[modelgridindex].rhoinit; }
