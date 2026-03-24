@@ -2,10 +2,10 @@
 // Number of energy packets per process (MPI rank). OpenMP threads share these packets
 constexpr int MPKTS;
 
-// set to GridType:: CARTESIAN3D, CYLINDRICAL2D, or SPHERICAL1D
-constexpr GridType GRID_TYPE;
+// override to GridType::CARTESIAN3D, GridType::CYLINDRICAL2D, GridType::SPHERICAL1D, or leave with no value to autodetect from model.txt
+constexpr std::optional<GridType> GRID_TYPE;
 
-// for GridType::CARTESIAN3D, set the dimensions. This will have no effect with a 3D model.txt since they will be set to match the input
+// for GridType::CARTESIAN3D, set the grid size from 1D and 2D input models. For a 3D model.txt, these will be ignored and set to match the input grid.
 constexpr int CUBOID_NCOORDGRID_X;
 constexpr int CUBOID_NCOORDGRID_Y;
 constexpr int CUBOID_NCOORDGRID_Z;

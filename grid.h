@@ -1,10 +1,9 @@
-#include <cmath>
-#include <cstddef>
-#include <span>
-
 #ifndef GRIDINIT_H
 #define GRIDINIT_H
 
+#include <cmath>
+#include <cstddef>
+#include <span>
 #include <tuple>
 
 #include "constants.h"
@@ -40,14 +39,10 @@ inline std::span<float> ion_partfuncts_allcells{};
 
 [[nodiscard]] auto get_elements_uppermost_ion(int nonemptymgi, int element) -> int;
 void set_elements_uppermost_ion(int nonemptymgi, int element, int uppermost_ion);
-[[gnu::pure]] [[nodiscard]] auto wid_init(int cellindex, int axis) -> double;
+[[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto propcell_width_tmin(int cellindex, int axis) -> double;
 [[gnu::pure]] [[nodiscard]] auto get_modelcell_assocvolume_tmin(int modelgridindex) -> double;
 [[gnu::pure]] [[nodiscard]] auto get_propcell_volume_tmin(int cellindex) -> double;
-[[gnu::pure]] [[nodiscard]] auto get_cellcoordmax(int cellindex, int axis) -> double;
-[[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_cellcoordmin(int cellindex, int axis) -> double;
-[[gnu::pure]] [[nodiscard]] auto get_cellcoordpointnum(int cellindex, int axis) -> int;
 [[gnu::pure]] [[nodiscard]] auto get_cellradialposmid(int cellindex) -> double;
-[[gnu::pure]] [[nodiscard]] auto get_coordcellindexincrement(int axis) -> int;
 [[gnu::pure]] [[nodiscard]] auto get_rho_tmin(int modelgridindex) -> float;
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_rho(std::ptrdiff_t nonemptymgi) -> float;
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_nne(int nonemptymgi) -> float;
@@ -81,8 +76,7 @@ void set_element_meanweight(std::ptrdiff_t nonemptymgi, int element, float meanw
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_numpropcells(int modelgridindex) -> int;
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_nonemptymgi_of_mgi(int mgi) -> int;
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_mgi_of_nonemptymgi(std::ptrdiff_t nonemptymgi) -> int;
-[[gnu::pure]] [[nodiscard]] auto get_model_type() -> GridType;
-void set_model_type(GridType model_type_value);
+[[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_modelgridtype() -> GridType;
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_npts_model() -> int;
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_nonempty_npts_model() -> int;
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_t_model() -> double;
@@ -96,6 +90,7 @@ void write_grid_restart_data(int timestep);
 [[gnu::pure]] [[nodiscard]] auto get_ndo(int rank) -> int;
 [[gnu::pure]] [[nodiscard]] auto get_ndo_nonempty(int rank) -> int;
 [[gnu::pure]] [[nodiscard]] auto get_totmassnuclide_tmodel(int z, int a) -> double;
+[[nodiscard]] auto get_propcell_random_position_tmin(int cellindex) -> Vec3d;
 [[nodiscard]] DEVICE_FUNC auto boundary_distance(const Vec3d& dir, const Vec3d& pos, double tstart, int cellindex)
     -> std::tuple<double, int>;
 
