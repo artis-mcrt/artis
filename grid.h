@@ -129,9 +129,10 @@ inline auto get_ejecta_kinetic_energy() {
   return E_kin;
 }
 
-constexpr auto get_prop_gridtype() -> GridType {
-  // accessor method exists for future autodetection of grid type from input file, but for now just return the
-  // compile-time constant
+inline auto get_prop_gridtype() -> GridType {
+  if (GRID_TYPE == GridType::AUTODETECT) {
+    return get_model_gridtype();
+  }
   return GRID_TYPE;
 }
 

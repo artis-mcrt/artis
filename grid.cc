@@ -47,7 +47,7 @@ namespace {
 
 std::array<int, 3> ncoordgrid{};  // propagation grid dimensions
 
-GridType model_type = GridType::CARTESIAN3D;
+GridType model_type = GridType::AUTODETECT;
 ptrdiff_t npts_model = 0;  // number of model grid cells
 ptrdiff_t nonempty_npts_model = 0;  // number of allocated non-empty model grid cells
 
@@ -729,6 +729,8 @@ auto read_model_columns(std::istream& fmodel) -> std::tuple<std::vector<std::str
       case GridType::CARTESIAN3D:
         headerline = std::string("#inputcellid pos_x_min pos_y_min pos_z_min rho");
         break;
+      default:
+        assert_always(false);
     }
     headerline += std::string(" X_Fegroup X_Ni56 X_Co56 X_Fe52 X_Cr48");
   }
@@ -2370,7 +2372,7 @@ auto get_totmassnuclide_tmodel(const int z, const int a) -> double { return totm
   // d is used to loop over the coordinate indices 0,1,2 for x,y,z
 
   // the following vector are in grid coordinates, so either x,y,z (3D) or r (1D), or r_xy, z (2D)
-  constexpr auto prop_gridtype = get_prop_gridtype();
+  const auto prop_gridtype = get_prop_gridtype();
 
   const auto pktposgridcoord = get_gridcoords_from_xyz(pos, prop_gridtype);
 
