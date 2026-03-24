@@ -1215,11 +1215,13 @@ auto get_poscoordpointnum(const double pos, const double time, const int axis) -
   switch (gridtype) {
     case GridType::CARTESIAN3D:
       return {dir_xyz[0] * CLIGHT_PROP, dir_xyz[1] * CLIGHT_PROP, dir_xyz[2] * CLIGHT_PROP};
+
     case GridType::CYLINDRICAL2D: {
       const double v_rcyl = ((pos_xyz[0] * dir_xyz[0]) + (pos_xyz[1] * dir_xyz[1])) / pktposgridcoord[0] * CLIGHT_PROP;
       const double v_z = dir_xyz[2] * CLIGHT_PROP;
       return {v_rcyl, v_z, NAN};
     }
+
     case GridType::SPHERICAL1D: {
       const double v_radial = dot(pos_xyz, dir_xyz) / pktposgridcoord[0] * CLIGHT_PROP;
       return {v_radial, NAN, NAN};
@@ -1423,7 +1425,8 @@ template <BoundaryType boundarytype, size_t S1>
 
 // convert a cell index number into an integer (x,y,z or r) coordinate index from 0 to ncoordgrid[axis]
 [[gnu::pure]] [[nodiscard]] auto get_cellcoordpointnum(const int cellindex, const int axis) -> int {
-  if (get_propgridtype() == GridType::CARTESIAN3D || get_propgridtype() == GridType::CYLINDRICAL2D) {
+  const auto prop_gridtype = get_propgridtype();
+  if (prop_gridtype == GridType::CARTESIAN3D || prop_gridtype == GridType::CYLINDRICAL2D) {
     switch (axis) {
       // 3D Cartesian: increment x first, then y, then z
       // 2D Cylindrical: increment r first, then z
@@ -1445,7 +1448,7 @@ template <BoundaryType boundarytype, size_t S1>
     }
   }
 
-  if (get_propgridtype() == GridType::SPHERICAL1D) {
+  if (prop_gridtype == GridType::SPHERICAL1D) {
     return cellindex;
   }
 
