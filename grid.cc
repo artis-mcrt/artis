@@ -2279,17 +2279,6 @@ void init_grid(const int my_rank) {
   allocate_nonemptymodelcells();
   read_elem_abundances();
 
-  double check1 = 0.;
-  double check2 = 0.;
-  for (int nonemptymgi = 0; nonemptymgi < get_nonempty_npts_model(); nonemptymgi++) {
-    const int mgi = get_mgi_of_nonemptymgi(nonemptymgi);
-    set_kappagrey(nonemptymgi, calculate_cell_kappagrey(nonemptymgi));
-    check1 = check1 + (get_kappagrey(nonemptymgi) * get_rho_tmin(mgi));
-    check2 = check2 + get_rho_tmin(mgi);
-  }
-
-  printlnlog("Grey normalisation check: {:g}", check1 / check2);
-
   const int ndo_nonempty = get_ndo_nonempty(my_rank);
 
   radfield::init(my_rank, ndo_nonempty);
@@ -2343,6 +2332,17 @@ void init_grid(const int my_rank) {
              mtot_mapped / mtot_input * 100.);
 
   MPI_Barrier(MPI_COMM_WORLD);
+
+  double check1 = 0.;
+  double check2 = 0.;
+  for (int nonemptymgi = 0; nonemptymgi < get_nonempty_npts_model(); nonemptymgi++) {
+    const int mgi = get_mgi_of_nonemptymgi(nonemptymgi);
+    set_kappagrey(nonemptymgi, calculate_cell_kappagrey(nonemptymgi));
+    check1 = check1 + (get_kappagrey(nonemptymgi) * get_rho_tmin(mgi));
+    check2 = check2 + get_rho_tmin(mgi);
+  }
+
+  printlnlog("Grey normalisation check: {:g}", check1 / check2);
 }
 
 auto get_totmassnuclide_tmodel(const int z, const int a) -> double { return totmassnuclide[decay::get_nucindex(z, a)]; }
