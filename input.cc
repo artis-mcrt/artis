@@ -119,8 +119,7 @@ constexpr std::array<std::string_view, 24> inputlinecomments = {
     "20: UNUSED max_bf_continua: (>0: max bound-free continua per ion, <0 unlimited)",
     "21: nprocs_exspec: extract spectra for n MPI tasks. sn3d will set this on start of new sim.",
     "22: UNUSED do_emission_res: this is always true for exspec, sometimes true during sn3d",
-    "23: kpktdiffusion_timescale n_kpktdiffusion_timesteps: kpkts diffuse x of a time step's length for the first y "
-    "time steps"};
+    "23: UNUSED kpktdiffusion_timescale n_kpktdiffusion_timesteps: now set in kpkt.cc"};
 
 void read_phixs_data_table(std::istream& phixsfile, const int nphixspoints_inputtable, const int element,
                            const int lowerion, const int lowerlevel, const int upperion, int upperlevel_in,
@@ -1920,18 +1919,11 @@ void read_parameterfile(int rank) {
   // UNUSED: Extract line-of-sight dependent information of last emission for spectrum_res
   assert_always(get_noncommentline(file, line));
 
-  // To reduce the work imbalance between different MPI tasks I introduced a diffusion
-  // for kpkts, since it turned out that this work imbalance was largely dominated
-  // by continuous collisional interactions. By introducing a diffusion time for kpkts
-  // this loop is broken. The following two parameters control this approximation.
-  // Parameter one (a float) gives the relative fraction of a time step which individual
-  // kpkts live. Parameter two (an int) gives the number of time steps for which we
-  // want to use this approximation
+  // UNUSED: kpkt diffusion parameters: now set in kpkt.cc
   assert_always(get_noncommentline(file, line));
   int n_kpktdiffusion_timesteps{0};
   float kpktdiffusion_timescale{0.};
   std::istringstream{line} >> kpktdiffusion_timescale >> n_kpktdiffusion_timesteps;
-  kpkt::set_kpktdiffusion(kpktdiffusion_timescale, n_kpktdiffusion_timesteps);
 
   file.close();
 
