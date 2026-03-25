@@ -2143,8 +2143,9 @@ void calculate_deposition_rate_density(const int nonemptymgi, const int timestep
       rho * decay::get_particle_injection_rate(nonemptymgi, tmid, decay::DECAYTYPE_SPONTFISSION);
 
   if (PARTICLE_THERMALISATION_SCHEME == ParticleThermalisationScheme::INSTANTFULLDEPOSITION) {
-    // if PARTICLE_THERMALISATION_SCHEME is INSTANT, use the analytic rate at t_mid since it will
-    // have no Monte Carlo noise (although strictly, it should be an integral from the timestep start to the end)
+    // for instant full deposition, the deposition rate is the same as the emission rate, which we know analytically
+    // without Monte Carlo noise (although strictly, it should be an integral from the timestep start to the end divided
+    // by timestep duration instead of the instantaneous rate at tmid)
     heatingcoolingrates.dep_positron = heatingcoolingrates.eps_positron_ana;
     heatingcoolingrates.dep_electron = heatingcoolingrates.eps_electron_ana;
     heatingcoolingrates.dep_alpha = heatingcoolingrates.eps_alpha_ana;
