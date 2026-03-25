@@ -683,13 +683,18 @@ auto do_rpkt_step(Packet& pkt, const double t2) -> bool {
     }
     move_pkt_withtime(pkt, sdist / 2.);
 
-    int new_nonemptymgi = nonemptymgi;
     if (snext != pkt.where) {
       grid::change_cell(pkt, snext);
-      new_nonemptymgi = grid::get_propcell_nonemptymgi(pkt.where);
+      if (snext < 0) {
+        // we left the grid, so we can stop tracking this packet
+        return false;
+      }
+      const auto new_nonemptymgi = grid::get_propcell_nonemptymgi(pkt.where);
+      // if the new cell is empty or the same as the previous one, keep going, otherwise we'll need to change the cell
+      // cache
+      return ((new_nonemptymgi < 0) || (new_nonemptymgi == nonemptymgi));
     }
-
-    return (pkt.type == TYPE_RPKT && (new_nonemptymgi < 0 || new_nonemptymgi == nonemptymgi));
+    return true;  // if snext == pkt.where, we reached the maximum path length and are not changing cell
   }
 
   if ((tdist < sdist) && (tdist <= edist)) [[unlikely]] {
@@ -705,6 +710,7 @@ auto do_rpkt_step(Packet& pkt, const double t2) -> bool {
   }
 
   assert_always(false);
+  return false;
 }
 
 // calculate the free-free absorption (to kpkt heating) coefficient [cm^-1]
@@ -945,20 +951,12 @@ void calculate_chi_rpkt_cont(const double nu_cmf, Rpkt_continuum_absorptioncoeff
   // free-free absorption
   chi_rpkt_cont.ffheat = calculate_chi_ffheating(nonemptymgi, nu_cmf, USECELLHISTANDUPDATEPHIXSLIST);
 
-  if (globals::opacity_case >= 4) {
-    [[likely]]
-    // First contribution: Thomson scattering on free electrons
-    chi_rpkt_cont.ffescat = SIGMA_T * nne;
+  // First contribution: Thomson scattering on free electrons
+  chi_rpkt_cont.ffescat = SIGMA_T * nne;
 
-    // Third contribution: bound-free absorption
-    chi_rpkt_cont.bf =
-        calculate_chi_bf_gammacontr<USECELLHISTANDUPDATEPHIXSLIST>(nonemptymgi, nu_cmf, chi_rpkt_cont.phixslist);
-
-  } else {
-    // in the other cases chi_grey is an mass absorption coefficient
-    chi_rpkt_cont.ffescat = 0.;
-    chi_rpkt_cont.bf = 0.;
-  }
+  // Third contribution: bound-free absorption
+  chi_rpkt_cont.bf =
+      calculate_chi_bf_gammacontr<USECELLHISTANDUPDATEPHIXSLIST>(nonemptymgi, nu_cmf, chi_rpkt_cont.phixslist);
 
   chi_rpkt_cont.nonemptymgi = nonemptymgi;
   chi_rpkt_cont.timestep = globals::timestep;

@@ -1778,113 +1778,75 @@ void set_elements_uppermost_ion(const int nonemptymgi, const int element, const 
   elements_uppermost_ion_allcells[(nonemptymgi * get_nelements()) + element] = uppermost_ion;
 }
 
-void calculate_kappagrey() {
-  double rho_sum = 0.;
-  double fe_sum = 0.;
-  double opcase3_sum = 0.;
-  const int empty_cells = 0;
-
-  for (int nonemptymgi = 0; nonemptymgi < get_nonempty_npts_model(); nonemptymgi++) {
-    const auto mgi = get_mgi_of_nonemptymgi(nonemptymgi);
-    rho_sum += get_rho_tmin(mgi);
-    fe_sum += get_ffegrp(mgi);
-
-    if (globals::opacity_case == 3) {
-      if (get_rho_tmin(mgi) > 0.) {
-        const auto kappagrey =
-            static_cast<float>(((0.9 * get_ffegrp(mgi)) + 0.1) *
-                               ((get_rho_tmin(mgi) > globals::rho_crit) ? globals::rho_crit / get_rho_tmin(mgi) : 1.));
-
-        set_kappagrey(nonemptymgi, kappagrey);
-      } else if (get_rho_tmin(mgi) == 0.) {
-        set_kappagrey(nonemptymgi, 0.);
-      } else if (get_rho_tmin(mgi) < 0.) {
-        printlnlog("Error: negative density. Abort.");
-        std::abort();
-      }
-      opcase3_sum += get_kappagrey(nonemptymgi) * get_rho_tmin(mgi);
-    }
+[[nodiscard]] auto calculate_cell_kappagrey(const int nonemptymgi) -> float {
+  const int mgi = get_mgi_of_nonemptymgi(nonemptymgi);
+  if (get_rho_tmin(mgi) <= 0.) {
+    return 0.;
   }
+  double kappa = 0.;
+  switch (RPKT_GREY_TYPE) {
+    case RpktGreyType::FEGROUP_APPROX:
+      // kappagrey is a simple function of the initial Fe-group mass fraction
+      kappa = ((0.9 * get_ffegrp(mgi)) + 0.1) * globals::GREY_OP / ((0.9 * mfegroup / mtot_input) + 0.1);
+      break;
 
-  // Second pass through allows calculation of normalized chi_grey
-  double check1 = 0.;
-  double check2 = 0.;
-  for (int nonemptymgi = 0; nonemptymgi < get_nonempty_npts_model(); nonemptymgi++) {
-    const int mgi = get_mgi_of_nonemptymgi(nonemptymgi);
-    if (get_rho_tmin(mgi) > 0) {
-      double kappa = 0.;
-      if (globals::opacity_case == 0) {
-        kappa = globals::GREY_OP;
-      } else if (globals::opacity_case == 1 || globals::opacity_case == 4) {
-        // kappagrey used for initial grey approximation in case 4
-        kappa = ((0.9 * get_ffegrp(mgi)) + 0.1) * globals::GREY_OP / ((0.9 * mfegroup / mtot_input) + 0.1);
-      } else if (globals::opacity_case == 2) {
-        const double opcase2_normal = globals::GREY_OP * rho_sum / ((0.9 * fe_sum) + (0.1 * (ngrid - empty_cells)));
-        kappa = opcase2_normal / get_rho_tmin(mgi) * ((0.9 * get_ffegrp(mgi)) + 0.1);
-      } else if (globals::opacity_case == 3) {
-        globals::opcase3_normal = globals::GREY_OP * rho_sum / opcase3_sum;
-        kappa = get_kappagrey(nonemptymgi) * globals::opcase3_normal;
-      } else if (globals::opacity_case == 5) {
-        // electron-fraction-dependent opacities
-        // values from table 1 of Tanaka et al. (2020).
-        const auto Ye = modelgrid_input[mgi].initelectronfrac;
-        assert_always(Ye > 0.);
+    case RpktGreyType::TANAKA2020_ELECTRONFRAC: {
+      // electron-fraction-dependent opacities from Tanaka et al. (2020) table 1.
+      const auto Ye = modelgrid_input[mgi].initelectronfrac;
+      assert_always(Ye > 0.);
 
-        if (Ye <= 0.1) {
-          kappa = 19.5;
-        } else if (Ye <= 0.15) {
-          kappa = 32.2;
-        } else if (Ye <= 0.20) {
-          kappa = 22.3;
-        } else if (Ye <= 0.25) {
-          kappa = 5.6;
-        } else if (Ye <= 0.30) {
-          kappa = 5.36;
-        } else if (Ye <= 0.35) {
-          kappa = 3.3;
-        } else {
-          kappa = 0.96;
-        }
-      } else if (globals::opacity_case == 6) {
-        // grey opacity used in Just+2022, https://ui.adsabs.harvard.edu/abs/2022MNRAS.510.2820J/abstract
-        // kappa is a simple analytic function of temperature and lanthanide mass fraction
-        // adapted to best fit lightcurves from Kasen+2017 in ALCAR simulations
-        const double T_rad = get_TR(nonemptymgi);
-        double X_lan = 0.;
-        for (int element = 0; element < get_nelements(); element++) {
-          const int z = get_atomicnumber(element);
-          if (z >= 57 && z <= 71) {
-            X_lan += get_elem_abundance(nonemptymgi, element);
-          }
-        }
-        // first step: temperature-independent factor
-        if (X_lan < 1e-7) {
-          kappa = 0.2;
-        } else if (X_lan < 1e-3) {
-          kappa = 3 * pow(X_lan / 1e-3, 0.3);
-        } else if (X_lan < 1e-1) {
-          kappa = 3 * pow(X_lan / 1e-3, 0.5);
-        } else {
-          kappa = 30 * pow(X_lan / 1e-1, 0.1);
-        }
-        // second step: multiply temperature-dependent factor
-        if (T_rad < 2000.) {
-          kappa *= pow(T_rad / 2000., 5.);
-        }
+      if (Ye <= 0.1) {
+        kappa = 19.5;
+      } else if (Ye <= 0.15) {
+        kappa = 32.2;
+      } else if (Ye <= 0.20) {
+        kappa = 22.3;
+      } else if (Ye <= 0.25) {
+        kappa = 5.6;
+      } else if (Ye <= 0.30) {
+        kappa = 5.36;
+      } else if (Ye <= 0.35) {
+        kappa = 3.3;
       } else {
-        assert_always(false);
+        kappa = 0.96;
       }
-
-      set_kappagrey(nonemptymgi, static_cast<float>(kappa));
-    } else {
-      set_kappagrey(nonemptymgi, 0.);
+      break;
     }
 
-    check1 = check1 + (get_kappagrey(nonemptymgi) * get_rho_tmin(mgi));
-    check2 = check2 + get_rho_tmin(mgi);
+    case RpktGreyType::JUST2022_TEMP_LANTHANIDEFRAC: {
+      // grey opacity used in Just+2022, https://ui.adsabs.harvard.edu/abs/2022MNRAS.510.2820J/abstract
+      // kappa is a simple analytic function of temperature and lanthanide mass fraction
+      // adapted to best fit lightcurves from Kasen+2017 in ALCAR simulations
+      const double T_rad = get_TR(nonemptymgi);
+      double X_lan = 0.;
+      for (int element = 0; element < get_nelements(); element++) {
+        const int z = get_atomicnumber(element);
+        if (z >= 57 && z <= 71) {
+          X_lan += get_elem_abundance(nonemptymgi, element);
+        }
+      }
+      // first step: temperature-independent factor
+      if (X_lan < 1e-7) {
+        kappa = 0.2;
+      } else if (X_lan < 1e-3) {
+        kappa = 3 * pow(X_lan / 1e-3, 0.3);
+      } else if (X_lan < 1e-1) {
+        kappa = 3 * pow(X_lan / 1e-3, 0.5);
+      } else {
+        kappa = 30 * pow(X_lan / 1e-1, 0.1);
+      }
+      // second step: multiply temperature-dependent factor
+      if (T_rad < 2000.) {
+        kappa *= pow(T_rad / 2000., 5.);
+      }
+      break;
+    }
   }
 
-  printlnlog("Grey normalisation check: {:g}", check1 / check2);
+  const auto kappa_float = static_cast<float>(kappa);
+  assert_always(kappa_float >= 0.);
+  assert_always(std::isfinite(kappa_float));
+  return kappa_float;
 }
 
 void read_ejecta_model() {
@@ -2285,15 +2247,6 @@ void init_grid(const int my_rank) {
   }
   printlnlog("    total propagation cells: {}", ngrid);
 
-  // Now set up the density in each cell.
-
-  // Calculate the critical opacity at which opacity_case 3 switches from a
-  // regime proportional to the density to a regime independent of the density
-  // This is done by solving for tau_sobolev == 1
-  // tau_sobolev = PI*QE*QE/(ME*C) * rho_crit_para * rho/(56 * MH) * 3000e-8 * globals::timesteps[m].mid;
-  globals::rho_crit = ME * CLIGHT * 56 * MH / (PI * QE * QE * globals::rho_crit_para * 3000e-8 * globals::tmin);
-  printlnlog("grid_init: rho_crit = {:g} [g/cm3]", globals::rho_crit);
-
   if (get_modelgridtype() == prop_gridtype) {
     if (get_modelgridtype() == GridType::CARTESIAN3D) {
       assert_always(ncoord_model[0] == ncoordgrid[0]);
@@ -2324,7 +2277,6 @@ void init_grid(const int my_rank) {
   }
 
   allocate_nonemptymodelcells();
-  calculate_kappagrey();
   read_elem_abundances();
 
   const int ndo_nonempty = get_ndo_nonempty(my_rank);
@@ -2380,6 +2332,15 @@ void init_grid(const int my_rank) {
              mtot_mapped / mtot_input * 100.);
 
   MPI_Barrier(MPI_COMM_WORLD);
+
+  if (globals::rank_in_node == 0) {
+    printlnlog("Calculating initial grey opacities for model cells.");
+    for (int nonemptymgi = 0; nonemptymgi < get_nonempty_npts_model(); nonemptymgi++) {
+      set_kappagrey(nonemptymgi, calculate_cell_kappagrey(nonemptymgi));
+    }
+  }
+
+  MPI_Barrier(globals::mpi_comm_node);
 }
 
 auto get_totmassnuclide_tmodel(const int z, const int a) -> double { return totmassnuclide[decay::get_nucindex(z, a)]; }

@@ -118,17 +118,9 @@ inline std::vector<int> acounter{};
 
 inline int nprocs_exspec{1};
 
-inline double gamma_kappagrey{-1};  // set to -ve for proper treatment. If positive, then
-                                    // gamma_rays are treated as grey with this opacity.
-
 constexpr double GREY_OP = 0.1;
 
 inline double max_path_step;
-
-inline int opacity_case{};  // 0 grey, 1 for Fe-grp dependence.
-                            // MK: 2 for Fe-grp dependence and proportional to 1/rho
-                            // MK: 3 combination of 1 & 2 depending on a rho_crit
-                            // MK: 4 non-grey treatment
 
 // ATOMIC DATA
 
@@ -299,14 +291,9 @@ inline int timestep_initial{-1};
 inline int timestep_finish{-1};
 inline int timestep{-1};  // Current time step during the simulation
 
-inline double opcase3_normal;  // MK: normalisation factor for opacity_case 3
-inline double rho_crit_para;  // MK: free parameter for the selection of the critical opacity in opacity_case 3
-inline double rho_crit;  // MK: critical opacity in opacity_case 3 (could now be declared locally)
-
 inline int total_nlte_levels;
 
 inline bool simulation_continued_from_saved;
-inline double nu_rfcut;
 inline int num_lte_timesteps;
 inline double cell_is_optically_thick;
 inline int num_grey_timesteps;

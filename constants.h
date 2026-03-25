@@ -64,6 +64,8 @@ enum class TimeStepSizeMethod { LOGARITHMIC, CONSTANT, LOGARITHMIC_THEN_CONSTANT
 
 enum class ThermalisationScheme { INSTANT, DETAILED, DETAILEDWITHGAMMAPRODUCTS, BARNES, WOLLAEGER, GUTTMAN };
 
+enum class RpktGreyType { FEGROUP_APPROX, TANAKA2020_ELECTRONFRAC, JUST2022_TEMP_LANTHANIDEFRAC };
+
 using Vec3d = std::array<double, 3>;
 constexpr Vec3d syn_dir{0., 0., 1.};  // vector defining the theta=0 direction
 
