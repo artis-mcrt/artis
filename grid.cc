@@ -1786,13 +1786,12 @@ void set_elements_uppermost_ion(const int nonemptymgi, const int element, const 
   double kappa = 0.;
   switch (RPKT_GREY_TYPE) {
     case RpktGreyType::FEGROUP_APPROX:
-      // kappagrey used for initial grey approximation in case 4
+      // kappagrey is a simple function of the initial Fe-group mass fraction
       kappa = ((0.9 * get_ffegrp(mgi)) + 0.1) * globals::GREY_OP / ((0.9 * mfegroup / mtot_input) + 0.1);
       break;
 
     case RpktGreyType::TANAKA2020_ELECTRONFRAC: {
-      // electron-fraction-dependent opacities
-      // values from table 1 of Tanaka et al. (2020).
+      // electron-fraction-dependent opacities from Tanaka et al. (2020) table 1.
       const auto Ye = modelgrid_input[mgi].initelectronfrac;
       assert_always(Ye > 0.);
 
