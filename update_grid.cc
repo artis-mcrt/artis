@@ -375,10 +375,6 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
   decay::update_abundances(nonemptymgi, globals::timesteps[nts].mid);
   nonthermal::calculate_deposition_rate_density(nonemptymgi, nts, heatingcoolingrates);
 
-  if (RPKT_GREY_TYPE == RpktGreyType::JUST2022_TEMP_LANTHANIDEFRAC) {
-    grid::calculate_cell_kappagrey(nonemptymgi);
-  }
-
   const double estimator_normfactor = 1 / deltaV / deltat / globals::nprocs;
   const double estimator_normfactor_over4pi = ONEOVER4PI * estimator_normfactor;
 
@@ -481,9 +477,12 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
                std::time(nullptr) - sys_time_start_temperature_corrections);
   }
 
-  const float nne = grid::get_nne(nonemptymgi);
+  const auto nne = grid::get_nne(nonemptymgi);
   const double compton_optical_depth_across_cell = SIGMA_T * nne * grid::propcell_width_tmin(mgi, 0) * tratmid;
 
+  if (RPKT_GREY_TYPE == RpktGreyType::JUST2022_TEMP_LANTHANIDEFRAC) {
+    grid::calculate_cell_kappagrey(nonemptymgi);
+  }
   const double radial_pos = grid::get_modelcell_mean_radial_pos(mgi, tratmid);
   const double grey_optical_depth_across_cell =
       grid::get_kappagrey(nonemptymgi) * grid::get_rho(nonemptymgi) * grid::propcell_width_tmin(mgi, 0) * tratmid;
