@@ -85,8 +85,6 @@ constexpr double NU_MAX_R;  // upper frequency boundary for UVOIR spectra and BB
 // to match classic artis
 constexpr bool PHIXS_CLASSIC_NO_INTERPOLATION;
 
-// ** Start of radiation field model options **
-
 // if using this, avoid look up tables and switch on the direct integration options below
 // (since LUTs created with Planck function J_nu)
 constexpr bool MULTIBIN_RADFIELD_MODEL_ON;
@@ -149,10 +147,6 @@ constexpr float STRICT_POPULATION_CHECKING_INVERSION_FACTOR_PRINTOUT_WARNING;
 // population are all individually checked.
 constexpr double NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION;
 
-// ** End of radiation field model options **
-
-// ** Start of non-thermal solution options **
-
 // non-thermal ionisation
 constexpr bool NT_ON;
 
@@ -209,8 +203,6 @@ constexpr bool SF_AUGER_CONTRIBUTION_DISTRIBUTE_EN;
 
 // load shells.txt containing shell occupancy data instead of simple algorithmic guesses
 constexpr bool NT_WORKFUNCTION_USE_SHELL_OCCUPANCY_FILE = false;
-
-// ** End of non-thermal solution options **
 
 constexpr double TEMPERATURE_SOLVER_ACCURACY;
 
