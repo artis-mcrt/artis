@@ -246,7 +246,7 @@ void init_xcom_photoion_data() {
 
 // the absorption coefficient [cm^-1] for Compton scattering in the co-moving frame
 [[nodiscard]] auto get_chi_compton_cmf(const int cellindex, const double nu_cmf) -> double {
-  if (GAMMA_USE_KAPPA_GREY.has_value()) {
+  if constexpr (GAMMA_USE_KAPPA_GREY.has_value()) {
     return 0.;
   }
 
@@ -436,7 +436,7 @@ void compton_scatter(Packet& pkt) {
 
   const double rho = grid::get_rho(nonemptymgi);
 
-  if (GAMMA_USE_KAPPA_GREY.has_value()) {
+  if constexpr (GAMMA_USE_KAPPA_GREY.has_value()) {
     return GAMMA_USE_KAPPA_GREY.value() * rho;
   }
 
@@ -518,7 +518,7 @@ void compton_scatter(Packet& pkt) {
 
 // calculate the absorption coefficient [cm^-1] for pair production in the comoving frame
 [[nodiscard]] auto get_chi_pair_prod_cmf(const int cellindex, const double nu_cmf) -> double {
-  if (GAMMA_USE_KAPPA_GREY.has_value()) {
+  if constexpr (GAMMA_USE_KAPPA_GREY.has_value()) {
     return 0.;
   }
   const int mgi = grid::get_propcell_modelgridindex(cellindex);
