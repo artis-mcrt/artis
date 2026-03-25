@@ -2333,16 +2333,14 @@ void init_grid(const int my_rank) {
 
   MPI_Barrier(MPI_COMM_WORLD);
 
-  double check1 = 0.;
-  double check2 = 0.;
-  for (int nonemptymgi = 0; nonemptymgi < get_nonempty_npts_model(); nonemptymgi++) {
-    const int mgi = get_mgi_of_nonemptymgi(nonemptymgi);
-    set_kappagrey(nonemptymgi, calculate_cell_kappagrey(nonemptymgi));
-    check1 = check1 + (get_kappagrey(nonemptymgi) * get_rho_tmin(mgi));
-    check2 = check2 + get_rho_tmin(mgi);
+  if (globals::rank_in_node == 0) {
+    printlnlog("Calculating initial grey opacities for model cells.");
+    for (int nonemptymgi = 0; nonemptymgi < get_nonempty_npts_model(); nonemptymgi++) {
+      set_kappagrey(nonemptymgi, calculate_cell_kappagrey(nonemptymgi));
+    }
   }
 
-  printlnlog("Grey normalisation check: {:g}", check1 / check2);
+  MPI_Barrier(globals::mpi_comm_node);
 }
 
 auto get_totmassnuclide_tmodel(const int z, const int a) -> double { return totmassnuclide[decay::get_nucindex(z, a)]; }
