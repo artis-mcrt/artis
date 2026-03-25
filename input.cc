@@ -1857,13 +1857,8 @@ void read_parameterfile(int rank) {
     printlnlog("input: starting a new simulation");
   }
 
-  // Wavelength (in Angstroms) at which the parameterisation of the radiation field
-  // switches from the nebular approximation to LTE.
-  float dum2{NAN};
+  // UNUSED free parameter for calculation of rho_crit
   assert_always(get_noncommentline(file, line));
-  std::istringstream{line} >> dum2;  // free parameter for calculation of rho_crit
-  globals::nu_rfcut = CLIGHT / (dum2 * 1e-8);
-  printlnlog("input: nu_rfcut {:g}", globals::nu_rfcut);
 
   // Sets the number of initial LTE timesteps for NLTE runs
   assert_always(get_noncommentline(file, line));

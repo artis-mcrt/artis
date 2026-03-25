@@ -294,7 +294,6 @@ inline int timestep{-1};  // Current time step during the simulation
 inline int total_nlte_levels;
 
 inline bool simulation_continued_from_saved;
-inline double nu_rfcut;
 inline int num_lte_timesteps;
 inline double cell_is_optically_thick;
 inline int num_grey_timesteps;
