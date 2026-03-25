@@ -134,7 +134,7 @@ constexpr bool USE_CALCULATED_MEANATOMICWEIGHT = false;
 
 constexpr bool WRITE_EMISSIONABSORPTION_SPEC_AT_END = false;
 
-constexpr auto TIMESTEP_SIZE_METHOD = TimeStepSizeMethod::LOGARITHMIC;
+constexpr TimeStepSizeMethod TIMESTEP_SIZE_METHOD = TimeStepSizeMethod::LOGARITHMIC;
 
 constexpr double FIXED_TIMESTEP_WIDTH = -1.;
 
@@ -152,9 +152,9 @@ constexpr RpktGreyType RPKT_GREY_TYPE = RpktGreyType::FEGROUP_APPROX;
 
 constexpr bool USE_XCOM_GAMMAPHOTOION = false;
 
-constexpr auto PARTICLE_THERMALISATION_SCHEME = ThermalisationScheme::INSTANT;
+constexpr ThermalisationScheme PARTICLE_THERMALISATION_SCHEME = ThermalisationScheme::INSTANT;
 
-constexpr auto GAMMA_THERMALISATION_SCHEME = ThermalisationScheme::DETAILED;
+constexpr ThermalisationScheme GAMMA_THERMALISATION_SCHEME = ThermalisationScheme::DETAILED;
 
 constexpr std::optional<double> GAMMA_USE_KAPPA_GREY;
 
