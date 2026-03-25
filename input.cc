@@ -1921,9 +1921,6 @@ void read_parameterfile(int rank) {
 
   // UNUSED: kpkt diffusion parameters: now set in kpkt.cc
   assert_always(get_noncommentline(file, line));
-  int n_kpktdiffusion_timesteps{0};
-  float kpktdiffusion_timescale{0.};
-  std::istringstream{line} >> kpktdiffusion_timescale >> n_kpktdiffusion_timesteps;
 
   file.close();
 
