@@ -1840,6 +1840,7 @@ void set_elements_uppermost_ion(const int nonemptymgi, const int element, const 
       if (T_rad < 2000.) {
         kappa *= pow(T_rad / 2000., 5.);
       }
+      break;
     }
   }
 
