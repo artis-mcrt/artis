@@ -9,7 +9,7 @@
 
 constexpr int MPKTS = 15000;
 
-constexpr std::optional<GridType> GRID_TYPE{};
+constexpr std::optional<GridType> GRID_TYPE;
 constexpr int CUBOID_NCOORDGRID_X = 50;
 constexpr int CUBOID_NCOORDGRID_Y = 50;
 constexpr int CUBOID_NCOORDGRID_Z = 50;
@@ -147,9 +147,9 @@ constexpr RpktGreyType RPKT_GREY_TYPE = RpktGreyType::TANAKA2020_ELECTRONFRAC;
 
 constexpr bool USE_XCOM_GAMMAPHOTOION = false;
 
-constexpr ThermalisationScheme PARTICLE_THERMALISATION_SCHEME = ThermalisationScheme::DETAILED;
+constexpr auto PARTICLE_THERMALISATION_SCHEME = ParticleThermalisationScheme::TIMEDEPENDENT;
 
-constexpr ThermalisationScheme GAMMA_THERMALISATION_SCHEME = ThermalisationScheme::DETAILED;
+constexpr auto GAMMA_THERMALISATION_SCHEME = GammaThermalisationScheme::FREQUENCYDEPENDENT;
 
 constexpr std::optional<double> GAMMA_USE_KAPPA_GREY;
 

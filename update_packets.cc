@@ -44,10 +44,10 @@ void do_nonthermal_predeposit(Packet& pkt, const int nts, const double t2) {
   const auto deposit_type =
       (pkt.type == TYPE_NONTHERMAL_PREDEPOSIT_ALPHA) ? TYPE_NTALPHA_FISPROD_DEPOSITED : TYPE_NTLEPTON_DEPOSITED;
 
-  if constexpr (PARTICLE_THERMALISATION_SCHEME == ThermalisationScheme::INSTANT) {
+  if constexpr (PARTICLE_THERMALISATION_SCHEME == ParticleThermalisationScheme::INSTANTFULLDEPOSITION) {
     // absorption happens
     pkt.type = deposit_type;
-  } else if constexpr (PARTICLE_THERMALISATION_SCHEME == ThermalisationScheme::BARNES) {
+  } else if constexpr (PARTICLE_THERMALISATION_SCHEME == ParticleThermalisationScheme::BARNES) {
     const double E_kin = grid::get_ejecta_kinetic_energy();
     const double v_ej = std::sqrt(E_kin * 2 / grid::mtot_input);
 
@@ -64,7 +64,7 @@ void do_nonthermal_predeposit(Packet& pkt, const int nts, const double t2) {
       pkt.type = TYPE_ESCAPE;
       grid::change_cell(pkt, -99);
     }
-  } else if constexpr (PARTICLE_THERMALISATION_SCHEME == ThermalisationScheme::WOLLAEGER) {
+  } else if constexpr (PARTICLE_THERMALISATION_SCHEME == ParticleThermalisationScheme::WOLLAEGER) {
     // particle thermalisation from Wollaeger+2018, similar to Barnes but using a slightly different expression
     const double A = (pkt.type == TYPE_NONTHERMAL_PREDEPOSIT_ALPHA) ? 1.2 * 1.e-11 : 1.3 * 1.e-11;
     const double aux_term = 2 * A / (ts * grid::get_rho(nonemptymgi));
@@ -80,9 +80,9 @@ void do_nonthermal_predeposit(Packet& pkt, const int nts, const double t2) {
       pkt.type = TYPE_ESCAPE;
       grid::change_cell(pkt, -99);
     }
-  } else {
-    // ThermalisationScheme::DETAILED or ThermalisationScheme::DETAILEDWITHGAMMAPRODUCTS
-    // local, detailed absorption following Shingles+2023
+  } else if constexpr (PARTICLE_THERMALISATION_SCHEME == ParticleThermalisationScheme::TIMEDEPENDENT ||
+                       PARTICLE_THERMALISATION_SCHEME == ParticleThermalisationScheme::TIMEDEPENDENTWITHGAMMAPRODUCTS) {
+    // local time-dependent absorption described by Shingles et al. (2023)
     const double rho = grid::get_rho(nonemptymgi);
 
     // endot is energy loss rate (positive) in [erg/s]
@@ -120,12 +120,14 @@ void do_nonthermal_predeposit(Packet& pkt, const int nts, const double t2) {
     pkt.prop_time = t_new;
     // pkt.e_cmf *= ts / t_new;
     assert_testmodeonly(grid::get_cellindex_from_pos(pkt.pos, pkt.prop_time) == pkt.where);
+  } else {
+    assert_always(false);  // unhandled thermalisation scheme
   }
 
   // contribute to the trajectory integrated deposition estimator
   // and if a deposition event occurred, also the discrete Monte Carlo count deposition rate
-  // for DETAILEDWITHGAMMAPRODUCTS, gamma-ray deposition will lead to predeposit beta particles, but they will count
-  // toward "gamma deposition" not particle deposition
+  // for TIMEDEPENDENTWITHGAMMAPRODUCTS, gamma-ray deposition will lead to predeposit beta particles, but they will
+  // count toward "gamma deposition" not particle deposition
   if (pkt.originated_from_particlenotgamma) {
     if (priortype == TYPE_NONTHERMAL_PREDEPOSIT_BETAMINUS) {
       atomicadd(globals::dep_estimator_electron[nonemptymgi], en_deposited);
@@ -143,7 +145,8 @@ void do_nonthermal_predeposit(Packet& pkt, const int nts, const double t2) {
         atomicadd(globals::timesteps[nts].alpha_dep_discrete, pkt.e_cmf);
       }
 
-    } else if constexpr (PARTICLE_THERMALISATION_SCHEME == ThermalisationScheme::DETAILEDWITHGAMMAPRODUCTS) {
+    } else if constexpr (PARTICLE_THERMALISATION_SCHEME ==
+                         ParticleThermalisationScheme::TIMEDEPENDENTWITHGAMMAPRODUCTS) {
       atomicadd(globals::dep_estimator_gamma[nonemptymgi], en_deposited);
       if (pkt.type == TYPE_NTLEPTON_DEPOSITED) {
         atomicadd(globals::timesteps[nts].gamma_dep_discrete, pkt.e_cmf);
