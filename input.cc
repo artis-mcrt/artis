@@ -1828,7 +1828,7 @@ void read_parameterfile(int rank) {
 
   assert_always(get_noncommentline(file, line));  // UNUSED change speed of light
 
-  assert_always(get_noncommentline(file, line));
+  assert_always(get_noncommentline(file, line));  // UNUSED gamma_kappagrey
 
   assert_always(get_noncommentline(file, line));  // UNUSED components of syn_dir
 
@@ -1836,11 +1836,7 @@ void read_parameterfile(int rank) {
 
   assert_always(get_noncommentline(file, line));  // UNUSED free parameter for calculation of rho_crit
 
-  assert_always(get_noncommentline(file, line));
-  int debug_packet = 0;
-  std::istringstream{line} >> debug_packet;  // activate debug output for packet
-  assert_always(debug_packet == -1);
-  // select a negative value to deactivate
+  assert_always(get_noncommentline(file, line));  // UNUSED activate debug output for packet
 
   // Do we start a new simulation or, continue another one?
   int continue_flag = 0;
