@@ -256,8 +256,7 @@ constexpr bool EXPANSIONOPACITIES_ON;
 // set this to < 0 to use the macroatom
 constexpr std::optional<float> RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY;
 
-// For cells in grey mode, select a method of calculating opacity.
-// Common RpktGreyType values include:
+// For cells in grey mode, select a method of calculating opacity:
 //   - FEGROUP_APPROX: Fe-group line expansion opacity scaled to local composition (default).
 //   - TANAKA2020_ELECTRONFRAC: opacity parametrised using the Tanaka et al. (2020) fit to electron fraction (Ye).
 //   - JUST2022_TEMP_LANTHANIDEFRAC: opacity parametrised using Just et al. (2022) fit to temperature and lanthanide fraction.
