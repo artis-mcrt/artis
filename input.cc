@@ -108,7 +108,7 @@ constexpr std::array<std::string_view, 24> inputlinecomments = {
     "10: UNUSED change speed of light by some factor. Change constants.h CLIGHT_PROP instead",
     "11: UNUSED gamma_kappagrey: if >0: use grey opacity for gammas, if <0: use detailed opacity",
     "12: UNUSED syn_dir: x, y, and z components of unit vector (now always 0,0,1)",
-    "13: opacity_case: opacity choice",
+    "13: UNUSED opacity_case: opacity choice",
     "14: UNUSED rho_crit_para: free parameter for calculation of rho_crit",
     "15: UNUSED debug_packet: (>=0: activate debug output for packet id, <0: ignore)",
     "16: simulation_continued_from_saved: (0: start new simulation, 1: continue from gridsave and packets files)",
