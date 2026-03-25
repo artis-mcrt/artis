@@ -256,6 +256,9 @@ constexpr bool EXPANSIONOPACITIES_ON;
 // set this to < 0 to use the macroatom
 constexpr std::optional<float> RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY;
 
+// For cells in grey mode, how should the grey opacitity be calculated?
+constexpr RpktGreyType RPKT_GREY_TYPE = RpktGreyType::FEGROUP_APPROX;
+
 // Use XCOM data for gamma photoionisation instead of Si+Fe Equation 2 of Ambwani & Sutherland (1988), Veigele (1973)
 constexpr bool USE_XCOM_GAMMAPHOTOION;
 

@@ -94,7 +94,7 @@ void write_grid_restart_data(int timestep);
 [[nodiscard]] DEVICE_FUNC auto boundary_distance(const Vec3d& dir, const Vec3d& pos, double tstart, int cellindex)
     -> std::tuple<double, int>;
 
-void calculate_kappagrey();
+void calculate_cell_kappagrey(int nonemptymgi);
 
 // Routine to take a packet across a boundary.
 inline void change_cell(Packet& pkt, const int snext) {

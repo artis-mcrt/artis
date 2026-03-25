@@ -375,24 +375,12 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
   decay::update_abundances(nonemptymgi, globals::timesteps[nts].mid);
   nonthermal::calculate_deposition_rate_density(nonemptymgi, nts, heatingcoolingrates);
 
-  if (globals::opacity_case == 6) {
-    grid::calculate_kappagrey();
+  if (RPKT_GREY_TYPE == RpktGreyType::JUST2022_TEMP_LANTHANIDEFRAC) {
+    grid::calculate_cell_kappagrey(nonemptymgi);
   }
 
   const double estimator_normfactor = 1 / deltaV / deltat / globals::nprocs;
   const double estimator_normfactor_over4pi = ONEOVER4PI * estimator_normfactor;
-
-  if (globals::opacity_case < 4) {
-    // various forms of grey opacity
-    grid::thick_allcells[nonemptymgi] = 1;
-
-    if (globals::opacity_case == 3) {
-      const auto kappagrey =
-          static_cast<float>(globals::opcase3_normal * ((0.9 * grid::get_ffegrp(mgi)) + 0.1) *
-                             (rho > globals::rho_crit ? globals::rho_crit / grid::get_rho(nonemptymgi) : 1.));
-      grid::set_kappagrey(nonemptymgi, kappagrey);
-    }
-  }
 
   if (nts == globals::timestep_initial && titer == 0) {
     // For the initial timestep, temperatures have already been assigned
@@ -574,17 +562,6 @@ void update_grid(std::ostream& estimators_file, const int nts, const int nts_pre
   assert_always(globals::num_lte_timesteps > 0);  // The first time step must solve the ionisation balance in LTE
 
   const double tratmid = globals::timesteps[nts].mid / globals::tmin;
-
-  // Calculate the critical opacity at which opacity_case 3 switches from a
-  // regime proportional to the density to a regime independent of the density
-  // This is done by solving for tau_sobolev == 1
-  // tau_sobolev = PI*QE*QE/(ME*C) * rho_crit_para * rho/(56 * MH) * 3000e-8 *
-  // globals::timesteps[m].mid;
-  globals::rho_crit =
-      ME * CLIGHT * 56 * MH / (PI * QE * QE * globals::rho_crit_para * 3000e-8 * globals::timesteps[nts].mid);
-  if (globals::opacity_case == 3) {
-    printlnlog("update_grid: rho_crit = {:g}", globals::rho_crit);
-  }
 
   // These values will not be used if nts == 0, but set them anyway
   // nts_prev is the previous timestep, unless this is timestep zero

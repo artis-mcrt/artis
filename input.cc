@@ -109,7 +109,7 @@ constexpr std::array<std::string_view, 24> inputlinecomments = {
     "11: UNUSED gamma_kappagrey: if >0: use grey opacity for gammas, if <0: use detailed opacity",
     "12: UNUSED syn_dir: x, y, and z components of unit vector (now always 0,0,1)",
     "13: opacity_case: opacity choice",
-    "14: rho_crit_para: free parameter for calculation of rho_crit",
+    "14: UNUSED rho_crit_para: free parameter for calculation of rho_crit",
     "15: UNUSED debug_packet: (>=0: activate debug output for packet id, <0: ignore)",
     "16: simulation_continued_from_saved: (0: start new simulation, 1: continue from gridsave and packets files)",
     "17: UNUSED rfcut: wavelength at which the radiation field switches from the nebular approximation to LTE.",
@@ -1832,13 +1832,9 @@ void read_parameterfile(int rank) {
 
   assert_always(get_noncommentline(file, line));  // UNUSED components of syn_dir
 
-  assert_always(get_noncommentline(file, line));
-  std::istringstream{line} >> globals::opacity_case;  // opacity choice
+  assert_always(get_noncommentline(file, line));  // UNUSED opacity choice
 
-  assert_always(get_noncommentline(file, line));
-  std::istringstream{line} >> globals::rho_crit_para;  // free parameter for calculation of rho_crit
-  printlnlog("input: rho_crit_para {:g}", globals::rho_crit_para);
-  // the calculation of rho_crit itself depends on the time, therefore it happens in grid_init and update_grid
+  assert_always(get_noncommentline(file, line));  // UNUSED free parameter for calculation of rho_crit
 
   assert_always(get_noncommentline(file, line));
   int debug_packet = 0;

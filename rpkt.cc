@@ -945,20 +945,12 @@ void calculate_chi_rpkt_cont(const double nu_cmf, Rpkt_continuum_absorptioncoeff
   // free-free absorption
   chi_rpkt_cont.ffheat = calculate_chi_ffheating(nonemptymgi, nu_cmf, USECELLHISTANDUPDATEPHIXSLIST);
 
-  if (globals::opacity_case >= 4) {
-    [[likely]]
-    // First contribution: Thomson scattering on free electrons
-    chi_rpkt_cont.ffescat = SIGMA_T * nne;
+  // First contribution: Thomson scattering on free electrons
+  chi_rpkt_cont.ffescat = SIGMA_T * nne;
 
-    // Third contribution: bound-free absorption
-    chi_rpkt_cont.bf =
-        calculate_chi_bf_gammacontr<USECELLHISTANDUPDATEPHIXSLIST>(nonemptymgi, nu_cmf, chi_rpkt_cont.phixslist);
-
-  } else {
-    // in the other cases chi_grey is an mass absorption coefficient
-    chi_rpkt_cont.ffescat = 0.;
-    chi_rpkt_cont.bf = 0.;
-  }
+  // Third contribution: bound-free absorption
+  chi_rpkt_cont.bf =
+      calculate_chi_bf_gammacontr<USECELLHISTANDUPDATEPHIXSLIST>(nonemptymgi, nu_cmf, chi_rpkt_cont.phixslist);
 
   chi_rpkt_cont.nonemptymgi = nonemptymgi;
   chi_rpkt_cont.timestep = globals::timestep;

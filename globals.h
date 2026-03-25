@@ -122,11 +122,6 @@ constexpr double GREY_OP = 0.1;
 
 inline double max_path_step;
 
-inline int opacity_case{};  // 0 grey, 1 for Fe-grp dependence.
-                            // MK: 2 for Fe-grp dependence and proportional to 1/rho
-                            // MK: 3 combination of 1 & 2 depending on a rho_crit
-                            // MK: 4 non-grey treatment
-
 // ATOMIC DATA
 
 inline std::span<float> allphixs{};
@@ -295,10 +290,6 @@ inline int ntimesteps{-1};
 inline int timestep_initial{-1};
 inline int timestep_finish{-1};
 inline int timestep{-1};  // Current time step during the simulation
-
-inline double opcase3_normal;  // MK: normalisation factor for opacity_case 3
-inline double rho_crit_para;  // MK: free parameter for the selection of the critical opacity in opacity_case 3
-inline double rho_crit;  // MK: critical opacity in opacity_case 3 (could now be declared locally)
 
 inline int total_nlte_levels;
 
