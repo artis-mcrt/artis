@@ -687,9 +687,9 @@ auto do_rpkt_step(Packet& pkt, const double t2) -> bool {
     if (snext != pkt.where) {
       grid::change_cell(pkt, snext);
       new_nonemptymgi = grid::get_propcell_nonemptymgi(pkt.where);
+      return (pkt.type == TYPE_RPKT && (new_nonemptymgi < 0 || new_nonemptymgi == nonemptymgi));
     }
-
-    return (pkt.type == TYPE_RPKT && (new_nonemptymgi < 0 || new_nonemptymgi == nonemptymgi));
+    return true;  // if snext == pkt.where, we reached the maximum path length and are not changing cell
   }
 
   if ((tdist < sdist) && (tdist <= edist)) [[unlikely]] {
