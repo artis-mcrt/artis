@@ -215,13 +215,15 @@ constexpr bool USE_CALCULATED_MEANATOMICWEIGHT;
 
 constexpr bool WRITE_EMISSIONABSORPTION_SPEC_AT_END;
 
-// thermalisation scheme for non-thermal particles (positrons, electrons, alphas). ThermalisationScheme::INSTANT
-// instantly deposits all particle energy. ThermalisationScheme::DETAILED uses time-dependent Monte Carlo transport.
-// ThermalisationScheme::BARNES, and WOLLAEGER use analytic thermalisation efficiency functions.
-constexpr ThermalisationScheme PARTICLE_THERMALISATION_SCHEME;
+// thermalisation scheme for non-thermal particles (positrons, electrons, alphas). INSTANTFULLDEPOSITION
+// instantly deposits all particle energy. TIMEDEPENDENT uses time-dependent Monte Carlo transport.
+// BARNES, and WOLLAEGER use analytic thermalisation efficiency functions.
+constexpr auto PARTICLE_THERMALISATION_SCHEME;;
 
-// thermalisation scheme for gamma-ray photons. ThermalisationScheme::DETAILED uses full gamma-ray transport.
-constexpr ThermalisationScheme GAMMA_THERMALISATION_SCHEME;
+// thermalisation scheme for gamma-ray photons. FREQUENCYDEPENDENT is the full frequency-dependent gamma-ray transport.
+// TIMEDEPENDENTWITHGAMMAPRODUCTS also replaces the instant "gamma" deposition of Compton electrons and pair-production particles
+// with separate handling as particle deposition
+constexpr auto GAMMA_THERMALISATION_SCHEME;
 
 // Options for different types of timestep set-ups, only one of these can be true at one time. The hybrid timestep
 // schemes that switch between log and fixed require a transition time from one scheme to the other as well as the
