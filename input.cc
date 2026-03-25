@@ -105,15 +105,14 @@ constexpr std::array<std::string_view, 24> inputlinecomments = {
     " 7: UNUSED (now autodetected) model.txt number of dimensions (1, 2, or 3)",
     " 8: UNUSED compute r-light curve (1: no estimators, 2: thin cells, 3: thick cells, 4: gamma-ray heating)",
     " 9: UNUSED n_out_it: number of iterations",
-    "10: UNUSED: change speed of light by some factor. Change constants.h CLIGHT_PROP instead",
-    "11: gamma_kappagrey: if >0: use grey opacity for gammas, if <0: use detailed opacity",
-    "12: UNUSED: syn_dir: x, y, and z components of unit vector (now always 0,0,1)",
+    "10: UNUSED change speed of light by some factor. Change constants.h CLIGHT_PROP instead",
+    "11: UNUSED gamma_kappagrey: if >0: use grey opacity for gammas, if <0: use detailed opacity",
+    "12: UNUSED syn_dir: x, y, and z components of unit vector (now always 0,0,1)",
     "13: opacity_case: opacity choice",
     "14: rho_crit_para: free parameter for calculation of rho_crit",
     "15: UNUSED debug_packet: (>=0: activate debug output for packet id, <0: ignore)",
     "16: simulation_continued_from_saved: (0: start new simulation, 1: continue from gridsave and packets files)",
-    "17: UNUSED rfcut_angstroms: wavelength (in Angstroms) at which the parameterisation of the radiation field "
-    "switches from the nebular approximation to LTE.",
+    "17: UNUSED rfcut: wavelength at which the radiation field switches from the nebular approximation to LTE.",
     "18: num_lte_timesteps",
     "19: cell_is_optically_thick num_grey_timesteps",
     "20: UNUSED max_bf_continua: (>0: max bound-free continua per ion, <0 unlimited)",
@@ -1830,7 +1829,6 @@ void read_parameterfile(int rank) {
   assert_always(get_noncommentline(file, line));  // UNUSED change speed of light
 
   assert_always(get_noncommentline(file, line));
-  std::istringstream{line} >> globals::gamma_kappagrey;  // use grey opacity for gammas?
 
   assert_always(get_noncommentline(file, line));  // UNUSED components of syn_dir
 

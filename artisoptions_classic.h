@@ -150,6 +150,8 @@ constexpr auto PARTICLE_THERMALISATION_SCHEME = ThermalisationScheme::INSTANT;
 
 constexpr auto GAMMA_THERMALISATION_SCHEME = ThermalisationScheme::DETAILED;
 
+constexpr std::optional<double> GAMMA_USE_KAPPA_GREY;
+
 constexpr bool DECAY_SPONTFISSION_ON = false;
 
 // NOLINTEND(modernize*,misc-unused-parameters)

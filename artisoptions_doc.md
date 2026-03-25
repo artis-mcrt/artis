@@ -259,6 +259,9 @@ constexpr std::optional<float> RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY;
 // Use XCOM data for gamma photoionisation instead of Si+Fe Equation 2 of Ambwani & Sutherland (1988), Veigele (1973)
 constexpr bool USE_XCOM_GAMMAPHOTOION;
 
+// Override frequency-dependent gamma-ray opacity with a grey opacity (in cm2/g)
+constexpr std::optional<double> GAMMA_USE_KAPPA_GREY;
+
 // use fissiondecays.txt and fissionproducts_GEF_100keV.txt to handle spontaneous fission decays
 constexpr bool DECAY_SPONTFISSION_ON = false;
 
