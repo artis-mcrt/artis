@@ -1853,7 +1853,7 @@ void read_parameterfile(int rank) {
     printlnlog("input: starting a new simulation");
   }
 
-  // UNUSED free parameter for calculation of rho_crit
+  // UNUSED rfcut parameter (kept for backward-compatible input parsing)
   assert_always(get_noncommentline(file, line));
 
   // Sets the number of initial LTE timesteps for NLTE runs
