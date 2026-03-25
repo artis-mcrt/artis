@@ -481,7 +481,7 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
   const double compton_optical_depth_across_cell = SIGMA_T * nne * grid::propcell_width_tmin(mgi, 0) * tratmid;
 
   if (RPKT_GREY_TYPE == RpktGreyType::JUST2022_TEMP_LANTHANIDEFRAC) {
-    grid::calculate_cell_kappagrey(nonemptymgi);
+    grid::set_kappagrey(nonemptymgi, grid::calculate_cell_kappagrey(nonemptymgi));
   }
   const double radial_pos = grid::get_modelcell_mean_radial_pos(mgi, tratmid);
   const double grey_optical_depth_across_cell =

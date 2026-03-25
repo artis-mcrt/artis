@@ -1778,14 +1778,19 @@ void set_elements_uppermost_ion(const int nonemptymgi, const int element, const 
   elements_uppermost_ion_allcells[(nonemptymgi * get_nelements()) + element] = uppermost_ion;
 }
 
-void calculate_cell_kappagrey(const int nonemptymgi) {
+[[nodiscard]] auto calculate_cell_kappagrey(const int nonemptymgi) -> float {
   const int mgi = get_mgi_of_nonemptymgi(nonemptymgi);
-  if (get_rho_tmin(mgi) > 0) {
-    double kappa = 0.;
-    if (RPKT_GREY_TYPE == RpktGreyType::FEGROUP_APPROX) {
+  if (get_rho_tmin(mgi) <= 0.) {
+    return 0.;
+  }
+  double kappa = 0.;
+  switch (RPKT_GREY_TYPE) {
+    case RpktGreyType::FEGROUP_APPROX:
       // kappagrey used for initial grey approximation in case 4
       kappa = ((0.9 * get_ffegrp(mgi)) + 0.1) * globals::GREY_OP / ((0.9 * mfegroup / mtot_input) + 0.1);
-    } else if (RPKT_GREY_TYPE == RpktGreyType::TANAKA2020_ELECTRONFRAC) {
+      break;
+
+    case RpktGreyType::TANAKA2020_ELECTRONFRAC: {
       // electron-fraction-dependent opacities
       // values from table 1 of Tanaka et al. (2020).
       const auto Ye = modelgrid_input[mgi].initelectronfrac;
@@ -1806,7 +1811,10 @@ void calculate_cell_kappagrey(const int nonemptymgi) {
       } else {
         kappa = 0.96;
       }
-    } else if (RPKT_GREY_TYPE == RpktGreyType::JUST2022_TEMP_LANTHANIDEFRAC) {
+      break;
+    }
+
+    case RpktGreyType::JUST2022_TEMP_LANTHANIDEFRAC: {
       // grey opacity used in Just+2022, https://ui.adsabs.harvard.edu/abs/2022MNRAS.510.2820J/abstract
       // kappa is a simple analytic function of temperature and lanthanide mass fraction
       // adapted to best fit lightcurves from Kasen+2017 in ALCAR simulations
@@ -1832,14 +1840,13 @@ void calculate_cell_kappagrey(const int nonemptymgi) {
       if (T_rad < 2000.) {
         kappa *= pow(T_rad / 2000., 5.);
       }
-    } else {
-      assert_always(false);
     }
-
-    set_kappagrey(nonemptymgi, static_cast<float>(kappa));
-  } else {
-    set_kappagrey(nonemptymgi, 0.);
   }
+
+  const auto kappa_float = static_cast<float>(kappa);
+  assert_always(kappa_float >= 0.);
+  assert_always(std::isfinite(kappa_float));
+  return kappa_float;
 }
 
 void read_ejecta_model() {
@@ -2276,7 +2283,7 @@ void init_grid(const int my_rank) {
   double check2 = 0.;
   for (int nonemptymgi = 0; nonemptymgi < get_nonempty_npts_model(); nonemptymgi++) {
     const int mgi = get_mgi_of_nonemptymgi(nonemptymgi);
-    calculate_cell_kappagrey(nonemptymgi);
+    set_kappagrey(nonemptymgi, calculate_cell_kappagrey(nonemptymgi));
     check1 = check1 + (get_kappagrey(nonemptymgi) * get_rho_tmin(mgi));
     check2 = check2 + get_rho_tmin(mgi);
   }
