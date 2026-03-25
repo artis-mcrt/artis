@@ -705,6 +705,7 @@ auto do_rpkt_step(Packet& pkt, const double t2) -> bool {
   }
 
   assert_always(false);
+  return false;
 }
 
 // calculate the free-free absorption (to kpkt heating) coefficient [cm^-1]
