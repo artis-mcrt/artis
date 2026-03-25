@@ -683,14 +683,13 @@ auto do_rpkt_step(Packet& pkt, const double t2) -> bool {
     }
     move_pkt_withtime(pkt, sdist / 2.);
 
-    int new_nonemptymgi = nonemptymgi;
     if (snext != pkt.where) {
       grid::change_cell(pkt, snext);
       if (snext < 0) {
         // we left the grid, so we can stop tracking this packet
         return false;
       }
-      new_nonemptymgi = grid::get_propcell_nonemptymgi(pkt.where);
+      const auto new_nonemptymgi = grid::get_propcell_nonemptymgi(pkt.where);
       // if the new cell is empty or the same as the previous one, keep going, otherwise we'll need to change the cell
       // cache
       return ((new_nonemptymgi < 0) || (new_nonemptymgi == nonemptymgi));
