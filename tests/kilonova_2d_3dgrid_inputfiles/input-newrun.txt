@@ -11,7 +11,7 @@
 1.0                      # CLIGHT/CLIGHT: change speed of light by some factor
 -1                       # use grey opacity for gammas?
 0 0 1                    # syn_dir: x, y, and z components of unit vector (will be normalised after input or randomised if zero length)
-4                        # opacity_case: opacity choice
+5                        # opacity_case: opacity choice
 1.0e-10                  # rho_crit_para: free parameter for calculation of rho_crit
 -1                       # UNUSED debug_packet: (>=0: activate debug output for packet id, <0: ignore)
 0                        # simulation_continued_from_saved: (0: start new simulation, 1: continue from gridsave and packets files)
