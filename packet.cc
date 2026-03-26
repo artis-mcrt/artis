@@ -140,7 +140,7 @@ void packet_init(std::span<Packet> packets)
 }
 
 // write packets text file
-void write_packets(const std::string& filename, std::span<const Packet> packets) {
+void write_packets(const std::string& filename, const std::span<const Packet> packets) {
   auto packets_file = std::fstream(filename, std::ios::out | std::ios::trunc);
   assert_always(packets_file.is_open());
   packets_file << "#number where type_id posx posy posz dirx diry dirz tdecay e_cmf e_rf nu_cmf nu_rf "
@@ -170,18 +170,18 @@ void write_packets(const std::string& filename, std::span<const Packet> packets)
   }
 }
 
-void read_temp_packetsfile(const int timestep, const int my_rank, std::span<Packet> pkt) {
+auto read_temp_packetsfile(const int timestep, const int my_rank, std::span<Packet> pkt) -> std::span<Packet> {
   // read binary packets file
   const auto filename = std::format("packets_{:04d}_ts{:d}.tmp", my_rank, timestep);
 
   printlnlog("Reading {}", filename);
   auto packets_file = fopen_required_uniqueptr(filename, "rb");
   assert_always(std::fread(pkt.data(), sizeof(Packet), MPKTS, packets_file.get()) == static_cast<size_t>(MPKTS));
-
   printlnlog("done");
+  return pkt;
 }
 
-auto verify_temp_packetsfile(const int timestep, const int my_rank, std::span<const Packet> pkt) -> bool {
+auto verify_temp_packetsfile(const int timestep, const int my_rank, const std::span<const Packet> pkt) -> bool {
   // return true if verification is good, otherwise return false
 
   // read binary packets file
@@ -191,7 +191,7 @@ auto verify_temp_packetsfile(const int timestep, const int my_rank, std::span<co
   auto packets_file = fopen_required_uniqueptr(filename, "rb");
   Packet pkt_in;
   bool readback_passed = true;
-  for (int n = 0; n < MPKTS; n++) {
+  for (size_t n = 0; n < pkt.size(); n++) {
     assert_always(std::fread(&pkt_in, sizeof(Packet), 1, packets_file.get()) == 1);
     if (pkt_in != pkt[n]) {
       printlnlog("failed on packet {}", n);

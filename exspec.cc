@@ -87,12 +87,12 @@ void do_angle_bin(const int a, std::span<Packet> pkts, bool load_allrank_packets
 
       if (std::filesystem::exists(pktfilename)) {
         pkts_start = read_packets(pktfilename, pkts_start);
-        rank_npackets[p] = static_cast<int>(pkts_start.size());
       } else {
         printlnlog("   WARNING {} does not exist - trying temp packets file at beginning of timestep {}...",
                    pktfilename, globals::timestep_initial);
-        read_temp_packetsfile(globals::timestep_initial, p, pkts_start);
+        pkts_start = read_temp_packetsfile(globals::timestep_initial, p, pkts_start);
       }
+      rank_npackets[p] = static_cast<int>(pkts_start.size());
     }
 
     MPI_Barrier(MPI_COMM_WORLD);
