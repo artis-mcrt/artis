@@ -361,8 +361,8 @@ template <typename T>
 #pragma clang unsafe_buffer_usage begin
   size_t new_size = 0;
   void* voidptr = static_cast<void*>(ptr);
-  auto* aligned_ptr = std::assume_aligned<alignment_bytes>(
-      static_cast<T*>(std::align(alignment_bytes, (num_allranks * sizeof(T)) + alignment_bytes, voidptr, new_size)));
+  auto* aligned_ptr =
+      static_cast<T*>(std::align(alignment_bytes, (num_allranks * sizeof(T)) + alignment_bytes, voidptr, new_size));
   assert_always(aligned_ptr != nullptr);
   auto newspan = std::span<T>(aligned_ptr, num_allranks);
 #pragma clang unsafe_buffer_usage end
