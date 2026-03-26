@@ -261,7 +261,7 @@ void write_partial_lightcurve_spectra_dirbin(const int nts, std::span<const Pack
     const int node_rank = globals::rank_in_node;
 #endif
     if (node_rank == globals::rank_in_node) {
-      for (int ii = 0; ii < globals::npkts; ii++) {
+      for (int ii = 0; ii < std::ssize(pkts); ii++) {
         if (pkts[ii].type == TYPE_ESCAPE) {
           if (pkts[ii].escape_type == TYPE_RPKT) {
             add_to_lc_res(pkts[ii], dirbin, rpkt_light_curve_lum, rpkt_light_curve_lumcmf);

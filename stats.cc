@@ -8,6 +8,7 @@
 #include <cstdlib>
 #include <utility>
 
+#include "artisoptions.h"
 #include "constants.h"
 #include "globals.h"
 #include "grid.h"
@@ -33,7 +34,7 @@ void pkt_action_counters_reset() {
 auto get_counter(const Counter i) -> ptrdiff_t { return eventstats[std::to_underlying(i)]; }
 
 void pkt_action_counters_printout(const int nts) {
-  const double meaninteractions = static_cast<double>(get_counter(Counter::INTERACTIONS)) / globals::npkts;
+  const double meaninteractions = static_cast<double>(get_counter(Counter::INTERACTIONS)) / MPKTS;
   printlnlog("timestep {}: mean number of interactions per packet = {:g}", nts, meaninteractions);
 
   const double deltat = globals::timesteps[nts].width;

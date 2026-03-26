@@ -279,7 +279,7 @@ inline int node_id{-1};
 
 inline bool mpi_finalized{false};  // set to true after MPI_Finalize
 
-inline constexpr int npkts = MPKTS;
+inline int npkts = MPKTS;
 
 inline double vmax;
 inline double rmax;

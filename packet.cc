@@ -147,6 +147,9 @@ void write_packets(const std::string& filename, std::span<const Packet> pkt) {
                   "trueem_posx trueem_posy trueem_posz trueem_time pellet_nucindex pellet_decaytype\n";
 
   for (int i = 0; i < globals::npkts; i++) {
+    if (pkt[i].type == TYPE_ESCAPE && pkt[i].escape_type == TYPE_GAMMA) {
+      continue;
+    }
     packets_file << pkt[i].number << ' ' << pkt[i].where << ' ' << std::to_underlying(pkt[i].type) << ' ';
     packets_file << pkt[i].pos[0] << ' ' << pkt[i].pos[1] << ' ' << pkt[i].pos[2] << ' ';
     packets_file << pkt[i].dir[0] << ' ' << pkt[i].dir[1] << ' ' << pkt[i].dir[2] << ' ';
@@ -216,11 +219,11 @@ auto read_packets(const std::string& filename, std::span<Packet> packets) -> std
     packets_read++;
     const int i = packets_read - 1;
 
-    if (i > globals::npkts - 1) {
+    if (i >= std::ssize(packets)) {
       printlnlog(
           "ERROR: More data found beyond packet {} (expecting {} packets). Recompile exspec with the correct number of "
           "packets. Run (wc -l < packets00_0000.out) to count them.",
-          packets_read, globals::npkts);
+          packets_read, std::ssize(packets));
       std::abort();
     }
 
@@ -264,11 +267,8 @@ auto read_packets(const std::string& filename, std::span<Packet> packets) -> std
   }
 
   if (packets_read < globals::npkts) {
-    printlnlog(
-        "ERROR: Read failed after packet {} (expecting {} packets). Recompile exspec with the correct number of "
-        "packets. Run (wc -l < packets00_0000.out) to count them.",
-        packets_read, globals::npkts);
-    std::abort();
+    printlnlog("WARNING: Read {} out of a possible {} packets.", packets_read, globals::npkts);
+    globals::npkts = packets_read;
   }
   return packets;
 }
