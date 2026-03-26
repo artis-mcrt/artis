@@ -39,6 +39,10 @@ namespace {
 
 std::vector<HeatingCoolingRates> heatingcoolingrates_thisrankcells;
 
+#ifdef READ_CLUMPING_FACTORS_FROM_FILE
+std::fstream clumping_factors_file;
+#endif
+
 void write_to_estimators_file(std::ostream& estimators_file, const int nonemptymgi, const int timestep, const int titer,
                               const HeatingCoolingRates& heatingcoolingrates) {
   // return; disable for better performance (if estimators files are not needed)
@@ -362,6 +366,7 @@ static void titer_average_estimators(const int nonemptymgi) {
 }
 #endif
 
+/*
 void setup_clumping_factors_for_timestep(int nts) {  // todo: maybe other arguments as well
   const auto numcells = grid::get_npts_model();
 #ifdef READ_CLUMPING_FACTORS_FROM_FILE
@@ -402,8 +407,8 @@ void setup_clumping_factors_for_timestep(int nts) {  // todo: maybe other argume
   /////////////
 #endif
 }
+*/
 
-// TODO: Check iclumpfactor to use the clumping factors in this function
 void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, const int titer, const double tratmid,
                       const double deltat, HeatingCoolingRates& heatingcoolingrates) {
   const int mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
@@ -603,6 +608,20 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
   if (update_grid_cell_seconds > 0) {
     printlnlog("update_grid_cell for cell {} timestep {} took {} seconds", mgi, nts, update_grid_cell_seconds);
   }
+
+  // Update clumping factors
+  if constexpr (USE_MICROCLUMPING) {
+    float clump_factor;
+#ifdef READ_CLUMPING_FACTORS_FROM_FILE
+    clumping_factors_file >> clump_factor;
+#else
+    // const double tmid = globals::timesteps[nts].mid;
+    // const double rad_vel = grid::get_modelcell_mean_radial_vel(grid::get_mgi_of_nonemptymgi(nonemptymgi));
+    // clump_factor = clumping_factor(tmid, rad_vel);
+    clump_factor = 1. / (globals::my_rank + 1.);  // temp
+#endif
+    grid::set_clumpfactor(nonemptymgi, clump_factor);
+  }
 }
 
 }  // anonymous namespace
@@ -645,6 +664,9 @@ void update_grid(std::ostream& estimators_file, const int nts, const int nts_pre
   heatingcoolingrates_thisrankcells.resize(ndo_nonempty);
   std::ranges::fill(heatingcoolingrates_thisrankcells, HeatingCoolingRates{});
 
+  const auto nstart_nonempty = grid::get_nstart_nonempty(my_rank);
+
+  /*
   if constexpr (USE_MICROCLUMPING) {
     // Writing to shared memory, synchronise
     MPI_Barrier(globals::mpi_comm_node);
@@ -652,16 +674,25 @@ void update_grid(std::ostream& estimators_file, const int nts, const int nts_pre
     MPI_Barrier(MPI_COMM_WORLD);  // temp
     assert_always(false);  // temp
   }
-
-  const auto nstart_nonempty = grid::get_nstart_nonempty(my_rank);
+  */
 
 #ifdef _OPENMP
 #pragma omp parallel for schedule(dynamic)
 #endif
+
+#ifdef READ_CLUMPING_FACTORS_FROM_FILE
+  clumping_factors_file = fstream_required("clumping-factors.txt", std::ios::in);
+  clumping_factors_file.seekg((nts * numcells + nstart_nonempty) * (2 + 6 + 5));
+#endif
+
   for (int nonemptymgi = nstart_nonempty; nonemptymgi < (nstart_nonempty + ndo_nonempty); nonemptymgi++) {
     update_grid_cell(nonemptymgi, nts, nts_prev, titer, tratmid, deltat,
                      heatingcoolingrates_thisrankcells.at(nonemptymgi - nstart_nonempty));
   }
+
+#ifdef READ_CLUMPING_FACTORS_FROM_FILE
+  clumping_factors_file.close();
+#endif
 
   // serial output of estimator data to this ranks estimator file cell by cell
   const auto nstart = grid::get_nstart(my_rank);
