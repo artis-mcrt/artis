@@ -31,7 +31,7 @@
 
 namespace {
 
-constexpr bool WRITE_ESCAPED_GAMMAS = true;
+constexpr bool WRITE_ESCAPED_GAMMAS = false;
 
 // Place pellet n with energy e_cmf_per_packet in cell m
 void place_pellet(const double e_cmf_per_packet, const std::span<const double> en_cumulative, const int pktnumber,
