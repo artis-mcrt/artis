@@ -33,6 +33,8 @@ std::fstream output_file;
 
 namespace {
 
+std::vector<int> rank_npackets;
+
 void do_angle_bin(const int a, std::span<Packet> pkts, bool load_allrank_packets) {
   THREADLOCALONHOST std::vector<double> rpkt_light_curve_lum;
   resize_exactly(rpkt_light_curve_lum, globals::ntimesteps);
@@ -65,17 +67,27 @@ void do_angle_bin(const int a, std::span<Packet> pkts, bool load_allrank_packets
   constexpr double nu_max_gamma = 4. * MEV / H;
   THREADLOCALONHOST Spectra gamma_spectra;
   init_spectra(gamma_spectra, nu_min_gamma, nu_max_gamma, false);
-
+  std::ranges::fill(rank_npackets, MPKTS);
   assert_always(globals::nprocs_exspec > 0);
   for (int p = 0; p < globals::nprocs_exspec; p++) {
-    auto pkts_start = pkts.subspan(load_allrank_packets ? p * globals::npkts : 0, globals::npkts);
+    auto pkts_start = [&]() {
+      int offset = 0;
+      if (load_allrank_packets) {
+        for (int pp = 0; pp < p; pp++) {
+          offset += rank_npackets[pp];
+        }
+      }
+
+      return pkts.subspan(offset, MPKTS);
+    }();
 
     if (a == -1 || !load_allrank_packets) {
       auto pktfilename = std::format("packets{:02d}_{:04d}.out", 0, p);
       printlnlog("Reading {} (file {} of {})", pktfilename, p + 1, globals::nprocs_exspec);
 
       if (std::filesystem::exists(pktfilename)) {
-        read_packets(pktfilename, pkts_start);
+        pkts_start = read_packets(pktfilename, pkts_start);
+        rank_npackets[p] = static_cast<int>(pkts_start.size());
       } else {
         printlnlog("   WARNING {} does not exist - trying temp packets file at beginning of timestep {}...",
                    pktfilename, globals::timestep_initial);
@@ -93,7 +105,7 @@ void do_angle_bin(const int a, std::span<Packet> pkts, bool load_allrank_packets
     int nesc_tot = 0;
     int nesc_gamma = 0;
     int nesc_rpkt = 0;
-    for (int ii = 0; ii < globals::npkts; ii++) {
+    for (int ii = 0; ii < rank_npackets[p]; ii++) {
       if (pkts_start[ii].type == TYPE_ESCAPE) {
         nesc_tot++;
         if (pkts_start[ii].escape_type == TYPE_RPKT) {
@@ -111,7 +123,7 @@ void do_angle_bin(const int a, std::span<Packet> pkts, bool load_allrank_packets
       }
     }
     if (a == -1 || !load_allrank_packets) {
-      printlnlog("  {} of {} packets escaped ({} gamma-pkts and {} r-pkts)", nesc_tot, globals::npkts, nesc_gamma,
+      printlnlog("  {} of {} packets escaped ({} gamma-pkts and {} r-pkts)", nesc_tot, rank_npackets[p], nesc_gamma,
                  nesc_rpkt);
     }
   }
@@ -199,13 +211,13 @@ auto main(int argc, char* argv[]) -> int {
 
   std::vector<Packet> pkts;
   bool load_allrank_packets = false;
-  const ptrdiff_t npkts_allranks = static_cast<ptrdiff_t>(globals::nprocs_exspec) * globals::npkts;
+  const ptrdiff_t npkts_allranks = static_cast<ptrdiff_t>(globals::nprocs_exspec) * MPKTS;
   try {
     // try to allocate memory for all packets from all ranks
     resize_exactly(pkts, npkts_allranks);
     printlnlog(
         "mem_usage: loading {} packets from each {} processes simultaneously (total {} packets, {:.1f} MB memory)",
-        globals::npkts, globals::nprocs_exspec, npkts_allranks, npkts_allranks * sizeof(Packet) / 1024. / 1024.);
+        MPKTS, globals::nprocs_exspec, npkts_allranks, npkts_allranks * sizeof(Packet) / 1024. / 1024.);
     load_allrank_packets = true;
   } catch (const std::bad_alloc& e) {
     // if we can't allocate memory for all packets, try to allocate memory for just one rank
@@ -213,8 +225,8 @@ auto main(int argc, char* argv[]) -> int {
     printlnlog("mem_usage: malloc failed to allocate memory for all packets");
     printlnlog(
         "mem_usage: loading {} packets from each of {} processes sequentially (total {} packets, {:.1f} MB memory)",
-        globals::npkts, globals::nprocs_exspec, npkts_allranks, npkts_allranks * sizeof(Packet) / 1024. / 1024.);
-    resize_exactly(pkts, globals::npkts);
+        MPKTS, globals::nprocs_exspec, npkts_allranks, npkts_allranks * sizeof(Packet) / 1024. / 1024.);
+    resize_exactly(pkts, MPKTS);
   }
 
   init_spectrum_trace();  // needed for TRACE_EMISSION_ABSORPTION_REGION_ON

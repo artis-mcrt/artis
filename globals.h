@@ -10,8 +10,6 @@
 #include <mpi.h>
 #pragma clang unsafe_buffer_usage end
 
-#include "artisoptions.h"
-
 enum ma_action {
   // Radiative deexcitation rate from this level.
   MA_ACTION_RADDEEXC = 0,
@@ -278,8 +276,6 @@ inline int node_count{-1};
 inline int node_id{-1};
 
 inline bool mpi_finalized{false};  // set to true after MPI_Finalize
-
-inline int npkts = MPKTS;
 
 inline double vmax;
 inline double rmax;

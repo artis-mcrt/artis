@@ -71,8 +71,8 @@ struct Packet {
   auto operator<=>(const Packet& rhs) const = default;
 };
 
-void packet_init(std::span<Packet> pkt);
-void write_packets(const std::string& filename, std::span<const Packet> pkt);
+void packet_init(std::span<Packet> packets);
+void write_packets(const std::string& filename, std::span<const Packet> packets);
 auto read_packets(const std::string& filename, std::span<Packet> packets) -> std::span<Packet>;
 void read_temp_packetsfile(int timestep, int my_rank, std::span<Packet> pkt);
 [[nodiscard]] auto verify_temp_packetsfile(int timestep, int my_rank, std::span<const Packet> pkt) -> bool;

@@ -795,7 +795,7 @@ auto main(int argc, char* argv[]) -> int {
   }
 
   std::vector<Packet> packets;
-  resize_exactly(packets, globals::npkts);
+  resize_exactly(packets, MPKTS);
 
   printlnlog("git branch {}", GIT_BRANCH);
 
@@ -859,8 +859,8 @@ auto main(int argc, char* argv[]) -> int {
 
   grid::init_grid(my_rank);
 
-  printlnlog("Simulation propagates {:g} packets per process (total {:g} with nprocs {})", 1. * globals::npkts,
-             1. * globals::npkts * globals::nprocs, globals::nprocs);
+  printlnlog("Simulation propagates {:g} packets per process (total {:g} with nprocs {})", 1. * MPKTS,
+             1. * MPKTS * globals::nprocs, globals::nprocs);
 
   printlnlog("[info] mem_usage: packets occupy {:.3f} MB", MPKTS * sizeof(Packet) / 1024. / 1024.);
 
