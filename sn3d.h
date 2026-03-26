@@ -343,8 +343,8 @@ template <typename T>
   }
   assert_always(num_allranks >= 0);
 
-  const auto [_, num_thisnoderank] = get_range_chunk(num_allranks, globals::node_nprocs, globals::rank_in_node);
-  assert_always(num_thisnoderank >= 0);
+  // only rank 0 on each node allocates memory, but all ranks will get a pointer to it
+  const auto num_thisnoderank = (globals::rank_in_node == 0) ? num_allranks : 0;
 
   auto size = static_cast<MPI_Aint>(num_thisnoderank * sizeof(T));
   int disp_unit = sizeof(T);
