@@ -350,9 +350,12 @@ template <typename T>
   int disp_unit = sizeof(T);
   MPI_Win mpiwin{MPI_WIN_NULL};
   T* ptr{};
-
-  assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
-                                        static_cast<void*>(&ptr), &mpiwin) == MPI_SUCCESS);
+  MPI_Info info{};
+  MPI_Info_create(&info);
+  // Request 64-byte alignment (e.g., for AVX-512)
+  MPI_Info_set(info, "mpi_minimum_memory_alignment", "64");
+  assert_always(MPI_Win_allocate_shared(size, disp_unit, info, globals::mpi_comm_node, static_cast<void*>(&ptr),
+                                        &mpiwin) == MPI_SUCCESS);
   assert_always(MPI_Win_shared_query(mpiwin, 0, &size, &disp_unit, static_cast<void*>(&ptr)) == MPI_SUCCESS);
   assert_always(ptr != nullptr);
 #pragma clang unsafe_buffer_usage begin
