@@ -343,7 +343,7 @@ template <typename T>
   }
   assert_always(num_allranks >= 0);
 
-  // only rank 0 on each node allocates memory, but all ranks will get a pointer to it
+  // only rank_in_node 0 on each node allocates memory, but all ranks will get a pointer to it
   const auto num_thisnoderank = (globals::rank_in_node == 0) ? num_allranks : 0;
 
   auto size = static_cast<MPI_Aint>(num_thisnoderank * sizeof(T));
@@ -356,6 +356,7 @@ template <typename T>
   MPI_Info_set(info, "mpi_minimum_memory_alignment", "64");
   assert_always(MPI_Win_allocate_shared(size, disp_unit, info, globals::mpi_comm_node, static_cast<void*>(&ptr),
                                         &mpiwin) == MPI_SUCCESS);
+  MPI_Info_free(&info);
   assert_always(MPI_Win_shared_query(mpiwin, 0, &size, &disp_unit, static_cast<void*>(&ptr)) == MPI_SUCCESS);
   assert_always(ptr != nullptr);
 #pragma clang unsafe_buffer_usage begin
