@@ -359,6 +359,9 @@ template <typename T>
   MPI_Info_free(&info);
   assert_always(MPI_Win_shared_query(mpiwin, 0, &size, &disp_unit, static_cast<void*>(&ptr)) == MPI_SUCCESS);
   assert_always(ptr != nullptr);
+#ifdef __cpp_lib_is_sufficiently_aligned
+  assert_always(std::is_sufficiently_aligned<64>(ptr));
+#endif
 #pragma clang unsafe_buffer_usage begin
   const auto newspan = std::span<T>(ptr, num_allranks);
 #pragma clang unsafe_buffer_usage end
