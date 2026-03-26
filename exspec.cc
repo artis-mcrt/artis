@@ -67,6 +67,7 @@ void do_angle_bin(const int a, std::span<Packet> pkts, bool load_allrank_packets
   constexpr double nu_max_gamma = 4. * MEV / H;
   THREADLOCALONHOST Spectra gamma_spectra;
   init_spectra(gamma_spectra, nu_min_gamma, nu_max_gamma, false);
+  resize_exactly(rank_npackets, globals::nprocs_exspec);
   std::ranges::fill(rank_npackets, MPKTS);
   assert_always(globals::nprocs_exspec > 0);
   for (int p = 0; p < globals::nprocs_exspec; p++) {
@@ -77,7 +78,6 @@ void do_angle_bin(const int a, std::span<Packet> pkts, bool load_allrank_packets
           offset += rank_npackets[pp];
         }
       }
-
       return pkts.subspan(offset, MPKTS);
     }();
 
@@ -88,6 +88,7 @@ void do_angle_bin(const int a, std::span<Packet> pkts, bool load_allrank_packets
       if (std::filesystem::exists(pktfilename)) {
         pkts_start = read_packets(pktfilename, pkts_start);
         rank_npackets[p] = static_cast<int>(pkts_start.size());
+        printlnlog("  DEBUG read {} packets", rank_npackets[p]);
       } else {
         printlnlog("   WARNING {} does not exist - trying temp packets file at beginning of timestep {}...",
                    pktfilename, globals::timestep_initial);
@@ -105,7 +106,7 @@ void do_angle_bin(const int a, std::span<Packet> pkts, bool load_allrank_packets
     int nesc_tot = 0;
     int nesc_gamma = 0;
     int nesc_rpkt = 0;
-    for (int ii = 0; ii < rank_npackets[p]; ii++) {
+    for (int ii = 0; ii < std::ssize(pkts_start); ii++) {
       if (pkts_start[ii].type == TYPE_ESCAPE) {
         nesc_tot++;
         if (pkts_start[ii].escape_type == TYPE_RPKT) {

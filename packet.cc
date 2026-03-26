@@ -209,7 +209,7 @@ auto verify_temp_packetsfile(const int timestep, const int my_rank, std::span<co
   return readback_passed;
 }
 
-auto read_packets(const std::string& filename, std::span<Packet> packets) -> std::span<Packet> {
+auto read_packets(const std::string& filename, const std::span<Packet> packets) -> std::span<Packet> {
   // read packets*.out text format file
   auto packets_file = fstream_required(filename, std::ios::in);
 
@@ -269,7 +269,7 @@ auto read_packets(const std::string& filename, std::span<Packet> packets) -> std
 
   if (packets_read < MPKTS) {
     printlnlog("WARNING: Read {} out of a possible {} packets.", packets_read, MPKTS);
-    packets = packets.first(packets_read);
+    return packets.first(packets_read);
   }
   return packets;
 }
