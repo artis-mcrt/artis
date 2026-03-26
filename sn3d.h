@@ -8,6 +8,7 @@
 #include <array>
 #include <atomic>
 #include <cassert>
+#include <cmath>
 #include <csignal>
 #include <cstdarg>
 #include <cstddef>
@@ -335,6 +336,7 @@ static_assert(get_range_chunk(10, 3, 0) == std::tuple{0, 4});
 static_assert(get_range_chunk(10, 3, 1) == std::tuple{4, 3});
 static_assert(get_range_chunk(10, 3, 2) == std::tuple{7, 3});
 
+constexpr size_t alignment_bytes{64};  // 64 byte alignment for AVX-512
 template <typename T>
 [[nodiscard]] auto MPI_shared_malloc_span_keepwin(const ptrdiff_t num_allranks, const T& initval = {})
     -> std::tuple<std::span<T>, MPI_Win> {
@@ -346,7 +348,8 @@ template <typename T>
   const auto [_, num_thisnoderank] = get_range_chunk(num_allranks, globals::node_nprocs, globals::rank_in_node);
   assert_always(num_thisnoderank >= 0);
 
-  auto size = static_cast<MPI_Aint>(num_thisnoderank * sizeof(T));
+  auto size =
+      static_cast<MPI_Aint>((num_thisnoderank * sizeof(T)) + ((globals::rank_in_node == 0) ? alignment_bytes : 0));
   int disp_unit = sizeof(T);
   MPI_Win mpiwin{MPI_WIN_NULL};
   T* ptr{};
@@ -356,7 +359,12 @@ template <typename T>
   assert_always(MPI_Win_shared_query(mpiwin, 0, &size, &disp_unit, static_cast<void*>(&ptr)) == MPI_SUCCESS);
   assert_always(ptr != nullptr);
 #pragma clang unsafe_buffer_usage begin
-  const auto newspan = std::span<T>(ptr, num_allranks);
+  size_t new_size = 0;
+  void* voidptr = static_cast<void*>(ptr);
+  auto* aligned_ptr =
+      static_cast<T*>(std::align(alignment_bytes, (num_allranks * sizeof(T)) + alignment_bytes, voidptr, new_size));
+  assert_always(aligned_ptr != nullptr);
+  auto newspan = std::span<T>(aligned_ptr, num_allranks);
 #pragma clang unsafe_buffer_usage end
   // initialise the shared memory
   if (globals::rank_in_node == 0) {
