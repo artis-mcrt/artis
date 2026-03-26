@@ -351,12 +351,12 @@ template <typename T>
   MPI_Win mpiwin{MPI_WIN_NULL};
   T* ptr{};
   MPI_Info info{};
-  MPI_Info_create(&info);
+  assert_always(MPI_Info_create(&info) == MPI_SUCCESS);
   // Request 64-byte alignment (e.g., for AVX-512)
-  MPI_Info_set(info, "mpi_minimum_memory_alignment", "64");
+  assert_always(MPI_Info_set(info, "mpi_minimum_memory_alignment", "64") == MPI_SUCCESS);
   assert_always(MPI_Win_allocate_shared(size, disp_unit, info, globals::mpi_comm_node, static_cast<void*>(&ptr),
                                         &mpiwin) == MPI_SUCCESS);
-  MPI_Info_free(&info);
+  assert_always(MPI_Info_free(&info) == MPI_SUCCESS);
   assert_always(MPI_Win_shared_query(mpiwin, 0, &size, &disp_unit, static_cast<void*>(&ptr)) == MPI_SUCCESS);
   assert_always(ptr != nullptr);
 #ifdef __cpp_lib_is_sufficiently_aligned
