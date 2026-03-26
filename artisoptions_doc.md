@@ -3,7 +3,7 @@
 constexpr int MPKTS;
 
 // override to GridType::CARTESIAN3D, GridType::CYLINDRICAL2D, GridType::SPHERICAL1D, or leave with no value to autodetect from model.txt
-constexpr std::optional<GridType> GRID_TYPE;
+constexpr std::optional<GridType> GRID_TYPE_OVERRIDE;
 
 // for GridType::CARTESIAN3D, set the grid size from 1D and 2D input models. For a 3D model.txt, these will be ignored and set to match the input grid.
 constexpr int CUBOID_NCOORDGRID_X;

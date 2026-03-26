@@ -9,7 +9,7 @@
 
 constexpr int MPKTS = 10000;
 
-constexpr std::optional<GridType> GRID_TYPE;
+constexpr std::optional<GridType> GRID_TYPE_OVERRIDE;
 constexpr int CUBOID_NCOORDGRID_X = 100;
 constexpr int CUBOID_NCOORDGRID_Y = 100;
 constexpr int CUBOID_NCOORDGRID_Z = 100;
