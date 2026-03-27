@@ -387,7 +387,8 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
     clumping_factors_file >> clump_factor;
 #else
     const double tmid = globals::timesteps[nts].mid;
-    const double rad_vel = grid::get_modelcell_mean_radial_vel(grid::get_mgi_of_nonemptymgi(nonemptymgi));
+    const double rad_vel =
+        grid::get_modelcell_mean_radial_vel(grid::get_mgi_of_nonemptymgi(nonemptymgi), globals::tmin);
     clump_factor = clumping_factor(tmid, rad_vel);
 #endif
     grid::set_clumpfactor(nonemptymgi, clump_factor);
