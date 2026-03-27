@@ -390,7 +390,7 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
     const double rad_vel = grid::get_modelcell_mean_radial_vel(grid::get_mgi_of_nonemptymgi(nonemptymgi));
     clump_factor = clumping_factor(tmid, rad_vel);
 #endif
-    if (nonemptymgi != 98) grid::set_clumpfactor(nonemptymgi, clump_factor);
+    grid::set_clumpfactor(nonemptymgi, clump_factor);
   }
 
   // Update elemental abundances with radioactive decays
