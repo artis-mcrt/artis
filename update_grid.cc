@@ -624,12 +624,6 @@ void update_grid(std::ostream& estimators_file, const int nts, const int nts_pre
 
   const auto nstart_nonempty = grid::get_nstart_nonempty(my_rank);
 
-    setup_clumping_factors_for_timestep(nts);
-    MPI_Barrier(MPI_COMM_WORLD);  // temp
-    assert_always(false);  // temp
-  }
-  */
-
 #ifdef _OPENMP
 #pragma omp parallel for schedule(dynamic)
 #endif
