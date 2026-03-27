@@ -366,49 +366,6 @@ static void titer_average_estimators(const int nonemptymgi) {
 }
 #endif
 
-/*
-void setup_clumping_factors_for_timestep(int nts) {  // todo: maybe other arguments as well
-  const auto numcells = grid::get_npts_model();
-#ifdef READ_CLUMPING_FACTORS_FROM_FILE
-  auto fclump = fstream_required("clumping-factors.txt", std::ios::in);
-  float fv_in = 0.;
-  fclump.seekg(nts * numcells * (2 + 6 + 5));  // %f.6e (x.xxxxxxe-xx)
-
-  int nonemptymgi = 0;
-  for (int i = 0; i < numcells; i++) {
-    fclump >> fv_in;
-    if (grid::check_mgi_is_nonempty(i, nonemptymgi)) {
-      grid::set_clumpfactor(nonemptymgi, 1.F / fv_in);
-    }
-  }
-
-  fclump.close();
-#else
-  int nonemptymgi = 0;
-  const double tmid = globals::timesteps[nts].mid;
-  printlog("My nonemptymgis are ");  // temp
-  for (int i = 0; i < numcells; i++) {
-    if ((i % globals::node_nprocs) == globals::rank_in_node && grid::check_mgi_is_nonempty(i, nonemptymgi)) {
-      const double rad_vel = grid::get_modelcell_mean_radial_vel(i);
-      grid::set_clumpfactor(nonemptymgi, clumping_factor(tmid, rad_vel));
-      printlog("{} ", nonemptymgi);  // temp
-    }
-  }
-  printlnlog("");  // temp
-
-  ///////////// temp
-  printlog("My clumping factors are ");
-  for (int i = 0; i < numcells; i++) {
-    if (grid::check_mgi_is_nonempty(i, nonemptymgi)) {
-      printlog("{} ", grid::get_clumpfactor(nonemptymgi));
-    }
-  }
-  printlnlog("");
-  /////////////
-#endif
-}
-*/
-
 void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, const int titer, const double tratmid,
                       const double deltat, HeatingCoolingRates& heatingcoolingrates) {
   const int mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
@@ -617,10 +574,9 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
     clumping_factors_file >> inbuf;
     clump_factor = stof(inbuf);
 #else
-    // const double tmid = globals::timesteps[nts].mid;
-    // const double rad_vel = grid::get_modelcell_mean_radial_vel(grid::get_mgi_of_nonemptymgi(nonemptymgi));
-    // clump_factor = clumping_factor(tmid, rad_vel);
-    clump_factor = 1. / (globals::my_rank + 1.);  // temp
+    const double tmid = globals::timesteps[nts].mid;
+    const double rad_vel = grid::get_modelcell_mean_radial_vel(grid::get_mgi_of_nonemptymgi(nonemptymgi));
+    clump_factor = clumping_factor(tmid, rad_vel);
 #endif
     grid::set_clumpfactor(nonemptymgi, clump_factor);
   }
@@ -668,10 +624,6 @@ void update_grid(std::ostream& estimators_file, const int nts, const int nts_pre
 
   const auto nstart_nonempty = grid::get_nstart_nonempty(my_rank);
 
-  /*
-  if constexpr (USE_MICROCLUMPING) {
-    // Writing to shared memory, synchronise
-    MPI_Barrier(globals::mpi_comm_node);
     setup_clumping_factors_for_timestep(nts);
     MPI_Barrier(MPI_COMM_WORLD);  // temp
     assert_always(false);  // temp
@@ -698,16 +650,6 @@ void update_grid(std::ostream& estimators_file, const int nts, const int nts_pre
 #ifdef READ_CLUMPING_FACTORS_FROM_FILE
   clumping_factors_file.close();
 #endif
-
-  MPI_Barrier(globals::mpi_comm_node);
-  printlog("My clumping factors are ");
-  int nmgi;
-  for (int i = 0; i < grid::get_npts_model(); i++) {
-    if (grid::check_mgi_is_nonempty(i, nmgi)) {
-      printlog("{} ", grid::get_clumpfactor(nmgi));
-    }
-  }
-  printlnlog("");
 
   // serial output of estimator data to this ranks estimator file cell by cell
   const auto nstart = grid::get_nstart(my_rank);
