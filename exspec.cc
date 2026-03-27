@@ -123,8 +123,7 @@ void do_angle_bin(const int a, std::span<Packet> pkts, bool load_allrank_packets
       }
     }
     if (a == -1 || !load_allrank_packets) {
-      printlnlog("  {} of {} packets escaped ({} gamma-pkts and {} r-pkts)", nesc_tot, rank_npackets[p], nesc_gamma,
-                 nesc_rpkt);
+      printlnlog("  {} of {} packets escaped ({} gamma-pkts and {} r-pkts)", nesc_tot, MPKTS, nesc_gamma, nesc_rpkt);
     }
   }
 
