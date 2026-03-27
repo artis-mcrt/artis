@@ -613,7 +613,9 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
   if constexpr (USE_MICROCLUMPING) {
     float clump_factor;
 #ifdef READ_CLUMPING_FACTORS_FROM_FILE
-    clumping_factors_file >> clump_factor;
+    std::string inbuf;
+    clumping_factors_file >> inbuf;
+    clump_factor = stof(inbuf);
 #else
     // const double tmid = globals::timesteps[nts].mid;
     // const double rad_vel = grid::get_modelcell_mean_radial_vel(grid::get_mgi_of_nonemptymgi(nonemptymgi));
@@ -681,6 +683,7 @@ void update_grid(std::ostream& estimators_file, const int nts, const int nts_pre
 #endif
 
 #ifdef READ_CLUMPING_FACTORS_FROM_FILE
+  // TODO: this assumes you know beforehand how many nonempty cells there are. Don't know if that's someting that can be
   clumping_factors_file = fstream_required("clumping-factors.txt", std::ios::in);
   clumping_factors_file.seekg((nts * numcells + nstart_nonempty) * (2 + 6 + 5));
 #endif
@@ -694,6 +697,14 @@ void update_grid(std::ostream& estimators_file, const int nts, const int nts_pre
   clumping_factors_file.close();
 #endif
 
+  MPI_Barrier(globals::mpi_comm_node);
+  printlog("My clumping factors are ");
+  int nmgi;
+  for (int i = 0; i < grid::get_npts_model(); i++) {
+    if (grid::check_mgi_is_nonempty(i, nmgi)) {
+      printlog("{} ", grid::get_clumpfactor(nmgi));
+    }
+  }
   // serial output of estimator data to this ranks estimator file cell by cell
   const auto nstart = grid::get_nstart(my_rank);
   const auto ndo = grid::get_ndo(my_rank);
