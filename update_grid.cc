@@ -601,8 +601,8 @@ void update_grid(std::ostream& estimators_file, const int nts, const int nts_pre
 
 #ifdef READ_CLUMPING_FACTORS_FROM_FILE
   clumping_factors_file = fstream_required("clumping-factors.txt", std::ios::in);
-  // TODO: this assumes you know beforehand how many nonempty cells there are. Don't know if that's something that can be
-  // precalculated??
+  // TODO: this assumes you know beforehand how many nonempty cells there are. Don't know if that's something that can
+  // be precalculated??
   clumping_factors_file.seekg((nts * grid::get_nonempty_npts_model() + nstart_nonempty) * (2 + 6 + 5));
 #endif
 
