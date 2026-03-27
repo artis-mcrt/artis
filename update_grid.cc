@@ -380,6 +380,19 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
   const auto rho = static_cast<float>(grid::get_rho_tmin(mgi) / pow(tratmid, 3));
   grid::set_rho(nonemptymgi, rho);
 
+  // Update clumping factors
+  if constexpr (USE_MICROCLUMPING) {
+    float clump_factor;
+#ifdef READ_CLUMPING_FACTORS_FROM_FILE
+    clumping_factors_file >> clump_factor;
+#else
+    const double tmid = globals::timesteps[nts].mid;
+    const double rad_vel = grid::get_modelcell_mean_radial_vel(grid::get_mgi_of_nonemptymgi(nonemptymgi));
+    clump_factor = clumping_factor(tmid, rad_vel);
+#endif
+    if (nonemptymgi != 98) grid::set_clumpfactor(nonemptymgi, clump_factor);
+  }
+
   // Update elemental abundances with radioactive decays
   decay::update_abundances(nonemptymgi, globals::timesteps[nts].mid);
   nonthermal::calculate_deposition_rate_density(nonemptymgi, nts, heatingcoolingrates);
@@ -565,19 +578,6 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
   if (update_grid_cell_seconds > 0) {
     printlnlog("update_grid_cell for cell {} timestep {} took {} seconds", mgi, nts, update_grid_cell_seconds);
   }
-
-  // Update clumping factors
-  if constexpr (USE_MICROCLUMPING) {
-    float clump_factor;
-#ifdef READ_CLUMPING_FACTORS_FROM_FILE
-    clumping_factors_file >> clump_factor;
-#else
-    const double tmid = globals::timesteps[nts].mid;
-    const double rad_vel = grid::get_modelcell_mean_radial_vel(grid::get_mgi_of_nonemptymgi(nonemptymgi));
-    clump_factor = clumping_factor(tmid, rad_vel);
-#endif
-    grid::set_clumpfactor(nonemptymgi, clump_factor);
-  }
 }
 
 }  // anonymous namespace
@@ -622,18 +622,16 @@ void update_grid(std::ostream& estimators_file, const int nts, const int nts_pre
 
   const auto nstart_nonempty = grid::get_nstart_nonempty(my_rank);
 
+#ifdef READ_CLUMPING_FACTORS_FROM_FILE
+  clumping_factors_file = fstream_required("clumping-factors.txt", std::ios::in);
+  // TODO: this assumes you know beforehand how many nonempty cells there are. Don't know if that's someting that can be
+  // precalculated??
+  clumping_factors_file.seekg((nts * grid::get_nonempty_npts_model() + nstart_nonempty) * (2 + 6 + 5));
+#endif
+
 #ifdef _OPENMP
 #pragma omp parallel for schedule(dynamic)
 #endif
-
-#ifdef READ_CLUMPING_FACTORS_FROM_FILE
-  // TODO: this assumes you know beforehand how many nonempty cells there are. Don't know if that's someting that can be
-  // precalculated??
-  const int numcells = grid::get_nonempty_npts_model();
-  clumping_factors_file = fstream_required("clumping-factors.txt", std::ios::in);
-  clumping_factors_file.seekg((nts * numcells + nstart_nonempty) * (2 + 6 + 5));
-#endif
-
   for (int nonemptymgi = nstart_nonempty; nonemptymgi < (nstart_nonempty + ndo_nonempty); nonemptymgi++) {
     update_grid_cell(nonemptymgi, nts, nts_prev, titer, tratmid, deltat,
                      heatingcoolingrates_thisrankcells.at(nonemptymgi - nstart_nonempty));
