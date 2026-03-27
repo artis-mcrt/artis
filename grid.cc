@@ -1553,7 +1553,7 @@ auto get_rho_tmin(const int modelgridindex) -> float { return modelgrid_input[mo
   // TODO: both versions give the same thing. uncommented one should give ever so slightly better performance
 
   const int assoc_cells = grid::get_numpropcells(modelgridindex);
-  return modelgrid_input[modelgridindex].initial_radial_pos_sum / globals::tmin / assoc_cells;
+  return modelgrid_input[modelgridindex].initial_radial_pos_sum / tmin / assoc_cells;
   // ---------------
   // return get_modelcell_mean_radial_pos(modelgridindex, tratmid) / tmid;
 }
