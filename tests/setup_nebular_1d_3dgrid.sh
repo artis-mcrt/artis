@@ -6,7 +6,7 @@ runfolder=nebular_1d_3dgrid_testrun
 
 rsync -av nebular_1d_3dgrid_inputfiles/ nebular_1d_3dgrid_testrun/
 
-if [ ! -f atomicdata_feconi.tar.xz ]; then curl -O https://theory.gsi.de/~lshingle/artis_http_public/artis/atomicdata_feconi.tar.xz; fi
+if [ ! -f atomicdata_feconi.tar.xz ]; then curl --insecure -O https://theory.gsi.de/~lshingle/artis_http_public/artis/atomicdata_feconi.tar.xz; fi
 
 tar -xf atomicdata_feconi.tar.xz --directory nebular_1d_3dgrid_testrun/
 
@@ -18,7 +18,7 @@ cd nebular_1d_3dgrid_testrun
 
 sed -i'' -e 's/constexpr int MPKTS.*/constexpr int MPKTS = 1000000;/g' artisoptions.h
 
-sed -i'' -e 's/constexpr auto GRID_TYPE.*/constexpr auto GRID_TYPE = GridType::CARTESIAN3D;/g' artisoptions.h
+sed -i'' -e 's/constexpr std::optional<GridType> GRID_TYPE_OVERRIDE.*/constexpr std::optional<GridType> GRID_TYPE_OVERRIDE = GridType::CARTESIAN3D;/g' artisoptions.h
 
 sed -i'' -e 's/constexpr int CUBOID_NCOORDGRID_X.*/constexpr int CUBOID_NCOORDGRID_X = 50;/g' artisoptions.h
 sed -i'' -e 's/constexpr int CUBOID_NCOORDGRID_Y.*/constexpr int CUBOID_NCOORDGRID_Y = 50;/g' artisoptions.h

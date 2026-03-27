@@ -9,7 +9,7 @@
 
 constexpr int MPKTS = 100000;
 
-constexpr auto GRID_TYPE = GridType::CARTESIAN3D;
+constexpr std::optional<GridType> GRID_TYPE_OVERRIDE;
 constexpr int CUBOID_NCOORDGRID_X = 100;
 constexpr int CUBOID_NCOORDGRID_Y = 100;
 constexpr int CUBOID_NCOORDGRID_Z = 100;
@@ -129,7 +129,7 @@ constexpr bool USE_CALCULATED_MEANATOMICWEIGHT = false;
 
 constexpr bool WRITE_EMISSIONABSORPTION_SPEC_AT_END = false;
 
-constexpr auto TIMESTEP_SIZE_METHOD = TimeStepSizeMethod::LOGARITHMIC;
+constexpr TimeStepSizeMethod TIMESTEP_SIZE_METHOD = TimeStepSizeMethod::LOGARITHMIC;
 
 constexpr double FIXED_TIMESTEP_WIDTH = -1.;
 
@@ -143,11 +143,15 @@ constexpr bool EXPANSIONOPACITIES_ON = false;
 
 constexpr std::optional<float> RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY;
 
+constexpr RpktGreyType RPKT_GREY_TYPE = RpktGreyType::FEGROUP_APPROX;
+
 constexpr bool USE_XCOM_GAMMAPHOTOION = false;
 
-constexpr auto PARTICLE_THERMALISATION_SCHEME = ThermalisationScheme::INSTANT;
+constexpr auto PARTICLE_THERMALISATION_SCHEME = ParticleThermalisationScheme::INSTANTFULLDEPOSITION;
 
-constexpr auto GAMMA_THERMALISATION_SCHEME = ThermalisationScheme::DETAILED;
+constexpr auto GAMMA_THERMALISATION_SCHEME = GammaThermalisationScheme::FREQUENCYDEPENDENT;
+
+constexpr std::optional<double> GAMMA_USE_KAPPA_GREY;
 
 constexpr bool DECAY_SPONTFISSION_ON = false;
 

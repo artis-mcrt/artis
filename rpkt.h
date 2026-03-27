@@ -12,6 +12,7 @@
 #include "atomic.h"
 #include "constants.h"
 #include "globals.h"
+#include "grid.h"
 #include "ltepop.h"
 #include "packet.h"
 #include "sn3d.h"

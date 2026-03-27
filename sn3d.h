@@ -343,18 +343,25 @@ template <typename T>
   }
   assert_always(num_allranks >= 0);
 
-  const auto [_, num_thisnoderank] = get_range_chunk(num_allranks, globals::node_nprocs, globals::rank_in_node);
-  assert_always(num_thisnoderank >= 0);
+  // only rank_in_node 0 on each node allocates memory, but all ranks will get a pointer to it
+  const auto num_thisnoderank = (globals::rank_in_node == 0) ? num_allranks : 0;
 
   auto size = static_cast<MPI_Aint>(num_thisnoderank * sizeof(T));
   int disp_unit = sizeof(T);
   MPI_Win mpiwin{MPI_WIN_NULL};
   T* ptr{};
-
-  assert_always(MPI_Win_allocate_shared(size, disp_unit, MPI_INFO_NULL, globals::mpi_comm_node,
-                                        static_cast<void*>(&ptr), &mpiwin) == MPI_SUCCESS);
+  MPI_Info info{};
+  assert_always(MPI_Info_create(&info) == MPI_SUCCESS);
+  // Request 64-byte alignment (e.g., for AVX-512)
+  assert_always(MPI_Info_set(info, "mpi_minimum_memory_alignment", "64") == MPI_SUCCESS);
+  assert_always(MPI_Win_allocate_shared(size, disp_unit, info, globals::mpi_comm_node, static_cast<void*>(&ptr),
+                                        &mpiwin) == MPI_SUCCESS);
+  assert_always(MPI_Info_free(&info) == MPI_SUCCESS);
   assert_always(MPI_Win_shared_query(mpiwin, 0, &size, &disp_unit, static_cast<void*>(&ptr)) == MPI_SUCCESS);
   assert_always(ptr != nullptr);
+#ifdef __cpp_lib_is_sufficiently_aligned
+  assert_always(std::is_sufficiently_aligned<64>(ptr));
+#endif
 #pragma clang unsafe_buffer_usage begin
   const auto newspan = std::span<T>(ptr, num_allranks);
 #pragma clang unsafe_buffer_usage end

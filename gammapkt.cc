@@ -246,7 +246,7 @@ void init_xcom_photoion_data() {
 
 // the absorption coefficient [cm^-1] for Compton scattering in the co-moving frame
 [[nodiscard]] auto get_chi_compton_cmf(const int cellindex, const double nu_cmf) -> double {
-  if (globals::gamma_kappagrey >= 0.) {
+  if constexpr (GAMMA_USE_KAPPA_GREY.has_value()) {
     return 0.;
   }
 
@@ -414,7 +414,7 @@ void compton_scatter(Packet& pkt) {
     pkt.e_rf = pkt.e_cmf / dopplerfactor;
   } else {
     // energy loss of the gamma becomes energy of the electron (needed to calculate time-dependent thermalisation rate)
-    if constexpr (PARTICLE_THERMALISATION_SCHEME == ThermalisationScheme::DETAILEDWITHGAMMAPRODUCTS) {
+    if constexpr (PARTICLE_THERMALISATION_SCHEME == ParticleThermalisationScheme::TIMEDEPENDENTWITHGAMMAPRODUCTS) {
       pkt.nu_cmf = pkt.nu_cmf * (1 - (1 / f));
       pkt.type = TYPE_NONTHERMAL_PREDEPOSIT_BETAMINUS;
     } else {
@@ -436,8 +436,8 @@ void compton_scatter(Packet& pkt) {
 
   const double rho = grid::get_rho(nonemptymgi);
 
-  if (globals::gamma_kappagrey >= 0.) {
-    return globals::gamma_kappagrey * rho;
+  if constexpr (GAMMA_USE_KAPPA_GREY.has_value()) {
+    return GAMMA_USE_KAPPA_GREY.value() * rho;
   }
 
   if constexpr (!USE_XCOM_GAMMAPHOTOION) {
@@ -518,7 +518,7 @@ void compton_scatter(Packet& pkt) {
 
 // calculate the absorption coefficient [cm^-1] for pair production in the comoving frame
 [[nodiscard]] auto get_chi_pair_prod_cmf(const int cellindex, const double nu_cmf) -> double {
-  if (globals::gamma_kappagrey >= 0.) {
+  if constexpr (GAMMA_USE_KAPPA_GREY.has_value()) {
     return 0.;
   }
   const int mgi = grid::get_propcell_modelgridindex(cellindex);
@@ -604,7 +604,7 @@ void update_gamma_dep(const Packet& pkt, const double dist) {
   if (!(dist > 0)) {
     return;
   }
-  if constexpr (PARTICLE_THERMALISATION_SCHEME == ThermalisationScheme::DETAILEDWITHGAMMAPRODUCTS) {
+  if constexpr (PARTICLE_THERMALISATION_SCHEME == ParticleThermalisationScheme::TIMEDEPENDENTWITHGAMMAPRODUCTS) {
     return;  // don't instantly deposit energy from gamma rays, handle the particles they produce instead
   }
 
@@ -643,7 +643,7 @@ void pair_prod(Packet& pkt) {
   assert_always(prob_gamma >= 0);
 
   if (rng_uniform() > prob_gamma) {
-    if constexpr (PARTICLE_THERMALISATION_SCHEME == ThermalisationScheme::DETAILEDWITHGAMMAPRODUCTS) {
+    if constexpr (PARTICLE_THERMALISATION_SCHEME == ParticleThermalisationScheme::TIMEDEPENDENTWITHGAMMAPRODUCTS) {
       // Convert it to an e-minus or positron kinetic energy packet
       pkt.type = (rng_uniform() > 0.5) ? TYPE_NONTHERMAL_PREDEPOSIT_BETAMINUS : TYPE_NONTHERMAL_PREDEPOSIT_BETAPLUS;
     } else {
@@ -753,7 +753,7 @@ void transport_gamma(Packet& pkt, const double t2) {
       compton_scatter(pkt);
     } else if ((chi_compton + chi_photo_electric) > chi_rnd) {
       // Photo electric effect
-      if constexpr (PARTICLE_THERMALISATION_SCHEME == ThermalisationScheme::DETAILEDWITHGAMMAPRODUCTS) {
+      if constexpr (PARTICLE_THERMALISATION_SCHEME == ParticleThermalisationScheme::TIMEDEPENDENTWITHGAMMAPRODUCTS) {
         pkt.type = TYPE_NONTHERMAL_PREDEPOSIT_BETAMINUS;
         // nu_cmf stays the same as the gamma-ray energy becomes the kinetic energy of the electron (minus ionisation
         // energy but this is neglected here)
@@ -1002,25 +1002,24 @@ DEVICE_FUNC void pellet_gamma_decay(Packet& pkt) {
 }
 
 DEVICE_FUNC void do_gamma(Packet& pkt, const int nts, const double t2) {
-  if constexpr (GAMMA_THERMALISATION_SCHEME == ThermalisationScheme::DETAILED) {
+  if constexpr (GAMMA_THERMALISATION_SCHEME == GammaThermalisationScheme::FREQUENCYDEPENDENT) {
     transport_gamma(pkt, t2);
-  } else if constexpr (GAMMA_THERMALISATION_SCHEME == ThermalisationScheme::BARNES) {
+  } else if constexpr (GAMMA_THERMALISATION_SCHEME == GammaThermalisationScheme::BARNES) {
     barnes_thermalisation(pkt);
-  } else if constexpr (GAMMA_THERMALISATION_SCHEME == ThermalisationScheme::WOLLAEGER) {
+  } else if constexpr (GAMMA_THERMALISATION_SCHEME == GammaThermalisationScheme::WOLLAEGER) {
     wollaeger_thermalisation(pkt);
-  } else if constexpr (GAMMA_THERMALISATION_SCHEME == ThermalisationScheme::GUTTMAN) {
+  } else if constexpr (GAMMA_THERMALISATION_SCHEME == GammaThermalisationScheme::GUTTMAN) {
     guttman_thermalisation(pkt);
   } else {
-    __builtin_unreachable();
+    assert_always(false);  // invalid thermalisation scheme
   }
 
   if (pkt.type != TYPE_GAMMA && pkt.type != TYPE_ESCAPE) {
-    if constexpr (PARTICLE_THERMALISATION_SCHEME != ThermalisationScheme::DETAILEDWITHGAMMAPRODUCTS) {
+    if constexpr (PARTICLE_THERMALISATION_SCHEME != ParticleThermalisationScheme::TIMEDEPENDENTWITHGAMMAPRODUCTS) {
       atomicadd(globals::timesteps[nts].gamma_dep_discrete, pkt.e_cmf);
     }
 
-    if constexpr (GAMMA_THERMALISATION_SCHEME != ThermalisationScheme::DETAILED &&
-                  GAMMA_THERMALISATION_SCHEME != ThermalisationScheme::DETAILEDWITHGAMMAPRODUCTS) {
+    if constexpr (GAMMA_THERMALISATION_SCHEME != GammaThermalisationScheme::FREQUENCYDEPENDENT) {
       // no transport, so the path-based gamma deposition estimator won't get updated unless we do it here
       const int mgi = grid::get_propcell_modelgridindex(pkt.where);
       const int nonemptymgi = grid::get_nonemptymgi_of_mgi(mgi);

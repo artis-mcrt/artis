@@ -2,10 +2,10 @@
 // Number of energy packets per process (MPI rank). OpenMP threads share these packets
 constexpr int MPKTS;
 
-// set to GridType:: CARTESIAN3D, CYLINDRICAL2D, or SPHERICAL1D
-constexpr GridType GRID_TYPE;
+// override to GridType::CARTESIAN3D, GridType::CYLINDRICAL2D, GridType::SPHERICAL1D, or leave with no value to autodetect from model.txt
+constexpr std::optional<GridType> GRID_TYPE_OVERRIDE;
 
-// for GridType::CARTESIAN3D, set the dimensions. This will have no effect with a 3D model.txt since they will be set to match the input
+// for GridType::CARTESIAN3D, set the grid size from 1D and 2D input models. For a 3D model.txt, these will be ignored and set to match the input grid.
 constexpr int CUBOID_NCOORDGRID_X;
 constexpr int CUBOID_NCOORDGRID_Y;
 constexpr int CUBOID_NCOORDGRID_Z;
@@ -85,8 +85,6 @@ constexpr double NU_MAX_R;  // upper frequency boundary for UVOIR spectra and BB
 // to match classic artis
 constexpr bool PHIXS_CLASSIC_NO_INTERPOLATION;
 
-// ** Start of radiation field model options **
-
 // if using this, avoid look up tables and switch on the direct integration options below
 // (since LUTs created with Planck function J_nu)
 constexpr bool MULTIBIN_RADFIELD_MODEL_ON;
@@ -149,10 +147,6 @@ constexpr float STRICT_POPULATION_CHECKING_INVERSION_FACTOR_PRINTOUT_WARNING;
 // population are all individually checked.
 constexpr double NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION;
 
-// ** End of radiation field model options **
-
-// ** Start of non-thermal solution options **
-
 // non-thermal ionisation
 constexpr bool NT_ON;
 
@@ -210,8 +204,6 @@ constexpr bool SF_AUGER_CONTRIBUTION_DISTRIBUTE_EN;
 // load shells.txt containing shell occupancy data instead of simple algorithmic guesses
 constexpr bool NT_WORKFUNCTION_USE_SHELL_OCCUPANCY_FILE = false;
 
-// ** End of non-thermal solution options **
-
 constexpr double TEMPERATURE_SOLVER_ACCURACY;
 
 constexpr bool USE_RELATIVISTIC_DOPPLER_SHIFT;
@@ -223,13 +215,17 @@ constexpr bool USE_CALCULATED_MEANATOMICWEIGHT;
 
 constexpr bool WRITE_EMISSIONABSORPTION_SPEC_AT_END;
 
-// thermalisation scheme for non-thermal particles (positrons, electrons, alphas). ThermalisationScheme::INSTANT
-// instantly deposits all particle energy. ThermalisationScheme::DETAILED uses time-dependent Monte Carlo transport.
-// ThermalisationScheme::BARNES, and WOLLAEGER use analytic thermalisation efficiency functions.
-constexpr ThermalisationScheme PARTICLE_THERMALISATION_SCHEME;
+// thermalisation scheme for non-thermal particles (positrons, electrons, alphas). INSTANTFULLDEPOSITION
+// instantly deposits all particle energy. TIMEDEPENDENT uses time-dependent Monte Carlo transport.
+// BARNES, and WOLLAEGER use analytic thermalisation efficiency functions.
+// TIMEDEPENDENTWITHGAMMAPRODUCTS also replaces the instant "gamma" deposition of Compton electrons and pair-production particles
+// with separate handling as particle deposition
+constexpr ParticleThermalisationScheme PARTICLE_THERMALISATION_SCHEME;
 
-// thermalisation scheme for gamma-ray photons. ThermalisationScheme::DETAILED uses full gamma-ray transport.
-constexpr ThermalisationScheme GAMMA_THERMALISATION_SCHEME;
+// thermalisation scheme for gamma-ray photons.
+// FREQUENCYDEPENDENT is time-dependent gamma-ray transport (with frequency-dependent opacities if GAMMA_USE_KAPPA_GREY is not set)
+// BARNES, WOLLAEGER, and GUTTMAN use analytic thermalisation efficiencies to instantly deposit some fraction of gamma energy.
+constexpr GammaThermalisationScheme GAMMA_THERMALISATION_SCHEME;
 
 // Options for different types of timestep set-ups, only one of these can be true at one time. The hybrid timestep
 // schemes that switch between log and fixed require a transition time from one scheme to the other as well as the
@@ -256,8 +252,17 @@ constexpr bool EXPANSIONOPACITIES_ON;
 // set this to < 0 to use the macroatom
 constexpr std::optional<float> RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY;
 
+// For cells in grey mode, select a method of calculating opacity:
+//   - FEGROUP_APPROX: Fe-group line expansion opacity scaled to local composition (default).
+//   - TANAKA2020_ELECTRONFRAC: opacity parametrised using the Tanaka et al. (2020) fit to electron fraction (Ye).
+//   - JUST2022_TEMP_LANTHANIDEFRAC: opacity parametrised using Just et al. (2022) fit to temperature and lanthanide fraction.
+constexpr RpktGreyType RPKT_GREY_TYPE = RpktGreyType::FEGROUP_APPROX;
+
 // Use XCOM data for gamma photoionisation instead of Si+Fe Equation 2 of Ambwani & Sutherland (1988), Veigele (1973)
 constexpr bool USE_XCOM_GAMMAPHOTOION;
+
+// Override frequency-dependent gamma-ray opacity with a grey opacity [cm^2/g]
+constexpr std::optional<double> GAMMA_USE_KAPPA_GREY;
 
 // use fissiondecays.txt and fissionproducts_GEF_100keV.txt to handle spontaneous fission decays
 constexpr bool DECAY_SPONTFISSION_ON = false;

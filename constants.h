@@ -62,7 +62,16 @@ constexpr double C_0 = 5.465e-11;
 
 enum class TimeStepSizeMethod { LOGARITHMIC, CONSTANT, LOGARITHMIC_THEN_CONSTANT, CONSTANT_THEN_LOGARITHMIC };
 
-enum class ThermalisationScheme { INSTANT, DETAILED, DETAILEDWITHGAMMAPRODUCTS, BARNES, WOLLAEGER, GUTTMAN };
+enum class GammaThermalisationScheme { FREQUENCYDEPENDENT, BARNES, WOLLAEGER, GUTTMAN };
+enum class ParticleThermalisationScheme {
+  INSTANTFULLDEPOSITION,
+  TIMEDEPENDENT,
+  TIMEDEPENDENTWITHGAMMAPRODUCTS,
+  BARNES,
+  WOLLAEGER,
+};
+
+enum class RpktGreyType { FEGROUP_APPROX, TANAKA2020_ELECTRONFRAC, JUST2022_TEMP_LANTHANIDEFRAC };
 
 using Vec3d = std::array<double, 3>;
 constexpr Vec3d syn_dir{0., 0., 1.};  // vector defining the theta=0 direction

@@ -1102,15 +1102,14 @@ auto calculate_frac_heating(const int nonemptymgi, const std::array<double, SFPT
     const double endash = delta_endash * j;
     N_e_contrib_Einit += N_e(nonemptymgi, endash * EV, yfunc) * endash * delta_endash;
   }
-  // there should not be more heating for E< EMIN than in the whole solution
-  assert_always(N_e_contrib_Einit < frac_heating_Einit);
   frac_heating_Einit += N_e_contrib_Einit;
 
   const auto frac_heating = static_cast<float>(frac_heating_Einit / E_init_ev);
 
-  assert_always(std::isfinite(frac_heating));
-  assert_always(frac_heating >= 0.);
-  assert_always(frac_heating <= 1.);
+  if (!std::isfinite(frac_heating) || frac_heating < 0 || frac_heating > 1.0) {
+    printlnlog("WARNING: calculate_frac_heating: invalid result of {:g}. Setting to 1.0 instead", frac_heating);
+    return 1.;
+  }
 
   return frac_heating;
 }
@@ -2130,10 +2129,6 @@ void calculate_deposition_rate_density(const int nonemptymgi, const int timestep
   const double tmid = globals::timesteps[timestep].mid;
   const double rho = grid::get_rho(nonemptymgi);
 
-  // if PARTICLE_THERMALISATION_SCHEME == ThermalisationScheme::INSTANT, use the analytic rate at t_mid since it will
-  // have no Monte Carlo noise (although strictly, it should be an integral from the timestep start to the end)
-  // with time-dependent deposition, we don't have an analytic rate, so we use the Monte Carlo rate
-
   heatingcoolingrates.eps_gamma_ana = rho * decay::get_gamma_emission_rate(nonemptymgi, tmid);
 
   heatingcoolingrates.eps_positron_ana =
@@ -2148,11 +2143,15 @@ void calculate_deposition_rate_density(const int nonemptymgi, const int timestep
   heatingcoolingrates.eps_spfission_ana =
       rho * decay::get_particle_injection_rate(nonemptymgi, tmid, decay::DECAYTYPE_SPONTFISSION);
 
-  if (PARTICLE_THERMALISATION_SCHEME == ThermalisationScheme::INSTANT) {
+  if (PARTICLE_THERMALISATION_SCHEME == ParticleThermalisationScheme::INSTANTFULLDEPOSITION) {
+    // for instant full deposition, the deposition rate is the same as the emission rate, which we know analytically
+    // without Monte Carlo noise (although strictly, it should be an integral from the timestep start to the end divided
+    // by timestep duration instead of the instantaneous rate at tmid)
     heatingcoolingrates.dep_positron = heatingcoolingrates.eps_positron_ana;
     heatingcoolingrates.dep_electron = heatingcoolingrates.eps_electron_ana;
     heatingcoolingrates.dep_alpha = heatingcoolingrates.eps_alpha_ana;
   } else {
+    // with time-dependent deposition, we don't have an analytic rate, so we use the Monte Carlo rate
     heatingcoolingrates.dep_positron = globals::dep_estimator_positron[nonemptymgi];
     heatingcoolingrates.dep_electron = globals::dep_estimator_electron[nonemptymgi];
     heatingcoolingrates.dep_alpha = globals::dep_estimator_alpha[nonemptymgi];

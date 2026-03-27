@@ -39,8 +39,13 @@ std::span<const CoolingType> coolinglist_type;
 std::span<const int> coolinglist_level;
 std::span<const int> coolinglist_upperlevel;
 
-int n_kpktdiffusion_timesteps{0};
-float kpktdiffusion_timescale{0.};
+// MK: To reduce the work imbalance between different MPI tasks I introduced a diffusion
+// for kpkts, since it turned out that this work imbalance was largely dominated
+// by continuous collisional interactions. By introducing a diffusion time for kpkts
+// this loop is broken.
+// kpktdiffusion_timescale gives the relative fraction of a time step which individual
+// kpkts live.
+constexpr float kpktdiffusion_timescale{0.001};
 
 // calculate the cooling contribution list of individual levels/processes for an ion
 // oldcoolingsum is the sum of lower ion (of same element or all ions of lower elements) cooling contributions
@@ -255,13 +260,6 @@ void calculate_cooling_rates(const int nonemptymgi, HeatingCoolingRates* heating
   }
 }
 
-void set_kpktdiffusion(const float kpktdiffusion_timescale_in, const int n_kpktdiffusion_timesteps_in) {
-  kpktdiffusion_timescale = kpktdiffusion_timescale_in;
-  n_kpktdiffusion_timesteps = n_kpktdiffusion_timesteps_in;
-  printlnlog("input: kpkts diffuse {:g} of a time step's length for the first {} time steps", kpktdiffusion_timescale,
-             n_kpktdiffusion_timesteps);
-}
-
 void setup_coolinglist() {
   // Determine number of processes which allow kpkts to convert to something else.
   // This number is given by the collisional excitations (so far determined from the oscillator strengths
@@ -346,6 +344,8 @@ void setup_coolinglist() {
   coolinglist_level = temp_coolinglist_level;
   coolinglist_upperlevel = temp_coolinglist_upperlevel;
   MPI_Barrier(globals::mpi_comm_node);
+
+  printlnlog("kpkts diffuse {:g} of a time step's length", kpktdiffusion_timescale);
 }
 
 // handle a k-packet (e.g., in a thick cell) by emitting according to the planck function
@@ -372,8 +372,7 @@ DEVICE_FUNC void do_kpkt_blackbody(Packet& pkt) {
 
 // handle a k-packet (kinetic energy of the free electrons)
 DEVICE_FUNC void do_kpkt(Packet& pkt, const double t2, const int nts) {
-  const double deltat =
-      (nts < n_kpktdiffusion_timesteps) ? kpktdiffusion_timescale * globals::timesteps[nts].width : 0.;
+  const double deltat = kpktdiffusion_timescale * globals::timesteps[nts].width;
 
   const double t_current = std::min(pkt.prop_time + deltat, t2);
 

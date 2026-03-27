@@ -1,7 +1,5 @@
 #!/bin/bash -x
-sbatch -J $(basename $(pwd)) --ntasks=960 --ntasks-per-node=160 --mem-per-cpu=2000MB --partition=long --time=48:00:00 --constraint=amd,epyc,9654 --mail-type=ALL --mail-user=${USER}@gsi.de --no-requeue -- artis/scripts/artis-virgo-slurmjob.sh
+sbatch -J $(basename $(pwd)) --ntasks=960 --ntasks-per-node=192 --mem-per-cpu=2000MB --exclusive --partition=long --time=48:00:00 --constraint=amd,epyc,9654 --mail-type=ALL --mail-user=${USER}@gsi.de --no-requeue -- artis/scripts/artis-virgo-slurmjob.sh
 
-# AMD EPYC 9654 nodes have 192 real cores per node and 4 GB/core. march=znver4
-# However, you might need to reduce --ntasks-per-node to around 120 because entire nodes are rarely available
-
-# Other AMD nodes have 128 real cores per node
+# AMD EPYC 9654 (Zen 4) nodes have 192 real cores per node
+# AMD EPYC 9555 (Zen 5) nodes have 128 real cores per node
