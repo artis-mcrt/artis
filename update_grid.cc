@@ -570,9 +570,7 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
   if constexpr (USE_MICROCLUMPING) {
     float clump_factor;
 #ifdef READ_CLUMPING_FACTORS_FROM_FILE
-    std::string inbuf;
-    clumping_factors_file >> inbuf;
-    clump_factor = stof(inbuf);
+    clumping_factors_file >> clump_factor;
 #else
     const double tmid = globals::timesteps[nts].mid;
     const double rad_vel = grid::get_modelcell_mean_radial_vel(grid::get_mgi_of_nonemptymgi(nonemptymgi));
