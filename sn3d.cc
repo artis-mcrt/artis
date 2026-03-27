@@ -615,6 +615,17 @@ auto do_timestep(const int nts, const int titer, std::span<Packet> packets, cons
   // Each process has now updated its own set of cells. The results now need to be communicated between processes.
   mpi_communicate_grid_properties();
 
+  printlog("CHECKING CLUMPING FACTORS!!!! ");
+  float clump_factor;
+  for (int nonemptymgi = 0; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
+    if (nonemptymgi % globals::nprocs == globals::my_rank) {
+      printlog("{} ", nonemptymgi);
+      clump_factor = grid::get_clumpfactor(nonemptymgi);
+      assert_always(0 < clump_factor && clump_factor <= 1);
+    }
+  }
+  printlnlog("");
+
   printlnlog("timestep {}: time after grid properties have been communicated {} (took {} seconds)", nts,
              std::time(nullptr), std::time(nullptr) - sys_time_start_communicate_grid);
 
