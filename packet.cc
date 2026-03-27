@@ -150,6 +150,9 @@ void write_packets(const std::string& filename, const std::span<const Packet> pa
                   "trueem_posx trueem_posy trueem_posz trueem_time pellet_nucindex pellet_decaytype\n";
 
   for (const auto& pkt : packets) {
+    if (pkt.type != TYPE_ESCAPE) {
+      continue;
+    }
     if (!WRITE_ESCAPED_GAMMAS && pkt.type == TYPE_ESCAPE && pkt.escape_type == TYPE_GAMMA) {
       continue;
     }
