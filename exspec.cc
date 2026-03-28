@@ -95,13 +95,6 @@ void do_angle_bin(const int a, std::span<Packet> pkts, bool load_allrank_packets
       rank_npackets[p] = static_cast<int>(pkts_start.size());
     }
 
-    MPI_Barrier(MPI_COMM_WORLD);
-
-    if (p % globals::nprocs != globals::my_rank) {
-      printlnlog("skipping packets file {} {}", p + 1, globals::nprocs);
-      continue;
-    }
-
     int nesc_tot = 0;
     int nesc_gamma = 0;
     int nesc_rpkt = 0;
