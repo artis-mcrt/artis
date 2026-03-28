@@ -946,13 +946,13 @@ void calculate_chi_rpkt_cont(const double nu_cmf, Rpkt_continuum_absorptioncoeff
     return;
   }
 
-  const auto clumpednne = grid::apply_clumping(grid::get_nne(nonemptymgi), grid::get_clumpfactor(nonemptymgi));
+  const auto nne = grid::get_nne(nonemptymgi);
 
   // free-free absorption
   chi_rpkt_cont.ffheat = calculate_chi_ffheating(nonemptymgi, nu_cmf, USECELLHISTANDUPDATEPHIXSLIST);
 
   // First contribution: Thomson scattering on free electrons
-  chi_rpkt_cont.ffescat = SIGMA_T * clumpednne;
+  chi_rpkt_cont.ffescat = SIGMA_T * nne;
 
   // Third contribution: bound-free absorption
   chi_rpkt_cont.bf =
