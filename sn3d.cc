@@ -615,8 +615,8 @@ auto do_timestep(const int nts, const int titer, std::span<Packet> packets, cons
   // Each process has now updated its own set of cells. The results now need to be communicated between processes.
   mpi_communicate_grid_properties();
 
-  // Check that the clumping values are physically sensible values
-  if (USE_MICROCLUMPING) {
+  // Check that the clumping factors are physically sensible values
+  if constexpr (USE_MICROCLUMPING) {
     for (int nonemptymgi = 0; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
       if (nonemptymgi % globals::nprocs == globals::my_rank) {
         const float clump_factor = grid::get_clumpfactor(nonemptymgi);

@@ -25,8 +25,7 @@ inline std::span<float> kappagrey_allcells;
 inline std::span<float> grey_depth_allcells;  // Grey optical depth to surface of the modelgridcell
 inline std::span<int>
     thick_allcells;  // whether the cell is optically thick (1) or not (0), or (2) thick for vpkts only
-inline std::span<float>
-    clumpfactor_allcells;  // Reciprocal of the clumping factor (which is what we actually use in calculations)
+inline std::span<float> clumpfactor_allcells;
 
 inline ptrdiff_t ngrid{0};
 
