@@ -31,8 +31,6 @@
 
 namespace {
 
-constexpr bool WRITE_ESCAPED_GAMMAS = false;
-
 // Place pellet n with energy e_cmf_per_packet in cell m
 void place_pellet(const double e_cmf_per_packet, const std::span<const double> en_cumulative, const int pktnumber,
                   Packet& pkt) {
@@ -153,7 +151,7 @@ void write_packets(const std::string& filename, const std::span<const Packet> pa
     if (pkt.type != TYPE_ESCAPE) {
       continue;
     }
-    if (!WRITE_ESCAPED_GAMMAS && pkt.type == TYPE_ESCAPE && pkt.escape_type == TYPE_GAMMA) {
+    if (!KEEP_ESCAPED_GAMMAS && pkt.type == TYPE_ESCAPE && pkt.escape_type == TYPE_GAMMA) {
       continue;
     }
     packets_file << pkt.number << ' ' << pkt.where << ' ' << std::to_underlying(pkt.type) << ' ';
