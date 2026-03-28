@@ -270,7 +270,7 @@ constexpr bool DECAY_SPONTFISSION_ON = false;
 // TODO: explain where clumping factors are actually used
 constexpr bool USE_MICROCLUMPING;
 
-// Read the clumping factors from a palin text file with (num timesteps) rows * (num non-empty cells) cols.
+// Read the clumping factors from a plain text file with (num timesteps) rows * (num non-empty cells) cols.
 // Entries should be in (0,1] and formatted using %.6e.
 // Has no effect if USE_MICROCLUMPING is set to false.
 constexpr bool READ_CLUMPING_FACTORS_FROM_FILE;
