@@ -376,7 +376,7 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
 
   // Update clumping factors
   if constexpr (USE_MICROCLUMPING) {
-    float clump_factor;
+    float clump_factor = NAN;
 
     if constexpr (READ_CLUMPING_FACTORS_FROM_FILE) {
       clumping_factors_file >> clump_factor;
@@ -599,7 +599,7 @@ void update_grid(std::ostream& estimators_file, const int nts, const int nts_pre
     clumping_factors_file = fstream_required("clumping-factors.txt", std::ios::in);
     // TODO: this assumes you know beforehand how many nonempty cells there are. Don't know if that's something that can
     // be precalculated??
-    clumping_factors_file.seekg((nts * grid::get_nonempty_npts_model() + nstart_nonempty) * (2 + 6 + 5));
+    clumping_factors_file.seekg(((nts * grid::get_nonempty_npts_model()) + nstart_nonempty) * (2 + 6 + 5));
   }
 
 #ifdef _OPENMP
