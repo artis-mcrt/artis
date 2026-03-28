@@ -6,11 +6,7 @@
 #include <cstdlib>
 #include <ctime>
 #include <format>
-
-#ifdef READ_CLUMPING_FACTORS_FROM_FILE
 #include <fstream>
-#endif
-
 #include <iostream>
 #include <vector>
 
@@ -39,9 +35,7 @@ namespace {
 
 std::vector<HeatingCoolingRates> heatingcoolingrates_thisrankcells;
 
-#ifdef READ_CLUMPING_FACTORS_FROM_FILE
 std::fstream clumping_factors_file;
-#endif
 
 void write_to_estimators_file(std::ostream& estimators_file, const int nonemptymgi, const int timestep, const int titer,
                               const HeatingCoolingRates& heatingcoolingrates) {
@@ -383,14 +377,16 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
   // Update clumping factors
   if constexpr (USE_MICROCLUMPING) {
     float clump_factor;
-#ifdef READ_CLUMPING_FACTORS_FROM_FILE
-    clumping_factors_file >> clump_factor;
-#else
-    const double tmid = globals::timesteps[nts].mid;
-    const double rad_vel =
-        grid::get_modelcell_mean_radial_vel(grid::get_mgi_of_nonemptymgi(nonemptymgi), globals::tmin);
-    clump_factor = clumping_factor(tmid, rad_vel);
-#endif
+
+    if constexpr (READ_CLUMPING_FACTORS_FROM_FILE) {
+      clumping_factors_file >> clump_factor;
+    } else {
+      const double tmid = globals::timesteps[nts].mid;
+      const double rad_vel =
+          grid::get_modelcell_mean_radial_vel(grid::get_mgi_of_nonemptymgi(nonemptymgi), globals::tmin);
+      clump_factor = clumping_factor(tmid, rad_vel);
+    }
+
     grid::set_clumpfactor(nonemptymgi, clump_factor);
   }
 
@@ -599,12 +595,12 @@ void update_grid(std::ostream& estimators_file, const int nts, const int nts_pre
 
   const auto nstart_nonempty = grid::get_nstart_nonempty(my_rank);
 
-#ifdef READ_CLUMPING_FACTORS_FROM_FILE
-  clumping_factors_file = fstream_required("clumping-factors.txt", std::ios::in);
-  // TODO: this assumes you know beforehand how many nonempty cells there are. Don't know if that's something that can
-  // be precalculated??
-  clumping_factors_file.seekg((nts * grid::get_nonempty_npts_model() + nstart_nonempty) * (2 + 6 + 5));
-#endif
+  if constexpr (READ_CLUMPING_FACTORS_FROM_FILE) {
+    clumping_factors_file = fstream_required("clumping-factors.txt", std::ios::in);
+    // TODO: this assumes you know beforehand how many nonempty cells there are. Don't know if that's something that can
+    // be precalculated??
+    clumping_factors_file.seekg((nts * grid::get_nonempty_npts_model() + nstart_nonempty) * (2 + 6 + 5));
+  }
 
 #ifdef _OPENMP
 #pragma omp parallel for schedule(dynamic)
@@ -614,9 +610,9 @@ void update_grid(std::ostream& estimators_file, const int nts, const int nts_pre
                      heatingcoolingrates_thisrankcells.at(nonemptymgi - nstart_nonempty));
   }
 
-#ifdef READ_CLUMPING_FACTORS_FROM_FILE
-  clumping_factors_file.close();
-#endif
+  if constexpr (READ_CLUMPING_FACTORS_FROM_FILE) {
+    clumping_factors_file.close();
+  }
 
   // serial output of estimator data to this ranks estimator file cell by cell
   const auto nstart = grid::get_nstart(my_rank);

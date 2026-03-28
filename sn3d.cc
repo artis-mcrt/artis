@@ -723,14 +723,14 @@ auto main(int argc, char* argv[]) -> int {
     vpkt::nvpkt_esc_from_macroatom = 0;
   }
 
-#ifdef READ_CLUMPING_FACTORS_FROM_FILE
-  bool clumping_factors_exists = false;
-  for (auto dir : datafolders) {
-    clumping_factors_exists =
-        clumping_factors_exists || std::filesystem::exists(std::format("{}/clumping-factors.txt", dir));
+  if constexpr (USE_MICROCLUMPING && READ_CLUMPING_FACTORS_FROM_FILE) {
+    bool clumping_factors_exists = false;
+    for (auto dir : datafolders) {
+      clumping_factors_exists =
+          clumping_factors_exists || std::filesystem::exists(std::format("{}/clumping-factors.txt", dir));
+    }
+    assert_always(clumping_factors_exists);
   }
-  assert_always(clumping_factors_exists);
-#endif
 
   MPI_Init(&argc, &argv);
 
