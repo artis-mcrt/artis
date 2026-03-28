@@ -270,6 +270,12 @@ constexpr bool DECAY_SPONTFISSION_ON = false;
 // TODO: explain where clumping factors are actually used
 constexpr bool USE_MICROCLUMPING;
 
-// TODO: figure out the arguments to this function
+// Read the clumping factors from a palin text file with (num timesteps) rows * (num non-empty cells) cols.
+// Entries should be in (0,1] and formatted using %.6e.
+// Has no effect if USE_MICROCLUMPING is set to false.
+constexpr bool READ_CLUMPING_FACTORS_FROM_FILE;
+
+// Calculate clumping factors based on time and radial velocity
+// Will be passed globals::timesteps[nts].mid and grid::get_modelcell_mean_radial_vel(mgi, globals::tmin)
 constexpr float clumping_factor([[maybe_unused]] double tmid, [[maybe_unused]] double rad_vel) { return 1.; }
 ```
