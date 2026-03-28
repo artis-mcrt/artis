@@ -33,8 +33,6 @@ std::fstream output_file;
 
 namespace {
 
-std::vector<int> rank_npackets;
-
 void do_angle_bin(const int a, std::span<Packet> pkts, bool load_allrank_packets) {
   THREADLOCALONHOST std::vector<double> rpkt_light_curve_lum;
   resize_exactly(rpkt_light_curve_lum, globals::ntimesteps);
@@ -67,57 +65,41 @@ void do_angle_bin(const int a, std::span<Packet> pkts, bool load_allrank_packets
   constexpr double nu_max_gamma = 4. * MEV / H;
   THREADLOCALONHOST Spectra gamma_spectra;
   init_spectra(gamma_spectra, nu_min_gamma, nu_max_gamma, false);
-  resize_exactly(rank_npackets, globals::nprocs_exspec);
-  std::ranges::fill(rank_npackets, MPKTS);
   assert_always(globals::nprocs_exspec > 0);
+  auto packetoffset = 0Z;
   for (int p = 0; p < globals::nprocs_exspec; p++) {
-    auto pkts_start = [&]() {
-      int offset = 0;
-      if (load_allrank_packets) {
-        for (int pp = 0; pp < p; pp++) {
-          offset += rank_npackets[pp];
-        }
-      }
-      return pkts.subspan(offset, MPKTS);
-    }();
+    auto pkts_thisrank = pkts.subspan(packetoffset, MPKTS);
 
     if (a == -1 || !load_allrank_packets) {
       auto pktfilename = std::format("packets{:02d}_{:04d}.out", 0, p);
       printlnlog("Reading {} (file {} of {})", pktfilename, p + 1, globals::nprocs_exspec);
 
       if (std::filesystem::exists(pktfilename)) {
-        pkts_start = read_packets(pktfilename, pkts_start);
+        pkts_thisrank = read_packets(pktfilename, pkts_thisrank);
       } else {
         printlnlog("   WARNING {} does not exist - trying temp packets file at beginning of timestep {}...",
                    pktfilename, globals::timestep_initial);
-        pkts_start = read_temp_packetsfile(globals::timestep_initial, p, pkts_start);
+        pkts_thisrank = read_temp_packetsfile(globals::timestep_initial, p, pkts_thisrank);
       }
-      rank_npackets[p] = static_cast<int>(pkts_start.size());
-    }
-
-    MPI_Barrier(MPI_COMM_WORLD);
-
-    if (p % globals::nprocs != globals::my_rank) {
-      printlnlog("skipping packets file {} {}", p + 1, globals::nprocs);
-      continue;
+      packetoffset += std::ssize(pkts_thisrank);
     }
 
     int nesc_tot = 0;
     int nesc_gamma = 0;
     int nesc_rpkt = 0;
-    for (int ii = 0; ii < std::ssize(pkts_start); ii++) {
-      if (pkts_start[ii].type == TYPE_ESCAPE) {
+    for (int ii = 0; ii < std::ssize(pkts_thisrank); ii++) {
+      if (pkts_thisrank[ii].type == TYPE_ESCAPE) {
         nesc_tot++;
-        if (pkts_start[ii].escape_type == TYPE_RPKT) {
+        if (pkts_thisrank[ii].escape_type == TYPE_RPKT) {
           nesc_rpkt++;
-          add_to_lc_res(pkts_start[ii], a, rpkt_light_curve_lum, rpkt_light_curve_lumcmf);
-          add_to_spec_res(pkts_start[ii], a, rpkt_spectra, POL_ON ? &stokes_i : nullptr, POL_ON ? &stokes_q : nullptr,
-                          POL_ON ? &stokes_u : nullptr);
-        } else if (pkts_start[ii].escape_type == TYPE_GAMMA) {
+          add_to_lc_res(pkts_thisrank[ii], a, rpkt_light_curve_lum, rpkt_light_curve_lumcmf);
+          add_to_spec_res(pkts_thisrank[ii], a, rpkt_spectra, POL_ON ? &stokes_i : nullptr,
+                          POL_ON ? &stokes_q : nullptr, POL_ON ? &stokes_u : nullptr);
+        } else if (pkts_thisrank[ii].escape_type == TYPE_GAMMA) {
           nesc_gamma++;
           if (a == -1) {
-            add_to_lc_res(pkts_start[ii], a, gamma_light_curve_lum, gamma_light_curve_lumcmf);
-            add_to_spec_res(pkts_start[ii], a, gamma_spectra, nullptr, nullptr, nullptr);
+            add_to_lc_res(pkts_thisrank[ii], a, gamma_light_curve_lum, gamma_light_curve_lumcmf);
+            add_to_spec_res(pkts_thisrank[ii], a, gamma_spectra, nullptr, nullptr, nullptr);
           }
         }
       }
