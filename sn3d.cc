@@ -430,36 +430,6 @@ void mpi_reduce_estimators(const int nts) {
   normalise_deposition_estimators(nts);
 }
 
-void write_temp_packetsfile(const int timestep, const int my_rank, std::span<const Packet> pkt) {
-  // write packets binary file (and retry if the write fails)
-  const auto filename = std::format("packets_{:04d}_ts{:d}.tmp", my_rank, timestep);
-
-  bool write_success = false;
-  while (!write_success) {
-    printlog("timestep {}: writing {}...", timestep, filename);
-    FILE* packets_file = fopen(filename.c_str(), "wb");
-    if (packets_file == nullptr) {
-      printlnlog("ERROR: Could not open file '{}' for mode 'wb'.", filename);
-      write_success = false;
-    } else {
-      auto packet_count = static_cast<ptrdiff_t>(std::ssize(pkt));
-      // write number of packets as header
-      write_success = (std::fwrite(&packet_count, sizeof(ptrdiff_t), 1, packets_file) == 1);
-      write_success =
-          write_success && (std::fwrite(pkt.data(), sizeof(Packet), pkt.size(), packets_file) == pkt.size());
-      if (!write_success) {
-        printlnlog("fwrite() FAILED! will retry...");
-      }
-
-      fclose(packets_file);
-    }
-
-    if (write_success) {
-      printlnlog("done");
-    }
-  }
-}
-
 auto walltime_sufficient_to_continue(const int nts, const int nts_prev, const int walltimelimitseconds) -> bool {
   MPI_Barrier(MPI_COMM_WORLD);
   // time is measured from just before packet propagation from one timestep to the next

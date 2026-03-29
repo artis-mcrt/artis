@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
+#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <format>
@@ -117,9 +118,10 @@ void packet_init(std::span<Packet> packets)
   // Now place the pellets in the ejecta and decide at what time they will decay.
 
   printlnlog("Placing pellets...");
-  const auto allpkts = std::ranges::iota_view{0U, packets.size()};
-  std::ranges::for_each(
-      allpkts, [&, e_cmf_per_packet](const int n) { place_pellet(e_cmf_per_packet, en_cumulative, n, packets[n]); });
+  const auto allpktindices = std::ranges::iota_view{0, static_cast<int>(std::ssize(packets))};
+  std::ranges::for_each(allpktindices, [&, e_cmf_per_packet](const int n) {
+    place_pellet(e_cmf_per_packet, en_cumulative, n, packets[n]);
+  });
 
   decay::free_decaypath_energy_per_mass();  // will no longer be needed after packets are set up
 
@@ -134,52 +136,6 @@ void packet_init(std::span<Packet> packets)
     pkt.e_rf *= e_ratio;
   }
   printlnlog("total energy that will be freed during simulation time: {:g} erg", e_cmf_total);
-}
-
-// write packets text file
-void write_text_packets(const std::string& filename, const std::span<const Packet> packets) {
-  auto packets_file = fstream_required(filename, std::ios::out | std::ios::trunc);
-  packets_file << "#number where type_id posx posy posz dirx diry dirz tdecay e_cmf e_rf nu_cmf nu_rf "
-                  "escape_type_id escape_time emissiontype trueemissiontype "
-                  "em_posx em_posy em_posz absorption_type absorption_freq nscatterings em_time stokes1 stokes2 "
-                  "stokes3 originated_from_particlenotgamma "
-                  "trueem_posx trueem_posy trueem_posz trueem_time pellet_nucindex pellet_decaytype\n";
-
-  for (const auto& pkt : packets) {
-    if (!KEEP_ESCAPED_GAMMAS && pkt.type == TYPE_ESCAPE && pkt.escape_type == TYPE_GAMMA) {
-      continue;
-    }
-    packets_file << pkt.number << ' ' << pkt.where << ' ' << std::to_underlying(pkt.type) << ' ';
-    packets_file << pkt.pos[0] << ' ' << pkt.pos[1] << ' ' << pkt.pos[2] << ' ';
-    packets_file << pkt.dir[0] << ' ' << pkt.dir[1] << ' ' << pkt.dir[2] << ' ';
-    packets_file << pkt.tdecay << ' ';
-    packets_file << pkt.e_cmf << ' ' << pkt.e_rf << ' ' << pkt.nu_cmf << ' ' << pkt.nu_rf << ' ';
-    packets_file << std::to_underlying(pkt.escape_type) << ' ' << pkt.escape_time << ' ';
-    packets_file << pkt.emissiontype << ' ' << pkt.trueemissiontype << ' ';
-    packets_file << pkt.em_pos[0] << ' ' << pkt.em_pos[1] << ' ' << pkt.em_pos[2] << ' ' << pkt.absorptiontype << ' '
-                 << pkt.absorptionfreq << ' ' << pkt.nscatterings << ' ' << pkt.em_time << ' ';
-    packets_file << pkt.stokes[0] << ' ' << pkt.stokes[1] << ' ' << pkt.stokes[2] << ' ';
-    packets_file << static_cast<int>(pkt.originated_from_particlenotgamma) << ' ' << pkt.trueem_pos[0] << ' '
-                 << pkt.trueem_pos[1] << ' ' << pkt.trueem_pos[2] << ' ' << pkt.trueem_time << ' '
-                 << pkt.pellet_nucindex << ' ' << pkt.pellet_decaytype;
-    packets_file << '\n';
-  }
-}
-
-auto read_temp_packetsfile(const int timestep, const int my_rank, const std::span<Packet> pkt) -> std::span<Packet> {
-  // read binary packets file
-  const auto filename = std::format("packets_{:04d}_ts{:d}.tmp", my_rank, timestep);
-
-  printlnlog("Reading {}", filename);
-  auto packets_file = fopen_required_uniqueptr(filename, "rb");
-  ptrdiff_t packet_count_in_file = 0;
-  assert_always(std::fread(&packet_count_in_file, sizeof(ptrdiff_t), 1, packets_file.get()) == 1);
-  assert_always(packet_count_in_file > 0);
-  assert_always(packet_count_in_file <= std::ssize(pkt));
-  assert_always(std::fread(pkt.data(), sizeof(Packet), packet_count_in_file, packets_file.get()) ==
-                static_cast<size_t>(packet_count_in_file));
-  printlnlog("done");
-  return pkt.first(packet_count_in_file);
 }
 
 auto read_text_packets(const std::string& filename, const std::span<Packet> packets) -> std::span<Packet> {
@@ -245,4 +201,79 @@ auto read_text_packets(const std::string& filename, const std::span<Packet> pack
     return packets.first(packets_read);
   }
   return packets;
+}
+
+void write_text_packets(const std::string& filename, const std::span<const Packet> packets) {
+  auto packets_file = fstream_required(filename, std::ios::out | std::ios::trunc);
+  packets_file << "#number where type_id posx posy posz dirx diry dirz tdecay e_cmf e_rf nu_cmf nu_rf "
+                  "escape_type_id escape_time emissiontype trueemissiontype "
+                  "em_posx em_posy em_posz absorption_type absorption_freq nscatterings em_time stokes1 stokes2 "
+                  "stokes3 originated_from_particlenotgamma "
+                  "trueem_posx trueem_posy trueem_posz trueem_time pellet_nucindex pellet_decaytype\n";
+
+  for (const auto& pkt : packets) {
+    if (!KEEP_ESCAPED_GAMMAS && pkt.type == TYPE_ESCAPE && pkt.escape_type == TYPE_GAMMA) {
+      continue;
+    }
+    packets_file << pkt.number << ' ' << pkt.where << ' ' << std::to_underlying(pkt.type) << ' ';
+    packets_file << pkt.pos[0] << ' ' << pkt.pos[1] << ' ' << pkt.pos[2] << ' ';
+    packets_file << pkt.dir[0] << ' ' << pkt.dir[1] << ' ' << pkt.dir[2] << ' ';
+    packets_file << pkt.tdecay << ' ';
+    packets_file << pkt.e_cmf << ' ' << pkt.e_rf << ' ' << pkt.nu_cmf << ' ' << pkt.nu_rf << ' ';
+    packets_file << std::to_underlying(pkt.escape_type) << ' ' << pkt.escape_time << ' ';
+    packets_file << pkt.emissiontype << ' ' << pkt.trueemissiontype << ' ';
+    packets_file << pkt.em_pos[0] << ' ' << pkt.em_pos[1] << ' ' << pkt.em_pos[2] << ' ' << pkt.absorptiontype << ' '
+                 << pkt.absorptionfreq << ' ' << pkt.nscatterings << ' ' << pkt.em_time << ' ';
+    packets_file << pkt.stokes[0] << ' ' << pkt.stokes[1] << ' ' << pkt.stokes[2] << ' ';
+    packets_file << static_cast<int>(pkt.originated_from_particlenotgamma) << ' ' << pkt.trueem_pos[0] << ' '
+                 << pkt.trueem_pos[1] << ' ' << pkt.trueem_pos[2] << ' ' << pkt.trueem_time << ' '
+                 << pkt.pellet_nucindex << ' ' << pkt.pellet_decaytype;
+    packets_file << '\n';
+  }
+}
+
+auto read_temp_packetsfile(const int timestep, const int my_rank, const std::span<Packet> pkt) -> std::span<Packet> {
+  // read binary packets file
+  const auto filename = std::format("packets_{:04d}_ts{:d}.tmp", my_rank, timestep);
+
+  printlnlog("Reading {}", filename);
+  auto packets_file = fopen_required_uniqueptr(filename, "rb");
+  std::int64_t packet_count_in_file = 0;
+  assert_always(std::fread(&packet_count_in_file, sizeof(std::int64_t), 1, packets_file.get()) == 1);
+  assert_always(packet_count_in_file > 0);
+  assert_always(packet_count_in_file <= std::ssize(pkt));
+  assert_always(std::fread(pkt.data(), sizeof(Packet), packet_count_in_file, packets_file.get()) ==
+                static_cast<size_t>(packet_count_in_file));
+  printlnlog("done");
+  return pkt.first(packet_count_in_file);
+}
+
+void write_temp_packetsfile(const int timestep, const int my_rank, const std::span<const Packet> pkt) {
+  // write packets binary file (and retry if the write fails)
+  const auto filename = std::format("packets_{:04d}_ts{:d}.tmp", my_rank, timestep);
+
+  bool write_success = false;
+  while (!write_success) {
+    printlog("timestep {}: writing {}...", timestep, filename);
+    FILE* packets_file = fopen(filename.c_str(), "wb");
+    if (packets_file == nullptr) {
+      printlnlog("ERROR: Could not open file '{}' for mode 'wb'.", filename);
+      write_success = false;
+    } else {
+      auto packet_count = static_cast<std::int64_t>(std::ssize(pkt));
+      // write number of packets as header
+      write_success = (std::fwrite(&packet_count, sizeof(std::int64_t), 1, packets_file) == 1);
+      write_success =
+          write_success && (std::fwrite(pkt.data(), sizeof(Packet), pkt.size(), packets_file) == pkt.size());
+      if (!write_success) {
+        printlnlog("fwrite() FAILED! will retry...");
+      }
+
+      fclose(packets_file);
+    }
+
+    if (write_success) {
+      printlnlog("done");
+    }
+  }
 }
