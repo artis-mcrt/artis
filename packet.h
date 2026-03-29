@@ -75,7 +75,7 @@ struct Packet {
 void packet_init(std::span<Packet> packets);
 void read_text_packets(const std::string& filename, std::vector<Packet>& packets);
 void write_text_packets(const std::string& filename, std::span<const Packet> packets);
-void read_temp_packetsfile(int timestep, int my_rank, std::vector<Packet>& pkt);
-void write_temp_packetsfile(int timestep, int my_rank, std::span<const Packet> pkt);
+void read_temp_packetsfile(int timestep, int my_rank, std::vector<Packet>& packets);
+void write_temp_packetsfile(int timestep, int my_rank, std::span<const Packet> packets);
 
 #endif  // PACKET_H
