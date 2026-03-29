@@ -67,11 +67,13 @@ void do_angle_bin(const int a, std::span<Packet> pkts, bool load_allrank_packets
   constexpr double nu_max_gamma = 4. * MEV / H;
   THREADLOCALONHOST Spectra gamma_spectra;
   init_spectra(gamma_spectra, nu_min_gamma, nu_max_gamma, false);
-  resize_exactly(rank_packets, globals::nprocs_exspec);
-  for (int p = 0; p < globals::nprocs_exspec; p++) {
-    // start with full size spans for each rank,
-    // but these will be resized to the actual number of packets read in for that rank
-    rank_packets[p] = load_allrank_packets ? pkts.subspan(p * MPKTS, MPKTS) : pkts;
+  if (rank_packets.empty()) {
+    resize_exactly(rank_packets, globals::nprocs_exspec);
+    for (int p = 0; p < globals::nprocs_exspec; p++) {
+      // start with full size spans for each rank,
+      // but these will be resized to the actual number of packets read in for that rank
+      rank_packets[p] = load_allrank_packets ? pkts.subspan(p * MPKTS, MPKTS) : pkts;
+    }
   }
   assert_always(globals::nprocs_exspec > 0);
   for (int p = 0; p < globals::nprocs_exspec; p++) {
