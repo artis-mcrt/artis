@@ -442,7 +442,11 @@ void write_temp_packetsfile(const int timestep, const int my_rank, std::span<con
       printlnlog("ERROR: Could not open file '{}' for mode 'wb'.", filename);
       write_success = false;
     } else {
-      write_success = (std::fwrite(pkt.data(), sizeof(Packet), pkt.size(), packets_file) == pkt.size());
+      auto packet_count = static_cast<ptrdiff_t>(std::ssize(pkt));
+      // write number of packets as header
+      write_success = (std::fwrite(&packet_count, sizeof(ptrdiff_t), 1, packets_file) == 1);
+      write_success =
+          write_success && (std::fwrite(pkt.data(), sizeof(Packet), pkt.size(), packets_file) == pkt.size());
       if (!write_success) {
         printlnlog("fwrite() FAILED! will retry...");
       }

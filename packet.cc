@@ -174,9 +174,13 @@ auto read_temp_packetsfile(const int timestep, const int my_rank, std::span<Pack
 
   printlnlog("Reading {}", filename);
   auto packets_file = fopen_required_uniqueptr(filename, "rb");
-  assert_always(std::fread(pkt.data(), sizeof(Packet), MPKTS, packets_file.get()) == static_cast<size_t>(MPKTS));
+  ptrdiff_t packet_count_in_file = 0;
+  assert_always(std::fread(&packet_count_in_file, sizeof(ptrdiff_t), 1, packets_file.get()) == 1);
+  assert_always(packet_count_in_file <= std::ssize(pkt));
+  assert_always(std::fread(pkt.data(), sizeof(Packet), packet_count_in_file, packets_file.get()) ==
+                static_cast<size_t>(packet_count_in_file));
   printlnlog("done");
-  return pkt;
+  return pkt.first(packet_count_in_file);
 }
 
 auto read_packets(const std::string& filename, const std::span<Packet> packets) -> std::span<Packet> {
