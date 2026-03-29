@@ -458,11 +458,15 @@ auto walltime_sufficient_to_continue(const int nts, const int nts_prev, const in
   return do_this_full_loop;
 }
 
-void save_grid_and_packets(const int nts, std::span<const Packet> packets) {
+void save_grid_and_packets(const int nts, std::vector<Packet>& packets) {
   MPI_Barrier(MPI_COMM_WORLD);
   const auto my_rank = globals::my_rank;
 
   const auto time_write_packets_file_start = std::time(nullptr);
+
+  if constexpr (!KEEP_ESCAPED_GAMMAS) {
+    std::erase_if(packets, [](const Packet& pkt) { return pkt.type == TYPE_ESCAPE && pkt.escape_type == TYPE_GAMMA; });
+  }
 
   // save packet state at start of current timestep (before propagation)
   write_temp_packetsfile(nts, globals::my_rank, packets);
