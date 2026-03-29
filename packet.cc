@@ -166,7 +166,7 @@ void write_text_packets(const std::string& filename, const std::span<const Packe
   }
 }
 
-auto read_temp_packetsfile(const int timestep, const int my_rank, std::span<Packet> pkt) -> std::span<Packet> {
+auto read_temp_packetsfile(const int timestep, const int my_rank, const std::span<Packet> pkt) -> std::span<Packet> {
   // read binary packets file
   const auto filename = std::format("packets_{:04d}_ts{:d}.tmp", my_rank, timestep);
 
