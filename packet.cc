@@ -242,7 +242,7 @@ void read_temp_packetsfile(const int timestep, const int my_rank, std::vector<Pa
   printlnlog("done");
 }
 
-void write_temp_packetsfile(const int timestep, const int my_rank, const std::span<const Packet> pkt) {
+void write_temp_packetsfile(const int timestep, const int my_rank, const std::span<const Packet> packets) {
   // write packets binary file (and retry if the write fails)
   const auto filename = std::format("packets_{:04d}_ts{:d}.tmp", my_rank, timestep);
 
@@ -254,11 +254,11 @@ void write_temp_packetsfile(const int timestep, const int my_rank, const std::sp
       printlnlog("ERROR: Could not open file '{}' for mode 'wb'.", filename);
       write_success = false;
     } else {
-      auto packet_count = static_cast<std::int64_t>(std::ssize(pkt));
+      auto packet_count = static_cast<std::int64_t>(std::ssize(packets));
       // write number of packets as header
       write_success = (std::fwrite(&packet_count, sizeof(std::int64_t), 1, packets_file) == 1);
-      write_success =
-          write_success && (std::fwrite(pkt.data(), sizeof(Packet), pkt.size(), packets_file) == pkt.size());
+      write_success = write_success &&
+                      (std::fwrite(packets.data(), sizeof(Packet), packets.size(), packets_file) == packets.size());
       if (!write_success) {
         printlnlog("fwrite() FAILED! will retry...");
       }
