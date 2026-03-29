@@ -12,6 +12,7 @@
 #include <ios>
 #include <new>
 #include <span>
+#include <system_error>
 #include <vector>
 
 #pragma clang unsafe_buffer_usage begin
@@ -118,7 +119,7 @@ void do_angle_bin(const int a, std::span<Packet> pkts, bool load_allrank_packets
   }
 
   if (a == -1) {
-    // angle-averaged spectra and light curves
+    // all directions integrated spectra and light curves
     write_light_curve("light_curve.out", rpkt_light_curve_lum, rpkt_light_curve_lumcmf, globals::ntimesteps);
     write_spectra("spec.out", "emission.out", "emissiontrue.out", "absorption.out", rpkt_spectra, globals::ntimesteps);
 
@@ -129,6 +130,10 @@ void do_angle_bin(const int a, std::span<Packet> pkts, bool load_allrank_packets
     if constexpr (KEEP_ESCAPED_GAMMAS) {
       write_light_curve("gamma_light_curve.out", gamma_light_curve_lum, gamma_light_curve_lumcmf, globals::ntimesteps);
       write_spectra("gamma_spec.out", "", "", "", gamma_spectra, globals::ntimesteps);
+    } else {
+      std::error_code ec;
+      std::filesystem::remove("gamma_light_curve.out", ec);
+      std::filesystem::remove("gamma_spec.out", ec);
     }
 
     printlnlog("finished angle-averaged stuff");
