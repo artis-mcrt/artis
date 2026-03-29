@@ -3,7 +3,6 @@ aff44ecad68d986f04fcd6110331ba8b  bflist.out
 a4c2c3263362bbe99791bd3bac911a5f  deposition.out
 c4b67a2819392e88e9d2a8c0f4c8ac5a  emission.out
 9883fd08c13aa6501ff0894d76e69760  emissiontrue.out
-d0ab0636dff986e7aa00a5428c0aed47  gamma_light_curve.out
 20dadbc26e8f98511b3a587798c9e190  gammalinelist.out
 a3e3cf9b6adeac882d182c06011c63e8  grid.out
 e1329fccf90200096bcaa9a79623eb5a  light_curve.out
