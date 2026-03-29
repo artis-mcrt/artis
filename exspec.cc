@@ -83,13 +83,7 @@ void do_angle_bin(const int a, std::span<Packet> pkts, bool load_allrank_packets
       auto pktfilename = std::format("packets{:02d}_{:04d}.out", 0, p);
       printlnlog("Reading {} (file {} of {})", pktfilename, p + 1, globals::nprocs_exspec);
 
-      if (std::filesystem::exists(pktfilename)) {
-        pkts_thisrank = read_text_packets(pktfilename, pkts_thisrank);
-      } else {
-        printlnlog("   WARNING {} does not exist - trying temp packets file at beginning of timestep {}...",
-                   pktfilename, globals::timestep_initial);
-        pkts_thisrank = read_temp_packetsfile(globals::timestep_initial, p, pkts_thisrank);
-      }
+      pkts_thisrank = read_text_packets(pktfilename, pkts_thisrank);
     }
 
     int nesc_tot = 0;
