@@ -6,7 +6,6 @@
 #include <cstdio>
 #include <cstdlib>
 #include <format>
-#include <fstream>
 #include <iostream>
 #include <ranges>
 #include <span>
@@ -138,9 +137,8 @@ void packet_init(std::span<Packet> packets)
 }
 
 // write packets text file
-void write_packets(const std::string& filename, const std::span<const Packet> packets) {
-  auto packets_file = std::fstream(filename, std::ios::out | std::ios::trunc);
-  assert_always(packets_file.is_open());
+void write_text_packets(const std::string& filename, const std::span<const Packet> packets) {
+  auto packets_file = fstream_required(filename, std::ios::out | std::ios::trunc);
   packets_file << "#number where type_id posx posy posz dirx diry dirz tdecay e_cmf e_rf nu_cmf nu_rf "
                   "escape_type_id escape_time emissiontype trueemissiontype "
                   "em_posx em_posy em_posz absorption_type absorption_freq nscatterings em_time stokes1 stokes2 "
@@ -183,7 +181,7 @@ auto read_temp_packetsfile(const int timestep, const int my_rank, std::span<Pack
   return pkt.first(packet_count_in_file);
 }
 
-auto read_packets(const std::string& filename, const std::span<Packet> packets) -> std::span<Packet> {
+auto read_text_packets(const std::string& filename, const std::span<Packet> packets) -> std::span<Packet> {
   // read packets*.out text format file
   auto packets_file = fstream_required(filename, std::ios::in);
 

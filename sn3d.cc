@@ -666,7 +666,7 @@ auto do_timestep(const int nts, const int titer, std::span<Packet> packets, cons
 
     if (nts == globals::timestep_finish - 1) {
       const auto filename = std::format("packets{:02d}_{:04d}.out", 0, globals::my_rank);
-      write_packets(filename, packets);
+      write_text_packets(filename, packets);
 
       vpkt::write_timestep(nts, globals::my_rank, true);
 
