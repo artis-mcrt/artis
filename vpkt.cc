@@ -588,8 +588,7 @@ void remove_temp_vpkt_file(const int nts, const int my_rank) {
                                              std::format("vpackets_{:04d}_ts{}.tmp", my_rank, nts)};
 
   for (const auto& filename : filenames) {
-    if (std::filesystem::exists(filename)) {
-      std::filesystem::remove(filename);
+    if (std::filesystem::remove(filename)) {
       printlnlog("Deleted {}", filename);
     }
   }
