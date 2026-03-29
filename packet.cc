@@ -138,69 +138,63 @@ void packet_init(std::span<Packet> packets)
   printlnlog("total energy that will be freed during simulation time: {:g} erg", e_cmf_total);
 }
 
-auto read_text_packets(const std::string& filename, const std::span<Packet> packets) -> std::span<Packet> {
-  // read packets*.out text format file
+// read packets*.out text format file
+void read_text_packets(const std::string& filename, std::vector<Packet>& packets) {
+  printlnlog("Reading {}", filename);
   auto packets_file = fstream_required(filename, std::ios::in);
 
+  std::istringstream ssline;
   std::string line;
-
   int packets_read = 0;
+  Packet pkt;
   while (get_noncommentline(packets_file, line)) {
     packets_read++;
-    const int i = packets_read - 1;
 
-    if (i >= std::ssize(packets)) {
-      printlnlog(
-          "ERROR: More data found beyond packet {} (expecting {} packets). Recompile exspec with the correct number of "
-          "packets. Run (wc -l < packets00_0000.out) to count them.",
-          packets_read, std::ssize(packets));
-      std::abort();
-    }
-
-    std::istringstream ssline(line);
+    ssline.clear();
+    ssline.str(line);
 
     int pkt_type_in = 0;
-    ssline >> packets[i].number >> packets[i].where >> pkt_type_in;
-    packets[i].type = static_cast<enum packet_type>(pkt_type_in);
+    ssline >> pkt.number >> pkt.where >> pkt_type_in;
+    pkt.type = static_cast<enum packet_type>(pkt_type_in);
 
-    ssline >> packets[i].pos[0] >> packets[i].pos[1] >> packets[i].pos[2];
+    ssline >> pkt.pos[0] >> pkt.pos[1] >> pkt.pos[2];
 
-    ssline >> packets[i].dir[0] >> packets[i].dir[1] >> packets[i].dir[2];
+    ssline >> pkt.dir[0] >> pkt.dir[1] >> pkt.dir[2];
 
-    ssline >> packets[i].tdecay;
+    ssline >> pkt.tdecay;
 
-    ssline >> packets[i].e_cmf >> packets[i].e_rf >> packets[i].nu_cmf >> packets[i].nu_rf;
+    ssline >> pkt.e_cmf >> pkt.e_rf >> pkt.nu_cmf >> pkt.nu_rf;
 
     int escape_type = 0;
-    ssline >> escape_type >> packets[i].escape_time;
-    packets[i].escape_type = static_cast<enum packet_type>(escape_type);
+    ssline >> escape_type >> pkt.escape_time;
+    pkt.escape_type = static_cast<enum packet_type>(escape_type);
 
-    ssline >> packets[i].emissiontype >> packets[i].trueemissiontype;
+    ssline >> pkt.emissiontype >> pkt.trueemissiontype;
 
-    ssline >> packets[i].em_pos[0] >> packets[i].em_pos[1] >> packets[i].em_pos[2];
+    ssline >> pkt.em_pos[0] >> pkt.em_pos[1] >> pkt.em_pos[2];
 
-    ssline >> packets[i].absorptiontype >> packets[i].absorptionfreq >> packets[i].nscatterings;
+    ssline >> pkt.absorptiontype >> pkt.absorptionfreq >> pkt.nscatterings;
 
-    ssline >> packets[i].em_time;
+    ssline >> pkt.em_time;
 
-    ssline >> packets[i].stokes[0] >> packets[i].stokes[1] >> packets[i].stokes[2];
+    ssline >> pkt.stokes[0] >> pkt.stokes[1] >> pkt.stokes[2];
 
     int int_originated_from_particlenotgamma = 0;
     ssline >> int_originated_from_particlenotgamma;
-    packets[i].originated_from_particlenotgamma = (int_originated_from_particlenotgamma != 0);
+    pkt.originated_from_particlenotgamma = (int_originated_from_particlenotgamma != 0);
 
-    ssline >> packets[i].trueem_pos[0] >> packets[i].trueem_pos[1] >> packets[i].trueem_pos[2];
+    ssline >> pkt.trueem_pos[0] >> pkt.trueem_pos[1] >> pkt.trueem_pos[2];
 
-    ssline >> packets[i].trueem_time;
+    ssline >> pkt.trueem_time;
 
-    ssline >> packets[i].pellet_nucindex;
+    ssline >> pkt.pellet_nucindex;
+
+    packets.push_back(pkt);
   }
 
   if (packets_read < MPKTS) {
-    printlnlog("WARNING: Read {} out of a possible {} packets.", packets_read, MPKTS);
-    return packets.first(packets_read);
+    printlnlog("  found {} out of a possible {} packets.", packets_read, MPKTS);
   }
-  return packets;
 }
 
 void write_text_packets(const std::string& filename, const std::span<const Packet> packets) {

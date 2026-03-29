@@ -4,6 +4,7 @@
 #include <cmath>
 #include <span>
 #include <string>
+#include <vector>
 
 #include "constants.h"
 
@@ -72,7 +73,7 @@ struct Packet {
 };
 
 void packet_init(std::span<Packet> packets);
-auto read_text_packets(const std::string& filename, std::span<Packet> packets) -> std::span<Packet>;
+void read_text_packets(const std::string& filename, std::vector<Packet>& packets);
 void write_text_packets(const std::string& filename, std::span<const Packet> packets);
 auto read_temp_packetsfile(int timestep, int my_rank, std::span<Packet> pkt) -> std::span<Packet>;
 void write_temp_packetsfile(int timestep, int my_rank, std::span<const Packet> pkt);

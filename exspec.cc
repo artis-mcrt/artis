@@ -10,7 +10,6 @@
 #include <format>
 #include <fstream>
 #include <ios>
-#include <new>
 #include <span>
 #include <vector>
 
@@ -33,9 +32,7 @@ std::fstream output_file;
 
 namespace {
 
-std::vector<std::span<Packet>> rank_packets;
-
-void do_angle_bin(const int a, std::span<Packet> pkts, bool load_allrank_packets) {
+void do_angle_bin(const int a, const std::vector<std::vector<Packet>>& packets_by_rank) {
   THREADLOCALONHOST std::vector<double> rpkt_light_curve_lum;
   resize_exactly(rpkt_light_curve_lum, globals::ntimesteps);
   std::ranges::fill(rpkt_light_curve_lum, 0.);
@@ -67,24 +64,9 @@ void do_angle_bin(const int a, std::span<Packet> pkts, bool load_allrank_packets
   constexpr double nu_max_gamma = 4. * MEV / H;
   THREADLOCALONHOST Spectra gamma_spectra;
   init_spectra(gamma_spectra, nu_min_gamma, nu_max_gamma, false);
-  if (rank_packets.empty()) {
-    resize_exactly(rank_packets, globals::nprocs_exspec);
-    for (int p = 0; p < globals::nprocs_exspec; p++) {
-      // start with full size spans for each rank,
-      // but these will be resized to the actual number of packets read in for that rank
-      rank_packets[p] = load_allrank_packets ? pkts.subspan(p * MPKTS, MPKTS) : pkts;
-    }
-  }
   assert_always(globals::nprocs_exspec > 0);
   for (int p = 0; p < globals::nprocs_exspec; p++) {
-    auto& pkts_thisrank = rank_packets[p];
-
-    if (a == -1 || !load_allrank_packets) {
-      auto pktfilename = std::format("packets{:02d}_{:04d}.out", 0, p);
-      printlnlog("Reading {} (file {} of {})", pktfilename, p + 1, globals::nprocs_exspec);
-
-      pkts_thisrank = read_text_packets(pktfilename, pkts_thisrank);
-    }
+    const auto& pkts_thisrank = packets_by_rank[p];
 
     int nesc_tot = 0;
     int nesc_gamma = 0;
@@ -106,8 +88,9 @@ void do_angle_bin(const int a, std::span<Packet> pkts, bool load_allrank_packets
         }
       }
     }
-    if (a == -1 || !load_allrank_packets) {
-      printlnlog("  {} of {} packets escaped ({} gamma-pkts and {} r-pkts)", nesc_tot, MPKTS, nesc_gamma, nesc_rpkt);
+    if (a == -1) {
+      printlnlog("  rank {}: {} of {} packets escaped ({} gamma-pkts and {} r-pkts)", p, nesc_tot, MPKTS, nesc_gamma,
+                 nesc_rpkt);
     }
   }
 
@@ -193,37 +176,26 @@ auto main(int argc, char* argv[]) -> int {
   // Get input stuff
   input(globals::my_rank);
 
-  // nprocs_exspec is the number of rank output files to process with exspec
-  // however, we might be running exspec with 1 or just a few ranks
-
-  std::vector<Packet> pkts;
-  bool load_allrank_packets = false;
-  const ptrdiff_t npkts_allranks = static_cast<ptrdiff_t>(globals::nprocs_exspec) * MPKTS;
-  try {
-    // try to allocate memory for all packets from all ranks
-    resize_exactly(pkts, npkts_allranks);
-    printlnlog(
-        "mem_usage: loading {} packets from each {} processes simultaneously (total {} packets, {:.1f} MB memory)",
-        MPKTS, globals::nprocs_exspec, npkts_allranks, npkts_allranks * sizeof(Packet) / 1024. / 1024.);
-    load_allrank_packets = true;
-  } catch (const std::bad_alloc& e) {
-    // if we can't allocate memory for all packets, try to allocate memory for just one rank
-    load_allrank_packets = false;
-    printlnlog("mem_usage: malloc failed to allocate memory for all packets");
-    printlnlog(
-        "mem_usage: loading {} packets from each of {} processes sequentially (total {} packets, {:.1f} MB memory)",
-        MPKTS, globals::nprocs_exspec, npkts_allranks, npkts_allranks * sizeof(Packet) / 1024. / 1024.);
-    resize_exactly(pkts, MPKTS);
-  }
+  setup_timesteps();
 
   init_spectrum_trace();  // needed for TRACE_EMISSION_ABSORPTION_REGION_ON
 
-  setup_timesteps();
+  // nprocs_exspec is the number of rank output files to process with exspec
+  // however, we might be running exspec with 1 or just a few ranks
+
+  std::vector<std::vector<Packet>> packets_by_rank;
+  resize_exactly(packets_by_rank, globals::nprocs_exspec);
+
+  for (int p = 0; p < globals::nprocs_exspec; p++) {
+    packets_by_rank[p].reserve(65536);
+    auto pktfilename = std::format("packets{:02d}_{:04d}.out", 0, p);
+    read_text_packets(pktfilename, packets_by_rank[p]);
+  }
 
   const int dirbinend = (grid::get_modelgridtype() == GridType::SPHERICAL1D) ? 0 : MABINS;
   // a is the escape direction angle bin
   for (int dirbin = -1; dirbin < dirbinend; dirbin++) {
-    do_angle_bin(dirbin, pkts, load_allrank_packets);
+    do_angle_bin(dirbin, packets_by_rank);
   }
 
   decay::cleanup();
