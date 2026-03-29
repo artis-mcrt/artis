@@ -226,7 +226,7 @@ void write_text_packets(const std::string& filename, const std::span<const Packe
   }
 }
 
-auto read_temp_packetsfile(const int timestep, const int my_rank, const std::span<Packet> pkt) -> std::span<Packet> {
+void read_temp_packetsfile(const int timestep, const int my_rank, std::vector<Packet>& pkt) {
   // read binary packets file
   const auto filename = std::format("packets_{:04d}_ts{:d}.tmp", my_rank, timestep);
 
@@ -235,11 +235,11 @@ auto read_temp_packetsfile(const int timestep, const int my_rank, const std::spa
   std::int64_t packet_count_in_file = 0;
   assert_always(std::fread(&packet_count_in_file, sizeof(std::int64_t), 1, packets_file.get()) == 1);
   assert_always(packet_count_in_file > 0);
-  assert_always(packet_count_in_file <= std::ssize(pkt));
+  assert_always(packet_count_in_file <= MPKTS);
+  resize_exactly(pkt, packet_count_in_file);
   assert_always(std::fread(pkt.data(), sizeof(Packet), packet_count_in_file, packets_file.get()) ==
                 static_cast<size_t>(packet_count_in_file));
   printlnlog("done");
-  return pkt.first(packet_count_in_file);
 }
 
 void write_temp_packetsfile(const int timestep, const int my_rank, const std::span<const Packet> pkt) {

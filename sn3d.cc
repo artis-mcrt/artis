@@ -531,12 +531,12 @@ void zero_estimators() {
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
-auto do_timestep(const int nts, const int titer, std::span<Packet> packets, const int walltimelimitseconds) -> bool {
+auto do_timestep(const int nts, const int titer, std::vector<Packet>& packets, const int walltimelimitseconds) -> bool {
   bool do_this_full_loop = true;
   const int nts_prev = (titer != 0 || nts == 0) ? nts : nts - 1;
   if ((titer > 0) || (globals::simulation_continued_from_saved && (nts == globals::timestep_initial))) {
     // Read the packets file to reset before each additional iteration on the timestep
-    packets = read_temp_packetsfile(nts, globals::my_rank, packets);
+    read_temp_packetsfile(nts, globals::my_rank, packets);
   }
 
   // Some counters on pkt-actions need to be reset to do statistics
