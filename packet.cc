@@ -139,19 +139,20 @@ void packet_init(std::span<Packet> packets)
 }
 
 // read packets*.out text format file
-void read_text_packets(const std::string& filename, std::vector<Packet>& packets) {
+auto read_text_packets(const std::string& filename) -> std::vector<Packet> {
   printlnlog("Reading {}", filename);
   auto packets_file = fstream_required(filename, std::ios::in);
 
   std::istringstream ssline;
   std::string line;
-  int packets_read = 0;
-  Packet pkt;
+  std::vector<Packet> packets;
+  packets.reserve(MPKTS);
   while (get_noncommentline(packets_file, line)) {
-    packets_read++;
-
     ssline.clear();
     ssline.str(line);
+
+    packets.emplace_back();
+    Packet& pkt = packets.back();
 
     int pkt_type_in = 0;
     ssline >> pkt.number >> pkt.where >> pkt_type_in;
@@ -188,13 +189,12 @@ void read_text_packets(const std::string& filename, std::vector<Packet>& packets
     ssline >> pkt.trueem_time;
 
     ssline >> pkt.pellet_nucindex;
-
-    packets.push_back(pkt);
   }
 
-  if (packets_read < MPKTS) {
-    printlnlog("  found {} out of a possible {} packets.", packets_read, MPKTS);
+  if (std::ssize(packets) < MPKTS) {
+    printlnlog("  found {} out of a possible {} packets.", std::ssize(packets), MPKTS);
   }
+  return packets;
 }
 
 void write_text_packets(const std::string& filename, const std::span<const Packet> packets) {

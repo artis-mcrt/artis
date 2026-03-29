@@ -184,9 +184,7 @@ auto main(int argc, char* argv[]) -> int {
   resize_exactly(packets_by_rank, globals::nprocs_exspec);
 
   for (int p = 0; p < globals::nprocs_exspec; p++) {
-    packets_by_rank[p].reserve(65536);
-    auto pktfilename = std::format("packets{:02d}_{:04d}.out", 0, p);
-    read_text_packets(pktfilename, packets_by_rank[p]);
+    packets_by_rank[p] = read_text_packets(std::format("packets{:02d}_{:04d}.out", 0, p));
   }
 
   const int dirbinend = (grid::get_modelgridtype() == GridType::SPHERICAL1D) ? 0 : MABINS;
