@@ -106,9 +106,6 @@ void do_angle_bin(const int a, const std::vector<std::vector<Packet>>& packets_b
     if constexpr (KEEP_ESCAPED_GAMMAS) {
       write_light_curve("gamma_light_curve.out", gamma_light_curve_lum, gamma_light_curve_lumcmf, globals::ntimesteps);
       write_spectra("gamma_spec.out", "", "", "", gamma_spectra, globals::ntimesteps);
-    } else {
-      std::filesystem::remove("gamma_light_curve.out");
-      std::filesystem::remove("gamma_spec.out");
     }
 
     printlnlog("finished angle-averaged stuff");
