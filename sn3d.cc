@@ -944,10 +944,7 @@ auto main(int argc, char* argv[]) -> int {
   globals::mpi_finalized = true;
   MPI_Finalize();
 
-  const std::filesystem::path pid_file_path("artis.pid");
-  if (std::filesystem::exists(pid_file_path)) {
-    std::filesystem::remove(pid_file_path);
-  }
+  std::filesystem::remove("artis.pid");
 
   return 0;
 }
