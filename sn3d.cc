@@ -13,7 +13,6 @@
 #include <format>
 #include <fstream>
 #include <ios>
-#include <iterator>
 
 #ifdef STDPAR_ON
 #include <ranges>
