@@ -179,34 +179,6 @@ auto read_temp_packetsfile(const int timestep, const int my_rank, std::span<Pack
   return pkt;
 }
 
-auto verify_temp_packetsfile(const int timestep, const int my_rank, const std::span<const Packet> pkt) -> bool {
-  // return true if verification is good, otherwise return false
-
-  // read binary packets file
-  const auto filename = std::format("packets_{:04d}_ts{:d}.tmp", my_rank, timestep);
-
-  printlnlog("Verifying file {}", filename);
-  auto packets_file = fopen_required_uniqueptr(filename, "rb");
-  Packet pkt_in;
-  bool readback_passed = true;
-  for (size_t n = 0; n < pkt.size(); n++) {
-    assert_always(std::fread(&pkt_in, sizeof(Packet), 1, packets_file.get()) == 1);
-    if (pkt_in != pkt[n]) {
-      printlnlog("failed on packet {}", n);
-      printlnlog(" compare number {} {}", pkt_in.number, pkt[n].number);
-      printlnlog(" compare nu_cmf {:g} {:g}", pkt_in.nu_cmf, pkt[n].nu_cmf);
-      printlnlog(" compare e_rf {:g} {:g}", pkt_in.e_rf, pkt[n].e_rf);
-      readback_passed = false;
-    }
-  }
-  if (readback_passed) {
-    printlnlog("  verification passed");
-  } else {
-    printlnlog("  verification FAILED");
-  }
-  return readback_passed;
-}
-
 auto read_packets(const std::string& filename, const std::span<Packet> packets) -> std::span<Packet> {
   // read packets*.out text format file
   auto packets_file = fstream_required(filename, std::ios::in);

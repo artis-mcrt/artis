@@ -50,7 +50,6 @@
 std::fstream output_file;
 
 namespace {
-constexpr bool VERIFY_WRITTEN_PACKETS_FILES = false;
 
 std::fstream linestat_file;
 time_t real_time_start = -1;
@@ -490,43 +489,22 @@ void save_grid_and_packets(const int nts, std::span<const Packet> packets) {
   MPI_Barrier(MPI_COMM_WORLD);
   const auto my_rank = globals::my_rank;
 
-  bool write_successful = false;
-  while (!write_successful) {
-    const auto time_write_packets_file_start = std::time(nullptr);
+  const auto time_write_packets_file_start = std::time(nullptr);
 
-    // save packet state at start of current timestep (before propagation)
-    write_temp_packetsfile(nts, globals::my_rank, packets);
+  // save packet state at start of current timestep (before propagation)
+  write_temp_packetsfile(nts, globals::my_rank, packets);
 
-    vpkt::write_timestep(nts, globals::my_rank, false);
+  vpkt::write_timestep(nts, globals::my_rank, false);
 
-    const auto time_write_packets_finished_thisrank = std::time(nullptr);
+  const auto time_write_packets_finished_thisrank = std::time(nullptr);
 
-    MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier(MPI_COMM_WORLD);
 
-    const auto timenow = std::time(nullptr);
+  const auto timenow = std::time(nullptr);
 
-    printlnlog("timestep {}: finished writing temporary packets file (took {}, waited {}, total {} seconds)", nts,
-               time_write_packets_finished_thisrank - time_write_packets_file_start,
-               timenow - time_write_packets_finished_thisrank, timenow - time_write_packets_file_start);
-
-    if constexpr (VERIFY_WRITTEN_PACKETS_FILES) {
-      MPI_Barrier(MPI_COMM_WORLD);
-
-      const auto time_readback_packets_start = std::time(nullptr);
-
-      printlnlog("reading back temporary packets file to check validity...");
-
-      // read packets file back to check that the disk write didn't fail
-      write_successful = verify_temp_packetsfile(nts, my_rank, packets);
-
-      MPI_Barrier(MPI_COMM_WORLD);
-
-      printlnlog("Verifying packets files for all ranks took {} seconds.",
-                 std::time(nullptr) - time_readback_packets_start);
-    } else {
-      write_successful = true;
-    }
-  }
+  printlnlog("timestep {}: finished writing temporary packets file (took {}, waited {}, total {} seconds)", nts,
+             time_write_packets_finished_thisrank - time_write_packets_file_start,
+             timenow - time_write_packets_finished_thisrank, timenow - time_write_packets_file_start);
 
   if (my_rank == 0) {
     grid::write_grid_restart_data(nts);
@@ -587,7 +565,7 @@ auto do_timestep(const int nts, const int titer, std::span<Packet> packets, cons
   const int nts_prev = (titer != 0 || nts == 0) ? nts : nts - 1;
   if ((titer > 0) || (globals::simulation_continued_from_saved && (nts == globals::timestep_initial))) {
     // Read the packets file to reset before each additional iteration on the timestep
-    read_temp_packetsfile(nts, globals::my_rank, packets);
+    packets = read_temp_packetsfile(nts, globals::my_rank, packets);
   }
 
   // Some counters on pkt-actions need to be reset to do statistics
