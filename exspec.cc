@@ -12,7 +12,6 @@
 #include <ios>
 #include <new>
 #include <span>
-#include <system_error>
 #include <vector>
 
 #pragma clang unsafe_buffer_usage begin
@@ -131,9 +130,8 @@ void do_angle_bin(const int a, std::span<Packet> pkts, bool load_allrank_packets
       write_light_curve("gamma_light_curve.out", gamma_light_curve_lum, gamma_light_curve_lumcmf, globals::ntimesteps);
       write_spectra("gamma_spec.out", "", "", "", gamma_spectra, globals::ntimesteps);
     } else {
-      std::error_code ec;
-      std::filesystem::remove("gamma_light_curve.out", ec);
-      std::filesystem::remove("gamma_spec.out", ec);
+      std::filesystem::remove("gamma_light_curve.out");
+      std::filesystem::remove("gamma_spec.out");
     }
 
     printlnlog("finished angle-averaged stuff");
@@ -240,9 +238,7 @@ auto main(int argc, char* argv[]) -> int {
   globals::mpi_finalized = true;
   MPI_Finalize();
 
-  if (std::filesystem::exists("artis.pid")) {
-    std::filesystem::remove("artis.pid");
-  }
+  std::filesystem::remove("artis.pid");
 
   return 0;
 }
