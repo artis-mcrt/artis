@@ -742,7 +742,7 @@ auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixsli
   }
 
   const auto T_e = grid::get_Te(nonemptymgi);
-  const auto nne = grid::get_nne(nonemptymgi);
+  const auto clumpednne = grid::apply_clumping(grid::get_nne(nonemptymgi), grid::get_clumpfactor(nonemptymgi));
   const auto nnetot = grid::get_nnetot(nonemptymgi);
   const auto& allcont_nu_edge = globals::allcont.nu_edge;
 
@@ -813,7 +813,8 @@ auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixsli
                                              : calculate_levelpop(nonemptymgi, element, ion + 1, upper);
           const double modified_sahafact =
               SAHACONST * stat_weight(element, ion, level) / stat_weight(element, ion + 1, upper) * std::pow(T_e, -1.5);
-          modified_departure_ratio = nnupperionlevel / nnlevel * nne * modified_sahafact;  // put that to phixslist
+          modified_departure_ratio =
+              nnupperionlevel / nnlevel * clumpednne * modified_sahafact;  // put that to phixslist
           if (USECELLHISTANDUPDATEPHIXSLIST) {
             globals::cellcache[cellcacheslotid].allcont_modified_departureratios[i] = modified_departure_ratio;
           }

@@ -56,7 +56,6 @@ auto calculate_cooling_rates_ion(const int nonemptymgi, const int element, const
   const auto nne = grid::get_nne(nonemptymgi);
   const auto T_e = grid::get_Te(nonemptymgi);
   const float clumpfactor = grid::get_clumpfactor(nonemptymgi);
-  const float clumpednne = grid::apply_clumping(nne, clumpfactor);
 
   double C_ion = 0.;
   [[maybe_unused]] int i = 0;  // NOLINT(misc-const-correctness)
@@ -67,8 +66,8 @@ auto calculate_cooling_rates_ion(const int nonemptymgi, const int element, const
   // ff creation of rpkt
   const int ioncharge = get_ionstage(element, ion) - 1;
   if (ioncharge > 0) {
-    const double C_ff_ion = 1.426e-27 * sqrt(T_e) * pow(ioncharge, 2) * nncurrention * clumpednne;
-    C_ion += C_ff_ion;
+    const double C_ff_ion = 1.426e-27 * sqrt(T_e) * pow(ioncharge, 2) * nncurrention * nne;
+    C_ion += grid::apply_clumping(C_ff_ion, clumpfactor);
 
     if constexpr (update_cellcache_contribs) {
       ion_contribs[i] = C_ion;
@@ -165,8 +164,8 @@ auto calculate_cooling_rates_ion(const int nonemptymgi, const int element, const
           }
           return nnupperion;
         }();
-        const double C = get_bfcoolingcoeff(element, ion, level, phixstargetindex, T_e) * pop * clumpednne;
-        C_ion += C;
+        const double C = get_bfcoolingcoeff(element, ion, level, phixstargetindex, T_e) * pop * nne;
+        C_ion += grid::apply_clumping(C, clumpfactor);
 
         if constexpr (update_cellcache_contribs) {
           ion_contribs[i] = C_ion;

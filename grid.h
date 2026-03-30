@@ -129,7 +129,8 @@ inline auto get_ejecta_kinetic_energy() {
 }
 
 // Applies the clumping factor to `val` if microclumping is being used
-inline auto apply_clumping(const float val, const float clumpfactor) -> float {
+template <typename T>
+inline auto apply_clumping(const T val, const float clumpfactor) -> T {
   if constexpr (USE_MICROCLUMPING) {
     return val * clumpfactor;
   }
