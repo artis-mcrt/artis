@@ -939,8 +939,8 @@ DEVICE_FUNC void emit_rpkt(Packet& pkt) {
   pkt.nu_rf = pkt.nu_cmf / dopplerfactor;
   pkt.e_rf = pkt.e_cmf / dopplerfactor;
 
-  // Reset polarization information
   if constexpr (POL_ON) {
+    // Reset to unpolarised
     pkt.stokes = {1., 0., 0.};
   }
 }
