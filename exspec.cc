@@ -68,12 +68,10 @@ void do_direction_bin(const int a, const std::vector<std::vector<Packet>>& packe
   for (int p = 0; p < globals::nprocs_exspec; p++) {
     const auto& pkts_thisrank = packets_by_rank[p];
 
-    int nesc_tot = 0;
     int nesc_gamma = 0;
     int nesc_rpkt = 0;
     for (int ii = 0; ii < std::ssize(pkts_thisrank); ii++) {
       if (pkts_thisrank[ii].type == TYPE_ESCAPE) {
-        nesc_tot++;
         if (pkts_thisrank[ii].escape_type == TYPE_RPKT) {
           nesc_rpkt++;
           add_to_lc_res(pkts_thisrank[ii], a, rpkt_light_curve_lum, rpkt_light_curve_lumcmf);
@@ -89,7 +87,7 @@ void do_direction_bin(const int a, const std::vector<std::vector<Packet>>& packe
       }
     }
     if (a == -1) {
-      printlnlog("  rank {}: {} escaped r-packets and {} escaped gamma-pkts", p, nesc_tot, nesc_rpkt, nesc_gamma);
+      printlnlog("  rank {}: {} escaped r-packets and {} escaped gamma-pkts", p, nesc_rpkt, nesc_gamma);
     }
   }
 
