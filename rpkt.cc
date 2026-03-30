@@ -318,9 +318,16 @@ void electron_scatter_rpkt(Packet& pkt) {
 
   // Transform Stokes Parameters from the RF to the CMF
 
-  double Qi = pkt.stokes[1];
-  double Ui = pkt.stokes[2];
-  const auto old_dir_cmf = POL_ON ? frame_transform(pkt.dir, &Qi, &Ui, vel_vec) : angle_ab(pkt.dir, vel_vec);
+  Vec3d old_dir_cmf{};
+  double Qi = 0.;
+  double Ui = 0.;
+  if constexpr (POL_ON) {
+    Qi = pkt.stokes[1];
+    Ui = pkt.stokes[2];
+    std::tie(old_dir_cmf, Qi, Ui) = frame_transform(pkt.dir, pkt.stokes[1], pkt.stokes[2], vel_vec);
+  } else {
+    old_dir_cmf = angle_ab(pkt.dir, vel_vec);
+  }
 
   // Outcoming direction. Compute the new cmf direction from the old direction and the scattering angles (see Kalos &
   // Whitlock 2008)
@@ -409,14 +416,15 @@ void electron_scatter_rpkt(Packet& pkt) {
     const double cos2i2 = cos(2 * i2);
     const double sin2i2 = sin(2 * i2);
 
-    double Q = (Qnew * cos2i2) + (Unew * sin2i2);
-    double U = (-Qnew * sin2i2) + (Unew * cos2i2);
+    const double Q_cmf = (Qnew * cos2i2) + (Unew * sin2i2);
+    const double U_cmf = (-Qnew * sin2i2) + (Unew * cos2i2);
 
     // Transform Stokes Parameters from the CMF to the RF
     // Update rest frame direction, frequency and energy
-    pkt.dir = frame_transform(new_dir_cmf, &Q, &U, Vec3d{-vel_vec[0], -vel_vec[1], -vel_vec[2]});
-
-    pkt.stokes = {1., Q, U};
+    const auto [new_dir_rf, Q_rf, U_rf] =
+        (frame_transform(new_dir_cmf, Q_cmf, U_cmf, Vec3d{-vel_vec[0], -vel_vec[1], -vel_vec[2]}));
+    pkt.dir = new_dir_rf;
+    pkt.stokes = {1., Q_rf, U_rf};
   }
 
   // Check unit vector

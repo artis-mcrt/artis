@@ -275,12 +275,10 @@ constexpr auto move_pkt_withtime(Packet& pkt, const double distance) -> double {
 }
 
 // Routine to transform the Stokes Parameters from RF to CMF
-constexpr auto frame_transform(const Vec3d& n_rf, double* Q, double* U, const Vec3d& v) -> Vec3d {
+constexpr auto frame_transform(const Vec3d& n_rf, const double Q0, const double U0, const Vec3d& v)
+    -> std::tuple<Vec3d, double, double> {
   // Meridian frame in the RF
   const auto [ref1_rf, ref2_rf] = meridian(n_rf);
-
-  const double Q0 = *Q;
-  const double U0 = *U;
 
   // Compute polarisation (which is invariant)
   const double p = sqrt((Q0 * Q0) + (U0 * U0));
@@ -358,10 +356,10 @@ constexpr auto frame_transform(const Vec3d& n_rf, double* Q, double* U, const Ve
   }
 
   // Compute Stokes Parameters in the CMF
-  *Q = cos(2 * theta_rot) * p;
-  *U = sin(2 * theta_rot) * p;
+  const auto Q = cos(2 * theta_rot) * p;
+  const auto U = sin(2 * theta_rot) * p;
 
-  return n_cmf;
+  return {n_cmf, Q, U};
 }
 
 #endif  // VECTORS_H

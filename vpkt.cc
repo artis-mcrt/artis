@@ -11,6 +11,7 @@
 #include <ios>
 #include <sstream>
 #include <string>
+#include <tuple>
 #include <vector>
 
 #include "artisoptions.h"
@@ -178,8 +179,6 @@ auto rlc_emiss_vpkt(const Packet& pkt, const double t_current, const double t_ar
   atomicadd(nvpkt_created, 1);  // increment the number of virtual packet in the given timestep
 
   const auto vel_vec = get_velocity(pkt.pos, t_current);
-  double Qi = vpkt.stokes[1];
-  double Ui = vpkt.stokes[2];
 
   // ------------ SCATTERING EVENT: dipole function --------------------
 
@@ -189,8 +188,7 @@ auto rlc_emiss_vpkt(const Packet& pkt, const double t_current, const double t_ar
   double U{NAN};
   if (type_before_rpkt == TYPE_RPKT) {
     // Transform Stokes Parameters from the RF to the CMF
-
-    const auto old_dir_cmf = frame_transform(pkt.dir, &Qi, &Ui, vel_vec);
+    const auto [old_dir_cmf, Qi, Ui] = frame_transform(pkt.dir, vpkt.stokes[1], vpkt.stokes[2], vel_vec);
 
     // Need to rotate Stokes Parameters in the scattering plane
 
@@ -229,14 +227,13 @@ auto rlc_emiss_vpkt(const Packet& pkt, const double t_current, const double t_ar
     const double cos2i2 = cos(2 * i2);
     const double sin2i2 = sin(2 * i2);
 
-    Q = (Qnew * cos2i2) + (Unew * sin2i2);
-    U = (-Qnew * sin2i2) + (Unew * cos2i2);
+    const double Q_cmf = (Qnew * cos2i2) + (Unew * sin2i2);
+    const double U_cmf = (-Qnew * sin2i2) + (Unew * cos2i2);
 
     // Transform Stokes Parameters from the CMF to the RF
 
-    const auto vel_rev = Vec3d{-vel_vec[0], -vel_vec[1], -vel_vec[2]};
-
-    frame_transform(obs_cmf, &Q, &U, vel_rev);
+    Vec3d new_dir_cmf;
+    std::tie(new_dir_cmf, Q, U) = frame_transform(obs_cmf, Q_cmf, U_cmf, Vec3d{-vel_vec[0], -vel_vec[1], -vel_vec[2]});
 
   } else if (type_before_rpkt == TYPE_KPKT || type_before_rpkt == TYPE_MA) {
     // MACROATOM and KPKT: isotropic emission
