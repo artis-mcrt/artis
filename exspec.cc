@@ -32,7 +32,7 @@ std::fstream output_file;
 
 namespace {
 
-void do_angle_bin(const int a, const std::vector<std::vector<Packet>>& packets_by_rank) {
+void do_direction_bin(const int a, const std::vector<std::vector<Packet>>& packets_by_rank) {
   THREADLOCALONHOST std::vector<double> rpkt_light_curve_lum;
   resize_exactly(rpkt_light_curve_lum, globals::ntimesteps);
   std::ranges::fill(rpkt_light_curve_lum, 0.);
@@ -189,7 +189,7 @@ auto main(int argc, char* argv[]) -> int {
   const int dirbinend = (grid::get_modelgridtype() == GridType::SPHERICAL1D) ? 0 : MABINS;
   // a is the escape direction angle bin
   for (int dirbin = -1; dirbin < dirbinend; dirbin++) {
-    do_angle_bin(dirbin, packets_by_rank);
+    do_direction_bin(dirbin, packets_by_rank);
   }
 
   decay::cleanup();
