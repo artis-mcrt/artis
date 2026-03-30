@@ -389,7 +389,7 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
       clumping_factors_file >> clump_factor;
 
       // Check if the next mgi is non-empty, if not move the file pointer to the next non-empty cell
-      int next_nonemptymgi;
+      int next_nonemptymgi = 0;
       if (!grid::check_mgi_is_nonempty(mgi + 1, next_nonemptymgi)) {
         assert_always(next_nonemptymgi == -1);  // TODO: keep this? maybe for testmode?
         const int mgi_of_next_nonemptymgi = grid::get_mgi_of_nonemptymgi(nonemptymgi + 1);
