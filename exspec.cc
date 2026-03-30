@@ -170,7 +170,7 @@ auto main(int argc, char* argv[]) -> int {
   assert_always(globals::nprocs == 1);
 
   // Get input stuff
-  input(globals::my_rank);
+  input();
 
   setup_timesteps();
 

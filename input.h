@@ -5,8 +5,8 @@
 #include <string>
 #include <string_view>
 
-void input(int rank);
-void read_parameterfile(int rank);
+void input();
+void read_parameterfile();
 void update_parameterfile(int nts);
 void setup_cellcache();
 void setup_timesteps();

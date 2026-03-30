@@ -66,7 +66,7 @@ void set_Te(int nonemptymgi, float Te);
 void set_TR(int nonemptymgi, float TR);
 void set_TJ(int nonemptymgi, float TJ);
 void set_W(int nonemptymgi, float W);
-void init_grid(int my_rank);
+void init_grid();
 [[gnu::pure]] [[nodiscard]] auto get_modelinitnucmassfrac(int modelgridindex, int nucindex) -> float;
 [[gnu::pure]] [[nodiscard]] auto get_otherstable_initabund(std::ptrdiff_t nonemptymgi, int element) -> float;
 [[gnu::pure]] [[nodiscard]] auto get_element_meanweight(std::ptrdiff_t nonemptymgi, int element) -> float;

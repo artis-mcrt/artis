@@ -11,7 +11,7 @@
 namespace radfield {
 
 void zero_estimators();
-void init(int my_rank, int ndo_nonempty);
+void init();
 void initialise_prev_titer_photoionestimators();
 void close_file();
 DEVICE_FUNC void update_estimators(ptrdiff_t nonemptymgi, double distance_e_cmf, double nu_cmf,

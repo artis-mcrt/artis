@@ -670,8 +670,6 @@ auto main(int argc, char* argv[]) -> int {
 
   check_already_running();
 
-  const int my_rank = globals::my_rank;
-
 #ifdef STDPAR_ON
   printlnlog("C++ standard parallelism (stdpar) is enabled with {} hardware threads", get_max_threads());
   for (int t = 1; t < get_max_threads(); t++) {
@@ -686,8 +684,8 @@ auto main(int argc, char* argv[]) -> int {
 #endif
   {
     // initialise the thread and rank specific output file
-    output_file =
-        fstream_required(std::format("output_{}-{}.txt", my_rank, get_thread_num()), std::ios::out | std::ios::trunc);
+    output_file = fstream_required(std::format("output_{}-{}.txt", globals::my_rank, get_thread_num()),
+                                   std::ios::out | std::ios::trunc);
 
 #ifdef _OPENMP
     printlnlog("OpenMP parallelisation is active with {} threads (max {})", omp_get_num_threads(), get_max_threads());
@@ -774,14 +772,14 @@ auto main(int argc, char* argv[]) -> int {
       MAX_NODE_SIZE);
 #endif
 
-  input(my_rank);
+  input();
   if (globals::simulation_continued_from_saved) {
     assert_always(globals::nprocs_exspec == globals::nprocs);
   } else {
     globals::nprocs_exspec = globals::nprocs;
   }
 
-  if (my_rank == 0) {
+  if (globals::my_rank == 0) {
     initialise_linestat_file();
   }
 
@@ -806,11 +804,11 @@ auto main(int argc, char* argv[]) -> int {
 
   setup_timesteps();
 
-  if (my_rank == 0) {
+  if (globals::my_rank == 0) {
     write_timestep_file();
   }
 
-  grid::init_grid(my_rank);
+  grid::init_grid();
 
   printlnlog("Simulation propagates {:g} packets per process (total {:g} with nprocs {})", 1. * MPKTS,
              1. * MPKTS * globals::nprocs, globals::nprocs);
@@ -827,10 +825,10 @@ auto main(int argc, char* argv[]) -> int {
   // The next loop is over all grid cells. For parallelisation, we want to split this loop between
   // processes. This is done by assigning each MPI process nblock cells. The residual n_leftover
   // cells are sent to processes 0 ... process n_leftover -1.
-  const int nstart = grid::get_nstart(my_rank);
-  const int ndo = grid::get_ndo(my_rank);
-  const int ndo_nonempty = grid::get_ndo_nonempty(my_rank);
-  printlog("process rank {} (global max rank {}) assigned {} modelgrid cells ({} nonempty)", my_rank,
+  const int nstart = grid::get_nstart(globals::my_rank);
+  const int ndo = grid::get_ndo(globals::my_rank);
+  const int ndo_nonempty = grid::get_ndo_nonempty(globals::my_rank);
+  printlog("process rank {} (global max rank {}) assigned {} modelgrid cells ({} nonempty)", globals::my_rank,
            globals::nprocs - 1, ndo, ndo_nonempty);
   if (ndo > 0) {
     printlnlog(": cells [{}..{}] (model has max mgi {})", nstart, nstart + ndo - 1, grid::get_npts_model() - 1);
@@ -841,18 +839,19 @@ auto main(int argc, char* argv[]) -> int {
   MPI_Barrier(MPI_COMM_WORLD);
   globals::timestep = globals::timestep_initial;
 
-  macroatom_open_file(my_rank);
+  macroatom_open_file(globals::my_rank);
   if (ndo > 0) {
     assert_always(!estimators_file.is_open());
-    estimators_file = fstream_required(std::format("estimators_{:04d}.out", my_rank), std::ios::out | std::ios::trunc);
+    estimators_file =
+        fstream_required(std::format("estimators_{:04d}.out", globals::my_rank), std::ios::out | std::ios::trunc);
 
     if (globals::total_nlte_levels > 0 && ndo_nonempty > 0) {
-      nltepop_open_file(my_rank);
+      nltepop_open_file(globals::my_rank);
     }
   }
 
   // initialise or read in virtual packet spectra
-  vpkt::init(globals::timestep, my_rank, globals::simulation_continued_from_saved);
+  vpkt::init(globals::timestep, globals::my_rank, globals::simulation_continued_from_saved);
 
   setup_cellcache();
 
