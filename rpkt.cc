@@ -321,8 +321,6 @@ void electron_scatter_rpkt(Packet& pkt) {
   double Qi = pkt.stokes[1];
   double Ui = pkt.stokes[2];
 
-  const auto old_dir_cmf = frame_transform(pkt.dir, &Qi, &Ui, vel_vec);
-
   // Outcoming direction. Compute the new cmf direction from the old direction and the scattering angles (see Kalos &
   // Whitlock 2008)
   double M = 0.;
@@ -361,6 +359,7 @@ void electron_scatter_rpkt(Packet& pkt) {
   const double tsc = acos(M);
   Vec3d new_dir_cmf{};
 
+  const auto old_dir_cmf = POL_ON ? frame_transform(pkt.dir, &Qi, &Ui, vel_vec) : angle_ab(pkt.dir, vel_vec);
   if (fabs(old_dir_cmf[2]) < 0.99999) {
     new_dir_cmf[0] = (sin(tsc) / sqrt(1. - pow(old_dir_cmf[2], 2.)) *
                       ((old_dir_cmf[1] * sin(phisc)) - (old_dir_cmf[0] * old_dir_cmf[2] * cos(phisc)))) +
@@ -373,48 +372,52 @@ void electron_scatter_rpkt(Packet& pkt) {
     new_dir_cmf = {sin(tsc) * cos(phisc), sin(tsc) * sin(phisc), (old_dir_cmf[2] > 0) ? cos(tsc) : -cos(tsc)};
   }
 
-  // Need to rotate Stokes Parameters in the scattering plane
+  if constexpr (!POL_ON) {
+    pkt.dir = angle_ab(new_dir_cmf, Vec3d{-vel_vec[0], -vel_vec[1], -vel_vec[2]});
+  } else {
+    // Need to rotate Stokes Parameters in the scattering plane
 
-  const auto [ref1_olddir, ref2_olddir] = meridian(old_dir_cmf);
+    const auto [ref1_olddir, ref2_olddir] = meridian(old_dir_cmf);
 
-  // This is the i1 angle of Bulla+2015, obtained by computing the angle between the
-  // reference axes ref1 and ref2 in the meridian frame and the corresponding axes
-  // ref1_sc and ref2_sc in the scattering plane. It is the supplementary angle of the
-  // scatt angle phisc chosen in the rejection technique above (phisc+i1=180 or phisc+i1=540)
-  const double i1 = get_rot_angle(old_dir_cmf, new_dir_cmf, ref1_olddir, ref2_olddir);
-  const double cos2i1 = cos(2 * i1);
-  const double sin2i1 = sin(2 * i1);
+    // This is the i1 angle of Bulla+2015, obtained by computing the angle between the
+    // reference axes ref1 and ref2 in the meridian frame and the corresponding axes
+    // ref1_sc and ref2_sc in the scattering plane. It is the supplementary angle of the
+    // scatt angle phisc chosen in the rejection technique above (phisc+i1=180 or phisc+i1=540)
+    const double i1 = get_rot_angle(old_dir_cmf, new_dir_cmf, ref1_olddir, ref2_olddir);
+    const double cos2i1 = cos(2 * i1);
+    const double sin2i1 = sin(2 * i1);
 
-  const double Qold = (Qi * cos2i1) - (Ui * sin2i1);
-  const double Uold = (Qi * sin2i1) + (Ui * cos2i1);
+    const double Qold = (Qi * cos2i1) - (Ui * sin2i1);
+    const double Uold = (Qi * sin2i1) + (Ui * cos2i1);
 
-  // Scattering
+    // Scattering
 
-  const double mu = dot(old_dir_cmf, new_dir_cmf);
+    const double mu = dot(old_dir_cmf, new_dir_cmf);
 
-  const double Inew = 0.75 * (((mu * mu) + 1.0) + (Qold * ((mu * mu) - 1.0)));
-  const double Qnew = (0.75 * (((mu * mu) - 1.0) + (Qold * ((mu * mu) + 1.0)))) / Inew;
-  const double Unew = (1.5 * mu * Uold) / Inew;
+    const double Inew = 0.75 * (((mu * mu) + 1.0) + (Qold * ((mu * mu) - 1.0)));
+    const double Qnew = (0.75 * (((mu * mu) - 1.0) + (Qold * ((mu * mu) + 1.0)))) / Inew;
+    const double Unew = (1.5 * mu * Uold) / Inew;
 
-  // Need to rotate Stokes Parameters out of the scattering plane to the meridian frame (Clockwise rotation of PI-i2)
+    // Need to rotate Stokes Parameters out of the scattering plane to the meridian frame (Clockwise rotation of PI-i2)
 
-  const auto [ref1, ref2] = meridian(new_dir_cmf);
+    const auto [ref1, ref2] = meridian(new_dir_cmf);
 
-  // This is the i2 angle of Bulla+2015, obtained from the angle THETA between the
-  // reference axes ref1_sc and ref2_sc in the scattering plane and ref1 and ref2 in the
-  // meridian frame. NB: we need to add PI to transform THETA to i2
-  const double i2 = PI + get_rot_angle(new_dir_cmf, old_dir_cmf, ref1, ref2);
-  const double cos2i2 = cos(2 * i2);
-  const double sin2i2 = sin(2 * i2);
+    // This is the i2 angle of Bulla+2015, obtained from the angle THETA between the
+    // reference axes ref1_sc and ref2_sc in the scattering plane and ref1 and ref2 in the
+    // meridian frame. NB: we need to add PI to transform THETA to i2
+    const double i2 = PI + get_rot_angle(new_dir_cmf, old_dir_cmf, ref1, ref2);
+    const double cos2i2 = cos(2 * i2);
+    const double sin2i2 = sin(2 * i2);
 
-  double Q = (Qnew * cos2i2) + (Unew * sin2i2);
-  double U = (-Qnew * sin2i2) + (Unew * cos2i2);
+    double Q = (Qnew * cos2i2) + (Unew * sin2i2);
+    double U = (-Qnew * sin2i2) + (Unew * cos2i2);
 
-  // Transform Stokes Parameters from the CMF to the RF
-  // Update rest frame direction, frequency and energy
-  pkt.dir = frame_transform(new_dir_cmf, &Q, &U, Vec3d{-vel_vec[0], -vel_vec[1], -vel_vec[2]});
+    // Transform Stokes Parameters from the CMF to the RF
+    // Update rest frame direction, frequency and energy
+    pkt.dir = frame_transform(new_dir_cmf, &Q, &U, Vec3d{-vel_vec[0], -vel_vec[1], -vel_vec[2]});
 
-  pkt.stokes = {1., Q, U};
+    pkt.stokes = {1., Q, U};
+  }
 
   // Check unit vector
   assert_testmodeonly(fabs(vec_len(pkt.dir) - 1.) < 1.e-6);
