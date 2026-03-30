@@ -89,8 +89,7 @@ void do_angle_bin(const int a, const std::vector<std::vector<Packet>>& packets_b
       }
     }
     if (a == -1) {
-      printlnlog("  rank {}: {} of {} packets escaped ({} gamma-pkts and {} r-pkts)", p, nesc_tot, MPKTS, nesc_gamma,
-                 nesc_rpkt);
+      printlnlog("  rank {}: {} escaped r-packets and {} escaped gamma-pkts", p, nesc_tot, nesc_rpkt, nesc_gamma);
     }
   }
 
