@@ -168,6 +168,7 @@ auto read_text_packets(const std::string& filename) -> std::vector<Packet> {
   std::vector<Packet> packets;
   std::getline(packets_file, line);  // read header line to make sure it matches
   assert_always(line == get_packets_text_header());
+
   packets.reserve(MPKTS);
   while (get_noncommentline(packets_file, line)) {
     ssline.clear();
