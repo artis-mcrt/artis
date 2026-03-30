@@ -277,8 +277,8 @@ inline int node_id{-1};
 
 inline bool mpi_finalized{false};  // set to true after MPI_Finalize
 
-inline double vmax;
-inline double rmax;
+inline double vmax{NAN};
+inline double rmax{NAN};
 inline double tmax{-1};
 inline double tmin{-1};
 
@@ -287,14 +287,14 @@ inline int timestep_initial{-1};
 inline int timestep_finish{-1};
 inline int timestep{-1};  // Current time step during the simulation
 
-inline int total_nlte_levels;
+inline int total_nlte_levels{0};
 
-inline bool simulation_continued_from_saved;
-inline int num_lte_timesteps;
-inline double cell_is_optically_thick;
-inline int num_grey_timesteps;
-inline int n_titer;
-inline bool lte_iteration;
+inline bool simulation_continued_from_saved{false};
+inline int num_lte_timesteps{-1};
+inline double cell_is_optically_thick{NAN};
+inline int num_grey_timesteps{-1};
+inline int n_titer{1};
+inline bool lte_iteration{false};
 
 inline void setup_mpi_vars() {
   MPI_Comm_rank(MPI_COMM_WORLD, &globals::my_rank);
