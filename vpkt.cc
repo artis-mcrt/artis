@@ -190,7 +190,7 @@ auto rlc_emiss_vpkt(const Packet& pkt, const double t_current, const double t_ar
   double pn{1 / (4 * PI)};
   double Q{0.};
   double U{0.};
-  if (type_before_rpkt == TYPE_RPKT && POL_ON) {
+  if (type_before_rpkt == TYPE_RPKT) {
     // Transform Stokes Parameters from the RF to the CMF
     const auto [old_dir_cmf, Qi, Ui] = frame_transform(pkt.dir, vpkt.stokes[1], vpkt.stokes[2], vel_vec);
 
