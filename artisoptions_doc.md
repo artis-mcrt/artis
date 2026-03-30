@@ -53,9 +53,6 @@ constexpr bool INITIAL_PACKETS_ON;
 // INITIAL_PACKETS_ON must be true to make use of this
 constexpr bool USE_MODEL_INITIAL_ENERGY;
 
-// record counts of emissions and absorptions in each line
-constexpr bool RECORD_LINESTAT;
-
 // Rate coefficients
 constexpr int TABLESIZE;
 constexpr double MINTEMP;

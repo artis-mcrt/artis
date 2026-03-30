@@ -555,7 +555,7 @@ void add_to_spec_res(const Packet& pkt, const int dirbin, Spectra& spectra, Spec
   // specific angle bins contain fewer packets than the full sphere, so must be normalised to match
   const double nu_min = spectra.nu_min;
   const double nu_max = spectra.nu_max;
-  const double t_arrive = get_arrive_time(pkt);
+  const double t_arrive = pkt.escape_time - (dot(pkt.pos, pkt.dir) / CLIGHT_PROP);
   if (t_arrive > globals::tmin && t_arrive < globals::tmax && pkt.nu_rf > nu_min && pkt.nu_rf < nu_max) {
     const double dlognu = (log(nu_max) - log(nu_min)) / MNUBINS;
     const auto nts = get_timestep(t_arrive);
@@ -705,9 +705,10 @@ void add_to_lc_res(const Packet& pkt, const int dirbin, std::span<double> light_
   }
   const double solidanglefactor = (dirbin >= 0) ? MABINS : 1.;
   // dirbin -1 means all full 4π angle average (no angle filtering)
-  const double arrive_time = get_arrive_time(pkt);
-  if (arrive_time > globals::tmin && arrive_time < globals::tmax) {
-    const int nts = get_timestep(arrive_time);
+
+  const double t_arrive = pkt.escape_time - (dot(pkt.pos, pkt.dir) / CLIGHT_PROP);
+  if (t_arrive > globals::tmin && t_arrive < globals::tmax) {
+    const int nts = get_timestep(t_arrive);
     atomicadd_always(light_curve_lum[nts],
                      pkt.e_rf / globals::timesteps[nts].width * solidanglefactor / globals::nprocs_exspec);
   }
@@ -715,10 +716,10 @@ void add_to_lc_res(const Packet& pkt, const int dirbin, std::span<double> light_
   const double inverse_gamma = std::sqrt(1. - (globals::vmax * globals::vmax / CLIGHTSQUARED));
 
   // Now do the cmf light curve.
-  const double arrive_time_cmf = pkt.escape_time * inverse_gamma;
+  const double t_arrive_cmf = pkt.escape_time * inverse_gamma;
 
-  if (arrive_time_cmf > globals::tmin && arrive_time_cmf < globals::tmax) {
-    const int nts = get_timestep(arrive_time_cmf);
+  if (t_arrive_cmf > globals::tmin && t_arrive_cmf < globals::tmax) {
+    const int nts = get_timestep(t_arrive_cmf);
     atomicadd_always(light_curve_lumcmf[nts], pkt.e_cmf / globals::timesteps[nts].width * solidanglefactor /
                                                   globals::nprocs_exspec / inverse_gamma);
   }

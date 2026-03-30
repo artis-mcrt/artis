@@ -32,7 +32,7 @@ std::fstream output_file;
 
 namespace {
 
-void do_angle_bin(const int a, const std::vector<std::vector<Packet>>& packets_by_rank) {
+void do_direction_bin(const int dirbin, const std::vector<std::vector<Packet>>& packets_by_rank) {
   THREADLOCALONHOST std::vector<double> rpkt_light_curve_lum;
   resize_exactly(rpkt_light_curve_lum, globals::ntimesteps);
   std::ranges::fill(rpkt_light_curve_lum, 0.);
@@ -68,33 +68,30 @@ void do_angle_bin(const int a, const std::vector<std::vector<Packet>>& packets_b
   for (int p = 0; p < globals::nprocs_exspec; p++) {
     const auto& pkts_thisrank = packets_by_rank[p];
 
-    int nesc_tot = 0;
     int nesc_gamma = 0;
     int nesc_rpkt = 0;
     for (int ii = 0; ii < std::ssize(pkts_thisrank); ii++) {
       if (pkts_thisrank[ii].type == TYPE_ESCAPE) {
-        nesc_tot++;
         if (pkts_thisrank[ii].escape_type == TYPE_RPKT) {
           nesc_rpkt++;
-          add_to_lc_res(pkts_thisrank[ii], a, rpkt_light_curve_lum, rpkt_light_curve_lumcmf);
-          add_to_spec_res(pkts_thisrank[ii], a, rpkt_spectra, POL_ON ? &stokes_i : nullptr,
+          add_to_lc_res(pkts_thisrank[ii], dirbin, rpkt_light_curve_lum, rpkt_light_curve_lumcmf);
+          add_to_spec_res(pkts_thisrank[ii], dirbin, rpkt_spectra, POL_ON ? &stokes_i : nullptr,
                           POL_ON ? &stokes_q : nullptr, POL_ON ? &stokes_u : nullptr);
         } else if (pkts_thisrank[ii].escape_type == TYPE_GAMMA) {
           nesc_gamma++;
-          if (a == -1) {
-            add_to_lc_res(pkts_thisrank[ii], a, gamma_light_curve_lum, gamma_light_curve_lumcmf);
-            add_to_spec_res(pkts_thisrank[ii], a, gamma_spectra, nullptr, nullptr, nullptr);
+          if (dirbin == -1) {
+            add_to_lc_res(pkts_thisrank[ii], dirbin, gamma_light_curve_lum, gamma_light_curve_lumcmf);
+            add_to_spec_res(pkts_thisrank[ii], dirbin, gamma_spectra, nullptr, nullptr, nullptr);
           }
         }
       }
     }
-    if (a == -1) {
-      printlnlog("  rank {}: {} of {} packets escaped ({} gamma-pkts and {} r-pkts)", p, nesc_tot, MPKTS, nesc_gamma,
-                 nesc_rpkt);
+    if (dirbin == -1) {
+      printlnlog("  rank {}: {} escaped r-packets and {} escaped gamma-pkts", p, nesc_rpkt, nesc_gamma);
     }
   }
 
-  if (a == -1) {
+  if (dirbin == -1) {
     // all directions integrated spectra and light curves
     write_light_curve("light_curve.out", rpkt_light_curve_lum, rpkt_light_curve_lumcmf, globals::ntimesteps);
     write_spectra("spec.out", "emission.out", "emissiontrue.out", "absorption.out", rpkt_spectra, globals::ntimesteps);
@@ -116,20 +113,22 @@ void do_angle_bin(const int a, const std::vector<std::vector<Packet>>& packets_b
     if (!std::filesystem::exists(outdir_resfiles)) {
       std::filesystem::create_directory(outdir_resfiles);
     }
-    write_light_curve(std::format("{}light_curve_res_{:02d}.out", outdir_resfiles, a), rpkt_light_curve_lum,
+    write_light_curve(std::format("{}light_curve_res_{:02d}.out", outdir_resfiles, dirbin), rpkt_light_curve_lum,
                       rpkt_light_curve_lumcmf, globals::ntimesteps);
-    write_spectra(std::format("{}spec_res_{:02d}.out", outdir_resfiles, a),
-                  std::format("{}emission_res_{:02d}.out", outdir_resfiles, a),
-                  std::format("{}emissiontrue_res_{:02d}.out", outdir_resfiles, a),
-                  std::format("{}absorption_res_{:02d}.out", outdir_resfiles, a), rpkt_spectra, globals::ntimesteps);
+    write_spectra(std::format("{}spec_res_{:02d}.out", outdir_resfiles, dirbin),
+                  std::format("{}emission_res_{:02d}.out", outdir_resfiles, dirbin),
+                  std::format("{}emissiontrue_res_{:02d}.out", outdir_resfiles, dirbin),
+                  std::format("{}absorption_res_{:02d}.out", outdir_resfiles, dirbin), rpkt_spectra,
+                  globals::ntimesteps);
 
     if constexpr (POL_ON) {
-      write_specpol(std::format("{}specpol_res_{:02d}.out", outdir_resfiles, a),
-                    std::format("{}emissionpol_res_{:02d}.out", outdir_resfiles, a),
-                    std::format("{}absorptionpol_res_{:02d}.out", outdir_resfiles, a), &stokes_i, &stokes_q, &stokes_u);
+      write_specpol(std::format("{}specpol_res_{:02d}.out", outdir_resfiles, dirbin),
+                    std::format("{}emissionpol_res_{:02d}.out", outdir_resfiles, dirbin),
+                    std::format("{}absorptionpol_res_{:02d}.out", outdir_resfiles, dirbin), &stokes_i, &stokes_q,
+                    &stokes_u);
     }
 
-    printlnlog("Did {} of {} angle bins.", a + 1, MABINS);
+    printlnlog("Did {} of {} angle bins.", dirbin + 1, MABINS);
   }
 }
 
@@ -171,7 +170,7 @@ auto main(int argc, char* argv[]) -> int {
   assert_always(globals::nprocs == 1);
 
   // Get input stuff
-  input(globals::my_rank);
+  input();
 
   setup_timesteps();
 
@@ -190,7 +189,7 @@ auto main(int argc, char* argv[]) -> int {
   const int dirbinend = (grid::get_modelgridtype() == GridType::SPHERICAL1D) ? 0 : MABINS;
   // a is the escape direction angle bin
   for (int dirbin = -1; dirbin < dirbinend; dirbin++) {
-    do_angle_bin(dirbin, packets_by_rank);
+    do_direction_bin(dirbin, packets_by_rank);
   }
 
   decay::cleanup();

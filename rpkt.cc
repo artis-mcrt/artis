@@ -521,10 +521,6 @@ void rpkt_event_boundbound(Packet& pkt, const MacroAtomState& pktmastate) {
   pkt.absorptiontype = pktmastate.activatingline;
   pkt.absorptionfreq = pkt.nu_rf;
 
-  if constexpr (RECORD_LINESTAT) {
-    atomicadd(globals::acounter[pkt.next_trans - 1], 1);
-  }
-
   do_macroatom(pkt, pktmastate);
 }
 

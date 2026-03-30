@@ -528,7 +528,7 @@ void write_to_file(const int nonemptymgi, const int timestep) {
 
 }  // anonymous namespace
 
-void init(const int my_rank, const int ndo_nonempty) {
+void init() {
   // this should be called only after the atomic data is in memory
 
   const ptrdiff_t nonempty_npts_model = grid::get_nonempty_npts_model();
@@ -601,9 +601,10 @@ void init(const int my_rank, const int ndo_nonempty) {
         RADFIELDBINCOUNT - 1, H * RADFIELDBINS_NU_MIN / EV, 1e8 * CLIGHT / RADFIELDBINS_NU_MIN,
         H * RADFIELDBINS_NU_MAX / EV, 1e8 * CLIGHT / RADFIELDBINS_NU_MAX, H * RADFIELDBINS_T_E_SUPERBIN_NU_MAX / EV,
         1e8 * CLIGHT / RADFIELDBINS_T_E_SUPERBIN_NU_MAX);
-    if (ndo_nonempty > 0) {
+    if (grid::get_ndo_nonempty(globals::my_rank) > 0) {
       assert_always(!radfieldfile.is_open());
-      radfieldfile = fstream_required(std::format("radfield_{:04d}.out", my_rank), std::ios::out | std::ios::trunc);
+      radfieldfile =
+          fstream_required(std::format("radfield_{:04d}.out", globals::my_rank), std::ios::out | std::ios::trunc);
       radfieldfile << "timestep modelgridindex bin_num nu_lower nu_upper nuJ J J_nu_avg ncontrib T_R W\n";
       radfieldfile.flush();
     }

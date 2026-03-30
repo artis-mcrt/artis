@@ -156,14 +156,6 @@ constexpr auto move_pkt_withtime(Packet& pkt, const double distance) -> double {
   return move_pkt_withtime(pkt.pos, pkt.dir, pkt.prop_time, pkt.nu_rf, pkt.nu_cmf, pkt.e_rf, pkt.e_cmf, distance);
 }
 
-// Get a packet's arrival time at the observer
-// We know that a packet escaped at "escape_time". However, we have
-// to allow for travel time. Use the formula in Leon's paper. The extra
-// distance to be travelled beyond the reference surface is ds = r_ref (1 - mu).
-[[gnu::pure]] [[nodiscard]] constexpr auto get_arrive_time(const Packet& pkt) -> double {
-  return pkt.escape_time - (dot(pkt.pos, pkt.dir) / CLIGHT_PROP);
-}
-
 [[gnu::pure]] [[nodiscard]] constexpr auto get_escapedirectionbin(const Vec3d& dir_in) -> int {
   constexpr auto xhat = Vec3d{1.0, 0.0, 0.0};
 
