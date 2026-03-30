@@ -178,7 +178,9 @@ auto read_text_packets(const std::string& filename) -> std::vector<Packet> {
 
     ssline >> pkt.em_time;
 
-    ssline >> pkt.stokes[0] >> pkt.stokes[1] >> pkt.stokes[2];
+    if constexpr (POL_ON) {
+      ssline >> pkt.stokes[0] >> pkt.stokes[1] >> pkt.stokes[2];
+    }
 
     int int_originated_from_particlenotgamma = 0;
     ssline >> int_originated_from_particlenotgamma;
