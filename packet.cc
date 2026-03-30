@@ -199,15 +199,20 @@ auto read_text_packets(const std::string& filename) -> std::vector<Packet> {
 
 void write_text_packets(const std::string& filename, const std::span<const Packet> packets) {
   auto packets_file = fstream_required(filename, std::ios::out | std::ios::trunc);
-  packets_file << "#number where type_id posx posy posz dirx diry dirz tdecay e_cmf e_rf nu_cmf nu_rf"
+  packets_file << "#number where type_id"
+                  " posx posy posz"
+                  " dirx diry dirz"
+                  " tdecay e_cmf e_rf nu_cmf nu_rf"
                   " escape_type_id escape_time emissiontype trueemissiontype"
                   " em_posx em_posy em_posz"
                   " absorption_type absorption_freq nscatterings em_time";
   if constexpr (POL_ON) {
     packets_file << " stokes1 stokes2 stokes3";
   }
-  packets_file << " originated_from_particlenotgamma "
-                  "trueem_posx trueem_posy trueem_posz trueem_time pellet_nucindex pellet_decaytype\n";
+  packets_file << " originated_from_particlenotgamma"
+                  " trueem_posx trueem_posy trueem_posz trueem_time"
+                  " pellet_nucindex pellet_decaytype"
+                  "\n";
 
   for (const auto& pkt : packets) {
     if (!KEEP_ESCAPED_GAMMAS && pkt.type == TYPE_ESCAPE && pkt.escape_type == TYPE_GAMMA) {
