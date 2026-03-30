@@ -56,7 +56,7 @@ std::fstream estimators_file;
 
 void initialise_linestat_file() {
   if (globals::simulation_continued_from_saved) {
-    // only write linestat.out on the first run, unless it contains statistics for each timestep
+    // only write linestat.out on the first run
     return;
   }
 
