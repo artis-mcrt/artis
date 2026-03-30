@@ -19,7 +19,6 @@
 
 #include "artisoptions.h"
 #include "constants.h"
-#include "decay.h"
 #include "globals.h"
 #include "grid.h"
 #include "input.h"
@@ -192,11 +191,9 @@ auto main(int argc, char* argv[]) -> int {
     do_direction_bin(dirbin, packets_by_rank);
   }
 
-  decay::cleanup();
   printlnlog("exspec finished at {} (tstart + {} seconds)", std::time(nullptr), std::time(nullptr) - sys_time_start);
 
   MPI_Finalize();
-  globals::mpi_finalized = true;
 
   std::filesystem::remove("artis.pid");
 

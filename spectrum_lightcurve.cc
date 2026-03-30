@@ -15,7 +15,6 @@
 #include <span>
 #include <string>
 #include <string_view>
-#include <tuple>
 #include <utility>
 #include <vector>
 
@@ -500,9 +499,7 @@ void init_spectra(Spectra& spectra, const double nu_min, const double nu_max, co
   }
 
   if (spectra.fluxalltimesteps.empty()) {
-    assert_always(spectra.win_fluxalltimesteps == MPI_WIN_NULL);
-    std::tie(spectra.fluxalltimesteps, spectra.win_fluxalltimesteps) =
-        MPI_shared_malloc_span_keepwin<double>(globals::ntimesteps * MNUBINS);
+    spectra.fluxalltimesteps = MPI_shared_array<double>(globals::ntimesteps * MNUBINS);
   }
   assert_always(std::ssize(spectra.fluxalltimesteps) == globals::ntimesteps * MNUBINS);
   std::ranges::fill(spectra.fluxalltimesteps, 0.0);
@@ -510,26 +507,21 @@ void init_spectra(Spectra& spectra, const double nu_min, const double nu_max, co
 
   if (do_emission_absorption) {
     if (spectra.absorptionalltimesteps.empty()) {
-      assert_always(spectra.win_absorptionalltimesteps == MPI_WIN_NULL);
-      std::tie(spectra.absorptionalltimesteps, spectra.win_absorptionalltimesteps) =
-          MPI_shared_malloc_span_keepwin<double>(globals::ntimesteps * MNUBINS * get_nelements() * get_max_nions());
+      spectra.absorptionalltimesteps =
+          MPI_shared_array<double>(globals::ntimesteps * MNUBINS * get_nelements() * get_max_nions());
     }
     assert_always(std::ssize(spectra.absorptionalltimesteps) ==
                   globals::ntimesteps * MNUBINS * get_nelements() * get_max_nions());
     std::ranges::fill(spectra.absorptionalltimesteps, 0.0);
 
     if (spectra.emissionalltimesteps.empty()) {
-      assert_always(spectra.win_emissionalltimesteps == MPI_WIN_NULL);
-      std::tie(spectra.emissionalltimesteps, spectra.win_emissionalltimesteps) =
-          MPI_shared_malloc_span_keepwin<double>(globals::ntimesteps * MNUBINS * get_proccount());
+      spectra.emissionalltimesteps = MPI_shared_array<double>(globals::ntimesteps * MNUBINS * get_proccount());
     }
     assert_always(std::ssize(spectra.emissionalltimesteps) == globals::ntimesteps * MNUBINS * get_proccount());
     std::ranges::fill(spectra.emissionalltimesteps, 0.0);
 
     if (spectra.trueemissionalltimesteps.empty()) {
-      assert_always(spectra.win_trueemissionalltimesteps == MPI_WIN_NULL);
-      std::tie(spectra.trueemissionalltimesteps, spectra.win_trueemissionalltimesteps) =
-          MPI_shared_malloc_span_keepwin<double>(globals::ntimesteps * MNUBINS * get_proccount());
+      spectra.trueemissionalltimesteps = MPI_shared_array<double>(globals::ntimesteps * MNUBINS * get_proccount());
     }
     assert_always(std::ssize(spectra.trueemissionalltimesteps) == globals::ntimesteps * MNUBINS * get_proccount());
     std::ranges::fill(spectra.trueemissionalltimesteps, 0.0);

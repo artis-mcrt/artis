@@ -50,7 +50,6 @@ void free_decaypath_energy_per_mass();
 [[nodiscard]] auto get_global_etot_tmodel_tinf() -> double;
 void output_nuc_abundances(std::ostream& estimators_file, int nonemptymgi, double t_current, int element);
 void setup_radioactive_pellet(double e_cmf_per_packet, int nonemptymgi, Packet& pkt);
-void cleanup();
 
 }  // namespace decay
 

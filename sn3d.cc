@@ -877,10 +877,7 @@ auto main(int argc, char* argv[]) -> int {
   radfield::close_file();
   nonthermal::close_file();
 
-  decay::cleanup();
-
   MPI_Finalize();
-  globals::mpi_finalized = true;
 
   std::filesystem::remove("artis.pid");
 

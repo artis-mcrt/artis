@@ -399,6 +399,79 @@ inline auto GET_MPI_TYPE() -> MPI_Datatype {
   }
 }
 
+template <typename T>
+class MPI_shared_array {
+ private:
+  MPI_Win _win{MPI_WIN_NULL};
+  std::span<T> _span{};
+
+ public:
+  MPI_shared_array() = default;
+
+  explicit MPI_shared_array(const ptrdiff_t num_allranks, const T& initval = {}) {
+    assert_always(_span.empty());
+    std::tie(_span, _win) = MPI_shared_malloc_span_keepwin<T>(num_allranks, initval);
+  }
+
+  // copy constructor and move assignment are deleted to avoid avoid multiple owners of the same MPI window, but move
+  // constructor is allowed
+  MPI_shared_array(const MPI_shared_array&) = delete;
+  auto operator=(const MPI_shared_array&) -> MPI_shared_array& = delete;
+  MPI_shared_array(MPI_shared_array&& other) noexcept = delete;
+  auto operator=(MPI_shared_array&& other) noexcept -> MPI_shared_array& {
+    if (this != &other) {
+      // free any existing window owned by this object before taking ownership of the new one
+      reset();
+      _span = other._span;
+      _win = other._win;
+      // prevent the other object from freeing the window in its destructor
+      other._span = {};
+      other._win = MPI_WIN_NULL;
+    }
+    return *this;
+  }
+
+  ~MPI_shared_array() { reset(); }
+
+  auto reset() {
+    if constexpr (TESTMODE) {
+      printlnlog("freeing MPI_shared_array of size {}", _span.size());
+    }
+    int finalized = 0;
+    MPI_Finalized(&finalized);
+    if (finalized != 0) {
+      return;  // do not attempt to free MPI windows after MPI_Finalize
+    }
+    _span = {};
+    if (_win != MPI_WIN_NULL) {
+      MPI_Win_free(&_win);
+      _win = MPI_WIN_NULL;
+    }
+  }
+
+  explicit operator std::span<T>() const { return _span; }
+
+  explicit operator std::span<const T>() const { return _span; }
+
+  [[nodiscard]] auto span() const -> std::span<T> { return _span; }
+
+  [[nodiscard]] auto data() const -> T* { return _span.data(); }
+
+  [[nodiscard]] auto begin() const { return _span.begin(); }
+  [[nodiscard]] auto end() const { return _span.end(); }
+
+  [[nodiscard]] auto empty() const -> bool { return _span.empty(); }
+
+  [[nodiscard]] auto subspan(const size_t offset, const size_t count) const -> std::span<T> {
+    return _span.subspan(offset, count);
+  }
+
+  [[nodiscard]] auto size() const -> size_t { return _span.size(); }
+
+  // define operator[] to allow direct indexing into the span
+  auto operator[](const size_t index) const -> T& { return _span[index]; }
+};
+
 // MPI operations use a 32-bit int for the count, so we need to chunk large arrays
 constexpr std::ptrdiff_t MPI_COUNT_MAX = std::numeric_limits<int>::max();
 

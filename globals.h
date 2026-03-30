@@ -272,8 +272,6 @@ inline int rank_in_node{-1};
 inline int node_count{-1};
 inline int node_id{-1};
 
-inline bool mpi_finalized{false};  // set to true after MPI_Finalize
-
 inline double vmax{NAN};
 inline double rmax{NAN};
 inline double tmax{-1};
