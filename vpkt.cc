@@ -777,11 +777,11 @@ void read_vpktparameterfile() {
   fclose(input_file);
 }
 
-void write_timestep(const int nts, const int my_rank, const bool is_final) {
+void write_timestep(const int nts, const bool is_final) {
   if constexpr (!VPKT_ON) {
     return;
   }
-
+  auto& my_rank = globals::my_rank;
   // write specpol of the virtual packets
   const auto filename_vspecpol =
       is_final ? std::format("vspecpol_{:04d}.out", my_rank) : std::format("vspecpol_{:04d}_ts{}.tmp", my_rank, nts);
@@ -809,7 +809,7 @@ void write_timestep(const int nts, const int my_rank, const bool is_final) {
   }
 }
 
-void init(const int nts, const int my_rank, const bool continued_from_saved) {
+void init(const int nts, const bool continued_from_saved) {
   if constexpr (!VPKT_ON) {
     return;
   }
@@ -820,10 +820,10 @@ void init(const int nts, const int my_rank, const bool continued_from_saved) {
   }
 
   if constexpr (VPKT_WRITE_CONTRIBS) {
-    const auto filename = std::format("vpackets_{:04d}_ts{}.tmp", my_rank, nts + 1);
+    const auto filename = std::format("vpackets_{:04d}_ts{}.tmp", globals::my_rank, nts + 1);
 
     if (continued_from_saved) {
-      const auto filename_prev = std::format("vpackets_{:04d}_ts{}.tmp", my_rank, nts);
+      const auto filename_prev = std::format("vpackets_{:04d}_ts{}.tmp", globals::my_rank, nts);
       printlnlog("Copying {} to {}", filename_prev, filename);
       std::filesystem::copy_file(filename_prev, filename, std::filesystem::copy_options::overwrite_existing);
     } else {
@@ -850,10 +850,10 @@ void init(const int nts, const int my_rank, const bool continued_from_saved) {
   if (continued_from_saved) {
     // Continue simulation: read into temporary files
 
-    read_vspecpol(my_rank, nts);
+    read_vspecpol(globals::my_rank, nts);
 
     if (vgrid_on) {
-      read_vpkt_grid(my_rank, nts);
+      read_vpkt_grid(globals::my_rank, nts);
     }
   }
 }

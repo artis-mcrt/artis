@@ -471,7 +471,7 @@ void save_grid_and_packets(const int nts, std::vector<Packet>& packets) {
   // save packet state at start of current timestep (before propagation)
   write_temp_packetsfile(nts, globals::my_rank, packets);
 
-  vpkt::write_timestep(nts, globals::my_rank, false);
+  vpkt::write_timestep(nts, false);
 
   const auto time_write_packets_finished_thisrank = std::time(nullptr);
 
@@ -641,7 +641,7 @@ auto do_timestep(const int nts, const int titer, std::vector<Packet>& packets, c
       const auto filename = std::format("packets{:02d}_{:04d}.out", 0, globals::my_rank);
       write_text_packets(filename, packets);
 
-      vpkt::write_timestep(nts, globals::my_rank, true);
+      vpkt::write_timestep(nts, true);
 
       printlnlog("time after write final packets file {}", std::time(nullptr));
     }
@@ -839,19 +839,19 @@ auto main(int argc, char* argv[]) -> int {
   MPI_Barrier(MPI_COMM_WORLD);
   globals::timestep = globals::timestep_initial;
 
-  macroatom_open_file(globals::my_rank);
+  macroatom_open_file();
   if (ndo > 0) {
     assert_always(!estimators_file.is_open());
     estimators_file =
         fstream_required(std::format("estimators_{:04d}.out", globals::my_rank), std::ios::out | std::ios::trunc);
 
     if (globals::total_nlte_levels > 0 && ndo_nonempty > 0) {
-      nltepop_open_file(globals::my_rank);
+      nltepop_open_file();
     }
   }
 
   // initialise or read in virtual packet spectra
-  vpkt::init(globals::timestep, globals::my_rank, globals::simulation_continued_from_saved);
+  vpkt::init(globals::timestep, globals::simulation_continued_from_saved);
 
   setup_cellcache();
 
