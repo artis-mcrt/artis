@@ -1651,12 +1651,6 @@ void setup_nlte_levels() {
 void read_atomicdata() {
   read_atomicdata_files();
 
-  // INITIALISE THE ABSORPTION/EMISSION COUNTERS ARRAYS
-  if constexpr (RECORD_LINESTAT) {
-    globals::ecounter.resize(globals::nlines);
-    globals::acounter.resize(globals::nlines);
-  }
-
   kpkt::setup_coolinglist();
 
   // Printout some information about the read-in model atom

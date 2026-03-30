@@ -33,7 +33,6 @@ constexpr bool UNIFORM_PELLET_ENERGIES = true;
 
 constexpr bool DIRECT_COL_HEAT = false;
 constexpr bool INITIAL_PACKETS_ON = true;
-constexpr bool RECORD_LINESTAT = false;
 
 constexpr bool USE_MODEL_INITIAL_ENERGY = true;
 

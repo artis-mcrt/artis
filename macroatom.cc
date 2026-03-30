@@ -200,10 +200,6 @@ void do_macroatom_raddeexcitation(Packet& pkt, const int ionuniquelevelindexstar
     stats::increment(stats::Counter::RESONANCESCATTERINGS);
   }
 
-  if constexpr (RECORD_LINESTAT) {
-    atomicadd(globals::ecounter[lineindex], 1);
-  }
-
   const auto uniquelevelindexlower =
       ionuniquelevelindexstart + globals::alltrans.targetlevelindex[alltrans_startdown + downtransindex];
 

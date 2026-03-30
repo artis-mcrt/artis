@@ -50,18 +50,17 @@ std::fstream output_file;
 
 namespace {
 
-std::fstream linestat_file;
 time_t real_time_start = -1;
 time_t time_timestep_start = -1;  // this will be set after the first update of the grid and before packet prop
 std::fstream estimators_file;
 
 void initialise_linestat_file() {
-  if (globals::simulation_continued_from_saved && !RECORD_LINESTAT) {
+  if (globals::simulation_continued_from_saved) {
     // only write linestat.out on the first run, unless it contains statistics for each timestep
     return;
   }
 
-  linestat_file = fstream_required("linestat.out", std::ios::out | std::ios::trunc);
+  auto linestat_file = fstream_required("linestat.out", std::ios::out | std::ios::trunc);
 
   for (int i = 0; i < globals::nlines; i++) {
     linestat_file << CLIGHT / globals::linelist.nu[i] << ' ';  // wavelength in cm
@@ -87,8 +86,6 @@ void initialise_linestat_file() {
     linestat_file << (globals::linelist.lowerlevelindex[i] + 1) << ' ';
   }
   linestat_file << '\n';
-
-  linestat_file.flush();
 }
 
 void write_deposition_file() {
@@ -380,12 +377,6 @@ void mpi_reduce_estimators(const int nts) {
     }
   }
 
-  if constexpr (RECORD_LINESTAT) {
-    MPI_Barrier(MPI_COMM_WORLD);
-    MPI_Allreduce_safe(globals::ecounter, MPI_SUM, MPI_COMM_WORLD);
-    MPI_Allreduce_safe(globals::acounter, MPI_SUM, MPI_COMM_WORLD);
-  }
-
   assert_always(std::ssize(globals::dep_estimator_gamma) == nonempty_npts_model);
   MPI_Allreduce_safe(globals::dep_estimator_gamma, MPI_SUM, MPI_COMM_WORLD);
   assert_always(std::ssize(globals::dep_estimator_positron) == nonempty_npts_model);
@@ -550,11 +541,6 @@ auto do_timestep(const int nts, const int titer, std::vector<Packet>& packets, c
     radfield::initialise_prev_titer_photoionestimators();
   }
 
-  if constexpr (RECORD_LINESTAT) {
-    std::ranges::fill(globals::acounter, 0);
-    std::ranges::fill(globals::ecounter, 0);
-  }
-
   // Update the matter quantities in the grid for the new timestep.
 
   update_grid(estimators_file, nts, nts_prev, titer, real_time_start);
@@ -618,21 +604,6 @@ auto do_timestep(const int nts, const int titer, std::vector<Packet>& packets, c
       vpkt::nvpkt_esc_from_rpkt = 0;
       vpkt::nvpkt_esc_from_kpkt = 0;
       vpkt::nvpkt_esc_from_macroatom = 0;
-    }
-
-    if (RECORD_LINESTAT && globals::my_rank == 0) {
-      // Print net absorption/emission in lines to the linestat_file
-      // Currently linestat information is only properly implemented for MPI only runs
-      // For hybrid runs only data from thread 0 is recorded
-      for (int i = 0; i < globals::nlines; i++) {
-        linestat_file << globals::ecounter[i] << ' ';
-      }
-      linestat_file << '\n';
-      for (int i = 0; i < globals::nlines; i++) {
-        linestat_file << globals::acounter[i] << ' ';
-      }
-      linestat_file << '\n';
-      linestat_file.flush();
     }
 
     if (nts == (globals::timestep_finish - 1)) {
@@ -881,9 +852,6 @@ auto main(int argc, char* argv[]) -> int {
   // code.
 
   MPI_Barrier(MPI_COMM_WORLD);
-  if (linestat_file.is_open()) {
-    linestat_file.close();
-  }
 
   if ((globals::ntimesteps > globals::timestep_finish) || terminate_early) {
     printlnlog("RESTART_NEEDED to continue model");
