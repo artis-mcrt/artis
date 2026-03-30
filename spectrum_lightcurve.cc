@@ -231,20 +231,22 @@ void write_specpol_param(std::ostream& specpol_file, std::ostream& emissionpol_f
   }
 }
 
-void write_partial_lightcurve_spectra_dirbin(const int nts, std::span<const Packet> pkts,
+void write_partial_lightcurve_spectra_dirbin(const int nts, std::span<const Packet> packets,
                                              const bool do_emission_absorption, const int dirbin) {
   THREADLOCALONHOST std::vector<double> rpkt_light_curve_lum;
   THREADLOCALONHOST std::vector<double> rpkt_light_curve_lumcmf;
   THREADLOCALONHOST std::vector<double> gamma_light_curve_lum;
   THREADLOCALONHOST std::vector<double> gamma_light_curve_lumcmf;
   resize_exactly(rpkt_light_curve_lum, globals::ntimesteps);
-  resize_exactly(rpkt_light_curve_lumcmf, globals::ntimesteps);
-  resize_exactly(gamma_light_curve_lum, globals::ntimesteps);
-  resize_exactly(gamma_light_curve_lumcmf, globals::ntimesteps);
   std::ranges::fill(rpkt_light_curve_lum, 0.);
+  resize_exactly(rpkt_light_curve_lumcmf, globals::ntimesteps);
   std::ranges::fill(rpkt_light_curve_lumcmf, 0.);
-  std::ranges::fill(gamma_light_curve_lum, 0.);
-  std::ranges::fill(gamma_light_curve_lumcmf, 0.);
+  if constexpr (KEEP_ESCAPED_GAMMAS) {
+    resize_exactly(gamma_light_curve_lum, globals::ntimesteps);
+    std::ranges::fill(gamma_light_curve_lum, 0.);
+    resize_exactly(gamma_light_curve_lumcmf, globals::ntimesteps);
+    std::ranges::fill(gamma_light_curve_lumcmf, 0.);
+  }
 
   TRACE_EMISSION_ABSORPTION_REGION_ON = false;
 
@@ -261,13 +263,13 @@ void write_partial_lightcurve_spectra_dirbin(const int nts, std::span<const Pack
     const int node_rank = globals::rank_in_node;
 #endif
     if (node_rank == globals::rank_in_node) {
-      for (int ii = 0; ii < globals::npkts; ii++) {
-        if (pkts[ii].type == TYPE_ESCAPE) {
-          if (pkts[ii].escape_type == TYPE_RPKT) {
-            add_to_lc_res(pkts[ii], dirbin, rpkt_light_curve_lum, rpkt_light_curve_lumcmf);
-            add_to_spec_res(pkts[ii], dirbin, rpkt_spectra, nullptr, nullptr, nullptr);
-          } else if (dirbin == -1 && pkts[ii].escape_type == TYPE_GAMMA) {
-            add_to_lc_res(pkts[ii], dirbin, gamma_light_curve_lum, gamma_light_curve_lumcmf);
+      for (const auto& pkt : packets) {
+        if (pkt.type == TYPE_ESCAPE) {
+          if (pkt.escape_type == TYPE_RPKT) {
+            add_to_lc_res(pkt, dirbin, rpkt_light_curve_lum, rpkt_light_curve_lumcmf);
+            add_to_spec_res(pkt, dirbin, rpkt_spectra, nullptr, nullptr, nullptr);
+          } else if (KEEP_ESCAPED_GAMMAS && dirbin == -1 && pkt.escape_type == TYPE_GAMMA) {
+            add_to_lc_res(pkt, dirbin, gamma_light_curve_lum, gamma_light_curve_lumcmf);
           }
         }
       }
@@ -289,13 +291,17 @@ void write_partial_lightcurve_spectra_dirbin(const int nts, std::span<const Pack
   }
   MPI_Allreduce_safe(rpkt_light_curve_lum, MPI_SUM, MPI_COMM_WORLD);
   MPI_Allreduce_safe(rpkt_light_curve_lumcmf, MPI_SUM, MPI_COMM_WORLD);
-  MPI_Allreduce_safe(gamma_light_curve_lum, MPI_SUM, MPI_COMM_WORLD);
-  MPI_Allreduce_safe(gamma_light_curve_lumcmf, MPI_SUM, MPI_COMM_WORLD);
+  if constexpr (KEEP_ESCAPED_GAMMAS) {
+    MPI_Allreduce_safe(gamma_light_curve_lum, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce_safe(gamma_light_curve_lumcmf, MPI_SUM, MPI_COMM_WORLD);
+  }
   MPI_Barrier(MPI_COMM_WORLD);
 
   if (dirbin == -1) {
     write_light_curve("light_curve.out", rpkt_light_curve_lum, rpkt_light_curve_lumcmf, numtimesteps);
-    write_light_curve("gamma_light_curve.out", gamma_light_curve_lum, gamma_light_curve_lumcmf, numtimesteps);
+    if constexpr (KEEP_ESCAPED_GAMMAS) {
+      write_light_curve("gamma_light_curve.out", gamma_light_curve_lum, gamma_light_curve_lumcmf, numtimesteps);
+    }
     write_spectra("spec.out", "emission.out", "emissiontrue.out", "absorption.out", rpkt_spectra, numtimesteps);
   } else {
     if (globals::my_rank == 0 && !std::filesystem::exists(outdir_resfiles)) {

@@ -10,7 +10,6 @@
 #include <format>
 #include <fstream>
 #include <ios>
-#include <new>
 #include <span>
 #include <vector>
 
@@ -33,7 +32,7 @@ std::fstream output_file;
 
 namespace {
 
-void do_angle_bin(const int a, std::span<Packet> pkts, bool load_allrank_packets) {
+void do_angle_bin(const int a, const std::vector<std::vector<Packet>>& packets_by_rank) {
   THREADLOCALONHOST std::vector<double> rpkt_light_curve_lum;
   resize_exactly(rpkt_light_curve_lum, globals::ntimesteps);
   std::ranges::fill(rpkt_light_curve_lum, 0.);
@@ -65,69 +64,49 @@ void do_angle_bin(const int a, std::span<Packet> pkts, bool load_allrank_packets
   constexpr double nu_max_gamma = 4. * MEV / H;
   THREADLOCALONHOST Spectra gamma_spectra;
   init_spectra(gamma_spectra, nu_min_gamma, nu_max_gamma, false);
-
   assert_always(globals::nprocs_exspec > 0);
   for (int p = 0; p < globals::nprocs_exspec; p++) {
-    auto pkts_start = pkts.subspan(load_allrank_packets ? p * globals::npkts : 0, globals::npkts);
-
-    if (a == -1 || !load_allrank_packets) {
-      auto pktfilename = std::format("packets{:02d}_{:04d}.out", 0, p);
-      printlnlog("Reading {} (file {} of {})", pktfilename, p + 1, globals::nprocs_exspec);
-
-      if (std::filesystem::exists(pktfilename)) {
-        read_packets(pktfilename, pkts_start);
-      } else {
-        printlnlog("   WARNING {} does not exist - trying temp packets file at beginning of timestep {}...",
-                   pktfilename, globals::timestep_initial);
-        read_temp_packetsfile(globals::timestep_initial, p, pkts_start);
-      }
-    }
-
-    MPI_Barrier(MPI_COMM_WORLD);
-
-    if (p % globals::nprocs != globals::my_rank) {
-      printlnlog("skipping packets file {} {}", p + 1, globals::nprocs);
-      continue;
-    }
+    const auto& pkts_thisrank = packets_by_rank[p];
 
     int nesc_tot = 0;
     int nesc_gamma = 0;
     int nesc_rpkt = 0;
-    for (int ii = 0; ii < globals::npkts; ii++) {
-      if (pkts_start[ii].type == TYPE_ESCAPE) {
+    for (int ii = 0; ii < std::ssize(pkts_thisrank); ii++) {
+      if (pkts_thisrank[ii].type == TYPE_ESCAPE) {
         nesc_tot++;
-        if (pkts_start[ii].escape_type == TYPE_RPKT) {
+        if (pkts_thisrank[ii].escape_type == TYPE_RPKT) {
           nesc_rpkt++;
-          add_to_lc_res(pkts_start[ii], a, rpkt_light_curve_lum, rpkt_light_curve_lumcmf);
-          add_to_spec_res(pkts_start[ii], a, rpkt_spectra, POL_ON ? &stokes_i : nullptr, POL_ON ? &stokes_q : nullptr,
-                          POL_ON ? &stokes_u : nullptr);
-        } else if (pkts_start[ii].escape_type == TYPE_GAMMA) {
+          add_to_lc_res(pkts_thisrank[ii], a, rpkt_light_curve_lum, rpkt_light_curve_lumcmf);
+          add_to_spec_res(pkts_thisrank[ii], a, rpkt_spectra, POL_ON ? &stokes_i : nullptr,
+                          POL_ON ? &stokes_q : nullptr, POL_ON ? &stokes_u : nullptr);
+        } else if (pkts_thisrank[ii].escape_type == TYPE_GAMMA) {
           nesc_gamma++;
           if (a == -1) {
-            add_to_lc_res(pkts_start[ii], a, gamma_light_curve_lum, gamma_light_curve_lumcmf);
-            add_to_spec_res(pkts_start[ii], a, gamma_spectra, nullptr, nullptr, nullptr);
+            add_to_lc_res(pkts_thisrank[ii], a, gamma_light_curve_lum, gamma_light_curve_lumcmf);
+            add_to_spec_res(pkts_thisrank[ii], a, gamma_spectra, nullptr, nullptr, nullptr);
           }
         }
       }
     }
-    if (a == -1 || !load_allrank_packets) {
-      printlnlog("  {} of {} packets escaped ({} gamma-pkts and {} r-pkts)", nesc_tot, globals::npkts, nesc_gamma,
+    if (a == -1) {
+      printlnlog("  rank {}: {} of {} packets escaped ({} gamma-pkts and {} r-pkts)", p, nesc_tot, MPKTS, nesc_gamma,
                  nesc_rpkt);
     }
   }
 
   if (a == -1) {
-    // angle-averaged spectra and light curves
+    // all directions integrated spectra and light curves
     write_light_curve("light_curve.out", rpkt_light_curve_lum, rpkt_light_curve_lumcmf, globals::ntimesteps);
-    write_light_curve("gamma_light_curve.out", gamma_light_curve_lum, gamma_light_curve_lumcmf, globals::ntimesteps);
-
     write_spectra("spec.out", "emission.out", "emissiontrue.out", "absorption.out", rpkt_spectra, globals::ntimesteps);
 
     if constexpr (POL_ON) {
       write_specpol("specpol.out", "emissionpol.out", "absorptionpol.out", &stokes_i, &stokes_q, &stokes_u);
     }
 
-    write_spectra("gamma_spec.out", "", "", "", gamma_spectra, globals::ntimesteps);
+    if constexpr (KEEP_ESCAPED_GAMMAS) {
+      write_light_curve("gamma_light_curve.out", gamma_light_curve_lum, gamma_light_curve_lumcmf, globals::ntimesteps);
+      write_spectra("gamma_spec.out", "", "", "", gamma_spectra, globals::ntimesteps);
+    }
 
     printlnlog("finished angle-averaged stuff");
   } else {
@@ -194,48 +173,33 @@ auto main(int argc, char* argv[]) -> int {
   // Get input stuff
   input(globals::my_rank);
 
-  // nprocs_exspec is the number of rank output files to process with exspec
-  // however, we might be running exspec with 1 or just a few ranks
-
-  std::vector<Packet> pkts;
-  bool load_allrank_packets = false;
-  const ptrdiff_t npkts_allranks = static_cast<ptrdiff_t>(globals::nprocs_exspec) * globals::npkts;
-  try {
-    // try to allocate memory for all packets from all ranks
-    resize_exactly(pkts, npkts_allranks);
-    printlnlog(
-        "mem_usage: loading {} packets from each {} processes simultaneously (total {} packets, {:.1f} MB memory)",
-        globals::npkts, globals::nprocs_exspec, npkts_allranks, npkts_allranks * sizeof(Packet) / 1024. / 1024.);
-    load_allrank_packets = true;
-  } catch (const std::bad_alloc& e) {
-    // if we can't allocate memory for all packets, try to allocate memory for just one rank
-    load_allrank_packets = false;
-    printlnlog("mem_usage: malloc failed to allocate memory for all packets");
-    printlnlog(
-        "mem_usage: loading {} packets from each of {} processes sequentially (total {} packets, {:.1f} MB memory)",
-        globals::npkts, globals::nprocs_exspec, npkts_allranks, npkts_allranks * sizeof(Packet) / 1024. / 1024.);
-    resize_exactly(pkts, globals::npkts);
-  }
+  setup_timesteps();
 
   init_spectrum_trace();  // needed for TRACE_EMISSION_ABSORPTION_REGION_ON
 
-  setup_timesteps();
+  // nprocs_exspec is the number of rank output files to process with exspec
+  // however, we might be running exspec with 1 or just a few ranks
+
+  std::vector<std::vector<Packet>> packets_by_rank;
+  resize_exactly(packets_by_rank, globals::nprocs_exspec);
+
+  for (int p = 0; p < globals::nprocs_exspec; p++) {
+    packets_by_rank[p] = read_text_packets(std::format("packets{:02d}_{:04d}.out", 0, p));
+  }
 
   const int dirbinend = (grid::get_modelgridtype() == GridType::SPHERICAL1D) ? 0 : MABINS;
   // a is the escape direction angle bin
   for (int dirbin = -1; dirbin < dirbinend; dirbin++) {
-    do_angle_bin(dirbin, pkts, load_allrank_packets);
+    do_angle_bin(dirbin, packets_by_rank);
   }
 
   decay::cleanup();
   printlnlog("exspec finished at {} (tstart + {} seconds)", std::time(nullptr), std::time(nullptr) - sys_time_start);
 
-  globals::mpi_finalized = true;
   MPI_Finalize();
+  globals::mpi_finalized = true;
 
-  if (std::filesystem::exists("artis.pid")) {
-    std::filesystem::remove("artis.pid");
-  }
+  std::filesystem::remove("artis.pid");
 
   return 0;
 }

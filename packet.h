@@ -4,6 +4,7 @@
 #include <cmath>
 #include <span>
 #include <string>
+#include <vector>
 
 #include "constants.h"
 
@@ -71,10 +72,10 @@ struct Packet {
   auto operator<=>(const Packet& rhs) const = default;
 };
 
-void packet_init(std::span<Packet> pkt);
-void write_packets(const std::string& filename, std::span<const Packet> pkt);
-auto read_packets(const std::string& filename, std::span<Packet> packets) -> std::span<Packet>;
-void read_temp_packetsfile(int timestep, int my_rank, std::span<Packet> pkt);
-[[nodiscard]] auto verify_temp_packetsfile(int timestep, int my_rank, std::span<const Packet> pkt) -> bool;
+void packet_init(std::span<Packet> packets);
+auto read_text_packets(const std::string& filename) -> std::vector<Packet>;
+void write_text_packets(const std::string& filename, std::span<const Packet> packets);
+void read_temp_packetsfile(int timestep, int my_rank, std::vector<Packet>& packets);
+void write_temp_packetsfile(int timestep, int my_rank, std::span<const Packet> packets);
 
 #endif  // PACKET_H
