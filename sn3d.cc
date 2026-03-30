@@ -914,8 +914,8 @@ auto main(int argc, char* argv[]) -> int {
 
   decay::cleanup();
 
-  globals::mpi_finalized = true;
   MPI_Finalize();
+  globals::mpi_finalized = true;
 
   std::filesystem::remove("artis.pid");
 

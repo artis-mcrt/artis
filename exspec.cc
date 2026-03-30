@@ -196,8 +196,8 @@ auto main(int argc, char* argv[]) -> int {
   decay::cleanup();
   printlnlog("exspec finished at {} (tstart + {} seconds)", std::time(nullptr), std::time(nullptr) - sys_time_start);
 
-  globals::mpi_finalized = true;
   MPI_Finalize();
+  globals::mpi_finalized = true;
 
   std::filesystem::remove("artis.pid");
 
