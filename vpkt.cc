@@ -781,7 +781,7 @@ void write_timestep(const int nts, const bool is_final) {
   if constexpr (!VPKT_ON) {
     return;
   }
-  auto& my_rank = globals::my_rank;
+  const int my_rank = globals::my_rank;
   // write specpol of the virtual packets
   const auto filename_vspecpol =
       is_final ? std::format("vspecpol_{:04d}.out", my_rank) : std::format("vspecpol_{:04d}_ts{}.tmp", my_rank, nts);
