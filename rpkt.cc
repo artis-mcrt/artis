@@ -932,7 +932,9 @@ DEVICE_FUNC void emit_rpkt(Packet& pkt) {
   pkt.e_rf = pkt.e_cmf / dopplerfactor;
 
   // Reset polarization information
-  pkt.stokes = {1., 0., 0.};
+  if constexpr (POL_ON) {
+    pkt.stokes = {1., 0., 0.};
+  }
 }
 
 template <bool USECELLHISTANDUPDATEPHIXSLIST>
