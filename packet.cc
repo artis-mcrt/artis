@@ -182,11 +182,8 @@ auto read_text_packets(const std::string& filename) -> std::vector<Packet> {
     pkt.type = static_cast<enum packet_type>(pkt_type_in);
 
     ssline >> pkt.pos[0] >> pkt.pos[1] >> pkt.pos[2];
-
     ssline >> pkt.dir[0] >> pkt.dir[1] >> pkt.dir[2];
-
     ssline >> pkt.tdecay;
-
     ssline >> pkt.e_cmf >> pkt.e_rf >> pkt.nu_cmf >> pkt.nu_rf;
 
     int escape_type = 0;
@@ -194,11 +191,8 @@ auto read_text_packets(const std::string& filename) -> std::vector<Packet> {
     pkt.escape_type = static_cast<enum packet_type>(escape_type);
 
     ssline >> pkt.emissiontype >> pkt.trueemissiontype;
-
     ssline >> pkt.em_pos[0] >> pkt.em_pos[1] >> pkt.em_pos[2];
-
     ssline >> pkt.absorptiontype >> pkt.absorptionfreq >> pkt.nscatterings;
-
     ssline >> pkt.em_time;
 
     if constexpr (POL_ON) {
@@ -210,10 +204,9 @@ auto read_text_packets(const std::string& filename) -> std::vector<Packet> {
     pkt.originated_from_particlenotgamma = (int_originated_from_particlenotgamma != 0);
 
     ssline >> pkt.trueem_pos[0] >> pkt.trueem_pos[1] >> pkt.trueem_pos[2];
-
     ssline >> pkt.trueem_time;
-
     ssline >> pkt.pellet_nucindex;
+    ssline >> pkt.pellet_decaytype;
   }
 
   if (std::ssize(packets) < MPKTS) {
@@ -244,9 +237,9 @@ void write_text_packets(const std::string& filename, const std::span<const Packe
     if constexpr (POL_ON) {
       packets_file << ' ' << pkt.stokes[0] << ' ' << pkt.stokes[1] << ' ' << pkt.stokes[2];
     }
-    packets_file << ' ' << static_cast<int>(pkt.originated_from_particlenotgamma) << ' ' << pkt.trueem_pos[0] << ' '
-                 << pkt.trueem_pos[1] << ' ' << pkt.trueem_pos[2] << ' ' << pkt.trueem_time << ' '
-                 << pkt.pellet_nucindex << ' ' << pkt.pellet_decaytype;
+    packets_file << ' ' << static_cast<int>(pkt.originated_from_particlenotgamma);
+    packets_file << ' ' << pkt.trueem_pos[0] << ' ' << pkt.trueem_pos[1] << ' ' << pkt.trueem_pos[2];
+    packets_file << ' ' << pkt.trueem_time << ' ' << pkt.pellet_nucindex << ' ' << pkt.pellet_decaytype;
     packets_file << '\n';
   }
 }
