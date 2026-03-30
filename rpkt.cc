@@ -320,6 +320,7 @@ void electron_scatter_rpkt(Packet& pkt) {
 
   double Qi = pkt.stokes[1];
   double Ui = pkt.stokes[2];
+  const auto old_dir_cmf = POL_ON ? frame_transform(pkt.dir, &Qi, &Ui, vel_vec) : angle_ab(pkt.dir, vel_vec);
 
   // Outcoming direction. Compute the new cmf direction from the old direction and the scattering angles (see Kalos &
   // Whitlock 2008)
@@ -359,7 +360,6 @@ void electron_scatter_rpkt(Packet& pkt) {
   const double tsc = acos(M);
   Vec3d new_dir_cmf{};
 
-  const auto old_dir_cmf = POL_ON ? frame_transform(pkt.dir, &Qi, &Ui, vel_vec) : angle_ab(pkt.dir, vel_vec);
   if (fabs(old_dir_cmf[2]) < 0.99999) {
     new_dir_cmf[0] = (sin(tsc) / sqrt(1. - pow(old_dir_cmf[2], 2.)) *
                       ((old_dir_cmf[1] * sin(phisc)) - (old_dir_cmf[0] * old_dir_cmf[2] * cos(phisc)))) +
