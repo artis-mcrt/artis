@@ -182,10 +182,11 @@ auto rlc_emiss_vpkt(const Packet& pkt, const double t_current, const double t_ar
 
   // ------------ SCATTERING EVENT: dipole function --------------------
 
-  double pn{NAN};
   constexpr double I = 1.;
-  double Q{NAN};
-  double U{NAN};
+  // MACROATOM and KPKT: isotropic emission
+  double pn{1 / (4 * PI)};
+  double Q{0.};
+  double U{0.};
   if (type_before_rpkt == TYPE_RPKT) {
     // Transform Stokes Parameters from the RF to the CMF
     const auto [old_dir_cmf, Qi, Ui] = frame_transform(pkt.dir, vpkt.stokes[1], vpkt.stokes[2], vel_vec);
@@ -234,11 +235,8 @@ auto rlc_emiss_vpkt(const Packet& pkt, const double t_current, const double t_ar
 
     std::tie(std::ignore, Q, U) = frame_transform(obs_cmf, Q_cmf, U_cmf, Vec3d{-vel_vec[0], -vel_vec[1], -vel_vec[2]});
 
-  } else if (type_before_rpkt == TYPE_KPKT || type_before_rpkt == TYPE_MA) {
-    // MACROATOM and KPKT: isotropic emission
-    Q = 0;
-    U = 0;
-    pn = 1 / (4 * PI);
+  } else {
+    assert_testmodeonly(type_before_rpkt == TYPE_KPKT || type_before_rpkt == TYPE_MA);
   }
 
   // compute the optical depth to boundary
