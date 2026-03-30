@@ -620,24 +620,22 @@ auto do_timestep(const int nts, const int titer, std::vector<Packet>& packets, c
       vpkt::nvpkt_esc_from_macroatom = 0;
     }
 
-    if constexpr (RECORD_LINESTAT) {
-      if (globals::my_rank == 0) {
-        // Print net absorption/emission in lines to the linestat_file
-        // Currently linestat information is only properly implemented for MPI only runs
-        // For hybrid runs only data from thread 0 is recorded
-        for (int i = 0; i < globals::nlines; i++) {
-          linestat_file << globals::ecounter[i] << ' ';
-        }
-        linestat_file << '\n';
-        for (int i = 0; i < globals::nlines; i++) {
-          linestat_file << globals::acounter[i] << ' ';
-        }
-        linestat_file << '\n';
-        linestat_file.flush();
+    if (RECORD_LINESTAT && globals::my_rank == 0) {
+      // Print net absorption/emission in lines to the linestat_file
+      // Currently linestat information is only properly implemented for MPI only runs
+      // For hybrid runs only data from thread 0 is recorded
+      for (int i = 0; i < globals::nlines; i++) {
+        linestat_file << globals::ecounter[i] << ' ';
       }
+      linestat_file << '\n';
+      for (int i = 0; i < globals::nlines; i++) {
+        linestat_file << globals::acounter[i] << ' ';
+      }
+      linestat_file << '\n';
+      linestat_file.flush();
     }
 
-    if (nts == globals::timestep_finish - 1) {
+    if (nts == (globals::timestep_finish - 1)) {
       const auto filename = std::format("packets{:02d}_{:04d}.out", 0, globals::my_rank);
       write_text_packets(filename, packets);
 
