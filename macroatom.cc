@@ -204,10 +204,6 @@ void do_macroatom_raddeexcitation(Packet& pkt, const int ionuniquelevelindexstar
     stats::increment(stats::Counter::RESONANCESCATTERINGS);
   }
 
-  if constexpr (RECORD_LINESTAT) {
-    atomicadd(globals::ecounter[lineindex], 1);
-  }
-
   const auto uniquelevelindexlower =
       ionuniquelevelindexstart + globals::alltrans.targetlevelindex[alltrans_startdown + downtransindex];
 
@@ -560,12 +556,13 @@ DEVICE_FUNC void do_macroatom(Packet& pkt, const MacroAtomState& pktmastate) {
   }
 }
 
-void macroatom_open_file(const int my_rank) {
+void macroatom_open_file() {
   if constexpr (!LOG_MACROATOM) {
     return;
   }
 
-  macroatom_file = fstream_required(std::format("macroatom_{:04d}.out", my_rank), std::ios::out | std::ios::trunc);
+  macroatom_file =
+      fstream_required(std::format("macroatom_{:04d}.out", globals::my_rank), std::ios::out | std::ios::trunc);
 
   macroatom_file << std::format("{:8s} {:14s} {:2s} {:12s} {:12s} {:9s} {:9s} {:9s} {:11s} {:11s} {:11s} {:11s}\n",
                                 "timestep", "modelgridindex", "Z", "ionstage_in", "ionstage_out", "level_in",

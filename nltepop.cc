@@ -1381,8 +1381,8 @@ DEVICE_FUNC auto superlevel_boltzmann(const int nonemptymgi, const int element, 
          exp(-(E_level - E_superlevel) / KB / T_exc);
 }
 
-void nltepop_open_file(const int my_rank) {
-  nlte_file = fstream_required(std::format("nlte_{:04d}.out", my_rank), std::ios::out | std::ios::trunc);
+void nltepop_open_file() {
+  nlte_file = fstream_required(std::format("nlte_{:04d}.out", globals::my_rank), std::ios::out | std::ios::trunc);
   nlte_file << "timestep modelgridindex Z ionstage level n_LTE n_NLTE ion_popfrac\n";
 }
 

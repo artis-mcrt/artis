@@ -6,7 +6,7 @@
 #include "constants.h"
 #include "packet.h"
 
-void macroatom_open_file(int my_rank);
+void macroatom_open_file();
 void macroatom_close_file();
 
 DEVICE_FUNC void do_macroatom(Packet& pkt, const MacroAtomState& pktmastate);

@@ -11,6 +11,7 @@
 #include <ios>
 #include <sstream>
 #include <string>
+#include <tuple>
 #include <vector>
 
 #include "artisoptions.h"
@@ -27,6 +28,9 @@
 
 namespace vpkt {
 namespace {
+
+static_assert(!VPKT_ON || POL_ON,
+              "POL_ON must be true if VPKT_ON is true because vpkt needs stokes parameters to be tracked");
 
 struct StokesParams {
   double i = 0.;
@@ -178,19 +182,17 @@ auto rlc_emiss_vpkt(const Packet& pkt, const double t_current, const double t_ar
   atomicadd(nvpkt_created, 1);  // increment the number of virtual packet in the given timestep
 
   const auto vel_vec = get_velocity(pkt.pos, t_current);
-  double Qi = vpkt.stokes[1];
-  double Ui = vpkt.stokes[2];
 
   // ------------ SCATTERING EVENT: dipole function --------------------
 
-  double pn{NAN};
   constexpr double I = 1.;
-  double Q{NAN};
-  double U{NAN};
+  // MACROATOM and KPKT: isotropic emission
+  double pn{1 / (4 * PI)};
+  double Q{0.};
+  double U{0.};
   if (type_before_rpkt == TYPE_RPKT) {
     // Transform Stokes Parameters from the RF to the CMF
-
-    const auto old_dir_cmf = frame_transform(pkt.dir, &Qi, &Ui, vel_vec);
+    const auto [old_dir_cmf, Qi, Ui] = frame_transform(pkt.dir, vpkt.stokes[1], vpkt.stokes[2], vel_vec);
 
     // Need to rotate Stokes Parameters in the scattering plane
 
@@ -229,20 +231,15 @@ auto rlc_emiss_vpkt(const Packet& pkt, const double t_current, const double t_ar
     const double cos2i2 = cos(2 * i2);
     const double sin2i2 = sin(2 * i2);
 
-    Q = (Qnew * cos2i2) + (Unew * sin2i2);
-    U = (-Qnew * sin2i2) + (Unew * cos2i2);
+    const double Q_cmf = (Qnew * cos2i2) + (Unew * sin2i2);
+    const double U_cmf = (-Qnew * sin2i2) + (Unew * cos2i2);
 
     // Transform Stokes Parameters from the CMF to the RF
 
-    const auto vel_rev = Vec3d{-vel_vec[0], -vel_vec[1], -vel_vec[2]};
+    std::tie(std::ignore, Q, U) = frame_transform(obs_cmf, Q_cmf, U_cmf, Vec3d{-vel_vec[0], -vel_vec[1], -vel_vec[2]});
 
-    frame_transform(obs_cmf, &Q, &U, vel_rev);
-
-  } else if (type_before_rpkt == TYPE_KPKT || type_before_rpkt == TYPE_MA) {
-    // MACROATOM and KPKT: isotropic emission
-    Q = 0;
-    U = 0;
-    pn = 1 / (4 * PI);
+  } else {
+    assert_testmodeonly(type_before_rpkt == TYPE_KPKT || type_before_rpkt == TYPE_MA);
   }
 
   // compute the optical depth to boundary
@@ -777,11 +774,11 @@ void read_vpktparameterfile() {
   fclose(input_file);
 }
 
-void write_timestep(const int nts, const int my_rank, const bool is_final) {
+void write_timestep(const int nts, const bool is_final) {
   if constexpr (!VPKT_ON) {
     return;
   }
-
+  const int my_rank = globals::my_rank;
   // write specpol of the virtual packets
   const auto filename_vspecpol =
       is_final ? std::format("vspecpol_{:04d}.out", my_rank) : std::format("vspecpol_{:04d}_ts{}.tmp", my_rank, nts);
@@ -809,7 +806,7 @@ void write_timestep(const int nts, const int my_rank, const bool is_final) {
   }
 }
 
-void init(const int nts, const int my_rank, const bool continued_from_saved) {
+void init(const int nts, const bool continued_from_saved) {
   if constexpr (!VPKT_ON) {
     return;
   }
@@ -820,10 +817,10 @@ void init(const int nts, const int my_rank, const bool continued_from_saved) {
   }
 
   if constexpr (VPKT_WRITE_CONTRIBS) {
-    const auto filename = std::format("vpackets_{:04d}_ts{}.tmp", my_rank, nts + 1);
+    const auto filename = std::format("vpackets_{:04d}_ts{}.tmp", globals::my_rank, nts + 1);
 
     if (continued_from_saved) {
-      const auto filename_prev = std::format("vpackets_{:04d}_ts{}.tmp", my_rank, nts);
+      const auto filename_prev = std::format("vpackets_{:04d}_ts{}.tmp", globals::my_rank, nts);
       printlnlog("Copying {} to {}", filename_prev, filename);
       std::filesystem::copy_file(filename_prev, filename, std::filesystem::copy_options::overwrite_existing);
     } else {
@@ -850,10 +847,10 @@ void init(const int nts, const int my_rank, const bool continued_from_saved) {
   if (continued_from_saved) {
     // Continue simulation: read into temporary files
 
-    read_vspecpol(my_rank, nts);
+    read_vspecpol(globals::my_rank, nts);
 
     if (vgrid_on) {
-      read_vpkt_grid(my_rank, nts);
+      read_vpkt_grid(globals::my_rank, nts);
     }
   }
 }

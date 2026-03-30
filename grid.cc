@@ -2264,7 +2264,7 @@ auto get_ndo_nonempty(const int rank) -> int {
 }
 
 // Initialise the propagation grid cells and associate them with modelgrid cells
-void init_grid(const int my_rank) {
+void init_grid() {
   // The cells will be ordered by x then y, then z. Call a routine that
   // sets up the initial positions and widths of the cells.
   const auto prop_gridtype = get_propgridtype();
@@ -2323,9 +2323,7 @@ void init_grid(const int my_rank) {
   allocate_nonemptymodelcells();
   read_elem_abundances();
 
-  const int ndo_nonempty = get_ndo_nonempty(my_rank);
-
-  radfield::init(my_rank, ndo_nonempty);
+  radfield::init();
   nonthermal::init();
 
   // and assign a temperature to the cells

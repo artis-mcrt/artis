@@ -1651,12 +1651,6 @@ void setup_nlte_levels() {
 void read_atomicdata() {
   read_atomicdata_files();
 
-  // INITIALISE THE ABSORPTION/EMISSION COUNTERS ARRAYS
-  if constexpr (RECORD_LINESTAT) {
-    globals::ecounter.resize(globals::nlines);
-    globals::acounter.resize(globals::nlines);
-  }
-
   kpkt::setup_coolinglist();
 
   // Printout some information about the read-in model atom
@@ -1703,7 +1697,7 @@ void read_atomicdata() {
 }  // anonymous namespace
 
 // read input.txt, atomic data, and ejecta model
-void input(int rank) {
+void input() {
   globals::n_titer = (globals::timestep < -1) ? 3 : 1;
   globals::lte_iteration = false;
 
@@ -1723,7 +1717,7 @@ void input(int rank) {
   }
 
   // Read in parameters from input.txt
-  read_parameterfile(rank);
+  read_parameterfile();
 
   // Read in parameters from vpkt.txt
   if (VPKT_ON) {
@@ -1755,7 +1749,7 @@ auto get_noncommentline(std::istream& input, std::string& line) -> bool {
 }
 
 // read input parameters from input.txt
-void read_parameterfile(int rank) {
+void read_parameterfile() {
   auto file = fstream_required("input.txt", std::ios::in);
 
   std::string line;
@@ -1781,11 +1775,11 @@ void read_parameterfile(int rank) {
   // Multi-threaded runs (OpenMP or stdpar) are not reproducible due to accumulation to shared memory, so the seed is
   // randomly generated
   const auto tid = get_thread_num();
-  auto rngseed = (tid == 0) ? pre_zseed + static_cast<std::int64_t>(13 * ((rank * get_max_threads()) + tid))
+  auto rngseed = (tid == 0) ? pre_zseed + static_cast<std::int64_t>(13 * ((globals::my_rank * get_max_threads()) + tid))
                             : get_rng_random_seed();
 
   rng_seed(rngseed);
-  printlnlog("rank {}: thread {} has rngseed {}", rank, tid, rngseed);
+  printlnlog("rank {}: thread {} has rngseed {}", globals::my_rank, tid, rngseed);
 
   // call it a few times
   for (int n = 0; n < 100; n++) {
@@ -1909,7 +1903,7 @@ void read_parameterfile(int rank) {
 
   file.close();
 
-  if (rank == 0 && !globals::simulation_continued_from_saved) {
+  if (globals::my_rank == 0 && !globals::simulation_continued_from_saved) {
     // back up original input file, adding comments to each line
     update_parameterfile(-1);
   }

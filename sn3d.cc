@@ -50,18 +50,17 @@ std::fstream output_file;
 
 namespace {
 
-std::fstream linestat_file;
 time_t real_time_start = -1;
 time_t time_timestep_start = -1;  // this will be set after the first update of the grid and before packet prop
 std::fstream estimators_file;
 
 void initialise_linestat_file() {
-  if (globals::simulation_continued_from_saved && !RECORD_LINESTAT) {
-    // only write linestat.out on the first run, unless it contains statistics for each timestep
+  if (globals::simulation_continued_from_saved) {
+    // only write linestat.out on the first run
     return;
   }
 
-  linestat_file = fstream_required("linestat.out", std::ios::out | std::ios::trunc);
+  auto linestat_file = fstream_required("linestat.out", std::ios::out | std::ios::trunc);
 
   for (int i = 0; i < globals::nlines; i++) {
     linestat_file << CLIGHT / globals::linelist.nu[i] << ' ';  // wavelength in cm
@@ -87,8 +86,6 @@ void initialise_linestat_file() {
     linestat_file << (globals::linelist.lowerlevelindex[i] + 1) << ' ';
   }
   linestat_file << '\n';
-
-  linestat_file.flush();
 }
 
 void write_deposition_file() {
@@ -384,12 +381,6 @@ void mpi_reduce_estimators(const int nts) {
     }
   }
 
-  if constexpr (RECORD_LINESTAT) {
-    MPI_Barrier(MPI_COMM_WORLD);
-    MPI_Allreduce_safe(globals::ecounter, MPI_SUM, MPI_COMM_WORLD);
-    MPI_Allreduce_safe(globals::acounter, MPI_SUM, MPI_COMM_WORLD);
-  }
-
   assert_always(std::ssize(globals::dep_estimator_gamma) == nonempty_npts_model);
   MPI_Allreduce_safe(globals::dep_estimator_gamma, MPI_SUM, MPI_COMM_WORLD);
   assert_always(std::ssize(globals::dep_estimator_positron) == nonempty_npts_model);
@@ -475,7 +466,7 @@ void save_grid_and_packets(const int nts, std::vector<Packet>& packets) {
   // save packet state at start of current timestep (before propagation)
   write_temp_packetsfile(nts, globals::my_rank, packets);
 
-  vpkt::write_timestep(nts, globals::my_rank, false);
+  vpkt::write_timestep(nts, false);
 
   const auto time_write_packets_finished_thisrank = std::time(nullptr);
 
@@ -554,11 +545,6 @@ auto do_timestep(const int nts, const int titer, std::vector<Packet>& packets, c
     radfield::initialise_prev_titer_photoionestimators();
   }
 
-  if constexpr (RECORD_LINESTAT) {
-    std::ranges::fill(globals::acounter, 0);
-    std::ranges::fill(globals::ecounter, 0);
-  }
-
   // Update the matter quantities in the grid for the new timestep.
 
   update_grid(estimators_file, nts, nts_prev, titer, real_time_start);
@@ -634,28 +620,11 @@ auto do_timestep(const int nts, const int titer, std::vector<Packet>& packets, c
       vpkt::nvpkt_esc_from_macroatom = 0;
     }
 
-    if constexpr (RECORD_LINESTAT) {
-      if (globals::my_rank == 0) {
-        // Print net absorption/emission in lines to the linestat_file
-        // Currently linestat information is only properly implemented for MPI only runs
-        // For hybrid runs only data from thread 0 is recorded
-        for (int i = 0; i < globals::nlines; i++) {
-          linestat_file << globals::ecounter[i] << ' ';
-        }
-        linestat_file << '\n';
-        for (int i = 0; i < globals::nlines; i++) {
-          linestat_file << globals::acounter[i] << ' ';
-        }
-        linestat_file << '\n';
-        linestat_file.flush();
-      }
-    }
-
-    if (nts == globals::timestep_finish - 1) {
+    if (nts == (globals::timestep_finish - 1)) {
       const auto filename = std::format("packets{:02d}_{:04d}.out", 0, globals::my_rank);
       write_text_packets(filename, packets);
 
-      vpkt::write_timestep(nts, globals::my_rank, true);
+      vpkt::write_timestep(nts, true);
 
       printlnlog("time after write final packets file {}", std::time(nullptr));
     }
@@ -693,12 +662,10 @@ auto main(int argc, char* argv[]) -> int {
 
   check_already_running();
 
-  const int my_rank = globals::my_rank;
-
 #ifdef STDPAR_ON
   printlnlog("C++ standard parallelism (stdpar) is enabled with {} hardware threads", get_max_threads());
   for (int t = 1; t < get_max_threads(); t++) {
-    std::filesystem::remove(std::format("output_{}-{}.txt", my_rank, t));
+    std::filesystem::remove(std::format("output_{}-{}.txt", globals::my_rank, t));
   }
 #endif
 
@@ -709,8 +676,8 @@ auto main(int argc, char* argv[]) -> int {
 #endif
   {
     // initialise the thread and rank specific output file
-    output_file =
-        fstream_required(std::format("output_{}-{}.txt", my_rank, get_thread_num()), std::ios::out | std::ios::trunc);
+    output_file = fstream_required(std::format("output_{}-{}.txt", globals::my_rank, get_thread_num()),
+                                   std::ios::out | std::ios::trunc);
 
 #ifdef _OPENMP
     printlnlog("OpenMP parallelisation is active with {} threads (max {})", omp_get_num_threads(), get_max_threads());
@@ -797,14 +764,14 @@ auto main(int argc, char* argv[]) -> int {
       MAX_NODE_SIZE);
 #endif
 
-  input(my_rank);
+  input();
   if (globals::simulation_continued_from_saved) {
     assert_always(globals::nprocs_exspec == globals::nprocs);
   } else {
     globals::nprocs_exspec = globals::nprocs;
   }
 
-  if (my_rank == 0) {
+  if (globals::my_rank == 0) {
     initialise_linestat_file();
   }
 
@@ -829,11 +796,11 @@ auto main(int argc, char* argv[]) -> int {
 
   setup_timesteps();
 
-  if (my_rank == 0) {
+  if (globals::my_rank == 0) {
     write_timestep_file();
   }
 
-  grid::init_grid(my_rank);
+  grid::init_grid();
 
   printlnlog("Simulation propagates {:g} packets per process (total {:g} with nprocs {})", 1. * MPKTS,
              1. * MPKTS * globals::nprocs, globals::nprocs);
@@ -850,10 +817,10 @@ auto main(int argc, char* argv[]) -> int {
   // The next loop is over all grid cells. For parallelisation, we want to split this loop between
   // processes. This is done by assigning each MPI process nblock cells. The residual n_leftover
   // cells are sent to processes 0 ... process n_leftover -1.
-  const int nstart = grid::get_nstart(my_rank);
-  const int ndo = grid::get_ndo(my_rank);
-  const int ndo_nonempty = grid::get_ndo_nonempty(my_rank);
-  printlog("process rank {} (global max rank {}) assigned {} modelgrid cells ({} nonempty)", my_rank,
+  const int nstart = grid::get_nstart(globals::my_rank);
+  const int ndo = grid::get_ndo(globals::my_rank);
+  const int ndo_nonempty = grid::get_ndo_nonempty(globals::my_rank);
+  printlog("process rank {} (global max rank {}) assigned {} modelgrid cells ({} nonempty)", globals::my_rank,
            globals::nprocs - 1, ndo, ndo_nonempty);
   if (ndo > 0) {
     printlnlog(": cells [{}..{}] (model has max mgi {})", nstart, nstart + ndo - 1, grid::get_npts_model() - 1);
@@ -864,18 +831,19 @@ auto main(int argc, char* argv[]) -> int {
   MPI_Barrier(MPI_COMM_WORLD);
   globals::timestep = globals::timestep_initial;
 
-  macroatom_open_file(my_rank);
+  macroatom_open_file();
   if (ndo > 0) {
     assert_always(!estimators_file.is_open());
-    estimators_file = fstream_required(std::format("estimators_{:04d}.out", my_rank), std::ios::out | std::ios::trunc);
+    estimators_file =
+        fstream_required(std::format("estimators_{:04d}.out", globals::my_rank), std::ios::out | std::ios::trunc);
 
     if (globals::total_nlte_levels > 0 && ndo_nonempty > 0) {
-      nltepop_open_file(my_rank);
+      nltepop_open_file();
     }
   }
 
   // initialise or read in virtual packet spectra
-  vpkt::init(globals::timestep, my_rank, globals::simulation_continued_from_saved);
+  vpkt::init(globals::timestep, globals::simulation_continued_from_saved);
 
   setup_cellcache();
 
@@ -907,9 +875,6 @@ auto main(int argc, char* argv[]) -> int {
   // code.
 
   MPI_Barrier(MPI_COMM_WORLD);
-  if (linestat_file.is_open()) {
-    linestat_file.close();
-  }
 
   if ((globals::ntimesteps > globals::timestep_finish) || terminate_early) {
     printlnlog("RESTART_NEEDED to continue model");

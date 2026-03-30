@@ -111,9 +111,6 @@ inline std::vector<double> ffheatingestimator_save{};
 inline std::vector<double> colheatingestimator_save{};
 #endif
 
-inline std::vector<int> ecounter{};
-inline std::vector<int> acounter{};
-
 inline int nprocs_exspec{1};
 
 constexpr double GREY_OP = 0.1;

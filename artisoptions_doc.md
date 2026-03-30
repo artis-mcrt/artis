@@ -53,9 +53,6 @@ constexpr bool INITIAL_PACKETS_ON;
 // INITIAL_PACKETS_ON must be true to make use of this
 constexpr bool USE_MODEL_INITIAL_ENERGY;
 
-// record counts of emissions and absorptions in each line
-constexpr bool RECORD_LINESTAT;
-
 // Rate coefficients
 constexpr int TABLESIZE;
 constexpr double MINTEMP;
@@ -67,7 +64,7 @@ constexpr double RECOMBCALIBRATION_T_ELEC;
 // Polarisation for real packets
 constexpr bool DIPOLE;
 
-// Only affects exspec and enables writing specpol.out, emissionpol.out, absorptionpol.out
+// Compute polarisation and write specpol.out, emissionpol.out, absorptionpol.out
 constexpr bool POL_ON;
 
 // Polarisation for virtual packets

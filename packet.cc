@@ -31,6 +31,26 @@
 
 namespace {
 
+constexpr auto get_packets_text_header() -> std::string {
+  std::string header;
+  header =
+      "#number where type_id"
+      " posx posy posz"
+      " dirx diry dirz"
+      " tdecay e_cmf e_rf nu_cmf nu_rf"
+      " escape_type_id escape_time emissiontype trueemissiontype"
+      " em_posx em_posy em_posz"
+      " absorption_type absorption_freq nscatterings em_time";
+  if constexpr (POL_ON) {
+    header += " stokes1 stokes2 stokes3";
+  }
+  header +=
+      " originated_from_particlenotgamma"
+      " trueem_posx trueem_posy trueem_posz trueem_time"
+      " pellet_nucindex pellet_decaytype";
+  return header;
+}
+
 // Place pellet n with energy e_cmf_per_packet in cell m
 void place_pellet(const double e_cmf_per_packet, const std::span<const double> en_cumulative, const int pktnumber,
                   Packet& pkt) {
@@ -146,6 +166,9 @@ auto read_text_packets(const std::string& filename) -> std::vector<Packet> {
   std::istringstream ssline;
   std::string line;
   std::vector<Packet> packets;
+  std::getline(packets_file, line);  // read header line to make sure it matches
+  assert_always(line == get_packets_text_header());
+
   packets.reserve(MPKTS);
   while (get_noncommentline(packets_file, line)) {
     ssline.clear();
@@ -159,11 +182,8 @@ auto read_text_packets(const std::string& filename) -> std::vector<Packet> {
     pkt.type = static_cast<enum packet_type>(pkt_type_in);
 
     ssline >> pkt.pos[0] >> pkt.pos[1] >> pkt.pos[2];
-
     ssline >> pkt.dir[0] >> pkt.dir[1] >> pkt.dir[2];
-
     ssline >> pkt.tdecay;
-
     ssline >> pkt.e_cmf >> pkt.e_rf >> pkt.nu_cmf >> pkt.nu_rf;
 
     int escape_type = 0;
@@ -171,39 +191,34 @@ auto read_text_packets(const std::string& filename) -> std::vector<Packet> {
     pkt.escape_type = static_cast<enum packet_type>(escape_type);
 
     ssline >> pkt.emissiontype >> pkt.trueemissiontype;
-
     ssline >> pkt.em_pos[0] >> pkt.em_pos[1] >> pkt.em_pos[2];
-
     ssline >> pkt.absorptiontype >> pkt.absorptionfreq >> pkt.nscatterings;
-
     ssline >> pkt.em_time;
 
-    ssline >> pkt.stokes[0] >> pkt.stokes[1] >> pkt.stokes[2];
+    if constexpr (POL_ON) {
+      ssline >> pkt.stokes[0] >> pkt.stokes[1] >> pkt.stokes[2];
+    }
 
     int int_originated_from_particlenotgamma = 0;
     ssline >> int_originated_from_particlenotgamma;
     pkt.originated_from_particlenotgamma = (int_originated_from_particlenotgamma != 0);
 
     ssline >> pkt.trueem_pos[0] >> pkt.trueem_pos[1] >> pkt.trueem_pos[2];
-
     ssline >> pkt.trueem_time;
-
     ssline >> pkt.pellet_nucindex;
+    ssline >> pkt.pellet_decaytype;
   }
 
   if (std::ssize(packets) < MPKTS) {
     printlnlog("  found {} out of a possible {} packets.", std::ssize(packets), MPKTS);
   }
+  packets.shrink_to_fit();
   return packets;
 }
 
 void write_text_packets(const std::string& filename, const std::span<const Packet> packets) {
   auto packets_file = fstream_required(filename, std::ios::out | std::ios::trunc);
-  packets_file << "#number where type_id posx posy posz dirx diry dirz tdecay e_cmf e_rf nu_cmf nu_rf "
-                  "escape_type_id escape_time emissiontype trueemissiontype "
-                  "em_posx em_posy em_posz absorption_type absorption_freq nscatterings em_time stokes1 stokes2 "
-                  "stokes3 originated_from_particlenotgamma "
-                  "trueem_posx trueem_posy trueem_posz trueem_time pellet_nucindex pellet_decaytype\n";
+  packets_file << get_packets_text_header() << '\n';
 
   for (const auto& pkt : packets) {
     if (!KEEP_ESCAPED_GAMMAS && pkt.type == TYPE_ESCAPE && pkt.escape_type == TYPE_GAMMA) {
@@ -216,12 +231,15 @@ void write_text_packets(const std::string& filename, const std::span<const Packe
     packets_file << pkt.e_cmf << ' ' << pkt.e_rf << ' ' << pkt.nu_cmf << ' ' << pkt.nu_rf << ' ';
     packets_file << std::to_underlying(pkt.escape_type) << ' ' << pkt.escape_time << ' ';
     packets_file << pkt.emissiontype << ' ' << pkt.trueemissiontype << ' ';
-    packets_file << pkt.em_pos[0] << ' ' << pkt.em_pos[1] << ' ' << pkt.em_pos[2] << ' ' << pkt.absorptiontype << ' '
-                 << pkt.absorptionfreq << ' ' << pkt.nscatterings << ' ' << pkt.em_time << ' ';
-    packets_file << pkt.stokes[0] << ' ' << pkt.stokes[1] << ' ' << pkt.stokes[2] << ' ';
-    packets_file << static_cast<int>(pkt.originated_from_particlenotgamma) << ' ' << pkt.trueem_pos[0] << ' '
-                 << pkt.trueem_pos[1] << ' ' << pkt.trueem_pos[2] << ' ' << pkt.trueem_time << ' '
-                 << pkt.pellet_nucindex << ' ' << pkt.pellet_decaytype;
+    packets_file << pkt.em_pos[0] << ' ' << pkt.em_pos[1] << ' ' << pkt.em_pos[2];
+    packets_file << ' ' << pkt.absorptiontype << ' ' << pkt.absorptionfreq << ' ' << pkt.nscatterings << ' '
+                 << pkt.em_time;
+    if constexpr (POL_ON) {
+      packets_file << ' ' << pkt.stokes[0] << ' ' << pkt.stokes[1] << ' ' << pkt.stokes[2];
+    }
+    packets_file << ' ' << static_cast<int>(pkt.originated_from_particlenotgamma);
+    packets_file << ' ' << pkt.trueem_pos[0] << ' ' << pkt.trueem_pos[1] << ' ' << pkt.trueem_pos[2];
+    packets_file << ' ' << pkt.trueem_time << ' ' << pkt.pellet_nucindex << ' ' << pkt.pellet_decaytype;
     packets_file << '\n';
   }
 }
