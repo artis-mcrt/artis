@@ -232,8 +232,7 @@ auto rlc_emiss_vpkt(const Packet& pkt, const double t_current, const double t_ar
 
     // Transform Stokes Parameters from the CMF to the RF
 
-    Vec3d new_dir_cmf;
-    std::tie(new_dir_cmf, Q, U) = frame_transform(obs_cmf, Q_cmf, U_cmf, Vec3d{-vel_vec[0], -vel_vec[1], -vel_vec[2]});
+    std::tie(std::ignore, Q, U) = frame_transform(obs_cmf, Q_cmf, U_cmf, Vec3d{-vel_vec[0], -vel_vec[1], -vel_vec[2]});
 
   } else if (type_before_rpkt == TYPE_KPKT || type_before_rpkt == TYPE_MA) {
     // MACROATOM and KPKT: isotropic emission
