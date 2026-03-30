@@ -3,10 +3,10 @@
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
+#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <format>
-#include <fstream>
 #include <iostream>
 #include <ranges>
 #include <span>
@@ -70,7 +70,7 @@ void place_pellet(const double e_cmf_per_packet, const std::span<const double> e
 
 }  // anonymous namespace
 
-void packet_init(std::span<Packet> pkt)
+void packet_init(std::span<Packet> packets)
 // Subroutine that initialises the packets if we start a new simulation.
 {
   MPI_Barrier(MPI_COMM_WORLD);
@@ -84,7 +84,7 @@ void packet_init(std::span<Packet> pkt)
 
   printlnlog("etot {:g} (t_model to t_inf)", etot_tmodel_tinf);
 
-  printlnlog("e_cmf per packet (t_model to t_inf) {:g} erg", etot_tmodel_tinf / globals::npkts);
+  printlnlog("e_cmf per packet (t_model to t_inf) {:g} erg", etot_tmodel_tinf / MPKTS);
 
   decay::setup_decaypath_energy_per_mass();
 
@@ -112,163 +112,162 @@ void packet_init(std::span<Packet> pkt)
   printlnlog("etot ({} to tmax) {} erg", strtimelow, etot_simtime);
 
   // So energy per pellet is:
-  const double e_cmf_per_packet = etot_simtime / globals::npkts;
+  const double e_cmf_per_packet = etot_simtime / MPKTS;
   printlnlog("e_cmf per packet ({} to tmax) {} erg", strtimelow, e_cmf_per_packet);
 
   // Now place the pellets in the ejecta and decide at what time they will decay.
 
   printlnlog("Placing pellets...");
-  const auto allpkts = std::ranges::iota_view{0, globals::npkts};
-  std::ranges::for_each(
-      allpkts, [&, e_cmf_per_packet](const int n) { place_pellet(e_cmf_per_packet, en_cumulative, n, pkt[n]); });
+  const auto allpktindices = std::ranges::iota_view{0, static_cast<int>(std::ssize(packets))};
+  std::ranges::for_each(allpktindices, [&, e_cmf_per_packet](const int n) {
+    place_pellet(e_cmf_per_packet, en_cumulative, n, packets[n]);
+  });
 
   decay::free_decaypath_energy_per_mass();  // will no longer be needed after packets are set up
 
-  double e_cmf_total = std::ranges::fold_left(pkt, 0., [](const double sum, const Packet& p) { return sum + p.e_cmf; });
+  double e_cmf_total =
+      std::ranges::fold_left(packets, 0., [](const double sum, const Packet& p) { return sum + p.e_cmf; });
   const double e_ratio = etot_simtime / e_cmf_total;
   printlnlog("packet energy sum {:g} should be {:g} normalisation factor: {:g}", e_cmf_total, etot_simtime, e_ratio);
   assert_always(std::isfinite(e_cmf_total));
   e_cmf_total *= e_ratio;
-  for (int n = 0; n < globals::npkts; n++) {
-    pkt[n].e_cmf *= e_ratio;
-    pkt[n].e_rf *= e_ratio;
+  for (auto& pkt : packets) {
+    pkt.e_cmf *= e_ratio;
+    pkt.e_rf *= e_ratio;
   }
   printlnlog("total energy that will be freed during simulation time: {:g} erg", e_cmf_total);
 }
 
-// write packets text file
-void write_packets(const std::string& filename, std::span<const Packet> pkt) {
-  auto packets_file = std::fstream(filename, std::ios::out | std::ios::trunc);
-  assert_always(packets_file.is_open());
+// read packets*.out text format file
+auto read_text_packets(const std::string& filename) -> std::vector<Packet> {
+  printlnlog("Reading {}", filename);
+  auto packets_file = fstream_required(filename, std::ios::in);
+
+  std::istringstream ssline;
+  std::string line;
+  std::vector<Packet> packets;
+  packets.reserve(MPKTS);
+  while (get_noncommentline(packets_file, line)) {
+    ssline.clear();
+    ssline.str(line);
+
+    packets.emplace_back();
+    Packet& pkt = packets.back();
+
+    int pkt_type_in = 0;
+    ssline >> pkt.number >> pkt.where >> pkt_type_in;
+    pkt.type = static_cast<enum packet_type>(pkt_type_in);
+
+    ssline >> pkt.pos[0] >> pkt.pos[1] >> pkt.pos[2];
+
+    ssline >> pkt.dir[0] >> pkt.dir[1] >> pkt.dir[2];
+
+    ssline >> pkt.tdecay;
+
+    ssline >> pkt.e_cmf >> pkt.e_rf >> pkt.nu_cmf >> pkt.nu_rf;
+
+    int escape_type = 0;
+    ssline >> escape_type >> pkt.escape_time;
+    pkt.escape_type = static_cast<enum packet_type>(escape_type);
+
+    ssline >> pkt.emissiontype >> pkt.trueemissiontype;
+
+    ssline >> pkt.em_pos[0] >> pkt.em_pos[1] >> pkt.em_pos[2];
+
+    ssline >> pkt.absorptiontype >> pkt.absorptionfreq >> pkt.nscatterings;
+
+    ssline >> pkt.em_time;
+
+    ssline >> pkt.stokes[0] >> pkt.stokes[1] >> pkt.stokes[2];
+
+    int int_originated_from_particlenotgamma = 0;
+    ssline >> int_originated_from_particlenotgamma;
+    pkt.originated_from_particlenotgamma = (int_originated_from_particlenotgamma != 0);
+
+    ssline >> pkt.trueem_pos[0] >> pkt.trueem_pos[1] >> pkt.trueem_pos[2];
+
+    ssline >> pkt.trueem_time;
+
+    ssline >> pkt.pellet_nucindex;
+  }
+
+  if (std::ssize(packets) < MPKTS) {
+    printlnlog("  found {} out of a possible {} packets.", std::ssize(packets), MPKTS);
+  }
+  return packets;
+}
+
+void write_text_packets(const std::string& filename, const std::span<const Packet> packets) {
+  auto packets_file = fstream_required(filename, std::ios::out | std::ios::trunc);
   packets_file << "#number where type_id posx posy posz dirx diry dirz tdecay e_cmf e_rf nu_cmf nu_rf "
                   "escape_type_id escape_time emissiontype trueemissiontype "
                   "em_posx em_posy em_posz absorption_type absorption_freq nscatterings em_time stokes1 stokes2 "
                   "stokes3 originated_from_particlenotgamma "
                   "trueem_posx trueem_posy trueem_posz trueem_time pellet_nucindex pellet_decaytype\n";
 
-  for (int i = 0; i < globals::npkts; i++) {
-    packets_file << pkt[i].number << ' ' << pkt[i].where << ' ' << std::to_underlying(pkt[i].type) << ' ';
-    packets_file << pkt[i].pos[0] << ' ' << pkt[i].pos[1] << ' ' << pkt[i].pos[2] << ' ';
-    packets_file << pkt[i].dir[0] << ' ' << pkt[i].dir[1] << ' ' << pkt[i].dir[2] << ' ';
-    packets_file << pkt[i].tdecay << ' ';
-    packets_file << pkt[i].e_cmf << ' ' << pkt[i].e_rf << ' ' << pkt[i].nu_cmf << ' ' << pkt[i].nu_rf << ' ';
-    packets_file << std::to_underlying(pkt[i].escape_type) << ' ' << pkt[i].escape_time << ' ';
-    packets_file << pkt[i].emissiontype << ' ' << pkt[i].trueemissiontype << ' ';
-    packets_file << pkt[i].em_pos[0] << ' ' << pkt[i].em_pos[1] << ' ' << pkt[i].em_pos[2] << ' '
-                 << pkt[i].absorptiontype << ' ' << pkt[i].absorptionfreq << ' ' << pkt[i].nscatterings << ' '
-                 << pkt[i].em_time << ' ';
-    packets_file << pkt[i].stokes[0] << ' ' << pkt[i].stokes[1] << ' ' << pkt[i].stokes[2] << ' ';
-    packets_file << static_cast<int>(pkt[i].originated_from_particlenotgamma) << ' ' << pkt[i].trueem_pos[0] << ' '
-                 << pkt[i].trueem_pos[1] << ' ' << pkt[i].trueem_pos[2] << ' ' << pkt[i].trueem_time << ' '
-                 << pkt[i].pellet_nucindex << ' ' << pkt[i].pellet_decaytype;
+  for (const auto& pkt : packets) {
+    if (!KEEP_ESCAPED_GAMMAS && pkt.type == TYPE_ESCAPE && pkt.escape_type == TYPE_GAMMA) {
+      continue;
+    }
+    packets_file << pkt.number << ' ' << pkt.where << ' ' << std::to_underlying(pkt.type) << ' ';
+    packets_file << pkt.pos[0] << ' ' << pkt.pos[1] << ' ' << pkt.pos[2] << ' ';
+    packets_file << pkt.dir[0] << ' ' << pkt.dir[1] << ' ' << pkt.dir[2] << ' ';
+    packets_file << pkt.tdecay << ' ';
+    packets_file << pkt.e_cmf << ' ' << pkt.e_rf << ' ' << pkt.nu_cmf << ' ' << pkt.nu_rf << ' ';
+    packets_file << std::to_underlying(pkt.escape_type) << ' ' << pkt.escape_time << ' ';
+    packets_file << pkt.emissiontype << ' ' << pkt.trueemissiontype << ' ';
+    packets_file << pkt.em_pos[0] << ' ' << pkt.em_pos[1] << ' ' << pkt.em_pos[2] << ' ' << pkt.absorptiontype << ' '
+                 << pkt.absorptionfreq << ' ' << pkt.nscatterings << ' ' << pkt.em_time << ' ';
+    packets_file << pkt.stokes[0] << ' ' << pkt.stokes[1] << ' ' << pkt.stokes[2] << ' ';
+    packets_file << static_cast<int>(pkt.originated_from_particlenotgamma) << ' ' << pkt.trueem_pos[0] << ' '
+                 << pkt.trueem_pos[1] << ' ' << pkt.trueem_pos[2] << ' ' << pkt.trueem_time << ' '
+                 << pkt.pellet_nucindex << ' ' << pkt.pellet_decaytype;
     packets_file << '\n';
   }
 }
 
-void read_temp_packetsfile(const int timestep, const int my_rank, std::span<Packet> pkt) {
+void read_temp_packetsfile(const int timestep, const int my_rank, std::vector<Packet>& packets) {
   // read binary packets file
   const auto filename = std::format("packets_{:04d}_ts{:d}.tmp", my_rank, timestep);
 
   printlnlog("Reading {}", filename);
   auto packets_file = fopen_required_uniqueptr(filename, "rb");
-  assert_always(std::fread(pkt.data(), sizeof(Packet), globals::npkts, packets_file.get()) ==
-                static_cast<size_t>(globals::npkts));
-
+  std::int64_t packet_count_in_file = 0;
+  assert_always(std::fread(&packet_count_in_file, sizeof(std::int64_t), 1, packets_file.get()) == 1);
+  assert_always(packet_count_in_file > 0);
+  assert_always(packet_count_in_file <= MPKTS);
+  resize_exactly(packets, packet_count_in_file);
+  assert_always(std::fread(packets.data(), sizeof(Packet), packet_count_in_file, packets_file.get()) ==
+                static_cast<size_t>(packet_count_in_file));
   printlnlog("done");
 }
 
-auto verify_temp_packetsfile(const int timestep, const int my_rank, std::span<const Packet> pkt) -> bool {
-  // return true if verification is good, otherwise return false
-
-  // read binary packets file
+void write_temp_packetsfile(const int timestep, const int my_rank, const std::span<const Packet> packets) {
+  // write packets binary file (and retry if the write fails)
   const auto filename = std::format("packets_{:04d}_ts{:d}.tmp", my_rank, timestep);
 
-  printlnlog("Verifying file {}", filename);
-  auto packets_file = fopen_required_uniqueptr(filename, "rb");
-  Packet pkt_in;
-  bool readback_passed = true;
-  for (int n = 0; n < globals::npkts; n++) {
-    assert_always(std::fread(&pkt_in, sizeof(Packet), 1, packets_file.get()) == 1);
-    if (pkt_in != pkt[n]) {
-      printlnlog("failed on packet {}", n);
-      printlnlog(" compare number {} {}", pkt_in.number, pkt[n].number);
-      printlnlog(" compare nu_cmf {:g} {:g}", pkt_in.nu_cmf, pkt[n].nu_cmf);
-      printlnlog(" compare e_rf {:g} {:g}", pkt_in.e_rf, pkt[n].e_rf);
-      readback_passed = false;
-    }
-  }
-  if (readback_passed) {
-    printlnlog("  verification passed");
-  } else {
-    printlnlog("  verification FAILED");
-  }
-  return readback_passed;
-}
+  bool write_success = false;
+  while (!write_success) {
+    printlog("timestep {}: writing {}...", timestep, filename);
+    FILE* packets_file = fopen(filename.c_str(), "wb");
+    if (packets_file == nullptr) {
+      printlnlog("ERROR: Could not open file '{}' for mode 'wb'.", filename);
+      write_success = false;
+    } else {
+      auto packet_count = static_cast<std::int64_t>(std::ssize(packets));
+      // write number of packets as header
+      write_success = (std::fwrite(&packet_count, sizeof(std::int64_t), 1, packets_file) == 1);
+      write_success = write_success &&
+                      (std::fwrite(packets.data(), sizeof(Packet), packets.size(), packets_file) == packets.size());
+      if (!write_success) {
+        printlnlog("fwrite() FAILED! will retry...");
+      }
 
-auto read_packets(const std::string& filename, std::span<Packet> packets) -> std::span<Packet> {
-  // read packets*.out text format file
-  auto packets_file = fstream_required(filename, std::ios::in);
-
-  std::string line;
-
-  int packets_read = 0;
-  while (get_noncommentline(packets_file, line)) {
-    packets_read++;
-    const int i = packets_read - 1;
-
-    if (i > globals::npkts - 1) {
-      printlnlog(
-          "ERROR: More data found beyond packet {} (expecting {} packets). Recompile exspec with the correct number of "
-          "packets. Run (wc -l < packets00_0000.out) to count them.",
-          packets_read, globals::npkts);
-      std::abort();
+      fclose(packets_file);
     }
 
-    std::istringstream ssline(line);
-
-    int pkt_type_in = 0;
-    ssline >> packets[i].number >> packets[i].where >> pkt_type_in;
-    packets[i].type = static_cast<enum packet_type>(pkt_type_in);
-
-    ssline >> packets[i].pos[0] >> packets[i].pos[1] >> packets[i].pos[2];
-
-    ssline >> packets[i].dir[0] >> packets[i].dir[1] >> packets[i].dir[2];
-
-    ssline >> packets[i].tdecay;
-
-    ssline >> packets[i].e_cmf >> packets[i].e_rf >> packets[i].nu_cmf >> packets[i].nu_rf;
-
-    int escape_type = 0;
-    ssline >> escape_type >> packets[i].escape_time;
-    packets[i].escape_type = static_cast<enum packet_type>(escape_type);
-
-    ssline >> packets[i].emissiontype >> packets[i].trueemissiontype;
-
-    ssline >> packets[i].em_pos[0] >> packets[i].em_pos[1] >> packets[i].em_pos[2];
-
-    ssline >> packets[i].absorptiontype >> packets[i].absorptionfreq >> packets[i].nscatterings;
-
-    ssline >> packets[i].em_time;
-
-    ssline >> packets[i].stokes[0] >> packets[i].stokes[1] >> packets[i].stokes[2];
-
-    int int_originated_from_particlenotgamma = 0;
-    ssline >> int_originated_from_particlenotgamma;
-    packets[i].originated_from_particlenotgamma = (int_originated_from_particlenotgamma != 0);
-
-    ssline >> packets[i].trueem_pos[0] >> packets[i].trueem_pos[1] >> packets[i].trueem_pos[2];
-
-    ssline >> packets[i].trueem_time;
-
-    ssline >> packets[i].pellet_nucindex;
+    if (write_success) {
+      printlnlog("done");
+    }
   }
-
-  if (packets_read < globals::npkts) {
-    printlnlog(
-        "ERROR: Read failed after packet {} (expecting {} packets). Recompile exspec with the correct number of "
-        "packets. Run (wc -l < packets00_0000.out) to count them.",
-        packets_read, globals::npkts);
-    std::abort();
-  }
-  return packets;
 }

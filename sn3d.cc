@@ -49,7 +49,6 @@
 std::fstream output_file;
 
 namespace {
-constexpr bool VERIFY_WRITTEN_PACKETS_FILES = false;
 
 std::fstream linestat_file;
 time_t real_time_start = -1;
@@ -434,33 +433,6 @@ void mpi_reduce_estimators(const int nts) {
   normalise_deposition_estimators(nts);
 }
 
-void write_temp_packetsfile(const int timestep, const int my_rank, std::span<const Packet> pkt) {
-  // write packets binary file (and retry if the write fails)
-  const auto filename = std::format("packets_{:04d}_ts{:d}.tmp", my_rank, timestep);
-
-  bool write_success = false;
-  while (!write_success) {
-    printlog("timestep {}: writing {}...", timestep, filename);
-    FILE* packets_file = fopen(filename.c_str(), "wb");
-    if (packets_file == nullptr) {
-      printlnlog("ERROR: Could not open file '{}' for mode 'wb'.", filename);
-      write_success = false;
-    } else {
-      write_success = (std::fwrite(pkt.data(), sizeof(Packet), globals::npkts, packets_file) ==
-                       static_cast<size_t>(globals::npkts));
-      if (!write_success) {
-        printlnlog("fwrite() FAILED! will retry...");
-      }
-
-      fclose(packets_file);
-    }
-
-    if (write_success) {
-      printlnlog("done");
-    }
-  }
-}
-
 auto walltime_sufficient_to_continue(const int nts, const int nts_prev, const int walltimelimitseconds) -> bool {
   MPI_Barrier(MPI_COMM_WORLD);
   // time is measured from just before packet propagation from one timestep to the next
@@ -490,47 +462,30 @@ auto walltime_sufficient_to_continue(const int nts, const int nts_prev, const in
   return do_this_full_loop;
 }
 
-void save_grid_and_packets(const int nts, std::span<const Packet> packets) {
+void save_grid_and_packets(const int nts, std::vector<Packet>& packets) {
   MPI_Barrier(MPI_COMM_WORLD);
   const auto my_rank = globals::my_rank;
 
-  bool write_successful = false;
-  while (!write_successful) {
-    const auto time_write_packets_file_start = std::time(nullptr);
+  const auto time_write_packets_file_start = std::time(nullptr);
 
-    // save packet state at start of current timestep (before propagation)
-    write_temp_packetsfile(nts, globals::my_rank, packets);
-
-    vpkt::write_timestep(nts, globals::my_rank, false);
-
-    const auto time_write_packets_finished_thisrank = std::time(nullptr);
-
-    MPI_Barrier(MPI_COMM_WORLD);
-
-    const auto timenow = std::time(nullptr);
-
-    printlnlog("timestep {}: finished writing temporary packets file (took {}, waited {}, total {} seconds)", nts,
-               time_write_packets_finished_thisrank - time_write_packets_file_start,
-               timenow - time_write_packets_finished_thisrank, timenow - time_write_packets_file_start);
-
-    if constexpr (VERIFY_WRITTEN_PACKETS_FILES) {
-      MPI_Barrier(MPI_COMM_WORLD);
-
-      const auto time_readback_packets_start = std::time(nullptr);
-
-      printlnlog("reading back temporary packets file to check validity...");
-
-      // read packets file back to check that the disk write didn't fail
-      write_successful = verify_temp_packetsfile(nts, my_rank, packets);
-
-      MPI_Barrier(MPI_COMM_WORLD);
-
-      printlnlog("Verifying packets files for all ranks took {} seconds.",
-                 std::time(nullptr) - time_readback_packets_start);
-    } else {
-      write_successful = true;
-    }
+  if constexpr (!KEEP_ESCAPED_GAMMAS) {
+    std::erase_if(packets, [](const Packet& pkt) { return pkt.type == TYPE_ESCAPE && pkt.escape_type == TYPE_GAMMA; });
   }
+
+  // save packet state at start of current timestep (before propagation)
+  write_temp_packetsfile(nts, globals::my_rank, packets);
+
+  vpkt::write_timestep(nts, globals::my_rank, false);
+
+  const auto time_write_packets_finished_thisrank = std::time(nullptr);
+
+  MPI_Barrier(MPI_COMM_WORLD);
+
+  const auto timenow = std::time(nullptr);
+
+  printlnlog("timestep {}: finished writing temporary packets file (took {}, waited {}, total {} seconds)", nts,
+             time_write_packets_finished_thisrank - time_write_packets_file_start,
+             timenow - time_write_packets_finished_thisrank, timenow - time_write_packets_file_start);
 
   if (my_rank == 0) {
     grid::write_grid_restart_data(nts);
@@ -543,16 +498,14 @@ void save_grid_and_packets(const int nts, std::span<const Packet> packets) {
 
     if (my_rank == 0) {
       const auto filename_prev_gridsave = std::format("gridsave_ts{}.tmp", nts - 1);
-      if (std::filesystem::exists(filename_prev_gridsave)) {
-        std::filesystem::remove(filename_prev_gridsave);
+      if (std::filesystem::remove(filename_prev_gridsave)) {
         printlnlog("deleted {}", filename_prev_gridsave);
       }
     }
 
     // delete temp packets files from previous timestep now that all restart data for the new timestep is available
     const auto filename_prev_packetstmp = std::format("packets_{:04d}_ts{:d}.tmp", my_rank, nts - 1);
-    if (std::filesystem::exists(filename_prev_packetstmp)) {
-      std::filesystem::remove(filename_prev_packetstmp);
+    if (std::filesystem::remove(filename_prev_packetstmp)) {
       printlnlog("deleted {}", filename_prev_packetstmp);
     }
 
@@ -586,7 +539,7 @@ void zero_estimators() {
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
-auto do_timestep(const int nts, const int titer, std::span<Packet> packets, const int walltimelimitseconds) -> bool {
+auto do_timestep(const int nts, const int titer, std::vector<Packet>& packets, const int walltimelimitseconds) -> bool {
   bool do_this_full_loop = true;
   const int nts_prev = (titer != 0 || nts == 0) ? nts : nts - 1;
   if ((titer > 0) || (globals::simulation_continued_from_saved && (nts == globals::timestep_initial))) {
@@ -700,7 +653,7 @@ auto do_timestep(const int nts, const int titer, std::span<Packet> packets, cons
 
     if (nts == globals::timestep_finish - 1) {
       const auto filename = std::format("packets{:02d}_{:04d}.out", 0, globals::my_rank);
-      write_packets(filename, packets);
+      write_text_packets(filename, packets);
 
       vpkt::write_timestep(nts, globals::my_rank, true);
 
@@ -818,7 +771,7 @@ auto main(int argc, char* argv[]) -> int {
   }
 
   std::vector<Packet> packets;
-  resize_exactly(packets, globals::npkts);
+  resize_exactly(packets, MPKTS);
 
   printlnlog("git branch {}", GIT_BRANCH);
 
@@ -882,8 +835,8 @@ auto main(int argc, char* argv[]) -> int {
 
   grid::init_grid(my_rank);
 
-  printlnlog("Simulation propagates {:g} packets per process (total {:g} with nprocs {})", 1. * globals::npkts,
-             1. * globals::npkts * globals::nprocs, globals::nprocs);
+  printlnlog("Simulation propagates {:g} packets per process (total {:g} with nprocs {})", 1. * MPKTS,
+             1. * MPKTS * globals::nprocs, globals::nprocs);
 
   printlnlog("[info] mem_usage: packets occupy {:.3f} MB", MPKTS * sizeof(Packet) / 1024. / 1024.);
 
@@ -984,13 +937,10 @@ auto main(int argc, char* argv[]) -> int {
 
   decay::cleanup();
 
-  globals::mpi_finalized = true;
   MPI_Finalize();
+  globals::mpi_finalized = true;
 
-  const std::filesystem::path pid_file_path("artis.pid");
-  if (std::filesystem::exists(pid_file_path)) {
-    std::filesystem::remove(pid_file_path);
-  }
+  std::filesystem::remove("artis.pid");
 
   return 0;
 }
