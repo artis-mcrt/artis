@@ -360,6 +360,13 @@ static void titer_average_estimators(const int nonemptymgi) {
 }
 #endif
 
+// Assumes clumping-factors.txt is formatted according to description in artisoptions_doc.md
+void set_clumping_factors_file_pointer(const int nts, const int mgi) {
+  assert_testmodeonly(nts >= 0 && 0 <= mgi && mgi < grid::get_npts_model());
+  assert_testmodeonly(clumping_factors_file.is_open());
+  clumping_factors_file.seekg(((nts * grid::get_npts_model()) + mgi) * (2 + 6 + 5));
+}
+
 void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, const int titer, const double tratmid,
                       const double deltat, HeatingCoolingRates& heatingcoolingrates) {
   const int mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
@@ -380,6 +387,14 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
 
     if constexpr (READ_CLUMPING_FACTORS_FROM_FILE) {
       clumping_factors_file >> clump_factor;
+
+      // Check if the next mgi is non-empty, if not move the file pointer to the next non-empty cell
+      int next_nonemptymgi;
+      if (!grid::check_mgi_is_nonempty(mgi + 1, next_nonemptymgi)) {
+        assert_always(next_nonemptymgi == -1);  // TODO: keep this? maybe for testmode?
+        const int mgi_of_next_nonemptymgi = grid::get_mgi_of_nonemptymgi(nonemptymgi + 1);
+        set_clumping_factors_file_pointer(nts, mgi_of_next_nonemptymgi);
+      }
     } else {
       const double tmid = globals::timesteps[nts].mid;
       const double rad_vel =
@@ -596,10 +611,11 @@ void update_grid(std::ostream& estimators_file, const int nts, const int nts_pre
   const auto nstart_nonempty = grid::get_nstart_nonempty(my_rank);
 
   if constexpr (READ_CLUMPING_FACTORS_FROM_FILE) {
-    clumping_factors_file = fstream_required("clumping-factors.txt", std::ios::in);
-    // TODO: this assumes you know beforehand how many nonempty cells there are. Don't know if that's something that can
-    // be precalculated??
-    clumping_factors_file.seekg(((nts * grid::get_nonempty_npts_model()) + nstart_nonempty) * (2 + 6 + 5));
+    // Only need to open the file if we have cells to update
+    if (ndo_nonempty != 0) {
+      clumping_factors_file = fstream_required("clumping-factors.txt", std::ios::in);
+      set_clumping_factors_file_pointer(nts, grid::get_mgi_of_nonemptymgi(nstart_nonempty));
+    }
   }
 
 #ifdef _OPENMP
@@ -611,7 +627,9 @@ void update_grid(std::ostream& estimators_file, const int nts, const int nts_pre
   }
 
   if constexpr (READ_CLUMPING_FACTORS_FROM_FILE) {
-    clumping_factors_file.close();
+    if (ndo_nonempty != 0) {
+      clumping_factors_file.close();
+    }
   }
 
   // serial output of estimator data to this ranks estimator file cell by cell
