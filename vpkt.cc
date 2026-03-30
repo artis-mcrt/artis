@@ -193,14 +193,12 @@ auto rlc_emiss_vpkt(const Packet& pkt, const double t_current, const double t_ar
 
     // Need to rotate Stokes Parameters in the scattering plane
 
-    const auto obs_cmf = angle_ab(vpkt.dir, vel_vec);
-
     const auto [ref1_old, ref2_old] = meridian(old_dir_cmf);
 
     // This is the i1 angle of Bulla+2015, obtained by computing the angle between the
     // reference axes ref1 and ref2 in the meridian frame and the corresponding axes
     // ref1_sc and ref2_sc in the scattering plane.
-    const double i1 = get_rot_angle(old_dir_cmf, obs_cmf, ref1_old, ref2_old);
+    const double i1 = get_rot_angle(old_dir_cmf, old_dir_cmf, ref1_old, ref2_old);
     const double cos2i1 = cos(2 * i1);
     const double sin2i1 = sin(2 * i1);
 
@@ -209,7 +207,7 @@ auto rlc_emiss_vpkt(const Packet& pkt, const double t_current, const double t_ar
 
     // Scattering
 
-    const double mu = dot(old_dir_cmf, obs_cmf);
+    const double mu = dot(old_dir_cmf, old_dir_cmf);
 
     pn = 3. / (16. * PI) * (1 + pow(mu, 2.) + ((pow(mu, 2.) - 1) * Qold));
 
@@ -219,12 +217,12 @@ auto rlc_emiss_vpkt(const Packet& pkt, const double t_current, const double t_ar
 
     // Need to rotate Stokes Parameters out of the scattering plane to the meridian frame
 
-    const auto [ref1, ref2] = meridian(obs_cmf);
+    const auto [ref1, ref2] = meridian(old_dir_cmf);
 
     // This is the i2 angle of Bulla+2015, obtained from the angle THETA between the
     // reference axes ref1_sc and ref2_sc in the scattering plane and ref1 and ref2 in the
     // meridian frame. NB: we need to add PI to transform THETA to i2
-    const double i2 = PI + get_rot_angle(obs_cmf, old_dir_cmf, ref1, ref2);
+    const double i2 = PI + get_rot_angle(old_dir_cmf, old_dir_cmf, ref1, ref2);
     const double cos2i2 = cos(2 * i2);
     const double sin2i2 = sin(2 * i2);
 
@@ -233,7 +231,8 @@ auto rlc_emiss_vpkt(const Packet& pkt, const double t_current, const double t_ar
 
     // Transform Stokes Parameters from the CMF to the RF
 
-    std::tie(std::ignore, Q, U) = frame_transform(obs_cmf, Q_cmf, U_cmf, Vec3d{-vel_vec[0], -vel_vec[1], -vel_vec[2]});
+    std::tie(std::ignore, Q, U) =
+        frame_transform(old_dir_cmf, Q_cmf, U_cmf, Vec3d{-vel_vec[0], -vel_vec[1], -vel_vec[2]});
 
   } else {
     assert_testmodeonly(type_before_rpkt == TYPE_KPKT || type_before_rpkt == TYPE_MA);
