@@ -160,7 +160,7 @@ constexpr bool USE_MICROCLUMPING = false;
 
 constexpr bool READ_CLUMPING_FACTORS_FROM_FILE = false;
 
-constexpr float clumping_factor([[maybe_unused]] double tmid, [[maybe_unused]] double rad_vel) { return 1.; }
+constexpr float volume_filling_factor([[maybe_unused]] double tmid, [[maybe_unused]] double rad_vel) { return 1.; }
 
 // NOLINTEND(modernize*,misc-unused-parameters)
 #endif  // ARTISOPTIONS_H

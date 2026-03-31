@@ -1525,7 +1525,7 @@ auto get_rho_tmin(const int modelgridindex) -> float { return modelgrid_input[mo
   assert_testmodeonly(nonemptymgi < get_nonempty_npts_model());
 
   if constexpr (USE_MICROCLUMPING) {
-    assert_testmodeonly(0 < clumpfactor_allcells[nonemptymgi] && clumpfactor_allcells[nonemptymgi] <= 1);
+    assert_testmodeonly(std::isfinite(clumpfactor_allcells[nonemptymgi]) && clumpfactor_allcells[nonemptymgi] >= 1);
     return clumpfactor_allcells[nonemptymgi];
   }
 
@@ -1615,10 +1615,10 @@ void set_nne(const int nonemptymgi, const float nne) {
   nne_allcells[nonemptymgi] = nne;
 }
 
-void set_clumpfactor(const int nonemptymgi, const float clumpfactor) {
+void set_clumpfactor(const int nonemptymgi, const float vol_filling_factor) {
   assert_testmodeonly(USE_MICROCLUMPING);
-  assert_always(0 < clumpfactor && clumpfactor <= 1);
-  clumpfactor_allcells[nonemptymgi] = clumpfactor;
+  assert_always(0 < vol_filling_factor && vol_filling_factor <= 1);
+  clumpfactor_allcells[nonemptymgi] = 1. / vol_filling_factor;
 }
 
 // Calculate and set the total density of electrons (free and bound) in grid cell. These are targets for Compton

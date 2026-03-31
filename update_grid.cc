@@ -383,14 +383,15 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
 
   // Update clumping factors
   if constexpr (USE_MICROCLUMPING) {
-    float clump_factor = NAN;
+    float vol_filling_factor = NAN;
 
     if constexpr (READ_CLUMPING_FACTORS_FROM_FILE) {
-      clumping_factors_file >> clump_factor;
+      clumping_factors_file >> vol_filling_factor;
 
       // Check if the next mgi is non-empty, if not move the file pointer to the next non-empty cell
       int next_nonemptymgi = 0;
-      if (!grid::check_mgi_is_nonempty(mgi + 1, next_nonemptymgi)) {
+      if (nonemptymgi < grid::get_nonempty_npts_model() - 1 &&
+          !grid::check_mgi_is_nonempty(mgi + 1, next_nonemptymgi)) {
         assert_always(next_nonemptymgi == -1);  // TODO: keep this? maybe for testmode?
         const int mgi_of_next_nonemptymgi = grid::get_mgi_of_nonemptymgi(nonemptymgi + 1);
         set_clumping_factors_file_pointer(nts, mgi_of_next_nonemptymgi);
@@ -399,10 +400,10 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
       const double tmid = globals::timesteps[nts].mid;
       const double rad_vel =
           grid::get_modelcell_mean_radial_vel(grid::get_mgi_of_nonemptymgi(nonemptymgi), globals::tmin);
-      clump_factor = clumping_factor(tmid, rad_vel);
+      vol_filling_factor = volume_filling_factor(tmid, rad_vel);
     }
 
-    grid::set_clumpfactor(nonemptymgi, clump_factor);
+    grid::set_clumpfactor(nonemptymgi, vol_filling_factor);
   }
 
   // Update elemental abundances with radioactive decays

@@ -96,7 +96,7 @@ void write_grid_restart_data(int timestep);
 [[nodiscard]] auto get_propcell_random_position_tmin(int cellindex) -> Vec3d;
 [[nodiscard]] DEVICE_FUNC auto boundary_distance(const Vec3d& dir, const Vec3d& pos, double tstart, int cellindex)
     -> std::tuple<double, int>;
-void set_clumpfactor(int nonemptymgi, float clumpfactor);
+void set_clumpfactor(int nonemptymgi, float vol_filling_factor);
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_clumpfactor(int nonemptymgi) -> float;
 
 [[nodiscard]] auto calculate_cell_kappagrey(int nonemptymgi) -> float;
