@@ -917,69 +917,67 @@ void init_nuclides(const std::span<const int> custom_zlist, const std::span<cons
       }
     }
 
-    if (DECAY_SPONTFISSION_ON) {
-      printlnlog("Including spontaneous fission decay data from fissiondecays.txt and fissionproducts_GEF_100keV.txt");
-      auto ffission = fstream_required("fissiondecays.txt", std::ios::in);
-      while (get_noncommentline(ffission, line)) {
-        int z_in = -1;
-        int a_in = -1;
-        double q_fission_mev = 0.;
-        double e_gamma_mev = 0.;
-        double e_1_mev = 0.;
-        double e_2_mev = 0.;
-        double m1 = 0.;
-        double m2 = 0.;
-        double z1 = 0.;
-        double z2 = 0.;
-        double tau_sec = 0.;
-        assert_always(std::stringstream(line) >> a_in >> z_in >> q_fission_mev >> e_gamma_mev >> e_1_mev >> e_2_mev >>
-                      m1 >> m2 >> z1 >> z2 >> tau_sec);
-        assert_always(!nuc_exists(z_in, a_in));
-        nuclides.push_back({.z = z_in, .a = a_in, .meanlife = tau_sec});
-        nuclides.back().branchprobs[DECAYTYPE_SPONTFISSION] = 1.;
-        nuclides.back().endecay_q[DECAYTYPE_SPONTFISSION] = q_fission_mev * MEV;
-        nuclides.back().endecay_fission = q_fission_mev * MEV;  // will be overwritten if we have fission product data
-        printlnlog("  added spontaneous fission nuclide: (Z={}){}{} meanlife {} days", z_in, get_elname(z_in), a_in,
-                   tau_sec / 86400.0);
+    printlnlog("Including spontaneous fission decay data from fissiondecays.txt and fissionproducts_GEF_100keV.txt");
+    auto ffission = fstream_required("fissiondecays.txt", std::ios::in);
+    while (get_noncommentline(ffission, line)) {
+      int z_in = -1;
+      int a_in = -1;
+      double q_fission_mev = 0.;
+      double e_gamma_mev = 0.;
+      double e_1_mev = 0.;
+      double e_2_mev = 0.;
+      double m1 = 0.;
+      double m2 = 0.;
+      double z1 = 0.;
+      double z2 = 0.;
+      double tau_sec = 0.;
+      assert_always(std::stringstream(line) >> a_in >> z_in >> q_fission_mev >> e_gamma_mev >> e_1_mev >> e_2_mev >>
+                    m1 >> m2 >> z1 >> z2 >> tau_sec);
+      assert_always(!nuc_exists(z_in, a_in));
+      nuclides.push_back({.z = z_in, .a = a_in, .meanlife = tau_sec});
+      nuclides.back().branchprobs[DECAYTYPE_SPONTFISSION] = 1.;
+      nuclides.back().endecay_q[DECAYTYPE_SPONTFISSION] = q_fission_mev * MEV;
+      nuclides.back().endecay_fission = q_fission_mev * MEV;  // will be overwritten if we have fission product data
+      printlnlog("  added spontaneous fission nuclide: (Z={}){}{} meanlife {} days", z_in, get_elname(z_in), a_in,
+                 tau_sec / 86400.0);
+    }
+
+    auto ffission_products = fstream_required("fissionproducts_GEF_100keV.txt", std::ios::in);
+    while (get_noncommentline(ffission_products, line)) {
+      int z_parent = -1;
+      int a_parent = -1;
+      assert_always(std::stringstream(line) >> z_parent >> a_parent);
+      get_noncommentline(ffission_products, line);
+      double num_neutrons = 0;
+      int tablesize = 0;
+      double q_fission_mev = 0.;
+      assert_always(std::stringstream(line) >> num_neutrons >> tablesize >> q_fission_mev);
+      const int nucindex = get_nucindex_or_neg_one(z_parent, a_parent);
+      const bool keep_table = (nucindex >= 0) && (nuclides[nucindex].branchprobs[DECAYTYPE_SPONTFISSION] > 0.);
+      if (keep_table) {
+        nuclides[nucindex].endecay_q[DECAYTYPE_SPONTFISSION] = q_fission_mev * MEV;
+        nuclides[nucindex].endecay_fission = q_fission_mev * MEV;
+        nuclides[nucindex].fission_daughters_z_a_prob.clear();
+        nuclides[nucindex].fission_daughters_z_a_prob.reserve(tablesize);
       }
 
-      auto ffission_products = fstream_required("fissionproducts_GEF_100keV.txt", std::ios::in);
-      while (get_noncommentline(ffission_products, line)) {
-        int z_parent = -1;
-        int a_parent = -1;
-        assert_always(std::stringstream(line) >> z_parent >> a_parent);
-        get_noncommentline(ffission_products, line);
-        double num_neutrons = 0;
-        int tablesize = 0;
-        double q_fission_mev = 0.;
-        assert_always(std::stringstream(line) >> num_neutrons >> tablesize >> q_fission_mev);
-        const int nucindex = get_nucindex_or_neg_one(z_parent, a_parent);
-        const bool keep_table = (nucindex >= 0) && (nuclides[nucindex].branchprobs[DECAYTYPE_SPONTFISSION] > 0.);
+      double daughter_prob_sum = 0.;
+      for (int i = 0; i < tablesize; i++) {
+        assert_always(get_noncommentline(ffission_products, line));
         if (keep_table) {
-          nuclides[nucindex].endecay_q[DECAYTYPE_SPONTFISSION] = q_fission_mev * MEV;
-          nuclides[nucindex].endecay_fission = q_fission_mev * MEV;
-          nuclides[nucindex].fission_daughters_z_a_prob.clear();
-          nuclides[nucindex].fission_daughters_z_a_prob.reserve(tablesize);
+          int daughter_a = -1;
+          int daughter_z = -1;
+          double probability_before_neutron_emission = 0.;
+          double probability = 0.;
+          assert_always(std::stringstream(line) >> daughter_a >> daughter_z >> probability_before_neutron_emission >>
+                        probability);
+          nuclides[nucindex].fission_daughters_z_a_prob.push_back(
+              {.z = daughter_z, .a = daughter_a, .probability = probability});
+          daughter_prob_sum += probability;
         }
-
-        double daughter_prob_sum = 0.;
-        for (int i = 0; i < tablesize; i++) {
-          assert_always(get_noncommentline(ffission_products, line));
-          if (keep_table) {
-            int daughter_a = -1;
-            int daughter_z = -1;
-            double probability_before_neutron_emission = 0.;
-            double probability = 0.;
-            assert_always(std::stringstream(line) >> daughter_a >> daughter_z >> probability_before_neutron_emission >>
-                          probability);
-            nuclides[nucindex].fission_daughters_z_a_prob.push_back(
-                {.z = daughter_z, .a = daughter_a, .probability = probability});
-            daughter_prob_sum += probability;
-          }
-        }
-        if (keep_table) {
-          nuclides[nucindex].decay_daughters_probsum = daughter_prob_sum;
-        }
+      }
+      if (keep_table) {
+        nuclides[nucindex].decay_daughters_probsum = daughter_prob_sum;
       }
     }
   }
@@ -1074,6 +1072,13 @@ void init_nuclides(const std::span<const int> custom_zlist, const std::span<cons
   if (globals::my_rank == 0 && !globals::simulation_continued_from_saved) {
     write_nuclides_list();
   }
+}
+
+[[nodiscard]] auto decaytype_in_use(const int decaytype) -> bool {
+  assert_always(!nuclides.empty());
+  return std::ranges::any_of(std::views::iota(0UZ, nuclides.size()), [decaytype](const auto nucindex) {
+    return get_nuc_decaybranchprob(nucindex, decaytype) > 0.;
+  });
 }
 
 // calculate the decay energy per unit mass [erg/g] released from time t_model (can be before tmin) to tstart,
