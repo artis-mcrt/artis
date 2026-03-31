@@ -93,7 +93,6 @@ struct DecayPath {
 
 std::vector<Nuclide> nuclides;
 std::vector<DecayPath> decaypaths;
-std::vector<bool> alldecaytypes_is_used;
 
 [[nodiscard]] constexpr auto decay_daughters_z_a_prob(const int z_parent, const int a_parent, const int decaytype)
     -> std::vector<DecayDaughter> {
@@ -1076,6 +1075,7 @@ void init_nuclides(const std::span<const int> custom_zlist, const std::span<cons
 }
 
 [[nodiscard]] auto decaytype_is_used(const int decaytype) -> bool {
+  THREADLOCALONHOST std::vector<bool> alldecaytypes_is_used;
   if (alldecaytypes_is_used.empty()) {
     assert_always(!nuclides.empty());
     resize_exactly(alldecaytypes_is_used, DECAYTYPE_COUNT);
