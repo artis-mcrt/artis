@@ -916,7 +916,7 @@ void init_nuclides(const std::span<const int> custom_zlist, const std::span<cons
     nuclides.back().branchprobs[DECAYTYPE_SPONTFISSION] = 1.;
     nuclides.back().endecay_q[DECAYTYPE_SPONTFISSION] = q_fission_mev * MEV;
     nuclides.back().endecay_fission = q_fission_mev * MEV;  // will be overwritten if we have fission product data
-    printlnlog("  added spontaneous fission nuclide: (Z={}){}{} meanlife {} days", z_in, get_elname(z_in), a_in,
+    printlnlog("  added spontaneous fission nuclide: (Z={}){}{} meanlife {:.1e} days", z_in, get_elname(z_in), a_in,
                tau_sec / 86400.0);
   }
 
