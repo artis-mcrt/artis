@@ -264,10 +264,12 @@ constexpr std::optional<double> GAMMA_USE_KAPPA_GREY;
 // use fissiondecays.txt and fissionproducts_GEF_100keV.txt to handle spontaneous fission decays
 constexpr bool DECAY_SPONTFISSION_ON = false;
 
-// TODO: explain where clumping factors are actually used
+// Use microclumping, which enhances collisional (de)excitation, collisional ionisation, collisional recombination,
+// radiative recombination, collisional capture, stimulated recombination, free-free heating, free-free cooling by the
+// reciprocal of the volume filling factor (the "clumping factor")
 constexpr bool USE_MICROCLUMPING;
 
-// Read the clumping factors from a plain text file with (num timesteps) rows * (num non-empty cells) cols.
+// Read the volume filling factors from a plain text file with (num timesteps) rows * (num cells) cols.
 // Entries should be in (0,1] and formatted using %.6e.
 // Has no effect if USE_MICROCLUMPING is set to false.
 constexpr bool READ_CLUMPING_FACTORS_FROM_FILE;
