@@ -462,14 +462,12 @@ class MPI_shared_array {
 
   [[nodiscard]] auto empty() const -> bool { return _span.empty(); }
 
-  [[nodiscard]] auto subspan(const size_t offset, const size_t count) const -> std::span<T> {
-    return _span.subspan(offset, count);
-  }
+  [[nodiscard]] auto subspan(const auto offset, const auto count) const { return _span.subspan(offset, count); }
 
-  [[nodiscard]] auto size() const -> size_t { return _span.size(); }
+  [[nodiscard]] auto size() const { return _span.size(); }
 
   // define operator[] to allow direct indexing into the span
-  auto operator[](const size_t index) const -> T& { return _span[index]; }
+  auto operator[](const auto index) const -> T& { return _span[index]; }
 };
 
 // MPI operations use a 32-bit int for the count, so we need to chunk large arrays
