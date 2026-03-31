@@ -93,6 +93,7 @@ struct DecayPath {
 
 std::vector<Nuclide> nuclides;
 std::vector<DecayPath> decaypaths;
+std::vector<bool> alldecaytypes_is_used;
 
 [[nodiscard]] constexpr auto decay_daughters_z_a_prob(const int z_parent, const int a_parent, const int decaytype)
     -> std::vector<DecayDaughter> {
@@ -1056,6 +1057,13 @@ void init_nuclides(const std::span<const int> custom_zlist, const std::span<cons
     }
   }
 
+  resize_exactly(alldecaytypes_is_used, DECAYTYPE_COUNT);
+  for (int decaytypeindex = 0; decaytypeindex < DECAYTYPE_COUNT; decaytypeindex++) {
+    alldecaytypes_is_used[decaytypeindex] = std::ranges::any_of(
+        std::views::iota(0UZ, nuclides.size()),
+        [decaytypeindex](const auto nucindex) { return get_nuc_decaybranchprob(nucindex, decaytypeindex) > 0.; });
+  }
+
   // Read in data for gamma ray lines and make a list of them in energy order.
   gammapkt::init_gamma_data();
 
@@ -1075,17 +1083,8 @@ void init_nuclides(const std::span<const int> custom_zlist, const std::span<cons
 }
 
 [[nodiscard]] auto decaytype_is_used(const int decaytype) -> bool {
-  THREADLOCALONHOST std::vector<bool> alldecaytypes_is_used;
-  if (alldecaytypes_is_used.empty()) {
-    assert_always(!nuclides.empty());
-    resize_exactly(alldecaytypes_is_used, DECAYTYPE_COUNT);
-    for (int decaytypeindex = 0; decaytypeindex < DECAYTYPE_COUNT; decaytypeindex++) {
-      alldecaytypes_is_used[decaytypeindex] = std::ranges::any_of(
-          std::views::iota(0UZ, nuclides.size()),
-          [decaytype](const auto nucindex) { return get_nuc_decaybranchprob(nucindex, decaytype) > 0.; });
-    }
-  }
-  return alldecaytypes_is_used[decaytype];
+  assert_always(!all_decaytypes.empty());
+  return alldecaytypes_is_used.at(decaytype);
 }
 
 // calculate the decay energy per unit mass [erg/g] released from time t_model (can be before tmin) to tstart,
