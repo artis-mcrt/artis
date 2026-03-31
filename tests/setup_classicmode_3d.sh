@@ -18,7 +18,7 @@ cp ../artisoptions_classic.h $runfolder/artisoptions.h
 
 cd $runfolder
 
-xz -dv -T0 *.xz
+xz -f -d -v -T0 *.xz
 
 sed -i'' -e 's/constexpr int MPKTS.*/constexpr int MPKTS = 15000;/g' artisoptions.h
 
