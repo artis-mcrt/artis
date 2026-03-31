@@ -153,7 +153,7 @@ void write_deposition_file() {
   MPI_Barrier(MPI_COMM_WORLD);
 
   if (my_rank == 0) {
-    const bool any_fission = decay::decaytype_in_use(decay::DECAYTYPE_SPONTFISSION);
+    const bool any_fission = decay::decaytype_is_used(decay::DECAYTYPE_SPONTFISSION);
     auto dep_file = fstream_required("deposition.out.tmp", std::ios::out | std::ios::trunc);
     dep_file << "#ts tmid_days tmid_s total_dep_Lsun gammadep_discrete_Lsun gammadep_Lsun positrondep_Lsun "
                 "eps_positron_ana_Lsun elecdep_Lsun eps_elec_Lsun eps_elec_ana_Lsun alphadep_Lsun eps_alpha_Lsun "
