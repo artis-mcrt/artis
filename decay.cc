@@ -445,12 +445,7 @@ void filter_unused_nuclides(const std::span<const int> custom_zlist, const std::
       return (decaypath.z.back() == nuc.z && decaypath.a.back() == nuc.a);
     });
 
-    if (in_any_decaypath) {
-      return false;
-    }
-
-    printout("removing unused nuclide (Z=%d)%s%d\n", nuc.z, get_elname(nuc.z).c_str(), nuc.a);
-    return true;
+    return !in_any_decaypath;
   });
   nuclides.shrink_to_fit();
 
