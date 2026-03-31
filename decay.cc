@@ -1060,7 +1060,9 @@ void init_nuclides(const std::span<const int> custom_zlist, const std::span<cons
 
 [[nodiscard]] auto decaytype_is_used(const int decaytype) -> bool {
   assert_always(!all_decaytypes.empty());
-  return alldecaytypes_is_used.at(decaytype);
+  assert_always(decaytype >= 0);
+  assert_always(decaytype < DECAYTYPE_COUNT);
+  return alldecaytypes_is_used[decaytype];
 }
 
 // calculate the decay energy per unit mass [erg/g] released from time t_model (can be before tmin) to tstart,
