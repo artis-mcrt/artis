@@ -78,10 +78,7 @@ std::vector<int> mgi_of_nonemptymgi;
 
 std::vector<double> totmassnuclide{};  // total mass of each nuclide in the ejecta
 
-MPI_Win win_nltepops_allcells = MPI_WIN_NULL;
-MPI_Win win_initnucmassfrac_allcells = MPI_WIN_NULL;
-
-std::span<float> initnucmassfrac_allcells{};
+MPI_shared_array<float> initnucmassfrac_allcells{};
 std::span<float> initmassfracuntrackedstable_allcells{};
 std::span<int> elements_uppermost_ion_allcells{};  // Highest ion index that has a significant population
 
@@ -370,8 +367,7 @@ void allocate_nonemptycells_composition_cooling() {
       MPI_shared_malloc_span<double>(nonempty_npts_model_ptrdifft * get_includedions(), 0.);
 
   // -1 indicates that there is currently no information on the nlte populations
-  std::tie(nltepops_allcells, win_nltepops_allcells) =
-      MPI_shared_malloc_span_keepwin<double>(nonempty_npts_model_ptrdifft * globals::total_nlte_levels, -1.);
+  nltepops_allcells = MPI_shared_array<double>(nonempty_npts_model_ptrdifft * globals::total_nlte_levels, -1.);
 }
 
 void allocate_nonemptymodelcells() {
@@ -847,8 +843,7 @@ auto read_model_columns(std::istream& fmodel) -> std::tuple<std::vector<std::str
 
   const ptrdiff_t num_nuclides = decay::get_num_nuclides();
 
-  std::tie(initnucmassfrac_allcells, win_initnucmassfrac_allcells) =
-      MPI_shared_malloc_span_keepwin<float>((npts_model + 1) * num_nuclides, 0.);
+  initnucmassfrac_allcells = MPI_shared_array<float>((npts_model + 1) * num_nuclides, 0.);
   printlnlog(
       "[info] mem_usage: input abundance data for {} nuclides for {} cells occupies {:.3f} MB (node shared memory)",
       num_nuclides, npts_model, (initnucmassfrac_allcells.size() * sizeof(float)) / 1024. / 1024.);
