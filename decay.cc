@@ -896,7 +896,6 @@ void init_nuclides(const std::span<const int> custom_zlist, const std::span<cons
     }
   }
 
-  printlnlog("Including spontaneous fission decay data from fissiondecays.txt and fissionproducts_GEF_100keV.txt");
   auto ffission = fstream_required("fissiondecays.txt", std::ios::in);
   while (get_noncommentline(ffission, line)) {
     int z_in = -1;
