@@ -26,7 +26,7 @@ constexpr std::array<enum decaytypes, 5> all_decaytypes{
     decaytypes::DECAYTYPE_BETAMINUS, decaytypes::DECAYTYPE_SPONTFISSION};
 
 void init_nuclides(std::span<const int> custom_zlist, std::span<const int> custom_alist);
-[[nodiscard]] auto decaytype_is_used(int decaytype) -> bool;
+[[nodiscard]] auto decaytype_is_used(decaytypes decaytype) -> bool;
 [[nodiscard]] auto get_nucstring_z(const std::string& strnuc) -> int;
 [[nodiscard]] auto get_nucstring_a(const std::string& strnuc) -> int;
 [[gnu::pure]] [[nodiscard]] auto get_num_nuclides() -> ptrdiff_t;
