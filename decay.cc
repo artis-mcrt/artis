@@ -1100,9 +1100,8 @@ void setup_decaypath_energy_per_mass() {
       "[info] mem_usage: decaypath_energy_per_mass[nonempty_npts_model*num_decaypaths] occupies {:.1f} MB (node shared "
       "memory)...",
       nonempty_npts_model * get_num_decaypaths() * sizeof(double) / 1024. / 1024.);
-  decaypath_energy_per_mass = MPI_shared_array<double>{nonempty_npts_model * get_num_decaypaths()};
+  decaypath_energy_per_mass = MPI_shared_array<double>{nonempty_npts_model * get_num_decaypaths(), 0.};
   printlnlog("done.");
-  std::ranges::fill(decaypath_energy_per_mass, 0.);
 
   MPI_Barrier_allranks();
   const auto time_min_decay = INITIAL_PACKETS_ON ? grid::get_t_model() : globals::tmin;
