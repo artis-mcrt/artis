@@ -283,6 +283,9 @@ class MPI_shared_array {
 
   explicit MPI_shared_array(const ptrdiff_t num_allranks, const T& initval = {}) {
     assert_always(_span.empty());
+    int initialized = 0;
+    MPI_Initialized(&initialized);
+    assert_always(initialized != 0);  // MPI must be initialized before constructing an MPI_shared_array
     std::tie(_span, _win) = MPI_shared_malloc_span_keepwin<T>(num_allranks, initval);
   }
 
