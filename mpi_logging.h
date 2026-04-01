@@ -116,7 +116,7 @@ inline auto printlnlog(std::string_view fmt, Args&&... args) -> void {
   printf("%s\n", str.c_str());
 }
 
-#define ARTIS_ASSERT(e)                           \
+#define __artis_assert(e)                         \
   {                                               \
     const bool assertpass = static_cast<bool>(e); \
     assert(assertpass);                           \
