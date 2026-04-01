@@ -24,6 +24,7 @@
 #include "decay.h"
 #include "globals.h"
 #include "grid.h"
+#include "mpi_logging.h"
 #include "nltepop.h"
 #include "nonthermal.h"
 #include "ratecoeff.h"

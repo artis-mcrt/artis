@@ -96,4 +96,47 @@ constexpr std::array<std::string_view, 3> datafolders = {"./", "data/", "artis/d
 #define DEVICE_FUNC
 #endif
 
+#ifdef STACKTRACE_ON
+#include <stacktrace>
+#define STACKTRACEIFSUPPORTED << std::stacktrace::current()
+#else
+#define STACKTRACEIFSUPPORTED
+#endif
+
+#if defined REPRODUCIBLE && REPRODUCIBLE
+#define SORT_OR_STABLE_SORT stable_sort
+#else
+#define SORT_OR_STABLE_SORT sort
+#endif
+
+#ifdef STDPAR_ON
+#include <execution>
+#include <thread>
+
+#define EXEC_PAR_UNSEQ std::execution::par_unseq,
+#define EXEC_PAR std::execution::par,
+#else
+#define EXEC_PAR_UNSEQ
+#define EXEC_PAR
+#endif
+
+#ifdef _OPENMP
+#define atomicadd(var, val)                  \
+  {                                          \
+    _Pragma("omp atomic update") var += val; \
+  }
+
+#elifdef STDPAR_ON
+
+template <typename T, typename U>
+constexpr void atomicadd(T& var, U&& val) {
+  std::atomic_ref<T>(var).fetch_add(std::forward<U>(val), std::memory_order_relaxed);
+}
+
+#else
+
+#define atomicadd(var, val) var += (val);
+
+#endif
+
 #endif

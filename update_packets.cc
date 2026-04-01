@@ -11,20 +11,20 @@
 #include <tuple>
 #include <vector>
 
-#include "atomic.h"
-#include "ltepop.h"
-
 #pragma clang unsafe_buffer_usage begin
 #include <mpi.h>
 #pragma clang unsafe_buffer_usage end
 
 #include "artisoptions.h"
+#include "atomic.h"
 #include "constants.h"
 #include "decay.h"
 #include "gammapkt.h"
 #include "globals.h"
 #include "grid.h"
 #include "kpkt.h"
+#include "ltepop.h"
+#include "mpi_logging.h"
 #include "nonthermal.h"
 #include "packet.h"
 #include "random.h"

@@ -19,6 +19,7 @@
 #include "globals.h"
 #include "grid.h"
 #include "ltepop.h"
+#include "mpi_logging.h"
 #include "nonthermal.h"
 #include "packet.h"
 #include "radfield.h"

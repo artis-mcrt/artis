@@ -18,6 +18,7 @@
 #include "grid.h"
 #include "ltepop.h"
 #include "macroatom.h"
+#include "mpi_logging.h"
 #include "packet.h"
 #include "radfield.h"
 #include "random.h"

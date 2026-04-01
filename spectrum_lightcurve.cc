@@ -28,6 +28,7 @@
 #include "exspec.h"
 #include "globals.h"
 #include "grid.h"
+#include "mpi_logging.h"
 #include "packet.h"
 #include "sn3d.h"
 #include "vectors.h"
@@ -204,6 +205,20 @@ auto columnindex_from_emissiontype(const int et) -> int {
   const ptrdiff_t nelements = get_nelements();
   const ptrdiff_t max_nions = get_max_nions();
   return (nnu_abs * globals::ntimesteps * nelements * max_nions) + (nts * nelements * max_nions);
+}
+
+[[nodiscard]] inline auto get_timestep(const double time) -> int {
+  assert_always(time >= globals::tmin);
+  assert_always(time < globals::tmax);
+  for (int nts = 0; nts < globals::ntimesteps; nts++) {
+    const double tsend = (nts < (globals::ntimesteps - 1)) ? globals::timesteps[nts + 1].start : globals::tmax;
+    if (time >= globals::timesteps[nts].start && time < tsend) {
+      return nts;
+    }
+  }
+  assert_always(false);  // could not find matching timestep
+
+  return -1;
 }
 
 void write_specpol_param(std::ostream& specpol_file, std::ostream& emissionpol_file, std::ostream& absorptionpol_file,

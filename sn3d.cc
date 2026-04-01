@@ -14,6 +14,8 @@
 #include <fstream>
 #include <ios>
 
+#include "mpi_logging.h"
+
 #ifdef STDPAR_ON
 #include <ranges>
 #endif

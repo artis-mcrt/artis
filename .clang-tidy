@@ -38,6 +38,7 @@ Checks: [
         -llvm-use-ranges,
         -llvm-header-guard,
         -llvm-prefer-static-over-anonymous-namespace,
+        -misc-confusable-identifiers,
         -misc-no-recursion,
         -misc-non-private-member-variables-in-classes,
         -modernize-avoid-variadic-functions,
@@ -55,7 +56,7 @@ ExtraArgs: [-std=c++23]
 ExcludeHeaderFilterRegex: '^/opt/homebrew/include/.*'
 CheckOptions:
     - key: bugprone-reserved-identifier.AllowedIdentifiers
-      value: '__host__;__device__'
+      value: '__host__;__device__;__artis_assert'
     - key: bugprone-narrowing-conversions.IgnoreConversionFromTypes
       value: size_t; size_type; unsigned long
     - key: bugprone-narrowing-conversions.WarnOnEquivalentBitWidth

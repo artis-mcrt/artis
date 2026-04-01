@@ -41,6 +41,7 @@
 #include "input.h"
 #include "ltepop.h"
 #include "macroatom.h"
+#include "mpi_logging.h"
 #include "packet.h"
 #include "random.h"
 #include "sn3d.h"

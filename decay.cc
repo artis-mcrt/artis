@@ -33,9 +33,9 @@
 #include "globals.h"
 #include "grid.h"
 #include "input.h"
+#include "mpi_logging.h"
 #include "packet.h"
 #include "random.h"
-#include "sn3d.h"
 
 namespace decay {
 

@@ -12,7 +12,7 @@
 #include "constants.h"
 #include "globals.h"
 #include "grid.h"
-#include "sn3d.h"
+#include "mpi_logging.h"
 
 // highest number of ions for any element
 inline int maxnions = 0;

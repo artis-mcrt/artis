@@ -22,8 +22,6 @@
 #include <tuple>
 #include <vector>
 
-#include "random.h"
-
 #pragma clang unsafe_buffer_usage begin
 #include <mpi.h>
 #pragma clang unsafe_buffer_usage end
@@ -36,9 +34,11 @@
 #include "grid.h"
 #include "input.h"
 #include "kpkt.h"
+#include "mpi_logging.h"
 #include "nltepop.h"
 #include "nonthermal.h"
 #include "radfield.h"
+#include "random.h"
 #include "rpkt.h"
 #include "sn3d.h"
 #include "vectors.h"
@@ -485,8 +485,7 @@ void allocate_nonemptymodelcells() {
   const auto ionestimsize = ionestimcount * sizeof(double);
 
   if (ionestimsize > 0) {
-    std::tie(globals::corrphotoionrenorm, globals::win_corrphotoionrenorm) =
-        MPI_shared_malloc_span_keepwin<double>(ionestimcount, 1.);
+    globals::corrphotoionrenorm = MPI_shared_array<double>(ionestimcount, 1.);
 
     resize_exactly(globals::gammaestimator, ionestimcount);
     std::ranges::fill(globals::gammaestimator, 0.);

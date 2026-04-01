@@ -7,8 +7,8 @@
 #include <string>
 
 #include "exspec.h"
+#include "mpi_logging.h"
 #include "packet.h"
-#include "sn3d.h"
 
 struct Spectra {
   double nu_min = -1.;

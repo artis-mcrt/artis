@@ -6,9 +6,7 @@
 #include <span>
 #include <vector>
 
-#pragma clang unsafe_buffer_usage begin
-#include <mpi.h>
-#pragma clang unsafe_buffer_usage end
+#include "mpi_logging.h"
 
 enum ma_action {
   // Radiative deexcitation rate from this level.
@@ -46,6 +44,7 @@ struct Ion {
   int groundcontindex{-1};
   double ionpot{NAN};  // Ionisation threshold to the next ionstage
 };
+
 struct Element {
   std::span<Ion> ions;  // subspan of the allions array for this element
   int anumber{-1};  // Atomic number
@@ -94,8 +93,7 @@ inline std::vector<double> dep_estimator_electron;
 inline std::vector<double> dep_estimator_alpha;
 
 // for USE_LUT_PHOTOION = true
-inline std::span<double> corrphotoionrenorm{};
-inline MPI_Win win_corrphotoionrenorm{MPI_WIN_NULL};
+inline MPI_shared_array<double> corrphotoionrenorm{};
 
 inline std::vector<double> gammaestimator;
 
@@ -260,18 +258,6 @@ struct CellCache {
 };
 inline std::vector<CellCache> cellcache{};
 
-inline MPI_Comm mpi_comm_node{MPI_COMM_NULL};
-inline MPI_Comm mpi_comm_internode{MPI_COMM_NULL};
-
-inline int nprocs{-1};
-inline int my_rank{-1};
-
-inline int node_nprocs{-1};
-inline int rank_in_node{-1};
-
-inline int node_count{-1};
-inline int node_id{-1};
-
 inline double vmax{NAN};
 inline double rmax{NAN};
 inline double tmax{-1};
@@ -291,47 +277,27 @@ inline int num_grey_timesteps{-1};
 inline int n_titer{1};
 inline bool lte_iteration{false};
 
-inline void setup_mpi_vars() {
-  MPI_Comm_rank(MPI_COMM_WORLD, &globals::my_rank);
-  MPI_Comm_size(MPI_COMM_WORLD, &globals::nprocs);
-
-  // make an intra-node communicator (group ranks that can share memory)
-  MPI_Comm_split_type(MPI_COMM_WORLD, MPI_COMM_TYPE_SHARED, globals::my_rank, MPI_INFO_NULL, &globals::mpi_comm_node);
-
-  // get the local rank within this node
-  MPI_Comm_rank(globals::mpi_comm_node, &globals::rank_in_node);
-
-  // get the number of ranks on the node
-  MPI_Comm_size(globals::mpi_comm_node, &globals::node_nprocs);
-
-  MPI_Barrier(MPI_COMM_WORLD);
-
-#ifdef MAX_NODE_SIZE
-  if (MAX_NODE_SIZE > 0 && globals::node_nprocs > MAX_NODE_SIZE) {
-    // limit the number of ranks that can share memory
-    MPI_Comm_split(globals::mpi_comm_node, globals::rank_in_node / MAX_NODE_SIZE, globals::my_rank,
-                   &globals::mpi_comm_node);
-
-    MPI_Comm_rank(globals::mpi_comm_node, &globals::rank_in_node);
-    MPI_Comm_size(globals::mpi_comm_node, &globals::node_nprocs);
-  }
-
-  MPI_Barrier(MPI_COMM_WORLD);
-#endif
-
-  // make an inter-node communicator (using local rank as the key for group membership)
-  MPI_Comm_split(MPI_COMM_WORLD, globals::rank_in_node, globals::my_rank, &globals::mpi_comm_internode);
-
-  // take the node id from the local rank 0 (node master) and broadcast it
-  if (globals::rank_in_node == 0) {
-    MPI_Comm_rank(globals::mpi_comm_internode, &globals::node_id);
-    MPI_Comm_size(globals::mpi_comm_internode, &globals::node_count);
-  }
-
-  MPI_Bcast(&globals::node_id, 1, MPI_INT, 0, globals::mpi_comm_node);
-  MPI_Bcast(&globals::node_count, 1, MPI_INT, 0, globals::mpi_comm_node);
-}
-
 }  // namespace globals
 
+constexpr int cellcacheslotid = 0;
+
+[[nodiscard]] inline auto get_max_threads() -> int {
+#ifdef STDPAR_ON
+  return static_cast<int>(std::thread::hardware_concurrency());
+#else
+#ifdef _OPENMP
+  return omp_get_max_threads();
+#else
+  return 1;
+#endif
+#endif
+}
+
+[[nodiscard]] inline auto get_thread_num() -> int {
+#ifdef _OPENMP
+  return omp_get_thread_num();
+#else
+  return 0;
+#endif
+}
 #endif  // GLOBALS_H

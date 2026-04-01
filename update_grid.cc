@@ -21,12 +21,12 @@
 #include "grid.h"
 #include "kpkt.h"
 #include "ltepop.h"
+#include "mpi_logging.h"
 #include "nltepop.h"
 #include "nonthermal.h"
 #include "radfield.h"
 #include "ratecoeff.h"
 #include "rpkt.h"
-#include "sn3d.h"
 #include "thermalbalance.h"
 #include "vpkt.h"
 

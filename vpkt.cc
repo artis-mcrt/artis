@@ -21,9 +21,9 @@
 #include "grid.h"
 #include "input.h"
 #include "ltepop.h"
+#include "mpi_logging.h"
 #include "packet.h"
 #include "rpkt.h"
-#include "sn3d.h"
 #include "vectors.h"
 
 namespace vpkt {

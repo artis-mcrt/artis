@@ -8,8 +8,8 @@
 
 #include "constants.h"
 #include "globals.h"
+#include "mpi_logging.h"
 #include "packet.h"
-#include "sn3d.h"
 #include "stats.h"
 
 namespace grid {

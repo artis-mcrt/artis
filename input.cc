@@ -37,6 +37,7 @@
 #include "globals.h"
 #include "grid.h"
 #include "kpkt.h"
+#include "mpi_logging.h"
 #include "packet.h"
 #include "random.h"
 #include "ratecoeff.h"

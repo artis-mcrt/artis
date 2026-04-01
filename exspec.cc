@@ -22,6 +22,7 @@
 #include "globals.h"
 #include "grid.h"
 #include "input.h"
+#include "mpi_logging.h"
 #include "packet.h"
 #include "sn3d.h"
 #include "spectrum_lightcurve.h"
