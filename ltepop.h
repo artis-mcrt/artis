@@ -11,7 +11,6 @@
 #include "globals.h"
 #include "grid.h"
 #include "mpi_logging.h"
-#include "sn3d.h"
 
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto calculate_levelpop(int nonemptymgi, int element, int ion, int level)
     -> double;

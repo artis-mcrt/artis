@@ -11,10 +11,6 @@
 #include <tuple>
 #include <vector>
 
-#pragma clang unsafe_buffer_usage begin
-#include <mpi.h>
-#pragma clang unsafe_buffer_usage end
-
 #include "artisoptions.h"
 #include "atomic.h"
 #include "constants.h"
@@ -29,7 +25,6 @@
 #include "packet.h"
 #include "random.h"
 #include "rpkt.h"
-#include "sn3d.h"
 #include "stats.h"
 #include "vectors.h"
 
