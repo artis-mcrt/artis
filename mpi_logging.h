@@ -89,7 +89,7 @@ inline void setup_mpi_vars() {
 }
 }  // namespace globals
 
-inline void MPI_Barrier_node() { MPI_Barrier(globals::mpi_comm_internode); }
+inline void MPI_Barrier_node() { MPI_Barrier(globals::mpi_comm_node); }
 
 #include "constants.h"
 
@@ -294,8 +294,7 @@ class MPI_shared_array {
     std::tie(_span, _win) = MPI_shared_malloc_span_keepwin<T>(num_allranks, initval);
   }
 
-  // copy constructor and move assignment are deleted to avoid avoid multiple owners of the same MPI window, but move
-  // constructor is allowed
+  // copy constructor is deleted to avoid avoid multiple owners of the same MPI window, but move constructor is allowed
   MPI_shared_array(const MPI_shared_array&) = delete;
   auto operator=(const MPI_shared_array&) -> MPI_shared_array& = delete;
   MPI_shared_array(MPI_shared_array&& other) noexcept = delete;
