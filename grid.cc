@@ -1525,7 +1525,7 @@ auto get_rho_tmin(const int modelgridindex) -> float { return modelgrid_input[mo
   assert_testmodeonly(nonemptymgi < get_nonempty_npts_model());
 
   if constexpr (USE_MICROCLUMPING) {
-    assert_testmodeonly(std::isfinite(clumpfactor_allcells[nonemptymgi]) && clumpfactor_allcells[nonemptymgi] >= 1);
+    assert_testmodeonly(std::isfinite(clumpfactor_allcells[nonemptymgi]) && clumpfactor_allcells[nonemptymgi] >= 1.F);
     return clumpfactor_allcells[nonemptymgi];
   }
 

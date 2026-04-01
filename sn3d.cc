@@ -556,11 +556,12 @@ auto do_timestep(const int nts, const int titer, std::vector<Packet>& packets, c
 
   // Check that the clumping factors are physically sensible values
   if constexpr (USE_MICROCLUMPING) {
-    for (int nonemptymgi = 0; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
-      if (nonemptymgi % globals::nprocs == globals::my_rank) {
-        const float clump_factor = grid::get_clumpfactor(nonemptymgi);
-        assert_always(0 < clump_factor && clump_factor <= 1);
-      }
+    const int nstart_nonempty = grid::get_nstart_nonempty(globals::my_rank);
+    const int ndo_nonempty = grid::get_ndo_nonempty(globals::my_rank);
+
+    for (int nonemptymgi = nstart_nonempty; nonemptymgi < (nstart_nonempty + ndo_nonempty); nonemptymgi++) {
+      const float clump_factor = grid::get_clumpfactor(nonemptymgi);
+      assert_always(std::isfinite(clump_factor) && clump_factor >= 1.F);
     }
   }
 
