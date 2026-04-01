@@ -329,26 +329,37 @@ class MPI_shared_array {
       _win = MPI_WIN_NULL;
     }
   }
-
-  explicit operator std::span<T>() const { return _span; }
-
+  // Conversion to a mutable span is only allowed on non-const objects.
+  explicit operator std::span<T>() { return _span; }
+  // Conversion to a read-only span is allowed on const objects.
   explicit operator std::span<const T>() const { return _span; }
-
-  [[nodiscard]] auto span() const -> std::span<T> { return _span; }
-
-  [[nodiscard]] auto data() const -> T* { return _span.data(); }
-
-  [[nodiscard]] auto begin() const { return _span.begin(); }
-  [[nodiscard]] auto end() const { return _span.end(); }
-
+  // Mutable span accessor.
+  [[nodiscard]] auto span() -> std::span<T> { return _span; }
+  // Read-only span accessor.
+  [[nodiscard]] auto span() const -> std::span<const T> { return std::span<const T>{_span}; }
+  // Mutable data pointer.
+  [[nodiscard]] auto data() -> T* { return _span.data(); }
+  // Read-only data pointer.
+  [[nodiscard]] auto data() const -> const T* { return _span.data(); }
+  // Iterators for mutable access.
+  [[nodiscard]] auto begin() { return _span.begin(); }
+  [[nodiscard]] auto end() { return _span.end(); }
+  // Iterators for read-only access.
+  [[nodiscard]] auto begin() const { return std::span<const T>{_span}.begin(); }
+  [[nodiscard]] auto end() const { return std::span<const T>{_span}.end(); }
   [[nodiscard]] auto empty() const -> bool { return _span.empty(); }
-
-  [[nodiscard]] auto subspan(const auto offset, const auto count) const { return _span.subspan(offset, count); }
-
-  [[nodiscard]] auto size() const { return _span.size(); }
-
+  // Mutable subspan accessor.
+  [[nodiscard]] auto subspan(const size_t offset, const size_t count) -> std::span<T> {
+    return _span.subspan(offset, count);
+  }
+  // Read-only subspan accessor.
+  [[nodiscard]] auto subspan(const size_t offset, const size_t count) const -> std::span<const T> {
+    return std::span<const T>{_span}.subspan(offset, count);
+  }
+  [[nodiscard]] auto size() const -> size_t { return _span.size(); }
   // define operator[] to allow direct indexing into the span
-  auto operator[](const auto index) const -> T& { return _span[index]; }
+  auto operator[](const size_t index) -> T& { return _span[index]; }
+  auto operator[](const size_t index) const -> const T& { return std::span<const T>{_span}[index]; }
 };
 
 // MPI operations use a 32-bit int for the count, so we need to chunk large arrays
