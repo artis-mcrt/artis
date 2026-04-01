@@ -9,10 +9,6 @@
 #include <ostream>
 #include <vector>
 
-#pragma clang unsafe_buffer_usage begin
-#include <mpi.h>
-#pragma clang unsafe_buffer_usage end
-
 #include "artisoptions.h"
 #include "atomic.h"
 #include "constants.h"
