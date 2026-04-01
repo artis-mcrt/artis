@@ -266,7 +266,7 @@ void write_partial_lightcurve_spectra_dirbin(const int nts, std::span<const Pack
 
   init_spectra(rpkt_spectra, NU_MIN_R, NU_MAX_R, do_emission_absorption);
 
-  MPI_Barrier(globals::mpi_comm_node);
+  MPI_Barrier_node();
 #if defined REPRODUCIBLE && REPRODUCIBLE
   for (int node_rank = 0; node_rank < globals::node_nprocs; node_rank++) {
     // do one rank at a time to keep the results reproducible (instead of simultaneous atomic adds to shared memory)
@@ -288,13 +288,13 @@ void write_partial_lightcurve_spectra_dirbin(const int nts, std::span<const Pack
         }
       }
     }
-    MPI_Barrier(globals::mpi_comm_node);
+    MPI_Barrier_node();
   }
 
   const int numtimesteps = nts + 1;  // only produce spectra and light curves up to one past nts
   assert_always(numtimesteps <= globals::ntimesteps);
 
-  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier_allranks();
   if (globals::rank_in_node == 0) {
     MPI_Allreduce_safe(rpkt_spectra.fluxalltimesteps, MPI_SUM, globals::mpi_comm_internode);
     if (rpkt_spectra.do_emission_absorption) {
@@ -309,7 +309,7 @@ void write_partial_lightcurve_spectra_dirbin(const int nts, std::span<const Pack
     MPI_Allreduce_safe(gamma_light_curve_lum, MPI_SUM, MPI_COMM_WORLD);
     MPI_Allreduce_safe(gamma_light_curve_lumcmf, MPI_SUM, MPI_COMM_WORLD);
   }
-  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier_allranks();
 
   if (dirbin == -1) {
     write_light_curve("light_curve.out", rpkt_light_curve_lum, rpkt_light_curve_lumcmf, numtimesteps);
@@ -321,7 +321,7 @@ void write_partial_lightcurve_spectra_dirbin(const int nts, std::span<const Pack
     if (globals::my_rank == 0 && !std::filesystem::exists(outdir_resfiles)) {
       std::filesystem::create_directory(outdir_resfiles);
     }
-    MPI_Barrier(MPI_COMM_WORLD);
+    MPI_Barrier_allranks();
 
     write_light_curve(std::format("{}light_curve_res_{:02d}.out", outdir_resfiles, dirbin), rpkt_light_curve_lum,
                       rpkt_light_curve_lumcmf, numtimesteps);
@@ -330,7 +330,7 @@ void write_partial_lightcurve_spectra_dirbin(const int nts, std::span<const Pack
                   std::format("{}emissiontrue_res_{:02d}.out", outdir_resfiles, dirbin),
                   std::format("{}absorption_res_{:02d}.out", outdir_resfiles, dirbin), rpkt_spectra, numtimesteps);
   }
-  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier_allranks();
 }
 
 void write_spectrum_file(const std::string& spec_filename, const Spectra& spectra, const int numtimesteps) {
@@ -518,7 +518,7 @@ void init_spectra(Spectra& spectra, const double nu_min, const double nu_max, co
   }
   assert_always(std::ssize(spectra.fluxalltimesteps) == globals::ntimesteps * MNUBINS);
   std::ranges::fill(spectra.fluxalltimesteps, 0.0);
-  MPI_Barrier(globals::mpi_comm_node);
+  MPI_Barrier_node();
 
   if (do_emission_absorption) {
     if (spectra.absorptionalltimesteps.empty()) {
@@ -541,7 +541,7 @@ void init_spectra(Spectra& spectra, const double nu_min, const double nu_max, co
     assert_always(std::ssize(spectra.trueemissionalltimesteps) == globals::ntimesteps * MNUBINS * get_proccount());
     std::ranges::fill(spectra.trueemissionalltimesteps, 0.0);
   }
-  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier_allranks();
 
   if (print_memusage) {
     printlnlog("[info] mem_usage: set of spectra{} occupy {:.3f} MB (node shared memory)",

@@ -500,7 +500,7 @@ void update_packets(const int nts, std::span<Packet> packets) {
   printlnlog("timestep {}: finished update_packets for rank {} (took {} seconds)", nts, globals::my_rank,
              time_update_packets_end_thisrank - time_update_packets_start);
 
-  MPI_Barrier(MPI_COMM_WORLD);  // hold all processes once the packets are updated
+  MPI_Barrier_allranks();  // hold all processes once the packets are updated
   const auto time_update_packets_end_allranks = std::time(nullptr);
   printlnlog("timestep {}: time after update packets for all processes (rank {} took {}s, waited {}s, total {}s)", nts,
              globals::my_rank, time_update_packets_end_thisrank - time_update_packets_start,

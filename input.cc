@@ -781,7 +781,7 @@ void setup_phixs_list() {
     std::ranges::sort(std::views::zip(groundcont_nu_edge, groundcont_element, groundcont_ion),
                       [](const auto& lhs, const auto& rhs) { return std::get<0>(lhs) < std::get<0>(rhs); });
   }
-  MPI_Barrier(globals::mpi_comm_node);
+  MPI_Barrier_node();
   globals::groundcont_nu_edge = groundcont_nu_edge;
   globals::groundcont_element = groundcont_element;
   globals::groundcont_ion = groundcont_ion;
@@ -848,11 +848,11 @@ void setup_phixs_list() {
   std::vector<double> temp_bfestim_nu_edge;
   if (nbfcontinua > 0) {
     // indices above were temporary only. continuum index should be to the sorted list
-    MPI_Barrier(globals::mpi_comm_node);
+    MPI_Barrier_node();
     if (globals::rank_in_node == 0) {
       std::ranges::SORT_OR_STABLE_SORT(allcont, std::ranges::less{}, &TempPhotoionTransitionInput::nu_edge);
     }
-    MPI_Barrier(globals::mpi_comm_node);
+    MPI_Barrier_node();
 
     for (int i = 0; i < nbfcontinua; i++) {
       if (DETAILED_BF_ESTIMATORS_ON &&
@@ -893,7 +893,7 @@ void setup_phixs_list() {
         allcont_bfestimindex[i] = allcont[i].bfestimindex;
       }
     }
-    MPI_Barrier(globals::mpi_comm_node);
+    MPI_Barrier_node();
     globals::bfestim_nu_edge = bfestim_nu_edge;
     globals::allcont.nu_edge = allcont_nu_edge;
     globals::allcont.element = allcont_element;
@@ -993,7 +993,7 @@ void read_autoion_data() {
   if (globals::rank_in_node == 0) {
     std::copy_n(temp_allautoion.cbegin(), temp_allautoion.size(), globals::allautoion.data());
   }
-  MPI_Barrier(globals::mpi_comm_node);
+  MPI_Barrier_node();
 
   // Plan is that autoionizing levels will be explicitly included in the NLTE population solver, but that their level
   // populations do not need to be accurately known - so if the ion has a superlevel already, then we will try to attach
@@ -1049,12 +1049,12 @@ void read_phixs_data() {
 
   if (phixs_file_version_exists[2]) {
     read_phixs_file(2, tmpallphixs, tmpallphixstargets);
-    MPI_Barrier(globals::mpi_comm_node);
+    MPI_Barrier_node();
   }
 
   if (phixs_file_version_exists[1]) {
     read_phixs_file(1, tmpallphixs, tmpallphixstargets);
-    MPI_Barrier(globals::mpi_comm_node);
+    MPI_Barrier_node();
   }
 
   int cont_index = 0;
@@ -1094,7 +1094,7 @@ void read_phixs_data() {
       }
     }
 
-    MPI_Barrier(globals::mpi_comm_node);
+    MPI_Barrier_node();
     globals::allphixstargets_levelindex = allphixstargets_levelindex;
     globals::allphixstargets_probability = allphixstargets_probability;
 
@@ -1324,7 +1324,7 @@ void read_atomicdata_files() {
     temp_alltranslist.reserve(1 << 22);
     read_levels_and_transitions(temp_alllevels, temp_linelist, temp_alltranslist, nlevelsmax_readin);
   }
-  MPI_Barrier(globals::mpi_comm_node);
+  MPI_Barrier_node();
 
   update_includedionslevels_maxnions();
 
@@ -1396,7 +1396,7 @@ void read_atomicdata_files() {
       chtransindex += ((2 * alllevels_ndowntrans[i]) + alllevels_nuptrans[i]);
     }
   }
-  MPI_Barrier(globals::mpi_comm_node);
+  MPI_Barrier_node();
   globals::alllevels.alltrans_startdown = alllevels_alltrans_startdown;
   globals::alllevels.ndowntrans = alllevels_ndowntrans;
   globals::alllevels.nuptrans = alllevels_nuptrans;
@@ -1418,7 +1418,7 @@ void read_atomicdata_files() {
              updowntranscount * ((2 * sizeof(int)) + (3 * sizeof(float)) + sizeof(bool)) / 1024. / 1024.);
 
   // create a shared all transitions list and then copy data across, freeing the local copy
-  MPI_Barrier(globals::mpi_comm_node);
+  MPI_Barrier_node();
 
   auto alltrans_lineindex = MPI_shared_malloc_span<int>(updowntranscount);
   auto alltrans_targetlevelindex = MPI_shared_malloc_span<int>(updowntranscount);
@@ -1469,7 +1469,7 @@ void read_atomicdata_files() {
   }
   temp_linelist.clear();
   temp_linelist.shrink_to_fit();
-  MPI_Barrier(globals::mpi_comm_node);
+  MPI_Barrier_node();
 
   globals::linelist.nu = linelist_nu;
   globals::linelist.einstein_A = linelist_einstein_A;
@@ -1535,7 +1535,7 @@ void read_atomicdata_files() {
   globals::alltrans.lineindex = alltrans_lineindex;
 
   printlnlog("  took {}s", std::time(nullptr) - time_start_establish_linelist_connections);
-  MPI_Barrier(globals::mpi_comm_node);
+  MPI_Barrier_node();
 
   for (int element = 0; element < get_nelements(); element++) {
     const int nions = get_nions(element);
@@ -1729,7 +1729,7 @@ void input() {
 
   const auto time_before_barrier = std::time(nullptr);
   printlog("barrier after read_atomicdata(): time before barrier {}, ", static_cast<int>(time_before_barrier));
-  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier_allranks();
   printlnlog("time after barrier {} (waited {} seconds)", static_cast<int>(time(nullptr)),
              static_cast<int>(time(nullptr) - time_before_barrier));
 

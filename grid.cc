@@ -1,3 +1,5 @@
+#include "grid.h"
+
 #include <algorithm>
 #include <array>
 #include <cassert>
@@ -22,16 +24,11 @@
 #include <tuple>
 #include <vector>
 
-#pragma clang unsafe_buffer_usage begin
-#include <mpi.h>
-#pragma clang unsafe_buffer_usage end
-
 #include "artisoptions.h"
 #include "atomic.h"
 #include "constants.h"
 #include "decay.h"
 #include "globals.h"
-#include "grid.h"
 #include "input.h"
 #include "kpkt.h"
 #include "mpi_logging.h"
@@ -378,7 +375,7 @@ void allocate_nonemptymodelcells() {
       modelgrid_input[mgi].initial_radial_pos_sum = 0.;
     }
   }
-  MPI_Barrier(globals::mpi_comm_node);
+  MPI_Barrier_node();
 
   for (int cellindex = 0; cellindex < ngrid; cellindex++) {
     const auto radial_pos_mid = get_cellradialposmid(cellindex);
@@ -402,7 +399,7 @@ void allocate_nonemptymodelcells() {
     }
   }
 
-  MPI_Barrier(globals::mpi_comm_node);
+  MPI_Barrier_node();
   // find number of non-empty cells and allocate nonempty list
   nonempty_npts_model = 0;
   for (int mgi = 0; mgi < get_npts_model(); mgi++) {
@@ -436,7 +433,7 @@ void allocate_nonemptymodelcells() {
       }
     }
   }
-  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier_allranks();
   for (int cellindex = 0; cellindex < ngrid; cellindex++) {
     const int mgi = get_propcell_modelgridindex(cellindex);
     if (mgi < 0) {
@@ -530,7 +527,7 @@ void allocate_nonemptymodelcells() {
 #endif
 
   // barrier to make sure node master has set abundance values to node shared memory
-  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier_allranks();
 
   printlnlog(
       "[info] mem_usage: NLTE populations for all allocated cells occupy a total of {:.3f} MB (node shared memory)",
@@ -594,7 +591,7 @@ void map_modeltogrid_direct() {
 
 void read_elem_abundances() {
   // barrier to make sure node master has set values in node shared memory
-  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier_allranks();
   printlog("reading abundances.txt...");
   const bool threedimensional = (get_modelgridtype() == GridType::CARTESIAN3D);
 
@@ -663,7 +660,7 @@ void read_elem_abundances() {
   }
 
   // barrier to make sure node master has set values in node shared memory
-  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier_allranks();
   printlnlog("done.");
 }
 
@@ -984,14 +981,14 @@ void read_grid_restart_data(const int timestep) {
     nonthermal::read_restart_data(gridsave_file);
     nltepop_read_restart_data(gridsave_file);
   }
-  MPI_Barrier(globals::mpi_comm_node);
+  MPI_Barrier_node();
   fclose(gridsave_file);
 }
 
 // Assign temperatures to the grid cells at the start of the simulation by assuming that all radioactive decay since
 // the snapshot time (plus any snapshot initial cell energy) energy is fully trapped
 void assign_initial_temperatures() {
-  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier_allranks();
 
   // We assume that for early times the material is so optically thick, that
   // all the radiation is trapped in the cell it originates from. This
@@ -1038,7 +1035,7 @@ void assign_initial_temperatures() {
   }
   printlnlog("  cells below MINTEMP {:g}: {}", MINTEMP, cells_below_mintemp);
   printlnlog("  cells above MAXTEMP {:g}: {}", MAXTEMP, cells_above_maxtemp);
-  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier_allranks();
 }
 
 // start at mgi_start and find the next non-empty cell, or return -1 if none found
@@ -2314,7 +2311,7 @@ void init_grid() {
     }
   }
 
-  MPI_Barrier(globals::mpi_comm_node);
+  MPI_Barrier_node();
 
   double mtot_mapped = 0.;
   for (int mgi = 0; mgi < get_npts_model(); mgi++) {
@@ -2323,7 +2320,7 @@ void init_grid() {
   printlnlog("Total grid-mapped mass: {:9.3e} [Msun] ({:.1f}% of input mass)", mtot_mapped / MSUN,
              mtot_mapped / mtot_input * 100.);
 
-  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier_allranks();
 
   if (globals::rank_in_node == 0) {
     printlnlog("Calculating initial grey opacities for model cells.");
@@ -2332,7 +2329,7 @@ void init_grid() {
     }
   }
 
-  MPI_Barrier(globals::mpi_comm_node);
+  MPI_Barrier_node();
 }
 
 auto get_totmassnuclide_tmodel(const int z, const int a) -> double { return totmassnuclide[decay::get_nucindex(z, a)]; }

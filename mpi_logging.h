@@ -26,6 +26,8 @@
 #include <mpi.h>
 #pragma clang unsafe_buffer_usage end
 
+inline void MPI_Barrier_allranks() { MPI_Barrier(MPI_COMM_WORLD); }
+
 namespace globals {
 
 inline MPI_Comm mpi_comm_node{MPI_COMM_NULL};
@@ -53,7 +55,7 @@ inline void setup_mpi_vars() {
   // get the number of ranks on the node
   MPI_Comm_size(globals::mpi_comm_node, &globals::node_nprocs);
 
-  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier_allranks();
 
 #ifdef MAX_NODE_SIZE
   if (MAX_NODE_SIZE > 0 && globals::node_nprocs > MAX_NODE_SIZE) {
@@ -65,7 +67,7 @@ inline void setup_mpi_vars() {
     MPI_Comm_size(globals::mpi_comm_node, &globals::node_nprocs);
   }
 
-  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier_allranks();
 #endif
 
   // make an inter-node communicator (using local rank as the key for group membership)
@@ -81,6 +83,8 @@ inline void setup_mpi_vars() {
   MPI_Bcast(&globals::node_count, 1, MPI_INT, 0, globals::mpi_comm_node);
 }
 }  // namespace globals
+
+inline void MPI_Barrier_node() { MPI_Barrier(globals::mpi_comm_internode); }
 
 #include "constants.h"
 
@@ -455,8 +459,6 @@ inline void MPI_Reduce_safe(R&& data, MPI_Op op, const int root, MPI_Comm comm) 
   }
   assert_always(items_processed == std::ssize(dataspan));
 }
-
-inline void MPI_Barrier_allranks() { assert_always(MPI_Barrier(MPI_COMM_WORLD) == MPI_SUCCESS); }
 
 [[nodiscard]] inline auto fopen_required(const std::string& filename, std::span<const char> mode) -> FILE* {
   if (mode[0] == 'r') {

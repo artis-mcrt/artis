@@ -629,7 +629,7 @@ void init() {
     if (globals::rank_in_node == 0) {
       std::ranges::fill(prev_bfrate_normed, 0.);
     }
-    MPI_Barrier(globals::mpi_comm_node);
+    MPI_Barrier_node();
     printlnlog("[info] mem_usage: detailed bf estimators for non-empty cells occupy {:.3f} MB (node shared memory)",
                nonempty_npts_model * bfestimcount * sizeof(float) / 1024. / 1024.);
 
@@ -642,12 +642,12 @@ void init() {
   zero_estimators();
 
   if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
-    MPI_Barrier(globals::mpi_comm_node);
+    MPI_Barrier_node();
     if (globals::rank_in_node == 0) {
       std::ranges::fill(radfieldbin_solutions_W, -1.);
       std::ranges::fill(radfieldbin_solutions_T_R, -1.);
     }
-    MPI_Barrier(globals::mpi_comm_node);
+    MPI_Barrier_node();
   }
 }
 
@@ -1026,7 +1026,7 @@ void reduce_estimators() {
     const auto duration_reduction = std::time(nullptr) - sys_time_start_reduction;
     printlnlog(" (took {} s)", duration_reduction);
   }
-  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier_allranks();
 }
 
 // broadcast computed radfield results including parameters
@@ -1050,7 +1050,7 @@ void do_MPI_Bcast(const ptrdiff_t nonemptymgi, const int root, const int root_no
     }
   }
 
-  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier_allranks();
 }
 
 void write_restart_data(FILE* gridsave_file) {

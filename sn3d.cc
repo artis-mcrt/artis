@@ -152,7 +152,7 @@ void write_deposition_file() {
   MPI_Allreduce_safe(globals::timesteps[nts].qdot_total, MPI_SUM, MPI_COMM_WORLD);
 
   MPI_Allreduce_safe(mtot, MPI_SUM, MPI_COMM_WORLD);
-  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier_allranks();
 
   if (my_rank == 0) {
     const bool any_fission = decay::decaytype_is_used(decay::DECAYTYPE_SPONTFISSION);
@@ -232,7 +232,7 @@ void mpi_communicate_grid_properties() {
   const int nincludedions = get_includedions();
   const auto nelements = get_nelements();
   for (int root = 0; root < globals::nprocs; root++) {
-    MPI_Barrier(MPI_COMM_WORLD);
+    MPI_Barrier_allranks();
 
     int root_node_id = globals::node_id;
     MPI_Bcast_safe(root_node_id, root, MPI_COMM_WORLD);
@@ -260,7 +260,7 @@ void mpi_communicate_grid_properties() {
       MPI_Bcast_binned_opacities(nonemptymgi, root_node_id);
     }
 
-    MPI_Barrier(MPI_COMM_WORLD);
+    MPI_Barrier_allranks();
     if (globals::rank_in_node == 0) {
       MPI_Bcast_safe(grid::rho_allcells.subspan(root_nstart_nonempty, root_ndo_nonempty), root_node_id,
                      globals::mpi_comm_internode);
@@ -317,10 +317,10 @@ void mpi_communicate_grid_properties() {
                      root_node_id, globals::mpi_comm_internode);
     }
 
-    MPI_Barrier(MPI_COMM_WORLD);
+    MPI_Barrier_allranks();
   }
 
-  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier_allranks();
 }
 
 void normalise_deposition_estimators(int nts) {
@@ -360,21 +360,21 @@ void normalise_deposition_estimators(int nts) {
 void mpi_reduce_estimators(const int nts) {
   const int nonempty_npts_model = grid::get_nonempty_npts_model();
   radfield::reduce_estimators();
-  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier_allranks();
   MPI_Allreduce_safe(globals::ffheatingestimator, MPI_SUM, MPI_COMM_WORLD);
   if constexpr (!DIRECT_COL_HEAT) {
     MPI_Allreduce_safe(globals::colheatingestimator, MPI_SUM, MPI_COMM_WORLD);
   }
-  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier_allranks();
 
   if (globals::nbfcontinua_ground > 0) {
     if constexpr (USE_LUT_PHOTOION) {
-      MPI_Barrier(MPI_COMM_WORLD);
+      MPI_Barrier_allranks();
       MPI_Allreduce_safe(globals::gammaestimator, MPI_SUM, MPI_COMM_WORLD);
     }
 
     if constexpr (USE_ION_BFHEATING_ESTIMATORS) {
-      MPI_Barrier(MPI_COMM_WORLD);
+      MPI_Barrier_allranks();
       MPI_Allreduce_safe(globals::bfheatingestimator, MPI_SUM, MPI_COMM_WORLD);
     }
   }
@@ -388,7 +388,7 @@ void mpi_reduce_estimators(const int nts) {
   assert_always(std::ssize(globals::dep_estimator_alpha) == nonempty_npts_model);
   MPI_Allreduce_safe(globals::dep_estimator_alpha, MPI_SUM, MPI_COMM_WORLD);
 
-  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier_allranks();
 
   MPI_Allreduce_safe(globals::timesteps[nts].gamma_dep_discrete, MPI_SUM, MPI_COMM_WORLD);
   globals::timesteps[nts].gamma_dep_discrete /= globals::nprocs;
@@ -414,7 +414,7 @@ void mpi_reduce_estimators(const int nts) {
   MPI_Allreduce_safe(globals::timesteps[nts].gamma_emission, MPI_SUM, MPI_COMM_WORLD);
   globals::timesteps[nts].gamma_emission /= globals::nprocs;
 
-  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier_allranks();
 
   // The estimators have been summed across all processes and distributed.
   // They will now be normalised independently on all processes.
@@ -423,7 +423,7 @@ void mpi_reduce_estimators(const int nts) {
 }
 
 auto walltime_sufficient_to_continue(const int nts, const int nts_prev, const int walltimelimitseconds) -> bool {
-  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier_allranks();
   // time is measured from just before packet propagation from one timestep to the next
   const auto estimated_time_per_timestep = std::time(nullptr) - time_timestep_start;
   printlnlog("TIME: time between timesteps is {} seconds (measured packet prop of ts {} and update grid of ts {})",
@@ -452,7 +452,7 @@ auto walltime_sufficient_to_continue(const int nts, const int nts_prev, const in
 }
 
 void save_grid_and_packets(const int nts, std::vector<Packet>& packets) {
-  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier_allranks();
   const auto my_rank = globals::my_rank;
 
   const auto time_write_packets_file_start = std::time(nullptr);
@@ -468,7 +468,7 @@ void save_grid_and_packets(const int nts, std::vector<Packet>& packets) {
 
   const auto time_write_packets_finished_thisrank = std::time(nullptr);
 
-  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier_allranks();
 
   const auto timenow = std::time(nullptr);
 
@@ -483,7 +483,7 @@ void save_grid_and_packets(const int nts, std::vector<Packet>& packets) {
 
   if (!KEEP_ALL_RESTART_FILES) {
     // ensure new packets files have been written by all processes before we remove the old set
-    MPI_Barrier(MPI_COMM_WORLD);
+    MPI_Barrier_allranks();
 
     if (my_rank == 0) {
       const auto filename_prev_gridsave = std::format("gridsave_ts{}.tmp", nts - 1);
@@ -503,7 +503,7 @@ void save_grid_and_packets(const int nts, std::vector<Packet>& packets) {
 }
 
 void zero_estimators() {
-  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier_allranks();
   radfield::zero_estimators();
 
   std::ranges::fill(globals::ffheatingestimator, 0.);
@@ -525,7 +525,7 @@ void zero_estimators() {
     }
   }
 
-  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier_allranks();
 }
 
 auto do_timestep(const int nts, const int titer, std::vector<Packet>& packets, const int walltimelimitseconds) -> bool {
@@ -569,7 +569,7 @@ auto do_timestep(const int nts, const int titer, std::vector<Packet>& packets, c
   // and also the photoion and stimrecomb estimators
   zero_estimators();
 
-  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier_allranks();
   if ((nts < globals::timestep_finish) && do_this_full_loop) {
     // Now process the packets.
 
@@ -763,7 +763,7 @@ auto main(int argc, char* argv[]) -> int {
 
   ratecoefficients_init();
 
-  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier_allranks();
 
   // Record the chosen syn_dir
   auto syn_file = std::fstream("syn_dir.txt", std::ios::out | std::ios::trunc);
@@ -807,7 +807,7 @@ auto main(int argc, char* argv[]) -> int {
     printlnlog("");
   }
 
-  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier_allranks();
   globals::timestep = globals::timestep_initial;
 
   macroatom_open_file();
@@ -827,7 +827,7 @@ auto main(int argc, char* argv[]) -> int {
   setup_cellcache();
 
   while (globals::timestep < globals::timestep_finish && !terminate_early) {
-    MPI_Barrier(MPI_COMM_WORLD);
+    MPI_Barrier_allranks();
 
     // titer example: Do 3 iterations on timestep 0-6
     // globals::n_titer = (globals::timestep < 6) ? 3 : 1;
@@ -853,7 +853,7 @@ auto main(int argc, char* argv[]) -> int {
   // Spectra and light curves are now extracted using exspec which is another make target of this
   // code.
 
-  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier_allranks();
 
   if ((globals::ntimesteps > globals::timestep_finish) || terminate_early) {
     printlnlog("RESTART_NEEDED to continue model");
@@ -861,7 +861,7 @@ auto main(int argc, char* argv[]) -> int {
     printlnlog("No need for restart");
   }
 
-  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier_allranks();
   const auto real_time_end = std::time(nullptr);
   printlnlog(
       "sn3d finished at {} (job: pktprop ts {} to ts {} grid-preprop, {:.3f} wallclock hours * {} processes * {} "

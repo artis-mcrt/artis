@@ -2107,7 +2107,7 @@ void init() {
       nt_solution[nonemptymgi].frac_excitations_list_size = 0;
     }
   }
-  MPI_Barrier(globals::mpi_comm_node);
+  MPI_Barrier_node();
 
   const double sourceintegral = std::ranges::fold_left(
       std::views::iota(0, SFPTS), 0.0, [](double sum, int s) { return sum + (sourcevec(s) * DELTA_E); });
@@ -2639,7 +2639,7 @@ void nt_MPI_Bcast(const ptrdiff_t nonemptymgi, const int root_node_id) {
       MPI_Bcast_safe(get_cell_allions_data(nonemptymgi), root_node_id, globals::mpi_comm_internode);
     }
 
-    MPI_Barrier(MPI_COMM_WORLD);
+    MPI_Barrier_allranks();
 
     check_auger_probabilities(nonemptymgi);
   }

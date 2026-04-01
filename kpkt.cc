@@ -1,9 +1,5 @@
 #include "kpkt.h"
 
-#pragma clang unsafe_buffer_usage begin
-#include <mpi.h>
-#pragma clang unsafe_buffer_usage end
-
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
@@ -24,7 +20,6 @@
 #include "random.h"
 #include "ratecoeff.h"
 #include "rpkt.h"
-#include "sn3d.h"
 #include "stats.h"
 #include "thermalbalance.h"
 #include "vectors.h"
@@ -340,7 +335,7 @@ void setup_coolinglist() {
   coolinglist_type = temp_coolinglist_type;
   coolinglist_level = temp_coolinglist_level;
   coolinglist_upperlevel = temp_coolinglist_upperlevel;
-  MPI_Barrier(globals::mpi_comm_node);
+  MPI_Barrier_node();
 
   printlnlog("kpkts diffuse {:g} of a time step's length", kpktdiffusion_timescale);
 }

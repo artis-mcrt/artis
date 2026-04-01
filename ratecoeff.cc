@@ -12,10 +12,6 @@
 #include <sstream>
 #include <string>
 
-#pragma clang unsafe_buffer_usage begin
-#include <mpi.h>
-#pragma clang unsafe_buffer_usage end
-
 #include "artisoptions.h"
 #include "atomic.h"
 #include "constants.h"
@@ -28,7 +24,6 @@
 #include "radfield.h"
 #include "random.h"
 #include "rpkt.h"
-#include "sn3d.h"
 
 namespace {
 constexpr double RATECOEFF_INTEGRAL_ACCURACY = 1e-3;
@@ -135,7 +130,7 @@ auto bfcooling_integrand(const double nu_minus_nu_edge, void* const voidparas) -
 
 void precalculate_rate_coefficient_integrals() {
   // we're writing to shared memory, so we need to synchronise
-  MPI_Barrier(globals::mpi_comm_node);
+  MPI_Barrier_node();
 
   // Calculate the rate coefficients for each level of each ion of each element
   for (int element = 0; element < get_nelements(); element++) {
@@ -214,7 +209,7 @@ void precalculate_rate_coefficient_integrals() {
     printlnlog("");
   }
 
-  MPI_Barrier(globals::mpi_comm_node);
+  MPI_Barrier_node();
 }
 
 // multiply the cross sections associated with a level by some factor and
@@ -416,7 +411,7 @@ void precalculate_ion_alpha_sp() {
   }
   assert_always(ion_alpha_sp.empty());
   ion_alpha_sp = temp_ion_alpha_sp;
-  MPI_Barrier(globals::mpi_comm_node);
+  MPI_Barrier_node();
 }
 
 // Integrand to calculate the rate coefficient for photoionisation. Corrected for stimulated recombination.

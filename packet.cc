@@ -15,10 +15,6 @@
 #include <utility>
 #include <vector>
 
-#pragma clang unsafe_buffer_usage begin
-#include <mpi.h>
-#pragma clang unsafe_buffer_usage end
-
 #include "artisoptions.h"
 #include "constants.h"
 #include "decay.h"
@@ -94,7 +90,7 @@ void place_pellet(const double e_cmf_per_packet, const std::span<const double> e
 void packet_init(std::span<Packet> packets)
 // Subroutine that initialises the packets if we start a new simulation.
 {
-  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier_allranks();
   printlnlog("UNIFORM_PELLET_ENERGIES is {}", (UNIFORM_PELLET_ENERGIES ? "true" : "false"));
 
   printlnlog("INITIAL_PACKETS_ON is {}", (INITIAL_PACKETS_ON ? "on" : "off"));

@@ -22,12 +22,6 @@
 #include <tuple>
 #include <vector>
 
-#include "sn3d.h"
-
-#pragma clang unsafe_buffer_usage begin
-#include <mpi.h>
-#pragma clang unsafe_buffer_usage end
-
 #include "artisoptions.h"
 #include "atomic.h"
 #include "constants.h"
@@ -38,6 +32,7 @@
 #include "mpi_logging.h"
 #include "packet.h"
 #include "random.h"
+#include "sn3d.h"
 
 namespace decay {
 
@@ -1109,7 +1104,7 @@ void setup_decaypath_energy_per_mass() {
   printlnlog("done.");
   std::ranges::fill(decaypath_energy_per_mass, 0.);
 
-  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier_allranks();
   const auto time_min_decay = INITIAL_PACKETS_ON ? grid::get_t_model() : globals::tmin;
   const ptrdiff_t num_decaypaths = get_num_decaypaths();
   for (int nonemptymgi = 0; nonemptymgi < nonempty_npts_model; nonemptymgi++) {
@@ -1122,7 +1117,7 @@ void setup_decaypath_energy_per_mass() {
     }
   }
 
-  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier_allranks();
 }
 
 void free_decaypath_energy_per_mass() { decaypath_energy_per_mass = {}; }

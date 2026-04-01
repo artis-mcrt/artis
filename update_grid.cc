@@ -612,7 +612,7 @@ void update_grid(std::ostream& estimators_file, const int nts, const int nts_pre
   printlnlog("timestep {}: finished update grid for rank {} (took {} seconds)", nts, my_rank,
              time_update_grid_end_thisrank - sys_time_start_update_grid);
 
-  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier_allranks();
   printlnlog("timestep {}: time after update grid on all processes (rank {} took {}, waited {}, total {} seconds)", nts,
              my_rank, time_update_grid_end_thisrank - sys_time_start_update_grid,
              std::time(nullptr) - time_update_grid_end_thisrank, std::time(nullptr) - sys_time_start_update_grid);

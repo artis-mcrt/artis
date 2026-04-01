@@ -68,7 +68,7 @@ inline void check_already_running() {
   }
 
   // make sure rank 0 checked for a pid file before we proceed
-  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier_allranks();
 }
 
 template <typename T>
