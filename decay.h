@@ -11,7 +11,7 @@
 
 namespace decay {
 
-enum decaytypes {
+enum DecayType : int {
   DECAYTYPE_ALPHA = 0,
   DECAYTYPE_ELECTRONCAPTURE = 1,
   DECAYTYPE_BETAPLUS = 2,
@@ -21,12 +21,12 @@ enum decaytypes {
   DECAYTYPE_COUNT = 6,
 };
 
-constexpr std::array<enum decaytypes, 5> all_decaytypes{
-    decaytypes::DECAYTYPE_ALPHA, decaytypes::DECAYTYPE_ELECTRONCAPTURE, decaytypes::DECAYTYPE_BETAPLUS,
-    decaytypes::DECAYTYPE_BETAMINUS, decaytypes::DECAYTYPE_SPONTFISSION};
+constexpr std::array<enum DecayType, 5> all_decaytypes{DecayType::DECAYTYPE_ALPHA, DecayType::DECAYTYPE_ELECTRONCAPTURE,
+                                                       DecayType::DECAYTYPE_BETAPLUS, DecayType::DECAYTYPE_BETAMINUS,
+                                                       DecayType::DECAYTYPE_SPONTFISSION};
 
 void init_nuclides(std::span<const int> custom_zlist, std::span<const int> custom_alist);
-[[nodiscard]] auto decaytype_is_used(decaytypes decaytype) -> bool;
+[[nodiscard]] auto decaytype_is_used(DecayType decaytype) -> bool;
 [[nodiscard]] auto get_nucstring_z(const std::string& strnuc) -> int;
 [[nodiscard]] auto get_nucstring_a(const std::string& strnuc) -> int;
 [[gnu::pure]] [[nodiscard]] auto get_num_nuclides() -> ptrdiff_t;
@@ -37,20 +37,21 @@ void init_nuclides(std::span<const int> custom_zlist, std::span<const int> custo
 [[nodiscard]] auto nuc_exists(int z, int a) -> bool;
 [[nodiscard]] auto nucdecayenergygamma(int nucindex) -> double;
 [[nodiscard]] auto nucdecayenergygamma(int z, int a) -> double;
-[[nodiscard]] auto get_decay_neutrino_frac(int nucindex, int decaytype) -> double;
+[[nodiscard]] auto get_decay_neutrino_frac(int nucindex, DecayType decaytype) -> double;
 void set_nucdecayenergygamma(int nucindex, double value);
 void update_abundances(int nonemptymgi, double t_current);
 [[nodiscard]] auto get_endecay_per_ejectamass_tmodel_to_time_withexpansion(int nonemptymgi, double tstart) -> double;
 [[nodiscard]] auto get_modelcell_simtime_endecay_per_mass(int nonemptymgi) -> double;
 void setup_decaypath_energy_per_mass();
 void free_decaypath_energy_per_mass();
-[[nodiscard]] auto get_qdot_modelcell(int nonemptymgi, double t, int decaytype) -> double;
-[[nodiscard]] auto get_particle_injection_rate(int nonemptymgi, double t, int decaytype) -> double;
+[[nodiscard]] auto get_qdot_modelcell(int nonemptymgi, double t, DecayType decaytype) -> double;
+[[nodiscard]] auto get_particle_injection_rate(int nonemptymgi, double t, DecayType decaytype) -> double;
 [[nodiscard]] auto get_gamma_emission_rate(int nonemptymgi, double t) -> double;
 [[nodiscard]] auto get_global_etot_tmodel_tinf() -> double;
 void output_nuc_abundances(std::ostream& estimators_file, int nonemptymgi, double t_current, int element);
-void setup_radioactive_pellet(double e_cmf_per_packet, int nonemptymgi, Packet& pkt);
 void cleanup();
+
+void setup_radioactive_pellet(double e_cmf_per_packet, int nonemptymgi, Packet& pkt);
 
 }  // namespace decay
 
