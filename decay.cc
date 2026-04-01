@@ -1058,7 +1058,7 @@ void init_nuclides(const std::span<const int> custom_zlist, const std::span<cons
   }
 }
 
-[[nodiscard]] auto decaytype_is_used(const int decaytype) -> bool {
+[[nodiscard]] auto decaytype_is_used(const decaytypes decaytype) -> bool {
   assert_testmodeonly(!all_decaytypes.empty());
   assert_testmodeonly(decaytype >= 0);
   assert_testmodeonly(decaytype < DECAYTYPE_COUNT);
