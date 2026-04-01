@@ -240,9 +240,9 @@ void printout_nuclidemeanlife(const int z, const int a) {
 // a decaypath's energy is the decay energy of the last nuclide and decaytype in the chain
 [[nodiscard]] auto get_decaypath_lastdecayenergy(const DecayPath& decaypath) -> double {
   const auto secondlastindex = decaypath.nucindex.size() - 2;
-  assert_testmodeonly(decaypath.decaytypes[secondlastindex] != DECAYTYPE_NONE);
+  assert_testmodeonly(decaypath.decaytypes[secondlastindex] != decaytypes::DECAYTYPE_NONE);
   assert_testmodeonly(decaypath.lambdas[secondlastindex] > 0.);
-  assert_testmodeonly(decaypath.decaytypes.back() == DECAYTYPE_NONE);
+  assert_testmodeonly(decaypath.decaytypes.back() == decaytypes::DECAYTYPE_NONE);
   // Normalize decay energy by decay_daughters_probsum to properly distribute energy among probabilistic fission product
   // outcomes. This avoids multiply counting the decay energy, since each daughter product will have it's own
   // separate decaypath that differs only in the last nuclide.
@@ -284,7 +284,7 @@ void printout_decaypath(const int decaypathindex) {
     printout_nuclidename(z, a);
     printout_nuclidemeanlife(z, a);
 
-    if (decaytype != DECAYTYPE_NONE) {
+    if (decaytype != decaytypes::DECAYTYPE_NONE) {
       printlog(" -> {} -> ", get_str_decaytype(decaytype));
     }
   }
@@ -323,7 +323,7 @@ void extend_lastdecaypath(std::vector<DecayPath>& localdecaypaths) {
       newdecaypath.a.push_back(daughter.a);
       newdecaypath.nucindex.push_back(daughter_nucindex);
       newdecaypath.decaytypes.back() = decaytypeindex;  // replace the DECAYTYPE_NONE at end with this decay type
-      newdecaypath.decaytypes.push_back(DECAYTYPE_NONE);  // add new DECAYTYPE_NONE at end
+      newdecaypath.decaytypes.push_back(decaytypes::DECAYTYPE_NONE);  // add new DECAYTYPE_NONE at end
       newdecaypath.branchproduct *= get_nuc_decaybranchprob(end_nucindex, decaytypeindex) * daughter.probability;
       localdecaypaths.push_back(newdecaypath);
 
@@ -366,7 +366,7 @@ auto find_decaypaths(const std::span<const int> custom_zlist, const std::span<co
             {.z = {z, daughter.z},
              .a = {a, daughter.a},
              .nucindex = {startnucindex, get_nucindex(daughter.z, daughter.a)},
-             .decaytypes = {decaytype, DECAYTYPE_NONE},
+             .decaytypes = {decaytype, decaytypes::DECAYTYPE_NONE},
              .lambdas = {},
              .branchproduct = get_nuc_decaybranchprob(startnucindex, decaytype) * daughter.probability});
 
@@ -401,7 +401,7 @@ auto find_decaypaths(const std::span<const int> custom_zlist, const std::span<co
     assert_always(std::all_of(decaypath.nucindex.cbegin(), decaypath.nucindex.cend() - 1,
                               [](const auto nucindex) { return get_meanlife(nucindex) > 0.; }));
 
-    assert_always(decaypath.decaytypes.back() == DECAYTYPE_NONE);
+    assert_always(decaypath.decaytypes.back() == decaytypes::DECAYTYPE_NONE);
 
     // convert mean lifetimes to decay constants
     decaypath.lambdas.resize(decaypath.nucindex.size(), -1.);
@@ -1033,8 +1033,8 @@ void init_nuclides(const std::span<const int> custom_zlist, const std::span<cons
     }
   }
 
-  resize_exactly(alldecaytypes_is_used, DECAYTYPE_COUNT);
-  for (int decaytypeindex = 0; decaytypeindex < DECAYTYPE_COUNT; decaytypeindex++) {
+  resize_exactly(alldecaytypes_is_used, decaytypes::DECAYTYPE_COUNT);
+  for (int decaytypeindex = 0; decaytypeindex < decaytypes::DECAYTYPE_COUNT; decaytypeindex++) {
     alldecaytypes_is_used[decaytypeindex] = std::ranges::any_of(
         std::views::iota(0UZ, nuclides.size()),
         [decaytypeindex](const auto nucindex) { return get_nuc_decaybranchprob(nucindex, decaytypeindex) > 0.; });
@@ -1061,7 +1061,7 @@ void init_nuclides(const std::span<const int> custom_zlist, const std::span<cons
 [[nodiscard]] auto decaytype_is_used(const decaytypes decaytype) -> bool {
   assert_testmodeonly(!all_decaytypes.empty());
   assert_testmodeonly(decaytype >= 0);
-  assert_testmodeonly(decaytype < DECAYTYPE_COUNT);
+  assert_testmodeonly(decaytype < decaytypes::DECAYTYPE_COUNT);
   return alldecaytypes_is_used[decaytype];
 }
 
