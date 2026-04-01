@@ -22,6 +22,8 @@
 #include <tuple>
 #include <vector>
 
+#include "sn3d.h"
+
 #pragma clang unsafe_buffer_usage begin
 #include <mpi.h>
 #pragma clang unsafe_buffer_usage end
