@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <array>
+#include <atomic>
 #include <cassert>
 #include <cstdarg>
 #include <cstddef>
@@ -21,6 +22,10 @@
 #include <string>
 #include <tuple>
 #include <utility>
+
+#ifdef _OPENMP
+#include <omp.h>
+#endif
 
 #pragma clang unsafe_buffer_usage begin
 #include <mpi.h>
@@ -515,5 +520,32 @@ inline void MPI_Reduce_safe(R&& data, MPI_Op op, const int root, MPI_Comm comm) 
   printlnlog("ERROR: Could not open file '{}'", filename);
   std::abort();
 }
+
+class ScopedMutex {
+ private:
+  int* lock_;
+
+  static void mutex_lock(int& lock) {
+    while (std::atomic_ref<int>(lock).exchange(1, std::memory_order_acquire) == 1) {
+      std::atomic_ref<int>(lock).wait(1, std::memory_order_relaxed);
+      // blocks until lock != 1 (i.e., someone called unlock->notify)
+    }
+  }
+
+  static void mutex_unlock(int& lock) {
+    std::atomic_ref<int>(lock).store(0, std::memory_order_release);
+    std::atomic_ref<int>(lock).notify_one();  // wake one sleeping thread
+  }
+
+ public:
+  explicit ScopedMutex(int& lock) : lock_(&lock) { mutex_lock(*lock_); }
+  ~ScopedMutex() { mutex_unlock(*lock_); }
+
+  // disable copying and moving to avoid accidentally sharing locks between threads
+  ScopedMutex(const ScopedMutex&) = delete;
+  auto operator=(const ScopedMutex&) -> ScopedMutex& = delete;
+  ScopedMutex(ScopedMutex&&) = delete;
+  auto operator=(ScopedMutex&&) -> ScopedMutex& = delete;
+};
 
 #endif  // MPI_LOGGING_H
