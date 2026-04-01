@@ -611,7 +611,7 @@ void update_grid(std::ostream& estimators_file, const int nts, const int nts_pre
 
   const auto nstart_nonempty = grid::get_nstart_nonempty(my_rank);
 
-  if constexpr (READ_CLUMPING_FACTORS_FROM_FILE) {
+  if constexpr (USE_MICROCLUMPING && READ_CLUMPING_FACTORS_FROM_FILE) {
     // Only need to open the file if we have cells to update
     if (ndo_nonempty != 0) {
       clumping_factors_file = fstream_required("clumping-factors.txt", std::ios::in);
@@ -627,7 +627,7 @@ void update_grid(std::ostream& estimators_file, const int nts, const int nts_pre
                      heatingcoolingrates_thisrankcells.at(nonemptymgi - nstart_nonempty));
   }
 
-  if constexpr (READ_CLUMPING_FACTORS_FROM_FILE) {
+  if constexpr (USE_MICROCLUMPING && READ_CLUMPING_FACTORS_FROM_FILE) {
     if (ndo_nonempty != 0) {
       clumping_factors_file.close();
     }
