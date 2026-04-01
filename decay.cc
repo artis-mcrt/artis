@@ -66,9 +66,9 @@ struct Nuclide {
   double endecay_gamma{0.};  // average energy per decay in gamma rays [erg]
   double endecay_alpha{0.};  // average energy per alpha decay in kinetic energy of alpha particles [erg]
   double endecay_fission{0.};  // average energy per fission decay in kinetic energy of fission fragments [erg]
-  std::array<double, decaytypes::DECAYTYPE_COUNT> endecay_q = {
+  std::array<double, DecayType::DECAYTYPE_COUNT> endecay_q = {
       0.};  // Q-value (reactant minus product energy) for each decay type
-  std::array<double, decaytypes::DECAYTYPE_COUNT> branchprobs = {0.};  // branch probability of each decay type
+  std::array<double, DecayType::DECAYTYPE_COUNT> branchprobs = {0.};  // branch probability of each decay type
 
   // (Z, A, probability) of fission daughters
   std::vector<DecayDaughter> fission_daughters_z_a_prob{};  // NOLINT(readability-redundant-member-init)
@@ -85,7 +85,7 @@ struct DecayPath {
   std::vector<int> z;  // atomic number
   std::vector<int> a;  // mass number
   std::vector<int> nucindex;  // index into nuclides list
-  std::vector<int> decaytypes;
+  std::vector<DecayType> decaytypes;
   std::vector<double> lambdas;
   double branchproduct{
       0.};  // product of all branching factors along the path set by calculate_decaypath_branchproduct()
@@ -93,34 +93,35 @@ struct DecayPath {
 
 std::vector<Nuclide> nuclides;
 std::vector<DecayPath> decaypaths;
+std::vector<bool> alldecaytypes_is_used;
 
-[[nodiscard]] constexpr auto decay_daughters_z_a_prob(const int z_parent, const int a_parent, const int decaytype)
+[[nodiscard]] constexpr auto decay_daughters_z_a_prob(const int z_parent, const int a_parent, const DecayType decaytype)
     -> std::vector<DecayDaughter> {
   assert_always(decaytype >= 0);
-  assert_always(decaytype < decaytypes::DECAYTYPE_COUNT);
+  assert_always(decaytype < DecayType::DECAYTYPE_COUNT);
 
-  switch (static_cast<enum decaytypes>(decaytype)) {
-    case decaytypes::DECAYTYPE_ALPHA: {
+  switch (static_cast<enum DecayType>(decaytype)) {
+    case DecayType::DECAYTYPE_ALPHA: {
       return {DecayDaughter{.z = z_parent - 2,
                             .a = a_parent - 4,
                             .probability = 1.}};  // lose two protons and two neutrons (He4 handled separately)
     }
-    case decaytypes::DECAYTYPE_BETAPLUS:
-    case decaytypes::DECAYTYPE_ELECTRONCAPTURE: {
+    case DecayType::DECAYTYPE_BETAPLUS:
+    case DecayType::DECAYTYPE_ELECTRONCAPTURE: {
       return {DecayDaughter{.z = z_parent - 1, .a = a_parent, .probability = 1.}};  // lose a proton, gain a neutron
     }
-    case decaytypes::DECAYTYPE_BETAMINUS: {
+    case DecayType::DECAYTYPE_BETAMINUS: {
       return {DecayDaughter{.z = z_parent + 1, .a = a_parent, .probability = 1.}};  // lose a neutron, gain a proton
     }
-    case decaytypes::DECAYTYPE_SPONTFISSION: {
+    case DecayType::DECAYTYPE_SPONTFISSION: {
       const auto nucindex = get_nucindex(z_parent, a_parent);
       assert_always(!nuclides[nucindex].fission_daughters_z_a_prob.empty());
       return nuclides[nucindex].fission_daughters_z_a_prob;
     }
-    case decaytypes::DECAYTYPE_NONE: {
+    case DecayType::DECAYTYPE_NONE: {
       return {DecayDaughter{.z = -1, .a = -1, .probability = 0.}};  // no daughter
     }
-    case decaytypes::DECAYTYPE_COUNT: {
+    case DecayType::DECAYTYPE_COUNT: {
       assert_always(false);
     }
   }
@@ -134,11 +135,11 @@ std::span<double> decaypath_energy_per_mass{};
 MPI_Win win_decaypath_energy_per_mass{MPI_WIN_NULL};
 
 // Get the probability that a decay of decaytype occurs
-[[nodiscard]] auto get_nuc_decaybranchprob(const int nucindex, const int decaytype) -> double {
+[[nodiscard]] auto get_nuc_decaybranchprob(const int nucindex, const DecayType decaytype) -> double {
   assert_testmodeonly(nucindex >= 0);
   assert_testmodeonly(nucindex < get_num_nuclides());
   assert_testmodeonly(decaytype >= 0);
-  assert_testmodeonly(decaytype < decaytypes::DECAYTYPE_COUNT);
+  assert_testmodeonly(decaytype < DecayType::DECAYTYPE_COUNT);
   return nuclides[nucindex].branchprobs[decaytype];
 }
 
@@ -182,27 +183,27 @@ void printout_nuclidemeanlife(const int z, const int a) {
 
 // decay energy in the form of kinetic energy of electrons, positrons, or alpha particles,
 // depending on the relevant decay type (but not including neutrinos)
-[[nodiscard]] auto nucdecayenergyparticle(const int nucindex, const int decaytype) -> double {
+[[nodiscard]] auto nucdecayenergyparticle(const int nucindex, const DecayType decaytype) -> double {
   assert_testmodeonly(decaytype >= 0);
-  assert_testmodeonly(decaytype < decaytypes::DECAYTYPE_COUNT);
+  assert_testmodeonly(decaytype < DecayType::DECAYTYPE_COUNT);
 
   switch (decaytype) {
-    case decaytypes::DECAYTYPE_ALPHA: {
+    case DecayType::DECAYTYPE_ALPHA: {
       return nuclides[nucindex].endecay_alpha;
     }
-    case decaytypes::DECAYTYPE_BETAPLUS: {
+    case DecayType::DECAYTYPE_BETAPLUS: {
       return nuclides[nucindex].endecay_positron;
     }
-    case decaytypes::DECAYTYPE_ELECTRONCAPTURE: {
+    case DecayType::DECAYTYPE_ELECTRONCAPTURE: {
       return 0.;
     }
-    case decaytypes::DECAYTYPE_BETAMINUS: {
+    case DecayType::DECAYTYPE_BETAMINUS: {
       return nuclides[nucindex].endecay_electron;
     }
-    case decaytypes::DECAYTYPE_SPONTFISSION: {
+    case DecayType::DECAYTYPE_SPONTFISSION: {
       return nuclides[nucindex].endecay_fission;
     }
-    case decaytypes::DECAYTYPE_NONE: {
+    case DecayType::DECAYTYPE_NONE: {
       return 0.;
     }
     default: {
@@ -224,13 +225,13 @@ void printout_nuclidemeanlife(const int z, const int a) {
 }
 
 // contributed energy release per decay [erg] for decaytype (e.g. decaytypes::DECAYTYPE_BETAPLUS) (excludes neutrinos!)
-[[nodiscard]] auto nucdecayenergy(const int nucindex, const int decaytype) -> double {
+[[nodiscard]] auto nucdecayenergy(const int nucindex, const DecayType decaytype) -> double {
   const double endecay = nuclides[nucindex].endecay_gamma + nucdecayenergyparticle(nucindex, decaytype);
 
   return endecay;
 }
 
-[[nodiscard]] auto nucdecayenergyqval(const int nucindex, const int decaytype) -> double {
+[[nodiscard]] auto nucdecayenergyqval(const int nucindex, const DecayType decaytype) -> double {
   return nuclides[nucindex].endecay_q[decaytype];
 }
 
@@ -239,9 +240,9 @@ void printout_nuclidemeanlife(const int z, const int a) {
 // a decaypath's energy is the decay energy of the last nuclide and decaytype in the chain
 [[nodiscard]] auto get_decaypath_lastdecayenergy(const DecayPath& decaypath) -> double {
   const auto secondlastindex = decaypath.nucindex.size() - 2;
-  assert_testmodeonly(decaypath.decaytypes[secondlastindex] != DECAYTYPE_NONE);
+  assert_testmodeonly(decaypath.decaytypes[secondlastindex] != DecayType::DECAYTYPE_NONE);
   assert_testmodeonly(decaypath.lambdas[secondlastindex] > 0.);
-  assert_testmodeonly(decaypath.decaytypes.back() == DECAYTYPE_NONE);
+  assert_testmodeonly(decaypath.decaytypes.back() == DecayType::DECAYTYPE_NONE);
   // Normalize decay energy by decay_daughters_probsum to properly distribute energy among probabilistic fission product
   // outcomes. This avoids multiply counting the decay energy, since each daughter product will have it's own
   // separate decaypath that differs only in the last nuclide.
@@ -249,24 +250,24 @@ void printout_nuclidemeanlife(const int z, const int a) {
   return nucdecayenergy(nucindex, decaypath.decaytypes[secondlastindex]) / nuclides[nucindex].decay_daughters_probsum;
 }
 
-[[nodiscard]] auto get_str_decaytype(const int decaytype) -> std::string {
+[[nodiscard]] auto get_str_decaytype(const DecayType decaytype) -> std::string {
   switch (decaytype) {
-    case decaytypes::DECAYTYPE_ALPHA: {
+    case DecayType::DECAYTYPE_ALPHA: {
       return "alpha";
     }
-    case decaytypes::DECAYTYPE_BETAPLUS: {
+    case DecayType::DECAYTYPE_BETAPLUS: {
       return "beta+";
     }
-    case decaytypes::DECAYTYPE_ELECTRONCAPTURE: {
+    case DecayType::DECAYTYPE_ELECTRONCAPTURE: {
       return "ec";
     }
-    case decaytypes::DECAYTYPE_BETAMINUS: {
+    case DecayType::DECAYTYPE_BETAMINUS: {
       return "beta-";
     }
-    case decaytypes::DECAYTYPE_SPONTFISSION: {
+    case DecayType::DECAYTYPE_SPONTFISSION: {
       return "sf";
     }
-    case decaytypes::DECAYTYPE_NONE: {
+    case DecayType::DECAYTYPE_NONE: {
       return "none";
     }
     default:
@@ -283,7 +284,7 @@ void printout_decaypath(const int decaypathindex) {
     printout_nuclidename(z, a);
     printout_nuclidemeanlife(z, a);
 
-    if (decaytype != DECAYTYPE_NONE) {
+    if (decaytype != DecayType::DECAYTYPE_NONE) {
       printlog(" -> {} -> ", get_str_decaytype(decaytype));
     }
   }
@@ -322,7 +323,7 @@ void extend_lastdecaypath(std::vector<DecayPath>& localdecaypaths) {
       newdecaypath.a.push_back(daughter.a);
       newdecaypath.nucindex.push_back(daughter_nucindex);
       newdecaypath.decaytypes.back() = decaytypeindex;  // replace the DECAYTYPE_NONE at end with this decay type
-      newdecaypath.decaytypes.push_back(DECAYTYPE_NONE);  // add new DECAYTYPE_NONE at end
+      newdecaypath.decaytypes.push_back(DecayType::DECAYTYPE_NONE);  // add new DECAYTYPE_NONE at end
       newdecaypath.branchproduct *= get_nuc_decaybranchprob(end_nucindex, decaytypeindex) * daughter.probability;
       localdecaypaths.push_back(newdecaypath);
 
@@ -365,7 +366,7 @@ auto find_decaypaths(const std::span<const int> custom_zlist, const std::span<co
             {.z = {z, daughter.z},
              .a = {a, daughter.a},
              .nucindex = {startnucindex, get_nucindex(daughter.z, daughter.a)},
-             .decaytypes = {decaytype, DECAYTYPE_NONE},
+             .decaytypes = {decaytype, DecayType::DECAYTYPE_NONE},
              .lambdas = {},
              .branchproduct = get_nuc_decaybranchprob(startnucindex, decaytype) * daughter.probability});
 
@@ -400,7 +401,7 @@ auto find_decaypaths(const std::span<const int> custom_zlist, const std::span<co
     assert_always(std::all_of(decaypath.nucindex.cbegin(), decaypath.nucindex.cend() - 1,
                               [](const auto nucindex) { return get_meanlife(nucindex) > 0.; }));
 
-    assert_always(decaypath.decaytypes.back() == DECAYTYPE_NONE);
+    assert_always(decaypath.decaytypes.back() == DecayType::DECAYTYPE_NONE);
 
     // convert mean lifetimes to decay constants
     decaypath.lambdas.resize(decaypath.nucindex.size(), -1.);
@@ -444,12 +445,7 @@ void filter_unused_nuclides(const std::span<const int> custom_zlist, const std::
       return (decaypath.z.back() == nuc.z && decaypath.a.back() == nuc.a);
     });
 
-    if (in_any_decaypath) {
-      return false;
-    }
-
-    printout("removing unused nuclide (Z=%d)%s%d\n", nuc.z, get_elname(nuc.z).c_str(), nuc.a);
-    return true;
+    return !in_any_decaypath;
   });
   nuclides.shrink_to_fit();
 
@@ -534,7 +530,7 @@ auto get_nuc_massfrac(const int nonemptymgi, const int nucindex, const double ti
   for (const auto& decaypath : decaypaths) {
     const auto last_decaytype = decaypath.decaytypes[decaypath.nucindex.size() - 2];
     // match 4He abundance to alpha decay of any nucleus (no continue), otherwise check daughter nuclide matches
-    if (z != 2 || a != 4 || last_decaytype != decaytypes::DECAYTYPE_ALPHA) {
+    if (z != 2 || a != 4 || last_decaytype != DecayType::DECAYTYPE_ALPHA) {
       if (decaypath.z.back() != z || decaypath.a.back() != a) {
         continue;
       }
@@ -714,7 +710,7 @@ auto write_nuclides_list() {
 
 }  // anonymous namespace
 
-[[nodiscard]] auto get_decay_neutrino_frac(const int nucindex, const int decaytype) -> double {
+[[nodiscard]] auto get_decay_neutrino_frac(const int nucindex, const DecayType decaytype) -> double {
   // subtract fraction of other decay products, nucdecayenergy() excludes neutrinos!
   const double nu_frac = 1. - (nucdecayenergy(nucindex, decaytype) / nuclides[nucindex].endecay_q[decaytype]);
   return nu_frac;
@@ -837,150 +833,129 @@ void init_nuclides(const std::span<const int> custom_zlist, const std::span<cons
 
   const auto standard_nuclides = nuclides;
 
-  // any nuclides in the custom list that are not in the standard list need beta and alpha decay data
-
-  bool use_custom_nuclides = false;
-  for (auto i = 0Z; i < std::ssize(custom_zlist); i++) {
-    if (custom_zlist[i] < 0 || custom_alist[i] < 0) {
-      continue;
-    }
-    const bool in_std_list = std::ranges::any_of(standard_nuclides, [=](const auto& stdnuc) {
-      return (custom_zlist[i] == stdnuc.z) && (custom_alist[i] == stdnuc.a);
-    });
-    if (!in_std_list) {
-      use_custom_nuclides = true;
-      break;
+  auto fbetaminus = fstream_required("betaminusdecays.txt", std::ios::in);
+  std::string line;
+  while (get_noncommentline(fbetaminus, line)) {
+    // energies are average per beta decay
+    // columns: # A, Z, Q[MeV], E_gamma[MeV], E_elec[MeV], E_neutrino[MeV], meanlife[s]
+    int a = -1;
+    int z = -1;
+    double Q_betadecay_mev = 0.;
+    double e_gamma_mev = 0.;
+    double e_elec_mev = 0.;
+    double e_neutrino = 0.;
+    double tau_sec = 0.;
+    assert_always(std::stringstream(line) >> a >> z >> Q_betadecay_mev >> e_gamma_mev >> e_elec_mev >> e_neutrino >>
+                  tau_sec);
+    if (Q_betadecay_mev > 0.) {
+      assert_always(!nuc_exists(z, a));
+      nuclides.push_back({.z = z, .a = a, .meanlife = tau_sec});
+      nuclides.back().branchprobs[DECAYTYPE_BETAMINUS] = 1.;
+      nuclides.back().endecay_q[DECAYTYPE_BETAMINUS] = Q_betadecay_mev * MEV;
+      nuclides.back().endecay_electron = e_elec_mev * MEV;
+      nuclides.back().endecay_gamma = e_gamma_mev * MEV;
+      assert_always(e_elec_mev >= 0.);
     }
   }
 
-  if (use_custom_nuclides) {
-    auto fbetaminus = fstream_required("betaminusdecays.txt", std::ios::in);
-    std::string line;
-    while (get_noncommentline(fbetaminus, line)) {
-      // energies are average per beta decay
-      // columns: # A, Z, Q[MeV], E_gamma[MeV], E_elec[MeV], E_neutrino[MeV], meanlife[s]
-      int a = -1;
-      int z = -1;
-      double Q_betadecay_mev = 0.;
-      double e_gamma_mev = 0.;
-      double e_elec_mev = 0.;
-      double e_neutrino = 0.;
-      double tau_sec = 0.;
-      assert_always(std::stringstream(line) >> a >> z >> Q_betadecay_mev >> e_gamma_mev >> e_elec_mev >> e_neutrino >>
-                    tau_sec);
-      if (Q_betadecay_mev > 0.) {
-        assert_always(!nuc_exists(z, a));
-        nuclides.push_back({.z = z, .a = a, .meanlife = tau_sec});
-        nuclides.back().branchprobs[DECAYTYPE_BETAMINUS] = 1.;
-        nuclides.back().endecay_q[DECAYTYPE_BETAMINUS] = Q_betadecay_mev * MEV;
-        nuclides.back().endecay_electron = e_elec_mev * MEV;
-        nuclides.back().endecay_gamma = e_gamma_mev * MEV;
-        assert_always(e_elec_mev >= 0.);
+  auto falpha = fstream_required("alphadecays.txt", std::ios::in);
+  if (!nuc_exists(2, 4)) {
+    nuclides.push_back({.z = 2, .a = 4, .meanlife = -1});
+  }
+  while (get_noncommentline(falpha, line)) {
+    // columns: # A, Z, branch_alpha, branch_beta, halflife[s], Q_total_alphadec[MeV], Q_total_betadec[MeV],
+    // E_alpha[MeV], E_gamma[MeV], E_beta[MeV]
+    int a = -1;
+    int z = -1;
+    double branch_alpha = 0.;
+    double branch_beta = 0.;
+    double halflife = 0.;
+    double Q_alphadecay_mev = 0.;
+    double Q_betadecay_mev = 0.;
+    double e_alpha_mev = 0.;
+    double e_gamma_mev = 0.;
+    double e_beta_mev = 0.;
+    assert_always(std::stringstream(line) >> a >> z >> branch_alpha >> branch_beta >> halflife >> Q_alphadecay_mev >>
+                  Q_betadecay_mev >> e_alpha_mev >> e_gamma_mev >> e_beta_mev);
+
+    const bool keeprow = ((branch_alpha > 0. || branch_beta > 0.) && halflife > 0.);
+    if (keeprow) {
+      const double tau_sec = halflife / std::numbers::ln2;
+      int alphanucindex = -1;
+      if (nuc_exists(z, a)) {
+        alphanucindex = get_nucindex(z, a);
+      } else {
+        nuclides.push_back({.z = z, .a = a, .meanlife = tau_sec, .endecay_gamma = e_gamma_mev * MEV});
+        alphanucindex = static_cast<int>(nuclides.size() - 1);
       }
+      nuclides[alphanucindex].endecay_alpha = e_alpha_mev * MEV;
+      nuclides[alphanucindex].branchprobs[DECAYTYPE_BETAMINUS] = branch_beta;
+      nuclides[alphanucindex].endecay_q[DECAYTYPE_BETAMINUS] = Q_betadecay_mev * MEV;
+      nuclides[alphanucindex].branchprobs[DECAYTYPE_ALPHA] = branch_alpha;
+      nuclides[alphanucindex].endecay_q[DECAYTYPE_ALPHA] = Q_alphadecay_mev * MEV;
+    }
+  }
+
+  auto ffission = fstream_required("fissiondecays.txt", std::ios::in);
+  while (get_noncommentline(ffission, line)) {
+    int z_in = -1;
+    int a_in = -1;
+    double q_fission_mev = 0.;
+    double e_gamma_mev = 0.;
+    double e_1_mev = 0.;
+    double e_2_mev = 0.;
+    double m1 = 0.;
+    double m2 = 0.;
+    double z1 = 0.;
+    double z2 = 0.;
+    double tau_sec = 0.;
+    assert_always(std::stringstream(line) >> a_in >> z_in >> q_fission_mev >> e_gamma_mev >> e_1_mev >> e_2_mev >> m1 >>
+                  m2 >> z1 >> z2 >> tau_sec);
+    assert_always(!nuc_exists(z_in, a_in));
+    nuclides.push_back({.z = z_in, .a = a_in, .meanlife = tau_sec});
+    nuclides.back().branchprobs[DECAYTYPE_SPONTFISSION] = 1.;
+    nuclides.back().endecay_q[DECAYTYPE_SPONTFISSION] = q_fission_mev * MEV;
+    nuclides.back().endecay_fission = q_fission_mev * MEV;  // will be overwritten if we have fission product data
+    printlnlog("  added spontaneous fission nuclide: (Z={}){}{} meanlife {:.1e} days", z_in, get_elname(z_in), a_in,
+               tau_sec / 86400.0);
+  }
+
+  auto ffission_products = fstream_required("fissionproducts_GEF_100keV.txt", std::ios::in);
+  while (get_noncommentline(ffission_products, line)) {
+    int z_parent = -1;
+    int a_parent = -1;
+    assert_always(std::stringstream(line) >> z_parent >> a_parent);
+    get_noncommentline(ffission_products, line);
+    double num_neutrons = 0;
+    int tablesize = 0;
+    double q_fission_mev = 0.;
+    assert_always(std::stringstream(line) >> num_neutrons >> tablesize >> q_fission_mev);
+    const int nucindex = get_nucindex_or_neg_one(z_parent, a_parent);
+    const bool keep_table = (nucindex >= 0) && (nuclides[nucindex].branchprobs[DECAYTYPE_SPONTFISSION] > 0.);
+    if (keep_table) {
+      nuclides[nucindex].endecay_q[DECAYTYPE_SPONTFISSION] = q_fission_mev * MEV;
+      nuclides[nucindex].endecay_fission = q_fission_mev * MEV;
+      nuclides[nucindex].fission_daughters_z_a_prob.clear();
+      nuclides[nucindex].fission_daughters_z_a_prob.reserve(tablesize);
     }
 
-    auto falpha = fstream_required("alphadecays.txt", std::ios::in);
-    if (!nuc_exists(2, 4)) {
-      nuclides.push_back({.z = 2, .a = 4, .meanlife = -1});
-    }
-    while (get_noncommentline(falpha, line)) {
-      // columns: # A, Z, branch_alpha, branch_beta, halflife[s], Q_total_alphadec[MeV], Q_total_betadec[MeV],
-      // E_alpha[MeV], E_gamma[MeV], E_beta[MeV]
-      int a = -1;
-      int z = -1;
-      double branch_alpha = 0.;
-      double branch_beta = 0.;
-      double halflife = 0.;
-      double Q_alphadecay_mev = 0.;
-      double Q_betadecay_mev = 0.;
-      double e_alpha_mev = 0.;
-      double e_gamma_mev = 0.;
-      double e_beta_mev = 0.;
-      assert_always(std::stringstream(line) >> a >> z >> branch_alpha >> branch_beta >> halflife >> Q_alphadecay_mev >>
-                    Q_betadecay_mev >> e_alpha_mev >> e_gamma_mev >> e_beta_mev);
-
-      const bool keeprow = ((branch_alpha > 0. || branch_beta > 0.) && halflife > 0.);
-      if (keeprow) {
-        const double tau_sec = halflife / std::numbers::ln2;
-        int alphanucindex = -1;
-        if (nuc_exists(z, a)) {
-          alphanucindex = get_nucindex(z, a);
-        } else {
-          nuclides.push_back({.z = z, .a = a, .meanlife = tau_sec, .endecay_gamma = e_gamma_mev * MEV});
-          alphanucindex = static_cast<int>(nuclides.size() - 1);
-        }
-        nuclides[alphanucindex].endecay_alpha = e_alpha_mev * MEV;
-        nuclides[alphanucindex].branchprobs[DECAYTYPE_BETAMINUS] = branch_beta;
-        nuclides[alphanucindex].endecay_q[DECAYTYPE_BETAMINUS] = Q_betadecay_mev * MEV;
-        nuclides[alphanucindex].branchprobs[DECAYTYPE_ALPHA] = branch_alpha;
-        nuclides[alphanucindex].endecay_q[DECAYTYPE_ALPHA] = Q_alphadecay_mev * MEV;
+    double daughter_prob_sum = 0.;
+    for (int i = 0; i < tablesize; i++) {
+      assert_always(get_noncommentline(ffission_products, line));
+      if (keep_table) {
+        int daughter_a = -1;
+        int daughter_z = -1;
+        double probability_before_neutron_emission = 0.;
+        double probability = 0.;
+        assert_always(std::stringstream(line) >> daughter_a >> daughter_z >> probability_before_neutron_emission >>
+                      probability);
+        nuclides[nucindex].fission_daughters_z_a_prob.push_back(
+            {.z = daughter_z, .a = daughter_a, .probability = probability});
+        daughter_prob_sum += probability;
       }
     }
-
-    if (DECAY_SPONTFISSION_ON) {
-      printlnlog("Including spontaneous fission decay data from fissiondecays.txt and fissionproducts_GEF_100keV.txt");
-      auto ffission = fstream_required("fissiondecays.txt", std::ios::in);
-      while (get_noncommentline(ffission, line)) {
-        int z_in = -1;
-        int a_in = -1;
-        double q_fission_mev = 0.;
-        double e_gamma_mev = 0.;
-        double e_1_mev = 0.;
-        double e_2_mev = 0.;
-        double m1 = 0.;
-        double m2 = 0.;
-        double z1 = 0.;
-        double z2 = 0.;
-        double tau_sec = 0.;
-        assert_always(std::stringstream(line) >> a_in >> z_in >> q_fission_mev >> e_gamma_mev >> e_1_mev >> e_2_mev >>
-                      m1 >> m2 >> z1 >> z2 >> tau_sec);
-        assert_always(!nuc_exists(z_in, a_in));
-        nuclides.push_back({.z = z_in, .a = a_in, .meanlife = tau_sec});
-        nuclides.back().branchprobs[DECAYTYPE_SPONTFISSION] = 1.;
-        nuclides.back().endecay_q[DECAYTYPE_SPONTFISSION] = q_fission_mev * MEV;
-        nuclides.back().endecay_fission = q_fission_mev * MEV;  // will be overwritten if we have fission product data
-        printlnlog("  added spontaneous fission nuclide: (Z={}){}{} meanlife {} days", z_in, get_elname(z_in), a_in,
-                   tau_sec / 86400.0);
-      }
-
-      auto ffission_products = fstream_required("fissionproducts_GEF_100keV.txt", std::ios::in);
-      while (get_noncommentline(ffission_products, line)) {
-        int z_parent = -1;
-        int a_parent = -1;
-        assert_always(std::stringstream(line) >> z_parent >> a_parent);
-        get_noncommentline(ffission_products, line);
-        double num_neutrons = 0;
-        int tablesize = 0;
-        double q_fission_mev = 0.;
-        assert_always(std::stringstream(line) >> num_neutrons >> tablesize >> q_fission_mev);
-        const int nucindex = get_nucindex_or_neg_one(z_parent, a_parent);
-        const bool keep_table = (nucindex >= 0) && (nuclides[nucindex].branchprobs[DECAYTYPE_SPONTFISSION] > 0.);
-        if (keep_table) {
-          nuclides[nucindex].endecay_q[DECAYTYPE_SPONTFISSION] = q_fission_mev * MEV;
-          nuclides[nucindex].endecay_fission = q_fission_mev * MEV;
-          nuclides[nucindex].fission_daughters_z_a_prob.clear();
-          nuclides[nucindex].fission_daughters_z_a_prob.reserve(tablesize);
-        }
-
-        double daughter_prob_sum = 0.;
-        for (int i = 0; i < tablesize; i++) {
-          assert_always(get_noncommentline(ffission_products, line));
-          if (keep_table) {
-            int daughter_a = -1;
-            int daughter_z = -1;
-            double probability_before_neutron_emission = 0.;
-            double probability = 0.;
-            assert_always(std::stringstream(line) >> daughter_a >> daughter_z >> probability_before_neutron_emission >>
-                          probability);
-            nuclides[nucindex].fission_daughters_z_a_prob.push_back(
-                {.z = daughter_z, .a = daughter_a, .probability = probability});
-            daughter_prob_sum += probability;
-          }
-        }
-        if (keep_table) {
-          nuclides[nucindex].decay_daughters_probsum = daughter_prob_sum;
-        }
-      }
+    if (keep_table) {
+      nuclides[nucindex].decay_daughters_probsum = daughter_prob_sum;
     }
   }
 
@@ -1058,6 +1033,13 @@ void init_nuclides(const std::span<const int> custom_zlist, const std::span<cons
     }
   }
 
+  resize_exactly(alldecaytypes_is_used, DecayType::DECAYTYPE_COUNT);
+  for (DecayType decaytype : all_decaytypes) {
+    alldecaytypes_is_used[decaytype] = std::ranges::any_of(
+        std::views::iota(0UZ, nuclides.size()),
+        [decaytype](const auto nucindex) { return get_nuc_decaybranchprob(nucindex, decaytype) > 0.; });
+  }
+
   // Read in data for gamma ray lines and make a list of them in energy order.
   gammapkt::init_gamma_data();
 
@@ -1074,6 +1056,13 @@ void init_nuclides(const std::span<const int> custom_zlist, const std::span<cons
   if (globals::my_rank == 0 && !globals::simulation_continued_from_saved) {
     write_nuclides_list();
   }
+}
+
+[[nodiscard]] auto decaytype_is_used(const DecayType decaytype) -> bool {
+  assert_testmodeonly(!all_decaytypes.empty());
+  assert_testmodeonly(decaytype >= 0);
+  assert_testmodeonly(decaytype < DecayType::DECAYTYPE_COUNT);
+  return alldecaytypes_is_used[decaytype];
 }
 
 // calculate the decay energy per unit mass [erg/g] released from time t_model (can be before tmin) to tstart,
@@ -1145,7 +1134,8 @@ void free_decaypath_energy_per_mass() {
 }
 
 // energy release rate in form of kinetic energy of positrons, electrons, and alpha particles in [erg/s/g]
-[[nodiscard]] auto get_particle_injection_rate(const int nonemptymgi, const double t, const int decaytype) -> double {
+[[nodiscard]] auto get_particle_injection_rate(const int nonemptymgi, const double t, const DecayType decaytype)
+    -> double {
   double dep_sum = 0.;
   const auto num_nuclides = get_num_nuclides();
   for (int nucindex = 0; nucindex < num_nuclides; nucindex++) {
@@ -1190,7 +1180,7 @@ void free_decaypath_energy_per_mass() {
 }
 
 // energy release rate [erg/s/g] including everything (even neutrinos that are ignored elsewhere)
-[[nodiscard]] auto get_qdot_modelcell(const int nonemptymgi, const double t, const int decaytype) -> double {
+[[nodiscard]] auto get_qdot_modelcell(const int nonemptymgi, const double t, const DecayType decaytype) -> double {
   double qdot = 0.;
   const auto num_nuclides = get_num_nuclides();
   for (int nucindex = 0; nucindex < num_nuclides; nucindex++) {
@@ -1376,7 +1366,7 @@ void setup_radioactive_pellet(const double e_cmf_per_packet, const int nonemptym
   pkt.pellet_decaytype = decaypaths[decaypathindex].decaytypes[pathlength - 2];
 
   const auto engamma = nucdecayenergygamma(pkt.pellet_nucindex);
-  const auto enparticle = nucdecayenergyparticle(pkt.pellet_nucindex, pkt.pellet_decaytype);
+  const auto enparticle = nucdecayenergyparticle(pkt.pellet_nucindex, static_cast<DecayType>(pkt.pellet_decaytype));
 
   pkt.originated_from_particlenotgamma = (rng_uniform() >= engamma / (engamma + enparticle));
   if (pkt.originated_from_particlenotgamma) {

@@ -148,7 +148,8 @@ void write_to_estimators_file(std::ostream& estimators_file, const int nonemptym
   estimators_file << std::format("emission_ana: gamma {:11.5e} positron {:11.5e} electron {:11.5e} alpha {:11.5e}",
                                  heatingcoolingrates.eps_gamma_ana, heatingcoolingrates.eps_positron_ana,
                                  heatingcoolingrates.eps_electron_ana, heatingcoolingrates.eps_alpha_ana);
-  if constexpr (DECAY_SPONTFISSION_ON) {
+  const bool any_fission = decay::decaytype_is_used(decay::DECAYTYPE_SPONTFISSION);
+  if (any_fission) {
     estimators_file << std::format(" spfission {:11.5e}", heatingcoolingrates.eps_spfission_ana);
   }
   estimators_file << '\n';
@@ -156,7 +157,7 @@ void write_to_estimators_file(std::ostream& estimators_file, const int nonemptym
   estimators_file << std::format("deposition: gamma {:11.5e} positron {:11.5e} electron {:11.5e} alpha {:11.5e}",
                                  heatingcoolingrates.dep_gamma, heatingcoolingrates.dep_positron,
                                  heatingcoolingrates.dep_electron, heatingcoolingrates.dep_alpha);
-  if constexpr (DECAY_SPONTFISSION_ON) {
+  if (any_fission) {
     estimators_file << std::format(" spfission {:11.5e}", heatingcoolingrates.dep_spfission);
   }
   estimators_file << '\n';
