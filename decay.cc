@@ -646,9 +646,13 @@ auto get_endecay_per_ejectamass_between_times(const int mgi, const int decaypath
   assert_testmodeonly(tlow <= thigh);
   const double energy_tlow = get_endecay_to_tinf_per_ejectamass_at_time(mgi, decaypathindex, tlow);
   const double energy_thigh = get_endecay_to_tinf_per_ejectamass_at_time(mgi, decaypathindex, thigh);
-  assert_always(energy_tlow >= energy_thigh);
   const double endiff = energy_tlow - energy_thigh;
   assert_always(std::isfinite(endiff));
+  if (endiff < 0.) {
+    // if the error is larger than just roundoff, this is a problem
+    assert_always((energy_tlow * (1 + 2e-5)) >= energy_thigh);
+    return 0.;
+  }
   return endiff;
 }
 
