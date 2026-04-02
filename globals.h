@@ -1,6 +1,9 @@
 #ifndef GLOBALS_H
 #define GLOBALS_H
 
+#ifdef STDPAR_ON
+#include <thread>
+#endif
 #include <cmath>
 #include <cstddef>
 #include <span>
