@@ -286,18 +286,17 @@ class MPI_shared_array {
  public:
   MPI_shared_array() = default;
 
-  explicit MPI_shared_array(const ptrdiff_t num_allranks, const T& initval = {}) {
-    assert_always(_span.empty());
-    int initialized = 0;
-    MPI_Initialized(&initialized);
-    assert_always(initialized != 0);  // MPI must be initialized before constructing an MPI_shared_array
-    std::tie(_span, _win) = MPI_shared_malloc_span_keepwin<T>(num_allranks, initval);
-  }
+  explicit MPI_shared_array(const ptrdiff_t num_allranks, const T& initval = {}) { allocate(num_allranks, initval); }
 
   // copy constructor is deleted to avoid avoid multiple owners of the same MPI window, but move constructor is allowed
   MPI_shared_array(const MPI_shared_array&) = delete;
+  MPI_shared_array(MPI_shared_array&& other) noexcept : _win(other._win), _span(other._span) {
+    // prevent the other object from freeing the window in its destructor
+    other._win = MPI_WIN_NULL;
+    other._span = {};
+  }
+
   auto operator=(const MPI_shared_array&) -> MPI_shared_array& = delete;
-  MPI_shared_array(MPI_shared_array&& other) noexcept = delete;
   auto operator=(MPI_shared_array&& other) noexcept -> MPI_shared_array& {
     if (this != &other) {
       // free any existing window owned by this object before taking ownership of the new one
@@ -312,6 +311,14 @@ class MPI_shared_array {
   }
 
   ~MPI_shared_array() { reset(); }
+
+  auto allocate(const ptrdiff_t num_allranks, const T& initval = {}) {
+    assert_always(_span.empty());
+    int initialized = 0;
+    MPI_Initialized(&initialized);
+    assert_always(initialized != 0);  // MPI must be initialized before constructing an MPI_shared_array
+    std::tie(_span, _win) = MPI_shared_malloc_span_keepwin<T>(num_allranks, initval);
+  }
 
   auto reset() {
     if constexpr (TESTMODE) {
