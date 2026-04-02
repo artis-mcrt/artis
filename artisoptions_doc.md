@@ -261,9 +261,6 @@ constexpr bool USE_XCOM_GAMMAPHOTOION;
 // Override frequency-dependent gamma-ray opacity with a grey opacity [cm^2/g]
 constexpr std::optional<double> GAMMA_USE_KAPPA_GREY;
 
-// use fissiondecays.txt and fissionproducts_GEF_100keV.txt to handle spontaneous fission decays
-constexpr bool DECAY_SPONTFISSION_ON = false;
-
 // Use microclumping, which enhances collisional (de)excitation, collisional ionisation, collisional recombination,
 // radiative recombination, collisional capture, stimulated recombination, free-free heating, free-free cooling by the
 // reciprocal of the volume filling factor (the "clumping factor")
