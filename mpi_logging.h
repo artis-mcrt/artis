@@ -21,6 +21,7 @@
 #include <span>
 #include <string>
 #include <tuple>
+#include <type_traits>
 #include <utility>
 
 #ifdef _OPENMP
@@ -279,6 +280,8 @@ inline auto GET_MPI_TYPE() -> MPI_Datatype {
 
 template <typename T>
 class MPI_shared_array {
+  friend class MPI_shared_array<const T>;  // allow conversion from non-const to const version
+
  private:
   MPI_Win _win{MPI_WIN_NULL};
   std::span<T> _span{};
@@ -296,12 +299,13 @@ class MPI_shared_array {
     other._span = {};
   }
 
-  auto operator=(const MPI_shared_array&) -> MPI_shared_array& = delete;
-  auto operator=(MPI_shared_array&& other) noexcept -> MPI_shared_array& {
-    if (this != &other) {
+  auto operator=(const MPI_shared_array<std::remove_cv_t<T>>&) -> MPI_shared_array& = delete;
+
+  auto operator=(MPI_shared_array<std::remove_cv_t<T>>&& other) noexcept -> MPI_shared_array& {
+    if (_span.data() != other._span.data()) {
       // free any existing window owned by this object before taking ownership of the new one
       reset();
-      _span = other._span;
+      _span = static_cast<std::span<T>>(other._span);
       _win = other._win;
       // prevent the other object from freeing the window in its destructor
       other._span = {};

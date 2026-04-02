@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <cstdlib>
 #include <span>
+#include <utility>
 
 #include "artisoptions.h"
 #include "atomic.h"
@@ -31,9 +32,9 @@ namespace {
 
 enum class CoolingType : std::uint8_t { FREEFREE, FREEBOUND, COLLEXC, COLLION };
 
-std::span<const CoolingType> coolinglist_type;
-std::span<const int> coolinglist_level;
-std::span<const int> coolinglist_upperlevel;
+MPI_shared_array<const CoolingType> coolinglist_type;
+MPI_shared_array<const int> coolinglist_level;
+MPI_shared_array<const int> coolinglist_upperlevel;
 
 // MK: To reduce the work imbalance between different MPI tasks I introduced a diffusion
 // for kpkts, since it turned out that this work imbalance was largely dominated
@@ -261,9 +262,9 @@ void setup_coolinglist() {
 
   set_ncoolingterms();
   assert_always(ncoolingterms > 0);
-  const auto temp_coolinglist_type = MPI_shared_malloc_span<CoolingType>(ncoolingterms);
-  const auto temp_coolinglist_level = MPI_shared_malloc_span<int>(ncoolingterms);
-  const auto temp_coolinglist_upperlevel = MPI_shared_malloc_span<int>(ncoolingterms);
+  auto temp_coolinglist_type = MPI_shared_array<CoolingType>(ncoolingterms);
+  auto temp_coolinglist_level = MPI_shared_array<int>(ncoolingterms);
+  auto temp_coolinglist_upperlevel = MPI_shared_array<int>(ncoolingterms);
   const size_t mem_usage_coolinglist = ncoolingterms * (sizeof(CoolingType) + (2 * sizeof(int)));
   printlnlog("[info] mem_usage: coolinglist occupies {:.3f} MB", mem_usage_coolinglist / 1024. / 1024.);
 
@@ -332,9 +333,9 @@ void setup_coolinglist() {
 
   assert_always(ncoolingterms == i);  // if this doesn't match, we miscalculated the number of cooling terms
   printlnlog("[info] read_atomicdata: number of coolingterms {}", ncoolingterms);
-  coolinglist_type = temp_coolinglist_type;
-  coolinglist_level = temp_coolinglist_level;
-  coolinglist_upperlevel = temp_coolinglist_upperlevel;
+  coolinglist_type = std::move(temp_coolinglist_type);
+  coolinglist_level = std::move(temp_coolinglist_level);
+  coolinglist_upperlevel = std::move(temp_coolinglist_upperlevel);
   MPI_Barrier_node();
 
   printlnlog("kpkts diffuse {:g} of a time step's length", kpktdiffusion_timescale);
