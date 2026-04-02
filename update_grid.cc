@@ -35,7 +35,7 @@ namespace {
 
 std::vector<HeatingCoolingRates> heatingcoolingrates_thisrankcells;
 
-std::fstream clumping_factors_file;
+std::fstream vol_filling_factors_file;
 
 void write_to_estimators_file(std::ostream& estimators_file, const int nonemptymgi, const int timestep, const int titer,
                               const HeatingCoolingRates& heatingcoolingrates) {
@@ -361,11 +361,11 @@ static void titer_average_estimators(const int nonemptymgi) {
 }
 #endif
 
-// Assumes clumping-factors.txt is formatted according to description in artisoptions_doc.md
-void set_clumping_factors_file_pointer(const int nts, const int mgi) {
+// Assumes volume-filling-factors.txt is formatted according to description in artisoptions_doc.md
+void set_vol_filling_factors_file_pointer(const int nts, const int mgi) {
   assert_testmodeonly(nts >= 0 && 0 <= mgi && mgi < grid::get_npts_model());
-  assert_testmodeonly(clumping_factors_file.is_open());
-  clumping_factors_file.seekg(((nts * grid::get_npts_model()) + mgi) * (2 + 6 + 5));
+  assert_testmodeonly(vol_filling_factors_file.is_open());
+  vol_filling_factors_file.seekg(((nts * grid::get_npts_model()) + mgi) * (2 + 6 + 5));
 }
 
 void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, const int titer, const double tratmid,
@@ -386,8 +386,8 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
   if constexpr (USE_MICROCLUMPING) {
     float vol_filling_factor = NAN;
 
-    if constexpr (READ_CLUMPING_FACTORS_FROM_FILE) {
-      clumping_factors_file >> vol_filling_factor;
+    if constexpr (READ_VOLUME_FILLING_FACTORS_FROM_FILE) {
+      vol_filling_factors_file >> vol_filling_factor;
 
       // Check if the next mgi is non-empty, if not move the file pointer to the next non-empty cell
       int next_nonemptymgi = 0;
@@ -395,7 +395,7 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
           !grid::check_mgi_is_nonempty(mgi + 1, next_nonemptymgi)) {
         assert_always(next_nonemptymgi == -1);  // TODO: keep this? maybe for testmode?
         const int mgi_of_next_nonemptymgi = grid::get_mgi_of_nonemptymgi(nonemptymgi + 1);
-        set_clumping_factors_file_pointer(nts, mgi_of_next_nonemptymgi);
+        set_vol_filling_factors_file_pointer(nts, mgi_of_next_nonemptymgi);
       }
     } else {
       const double tmid = globals::timesteps[nts].mid;
@@ -612,11 +612,11 @@ void update_grid(std::ostream& estimators_file, const int nts, const int nts_pre
 
   const auto nstart_nonempty = grid::get_nstart_nonempty(my_rank);
 
-  if constexpr (USE_MICROCLUMPING && READ_CLUMPING_FACTORS_FROM_FILE) {
+  if constexpr (USE_MICROCLUMPING && READ_VOLUME_FILLING_FACTORS_FROM_FILE) {
     // Only need to open the file if we have cells to update
     if (ndo_nonempty != 0) {
-      clumping_factors_file = fstream_required("clumping-factors.txt", std::ios::in);
-      set_clumping_factors_file_pointer(nts, grid::get_mgi_of_nonemptymgi(nstart_nonempty));
+      clumping_factors_file = fstream_required("volume-filling-factors.txt", std::ios::in);
+      set_vol_filling_factors_file_pointer(nts, grid::get_mgi_of_nonemptymgi(nstart_nonempty));
     }
   }
 
@@ -628,9 +628,9 @@ void update_grid(std::ostream& estimators_file, const int nts, const int nts_pre
                      heatingcoolingrates_thisrankcells.at(nonemptymgi - nstart_nonempty));
   }
 
-  if constexpr (USE_MICROCLUMPING && READ_CLUMPING_FACTORS_FROM_FILE) {
+  if constexpr (USE_MICROCLUMPING && READ_VOLUME_FILLING_FACTORS_FROM_FILE) {
     if (ndo_nonempty != 0) {
-      clumping_factors_file.close();
+      vol_filling_factors_file.close();
     }
   }
 
