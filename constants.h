@@ -110,9 +110,6 @@ constexpr std::array<std::string_view, 3> datafolders = {"./", "data/", "artis/d
 #endif
 
 #ifdef STDPAR_ON
-#include <execution>
-#include <thread>
-
 #define EXEC_PAR_UNSEQ std::execution::par_unseq,
 #define EXEC_PAR std::execution::par,
 #else
@@ -127,6 +124,7 @@ constexpr std::array<std::string_view, 3> datafolders = {"./", "data/", "artis/d
   }
 
 #elifdef STDPAR_ON
+#include <atomic>
 
 template <typename T, typename U>
 constexpr void atomicadd(T& var, U&& val) {
