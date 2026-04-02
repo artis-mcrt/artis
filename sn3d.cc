@@ -14,8 +14,6 @@
 #include <fstream>
 #include <ios>
 
-#include "mpi_logging.h"
-
 #ifdef STDPAR_ON
 #include <ranges>
 #endif
@@ -35,6 +33,7 @@
 #include "input.h"
 #include "kpkt.h"
 #include "macroatom.h"
+#include "mpi_logging.h"
 #include "nltepop.h"
 #include "nonthermal.h"
 #include "packet.h"
