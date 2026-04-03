@@ -120,7 +120,7 @@ inline double max_path_step;
 
 // ATOMIC DATA
 
-inline std::span<float> allphixs{};
+inline MPI_shared_array<float> allphixs{};
 
 struct AllTransitions {
   std::span<const int> lineindex;
@@ -143,8 +143,8 @@ struct LevelAutoion {
 };
 inline std::span<LevelAutoion> allautoion;
 
-inline std::span<const int> allphixstargets_levelindex;  // index of upper ion level after photoionisation
-inline std::span<const double>
+inline MPI_shared_array<const int> allphixstargets_levelindex;  // index of upper ion level after photoionisation
+inline MPI_shared_array<const double>
     allphixstargets_probability;  // fraction of phixs cross section leading to associated final level
 
 struct AllLevels {
@@ -195,7 +195,7 @@ struct AllLevels {
 inline AllLevels alllevels{};
 
 inline std::vector<Element> elements;
-inline std::span<Ion> allions;
+inline MPI_shared_array<Ion> allions;
 
 struct TransitionLines {
   std::span<const double> nu;  // Frequency of the line transition

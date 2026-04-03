@@ -24,6 +24,7 @@
 #include <string>
 #include <string_view>
 #include <tuple>
+#include <utility>
 #include <vector>
 
 #pragma clang unsafe_buffer_usage begin
@@ -1081,9 +1082,9 @@ void read_phixs_data() {
     assert_always((nbftables * globals::NPHIXSPOINTS) == std::ssize(tmpallphixs));
 
     // copy the photoionisation tables into one contiguous block of memory
-    globals::allphixs = MPI_shared_malloc_span<float>(std::ssize(tmpallphixs));
-    auto allphixstargets_levelindex = MPI_shared_malloc_span<int>(std::ssize(tmpallphixstargets));
-    auto allphixstargets_probability = MPI_shared_malloc_span<double>(std::ssize(tmpallphixstargets));
+    globals::allphixs = MPI_shared_array<float>(std::ssize(tmpallphixs));
+    auto allphixstargets_levelindex = MPI_shared_array<int>(std::ssize(tmpallphixstargets));
+    auto allphixstargets_probability = MPI_shared_array<double>(std::ssize(tmpallphixstargets));
 
     if (globals::rank_in_node == 0) {
       std::copy_n(tmpallphixs.cbegin(), tmpallphixs.size(), globals::allphixs.data());
@@ -1095,8 +1096,8 @@ void read_phixs_data() {
     }
 
     MPI_Barrier_node();
-    globals::allphixstargets_levelindex = allphixstargets_levelindex;
-    globals::allphixstargets_probability = allphixstargets_probability;
+    globals::allphixstargets_levelindex = std::move(allphixstargets_levelindex);
+    globals::allphixstargets_probability = std::move(allphixstargets_probability);
 
     tmpallphixs.clear();
     tmpallphixs.shrink_to_fit();
@@ -1175,7 +1176,7 @@ auto read_compositiondata() -> std::vector<int> {
     uniqueionindex += nions_readin[element];
   }
 
-  globals::allions = MPI_shared_malloc_span<Ion>(uniqueionindex);
+  globals::allions = MPI_shared_array<Ion>(uniqueionindex);
 
   for (int element = 0; element < get_nelements(); element++) {
     globals::elements[element].ions =
