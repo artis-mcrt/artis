@@ -12,10 +12,6 @@
 #include <tuple>
 #include <vector>
 
-#pragma clang unsafe_buffer_usage begin
-#include <mpi.h>
-#pragma clang unsafe_buffer_usage end
-
 #include "artisoptions.h"
 #include "atomic.h"
 #include "constants.h"
@@ -46,12 +42,10 @@ constexpr float expopac_deltalambda = 35.5;
 constexpr auto expopac_nbins = static_cast<ptrdiff_t>((expopac_lambdamax - expopac_lambdamin) / expopac_deltalambda);
 
 // kappa in cm^2/g for each bin of each non-empty cell
-std::span<float> expansionopacities{};
+MPI_shared_array<float> expansionopacities{};
 
 // kappa times Planck function for each bin of each non-empty cell
-std::span<double> expansionopacity_planck_cumulative{};
-MPI_Win win_expansionopacities = MPI_WIN_NULL;
-MPI_Win win_expansionopacity_planck_cumulative = MPI_WIN_NULL;
+MPI_shared_array<double> expansionopacity_planck_cumulative{};
 
 // get the frequency change per distance travelled assuming linear change to the abort distance
 // this is done is two parts to get identical results to do_rpkt_step()
@@ -878,13 +872,11 @@ void allocate_expansionopacities() {
   const auto nonempty_npts_model = grid::get_nonempty_npts_model();
 
   assert_always(expansionopacities.empty());
-  std::tie(expansionopacities, win_expansionopacities) =
-      MPI_shared_malloc_span_keepwin<float>(nonempty_npts_model * expopac_nbins);
+  expansionopacities = MPI_shared_array<float>(nonempty_npts_model * expopac_nbins);
 
   assert_always(expansionopacity_planck_cumulative.empty());
   if constexpr (RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.has_value()) {
-    std::tie(expansionopacity_planck_cumulative, win_expansionopacity_planck_cumulative) =
-        MPI_shared_malloc_span_keepwin<double>(nonempty_npts_model * expopac_nbins);
+    expansionopacity_planck_cumulative = MPI_shared_array<double>(nonempty_npts_model * expopac_nbins);
   }
 }
 

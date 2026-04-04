@@ -92,7 +92,7 @@ struct ModelGridCellInput {
   float initelectronfrac = 0.4;  // Ye: electrons (or protons) per nucleon
   float initenergyq = 0.;  // q: energy in the model at tmin to use with USE_MODEL_INITIAL_ENERGY [erg/g]
 };
-std::span<ModelGridCellInput> modelgrid_input{};
+MPI_shared_array<ModelGridCellInput> modelgrid_input{};
 
 enum class BoundaryType : std::uint8_t { INNER, OUTER };
 
@@ -1896,7 +1896,7 @@ void read_ejecta_model() {
   model_type = detected_dim;
 
   assert_always(modelgrid_input.empty());
-  modelgrid_input = MPI_shared_malloc_span<ModelGridCellInput>(npts_model + 1, ModelGridCellInput{});
+  modelgrid_input = MPI_shared_array<ModelGridCellInput>(npts_model + 1, ModelGridCellInput{});
   modelgrid_numpropcells.resize(npts_model + 1, 0);
   nonemptymgi_of_mgi.resize(npts_model + 1, -1);
 
