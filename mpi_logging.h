@@ -253,11 +253,6 @@ template <typename T>
 }
 
 template <typename T>
-[[nodiscard]] auto MPI_shared_malloc_span(const ptrdiff_t num_allranks, const T& initval = {}) -> std::span<T> {
-  return std::get<0>(MPI_shared_malloc_span_keepwin<T>(num_allranks, initval));
-}
-
-template <typename T>
 inline auto GET_MPI_TYPE() -> MPI_Datatype {
   if constexpr (std::is_same_v<T, float>) {
     return MPI_FLOAT;
@@ -280,7 +275,7 @@ inline auto GET_MPI_TYPE() -> MPI_Datatype {
 
 template <typename T>
 class MPI_shared_array {
-  friend class MPI_shared_array<const T>;  // allow conversion from non-const to const version
+  friend class MPI_shared_array<std::add_const_t<T>>;  // allow conversion from non-const to const version
 
  private:
   MPI_Win _win{MPI_WIN_NULL};
@@ -292,17 +287,35 @@ class MPI_shared_array {
   explicit MPI_shared_array(const ptrdiff_t num_allranks, const T& initval = {}) { allocate(num_allranks, initval); }
 
   // copy constructor is deleted to avoid avoid multiple owners of the same MPI window, but move constructor is allowed
-  MPI_shared_array(const MPI_shared_array<std::remove_cv_t<T>>&) = delete;
-  explicit MPI_shared_array(MPI_shared_array<std::remove_cv_t<T>>&& other) noexcept
-      : _win(other._win), _span(other._span) {
+  MPI_shared_array(const MPI_shared_array<T>&) = delete;
+
+  MPI_shared_array(MPI_shared_array&& other) noexcept : _win(other._win), _span(other._span) {
     // prevent the other object from freeing the window in its destructor
     other._win = MPI_WIN_NULL;
     other._span = {};
   }
 
-  auto operator=(const MPI_shared_array<std::remove_cv_t<T>>&) -> MPI_shared_array& = delete;
+  auto operator=(const MPI_shared_array<T>&) -> MPI_shared_array& = delete;
 
-  auto operator=(MPI_shared_array<std::remove_cv_t<T>>&& other) noexcept -> MPI_shared_array& {
+  template <typename U = T>
+    requires std::is_same_v<T, std::add_const_t<U>>
+  // only allow this assignment operator if T is const and U is the
+  // non-const version of T
+  auto operator=(MPI_shared_array<U>&& other_) noexcept -> MPI_shared_array& {
+    auto other = std::move(other_);
+    if (_span.data() != other._span.data()) {
+      // free any existing window owned by this object before taking ownership of the new one
+      reset();
+      _span = static_cast<std::span<T>>(other._span);
+      _win = other._win;
+      // prevent the other object from freeing the window in its destructor
+      other._span = {};
+      other._win = MPI_WIN_NULL;
+    }
+    return *this;
+  }
+
+  auto operator=(MPI_shared_array<T>&& other) noexcept -> MPI_shared_array& {
     if (_span.data() != other._span.data()) {
       // free any existing window owned by this object before taking ownership of the new one
       reset();

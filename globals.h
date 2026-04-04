@@ -141,7 +141,7 @@ struct LevelAutoion {
   int upperlevelindex;  // this will be for a level index of the upper ion.
                         // Note: level of the lower ion should also be at higher energy than of the higher ion
 };
-inline std::span<LevelAutoion> allautoion;
+inline MPI_shared_array<LevelAutoion> allautoion;
 
 inline MPI_shared_array<const int> allphixstargets_levelindex;  // index of upper ion level after photoionisation
 inline MPI_shared_array<const double>
@@ -150,46 +150,46 @@ inline MPI_shared_array<const double>
 struct AllLevels {
   // these arrays are indexed by uniquelevelindex, which can be derived from the element, ion, level
 
-  std::span<const double> epsilon;
-  std::span<const float> statweight;
+  MPI_shared_array<const double> epsilon;
+  MPI_shared_array<const float> statweight;
 
   // index into globals::alltrans for first down transition from each level
-  std::span<const int> alltrans_startdown;
+  MPI_shared_array<const int> alltrans_startdown;
 
   // Number of down transitions from each level
-  std::span<const int> ndowntrans;
+  MPI_shared_array<const int> ndowntrans;
 
   // Number of up transitions from each level
-  std::span<const int> nuptrans;
+  MPI_shared_array<const int> nuptrans;
 
   // Number of autoionizing transition from this level
-  std::span<int> nautoiondowntrans;
+  MPI_shared_array<int> nautoiondowntrans;
 
   // Number of di-el captures up from this level
-  std::span<int> nautoionuptrans;
+  MPI_shared_array<int> nautoionuptrans;
 
   // index into globals::allautoion for first autoion from this level
-  std::span<int> allautoion_start;
+  MPI_shared_array<int> allautoion_start;
 
-  std::span<int> closestgroundlevelcont;
+  MPI_shared_array<int> closestgroundlevelcont;
 
   // index to start of photoionisation cross-sections table in global::allphixs
-  std::span<int> phixsstart;
+  MPI_shared_array<int> phixsstart;
 
   // number of target levels for photoionisation
-  std::span<int> nphixstargets;
+  MPI_shared_array<int> nphixstargets;
 
   // index into globals::allphixstargets for the first target level
-  std::span<int> phixstargetstart;
+  MPI_shared_array<int> phixstargetstart;
 
   // index of the bound-free continuum (for first target) sorted by element/ion/level/phixstargetindex (not an index
   // into the nu_edge-sorted allcont list!)
-  std::span<int> bflist_start;
+  MPI_shared_array<int> bflist_start;
 
   // index into cellcache allmacroatomictransitions for each level. This is
   // different to the alltrans index because two types of down transitions are stored separately
   // per level as well as the up transitions
-  std::span<const int> matransblock_start;
+  MPI_shared_array<const int> matransblock_start;
 };
 
 inline AllLevels alllevels{};

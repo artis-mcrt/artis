@@ -76,8 +76,8 @@ std::vector<int> mgi_of_nonemptymgi;
 std::vector<double> totmassnuclide{};  // total mass of each nuclide in the ejecta
 
 MPI_shared_array<float> initnucmassfrac_allcells{};
-std::span<float> initmassfracuntrackedstable_allcells{};
-std::span<int> elements_uppermost_ion_allcells{};  // Highest ion index that has a significant population
+MPI_shared_array<float> initmassfracuntrackedstable_allcells{};
+MPI_shared_array<int> elements_uppermost_ion_allcells{};  // Highest ion index that has a significant population
 
 // indexed by global rank
 std::vector<int> ranks_nstart;
@@ -92,7 +92,7 @@ struct ModelGridCellInput {
   float initelectronfrac = 0.4;  // Ye: electrons (or protons) per nucleon
   float initenergyq = 0.;  // q: energy in the model at tmin to use with USE_MODEL_INITIAL_ENERGY [erg/g]
 };
-std::span<ModelGridCellInput> modelgrid_input{};
+MPI_shared_array<ModelGridCellInput> modelgrid_input{};
 
 enum class BoundaryType : std::uint8_t { INNER, OUTER };
 
@@ -354,14 +354,13 @@ void allocate_nonemptycells_composition_cooling() {
   const ptrdiff_t nonempty_npts_model_ptrdifft = get_nonempty_npts_model();
   const auto nelements = get_nelements();
 
-  initmassfracuntrackedstable_allcells = MPI_shared_malloc_span<float>(nonempty_npts_model_ptrdifft * nelements, 0.);
-  elem_meanweight_allcells = MPI_shared_malloc_span<float>(nonempty_npts_model_ptrdifft * nelements, 0.);
-  elements_uppermost_ion_allcells = MPI_shared_malloc_span<int>(nonempty_npts_model_ptrdifft * nelements, -1);
-  elem_massfracs_allcells = MPI_shared_malloc_span<float>(nonempty_npts_model_ptrdifft * nelements, 0.);
-  ion_groundlevelpops_allcells = MPI_shared_malloc_span<float>(nonempty_npts_model_ptrdifft * get_includedions(), 0.);
-  ion_partfuncts_allcells = MPI_shared_malloc_span<float>(nonempty_npts_model_ptrdifft * get_includedions(), 0.);
-  kpkt::ion_cooling_contribs_allcells =
-      MPI_shared_malloc_span<double>(nonempty_npts_model_ptrdifft * get_includedions(), 0.);
+  initmassfracuntrackedstable_allcells.allocate(nonempty_npts_model_ptrdifft * nelements, 0.);
+  elem_meanweight_allcells.allocate(nonempty_npts_model_ptrdifft * nelements, 0.);
+  elements_uppermost_ion_allcells.allocate(nonempty_npts_model_ptrdifft * nelements, -1);
+  elem_massfracs_allcells.allocate(nonempty_npts_model_ptrdifft * nelements, 0.);
+  ion_groundlevelpops_allcells.allocate(nonempty_npts_model_ptrdifft * get_includedions(), 0.);
+  ion_partfuncts_allcells.allocate(nonempty_npts_model_ptrdifft * get_includedions(), 0.);
+  kpkt::ion_cooling_contribs_allcells.allocate(nonempty_npts_model_ptrdifft * get_includedions(), 0.);
 
   // -1 indicates that there is currently no information on the nlte populations
   nltepops_allcells = MPI_shared_array<double>(nonempty_npts_model_ptrdifft * globals::total_nlte_levels, -1.);
@@ -444,16 +443,16 @@ void allocate_nonemptymodelcells() {
   }
 
   assert_always(rho_allcells.empty());
-  rho_allcells = MPI_shared_malloc_span<float>(nonempty_npts_model, -1.);
-  Te_allcells = MPI_shared_malloc_span<float>(nonempty_npts_model, -1.);
-  TJ_allcells = MPI_shared_malloc_span<float>(nonempty_npts_model, -1.);
-  TR_allcells = MPI_shared_malloc_span<float>(nonempty_npts_model, -1.);
-  W_allcells = MPI_shared_malloc_span<float>(nonempty_npts_model, -1.);
-  nne_allcells = MPI_shared_malloc_span<float>(nonempty_npts_model, -1.);
-  nnetot_allcells = MPI_shared_malloc_span<float>(nonempty_npts_model, -1.);
-  kappagrey_allcells = MPI_shared_malloc_span<float>(nonempty_npts_model, 0.);
-  grey_depth_allcells = MPI_shared_malloc_span<float>(nonempty_npts_model, 0.);
-  thick_allcells = MPI_shared_malloc_span<int>(nonempty_npts_model, 0);
+  rho_allcells.allocate(nonempty_npts_model, -1.);
+  Te_allcells.allocate(nonempty_npts_model, -1.);
+  TJ_allcells.allocate(nonempty_npts_model, -1.);
+  TR_allcells.allocate(nonempty_npts_model, -1.);
+  W_allcells.allocate(nonempty_npts_model, -1.);
+  nne_allcells.allocate(nonempty_npts_model, -1.);
+  nnetot_allcells.allocate(nonempty_npts_model, -1.);
+  kappagrey_allcells.allocate(nonempty_npts_model, 0.);
+  grey_depth_allcells.allocate(nonempty_npts_model, 0.);
+  thick_allcells.allocate(nonempty_npts_model, 0);
   const auto modelgrid_mem_usage = nonempty_npts_model * ((sizeof(float) * 9) + sizeof(double) + sizeof(int));
   printlnlog(
       "[info] mem_usage: the modelgrid properties (temperatures and electron densities) occupies {:.3f} MB (node "
@@ -1897,7 +1896,7 @@ void read_ejecta_model() {
   model_type = detected_dim;
 
   assert_always(modelgrid_input.empty());
-  modelgrid_input = MPI_shared_malloc_span<ModelGridCellInput>(npts_model + 1, ModelGridCellInput{});
+  modelgrid_input.allocate(npts_model + 1, ModelGridCellInput{});
   modelgrid_numpropcells.resize(npts_model + 1, 0);
   nonemptymgi_of_mgi.resize(npts_model + 1, -1);
 

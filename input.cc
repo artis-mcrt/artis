@@ -754,9 +754,9 @@ void setup_phixs_list() {
     int bfestimindex;
   };
 
-  auto groundcont_nu_edge = MPI_shared_malloc_span<double>(globals::nbfcontinua_ground);
-  auto groundcont_element = MPI_shared_malloc_span<int>(globals::nbfcontinua_ground);
-  auto groundcont_ion = MPI_shared_malloc_span<int>(globals::nbfcontinua_ground);
+  auto groundcont_nu_edge = MPI_shared_array<double>(globals::nbfcontinua_ground);
+  auto groundcont_element = MPI_shared_array<int>(globals::nbfcontinua_ground);
+  auto groundcont_ion = MPI_shared_array<int>(globals::nbfcontinua_ground);
 
   if (globals::rank_in_node == 0) {
     int nextgroundcontindex = 0;
@@ -787,7 +787,7 @@ void setup_phixs_list() {
   globals::groundcont_element = groundcont_element;
   globals::groundcont_ion = groundcont_ion;
 
-  auto allcont = MPI_shared_malloc_span<TempPhotoionTransitionInput>(globals::nbfcontinua);
+  auto allcont = MPI_shared_array<TempPhotoionTransitionInput>(globals::nbfcontinua);
   printlnlog("[info] mem_usage: photoionisation list occupies {:.3f} MB",
              globals::nbfcontinua * (sizeof(TempPhotoionTransitionInput)) / 1024. / 1024.);
   const auto groundcontindices = std::ranges::iota_view{0, globals::nbfcontinua_ground};
@@ -866,17 +866,17 @@ void setup_phixs_list() {
       }
     }
 
-    auto bfestim_nu_edge = MPI_shared_malloc_span<double>(std::ssize(temp_bfestim_nu_edge));
-    auto allcont_nu_edge = MPI_shared_malloc_span<double>(nbfcontinua);
-    auto allcont_element = MPI_shared_malloc_span<int>(nbfcontinua);
-    auto allcont_ion = MPI_shared_malloc_span<int>(nbfcontinua);
-    auto allcont_level = MPI_shared_malloc_span<int>(nbfcontinua);
-    auto allcont_phixstargetindex = MPI_shared_malloc_span<int>(nbfcontinua);
-    auto allcont_upperlevel = MPI_shared_malloc_span<int>(nbfcontinua);
-    auto allcont_uniquelevelindex = MPI_shared_malloc_span<int>(nbfcontinua);
-    auto allcont_probability = MPI_shared_malloc_span<double>(nbfcontinua);
-    auto allcont_index_in_groundphixslist = MPI_shared_malloc_span<int>(nbfcontinua);
-    auto allcont_bfestimindex = MPI_shared_malloc_span<int>(nbfcontinua);
+    auto bfestim_nu_edge = MPI_shared_array<double>(std::ssize(temp_bfestim_nu_edge));
+    auto allcont_nu_edge = MPI_shared_array<double>(nbfcontinua);
+    auto allcont_element = MPI_shared_array<int>(nbfcontinua);
+    auto allcont_ion = MPI_shared_array<int>(nbfcontinua);
+    auto allcont_level = MPI_shared_array<int>(nbfcontinua);
+    auto allcont_phixstargetindex = MPI_shared_array<int>(nbfcontinua);
+    auto allcont_upperlevel = MPI_shared_array<int>(nbfcontinua);
+    auto allcont_uniquelevelindex = MPI_shared_array<int>(nbfcontinua);
+    auto allcont_probability = MPI_shared_array<double>(nbfcontinua);
+    auto allcont_index_in_groundphixslist = MPI_shared_array<int>(nbfcontinua);
+    auto allcont_bfestimindex = MPI_shared_array<int>(nbfcontinua);
     if (globals::rank_in_node == 0) {
       for (int i = 0; i < std::ssize(temp_bfestim_nu_edge); i++) {
         bfestim_nu_edge[i] = temp_bfestim_nu_edge[i];
@@ -990,7 +990,7 @@ void read_autoion_data() {
 
   assert_always(allautoion_levels_are_not_nlte || allautoion_levels_are_nlte);
 
-  globals::allautoion = MPI_shared_malloc_span<globals::LevelAutoion>(temp_allautoion.size());
+  globals::allautoion = MPI_shared_array<globals::LevelAutoion>(temp_allautoion.size());
   if (globals::rank_in_node == 0) {
     std::copy_n(temp_allautoion.cbegin(), temp_allautoion.size(), globals::allautoion.data());
   }
@@ -1371,20 +1371,20 @@ void read_atomicdata_files() {
   ptrdiff_t nlevels = std::ssize(temp_alllevels);
   MPI_Bcast_safe(nlevels, 0, globals::mpi_comm_node);
 
-  auto alllevels_alltrans_startdown = MPI_shared_malloc_span<int>(nlevels);
-  auto alllevels_ndowntrans = MPI_shared_malloc_span<int>(nlevels);
-  auto alllevels_nuptrans = MPI_shared_malloc_span<int>(nlevels);
-  auto alllevels_epsilon = MPI_shared_malloc_span<double>(nlevels);
-  auto alllevels_statweight = MPI_shared_malloc_span<float>(nlevels);
-  auto alllevels_matransblock_start = MPI_shared_malloc_span<int>(nlevels);
-  globals::alllevels.allautoion_start = MPI_shared_malloc_span<int>(nlevels, -1);
-  globals::alllevels.nautoiondowntrans = MPI_shared_malloc_span<int>(nlevels, 0);
-  globals::alllevels.nautoionuptrans = MPI_shared_malloc_span<int>(nlevels, 0);
-  globals::alllevels.closestgroundlevelcont = MPI_shared_malloc_span<int>(nlevels, -1);
-  globals::alllevels.phixsstart = MPI_shared_malloc_span<int>(nlevels, -1);
-  globals::alllevels.nphixstargets = MPI_shared_malloc_span<int>(nlevels, 0);
-  globals::alllevels.phixstargetstart = MPI_shared_malloc_span<int>(nlevels, -1);
-  globals::alllevels.bflist_start = MPI_shared_malloc_span<int>(nlevels, -1);
+  auto alllevels_alltrans_startdown = MPI_shared_array<int>(nlevels);
+  auto alllevels_ndowntrans = MPI_shared_array<int>(nlevels);
+  auto alllevels_nuptrans = MPI_shared_array<int>(nlevels);
+  auto alllevels_epsilon = MPI_shared_array<double>(nlevels);
+  auto alllevels_statweight = MPI_shared_array<float>(nlevels);
+  auto alllevels_matransblock_start = MPI_shared_array<int>(nlevels);
+  globals::alllevels.allautoion_start = MPI_shared_array<int>(nlevels, -1);
+  globals::alllevels.nautoiondowntrans = MPI_shared_array<int>(nlevels, 0);
+  globals::alllevels.nautoionuptrans = MPI_shared_array<int>(nlevels, 0);
+  globals::alllevels.closestgroundlevelcont = MPI_shared_array<int>(nlevels, -1);
+  globals::alllevels.phixsstart = MPI_shared_array<int>(nlevels, -1);
+  globals::alllevels.nphixstargets = MPI_shared_array<int>(nlevels, 0);
+  globals::alllevels.phixstargetstart = MPI_shared_array<int>(nlevels, -1);
+  globals::alllevels.bflist_start = MPI_shared_array<int>(nlevels, -1);
   if (globals::rank_in_node == 0) {
     int chtransindex = 0;
     for (auto i = 0ZU; i < temp_alllevels.size(); i++) {
@@ -1398,12 +1398,12 @@ void read_atomicdata_files() {
     }
   }
   MPI_Barrier_node();
-  globals::alllevels.alltrans_startdown = alllevels_alltrans_startdown;
-  globals::alllevels.ndowntrans = alllevels_ndowntrans;
-  globals::alllevels.nuptrans = alllevels_nuptrans;
-  globals::alllevels.epsilon = alllevels_epsilon;
-  globals::alllevels.statweight = alllevels_statweight;
-  globals::alllevels.matransblock_start = alllevels_matransblock_start;
+  globals::alllevels.alltrans_startdown = std::move(alllevels_alltrans_startdown);
+  globals::alllevels.ndowntrans = std::move(alllevels_ndowntrans);
+  globals::alllevels.nuptrans = std::move(alllevels_nuptrans);
+  globals::alllevels.epsilon = std::move(alllevels_epsilon);
+  globals::alllevels.statweight = std::move(alllevels_statweight);
+  globals::alllevels.matransblock_start = std::move(alllevels_matransblock_start);
   temp_alllevels.clear();
   temp_alllevels.shrink_to_fit();
 
@@ -1421,12 +1421,12 @@ void read_atomicdata_files() {
   // create a shared all transitions list and then copy data across, freeing the local copy
   MPI_Barrier_node();
 
-  auto alltrans_lineindex = MPI_shared_malloc_span<int>(updowntranscount);
-  auto alltrans_targetlevelindex = MPI_shared_malloc_span<int>(updowntranscount);
-  auto alltrans_einstein_A = MPI_shared_malloc_span<float>(updowntranscount);
-  auto alltrans_coll_str = MPI_shared_malloc_span<float>(updowntranscount);
-  auto alltrans_osc_strength = MPI_shared_malloc_span<float>(updowntranscount);
-  auto alltrans_forbidden = MPI_shared_malloc_span<bool>(updowntranscount);
+  auto alltrans_lineindex = MPI_shared_array<int>(updowntranscount);
+  auto alltrans_targetlevelindex = MPI_shared_array<int>(updowntranscount);
+  auto alltrans_einstein_A = MPI_shared_array<float>(updowntranscount);
+  auto alltrans_coll_str = MPI_shared_array<float>(updowntranscount);
+  auto alltrans_osc_strength = MPI_shared_array<float>(updowntranscount);
+  auto alltrans_forbidden = MPI_shared_array<bool>(updowntranscount);
 
   if (globals::rank_in_node == 0) {
     assert_always(std::ssize(temp_alltranslist) == updowntranscount);
@@ -1450,12 +1450,12 @@ void read_atomicdata_files() {
 
   // create a linelist shared on node and then copy data across, freeing the local copy
 
-  auto linelist_nu = MPI_shared_malloc_span<double>(globals::nlines);
-  auto linelist_einstein_A = MPI_shared_malloc_span<float>(globals::nlines);
-  auto linelist_elementindex = MPI_shared_malloc_span<int>(globals::nlines);
-  auto linelist_ionindex = MPI_shared_malloc_span<int>(globals::nlines);
-  auto linelist_upperlevelindex = MPI_shared_malloc_span<int>(globals::nlines);
-  auto linelist_lowerlevelindex = MPI_shared_malloc_span<int>(globals::nlines);
+  auto linelist_nu = MPI_shared_array<double>(globals::nlines);
+  auto linelist_einstein_A = MPI_shared_array<float>(globals::nlines);
+  auto linelist_elementindex = MPI_shared_array<int>(globals::nlines);
+  auto linelist_ionindex = MPI_shared_array<int>(globals::nlines);
+  auto linelist_upperlevelindex = MPI_shared_array<int>(globals::nlines);
+  auto linelist_lowerlevelindex = MPI_shared_array<int>(globals::nlines);
 
   if (globals::rank_in_node == 0) {
     assert_always(std::ssize(temp_linelist) == globals::nlines);

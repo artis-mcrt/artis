@@ -34,9 +34,9 @@ std::span<const float> ion_alpha_sp;  // size is nincludedions * TABLESIZE
                                       //
 
 // the following spans are indexed by get_bflutindex()
-std::span<double> spontrecombcoeffs{};  // indexed by get_bflutindex()
-std::span<double> corrphotoioncoeffs{};  // for USE_LUT_PHOTOION = true
-std::span<double> bfcooling_coeffs{};
+MPI_shared_array<double> spontrecombcoeffs{};  // indexed by get_bflutindex()
+MPI_shared_array<double> corrphotoioncoeffs{};  // for USE_LUT_PHOTOION = true
+MPI_shared_array<double> bfcooling_coeffs{};
 
 struct GSLIntegrationParas {
   double nu_edge;
@@ -385,7 +385,7 @@ void read_recombrate_file() {
 }
 
 void precalculate_ion_alpha_sp() {
-  const auto temp_ion_alpha_sp = MPI_shared_malloc_span<float>(get_includedions() * TABLESIZE, 0.);
+  auto temp_ion_alpha_sp = MPI_shared_array<float>(get_includedions() * TABLESIZE, 0.);
   if (globals::rank_in_node == 0) {
     const auto nincludedions = get_includedions();
     for (int iter = 0; iter < TABLESIZE; iter++) {
@@ -503,20 +503,20 @@ void setup_photoion_luts() {
   assert_always(globals::nbfcontinua > 0);
   size_t mem_usage_photoionluts = 2 * TABLESIZE * globals::nbfcontinua * sizeof(double);
 
-  spontrecombcoeffs = MPI_shared_malloc_span<double>(TABLESIZE * globals::nbfcontinua);
+  spontrecombcoeffs = MPI_shared_array<double>(TABLESIZE * globals::nbfcontinua);
   if (globals::rank_in_node == 0) {
     std::ranges::fill(spontrecombcoeffs, 0.);
   }
 
   if constexpr (USE_LUT_PHOTOION) {
-    corrphotoioncoeffs = MPI_shared_malloc_span<double>(TABLESIZE * globals::nbfcontinua);
+    corrphotoioncoeffs = MPI_shared_array<double>(TABLESIZE * globals::nbfcontinua);
     if (globals::rank_in_node == 0) {
       std::ranges::fill(corrphotoioncoeffs, 0.);
     }
     mem_usage_photoionluts += TABLESIZE * globals::nbfcontinua * sizeof(double);
   }
 
-  bfcooling_coeffs = MPI_shared_malloc_span<double>(TABLESIZE * globals::nbfcontinua, 0.);
+  bfcooling_coeffs = MPI_shared_array<double>(TABLESIZE * globals::nbfcontinua, 0.);
 
   printlnlog(
       "[info] mem_usage: lookup tables derived from photoionisation (spontrecombcoeff, bfcooling and "
@@ -594,7 +594,7 @@ DEVICE_FUNC auto select_continuum_nu(int element, const int lowerion, const int 
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_spontrecombcoeff(const int uniquelevelindex,
                                                                   const int phixstargetindex, const float T_e)
     -> double {
-  return lerp_or_last(spontrecombcoeffs, uniquelevelindex, phixstargetindex, T_e);
+  return lerp_or_last(spontrecombcoeffs.span(), uniquelevelindex, phixstargetindex, T_e);
 }
 
 // multiply by upper ion population (or ground population if per_groundmultipletpop is true) and nne to get a rate
@@ -699,12 +699,13 @@ auto get_corrphotoioncoeff_ana(int element, const int ion, const int level, cons
   const double W = grid::get_W(nonemptymgi);
   const double T_R = grid::get_TR(nonemptymgi);
   const auto uniquelevelindex = get_uniquelevelindex(element, ion, level);
-  return W * lerp_or_last(corrphotoioncoeffs, uniquelevelindex, phixstargetindex, T_R);
+  return W * lerp_or_last(corrphotoioncoeffs.span(), uniquelevelindex, phixstargetindex, T_R);
 }
 
 DEVICE_FUNC auto get_bfcoolingcoeff(const int element, const int lowerion, const int lowerionlevel,
                                     const int phixstargetindex, const float T_e) -> double {
-  return lerp_or_last(bfcooling_coeffs, get_uniquelevelindex(element, lowerion, lowerionlevel), phixstargetindex, T_e);
+  return lerp_or_last(bfcooling_coeffs.span(), get_uniquelevelindex(element, lowerion, lowerionlevel), phixstargetindex,
+                      T_e);
 }
 
 // Return the photoionisation rate coefficient (corrected for stimulated emission)
@@ -729,7 +730,7 @@ DEVICE_FUNC auto get_corrphotoioncoeff(const int element, const int ion, const i
         const double W = grid::get_W(nonemptymgi);
         const double T_R = grid::get_TR(nonemptymgi);
 
-        gammacorr = W * lerp_or_last(corrphotoioncoeffs, uniquelevelindex, phixstargetindex, T_R);
+        gammacorr = W * lerp_or_last(corrphotoioncoeffs.span(), uniquelevelindex, phixstargetindex, T_R);
         const int index_in_groundlevelcontestimator = globals::alllevels.closestgroundlevelcont[uniquelevelindex];
         if (index_in_groundlevelcontestimator >= 0) {
           gammacorr *= globals::corrphotoionrenorm[(nonemptymgi * globals::nbfcontinua_ground) +
