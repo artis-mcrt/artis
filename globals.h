@@ -150,8 +150,8 @@ inline MPI_shared_array<const double>
 struct AllLevels {
   // these arrays are indexed by uniquelevelindex, which can be derived from the element, ion, level
 
-  std::span<const double> epsilon;
-  std::span<const float> statweight;
+  MPI_shared_array<const double> epsilon;
+  MPI_shared_array<const float> statweight;
 
   // index into globals::alltrans for first down transition from each level
   std::span<const int> alltrans_startdown;
