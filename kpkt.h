@@ -7,7 +7,6 @@
 #include "atomic.h"
 #include "constants.h"
 #include "globals.h"
-#include "mpi_logging.h"
 #include "packet.h"
 #include "thermalbalance.h"
 
@@ -15,7 +14,7 @@ constexpr double COOLING_UNDEFINED = -99;
 
 namespace kpkt {
 
-inline MPI_shared_array<double> ion_cooling_contribs_allcells{};
+inline std::span<double> ion_cooling_contribs_allcells{};
 inline int ncoolingterms{0};
 
 void setup_coolinglist();
