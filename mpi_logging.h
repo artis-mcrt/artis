@@ -277,10 +277,10 @@ inline auto GET_MPI_TYPE() -> MPI_Datatype {
     return MPI_BYTE;  // fallback to byte type for unsupported types
   }
 }
-
+// NOLINT(cppcoreguidelines-special-member-functions)
 template <typename T>
 class MPI_shared_array {
-  friend class MPI_shared_array<const T>;  // allow conversion from non-const to const version
+  friend class MPI_shared_array<std::add_const_t<T>>;  // allow conversion from non-const to const version
 
  private:
   MPI_Win _win{MPI_WIN_NULL};
@@ -374,6 +374,7 @@ class MPI_shared_array {
   auto operator[](const size_t index) -> T& { return _span[index]; }
   auto operator[](const size_t index) const -> const T& { return std::span<const T>{_span}[index]; }
 };
+// NOLINTEND(cppcoreguidelines-special-member-functions)
 
 // MPI operations use a 32-bit int for the count, so we need to chunk large arrays
 constexpr std::ptrdiff_t MPI_COUNT_MAX = std::numeric_limits<int>::max();

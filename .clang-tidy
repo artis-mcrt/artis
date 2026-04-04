@@ -34,6 +34,7 @@ Checks: [
         -google-readability-todo,
         -hicpp-vararg,
         -hicpp-no-array-decay,
+        -hicpp-special-member-functions,
         -llvmlibc-*,
         -llvm-use-ranges,
         -llvm-header-guard,
