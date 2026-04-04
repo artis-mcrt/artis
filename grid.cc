@@ -443,16 +443,16 @@ void allocate_nonemptymodelcells() {
   }
 
   assert_always(rho_allcells.empty());
-  rho_allcells = MPI_shared_malloc_span<float>(nonempty_npts_model, -1.);
-  Te_allcells = MPI_shared_malloc_span<float>(nonempty_npts_model, -1.);
-  TJ_allcells = MPI_shared_malloc_span<float>(nonempty_npts_model, -1.);
-  TR_allcells = MPI_shared_malloc_span<float>(nonempty_npts_model, -1.);
-  W_allcells = MPI_shared_malloc_span<float>(nonempty_npts_model, -1.);
-  nne_allcells = MPI_shared_malloc_span<float>(nonempty_npts_model, -1.);
-  nnetot_allcells = MPI_shared_malloc_span<float>(nonempty_npts_model, -1.);
-  kappagrey_allcells = MPI_shared_malloc_span<float>(nonempty_npts_model, 0.);
-  grey_depth_allcells = MPI_shared_malloc_span<float>(nonempty_npts_model, 0.);
-  thick_allcells = MPI_shared_malloc_span<int>(nonempty_npts_model, 0);
+  rho_allcells = MPI_shared_array<float>(nonempty_npts_model, -1.);
+  Te_allcells = MPI_shared_array<float>(nonempty_npts_model, -1.);
+  TJ_allcells = MPI_shared_array<float>(nonempty_npts_model, -1.);
+  TR_allcells = MPI_shared_array<float>(nonempty_npts_model, -1.);
+  W_allcells = MPI_shared_array<float>(nonempty_npts_model, -1.);
+  nne_allcells = MPI_shared_array<float>(nonempty_npts_model, -1.);
+  nnetot_allcells = MPI_shared_array<float>(nonempty_npts_model, -1.);
+  kappagrey_allcells = MPI_shared_array<float>(nonempty_npts_model, 0.);
+  grey_depth_allcells = MPI_shared_array<float>(nonempty_npts_model, 0.);
+  thick_allcells = MPI_shared_array<int>(nonempty_npts_model, 0);
   const auto modelgrid_mem_usage = nonempty_npts_model * ((sizeof(float) * 9) + sizeof(double) + sizeof(int));
   printlnlog(
       "[info] mem_usage: the modelgrid properties (temperatures and electron densities) occupies {:.3f} MB (node "

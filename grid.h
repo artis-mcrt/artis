@@ -3,7 +3,6 @@
 
 #include <cmath>
 #include <cstddef>
-#include <span>
 #include <tuple>
 
 #include "constants.h"
@@ -15,16 +14,16 @@
 namespace grid {
 
 // these arrays are indexed by nonemptymgi
-inline std::span<float> rho_allcells;
-inline std::span<float> Te_allcells;
-inline std::span<float> TJ_allcells;
-inline std::span<float> TR_allcells;
-inline std::span<float> W_allcells;
-inline std::span<float> nne_allcells;
-inline std::span<float> nnetot_allcells;  // total electron density (free + bound).
-inline std::span<float> kappagrey_allcells;
-inline std::span<float> grey_depth_allcells;  // Grey optical depth to surface of the modelgridcell
-inline std::span<int>
+inline MPI_shared_array<float> rho_allcells;
+inline MPI_shared_array<float> Te_allcells;
+inline MPI_shared_array<float> TJ_allcells;
+inline MPI_shared_array<float> TR_allcells;
+inline MPI_shared_array<float> W_allcells;
+inline MPI_shared_array<float> nne_allcells;
+inline MPI_shared_array<float> nnetot_allcells;  // total electron density (free + bound).
+inline MPI_shared_array<float> kappagrey_allcells;
+inline MPI_shared_array<float> grey_depth_allcells;  // Grey optical depth to surface of the modelgridcell
+inline MPI_shared_array<int>
     thick_allcells;  // whether the cell is optically thick (1) or not (0), or (2) thick for vpkts only
 
 inline ptrdiff_t ngrid{0};
