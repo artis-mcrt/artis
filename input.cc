@@ -1371,14 +1371,14 @@ void read_atomicdata_files() {
   ptrdiff_t nlevels = std::ssize(temp_alllevels);
   MPI_Bcast_safe(nlevels, 0, globals::mpi_comm_node);
 
-  auto alllevels_alltrans_startdown = MPI_shared_array<int>(nlevels);
-  auto alllevels_ndowntrans = MPI_shared_array<int>(nlevels);
-  auto alllevels_nuptrans = MPI_shared_array<int>(nlevels);
+  auto alllevels_alltrans_startdown = MPI_shared_malloc_span<int>(nlevels);
+  auto alllevels_ndowntrans = MPI_shared_malloc_span<int>(nlevels);
+  auto alllevels_nuptrans = MPI_shared_malloc_span<int>(nlevels);
   auto alllevels_epsilon = MPI_shared_array<double>(nlevels);
   auto alllevels_statweight = MPI_shared_array<float>(nlevels);
-  auto alllevels_matransblock_start = MPI_shared_array<int>(nlevels);
+  auto alllevels_matransblock_start = MPI_shared_malloc_span<int>(nlevels);
   globals::alllevels.allautoion_start = MPI_shared_malloc_span<int>(nlevels, -1);
-  globals::alllevels.nautoiondowntrans = MPI_shared_array<int>(nlevels, 0);
+  globals::alllevels.nautoiondowntrans = MPI_shared_malloc_span<int>(nlevels, 0);
   globals::alllevels.nautoionuptrans = MPI_shared_malloc_span<int>(nlevels, 0);
   globals::alllevels.closestgroundlevelcont = MPI_shared_malloc_span<int>(nlevels, -1);
   globals::alllevels.phixsstart = MPI_shared_malloc_span<int>(nlevels, -1);
@@ -1398,12 +1398,12 @@ void read_atomicdata_files() {
     }
   }
   MPI_Barrier_node();
-  globals::alllevels.alltrans_startdown = std::move(alllevels_alltrans_startdown);
-  globals::alllevels.ndowntrans = std::move(alllevels_ndowntrans);
-  globals::alllevels.nuptrans = std::move(alllevels_nuptrans);
+  globals::alllevels.alltrans_startdown = alllevels_alltrans_startdown;
+  globals::alllevels.ndowntrans = alllevels_ndowntrans;
+  globals::alllevels.nuptrans = alllevels_nuptrans;
   globals::alllevels.epsilon = std::move(alllevels_epsilon);
   globals::alllevels.statweight = std::move(alllevels_statweight);
-  globals::alllevels.matransblock_start = std::move(alllevels_matransblock_start);
+  globals::alllevels.matransblock_start = alllevels_matransblock_start;
   temp_alllevels.clear();
   temp_alllevels.shrink_to_fit();
 
