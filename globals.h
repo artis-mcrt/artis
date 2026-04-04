@@ -177,7 +177,7 @@ struct AllLevels {
   std::span<int> phixsstart;
 
   // number of target levels for photoionisation
-  std::span<int> nphixstargets;
+  MPI_shared_array<int> nphixstargets;
 
   // index into globals::allphixstargets for the first target level
   std::span<int> phixstargetstart;

@@ -1382,7 +1382,7 @@ void read_atomicdata_files() {
   globals::alllevels.nautoionuptrans = MPI_shared_malloc_span<int>(nlevels, 0);
   globals::alllevels.closestgroundlevelcont = MPI_shared_malloc_span<int>(nlevels, -1);
   globals::alllevels.phixsstart = MPI_shared_malloc_span<int>(nlevels, -1);
-  globals::alllevels.nphixstargets = MPI_shared_malloc_span<int>(nlevels, 0);
+  globals::alllevels.nphixstargets = MPI_shared_array<int>(nlevels, 0);
   globals::alllevels.phixstargetstart = MPI_shared_malloc_span<int>(nlevels, -1);
   globals::alllevels.bflist_start = MPI_shared_malloc_span<int>(nlevels, -1);
   if (globals::rank_in_node == 0) {
