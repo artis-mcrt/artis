@@ -360,8 +360,7 @@ void allocate_nonemptycells_composition_cooling() {
   elem_massfracs_allcells = MPI_shared_malloc_span<float>(nonempty_npts_model_ptrdifft * nelements, 0.);
   ion_groundlevelpops_allcells = MPI_shared_malloc_span<float>(nonempty_npts_model_ptrdifft * get_includedions(), 0.);
   ion_partfuncts_allcells = MPI_shared_malloc_span<float>(nonempty_npts_model_ptrdifft * get_includedions(), 0.);
-  kpkt::ion_cooling_contribs_allcells =
-      MPI_shared_malloc_span<double>(nonempty_npts_model_ptrdifft * get_includedions(), 0.);
+  kpkt::ion_cooling_contribs_allcells = MPI_shared_array<double>(nonempty_npts_model_ptrdifft * get_includedions(), 0.);
 
   // -1 indicates that there is currently no information on the nlte populations
   nltepops_allcells = MPI_shared_array<double>(nonempty_npts_model_ptrdifft * globals::total_nlte_levels, -1.);
