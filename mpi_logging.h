@@ -341,8 +341,6 @@ class MPI_shared_array {
     }
   }
   // Conversion to a mutable span is only allowed on non-const objects.
-  explicit operator std::span<T>() { return _span; }
-  // Conversion to a read-only span is allowed on const objects.
   explicit operator std::span<const T>() const { return _span; }
   // Mutable span accessor.
   [[nodiscard]] auto span() -> std::span<T> { return _span; }
