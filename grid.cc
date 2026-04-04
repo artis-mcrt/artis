@@ -76,8 +76,8 @@ std::vector<int> mgi_of_nonemptymgi;
 std::vector<double> totmassnuclide{};  // total mass of each nuclide in the ejecta
 
 MPI_shared_array<float> initnucmassfrac_allcells{};
-std::span<float> initmassfracuntrackedstable_allcells{};
-std::span<int> elements_uppermost_ion_allcells{};  // Highest ion index that has a significant population
+MPI_shared_array<float> initmassfracuntrackedstable_allcells{};
+MPI_shared_array<int> elements_uppermost_ion_allcells{};  // Highest ion index that has a significant population
 
 // indexed by global rank
 std::vector<int> ranks_nstart;
@@ -354,12 +354,12 @@ void allocate_nonemptycells_composition_cooling() {
   const ptrdiff_t nonempty_npts_model_ptrdifft = get_nonempty_npts_model();
   const auto nelements = get_nelements();
 
-  initmassfracuntrackedstable_allcells = MPI_shared_malloc_span<float>(nonempty_npts_model_ptrdifft * nelements, 0.);
-  elem_meanweight_allcells = MPI_shared_malloc_span<float>(nonempty_npts_model_ptrdifft * nelements, 0.);
-  elements_uppermost_ion_allcells = MPI_shared_malloc_span<int>(nonempty_npts_model_ptrdifft * nelements, -1);
-  elem_massfracs_allcells = MPI_shared_malloc_span<float>(nonempty_npts_model_ptrdifft * nelements, 0.);
-  ion_groundlevelpops_allcells = MPI_shared_malloc_span<float>(nonempty_npts_model_ptrdifft * get_includedions(), 0.);
-  ion_partfuncts_allcells = MPI_shared_malloc_span<float>(nonempty_npts_model_ptrdifft * get_includedions(), 0.);
+  initmassfracuntrackedstable_allcells = MPI_shared_array<float>(nonempty_npts_model_ptrdifft * nelements, 0.);
+  elem_meanweight_allcells = MPI_shared_array<float>(nonempty_npts_model_ptrdifft * nelements, 0.);
+  elements_uppermost_ion_allcells = MPI_shared_array<int>(nonempty_npts_model_ptrdifft * nelements, -1);
+  elem_massfracs_allcells = MPI_shared_array<float>(nonempty_npts_model_ptrdifft * nelements, 0.);
+  ion_groundlevelpops_allcells = MPI_shared_array<float>(nonempty_npts_model_ptrdifft * get_includedions(), 0.);
+  ion_partfuncts_allcells = MPI_shared_array<float>(nonempty_npts_model_ptrdifft * get_includedions(), 0.);
   kpkt::ion_cooling_contribs_allcells = MPI_shared_array<double>(nonempty_npts_model_ptrdifft * get_includedions(), 0.);
 
   // -1 indicates that there is currently no information on the nlte populations
