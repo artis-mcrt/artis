@@ -1421,12 +1421,12 @@ void read_atomicdata_files() {
   // create a shared all transitions list and then copy data across, freeing the local copy
   MPI_Barrier_node();
 
-  auto alltrans_lineindex = MPI_shared_malloc_span<int>(updowntranscount);
-  auto alltrans_targetlevelindex = MPI_shared_malloc_span<int>(updowntranscount);
-  auto alltrans_einstein_A = MPI_shared_malloc_span<float>(updowntranscount);
-  auto alltrans_coll_str = MPI_shared_malloc_span<float>(updowntranscount);
-  auto alltrans_osc_strength = MPI_shared_malloc_span<float>(updowntranscount);
-  auto alltrans_forbidden = MPI_shared_malloc_span<bool>(updowntranscount);
+  auto alltrans_lineindex = MPI_shared_array<int>(updowntranscount);
+  auto alltrans_targetlevelindex = MPI_shared_array<int>(updowntranscount);
+  auto alltrans_einstein_A = MPI_shared_array<float>(updowntranscount);
+  auto alltrans_coll_str = MPI_shared_array<float>(updowntranscount);
+  auto alltrans_osc_strength = MPI_shared_array<float>(updowntranscount);
+  auto alltrans_forbidden = MPI_shared_array<bool>(updowntranscount);
 
   if (globals::rank_in_node == 0) {
     assert_always(std::ssize(temp_alltranslist) == updowntranscount);
@@ -1442,11 +1442,11 @@ void read_atomicdata_files() {
   temp_alltranslist.clear();
   temp_alltranslist.shrink_to_fit();
 
-  globals::alltrans.targetlevelindex = alltrans_targetlevelindex;
-  globals::alltrans.einstein_A = alltrans_einstein_A;
-  globals::alltrans.coll_str = alltrans_coll_str;
-  globals::alltrans.osc_strength = alltrans_osc_strength;
-  globals::alltrans.forbidden = alltrans_forbidden;
+  globals::alltrans.targetlevelindex = std::move(alltrans_targetlevelindex);
+  globals::alltrans.einstein_A = std::move(alltrans_einstein_A);
+  globals::alltrans.coll_str = std::move(alltrans_coll_str);
+  globals::alltrans.osc_strength = std::move(alltrans_osc_strength);
+  globals::alltrans.forbidden = std::move(alltrans_forbidden);
 
   // create a linelist shared on node and then copy data across, freeing the local copy
 
@@ -1533,7 +1533,7 @@ void read_atomicdata_files() {
     assert_always(uptransid != -1);
     alltrans_lineindex[uptransid] = lineindex;
   }
-  globals::alltrans.lineindex = alltrans_lineindex;
+  globals::alltrans.lineindex = std::move(alltrans_lineindex);
 
   printlnlog("  took {}s", std::time(nullptr) - time_start_establish_linelist_connections);
   MPI_Barrier_node();

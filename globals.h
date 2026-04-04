@@ -123,12 +123,12 @@ inline double max_path_step;
 inline MPI_shared_array<float> allphixs{};
 
 struct AllTransitions {
-  std::span<const int> lineindex;
-  std::span<const int> targetlevelindex;
-  std::span<const float> einstein_A;
-  std::span<const float> coll_str;
-  std::span<const float> osc_strength;
-  std::span<const bool> forbidden;
+  MPI_shared_array<const int> lineindex;
+  MPI_shared_array<const int> targetlevelindex;
+  MPI_shared_array<const float> einstein_A;
+  MPI_shared_array<const float> coll_str;
+  MPI_shared_array<const float> osc_strength;
+  MPI_shared_array<const bool> forbidden;
 };
 inline AllTransitions alltrans;
 
