@@ -154,16 +154,16 @@ struct AllLevels {
   MPI_shared_array<const float> statweight;
 
   // index into globals::alltrans for first down transition from each level
-  std::span<const int> alltrans_startdown;
+  MPI_shared_array<const int> alltrans_startdown;
 
   // Number of down transitions from each level
-  std::span<const int> ndowntrans;
+  MPI_shared_array<const int> ndowntrans;
 
   // Number of up transitions from each level
-  std::span<const int> nuptrans;
+  MPI_shared_array<const int> nuptrans;
 
   // Number of autoionizing transition from this level
-  std::span<int> nautoiondowntrans;
+  MPI_shared_array<int> nautoiondowntrans;
 
   // Number of di-el captures up from this level
   std::span<int> nautoionuptrans;
