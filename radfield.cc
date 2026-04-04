@@ -719,12 +719,12 @@ void close_file() {
 
   if (MULTIBIN_RADFIELD_MODEL_ON) {
     radfieldbins = {};
-    radfieldbin_solutions_W = {};
-    radfieldbin_solutions_T_R = {};
+    radfieldbin_solutions_W.reset();
+    radfieldbin_solutions_T_R.reset();
   }
 
   if constexpr (DETAILED_BF_ESTIMATORS_ON) {
-    prev_bfrate_normed = {};
+    prev_bfrate_normed.reset();
   }
 }
 

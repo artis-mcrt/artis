@@ -1119,7 +1119,7 @@ void setup_decaypath_energy_per_mass() {
   MPI_Barrier_allranks();
 }
 
-void free_decaypath_energy_per_mass() { decaypath_energy_per_mass = {}; }
+void free_decaypath_energy_per_mass() { decaypath_energy_per_mass.reset(); }
 
 // energy release rate in form of kinetic energy of positrons, electrons, and alpha particles in [erg/s/g]
 [[nodiscard]] auto get_particle_injection_rate(const int nonemptymgi, const double t, const DecayType decaytype)

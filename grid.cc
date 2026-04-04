@@ -490,7 +490,7 @@ void allocate_nonemptymodelcells() {
     std::ranges::fill(globals::gammaestimator_save, 0.);
 #endif
   } else {
-    globals::corrphotoionrenorm = {};
+    globals::corrphotoionrenorm.reset();
     globals::gammaestimator.clear();
 #ifdef DO_TITER
     globals::gammaestimator_save.clear();
