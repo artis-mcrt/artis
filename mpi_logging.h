@@ -301,23 +301,7 @@ class MPI_shared_array {
 
   auto operator=(const MPI_shared_array<T>&) -> MPI_shared_array& = delete;
 
-  template <typename U>
-    requires std::is_same_v<U, std::remove_const_t<T>>
-  auto operator=(MPI_shared_array<U>&& other_) noexcept -> MPI_shared_array& {
-    auto other = std::move(other_);
-    if (_span.data() != other._span.data()) {
-      // free any existing window owned by this object before taking ownership of the new one
-      reset();
-      _span = static_cast<std::span<T>>(other._span);
-      _win = other._win;
-      // prevent the other object from freeing the window in its destructor
-      other._span = {};
-      other._win = MPI_WIN_NULL;
-    }
-    return *this;
-  }
-
-  auto operator=(MPI_shared_array<T>&& other_) noexcept -> MPI_shared_array& {
+  auto operator=(MPI_shared_array<std::remove_const_t<T>>&& other_) noexcept -> MPI_shared_array& {
     auto other = std::move(other_);
     if (_span.data() != other._span.data()) {
       // free any existing window owned by this object before taking ownership of the new one

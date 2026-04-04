@@ -1450,7 +1450,7 @@ void read_atomicdata_files() {
 
   // create a linelist shared on node and then copy data across, freeing the local copy
 
-  auto linelist_nu = MPI_shared_malloc_span<double>(globals::nlines);
+  auto linelist_nu = MPI_shared_array<double>(globals::nlines);
   auto linelist_einstein_A = MPI_shared_malloc_span<float>(globals::nlines);
   auto linelist_elementindex = MPI_shared_malloc_span<int>(globals::nlines);
   auto linelist_ionindex = MPI_shared_malloc_span<int>(globals::nlines);
@@ -1472,7 +1472,7 @@ void read_atomicdata_files() {
   temp_linelist.shrink_to_fit();
   MPI_Barrier_node();
 
-  globals::linelist.nu = linelist_nu;
+  globals::linelist.nu = std::move(linelist_nu);
   globals::linelist.einstein_A = linelist_einstein_A;
   globals::linelist.elementindex = linelist_elementindex;
   globals::linelist.ionindex = linelist_ionindex;
