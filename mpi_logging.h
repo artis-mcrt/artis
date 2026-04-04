@@ -292,9 +292,8 @@ class MPI_shared_array {
   explicit MPI_shared_array(const ptrdiff_t num_allranks, const T& initval = {}) { allocate(num_allranks, initval); }
 
   // copy constructor is deleted to avoid avoid multiple owners of the same MPI window, but move constructor is allowed
-  MPI_shared_array(const MPI_shared_array<std::remove_cv_t<T>>&) = delete;
-  explicit MPI_shared_array(MPI_shared_array<std::remove_cv_t<T>>&& other) noexcept
-      : _win(other._win), _span(other._span) {
+  MPI_shared_array(const MPI_shared_array&) = delete;
+  MPI_shared_array(MPI_shared_array&& other) noexcept : _win(other._win), _span(other._span) {
     // prevent the other object from freeing the window in its destructor
     other._win = MPI_WIN_NULL;
     other._span = {};
@@ -304,7 +303,8 @@ class MPI_shared_array {
 
   template <typename U>
     requires std::is_same_v<U, std::remove_const_t<T>>
-  auto operator=(MPI_shared_array<U>&& other) noexcept -> MPI_shared_array& {
+  auto operator=(MPI_shared_array<U>&& other_) noexcept -> MPI_shared_array& {
+    auto other = std::move(other_);
     if (_span.data() != other._span.data()) {
       // free any existing window owned by this object before taking ownership of the new one
       reset();
