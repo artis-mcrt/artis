@@ -361,7 +361,7 @@ jobs:
               uses: fortran-lang/setup-fortran@v1.9.0
               with:
                   compiler: nvidia-hpc
-                  version: 26.3
+                  version: 26.1
 
             - name: Set nvc++ as compiler
               run: |
