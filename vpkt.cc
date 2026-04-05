@@ -580,9 +580,9 @@ void read_vpkt_grid(const int my_rank, const int nts) {
 }  // anonymous namespace
 
 void remove_temp_vpkt_file(const int nts, const int my_rank) {
-  const std::array<std::string, 3> filenames{std::format("vspecpol_{:04d}_ts{}.tmp", my_rank, nts),
-                                             std::format("vpkt_grid_{:04d}_ts{}.tmp", my_rank, nts),
-                                             std::format("vpackets_{:04d}_ts{}.tmp", my_rank, nts)};
+  const std::array filenames{std::format("vspecpol_{:04d}_ts{}.tmp", my_rank, nts),
+                             std::format("vpkt_grid_{:04d}_ts{}.tmp", my_rank, nts),
+                             std::format("vpackets_{:04d}_ts{}.tmp", my_rank, nts)};
 
   for (const auto& filename : filenames) {
     if (std::filesystem::remove(filename)) {
