@@ -751,7 +751,6 @@ void setup_phixs_list() {
     int uniquelevelindex;
     double probability;
     int index_in_groundphixslist;
-    int bfestimindex;
   };
 
   auto groundcont_nu_edge = MPI_shared_array<double>(globals::nbfcontinua_ground);
@@ -787,7 +786,7 @@ void setup_phixs_list() {
   globals::groundcont_element = std::move(groundcont_element);
   globals::groundcont_ion = std::move(groundcont_ion);
 
-  auto allcont = MPI_shared_malloc_span<TempPhotoionTransitionInput>(globals::nbfcontinua);
+  auto allcont = MPI_shared_array<TempPhotoionTransitionInput>(globals::nbfcontinua);
   printlnlog("[info] mem_usage: photoionisation list occupies {:.3f} MB",
              globals::nbfcontinua * (sizeof(TempPhotoionTransitionInput)) / 1024. / 1024.);
   const auto groundcontindices = std::ranges::iota_view{0, globals::nbfcontinua_ground};
@@ -832,7 +831,6 @@ void setup_phixs_list() {
               .uniquelevelindex = uniquelevelindex,
               .probability = get_phixsprobability(uniquelevelindex, phixstargetindex),
               .index_in_groundphixslist = index_in_groundphixslist,
-              .bfestimindex = -1,
           };
 
           allcontindex++;
@@ -855,17 +853,6 @@ void setup_phixs_list() {
     }
     MPI_Barrier_node();
 
-    for (int i = 0; i < nbfcontinua; i++) {
-      if (DETAILED_BF_ESTIMATORS_ON &&
-          LEVEL_HAS_BFEST(get_atomicnumber(allcont[i].element), get_ionstage(allcont[i].element, allcont[i].ion),
-                          allcont[i].level)) {
-        allcont[i].bfestimindex = static_cast<int>(temp_bfestim_nu_edge.size());
-        temp_bfestim_nu_edge.push_back(allcont[i].nu_edge);
-      } else {
-        allcont[i].bfestimindex = -1;
-      }
-    }
-
     auto bfestim_nu_edge = MPI_shared_array<double>(std::ssize(temp_bfestim_nu_edge));
     auto allcont_nu_edge = MPI_shared_array<double>(nbfcontinua);
     auto allcont_element = MPI_shared_array<int>(nbfcontinua);
@@ -876,7 +863,6 @@ void setup_phixs_list() {
     auto allcont_uniquelevelindex = MPI_shared_array<int>(nbfcontinua);
     auto allcont_probability = MPI_shared_array<double>(nbfcontinua);
     auto allcont_index_in_groundphixslist = MPI_shared_array<int>(nbfcontinua);
-    auto allcont_bfestimindex = MPI_shared_array<int>(nbfcontinua);
     if (globals::rank_in_node == 0) {
       for (int i = 0; i < std::ssize(temp_bfestim_nu_edge); i++) {
         bfestim_nu_edge[i] = temp_bfestim_nu_edge[i];
@@ -891,7 +877,6 @@ void setup_phixs_list() {
         allcont_uniquelevelindex[i] = allcont[i].uniquelevelindex;
         allcont_probability[i] = allcont[i].probability;
         allcont_index_in_groundphixslist[i] = allcont[i].index_in_groundphixslist;
-        allcont_bfestimindex[i] = allcont[i].bfestimindex;
       }
     }
     MPI_Barrier_node();
@@ -905,8 +890,19 @@ void setup_phixs_list() {
     globals::allcont.uniquelevelindex = std::move(allcont_uniquelevelindex);
     globals::allcont.probability = std::move(allcont_probability);
     globals::allcont.index_in_groundphixslist = std::move(allcont_index_in_groundphixslist);
-    globals::allcont.bfestimindex = std::move(allcont_bfestimindex);
 
+    auto allcont_bfestimindex = MPI_shared_array<int>(nbfcontinua);
+    for (int i = 0; i < nbfcontinua; i++) {
+      if (DETAILED_BF_ESTIMATORS_ON &&
+          LEVEL_HAS_BFEST(get_atomicnumber(allcont[i].element), get_ionstage(allcont[i].element, allcont[i].ion),
+                          allcont[i].level)) {
+        allcont_bfestimindex[i] = static_cast<int>(temp_bfestim_nu_edge.size());
+        temp_bfestim_nu_edge.push_back(allcont[i].nu_edge);
+      } else {
+        allcont_bfestimindex[i] = -1;
+      }
+    }
+    globals::allcont.bfestimindex = std::move(allcont_bfestimindex);
     setup_photoion_luts();
   }
   printlnlog("[info] bound-free estimators track bfestimcount {} photoionisation transitions",
