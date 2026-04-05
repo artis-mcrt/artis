@@ -894,10 +894,11 @@ void setup_phixs_list() {
     auto allcont_bfestimindex = MPI_shared_array<int>(nbfcontinua);
     for (int i = 0; i < nbfcontinua; i++) {
       if (DETAILED_BF_ESTIMATORS_ON &&
-          LEVEL_HAS_BFEST(get_atomicnumber(allcont[i].element), get_ionstage(allcont[i].element, allcont[i].ion),
-                          allcont[i].level)) {
+          LEVEL_HAS_BFEST(get_atomicnumber(globals::allcont.element[i]),
+                          get_ionstage(globals::allcont.element[i], globals::allcont.ion[i]),
+                          globals::allcont.level[i])) {
         allcont_bfestimindex[i] = static_cast<int>(temp_bfestim_nu_edge.size());
-        temp_bfestim_nu_edge.push_back(allcont[i].nu_edge);
+        temp_bfestim_nu_edge.push_back(globals::allcont.nu_edge[i]);
       } else {
         allcont_bfestimindex[i] = -1;
       }
