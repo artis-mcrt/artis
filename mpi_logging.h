@@ -281,6 +281,7 @@ inline auto GET_MPI_TYPE() -> MPI_Datatype {
 template <typename T>
 class MPI_shared_array {
   friend class MPI_shared_array<const T>;  // allow conversion from non-const to const version
+  friend class MPI_shared_array<std::remove_const_t<T>>;
 
  private:
   MPI_Win _win{MPI_WIN_NULL};
@@ -301,7 +302,9 @@ class MPI_shared_array {
 
   auto operator=(const MPI_shared_array<T>&) -> MPI_shared_array& = delete;
 
-  auto operator=(MPI_shared_array<std::remove_const_t<T>>&& other_) noexcept -> MPI_shared_array& {
+  template <typename U>
+    requires(std::is_same_v<T, U> || std::is_same_v<T, const U>)
+  auto operator=(MPI_shared_array<U>&& other_) noexcept -> MPI_shared_array& {
     auto other = std::move(other_);
     if (_span.data() != other._span.data()) {
       // free any existing window owned by this object before taking ownership of the new one
