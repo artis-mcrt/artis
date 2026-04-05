@@ -2157,11 +2157,11 @@ void write_grid_restart_data(const int timestep) {
     const int mgi = get_mgi_of_nonemptymgi(nonemptymgi);
 
     assert_always(globals::dep_estimator_gamma[nonemptymgi] >= 0.);
-    fprintf(gridsave_file, "%d %a %a %a %a %d %la %la %la %la %a %a",  // cppcheck-suppress invalidPrintfArgType_sint
-            mgi, get_TR(nonemptymgi), get_Te(nonemptymgi), get_W(nonemptymgi), get_TJ(nonemptymgi),
-            static_cast<int>(thick_allcells[nonemptymgi]), globals::dep_estimator_gamma[nonemptymgi],
-            globals::dep_estimator_positron[nonemptymgi], globals::dep_estimator_electron[nonemptymgi],
-            globals::dep_estimator_alpha[nonemptymgi], nne_allcells[nonemptymgi], nnetot_allcells[nonemptymgi]);
+    fprintf(gridsave_file, "%d %a %a %a %a %d %la %la %la %la %a %a", mgi, get_TR(nonemptymgi), get_Te(nonemptymgi),
+            get_W(nonemptymgi), get_TJ(nonemptymgi), static_cast<int>(thick_allcells[nonemptymgi]),
+            globals::dep_estimator_gamma[nonemptymgi], globals::dep_estimator_positron[nonemptymgi],
+            globals::dep_estimator_electron[nonemptymgi], globals::dep_estimator_alpha[nonemptymgi],
+            nne_allcells[nonemptymgi], nnetot_allcells[nonemptymgi]);
 
     if constexpr (USE_LUT_PHOTOION) {
       for (int i = 0; i < globals::nbfcontinua_ground; i++) {
