@@ -302,19 +302,22 @@ class MPI_shared_array {
 
   auto operator=(const MPI_shared_array<T>&) -> MPI_shared_array& = delete;
 
+  auto operator=(MPI_shared_array&& other) noexcept -> MPI_shared_array& {
+    // should not be assigning to an object that already owns a window
+    assert_always(_span.empty() && (_win == MPI_WIN_NULL));
+    _span = static_cast<std::span<T>>(std::exchange(other._span, {}));
+    _win = std::exchange(other._win, MPI_WIN_NULL);
+    return *this;
+  }
+
   template <typename U>
-    requires(std::is_same_v<T, U> || std::is_same_v<T, const U>)
+    requires(std::is_same_v<T, const U> && !std::is_const_v<U>)
   auto operator=(MPI_shared_array<U>&& other_) noexcept -> MPI_shared_array& {
+    // should not be assigning to an object that already owns a window
     auto other = std::move(other_);
-    if (_span.data() != other._span.data()) {
-      // free any existing window owned by this object before taking ownership of the new one
-      reset();
-      _span = static_cast<std::span<T>>(other._span);
-      _win = other._win;
-      // prevent the other object from freeing the window in its destructor
-      other._span = {};
-      other._win = MPI_WIN_NULL;
-    }
+    assert_always(_span.empty() && (_win == MPI_WIN_NULL));
+    _span = static_cast<std::span<T>>(std::exchange(other._span, {}));
+    _win = std::exchange(other._win, MPI_WIN_NULL);
     return *this;
   }
 
