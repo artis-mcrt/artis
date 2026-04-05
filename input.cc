@@ -1376,7 +1376,7 @@ void read_atomicdata_files() {
   auto alllevels_nuptrans = MPI_shared_malloc_span<int>(nlevels);
   auto alllevels_epsilon = MPI_shared_array<double>(nlevels);
   auto alllevels_statweight = MPI_shared_array<float>(nlevels);
-  auto alllevels_matransblock_start = MPI_shared_malloc_span<int>(nlevels);
+  auto alllevels_matransblock_start = MPI_shared_array<int>(nlevels);
   globals::alllevels.allautoion_start = MPI_shared_malloc_span<int>(nlevels, -1);
   globals::alllevels.nautoiondowntrans = MPI_shared_malloc_span<int>(nlevels, 0);
   globals::alllevels.nautoionuptrans = MPI_shared_malloc_span<int>(nlevels, 0);
@@ -1403,7 +1403,7 @@ void read_atomicdata_files() {
   globals::alllevels.nuptrans = alllevels_nuptrans;
   globals::alllevels.epsilon = std::move(alllevels_epsilon);
   globals::alllevels.statweight = std::move(alllevels_statweight);
-  globals::alllevels.matransblock_start = alllevels_matransblock_start;
+  globals::alllevels.matransblock_start = std::move(alllevels_matransblock_start);
   temp_alllevels.clear();
   temp_alllevels.shrink_to_fit();
 

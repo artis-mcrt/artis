@@ -189,7 +189,7 @@ struct AllLevels {
   // index into cellcache allmacroatomictransitions for each level. This is
   // different to the alltrans index because two types of down transitions are stored separately
   // per level as well as the up transitions
-  std::span<const int> matransblock_start;
+  MPI_shared_array<const int> matransblock_start;
 };
 
 inline AllLevels alllevels{};
