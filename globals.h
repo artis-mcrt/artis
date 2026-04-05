@@ -199,12 +199,12 @@ inline MPI_shared_array<Ion> allions;
 
 struct TransitionLines {
   MPI_shared_array<const double> nu;  // Frequency of the line transition
-  std::span<const float> einstein_A;
-  std::span<const int> elementindex;  // It's a transition of element (not its atomic number,
-                                      // but the (x-1)th element included in the simulation.
-  std::span<const int> ionindex;  // The same for the elements ion
-  std::span<const int> upperlevelindex;  // And the participating upper
-  std::span<const int> lowerlevelindex;  // and lower levels
+  MPI_shared_array<const float> einstein_A;
+  MPI_shared_array<const int> elementindex;  // It's a transition of element (not its atomic number,
+                                             // but the (x-1)th element included in the simulation.
+  MPI_shared_array<const int> ionindex;  // The same for the elements ion
+  MPI_shared_array<const int> upperlevelindex;  // And the participating upper
+  MPI_shared_array<const int> lowerlevelindex;  // and lower levels
 };
 inline TransitionLines linelist{};
 inline int nlines{-1};
@@ -218,19 +218,19 @@ struct BFListEntry {
 // the bound-free list sorted by element/ion/level/phixstargetindex (not nu_edge)
 inline std::vector<BFListEntry> bflist;
 
-inline std::span<const double> bfestim_nu_edge{};
+inline MPI_shared_array<const double> bfestim_nu_edge{};
 
 struct AllCont {
-  std::span<const double> nu_edge;
-  std::span<const int> element;
-  std::span<const int> ion;
-  std::span<const int> level;
-  std::span<const int> phixstargetindex;
-  std::span<const int> upperlevel;
-  std::span<const int> uniquelevelindex;
-  std::span<const double> probability;
-  std::span<const int> index_in_groundphixslist;
-  std::span<const int> bfestimindex;
+  MPI_shared_array<const double> nu_edge;
+  MPI_shared_array<const int> element;
+  MPI_shared_array<const int> ion;
+  MPI_shared_array<const int> level;
+  MPI_shared_array<const int> phixstargetindex;
+  MPI_shared_array<const int> upperlevel;
+  MPI_shared_array<const int> uniquelevelindex;
+  MPI_shared_array<const double> probability;
+  MPI_shared_array<const int> index_in_groundphixslist;
+  MPI_shared_array<const int> bfestimindex;
 };
 inline AllCont allcont{};
 

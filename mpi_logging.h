@@ -371,6 +371,10 @@ class MPI_shared_array {
   [[nodiscard]] auto subspan(const size_t offset, const size_t count) const -> std::span<const T> {
     return std::span<const T>{_span}.subspan(offset, count);
   }
+  [[nodiscard]] auto first(const size_t count) -> std::span<T> { return _span.first(count); }
+  [[nodiscard]] auto first(const size_t count) const -> std::span<const T> {
+    return std::span<const T>{_span}.first(count);
+  }
   [[nodiscard]] auto size() const -> size_t { return _span.size(); }
   // define operator[] to allow direct indexing into the span
   auto operator[](const size_t index) -> T& { return _span[index]; }
