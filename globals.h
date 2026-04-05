@@ -235,9 +235,9 @@ struct AllCont {
 inline AllCont allcont{};
 
 // Used when USE_LUT_PHOTOION or USE_ION_BFHEATING_ESTIMATORS is enabled
-inline std::span<const double> groundcont_nu_edge{};
-inline std::span<const int> groundcont_element{};
-inline std::span<const int> groundcont_ion{};
+inline MPI_shared_array<const double> groundcont_nu_edge{};
+inline MPI_shared_array<const int> groundcont_element{};
+inline MPI_shared_array<const int> groundcont_ion{};
 
 inline int nbfcontinua{-1};  // number of bf-continua
 inline int nbfcontinua_ground{-1};  // number of bf-continua from ground levels

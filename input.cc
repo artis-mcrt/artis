@@ -754,9 +754,9 @@ void setup_phixs_list() {
     int bfestimindex;
   };
 
-  auto groundcont_nu_edge = MPI_shared_malloc_span<double>(globals::nbfcontinua_ground);
-  auto groundcont_element = MPI_shared_malloc_span<int>(globals::nbfcontinua_ground);
-  auto groundcont_ion = MPI_shared_malloc_span<int>(globals::nbfcontinua_ground);
+  auto groundcont_nu_edge = MPI_shared_array<double>(globals::nbfcontinua_ground);
+  auto groundcont_element = MPI_shared_array<int>(globals::nbfcontinua_ground);
+  auto groundcont_ion = MPI_shared_array<int>(globals::nbfcontinua_ground);
 
   if (globals::rank_in_node == 0) {
     int nextgroundcontindex = 0;
@@ -783,9 +783,9 @@ void setup_phixs_list() {
                       [](const auto& lhs, const auto& rhs) { return std::get<0>(lhs) < std::get<0>(rhs); });
   }
   MPI_Barrier_node();
-  globals::groundcont_nu_edge = groundcont_nu_edge;
-  globals::groundcont_element = groundcont_element;
-  globals::groundcont_ion = groundcont_ion;
+  globals::groundcont_nu_edge = std::move(groundcont_nu_edge);
+  globals::groundcont_element = std::move(groundcont_element);
+  globals::groundcont_ion = std::move(groundcont_ion);
 
   auto allcont = MPI_shared_malloc_span<TempPhotoionTransitionInput>(globals::nbfcontinua);
   printlnlog("[info] mem_usage: photoionisation list occupies {:.3f} MB",
