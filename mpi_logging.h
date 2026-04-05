@@ -253,11 +253,6 @@ template <typename T>
 }
 
 template <typename T>
-[[nodiscard]] auto MPI_shared_malloc_span(const ptrdiff_t num_allranks, const T& initval = {}) -> std::span<T> {
-  return std::get<0>(MPI_shared_malloc_span_keepwin<T>(num_allranks, initval));
-}
-
-template <typename T>
 inline auto GET_MPI_TYPE() -> MPI_Datatype {
   if constexpr (std::is_same_v<T, float>) {
     return MPI_FLOAT;

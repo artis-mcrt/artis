@@ -987,7 +987,7 @@ void read_autoion_data() {
 
   assert_always(allautoion_levels_are_not_nlte || allautoion_levels_are_nlte);
 
-  globals::allautoion = MPI_shared_malloc_span<globals::LevelAutoion>(temp_allautoion.size());
+  globals::allautoion = MPI_shared_array<globals::LevelAutoion>(temp_allautoion.size());
   if (globals::rank_in_node == 0) {
     std::copy_n(temp_allautoion.cbegin(), temp_allautoion.size(), globals::allautoion.data());
   }

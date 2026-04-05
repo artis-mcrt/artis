@@ -141,7 +141,7 @@ struct LevelAutoion {
   int upperlevelindex;  // this will be for a level index of the upper ion.
                         // Note: level of the lower ion should also be at higher energy than of the higher ion
 };
-inline std::span<LevelAutoion> allautoion;
+inline MPI_shared_array<LevelAutoion> allautoion;
 
 inline MPI_shared_array<const int> allphixstargets_levelindex;  // index of upper ion level after photoionisation
 inline MPI_shared_array<const double>
