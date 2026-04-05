@@ -2,7 +2,7 @@
 
 set -x
 
-runfolder=kilonova_2d_2dgrid_expansionopac_testrun
+runfolder=kilonova_2d_testrun
 
 mkdir -p $runfolder
 
@@ -11,10 +11,7 @@ if [ ! -f atomicdata_feconi.tar.xz ]; then curl --insecure -O https://theory.gsi
 tar -xf atomicdata_feconi.tar.xz --directory $runfolder/
 
 # same input files as the other test run
-rsync -av kilonova_2d_3dgrid_inputfiles/ $runfolder/
-
-# for the checksum files
-rsync -av --ignore-times kilonova_2d_2dgrid_expansionopac_inputfiles/ $runfolder/
+rsync -av kilonova_2d_inputfiles/ $runfolder/
 
 ln -s ../../data/ $runfolder
 
@@ -29,11 +26,6 @@ sed -i'' -e 's/constexpr int MPKTS.*/constexpr int MPKTS = 80000;/g' artisoption
 sed -i'' -e 's/constexpr int TABLESIZE.*/constexpr int TABLESIZE = 20;/g' artisoptions.h
 sed -i'' -e 's/constexpr double MINTEMP.*/constexpr double MINTEMP = 1000.;/g' artisoptions.h
 sed -i'' -e 's/constexpr double MAXTEMP.*/constexpr double MAXTEMP = 20000.;/g' artisoptions.h
-
-sed -i'' -e 's/constexpr bool WRITE_EMISSIONABSORPTION_SPEC_AT_END.*/constexpr bool WRITE_EMISSIONABSORPTION_SPEC_AT_END = true;/g' artisoptions.h
-
-sed -i'' -e 's/constexpr bool EXPANSIONOPACITIES_ON.*/constexpr bool EXPANSIONOPACITIES_ON = true;/g' artisoptions.h
-sed -i'' -e 's/constexpr std::optional<float> RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.*/constexpr std::optional<float> RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY = 1.;/g' artisoptions.h
 
 cd -
 
