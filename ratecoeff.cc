@@ -1,6 +1,5 @@
 #include "ratecoeff.h"
 
-#include <algorithm>
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
@@ -504,16 +503,10 @@ void setup_photoion_luts() {
   assert_always(globals::nbfcontinua > 0);
   size_t mem_usage_photoionluts = 2 * TABLESIZE * globals::nbfcontinua * sizeof(double);
 
-  spontrecombcoeffs = MPI_shared_array<double>(TABLESIZE * globals::nbfcontinua);
-  if (globals::rank_in_node == 0) {
-    std::ranges::fill(spontrecombcoeffs, 0.);
-  }
+  spontrecombcoeffs = MPI_shared_array<double>(TABLESIZE * globals::nbfcontinua, 0.);
 
   if constexpr (USE_LUT_PHOTOION) {
-    corrphotoioncoeffs = MPI_shared_array<double>(TABLESIZE * globals::nbfcontinua);
-    if (globals::rank_in_node == 0) {
-      std::ranges::fill(corrphotoioncoeffs, 0.);
-    }
+    corrphotoioncoeffs = MPI_shared_array<double>(TABLESIZE * globals::nbfcontinua, 0.);
     mem_usage_photoionluts += TABLESIZE * globals::nbfcontinua * sizeof(double);
   }
 
