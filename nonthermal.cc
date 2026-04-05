@@ -455,9 +455,9 @@ void read_auger_data() {
   auto augerfile = fstream_required("auger-km1993-table2.txt", std::ios::in);
 
   // map x-ray notation shells K L1 L2 L3 M1 M2 M3 to quantum numbers n and l
-  constexpr std::array<int, 7> xrayn = {1, 2, 2, 2, 3, 3, 3};
-  constexpr std::array<int, 7> xrayl = {0, 0, 1, 1, 0, 1, 1};
-  constexpr std::array<int, 7> xrayg = {2, 2, 2, 4, 2, 2, 4};  // g statistical weight = 2j + 1
+  constexpr std::array xrayn{1, 2, 2, 2, 3, 3, 3};
+  constexpr std::array xrayl{0, 0, 1, 1, 0, 1, 1};
+  constexpr std::array xrayg{2, 2, 2, 4, 2, 2, 4};  // g statistical weight = 2j + 1
 
   std::string strline;
   while (get_noncommentline(augerfile, strline)) {
