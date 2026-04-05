@@ -844,7 +844,6 @@ void setup_phixs_list() {
   // just so that clang-tidy doesn't throw errors on the assumption that nbfcontinua is changing
   const auto nbfcontinua = globals::nbfcontinua;
 
-  std::vector<double> temp_bfestim_nu_edge;
   if (nbfcontinua > 0) {
     // indices above were temporary only. continuum index should be to the sorted list
     MPI_Barrier_node();
@@ -887,6 +886,7 @@ void setup_phixs_list() {
     globals::allcont.index_in_groundphixslist = std::move(allcont_index_in_groundphixslist);
 
     auto allcont_bfestimindex = MPI_shared_array<int>(nbfcontinua);
+    std::vector<double> temp_bfestim_nu_edge;
     for (int i = 0; i < nbfcontinua; i++) {
       if (DETAILED_BF_ESTIMATORS_ON &&
           LEVEL_HAS_BFEST(get_atomicnumber(globals::allcont.element[i]),
