@@ -1377,14 +1377,14 @@ void read_atomicdata_files() {
   auto alllevels_epsilon = MPI_shared_array<double>(nlevels);
   auto alllevels_statweight = MPI_shared_array<float>(nlevels);
   auto alllevels_matransblock_start = MPI_shared_array<int>(nlevels);
-  globals::alllevels.allautoion_start = MPI_shared_malloc_span<int>(nlevels, -1);
-  globals::alllevels.nautoiondowntrans = MPI_shared_malloc_span<int>(nlevels, 0);
-  globals::alllevels.nautoionuptrans = MPI_shared_malloc_span<int>(nlevels, 0);
-  globals::alllevels.closestgroundlevelcont.allocate(nlevels, -1);
-  globals::alllevels.phixsstart.allocate(nlevels, -1);
-  globals::alllevels.nphixstargets.allocate(nlevels, 0);
-  globals::alllevels.phixstargetstart = MPI_shared_malloc_span<int>(nlevels, -1);
-  globals::alllevels.bflist_start = MPI_shared_malloc_span<int>(nlevels, -1);
+  globals::alllevels.allautoion_start = MPI_shared_array<int>(nlevels, -1);
+  globals::alllevels.nautoiondowntrans = MPI_shared_array<int>(nlevels, 0);
+  globals::alllevels.nautoionuptrans = MPI_shared_array<int>(nlevels, 0);
+  globals::alllevels.closestgroundlevelcont = MPI_shared_array<int>(nlevels, -1);
+  globals::alllevels.phixsstart = MPI_shared_array<int>(nlevels, -1);
+  globals::alllevels.nphixstargets = MPI_shared_array<int>(nlevels, 0);
+  globals::alllevels.phixstargetstart = MPI_shared_array<int>(nlevels, -1);
+  globals::alllevels.bflist_start = MPI_shared_array<int>(nlevels, -1);
   if (globals::rank_in_node == 0) {
     int chtransindex = 0;
     for (auto i = 0ZU; i < temp_alllevels.size(); i++) {
