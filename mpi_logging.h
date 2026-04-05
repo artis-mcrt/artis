@@ -275,6 +275,7 @@ inline auto GET_MPI_TYPE() -> MPI_Datatype {
 }
 
 template <typename T>
+  requires std::is_trivially_copyable_v<T>
 class MPI_shared_array {
   friend class MPI_shared_array<const T>;  // allow conversion from non-const to const version
   friend class MPI_shared_array<std::remove_const_t<T>>;
