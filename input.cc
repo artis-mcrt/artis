@@ -853,7 +853,6 @@ void setup_phixs_list() {
     }
     MPI_Barrier_node();
 
-    auto bfestim_nu_edge = MPI_shared_array<double>(std::ssize(temp_bfestim_nu_edge));
     auto allcont_nu_edge = MPI_shared_array<double>(nbfcontinua);
     auto allcont_element = MPI_shared_array<int>(nbfcontinua);
     auto allcont_ion = MPI_shared_array<int>(nbfcontinua);
@@ -864,9 +863,6 @@ void setup_phixs_list() {
     auto allcont_probability = MPI_shared_array<double>(nbfcontinua);
     auto allcont_index_in_groundphixslist = MPI_shared_array<int>(nbfcontinua);
     if (globals::rank_in_node == 0) {
-      for (int i = 0; i < std::ssize(temp_bfestim_nu_edge); i++) {
-        bfestim_nu_edge[i] = temp_bfestim_nu_edge[i];
-      }
       for (int i = 0; i < nbfcontinua; i++) {
         allcont_nu_edge[i] = allcont[i].nu_edge;
         allcont_element[i] = allcont[i].element;
@@ -880,7 +876,6 @@ void setup_phixs_list() {
       }
     }
     MPI_Barrier_node();
-    globals::bfestim_nu_edge = std::move(bfestim_nu_edge);
     globals::allcont.nu_edge = std::move(allcont_nu_edge);
     globals::allcont.element = std::move(allcont_element);
     globals::allcont.ion = std::move(allcont_ion);
@@ -904,6 +899,12 @@ void setup_phixs_list() {
       }
     }
     globals::allcont.bfestimindex = std::move(allcont_bfestimindex);
+    auto bfestim_nu_edge = MPI_shared_array<double>(std::ssize(temp_bfestim_nu_edge));
+    for (int i = 0; i < std::ssize(temp_bfestim_nu_edge); i++) {
+      bfestim_nu_edge[i] = temp_bfestim_nu_edge[i];
+    }
+    globals::bfestim_nu_edge = std::move(bfestim_nu_edge);
+
     setup_photoion_luts();
   }
   printlnlog("[info] bound-free estimators track bfestimcount {} photoionisation transitions",
