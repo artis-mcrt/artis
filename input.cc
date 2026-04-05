@@ -96,7 +96,7 @@ struct TempLineTransitionInput {
   int lowerlevelindex;
 };
 
-constexpr std::array<std::string_view, 24> inputlinecomments = {
+constexpr auto inputlinecomments = std::array{
     " 0: pre_zseed: specific random number seed if > 0 or random if negative",
     " 1: ntimesteps: number of timesteps",
     " 2: timestep_start timestep_finish: timestep number range start (inclusive) and stop (not inclusive)",
