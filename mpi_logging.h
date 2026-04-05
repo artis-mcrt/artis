@@ -289,7 +289,7 @@ class MPI_shared_array {
 
   explicit MPI_shared_array(const ptrdiff_t num_allranks, const T& initval = {}) { allocate(num_allranks, initval); }
 
-  // copy constructor is deleted to avoid avoid multiple owners of the same MPI window, but move constructor is allowed
+  // copy constructor is deleted to avoid multiple owners of the same MPI window, but move constructor is allowed
   MPI_shared_array(const MPI_shared_array&) = delete;
   MPI_shared_array(MPI_shared_array&& other) noexcept : _win(other._win), _span(other._span) {
     // prevent the other object from freeing the window in its destructor
