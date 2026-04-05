@@ -332,16 +332,16 @@ class MPI_shared_array {
     if constexpr (TESTMODE) {
       printlnlog("freeing MPI_shared_array of size {}", _span.size());
     }
-    int finalized = 0;
-    MPI_Finalized(&finalized);
-    if (finalized != 0) {
-      return;  // do not attempt to free MPI windows after MPI_Finalize
-    }
     _span = {};
     if (_win != MPI_WIN_NULL) {
-      MPI_Win_free(&_win);
-      _win = MPI_WIN_NULL;
+      int finalized = 0;
+      MPI_Finalized(&finalized);
+      // do not attempt to free MPI windows after MPI_Finalize
+      if (finalized == 0) {
+        MPI_Win_free(&_win);
+      }
     }
+    _win = MPI_WIN_NULL;
   }
   // Conversion to a mutable span is only allowed on non-const objects.
   explicit operator std::span<const T>() const { return _span; }
