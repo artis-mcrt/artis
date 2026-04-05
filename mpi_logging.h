@@ -300,6 +300,7 @@ class MPI_shared_array {
   auto operator=(MPI_shared_array&& other) noexcept -> MPI_shared_array& {
     // should not be assigning to an object that already owns a window
     assert_always(_span.empty() && (_win == MPI_WIN_NULL));
+    MPI_Barrier_node();
     _span = static_cast<std::span<T>>(std::exchange(other._span, {}));
     _win = std::exchange(other._win, MPI_WIN_NULL);
     return *this;
@@ -309,8 +310,9 @@ class MPI_shared_array {
     requires(std::is_same_v<T, const U> && !std::is_const_v<U>)
   auto operator=(MPI_shared_array<U>&& other_) noexcept -> MPI_shared_array& {
     // should not be assigning to an object that already owns a window
-    auto other = std::move(other_);
     assert_always(_span.empty() && (_win == MPI_WIN_NULL));
+    MPI_Barrier_node();
+    auto other = std::move(other_);
     _span = static_cast<std::span<T>>(std::exchange(other._span, {}));
     _win = std::exchange(other._win, MPI_WIN_NULL);
     return *this;
