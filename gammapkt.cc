@@ -121,8 +121,7 @@ void read_decaydata() {
     const auto striso = std::format("{}{}", strelname, a);
 
     // look in the current folder first, then in the data/ subfolder
-    const auto filenames =
-        std::array<const std::string, 2>{std::format("gamma_{}.txt", striso), std::format("{}_lines.txt", striso)};
+    const std::array filenames = {std::format("gamma_{}.txt", striso), std::format("{}_lines.txt", striso)};
 
     bool tablefound = false;
     for (const auto& datadir : datafolders) {
