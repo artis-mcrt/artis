@@ -2,7 +2,7 @@
 
 set -x
 
-runfolder=kilonova_2d_2dgrid_barnesthermalisation_testrun
+runfolder=kilonova_1d_testrun
 
 mkdir -p $runfolder
 
@@ -11,10 +11,7 @@ if [ ! -f atomicdata_feconi.tar.xz ]; then curl --insecure -O https://theory.gsi
 tar -xf atomicdata_feconi.tar.xz --directory $runfolder/
 
 # same input files as the other test run
-rsync -av kilonova_2d_3dgrid_inputfiles/ $runfolder/
-
-# for the checksum files
-rsync -av --ignore-times kilonova_2d_2dgrid_barnesthermalisation_inputfiles/ $runfolder/
+rsync -av kilonova_1d_inputfiles/ $runfolder/
 
 ln -s ../../data/ $runfolder
 
@@ -30,9 +27,7 @@ sed -i'' -e 's/constexpr int TABLESIZE.*/constexpr int TABLESIZE = 20;/g' artiso
 sed -i'' -e 's/constexpr double MINTEMP.*/constexpr double MINTEMP = 1000.;/g' artisoptions.h
 sed -i'' -e 's/constexpr double MAXTEMP.*/constexpr double MAXTEMP = 20000.;/g' artisoptions.h
 
-sed -i'' -e 's/constexpr auto PARTICLE_THERMALISATION_SCHEME.*/constexpr auto PARTICLE_THERMALISATION_SCHEME = ParticleThermalisationScheme::BARNES;/g' artisoptions.h
-
-sed -i'' -e 's/constexpr auto GAMMA_THERMALISATION_SCHEME.*/constexpr auto GAMMA_THERMALISATION_SCHEME = GammaThermalisationScheme::BARNES;/g' artisoptions.h
+sed -i'' -e 's/constexpr bool WRITE_EMISSIONABSORPTION_SPEC_AT_END.*/constexpr bool WRITE_EMISSIONABSORPTION_SPEC_AT_END = true;/g' artisoptions.h
 
 cd -
 

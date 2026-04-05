@@ -2,7 +2,7 @@
 
 set -x
 
-runfolder=kilonova_2d_3dgrid_testrun
+runfolder=kilonova_2d_xcomgammaphotoion_testrun
 
 mkdir -p $runfolder
 
@@ -10,7 +10,11 @@ if [ ! -f atomicdata_feconi.tar.xz ]; then curl --insecure -O https://theory.gsi
 
 tar -xf atomicdata_feconi.tar.xz --directory $runfolder/
 
-rsync -av kilonova_2d_3dgrid_inputfiles/ $runfolder/
+# same input files as the other test run
+rsync -av kilonova_2d_inputfiles/ $runfolder/
+
+# for the checksum files
+rsync -av --ignore-times kilonova_2d_xcomgammaphotoion_inputfiles/ $runfolder/
 
 ln -s ../../data/ $runfolder
 
@@ -22,15 +26,13 @@ xz -f -d -v -T0 *.xz
 
 sed -i'' -e 's/constexpr int MPKTS.*/constexpr int MPKTS = 80000;/g' artisoptions.h
 
-sed -i'' -e 's/constexpr std::optional<GridType> GRID_TYPE_OVERRIDE.*/constexpr std::optional<GridType> GRID_TYPE_OVERRIDE = GridType::CARTESIAN3D;/g' artisoptions.h
-
-sed -i'' -e 's/constexpr int CUBOID_NCOORDGRID_X.*/constexpr int CUBOID_NCOORDGRID_X = 50;/g' artisoptions.h
-sed -i'' -e 's/constexpr int CUBOID_NCOORDGRID_Y.*/constexpr int CUBOID_NCOORDGRID_Y = 50;/g' artisoptions.h
-sed -i'' -e 's/constexpr int CUBOID_NCOORDGRID_Z.*/constexpr int CUBOID_NCOORDGRID_Z = 50;/g' artisoptions.h
-
 sed -i'' -e 's/constexpr int TABLESIZE.*/constexpr int TABLESIZE = 20;/g' artisoptions.h
 sed -i'' -e 's/constexpr double MINTEMP.*/constexpr double MINTEMP = 1000.;/g' artisoptions.h
 sed -i'' -e 's/constexpr double MAXTEMP.*/constexpr double MAXTEMP = 20000.;/g' artisoptions.h
+
+sed -i'' -e 's/constexpr bool WRITE_EMISSIONABSORPTION_SPEC_AT_END.*/constexpr bool WRITE_EMISSIONABSORPTION_SPEC_AT_END = true;/g' artisoptions.h
+
+sed -i'' -e 's/constexpr bool USE_XCOM_GAMMAPHOTOION.*/constexpr bool USE_XCOM_GAMMAPHOTOION = true;/g' artisoptions.h
 
 cd -
 
