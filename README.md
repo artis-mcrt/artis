@@ -35,19 +35,17 @@ cd artis
 
 To compile and run artis, you will need a recent C++ compiler (g++, Clang, or nvc++) and an MPI library (e.g., Open MPI) that provides an `mpicxx` command. Usually, these are available on HPC clusters using module or spack commands. For systems that we use, look at the top of the relevant SLURM script in scripts/artis-*.sh to find compatible modules specifications. For Open MPI, set the C++ compiler using `export OMPI_CXX=g++`.
 
-Next, select an options preset and compile with `make`. For example:
+Next, select an options preset. For example:
 ```sh
 ln -s artisoptions_classic.h artisoptions.h
-make
 ```
 
 You will likely want to change the number of packets per rank (MPKTS) using a text editor, e.g. `vim artisoptions.h`.
 
-Next, go up to the model folder and symlink the executables:
+Next, compile with `make` and go up a level to the model folder:
 ```sh
+make
 cd ..
-ln -s artis/sn3d
-ln -s artis/exspec
 ```
 
 The next steps are to ensure a full set of snapshot files (model.txt and abundances.txt) and an atomic database are present, and to configure the timesteps in input.txt. Then, queue the relevant job script with a command such as:
