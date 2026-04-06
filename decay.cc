@@ -133,7 +133,7 @@ MPI_shared_array<double> decaypath_energy_per_mass{};
 // Get the probability that a decay of decaytype occurs
 [[nodiscard]] auto get_nuc_decaybranchprob(const int nucindex, const DecayType decaytype) -> double {
   assert_testmodeonly(nucindex >= 0);
-  assert_testmodeonly(nucindex < get_num_nuclides());
+  assert_testmodeonly(nucindex < std::ssize(nuclides));
   assert_testmodeonly(decaytype >= 0);
   assert_testmodeonly(decaytype < DecayType::DECAYTYPE_COUNT);
   return nuclides[nucindex].branchprobs[decaytype];
@@ -143,14 +143,14 @@ MPI_shared_array<double> decaypath_energy_per_mass{};
 
 [[nodiscard]] auto get_nuc_z_a(const int nucindex) -> std::tuple<int, int> {
   assert_testmodeonly(nucindex >= 0);
-  assert_testmodeonly(nucindex < get_num_nuclides());
+  assert_testmodeonly(nucindex < std::ssize(nuclides));
   return {nuclides[nucindex].z, nuclides[nucindex].a};
 }
 
 // get the nuclide array index from the atomic number and mass number
 [[nodiscard]] auto get_nucindex_or_neg_one(const int z, const int a) -> int {
-  assert_testmodeonly(get_num_nuclides() > 0);
-  const auto num_nuclides = get_num_nuclides();
+  assert_testmodeonly(std::ssize(nuclides) > 0);
+  const auto num_nuclides = std::ssize(nuclides);
 
   for (int nucindex = 0; nucindex < num_nuclides; nucindex++) {
     if (nuclides[nucindex].z == z && nuclides[nucindex].a == a) {
@@ -162,7 +162,7 @@ MPI_shared_array<double> decaypath_energy_per_mass{};
 
 [[nodiscard]] auto get_meanlife(const int nucindex) -> double {
   assert_testmodeonly(nucindex >= 0);
-  assert_testmodeonly(nucindex < get_num_nuclides());
+  assert_testmodeonly(nucindex < std::ssize(nuclides));
   return nuclides[nucindex].meanlife;
 }
 
@@ -331,7 +331,7 @@ void extend_lastdecaypath(std::vector<DecayPath>& localdecaypaths) {
 auto find_decaypaths(const std::span<const int> custom_zlist, const std::span<const int> custom_alist,
                      const std::vector<Nuclide>& standard_nuclides) -> std::vector<DecayPath> {
   std::vector<DecayPath> localdecaypaths;
-  for (int startnucindex = 0; startnucindex < get_num_nuclides(); startnucindex++) {
+  for (int startnucindex = 0; startnucindex < std::ssize(nuclides); startnucindex++) {
     if (get_meanlife(startnucindex) <= 0.) {
       continue;  // skip stable nuclides as start points
     }
@@ -699,7 +699,7 @@ auto write_nuclides_list() {
   auto nuclides_file = std::fstream("nuclides.out", std::ofstream::out | std::ofstream::trunc);
   assert_always(nuclides_file.is_open());
   nuclides_file << "#nucindex Z A\n";
-  for (int nucindex = 0; nucindex < get_num_nuclides(); nucindex++) {
+  for (int nucindex = 0; nucindex < std::ssize(nuclides); nucindex++) {
     nuclides_file << nucindex << ' ' << get_nuc_z(nucindex) << ' ' << get_nuc_a(nucindex) << '\n';
   }
 }
@@ -721,13 +721,13 @@ auto write_nuclides_list() {
 
 [[nodiscard]] auto get_nuc_z(const int nucindex) -> int {
   assert_testmodeonly(nucindex >= 0);
-  assert_testmodeonly(nucindex < get_num_nuclides());
+  assert_testmodeonly(nucindex < std::ssize(nuclides));
   return nuclides[nucindex].z;
 }
 
 [[nodiscard]] auto get_nuc_a(const int nucindex) -> int {
   assert_testmodeonly(nucindex >= 0);
-  assert_testmodeonly(nucindex < get_num_nuclides());
+  assert_testmodeonly(nucindex < std::ssize(nuclides));
   return nuclides[nucindex].a;
 }
 
@@ -1011,11 +1011,11 @@ void init_nuclides(const std::span<const int> custom_zlist, const std::span<cons
     assert_always(nuc.endecay_gamma >= 0.);
   }
 
-  printlnlog("Number of nuclides before filtering: {}", get_num_nuclides());
+  printlnlog("Number of nuclides before filtering: {}", std::ssize(nuclides));
   decaypaths = find_decaypaths(custom_zlist, custom_alist, standard_nuclides);
   filter_unused_nuclides(custom_zlist, custom_alist, standard_nuclides);
 
-  printlnlog("Number of nuclides: {}", get_num_nuclides());
+  printlnlog("Number of nuclides: {}", std::ssize(nuclides));
 
   const int maxdecaypathlength = std::ranges::fold_left(decaypaths, 0ZU, [](const auto maxlen, const auto& decaypath) {
     return std::max(maxlen, decaypath.nucindex.size());
@@ -1125,7 +1125,7 @@ void free_decaypath_energy_per_mass() { decaypath_energy_per_mass.reset(); }
 [[nodiscard]] auto get_particle_injection_rate(const int nonemptymgi, const double t, const DecayType decaytype)
     -> double {
   double dep_sum = 0.;
-  const auto num_nuclides = get_num_nuclides();
+  const auto num_nuclides = std::ssize(nuclides);
   for (int nucindex = 0; nucindex < num_nuclides; nucindex++) {
     const double meanlife = get_meanlife(nucindex);
     if (meanlife < 0.) {
@@ -1148,7 +1148,7 @@ void free_decaypath_energy_per_mass() { decaypath_energy_per_mass.reset(); }
 // energy release rate in form of gamma-rays in [erg/s/g]
 [[nodiscard]] auto get_gamma_emission_rate(const int nonemptymgi, const double t) -> double {
   double eps_gamma_sum = 0.;
-  const auto num_nuclides = get_num_nuclides();
+  const auto num_nuclides = std::ssize(nuclides);
   for (int nucindex = 0; nucindex < num_nuclides; nucindex++) {
     const double meanlife = get_meanlife(nucindex);
     if (meanlife < 0.) {
@@ -1170,7 +1170,7 @@ void free_decaypath_energy_per_mass() { decaypath_energy_per_mass.reset(); }
 // energy release rate [erg/s/g] including everything (even neutrinos that are ignored elsewhere)
 [[nodiscard]] auto get_qdot_modelcell(const int nonemptymgi, const double t, const DecayType decaytype) -> double {
   double qdot = 0.;
-  const auto num_nuclides = get_num_nuclides();
+  const auto num_nuclides = std::ssize(nuclides);
   for (int nucindex = 0; nucindex < num_nuclides; nucindex++) {
     const double meanlife = get_meanlife(nucindex);
     if (meanlife < 0.) {
@@ -1212,7 +1212,7 @@ void update_abundances(const int nonemptymgi, const double t_current) {
     // the mass fraction sum of radioactive isotopes, and stable nuclei coming from other decays for the current element
     double isomassfracsum = 0.;
     double isomassfrac_on_nucmass_sum = 0.;
-    const auto num_nuclides = get_num_nuclides();
+    const auto num_nuclides = std::ssize(nuclides);
     for (int nucindex = 0; nucindex < num_nuclides; nucindex++) {
       if (get_nuc_z(nucindex) == atomic_number) {
         const double nuc_massfrac = get_nuc_massfrac(nonemptymgi, nucindex, t_current);
@@ -1244,7 +1244,7 @@ void output_nuc_abundances(std::ostream& estimators_file, const int nonemptymgi,
 
   const int atomic_number = get_atomicnumber(element);
   std::set<std::tuple<int, int>> a_isotopes;  // so that we output sorted by mass number
-  const auto num_nuclides = get_num_nuclides();
+  const auto num_nuclides = std::ssize(nuclides);
   for (int nucindex = 0; nucindex < num_nuclides; nucindex++) {
     const auto [nuc_z, nuc_a] = get_nuc_z_a(nucindex);
     if (nuc_z == atomic_number) {
