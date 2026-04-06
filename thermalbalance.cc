@@ -204,12 +204,10 @@ auto calculate_bfheatingcoeff(const int element, const int ion, const int level,
 
   const double nu_threshold = ONEOVERH * E_threshold;
   const double nu_max_phixs = nu_threshold * last_phixs_nuovernuedge;  // nu of the uppermost point in the phixs table
-
+  const auto photoion_xs = get_phixs_table(element, ion, level);
+  const auto T_R = grid::get_TR(nonemptymgi);
   auto bfheating = integrator(
-      [&](const double nu) {
-        return integrand_bfheatingcoeff(nu, nu_threshold, nonemptymgi, grid::get_TR(nonemptymgi),
-                                        get_phixs_table(element, ion, level));
-      },
+      [&](const double nu) { return integrand_bfheatingcoeff(nu, nu_threshold, nonemptymgi, T_R, photoion_xs); },
       nu_threshold, nu_max_phixs, epsrel, &error);
 
   bfheating *= FOURPI * get_phixsprobability(element, ion, level, phixstargetindex);
