@@ -81,7 +81,6 @@ Press Ctrl+C to stop following the log file.
 ## make options
 - TESTMODE=ON: Enable additional assertions and the address and undefined behaviour sanitizers.
 - FASTMATH=OFF: Don't enable compiler transformations that affect round-off-level results (e.g. a*(b\*c) = (a\*b)*c).
-- BOOST=OFF: Use GSL (not Boost) for root finding (classic n_e solver, T_e, and binned radfield).
 - EIGEN=OFF: Use GSL (not Eigen) for matrix-vector solving (Spencer-Fano and NLTE pops).
 - MAX_NODE_SIZE=N: Artificially limit MPI node size to N ranks. Useful for testing and preventing MPI shared memory windows from crossing CPU sockets.
 - REPRODUCIBLE=ON: Use stable sorts and disable FASTMATH.

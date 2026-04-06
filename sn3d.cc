@@ -675,18 +675,7 @@ auto main(int argc, char* argv[]) -> int {
 #ifdef USE_SIMPSON_INTEGRATOR
   printlnlog("Simpson rule");
 #else
-#ifdef BOOST_OFF
-  printlnlog("GSL qag adaptive integrator");
-#else
   printlnlog("Boost qag adaptive integrator");
-#endif
-#endif
-
-  printlog("Root finding method is: ");
-#ifdef BOOST_OFF
-  printlnlog("GSL Brent");
-#else
-  printlnlog("Boost toms748_solve");
 #endif
 
 #ifdef EIGEN_OFF

@@ -1,14 +1,8 @@
 #include "ltepop.h"
 
 #pragma clang unsafe_buffer_usage begin
-#ifdef BOOST_OFF
-#include <gsl/gsl_errno.h>
-#include <gsl/gsl_math.h>
-#include <gsl/gsl_roots.h>
-#else
 #include <boost/math/tools/toms748_solve.hpp>
 #include <cstdint>
-#endif
 #pragma clang unsafe_buffer_usage end
 
 #include <algorithm>
@@ -132,19 +126,6 @@ auto nne_solution_f(const double nne_assumed, const int nonemptymgi, const bool 
 
   return nne_after - nne_assumed;
 }
-
-#ifdef BOOST_OFF
-struct nneSolutionParas {
-  int nonemptymgi;
-  bool force_saha;
-};
-
-auto nne_solution_f(const double nne_assumed, void* const voidparas)  // cppcheck-suppress constParameterPointer
-    -> double {
-  const auto* paras = static_cast<const nneSolutionParas*>(voidparas);
-  return nne_solution_f(nne_assumed, paras->nonemptymgi, paras->force_saha);
-}
-#endif
 
 // return population and whether the population came from the nlte solver
 auto calculate_levelpop_nominpop(const int nonemptymgi, const int element, const int ion, const int level)
@@ -297,34 +278,6 @@ auto find_converged_nne(const int nonemptymgi, double nne_max, const bool force_
   constexpr double fractional_accuracy = 1e-3;
   constexpr auto maxit = 50U;
 
-#ifdef BOOST_OFF
-
-  gsl_root_fsolver* solver = gsl_root_fsolver_alloc(gsl_root_fsolver_brent);
-
-  nneSolutionParas paras = {.nonemptymgi = nonemptymgi, .force_saha = force_lte};
-  gsl_function f = {.function = &nne_solution_f, .params = &paras};
-  gsl_root_fsolver_set(solver, &f, nne_min, nne_max);
-  int status = GSL_CONTINUE;
-  auto iter = 0U;
-  double nne_solution = 0.;
-  for (iter = 0; iter <= maxit; iter++) {
-    gsl_root_fsolver_iterate(solver);
-    nne_solution = gsl_root_fsolver_root(solver);
-    const auto nne_lower = gsl_root_fsolver_x_lower(solver);
-    const auto nne_upper = gsl_root_fsolver_x_upper(solver);
-    status = gsl_root_test_interval(nne_lower, nne_upper, 0, fractional_accuracy);
-    if (status != GSL_CONTINUE) {
-      break;
-    }
-  }
-  if (status == GSL_CONTINUE) {
-    printlnlog("[warning] calculate_ion_balance_nne: nne did not converge within {} iterations", iter + 1);
-  }
-
-  gsl_root_fsolver_free(solver);
-
-#else
-
   // use TOMS 748 solver from Boost
   uintmax_t iter = maxit;
   auto result =
@@ -333,8 +286,6 @@ auto find_converged_nne(const int nonemptymgi, double nne_max, const bool force_
   if (iter >= maxit) {
     printlnlog("[warning] calculate_ion_balance_nne: nne did not converge within {} iterations", iter);
   }
-
-#endif
 
   return static_cast<float>(std::max(MINPOP, nne_solution));
 }

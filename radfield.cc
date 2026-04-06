@@ -14,15 +14,10 @@
 #include <vector>
 
 #pragma clang unsafe_buffer_usage begin
-#ifdef BOOST_OFF
-#include <gsl/gsl_errno.h>
-#include <gsl/gsl_math.h>
-#include <gsl/gsl_roots.h>
-#else
+#include <mpi.h>
+
 #include <boost/math/tools/toms748_solve.hpp>
 #include <cstdint>
-#endif
-#include <mpi.h>
 #pragma clang unsafe_buffer_usage end
 
 #include "artisoptions.h"
@@ -327,19 +322,6 @@ auto nu_bar_planck_minus_estimator(const double T_R, const int nonemptymgi, cons
   return delta_nu_bar;
 }
 
-#ifdef BOOST_OFF
-struct GSLTempSolverParams {
-  int nonemptymgi;
-  int binindex;
-};
-
-auto nu_bar_planck_minus_estimator(const double T_R, void* const voidparas)  // cppcheck-suppress constParameterPointer
-    -> double {
-  const auto* const params = static_cast<const GSLTempSolverParams*>(voidparas);
-  return nu_bar_planck_minus_estimator(T_R, params->nonemptymgi, params->binindex);
-}
-#endif
-
 auto find_bin_T_R(const int nonemptymgi, const int binindex) -> float {
   const auto f_deltanubar = [nonemptymgi, binindex](const double T_R) {
     return nu_bar_planck_minus_estimator(T_R, nonemptymgi, binindex);
@@ -356,37 +338,6 @@ auto find_bin_T_R(const int nonemptymgi, const int binindex) -> float {
 
     constexpr double epsrel = 1e-4;
     const auto maxit = 100U;
-#ifdef BOOST_OFF
-
-    GSLTempSolverParams paras{.nonemptymgi = nonemptymgi, .binindex = binindex};
-    gsl_function find_T_R_f = {.function = &nu_bar_planck_minus_estimator, .params = &paras};
-
-    // one dimensional gsl root solver, bracketing type
-    gsl_root_fsolver* T_R_solver = gsl_root_fsolver_alloc(gsl_root_fsolver_brent);
-    gsl_root_fsolver_set(T_R_solver, &find_T_R_f, bins_T_R_min, bins_T_R_max);
-    int status = 0;
-    float T_R_solution = 0.;
-    for (auto iteration_num = 0U; iteration_num <= maxit; iteration_num++) {
-      gsl_root_fsolver_iterate(T_R_solver);
-      T_R_solution = static_cast<float>(gsl_root_fsolver_root(T_R_solver));
-
-      const double T_R_lower = gsl_root_fsolver_x_lower(T_R_solver);
-      const double T_R_upper = gsl_root_fsolver_x_upper(T_R_solver);
-      status = gsl_root_test_interval(T_R_lower, T_R_upper, 0., epsrel);
-
-      if (status != GSL_CONTINUE) {
-        break;
-      }
-    }
-
-    if (status == GSL_CONTINUE) {
-      printlnlog("[warning] find_bin_T_R: T_R did not converge within {} iterations", maxit);
-    }
-
-    gsl_root_fsolver_free(T_R_solver);
-    return T_R_solution;
-
-#else
 
     // use TOMS 748 solver from Boost
     uintmax_t iteration_num = maxit;
@@ -397,9 +348,8 @@ auto find_bin_T_R(const int nonemptymgi, const int binindex) -> float {
       printlnlog("[warning] find_bin_T_R: T_R did not converge within {} iterations.", iteration_num);
     }
     return T_R_solution;
-
-#endif
-  } else if (invalid_values || f_Tmax < 0) {
+  }
+  if (invalid_values || f_Tmax < 0) {
     // At T_R_max, nu_bar_planck_minus_estimator is negative or not finite, so any root lies above T_R_max; clamp to
     // upper bound
     return bins_T_R_max;
