@@ -47,7 +47,7 @@ void setup_photoion_luts();
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_ion_spontrecombcoeff(int uniqueionindex, float T_e) -> double;
 
 template <class F>
-constexpr auto simpson_integrator(const F func_integrand, const double a, const double b, const int samplecount)
+constexpr auto simpson_integrator(const F& func_integrand, const double a, const double b, const int samplecount)
     -> double {
   assert_testmodeonly(samplecount % 2 == 1);
 
@@ -78,7 +78,7 @@ constexpr auto simpson_integrator(const F func_integrand, const double a, const 
 }
 
 template <int GKNPOINTS = 61, class F>
-auto integrator(const F func_integrand, const double a, const double b, [[maybe_unused]] const double epsrel,
+auto integrator(const F& func_integrand, const double a, const double b, [[maybe_unused]] const double epsrel,
                 double* abserr) -> double {
   static_assert(GKNPOINTS == 15 || GKNPOINTS == 31 || GKNPOINTS == 41 || GKNPOINTS == 51 || GKNPOINTS == 61,
                 "Unsupported GKNPOINTS value");
