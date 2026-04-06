@@ -51,7 +51,7 @@ constexpr auto simpson_integrator(const F func_integrand, const double a, const 
     -> double {
   assert_testmodeonly(samplecount % 2 == 1);
 
-  const double deltax = (b - a) / samplecount;
+  const double deltax = (b - a) / (samplecount - 1);
 
   double integral = 0.;
   for (int i = 0; i < samplecount; i++) {
