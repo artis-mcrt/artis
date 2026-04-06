@@ -6,26 +6,26 @@
 
 [ARTIS](https://github.com/artis-mcrt/artis) ([Sim 2007](https://ui.adsabs.harvard.edu/abs/2007MNRAS.375..154S/abstract); [Kromer & Sim 2009](https://ui.adsabs.harvard.edu/abs/2009MNRAS.398.1809K/abstract)) is a 3D radiative transfer code for Type Ia supernovae using the Monte Carlo method with indivisible energy packets ([Lucy 2002](https://ui.adsabs.harvard.edu/abs/2002A%26A...384..725L/abstract)). The latest version incorporates polarisation and virtual packets ([Bulla et al. 2015](https://ui.adsabs.harvard.edu/abs/2015MNRAS.450..967B/abstract)), non-LTE physics appropriate for the nebular phase of Type Ia supernovae ([Shingles et al. 2020](https://ui.adsabs.harvard.edu/abs/2020MNRAS.492.2029S/abstract)), and alpha- and beta-decays with time-dependent thermalisation ([Shingles et al. 2023](https://ui.adsabs.harvard.edu/abs/2023ApJ...954L..41S/abstract)).
 
-The code is modern C++23 and scales to thousands of CPU cores across multiple node using MPI with shared memory on each node. Experimental support is also provided for OpenMP and C++ standard parallelism (for multicore CPU and upcoming GPU targets).
+Supported coordinate systems are 1D spherical (arbitrary spacing), 2D cylindrical (regular), and 3D Cartesian (regular).
+
+The code is modern C++23 and scales to thousands of CPU cores across multiple nodes with MPI shared memory on each node. Experimental support is also provided for OpenMP and C++ standard parallelism for multithreaded CPU and upcoming GPU targets.
 
 ## Citing ARTIS
 We maintain a list of [papers that use ARTIS](https://ui.adsabs.harvard.edu/user/libraries/g5NyA9gKT5KdDFLY6SixWg) and [papers that use ARTIS with non-LTE enabled](https://ui.adsabs.harvard.edu/user/libraries/CX8fnPInSu2q1rAE4wWQrg).
 
 If you use ARTIS, please cite it using the [DOI from Zenodo](https://zenodo.org/records/18670358).
 
-An early version of the code is described in [Sim (2007)](https://ui.adsabs.harvard.edu/abs/2007MNRAS.375..154S/abstract) and [Kromer & Sim (2009)](https://ui.adsabs.harvard.edu/abs/2009MNRAS.398.1809K/abstract). For specific features, see:
+An early version of the code is described in [Sim (2007)](https://ui.adsabs.harvard.edu/abs/2007MNRAS.375..154S/abstract) and [Kromer & Sim (2009)](https://ui.adsabs.harvard.edu/abs/2009MNRAS.398.1809K/abstract). For specific features, please cite:
 - Polarisation and virtual packets: [Bulla et al. (2015)](https://ui.adsabs.harvard.edu/abs/2015MNRAS.450..967B/abstract)
-- Non-LTE level populations, multibin radiation field model, and the non-thermal ionisation: [Shingles et al. (2020)](https://ui.adsabs.harvard.edu/abs/2020MNRAS.492.2029S/abstract)
-- Alpha, beta, and fission decay, and time-dependent particle thermalisation for kilonovae: [Shingles et al. (2023)](https://ui.adsabs.harvard.edu/abs/2023ApJ...954L..41S/abstract).
+- Non-LTE level populations, multibin radiation field model, and non-thermal ionisation/excitation: [Shingles et al. (2020)](https://ui.adsabs.harvard.edu/abs/2020MNRAS.492.2029S/abstract)
+- Alpha, beta, and fission decay, and time-dependent particle thermalisation for kilonovae: [Shingles et al. (2023)](https://ui.adsabs.harvard.edu/abs/2023ApJ...954L..41S/abstract)
+- Expansion opacities and paramaterised scattering/thermalisation ratio (instead of default line-by-line opacity and macroatom): Shingles et al. (in prep)
 
 ## Source code availability and license
-The ARTIS code forms part of the method used to obtain published scientific results. We anticipate that some developers building similar simulation codes might find our code useful, and in this case we ask that authors of any derivative works acknowledge and cite the ARTIS collaboration. This is in addition to the legal requirements of attribution and preservation of copyright notices on any substantial copies under the BSD 3-Clause license.
-
-## Can you help me to use the code?
-We do not have the resources to support users of the code outside our team of direct collaborators.
+The ARTIS source code is available under a [BSD 3-Clause license](https://github.com/artis-mcrt/artis/blob/nebular/LICENSE), which requires attribution and preservation of copyright notices on any substantial copies. If you find the ARTIS code useful in any way, we request that you cite us as described above and star the respository to help show impact in funding proposals.
 
 ## Setting up production runs on Linux
-We recommended that you retain the full source code and Git version metadata within each simulation folder for future reference (i.e. don't just copy the executables).
+We recommended retaining the exact source code and Git metadata within each simulation folder for future reference (i.e., don't just copy the executables).
 
 Clone the source code repository from the release branch:
 ```sh
@@ -33,22 +33,21 @@ git clone --branch release https://github.com/artis-mcrt/artis.git
 cd artis
 ```
 
-To compile and run artis, you will need a recent C++ compiler (g++, LLVM Clang, Apple Clang, or nvc++) and an MPI library that provides a wrapper command `mpicxx'. Typically, these are made available on HPC systems using module or spack commands. For systems that we use, look at the top of the relevant SLURM script in scripts/artis-*.sh to find compatible modules specifications.
+To compile and run artis, you will need a recent C++ compiler (g++, Clang, or nvc++) and an MPI library (e.g., Open MPI) that provides an `mpicxx` command. Usually, these are available on HPC clusters using module or spack commands. For systems that we use, look at the top of the relevant SLURM script in scripts/artis-*.sh to find compatible modules specifications. For Open MPI, set the C++ compiler using `export OMPI_CXX=g++`.
 
-Next, select an options preset and compile with `make'. For example:
+Next, select an options preset and compile with `make`. For example:
 ```sh
 ln -s artisoptions_classic.h artisoptions.h
 make
 ```
 
-You will likely want to change the number of packets per rank (MPKTS), and the GRID_TYPE (SPHERICAL1D, CYLINDRICAL2D, or CARTESIAN3D) using a text editor. A CARTESIAN3D grid can be used with any 1D, 2D, or 3D input model (as was historically done) but there will be a loss of accuracy due to the mismatch between model cells and propagation cells.
+You will likely want to change the number of packets per rank (MPKTS) using a text editor, e.g. `vim artisoptions.h`.
 
-Next, go up to the model folder and symlink the executables and data folder:
+Next, go up to the model folder and symlink the executables:
 ```sh
 cd ..
 ln -s artis/sn3d
 ln -s artis/exspec
-ln -s artis/data
 ```
 
 The next steps are to ensure a full set of snapshot files (model.txt and abundances.txt) and an atomic database are present, and to configure the timesteps in input.txt. Then, queue the relevant job script with a command such as:
@@ -132,7 +131,3 @@ Photoionisation cross sections in v1 format (arbitrary energy tables) or v2 form
 
 ### gamma_*.txt
 Gamma decay spectra containing energies [MeV] and probabilities.
-
-## License
-
-Distributed under the BSD 3-Clause license. See [LICENSE](https://github.com/artis-mcrt/artis/blob/nebular/LICENSE) for more information.
