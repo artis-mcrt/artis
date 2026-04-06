@@ -70,13 +70,13 @@ auto gammacorr_integrand(const double nu, const double nu_edge, const float T, c
 }
 
 // Integrand to precalculate the bound-free cooling rate coefficient
-auto bfcooling_integrand(const double nu_minus_nu_edge, const double nu_edge, const float T,
+auto bfcooling_integrand(const double nu_minus_nu_edge, const double nu_edge, const float T_e,
                          const std::span<const float> photoion_xs) -> double {
   const float sigma_bf = photoionisation_crosssection_fromtable(photoion_xs, nu_edge, nu_minus_nu_edge + nu_edge);
 
   // return sigma_bf * (1-nu_edge/nu) * TWOHOVERCLIGHTSQUARED * pow(nu,3) * exp(-HOVERKB*nu/T);
   return sigma_bf * nu_minus_nu_edge * TWOHOVERCLIGHTSQUARED * (nu_minus_nu_edge + nu_edge) *
-         (nu_minus_nu_edge + nu_edge) * exp(-HOVERKB * nu_minus_nu_edge / T);
+         (nu_minus_nu_edge + nu_edge) * exp(-HOVERKB * nu_minus_nu_edge / T_e);
 }
 
 [[gnu::pure]] [[nodiscard]] inline auto get_bflutindex(const int temperatureindex, const int uniquelevelindex,
@@ -128,12 +128,12 @@ void precalculate_rate_coefficient_integrals() {
           const double nu_max_phixs =
               nu_threshold * last_phixs_nuovernuedge;  // nu of the uppermost point in the phixs table
           // Loop over the temperature grid
-          for (int iter = 0; iter < TABLESIZE; iter++) {
-            const int bflutindex = get_bflutindex(iter, element, ion, level, phixstargetindex);
+          for (int temperatureindex = 0; temperatureindex < TABLESIZE; temperatureindex++) {
+            const int bflutindex = get_bflutindex(temperatureindex, element, ion, level, phixstargetindex);
             double error{NAN};
-            const auto T_e = static_cast<float>(MINTEMP * exp(iter * T_step_log));
+            const auto temperature = static_cast<float>(MINTEMP * exp(temperatureindex * T_step_log));
 
-            const double modified_sahafact = SAHACONST * statw_lower / statw_upper * std::pow(T_e, -1.5);
+            const double modified_sahafact = SAHACONST * statw_lower / statw_upper * std::pow(temperature, -1.5);
             assert_always(modified_sahafact >= 0.);
             assert_always(std::isfinite(modified_sahafact));
 
@@ -142,12 +142,13 @@ void precalculate_rate_coefficient_integrals() {
             const auto photoion_xs = get_phixs_table(element, ion, level);
 
             // Spontaneous recombination and bf-cooling coefficient don't depend on the radiation field
-            const auto alpha_sp = FOURPI * modified_sahafact * phixstargetprobability *
-                                  integrator(
-                                      [&](const double nu_minus_nu_edge) {
-                                        return alpha_sp_integrand(nu_minus_nu_edge, nu_threshold, T_e, photoion_xs);
-                                      },
-                                      0, nu_max_phixs - nu_threshold, RATECOEFF_INTEGRAL_ACCURACY, &error);
+            const auto alpha_sp =
+                FOURPI * modified_sahafact * phixstargetprobability *
+                integrator(
+                    [&](const double nu_minus_nu_edge) {
+                      return alpha_sp_integrand(nu_minus_nu_edge, nu_threshold, temperature, photoion_xs);
+                    },
+                    0, nu_max_phixs - nu_threshold, RATECOEFF_INTEGRAL_ACCURACY, &error);
 
             assert_always(std::isfinite(alpha_sp) && alpha_sp >= 0);
             spontrecombcoeffs[bflutindex] = alpha_sp;
@@ -155,7 +156,7 @@ void precalculate_rate_coefficient_integrals() {
             if constexpr (USE_LUT_PHOTOION) {
               auto gammacorr = integrator(
                   [&](const double nu_minus_nu_edge) {
-                    return gammacorr_integrand(nu_minus_nu_edge, nu_threshold, T_e, photoion_xs);
+                    return gammacorr_integrand(nu_minus_nu_edge, nu_threshold, temperature, photoion_xs);
                   },
                   nu_threshold, nu_max_phixs, RATECOEFF_INTEGRAL_ACCURACY, &error);
               gammacorr *= FOURPI * phixstargetprobability;
@@ -170,7 +171,7 @@ void precalculate_rate_coefficient_integrals() {
                 FOURPI * modified_sahafact * phixstargetprobability *
                 integrator(
                     [&](const double nu_minus_nu_edge) {
-                      return bfcooling_integrand(nu_minus_nu_edge, nu_threshold, T_e, photoion_xs);
+                      return bfcooling_integrand(nu_minus_nu_edge, nu_threshold, temperature, photoion_xs);
                     },
                     0, nu_max_phixs - nu_threshold, RATECOEFF_INTEGRAL_ACCURACY, &error);
 
