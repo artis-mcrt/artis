@@ -44,14 +44,6 @@ struct GSLIntegrationParas {
   std::span<const float> photoion_xs;
 };
 
-struct GSLIntegralParasGammaCorr {
-  double nu_edge;
-  double modified_departure_ratio;  // nnupperionlevel / nnlevel * nne * (sahafact / exp(E_threshold / KB / T))
-  std::span<const float> photoion_xs;
-  float T_e;
-  int nonemptymgi;
-};
-
 // Integrand to calculate the rate coefficient for spontaneous recombination
 auto alpha_sp_integrand(const double nu_minus_nu_edge, const GSLIntegrationParas& params) -> double {
   const auto& nu_edge = params.nu_edge;
