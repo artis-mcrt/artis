@@ -441,8 +441,8 @@ auto calculate_corrphotoioncoeff_integral(const int element, const int ion, cons
       SAHACONST * stat_weight(loweruniquelevelindex) / stat_weight(upperuniquelevelindex) * std::pow(T_e, -1.5);
   const double nnupperionlevel = use_cellcache ? get_cellcache_levelpop(nonemptymgi, upperuniquelevelindex)
                                                : calculate_levelpop(nonemptymgi, element, ion + 1, upperionlevel);
-  double modified_departure_ratio =
-      nnlevel > 0. ? nnupperionlevel / nnlevel * nne * modified_sahafact : 1.;  // put that to phixslist
+
+  double modified_departure_ratio = nnlevel > 0. ? nnupperionlevel / nnlevel * nne * modified_sahafact : 1.;
   if (!std::isfinite(modified_departure_ratio)) {
     modified_departure_ratio = 0.;
   }
