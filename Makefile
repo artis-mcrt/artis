@@ -45,6 +45,8 @@ else ifneq '' '$(findstring clang,$(COMPILER_VERSION))'
 			LDFLAGS += -fuse-ld=lld
 		endif
 	endif
+$(info detected CPU is $(shell mpicxx -march=native -### -c -x c++ /dev/null 2>&1   | tr ' ' '\n'   | awk '/-target-cpu/ {getline; gsub(/"/,""); print; exit}'))
+
 else ifneq '' '$(findstring g++,$(COMPILER_VERSION))'
 	COMPILER_NAME := GCC
 	# std::stacktrace is available in GCC 14 and later
@@ -61,6 +63,8 @@ else ifneq '' '$(findstring g++,$(COMPILER_VERSION))'
 	endif
 	CXXFLAGS += -Wno-psabi
 # 	CXXFLAGS += -Wsuggest-attribute=pure -Wsuggest-attribute=const
+$(info detected CPU is $(shell mpicxx -march=native -Q --help=target | grep -- '-march=  ' | cut -f3))
+
 else ifneq '' '$(findstring nvc++,$(COMPILER_VERSION))'
 	COMPILER_NAME := NVHPC
 	CXX_STD := c++23
@@ -75,7 +79,7 @@ else
 	COMPILER_NAME := unknown
 endif
 
-$(info detected compiler is $(COMPILER_NAME) major version $(COMPILER_VERSION_NUMBER_MAJOR))
+$(info detected compiler is $(COMPILER_NAME) version $(COMPILER_VERSION_NUMBER). Major version: $(COMPILER_VERSION_NUMBER_MAJOR))
 
 CXXFLAGS += -std=$(CXX_STD) -Wall -Wextra -Wpedantic -Wredundant-decls -Wno-unused-parameter -Wsign-compare -Wshadow -isystem third_party -DBOOST_MATH_STANDALONE
 
@@ -197,6 +201,7 @@ else
 	endif
 
 endif
+
 ifeq ($(EIGEN),OFF)
 	BUILD_DIR := $(BUILD_DIR)_eigenoff
 
