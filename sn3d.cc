@@ -675,7 +675,7 @@ auto main(int argc, char* argv[]) -> int {
 #ifdef USE_SIMPSON_INTEGRATOR
   printlnlog("Simpson rule");
 #else
-  printlnlog("Boost qag adaptive integrator");
+  printlnlog("Boost Gauss-Kronrod quadrature");
 #endif
 
 #ifdef EIGEN_OFF
