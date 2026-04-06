@@ -82,22 +82,19 @@ auto integrator(const F func_integrand, const double a, const double b, [[maybe_
                 double* abserr) -> double {
   static_assert(GKNPOINTS == 15 || GKNPOINTS == 31 || GKNPOINTS == 41 || GKNPOINTS == 51 || GKNPOINTS == 61,
                 "Unsupported GKNPOINTS value");
-  double result{0.};
 #ifdef USE_SIMPSON_INTEGRATOR
   // need an odd number for Simpson rule
-  const int samplecount = std::max(3, (globals::NPHIXSPOINTS * 3) + 1);
+  const int samplecount = std::max(3, (globals::NPHIXSPOINTS * 2) + 1);
 
-  result = simpson_integrator(func_integrand, a, b, samplecount);
   *abserr = 0.;
+  return simpson_integrator(func_integrand, a, b, samplecount);
 
 #else
 
   // Boost's Gauss-Kronrod integrator
-  result =
-      boost::math::quadrature::gauss_kronrod<double, GKNPOINTS>::integrate(func_integrand, a, b, 15, epsrel, abserr);
+  return boost::math::quadrature::gauss_kronrod<double, GKNPOINTS>::integrate(func_integrand, a, b, 15, epsrel, abserr);
 
 #endif
-  return result;
 }
 
 #endif  // RATECOEFF_H
