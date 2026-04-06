@@ -46,8 +46,8 @@ void setup_photoion_luts();
 
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_ion_spontrecombcoeff(int uniqueionindex, float T_e) -> double;
 
-template <double func_integrand(double, void* const)>
-constexpr auto simpson_integrator(auto& params, const double a, const double b, const int samplecount) -> double {
+template <class F>
+constexpr auto simpson_integrator(F func_integrand, const double a, const double b, const int samplecount) -> double {
   assert_testmodeonly(samplecount % 2 == 1);
 
   const double deltax = (b - a) / samplecount;
@@ -69,15 +69,16 @@ constexpr auto simpson_integrator(auto& params, const double a, const double b, 
 
     const double x = a + (deltax * i);
 
-    integral += weight * func_integrand(x, &params) * deltax;
+    integral += weight * func_integrand(x) * deltax;
   }
   integral /= 3.;
 
   return integral;
 }
 
-template <double func_integrand(double, void* const), int GKNPOINTS = 61>
-auto integrator(auto params, const double a, const double b, const double epsrel, double* abserr) -> double {
+template <int GKNPOINTS = 61, class F>
+auto integrator(F func_integrand, const double a, const double b, [[maybe_unused]] const double epsrel, double* abserr)
+    -> double {
   static_assert(GKNPOINTS == 15 || GKNPOINTS == 31 || GKNPOINTS == 41 || GKNPOINTS == 51 || GKNPOINTS == 61,
                 "Unsupported GKNPOINTS value");
   double result{0.};
@@ -85,14 +86,14 @@ auto integrator(auto params, const double a, const double b, const double epsrel
   // need an odd number for Simpson rule
   const int samplecount = std::max(3, (globals::NPHIXSPOINTS * 3) + 1);
 
-  result = simpson_integrator<func_integrand>(params, a, b, samplecount);
+  result = simpson_integrator(func_integrand, a, b, samplecount);
   *abserr = 0.;
 
 #else
 
   // Boost's Gauss-Kronrod integrator
-  result = boost::math::quadrature::gauss_kronrod<double, GKNPOINTS>::integrate(
-      [&](double x) { return func_integrand(x, &params); }, a, b, 15, epsrel, abserr);
+  result =
+      boost::math::quadrature::gauss_kronrod<double, GKNPOINTS>::integrate(func_integrand, a, b, 15, epsrel, abserr);
 
 #endif
   return result;

@@ -53,8 +53,7 @@ struct GSLIntegralParasGammaCorr {
 };
 
 // Integrand to calculate the rate coefficient for spontaneous recombination
-auto alpha_sp_integrand(const double nu_minus_nu_edge, void* const voidparas) -> double {
-  const auto& params = *(static_cast<const GSLIntegrationParas*>(voidparas));
+auto alpha_sp_integrand(const double nu_minus_nu_edge, const GSLIntegrationParas& params) -> double {
   const auto& nu_edge = params.nu_edge;
   const auto& T = params.T_e;
   const auto& photoion_xs = params.photoion_xs;
@@ -69,8 +68,7 @@ auto alpha_sp_integrand(const double nu_minus_nu_edge, void* const voidparas) ->
 }
 
 // Integrand to calculate the rate coefficient for spontaneous recombination
-auto alpha_sp_E_integrand(const double nu, void* const voidparas) -> double {
-  const auto& params = *(static_cast<const GSLIntegrationParas*>(voidparas));
+auto alpha_sp_E_integrand(const double nu, const GSLIntegrationParas& params) -> double {
   const auto& nu_edge = params.nu_edge;
   const auto& T = params.T_e;
   const auto& photoion_xs = params.photoion_xs;
@@ -82,8 +80,7 @@ auto alpha_sp_E_integrand(const double nu, void* const voidparas) -> double {
 }
 
 // Integrand to calculate the rate coefficient for photoionisation corrected for stimulated recombination.
-auto gammacorr_integrand(const double nu, void* const voidparas) -> double {
-  const auto& params = *(static_cast<const GSLIntegrationParas*>(voidparas));
+auto gammacorr_integrand(const double nu, const GSLIntegrationParas& params) -> double {
   const auto& nu_edge = params.nu_edge;
   const auto& T = params.T_e;
   const auto& photoion_xs = params.photoion_xs;
@@ -101,8 +98,7 @@ auto gammacorr_integrand(const double nu, void* const voidparas) -> double {
 }
 
 // Integrand to precalculate the bound-free cooling rate coefficient
-auto bfcooling_integrand(const double nu_minus_nu_edge, void* const voidparas) -> double {
-  const auto& params = *(static_cast<const GSLIntegrationParas*>(voidparas));
+auto bfcooling_integrand(const double nu_minus_nu_edge, const GSLIntegrationParas& params) -> double {
   const auto& nu_edge = params.nu_edge;
   const auto& T = params.T_e;
   const auto& photoion_xs = params.photoion_xs;
@@ -179,15 +175,15 @@ void precalculate_rate_coefficient_integrals() {
 
             // Spontaneous recombination and bf-cooling coefficient don't depend on the radiation field
             const auto alpha_sp = FOURPI * modified_sahafact * phixstargetprobability *
-                                  integrator<alpha_sp_integrand>(intparas, 0, nu_max_phixs - nu_threshold,
-                                                                 RATECOEFF_INTEGRAL_ACCURACY, &error);
+                                  integrator([&](double x) { return alpha_sp_integrand(x, intparas); }, 0,
+                                             nu_max_phixs - nu_threshold, RATECOEFF_INTEGRAL_ACCURACY, &error);
 
             assert_always(std::isfinite(alpha_sp) && alpha_sp >= 0);
             spontrecombcoeffs[bflutindex] = alpha_sp;
 
             if constexpr (USE_LUT_PHOTOION) {
-              auto gammacorr = integrator<gammacorr_integrand>(intparas, nu_threshold, nu_max_phixs,
-                                                               RATECOEFF_INTEGRAL_ACCURACY, &error);
+              auto gammacorr = integrator([&](double x) { return gammacorr_integrand(x, intparas); }, nu_threshold,
+                                          nu_max_phixs, RATECOEFF_INTEGRAL_ACCURACY, &error);
               gammacorr *= FOURPI * phixstargetprobability;
               assert_always(gammacorr >= 0);
               if (gammacorr < 0) {
@@ -196,9 +192,10 @@ void precalculate_rate_coefficient_integrals() {
               }
               corrphotoioncoeffs[bflutindex] = gammacorr;
             }
-            const auto this_bfcooling_coeff = FOURPI * modified_sahafact * phixstargetprobability *
-                                              integrator<bfcooling_integrand>(intparas, 0, nu_max_phixs - nu_threshold,
-                                                                              RATECOEFF_INTEGRAL_ACCURACY, &error);
+            const auto this_bfcooling_coeff =
+                FOURPI * modified_sahafact * phixstargetprobability *
+                integrator([&](double x) { return bfcooling_integrand(x, intparas); }, 0, nu_max_phixs - nu_threshold,
+                           RATECOEFF_INTEGRAL_ACCURACY, &error);
 
             assert_always(std::isfinite(this_bfcooling_coeff) && this_bfcooling_coeff >= 0);
             bfcooling_coeffs[bflutindex] = this_bfcooling_coeff;
@@ -415,8 +412,8 @@ void precalculate_ion_alpha_sp() {
 }
 
 // Integrand to calculate the rate coefficient for photoionisation. Corrected for stimulated recombination.
-auto integrand_corrphotoioncoeff_custom_radfield(const double nu_minus_nu_edge, void* const voidparas) -> double {
-  const auto& params = *(static_cast<const GSLIntegralParasGammaCorr*>(voidparas));
+auto integrand_corrphotoioncoeff_custom_radfield(const double nu_minus_nu_edge, const GSLIntegralParasGammaCorr& params)
+    -> double {
   const auto& nu_edge = params.nu_edge;
   const auto& modified_departure_ratio = params.modified_departure_ratio;
   const auto& photoion_xs = params.photoion_xs;
@@ -472,9 +469,9 @@ auto calculate_corrphotoioncoeff_integral(const int element, const int ion, cons
 
   double error = 0.;
 
-  const auto gammacorr =
-      FOURPI * get_phixsprobability(loweruniquelevelindex, phixstargetindex) *
-      integrator<integrand_corrphotoioncoeff_custom_radfield>(intparas, 0, nu_max_phixs - nu_threshold, epsrel, &error);
+  const auto gammacorr = FOURPI * get_phixsprobability(loweruniquelevelindex, phixstargetindex) *
+                         integrator([&](double x) { return integrand_corrphotoioncoeff_custom_radfield(x, intparas); },
+                                    0, nu_max_phixs - nu_threshold, epsrel, &error);
   assert_always(std::isfinite(gammacorr));
 
   return gammacorr;
@@ -537,8 +534,8 @@ DEVICE_FUNC auto select_continuum_nu(int element, const int lowerion, const int 
   const double deltanu = (nu_max_phixs - nu_threshold) / npieces;
   double error{NAN};
 
-  auto total_alpha_sp =
-      integrator<alpha_sp_E_integrand, 31>(intparas, nu_threshold, nu_max_phixs, RATECOEFF_INTEGRAL_ACCURACY, &error);
+  auto total_alpha_sp = integrator<31>([&](double x) { return alpha_sp_E_integrand(x, intparas); }, nu_threshold,
+                                       nu_max_phixs, RATECOEFF_INTEGRAL_ACCURACY, &error);
 
   double alpha_sp_old = total_alpha_sp;
   double alpha_sp = total_alpha_sp;
@@ -549,7 +546,8 @@ DEVICE_FUNC auto select_continuum_nu(int element, const int lowerion, const int 
     const double xlow = nu_threshold + (i * deltanu);
 
     // Spontaneous recombination and bf-cooling coefficient don't depend on the radiation field
-    alpha_sp = integrator<alpha_sp_E_integrand, 31>(intparas, xlow, nu_max_phixs, RATECOEFF_INTEGRAL_ACCURACY, &error);
+    alpha_sp = integrator<31>([&](double x) { return alpha_sp_E_integrand(x, intparas); }, xlow, nu_max_phixs,
+                              RATECOEFF_INTEGRAL_ACCURACY, &error);
 
     if (zrand >= alpha_sp / total_alpha_sp) {
       break;

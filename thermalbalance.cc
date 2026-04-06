@@ -43,8 +43,7 @@ struct BFHeatingIntegralParams {
 };
 
 // Integrand to calculate the rate coefficient for bfheating.
-auto integrand_bfheatingcoeff(const double nu, void* const voidparas) -> double {
-  const auto& params = *(static_cast<const BFHeatingIntegralParams*>(voidparas));
+auto integrand_bfheatingcoeff(const double nu, const BFHeatingIntegralParams& params) -> double {
   const auto& nu_edge = params.nu_edge;
   const auto& nonemptymgi = params.nonemptymgi;
   const auto& T_R = params.T_R;
@@ -222,7 +221,8 @@ auto calculate_bfheatingcoeff(const int element, const int ion, const int level,
                                             .T_R = grid::get_TR(nonemptymgi),
                                             .photoion_xs = get_phixs_table(element, ion, level)};
 
-  auto bfheating = integrator<integrand_bfheatingcoeff>(intparas, nu_threshold, nu_max_phixs, epsrel, &error);
+  auto bfheating = integrator([&](double x) { return integrand_bfheatingcoeff(x, intparas); }, nu_threshold,
+                              nu_max_phixs, epsrel, &error);
 
   bfheating *= FOURPI * get_phixsprobability(element, ion, level, phixstargetindex);
 
