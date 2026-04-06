@@ -15,6 +15,7 @@ cd $SLURM_SUBMIT_DIR/artis
 export LD_LIBRARY_PATH=$(gsl-config --prefix)/lib/:$LD_LIBRARY_PATH
 export MAKEFLAGS="--check-symlink-times --jobs=$(nproc --all)"
 export OMPI_CXX=g++
+make clean
 make
 
 cd $SLURM_SUBMIT_DIR
