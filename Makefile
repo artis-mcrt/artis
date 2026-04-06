@@ -197,36 +197,18 @@ else
 	endif
 
 endif
-
-# default to gsl off unless eigen is off
-GSL := OFF
-
 ifeq ($(EIGEN),OFF)
-	CXXFLAGS += -DEIGEN_OFF
-	GSL := ON
 	BUILD_DIR := $(BUILD_DIR)_eigenoff
-else
-endif
 
-ifeq ($(GSL),ON)
-	# GSL (GNU Scientific Library)
-	CXXFLAGS += $(shell pkg-config --cflags gsl)
-	# Use GSL inline functions
-	CXXFLAGS += -DHAVE_INLINE -DGSL_C99_INLINE
+	# if EIGEN is off, we need GSL for linear algebra
+	CXXFLAGS += -DEIGEN_OFF $(shell pkg-config --cflags gsl) -DHAVE_INLINE -DGSL_C99_INLINE
 
-	ifeq ($(STATICGSL),)
-		# default to static linking
-		STATICGSL := ON
-	endif
+	# static linking
+	gsllibdir := $(shell pkg-config --variable=libdir gsl)
+	gsl_objects = $(gsllibdir)/libgsl.a $(gsllibdir)/libgslcblas.a
 
-	ifeq ($(STATICGSL),ON)
-		gsllibdir := $(shell pkg-config --variable=libdir gsl)
-		gsl_objects = $(gsllibdir)/libgsl.a $(gsllibdir)/libgslcblas.a
-	else ifeq ($(STATICGSL),OFF)
-		LDFLAGS += $(shell pkg-config --libs gsl)
-	else
-		$(error bad value for STATICGSL option. Should be ON or OFF)
-	endif
+	# dynamic linking
+# 	LDFLAGS += $(shell pkg-config --libs gsl)
 endif
 
 ifneq ($(MAX_NODE_SIZE),)
