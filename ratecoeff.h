@@ -9,27 +9,6 @@
 
 #include "globals.h"
 
-#elifdef BOOST_OFF
-
-#include <gsl/gsl_errno.h>
-#include <gsl/gsl_integration.h>
-#include <gsl/gsl_math.h>
-
-#include <cstddef>
-#include <memory>
-
-constexpr size_t GSLWSIZE = 16384;  // GSL integration workspace size
-inline thread_local auto gslworkspace =
-    std::unique_ptr<gsl_integration_workspace, void (*)(gsl_integration_workspace*)>{
-        gsl_integration_workspace_alloc(GSLWSIZE),
-        [](gsl_integration_workspace* const w) -> void { gsl_integration_workspace_free(w); }};
-
-inline void gsl_error_handler_printout(const char* reason, const char* file, int line, int gsl_errno) {
-  if (gsl_errno != GSL_EROUND) {
-    printlnlog("WARNING: gsl ({}:{}): {} (Error code {})", file, line, reason, gsl_errno);
-  }
-}
-
 #else
 #include <cstdlib>
 
@@ -110,42 +89,11 @@ auto integrator(auto params, const double a, const double b, const double epsrel
   *abserr = 0.;
 
 #else
-#ifdef BOOST_OFF
-
-  // GSL's QAG adaptive integrator
-  constexpr auto key = []() {
-    switch (GKNPOINTS) {
-      case 15:
-        return GSL_INTEG_GAUSS15;
-      case 21:
-        return GSL_INTEG_GAUSS21;
-      case 31:
-        return GSL_INTEG_GAUSS31;
-      case 41:
-        return GSL_INTEG_GAUSS41;
-      case 51:
-        return GSL_INTEG_GAUSS51;
-      default:
-        return GSL_INTEG_GAUSS61;
-    }
-  }();
-
-  gsl_error_handler_t* previous_handler = gsl_set_error_handler(gsl_error_handler_printout);
-  const auto gslfunc = gsl_function{.function = func_integrand, .params = &params};
-  const auto status =
-      gsl_integration_qag(&gslfunc, a, b, 0., epsrel, GSLWSIZE, key, gslworkspace.get(), &result, abserr);
-  gsl_set_error_handler(previous_handler);
-  if (status != 0 && (status != 18 || (*abserr / std::abs(result)) > 0.1)) {
-    printlnlog("[warning] integrator status {}. Integral value {:9.3e} +/- {:9.3e}", status, result, *abserr);
-  }
-
-#else
 
   // Boost's Gauss-Kronrod integrator
   result = boost::math::quadrature::gauss_kronrod<double, GKNPOINTS>::integrate(
       [&](double x) { return func_integrand(x, &params); }, a, b, 15, epsrel, abserr);
 
-#endif
 #endif
   return result;
 }

@@ -77,7 +77,7 @@ endif
 
 $(info detected compiler is $(COMPILER_NAME) major version $(COMPILER_VERSION_NUMBER_MAJOR))
 
-CXXFLAGS += -std=$(CXX_STD) -Wall -Wextra -Wpedantic -Wredundant-decls -Wno-unused-parameter -Wsign-compare -Wshadow -isystem third_party
+CXXFLAGS += -std=$(CXX_STD) -Wall -Wextra -Wpedantic -Wredundant-decls -Wno-unused-parameter -Wsign-compare -Wshadow -isystem third_party -DBOOST_MATH_STANDALONE
 
 ifneq ($(COMPILER_NAME),NVHPC)
 	CXXFLAGS += -Wunused-macros -Werror -Wextra-semi -Wno-unknown-pragmas -Wno-error=cast-function-type -MD -MP -Wno-unused-function
@@ -198,15 +198,8 @@ else
 
 endif
 
-# default to gsl off unless boost or eigen are off
+# default to gsl off unless eigen is off
 GSL := OFF
-ifeq ($(BOOST),OFF)
-	CXXFLAGS += -DBOOST_OFF
-	GSL := ON
-	BUILD_DIR := $(BUILD_DIR)_boostoff
-else
-	CXXFLAGS += -DBOOST_MATH_STANDALONE
-endif
 
 ifeq ($(EIGEN),OFF)
 	CXXFLAGS += -DEIGEN_OFF
