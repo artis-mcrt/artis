@@ -412,14 +412,10 @@ void precalculate_ion_alpha_sp() {
 }
 
 // Integrand to calculate the rate coefficient for photoionisation. Corrected for stimulated recombination.
-auto integrand_corrphotoioncoeff_custom_radfield(const double nu_minus_nu_edge, const GSLIntegralParasGammaCorr& params)
-    -> double {
-  const auto& nu_edge = params.nu_edge;
-  const auto& modified_departure_ratio = params.modified_departure_ratio;
-  const auto& photoion_xs = params.photoion_xs;
-  const auto& T_e = params.T_e;
-  const auto& nonemptymgi = params.nonemptymgi;
-
+auto integrand_corrphotoioncoeff_custom_radfield(const double nu_minus_nu_edge, const double nu_edge,
+                                                 const double modified_departure_ratio,
+                                                 const std::span<const float> photoion_xs, const float T_e,
+                                                 const int nonemptymgi) -> double {
   double corrfactor = 1. - (modified_departure_ratio * exp(-HOVERKB * nu_minus_nu_edge / T_e));
   if (corrfactor < 0) {
     corrfactor = 0.;
@@ -459,19 +455,16 @@ auto calculate_corrphotoioncoeff_integral(const int element, const int ion, cons
     modified_departure_ratio = 0.;
   }
 
-  const auto intparas = GSLIntegralParasGammaCorr{
-      .nu_edge = nu_threshold,
-      .modified_departure_ratio = modified_departure_ratio,
-      .photoion_xs = get_phixs_table(loweruniquelevelindex),
-      .T_e = T_e,
-      .nonemptymgi = nonemptymgi,
-  };
-
   double error = 0.;
 
   const auto gammacorr = FOURPI * get_phixsprobability(loweruniquelevelindex, phixstargetindex) *
-                         integrator([&](double x) { return integrand_corrphotoioncoeff_custom_radfield(x, intparas); },
-                                    0, nu_max_phixs - nu_threshold, epsrel, &error);
+                         integrator(
+                             [&](const double nu_minus_nu_edge) {
+                               return integrand_corrphotoioncoeff_custom_radfield(
+                                   nu_minus_nu_edge, nu_threshold, modified_departure_ratio,
+                                   get_phixs_table(loweruniquelevelindex), T_e, nonemptymgi);
+                             },
+                             0, nu_max_phixs - nu_threshold, epsrel, &error);
   assert_always(std::isfinite(gammacorr));
 
   return gammacorr;
