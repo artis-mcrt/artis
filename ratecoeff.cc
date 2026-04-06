@@ -142,18 +142,22 @@ void precalculate_rate_coefficient_integrals() {
             const auto photoion_xs = get_phixs_table(element, ion, level);
 
             // Spontaneous recombination and bf-cooling coefficient don't depend on the radiation field
-            const auto alpha_sp =
-                FOURPI * modified_sahafact * phixstargetprobability *
-                integrator([&](double x) { return alpha_sp_integrand(x, nu_threshold, T_e, photoion_xs); }, 0,
-                           nu_max_phixs - nu_threshold, RATECOEFF_INTEGRAL_ACCURACY, &error);
+            const auto alpha_sp = FOURPI * modified_sahafact * phixstargetprobability *
+                                  integrator(
+                                      [&](const double nu_minus_nu_edge) {
+                                        return alpha_sp_integrand(nu_minus_nu_edge, nu_threshold, T_e, photoion_xs);
+                                      },
+                                      0, nu_max_phixs - nu_threshold, RATECOEFF_INTEGRAL_ACCURACY, &error);
 
             assert_always(std::isfinite(alpha_sp) && alpha_sp >= 0);
             spontrecombcoeffs[bflutindex] = alpha_sp;
 
             if constexpr (USE_LUT_PHOTOION) {
-              auto gammacorr =
-                  integrator([&](double x) { return gammacorr_integrand(x, nu_threshold, T_e, photoion_xs); },
-                             nu_threshold, nu_max_phixs, RATECOEFF_INTEGRAL_ACCURACY, &error);
+              auto gammacorr = integrator(
+                  [&](const double nu_minus_nu_edge) {
+                    return gammacorr_integrand(nu_minus_nu_edge, nu_threshold, T_e, photoion_xs);
+                  },
+                  nu_threshold, nu_max_phixs, RATECOEFF_INTEGRAL_ACCURACY, &error);
               gammacorr *= FOURPI * phixstargetprobability;
               assert_always(gammacorr >= 0);
               if (gammacorr < 0) {
@@ -164,8 +168,11 @@ void precalculate_rate_coefficient_integrals() {
             }
             const auto this_bfcooling_coeff =
                 FOURPI * modified_sahafact * phixstargetprobability *
-                integrator([&](double x) { return bfcooling_integrand(x, nu_threshold, T_e, photoion_xs); }, 0,
-                           nu_max_phixs - nu_threshold, RATECOEFF_INTEGRAL_ACCURACY, &error);
+                integrator(
+                    [&](const double nu_minus_nu_edge) {
+                      return bfcooling_integrand(nu_minus_nu_edge, nu_threshold, T_e, photoion_xs);
+                    },
+                    0, nu_max_phixs - nu_threshold, RATECOEFF_INTEGRAL_ACCURACY, &error);
 
             assert_always(std::isfinite(this_bfcooling_coeff) && this_bfcooling_coeff >= 0);
             bfcooling_coeffs[bflutindex] = this_bfcooling_coeff;
@@ -489,7 +496,7 @@ DEVICE_FUNC auto select_continuum_nu(int element, const int lowerion, const int 
 
   const int npieces = globals::NPHIXSPOINTS;
 
-  const std::span<const float> photoion_xs = get_phixs_table(lower_uniquelevelindex);
+  const auto photoion_xs = get_phixs_table(lower_uniquelevelindex);
 
   const double zrand = 1. - rng_uniform();  // Make sure that 0 < zrand <= 1
 
@@ -497,8 +504,8 @@ DEVICE_FUNC auto select_continuum_nu(int element, const int lowerion, const int 
   double error{NAN};
 
   auto total_alpha_sp =
-      integrator<31>([&](double x) { return alpha_sp_E_integrand(x, nu_threshold, T_e, photoion_xs); }, nu_threshold,
-                     nu_max_phixs, RATECOEFF_INTEGRAL_ACCURACY, &error);
+      integrator<31>([&](const double nu) { return alpha_sp_E_integrand(nu, nu_threshold, T_e, photoion_xs); },
+                     nu_threshold, nu_max_phixs, RATECOEFF_INTEGRAL_ACCURACY, &error);
 
   double alpha_sp_old = total_alpha_sp;
   double alpha_sp = total_alpha_sp;
@@ -509,8 +516,8 @@ DEVICE_FUNC auto select_continuum_nu(int element, const int lowerion, const int 
     const double xlow = nu_threshold + (i * deltanu);
 
     // Spontaneous recombination and bf-cooling coefficient don't depend on the radiation field
-    alpha_sp = integrator<31>([&](double x) { return alpha_sp_E_integrand(x, nu_threshold, T_e, photoion_xs); }, xlow,
-                              nu_max_phixs, RATECOEFF_INTEGRAL_ACCURACY, &error);
+    alpha_sp = integrator<31>([&](const double nu) { return alpha_sp_E_integrand(nu, nu_threshold, T_e, photoion_xs); },
+                              xlow, nu_max_phixs, RATECOEFF_INTEGRAL_ACCURACY, &error);
 
     if (zrand >= alpha_sp / total_alpha_sp) {
       break;
