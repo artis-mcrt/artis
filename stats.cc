@@ -12,8 +12,8 @@
 #include "constants.h"
 #include "globals.h"
 #include "grid.h"
+#include "mpi_logging.h"
 #include "nonthermal.h"
-#include "sn3d.h"
 
 namespace stats {
 

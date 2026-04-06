@@ -21,9 +21,9 @@ enum DecayType : int {
   DECAYTYPE_COUNT = 6,
 };
 
-constexpr std::array<enum DecayType, 5> all_decaytypes{DecayType::DECAYTYPE_ALPHA, DecayType::DECAYTYPE_ELECTRONCAPTURE,
-                                                       DecayType::DECAYTYPE_BETAPLUS, DecayType::DECAYTYPE_BETAMINUS,
-                                                       DecayType::DECAYTYPE_SPONTFISSION};
+constexpr std::array all_decaytypes{DecayType::DECAYTYPE_ALPHA, DecayType::DECAYTYPE_ELECTRONCAPTURE,
+                                    DecayType::DECAYTYPE_BETAPLUS, DecayType::DECAYTYPE_BETAMINUS,
+                                    DecayType::DECAYTYPE_SPONTFISSION};
 
 void init_nuclides(std::span<const int> custom_zlist, std::span<const int> custom_alist);
 [[nodiscard]] auto decaytype_is_used(DecayType decaytype) -> bool;
@@ -50,7 +50,6 @@ void free_decaypath_energy_per_mass();
 [[nodiscard]] auto get_global_etot_tmodel_tinf() -> double;
 void output_nuc_abundances(std::ostream& estimators_file, int nonemptymgi, double t_current, int element);
 void setup_radioactive_pellet(double e_cmf_per_packet, int nonemptymgi, Packet& pkt);
-void cleanup();
 
 }  // namespace decay
 

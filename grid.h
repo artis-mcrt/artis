@@ -3,39 +3,41 @@
 
 #include <cmath>
 #include <cstddef>
-#include <span>
 #include <tuple>
 
 #include "constants.h"
 #include "globals.h"
+#include "mpi_logging.h"
 #include "packet.h"
 #include "stats.h"
 
 namespace grid {
 
 // these arrays are indexed by nonemptymgi
-inline std::span<float> rho_allcells;
-inline std::span<float> Te_allcells;
-inline std::span<float> TJ_allcells;
-inline std::span<float> TR_allcells;
-inline std::span<float> W_allcells;
-inline std::span<float> nne_allcells;
-inline std::span<float> nnetot_allcells;  // total electron density (free + bound).
-inline std::span<float> kappagrey_allcells;
-inline std::span<float> grey_depth_allcells;  // Grey optical depth to surface of the modelgridcell
-inline std::span<int>
+inline MPI_shared_array<float> rho_allcells;
+inline MPI_shared_array<float> Te_allcells;
+inline MPI_shared_array<float> TJ_allcells;
+inline MPI_shared_array<float> TR_allcells;
+inline MPI_shared_array<float> W_allcells;
+inline MPI_shared_array<float> nne_allcells;
+inline MPI_shared_array<float> nnetot_allcells;  // total electron density (free + bound).
+inline MPI_shared_array<float> kappagrey_allcells;
+inline MPI_shared_array<float> grey_depth_allcells;  // Grey optical depth to surface of the modelgridcell
+inline MPI_shared_array<int>
     thick_allcells;  // whether the cell is optically thick (1) or not (0), or (2) thick for vpkts only
 
 inline ptrdiff_t ngrid{0};
 
 inline double mtot_input{0.};
 
-inline std::span<float> elem_meanweight_allcells{};
-inline std::span<float> elem_massfracs_allcells{};  // mass fractions of elements in each cell for the current timestep
+inline MPI_shared_array<float> elem_meanweight_allcells;
 
-inline std::span<double> nltepops_allcells{};
-inline std::span<float> ion_groundlevelpops_allcells{};
-inline std::span<float> ion_partfuncts_allcells{};
+// mass fractions of elements in each cell for the current timestep
+inline MPI_shared_array<float> elem_massfracs_allcells;
+
+inline MPI_shared_array<double> nltepops_allcells;
+inline MPI_shared_array<float> ion_groundlevelpops_allcells;
+inline MPI_shared_array<float> ion_partfuncts_allcells;
 
 [[nodiscard]] auto get_elements_uppermost_ion(int nonemptymgi, int element) -> int;
 void set_elements_uppermost_ion(int nonemptymgi, int element, int uppermost_ion);

@@ -24,6 +24,7 @@
 #include <string>
 #include <string_view>
 #include <tuple>
+#include <utility>
 #include <vector>
 
 #pragma clang unsafe_buffer_usage begin
@@ -37,6 +38,7 @@
 #include "globals.h"
 #include "grid.h"
 #include "kpkt.h"
+#include "mpi_logging.h"
 #include "packet.h"
 #include "random.h"
 #include "ratecoeff.h"
@@ -94,7 +96,7 @@ struct TempLineTransitionInput {
   int lowerlevelindex;
 };
 
-constexpr std::array<std::string_view, 24> inputlinecomments = {
+constexpr auto inputlinecomments = std::array{
     " 0: pre_zseed: specific random number seed if > 0 or random if negative",
     " 1: ntimesteps: number of timesteps",
     " 2: timestep_start timestep_finish: timestep number range start (inclusive) and stop (not inclusive)",
@@ -749,12 +751,11 @@ void setup_phixs_list() {
     int uniquelevelindex;
     double probability;
     int index_in_groundphixslist;
-    int bfestimindex;
   };
 
-  auto groundcont_nu_edge = MPI_shared_malloc_span<double>(globals::nbfcontinua_ground);
-  auto groundcont_element = MPI_shared_malloc_span<int>(globals::nbfcontinua_ground);
-  auto groundcont_ion = MPI_shared_malloc_span<int>(globals::nbfcontinua_ground);
+  auto groundcont_nu_edge = MPI_shared_array<double>(globals::nbfcontinua_ground);
+  auto groundcont_element = MPI_shared_array<int>(globals::nbfcontinua_ground);
+  auto groundcont_ion = MPI_shared_array<int>(globals::nbfcontinua_ground);
 
   if (globals::rank_in_node == 0) {
     int nextgroundcontindex = 0;
@@ -780,12 +781,12 @@ void setup_phixs_list() {
     std::ranges::sort(std::views::zip(groundcont_nu_edge, groundcont_element, groundcont_ion),
                       [](const auto& lhs, const auto& rhs) { return std::get<0>(lhs) < std::get<0>(rhs); });
   }
-  MPI_Barrier(globals::mpi_comm_node);
-  globals::groundcont_nu_edge = groundcont_nu_edge;
-  globals::groundcont_element = groundcont_element;
-  globals::groundcont_ion = groundcont_ion;
+  MPI_Barrier_node();
+  globals::groundcont_nu_edge = std::move(groundcont_nu_edge);
+  globals::groundcont_element = std::move(groundcont_element);
+  globals::groundcont_ion = std::move(groundcont_ion);
 
-  auto allcont = MPI_shared_malloc_span<TempPhotoionTransitionInput>(globals::nbfcontinua);
+  auto allcont = MPI_shared_array<TempPhotoionTransitionInput>(globals::nbfcontinua);
   printlnlog("[info] mem_usage: photoionisation list occupies {:.3f} MB",
              globals::nbfcontinua * (sizeof(TempPhotoionTransitionInput)) / 1024. / 1024.);
   const auto groundcontindices = std::ranges::iota_view{0, globals::nbfcontinua_ground};
@@ -830,7 +831,6 @@ void setup_phixs_list() {
               .uniquelevelindex = uniquelevelindex,
               .probability = get_phixsprobability(uniquelevelindex, phixstargetindex),
               .index_in_groundphixslist = index_in_groundphixslist,
-              .bfestimindex = -1,
           };
 
           allcontindex++;
@@ -844,41 +844,24 @@ void setup_phixs_list() {
   // just so that clang-tidy doesn't throw errors on the assumption that nbfcontinua is changing
   const auto nbfcontinua = globals::nbfcontinua;
 
-  std::vector<double> temp_bfestim_nu_edge;
   if (nbfcontinua > 0) {
     // indices above were temporary only. continuum index should be to the sorted list
-    MPI_Barrier(globals::mpi_comm_node);
+    MPI_Barrier_node();
     if (globals::rank_in_node == 0) {
       std::ranges::SORT_OR_STABLE_SORT(allcont, std::ranges::less{}, &TempPhotoionTransitionInput::nu_edge);
     }
-    MPI_Barrier(globals::mpi_comm_node);
+    MPI_Barrier_node();
 
-    for (int i = 0; i < nbfcontinua; i++) {
-      if (DETAILED_BF_ESTIMATORS_ON &&
-          LEVEL_HAS_BFEST(get_atomicnumber(allcont[i].element), get_ionstage(allcont[i].element, allcont[i].ion),
-                          allcont[i].level)) {
-        allcont[i].bfestimindex = static_cast<int>(temp_bfestim_nu_edge.size());
-        temp_bfestim_nu_edge.push_back(allcont[i].nu_edge);
-      } else {
-        allcont[i].bfestimindex = -1;
-      }
-    }
-
-    auto bfestim_nu_edge = MPI_shared_malloc_span<double>(std::ssize(temp_bfestim_nu_edge));
-    auto allcont_nu_edge = MPI_shared_malloc_span<double>(nbfcontinua);
-    auto allcont_element = MPI_shared_malloc_span<int>(nbfcontinua);
-    auto allcont_ion = MPI_shared_malloc_span<int>(nbfcontinua);
-    auto allcont_level = MPI_shared_malloc_span<int>(nbfcontinua);
-    auto allcont_phixstargetindex = MPI_shared_malloc_span<int>(nbfcontinua);
-    auto allcont_upperlevel = MPI_shared_malloc_span<int>(nbfcontinua);
-    auto allcont_uniquelevelindex = MPI_shared_malloc_span<int>(nbfcontinua);
-    auto allcont_probability = MPI_shared_malloc_span<double>(nbfcontinua);
-    auto allcont_index_in_groundphixslist = MPI_shared_malloc_span<int>(nbfcontinua);
-    auto allcont_bfestimindex = MPI_shared_malloc_span<int>(nbfcontinua);
+    auto allcont_nu_edge = MPI_shared_array<double>(nbfcontinua);
+    auto allcont_element = MPI_shared_array<int>(nbfcontinua);
+    auto allcont_ion = MPI_shared_array<int>(nbfcontinua);
+    auto allcont_level = MPI_shared_array<int>(nbfcontinua);
+    auto allcont_phixstargetindex = MPI_shared_array<int>(nbfcontinua);
+    auto allcont_upperlevel = MPI_shared_array<int>(nbfcontinua);
+    auto allcont_uniquelevelindex = MPI_shared_array<int>(nbfcontinua);
+    auto allcont_probability = MPI_shared_array<double>(nbfcontinua);
+    auto allcont_index_in_groundphixslist = MPI_shared_array<int>(nbfcontinua);
     if (globals::rank_in_node == 0) {
-      for (int i = 0; i < std::ssize(temp_bfestim_nu_edge); i++) {
-        bfestim_nu_edge[i] = temp_bfestim_nu_edge[i];
-      }
       for (int i = 0; i < nbfcontinua; i++) {
         allcont_nu_edge[i] = allcont[i].nu_edge;
         allcont_element[i] = allcont[i].element;
@@ -889,21 +872,38 @@ void setup_phixs_list() {
         allcont_uniquelevelindex[i] = allcont[i].uniquelevelindex;
         allcont_probability[i] = allcont[i].probability;
         allcont_index_in_groundphixslist[i] = allcont[i].index_in_groundphixslist;
-        allcont_bfestimindex[i] = allcont[i].bfestimindex;
       }
     }
-    MPI_Barrier(globals::mpi_comm_node);
-    globals::bfestim_nu_edge = bfestim_nu_edge;
-    globals::allcont.nu_edge = allcont_nu_edge;
-    globals::allcont.element = allcont_element;
-    globals::allcont.ion = allcont_ion;
-    globals::allcont.level = allcont_level;
-    globals::allcont.phixstargetindex = allcont_phixstargetindex;
-    globals::allcont.upperlevel = allcont_upperlevel;
-    globals::allcont.uniquelevelindex = allcont_uniquelevelindex;
-    globals::allcont.probability = allcont_probability;
-    globals::allcont.index_in_groundphixslist = allcont_index_in_groundphixslist;
-    globals::allcont.bfestimindex = allcont_bfestimindex;
+    MPI_Barrier_node();
+    globals::allcont.nu_edge = std::move(allcont_nu_edge);
+    globals::allcont.element = std::move(allcont_element);
+    globals::allcont.ion = std::move(allcont_ion);
+    globals::allcont.level = std::move(allcont_level);
+    globals::allcont.phixstargetindex = std::move(allcont_phixstargetindex);
+    globals::allcont.upperlevel = std::move(allcont_upperlevel);
+    globals::allcont.uniquelevelindex = std::move(allcont_uniquelevelindex);
+    globals::allcont.probability = std::move(allcont_probability);
+    globals::allcont.index_in_groundphixslist = std::move(allcont_index_in_groundphixslist);
+
+    auto allcont_bfestimindex = MPI_shared_array<int>(nbfcontinua);
+    std::vector<double> temp_bfestim_nu_edge;
+    for (int i = 0; i < nbfcontinua; i++) {
+      if (DETAILED_BF_ESTIMATORS_ON &&
+          LEVEL_HAS_BFEST(get_atomicnumber(globals::allcont.element[i]),
+                          get_ionstage(globals::allcont.element[i], globals::allcont.ion[i]),
+                          globals::allcont.level[i])) {
+        allcont_bfestimindex[i] = static_cast<int>(temp_bfestim_nu_edge.size());
+        temp_bfestim_nu_edge.push_back(globals::allcont.nu_edge[i]);
+      } else {
+        allcont_bfestimindex[i] = -1;
+      }
+    }
+    globals::allcont.bfestimindex = std::move(allcont_bfestimindex);
+    auto bfestim_nu_edge = MPI_shared_array<double>(std::ssize(temp_bfestim_nu_edge));
+    for (int i = 0; i < std::ssize(temp_bfestim_nu_edge); i++) {
+      bfestim_nu_edge[i] = temp_bfestim_nu_edge[i];
+    }
+    globals::bfestim_nu_edge = std::move(bfestim_nu_edge);
 
     setup_photoion_luts();
   }
@@ -988,11 +988,11 @@ void read_autoion_data() {
 
   assert_always(allautoion_levels_are_not_nlte || allautoion_levels_are_nlte);
 
-  globals::allautoion = MPI_shared_malloc_span<globals::LevelAutoion>(temp_allautoion.size());
+  globals::allautoion = MPI_shared_array<globals::LevelAutoion>(temp_allautoion.size());
   if (globals::rank_in_node == 0) {
     std::copy_n(temp_allautoion.cbegin(), temp_allautoion.size(), globals::allautoion.data());
   }
-  MPI_Barrier(globals::mpi_comm_node);
+  MPI_Barrier_node();
 
   // Plan is that autoionizing levels will be explicitly included in the NLTE population solver, but that their level
   // populations do not need to be accurately known - so if the ion has a superlevel already, then we will try to attach
@@ -1048,12 +1048,12 @@ void read_phixs_data() {
 
   if (phixs_file_version_exists[2]) {
     read_phixs_file(2, tmpallphixs, tmpallphixstargets);
-    MPI_Barrier(globals::mpi_comm_node);
+    MPI_Barrier_node();
   }
 
   if (phixs_file_version_exists[1]) {
     read_phixs_file(1, tmpallphixs, tmpallphixstargets);
-    MPI_Barrier(globals::mpi_comm_node);
+    MPI_Barrier_node();
   }
 
   int cont_index = 0;
@@ -1080,9 +1080,9 @@ void read_phixs_data() {
     assert_always((nbftables * globals::NPHIXSPOINTS) == std::ssize(tmpallphixs));
 
     // copy the photoionisation tables into one contiguous block of memory
-    globals::allphixs = MPI_shared_malloc_span<float>(std::ssize(tmpallphixs));
-    auto allphixstargets_levelindex = MPI_shared_malloc_span<int>(std::ssize(tmpallphixstargets));
-    auto allphixstargets_probability = MPI_shared_malloc_span<double>(std::ssize(tmpallphixstargets));
+    globals::allphixs = MPI_shared_array<float>(std::ssize(tmpallphixs));
+    auto allphixstargets_levelindex = MPI_shared_array<int>(std::ssize(tmpallphixstargets));
+    auto allphixstargets_probability = MPI_shared_array<double>(std::ssize(tmpallphixstargets));
 
     if (globals::rank_in_node == 0) {
       std::copy_n(tmpallphixs.cbegin(), tmpallphixs.size(), globals::allphixs.data());
@@ -1093,9 +1093,9 @@ void read_phixs_data() {
       }
     }
 
-    MPI_Barrier(globals::mpi_comm_node);
-    globals::allphixstargets_levelindex = allphixstargets_levelindex;
-    globals::allphixstargets_probability = allphixstargets_probability;
+    MPI_Barrier_node();
+    globals::allphixstargets_levelindex = std::move(allphixstargets_levelindex);
+    globals::allphixstargets_probability = std::move(allphixstargets_probability);
 
     tmpallphixs.clear();
     tmpallphixs.shrink_to_fit();
@@ -1174,7 +1174,7 @@ auto read_compositiondata() -> std::vector<int> {
     uniqueionindex += nions_readin[element];
   }
 
-  globals::allions = MPI_shared_malloc_span<Ion>(uniqueionindex);
+  globals::allions = MPI_shared_array<Ion>(uniqueionindex);
 
   for (int element = 0; element < get_nelements(); element++) {
     globals::elements[element].ions =
@@ -1323,7 +1323,7 @@ void read_atomicdata_files() {
     temp_alltranslist.reserve(1 << 22);
     read_levels_and_transitions(temp_alllevels, temp_linelist, temp_alltranslist, nlevelsmax_readin);
   }
-  MPI_Barrier(globals::mpi_comm_node);
+  MPI_Barrier_node();
 
   update_includedionslevels_maxnions();
 
@@ -1369,20 +1369,20 @@ void read_atomicdata_files() {
   ptrdiff_t nlevels = std::ssize(temp_alllevels);
   MPI_Bcast_safe(nlevels, 0, globals::mpi_comm_node);
 
-  auto alllevels_alltrans_startdown = MPI_shared_malloc_span<int>(nlevels);
-  auto alllevels_ndowntrans = MPI_shared_malloc_span<int>(nlevels);
-  auto alllevels_nuptrans = MPI_shared_malloc_span<int>(nlevels);
-  auto alllevels_epsilon = MPI_shared_malloc_span<double>(nlevels);
-  auto alllevels_statweight = MPI_shared_malloc_span<float>(nlevels);
-  auto alllevels_matransblock_start = MPI_shared_malloc_span<int>(nlevels);
-  globals::alllevels.allautoion_start = MPI_shared_malloc_span<int>(nlevels, -1);
-  globals::alllevels.nautoiondowntrans = MPI_shared_malloc_span<int>(nlevels, 0);
-  globals::alllevels.nautoionuptrans = MPI_shared_malloc_span<int>(nlevels, 0);
-  globals::alllevels.closestgroundlevelcont = MPI_shared_malloc_span<int>(nlevels, -1);
-  globals::alllevels.phixsstart = MPI_shared_malloc_span<int>(nlevels, -1);
-  globals::alllevels.nphixstargets = MPI_shared_malloc_span<int>(nlevels, 0);
-  globals::alllevels.phixstargetstart = MPI_shared_malloc_span<int>(nlevels, -1);
-  globals::alllevels.bflist_start = MPI_shared_malloc_span<int>(nlevels, -1);
+  auto alllevels_alltrans_startdown = MPI_shared_array<int>(nlevels);
+  auto alllevels_ndowntrans = MPI_shared_array<int>(nlevels);
+  auto alllevels_nuptrans = MPI_shared_array<int>(nlevels);
+  auto alllevels_epsilon = MPI_shared_array<double>(nlevels);
+  auto alllevels_statweight = MPI_shared_array<float>(nlevels);
+  auto alllevels_matransblock_start = MPI_shared_array<int>(nlevels);
+  globals::alllevels.allautoion_start = MPI_shared_array<int>(nlevels, -1);
+  globals::alllevels.nautoiondowntrans = MPI_shared_array<int>(nlevels, 0);
+  globals::alllevels.nautoionuptrans = MPI_shared_array<int>(nlevels, 0);
+  globals::alllevels.closestgroundlevelcont = MPI_shared_array<int>(nlevels, -1);
+  globals::alllevels.phixsstart = MPI_shared_array<int>(nlevels, -1);
+  globals::alllevels.nphixstargets = MPI_shared_array<int>(nlevels, 0);
+  globals::alllevels.phixstargetstart = MPI_shared_array<int>(nlevels, -1);
+  globals::alllevels.bflist_start = MPI_shared_array<int>(nlevels, -1);
   if (globals::rank_in_node == 0) {
     int chtransindex = 0;
     for (auto i = 0ZU; i < temp_alllevels.size(); i++) {
@@ -1395,13 +1395,13 @@ void read_atomicdata_files() {
       chtransindex += ((2 * alllevels_ndowntrans[i]) + alllevels_nuptrans[i]);
     }
   }
-  MPI_Barrier(globals::mpi_comm_node);
-  globals::alllevels.alltrans_startdown = alllevels_alltrans_startdown;
-  globals::alllevels.ndowntrans = alllevels_ndowntrans;
-  globals::alllevels.nuptrans = alllevels_nuptrans;
-  globals::alllevels.epsilon = alllevels_epsilon;
-  globals::alllevels.statweight = alllevels_statweight;
-  globals::alllevels.matransblock_start = alllevels_matransblock_start;
+  MPI_Barrier_node();
+  globals::alllevels.alltrans_startdown = std::move(alllevels_alltrans_startdown);
+  globals::alllevels.ndowntrans = std::move(alllevels_ndowntrans);
+  globals::alllevels.nuptrans = std::move(alllevels_nuptrans);
+  globals::alllevels.epsilon = std::move(alllevels_epsilon);
+  globals::alllevels.statweight = std::move(alllevels_statweight);
+  globals::alllevels.matransblock_start = std::move(alllevels_matransblock_start);
   temp_alllevels.clear();
   temp_alllevels.shrink_to_fit();
 
@@ -1417,14 +1417,14 @@ void read_atomicdata_files() {
              updowntranscount * ((2 * sizeof(int)) + (3 * sizeof(float)) + sizeof(bool)) / 1024. / 1024.);
 
   // create a shared all transitions list and then copy data across, freeing the local copy
-  MPI_Barrier(globals::mpi_comm_node);
+  MPI_Barrier_node();
 
-  auto alltrans_lineindex = MPI_shared_malloc_span<int>(updowntranscount);
-  auto alltrans_targetlevelindex = MPI_shared_malloc_span<int>(updowntranscount);
-  auto alltrans_einstein_A = MPI_shared_malloc_span<float>(updowntranscount);
-  auto alltrans_coll_str = MPI_shared_malloc_span<float>(updowntranscount);
-  auto alltrans_osc_strength = MPI_shared_malloc_span<float>(updowntranscount);
-  auto alltrans_forbidden = MPI_shared_malloc_span<bool>(updowntranscount);
+  auto alltrans_lineindex = MPI_shared_array<int>(updowntranscount);
+  auto alltrans_targetlevelindex = MPI_shared_array<int>(updowntranscount);
+  auto alltrans_einstein_A = MPI_shared_array<float>(updowntranscount);
+  auto alltrans_coll_str = MPI_shared_array<float>(updowntranscount);
+  auto alltrans_osc_strength = MPI_shared_array<float>(updowntranscount);
+  auto alltrans_forbidden = MPI_shared_array<bool>(updowntranscount);
 
   if (globals::rank_in_node == 0) {
     assert_always(std::ssize(temp_alltranslist) == updowntranscount);
@@ -1440,20 +1440,20 @@ void read_atomicdata_files() {
   temp_alltranslist.clear();
   temp_alltranslist.shrink_to_fit();
 
-  globals::alltrans.targetlevelindex = alltrans_targetlevelindex;
-  globals::alltrans.einstein_A = alltrans_einstein_A;
-  globals::alltrans.coll_str = alltrans_coll_str;
-  globals::alltrans.osc_strength = alltrans_osc_strength;
-  globals::alltrans.forbidden = alltrans_forbidden;
+  globals::alltrans.targetlevelindex = std::move(alltrans_targetlevelindex);
+  globals::alltrans.einstein_A = std::move(alltrans_einstein_A);
+  globals::alltrans.coll_str = std::move(alltrans_coll_str);
+  globals::alltrans.osc_strength = std::move(alltrans_osc_strength);
+  globals::alltrans.forbidden = std::move(alltrans_forbidden);
 
   // create a linelist shared on node and then copy data across, freeing the local copy
 
-  auto linelist_nu = MPI_shared_malloc_span<double>(globals::nlines);
-  auto linelist_einstein_A = MPI_shared_malloc_span<float>(globals::nlines);
-  auto linelist_elementindex = MPI_shared_malloc_span<int>(globals::nlines);
-  auto linelist_ionindex = MPI_shared_malloc_span<int>(globals::nlines);
-  auto linelist_upperlevelindex = MPI_shared_malloc_span<int>(globals::nlines);
-  auto linelist_lowerlevelindex = MPI_shared_malloc_span<int>(globals::nlines);
+  auto linelist_nu = MPI_shared_array<double>(globals::nlines);
+  auto linelist_einstein_A = MPI_shared_array<float>(globals::nlines);
+  auto linelist_elementindex = MPI_shared_array<int>(globals::nlines);
+  auto linelist_ionindex = MPI_shared_array<int>(globals::nlines);
+  auto linelist_upperlevelindex = MPI_shared_array<int>(globals::nlines);
+  auto linelist_lowerlevelindex = MPI_shared_array<int>(globals::nlines);
 
   if (globals::rank_in_node == 0) {
     assert_always(std::ssize(temp_linelist) == globals::nlines);
@@ -1468,14 +1468,14 @@ void read_atomicdata_files() {
   }
   temp_linelist.clear();
   temp_linelist.shrink_to_fit();
-  MPI_Barrier(globals::mpi_comm_node);
+  MPI_Barrier_node();
 
-  globals::linelist.nu = linelist_nu;
-  globals::linelist.einstein_A = linelist_einstein_A;
-  globals::linelist.elementindex = linelist_elementindex;
-  globals::linelist.ionindex = linelist_ionindex;
-  globals::linelist.upperlevelindex = linelist_upperlevelindex;
-  globals::linelist.lowerlevelindex = linelist_lowerlevelindex;
+  globals::linelist.nu = std::move(linelist_nu);
+  globals::linelist.einstein_A = std::move(linelist_einstein_A);
+  globals::linelist.elementindex = std::move(linelist_elementindex);
+  globals::linelist.ionindex = std::move(linelist_ionindex);
+  globals::linelist.upperlevelindex = std::move(linelist_upperlevelindex);
+  globals::linelist.lowerlevelindex = std::move(linelist_lowerlevelindex);
 
   const double linelist_mem_MB =
       ((globals::nlines * sizeof(double))  // nu
@@ -1531,10 +1531,10 @@ void read_atomicdata_files() {
     assert_always(uptransid != -1);
     alltrans_lineindex[uptransid] = lineindex;
   }
-  globals::alltrans.lineindex = alltrans_lineindex;
+  globals::alltrans.lineindex = std::move(alltrans_lineindex);
 
   printlnlog("  took {}s", std::time(nullptr) - time_start_establish_linelist_connections);
-  MPI_Barrier(globals::mpi_comm_node);
+  MPI_Barrier_node();
 
   for (int element = 0; element < get_nelements(); element++) {
     const int nions = get_nions(element);
@@ -1728,7 +1728,7 @@ void input() {
 
   const auto time_before_barrier = std::time(nullptr);
   printlog("barrier after read_atomicdata(): time before barrier {}, ", static_cast<int>(time_before_barrier));
-  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier_allranks();
   printlnlog("time after barrier {} (waited {} seconds)", static_cast<int>(time(nullptr)),
              static_cast<int>(time(nullptr) - time_before_barrier));
 

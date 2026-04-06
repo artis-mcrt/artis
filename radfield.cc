@@ -11,7 +11,6 @@
 #include <ios>
 #include <iterator>
 #include <span>
-#include <tuple>
 #include <vector>
 
 #pragma clang unsafe_buffer_usage begin
@@ -31,6 +30,7 @@
 #include "constants.h"
 #include "globals.h"
 #include "grid.h"
+#include "mpi_logging.h"
 #include "rpkt.h"
 #include "sn3d.h"
 
@@ -68,13 +68,9 @@ constexpr double radfieldbins_delta_nu =
 
 RadFieldBins radfieldbins;
 
-std::span<float> radfieldbin_solutions_W;
-MPI_Win win_radfieldbin_solutions_W = MPI_WIN_NULL;
+MPI_shared_array<float> radfieldbin_solutions_W;
 
-std::span<float> radfieldbin_solutions_T_R;
-MPI_Win win_radfieldbin_solutions_T_R = MPI_WIN_NULL;
-
-MPI_Win win_prev_bfrate_normed = MPI_WIN_NULL;
+MPI_shared_array<float> radfieldbin_solutions_T_R;
 
 struct Jb_lu_estimator {
   double value = 0.;
@@ -89,7 +85,7 @@ std::vector<int> detailed_lineindices;
 std::vector<std::vector<Jb_lu_estimator>> prev_Jb_lu_normed{};  // value from the previous timestep
 std::vector<std::vector<Jb_lu_estimator>> Jb_lu_raw{};  // unnormalised estimator for the current timestep
 
-std::span<float> prev_bfrate_normed{};  // values from the previous timestep
+MPI_shared_array<float> prev_bfrate_normed{};  // values from the previous timestep
 std::vector<double> bfrate_raw;  // unnormalised estimators for the current timestep
 
 // J and nuJ are accumulated and then normalised in-place
@@ -615,11 +611,9 @@ void init() {
     printlnlog("[info] mem_usage: radiation field bin accumulators for non-empty cells occupy {:.3f} MB",
                mem_usage_bins / 1024. / 1024.);
 
-    std::tie(radfieldbin_solutions_W, win_radfieldbin_solutions_W) =
-        MPI_shared_malloc_span_keepwin<float>(nonempty_npts_model * RADFIELDBINCOUNT);
+    radfieldbin_solutions_W = MPI_shared_array<float>(nonempty_npts_model * RADFIELDBINCOUNT);
 
-    std::tie(radfieldbin_solutions_T_R, win_radfieldbin_solutions_T_R) =
-        MPI_shared_malloc_span_keepwin<float>(nonempty_npts_model * RADFIELDBINCOUNT);
+    radfieldbin_solutions_T_R = MPI_shared_array<float>(nonempty_npts_model * RADFIELDBINCOUNT);
 
     const size_t mem_usage_bin_solutions = nonempty_npts_model * RADFIELDBINCOUNT * sizeof(RadFieldBinSolution);
     printlnlog(
@@ -631,12 +625,11 @@ void init() {
 
   if constexpr (DETAILED_BF_ESTIMATORS_ON) {
     const auto bfestimcount = std::ssize(globals::bfestim_nu_edge);
-    std::tie(prev_bfrate_normed, win_prev_bfrate_normed) =
-        MPI_shared_malloc_span_keepwin<float>(nonempty_npts_model * bfestimcount);
+    prev_bfrate_normed = MPI_shared_array<float>(nonempty_npts_model * bfestimcount);
     if (globals::rank_in_node == 0) {
       std::ranges::fill(prev_bfrate_normed, 0.);
     }
-    MPI_Barrier(globals::mpi_comm_node);
+    MPI_Barrier_node();
     printlnlog("[info] mem_usage: detailed bf estimators for non-empty cells occupy {:.3f} MB (node shared memory)",
                nonempty_npts_model * bfestimcount * sizeof(float) / 1024. / 1024.);
 
@@ -649,12 +642,12 @@ void init() {
   zero_estimators();
 
   if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
-    MPI_Barrier(globals::mpi_comm_node);
+    MPI_Barrier_node();
     if (globals::rank_in_node == 0) {
       std::ranges::fill(radfieldbin_solutions_W, -1.);
       std::ranges::fill(radfieldbin_solutions_T_R, -1.);
     }
-    MPI_Barrier(globals::mpi_comm_node);
+    MPI_Barrier_node();
   }
 }
 
@@ -726,21 +719,12 @@ void close_file() {
 
   if (MULTIBIN_RADFIELD_MODEL_ON) {
     radfieldbins = {};
-    if (win_radfieldbin_solutions_W != MPI_WIN_NULL) {
-      MPI_Win_free(&win_radfieldbin_solutions_W);
-      radfieldbin_solutions_W = {};
-    }
-    if (win_radfieldbin_solutions_T_R != MPI_WIN_NULL) {
-      MPI_Win_free(&win_radfieldbin_solutions_T_R);
-      radfieldbin_solutions_T_R = {};
-    }
+    radfieldbin_solutions_W.reset();
+    radfieldbin_solutions_T_R.reset();
   }
 
   if constexpr (DETAILED_BF_ESTIMATORS_ON) {
-    if (win_prev_bfrate_normed != MPI_WIN_NULL) {
-      MPI_Win_free(&win_prev_bfrate_normed);
-      prev_bfrate_normed = {};
-    }
+    prev_bfrate_normed.reset();
   }
 }
 
@@ -1042,7 +1026,7 @@ void reduce_estimators() {
     const auto duration_reduction = std::time(nullptr) - sys_time_start_reduction;
     printlnlog(" (took {} s)", duration_reduction);
   }
-  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier_allranks();
 }
 
 // broadcast computed radfield results including parameters
@@ -1066,7 +1050,7 @@ void do_MPI_Bcast(const ptrdiff_t nonemptymgi, const int root, const int root_no
     }
   }
 
-  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier_allranks();
 }
 
 void write_restart_data(FILE* gridsave_file) {

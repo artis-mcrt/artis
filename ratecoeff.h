@@ -2,7 +2,7 @@
 #define RATECOEFF_H
 
 #include "constants.h"
-#include "sn3d.h"
+#include "mpi_logging.h"
 
 #ifdef USE_SIMPSON_INTEGRATOR
 #include <algorithm>

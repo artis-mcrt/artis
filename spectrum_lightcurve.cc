@@ -15,7 +15,6 @@
 #include <span>
 #include <string>
 #include <string_view>
-#include <tuple>
 #include <utility>
 #include <vector>
 
@@ -29,6 +28,7 @@
 #include "exspec.h"
 #include "globals.h"
 #include "grid.h"
+#include "mpi_logging.h"
 #include "packet.h"
 #include "sn3d.h"
 #include "vectors.h"
@@ -207,6 +207,20 @@ auto columnindex_from_emissiontype(const int et) -> int {
   return (nnu_abs * globals::ntimesteps * nelements * max_nions) + (nts * nelements * max_nions);
 }
 
+[[nodiscard]] inline auto get_timestep(const double time) -> int {
+  assert_always(time >= globals::tmin);
+  assert_always(time < globals::tmax);
+  for (int nts = 0; nts < globals::ntimesteps; nts++) {
+    const double tsend = (nts < (globals::ntimesteps - 1)) ? globals::timesteps[nts + 1].start : globals::tmax;
+    if (time >= globals::timesteps[nts].start && time < tsend) {
+      return nts;
+    }
+  }
+  assert_always(false);  // could not find matching timestep
+
+  return -1;
+}
+
 void write_specpol_param(std::ostream& specpol_file, std::ostream& emissionpol_file, std::ostream& absorptionpol_file,
                          const Spectra& spec, const int nnu, const bool do_emission_absorption) {
   const int proccount = get_proccount();
@@ -252,7 +266,7 @@ void write_partial_lightcurve_spectra_dirbin(const int nts, std::span<const Pack
 
   init_spectra(rpkt_spectra, NU_MIN_R, NU_MAX_R, do_emission_absorption);
 
-  MPI_Barrier(globals::mpi_comm_node);
+  MPI_Barrier_node();
 #if defined REPRODUCIBLE && REPRODUCIBLE
   for (int node_rank = 0; node_rank < globals::node_nprocs; node_rank++) {
     // do one rank at a time to keep the results reproducible (instead of simultaneous atomic adds to shared memory)
@@ -274,13 +288,13 @@ void write_partial_lightcurve_spectra_dirbin(const int nts, std::span<const Pack
         }
       }
     }
-    MPI_Barrier(globals::mpi_comm_node);
+    MPI_Barrier_node();
   }
 
   const int numtimesteps = nts + 1;  // only produce spectra and light curves up to one past nts
   assert_always(numtimesteps <= globals::ntimesteps);
 
-  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier_allranks();
   if (globals::rank_in_node == 0) {
     MPI_Allreduce_safe(rpkt_spectra.fluxalltimesteps, MPI_SUM, globals::mpi_comm_internode);
     if (rpkt_spectra.do_emission_absorption) {
@@ -295,7 +309,7 @@ void write_partial_lightcurve_spectra_dirbin(const int nts, std::span<const Pack
     MPI_Allreduce_safe(gamma_light_curve_lum, MPI_SUM, MPI_COMM_WORLD);
     MPI_Allreduce_safe(gamma_light_curve_lumcmf, MPI_SUM, MPI_COMM_WORLD);
   }
-  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier_allranks();
 
   if (dirbin == -1) {
     write_light_curve("light_curve.out", rpkt_light_curve_lum, rpkt_light_curve_lumcmf, numtimesteps);
@@ -307,7 +321,7 @@ void write_partial_lightcurve_spectra_dirbin(const int nts, std::span<const Pack
     if (globals::my_rank == 0 && !std::filesystem::exists(outdir_resfiles)) {
       std::filesystem::create_directory(outdir_resfiles);
     }
-    MPI_Barrier(MPI_COMM_WORLD);
+    MPI_Barrier_allranks();
 
     write_light_curve(std::format("{}light_curve_res_{:02d}.out", outdir_resfiles, dirbin), rpkt_light_curve_lum,
                       rpkt_light_curve_lumcmf, numtimesteps);
@@ -316,7 +330,7 @@ void write_partial_lightcurve_spectra_dirbin(const int nts, std::span<const Pack
                   std::format("{}emissiontrue_res_{:02d}.out", outdir_resfiles, dirbin),
                   std::format("{}absorption_res_{:02d}.out", outdir_resfiles, dirbin), rpkt_spectra, numtimesteps);
   }
-  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier_allranks();
 }
 
 void write_spectrum_file(const std::string& spec_filename, const Spectra& spectra, const int numtimesteps) {
@@ -500,41 +514,34 @@ void init_spectra(Spectra& spectra, const double nu_min, const double nu_max, co
   }
 
   if (spectra.fluxalltimesteps.empty()) {
-    assert_always(spectra.win_fluxalltimesteps == MPI_WIN_NULL);
-    std::tie(spectra.fluxalltimesteps, spectra.win_fluxalltimesteps) =
-        MPI_shared_malloc_span_keepwin<double>(globals::ntimesteps * MNUBINS);
+    spectra.fluxalltimesteps = MPI_shared_array<double>(globals::ntimesteps * MNUBINS);
   }
   assert_always(std::ssize(spectra.fluxalltimesteps) == globals::ntimesteps * MNUBINS);
   std::ranges::fill(spectra.fluxalltimesteps, 0.0);
-  MPI_Barrier(globals::mpi_comm_node);
+  MPI_Barrier_node();
 
   if (do_emission_absorption) {
     if (spectra.absorptionalltimesteps.empty()) {
-      assert_always(spectra.win_absorptionalltimesteps == MPI_WIN_NULL);
-      std::tie(spectra.absorptionalltimesteps, spectra.win_absorptionalltimesteps) =
-          MPI_shared_malloc_span_keepwin<double>(globals::ntimesteps * MNUBINS * get_nelements() * get_max_nions());
+      spectra.absorptionalltimesteps =
+          MPI_shared_array<double>(globals::ntimesteps * MNUBINS * get_nelements() * get_max_nions());
     }
     assert_always(std::ssize(spectra.absorptionalltimesteps) ==
                   globals::ntimesteps * MNUBINS * get_nelements() * get_max_nions());
     std::ranges::fill(spectra.absorptionalltimesteps, 0.0);
 
     if (spectra.emissionalltimesteps.empty()) {
-      assert_always(spectra.win_emissionalltimesteps == MPI_WIN_NULL);
-      std::tie(spectra.emissionalltimesteps, spectra.win_emissionalltimesteps) =
-          MPI_shared_malloc_span_keepwin<double>(globals::ntimesteps * MNUBINS * get_proccount());
+      spectra.emissionalltimesteps = MPI_shared_array<double>(globals::ntimesteps * MNUBINS * get_proccount());
     }
     assert_always(std::ssize(spectra.emissionalltimesteps) == globals::ntimesteps * MNUBINS * get_proccount());
     std::ranges::fill(spectra.emissionalltimesteps, 0.0);
 
     if (spectra.trueemissionalltimesteps.empty()) {
-      assert_always(spectra.win_trueemissionalltimesteps == MPI_WIN_NULL);
-      std::tie(spectra.trueemissionalltimesteps, spectra.win_trueemissionalltimesteps) =
-          MPI_shared_malloc_span_keepwin<double>(globals::ntimesteps * MNUBINS * get_proccount());
+      spectra.trueemissionalltimesteps = MPI_shared_array<double>(globals::ntimesteps * MNUBINS * get_proccount());
     }
     assert_always(std::ssize(spectra.trueemissionalltimesteps) == globals::ntimesteps * MNUBINS * get_proccount());
     std::ranges::fill(spectra.trueemissionalltimesteps, 0.0);
   }
-  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier_allranks();
 
   if (print_memusage) {
     printlnlog("[info] mem_usage: set of spectra{} occupy {:.3f} MB (node shared memory)",

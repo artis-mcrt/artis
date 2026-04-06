@@ -1,14 +1,15 @@
 #ifndef GLOBALS_H
 #define GLOBALS_H
 
+#ifdef STDPAR_ON
+#include <thread>
+#endif
 #include <cmath>
 #include <cstddef>
 #include <span>
 #include <vector>
 
-#pragma clang unsafe_buffer_usage begin
-#include <mpi.h>
-#pragma clang unsafe_buffer_usage end
+#include "mpi_logging.h"
 
 enum ma_action {
   // Radiative deexcitation rate from this level.
@@ -46,6 +47,7 @@ struct Ion {
   int groundcontindex{-1};
   double ionpot{NAN};  // Ionisation threshold to the next ionstage
 };
+
 struct Element {
   std::span<Ion> ions;  // subspan of the allions array for this element
   int anumber{-1};  // Atomic number
@@ -94,8 +96,7 @@ inline std::vector<double> dep_estimator_electron;
 inline std::vector<double> dep_estimator_alpha;
 
 // for USE_LUT_PHOTOION = true
-inline std::span<double> corrphotoionrenorm{};
-inline MPI_Win win_corrphotoionrenorm{MPI_WIN_NULL};
+inline MPI_shared_array<double> corrphotoionrenorm{};
 
 inline std::vector<double> gammaestimator;
 
@@ -119,15 +120,15 @@ inline double max_path_step;
 
 // ATOMIC DATA
 
-inline std::span<float> allphixs{};
+inline MPI_shared_array<float> allphixs{};
 
 struct AllTransitions {
-  std::span<const int> lineindex;
-  std::span<const int> targetlevelindex;
-  std::span<const float> einstein_A;
-  std::span<const float> coll_str;
-  std::span<const float> osc_strength;
-  std::span<const bool> forbidden;
+  MPI_shared_array<const int> lineindex;
+  MPI_shared_array<const int> targetlevelindex;
+  MPI_shared_array<const float> einstein_A;
+  MPI_shared_array<const float> coll_str;
+  MPI_shared_array<const float> osc_strength;
+  MPI_shared_array<const bool> forbidden;
 };
 inline AllTransitions alltrans;
 
@@ -140,70 +141,70 @@ struct LevelAutoion {
   int upperlevelindex;  // this will be for a level index of the upper ion.
                         // Note: level of the lower ion should also be at higher energy than of the higher ion
 };
-inline std::span<LevelAutoion> allautoion;
+inline MPI_shared_array<LevelAutoion> allautoion;
 
-inline std::span<const int> allphixstargets_levelindex;  // index of upper ion level after photoionisation
-inline std::span<const double>
+inline MPI_shared_array<const int> allphixstargets_levelindex;  // index of upper ion level after photoionisation
+inline MPI_shared_array<const double>
     allphixstargets_probability;  // fraction of phixs cross section leading to associated final level
 
 struct AllLevels {
   // these arrays are indexed by uniquelevelindex, which can be derived from the element, ion, level
 
-  std::span<const double> epsilon;
-  std::span<const float> statweight;
+  MPI_shared_array<const double> epsilon;
+  MPI_shared_array<const float> statweight;
 
   // index into globals::alltrans for first down transition from each level
-  std::span<const int> alltrans_startdown;
+  MPI_shared_array<const int> alltrans_startdown;
 
   // Number of down transitions from each level
-  std::span<const int> ndowntrans;
+  MPI_shared_array<const int> ndowntrans;
 
   // Number of up transitions from each level
-  std::span<const int> nuptrans;
+  MPI_shared_array<const int> nuptrans;
 
   // Number of autoionizing transition from this level
-  std::span<int> nautoiondowntrans;
+  MPI_shared_array<int> nautoiondowntrans;
 
   // Number of di-el captures up from this level
-  std::span<int> nautoionuptrans;
+  MPI_shared_array<int> nautoionuptrans;
 
   // index into globals::allautoion for first autoion from this level
-  std::span<int> allautoion_start;
+  MPI_shared_array<int> allautoion_start;
 
-  std::span<int> closestgroundlevelcont;
+  MPI_shared_array<int> closestgroundlevelcont;
 
   // index to start of photoionisation cross-sections table in global::allphixs
-  std::span<int> phixsstart;
+  MPI_shared_array<int> phixsstart;
 
   // number of target levels for photoionisation
-  std::span<int> nphixstargets;
+  MPI_shared_array<int> nphixstargets;
 
   // index into globals::allphixstargets for the first target level
-  std::span<int> phixstargetstart;
+  MPI_shared_array<int> phixstargetstart;
 
   // index of the bound-free continuum (for first target) sorted by element/ion/level/phixstargetindex (not an index
   // into the nu_edge-sorted allcont list!)
-  std::span<int> bflist_start;
+  MPI_shared_array<int> bflist_start;
 
   // index into cellcache allmacroatomictransitions for each level. This is
   // different to the alltrans index because two types of down transitions are stored separately
   // per level as well as the up transitions
-  std::span<const int> matransblock_start;
+  MPI_shared_array<const int> matransblock_start;
 };
 
 inline AllLevels alllevels{};
 
 inline std::vector<Element> elements;
-inline std::span<Ion> allions;
+inline MPI_shared_array<Ion> allions;
 
 struct TransitionLines {
-  std::span<const double> nu;  // Frequency of the line transition
-  std::span<const float> einstein_A;
-  std::span<const int> elementindex;  // It's a transition of element (not its atomic number,
-                                      // but the (x-1)th element included in the simulation.
-  std::span<const int> ionindex;  // The same for the elements ion
-  std::span<const int> upperlevelindex;  // And the participating upper
-  std::span<const int> lowerlevelindex;  // and lower levels
+  MPI_shared_array<const double> nu;  // Frequency of the line transition
+  MPI_shared_array<const float> einstein_A;
+  MPI_shared_array<const int> elementindex;  // It's a transition of element (not its atomic number,
+                                             // but the (x-1)th element included in the simulation.
+  MPI_shared_array<const int> ionindex;  // The same for the elements ion
+  MPI_shared_array<const int> upperlevelindex;  // And the participating upper
+  MPI_shared_array<const int> lowerlevelindex;  // and lower levels
 };
 inline TransitionLines linelist{};
 inline int nlines{-1};
@@ -217,26 +218,26 @@ struct BFListEntry {
 // the bound-free list sorted by element/ion/level/phixstargetindex (not nu_edge)
 inline std::vector<BFListEntry> bflist;
 
-inline std::span<const double> bfestim_nu_edge{};
+inline MPI_shared_array<const double> bfestim_nu_edge{};
 
 struct AllCont {
-  std::span<const double> nu_edge;
-  std::span<const int> element;
-  std::span<const int> ion;
-  std::span<const int> level;
-  std::span<const int> phixstargetindex;
-  std::span<const int> upperlevel;
-  std::span<const int> uniquelevelindex;
-  std::span<const double> probability;
-  std::span<const int> index_in_groundphixslist;
-  std::span<const int> bfestimindex;
+  MPI_shared_array<const double> nu_edge;
+  MPI_shared_array<const int> element;
+  MPI_shared_array<const int> ion;
+  MPI_shared_array<const int> level;
+  MPI_shared_array<const int> phixstargetindex;
+  MPI_shared_array<const int> upperlevel;
+  MPI_shared_array<const int> uniquelevelindex;
+  MPI_shared_array<const double> probability;
+  MPI_shared_array<const int> index_in_groundphixslist;
+  MPI_shared_array<const int> bfestimindex;
 };
 inline AllCont allcont{};
 
 // Used when USE_LUT_PHOTOION or USE_ION_BFHEATING_ESTIMATORS is enabled
-inline std::span<const double> groundcont_nu_edge{};
-inline std::span<const int> groundcont_element{};
-inline std::span<const int> groundcont_ion{};
+inline MPI_shared_array<const double> groundcont_nu_edge{};
+inline MPI_shared_array<const int> groundcont_element{};
+inline MPI_shared_array<const int> groundcont_ion{};
 
 inline int nbfcontinua{-1};  // number of bf-continua
 inline int nbfcontinua_ground{-1};  // number of bf-continua from ground levels
@@ -260,20 +261,6 @@ struct CellCache {
 };
 inline std::vector<CellCache> cellcache{};
 
-inline MPI_Comm mpi_comm_node{MPI_COMM_NULL};
-inline MPI_Comm mpi_comm_internode{MPI_COMM_NULL};
-
-inline int nprocs{-1};
-inline int my_rank{-1};
-
-inline int node_nprocs{-1};
-inline int rank_in_node{-1};
-
-inline int node_count{-1};
-inline int node_id{-1};
-
-inline bool mpi_finalized{false};  // set to true after MPI_Finalize
-
 inline double vmax{NAN};
 inline double rmax{NAN};
 inline double tmax{-1};
@@ -293,47 +280,27 @@ inline int num_grey_timesteps{-1};
 inline int n_titer{1};
 inline bool lte_iteration{false};
 
-inline void setup_mpi_vars() {
-  MPI_Comm_rank(MPI_COMM_WORLD, &globals::my_rank);
-  MPI_Comm_size(MPI_COMM_WORLD, &globals::nprocs);
-
-  // make an intra-node communicator (group ranks that can share memory)
-  MPI_Comm_split_type(MPI_COMM_WORLD, MPI_COMM_TYPE_SHARED, globals::my_rank, MPI_INFO_NULL, &globals::mpi_comm_node);
-
-  // get the local rank within this node
-  MPI_Comm_rank(globals::mpi_comm_node, &globals::rank_in_node);
-
-  // get the number of ranks on the node
-  MPI_Comm_size(globals::mpi_comm_node, &globals::node_nprocs);
-
-  MPI_Barrier(MPI_COMM_WORLD);
-
-#ifdef MAX_NODE_SIZE
-  if (MAX_NODE_SIZE > 0 && globals::node_nprocs > MAX_NODE_SIZE) {
-    // limit the number of ranks that can share memory
-    MPI_Comm_split(globals::mpi_comm_node, globals::rank_in_node / MAX_NODE_SIZE, globals::my_rank,
-                   &globals::mpi_comm_node);
-
-    MPI_Comm_rank(globals::mpi_comm_node, &globals::rank_in_node);
-    MPI_Comm_size(globals::mpi_comm_node, &globals::node_nprocs);
-  }
-
-  MPI_Barrier(MPI_COMM_WORLD);
-#endif
-
-  // make an inter-node communicator (using local rank as the key for group membership)
-  MPI_Comm_split(MPI_COMM_WORLD, globals::rank_in_node, globals::my_rank, &globals::mpi_comm_internode);
-
-  // take the node id from the local rank 0 (node master) and broadcast it
-  if (globals::rank_in_node == 0) {
-    MPI_Comm_rank(globals::mpi_comm_internode, &globals::node_id);
-    MPI_Comm_size(globals::mpi_comm_internode, &globals::node_count);
-  }
-
-  MPI_Bcast(&globals::node_id, 1, MPI_INT, 0, globals::mpi_comm_node);
-  MPI_Bcast(&globals::node_count, 1, MPI_INT, 0, globals::mpi_comm_node);
-}
-
 }  // namespace globals
 
+constexpr int cellcacheslotid = 0;
+
+[[nodiscard]] inline auto get_max_threads() -> int {
+#ifdef STDPAR_ON
+  return static_cast<int>(std::thread::hardware_concurrency());
+#else
+#ifdef _OPENMP
+  return omp_get_max_threads();
+#else
+  return 1;
+#endif
+#endif
+}
+
+[[nodiscard]] inline auto get_thread_num() -> int {
+#ifdef _OPENMP
+  return omp_get_thread_num();
+#else
+  return 0;
+#endif
+}
 #endif  // GLOBALS_H

@@ -22,10 +22,6 @@
 #include <tuple>
 #include <vector>
 
-#pragma clang unsafe_buffer_usage begin
-#include <mpi.h>
-#pragma clang unsafe_buffer_usage end
-
 #include "artisoptions.h"
 #include "atomic.h"
 #include "constants.h"
@@ -33,6 +29,7 @@
 #include "globals.h"
 #include "grid.h"
 #include "input.h"
+#include "mpi_logging.h"
 #include "packet.h"
 #include "random.h"
 #include "sn3d.h"
@@ -41,7 +38,7 @@ namespace decay {
 
 namespace {
 
-constexpr auto elsymbols = std::array<const std::string, 119>{
+constexpr std::array elsymbols{
     "n",  "H",  "He", "Li", "Be", "B",  "C",  "N",  "O",  "F",  "Ne", "Na",  "Mg", "Al",  "Si", "P",   "S",
     "Cl", "Ar", "K",  "Ca", "Sc", "Ti", "V",  "Cr", "Mn", "Fe", "Co", "Ni",  "Cu", "Zn",  "Ga", "Ge",  "As",
     "Se", "Br", "Kr", "Rb", "Sr", "Y",  "Zr", "Nb", "Mo", "Tc", "Ru", "Rh",  "Pd", "Ag",  "Cd", "In",  "Sn",
@@ -131,8 +128,7 @@ std::vector<bool> alldecaytypes_is_used;
 // decaypath_energy_per_mass points to an array of length npts_model * num_decaypaths
 // the index [mgi * num_decaypaths + i] will hold the decay energy per mass [erg/g] released by chain i in cell mgi
 // during the simulation time range tmin to tmax
-std::span<double> decaypath_energy_per_mass{};
-MPI_Win win_decaypath_energy_per_mass{MPI_WIN_NULL};
+MPI_shared_array<double> decaypath_energy_per_mass{};
 
 // Get the probability that a decay of decaytype occurs
 [[nodiscard]] auto get_nuc_decaybranchprob(const int nucindex, const DecayType decaytype) -> double {
@@ -1104,11 +1100,10 @@ void setup_decaypath_energy_per_mass() {
       "[info] mem_usage: decaypath_energy_per_mass[nonempty_npts_model*num_decaypaths] occupies {:.1f} MB (node shared "
       "memory)...",
       nonempty_npts_model * get_num_decaypaths() * sizeof(double) / 1024. / 1024.);
-  std::tie(decaypath_energy_per_mass, win_decaypath_energy_per_mass) =
-      MPI_shared_malloc_span_keepwin<double>(nonempty_npts_model * get_num_decaypaths());
+  decaypath_energy_per_mass = MPI_shared_array<double>{nonempty_npts_model * get_num_decaypaths(), 0.};
   printlnlog("done.");
 
-  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier_allranks();
   const auto time_min_decay = INITIAL_PACKETS_ON ? grid::get_t_model() : globals::tmin;
   const ptrdiff_t num_decaypaths = get_num_decaypaths();
   for (int nonemptymgi = 0; nonemptymgi < nonempty_npts_model; nonemptymgi++) {
@@ -1121,17 +1116,10 @@ void setup_decaypath_energy_per_mass() {
     }
   }
 
-  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier_allranks();
 }
 
-void free_decaypath_energy_per_mass() {
-  if (win_decaypath_energy_per_mass != MPI_WIN_NULL) {
-    printlnlog("[info] mem_usage: decaypath_energy_per_mass was freed");
-    MPI_Win_free(&win_decaypath_energy_per_mass);
-    win_decaypath_energy_per_mass = MPI_WIN_NULL;
-  }
-  decaypath_energy_per_mass = {};
-}
+void free_decaypath_energy_per_mass() { decaypath_energy_per_mass.reset(); }
 
 // energy release rate in form of kinetic energy of positrons, electrons, and alpha particles in [erg/s/g]
 [[nodiscard]] auto get_particle_injection_rate(const int nonemptymgi, const double t, const DecayType decaytype)
@@ -1377,7 +1365,5 @@ void setup_radioactive_pellet(const double e_cmf_per_packet, const int nonemptym
     pkt.nu_cmf = gammapkt::choose_gamma_ray(pkt.pellet_nucindex);
   }
 }
-
-void cleanup() { free_decaypath_energy_per_mass(); }
 
 }  // namespace decay

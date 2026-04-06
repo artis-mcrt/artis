@@ -10,9 +10,9 @@
 #include "artisoptions.h"
 #include "constants.h"
 #include "exspec.h"
+#include "mpi_logging.h"
 #include "packet.h"
 #include "random.h"
-#include "sn3d.h"
 
 // return the the magnitude of a vector
 template <size_t VECDIM>

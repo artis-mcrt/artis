@@ -26,6 +26,7 @@
 #include "kpkt.h"
 #include "ltepop.h"
 #include "macroatom.h"
+#include "mpi_logging.h"
 #include "nonthermal.h"
 #include "radfield.h"
 #include "ratecoeff.h"
