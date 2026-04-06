@@ -155,9 +155,7 @@ void precalculate_rate_coefficient_integrals() {
 
             if constexpr (USE_LUT_PHOTOION) {
               auto gammacorr = integrator(
-                  [&](const double nu_minus_nu_edge) {
-                    return gammacorr_integrand(nu_minus_nu_edge, nu_threshold, temperature, photoion_xs);
-                  },
+                  [&](const double nu) { return gammacorr_integrand(nu, nu_threshold, temperature, photoion_xs); },
                   nu_threshold, nu_max_phixs, RATECOEFF_INTEGRAL_ACCURACY, &error);
               gammacorr *= FOURPI * phixstargetprobability;
               assert_always(gammacorr >= 0);
@@ -434,15 +432,16 @@ auto calculate_corrphotoioncoeff_integral(const int element, const int ion, cons
   }
 
   double error = 0.;
+  const auto photoion_xs = get_phixs_table(loweruniquelevelindex);
 
-  const auto gammacorr = FOURPI * get_phixsprobability(loweruniquelevelindex, phixstargetindex) *
-                         integrator(
-                             [&](const double nu_minus_nu_edge) {
-                               return integrand_corrphotoioncoeff_custom_radfield(
-                                   nu_minus_nu_edge, nu_threshold, modified_departure_ratio,
-                                   get_phixs_table(loweruniquelevelindex), T_e, nonemptymgi);
-                             },
-                             0, nu_max_phixs - nu_threshold, epsrel, &error);
+  const auto gammacorr =
+      FOURPI * get_phixsprobability(loweruniquelevelindex, phixstargetindex) *
+      integrator(
+          [&](const double nu_minus_nu_edge) {
+            return integrand_corrphotoioncoeff_custom_radfield(nu_minus_nu_edge, nu_threshold, modified_departure_ratio,
+                                                               photoion_xs, T_e, nonemptymgi);
+          },
+          0, nu_max_phixs - nu_threshold, epsrel, &error);
   assert_always(std::isfinite(gammacorr));
 
   return gammacorr;
