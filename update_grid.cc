@@ -611,7 +611,7 @@ void update_grid(std::ostream& estimators_file, const int nts, const int nts_pre
   if constexpr (USE_MICROCLUMPING && READ_VOLUME_FILLING_FACTORS_FROM_FILE) {
     // Only need to open the file if we have cells to update
     if (ndo_nonempty != 0) {
-      clumping_factors_file = fstream_required("volume-filling-factors.txt", std::ios::in);
+      vol_filling_factors_file = fstream_required("volume-filling-factors.txt", std::ios::in);
       set_vol_filling_factors_file_pointer(nts, grid::get_mgi_of_nonemptymgi(nstart_nonempty));
     }
   }
