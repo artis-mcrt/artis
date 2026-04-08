@@ -1605,10 +1605,10 @@ void set_nne(const int nonemptymgi, const float nne) {
   nne_allcells[nonemptymgi] = nne;
 }
 
-void set_clumpfactor(const int nonemptymgi, const float vol_filling_factor) {
+void set_clumpfactor(const int nonemptymgi, const float clumpfactor) {
   assert_testmodeonly(USE_MICROCLUMPING);
-  assert_always(0 < vol_filling_factor && vol_filling_factor <= 1);
-  clumpfactor_allcells[nonemptymgi] = 1.F / vol_filling_factor;
+  assert_always(std::isfinite(clumpfactor) && clumpfactor >= 1);
+  clumpfactor_allcells[nonemptymgi] = clumpfactor;
 }
 
 // Calculate and set the total density of electrons (free and bound) in grid cell. These are targets for Compton

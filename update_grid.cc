@@ -400,7 +400,7 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
       vol_filling_factor = volume_filling_factor(tmid, rad_vel);
     }
 
-    grid::set_clumpfactor(nonemptymgi, vol_filling_factor);
+    grid::set_clumpfactor(nonemptymgi, 1.F / vol_filling_factor);
   }
 
   // Update elemental abundances with radioactive decays
