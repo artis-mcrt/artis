@@ -6,12 +6,8 @@
 #include <span>
 #include <string>
 
-#pragma clang unsafe_buffer_usage begin
-#include <mpi.h>
-#pragma clang unsafe_buffer_usage end
-
 #include "exspec.h"
-#include "globals.h"
+#include "mpi_logging.h"
 #include "packet.h"
 
 struct Spectra {
@@ -20,17 +16,10 @@ struct Spectra {
   std::array<float, MNUBINS> lower_freq{};
   std::array<float, MNUBINS> delta_freq{};
 
-  std::span<double> fluxalltimesteps;
-  MPI_Win win_fluxalltimesteps{MPI_WIN_NULL};
-
-  std::span<double> absorptionalltimesteps;
-  MPI_Win win_absorptionalltimesteps{MPI_WIN_NULL};
-
-  std::span<double> emissionalltimesteps;
-  MPI_Win win_emissionalltimesteps{MPI_WIN_NULL};
-
-  std::span<double> trueemissionalltimesteps;
-  MPI_Win win_trueemissionalltimesteps{MPI_WIN_NULL};
+  MPI_shared_array<double> fluxalltimesteps;
+  MPI_shared_array<double> absorptionalltimesteps;
+  MPI_shared_array<double> emissionalltimesteps;
+  MPI_shared_array<double> trueemissionalltimesteps;
 
   bool do_emission_absorption = false;
 
@@ -41,41 +30,6 @@ struct Spectra {
                                    emissionalltimesteps.size() + trueemissionalltimesteps.size());
     // Note: Allocator overhead is not included in this calculation.
     return mem_usage;
-  }
-
-  auto operator=(Spectra&&) -> Spectra& = delete;
-  auto operator=(const Spectra&) -> Spectra& = delete;
-  Spectra(Spectra&&) = delete;
-  Spectra(const Spectra&) = delete;
-
-  // constructor to allocate MPI windows
-  Spectra() = default;
-
-  // destructor to free MPI windows
-  ~Spectra() {
-    if (globals::mpi_finalized) {
-      return;  // do not free MPI windows after MPI_Finalize
-    }
-    if (win_fluxalltimesteps != MPI_WIN_NULL) {
-      fluxalltimesteps = {};
-      MPI_Win_free(&win_fluxalltimesteps);
-      win_fluxalltimesteps = MPI_WIN_NULL;
-    }
-    if (win_absorptionalltimesteps != MPI_WIN_NULL) {
-      absorptionalltimesteps = {};
-      MPI_Win_free(&win_absorptionalltimesteps);
-      win_absorptionalltimesteps = MPI_WIN_NULL;
-    }
-    if (win_emissionalltimesteps != MPI_WIN_NULL) {
-      emissionalltimesteps = {};
-      MPI_Win_free(&win_emissionalltimesteps);
-      win_emissionalltimesteps = MPI_WIN_NULL;
-    }
-    if (win_trueemissionalltimesteps != MPI_WIN_NULL) {
-      trueemissionalltimesteps = {};
-      MPI_Win_free(&win_trueemissionalltimesteps);
-      win_trueemissionalltimesteps = MPI_WIN_NULL;
-    }
   }
 };
 

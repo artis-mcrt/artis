@@ -11,7 +11,12 @@ eval `spack load --sh openmpi%gcc target=x86_64`
 eval `spack load --sh gsl%gcc target=x86_64`
 eval `spack load --sh gcc target=x86_64`
 
+cd $SLURM_SUBMIT_DIR/artis
 export LD_LIBRARY_PATH=$(gsl-config --prefix)/lib/:$LD_LIBRARY_PATH
+export MAKEFLAGS="--check-symlink-times --jobs=$(nproc --all)"
+export OMPI_CXX=g++
+make clean
+make
 
 cd $SLURM_SUBMIT_DIR
 
@@ -22,7 +27,9 @@ source ./artis/scripts/exspec-before.sh
 
 hoursleft=$(python3 ./artis/scripts/slurmjobhoursleft.py ${SLURM_JOB_ID})
 echo "$(date): before srun sn3d. hours left: $hoursleft"
-time srun -- ./sn3d -w $hoursleft > out.txt
+
+time srun -- ./artis/sn3d -w $hoursleft > out.txt
+
 hoursleftafter=$(python3 ./artis/scripts/slurmjobhoursleft.py ${SLURM_JOB_ID})
 echo "$(date): after srun sn3d finished. hours left: $hoursleftafter"
 hourselapsed=$(python3 -c "print($hoursleft - $hoursleftafter)")
@@ -35,15 +42,9 @@ source ./artis/scripts/movefiles.sh ${SLURM_JOB_ID}.slurm
 
 if grep -q "RESTART_NEEDED" "output_0-0.txt"
 then
-    # check if there's a submit script in the submission directory, otherwise use the repository version
-    if [ -f ./artis-virgo-submit.sh ]
-    then
-        source ./artis-virgo-submit.sh
-    else
-        source ./artis/scripts/artis-virgo-submit.sh
+    source ./artis/scripts/artis-virgo-submit.sh
+else
+    if [ -f packets00_0000.out ]; then
+        source ./artis/scripts/exspec-zip-virgo-submit.sh
     fi
-fi
-
-if [ -f packets00_0000.out ]; then
-    source ./artis/scripts/exspec-zip-virgo-submit.sh
 fi

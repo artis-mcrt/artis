@@ -2,7 +2,7 @@
 
 set -x
 
-runfolder=kilonova_2d_2dgrid_xcomgammaphotoion_testrun
+runfolder=kilonova_2d_expansionopac_testrun
 
 mkdir -p $runfolder
 
@@ -11,10 +11,10 @@ if [ ! -f atomicdata_feconi.tar.xz ]; then curl --insecure -O https://theory.gsi
 tar -xf atomicdata_feconi.tar.xz --directory $runfolder/
 
 # same input files as the other test run
-rsync -av kilonova_2d_3dgrid_inputfiles/ $runfolder/
+rsync -av kilonova_2d_inputfiles/ $runfolder/
 
 # for the checksum files
-rsync -av --ignore-times kilonova_2d_2dgrid_xcomgammaphotoion_inputfiles/ $runfolder/
+rsync -av --ignore-times kilonova_2d_expansionopac_inputfiles/ $runfolder/
 
 ln -s ../../data/ $runfolder
 
@@ -32,7 +32,8 @@ sed -i'' -e 's/constexpr double MAXTEMP.*/constexpr double MAXTEMP = 20000.;/g' 
 
 sed -i'' -e 's/constexpr bool WRITE_EMISSIONABSORPTION_SPEC_AT_END.*/constexpr bool WRITE_EMISSIONABSORPTION_SPEC_AT_END = true;/g' artisoptions.h
 
-sed -i'' -e 's/constexpr bool USE_XCOM_GAMMAPHOTOION.*/constexpr bool USE_XCOM_GAMMAPHOTOION = true;/g' artisoptions.h
+sed -i'' -e 's/constexpr bool EXPANSIONOPACITIES_ON.*/constexpr bool EXPANSIONOPACITIES_ON = true;/g' artisoptions.h
+sed -i'' -e 's/constexpr std::optional<float> RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.*/constexpr std::optional<float> RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY = 1.;/g' artisoptions.h
 
 cd -
 

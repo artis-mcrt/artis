@@ -41,6 +41,7 @@
 #include "input.h"
 #include "ltepop.h"
 #include "macroatom.h"
+#include "mpi_logging.h"
 #include "packet.h"
 #include "random.h"
 #include "sn3d.h"
@@ -60,9 +61,8 @@ constexpr double MINDEPRATE = 0.;
 // Bohr radius squared in cm^2
 constexpr double A_naught_squared = 2.800285203e-17;
 
-constexpr std::array<std::string, 28> shellnames{"K ", "L1", "L2", "L3", "M1", "M2", "M3", "M4", "M5", "N1",
-                                                 "N2", "N3", "N4", "N5", "N6", "N7", "O1", "O2", "O3", "O4",
-                                                 "O5", "O6", "O7", "P1", "P2", "P3", "P4", "Q1"};
+constexpr std::array shellnames{"K ", "L1", "L2", "L3", "M1", "M2", "M3", "M4", "M5", "N1", "N2", "N3", "N4", "N5",
+                                "N6", "N7", "O1", "O2", "O3", "O4", "O5", "O6", "O7", "P1", "P2", "P3", "P4", "Q1"};
 
 std::vector<std::vector<double>> elements_electron_binding;
 std::vector<std::vector<int>> allions_shell_occupancies;
@@ -157,7 +157,7 @@ struct NonThermalExcitation {
 };
 
 // pointer to either local or node-shared memory excitation list of all cells
-std::span<NonThermalExcitation> excitations_list_all_cells{};
+MPI_shared_array<NonThermalExcitation> excitations_list_all_cells{};
 
 // the minimum of MAX_NT_EXCITATIONS_STORED and the number of included excitation transitions in the atomic dataset
 int nt_excitations_stored = 0;
@@ -173,7 +173,7 @@ struct NonThermalSolutionIon {
   std::array<float, NT_MAX_AUGER_ELECTRONS + 1> ionenfrac_num_auger{};
 };
 
-std::span<NonThermalSolutionIon> ion_data_all_cells{};
+MPI_shared_array<NonThermalSolutionIon> ion_data_all_cells{};
 
 struct NonThermalCellSolution {
   float frac_heating = 1.;  // energy fractions should add up to 1.0 if the solution is good
@@ -186,9 +186,9 @@ struct NonThermalCellSolution {
   float nneperion_when_solved{NAN};  // the nne when the solver was last run
 };
 
-std::span<NonThermalCellSolution> nt_solution;
+MPI_shared_array<NonThermalCellSolution> nt_solution;
 
-std::span<double> deposition_rate_density_all_cells;
+MPI_shared_array<double> deposition_rate_density_all_cells;
 
 constexpr auto uppertriangular(const int i, const int j) -> int {
   assert_testmodeonly(i >= 0);
@@ -455,9 +455,9 @@ void read_auger_data() {
   auto augerfile = fstream_required("auger-km1993-table2.txt", std::ios::in);
 
   // map x-ray notation shells K L1 L2 L3 M1 M2 M3 to quantum numbers n and l
-  constexpr std::array<int, 7> xrayn = {1, 2, 2, 2, 3, 3, 3};
-  constexpr std::array<int, 7> xrayl = {0, 0, 1, 1, 0, 1, 1};
-  constexpr std::array<int, 7> xrayg = {2, 2, 2, 4, 2, 2, 4};  // g statistical weight = 2j + 1
+  constexpr std::array xrayn{1, 2, 2, 2, 3, 3, 3};
+  constexpr std::array xrayl{0, 0, 1, 1, 0, 1, 1};
+  constexpr std::array xrayg{2, 2, 2, 4, 2, 2, 4};  // g statistical weight = 2j + 1
 
   std::string strline;
   while (get_noncommentline(augerfile, strline)) {
@@ -2049,7 +2049,7 @@ auto sfmatrix_solve(const std::span<const double> sfmatrix) -> std::array<double
 void init() {
   const ptrdiff_t nonempty_npts_model = grid::get_nonempty_npts_model();
 
-  deposition_rate_density_all_cells = MPI_shared_malloc_span<double>(nonempty_npts_model);
+  deposition_rate_density_all_cells = MPI_shared_array<double>(nonempty_npts_model);
 
   if (globals::rank_in_node == 0) {
     std::ranges::fill(deposition_rate_density_all_cells, -1.);
@@ -2084,13 +2084,12 @@ void init() {
                nt_excitations_stored,
                nonempty_npts_model * sizeof(NonThermalExcitation) * nt_excitations_stored / 1024. / 1024.);
 
-    excitations_list_all_cells =
-        MPI_shared_malloc_span<NonThermalExcitation>(nonempty_npts_model * nt_excitations_stored);
+    excitations_list_all_cells = MPI_shared_array<NonThermalExcitation>(nonempty_npts_model * nt_excitations_stored);
   }
 
-  ion_data_all_cells = MPI_shared_malloc_span<NonThermalSolutionIon>(nonempty_npts_model * get_includedions());
+  ion_data_all_cells = MPI_shared_array<NonThermalSolutionIon>(nonempty_npts_model * get_includedions());
 
-  nt_solution = MPI_shared_malloc_span<NonThermalCellSolution>(nonempty_npts_model);
+  nt_solution = MPI_shared_array<NonThermalCellSolution>(nonempty_npts_model);
 
   if (globals::rank_in_node == 0) {
     for (auto nonemptymgi = 0Z; nonemptymgi < nonempty_npts_model; nonemptymgi++) {
@@ -2107,7 +2106,7 @@ void init() {
       nt_solution[nonemptymgi].frac_excitations_list_size = 0;
     }
   }
-  MPI_Barrier(globals::mpi_comm_node);
+  MPI_Barrier_node();
 
   const double sourceintegral = std::ranges::fold_left(
       std::views::iota(0, SFPTS), 0.0, [](double sum, int s) { return sum + (sourcevec(s) * DELTA_E); });
@@ -2639,7 +2638,7 @@ void nt_MPI_Bcast(const ptrdiff_t nonemptymgi, const int root_node_id) {
       MPI_Bcast_safe(get_cell_allions_data(nonemptymgi), root_node_id, globals::mpi_comm_internode);
     }
 
-    MPI_Barrier(MPI_COMM_WORLD);
+    MPI_Barrier_allranks();
 
     check_auger_probabilities(nonemptymgi);
   }

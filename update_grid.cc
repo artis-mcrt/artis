@@ -10,10 +10,6 @@
 #include <iostream>
 #include <vector>
 
-#pragma clang unsafe_buffer_usage begin
-#include <mpi.h>
-#pragma clang unsafe_buffer_usage end
-
 #include "artisoptions.h"
 #include "atomic.h"
 #include "constants.h"
@@ -22,12 +18,12 @@
 #include "grid.h"
 #include "kpkt.h"
 #include "ltepop.h"
+#include "mpi_logging.h"
 #include "nltepop.h"
 #include "nonthermal.h"
 #include "radfield.h"
 #include "ratecoeff.h"
 #include "rpkt.h"
-#include "sn3d.h"
 #include "thermalbalance.h"
 #include "vpkt.h"
 
@@ -661,7 +657,7 @@ void update_grid(std::ostream& estimators_file, const int nts, const int nts_pre
   printlnlog("timestep {}: finished update grid for rank {} (took {} seconds)", nts, my_rank,
              time_update_grid_end_thisrank - sys_time_start_update_grid);
 
-  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier_allranks();
   printlnlog("timestep {}: time after update grid on all processes (rank {} took {}, waited {}, total {} seconds)", nts,
              my_rank, time_update_grid_end_thisrank - sys_time_start_update_grid,
              std::time(nullptr) - time_update_grid_end_thisrank, std::time(nullptr) - sys_time_start_update_grid);

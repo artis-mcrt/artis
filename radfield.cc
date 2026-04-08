@@ -11,19 +11,13 @@
 #include <ios>
 #include <iterator>
 #include <span>
-#include <tuple>
 #include <vector>
 
 #pragma clang unsafe_buffer_usage begin
-#ifdef BOOST_OFF
-#include <gsl/gsl_errno.h>
-#include <gsl/gsl_math.h>
-#include <gsl/gsl_roots.h>
-#else
+#include <mpi.h>
+
 #include <boost/math/tools/toms748_solve.hpp>
 #include <cstdint>
-#endif
-#include <mpi.h>
 #pragma clang unsafe_buffer_usage end
 
 #include "artisoptions.h"
@@ -31,6 +25,7 @@
 #include "constants.h"
 #include "globals.h"
 #include "grid.h"
+#include "mpi_logging.h"
 #include "rpkt.h"
 #include "sn3d.h"
 
@@ -68,13 +63,9 @@ constexpr double radfieldbins_delta_nu =
 
 RadFieldBins radfieldbins;
 
-std::span<float> radfieldbin_solutions_W;
-MPI_Win win_radfieldbin_solutions_W = MPI_WIN_NULL;
+MPI_shared_array<float> radfieldbin_solutions_W;
 
-std::span<float> radfieldbin_solutions_T_R;
-MPI_Win win_radfieldbin_solutions_T_R = MPI_WIN_NULL;
-
-MPI_Win win_prev_bfrate_normed = MPI_WIN_NULL;
+MPI_shared_array<float> radfieldbin_solutions_T_R;
 
 struct Jb_lu_estimator {
   double value = 0.;
@@ -89,7 +80,7 @@ std::vector<int> detailed_lineindices;
 std::vector<std::vector<Jb_lu_estimator>> prev_Jb_lu_normed{};  // value from the previous timestep
 std::vector<std::vector<Jb_lu_estimator>> Jb_lu_raw{};  // unnormalised estimator for the current timestep
 
-std::span<float> prev_bfrate_normed{};  // values from the previous timestep
+MPI_shared_array<float> prev_bfrate_normed{};  // values from the previous timestep
 std::vector<double> bfrate_raw;  // unnormalised estimators for the current timestep
 
 // J and nuJ are accumulated and then normalised in-place
@@ -331,19 +322,6 @@ auto nu_bar_planck_minus_estimator(const double T_R, const int nonemptymgi, cons
   return delta_nu_bar;
 }
 
-#ifdef BOOST_OFF
-struct GSLTempSolverParams {
-  int nonemptymgi;
-  int binindex;
-};
-
-auto nu_bar_planck_minus_estimator(const double T_R, void* const voidparas)  // cppcheck-suppress constParameterPointer
-    -> double {
-  const auto* const params = static_cast<const GSLTempSolverParams*>(voidparas);
-  return nu_bar_planck_minus_estimator(T_R, params->nonemptymgi, params->binindex);
-}
-#endif
-
 auto find_bin_T_R(const int nonemptymgi, const int binindex) -> float {
   const auto f_deltanubar = [nonemptymgi, binindex](const double T_R) {
     return nu_bar_planck_minus_estimator(T_R, nonemptymgi, binindex);
@@ -360,37 +338,6 @@ auto find_bin_T_R(const int nonemptymgi, const int binindex) -> float {
 
     constexpr double epsrel = 1e-4;
     const auto maxit = 100U;
-#ifdef BOOST_OFF
-
-    GSLTempSolverParams paras{.nonemptymgi = nonemptymgi, .binindex = binindex};
-    gsl_function find_T_R_f = {.function = &nu_bar_planck_minus_estimator, .params = &paras};
-
-    // one dimensional gsl root solver, bracketing type
-    gsl_root_fsolver* T_R_solver = gsl_root_fsolver_alloc(gsl_root_fsolver_brent);
-    gsl_root_fsolver_set(T_R_solver, &find_T_R_f, bins_T_R_min, bins_T_R_max);
-    int status = 0;
-    float T_R_solution = 0.;
-    for (auto iteration_num = 0U; iteration_num <= maxit; iteration_num++) {
-      gsl_root_fsolver_iterate(T_R_solver);
-      T_R_solution = static_cast<float>(gsl_root_fsolver_root(T_R_solver));
-
-      const double T_R_lower = gsl_root_fsolver_x_lower(T_R_solver);
-      const double T_R_upper = gsl_root_fsolver_x_upper(T_R_solver);
-      status = gsl_root_test_interval(T_R_lower, T_R_upper, 0., epsrel);
-
-      if (status != GSL_CONTINUE) {
-        break;
-      }
-    }
-
-    if (status == GSL_CONTINUE) {
-      printlnlog("[warning] find_bin_T_R: T_R did not converge within {} iterations", maxit);
-    }
-
-    gsl_root_fsolver_free(T_R_solver);
-    return T_R_solution;
-
-#else
 
     // use TOMS 748 solver from Boost
     uintmax_t iteration_num = maxit;
@@ -401,9 +348,8 @@ auto find_bin_T_R(const int nonemptymgi, const int binindex) -> float {
       printlnlog("[warning] find_bin_T_R: T_R did not converge within {} iterations.", iteration_num);
     }
     return T_R_solution;
-
-#endif
-  } else if (invalid_values || f_Tmax < 0) {
+  }
+  if (invalid_values || f_Tmax < 0) {
     // At T_R_max, nu_bar_planck_minus_estimator is negative or not finite, so any root lies above T_R_max; clamp to
     // upper bound
     return bins_T_R_max;
@@ -615,11 +561,9 @@ void init() {
     printlnlog("[info] mem_usage: radiation field bin accumulators for non-empty cells occupy {:.3f} MB",
                mem_usage_bins / 1024. / 1024.);
 
-    std::tie(radfieldbin_solutions_W, win_radfieldbin_solutions_W) =
-        MPI_shared_malloc_span_keepwin<float>(nonempty_npts_model * RADFIELDBINCOUNT);
+    radfieldbin_solutions_W = MPI_shared_array<float>(nonempty_npts_model * RADFIELDBINCOUNT);
 
-    std::tie(radfieldbin_solutions_T_R, win_radfieldbin_solutions_T_R) =
-        MPI_shared_malloc_span_keepwin<float>(nonempty_npts_model * RADFIELDBINCOUNT);
+    radfieldbin_solutions_T_R = MPI_shared_array<float>(nonempty_npts_model * RADFIELDBINCOUNT);
 
     const size_t mem_usage_bin_solutions = nonempty_npts_model * RADFIELDBINCOUNT * sizeof(RadFieldBinSolution);
     printlnlog(
@@ -631,12 +575,11 @@ void init() {
 
   if constexpr (DETAILED_BF_ESTIMATORS_ON) {
     const auto bfestimcount = std::ssize(globals::bfestim_nu_edge);
-    std::tie(prev_bfrate_normed, win_prev_bfrate_normed) =
-        MPI_shared_malloc_span_keepwin<float>(nonempty_npts_model * bfestimcount);
+    prev_bfrate_normed = MPI_shared_array<float>(nonempty_npts_model * bfestimcount);
     if (globals::rank_in_node == 0) {
       std::ranges::fill(prev_bfrate_normed, 0.);
     }
-    MPI_Barrier(globals::mpi_comm_node);
+    MPI_Barrier_node();
     printlnlog("[info] mem_usage: detailed bf estimators for non-empty cells occupy {:.3f} MB (node shared memory)",
                nonempty_npts_model * bfestimcount * sizeof(float) / 1024. / 1024.);
 
@@ -649,12 +592,12 @@ void init() {
   zero_estimators();
 
   if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
-    MPI_Barrier(globals::mpi_comm_node);
+    MPI_Barrier_node();
     if (globals::rank_in_node == 0) {
       std::ranges::fill(radfieldbin_solutions_W, -1.);
       std::ranges::fill(radfieldbin_solutions_T_R, -1.);
     }
-    MPI_Barrier(globals::mpi_comm_node);
+    MPI_Barrier_node();
   }
 }
 
@@ -726,21 +669,12 @@ void close_file() {
 
   if (MULTIBIN_RADFIELD_MODEL_ON) {
     radfieldbins = {};
-    if (win_radfieldbin_solutions_W != MPI_WIN_NULL) {
-      MPI_Win_free(&win_radfieldbin_solutions_W);
-      radfieldbin_solutions_W = {};
-    }
-    if (win_radfieldbin_solutions_T_R != MPI_WIN_NULL) {
-      MPI_Win_free(&win_radfieldbin_solutions_T_R);
-      radfieldbin_solutions_T_R = {};
-    }
+    radfieldbin_solutions_W.reset();
+    radfieldbin_solutions_T_R.reset();
   }
 
   if constexpr (DETAILED_BF_ESTIMATORS_ON) {
-    if (win_prev_bfrate_normed != MPI_WIN_NULL) {
-      MPI_Win_free(&win_prev_bfrate_normed);
-      prev_bfrate_normed = {};
-    }
+    prev_bfrate_normed.reset();
   }
 }
 
@@ -1042,7 +976,7 @@ void reduce_estimators() {
     const auto duration_reduction = std::time(nullptr) - sys_time_start_reduction;
     printlnlog(" (took {} s)", duration_reduction);
   }
-  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier_allranks();
 }
 
 // broadcast computed radfield results including parameters
@@ -1066,7 +1000,7 @@ void do_MPI_Bcast(const ptrdiff_t nonemptymgi, const int root, const int root_no
     }
   }
 
-  MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier_allranks();
 }
 
 void write_restart_data(FILE* gridsave_file) {

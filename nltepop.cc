@@ -38,6 +38,7 @@
 #include "kpkt.h"
 #include "ltepop.h"
 #include "macroatom.h"
+#include "mpi_logging.h"
 #include "nltepop.h"
 #include "nonthermal.h"
 #include "ratecoeff.h"

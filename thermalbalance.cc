@@ -8,14 +8,8 @@
 #include <vector>
 
 #pragma clang unsafe_buffer_usage begin
-#ifdef BOOST_OFF
-#include <gsl/gsl_errno.h>
-#include <gsl/gsl_math.h>
-#include <gsl/gsl_roots.h>
-#else
 #include <boost/math/tools/toms748_solve.hpp>
 #include <cstdint>
-#endif
 #pragma clang unsafe_buffer_usage end
 
 #include "artisoptions.h"
@@ -26,6 +20,7 @@
 #include "kpkt.h"
 #include "ltepop.h"
 #include "macroatom.h"
+#include "mpi_logging.h"
 #include "nonthermal.h"
 #include "radfield.h"
 #include "ratecoeff.h"
@@ -34,21 +29,9 @@
 
 namespace {
 
-struct BFHeatingIntegralParams {
-  double nu_edge;
-  int nonemptymgi;
-  float T_R;
-  std::span<const float> photoion_xs;
-};
-
 // Integrand to calculate the rate coefficient for bfheating.
-auto integrand_bfheatingcoeff(const double nu, void* const voidparas) -> double {
-  const auto& params = *(static_cast<const BFHeatingIntegralParams*>(voidparas));
-  const auto& nu_edge = params.nu_edge;
-  const auto& nonemptymgi = params.nonemptymgi;
-  const auto& T_R = params.T_R;
-  const auto& photoion_xs = params.photoion_xs;
-
+auto integrand_bfheatingcoeff(const double nu, const double nu_edge, const int nonemptymgi, const float T_R,
+                              const std::span<const float> photoion_xs) -> double {
   const float sigma_bf = photoionisation_crosssection_fromtable(photoion_xs, nu_edge, nu);
 
   return sigma_bf * (1 - (nu_edge / nu)) * radfield::radfield(nu, nonemptymgi) * (1 - exp(-HOVERKB * nu / T_R));
@@ -190,22 +173,6 @@ auto T_e_eqn_heating_minus_cooling(const double T_e, int nonemptymgi, const doub
   return total_heating_rate - total_coolingrate;
 }
 
-#ifdef BOOST_OFF
-struct TeSolutionParams {
-  double t_current;
-  int nonemptymgi;
-  HeatingCoolingRates* heatingcoolingrates;
-  std::span<const double> bfheatingcoeffs;
-};
-
-auto T_e_eqn_heating_minus_cooling(const double T_e, void* const paras)  // cppcheck-suppress constParameterPointer
-    -> double {
-  const auto* const params = static_cast<const TeSolutionParams*>(paras);
-  return T_e_eqn_heating_minus_cooling(T_e, params->nonemptymgi, params->t_current, *params->heatingcoolingrates,
-                                       params->bfheatingcoeffs);
-}
-#endif
-
 }  // anonymous namespace
 
 auto calculate_bfheatingcoeff(const int element, const int ion, const int level, const int phixstargetindex,
@@ -217,13 +184,11 @@ auto calculate_bfheatingcoeff(const int element, const int ion, const int level,
 
   const double nu_threshold = ONEOVERH * E_threshold;
   const double nu_max_phixs = nu_threshold * last_phixs_nuovernuedge;  // nu of the uppermost point in the phixs table
-
-  const BFHeatingIntegralParams intparas = {.nu_edge = nu_threshold,
-                                            .nonemptymgi = nonemptymgi,
-                                            .T_R = grid::get_TR(nonemptymgi),
-                                            .photoion_xs = get_phixs_table(element, ion, level)};
-
-  auto bfheating = integrator<integrand_bfheatingcoeff>(intparas, nu_threshold, nu_max_phixs, epsrel, &error);
+  const auto photoion_xs = get_phixs_table(element, ion, level);
+  const auto T_R = grid::get_TR(nonemptymgi);
+  auto bfheating = integrator(
+      [&](const double nu) { return integrand_bfheatingcoeff(nu, nu_threshold, nonemptymgi, T_R, photoion_xs); },
+      nu_threshold, nu_max_phixs, epsrel, &error);
 
   bfheating *= FOURPI * get_phixsprobability(element, ion, level, phixstargetindex);
 
@@ -271,12 +236,7 @@ void call_T_e_finder(const int nonemptymgi, const double t_current, const double
                      HeatingCoolingRates& heatingcoolingrates, const std::span<const double> bfheatingcoeffs) {
   const int modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
   const double T_e_old = grid::get_Te(nonemptymgi);
-#ifdef BOOST_OFF
-  constexpr auto method = "gsl brent";
-#else
-  constexpr auto method = "boost toms748_solve";
-#endif
-  printlog("Finding T_e in cell {} at timestep {} [{}]...", modelgridindex, globals::timestep, method);
+  printlog("Finding T_e in cell {} at timestep {}...", modelgridindex, globals::timestep);
 
   const auto f_T_e = [&](double T_e) -> double {
     return T_e_eqn_heating_minus_cooling(T_e, nonemptymgi, t_current, heatingcoolingrates, bfheatingcoeffs);
@@ -298,38 +258,7 @@ void call_T_e_finder(const int nonemptymgi, const double t_current, const double
   if (!invalid_values && f_T_min * f_T_max < 0) {
     const auto maxit = 100U;
     // If it has, then solve for the root T_e
-#ifdef BOOST_OFF
-    TeSolutionParams paras = {.t_current = t_current,
-                              .nonemptymgi = nonemptymgi,
-                              .heatingcoolingrates = &heatingcoolingrates,
-                              .bfheatingcoeffs = bfheatingcoeffs};
 
-    gsl_function find_T_e_f = {.function = &T_e_eqn_heating_minus_cooling, .params = &paras};
-    // one-dimensional GSL Brent root solver, bracketing type
-    gsl_root_fsolver* T_e_solver = gsl_root_fsolver_alloc(gsl_root_fsolver_brent);
-
-    gsl_root_fsolver_set(T_e_solver, &find_T_e_f, T_min, T_max);
-    int status = 0;
-    for (auto iternum = 0U; iternum < maxit; iternum++) {
-      gsl_root_fsolver_iterate(T_e_solver);
-      T_e = gsl_root_fsolver_root(T_e_solver);
-      const double T_e_lower = gsl_root_fsolver_x_lower(T_e_solver);
-      const double T_e_upper = gsl_root_fsolver_x_upper(T_e_solver);
-      status = gsl_root_test_interval(T_e_lower, T_e_upper, 0, TEMPERATURE_SOLVER_ACCURACY);
-      // printlnlog("iter {}, T_e interval [{:g}, {:g}], guess {:g}, status {}", iternum, T_e_lower, T_e_upper, T_e,
-      // status);
-      if (status != GSL_CONTINUE) {
-        printlnlog("after {} iterations, T_e = {:g} K, interval [{:g}, {:g}]", iternum + 1, T_e, T_e_lower, T_e_upper);
-        break;
-      }
-    }
-
-    if (status == GSL_CONTINUE) {
-      printlnlog("[warning] call_T_e_finder: T_e did not converge within {} iterations", maxit);
-    }
-
-    gsl_root_fsolver_free(T_e_solver);
-#else
     // use TOMS 748 solver from Boost
     uintmax_t iternum = maxit;
     auto result = boost::math::tools::toms748_solve(f_T_e, T_min, T_max, f_T_min, f_T_max,
@@ -341,10 +270,7 @@ void call_T_e_finder(const int nonemptymgi, const double t_current, const double
     } else {
       printlnlog("after {} iterations, T_e = {:g} K, interval [{:g}, {:g}]", iternum, T_e, result.first, result.second);
     }
-#endif
-  }
-
-  else if (invalid_values || f_T_max < 0) {
+  } else if (invalid_values || f_T_max < 0) {
     // Thermal balance equation always negative ===> T_e = T_min
     T_e = MINTEMP;
     printlnlog(
