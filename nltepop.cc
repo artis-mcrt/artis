@@ -667,7 +667,7 @@ void nltepop_matrix_add_autoionisation(const int nonemptymgi, const int element,
   assert_always(ion < max_ion_used);  // can't ionise top ion stage
   const auto T_e = grid::get_Te(nonemptymgi);
   const float clumpfactor = grid::get_clumpfactor(nonemptymgi);
-  const float clumpednne = grid::apply_clumping(grid::get_nne(nonemptymgi), clumpfactor);
+  const float clumpednne = grid::get_nne(nonemptymgi) * clumpfactor;
   const int nlevels = get_nlevels(element, ion);
   for (int level = 0; level < nlevels; level++) {
     const int level_index = get_nlte_vector_index(element, ion, level, first_ion_used);

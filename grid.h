@@ -131,15 +131,6 @@ inline auto get_ejecta_kinetic_energy() {
   return E_kin;
 }
 
-// Applies the clumping factor to `val` if microclumping is being used
-template <typename T>
-inline auto apply_clumping(const T val, const float clumpfactor) -> T {
-  if constexpr (USE_MICROCLUMPING) {
-    return val * clumpfactor;
-  }
-  return val;
-}
-
 }  // namespace grid
 
 #endif  // GRIDINIT_H

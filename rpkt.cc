@@ -717,7 +717,7 @@ auto do_rpkt_step(Packet& pkt, const double t2) -> bool {
 // calculate the free-free absorption (to kpkt heating) coefficient [cm^-1]
 // = kappa(free-free) * nne
 auto calculate_chi_ffheating(const int nonemptymgi, const double nu, const bool use_cellcache) -> double {
-  const auto clumpednne = grid::apply_clumping(grid::get_nne(nonemptymgi), grid::get_clumpfactor(nonemptymgi));
+  const auto clumpednne = grid::get_nne(nonemptymgi) * grid::get_clumpfactor(nonemptymgi);
   const auto T_e = grid::get_Te(nonemptymgi);
   assert_testmodeonly(!use_cellcache || globals::cellcache[cellcacheslotid].nonemptymgi == nonemptymgi);
   const auto chi_ff_nnionpart = use_cellcache ? globals::cellcache[cellcacheslotid].chi_ff_nnionpart
@@ -743,7 +743,7 @@ auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixsli
   }
 
   const auto T_e = grid::get_Te(nonemptymgi);
-  const auto clumpednne = grid::apply_clumping(grid::get_nne(nonemptymgi), grid::get_clumpfactor(nonemptymgi));
+  const auto clumpednne = grid::get_nne(nonemptymgi) * grid::get_clumpfactor(nonemptymgi);
   const auto nnetot = grid::get_nnetot(nonemptymgi);
   const auto& allcont_nu_edge = globals::allcont.nu_edge;
 

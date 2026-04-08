@@ -418,7 +418,7 @@ auto calculate_corrphotoioncoeff_integral(const int element, const int ion, cons
   // stimulated recombination is negative photoionisation
   const double nnlevel = use_cellcache ? get_cellcache_levelpop(nonemptymgi, loweruniquelevelindex)
                                        : calculate_levelpop(nonemptymgi, element, ion, level);
-  const double clumpednne = grid::apply_clumping(grid::get_nne(nonemptymgi), grid::get_clumpfactor(nonemptymgi));
+  const double clumpednne = grid::get_nne(nonemptymgi) * grid::get_clumpfactor(nonemptymgi);
 
   const int upperionlevel = get_phixsupperlevel(loweruniquelevelindex, phixstargetindex);
   const auto upperuniquelevelindex = get_uniquelevelindex(element, ion + 1, upperionlevel);

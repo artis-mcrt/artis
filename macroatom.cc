@@ -621,7 +621,7 @@ void macroatom_close_file() {
   // it's faster to only check this condition outside this function than to check it for every level
   assert_testmodeonly(upperionlevel <= get_maxrecombininglevel(element, upperion));
 
-  nne = grid::apply_clumping(nne, clumpfactor);
+  nne *= clumpfactor;
   const int lowerion = upperion - 1;
   const auto lowerionlower_uniquelevelindex = get_uniquelevelindex(element, lowerion, lowerionlevel);
   const int nphixstargets = get_nphixstargets(lowerionlower_uniquelevelindex);
@@ -642,7 +642,7 @@ void macroatom_close_file() {
                                                              const int upperion, const int upper, const int lower,
                                                              const double epsilon_trans, const float clumpfactor)
     -> double {
-  nne = grid::apply_clumping(nne, clumpfactor);
+  nne *= clumpfactor;
   const auto lowerionlower_uniquelevelindex = get_uniquelevelindex(element, upperion - 1, lower);
   const double statw_lower = stat_weight(lowerionlower_uniquelevelindex);
   const int nphixstargets = get_nphixstargets(lowerionlower_uniquelevelindex);
@@ -679,7 +679,7 @@ void macroatom_close_file() {
   assert_testmodeonly(phixstargetindex >= 0);
   assert_testmodeonly(phixstargetindex < get_nphixstargets(element, ion, lower));
 
-  nne = grid::apply_clumping(nne, clumpfactor);
+  nne *= clumpfactor;
 
   // Seaton approximation: Mihalas (1978), eq.5-79, p.134
 
@@ -701,7 +701,7 @@ void macroatom_close_file() {
                                                             const double upperstatweight, const double lowerstatweight,
                                                             const int alltransindex, const float clumpfactor)
     -> double {
-  nne = grid::apply_clumping(nne, clumpfactor);
+  nne *= clumpfactor;
   const auto coll_strength = globals::alltrans.coll_str[alltransindex];
   if (coll_strength < 0) {
     if (!globals::alltrans.forbidden[alltransindex])  // alternative: (coll_strength > -1.5) i.e. to catch -1
@@ -750,7 +750,7 @@ void macroatom_close_file() {
                                                           const int alltransindex, const double epsilon_trans,
                                                           const double lowerstatweight, const float clumpfactor)
     -> double {
-  nne = grid::apply_clumping(nne, clumpfactor);
+  nne *= clumpfactor;
   const auto coll_strength = globals::alltrans.coll_str[alltransindex];
   const double eoverkt = epsilon_trans / (KB * T_e);
 
