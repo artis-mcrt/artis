@@ -94,7 +94,7 @@ void setup_cellcache() {
 
         for (int level = 0; level < nlevels; level++) {
           const int nphixstargets = get_nphixstargets(element, ion, level);
-          allphixstargetcount += nphixstargets * sizeof(double);
+          allphixstargetcount += nphixstargets;
 
           const int ndowntrans = get_ndowntrans(element, ion, level);
           const int nuptrans = get_nuptrans(element, ion, level);
