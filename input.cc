@@ -1726,11 +1726,7 @@ void input() {
 
   read_atomicdata();
 
-  const auto time_before_barrier = std::time(nullptr);
-  printlog("barrier after read_atomicdata(): time before barrier {}, ", static_cast<int>(time_before_barrier));
   MPI_Barrier_allranks();
-  printlnlog("time after barrier {} (waited {} seconds)", static_cast<int>(time(nullptr)),
-             static_cast<int>(time(nullptr) - time_before_barrier));
 
   grid::read_ejecta_model();
 }
