@@ -78,6 +78,12 @@ tail -f output_0-0.txt
 ```
 Press Ctrl+C to stop following the log file.
 
+## Bundled Scripts
+- clean.sh: Remove all output files while keeping input files and resetting the simulation to the beginning.
+- movefiles.sh [DIRNAME]: Move artis output files from the simulation folder into another folder. Usually called automatically by the job scripts, but should be run manually if the simulation crashes or is terminated early.
+- sumcorehourslogs.py: Calculate the summed core hours of all jobs using the timing information in the last line of the output*.txt log files. This cannot include runs where the job was terminated early.
+- sumcorehoursslurm.py: Calculate the summed core hours of all jobs from the slurm job output files.
+
 ## make options
 - TESTMODE=ON: Enable additional assertions and the address and undefined behaviour sanitizers.
 - FASTMATH=OFF: Don't enable compiler transformations that affect round-off-level results (e.g. a*(b\*c) = (a\*b)*c).
