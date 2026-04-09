@@ -860,17 +860,20 @@ void setup_phixs_list() {
     auto allcont_probability = MPI_shared_array<double>(nbfcontinua);
     auto allcont_index_in_groundphixslist = MPI_shared_array<int>(nbfcontinua);
     if (globals::rank_in_node == 0) {
-      for (int i = 0; i < nbfcontinua; i++) {
-        allcont_nu_edge[i] = allcont[i].nu_edge;
-        allcont_element[i] = allcont[i].element;
-        allcont_ion[i] = allcont[i].ion;
-        allcont_level[i] = allcont[i].level;
-        allcont_phixstargetindex[i] = allcont[i].phixstargetindex;
-        allcont_upperlevel[i] = allcont[i].upperlevel;
-        allcont_uniquelevelindex[i] = allcont[i].uniquelevelindex;
-        allcont_probability[i] = allcont[i].probability;
-        allcont_index_in_groundphixslist[i] = allcont[i].index_in_groundphixslist;
-      }
+      std::ranges::copy(std::views::transform(allcont, &TempPhotoionTransitionInput::nu_edge), allcont_nu_edge.begin());
+      std::ranges::copy(std::views::transform(allcont, &TempPhotoionTransitionInput::element), allcont_element.begin());
+      std::ranges::copy(std::views::transform(allcont, &TempPhotoionTransitionInput::ion), allcont_ion.begin());
+      std::ranges::copy(std::views::transform(allcont, &TempPhotoionTransitionInput::level), allcont_level.begin());
+      std::ranges::copy(std::views::transform(allcont, &TempPhotoionTransitionInput::phixstargetindex),
+                        allcont_phixstargetindex.begin());
+      std::ranges::copy(std::views::transform(allcont, &TempPhotoionTransitionInput::upperlevel),
+                        allcont_upperlevel.begin());
+      std::ranges::copy(std::views::transform(allcont, &TempPhotoionTransitionInput::uniquelevelindex),
+                        allcont_uniquelevelindex.begin());
+      std::ranges::copy(std::views::transform(allcont, &TempPhotoionTransitionInput::probability),
+                        allcont_probability.begin());
+      std::ranges::copy(std::views::transform(allcont, &TempPhotoionTransitionInput::index_in_groundphixslist),
+                        allcont_index_in_groundphixslist.begin());
     }
     MPI_Barrier_node();
     globals::allcont.nu_edge = std::move(allcont_nu_edge);
