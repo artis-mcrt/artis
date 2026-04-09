@@ -45,7 +45,7 @@ void update_abundances(int nonemptymgi, double t_current);
 [[nodiscard]] auto get_modelcell_simtime_endecay_per_mass(int nonemptymgi,
                                                           std::span<const double> energy_per_mass_nonemptymgi_decaypath)
     -> double;
-auto get_energy_per_mass_nonemptymgi_decaypath() -> MPI_shared_array<double>;
+auto get_energy_per_mass_nonemptymgi_decaypath() -> MPI_shared_array<const double>;
 [[nodiscard]] auto get_qdot_modelcell(int nonemptymgi, double t, DecayType decaytype) -> double;
 [[nodiscard]] auto get_particle_injection_rate(int nonemptymgi, double t, DecayType decaytype) -> double;
 [[nodiscard]] auto get_gamma_emission_rate(int nonemptymgi, double t) -> double;

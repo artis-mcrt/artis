@@ -1085,7 +1085,7 @@ auto get_modelcell_simtime_endecay_per_mass(const int nonemptymgi,
 
 // energy_per_mass_nonemptymgi_decaypath is an array indexed by [nonemptymgi * num_decaypaths + i] will hold the
 // decay energy per mass [erg/g] released by chain i in cell mgi during the simulation time range tmin to tmax
-auto get_energy_per_mass_nonemptymgi_decaypath() -> MPI_shared_array<double> {
+auto get_energy_per_mass_nonemptymgi_decaypath() -> MPI_shared_array<const double> {
   const ptrdiff_t nonempty_npts_model = grid::get_nonempty_npts_model();
   printlog(
       "[info] mem_usage: energy_per_mass_nonemptymgi_decaypath[nonempty_npts_model*num_decaypaths] occupies {:.1f} "
