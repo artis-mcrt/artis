@@ -1094,12 +1094,6 @@ void read_phixs_data() {
     MPI_Barrier_node();
     globals::allphixstargets_levelindex = std::move(allphixstargets_levelindex);
     globals::allphixstargets_probability = std::move(allphixstargets_probability);
-
-    tmpallphixs.clear();
-    tmpallphixs.shrink_to_fit();
-
-    tmpallphixstargets.clear();
-    tmpallphixstargets.shrink_to_fit();
   }
 
   for (int element = 0; element < get_nelements(); element++) {
@@ -1122,8 +1116,6 @@ void read_phixs_data() {
       }
     }
   }
-
-  setup_phixs_list();
 }
 
 auto read_compositiondata() -> std::vector<int> {
@@ -1549,6 +1541,7 @@ void read_atomicdata_files() {
 
   read_autoion_data();
   read_phixs_data();
+  setup_phixs_list();
 }
 
 void write_bflist_file() {
