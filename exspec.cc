@@ -169,7 +169,6 @@ auto main(int argc, char* argv[]) -> int {
   assert_always(globals::my_rank == 0);
   assert_always(globals::nprocs == 1);
 
-  // Get input stuff
   input();
 
   setup_timesteps();
@@ -177,7 +176,7 @@ auto main(int argc, char* argv[]) -> int {
   init_spectrum_trace();  // needed for TRACE_EMISSION_ABSORPTION_REGION_ON
 
   // nprocs_exspec is the number of rank output files to process with exspec
-  // however, we might be running exspec with 1 or just a few ranks
+  // (not the number of ranks used to run exspec, which is always 1 for now)
 
   std::vector<std::vector<Packet>> packets_by_rank;
   resize_exactly(packets_by_rank, globals::nprocs_exspec);
