@@ -821,12 +821,6 @@ auto main(int argc, char* argv[]) -> int {
       MAX_NODE_SIZE);
 #endif
 
-#ifdef DO_TITER
-  assert_always(globals::n_titer > 0);
-#else
-  assert_always(globals::n_titer == 1);
-#endif
-
   // Read in parameters from input.txt
   read_parameterfile();
 
@@ -924,8 +918,13 @@ auto main(int argc, char* argv[]) -> int {
 
     // titer example: Do 3 iterations on timestep 0-6
     // globals::n_titer = (globals::timestep < 6) ? 3 : 1;
+    globals::n_titer = 1;
 
-    globals::n_titer = (globals::timestep < -1) ? 3 : 1;
+#ifdef DO_TITER
+    assert_always(globals::n_titer > 0);
+#else
+    assert_always(globals::n_titer == 1);
+#endif
     if (globals::n_titer > 1) {
       printlnlog("Doing %d iterations on timestep %d", globals::n_titer, globals::timestep);
     }
