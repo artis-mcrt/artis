@@ -32,6 +32,8 @@ Checks: [
         -fuchsia-*,
         -google-objc*,
         -google-readability-todo,
+        -google-explicit-constructor,
+        -hicpp-explicit-conversions,
         -hicpp-vararg,
         -llvmlibc-*,
         -llvm-use-ranges,
