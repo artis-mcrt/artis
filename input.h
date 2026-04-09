@@ -5,7 +5,7 @@
 #include <string>
 #include <string_view>
 
-void input();
+void read_atomicdata();
 void read_parameterfile();
 void update_parameterfile(int nts);
 void setup_timesteps();

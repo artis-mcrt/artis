@@ -821,7 +821,22 @@ auto main(int argc, char* argv[]) -> int {
       MAX_NODE_SIZE);
 #endif
 
-  input();
+#ifdef DO_TITER
+  assert_always(globals::n_titer > 0);
+#else
+  assert_always(globals::n_titer == 1);
+#endif
+
+  // Read in parameters from input.txt
+  read_parameterfile();
+
+  // Read in parameters from vpkt.txt
+  vpkt::read_vpktparameterfile();
+
+  read_atomicdata();
+
+  grid::read_ejecta_model();
+
   if (globals::simulation_continued_from_saved) {
     assert_always(globals::nprocs_exspec == globals::nprocs);
   } else {

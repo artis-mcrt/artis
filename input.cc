@@ -36,14 +36,12 @@
 #include "constants.h"
 #include "decay.h"
 #include "globals.h"
-#include "grid.h"
 #include "kpkt.h"
 #include "mpi_logging.h"
 #include "packet.h"
 #include "random.h"
 #include "ratecoeff.h"
 #include "sn3d.h"
-#include "vpkt.h"
 
 namespace {
 
@@ -1648,72 +1646,7 @@ void setup_nlte_levels() {
   printlnlog("[input] Total NLTE levels: {}, of which {} are superlevels", globals::total_nlte_levels, n_super_levels);
 }
 
-void read_atomicdata() {
-  read_atomicdata_files();
-
-  kpkt::setup_coolinglist();
-
-  // Printout some information about the read-in model atom
-
-  int includedionisinglevels = 0;
-  int includedboundboundtransitions = 0;
-  int includedphotoiontransitions = 0;
-  printlnlog("[input] this simulation contains");
-  printlnlog("----------------------------------");
-  for (int element = 0; element < get_nelements(); element++) {
-    printlnlog("[input]  element {} (Z={:2} {})", element, get_atomicnumber(element),
-               decay::get_elname(get_atomicnumber(element)));
-    const int nions = get_nions(element);
-    for (int ion = 0; ion < nions; ion++) {
-      int ion_photoiontransitions = 0;
-      int ion_bbtransitions = 0;
-      for (int level = 0; level < get_nlevels(element, ion); level++) {
-        ion_photoiontransitions += get_nphixstargets(element, ion, level);
-        ion_bbtransitions += get_nuptrans(element, ion, level);
-      }
-
-      printlnlog(
-          "[input]    ionstage {}: {:4} levels ({:4} ionising) {:7} lines {:6} bf transitions ("
-          "epsilon_ground: {:7.2f} eV)",
-          get_ionstage(element, ion), get_nlevels(element, ion), get_nlevels_ionising(element, ion), ion_bbtransitions,
-          ion_photoiontransitions, epsilon(element, ion, 0) / EV);
-
-      includedionisinglevels += get_nlevels_ionising(element, ion);
-      includedphotoiontransitions += ion_photoiontransitions;
-      includedboundboundtransitions += ion_bbtransitions;
-    }
-  }
-  assert_always(includedphotoiontransitions == globals::nbfcontinua);
-  assert_always(globals::nlines == includedboundboundtransitions);
-
-  printlnlog("[input]  in total {} ions, {} levels ({} ionising), {} lines, {} photoionisation transitions",
-             get_includedions(), get_includedlevels(), includedionisinglevels, globals::nlines, globals::nbfcontinua);
-
-  write_bflist_file();
-
-  setup_nlte_levels();
-}
-
 }  // anonymous namespace
-
-// read input.txt, atomic data, and ejecta model
-void input() {
-#ifdef DO_TITER
-  assert_always(globals::n_titer > 0);
-#else
-  assert_always(globals::n_titer == 1);
-#endif
-
-  // Read in parameters from input.txt
-  read_parameterfile();
-
-  // Read in parameters from vpkt.txt
-  vpkt::read_vpktparameterfile();
-
-  read_atomicdata();
-
-  grid::read_ejecta_model();
-}
 
 // read the next line, skipping any comment lines beginning with '#'
 auto get_noncommentline(std::istream& input, std::string& line) -> bool {
@@ -1954,6 +1887,52 @@ void update_parameterfile(const int nts) {
   }
 
   printlnlog("done");
+}
+
+void read_atomicdata() {
+  read_atomicdata_files();
+
+  kpkt::setup_coolinglist();
+
+  // Printout some information about the read-in model atom
+
+  int includedionisinglevels = 0;
+  int includedboundboundtransitions = 0;
+  int includedphotoiontransitions = 0;
+  printlnlog("[input] this simulation contains");
+  printlnlog("----------------------------------");
+  for (int element = 0; element < get_nelements(); element++) {
+    printlnlog("[input]  element {} (Z={:2} {})", element, get_atomicnumber(element),
+               decay::get_elname(get_atomicnumber(element)));
+    const int nions = get_nions(element);
+    for (int ion = 0; ion < nions; ion++) {
+      int ion_photoiontransitions = 0;
+      int ion_bbtransitions = 0;
+      for (int level = 0; level < get_nlevels(element, ion); level++) {
+        ion_photoiontransitions += get_nphixstargets(element, ion, level);
+        ion_bbtransitions += get_nuptrans(element, ion, level);
+      }
+
+      printlnlog(
+          "[input]    ionstage {}: {:4} levels ({:4} ionising) {:7} lines {:6} bf transitions ("
+          "epsilon_ground: {:7.2f} eV)",
+          get_ionstage(element, ion), get_nlevels(element, ion), get_nlevels_ionising(element, ion), ion_bbtransitions,
+          ion_photoiontransitions, epsilon(element, ion, 0) / EV);
+
+      includedionisinglevels += get_nlevels_ionising(element, ion);
+      includedphotoiontransitions += ion_photoiontransitions;
+      includedboundboundtransitions += ion_bbtransitions;
+    }
+  }
+  assert_always(includedphotoiontransitions == globals::nbfcontinua);
+  assert_always(globals::nlines == includedboundboundtransitions);
+
+  printlnlog("[input]  in total {} ions, {} levels ({} ionising), {} lines, {} photoionisation transitions",
+             get_includedions(), get_includedlevels(), includedionisinglevels, globals::nlines, globals::nbfcontinua);
+
+  write_bflist_file();
+
+  setup_nlte_levels();
 }
 
 // initialise the time steps

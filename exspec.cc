@@ -169,7 +169,12 @@ auto main(int argc, char* argv[]) -> int {
   assert_always(globals::my_rank == 0);
   assert_always(globals::nprocs == 1);
 
-  input();
+  // Read in parameters from input.txt
+  read_parameterfile();
+
+  read_atomicdata();
+
+  grid::read_ejecta_model();
 
   setup_timesteps();
 
