@@ -10,7 +10,6 @@ void read_parameterfile();
 void update_parameterfile(int nts);
 void setup_cellcache();
 void setup_timesteps();
-void write_timestep_file();
 auto get_noncommentline(std::istream& input, std::string& line) -> bool;
 
 // return true for whitespace-only lines, and lines that are exclusively whitespace up to a '#' character

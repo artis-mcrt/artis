@@ -227,6 +227,16 @@ void write_deposition_file() {
   printlnlog("took {} seconds", std::time(nullptr) - time_write_deposition_file_start);
 }
 
+void write_timestep_file() {
+  auto timestepfile = std::fstream("timesteps.out", std::ofstream::out | std::ofstream::trunc);
+  assert_always(timestepfile.is_open());
+  timestepfile << "#timestep tstart_days tmid_days twidth_days\n";
+  for (int n = 0; n < globals::ntimesteps; n++) {
+    timestepfile << n << ' ' << globals::timesteps[n].start / DAY << ' ' << globals::timesteps[n].mid / DAY << ' '
+                 << globals::timesteps[n].width / DAY << '\n';
+  }
+}
+
 void mpi_communicate_grid_properties() {
   const int nincludedions = get_includedions();
   const auto nelements = get_nelements();

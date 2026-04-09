@@ -2185,13 +2185,3 @@ void setup_timesteps() {
           1 <
       0.001);
 }
-
-void write_timestep_file() {
-  auto timestepfile = std::fstream("timesteps.out", std::ofstream::out | std::ofstream::trunc);
-  assert_always(timestepfile.is_open());
-  timestepfile << "#timestep tstart_days tmid_days twidth_days\n";
-  for (int n = 0; n < globals::ntimesteps; n++) {
-    timestepfile << n << ' ' << globals::timesteps[n].start / DAY << ' ' << globals::timesteps[n].mid / DAY << ' '
-                 << globals::timesteps[n].width / DAY << '\n';
-  }
-}
