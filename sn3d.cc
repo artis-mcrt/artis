@@ -13,6 +13,7 @@
 #include <format>
 #include <fstream>
 #include <ios>
+#include <limits>
 
 #ifdef STDPAR_ON
 #include <ranges>
@@ -54,6 +55,85 @@ namespace {
 time_t real_time_start = -1;
 time_t time_timestep_start = -1;  // this will be set after the first update of the grid and before packet prop
 std::fstream estimators_file;
+
+void setup_cellcache() {
+  constexpr int num_cellcache_slots = 1;
+  resize_exactly(globals::cellcache, num_cellcache_slots);
+
+  auto mem_usage_cellcache = 0ZU;
+  for (int cellcachenum = 0; cellcachenum < num_cellcache_slots; cellcachenum++) {
+    mem_usage_cellcache += sizeof(globals::CellCache);
+    globals::CellCache& cacheslot = globals::cellcache[cellcachenum];
+
+    cacheslot.nonemptymgi = -1;
+
+    resize_exactly(cacheslot.cooling_contrib_locks, get_includedions());
+    std::ranges::fill(cacheslot.cooling_contrib_locks, 0);
+    resize_exactly(cacheslot.allmacroatomictransitions_locks, get_includedlevels());
+    std::ranges::fill(cacheslot.allmacroatomictransitions_locks, 0);
+
+    mem_usage_cellcache += cacheslot.cooling_contrib_locks.size() * sizeof(cacheslot.cooling_contrib_locks[0]);
+    mem_usage_cellcache +=
+        cacheslot.allmacroatomictransitions_locks.size() * sizeof(cacheslot.allmacroatomictransitions_locks[0]);
+    const auto ncoolingterms = kpkt::ncoolingterms;
+    mem_usage_cellcache += ncoolingterms * sizeof(double);
+    resize_exactly(cacheslot.cooling_contrib, ncoolingterms);
+    std::ranges::fill(cacheslot.cooling_contrib, 0.0);
+
+    if (cellcachenum == 0) {
+      printlnlog("[info] mem_usage: cellcache coolinglist contribs for slot 0 occupies {:.3f} MB",
+                 ncoolingterms * sizeof(double) / 1024. / 1024.);
+    }
+
+    auto allphixstargetcount = 0ZU;
+    auto chtransblocksize = 0ZU;
+    for (int element = 0; element < get_nelements(); element++) {
+      const int nions = get_nions(element);
+      for (int ion = 0; ion < nions; ion++) {
+        const int nlevels = get_nlevels(element, ion);
+
+        for (int level = 0; level < nlevels; level++) {
+          const int nphixstargets = get_nphixstargets(element, ion, level);
+          allphixstargetcount += nphixstargets;
+
+          const int ndowntrans = get_ndowntrans(element, ion, level);
+          const int nuptrans = get_nuptrans(element, ion, level);
+          chtransblocksize += ((2 * ndowntrans) + nuptrans);
+        }
+      }
+    }
+    resize_exactly(cacheslot.alllevels_pops, get_includedlevels());
+    resize_exactly(cacheslot.alllevels_maprocessrates, get_includedlevels() * MA_ACTION_COUNT);
+
+    if (allphixstargetcount > 0) {
+      resize_exactly(cacheslot.allphixstargets_corrphotoioncoeff, allphixstargetcount);
+    }
+    mem_usage_cellcache +=
+        (get_includedlevels() * ((2 * sizeof(double)) + sizeof(int))) + (allphixstargetcount * sizeof(double));
+
+    assert_always(chtransblocksize <= std::numeric_limits<int>::max());
+    mem_usage_cellcache += chtransblocksize * sizeof(double);
+    if (chtransblocksize > 0) {
+      resize_exactly(cacheslot.allmacroatomictransitions, chtransblocksize);
+    }
+
+    for (int uniquelevelindex = 0; uniquelevelindex < get_includedlevels(); uniquelevelindex++) {
+      cacheslot.alllevels_maprocessrates[uniquelevelindex * MA_ACTION_COUNT] = -99.;
+    }
+
+    assert_always(globals::nbfcontinua >= 0);
+    resize_exactly(cacheslot.allcont_modified_departureratios, globals::nbfcontinua);
+    resize_exactly(cacheslot.allcont_nnlevel, globals::nbfcontinua);
+    resize_exactly(cacheslot.allcont_keep, globals::nbfcontinua);
+    mem_usage_cellcache += 2 * globals::nbfcontinua * sizeof(double);
+
+    if (cellcachenum == 0) {
+      printlnlog("[info] mem_usage: cellcache for slot 0 occupies {:.3f} MB", mem_usage_cellcache / 1024. / 1024.);
+    }
+  }
+  printlnlog("[info] mem_usage: cellcache for all {} slots occupies {:.3f} MB", num_cellcache_slots,
+             mem_usage_cellcache / 1024. / 1024.);
+}
 
 void initialise_linestat_file() {
   if (globals::simulation_continued_from_saved) {
@@ -225,6 +305,16 @@ void write_deposition_file() {
   }
 
   printlnlog("took {} seconds", std::time(nullptr) - time_write_deposition_file_start);
+}
+
+void write_timestep_file() {
+  auto timestepfile = std::fstream("timesteps.out", std::ofstream::out | std::ofstream::trunc);
+  assert_always(timestepfile.is_open());
+  timestepfile << "#timestep tstart_days tmid_days twidth_days\n";
+  for (int n = 0; n < globals::ntimesteps; n++) {
+    timestepfile << n << ' ' << globals::timesteps[n].start / DAY << ' ' << globals::timesteps[n].mid / DAY << ' '
+                 << globals::timesteps[n].width / DAY << '\n';
+  }
 }
 
 void mpi_communicate_grid_properties() {
@@ -731,7 +821,16 @@ auto main(int argc, char* argv[]) -> int {
       MAX_NODE_SIZE);
 #endif
 
-  input();
+  // Read in parameters from input.txt
+  read_parameterfile();
+
+  // Read in parameters from vpkt.txt
+  vpkt::read_vpktparameterfile();
+
+  read_atomicdata();
+
+  grid::read_ejecta_model();
+
   if (globals::simulation_continued_from_saved) {
     assert_always(globals::nprocs_exspec == globals::nprocs);
   } else {
@@ -819,8 +918,13 @@ auto main(int argc, char* argv[]) -> int {
 
     // titer example: Do 3 iterations on timestep 0-6
     // globals::n_titer = (globals::timestep < 6) ? 3 : 1;
+    globals::n_titer = 1;
 
-    globals::n_titer = (globals::timestep < -1) ? 3 : 1;
+#ifdef DO_TITER
+    assert_always(globals::n_titer > 0);
+#else
+    assert_always(globals::n_titer == 1);
+#endif
     if (globals::n_titer > 1) {
       printlnlog("Doing %d iterations on timestep %d", globals::n_titer, globals::timestep);
     }

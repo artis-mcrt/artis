@@ -297,13 +297,20 @@ class MPI_shared_array {
     other._span = {};
   }
 
+  template <typename U>
+    requires(std::is_same_v<T, const U> && !std::is_const_v<U>)
+  // NOLINTNEXTLINE(cppcoreguidelines-rvalue-reference-param-not-moved,google-explicit-constructor,hicpp-explicit-conversions)
+  MPI_shared_array(MPI_shared_array<U>&& other) noexcept  // cppcheck-suppress noExplicitConstructor
+      : _win(std::exchange(other._win, MPI_WIN_NULL)), _span(std::exchange(other._span, {})) {}
+
   auto operator=(const MPI_shared_array<T>&) -> MPI_shared_array& = delete;
 
   auto operator=(MPI_shared_array&& other) noexcept -> MPI_shared_array& {
-    // should not be assigning to an object that already owns a window
+    if (this->_span.data() == other._span.data()) {
+      return *this;
+    }
     assert_always(_span.empty() && (_win == MPI_WIN_NULL));
-    MPI_Barrier_node();
-    _span = static_cast<std::span<T>>(std::exchange(other._span, {}));
+    _span = std::exchange(other._span, {});
     _win = std::exchange(other._win, MPI_WIN_NULL);
     return *this;
   }
@@ -311,9 +318,10 @@ class MPI_shared_array {
   template <typename U>
     requires(std::is_same_v<T, const U> && !std::is_const_v<U>)
   auto operator=(MPI_shared_array<U>&& other_) noexcept -> MPI_shared_array& {
-    // should not be assigning to an object that already owns a window
+    if (this->_span.data() == other_._span.data()) {
+      return *this;
+    }
     assert_always(_span.empty() && (_win == MPI_WIN_NULL));
-    MPI_Barrier_node();
     auto other = std::move(other_);
     _span = static_cast<std::span<T>>(std::exchange(other._span, {}));
     _win = std::exchange(other._win, MPI_WIN_NULL);
@@ -323,7 +331,7 @@ class MPI_shared_array {
   ~MPI_shared_array() { reset(); }
 
   auto allocate(const ptrdiff_t num_allranks, const T& initval = {}) {
-    assert_always(_span.empty());
+    assert_always(_span.empty() && (_win == MPI_WIN_NULL));  // should not be allocating if we already own a window
     int initialized = 0;
     MPI_Initialized(&initialized);
     assert_always(initialized != 0);  // MPI must be initialized before constructing an MPI_shared_array
@@ -345,8 +353,15 @@ class MPI_shared_array {
     }
     _win = MPI_WIN_NULL;
   }
-  // Conversion to a mutable span is only allowed on non-const objects.
+  // Conversion to a const span is allowed on const objects.
   explicit operator std::span<const T>() const { return _span; }
+
+  // mutable span if T is not const
+  template <typename U = T>
+    requires(!std::is_const_v<U>)
+  explicit operator std::span<U>() {  // cppcheck-suppress functionConst
+    return _span;
+  }
   // Mutable span accessor.
   [[nodiscard]] auto span() -> std::span<T> { return _span; }  // cppcheck-suppress functionConst
   // Read-only span accessor.
@@ -375,9 +390,11 @@ class MPI_shared_array {
     return std::span<const T>{_span}.first(count);
   }
   [[nodiscard]] auto size() const -> size_t { return _span.size(); }
+  [[nodiscard]] auto ssize() const -> ptrdiff_t { return _span.ssize(); }
+
   // define operator[] to allow direct indexing into the span
-  auto operator[](const size_t index) -> T& { return _span[index]; }
-  auto operator[](const size_t index) const -> const T& { return std::span<const T>{_span}[index]; }
+  auto operator[](const size_t index) noexcept -> T& { return _span[index]; }
+  auto operator[](const size_t index) const noexcept -> const T& { return std::span<const T>{_span}[index]; }
 };
 
 // MPI operations use a 32-bit int for the count, so we need to chunk large arrays

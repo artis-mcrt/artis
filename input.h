@@ -5,13 +5,10 @@
 #include <string>
 #include <string_view>
 
-void input();
+void read_atomicdata();
 void read_parameterfile();
 void update_parameterfile(int nts);
-void setup_cellcache();
 void setup_timesteps();
-void write_timestep_file();
-auto get_noncommentline(std::istream& input, std::string& line) -> bool;
 
 // return true for whitespace-only lines, and lines that are exclusively whitespace up to a '#' character
 [[nodiscard]] constexpr auto lineiscommentonly(const std::string_view line) -> bool {
@@ -24,6 +21,19 @@ auto get_noncommentline(std::istream& input, std::string& line) -> bool;
     }
   }
   return true;
+}
+
+// read the next line, skipping any comment lines beginning with '#'
+inline auto get_noncommentline(std::istream& input, std::string& line) -> bool {
+  while (true) {
+    const bool linefound = !(!std::getline(input, line));
+    if (!linefound) {
+      return false;
+    }
+    if (!lineiscommentonly(line)) {
+      return true;
+    }
+  }
 }
 
 #endif  // INPUT_H

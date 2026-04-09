@@ -36,14 +36,12 @@
 #include "constants.h"
 #include "decay.h"
 #include "globals.h"
-#include "grid.h"
 #include "kpkt.h"
 #include "mpi_logging.h"
 #include "packet.h"
 #include "random.h"
 #include "ratecoeff.h"
 #include "sn3d.h"
-#include "vpkt.h"
 
 namespace {
 
@@ -1648,105 +1646,7 @@ void setup_nlte_levels() {
   printlnlog("[input] Total NLTE levels: {}, of which {} are superlevels", globals::total_nlte_levels, n_super_levels);
 }
 
-void read_atomicdata() {
-  read_atomicdata_files();
-
-  kpkt::setup_coolinglist();
-
-  // Printout some information about the read-in model atom
-
-  int includedionisinglevels = 0;
-  int includedboundboundtransitions = 0;
-  int includedphotoiontransitions = 0;
-  printlnlog("[input] this simulation contains");
-  printlnlog("----------------------------------");
-  for (int element = 0; element < get_nelements(); element++) {
-    printlnlog("[input]  element {} (Z={:2} {})", element, get_atomicnumber(element),
-               decay::get_elname(get_atomicnumber(element)));
-    const int nions = get_nions(element);
-    for (int ion = 0; ion < nions; ion++) {
-      int ion_photoiontransitions = 0;
-      int ion_bbtransitions = 0;
-      for (int level = 0; level < get_nlevels(element, ion); level++) {
-        ion_photoiontransitions += get_nphixstargets(element, ion, level);
-        ion_bbtransitions += get_nuptrans(element, ion, level);
-      }
-
-      printlnlog(
-          "[input]    ionstage {}: {:4} levels ({:4} ionising) {:7} lines {:6} bf transitions ("
-          "epsilon_ground: {:7.2f} eV)",
-          get_ionstage(element, ion), get_nlevels(element, ion), get_nlevels_ionising(element, ion), ion_bbtransitions,
-          ion_photoiontransitions, epsilon(element, ion, 0) / EV);
-
-      includedionisinglevels += get_nlevels_ionising(element, ion);
-      includedphotoiontransitions += ion_photoiontransitions;
-      includedboundboundtransitions += ion_bbtransitions;
-    }
-  }
-  assert_always(includedphotoiontransitions == globals::nbfcontinua);
-  assert_always(globals::nlines == includedboundboundtransitions);
-
-  printlnlog("[input]  in total {} ions, {} levels ({} ionising), {} lines, {} photoionisation transitions",
-             get_includedions(), get_includedlevels(), includedionisinglevels, globals::nlines, globals::nbfcontinua);
-
-  write_bflist_file();
-
-  setup_nlte_levels();
-}
-
 }  // anonymous namespace
-
-// read input.txt, atomic data, and ejecta model
-void input() {
-  globals::n_titer = (globals::timestep < -1) ? 3 : 1;
-  globals::lte_iteration = false;
-
-  printlnlog("[info] input: do n_titer {} iterations per timestep", globals::n_titer);
-  if (globals::n_titer > 1) {
-#ifndef DO_TITER
-    printlnlog("[fatal] input: n_titer > 1, but DO_TITER not defined ... abort");
-    std::abort();
-#endif
-  } else if (globals::n_titer == 1) {
-#ifdef DO_TITER
-    printlnlog("[warning] input: n_titer = 1 but DO_TITER defined, remove DO_TITER to save memory");
-#endif
-  } else {
-    printlnlog("[fatal] input: no valid value for n_titer selected");
-    std::abort();
-  }
-
-  // Read in parameters from input.txt
-  read_parameterfile();
-
-  // Read in parameters from vpkt.txt
-  if (VPKT_ON) {
-    vpkt::read_vpktparameterfile();
-  }
-
-  read_atomicdata();
-
-  const auto time_before_barrier = std::time(nullptr);
-  printlog("barrier after read_atomicdata(): time before barrier {}, ", static_cast<int>(time_before_barrier));
-  MPI_Barrier_allranks();
-  printlnlog("time after barrier {} (waited {} seconds)", static_cast<int>(time(nullptr)),
-             static_cast<int>(time(nullptr) - time_before_barrier));
-
-  grid::read_ejecta_model();
-}
-
-// read the next line, skipping any comment lines beginning with '#'
-auto get_noncommentline(std::istream& input, std::string& line) -> bool {
-  while (true) {
-    const bool linefound = !(!std::getline(input, line));
-    if (!linefound) {
-      return false;
-    }
-    if (!lineiscommentonly(line)) {
-      return true;
-    }
-  }
-}
 
 // read input parameters from input.txt
 void read_parameterfile() {
@@ -1976,83 +1876,50 @@ void update_parameterfile(const int nts) {
   printlnlog("done");
 }
 
-void setup_cellcache() {
-  constexpr int num_cellcache_slots = 1;
-  resize_exactly(globals::cellcache, num_cellcache_slots);
+void read_atomicdata() {
+  read_atomicdata_files();
 
-  auto mem_usage_cellcache = 0ZU;
-  for (int cellcachenum = 0; cellcachenum < num_cellcache_slots; cellcachenum++) {
-    mem_usage_cellcache += sizeof(globals::CellCache);
-    globals::CellCache& cacheslot = globals::cellcache[cellcachenum];
+  kpkt::setup_coolinglist();
 
-    cacheslot.nonemptymgi = -1;
+  // Printout some information about the read-in model atom
 
-    resize_exactly(cacheslot.cooling_contrib_locks, get_includedions());
-    std::ranges::fill(cacheslot.cooling_contrib_locks, 0);
-    resize_exactly(cacheslot.allmacroatomictransitions_locks, get_includedlevels());
-    std::ranges::fill(cacheslot.allmacroatomictransitions_locks, 0);
-
-    mem_usage_cellcache += cacheslot.cooling_contrib_locks.size() * sizeof(cacheslot.cooling_contrib_locks[0]);
-    mem_usage_cellcache +=
-        cacheslot.allmacroatomictransitions_locks.size() * sizeof(cacheslot.allmacroatomictransitions_locks[0]);
-    const auto ncoolingterms = kpkt::ncoolingterms;
-    mem_usage_cellcache += ncoolingterms * sizeof(double);
-    resize_exactly(cacheslot.cooling_contrib, ncoolingterms);
-    std::ranges::fill(cacheslot.cooling_contrib, 0.0);
-
-    if (cellcachenum == 0) {
-      printlnlog("[info] mem_usage: cellcache coolinglist contribs for slot 0 occupies {:.3f} MB",
-                 ncoolingterms * sizeof(double) / 1024. / 1024.);
-    }
-
-    auto allphixstargetcount = 0ZU;
-    auto chtransblocksize = 0ZU;
-    for (int element = 0; element < get_nelements(); element++) {
-      const int nions = get_nions(element);
-      for (int ion = 0; ion < nions; ion++) {
-        const int nlevels = get_nlevels(element, ion);
-
-        for (int level = 0; level < nlevels; level++) {
-          const int nphixstargets = get_nphixstargets(element, ion, level);
-          allphixstargetcount += nphixstargets * sizeof(double);
-
-          const int ndowntrans = get_ndowntrans(element, ion, level);
-          const int nuptrans = get_nuptrans(element, ion, level);
-          chtransblocksize += ((2 * ndowntrans) + nuptrans);
-        }
+  int includedionisinglevels = 0;
+  int includedboundboundtransitions = 0;
+  int includedphotoiontransitions = 0;
+  printlnlog("[input] this simulation contains");
+  printlnlog("----------------------------------");
+  for (int element = 0; element < get_nelements(); element++) {
+    printlnlog("[input]  element {} (Z={:2} {})", element, get_atomicnumber(element),
+               decay::get_elname(get_atomicnumber(element)));
+    const int nions = get_nions(element);
+    for (int ion = 0; ion < nions; ion++) {
+      int ion_photoiontransitions = 0;
+      int ion_bbtransitions = 0;
+      for (int level = 0; level < get_nlevels(element, ion); level++) {
+        ion_photoiontransitions += get_nphixstargets(element, ion, level);
+        ion_bbtransitions += get_nuptrans(element, ion, level);
       }
-    }
-    resize_exactly(cacheslot.alllevels_pops, get_includedlevels());
-    resize_exactly(cacheslot.alllevels_maprocessrates, get_includedlevels() * MA_ACTION_COUNT);
 
-    if (allphixstargetcount > 0) {
-      resize_exactly(cacheslot.allphixstargets_corrphotoioncoeff, allphixstargetcount);
-    }
-    mem_usage_cellcache +=
-        (get_includedlevels() * ((2 * sizeof(double)) + sizeof(int))) + (allphixstargetcount * sizeof(double));
+      printlnlog(
+          "[input]    ionstage {}: {:4} levels ({:4} ionising) {:7} lines {:6} bf transitions ("
+          "epsilon_ground: {:7.2f} eV)",
+          get_ionstage(element, ion), get_nlevels(element, ion), get_nlevels_ionising(element, ion), ion_bbtransitions,
+          ion_photoiontransitions, epsilon(element, ion, 0) / EV);
 
-    assert_always(chtransblocksize <= std::numeric_limits<int>::max());
-    mem_usage_cellcache += chtransblocksize * sizeof(double);
-    if (chtransblocksize > 0) {
-      resize_exactly(cacheslot.allmacroatomictransitions, chtransblocksize);
-    }
-
-    for (int uniquelevelindex = 0; uniquelevelindex < get_includedlevels(); uniquelevelindex++) {
-      cacheslot.alllevels_maprocessrates[uniquelevelindex * MA_ACTION_COUNT] = -99.;
-    }
-
-    assert_always(globals::nbfcontinua >= 0);
-    resize_exactly(cacheslot.allcont_modified_departureratios, globals::nbfcontinua);
-    resize_exactly(cacheslot.allcont_nnlevel, globals::nbfcontinua);
-    resize_exactly(cacheslot.allcont_keep, globals::nbfcontinua);
-    mem_usage_cellcache += 2 * globals::nbfcontinua * sizeof(double);
-
-    if (cellcachenum == 0) {
-      printlnlog("[info] mem_usage: cellcache for slot 0 occupies {:.3f} MB", mem_usage_cellcache / 1024. / 1024.);
+      includedionisinglevels += get_nlevels_ionising(element, ion);
+      includedphotoiontransitions += ion_photoiontransitions;
+      includedboundboundtransitions += ion_bbtransitions;
     }
   }
-  printlnlog("[info] mem_usage: cellcache for all {} slots occupies {:.3f} MB", num_cellcache_slots,
-             mem_usage_cellcache / 1024. / 1024.);
+  assert_always(includedphotoiontransitions == globals::nbfcontinua);
+  assert_always(globals::nlines == includedboundboundtransitions);
+
+  printlnlog("[input]  in total {} ions, {} levels ({} ionising), {} lines, {} photoionisation transitions",
+             get_includedions(), get_includedlevels(), includedionisinglevels, globals::nlines, globals::nbfcontinua);
+
+  write_bflist_file();
+
+  setup_nlte_levels();
 }
 
 // initialise the time steps
@@ -2190,14 +2057,4 @@ void setup_timesteps() {
            globals::tmax) -
           1 <
       0.001);
-}
-
-void write_timestep_file() {
-  auto timestepfile = std::fstream("timesteps.out", std::ofstream::out | std::ofstream::trunc);
-  assert_always(timestepfile.is_open());
-  timestepfile << "#timestep tstart_days tmid_days twidth_days\n";
-  for (int n = 0; n < globals::ntimesteps; n++) {
-    timestepfile << n << ' ' << globals::timesteps[n].start / DAY << ' ' << globals::timesteps[n].mid / DAY << ' '
-                 << globals::timesteps[n].width / DAY << '\n';
-  }
 }

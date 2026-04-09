@@ -592,6 +592,10 @@ void remove_temp_vpkt_file(const int nts, const int my_rank) {
 }
 
 void read_vpktparameterfile() {
+  if constexpr (!VPKT_ON) {
+    return;
+  }
+
   FILE* input_file = fopen_required("vpkt.txt", "r");
 
   // Nobs

@@ -50,7 +50,7 @@ constexpr auto get_packets_text_header() -> std::string {
 
 // Place pellet n with energy e_cmf_per_packet in cell m
 void place_pellet(const double e_cmf_per_packet, const std::span<const double> en_cumulative, const int pktnumber,
-                  Packet& pkt) {
+                  Packet& pkt, const std::span<const double> energy_per_mass_nonemptymgi_decaypath) {
   const auto etot_simtime = en_cumulative.back();
   const double targetval = rng_uniform() * etot_simtime;
 
@@ -72,7 +72,7 @@ void place_pellet(const double e_cmf_per_packet, const std::span<const double> e
 
   const auto nonemptymgi = grid::get_propcell_nonemptymgi(cellindex);
 
-  decay::setup_radioactive_pellet(e_cmf_per_packet, nonemptymgi, pkt);
+  decay::setup_radioactive_pellet(e_cmf_per_packet, nonemptymgi, pkt, energy_per_mass_nonemptymgi_decaypath);
 
   // initial e_rf is probably never needed (e_rf is set at pellet decay time), but we
   // might as well give it a correct value since this code is fast and runs only once
@@ -103,7 +103,7 @@ void packet_init(std::span<Packet> packets)
 
   printlnlog("e_cmf per packet (t_model to t_inf) {:g} erg", etot_tmodel_tinf / MPKTS);
 
-  decay::setup_decaypath_energy_per_mass();
+  const auto energy_per_mass_nonemptymgi_decaypath = decay::get_energy_per_mass_nonemptymgi_decaypath();
 
   // Need to get a normalisation factor
   auto en_cumulative = std::vector<double>(grid::ngrid);
@@ -114,7 +114,8 @@ void packet_init(std::span<Packet> packets)
     // some grid cells are empty
     if (mgi >= 0) {
       const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(mgi);
-      const double decay_en_per_mass = decay::get_modelcell_simtime_endecay_per_mass(nonemptymgi);
+      const double decay_en_per_mass =
+          decay::get_modelcell_simtime_endecay_per_mass(nonemptymgi, energy_per_mass_nonemptymgi_decaypath.span());
       const auto initial_en_per_mass =
           (INITIAL_PACKETS_ON && USE_MODEL_INITIAL_ENERGY) ? grid::get_initenergyq(mgi) : 0.;
 
@@ -137,10 +138,8 @@ void packet_init(std::span<Packet> packets)
   printlnlog("Placing pellets...");
   const auto allpktindices = std::ranges::iota_view{0, static_cast<int>(std::ssize(packets))};
   std::ranges::for_each(allpktindices, [&, e_cmf_per_packet](const int n) {
-    place_pellet(e_cmf_per_packet, en_cumulative, n, packets[n]);
+    place_pellet(e_cmf_per_packet, en_cumulative, n, packets[n], energy_per_mass_nonemptymgi_decaypath.span());
   });
-
-  decay::free_decaypath_energy_per_mass();  // will no longer be needed after packets are set up
 
   double e_cmf_total =
       std::ranges::fold_left(packets, 0., [](const double sum, const Packet& p) { return sum + p.e_cmf; });

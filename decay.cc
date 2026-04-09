@@ -125,11 +125,6 @@ std::vector<bool> alldecaytypes_is_used;
   return {DecayDaughter{.z = -1, .a = -1, .probability = 0.}};  // no daughter
 }
 
-// decaypath_energy_per_mass points to an array of length npts_model * num_decaypaths
-// the index [mgi * num_decaypaths + i] will hold the decay energy per mass [erg/g] released by chain i in cell mgi
-// during the simulation time range tmin to tmax
-MPI_shared_array<double> decaypath_energy_per_mass{};
-
 // Get the probability that a decay of decaytype occurs
 [[nodiscard]] auto get_nuc_decaybranchprob(const int nucindex, const DecayType decaytype) -> double {
   assert_testmodeonly(nucindex >= 0);
@@ -648,16 +643,6 @@ auto get_endecay_per_ejectamass_between_times(const int mgi, const int decaypath
   return endiff;
 }
 
-// get the decay energy released during the simulation [(tmodel if initial packets else tmin) to tmax] per unit mass
-// [erg/g]
-auto get_simtime_endecay_per_ejectamass(const int nonemptymgi, const int decaypathindex) -> double {
-  assert_testmodeonly(!decaypath_energy_per_mass.empty());
-  const double chainendecay = decaypath_energy_per_mass[(nonemptymgi * get_num_decaypaths()) + decaypathindex];
-  assert_testmodeonly(chainendecay >= 0.);
-  assert_testmodeonly(std::isfinite(chainendecay));
-  return chainendecay;
-}
-
 // Get the total decay power per mass [erg/s/g] for a given decaypath
 // We only count the power from the last decay in the chain to avoid double counting of decay energy (all sub paths are
 // handled separately)
@@ -1085,22 +1070,29 @@ auto get_endecay_per_ejectamass_tmodel_to_time_withexpansion(const int nonemptym
   return tot_endecay;
 }
 
-// get the decay energy that will be released during the simulation time range [erg/g]
-auto get_modelcell_simtime_endecay_per_mass(const int nonemptymgi) -> double {
+// get the decay energy that will be released during the simulation time [(tmodel if initial packets else tmin) to tmax]
+// indexed by nonemptymgi and decaypathindex [erg/g]
+auto get_modelcell_simtime_endecay_per_mass(const int nonemptymgi,
+                                            const std::span<const double> energy_per_mass_nonemptymgi_decaypath)
+    -> double {
+  const auto num_decaypaths = get_num_decaypaths();
   double endecay_per_mass = 0.;
-  for (int decaypathindex = 0; decaypathindex < get_num_decaypaths(); decaypathindex++) {
-    endecay_per_mass += get_simtime_endecay_per_ejectamass(nonemptymgi, decaypathindex);
+  for (int decaypathindex = 0; decaypathindex < num_decaypaths; decaypathindex++) {
+    endecay_per_mass += energy_per_mass_nonemptymgi_decaypath[(nonemptymgi * num_decaypaths) + decaypathindex];
   }
   return endecay_per_mass;
 }
 
-void setup_decaypath_energy_per_mass() {
+// energy_per_mass_nonemptymgi_decaypath is an array indexed by [nonemptymgi * num_decaypaths + i] will hold the
+// decay energy per mass [erg/g] released by chain i in cell mgi during the simulation time range tmin to tmax
+auto get_energy_per_mass_nonemptymgi_decaypath() -> MPI_shared_array<const double> {
   const ptrdiff_t nonempty_npts_model = grid::get_nonempty_npts_model();
   printlog(
-      "[info] mem_usage: decaypath_energy_per_mass[nonempty_npts_model*num_decaypaths] occupies {:.1f} MB (node shared "
+      "[info] mem_usage: energy_per_mass_nonemptymgi_decaypath[nonempty_npts_model*num_decaypaths] occupies {:.1f} "
+      "MB (node shared "
       "memory)...",
       nonempty_npts_model * get_num_decaypaths() * sizeof(double) / 1024. / 1024.);
-  decaypath_energy_per_mass = MPI_shared_array<double>{nonempty_npts_model * get_num_decaypaths(), 0.};
+  auto energy_per_mass_nonemptymgi_decaypath = MPI_shared_array<double>{nonempty_npts_model * get_num_decaypaths(), 0.};
   printlnlog("done.");
 
   MPI_Barrier_allranks();
@@ -1110,16 +1102,18 @@ void setup_decaypath_energy_per_mass() {
     if (nonemptymgi % globals::node_nprocs == globals::rank_in_node) {
       const int mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
       for (int decaypathindex = 0; decaypathindex < num_decaypaths; decaypathindex++) {
-        decaypath_energy_per_mass[(nonemptymgi * num_decaypaths) + decaypathindex] =
+        const double energy_per_mass =
             get_endecay_per_ejectamass_between_times(mgi, decaypathindex, time_min_decay, globals::tmax);
+        assert_testmodeonly(energy_per_mass >= 0.);
+        assert_testmodeonly(std::isfinite(energy_per_mass));
+        energy_per_mass_nonemptymgi_decaypath[(nonemptymgi * num_decaypaths) + decaypathindex] = energy_per_mass;
       }
     }
   }
 
   MPI_Barrier_allranks();
+  return energy_per_mass_nonemptymgi_decaypath;
 }
-
-void free_decaypath_energy_per_mass() { decaypath_energy_per_mass.reset(); }
 
 // energy release rate in form of kinetic energy of positrons, electrons, and alpha particles in [erg/s/g]
 [[nodiscard]] auto get_particle_injection_rate(const int nonemptymgi, const double t, const DecayType decaytype)
@@ -1270,7 +1264,8 @@ void output_nuc_abundances(std::ostream& estimators_file, const int nonemptymgi,
   estimators_file << '\n';
 }
 
-void setup_radioactive_pellet(const double e_cmf_per_packet, const int nonemptymgi, Packet& pkt) {
+void setup_radioactive_pellet(const double e_cmf_per_packet, const int nonemptymgi, Packet& pkt,
+                              const std::span<const double> energy_per_mass_nonemptymgi_decaypath) {
   const int num_decaypaths = get_num_decaypaths();
 
   // decay channels include all radioactive decay paths, and possibly also an initial cell energy channel
@@ -1281,7 +1276,7 @@ void setup_radioactive_pellet(const double e_cmf_per_packet, const int nonemptym
 
   // add the radioactive decay paths
   for (int decaypathindex = 0; decaypathindex < num_decaypaths; decaypathindex++) {
-    energysum += get_simtime_endecay_per_ejectamass(nonemptymgi, decaypathindex);
+    energysum += energy_per_mass_nonemptymgi_decaypath[(nonemptymgi * num_decaypaths) + decaypathindex];
     cumulative_en_sum[decaypathindex] = energysum;
   }
 
@@ -1338,8 +1333,8 @@ void setup_radioactive_pellet(const double e_cmf_per_packet, const int nonemptym
     // we need to scale the packet energy up or down according to decay rate at the randomly selected time.
     // e_cmf_average is the average energy per packet for this cell and decaypath, so we scale this up or down
     // according to: decay power at this time relative to the average decay power
-    const double avgpower =
-        get_simtime_endecay_per_ejectamass(nonemptymgi, decaypathindex) / (globals::tmax - tdecaymin);
+    const double avgpower = energy_per_mass_nonemptymgi_decaypath[(nonemptymgi * num_decaypaths) + decaypathindex] /
+                            (globals::tmax - tdecaymin);
     assert_always(avgpower > 0.);
     pkt.e_cmf =
         e_cmf_per_packet * get_decaypath_power_per_ejectamass(decaypathindex, nonemptymgi, pkt.tdecay) / avgpower;

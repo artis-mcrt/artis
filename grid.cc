@@ -2181,6 +2181,7 @@ void write_grid_restart_data(const int timestep) {
   printlnlog("done in {} seconds.", std::time(nullptr) - sys_time_start_write_restart);
 }
 
+// get lowest modelgridindex assigned to this rank (for update_grid and output files)
 auto get_nstart(const int rank) -> int {
   if (ranks_ndo.empty()) {
     setup_nstart_ndo();
@@ -2188,6 +2189,7 @@ auto get_nstart(const int rank) -> int {
   return ranks_nstart[rank];
 }
 
+// get lowest nonemptymgi assigned to this rank (for update_grid and output files)
 auto get_nstart_nonempty(const int rank) -> int {
   if (ranks_ndo.empty()) {
     setup_nstart_ndo();
@@ -2195,6 +2197,7 @@ auto get_nstart_nonempty(const int rank) -> int {
   return ranks_nstart_nonempty[rank];
 }
 
+// get the count of modelgridindices assigned to this rank (for update_grid and output files)
 auto get_ndo(const int rank) -> int {
   if (ranks_ndo.empty()) {
     setup_nstart_ndo();
@@ -2202,6 +2205,7 @@ auto get_ndo(const int rank) -> int {
   return ranks_ndo[rank];
 }
 
+// get the count of nonemptymgi assigned to this rank (for update_grid and output files)
 auto get_ndo_nonempty(const int rank) -> int {
   if (ranks_ndo.empty()) {
     setup_nstart_ndo();
