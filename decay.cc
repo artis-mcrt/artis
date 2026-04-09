@@ -1102,8 +1102,11 @@ auto get_energy_per_mass_nonemptymgi_decaypath() -> MPI_shared_array<const doubl
     if (nonemptymgi % globals::node_nprocs == globals::rank_in_node) {
       const int mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
       for (int decaypathindex = 0; decaypathindex < num_decaypaths; decaypathindex++) {
-        energy_per_mass_nonemptymgi_decaypath[(nonemptymgi * num_decaypaths) + decaypathindex] =
+        const double energy_per_mass =
             get_endecay_per_ejectamass_between_times(mgi, decaypathindex, time_min_decay, globals::tmax);
+        assert_testmodeonly(energy_per_mass >= 0.);
+        assert_testmodeonly(std::isfinite(energy_per_mass));
+        energy_per_mass_nonemptymgi_decaypath[(nonemptymgi * num_decaypaths) + decaypathindex] = energy_per_mass;
       }
     }
   }
