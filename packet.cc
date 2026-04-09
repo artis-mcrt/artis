@@ -115,7 +115,7 @@ void packet_init(std::span<Packet> packets)
     if (mgi >= 0) {
       const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(mgi);
       const double decay_en_per_mass =
-          decay::get_modelcell_simtime_endecay_per_mass(nonemptymgi, energy_per_mass_nonemptymgi_decaypath);
+          decay::get_modelcell_simtime_endecay_per_mass(nonemptymgi, energy_per_mass_nonemptymgi_decaypath.span());
       const auto initial_en_per_mass =
           (INITIAL_PACKETS_ON && USE_MODEL_INITIAL_ENERGY) ? grid::get_initenergyq(mgi) : 0.;
 
@@ -138,7 +138,7 @@ void packet_init(std::span<Packet> packets)
   printlnlog("Placing pellets...");
   const auto allpktindices = std::ranges::iota_view{0, static_cast<int>(std::ssize(packets))};
   std::ranges::for_each(allpktindices, [&, e_cmf_per_packet](const int n) {
-    place_pellet(e_cmf_per_packet, en_cumulative, n, packets[n], energy_per_mass_nonemptymgi_decaypath);
+    place_pellet(e_cmf_per_packet, en_cumulative, n, packets[n], energy_per_mass_nonemptymgi_decaypath.span());
   });
 
   double e_cmf_total =
