@@ -299,7 +299,7 @@ class MPI_shared_array {
 
   template <typename U>
     requires(std::is_same_v<T, const U> && !std::is_const_v<U>)
-  // NOLINTNEXTLINE(cppcoreguidelines-rvalue-reference-param-not-moved)
+  // NOLINTNEXTLINE(cppcoreguidelines-rvalue-reference-param-not-moved,google-explicit-constructor,hicpp-explicit-conversions)
   MPI_shared_array(MPI_shared_array<U>&& other) noexcept
       : _win(std::exchange(other._win, MPI_WIN_NULL)), _span(std::exchange(other._span, {})) {}
 
@@ -309,7 +309,7 @@ class MPI_shared_array {
     if (this->_span.data() == other._span.data()) {
       return *this;
     }
-    reset();
+    assert_always(_span.empty() && (_win == MPI_WIN_NULL));
     _span = std::exchange(other._span, {});
     _win = std::exchange(other._win, MPI_WIN_NULL);
     return *this;
@@ -321,7 +321,7 @@ class MPI_shared_array {
     if (this->_span.data() == other_._span.data()) {
       return *this;
     }
-    reset();
+    assert_always(_span.empty() && (_win == MPI_WIN_NULL));
     auto other = std::move(other_);
     _span = static_cast<std::span<T>>(std::exchange(other._span, {}));
     _win = std::exchange(other._win, MPI_WIN_NULL);
@@ -354,12 +354,12 @@ class MPI_shared_array {
     _win = MPI_WIN_NULL;
   }
   // Conversion to a const span is allowed on const objects.
-  operator std::span<const T>() const { return _span; }
+  explicit operator std::span<const T>() const { return _span; }
 
   // mutable span if T is not const
   template <typename U = T>
     requires(!std::is_const_v<U>)
-  operator std::span<U>() {
+  explicit operator std::span<U>() {
     return _span;
   }
   // Mutable span accessor.
