@@ -1698,31 +1698,17 @@ void read_atomicdata() {
 
 // read input.txt, atomic data, and ejecta model
 void input() {
-  globals::n_titer = (globals::timestep < -1) ? 3 : 1;
-  globals::lte_iteration = false;
-
-  printlnlog("[info] input: do n_titer {} iterations per timestep", globals::n_titer);
-  if (globals::n_titer > 1) {
-#ifndef DO_TITER
-    printlnlog("[fatal] input: n_titer > 1, but DO_TITER not defined ... abort");
-    std::abort();
-#endif
-  } else if (globals::n_titer == 1) {
 #ifdef DO_TITER
-    printlnlog("[warning] input: n_titer = 1 but DO_TITER defined, remove DO_TITER to save memory");
+  assert_always(globals::n_titer > 0);
+#else
+  assert_always(globals::n_titer == 1);
 #endif
-  } else {
-    printlnlog("[fatal] input: no valid value for n_titer selected");
-    std::abort();
-  }
 
   // Read in parameters from input.txt
   read_parameterfile();
 
   // Read in parameters from vpkt.txt
-  if (VPKT_ON) {
-    vpkt::read_vpktparameterfile();
-  }
+  vpkt::read_vpktparameterfile();
 
   read_atomicdata();
 
