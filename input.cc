@@ -1648,19 +1648,6 @@ void setup_nlte_levels() {
 
 }  // anonymous namespace
 
-// read the next line, skipping any comment lines beginning with '#'
-auto get_noncommentline(std::istream& input, std::string& line) -> bool {
-  while (true) {
-    const bool linefound = !(!std::getline(input, line));
-    if (!linefound) {
-      return false;
-    }
-    if (!lineiscommentonly(line)) {
-      return true;
-    }
-  }
-}
-
 // read input parameters from input.txt
 void read_parameterfile() {
   auto file = fstream_required("input.txt", std::ios::in);
