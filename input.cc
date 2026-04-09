@@ -1726,8 +1726,6 @@ void input() {
 
   read_atomicdata();
 
-  MPI_Barrier_allranks();
-
   grid::read_ejecta_model();
 }
 
