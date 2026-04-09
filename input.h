@@ -8,7 +8,6 @@
 void input();
 void read_parameterfile();
 void update_parameterfile(int nts);
-void setup_cellcache();
 void setup_timesteps();
 auto get_noncommentline(std::istream& input, std::string& line) -> bool;
 
