@@ -7,6 +7,7 @@
 #include <span>
 #include <string>
 
+#include "mpi_logging.h"
 #include "packet.h"
 
 namespace decay {
@@ -41,15 +42,17 @@ void init_nuclides(std::span<const int> custom_zlist, std::span<const int> custo
 void set_nucdecayenergygamma(int nucindex, double value);
 void update_abundances(int nonemptymgi, double t_current);
 [[nodiscard]] auto get_endecay_per_ejectamass_tmodel_to_time_withexpansion(int nonemptymgi, double tstart) -> double;
-[[nodiscard]] auto get_modelcell_simtime_endecay_per_mass(int nonemptymgi) -> double;
-void setup_decaypath_energy_per_mass();
-void free_decaypath_energy_per_mass();
+[[nodiscard]] auto get_modelcell_simtime_endecay_per_mass(int nonemptymgi,
+                                                          std::span<const double> energy_per_mass_nonemptymgi_decaypath)
+    -> double;
+auto get_energy_per_mass_nonemptymgi_decaypath() -> MPI_shared_array<double>;
 [[nodiscard]] auto get_qdot_modelcell(int nonemptymgi, double t, DecayType decaytype) -> double;
 [[nodiscard]] auto get_particle_injection_rate(int nonemptymgi, double t, DecayType decaytype) -> double;
 [[nodiscard]] auto get_gamma_emission_rate(int nonemptymgi, double t) -> double;
 [[nodiscard]] auto get_global_etot_tmodel_tinf() -> double;
 void output_nuc_abundances(std::ostream& estimators_file, int nonemptymgi, double t_current, int element);
-void setup_radioactive_pellet(double e_cmf_per_packet, int nonemptymgi, Packet& pkt);
+void setup_radioactive_pellet(double e_cmf_per_packet, int nonemptymgi, Packet& pkt,
+                              std::span<const double> energy_per_mass_nonemptymgi_decaypath);
 
 }  // namespace decay
 
