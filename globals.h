@@ -258,6 +258,21 @@ struct CellCache {
   std::vector<double> allphixstargets_corrphotoioncoeff;
   std::vector<int> cooling_contrib_locks;
   std::vector<int> allmacroatomictransitions_locks;
+
+  [[nodiscard]] auto get_mem_usage() const {
+    auto mem_usage = (cooling_contrib.size() * sizeof(cooling_contrib[0]));
+    mem_usage += (alllevels_pops.size() * sizeof(alllevels_pops[0]));
+    mem_usage += (alllevels_maprocessrates.size() * sizeof(alllevels_maprocessrates[0]));
+    mem_usage += (allmacroatomictransitions.size() * sizeof(allmacroatomictransitions[0]));
+    mem_usage += (allcont_modified_departureratios.size() * sizeof(allcont_modified_departureratios[0]));
+    mem_usage += (allcont_nnlevel.size() * sizeof(allcont_nnlevel[0]));
+    mem_usage += (allcont_keep.size() * sizeof(allcont_keep[0]));
+    mem_usage += sizeof(double);  // for chi_ff_nnionpart
+    mem_usage += (allphixstargets_corrphotoioncoeff.size() * sizeof(allphixstargets_corrphotoioncoeff[0]));
+    mem_usage += (cooling_contrib_locks.size() * sizeof(cooling_contrib_locks[0]));
+    mem_usage += (allmacroatomictransitions_locks.size() * sizeof(allmacroatomictransitions_locks[0]));
+    return mem_usage;
+  }
 };
 inline std::vector<CellCache> cellcache{};
 

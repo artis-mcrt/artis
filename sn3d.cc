@@ -62,7 +62,6 @@ void setup_cellcache() {
 
   auto mem_usage_cellcache = 0ZU;
   for (int cellcachenum = 0; cellcachenum < num_cellcache_slots; cellcachenum++) {
-    mem_usage_cellcache += sizeof(globals::CellCache);
     globals::CellCache& cacheslot = globals::cellcache[cellcachenum];
 
     cacheslot.nonemptymgi = -1;
@@ -72,11 +71,7 @@ void setup_cellcache() {
     resize_exactly(cacheslot.allmacroatomictransitions_locks, get_includedlevels());
     std::ranges::fill(cacheslot.allmacroatomictransitions_locks, 0);
 
-    mem_usage_cellcache += cacheslot.cooling_contrib_locks.size() * sizeof(cacheslot.cooling_contrib_locks[0]);
-    mem_usage_cellcache +=
-        cacheslot.allmacroatomictransitions_locks.size() * sizeof(cacheslot.allmacroatomictransitions_locks[0]);
     const auto ncoolingterms = kpkt::ncoolingterms;
-    mem_usage_cellcache += ncoolingterms * sizeof(double);
     resize_exactly(cacheslot.cooling_contrib, ncoolingterms);
     std::ranges::fill(cacheslot.cooling_contrib, 0.0);
 
@@ -108,11 +103,8 @@ void setup_cellcache() {
     if (allphixstargetcount > 0) {
       resize_exactly(cacheslot.allphixstargets_corrphotoioncoeff, allphixstargetcount);
     }
-    mem_usage_cellcache +=
-        (get_includedlevels() * ((2 * sizeof(double)) + sizeof(int))) + (allphixstargetcount * sizeof(double));
 
     assert_always(chtransblocksize <= std::numeric_limits<int>::max());
-    mem_usage_cellcache += chtransblocksize * sizeof(double);
     if (chtransblocksize > 0) {
       resize_exactly(cacheslot.allmacroatomictransitions, chtransblocksize);
     }
@@ -125,7 +117,7 @@ void setup_cellcache() {
     resize_exactly(cacheslot.allcont_modified_departureratios, globals::nbfcontinua);
     resize_exactly(cacheslot.allcont_nnlevel, globals::nbfcontinua);
     resize_exactly(cacheslot.allcont_keep, globals::nbfcontinua);
-    mem_usage_cellcache += 2 * globals::nbfcontinua * sizeof(double);
+    mem_usage_cellcache += cacheslot.get_mem_usage();
 
     if (cellcachenum == 0) {
       printlnlog("[info] mem_usage: cellcache for slot 0 occupies {:.3f} MB", mem_usage_cellcache / 1024. / 1024.);
