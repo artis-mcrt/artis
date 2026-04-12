@@ -115,25 +115,9 @@ constexpr auto get_ndim(const GridType gridtype) -> int {
   assert_always(axis >= 0 && axis < get_ndim(gridtype));
   switch (gridtype) {
     case GridType::CARTESIAN3D:
-      switch (axis) {
-        case 0:
-          return 'x';
-        case 1:
-          return 'y';
-        case 2:
-          return 'z';
-        default:
-          return '?';
-      }
+      return std::array<char, 3>{'x', 'y', 'z'}.at(axis);
     case GridType::CYLINDRICAL2D:
-      switch (axis) {
-        case 0:
-          return 'r';
-        case 1:
-          return 'z';
-        default:
-          return '?';
-      }
+      return std::array<char, 2>{'r', 'z'}.at(axis);
     case GridType::SPHERICAL1D:
       return 'r';
     default:
