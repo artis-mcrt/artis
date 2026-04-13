@@ -7,9 +7,10 @@ export APPTAINER_NAME="vae25-user_container"
 export APPTAINER_SHARENS=true
 export APPTAINER_CONFIGDIR=/tmp/$USER
 
-eval `spack load --sh openmpi%gcc target=x86_64`
-eval `spack load --sh gsl%gcc target=x86_64`
-eval `spack load --sh gcc target=x86_64`
+eval `spack load --first --sh openmpi%gcc`
+eval `spack load --first --sh gsl%gcc target=x86_64`
+eval `spack load --first --sh gcc`
+eval `spack load --first --sh zstd`
 
 cd $SLURM_SUBMIT_DIR/artis
 export LD_LIBRARY_PATH=$(gsl-config --prefix)/lib/:$LD_LIBRARY_PATH

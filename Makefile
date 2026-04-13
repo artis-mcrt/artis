@@ -47,7 +47,7 @@ else ifneq '' '$(findstring clang,$(COMPILER_VERSION))'
 	endif
 $(info detected CPU is $(shell mpicxx -march=native -### -c -x c++ /dev/null 2>&1   | tr ' ' '\n'   | awk '/-target-cpu/ {getline; gsub(/"/,""); print; exit}'))
 
-else ifneq '' '$(findstring g++,$(COMPILER_VERSION))'
+else ifneq (,$(or $(findstring g++,$(COMPILER_VERSION)),$(findstring gcc,$(COMPILER_VERSION))))
 	COMPILER_NAME := GCC
 	# std::stacktrace is available in GCC 14 and later
 	# but it is not enabled by default because it slowed down the GitHub CI by > 2x
@@ -75,7 +75,7 @@ else ifneq '' '$(findstring nvc++,$(COMPILER_VERSION))'
 	endif
 
 else
-	$(warning Unknown compiler)
+$(warning Unknown compiler)
 	COMPILER_NAME := unknown
 endif
 
@@ -184,22 +184,9 @@ ifeq ($(shell uname -s),Darwin)
 	# CXXFLAGS += -Rpass-analysis=loop-vectorize
 
 else
-	# sometimes the login nodes have different CPUs
-	# to the job nodes. march=native assumes that they are the same
-	# (or that the job CPUs support all features of the login CPUs)
-
-	# to get the current CPU architecture, run this:
-	# g++ -march=native -Q --help=target | grep -- '-march=  ' | cut -f3
-
-	ifneq (,$(shell hostname -A | grep gsi.de))
-		# virgo has znver4 nodes in the amd,epyc,9654 feature group
-		CXXFLAGS += -march=znver4
-		# znver3 in the other partitions and login nodes does not support avx512
-		# CXXFLAGS += -march=native -mtune=znver4
-	else
-		CXXFLAGS += -march=native
-	endif
-
+	# ensure that the jobscript has a compilation step so that the architecture
+	# target exactly matches the compute nodes
+	CXXFLAGS += -march=native
 endif
 
 ifeq ($(EIGEN),OFF)
