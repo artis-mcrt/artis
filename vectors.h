@@ -212,24 +212,8 @@ constexpr auto move_pkt_withtime(Packet& pkt, const double distance) -> double {
   const double cos_stokes_rot_1 = std::clamp(dot(ref1_sc, ref1), -1., 1.);
   const double cos_stokes_rot_2 = dot(ref1_sc, ref2);
 
-  double i = 0;
-  if ((cos_stokes_rot_1 > 0) && (cos_stokes_rot_2 > 0)) {
-    i = acos(cos_stokes_rot_1);
-  } else if ((cos_stokes_rot_1 < 0) && (cos_stokes_rot_2 > 0)) {
-    i = PI - acos(fabs(cos_stokes_rot_1));
-  } else if ((cos_stokes_rot_1 > 0) && (cos_stokes_rot_2 < 0)) {
-    i = (2 * PI) - acos(cos_stokes_rot_1);
-  } else if ((cos_stokes_rot_1 < 0) && (cos_stokes_rot_2 < 0)) {
-    i = PI + acos(fabs(cos_stokes_rot_1));
-  }
-  if (cos_stokes_rot_1 == 0) {
-    i = PI / 2.;
-  }
-  if (cos_stokes_rot_2 == 0) {
-    i = 0.;
-  }
-
-  return i;
+  const double i = std::atan2(cos_stokes_rot_2, cos_stokes_rot_1);
+  return i < 0 ? i + 2 * PI : i;
 }
 
 // Routine to compute the meridian frame axes ref1 and ref2
@@ -258,15 +242,7 @@ constexpr auto move_pkt_withtime(Packet& pkt, const double distance) -> double {
 
   const auto b_rf = cross_prod(n_rf, e_rf);
 
-  // const double b_par[3] = {dot(b_rf, beta) * beta[0] / (vsqr), dot(b_rf, beta) * beta[1] / (vsqr),
-  //                          dot(b_rf, beta) * beta[2] / (vsqr)};
-
-  // const double b_perp[3] = {b_rf[0] - b_par[0], b_rf[1] - b_par[1], b_rf[2] - b_par[2]};
-
   const auto v_cr_b = cross_prod(beta, b_rf);
-
-  // const double v_cr_e[3] = {beta[1] * e_rf[2] - beta[2] * e_rf[1], beta[2] * e_rf[0] - beta[0] * e_rf[2],
-  //                           beta[0] * e_rf[1] - beta[1] * e_rf[0]};
 
   const auto e_cmf =
       Vec3d{e_par[0] + (gamma_rel * (e_perp[0] + v_cr_b[0])), e_par[1] + (gamma_rel * (e_perp[1] + v_cr_b[1])),
@@ -287,29 +263,11 @@ constexpr auto frame_transform(const Vec3d& n_rf, const double Q0, const double 
   double rot_angle = 0;
 
   if (p > 0) {
-    const double cos2rot_angle = Q0 / p;
-    const double sin2rot_angle = U0 / p;
-
-    if ((cos2rot_angle > 0) && (sin2rot_angle > 0)) {
-      rot_angle = acos(Q0 / p) / 2.;
-    } else if ((cos2rot_angle < 0) && (sin2rot_angle > 0)) {
-      rot_angle = (PI - acos(fabs(cos2rot_angle))) / 2.;
-    } else if ((cos2rot_angle < 0) && (sin2rot_angle < 0)) {
-      rot_angle = (PI + acos(fabs(cos2rot_angle))) / 2.;
-    } else if ((cos2rot_angle > 0) && (sin2rot_angle < 0)) {
-      rot_angle = ((2. * PI) - acos(fabs(cos2rot_angle))) / 2.;
-    } else if (cos2rot_angle == 0) {
-      rot_angle = 0.25 * PI;
-      if (U0 < 0) {
-        rot_angle = 0.75 * PI;
-      }
+    rot_angle = std::atan2(U0, Q0);
+    if (rot_angle < 0) {
+      rot_angle += 2 * PI;
     }
-    if (sin2rot_angle == 0) {
-      rot_angle = 0.;
-      if (Q0 < 0) {
-        rot_angle = 0.5 * PI;
-      }
-    }
+    rot_angle /= 2.;
   }
 
   // Define electric field by linear combination of ref1 and ref2 (using the angle just computed)
@@ -332,27 +290,9 @@ constexpr auto frame_transform(const Vec3d& n_rf, const double Q0, const double 
   const double cosine_elec_ref2 = dot(elec_cmf, ref2_cmf);
 
   // Compute the angle between ref1 and the electric field
-  double theta_rot = 0.;
-  if ((cosine_elec_ref1 > 0) && (cosine_elec_ref2 < 0)) {
-    theta_rot = acos(cosine_elec_ref1);
-  } else if ((cosine_elec_ref1 < 0) && (cosine_elec_ref2 > 0)) {
-    theta_rot = PI + acos(fabs(cosine_elec_ref1));
-  } else if ((cosine_elec_ref1 < 0) && (cosine_elec_ref2 < 0)) {
-    theta_rot = PI - acos(fabs(cosine_elec_ref1));
-  } else if ((cosine_elec_ref1 > 0) && (cosine_elec_ref2 > 0)) {
-    theta_rot = (2 * PI) - acos(cosine_elec_ref1);
-  }
-  if (cosine_elec_ref1 == 0) {
-    theta_rot = PI / 2.;
-  }
-  if (cosine_elec_ref2 == 0) {
-    theta_rot = 0.;
-  }
-  if (cosine_elec_ref1 > 1) {
-    theta_rot = 0.;
-  }
-  if (cosine_elec_ref1 < -1) {
-    theta_rot = PI;
+  double theta_rot = std::atan2(-cosine_elec_ref2, cosine_elec_ref1);
+  if (theta_rot < 0) {
+    theta_rot += 2 * PI;
   }
 
   // Compute Stokes Parameters in the CMF

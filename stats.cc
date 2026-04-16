@@ -40,7 +40,7 @@ void pkt_action_counters_printout(const int nts) {
   const double deltat = globals::timesteps[nts].width;
   double modelvolume = 0.;
   for (int mgi = 0; mgi < grid::get_npts_model(); mgi++) {
-    modelvolume += grid::get_modelcell_assocvolume_tmin(mgi) * pow(globals::timesteps[nts].mid / globals::tmin, 3);
+    modelvolume += grid::get_modelcell_assocvolume_tmin(mgi) * pow3(globals::timesteps[nts].mid / globals::tmin);
   }
 
   printlnlog("timestep {}: ma_stat_activation_collexc = {}", nts, get_counter(Counter::MA_STAT_ACTIVATION_COLLEXC));
@@ -76,12 +76,12 @@ void pkt_action_counters_printout(const int nts) {
   nonthermal::print_stats(modelvolume, deltat);
 
   printlnlog("timestep {}: escounter = {}", nts, get_counter(Counter::ESCOUNTER));
-  printlnlog("timestep {}: cellcrossing  = {}", nts, get_counter(Counter::CELLCROSSINGS));
-  printlnlog("timestep {}: updatecellcounter  = {}", nts, get_counter(Counter::UPDATECELL));
-  printlnlog("timestep {}: resonancescatterings  = {}", nts, get_counter(Counter::RESONANCESCATTERINGS));
+  printlnlog("timestep {}: cellcrossing = {}", nts, get_counter(Counter::CELLCROSSINGS));
+  printlnlog("timestep {}: updatecellcounter = {}", nts, get_counter(Counter::UPDATECELL));
+  printlnlog("timestep {}: resonancescatterings = {}", nts, get_counter(Counter::RESONANCESCATTERINGS));
 
-  printlnlog("timestep {}: upscatterings  = {}", nts, get_counter(Counter::UPSCATTER));
-  printlnlog("timestep {}: downscatterings  = {}", nts, get_counter(Counter::DOWNSCATTER));
+  printlnlog("timestep {}: upscatterings = {}", nts, get_counter(Counter::UPSCATTER));
+  printlnlog("timestep {}: downscatterings = {}", nts, get_counter(Counter::DOWNSCATTER));
 }
 
 }  // namespace stats
