@@ -11,16 +11,6 @@ else
   $(error bad value for TESTMODE option. Should be ON or OFF)
 endif
 
-ifeq ($(REPRODUCIBLE),ON)
-	CXXFLAGS += -DREPRODUCIBLE=true -ffp-contract=off -DEIGEN_DONT_VECTORIZE
-	BUILD_DIR := $(BUILD_DIR)_reproducible
-	FASTMATH := OFF
-else ifeq ($(REPRODUCIBLE),OFF)
-else ifeq ($(REPRODUCIBLE),)
-else
-  $(error bad value for REPRODUCIBLE option. Should be ON or OFF)
-endif
-
 CXX := mpicxx
 COMPILER_VERSION := $(shell $(CXX) --version)
 COMPILER_VERSION_NUMBER := $(shell $(CXX) -dumpversion -dumpfullversion)
@@ -82,7 +72,6 @@ else ifneq '' '$(findstring nvc++,$(COMPILER_VERSION))'
 else
 $(warning Unknown compiler)
 	COMPILER_NAME := unknown
-
 endif
 
 $(info detected compiler is $(COMPILER_NAME) version $(COMPILER_VERSION_NUMBER). Major version: $(COMPILER_VERSION_NUMBER_MAJOR))
@@ -95,6 +84,16 @@ CXXFLAGS += -std=$(CXX_STD) -Wall -Wextra -Wpedantic -Wredundant-decls -Wno-unus
 
 ifneq ($(COMPILER_NAME),nvhpc)
 	CXXFLAGS += -Wunused-macros -Werror -Wextra-semi -Wno-unknown-pragmas -Wno-error=cast-function-type -MD -MP -Wno-unused-function
+endif
+
+ifeq ($(REPRODUCIBLE),ON)
+	CXXFLAGS += -DREPRODUCIBLE=true -ffp-contract=off -DEIGEN_DONT_VECTORIZE
+	BUILD_DIR := $(BUILD_DIR)_reproducible
+	FASTMATH := OFF
+else ifeq ($(REPRODUCIBLE),OFF)
+else ifeq ($(REPRODUCIBLE),)
+else
+  $(error bad value for REPRODUCIBLE option. Should be ON or OFF)
 endif
 
 # CXXFLAGS += -DUSE_SIMPSON_INTEGRATOR
