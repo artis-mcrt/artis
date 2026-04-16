@@ -2,7 +2,7 @@
 
 [![DOI](https://zenodo.org/badge/11279591.svg)](https://zenodo.org/badge/latestdoi/11279591)
 [![CI](https://github.com/artis-mcrt/artis/actions/workflows/ci.yml/badge.svg)](https://github.com/artis-mcrt/artis/actions/workflows/ci.yml)
-[![License](https://img.shields.io/github/license/artis-mcrt/artis)](https://github.com/artis-mcrt/artis/blob/main/LICENSE)
+[![License](https://img.shields.io/github/license/artis-mcrt/artis)](https://github.com/artis-mcrt/artis/blob/develop/LICENSE)
 
 [ARTIS](https://github.com/artis-mcrt/artis) ([Sim 2007](https://ui.adsabs.harvard.edu/abs/2007MNRAS.375..154S/abstract); [Kromer & Sim 2009](https://ui.adsabs.harvard.edu/abs/2009MNRAS.398.1809K/abstract)) is a 3D radiative transfer code for Type Ia supernovae using the Monte Carlo method with indivisible energy packets ([Lucy 2002](https://ui.adsabs.harvard.edu/abs/2002A%26A...384..725L/abstract)). The latest version incorporates polarisation and virtual packets ([Bulla et al. 2015](https://ui.adsabs.harvard.edu/abs/2015MNRAS.450..967B/abstract)), non-LTE physics appropriate for the nebular phase of Type Ia supernovae ([Shingles et al. 2020](https://ui.adsabs.harvard.edu/abs/2020MNRAS.492.2029S/abstract)), and alpha- and beta-decays with time-dependent thermalisation ([Shingles et al. 2023](https://ui.adsabs.harvard.edu/abs/2023ApJ...954L..41S/abstract)).
 
@@ -22,7 +22,7 @@ An early version of the code is described in [Sim (2007)](https://ui.adsabs.harv
 - Expansion opacities and paramaterised scattering/thermalisation ratio (instead of default line-by-line opacity and macroatom): Shingles et al. (in prep)
 
 ## Source code availability and license
-The ARTIS source code is available under a [BSD 3-Clause license](https://github.com/artis-mcrt/artis/blob/nebular/LICENSE), which requires attribution and preservation of copyright notices on any substantial copies. If you find the ARTIS code useful in any way, we request that you cite us as described above and star the respository to help show impact in funding proposals.
+The ARTIS source code is available under a [BSD 3-Clause license](https://github.com/artis-mcrt/artis/blob/develop/LICENSE), which requires attribution and preservation of copyright notices on any substantial copies. If you find the ARTIS code useful in any way, we request that you cite us as described above and star the respository to help show impact in funding proposals.
 
 ## Setting up production runs on Linux
 We recommended retaining the exact source code and Git metadata within each simulation folder for future reference (i.e., don't just copy the executables).
@@ -40,7 +40,7 @@ Next, select an options preset. For example:
 ln -s artisoptions_classic.h artisoptions.h
 ```
 
-You will likely want to change the number of packets per rank (MPKTS) using a text editor, e.g. `vim artisoptions.h`.
+You will likely want to change the number of packets per rank (MPKTS) using a text editor, e.g. `vim artisoptions.h`. The options are explained in [artisoptions_doc.md](https://github.com/artis-mcrt/artis/blob/develop/artisoptions_doc.md).
 
 Next, compile with `make` and go up a level to the model folder:
 ```sh
