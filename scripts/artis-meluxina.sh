@@ -19,11 +19,8 @@ cd $SLURM_SUBMIT_DIR
 export MAKEFLAGS="--check-symlink-times --jobs=$(nproc --all)"
 export OMPI_CXX=g++
 cd artis
-make clean
 make
 cd ..
-ln -sf artis/sn3d .
-ln -sf artis/exspec .
 
 mpicxx --version
 echo "CPU type: $(c++ -march=native -Q --help=target | grep -- '-march=  ' | cut -f3)"
