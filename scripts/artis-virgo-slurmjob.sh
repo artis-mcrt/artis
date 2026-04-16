@@ -12,14 +12,15 @@ eval `spack load --first --sh gsl%gcc target=x86_64`
 eval `spack load --first --sh gcc`
 eval `spack load --first --sh zstd`
 
-cd $SLURM_SUBMIT_DIR/artis
 export LD_LIBRARY_PATH=$(gsl-config --prefix)/lib/:$LD_LIBRARY_PATH
 export MAKEFLAGS="--check-symlink-times --jobs=$(nproc --all)"
 export OMPI_CXX=g++
-make clean
-make
 
 cd $SLURM_SUBMIT_DIR
+
+cd artis
+make
+cd ..
 
 echo "CPU type: $(c++ -march=native -Q --help=target | grep -- '-march=  ' | cut -f3)"
 
