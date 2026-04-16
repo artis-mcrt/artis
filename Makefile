@@ -2,9 +2,6 @@
 # export MAKEFLAGS="--check-symlink-times --jobs=$(nproc --all)"
 .DEFAULT_GOAL := all
 
-# place in architecture folder, e.g. build/arm64
-BUILD_DIR = build/$(shell uname -m)
-
 $(info mpicxx version: $(shell mpicxx --showme:version 2> /dev/null))
 
 ifeq ($(TESTMODE),ON)
@@ -31,12 +28,14 @@ COMPILER_VERSION_NUMBER_MAJOR := $(shell echo $(COMPILER_VERSION_NUMBER) | cut -
 $(info $(COMPILER_VERSION))
 CXX_STD := c++26
 
+COMPILER_NAME := unknown
+CPU_ARCH := unknown
 ifneq '' '$(findstring HIP version,$(COMPILER_VERSION))'
-	COMPILER_NAME := HIPCC
+	COMPILER_NAME := hipcc
 	CXX_STD := c++23
 	CXXFLAGS += -Wno-macro-redefined -Wno-unused-command-line-argument
 else ifneq '' '$(findstring clang,$(COMPILER_VERSION))'
-	COMPILER_NAME := CLANG
+	COMPILER_NAME := clang
 	CXXFLAGS += -Wunsafe-buffer-usage -Wno-unsafe-buffer-usage-in-libc-call -fsafe-buffer-usage-suggestions -Wno-unneeded-internal-declaration
 	LDFLAGS += -Wno-unused-command-line-argument
 
@@ -45,11 +44,17 @@ else ifneq '' '$(findstring clang,$(COMPILER_VERSION))'
 			LDFLAGS += -fuse-ld=lld
 		endif
 	endif
-$(info detected CPU is $(shell mpicxx -march=native -### -c -x c++ /dev/null 2>&1   | tr ' ' '\n'   | awk '/-target-cpu/ {getline; gsub(/"/,""); print; exit}'))
+
+define GET_ARCH_CMD
+	mpicxx -march=native -### -c -x c++ /dev/null 2>&1 \
+	| tr ' ' '\n' \
+	| awk '/-target-cpu/ {getline; gsub(/"/,""); print; exit}'
+endef
+	CPU_ARCH := $(shell $(GET_ARCH_CMD))
 
 else ifneq (,$(or $(findstring g++,$(COMPILER_VERSION)),$(findstring gcc,$(COMPILER_VERSION))))
-	COMPILER_NAME := GCC
-	# std::stacktrace is available in GCC 14 and later
+	COMPILER_NAME := gcc
+	# std::stacktrace is available in gcc 14 and later
 	# but it is not enabled by default because it slowed down the GitHub CI by > 2x
 	ifeq ($(shell expr $(COMPILER_VERSION_NUMBER_MAJOR) \>= 14),1)
 		ifeq ($(STACKTRACE),ON)
@@ -63,10 +68,10 @@ else ifneq (,$(or $(findstring g++,$(COMPILER_VERSION)),$(findstring gcc,$(COMPI
 	endif
 	CXXFLAGS += -Wno-psabi
 # 	CXXFLAGS += -Wsuggest-attribute=pure -Wsuggest-attribute=const
-$(info detected CPU is $(shell mpicxx -march=native -Q --help=target | grep -- '-march=  ' | cut -f3))
+	CPU_ARCH := $(shell mpicxx -march=native -Q --help=target | grep -- '-march=  ' | cut -f3)
 
 else ifneq '' '$(findstring nvc++,$(COMPILER_VERSION))'
-	COMPILER_NAME := NVHPC
+	COMPILER_NAME := nvhpc
 	CXX_STD := c++23
 	# to use the pixi installed libstdc++
 # 	CXXFLAGS += --gcc-toolchain=$(PWD)/.pixi/envs/default -Wl,-rpath,$(PWD)/.pixi/envs/default/lib
@@ -77,13 +82,18 @@ else ifneq '' '$(findstring nvc++,$(COMPILER_VERSION))'
 else
 $(warning Unknown compiler)
 	COMPILER_NAME := unknown
+
 endif
 
 $(info detected compiler is $(COMPILER_NAME) version $(COMPILER_VERSION_NUMBER). Major version: $(COMPILER_VERSION_NUMBER_MAJOR))
+$(info detected CPU is $(CPU_ARCH))
+
+# Use a custom build directory for each combination of compiler, CPU architecture, and options to avoid conflicts and ensure that the correct binaries are used
+BUILD_DIR = build/$(COMPILER_NAME)-$(COMPILER_VERSION_NUMBER)_$(CPU_ARCH)
 
 CXXFLAGS += -std=$(CXX_STD) -Wall -Wextra -Wpedantic -Wredundant-decls -Wno-unused-parameter -Wsign-compare -Wshadow -isystem third_party -DBOOST_MATH_STANDALONE
 
-ifneq ($(COMPILER_NAME),NVHPC)
+ifneq ($(COMPILER_NAME),nvhpc)
 	CXXFLAGS += -Wunused-macros -Werror -Wextra-semi -Wno-unknown-pragmas -Wno-error=cast-function-type -MD -MP -Wno-unused-function
 endif
 
@@ -112,17 +122,17 @@ ifeq ($(OPENMP),ON)
 	endif
 	BUILD_DIR := $(BUILD_DIR)_openmp
 
-	ifeq ($(COMPILER_NAME),NVHPC)
+	ifeq ($(COMPILER_NAME),nvhpc)
 		ifeq ($(GPU),ON)
 			CXXFLAGS += -mp=gpu -gpu=mem:unified
 			CXXFLAGS += -gpu=cc80,rdc
 		else
 			CXXFLAGS += -mp
 		endif
-	else ifeq ($(COMPILER_NAME),CLANG)
+	else ifeq ($(COMPILER_NAME),clang)
 		CXXFLAGS += -Xpreprocessor -fopenmp
 		LDFLAGS += -lomp
-	else ifeq ($(COMPILER_NAME),GCC)
+	else ifeq ($(COMPILER_NAME),gcc)
 		CXXFLAGS += -fopenmp
 	endif
 
@@ -136,25 +146,25 @@ ifeq ($(STDPAR),ON)
 	CXXFLAGS += -DSTDPAR_ON=true
 	BUILD_DIR := $(BUILD_DIR)_stdpar
 
-	ifeq ($(COMPILER_NAME),NVHPC)
+	ifeq ($(COMPILER_NAME),nvhpc)
 		ifeq ($(GPU),ON)
 			CXXFLAGS += -stdpar=gpu -gpu=mem:unified
 			CXXFLAGS += -gpu=cc80,rdc
 		else
 			CXXFLAGS += -stdpar=multicore
 		endif
-	else ifeq ($(COMPILER_NAME),HIPCC)
+	else ifeq ($(COMPILER_NAME),hipcc)
 		CXXFLAGS += -fexperimental-library
 		ifeq ($(GPU),ON)
 			# MI300
 			CXXFLAGS += --offload-arch=gfx942 -fgpu-rdc --hipstdpar
 		endif
-	else ifeq ($(COMPILER_NAME),CLANG)
+	else ifeq ($(COMPILER_NAME),clang)
 		CXXFLAGS += -fexperimental-library
 		# LDFLAGS += -ltbb
 		# LDFLAGS += -Xlinker -debug_snapshot
 
-	else ifeq ($(COMPILER_NAME),GCC)
+	else ifeq ($(COMPILER_NAME),gcc)
 		LDFLAGS += -ltbb
 	endif
 
@@ -234,9 +244,9 @@ ifeq ($(OPTIMIZE),OFF)
 else
 	CXXFLAGS += -O3
 
-	ifeq ($(COMPILER_NAME),CLANG)
+	ifeq ($(COMPILER_NAME),clang)
 		CXXFLAGS += -flto=thin
-	else ifeq ($(COMPILER_NAME),GCC)
+	else ifeq ($(COMPILER_NAME),gcc)
 		CXXFLAGS += -flto=auto -pipe
 	endif
 
@@ -244,7 +254,7 @@ else
 		BUILD_DIR := $(BUILD_DIR)_nofastmath
 		CXXFLAGS += -DEIGEN_FAST_MATH=0
 	else
-		ifeq ($(COMPILER_NAME),NVHPC)
+		ifeq ($(COMPILER_NAME),nvhpc)
 			CXXFLAGS += -fast
 		else
 			CXXFLAGS += -ffast-math -funsafe-math-optimizations -fno-finite-math-only
@@ -282,18 +292,9 @@ endif
 
 $(shell mkdir -p $(BUILD_DIR))
 
-$(shell echo "$(COMPILER_VERSION)" > $(BUILD_DIR)/compiler_tmp.txt)
-$(shell test -f $(BUILD_DIR)/compiler.txt || touch $(BUILD_DIR)/compiler.txt)
-ifneq ($(shell cat $(BUILD_DIR)/compiler.txt),$(shell cat $(BUILD_DIR)/compiler_tmp.txt))
-  $(info detected compiler change)
-  $(shell mv $(BUILD_DIR)/compiler_tmp.txt $(BUILD_DIR)/compiler.txt)
-else
-  $(shell rm $(BUILD_DIR)/compiler_tmp.txt)
-endif
-
 all: sn3d exspec
 
-$(BUILD_DIR)/%.o: %.cc Makefile $(BUILD_DIR)/compiler.txt
+$(BUILD_DIR)/%.o: %.cc Makefile
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 check: $(sn3d_files)
@@ -306,7 +307,7 @@ $(BUILD_DIR)/sn3d: $(sn3d_objects)
 sn3d: $(BUILD_DIR)/sn3d
 	ln -sf $(BUILD_DIR)/sn3d sn3d
 
-$(BUILD_DIR)/sn3dwhole: $(sn3d_files) version.h artisoptions.h Makefile $(BUILD_DIR)/compiler.txt
+$(BUILD_DIR)/sn3dwhole: $(sn3d_files) version.h artisoptions.h Makefile
 	$(CXX) $(CXXFLAGS) $(sn3d_files) $(gsl_objects) $(LDFLAGS) -o $(BUILD_DIR)/sn3dwhole
 -include $(sn3d_dep)
 
