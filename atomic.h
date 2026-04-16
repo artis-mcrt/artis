@@ -239,7 +239,7 @@ DEVICE_FUNC inline auto get_nphixstargets(const int element, const int ion, cons
     // which anchor point should we take ??? the cross-section at the edge or at the highest grid point ???
     // so far the highest grid point, otherwise the cross-section is not continuous
     const double nu_max_phixs = nu_edge * last_phixs_nuovernuedge;  // nu of the uppermost point in the phixs table
-    sigma_bf = static_cast<float>(photoion_xs[globals::NPHIXSPOINTS - 1] * pow(nu_max_phixs / nu, 3));
+    sigma_bf = static_cast<float>(photoion_xs[globals::NPHIXSPOINTS - 1] * pow3(nu_max_phixs / nu));
   }
 
   return sigma_bf;
