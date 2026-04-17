@@ -11,6 +11,7 @@
 #include <fstream>
 #include <functional>
 #include <iostream>
+#include <iterator>
 #include <numbers>
 #include <numeric>
 #include <ranges>
@@ -145,14 +146,8 @@ std::vector<bool> alldecaytypes_is_used;
 // get the nuclide array index from the atomic number and mass number
 [[nodiscard]] auto get_nucindex_or_neg_one(const int z, const int a) -> int {
   assert_testmodeonly(std::ssize(nuclides) > 0);
-  const auto num_nuclides = std::ssize(nuclides);
-
-  for (int nucindex = 0; nucindex < num_nuclides; nucindex++) {
-    if (nuclides[nucindex].z == z && nuclides[nucindex].a == a) {
-      return nucindex;
-    }
-  }
-  return -1;  // nuclide not found
+  const auto it = std::ranges::find_if(nuclides, [z, a](const auto& nuc) { return nuc.z == z && nuc.a == a; });
+  return it != nuclides.end() ? static_cast<int>(std::ranges::distance(nuclides.begin(), it)) : -1;
 }
 
 [[nodiscard]] auto get_meanlife(const int nucindex) -> double {
