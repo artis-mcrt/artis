@@ -13,7 +13,7 @@ endif
 
 CXX := mpicxx
 COMPILER_VERSION := $(shell $(CXX) --version)
-COMPILER_VERSION_NUMBER := $(shell $(CXX) -dumpversion -dumpfullversion)
+COMPILER_VERSION_NUMBER := $(shell $(CXX) -dumpversion -dumpfullversion | head -n1)
 COMPILER_VERSION_NUMBER_MAJOR := $(shell echo $(COMPILER_VERSION_NUMBER) | cut -f1 -d.)
 $(info $(COMPILER_VERSION))
 CXX_STD := c++26
@@ -68,8 +68,6 @@ else ifneq '' '$(findstring nvc++,$(COMPILER_VERSION))'
 	ifneq (,$(shell hostname -A | grep .cosma.))
 		CXXFLAGS += --gcc-toolchain=/cosma/local/gcc/14.1.0/
 	endif
-	COMPILER_VERSION_NUMBER := $(strip $(shell $(CXX) -dumpfullversion))
-	COMPILER_VERSION_NUMBER_MAJOR := $(shell echo $(COMPILER_VERSION_NUMBER) | cut -f1 -d.)
 	CPU_ARCH := $(shell g++ -march=native -Q --help=target | grep -- '-march=  ' | cut -f3)
 else
 $(warning Unknown compiler)
