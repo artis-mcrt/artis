@@ -58,7 +58,7 @@ else ifneq (,$(or $(findstring g++,$(COMPILER_VERSION)),$(findstring gcc,$(COMPI
 	endif
 	CXXFLAGS += -Wno-psabi
 # 	CXXFLAGS += -Wsuggest-attribute=pure -Wsuggest-attribute=const
-	CPU_ARCH := $(shell mpicxx -march=native -Q --help=target | grep -- '-march=  ' | cut -f3)
+	CPU_ARCH := $(shell $(CXX) -mcpu=native -mtune=native -Q --help=target  | grep -- '-mtune=  ' | cut -f3)
 
 else ifneq '' '$(findstring nvc++,$(COMPILER_VERSION))'
 	COMPILER_NAME := nvhpc
@@ -68,7 +68,9 @@ else ifneq '' '$(findstring nvc++,$(COMPILER_VERSION))'
 	ifneq (,$(shell hostname -A | grep .cosma.))
 		CXXFLAGS += --gcc-toolchain=/cosma/local/gcc/14.1.0/
 	endif
-
+	COMPILER_VERSION_NUMBER := $(strip $(shell $(CXX) -dumpfullversion))
+	COMPILER_VERSION_NUMBER_MAJOR := $(shell echo $(COMPILER_VERSION_NUMBER) | cut -f1 -d.)
+	CPU_ARCH := $(shell g++ -march=native -Q --help=target | grep -- '-march=  ' | cut -f3)
 else
 $(warning Unknown compiler)
 	COMPILER_NAME := unknown
@@ -290,6 +292,7 @@ else
 endif
 
 $(shell mkdir -p $(BUILD_DIR))
+$(info build directory: $(BUILD_DIR))
 
 all: sn3d exspec
 
