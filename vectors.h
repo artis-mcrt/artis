@@ -25,7 +25,7 @@ template <size_t VECDIM>
 }
 
 // get a normalized copy of vec_in
-[[gnu::pure]] [[nodiscard]] constexpr auto vec_norm(const Vec3d& vec_in) -> Vec3d {
+[[gnu::pure]] [[nodiscard]] constexpr auto vec_norm(const Vec3d vec_in) -> Vec3d {
   const double magnitude = vec_len(vec_in);
   assert_testmodeonly(magnitude > 0.);
 
@@ -69,8 +69,8 @@ template <size_t VECDIM>
   const double fact1 = gamma_rel * (1 - (ndotv / CLIGHT));
   const double fact2 = (gamma_rel - (gamma_rel * gamma_rel * ndotv / (gamma_rel + 1) / CLIGHT)) / CLIGHT;
 
-  return vec_norm(Vec3d{(dir1[0] - (vel[0] * fact2)) / fact1, (dir1[1] - (vel[1] * fact2)) / fact1,
-                        (dir1[2] - (vel[2] * fact2)) / fact1});
+  return vec_norm({(dir1[0] - (vel[0] * fact2)) / fact1, (dir1[1] - (vel[1] * fact2)) / fact1,
+                   (dir1[2] - (vel[2] * fact2)) / fact1});
 }
 
 // Doppler factor squared, either to first order v/c or fully relativisitic depending on USE_RELATIVISTIC_DOPPLER_SHIFT
@@ -206,30 +206,14 @@ constexpr auto move_pkt_withtime(Packet& pkt, const double distance) -> double {
 
   // ref1_sc is the ref1 axis in the scattering plane ref1 = n1 x ( n1 x n2 )
   const double n1_dot_n2 = dot(n1, n2);
-  auto ref1_sc = Vec3d{(n1[0] * n1_dot_n2) - n2[0], (n1[1] * n1_dot_n2) - n2[1], (n1[2] * n1_dot_n2) - n2[2]};
-  ref1_sc = vec_norm(ref1_sc);
+  const auto ref1_sc =
+      vec_norm({(n1[0] * n1_dot_n2) - n2[0], (n1[1] * n1_dot_n2) - n2[1], (n1[2] * n1_dot_n2) - n2[2]});
 
   const double cos_stokes_rot_1 = std::clamp(dot(ref1_sc, ref1), -1., 1.);
   const double cos_stokes_rot_2 = dot(ref1_sc, ref2);
 
-  double i = 0;
-  if ((cos_stokes_rot_1 > 0) && (cos_stokes_rot_2 > 0)) {
-    i = acos(cos_stokes_rot_1);
-  } else if ((cos_stokes_rot_1 < 0) && (cos_stokes_rot_2 > 0)) {
-    i = PI - acos(fabs(cos_stokes_rot_1));
-  } else if ((cos_stokes_rot_1 > 0) && (cos_stokes_rot_2 < 0)) {
-    i = (2 * PI) - acos(cos_stokes_rot_1);
-  } else if ((cos_stokes_rot_1 < 0) && (cos_stokes_rot_2 < 0)) {
-    i = PI + acos(fabs(cos_stokes_rot_1));
-  }
-  if (cos_stokes_rot_1 == 0) {
-    i = PI / 2.;
-  }
-  if (cos_stokes_rot_2 == 0) {
-    i = 0.;
-  }
-
-  return i;
+  const double i = std::atan2(cos_stokes_rot_2, cos_stokes_rot_1);
+  return i < 0 ? i + (2 * PI) : i;
 }
 
 // Routine to compute the meridian frame axes ref1 and ref2
@@ -243,35 +227,28 @@ constexpr auto move_pkt_withtime(Packet& pkt, const double distance) -> double {
   return {ref1, ref2};
 }
 
-[[gnu::pure]] [[nodiscard]] constexpr auto lorentz(const Vec3d& e_rf, const Vec3d& n_rf, const Vec3d& v) -> Vec3d {
-  // Use Lorentz transformations to get e_cmf from e_rf
+[[gnu::pure]] [[nodiscard]] constexpr auto lorentz(const Vec3d& elec_rf, const Vec3d& n_rf, const Vec3d& v) -> Vec3d {
+  // Use Lorentz transformations to get elec_cmf from elec_rf
 
-  const auto beta = Vec3d{v[0] / CLIGHT, v[1] / CLIGHT, v[2] / CLIGHT};
-  const double vsqr = dot(beta, beta);
+  const Vec3d beta{v[0] / CLIGHT, v[1] / CLIGHT, v[2] / CLIGHT};
+  const double betasquared = dot(beta, beta);
 
-  const double gamma_rel = 1. / (sqrt(1 - vsqr));
+  const double gamma_rel = 1. / (sqrt(1 - betasquared));
+  const double elec_rf_dot_beta = dot(elec_rf, beta);
 
-  const auto e_par =
-      Vec3d{dot(e_rf, beta) * beta[0] / vsqr, dot(e_rf, beta) * beta[1] / vsqr, dot(e_rf, beta) * beta[2] / vsqr};
+  const Vec3d elec_par{elec_rf_dot_beta * beta[0] / betasquared, elec_rf_dot_beta * beta[1] / betasquared,
+                       elec_rf_dot_beta * beta[2] / betasquared};
 
-  const auto e_perp = Vec3d{e_rf[0] - e_par[0], e_rf[1] - e_par[1], e_rf[2] - e_par[2]};
+  const Vec3d elec_perp{elec_rf[0] - elec_par[0], elec_rf[1] - elec_par[1], elec_rf[2] - elec_par[2]};
 
-  const auto b_rf = cross_prod(n_rf, e_rf);
+  const auto b_rf = cross_prod(n_rf, elec_rf);
 
-  // const double b_par[3] = {dot(b_rf, beta) * beta[0] / (vsqr), dot(b_rf, beta) * beta[1] / (vsqr),
-  //                          dot(b_rf, beta) * beta[2] / (vsqr)};
+  const auto v_cross_b = cross_prod(beta, b_rf);
 
-  // const double b_perp[3] = {b_rf[0] - b_par[0], b_rf[1] - b_par[1], b_rf[2] - b_par[2]};
-
-  const auto v_cr_b = cross_prod(beta, b_rf);
-
-  // const double v_cr_e[3] = {beta[1] * e_rf[2] - beta[2] * e_rf[1], beta[2] * e_rf[0] - beta[0] * e_rf[2],
-  //                           beta[0] * e_rf[1] - beta[1] * e_rf[0]};
-
-  const auto e_cmf =
-      Vec3d{e_par[0] + (gamma_rel * (e_perp[0] + v_cr_b[0])), e_par[1] + (gamma_rel * (e_perp[1] + v_cr_b[1])),
-            e_par[2] + (gamma_rel * (e_perp[2] + v_cr_b[2]))};
-  return vec_norm(e_cmf);
+  const auto elec_cmf = vec_norm({elec_par[0] + (gamma_rel * (elec_perp[0] + v_cross_b[0])),
+                                  elec_par[1] + (gamma_rel * (elec_perp[1] + v_cross_b[1])),
+                                  elec_par[2] + (gamma_rel * (elec_perp[2] + v_cross_b[2]))});
+  return elec_cmf;
 }
 
 // Routine to transform the Stokes Parameters from RF to CMF
@@ -287,33 +264,11 @@ constexpr auto frame_transform(const Vec3d& n_rf, const double Q0, const double 
   double rot_angle = 0;
 
   if (p > 0) {
-    const double cos2rot_angle = Q0 / p;
-    const double sin2rot_angle = U0 / p;
-
-    if ((cos2rot_angle > 0) && (sin2rot_angle > 0)) {
-      rot_angle = acos(Q0 / p) / 2.;
-    } else if ((cos2rot_angle < 0) && (sin2rot_angle > 0)) {
-      rot_angle = (PI - acos(fabs(cos2rot_angle))) / 2.;
-    } else if ((cos2rot_angle < 0) && (sin2rot_angle < 0)) {
-      rot_angle = (PI + acos(fabs(cos2rot_angle))) / 2.;
-    } else if ((cos2rot_angle > 0) && (sin2rot_angle < 0)) {
-      rot_angle = ((2. * PI) - acos(fabs(cos2rot_angle))) / 2.;
-    } else if (cos2rot_angle == 0) {
-      rot_angle = 0.25 * PI;
-      if (U0 < 0) {
-        rot_angle = 0.75 * PI;
-      }
-    }
-    if (sin2rot_angle == 0) {
-      rot_angle = 0.;
-      if (Q0 < 0) {
-        rot_angle = 0.5 * PI;
-      }
-    }
+    const double pol_angle = std::atan2(U0, Q0);
+    rot_angle = (pol_angle < 0 ? pol_angle + (2. * PI) : pol_angle) / 2.;
   }
 
   // Define electric field by linear combination of ref1 and ref2 (using the angle just computed)
-
   const auto elec_rf = Vec3d{(cos(rot_angle) * ref1_rf[0]) - (sin(rot_angle) * ref2_rf[0]),
                              (cos(rot_angle) * ref1_rf[1]) - (sin(rot_angle) * ref2_rf[1]),
                              (cos(rot_angle) * ref1_rf[2]) - (sin(rot_angle) * ref2_rf[2])};
@@ -331,28 +286,9 @@ constexpr auto frame_transform(const Vec3d& n_rf, const double Q0, const double 
   const double cosine_elec_ref1 = dot(elec_cmf, ref1_cmf);
   const double cosine_elec_ref2 = dot(elec_cmf, ref2_cmf);
 
-  // Compute the angle between ref1 and the electric field
-  double theta_rot = 0.;
-  if ((cosine_elec_ref1 > 0) && (cosine_elec_ref2 < 0)) {
-    theta_rot = acos(cosine_elec_ref1);
-  } else if ((cosine_elec_ref1 < 0) && (cosine_elec_ref2 > 0)) {
-    theta_rot = PI + acos(fabs(cosine_elec_ref1));
-  } else if ((cosine_elec_ref1 < 0) && (cosine_elec_ref2 < 0)) {
-    theta_rot = PI - acos(fabs(cosine_elec_ref1));
-  } else if ((cosine_elec_ref1 > 0) && (cosine_elec_ref2 > 0)) {
-    theta_rot = (2 * PI) - acos(cosine_elec_ref1);
-  }
-  if (cosine_elec_ref1 == 0) {
-    theta_rot = PI / 2.;
-  }
-  if (cosine_elec_ref2 == 0) {
-    theta_rot = 0.;
-  }
-  if (cosine_elec_ref1 > 1) {
-    theta_rot = 0.;
-  }
-  if (cosine_elec_ref1 < -1) {
-    theta_rot = PI;
+  double theta_rot = std::atan2(-cosine_elec_ref2, cosine_elec_ref1);
+  if (theta_rot < 0) {
+    theta_rot += 2 * PI;
   }
 
   // Compute Stokes Parameters in the CMF
