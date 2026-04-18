@@ -18,6 +18,12 @@ COMPILER_VERSION_NUMBER_MAJOR := $(shell echo $(COMPILER_VERSION_NUMBER) | cut -
 $(info $(COMPILER_VERSION))
 CXX_STD := c++26
 
+ifeq ($(shell uname -m),arm64)
+	ARCH_FLAGS = -mcpu=native -mtune=native
+else
+	ARCH_FLAGS = -march=native
+endif
+
 COMPILER_NAME := unknown
 CPU_ARCH := unknown
 ifneq '' '$(findstring HIP version,$(COMPILER_VERSION))'
@@ -36,7 +42,7 @@ else ifneq '' '$(findstring clang,$(COMPILER_VERSION))'
 	endif
 
 define GET_ARCH_CMD
-	mpicxx -march=native -### -c -x c++ /dev/null 2>&1 \
+	mpicxx $(ARCH_FLAGS) -### -c -x c++ /dev/null 2>&1 \
 	| tr ' ' '\n' \
 	| awk '/-target-cpu/ {getline; gsub(/"/,""); print; exit}'
 endef
@@ -58,7 +64,7 @@ else ifneq (,$(or $(findstring g++,$(COMPILER_VERSION)),$(findstring gcc,$(COMPI
 	endif
 	CXXFLAGS += -Wno-psabi
 # 	CXXFLAGS += -Wsuggest-attribute=pure -Wsuggest-attribute=const
-	CPU_ARCH := $(shell $(CXX) -mcpu=native -mtune=native -Q --help=target  | grep -- '-mtune=  ' | cut -f3)
+	CPU_ARCH := $(shell $(CXX) $(ARCH_FLAGS) -Q --help=target  | grep -- '-mtune=  ' | cut -f3)
 
 else ifneq '' '$(findstring nvc++,$(COMPILER_VERSION))'
 	COMPILER_NAME := nvhpc
@@ -80,7 +86,7 @@ $(info detected CPU is $(CPU_ARCH))
 # Use a custom build directory for each combination of compiler, CPU architecture, and options to avoid conflicts and ensure that the correct binaries are used
 BUILD_DIR = build/$(COMPILER_NAME)-$(COMPILER_VERSION_NUMBER)_$(CPU_ARCH)
 
-CXXFLAGS += -std=$(CXX_STD) -Wall -Wextra -Wpedantic -Wredundant-decls -Wno-unused-parameter -Wsign-compare -Wshadow -isystem third_party -DBOOST_MATH_STANDALONE
+CXXFLAGS += -std=$(CXX_STD) $(ARCH_FLAGS) -Wall -Wextra -Wpedantic -Wredundant-decls -Wno-unused-parameter -Wsign-compare -Wshadow -isystem third_party -DBOOST_MATH_STANDALONE
 
 ifneq ($(COMPILER_NAME),nvhpc)
 	CXXFLAGS += -Wunused-macros -Werror -Wextra-semi -Wno-unknown-pragmas -Wno-error=cast-function-type -MD -MP -Wno-unused-function
@@ -175,15 +181,6 @@ endif
 
 ifeq ($(shell uname -s),Darwin)
 # 	macOS
-
-	ifeq ($(shell uname -m),arm64)
-#	 	On Arm, -mcpu combines -march and -mtune
-		CXXFLAGS += -mcpu=native
-	else
-#		On x86, -march implies -mtune
-		CXXFLAGS += -march=native
-	endif
-
 	CXXFLAGS += -fno-omit-frame-pointer -g
 	# gcc
 	# CXXFLAGS += -fopt-info-vec-missed
@@ -191,11 +188,6 @@ ifeq ($(shell uname -s),Darwin)
 	# CXXFLAGS += -Rpass=loop-vectorize
 	# CXXFLAGS += -Rpass-missed=loop-vectorize
 	# CXXFLAGS += -Rpass-analysis=loop-vectorize
-
-else
-	# ensure that the jobscript has a compilation step so that the architecture
-	# target exactly matches the compute nodes
-	CXXFLAGS += -march=native
 endif
 
 ifeq ($(EIGEN),OFF)
