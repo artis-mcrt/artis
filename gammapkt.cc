@@ -820,7 +820,7 @@ void wollaeger_thermalisation(Packet& pkt) {
   while (!end_packet) {
     // distance to the next cell
     const auto [sdist, snext] = grid::boundary_distance(pkt_copy.dir, pkt_copy.pos, pkt_copy.prop_time, pkt_copy.where);
-    const double s_cont = sdist * pow3(t_current) / pow3(pkt_copy.prop_time);
+    const double s_cont = sdist * pow3(t_current / pkt_copy.prop_time);
     const int mgi = grid::get_propcell_modelgridindex(pkt_copy.where);
     if (mgi >= 0) {
       const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(mgi);
@@ -882,7 +882,7 @@ void guttman_thermalisation(Packet& pkt) {
       // distance to the next cell
       const auto [sdist, snext] =
           grid::boundary_distance(pkt_copy.dir, pkt_copy.pos, pkt_copy.prop_time, pkt_copy.where);
-      const double s_cont = sdist * pow3(t) / pow3(pkt_copy.prop_time);
+      const double s_cont = sdist * pow3(t / pkt_copy.prop_time);
       const int mgi = grid::get_propcell_modelgridindex(pkt_copy.where);
       if (mgi >= 0) {
         column_densities[i] += grid::get_rho_tmin(mgi) * s_cont;  // contribution to the integral
@@ -902,8 +902,7 @@ void guttman_thermalisation(Packet& pkt) {
   double f_gamma = 0.;
   const double width = 4 * PI / numb_rnd_dirs;
   for (int i = 0; i < numb_rnd_dirs; i++) {
-    const double summand =
-        width * (1 - std::exp(-pow2(t_gamma) / pow2(t) * column_densities[i] / avg_column_density));
+    const double summand = width * (1 - std::exp(-pow2(t_gamma / t) * column_densities[i] / avg_column_density));
     f_gamma += summand;
   }
   f_gamma /= (4 * PI);

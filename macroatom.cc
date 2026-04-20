@@ -712,8 +712,8 @@ void macroatom_close_file() {
 
       const double g_ratio = lowerstatweight / upperstatweight;
 
-      return C_0 * 14.51039491 * nne * std::sqrt(T_e) * trans_osc_strength * pow2(H_ionpot / epsilon_trans) *
-             eoverkt * g_ratio * gauntfac;
+      return C_0 * 14.51039491 * nne * std::sqrt(T_e) * trans_osc_strength * pow2(H_ionpot / epsilon_trans) * eoverkt *
+             g_ratio * gauntfac;
     }
 
     // forbidden transitions: magnetic dipole, electric quadropole...
@@ -753,8 +753,8 @@ void macroatom_close_file() {
       const double exp_eoverkt = std::exp(eoverkt);
 
       const double Gamma = std::max(g_bar, 0.276 * exp_eoverkt * (-EULERGAMMA - std::log(eoverkt)));
-      return C_0 * nne * std::sqrt(T_e) * 14.51039491 * trans_osc_strength * pow2(H_ionpot / epsilon_trans) *
-             eoverkt / exp_eoverkt * Gamma;
+      return C_0 * nne * std::sqrt(T_e) * 14.51039491 * trans_osc_strength * pow2(H_ionpot / epsilon_trans) * eoverkt /
+             exp_eoverkt * Gamma;
     }
 
     // forbidden transitions: magnetic dipole, electric quadropole...
