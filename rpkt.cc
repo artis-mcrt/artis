@@ -333,7 +333,7 @@ void electron_scatter_rpkt(Packet& pkt) {
     double p = 0.;
     double x = 1.;
     while (x > p) {
-      const double zrand = rng_uniform();
+      const double zrand = rng_uniform_pos();
 
       M = (2 * zrand) - 1;
       const double mu = pow2(M);
