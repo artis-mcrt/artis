@@ -4,20 +4,22 @@
 [![CI](https://github.com/artis-mcrt/artis/actions/workflows/ci.yml/badge.svg)](https://github.com/artis-mcrt/artis/actions/workflows/ci.yml)
 [![License](https://img.shields.io/github/license/artis-mcrt/artis)](https://github.com/artis-mcrt/artis/blob/develop/LICENSE)
 
-[ARTIS](https://github.com/artis-mcrt/artis) ([Sim 2007](https://ui.adsabs.harvard.edu/abs/2007MNRAS.375..154S/abstract); [Kromer & Sim 2009](https://ui.adsabs.harvard.edu/abs/2009MNRAS.398.1809K/abstract)) is a 3D radiative transfer code for Type Ia supernovae using the Monte Carlo method with indivisible energy packets ([Lucy 2002](https://ui.adsabs.harvard.edu/abs/2002A%26A...384..725L/abstract)). The latest version incorporates polarisation and virtual packets ([Bulla et al. 2015](https://ui.adsabs.harvard.edu/abs/2015MNRAS.450..967B/abstract)), non-LTE physics appropriate for the nebular phase of Type Ia supernovae ([Shingles et al. 2020](https://ui.adsabs.harvard.edu/abs/2020MNRAS.492.2029S/abstract)), and alpha- and beta-decays with time-dependent thermalisation ([Shingles et al. 2023](https://ui.adsabs.harvard.edu/abs/2023ApJ...954L..41S/abstract)).
+ARTIS is a 3D radiative transfer code that uses Monte Carlo methods with indivisible energy packets ([Lucy 2002](https://ui.adsabs.harvard.edu/abs/2002A%26A...384..725L/abstract)) under the assumption homologous (ballistic) expansion and line-by-line opacities with detailed atomic re-radiation including fluouresence (Lucy's macroatom .
+
+The latest version incorporates polarisation and virtual packets, non-LTE physics, and alpha- and beta-decays with time-dependent particle thermalisation.
 
 Supported coordinate systems are 1D spherical (arbitrary spacing), 2D cylindrical (regular), and 3D Cartesian (regular).
 
-The code is modern C++23 and scales to thousands of CPU cores across multiple nodes with MPI shared memory on each node. Experimental support is also provided for OpenMP and C++ standard parallelism for multithreaded CPU and upcoming GPU targets.
+The code is written in modern C++23 and scales to thousands of CPU cores across multiple nodes with MPI shared memory on each node. Experimental support is also provided for OpenMP and C++ standard parallelism for multithreaded CPU and upcoming GPU targets.
 
 ## Citing ARTIS
 We maintain a list of [papers that use ARTIS](https://ui.adsabs.harvard.edu/user/libraries/g5NyA9gKT5KdDFLY6SixWg) and [papers that use ARTIS with non-LTE enabled](https://ui.adsabs.harvard.edu/user/libraries/CX8fnPInSu2q1rAE4wWQrg).
 
 If you use ARTIS, please cite it using the [DOI from Zenodo](https://zenodo.org/records/18670358).
 
-An early version of the code is described in [Sim (2007)](https://ui.adsabs.harvard.edu/abs/2007MNRAS.375..154S/abstract) and [Kromer & Sim (2009)](https://ui.adsabs.harvard.edu/abs/2009MNRAS.398.1809K/abstract). For specific features, please cite:
+An early version of the code is described in [Sim (2007)](https://ui.adsabs.harvard.edu/abs/2007MNRAS.375..154S/abstract) and [Kromer & Sim (2009)](https://ui.adsabs.harvard.edu/abs/2009MNRAS.398.1809K/abstract). Some specific features are described in:
 - Polarisation and virtual packets: [Bulla et al. (2015)](https://ui.adsabs.harvard.edu/abs/2015MNRAS.450..967B/abstract)
-- Non-LTE level populations, multibin radiation field model, and non-thermal ionisation/excitation: [Shingles et al. (2020)](https://ui.adsabs.harvard.edu/abs/2020MNRAS.492.2029S/abstract)
+- Non-LTE level populations, multibin radiation field model, trajectory-based photoionisation estimators, and non-thermal ionisation/excitation: [Shingles et al. (2020)](https://ui.adsabs.harvard.edu/abs/2020MNRAS.492.2029S/abstract)
 - Alpha, beta, and fission decay, and time-dependent particle thermalisation for kilonovae: [Shingles et al. (2023)](https://ui.adsabs.harvard.edu/abs/2023ApJ...954L..41S/abstract)
 - Expansion opacities and paramaterised scattering/thermalisation ratio (instead of default line-by-line opacity and macroatom): Shingles et al. (in prep)
 
