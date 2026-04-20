@@ -99,6 +99,7 @@ template <bool USECELLCACHE>
 }
 
 // find any line or continuum interaction occuring before frequency decreases to nu_cmf_abort at distance abort_dist
+// returns tuple of (distance to event, lineindex of event or nlines+1 for continuum, bool for whether line event)
 auto get_possible_event(const int nonemptymgi, const Packet& pkt, const Rpkt_continuum_absorptioncoeffs& chi_rpkt_cont,
                         MacroAtomState& mastate,
                         const double tau_rnd,  // random optical depth until which the packet travels
@@ -243,7 +244,7 @@ auto get_possible_event_expansion_opacity(const int nonemptymgi, const Packet& p
     double chi_bb_expansionopac = 0.;
     if (binindex >= 0) {
       const auto kappa = expansionopacities[(nonemptymgi * expopac_nbins) + binindex];
-      chi_bb_expansionopac = kappa * grid::get_rho(nonemptymgi) * doppler;
+      chi_bb_expansionopac = kappa * grid::get_rho(nonemptymgi);
     }
 
     const double chi_tot = chi_cont + chi_bb_expansionopac;
