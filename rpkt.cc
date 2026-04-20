@@ -99,7 +99,9 @@ template <bool USECELLCACHE>
 }
 
 // find any line or continuum interaction occuring before frequency decreases to nu_cmf_abort at distance abort_dist
-// returns tuple of (distance to event, lineindex of event or nlines+1 for continuum, bool for whether line event)
+// returns tuple of (distance to event, next transition index for pkt.next_trans, bool for whether line event)
+// the next transition index is lineindex + 1 for a line event, may remain the current next_trans if no event occurs,
+// and is globals::nlines + 1 for a continuum event
 auto get_possible_event(const int nonemptymgi, const Packet& pkt, const Rpkt_continuum_absorptioncoeffs& chi_rpkt_cont,
                         MacroAtomState& mastate,
                         const double tau_rnd,  // random optical depth until which the packet travels
