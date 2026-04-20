@@ -388,7 +388,7 @@ void set_params_fullspec(const int nonemptymgi, const int timestep) {
     }
     grid::set_TR(nonemptymgi, T_R);
 
-    const auto W = static_cast<float>(J[nonemptymgi] * PI / STEBO / pow(T_R, 4));
+    const auto W = static_cast<float>(J[nonemptymgi] * PI / STEBO / pow4(T_R));
     grid::set_W(nonemptymgi, W);
 
     printlnlog(
@@ -868,7 +868,7 @@ void normalise_bf_estimators(const int nts, const int nts_prev, const int titer,
     }
     const auto mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
     const double deltaV =
-        grid::get_modelcell_assocvolume_tmin(mgi) * pow(globals::timesteps[nts_prev].mid / globals::tmin, 3);
+        grid::get_modelcell_assocvolume_tmin(mgi) * pow3(globals::timesteps[nts_prev].mid / globals::tmin);
     const double estimator_normfactor = 1 / deltaV / deltat / globals::nprocs;
     for (int i = 0; i < bfestimcount; i++) {
       const auto mgibfindex = (nonemptymgi * bfestimcount) + i;

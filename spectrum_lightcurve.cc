@@ -131,7 +131,7 @@ void printout_tracemission_stats() {
 
         const double nu_trans = (epsilon(element, ion, upper) - epsilon(element, ion, lower)) / H;
         const double A_ul = globals::linelist.einstein_A[lineindex];
-        const double B_ul = CLIGHTSQUAREDOVERTWOH / pow(nu_trans, 3) * A_ul;
+        const double B_ul = CLIGHTSQUAREDOVERTWOH / pow3(nu_trans) * A_ul;
         const double B_lu = statweight_target / statweight_lower * B_ul;
 
         const auto upper_uniquelevelindex = get_uniquelevelindex(element, ion, upper);

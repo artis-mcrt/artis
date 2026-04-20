@@ -220,7 +220,7 @@ void read_phixs_data_table(std::istream& phixsfile, const int nphixspoints_input
     for (int i = 1; i < globals::NPHIXSPOINTS; i++) {
       const double nu = nu_edge * (1. + (i * globals::NPHIXSNUINCREMENT));
       if (nu >= nu_max) {
-        levelphixstable[i] = static_cast<float>(phixs_in[nphixspoints_inputtable - 1] * pow(nu_max / nu, 3));
+        levelphixstable[i] = static_cast<float>(phixs_in[nphixspoints_inputtable - 1] * pow3(nu_max / nu));
       } else {
         assert_always(nu >= nugrid_in[0]);
         const auto index_above =
@@ -558,7 +558,7 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion,
         if (pass == 1) {
           const auto g_ratio = static_cast<double>(ion_levels[level].stat_weight) / ion_levels[lowerlevel].stat_weight;
           const auto f_ul =
-              static_cast<float>(g_ratio * ME * pow(CLIGHT, 3) / (8 * pow(QE * nu_trans * PI, 2)) * transition.A);
+              static_cast<float>(g_ratio * ME * pow3(CLIGHT) / (8 * pow2(QE * nu_trans * PI)) * transition.A);
           assert_always(std::isfinite(f_ul));
 
           temp_linelist.push_back({
@@ -611,7 +611,7 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion,
 
         const auto g_ratio = static_cast<double>(ion_levels[level].stat_weight) / ion_levels[lowerlevel].stat_weight;
         const auto f_ul =
-            static_cast<float>(g_ratio * ME * pow(CLIGHT, 3) / (8 * pow(QE * nu_trans * PI, 2)) * transition.A);
+            static_cast<float>(g_ratio * ME * pow3(CLIGHT) / (8 * pow2(QE * nu_trans * PI)) * transition.A);
 
         auto& downtransition =
             temp_alltranslist[ion_levels[level].alltrans_startdown + ion_levels[level].ndowntrans - 1];

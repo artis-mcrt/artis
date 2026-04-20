@@ -573,7 +573,7 @@ void macroatom_close_file() {
                                                           const double statweight_lower, const int alltransindex,
                                                           const double t_current) -> double {
   const double nu_trans = epsilon_trans / H;
-  const double B_ul = CLIGHTSQUAREDOVERTWOH / std::pow(nu_trans, 3) * einstein_A;
+  const double B_ul = CLIGHTSQUAREDOVERTWOH / pow3(nu_trans) * einstein_A;
   const double B_lu = upper_statweight / statweight_lower * B_ul;
 
   const double tau_sobolev = ((B_lu * nnlevel_lower) - (B_ul * nnlevel_upper)) * HCLIGHTOVERFOURPI * t_current;
@@ -712,7 +712,7 @@ void macroatom_close_file() {
 
       const double g_ratio = lowerstatweight / upperstatweight;
 
-      return C_0 * 14.51039491 * nne * std::sqrt(T_e) * trans_osc_strength * std::pow(H_ionpot / epsilon_trans, 2) *
+      return C_0 * 14.51039491 * nne * std::sqrt(T_e) * trans_osc_strength * pow2(H_ionpot / epsilon_trans) *
              eoverkt * g_ratio * gauntfac;
     }
 
@@ -753,7 +753,7 @@ void macroatom_close_file() {
       const double exp_eoverkt = std::exp(eoverkt);
 
       const double Gamma = std::max(g_bar, 0.276 * exp_eoverkt * (-EULERGAMMA - std::log(eoverkt)));
-      return C_0 * nne * std::sqrt(T_e) * 14.51039491 * trans_osc_strength * pow(H_ionpot / epsilon_trans, 2) *
+      return C_0 * nne * std::sqrt(T_e) * 14.51039491 * trans_osc_strength * pow2(H_ionpot / epsilon_trans) *
              eoverkt / exp_eoverkt * Gamma;
     }
 

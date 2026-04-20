@@ -359,13 +359,13 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
   const int mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
 
   const double deltaV =
-      grid::get_modelcell_assocvolume_tmin(mgi) * pow(globals::timesteps[nts_prev].mid / globals::tmin, 3);
+      grid::get_modelcell_assocvolume_tmin(mgi) * pow3(globals::timesteps[nts_prev].mid / globals::tmin);
   const auto sys_time_start_update_cell = std::time(nullptr);
 
   printlnlog("update_grid_cell: working on mgi {} before timestep {} titeration {}...", mgi, nts, titer);
 
   // Update current mass density of cell
-  const auto rho = static_cast<float>(grid::get_rho_tmin(mgi) / pow(tratmid, 3));
+  const auto rho = static_cast<float>(grid::get_rho_tmin(mgi) / pow3(tratmid));
   grid::set_rho(nonemptymgi, rho);
 
   // Update elemental abundances with radioactive decays

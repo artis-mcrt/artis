@@ -417,7 +417,7 @@ void normalise_deposition_estimators(int nts) {
     const int mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
 
     const double dV =
-        grid::get_modelcell_assocvolume_tmin(mgi) * std::pow(globals::timesteps[nts].mid / globals::tmin, 3);
+        grid::get_modelcell_assocvolume_tmin(mgi) * pow3(globals::timesteps[nts].mid / globals::tmin);
 
     // contribute the energy deposited (in erg) by each process in this cell to the timestep total
     globals::timesteps[nts].gamma_dep += globals::dep_estimator_gamma[nonemptymgi] / nprocs;

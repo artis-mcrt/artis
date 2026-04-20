@@ -88,7 +88,7 @@ template <bool USECELLCACHE>
                                                        globals::linelist.lowerlevelindex[lineindex]);
 
   const double B_ul =
-      CLIGHTSQUAREDOVERTWOH / pow(globals::linelist.nu[lineindex], 3) * globals::linelist.einstein_A[lineindex];
+      CLIGHTSQUAREDOVERTWOH / pow3(globals::linelist.nu[lineindex]) * globals::linelist.einstein_A[lineindex];
   const double B_lu = stat_weight(uniquelevelindex_upper) / stat_weight(uniquelevelindex_lower) * B_ul;
 
   const double n_u = USECELLCACHE ? get_cellcache_levelpop(nonemptymgi, uniquelevelindex_upper)
@@ -333,10 +333,10 @@ void electron_scatter_rpkt(Packet& pkt) {
     double p = 0.;
     double x = 1.;
     while (x > p) {
-      const double zrand = rng_uniform();
+      const double zrand = rng_uniform_pos();
 
       M = (2 * zrand) - 1;
-      const double mu = pow(M, 2.);
+      const double mu = pow2(M);
       phisc = 2 * PI * rng_uniform();
 
       // NB: the rotational matrix R here is chosen in the clockwise direction ("+").
@@ -362,13 +362,13 @@ void electron_scatter_rpkt(Packet& pkt) {
   Vec3d new_dir_cmf{};
 
   if (fabs(old_dir_cmf[2]) < 0.99999) {
-    new_dir_cmf[0] = (sin(tsc) / sqrt(1. - pow(old_dir_cmf[2], 2.)) *
+    new_dir_cmf[0] = (sin(tsc) / sqrt(1. - pow2(old_dir_cmf[2])) *
                       ((old_dir_cmf[1] * sin(phisc)) - (old_dir_cmf[0] * old_dir_cmf[2] * cos(phisc)))) +
                      (old_dir_cmf[0] * cos(tsc));
-    new_dir_cmf[1] = (sin(tsc) / sqrt(1 - pow(old_dir_cmf[2], 2.)) *
+    new_dir_cmf[1] = (sin(tsc) / sqrt(1 - pow2(old_dir_cmf[2])) *
                       ((-old_dir_cmf[0] * sin(phisc)) - (old_dir_cmf[1] * old_dir_cmf[2] * cos(phisc)))) +
                      (old_dir_cmf[1] * cos(tsc));
-    new_dir_cmf[2] = (sin(tsc) * cos(phisc) * sqrt(1 - pow(old_dir_cmf[2], 2.))) + (old_dir_cmf[2] * cos(tsc));
+    new_dir_cmf[2] = (sin(tsc) * cos(phisc) * sqrt(1 - pow2(old_dir_cmf[2]))) + (old_dir_cmf[2] * cos(tsc));
   } else {
     new_dir_cmf = {sin(tsc) * cos(phisc), sin(tsc) * sin(phisc), (old_dir_cmf[2] > 0) ? cos(tsc) : -cos(tsc)};
   }
@@ -723,7 +723,7 @@ auto calculate_chi_ffheating(const int nonemptymgi, const double nu, const bool 
   const auto chi_ff_nnionpart = use_cellcache ? globals::cellcache[cellcacheslotid].chi_ff_nnionpart
                                               : calculate_chi_ffheat_nnionpart(nonemptymgi);
 
-  const double chi_ff = chi_ff_nnionpart * pow(nu, -3) * nne * (1 - exp(-HOVERKB * nu / T_e));
+  const double chi_ff = chi_ff_nnionpart / pow3(nu) * nne * (1 - exp(-HOVERKB * nu / T_e));
 
   assert_testmodeonly(std::isfinite(chi_ff));
   assert_testmodeonly(chi_ff >= 0);

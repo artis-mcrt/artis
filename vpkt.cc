@@ -214,7 +214,7 @@ auto rlc_emiss_vpkt(const Packet& pkt, const double t_current, const double t_ar
 
     const double mu = dot(old_dir_cmf, obs_cmf);
 
-    pn = 3. / (16. * PI) * (1 + pow(mu, 2.) + ((pow(mu, 2.) - 1) * Qold));
+    pn = 3. / (16. * PI) * (1 + pow2(mu) + ((pow2(mu) - 1) * Qold));
 
     const double Inew = 0.75 * (((mu * mu) + 1.0) + (Qold * ((mu * mu) - 1.0)));
     const double Qnew = (0.75 * (((mu * mu) - 1.0) + (Qold * ((mu * mu) + 1.0)))) / Inew;
@@ -250,7 +250,7 @@ auto rlc_emiss_vpkt(const Packet& pkt, const double t_current, const double t_ar
   while (!end_packet) {
     // distance to the next cell
     const auto [sdist, snext] = grid::boundary_distance(vpkt.dir, vpkt.pos, vpkt.prop_time, vpkt.where);
-    const double s_cont = sdist * t_current * t_current * t_current / (t_future * t_future * t_future);
+    const double s_cont = sdist * pow3(t_current) / pow3(t_future);
 
     if (mgi < 0) {
       vpkt.next_trans = -1;
@@ -319,7 +319,7 @@ auto rlc_emiss_vpkt(const Packet& pkt, const double t_current, const double t_ar
         const int upper = globals::linelist.upperlevelindex[lineindex];
         const int lower = globals::linelist.lowerlevelindex[lineindex];
 
-        const double B_ul = CLIGHTSQUAREDOVERTWOH / pow(nutrans, 3) * globals::linelist.einstein_A[lineindex];
+        const double B_ul = CLIGHTSQUAREDOVERTWOH / pow3(nutrans) * globals::linelist.einstein_A[lineindex];
         const double B_lu = stat_weight(element, ion, upper) / stat_weight(element, ion, lower) * B_ul;
 
         const auto n_u = calculate_levelpop(nonemptymgi, element, ion, upper);

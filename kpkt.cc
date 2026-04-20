@@ -62,7 +62,7 @@ auto calculate_cooling_rates_ion(const int nonemptymgi, const int element, const
   // ff creation of rpkt
   const int ioncharge = get_ionstage(element, ion) - 1;
   if (ioncharge > 0) {
-    const double C_ff_ion = 1.426e-27 * sqrt(T_e) * pow(ioncharge, 2) * nncurrention * nne;
+    const double C_ff_ion = 1.426e-27 * sqrt(T_e) * pow2(ioncharge) * nncurrention * nne;
     C_ion += C_ff_ion;
 
     if constexpr (update_cellcache_contribs) {

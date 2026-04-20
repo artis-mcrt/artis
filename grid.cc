@@ -175,14 +175,14 @@ auto get_cell_r_inner(const int cellindex, const GridType prop_gridtype) -> doub
   if (prop_gridtype == GridType::CYLINDRICAL2D) {
     const auto rcyl_inner = get_cellcoordmin(cellindex, 0);
     const auto z_inner = std::min(std::abs(get_cellcoordmin(cellindex, 1)), std::abs(get_cellcoordmax(cellindex, 1)));
-    return std::sqrt(std::pow(rcyl_inner, 2) + std::pow(z_inner, 2));
+    return std::sqrt(pow2(rcyl_inner) + pow2(z_inner));
   }
 
   if (prop_gridtype == GridType::CARTESIAN3D) {
     const auto x_inner = std::min(std::abs(get_cellcoordmin(cellindex, 0)), std::abs(get_cellcoordmax(cellindex, 0)));
     const auto y_inner = std::min(std::abs(get_cellcoordmin(cellindex, 1)), std::abs(get_cellcoordmax(cellindex, 1)));
     const auto z_inner = std::min(std::abs(get_cellcoordmin(cellindex, 2)), std::abs(get_cellcoordmax(cellindex, 2)));
-    return std::sqrt(std::pow(x_inner, 2) + std::pow(y_inner, 2) + std::pow(z_inner, 2));
+    return std::sqrt(pow2(x_inner) + pow2(y_inner) + pow2(z_inner));
   }
 
   assert_always(false);
@@ -543,7 +543,7 @@ void map_2dmodelto3dgrid() {
                                get_cellcoordmin(cellindex, 1) + (0.5 * propcell_width_tmin(cellindex, 1)),
                                get_cellcoordmin(cellindex, 2) + (0.5 * propcell_width_tmin(cellindex, 2))};
 
-    const double rcylindrical = std::sqrt(std::pow(pos_mid[0], 2) + std::pow(pos_mid[1], 2));
+    const double rcylindrical = std::sqrt(pow2(pos_mid[0]) + pow2(pos_mid[1]));
 
     // 2D grid is uniform so rcyl and z indices can be calculated with no lookup
     const int n_rcyl = static_cast<int>(rcylindrical / globals::tmin / globals::vmax * ncoord_model[0]);
@@ -834,20 +834,20 @@ auto get_inputcellvolume(const int mgi) -> double {
   switch (get_modelgridtype()) {
     case GridType::SPHERICAL1D: {
       const double v_inner = (mgi == 0) ? 0. : vout_model[mgi - 1];
-      return (pow(vout_model[mgi], 3) - pow(v_inner, 3)) * 4 * PI * pow(globals::tmin, 3) / 3.;
+      return (pow3(vout_model[mgi]) - pow3(v_inner)) * 4 * PI * pow3(globals::tmin) / 3.;
     }
 
     case GridType::CYLINDRICAL2D: {
       const int n_r = mgi % ncoord_model[0];
       const double delta_rcyl = globals::vmax * t_model / ncoord_model[0];
       const double delta_z = 2. * globals::vmax * t_model / ncoord_model[1];
-      return pow(globals::tmin / t_model, 3) * delta_z * PI *
-             (pow((n_r + 1) * delta_rcyl, 2) - pow(n_r * delta_rcyl, 2));
+      return pow3(globals::tmin / t_model) * delta_z * PI *
+             (pow2((n_r + 1) * delta_rcyl) - pow2(n_r * delta_rcyl));
     }
 
     case GridType::CARTESIAN3D: {
       // Assumes cells are cubes here - all same volume.
-      return pow((2 * globals::vmax * globals::tmin), 3) / (ncoordgrid[0] * ncoordgrid[1] * ncoordgrid[2]);
+      return pow3(2 * globals::vmax * globals::tmin) / (ncoordgrid[0] * ncoordgrid[1] * ncoordgrid[2]);
     }
   }
 
@@ -993,7 +993,7 @@ void assign_initial_temperatures() {
         decay::get_endecay_per_ejectamass_tmodel_to_time_withexpansion(nonemptymgi, tstart) + q;
 
     auto T_initial = static_cast<float>(
-        pow(CLIGHT / 4 / STEBO * pow(globals::tmin / tstart, 3) * get_rho_tmin(mgi) * decayedenergy_per_mass, 1. / 4.));
+        std::pow(CLIGHT / 4 / STEBO * pow3(globals::tmin / tstart) * get_rho_tmin(mgi) * decayedenergy_per_mass, 1. / 4.));
 
     if (T_initial < MINTEMP) {
       T_initial = MINTEMP;
@@ -1105,7 +1105,7 @@ void setup_nstart_ndo() {
 void setup_grid_cartesian_3d() {
   // vmax is per coordinate, but the simulation volume corners will
   // have a higher expansion velocity than the sides
-  const double vmax_corner = sqrt(3 * pow(globals::vmax, 2));
+  const double vmax_corner = sqrt(3 * pow2(globals::vmax));
   printlnlog("corner vmax {:g} [cm/s] ({:.2f}c)", vmax_corner, vmax_corner / CLIGHT);
   if (!FORCE_SPHERICAL_ESCAPE_SURFACE) {
     assert_always(vmax_corner < CLIGHT);
@@ -1166,7 +1166,7 @@ void setup_grid_spherical_1d() {
 }
 
 void setup_grid_cylindrical_2d() {
-  const double vmax_corner = sqrt(2 * pow(globals::vmax, 2));
+  const double vmax_corner = sqrt(2 * pow2(globals::vmax));
   printlnlog("corner vmax {:g} [cm/s] ({:.2f}c)", vmax_corner, vmax_corner / CLIGHT);
   assert_always(vmax_corner < CLIGHT);
 
@@ -1415,11 +1415,11 @@ template <BoundaryType boundarytype, size_t S1>
 
     case GridType::CYLINDRICAL2D: {
       return propcell_width_tmin(modelgridindex, 1) * PI *
-             (pow(get_cellcoordmax(modelgridindex, 0), 2) - pow(get_cellcoordmin(modelgridindex, 0), 2));
+             (pow2(get_cellcoordmax(modelgridindex, 0)) - pow2(get_cellcoordmin(modelgridindex, 0)));
     }
 
     case GridType::SPHERICAL1D: {
-      return 4. / 3. * PI * (pow(get_cellcoordmax(modelgridindex, 0), 3) - pow(get_cellcoordmin(modelgridindex, 0), 3));
+      return 4. / 3. * PI * (pow3(get_cellcoordmax(modelgridindex, 0)) - pow3(get_cellcoordmin(modelgridindex, 0)));
     }
   }
   assert_always(false);
@@ -1446,7 +1446,7 @@ template <BoundaryType boundarytype, size_t S1>
       const double r_inner = get_cellcoordmin(cellindex, 0);
       const double r_outer = get_cellcoordmax(cellindex, 0);
       // use equal volume probability distribution to select radius
-      const double radius = pow((zrand * pow(r_inner, 3)) + ((1. - zrand) * pow(r_outer, 3)), 1 / 3.);
+      const double radius = std::cbrt((zrand * pow3(r_inner)) + ((1. - zrand) * pow3(r_outer)));
       // assert_always(radius >= r_inner);
       // assert_always(radius <= r_outer);
 
@@ -1458,7 +1458,7 @@ template <BoundaryType boundarytype, size_t S1>
       const double rcyl_inner = get_cellcoordmin(cellindex, 0);
       const double rcyl_outer = get_cellcoordmax(cellindex, 0);
       // use equal area probability distribution to select radius
-      const double rcyl_rand = std::sqrt((zrand * std::pow(rcyl_inner, 2)) + ((1. - zrand) * std::pow(rcyl_outer, 2)));
+      const double rcyl_rand = std::sqrt((zrand * pow2(rcyl_inner)) + ((1. - zrand) * pow2(rcyl_outer)));
       const double theta_rand = rng_uniform() * 2 * PI;
       return {std::cos(theta_rand) * rcyl_rand, std::sin(theta_rand) * rcyl_rand,
               get_cellcoordmin(cellindex, 1) + (rng_uniform_pos() * propcell_width_tmin(cellindex, 1))};
@@ -1722,13 +1722,13 @@ auto get_cellradialposmid(const int cellindex) -> double {
     // volume averaged mean radius is slightly complex for radial shells
     const double r_inner = get_cellcoordmin(cellindex, 0);
     const double r_outer = r_inner + propcell_width_tmin(cellindex, 0);
-    return 3. / 4 * (pow(r_outer, 4.) - pow(r_inner, 4.)) / (pow(r_outer, 3) - pow(r_inner, 3.));
+    return 3. / 4 * (pow4(r_outer) - pow4(r_inner)) / (pow3(r_outer) - pow3(r_inner));
   }
 
   if (prop_gridtype == GridType::CYLINDRICAL2D) {
     const double rcyl_mid = get_cellcoordmin(cellindex, 0) + (0.5 * propcell_width_tmin(cellindex, 0));
     const double z_mid = get_cellcoordmin(cellindex, 1) + (0.5 * propcell_width_tmin(cellindex, 1));
-    return std::sqrt(std::pow(rcyl_mid, 2) + std::pow(z_mid, 2));
+    return std::sqrt(pow2(rcyl_mid) + pow2(z_mid));
   }
 
   // cubic grid requires taking the length of the 3D position vector
@@ -1811,7 +1811,7 @@ void set_elements_uppermost_ion(const int nonemptymgi, const int element, const 
       }
       // second step: multiply temperature-dependent factor
       if (T_rad < 2000.) {
-        kappa *= pow(T_rad / 2000., 5.);
+        kappa *= pow5(T_rad / 2000.);
       }
       break;
     }
@@ -1922,7 +1922,7 @@ void read_ejecta_model() {
       vout_model[mgi] = vout_kmps * 1.e5;
 
       const auto rho_tmin =
-          static_cast<float>(log_rho > -90 ? pow(10., log_rho) * pow(t_model / globals::tmin, 3) : 0.);
+          static_cast<float>(log_rho > -90 ? pow(10., log_rho) * pow3(t_model / globals::tmin) : 0.);
       set_rho_tmin(mgi, rho_tmin);
       const bool keepcell = (rho_tmin > 0);
       read_model_radioabundances(fmodel, ssline, mgi, keepcell, colnames, nucindexlist, one_line_per_cell);
@@ -1978,7 +1978,7 @@ void read_ejecta_model() {
       }
 
       const bool keepcell = (rho_tmodel > 0);
-      const auto rho_tmin = static_cast<float>(rho_tmodel * pow(t_model / globals::tmin, 3));
+      const auto rho_tmin = static_cast<float>(rho_tmodel * pow3(t_model / globals::tmin));
       set_rho_tmin(mgi, rho_tmin);
 
       read_model_radioabundances(fmodel, ssline, mgi, keepcell, colnames, nucindexlist, one_line_per_cell);
@@ -2054,7 +2054,7 @@ void read_ejecta_model() {
 
       // in 3D cartesian, cellindex and modelgridindex are interchangeable
       const bool keepcell = (rho_model > 0);
-      const auto rho_tmin = static_cast<float>(rho_model * pow(t_model / globals::tmin, 3));
+      const auto rho_tmin = static_cast<float>(rho_model * pow3(t_model / globals::tmin));
       set_rho_tmin(mgi, rho_tmin);
 
       if (min_den < 0. || min_den > rho_model) {

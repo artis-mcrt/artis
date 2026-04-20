@@ -1,7 +1,6 @@
 #ifndef GRIDINIT_H
 #define GRIDINIT_H
 
-#include <cmath>
 #include <cstddef>
 #include <tuple>
 
@@ -120,7 +119,7 @@ inline auto get_ejecta_kinetic_energy() {
     const int mgi = get_mgi_of_nonemptymgi(nonemptymgi);
     double const M_cell = get_rho_tmin(mgi) * grid::get_modelcell_assocvolume_tmin(mgi);
     const double radial_pos = get_modelcell_mean_radial_pos(mgi, 1.);
-    E_kin += 0.5 * M_cell * std::pow(radial_pos / globals::tmin, 2);
+    E_kin += 0.5 * M_cell * pow2(radial_pos / globals::tmin);
   }
 
   return E_kin;
