@@ -822,7 +822,7 @@ constexpr auto xs_ionisation_lotz(const double en_erg, const ShellParams& collio
          (std::log(pow2(beta) * ME * pow2(CLIGHT) / 2.0 / ionpot) - std::log10(1 - pow2(beta)) - pow2(beta)));
     if (part_sigma_shell > 0.) {
       constexpr double Aconst = 1.33e-14 * EV * EV;
-      const double sigma = 2 * Aconst / pow2(beta) / ME / pow2(CLIGHT) * part_sigma_shell;
+      const double sigma = 2 * Aconst / ME / pow2(beta * CLIGHT) * part_sigma_shell;
       assert_always(sigma >= 0);
       return sigma;
     }

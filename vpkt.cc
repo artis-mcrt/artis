@@ -250,7 +250,7 @@ auto rlc_emiss_vpkt(const Packet& pkt, const double t_current, const double t_ar
   while (!end_packet) {
     // distance to the next cell
     const auto [sdist, snext] = grid::boundary_distance(vpkt.dir, vpkt.pos, vpkt.prop_time, vpkt.where);
-    const double s_cont = sdist * pow3(t_current) / pow3(t_future);
+    const double s_cont = sdist * pow3(t_current / t_future);
 
     if (mgi < 0) {
       vpkt.next_trans = -1;

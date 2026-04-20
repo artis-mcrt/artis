@@ -841,8 +841,7 @@ auto get_inputcellvolume(const int mgi) -> double {
       const int n_r = mgi % ncoord_model[0];
       const double delta_rcyl = globals::vmax * t_model / ncoord_model[0];
       const double delta_z = 2. * globals::vmax * t_model / ncoord_model[1];
-      return pow3(globals::tmin / t_model) * delta_z * PI *
-             (pow2((n_r + 1) * delta_rcyl) - pow2(n_r * delta_rcyl));
+      return pow3(globals::tmin / t_model) * delta_z * PI * (pow2((n_r + 1) * delta_rcyl) - pow2(n_r * delta_rcyl));
     }
 
     case GridType::CARTESIAN3D: {
@@ -992,8 +991,8 @@ void assign_initial_temperatures() {
     const double decayedenergy_per_mass =
         decay::get_endecay_per_ejectamass_tmodel_to_time_withexpansion(nonemptymgi, tstart) + q;
 
-    auto T_initial = static_cast<float>(
-        std::pow(CLIGHT / 4 / STEBO * pow3(globals::tmin / tstart) * get_rho_tmin(mgi) * decayedenergy_per_mass, 1. / 4.));
+    auto T_initial = static_cast<float>(std::pow(
+        CLIGHT / 4 / STEBO * pow3(globals::tmin / tstart) * get_rho_tmin(mgi) * decayedenergy_per_mass, 1. / 4.));
 
     if (T_initial < MINTEMP) {
       T_initial = MINTEMP;
@@ -1921,8 +1920,7 @@ void read_ejecta_model() {
 
       vout_model[mgi] = vout_kmps * 1.e5;
 
-      const auto rho_tmin =
-          static_cast<float>(log_rho > -90 ? pow(10., log_rho) * pow3(t_model / globals::tmin) : 0.);
+      const auto rho_tmin = static_cast<float>(log_rho > -90 ? pow(10., log_rho) * pow3(t_model / globals::tmin) : 0.);
       set_rho_tmin(mgi, rho_tmin);
       const bool keepcell = (rho_tmin > 0);
       read_model_radioabundances(fmodel, ssline, mgi, keepcell, colnames, nucindexlist, one_line_per_cell);
