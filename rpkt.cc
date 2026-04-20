@@ -98,7 +98,7 @@ template <bool USECELLCACHE>
   return std::max(((B_lu * n_l) - (B_ul * n_u)) * HCLIGHTOVERFOURPI * t_current, 0.);
 }
 
-// find any line or continuum interaction occuring before frequency decreases to nu_cmf_abort at distance abort_dist
+// find any line or continuum interaction occurring before frequency decreases to nu_cmf_abort at distance abort_dist
 // returns tuple of (distance to event, next transition index for pkt.next_trans, bool for whether line event)
 // the next transition index is lineindex + 1 for a line event, may remain the current next_trans if no event occurs,
 // and is globals::nlines + 1 for a continuum event
