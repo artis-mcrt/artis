@@ -333,6 +333,31 @@ void set_elem_untrackedstable_abund_from_total(const int nonemptymgi, const int 
   set_elem_abundance(nonemptymgi, element, static_cast<float>(isofracsum + massfrac_untrackedstable));
 }
 
+// get the radial distance from the origin to the centre of the cell at time tmin
+auto get_cellradialposmid(const int cellindex) -> double {
+  const auto prop_gridtype = get_propgridtype();
+  if (prop_gridtype == GridType::SPHERICAL1D) {
+    // volume averaged mean radius is slightly complex for radial shells
+    const double r_inner = get_cellcoordmin(cellindex, 0);
+    const double r_outer = r_inner + propcell_width_tmin(cellindex, 0);
+    return 3. / 4 * (pow4(r_outer) - pow4(r_inner)) / (pow3(r_outer) - pow3(r_inner));
+  }
+
+  if (prop_gridtype == GridType::CYLINDRICAL2D) {
+    const double rcyl_mid = get_cellcoordmin(cellindex, 0) + (0.5 * propcell_width_tmin(cellindex, 0));
+    const double z_mid = get_cellcoordmin(cellindex, 1) + (0.5 * propcell_width_tmin(cellindex, 1));
+    return std::sqrt(pow2(rcyl_mid) + pow2(z_mid));
+  }
+
+  // cubic grid requires taking the length of the 3D position vector
+  Vec3d dcen{};
+  for (int axis = 0; axis < 3; axis++) {
+    dcen[axis] = get_cellcoordmin(cellindex, axis) + (0.5 * propcell_width_tmin(cellindex, axis));
+  }
+
+  return vec_len(dcen);
+}
+
 void allocate_nonemptycells_composition_cooling() {
   // Initialise composition dependent cell data for the given cell
   const ptrdiff_t nonempty_npts_model_ptrdifft = get_nonempty_npts_model();
@@ -1379,6 +1404,16 @@ template <BoundaryType boundarytype, size_t S1>
   return -1.;
 }
 
+// get element mean weight in grams
+auto get_element_meanweight(const std::ptrdiff_t nonemptymgi, const int element) -> float {
+  if constexpr (USE_CALCULATED_MEANATOMICWEIGHT) {
+    const auto mu = elem_meanweight_allcells[(nonemptymgi * get_nelements()) + element];
+    assert_always(mu > 0);
+    return mu;
+  }
+  return globals::elements[element].initstablemeannucmass;
+}
+
 }  // anonymous namespace
 
 // for a uniform grid get the the extent along the x,y,z coordinate (x_2 - x_1, etc.) at time tmin
@@ -1684,17 +1719,6 @@ auto get_otherstable_initabund(const std::ptrdiff_t nonemptymgi, const int eleme
   return initmassfracuntrackedstable_allcells[(nonemptymgi * get_nelements()) + element];
 }
 
-// get element mean weight in grams
-auto get_element_meanweight(const std::ptrdiff_t nonemptymgi, const int element) -> float {
-  if constexpr (USE_CALCULATED_MEANATOMICWEIGHT) {
-    const auto mu = elem_meanweight_allcells[(nonemptymgi * get_nelements()) + element];
-    if (mu > 0) {
-      return mu;
-    }
-  }
-  return globals::elements[element].initstablemeannucmass;
-}
-
 // set element weight in grams
 void set_element_meanweight(const std::ptrdiff_t nonemptymgi, const int element, const float meanweight) {
   assert_always(meanweight > 0.);
@@ -1712,31 +1736,6 @@ auto get_electronfrac(const int nonemptymgi) -> double {
 // q: energy in the model at tmin per gram to use with USE_MODEL_INITIAL_ENERGY option [erg/g]
 DEVICE_FUNC auto get_initenergyq(const int modelgridindex) -> double {
   return modelgrid_input[modelgridindex].initenergyq;
-}
-
-// get the radial distance from the origin to the centre of the cell at time tmin
-auto get_cellradialposmid(const int cellindex) -> double {
-  const auto prop_gridtype = get_propgridtype();
-  if (prop_gridtype == GridType::SPHERICAL1D) {
-    // volume averaged mean radius is slightly complex for radial shells
-    const double r_inner = get_cellcoordmin(cellindex, 0);
-    const double r_outer = r_inner + propcell_width_tmin(cellindex, 0);
-    return 3. / 4 * (pow4(r_outer) - pow4(r_inner)) / (pow3(r_outer) - pow3(r_inner));
-  }
-
-  if (prop_gridtype == GridType::CYLINDRICAL2D) {
-    const double rcyl_mid = get_cellcoordmin(cellindex, 0) + (0.5 * propcell_width_tmin(cellindex, 0));
-    const double z_mid = get_cellcoordmin(cellindex, 1) + (0.5 * propcell_width_tmin(cellindex, 1));
-    return std::sqrt(pow2(rcyl_mid) + pow2(z_mid));
-  }
-
-  // cubic grid requires taking the length of the 3D position vector
-  Vec3d dcen{};
-  for (int axis = 0; axis < 3; axis++) {
-    dcen[axis] = get_cellcoordmin(cellindex, axis) + (0.5 * propcell_width_tmin(cellindex, axis));
-  }
-
-  return vec_len(dcen);
 }
 
 [[nodiscard]] auto get_elements_uppermost_ion(const int nonemptymgi, const int element) -> int {
