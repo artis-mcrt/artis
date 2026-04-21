@@ -165,7 +165,7 @@ constexpr auto move_pkt_withtime(Packet& pkt, const double distance) -> double {
 
   // Angle resolved case: need to work out the correct angle bin
   const double costheta = dot(dir, syn_dir);
-  const int costhetabin = std::clamp(static_cast<int>((costheta + 1.0) * NPHIBINS / 2.0), 0, NCOSTHETABINS - 1);
+  const int costhetabin = std::clamp(static_cast<int>((costheta + 1.0) * NCOSTHETABINS / 2.0), 0, NCOSTHETABINS - 1);
 
   const auto vec1 = cross_prod(dir, syn_dir);
 
@@ -220,6 +220,10 @@ constexpr auto move_pkt_withtime(Packet& pkt, const double distance) -> double {
 [[gnu::pure]] [[nodiscard]] constexpr auto meridian(const Vec3d& n) -> std::tuple<Vec3d, Vec3d> {
   // for ref_1 use (from triple product rule)
   const double n_xylen = std::sqrt((n[0] * n[0]) + (n[1] * n[1]));
+  if (n_xylen == 0.) {
+    // if n is along z axis, we can just use x and y as the meridian frame axes
+    return {Vec3d{1., 0., 0.}, Vec3d{0., 1., 0.}};
+  }
   const auto ref1 = Vec3d{-1. * n[0] * n[2] / n_xylen, -1. * n[1] * n[2] / n_xylen, (1 - (n[2] * n[2])) / n_xylen};
 
   // for ref_2 use vector product of n_cmf with ref1
@@ -232,6 +236,9 @@ constexpr auto move_pkt_withtime(Packet& pkt, const double distance) -> double {
 
   const Vec3d beta{v[0] / CLIGHT, v[1] / CLIGHT, v[2] / CLIGHT};
   const double betasquared = dot(beta, beta);
+  if (betasquared == 0.) {
+    return elec_rf;
+  }
 
   const double gamma_rel = 1. / (sqrt(1 - betasquared));
   const double elec_rf_dot_beta = dot(elec_rf, beta);
