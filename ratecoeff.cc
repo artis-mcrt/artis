@@ -714,8 +714,11 @@ auto iongamma_is_zero(const int nonemptymgi, const int element, const int ion) -
   }
 
   if (!elem_has_nlte_levels(element)) {
-    return (globals::gammaestimator[(nonemptymgi * globals::nbfcontinua_ground) + get_groundcontindex(element, ion)] ==
-            0);
+    const auto groundcontindex = get_groundcontindex(element, ion);
+    if (groundcontindex < 0) {
+      return true;
+    }
+    return (globals::gammaestimator[(nonemptymgi * globals::nbfcontinua_ground) + groundcontindex] == 0);
   }
 
   const auto T_e = grid::get_Te(nonemptymgi);
