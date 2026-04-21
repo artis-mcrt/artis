@@ -281,15 +281,15 @@ void printout_decaypath(const int decaypathindex) {
 // follow decays at the ends of the current list of decaypaths
 // to get decaypaths from all descendants
 void extend_lastdecaypath(std::vector<DecayPath>& localdecaypaths) {
-  const auto inital_last_decaypath = localdecaypaths.back();
+  const auto initial_last_decaypath = localdecaypaths.back();
 
-  const int end_nucindex = inital_last_decaypath.nucindex.back();
+  const int end_nucindex = initial_last_decaypath.nucindex.back();
   if ((get_meanlife(end_nucindex) <= 0.)) {
     // daughter is stable: no extension possible
     return;
   }
-  const int prev_end_z = inital_last_decaypath.z.back();
-  const int prev_end_a = inital_last_decaypath.a.back();
+  const int prev_end_z = initial_last_decaypath.z.back();
+  const int prev_end_a = initial_last_decaypath.a.back();
   for (const auto decaytypeindex : all_decaytypes) {
     if (get_nuc_decaybranchprob(end_nucindex, decaytypeindex) == 0.) {
       continue;
@@ -297,14 +297,14 @@ void extend_lastdecaypath(std::vector<DecayPath>& localdecaypaths) {
 
     for (const auto& daughter : decay_daughters_z_a_prob(prev_end_z, prev_end_a, decaytypeindex)) {
       // check for nuclide in existing path, which would indicate a loop
-      for (const auto [z, a] : std::views::zip(inital_last_decaypath.z, inital_last_decaypath.a)) {
+      for (const auto [z, a] : std::views::zip(initial_last_decaypath.z, initial_last_decaypath.a)) {
         if (z == daughter.z && a == daughter.a) {
           printlnlog("\nERROR: Loop found in nuclear decay chain.");
           std::abort();
         }
       }
       const auto daughter_nucindex = get_nucindex(daughter.z, daughter.a);
-      auto newdecaypath = inital_last_decaypath;
+      auto newdecaypath = initial_last_decaypath;
       newdecaypath.z.push_back(daughter.z);
       newdecaypath.a.push_back(daughter.a);
       newdecaypath.nucindex.push_back(daughter_nucindex);
@@ -499,7 +499,7 @@ constexpr auto calculate_decaychain(const double firstinitabund, const std::span
   }
 
   const double lastabund = firstinitabund * lambdaproduct * sum;
-
+  assert_always(std::isfinite(lastabund));
   return lastabund;
 }
 
@@ -717,6 +717,7 @@ auto write_nuclides_list() {
   if (nucindex >= 0) {
     return nucindex;
   }
+  printlnlog("ERROR: nuclide Z={} A={} not found in nuclide list", z, a);
   assert_always(false);  // nuclide not found
   return -1;
 }
@@ -902,7 +903,7 @@ void init_nuclides(const std::span<const int> custom_zlist, const std::span<cons
     int z_parent = -1;
     int a_parent = -1;
     assert_always(std::stringstream(line) >> z_parent >> a_parent);
-    get_noncommentline(ffission_products, line);
+    assert_always(get_noncommentline(ffission_products, line));
     double num_neutrons = 0;
     int tablesize = 0;
     double q_fission_mev = 0.;
