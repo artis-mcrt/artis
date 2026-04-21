@@ -656,12 +656,6 @@ auto get_Jb_lu(const int nonemptymgi, const int jblueindex) -> double {
   return prev_Jb_lu_normed[nonemptymgi][jblueindex].value;
 }
 
-auto get_Jb_lu_contribcount(const int nonemptymgi, const int jblueindex) -> int {
-  assert_always(jblueindex >= 0);
-  assert_always(jblueindex < detailed_linecount);
-  return prev_Jb_lu_normed[nonemptymgi][jblueindex].contribcount;
-}
-
 void close_file() {
   if (radfieldfile.is_open()) {
     radfieldfile.close();
