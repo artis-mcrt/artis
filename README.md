@@ -21,10 +21,10 @@ An early version of the code is described in [Sim (2007)](https://ui.adsabs.harv
 - Polarisation and virtual packets: [Bulla et al. (2015)](https://ui.adsabs.harvard.edu/abs/2015MNRAS.450..967B/abstract)
 - Non-LTE level populations, multibin radiation field model, trajectory-based photoionisation estimators, and non-thermal ionisation/excitation: [Shingles et al. (2020)](https://ui.adsabs.harvard.edu/abs/2020MNRAS.492.2029S/abstract)
 - Alpha, beta, and fission decay, and time-dependent particle thermalisation for kilonovae: [Shingles et al. (2023)](https://ui.adsabs.harvard.edu/abs/2023ApJ...954L..41S/abstract)
-- Expansion opacities and paramaterised scattering/thermalisation ratio (instead of default line-by-line opacity and macroatom): Shingles et al. (in prep)
+- Expansion opacities and parameterised scattering/thermalisation ratio (instead of default line-by-line opacity and macroatom): Shingles et al. (in prep)
 
 ## Source code availability and license
-The ARTIS source code is available under a [BSD 3-Clause license](https://github.com/artis-mcrt/artis/blob/develop/LICENSE), which requires attribution and preservation of copyright notices on any substantial copies. If you find the ARTIS code useful in any way, we request that you cite us as described above and star the respository to help show impact in funding proposals.
+The ARTIS source code is available under a [BSD 3-Clause license](https://github.com/artis-mcrt/artis/blob/develop/LICENSE), which requires attribution and preservation of copyright notices on any substantial copies. If you find the ARTIS code useful in any way, we request that you cite us as described above and star the repository to help show impact in funding proposals.
 
 ## Setting up production runs on Linux
 We recommended retaining the exact source code and Git metadata within each simulation folder for future reference (i.e., don't just copy the executables).
@@ -61,7 +61,7 @@ Clone the source code repository and checkout the default branch:
 git clone https://github.com/artis-mcrt/artis.git
 cd artis
 ```
-On macOS, it's recommend that you install homebrew llvm to get clang-format, clang-tidy, clangd language server, and the clang C++ compiler. You can install this and other dependencies with:
+On macOS, it's recommended that you install homebrew llvm to get clang-format, clang-tidy, clangd language server, and the clang C++ compiler. You can install this and other dependencies with:
 ```sh
 brew install llvm open-mpi gsl prek compiledb
 ```
