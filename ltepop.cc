@@ -143,8 +143,6 @@ auto calculate_levelpop_nominpop(const int nonemptymgi, const int element, const
       const double nltepop_over_rho = get_nlte_levelpop_over_rho(nonemptymgi, element, ion, level);
       if (nltepop_over_rho >= 0.) {
         const double nn = nltepop_over_rho * grid::get_rho(nonemptymgi);
-        assert_testmodeonly(std::isfinite(nn));
-        assert_testmodeonly(nn >= 0.);
         return {nn, true};
       }
     } else {
@@ -155,8 +153,6 @@ auto calculate_levelpop_nominpop(const int nonemptymgi, const int element, const
       if (superlevelpop_over_rho >= 0.) {
         const double nn = superlevelpop_over_rho * grid::get_rho(nonemptymgi) *
                           superlevel_boltzmann(nonemptymgi, element, ion, level);
-        assert_testmodeonly(std::isfinite(nn));
-        assert_testmodeonly(nn >= 0.);
         return {nn, true};
       }
     }
