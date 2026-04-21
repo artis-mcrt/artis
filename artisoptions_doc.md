@@ -23,7 +23,7 @@ constexpr int ION_NLEVELS_EXCITED_NLTE(int element_z, int ionstage);
 // This is default on for classic (with Boltzmann factor level pops), and off for nebularnlte, where it affects the superlevel sublevel populations
 constexpr bool LTEPOP_EXCITATION_USE_TJ;
 
-// force Saha ionisation balance for a given element (contraint applied to NLTE population solver and classic phi function)
+// force Saha ionisation balance for a given element (constraint applied to NLTE population solver and classic phi function)
 constexpr bool FORCE_SAHA_ION_BALANCE(int element_z);
 
 // Only include a single level for the highest ion stage
@@ -42,6 +42,7 @@ constexpr int NLEVELS_REQUIRETRANSITIONS(int Z, int ionstage) {
 // if uniform pellet energies are not used, a uniform decay time distribution is used with scaled packet energies
 constexpr bool UNIFORM_PELLET_ENERGIES;
 
+// directly calculate collisional heating from ion level populations instead of using estimators
 constexpr bool DIRECT_COL_HEAT;
 
 // INITIAL PACKETS will seed the cells on the first timestep at tmin with K-packets
@@ -212,6 +213,9 @@ constexpr bool USE_CALCULATED_MEANATOMICWEIGHT;
 
 constexpr bool WRITE_EMISSIONABSORPTION_SPEC_AT_END;
 
+// track escaped gamma-ray packets and write gamma_light_curve.out
+constexpr bool KEEP_ESCAPED_GAMMAS;
+
 // thermalisation scheme for non-thermal particles (positrons, electrons, alphas). INSTANTFULLDEPOSITION
 // instantly deposits all particle energy. TIMEDEPENDENT uses time-dependent Monte Carlo transport.
 // BARNES, and WOLLAEGER use analytic thermalisation efficiency functions.
@@ -245,7 +249,7 @@ constexpr bool BFCOOLING_USELEVELPOPNOTIONPOP;
 // set true to calculate and use expansion opacities instead of line-by-line
 constexpr bool EXPANSIONOPACITIES_ON;
 
-// thermalisation probability (1 - P is probabiltiy of scattering). EXPANSIONOPACITIES_ON must be true for this to work.
+// thermalisation probability (1 - P is probability of scattering). EXPANSIONOPACITIES_ON must be true for this to work.
 // set this to < 0 to use the macroatom
 constexpr std::optional<float> RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY;
 
