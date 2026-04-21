@@ -22,7 +22,6 @@
 #include "nltepop.h"
 #include "nonthermal.h"
 #include "ratecoeff.h"
-#include "rpkt.h"
 #include "sn3d.h"
 
 namespace {
@@ -59,7 +58,8 @@ namespace {
   const auto T_e = grid::get_Te(nonemptymgi);
 
   // photoionisation plus collisional ionisation rate coefficient per ground level pop
-  const double Gamma_groundlevel = globals::gammaestimator[get_ionestimindex_nonemptymgi(nonemptymgi, element, ion)];
+  const double Gamma_groundlevel =
+      globals::gammaestimator[(nonemptymgi * globals::nbfcontinua_ground) + get_groundcontindex(element, ion)];
 
   // Convert Gamma to the photoionisation rate per ion pop
   const double Gamma_ion = Gamma_groundlevel * stat_weight(element, ion, 0) / partfunc_ion;
@@ -268,8 +268,9 @@ auto find_converged_nne(const int nonemptymgi, double nne_max, const bool force_
 
       if constexpr (USE_LUT_PHOTOION) {
         for (int ion = 0; ion <= grid::get_elements_uppermost_ion(nonemptymgi, element); ion++) {
-          printout("element %d, ion %d, gammaionest %g\n", element, ion,
-                   globals::gammaestimator[get_ionestimindex_nonemptymgi(nonemptymgi, element, ion)]);
+          printout(
+              "element %d, ion %d, gammaionest %g\n", element, ion,
+              globals::gammaestimator[(nonemptymgi * globals::nbfcontinua_ground) + get_groundcontindex(element, ion)]);
         }
       }
     }

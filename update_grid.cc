@@ -121,9 +121,9 @@ void write_to_estimators_file(std::ostream& estimators_file, const int nonemptym
       estimators_file << std::format("corrphotoionrenorm Z={:2d}", get_atomicnumber(element));
       for (int ion = 0; ion < nions - 1; ion++) {
         if (get_groundcontindex(element, ion) >= 0) {
-          estimators_file << std::format(
-              "  {}: {:9.3e}", get_ionstage(element, ion),
-              globals::corrphotoionrenorm[get_ionestimindex_nonemptymgi(nonemptymgi, element, ion)]);
+          estimators_file << std::format("  {}: {:9.3e}", get_ionstage(element, ion),
+                                         globals::corrphotoionrenorm[(nonemptymgi * globals::nbfcontinua_ground) +
+                                                                     get_groundcontindex(element, ion)]);
         }
       }
       estimators_file << '\n';
@@ -132,7 +132,7 @@ void write_to_estimators_file(std::ostream& estimators_file, const int nonemptym
         if (get_groundcontindex(element, ion) >= 0) {
           estimators_file << std::format(
               "  {}: {:9.3e}", get_ionstage(element, ion),
-              globals::gammaestimator[get_ionestimindex_nonemptymgi(nonemptymgi, element, ion)]);
+              globals::gammaestimator[(nonemptymgi * globals::nbfcontinua_ground) + get_groundcontindex(element, ion)]);
         }
       }
       estimators_file << '\n';
@@ -495,11 +495,11 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
 
   // grey_optical_depth = compton_optical_depth;
 
-  if ((grey_optical_depth >= globals::cell_is_optically_thick) && (nts < globals::num_grey_timesteps)) {
+  if ((grey_optical_depth >= globals::optical_depth_is_thick) && (nts < globals::num_grey_timesteps)) {
     printlnlog("timestep {} cell {} is treated in grey approximation (chi_grey {:g} [cm2/g], tau {:g} >= {:g})", nts,
-               mgi, grid::get_kappagrey(nonemptymgi), grey_optical_depth, globals::cell_is_optically_thick);
+               mgi, grid::get_kappagrey(nonemptymgi), grey_optical_depth, globals::optical_depth_is_thick);
     grid::thick_allcells[nonemptymgi] = 1;
-  } else if (VPKT_ON && (grey_optical_depth > vpkt::cell_is_optically_thick_vpkt)) {
+  } else if (VPKT_ON && (grey_optical_depth > vpkt::optical_depth_is_thick_vpkt)) {
     grid::thick_allcells[nonemptymgi] = 2;
   } else {
     grid::thick_allcells[nonemptymgi] = 0;

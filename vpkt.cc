@@ -723,16 +723,16 @@ void read_vpktparameterfile() {
                1e8 * CLIGHT / VSPEC_NUMIN_input[i]);
   }
 
-  // if dum7=1, vpkt are not created when cell optical depth is larger than cell_is_optically_thick_vpkt
+  // if dum7=1, vpkt are not created when cell optical depth is larger than optical_depth_is_thick_vpkt
   int override_thickcell_tau = 0;
-  assert_always(fscanf(input_file, "%d %lg \n", &override_thickcell_tau, &cell_is_optically_thick_vpkt) == 2);
+  assert_always(fscanf(input_file, "%d %lg \n", &override_thickcell_tau, &optical_depth_is_thick_vpkt) == 2);
 
   if (override_thickcell_tau == 1) {
-    printlnlog("vpkt.txt: cell_is_optically_thick_vpkt {:g}", cell_is_optically_thick_vpkt);
+    printlnlog("vpkt.txt: optical_depth_is_thick_vpkt {:g}", optical_depth_is_thick_vpkt);
   } else {
-    cell_is_optically_thick_vpkt = globals::cell_is_optically_thick;
-    printlnlog("vpkt.txt: cell_is_optically_thick_vpkt {:g} (inherited from cell_is_optically_thick)",
-               cell_is_optically_thick_vpkt);
+    optical_depth_is_thick_vpkt = globals::optical_depth_is_thick;
+    printlnlog("vpkt.txt: optical_depth_is_thick_vpkt {:g} (inherited from optical_depth_is_thick)",
+               optical_depth_is_thick_vpkt);
   }
 
   // Maximum optical depth. If a vpkt reaches dum7 is thrown away

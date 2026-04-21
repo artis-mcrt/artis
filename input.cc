@@ -114,7 +114,7 @@ constexpr auto inputlinecomments = std::array{
     "16: simulation_continued_from_saved: (0: start new simulation, 1: continue from gridsave and packets files)",
     "17: UNUSED rfcut: wavelength at which the radiation field switches from the nebular approximation to LTE.",
     "18: num_lte_timesteps",
-    "19: cell_is_optically_thick num_grey_timesteps",
+    "19: optical_depth_is_thick num_grey_timesteps",
     "20: UNUSED max_bf_continua: (>0: max bound-free continua per ion, <0 unlimited)",
     "21: nprocs_exspec: extract spectra for n MPI tasks. sn3d will set this on start of new sim.",
     "22: UNUSED do_emission_res: this is always true for exspec, sometimes true during sn3d",
@@ -1776,10 +1776,10 @@ void read_parameterfile() {
 
   // Set up initial grey approximation?
   assert_always(get_noncommentline(file, line));
-  std::istringstream{line} >> globals::cell_is_optically_thick >> globals::num_grey_timesteps;
+  std::istringstream{line} >> globals::optical_depth_is_thick >> globals::num_grey_timesteps;
   printlnlog(
       "input: cells with Thomson optical depth > {:g} are treated in grey approximation for the first {} timesteps",
-      globals::cell_is_optically_thick, globals::num_grey_timesteps);
+      globals::optical_depth_is_thick, globals::num_grey_timesteps);
 
   // Limit the number of bf-continua
   assert_always(get_noncommentline(file, line));

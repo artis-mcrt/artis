@@ -289,7 +289,7 @@ inline int total_nlte_levels{0};
 
 inline bool simulation_continued_from_saved{false};
 inline int num_lte_timesteps{-1};
-inline double cell_is_optically_thick{NAN};
+inline double optical_depth_is_thick{NAN};
 inline int num_grey_timesteps{-1};
 inline int n_titer{1};
 inline bool lte_iteration{false};

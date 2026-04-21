@@ -34,7 +34,6 @@ inline MPI_shared_array<float> elem_meanweight_allcells;
 // mass fractions of elements in each cell for the current timestep
 inline MPI_shared_array<float> elem_massfracs_allcells;
 
-inline MPI_shared_array<double> nltepops_allcells;
 inline MPI_shared_array<float> ion_groundlevelpops_allcells;
 inline MPI_shared_array<float> ion_partfuncts_allcells;
 

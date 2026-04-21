@@ -24,7 +24,6 @@
 #include "nonthermal.h"
 #include "radfield.h"
 #include "ratecoeff.h"
-#include "rpkt.h"
 #include "sn3d.h"
 
 namespace {
@@ -127,7 +126,7 @@ auto T_e_eqn_heating_minus_cooling(const double T_e, int nonemptymgi, const doub
           const int nions = get_nions(element);
           for (int ion = 0; ion < nions - 1; ion++) {
             if (get_groundcontindex(element, ion) >= 0) {
-              globals::gammaestimator[get_ionestimindex_nonemptymgi(nonemptymgi, element, ion)] =
+              globals::gammaestimator[(nonemptymgi * globals::nbfcontinua_ground) + get_groundcontindex(element, ion)] =
                   calculate_iongamma_per_gspop(nonemptymgi, element, ion);
             }
           }
