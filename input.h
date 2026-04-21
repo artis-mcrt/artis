@@ -16,7 +16,7 @@ void setup_timesteps();
     if (i == '#') {  // anything to the right of a # character doesn't count
       return true;
     }
-    if (i != ' ') {
+    if (i != ' ' && i != '\t' && i != '\r' && i != '\n') {
       return false;
     }
   }
