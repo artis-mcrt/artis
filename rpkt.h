@@ -9,12 +9,9 @@
 #include <span>
 
 #include "artisoptions.h"
-#include "atomic.h"
 #include "constants.h"
-#include "globals.h"
 #include "grid.h"
 #include "ltepop.h"
-#include "mpi_logging.h"
 #include "packet.h"
 
 class Phixslist {
@@ -145,15 +142,6 @@ auto calculate_chi_ffheat_nnionpart(int nonemptymgi) -> double;
   }
 
   return matchindex;
-}
-
-[[gnu::pure]] [[nodiscard]] inline auto get_ionestimindex_nonemptymgi(const int nonemptymgi, const int element,
-                                                                      const int ion) -> int {
-  assert_testmodeonly(ion >= 0);
-  assert_testmodeonly(ion < get_nions(element) - 1);
-  const int groundcontindex = get_groundcontindex(element, ion);
-  assert_always(groundcontindex >= 0);
-  return (nonemptymgi * globals::nbfcontinua_ground) + groundcontindex;
 }
 
 [[gnu::pure]] [[nodiscard]] inline auto keep_this_cont(int element, const int ion, const int level,

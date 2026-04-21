@@ -372,8 +372,8 @@ void mpi_communicate_grid_properties() {
       }
 
       if (globals::total_nlte_levels > 0) {
-        MPI_Bcast_safe(grid::nltepops_allcells.subspan(root_nstart_nonempty * globals::total_nlte_levels,
-                                                       root_ndo_nonempty * globals::total_nlte_levels),
+        MPI_Bcast_safe(nltepops_allcells.subspan(root_nstart_nonempty * globals::total_nlte_levels,
+                                                 root_ndo_nonempty * globals::total_nlte_levels),
                        root_node_id, globals::mpi_comm_internode);
       }
 

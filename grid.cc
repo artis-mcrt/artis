@@ -1522,7 +1522,9 @@ void set_elem_abundance(const ptrdiff_t nonemptymgi, const int element, const fl
          get_rho(nonemptymgi);
 }
 
-DEVICE_FUNC auto get_kappagrey(const int nonemptymgi) -> float { return kappagrey_allcells[nonemptymgi]; }
+[[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_kappagrey(const int nonemptymgi) -> float {
+  return kappagrey_allcells[nonemptymgi];
+}
 
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_Te(const int nonemptymgi) -> float {
   assert_testmodeonly(nonemptymgi >= 0);

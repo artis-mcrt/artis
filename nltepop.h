@@ -4,6 +4,9 @@
 #include <cstdio>
 
 #include "constants.h"
+#include "mpi_logging.h"
+
+inline MPI_shared_array<double> nltepops_allcells;
 
 void solve_nlte_pops_element(int element, int nonemptymgi, int timestep, int nlte_iter);
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto superlevel_boltzmann(int nonemptymgi, int element, int ion, int level)
