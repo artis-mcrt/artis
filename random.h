@@ -33,13 +33,13 @@ template <class ResultType>
   state = (state ^ (state >> 27)) * 0x94D049BB133111EB;
   return static_cast<ResultType>(state ^ (state >> 31));
   // some of the 16/32-bit PRNGs have bad correlation on the successive seeds, this usually
-  // can be alleviated by using a signle iteration of a "good" PRNG to pre-mix the seed
+  // can be alleviated by using a single iteration of a "good" PRNG to pre-mix the seed
 }
 
 template <class T>
 constexpr T _default_seed = (std::numeric_limits<T>::max() / 2) + 1;
-// an "overall decent" default seed - doesn't gave too many zeroes,
-// unlikely to accidentaly match with a user-defined seed
+// an "overall decent" default seed - doesn't have too many zeroes,
+// unlikely to accidentally match with a user-defined seed
 
 namespace generators {
 
@@ -60,7 +60,7 @@ namespace generators {
 //
 class SplitMix32 {
  public:
-  using result_type = std::uint64_t;
+  using result_type = std::uint32_t;
 
  private:
   result_type s{};
