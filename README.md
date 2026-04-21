@@ -12,29 +12,33 @@ When configured appropriately, ARTIS is capable of calculating polarisation, non
 
 The code is written in modern C++23 and scales to thousands of CPU cores across multiple nodes using MPI shared memory on each node. High performance is achieved using cache-friendly data layouts and cell-batched packet updates (similar to a ray coherence method).
 
-## Key Advantages and Comparison to Similar Codes
+## Key Strengths
 
-### ARTIS vs CMFGEN
-[CMFGEN](https://kookaburra.phyast.pitt.edu/hillier/web/CMFGEN.htm) (Hillier & Miller 1998) solves the radiative transfer equation in the co-moving frame for 1D stellar atmospheres and supernova ejecta, with detailed non-LTE level populations. Key differences:
-- **Geometry**: ARTIS supports 1D, 2D, and 3D ejecta geometries, while CMFGEN is restricted to 1D (spherical symmetry).
-- **Method**: ARTIS uses time-dependent Monte Carlo transport, which naturally handles multi-dimensional scattering and geometric effects. CMFGEN solves steady-state radiative transfer iteratively in the co-moving frame.
-- **Polarisation**: ARTIS can model linear polarisation arising from asymmetric ejecta geometry; CMFGEN does not include polarisation.
-- **Scope**: ARTIS targets the entire post-explosion evolution (photospheric through nebular phases) in multi-D, whereas CMFGEN is primarily used for detailed 1D atmosphere models at a single epoch.
+### Multi-dimensional geometry
+ARTIS simulates ejecta in 1D spherical, 2D cylindrical, and 3D Cartesian coordinates, enabling the study of asymmetric explosions and geometry-dependent observables such as polarisation that are inaccessible to 1D codes.
 
-### ARTIS vs SUMO
-[SUMO](https://ui.adsabs.harvard.edu/abs/2011A%26A...530A.107J/abstract) (Jerkstrand et al. 2011) is a non-LTE spectral synthesis code focused on the nebular phase of supernovae. Key differences:
-- **Geometry**: ARTIS supports 3D ejecta; SUMO operates in 1D.
-- **Phase coverage**: ARTIS seamlessly models both the photospheric and nebular phases within a single framework, whereas SUMO is specialised for the nebular phase.
-- **Transport**: ARTIS performs full Monte Carlo radiative transfer; SUMO uses a simplified escape-probability treatment for radiation transport.
-- **Non-thermal physics**: Both codes include non-thermal ionisation/excitation via the Spencer-Fano equation, but ARTIS integrates this with time-dependent 3D transport and a multibin radiation field model.
+### Physics fidelity
+- **Full-phase coverage**: a single simulation framework spans both the photospheric and nebular phases of a transient, eliminating the need to switch between specialised codes.
+- **Macroatom radiative transfer**: the Lucy macroatom scheme self-consistently propagates packets through absorption, fluorescence, and multi-level de-excitation, capturing line-to-line energy redistribution without simplification.
+- **Non-LTE level populations**: statistical-equilibrium non-LTE populations are solved alongside a multibin radiation field model and trajectory-based photoionisation estimators for accurate ionisation and excitation.
+- **Non-thermal physics**: a detailed Spencer-Fano solver tracks the thermalization of fast electrons from radioactive decays and yields ionisation and excitation rates as a function of electron energy.
+- **Nuclear decay network**: alpha, beta, and fission decays are handled natively, including time-dependent Monte Carlo particle thermalisation, making ARTIS well suited for kilonova and r-process transient modelling.
+- **Polarisation**: full Stokes-parameter polarised radiative transfer via both real and virtual packets enables direct comparison with spectropolarimetric observations of asymmetric ejecta.
 
-### ARTIS vs SEDONA
-[SEDONA](https://ui.adsabs.harvard.edu/abs/2006ApJ...651..366K/abstract) (Kasen et al. 2006) is a multi-dimensional time-dependent Monte Carlo radiative transfer code for supernovae and kilonovae. Key differences:
-- **Atomic physics**: ARTIS employs the Lucy macroatom scheme, which self-consistently handles fluorescence and multi-level de-excitation through a single statistical framework. SEDONA uses a two-level atom approximation or expansion opacities.
-- **Non-LTE**: ARTIS includes a full non-LTE population solver (statistical equilibrium) with a detailed Spencer-Fano non-thermal solver for ionisation and excitation by fast electrons. SEDONA typically operates in LTE or with simplified ionisation balance.
-- **Decay channels**: ARTIS handles alpha, beta, and fission decays with time-dependent particle thermalisation, making it well suited for kilonova modelling. SEDONA's primary decay treatment is gamma-ray and positron deposition.
-- **Polarisation**: ARTIS includes polarised radiative transfer (Stokes parameters) via real and virtual packets; SEDONA does not include polarisation.
-- **Performance**: ARTIS is written in modern C++23 with cache-friendly data layouts and cell-batched packet updates, and scales to thousands of CPU cores across multiple nodes using MPI shared memory.
+### High-performance computing
+- **Modern C++23**: the codebase uses current language standards, including `constexpr`, concepts, ranges, and structured bindings, resulting in expressive and maintainable code that benefits from the full optimisation pipeline of modern compilers.
+- **Distributed memory parallelism with MPI**: the simulation scales to thousands of CPU cores across multiple nodes. Intra-node communication uses MPI shared-memory windows to avoid redundant data copies between ranks on the same host.
+- **Cache-friendly data layout**: data structures are organised for spatial locality so that packet updates and cell lookups achieve high cache hit rates, reducing memory-bandwidth bottlenecks on modern CPU architectures.
+- **Cell-batched packet updates**: packets are processed in cell-ordered batches — analogous to ray-coherence methods used in production rendering engines — further improving instruction and data cache reuse.
+- **GPU portability**: a GPU compilation path (`make GPU=ON`) provides GPU-compatible code paths and uses a portable integrator, demonstrating awareness of heterogeneous compute architectures.
+
+### Software engineering practices
+- **Continuous integration**: every pull request is validated automatically via [GitHub Actions CI](https://github.com/artis-mcrt/artis/actions/workflows/ci.yml), catching regressions before they reach the main branch.
+- **Static analysis and linting**: the project is configured for clang-tidy, clang-format, and cpplint, enforcing consistent style and catching common C++ pitfalls at compile time rather than at runtime.
+- **Address and undefined-behaviour sanitizers**: the `TESTMODE=ON` build flag enables ASan and UBSan, providing runtime detection of memory errors and undefined behaviour during development.
+- **Reproducible builds**: the `REPRODUCIBLE=ON` flag disables floating-point reassociation and uses stable sorts, making results bit-reproducible across platforms for debugging and regression testing.
+- **Pre-commit hooks**: automated pre-commit checks (via `prek`) enforce formatting and linting on every commit, keeping the repository in a consistently clean state.
+- **Language server integration**: a `compile_commands.json` database is generated via `compiledb`, enabling full clangd language-server support (go-to-definition, refactoring, diagnostics) in any LSP-capable editor.
 
 ## Citing ARTIS
 We maintain a list of [papers that use ARTIS](https://ui.adsabs.harvard.edu/user/libraries/g5NyA9gKT5KdDFLY6SixWg) and [papers that use ARTIS with non-LTE enabled](https://ui.adsabs.harvard.edu/user/libraries/CX8fnPInSu2q1rAE4wWQrg).
