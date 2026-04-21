@@ -260,8 +260,13 @@ void write_temp_packetsfile(const int timestep, const int my_rank, const std::sp
   // write packets binary file (and retry if the write fails)
   const auto filename = std::format("packets_{:04d}_ts{:d}.tmp", my_rank, timestep);
 
+  int tries = 0;
   bool write_success = false;
   while (!write_success) {
+    if (tries > 10) {
+      printlnlog("ERROR: Failed to write {} after {} tries. Aborting.", filename, tries);
+      std::abort();
+    }
     printlog("timestep {}: writing {}...", timestep, filename);
     FILE* packets_file = fopen(filename.c_str(), "wb");
     if (packets_file == nullptr) {
@@ -279,9 +284,7 @@ void write_temp_packetsfile(const int timestep, const int my_rank, const std::sp
 
       fclose(packets_file);
     }
-
-    if (write_success) {
-      printlnlog("done");
-    }
+    tries++;
   }
+  printlnlog("done");
 }
