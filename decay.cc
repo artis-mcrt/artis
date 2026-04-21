@@ -792,8 +792,9 @@ void init_nuclides(const std::span<const int> custom_zlist, const std::span<cons
 
   // V48
   nuclides.push_back({.z = 23, .a = 48, .meanlife = 23.0442 * DAY});
-  nuclides.back().endecay_positron = 0.290 * MEV * 0.499;
-  nuclides.back().branchprobs[DECAYTYPE_BETAPLUS] = 1.;
+  nuclides.back().branchprobs[DECAYTYPE_BETAPLUS] = 0.499;
+  nuclides.back().branchprobs[DECAYTYPE_ELECTRONCAPTURE] = 1. - 0.499;
+  nuclides.back().endecay_positron = 0.290 * MEV;
 
   // Co57
   nuclides.push_back({.z = 27, .a = 57, .meanlife = 392.03 * DAY});
