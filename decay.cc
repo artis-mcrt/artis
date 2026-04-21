@@ -281,7 +281,7 @@ void printout_decaypath(const int decaypathindex) {
 // follow decays at the ends of the current list of decaypaths
 // to get decaypaths from all descendants
 void extend_lastdecaypath(std::vector<DecayPath>& localdecaypaths) {
-  const auto& inital_last_decaypath = localdecaypaths.back();
+  const auto inital_last_decaypath = localdecaypaths.back();
 
   const int end_nucindex = inital_last_decaypath.nucindex.back();
   if ((get_meanlife(end_nucindex) <= 0.)) {
