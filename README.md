@@ -6,39 +6,30 @@
 
 ARTIS is a 3D radiative transfer code that uses Monte Carlo methods with indivisible energy packets ([Lucy 2002](https://ui.adsabs.harvard.edu/abs/2002A%26A...384..725L/abstract)) for ejecta in homologous (ballistic) expansion.
 
-In the default mode, ARTIS uses individual line-by-line opacities (Sobolev) with detailed atomic emission that includes fluorescence (Lucy macroatom method).
-
-When configured appropriately, ARTIS is capable of calculating polarisation, non-LTE level populations (in statistical equilibrium), non-thermal ionisation, and alpha- and beta-decays, and time-dependent particle thermalisation. Supported coordinate systems are 1D spherical (arbitrary spacing), 2D cylindrical (regular), and 3D Cartesian (regular).
-
-The code is written in modern C++23 and scales to thousands of CPU cores across multiple nodes using MPI shared memory on each node. High performance is achieved using cache-friendly data layouts and cell-batched packet updates (similar to a ray coherence method).
-
-## Key Strengths
+## Key Features
 
 ### Multi-dimensional geometry
 ARTIS simulates ejecta in 1D spherical, 2D cylindrical, and 3D Cartesian coordinates, enabling the study of asymmetric explosions and geometry-dependent observables such as polarisation that are inaccessible to 1D codes.
 
 ### Physics fidelity
-- **Full-phase coverage**: a single simulation framework spans both the photospheric and nebular phases of a transient, eliminating the need to switch between specialised codes.
+- **Line-by-line opacities**: In the default mode, ARTIS uses individual line-by-line opacities (Sobolev).
 - **Macroatom radiative transfer**: the Lucy macroatom scheme self-consistently propagates packets through absorption, fluorescence, and multi-level de-excitation, capturing line-to-line energy redistribution without simplification.
 - **Non-LTE level populations**: statistical-equilibrium non-LTE populations are solved alongside a multibin radiation field model and trajectory-based photoionisation estimators for accurate ionisation and excitation.
-- **Non-thermal physics**: a detailed Spencer-Fano solver tracks the thermalization of fast electrons from radioactive decays and yields ionisation and excitation rates as a function of electron energy.
+- **Non-thermal physics**: a detailed Spencer-Fano solver tracks the thermalization of fast electrons from radioactive decays and their contributions to ionisation and excitation rates.
 - **Nuclear decay network**: alpha, beta, and fission decays are handled natively, including time-dependent Monte Carlo particle thermalisation, making ARTIS well suited for kilonova and r-process transient modelling.
 - **Polarisation**: full Stokes-parameter polarised radiative transfer via both real and virtual packets enables direct comparison with spectropolarimetric observations of asymmetric ejecta.
+- **Full-phase coverage**: a single simulation framework spans both the photospheric and nebular phases of a transient, eliminating the need to switch between specialised codes.
 
 ### High-performance computing
 - **Modern C++23**: the codebase uses current language standards, including `constexpr`, concepts, ranges, and structured bindings, resulting in expressive and maintainable code that benefits from the full optimisation pipeline of modern compilers.
 - **Distributed memory parallelism with MPI**: the simulation scales to thousands of CPU cores across multiple nodes. Intra-node communication uses MPI shared-memory windows to avoid redundant data copies between ranks on the same host.
 - **Cache-friendly data layout**: data structures are organised for spatial locality so that packet updates and cell lookups achieve high cache hit rates, reducing memory-bandwidth bottlenecks on modern CPU architectures.
 - **Cell-batched packet updates**: packets are processed in cell-ordered batches — analogous to ray-coherence methods used in production rendering engines — further improving instruction and data cache reuse.
-- **GPU portability**: a GPU compilation path (`make GPU=ON`) provides GPU-compatible code paths and uses a portable integrator, demonstrating awareness of heterogeneous compute architectures.
 
 ### Software engineering practices
 - **Continuous integration**: every pull request is validated automatically via [GitHub Actions CI](https://github.com/artis-mcrt/artis/actions/workflows/ci.yml), catching regressions before they reach the main branch.
-- **Static analysis and linting**: the project is configured for clang-tidy, clang-format, and cpplint, enforcing consistent style and catching common C++ pitfalls at compile time rather than at runtime.
+- **Static analysis and linting**: the project is configured for clang-tidy, clang-format, and cppcheck, enforcing consistent style and catching common C++ pitfalls at compile time rather than at runtime.
 - **Address and undefined-behaviour sanitizers**: the `TESTMODE=ON` build flag enables ASan and UBSan, providing runtime detection of memory errors and undefined behaviour during development.
-- **Reproducible builds**: the `REPRODUCIBLE=ON` flag disables floating-point reassociation and uses stable sorts, making results bit-reproducible across platforms for debugging and regression testing.
-- **Pre-commit hooks**: automated pre-commit checks (via `prek`) enforce formatting and linting on every commit, keeping the repository in a consistently clean state.
-- **Language server integration**: a `compile_commands.json` database is generated via `compiledb`, enabling full clangd language-server support (go-to-definition, refactoring, diagnostics) in any LSP-capable editor.
 
 ## Citing ARTIS
 We maintain a list of [papers that use ARTIS](https://ui.adsabs.harvard.edu/user/libraries/g5NyA9gKT5KdDFLY6SixWg) and [papers that use ARTIS with non-LTE enabled](https://ui.adsabs.harvard.edu/user/libraries/CX8fnPInSu2q1rAE4wWQrg).
