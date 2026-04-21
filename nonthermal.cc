@@ -514,6 +514,8 @@ void read_auger_data() {
       // use the epsilon correction factor as in equation 7 of Kaastra & Mewe (1993)
       auto en_auger_ev = static_cast<float>(en_auger_ev_total_nocorrection - (epsilon_e3 / 1000. * ionpot_ev));
 
+      assert_always(shellnum > 0);
+      assert_always(shellnum <= std::ssize(xrayn));
       const int n = xrayn[shellnum - 1];
       const int l = xrayl[shellnum - 1];
       const int g = xrayg[shellnum - 1];
@@ -595,8 +597,9 @@ auto get_sum_q_over_binding_energy(const int element, const int ion) -> double {
     double enbinding = binding_energies.at(shellindex);
     if (enbinding <= 0) {
       // if we don't have the shell's binding energy, use the previous one
+      assert_always(shellindex > 0);
       enbinding = binding_energies.at(shellindex - 1);
-      assert_always(enbinding > 0);
+      assert_always(enbinding > 0.);
     }
     total += electronsinshell / std::max(get_ionpot(element, ion), enbinding);
   }
