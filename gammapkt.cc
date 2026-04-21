@@ -145,7 +145,7 @@ void read_decaydata() {
       assert_always(z != 23 || a != 48);  // V-48 must have a gamma spectrum
       assert_always(z != 24 || a != 48);  // Cr-48 must have a gamma spectrum
       assert_always(z != 28 || a != 57);  // Ni-57 must have a gamma spectrum if present in list of nuclides
-      assert_always(z != 28 || a != 57);  // Co-57 must have a gamma spectrum if present in list of nuclides
+      assert_always(z != 27 || a != 57);  // Co-57 must have a gamma spectrum if present in list of nuclides
       set_trivial_gamma_spectrum(nucindex);
     }
   }
@@ -682,7 +682,6 @@ void transport_gamma(Packet& pkt, const double t2) {
   // Assign optical depth to next physical event. And start counter of
   // optical depth for this path.
   const double tau_next = -std::log(static_cast<double>(rng_uniform_pos()));
-  const double tau_current = 0.;
 
   // Start by finding the distance to the crossing of the grid cell
   // boundaries. sdist is the boundary distance and snext is the
@@ -706,7 +705,7 @@ void transport_gamma(Packet& pkt, const double t2) {
 
   // So distance before physical event is...
 
-  const double edist = chi_tot > 0. ? (tau_next - tau_current) / chi_tot : std::numeric_limits<double>::max();
+  const double edist = chi_tot > 0. ? tau_next / chi_tot : std::numeric_limits<double>::max();
 
   assert_always(edist >= 0);
 

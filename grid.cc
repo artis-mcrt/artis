@@ -890,7 +890,6 @@ void read_grid_restart_data(const int timestep) {
   assert_always(nprocs_in == globals::nprocs);
 
   for (int nts = 0; nts < globals::ntimesteps; nts++) {
-    int pellet_decays = 0.;
     assert_always(
         fscanf(gridsave_file, "%la %la %la %la %la %la %la %la %la %la %la %la %la %la %la %la %la %la %la %la %la %d ",
                &globals::timesteps[nts].gamma_dep, &globals::timesteps[nts].gamma_dep_discrete,
@@ -903,8 +902,7 @@ void read_grid_restart_data(const int timestep) {
                &globals::timesteps[nts].spfission_dep_discrete, &globals::timesteps[nts].eps_spfission_ana_power,
                &globals::timesteps[nts].qdot_betaminus, &globals::timesteps[nts].qdot_alpha,
                &globals::timesteps[nts].qdot_spfission, &globals::timesteps[nts].qdot_total,
-               &globals::timesteps[nts].gamma_emission, &pellet_decays) == 22);
-    globals::timesteps[nts].pellet_decays = pellet_decays;
+               &globals::timesteps[nts].gamma_emission, &globals::timesteps[nts].pellet_decays) == 22);
   }
 
   int timestep_in = 0;
@@ -1758,10 +1756,12 @@ void set_elements_uppermost_ion(const int nonemptymgi, const int element, const 
   }
   double kappa = 0.;
   switch (RPKT_GREY_TYPE) {
-    case RpktGreyType::FEGROUP_APPROX:
+    case RpktGreyType::FEGROUP_APPROX: {
       // kappagrey is a simple function of the initial Fe-group mass fraction
-      kappa = ((0.9 * get_ffegrp(mgi)) + 0.1) * globals::GREY_OP / ((0.9 * mfegroup / mtot_input) + 0.1);
+      constexpr double GREY_OP = 0.1;
+      kappa = ((0.9 * get_ffegrp(mgi)) + 0.1) * GREY_OP / ((0.9 * mfegroup / mtot_input) + 0.1);
       break;
+    }
 
     case RpktGreyType::TANAKA2020_ELECTRONFRAC: {
       // electron-fraction-dependent opacities from Tanaka et al. (2020) table 1.
