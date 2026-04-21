@@ -242,7 +242,6 @@ auto get_possible_event_expansion_opacity(const int nonemptymgi, const Packet& p
     const auto binedgedist = get_linedistance(prop_time, nu_cmf, next_bin_edge_nu, dnu_on_dl);
 
     const double chi_cont = chi_rpkt_cont.total() * doppler;
-    // const auto chi_cont = 0.;
     double chi_bb_expansionopac = 0.;
     if (binindex >= 0) {
       const auto kappa = expansionopacities[(nonemptymgi * expopac_nbins) + binindex];
