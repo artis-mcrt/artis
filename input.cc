@@ -638,8 +638,8 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion,
 
 auto calculate_nlevels_groundterm(const int element, const int ion) -> int {
   const int nlevels = get_nlevels(element, ion);
-  if (nlevels == 1) {
-    return 1;
+  if (nlevels <= 2) {
+    return nlevels;
   }
 
   int nlevels_groundterm = 1;
