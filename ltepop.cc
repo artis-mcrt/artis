@@ -58,8 +58,10 @@ namespace {
   const auto T_e = grid::get_Te(nonemptymgi);
 
   // photoionisation plus collisional ionisation rate coefficient per ground level pop
+  const auto groundcontindex = get_groundcontindex(element, ion);
   const double Gamma_groundlevel =
-      globals::gammaestimator[(nonemptymgi * globals::nbfcontinua_ground) + get_groundcontindex(element, ion)];
+      groundcontindex >= 0 ? globals::gammaestimator[(nonemptymgi * globals::nbfcontinua_ground) + groundcontindex]
+                           : 0.;
 
   // Convert Gamma to the photoionisation rate per ion pop
   const double Gamma_ion = Gamma_groundlevel * stat_weight(element, ion, 0) / partfunc_ion;
@@ -245,27 +247,7 @@ auto find_converged_nne(const int nonemptymgi, double nne_max, const bool force_
   constexpr double nne_min = 0.;
   const auto f_nne_min = f_nne(nne_min);
   const auto f_nne_max = f_nne(nne_max);
-  if (f_nne_min * f_nne_max > 0) {
-    const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
-    printout("n, nne_min, nne_max, T_R, T_e, W, rho %d, %g, %g, %g, %g, %g, %g\n", modelgridindex, nne_min, nne_max,
-             grid::get_TR(nonemptymgi), grid::get_Te(nonemptymgi), grid::get_W(nonemptymgi),
-             grid::get_rho(nonemptymgi));
-    printout("nne(nne_min) %g\n", f_nne_min);
-    printout("nne(nne_max) %g\n", f_nne_max);
-
-    for (int element = 0; element < get_nelements(); element++) {
-      printout("modelgridindex %d, element %d, uppermost_ion is %d\n", modelgridindex, element,
-               grid::get_elements_uppermost_ion(nonemptymgi, element));
-
-      if constexpr (USE_LUT_PHOTOION) {
-        for (int ion = 0; ion <= grid::get_elements_uppermost_ion(nonemptymgi, element); ion++) {
-          printout(
-              "element %d, ion %d, gammaionest %g\n", element, ion,
-              globals::gammaestimator[(nonemptymgi * globals::nbfcontinua_ground) + get_groundcontindex(element, ion)]);
-        }
-      }
-    }
-  }
+  assert_always(f_nne_min * f_nne_max <= 0.);  // there should be a root in the interval
 
   constexpr double fractional_accuracy = 1e-3;
   constexpr auto maxit = 50U;
