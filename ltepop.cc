@@ -9,6 +9,7 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdlib>
+#include <tuple>
 #include <vector>
 
 #include "artisoptions.h"
@@ -127,13 +128,14 @@ auto nne_solution_f(const double nne_assumed, const int nonemptymgi, const bool 
 }
 
 // return population and whether the population came from the nlte solver
-auto calculate_levelpop_nominpop(const int nonemptymgi, const int element, const int ion, const int level) -> double {
+auto calculate_levelpop_nominpop(const int nonemptymgi, const int element, const int ion, const int level)
+    -> std::tuple<double, bool> {
   assert_testmodeonly(element < get_nelements());
   assert_testmodeonly(ion < get_nions(element));
   assert_testmodeonly(level < get_nlevels(element, ion));
 
   if (level == 0) {
-    return get_groundlevelpop(nonemptymgi, element, ion);
+    return {get_groundlevelpop(nonemptymgi, element, ion), false};
   }
 
   if (elem_has_nlte_levels(element)) {
@@ -141,9 +143,12 @@ auto calculate_levelpop_nominpop(const int nonemptymgi, const int element, const
       const double nltepop_over_rho = get_nlte_levelpop_over_rho(nonemptymgi, element, ion, level);
       if (nltepop_over_rho < 0.) {
         // Case for when no NLTE level information is available yet
-        return calculate_levelpop_boltzmann(nonemptymgi, element, ion, level);
+        return {calculate_levelpop_boltzmann(nonemptymgi, element, ion, level), false};
       }
-      return nltepop_over_rho * grid::get_rho(nonemptymgi);
+      const double nn = nltepop_over_rho * grid::get_rho(nonemptymgi);
+      assert_testmodeonly(std::isfinite(nn));
+      assert_testmodeonly(nn >= 0.);
+      return {nn, true};
     }
 
     // level is in the superlevel
@@ -152,15 +157,17 @@ auto calculate_levelpop_nominpop(const int nonemptymgi, const int element, const
     const double superlevelpop_over_rho = get_nlte_superlevelpop_over_rho_over_slpartfunc(nonemptymgi, element, ion);
     if (superlevelpop_over_rho < 0.) {
       // Case for when no NLTE level information is available yet
-      return calculate_levelpop_boltzmann(nonemptymgi, element, ion, level);
+      return {calculate_levelpop_boltzmann(nonemptymgi, element, ion, level), false};
     }
 
     const double nn =
         superlevelpop_over_rho * grid::get_rho(nonemptymgi) * superlevel_boltzmann(nonemptymgi, element, ion, level);
-    return nn;
+    assert_testmodeonly(std::isfinite(nn));
+    assert_testmodeonly(nn >= 0.);
+    return {nn, true};
   }
 
-  return calculate_levelpop_boltzmann(nonemptymgi, element, ion, level);
+  return {calculate_levelpop_boltzmann(nonemptymgi, element, ion, level), false};
 }
 
 // Calculate the partition function for ion=ion of element=element in a cell modelgridindex
@@ -187,7 +194,7 @@ auto calculate_partfunct(const int element, const int ion, const int nonemptymgi
   const int nlevels = get_nlevels(element, ion);
   const double groundpop = get_groundlevelpop(nonemptymgi, element, ion);
   for (int level = 1; level < nlevels; level++) {
-    const auto nn = calculate_levelpop_nominpop(nonemptymgi, element, ion, level);
+    const auto nn = std::get<0>(calculate_levelpop_nominpop(nonemptymgi, element, ion, level));
     U += nn / groundpop;
   }
   U *= stat_weight(element, ion, 0);
@@ -386,7 +393,15 @@ auto find_converged_nne(const int nonemptymgi, double nne_max, const bool force_
 
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto calculate_levelpop(const int nonemptymgi, const int element, const int ion,
                                                                 const int level) -> double {
-  return std::max(calculate_levelpop_nominpop(nonemptymgi, element, ion, level), MINPOP);
+  const auto [nn, skipminpop] = calculate_levelpop_nominpop(nonemptymgi, element, ion, level);
+  if (!skipminpop && nn < MINPOP) {
+    if (grid::get_elem_abundance(nonemptymgi, element) > 0) {
+      return MINPOP;
+    }
+    return 0.;
+  }
+
+  return nn;
 }
 
 // The partition functions depend only on T_R and W. This means they don't
