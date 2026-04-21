@@ -12,6 +12,30 @@ When configured appropriately, ARTIS is capable of calculating polarisation, non
 
 The code is written in modern C++23 and scales to thousands of CPU cores across multiple nodes using MPI shared memory on each node. High performance is achieved using cache-friendly data layouts and cell-batched packet updates (similar to a ray coherence method).
 
+## Key Advantages and Comparison to Similar Codes
+
+### ARTIS vs CMFGEN
+[CMFGEN](https://kookaburra.phyast.pitt.edu/hillier/web/CMFGEN.htm) (Hillier & Miller 1998) solves the radiative transfer equation in the co-moving frame for 1D stellar atmospheres and supernova ejecta, with detailed non-LTE level populations. Key differences:
+- **Geometry**: ARTIS supports 1D, 2D, and 3D ejecta geometries, while CMFGEN is restricted to 1D (spherical symmetry).
+- **Method**: ARTIS uses time-dependent Monte Carlo transport, which naturally handles multi-dimensional scattering and geometric effects. CMFGEN solves steady-state radiative transfer iteratively in the co-moving frame.
+- **Polarisation**: ARTIS can model linear polarisation arising from asymmetric ejecta geometry; CMFGEN does not include polarisation.
+- **Scope**: ARTIS targets the entire post-explosion evolution (photospheric through nebular phases) in multi-D, whereas CMFGEN is primarily used for detailed 1D atmosphere models at a single epoch.
+
+### ARTIS vs SUMO
+[SUMO](https://ui.adsabs.harvard.edu/abs/2011A%26A...530A.107J/abstract) (Jerkstrand et al. 2011) is a non-LTE spectral synthesis code focused on the nebular phase of supernovae. Key differences:
+- **Geometry**: ARTIS supports 3D ejecta; SUMO operates in 1D.
+- **Phase coverage**: ARTIS seamlessly models both the photospheric and nebular phases within a single framework, whereas SUMO is specialised for the nebular phase.
+- **Transport**: ARTIS performs full Monte Carlo radiative transfer; SUMO uses a simplified escape-probability treatment for radiation transport.
+- **Non-thermal physics**: Both codes include non-thermal ionisation/excitation via the Spencer-Fano equation, but ARTIS integrates this with time-dependent 3D transport and a multibin radiation field model.
+
+### ARTIS vs SEDONA
+[SEDONA](https://ui.adsabs.harvard.edu/abs/2006ApJ...651..366K/abstract) (Kasen et al. 2006) is a multi-dimensional time-dependent Monte Carlo radiative transfer code for supernovae and kilonovae. Key differences:
+- **Atomic physics**: ARTIS employs the Lucy macroatom scheme, which self-consistently handles fluorescence and multi-level de-excitation through a single statistical framework. SEDONA uses a two-level atom approximation or expansion opacities.
+- **Non-LTE**: ARTIS includes a full non-LTE population solver (statistical equilibrium) with a detailed Spencer-Fano non-thermal solver for ionisation and excitation by fast electrons. SEDONA typically operates in LTE or with simplified ionisation balance.
+- **Decay channels**: ARTIS handles alpha, beta, and fission decays with time-dependent particle thermalisation, making it well suited for kilonova modelling. SEDONA's primary decay treatment is gamma-ray and positron deposition.
+- **Polarisation**: ARTIS includes polarised radiative transfer (Stokes parameters) via real and virtual packets; SEDONA does not include polarisation.
+- **Performance**: ARTIS is written in modern C++23 with cache-friendly data layouts and cell-batched packet updates, and scales to thousands of CPU cores across multiple nodes using MPI shared memory.
+
 ## Citing ARTIS
 We maintain a list of [papers that use ARTIS](https://ui.adsabs.harvard.edu/user/libraries/g5NyA9gKT5KdDFLY6SixWg) and [papers that use ARTIS with non-LTE enabled](https://ui.adsabs.harvard.edu/user/libraries/CX8fnPInSu2q1rAE4wWQrg).
 
