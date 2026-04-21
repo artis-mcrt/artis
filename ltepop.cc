@@ -141,30 +141,25 @@ auto calculate_levelpop_nominpop(const int nonemptymgi, const int element, const
   if (elem_has_nlte_levels(element)) {
     if (is_nlte(element, ion, level)) {
       const double nltepop_over_rho = get_nlte_levelpop_over_rho(nonemptymgi, element, ion, level);
-      if (nltepop_over_rho < 0.) {
-        // Case for when no NLTE level information is available yet
-        return {calculate_levelpop_boltzmann(nonemptymgi, element, ion, level), false};
+      if (nltepop_over_rho >= 0.) {
+        const double nn = nltepop_over_rho * grid::get_rho(nonemptymgi);
+        assert_testmodeonly(std::isfinite(nn));
+        assert_testmodeonly(nn >= 0.);
+        return {nn, true};
       }
-      const double nn = nltepop_over_rho * grid::get_rho(nonemptymgi);
-      assert_testmodeonly(std::isfinite(nn));
-      assert_testmodeonly(nn >= 0.);
-      return {nn, true};
+    } else {
+      // level is in the superlevel
+      assert_testmodeonly(level_isinsuperlevel(element, ion, level) || level_isautoionising(element, ion, level));
+
+      const double superlevelpop_over_rho = get_nlte_superlevelpop_over_rho_over_slpartfunc(nonemptymgi, element, ion);
+      if (superlevelpop_over_rho >= 0.) {
+        const double nn = superlevelpop_over_rho * grid::get_rho(nonemptymgi) *
+                          superlevel_boltzmann(nonemptymgi, element, ion, level);
+        assert_testmodeonly(std::isfinite(nn));
+        assert_testmodeonly(nn >= 0.);
+        return {nn, true};
+      }
     }
-
-    // level is in the superlevel
-    assert_testmodeonly(level_isinsuperlevel(element, ion, level) || level_isautoionising(element, ion, level));
-
-    const double superlevelpop_over_rho = get_nlte_superlevelpop_over_rho_over_slpartfunc(nonemptymgi, element, ion);
-    if (superlevelpop_over_rho < 0.) {
-      // Case for when no NLTE level information is available yet
-      return {calculate_levelpop_boltzmann(nonemptymgi, element, ion, level), false};
-    }
-
-    const double nn =
-        superlevelpop_over_rho * grid::get_rho(nonemptymgi) * superlevel_boltzmann(nonemptymgi, element, ion, level);
-    assert_testmodeonly(std::isfinite(nn));
-    assert_testmodeonly(nn >= 0.);
-    return {nn, true};
   }
 
   return {calculate_levelpop_boltzmann(nonemptymgi, element, ion, level), false};
