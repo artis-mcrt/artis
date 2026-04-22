@@ -19,7 +19,7 @@ export OMPI_CXX=g++
 cd $SLURM_SUBMIT_DIR
 
 cd artis
-make
+make sn3d
 cd ..
 
 echo "CPU type: $(c++ -march=native -Q --help=target | grep -- '-march=  ' | cut -f3)"

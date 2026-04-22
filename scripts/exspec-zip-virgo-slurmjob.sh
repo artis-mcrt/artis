@@ -10,9 +10,17 @@ eval `spack load --first --sh gsl%gcc target=x86_64`
 eval `spack load --first --sh gcc`
 eval `spack load --first --sh zstd`
 
-echo "CPU type: $(c++ -march=native -Q --help=target | grep -- '-march=  ' | cut -f3)"
+export LD_LIBRARY_PATH=$(gsl-config --prefix)/lib/:$LD_LIBRARY_PATH
+export MAKEFLAGS="--check-symlink-times --jobs=$(nproc --all)"
+export OMPI_CXX=g++
 
 cd $SLURM_SUBMIT_DIR
+
+cd artis
+make exspec
+cd ..
+
+echo "CPU type: $(c++ -march=native -Q --help=target | grep -- '-march=  ' | cut -f3)"
 
 if [[ -f emission.out || -f emission.out.zst ]] && [[ -f exspec.txt ]]; then
   echo 'Not running exspec because emission.out[.zst] and exspec.txt were found'
