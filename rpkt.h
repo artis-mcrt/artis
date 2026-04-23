@@ -114,7 +114,7 @@ auto calculate_chi_ffheat_nnionpart(int nonemptymgi) -> double;
   }
   // if nu_cmf is smaller than the lowest frequency in the linelist,
   // no line interaction is possible: return negative value as a flag
-  if (nu_cmf < linelistnu[nlines - 1]) {
+  if (nu_cmf < linelistnu.back()) {
     return -1;
   }
 
@@ -136,10 +136,6 @@ auto calculate_chi_ffheat_nnionpart(int nonemptymgi) -> double;
   // lower_bound matches the first element where the comparison function is false
   const int matchindex =
       static_cast<int>(std::ranges::lower_bound(linelistnu, nu_cmf, std::ranges::greater{}) - linelistnu.begin());
-
-  if (matchindex >= nlines) [[unlikely]] {
-    return -1;
-  }
 
   return matchindex;
 }
