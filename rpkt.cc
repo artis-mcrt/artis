@@ -364,9 +364,9 @@ void electron_scatter_rpkt(Packet& pkt) {
 
   const double cos_tsc = M;  // M is cos(tsc) by construction
   const double sin_tsc = std::sqrt(1. - (M * M));
-  const double sin_polar = std::sqrt(1. - pow2(old_dir_cmf[2]));
 
   if (fabs(old_dir_cmf[2]) < 0.99999) {
+    const double sin_polar = std::sqrt(1. - pow2(old_dir_cmf[2]));
     const double common_factor = sin_tsc / sin_polar;
     const double cos_phisc = cos(phisc);
     const double sin_phisc = sin(phisc);
