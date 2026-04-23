@@ -211,8 +211,8 @@ void scale_level_phixs(const int element, const int ion, const int level, const 
     }
 
     for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
-      for (int iter = 0; iter < TABLESIZE; iter++) {
-        const auto bflutindex = get_bflutindex(iter, element, ion, level, phixstargetindex);
+      for (int tempindex = 0; tempindex < TABLESIZE; tempindex++) {
+        const auto bflutindex = get_bflutindex(tempindex, element, ion, level, phixstargetindex);
         spontrecombcoeffs[bflutindex] = spontrecombcoeffs[bflutindex] * factor;
 
         if constexpr (USE_LUT_PHOTOION) {
@@ -368,8 +368,8 @@ void precalculate_ion_alpha_sp() {
   auto temp_ion_alpha_sp = MPI_shared_array<float>(get_includedions() * TABLESIZE, 0.);
   if (globals::rank_in_node == 0) {
     const auto nincludedions = get_includedions();
-    for (int iter = 0; iter < TABLESIZE; iter++) {
-      const auto T_e = static_cast<float>(temperature_grid[iter]);
+    for (int tempindex = 0; tempindex < TABLESIZE; tempindex++) {
+      const auto T_e = static_cast<float>(temperature_grid[tempindex]);
       for (int element = 0; element < get_nelements(); element++) {
         const int nions = get_nions(element) - 1;
         for (int ion = 0; ion < nions; ion++) {
@@ -384,7 +384,7 @@ void precalculate_ion_alpha_sp() {
               zeta += zeta_level;
             }
           }
-          temp_ion_alpha_sp[(iter * nincludedions) + uniqueionindex] = static_cast<float>(zeta);
+          temp_ion_alpha_sp[(tempindex * nincludedions) + uniqueionindex] = static_cast<float>(zeta);
         }
       }
     }
