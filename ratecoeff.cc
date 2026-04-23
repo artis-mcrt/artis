@@ -549,6 +549,9 @@ DEVICE_FUNC auto select_continuum_nu(int element, const int lowerion, const int 
     -> double {
   const auto upperindex =
       std::ranges::distance(temperature_grid.begin(), std::ranges::upper_bound(temperature_grid, T_e));
+  if (upperindex == 0) {
+    return ion_alpha_sp[uniqueionindex];
+  }
   const auto nincludedions = get_includedions();
   if (upperindex < TABLESIZE) {
     const double T_lower = temperature_grid[upperindex - 1];
