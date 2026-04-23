@@ -360,19 +360,23 @@ void electron_scatter_rpkt(Packet& pkt) {
     phisc = 2 * PI * rng_uniform();
   }
 
-  const double tsc = acos(M);
   Vec3d new_dir_cmf{};
 
+  const double cos_tsc = M;  // M is cos(tsc) by construction
+  const double sin_tsc = std::sqrt(1. - (M * M));
+  const double sin_polar = std::sqrt(1. - pow2(old_dir_cmf[2]));
+
   if (fabs(old_dir_cmf[2]) < 0.99999) {
-    new_dir_cmf[0] = (sin(tsc) / sqrt(1. - pow2(old_dir_cmf[2])) *
-                      ((old_dir_cmf[1] * sin(phisc)) - (old_dir_cmf[0] * old_dir_cmf[2] * cos(phisc)))) +
-                     (old_dir_cmf[0] * cos(tsc));
-    new_dir_cmf[1] = (sin(tsc) / sqrt(1 - pow2(old_dir_cmf[2])) *
-                      ((-old_dir_cmf[0] * sin(phisc)) - (old_dir_cmf[1] * old_dir_cmf[2] * cos(phisc)))) +
-                     (old_dir_cmf[1] * cos(tsc));
-    new_dir_cmf[2] = (sin(tsc) * cos(phisc) * sqrt(1 - pow2(old_dir_cmf[2]))) + (old_dir_cmf[2] * cos(tsc));
+    const double common_factor = sin_tsc / sin_polar;
+    const double cos_phisc = cos(phisc);
+    const double sin_phisc = sin(phisc);
+    new_dir_cmf = {(common_factor * ((old_dir_cmf[1] * sin_phisc) - (old_dir_cmf[0] * old_dir_cmf[2] * cos_phisc))) +
+                       (old_dir_cmf[0] * cos_tsc),
+                   (common_factor * ((-old_dir_cmf[0] * sin_phisc) - (old_dir_cmf[1] * old_dir_cmf[2] * cos_phisc))) +
+                       (old_dir_cmf[1] * cos_tsc),
+                   (sin_tsc * cos_phisc * sin_polar) + (old_dir_cmf[2] * cos_tsc)};
   } else {
-    new_dir_cmf = {sin(tsc) * cos(phisc), sin(tsc) * sin(phisc), (old_dir_cmf[2] > 0) ? cos(tsc) : -cos(tsc)};
+    new_dir_cmf = {sin_tsc * cos(phisc), sin_tsc * sin(phisc), (old_dir_cmf[2] > 0) ? cos_tsc : -cos_tsc};
   }
 
   if constexpr (!POL_ON) {
