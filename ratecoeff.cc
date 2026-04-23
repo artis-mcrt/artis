@@ -461,6 +461,9 @@ template <typename T>
                                             const int phixstargetindex, const auto temperature) {
   const auto upperindex =
       std::ranges::distance(temperature_grid.begin(), std::ranges::upper_bound(temperature_grid, temperature));
+  if (upperindex == 0) {
+    return table[get_bflutindex(0, uniquelevelindex, phixstargetindex)];
+  }
   if (upperindex < TABLESIZE) {
     const double T_lower = temperature_grid[upperindex - 1];
     const double T_upper = temperature_grid[upperindex];
