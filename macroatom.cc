@@ -39,7 +39,7 @@ std::fstream macroatom_file;
 [[nodiscard]] auto get_sum_internal_down_same_exceptlast(const int uniquelevelindex) -> std::span<const double> {
   const auto ndowntrans = get_ndowntrans(uniquelevelindex);
   return std::span{globals::cellcache[cellcacheslotid].allmacroatomictransitions}.subspan(
-      globals::alllevels.matransblock_start[uniquelevelindex] + get_ndowntrans(uniquelevelindex), ndowntrans - 1);
+      globals::alllevels.matransblock_start[uniquelevelindex] + ndowntrans, ndowntrans - 1);
 }
 
 [[nodiscard]] auto get_sum_internal_up_same_exceptlast(const int uniquelevelindex) -> std::span<const double> {
