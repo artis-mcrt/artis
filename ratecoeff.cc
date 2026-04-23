@@ -1,5 +1,6 @@
 #include "ratecoeff.h"
 
+#include <array>
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
@@ -28,6 +29,13 @@ namespace {
 constexpr double RATECOEFF_INTEGRAL_ACCURACY = 1e-3;
 
 const double T_step_log = (std::log(MAXTEMP) - std::log(MINTEMP)) / (TABLESIZE - 1.);
+const auto temperature_grid = []() {
+  std::array<double, TABLESIZE> grid{};
+  for (int i = 0; i < TABLESIZE; i++) {
+    grid[i] = MINTEMP * std::exp(i * T_step_log);
+  }
+  return grid;
+}();
 
 MPI_shared_array<const float> ion_alpha_sp;  // size is nincludedions * TABLESIZE
                                              //
@@ -130,7 +138,7 @@ void precalculate_rate_coefficient_integrals() {
           for (int temperatureindex = 0; temperatureindex < TABLESIZE; temperatureindex++) {
             const int bflutindex = get_bflutindex(temperatureindex, element, ion, level, phixstargetindex);
             double error{NAN};
-            const auto temperature = static_cast<float>(MINTEMP * exp(temperatureindex * T_step_log));
+            const auto temperature = static_cast<float>(temperature_grid[temperatureindex]);
 
             const double modified_sahafact = SAHACONST * statw_lower / statw_upper * std::pow(temperature, -1.5);
             assert_always(modified_sahafact >= 0.);
@@ -361,7 +369,7 @@ void precalculate_ion_alpha_sp() {
   if (globals::rank_in_node == 0) {
     const auto nincludedions = get_includedions();
     for (int iter = 0; iter < TABLESIZE; iter++) {
-      const auto T_e = static_cast<float>(MINTEMP * exp(iter * T_step_log));
+      const auto T_e = static_cast<float>(temperature_grid[iter]);
       for (int element = 0; element < get_nelements(); element++) {
         const int nions = get_nions(element) - 1;
         for (int ion = 0; ion < nions; ion++) {
@@ -448,16 +456,15 @@ auto calculate_corrphotoioncoeff_integral(const int element, const int ion, cons
 
 template <typename T>
 [[nodiscard]] DEVICE_FUNC auto lerp_or_last(const std::span<T> table, const int uniquelevelindex,
-                                            const int phixstargetindex, auto temperature) -> double {
-  const int lowerindex = floor(log(temperature / MINTEMP) / T_step_log);
+                                            const int phixstargetindex, const auto temperature) {
+  const int lowerindex = std::floor(std::log(temperature / MINTEMP) / T_step_log);
   assert_always(lowerindex >= 0);
   if (lowerindex < (TABLESIZE - 1)) {
-    const int upperindex = lowerindex + 1;
-    const double T_lower = MINTEMP * exp(lowerindex * T_step_log);
-    const double T_upper = MINTEMP * exp(upperindex * T_step_log);
+    const double T_lower = temperature_grid[lowerindex];
+    const double T_upper = temperature_grid[lowerindex + 1];
 
-    const double f_upper = table[get_bflutindex(upperindex, uniquelevelindex, phixstargetindex)];
     const double f_lower = table[get_bflutindex(lowerindex, uniquelevelindex, phixstargetindex)];
+    const double f_upper = table[get_bflutindex(lowerindex + 1, uniquelevelindex, phixstargetindex)];
     return (f_lower + ((f_upper - f_lower) / (T_upper - T_lower) * (temperature - T_lower)));
   }
   return table[get_bflutindex(TABLESIZE - 1, uniquelevelindex, phixstargetindex)];
@@ -539,12 +546,11 @@ DEVICE_FUNC auto select_continuum_nu(int element, const int lowerion, const int 
   assert_testmodeonly(lowerindex >= 0);
   const auto nincludedions = get_includedions();
   if (lowerindex < (TABLESIZE - 1)) {
-    const int upperindex = lowerindex + 1;
-    const double T_lower = MINTEMP * std::exp(lowerindex * T_step_log);
-    const double T_upper = MINTEMP * std::exp(upperindex * T_step_log);
+    const double T_lower = temperature_grid[lowerindex];
+    const double T_upper = temperature_grid[lowerindex + 1];
 
-    const double f_upper = ion_alpha_sp[(upperindex * nincludedions) + uniqueionindex];
     const double f_lower = ion_alpha_sp[(lowerindex * nincludedions) + uniqueionindex];
+    const double f_upper = ion_alpha_sp[((lowerindex + 1) * nincludedions) + uniqueionindex];
 
     return f_lower + ((f_upper - f_lower) / (T_upper - T_lower) * (T_e - T_lower));
   }
