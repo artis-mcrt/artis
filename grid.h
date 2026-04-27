@@ -1,7 +1,6 @@
 #ifndef GRIDINIT_H
 #define GRIDINIT_H
 
-#include <cmath>
 #include <cstddef>
 #include <tuple>
 
@@ -36,7 +35,6 @@ inline MPI_shared_array<float> elem_meanweight_allcells;
 // mass fractions of elements in each cell for the current timestep
 inline MPI_shared_array<float> elem_massfracs_allcells;
 
-inline MPI_shared_array<double> nltepops_allcells;
 inline MPI_shared_array<float> ion_groundlevelpops_allcells;
 inline MPI_shared_array<float> ion_partfuncts_allcells;
 
@@ -45,7 +43,6 @@ void set_elements_uppermost_ion(int nonemptymgi, int element, int uppermost_ion)
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto propcell_width_tmin(int cellindex, int axis) -> double;
 [[gnu::pure]] [[nodiscard]] auto get_modelcell_assocvolume_tmin(int modelgridindex) -> double;
 [[gnu::pure]] [[nodiscard]] auto get_propcell_volume_tmin(int cellindex) -> double;
-[[gnu::pure]] [[nodiscard]] auto get_cellradialposmid(int cellindex) -> double;
 [[gnu::pure]] [[nodiscard]] auto get_rho_tmin(int modelgridindex) -> float;
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_rho(std::ptrdiff_t nonemptymgi) -> float;
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_nne(int nonemptymgi) -> float;
@@ -73,7 +70,6 @@ void set_W(int nonemptymgi, float W);
 void init_grid();
 [[gnu::pure]] [[nodiscard]] auto get_modelinitnucmassfrac(int modelgridindex, int nucindex) -> float;
 [[gnu::pure]] [[nodiscard]] auto get_otherstable_initabund(std::ptrdiff_t nonemptymgi, int element) -> float;
-[[gnu::pure]] [[nodiscard]] auto get_element_meanweight(std::ptrdiff_t nonemptymgi, int element) -> float;
 [[gnu::pure]] [[nodiscard]] auto get_elem_abundance(std::ptrdiff_t nonemptymgi, int element) -> float;
 void set_element_meanweight(std::ptrdiff_t nonemptymgi, int element, float meanweight);
 [[gnu::pure]] [[nodiscard]] auto get_electronfrac(int nonemptymgi) -> double;
@@ -125,7 +121,7 @@ inline auto get_ejecta_kinetic_energy() {
     const int mgi = get_mgi_of_nonemptymgi(nonemptymgi);
     double const M_cell = get_rho_tmin(mgi) * grid::get_modelcell_assocvolume_tmin(mgi);
     const double radial_pos = get_modelcell_mean_radial_pos(mgi, 1.);
-    E_kin += 0.5 * M_cell * std::pow(radial_pos / globals::tmin, 2);
+    E_kin += 0.5 * M_cell * pow2(radial_pos / globals::tmin);
   }
 
   return E_kin;

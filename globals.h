@@ -11,24 +11,25 @@
 
 #include "mpi_logging.h"
 
+// ma_action enumerates the types of macroatom transitions that can occur from a given level
 enum ma_action {
-  // Radiative deexcitation rate from this level.
+  // Rate for radiative deexcitation
   MA_ACTION_RADDEEXC = 0,
-  // Collisional deexcitation rate from this level.
+  // Rate for thermal collisional deexcitation
   MA_ACTION_COLDEEXC = 1,
-  // Radiative recombination from this level.
+  // Rate for radiative recombination
   MA_ACTION_RADRECOMB = 2,
-  // Collisional recombination rate from this level.
+  // Rate for collisional recombination
   MA_ACTION_COLRECOMB = 3,
-  // Rate for internal downward transitions to same ionisation stage.
+  // Rate for internal downward transitions to same ionisation stage
   MA_ACTION_INTERNALDOWNSAME = 4,
-  // Rate for internal upward transitions to same ionisation stage.
+  // Rate for internal downward transitions to lower ionisation stage
   MA_ACTION_INTERNALDOWNLOWER = 5,
-  // Rate for internal downward transitions to lower ionisation stage.
+  // Rate for internal upward transitions to same ionisation stage
   MA_ACTION_INTERNALUPSAME = 6,
-  // Rate for internal upward transitions to higher ionisation stage.
+  // Rate for internal upward transitions to higher ionisation stage
   MA_ACTION_INTERNALUPHIGHER = 7,
-  // Rate for internal upward transitions to higher ionisation stage due to non-thermal collisions.
+  // Rate for internal upward transitions to any higher ionisation stage due to non-thermal collisions
   MA_ACTION_INTERNALUPHIGHERNT = 8,
   MA_ACTION_COUNT = 9,
 };
@@ -113,8 +114,6 @@ inline std::vector<double> colheatingestimator_save{};
 #endif
 
 inline int nprocs_exspec{1};
-
-constexpr double GREY_OP = 0.1;
 
 inline double max_path_step;
 
@@ -258,6 +257,21 @@ struct CellCache {
   std::vector<double> allphixstargets_corrphotoioncoeff;
   std::vector<int> cooling_contrib_locks;
   std::vector<int> allmacroatomictransitions_locks;
+
+  [[nodiscard]] auto get_mem_usage() const {
+    auto mem_usage = (cooling_contrib.size() * sizeof(cooling_contrib[0]));
+    mem_usage += (alllevels_pops.size() * sizeof(alllevels_pops[0]));
+    mem_usage += (alllevels_maprocessrates.size() * sizeof(alllevels_maprocessrates[0]));
+    mem_usage += (allmacroatomictransitions.size() * sizeof(allmacroatomictransitions[0]));
+    mem_usage += (allcont_modified_departureratios.size() * sizeof(allcont_modified_departureratios[0]));
+    mem_usage += (allcont_nnlevel.size() * sizeof(allcont_nnlevel[0]));
+    mem_usage += (allcont_keep.size() * sizeof(allcont_keep[0]));
+    mem_usage += sizeof(double);  // for chi_ff_nnionpart
+    mem_usage += (allphixstargets_corrphotoioncoeff.size() * sizeof(allphixstargets_corrphotoioncoeff[0]));
+    mem_usage += (cooling_contrib_locks.size() * sizeof(cooling_contrib_locks[0]));
+    mem_usage += (allmacroatomictransitions_locks.size() * sizeof(allmacroatomictransitions_locks[0]));
+    return mem_usage;
+  }
 };
 inline std::vector<CellCache> cellcache{};
 
@@ -275,7 +289,7 @@ inline int total_nlte_levels{0};
 
 inline bool simulation_continued_from_saved{false};
 inline int num_lte_timesteps{-1};
-inline double cell_is_optically_thick{NAN};
+inline double optical_depth_is_thick{NAN};
 inline int num_grey_timesteps{-1};
 inline int n_titer{1};
 inline bool lte_iteration{false};

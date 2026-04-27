@@ -115,25 +115,9 @@ constexpr auto get_ndim(const GridType gridtype) -> int {
   assert_always(axis >= 0 && axis < get_ndim(gridtype));
   switch (gridtype) {
     case GridType::CARTESIAN3D:
-      switch (axis) {
-        case 0:
-          return 'x';
-        case 1:
-          return 'y';
-        case 2:
-          return 'z';
-        default:
-          return '?';
-      }
+      return std::array<char, 3>{'x', 'y', 'z'}.at(axis);
     case GridType::CYLINDRICAL2D:
-      switch (axis) {
-        case 0:
-          return 'r';
-        case 1:
-          return 'z';
-        default:
-          return '?';
-      }
+      return std::array<char, 2>{'r', 'z'}.at(axis);
     case GridType::SPHERICAL1D:
       return 'r';
     default:
@@ -191,14 +175,14 @@ auto get_cell_r_inner(const int cellindex, const GridType prop_gridtype) -> doub
   if (prop_gridtype == GridType::CYLINDRICAL2D) {
     const auto rcyl_inner = get_cellcoordmin(cellindex, 0);
     const auto z_inner = std::min(std::abs(get_cellcoordmin(cellindex, 1)), std::abs(get_cellcoordmax(cellindex, 1)));
-    return std::sqrt(std::pow(rcyl_inner, 2) + std::pow(z_inner, 2));
+    return std::sqrt(pow2(rcyl_inner) + pow2(z_inner));
   }
 
   if (prop_gridtype == GridType::CARTESIAN3D) {
     const auto x_inner = std::min(std::abs(get_cellcoordmin(cellindex, 0)), std::abs(get_cellcoordmax(cellindex, 0)));
     const auto y_inner = std::min(std::abs(get_cellcoordmin(cellindex, 1)), std::abs(get_cellcoordmax(cellindex, 1)));
     const auto z_inner = std::min(std::abs(get_cellcoordmin(cellindex, 2)), std::abs(get_cellcoordmax(cellindex, 2)));
-    return std::sqrt(std::pow(x_inner, 2) + std::pow(y_inner, 2) + std::pow(z_inner, 2));
+    return std::sqrt(pow2(x_inner) + pow2(y_inner) + pow2(z_inner));
   }
 
   assert_always(false);
@@ -347,6 +331,31 @@ void set_elem_untrackedstable_abund_from_total(const int nonemptymgi, const int 
 
   // (isofracsum + massfracstable) might not exactly match elemabundance if we had to boost it to reach isofracsum
   set_elem_abundance(nonemptymgi, element, static_cast<float>(isofracsum + massfrac_untrackedstable));
+}
+
+// get the radial distance from the origin to the centre of the cell at time tmin
+auto get_cellradialposmid(const int cellindex) -> double {
+  const auto prop_gridtype = get_propgridtype();
+  if (prop_gridtype == GridType::SPHERICAL1D) {
+    // volume averaged mean radius is slightly complex for radial shells
+    const double r_inner = get_cellcoordmin(cellindex, 0);
+    const double r_outer = r_inner + propcell_width_tmin(cellindex, 0);
+    return 3. / 4 * (pow4(r_outer) - pow4(r_inner)) / (pow3(r_outer) - pow3(r_inner));
+  }
+
+  if (prop_gridtype == GridType::CYLINDRICAL2D) {
+    const double rcyl_mid = get_cellcoordmin(cellindex, 0) + (0.5 * propcell_width_tmin(cellindex, 0));
+    const double z_mid = get_cellcoordmin(cellindex, 1) + (0.5 * propcell_width_tmin(cellindex, 1));
+    return std::sqrt(pow2(rcyl_mid) + pow2(z_mid));
+  }
+
+  // cubic grid requires taking the length of the 3D position vector
+  Vec3d dcen{};
+  for (int axis = 0; axis < 3; axis++) {
+    dcen[axis] = get_cellcoordmin(cellindex, axis) + (0.5 * propcell_width_tmin(cellindex, axis));
+  }
+
+  return vec_len(dcen);
 }
 
 void allocate_nonemptycells_composition_cooling() {
@@ -563,7 +572,7 @@ void map_2dmodelto3dgrid() {
                                get_cellcoordmin(cellindex, 1) + (0.5 * propcell_width_tmin(cellindex, 1)),
                                get_cellcoordmin(cellindex, 2) + (0.5 * propcell_width_tmin(cellindex, 2))};
 
-    const double rcylindrical = std::sqrt(std::pow(pos_mid[0], 2) + std::pow(pos_mid[1], 2));
+    const double rcylindrical = std::sqrt(pow2(pos_mid[0]) + pow2(pos_mid[1]));
 
     // 2D grid is uniform so rcyl and z indices can be calculated with no lookup
     const int n_rcyl = static_cast<int>(rcylindrical / globals::tmin / globals::vmax * ncoord_model[0]);
@@ -854,20 +863,19 @@ auto get_inputcellvolume(const int mgi) -> double {
   switch (get_modelgridtype()) {
     case GridType::SPHERICAL1D: {
       const double v_inner = (mgi == 0) ? 0. : vout_model[mgi - 1];
-      return (pow(vout_model[mgi], 3) - pow(v_inner, 3)) * 4 * PI * pow(globals::tmin, 3) / 3.;
+      return (pow3(vout_model[mgi]) - pow3(v_inner)) * 4 * PI * pow3(globals::tmin) / 3.;
     }
 
     case GridType::CYLINDRICAL2D: {
       const int n_r = mgi % ncoord_model[0];
       const double delta_rcyl = globals::vmax * t_model / ncoord_model[0];
       const double delta_z = 2. * globals::vmax * t_model / ncoord_model[1];
-      return pow(globals::tmin / t_model, 3) * delta_z * PI *
-             (pow((n_r + 1) * delta_rcyl, 2) - pow(n_r * delta_rcyl, 2));
+      return pow3(globals::tmin / t_model) * delta_z * PI * (pow2((n_r + 1) * delta_rcyl) - pow2(n_r * delta_rcyl));
     }
 
     case GridType::CARTESIAN3D: {
       // Assumes cells are cubes here - all same volume.
-      return pow((2 * globals::vmax * globals::tmin), 3) / (ncoordgrid[0] * ncoordgrid[1] * ncoordgrid[2]);
+      return pow3(2 * globals::vmax * globals::tmin) / (ncoordgrid[0] * ncoordgrid[1] * ncoordgrid[2]);
     }
   }
 
@@ -911,7 +919,6 @@ void read_grid_restart_data(const int timestep) {
   assert_always(nprocs_in == globals::nprocs);
 
   for (int nts = 0; nts < globals::ntimesteps; nts++) {
-    int pellet_decays = 0.;
     assert_always(
         fscanf(gridsave_file, "%la %la %la %la %la %la %la %la %la %la %la %la %la %la %la %la %la %la %la %la %la %d ",
                &globals::timesteps[nts].gamma_dep, &globals::timesteps[nts].gamma_dep_discrete,
@@ -924,8 +931,7 @@ void read_grid_restart_data(const int timestep) {
                &globals::timesteps[nts].spfission_dep_discrete, &globals::timesteps[nts].eps_spfission_ana_power,
                &globals::timesteps[nts].qdot_betaminus, &globals::timesteps[nts].qdot_alpha,
                &globals::timesteps[nts].qdot_spfission, &globals::timesteps[nts].qdot_total,
-               &globals::timesteps[nts].gamma_emission, &pellet_decays) == 22);
-    globals::timesteps[nts].pellet_decays = pellet_decays;
+               &globals::timesteps[nts].gamma_emission, &globals::timesteps[nts].pellet_decays) == 22);
   }
 
   int timestep_in = 0;
@@ -1012,8 +1018,8 @@ void assign_initial_temperatures() {
     const double decayedenergy_per_mass =
         decay::get_endecay_per_ejectamass_tmodel_to_time_withexpansion(nonemptymgi, tstart) + q;
 
-    auto T_initial = static_cast<float>(
-        pow(CLIGHT / 4 / STEBO * pow(globals::tmin / tstart, 3) * get_rho_tmin(mgi) * decayedenergy_per_mass, 1. / 4.));
+    auto T_initial = static_cast<float>(std::pow(
+        CLIGHT / 4 / STEBO * pow3(globals::tmin / tstart) * get_rho_tmin(mgi) * decayedenergy_per_mass, 1. / 4.));
 
     if (T_initial < MINTEMP) {
       T_initial = MINTEMP;
@@ -1125,7 +1131,7 @@ void setup_nstart_ndo() {
 void setup_grid_cartesian_3d() {
   // vmax is per coordinate, but the simulation volume corners will
   // have a higher expansion velocity than the sides
-  const double vmax_corner = sqrt(3 * pow(globals::vmax, 2));
+  const double vmax_corner = sqrt(3 * pow2(globals::vmax));
   printlnlog("corner vmax {:g} [cm/s] ({:.2f}c)", vmax_corner, vmax_corner / CLIGHT);
   if (!FORCE_SPHERICAL_ESCAPE_SURFACE) {
     assert_always(vmax_corner < CLIGHT);
@@ -1186,7 +1192,7 @@ void setup_grid_spherical_1d() {
 }
 
 void setup_grid_cylindrical_2d() {
-  const double vmax_corner = sqrt(2 * pow(globals::vmax, 2));
+  const double vmax_corner = sqrt(2 * pow2(globals::vmax));
   printlnlog("corner vmax {:g} [cm/s] ({:.2f}c)", vmax_corner, vmax_corner / CLIGHT);
   assert_always(vmax_corner < CLIGHT);
 
@@ -1402,6 +1408,16 @@ template <BoundaryType boundarytype, size_t S1>
   return -1.;
 }
 
+// get element mean weight in grams
+auto get_element_meanweight(const std::ptrdiff_t nonemptymgi, const int element) -> float {
+  if constexpr (USE_CALCULATED_MEANATOMICWEIGHT) {
+    const auto mu = elem_meanweight_allcells[(nonemptymgi * get_nelements()) + element];
+    assert_always(mu > 0);
+    return mu;
+  }
+  return globals::elements[element].initstablemeannucmass;
+}
+
 }  // anonymous namespace
 
 // for a uniform grid get the the extent along the x,y,z coordinate (x_2 - x_1, etc.) at time tmin
@@ -1435,11 +1451,11 @@ template <BoundaryType boundarytype, size_t S1>
 
     case GridType::CYLINDRICAL2D: {
       return propcell_width_tmin(modelgridindex, 1) * PI *
-             (pow(get_cellcoordmax(modelgridindex, 0), 2) - pow(get_cellcoordmin(modelgridindex, 0), 2));
+             (pow2(get_cellcoordmax(modelgridindex, 0)) - pow2(get_cellcoordmin(modelgridindex, 0)));
     }
 
     case GridType::SPHERICAL1D: {
-      return 4. / 3. * PI * (pow(get_cellcoordmax(modelgridindex, 0), 3) - pow(get_cellcoordmin(modelgridindex, 0), 3));
+      return 4. / 3. * PI * (pow3(get_cellcoordmax(modelgridindex, 0)) - pow3(get_cellcoordmin(modelgridindex, 0)));
     }
   }
   assert_always(false);
@@ -1466,7 +1482,7 @@ template <BoundaryType boundarytype, size_t S1>
       const double r_inner = get_cellcoordmin(cellindex, 0);
       const double r_outer = get_cellcoordmax(cellindex, 0);
       // use equal volume probability distribution to select radius
-      const double radius = pow((zrand * pow(r_inner, 3)) + ((1. - zrand) * pow(r_outer, 3)), 1 / 3.);
+      const double radius = std::cbrt((zrand * pow3(r_inner)) + ((1. - zrand) * pow3(r_outer)));
       // assert_always(radius >= r_inner);
       // assert_always(radius <= r_outer);
 
@@ -1478,7 +1494,7 @@ template <BoundaryType boundarytype, size_t S1>
       const double rcyl_inner = get_cellcoordmin(cellindex, 0);
       const double rcyl_outer = get_cellcoordmax(cellindex, 0);
       // use equal area probability distribution to select radius
-      const double rcyl_rand = std::sqrt((zrand * std::pow(rcyl_inner, 2)) + ((1. - zrand) * std::pow(rcyl_outer, 2)));
+      const double rcyl_rand = std::sqrt((zrand * pow2(rcyl_inner)) + ((1. - zrand) * pow2(rcyl_outer)));
       const double theta_rand = rng_uniform() * 2 * PI;
       return {std::cos(theta_rand) * rcyl_rand, std::sin(theta_rand) * rcyl_rand,
               get_cellcoordmin(cellindex, 1) + (rng_uniform_pos() * propcell_width_tmin(cellindex, 1))};
@@ -1567,7 +1583,9 @@ void set_elem_abundance(const ptrdiff_t nonemptymgi, const int element, const fl
          get_rho(nonemptymgi);
 }
 
-DEVICE_FUNC auto get_kappagrey(const int nonemptymgi) -> float { return kappagrey_allcells[nonemptymgi]; }
+[[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_kappagrey(const int nonemptymgi) -> float {
+  return kappagrey_allcells[nonemptymgi];
+}
 
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_Te(const int nonemptymgi) -> float {
   assert_testmodeonly(nonemptymgi >= 0);
@@ -1745,17 +1763,6 @@ auto get_otherstable_initabund(const std::ptrdiff_t nonemptymgi, const int eleme
   return initmassfracuntrackedstable_allcells[(nonemptymgi * get_nelements()) + element];
 }
 
-// get element mean weight in grams
-auto get_element_meanweight(const std::ptrdiff_t nonemptymgi, const int element) -> float {
-  if constexpr (USE_CALCULATED_MEANATOMICWEIGHT) {
-    const auto mu = elem_meanweight_allcells[(nonemptymgi * get_nelements()) + element];
-    if (mu > 0) {
-      return mu;
-    }
-  }
-  return globals::elements[element].initstablemeannucmass;
-}
-
 // set element weight in grams
 void set_element_meanweight(const std::ptrdiff_t nonemptymgi, const int element, const float meanweight) {
   assert_always(meanweight > 0.);
@@ -1773,31 +1780,6 @@ auto get_electronfrac(const int nonemptymgi) -> double {
 // q: energy in the model at tmin per gram to use with USE_MODEL_INITIAL_ENERGY option [erg/g]
 DEVICE_FUNC auto get_initenergyq(const int modelgridindex) -> double {
   return modelgrid_input[modelgridindex].initenergyq;
-}
-
-// get the radial distance from the origin to the centre of the cell at time tmin
-auto get_cellradialposmid(const int cellindex) -> double {
-  const auto prop_gridtype = get_propgridtype();
-  if (prop_gridtype == GridType::SPHERICAL1D) {
-    // volume averaged mean radius is slightly complex for radial shells
-    const double r_inner = get_cellcoordmin(cellindex, 0);
-    const double r_outer = r_inner + propcell_width_tmin(cellindex, 0);
-    return 3. / 4 * (pow(r_outer, 4.) - pow(r_inner, 4.)) / (pow(r_outer, 3) - pow(r_inner, 3.));
-  }
-
-  if (prop_gridtype == GridType::CYLINDRICAL2D) {
-    const double rcyl_mid = get_cellcoordmin(cellindex, 0) + (0.5 * propcell_width_tmin(cellindex, 0));
-    const double z_mid = get_cellcoordmin(cellindex, 1) + (0.5 * propcell_width_tmin(cellindex, 1));
-    return std::sqrt(std::pow(rcyl_mid, 2) + std::pow(z_mid, 2));
-  }
-
-  // cubic grid requires taking the length of the 3D position vector
-  Vec3d dcen{};
-  for (int axis = 0; axis < 3; axis++) {
-    dcen[axis] = get_cellcoordmin(cellindex, axis) + (0.5 * propcell_width_tmin(cellindex, axis));
-  }
-
-  return vec_len(dcen);
 }
 
 [[nodiscard]] auto get_elements_uppermost_ion(const int nonemptymgi, const int element) -> int {
@@ -1819,10 +1801,12 @@ void set_elements_uppermost_ion(const int nonemptymgi, const int element, const 
   }
   double kappa = 0.;
   switch (RPKT_GREY_TYPE) {
-    case RpktGreyType::FEGROUP_APPROX:
+    case RpktGreyType::FEGROUP_APPROX: {
       // kappagrey is a simple function of the initial Fe-group mass fraction
-      kappa = ((0.9 * get_ffegrp(mgi)) + 0.1) * globals::GREY_OP / ((0.9 * mfegroup / mtot_input) + 0.1);
+      constexpr double GREY_OP = 0.1;
+      kappa = ((0.9 * get_ffegrp(mgi)) + 0.1) * GREY_OP / ((0.9 * mfegroup / mtot_input) + 0.1);
       break;
+    }
 
     case RpktGreyType::TANAKA2020_ELECTRONFRAC: {
       // electron-fraction-dependent opacities from Tanaka et al. (2020) table 1.
@@ -1871,7 +1855,7 @@ void set_elements_uppermost_ion(const int nonemptymgi, const int element, const 
       }
       // second step: multiply temperature-dependent factor
       if (T_rad < 2000.) {
-        kappa *= pow(T_rad / 2000., 5.);
+        kappa *= pow5(T_rad / 2000.);
       }
       break;
     }
@@ -1981,8 +1965,7 @@ void read_ejecta_model() {
 
       vout_model[mgi] = vout_kmps * 1.e5;
 
-      const auto rho_tmin =
-          static_cast<float>(log_rho > -90 ? pow(10., log_rho) * pow(t_model / globals::tmin, 3) : 0.);
+      const auto rho_tmin = static_cast<float>(log_rho > -90 ? pow(10., log_rho) * pow3(t_model / globals::tmin) : 0.);
       set_rho_tmin(mgi, rho_tmin);
       const bool keepcell = (rho_tmin > 0);
       read_model_radioabundances(fmodel, ssline, mgi, keepcell, colnames, nucindexlist, one_line_per_cell);
@@ -2038,7 +2021,7 @@ void read_ejecta_model() {
       }
 
       const bool keepcell = (rho_tmodel > 0);
-      const auto rho_tmin = static_cast<float>(rho_tmodel * pow(t_model / globals::tmin, 3));
+      const auto rho_tmin = static_cast<float>(rho_tmodel * pow3(t_model / globals::tmin));
       set_rho_tmin(mgi, rho_tmin);
 
       read_model_radioabundances(fmodel, ssline, mgi, keepcell, colnames, nucindexlist, one_line_per_cell);
@@ -2114,7 +2097,7 @@ void read_ejecta_model() {
 
       // in 3D cartesian, cellindex and modelgridindex are interchangeable
       const bool keepcell = (rho_model > 0);
-      const auto rho_tmin = static_cast<float>(rho_model * pow(t_model / globals::tmin, 3));
+      const auto rho_tmin = static_cast<float>(rho_model * pow3(t_model / globals::tmin));
       set_rho_tmin(mgi, rho_tmin);
 
       if (min_den < 0. || min_den > rho_model) {
@@ -2225,6 +2208,7 @@ void write_grid_restart_data(const int timestep) {
   printlnlog("done in {} seconds.", std::time(nullptr) - sys_time_start_write_restart);
 }
 
+// get lowest modelgridindex assigned to this rank (for update_grid and output files)
 auto get_nstart(const int rank) -> int {
   if (ranks_ndo.empty()) {
     setup_nstart_ndo();
@@ -2232,6 +2216,7 @@ auto get_nstart(const int rank) -> int {
   return ranks_nstart[rank];
 }
 
+// get lowest nonemptymgi assigned to this rank (for update_grid and output files)
 auto get_nstart_nonempty(const int rank) -> int {
   if (ranks_ndo.empty()) {
     setup_nstart_ndo();
@@ -2239,6 +2224,7 @@ auto get_nstart_nonempty(const int rank) -> int {
   return ranks_nstart_nonempty[rank];
 }
 
+// get the count of modelgridindices assigned to this rank (for update_grid and output files)
 auto get_ndo(const int rank) -> int {
   if (ranks_ndo.empty()) {
     setup_nstart_ndo();
@@ -2246,6 +2232,7 @@ auto get_ndo(const int rank) -> int {
   return ranks_ndo[rank];
 }
 
+// get the count of nonemptymgi assigned to this rank (for update_grid and output files)
 auto get_ndo_nonempty(const int rank) -> int {
   if (ranks_ndo.empty()) {
     setup_nstart_ndo();

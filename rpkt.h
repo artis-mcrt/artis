@@ -9,12 +9,9 @@
 #include <span>
 
 #include "artisoptions.h"
-#include "atomic.h"
 #include "constants.h"
-#include "globals.h"
 #include "grid.h"
 #include "ltepop.h"
-#include "mpi_logging.h"
 #include "packet.h"
 
 class Phixslist {
@@ -117,7 +114,7 @@ auto calculate_chi_ffheat_nnionpart(int nonemptymgi) -> double;
   }
   // if nu_cmf is smaller than the lowest frequency in the linelist,
   // no line interaction is possible: return negative value as a flag
-  if (nu_cmf < linelistnu[nlines - 1]) {
+  if (nu_cmf < linelistnu.back()) {
     return -1;
   }
 
@@ -140,20 +137,7 @@ auto calculate_chi_ffheat_nnionpart(int nonemptymgi) -> double;
   const int matchindex =
       static_cast<int>(std::ranges::lower_bound(linelistnu, nu_cmf, std::ranges::greater{}) - linelistnu.begin());
 
-  if (matchindex >= nlines) [[unlikely]] {
-    return -1;
-  }
-
   return matchindex;
-}
-
-[[gnu::pure]] [[nodiscard]] inline auto get_ionestimindex_nonemptymgi(const int nonemptymgi, const int element,
-                                                                      const int ion) -> int {
-  assert_testmodeonly(ion >= 0);
-  assert_testmodeonly(ion < get_nions(element) - 1);
-  const int groundcontindex = get_groundcontindex(element, ion);
-  assert_always(groundcontindex >= 0);
-  return (nonemptymgi * globals::nbfcontinua_ground) + groundcontindex;
 }
 
 [[gnu::pure]] [[nodiscard]] inline auto keep_this_cont(int element, const int ion, const int level,

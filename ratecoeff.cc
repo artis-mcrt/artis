@@ -1,5 +1,7 @@
 #include "ratecoeff.h"
 
+#include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
@@ -7,6 +9,7 @@
 #include <ctime>
 #include <filesystem>
 #include <ios>
+#include <iterator>
 #include <span>
 #include <sstream>
 #include <string>
@@ -23,12 +26,18 @@
 #include "mpi_logging.h"
 #include "radfield.h"
 #include "random.h"
-#include "rpkt.h"
 
 namespace {
 constexpr double RATECOEFF_INTEGRAL_ACCURACY = 1e-3;
 
-const double T_step_log = (std::log(MAXTEMP) - std::log(MINTEMP)) / (TABLESIZE - 1.);
+const auto temperature_grid = []() {
+  const double T_step_log = (std::log(MAXTEMP) - std::log(MINTEMP)) / (TABLESIZE - 1.);
+  std::array<double, TABLESIZE + 1> grid{};
+  for (auto i = 0UZ; i < grid.size(); i++) {
+    grid[i] = MINTEMP * std::exp(i * T_step_log);
+  }
+  return grid;
+}();
 
 MPI_shared_array<const float> ion_alpha_sp;  // size is nincludedions * TABLESIZE
                                              //
@@ -44,14 +53,14 @@ auto alpha_sp_integrand(const double nu_minus_nu_edge, const double nu_edge, con
   const auto sigma_bf = photoionisation_crosssection_fromtable(photoion_xs, nu_edge, nu_minus_nu_edge + nu_edge);
   // the variable of integration has been changed from nu to nu_edge_minus_nu = nu - nu_edge
   // to get a cancellation with part of the saha factor
-  return TWOOVERCLIGHTSQUARED * sigma_bf * pow(nu_edge + nu_minus_nu_edge, 2) * exp(-HOVERKB * nu_minus_nu_edge / T_e);
+  return TWOOVERCLIGHTSQUARED * sigma_bf * pow2(nu_edge + nu_minus_nu_edge) * exp(-HOVERKB * nu_minus_nu_edge / T_e);
 }
 
 // Integrand to calculate the rate coefficient for spontaneous recombination
 auto alpha_sp_E_integrand(const double nu, const double nu_edge, const float T_e,
                           const std::span<const float> photoion_xs) -> double {
   const auto sigma_bf = photoionisation_crosssection_fromtable(photoion_xs, nu_edge, nu);
-  return TWOOVERCLIGHTSQUARED * sigma_bf * pow(nu, 3) / nu_edge * exp(-HOVERKB * nu / T_e);
+  return TWOOVERCLIGHTSQUARED * sigma_bf * pow3(nu) / nu_edge * exp(-HOVERKB * nu / T_e);
 }
 
 // Integrand to calculate the rate coefficient for photoionisation corrected for stimulated recombination.
@@ -131,7 +140,7 @@ void precalculate_rate_coefficient_integrals() {
           for (int temperatureindex = 0; temperatureindex < TABLESIZE; temperatureindex++) {
             const int bflutindex = get_bflutindex(temperatureindex, element, ion, level, phixstargetindex);
             double error{NAN};
-            const auto temperature = static_cast<float>(MINTEMP * exp(temperatureindex * T_step_log));
+            const auto temperature = static_cast<float>(temperature_grid[temperatureindex]);
 
             const double modified_sahafact = SAHACONST * statw_lower / statw_upper * std::pow(temperature, -1.5);
             assert_always(modified_sahafact >= 0.);
@@ -204,8 +213,8 @@ void scale_level_phixs(const int element, const int ion, const int level, const 
     }
 
     for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
-      for (int iter = 0; iter < TABLESIZE; iter++) {
-        const auto bflutindex = get_bflutindex(iter, element, ion, level, phixstargetindex);
+      for (int tempindex = 0; tempindex < TABLESIZE; tempindex++) {
+        const auto bflutindex = get_bflutindex(tempindex, element, ion, level, phixstargetindex);
         spontrecombcoeffs[bflutindex] = spontrecombcoeffs[bflutindex] * factor;
 
         if constexpr (USE_LUT_PHOTOION) {
@@ -361,8 +370,8 @@ void precalculate_ion_alpha_sp() {
   auto temp_ion_alpha_sp = MPI_shared_array<float>(get_includedions() * TABLESIZE, 0.);
   if (globals::rank_in_node == 0) {
     const auto nincludedions = get_includedions();
-    for (int iter = 0; iter < TABLESIZE; iter++) {
-      const auto T_e = static_cast<float>(MINTEMP * exp(iter * T_step_log));
+    for (int tempindex = 0; tempindex < TABLESIZE; tempindex++) {
+      const auto T_e = static_cast<float>(temperature_grid[tempindex]);
       for (int element = 0; element < get_nelements(); element++) {
         const int nions = get_nions(element) - 1;
         for (int ion = 0; ion < nions; ion++) {
@@ -377,7 +386,7 @@ void precalculate_ion_alpha_sp() {
               zeta += zeta_level;
             }
           }
-          temp_ion_alpha_sp[(iter * nincludedions) + uniqueionindex] = static_cast<float>(zeta);
+          temp_ion_alpha_sp[(tempindex * nincludedions) + uniqueionindex] = static_cast<float>(zeta);
         }
       }
     }
@@ -448,18 +457,20 @@ auto calculate_corrphotoioncoeff_integral(const int element, const int ion, cons
   return gammacorr;
 }
 
-template <typename T>
-[[nodiscard]] DEVICE_FUNC auto lerp_or_last(const std::span<T> table, const int uniquelevelindex,
-                                            const int phixstargetindex, auto temperature) -> double {
-  const int lowerindex = floor(log(temperature / MINTEMP) / T_step_log);
-  assert_always(lowerindex >= 0);
-  if (lowerindex < (TABLESIZE - 1)) {
-    const int upperindex = lowerindex + 1;
-    const double T_lower = MINTEMP * exp(lowerindex * T_step_log);
-    const double T_upper = MINTEMP * exp(upperindex * T_step_log);
+template <typename T, typename U>
+[[nodiscard]] auto lerp_or_last(const std::span<T> table, const int uniquelevelindex, const int phixstargetindex,
+                                const U temperature) {
+  const auto upperindex =
+      std::ranges::distance(temperature_grid.begin(), std::ranges::upper_bound(temperature_grid, temperature));
+  if (upperindex == 0) {
+    return table[get_bflutindex(0, uniquelevelindex, phixstargetindex)];
+  }
+  if (upperindex < TABLESIZE) {
+    const double T_lower = temperature_grid[upperindex - 1];
+    const double T_upper = temperature_grid[upperindex];
 
+    const double f_lower = table[get_bflutindex(upperindex - 1, uniquelevelindex, phixstargetindex)];
     const double f_upper = table[get_bflutindex(upperindex, uniquelevelindex, phixstargetindex)];
-    const double f_lower = table[get_bflutindex(lowerindex, uniquelevelindex, phixstargetindex)];
     return (f_lower + ((f_upper - f_lower) / (T_upper - T_lower) * (temperature - T_lower)));
   }
   return table[get_bflutindex(TABLESIZE - 1, uniquelevelindex, phixstargetindex)];
@@ -537,16 +548,18 @@ DEVICE_FUNC auto select_continuum_nu(int element, const int lowerion, const int 
 // Get an ion's rate coefficient for spontaneous recombination in LTE
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_ion_spontrecombcoeff(const int uniqueionindex, const float T_e)
     -> double {
-  const int lowerindex = std::floor(std::log(T_e / MINTEMP) / T_step_log);
-  assert_testmodeonly(lowerindex >= 0);
+  const auto upperindex =
+      std::ranges::distance(temperature_grid.begin(), std::ranges::upper_bound(temperature_grid, T_e));
+  if (upperindex == 0) {
+    return ion_alpha_sp[uniqueionindex];
+  }
   const auto nincludedions = get_includedions();
-  if (lowerindex < (TABLESIZE - 1)) {
-    const int upperindex = lowerindex + 1;
-    const double T_lower = MINTEMP * std::exp(lowerindex * T_step_log);
-    const double T_upper = MINTEMP * std::exp(upperindex * T_step_log);
+  if (upperindex < TABLESIZE) {
+    const double T_lower = temperature_grid[upperindex - 1];
+    const double T_upper = temperature_grid[upperindex];
 
+    const double f_lower = ion_alpha_sp[((upperindex - 1) * nincludedions) + uniqueionindex];
     const double f_upper = ion_alpha_sp[(upperindex * nincludedions) + uniqueionindex];
-    const double f_lower = ion_alpha_sp[(lowerindex * nincludedions) + uniqueionindex];
 
     return f_lower + ((f_upper - f_lower) / (T_upper - T_lower) * (T_e - T_lower));
   }
@@ -720,7 +733,11 @@ auto iongamma_is_zero(const int nonemptymgi, const int element, const int ion) -
   }
 
   if (!elem_has_nlte_levels(element)) {
-    return (globals::gammaestimator[get_ionestimindex_nonemptymgi(nonemptymgi, element, ion)] == 0);
+    const auto groundcontindex = get_groundcontindex(element, ion);
+    if (groundcontindex < 0) {
+      return true;
+    }
+    return (globals::gammaestimator[(nonemptymgi * globals::nbfcontinua_ground) + groundcontindex] == 0);
   }
 
   const auto T_e = grid::get_Te(nonemptymgi);

@@ -88,7 +88,7 @@ template <bool USECELLCACHE>
                                                        globals::linelist.lowerlevelindex[lineindex]);
 
   const double B_ul =
-      CLIGHTSQUAREDOVERTWOH / pow(globals::linelist.nu[lineindex], 3) * globals::linelist.einstein_A[lineindex];
+      CLIGHTSQUAREDOVERTWOH / pow3(globals::linelist.nu[lineindex]) * globals::linelist.einstein_A[lineindex];
   const double B_lu = stat_weight(uniquelevelindex_upper) / stat_weight(uniquelevelindex_lower) * B_ul;
 
   const double n_u = USECELLCACHE ? get_cellcache_levelpop(nonemptymgi, uniquelevelindex_upper)
@@ -98,7 +98,10 @@ template <bool USECELLCACHE>
   return std::max(((B_lu * n_l) - (B_ul * n_u)) * HCLIGHTOVERFOURPI * t_current, 0.);
 }
 
-// find any line or continuum interaction occuring before frequency decreases to nu_cmf_abort at distance abort_dist
+// find any line or continuum interaction occurring before frequency decreases to nu_cmf_abort at distance abort_dist
+// returns tuple of (distance to event, next transition index for pkt.next_trans, bool for whether line event)
+// the next transition index is lineindex + 1 for a line event, may remain the current next_trans if no event occurs,
+// and is globals::nlines + 1 for a continuum event
 auto get_possible_event(const int nonemptymgi, const Packet& pkt, const Rpkt_continuum_absorptioncoeffs& chi_rpkt_cont,
                         MacroAtomState& mastate,
                         const double tau_rnd,  // random optical depth until which the packet travels
@@ -239,11 +242,10 @@ auto get_possible_event_expansion_opacity(const int nonemptymgi, const Packet& p
     const auto binedgedist = get_linedistance(prop_time, nu_cmf, next_bin_edge_nu, dnu_on_dl);
 
     const double chi_cont = chi_rpkt_cont.total() * doppler;
-    // const auto chi_cont = 0.;
     double chi_bb_expansionopac = 0.;
     if (binindex >= 0) {
       const auto kappa = expansionopacities[(nonemptymgi * expopac_nbins) + binindex];
-      chi_bb_expansionopac = kappa * grid::get_rho(nonemptymgi) * doppler;
+      chi_bb_expansionopac = kappa * grid::get_rho(nonemptymgi);
     }
 
     const double chi_tot = chi_cont + chi_bb_expansionopac;
@@ -333,10 +335,10 @@ void electron_scatter_rpkt(Packet& pkt) {
     double p = 0.;
     double x = 1.;
     while (x > p) {
-      const double zrand = rng_uniform();
+      const double zrand = rng_uniform_pos();
 
       M = (2 * zrand) - 1;
-      const double mu = pow(M, 2.);
+      const double mu = pow2(M);
       phisc = 2 * PI * rng_uniform();
 
       // NB: the rotational matrix R here is chosen in the clockwise direction ("+").
@@ -358,19 +360,23 @@ void electron_scatter_rpkt(Packet& pkt) {
     phisc = 2 * PI * rng_uniform();
   }
 
-  const double tsc = acos(M);
   Vec3d new_dir_cmf{};
 
+  const double cos_tsc = M;  // M is cos(tsc) by construction
+  const double sin_tsc = std::sqrt(1. - (M * M));
+
   if (fabs(old_dir_cmf[2]) < 0.99999) {
-    new_dir_cmf[0] = (sin(tsc) / sqrt(1. - pow(old_dir_cmf[2], 2.)) *
-                      ((old_dir_cmf[1] * sin(phisc)) - (old_dir_cmf[0] * old_dir_cmf[2] * cos(phisc)))) +
-                     (old_dir_cmf[0] * cos(tsc));
-    new_dir_cmf[1] = (sin(tsc) / sqrt(1 - pow(old_dir_cmf[2], 2.)) *
-                      ((-old_dir_cmf[0] * sin(phisc)) - (old_dir_cmf[1] * old_dir_cmf[2] * cos(phisc)))) +
-                     (old_dir_cmf[1] * cos(tsc));
-    new_dir_cmf[2] = (sin(tsc) * cos(phisc) * sqrt(1 - pow(old_dir_cmf[2], 2.))) + (old_dir_cmf[2] * cos(tsc));
+    const double sin_polar = std::sqrt(1. - pow2(old_dir_cmf[2]));
+    const double common_factor = sin_tsc / sin_polar;
+    const double cos_phisc = cos(phisc);
+    const double sin_phisc = sin(phisc);
+    new_dir_cmf = {(common_factor * ((old_dir_cmf[1] * sin_phisc) - (old_dir_cmf[0] * old_dir_cmf[2] * cos_phisc))) +
+                       (old_dir_cmf[0] * cos_tsc),
+                   (common_factor * ((-old_dir_cmf[0] * sin_phisc) - (old_dir_cmf[1] * old_dir_cmf[2] * cos_phisc))) +
+                       (old_dir_cmf[1] * cos_tsc),
+                   (sin_tsc * cos_phisc * sin_polar) + (old_dir_cmf[2] * cos_tsc)};
   } else {
-    new_dir_cmf = {sin(tsc) * cos(phisc), sin(tsc) * sin(phisc), (old_dir_cmf[2] > 0) ? cos(tsc) : -cos(tsc)};
+    new_dir_cmf = {sin_tsc * cos(phisc), sin_tsc * sin(phisc), (old_dir_cmf[2] > 0) ? cos_tsc : -cos_tsc};
   }
 
   if constexpr (!POL_ON) {
@@ -723,7 +729,7 @@ auto calculate_chi_ffheating(const int nonemptymgi, const double nu, const bool 
   const auto chi_ff_nnionpart = use_cellcache ? globals::cellcache[cellcacheslotid].chi_ff_nnionpart
                                               : calculate_chi_ffheat_nnionpart(nonemptymgi);
 
-  const double chi_ff = chi_ff_nnionpart * pow(nu, -3) * clumpednne * (1 - exp(-HOVERKB * nu / T_e));
+  const double chi_ff = chi_ff_nnionpart / pow3(nu) * clumpednne * (1 - exp(-HOVERKB * nu / T_e));
 
   assert_testmodeonly(std::isfinite(chi_ff));
   assert_testmodeonly(chi_ff >= 0);

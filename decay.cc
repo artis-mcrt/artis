@@ -11,6 +11,7 @@
 #include <fstream>
 #include <functional>
 #include <iostream>
+#include <iterator>
 #include <numbers>
 #include <numeric>
 #include <ranges>
@@ -125,11 +126,6 @@ std::vector<bool> alldecaytypes_is_used;
   return {DecayDaughter{.z = -1, .a = -1, .probability = 0.}};  // no daughter
 }
 
-// decaypath_energy_per_mass points to an array of length npts_model * num_decaypaths
-// the index [mgi * num_decaypaths + i] will hold the decay energy per mass [erg/g] released by chain i in cell mgi
-// during the simulation time range tmin to tmax
-MPI_shared_array<double> decaypath_energy_per_mass{};
-
 // Get the probability that a decay of decaytype occurs
 [[nodiscard]] auto get_nuc_decaybranchprob(const int nucindex, const DecayType decaytype) -> double {
   assert_testmodeonly(nucindex >= 0);
@@ -150,14 +146,8 @@ MPI_shared_array<double> decaypath_energy_per_mass{};
 // get the nuclide array index from the atomic number and mass number
 [[nodiscard]] auto get_nucindex_or_neg_one(const int z, const int a) -> int {
   assert_testmodeonly(std::ssize(nuclides) > 0);
-  const auto num_nuclides = std::ssize(nuclides);
-
-  for (int nucindex = 0; nucindex < num_nuclides; nucindex++) {
-    if (nuclides[nucindex].z == z && nuclides[nucindex].a == a) {
-      return nucindex;
-    }
-  }
-  return -1;  // nuclide not found
+  const auto it = std::ranges::find_if(nuclides, [z, a](const auto& nuc) { return nuc.z == z && nuc.a == a; });
+  return it != nuclides.end() ? static_cast<int>(std::ranges::distance(nuclides.begin(), it)) : -1;
 }
 
 [[nodiscard]] auto get_meanlife(const int nucindex) -> double {
@@ -291,15 +281,15 @@ void printout_decaypath(const int decaypathindex) {
 // follow decays at the ends of the current list of decaypaths
 // to get decaypaths from all descendants
 void extend_lastdecaypath(std::vector<DecayPath>& localdecaypaths) {
-  const auto& inital_last_decaypath = localdecaypaths.back();
+  const auto initial_last_decaypath = localdecaypaths.back();
 
-  const int end_nucindex = inital_last_decaypath.nucindex.back();
+  const int end_nucindex = initial_last_decaypath.nucindex.back();
   if ((get_meanlife(end_nucindex) <= 0.)) {
     // daughter is stable: no extension possible
     return;
   }
-  const int prev_end_z = inital_last_decaypath.z.back();
-  const int prev_end_a = inital_last_decaypath.a.back();
+  const int prev_end_z = initial_last_decaypath.z.back();
+  const int prev_end_a = initial_last_decaypath.a.back();
   for (const auto decaytypeindex : all_decaytypes) {
     if (get_nuc_decaybranchprob(end_nucindex, decaytypeindex) == 0.) {
       continue;
@@ -307,14 +297,14 @@ void extend_lastdecaypath(std::vector<DecayPath>& localdecaypaths) {
 
     for (const auto& daughter : decay_daughters_z_a_prob(prev_end_z, prev_end_a, decaytypeindex)) {
       // check for nuclide in existing path, which would indicate a loop
-      for (const auto [z, a] : std::views::zip(inital_last_decaypath.z, inital_last_decaypath.a)) {
+      for (const auto [z, a] : std::views::zip(initial_last_decaypath.z, initial_last_decaypath.a)) {
         if (z == daughter.z && a == daughter.a) {
           printlnlog("\nERROR: Loop found in nuclear decay chain.");
           std::abort();
         }
       }
       const auto daughter_nucindex = get_nucindex(daughter.z, daughter.a);
-      auto newdecaypath = inital_last_decaypath;
+      auto newdecaypath = initial_last_decaypath;
       newdecaypath.z.push_back(daughter.z);
       newdecaypath.a.push_back(daughter.a);
       newdecaypath.nucindex.push_back(daughter_nucindex);
@@ -509,7 +499,7 @@ constexpr auto calculate_decaychain(const double firstinitabund, const std::span
   }
 
   const double lastabund = firstinitabund * lambdaproduct * sum;
-
+  assert_always(std::isfinite(lastabund));
   return lastabund;
 }
 
@@ -648,16 +638,6 @@ auto get_endecay_per_ejectamass_between_times(const int mgi, const int decaypath
   return endiff;
 }
 
-// get the decay energy released during the simulation [(tmodel if initial packets else tmin) to tmax] per unit mass
-// [erg/g]
-auto get_simtime_endecay_per_ejectamass(const int nonemptymgi, const int decaypathindex) -> double {
-  assert_testmodeonly(!decaypath_energy_per_mass.empty());
-  const double chainendecay = decaypath_energy_per_mass[(nonemptymgi * get_num_decaypaths()) + decaypathindex];
-  assert_testmodeonly(chainendecay >= 0.);
-  assert_testmodeonly(std::isfinite(chainendecay));
-  return chainendecay;
-}
-
 // Get the total decay power per mass [erg/s/g] for a given decaypath
 // We only count the power from the last decay in the chain to avoid double counting of decay energy (all sub paths are
 // handled separately)
@@ -737,6 +717,7 @@ auto write_nuclides_list() {
   if (nucindex >= 0) {
     return nucindex;
   }
+  printlnlog("ERROR: nuclide Z={} A={} not found in nuclide list", z, a);
   assert_always(false);  // nuclide not found
   return -1;
 }
@@ -812,8 +793,9 @@ void init_nuclides(const std::span<const int> custom_zlist, const std::span<cons
 
   // V48
   nuclides.push_back({.z = 23, .a = 48, .meanlife = 23.0442 * DAY});
-  nuclides.back().endecay_positron = 0.290 * MEV * 0.499;
-  nuclides.back().branchprobs[DECAYTYPE_BETAPLUS] = 1.;
+  nuclides.back().branchprobs[DECAYTYPE_BETAPLUS] = 0.499;
+  nuclides.back().branchprobs[DECAYTYPE_ELECTRONCAPTURE] = 1. - 0.499;
+  nuclides.back().endecay_positron = 0.290 * MEV;
 
   // Co57
   nuclides.push_back({.z = 27, .a = 57, .meanlife = 392.03 * DAY});
@@ -921,7 +903,7 @@ void init_nuclides(const std::span<const int> custom_zlist, const std::span<cons
     int z_parent = -1;
     int a_parent = -1;
     assert_always(std::stringstream(line) >> z_parent >> a_parent);
-    get_noncommentline(ffission_products, line);
+    assert_always(get_noncommentline(ffission_products, line));
     double num_neutrons = 0;
     int tablesize = 0;
     double q_fission_mev = 0.;
@@ -1085,22 +1067,29 @@ auto get_endecay_per_ejectamass_tmodel_to_time_withexpansion(const int nonemptym
   return tot_endecay;
 }
 
-// get the decay energy that will be released during the simulation time range [erg/g]
-auto get_modelcell_simtime_endecay_per_mass(const int nonemptymgi) -> double {
+// get the decay energy that will be released during the simulation time [(tmodel if initial packets else tmin) to tmax]
+// indexed by nonemptymgi and decaypathindex [erg/g]
+auto get_modelcell_simtime_endecay_per_mass(const int nonemptymgi,
+                                            const std::span<const double> energy_per_mass_nonemptymgi_decaypath)
+    -> double {
+  const auto num_decaypaths = get_num_decaypaths();
   double endecay_per_mass = 0.;
-  for (int decaypathindex = 0; decaypathindex < get_num_decaypaths(); decaypathindex++) {
-    endecay_per_mass += get_simtime_endecay_per_ejectamass(nonemptymgi, decaypathindex);
+  for (int decaypathindex = 0; decaypathindex < num_decaypaths; decaypathindex++) {
+    endecay_per_mass += energy_per_mass_nonemptymgi_decaypath[(nonemptymgi * num_decaypaths) + decaypathindex];
   }
   return endecay_per_mass;
 }
 
-void setup_decaypath_energy_per_mass() {
+// energy_per_mass_nonemptymgi_decaypath is an array indexed by [nonemptymgi * num_decaypaths + i] will hold the
+// decay energy per mass [erg/g] released by chain i in cell mgi during the simulation time range tmin to tmax
+auto get_energy_per_mass_nonemptymgi_decaypath() -> MPI_shared_array<const double> {
   const ptrdiff_t nonempty_npts_model = grid::get_nonempty_npts_model();
   printlog(
-      "[info] mem_usage: decaypath_energy_per_mass[nonempty_npts_model*num_decaypaths] occupies {:.1f} MB (node shared "
+      "[info] mem_usage: energy_per_mass_nonemptymgi_decaypath[nonempty_npts_model*num_decaypaths] occupies {:.1f} "
+      "MB (node shared "
       "memory)...",
       nonempty_npts_model * get_num_decaypaths() * sizeof(double) / 1024. / 1024.);
-  decaypath_energy_per_mass = MPI_shared_array<double>{nonempty_npts_model * get_num_decaypaths(), 0.};
+  auto energy_per_mass_nonemptymgi_decaypath = MPI_shared_array<double>{nonempty_npts_model * get_num_decaypaths(), 0.};
   printlnlog("done.");
 
   MPI_Barrier_allranks();
@@ -1110,16 +1099,18 @@ void setup_decaypath_energy_per_mass() {
     if (nonemptymgi % globals::node_nprocs == globals::rank_in_node) {
       const int mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
       for (int decaypathindex = 0; decaypathindex < num_decaypaths; decaypathindex++) {
-        decaypath_energy_per_mass[(nonemptymgi * num_decaypaths) + decaypathindex] =
+        const double energy_per_mass =
             get_endecay_per_ejectamass_between_times(mgi, decaypathindex, time_min_decay, globals::tmax);
+        assert_testmodeonly(energy_per_mass >= 0.);
+        assert_testmodeonly(std::isfinite(energy_per_mass));
+        energy_per_mass_nonemptymgi_decaypath[(nonemptymgi * num_decaypaths) + decaypathindex] = energy_per_mass;
       }
     }
   }
 
   MPI_Barrier_allranks();
+  return energy_per_mass_nonemptymgi_decaypath;
 }
-
-void free_decaypath_energy_per_mass() { decaypath_energy_per_mass.reset(); }
 
 // energy release rate in form of kinetic energy of positrons, electrons, and alpha particles in [erg/s/g]
 [[nodiscard]] auto get_particle_injection_rate(const int nonemptymgi, const double t, const DecayType decaytype)
@@ -1270,7 +1261,8 @@ void output_nuc_abundances(std::ostream& estimators_file, const int nonemptymgi,
   estimators_file << '\n';
 }
 
-void setup_radioactive_pellet(const double e_cmf_per_packet, const int nonemptymgi, Packet& pkt) {
+void setup_radioactive_pellet(const double e_cmf_per_packet, const int nonemptymgi, Packet& pkt,
+                              const std::span<const double> energy_per_mass_nonemptymgi_decaypath) {
   const int num_decaypaths = get_num_decaypaths();
 
   // decay channels include all radioactive decay paths, and possibly also an initial cell energy channel
@@ -1281,7 +1273,7 @@ void setup_radioactive_pellet(const double e_cmf_per_packet, const int nonemptym
 
   // add the radioactive decay paths
   for (int decaypathindex = 0; decaypathindex < num_decaypaths; decaypathindex++) {
-    energysum += get_simtime_endecay_per_ejectamass(nonemptymgi, decaypathindex);
+    energysum += energy_per_mass_nonemptymgi_decaypath[(nonemptymgi * num_decaypaths) + decaypathindex];
     cumulative_en_sum[decaypathindex] = energysum;
   }
 
@@ -1338,8 +1330,8 @@ void setup_radioactive_pellet(const double e_cmf_per_packet, const int nonemptym
     // we need to scale the packet energy up or down according to decay rate at the randomly selected time.
     // e_cmf_average is the average energy per packet for this cell and decaypath, so we scale this up or down
     // according to: decay power at this time relative to the average decay power
-    const double avgpower =
-        get_simtime_endecay_per_ejectamass(nonemptymgi, decaypathindex) / (globals::tmax - tdecaymin);
+    const double avgpower = energy_per_mass_nonemptymgi_decaypath[(nonemptymgi * num_decaypaths) + decaypathindex] /
+                            (globals::tmax - tdecaymin);
     assert_always(avgpower > 0.);
     pkt.e_cmf =
         e_cmf_per_packet * get_decaypath_power_per_ejectamass(decaypathindex, nonemptymgi, pkt.tdecay) / avgpower;

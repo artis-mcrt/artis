@@ -145,7 +145,7 @@ void read_decaydata() {
       assert_always(z != 23 || a != 48);  // V-48 must have a gamma spectrum
       assert_always(z != 24 || a != 48);  // Cr-48 must have a gamma spectrum
       assert_always(z != 28 || a != 57);  // Ni-57 must have a gamma spectrum if present in list of nuclides
-      assert_always(z != 28 || a != 57);  // Co-57 must have a gamma spectrum if present in list of nuclides
+      assert_always(z != 27 || a != 57);  // Co-57 must have a gamma spectrum if present in list of nuclides
       set_trivial_gamma_spectrum(nucindex);
     }
   }
@@ -682,7 +682,6 @@ void transport_gamma(Packet& pkt, const double t2) {
   // Assign optical depth to next physical event. And start counter of
   // optical depth for this path.
   const double tau_next = -std::log(static_cast<double>(rng_uniform_pos()));
-  const double tau_current = 0.;
 
   // Start by finding the distance to the crossing of the grid cell
   // boundaries. sdist is the boundary distance and snext is the
@@ -706,7 +705,7 @@ void transport_gamma(Packet& pkt, const double t2) {
 
   // So distance before physical event is...
 
-  const double edist = chi_tot > 0. ? (tau_next - tau_current) / chi_tot : std::numeric_limits<double>::max();
+  const double edist = chi_tot > 0. ? tau_next / chi_tot : std::numeric_limits<double>::max();
 
   assert_always(edist >= 0);
 
@@ -789,7 +788,7 @@ void barnes_thermalisation(Packet& pkt)
 
   // const double t_ineff = sqrt(rho_0 * R_0 * pow(t_0, 2) * mean_gamma_opac);
   const double t_ineff = 1.4 * 86400. * sqrt(grid::mtot_input / (5.e-3 * 1.989 * 1.e33)) * ((0.2 * 29979200000) / v_ej);
-  const double tau = pow(t_ineff / pkt.prop_time, 2.);
+  const double tau = pow2(t_ineff / pkt.prop_time);
   const double f_gamma = 1. - exp(-tau);
   assert_always(f_gamma >= 0.);
   assert_always(f_gamma <= 1.);
@@ -820,7 +819,7 @@ void wollaeger_thermalisation(Packet& pkt) {
   while (!end_packet) {
     // distance to the next cell
     const auto [sdist, snext] = grid::boundary_distance(pkt_copy.dir, pkt_copy.pos, pkt_copy.prop_time, pkt_copy.where);
-    const double s_cont = sdist * t_current * t_current * t_current / std::pow(pkt_copy.prop_time, 3);
+    const double s_cont = sdist * pow3(t_current / pkt_copy.prop_time);
     const int mgi = grid::get_propcell_modelgridindex(pkt_copy.where);
     if (mgi >= 0) {
       const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(mgi);
@@ -882,7 +881,7 @@ void guttman_thermalisation(Packet& pkt) {
       // distance to the next cell
       const auto [sdist, snext] =
           grid::boundary_distance(pkt_copy.dir, pkt_copy.pos, pkt_copy.prop_time, pkt_copy.where);
-      const double s_cont = sdist * std::pow(t, 3.) / std::pow(pkt_copy.prop_time, 3.);
+      const double s_cont = sdist * pow3(t / pkt_copy.prop_time);
       const int mgi = grid::get_propcell_modelgridindex(pkt_copy.where);
       if (mgi >= 0) {
         column_densities[i] += grid::get_rho_tmin(mgi) * s_cont;  // contribution to the integral
@@ -902,8 +901,7 @@ void guttman_thermalisation(Packet& pkt) {
   double f_gamma = 0.;
   const double width = 4 * PI / numb_rnd_dirs;
   for (int i = 0; i < numb_rnd_dirs; i++) {
-    const double summand =
-        width * (1 - std::exp(-std::pow(t_gamma, 2.) / std::pow(t, 2.) * column_densities[i] / avg_column_density));
+    const double summand = width * (1 - std::exp(-pow2(t_gamma / t) * column_densities[i] / avg_column_density));
     f_gamma += summand;
   }
   f_gamma /= (4 * PI);

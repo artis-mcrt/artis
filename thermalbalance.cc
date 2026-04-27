@@ -24,7 +24,6 @@
 #include "nonthermal.h"
 #include "radfield.h"
 #include "ratecoeff.h"
-#include "rpkt.h"
 #include "sn3d.h"
 
 namespace {
@@ -127,8 +126,9 @@ auto T_e_eqn_heating_minus_cooling(const double T_e, int nonemptymgi, const doub
           // recalculate the Gammas using the current level populations
           const int nions = get_nions(element);
           for (int ion = 0; ion < nions - 1; ion++) {
-            if (get_groundcontindex(element, ion) >= 0) {
-              globals::gammaestimator[get_ionestimindex_nonemptymgi(nonemptymgi, element, ion)] =
+            const auto groundcontindex = get_groundcontindex(element, ion);
+            if (groundcontindex >= 0) {
+              globals::gammaestimator[(nonemptymgi * globals::nbfcontinua_ground) + groundcontindex] =
                   calculate_iongamma_per_gspop(nonemptymgi, element, ion);
             }
           }
@@ -161,8 +161,8 @@ auto T_e_eqn_heating_minus_cooling(const double T_e, int nonemptymgi, const doub
   const double p = nntot * KB * T_e;  // pressure in [erg/cm^3]
   const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
   const double volumetmin = grid::get_modelcell_assocvolume_tmin(modelgridindex);
-  const double dV_on_dt = 3 * volumetmin / pow(globals::tmin, 3) * pow(t_current, 2);
-  const double V = volumetmin * pow(t_current / globals::tmin, 3);
+  const double dV_on_dt = 3 * volumetmin / pow3(globals::tmin) * pow2(t_current);
+  const double V = volumetmin * pow3(t_current / globals::tmin);
   heatingcoolingrates.cooling_adiabatic = p * dV_on_dt / V;
 
   const double total_heating_rate = heatingcoolingrates.heating_ff + heatingcoolingrates.heating_bf +

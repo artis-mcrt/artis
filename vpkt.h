@@ -34,7 +34,7 @@ inline int nvpkt_esc_from_rpkt{0};  // electron scattering event
 inline int nvpkt_esc_from_kpkt{0};  // kpkt deactivation
 inline int nvpkt_esc_from_macroatom{0};  // macroatom deactivation
 
-inline double cell_is_optically_thick_vpkt;
+inline double optical_depth_is_thick_vpkt;
 }  // namespace vpkt
 
 #endif  // VPKT_H

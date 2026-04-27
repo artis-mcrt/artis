@@ -204,15 +204,15 @@ void update_bfestimators(const ptrdiff_t nonemptymgi, const double distance_e_cm
 
   assert_testmodeonly(phixslist.bfestimend <= bfestimcount);
   const auto bfestimend =
-      std::distance(globals::bfestim_nu_edge.begin(),
-                    std::ranges::upper_bound(globals::bfestim_nu_edge.first(phixslist.bfestimend), nu_cmf));
+      std::ranges::distance(globals::bfestim_nu_edge.begin(),
+                            std::ranges::upper_bound(globals::bfestim_nu_edge.first(phixslist.bfestimend), nu_cmf));
   assert_testmodeonly(bfestimend <= bfestimcount);
   assert_testmodeonly(phixslist.bfestimbegin >= 0);
-  const auto bfestimbegin =
-      std::distance(globals::bfestim_nu_edge.begin(),
-                    std::ranges::lower_bound(
-                        globals::bfestim_nu_edge.subspan(phixslist.bfestimbegin, bfestimend - phixslist.bfestimbegin),
-                        nu_cmf / last_phixs_nuovernuedge));
+  const auto bfestimbegin = std::ranges::distance(
+      globals::bfestim_nu_edge.begin(),
+      std::ranges::lower_bound(
+          globals::bfestim_nu_edge.subspan(phixslist.bfestimbegin, bfestimend - phixslist.bfestimbegin),
+          nu_cmf / last_phixs_nuovernuedge));
 
   for (auto bfestimindex = bfestimbegin; bfestimindex < bfestimend; bfestimindex++) {
     atomicadd(bfrate_raw[(nonemptymgi * bfestimcount) + bfestimindex],
@@ -388,7 +388,7 @@ void set_params_fullspec(const int nonemptymgi, const int timestep) {
     }
     grid::set_TR(nonemptymgi, T_R);
 
-    const auto W = static_cast<float>(J[nonemptymgi] * PI / STEBO / pow(T_R, 4));
+    const auto W = static_cast<float>(J[nonemptymgi] * PI / STEBO / pow4(T_R));
     grid::set_W(nonemptymgi, W);
 
     printlnlog(
@@ -614,10 +614,12 @@ void initialise_prev_titer_photoionestimators() {
       const int nions = get_nions(element);
       for (int ion = 0; ion < nions - 1; ion++) {
         if constexpr (USE_LUT_PHOTOION) {
-          globals::gammaestimator_save[get_ionestimindex_nonemptymgi(nonemptymgi, element, ion)] = -1.;
+          globals::gammaestimator_save[(nonemptymgi * globals::nbfcontinua_ground) +
+                                       get_groundcontindex(element, ion)] = -1.;
         }
         if constexpr (USE_ION_BFHEATING_ESTIMATORS) {
-          globals::bfheatingestimator_save[get_ionestimindex_nonemptymgi(nonemptymgi, element, ion)] = -1.;
+          globals::bfheatingestimator_save[(nonemptymgi * globals::nbfcontinua_ground) +
+                                           get_groundcontindex(element, ion)] = -1.;
         }
       }
     }
@@ -654,12 +656,6 @@ auto get_Jb_lu(const int nonemptymgi, const int jblueindex) -> double {
   assert_always(jblueindex >= 0);
   assert_always(jblueindex < detailed_linecount);
   return prev_Jb_lu_normed[nonemptymgi][jblueindex].value;
-}
-
-auto get_Jb_lu_contribcount(const int nonemptymgi, const int jblueindex) -> int {
-  assert_always(jblueindex >= 0);
-  assert_always(jblueindex < detailed_linecount);
-  return prev_Jb_lu_normed[nonemptymgi][jblueindex].contribcount;
 }
 
 void close_file() {
@@ -868,7 +864,7 @@ void normalise_bf_estimators(const int nts, const int nts_prev, const int titer,
     }
     const auto mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
     const double deltaV =
-        grid::get_modelcell_assocvolume_tmin(mgi) * pow(globals::timesteps[nts_prev].mid / globals::tmin, 3);
+        grid::get_modelcell_assocvolume_tmin(mgi) * pow3(globals::timesteps[nts_prev].mid / globals::tmin);
     const double estimator_normfactor = 1 / deltaV / deltat / globals::nprocs;
     for (int i = 0; i < bfestimcount; i++) {
       const auto mgibfindex = (nonemptymgi * bfestimcount) + i;

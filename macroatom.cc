@@ -39,7 +39,7 @@ std::fstream macroatom_file;
 [[nodiscard]] auto get_sum_internal_down_same_exceptlast(const int uniquelevelindex) -> std::span<const double> {
   const auto ndowntrans = get_ndowntrans(uniquelevelindex);
   return std::span{globals::cellcache[cellcacheslotid].allmacroatomictransitions}.subspan(
-      globals::alllevels.matransblock_start[uniquelevelindex] + get_ndowntrans(uniquelevelindex), ndowntrans - 1);
+      globals::alllevels.matransblock_start[uniquelevelindex] + ndowntrans, ndowntrans - 1);
 }
 
 [[nodiscard]] auto get_sum_internal_up_same_exceptlast(const int uniquelevelindex) -> std::span<const double> {
@@ -583,7 +583,7 @@ void macroatom_close_file() {
                                                           const double statweight_lower, const int alltransindex,
                                                           const double t_current) -> double {
   const double nu_trans = epsilon_trans / H;
-  const double B_ul = CLIGHTSQUAREDOVERTWOH / std::pow(nu_trans, 3) * einstein_A;
+  const double B_ul = CLIGHTSQUAREDOVERTWOH / pow3(nu_trans) * einstein_A;
   const double B_lu = upper_statweight / statweight_lower * B_ul;
 
   const double tau_sobolev = ((B_lu * nnlevel_lower) - (B_ul * nnlevel_upper)) * HCLIGHTOVERFOURPI * t_current;
@@ -730,8 +730,8 @@ void macroatom_close_file() {
 
       const double g_ratio = lowerstatweight / upperstatweight;
 
-      return C_0 * 14.51039491 * nne * std::sqrt(T_e) * trans_osc_strength * std::pow(H_ionpot / epsilon_trans, 2) *
-             eoverkt * g_ratio * gauntfac;
+      return C_0 * 14.51039491 * nne * std::sqrt(T_e) * trans_osc_strength * pow2(H_ionpot / epsilon_trans) * eoverkt *
+             g_ratio * gauntfac;
     }
 
     // forbidden transitions: magnetic dipole, electric quadropole...
@@ -772,8 +772,8 @@ void macroatom_close_file() {
       const double exp_eoverkt = std::exp(eoverkt);
 
       const double Gamma = std::max(g_bar, 0.276 * exp_eoverkt * (-EULERGAMMA - std::log(eoverkt)));
-      return C_0 * nne * std::sqrt(T_e) * 14.51039491 * trans_osc_strength * pow(H_ionpot / epsilon_trans, 2) *
-             eoverkt / exp_eoverkt * Gamma;
+      return C_0 * nne * std::sqrt(T_e) * 14.51039491 * trans_osc_strength * pow2(H_ionpot / epsilon_trans) * eoverkt /
+             exp_eoverkt * Gamma;
     }
 
     // forbidden transitions: magnetic dipole, electric quadropole...

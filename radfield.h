@@ -25,7 +25,6 @@ void normalise_nuJ(int nonemptymgi, double estimator_normfactor_over4pi);
 [[nodiscard]] auto get_T_J_from_J(int nonemptymgi) -> float;
 [[nodiscard]] auto get_Jblueindex(int lineindex) -> int;
 [[nodiscard]] auto get_Jb_lu(int nonemptymgi, int jblueindex) -> double;
-[[nodiscard]] auto get_Jb_lu_contribcount(int nonemptymgi, int jblueindex) -> int;
 void titer_J(int nonemptymgi);
 void titer_nuJ(int nonemptymgi);
 void reduce_estimators();

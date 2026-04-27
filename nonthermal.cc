@@ -514,6 +514,8 @@ void read_auger_data() {
       // use the epsilon correction factor as in equation 7 of Kaastra & Mewe (1993)
       auto en_auger_ev = static_cast<float>(en_auger_ev_total_nocorrection - (epsilon_e3 / 1000. * ionpot_ev));
 
+      assert_always(shellnum > 0);
+      assert_always(shellnum <= std::ssize(xrayn));
       const int n = xrayn[shellnum - 1];
       const int l = xrayl[shellnum - 1];
       const int g = xrayg[shellnum - 1];
@@ -595,8 +597,9 @@ auto get_sum_q_over_binding_energy(const int element, const int ion) -> double {
     double enbinding = binding_energies.at(shellindex);
     if (enbinding <= 0) {
       // if we don't have the shell's binding energy, use the previous one
+      assert_always(shellindex > 0);
       enbinding = binding_energies.at(shellindex - 1);
-      assert_always(enbinding > 0);
+      assert_always(enbinding > 0.);
     }
     total += electronsinshell / std::max(get_ionpot(element, ion), enbinding);
   }
@@ -822,7 +825,7 @@ constexpr auto xs_ionisation_lotz(const double en_erg, const ShellParams& collio
          (std::log(pow2(beta) * ME * pow2(CLIGHT) / 2.0 / ionpot) - std::log10(1 - pow2(beta)) - pow2(beta)));
     if (part_sigma_shell > 0.) {
       constexpr double Aconst = 1.33e-14 * EV * EV;
-      const double sigma = 2 * Aconst / pow2(beta) / ME / pow2(CLIGHT) * part_sigma_shell;
+      const double sigma = 2 * Aconst / ME / pow2(beta * CLIGHT) * part_sigma_shell;
       assert_always(sigma >= 0);
       return sigma;
     }
@@ -868,8 +871,8 @@ auto get_xs_ionisation_vector(std::array<double, SFPTS>& xs_vec, const ShellPara
   for (int i = startindex; i < SFPTS; i++) {
     const double u = engrid(i) / ionpot_ev;
     const double xs_ioniz =
-        1e-14 * ((A * (1 - (1 / u))) + (B * std::pow((1 - (1 / u)), 2)) + (C * std::log(u)) + (D * std::log(u) / u)) /
-        (u * std::pow(ionpot_ev, 2));
+        1e-14 * ((A * (1 - (1 / u))) + (B * pow2(1 - (1 / u))) + (C * std::log(u)) + (D * std::log(u) / u)) /
+        (u * pow2(ionpot_ev));
     xs_vec[i] = xs_ioniz;
   }
 
@@ -1162,7 +1165,7 @@ auto get_oneoverw_approx_axelrod(const int element, const int ion, const int non
   const double binding = get_sum_q_over_binding_energy(element, ion);
   constexpr double Aconst = 1.33e-14 * EV * EV;
 
-  return Aconst * binding / Zbar / (2 * PI * std::pow(QE, 4));
+  return Aconst * binding / Zbar / (2 * PI * pow4(QE));
 }
 
 // the fraction of deposited energy that goes into ionising electrons in a particular shell
@@ -1374,7 +1377,7 @@ auto get_xs_excitation_vector(const int alltransindex, const double statweight_l
     // collision strength is available, so use it
     // Li et al. 2012 equation 11
     const double constantfactor =
-        std::pow(H_ionpot, 2) / statweight_lower * globals::alltrans.coll_str[alltransindex] * PI * A_naught_squared;
+        pow2(H_ionpot) / statweight_lower * globals::alltrans.coll_str[alltransindex] * PI * A_naught_squared;
 
     const int en_startindex = get_energyindex_ev_gteq(epsilon_trans / EV);
 
@@ -1382,7 +1385,7 @@ auto get_xs_excitation_vector(const int alltransindex, const double statweight_l
 
     for (int j = en_startindex; j < SFPTS; j++) {
       const double energy = engrid(j) * EV;
-      xs_excitation_vec[j] = constantfactor * std::pow(energy, -2);
+      xs_excitation_vec[j] = constantfactor / pow2(energy);
     }
     return {xs_excitation_vec, en_startindex};
   }
@@ -1399,7 +1402,7 @@ auto get_xs_excitation_vector(const int alltransindex, const double statweight_l
 
     // Eq 4 of Mewe 1972, possibly from Seaton 1962?
     const double constantfactor =
-        epsilon_trans_ev * prefactor * A_naught_squared * std::pow(H_ionpot / epsilon_trans, 2) * trans_osc_strength;
+        epsilon_trans_ev * prefactor * A_naught_squared * pow2(H_ionpot / epsilon_trans) * trans_osc_strength;
 
     const int en_startindex = get_energyindex_ev_gteq(epsilon_trans_ev);
 
