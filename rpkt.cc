@@ -444,7 +444,7 @@ void rpkt_event_continuum(Packet& pkt, const RpktContinuumOpacity& chi_rpkt_cont
   const double dopplerfactor = calculate_doppler_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
   const double chi_cont = chi_rpkt_cont.total() * dopplerfactor;
   const double chi_escatter = chi_rpkt_cont.chi_freefree_scatter * dopplerfactor;
-  const double chi_ff = chi_rpkt_cont.chi_freefree_heating * dopplerfactor;
+  const double chi_ff = chi_rpkt_cont.chi_freefree_heat * dopplerfactor;
   const double chi_bf = chi_rpkt_cont.chi_boundfree * dopplerfactor;
 
   // continuum process happens. select due to its probabilities sigma/chi_cont, chi_ff/chi_cont,
@@ -567,7 +567,7 @@ void update_estimators(const double e_cmf, const double nu_cmf, const double dis
   }
 
   // ffheatingestimator does not depend on ion and element, so an array with gridsize is enough.
-  atomicadd(globals::ffheatingestimator[nonemptymgi], distance_e_cmf * chi_rpkt_cont.chi_freefree_heating);
+  atomicadd(globals::ffheatingestimator[nonemptymgi], distance_e_cmf * chi_rpkt_cont.chi_freefree_heat);
 
   if constexpr (USE_LUT_PHOTOION || USE_ION_BFHEATING_ESTIMATORS) {
     for (int i = 0; i < globals::nbfcontinua_ground; i++) {
@@ -955,7 +955,7 @@ void calculate_chi_rpkt_cont(const double nu_cmf, RpktContinuumOpacity& chi_rpkt
   const auto nne = grid::get_nne(nonemptymgi);
 
   // free-free absorption
-  chi_rpkt_cont.chi_freefree_heating = calculate_chi_ffheating(nonemptymgi, nu_cmf, USECELLHISTANDUPDATEPHIXSLIST);
+  chi_rpkt_cont.chi_freefree_heat = calculate_chi_ffheating(nonemptymgi, nu_cmf, USECELLHISTANDUPDATEPHIXSLIST);
 
   // First contribution: Thomson scattering on free electrons
   chi_rpkt_cont.chi_freefree_scatter = SIGMA_T * nne;
