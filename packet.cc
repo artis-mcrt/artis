@@ -60,7 +60,7 @@ void place_pellet(const double e_cmf_per_packet, const std::span<const double> e
   assert_always(cellindex < grid::ngrid);
 
   pkt = Packet{};
-  pkt.where = cellindex;
+  pkt.cellindex = cellindex;
   pkt.number = pktnumber;  // record the packets number for debugging
   pkt.prop_time = globals::tmin;
   pkt.originated_from_particlenotgamma = false;
@@ -174,7 +174,7 @@ auto read_text_packets(const std::string& filename) -> std::vector<Packet> {
     Packet& pkt = packets.back();
 
     int pkt_type_in = 0;
-    ssline >> pkt.number >> pkt.where >> pkt_type_in;
+    ssline >> pkt.number >> pkt.cellindex >> pkt_type_in;
     pkt.type = static_cast<enum packet_type>(pkt_type_in);
 
     ssline >> pkt.pos[0] >> pkt.pos[1] >> pkt.pos[2];
@@ -220,7 +220,7 @@ void write_text_packets(const std::string& filename, const std::span<const Packe
     if (!KEEP_ESCAPED_GAMMAS && pkt.type == TYPE_ESCAPE && pkt.escape_type == TYPE_GAMMA) {
       continue;
     }
-    packets_file << pkt.number << ' ' << pkt.where << ' ' << std::to_underlying(pkt.type) << ' ';
+    packets_file << pkt.number << ' ' << pkt.cellindex << ' ' << std::to_underlying(pkt.type) << ' ';
     packets_file << pkt.pos[0] << ' ' << pkt.pos[1] << ' ' << pkt.pos[2] << ' ';
     packets_file << pkt.dir[0] << ' ' << pkt.dir[1] << ' ' << pkt.dir[2] << ' ';
     packets_file << pkt.tdecay << ' ';

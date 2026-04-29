@@ -244,12 +244,12 @@ auto rlc_emiss_vpkt(const Packet& pkt, const double t_current, const double t_ar
 
   // compute the optical depth to boundary
 
-  mgi = grid::get_propcell_modelgridindex(vpkt.where);
+  mgi = grid::get_propcell_modelgridindex(vpkt.cellindex);
   THREADLOCALONHOST auto chi_vpkt_cont = Rpkt_continuum_absorptioncoeffs{};
 
   while (!end_packet) {
     // distance to the next cell
-    const auto [sdist, snext] = grid::boundary_distance(vpkt.dir, vpkt.pos, vpkt.prop_time, vpkt.where);
+    const auto [sdist, snext] = grid::boundary_distance(vpkt.dir, vpkt.pos, vpkt.prop_time, vpkt.cellindex);
     const double s_cont = sdist * pow3(t_current / t_future);
 
     if (mgi < 0) {
@@ -351,7 +351,7 @@ auto rlc_emiss_vpkt(const Packet& pkt, const double t_current, const double t_ar
     grid::change_cell(vpkt, snext);
     end_packet = (vpkt.type == TYPE_ESCAPE);
 
-    mgi = grid::get_propcell_modelgridindex(vpkt.where);
+    mgi = grid::get_propcell_modelgridindex(vpkt.cellindex);
     if (mgi >= 0) {
       const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(mgi);
 
@@ -865,7 +865,7 @@ auto call_estimators(const Packet& pkt, const enum packet_type type_before_rpkt)
   }
 
   // Cut on vpkts
-  const auto nonemptymgi = grid::get_propcell_nonemptymgi(pkt.where);
+  const auto nonemptymgi = grid::get_propcell_nonemptymgi(pkt.cellindex);
 
   if (grid::thick_allcells[nonemptymgi] != 0) {
     return;

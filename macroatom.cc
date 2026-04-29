@@ -311,7 +311,7 @@ void do_macroatom_raddeexcitation(Packet& pkt, const int ionuniquelevelindexstar
 
 // handle activated macro atoms
 DEVICE_FUNC void do_macroatom(Packet& pkt, const MacroAtomState& pktmastate) {
-  const auto nonemptymgi = grid::get_propcell_nonemptymgi(pkt.where);
+  const auto nonemptymgi = grid::get_propcell_nonemptymgi(pkt.cellindex);
   assert_testmodeonly(nonemptymgi >= 0);
   const auto T_e = grid::get_Te(nonemptymgi);
 

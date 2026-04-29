@@ -343,7 +343,7 @@ void setup_coolinglist() {
 
 // handle a k-packet (e.g., in a thick cell) by emitting according to the planck function
 DEVICE_FUNC void do_kpkt_blackbody(Packet& pkt) {
-  const auto nonemptymgi = grid::get_propcell_nonemptymgi(pkt.where);
+  const auto nonemptymgi = grid::get_propcell_nonemptymgi(pkt.cellindex);
 
   if (RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.has_value() && grid::thick_allcells[nonemptymgi] != 1) {
     pkt.nu_cmf = sample_planck_times_expansion_opacity(nonemptymgi);
@@ -379,7 +379,7 @@ DEVICE_FUNC void do_kpkt(Packet& pkt, const double t2, const int nts) {
 
   stats::increment(stats::Counter::INTERACTIONS);
 
-  const auto nonemptymgi = grid::get_propcell_nonemptymgi(pkt.where);
+  const auto nonemptymgi = grid::get_propcell_nonemptymgi(pkt.cellindex);
   const std::span<const double> ion_cooling_contribs_thiscell = get_cell_ion_cooling_contribs(nonemptymgi);
   const double rndcool_ion = rng_uniform() * ion_cooling_contribs_thiscell.back();
 

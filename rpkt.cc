@@ -594,7 +594,7 @@ void update_estimators(const double e_cmf, const double nu_cmf, const double dis
 // Update an r-packet and return true if no mgi change (or it goes into an empty cell) and no pkttype change and not
 // reached end of timestep, otherwise false
 auto do_rpkt_step(Packet& pkt, const double t2) -> bool {
-  const auto nonemptymgi = grid::get_propcell_nonemptymgi(pkt.where);
+  const auto nonemptymgi = grid::get_propcell_nonemptymgi(pkt.cellindex);
 
   MacroAtomState pktmastate{};
 
@@ -606,11 +606,11 @@ auto do_rpkt_step(Packet& pkt, const double t2) -> bool {
 
   // Finding the distance to the crossing of the grid cell boundaries.
   // sdist is the boundary distance to the next grid cell snext
-  const auto [sdist, snext] = grid::boundary_distance(pkt.dir, pkt.pos, pkt.prop_time, pkt.where);
+  const auto [sdist, snext] = grid::boundary_distance(pkt.dir, pkt.pos, pkt.prop_time, pkt.cellindex);
 
   if (sdist == 0) {
     grid::change_cell(pkt, snext);
-    const int new_nonemptymgi = grid::get_propcell_nonemptymgi(pkt.where);
+    const int new_nonemptymgi = grid::get_propcell_nonemptymgi(pkt.cellindex);
 
     return (pkt.type == TYPE_RPKT && (new_nonemptymgi < 0 || new_nonemptymgi == nonemptymgi));
   }
@@ -690,18 +690,18 @@ auto do_rpkt_step(Packet& pkt, const double t2) -> bool {
     }
     move_pkt_withtime(pkt, sdist / 2.);
 
-    if (snext != pkt.where) {
+    if (snext != pkt.cellindex) {
       grid::change_cell(pkt, snext);
       if (snext < 0) {
         // we left the grid, so we can stop tracking this packet
         return false;
       }
-      const auto new_nonemptymgi = grid::get_propcell_nonemptymgi(pkt.where);
+      const auto new_nonemptymgi = grid::get_propcell_nonemptymgi(pkt.cellindex);
       // if the new cell is empty or the same as the previous one, keep going, otherwise we'll need to change the cell
       // cache
       return ((new_nonemptymgi < 0) || (new_nonemptymgi == nonemptymgi));
     }
-    return true;  // if snext == pkt.where, we reached the maximum path length and are not changing cell
+    return true;  // if snext == pkt.cellindex, we reached the maximum path length and are not changing cell
   }
 
   if ((tdist < sdist) && (tdist <= edist)) [[unlikely]] {
