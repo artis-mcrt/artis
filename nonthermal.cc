@@ -2318,7 +2318,7 @@ DEVICE_FUNC void do_ntalpha_fisprod_deposit(Packet& pkt) {
 DEVICE_FUNC void do_ntlepton_deposit(Packet& pkt) {
   atomicadd(nt_energy_deposited, pkt.e_cmf);
 
-  const int modelgridindex = grid::get_propcell_modelgridindex(pkt.where);
+  const int modelgridindex = grid::get_propcell_modelgridindex(pkt.cellindex);
   const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
 
   // macroatom should not be activated in thick cells

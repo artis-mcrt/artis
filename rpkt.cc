@@ -102,7 +102,7 @@ template <bool USECELLCACHE>
 // returns tuple of (distance to event, next transition index for pkt.next_trans, bool for whether line event)
 // the next transition index is lineindex + 1 for a line event, may remain the current next_trans if no event occurs,
 // and is globals::nlines + 1 for a continuum event
-auto get_possible_event(const int nonemptymgi, const Packet& pkt, const Rpkt_continuum_absorptioncoeffs& chi_rpkt_cont,
+auto get_possible_event(const int nonemptymgi, const Packet& pkt, const RpktContinuumOpacity& chi_rpkt_cont,
                         MacroAtomState& mastate,
                         const double tau_rnd,  // random optical depth until which the packet travels
                         const double abort_dist,  // maximal travel distance before packet leaves cell or time step ends
@@ -216,7 +216,7 @@ auto get_possible_event(const int nonemptymgi, const Packet& pkt, const Rpkt_con
 }
 
 auto get_possible_event_expansion_opacity(const int nonemptymgi, const Packet& pkt,
-                                          const Rpkt_continuum_absorptioncoeffs& chi_rpkt_cont, MacroAtomState& mastate,
+                                          const RpktContinuumOpacity& chi_rpkt_cont, MacroAtomState& mastate,
                                           const double tau_rnd, const double nu_cmf_abort, const double dnu_on_dl,
                                           const double doppler) -> std::tuple<double, int, bool> {
   auto pos = pkt.pos;
@@ -438,14 +438,14 @@ void electron_scatter_rpkt(Packet& pkt) {
   pkt.e_rf = pkt.e_cmf / dopplerfactor;
 }
 
-void rpkt_event_continuum(Packet& pkt, const Rpkt_continuum_absorptioncoeffs& chi_rpkt_cont) {
+void rpkt_event_continuum(Packet& pkt, const RpktContinuumOpacity& chi_rpkt_cont) {
   const double nu = pkt.nu_cmf;
 
   const double dopplerfactor = calculate_doppler_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
   const double chi_cont = chi_rpkt_cont.total() * dopplerfactor;
-  const double chi_escatter = chi_rpkt_cont.ffescat * dopplerfactor;
-  const double chi_ff = chi_rpkt_cont.ffheat * dopplerfactor;
-  const double chi_bf = chi_rpkt_cont.bf * dopplerfactor;
+  const double chi_escatter = chi_rpkt_cont.chi_freefree_scatter * dopplerfactor;
+  const double chi_ff = chi_rpkt_cont.chi_freefree_heat * dopplerfactor;
+  const double chi_bf = chi_rpkt_cont.chi_boundfree * dopplerfactor;
 
   // continuum process happens. select due to its probabilities sigma/chi_cont, chi_ff/chi_cont,
   // chi_bf/chi_cont
@@ -458,7 +458,7 @@ void rpkt_event_continuum(Packet& pkt, const Rpkt_continuum_absorptioncoeffs& ch
     // in this case the packet stays a R_PKT of same nu_cmf as before (coherent scattering)
     // but with different direction
     pkt.nscatterings += 1;
-    stats::increment(stats::Counter::ESCOUNTER);
+    stats::increment(stats::Counter::ELECTRON_SCATTERINGS);
 
     // generate a virtual packet
     if constexpr (VPKT_ON) {
@@ -484,7 +484,7 @@ void rpkt_event_continuum(Packet& pkt, const Rpkt_continuum_absorptioncoeffs& ch
 
     pkt.absorptiontype = -2;
 
-    const double chi_bf_inrest = chi_rpkt_cont.bf;
+    const double chi_bf_inrest = chi_rpkt_cont.chi_boundfree;
     assert_testmodeonly(phixslist.chi_bf_sum[phixslist.allcontend - 1] == chi_bf_inrest);
 
     // Determine in which continuum the bf-absorption occurs
@@ -540,7 +540,7 @@ void rpkt_event_boundbound(Packet& pkt, const MacroAtomState& pktmastate) {
 void rpkt_event_thickcell(Packet& pkt) {
   stats::increment(stats::Counter::INTERACTIONS);
   pkt.nscatterings += 1;
-  stats::increment(stats::Counter::ESCOUNTER);
+  stats::increment(stats::Counter::ELECTRON_SCATTERINGS);
 
   emit_rpkt(pkt);
   // Electron scattering does not modify the last emission flag but it updates the last emission position
@@ -553,7 +553,7 @@ void rpkt_event_thickcell(Packet& pkt) {
 // packets which do not contribute to the radiation field.
 void update_estimators(const double e_cmf, const double nu_cmf, const double distance,
                        const double doppler_nucmf_on_nurf, const int nonemptymgi,
-                       const Rpkt_continuum_absorptioncoeffs& chi_rpkt_cont, const bool thickcell) {
+                       const RpktContinuumOpacity& chi_rpkt_cont, const bool thickcell) {
   // Update only non-empty cells
   assert_testmodeonly(nonemptymgi >= 0);
   const double distance_e_cmf = distance * e_cmf;
@@ -567,7 +567,7 @@ void update_estimators(const double e_cmf, const double nu_cmf, const double dis
   }
 
   // ffheatingestimator does not depend on ion and element, so an array with gridsize is enough.
-  atomicadd(globals::ffheatingestimator[nonemptymgi], distance_e_cmf * chi_rpkt_cont.ffheat);
+  atomicadd(globals::ffheatingestimator[nonemptymgi], distance_e_cmf * chi_rpkt_cont.chi_freefree_heat);
 
   if constexpr (USE_LUT_PHOTOION || USE_ION_BFHEATING_ESTIMATORS) {
     for (int i = 0; i < globals::nbfcontinua_ground; i++) {
@@ -594,23 +594,23 @@ void update_estimators(const double e_cmf, const double nu_cmf, const double dis
 // Update an r-packet and return true if no mgi change (or it goes into an empty cell) and no pkttype change and not
 // reached end of timestep, otherwise false
 auto do_rpkt_step(Packet& pkt, const double t2) -> bool {
-  const auto nonemptymgi = grid::get_propcell_nonemptymgi(pkt.where);
+  const auto nonemptymgi = grid::get_propcell_nonemptymgi(pkt.cellindex);
 
   MacroAtomState pktmastate{};
 
-  THREADLOCALONHOST auto chi_rpkt_cont = Rpkt_continuum_absorptioncoeffs{
-      globals::nbfcontinua_ground, globals::nbfcontinua, static_cast<int>(globals::bfestim_nu_edge.size())};
+  THREADLOCALONHOST auto chi_rpkt_cont = RpktContinuumOpacity{globals::nbfcontinua_ground, globals::nbfcontinua,
+                                                              static_cast<int>(globals::bfestim_nu_edge.size())};
 
   // draw random optical depth to next physical event
   const double tau_rnd = -std::log(static_cast<double>(rng_uniform_pos()));
 
   // Finding the distance to the crossing of the grid cell boundaries.
   // sdist is the boundary distance to the next grid cell snext
-  const auto [sdist, snext] = grid::boundary_distance(pkt.dir, pkt.pos, pkt.prop_time, pkt.where);
+  const auto [sdist, snext] = grid::boundary_distance(pkt.dir, pkt.pos, pkt.prop_time, pkt.cellindex);
 
   if (sdist == 0) {
     grid::change_cell(pkt, snext);
-    const int new_nonemptymgi = grid::get_propcell_nonemptymgi(pkt.where);
+    const int new_nonemptymgi = grid::get_propcell_nonemptymgi(pkt.cellindex);
 
     return (pkt.type == TYPE_RPKT && (new_nonemptymgi < 0 || new_nonemptymgi == nonemptymgi));
   }
@@ -690,18 +690,18 @@ auto do_rpkt_step(Packet& pkt, const double t2) -> bool {
     }
     move_pkt_withtime(pkt, sdist / 2.);
 
-    if (snext != pkt.where) {
+    if (snext != pkt.cellindex) {
       grid::change_cell(pkt, snext);
       if (snext < 0) {
         // we left the grid, so we can stop tracking this packet
         return false;
       }
-      const auto new_nonemptymgi = grid::get_propcell_nonemptymgi(pkt.where);
+      const auto new_nonemptymgi = grid::get_propcell_nonemptymgi(pkt.cellindex);
       // if the new cell is empty or the same as the previous one, keep going, otherwise we'll need to change the cell
       // cache
       return ((new_nonemptymgi < 0) || (new_nonemptymgi == nonemptymgi));
     }
-    return true;  // if snext == pkt.where, we reached the maximum path length and are not changing cell
+    return true;  // if snext == pkt.cellindex, we reached the maximum path length and are not changing cell
   }
 
   if ((tdist < sdist) && (tdist <= edist)) [[unlikely]] {
@@ -944,8 +944,7 @@ DEVICE_FUNC void emit_rpkt(Packet& pkt) {
 }
 
 template <bool USECELLHISTANDUPDATEPHIXSLIST>
-void calculate_chi_rpkt_cont(const double nu_cmf, Rpkt_continuum_absorptioncoeffs& chi_rpkt_cont,
-                             const int nonemptymgi) {
+void calculate_chi_rpkt_cont(const double nu_cmf, RpktContinuumOpacity& chi_rpkt_cont, const int nonemptymgi) {
   assert_testmodeonly(grid::thick_allcells[nonemptymgi] != 1);
   if ((nonemptymgi == chi_rpkt_cont.nonemptymgi) && (globals::timestep == chi_rpkt_cont.timestep) &&
       (fabs((chi_rpkt_cont.nu / nu_cmf) - 1.0) < 1e-4)) {
@@ -956,13 +955,13 @@ void calculate_chi_rpkt_cont(const double nu_cmf, Rpkt_continuum_absorptioncoeff
   const auto nne = grid::get_nne(nonemptymgi);
 
   // free-free absorption
-  chi_rpkt_cont.ffheat = calculate_chi_ffheating(nonemptymgi, nu_cmf, USECELLHISTANDUPDATEPHIXSLIST);
+  chi_rpkt_cont.chi_freefree_heat = calculate_chi_ffheating(nonemptymgi, nu_cmf, USECELLHISTANDUPDATEPHIXSLIST);
 
   // First contribution: Thomson scattering on free electrons
-  chi_rpkt_cont.ffescat = SIGMA_T * nne;
+  chi_rpkt_cont.chi_freefree_scatter = SIGMA_T * nne;
 
   // Third contribution: bound-free absorption
-  chi_rpkt_cont.bf =
+  chi_rpkt_cont.chi_boundfree =
       calculate_chi_bf_gammacontr<USECELLHISTANDUPDATEPHIXSLIST>(nonemptymgi, nu_cmf, chi_rpkt_cont.phixslist);
 
   chi_rpkt_cont.nonemptymgi = nonemptymgi;
@@ -971,9 +970,9 @@ void calculate_chi_rpkt_cont(const double nu_cmf, Rpkt_continuum_absorptioncoeff
 }
 
 // specialize calculate_chi_rpkt_cont templates with true and false:
-template void calculate_chi_rpkt_cont<true>(const double nu_cmf, Rpkt_continuum_absorptioncoeffs& chi_rpkt_cont,
+template void calculate_chi_rpkt_cont<true>(const double nu_cmf, RpktContinuumOpacity& chi_rpkt_cont,
                                             const int nonemptymgi);
-template void calculate_chi_rpkt_cont<false>(const double nu_cmf, Rpkt_continuum_absorptioncoeffs& chi_rpkt_cont,
+template void calculate_chi_rpkt_cont<false>(const double nu_cmf, RpktContinuumOpacity& chi_rpkt_cont,
                                              const int nonemptymgi);
 
 void MPI_Bcast_binned_opacities(const ptrdiff_t nonemptymgi, const int root_node_id) {
@@ -1024,7 +1023,7 @@ void calculate_expansion_opacities(const int nonemptymgi) {
     expansionopacities[(nonemptymgi * expopac_nbins) + binindex] = bin_kappa_bb;
 
     if constexpr (RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.has_value()) {
-      // thread_local Rpkt_continuum_absorptioncoeffs chi_rpkt_cont {};
+      // thread_local RpktContinuumOpacity chi_rpkt_cont {};
       // calculate_chi_rpkt_cont(nu_mid, chi_rpkt_cont, nullptr, nonemptymgi);
       // const auto bin_kappa_cont = chi_rpkt_cont.total / rho;
 

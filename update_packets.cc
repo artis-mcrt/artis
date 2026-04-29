@@ -32,7 +32,7 @@ namespace {
 
 void do_nonthermal_predeposit(Packet& pkt, const int nts, const double t2) {
   double en_deposited = pkt.e_cmf;
-  const auto mgi = grid::get_propcell_modelgridindex(pkt.where);
+  const auto mgi = grid::get_propcell_modelgridindex(pkt.cellindex);
   const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(mgi);
   const auto priortype = pkt.type;
   const double ts = pkt.prop_time;
@@ -114,7 +114,7 @@ void do_nonthermal_predeposit(Packet& pkt, const int nts, const double t2) {
     pkt.pos = vec_scale(pkt.pos, t_new / ts);
     pkt.prop_time = t_new;
     // pkt.e_cmf *= ts / t_new;
-    assert_testmodeonly(grid::get_cellindex_from_pos(pkt.pos, pkt.prop_time) == pkt.where);
+    assert_testmodeonly(grid::get_cellindex_from_pos(pkt.pos, pkt.prop_time) == pkt.cellindex);
   } else {
     assert_always(false);  // unhandled thermalisation scheme
   }
@@ -161,7 +161,7 @@ void update_pellet(Packet& pkt, const int nts, const double t2) {
     // It won't decay in this timestep, so just need to move it on with the flow.
     pkt.pos = vec_scale(pkt.pos, t2 / ts);
     pkt.prop_time = t2;
-    assert_testmodeonly(grid::get_cellindex_from_pos(pkt.pos, pkt.prop_time) == pkt.where);
+    assert_testmodeonly(grid::get_cellindex_from_pos(pkt.pos, pkt.prop_time) == pkt.cellindex);
 
     // That's all that needs to be done for the inactive pellet.
   } else if (tdecay > ts) {
@@ -170,7 +170,7 @@ void update_pellet(Packet& pkt, const int nts, const double t2) {
 
     pkt.prop_time = tdecay;
     pkt.pos = vec_scale(pkt.pos, tdecay / ts);
-    assert_testmodeonly(grid::get_cellindex_from_pos(pkt.pos, pkt.prop_time) == pkt.where);
+    assert_testmodeonly(grid::get_cellindex_from_pos(pkt.pos, pkt.prop_time) == pkt.cellindex);
 
     if (pkt.originated_from_particlenotgamma) {
       // decay to non-thermal particle
@@ -263,7 +263,7 @@ void do_packet(Packet& pkt, const double t2, const int nts) {
     }
 
     case TYPE_KPKT: {
-      const int mgi = grid::get_propcell_modelgridindex(pkt.where);
+      const int mgi = grid::get_propcell_modelgridindex(pkt.cellindex);
       const int nonemptymgi = grid::get_nonemptymgi_of_mgi(mgi);
       if (grid::thick_allcells[nonemptymgi] == 1 ||
           (EXPANSIONOPACITIES_ON && RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.has_value())) {
@@ -305,7 +305,7 @@ auto get_packet_cellcachenonemptymgi(const Packet& pkt) -> std::optional<int> {
   if (std::ranges::find(nocache_packettypes, pkt.type) != nocache_packettypes.end()) {
     return {};  // these types do not use the cell cache
   }
-  const auto mgi = grid::get_propcell_modelgridindex(pkt.where);
+  const auto mgi = grid::get_propcell_modelgridindex(pkt.cellindex);
   if (mgi < 0) {
     return {};  // for empty cell, no cell cache required
   }

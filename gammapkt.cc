@@ -591,8 +591,8 @@ constexpr auto meanf_sigma(const double x) -> double {
 [[nodiscard]] auto get_chi_loss_weighted(const Packet& pkt, const int nonemptymgi) -> double {
   const double xx = H * pkt.nu_cmf / ME / CLIGHT / CLIGHT;
   const auto doppler = calculate_doppler_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
-  const auto chi_photo_electric_rf = get_chi_photo_electric_cmf(pkt.where, pkt.nu_cmf) * doppler;
-  const auto chi_pair_prod_rf = get_chi_pair_prod_cmf(pkt.where, pkt.nu_cmf) * doppler;
+  const auto chi_photo_electric_rf = get_chi_photo_electric_cmf(pkt.cellindex, pkt.nu_cmf) * doppler;
+  const auto chi_pair_prod_rf = get_chi_pair_prod_cmf(pkt.cellindex, pkt.nu_cmf) * doppler;
 
   return ((meanf_sigma(xx) * grid::get_nnetot(nonemptymgi)) + chi_photo_electric_rf +
           (chi_pair_prod_rf * (1. - (2.46636e+20 / pkt.nu_cmf))));
@@ -607,7 +607,7 @@ void update_gamma_dep(const Packet& pkt, const double dist) {
     return;  // don't instantly deposit energy from gamma rays, handle the particles they produce instead
   }
 
-  const int nonemptymgi = grid::get_propcell_nonemptymgi(pkt.where);
+  const int nonemptymgi = grid::get_propcell_nonemptymgi(pkt.cellindex);
   if (nonemptymgi < 0) {
     return;  // empty cell
   }
@@ -687,16 +687,16 @@ void transport_gamma(Packet& pkt, const double t2) {
   // boundaries. sdist is the boundary distance and snext is the
   // grid cell into which we pass.
 
-  const auto [sdist, snext] = grid::boundary_distance(pkt.dir, pkt.pos, pkt.prop_time, pkt.where);
+  const auto [sdist, snext] = grid::boundary_distance(pkt.dir, pkt.pos, pkt.prop_time, pkt.cellindex);
 
   // Now consider the scattering/destruction processes.
   // Compton scattering - need to determine the scattering co-efficient.
   // Routine returns the value in the rest frame.
 
   const auto doppler = calculate_doppler_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
-  const double chi_compton = get_chi_compton_cmf(pkt.where, pkt.nu_cmf) * doppler;
-  const double chi_photo_electric = get_chi_photo_electric_cmf(pkt.where, pkt.nu_cmf) * doppler;
-  const double chi_pair_prod = get_chi_pair_prod_cmf(pkt.where, pkt.nu_cmf) * doppler;
+  const double chi_compton = get_chi_compton_cmf(pkt.cellindex, pkt.nu_cmf) * doppler;
+  const double chi_photo_electric = get_chi_photo_electric_cmf(pkt.cellindex, pkt.nu_cmf) * doppler;
+  const double chi_pair_prod = get_chi_pair_prod_cmf(pkt.cellindex, pkt.nu_cmf) * doppler;
   const double chi_tot = chi_compton + chi_photo_electric + chi_pair_prod;
 
   assert_testmodeonly(std::isfinite(chi_compton));
@@ -725,7 +725,7 @@ void transport_gamma(Packet& pkt, const double t2) {
 
     move_pkt_withtime(pkt, sdist / 2.);
 
-    if (snext != pkt.where) {
+    if (snext != pkt.cellindex) {
       grid::change_cell(pkt, snext);
     }
   } else if ((tdist < sdist) && (tdist < edist)) {
@@ -818,9 +818,10 @@ void wollaeger_thermalisation(Packet& pkt) {
   bool end_packet = false;
   while (!end_packet) {
     // distance to the next cell
-    const auto [sdist, snext] = grid::boundary_distance(pkt_copy.dir, pkt_copy.pos, pkt_copy.prop_time, pkt_copy.where);
+    const auto [sdist, snext] =
+        grid::boundary_distance(pkt_copy.dir, pkt_copy.pos, pkt_copy.prop_time, pkt_copy.cellindex);
     const double s_cont = sdist * pow3(t_current / pkt_copy.prop_time);
-    const int mgi = grid::get_propcell_modelgridindex(pkt_copy.where);
+    const int mgi = grid::get_propcell_modelgridindex(pkt_copy.cellindex);
     if (mgi >= 0) {
       const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(mgi);
       tau += grid::get_rho(nonemptymgi) * s_cont * mean_gamma_opac;  // contribution to the integral
@@ -880,9 +881,9 @@ void guttman_thermalisation(Packet& pkt) {
     while (!end_packet) {
       // distance to the next cell
       const auto [sdist, snext] =
-          grid::boundary_distance(pkt_copy.dir, pkt_copy.pos, pkt_copy.prop_time, pkt_copy.where);
+          grid::boundary_distance(pkt_copy.dir, pkt_copy.pos, pkt_copy.prop_time, pkt_copy.cellindex);
       const double s_cont = sdist * pow3(t / pkt_copy.prop_time);
-      const int mgi = grid::get_propcell_modelgridindex(pkt_copy.where);
+      const int mgi = grid::get_propcell_modelgridindex(pkt_copy.cellindex);
       if (mgi >= 0) {
         column_densities[i] += grid::get_rho_tmin(mgi) * s_cont;  // contribution to the integral
       }
@@ -1018,7 +1019,7 @@ DEVICE_FUNC void do_gamma(Packet& pkt, const int nts, const double t2) {
 
     if constexpr (GAMMA_THERMALISATION_SCHEME != GammaThermalisationScheme::FREQUENCYDEPENDENT) {
       // no transport, so the path-based gamma deposition estimator won't get updated unless we do it here
-      const int mgi = grid::get_propcell_modelgridindex(pkt.where);
+      const int mgi = grid::get_propcell_modelgridindex(pkt.cellindex);
       const int nonemptymgi = grid::get_nonemptymgi_of_mgi(mgi);
       atomicadd(globals::dep_estimator_gamma[nonemptymgi], pkt.e_cmf);
     }

@@ -244,12 +244,12 @@ auto rlc_emiss_vpkt(const Packet& pkt, const double t_current, const double t_ar
 
   // compute the optical depth to boundary
 
-  mgi = grid::get_propcell_modelgridindex(vpkt.where);
-  THREADLOCALONHOST auto chi_vpkt_cont = Rpkt_continuum_absorptioncoeffs{};
+  mgi = grid::get_propcell_modelgridindex(vpkt.cellindex);
+  THREADLOCALONHOST auto chi_vpkt_cont = RpktContinuumOpacity{};
 
   while (!end_packet) {
     // distance to the next cell
-    const auto [sdist, snext] = grid::boundary_distance(vpkt.dir, vpkt.pos, vpkt.prop_time, vpkt.where);
+    const auto [sdist, snext] = grid::boundary_distance(vpkt.dir, vpkt.pos, vpkt.prop_time, vpkt.cellindex);
     const double s_cont = sdist * pow3(t_current / t_future);
 
     if (mgi < 0) {
@@ -262,13 +262,13 @@ auto rlc_emiss_vpkt(const Packet& pkt, const double t_current, const double t_ar
 
       for (int ind = 0; ind < Nspectra; ind++) {
         if (exclude[ind] == -2) {
-          const double chi_cont_nobf = chi_cont - chi_vpkt_cont.bf;
+          const double chi_cont_nobf = chi_cont - chi_vpkt_cont.chi_boundfree;
           tau_vpkt[ind] += chi_cont_nobf * s_cont;
         } else if (exclude[ind] == -3) {
-          const double chi_cont_noff = chi_cont - chi_vpkt_cont.ffheat;
+          const double chi_cont_noff = chi_cont - chi_vpkt_cont.chi_freefree_heat;
           tau_vpkt[ind] += chi_cont_noff * s_cont;
         } else if (exclude[ind] == -4) {
-          const double chi_cont_noes = chi_cont - chi_vpkt_cont.ffescat;
+          const double chi_cont_noes = chi_cont - chi_vpkt_cont.chi_freefree_scatter;
           tau_vpkt[ind] += chi_cont_noes * s_cont;
         } else {
           tau_vpkt[ind] += chi_cont * s_cont;
@@ -351,7 +351,7 @@ auto rlc_emiss_vpkt(const Packet& pkt, const double t_current, const double t_ar
     grid::change_cell(vpkt, snext);
     end_packet = (vpkt.type == TYPE_ESCAPE);
 
-    mgi = grid::get_propcell_modelgridindex(vpkt.where);
+    mgi = grid::get_propcell_modelgridindex(vpkt.cellindex);
     if (mgi >= 0) {
       const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(mgi);
 
@@ -865,7 +865,7 @@ auto call_estimators(const Packet& pkt, const enum packet_type type_before_rpkt)
   }
 
   // Cut on vpkts
-  const auto nonemptymgi = grid::get_propcell_nonemptymgi(pkt.where);
+  const auto nonemptymgi = grid::get_propcell_nonemptymgi(pkt.cellindex);
 
   if (grid::thick_allcells[nonemptymgi] != 0) {
     return;
