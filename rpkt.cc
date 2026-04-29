@@ -458,7 +458,7 @@ void rpkt_event_continuum(Packet& pkt, const Rpkt_continuum_absorptioncoeffs& ch
     // in this case the packet stays a R_PKT of same nu_cmf as before (coherent scattering)
     // but with different direction
     pkt.nscatterings += 1;
-    stats::increment(stats::Counter::ESCOUNTER);
+    stats::increment(stats::Counter::ELECTRON_SCATTERINGS);
 
     // generate a virtual packet
     if constexpr (VPKT_ON) {
@@ -540,7 +540,7 @@ void rpkt_event_boundbound(Packet& pkt, const MacroAtomState& pktmastate) {
 void rpkt_event_thickcell(Packet& pkt) {
   stats::increment(stats::Counter::INTERACTIONS);
   pkt.nscatterings += 1;
-  stats::increment(stats::Counter::ESCOUNTER);
+  stats::increment(stats::Counter::ELECTRON_SCATTERINGS);
 
   emit_rpkt(pkt);
   // Electron scattering does not modify the last emission flag but it updates the last emission position

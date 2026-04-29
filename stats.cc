@@ -74,8 +74,8 @@ void pkt_action_counters_printout(const int nts) {
   printlnlog("timestep {}: nt_stat_to_kpkt = {}", nts, get_counter(Counter::NT_STAT_TO_KPKT));
   nonthermal::print_stats(modelvolume, deltat);
 
-  printlnlog("timestep {}: escounter = {}", nts, get_counter(Counter::ESCOUNTER));
-  printlnlog("timestep {}: cellcrossing = {}", nts, get_counter(Counter::CELLCROSSINGS));
+  printlnlog("timestep {}: electron_scatterings = {}", nts, get_counter(Counter::ELECTRON_SCATTERINGS));
+  printlnlog("timestep {}: cellcrossings = {}", nts, get_counter(Counter::CELLCROSSINGS));
   printlnlog("timestep {}: updatecellcounter = {}", nts, get_counter(Counter::UPDATECELL));
   printlnlog("timestep {}: resonancescatterings = {}", nts, get_counter(Counter::RESONANCESCATTERINGS));
 
