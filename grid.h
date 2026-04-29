@@ -97,7 +97,7 @@ void write_grid_restart_data(int timestep);
 // Routine to take a packet across a boundary.
 inline void change_cell(Packet& pkt, const int snext) {
   if (snext >= 0) {
-    // Just need to update "where".
+    // Just need to update cellindex.
     pkt.cellindex = snext;
     stats::increment(stats::Counter::CELLCROSSINGS);
   } else {
