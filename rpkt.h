@@ -54,9 +54,9 @@ class Phixslist {
 
 struct RpktContinuumOpacity {
   double nu{-1.};  // frequency at which opacity was calculated
-  double ffescat{0.};
-  double ffheat{0.};
-  double bf{0.};
+  double chi_freefree_scatter{0.};
+  double chi_freefree_heat{0.};
+  double chi_boundfree{0.};
   int nonemptymgi{-1};
   int timestep{-1};
   Phixslist phixslist;
@@ -65,7 +65,7 @@ struct RpktContinuumOpacity {
       : phixslist{nbfcontinua_ground, nbfcontinua, bfestimcount} {}
 
   constexpr RpktContinuumOpacity() = default;
-  [[nodiscard]] constexpr auto total() const { return ffescat + bf + ffheat; }
+  [[nodiscard]] constexpr auto total() const { return chi_freefree_scatter + chi_boundfree + chi_freefree_heat; }
 };
 
 DEVICE_FUNC void do_rpkt(Packet& pkt, double t2);

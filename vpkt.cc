@@ -262,13 +262,13 @@ auto rlc_emiss_vpkt(const Packet& pkt, const double t_current, const double t_ar
 
       for (int ind = 0; ind < Nspectra; ind++) {
         if (exclude[ind] == -2) {
-          const double chi_cont_nobf = chi_cont - chi_vpkt_cont.bf;
+          const double chi_cont_nobf = chi_cont - chi_vpkt_cont.chi_boundfree;
           tau_vpkt[ind] += chi_cont_nobf * s_cont;
         } else if (exclude[ind] == -3) {
-          const double chi_cont_noff = chi_cont - chi_vpkt_cont.ffheat;
+          const double chi_cont_noff = chi_cont - chi_vpkt_cont.chi_freefree_heating;
           tau_vpkt[ind] += chi_cont_noff * s_cont;
         } else if (exclude[ind] == -4) {
-          const double chi_cont_noes = chi_cont - chi_vpkt_cont.ffescat;
+          const double chi_cont_noes = chi_cont - chi_vpkt_cont.chi_freefree_scatter;
           tau_vpkt[ind] += chi_cont_noes * s_cont;
         } else {
           tau_vpkt[ind] += chi_cont * s_cont;
