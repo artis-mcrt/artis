@@ -82,20 +82,12 @@ jobs:
                   python3 -c 'import multiprocessing; print(f"CPU count: {multiprocessing.cpu_count()}")'
                   echo "count=$(python3 -c 'import multiprocessing; print(multiprocessing.cpu_count())')" >> $GITHUB_OUTPUT
 
-            # - name: Install ${{ matrix.compiler.name }} ${{ matrix.compiler.ver }}
-            #   if: matrix.compiler.name == 'gcc' && matrix.compiler.ver == 15
-            #   uses: fortran-lang/setup-fortran@v1.9.0
-            #   with:
-            #       compiler: ${{ matrix.compiler.name }}
-            #       version: ${{ matrix.compiler.ver }}
-
             - name: Install ${{ matrix.compiler.name }} ${{ matrix.compiler.ver }}
-              if: matrix.compiler.name == 'gcc' && matrix.compiler.ver >= 15
-              run: |
-                  sudo add-apt-repository --yes ppa:ubuntu-toolchain-r/test
-                  sudo apt-get update -q
-                  sudo apt-get install -y gcc-${{ matrix.compiler.ver }} gfortran-${{ matrix.compiler.ver }} g++-${{ matrix.compiler.ver }}
-                  sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-${{ matrix.compiler.ver }} 100 --slave /usr/bin/gfortran gfortran /usr/bin/gfortran-${{ matrix.compiler.ver }} --slave /usr/bin/gcov gcov /usr/bin/gcov-${{ matrix.compiler.ver }} --slave /usr/bin/g++ g++ /usr/bin/g++-${{ matrix.compiler.ver }}
+              if: matrix.compiler.name == 'gcc' && matrix.compiler.ver == 15
+              uses: fortran-lang/setup-fortran@v1.9.0
+              with:
+                  compiler: ${{ matrix.compiler.name }}
+                  version: ${{ matrix.compiler.ver }}
 
             - name: Select GCC version as default C++ compiler
               if: matrix.compiler.name == 'gcc'
