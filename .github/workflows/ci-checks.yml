@@ -92,7 +92,10 @@ jobs:
               if: matrix.compiler.name == 'gcc' && matrix.compiler.ver >= 15
               run: |
                   sudo apt-get update
-                  sudo apt-get install -y g++-${{ matrix.compiler.ver }}
+                  sudo apt-get install -y gcc-${{ matrix.compiler.ver }} g++-${{ matrix.compiler.ver }}
+                  sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-${{ matrix.compiler.ver }} 100 \
+                                            --slave /usr/bin/g++ g++ /usr/bin/g++-${{ matrix.compiler.ver }}
+
 
             - name: Select GCC version as default C++ compiler
               if: matrix.compiler.name == 'gcc'
