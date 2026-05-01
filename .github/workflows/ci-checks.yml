@@ -91,7 +91,8 @@ jobs:
             - name: Install ${{ matrix.compiler.name }} ${{ matrix.compiler.ver }}
               if: matrix.compiler.name == 'gcc' && matrix.compiler.ver >= 15
               run: |
-                  sudo apt-get update
+                  sudo add-apt-repository --yes ppa:ubuntu-toolchain-r/test
+                  sudo apt-get update -q
                   sudo apt-get install -y gcc-${{ matrix.compiler.ver }} g++-${{ matrix.compiler.ver }}
                   sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-${{ matrix.compiler.ver }} 100 \
                                             --slave /usr/bin/g++ g++ /usr/bin/g++-${{ matrix.compiler.ver }}
