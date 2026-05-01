@@ -13,8 +13,7 @@ endif
 
 CXX := mpicxx
 COMPILER_VERSION := $(shell $(CXX) --version)
-COMPILER_VERSION_NUMBER := $(shell $(CXX) -dumpversion -dumpfullversion | head -n1)
-COMPILER_VERSION_NUMBER_MAJOR := $(shell echo $(COMPILER_VERSION_NUMBER) | cut -f1 -d.)
+COMPILER_VERSION_NUMBER := $(shell $(CXX) -dumpfullversion -dumpversion | head -n1)
 $(info $(COMPILER_VERSION))
 CXX_STD := c++26
 
@@ -50,17 +49,9 @@ endef
 
 else ifneq (,$(or $(findstring g++,$(COMPILER_VERSION)),$(findstring gcc,$(COMPILER_VERSION))))
 	COMPILER_NAME := gcc
-	# std::stacktrace is available in gcc 14 and later
-	# but it is not enabled by default because it slowed down the GitHub CI by > 2x
-	ifeq ($(shell expr $(COMPILER_VERSION_NUMBER_MAJOR) \>= 14),1)
-		ifeq ($(STACKTRACE),ON)
-			CXXFLAGS += -DSTACKTRACE_ON=true -rdynamic
-			LDFLAGS += -lstdc++exp
-		endif
-	endif
-	# std=c++26 is not supported on gcc < 14
-	ifeq ($(shell expr $(COMPILER_VERSION_NUMBER_MAJOR) \<= 13),1)
-		CXX_STD := c++23
+	MIN_GCC_VERSION := 14
+	ifeq ($(shell expr $(COMPILER_VERSION_NUMBER) \< MIN_GCC_VERSION),1)
+$(warning WARNING: Detected GCC version $(COMPILER_VERSION_NUMBER) but minimum supported version is $(MIN_GCC_VERSION))
 	endif
 	CXXFLAGS += -Wno-psabi
 # 	CXXFLAGS += -Wsuggest-attribute=pure -Wsuggest-attribute=const
@@ -80,7 +71,7 @@ $(warning Unknown compiler)
 	COMPILER_NAME := unknown
 endif
 
-$(info detected compiler is $(COMPILER_NAME) version $(COMPILER_VERSION_NUMBER). Major version: $(COMPILER_VERSION_NUMBER_MAJOR))
+$(info detected compiler is $(COMPILER_NAME) $(COMPILER_VERSION_NUMBER))
 $(info detected CPU is $(CPU_ARCH))
 
 # Use a custom build directory for each combination of compiler, CPU architecture, and options to avoid conflicts and ensure that the correct binaries are used
