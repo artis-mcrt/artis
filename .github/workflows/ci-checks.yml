@@ -67,7 +67,7 @@ jobs:
                         {name: gcc, ver: 13},
                         {name: gcc, ver: 14},
                         {name: gcc, ver: 15},
-                        {name: clang, ver: 21},
+                        {name: clang, ver: 22},
                     ]
             fail-fast: false
 
