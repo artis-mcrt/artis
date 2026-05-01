@@ -1515,8 +1515,7 @@ auto select_nt_ionisation(const int nonemptymgi) -> std::tuple<int, int> {
   return {-1, -1};
 }
 
-void analyse_sf_solution(const int nonemptymgi, const int timestep, const bool enable_sfexcitation,
-                         const std::array<double, SFPTS>& yfunc) {
+void analyse_sf_solution(const int nonemptymgi, const int timestep, const std::array<double, SFPTS>& yfunc) {
   const auto nne = grid::get_nne(nonemptymgi);
   const auto nntot = get_nnion_tot(nonemptymgi);
   const auto nnetot = grid::get_nnetot(nonemptymgi);
@@ -1590,13 +1589,8 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const bool e
       }
       printlnlog("    frac_ionisation: {:g} ({} subshells)", frac_ionisation_ion, matching_subshell_count);
 
-      // excitation from all levels is very SLOW
-      const int nlevels_all = get_nlevels(element, ion);
-      // So limit the lower levels to improve performance
-      int nlevels = (nlevels_all > NTEXCITATION_MAXNLEVELS_LOWER) ? NTEXCITATION_MAXNLEVELS_LOWER : nlevels_all;
-      if (!enable_sfexcitation) {
-        nlevels = -1;  // disable all excitations
-      }
+      // excitation from all levels is expensive, so we limit it to a maximum number of levels
+      const int nlevels = std::min(get_nlevels(element, ion), NTEXCITATION_MAXNLEVELS_LOWER);
       const bool above_minionfraction = (nnion >= MIN_ION_OVER_NNTOT * get_nnion_tot(nonemptymgi));
 
       for (int lower = 0; lower < nlevels; lower++) {
@@ -2435,7 +2429,7 @@ void solve_spencerfano(const int nonemptymgi, const int timestep, const int iter
       timestep_last_solved > globals::num_lte_timesteps) {
     printlnlog(
         "Keeping Spencer-Fano solution from timestep {} because x_e fracdiff {:g} < {:g} and because timestep {} - {} "
-        "< {}",
+        "<= {}",
         timestep_last_solved, nne_per_ion_fracdiff, NT_MAX_FRACDIFF_NNEPERION_BETWEEN_SOLUTIONS, timestep,
         timestep_last_solved, SF_MAX_TIMESTEPS_BETWEEN_SOLUTIONS);
 
@@ -2449,28 +2443,6 @@ void solve_spencerfano(const int nonemptymgi, const int timestep, const int iter
   nt_solution[nonemptymgi].nneperion_when_solved = static_cast<float>(nne_per_ion);
   nt_solution[nonemptymgi].timestep_last_solved = timestep;
 
-  const bool enable_sfexcitation = true;
-  const bool enable_sfionisation = true;
-  // if (timestep <= globals::num_lte_timesteps) {
-  //   // for the first run of the solver at the first NLTE timestep (which usually requires many iterations),
-  //   // do a fast initial solution but mark it has an invalid nne per ion so it gets replaced at the next timestep
-  //   nt_solution[nonemptymgi].nneperion_when_solved = -1.;
-  //   enable_sfexcitation = false;
-  //   enable_sfionisation = false;
-
-  //   printlnlog(
-  //       "Doing a fast initial solution without ionisation or excitation in the SF equation for the first NLTE "
-  //       "timestep.");
-  // }
-  // if (timestep <= globals::num_lte_timesteps + 2) {
-  //   // run the solver in a faster mode for the first couple of NLTE timesteps
-  //   nt_solution[nonemptymgi].nneperion_when_solved = -1.;
-  //   enable_sfexcitation = false;
-  //   // enable_sfionisation = false;
-  //   printlnlog("Doing a faster solution without excitation in the SF equation for the first couple of NLTE
-  //   timesteps.");
-  // }
-
   // sfmatrix will be a compacted upper triangular matrix during construction and then expanded into a full matrix (with
   // lots of zeros) just before the solver is called
   THREADLOCALONHOST std::vector<double> sfmatrix(SFPTS * SFPTS);
@@ -2483,48 +2455,44 @@ void solve_spencerfano(const int nonemptymgi, const int timestep, const int iter
     sfmatrix[uppertriangular(i, i)] += electron_loss_rate(engrid(i) * EV, nne) / EV;
   }
 
-  if (enable_sfexcitation || enable_sfionisation) {
-    for (int element = 0; element < get_nelements(); element++) {
-      const int Z = get_atomicnumber(element);
-      const int nions = get_nions(element);
-      bool first_included_ion_of_element = true;
-      for (int ion = 0; ion < nions; ion++) {
-        const double nnion = get_nnion(nonemptymgi, element, ion);
+  for (int element = 0; element < get_nelements(); element++) {
+    const int Z = get_atomicnumber(element);
+    const int nions = get_nions(element);
+    bool first_included_ion_of_element = true;
+    for (int ion = 0; ion < nions; ion++) {
+      const double nnion = get_nnion(nonemptymgi, element, ion);
 
-        // skip negligible ions
-        if (nnion < MIN_ION_OVER_NNTOT * get_nnion_tot(nonemptymgi)) {
-          continue;
-        }
-
-        const int ionstage = get_ionstage(element, ion);
-        if (first_included_ion_of_element) {
-          printlog("  including Z={:2} ionstages: ", Z);
-          for (int i = 1; i < get_ionstage(element, ion); i++) {
-            printlog("  ");
-          }
-          first_included_ion_of_element = false;
-        }
-
-        printlog("{} ", ionstage);
-
-        if (enable_sfexcitation) {
-          sfmatrix_add_excitation(sfmatrix, nonemptymgi, element, ion);
-        }
-
-        if (enable_sfionisation && (ion < nions - 1)) {
-          sfmatrix_add_ionisation(sfmatrix, Z, ionstage, nnion);
-        }
+      // skip negligible ions
+      if (nnion < MIN_ION_OVER_NNTOT * get_nnion_tot(nonemptymgi)) {
+        continue;
       }
-      if (!first_included_ion_of_element) {
-        printlnlog("");
+
+      const int ionstage = get_ionstage(element, ion);
+      if (first_included_ion_of_element) {
+        printlog("  including Z={:2} ionstages: ", Z);
+        for (int i = 1; i < get_ionstage(element, ion); i++) {
+          printlog("  ");
+        }
+        first_included_ion_of_element = false;
       }
+
+      printlog("{} ", ionstage);
+
+      sfmatrix_add_excitation(sfmatrix, nonemptymgi, element, ion);
+
+      if ((ion < nions - 1)) {
+        sfmatrix_add_ionisation(sfmatrix, Z, ionstage, nnion);
+      }
+    }
+    if (!first_included_ion_of_element) {
+      printlnlog("");
     }
   }
 
   decompactify_triangular_matrix(sfmatrix);
   const auto yfunc = sfmatrix_solve(sfmatrix);
 
-  analyse_sf_solution(nonemptymgi, timestep, enable_sfexcitation, yfunc);
+  analyse_sf_solution(nonemptymgi, timestep, yfunc);
 }
 
 void write_restart_data(FILE* gridsave_file) {
