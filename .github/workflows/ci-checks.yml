@@ -93,7 +93,18 @@ jobs:
               if: matrix.compiler.name == 'gcc' && matrix.compiler.ver == 15
               run: |
                   eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+                  echo "/home/linuxbrew/.linuxbrew/bin" >> $GITHUB_PATH
                   brew install --force gcc@${{ matrix.compiler.ver }} || true
+                    # Add brew binutils to PATH (gcc-15+ requires newer assembler)
+                  brew install --force binutils
+                  binutils_dir=$(brew --prefix binutils)/bin
+                  echo "$binutils_dir" >> $GITHUB_PATH
+                  bindir=$(brew --prefix)/bin
+                  sudo update-alternatives \
+                        --install /usr/bin/gcc gcc ${bindir}/gcc-${{ matrix.compiler.ver }} 100 \
+                        --slave /usr/bin/gfortran gfortran ${bindir}/gfortran-${{ matrix.compiler.ver }} \
+                        --slave /usr/bin/gcov gcov ${bindir}/gcov-${{ matrix.compiler.ver }} \
+                        --slave /usr/bin/g++ g++ ${bindir}/g++-${{ matrix.compiler.ver }}
 
             - name: Select GCC version as default C++ compiler
               if: matrix.compiler.name == 'gcc'
