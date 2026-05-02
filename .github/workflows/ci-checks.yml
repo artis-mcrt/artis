@@ -82,12 +82,18 @@ jobs:
                   python3 -c 'import multiprocessing; print(f"CPU count: {multiprocessing.cpu_count()}")'
                   echo "count=$(python3 -c 'import multiprocessing; print(multiprocessing.cpu_count())')" >> $GITHUB_OUTPUT
 
+            # - name: Install ${{ matrix.compiler.name }} ${{ matrix.compiler.ver }}
+            #   if: matrix.compiler.name == 'gcc' && matrix.compiler.ver == 15
+            #   uses: fortran-lang/setup-fortran@v1.9.0
+            #   with:
+            #       compiler: ${{ matrix.compiler.name }}
+            #       version: ${{ matrix.compiler.ver }}
+
             - name: Install ${{ matrix.compiler.name }} ${{ matrix.compiler.ver }}
               if: matrix.compiler.name == 'gcc' && matrix.compiler.ver == 15
-              uses: fortran-lang/setup-fortran@v1.9.0
-              with:
-                  compiler: ${{ matrix.compiler.name }}
-                  version: ${{ matrix.compiler.ver }}
+              run: |
+                  eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+                  brew install --force gcc@${{ matrix.compiler.ver }} || true
 
             - name: Select GCC version as default C++ compiler
               if: matrix.compiler.name == 'gcc'
