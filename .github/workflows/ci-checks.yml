@@ -118,7 +118,7 @@ jobs:
                   wget https://apt.llvm.org/llvm.sh
                   chmod +x llvm.sh
                   sudo ./llvm.sh ${{ matrix.compiler.ver }}
-                  sudo apt-get install libc++-${{ matrix.compiler.ver }}* libc++abi-${{ matrix.compiler.ver }}* -y --no-install-recommends
+                  sudo apt-get install libc++-${{ matrix.compiler.ver }}* -y --no-install-recommends
                   sudo apt-get update
                   sudo apt-get upgrade
                   sudo apt-get install -y lld-${{ matrix.compiler.ver }} clang-${{ matrix.compiler.ver }} libomp-${{ matrix.compiler.ver }}-dev
