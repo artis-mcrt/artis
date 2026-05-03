@@ -96,9 +96,6 @@ jobs:
                   echo "/home/linuxbrew/.linuxbrew/bin" >> $GITHUB_PATH
                   brew install --force gcc@${{ matrix.compiler.ver }}
                     # Add brew binutils to PATH (gcc-15+ requires newer assembler)
-                  brew install --force binutils
-                  binutils_dir=$(brew --prefix binutils)/bin
-                  echo "$binutils_dir" >> $GITHUB_PATH
                   bindir=$(brew --prefix)/bin
                   sudo update-alternatives \
                         --install /usr/bin/gcc gcc ${bindir}/gcc-${{ matrix.compiler.ver }} 100 \
