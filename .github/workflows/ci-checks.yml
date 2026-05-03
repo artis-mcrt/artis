@@ -64,7 +64,6 @@ jobs:
             matrix:
                 compiler:
                     [
-                        {name: gcc, ver: 13},
                         {name: gcc, ver: 14},
                         {name: gcc, ver: 15},
                         {name: clang, ver: 22},
@@ -83,12 +82,29 @@ jobs:
                   python3 -c 'import multiprocessing; print(f"CPU count: {multiprocessing.cpu_count()}")'
                   echo "count=$(python3 -c 'import multiprocessing; print(multiprocessing.cpu_count())')" >> $GITHUB_OUTPUT
 
+            # - name: Install ${{ matrix.compiler.name }} ${{ matrix.compiler.ver }}
+            #   if: matrix.compiler.name == 'gcc' && matrix.compiler.ver == 15
+            #   uses: fortran-lang/setup-fortran@v1.9.0
+            #   with:
+            #       compiler: ${{ matrix.compiler.name }}
+            #       version: ${{ matrix.compiler.ver }}
+
             - name: Install ${{ matrix.compiler.name }} ${{ matrix.compiler.ver }}
               if: matrix.compiler.name == 'gcc' && matrix.compiler.ver == 15
-              uses: fortran-lang/setup-fortran@v1.9.0
-              with:
-                  compiler: ${{ matrix.compiler.name }}
-                  version: ${{ matrix.compiler.ver }}
+              run: |
+                  eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+                  echo "/home/linuxbrew/.linuxbrew/bin" >> $GITHUB_PATH
+                  brew install --force gcc@${{ matrix.compiler.ver }}
+                    # Add brew binutils to PATH (gcc-15+ requires newer assembler)
+                  brew install --force binutils
+                  binutils_dir=$(brew --prefix binutils)/bin
+                  echo "$binutils_dir" >> $GITHUB_PATH
+                  bindir=$(brew --prefix)/bin
+                  sudo update-alternatives \
+                        --install /usr/bin/gcc gcc ${bindir}/gcc-${{ matrix.compiler.ver }} 100 \
+                        --slave /usr/bin/gfortran gfortran ${bindir}/gfortran-${{ matrix.compiler.ver }} \
+                        --slave /usr/bin/gcov gcov ${bindir}/gcov-${{ matrix.compiler.ver }} \
+                        --slave /usr/bin/g++ g++ ${bindir}/g++-${{ matrix.compiler.ver }}
 
             - name: Select GCC version as default C++ compiler
               if: matrix.compiler.name == 'gcc'
@@ -102,9 +118,6 @@ jobs:
                   wget https://apt.llvm.org/llvm.sh
                   chmod +x llvm.sh
                   sudo ./llvm.sh ${{ matrix.compiler.ver }}
-                  sudo apt-get install libc++-${{ matrix.compiler.ver }}* libc++abi-${{ matrix.compiler.ver }}* -y --no-install-recommends
-                  sudo apt-get update
-                  sudo apt-get upgrade
                   sudo apt-get install -y lld-${{ matrix.compiler.ver }} clang-${{ matrix.compiler.ver }} libomp-${{ matrix.compiler.ver }}-dev
                   echo "CXX=clang++-${{ matrix.compiler.ver }}" >> $GITHUB_ENV
                   echo "OMPI_CXX=clang++-${{ matrix.compiler.ver }}" >> $GITHUB_ENV

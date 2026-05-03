@@ -179,7 +179,7 @@ inline auto printlnlog(const std::format_string<Args...> fmt, Args&&... args) ->
         output_file.flush();                                                                                           \
       }                                                                                                                \
       std::cerr << "\n[rank " << globals::my_rank << "] " << __FILE__ << ":" << __LINE__ << ": failed assertion `"     \
-                << #e << "` in function " << __PRETTY_FUNCTION__ << '\n' STACKTRACEIFSUPPORTED;                        \
+                << #e << "` in function " << __PRETTY_FUNCTION__ << '\n';                                              \
     }                                                                                                                  \
     assert(assertpass);                                                                                                \
   }

@@ -96,13 +96,6 @@ constexpr std::array datafolders{"./", "data/", "artis/data/"};
 #define DEVICE_FUNC
 #endif
 
-#ifdef STACKTRACE_ON
-#include <stacktrace>
-#define STACKTRACEIFSUPPORTED << std::stacktrace::current()
-#else
-#define STACKTRACEIFSUPPORTED
-#endif
-
 #if defined REPRODUCIBLE && REPRODUCIBLE
 #define SORT_OR_STABLE_SORT stable_sort
 #else
