@@ -94,7 +94,7 @@ jobs:
               run: |
                   eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
                   echo "/home/linuxbrew/.linuxbrew/bin" >> $GITHUB_PATH
-                  brew install --force gcc@${{ matrix.compiler.ver }} || true
+                  brew install --force gcc@${{ matrix.compiler.ver }}
                     # Add brew binutils to PATH (gcc-15+ requires newer assembler)
                   brew install --force binutils
                   binutils_dir=$(brew --prefix binutils)/bin
