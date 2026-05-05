@@ -336,7 +336,8 @@ jobs:
                         --install /usr/bin/gcc gcc ${bindir}/gcc-14 100 \
                         --slave /usr/bin/g++ g++ ${bindir}/g++-14 \
                         --slave /usr/bin/fortran gfortran ${bindir}/gfortran-14
-                  echo "PATH=$(brew --prefix)/gcc@14/bin:$PATH" >> $GITHUB_ENV
+                  echo "PATH=$(brew --prefix)/bin:$PATH" >> $GITHUB_ENV
+                  echo "PATH=$(brew --prefix gcc@14)/bin:$PATH" >> $GITHUB_ENV
 
             - name: Install nvc++
               uses: fortran-lang/setup-fortran@v1.9.0
