@@ -89,7 +89,7 @@ void write_to_estimators_file(std::ostream& estimators_file, const int nonemptym
       std::print(estimators_file, "  {}: {:9.3e}", get_ionstage(element, ion),
                  calculate_iongamma_per_ionpop(nonemptymgi, element, ion, false, false));
     }
-    std::print(estimators_file, "\n");
+    std::println(estimators_file, "");
 
     // if we have bound-free estimators, we might want to compare how gamma_R would be if we used the radiation field
     // model instead
@@ -102,7 +102,7 @@ void write_to_estimators_file(std::ostream& estimators_file, const int nonemptym
         std::print(estimators_file, "  {}: {:9.3e}", get_ionstage(element, ion),
                    calculate_iongamma_per_ionpop(nonemptymgi, element, ion, false, true));
       }
-      std::print(estimators_file, "\n");
+      std::println(estimators_file, "");
     }
 
     if (NT_ON) {
@@ -114,7 +114,7 @@ void write_to_estimators_file(std::ostream& estimators_file, const int nonemptym
         const double Y_nt = nonthermal::nt_ionisation_ratecoeff(nonemptymgi, element, ion);
         std::print(estimators_file, "  {}: {:9.3e}", get_ionstage(element, ion), Y_nt);
       }
-      std::print(estimators_file, "\n");
+      std::println(estimators_file, "");
     }
 
     if (USE_LUT_PHOTOION && globals::nbfcontinua_ground > 0) {
@@ -126,7 +126,7 @@ void write_to_estimators_file(std::ostream& estimators_file, const int nonemptym
                                                  get_groundcontindex(element, ion)]);
         }
       }
-      std::print(estimators_file, "\n");
+      std::println(estimators_file, "");
       std::print(estimators_file, "gammaestimator     Z={:2d}", get_atomicnumber(element));
       for (int ion = 0; ion < nions - 1; ion++) {
         if (get_groundcontindex(element, ion) >= 0) {
@@ -135,7 +135,7 @@ void write_to_estimators_file(std::ostream& estimators_file, const int nonemptym
               globals::gammaestimator[(nonemptymgi * globals::nbfcontinua_ground) + get_groundcontindex(element, ion)]);
         }
       }
-      std::print(estimators_file, "\n");
+      std::println(estimators_file, "");
     }
   }
 
@@ -148,7 +148,7 @@ void write_to_estimators_file(std::ostream& estimators_file, const int nonemptym
   if (any_fission) {
     std::print(estimators_file, " spfission {:11.5e}", heatingcoolingrates.eps_spfission_ana);
   }
-  std::print(estimators_file, "\n");
+  std::println(estimators_file, "");
 
   std::print(estimators_file, "deposition: gamma {:11.5e} positron {:11.5e} electron {:11.5e} alpha {:11.5e}",
              heatingcoolingrates.dep_gamma, heatingcoolingrates.dep_positron, heatingcoolingrates.dep_electron,
@@ -156,7 +156,7 @@ void write_to_estimators_file(std::ostream& estimators_file, const int nonemptym
   if (any_fission) {
     std::print(estimators_file, " spfission {:11.5e}", heatingcoolingrates.dep_spfission);
   }
-  std::print(estimators_file, "\n");
+  std::println(estimators_file, "");
 
   std::print(estimators_file,
              "heating: ff {:11.5e} bf {:11.5e} coll {:11.5e}       dep {:11.5e} heating_dep/total_dep {:.3f}\n",
@@ -594,7 +594,7 @@ void update_grid(std::ostream& estimators_file, const int nts, const int nts_pre
         std::println(estimators_file, "timestep {} modelgridindex {} EMPTYCELL", nts, mgi);
       }
 
-      std::print(estimators_file, "\n");
+      std::println(estimators_file, "");
       estimators_file.flush();
     }
   }
