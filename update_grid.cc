@@ -41,12 +41,11 @@ void write_to_estimators_file(std::ostream& estimators_file, const int nonemptym
   const auto nne = grid::get_nne(nonemptymgi);
   const auto Y_e = grid::get_electronfrac(nonemptymgi);
 
-  std::print(estimators_file,
-             "timestep {} modelgridindex {} titeration {} TR {} Te {} W {} TJ {} grey_depth {} thick {} nne {} Ye {} "
-             "tdays {:7.2f}\n",
-             timestep, mgi, titer, grid::get_TR(nonemptymgi), T_e, grid::get_W(nonemptymgi), grid::get_TJ(nonemptymgi),
-             grid::grey_depth_allcells[nonemptymgi], grid::thick_allcells[nonemptymgi], nne, Y_e,
-             globals::timesteps[timestep].mid / DAY);
+  std::print(estimators_file, "timestep {} modelgridindex {} titeration {} TR {:g} Te {:g} W {:g} TJ {:g}", timestep,
+             mgi, titer, grid::get_TR(nonemptymgi), T_e, grid::get_W(nonemptymgi), grid::get_TJ(nonemptymgi));
+  std::println(estimators_file, "grey_depth {} thick {} nne {} Ye {} tdays {:7.2f}",
+               grid::grey_depth_allcells[nonemptymgi], grid::thick_allcells[nonemptymgi], nne, Y_e,
+               globals::timesteps[timestep].mid / DAY);
 
   if (globals::total_nlte_levels > 0) {
     nltepop_write_to_file(nonemptymgi, timestep);
