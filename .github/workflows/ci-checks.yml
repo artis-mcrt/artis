@@ -330,7 +330,7 @@ jobs:
                   brew install --force binutils
                   binutils_dir=$(brew --prefix binutils)/bin
                   echo "$binutils_dir" >> $GITHUB_PATH
-                  bindir=$(brew --prefix)/gcc@15/bin
+                  bindir=$(brew --prefix gcc@15)/bin
                   sudo update-alternatives \
                         --install /usr/bin/gcc gcc ${bindir}/gcc-15 100 \
                         --slave /usr/bin/g++ g++ ${bindir}/g++-15 \
