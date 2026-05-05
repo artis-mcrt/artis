@@ -99,6 +99,20 @@ jobs:
                         --slave /usr/bin/gcov gcov ${bindir}/gcov-${{ matrix.compiler.ver }} \
                         --slave /usr/bin/g++ g++ ${bindir}/g++-${{ matrix.compiler.ver }}
 
+            - name: Install ${{ matrix.compiler.name }} ${{ matrix.compiler.ver }}
+              if: matrix.compiler.name == 'gcc' && matrix.compiler.ver == 16
+              run: |
+                  sudo apt update
+                  sudo apt install -y software-properties-common
+                  sudo add-apt-repository ppa:ubuntu-toolchain-r/test
+                  sudo apt update
+                  sudo apt install -y gcc-${{ matrix.compiler.ver }} g++-${{ matrix.compiler.ver }}
+                  sudo update-alternatives \
+                        --install /usr/bin/gcc gcc /usr/bin/gcc-${{ matrix.compiler.ver }} 100 \
+                        --slave /usr/bin/gfortran gfortran /usr/bin/gfortran-${{ matrix.compiler.ver }} \
+                        --slave /usr/bin/gcov gcov /usr/bin/gcov-${{ matrix.compiler.ver }} \
+                        --slave /usr/bin/g++ g++ /usr/bin/g++-${{ matrix.compiler.ver }}
+
             - name: Select GCC version as default C++ compiler
               if: matrix.compiler.name == 'gcc'
               run: |
