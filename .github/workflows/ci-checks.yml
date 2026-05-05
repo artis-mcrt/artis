@@ -77,13 +77,13 @@ jobs:
             - uses: actions/checkout@v6
 
             - name: Install gcc
-              if: matrix.compiler.name == 'gcc'
+              if: matrix.compiler.name == 'gcc' && matrix.compiler.ver >= 15
               run: |
-                  sudo apt update
-                  sudo apt install -y software-properties-common
+                  sudo apt-get update
+                  sudo apt-get install -y --no-install-recommends software-properties-common
                   sudo add-apt-repository ppa:ubuntu-toolchain-r/test
-                  sudo apt update
-                  sudo apt install -y gcc-${{ matrix.compiler.ver }} g++-${{ matrix.compiler.ver }}
+                  sudo apt-get update
+                  sudo apt-get install -y --no-install-recommends gcc-${{ matrix.compiler.ver }} g++-${{ matrix.compiler.ver }}
                   sudo update-alternatives \
                         --install /usr/bin/gcc gcc /usr/bin/gcc-${{ matrix.compiler.ver }} 100 \
                         --slave /usr/bin/gfortran gfortran /usr/bin/gfortran-${{ matrix.compiler.ver }} \
@@ -102,24 +102,20 @@ jobs:
                   wget https://apt.llvm.org/llvm.sh
                   chmod +x llvm.sh
                   sudo ./llvm.sh ${{ matrix.compiler.ver }}
-                  sudo apt-get install -y lld-${{ matrix.compiler.ver }} clang-${{ matrix.compiler.ver }} libomp-${{ matrix.compiler.ver }}-dev
+                  sudo apt-get install -y --no-install-recommends lld-${{ matrix.compiler.ver }} clang-${{ matrix.compiler.ver }} libomp-${{ matrix.compiler.ver }}-dev
                   echo "CXX=clang++-${{ matrix.compiler.ver }}" >> $GITHUB_ENV
                   echo "OMPI_CXX=clang++-${{ matrix.compiler.ver }}" >> $GITHUB_ENV
                   echo "LDFLAGS=-L/usr/lib/llvm-${{ matrix.compiler.ver }}/lib" >> $GITHUB_ENV
 
-            - name: Install GSL
+            - name: Install Open MPI and GSL
               run: |
                   sudo apt-get update
-                  sudo apt install -y libgsl-dev
+                  sudo apt-get install -y --no-install-recommends openmpi-bin libopenmpi-dev libgsl-dev
 
             - name: Install TBB
               if: matrix.compiler.name == 'gcc'
               run: |
-                  sudo apt install libtbb-dev
-
-            - name: Install Open MPI
-              run: |
-                  sudo apt install -y openmpi-bin libopenmpi-dev
+                  sudo apt-get install libtbb-dev
 
             - name: Compile classic mode
               run: |
@@ -302,8 +298,7 @@ jobs:
             - name: Install Open MPI and git
               run: |
                   sudo apt-get update
-                  sudo apt-get install -y libopenmpi-dev openmpi-bin
-                  sudo apt-get install -y git
+                  sudo apt-get install -y --no-install-recommends libopenmpi-dev openmpi-bin git
                   git config --global --add safe.directory /__w/artis/artis
 
             - uses: actions/checkout@v6
@@ -347,7 +342,7 @@ jobs:
 
             - name: Install Open MPI
               run: |
-                  sudo apt install -y openmpi-bin libopenmpi-dev
+                  sudo apt-get install -y --no-install-recommends openmpi-bin libopenmpi-dev
 
             - name: Compile classic mode STDPAR=ON GPU=ON
               run: |
