@@ -75,12 +75,6 @@ jobs:
         steps:
             - uses: actions/checkout@v6
 
-            - name: Get CPU Core count for parallel builds
-              id: cpu-count
-              run: |
-                  echo "CPU count: $(nproc)"
-                  echo "count=$(nproc)" >> $GITHUB_OUTPUT
-
             # - name: Install ${{ matrix.compiler.name }} ${{ matrix.compiler.ver }}
             #   if: matrix.compiler.name == 'gcc' && matrix.compiler.ver == 15
             #   uses: fortran-lang/setup-fortran@v1.9.0
@@ -189,12 +183,6 @@ jobs:
         name: Apple Clang and LLVM Clang
         steps:
             - uses: actions/checkout@v6
-
-            - name: Get CPU Core count for parallel builds
-              id: cpu-count
-              run: |
-                  echo "CPU count: $(nproc)"
-                  echo "count=$(nproc)" >> $GITHUB_OUTPUT
 
             - uses: maxim-lobanov/setup-xcode@v1
               with:
@@ -312,12 +300,6 @@ jobs:
         container:
             image: rocm/dev-ubuntu-24.04:7.2-complete
         steps:
-            - name: Get CPU Core count for parallel builds
-              id: cpu-count
-              run: |
-                  echo "CPU count: $(nproc)"
-                  echo "count=$(nproc)" >> $GITHUB_OUTPUT
-
             - name: Set MPI compiler to hipcc
               run: |
                   hipcc --version
@@ -360,12 +342,6 @@ jobs:
         runs-on: ubuntu-24.04
         steps:
             - uses: actions/checkout@v6
-
-            - name: Get CPU Core count for parallel builds
-              id: cpu-count
-              run: |
-                  echo "CPU count: $(nproc)"
-                  echo "count=$(nproc)" >> $GITHUB_OUTPUT
 
             - name: Install nvc++
               uses: fortran-lang/setup-fortran@v1.9.0
