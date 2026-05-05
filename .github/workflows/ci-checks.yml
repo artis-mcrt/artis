@@ -86,8 +86,6 @@ jobs:
                   sudo apt-get install -y --no-install-recommends gcc-${{ matrix.compiler.ver }} g++-${{ matrix.compiler.ver }}
                   sudo update-alternatives \
                         --install /usr/bin/gcc gcc /usr/bin/gcc-${{ matrix.compiler.ver }} 100 \
-                        --slave /usr/bin/gfortran gfortran /usr/bin/gfortran-${{ matrix.compiler.ver }} \
-                        --slave /usr/bin/gcov gcov /usr/bin/gcov-${{ matrix.compiler.ver }} \
                         --slave /usr/bin/g++ g++ /usr/bin/g++-${{ matrix.compiler.ver }}
 
             - name: Set default C++ compiler to gcc version
@@ -115,7 +113,7 @@ jobs:
             - name: Install TBB
               if: matrix.compiler.name == 'gcc'
               run: |
-                  sudo apt-get install libtbb-dev
+                  sudo apt-get install -y --no-install-recommends libtbb-dev
 
             - name: Compile classic mode
               run: |
