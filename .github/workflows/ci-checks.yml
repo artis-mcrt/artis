@@ -25,7 +25,7 @@ jobs:
             - name: Install dependencies
               run: |
                   brew update
-                  brew install llvm
+                  brew install coreutils llvm openmpi gsl cppcheck
                   echo "/opt/homebrew/opt/llvm/bin" >> $GITHUB_PATH
 
                   echo "LDFLAGS=-L/opt/homebrew/opt/llvm/lib" >> $GITHUB_ENV
@@ -37,7 +37,6 @@ jobs:
                   echo "LD_LIBRARY_PATH=/opt/homebrew/opt/lib" >> $GITHUB_ENV
                   echo "CPATH=$HOMEBREW_PREFIX/include:$CPATH" >> $GITHUB_ENV
 
-                  brew install openmpi gsl cppcheck || true
                   python3 -m pip install compiledb
 
             - name: Generate compile_commands.json
@@ -66,6 +65,7 @@ jobs:
                     [
                         {name: gcc, ver: 14},
                         {name: gcc, ver: 15},
+                        {name: gcc, ver: 16},
                         {name: clang, ver: 22},
                     ]
             fail-fast: false
@@ -75,108 +75,85 @@ jobs:
         steps:
             - uses: actions/checkout@v6
 
-            - name: Show CPU type and core count
-              id: cpu-count
+            - name: Install gcc
+              if: matrix.compiler.name == 'gcc' && matrix.compiler.ver >= 15
               run: |
-                  g++ -march=native -Q --help=target | grep -- '-march=  ' | cut -f3
-                  python3 -c 'import multiprocessing; print(f"CPU count: {multiprocessing.cpu_count()}")'
-                  echo "count=$(python3 -c 'import multiprocessing; print(multiprocessing.cpu_count())')" >> $GITHUB_OUTPUT
-
-            # - name: Install ${{ matrix.compiler.name }} ${{ matrix.compiler.ver }}
-            #   if: matrix.compiler.name == 'gcc' && matrix.compiler.ver == 15
-            #   uses: fortran-lang/setup-fortran@v1.9.0
-            #   with:
-            #       compiler: ${{ matrix.compiler.name }}
-            #       version: ${{ matrix.compiler.ver }}
-
-            - name: Install ${{ matrix.compiler.name }} ${{ matrix.compiler.ver }}
-              if: matrix.compiler.name == 'gcc' && matrix.compiler.ver == 15
-              run: |
-                  eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
-                  echo "/home/linuxbrew/.linuxbrew/bin" >> $GITHUB_PATH
-                  brew install --force gcc@${{ matrix.compiler.ver }}
-                    # Add brew binutils to PATH (gcc-15+ requires newer assembler)
-                  brew install --force binutils
-                  binutils_dir=$(brew --prefix binutils)/bin
-                  echo "$binutils_dir" >> $GITHUB_PATH
-                  bindir=$(brew --prefix)/bin
+                  sudo apt-get update
+                  sudo apt-get install -y --no-install-recommends software-properties-common
+                  sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
+                  sudo apt-get update
+                  sudo apt-get install -y --no-install-recommends gcc-${{ matrix.compiler.ver }} g++-${{ matrix.compiler.ver }}
                   sudo update-alternatives \
-                        --install /usr/bin/gcc gcc ${bindir}/gcc-${{ matrix.compiler.ver }} 100 \
-                        --slave /usr/bin/gfortran gfortran ${bindir}/gfortran-${{ matrix.compiler.ver }} \
-                        --slave /usr/bin/gcov gcov ${bindir}/gcov-${{ matrix.compiler.ver }} \
-                        --slave /usr/bin/g++ g++ ${bindir}/g++-${{ matrix.compiler.ver }}
+                        --install /usr/bin/gcc gcc /usr/bin/gcc-${{ matrix.compiler.ver }} 100 \
+                        --slave /usr/bin/g++ g++ /usr/bin/g++-${{ matrix.compiler.ver }}
 
-            - name: Select GCC version as default C++ compiler
+            - name: Set default C++ compiler to gcc version
               if: matrix.compiler.name == 'gcc'
               run: |
                   echo "CXX=g++-${{ matrix.compiler.ver }}" >> $GITHUB_ENV
                   echo "OMPI_CXX=g++-${{ matrix.compiler.ver }}" >> $GITHUB_ENV
 
-            - name: Install Clang ${{ matrix.compiler.ver }}
+            - name: Install clang
               if: matrix.compiler.name == 'clang'
               run: |
                   wget https://apt.llvm.org/llvm.sh
                   chmod +x llvm.sh
                   sudo ./llvm.sh ${{ matrix.compiler.ver }}
-                  sudo apt-get install -y lld-${{ matrix.compiler.ver }} clang-${{ matrix.compiler.ver }} libomp-${{ matrix.compiler.ver }}-dev
+                  sudo apt-get install -y --no-install-recommends lld-${{ matrix.compiler.ver }} clang-${{ matrix.compiler.ver }} libomp-${{ matrix.compiler.ver }}-dev
                   echo "CXX=clang++-${{ matrix.compiler.ver }}" >> $GITHUB_ENV
                   echo "OMPI_CXX=clang++-${{ matrix.compiler.ver }}" >> $GITHUB_ENV
                   echo "LDFLAGS=-L/usr/lib/llvm-${{ matrix.compiler.ver }}/lib" >> $GITHUB_ENV
 
-            - name: Install GSL
+            - name: Install Open MPI and GSL
               run: |
                   sudo apt-get update
-                  sudo apt install -y libgsl-dev
+                  sudo apt-get install -y --no-install-recommends openmpi-bin libopenmpi-dev libgsl-dev
 
             - name: Install TBB
               if: matrix.compiler.name == 'gcc'
               run: |
-                  sudo apt install libtbb-dev
-
-            - name: Install Open MPI
-              run: |
-                  sudo apt install -y openmpi-bin libopenmpi-dev
+                  sudo apt-get install -y --no-install-recommends libtbb-dev
 
             - name: Compile classic mode
               run: |
                   cp -v -p artisoptions_classic.h artisoptions.h
                   make clean
-                  make -j${{ steps.cpu-count.outputs.count}} sn3d exspec
+                  make -j$(nproc) sn3d exspec
 
             - name: Compile classic mode OPENMP=ON
               run: |
                   make clean
-                  make OPENMP=ON -j${{ steps.cpu-count.outputs.count}} sn3d exspec
+                  make OPENMP=ON -j$(nproc) sn3d exspec
 
             - name: Compile classic mode STDPAR=ON
               run: |
                   cp -v -p artisoptions_classic.h artisoptions.h
                   make clean
-                  make STDPAR=ON -j${{ steps.cpu-count.outputs.count}} sn3d exspec
+                  make STDPAR=ON -j$(nproc) sn3d exspec
 
             - name: Compile nebular mode
               run: |
                   cp -v -p artisoptions_nltenebular.h artisoptions.h
                   make clean
-                  make -j${{ steps.cpu-count.outputs.count}} sn3d exspec
+                  make -j$(nproc) sn3d exspec
 
             - name: Compile nebular mode EIGEN=OFF
               run: |
                   cp -v -p artisoptions_nltenebular.h artisoptions.h
                   make clean
-                  make -j${{ steps.cpu-count.outputs.count}} EIGEN=OFF sn3d exspec
+                  make -j$(nproc) EIGEN=OFF sn3d exspec
 
             - name: Compile nebular mode OPENMP=ON
               run: |
                   cp -v -p artisoptions_nltenebular.h artisoptions.h
                   make clean
-                  make OPENMP=ON -j${{ steps.cpu-count.outputs.count}} sn3d exspec
+                  make OPENMP=ON -j$(nproc) sn3d exspec
 
             - name: Compile nebular mode STDPAR=ON
               run: |
                   cp -v -p artisoptions_nltenebular.h artisoptions.h
                   make clean
-                  make STDPAR=ON -j${{ steps.cpu-count.outputs.count}} sn3d exspec
+                  make STDPAR=ON -j$(nproc) sn3d exspec
 
             - name: Compile all remaining option files
               run: |
@@ -191,24 +168,14 @@ jobs:
         steps:
             - uses: actions/checkout@v6
 
-            - name: Show CPU Core Count
-              id: cpu-count
-              run: |
-                  python3 -c 'import multiprocessing; print(f"CPU count: {multiprocessing.cpu_count()}")'
-                  echo "count=$(python3 -c 'import multiprocessing; print(multiprocessing.cpu_count())')" >> $GITHUB_OUTPUT
-
             - uses: maxim-lobanov/setup-xcode@v1
               with:
                   xcode-version: 'latest-stable'
 
-            - name: Install Open MPI
+            - name: Install Open MPI and OpenMP
               run: |
                   brew update
-                  brew install openmpi || true
-
-            - name: Install OpenMP
-              run: |
-                  brew install libomp || true
+                  brew install coreutils openmpi libomp
                   brew link --force libomp
 
                   echo "LDFLAGS=-L/opt/homebrew/opt/libomp/lib $LDFLAGS" >> $GITHUB_ENV
@@ -218,36 +185,36 @@ jobs:
               run: |
                   cp -v -p artisoptions_classic.h artisoptions.h
                   make clean
-                  make -j${{ steps.cpu-count.outputs.count}} sn3d exspec
+                  make -j$(nproc) sn3d exspec
 
             - name: Apple Clang Compile classic mode OPENMP=ON
               run: |
                   make clean
-                  make OPENMP=ON -j${{ steps.cpu-count.outputs.count}} sn3d exspec
+                  make OPENMP=ON -j$(nproc) sn3d exspec
 
             - name: Apple Clang Compile classic mode STDPAR=ON
               run: |
                   cp -v -p artisoptions_nltenebular.h artisoptions.h
                   make clean
-                  make STDPAR=ON -j${{ steps.cpu-count.outputs.count}} sn3d exspec
+                  make STDPAR=ON -j$(nproc) sn3d exspec
 
             - name: Apple Clang Compile nebular mode
               run: |
                   cp -v -p artisoptions_nltenebular.h artisoptions.h
                   make clean
-                  make -j${{ steps.cpu-count.outputs.count}} sn3d exspec
+                  make -j$(nproc) sn3d exspec
 
             - name: Apple Clang Compile nebular mode OPENMP=ON
               run: |
                   cp -v -p artisoptions_nltenebular.h artisoptions.h
                   make clean
-                  make OPENMP=ON -j${{ steps.cpu-count.outputs.count}} sn3d exspec
+                  make OPENMP=ON -j$(nproc) sn3d exspec
 
             - name: Apple Clang Compile nebular mode STDPAR=ON
               run: |
                   cp -v -p artisoptions_nltenebular.h artisoptions.h
                   make clean
-                  make STDPAR=ON -j${{ steps.cpu-count.outputs.count}} sn3d exspec
+                  make STDPAR=ON -j$(nproc) sn3d exspec
 
             - name: Apple Clang Compile all remaining option files
               run: |
@@ -258,7 +225,7 @@ jobs:
 
             - name: Install LLVM
               run: |
-                  brew install llvm || true
+                  brew install llvm
                   echo "/opt/homebrew/opt/llvm/bin" >> $GITHUB_PATH
                   echo "LDFLAGS=-L/opt/homebrew/opt/llvm/lib -L/opt/homebrew/opt/llvm/lib/c++ -L/opt/homebrew/opt/llvm/lib/unwind -lunwind" >> $GITHUB_ENV
                   echo "CPPFLAGS=-I/opt/homebrew/opt/llvm/include" >> $GITHUB_ENV
@@ -268,37 +235,37 @@ jobs:
               run: |
                   cp -v -p artisoptions_classic.h artisoptions.h
                   make clean
-                  make -j${{ steps.cpu-count.outputs.count}} sn3d exspec
+                  make -j$(nproc) sn3d exspec
 
             - name: LLVM Clang Compile classic mode OPENMP=ON
               run: |
                   make clean
-                  make OPENMP=ON -j${{ steps.cpu-count.outputs.count}} sn3d exspec
+                  make OPENMP=ON -j$(nproc) sn3d exspec
 
             - name: LLVM Clang Compile classic mode STDPAR=ON
               run: |
                   clang++ -v
                   cp -v -p artisoptions_classic.h artisoptions.h
                   make clean
-                  make STDPAR=ON -j${{ steps.cpu-count.outputs.count}} sn3d exspec
+                  make STDPAR=ON -j$(nproc) sn3d exspec
 
             - name: LLVM Clang Compile nebular mode
               run: |
                   cp -v -p artisoptions_nltenebular.h artisoptions.h
                   make clean
-                  make -j${{ steps.cpu-count.outputs.count}} sn3d exspec
+                  make -j$(nproc) sn3d exspec
 
             - name: LLVM Clang Compile nebular mode OPENMP=ON
               run: |
                   cp -v -p artisoptions_nltenebular.h artisoptions.h
                   make clean
-                  make OPENMP=ON -j${{ steps.cpu-count.outputs.count}} sn3d exspec
+                  make OPENMP=ON -j$(nproc) sn3d exspec
 
             - name: LLVM Clang Compile nebular mode STDPAR=ON
               run: |
                   cp -v -p artisoptions_nltenebular.h artisoptions.h
                   make clean
-                  make STDPAR=ON -j${{ steps.cpu-count.outputs.count}} sn3d exspec
+                  make STDPAR=ON -j$(nproc) sn3d exspec
 
             - name: LLVM Clang Compile all remaining option files
               run: |
@@ -313,13 +280,6 @@ jobs:
         container:
             image: rocm/dev-ubuntu-24.04:7.2-complete
         steps:
-            - name: Show CPU type and core count
-              id: cpu-count
-              run: |
-                  g++ -march=native -Q --help=target | grep -- '-march=  ' | cut -f3
-                  python3 -c 'import multiprocessing; print(f"CPU count: {multiprocessing.cpu_count()}")'
-                  echo "count=$(python3 -c 'import multiprocessing; print(multiprocessing.cpu_count())')" >> $GITHUB_OUTPUT
-
             - name: Set MPI compiler to hipcc
               run: |
                   hipcc --version
@@ -331,8 +291,7 @@ jobs:
             - name: Install Open MPI and git
               run: |
                   sudo apt-get update
-                  sudo apt-get install -y libopenmpi-dev openmpi-bin
-                  sudo apt-get install -y git
+                  sudo apt-get install -y --no-install-recommends libopenmpi-dev openmpi-bin git
                   git config --global --add safe.directory /__w/artis/artis
 
             - uses: actions/checkout@v6
@@ -343,32 +302,25 @@ jobs:
               run: |
                   cp -v -p artisoptions_classic.h artisoptions.h
                   make clean
-                  make STDPAR=ON GPU=ON -j${{ steps.cpu-count.outputs.count}} sn3d exspec
+                  make STDPAR=ON GPU=ON -j$(nproc) sn3d exspec
 
             - name: Compile nebular mode STDPAR=ON GPU=ON
               run: |
                   cp -v -p artisoptions_nltenebular.h artisoptions.h
                   make clean
-                  make STDPAR=ON GPU=ON -j${{ steps.cpu-count.outputs.count}} sn3d exspec
+                  make STDPAR=ON GPU=ON -j$(nproc) sn3d exspec
 
             - name: Compile nebular mode
               run: |
                   cp -v -p artisoptions_nltenebular.h artisoptions.h
                   make clean
-                  make -j${{ steps.cpu-count.outputs.count}} sn3d exspec
+                  make -j$(nproc) sn3d exspec
 
     nvidia-nvhpc:
         name: NVIDIA NVHPC nvc++
         runs-on: ubuntu-24.04
         steps:
             - uses: actions/checkout@v6
-
-            - name: Show CPU type and core count
-              id: cpu-count
-              run: |
-                  g++ -march=native -Q --help=target | grep -- '-march=  ' | cut -f3
-                  python3 -c 'import multiprocessing; print(f"CPU count: {multiprocessing.cpu_count()}")'
-                  echo "count=$(python3 -c 'import multiprocessing; print(multiprocessing.cpu_count())')" >> $GITHUB_OUTPUT
 
             - name: Install nvc++
               uses: fortran-lang/setup-fortran@v1.9.0
@@ -383,28 +335,28 @@ jobs:
 
             - name: Install Open MPI
               run: |
-                  sudo apt install -y openmpi-bin libopenmpi-dev
+                  sudo apt-get install -y --no-install-recommends openmpi-bin libopenmpi-dev
 
             - name: Compile classic mode STDPAR=ON GPU=ON
               run: |
                   cp -v -p artisoptions_classic.h artisoptions.h
                   make clean
-                  make STDPAR=ON GPU=ON -j${{ steps.cpu-count.outputs.count}} sn3d exspec
+                  make STDPAR=ON GPU=ON -j$(nproc) sn3d exspec
 
             - name: Compile nebular mode STDPAR=ON GPU=ON
               run: |
                   cp -v -p artisoptions_nltenebular.h artisoptions.h
                   make clean
-                  make STDPAR=ON GPU=ON -j${{ steps.cpu-count.outputs.count}} sn3d exspec
+                  make STDPAR=ON GPU=ON -j$(nproc) sn3d exspec
 
             - name: Compile nebular mode STDPAR=ON
               run: |
                   cp -v -p artisoptions_nltenebular.h artisoptions.h
                   make clean
-                  make STDPAR=ON -j${{ steps.cpu-count.outputs.count}} sn3d exspec
+                  make STDPAR=ON -j$(nproc) sn3d exspec
 
             - name: Compile nebular mode
               run: |
                   cp -v -p artisoptions_nltenebular.h artisoptions.h
                   make clean
-                  make -j${{ steps.cpu-count.outputs.count}} sn3d exspec
+                  make -j$(nproc) sn3d exspec
