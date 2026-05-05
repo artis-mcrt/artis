@@ -76,32 +76,8 @@ jobs:
         steps:
             - uses: actions/checkout@v6
 
-            # - name: Install ${{ matrix.compiler.name }} ${{ matrix.compiler.ver }}
-            #   if: matrix.compiler.name == 'gcc' && matrix.compiler.ver == 15
-            #   uses: fortran-lang/setup-fortran@v1.9.0
-            #   with:
-            #       compiler: ${{ matrix.compiler.name }}
-            #       version: ${{ matrix.compiler.ver }}
-
             - name: Install ${{ matrix.compiler.name }} ${{ matrix.compiler.ver }}
-              if: matrix.compiler.name == 'gcc' && matrix.compiler.ver == 15
-              run: |
-                  eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
-                  echo "/home/linuxbrew/.linuxbrew/bin" >> $GITHUB_PATH
-                  brew install --force gcc@${{ matrix.compiler.ver }}
-                    # Add brew binutils to PATH (gcc-15+ requires newer assembler)
-                  brew install --force binutils
-                  binutils_dir=$(brew --prefix binutils)/bin
-                  echo "$binutils_dir" >> $GITHUB_PATH
-                  bindir=$(brew --prefix)/bin
-                  sudo update-alternatives \
-                        --install /usr/bin/gcc gcc ${bindir}/gcc-${{ matrix.compiler.ver }} 100 \
-                        --slave /usr/bin/gfortran gfortran ${bindir}/gfortran-${{ matrix.compiler.ver }} \
-                        --slave /usr/bin/gcov gcov ${bindir}/gcov-${{ matrix.compiler.ver }} \
-                        --slave /usr/bin/g++ g++ ${bindir}/g++-${{ matrix.compiler.ver }}
-
-            - name: Install ${{ matrix.compiler.name }} ${{ matrix.compiler.ver }}
-              if: matrix.compiler.name == 'gcc' && matrix.compiler.ver == 16
+              if: matrix.compiler.name == 'gcc' && matrix.compiler.ver >= 15
               run: |
                   sudo apt update
                   sudo apt install -y software-properties-common
