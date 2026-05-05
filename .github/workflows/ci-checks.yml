@@ -90,7 +90,7 @@ jobs:
                         --slave /usr/bin/gcov gcov /usr/bin/gcov-${{ matrix.compiler.ver }} \
                         --slave /usr/bin/g++ g++ /usr/bin/g++-${{ matrix.compiler.ver }}
 
-            - name: Select GCC version as default C++ compiler
+            - name: Set default C++ compiler to gcc version
               if: matrix.compiler.name == 'gcc'
               run: |
                   echo "CXX=g++-${{ matrix.compiler.ver }}" >> $GITHUB_ENV
