@@ -43,7 +43,7 @@ void write_to_estimators_file(std::ostream& estimators_file, const int nonemptym
 
   std::print(estimators_file, "timestep {} modelgridindex {} titeration {} TR {:g} Te {:g} W {:g} TJ {:g}", timestep,
              mgi, titer, grid::get_TR(nonemptymgi), T_e, grid::get_W(nonemptymgi), grid::get_TJ(nonemptymgi));
-  std::println(estimators_file, "grey_depth {} thick {} nne {} Ye {} tdays {:7.2f}",
+  std::println(estimators_file, "grey_depth {:g} thick {} nne {:g} Ye {:g} tdays {:7.2f}",
                grid::grey_depth_allcells[nonemptymgi], grid::thick_allcells[nonemptymgi], nne, Y_e,
                globals::timesteps[timestep].mid / DAY);
 
