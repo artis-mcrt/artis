@@ -135,7 +135,7 @@ inline void print_line_start() {
     const time_t now_time = time(nullptr);
     THREADLOCALONHOST tm timebuf{};
     strftime(outputlinebuf.data(), 32, "%FT%TZ", gmtime_r(&now_time, &timebuf));
-    output_file << outputlinebuf.data() << ' ';
+    std::print(output_file, "{} ", outputlinebuf.data());
   }
 }
 
