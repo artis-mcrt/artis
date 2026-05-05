@@ -332,9 +332,9 @@ jobs:
                   echo "$binutils_dir" >> $GITHUB_PATH
                   bindir=$(brew --prefix)/bin
                   sudo update-alternatives \
-                        --install /usr/bin/gcc gcc /usr/bin/gcc-15 100 \
-                        --slave /usr/bin/g++ g++ /usr/bin/g++-15 \
-                        --slave /usr/bin/fortran gfortran /usr/bin/gfortran-15
+                        --install /usr/bin/gcc gcc ${bindir}gcc-15 100 \
+                        --slave /usr/bin/g++ g++ ${bindir}g++-15 \
+                        --slave /usr/bin/fortran gfortran ${bindir}gfortran-15
 
             - name: Install nvc++
               uses: fortran-lang/setup-fortran@v1.9.0
