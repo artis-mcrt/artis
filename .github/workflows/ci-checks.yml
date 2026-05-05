@@ -77,7 +77,7 @@ jobs:
             - uses: actions/checkout@v6
 
             - name: Install gcc
-              if: matrix.compiler.name == 'gcc' && matrix.compiler.ver >= 15
+              if: matrix.compiler.name == 'gcc'
               run: |
                   sudo apt update
                   sudo apt install -y software-properties-common
