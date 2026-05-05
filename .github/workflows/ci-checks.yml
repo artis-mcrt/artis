@@ -331,7 +331,7 @@ jobs:
                   sudo apt-get install -y --no-install-recommends gcc-15 gfortran-15 g++-15
                   sudo update-alternatives \
                         --install /usr/bin/gcc gcc /usr/bin/gcc-15 100 \
-                        --slave /usr/bin/g++ g++ /usr/bin/g++-15
+                        --slave /usr/bin/g++ g++ /usr/bin/g++-15 \
                         --slave /usr/bin/gfortran gfortran /usr/bin/gfortran-15
 
             - name: Install nvc++
