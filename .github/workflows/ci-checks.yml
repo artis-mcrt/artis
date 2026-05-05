@@ -327,10 +327,11 @@ jobs:
                   eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
                   echo "/home/linuxbrew/.linuxbrew/bin" >> $GITHUB_PATH
                   brew install --force gcc@15
+                  brew link --force gcc@15
                   brew install --force binutils
                   binutils_dir=$(brew --prefix binutils)/bin
                   echo "$binutils_dir" >> $GITHUB_PATH
-                  bindir=$(brew --prefix gcc@15)/bin
+                  bindir=$(brew --prefix)/bin
                   sudo update-alternatives \
                         --install /usr/bin/gcc gcc ${bindir}/gcc-15 100 \
                         --slave /usr/bin/g++ g++ ${bindir}/g++-15 \
