@@ -76,7 +76,7 @@ jobs:
         steps:
             - uses: actions/checkout@v6
 
-            - name: Install ${{ matrix.compiler.name }} ${{ matrix.compiler.ver }}
+            - name: Install gcc
               if: matrix.compiler.name == 'gcc' && matrix.compiler.ver >= 15
               run: |
                   sudo apt update
@@ -96,7 +96,7 @@ jobs:
                   echo "CXX=g++-${{ matrix.compiler.ver }}" >> $GITHUB_ENV
                   echo "OMPI_CXX=g++-${{ matrix.compiler.ver }}" >> $GITHUB_ENV
 
-            - name: Install Clang ${{ matrix.compiler.ver }}
+            - name: Install clang
               if: matrix.compiler.name == 'clang'
               run: |
                   wget https://apt.llvm.org/llvm.sh
