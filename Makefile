@@ -64,6 +64,14 @@ else ifneq '' '$(findstring nvc++,$(COMPILER_VERSION))'
 # 	CXXFLAGS += --gcc-toolchain=$(PWD)/.pixi/envs/default -Wl,-rpath,$(PWD)/.pixi/envs/default/lib
 	ifneq (,$(shell hostname -A | grep .cosma.))
 		CXXFLAGS += --gcc-toolchain=/cosma/local/gcc/14.1.0/
+	else ifeq ($(if $(shell command -v g++-16),'true','false'), 'true')
+		CXXFLAGS += --gcc-toolchain=$(shell which g++-16)
+	else ifeq ($(if $(shell command -v g++-15),'true','false'), 'true')
+		CXXFLAGS += --gcc-toolchain=$(shell which g++-15)
+	else ifeq ($(if $(shell command -v g++-14),'true','false'), 'true')
+		CXXFLAGS += --gcc-toolchain=$(shell which g++-14)
+	else ifeq ($(if $(shell command -v g++),'true','false'), 'true')
+		CXXFLAGS += --gcc-toolchain=$(shell which g++)
 	endif
 	CPU_ARCH := $(shell g++ -march=native -Q --help=target | grep -- '-march=  ' | cut -f3)
 else
