@@ -17,6 +17,7 @@
 #include <iostream>
 #include <limits>
 #include <memory>
+#include <print>
 #include <ranges>
 #include <span>
 #include <string>
@@ -157,7 +158,7 @@ inline auto printlog(const std::format_string<Args...> fmt, Args&&... args) -> v
   THREADLOCALONHOST std::string outputlinestr;
   outputlinestr = std::format(fmt, std::forward<Args>(args)...);
   outputstartofline = (outputlinestr.back() == '\n');
-  output_file << outputlinestr;
+  std::print(output_file, "{}", outputlinestr);
   output_file.flush();
 }
 
@@ -165,7 +166,7 @@ template <typename... Args>
 inline auto printlnlog(const std::format_string<Args...> fmt, Args&&... args) -> void {
   print_line_start();
   outputstartofline = true;
-  output_file << std::format(fmt, std::forward<Args>(args)...) << '\n';
+  std::println(output_file, fmt, std::forward<Args>(args)...);
   output_file.flush();
 }
 
