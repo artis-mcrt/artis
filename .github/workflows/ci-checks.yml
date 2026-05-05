@@ -25,7 +25,7 @@ jobs:
             - name: Install dependencies
               run: |
                   brew update
-                  brew install llvm
+                  brew install coreutils llvm openmpi gsl cppcheck
                   echo "/opt/homebrew/opt/llvm/bin" >> $GITHUB_PATH
 
                   echo "LDFLAGS=-L/opt/homebrew/opt/llvm/lib" >> $GITHUB_ENV
@@ -37,7 +37,6 @@ jobs:
                   echo "LD_LIBRARY_PATH=/opt/homebrew/opt/lib" >> $GITHUB_ENV
                   echo "CPATH=$HOMEBREW_PREFIX/include:$CPATH" >> $GITHUB_ENV
 
-                  brew install openmpi gsl cppcheck || true
                   python3 -m pip install compiledb
 
             - name: Generate compile_commands.json
@@ -173,14 +172,10 @@ jobs:
               with:
                   xcode-version: 'latest-stable'
 
-            - name: Install Open MPI
+            - name: Install Open MPI and OpenMP
               run: |
                   brew update
-                  brew install openmpi || true
-
-            - name: Install OpenMP
-              run: |
-                  brew install libomp || true
+                  brew install coreutils openmpi libomp
                   brew link --force libomp
 
                   echo "LDFLAGS=-L/opt/homebrew/opt/libomp/lib $LDFLAGS" >> $GITHUB_ENV
@@ -230,7 +225,7 @@ jobs:
 
             - name: Install LLVM
               run: |
-                  brew install llvm || true
+                  brew install llvm
                   echo "/opt/homebrew/opt/llvm/bin" >> $GITHUB_PATH
                   echo "LDFLAGS=-L/opt/homebrew/opt/llvm/lib -L/opt/homebrew/opt/llvm/lib/c++ -L/opt/homebrew/opt/llvm/lib/unwind -lunwind" >> $GITHUB_ENV
                   echo "CPPFLAGS=-I/opt/homebrew/opt/llvm/include" >> $GITHUB_ENV
