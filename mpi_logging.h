@@ -130,7 +130,7 @@ inline auto printlnlog(std::string_view fmt, Args&&... args) -> void {
   }
 
 #else
-inline void print_line_start() {
+inline void print_line_start() noexcept {
   if (outputstartofline) {
     const time_t now_time = time(nullptr);
     THREADLOCALONHOST tm timebuf{};
@@ -139,7 +139,7 @@ inline void print_line_start() {
   }
 }
 
-__attribute__((__format__(__printf__, 1, 2))) inline auto printout(const char* format, ...) -> void {
+__attribute__((__format__(__printf__, 1, 2))) inline auto printout(const char* format, ...) noexcept -> void {
   print_line_start();
   va_list args{};
   va_start(args, format);
@@ -153,7 +153,7 @@ __attribute__((__format__(__printf__, 1, 2))) inline auto printout(const char* f
 }
 
 template <typename... Args>
-inline auto printlog(const std::format_string<Args...> fmt, Args&&... args) -> void {
+inline auto printlog(const std::format_string<Args...> fmt, Args&&... args) noexcept -> void {
   print_line_start();
   THREADLOCALONHOST std::string outputlinestr;
   outputlinestr = std::format(fmt, std::forward<Args>(args)...);
@@ -163,7 +163,7 @@ inline auto printlog(const std::format_string<Args...> fmt, Args&&... args) -> v
 }
 
 template <typename... Args>
-inline auto printlnlog(const std::format_string<Args...> fmt, Args&&... args) -> void {
+inline auto printlnlog(const std::format_string<Args...> fmt, Args&&... args) noexcept -> void {
   print_line_start();
   outputstartofline = true;
   std::println(output_file, fmt, std::forward<Args>(args)...);
