@@ -166,10 +166,6 @@ void write_to_estimators_file(std::ostream& estimators_file, const int nonemptym
              heatingcoolingrates.cooling_ff, heatingcoolingrates.cooling_fb, heatingcoolingrates.cooling_collisional,
              heatingcoolingrates.cooling_adiabatic);
 
-  std::print(estimators_file, "\n");
-
-  estimators_file.flush();
-
   const auto write_estim_duration = std::time(nullptr) - sys_time_start_write_estimators;
   if (write_estim_duration >= 1) {
     printlnlog("writing estimators for timestep {} cell {} took {} seconds", timestep, mgi, write_estim_duration);
@@ -595,9 +591,11 @@ void update_grid(std::ostream& estimators_file, const int nts, const int nts_pre
                                  heatingcoolingrates_thisrankcells.at(nonemptymgi - nstart_nonempty));
       } else {
         // modelgrid cells that are not represented in the simulation grid
-        std::print(estimators_file, "timestep {} modelgridindex {} EMPTYCELL\n\n", nts, mgi);
-        estimators_file.flush();
+        std::println(estimators_file, "timestep {} modelgridindex {} EMPTYCELL", nts, mgi);
       }
+
+      std::print(estimators_file, "\n");
+      estimators_file.flush();
     }
   }
 
