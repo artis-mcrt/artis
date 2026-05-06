@@ -218,7 +218,7 @@ auto get_possible_event(const int nonemptymgi, const Packet& pkt, const RpktCont
 auto get_possible_event_expansion_opacity(const int nonemptymgi, const Packet& pkt,
                                           const RpktContinuumOpacity& chi_rpkt_cont, MacroAtomState& mastate,
                                           const double tau_rnd, const double nu_cmf_abort, const double dnu_on_dl,
-                                          const double doppler) -> std::tuple<double, int, bool> {
+                                          const double doppler) -> std::tuple<double, bool> {
   auto pos = pkt.pos;
   const auto nu_rf = pkt.nu_rf;
   auto nu_cmf = pkt.nu_cmf;
@@ -227,7 +227,6 @@ auto get_possible_event_expansion_opacity(const int nonemptymgi, const Packet& p
   auto prop_time = pkt.prop_time;
 
   // with thermalisation or pure scattering, we don't keep track of line interactions
-  auto next_trans = RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.has_value() ? -1 : pkt.next_trans;
 
   assert_always(globals::cellcache[cellcacheslotid].nonemptymgi == nonemptymgi);
   double dist = 0.;
@@ -255,7 +254,7 @@ auto get_possible_event_expansion_opacity(const int nonemptymgi, const Packet& p
       if constexpr (RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.has_value()) {
         const auto edist = std::max(dist + ((tau_rnd - tau) / chi_tot), 0.);
         const bool event_is_boundbound = rng_uniform() <= chi_bb_expansionopac / chi_tot;
-        return {edist, next_trans, event_is_boundbound};
+        return {edist, event_is_boundbound};
       }
 
       // re-trace this bin line-by-line
@@ -270,13 +269,14 @@ auto get_possible_event_expansion_opacity(const int nonemptymgi, const Packet& p
       pkt_bin_start.next_trans = -1;
       double edist_after_bin = 0.;
       bool event_is_boundbound = false;
+      auto next_trans = -1;
       std::tie(edist_after_bin, next_trans, event_is_boundbound) =
           get_possible_event(nonemptymgi, pkt_bin_start, chi_rpkt_cont, mastate, tau_rnd - tau,
                              std::numeric_limits<double>::max(), 0., dnu_on_dl, doppler, globals::linelist);
       // assert_always(edist_after_bin <= 1.1 * binedgedist);
       dist = dist + edist_after_bin;
 
-      return {dist, next_trans, event_is_boundbound};
+      return {dist, event_is_boundbound};
     }
 
     tau += chi_tot * binedgedist;
@@ -298,12 +298,12 @@ auto get_possible_event_expansion_opacity(const int nonemptymgi, const Packet& p
 
     if (nu_cmf <= nu_cmf_abort) {
       // hit edge of cell or timestep limit
-      return {std::numeric_limits<double>::max(), next_trans, false};
+      return {std::numeric_limits<double>::max(), false};
     }
   }
 
   // no more bins, so no opacity and no chance of further interaction below this frequency
-  return {std::numeric_limits<double>::max(), next_trans, false};
+  return {std::numeric_limits<double>::max(), false};
 }
 
 void electron_scatter_rpkt(Packet& pkt) {
@@ -648,11 +648,14 @@ auto do_rpkt_step(Packet& pkt, const double t2) -> bool {
     const auto dnu_on_dl = (nu_cmf_abort - pkt.nu_cmf) / abort_dist;
     const auto doppler = calculate_doppler_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
 
-    std::tie(edist, pkt.next_trans, event_is_boundbound) =
-        EXPANSIONOPACITIES_ON ? get_possible_event_expansion_opacity(nonemptymgi, pkt, chi_rpkt_cont, pktmastate,
-                                                                     tau_rnd, nu_cmf_abort, dnu_on_dl, doppler)
-                              : get_possible_event(nonemptymgi, pkt, chi_rpkt_cont, pktmastate, tau_rnd, abort_dist,
-                                                   nu_cmf_abort, dnu_on_dl, doppler, globals::linelist);
+    if constexpr (EXPANSIONOPACITIES_ON) {
+      std::tie(edist, event_is_boundbound) = get_possible_event_expansion_opacity(
+          nonemptymgi, pkt, chi_rpkt_cont, pktmastate, tau_rnd, nu_cmf_abort, dnu_on_dl, doppler);
+    } else {
+      std::tie(edist, pkt.next_trans, event_is_boundbound) =
+          get_possible_event(nonemptymgi, pkt, chi_rpkt_cont, pktmastate, tau_rnd, abort_dist, nu_cmf_abort, dnu_on_dl,
+                             doppler, globals::linelist);
+    }
   }
   assert_always(edist >= 0);
 
