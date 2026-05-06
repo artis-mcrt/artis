@@ -227,7 +227,7 @@ auto get_possible_event_expansion_opacity(const int nonemptymgi, const Packet& p
   auto prop_time = pkt.prop_time;
 
   // with thermalisation or pure scattering, we don't keep track of line interactions
-  auto next_trans = RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.has_value() ? -1 : pkt.next_trans;
+  auto next_trans = -1;
 
   assert_always(globals::cellcache[cellcacheslotid].nonemptymgi == nonemptymgi);
   double dist = 0.;
