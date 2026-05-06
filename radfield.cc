@@ -10,6 +10,7 @@
 #include <fstream>
 #include <ios>
 #include <iterator>
+#include <print>
 #include <span>
 #include <vector>
 
@@ -1002,60 +1003,61 @@ void do_MPI_Bcast(const ptrdiff_t nonemptymgi, const int root, const int root_no
 void write_restart_data(FILE* gridsave_file) {
   printlog("binned radiation field and detailed lines, ");
 
-  fprintf(gridsave_file, "%d\n", 30490824);  // special number marking the beginning of radfield data
+  std::println(gridsave_file, "{}", 30490824);  // special number marking the beginning of radfield data
 
   if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
-    fprintf(gridsave_file, "%d %la %la %la %la\n", RADFIELDBINCOUNT, RADFIELDBINS_NU_MIN, RADFIELDBINS_NU_MAX,
-            bins_T_R_min, bins_T_R_max);
+    std::println(gridsave_file, "{} {:a} {:a} {:a} {:a}", RADFIELDBINCOUNT, RADFIELDBINS_NU_MIN, RADFIELDBINS_NU_MAX,
+                 bins_T_R_min, bins_T_R_max);
 
     for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++) {
-      fprintf(gridsave_file, "%d %la\n", binindex, get_bin_nu_upper(binindex));
+      std::println(gridsave_file, "{} {:a}", binindex, get_bin_nu_upper(binindex));
     }
   }
 
   if constexpr (DETAILED_BF_ESTIMATORS_ON) {
     const int nbfcontinua = globals::nbfcontinua;
-    fprintf(gridsave_file, "%d\n", nbfcontinua);
+    std::println(gridsave_file, "{}", nbfcontinua);
 
     const int bfestimcount = static_cast<int>(globals::bfestim_nu_edge.size());
-    fprintf(gridsave_file, "%d\n", bfestimcount);
+    std::println(gridsave_file, "{}", bfestimcount);
 
     for (int nonemptymgi = 0; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
-      fprintf(gridsave_file, "%d\n", nonemptymgi);
+      std::println(gridsave_file, "{}", nonemptymgi);
       for (int i = 0; i < bfestimcount; i++) {
-        fprintf(gridsave_file, "%a ", prev_bfrate_normed[(nonemptymgi * bfestimcount) + i]);
+        std::print(gridsave_file, "{:a} ", prev_bfrate_normed[(nonemptymgi * bfestimcount) + i]);
       }
     }
   }
 
   if constexpr (DETAILED_LINE_ESTIMATORS_ON) {
-    fprintf(gridsave_file, "%d\n", detailed_linecount);
+    std::println(gridsave_file, "{}", detailed_linecount);
 
     for (int jblueindex = 0; jblueindex < detailed_linecount; jblueindex++) {
-      fprintf(gridsave_file, "%d ", detailed_lineindices[jblueindex]);
+      std::print(gridsave_file, "{} ", detailed_lineindices[jblueindex]);
     }
   }
 
   for (int nonemptymgi = 0; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
     assert_testmodeonly(nonemptymgi >= 0);
-    fprintf(gridsave_file, "%d %la\n", nonemptymgi, J_normfactor[nonemptymgi]);
+    std::println(gridsave_file, "{} {:a}", nonemptymgi, J_normfactor[nonemptymgi]);
 
     if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
       for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++) {
         const auto mgibinindex = (nonemptymgi * RADFIELDBINCOUNT) + binindex;
-        fprintf(gridsave_file, "%la %la %a %a\n", radfieldbins.J_raw[mgibinindex], radfieldbins.nuJ_raw[mgibinindex],
-                radfieldbin_solutions_W[mgibinindex], radfieldbin_solutions_T_R[mgibinindex]);
+        std::println(gridsave_file, "{:a} {:a} {:a} {:a}", radfieldbins.J_raw[mgibinindex],
+                     radfieldbins.nuJ_raw[mgibinindex], radfieldbin_solutions_W[mgibinindex],
+                     radfieldbin_solutions_T_R[mgibinindex]);
       }
     }
 
     if constexpr (DETAILED_LINE_ESTIMATORS_ON) {
       for (int jblueindex = 0; jblueindex < detailed_linecount; jblueindex++) {
-        fprintf(gridsave_file, "%la %d\n", Jb_lu_raw[nonemptymgi][jblueindex].value,
-                Jb_lu_raw[nonemptymgi][jblueindex].contribcount);
+        std::println(gridsave_file, "{:a} {}", Jb_lu_raw[nonemptymgi][jblueindex].value,
+                     Jb_lu_raw[nonemptymgi][jblueindex].contribcount);
       }
     }
   }
-  fprintf(gridsave_file, "%d\n", 42809403);  // special number marking the end of radfield data
+  std::println(gridsave_file, "{}", 42809403);  // special number marking the end of radfield data
 }
 
 void read_restart_data(FILE* gridsave_file) {
