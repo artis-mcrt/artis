@@ -28,7 +28,7 @@ CPU_ARCH := unknown
 ifneq '' '$(findstring HIP version,$(COMPILER_VERSION))'
 	COMPILER_NAME := hipcc
 	CXX_STD := c++23
-	CXXFLAGS += -Wno-macro-redefined -Wno-unused-command-line-argument
+	CXXFLAGS += -Wno-macro-redefined -Wno-unused-command-line-argument -stdlib=libc++
 else ifneq '' '$(findstring clang,$(COMPILER_VERSION))'
 	COMPILER_NAME := clang
 	CXXFLAGS += -Wunsafe-buffer-usage -Wno-unsafe-buffer-usage-in-libc-call -fsafe-buffer-usage-suggestions -Wno-unneeded-internal-declaration
