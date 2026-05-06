@@ -276,7 +276,7 @@ auto get_possible_event_expansion_opacity(const int nonemptymgi, const Packet& p
       // assert_always(edist_after_bin <= 1.1 * binedgedist);
       dist = dist + edist_after_bin;
 
-      return {dist, next_trans, event_is_boundbound};
+      return {dist, -1, event_is_boundbound};
     }
 
     tau += chi_tot * binedgedist;
