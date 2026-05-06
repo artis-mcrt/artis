@@ -322,20 +322,16 @@ jobs:
         steps:
             - uses: actions/checkout@v6
 
-            - name: Install gcc-14
+            - name: Install gcc
               run: |
-                  eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
-                  echo "/home/linuxbrew/.linuxbrew/bin" >> $GITHUB_PATH
-                  brew install --force gcc@14
-                  brew link --force gcc@14
-                  brew install --force binutils
-                  binutils_dir=$(brew --prefix binutils)/bin
-                  echo "$binutils_dir" >> $GITHUB_PATH
-                  bindir=$(brew --prefix)/bin
+                  sudo apt-get update
+                  sudo apt-get install -y --no-install-recommends software-properties-common
+                  sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
+                  sudo apt-get update
+                  sudo apt-get install -y --no-install-recommends gcc-14 g++-14
                   sudo update-alternatives \
-                        --install /usr/bin/gcc gcc ${bindir}/gcc-14 100 \
-                        --slave /usr/bin/g++ g++ ${bindir}/g++-14 \
-                        --slave /usr/bin/fortran gfortran ${bindir}/gfortran-14
+                       --install /usr/bin/gcc gcc /usr/bin/gcc-14 100 \
+                       --slave /usr/bin/g++ g++ /usr/bin/g++-14
 
             - name: Install nvc++
               uses: fortran-lang/setup-fortran@v1.9.0
@@ -356,13 +352,13 @@ jobs:
               run: |
                   cp -v -p artisoptions_classic.h artisoptions.h
                   make clean
-                  make STDPAR=ON GPU=ON GCCTOOLCHAIN=$(brew --prefix)/bin/g++-14 -j$(nproc) sn3d exspec
+                  make STDPAR=ON GPU=ON -j$(nproc) sn3d exspec
 
             - name: Compile nebular mode STDPAR=ON GPU=ON
               run: |
                   cp -v -p artisoptions_nltenebular.h artisoptions.h
                   make clean
-                  make STDPAR=ON GPU=ON GCCTOOLCHAIN=$(brew --prefix)/bin/g++-14 -j$(nproc) sn3d exspec
+                  make STDPAR=ON GPU=ON -j$(nproc) sn3d exspec
 
             - name: Compile nebular mode STDPAR=ON
               run: |
