@@ -14,6 +14,7 @@
 #include <iterator>
 #include <numbers>
 #include <numeric>
+#include <print>
 #include <ranges>
 #include <set>
 #include <span>
@@ -1247,7 +1248,7 @@ void output_nuc_abundances(std::ostream& estimators_file, const int nonemptymgi,
     const double massfrac = get_nuc_massfrac(nonemptymgi, nucindex, t_current);
     if (massfrac > 0) {
       const double numberdens = massfrac / nucmass(nucindex) * rho;
-      estimators_file << std::format("  {}{}: {:9.3e}", get_elname(atomic_number), nuc_a, numberdens);
+      std::print(estimators_file, "  {}{}: {:9.3e}", get_elname(atomic_number), nuc_a, numberdens);
     }
   }
 
@@ -1256,9 +1257,9 @@ void output_nuc_abundances(std::ostream& estimators_file, const int nonemptymgi,
     // factor to convert convert mass fraction to number density
     const double meannucmass = globals::elements[element].initstablemeannucmass;
     const double otherstable_numberdens = otherstablemassfrac / meannucmass * grid::get_rho(nonemptymgi);
-    estimators_file << std::format("  {}_otherstable: {:9.3e}", get_elname(atomic_number), otherstable_numberdens);
+    std::print(estimators_file, "  {}_otherstable: {:9.3e}", get_elname(atomic_number), otherstable_numberdens);
   }
-  estimators_file << '\n';
+  std::println(estimators_file, "");
 }
 
 void setup_radioactive_pellet(const double e_cmf_per_packet, const int nonemptymgi, Packet& pkt,
