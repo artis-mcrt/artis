@@ -278,7 +278,7 @@ jobs:
         runs-on: ubuntu-24.04
         name: AMD ROCm hipcc
         container:
-            image: rocm/dev-ubuntu-24.04:7.2-complete
+            image: rocm/dev-ubuntu-24.04:7.2.3-complete
         steps:
             - name: Set MPI compiler to hipcc
               run: |
