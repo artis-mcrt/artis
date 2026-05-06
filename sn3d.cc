@@ -18,6 +18,7 @@
 #ifdef STDPAR_ON
 #include <ranges>
 #endif
+#include <print>
 #include <span>
 #include <vector>
 
@@ -779,8 +780,8 @@ auto main(int argc, char* argv[]) -> int {
       walltimelimitseconds = static_cast<int>(walltimehours * 3600);
       printlnlog("walltimelimitseconds = {}", walltimelimitseconds);
     } else {
-      fprintf(stderr, "Usage: %s [-w WALLTIMELIMITHOURS]\n",
-              argv[0]);  // NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic,)
+      std::println(stderr, "Usage: {} [-w WALLTIMELIMITHOURS]",
+                   argv[0]);  // NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic,)
       std::abort();
     }
   }

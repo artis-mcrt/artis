@@ -62,7 +62,10 @@ else ifneq '' '$(findstring nvc++,$(COMPILER_VERSION))'
 	CXX_STD := c++23
 	# to use the pixi installed libstdc++
 # 	CXXFLAGS += --gcc-toolchain=$(PWD)/.pixi/envs/default -Wl,-rpath,$(PWD)/.pixi/envs/default/lib
-	ifneq (,$(shell hostname -A | grep .cosma.))
+
+	ifneq ($(GCCTOOLCHAIN),)
+		CXXFLAGS += --gcc-toolchain=$(GCCTOOLCHAIN)
+	else ifneq (,$(shell hostname -A | grep .cosma.))
 		CXXFLAGS += --gcc-toolchain=/cosma/local/gcc/14.1.0/
 	endif
 	CPU_ARCH := $(shell g++ -march=native -Q --help=target | grep -- '-march=  ' | cut -f3)
@@ -104,7 +107,7 @@ endif
 # CXXFLAGS += -fprofile-use="profdataraw"
 
 ifeq ($(GPU),ON)
-	CXXFLAGS += -DGPU_ON -DUSE_SIMPSON_INTEGRATOR -DBOOST_MATH_NO_EXCEPTIONS -DBOOST_NO_IOSTREAM
+	CXXFLAGS += -DGPU_ON -DUSE_SIMPSON_INTEGRATOR -DBOOST_MATH_NO_EXCEPTIONS -DBOOST_NO_IOSTREAM -U_GLIBCXX_ASSERTIONS
 	BUILD_DIR := $(BUILD_DIR)_gpu
 else ifeq ($(GPU),OFF)
 else ifeq ($(GPU),)

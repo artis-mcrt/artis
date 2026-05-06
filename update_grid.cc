@@ -5,8 +5,8 @@
 #include <cstddef>
 #include <cstdlib>
 #include <ctime>
-#include <format>
 #include <ostream>
+#include <print>
 #include <vector>
 
 #include "artisoptions.h"
@@ -41,11 +41,11 @@ void write_to_estimators_file(std::ostream& estimators_file, const int nonemptym
   const auto nne = grid::get_nne(nonemptymgi);
   const auto Y_e = grid::get_electronfrac(nonemptymgi);
 
-  estimators_file << "timestep " << timestep << " modelgridindex " << mgi << " titeration " << titer << " TR "
-                  << grid::get_TR(nonemptymgi) << " Te " << T_e << " W " << grid::get_W(nonemptymgi) << " TJ "
-                  << grid::get_TJ(nonemptymgi) << " grey_depth " << grid::grey_depth_allcells[nonemptymgi] << " thick "
-                  << grid::thick_allcells[nonemptymgi] << " nne " << nne << " Ye " << Y_e << " tdays "
-                  << std::format("{:7.2f}", globals::timesteps[timestep].mid / DAY) << '\n';
+  std::print(estimators_file, "timestep {} modelgridindex {} titeration {} TR {:g} Te {:g} W {:g} TJ {:g}", timestep,
+             mgi, titer, grid::get_TR(nonemptymgi), T_e, grid::get_W(nonemptymgi), grid::get_TJ(nonemptymgi));
+  std::println(estimators_file, " grey_depth {:g} thick {} nne {:g} Ye {:g} tdays {:7.2f}",
+               grid::grey_depth_allcells[nonemptymgi], grid::thick_allcells[nonemptymgi], nne, Y_e,
+               globals::timesteps[timestep].mid / DAY);
 
   if (globals::total_nlte_levels > 0) {
     nltepop_write_to_file(nonemptymgi, timestep);
@@ -56,23 +56,23 @@ void write_to_estimators_file(std::ostream& estimators_file, const int nonemptym
       continue;
     }
 
-    estimators_file << std::format("populations        Z={:2d}", get_atomicnumber(element));
+    std::print(estimators_file, "populations        Z={:2d}", get_atomicnumber(element));
     const int nions = get_nions(element);
     if (nions > 0) {
       // add spaces for missing lowest ion stages to match other elements
       for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++) {
-        estimators_file << "              ";
+        std::print(estimators_file, "              ");
       }
     }
     double elpop = 0.;
     for (int ion = 0; ion < nions; ion++) {
       elpop += get_nnion(nonemptymgi, element, ion);
-      estimators_file << std::format("  {}: {:9.3e}", get_ionstage(element, ion), get_nnion(nonemptymgi, element, ion));
+      std::print(estimators_file, "  {}: {:9.3e}", get_ionstage(element, ion), get_nnion(nonemptymgi, element, ion));
     }
     if (nions == 0) {
       elpop = grid::get_elem_numberdens(nonemptymgi, element);
     }
-    estimators_file << std::format("  SUM: {:9.3e}", elpop);
+    std::print(estimators_file, "  SUM: {:9.3e}", elpop);
 
     decay::output_nuc_abundances(estimators_file, nonemptymgi, globals::timesteps[timestep].mid, element);
 
@@ -81,94 +81,90 @@ void write_to_estimators_file(std::ostream& estimators_file, const int nonemptym
       continue;
     }
 
-    estimators_file << std::format("gamma_R            Z={:2d}", get_atomicnumber(element));
+    std::print(estimators_file, "gamma_R            Z={:2d}", get_atomicnumber(element));
     for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++) {
-      estimators_file << "              ";
+      std::print(estimators_file, "              ");
     }
     for (int ion = 0; ion < nions - 1; ion++) {
-      estimators_file << std::format("  {}: {:9.3e}", get_ionstage(element, ion),
-                                     calculate_iongamma_per_ionpop(nonemptymgi, element, ion, false, false));
+      std::print(estimators_file, "  {}: {:9.3e}", get_ionstage(element, ion),
+                 calculate_iongamma_per_ionpop(nonemptymgi, element, ion, false, false));
     }
-    estimators_file << '\n';
+    std::println(estimators_file);
 
     // if we have bound-free estimators, we might want to compare how gamma_R would be if we used the radiation field
     // model instead
     if (DETAILED_BF_ESTIMATORS_ON) {
-      estimators_file << std::format("gamma_R_integral   Z={:2d}", get_atomicnumber(element));
+      std::print(estimators_file, "gamma_R_integral   Z={:2d}", get_atomicnumber(element));
       for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++) {
-        estimators_file << "              ";
+        std::print(estimators_file, "              ");
       }
       for (int ion = 0; ion < nions - 1; ion++) {
-        estimators_file << std::format("  {}: {:9.3e}", get_ionstage(element, ion),
-                                       calculate_iongamma_per_ionpop(nonemptymgi, element, ion, false, true));
+        std::print(estimators_file, "  {}: {:9.3e}", get_ionstage(element, ion),
+                   calculate_iongamma_per_ionpop(nonemptymgi, element, ion, false, true));
       }
-      estimators_file << '\n';
+      std::println(estimators_file);
     }
 
     if (NT_ON) {
-      estimators_file << std::format("gamma_NT           Z={:2d}", get_atomicnumber(element));
+      std::print(estimators_file, "gamma_NT           Z={:2d}", get_atomicnumber(element));
       for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++) {
-        estimators_file << "              ";
+        std::print(estimators_file, "              ");
       }
       for (int ion = 0; ion < nions - 1; ion++) {
         const double Y_nt = nonthermal::nt_ionisation_ratecoeff(nonemptymgi, element, ion);
-        estimators_file << std::format("  {}: {:9.3e}", get_ionstage(element, ion), Y_nt);
+        std::print(estimators_file, "  {}: {:9.3e}", get_ionstage(element, ion), Y_nt);
       }
-      estimators_file << '\n';
+      std::println(estimators_file);
     }
 
     if (USE_LUT_PHOTOION && globals::nbfcontinua_ground > 0) {
-      estimators_file << std::format("corrphotoionrenorm Z={:2d}", get_atomicnumber(element));
+      std::print(estimators_file, "corrphotoionrenorm Z={:2d}", get_atomicnumber(element));
       for (int ion = 0; ion < nions - 1; ion++) {
         if (get_groundcontindex(element, ion) >= 0) {
-          estimators_file << std::format("  {}: {:9.3e}", get_ionstage(element, ion),
-                                         globals::corrphotoionrenorm[(nonemptymgi * globals::nbfcontinua_ground) +
-                                                                     get_groundcontindex(element, ion)]);
+          std::print(estimators_file, "  {}: {:9.3e}", get_ionstage(element, ion),
+                     globals::corrphotoionrenorm[(nonemptymgi * globals::nbfcontinua_ground) +
+                                                 get_groundcontindex(element, ion)]);
         }
       }
-      estimators_file << '\n';
-      estimators_file << std::format("gammaestimator     Z={:2d}", get_atomicnumber(element));
+      std::println(estimators_file);
+      std::print(estimators_file, "gammaestimator     Z={:2d}", get_atomicnumber(element));
       for (int ion = 0; ion < nions - 1; ion++) {
         if (get_groundcontindex(element, ion) >= 0) {
-          estimators_file << std::format(
-              "  {}: {:9.3e}", get_ionstage(element, ion),
+          std::print(
+              estimators_file, "  {}: {:9.3e}", get_ionstage(element, ion),
               globals::gammaestimator[(nonemptymgi * globals::nbfcontinua_ground) + get_groundcontindex(element, ion)]);
         }
       }
-      estimators_file << '\n';
+      std::println(estimators_file);
     }
   }
 
   // power densities in erg / s / cm^3. 'ana' means analytical at t_mid, i.e. the rates calculated from the nuclear
   // abundances and decay data, not from Monte Carlo events
-  estimators_file << std::format("emission_ana: gamma {:11.5e} positron {:11.5e} electron {:11.5e} alpha {:11.5e}",
-                                 heatingcoolingrates.eps_gamma_ana, heatingcoolingrates.eps_positron_ana,
-                                 heatingcoolingrates.eps_electron_ana, heatingcoolingrates.eps_alpha_ana);
+  std::print(estimators_file, "emission_ana: gamma {:11.5e} positron {:11.5e} electron {:11.5e} alpha {:11.5e}",
+             heatingcoolingrates.eps_gamma_ana, heatingcoolingrates.eps_positron_ana,
+             heatingcoolingrates.eps_electron_ana, heatingcoolingrates.eps_alpha_ana);
   const bool any_fission = decay::decaytype_is_used(decay::DECAYTYPE_SPONTFISSION);
   if (any_fission) {
-    estimators_file << std::format(" spfission {:11.5e}", heatingcoolingrates.eps_spfission_ana);
+    std::print(estimators_file, " spfission {:11.5e}", heatingcoolingrates.eps_spfission_ana);
   }
-  estimators_file << '\n';
+  std::println(estimators_file);
 
-  estimators_file << std::format("deposition: gamma {:11.5e} positron {:11.5e} electron {:11.5e} alpha {:11.5e}",
-                                 heatingcoolingrates.dep_gamma, heatingcoolingrates.dep_positron,
-                                 heatingcoolingrates.dep_electron, heatingcoolingrates.dep_alpha);
+  std::print(estimators_file, "deposition: gamma {:11.5e} positron {:11.5e} electron {:11.5e} alpha {:11.5e}",
+             heatingcoolingrates.dep_gamma, heatingcoolingrates.dep_positron, heatingcoolingrates.dep_electron,
+             heatingcoolingrates.dep_alpha);
   if (any_fission) {
-    estimators_file << std::format(" spfission {:11.5e}", heatingcoolingrates.dep_spfission);
+    std::print(estimators_file, " spfission {:11.5e}", heatingcoolingrates.dep_spfission);
   }
-  estimators_file << '\n';
+  std::println(estimators_file);
 
-  estimators_file << std::format(
-      "heating: ff {:11.5e} bf {:11.5e} coll {:11.5e}       dep {:11.5e} heating_dep/total_dep {:.3f}\n",
-      heatingcoolingrates.heating_ff, heatingcoolingrates.heating_bf, heatingcoolingrates.heating_collisional,
-      heatingcoolingrates.heating_dep, heatingcoolingrates.dep_frac_heating);
-  estimators_file << std::format("cooling: ff {:11.5e} fb {:11.5e} coll {:11.5e} adiabatic {:11.5e}\n",
-                                 heatingcoolingrates.cooling_ff, heatingcoolingrates.cooling_fb,
-                                 heatingcoolingrates.cooling_collisional, heatingcoolingrates.cooling_adiabatic);
-
-  estimators_file << '\n';
-
-  estimators_file.flush();
+  std::print(estimators_file,
+             "heating: ff {:11.5e} bf {:11.5e} coll {:11.5e}       dep {:11.5e} heating_dep/total_dep {:.3f}\n",
+             heatingcoolingrates.heating_ff, heatingcoolingrates.heating_bf, heatingcoolingrates.heating_collisional,
+             heatingcoolingrates.heating_dep, heatingcoolingrates.dep_frac_heating);
+  std::print(estimators_file, "cooling: ff {:11.5e} fb {:11.5e} coll {:11.5e} adiabatic {:11.5e}\n",
+             heatingcoolingrates.cooling_ff, heatingcoolingrates.cooling_fb, heatingcoolingrates.cooling_collisional,
+             heatingcoolingrates.cooling_adiabatic);
 
   const auto write_estim_duration = std::time(nullptr) - sys_time_start_write_estimators;
   if (write_estim_duration >= 1) {
@@ -595,9 +591,11 @@ void update_grid(std::ostream& estimators_file, const int nts, const int nts_pre
                                  heatingcoolingrates_thisrankcells.at(nonemptymgi - nstart_nonempty));
       } else {
         // modelgrid cells that are not represented in the simulation grid
-        estimators_file << std::format("timestep {} modelgridindex {} EMPTYCELL\n\n", nts, mgi);
-        estimators_file.flush();
+        std::println(estimators_file, "timestep {} modelgridindex {} EMPTYCELL", nts, mgi);
       }
+
+      std::println(estimators_file);
+      estimators_file.flush();
     }
   }
 

@@ -17,6 +17,7 @@
 #include <iostream>
 #include <limits>
 #include <memory>
+#include <print>
 #include <ranges>
 #include <span>
 #include <string>
@@ -129,16 +130,16 @@ inline auto printlnlog(std::string_view fmt, Args&&... args) -> void {
   }
 
 #else
-inline void print_line_start() {
+inline void print_line_start() noexcept {
   if (outputstartofline) {
     const time_t now_time = time(nullptr);
     THREADLOCALONHOST tm timebuf{};
     strftime(outputlinebuf.data(), 32, "%FT%TZ", gmtime_r(&now_time, &timebuf));
-    output_file << outputlinebuf.data() << ' ';
+    std::print(output_file, "{} ", outputlinebuf.data());
   }
 }
 
-__attribute__((__format__(__printf__, 1, 2))) inline auto printout(const char* format, ...) -> void {
+__attribute__((__format__(__printf__, 1, 2))) inline auto printout(const char* format, ...) noexcept -> void {
   print_line_start();
   va_list args{};
   va_start(args, format);
@@ -152,20 +153,20 @@ __attribute__((__format__(__printf__, 1, 2))) inline auto printout(const char* f
 }
 
 template <typename... Args>
-inline auto printlog(const std::format_string<Args...> fmt, Args&&... args) -> void {
+inline auto printlog(const std::format_string<Args...> fmt, Args&&... args) noexcept -> void {
   print_line_start();
   THREADLOCALONHOST std::string outputlinestr;
   outputlinestr = std::format(fmt, std::forward<Args>(args)...);
   outputstartofline = (outputlinestr.back() == '\n');
-  output_file << outputlinestr;
+  std::print(output_file, "{}", outputlinestr);
   output_file.flush();
 }
 
 template <typename... Args>
-inline auto printlnlog(const std::format_string<Args...> fmt, Args&&... args) -> void {
+inline auto printlnlog(const std::format_string<Args...> fmt, Args&&... args) noexcept -> void {
   print_line_start();
   outputstartofline = true;
-  output_file << std::format(fmt, std::forward<Args>(args)...) << '\n';
+  std::println(output_file, fmt, std::forward<Args>(args)...);
   output_file.flush();
 }
 

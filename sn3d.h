@@ -16,6 +16,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <print>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -45,10 +46,10 @@ inline void check_already_running() {
       std::istringstream{line} >> working_directory;
       pidfile.close();
       if (is_pid_running(artispid_in) && std::filesystem::current_path().generic_string() == working_directory) {
-        fprintf(stderr,
-                "\nERROR: artis or exspec is already running in this folder with existing pid %d. Refusing to start. "
-                "(delete artis.pid if you are sure this is incorrect)\n",
-                artispid_in);
+        std::println(stderr,
+                     "\nERROR: artis or exspec is already running in this folder with existing pid {}. Refusing to "
+                     "start. (delete artis.pid if you are sure this is incorrect)",
+                     artispid_in);
         std::abort();
       }
     }
