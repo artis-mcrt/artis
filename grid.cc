@@ -799,16 +799,16 @@ auto read_model_columns(std::istream& fmodel) -> std::tuple<std::vector<std::str
     // add a default header for unlabelled columns
     switch (get_modelgridtype()) {
       case GridType::SPHERICAL1D:
-        headerline = std::string("#inputcellid vel_r_max_kmps logrho");
+        headerline = "#inputcellid vel_r_max_kmps logrho";
         break;
       case GridType::CYLINDRICAL2D:
-        headerline = std::string("#inputcellid pos_rcyl_mid pos_z_mid rho");
+        headerline = "#inputcellid pos_rcyl_mid pos_z_mid rho";
         break;
       case GridType::CARTESIAN3D:
-        headerline = std::string("#inputcellid pos_x_min pos_y_min pos_z_min rho");
+        headerline = "#inputcellid pos_x_min pos_y_min pos_z_min rho";
         break;
     }
-    headerline += std::string(" X_Fegroup X_Ni56 X_Co56 X_Fe52 X_Cr48");
+    headerline += " X_Fegroup X_Ni56 X_Co56 X_Fe52 X_Cr48";
   }
 
   int colcount = get_token_count(line);
