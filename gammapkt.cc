@@ -13,6 +13,7 @@
 #include <ios>
 #include <limits>
 #include <numeric>
+#include <print>
 #include <span>
 #include <sstream>
 #include <string>
@@ -193,16 +194,15 @@ void init_gamma_linelist() {
 
     auto gammalinelist = std::fstream("gammalinelist.out", std::ofstream::out | std::ofstream::trunc);
     assert_always(gammalinelist.is_open());
-    gammalinelist << "#index nucindex Z A nucgammmaindex en_gamma_mev gammaline_probability\n";
+    std::println(gammalinelist, "#index nucindex Z A nucgammmaindex en_gamma_mev gammaline_probability");
 
     for (auto i = 0Z; i < total_lines; i++) {
       const int nucindex = allnuc_gamma_line_list[i].nucindex;
       const int index = allnuc_gamma_line_list[i].nucgammaindex;
-      gammalinelist << static_cast<int>(i) << ' ' << allnuc_gamma_line_list[i].nucindex << ' '
-                    << decay::get_nuc_z(allnuc_gamma_line_list[i].nucindex) << ' '
-                    << decay::get_nuc_a(allnuc_gamma_line_list[i].nucindex) << ' '
-                    << allnuc_gamma_line_list[i].nucgammaindex << ' ' << gamma_spectra[nucindex][index].energy / MEV
-                    << ' ' << gamma_spectra[nucindex][index].probability << '\n';
+      std::println(gammalinelist, "{} {} {} {} {} {:g} {:g}", static_cast<int>(i), allnuc_gamma_line_list[i].nucindex,
+                   decay::get_nuc_z(allnuc_gamma_line_list[i].nucindex),
+                   decay::get_nuc_a(allnuc_gamma_line_list[i].nucindex), allnuc_gamma_line_list[i].nucgammaindex,
+                   gamma_spectra[nucindex][index].energy / MEV, gamma_spectra[nucindex][index].probability);
     }
     printlnlog("Wrote combined gamma-ray line list to gammalinelist.out");
   }
