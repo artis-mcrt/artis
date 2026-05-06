@@ -227,7 +227,6 @@ auto get_possible_event_expansion_opacity(const int nonemptymgi, const Packet& p
   auto prop_time = pkt.prop_time;
 
   // with thermalisation or pure scattering, we don't keep track of line interactions
-  auto next_trans = -1;
 
   assert_always(globals::cellcache[cellcacheslotid].nonemptymgi == nonemptymgi);
   double dist = 0.;
@@ -255,7 +254,7 @@ auto get_possible_event_expansion_opacity(const int nonemptymgi, const Packet& p
       if constexpr (RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.has_value()) {
         const auto edist = std::max(dist + ((tau_rnd - tau) / chi_tot), 0.);
         const bool event_is_boundbound = rng_uniform() <= chi_bb_expansionopac / chi_tot;
-        return {edist, next_trans, event_is_boundbound};
+        return {edist, -1, event_is_boundbound};
       }
 
       // re-trace this bin line-by-line
@@ -270,6 +269,7 @@ auto get_possible_event_expansion_opacity(const int nonemptymgi, const Packet& p
       pkt_bin_start.next_trans = -1;
       double edist_after_bin = 0.;
       bool event_is_boundbound = false;
+      auto next_trans = -1;
       std::tie(edist_after_bin, next_trans, event_is_boundbound) =
           get_possible_event(nonemptymgi, pkt_bin_start, chi_rpkt_cont, mastate, tau_rnd - tau,
                              std::numeric_limits<double>::max(), 0., dnu_on_dl, doppler, globals::linelist);
@@ -298,12 +298,12 @@ auto get_possible_event_expansion_opacity(const int nonemptymgi, const Packet& p
 
     if (nu_cmf <= nu_cmf_abort) {
       // hit edge of cell or timestep limit
-      return {std::numeric_limits<double>::max(), next_trans, false};
+      return {std::numeric_limits<double>::max(), -1, false};
     }
   }
 
   // no more bins, so no opacity and no chance of further interaction below this frequency
-  return {std::numeric_limits<double>::max(), next_trans, false};
+  return {std::numeric_limits<double>::max(), -1, false};
 }
 
 void electron_scatter_rpkt(Packet& pkt) {
