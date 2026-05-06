@@ -18,6 +18,7 @@
 #include <limits>
 #include <numbers>
 #include <optional>
+#include <print>
 #include <span>
 #include <sstream>
 #include <string>
@@ -2248,7 +2249,7 @@ void init_grid() {
     for (int cellindex = 0; cellindex < ngrid; cellindex++) {
       const int mgi = get_propcell_modelgridindex(cellindex);
       if (mgi >= 0) {
-        grid_file << cellindex << ' ' << mgi << '\n';  // write only non-empty cells to grid file
+        std::println(grid_file, "{} {}", cellindex, mgi);  // write only non-empty cells to grid file
       }
     }
   }
