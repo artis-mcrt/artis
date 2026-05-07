@@ -35,6 +35,10 @@ sed -i'' -e 's/constexpr bool WRITE_EMISSIONABSORPTION_SPEC_AT_END.*/constexpr b
 sed -i'' -e 's/constexpr bool RPKT_USE_EXPANSION_OPACITIES.*/constexpr bool RPKT_USE_EXPANSION_OPACITIES = true;/g' artisoptions.h
 sed -i'' -e 's/constexpr std::optional<float> RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.*/constexpr std::optional<float> RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY = 1.;/g' artisoptions.h
 
+sed -i'' -e 's/constexpr bool POL_ON.*/constexpr bool POL_ON = true;/g' artisoptions.h
+sed -i'' -e 's/constexpr bool VPKT_ON.*/constexpr bool VPKT_ON = true;/g' artisoptions.h
+sed -i'' -e 's/constexpr bool VPKT_WRITE_CONTRIBS.*/constexpr bool VPKT_WRITE_CONTRIBS = true;/g' artisoptions.h
+
 cd -
 
 set +x
