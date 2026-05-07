@@ -36,14 +36,6 @@ static_assert(!RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.has_value() ||
 
 namespace {
 
-constexpr float expopac_lambdamin = 534.5;
-constexpr float expopac_lambdamax = 35000.;
-constexpr float expopac_deltalambda = 35.5;
-constexpr auto expopac_nbins = static_cast<ptrdiff_t>((expopac_lambdamax - expopac_lambdamin) / expopac_deltalambda);
-
-// kappa in cm^2/g for each bin of each non-empty cell
-MPI_shared_array<float> expansionopacities{};
-
 // kappa times Planck function for each bin of each non-empty cell
 MPI_shared_array<double> expansionopacity_planck_cumulative{};
 
@@ -61,18 +53,6 @@ auto get_nu_cmf_abort(const Vec3d& pos, const Vec3d& dir, const double prop_time
   const double nu_cmf_abort = nu_rf * calculate_doppler_nucmf_on_nurf(abort_pos, dir, abort_time);
 
   return nu_cmf_abort;
-}
-
-// wavelength bins are ordered by ascending wavelength (descending frequency)
-
-constexpr auto get_expopac_bin_nu_upper(const ptrdiff_t binindex) -> double {
-  const auto lambda_lower = expopac_lambdamin + (binindex * expopac_deltalambda);
-  return 1e8 * CLIGHT / lambda_lower;
-}
-
-constexpr auto get_expopac_bin_nu_lower(const ptrdiff_t binindex) -> double {
-  const auto lambda_upper = expopac_lambdamin + ((binindex + 1) * expopac_deltalambda);
-  return 1e8 * CLIGHT / lambda_upper;
 }
 
 template <bool USECELLCACHE>
@@ -647,7 +627,7 @@ auto do_rpkt_step(Packet& pkt, const double t2) -> bool {
     const auto dnu_on_dl = (nu_cmf_abort - pkt.nu_cmf) / abort_dist;
     const auto doppler = calculate_doppler_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
 
-    if constexpr (RPKTS_USE_EXPANSION_OPACITIES) {
+    if constexpr (RPKT_USE_EXPANSION_OPACITIES) {
       std::tie(edist, event_is_boundbound) = get_possible_event_expansion_opacity(
           nonemptymgi, pkt, chi_rpkt_cont, pktmastate, tau_rnd, nu_cmf_abort, dnu_on_dl, doppler);
     } else {
@@ -978,7 +958,7 @@ template void calculate_chi_rpkt_cont<false>(const double nu_cmf, RpktContinuumO
                                              const int nonemptymgi);
 
 void MPI_Bcast_binned_opacities(const ptrdiff_t nonemptymgi, const int root_node_id) {
-  if constexpr (RPKTS_USE_EXPANSION_OPACITIES) {
+  if constexpr (RPKT_USE_EXPANSION_OPACITIES) {
     if (globals::rank_in_node == 0) {
       assert_always(nonemptymgi >= 0);
       MPI_Bcast_safe(expansionopacities.subspan(nonemptymgi * expopac_nbins, expopac_nbins), root_node_id,

@@ -12,7 +12,28 @@
 #include "constants.h"
 #include "grid.h"
 #include "ltepop.h"
+#include "mpi_logging.h"
 #include "packet.h"
+
+constexpr float expopac_lambdamin = 534.5;
+constexpr float expopac_lambdamax = 35000.;
+constexpr float expopac_deltalambda = 35.5;
+constexpr auto expopac_nbins = static_cast<ptrdiff_t>((expopac_lambdamax - expopac_lambdamin) / expopac_deltalambda);
+
+// wavelength bins are ordered by ascending wavelength (descending frequency)
+
+constexpr auto get_expopac_bin_nu_upper(const ptrdiff_t binindex) -> double {
+  const auto lambda_lower = expopac_lambdamin + (binindex * expopac_deltalambda);
+  return 1e8 * CLIGHT / lambda_lower;
+}
+
+constexpr auto get_expopac_bin_nu_lower(const ptrdiff_t binindex) -> double {
+  const auto lambda_upper = expopac_lambdamin + ((binindex + 1) * expopac_deltalambda);
+  return 1e8 * CLIGHT / lambda_upper;
+}
+
+// kappa in cm^2/g for each bin of each non-empty cell
+inline MPI_shared_array<float> expansionopacities{};
 
 class Phixslist {
   // NOLINTBEGIN(*-avoid-c-arrays)

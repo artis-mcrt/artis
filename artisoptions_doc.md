@@ -247,10 +247,10 @@ constexpr bool KEEP_ALL_RESTART_FILES;
 constexpr bool BFCOOLING_USELEVELPOPNOTIONPOP;
 
 // set true to calculate and use expansion opacities instead of line-by-line in non-grey mode
-constexpr bool RPKTS_USE_EXPANSION_OPACITIES;
+constexpr bool RPKT_USE_EXPANSION_OPACITIES;
 
 // set true to calculate and use expansion opacities instead of line-by-line for virtual packets
-constexpr bool VPKTS_USE_EXPANSION_OPACITIES;
+constexpr bool VPKT_USE_EXPANSION_OPACITIES;
 
 // Optionally replace macroatom with a thermalisation probability P (where 1 - P is probability of scattering).
 constexpr std::optional<float> RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY;

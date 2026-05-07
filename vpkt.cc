@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <cstddef>
 #include <cstdio>
 #include <cstdlib>
 #include <filesystem>
@@ -288,55 +289,101 @@ auto rlc_emiss_vpkt(const Packet& pkt, const double t_current, const double t_ar
           vpkt.nu_cmf);
 
       const double dnu_on_dl = (nu_cmf_abort - vpkt.nu_cmf) / sdist;
-
-      double ldist = 0;
-      while (ldist < sdist) {
-        const int lineindex = closest_transition(vpkt.nu_cmf, vpkt.next_trans, globals::linelist.nu);
-
-        if (lineindex < 0) {
-          // no more lines below the current frequency
-          vpkt.next_trans = globals::nlines + 1;
-          break;
-        }
-        const double nutrans = globals::linelist.nu[lineindex];
-
-        vpkt.next_trans = lineindex + 1;
-
-        ldist = get_linedistance(vpkt.prop_time, vpkt.nu_cmf, nutrans, dnu_on_dl);
-
-        if (ldist > sdist) {
-          // exit the while loop if you reach the boundary; go back to the previous transition to start next cell with
-          // the excluded line
-
-          vpkt.next_trans -= 1;
-          break;
+      if constexpr (VPKT_USE_EXPANSION_OPACITIES) {
+        auto binindex_start =
+            static_cast<ptrdiff_t>(((1e8 * CLIGHT / vpkt.nu_cmf) - expopac_lambdamin) / expopac_deltalambda);
+        if (binindex_start < 0) {
+          binindex_start = -1;
         }
 
-        const double t_line = vpkt.prop_time + (ldist / CLIGHT);
+        double dist = 0.;
 
-        const int element = globals::linelist.elementindex[lineindex];
-        const int ion = globals::linelist.ionindex[lineindex];
-        const int upper = globals::linelist.upperlevelindex[lineindex];
-        const int lower = globals::linelist.lowerlevelindex[lineindex];
+        for (auto binindex = binindex_start; binindex < expopac_nbins; binindex++) {
+          // binindex could be -1, in which case we have only the continuum opacity and no expansion opacity
+          const auto next_bin_edge_nu =
+              (binindex < 0) ? get_expopac_bin_nu_upper(0) : get_expopac_bin_nu_lower(binindex);
+          const auto binedgedist = get_linedistance(vpkt.prop_time, vpkt.nu_cmf, next_bin_edge_nu, dnu_on_dl);
 
-        const double B_ul = CLIGHTSQUAREDOVERTWOH / pow3(nutrans) * globals::linelist.einstein_A[lineindex];
-        const double B_lu = stat_weight(element, ion, upper) / stat_weight(element, ion, lower) * B_ul;
+          double chi_bb_expansionopac = 0.;
+          if (binindex >= 0) {
+            const auto kappa = expansionopacities[(nonemptymgi * expopac_nbins) + binindex];
+            chi_bb_expansionopac = kappa * grid::get_rho(nonemptymgi);
+          }
 
-        const auto n_u = calculate_levelpop(nonemptymgi, element, ion, upper);
-        const auto n_l = calculate_levelpop(nonemptymgi, element, ion, lower);
-        const double tau_line = std::max(0., ((B_lu * n_l) - (B_ul * n_u)) * HCLIGHTOVERFOURPI * t_line);
+          double tau_bin = 0.;
+          if ((dist + binedgedist) > sdist) {
+            tau_bin = chi_bb_expansionopac * (sdist - dist);
+            dist = sdist;
+          } else {
+            tau_bin = chi_bb_expansionopac * binedgedist;
+            dist += binedgedist;
+          }
 
-        // Check on the element to exclude (or -1 for no line opacity)
-        const int anumber = get_atomicnumber(element);
-        for (int ind = 0; ind < Nspectra; ind++) {
-          if (exclude[ind] != -1 && (exclude[ind] != anumber)) {
-            tau_vpkt[ind] += tau_line;
+          for (int ind = 0; ind < Nspectra; ind++) {
+            assert_testmodeonly(exclude[ind] <= 0);  // expansion opacities include all elements, so cannot be used with
+                                                     // custom lists that exclude some elements
+            tau_vpkt[ind] += tau_bin;
+          }
+
+          // kill vpkt with high optical depth
+          if (all_taus_past_taumax(tau_vpkt, tau_max_vpkt)) {
+            return false;
+          }
+
+          if (dist >= sdist) {
+            break;
           }
         }
+      } else {
+        double ldist = 0;
+        while (ldist < sdist) {
+          const int lineindex = closest_transition(vpkt.nu_cmf, vpkt.next_trans, globals::linelist.nu);
 
-        // kill vpkt with high optical depth
-        if (all_taus_past_taumax(tau_vpkt, tau_max_vpkt)) {
-          return false;
+          if (lineindex < 0) {
+            // no more lines below the current frequency
+            vpkt.next_trans = globals::nlines + 1;
+            break;
+          }
+          const double nutrans = globals::linelist.nu[lineindex];
+
+          vpkt.next_trans = lineindex + 1;
+
+          ldist = get_linedistance(vpkt.prop_time, vpkt.nu_cmf, nutrans, dnu_on_dl);
+
+          if (ldist > sdist) {
+            // exit the while loop if you reach the boundary; go back to the previous transition to start next cell with
+            // the excluded line
+
+            vpkt.next_trans -= 1;
+            break;
+          }
+
+          const double t_line = vpkt.prop_time + (ldist / CLIGHT);
+
+          const int element = globals::linelist.elementindex[lineindex];
+          const int ion = globals::linelist.ionindex[lineindex];
+          const int upper = globals::linelist.upperlevelindex[lineindex];
+          const int lower = globals::linelist.lowerlevelindex[lineindex];
+
+          const double B_ul = CLIGHTSQUAREDOVERTWOH / pow3(nutrans) * globals::linelist.einstein_A[lineindex];
+          const double B_lu = stat_weight(element, ion, upper) / stat_weight(element, ion, lower) * B_ul;
+
+          const auto n_u = calculate_levelpop(nonemptymgi, element, ion, upper);
+          const auto n_l = calculate_levelpop(nonemptymgi, element, ion, lower);
+          const double tau_line = std::max(0., ((B_lu * n_l) - (B_ul * n_u)) * HCLIGHTOVERFOURPI * t_line);
+
+          // Check on the element to exclude (or -1 for no line opacity)
+          const int anumber = get_atomicnumber(element);
+          for (int ind = 0; ind < Nspectra; ind++) {
+            if (exclude[ind] != -1 && (exclude[ind] != anumber)) {
+              tau_vpkt[ind] += tau_line;
+            }
+          }
+
+          // kill vpkt with high optical depth
+          if (all_taus_past_taumax(tau_vpkt, tau_max_vpkt)) {
+            return false;
+          }
         }
       }
     }
@@ -648,6 +695,9 @@ void read_vpktparameterfile() {
 
       // The first number should be equal to zero!
       assert_always(exclude[0] == 0);  // The first spectrum should allow for all opacities (exclude[i]=0)
+      assert_always(exclude[i] <= 0 ||
+                    !VPKT_USE_EXPANSION_OPACITIES);  // expansion opacities include all elements, so cannot be used
+                                                     // with custom lists that exclude some elements
     }
   }
 
