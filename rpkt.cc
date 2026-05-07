@@ -237,6 +237,7 @@ auto get_possible_event_expansion_opacity(const int nonemptymgi, const Packet& p
   }
 
   for (auto binindex = binindex_start; binindex < expopac_nbins; binindex++) {
+    // binindex could be -1, in which case we have only the continuum opacity and no expansion opacity
     const auto next_bin_edge_nu = (binindex < 0) ? get_expopac_bin_nu_upper(0) : get_expopac_bin_nu_lower(binindex);
     const auto binedgedist = get_linedistance(prop_time, nu_cmf, next_bin_edge_nu, dnu_on_dl);
 
@@ -318,8 +319,6 @@ void electron_scatter_rpkt(Packet& pkt) {
   double Qi = 0.;
   double Ui = 0.;
   if constexpr (POL_ON) {
-    Qi = pkt.stokes[1];
-    Ui = pkt.stokes[2];
     std::tie(old_dir_cmf, Qi, Ui) = frame_transform(pkt.dir, pkt.stokes[1], pkt.stokes[2], vel_vec);
   } else {
     old_dir_cmf = angle_ab(pkt.dir, vel_vec);
