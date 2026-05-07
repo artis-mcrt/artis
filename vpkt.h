@@ -8,7 +8,7 @@ namespace vpkt {
 
 void read_vpktparameterfile();
 void init(int nts, bool continued_from_saved);
-void call_estimators(const Packet& pkt, enum packet_type type_before_rpkt);
+void trace_vpkts(const Packet& pkt, enum packet_type type_before_rpkt);
 void write_timestep(int nts, bool is_final);
 
 void remove_temp_vpkt_file(int nts, int my_rank);

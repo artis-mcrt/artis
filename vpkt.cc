@@ -911,7 +911,7 @@ void init(const int nts, const bool continued_from_saved) {
   }
 }
 
-auto call_estimators(const Packet& pkt, const enum packet_type type_before_rpkt) -> void {
+auto trace_vpkts(const Packet& pkt, const enum packet_type type_before_rpkt) -> void {
   if constexpr (!VPKT_ON) {
     return;
   }

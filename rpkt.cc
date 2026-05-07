@@ -442,7 +442,7 @@ void rpkt_event_continuum(Packet& pkt, const RpktContinuumOpacity& chi_rpkt_cont
 
     // generate a virtual packet
     if constexpr (VPKT_ON) {
-      vpkt::call_estimators(pkt, TYPE_RPKT);
+      vpkt::trace_vpkts(pkt, TYPE_RPKT);
     }
 
     electron_scatter_rpkt(pkt);
