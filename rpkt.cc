@@ -1006,10 +1006,6 @@ void calculate_expansion_opacities(const int nonemptymgi) {
     expansionopacities[(nonemptymgi * expopac_nbins) + binindex] = bin_kappa_bb;
 
     if constexpr (RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.has_value()) {
-      // thread_local ContinuumOpacity chi_rpkt_cont {};
-      // calculate_chi_rpkt_cont(nu_mid, chi_rpkt_cont, nullptr, nonemptymgi);
-      // const auto bin_kappa_cont = chi_rpkt_cont.total / rho;
-
       const auto nu_upper = get_expopac_bin_nu_upper(binindex);
       const auto nu_mid = (nu_upper + nu_lower) / 2.;
       const auto bin_kappa_cont = calculate_chi_ffheating(nonemptymgi, nu_mid, false) / rho;
