@@ -251,11 +251,10 @@ auto rlc_emiss_vpkt(const Packet& pkt, const double t_current, const double t_ar
   while (!end_packet) {
     // distance to the next cell
     const auto [sdist, snext] = grid::boundary_distance(vpkt.dir, vpkt.pos, vpkt.prop_time, vpkt.cellindex);
-    const double s_cont = sdist * pow3(t_current / t_future);
-
     if (mgi < 0) {
       vpkt.next_trans = -1;
     } else {
+      const double s_cont = sdist * pow3(t_current / t_future);
       const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(mgi);
       calculate_chi_rpkt_cont<false>(vpkt.nu_cmf, chi_vpkt_cont, nonemptymgi);
 
