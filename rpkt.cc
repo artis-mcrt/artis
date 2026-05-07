@@ -34,8 +34,9 @@ static_assert(!RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.has_value() ||
                   RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.value() <= 1.,
               "RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY must <= 1.0 if set");
 
-namespace {
+static_assert(!RPKT_USE_EXPANSION_OPACITIES || !VPKT_ON, "VPKT cannot be used with r-packet expansion opacities");
 
+namespace {
 // kappa times Planck function for each bin of each non-empty cell
 MPI_shared_array<double> expansionopacity_planck_cumulative{};
 
