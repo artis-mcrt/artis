@@ -875,7 +875,7 @@ DEVICE_FUNC auto sample_planck_times_expansion_opacity(const int nonemptymgi) ->
 
   const std::span<const double> kappa_planck_bins =
       expansionopacity_planck_cumulative.subspan(nonemptymgi * expopac_nbins, expopac_nbins);
-
+  assert_always(kappa_planck_bins.back() > 0);
   const auto rnd_integral = rng_uniform() * kappa_planck_bins[expopac_nbins - 1];
   const auto selected_partintegral = std::upper_bound(kappa_planck_bins.begin(), kappa_planck_bins.end(), rnd_integral);
   const auto binindex = std::min(selected_partintegral - kappa_planck_bins.begin(), expopac_nbins - 1);
