@@ -712,7 +712,7 @@ void read_vpktparameterfile() {
   double vspec_tmax_in_days = 0.;
   assert_always(fscanf(input_file, "%d %lg %lg \n", &override_tminmax, &vspec_tmin_in_days, &vspec_tmax_in_days) == 3);
 
-  printlnlog("vpkt: compiled with VSPEC_TIMEMIN {:.1f}d VSPEC_TIMEMAX {:1f}d VMTBINS {}", VSPEC_TIMEMIN / DAY,
+  printlnlog("vpkt: compiled with VSPEC_TIMEMIN {:.1f}d VSPEC_TIMEMAX {:1f}d VSPEC_TIMEBINS {}", VSPEC_TIMEMIN / DAY,
              VSPEC_TIMEMAX / DAY, VSPEC_TIMEBINS);
   if (override_tminmax == 1) {
     VSPEC_TIMEMIN_input = vspec_tmin_in_days * DAY;
@@ -738,7 +738,7 @@ void read_vpktparameterfile() {
   int flag_custom_freq_ranges = 0;
   assert_always(fscanf(input_file, "%d ", &flag_custom_freq_ranges) == 1);
 
-  printlnlog("vpkt: compiled with VMNUBINS {}", VSPEC_NUBINS);
+  printlnlog("vpkt: compiled with VSPEC_NUBINS {}", VSPEC_NUBINS);
   assert_always(VSPEC_NUMAX > VSPEC_NUMIN);
   printlnlog("vpkt: compiled with VSPEC_NUMAX {:g} lambda_min {:g} Angstroms", VSPEC_NUMAX, 1e8 * CLIGHT / VSPEC_NUMAX);
   printlnlog("vpkt: compiled with VSPEC_NUMIN {:g} lambda_max {:g} Angstroms", VSPEC_NUMIN, 1e8 * CLIGHT / VSPEC_NUMIN);
