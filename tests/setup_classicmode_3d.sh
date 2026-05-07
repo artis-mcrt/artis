@@ -24,6 +24,10 @@ sed -i'' -e 's/constexpr int MPKTS.*/constexpr int MPKTS = 15000;/g' artisoption
 
 sed -i'' -e 's/constexpr bool WRITE_EMISSIONABSORPTION_SPEC_AT_END.*/constexpr bool WRITE_EMISSIONABSORPTION_SPEC_AT_END = true;/g' artisoptions.h
 
+sed -i'' -e 's/constexpr bool VPKT_ON.*/constexpr bool VPKT_ON = true;/g' artisoptions.h
+sed -i'' -e 's/constexpr bool VPKT_WRITE_CONTRIBS.*/constexpr bool VPKT_WRITE_CONTRIBS = true;/g' artisoptions.h
+sed -i'' -e 's/constexpr bool VPKT_USE_EXPANSION_OPACITIES.*/constexpr bool RPKT_USE_EXPANSION_OPACITIES = true;/g' artisoptions.h
+
 cd -
 
 set +x
