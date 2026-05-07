@@ -322,7 +322,9 @@ auto rlc_emiss_vpkt(const Packet& pkt, const double t_current, const double t_ar
           for (int ind = 0; ind < Nspectra; ind++) {
             assert_testmodeonly(exclude[ind] <= 0);  // expansion opacities include all elements, so cannot be used with
                                                      // custom lists that exclude some elements
-            tau_vpkt[ind] += tau_bin;
+            if (exclude[ind] != -1) {
+              tau_vpkt[ind] += tau_bin;
+            }
           }
 
           // kill vpkt with high optical depth
