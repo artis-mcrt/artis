@@ -145,6 +145,8 @@ constexpr bool BFCOOLING_USELEVELPOPNOTIONPOP = true;
 
 constexpr bool RPKTS_USE_EXPANSION_OPACITIES = false;
 
+constexpr bool VPKTS_USE_EXPANSION_OPACITIES = false;
+
 constexpr std::optional<float> RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY;
 
 constexpr RpktGreyType RPKT_GREY_TYPE = RpktGreyType::FEGROUP_APPROX;
