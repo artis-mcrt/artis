@@ -39,15 +39,15 @@ struct StokesParams {
 };
 
 struct VSpecPol {
-  std::array<StokesParams, VMNUBINS> flux;
+  std::array<StokesParams, VSPEC_NUBINS> flux;
   float lower_time{NAN};
   float delta_t{NAN};
 };
 
 std::vector<std::vector<VSpecPol>> vspecpol{};
 
-std::array<float, VMNUBINS> lower_freq_vspec;
-std::array<float, VMNUBINS> delta_freq_vspec;
+std::array<float, VSPEC_NUBINS> lower_freq_vspec;
+std::array<float, VSPEC_NUBINS> delta_freq_vspec;
 
 int Nobs = 0;  // Number of observer directions
 int Nspectra = 0;  // Number of virtual packet spectra per observer direction (total + elements switched off)
@@ -84,8 +84,8 @@ std::vector<double> nu_grid_min;
 std::vector<double> nu_grid_max;
 bool vgrid_on;
 
-const double dlogt_vspec = (std::log(VSPEC_TIMEMAX) - std::log(VSPEC_TIMEMIN)) / VMTBINS;
-const double dlognu_vspec = (std::log(VSPEC_NUMAX) - std::log(VSPEC_NUMIN)) / VMNUBINS;
+const double dlogt_vspec = (std::log(VSPEC_TIMEMAX) - std::log(VSPEC_TIMEMIN)) / VSPEC_TIMEBINS;
+const double dlognu_vspec = (std::log(VSPEC_NUMAX) - std::log(VSPEC_NUMIN)) / VSPEC_NUBINS;
 
 // Virtual packet is killed when tau reaches tau_max_vpkt for ALL the different setups
 // E.g. imagine that a packet in the first setup (all elements included) reaches tau = tau_max_vpkt
@@ -101,7 +101,7 @@ void add_to_vspecpol(const Packet& vpkt, const int obsdirindex, const int opacho
 
   const int nt = static_cast<int>((log(t_arrive) - log(VSPEC_TIMEMIN)) / dlogt_vspec);
   const int nnu = static_cast<int>((log(vpkt.nu_rf) - log(VSPEC_NUMIN)) / dlognu_vspec);
-  if (nt < 0 || nt >= VMTBINS || nnu < 0 || nnu >= VMNUBINS) {
+  if (nt < 0 || nt >= VSPEC_TIMEBINS || nnu < 0 || nnu >= VSPEC_NUBINS) {
     return;
   }
 
@@ -414,14 +414,14 @@ auto rlc_emiss_vpkt(const Packet& pkt, const double t_current, const double t_ar
 }
 
 void init_vspecpol() {
-  vspecpol.resize(VMTBINS, {});
+  vspecpol.resize(VSPEC_TIMEBINS, {});
 
   const int indexmax = Nspectra * Nobs;
-  for (int p = 0; p < VMTBINS; p++) {
+  for (int p = 0; p < VSPEC_TIMEBINS; p++) {
     vspecpol[p].resize(indexmax, {});
   }
 
-  for (int m = 0; m < VMNUBINS; m++) {
+  for (int m = 0; m < VSPEC_NUBINS; m++) {
     lower_freq_vspec[m] = static_cast<float>(std::exp(log(VSPEC_NUMIN) + (m * dlognu_vspec)));
     delta_freq_vspec[m] =
         static_cast<float>(std::exp(log(VSPEC_NUMIN) + ((m + 1) * dlognu_vspec)) - lower_freq_vspec[m]);
@@ -430,7 +430,7 @@ void init_vspecpol() {
   // start by setting up the time and frequency bins.
   // it is all done interms of a logarithmic spacing in both t and nu - get the
   // step sizes first.
-  for (int n = 0; n < VMTBINS; n++) {
+  for (int n = 0; n < VSPEC_TIMEBINS; n++) {
     for (int ind_comb = 0; ind_comb < indexmax; ind_comb++) {
       vspecpol[n][ind_comb].lower_time = static_cast<float>(std::exp(log(VSPEC_TIMEMIN) + (n * dlogt_vspec)));
       vspecpol[n][ind_comb].delta_t =
@@ -452,28 +452,28 @@ void write_vspecpol(const std::string& filename) {
     vspecpol_file << 0. << ' ';
 
     for (int l = 0; l < 3; l++) {
-      for (int p = 0; p < VMTBINS; p++) {
+      for (int p = 0; p < VSPEC_TIMEBINS; p++) {
         vspecpol_file << (vspecpol[p][ind_comb].lower_time + (vspecpol[p][ind_comb].delta_t / 2.)) / DAY << ' ';
       }
     }
 
     vspecpol_file << '\n';
 
-    for (int m = 0; m < VMNUBINS; m++) {
+    for (int m = 0; m < VSPEC_NUBINS; m++) {
       vspecpol_file << (lower_freq_vspec[m] + (delta_freq_vspec[m] / 2.)) << ' ';
 
       // Stokes I
-      for (int p = 0; p < VMTBINS; p++) {
+      for (int p = 0; p < VSPEC_TIMEBINS; p++) {
         vspecpol_file << vspecpol[p][ind_comb].flux[m].i << ' ';
       }
 
       // Stokes Q
-      for (int p = 0; p < VMTBINS; p++) {
+      for (int p = 0; p < VSPEC_TIMEBINS; p++) {
         vspecpol_file << vspecpol[p][ind_comb].flux[m].q << ' ';
       }
 
       // Stokes U
-      for (int p = 0; p < VMTBINS; p++) {
+      for (int p = 0; p < VSPEC_TIMEBINS; p++) {
         vspecpol_file << vspecpol[p][ind_comb].flux[m].u << ' ';
       }
 
@@ -493,7 +493,7 @@ void read_vspecpol(const int my_rank, const int nts) {
     get_noncommentline(vspecpol_file, line);  // first line is the header of times
 
     // Initialise I,Q,U fluxes from temporary files
-    for (int j = 0; j < VMNUBINS; j++) {
+    for (int j = 0; j < VSPEC_NUBINS; j++) {
       get_noncommentline(vspecpol_file, line);
       auto ssline = std::stringstream(line);
 
@@ -501,17 +501,17 @@ void read_vspecpol(const int my_rank, const int nts) {
       assert_always(ssline >> c);  // frequency bin center
 
       // Stokes I
-      for (int p = 0; p < VMTBINS; p++) {
+      for (int p = 0; p < VSPEC_TIMEBINS; p++) {
         assert_always(ssline >> vspecpol[p][ind_comb].flux[j].i);
       }
 
       // Stokes Q
-      for (int p = 0; p < VMTBINS; p++) {
+      for (int p = 0; p < VSPEC_TIMEBINS; p++) {
         assert_always(ssline >> vspecpol[p][ind_comb].flux[j].q);
       }
 
       // Stokes U
-      for (int p = 0; p < VMTBINS; p++) {
+      for (int p = 0; p < VSPEC_TIMEBINS; p++) {
         assert_always(ssline >> vspecpol[p][ind_comb].flux[j].u);
       }
     }
@@ -661,7 +661,7 @@ void read_vpktparameterfile() {
   assert_always(fscanf(input_file, "%d %lg %lg \n", &override_tminmax, &vspec_tmin_in_days, &vspec_tmax_in_days) == 3);
 
   printlnlog("vpkt: compiled with VSPEC_TIMEMIN {:.1f}d VSPEC_TIMEMAX {:1f}d VMTBINS {}", VSPEC_TIMEMIN / DAY,
-             VSPEC_TIMEMAX / DAY, VMTBINS);
+             VSPEC_TIMEMAX / DAY, VSPEC_TIMEBINS);
   if (override_tminmax == 1) {
     VSPEC_TIMEMIN_input = vspec_tmin_in_days * DAY;
     VSPEC_TIMEMAX_input = vspec_tmax_in_days * DAY;
@@ -686,7 +686,7 @@ void read_vpktparameterfile() {
   int flag_custom_freq_ranges = 0;
   assert_always(fscanf(input_file, "%d ", &flag_custom_freq_ranges) == 1);
 
-  printlnlog("vpkt: compiled with VMNUBINS {}", VMNUBINS);
+  printlnlog("vpkt: compiled with VMNUBINS {}", VSPEC_NUBINS);
   assert_always(VSPEC_NUMAX > VSPEC_NUMIN);
   printlnlog("vpkt: compiled with VSPEC_NUMAX {:g} lambda_min {:g} Angstroms", VSPEC_NUMAX, 1e8 * CLIGHT / VSPEC_NUMAX);
   printlnlog("vpkt: compiled with VSPEC_NUMIN {:g} lambda_max {:g} Angstroms", VSPEC_NUMIN, 1e8 * CLIGHT / VSPEC_NUMIN);
