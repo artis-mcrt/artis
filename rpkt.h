@@ -73,7 +73,7 @@ class Phixslist {
   // NOLINTEND(*-avoid-c-arrays)
 };
 
-struct RpktContinuumOpacity {
+struct ContinuumOpacity {
   double nu{-1.};  // frequency at which opacity was calculated
   double chi_freefree_scatter{0.};
   double chi_freefree_heat{0.};
@@ -82,20 +82,19 @@ struct RpktContinuumOpacity {
   int timestep{-1};
   Phixslist phixslist;
 
-  constexpr RpktContinuumOpacity(const int nbfcontinua_ground, const int nbfcontinua, const int bfestimcount)
+  constexpr ContinuumOpacity(const int nbfcontinua_ground, const int nbfcontinua, const int bfestimcount)
       : phixslist{nbfcontinua_ground, nbfcontinua, bfestimcount} {}
 
-  constexpr RpktContinuumOpacity() = default;
+  constexpr ContinuumOpacity() = default;
   [[nodiscard]] constexpr auto total() const { return chi_freefree_scatter + chi_boundfree + chi_freefree_heat; }
 };
 
 DEVICE_FUNC void do_rpkt(Packet& pkt, double t2);
 DEVICE_FUNC void emit_rpkt(Packet& pkt);
 template <bool USECELLHISTANDUPDATEPHIXSLIST>
-void calculate_chi_rpkt_cont(double nu_cmf, RpktContinuumOpacity& chi_rpkt_cont, int nonemptymgi);
-extern template void calculate_chi_rpkt_cont<true>(double nu_cmf, RpktContinuumOpacity& chi_rpkt_cont, int nonemptymgi);
-extern template void calculate_chi_rpkt_cont<false>(double nu_cmf, RpktContinuumOpacity& chi_rpkt_cont,
-                                                    int nonemptymgi);
+void calculate_chi_rpkt_cont(double nu_cmf, ContinuumOpacity& chi_rpkt_cont, int nonemptymgi);
+extern template void calculate_chi_rpkt_cont<true>(double nu_cmf, ContinuumOpacity& chi_rpkt_cont, int nonemptymgi);
+extern template void calculate_chi_rpkt_cont<false>(double nu_cmf, ContinuumOpacity& chi_rpkt_cont, int nonemptymgi);
 [[nodiscard]] DEVICE_FUNC auto sample_planck_times_expansion_opacity(int nonemptymgi) -> double;
 void allocate_expansionopacities();
 void calculate_expansion_opacities(int nonemptymgi);

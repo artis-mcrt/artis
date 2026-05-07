@@ -83,7 +83,7 @@ template <bool USECELLCACHE>
 // returns tuple of (distance to event, next transition index for pkt.next_trans, bool for whether line event)
 // the next transition index is lineindex + 1 for a line event, may remain the current next_trans if no event occurs,
 // and is globals::nlines + 1 for a continuum event
-auto get_possible_event(const int nonemptymgi, const Packet& pkt, const RpktContinuumOpacity& chi_rpkt_cont,
+auto get_possible_event(const int nonemptymgi, const Packet& pkt, const ContinuumOpacity& chi_rpkt_cont,
                         MacroAtomState& mastate,
                         const double tau_rnd,  // random optical depth until which the packet travels
                         const double abort_dist,  // maximal travel distance before packet leaves cell or time step ends
@@ -197,7 +197,7 @@ auto get_possible_event(const int nonemptymgi, const Packet& pkt, const RpktCont
 }
 
 auto get_possible_event_expansion_opacity(const int nonemptymgi, const Packet& pkt,
-                                          const RpktContinuumOpacity& chi_rpkt_cont, MacroAtomState& mastate,
+                                          const ContinuumOpacity& chi_rpkt_cont, MacroAtomState& mastate,
                                           const double tau_rnd, const double nu_cmf_abort, const double dnu_on_dl,
                                           const double doppler) -> std::tuple<double, bool> {
   auto pos = pkt.pos;
@@ -418,7 +418,7 @@ void electron_scatter_rpkt(Packet& pkt) {
   pkt.e_rf = pkt.e_cmf / dopplerfactor;
 }
 
-void rpkt_event_continuum(Packet& pkt, const RpktContinuumOpacity& chi_rpkt_cont) {
+void rpkt_event_continuum(Packet& pkt, const ContinuumOpacity& chi_rpkt_cont) {
   const double nu = pkt.nu_cmf;
 
   const double dopplerfactor = calculate_doppler_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
@@ -532,8 +532,8 @@ void rpkt_event_thickcell(Packet& pkt) {
 // This is done in another routine than move, as we sometimes move dummy
 // packets which do not contribute to the radiation field.
 void update_estimators(const double e_cmf, const double nu_cmf, const double distance,
-                       const double doppler_nucmf_on_nurf, const int nonemptymgi,
-                       const RpktContinuumOpacity& chi_rpkt_cont, const bool thickcell) {
+                       const double doppler_nucmf_on_nurf, const int nonemptymgi, const ContinuumOpacity& chi_rpkt_cont,
+                       const bool thickcell) {
   // Update only non-empty cells
   assert_testmodeonly(nonemptymgi >= 0);
   const double distance_e_cmf = distance * e_cmf;
@@ -578,8 +578,8 @@ auto do_rpkt_step(Packet& pkt, const double t2) -> bool {
 
   MacroAtomState pktmastate{};
 
-  THREADLOCALONHOST auto chi_rpkt_cont = RpktContinuumOpacity{globals::nbfcontinua_ground, globals::nbfcontinua,
-                                                              static_cast<int>(globals::bfestim_nu_edge.size())};
+  THREADLOCALONHOST auto chi_rpkt_cont = ContinuumOpacity{globals::nbfcontinua_ground, globals::nbfcontinua,
+                                                          static_cast<int>(globals::bfestim_nu_edge.size())};
 
   // draw random optical depth to next physical event
   const double tau_rnd = -std::log(static_cast<double>(rng_uniform_pos()));
@@ -927,7 +927,7 @@ DEVICE_FUNC void emit_rpkt(Packet& pkt) {
 }
 
 template <bool USECELLHISTANDUPDATEPHIXSLIST>
-void calculate_chi_rpkt_cont(const double nu_cmf, RpktContinuumOpacity& chi_rpkt_cont, const int nonemptymgi) {
+void calculate_chi_rpkt_cont(const double nu_cmf, ContinuumOpacity& chi_rpkt_cont, const int nonemptymgi) {
   assert_testmodeonly(grid::thick_allcells[nonemptymgi] != 1);
   if ((nonemptymgi == chi_rpkt_cont.nonemptymgi) && (globals::timestep == chi_rpkt_cont.timestep) &&
       (fabs((chi_rpkt_cont.nu / nu_cmf) - 1.0) < 1e-4)) {
@@ -953,9 +953,9 @@ void calculate_chi_rpkt_cont(const double nu_cmf, RpktContinuumOpacity& chi_rpkt
 }
 
 // specialize calculate_chi_rpkt_cont templates with true and false:
-template void calculate_chi_rpkt_cont<true>(const double nu_cmf, RpktContinuumOpacity& chi_rpkt_cont,
+template void calculate_chi_rpkt_cont<true>(const double nu_cmf, ContinuumOpacity& chi_rpkt_cont,
                                             const int nonemptymgi);
-template void calculate_chi_rpkt_cont<false>(const double nu_cmf, RpktContinuumOpacity& chi_rpkt_cont,
+template void calculate_chi_rpkt_cont<false>(const double nu_cmf, ContinuumOpacity& chi_rpkt_cont,
                                              const int nonemptymgi);
 
 void MPI_Bcast_binned_opacities(const ptrdiff_t nonemptymgi, const int root_node_id) {
@@ -1006,7 +1006,7 @@ void calculate_expansion_opacities(const int nonemptymgi) {
     expansionopacities[(nonemptymgi * expopac_nbins) + binindex] = bin_kappa_bb;
 
     if constexpr (RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.has_value()) {
-      // thread_local RpktContinuumOpacity chi_rpkt_cont {};
+      // thread_local ContinuumOpacity chi_rpkt_cont {};
       // calculate_chi_rpkt_cont(nu_mid, chi_rpkt_cont, nullptr, nonemptymgi);
       // const auto bin_kappa_cont = chi_rpkt_cont.total / rho;
 
