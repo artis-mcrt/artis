@@ -471,7 +471,7 @@ void allocate_nonemptymodelcells() {
 
   allocate_nonemptycells_composition_cooling();
 
-  if constexpr (EXPANSIONOPACITIES_ON || RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.has_value()) {
+  if constexpr (RPKTS_USE_EXPANSION_OPACITIES || RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.has_value()) {
     allocate_expansionopacities();
   }
 

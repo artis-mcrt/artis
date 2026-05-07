@@ -648,7 +648,7 @@ auto do_rpkt_step(Packet& pkt, const double t2) -> bool {
     const auto dnu_on_dl = (nu_cmf_abort - pkt.nu_cmf) / abort_dist;
     const auto doppler = calculate_doppler_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
 
-    if constexpr (EXPANSIONOPACITIES_ON) {
+    if constexpr (RPKTS_USE_EXPANSION_OPACITIES) {
       std::tie(edist, event_is_boundbound) = get_possible_event_expansion_opacity(
           nonemptymgi, pkt, chi_rpkt_cont, pktmastate, tau_rnd, nu_cmf_abort, dnu_on_dl, doppler);
     } else {
@@ -979,7 +979,7 @@ template void calculate_chi_rpkt_cont<false>(const double nu_cmf, RpktContinuumO
                                              const int nonemptymgi);
 
 void MPI_Bcast_binned_opacities(const ptrdiff_t nonemptymgi, const int root_node_id) {
-  if constexpr (EXPANSIONOPACITIES_ON) {
+  if constexpr (RPKTS_USE_EXPANSION_OPACITIES) {
     if (globals::rank_in_node == 0) {
       assert_always(nonemptymgi >= 0);
       MPI_Bcast_safe(expansionopacities.subspan(nonemptymgi * expopac_nbins, expopac_nbins), root_node_id,

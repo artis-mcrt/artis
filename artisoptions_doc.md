@@ -247,9 +247,9 @@ constexpr bool KEEP_ALL_RESTART_FILES;
 constexpr bool BFCOOLING_USELEVELPOPNOTIONPOP;
 
 // set true to calculate and use expansion opacities instead of line-by-line
-constexpr bool EXPANSIONOPACITIES_ON;
+constexpr bool RPKTS_USE_EXPANSION_OPACITIES;
 
-// thermalisation probability (1 - P is probability of scattering). EXPANSIONOPACITIES_ON must be true for this to work.
+// thermalisation probability (1 - P is probability of scattering). RPKTS_USE_EXPANSION_OPACITIES must be true for this to work.
 // set this to < 0 to use the macroatom
 constexpr std::optional<float> RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY;
 
