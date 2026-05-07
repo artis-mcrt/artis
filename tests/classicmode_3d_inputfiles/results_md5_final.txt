@@ -23,6 +23,14 @@ bdb65fa3116fbabc31919e3ef4ecb408  spec.out
 bb0472fd97d75fb30730113cf036a5c0  specpol.out
 b382801668907ea7f80cc24f29ee611f  specpol_res.out
 bc01f046eab9bf3802149e0ff63d5069  timesteps.out
+3135a81ce6e4f8d6bf899ceaf3bc0367  vpackets_0000.out
+67557cc169732d38c406245dad9e7e74  vpackets_0001.out
+ebaae69162dbe113b343a7ee2281c961  vpackets_0002.out
+824032cf4bcfcfad3133134966712176  vpackets_0003.out
+3f9b71e0a62a03194b33d044c4a6bbe3  vspecpol_0000.out
+749464c3c97c3d7d9a7063cd7d82454c  vspecpol_0001.out
+758bb70ac47549b224277ade0b786f4f  vspecpol_0002.out
+9338d16da47dee9ab22088bb3bc42588  vspecpol_0003.out
 4069d4e0ab1c5807a94f13cf92995a4c  job1/estimators_0000.out
 ca894efabdb63496cb47c6dca9075bb7  job1/estimators_0001.out
 524fc76d3fe4e0468401e014cba9730c  job1/estimators_0002.out
