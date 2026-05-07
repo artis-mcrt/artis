@@ -311,12 +311,12 @@ auto rlc_emiss_vpkt(const Packet& pkt, const double t_current, const double t_ar
           }
 
           double tau_bin = 0.;
-          if ((dist + binedgedist) > sdist) {
+          if (binedgedist > sdist) {
             tau_bin = chi_bb_expansionopac * (sdist - dist);
             dist = sdist;
           } else {
-            tau_bin = chi_bb_expansionopac * binedgedist;
-            dist += binedgedist;
+            tau_bin = chi_bb_expansionopac * (binedgedist - dist);
+            dist = binedgedist;
           }
 
           for (int ind = 0; ind < Nspectra; ind++) {

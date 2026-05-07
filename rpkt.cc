@@ -959,16 +959,16 @@ template void calculate_chi_rpkt_cont<false>(const double nu_cmf, RpktContinuumO
                                              const int nonemptymgi);
 
 void MPI_Bcast_binned_opacities(const ptrdiff_t nonemptymgi, const int root_node_id) {
-  if constexpr (RPKT_USE_EXPANSION_OPACITIES) {
-    if (globals::rank_in_node == 0) {
-      assert_always(nonemptymgi >= 0);
+  if (globals::rank_in_node == 0) {
+    assert_always(nonemptymgi >= 0);
+    if constexpr (RPKT_USE_EXPANSION_OPACITIES || VPKT_USE_EXPANSION_OPACITIES) {
       MPI_Bcast_safe(expansionopacities.subspan(nonemptymgi * expopac_nbins, expopac_nbins), root_node_id,
                      globals::mpi_comm_internode);
+    }
 
-      if constexpr (RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.has_value()) {
-        MPI_Bcast_safe(expansionopacity_planck_cumulative.subspan(nonemptymgi * expopac_nbins, expopac_nbins),
-                       root_node_id, globals::mpi_comm_internode);
-      }
+    if constexpr (RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.has_value()) {
+      MPI_Bcast_safe(expansionopacity_planck_cumulative.subspan(nonemptymgi * expopac_nbins, expopac_nbins),
+                     root_node_id, globals::mpi_comm_internode);
     }
   }
 }
