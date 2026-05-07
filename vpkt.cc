@@ -310,14 +310,8 @@ auto rlc_emiss_vpkt(const Packet& pkt, const double t_current, const double t_ar
             chi_bb_expansionopac = kappa * grid::get_rho(nonemptymgi);
           }
 
-          double tau_bin = 0.;
-          if (binedgedist > sdist) {
-            tau_bin = chi_bb_expansionopac * (sdist - dist);
-            dist = sdist;
-          } else {
-            tau_bin = chi_bb_expansionopac * (binedgedist - dist);
-            dist = binedgedist;
-          }
+          const double tau_bin = chi_bb_expansionopac * (std::min(binedgedist, sdist) - dist);
+          dist = std::min(binedgedist, sdist);
 
           for (int ind = 0; ind < Nspectra; ind++) {
             assert_testmodeonly(exclude[ind] <= 0);  // expansion opacities include all elements, so cannot be used with
