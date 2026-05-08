@@ -909,7 +909,7 @@ auto trace_vpkts(const Packet& pkt, const enum packet_type type_before_rpkt) -> 
     return;
   }
 
-  THREADLOCALONHOST std::stringstream vpkt_contrib_row;
+  std::stringstream vpkt_contrib_row;
   vpkt_contrib_row.clear();
 
   bool any_dir_escaped = false;
