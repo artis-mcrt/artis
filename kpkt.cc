@@ -441,7 +441,7 @@ DEVICE_FUNC void do_kpkt(Packet& pkt, const double t2, const int nts) {
     pkt.em_time = static_cast<float>(pkt.prop_time);
     pkt.nscatterings = 0;
     if constexpr (VPKT_ON) {
-      vpkt::call_estimators(pkt, TYPE_KPKT);
+      vpkt::trace_vpkts(pkt, TYPE_KPKT);
     }
 
   } else if (rndcoolingtype == CoolingType::FREEBOUND) {
@@ -474,7 +474,7 @@ DEVICE_FUNC void do_kpkt(Packet& pkt, const double t2, const int nts) {
     pkt.nscatterings = 0;
 
     if constexpr (VPKT_ON) {
-      vpkt::call_estimators(pkt, TYPE_KPKT);
+      vpkt::trace_vpkts(pkt, TYPE_KPKT);
     }
   } else if (rndcoolingtype == CoolingType::COLLEXC) {
     // the k-packet activates a macro-atom due to collisional excitation

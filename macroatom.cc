@@ -541,7 +541,7 @@ DEVICE_FUNC void do_macroatom(Packet& pkt, const MacroAtomState& pktmastate) {
 
   if (pkt.type == TYPE_RPKT) {
     if constexpr (VPKT_ON) {
-      vpkt::call_estimators(pkt, TYPE_MA);
+      vpkt::trace_vpkts(pkt, TYPE_MA);
     }
   }
 }

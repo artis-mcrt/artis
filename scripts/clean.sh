@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-paths="gridsave*.tmp packets*.tmp *.out *.out.* out.txt output_*-*.txt* exspec*.txt* machine.file.* core.* *.slurm packets vspecpol speclc_angle_res bflist.dat line_list.txt logfiles.tar*"
+paths="gridsave*.tmp packets*.tmp vspecpol*.tmp vpackets*.tmp *.out *.out.* out.txt output_*-*.txt* exspec*.txt* machine.file.* core.* *.slurm packets vspecpol vpackets speclc_angle_res bflist.dat line_list.txt logfiles.tar*"
 
 if [ 0 -lt $(ls $paths 2>/dev/null | wc -w) ]; then
   echo "The following ARTIS run files will be deleted:"

@@ -246,11 +246,13 @@ constexpr bool KEEP_ALL_RESTART_FILES;
 // multiply bound-free cooling coefficient by upper level population instead of the upper ion target level population
 constexpr bool BFCOOLING_USELEVELPOPNOTIONPOP;
 
-// set true to calculate and use expansion opacities instead of line-by-line
-constexpr bool EXPANSIONOPACITIES_ON;
+// set true to calculate and use expansion opacities instead of line-by-line in non-grey mode
+constexpr bool RPKT_USE_EXPANSION_OPACITIES;
 
-// thermalisation probability (1 - P is probability of scattering). EXPANSIONOPACITIES_ON must be true for this to work.
-// set this to < 0 to use the macroatom
+// set true to calculate and use expansion opacities instead of line-by-line for virtual packets
+constexpr bool VPKT_USE_EXPANSION_OPACITIES;
+
+// Optionally replace macroatom with a thermalisation probability P (where 1 - P is probability of scattering).
 constexpr std::optional<float> RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY;
 
 // For cells in grey mode, select a method of calculating opacity:

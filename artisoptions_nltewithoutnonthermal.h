@@ -143,7 +143,9 @@ constexpr bool KEEP_ALL_RESTART_FILES = false;
 
 constexpr bool BFCOOLING_USELEVELPOPNOTIONPOP = true;
 
-constexpr bool EXPANSIONOPACITIES_ON = false;
+constexpr bool RPKT_USE_EXPANSION_OPACITIES = false;
+
+constexpr bool VPKT_USE_EXPANSION_OPACITIES = false;
 
 constexpr std::optional<float> RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY;
 
