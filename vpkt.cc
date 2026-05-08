@@ -167,7 +167,7 @@ void add_to_vpkt_grid(const double nu_rf, const double e_rf, const Vec3d& stokes
 
 auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const double nu_rf, const double e_rf,
                           const int obsdirindex, const Vec3d& obsdir, const enum packet_type type_before_rpkt,
-                          std::stringstream& vpkt_contrib_row) -> bool {
+                          std::string& vpkt_contrib_row) -> bool {
   int mgi = 0;
 
   auto cellindex = rpkt.cellindex;
@@ -417,7 +417,7 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
   // -------------- final stokes vector ---------------
 
   if (VPKT_WRITE_CONTRIBS) {
-    vpkt_contrib_row << ' ' << t_arrive / DAY << ' ' << nu_rf;
+    vpkt_contrib_row += std::format(" {:g} {:g}", t_arrive / DAY, nu_rf);
   }
 
   for (int ind = 0; ind < Nspectra; ind++) {
@@ -430,7 +430,7 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
     add_to_vspecpol(nu_rf, e_rf, stokes, obsdirindex, ind, t_arrive);
 
     if constexpr (VPKT_WRITE_CONTRIBS) {
-      vpkt_contrib_row << ' ' << e_rf * prob;
+      vpkt_contrib_row += std::format(" {:g}", e_rf * prob);
     }
   }
 
@@ -909,7 +909,7 @@ auto trace_vpkts(const Packet& pkt, const enum packet_type type_before_rpkt) -> 
     return;
   }
 
-  THREADLOCALONHOST std::stringstream vpkt_contrib_row;
+  THREADLOCALONHOST std::string vpkt_contrib_row;
 
   bool any_dir_escaped = false;
   for (int obsdirindex = 0; obsdirindex < Nobs; obsdirindex++) {
@@ -946,16 +946,16 @@ auto trace_vpkts(const Packet& pkt, const enum packet_type type_before_rpkt) -> 
     if (dir_escaped) {
       any_dir_escaped = true;
     } else {
-      vpkt_contrib_row << " -1. -1.";  // t_arrive_d nu_rf
+      vpkt_contrib_row += " -1. -1.";  // t_arrive_d nu_rf
       for (int ind = 0; ind < Nspectra; ind++) {
-        vpkt_contrib_row << " 0.";  // e_rf_diri_j
+        vpkt_contrib_row += " 0.";  // e_rf_diri_j
       }
     }
   }
   if (VPKT_WRITE_CONTRIBS && any_dir_escaped) {
     vpkt_contrib_file << pkt.emissiontype << ' ' << pkt.trueemissiontype << ' ' << pkt.absorptiontype << ' '
                       << pkt.absorptionfreq;
-    vpkt_contrib_file << vpkt_contrib_row.rdbuf() << '\n';
+    vpkt_contrib_file << vpkt_contrib_row << '\n';
     vpkt_contrib_file.flush();
   }
 }
