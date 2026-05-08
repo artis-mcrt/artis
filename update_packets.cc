@@ -265,8 +265,7 @@ void do_packet(Packet& pkt, const double t2, const int nts) {
     case TYPE_KPKT: {
       const int mgi = grid::get_propcell_modelgridindex(pkt.cellindex);
       const int nonemptymgi = grid::get_nonemptymgi_of_mgi(mgi);
-      if (grid::thick_allcells[nonemptymgi] == 1 ||
-          (RPKT_USE_EXPANSION_OPACITIES && RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.has_value())) {
+      if (grid::thick_allcells[nonemptymgi] == 1 || RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.has_value()) {
         kpkt::do_kpkt_blackbody(pkt);
       } else {
         kpkt::do_kpkt(pkt, t2, nts);
