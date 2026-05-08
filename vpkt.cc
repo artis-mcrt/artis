@@ -97,26 +97,28 @@ constexpr auto all_taus_past_taumax(std::vector<double>& tau, const double tau_m
 }
 
 // Routine to add a packet to the outcoming spectrum.
-void add_to_vspecpol(const Packet& vpkt, const int obsdirindex, const int opachoiceindex, const double t_arrive) {
+void add_to_vspecpol(const double nu_rf, const double e_rf, const Vec3d& stokes, const int obsdirindex,
+                     const int opachoiceindex, const double t_arrive) {
   // Need to decide in which (1) time and (2) frequency bin the vpkt is escaping
 
   const int nt = static_cast<int>((log(t_arrive) - log(VSPEC_TIMEMIN)) / dlogt_vspec);
-  const int nnu = static_cast<int>((log(vpkt.nu_rf) - log(VSPEC_NUMIN)) / dlognu_vspec);
+  const int nnu = static_cast<int>((log(nu_rf) - log(VSPEC_NUMIN)) / dlognu_vspec);
   if (nt < 0 || nt >= VSPEC_TIMEBINS || nnu < 0 || nnu >= VSPEC_NUBINS) {
     return;
   }
 
   const int ind_comb = (Nspectra * obsdirindex) + opachoiceindex;
-  const double pktcontrib = vpkt.e_rf / vspecpol[nt][ind_comb].delta_t / delta_freq_vspec[nnu] / 4.e12 / PI / PARSEC /
+  const double pktcontrib = e_rf / vspecpol[nt][ind_comb].delta_t / delta_freq_vspec[nnu] / 4.e12 / PI / PARSEC /
                             PARSEC / globals::nprocs * 4 * PI;
 
-  atomicadd(vspecpol[nt][ind_comb].flux[nnu].i, vpkt.stokes[0] * pktcontrib);
-  atomicadd(vspecpol[nt][ind_comb].flux[nnu].q, vpkt.stokes[1] * pktcontrib);
-  atomicadd(vspecpol[nt][ind_comb].flux[nnu].u, vpkt.stokes[2] * pktcontrib);
+  atomicadd(vspecpol[nt][ind_comb].flux[nnu].i, stokes[0] * pktcontrib);
+  atomicadd(vspecpol[nt][ind_comb].flux[nnu].q, stokes[1] * pktcontrib);
+  atomicadd(vspecpol[nt][ind_comb].flux[nnu].u, stokes[2] * pktcontrib);
 }
 
 // Routine to add a packet to the outcoming spectrum.
-void add_to_vpkt_grid(const Packet& vpkt, const Vec3d& vel, const int wlbin, const int obsdirindex, const Vec3d& obs) {
+void add_to_vpkt_grid(const double nu_rf, const double e_rf, const Vec3d& stokes, const Vec3d& vel, const int wlbin,
+                      const int obsdirindex, const Vec3d& obs) {
   double vref1{NAN};
   double vref2{NAN};
 
@@ -156,33 +158,33 @@ void add_to_vpkt_grid(const Packet& vpkt, const Vec3d& vel, const int wlbin, con
   const int nz = static_cast<int>((globals::vmax - vref2) / (2 * globals::vmax / VGRID_NZ));
 
   // Add contribution
-  if (vpkt.nu_rf > nu_grid_min[wlbin] && vpkt.nu_rf < nu_grid_max[wlbin]) {
-    atomicadd(vgrid[ny][nz].flux[wlbin][obsdirindex].i, vpkt.stokes[0] * vpkt.e_rf);
-    atomicadd(vgrid[ny][nz].flux[wlbin][obsdirindex].q, vpkt.stokes[1] * vpkt.e_rf);
-    atomicadd(vgrid[ny][nz].flux[wlbin][obsdirindex].u, vpkt.stokes[2] * vpkt.e_rf);
+  if (nu_rf > nu_grid_min[wlbin] && nu_rf < nu_grid_max[wlbin]) {
+    atomicadd(vgrid[ny][nz].flux[wlbin][obsdirindex].i, stokes[0] * e_rf);
+    atomicadd(vgrid[ny][nz].flux[wlbin][obsdirindex].q, stokes[1] * e_rf);
+    atomicadd(vgrid[ny][nz].flux[wlbin][obsdirindex].u, stokes[2] * e_rf);
   }
 }
 
-auto rlc_emiss_vpkt(const Packet& pkt, const double t_current, const double t_arrive, const double nu_rf,
-                    const double e_rf, const int obsdirindex, const Vec3d& obsdir,
-                    const enum packet_type type_before_rpkt, std::stringstream& vpkt_contrib_row) -> bool {
+auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const double nu_rf, const double e_rf,
+                          const int obsdirindex, const Vec3d& obsdir, const enum packet_type type_before_rpkt,
+                          std::stringstream& vpkt_contrib_row) -> bool {
   int mgi = 0;
 
-  Packet vpkt = pkt;
-  vpkt.nu_rf = nu_rf;
-  vpkt.e_rf = e_rf;
-  vpkt.dir = obsdir;
+  auto cellindex = rpkt.cellindex;
+  auto next_trans = rpkt.next_trans;  // should be -1 since doppler factor changed it?
+  auto e_cmf = rpkt.e_cmf;
+  auto nu_cmf = rpkt.nu_cmf;
+  auto vpktpos = rpkt.pos;
 
   bool end_packet = false;
-  double t_future = t_current;
+  const double t_start = rpkt.prop_time;
+  double t_future = t_start;
 
-  for (int opacindex = 0; opacindex < Nspectra; opacindex++) {
-    tau_vpkt[opacindex] = 0;
-  }
+  std::ranges::fill(tau_vpkt, 0.);
 
   atomicadd(nvpkt_created, 1);  // increment the number of virtual packet in the given timestep
 
-  const auto vel_vec = get_velocity(pkt.pos, t_current);
+  const auto vel_vec = get_velocity(rpkt.pos, t_start);
 
   // ------------ SCATTERING EVENT: dipole function --------------------
 
@@ -193,11 +195,11 @@ auto rlc_emiss_vpkt(const Packet& pkt, const double t_current, const double t_ar
   double U{0.};
   if (type_before_rpkt == TYPE_RPKT) {
     // Transform Stokes Parameters from the RF to the CMF
-    const auto [old_dir_cmf, Qi, Ui] = frame_transform(pkt.dir, vpkt.stokes[1], vpkt.stokes[2], vel_vec);
+    const auto [old_dir_cmf, Qi, Ui] = frame_transform(rpkt.dir, rpkt.stokes[1], rpkt.stokes[2], vel_vec);
 
     // Need to rotate Stokes Parameters in the scattering plane
 
-    const auto obs_cmf = angle_ab(vpkt.dir, vel_vec);
+    const auto obs_cmf = angle_ab(obsdir, vel_vec);
 
     const auto [ref1_old, ref2_old] = meridian(old_dir_cmf);
 
@@ -245,18 +247,18 @@ auto rlc_emiss_vpkt(const Packet& pkt, const double t_current, const double t_ar
 
   // compute the optical depth to boundary
 
-  mgi = grid::get_propcell_modelgridindex(vpkt.cellindex);
+  mgi = grid::get_propcell_modelgridindex(cellindex);
   THREADLOCALONHOST auto chi_vpkt_cont = ContinuumOpacity{};
 
   while (!end_packet) {
     // distance to the next cell
-    const auto [sdist, snext] = grid::boundary_distance(vpkt.dir, vpkt.pos, vpkt.prop_time, vpkt.cellindex);
+    const auto [boundarydist, snext] = grid::boundary_distance(obsdir, vpktpos, t_future, cellindex);
     if (mgi < 0) {
-      vpkt.next_trans = -1;
+      next_trans = -1;
     } else {
-      const double s_cont = sdist * pow3(t_current / t_future);
+      const double s_cont = boundarydist * pow3(t_start / t_future);
       const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(mgi);
-      calculate_chi_rpkt_cont<false>(vpkt.nu_cmf, chi_vpkt_cont, nonemptymgi);
+      calculate_chi_rpkt_cont<false>(nu_cmf, chi_vpkt_cont, nonemptymgi);
 
       const double chi_cont = chi_vpkt_cont.total();
 
@@ -280,17 +282,16 @@ auto rlc_emiss_vpkt(const Packet& pkt, const double t_current, const double t_ar
         return false;
       }
 
-      const Vec3d abort_pos{vpkt.pos[0] + (vpkt.dir[0] * sdist), vpkt.pos[1] + (vpkt.dir[1] * sdist),
-                            vpkt.pos[2] + (vpkt.dir[2] * sdist)};
+      const Vec3d abort_pos{vpktpos[0] + (obsdir[0] * boundarydist), vpktpos[1] + (obsdir[1] * boundarydist),
+                            vpktpos[2] + (obsdir[2] * boundarydist)};
 
       const double nu_cmf_abort = std::min(
-          vpkt.nu_rf * calculate_doppler_nucmf_on_nurf(abort_pos, vpkt.dir, vpkt.prop_time + (sdist / CLIGHT_PROP)),
-          vpkt.nu_cmf);
+          nu_rf * calculate_doppler_nucmf_on_nurf(abort_pos, obsdir, t_future + (boundarydist / CLIGHT_PROP)), nu_cmf);
 
-      const double dnu_on_dl = (nu_cmf_abort - vpkt.nu_cmf) / sdist;
+      const double dnu_on_dl = (nu_cmf_abort - nu_cmf) / boundarydist;
       if constexpr (VPKT_USE_EXPANSION_OPACITIES) {
         auto binindex_start =
-            static_cast<ptrdiff_t>(((1e8 * CLIGHT / vpkt.nu_cmf) - expopac_lambdamin) / expopac_deltalambda);
+            static_cast<ptrdiff_t>(((1e8 * CLIGHT / nu_cmf) - expopac_lambdamin) / expopac_deltalambda);
         if (binindex_start < 0) {
           binindex_start = -1;
         }
@@ -301,7 +302,7 @@ auto rlc_emiss_vpkt(const Packet& pkt, const double t_current, const double t_ar
           // binindex could be -1, in which case we have only the continuum opacity and no expansion opacity
           const auto next_bin_edge_nu =
               (binindex < 0) ? get_expopac_bin_nu_upper(0) : get_expopac_bin_nu_lower(binindex);
-          const auto binedgedist = get_linedistance(vpkt.prop_time, vpkt.nu_cmf, next_bin_edge_nu, dnu_on_dl);
+          const auto binedgedist = get_linedistance(t_future, nu_cmf, next_bin_edge_nu, dnu_on_dl);
 
           double chi_bb_expansionopac = 0.;
           if (binindex >= 0) {
@@ -309,8 +310,8 @@ auto rlc_emiss_vpkt(const Packet& pkt, const double t_current, const double t_ar
             chi_bb_expansionopac = kappa * grid::get_rho(nonemptymgi);
           }
 
-          const double tau_bin = chi_bb_expansionopac * (std::min(binedgedist, sdist) - dist);
-          dist = std::min(binedgedist, sdist);
+          const double tau_bin = chi_bb_expansionopac * (std::min(binedgedist, boundarydist) - dist);
+          dist = std::min(binedgedist, boundarydist);
 
           for (int ind = 0; ind < Nspectra; ind++) {
             assert_testmodeonly(exclude[ind] <= 0);  // expansion opacities include all elements, so cannot be used with
@@ -325,35 +326,34 @@ auto rlc_emiss_vpkt(const Packet& pkt, const double t_current, const double t_ar
             return false;
           }
 
-          if (dist >= sdist) {
+          if (dist >= boundarydist) {
             break;
           }
         }
       } else {
-        double ldist = 0;
-        while (ldist < sdist) {
-          const int lineindex = closest_transition(vpkt.nu_cmf, vpkt.next_trans, globals::linelist.nu);
+        while (true) {
+          const int lineindex = closest_transition(nu_cmf, next_trans, globals::linelist.nu);
 
           if (lineindex < 0) {
             // no more lines below the current frequency
-            vpkt.next_trans = globals::nlines + 1;
+            next_trans = globals::nlines + 1;
             break;
           }
           const double nutrans = globals::linelist.nu[lineindex];
 
-          vpkt.next_trans = lineindex + 1;
+          next_trans = lineindex + 1;
 
-          ldist = get_linedistance(vpkt.prop_time, vpkt.nu_cmf, nutrans, dnu_on_dl);
+          const auto ldist = get_linedistance(t_future, nu_cmf, nutrans, dnu_on_dl);
 
-          if (ldist > sdist) {
+          if (ldist > boundarydist) {
             // exit the while loop if you reach the boundary; go back to the previous transition to start next cell with
             // the excluded line
 
-            vpkt.next_trans -= 1;
+            next_trans--;
             break;
           }
 
-          const double t_line = vpkt.prop_time + (ldist / CLIGHT);
+          const double t_line = t_future + (ldist / CLIGHT);
 
           const int element = globals::linelist.elementindex[lineindex];
           const int ion = globals::linelist.ionindex[lineindex];
@@ -386,21 +386,22 @@ auto rlc_emiss_vpkt(const Packet& pkt, const double t_current, const double t_ar
     // virtual packet is still at the starting position
     // move it to cell boundary and go to next cell
 
-    t_future += (sdist / CLIGHT_PROP);
-    move_pkt_withtime(vpkt, sdist);
-    vpkt.prop_time = t_future;
+    move_pkt_withtime(vpktpos, obsdir, t_future, nu_rf, nu_cmf, e_rf, e_cmf, boundarydist);
 
-    grid::change_cell(vpkt, snext);
-    end_packet = (vpkt.type == TYPE_ESCAPE);
+    if (snext >= 0) {
+      // Just need to update cellindex.
+      cellindex = snext;
+      mgi = grid::get_propcell_modelgridindex(cellindex);
+      if (mgi >= 0) {
+        const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(mgi);
 
-    mgi = grid::get_propcell_modelgridindex(vpkt.cellindex);
-    if (mgi >= 0) {
-      const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(mgi);
-
-      // kill vpkt with pass through a thick cell
-      if (grid::thick_allcells[nonemptymgi] != 0) {
-        return false;
+        // kill vpkt with pass through a thick cell
+        if (grid::thick_allcells[nonemptymgi] != 0) {
+          return false;
+        }
       }
+    } else {
+      end_packet = true;
     }
   }
 
@@ -416,7 +417,7 @@ auto rlc_emiss_vpkt(const Packet& pkt, const double t_current, const double t_ar
   // -------------- final stokes vector ---------------
 
   if (VPKT_WRITE_CONTRIBS) {
-    vpkt_contrib_row << ' ' << t_arrive / DAY << ' ' << vpkt.nu_rf;
+    vpkt_contrib_row << ' ' << t_arrive / DAY << ' ' << nu_rf;
   }
 
   for (int ind = 0; ind < Nspectra; ind++) {
@@ -424,16 +425,12 @@ auto rlc_emiss_vpkt(const Packet& pkt, const double t_current, const double t_ar
 
     assert_always(std::isfinite(prob));
 
-    vpkt.stokes = {I * prob, Q * prob, U * prob};
+    const Vec3d stokes = {I * prob, Q * prob, U * prob};
 
-    for (const auto stokeval : vpkt.stokes) {
-      assert_always(std::isfinite(stokeval));
-    }
-
-    add_to_vspecpol(vpkt, obsdirindex, ind, t_arrive);
+    add_to_vspecpol(nu_rf, e_rf, stokes, obsdirindex, ind, t_arrive);
 
     if constexpr (VPKT_WRITE_CONTRIBS) {
-      vpkt_contrib_row << ' ' << vpkt.e_rf * prob;
+      vpkt_contrib_row << ' ' << e_rf * prob;
     }
   }
 
@@ -442,12 +439,10 @@ auto rlc_emiss_vpkt(const Packet& pkt, const double t_current, const double t_ar
   if (vgrid_on) {
     const double prob = pn * exp(-tau_vpkt[0]);
 
-    vpkt.stokes = {I * prob, Q * prob, U * prob};
-
     for (int wlbin = 0; wlbin < Nrange_grid; wlbin++) {
-      if (vpkt.nu_rf > nu_grid_min[wlbin] && vpkt.nu_rf < nu_grid_max[wlbin]) {  // Frequency selection
+      if (nu_rf > nu_grid_min[wlbin] && nu_rf < nu_grid_max[wlbin]) {  // Frequency selection
         if (t_arrive > tmin_grid && t_arrive < tmax_grid) {  // Time selection
-          add_to_vpkt_grid(vpkt, vel_vec, wlbin, obsdirindex, obsdir);
+          add_to_vpkt_grid(nu_rf, e_rf, {I * prob, Q * prob, U * prob}, vel_vec, wlbin, obsdirindex, obsdir);
         }
       }
     }
@@ -905,9 +900,7 @@ void init(const int nts, const bool continued_from_saved) {
 }
 
 auto trace_vpkts(const Packet& pkt, const enum packet_type type_before_rpkt) -> void {
-  if constexpr (!VPKT_ON) {
-    return;
-  }
+  assert_testmodeonly(VPKT_ON);
 
   // Cut on vpkts
   const auto nonemptymgi = grid::get_propcell_nonemptymgi(pkt.cellindex);
@@ -915,8 +908,6 @@ auto trace_vpkts(const Packet& pkt, const enum packet_type type_before_rpkt) -> 
   if (grid::thick_allcells[nonemptymgi] != 0) {
     return;
   }
-
-  const double t_current = pkt.prop_time;
 
   std::stringstream vpkt_contrib_row;
 
@@ -929,7 +920,7 @@ auto trace_vpkts(const Packet& pkt, const enum packet_type type_before_rpkt) -> 
               sqrt(1 - (nz_obs_vpkt[obsdirindex] * nz_obs_vpkt[obsdirindex])) * sin(phiobs[obsdirindex]),
               nz_obs_vpkt[obsdirindex]};
 
-    const double t_arrive = t_current - (dot(pkt.pos, obsdir) / CLIGHT_PROP);
+    const double t_arrive = pkt.prop_time - (dot(pkt.pos, obsdir) / CLIGHT_PROP);
 
     bool dir_escaped = false;
     if (t_arrive >= VSPEC_TIMEMIN_input && t_arrive <= VSPEC_TIMEMAX_input) {
@@ -945,8 +936,8 @@ auto trace_vpkts(const Packet& pkt, const enum packet_type type_before_rpkt) -> 
         if ((nu_rf > VSPEC_NUMIN_input[i] && nu_rf < VSPEC_NUMAX_input[i]) ||
             (pkt.absorptionfreq > VSPEC_NUMIN_input[i] && pkt.absorptionfreq < VSPEC_NUMAX_input[i])) {
           // frequency selection
-          dir_escaped = rlc_emiss_vpkt(pkt, t_current, t_arrive, nu_rf, e_rf, obsdirindex, obsdir, type_before_rpkt,
-                                       vpkt_contrib_row);
+          dir_escaped =
+              trace_vpkt_direction(pkt, t_arrive, nu_rf, e_rf, obsdirindex, obsdir, type_before_rpkt, vpkt_contrib_row);
           break;  // assume that the frequency ranges do not overlap
         }
       }
