@@ -955,9 +955,9 @@ auto trace_vpkts(const Packet& pkt, const enum packet_type type_before_rpkt) -> 
     }
   }
   if (VPKT_WRITE_CONTRIBS && any_dir_escaped) {
-    vpkt_contrib_file << pkt.emissiontype << ' ' << pkt.trueemissiontype << ' ' << pkt.absorptiontype << ' '
-                      << pkt.absorptionfreq;
-    vpkt_contrib_file << vpkt_contrib_row.rdbuf() << '\n';
+    std::print(vpkt_contrib_file, "{} {} {} {}", pkt.emissiontype, pkt.trueemissiontype, pkt.absorptiontype,
+               pkt.absorptionfreq);
+    std::println(vpkt_contrib_file, "{}", vpkt_contrib_row.str());
     vpkt_contrib_file.flush();
   }
 }
