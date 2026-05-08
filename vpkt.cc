@@ -871,16 +871,16 @@ void init(const int nts, const bool continued_from_saved) {
       // Create new file with header line
       vpkt_contrib_file = std::ofstream(filename, std::ios::trunc);
 
-      vpkt_contrib_file << "#emissiontype trueemissiontype absorption_type absorption_freq";
+      std::print(vpkt_contrib_file, "#emissiontype trueemissiontype absorption_type absorption_freq");
 
       for (int obsdirindex = 0; obsdirindex < Nobs; obsdirindex++) {
-        vpkt_contrib_file << " dir" << obsdirindex << "_t_arrive_d dir" << obsdirindex << "_nu_rf";
+        std::print(vpkt_contrib_file, " dir{}_t_arrive_d dir{}_nu_rf", obsdirindex, obsdirindex);
         for (int ind = 0; ind < Nspectra; ind++) {
-          vpkt_contrib_file << " dir" << obsdirindex << "_e_rf_" << ind;
+          std::print(vpkt_contrib_file, " dir{}_e_rf_{}", obsdirindex, ind);
         }
       }
 
-      vpkt_contrib_file << '\n';
+      std::println(vpkt_contrib_file, "");
       vpkt_contrib_file.flush();
       vpkt_contrib_file.close();
     }
