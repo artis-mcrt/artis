@@ -137,29 +137,29 @@ void initialise_linestat_file() {
   auto linestat_file = fstream_required("linestat.out", std::ios::out | std::ios::trunc);
 
   for (int i = 0; i < globals::nlines; i++) {
-    linestat_file << CLIGHT / globals::linelist.nu[i] << ' ';  // wavelength in cm
+    std::print(linestat_file, "{:g} ", CLIGHT / globals::linelist.nu[i]);  // wavelength in cm
   }
-  linestat_file << '\n';
+  std::println(linestat_file, "");
 
   for (int i = 0; i < globals::nlines; i++) {
-    linestat_file << get_atomicnumber(globals::linelist.elementindex[i]) << ' ';
+    std::print(linestat_file, "{} ", get_atomicnumber(globals::linelist.elementindex[i]));
   }
-  linestat_file << '\n';
+  std::println(linestat_file, "");
 
   for (int i = 0; i < globals::nlines; i++) {
-    linestat_file << get_ionstage(globals::linelist.elementindex[i], globals::linelist.ionindex[i]) << ' ';
+    std::print(linestat_file, "{} ", get_ionstage(globals::linelist.elementindex[i], globals::linelist.ionindex[i]));
   }
-  linestat_file << '\n';
+  std::println(linestat_file, "");
 
   for (int i = 0; i < globals::nlines; i++) {
-    linestat_file << (globals::linelist.upperlevelindex[i] + 1) << ' ';
+    std::print(linestat_file, "{} ", (globals::linelist.upperlevelindex[i] + 1));
   }
-  linestat_file << '\n';
+  std::println(linestat_file, "");
 
   for (int i = 0; i < globals::nlines; i++) {
-    linestat_file << (globals::linelist.lowerlevelindex[i] + 1) << ' ';
+    std::print(linestat_file, "{} ", (globals::linelist.lowerlevelindex[i] + 1));
   }
-  linestat_file << '\n';
+  std::println(linestat_file, "");
 }
 
 void write_deposition_file() {
@@ -314,10 +314,10 @@ void write_deposition_file() {
 void write_timestep_file() {
   auto timestepfile = std::fstream("timesteps.out", std::ofstream::out | std::ofstream::trunc);
   assert_always(timestepfile.is_open());
-  timestepfile << "#timestep tstart_days tmid_days twidth_days\n";
+  std::print(timestepfile, "#timestep tstart_days tmid_days twidth_days\n");
   for (int n = 0; n < globals::ntimesteps; n++) {
-    timestepfile << n << ' ' << globals::timesteps[n].start / DAY << ' ' << globals::timesteps[n].mid / DAY << ' '
-                 << globals::timesteps[n].width / DAY << '\n';
+    std::println(timestepfile, "{} {:g} {:g} {:g}", n, globals::timesteps[n].start / DAY,
+                 globals::timesteps[n].mid / DAY, globals::timesteps[n].width / DAY);
   }
 }
 
