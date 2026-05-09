@@ -931,15 +931,14 @@ auto trace_vpkts(const Packet& pkt, const enum packet_type type_before_rpkt) -> 
       const double nu_rf = pkt.nu_cmf / doppler;
       const double e_rf = pkt.e_cmf / doppler;
 
+      // Loop over frequency intervals for this observer and check if the vpkt frequency falls in any of them. If it
+      // does, trace the vpkt to see if it escapes in this direction.
       for (int i = 0; i < Nrange; i++) {
-        // Loop over frequency ranges
-
         if ((nu_rf > VSPEC_NUMIN_input[i] && nu_rf < VSPEC_NUMAX_input[i]) ||
             (pkt.absorptionfreq > VSPEC_NUMIN_input[i] && pkt.absorptionfreq < VSPEC_NUMAX_input[i])) {
           // frequency selection
-          dir_escaped =
-              trace_vpkt_direction(pkt, t_arrive, nu_rf, e_rf, obsdirindex, obsdir, type_before_rpkt, vpkt_contrib_row);
-          break;  // assume that the frequency ranges do not overlap
+          dir_escaped = dir_escaped || trace_vpkt_direction(pkt, t_arrive, nu_rf, e_rf, obsdirindex, obsdir,
+                                                            type_before_rpkt, vpkt_contrib_row);
         }
       }
     }
