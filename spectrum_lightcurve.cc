@@ -12,6 +12,7 @@
 #include <ios>
 #include <iterator>
 #include <ostream>
+#include <print>
 #include <span>
 #include <string>
 #include <string_view>
@@ -228,19 +229,19 @@ void write_specpol_param(std::ostream& specpol_file, std::ostream& emissionpol_f
   // Stokes I, Q, or U
   const auto ntimesteps = static_cast<ptrdiff_t>(globals::ntimesteps);
   for (auto nts = 0Z; nts < ntimesteps; nts++) {
-    specpol_file << spec.fluxalltimesteps[(nnu * ntimesteps) + nts] << ' ';
+    std::print(specpol_file, "{:g} ", spec.fluxalltimesteps[(nnu * ntimesteps) + nts]);
 
     if (do_emission_absorption) {
       for (int nproc = 0; nproc < proccount; nproc++) {
         const auto emindex = (nnu * ntimesteps * proccount) + (nts * proccount) + nproc;
-        emissionpol_file << spec.emissionalltimesteps[emindex] << ' ';
+        std::print(emissionpol_file, "{:g} ", spec.emissionalltimesteps[emindex]);
       }
-      emissionpol_file << '\n';
+      std::println(emissionpol_file, "");
 
       for (int i = 0; i < ioncount; i++) {
-        absorptionpol_file << spec.absorptionalltimesteps[get_absindex(nts, nnu) + i] << ' ';
+        std::print(absorptionpol_file, "{:g} ", spec.absorptionalltimesteps[get_absindex(nts, nnu) + i]);
       }
-      absorptionpol_file << '\n';
+      std::println(absorptionpol_file, "");
     }
   }
 }
@@ -335,20 +336,20 @@ void write_partial_lightcurve_spectra_dirbin(const int nts, std::span<const Pack
 
 void write_spectrum_file(const std::string& spec_filename, const Spectra& spectra, const int numtimesteps) {
   auto spec_file = fstream_required(spec_filename, std::ios::out | std::ios::trunc);
-  spec_file << "0 ";
+  std::print(spec_file, "0 ");
   for (int p = 0; p < numtimesteps; p++) {
-    spec_file << globals::timesteps[p].mid / DAY << ' ';
+    std::print(spec_file, "{:g} ", globals::timesteps[p].mid / DAY);
   }
-  spec_file << '\n';
+  std::println(spec_file, "");
 
   const auto ntimesteps_all = static_cast<ptrdiff_t>(globals::ntimesteps);
   for (auto nubin = 0Z; nubin < MNUBINS; nubin++) {
-    spec_file << (spectra.lower_freq[nubin] + (spectra.delta_freq[nubin] / 2)) << ' ';
+    std::print(spec_file, "{:g} ", (spectra.lower_freq[nubin] + (spectra.delta_freq[nubin] / 2)));
 
     for (auto nts = 0Z; nts < numtimesteps; nts++) {
-      spec_file << spectra.fluxalltimesteps[(nubin * ntimesteps_all) + nts] << ' ';
+      std::print(spec_file, "{:g} ", spectra.fluxalltimesteps[(nubin * ntimesteps_all) + nts]);
     }
-    spec_file << '\n';
+    std::println(spec_file, "");
   }
 }
 
@@ -363,9 +364,9 @@ void write_emission_spectrum_file(const std::string& emission_filename, const Sp
     for (auto nts = 0Z; nts < numtimesteps; nts++) {
       const auto emindex_nts_nubin = (nubin * ntimesteps_all * proccount) + (nts * proccount);
       for (int nproc = 0; nproc < proccount; nproc++) {
-        emission_file << spectra.emissionalltimesteps[emindex_nts_nubin + nproc] << ' ';
+        std::print(emission_file, "{:g} ", spectra.emissionalltimesteps[emindex_nts_nubin + nproc]);
       }
-      emission_file << '\n';
+      std::println(emission_file, "");
     }
   }
 }
@@ -381,9 +382,9 @@ void write_trueemission_spectrum_file(const std::string& trueemission_filename, 
     for (auto nts = 0Z; nts < numtimesteps; nts++) {
       const auto emindex_nts_nubin = (nubin * ntimesteps_all * proccount) + (nts * proccount);
       for (int truenproc = 0; truenproc < proccount; truenproc++) {
-        trueemission_file << spectra.trueemissionalltimesteps[emindex_nts_nubin + truenproc] << ' ';
+        std::print(trueemission_file, "{:g} ", spectra.trueemissionalltimesteps[emindex_nts_nubin + truenproc]);
       }
-      trueemission_file << '\n';
+      std::println(trueemission_file, "");
     }
   }
 }
@@ -397,9 +398,9 @@ void write_absorption_spectrum_file(const std::string& absorption_filename, cons
   for (auto nubin = 0Z; nubin < MNUBINS; nubin++) {
     for (auto nts = 0Z; nts < numtimesteps; nts++) {
       for (int i = 0; i < ioncount; i++) {
-        absorption_file << spectra.absorptionalltimesteps[get_absindex(nts, nubin) + i] << ' ';
+        std::print(absorption_file, "{:g} ", spectra.absorptionalltimesteps[get_absindex(nts, nubin) + i]);
       }
-      absorption_file << '\n';
+      std::println(absorption_file, "");
     }
   }
 }
@@ -456,26 +457,26 @@ void write_specpol(const std::string& specpol_filename, const std::string& emiss
     printlnlog("Writing {}", specpol_filename);
   }
 
-  specpol_file << 0.0 << ' ';
+  std::print(specpol_file, "{:g} ", 0.0);
 
   for (int l = 0; l < 3; l++) {
     for (int p = 0; p < globals::ntimesteps; p++) {
-      specpol_file << globals::timesteps[p].mid / DAY << ' ';
+      std::print(specpol_file, "{:g} ", globals::timesteps[p].mid / DAY);
     }
   }
 
-  specpol_file << '\n';
+  std::println(specpol_file, "");
 
   assert_always(std::ssize(stokes_i->delta_freq) == MNUBINS);
   assert_always(std::ssize(stokes_i->lower_freq) == MNUBINS);
   for (int nnu = 0; nnu < std::ssize(stokes_i->lower_freq); nnu++) {
-    specpol_file << (stokes_i->lower_freq[nnu] + (stokes_i->delta_freq[nnu] / 2)) << ' ';
+    std::print(specpol_file, "{:g} ", (stokes_i->lower_freq[nnu] + (stokes_i->delta_freq[nnu] / 2)));
 
     write_specpol_param(specpol_file, emissionpol_file, absorptionpol_file, *stokes_i, nnu, do_emission_absorption);
     write_specpol_param(specpol_file, emissionpol_file, absorptionpol_file, *stokes_q, nnu, do_emission_absorption);
     write_specpol_param(specpol_file, emissionpol_file, absorptionpol_file, *stokes_u, nnu, do_emission_absorption);
 
-    specpol_file << '\n';
+    std::println(specpol_file, "");
   }
 }
 
@@ -699,8 +700,8 @@ void write_light_curve(const std::string& lc_filename, const std::span<const dou
 
   // UVOIR bolometric light curve
   for (int nts = 0; nts < numtimesteps; nts++) {
-    lc_file << globals::timesteps[nts].mid / DAY << ' ' << light_curve_lum[nts] / LSUN << ' '
-            << light_curve_lumcmf[nts] / LSUN << '\n';
+    std::println(lc_file, "{:g} {:g} {:g}", globals::timesteps[nts].mid / DAY, light_curve_lum[nts] / LSUN,
+                 light_curve_lumcmf[nts] / LSUN);
   }
 }
 
