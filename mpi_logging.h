@@ -541,13 +541,13 @@ inline void MPI_Reduce_safe(R&& data, MPI_Op op, const int root, MPI_Comm comm) 
                                                [](FILE* fp) -> int { return std::fclose(fp); });
 }
 
-[[nodiscard]] inline auto fstream_required(const std::string& filename, std::ios_base::openmode mode) -> std::fstream {
+[[nodiscard]] inline auto fstream_required(const std::string& filename, std::ios::openmode mode) -> std::fstream {
   if (filename.empty()) {
     printlnlog("ERROR: Cannot open file with empty filename.");
     std::abort();
   }
 
-  if (mode == std::ios::in) {
+  if ((mode & std::ios::in) != 0U) {
     // search data folders in order to find file to read
     for (const auto& datadir : datafolders) {
       auto datafolderfilename = std::string(datadir) + filename;
