@@ -264,18 +264,18 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
 
       const double chi_cont = chi_vpkt_cont.total();
 
-      for (int ind = 0; ind < Nspectra; ind++) {
-        if (exclude[ind] == -2) {
+      for (int opacchoiceindex = 0; opacchoiceindex < Nspectra; opacchoiceindex++) {
+        if (exclude[opacchoiceindex] == -2) {
           const double chi_cont_nobf = chi_cont - chi_vpkt_cont.chi_boundfree;
-          tau_vpkt[ind] += chi_cont_nobf * s_cont;
-        } else if (exclude[ind] == -3) {
+          tau_vpkt[opacchoiceindex] += chi_cont_nobf * s_cont;
+        } else if (exclude[opacchoiceindex] == -3) {
           const double chi_cont_noff = chi_cont - chi_vpkt_cont.chi_freefree_heat;
-          tau_vpkt[ind] += chi_cont_noff * s_cont;
-        } else if (exclude[ind] == -4) {
+          tau_vpkt[opacchoiceindex] += chi_cont_noff * s_cont;
+        } else if (exclude[opacchoiceindex] == -4) {
           const double chi_cont_noes = chi_cont - chi_vpkt_cont.chi_freefree_scatter;
-          tau_vpkt[ind] += chi_cont_noes * s_cont;
+          tau_vpkt[opacchoiceindex] += chi_cont_noes * s_cont;
         } else {
-          tau_vpkt[ind] += chi_cont * s_cont;
+          tau_vpkt[opacchoiceindex] += chi_cont * s_cont;
         }
       }
 
@@ -315,11 +315,11 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
           const double tau_bin = chi_bb_expansionopac * (std::min(binedgedist, boundarydist) - dist);
           dist = std::min(binedgedist, boundarydist);
 
-          for (int ind = 0; ind < Nspectra; ind++) {
-            assert_testmodeonly(exclude[ind] <= 0);  // expansion opacities include all elements, so cannot be used with
-                                                     // custom lists that exclude some elements
-            if (exclude[ind] != -1) {
-              tau_vpkt[ind] += tau_bin;
+          for (int opacchoiceindex = 0; opacchoiceindex < Nspectra; opacchoiceindex++) {
+            assert_testmodeonly(exclude[opacchoiceindex] <= 0);  // expansion opacities include all elements, so cannot
+                                                                 // be used with custom lists that exclude some elements
+            if (exclude[opacchoiceindex] != -1) {
+              tau_vpkt[opacchoiceindex] += tau_bin;
             }
           }
 
@@ -371,9 +371,9 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
 
           // Check on the element to exclude (or -1 for no line opacity)
           const int anumber = get_atomicnumber(element);
-          for (int ind = 0; ind < Nspectra; ind++) {
-            if (exclude[ind] != -1 && (exclude[ind] != anumber)) {
-              tau_vpkt[ind] += tau_line;
+          for (int opacchoiceindex = 0; opacchoiceindex < Nspectra; opacchoiceindex++) {
+            if (exclude[opacchoiceindex] != -1 && (exclude[opacchoiceindex] != anumber)) {
+              tau_vpkt[opacchoiceindex] += tau_line;
             }
           }
 
@@ -682,12 +682,12 @@ void read_vpktparameterfile() {
     assert_always(fscanf(input_file, "%d ", &Nspectra) == 1);
     exclude.resize(Nspectra, 0);
 
-    for (int i = 0; i < Nspectra; i++) {
-      assert_always(fscanf(input_file, "%d ", &exclude[i]) == 1);
+    for (int opacchoiceindex = 0; opacchoiceindex < Nspectra; opacchoiceindex++) {
+      assert_always(fscanf(input_file, "%d ", &exclude[opacchoiceindex]) == 1);
 
       // The first number should be equal to zero!
       assert_always(exclude[0] == 0);  // The first spectrum should allow for all opacities (exclude[i]=0)
-      assert_always(exclude[i] <= 0 ||
+      assert_always(exclude[opacchoiceindex] <= 0 ||
                     !VPKT_USE_EXPANSION_OPACITIES);  // expansion opacities include all elements, so cannot be used
                                                      // with custom lists that exclude some elements
     }
@@ -877,8 +877,8 @@ void init(const int nts, const bool continued_from_saved) {
 
       for (int obsdirindex = 0; obsdirindex < Nobs; obsdirindex++) {
         std::print(vpkt_contrib_file, " dir{}_t_arrive_d dir{}_nu_rf", obsdirindex, obsdirindex);
-        for (int ind = 0; ind < Nspectra; ind++) {
-          std::print(vpkt_contrib_file, " dir{}_e_rf_{}", obsdirindex, ind);
+        for (int opacchoiceindex = 0; opacchoiceindex < Nspectra; opacchoiceindex++) {
+          std::print(vpkt_contrib_file, " dir{}_e_rf_{}", obsdirindex, opacchoiceindex);
         }
       }
 
@@ -949,7 +949,7 @@ auto trace_vpkts(const Packet& pkt, const enum packet_type type_before_rpkt) -> 
       any_dir_escaped = true;
     } else {
       vpkt_contrib_row += " -1. -1.";  // t_arrive_d nu_rf
-      for (int ind = 0; ind < Nspectra; ind++) {
+      for (int opacchoiceindex = 0; opacchoiceindex < Nspectra; opacchoiceindex++) {
         vpkt_contrib_row += " 0.";  // e_rf_diri_j
       }
     }
