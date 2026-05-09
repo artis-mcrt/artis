@@ -902,8 +902,10 @@ void setup_phixs_list() {
     }
     globals::allcont.bfestimindex = std::move(allcont_bfestimindex);
     auto bfestim_nu_edge = MPI_shared_array<double>(std::ssize(temp_bfestim_nu_edge));
-    for (int i = 0; i < std::ssize(temp_bfestim_nu_edge); i++) {
-      bfestim_nu_edge[i] = temp_bfestim_nu_edge[i];
+    auto bfestimindex = 0ZU;
+    for (const auto nu_edge : temp_bfestim_nu_edge) {
+      bfestim_nu_edge[bfestimindex] = nu_edge;
+      bfestimindex++;
     }
     globals::bfestim_nu_edge = std::move(bfestim_nu_edge);
 
