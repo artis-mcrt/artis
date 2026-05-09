@@ -61,6 +61,7 @@ else ifneq '' '$(findstring nvc++,$(COMPILER_VERSION))'
 	COMPILER_NAME := nvhpc
 	CXX_STD := c++23
 	# to use the pixi installed libstdc++
+	CXXFLAGS += -Minfo=accel
 # 	CXXFLAGS += --gcc-toolchain=$(PWD)/.pixi/envs/default -Wl,-rpath,$(PWD)/.pixi/envs/default/lib
 
 	ifneq ($(GCCTOOLCHAIN),)
