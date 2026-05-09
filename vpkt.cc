@@ -422,14 +422,14 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
     std::format_to(std::back_inserter(vpkt_contrib_row), " {:g} {:g}", t_arrive / DAY, nu_rf);
   }
 
-  for (int ind = 0; ind < Nspectra; ind++) {
-    const double prob = pn * std::exp(-tau_vpkt[ind]);
+  for (int opacchoiceindex = 0; opacchoiceindex < Nspectra; opacchoiceindex++) {
+    const double prob = pn * std::exp(-tau_vpkt[opacchoiceindex]);
 
     assert_always(std::isfinite(prob));
 
     const Vec3d stokes = {I * prob, Q * prob, U * prob};
 
-    add_to_vspecpol(nu_rf, e_rf, stokes, obsdirindex, ind, t_arrive);
+    add_to_vspecpol(nu_rf, e_rf, stokes, obsdirindex, opacchoiceindex, t_arrive);
 
     if constexpr (VPKT_WRITE_CONTRIBS) {
       std::format_to(std::back_inserter(vpkt_contrib_row), " {:g}", e_rf * prob);
