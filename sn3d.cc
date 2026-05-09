@@ -845,9 +845,8 @@ auto main(int argc, char* argv[]) -> int {
   MPI_Barrier_allranks();
 
   // Record the chosen syn_dir
-  auto syn_file = std::fstream("syn_dir.txt", std::ios::out | std::ios::trunc);
-  assert_always(syn_file.is_open());
-  syn_file << syn_dir[0] << ' ' << syn_dir[1] << ' ' << syn_dir[2];
+  auto syn_file = fstream_required("syn_dir.txt", std::ios::out | std::ios::trunc);
+  std::print(syn_file, "{} {} {}", syn_dir[0], syn_dir[1], syn_dir[2]);
   syn_file.close();
 
   bool terminate_early = false;
@@ -953,10 +952,6 @@ auto main(int argc, char* argv[]) -> int {
       real_time_end, globals::timestep_initial, globals::timestep - 1, (real_time_end - real_time_start) / 3600.,
       globals::nprocs, get_max_threads(),
       (real_time_end - real_time_start) / 3600. * globals::nprocs * get_max_threads());
-
-  if (estimators_file.is_open()) {
-    estimators_file.close();
-  }
 
   MPI_Finalize();
 
