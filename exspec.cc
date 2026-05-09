@@ -70,19 +70,21 @@ void do_direction_bin(const int dirbin, const std::vector<std::vector<Packet>>& 
 
     int nesc_gamma = 0;
     int nesc_rpkt = 0;
-    for (int ii = 0; ii < std::ssize(pkts_thisrank); ii++) {
-      if (pkts_thisrank[ii].type == TYPE_ESCAPE) {
-        if (pkts_thisrank[ii].escape_type == TYPE_RPKT) {
-          nesc_rpkt++;
-          add_to_lc_res(pkts_thisrank[ii], dirbin, rpkt_light_curve_lum, rpkt_light_curve_lumcmf);
-          add_to_spec_res(pkts_thisrank[ii], dirbin, rpkt_spectra, POL_ON ? &stokes_i : nullptr,
-                          POL_ON ? &stokes_q : nullptr, POL_ON ? &stokes_u : nullptr);
-        } else if (pkts_thisrank[ii].escape_type == TYPE_GAMMA) {
-          nesc_gamma++;
-          if (dirbin == -1) {
-            add_to_lc_res(pkts_thisrank[ii], dirbin, gamma_light_curve_lum, gamma_light_curve_lumcmf);
-            add_to_spec_res(pkts_thisrank[ii], dirbin, gamma_spectra, nullptr, nullptr, nullptr);
-          }
+    for (const auto& pkt : pkts_thisrank) {
+      if (pkt.type != TYPE_ESCAPE) {
+        continue;
+      }
+
+      if (pkt.escape_type == TYPE_RPKT) {
+        nesc_rpkt++;
+        add_to_lc_res(pkt, dirbin, rpkt_light_curve_lum, rpkt_light_curve_lumcmf);
+        add_to_spec_res(pkt, dirbin, rpkt_spectra, POL_ON ? &stokes_i : nullptr, POL_ON ? &stokes_q : nullptr,
+                        POL_ON ? &stokes_u : nullptr);
+      } else if (pkt.escape_type == TYPE_GAMMA) {
+        nesc_gamma++;
+        if (dirbin == -1) {
+          add_to_lc_res(pkt, dirbin, gamma_light_curve_lum, gamma_light_curve_lumcmf);
+          add_to_spec_res(pkt, dirbin, gamma_spectra, nullptr, nullptr, nullptr);
         }
       }
     }
