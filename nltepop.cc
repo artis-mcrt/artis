@@ -8,6 +8,7 @@
 #include <fstream>
 #include <ios>
 #include <numeric>
+#include <print>
 #include <ranges>
 #include <span>
 #include <string>
@@ -1379,7 +1380,7 @@ DEVICE_FUNC auto superlevel_boltzmann(const int nonemptymgi, const int element, 
 
 void nltepop_open_file() {
   nlte_file = fstream_required(std::format("nlte_{:04d}.out", globals::my_rank), std::ios::out | std::ios::trunc);
-  nlte_file << "timestep modelgridindex Z ionstage level n_LTE n_NLTE ion_popfrac\n";
+  std::println(nlte_file, "timestep modelgridindex Z ionstage level n_LTE n_NLTE ion_popfrac");
 }
 
 void nltepop_write_to_file(const int nonemptymgi, const int timestep) {
@@ -1404,10 +1405,10 @@ void nltepop_write_to_file(const int nonemptymgi, const int timestep) {
         double nnlevellte = calculate_levelpop_boltzmann(nonemptymgi, element, ion, level);
         double nnlevelnlte{NAN};
 
-        nlte_file << timestep << ' ' << modelgridindex << ' ' << get_atomicnumber(element) << ' '
-                  << get_ionstage(element, ion) << ' ';
+        std::print(nlte_file, "{} {} {} {} ", timestep, modelgridindex, get_atomicnumber(element),
+                   get_ionstage(element, ion));
         if (level <= nlevels_excited_nlte) {
-          nlte_file << level << ' ';
+          std::print(nlte_file, "{} ", level);
 
           if (level == 0) {
             nnlevelnlte = get_groundlevelpop(nonemptymgi, element, ion);
@@ -1420,7 +1421,7 @@ void nltepop_write_to_file(const int nonemptymgi, const int timestep) {
               get_nlte_superlevelpop_over_rho_over_slpartfunc(nonemptymgi, element, ion) * grid::get_rho(nonemptymgi);
 
           nnlevellte = 0;
-          nlte_file << -1 << ' ';
+          std::print(nlte_file, "-1 ");
           for (int level_sl = nlevels_excited_nlte + 1; level_sl < get_nlevels(element, ion); level_sl++) {
             if (level_isinsuperlevel(element, ion, level_sl)) {
               nnlevellte += calculate_levelpop_boltzmann(nonemptymgi, element, ion, level_sl);
@@ -1430,7 +1431,7 @@ void nltepop_write_to_file(const int nonemptymgi, const int timestep) {
           nnlevelnlte = slpopfactor * superlevel_partfuncs[ion];
         }
 
-        nlte_file << std::format("{:.5e} {:.5e} {:.5e}\n", nnlevellte, nnlevelnlte, nnlevelnlte / nnion);
+        std::println(nlte_file, "{:.5e} {:.5e} {:.5e}", nnlevellte, nnlevelnlte, nnlevelnlte / nnion);
       }
     }
   }
