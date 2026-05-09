@@ -57,12 +57,12 @@ int nobsdirections = 0;  // Number of observer directions
 int nspectraperobsdir = 0;  // Number of virtual packet spectra per observer direction (total + elements switched off)
 std::vector<double> obsdirs_costheta;
 std::vector<double> obsdirs_phi;
-double VSPEC_TIMEMIN_input;
-double VSPEC_TIMEMAX_input;
+double vspec_timemin_input;
+double vspec_timemax_input;
 int nwavelengthranges = 0;  // Number of wavelength ranges
 
-std::vector<double> VSPEC_NUMIN_input;
-std::vector<double> VSPEC_NUMAX_input;
+std::vector<double> vspec_numin_input;
+std::vector<double> vspec_numax_input;
 double tau_max_vpkt;
 
 std::vector<int> exclude;  // vector of opacity contribution setups:
@@ -706,23 +706,23 @@ void read_vpktparameterfile() {
   printlnlog("vpkt: compiled with VSPEC_TIMEMIN {:.1f}d VSPEC_TIMEMAX {:1f}d VSPEC_TIMEBINS {}", VSPEC_TIMEMIN / DAY,
              VSPEC_TIMEMAX / DAY, VSPEC_TIMEBINS);
   if (override_tminmax == 1) {
-    VSPEC_TIMEMIN_input = vspec_tmin_in_days * DAY;
-    VSPEC_TIMEMAX_input = vspec_tmax_in_days * DAY;
-    printlnlog("vpkt.txt: VSPEC_TIMEMIN_input {:.1f}d, VSPEC_TIMEMAX_input {:.1f}d", VSPEC_TIMEMIN_input / DAY,
-               VSPEC_TIMEMAX_input / DAY);
+    vspec_timemin_input = vspec_tmin_in_days * DAY;
+    vspec_timemax_input = vspec_tmax_in_days * DAY;
+    printlnlog("vpkt.txt: VSPEC_TIMEMIN_input {:.1f}d, VSPEC_TIMEMAX_input {:.1f}d", vspec_timemin_input / DAY,
+               vspec_timemax_input / DAY);
   } else {
-    VSPEC_TIMEMIN_input = VSPEC_TIMEMIN;
-    VSPEC_TIMEMAX_input = VSPEC_TIMEMAX;
+    vspec_timemin_input = VSPEC_TIMEMIN;
+    vspec_timemax_input = VSPEC_TIMEMAX;
     printlnlog(
         "vpkt.txt: VSPEC_TIMEMIN_input {:.1f}d, VSPEC_TIMEMAX_input {:.1f}d (inherited from VSPEC_TIMEMIN and "
         "VSPEC_TIMEMAX)",
-        VSPEC_TIMEMIN_input / DAY, VSPEC_TIMEMAX_input / DAY);
+        vspec_timemin_input / DAY, vspec_timemax_input / DAY);
   }
 
-  assert_always(VSPEC_TIMEMIN_input >= VSPEC_TIMEMIN);
-  assert_always(VSPEC_TIMEMAX_input <= VSPEC_TIMEMAX);
-  assert_always(VSPEC_TIMEMIN_input >= globals::tmin);
-  assert_always(VSPEC_TIMEMAX_input <= globals::tmax);
+  assert_always(vspec_timemin_input >= VSPEC_TIMEMIN);
+  assert_always(vspec_timemax_input <= VSPEC_TIMEMAX);
+  assert_always(vspec_timemin_input >= globals::tmin);
+  assert_always(vspec_timemax_input <= globals::tmax);
 
   // frequency window. dum4 restrict vpkt to a frequency range, dum5 indicates the number of ranges,
   // followed by a list of ranges (dum6,dum7)
@@ -736,8 +736,8 @@ void read_vpktparameterfile() {
 
   if (flag_custom_freq_ranges == 1) {
     assert_always(fscanf(input_file, "%d ", &nwavelengthranges) == 1);
-    VSPEC_NUMIN_input.resize(nwavelengthranges, 0.);
-    VSPEC_NUMAX_input.resize(nwavelengthranges, 0.);
+    vspec_numin_input.resize(nwavelengthranges, 0.);
+    vspec_numax_input.resize(nwavelengthranges, 0.);
 
     printlnlog("vpkt.txt: Nrange {} frequency intervals per spectrum per observer", nwavelengthranges);
 
@@ -746,24 +746,24 @@ void read_vpktparameterfile() {
       double lmax_vspec_input = 0.;
       assert_always(fscanf(input_file, "%lg %lg", &lmin_vspec_input, &lmax_vspec_input) == 2);
 
-      VSPEC_NUMIN_input[i] = CLIGHT / (lmax_vspec_input * 1e-8);
-      VSPEC_NUMAX_input[i] = CLIGHT / (lmin_vspec_input * 1e-8);
+      vspec_numin_input[i] = CLIGHT / (lmax_vspec_input * 1e-8);
+      vspec_numax_input[i] = CLIGHT / (lmin_vspec_input * 1e-8);
 
-      assert_always(VSPEC_NUMIN_input[i] >= VSPEC_NUMIN);
-      assert_always(VSPEC_NUMAX_input[i] <= VSPEC_NUMAX);
+      assert_always(vspec_numin_input[i] >= VSPEC_NUMIN);
+      assert_always(vspec_numax_input[i] <= VSPEC_NUMAX);
     }
   } else {
     nwavelengthranges = 1;
 
-    VSPEC_NUMIN_input.push_back(VSPEC_NUMIN);
-    VSPEC_NUMAX_input.push_back(VSPEC_NUMAX);
+    vspec_numin_input.push_back(VSPEC_NUMIN);
+    vspec_numax_input.push_back(VSPEC_NUMAX);
 
     printlnlog("vpkt.txt: Nrange 1 frequency interval (inherited from VSPEC_NUMIN and VSPEC_NUMAX)");
   }
 
   for (int i = 0; i < nwavelengthranges; i++) {
-    printlnlog("vpkt.txt:   range {} lambda [{:g}, {:g}] Angstroms", i, 1e8 * CLIGHT / VSPEC_NUMAX_input[i],
-               1e8 * CLIGHT / VSPEC_NUMIN_input[i]);
+    printlnlog("vpkt.txt:   range {} lambda [{:g}, {:g}] Angstroms", i, 1e8 * CLIGHT / vspec_numax_input[i],
+               1e8 * CLIGHT / vspec_numin_input[i]);
   }
 
   // if dum7=1, vpkt are not created when cell optical depth is larger than optical_depth_is_thick_vpkt
@@ -927,7 +927,7 @@ auto trace_vpkts(const Packet& pkt, const enum packet_type type_before_rpkt) -> 
     const double t_arrive = pkt.prop_time - (dot(pkt.pos, obsdir) / CLIGHT_PROP);
 
     bool dir_escaped = false;
-    if (t_arrive >= VSPEC_TIMEMIN_input && t_arrive <= VSPEC_TIMEMAX_input) {
+    if (t_arrive >= vspec_timemin_input && t_arrive <= vspec_timemax_input) {
       // time selection
 
       const double doppler = calculate_doppler_nucmf_on_nurf(pkt.pos, obsdir, pkt.prop_time);
@@ -937,8 +937,8 @@ auto trace_vpkts(const Packet& pkt, const enum packet_type type_before_rpkt) -> 
       // Loop over frequency intervals for this observer and check if the vpkt frequency falls in any of them. If it
       // does, trace the vpkt to see if it escapes in this direction.
       for (int i = 0; i < nwavelengthranges; i++) {
-        if ((nu_rf > VSPEC_NUMIN_input[i] && nu_rf < VSPEC_NUMAX_input[i]) ||
-            (pkt.absorptionfreq > VSPEC_NUMIN_input[i] && pkt.absorptionfreq < VSPEC_NUMAX_input[i])) {
+        if ((nu_rf > vspec_numin_input[i] && nu_rf < vspec_numax_input[i]) ||
+            (pkt.absorptionfreq > vspec_numin_input[i] && pkt.absorptionfreq < vspec_numax_input[i])) {
           // frequency selection
           dir_escaped = dir_escaped || trace_vpkt_direction(pkt, t_arrive, nu_rf, e_rf, obsdirindex, obsdir,
                                                             type_before_rpkt, vpkt_contrib_row);
