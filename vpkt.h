@@ -21,7 +21,7 @@ constexpr double VSPEC_NUMIN = CLIGHT / 10000 * 1e8;
 constexpr double VSPEC_NUMAX = CLIGHT / 3500 * 1e8;
 constexpr int VSPEC_NUBINS = 2500;
 
-// TIME
+// arrival time range and bins
 constexpr double VSPEC_TIMEMIN = 3 * DAY;
 constexpr double VSPEC_TIMEMAX = 8 * DAY;
 constexpr int VSPEC_TIMEBINS = 5;

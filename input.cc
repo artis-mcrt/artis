@@ -17,6 +17,7 @@
 #include <istream>
 #include <iterator>
 #include <limits>
+#include <print>
 #include <ranges>
 #include <set>
 #include <span>
@@ -1581,14 +1582,14 @@ void write_bflist_file() {
 
   if (globals::my_rank == 0) {
     auto bflist_file = fstream_required("bflist.out", std::ios::out | std::ios::trunc);
-    bflist_file << globals::nbfcontinua << '\n';
+    std::println(bflist_file, "{}", globals::nbfcontinua);
     for (i = 0; i < globals::nbfcontinua; i++) {
       const int element = globals::bflist[i].elementindex;
       const int ion = globals::bflist[i].ionindex;
       const int level = globals::bflist[i].levelindex;
       const int phixstargetindex = globals::bflist[i].phixstargetindex;
       const int upperionlevel = get_phixsupperlevel(element, ion, level, phixstargetindex);
-      bflist_file << i << ' ' << element << ' ' << ion << ' ' << level << ' ' << upperionlevel << '\n';
+      std::println(bflist_file, "{} {} {} {} {}", i, element, ion, level, upperionlevel);
     }
   }
 }
@@ -1856,7 +1857,7 @@ void update_parameterfile(const int nts) {
       }
     }
 
-    fileout << line << '\n';
+    std::println(fileout, "{}", line);
   }
 
   fileout.close();

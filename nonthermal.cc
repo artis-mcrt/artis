@@ -2165,14 +2165,6 @@ DEVICE_FUNC auto get_deposition_rate_density(const int nonemptymgi) -> double {
   return deposition_rate_density_all_cells[nonemptymgi];
 }
 
-void close_file() {
-  if (!NT_ON || !NT_SOLVE_SPENCERFANO) {
-    return;
-  }
-
-  colliondata.clear();
-}
-
 auto get_nt_frac_heating(const int nonemptymgi) -> float {
   if (!NT_ON) {
     return 1.;

@@ -192,8 +192,7 @@ void init_gamma_linelist() {
       return std::tie(g1.energy, g1.nucindex, g1.nucgammaindex) < std::tie(g2.energy, g2.nucindex, g2.nucgammaindex);
     });
 
-    auto gammalinelist = std::fstream("gammalinelist.out", std::ofstream::out | std::ofstream::trunc);
-    assert_always(gammalinelist.is_open());
+    auto gammalinelist = fstream_required("gammalinelist.out", std::ofstream::out | std::ofstream::trunc);
     std::println(gammalinelist, "#index nucindex Z A nucgammmaindex en_gamma_mev gammaline_probability");
 
     for (auto i = 0Z; i < total_lines; i++) {

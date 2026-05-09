@@ -13,7 +13,6 @@ namespace radfield {
 void zero_estimators();
 void init();
 void initialise_prev_titer_photoionestimators();
-void close_file();
 DEVICE_FUNC void update_estimators(ptrdiff_t nonemptymgi, double distance_e_cmf, double nu_cmf,
                                    double doppler_nucmf_on_nurf, const Phixslist& phixslist, bool thickcell);
 DEVICE_FUNC void update_lineestimator(int nonemptymgi, int lineindex, double increment);

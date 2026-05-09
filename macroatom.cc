@@ -11,6 +11,7 @@
 #include <functional>
 #include <ios>
 #include <numeric>
+#include <print>
 #include <span>
 
 #include "artisoptions.h"
@@ -388,11 +389,10 @@ DEVICE_FUNC void do_macroatom(Packet& pkt, const MacroAtomState& pktmastate) {
                                      levelrates[MA_ACTION_RADDEEXC]);
 
         if constexpr (LOG_MACROATOM) {
-          macroatom_file << std::format(
-              "{:8d} {:14d} {:2d} {:12d} {:12d} {:9d} {:9d} {:9d} {:11.5e} {:11.5e} {:11.5e} {:11.5e}\n",
-              globals::timestep, grid::get_mgi_of_nonemptymgi(nonemptymgi), get_atomicnumber(element),
-              get_ionstage(element, ion_in), get_ionstage(element, ion), level_in, level, activatingline, nu_cmf_in,
-              pkt.nu_cmf, nu_rf_in, pkt.nu_rf);
+          std::println(macroatom_file, "{:d} {:d} {:d} {:d} {:d} {:d} {:d} {:d} {:.5e} {:.5e} {:.5e} {:.5e}",
+                       globals::timestep, grid::get_mgi_of_nonemptymgi(nonemptymgi), get_atomicnumber(element),
+                       get_ionstage(element, ion_in), get_ionstage(element, ion), level_in, level, activatingline,
+                       nu_cmf_in, pkt.nu_cmf, nu_rf_in, pkt.nu_rf);
         }
 
         end_packet = true;
@@ -554,15 +554,8 @@ void macroatom_open_file() {
   macroatom_file =
       fstream_required(std::format("macroatom_{:04d}.out", globals::my_rank), std::ios::out | std::ios::trunc);
 
-  macroatom_file << std::format("{:8s} {:14s} {:2s} {:12s} {:12s} {:9s} {:9s} {:9s} {:11s} {:11s} {:11s} {:11s}\n",
-                                "timestep", "modelgridindex", "Z", "ionstage_in", "ionstage_out", "level_in",
-                                "level_out", "activline", "nu_cmf_in", "nu_cmf_out", "nu_rf_in", "nu_rf_out");
-}
-
-void macroatom_close_file() {
-  if (macroatom_file.is_open()) {
-    macroatom_file.close();
-  }
+  std::println(macroatom_file, "timestep modelgridindex Z ionstage_in ionstage_out level_in level_out activline",
+               "nu_cmf_in nu_cmf_out nu_rf_in nu_rf_out");
 }
 
 // radiative excitation rate: paperII 3.5.2

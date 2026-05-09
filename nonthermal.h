@@ -10,7 +10,6 @@
 
 namespace nonthermal {
 void init();
-void close_file();
 void solve_spencerfano(int nonemptymgi, int timestep, int iteration);
 [[nodiscard]] DEVICE_FUNC auto nt_ionisation_ratecoeff(int nonemptymgi, int element, int ion) -> double;
 [[nodiscard]] DEVICE_FUNC auto nt_ionisation_upperion_probability(int nonemptymgi, int element, int lowerion,

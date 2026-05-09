@@ -10,6 +10,7 @@
 #include <fstream>
 #include <ios>
 #include <iterator>
+#include <print>
 #include <span>
 #include <vector>
 
@@ -462,8 +463,8 @@ void write_to_file(const int nonemptymgi, const int timestep) {
       }
 
       if (!skipoutput) {
-        radfieldfile << std::format("{:d} {:d} {:d} {:.5e} {:.5e} {:.3e} {:.3e} {:.3e} {:.1f} {:.5e}\n", timestep,
-                                    modelgridindex, binindex, nu_lower, nu_upper, nuJ_out, J_out, J_nu_bar, T_R, W);
+        std::println(radfieldfile, "{:d} {:d} {:d} {:.5e} {:.5e} {:.3e} {:.3e} {:.3e} {:.1f} {:.5e}", timestep,
+                     modelgridindex, binindex, nu_lower, nu_upper, nuJ_out, J_out, J_nu_bar, T_R, W);
       }
     }
     radfieldfile.flush();
@@ -551,7 +552,7 @@ void init() {
       assert_always(!radfieldfile.is_open());
       radfieldfile =
           fstream_required(std::format("radfield_{:04d}.out", globals::my_rank), std::ios::out | std::ios::trunc);
-      radfieldfile << "timestep modelgridindex bin_num nu_lower nu_upper nuJ J J_nu_avg ncontrib T_R W\n";
+      std::println(radfieldfile, "timestep modelgridindex bin_num nu_lower nu_upper nuJ J J_nu_avg ncontrib T_R W");
       radfieldfile.flush();
     }
 
@@ -656,22 +657,6 @@ auto get_Jb_lu(const int nonemptymgi, const int jblueindex) -> double {
   assert_always(jblueindex >= 0);
   assert_always(jblueindex < detailed_linecount);
   return prev_Jb_lu_normed[nonemptymgi][jblueindex].value;
-}
-
-void close_file() {
-  if (radfieldfile.is_open()) {
-    radfieldfile.close();
-  }
-
-  if (MULTIBIN_RADFIELD_MODEL_ON) {
-    radfieldbins = {};
-    radfieldbin_solutions_W.reset();
-    radfieldbin_solutions_T_R.reset();
-  }
-
-  if constexpr (DETAILED_BF_ESTIMATORS_ON) {
-    prev_bfrate_normed.reset();
-  }
 }
 
 // set up the new bins and clear the estimators in preparation for a timestep

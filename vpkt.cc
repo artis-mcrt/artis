@@ -10,6 +10,7 @@
 #include <format>
 #include <fstream>
 #include <ios>
+#include <iterator>
 #include <print>
 #include <sstream>
 #include <string>
@@ -26,6 +27,7 @@
 #include "mpi_logging.h"
 #include "packet.h"
 #include "rpkt.h"
+#include "sn3d.h"
 #include "vectors.h"
 
 namespace vpkt {
@@ -51,16 +53,16 @@ std::vector<std::vector<VSpecPol>> vspecpol{};
 std::array<float, VSPEC_NUBINS> lower_freq_vspec;
 std::array<float, VSPEC_NUBINS> delta_freq_vspec;
 
-int Nobs = 0;  // Number of observer directions
-int Nspectra = 0;  // Number of virtual packet spectra per observer direction (total + elements switched off)
-std::vector<double> nz_obs_vpkt;
-std::vector<double> phiobs;
-double VSPEC_TIMEMIN_input;
-double VSPEC_TIMEMAX_input;
-int Nrange = 0;  // Number of wavelength ranges
+int nobsdirections = 0;  // Number of observer directions
+int nspectraperobsdir = 0;  // Number of virtual packet spectra per observer direction (total + elements switched off)
+std::vector<double> obsdirs_costheta;
+std::vector<double> obsdirs_phi;
+double vspec_timemin_input;
+double vspec_timemax_input;
+int nwavelengthranges = 0;  // Number of wavelength ranges
 
-std::vector<double> VSPEC_NUMIN_input;
-std::vector<double> VSPEC_NUMAX_input;
+std::vector<double> vspec_numin_input;
+std::vector<double> vspec_numax_input;
 double tau_max_vpkt;
 
 std::vector<int> exclude;  // vector of opacity contribution setups:
@@ -79,7 +81,7 @@ struct VGrid {
 
 std::array<std::array<VGrid, VGRID_NZ>, VGRID_NY> vgrid;
 
-int Nrange_grid;
+int grid_nwavelengthranges{};
 double tmin_grid;
 double tmax_grid;
 std::vector<double> nu_grid_min;
@@ -108,7 +110,7 @@ void add_to_vspecpol(const double nu_rf, const double e_rf, const Vec3d& stokes,
     return;
   }
 
-  const int ind_comb = (Nspectra * obsdirindex) + opachoiceindex;
+  const int ind_comb = (nspectraperobsdir * obsdirindex) + opachoiceindex;
   const double pktcontrib = e_rf / vspecpol[nt][ind_comb].delta_t / delta_freq_vspec[nnu] / 4.e12 / PI / PARSEC /
                             PARSEC / globals::nprocs * 4 * PI;
 
@@ -168,7 +170,7 @@ void add_to_vpkt_grid(const double nu_rf, const double e_rf, const Vec3d& stokes
 
 auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const double nu_rf, const double e_rf,
                           const int obsdirindex, const Vec3d& obsdir, const enum packet_type type_before_rpkt,
-                          std::stringstream& vpkt_contrib_row) -> bool {
+                          std::string& vpkt_contrib_row) -> bool {
   int mgi = 0;
 
   auto cellindex = rpkt.cellindex;
@@ -263,18 +265,18 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
 
       const double chi_cont = chi_vpkt_cont.total();
 
-      for (int ind = 0; ind < Nspectra; ind++) {
-        if (exclude[ind] == -2) {
+      for (int opacchoiceindex = 0; opacchoiceindex < nspectraperobsdir; opacchoiceindex++) {
+        if (exclude[opacchoiceindex] == -2) {
           const double chi_cont_nobf = chi_cont - chi_vpkt_cont.chi_boundfree;
-          tau_vpkt[ind] += chi_cont_nobf * s_cont;
-        } else if (exclude[ind] == -3) {
+          tau_vpkt[opacchoiceindex] += chi_cont_nobf * s_cont;
+        } else if (exclude[opacchoiceindex] == -3) {
           const double chi_cont_noff = chi_cont - chi_vpkt_cont.chi_freefree_heat;
-          tau_vpkt[ind] += chi_cont_noff * s_cont;
-        } else if (exclude[ind] == -4) {
+          tau_vpkt[opacchoiceindex] += chi_cont_noff * s_cont;
+        } else if (exclude[opacchoiceindex] == -4) {
           const double chi_cont_noes = chi_cont - chi_vpkt_cont.chi_freefree_scatter;
-          tau_vpkt[ind] += chi_cont_noes * s_cont;
+          tau_vpkt[opacchoiceindex] += chi_cont_noes * s_cont;
         } else {
-          tau_vpkt[ind] += chi_cont * s_cont;
+          tau_vpkt[opacchoiceindex] += chi_cont * s_cont;
         }
       }
 
@@ -314,11 +316,11 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
           const double tau_bin = chi_bb_expansionopac * (std::min(binedgedist, boundarydist) - dist);
           dist = std::min(binedgedist, boundarydist);
 
-          for (int ind = 0; ind < Nspectra; ind++) {
-            assert_testmodeonly(exclude[ind] <= 0);  // expansion opacities include all elements, so cannot be used with
-                                                     // custom lists that exclude some elements
-            if (exclude[ind] != -1) {
-              tau_vpkt[ind] += tau_bin;
+          for (int opacchoiceindex = 0; opacchoiceindex < nspectraperobsdir; opacchoiceindex++) {
+            assert_testmodeonly(exclude[opacchoiceindex] <= 0);  // expansion opacities include all elements, so cannot
+                                                                 // be used with custom lists that exclude some elements
+            if (exclude[opacchoiceindex] != -1) {
+              tau_vpkt[opacchoiceindex] += tau_bin;
             }
           }
 
@@ -370,9 +372,9 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
 
           // Check on the element to exclude (or -1 for no line opacity)
           const int anumber = get_atomicnumber(element);
-          for (int ind = 0; ind < Nspectra; ind++) {
-            if (exclude[ind] != -1 && (exclude[ind] != anumber)) {
-              tau_vpkt[ind] += tau_line;
+          for (int opacchoiceindex = 0; opacchoiceindex < nspectraperobsdir; opacchoiceindex++) {
+            if (exclude[opacchoiceindex] != -1 && (exclude[opacchoiceindex] != anumber)) {
+              tau_vpkt[opacchoiceindex] += tau_line;
             }
           }
 
@@ -418,20 +420,20 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
   // -------------- final stokes vector ---------------
 
   if (VPKT_WRITE_CONTRIBS) {
-    vpkt_contrib_row << ' ' << t_arrive / DAY << ' ' << nu_rf;
+    std::format_to(std::back_inserter(vpkt_contrib_row), " {:g} {:g}", t_arrive / DAY, nu_rf);
   }
 
-  for (int ind = 0; ind < Nspectra; ind++) {
-    const double prob = pn * std::exp(-tau_vpkt[ind]);
+  for (int opacchoiceindex = 0; opacchoiceindex < nspectraperobsdir; opacchoiceindex++) {
+    const double prob = pn * std::exp(-tau_vpkt[opacchoiceindex]);
 
     assert_always(std::isfinite(prob));
 
     const Vec3d stokes = {I * prob, Q * prob, U * prob};
 
-    add_to_vspecpol(nu_rf, e_rf, stokes, obsdirindex, ind, t_arrive);
+    add_to_vspecpol(nu_rf, e_rf, stokes, obsdirindex, opacchoiceindex, t_arrive);
 
     if constexpr (VPKT_WRITE_CONTRIBS) {
-      vpkt_contrib_row << ' ' << e_rf * prob;
+      std::format_to(std::back_inserter(vpkt_contrib_row), " {:g}", e_rf * prob);
     }
   }
 
@@ -440,7 +442,7 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
   if (vgrid_on) {
     const double prob = pn * exp(-tau_vpkt[0]);
 
-    for (int wlbin = 0; wlbin < Nrange_grid; wlbin++) {
+    for (int wlbin = 0; wlbin < grid_nwavelengthranges; wlbin++) {
       if (nu_rf > nu_grid_min[wlbin] && nu_rf < nu_grid_max[wlbin]) {  // Frequency selection
         if (t_arrive > tmin_grid && t_arrive < tmax_grid) {  // Time selection
           add_to_vpkt_grid(nu_rf, e_rf, {I * prob, Q * prob, U * prob}, vel_vec, wlbin, obsdirindex, obsdir);
@@ -454,7 +456,7 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
 void init_vspecpol() {
   vspecpol.resize(VSPEC_TIMEBINS, {});
 
-  const int indexmax = Nspectra * Nobs;
+  const int indexmax = nspectraperobsdir * nobsdirections;
   for (int p = 0; p < VSPEC_TIMEBINS; p++) {
     vspecpol[p].resize(indexmax, {});
   }
@@ -486,36 +488,37 @@ void init_vspecpol() {
 void write_vspecpol(const std::string& filename) {
   printlnlog("Writing {}", filename);
   auto vspecpol_file = fstream_required(filename, std::ios::out | std::ios::trunc);
-  for (int ind_comb = 0; ind_comb < (Nobs * Nspectra); ind_comb++) {
-    vspecpol_file << 0. << ' ';
+  for (int ind_comb = 0; ind_comb < (nobsdirections * nspectraperobsdir); ind_comb++) {
+    std::print(vspecpol_file, "{:g} ", 0.);
 
     for (int l = 0; l < 3; l++) {
       for (int p = 0; p < VSPEC_TIMEBINS; p++) {
-        vspecpol_file << (vspecpol[p][ind_comb].lower_time + (vspecpol[p][ind_comb].delta_t / 2.)) / DAY << ' ';
+        std::print(vspecpol_file, "{:g} ",
+                   (vspecpol[p][ind_comb].lower_time + (vspecpol[p][ind_comb].delta_t / 2.)) / DAY);
       }
     }
 
-    vspecpol_file << '\n';
+    std::println(vspecpol_file, "");
 
     for (int m = 0; m < VSPEC_NUBINS; m++) {
-      vspecpol_file << (lower_freq_vspec[m] + (delta_freq_vspec[m] / 2.)) << ' ';
+      std::print(vspecpol_file, "{:g} ", (lower_freq_vspec[m] + (delta_freq_vspec[m] / 2.)));
 
       // Stokes I
       for (int p = 0; p < VSPEC_TIMEBINS; p++) {
-        vspecpol_file << vspecpol[p][ind_comb].flux[m].i << ' ';
+        std::print(vspecpol_file, "{:g} ", vspecpol[p][ind_comb].flux[m].i);
       }
 
       // Stokes Q
       for (int p = 0; p < VSPEC_TIMEBINS; p++) {
-        vspecpol_file << vspecpol[p][ind_comb].flux[m].q << ' ';
+        std::print(vspecpol_file, "{:g} ", vspecpol[p][ind_comb].flux[m].q);
       }
 
       // Stokes U
       for (int p = 0; p < VSPEC_TIMEBINS; p++) {
-        vspecpol_file << vspecpol[p][ind_comb].flux[m].u << ' ';
+        std::print(vspecpol_file, "{:g} ", vspecpol[p][ind_comb].flux[m].u);
       }
 
-      vspecpol_file << '\n';
+      std::println(vspecpol_file, "");
     }
   }
 }
@@ -527,7 +530,7 @@ void read_vspecpol(const int my_rank, const int nts) {
   auto vspecpol_file = fstream_required(filename, std::ios::in);
   std::string line;
 
-  for (int ind_comb = 0; ind_comb < (Nobs * Nspectra); ind_comb++) {
+  for (int ind_comb = 0; ind_comb < (nobsdirections * nspectraperobsdir); ind_comb++) {
     get_noncommentline(vspecpol_file, line);  // first line is the header of times
 
     // Initialise I,Q,U fluxes from temporary files
@@ -568,10 +571,11 @@ void init_vpkt_grid() {
       vgrid[n][m].yvel = yvel;
       vgrid[n][m].zvel = zvel;
 
-      vgrid[n][m].flux.resize(Nrange_grid, {});
+      resize_exactly(vgrid[n][m].flux, grid_nwavelengthranges);
 
-      for (int wlbin = 0; wlbin < Nrange_grid; wlbin++) {
-        vgrid[n][m].flux[wlbin].resize(Nobs, {.i = 0., .q = 0., .u = 0.});
+      for (int wlbin = 0; wlbin < grid_nwavelengthranges; wlbin++) {
+        resize_exactly(vgrid[n][m].flux[wlbin], nobsdirections);
+        std::ranges::fill(vgrid[n][m].flux[wlbin], StokesParams{.i = 0., .q = 0., .u = 0.});
       }
     }
   }
@@ -580,13 +584,13 @@ void init_vpkt_grid() {
 void write_vpkt_grid(const std::string& filename) {
   auto vpkt_grid_file = fstream_required(filename, std::ios::out | std::ios::trunc);
 
-  for (int obsdirindex = 0; obsdirindex < Nobs; obsdirindex++) {
-    for (int wlbin = 0; wlbin < Nrange_grid; wlbin++) {
+  for (int obsdirindex = 0; obsdirindex < nobsdirections; obsdirindex++) {
+    for (int wlbin = 0; wlbin < grid_nwavelengthranges; wlbin++) {
       for (int n = 0; n < VGRID_NY; n++) {
         for (int m = 0; m < VGRID_NZ; m++) {
-          vpkt_grid_file << vgrid[n][m].yvel << ' ' << vgrid[n][m].zvel << ' ' << vgrid[n][m].flux[wlbin][obsdirindex].i
-                         << ' ' << vgrid[n][m].flux[wlbin][obsdirindex].q << ' '
-                         << vgrid[n][m].flux[wlbin][obsdirindex].u << ' ' << '\n';
+          std::println(vpkt_grid_file, "{:g} {:g} {:g} {:g} {:g} ", vgrid[n][m].yvel, vgrid[n][m].zvel,
+                       vgrid[n][m].flux[wlbin][obsdirindex].i, vgrid[n][m].flux[wlbin][obsdirindex].q,
+                       vgrid[n][m].flux[wlbin][obsdirindex].u);
         }
       }
     }
@@ -602,8 +606,8 @@ void read_vpkt_grid(const int my_rank, const int nts) {
   printlnlog("Reading {}", filename);
   auto vpkt_grid_file = fstream_required(filename, std::ios::in);
 
-  for (int obsdirindex = 0; obsdirindex < Nobs; obsdirindex++) {
-    for (int wlbin = 0; wlbin < Nrange_grid; wlbin++) {
+  for (int obsdirindex = 0; obsdirindex < nobsdirections; obsdirindex++) {
+    for (int wlbin = 0; wlbin < grid_nwavelengthranges; wlbin++) {
       for (int n = 0; n < VGRID_NY; n++) {
         for (int m = 0; m < VGRID_NZ; m++) {
           assert_always(vpkt_grid_file >> vgrid[n][m].yvel >> vgrid[n][m].zvel >>
@@ -636,36 +640,35 @@ void read_vpktparameterfile() {
 
   FILE* input_file = fopen_required("vpkt.txt", "r");
 
-  // Nobs
-  assert_always(fscanf(input_file, "%d", &Nobs) == 1);
+  assert_always(fscanf(input_file, "%d", &nobsdirections) == 1);
 
-  printlnlog("vpkt.txt: Nobs {} directions", Nobs);
+  printlnlog("vpkt.txt: nobsdirections {}", nobsdirections);
 
   // nz_obs_vpkt. Cos(theta) to the observer. A list in the case of many observers
-  nz_obs_vpkt.resize(Nobs);
-  for (int i = 0; i < Nobs; i++) {
-    assert_always(fscanf(input_file, "%lg", &nz_obs_vpkt[i]) == 1);
+  obsdirs_costheta.resize(nobsdirections);
+  for (int i = 0; i < nobsdirections; i++) {
+    assert_always(fscanf(input_file, "%lg", &obsdirs_costheta[i]) == 1);
 
-    if (fabs(nz_obs_vpkt[i]) > 1) {
+    if (fabs(obsdirs_costheta[i]) > 1) {
       printlnlog("Wrong observer direction");
       std::abort();
-    } else if (nz_obs_vpkt[i] == 1) {
-      nz_obs_vpkt[i] = 0.9999;
-    } else if (nz_obs_vpkt[i] == -1) {
-      nz_obs_vpkt[i] = -0.9999;
+    } else if (obsdirs_costheta[i] == 1) {
+      obsdirs_costheta[i] = 0.9999;
+    } else if (obsdirs_costheta[i] == -1) {
+      obsdirs_costheta[i] = -0.9999;
     }
   }
 
   // phi to the observer (degrees). A list in the case of many observers
-  phiobs.resize(Nobs);
-  for (int i = 0; i < Nobs; i++) {
+  obsdirs_phi.resize(nobsdirections);
+  for (int i = 0; i < nobsdirections; i++) {
     double phi_degrees = 0.;
     assert_always(fscanf(input_file, "%lg \n", &phi_degrees) == 1);
-    phiobs[i] = phi_degrees * PI / 180.;
-    const double theta_degrees = std::acos(nz_obs_vpkt[i]) / PI * 180.;
+    obsdirs_phi[i] = phi_degrees * PI / 180.;
+    const double theta_degrees = std::acos(obsdirs_costheta[i]) / PI * 180.;
 
-    printlnlog("vpkt.txt:   direction {} costheta {:g} ({:.1f} degrees) phi {:g} ({:.1f} degrees)", i, nz_obs_vpkt[i],
-               theta_degrees, phiobs[i], phi_degrees);
+    printlnlog("vpkt.txt:   direction {} costheta {:g} ({:.1f} degrees) phi {:g} ({:.1f} degrees)", i,
+               obsdirs_costheta[i], theta_degrees, obsdirs_phi[i], phi_degrees);
   }
 
   // Nspectra opacity choices (i.e. Nspectra spectra for each observer)
@@ -673,27 +676,27 @@ void read_vpktparameterfile() {
   assert_always(fscanf(input_file, "%d ", &nspectra_customlist_flag) == 1);
 
   if (nspectra_customlist_flag != 1) {
-    Nspectra = 1;
-    exclude.resize(Nspectra, 0);
+    nspectraperobsdir = 1;
+    exclude.resize(nspectraperobsdir, 0);
 
     exclude[0] = 0;
   } else {
-    assert_always(fscanf(input_file, "%d ", &Nspectra) == 1);
-    exclude.resize(Nspectra, 0);
+    assert_always(fscanf(input_file, "%d ", &nspectraperobsdir) == 1);
+    exclude.resize(nspectraperobsdir, 0);
 
-    for (int i = 0; i < Nspectra; i++) {
-      assert_always(fscanf(input_file, "%d ", &exclude[i]) == 1);
+    for (int opacchoiceindex = 0; opacchoiceindex < nspectraperobsdir; opacchoiceindex++) {
+      assert_always(fscanf(input_file, "%d ", &exclude[opacchoiceindex]) == 1);
 
       // The first number should be equal to zero!
       assert_always(exclude[0] == 0);  // The first spectrum should allow for all opacities (exclude[i]=0)
-      assert_always(exclude[i] <= 0 ||
+      assert_always(exclude[opacchoiceindex] <= 0 ||
                     !VPKT_USE_EXPANSION_OPACITIES);  // expansion opacities include all elements, so cannot be used
                                                      // with custom lists that exclude some elements
     }
   }
 
-  printlnlog("vpkt.txt: Nspectra {} per observer", Nspectra);
-  tau_vpkt.resize(Nspectra, 0.);
+  printlnlog("vpkt.txt: Nspectra {} per observer", nspectraperobsdir);
+  tau_vpkt.resize(nspectraperobsdir, 0.);
 
   // time window. If dum4=1 it restrict vpkt to time windown (dum5,dum6)
   int override_tminmax = 0;
@@ -704,23 +707,23 @@ void read_vpktparameterfile() {
   printlnlog("vpkt: compiled with VSPEC_TIMEMIN {:.1f}d VSPEC_TIMEMAX {:1f}d VSPEC_TIMEBINS {}", VSPEC_TIMEMIN / DAY,
              VSPEC_TIMEMAX / DAY, VSPEC_TIMEBINS);
   if (override_tminmax == 1) {
-    VSPEC_TIMEMIN_input = vspec_tmin_in_days * DAY;
-    VSPEC_TIMEMAX_input = vspec_tmax_in_days * DAY;
-    printlnlog("vpkt.txt: VSPEC_TIMEMIN_input {:.1f}d, VSPEC_TIMEMAX_input {:.1f}d", VSPEC_TIMEMIN_input / DAY,
-               VSPEC_TIMEMAX_input / DAY);
+    vspec_timemin_input = vspec_tmin_in_days * DAY;
+    vspec_timemax_input = vspec_tmax_in_days * DAY;
+    printlnlog("vpkt.txt: VSPEC_TIMEMIN_input {:.1f}d, VSPEC_TIMEMAX_input {:.1f}d", vspec_timemin_input / DAY,
+               vspec_timemax_input / DAY);
   } else {
-    VSPEC_TIMEMIN_input = VSPEC_TIMEMIN;
-    VSPEC_TIMEMAX_input = VSPEC_TIMEMAX;
+    vspec_timemin_input = VSPEC_TIMEMIN;
+    vspec_timemax_input = VSPEC_TIMEMAX;
     printlnlog(
         "vpkt.txt: VSPEC_TIMEMIN_input {:.1f}d, VSPEC_TIMEMAX_input {:.1f}d (inherited from VSPEC_TIMEMIN and "
         "VSPEC_TIMEMAX)",
-        VSPEC_TIMEMIN_input / DAY, VSPEC_TIMEMAX_input / DAY);
+        vspec_timemin_input / DAY, vspec_timemax_input / DAY);
   }
 
-  assert_always(VSPEC_TIMEMIN_input >= VSPEC_TIMEMIN);
-  assert_always(VSPEC_TIMEMAX_input <= VSPEC_TIMEMAX);
-  assert_always(VSPEC_TIMEMIN_input >= globals::tmin);
-  assert_always(VSPEC_TIMEMAX_input <= globals::tmax);
+  assert_always(vspec_timemin_input >= VSPEC_TIMEMIN);
+  assert_always(vspec_timemax_input <= VSPEC_TIMEMAX);
+  assert_always(vspec_timemin_input >= globals::tmin);
+  assert_always(vspec_timemax_input <= globals::tmax);
 
   // frequency window. dum4 restrict vpkt to a frequency range, dum5 indicates the number of ranges,
   // followed by a list of ranges (dum6,dum7)
@@ -733,35 +736,35 @@ void read_vpktparameterfile() {
   printlnlog("vpkt: compiled with VSPEC_NUMIN {:g} lambda_max {:g} Angstroms", VSPEC_NUMIN, 1e8 * CLIGHT / VSPEC_NUMIN);
 
   if (flag_custom_freq_ranges == 1) {
-    assert_always(fscanf(input_file, "%d ", &Nrange) == 1);
-    VSPEC_NUMIN_input.resize(Nrange, 0.);
-    VSPEC_NUMAX_input.resize(Nrange, 0.);
+    assert_always(fscanf(input_file, "%d ", &nwavelengthranges) == 1);
+    vspec_numin_input.resize(nwavelengthranges, 0.);
+    vspec_numax_input.resize(nwavelengthranges, 0.);
 
-    printlnlog("vpkt.txt: Nrange {} frequency intervals per spectrum per observer", Nrange);
+    printlnlog("vpkt.txt: Nrange {} frequency intervals per spectrum per observer", nwavelengthranges);
 
-    for (int i = 0; i < Nrange; i++) {
+    for (int i = 0; i < nwavelengthranges; i++) {
       double lmin_vspec_input = 0.;
       double lmax_vspec_input = 0.;
       assert_always(fscanf(input_file, "%lg %lg", &lmin_vspec_input, &lmax_vspec_input) == 2);
 
-      VSPEC_NUMIN_input[i] = CLIGHT / (lmax_vspec_input * 1e-8);
-      VSPEC_NUMAX_input[i] = CLIGHT / (lmin_vspec_input * 1e-8);
+      vspec_numin_input[i] = CLIGHT / (lmax_vspec_input * 1e-8);
+      vspec_numax_input[i] = CLIGHT / (lmin_vspec_input * 1e-8);
 
-      assert_always(VSPEC_NUMIN_input[i] >= VSPEC_NUMIN);
-      assert_always(VSPEC_NUMAX_input[i] <= VSPEC_NUMAX);
+      assert_always(vspec_numin_input[i] >= VSPEC_NUMIN);
+      assert_always(vspec_numax_input[i] <= VSPEC_NUMAX);
     }
   } else {
-    Nrange = 1;
+    nwavelengthranges = 1;
 
-    VSPEC_NUMIN_input.push_back(VSPEC_NUMIN);
-    VSPEC_NUMAX_input.push_back(VSPEC_NUMAX);
+    vspec_numin_input.push_back(VSPEC_NUMIN);
+    vspec_numax_input.push_back(VSPEC_NUMAX);
 
     printlnlog("vpkt.txt: Nrange 1 frequency interval (inherited from VSPEC_NUMIN and VSPEC_NUMAX)");
   }
 
-  for (int i = 0; i < Nrange; i++) {
-    printlnlog("vpkt.txt:   range {} lambda [{:g}, {:g}] Angstroms", i, 1e8 * CLIGHT / VSPEC_NUMAX_input[i],
-               1e8 * CLIGHT / VSPEC_NUMIN_input[i]);
+  for (int i = 0; i < nwavelengthranges; i++) {
+    printlnlog("vpkt.txt:   range {} lambda [{:g}, {:g}] Angstroms", i, 1e8 * CLIGHT / vspec_numax_input[i],
+               1e8 * CLIGHT / vspec_numin_input[i]);
   }
 
   // if dum7=1, vpkt are not created when cell optical depth is larger than optical_depth_is_thick_vpkt
@@ -797,13 +800,13 @@ void read_vpktparameterfile() {
     printlnlog("vpkt.txt: velocity grid time range tmin_grid {:g}d tmax_grid {:g}d", tmin_grid / DAY, tmax_grid / DAY);
 
     // Specify wavelength range: number of intervals (dum9) and limits (dum10,dum11)
-    assert_always(fscanf(input_file, "%d ", &Nrange_grid) == 1);
+    assert_always(fscanf(input_file, "%d ", &grid_nwavelengthranges) == 1);
 
-    printlnlog("vpkt.txt: velocity grid frequency intervals {}", Nrange_grid);
+    printlnlog("vpkt.txt: velocity grid frequency intervals {}", grid_nwavelengthranges);
 
-    nu_grid_max.resize(Nrange_grid, 0.);
-    nu_grid_min.resize(Nrange_grid, 0.);
-    for (int i = 0; i < Nrange_grid; i++) {
+    nu_grid_max.resize(grid_nwavelengthranges, 0.);
+    nu_grid_min.resize(grid_nwavelengthranges, 0.);
+    for (int i = 0; i < grid_nwavelengthranges; i++) {
       double range_lambda_min = 0.;
       double range_lambda_max = 0.;
       assert_always(fscanf(input_file, "%lg %lg", &range_lambda_min, &range_lambda_max) == 2);
@@ -874,10 +877,10 @@ void init(const int nts, const bool continued_from_saved) {
 
       std::print(vpkt_contrib_file, "#emissiontype trueemissiontype absorption_type absorption_freq");
 
-      for (int obsdirindex = 0; obsdirindex < Nobs; obsdirindex++) {
+      for (int obsdirindex = 0; obsdirindex < nobsdirections; obsdirindex++) {
         std::print(vpkt_contrib_file, " dir{}_t_arrive_d dir{}_nu_rf", obsdirindex, obsdirindex);
-        for (int ind = 0; ind < Nspectra; ind++) {
-          std::print(vpkt_contrib_file, " dir{}_e_rf_{}", obsdirindex, ind);
+        for (int opacchoiceindex = 0; opacchoiceindex < nspectraperobsdir; opacchoiceindex++) {
+          std::print(vpkt_contrib_file, " dir{}_e_rf_{}", obsdirindex, opacchoiceindex);
         }
       }
 
@@ -910,37 +913,37 @@ auto trace_vpkts(const Packet& pkt, const enum packet_type type_before_rpkt) -> 
     return;
   }
 
-  std::stringstream vpkt_contrib_row;
+  THREADLOCALONHOST std::string vpkt_contrib_row;
   vpkt_contrib_row.clear();
 
   bool any_dir_escaped = false;
-  for (int obsdirindex = 0; obsdirindex < Nobs; obsdirindex++) {
+  for (int obsdirindex = 0; obsdirindex < nobsdirections; obsdirindex++) {
     // loop over different observer directions
 
     const auto obsdir =
-        Vec3d{sqrt(1 - (nz_obs_vpkt[obsdirindex] * nz_obs_vpkt[obsdirindex])) * cos(phiobs[obsdirindex]),
-              sqrt(1 - (nz_obs_vpkt[obsdirindex] * nz_obs_vpkt[obsdirindex])) * sin(phiobs[obsdirindex]),
-              nz_obs_vpkt[obsdirindex]};
+        Vec3d{sqrt(1 - (obsdirs_costheta[obsdirindex] * obsdirs_costheta[obsdirindex])) * cos(obsdirs_phi[obsdirindex]),
+              sqrt(1 - (obsdirs_costheta[obsdirindex] * obsdirs_costheta[obsdirindex])) * sin(obsdirs_phi[obsdirindex]),
+              obsdirs_costheta[obsdirindex]};
 
     const double t_arrive = pkt.prop_time - (dot(pkt.pos, obsdir) / CLIGHT_PROP);
 
     bool dir_escaped = false;
-    if (t_arrive >= VSPEC_TIMEMIN_input && t_arrive <= VSPEC_TIMEMAX_input) {
+    if (t_arrive >= vspec_timemin_input && t_arrive <= vspec_timemax_input) {
       // time selection
 
       const double doppler = calculate_doppler_nucmf_on_nurf(pkt.pos, obsdir, pkt.prop_time);
       const double nu_rf = pkt.nu_cmf / doppler;
       const double e_rf = pkt.e_cmf / doppler;
 
-      for (int i = 0; i < Nrange; i++) {
-        // Loop over frequency ranges
-
-        if ((nu_rf > VSPEC_NUMIN_input[i] && nu_rf < VSPEC_NUMAX_input[i]) ||
-            (pkt.absorptionfreq > VSPEC_NUMIN_input[i] && pkt.absorptionfreq < VSPEC_NUMAX_input[i])) {
+      // Loop over frequency intervals for this observer and check if the vpkt frequency falls in any of them. If it
+      // does, trace the vpkt to see if it escapes in this direction.
+      for (int i = 0; i < nwavelengthranges; i++) {
+        if ((nu_rf > vspec_numin_input[i] && nu_rf < vspec_numax_input[i]) ||
+            (pkt.absorptionfreq > vspec_numin_input[i] && pkt.absorptionfreq < vspec_numax_input[i])) {
           // frequency selection
-          dir_escaped =
-              trace_vpkt_direction(pkt, t_arrive, nu_rf, e_rf, obsdirindex, obsdir, type_before_rpkt, vpkt_contrib_row);
-          break;  // assume that the frequency ranges do not overlap
+          dir_escaped = dir_escaped || trace_vpkt_direction(pkt, t_arrive, nu_rf, e_rf, obsdirindex, obsdir,
+                                                            type_before_rpkt, vpkt_contrib_row);
+          break;  // we only need to match one frequency interval to trace the vpkt
         }
       }
     }
@@ -948,17 +951,15 @@ auto trace_vpkts(const Packet& pkt, const enum packet_type type_before_rpkt) -> 
     if (dir_escaped) {
       any_dir_escaped = true;
     } else {
-      vpkt_contrib_row << " -1. -1.";  // t_arrive_d nu_rf
-      for (int ind = 0; ind < Nspectra; ind++) {
-        vpkt_contrib_row << " 0.";  // e_rf_diri_j
+      vpkt_contrib_row += " -1. -1.";  // t_arrive_d nu_rf
+      for (int opacchoiceindex = 0; opacchoiceindex < nspectraperobsdir; opacchoiceindex++) {
+        vpkt_contrib_row += " 0.";  // e_rf_diri_j
       }
     }
   }
   if (VPKT_WRITE_CONTRIBS && any_dir_escaped) {
-    std::print(vpkt_contrib_file, "{} {} {} {:g}", pkt.emissiontype, pkt.trueemissiontype, pkt.absorptiontype,
-               pkt.absorptionfreq);
-    std::println(vpkt_contrib_file, "{}", vpkt_contrib_row.str());
-    vpkt_contrib_file.flush();
+    std::println(vpkt_contrib_file, "{} {} {} {:g}{}", pkt.emissiontype, pkt.trueemissiontype, pkt.absorptiontype,
+                 pkt.absorptionfreq, vpkt_contrib_row);
   }
 }
 }  // namespace vpkt

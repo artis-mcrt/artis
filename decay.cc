@@ -677,11 +677,10 @@ auto get_endecay_per_ejectamass_between_times(const int mgi, const int decaypath
 }
 
 auto write_nuclides_list() {
-  auto nuclides_file = std::fstream("nuclides.out", std::ofstream::out | std::ofstream::trunc);
-  assert_always(nuclides_file.is_open());
-  nuclides_file << "#nucindex Z A\n";
+  auto nuclides_file = fstream_required("nuclides.out", std::ofstream::out | std::ofstream::trunc);
+  std::println(nuclides_file, "#nucindex Z A");
   for (int nucindex = 0; nucindex < std::ssize(nuclides); nucindex++) {
-    nuclides_file << nucindex << ' ' << get_nuc_z(nucindex) << ' ' << get_nuc_a(nucindex) << '\n';
+    std::println(nuclides_file, "{} {} {}", nucindex, get_nuc_z(nucindex), get_nuc_a(nucindex));
   }
 }
 
