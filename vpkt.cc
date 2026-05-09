@@ -55,8 +55,8 @@ std::array<float, VSPEC_NUBINS> delta_freq_vspec;
 
 int nobsdirections = 0;  // Number of observer directions
 int nspectraperobsdir = 0;  // Number of virtual packet spectra per observer direction (total + elements switched off)
-std::vector<double> nz_obs_vpkt;
-std::vector<double> phiobs;
+std::vector<double> obsdirs_costheta;
+std::vector<double> obsdirs_phi;
 double VSPEC_TIMEMIN_input;
 double VSPEC_TIMEMAX_input;
 int nwavelengthranges = 0;  // Number of wavelength ranges
@@ -81,7 +81,7 @@ struct VGrid {
 
 std::array<std::array<VGrid, VGRID_NZ>, VGRID_NY> vgrid;
 
-int Nrange_grid;
+int grid_nwavelengthranges{};
 double tmin_grid;
 double tmax_grid;
 std::vector<double> nu_grid_min;
@@ -442,7 +442,7 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
   if (vgrid_on) {
     const double prob = pn * exp(-tau_vpkt[0]);
 
-    for (int wlbin = 0; wlbin < Nrange_grid; wlbin++) {
+    for (int wlbin = 0; wlbin < grid_nwavelengthranges; wlbin++) {
       if (nu_rf > nu_grid_min[wlbin] && nu_rf < nu_grid_max[wlbin]) {  // Frequency selection
         if (t_arrive > tmin_grid && t_arrive < tmax_grid) {  // Time selection
           add_to_vpkt_grid(nu_rf, e_rf, {I * prob, Q * prob, U * prob}, vel_vec, wlbin, obsdirindex, obsdir);
@@ -570,9 +570,9 @@ void init_vpkt_grid() {
       vgrid[n][m].yvel = yvel;
       vgrid[n][m].zvel = zvel;
 
-      resize_exactly(vgrid[n][m].flux, Nrange_grid);
+      resize_exactly(vgrid[n][m].flux, grid_nwavelengthranges);
 
-      for (int wlbin = 0; wlbin < Nrange_grid; wlbin++) {
+      for (int wlbin = 0; wlbin < grid_nwavelengthranges; wlbin++) {
         resize_exactly(vgrid[n][m].flux[wlbin], nobsdirections);
         std::ranges::fill(vgrid[n][m].flux[wlbin], StokesParams{.i = 0., .q = 0., .u = 0.});
       }
@@ -584,7 +584,7 @@ void write_vpkt_grid(const std::string& filename) {
   auto vpkt_grid_file = fstream_required(filename, std::ios::out | std::ios::trunc);
 
   for (int obsdirindex = 0; obsdirindex < nobsdirections; obsdirindex++) {
-    for (int wlbin = 0; wlbin < Nrange_grid; wlbin++) {
+    for (int wlbin = 0; wlbin < grid_nwavelengthranges; wlbin++) {
       for (int n = 0; n < VGRID_NY; n++) {
         for (int m = 0; m < VGRID_NZ; m++) {
           vpkt_grid_file << vgrid[n][m].yvel << ' ' << vgrid[n][m].zvel << ' ' << vgrid[n][m].flux[wlbin][obsdirindex].i
@@ -606,7 +606,7 @@ void read_vpkt_grid(const int my_rank, const int nts) {
   auto vpkt_grid_file = fstream_required(filename, std::ios::in);
 
   for (int obsdirindex = 0; obsdirindex < nobsdirections; obsdirindex++) {
-    for (int wlbin = 0; wlbin < Nrange_grid; wlbin++) {
+    for (int wlbin = 0; wlbin < grid_nwavelengthranges; wlbin++) {
       for (int n = 0; n < VGRID_NY; n++) {
         for (int m = 0; m < VGRID_NZ; m++) {
           assert_always(vpkt_grid_file >> vgrid[n][m].yvel >> vgrid[n][m].zvel >>
@@ -644,30 +644,30 @@ void read_vpktparameterfile() {
   printlnlog("vpkt.txt: nobsdirections {}", nobsdirections);
 
   // nz_obs_vpkt. Cos(theta) to the observer. A list in the case of many observers
-  nz_obs_vpkt.resize(nobsdirections);
+  obsdirs_costheta.resize(nobsdirections);
   for (int i = 0; i < nobsdirections; i++) {
-    assert_always(fscanf(input_file, "%lg", &nz_obs_vpkt[i]) == 1);
+    assert_always(fscanf(input_file, "%lg", &obsdirs_costheta[i]) == 1);
 
-    if (fabs(nz_obs_vpkt[i]) > 1) {
+    if (fabs(obsdirs_costheta[i]) > 1) {
       printlnlog("Wrong observer direction");
       std::abort();
-    } else if (nz_obs_vpkt[i] == 1) {
-      nz_obs_vpkt[i] = 0.9999;
-    } else if (nz_obs_vpkt[i] == -1) {
-      nz_obs_vpkt[i] = -0.9999;
+    } else if (obsdirs_costheta[i] == 1) {
+      obsdirs_costheta[i] = 0.9999;
+    } else if (obsdirs_costheta[i] == -1) {
+      obsdirs_costheta[i] = -0.9999;
     }
   }
 
   // phi to the observer (degrees). A list in the case of many observers
-  phiobs.resize(nobsdirections);
+  obsdirs_phi.resize(nobsdirections);
   for (int i = 0; i < nobsdirections; i++) {
     double phi_degrees = 0.;
     assert_always(fscanf(input_file, "%lg \n", &phi_degrees) == 1);
-    phiobs[i] = phi_degrees * PI / 180.;
-    const double theta_degrees = std::acos(nz_obs_vpkt[i]) / PI * 180.;
+    obsdirs_phi[i] = phi_degrees * PI / 180.;
+    const double theta_degrees = std::acos(obsdirs_costheta[i]) / PI * 180.;
 
-    printlnlog("vpkt.txt:   direction {} costheta {:g} ({:.1f} degrees) phi {:g} ({:.1f} degrees)", i, nz_obs_vpkt[i],
-               theta_degrees, phiobs[i], phi_degrees);
+    printlnlog("vpkt.txt:   direction {} costheta {:g} ({:.1f} degrees) phi {:g} ({:.1f} degrees)", i,
+               obsdirs_costheta[i], theta_degrees, obsdirs_phi[i], phi_degrees);
   }
 
   // Nspectra opacity choices (i.e. Nspectra spectra for each observer)
@@ -799,13 +799,13 @@ void read_vpktparameterfile() {
     printlnlog("vpkt.txt: velocity grid time range tmin_grid {:g}d tmax_grid {:g}d", tmin_grid / DAY, tmax_grid / DAY);
 
     // Specify wavelength range: number of intervals (dum9) and limits (dum10,dum11)
-    assert_always(fscanf(input_file, "%d ", &Nrange_grid) == 1);
+    assert_always(fscanf(input_file, "%d ", &grid_nwavelengthranges) == 1);
 
-    printlnlog("vpkt.txt: velocity grid frequency intervals {}", Nrange_grid);
+    printlnlog("vpkt.txt: velocity grid frequency intervals {}", grid_nwavelengthranges);
 
-    nu_grid_max.resize(Nrange_grid, 0.);
-    nu_grid_min.resize(Nrange_grid, 0.);
-    for (int i = 0; i < Nrange_grid; i++) {
+    nu_grid_max.resize(grid_nwavelengthranges, 0.);
+    nu_grid_min.resize(grid_nwavelengthranges, 0.);
+    for (int i = 0; i < grid_nwavelengthranges; i++) {
       double range_lambda_min = 0.;
       double range_lambda_max = 0.;
       assert_always(fscanf(input_file, "%lg %lg", &range_lambda_min, &range_lambda_max) == 2);
@@ -920,9 +920,9 @@ auto trace_vpkts(const Packet& pkt, const enum packet_type type_before_rpkt) -> 
     // loop over different observer directions
 
     const auto obsdir =
-        Vec3d{sqrt(1 - (nz_obs_vpkt[obsdirindex] * nz_obs_vpkt[obsdirindex])) * cos(phiobs[obsdirindex]),
-              sqrt(1 - (nz_obs_vpkt[obsdirindex] * nz_obs_vpkt[obsdirindex])) * sin(phiobs[obsdirindex]),
-              nz_obs_vpkt[obsdirindex]};
+        Vec3d{sqrt(1 - (obsdirs_costheta[obsdirindex] * obsdirs_costheta[obsdirindex])) * cos(obsdirs_phi[obsdirindex]),
+              sqrt(1 - (obsdirs_costheta[obsdirindex] * obsdirs_costheta[obsdirindex])) * sin(obsdirs_phi[obsdirindex]),
+              obsdirs_costheta[obsdirindex]};
 
     const double t_arrive = pkt.prop_time - (dot(pkt.pos, obsdir) / CLIGHT_PROP);
 
