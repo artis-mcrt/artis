@@ -434,8 +434,6 @@ void write_to_file(const int nonemptymgi, const int timestep) {
       float W = 0.;
       double J_nu_bar = 0.;
 
-      const bool skipoutput = false;
-
       if (binindex >= 0) {
         nu_lower = get_bin_nu_lower(binindex);
         nu_upper = get_bin_nu_upper(binindex);
@@ -462,10 +460,8 @@ void write_to_file(const int nonemptymgi, const int timestep) {
         J_nu_bar = prev_Jb_lu_normed[nonemptymgi][jblueindex].value;
       }
 
-      if (!skipoutput) {
-        std::println(radfieldfile, "{:d} {:d} {:d} {:.5e} {:.5e} {:.3e} {:.3e} {:.3e} {:.1f} {:.5e}", timestep,
-                     modelgridindex, binindex, nu_lower, nu_upper, nuJ_out, J_out, J_nu_bar, T_R, W);
-      }
+      std::println(radfieldfile, "{:d} {:d} {:d} {:.5e} {:.5e} {:.3e} {:.3e} {:.3e} {:.1f} {:.5e}", timestep,
+                   modelgridindex, binindex, nu_lower, nu_upper, nuJ_out, J_out, J_nu_bar, T_R, W);
     }
     radfieldfile.flush();
 #ifdef _OPENMP
