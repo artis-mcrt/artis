@@ -901,8 +901,9 @@ void setup_phixs_list() {
       }
     }
     globals::allcont.bfestimindex = std::move(allcont_bfestimindex);
-    auto bfestim_nu_edge = MPI_shared_array<double>(std::ssize(temp_bfestim_nu_edge));
-    std::copy_n(temp_bfestim_nu_edge.cbegin(), temp_bfestim_nu_edge.size(), bfestim_nu_edge.data());
+    const auto bfestimcount = std::ssize(temp_bfestim_nu_edge);
+    auto bfestim_nu_edge = MPI_shared_array<double>(bfestimcount);
+    std::copy_n(temp_bfestim_nu_edge.cbegin(), bfestimcount, bfestim_nu_edge.data());
     globals::bfestim_nu_edge = std::move(bfestim_nu_edge);
 
     setup_photoion_luts();
