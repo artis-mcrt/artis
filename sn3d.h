@@ -55,8 +55,8 @@ inline void check_already_running() {
     }
 
     auto pidfile = std::fstream("artis.pid", std::ofstream::out | std::ofstream::trunc);
-    pidfile << artispid << '\n';
-    pidfile << std::filesystem::current_path().generic_string() << '\n';
+    std::println(pidfile, "{}", artispid);
+    std::println(pidfile, "{}", std::filesystem::current_path().generic_string());
   }
 
   // make sure rank 0 checked for a pid file before we proceed
