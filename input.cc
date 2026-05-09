@@ -902,9 +902,7 @@ void setup_phixs_list() {
     }
     globals::allcont.bfestimindex = std::move(allcont_bfestimindex);
     auto bfestim_nu_edge = MPI_shared_array<double>(std::ssize(temp_bfestim_nu_edge));
-    for (int i = 0; i < std::ssize(temp_bfestim_nu_edge); i++) {
-      bfestim_nu_edge[i] = temp_bfestim_nu_edge[i];
-    }
+    std::ranges::copy(temp_bfestim_nu_edge, bfestim_nu_edge.begin());
     globals::bfestim_nu_edge = std::move(bfestim_nu_edge);
 
     setup_photoion_luts();
@@ -992,7 +990,7 @@ void read_autoion_data() {
 
   globals::allautoion = MPI_shared_array<globals::LevelAutoion>(temp_allautoion.size());
   if (globals::rank_in_node == 0) {
-    std::copy_n(temp_allautoion.cbegin(), temp_allautoion.size(), globals::allautoion.data());
+    std::ranges::copy(temp_allautoion, globals::allautoion.begin());
   }
   MPI_Barrier_node();
 
@@ -1087,7 +1085,7 @@ void read_phixs_data() {
     auto allphixstargets_probability = MPI_shared_array<double>(std::ssize(tmpallphixstargets));
 
     if (globals::rank_in_node == 0) {
-      std::copy_n(tmpallphixs.cbegin(), tmpallphixs.size(), globals::allphixs.data());
+      std::ranges::copy(tmpallphixs, globals::allphixs.begin());
 
       for (int i = 0; i < std::ssize(tmpallphixstargets); i++) {
         allphixstargets_levelindex[i] = tmpallphixstargets[i].levelindex;
