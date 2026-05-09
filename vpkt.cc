@@ -941,6 +941,7 @@ auto trace_vpkts(const Packet& pkt, const enum packet_type type_before_rpkt) -> 
           // frequency selection
           dir_escaped = dir_escaped || trace_vpkt_direction(pkt, t_arrive, nu_rf, e_rf, obsdirindex, obsdir,
                                                             type_before_rpkt, vpkt_contrib_row);
+          break;  // we only need to match one frequency interval to trace the vpkt
         }
       }
     }
