@@ -431,7 +431,7 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
     add_to_vspecpol(nu_rf, e_rf, stokes, obsdirindex, ind, t_arrive);
 
     if constexpr (VPKT_WRITE_CONTRIBS) {
-      vpkt_contrib_row << ' ' << e_rf * prob;
+      vpkt_contrib_row << std::format(" {:g}", e_rf * prob);
     }
   }
 
