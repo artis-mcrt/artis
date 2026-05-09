@@ -559,12 +559,6 @@ void macroatom_open_file() {
                                 "level_out", "activline", "nu_cmf_in", "nu_cmf_out", "nu_rf_in", "nu_rf_out");
 }
 
-void macroatom_close_file() {
-  if (macroatom_file.is_open()) {
-    macroatom_file.close();
-  }
-}
-
 // radiative excitation rate: paperII 3.5.2
 // multiply by lower level population to get a rate per second
 [[gnu::pure]] [[nodiscard]] auto rad_excitation_ratecoeff(const int nonemptymgi, const double upper_statweight,

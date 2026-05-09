@@ -659,22 +659,6 @@ auto get_Jb_lu(const int nonemptymgi, const int jblueindex) -> double {
   return prev_Jb_lu_normed[nonemptymgi][jblueindex].value;
 }
 
-void close_file() {
-  if (radfieldfile.is_open()) {
-    radfieldfile.close();
-  }
-
-  if (MULTIBIN_RADFIELD_MODEL_ON) {
-    radfieldbins = {};
-    radfieldbin_solutions_W.reset();
-    radfieldbin_solutions_T_R.reset();
-  }
-
-  if constexpr (DETAILED_BF_ESTIMATORS_ON) {
-    prev_bfrate_normed.reset();
-  }
-}
-
 // set up the new bins and clear the estimators in preparation for a timestep
 void zero_estimators() {
   std::ranges::fill(J_normfactor, -1.0);

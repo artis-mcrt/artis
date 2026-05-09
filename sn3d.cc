@@ -958,11 +958,6 @@ auto main(int argc, char* argv[]) -> int {
     estimators_file.close();
   }
 
-  macroatom_close_file();
-
-  radfield::close_file();
-  nonthermal::close_file();
-
   MPI_Finalize();
 
   std::filesystem::remove("artis.pid");
