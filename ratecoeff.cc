@@ -33,12 +33,8 @@ constexpr double RATECOEFF_INTEGRAL_ACCURACY = 1e-3;
 const auto temperature_grid = []() {
   const double T_step_log = (std::log(MAXTEMP) - std::log(MINTEMP)) / (TABLESIZE - 1.);
   std::array<double, TABLESIZE + 1> grid{};
-  double temperature = MINTEMP;
-  const double temperature_step = std::exp(T_step_log);
-  for (auto& gridpoint : grid) {
-    gridpoint = temperature;
-    temperature *= temperature_step;
-  }
+  auto i = 0UZ;
+  std::generate(grid.begin(), grid.end(), [&i, T_step_log] { return MINTEMP * std::exp(i++ * T_step_log); });
   return grid;
 }();
 
