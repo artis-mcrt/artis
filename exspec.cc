@@ -70,8 +70,7 @@ void do_direction_bin(const int dirbin, const std::vector<std::vector<Packet>>& 
 
     int nesc_gamma = 0;
     int nesc_rpkt = 0;
-    for (int ii = 0; ii < std::ssize(pkts_thisrank); ii++) {
-      const auto& pkt = pkts_thisrank[ii];
+    for (const auto& pkt : pkts_thisrank) {
       if (pkt.type != TYPE_ESCAPE) {
         continue;
       }
