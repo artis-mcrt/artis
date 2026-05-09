@@ -260,33 +260,46 @@ void write_deposition_file() {
                                   globals::timesteps[i].spfission_dep_discrete) /
                                  mtot / t_width;
 
-      std::print(
-          dep_file, "{} {:g} {:g} {:g} {:g} {:g} {:g} {:g} {:g} {:g} {:g} {:g} {:g} {:g}", i, t_mid / DAY, t_mid,
-          total_dep / t_width / LSUN, globals::timesteps[i].gamma_dep_discrete / t_width / LSUN,
-          globals::timesteps[i].gamma_dep / t_width / LSUN, globals::timesteps[i].positron_dep / t_width / LSUN,
-          globals::timesteps[i].eps_positron_ana_power / LSUN, globals::timesteps[i].electron_dep / t_width / LSUN,
-          globals::timesteps[i].electron_emission / t_width / LSUN, globals::timesteps[i].eps_electron_ana_power / LSUN,
-          globals::timesteps[i].alpha_dep / t_width / LSUN, globals::timesteps[i].alpha_emission / t_width / LSUN,
-          globals::timesteps[i].eps_alpha_ana_power / LSUN);
+      std::print(dep_file, "{} {:g} {:g} {:g}", i, t_mid / DAY, t_mid, total_dep / t_width / LSUN);
+
+      std::print(dep_file, " {:g} {:g}", globals::timesteps[i].gamma_dep_discrete / t_width / LSUN,
+                 globals::timesteps[i].gamma_dep / t_width / LSUN);
+
+      std::print(dep_file, " {:g} {:g}", globals::timesteps[i].positron_dep / t_width / LSUN,
+                 globals::timesteps[i].eps_positron_ana_power / LSUN);
+
+      std::print(dep_file, " {:g} {:g} {:g}", globals::timesteps[i].electron_dep / t_width / LSUN,
+                 globals::timesteps[i].electron_emission / t_width / LSUN,
+                 globals::timesteps[i].eps_electron_ana_power / LSUN);
+
+      std::print(dep_file, " {:g} {:g} {:g}", globals::timesteps[i].alpha_dep / t_width / LSUN,
+                 globals::timesteps[i].alpha_emission / t_width / LSUN,
+                 globals::timesteps[i].eps_alpha_ana_power / LSUN);
+
       if (any_fission) {
         std::print(dep_file, " {:g}", globals::timesteps[i].eps_spfission_ana_power / LSUN);
       } else {
         assert_testmodeonly(globals::timesteps[i].eps_spfission_ana_power == 0.);
       }
+
       std::print(dep_file, " {:g} {:g} {:g}", globals::timesteps[i].gamma_emission / t_width / LSUN,
                  globals::timesteps[i].qdot_betaminus / mtot, globals::timesteps[i].qdot_alpha / mtot);
+
       if (any_fission) {
         std::print(dep_file, " {:g}", globals::timesteps[i].qdot_spfission / mtot);
       } else {
         assert_testmodeonly(globals::timesteps[i].qdot_spfission == 0.);
       }
+
       std::print(dep_file, " {:g} {:g} {:g} {:g} {:g}", epsilon_tot, globals::timesteps[i].qdot_total / mtot,
                  globals::timesteps[i].positron_dep_discrete / t_width / LSUN,
                  globals::timesteps[i].electron_dep_discrete / t_width / LSUN,
                  globals::timesteps[i].alpha_dep_discrete / t_width / LSUN);
+
       if (any_fission) {
         std::print(dep_file, " {:g}", globals::timesteps[i].spfission_dep_discrete / t_width / LSUN);
       }
+
       std::println(dep_file, "");
     }
     dep_file.close();
