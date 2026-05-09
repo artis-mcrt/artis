@@ -910,7 +910,7 @@ auto trace_vpkts(const Packet& pkt, const enum packet_type type_before_rpkt) -> 
     return;
   }
 
-  std::string vpkt_contrib_row;
+  THREADLOCALONHOST std::string vpkt_contrib_row;
 
   bool any_dir_escaped = false;
   for (int obsdirindex = 0; obsdirindex < Nobs; obsdirindex++) {
