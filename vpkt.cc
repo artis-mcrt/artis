@@ -418,7 +418,7 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
   // -------------- final stokes vector ---------------
 
   if (VPKT_WRITE_CONTRIBS) {
-    vpkt_contrib_row << ' ' << t_arrive / DAY << ' ' << nu_rf;
+    vpkt_contrib_row << std::format(" {:g} {:g}", t_arrive / DAY, nu_rf);
   }
 
   for (int ind = 0; ind < Nspectra; ind++) {
