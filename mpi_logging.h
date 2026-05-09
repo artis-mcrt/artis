@@ -148,7 +148,7 @@ __attribute__((__format__(__printf__, 1, 2))) inline auto printout(const char* f
 
   const auto linebuflen = strlen(outputlinebuf.data());
   outputstartofline = (linebuflen == 0 || (outputlinebuf[linebuflen - 1] == '\n'));
-  output_file << outputlinebuf.data();
+  std::print(output_file, "{}", outputlinebuf.data());
   output_file.flush();
 }
 
