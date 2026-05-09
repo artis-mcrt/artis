@@ -224,7 +224,7 @@ void write_text_packets(const std::string& filename, const std::span<const Packe
     std::print(packets_file, "{} {} {}", pkt.number, pkt.cellindex, std::to_underlying(pkt.type));
     std::print(packets_file, " {:g} {:g} {:g}", pkt.pos[0], pkt.pos[1], pkt.pos[2]);
     std::print(packets_file, " {:g} {:g} {:g}", pkt.dir[0], pkt.dir[1], pkt.dir[2]);
-    std::print(packets_file, " {:g} ", pkt.tdecay);
+    std::print(packets_file, " {:g}", pkt.tdecay);
     std::print(packets_file, " {:g} {:g} {:g} {:g}", pkt.e_cmf, pkt.e_rf, pkt.nu_cmf, pkt.nu_rf);
     std::print(packets_file, " {} {:g}", std::to_underlying(pkt.escape_type), pkt.escape_time);
     std::print(packets_file, " {} {}", pkt.emissiontype, pkt.trueemissiontype);
