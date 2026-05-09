@@ -1857,7 +1857,7 @@ void update_parameterfile(const int nts) {
       }
     }
 
-    fileout << line << '\n';
+    std::println(fileout, "{}", line);
   }
 
   fileout.close();
