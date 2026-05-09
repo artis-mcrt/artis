@@ -10,6 +10,7 @@
 #include <format>
 #include <fstream>
 #include <ios>
+#include <iterator>
 #include <print>
 #include <sstream>
 #include <string>
@@ -418,7 +419,7 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
   // -------------- final stokes vector ---------------
 
   if (VPKT_WRITE_CONTRIBS) {
-    vpkt_contrib_row += std::format(" {:g} {:g}", t_arrive / DAY, nu_rf);
+    std::format_to(std::back_inserter(vpkt_contrib_row), " {:g} {:g}", t_arrive / DAY, nu_rf);
   }
 
   for (int ind = 0; ind < Nspectra; ind++) {
@@ -431,7 +432,7 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
     add_to_vspecpol(nu_rf, e_rf, stokes, obsdirindex, ind, t_arrive);
 
     if constexpr (VPKT_WRITE_CONTRIBS) {
-      vpkt_contrib_row += std::format(" {:g}", e_rf * prob);
+      std::format_to(std::back_inserter(vpkt_contrib_row), " {:g}", e_rf * prob);
     }
   }
 
