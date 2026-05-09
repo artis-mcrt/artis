@@ -229,21 +229,24 @@ void write_deposition_file() {
   if (my_rank == 0) {
     const bool any_fission = decay::decaytype_is_used(decay::DECAYTYPE_SPONTFISSION);
     auto dep_file = fstream_required("deposition.out.tmp", std::ios::out | std::ios::trunc);
-    dep_file << "#ts tmid_days tmid_s total_dep_Lsun gammadep_discrete_Lsun gammadep_Lsun positrondep_Lsun "
-                "eps_positron_ana_Lsun elecdep_Lsun eps_elec_Lsun eps_elec_ana_Lsun alphadep_Lsun eps_alpha_Lsun "
-                "eps_alpha_ana_Lsun";
+    std::print(dep_file,
+               "#ts tmid_days tmid_s total_dep_Lsun gammadep_discrete_Lsun gammadep_Lsun positrondep_Lsun "
+               "eps_positron_ana_Lsun elecdep_Lsun eps_elec_Lsun eps_elec_ana_Lsun alphadep_Lsun eps_alpha_Lsun "
+               "eps_alpha_ana_Lsun");
     if (any_fission) {
-      dep_file << " eps_spfission_ana_Lsun";
+      std::print(dep_file, " eps_spfission_ana_Lsun");
     }
-    dep_file << " eps_gamma_Lsun Qdot_betaminus_ana_erg/s/g Qdotalpha_ana_erg/s/g";
+    std::print(dep_file, " eps_gamma_Lsun Qdot_betaminus_ana_erg/s/g Qdotalpha_ana_erg/s/g");
     if (any_fission) {
-      dep_file << " Qdotspfission_ana_erg/s/g";
+      std::print(dep_file, " Qdotspfission_ana_erg/s/g");
     }
-    dep_file << " eps_erg/s/g Qdot_ana_erg/s/g positrondep_discrete_Lsun elecdep_discrete_Lsun alphadep_discrete_Lsun";
+    std::print(dep_file,
+               " eps_erg/s/g Qdot_ana_erg/s/g positrondep_discrete_Lsun elecdep_discrete_Lsun "
+               "alphadep_discrete_Lsun");
     if (any_fission) {
-      dep_file << " spfission_dep_discrete_Lsun";
+      std::print(dep_file, " spfission_dep_discrete_Lsun");
     }
-    dep_file << '\n';
+    std::println(dep_file, "");
 
     for (int i = 0; i <= nts; i++) {
       const double t_mid = globals::timesteps[i].mid;
@@ -257,39 +260,34 @@ void write_deposition_file() {
                                   globals::timesteps[i].spfission_dep_discrete) /
                                  mtot / t_width;
 
-      dep_file << i << ' ' << t_mid / DAY << ' ' << t_mid;
-      dep_file << ' ' << total_dep / t_width / LSUN;
-      dep_file << ' ' << globals::timesteps[i].gamma_dep_discrete / t_width / LSUN;
-      dep_file << ' ' << globals::timesteps[i].gamma_dep / t_width / LSUN;
-      dep_file << ' ' << globals::timesteps[i].positron_dep / t_width / LSUN;
-      dep_file << ' ' << globals::timesteps[i].eps_positron_ana_power / LSUN;
-      dep_file << ' ' << globals::timesteps[i].electron_dep / t_width / LSUN;
-      dep_file << ' ' << globals::timesteps[i].electron_emission / t_width / LSUN;
-      dep_file << ' ' << globals::timesteps[i].eps_electron_ana_power / LSUN;
-      dep_file << ' ' << globals::timesteps[i].alpha_dep / t_width / LSUN;
-      dep_file << ' ' << globals::timesteps[i].alpha_emission / t_width / LSUN;
-      dep_file << ' ' << globals::timesteps[i].eps_alpha_ana_power / LSUN;
+      std::print(
+          dep_file, "{} {:g} {:g} {:g} {:g} {:g} {:g} {:g} {:g} {:g} {:g} {:g} {:g} {:g}", i, t_mid / DAY, t_mid,
+          total_dep / t_width / LSUN, globals::timesteps[i].gamma_dep_discrete / t_width / LSUN,
+          globals::timesteps[i].gamma_dep / t_width / LSUN, globals::timesteps[i].positron_dep / t_width / LSUN,
+          globals::timesteps[i].eps_positron_ana_power / LSUN, globals::timesteps[i].electron_dep / t_width / LSUN,
+          globals::timesteps[i].electron_emission / t_width / LSUN, globals::timesteps[i].eps_electron_ana_power / LSUN,
+          globals::timesteps[i].alpha_dep / t_width / LSUN, globals::timesteps[i].alpha_emission / t_width / LSUN,
+          globals::timesteps[i].eps_alpha_ana_power / LSUN);
       if (any_fission) {
-        dep_file << ' ' << globals::timesteps[i].eps_spfission_ana_power / LSUN;
+        std::print(dep_file, " {:g}", globals::timesteps[i].eps_spfission_ana_power / LSUN);
       } else {
         assert_testmodeonly(globals::timesteps[i].eps_spfission_ana_power == 0.);
       }
-      dep_file << ' ' << globals::timesteps[i].gamma_emission / t_width / LSUN;
-      dep_file << ' ' << globals::timesteps[i].qdot_betaminus / mtot;
-      dep_file << ' ' << globals::timesteps[i].qdot_alpha / mtot;
+      std::print(dep_file, " {:g} {:g} {:g}", globals::timesteps[i].gamma_emission / t_width / LSUN,
+                 globals::timesteps[i].qdot_betaminus / mtot, globals::timesteps[i].qdot_alpha / mtot);
       if (any_fission) {
-        dep_file << ' ' << globals::timesteps[i].qdot_spfission / mtot;
+        std::print(dep_file, " {:g}", globals::timesteps[i].qdot_spfission / mtot);
       } else {
         assert_testmodeonly(globals::timesteps[i].qdot_spfission == 0.);
       }
-      dep_file << ' ' << epsilon_tot << ' ' << globals::timesteps[i].qdot_total / mtot;
-      dep_file << ' ' << globals::timesteps[i].positron_dep_discrete / t_width / LSUN;
-      dep_file << ' ' << globals::timesteps[i].electron_dep_discrete / t_width / LSUN;
-      dep_file << ' ' << globals::timesteps[i].alpha_dep_discrete / t_width / LSUN;
+      std::print(dep_file, " {:g} {:g} {:g} {:g} {:g}", epsilon_tot, globals::timesteps[i].qdot_total / mtot,
+                 globals::timesteps[i].positron_dep_discrete / t_width / LSUN,
+                 globals::timesteps[i].electron_dep_discrete / t_width / LSUN,
+                 globals::timesteps[i].alpha_dep_discrete / t_width / LSUN);
       if (any_fission) {
-        dep_file << ' ' << globals::timesteps[i].spfission_dep_discrete / t_width / LSUN;
+        std::print(dep_file, " {:g}", globals::timesteps[i].spfission_dep_discrete / t_width / LSUN);
       }
-      dep_file << '\n';
+      std::println(dep_file, "");
     }
     dep_file.close();
 
