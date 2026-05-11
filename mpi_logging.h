@@ -170,19 +170,19 @@ inline auto printlnlog(const std::format_string<Args...> fmt, Args&&... args) no
   output_file.flush();
 }
 
-#define __artis_assert(e)                                                                                              \
-  {                                                                                                                    \
-    const bool assertpass = static_cast<bool>(e);                                                                      \
-    if (!assertpass) [[unlikely]] {                                                                                    \
-      if (output_file) {                                                                                               \
-        output_file << "\n[rank " << globals::my_rank << "] " << __FILE__ << ":" << __LINE__ << ": failed assertion `" \
-                    << #e << "` in function " << __PRETTY_FUNCTION__ << '\n';                                          \
-        output_file.flush();                                                                                           \
-      }                                                                                                                \
-      std::cerr << "\n[rank " << globals::my_rank << "] " << __FILE__ << ":" << __LINE__ << ": failed assertion `"     \
-                << #e << "` in function " << __PRETTY_FUNCTION__ << '\n';                                              \
-    }                                                                                                                  \
-    assert(assertpass);                                                                                                \
+#define __artis_assert(e)                                                                                            \
+  {                                                                                                                  \
+    const bool assertpass = static_cast<bool>(e);                                                                    \
+    if (!assertpass) [[unlikely]] {                                                                                  \
+      if (output_file) {                                                                                             \
+        std::println(output_file, "\n[rank {}] {}:{}: failed assertion `{}` in function {}", globals::my_rank,       \
+                     __FILE__, __LINE__, #e, __PRETTY_FUNCTION__);                                                   \
+        output_file.flush();                                                                                         \
+      }                                                                                                              \
+      std::println(std::cerr, "\n[rank {}] {}:{}: failed assertion `{}` in function {}", globals::my_rank, __FILE__, \
+                   __LINE__, #e, __PRETTY_FUNCTION__);                                                               \
+    }                                                                                                                \
+    assert(assertpass);                                                                                              \
   }
 
 #endif
