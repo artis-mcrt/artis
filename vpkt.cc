@@ -663,7 +663,7 @@ void read_vpktparameterfile() {
   obsdirs_phi.resize(nobsdirections);
   for (int i = 0; i < nobsdirections; i++) {
     double phi_degrees = 0.;
-    assert_always(fscanf(input_file, "%lg \n", &phi_degrees) == 1);
+    assert_always(fscanf(input_file, "%lg", &phi_degrees) == 1);
     obsdirs_phi[i] = phi_degrees * PI / 180.;
     const double theta_degrees = std::acos(obsdirs_costheta[i]) / PI * 180.;
 
@@ -702,7 +702,7 @@ void read_vpktparameterfile() {
   int override_tminmax = 0;
   double vspec_tmin_in_days = 0.;
   double vspec_tmax_in_days = 0.;
-  assert_always(fscanf(input_file, "%d %lg %lg \n", &override_tminmax, &vspec_tmin_in_days, &vspec_tmax_in_days) == 3);
+  assert_always(fscanf(input_file, "%d %lg %lg", &override_tminmax, &vspec_tmin_in_days, &vspec_tmax_in_days) == 3);
 
   printlnlog("vpkt: compiled with VSPEC_TIMEMIN {:.1f}d VSPEC_TIMEMAX {:1f}d VSPEC_TIMEBINS {}", VSPEC_TIMEMIN / DAY,
              VSPEC_TIMEMAX / DAY, VSPEC_TIMEBINS);
@@ -769,7 +769,7 @@ void read_vpktparameterfile() {
 
   // if dum7=1, vpkt are not created when cell optical depth is larger than optical_depth_is_thick_vpkt
   int override_thickcell_tau = 0;
-  assert_always(fscanf(input_file, "%d %lg \n", &override_thickcell_tau, &optical_depth_is_thick_vpkt) == 2);
+  assert_always(fscanf(input_file, "%d %lg", &override_thickcell_tau, &optical_depth_is_thick_vpkt) == 2);
 
   if (override_thickcell_tau == 1) {
     printlnlog("vpkt.txt: optical_depth_is_thick_vpkt {:g}", optical_depth_is_thick_vpkt);
@@ -780,12 +780,12 @@ void read_vpktparameterfile() {
   }
 
   // Maximum optical depth. If a vpkt reaches dum7 is thrown away
-  assert_always(fscanf(input_file, "%lg \n", &tau_max_vpkt) == 1);
+  assert_always(fscanf(input_file, "%lg", &tau_max_vpkt) == 1);
   printlnlog("vpkt.txt: tau_max_vpkt {:g}", tau_max_vpkt);
 
   // Produce velocity grid map if =1
   int in_vgrid_on = 0;
-  assert_always(fscanf(input_file, "%d \n", &in_vgrid_on) == 1);
+  assert_always(fscanf(input_file, "%d", &in_vgrid_on) == 1);
   vgrid_on = in_vgrid_on != 0;
   printlnlog("vpkt.txt: velocity grid map {}", vgrid_on ? "ENABLED" : "DISABLED");
 
@@ -793,7 +793,7 @@ void read_vpktparameterfile() {
     double tmin_grid_in_days{NAN};
     double tmax_grid_in_days{NAN};
     // Specify time range for velocity grid map
-    assert_always(fscanf(input_file, "%lg %lg \n", &tmin_grid_in_days, &tmax_grid_in_days) == 2);
+    assert_always(fscanf(input_file, "%lg %lg", &tmin_grid_in_days, &tmax_grid_in_days) == 2);
     tmin_grid = tmin_grid_in_days * DAY;
     tmax_grid = tmax_grid_in_days * DAY;
 
