@@ -377,10 +377,7 @@ auto find_converged_nne(const int nonemptymgi, double nne_max, const bool force_
   return nn;
 }
 
-// The partition functions depend only on T_R and W. This means they don't
-// change during any iteration on T_e. Therefore their precalculation was
-// taken out of calculate_ion_balance_nne to save runtime.
-// TODO: not true if LTEPOP_EXCITATION_USE_TJ is true unless LTE mode only (TJ=TR=Te)
+// Set the partition function for an element in a cell based on the current level populations
 void calculate_cellpartfuncts(const int nonemptymgi, const int element) {
   const int nions = get_nions(element);
   for (int ion = 0; ion < nions; ion++) {

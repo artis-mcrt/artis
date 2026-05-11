@@ -110,7 +110,10 @@ const auto logengrid = []() {
   return _logengrid;
 }();
 
-// samples of the source function (energy distribution of deposited energy)
+// evaluate the source function (distribution of deposited energy) [s^-1 cm^-3 eV^-1] at energy engrid(index)
+// This function returns only the spectral shape of the deposited-energy source, spread over a finite energy interval
+// and normalized so its integral over energy is 1 (i.e. effective units of eV^-1); the final deposition-rate density
+// scaling is applied separately.
 constexpr auto sourcevec(const int index) {
   assert_testmodeonly(index >= 0 && index < SFPTS);
 
@@ -120,10 +123,6 @@ constexpr auto sourcevec(const int index) {
   constexpr int sourcestartindex = SFPTS - source_spread_pts;
 
   return (index < sourcestartindex) ? 0. : 1. / source_spread_en;
-
-  // or put all of the source into one point at SF_EMAX
-  // return (index < SFPTS - 1) ? 0. : 1. / DELTA_E;
-  // so that E_init_ev = SF_EMAX;
 }
 
 // the energy injection rate density (integral of E * S(e) dE) in eV/s/cm3 that the Spencer-Fano equation is solved for.
@@ -1750,7 +1749,7 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const std::a
       }
     }
 
-    // sort the excitation list by ascending lineindex for fast lookup with a binary search
+    // sort the excitation list by ascending alltransindex for fast lookup with a binary search
     std::ranges::SORT_OR_STABLE_SORT(get_cell_ntexcitations(nonemptymgi), std::ranges::less{},
                                      &NonThermalExcitation::alltransindex);
 
@@ -2278,7 +2277,7 @@ DEVICE_FUNC auto nt_excitation_ratecoeff(const int nonemptymgi, const int lowerl
     return 0.;
   }
 
-  // binary search, assuming the excitation list is sorted by lineindex ascending
+  // binary search, assuming the excitation list is sorted by alltransindex ascending
   const auto ntexclist = get_cell_ntexcitations(nonemptymgi);
   const auto ntexcitation =
       std::ranges::lower_bound(ntexclist, alltransindex, {}, &NonThermalExcitation::alltransindex);
