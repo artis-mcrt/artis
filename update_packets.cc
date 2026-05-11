@@ -341,7 +341,9 @@ auto compare_packet_order(const Packet& p1, const Packet& p2, const double ts_en
   const auto rho1 = cellcachenonemptymgi1 >= 0 ? grid::get_rho(cellcachenonemptymgi1) : 0.0;
   const auto rho2 = cellcachenonemptymgi2 >= 0 ? grid::get_rho(cellcachenonemptymgi2) : 0.0;
 
-  // rho 1 and 2 are swapped here since we want higher density cells to come first
+  // rho1 and rho2 are swapped here so that higher density cells are first (descending order of density)
+  // nu_cmf 1 and 2 are also swapped so that higher energy packets are first (descending order of nu_cmf)
+  // other fields are ascending order
   return std::tie(rho2, cellcachenonemptymgi1, p1.type, p2.nu_cmf) <
          std::tie(rho1, cellcachenonemptymgi2, p2.type, p1.nu_cmf);
 }

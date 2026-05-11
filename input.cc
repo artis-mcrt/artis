@@ -678,12 +678,11 @@ auto calculate_nlevels_groundterm(const int element, const int ion) -> int {
   return nlevels_groundterm;
 }
 
-auto search_groundphixslist(const double nu_edge, const int element_in, const int ion_in, const int level_in) -> int
 // Return the closest ground level continuum index to the given edge
 // frequency. If the given edge frequency is redder than the reddest
 // continuum return -1.
-// NB: groundphixslist must be in ascending order.
-{
+// groundcont_nu_edge is in ascending order (red to blue)
+auto search_groundphixslist(const double nu_edge, const int element_in, const int ion_in, const int level_in) -> int {
   assert_always((USE_LUT_PHOTOION || USE_ION_BFHEATING_ESTIMATORS));
 
   if (nu_edge < globals::groundcont_nu_edge[0]) {
@@ -705,22 +704,21 @@ auto search_groundphixslist(const double nu_edge, const int element_in, const in
     }
 
     printlnlog(
-        "[fatal] search_groundphixslist: element {}, ion {}, level {} has edge_frequency {:g} equal to the bluest "
+        "ERROR: search_groundphixslist: element {}, ion {}, level {} has edge_frequency {:g} equal to the bluest "
         "ground-level continuum",
         element_in, ion_in, level_in, nu_edge);
-    printlnlog("[fatal] search_groundphixslist: bluest ground level continuum is element {}, ion {} at nu_edge {:g}",
-               element, ion, globals::groundcont_nu_edge[i - 1]);
-    printlnlog("[fatal] search_groundphixslist: i {}, nbfcontinua_ground {}", i, globals::nbfcontinua_ground);
+    printlnlog("  search_groundphixslist: bluest ground level continuum is element {}, ion {} at nu_edge {:g}", element,
+               ion, globals::groundcont_nu_edge[i - 1]);
+    printlnlog("  search_groundphixslist: i {}, nbfcontinua_ground {}", i, globals::nbfcontinua_ground);
     printlnlog(
-        "[fatal] This shouldn't happen, is hoewever possible if there are multiple levels in the adata file at "
+        "  This shouldn't happen, but is possible if there are multiple levels in the adata file at "
         "energy=0");
     for (int looplevels = 0; looplevels < get_nlevels(element_in, ion_in); looplevels++) {
-      printlnlog("[fatal]   element {}, ion {}, level {}, energy {:g}", element_in, ion_in, looplevels,
+      printlnlog("  element {}, ion {}, level {}, energy {:g}", element_in, ion_in, looplevels,
                  epsilon(element_in, ion_in, looplevels));
     }
-    printlnlog("[fatal] Abort omitted ... MAKE SURE ATOMIC DATA ARE CONSISTENT");
+    assert_always(false);
     return i - 1;
-    // abort();
   }
 
   const double left_diff = nu_edge - globals::groundcont_nu_edge[i - 1];
@@ -1326,7 +1324,7 @@ void read_atomicdata_files() {
     assert_always(globals::nlines == std::ssize(temp_linelist));
     temp_linelist.shrink_to_fit();
 
-    // sort the lineline in descending frequency
+    // sort the linelist by frequency descending
     std::SORT_OR_STABLE_SORT(
         EXEC_PAR_UNSEQ temp_linelist.begin(), temp_linelist.end(), [](const auto& a, const auto& b) {
           if (a.nu != b.nu) {
