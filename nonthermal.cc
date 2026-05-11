@@ -111,6 +111,9 @@ const auto logengrid = []() {
 }();
 
 // evaluate the source function (distribution of deposited energy) [s^-1 cm^-3 eV^-1] at energy engrid(index)
+// This function returns only the spectral shape of the deposited-energy source, spread over a finite energy interval
+// and normalized so its integral over energy is 1 (i.e. effective units of eV^-1); the final deposition-rate density
+// scaling is applied separately.
 constexpr auto sourcevec(const int index) {
   assert_testmodeonly(index >= 0 && index < SFPTS);
 
@@ -120,10 +123,6 @@ constexpr auto sourcevec(const int index) {
   constexpr int sourcestartindex = SFPTS - source_spread_pts;
 
   return (index < sourcestartindex) ? 0. : 1. / source_spread_en;
-
-  // or put all of the source into one point at SF_EMAX
-  // return (index < SFPTS - 1) ? 0. : 1. / DELTA_E;
-  // so that E_init_ev = SF_EMAX;
 }
 
 // the energy injection rate density (integral of E * S(e) dE) in eV/s/cm3 that the Spencer-Fano equation is solved for.
