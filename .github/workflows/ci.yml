@@ -248,6 +248,7 @@ jobs:
               if: always() && inputs.testmode != 'ON' && startsWith(matrix.testname, 'classicmode_1d')
               working-directory: tests/
               run: |
+                  artistools plotspectra -t 4-6 -plotvspecpol 0 1 2 3 12 13 14 ${{ matrix.testname }}_testrun
                   artistools plotspectra -t 4-6 -plotvspecpol 0 1 2 3 12 13 14 --frompackets ${{ matrix.testname }}_testrun
 
             - name: Plot spectrum kilonova
