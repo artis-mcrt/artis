@@ -489,11 +489,11 @@ void write_vspecpol(const std::string& filename) {
   printlnlog("Writing {}", filename);
   auto vspecpol_file = fstream_required(filename, std::ios::out | std::ios::trunc);
   for (int ind_comb = 0; ind_comb < (nobsdirections * nspectraperobsdir); ind_comb++) {
-    std::print(vspecpol_file, "{:g} ", 0.);
+    std::print(vspecpol_file, "{:g}", 0.);
 
     for (int l = 0; l < 3; l++) {
       for (int p = 0; p < VSPEC_TIMEBINS; p++) {
-        std::print(vspecpol_file, "{:g} ",
+        std::print(vspecpol_file, " {:g}",
                    (vspecpol[p][ind_comb].lower_time + (vspecpol[p][ind_comb].delta_t / 2.)) / DAY);
       }
     }
@@ -501,21 +501,21 @@ void write_vspecpol(const std::string& filename) {
     std::println(vspecpol_file, "");
 
     for (int m = 0; m < VSPEC_NUBINS; m++) {
-      std::print(vspecpol_file, "{:g} ", (lower_freq_vspec[m] + (delta_freq_vspec[m] / 2.)));
+      std::print(vspecpol_file, "{:g}", (lower_freq_vspec[m] + (delta_freq_vspec[m] / 2.)));
 
       // Stokes I
       for (int p = 0; p < VSPEC_TIMEBINS; p++) {
-        std::print(vspecpol_file, "{:g} ", vspecpol[p][ind_comb].flux[m].i);
+        std::print(vspecpol_file, " {:g}", vspecpol[p][ind_comb].flux[m].i);
       }
 
       // Stokes Q
       for (int p = 0; p < VSPEC_TIMEBINS; p++) {
-        std::print(vspecpol_file, "{:g} ", vspecpol[p][ind_comb].flux[m].q);
+        std::print(vspecpol_file, " {:g}", vspecpol[p][ind_comb].flux[m].q);
       }
 
       // Stokes U
       for (int p = 0; p < VSPEC_TIMEBINS; p++) {
-        std::print(vspecpol_file, "{:g} ", vspecpol[p][ind_comb].flux[m].u);
+        std::print(vspecpol_file, " {:g}", vspecpol[p][ind_comb].flux[m].u);
       }
 
       std::println(vspecpol_file, "");
@@ -588,7 +588,7 @@ void write_vpkt_grid(const std::string& filename) {
     for (int wlbin = 0; wlbin < grid_nwavelengthranges; wlbin++) {
       for (int n = 0; n < VGRID_NY; n++) {
         for (int m = 0; m < VGRID_NZ; m++) {
-          std::println(vpkt_grid_file, "{:g} {:g} {:g} {:g} {:g} ", vgrid[n][m].yvel, vgrid[n][m].zvel,
+          std::println(vpkt_grid_file, "{:g} {:g} {:g} {:g} {:g}", vgrid[n][m].yvel, vgrid[n][m].zvel,
                        vgrid[n][m].flux[wlbin][obsdirindex].i, vgrid[n][m].flux[wlbin][obsdirindex].q,
                        vgrid[n][m].flux[wlbin][obsdirindex].u);
         }
