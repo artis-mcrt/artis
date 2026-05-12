@@ -6,3 +6,16 @@ updates:
       directory: /
       schedule:
           interval: weekly
+      groups:
+          - name: actions
+            patterns:
+                - '*'
+
+    - package-ecosystem: pre-commit
+      directory: /
+      schedule:
+          interval: weekly
+      groups:
+          - name: pre-commit
+            patterns:
+                - '*'
