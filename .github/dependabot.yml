@@ -8,8 +8,8 @@ updates:
           interval: weekly
       groups:
           github-actions:
-          patterns:
-              - '*'
+              patterns:
+                  - '*'
 
     - package-ecosystem: pre-commit
       directory: /
