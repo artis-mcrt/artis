@@ -244,12 +244,19 @@ jobs:
               run: |
                   artistools plotspectra --frompackets -t 4-6 ${{ matrix.testname }}_testrun
 
-            - name: Plot virtual packet spectrum classicmode
-              if: always() && inputs.testmode != 'ON' && startsWith(matrix.testname, 'classicmode')
+            - name: Plot virtual packet spectrum classicmode_1d
+              if: always() && inputs.testmode != 'ON' && startsWith(matrix.testname, 'classicmode_1d')
               working-directory: tests/
               run: |
                   artistools plotspectra -t 4-6 -plotvspecpol 0 1 2 3 12 13 14 -- ${{ matrix.testname }}_testrun
                   artistools plotspectra -t 4-6 -plotvspecpol 0 1 2 3 12 13 14 --frompackets ${{ matrix.testname }}_testrun
+
+            - name: Plot virtual packet spectrum classicmode_3d
+              if: always() && inputs.testmode != 'ON' && startsWith(matrix.testname, 'classicmode_3d')
+              working-directory: tests/
+              run: |
+                  artistools plotspectra -t 4-6 -plotvspecpol 0 1 2 -- ${{ matrix.testname }}_testrun
+                  artistools plotspectra -t 4-6 -plotvspecpol 0 1 2 --frompackets ${{ matrix.testname }}_testrun
 
             - name: Plot spectrum kilonova
               if: always() && inputs.testmode != 'ON' && startsWith(matrix.testname, 'kilonova')
