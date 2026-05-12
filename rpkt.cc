@@ -437,7 +437,7 @@ void rpkt_event_continuum(Packet& pkt, const ContinuumOpacity& chi_rpkt_cont) {
     // electron scattering occurs
     // in this case the packet stays a R_PKT of same nu_cmf as before (coherent scattering)
     // but with different direction
-    pkt.nscatterings += 1;
+    pkt.nscatterings++;
     stats::increment(stats::Counter::ELECTRON_SCATTERINGS);
 
     // generate a virtual packet
@@ -505,7 +505,7 @@ void rpkt_event_continuum(Packet& pkt, const ContinuumOpacity& chi_rpkt_cont) {
 }
 
 // handle bound-bound transition and activate macro-atom in corresponding upper-level
-void rpkt_event_boundbound(Packet& pkt, const MacroAtomState& pktmastate) {
+void rpkt_event_boundbound_macroatom(Packet& pkt, const MacroAtomState& pktmastate) {
   stats::increment(stats::Counter::MA_STAT_ACTIVATION_BB);
   stats::increment(stats::Counter::INTERACTIONS);
 
@@ -519,7 +519,7 @@ void rpkt_event_boundbound(Packet& pkt, const MacroAtomState& pktmastate) {
 // The packet stays an RPKT of same nu_cmf as before (coherent scattering) but with a different direction.
 void rpkt_event_thickcell(Packet& pkt) {
   stats::increment(stats::Counter::INTERACTIONS);
-  pkt.nscatterings += 1;
+  pkt.nscatterings++;
   stats::increment(stats::Counter::ELECTRON_SCATTERINGS);
 
   emit_rpkt(pkt);
@@ -649,13 +649,14 @@ auto do_rpkt_step(Packet& pkt, const double t2) -> bool {
     if (thickcell) {
       rpkt_event_thickcell(pkt);
     } else if (event_is_boundbound && !RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.has_value()) {
-      rpkt_event_boundbound(pkt, pktmastate);
+      rpkt_event_boundbound_macroatom(pkt, pktmastate);
     } else if (event_is_boundbound) {
       // Probability based thermalisation (i.e. redistribution of the packet frequency) or scattering
       if (RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.value() >= 1. ||
           rng_uniform() < RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.value()) {
         // Thermal redistribution of frequency
         pkt.nu_cmf = sample_planck_times_expansion_opacity(nonemptymgi);
+        pkt.next_trans = -1;
       }
       rpkt_event_thickcell(pkt);
     } else {
@@ -861,7 +862,9 @@ void allocate_expansionopacities() {
   const auto nonempty_npts_model = grid::get_nonempty_npts_model();
 
   assert_always(expansionopacities.empty());
-  expansionopacities = MPI_shared_array<float>(nonempty_npts_model * expopac_nbins);
+  if constexpr (RPKT_USE_EXPANSION_OPACITIES || VPKT_USE_EXPANSION_OPACITIES) {
+    expansionopacities = MPI_shared_array<float>(nonempty_npts_model * expopac_nbins);
+  }
 
   assert_always(expansionopacity_planck_cumulative.empty());
   if constexpr (RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.has_value()) {
@@ -1003,7 +1006,10 @@ void calculate_expansion_opacities(const int nonemptymgi) {
 
     const auto bin_kappa_bb = static_cast<float>(1. / (CLIGHT * t_mid * rho) * bin_linesum);
     assert_always(std::isfinite(bin_kappa_bb));
-    expansionopacities[(nonemptymgi * expopac_nbins) + binindex] = bin_kappa_bb;
+
+    if constexpr (RPKT_USE_EXPANSION_OPACITIES || VPKT_USE_EXPANSION_OPACITIES) {
+      expansionopacities[(nonemptymgi * expopac_nbins) + binindex] = bin_kappa_bb;
+    }
 
     if constexpr (RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.has_value()) {
       const auto nu_upper = get_expopac_bin_nu_upper(binindex);
