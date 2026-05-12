@@ -7,15 +7,15 @@ updates:
       schedule:
           interval: weekly
       groups:
-          - name: actions
-            patterns:
-                - '*'
+          github-actions:
+          patterns:
+              - '*'
 
     - package-ecosystem: pre-commit
       directory: /
       schedule:
           interval: weekly
       groups:
-          - name: pre-commit
-            patterns:
-                - '*'
+          pre-commit:
+              patterns:
+                  - '*'
