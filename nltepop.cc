@@ -708,37 +708,55 @@ void nltepop_matrix_add_autoionisation(const int nonemptymgi, const int element,
   }
 }
 
+// Calculate the l2 norm of row or column `i` of `n*n` matrix
+auto norm(std::span<double> matrix, const int i, const bool row, const size_t n) -> double {
+  double result = 0.;
+
+  for (size_t j = 0; j < n; j++) {
+    const double val = row ? matrix[i * n + j] : matrix[j * n + i];
+    result += val * val;
+  }
+
+  return std::sqrt(result);
+}
+
+// Multiply row or column `i` by `val`
+void mult(std::span<double> matrix, const int i, const bool row, const size_t n, const double val) {
+  for (size_t j = 0; j < n; j++) {
+    const size_t idx = row ? i * n + j : j * n + i;
+    matrix[idx] *= val;
+  }
+}
+
 void nltepop_matrix_normalise(const int nonemptymgi, const int element, std::span<double> rate_matrix,
-                              std::span<double> pop_normfactors, const int first_ion_used, const int nions_used) {
+                              std::span<double> balance_vector, std::span<double> pop_normfactors,
+                              const int first_ion_used, const int nions_used) {
   const auto nlte_dimension = std::ssize(pop_normfactors);
   assert_always(std::ssize(rate_matrix) == (nlte_dimension * nlte_dimension));
 
-  for (auto column = 0; column < nlte_dimension; column++) {
-    const auto [ion, level] = get_ion_level_of_nlte_vector_index(column, element, first_ion_used, nions_used);
+  for (int iter = 0; iter < 10; iter++) {
+    bool changed = false;
 
-    pop_normfactors[column] = calculate_levelpop_boltzmann(nonemptymgi, element, ion, level);
+    for (auto i = 0; i < nlte_dimension; i++) {
+      const double row_norm = norm(rate_matrix, i, true, nlte_dimension);
+      const double col_norm = norm(rate_matrix, i, false, nlte_dimension);
+      if (row_norm == 0 || col_norm == 0) {
+        continue;
+      }
 
-    if (level_isinsuperlevel(element, ion, level)) {
-      // levels in the superlevel get combined together
-      for (int dummylevel = level + 1; dummylevel < get_nlevels(element, ion); dummylevel++) {
-        if (level_isinsuperlevel(element, ion, dummylevel)) {
-          pop_normfactors[column] += calculate_levelpop_boltzmann(nonemptymgi, element, ion, dummylevel);
-        }
+      const double f = std::sqrt(col_norm / row_norm);
+      if (std::abs(f - 1.0F) > 1e-3) {
+        mult(rate_matrix, i, true, nlte_dimension, f);
+        mult(rate_matrix, i, false, nlte_dimension, 1. / f);
+        pop_normfactors[i] /= f;
+        changed = true;
       }
     }
-    if (!std::isfinite(pop_normfactors[column]) || pop_normfactors[column] <= 0.) {
-      printlnlog(
-          "  WARNING: Boltzmann population for Z={} ionstage {} level {} is non-finite or negative ({}). Setting to "
-          "MINPOP",
-          get_atomicnumber(element), get_ionstage(element, ion), level, pop_normfactors[column]);
-      pop_normfactors[column] = MINPOP;
-    }
+    if (!changed) break;
   }
 
-  for (auto column = 0; column < nlte_dimension; column++) {
-    for (auto row = 0; row < nlte_dimension; row++) {
-      rate_matrix[(row * nlte_dimension) + column] *= pop_normfactors[column];
-    }
+  for (int i = 0; i < nlte_dimension; i++) {
+    balance_vector[i] /= pop_normfactors[i];
   }
 }
 
@@ -1244,7 +1262,8 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
     pop_normfactors.reserve(max_nlte_dimension);
     pop_normfactors.resize(nlte_dimension);
     std::ranges::fill(pop_normfactors, 1.0);
-    nltepop_matrix_normalise(nonemptymgi, element, rate_matrix, pop_normfactors, first_ion_used, nions_used);
+    nltepop_matrix_normalise(nonemptymgi, element, rate_matrix, balance_vector, pop_normfactors, first_ion_used,
+                             nions_used);
 
     matrix_solve_success = nltepop_matrix_solve(element, nonemptymgi, rate_matrix, balance_vector, popvec,
                                                 pop_normfactors, max_nlte_dimension, first_ion_used, nions_used);
