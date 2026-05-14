@@ -713,7 +713,7 @@ auto norm(std::span<double> matrix, const int i, const bool row, const size_t n)
   double result = 0.;
 
   for (size_t j = 0; j < n; j++) {
-    const double val = row ? matrix[i * n + j] : matrix[j * n + i];
+    const double val = row ? matrix[(i * n) + j] : matrix[(j * n) + i];
     result += val * val;
   }
 
@@ -723,14 +723,13 @@ auto norm(std::span<double> matrix, const int i, const bool row, const size_t n)
 // Multiply row or column `i` by `val`
 void mult(std::span<double> matrix, const int i, const bool row, const size_t n, const double val) {
   for (size_t j = 0; j < n; j++) {
-    const size_t idx = row ? i * n + j : j * n + i;
+    const size_t idx = row ? (i * n) + j : (j * n) + i;
     matrix[idx] *= val;
   }
 }
 
-void nltepop_matrix_normalise(const int nonemptymgi, const int element, std::span<double> rate_matrix,
-                              std::span<double> balance_vector, std::span<double> pop_normfactors,
-                              const int first_ion_used, const int nions_used) {
+void nltepop_matrix_normalise(std::span<double> rate_matrix, std::span<double> balance_vector,
+                              std::span<double> pop_normfactors) {
   const auto nlte_dimension = std::ssize(pop_normfactors);
   assert_always(std::ssize(rate_matrix) == (nlte_dimension * nlte_dimension));
 
@@ -752,7 +751,10 @@ void nltepop_matrix_normalise(const int nonemptymgi, const int element, std::spa
         changed = true;
       }
     }
-    if (!changed) break;
+
+    if (!changed) {
+      break;
+    }
   }
 
   for (int i = 0; i < nlte_dimension; i++) {
@@ -790,8 +792,7 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
 }
 
 [[nodiscard]] auto solution_pops_are_valid(const int nonemptymgi, const int element, std::span<double> popvec,
-                                           std::span<const double> pop_normfactors, const int first_ion_used,
-                                           const int nions_used) -> bool {
+                                           const int first_ion_used, const int nions_used) -> bool {
   const size_t nlte_dimension = popvec.size();
   const auto superlevel_partfuncs = get_element_superlevelpartfuncs(nonemptymgi, element);
   for (auto index = 0ZU; index < nlte_dimension; index++) {
@@ -801,11 +802,29 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
 
     if constexpr (!STRICT_POPULATION_CHECKING) {
       if (population < 0.0 || !std::isfinite(population)) {
+        double ltepop = calculate_levelpop_boltzmann(nonemptymgi, element, ion, level);
+
+        if (level_isinsuperlevel(element, ion, level)) {
+          for (int dummylevel = level + 1; dummylevel < get_nlevels(element, ion); dummylevel++) {
+            if (level_isinsuperlevel(element, ion, dummylevel)) {
+              ltepop += calculate_levelpop_boltzmann(nonemptymgi, element, ion, dummylevel);
+            }
+          }
+        }
+
+        if (!std::isfinite(ltepop) || ltepop <= 0.) {
+          printlnlog(
+              "  WARNING: Boltzmann population for Z={} ionstage {} level {} is non-finite or non-positive ({}). "
+              "Setting to MINPOP",
+              get_atomicnumber(element), get_ionstage(element, ion), level, ltepop);
+          ltepop = MINPOP;
+        }
+
         printlnlog(
             "  WARNING: NLTE solver gave negative/non-finite population to index {} (Z={} ionstage {} level {}), pop = "
             "{:g}. Replacing with LTE pop of {:g}",
-            index, get_atomicnumber(element), ionstage, level, population, pop_normfactors[index]);
-        popvec[index] = pop_normfactors[index];
+            index, get_atomicnumber(element), ionstage, level, population, ltepop);
+        popvec[index] = ltepop;
       }
     } else {
       // if groundpop is below MINPOP then the NLTE solution fails
@@ -1072,7 +1091,7 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
     popvec[i] = vec_x[i] * pop_normfactors[i];
   }
 
-  return solution_pops_are_valid(nonemptymgi, element, popvec, pop_normfactors, first_ion_used, nions_used);
+  return solution_pops_are_valid(nonemptymgi, element, popvec, first_ion_used, nions_used);
 }
 
 auto can_remove_ion(const int element, const int ion, const int first_ion_used, const int nions_used,
@@ -1262,8 +1281,7 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
     pop_normfactors.reserve(max_nlte_dimension);
     pop_normfactors.resize(nlte_dimension);
     std::ranges::fill(pop_normfactors, 1.0);
-    nltepop_matrix_normalise(nonemptymgi, element, rate_matrix, balance_vector, pop_normfactors, first_ion_used,
-                             nions_used);
+    nltepop_matrix_normalise(rate_matrix, balance_vector, pop_normfactors);
 
     matrix_solve_success = nltepop_matrix_solve(element, nonemptymgi, rate_matrix, balance_vector, popvec,
                                                 pop_normfactors, max_nlte_dimension, first_ion_used, nions_used);
