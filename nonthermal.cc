@@ -1083,7 +1083,7 @@ auto N_e(const int nonemptymgi, const double energy, const std::array<double, SF
 auto calculate_frac_heating(const int nonemptymgi, const std::array<double, SFPTS>& yfunc) -> float {
   // frac_heating multiplied by E_init, which will be divided out at the end
   double frac_heating_Einit = 0.;
-  const float nne = grid::get_nne(nonemptymgi);
+  const auto nne = grid::get_nne(nonemptymgi);
 
   for (int i = 0; i < SFPTS; i++) {
     const double endash = engrid(i);
@@ -1452,12 +1452,6 @@ auto ion_ntion_energyrate(const int nonemptymgi, const int element, const int lo
   const auto maxupperion = nt_ionisation_maxupperion(element, lowerion);
   for (int upperion = lowerion + 1; upperion <= maxupperion; upperion++) {
     const double upperionprobfrac = nt_ionisation_upperion_probability(nonemptymgi, element, lowerion, upperion, false);
-    // for (int lower = 0; lower < get_nlevels(element, lowerion); lower++)
-    // {
-    //   const double epsilon_trans = epsilon(element, upperion, 0) - epsilon(element, lowerion, lower);
-    //   const double nnlower = get_cellcache_levelpop(nonemptymgi, element, lowerion, lower);
-    //   enrate += nnlower * upperionprobfrac * epsilon_trans;
-    // }
     const double epsilon_trans = epsilon(element, upperion, 0) - epsilon(element, lowerion, 0);
     enrate += nnlowerion * upperionprobfrac * epsilon_trans;
   }
@@ -1514,7 +1508,8 @@ auto select_nt_ionisation(const int nonemptymgi) -> std::tuple<int, int> {
   return {-1, -1};
 }
 
-void analyse_sf_solution(const int nonemptymgi, const int timestep, const std::array<double, SFPTS>& yfunc) {
+void analyse_sf_solution(const int nonemptymgi, const int timestep, const std::array<double, SFPTS>& yfunc,
+                         const bool verbose) {
   const auto nne = grid::get_nne(nonemptymgi);
   const auto nntot = get_nnion_tot(nonemptymgi);
   const auto nnetot = grid::get_nnetot(nonemptymgi);
@@ -1548,18 +1543,24 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const std::a
 
       double frac_ionisation_ion = 0.;
       double frac_excitation_ion = 0.;
-      printlnlog("  Z={} ionstage {}:", Z, ionstage);
-      printlnlog("    nnion/nntot: {:g}", nnion / nntot);
+      if (verbose) {
+        printlnlog("  Z={} ionstage {}:", Z, ionstage);
+        printlnlog("    nnion/nntot: {:g}", nnion / nntot);
+      }
 
       calculate_eff_ionpot_auger_rates(nonemptymgi, element, ion, yfunc);
 
       int matching_subshell_count = 0;
       for (const auto& collionrow : colliondata) {
-        if (collionrow.Z == Z && collionrow.ionstage == ionstage) {
-          const double frac_ionisation_ion_shell =
-              calculate_nt_frac_ionisation_shell(nonemptymgi, element, ion, collionrow, yfunc);
-          frac_ionisation_ion += frac_ionisation_ion_shell;
-          matching_subshell_count++;
+        if (collionrow.Z != Z || collionrow.ionstage != ionstage) {
+          continue;
+        }
+        const double frac_ionisation_ion_shell =
+            calculate_nt_frac_ionisation_shell(nonemptymgi, element, ion, collionrow, yfunc);
+        frac_ionisation_ion += frac_ionisation_ion_shell;
+        matching_subshell_count++;
+
+        if (verbose) {
           printlog("      shell ");
           if (collionrow.n >= 0) {
             printlog("n {}, l {}", collionrow.n, collionrow.l);
@@ -1586,7 +1587,9 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const std::a
       } else {
         get_cell_allions_data(nonemptymgi)[uniqueionindex].fracdep_ionisation_ion = 0.;
       }
-      printlnlog("    frac_ionisation: {:g} ({} subshells)", frac_ionisation_ion, matching_subshell_count);
+      if (verbose) {
+        printlnlog("    frac_ionisation: {:g} ({} subshells)", frac_ionisation_ion, matching_subshell_count);
+      }
 
       // excitation from all levels is expensive, so we limit it to a maximum number of levels
       const int nlevels = std::min(get_nlevels(element, ion), NTEXCITATION_MAXNLEVELS_LOWER);
@@ -1632,56 +1635,67 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const std::a
         }  // for t
       }  // for lower
 
-      printlnlog("    frac_excitation: {:g}", frac_excitation_ion);
+      if (verbose) {
+        printlnlog("    frac_excitation: {:g}", frac_excitation_ion);
+      }
       if (frac_excitation_ion > 1. || !std::isfinite(frac_excitation_ion)) {
         printlnlog("      WARNING: invalid frac_excitation. Replacing with zero");
         frac_excitation_ion = 0.;
       }
       frac_excitation_total += frac_excitation_ion;
-      printlnlog("    approxworkfn: {:9.2f} eV  (without using the Spencer-Fano solution)",
-                 (1. / get_oneoverw_approx_axelrod(element, ion, nonemptymgi)) / EV);
-      printlnlog("    eff_ionpot:   {:9.2f} eV  (always use valence potential is {})",
-                 get_eff_ionpot(nonemptymgi, element, ion) / EV, (NT_USE_VALENCE_IONPOTENTIAL ? "true" : "false"));
 
-      printlnlog("    approxworkfn Gamma:      {:9.3e}", nt_ionisation_ratecoeff_wfapprox(nonemptymgi, element, ion));
+      if (verbose) {
+        printlnlog("    approxworkfn: {:9.2f} eV  (without using the Spencer-Fano solution)",
+                   (1. / get_oneoverw_approx_axelrod(element, ion, nonemptymgi)) / EV);
+        printlnlog("    eff_ionpot:   {:9.2f} eV  (always use valence potential is {})",
+                   get_eff_ionpot(nonemptymgi, element, ion) / EV, (NT_USE_VALENCE_IONPOTENTIAL ? "true" : "false"));
 
-      if constexpr (NT_USE_VALENCE_IONPOTENTIAL) {
-        printlnlog("    SF integral Gamma:       {:9.3e} (alternative if NT_USE_VALENCE_IONPOTENTIAL was disabled)",
-                   calculate_nt_ionisation_ratecoeff(nonemptymgi, element, ion, false, yfunc));
-      } else {
-        printlnlog("    SF integral(I=Iv) Gamma: {:9.3e}  (alternative if NT_USE_VALENCE_IONPOTENTIAL was enabled)",
-                   calculate_nt_ionisation_ratecoeff(nonemptymgi, element, ion, true, yfunc));
+        printlnlog("    approxworkfn Gamma:      {:9.3e}", nt_ionisation_ratecoeff_wfapprox(nonemptymgi, element, ion));
+
+        if constexpr (NT_USE_VALENCE_IONPOTENTIAL) {
+          printlnlog("    SF integral Gamma:       {:9.3e} (alternative if NT_USE_VALENCE_IONPOTENTIAL was disabled)",
+                     calculate_nt_ionisation_ratecoeff(nonemptymgi, element, ion, false, yfunc));
+        } else {
+          printlnlog("    SF integral(I=Iv) Gamma: {:9.3e}  (alternative if NT_USE_VALENCE_IONPOTENTIAL was enabled)",
+                     calculate_nt_ionisation_ratecoeff(nonemptymgi, element, ion, true, yfunc));
+        }
+
+        printlnlog("    ARTIS using Gamma:       {:9.3e}", nt_ionisation_ratecoeff(nonemptymgi, element, ion));
       }
-
-      printlnlog("    ARTIS using Gamma:       {:9.3e}", nt_ionisation_ratecoeff(nonemptymgi, element, ion));
 
       // the ion values (unlike shell ones) have been collapsed down to ensure that upperion < nions
       if (ion < nions - 1) {
-        printlog("    probability to ionstage:");
+        if (verbose) {
+          printlog("    probability to ionstage:");
+        }
         double prob_sum = 0.;
         for (int upperion = ion + 1; upperion <= nt_ionisation_maxupperion(element, ion); upperion++) {
           const double probability = nt_ionisation_upperion_probability(nonemptymgi, element, ion, upperion, false);
           prob_sum += probability;
-          if (probability > 0.) {
+          if (probability > 0. && verbose) {
             printlog(" {}: {:.3f}", get_ionstage(element, upperion), probability);
           }
         }
-        printlnlog("");
         assert_always((fabs(prob_sum - 1.0) <= 1e-2) ||
                       (nt_ionisation_ratecoeff_sf(nonemptymgi, element, ion) < 1e-20));
 
-        printlog("         enfrac to ionstage:");
+        if (verbose) {
+          printlnlog("");
+          printlog("         enfrac to ionstage:");
+        }
         double enfrac_sum = 0.;
         for (int upperion = ion + 1; upperion <= nt_ionisation_maxupperion(element, ion); upperion++) {
           const double probability = nt_ionisation_upperion_probability(nonemptymgi, element, ion, upperion, true);
           enfrac_sum += probability;
-          if (probability > 0.) {
+          if (probability > 0. && verbose) {
             printlog(" {}: {:.3f}", get_ionstage(element, upperion), probability);
           }
         }
-        printlnlog("");
         assert_always(fabs(enfrac_sum - 1.0) <= 1e-2 ||
                       (nt_ionisation_ratecoeff_sf(nonemptymgi, element, ion) < 1e-20));
+        if (verbose) {
+          printlnlog("");
+        }
       }
     }
   }
@@ -1705,47 +1719,49 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const std::a
     std::ranges::copy(tmp_excitation_list, get_cell_ntexcitations(nonemptymgi).begin());
 
     const auto T_e = grid::get_Te(nonemptymgi);
-    printlnlog("  Top non-thermal excitation fractions (total excitations = {}):",
-               nt_solution[nonemptymgi].frac_excitations_list_size);
-    const int ntransdisplayed = std::min(10, nt_solution[nonemptymgi].frac_excitations_list_size);
+    if (verbose) {
+      printlnlog("  Top non-thermal excitation fractions (total excitations = {}):",
+                 nt_solution[nonemptymgi].frac_excitations_list_size);
+      const int ntransdisplayed = std::min(10, nt_solution[nonemptymgi].frac_excitations_list_size);
 
-    for (int excitationindex = 0; excitationindex < ntransdisplayed; excitationindex++) {
-      const auto& ntexc = tmp_excitation_list[excitationindex];
-      if (ntexc.frac_deposition > 0.) {
-        const auto alltransindex = ntexc.alltransindex;
-        const auto lineindex = globals::alltrans.lineindex[alltransindex];
-        const int element = globals::linelist.elementindex[lineindex];
-        const int ion = globals::linelist.ionindex[lineindex];
-        const int lower = globals::linelist.lowerlevelindex[lineindex];
-        const int upper = globals::linelist.upperlevelindex[lineindex];
-        const auto lower_uniquelevelindex = get_uniquelevelindex(element, ion, lower);
-        const auto upper_uniquelevelindex = get_uniquelevelindex(element, ion, upper);
-        const auto nnlevel_lower = calculate_levelpop(nonemptymgi, element, ion, lower);
-        const auto nnlevel_upper = calculate_levelpop(nonemptymgi, element, ion, upper);
-        const auto statweight_lower = stat_weight(lower_uniquelevelindex);
+      for (int excitationindex = 0; excitationindex < ntransdisplayed; excitationindex++) {
+        const auto& ntexc = tmp_excitation_list[excitationindex];
+        if (ntexc.frac_deposition > 0.) {
+          const auto alltransindex = ntexc.alltransindex;
+          const auto lineindex = globals::alltrans.lineindex[alltransindex];
+          const int element = globals::linelist.elementindex[lineindex];
+          const int ion = globals::linelist.ionindex[lineindex];
+          const int lower = globals::linelist.lowerlevelindex[lineindex];
+          const int upper = globals::linelist.upperlevelindex[lineindex];
+          const auto lower_uniquelevelindex = get_uniquelevelindex(element, ion, lower);
+          const auto upper_uniquelevelindex = get_uniquelevelindex(element, ion, upper);
+          const auto nnlevel_lower = calculate_levelpop(nonemptymgi, element, ion, lower);
+          const auto nnlevel_upper = calculate_levelpop(nonemptymgi, element, ion, upper);
+          const auto statweight_lower = stat_weight(lower_uniquelevelindex);
 
-        const double epsilon_trans = epsilon(upper_uniquelevelindex) - epsilon(lower_uniquelevelindex);
+          const double epsilon_trans = epsilon(upper_uniquelevelindex) - epsilon(lower_uniquelevelindex);
 
-        const double ntcollexc_ratecoeff = ntexc.ratecoeffperdeposition * deposition_rate_density;
-        const auto statweight_upper = stat_weight(upper_uniquelevelindex);
+          const double ntcollexc_ratecoeff = ntexc.ratecoeffperdeposition * deposition_rate_density;
+          const auto statweight_upper = stat_weight(upper_uniquelevelindex);
 
-        const double t_mid = globals::timesteps[timestep].mid;
-        const double radexc_ratecoeff = rad_excitation_ratecoeff(
-            nonemptymgi, statweight_upper, globals::alltrans.einstein_A[alltransindex], epsilon_trans, nnlevel_lower,
-            nnlevel_upper, statweight_lower, alltransindex, t_mid);
+          const double t_mid = globals::timesteps[timestep].mid;
+          const double radexc_ratecoeff = rad_excitation_ratecoeff(
+              nonemptymgi, statweight_upper, globals::alltrans.einstein_A[alltransindex], epsilon_trans, nnlevel_lower,
+              nnlevel_upper, statweight_lower, alltransindex, t_mid);
 
-        const double collexc_ratecoeff =
-            col_excitation_ratecoeff(T_e, nne, statweight_upper, alltransindex, epsilon_trans, statweight_lower);
+          const double collexc_ratecoeff =
+              col_excitation_ratecoeff(T_e, nne, statweight_upper, alltransindex, epsilon_trans, statweight_lower);
 
-        const double exc_ratecoeff = radexc_ratecoeff + collexc_ratecoeff + ntcollexc_ratecoeff;
-        const auto coll_str = globals::alltrans.coll_str[alltransindex];
+          const double exc_ratecoeff = radexc_ratecoeff + collexc_ratecoeff + ntcollexc_ratecoeff;
+          const auto coll_str = globals::alltrans.coll_str[alltransindex];
 
-        printlnlog(
-            "    frac_deposition {:.3e} Z={:2} ionstage {} lower {:4} upper {:4} rad_exc {:.1e} coll_exc {:.1e} nt_exc "
-            "{:.1e} nt/tot {:.1e} collstr {:.1e} lineindex {}",
-            ntexc.frac_deposition, get_atomicnumber(element), get_ionstage(element, ion), lower, upper,
-            radexc_ratecoeff, collexc_ratecoeff, ntcollexc_ratecoeff, ntcollexc_ratecoeff / exc_ratecoeff, coll_str,
-            lineindex);
+          printlnlog(
+              "    frac_deposition {:.3e} Z={:2} ionstage {} lower {:4} upper {:4} rad_exc {:.1e} coll_exc {:.1e} "
+              "nt_exc {:.1e} nt/tot {:.1e} collstr {:.1e} lineindex {}",
+              ntexc.frac_deposition, get_atomicnumber(element), get_ionstage(element, ion), lower, upper,
+              radexc_ratecoeff, collexc_ratecoeff, ntcollexc_ratecoeff, ntcollexc_ratecoeff / exc_ratecoeff, coll_str,
+              lineindex);
+        }
       }
     }
 
@@ -1769,25 +1785,30 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const std::a
 
   nt_solution[nonemptymgi].frac_excitation = static_cast<float>(frac_excitation_total);
   nt_solution[nonemptymgi].frac_ionisation = static_cast<float>(frac_ionisation_total);
+  const auto frac_heating_calculated = calculate_frac_heating(nonemptymgi, yfunc);
+  const double frac_sum = frac_heating_calculated + frac_excitation_total + frac_ionisation_total;
 
-  printlnlog("  deposition:  {:9.2f} eV/s/cm^3", deposition_rate_density_ev);
-  printlnlog("  nne:         {:9.3e} e-/cm^3", nne);
-  printlnlog("  nnetot:      {:9.3e} e-/cm^3", nnetot);
-  printlnlog("  nne_nt     < {:9.3e} e-/cm^3", nne_nt_max);
-  printlnlog("  nne_nt/nne < {:9.3e}", nne_nt_max / nne);
+  if (verbose) {
+    printlnlog("  deposition:  {:9.2f} eV/s/cm^3", deposition_rate_density_ev);
+    printlnlog("  nne:         {:9.3e} e-/cm^3", nne);
+    printlnlog("  nnetot:      {:9.3e} e-/cm^3", nnetot);
+    printlnlog("  nne_nt     < {:9.3e} e-/cm^3", nne_nt_max);
+    printlnlog("  nne_nt/nne < {:9.3e}", nne_nt_max / nne);
 
-  // store the solution properties now while the NT spectrum is in memory (in case we free before packet prop)
-  nt_solution[nonemptymgi].frac_heating = calculate_frac_heating(nonemptymgi, yfunc);
+    printlnlog("  frac_heating_tot:    {:g}", frac_heating_calculated);
+    printlnlog("  frac_excitation_tot: {:g}", frac_excitation_total);
+    printlnlog("  frac_ionisation_tot: {:g}", frac_ionisation_total);
+    printlnlog("  frac_sum:            {:g} (should be close to 1.0)", frac_sum);
+  }
 
-  printlnlog("  frac_heating_tot:    {:g}", nt_solution[nonemptymgi].frac_heating);
-  printlnlog("  frac_excitation_tot: {:g}", frac_excitation_total);
-  printlnlog("  frac_ionisation_tot: {:g}", frac_ionisation_total);
-  const double frac_sum = nt_solution[nonemptymgi].frac_heating + frac_excitation_total + frac_ionisation_total;
-  printlnlog("  frac_sum:            {:g} (should be close to 1.0)", frac_sum);
-
+  // force frac_sum to be 1.0 by adjusting frac_heating
   nt_solution[nonemptymgi].frac_heating = static_cast<float>(1. - frac_excitation_total - frac_ionisation_total);
-  printlnlog("  (replacing calculated frac_heating_tot with {:g} to make frac_sum = 1.0)",
-             nt_solution[nonemptymgi].frac_heating);
+
+  if (!ftol<0.02>(frac_sum, 1.0)) {
+    printlnlog("WARNING: frac_sum is {:g}, but should be 1.0", frac_sum);
+    printlnlog("  (replacing calculated frac_heating_tot with {:g} to make frac_sum = 1.0)",
+               nt_solution[nonemptymgi].frac_heating);
+  }
 }
 
 void sfmatrix_add_excitation(std::span<double> sfmatrixuppertri, const int nonemptymgi, const int element,
@@ -2482,8 +2503,8 @@ void solve_spencerfano(const int nonemptymgi, const int timestep, const int iter
 
   decompactify_triangular_matrix(sfmatrix);
   const auto yfunc = sfmatrix_solve(sfmatrix);
-
-  analyse_sf_solution(nonemptymgi, timestep, yfunc);
+  constexpr bool verbose = false;
+  analyse_sf_solution(nonemptymgi, timestep, yfunc, verbose);
 }
 
 void write_restart_data(FILE* gridsave_file) {
