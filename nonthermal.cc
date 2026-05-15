@@ -1806,8 +1806,8 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const std::a
 
   if (!ftol<0.02>(frac_sum, 1.0)) {
     printlnlog("WARNING: frac_sum is {:g}, but should be 1.0", frac_sum);
-    printlnlog("  (replacing calculated frac_heating_tot with {:g} to make frac_sum = 1.0)",
-               nt_solution[nonemptymgi].frac_heating);
+    printlnlog("  (replacing calculated frac_heating_tot {:g} with {:g} to make frac_sum = 1.0)",
+               frac_heating_calculated, nt_solution[nonemptymgi].frac_heating);
   }
 }
 
