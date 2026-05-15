@@ -50,7 +50,7 @@ Checks: [
     ]
 WarningsAsErrors: '*,-clang-diagnostic-unused-function'
 FormatStyle: file
-ExtraArgs: [-std=c++23]
+ExtraArgs: [-std=c++26]
 # HeaderFilterRegex: '.*'
 ExcludeHeaderFilterRegex: '^/opt/homebrew/include/.*'
 CheckOptions:

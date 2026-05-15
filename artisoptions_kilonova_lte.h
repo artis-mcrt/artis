@@ -1,6 +1,6 @@
-#ifndef ARTISOPTIONS_H  // NOLINT(llvm-header-guard)
+#ifndef ARTISOPTIONS_H
 #define ARTISOPTIONS_H
-// NOLINTBEGIN(modernize*,misc-unused-parameters)
+// NOLINTBEGIN(modernize-use-trailing-return-type,misc-unused-parameters)
 
 #include <cstdlib>
 #include <optional>
@@ -156,5 +156,5 @@ constexpr auto GAMMA_THERMALISATION_SCHEME = GammaThermalisationScheme::FREQUENC
 
 constexpr std::optional<double> GAMMA_USE_KAPPA_GREY;
 
-// NOLINTEND(modernize*,misc-unused-parameters)
+// NOLINTEND(modernize-use-trailing-return-type,misc-unused-parameters)
 #endif  // ARTISOPTIONS_H
