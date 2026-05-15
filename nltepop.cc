@@ -709,7 +709,7 @@ void nltepop_matrix_add_autoionisation(const int nonemptymgi, const int element,
 }
 
 // Calculate the l2 norm of row or column `i` of `n*n` matrix
-auto norm(std::span<double> matrix, const int i, const bool row, const size_t n) -> double {
+auto matrix_row_or_col_norm(std::span<const double> matrix, const int i, const bool row, const size_t n) -> double {
   double result = 0.;
 
   for (size_t j = 0; j < n; j++) {
@@ -721,7 +721,7 @@ auto norm(std::span<double> matrix, const int i, const bool row, const size_t n)
 }
 
 // Multiply row or column `i` by `val`
-void mult(std::span<double> matrix, const int i, const bool row, const size_t n, const double val) {
+void matrix_scale_row_or_col(std::span<double> matrix, const int i, const bool row, const size_t n, const double val) {
   for (size_t j = 0; j < n; j++) {
     const size_t idx = row ? (i * n) + j : (j * n) + i;
     matrix[idx] *= val;
@@ -737,16 +737,16 @@ void nltepop_matrix_normalise(std::span<double> rate_matrix, std::span<double> b
     bool changed = false;
 
     for (auto i = 0; i < nlte_dimension; i++) {
-      const double row_norm = norm(rate_matrix, i, true, nlte_dimension);
-      const double col_norm = norm(rate_matrix, i, false, nlte_dimension);
+      const double row_norm = matrix_row_or_col_norm(rate_matrix, i, true, nlte_dimension);
+      const double col_norm = matrix_row_or_col_norm(rate_matrix, i, false, nlte_dimension);
       if (row_norm == 0 || col_norm == 0) {
         continue;
       }
 
       const double f = std::sqrt(col_norm / row_norm);
-      if (std::abs(f - 1.0F) > 1e-3) {
-        mult(rate_matrix, i, true, nlte_dimension, f);
-        mult(rate_matrix, i, false, nlte_dimension, 1. / f);
+      if (std::abs(f - 1.) > 1e-3) {
+        matrix_scale_row_or_col(rate_matrix, i, true, nlte_dimension, f);
+        matrix_scale_row_or_col(rate_matrix, i, false, nlte_dimension, 1. / f);
         pop_normfactors[i] /= f;
         changed = true;
       }
