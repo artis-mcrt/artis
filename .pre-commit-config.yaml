@@ -37,3 +37,5 @@ repos:
             entry: make -j OPTIMIZE=OFF
             language: system
             pass_filenames: false
+ci:
+    skip: [make]
