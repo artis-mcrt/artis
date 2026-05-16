@@ -14,7 +14,7 @@ rsync -av --exclude="recombrates.txt" nebular_1d_3dgrid_inputfiles/ $runfolder/
 
 rsync -av --ignore-times nltephotospheric_dynamic_ion_range_1d_1dgrid_inputfiles/ $runfolder/
 
-cp ../data/* $runfolder
+ln -s ../../data/ $runfolder
 
 cp ../artisoptions_nltephotospheric_dynamic_ion_range.h $runfolder/artisoptions.h
 

@@ -10,7 +10,7 @@ if [ ! -f atomicdata_feconi.tar.xz ]; then curl -O -L https://github.com/artis-m
 
 tar -xf atomicdata_feconi.tar.xz --directory $runfolder/
 
-cp ../data/* $runfolder/
+ln -s ../../data/ $runfolder
 
 cp ../artisoptions_nltenebular.h $runfolder/artisoptions.h
 
