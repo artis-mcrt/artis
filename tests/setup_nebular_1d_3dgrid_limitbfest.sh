@@ -8,7 +8,7 @@ rsync -av nebular_1d_3dgrid_inputfiles/ nebular_1d_3dgrid_limitbfest_testrun/
 
 rsync --ignore-times -av nebular_1d_3dgrid_limitbfest_inputfiles/ nebular_1d_3dgrid_limitbfest_testrun/
 
-if [ ! -f atomicdata_feconi.tar.xz ]; then curl --insecure -O https://theory.gsi.de/~lshingle/artis_http_public/artis/atomicdata_feconi.tar.xz; fi
+if [ ! -f atomicdata_feconi.tar.xz ]; then curl -O -L https://github.com/artis-mcrt/artis/releases/download/v2026.5.15/atomicdata_feconi.tar.xz; fi
 
 tar -xf atomicdata_feconi.tar.xz --directory nebular_1d_3dgrid_limitbfest_testrun/
 
