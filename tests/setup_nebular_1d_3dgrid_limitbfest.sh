@@ -4,19 +4,22 @@ set -x
 
 runfolder=nebular_1d_3dgrid_limitbfest_testrun
 
-rsync -av nebular_1d_3dgrid_inputfiles/ $runfolder/
-
-rsync --ignore-times -av nebular_1d_3dgrid_limitbfest_inputfiles/ $runfolder/
-
 if [ ! -f atomicdata_feconi.tar.xz ]; then curl -O -L https://github.com/artis-mcrt/artis/releases/download/v2026.5.15/atomicdata_feconi.tar.xz; fi
 
-tar -xf atomicdata_feconi.tar.xz --directory $runfolder/
 
-ln -s ../../data/ $runfolder
-
-cp ../artisoptions_nltenebular.h $runfolder/artisoptions.h
+mkdir -p $runfolder
 
 cd $runfolder
+
+rsync -av ../nebular_1d_3dgrid_inputfiles/ ./
+
+rsync --ignore-times -av ../nebular_1d_3dgrid_limitbfest_inputfiles/ ./
+
+tar -xf ../atomicdata_feconi.tar.xz --directory .
+
+ln -s ../../ artis
+
+cp artis/artisoptions_nltenebular.h artisoptions.h
 
 sed -i'' -e 's/constexpr int MPKTS.*/constexpr int MPKTS = 1000000;/g' artisoptions.h
 
