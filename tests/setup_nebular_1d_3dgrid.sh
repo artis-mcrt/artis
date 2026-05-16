@@ -4,15 +4,15 @@ set -x
 
 runfolder=nebular_1d_3dgrid_testrun
 
-rsync -av nebular_1d_3dgrid_inputfiles/ nebular_1d_3dgrid_testrun/
+rsync -av nebular_1d_3dgrid_inputfiles/ $runfolder/
 
 if [ ! -f atomicdata_feconi.tar.xz ]; then curl -O -L https://github.com/artis-mcrt/artis/releases/download/v2026.5.15/atomicdata_feconi.tar.xz; fi
 
-tar -xf atomicdata_feconi.tar.xz --directory nebular_1d_3dgrid_testrun/
+tar -xf atomicdata_feconi.tar.xz --directory $runfolder/
 
-cp ../data/* nebular_1d_3dgrid_testrun/
+cp ../data/* $runfolder/
 
-cp ../artisoptions_nltenebular.h nebular_1d_3dgrid_testrun/artisoptions.h
+cp ../artisoptions_nltenebular.h $runfolder/artisoptions.h
 
 cd nebular_1d_3dgrid_testrun
 
