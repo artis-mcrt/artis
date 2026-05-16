@@ -326,11 +326,11 @@ auto thomson_angle() -> double {
   const double norm2 = 1. / vec_len(dir_in);
 
   const double r11 = dir_in[1] * norm1;
-  const double r12 = -1 * dir_in[0] * norm1;
+  const double r12 = -dir_in[0] * norm1;
   const double r13 = 0.;
   const double r21 = dir_in[0] * dir_in[2] * norm1 * norm2;
   const double r22 = dir_in[1] * dir_in[2] * norm1 * norm2;
-  const double r23 = -1 * norm2 / norm1;
+  const double r23 = -norm2 / norm1;
   const double r31 = dir_in[0] * norm2;
   const double r32 = dir_in[1] * norm2;
   const double r33 = dir_in[2] * norm2;
