@@ -695,7 +695,7 @@ void nltepop_matrix_add_autoionisation(const int nonemptymgi, const int element,
 
       // capture (which is an excitation process, and the first part of di-electronic recomb)
       R = nne * A_a * statweight / stat_weight(element, target_ion, target_level) * SAHACONST * pow(T_e, -1.5) *
-          exp(-1. * epsilon_trans / KB / T_e);
+          exp(-epsilon_trans / KB / T_e);
       // renorm??
 
       rate_matrices.autoion[(lower_index * nlte_dimension) + lower_index] -= R;

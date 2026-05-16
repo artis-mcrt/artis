@@ -4,20 +4,19 @@ set -x
 
 runfolder=kilonova_2d_testrun
 
+if [ ! -f atomicdata_feconi.tar.xz ]; then curl -O -L https://github.com/artis-mcrt/artis/releases/download/v2026.5.15/atomicdata_feconi.tar.xz; fi
+
 mkdir -p $runfolder
 
-if [ ! -f atomicdata_feconi.tar.xz ]; then curl --insecure -O https://theory.gsi.de/~lshingle/artis_http_public/artis/atomicdata_feconi.tar.xz; fi
-
-tar -xf atomicdata_feconi.tar.xz --directory $runfolder/
-
-# same input files as the other test run
-rsync -av kilonova_2d_inputfiles/ $runfolder/
-
-ln -s ../../data/ $runfolder
-
-cp ../artisoptions_kilonova_lte.h $runfolder/artisoptions.h
-
 cd $runfolder
+
+tar -xf ../atomicdata_feconi.tar.xz --directory ./
+
+rsync -av ../kilonova_2d_inputfiles/ ./
+
+ln -s ../../ artis
+
+cp artis/artisoptions_kilonova_lte.h artisoptions.h
 
 xz -f -d -v -T0 *.xz
 

@@ -911,7 +911,7 @@ DEVICE_FUNC void emit_rpkt(Packet& pkt) {
   // This direction is in the cmf - we want to convert it to the rest
   // frame - use aberration of angles. We want to convert from cmf to
   // rest so need -ve velocity.
-  const auto vel_vec = get_velocity(pkt.pos, -1. * pkt.prop_time);
+  const auto vel_vec = get_velocity(pkt.pos, -pkt.prop_time);
   // negative time since we want the backwards transformation here
 
   pkt.dir = angle_ab(dir_cmf, vel_vec);

@@ -4,19 +4,19 @@ set -x
 
 runfolder=classicmode_1d_3dgrid_testrun
 
+if [ ! -f atomicdata_classic.tar.xz ]; then curl -O -L https://github.com/artis-mcrt/artis/releases/download/v2026.5.15/atomicdata_classic.tar.xz; fi
+
 mkdir -p $runfolder
 
-if [ ! -f atomicdata_classic.tar.xz ]; then curl --insecure -O https://theory.gsi.de/~lshingle/artis_http_public/artis/atomicdata_classic.tar.xz; fi
-
-tar -xf atomicdata_classic.tar.xz --directory $runfolder/
-
-rsync -av classicmode_1d_3dgrid_inputfiles/ $runfolder/
-
-ln -s ../../data/ $runfolder
-
-cp ../artisoptions_classic.h $runfolder/artisoptions.h
-
 cd $runfolder
+
+tar -xf ../atomicdata_classic.tar.xz --directory ./
+
+rsync -av ../classicmode_1d_3dgrid_inputfiles/ ./
+
+ln -s ../../ artis
+
+cp artis/artisoptions_classic.h artisoptions.h
 
 sed -i'' -e 's/constexpr int MPKTS.*/constexpr int MPKTS = 15000;/g' artisoptions.h
 

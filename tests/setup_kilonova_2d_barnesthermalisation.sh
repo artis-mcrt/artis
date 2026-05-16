@@ -4,23 +4,24 @@ set -x
 
 runfolder=kilonova_2d_barnesthermalisation_testrun
 
+if [ ! -f atomicdata_feconi.tar.xz ]; then curl -O -L https://github.com/artis-mcrt/artis/releases/download/v2026.5.15/atomicdata_feconi.tar.xz; fi
+
 mkdir -p $runfolder
 
-if [ ! -f atomicdata_feconi.tar.xz ]; then curl --insecure -O https://theory.gsi.de/~lshingle/artis_http_public/artis/atomicdata_feconi.tar.xz; fi
+cd $runfolder
 
-tar -xf atomicdata_feconi.tar.xz --directory $runfolder/
+tar -xf ../atomicdata_feconi.tar.xz --directory ./
 
 # same input files as the other test run
-rsync -av kilonova_2d_inputfiles/ $runfolder/
+rsync -av ../kilonova_2d_inputfiles/ ./
 
 # for the checksum files
-rsync -av --ignore-times kilonova_2d_barnesthermalisation_inputfiles/ $runfolder/
+rsync -av --ignore-times ../kilonova_2d_barnesthermalisation_inputfiles/ ./
 
-ln -s ../../data/ $runfolder
 
-cp ../artisoptions_kilonova_lte.h $runfolder/artisoptions.h
+ln -s ../../ artis
 
-cd $runfolder
+cp artis/artisoptions_kilonova_lte.h artisoptions.h
 
 xz -f -d -v -T0 *.xz
 
