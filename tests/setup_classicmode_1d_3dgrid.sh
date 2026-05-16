@@ -12,11 +12,11 @@ tar -xf atomicdata_classic.tar.xz --directory $runfolder/
 
 rsync -av classicmode_1d_3dgrid_inputfiles/ $runfolder/
 
-ln -s ../../data/ $runfolder
-
-cp ../artisoptions_classic.h $runfolder/artisoptions.h
-
 cd $runfolder
+
+ln -s ../../ artis
+
+cp artis/artisoptions_classic.h artisoptions.h
 
 sed -i'' -e 's/constexpr int MPKTS.*/constexpr int MPKTS = 15000;/g' artisoptions.h
 

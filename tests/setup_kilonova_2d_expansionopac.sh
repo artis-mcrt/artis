@@ -16,11 +16,11 @@ rsync -av kilonova_2d_inputfiles/ $runfolder/
 # for the checksum files
 rsync -av --ignore-times kilonova_2d_expansionopac_inputfiles/ $runfolder/
 
-ln -s ../../data/ $runfolder
-
-cp ../artisoptions_kilonova_lte.h $runfolder/artisoptions.h
-
 cd $runfolder
+
+ln -s ../../ artis
+
+cp artis/artisoptions_kilonova_lte.h artisoptions.h
 
 xz -f -d -v -T0 *.xz
 

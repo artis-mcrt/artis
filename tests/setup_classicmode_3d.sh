@@ -12,11 +12,11 @@ tar -xf atomicdata_classic.tar.xz --directory $runfolder/
 
 rsync -av classicmode_3d_inputfiles/ $runfolder/
 
-ln -s ../../data/ $runfolder
-
-cp ../artisoptions_classic.h $runfolder/artisoptions.h
-
 cd $runfolder
+
+ln -s ../../ artis
+
+cp artis/artisoptions_classic.h artisoptions.h
 
 xz -f -d -v -T0 *.xz
 

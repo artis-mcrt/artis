@@ -10,14 +10,13 @@ if [ ! -f atomicdata_feconi.tar.xz ]; then curl -O -L https://github.com/artis-m
 
 tar -xf atomicdata_feconi.tar.xz --directory $runfolder/
 
-# same input files as the other test run
 rsync -av kilonova_1d_inputfiles/ $runfolder/
 
-ln -s ../../data/ $runfolder
-
-cp ../artisoptions_kilonova_lte.h $runfolder/artisoptions.h
-
 cd $runfolder
+
+ln -s ../../ artis
+
+cp artis/artisoptions_kilonova_lte.h artisoptions.h
 
 xz -f -d -v -T0 *.xz
 
