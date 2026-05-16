@@ -4,15 +4,15 @@ set -x
 
 runfolder=kilonova_1d_testrun
 
-mkdir -p $runfolder
-
 if [ ! -f atomicdata_feconi.tar.xz ]; then curl -O -L https://github.com/artis-mcrt/artis/releases/download/v2026.5.15/atomicdata_feconi.tar.xz; fi
 
-tar -xf atomicdata_feconi.tar.xz --directory $runfolder/
-
-rsync -av kilonova_1d_inputfiles/ $runfolder/
+mkdir -p $runfolder
 
 cd $runfolder
+
+tar -xf ../atomicdata_feconi.tar.xz --directory ./
+
+rsync -av ../kilonova_1d_inputfiles/ ./
 
 ln -s ../../ artis
 

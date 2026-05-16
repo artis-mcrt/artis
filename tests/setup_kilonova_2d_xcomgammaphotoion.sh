@@ -4,19 +4,19 @@ set -x
 
 runfolder=kilonova_2d_xcomgammaphotoion_testrun
 
-mkdir -p $runfolder
-
 if [ ! -f atomicdata_feconi.tar.xz ]; then curl -O -L https://github.com/artis-mcrt/artis/releases/download/v2026.5.15/atomicdata_feconi.tar.xz; fi
 
-tar -xf atomicdata_feconi.tar.xz --directory $runfolder/
-
-# same input files as the other test run
-rsync -av kilonova_2d_inputfiles/ $runfolder/
-
-# for the checksum files
-rsync -av --ignore-times kilonova_2d_xcomgammaphotoion_inputfiles/ $runfolder/
+mkdir -p $runfolder
 
 cd $runfolder
+
+tar -xf ../atomicdata_feconi.tar.xz --directory ./
+
+# same input files as the other test run
+rsync -av ../kilonova_2d_inputfiles/ ./
+
+# for the checksum files
+rsync -av --ignore-times ../kilonova_2d_xcomgammaphotoion_inputfiles/ ./
 
 ln -s ../../ artis
 

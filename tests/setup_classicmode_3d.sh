@@ -4,15 +4,15 @@ set -x
 
 runfolder=classicmode_3d_testrun
 
-mkdir -p $runfolder
-
 if [ ! -f atomicdata_classic.tar.xz ]; then curl -O -L https://github.com/artis-mcrt/artis/releases/download/v2026.5.15/atomicdata_classic.tar.xz; fi
 
-tar -xf atomicdata_classic.tar.xz --directory $runfolder/
-
-rsync -av classicmode_3d_inputfiles/ $runfolder/
+mkdir -p $runfolder
 
 cd $runfolder
+
+tar -xf ../atomicdata_classic.tar.xz --directory ./
+
+rsync -av ../classicmode_3d_inputfiles/ ./
 
 ln -s ../../ artis
 
