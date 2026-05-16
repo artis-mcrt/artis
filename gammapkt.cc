@@ -212,12 +212,8 @@ void init_xcom_photoion_data() {
   for (int Z = 0; Z < numb_xcom_elements; Z++) {
     photoion_data[Z].reserve(100);
   }
-  std::string filepath{"xcom_photoion_data.txt"};
-  if (!std::filesystem::exists(filepath)) {
-    filepath = "data/xcom_photoion_data.txt";
-  }
 
-  auto data_fs = fstream_required(filepath, std::ios::in);
+  auto data_fs = fstream_required("xcom_photoion_data.txt", std::ios::in);
   std::string line_str;
   while (get_noncommentline(data_fs, line_str)) {
     int Z = 0;
