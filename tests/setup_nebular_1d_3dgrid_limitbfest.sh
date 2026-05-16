@@ -16,7 +16,7 @@ ln -s ../../data/ $runfolder
 
 cp ../artisoptions_nltenebular.h $runfolder/artisoptions.h
 
-cd nebular_1d_3dgrid_limitbfest_testrun
+cd $runfolder
 
 sed -i'' -e 's/constexpr int MPKTS.*/constexpr int MPKTS = 1000000;/g' artisoptions.h
 
