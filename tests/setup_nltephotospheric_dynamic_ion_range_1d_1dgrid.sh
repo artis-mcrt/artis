@@ -18,7 +18,7 @@ tar -xf ../atomicdata_hefeconi_fe_i_to_vii.tar.xz --directory .
 
 ln -s ../../ artis
 
-cp artis/artisoptions_nltenebular.h artisoptions.h
+cp artis/artisoptions_nltephotospheric_dynamic_ion_range.h artisoptions.h
 
 sed -i'' -e 's/constexpr int MPKTS.*/constexpr int MPKTS = 400;/g' artisoptions.h
 
