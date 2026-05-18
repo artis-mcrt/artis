@@ -1476,21 +1476,19 @@ auto get_element_meanweight(const std::ptrdiff_t nonemptymgi, const int element)
 [[nodiscard]] auto get_propcell_random_position_tmin(int cellindex) -> Vec3d {
   switch (get_propgridtype()) {
     case GridType::SPHERICAL1D: {
-      const double zrand = rng_uniform();
       const double r_inner = get_cellcoordmin(cellindex, 0);
       const double r_outer = get_cellcoordmax(cellindex, 0);
       // use equal volume probability distribution to select radius
-      const double radius = std::cbrt(std::lerp(pow3(r_outer), pow3(r_inner), zrand));
+      const double radius = std::cbrt(std::lerp(pow3(r_outer), pow3(r_inner), rng_uniform()));
 
       return vec_scale(get_rand_isotropic_unitvec(), radius);
     }
 
     case GridType::CYLINDRICAL2D: {
-      const double zrand = rng_uniform_pos();
       const double rcyl_inner = get_cellcoordmin(cellindex, 0);
       const double rcyl_outer = get_cellcoordmax(cellindex, 0);
       // use equal area probability distribution to select radius
-      const double rcyl_rand = std::sqrt(std::lerp(pow2(rcyl_inner), pow2(rcyl_outer), zrand));
+      const double rcyl_rand = std::sqrt(std::lerp(pow2(rcyl_outer), pow2(rcyl_inner), rng_uniform_pos()));
       const double theta_rand = rng_uniform() * 2 * PI;
       return {std::cos(theta_rand) * rcyl_rand, std::sin(theta_rand) * rcyl_rand,
               get_cellcoordmin(cellindex, 1) + (rng_uniform_pos() * propcell_width_tmin(cellindex, 1))};
