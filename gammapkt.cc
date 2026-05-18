@@ -553,9 +553,6 @@ void compton_scatter(Packet& pkt) {
 
   // multiply by the particle number density.
 
-  // sigma_cmf_cno *= rho * (1. - f_fe) / MH / 14;
-  // Assumes Z = 7. So mass = 14.
-
   const double chi_cmf_si = sigma_cmf_si * (rho / MH / 28);
   // Assumes Z = 14. So mass = 28.
 
