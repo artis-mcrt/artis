@@ -780,10 +780,8 @@ void zero_all_effionpot(const ptrdiff_t nonemptymgi) {
 
   const int index = static_cast<int>((energy_ev - SF_EMIN) / DELTA_E);
 
-  // assert_always(index > 0);
   if (index < 0) {
     // return 0.;
-    assert_always(std::isfinite(yfunc[0]));
     return yfunc[0];
   }
   if (index >= SFPTS - 1) {

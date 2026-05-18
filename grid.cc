@@ -1691,7 +1691,6 @@ DEVICE_FUNC auto get_modelgridtype() -> GridType {
   assert_testmodeonly(mgi < get_npts_model());
 
   const int nonemptymgi = nonemptymgi_of_mgi[mgi];
-  // assert_testmodeonly(nonemptymgi >= 0 || get_numpropcells(mgi) == 0);
   assert_testmodeonly(nonemptymgi >= 0);
   assert_testmodeonly(nonemptymgi < get_nonempty_npts_model());
 
