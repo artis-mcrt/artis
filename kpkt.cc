@@ -454,13 +454,7 @@ DEVICE_FUNC void do_kpkt(Packet& pkt, const double t2, const int nts) {
     // then randomly sample the packets frequency according to the continuums energy distribution
 
     // Sample the packets comoving frame frequency according to paperII 4.2.2
-    // const double zrand = rng_uniform();
-    // if (zrand < 0.5) {
     pkt.nu_cmf = select_continuum_nu(element, lowerion, lowerlevel, upper, T_e);
-    // } else {
-    //   // Emit like a BB
-    //   pkt.nu_cmf = sample_planck(T_e);
-    // }
 
     // and then emit the packet randomly in the comoving frame
     emit_rpkt(pkt);
