@@ -470,15 +470,13 @@ void rpkt_event_continuum(Packet& pkt, const ContinuumOpacity& chi_rpkt_cont) {
     // Determine in which continuum the bf-absorption occurs
     const double chi_bf_rand = rng_uniform() * chi_bf_inrest;
 
-#pragma clang unsafe_buffer_usage begin
-    // NOLINTBEGIN(*-pointer-arithmetic)
-    // first chi_bf_sum[i] such that chi_bf_sum[i] > chi_bf_rand
-    const auto allcontindex = std::upper_bound(phixslist.chi_bf_sum.begin() + phixslist.allcontbegin,
-                                               phixslist.chi_bf_sum.begin() + phixslist.allcontend - 1, chi_bf_rand) -
-                              phixslist.chi_bf_sum.begin();
-    // NOLINTEND(*-pointer-arithmetic)
-#pragma clang unsafe_buffer_usage end
-    assert_testmodeonly(allcontindex < phixslist.allcontend);
+    // first chi_bf_sum[i] such that chi_bf_sum[i] > chi_bf_rand (or the last one if chi_bf_rand is larger than all
+    // chi_bf_sum) gives the index of the continuum
+    const auto allcontindex =
+        std::ranges::upper_bound(
+            phixslist.chi_bf_sum.subspan(phixslist.allcontbegin, phixslist.allcontend - phixslist.allcontbegin - 1),
+            chi_bf_rand) -
+        phixslist.chi_bf_sum.begin();
 
     const double nu_edge = globals::allcont.nu_edge[allcontindex];
     const int element = globals::allcont.element[allcontindex];
