@@ -456,7 +456,7 @@ void compton_scatter(Packet& pkt) {
 
     const double f_fe = grid::get_ffegrp(mgi);
 
-    return (chi_cmf_fe * f_fe) + (chi_cmf_si * (1. - f_fe));
+    return std::lerp(chi_cmf_si, chi_cmf_fe, f_fe);
   }
 
   const double hnu_over_1MeV = nu_cmf / 2.41326e+20;
