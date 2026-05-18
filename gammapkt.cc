@@ -559,7 +559,7 @@ void compton_scatter(Packet& pkt) {
   const double chi_cmf_fe = sigma_cmf_fe * (rho / MH / 56);
   // Assumes Z = 28. So mass = 56.
 
-  const double chi_cmf = std::lerp(chi_cmf_si, chi_cmf_fe, f_fe);
+  const double chi_cmf = (chi_cmf_fe * f_fe) + (chi_cmf_si * (1. - f_fe));
 
   return std::max(chi_cmf, 0.);
 }
