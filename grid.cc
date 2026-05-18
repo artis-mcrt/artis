@@ -1480,7 +1480,7 @@ auto get_element_meanweight(const std::ptrdiff_t nonemptymgi, const int element)
       const double r_inner = get_cellcoordmin(cellindex, 0);
       const double r_outer = get_cellcoordmax(cellindex, 0);
       // use equal volume probability distribution to select radius
-      const double radius = std::cbrt(std::lerp(pow3(r_inner), pow3(r_outer), zrand));
+      const double radius = std::cbrt(std::lerp(pow3(r_outer), pow3(r_inner), zrand));
 
       return vec_scale(get_rand_isotropic_unitvec(), radius);
     }
