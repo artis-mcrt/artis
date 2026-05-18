@@ -232,7 +232,8 @@ DEVICE_FUNC inline auto get_nphixstargets(const int element, const int ion, cons
   } else if (i < globals::NPHIXSPOINTS - 1) {
     const double sigma_bf_a = photoion_xs[i];
     const double sigma_bf_b = photoion_xs[i + 1];
-    sigma_bf = static_cast<float>(std::lerp(sigma_bf_a, sigma_bf_b, ireal - i));
+    const double factor_b = ireal - i;
+    sigma_bf = static_cast<float>(((1. - factor_b) * sigma_bf_a) + (factor_b * sigma_bf_b));
   } else {
     // use a parameterization of sigma_bf by the Kramers formula
     // which anchor point should we take ??? the cross-section at the edge or at the highest grid point ???
