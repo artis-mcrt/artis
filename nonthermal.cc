@@ -774,15 +774,10 @@ void zero_all_effionpot(const ptrdiff_t nonemptymgi) {
 // interpolate the y flux values to get the value at a given energy
 // y has units of particles / cm2 / s / eV
 [[nodiscard]] constexpr auto get_y(const std::array<double, SFPTS>& yfunc, const double energy_ev) -> double {
-  if (energy_ev <= 0) {
-    return 0.;
-  }
-
   const int index = static_cast<int>((energy_ev - SF_EMIN) / DELTA_E);
 
   if (index < 0) {
-    // return 0.;
-    return yfunc[0];
+    return 0.;
   }
   if (index >= SFPTS - 1) {
     return 0.;
