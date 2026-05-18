@@ -193,7 +193,7 @@ constexpr auto uppertriangular(const int i, const int j) -> int {
   assert_testmodeonly(i >= 0);
   assert_testmodeonly(i < SFPTS);
   // sometimes you might want to get an offset for a row using j = 0 < i, so that j can be added to it.
-  // assert_testmodeonly(j >= i);
+  assert_testmodeonly(j >= i || j == 0);
   assert_testmodeonly(j < SFPTS);
   return (SFPTS * i) - (i * (i + 1) / 2) + j;
 }
