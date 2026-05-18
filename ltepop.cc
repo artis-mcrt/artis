@@ -1,16 +1,16 @@
 #include "ltepop.h"
 
-#pragma clang unsafe_buffer_usage begin
-#include <boost/math/tools/toms748_solve.hpp>
-#include <cstdint>
-#pragma clang unsafe_buffer_usage end
-
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
+#include <cstdint>
 #include <cstdlib>
 #include <tuple>
 #include <vector>
+
+#pragma clang unsafe_buffer_usage begin
+#include <boost/math/tools/toms748_solve.hpp>
+#pragma clang unsafe_buffer_usage end
 
 #include "artisoptions.h"
 #include "atomic.h"
