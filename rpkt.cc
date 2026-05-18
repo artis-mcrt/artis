@@ -255,7 +255,6 @@ auto get_possible_event_expansion_opacity(const int nonemptymgi, const Packet& p
       std::tie(edist_after_bin, next_trans, event_is_boundbound) =
           get_possible_event(nonemptymgi, pkt_bin_start, chi_rpkt_cont, mastate, tau_rnd - tau,
                              std::numeric_limits<double>::max(), 0., dnu_on_dl, doppler, globals::linelist);
-      // assert_always(edist_after_bin <= 1.1 * binedgedist);
       dist = dist + edist_after_bin;
 
       return {dist, event_is_boundbound};

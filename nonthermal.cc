@@ -193,7 +193,7 @@ constexpr auto uppertriangular(const int i, const int j) -> int {
   assert_testmodeonly(i >= 0);
   assert_testmodeonly(i < SFPTS);
   // sometimes you might want to get an offset for a row using j = 0 < i, so that j can be added to it.
-  // assert_testmodeonly(j >= i);
+  assert_testmodeonly(j >= i || j == 0);
   assert_testmodeonly(j < SFPTS);
   return (SFPTS * i) - (i * (i + 1) / 2) + j;
 }
@@ -774,30 +774,16 @@ void zero_all_effionpot(const ptrdiff_t nonemptymgi) {
 // interpolate the y flux values to get the value at a given energy
 // y has units of particles / cm2 / s / eV
 [[nodiscard]] constexpr auto get_y(const std::array<double, SFPTS>& yfunc, const double energy_ev) -> double {
-  if (energy_ev <= 0) {
-    return 0.;
-  }
-
   const int index = static_cast<int>((energy_ev - SF_EMIN) / DELTA_E);
 
-  // assert_always(index > 0);
-  if (index < 0) {
-    // return 0.;
-    assert_always(std::isfinite(yfunc[0]));
-    return yfunc[0];
-  }
-  if (index >= SFPTS - 1) {
+  if (index < 0 || index >= (SFPTS - 1)) {
     return 0.;
   }
   const double enbelow = engrid(index);
   const double enabove = engrid(index + 1);
   const double ybelow = yfunc[index];
   const double yabove = yfunc[index + 1];
-  const double x = (energy_ev - enbelow) / (enabove - enbelow);
-  return ((1 - x) * ybelow) + (x * yabove);
-
-  // or return the nearest neighbour
-  // return yfunc[index];
+  return std::lerp(ybelow, yabove, (energy_ev - enbelow) / (enabove - enbelow));
 }
 
 constexpr auto xs_ionisation_lotz(const double en_erg, const ShellParams& colliondata_ion, const int electronsinshell)
