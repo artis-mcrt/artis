@@ -786,11 +786,7 @@ void zero_all_effionpot(const ptrdiff_t nonemptymgi) {
   const double enabove = engrid(index + 1);
   const double ybelow = yfunc[index];
   const double yabove = yfunc[index + 1];
-  const double x = (energy_ev - enbelow) / (enabove - enbelow);
-  return ((1 - x) * ybelow) + (x * yabove);
-
-  // or return the nearest neighbour
-  // return yfunc[index];
+  return std::lerp(ybelow, yabove, (energy_ev - enbelow) / (enabove - enbelow));
 }
 
 constexpr auto xs_ionisation_lotz(const double en_erg, const ShellParams& colliondata_ion, const int electronsinshell)
