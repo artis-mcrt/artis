@@ -17,7 +17,7 @@ def main() -> None:
     assert sys.version_info >= (3, 14), "This script requires Python 3.14 or higher."
     import compression
 
-    parser = argparse.ArgumentParser(description="Plot text file")
+    parser = argparse.ArgumentParser(description="Filter packets files to keep only escaped rpkts")
     parser.add_argument("--rm", action="store_true", help="Remove original files after processing")
     parser.add_argument("-f", action="store_true", help="Confirm performing the filtering")
     args = parser.parse_args()
