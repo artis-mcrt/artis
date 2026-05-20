@@ -15,22 +15,22 @@
 #include "mpi_logging.h"
 #include "packet.h"
 
-constexpr float expopac_lambdamin = 534.5;
-constexpr float expopac_lambdamax = 35000.;
-constexpr float expopac_deltalambda = 35.5;
+constexpr double expopac_lambdamin = 534.5;
+constexpr double expopac_lambdamax = 35000.;
+constexpr double expopac_deltalambda = 35.5;
 constexpr auto expopac_nbins = static_cast<ptrdiff_t>((expopac_lambdamax - expopac_lambdamin) / expopac_deltalambda);
 
 // wavelength bins are ordered by ascending wavelength (descending frequency)
 
 constexpr auto get_expopac_bin_nu_upper(const ptrdiff_t binindex) -> double {
-  const auto binindex_f32 = static_cast<float>(binindex);
-  const auto lambda_lower = expopac_lambdamin + (binindex_f32 * expopac_deltalambda);
+  const auto binindex_f64 = static_cast<double>(binindex);
+  const auto lambda_lower = expopac_lambdamin + (binindex_f64 * expopac_deltalambda);
   return 1e8 * CLIGHT / lambda_lower;
 }
 
 constexpr auto get_expopac_bin_nu_lower(const ptrdiff_t binindex) -> double {
-  const auto binindexplusone_f32 = static_cast<float>(binindex + 1);
-  const auto lambda_upper = expopac_lambdamin + (binindexplusone_f32 * expopac_deltalambda);
+  const auto binindexplusone_f64 = static_cast<double>(binindex + 1);
+  const auto lambda_upper = expopac_lambdamin + (binindexplusone_f64 * expopac_deltalambda);
   return 1e8 * CLIGHT / lambda_upper;
 }
 
