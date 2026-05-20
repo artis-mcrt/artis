@@ -53,14 +53,14 @@ auto alpha_sp_integrand(const double nu_minus_nu_edge, const double nu_edge, con
   const auto sigma_bf = photoionisation_crosssection_fromtable(photoion_xs, nu_edge, nu_minus_nu_edge + nu_edge);
   // the variable of integration has been changed from nu to nu_edge_minus_nu = nu - nu_edge
   // to get a cancellation with part of the saha factor
-  return TWOOVERCLIGHTSQUARED * sigma_bf * pow2(nu_edge + nu_minus_nu_edge) * exp(-HOVERKB * nu_minus_nu_edge / T_e);
+  return (2 / CLIGHTSQUARED) * sigma_bf * pow2(nu_edge + nu_minus_nu_edge) * exp(-HOVERKB * nu_minus_nu_edge / T_e);
 }
 
 // Integrand to calculate the rate coefficient for spontaneous recombination
 auto alpha_sp_E_integrand(const double nu, const double nu_edge, const float T_e,
                           const std::span<const float> photoion_xs) -> double {
   const auto sigma_bf = photoionisation_crosssection_fromtable(photoion_xs, nu_edge, nu);
-  return TWOOVERCLIGHTSQUARED * sigma_bf * pow3(nu) / nu_edge * exp(-HOVERKB * nu / T_e);
+  return (2 / CLIGHTSQUARED) * sigma_bf * pow3(nu) / nu_edge * exp(-HOVERKB * nu / T_e);
 }
 
 // Integrand to calculate the rate coefficient for photoionisation corrected for stimulated recombination.
