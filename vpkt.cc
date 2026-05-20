@@ -100,8 +100,8 @@ constexpr auto all_taus_past_taumax(std::vector<double>& tau, const double tau_m
 }
 
 // Routine to add a packet to the outcoming spectrum.
-void add_to_vspecpol(const double nu_rf, const double e_rf, const Vec3d& stokes, const int obsdirindex,
-                     const int opachoiceindex, const double t_arrive) {
+void add_to_vspecpol(const double nu_rf, const double e_rf, const double prob, const double q_rf, const double u_rf,
+                     const int obsdirindex, const int opachoiceindex, const double t_arrive) {
   // Need to decide in which (1) time and (2) frequency bin the vpkt is escaping
 
   const int nt = static_cast<int>((log(t_arrive) - log(VSPEC_TIMEMIN)) / dlogt_vspec);
@@ -114,9 +114,9 @@ void add_to_vspecpol(const double nu_rf, const double e_rf, const Vec3d& stokes,
   const double pktcontrib = e_rf / vspecpol[nt][ind_comb].delta_t / delta_freq_vspec[nnu] / 4.e12 / PI / PARSEC /
                             PARSEC / globals::nprocs * 4 * PI;
 
-  atomicadd(vspecpol[nt][ind_comb].flux[nnu].i, stokes[0] * pktcontrib);
-  atomicadd(vspecpol[nt][ind_comb].flux[nnu].q, stokes[1] * pktcontrib);
-  atomicadd(vspecpol[nt][ind_comb].flux[nnu].u, stokes[2] * pktcontrib);
+  atomicadd(vspecpol[nt][ind_comb].flux[nnu].i, prob * pktcontrib);
+  atomicadd(vspecpol[nt][ind_comb].flux[nnu].q, prob * q_rf * pktcontrib);
+  atomicadd(vspecpol[nt][ind_comb].flux[nnu].u, prob * u_rf * pktcontrib);
 }
 
 // Routine to add a packet to the outcoming spectrum.
@@ -390,9 +390,7 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
 
     assert_always(std::isfinite(prob));
 
-    const Vec3d stokes = {prob, q_rf * prob, u_rf * prob};
-
-    add_to_vspecpol(nu_rf, e_rf, stokes, obsdirindex, opacchoiceindex, t_arrive);
+    add_to_vspecpol(nu_rf, e_rf, prob, q_rf, u_rf, obsdirindex, opacchoiceindex, t_arrive);
 
     if constexpr (VPKT_WRITE_CONTRIBS) {
       std::format_to(std::back_inserter(vpkt_contrib_row), " {:g}", e_rf * prob);
