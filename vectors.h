@@ -325,9 +325,10 @@ constexpr auto scatter_polarisation_frame_transform(const Vec3d& old_dir_cmf, co
   // Scattering
 
   const double mu = dot(old_dir_cmf, new_dir_cmf);
+  const double musquared = pow2(mu);
 
-  const double Inew = 0.75 * (((mu * mu) + 1.0) + (Qold * ((mu * mu) - 1.0)));
-  const double Qnew = (0.75 * (((mu * mu) - 1.0) + (Qold * ((mu * mu) + 1.0)))) / Inew;
+  const double Inew = 0.75 * ((musquared + 1.0) + (Qold * (musquared - 1.0)));
+  const double Qnew = (0.75 * ((musquared - 1.0) + (Qold * (musquared + 1.0)))) / Inew;
   const double Unew = (1.5 * mu * Uold) / Inew;
 
   // Need to rotate Stokes Parameters out of the scattering plane to the meridian frame (Clockwise rotation of PI-i2)
@@ -347,7 +348,7 @@ constexpr auto scatter_polarisation_frame_transform(const Vec3d& old_dir_cmf, co
   const auto [new_dir_rf, Q_rf, U_rf] =
       (frame_transform(new_dir_cmf, Q_cmf, U_cmf, Vec3d{-vel_vec[0], -vel_vec[1], -vel_vec[2]}));
 
-  const double pn = 3. / (16. * PI) * (1 + pow2(mu) + ((pow2(mu) - 1) * Qold));
+  const double pn = 3. / (16. * PI) * (1 + musquared + ((musquared - 1) * Qold));
   return {new_dir_rf, Q_rf, U_rf, pn};
 }
 
