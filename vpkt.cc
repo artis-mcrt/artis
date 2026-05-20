@@ -162,8 +162,8 @@ void add_to_vpkt_grid(const double nu_rf, const double e_rf, const double prob, 
   // Add contribution
   if (nu_rf > nu_grid_min[wlbin] && nu_rf < nu_grid_max[wlbin]) {
     atomicadd(vgrid[ny][nz].flux[wlbin][obsdirindex].i, prob * e_rf);
-    atomicadd(vgrid[ny][nz].flux[wlbin][obsdirindex].q, (stokes_q * prob) * e_rf);
-    atomicadd(vgrid[ny][nz].flux[wlbin][obsdirindex].u, (stokes_u * prob) * e_rf);
+    atomicadd(vgrid[ny][nz].flux[wlbin][obsdirindex].q, prob * stokes_q * e_rf);
+    atomicadd(vgrid[ny][nz].flux[wlbin][obsdirindex].u, prob * stokes_u * e_rf);
   }
 }
 
