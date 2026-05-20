@@ -470,7 +470,7 @@ template <typename T, typename U>
 
     const double f_lower = table[get_bflutindex(upperindex - 1, uniquelevelindex, phixstargetindex)];
     const double f_upper = table[get_bflutindex(upperindex, uniquelevelindex, phixstargetindex)];
-    return std::lerp(f_lower, f_upper, (temperature - T_lower) / (T_upper - T_lower));
+    return (f_lower + ((f_upper - f_lower) / (T_upper - T_lower) * (temperature - T_lower)));
   }
   return table[get_bflutindex(TABLESIZE - 1, uniquelevelindex, phixstargetindex)];
 }
