@@ -121,7 +121,7 @@ void add_to_vspecpol(const double nu_rf, const double e_rf, const Vec3d& stokes,
 
 // Routine to add a packet to the outcoming spectrum.
 void add_to_vpkt_grid(const double nu_rf, const double e_rf, const Vec3d& stokes, const Vec3d& vel, const int wlbin,
-                      const int obsdirindex, const Vec3d& obs) {
+                      const int obsdirindex, const Vec3d& obsdir) {
   double vref1{NAN};
   double vref2{NAN};
 
@@ -129,24 +129,22 @@ void add_to_vpkt_grid(const double nu_rf, const double e_rf, const Vec3d& stokes
 
   // Packet velocity
 
-  // if nobs = x , vref1 = vy and vref2 = vz
-  if (obs[0] == 1) {
+  if (obsdir[0] == 1) {
+    // if obsdir = +x , vref1 = vy and vref2 = vz
     vref1 = vel[1];
     vref2 = vel[2];
-  }
-  // if nobs = -x , vref1 = -vy and vref2 = -vz
-  else if (obs[0] == -1) {
+  } else if (obsdir[0] == -1) {
+    // if obsdir = -x , vref1 = -vy and vref2 = -vz
     vref1 = -vel[1];
     vref2 = -vel[2];
-  }
-
-  // Rotate velocity into projected area seen by the observer (see notes)
-  else {
-    // Rotate velocity from (x,y,z) to (n_obs,ref1,ref2) so that x correspond to n_obs (see notes)
-    vref1 = (-obs[1] * vel[0]) + ((obs[0] + (obs[2] * obs[2] / (1 + obs[0]))) * vel[1]) -
-            (obs[1] * obs[2] * (1 - obs[0]) / sqrt(1 - (obs[0] * obs[0])) * vel[2]);
-    vref2 = (-obs[2] * vel[0]) - (obs[1] * obs[2] * (1 - obs[0]) / sqrt(1 - (obs[0] * obs[0])) * vel[1]) +
-            ((obs[0] + (obs[1] * obs[1] / (1 + obs[0]))) * vel[2]);
+  } else {
+    // Rotate velocity into projected area seen by the observer (see notes)
+    // Rotate velocity from (x,y,z) to (obsdir,vref1,vref2) so that x corresponds to obsdir
+    vref1 = (-obsdir[1] * vel[0]) + ((obsdir[0] + (obsdir[2] * obsdir[2] / (1 + obsdir[0]))) * vel[1]) -
+            (obsdir[1] * obsdir[2] * (1 - obsdir[0]) / sqrt(1 - (obsdir[0] * obsdir[0])) * vel[2]);
+    vref2 = (-obsdir[2] * vel[0]) -
+            (obsdir[1] * obsdir[2] * (1 - obsdir[0]) / sqrt(1 - (obsdir[0] * obsdir[0])) * vel[1]) +
+            ((obsdir[0] + (obsdir[1] * obsdir[1] / (1 + obsdir[0]))) * vel[2]);
   }
 
   // Outside the grid
