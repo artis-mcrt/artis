@@ -1123,12 +1123,8 @@ auto get_nt_frac_excitation(const int nonemptymgi) -> float {
   }
 
   const float frac_excitation = nt_solution[nonemptymgi].frac_excitation;
-
-  if (frac_excitation < 0 || !std::isfinite(frac_excitation)) {
-    printlnlog("ERROR: get_nt_frac_excitation called with no valid solution stored for cell {}. frac_excitation = {:g}",
-               grid::get_mgi_of_nonemptymgi(nonemptymgi), frac_excitation);
-    std::abort();
-  }
+  assert_always(frac_excitation >= 0.);
+  assert_always(std::isfinite(frac_excitation));
 
   return frac_excitation;
 }
