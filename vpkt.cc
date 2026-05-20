@@ -120,8 +120,9 @@ void add_to_vspecpol(const double nu_rf, const double e_rf, const Vec3d& stokes,
 }
 
 // Routine to add a packet to the outcoming spectrum.
-void add_to_vpkt_grid(const double nu_rf, const double e_rf, const Vec3d& stokes, const Vec3d& vel, const int wlbin,
-                      const int obsdirindex, const Vec3d& obsdir) {
+void add_to_vpkt_grid(const double nu_rf, const double e_rf, const double prob, const double stokes_q,
+                      const double stokes_u, const Vec3d& vel, const int wlbin, const int obsdirindex,
+                      const Vec3d& obsdir) {
   double vref1{NAN};
   double vref2{NAN};
 
@@ -160,9 +161,9 @@ void add_to_vpkt_grid(const double nu_rf, const double e_rf, const Vec3d& stokes
 
   // Add contribution
   if (nu_rf > nu_grid_min[wlbin] && nu_rf < nu_grid_max[wlbin]) {
-    atomicadd(vgrid[ny][nz].flux[wlbin][obsdirindex].i, stokes[0] * e_rf);
-    atomicadd(vgrid[ny][nz].flux[wlbin][obsdirindex].q, stokes[1] * e_rf);
-    atomicadd(vgrid[ny][nz].flux[wlbin][obsdirindex].u, stokes[2] * e_rf);
+    atomicadd(vgrid[ny][nz].flux[wlbin][obsdirindex].i, prob * e_rf);
+    atomicadd(vgrid[ny][nz].flux[wlbin][obsdirindex].q, (stokes_q * prob) * e_rf);
+    atomicadd(vgrid[ny][nz].flux[wlbin][obsdirindex].u, (stokes_u * prob) * e_rf);
   }
 }
 
@@ -406,7 +407,7 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
     for (int wlbin = 0; wlbin < grid_nwavelengthranges; wlbin++) {
       if (nu_rf > nu_grid_min[wlbin] && nu_rf < nu_grid_max[wlbin]) {  // Frequency selection
         if (t_arrive > tmin_grid && t_arrive < tmax_grid) {  // Time selection
-          add_to_vpkt_grid(nu_rf, e_rf, {prob, q_rf * prob, u_rf * prob}, vel_vec, wlbin, obsdirindex, obsdir);
+          add_to_vpkt_grid(nu_rf, e_rf, prob, q_rf, u_rf, vel_vec, wlbin, obsdirindex, obsdir);
         }
       }
     }
