@@ -1013,7 +1013,7 @@ void calculate_expansion_opacities(const int nonemptymgi) {
       const auto nu_mid = (nu_upper + nu_lower) / 2.;
       const auto bin_kappa_cont = calculate_chi_ffheating(nonemptymgi, nu_mid, false) / rho;
 
-      const auto planck_val = radfield::dbb(nu_mid, temperature, 1);
+      const auto planck_val = radfield::planck(nu_mid, temperature);
       const auto kappa_planck = (bin_kappa_bb + bin_kappa_cont) * planck_val;
 
       const auto delta_nu = nu_upper - nu_lower;

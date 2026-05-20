@@ -75,7 +75,7 @@ auto gammacorr_integrand(const double nu, const double nu_edge, const float T, c
   // Dependence on dilution factor W is linear. This allows to set it here to
   // 1. and scale to its actual value later on.
   // Assumption T_e = T_R makes n_kappa/n_i * (n_i/n_kappa)* = 1
-  return sigma_bf * ONEOVERH / nu * radfield::dbb(nu, T, 1) * (1 - exp(-HOVERKB * nu / T));
+  return sigma_bf * ONEOVERH / nu * radfield::planck(nu, T) * (1 - exp(-HOVERKB * nu / T));
 }
 
 // Integrand to precalculate the bound-free cooling rate coefficient
