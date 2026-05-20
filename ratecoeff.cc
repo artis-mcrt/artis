@@ -470,7 +470,7 @@ template <typename T, typename U>
 
     const double f_lower = table[get_bflutindex(upperindex - 1, uniquelevelindex, phixstargetindex)];
     const double f_upper = table[get_bflutindex(upperindex, uniquelevelindex, phixstargetindex)];
-    return (f_lower + ((f_upper - f_lower) / (T_upper - T_lower) * (temperature - T_lower)));
+    return std::lerp(f_lower, f_upper, (temperature - T_lower) / (T_upper - T_lower));
   }
   return table[get_bflutindex(TABLESIZE - 1, uniquelevelindex, phixstargetindex)];
 }
@@ -668,11 +668,9 @@ void ratecoefficients_init() {
 }
 
 // Returns the (stimulated recombination corrected) photoionisation rate coefficient.
-auto get_corrphotoioncoeff_ana(int element, const int ion, const int level, const int phixstargetindex,
-                               const int nonemptymgi) -> double {
+auto get_corrphotoioncoeff_ana(int element, const int ion, const int level, const int phixstargetindex, const float T_R,
+                               const float W) -> double {
   assert_always(USE_LUT_PHOTOION);
-  const double W = grid::get_W(nonemptymgi);
-  const double T_R = grid::get_TR(nonemptymgi);
   const auto uniquelevelindex = get_uniquelevelindex(element, ion, level);
   return W * lerp_or_last(std::span{corrphotoioncoeffs}, uniquelevelindex, phixstargetindex, T_R);
 }
