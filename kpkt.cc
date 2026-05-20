@@ -217,11 +217,11 @@ void set_ncoolingterms() {
 // return a randomly chosen frequency according to the Planck distribution of temperature T using a Monte Carlo method
 auto sample_planck_montecarlo(const double T) -> double {
   const double nu_peak = 5.879e10 * T;
-  const double B_peak = radfield::dbb(nu_peak, T, 1);
+  const double B_peak = radfield::planck(nu_peak, T);
 
   while (true) {
     const double nu = NU_MIN_R + (rng_uniform() * (NU_MAX_R - NU_MIN_R));
-    if (rng_uniform() * B_peak <= radfield::dbb(nu, T, 1)) {
+    if (rng_uniform() * B_peak <= radfield::planck(nu, T)) {
       return nu;
     }
   }

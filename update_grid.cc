@@ -264,6 +264,9 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
 }
 
 void update_gamma_corrphotoionrenorm_bfheating_estimators(const int nonemptymgi, const double estimator_normfactor) {
+  const auto W = grid::get_W(nonemptymgi);
+  const auto T_R = grid::get_TR(nonemptymgi);
+
   if constexpr (USE_LUT_PHOTOION) {
     for (int element = 0; element < get_nelements(); element++) {
       const int nions = get_nions(element);
@@ -284,7 +287,7 @@ void update_gamma_corrphotoionrenorm_bfheating_estimators(const int nonemptymgi,
 #endif
 
         globals::corrphotoionrenorm[ionestimindex] =
-            globals::gammaestimator[ionestimindex] / get_corrphotoioncoeff_ana(element, ion, 0, 0, nonemptymgi);
+            globals::gammaestimator[ionestimindex] / (W * get_corrphotoioncoeff_ana(element, ion, 0, 0, T_R));
 
         assert_always(std::isfinite(globals::corrphotoionrenorm[ionestimindex]));
       }
@@ -369,7 +372,7 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
   nonthermal::calculate_deposition_rate_density(nonemptymgi, nts, heatingcoolingrates);
 
   const double estimator_normfactor = 1 / deltaV / deltat / globals::nprocs;
-  const double estimator_normfactor_over4pi = ONEOVER4PI * estimator_normfactor;
+  const double estimator_normfactor_over4pi = (1. / (4 * PI)) * estimator_normfactor;
 
   if (nts == globals::timestep_initial && titer == 0) {
     // For the initial timestep, temperatures have already been assigned
