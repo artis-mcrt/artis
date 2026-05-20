@@ -194,7 +194,7 @@ auto read_text_packets(const std::string& filename) -> std::vector<Packet> {
 
     if constexpr (POL_ON) {
       double stokes1 = 0.;
-      ssline >> stokes1 >> pkt.stokes_Q >> pkt.stokes_U;
+      ssline >> stokes1 >> pkt.stokes_q >> pkt.stokes_u;
     }
 
     int int_originated_from_particlenotgamma = 0;
@@ -232,7 +232,7 @@ void write_text_packets(const std::string& filename, const std::span<const Packe
     std::print(packets_file, " {:g} {:g} {:g}", pkt.em_pos[0], pkt.em_pos[1], pkt.em_pos[2]);
     std::print(packets_file, " {} {:g} {} {:g}", pkt.absorptiontype, pkt.absorptionfreq, pkt.nscatterings, pkt.em_time);
     if constexpr (POL_ON) {
-      std::print(packets_file, " {:g} {:g} {:g}", 1., pkt.stokes_Q, pkt.stokes_U);
+      std::print(packets_file, " {:g} {:g} {:g}", 1., pkt.stokes_q, pkt.stokes_u);
     }
     std::print(packets_file, " {}", static_cast<int>(pkt.originated_from_particlenotgamma));
     std::print(packets_file, " {:g} {:g} {:g}", pkt.trueem_pos[0], pkt.trueem_pos[1], pkt.trueem_pos[2]);

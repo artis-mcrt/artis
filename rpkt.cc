@@ -295,8 +295,8 @@ void electron_scatter_rpkt(Packet& pkt) {
 
   // Transform Stokes Parameters from the RF to the CMF
 
-  const auto [old_dir_cmf, Qi_cmf, Ui_cmf] = (POL_ON ? frame_transform(pkt.dir, pkt.stokes_Q, pkt.stokes_U, vel_vec)
-                                                     : std::make_tuple(angle_ab(pkt.dir, vel_vec), 0., 0.));
+  const auto [old_dir_cmf, q_i_cmf, u_i_cmf] = (POL_ON ? frame_transform(pkt.dir, pkt.stokes_q, pkt.stokes_u, vel_vec)
+                                                       : std::make_tuple(angle_ab(pkt.dir, vel_vec), 0., 0.));
 
   // Outcoming direction. Compute the new cmf direction from the old direction and the scattering angles (see Kalos &
   // Whitlock 2008)
@@ -318,7 +318,7 @@ void electron_scatter_rpkt(Packet& pkt) {
       // with -i1. Here, instead, we calculate the angle in the clockwise direction from 0 to 2PI.
       // For instance, the i1 angle in Fig.2 of Bulla+2015 corresponds to 2PI-i1 here.
       // NB2: the i1 and i2 angles computed in the code (before and after scattering) are instead as in Bulla+2015
-      p = (mu + 1) + ((mu - 1) * ((cos(2 * phisc) * Qi_cmf) + (sin(2 * phisc) * Ui_cmf)));
+      p = (mu + 1) + ((mu - 1) * ((cos(2 * phisc) * q_i_cmf) + (sin(2 * phisc) * u_i_cmf)));
 
       // generate a number between 0 and the maximum of the previous function (2)
       x = 2. * rng_uniform();
@@ -352,8 +352,8 @@ void electron_scatter_rpkt(Packet& pkt) {
     pkt.dir = angle_ab(new_dir_cmf, Vec3d{-vel_vec[0], -vel_vec[1], -vel_vec[2]});
   } else {
     // Need to rotate Stokes Parameters in the scattering plane
-    std::tie(pkt.dir, pkt.stokes_Q, pkt.stokes_U, std::ignore) =
-        scatter_polarisation_to_rf(old_dir_cmf, new_dir_cmf, Qi_cmf, Ui_cmf, vel_vec);
+    std::tie(pkt.dir, pkt.stokes_q, pkt.stokes_u, std::ignore) =
+        scatter_polarisation_to_rf(old_dir_cmf, new_dir_cmf, q_i_cmf, u_i_cmf, vel_vec);
   }
 
   // Check unit vector
@@ -867,8 +867,8 @@ DEVICE_FUNC void emit_rpkt(Packet& pkt) {
 
   if constexpr (POL_ON) {
     // Reset to unpolarised
-    pkt.stokes_U = 0.;
-    pkt.stokes_Q = 0.;
+    pkt.stokes_u = 0.;
+    pkt.stokes_q = 0.;
   }
 }
 

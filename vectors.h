@@ -259,19 +259,19 @@ constexpr auto move_pkt_withtime(Packet& pkt, const double distance) -> double {
 }
 
 // Routine to transform the Stokes Parameters from RF to CMF
-constexpr auto frame_transform(const Vec3d& n_rf, const double Q0, const double U0, const Vec3d& v)
+constexpr auto frame_transform(const Vec3d& n_rf, const double q0, const double u0, const Vec3d& v)
     -> std::tuple<Vec3d, double, double> {
   // Meridian frame in the RF
   const auto [ref1_rf, ref2_rf] = meridian(n_rf);
 
   // Compute polarisation (which is invariant)
-  const double p = sqrt((Q0 * Q0) + (U0 * U0));
+  const double p = sqrt((q0 * q0) + (u0 * u0));
 
   // We want to compute the angle between ref1 and the electric field
   double rot_angle = 0;
 
   if (p > 0) {
-    const double pol_angle = std::atan2(U0, Q0);
+    const double pol_angle = std::atan2(u0, q0);
     rot_angle = (pol_angle < 0 ? pol_angle + (2. * PI) : pol_angle) / 2.;
   }
 
@@ -302,16 +302,16 @@ constexpr auto frame_transform(const Vec3d& n_rf, const double Q0, const double 
   }
 
   // Compute Stokes Parameters in the CMF
-  const auto Q = cos(2 * theta_rot) * p;
-  const auto U = sin(2 * theta_rot) * p;
+  const auto q_cmf = cos(2 * theta_rot) * p;
+  const auto u_cmf = sin(2 * theta_rot) * p;
 
-  return {n_cmf, Q, U};
+  return {n_cmf, q_cmf, u_cmf};
 }
 
 // Routine to compute the new Stokes Parameters after scattering and transform them back to the RF
 // returns a tuple of the new direction in the RF, the new Q and U in the RF and the scattering probability pn
-constexpr auto scatter_polarisation_to_rf(const Vec3d& old_dir_cmf, const Vec3d& new_dir_cmf, const double Qi_cmf,
-                                          const double Ui_cmf, const Vec3d& vel_vec)
+constexpr auto scatter_polarisation_to_rf(const Vec3d& old_dir_cmf, const Vec3d& new_dir_cmf, const double q_i_cmf,
+                                          const double u_i_cmf, const Vec3d& vel_vec)
     -> std::tuple<Vec3d, double, double, double> {
   const auto [ref1_olddir, ref2_olddir] = meridian(old_dir_cmf);
 
@@ -322,8 +322,8 @@ constexpr auto scatter_polarisation_to_rf(const Vec3d& old_dir_cmf, const Vec3d&
   const double cos2i1 = cos(2 * i1);
   const double sin2i1 = sin(2 * i1);
 
-  const double Qold = (Qi_cmf * cos2i1) - (Ui_cmf * sin2i1);
-  const double Uold = (Qi_cmf * sin2i1) + (Ui_cmf * cos2i1);
+  const double Qold = (q_i_cmf * cos2i1) - (u_i_cmf * sin2i1);
+  const double Uold = (q_i_cmf * sin2i1) + (u_i_cmf * cos2i1);
 
   // Scattering
 
@@ -345,14 +345,14 @@ constexpr auto scatter_polarisation_to_rf(const Vec3d& old_dir_cmf, const Vec3d&
   const double cos2i2 = cos(2 * i2);
   const double sin2i2 = sin(2 * i2);
 
-  const double Q_cmf = (Qnew * cos2i2) + (Unew * sin2i2);
-  const double U_cmf = (-Qnew * sin2i2) + (Unew * cos2i2);
+  const double q_cmf = (Qnew * cos2i2) + (Unew * sin2i2);
+  const double u_cmf = (-Qnew * sin2i2) + (Unew * cos2i2);
 
-  const auto [new_dir_rf, Q_rf, U_rf] =
-      (frame_transform(new_dir_cmf, Q_cmf, U_cmf, Vec3d{-vel_vec[0], -vel_vec[1], -vel_vec[2]}));
+  const auto [new_dir_rf, q_rf, u_rf] =
+      (frame_transform(new_dir_cmf, q_cmf, u_cmf, Vec3d{-vel_vec[0], -vel_vec[1], -vel_vec[2]}));
 
   const double pn = 3. / (16. * PI) * (1. + musquared + ((musquared - 1.) * Qold));
-  return {new_dir_rf, Q_rf, U_rf, pn};
+  return {new_dir_rf, q_rf, u_rf, pn};
 }
 
 #endif  // VECTORS_H
