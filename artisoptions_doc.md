@@ -200,7 +200,7 @@ constexpr bool SF_AUGER_CONTRIBUTION_ON;
 constexpr bool SF_AUGER_CONTRIBUTION_DISTRIBUTE_EN;
 
 // load shells.txt containing shell occupancy data instead of simple algorithmic guesses
-constexpr bool NT_WORKFUNCTION_USE_SHELL_OCCUPANCY_FILE = false;
+constexpr bool NT_WORKFUNCTION_USE_SHELL_OCCUPANCY_FILE = true;
 
 constexpr double TEMPERATURE_SOLVER_ACCURACY;
 

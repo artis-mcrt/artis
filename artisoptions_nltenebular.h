@@ -125,7 +125,7 @@ constexpr bool SF_AUGER_CONTRIBUTION_ON = true;
 
 constexpr bool SF_AUGER_CONTRIBUTION_DISTRIBUTE_EN = false;
 
-constexpr bool NT_WORKFUNCTION_USE_SHELL_OCCUPANCY_FILE = false;
+constexpr bool NT_WORKFUNCTION_USE_SHELL_OCCUPANCY_FILE = true;
 
 constexpr double TEMPERATURE_SOLVER_ACCURACY = 1e-3;
 
