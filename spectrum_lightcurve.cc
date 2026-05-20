@@ -579,7 +579,7 @@ void add_to_spec_res(const Packet& pkt, const int dirbin, Spectra& spectra, Spec
     atomicadd_always(spectra.fluxalltimesteps[fluxindex], deltaE);
 
     if (stokes_i != nullptr) {
-      atomicadd_always(stokes_i->fluxalltimesteps[fluxindex], pkt.stokes[0] * deltaE);
+      atomicadd_always(stokes_i->fluxalltimesteps[fluxindex], deltaE);
     }
     if (stokes_q != nullptr) {
       atomicadd_always(stokes_q->fluxalltimesteps[fluxindex], pkt.stokes[1] * deltaE);
@@ -605,7 +605,7 @@ void add_to_spec_res(const Packet& pkt, const int dirbin, Spectra& spectra, Spec
         atomicadd_always(spectra.emissionalltimesteps[emindex], deltaE);
 
         if (stokes_i != nullptr && stokes_i->do_emission_absorption) {
-          atomicadd_always(stokes_i->emissionalltimesteps[emindex], pkt.stokes[0] * deltaE);
+          atomicadd_always(stokes_i->emissionalltimesteps[emindex], deltaE);
         }
         if (stokes_q != nullptr && stokes_q->do_emission_absorption) {
           atomicadd_always(stokes_q->emissionalltimesteps[emindex], pkt.stokes[1] * deltaE);
@@ -644,7 +644,7 @@ void add_to_spec_res(const Packet& pkt, const int dirbin, Spectra& spectra, Spec
           atomicadd_always(spectra.absorptionalltimesteps[absindex], deltaE_absorption);
 
           if (stokes_i != nullptr && stokes_i->do_emission_absorption) {
-            atomicadd_always(stokes_i->absorptionalltimesteps[absindex], pkt.stokes[0] * deltaE_absorption);
+            atomicadd_always(stokes_i->absorptionalltimesteps[absindex], deltaE_absorption);
           }
           if (stokes_q != nullptr && stokes_q->do_emission_absorption) {
             atomicadd_always(stokes_q->absorptionalltimesteps[absindex], pkt.stokes[1] * deltaE_absorption);
