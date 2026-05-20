@@ -34,7 +34,7 @@ void normalise_bf_estimators(int nts, int nts_prev, int titer, double deltat);
 [[nodiscard]] DEVICE_FUNC auto get_bfrate_estimator(int element, int lowerion, int lower, int phixstargetindex,
                                                     int nonemptymgi) -> double;
 
-// get Planck function spectral radiance J_nu [ergs/s/sr/cm2/Hz] for a black body for some temperature [K]
+// get Planck function spectral radiance B_nu [ergs/s/sr/cm2/Hz] for a black body for some temperature [K]
 [[gnu::const]] [[nodiscard]] constexpr auto planck(const double nu, const double temperature) -> double {
   return 2 * H * pow3(nu) / pow2(CLIGHT) / std::expm1(HOVERKB * nu / temperature);
 }
