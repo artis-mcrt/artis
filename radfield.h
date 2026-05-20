@@ -34,14 +34,9 @@ void normalise_bf_estimators(int nts, int nts_prev, int titer, double deltat);
 [[nodiscard]] DEVICE_FUNC auto get_bfrate_estimator(int element, int lowerion, int lower, int phixstargetindex,
                                                     int nonemptymgi) -> double;
 
-// get J_nu [ergs/s/sr/cm2/Hz] for a dilute black body with temperature T and dilution factor W
-[[gnu::const]] [[nodiscard]] constexpr auto dbb(const double nu, const double T, const double W) -> double {
-  return W * (2 * H / CLIGHTSQUARED) * pow3(nu) / std::expm1(HOVERKB * nu / T);
-}
-
-// get J_nu [ergs/s/sr/cm2/Hz] for a dilute black body with temperature T
-[[gnu::const]] [[nodiscard]] constexpr auto planck(const double nu, const double T) -> double {
-  return (2 * H / CLIGHTSQUARED) * pow3(nu) / std::expm1(HOVERKB * nu / T);
+// get Planck function spectral radiance J_nu [ergs/s/sr/cm2/Hz] for a black body for some temperature [K]
+[[gnu::const]] [[nodiscard]] constexpr auto planck(const double nu, const double temperature) -> double {
+  return 2 * H * pow3(nu) / pow2(CLIGHT) / std::expm1(HOVERKB * nu / temperature);
 }
 
 }  // namespace radfield

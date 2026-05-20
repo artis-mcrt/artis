@@ -723,14 +723,14 @@ DEVICE_FUNC auto radfield(const double nu, const int nonemptymgi) -> double {
       if (binindex >= 0) {
         const auto W = get_bin_W(nonemptymgi, binindex);
         if (W >= 0.) {
-          return dbb(nu, get_bin_T_R(nonemptymgi, binindex), W);
+          return W * planck(nu, get_bin_T_R(nonemptymgi, binindex));
         }
       }
       return 0.;
     }
   }
   // full spectrum fit to a single dilute blackbody
-  return dbb(nu, grid::get_TR(nonemptymgi), grid::get_W(nonemptymgi));
+  return grid::get_W(nonemptymgi) * planck(nu, grid::get_TR(nonemptymgi));
 }
 
 // finds the best fitting W and temperature parameters in each spectral bin using J and nuJ
