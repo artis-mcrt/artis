@@ -353,7 +353,7 @@ void electron_scatter_rpkt(Packet& pkt) {
   } else {
     // Need to rotate Stokes Parameters in the scattering plane
     const auto [new_dir_rf, Q_rf, U_rf, _] =
-        scatter_transform_polarisation(old_dir_cmf, new_dir_cmf, Qi_cmf, Ui_cmf, vel_vec);
+        scatter_polarisation_to_rf(old_dir_cmf, new_dir_cmf, Qi_cmf, Ui_cmf, vel_vec);
     pkt.dir = new_dir_rf;
     pkt.stokes = {1., Q_rf, U_rf};
   }
