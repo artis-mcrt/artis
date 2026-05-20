@@ -6,7 +6,6 @@
 #include <cstddef>
 #include <cstdio>
 #include <cstdlib>
-#include <filesystem>
 #include <functional>
 #include <ios>
 #include <numeric>
@@ -29,7 +28,6 @@
 #include <Eigen/Core>
 #include <Eigen/Dense>
 #endif
-#include <mpi.h>
 #pragma clang unsafe_buffer_usage end
 
 #include "artisoptions.h"
@@ -212,62 +210,6 @@ constexpr void decompactify_triangular_matrix(std::span<double> matrix) {
   }
 }
 
-auto get_approx_shell_occupancies(const int atomic_number, const int nbound) {
-  assert_always(nbound > 0);
-  const int ioncharge = atomic_number - nbound;
-  assert_always(ioncharge >= 0);
-  std::vector<int> q;
-  q.resize(std::max(10UZ, elements_electron_binding[atomic_number - 1].size()), 0);
-
-  for (int electron_loop = 0; electron_loop < nbound; electron_loop++) {
-    if (q[0] < 2) {
-      q[0]++;  // K 1s
-    } else if (q[1] < 2) {
-      q[1]++;  // L1 2s
-    } else if (q[2] < 2) {
-      q[2]++;  // L2 2p[1/2]
-    } else if (q[3] < 4) {
-      q[3]++;  // L3 2p[3/2]
-    } else if (q[4] < 2) {
-      q[4]++;  // M1 3s
-    } else if (q[5] < 2) {
-      q[5]++;  // M2 3p[1/2]
-    } else if (q[6] < 4) {
-      q[6]++;  // M3 3p[3/2]
-    } else if (ioncharge == 0) {
-      if (q[9] < 2) {
-        q[9]++;  // N1 4s
-      } else if (q[7] < 4) {
-        q[7]++;  // M4 3d[3/2]
-      } else if (q[8] < 6) {
-        q[8]++;  // M5 3d[5/2]
-      } else {
-        assert_always(false);  // Going beyond the 4s shell
-      }
-    } else if (ioncharge == 1) {
-      if (q[9] < 1) {
-        q[9]++;  // N1 4s
-      } else if (q[7] < 4) {
-        q[7]++;  // M4 3d[3/2]
-      } else if (q[8] < 6) {
-        q[8]++;  // M5 3d[5/2]
-      } else {
-        assert_always(false);  // Going beyond the 4s shell
-      }
-    } else if (ioncharge > 1) {
-      if (q[7] < 4) {
-        q[7]++;  // M4 3d[3/2]
-      } else if (q[8] < 6) {
-        q[8]++;  // M5 3d[5/2]
-      } else {
-        assert_always(false);  // Going beyond the 4s shell
-      }
-    }
-  }
-  assert_always(nbound == std::accumulate(q.begin(), q.end(), 0));
-  return q;
-}
-
 auto calculate_ion_shell_occupancies(const int atomic_number, const int nbound,
                                      const std::vector<int>& element_shells_q_neutral) {
   assert_testmodeonly(nbound >= 0);
@@ -297,7 +239,6 @@ auto calculate_ion_shell_occupancies(const int atomic_number, const int nbound,
 }
 
 auto read_shell_configs() {
-  assert_always(NT_WORKFUNCTION_USE_SHELL_OCCUPANCY_FILE);
   auto shells_file = fstream_required("electron_shell_occupancy.txt", std::ios::in);
 
   int nshells = 0;  // number of shell in binding energy file
@@ -320,6 +261,7 @@ auto read_shell_configs() {
 
     int z_element = 0;
     assert_always(ssline >> z_element);
+    assert_always(z_element == (zminusone + 1));
 
     assert_always(elements_shells_q[zminusone].size() == elements_electron_binding[zminusone].size());
     for (int shell = 0; shell < nshells; shell++) {
@@ -333,16 +275,10 @@ auto read_shell_configs() {
 }
 
 void read_binding_energies() {
-  const bool binding_en_newformat_local = std::filesystem::exists("binding_energies_lotz_tab1and2.txt") ||
-                                          std::filesystem::exists("data/binding_energies_lotz_tab1and2.txt");
-  bool binding_en_newformat = binding_en_newformat_local;
-  // just in case the file system was faulty and the ranks disagree on the existence of the files
-  MPI_Allreduce_safe(binding_en_newformat, MPI_LOR, MPI_COMM_WORLD);
-
   int nshells = 0;  // number of shell in binding energy file
   int n_z_binding = 0;  // number of elements in binding energy file
 
-  const auto* filename = binding_en_newformat ? "binding_energies_lotz_tab1and2.txt" : "binding_energies.txt";
+  constexpr auto filename = "binding_energies_lotz_tab1and2.txt";
   auto binding_energies_file = fstream_required(filename, std::ios::in);
 
   std::string line;
@@ -356,11 +292,9 @@ void read_binding_energies() {
     assert_always(get_noncommentline(binding_energies_file, line));
     std::istringstream ssline(line);
     // new file as an atomic number column
-    if (binding_en_newformat) {
-      int z_element{-1};
-      ssline >> z_element;
-      assert_always(z_element == (zminusone + 1));
-    }
+    int z_element{-1};
+    ssline >> z_element;
+    assert_always(z_element == (zminusone + 1));
     for (int shell = 0; shell < nshells; shell++) {
       float bindingenergy = 0.;
       assert_always(ssline >> bindingenergy);
@@ -369,10 +303,7 @@ void read_binding_energies() {
   }
 
   std::vector<std::vector<int>> elements_neutral_shells_q;
-  if constexpr (NT_WORKFUNCTION_USE_SHELL_OCCUPANCY_FILE) {
-    assert_always(binding_en_newformat);
-    elements_neutral_shells_q = read_shell_configs();
-  }
+  elements_neutral_shells_q = read_shell_configs();
 
   resize_exactly(allions_shell_occupancies, get_includedions());
   for (int element = 0; element < get_nelements(); element++) {
@@ -384,9 +315,7 @@ void read_binding_energies() {
         continue;
       }
       allions_shell_occupancies[get_uniqueionindex(element, ion)] =
-          NT_WORKFUNCTION_USE_SHELL_OCCUPANCY_FILE
-              ? calculate_ion_shell_occupancies(atomic_number, nbound, elements_neutral_shells_q.at(atomic_number - 1))
-              : get_approx_shell_occupancies(atomic_number, nbound);
+          calculate_ion_shell_occupancies(atomic_number, nbound, elements_neutral_shells_q.at(atomic_number - 1));
     }
   }
 }
@@ -1123,12 +1052,8 @@ auto get_nt_frac_excitation(const int nonemptymgi) -> float {
   }
 
   const float frac_excitation = nt_solution[nonemptymgi].frac_excitation;
-
-  if (frac_excitation < 0 || !std::isfinite(frac_excitation)) {
-    printlnlog("ERROR: get_nt_frac_excitation called with no valid solution stored for cell {}. frac_excitation = {:g}",
-               grid::get_mgi_of_nonemptymgi(nonemptymgi), frac_excitation);
-    std::abort();
-  }
+  assert_always(frac_excitation >= 0.);
+  assert_always(std::isfinite(frac_excitation));
 
   return frac_excitation;
 }

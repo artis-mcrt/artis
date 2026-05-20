@@ -199,9 +199,6 @@ constexpr bool SF_AUGER_CONTRIBUTION_ON;
 // set true to divide up the mean Auger energy by the number of electrons that come out
 constexpr bool SF_AUGER_CONTRIBUTION_DISTRIBUTE_EN;
 
-// load shells.txt containing shell occupancy data instead of simple algorithmic guesses
-constexpr bool NT_WORKFUNCTION_USE_SHELL_OCCUPANCY_FILE = false;
-
 constexpr double TEMPERATURE_SOLVER_ACCURACY;
 
 constexpr bool USE_RELATIVISTIC_DOPPLER_SHIFT;

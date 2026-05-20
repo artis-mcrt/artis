@@ -519,7 +519,7 @@ inline void MPI_Reduce_safe(R&& data, MPI_Op op, const int root, MPI_Comm comm) 
   if (mode[0] == 'r') {
     // search data folders in order to find file to read
     for (const auto& datadir : datafolders) {
-      const std::string datafolderfilename = std::string(datadir) + filename;
+      const auto datafolderfilename = std::format("{}{}", datadir, filename);
       auto* file = std::fopen(datafolderfilename.c_str(), mode.data());
       if (file != nullptr) {
         return file;
@@ -550,7 +550,7 @@ inline void MPI_Reduce_safe(R&& data, MPI_Op op, const int root, MPI_Comm comm) 
   if ((mode & std::ios::in) != 0U) {
     // search data folders in order to find file to read
     for (const auto& datadir : datafolders) {
-      auto datafolderfilename = std::string(datadir) + filename;
+      const auto datafolderfilename = std::format("{}{}", datadir, filename);
       auto file = std::fstream(datafolderfilename.c_str(), mode);
       if (file.is_open()) {
         return file;
