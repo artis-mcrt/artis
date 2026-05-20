@@ -564,7 +564,7 @@ void compton_scatter(Packet& pkt) {
   return std::max(chi_cmf, 0.);
 }
 
-// Routine to compute the mean energy converted to non-thermal electrons times the Klein-Nishina cross section.
+// Compute the mean energy converted to non-thermal electrons times the Klein-Nishina cross section.
 constexpr auto meanf_sigma(const double x) -> double {
   const double f = 1 + (2 * x);
 

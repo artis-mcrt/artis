@@ -99,7 +99,7 @@ constexpr auto all_taus_past_taumax(std::vector<double>& tau, const double tau_m
   return std::ranges::all_of(tau, [tau_max](const double tau_i) { return tau_i > tau_max; });
 }
 
-// Routine to add a packet to the outcoming spectrum.
+// Add a packet to the outgoing spectrum
 void add_to_vspecpol(const double nu_rf, const double e_rf, const double prob, const double q_rf, const double u_rf,
                      const int obsdirindex, const int opachoiceindex, const double t_arrive) {
   // Need to decide in which (1) time and (2) frequency bin the vpkt is escaping
@@ -119,7 +119,7 @@ void add_to_vspecpol(const double nu_rf, const double e_rf, const double prob, c
   atomicadd(vspecpol[nt][ind_comb].flux[nnu].U, prob * u_rf * pktcontrib);
 }
 
-// Routine to add a packet to the outcoming spectrum.
+// Add a packet to the outgoing spectrum
 void add_to_vpkt_grid(const double nu_rf, const double e_rf, const double prob, const double stokes_q,
                       const double stokes_u, const Vec3d& vel, const int wlbin, const int obsdirindex,
                       const Vec3d& obsdir) {

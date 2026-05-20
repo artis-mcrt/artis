@@ -94,7 +94,6 @@ void write_grid_restart_data(int timestep);
 
 [[nodiscard]] auto calculate_cell_kappagrey(int nonemptymgi) -> float;
 
-// Routine to take a packet across a boundary.
 inline void change_cell(Packet& pkt, const int snext) {
   if (snext >= 0) {
     // Just need to update cellindex.

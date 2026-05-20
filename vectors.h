@@ -216,7 +216,7 @@ constexpr auto move_pkt_withtime(Packet& pkt, const double distance) -> double {
   return i < 0 ? i + (2 * PI) : i;
 }
 
-// Routine to compute the meridian frame axes ref1 and ref2
+// Compute the meridian frame axes ref1 and ref2
 [[gnu::pure]] [[nodiscard]] constexpr auto meridian(const Vec3d& n) -> std::tuple<Vec3d, Vec3d> {
   // for ref_1 use (from triple product rule)
   const double n_xylen = std::sqrt(pow2(n[0]) + pow2(n[1]));
@@ -258,7 +258,7 @@ constexpr auto move_pkt_withtime(Packet& pkt, const double distance) -> double {
   return elec_cmf;
 }
 
-// Routine to transform the Stokes Parameters from RF to CMF
+// Transform the Stokes Parameters from RF to CMF
 constexpr auto frame_transform(const Vec3d& n_rf, const double q0, const double u0, const Vec3d& v)
     -> std::tuple<Vec3d, double, double> {
   // Meridian frame in the RF
@@ -308,8 +308,9 @@ constexpr auto frame_transform(const Vec3d& n_rf, const double q0, const double 
   return {n_cmf, q_cmf, u_cmf};
 }
 
-// Routine to compute the new Stokes Parameters after scattering and transform them back to the RF
-// returns a tuple of the new direction in the RF, the new Q and U in the RF and the scattering probability pn
+// Compute the new Stokes Parameters after scattering and transform them back to the RF.
+// Returns a tuple of the new direction in the RF, the new q and u in the RF and the scattering phase-function
+// probability pn
 constexpr auto scatter_polarisation_to_rf(const Vec3d& old_dir_cmf, const Vec3d& new_dir_cmf, const double q_i_cmf,
                                           const double u_i_cmf, const Vec3d& vel_vec)
     -> std::tuple<Vec3d, double, double, double> {
