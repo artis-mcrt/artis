@@ -305,4 +305,47 @@ constexpr auto frame_transform(const Vec3d& n_rf, const double Q0, const double 
   return {n_cmf, Q, U};
 }
 
+// Routine to compute the new Stokes Parameters after scattering, including the frame transformations to and from the
+// CMF and the rotation of Stokes Parameters in the scattering plane. The input Stokes Parameters are in the RF and the
+// output ones are also in the RF.
+constexpr auto scatter_polarisation_frame_transform(const Vec3d& old_dir_cmf, const Vec3d& new_dir_cmf, const double Qi,
+                                                    const double Ui) -> std::tuple<double, double> {
+  const auto [ref1_olddir, ref2_olddir] = meridian(old_dir_cmf);
+
+  // This is the i1 angle of Bulla+2015, obtained by computing the angle between the
+  // reference axes ref1 and ref2 in the meridian frame and the corresponding axes
+  // ref1_sc and ref2_sc in the scattering plane. It is the supplementary angle of the
+  // scatt angle phisc chosen in the rejection technique above (phisc+i1=180 or phisc+i1=540)
+  const double i1 = get_rot_angle(old_dir_cmf, new_dir_cmf, ref1_olddir, ref2_olddir);
+  const double cos2i1 = cos(2 * i1);
+  const double sin2i1 = sin(2 * i1);
+
+  const double Qold = (Qi * cos2i1) - (Ui * sin2i1);
+  const double Uold = (Qi * sin2i1) + (Ui * cos2i1);
+
+  // Scattering
+
+  const double mu = dot(old_dir_cmf, new_dir_cmf);
+
+  const double Inew = 0.75 * (((mu * mu) + 1.0) + (Qold * ((mu * mu) - 1.0)));
+  const double Qnew = (0.75 * (((mu * mu) - 1.0) + (Qold * ((mu * mu) + 1.0)))) / Inew;
+  const double Unew = (1.5 * mu * Uold) / Inew;
+
+  // Need to rotate Stokes Parameters out of the scattering plane to the meridian frame (Clockwise rotation of PI-i2)
+
+  const auto [ref1, ref2] = meridian(new_dir_cmf);
+
+  // This is the i2 angle of Bulla+2015, obtained from the angle THETA between the
+  // reference axes ref1_sc and ref2_sc in the scattering plane and ref1 and ref2 in the
+  // meridian frame. NB: we need to add PI to transform THETA to i2
+  const double i2 = PI + get_rot_angle(new_dir_cmf, old_dir_cmf, ref1, ref2);
+  const double cos2i2 = cos(2 * i2);
+  const double sin2i2 = sin(2 * i2);
+
+  const double Q_cmf = (Qnew * cos2i2) + (Unew * sin2i2);
+  const double U_cmf = (-Qnew * sin2i2) + (Unew * cos2i2);
+
+  return {Q_cmf, U_cmf};
+}
+
 #endif  // VECTORS_H
