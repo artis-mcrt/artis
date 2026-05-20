@@ -646,6 +646,7 @@ auto do_rpkt_step(Packet& pkt, const double t2) -> bool {
             rng_uniform() < RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.value()) {
           // Thermal redistribution of frequency
 
+          pkt.absorptionfreq = pkt.nu_rf;
           pkt.nu_cmf = sample_planck_times_expansion_opacity(nonemptymgi);
           pkt.next_trans = -1;
         }
