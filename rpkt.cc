@@ -632,28 +632,27 @@ auto do_rpkt_step(Packet& pkt, const double t2) -> bool {
     stats::increment(stats::Counter::INTERACTIONS);
     if (thickcell) {
       rpkt_event_thickcell(pkt);
-    } else if (event_is_boundbound) {
-      if constexpr (!RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.has_value()) {
-        stats::increment(stats::Counter::MA_STAT_ACTIVATION_BB);
+    } else if (!event_is_boundbound) {
+      rpkt_event_continuum(pkt, chi_rpkt_cont);
+    } else if constexpr (!RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.has_value()) {
+      stats::increment(stats::Counter::MA_STAT_ACTIVATION_BB);
+
+      pkt.absorptiontype = pktmastate.activatingline;
+      pkt.absorptionfreq = pkt.nu_rf;
+
+      do_macroatom(pkt, pktmastate);
+    } else {
+      // Probability based thermalisation (i.e. redistribution of the packet frequency) or scattering
+      if (RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.value() >= 1. ||
+          rng_uniform() < RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.value()) {
+        // Thermal redistribution of frequency
 
         pkt.absorptiontype = pktmastate.activatingline;
         pkt.absorptionfreq = pkt.nu_rf;
-
-        do_macroatom(pkt, pktmastate);
-      } else {
-        // Probability based thermalisation (i.e. redistribution of the packet frequency) or scattering
-        if (RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.value() >= 1. ||
-            rng_uniform() < RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.value()) {
-          // Thermal redistribution of frequency
-
-          pkt.absorptionfreq = pkt.nu_rf;
-          pkt.nu_cmf = sample_planck_times_expansion_opacity(nonemptymgi);
-          pkt.next_trans = -1;
-        }
-        rpkt_event_thickcell(pkt);
+        pkt.nu_cmf = sample_planck_times_expansion_opacity(nonemptymgi);
+        pkt.next_trans = -1;
       }
-    } else {
-      rpkt_event_continuum(pkt, chi_rpkt_cont);
+      rpkt_event_thickcell(pkt);
     }
 
     return (pkt.type == TYPE_RPKT);
