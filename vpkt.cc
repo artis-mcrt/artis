@@ -37,9 +37,9 @@ static_assert(!VPKT_ON || POL_ON,
               "POL_ON must be true if VPKT_ON is true because vpkt needs stokes parameters to be tracked");
 
 struct StokesParams {
-  double i = 0.;
-  double q = 0.;
-  double u = 0.;
+  double I = 0.;
+  double Q = 0.;
+  double U = 0.;
 };
 
 struct VSpecPol {
@@ -114,9 +114,9 @@ void add_to_vspecpol(const double nu_rf, const double e_rf, const double prob, c
   const double pktcontrib = e_rf / vspecpol[nt][ind_comb].delta_t / delta_freq_vspec[nnu] / 4.e12 / PI / PARSEC /
                             PARSEC / globals::nprocs * 4 * PI;
 
-  atomicadd(vspecpol[nt][ind_comb].flux[nnu].i, prob * pktcontrib);
-  atomicadd(vspecpol[nt][ind_comb].flux[nnu].q, prob * q_rf * pktcontrib);
-  atomicadd(vspecpol[nt][ind_comb].flux[nnu].u, prob * u_rf * pktcontrib);
+  atomicadd(vspecpol[nt][ind_comb].flux[nnu].I, prob * pktcontrib);
+  atomicadd(vspecpol[nt][ind_comb].flux[nnu].Q, prob * q_rf * pktcontrib);
+  atomicadd(vspecpol[nt][ind_comb].flux[nnu].U, prob * u_rf * pktcontrib);
 }
 
 // Routine to add a packet to the outcoming spectrum.
@@ -161,9 +161,9 @@ void add_to_vpkt_grid(const double nu_rf, const double e_rf, const double prob, 
 
   // Add contribution
   if (nu_rf > nu_grid_min[wlbin] && nu_rf < nu_grid_max[wlbin]) {
-    atomicadd(vgrid[ny][nz].flux[wlbin][obsdirindex].i, prob * e_rf);
-    atomicadd(vgrid[ny][nz].flux[wlbin][obsdirindex].q, prob * stokes_q * e_rf);
-    atomicadd(vgrid[ny][nz].flux[wlbin][obsdirindex].u, prob * stokes_u * e_rf);
+    atomicadd(vgrid[ny][nz].flux[wlbin][obsdirindex].I, prob * e_rf);
+    atomicadd(vgrid[ny][nz].flux[wlbin][obsdirindex].Q, prob * stokes_q * e_rf);
+    atomicadd(vgrid[ny][nz].flux[wlbin][obsdirindex].U, prob * stokes_u * e_rf);
   }
 }
 
@@ -437,9 +437,9 @@ void init_vspecpol() {
           static_cast<float>(std::exp(log(VSPEC_TIMEMIN) + ((n + 1) * dlogt_vspec)) - vspecpol[n][ind_comb].lower_time);
 
       for (auto& flux : vspecpol[n][ind_comb].flux) {
-        flux.i = 0.;
-        flux.q = 0.;
-        flux.u = 0.;
+        flux.I = 0.;
+        flux.Q = 0.;
+        flux.U = 0.;
       }
     }
   }
@@ -465,17 +465,17 @@ void write_vspecpol(const std::string& filename) {
 
       // Stokes I
       for (int p = 0; p < VSPEC_TIMEBINS; p++) {
-        std::print(vspecpol_file, " {:g}", vspecpol[p][ind_comb].flux[m].i);
+        std::print(vspecpol_file, " {:g}", vspecpol[p][ind_comb].flux[m].I);
       }
 
       // Stokes Q
       for (int p = 0; p < VSPEC_TIMEBINS; p++) {
-        std::print(vspecpol_file, " {:g}", vspecpol[p][ind_comb].flux[m].q);
+        std::print(vspecpol_file, " {:g}", vspecpol[p][ind_comb].flux[m].Q);
       }
 
       // Stokes U
       for (int p = 0; p < VSPEC_TIMEBINS; p++) {
-        std::print(vspecpol_file, " {:g}", vspecpol[p][ind_comb].flux[m].u);
+        std::print(vspecpol_file, " {:g}", vspecpol[p][ind_comb].flux[m].U);
       }
 
       std::println(vspecpol_file, "");
@@ -503,17 +503,17 @@ void read_vspecpol(const int my_rank, const int nts) {
 
       // Stokes I
       for (int p = 0; p < VSPEC_TIMEBINS; p++) {
-        assert_always(ssline >> vspecpol[p][ind_comb].flux[j].i);
+        assert_always(ssline >> vspecpol[p][ind_comb].flux[j].I);
       }
 
       // Stokes Q
       for (int p = 0; p < VSPEC_TIMEBINS; p++) {
-        assert_always(ssline >> vspecpol[p][ind_comb].flux[j].q);
+        assert_always(ssline >> vspecpol[p][ind_comb].flux[j].Q);
       }
 
       // Stokes U
       for (int p = 0; p < VSPEC_TIMEBINS; p++) {
-        assert_always(ssline >> vspecpol[p][ind_comb].flux[j].u);
+        assert_always(ssline >> vspecpol[p][ind_comb].flux[j].U);
       }
     }
   }
@@ -535,7 +535,7 @@ void init_vpkt_grid() {
 
       for (int wlbin = 0; wlbin < grid_nwavelengthranges; wlbin++) {
         resize_exactly(vgrid[n][m].flux[wlbin], nobsdirections);
-        std::ranges::fill(vgrid[n][m].flux[wlbin], StokesParams{.i = 0., .q = 0., .u = 0.});
+        std::ranges::fill(vgrid[n][m].flux[wlbin], StokesParams{.I = 0., .Q = 0., .U = 0.});
       }
     }
   }
@@ -549,8 +549,8 @@ void write_vpkt_grid(const std::string& filename) {
       for (int n = 0; n < VGRID_NY; n++) {
         for (int m = 0; m < VGRID_NZ; m++) {
           std::println(vpkt_grid_file, "{:g} {:g} {:g} {:g} {:g}", vgrid[n][m].yvel, vgrid[n][m].zvel,
-                       vgrid[n][m].flux[wlbin][obsdirindex].i, vgrid[n][m].flux[wlbin][obsdirindex].q,
-                       vgrid[n][m].flux[wlbin][obsdirindex].u);
+                       vgrid[n][m].flux[wlbin][obsdirindex].I, vgrid[n][m].flux[wlbin][obsdirindex].Q,
+                       vgrid[n][m].flux[wlbin][obsdirindex].U);
         }
       }
     }
@@ -571,8 +571,8 @@ void read_vpkt_grid(const int my_rank, const int nts) {
       for (int n = 0; n < VGRID_NY; n++) {
         for (int m = 0; m < VGRID_NZ; m++) {
           assert_always(vpkt_grid_file >> vgrid[n][m].yvel >> vgrid[n][m].zvel >>
-                        vgrid[n][m].flux[wlbin][obsdirindex].i >> vgrid[n][m].flux[wlbin][obsdirindex].q >>
-                        vgrid[n][m].flux[wlbin][obsdirindex].u);
+                        vgrid[n][m].flux[wlbin][obsdirindex].I >> vgrid[n][m].flux[wlbin][obsdirindex].Q >>
+                        vgrid[n][m].flux[wlbin][obsdirindex].U);
         }
       }
     }
