@@ -189,7 +189,6 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
 
   // ------------ SCATTERING EVENT: dipole function --------------------
 
-  constexpr double I = 1.;
   // MACROATOM and KPKT: isotropic emission
   double pn{1 / (4 * PI)};
   double Q{0.};
@@ -389,7 +388,7 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
 
     assert_always(std::isfinite(prob));
 
-    const Vec3d stokes = {I * prob, Q * prob, U * prob};
+    const Vec3d stokes = {prob, Q * prob, U * prob};
 
     add_to_vspecpol(nu_rf, e_rf, stokes, obsdirindex, opacchoiceindex, t_arrive);
 
@@ -406,7 +405,7 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
     for (int wlbin = 0; wlbin < grid_nwavelengthranges; wlbin++) {
       if (nu_rf > nu_grid_min[wlbin] && nu_rf < nu_grid_max[wlbin]) {  // Frequency selection
         if (t_arrive > tmin_grid && t_arrive < tmax_grid) {  // Time selection
-          add_to_vpkt_grid(nu_rf, e_rf, {I * prob, Q * prob, U * prob}, vel_vec, wlbin, obsdirindex, obsdir);
+          add_to_vpkt_grid(nu_rf, e_rf, {prob, Q * prob, U * prob}, vel_vec, wlbin, obsdirindex, obsdir);
         }
       }
     }
