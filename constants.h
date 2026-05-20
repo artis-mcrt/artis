@@ -39,8 +39,6 @@ constexpr double EULERGAMMA = std::numbers::egamma;
 // numerical constants
 
 constexpr double CLIGHTSQUARED = pow2(CLIGHT);  // Speed of light squared [cm^2/s^2]
-constexpr double TWOOVERCLIGHTSQUARED = 2 / CLIGHTSQUARED;
-constexpr double TWOHOVERCLIGHTSQUARED = 2 * H / CLIGHTSQUARED;
 constexpr double CLIGHTSQUAREDOVERTWOH = CLIGHTSQUARED / (2 * H);
 
 constexpr double ONEOVERH = 1.0 / H;
