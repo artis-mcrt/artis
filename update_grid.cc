@@ -372,7 +372,7 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
   nonthermal::calculate_deposition_rate_density(nonemptymgi, nts, heatingcoolingrates);
 
   const double estimator_normfactor = 1 / deltaV / deltat / globals::nprocs;
-  const double estimator_normfactor_over4pi = ONEOVER4PI * estimator_normfactor;
+  const double estimator_normfactor_over4pi = (1. / (4 * PI)) * estimator_normfactor;
 
   if (nts == globals::timestep_initial && titer == 0) {
     // For the initial timestep, temperatures have already been assigned
