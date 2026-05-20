@@ -198,7 +198,7 @@ inline auto printlnlog(const std::format_string<Args...> fmt, Args&&... args) no
 // Chunk a range of integers into (approximately) equal contiguous pieces for getting around the MPI 32-bit limit
 // on counts.
 //
-// This won't be necessary after OpenMPI 6.0, which supports MPI-4's 64-bit MPI_Count functions (e.g.,
+// This won't be necessary after Open MPI 6.0, which supports MPI-4's 64-bit MPI_Count functions (e.g.,
 // MPI_Bcast_c instead of MPI_Bcast). For now we need this to be able to use more than ~2 billion items in a single
 // array.
 constexpr auto get_range_chunk(const ptrdiff_t size, const ptrdiff_t nchunks, const ptrdiff_t nchunk)
