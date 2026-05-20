@@ -308,7 +308,7 @@ void electron_scatter_rpkt(Packet& pkt) {
     double p = 0.;
     double x = 1.;
     while (x > p) {
-      M = (2 * rng_uniform_pos()) - 1;
+      M = (2. * rng_uniform_pos()) - 1.;
       const double mu = pow2(M);
       phisc = 2 * PI * rng_uniform();
 
@@ -325,7 +325,7 @@ void electron_scatter_rpkt(Packet& pkt) {
     }
   } else {
     // Assume isotropic scattering
-    M = (2. * rng_uniform()) - 1;
+    M = (2. * rng_uniform()) - 1.;
     phisc = 2 * PI * rng_uniform();
   }
 
