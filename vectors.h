@@ -348,7 +348,7 @@ constexpr auto scatter_polarisation_frame_transform(const Vec3d& old_dir_cmf, co
       (frame_transform(new_dir_cmf, Q_cmf, U_cmf, Vec3d{-vel_vec[0], -vel_vec[1], -vel_vec[2]}));
 
   const double pn = 3. / (16. * PI) * (1 + pow2(mu) + ((pow2(mu) - 1) * Qold));
-  return {new_dir_rf, Q_cmf, U_cmf, pn};
+  return {new_dir_rf, Q_rf, U_rf, pn};
 }
 
 #endif  // VECTORS_H
