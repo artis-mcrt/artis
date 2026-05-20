@@ -30,7 +30,7 @@ def main() -> None:
         return
 
     for filein in matching_files:
-        if "parquet" in filein.name:
+        if "parquet" in filein.name or ".tmp" in filein.name:
             continue
         print(f"\n{filein}")
         linesin = at.zopen(filein).readlines()
