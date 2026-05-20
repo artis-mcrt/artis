@@ -75,7 +75,7 @@ auto gammacorr_integrand(const double nu, const double nu_edge, const float temp
   // Dependence on dilution factor W is linear. This allows to set it here to
   // 1. and scale to its actual value later on.
   // Assumption T_e = T_R makes n_kappa/n_i * (n_i/n_kappa)* = 1
-  return sigma_bf * ONEOVERH / nu * radfield::planck(nu, temperature) * (1 - exp(-HOVERKB * nu / temperature));
+  return sigma_bf * (1. / H) / nu * radfield::planck(nu, temperature) * (1 - exp(-HOVERKB * nu / temperature));
 }
 
 // Integrand to precalculate the bound-free cooling rate coefficient
@@ -411,7 +411,7 @@ auto integrand_corrphotoioncoeff_custom_radfield(const double nu_minus_nu_edge, 
   const double Jnu = radfield::radfield(nu_minus_nu_edge + nu_edge, nonemptymgi);
 
   // TODO: MK thesis page 41, use population ratios and Te?
-  return ONEOVERH * sigma_bf / (nu_minus_nu_edge + nu_edge) * Jnu * corrfactor;
+  return (1. / H) * sigma_bf / (nu_minus_nu_edge + nu_edge) * Jnu * corrfactor;
 }
 
 auto calculate_corrphotoioncoeff_integral(const int element, const int ion, const int level, const int phixstargetindex,
@@ -419,7 +419,7 @@ auto calculate_corrphotoioncoeff_integral(const int element, const int ion, cons
   constexpr double epsrel = 1e-3;
 
   const auto loweruniquelevelindex = get_uniquelevelindex(element, ion, level);
-  const double nu_threshold = ONEOVERH * get_phixs_threshold(loweruniquelevelindex, phixstargetindex);
+  const double nu_threshold = (1. / H) * get_phixs_threshold(loweruniquelevelindex, phixstargetindex);
   const double nu_max_phixs = nu_threshold * last_phixs_nuovernuedge;  // nu of the uppermost point in the phixs table
 
   const auto T_e = grid::get_Te(nonemptymgi);
@@ -501,7 +501,7 @@ DEVICE_FUNC auto select_continuum_nu(int element, const int lowerion, const int 
   const auto lower_uniquelevelindex = get_uniquelevelindex(element, lowerion, lower);
   const int phixstargetindex = get_phixtargetindex(lower_uniquelevelindex, upperionlevel);
   const double E_threshold = get_phixs_threshold(lower_uniquelevelindex, phixstargetindex);
-  const double nu_threshold = ONEOVERH * E_threshold;
+  const double nu_threshold = (1. / H) * E_threshold;
 
   const double nu_max_phixs = nu_threshold * last_phixs_nuovernuedge;  // nu of the uppermost point in the phixs table
 
