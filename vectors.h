@@ -351,7 +351,6 @@ constexpr auto scatter_polarisation_to_rf(const Vec3d& old_dir_cmf, const Vec3d&
   const auto [new_dir_rf, Q_rf, U_rf] =
       (frame_transform(new_dir_cmf, Q_cmf, U_cmf, Vec3d{-vel_vec[0], -vel_vec[1], -vel_vec[2]}));
 
-  // Scattering probability (see Bulla+2015 equation 12)
   const double pn = 3. / (16. * PI) * (1. + musquared + ((musquared - 1.) * Qold));
   return {new_dir_rf, Q_rf, U_rf, pn};
 }
