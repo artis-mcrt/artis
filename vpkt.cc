@@ -37,9 +37,9 @@ static_assert(!VPKT_ON || POL_ON,
               "POL_ON must be true if VPKT_ON is true because vpkt needs stokes parameters to be tracked");
 
 struct StokesParams {
-  double i = 0.;
-  double q = 0.;
-  double u = 0.;
+  double I = 0.;
+  double Q = 0.;
+  double U = 0.;
 };
 
 struct VSpecPol {
@@ -99,9 +99,9 @@ constexpr auto all_taus_past_taumax(std::vector<double>& tau, const double tau_m
   return std::ranges::all_of(tau, [tau_max](const double tau_i) { return tau_i > tau_max; });
 }
 
-// Routine to add a packet to the outcoming spectrum.
-void add_to_vspecpol(const double nu_rf, const double e_rf, const Vec3d& stokes, const int obsdirindex,
-                     const int opachoiceindex, const double t_arrive) {
+// Add a packet to the outgoing spectrum
+void add_to_vspecpol(const double nu_rf, const double e_rf, const double prob, const double q_rf, const double u_rf,
+                     const int obsdirindex, const int opachoiceindex, const double t_arrive) {
   // Need to decide in which (1) time and (2) frequency bin the vpkt is escaping
 
   const int nt = static_cast<int>((log(t_arrive) - log(VSPEC_TIMEMIN)) / dlogt_vspec);
@@ -114,14 +114,15 @@ void add_to_vspecpol(const double nu_rf, const double e_rf, const Vec3d& stokes,
   const double pktcontrib = e_rf / vspecpol[nt][ind_comb].delta_t / delta_freq_vspec[nnu] / 4.e12 / PI / PARSEC /
                             PARSEC / globals::nprocs * 4 * PI;
 
-  atomicadd(vspecpol[nt][ind_comb].flux[nnu].i, stokes[0] * pktcontrib);
-  atomicadd(vspecpol[nt][ind_comb].flux[nnu].q, stokes[1] * pktcontrib);
-  atomicadd(vspecpol[nt][ind_comb].flux[nnu].u, stokes[2] * pktcontrib);
+  atomicadd(vspecpol[nt][ind_comb].flux[nnu].I, prob * pktcontrib);
+  atomicadd(vspecpol[nt][ind_comb].flux[nnu].Q, prob * q_rf * pktcontrib);
+  atomicadd(vspecpol[nt][ind_comb].flux[nnu].U, prob * u_rf * pktcontrib);
 }
 
-// Routine to add a packet to the outcoming spectrum.
-void add_to_vpkt_grid(const double nu_rf, const double e_rf, const Vec3d& stokes, const Vec3d& vel, const int wlbin,
-                      const int obsdirindex, const Vec3d& obs) {
+// Add a packet to the outgoing spectrum
+void add_to_vpkt_grid(const double nu_rf, const double e_rf, const double prob, const double stokes_q,
+                      const double stokes_u, const Vec3d& vel, const int wlbin, const int obsdirindex,
+                      const Vec3d& obsdir) {
   double vref1{NAN};
   double vref2{NAN};
 
@@ -129,24 +130,22 @@ void add_to_vpkt_grid(const double nu_rf, const double e_rf, const Vec3d& stokes
 
   // Packet velocity
 
-  // if nobs = x , vref1 = vy and vref2 = vz
-  if (obs[0] == 1) {
+  if (obsdir[0] == 1) {
+    // if obsdir = +x , vref1 = vy and vref2 = vz
     vref1 = vel[1];
     vref2 = vel[2];
-  }
-  // if nobs = -x , vref1 = -vy and vref2 = -vz
-  else if (obs[0] == -1) {
+  } else if (obsdir[0] == -1) {
+    // if obsdir = -x , vref1 = -vy and vref2 = -vz
     vref1 = -vel[1];
     vref2 = -vel[2];
-  }
-
-  // Rotate velocity into projected area seen by the observer (see notes)
-  else {
-    // Rotate velocity from (x,y,z) to (n_obs,ref1,ref2) so that x correspond to n_obs (see notes)
-    vref1 = (-obs[1] * vel[0]) + ((obs[0] + (obs[2] * obs[2] / (1 + obs[0]))) * vel[1]) -
-            (obs[1] * obs[2] * (1 - obs[0]) / sqrt(1 - (obs[0] * obs[0])) * vel[2]);
-    vref2 = (-obs[2] * vel[0]) - (obs[1] * obs[2] * (1 - obs[0]) / sqrt(1 - (obs[0] * obs[0])) * vel[1]) +
-            ((obs[0] + (obs[1] * obs[1] / (1 + obs[0]))) * vel[2]);
+  } else {
+    // Rotate velocity into projected area seen by the observer (see notes)
+    // Rotate velocity from (x,y,z) to (obsdir,vref1,vref2) so that x corresponds to obsdir
+    vref1 = (-obsdir[1] * vel[0]) + ((obsdir[0] + (obsdir[2] * obsdir[2] / (1 + obsdir[0]))) * vel[1]) -
+            (obsdir[1] * obsdir[2] * (1 - obsdir[0]) / sqrt(1 - (obsdir[0] * obsdir[0])) * vel[2]);
+    vref2 = (-obsdir[2] * vel[0]) -
+            (obsdir[1] * obsdir[2] * (1 - obsdir[0]) / sqrt(1 - (obsdir[0] * obsdir[0])) * vel[1]) +
+            ((obsdir[0] + (obsdir[1] * obsdir[1] / (1 + obsdir[0]))) * vel[2]);
   }
 
   // Outside the grid
@@ -162,9 +161,9 @@ void add_to_vpkt_grid(const double nu_rf, const double e_rf, const Vec3d& stokes
 
   // Add contribution
   if (nu_rf > nu_grid_min[wlbin] && nu_rf < nu_grid_max[wlbin]) {
-    atomicadd(vgrid[ny][nz].flux[wlbin][obsdirindex].i, stokes[0] * e_rf);
-    atomicadd(vgrid[ny][nz].flux[wlbin][obsdirindex].q, stokes[1] * e_rf);
-    atomicadd(vgrid[ny][nz].flux[wlbin][obsdirindex].u, stokes[2] * e_rf);
+    atomicadd(vgrid[ny][nz].flux[wlbin][obsdirindex].I, prob * e_rf);
+    atomicadd(vgrid[ny][nz].flux[wlbin][obsdirindex].Q, prob * stokes_q * e_rf);
+    atomicadd(vgrid[ny][nz].flux[wlbin][obsdirindex].U, prob * stokes_u * e_rf);
   }
 }
 
@@ -191,58 +190,21 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
 
   // ------------ SCATTERING EVENT: dipole function --------------------
 
-  constexpr double I = 1.;
   // MACROATOM and KPKT: isotropic emission
   double pn{1 / (4 * PI)};
-  double Q{0.};
-  double U{0.};
+  // normalised Stokes parameters in the rest frame (RF)
+  double q_rf{0.};
+  double u_rf{0.};
   if (type_before_rpkt == TYPE_RPKT) {
     // Transform Stokes Parameters from the RF to the CMF
-    const auto [old_dir_cmf, Qi, Ui] = frame_transform(rpkt.dir, rpkt.stokes[1], rpkt.stokes[2], vel_vec);
+    const auto [old_dir_cmf, q_i_cmf, u_i_cmf] = POL_ON
+                                                     ? frame_transform(rpkt.dir, rpkt.stokes_q, rpkt.stokes_u, vel_vec)
+                                                     : std::make_tuple(angle_ab(rpkt.dir, vel_vec), 0., 0.);
 
     // Need to rotate Stokes Parameters in the scattering plane
 
     const auto obs_cmf = angle_ab(obsdir, vel_vec);
-
-    const auto [ref1_old, ref2_old] = meridian(old_dir_cmf);
-
-    // This is the i1 angle of Bulla+2015, obtained by computing the angle between the
-    // reference axes ref1 and ref2 in the meridian frame and the corresponding axes
-    // ref1_sc and ref2_sc in the scattering plane.
-    const double i1 = get_rot_angle(old_dir_cmf, obs_cmf, ref1_old, ref2_old);
-    const double cos2i1 = cos(2 * i1);
-    const double sin2i1 = sin(2 * i1);
-
-    const double Qold = (Qi * cos2i1) - (Ui * sin2i1);
-    const double Uold = (Qi * sin2i1) + (Ui * cos2i1);
-
-    // Scattering
-
-    const double mu = dot(old_dir_cmf, obs_cmf);
-
-    pn = 3. / (16. * PI) * (1 + pow2(mu) + ((pow2(mu) - 1) * Qold));
-
-    const double Inew = 0.75 * (((mu * mu) + 1.0) + (Qold * ((mu * mu) - 1.0)));
-    const double Qnew = (0.75 * (((mu * mu) - 1.0) + (Qold * ((mu * mu) + 1.0)))) / Inew;
-    const double Unew = (1.5 * mu * Uold) / Inew;
-
-    // Need to rotate Stokes Parameters out of the scattering plane to the meridian frame
-
-    const auto [ref1, ref2] = meridian(obs_cmf);
-
-    // This is the i2 angle of Bulla+2015, obtained from the angle THETA between the
-    // reference axes ref1_sc and ref2_sc in the scattering plane and ref1 and ref2 in the
-    // meridian frame. NB: we need to add PI to transform THETA to i2
-    const double i2 = PI + get_rot_angle(obs_cmf, old_dir_cmf, ref1, ref2);
-    const double cos2i2 = cos(2 * i2);
-    const double sin2i2 = sin(2 * i2);
-
-    const double Q_cmf = (Qnew * cos2i2) + (Unew * sin2i2);
-    const double U_cmf = (-Qnew * sin2i2) + (Unew * cos2i2);
-
-    // Transform Stokes Parameters from the CMF to the RF
-
-    std::tie(std::ignore, Q, U) = frame_transform(obs_cmf, Q_cmf, U_cmf, Vec3d{-vel_vec[0], -vel_vec[1], -vel_vec[2]});
+    std::tie(std::ignore, q_rf, u_rf, pn) = scatter_polarisation_to_rf(old_dir_cmf, obs_cmf, q_i_cmf, u_i_cmf, vel_vec);
 
   } else {
     assert_testmodeonly(type_before_rpkt == TYPE_KPKT || type_before_rpkt == TYPE_MA);
@@ -428,9 +390,7 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
 
     assert_always(std::isfinite(prob));
 
-    const Vec3d stokes = {I * prob, Q * prob, U * prob};
-
-    add_to_vspecpol(nu_rf, e_rf, stokes, obsdirindex, opacchoiceindex, t_arrive);
+    add_to_vspecpol(nu_rf, e_rf, prob, q_rf, u_rf, obsdirindex, opacchoiceindex, t_arrive);
 
     if constexpr (VPKT_WRITE_CONTRIBS) {
       std::format_to(std::back_inserter(vpkt_contrib_row), " {:g}", e_rf * prob);
@@ -445,7 +405,7 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
     for (int wlbin = 0; wlbin < grid_nwavelengthranges; wlbin++) {
       if (nu_rf > nu_grid_min[wlbin] && nu_rf < nu_grid_max[wlbin]) {  // Frequency selection
         if (t_arrive > tmin_grid && t_arrive < tmax_grid) {  // Time selection
-          add_to_vpkt_grid(nu_rf, e_rf, {I * prob, Q * prob, U * prob}, vel_vec, wlbin, obsdirindex, obsdir);
+          add_to_vpkt_grid(nu_rf, e_rf, prob, q_rf, u_rf, vel_vec, wlbin, obsdirindex, obsdir);
         }
       }
     }
@@ -477,9 +437,9 @@ void init_vspecpol() {
           static_cast<float>(std::exp(log(VSPEC_TIMEMIN) + ((n + 1) * dlogt_vspec)) - vspecpol[n][ind_comb].lower_time);
 
       for (auto& flux : vspecpol[n][ind_comb].flux) {
-        flux.i = 0.;
-        flux.q = 0.;
-        flux.u = 0.;
+        flux.I = 0.;
+        flux.Q = 0.;
+        flux.U = 0.;
       }
     }
   }
@@ -505,17 +465,17 @@ void write_vspecpol(const std::string& filename) {
 
       // Stokes I
       for (int p = 0; p < VSPEC_TIMEBINS; p++) {
-        std::print(vspecpol_file, " {:g}", vspecpol[p][ind_comb].flux[m].i);
+        std::print(vspecpol_file, " {:g}", vspecpol[p][ind_comb].flux[m].I);
       }
 
       // Stokes Q
       for (int p = 0; p < VSPEC_TIMEBINS; p++) {
-        std::print(vspecpol_file, " {:g}", vspecpol[p][ind_comb].flux[m].q);
+        std::print(vspecpol_file, " {:g}", vspecpol[p][ind_comb].flux[m].Q);
       }
 
       // Stokes U
       for (int p = 0; p < VSPEC_TIMEBINS; p++) {
-        std::print(vspecpol_file, " {:g}", vspecpol[p][ind_comb].flux[m].u);
+        std::print(vspecpol_file, " {:g}", vspecpol[p][ind_comb].flux[m].U);
       }
 
       std::println(vspecpol_file, "");
@@ -543,17 +503,17 @@ void read_vspecpol(const int my_rank, const int nts) {
 
       // Stokes I
       for (int p = 0; p < VSPEC_TIMEBINS; p++) {
-        assert_always(ssline >> vspecpol[p][ind_comb].flux[j].i);
+        assert_always(ssline >> vspecpol[p][ind_comb].flux[j].I);
       }
 
       // Stokes Q
       for (int p = 0; p < VSPEC_TIMEBINS; p++) {
-        assert_always(ssline >> vspecpol[p][ind_comb].flux[j].q);
+        assert_always(ssline >> vspecpol[p][ind_comb].flux[j].Q);
       }
 
       // Stokes U
       for (int p = 0; p < VSPEC_TIMEBINS; p++) {
-        assert_always(ssline >> vspecpol[p][ind_comb].flux[j].u);
+        assert_always(ssline >> vspecpol[p][ind_comb].flux[j].U);
       }
     }
   }
@@ -575,7 +535,7 @@ void init_vpkt_grid() {
 
       for (int wlbin = 0; wlbin < grid_nwavelengthranges; wlbin++) {
         resize_exactly(vgrid[n][m].flux[wlbin], nobsdirections);
-        std::ranges::fill(vgrid[n][m].flux[wlbin], StokesParams{.i = 0., .q = 0., .u = 0.});
+        std::ranges::fill(vgrid[n][m].flux[wlbin], StokesParams{.I = 0., .Q = 0., .U = 0.});
       }
     }
   }
@@ -589,8 +549,8 @@ void write_vpkt_grid(const std::string& filename) {
       for (int n = 0; n < VGRID_NY; n++) {
         for (int m = 0; m < VGRID_NZ; m++) {
           std::println(vpkt_grid_file, "{:g} {:g} {:g} {:g} {:g}", vgrid[n][m].yvel, vgrid[n][m].zvel,
-                       vgrid[n][m].flux[wlbin][obsdirindex].i, vgrid[n][m].flux[wlbin][obsdirindex].q,
-                       vgrid[n][m].flux[wlbin][obsdirindex].u);
+                       vgrid[n][m].flux[wlbin][obsdirindex].I, vgrid[n][m].flux[wlbin][obsdirindex].Q,
+                       vgrid[n][m].flux[wlbin][obsdirindex].U);
         }
       }
     }
@@ -611,8 +571,8 @@ void read_vpkt_grid(const int my_rank, const int nts) {
       for (int n = 0; n < VGRID_NY; n++) {
         for (int m = 0; m < VGRID_NZ; m++) {
           assert_always(vpkt_grid_file >> vgrid[n][m].yvel >> vgrid[n][m].zvel >>
-                        vgrid[n][m].flux[wlbin][obsdirindex].i >> vgrid[n][m].flux[wlbin][obsdirindex].q >>
-                        vgrid[n][m].flux[wlbin][obsdirindex].u);
+                        vgrid[n][m].flux[wlbin][obsdirindex].I >> vgrid[n][m].flux[wlbin][obsdirindex].Q >>
+                        vgrid[n][m].flux[wlbin][obsdirindex].U);
         }
       }
     }

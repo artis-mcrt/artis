@@ -564,7 +564,7 @@ void compton_scatter(Packet& pkt) {
   return std::max(chi_cmf, 0.);
 }
 
-// Routine to compute the mean energy converted to non-thermal electrons times the Klein-Nishina cross section.
+// Compute the mean energy converted to non-thermal electrons times the Klein-Nishina cross section.
 constexpr auto meanf_sigma(const double x) -> double {
   const double f = 1 + (2 * x);
 
@@ -986,9 +986,6 @@ DEVICE_FUNC void pellet_gamma_decay(Packet& pkt) {
   pkt.e_rf = pkt.e_cmf / dopplerfactor;
 
   pkt.type = TYPE_GAMMA;
-
-  // initialise polarisation information
-  pkt.stokes = {1., 0., 0.};
 }
 
 DEVICE_FUNC void do_gamma(Packet& pkt, const int nts, const double t2) {

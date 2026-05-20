@@ -295,14 +295,8 @@ void electron_scatter_rpkt(Packet& pkt) {
 
   // Transform Stokes Parameters from the RF to the CMF
 
-  Vec3d old_dir_cmf{};
-  double Qi = 0.;
-  double Ui = 0.;
-  if constexpr (POL_ON) {
-    std::tie(old_dir_cmf, Qi, Ui) = frame_transform(pkt.dir, pkt.stokes[1], pkt.stokes[2], vel_vec);
-  } else {
-    old_dir_cmf = angle_ab(pkt.dir, vel_vec);
-  }
+  const auto [old_dir_cmf, q_i_cmf, u_i_cmf] = (POL_ON ? frame_transform(pkt.dir, pkt.stokes_q, pkt.stokes_u, vel_vec)
+                                                       : std::make_tuple(angle_ab(pkt.dir, vel_vec), 0., 0.));
 
   // Outcoming direction. Compute the new cmf direction from the old direction and the scattering angles (see Kalos &
   // Whitlock 2008)
@@ -314,9 +308,7 @@ void electron_scatter_rpkt(Packet& pkt) {
     double p = 0.;
     double x = 1.;
     while (x > p) {
-      const double zrand = rng_uniform_pos();
-
-      M = (2 * zrand) - 1;
+      M = (2. * rng_uniform_pos()) - 1.;
       const double mu = pow2(M);
       phisc = 2 * PI * rng_uniform();
 
@@ -326,16 +318,14 @@ void electron_scatter_rpkt(Packet& pkt) {
       // with -i1. Here, instead, we calculate the angle in the clockwise direction from 0 to 2PI.
       // For instance, the i1 angle in Fig.2 of Bulla+2015 corresponds to 2PI-i1 here.
       // NB2: the i1 and i2 angles computed in the code (before and after scattering) are instead as in Bulla+2015
-      p = (mu + 1) + ((mu - 1) * ((cos(2 * phisc) * Qi) + (sin(2 * phisc) * Ui)));
+      p = (mu + 1) + ((mu - 1) * ((cos(2 * phisc) * q_i_cmf) + (sin(2 * phisc) * u_i_cmf)));
 
       // generate a number between 0 and the maximum of the previous function (2)
       x = 2. * rng_uniform();
     }
   } else {
     // Assume isotropic scattering
-    const double zrand = rng_uniform();
-
-    M = (2. * zrand) - 1;
+    M = (2. * rng_uniform()) - 1.;
     phisc = 2 * PI * rng_uniform();
   }
 
@@ -362,48 +352,8 @@ void electron_scatter_rpkt(Packet& pkt) {
     pkt.dir = angle_ab(new_dir_cmf, Vec3d{-vel_vec[0], -vel_vec[1], -vel_vec[2]});
   } else {
     // Need to rotate Stokes Parameters in the scattering plane
-
-    const auto [ref1_olddir, ref2_olddir] = meridian(old_dir_cmf);
-
-    // This is the i1 angle of Bulla+2015, obtained by computing the angle between the
-    // reference axes ref1 and ref2 in the meridian frame and the corresponding axes
-    // ref1_sc and ref2_sc in the scattering plane. It is the supplementary angle of the
-    // scatt angle phisc chosen in the rejection technique above (phisc+i1=180 or phisc+i1=540)
-    const double i1 = get_rot_angle(old_dir_cmf, new_dir_cmf, ref1_olddir, ref2_olddir);
-    const double cos2i1 = cos(2 * i1);
-    const double sin2i1 = sin(2 * i1);
-
-    const double Qold = (Qi * cos2i1) - (Ui * sin2i1);
-    const double Uold = (Qi * sin2i1) + (Ui * cos2i1);
-
-    // Scattering
-
-    const double mu = dot(old_dir_cmf, new_dir_cmf);
-
-    const double Inew = 0.75 * (((mu * mu) + 1.0) + (Qold * ((mu * mu) - 1.0)));
-    const double Qnew = (0.75 * (((mu * mu) - 1.0) + (Qold * ((mu * mu) + 1.0)))) / Inew;
-    const double Unew = (1.5 * mu * Uold) / Inew;
-
-    // Need to rotate Stokes Parameters out of the scattering plane to the meridian frame (Clockwise rotation of PI-i2)
-
-    const auto [ref1, ref2] = meridian(new_dir_cmf);
-
-    // This is the i2 angle of Bulla+2015, obtained from the angle THETA between the
-    // reference axes ref1_sc and ref2_sc in the scattering plane and ref1 and ref2 in the
-    // meridian frame. NB: we need to add PI to transform THETA to i2
-    const double i2 = PI + get_rot_angle(new_dir_cmf, old_dir_cmf, ref1, ref2);
-    const double cos2i2 = cos(2 * i2);
-    const double sin2i2 = sin(2 * i2);
-
-    const double Q_cmf = (Qnew * cos2i2) + (Unew * sin2i2);
-    const double U_cmf = (-Qnew * sin2i2) + (Unew * cos2i2);
-
-    // Transform Stokes Parameters from the CMF to the RF
-    // Update rest frame direction, frequency and energy
-    const auto [new_dir_rf, Q_rf, U_rf] =
-        (frame_transform(new_dir_cmf, Q_cmf, U_cmf, Vec3d{-vel_vec[0], -vel_vec[1], -vel_vec[2]}));
-    pkt.dir = new_dir_rf;
-    pkt.stokes = {1., Q_rf, U_rf};
+    std::tie(pkt.dir, pkt.stokes_q, pkt.stokes_u, std::ignore) =
+        scatter_polarisation_to_rf(old_dir_cmf, new_dir_cmf, q_i_cmf, u_i_cmf, vel_vec);
   }
 
   // Check unit vector
@@ -917,7 +867,8 @@ DEVICE_FUNC void emit_rpkt(Packet& pkt) {
 
   if constexpr (POL_ON) {
     // Reset to unpolarised
-    pkt.stokes = {1., 0., 0.};
+    pkt.stokes_u = 0.;
+    pkt.stokes_q = 0.;
   }
 }
 

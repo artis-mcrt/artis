@@ -216,10 +216,10 @@ constexpr auto move_pkt_withtime(Packet& pkt, const double distance) -> double {
   return i < 0 ? i + (2 * PI) : i;
 }
 
-// Routine to compute the meridian frame axes ref1 and ref2
+// Compute the meridian frame axes ref1 and ref2
 [[gnu::pure]] [[nodiscard]] constexpr auto meridian(const Vec3d& n) -> std::tuple<Vec3d, Vec3d> {
   // for ref_1 use (from triple product rule)
-  const double n_xylen = std::sqrt((n[0] * n[0]) + (n[1] * n[1]));
+  const double n_xylen = std::sqrt(pow2(n[0]) + pow2(n[1]));
   if (n_xylen == 0.) {
     // if n is along z axis, we can just use x and y as the meridian frame axes
     return {Vec3d{1., 0., 0.}, Vec3d{0., 1., 0.}};
@@ -258,27 +258,30 @@ constexpr auto move_pkt_withtime(Packet& pkt, const double distance) -> double {
   return elec_cmf;
 }
 
-// Routine to transform the Stokes Parameters from RF to CMF
-constexpr auto frame_transform(const Vec3d& n_rf, const double Q0, const double U0, const Vec3d& v)
+// Transform the Stokes Parameters from RF to CMF
+constexpr auto frame_transform(const Vec3d& n_rf, const double q0, const double u0, const Vec3d& v)
     -> std::tuple<Vec3d, double, double> {
   // Meridian frame in the RF
   const auto [ref1_rf, ref2_rf] = meridian(n_rf);
 
   // Compute polarisation (which is invariant)
-  const double p = sqrt((Q0 * Q0) + (U0 * U0));
+  const double p = sqrt((q0 * q0) + (u0 * u0));
 
   // We want to compute the angle between ref1 and the electric field
   double rot_angle = 0;
 
   if (p > 0) {
-    const double pol_angle = std::atan2(U0, Q0);
+    const double pol_angle = std::atan2(u0, q0);
     rot_angle = (pol_angle < 0 ? pol_angle + (2. * PI) : pol_angle) / 2.;
   }
 
+  const double cos_rot_angle = std::cos(rot_angle);
+  const double sin_rot_angle = std::sin(rot_angle);
+
   // Define electric field by linear combination of ref1 and ref2 (using the angle just computed)
-  const auto elec_rf = Vec3d{(cos(rot_angle) * ref1_rf[0]) - (sin(rot_angle) * ref2_rf[0]),
-                             (cos(rot_angle) * ref1_rf[1]) - (sin(rot_angle) * ref2_rf[1]),
-                             (cos(rot_angle) * ref1_rf[2]) - (sin(rot_angle) * ref2_rf[2])};
+  const auto elec_rf = Vec3d{(cos_rot_angle * ref1_rf[0]) - (sin_rot_angle * ref2_rf[0]),
+                             (cos_rot_angle * ref1_rf[1]) - (sin_rot_angle * ref2_rf[1]),
+                             (cos_rot_angle * ref1_rf[2]) - (sin_rot_angle * ref2_rf[2])};
 
   // Aberration
   const auto n_cmf = angle_ab(n_rf, v);
@@ -299,10 +302,58 @@ constexpr auto frame_transform(const Vec3d& n_rf, const double Q0, const double 
   }
 
   // Compute Stokes Parameters in the CMF
-  const auto Q = cos(2 * theta_rot) * p;
-  const auto U = sin(2 * theta_rot) * p;
+  const auto q_cmf = cos(2 * theta_rot) * p;
+  const auto u_cmf = sin(2 * theta_rot) * p;
 
-  return {n_cmf, Q, U};
+  return {n_cmf, q_cmf, u_cmf};
+}
+
+// Compute the new Stokes Parameters after scattering and transform them back to the RF.
+// Returns a tuple of the new direction in the RF, the new q and u in the RF and the scattering phase-function
+// probability pn
+constexpr auto scatter_polarisation_to_rf(const Vec3d& old_dir_cmf, const Vec3d& new_dir_cmf, const double q_i_cmf,
+                                          const double u_i_cmf, const Vec3d& vel_vec)
+    -> std::tuple<Vec3d, double, double, double> {
+  const auto [ref1_olddir, ref2_olddir] = meridian(old_dir_cmf);
+
+  // This is the i1 angle of Bulla+2015, obtained by computing the angle between the
+  // reference axes ref1 and ref2 in the meridian frame and the corresponding axes
+  // ref1_sc and ref2_sc in the scattering plane.
+  const double i1 = get_rot_angle(old_dir_cmf, new_dir_cmf, ref1_olddir, ref2_olddir);
+  const double cos2i1 = cos(2 * i1);
+  const double sin2i1 = sin(2 * i1);
+
+  const double Qold = (q_i_cmf * cos2i1) - (u_i_cmf * sin2i1);
+  const double Uold = (q_i_cmf * sin2i1) + (u_i_cmf * cos2i1);
+
+  // Scattering
+
+  const double mu = dot(old_dir_cmf, new_dir_cmf);
+  const double musquared = pow2(mu);
+
+  const double Inew = 0.75 * ((musquared + 1.) + (Qold * (musquared - 1.)));
+  const double Qnew = (0.75 * ((musquared - 1.) + (Qold * (musquared + 1.)))) / Inew;
+  const double Unew = (1.5 * mu * Uold) / Inew;
+
+  // Need to rotate Stokes Parameters out of the scattering plane to the meridian frame (Clockwise rotation of PI-i2)
+
+  const auto [ref1, ref2] = meridian(new_dir_cmf);
+
+  // This is the i2 angle of Bulla+2015, obtained from the angle THETA between the
+  // reference axes ref1_sc and ref2_sc in the scattering plane and ref1 and ref2 in the
+  // meridian frame. NB: we need to add PI to transform THETA to i2
+  const double i2 = PI + get_rot_angle(new_dir_cmf, old_dir_cmf, ref1, ref2);
+  const double cos2i2 = cos(2 * i2);
+  const double sin2i2 = sin(2 * i2);
+
+  const double q_cmf = (Qnew * cos2i2) + (Unew * sin2i2);
+  const double u_cmf = (-Qnew * sin2i2) + (Unew * cos2i2);
+
+  const auto [new_dir_rf, q_rf, u_rf] =
+      (frame_transform(new_dir_cmf, q_cmf, u_cmf, Vec3d{-vel_vec[0], -vel_vec[1], -vel_vec[2]}));
+
+  const double pn = 3. / (16. * PI) * (1. + musquared + ((musquared - 1.) * Qold));
+  return {new_dir_rf, q_rf, u_rf, pn};
 }
 
 #endif  // VECTORS_H

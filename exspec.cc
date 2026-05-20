@@ -46,18 +46,16 @@ void do_direction_bin(const int dirbin, const std::vector<std::vector<Packet>>& 
   resize_exactly(gamma_light_curve_lumcmf, globals::ntimesteps);
   std::ranges::fill(gamma_light_curve_lumcmf, 0.);
 
-  THREADLOCALONHOST Spectra rpkt_spectra;
+  THREADLOCALONHOST Spectra rpkt_spectra_I;
   // Set up the spectrum grid and initialise the bins to zero.
-  init_spectra(rpkt_spectra, NU_MIN_R, NU_MAX_R, true);
+  init_spectra(rpkt_spectra_I, NU_MIN_R, NU_MAX_R, true);
 
-  THREADLOCALONHOST Spectra stokes_i;
-  THREADLOCALONHOST Spectra stokes_q;
-  THREADLOCALONHOST Spectra stokes_u;
+  THREADLOCALONHOST Spectra rpkt_spectra_Q;
+  THREADLOCALONHOST Spectra rpkt_spectra_U;
 
   if constexpr (POL_ON) {
-    init_spectra(stokes_i, NU_MIN_R, NU_MAX_R, true);
-    init_spectra(stokes_q, NU_MIN_R, NU_MAX_R, true);
-    init_spectra(stokes_u, NU_MIN_R, NU_MAX_R, true);
+    init_spectra(rpkt_spectra_Q, NU_MIN_R, NU_MAX_R, true);
+    init_spectra(rpkt_spectra_U, NU_MIN_R, NU_MAX_R, true);
   }
 
   constexpr double nu_min_gamma = 0.05 * MEV / H;
@@ -78,13 +76,13 @@ void do_direction_bin(const int dirbin, const std::vector<std::vector<Packet>>& 
       if (pkt.escape_type == TYPE_RPKT) {
         nesc_rpkt++;
         add_to_lc_res(pkt, dirbin, rpkt_light_curve_lum, rpkt_light_curve_lumcmf);
-        add_to_spec_res(pkt, dirbin, rpkt_spectra, POL_ON ? &stokes_i : nullptr, POL_ON ? &stokes_q : nullptr,
-                        POL_ON ? &stokes_u : nullptr);
+        add_to_spec_res(pkt, dirbin, rpkt_spectra_I, POL_ON ? &rpkt_spectra_Q : nullptr,
+                        POL_ON ? &rpkt_spectra_U : nullptr);
       } else if (pkt.escape_type == TYPE_GAMMA) {
         nesc_gamma++;
         if (dirbin == -1) {
           add_to_lc_res(pkt, dirbin, gamma_light_curve_lum, gamma_light_curve_lumcmf);
-          add_to_spec_res(pkt, dirbin, gamma_spectra, nullptr, nullptr, nullptr);
+          add_to_spec_res(pkt, dirbin, gamma_spectra, nullptr, nullptr);
         }
       }
     }
@@ -96,10 +94,12 @@ void do_direction_bin(const int dirbin, const std::vector<std::vector<Packet>>& 
   if (dirbin == -1) {
     // all directions integrated spectra and light curves
     write_light_curve("light_curve.out", rpkt_light_curve_lum, rpkt_light_curve_lumcmf, globals::ntimesteps);
-    write_spectra("spec.out", "emission.out", "emissiontrue.out", "absorption.out", rpkt_spectra, globals::ntimesteps);
+    write_spectra("spec.out", "emission.out", "emissiontrue.out", "absorption.out", rpkt_spectra_I,
+                  globals::ntimesteps);
 
     if constexpr (POL_ON) {
-      write_specpol("specpol.out", "emissionpol.out", "absorptionpol.out", &stokes_i, &stokes_q, &stokes_u);
+      write_specpol("specpol.out", "emissionpol.out", "absorptionpol.out", rpkt_spectra_I, rpkt_spectra_Q,
+                    rpkt_spectra_U);
     }
 
     if constexpr (KEEP_ESCAPED_GAMMAS) {
@@ -120,14 +120,14 @@ void do_direction_bin(const int dirbin, const std::vector<std::vector<Packet>>& 
     write_spectra(std::format("{}spec_res_{:02d}.out", outdir_resfiles, dirbin),
                   std::format("{}emission_res_{:02d}.out", outdir_resfiles, dirbin),
                   std::format("{}emissiontrue_res_{:02d}.out", outdir_resfiles, dirbin),
-                  std::format("{}absorption_res_{:02d}.out", outdir_resfiles, dirbin), rpkt_spectra,
+                  std::format("{}absorption_res_{:02d}.out", outdir_resfiles, dirbin), rpkt_spectra_I,
                   globals::ntimesteps);
 
     if constexpr (POL_ON) {
       write_specpol(std::format("{}specpol_res_{:02d}.out", outdir_resfiles, dirbin),
                     std::format("{}emissionpol_res_{:02d}.out", outdir_resfiles, dirbin),
-                    std::format("{}absorptionpol_res_{:02d}.out", outdir_resfiles, dirbin), &stokes_i, &stokes_q,
-                    &stokes_u);
+                    std::format("{}absorptionpol_res_{:02d}.out", outdir_resfiles, dirbin), rpkt_spectra_I,
+                    rpkt_spectra_Q, rpkt_spectra_U);
     }
 
     printlnlog("Did {} of {} angle bins.", dirbin + 1, MABINS);
