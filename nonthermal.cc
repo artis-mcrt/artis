@@ -6,7 +6,6 @@
 #include <cstddef>
 #include <cstdio>
 #include <cstdlib>
-#include <filesystem>
 #include <functional>
 #include <ios>
 #include <numeric>
@@ -29,7 +28,6 @@
 #include <Eigen/Core>
 #include <Eigen/Dense>
 #endif
-#include <mpi.h>
 #pragma clang unsafe_buffer_usage end
 
 #include "artisoptions.h"
@@ -333,17 +331,10 @@ auto read_shell_configs() {
 }
 
 void read_binding_energies() {
-  const bool binding_en_newformat_local = std::ranges::any_of(datafolders, [](const auto datafolder) {
-    return std::filesystem::exists(std::format("{}binding_energies_lotz_tab1and2.txt", datafolder));
-  });
-  bool binding_en_newformat = binding_en_newformat_local;
-  // just in case the file system was faulty and the ranks disagree on the existence of the files
-  MPI_Allreduce_safe(binding_en_newformat, MPI_LOR, MPI_COMM_WORLD);
-
   int nshells = 0;  // number of shell in binding energy file
   int n_z_binding = 0;  // number of elements in binding energy file
 
-  const auto* filename = binding_en_newformat ? "binding_energies_lotz_tab1and2.txt" : "binding_energies.txt";
+  constexpr auto filename = "binding_energies_lotz_tab1and2.txt";
   auto binding_energies_file = fstream_required(filename, std::ios::in);
 
   std::string line;
@@ -357,21 +348,13 @@ void read_binding_energies() {
     assert_always(get_noncommentline(binding_energies_file, line));
     std::istringstream ssline(line);
     // new file as an atomic number column
-    if (binding_en_newformat) {
-      int z_element{-1};
-      ssline >> z_element;
-      assert_always(z_element == (zminusone + 1));
-    }
-    for (int shell = 0; shell < nshells; shell++) {
-      float bindingenergy = 0.;
-      assert_always(ssline >> bindingenergy);
-      elements_electron_binding.at(zminusone).at(shell) = bindingenergy * EV;
-    }
+    int z_element{-1};
+    ssline >> z_element;
+    assert_always(z_element == (zminusone + 1));
   }
 
   std::vector<std::vector<int>> elements_neutral_shells_q;
   if constexpr (NT_WORKFUNCTION_USE_SHELL_OCCUPANCY_FILE) {
-    assert_always(binding_en_newformat);
     elements_neutral_shells_q = read_shell_configs();
   }
 
