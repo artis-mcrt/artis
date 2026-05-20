@@ -582,10 +582,10 @@ void add_to_spec_res(const Packet& pkt, const int dirbin, Spectra& spectra, Spec
       atomicadd_always(stokes_i->fluxalltimesteps[fluxindex], deltaE);
     }
     if (stokes_q != nullptr) {
-      atomicadd_always(stokes_q->fluxalltimesteps[fluxindex], pkt.stokes[1] * deltaE);
+      atomicadd_always(stokes_q->fluxalltimesteps[fluxindex], pkt.stokes_Q * deltaE);
     }
     if (stokes_u != nullptr) {
-      atomicadd_always(stokes_u->fluxalltimesteps[fluxindex], pkt.stokes[2] * deltaE);
+      atomicadd_always(stokes_u->fluxalltimesteps[fluxindex], pkt.stokes_U * deltaE);
     }
 
     if (spectra.do_emission_absorption) {
@@ -608,10 +608,10 @@ void add_to_spec_res(const Packet& pkt, const int dirbin, Spectra& spectra, Spec
           atomicadd_always(stokes_i->emissionalltimesteps[emindex], deltaE);
         }
         if (stokes_q != nullptr && stokes_q->do_emission_absorption) {
-          atomicadd_always(stokes_q->emissionalltimesteps[emindex], pkt.stokes[1] * deltaE);
+          atomicadd_always(stokes_q->emissionalltimesteps[emindex], pkt.stokes_Q * deltaE);
         }
         if (stokes_u != nullptr && stokes_u->do_emission_absorption) {
-          atomicadd_always(stokes_u->emissionalltimesteps[emindex], pkt.stokes[2] * deltaE);
+          atomicadd_always(stokes_u->emissionalltimesteps[emindex], pkt.stokes_U * deltaE);
         }
       }
 
@@ -647,10 +647,10 @@ void add_to_spec_res(const Packet& pkt, const int dirbin, Spectra& spectra, Spec
             atomicadd_always(stokes_i->absorptionalltimesteps[absindex], deltaE_absorption);
           }
           if (stokes_q != nullptr && stokes_q->do_emission_absorption) {
-            atomicadd_always(stokes_q->absorptionalltimesteps[absindex], pkt.stokes[1] * deltaE_absorption);
+            atomicadd_always(stokes_q->absorptionalltimesteps[absindex], pkt.stokes_Q * deltaE_absorption);
           }
           if (stokes_u != nullptr && stokes_u->do_emission_absorption) {
-            atomicadd_always(stokes_u->absorptionalltimesteps[absindex], pkt.stokes[2] * deltaE_absorption);
+            atomicadd_always(stokes_u->absorptionalltimesteps[absindex], pkt.stokes_U * deltaE_absorption);
           }
 
           if (TRACE_EMISSION_ABSORPTION_REGION_ON && t_arrive >= traceemissabs_timemin &&

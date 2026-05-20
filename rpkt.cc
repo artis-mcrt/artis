@@ -295,7 +295,7 @@ void electron_scatter_rpkt(Packet& pkt) {
 
   // Transform Stokes Parameters from the RF to the CMF
 
-  const auto [old_dir_cmf, Qi_cmf, Ui_cmf] = (POL_ON ? frame_transform(pkt.dir, pkt.stokes[1], pkt.stokes[2], vel_vec)
+  const auto [old_dir_cmf, Qi_cmf, Ui_cmf] = (POL_ON ? frame_transform(pkt.dir, pkt.stokes_Q, pkt.stokes_U, vel_vec)
                                                      : std::make_tuple(angle_ab(pkt.dir, vel_vec), 0., 0.));
 
   // Outcoming direction. Compute the new cmf direction from the old direction and the scattering angles (see Kalos &
@@ -352,10 +352,8 @@ void electron_scatter_rpkt(Packet& pkt) {
     pkt.dir = angle_ab(new_dir_cmf, Vec3d{-vel_vec[0], -vel_vec[1], -vel_vec[2]});
   } else {
     // Need to rotate Stokes Parameters in the scattering plane
-    const auto [new_dir_rf, Q_rf, U_rf, _] =
+    std::tie(pkt.dir, pkt.stokes_Q, pkt.stokes_U, std::ignore) =
         scatter_polarisation_to_rf(old_dir_cmf, new_dir_cmf, Qi_cmf, Ui_cmf, vel_vec);
-    pkt.dir = new_dir_rf;
-    pkt.stokes = {1., Q_rf, U_rf};
   }
 
   // Check unit vector
@@ -869,7 +867,8 @@ DEVICE_FUNC void emit_rpkt(Packet& pkt) {
 
   if constexpr (POL_ON) {
     // Reset to unpolarised
-    pkt.stokes = {1., 0., 0.};
+    pkt.stokes_U = 0.;
+    pkt.stokes_Q = 0.;
   }
 }
 

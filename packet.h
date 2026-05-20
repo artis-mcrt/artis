@@ -55,7 +55,8 @@ struct Packet {
                           // onset of the simulation (-7)
                           // decay of a positron pellet (-10)
   double absorptionfreq{};  // records nu_rf of packet at last absorption
-  Vec3d stokes{1., 0., 0.};  // I, Q and U Stokes parameters
+  double stokes_Q{0.};
+  double stokes_U{0.};
   int trueemissiontype = EMTYPE_NOTSET;  // emission type coming from a kpkt to rpkt (last thermal emission)
   Vec3d trueem_pos{NAN, NAN, NAN};
   float trueem_time{-1.};  // last thermal emission time [s]

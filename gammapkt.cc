@@ -988,7 +988,8 @@ DEVICE_FUNC void pellet_gamma_decay(Packet& pkt) {
   pkt.type = TYPE_GAMMA;
 
   // initialise polarisation information
-  pkt.stokes = {1., 0., 0.};
+  pkt.stokes_Q = 0.;
+  pkt.stokes_U = 0.;
 }
 
 DEVICE_FUNC void do_gamma(Packet& pkt, const int nts, const double t2) {
