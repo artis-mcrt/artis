@@ -36,7 +36,7 @@ void normalise_bf_estimators(int nts, int nts_prev, int titer, double deltat);
 
 // get J_nu [ergs/s/sr/cm2/Hz] for a dilute black body with temperature T
 [[gnu::const]] [[nodiscard]] constexpr auto planck(const double nu, const double T) -> double {
-  return (2 * H / CLIGHTSQUARED) * pow3(nu) / std::expm1(HOVERKB * nu / T);
+  return 2 * H * pow3(nu) / pow2(CLIGHT) / std::expm1(HOVERKB * nu / T);
 }
 
 }  // namespace radfield
