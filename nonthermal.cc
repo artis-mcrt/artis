@@ -333,8 +333,9 @@ auto read_shell_configs() {
 }
 
 void read_binding_energies() {
-  const bool binding_en_newformat_local = std::filesystem::exists("binding_energies_lotz_tab1and2.txt") ||
-                                          std::filesystem::exists("data/binding_energies_lotz_tab1and2.txt");
+  const bool binding_en_newformat_local = std::ranges::any_of(datafolders, [](const auto datafolder) {
+    return std::filesystem::exists(std::format("{}binding_energies_lotz_tab1and2.txt", datafolder));
+  });
   bool binding_en_newformat = binding_en_newformat_local;
   // just in case the file system was faulty and the ranks disagree on the existence of the files
   MPI_Allreduce_safe(binding_en_newformat, MPI_LOR, MPI_COMM_WORLD);
