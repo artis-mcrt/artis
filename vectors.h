@@ -305,10 +305,10 @@ constexpr auto frame_transform(const Vec3d& n_rf, const double Q0, const double 
   return {n_cmf, Q, U};
 }
 
-// Routine to compute the new Stokes Parameters after scattering, including the frame transformations to and from the
-// CMF and the rotation of Stokes Parameters in the scattering plane.
-constexpr auto scatter_polarisation_frame_transform(const Vec3d& old_dir_cmf, const Vec3d& new_dir_cmf, const double Qi,
-                                                    const double Ui, const Vec3d& vel_vec)
+// Routine to compute the new Stokes Parameters after scattering and transform them back to the RF
+// returns a tuple of the new direction in the RF, the new Q and U in the RF and the scattering probability pn
+constexpr auto scatter_transform_polarisation(const Vec3d& old_dir_cmf, const Vec3d& new_dir_cmf, const double Qi,
+                                              const double Ui, const Vec3d& vel_vec)
     -> std::tuple<Vec3d, double, double, double> {
   const auto [ref1_olddir, ref2_olddir] = meridian(old_dir_cmf);
 
@@ -327,8 +327,8 @@ constexpr auto scatter_polarisation_frame_transform(const Vec3d& old_dir_cmf, co
   const double mu = dot(old_dir_cmf, new_dir_cmf);
   const double musquared = pow2(mu);
 
-  const double Inew = 0.75 * ((musquared + 1.0) + (Qold * (musquared - 1.0)));
-  const double Qnew = (0.75 * ((musquared - 1.0) + (Qold * (musquared + 1.0)))) / Inew;
+  const double Inew = 0.75 * ((musquared + 1.) + (Qold * (musquared - 1.)));
+  const double Qnew = (0.75 * ((musquared - 1.) + (Qold * (musquared + 1.)))) / Inew;
   const double Unew = (1.5 * mu * Uold) / Inew;
 
   // Need to rotate Stokes Parameters out of the scattering plane to the meridian frame (Clockwise rotation of PI-i2)
@@ -348,7 +348,8 @@ constexpr auto scatter_polarisation_frame_transform(const Vec3d& old_dir_cmf, co
   const auto [new_dir_rf, Q_rf, U_rf] =
       (frame_transform(new_dir_cmf, Q_cmf, U_cmf, Vec3d{-vel_vec[0], -vel_vec[1], -vel_vec[2]}));
 
-  const double pn = 3. / (16. * PI) * (1 + musquared + ((musquared - 1) * Qold));
+  // Scattering probability (see Bulla+2015 equation 12)
+  const double pn = 3. / (16. * PI) * (1. + musquared + ((musquared - 1.) * Qold));
   return {new_dir_rf, Q_rf, U_rf, pn};
 }
 

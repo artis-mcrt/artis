@@ -352,8 +352,7 @@ void electron_scatter_rpkt(Packet& pkt) {
     pkt.dir = angle_ab(new_dir_cmf, Vec3d{-vel_vec[0], -vel_vec[1], -vel_vec[2]});
   } else {
     // Need to rotate Stokes Parameters in the scattering plane
-    const auto [new_dir_rf, Q_rf, U_rf, _] =
-        scatter_polarisation_frame_transform(old_dir_cmf, new_dir_cmf, Qi, Ui, vel_vec);
+    const auto [new_dir_rf, Q_rf, U_rf, _] = scatter_transform_polarisation(old_dir_cmf, new_dir_cmf, Qi, Ui, vel_vec);
     pkt.dir = new_dir_rf;
     pkt.stokes = {1., Q_rf, U_rf};
   }

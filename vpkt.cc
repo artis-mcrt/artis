@@ -204,7 +204,7 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
     // Need to rotate Stokes Parameters in the scattering plane
 
     const auto obs_cmf = angle_ab(obsdir, vel_vec);
-    std::tie(std::ignore, Q, U, pn) = scatter_polarisation_frame_transform(old_dir_cmf, obs_cmf, Qi, Ui, vel_vec);
+    std::tie(std::ignore, Q, U, pn) = scatter_transform_polarisation(old_dir_cmf, obs_cmf, Qi, Ui, vel_vec);
 
   } else {
     assert_testmodeonly(type_before_rpkt == TYPE_KPKT || type_before_rpkt == TYPE_MA);
