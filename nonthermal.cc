@@ -261,6 +261,7 @@ auto read_shell_configs() {
 
     int z_element = 0;
     assert_always(ssline >> z_element);
+    assert_always(z_element == (zminusone + 1));
 
     assert_always(elements_shells_q[zminusone].size() == elements_electron_binding[zminusone].size());
     for (int shell = 0; shell < nshells; shell++) {
