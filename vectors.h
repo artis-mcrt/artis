@@ -314,8 +314,7 @@ constexpr auto scatter_polarisation_frame_transform(const Vec3d& old_dir_cmf, co
 
   // This is the i1 angle of Bulla+2015, obtained by computing the angle between the
   // reference axes ref1 and ref2 in the meridian frame and the corresponding axes
-  // ref1_sc and ref2_sc in the scattering plane. It is the supplementary angle of the
-  // scatt angle phisc chosen in the rejection technique above (phisc+i1=180 or phisc+i1=540)
+  // ref1_sc and ref2_sc in the scattering plane.
   const double i1 = get_rot_angle(old_dir_cmf, new_dir_cmf, ref1_olddir, ref2_olddir);
   const double cos2i1 = cos(2 * i1);
   const double sin2i1 = sin(2 * i1);
