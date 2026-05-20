@@ -66,7 +66,7 @@ struct Packet {
   float escape_time{-1};  // time at which is passes out of the grid [s]
   double tdecay{-1.};  // Time at which pellet decays
   int number{-1};  // A unique number to identify the packet
-  bool originated_from_particlenotgamma{false};  // first-non-pellet packet type was gamma
+  bool originated_from_particlenotgamma{false};  // first packet type after pellet decay
   int pellet_decaytype{-1};  // index into decay::decaytypes
   int pellet_nucindex{-1};  // nuclide index of the decaying species
 
