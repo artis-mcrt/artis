@@ -430,8 +430,6 @@ void rpkt_event_continuum(Packet& pkt, const ContinuumOpacity& chi_rpkt_cont) {
   // chi_bf/chi_cont
 
   const auto chi_rnd = rng_uniform() * chi_cont;
-  stats::increment(stats::Counter::INTERACTIONS);
-
   if (chi_rnd < chi_escatter) {
     // electron scattering occurs
     // in this case the packet stays a R_PKT of same nu_cmf as before (coherent scattering)
@@ -501,21 +499,9 @@ void rpkt_event_continuum(Packet& pkt, const ContinuumOpacity& chi_rpkt_cont) {
   }
 }
 
-// handle bound-bound transition and activate macro-atom in corresponding upper-level
-void rpkt_event_boundbound_macroatom(Packet& pkt, const MacroAtomState& pktmastate) {
-  stats::increment(stats::Counter::MA_STAT_ACTIVATION_BB);
-  stats::increment(stats::Counter::INTERACTIONS);
-
-  pkt.absorptiontype = pktmastate.activatingline;
-  pkt.absorptionfreq = pkt.nu_rf;
-
-  do_macroatom(pkt, pktmastate);
-}
-
 // Handle r-packet interaction in thick cell (grey opacity).
 // The packet stays an RPKT of same nu_cmf as before (coherent scattering) but with a different direction.
 void rpkt_event_thickcell(Packet& pkt) {
-  stats::increment(stats::Counter::INTERACTIONS);
   pkt.nscatterings++;
   stats::increment(stats::Counter::ELECTRON_SCATTERINGS);
 
@@ -642,22 +628,31 @@ auto do_rpkt_step(Packet& pkt, const double t2) -> bool {
     update_estimators(pkt.e_cmf, pkt.nu_cmf, edist, doppler_nucmf_on_nurf, nonemptymgi, chi_rpkt_cont, thickcell);
     move_pkt_withtime(pkt, edist / 2.);
 
-    // The previously selected and in pkt stored event occurs. Handling is done by rpkt_event
+    // The previously selected event occurs
+    stats::increment(stats::Counter::INTERACTIONS);
     if (thickcell) {
       rpkt_event_thickcell(pkt);
-    } else if (event_is_boundbound && !RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.has_value()) {
-      rpkt_event_boundbound_macroatom(pkt, pktmastate);
-    } else if (event_is_boundbound) {
+    } else if (!event_is_boundbound) {
+      rpkt_event_continuum(pkt, chi_rpkt_cont);
+    } else if constexpr (!RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.has_value()) {
+      stats::increment(stats::Counter::MA_STAT_ACTIVATION_BB);
+
+      pkt.absorptiontype = pktmastate.activatingline;
+      pkt.absorptionfreq = pkt.nu_rf;
+
+      do_macroatom(pkt, pktmastate);
+    } else {
       // Probability based thermalisation (i.e. redistribution of the packet frequency) or scattering
       if (RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.value() >= 1. ||
           rng_uniform() < RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.value()) {
         // Thermal redistribution of frequency
+
+        pkt.absorptiontype = pktmastate.activatingline;
+        pkt.absorptionfreq = pkt.nu_rf;
         pkt.nu_cmf = sample_planck_times_expansion_opacity(nonemptymgi);
         pkt.next_trans = -1;
       }
       rpkt_event_thickcell(pkt);
-    } else {
-      rpkt_event_continuum(pkt, chi_rpkt_cont);
     }
 
     return (pkt.type == TYPE_RPKT);
