@@ -23,13 +23,13 @@ constexpr auto expopac_nbins = static_cast<ptrdiff_t>((expopac_lambdamax - expop
 // wavelength bins are ordered by ascending wavelength (descending frequency)
 
 constexpr auto get_expopac_bin_nu_upper(const ptrdiff_t binindex) -> double {
-  const auto binindex_f32 = static_cast<decltype(expopac_deltalambda)>(binindex);
+  const auto binindex_f32 = static_cast<float>(binindex);
   const auto lambda_lower = expopac_lambdamin + (binindex_f32 * expopac_deltalambda);
   return 1e8 * CLIGHT / lambda_lower;
 }
 
 constexpr auto get_expopac_bin_nu_lower(const ptrdiff_t binindex) -> double {
-  const auto binindexplusone_f32 = static_cast<decltype(expopac_deltalambda)>(binindex + 1);
+  const auto binindexplusone_f32 = static_cast<float>(binindex + 1);
   const auto lambda_upper = expopac_lambdamin + (binindexplusone_f32 * expopac_deltalambda);
   return 1e8 * CLIGHT / lambda_upper;
 }
