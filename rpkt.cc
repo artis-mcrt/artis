@@ -295,9 +295,8 @@ void electron_scatter_rpkt(Packet& pkt) {
 
   // Transform Stokes Parameters from the RF to the CMF
 
-  const auto [old_dir_cmf, Q_in_cmf, U_in_cmf] =
-      (POL_ON ? frame_transform(pkt.dir, pkt.stokes[1], pkt.stokes[2], vel_vec)
-              : std::make_tuple(angle_ab(pkt.dir, vel_vec), 0., 0.));
+  const auto [old_dir_cmf, Qi_cmf, Ui_cmf] = (POL_ON ? frame_transform(pkt.dir, pkt.stokes[1], pkt.stokes[2], vel_vec)
+                                                     : std::make_tuple(angle_ab(pkt.dir, vel_vec), 0., 0.));
 
   // Outcoming direction. Compute the new cmf direction from the old direction and the scattering angles (see Kalos &
   // Whitlock 2008)
@@ -319,7 +318,7 @@ void electron_scatter_rpkt(Packet& pkt) {
       // with -i1. Here, instead, we calculate the angle in the clockwise direction from 0 to 2PI.
       // For instance, the i1 angle in Fig.2 of Bulla+2015 corresponds to 2PI-i1 here.
       // NB2: the i1 and i2 angles computed in the code (before and after scattering) are instead as in Bulla+2015
-      p = (mu + 1) + ((mu - 1) * ((cos(2 * phisc) * Q_in_cmf) + (sin(2 * phisc) * U_in_cmf)));
+      p = (mu + 1) + ((mu - 1) * ((cos(2 * phisc) * Qi_cmf) + (sin(2 * phisc) * Ui_cmf)));
 
       // generate a number between 0 and the maximum of the previous function (2)
       x = 2. * rng_uniform();
@@ -354,7 +353,7 @@ void electron_scatter_rpkt(Packet& pkt) {
   } else {
     // Need to rotate Stokes Parameters in the scattering plane
     const auto [new_dir_rf, Q_rf, U_rf, _] =
-        scatter_transform_polarisation(old_dir_cmf, new_dir_cmf, Q_in_cmf, U_in_cmf, vel_vec);
+        scatter_transform_polarisation(old_dir_cmf, new_dir_cmf, Qi_cmf, Ui_cmf, vel_vec);
     pkt.dir = new_dir_rf;
     pkt.stokes = {1., Q_rf, U_rf};
   }

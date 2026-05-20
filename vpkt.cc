@@ -196,14 +196,14 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
   double U{0.};
   if (type_before_rpkt == TYPE_RPKT) {
     // Transform Stokes Parameters from the RF to the CMF
-    const auto [old_dir_cmf, Q_in_cmf, U_in_cmf] =
-        POL_ON ? frame_transform(rpkt.dir, rpkt.stokes[1], rpkt.stokes[2], vel_vec)
-               : std::make_tuple(angle_ab(rpkt.dir, vel_vec), 0., 0.);
+    const auto [old_dir_cmf, Qi_cmf, Ui_cmf] = POL_ON
+                                                   ? frame_transform(rpkt.dir, rpkt.stokes[1], rpkt.stokes[2], vel_vec)
+                                                   : std::make_tuple(angle_ab(rpkt.dir, vel_vec), 0., 0.);
 
     // Need to rotate Stokes Parameters in the scattering plane
 
     const auto obs_cmf = angle_ab(obsdir, vel_vec);
-    std::tie(std::ignore, Q, U, pn) = scatter_transform_polarisation(old_dir_cmf, obs_cmf, Q_in_cmf, U_in_cmf, vel_vec);
+    std::tie(std::ignore, Q, U, pn) = scatter_transform_polarisation(old_dir_cmf, obs_cmf, Qi_cmf, Ui_cmf, vel_vec);
 
   } else {
     assert_testmodeonly(type_before_rpkt == TYPE_KPKT || type_before_rpkt == TYPE_MA);

@@ -310,8 +310,8 @@ constexpr auto frame_transform(const Vec3d& n_rf, const double Q0, const double 
 
 // Routine to compute the new Stokes Parameters after scattering and transform them back to the RF
 // returns a tuple of the new direction in the RF, the new Q and U in the RF and the scattering probability pn
-constexpr auto scatter_transform_polarisation(const Vec3d& old_dir_cmf, const Vec3d& new_dir_cmf, const double Q_in_cmf,
-                                              const double U_in_cmf, const Vec3d& vel_vec)
+constexpr auto scatter_transform_polarisation(const Vec3d& old_dir_cmf, const Vec3d& new_dir_cmf, const double Qi_cmf,
+                                              const double Ui_cmf, const Vec3d& vel_vec)
     -> std::tuple<Vec3d, double, double, double> {
   const auto [ref1_olddir, ref2_olddir] = meridian(old_dir_cmf);
 
@@ -322,8 +322,8 @@ constexpr auto scatter_transform_polarisation(const Vec3d& old_dir_cmf, const Ve
   const double cos2i1 = cos(2 * i1);
   const double sin2i1 = sin(2 * i1);
 
-  const double Qold = (Q_in_cmf * cos2i1) - (U_in_cmf * sin2i1);
-  const double Uold = (Q_in_cmf * sin2i1) + (U_in_cmf * cos2i1);
+  const double Qold = (Qi_cmf * cos2i1) - (Ui_cmf * sin2i1);
+  const double Uold = (Qi_cmf * sin2i1) + (Ui_cmf * cos2i1);
 
   // Scattering
 
