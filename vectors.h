@@ -219,7 +219,7 @@ constexpr auto move_pkt_withtime(Packet& pkt, const double distance) -> double {
 // Routine to compute the meridian frame axes ref1 and ref2
 [[gnu::pure]] [[nodiscard]] constexpr auto meridian(const Vec3d& n) -> std::tuple<Vec3d, Vec3d> {
   // for ref_1 use (from triple product rule)
-  const double n_xylen = std::sqrt((n[0] * n[0]) + (n[1] * n[1]));
+  const double n_xylen = std::sqrt(pow2(n[0]) + pow2(n[1]));
   if (n_xylen == 0.) {
     // if n is along z axis, we can just use x and y as the meridian frame axes
     return {Vec3d{1., 0., 0.}, Vec3d{0., 1., 0.}};
@@ -275,10 +275,13 @@ constexpr auto frame_transform(const Vec3d& n_rf, const double Q0, const double 
     rot_angle = (pol_angle < 0 ? pol_angle + (2. * PI) : pol_angle) / 2.;
   }
 
+  const double cos_rot_angle = std::cos(rot_angle);
+  const double sin_rot_angle = std::sin(rot_angle);
+
   // Define electric field by linear combination of ref1 and ref2 (using the angle just computed)
-  const auto elec_rf = Vec3d{(cos(rot_angle) * ref1_rf[0]) - (sin(rot_angle) * ref2_rf[0]),
-                             (cos(rot_angle) * ref1_rf[1]) - (sin(rot_angle) * ref2_rf[1]),
-                             (cos(rot_angle) * ref1_rf[2]) - (sin(rot_angle) * ref2_rf[2])};
+  const auto elec_rf = Vec3d{(cos_rot_angle * ref1_rf[0]) - (sin_rot_angle * ref2_rf[0]),
+                             (cos_rot_angle * ref1_rf[1]) - (sin_rot_angle * ref2_rf[1]),
+                             (cos_rot_angle * ref1_rf[2]) - (sin_rot_angle * ref2_rf[2])};
 
   // Aberration
   const auto n_cmf = angle_ab(n_rf, v);
