@@ -191,8 +191,9 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
 
   // MACROATOM and KPKT: isotropic emission
   double pn{1 / (4 * PI)};
-  double Q{0.};
-  double U{0.};
+  // normalised Stokes parameters in the rest frame (RF)
+  double q_rf{0.};
+  double u_rf{0.};
   if (type_before_rpkt == TYPE_RPKT) {
     // Transform Stokes Parameters from the RF to the CMF
     const auto [old_dir_cmf, q_i_cmf, u_i_cmf] = POL_ON
@@ -202,7 +203,7 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
     // Need to rotate Stokes Parameters in the scattering plane
 
     const auto obs_cmf = angle_ab(obsdir, vel_vec);
-    std::tie(std::ignore, Q, U, pn) = scatter_polarisation_to_rf(old_dir_cmf, obs_cmf, q_i_cmf, u_i_cmf, vel_vec);
+    std::tie(std::ignore, q_rf, u_rf, pn) = scatter_polarisation_to_rf(old_dir_cmf, obs_cmf, q_i_cmf, u_i_cmf, vel_vec);
 
   } else {
     assert_testmodeonly(type_before_rpkt == TYPE_KPKT || type_before_rpkt == TYPE_MA);
@@ -388,7 +389,7 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
 
     assert_always(std::isfinite(prob));
 
-    const Vec3d stokes = {prob, Q * prob, U * prob};
+    const Vec3d stokes = {prob, q_rf * prob, u_rf * prob};
 
     add_to_vspecpol(nu_rf, e_rf, stokes, obsdirindex, opacchoiceindex, t_arrive);
 
@@ -405,7 +406,7 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
     for (int wlbin = 0; wlbin < grid_nwavelengthranges; wlbin++) {
       if (nu_rf > nu_grid_min[wlbin] && nu_rf < nu_grid_max[wlbin]) {  // Frequency selection
         if (t_arrive > tmin_grid && t_arrive < tmax_grid) {  // Time selection
-          add_to_vpkt_grid(nu_rf, e_rf, {prob, Q * prob, U * prob}, vel_vec, wlbin, obsdirindex, obsdir);
+          add_to_vpkt_grid(nu_rf, e_rf, {prob, q_rf * prob, u_rf * prob}, vel_vec, wlbin, obsdirindex, obsdir);
         }
       }
     }
