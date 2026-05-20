@@ -294,6 +294,11 @@ void read_binding_energies() {
     int z_element{-1};
     ssline >> z_element;
     assert_always(z_element == (zminusone + 1));
+    for (int shell = 0; shell < nshells; shell++) {
+      float bindingenergy = 0.;
+      assert_always(ssline >> bindingenergy);
+      elements_electron_binding.at(zminusone).at(shell) = bindingenergy * EV;
+    }
   }
 
   std::vector<std::vector<int>> elements_neutral_shells_q;
