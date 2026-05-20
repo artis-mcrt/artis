@@ -668,11 +668,11 @@ void ratecoefficients_init() {
 }
 
 // Returns the (stimulated recombination corrected) photoionisation rate coefficient.
-auto get_corrphotoioncoeff_ana(int element, const int ion, const int level, const int phixstargetindex, const float T_R,
-                               const float W) -> double {
+auto get_corrphotoioncoeff_ana(int element, const int ion, const int level, const int phixstargetindex, const float T_R)
+    -> double {
   assert_always(USE_LUT_PHOTOION);
   const auto uniquelevelindex = get_uniquelevelindex(element, ion, level);
-  return W * lerp_or_last(std::span{corrphotoioncoeffs}, uniquelevelindex, phixstargetindex, T_R);
+  return lerp_or_last(std::span{corrphotoioncoeffs}, uniquelevelindex, phixstargetindex, T_R);
 }
 
 DEVICE_FUNC auto get_bfcoolingcoeff(const int element, const int lowerion, const int lowerionlevel,

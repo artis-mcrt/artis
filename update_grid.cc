@@ -287,7 +287,7 @@ void update_gamma_corrphotoionrenorm_bfheating_estimators(const int nonemptymgi,
 #endif
 
         globals::corrphotoionrenorm[ionestimindex] =
-            globals::gammaestimator[ionestimindex] / get_corrphotoioncoeff_ana(element, ion, 0, 0, T_R, W);
+            globals::gammaestimator[ionestimindex] / (W * get_corrphotoioncoeff_ana(element, ion, 0, 0, T_R));
 
         assert_always(std::isfinite(globals::corrphotoionrenorm[ionestimindex]));
       }
