@@ -50,14 +50,12 @@ void do_direction_bin(const int dirbin, const std::vector<std::vector<Packet>>& 
   // Set up the spectrum grid and initialise the bins to zero.
   init_spectra(rpkt_spectra, NU_MIN_R, NU_MAX_R, true);
 
-  THREADLOCALONHOST Spectra stokes_i;
-  THREADLOCALONHOST Spectra stokes_q;
-  THREADLOCALONHOST Spectra stokes_u;
+  THREADLOCALONHOST Spectra rpkt_stokes_q;
+  THREADLOCALONHOST Spectra rpkt_stokes_u;
 
   if constexpr (POL_ON) {
-    init_spectra(stokes_i, NU_MIN_R, NU_MAX_R, true);
-    init_spectra(stokes_q, NU_MIN_R, NU_MAX_R, true);
-    init_spectra(stokes_u, NU_MIN_R, NU_MAX_R, true);
+    init_spectra(rpkt_stokes_q, NU_MIN_R, NU_MAX_R, true);
+    init_spectra(rpkt_stokes_u, NU_MIN_R, NU_MAX_R, true);
   }
 
   constexpr double nu_min_gamma = 0.05 * MEV / H;
@@ -78,13 +76,13 @@ void do_direction_bin(const int dirbin, const std::vector<std::vector<Packet>>& 
       if (pkt.escape_type == TYPE_RPKT) {
         nesc_rpkt++;
         add_to_lc_res(pkt, dirbin, rpkt_light_curve_lum, rpkt_light_curve_lumcmf);
-        add_to_spec_res(pkt, dirbin, rpkt_spectra, POL_ON ? &stokes_i : nullptr, POL_ON ? &stokes_q : nullptr,
-                        POL_ON ? &stokes_u : nullptr);
+        add_to_spec_res(pkt, dirbin, rpkt_spectra, POL_ON ? &rpkt_stokes_q : nullptr,
+                        POL_ON ? &rpkt_stokes_u : nullptr);
       } else if (pkt.escape_type == TYPE_GAMMA) {
         nesc_gamma++;
         if (dirbin == -1) {
           add_to_lc_res(pkt, dirbin, gamma_light_curve_lum, gamma_light_curve_lumcmf);
-          add_to_spec_res(pkt, dirbin, gamma_spectra, nullptr, nullptr, nullptr);
+          add_to_spec_res(pkt, dirbin, gamma_spectra, nullptr, nullptr);
         }
       }
     }
@@ -99,7 +97,7 @@ void do_direction_bin(const int dirbin, const std::vector<std::vector<Packet>>& 
     write_spectra("spec.out", "emission.out", "emissiontrue.out", "absorption.out", rpkt_spectra, globals::ntimesteps);
 
     if constexpr (POL_ON) {
-      write_specpol("specpol.out", "emissionpol.out", "absorptionpol.out", &stokes_i, &stokes_q, &stokes_u);
+      write_specpol("specpol.out", "emissionpol.out", "absorptionpol.out", rpkt_spectra, rpkt_stokes_q, rpkt_stokes_u);
     }
 
     if constexpr (KEEP_ESCAPED_GAMMAS) {
@@ -126,8 +124,8 @@ void do_direction_bin(const int dirbin, const std::vector<std::vector<Packet>>& 
     if constexpr (POL_ON) {
       write_specpol(std::format("{}specpol_res_{:02d}.out", outdir_resfiles, dirbin),
                     std::format("{}emissionpol_res_{:02d}.out", outdir_resfiles, dirbin),
-                    std::format("{}absorptionpol_res_{:02d}.out", outdir_resfiles, dirbin), &stokes_i, &stokes_q,
-                    &stokes_u);
+                    std::format("{}absorptionpol_res_{:02d}.out", outdir_resfiles, dirbin), rpkt_spectra, rpkt_stokes_q,
+                    rpkt_stokes_u);
     }
 
     printlnlog("Did {} of {} angle bins.", dirbin + 1, MABINS);

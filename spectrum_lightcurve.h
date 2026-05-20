@@ -38,11 +38,10 @@ void write_spectra(const std::string& spec_filename, const std::string& emission
                    const Spectra& spectra, int numtimesteps);
 
 void write_specpol(const std::string& specpol_filename, const std::string& emission_filename,
-                   const std::string& absorption_filename, const Spectra* stokes_i, const Spectra* stokes_q,
-                   const Spectra* stokes_u);
+                   const std::string& absorption_filename, const Spectra& stokes_i, const Spectra& stokes_q,
+                   const Spectra& stokes_u);
 
-void add_to_spec_res(const Packet& pkt, int dirbin, Spectra& spectra, Spectra* stokes_i, Spectra* stokes_q,
-                     Spectra* stokes_u);
+void add_to_spec_res(const Packet& pkt, int dirbin, Spectra& spectra, Spectra* stokes_q, Spectra* stokes_u);
 
 void init_spectra(Spectra& spectra, double nu_min, double nu_max, bool do_emission_absorption);
 void init_spectrum_trace();
