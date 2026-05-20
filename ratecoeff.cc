@@ -83,8 +83,8 @@ auto bfcooling_integrand(const double nu_minus_nu_edge, const double nu_edge, co
                          const std::span<const float> photoion_xs) -> double {
   const float sigma_bf = photoionisation_crosssection_fromtable(photoion_xs, nu_edge, nu_minus_nu_edge + nu_edge);
 
-  // return sigma_bf * (1-nu_edge/nu) * TWOHOVERCLIGHTSQUARED * pow(nu,3) * exp(-HOVERKB*nu/T);
-  return sigma_bf * nu_minus_nu_edge * TWOHOVERCLIGHTSQUARED * (nu_minus_nu_edge + nu_edge) *
+  // return sigma_bf * (1-nu_edge/nu) * (2 * H / CLIGHTSQUARED) * pow(nu,3) * exp(-HOVERKB*nu/T);
+  return sigma_bf * nu_minus_nu_edge * (2 * H / CLIGHTSQUARED) * (nu_minus_nu_edge + nu_edge) *
          (nu_minus_nu_edge + nu_edge) * exp(-HOVERKB * nu_minus_nu_edge / T_e);
 }
 
