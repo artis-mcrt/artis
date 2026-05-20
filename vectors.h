@@ -306,10 +306,10 @@ constexpr auto frame_transform(const Vec3d& n_rf, const double Q0, const double 
 }
 
 // Routine to compute the new Stokes Parameters after scattering, including the frame transformations to and from the
-// CMF and the rotation of Stokes Parameters in the scattering plane. The input Stokes Parameters are in the RF and the
-// output ones are also in the RF.
+// CMF and the rotation of Stokes Parameters in the scattering plane.
 constexpr auto scatter_polarisation_frame_transform(const Vec3d& old_dir_cmf, const Vec3d& new_dir_cmf, const double Qi,
-                                                    const double Ui) -> std::tuple<double, double> {
+                                                    const double Ui, const Vec3d& vel_vec)
+    -> std::tuple<Vec3d, double, double, double> {
   const auto [ref1_olddir, ref2_olddir] = meridian(old_dir_cmf);
 
   // This is the i1 angle of Bulla+2015, obtained by computing the angle between the
@@ -344,7 +344,11 @@ constexpr auto scatter_polarisation_frame_transform(const Vec3d& old_dir_cmf, co
   const double Q_cmf = (Qnew * cos2i2) + (Unew * sin2i2);
   const double U_cmf = (-Qnew * sin2i2) + (Unew * cos2i2);
 
-  return {Q_cmf, U_cmf};
+  const auto [new_dir_rf, Q_rf, U_rf] =
+      (frame_transform(new_dir_cmf, Q_cmf, U_cmf, Vec3d{-vel_vec[0], -vel_vec[1], -vel_vec[2]}));
+
+  const double pn = 3. / (16. * PI) * (1 + pow2(mu) + ((pow2(mu) - 1) * Qold));
+  return {new_dir_rf, Q_cmf, U_cmf, pn};
 }
 
 #endif  // VECTORS_H
