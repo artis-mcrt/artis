@@ -1,9 +1,9 @@
 eaddcdbf15aa53a08fb96ef43899850a  absorption.out
-802fcfa79ea1fd5880bfcc903754558d  absorptionpol.out
+b2ec5b73919786193ae9a67a60e02307  absorptionpol.out
 c0604236aa7df99cda43e5c7bbe7b6f4  bflist.out
 9c9af4c9beef1ba02ebead9f1d305918  deposition.out
 007acbad5b87f10e8602d5c4d7fb965f  emission.out
-ebe95557e6aa487a1973bb1481f38d4d  emissionpol.out
+1f390589f8e1d2dff60936ef29f4c9f4  emissionpol.out
 1d004a9457380f7735335d86af7415f2  emissiontrue.out
 626927649fd3a51ca8f8dcccb38e28b0  gamma_light_curve.out
 0f0dd6b75d84c7478e75f7a3e50c949e  gamma_spec.out
