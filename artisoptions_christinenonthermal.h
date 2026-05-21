@@ -30,8 +30,6 @@ constexpr bool FORCE_SAHA_ION_BALANCE(int element_z) { return false; }
 
 constexpr bool SINGLE_LEVEL_TOP_ION = false;
 
-constexpr bool SINGLE_GROUND_LEVEL = false;
-
 constexpr int NLEVELS_REQUIRETRANSITIONS(int Z, int ionstage) {
   return ((Z == 26 && ionstage == 5) && ionstage >= 1) ? 80 : 0;
 }

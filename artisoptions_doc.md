@@ -29,10 +29,6 @@ constexpr bool FORCE_SAHA_ION_BALANCE(int element_z);
 // Only include a single level for the highest ion stage
 constexpr bool SINGLE_LEVEL_TOP_ION;
 
-// if false, read from file or autodetect
-// this only affects the recombrates scaling, since rates are given per ground multiplet population.
-constexpr bool SINGLE_GROUND_LEVEL;
-
 // Add any missing collisional transitions between the lower n levels and all other levels (or disable by returning zero)
 // This can prevent fully disconnected levels, whose NLTE populations cannot be determined
 constexpr int NLEVELS_REQUIRETRANSITIONS(int Z, int ionstage) {
