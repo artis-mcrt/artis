@@ -11,7 +11,6 @@
 #include <functional>
 #include <ios>
 #include <iterator>
-#include <ostream>
 #include <print>
 #include <span>
 #include <string>
@@ -220,30 +219,6 @@ auto columnindex_from_emissiontype(const int et) -> int {
   assert_always(false);  // could not find matching timestep
 
   return -1;
-}
-
-void write_specpol_param(std::ostream& specpol_file, std::ostream& emissionpol_file, std::ostream& absorptionpol_file,
-                         const Spectra& spec, const int nnu, const bool do_emission_absorption) {
-  const int proccount = get_proccount();
-  const int ioncount = get_nelements() * get_max_nions();  // may be higher than the true included ion count
-  // Stokes I, Q, or U
-  const auto ntimesteps = static_cast<ptrdiff_t>(globals::ntimesteps);
-  for (auto nts = 0Z; nts < ntimesteps; nts++) {
-    std::print(specpol_file, "{:g} ", spec.fluxalltimesteps[(nnu * ntimesteps) + nts]);
-
-    if (do_emission_absorption) {
-      for (int nproc = 0; nproc < proccount; nproc++) {
-        const auto emindex = (nnu * ntimesteps * proccount) + (nts * proccount) + nproc;
-        std::print(emissionpol_file, "{:g} ", spec.emissionalltimesteps[emindex]);
-      }
-      std::println(emissionpol_file, "");
-
-      for (int i = 0; i < ioncount; i++) {
-        std::print(absorptionpol_file, "{:g} ", spec.absorptionalltimesteps[get_absindex(nts, nnu) + i]);
-      }
-      std::println(absorptionpol_file, "");
-    }
-  }
 }
 
 void write_partial_lightcurve_spectra_dirbin(const int nts, std::span<const Packet> packets,
@@ -457,6 +432,10 @@ void write_specpol(const std::string& specpol_filename, const std::string& emiss
     printlnlog("Writing {}", specpol_filename);
   }
 
+  const int proccount = get_proccount();
+  const int ioncount = get_nelements() * get_max_nions();  // may be higher than the true included ion count
+  const auto ntimesteps = static_cast<ptrdiff_t>(globals::ntimesteps);
+
   std::print(specpol_file, "{:g} ", 0.0);
 
   for (int l = 0; l < 3; l++) {
@@ -472,9 +451,24 @@ void write_specpol(const std::string& specpol_filename, const std::string& emiss
   for (int nnu = 0; nnu < std::ssize(spectra_I.lower_freq); nnu++) {
     std::print(specpol_file, "{:g} ", (spectra_I.lower_freq[nnu] + (spectra_I.delta_freq[nnu] / 2)));
 
-    write_specpol_param(specpol_file, emissionpol_file, absorptionpol_file, spectra_I, nnu, do_emission_absorption);
-    write_specpol_param(specpol_file, emissionpol_file, absorptionpol_file, spectra_Q, nnu, do_emission_absorption);
-    write_specpol_param(specpol_file, emissionpol_file, absorptionpol_file, spectra_U, nnu, do_emission_absorption);
+    for (const auto* spec : {&spectra_I, &spectra_Q, &spectra_U}) {
+      for (auto nts = 0Z; nts < ntimesteps; nts++) {
+        std::print(specpol_file, "{:g} ", spec->fluxalltimesteps[(nnu * ntimesteps) + nts]);
+
+        if (do_emission_absorption) {
+          for (int nproc = 0; nproc < proccount; nproc++) {
+            const auto emindex = (nnu * ntimesteps * proccount) + (nts * proccount) + nproc;
+            std::print(emissionpol_file, "{:g} ", spec->emissionalltimesteps[emindex]);
+          }
+          std::println(emissionpol_file, "");
+
+          for (int i = 0; i < ioncount; i++) {
+            std::print(absorptionpol_file, "{:g} ", spec->absorptionalltimesteps[get_absindex(nts, nnu) + i]);
+          }
+          std::println(absorptionpol_file, "");
+        }
+      }
+    }
 
     std::println(specpol_file, "");
   }
