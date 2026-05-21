@@ -110,7 +110,7 @@ constexpr double DELTA_E = (SF_EMAX - SF_EMIN) / (SFPTS - 1);
 
 // if this is greater than zero, make sure NT_USE_VALENCE_IONPOTENTIAL is false!
 static_assert(NT_MAX_AUGER_ELECTRONS == 0 || !NT_USE_VALENCE_IONPOTENTIAL,
-              "Overriding the shell potention with the valence potential is not compatible with including Auger "
+              "Overriding the shell potential with the valence potential is not compatible with including Auger "
               "electrons, because the shell potential is used to calculate the energy of Auger electrons.");
 
 // energy grid on which solution is sampled [eV]
