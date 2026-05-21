@@ -469,7 +469,7 @@ void write_specpol(const std::string& specpol_filename, const std::string& emiss
             if (i > 0) {
               std::print(absorptionpol_file, " ");
             }
-            std::print(absorptionpol_file, " {:g}", spec->absorptionalltimesteps[get_absindex(nts, nnu) + i]);
+            std::print(absorptionpol_file, "{:g}", spec->absorptionalltimesteps[get_absindex(nts, nnu) + i]);
           }
           std::println(absorptionpol_file, "");
         }
