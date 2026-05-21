@@ -50,10 +50,20 @@ namespace nonthermal {
 
 namespace {
 
+// number of energy points in the Spencer-Fano solution vector
+constexpr int SFPTS = 4096;
+
+// the minimum and maximum energies for the Spencer-Fano solution vector [eV]
+constexpr double SF_EMIN = 0.1;
+constexpr double SF_EMAX = 16000;
+
+// add the Auger electron term to the Spencer-Fano equation
+constexpr bool SF_AUGER_CONTRIBUTION_DISTRIBUTE_EN = false;
+
 // minimum number fraction of the total population to include in SF solution
 constexpr double MIN_ION_OVER_NNTOT = 1.e-8;
 
-// minimum deposition rate density (eV/s/cm^3) to solve SF equation
+// minimum deposition rate density [eV/s/cm3] to solve SF equation
 constexpr double MINDEPRATE = 0.;
 
 // Bohr radius squared in cm^2
