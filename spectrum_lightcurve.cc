@@ -436,11 +436,11 @@ void write_specpol(const std::string& specpol_filename, const std::string& emiss
   const int ioncount = get_nelements() * get_max_nions();  // may be higher than the true included ion count
   const auto ntimesteps = static_cast<ptrdiff_t>(globals::ntimesteps);
 
-  std::print(specpol_file, "{:g} ", 0.0);
+  std::print(specpol_file, "{:g}", 0.0);
 
   for (int l = 0; l < 3; l++) {
     for (int p = 0; p < globals::ntimesteps; p++) {
-      std::print(specpol_file, "{:g} ", globals::timesteps[p].mid / DAY);
+      std::print(specpol_file, " {:g}", globals::timesteps[p].mid / DAY);
     }
   }
 
@@ -449,21 +449,21 @@ void write_specpol(const std::string& specpol_filename, const std::string& emiss
   assert_always(std::ssize(spectra_I.delta_freq) == MNUBINS);
   assert_always(std::ssize(spectra_I.lower_freq) == MNUBINS);
   for (int nnu = 0; nnu < std::ssize(spectra_I.lower_freq); nnu++) {
-    std::print(specpol_file, "{:g} ", (spectra_I.lower_freq[nnu] + (spectra_I.delta_freq[nnu] / 2)));
+    std::print(specpol_file, "{:g}", (spectra_I.lower_freq[nnu] + (spectra_I.delta_freq[nnu] / 2)));
 
     for (const auto* spec : {&spectra_I, &spectra_Q, &spectra_U}) {
       for (auto nts = 0Z; nts < ntimesteps; nts++) {
-        std::print(specpol_file, "{:g} ", spec->fluxalltimesteps[(nnu * ntimesteps) + nts]);
+        std::print(specpol_file, " {:g}", spec->fluxalltimesteps[(nnu * ntimesteps) + nts]);
 
         if (do_emission_absorption) {
           for (int nproc = 0; nproc < proccount; nproc++) {
             const auto emindex = (nnu * ntimesteps * proccount) + (nts * proccount) + nproc;
-            std::print(emissionpol_file, "{:g} ", spec->emissionalltimesteps[emindex]);
+            std::print(emissionpol_file, " {:g}", spec->emissionalltimesteps[emindex]);
           }
           std::println(emissionpol_file, "");
 
           for (int i = 0; i < ioncount; i++) {
-            std::print(absorptionpol_file, "{:g} ", spec->absorptionalltimesteps[get_absindex(nts, nnu) + i]);
+            std::print(absorptionpol_file, " {:g}", spec->absorptionalltimesteps[get_absindex(nts, nnu) + i]);
           }
           std::println(absorptionpol_file, "");
         }
