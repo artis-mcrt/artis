@@ -57,7 +57,7 @@ constexpr int SFPTS = 4096;
 constexpr double SF_EMIN = 0.1;
 constexpr double SF_EMAX = 16000;
 
-// add the Auger electron term to the Spencer-Fano equation
+// set true to divide up the mean Auger energy by the number of electrons that come out
 constexpr bool SF_AUGER_CONTRIBUTION_DISTRIBUTE_EN = false;
 
 // minimum number fraction of the total population to include in SF solution
@@ -105,7 +105,13 @@ struct ShellParams {
 std::vector<ShellParams> colliondata;
 
 static_assert(SF_EMIN > 0.);
+static_assert(SF_EMAX > SF_EMIN);
 constexpr double DELTA_E = (SF_EMAX - SF_EMIN) / (SFPTS - 1);
+
+// if this is greater than zero, make sure NT_USE_VALENCE_IONPOTENTIAL is false!
+static_assert(NT_MAX_AUGER_ELECTRONS == 0 || !NT_USE_VALENCE_IONPOTENTIAL,
+              "Overriding the shell potention with the valence potential is not compatible with including Auger "
+              "electrons, because the shell potential is used to calculate the energy of Auger electrons.");
 
 // energy grid on which solution is sampled [eV]
 constexpr auto engrid(int index) -> double { return SF_EMIN + (index * DELTA_E); }
