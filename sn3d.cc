@@ -828,7 +828,9 @@ auto main(int argc, char* argv[]) -> int {
   read_parameterfile();
 
   // Read in parameters from vpkt.txt
-  vpkt::read_vpktparameterfile();
+  if constexpr (VPKT_ON) {
+    vpkt::read_vpktparameterfile();
+  }
 
   read_atomicdata();
 

@@ -558,10 +558,6 @@ void write_vpkt_grid(const std::string& filename) {
 }
 
 void read_vpkt_grid(const int my_rank, const int nts) {
-  if (!vgrid_on) {
-    return;
-  }
-
   const std::string filename = std::format("vpkt_grid_{:04d}_ts{}.tmp", my_rank, nts);
   printlnlog("Reading {}", filename);
   auto vpkt_grid_file = fstream_required(filename, std::ios::in);
@@ -594,10 +590,6 @@ void remove_temp_vpkt_file(const int nts, const int my_rank) {
 }
 
 void read_vpktparameterfile() {
-  if constexpr (!VPKT_ON) {
-    return;
-  }
-
   FILE* input_file = fopen_required("vpkt.txt", "r");
 
   assert_always(fscanf(input_file, "%d", &nobsdirections) == 1);
