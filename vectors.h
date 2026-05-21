@@ -67,7 +67,7 @@ template <size_t VECDIM>
 
   const double ndotv = dot(dir1, vel);
   const double fact1 = gamma_rel * (1 - (ndotv / CLIGHT));
-  const double fact2 = (gamma_rel - (gamma_rel * gamma_rel * ndotv / (gamma_rel + 1) / CLIGHT)) / CLIGHT;
+  const double fact2 = (gamma_rel - (pow2(gamma_rel) * ndotv / (gamma_rel + 1) / CLIGHT)) / CLIGHT;
 
   return vec_norm({(dir1[0] - (vel[0] * fact2)) / fact1, (dir1[1] - (vel[1] * fact2)) / fact1,
                    (dir1[2] - (vel[2] * fact2)) / fact1});
@@ -193,7 +193,7 @@ constexpr auto move_pkt_withtime(Packet& pkt, const double distance) -> double {
 
   const double phi = rng_uniform() * 2 * PI;
 
-  const double sintheta = std::sqrt(1. - (costheta * costheta));
+  const double sintheta = std::sqrt(1. - pow2(costheta));
 
   return {sintheta * std::cos(phi), sintheta * std::sin(phi), costheta};
 }
@@ -217,17 +217,17 @@ constexpr auto move_pkt_withtime(Packet& pkt, const double distance) -> double {
 }
 
 // Compute the meridian frame axes ref1 and ref2
-[[gnu::pure]] [[nodiscard]] constexpr auto meridian(const Vec3d& n) -> std::tuple<Vec3d, Vec3d> {
+[[gnu::pure]] [[nodiscard]] constexpr auto meridian(const Vec3d& dir) -> std::tuple<Vec3d, Vec3d> {
   // for ref_1 use (from triple product rule)
-  const double n_xylen = std::sqrt(pow2(n[0]) + pow2(n[1]));
+  const double n_xylen = std::sqrt(pow2(dir[0]) + pow2(dir[1]));
   if (n_xylen == 0.) {
     // if n is along z axis, we can just use x and y as the meridian frame axes
     return {Vec3d{1., 0., 0.}, Vec3d{0., 1., 0.}};
   }
-  const auto ref1 = Vec3d{-n[0] * n[2] / n_xylen, -n[1] * n[2] / n_xylen, (1 - (n[2] * n[2])) / n_xylen};
+  const auto ref1 = Vec3d{-dir[0] * dir[2] / n_xylen, -dir[1] * dir[2] / n_xylen, (1 - (dir[2] * dir[2])) / n_xylen};
 
   // for ref_2 use vector product of n_cmf with ref1
-  const auto ref2 = cross_prod(ref1, n);
+  const auto ref2 = cross_prod(ref1, dir);
   return {ref1, ref2};
 }
 
@@ -258,14 +258,14 @@ constexpr auto move_pkt_withtime(Packet& pkt, const double distance) -> double {
   return elec_cmf;
 }
 
-// Transform the Stokes Parameters from RF to CMF
+// Transform a direction and Stokes Parameters from RF to CMF
 constexpr auto frame_transform(const Vec3d& n_rf, const double q0, const double u0, const Vec3d& v)
     -> std::tuple<Vec3d, double, double> {
   // Meridian frame in the RF
   const auto [ref1_rf, ref2_rf] = meridian(n_rf);
 
   // Compute polarisation (which is invariant)
-  const double p = sqrt((q0 * q0) + (u0 * u0));
+  const double p = std::sqrt(pow2(q0) + pow2(u0));
 
   // We want to compute the angle between ref1 and the electric field
   double rot_angle = 0;
@@ -323,17 +323,17 @@ constexpr auto scatter_polarisation_to_rf(const Vec3d& old_dir_cmf, const Vec3d&
   const double cos2i1 = cos(2 * i1);
   const double sin2i1 = sin(2 * i1);
 
-  const double Qold = (q_i_cmf * cos2i1) - (u_i_cmf * sin2i1);
-  const double Uold = (q_i_cmf * sin2i1) + (u_i_cmf * cos2i1);
+  const double q_old = (q_i_cmf * cos2i1) - (u_i_cmf * sin2i1);
+  const double u_old = (q_i_cmf * sin2i1) + (u_i_cmf * cos2i1);
 
   // Scattering
 
   const double mu = dot(old_dir_cmf, new_dir_cmf);
   const double musquared = pow2(mu);
 
-  const double Inew = 0.75 * ((musquared + 1.) + (Qold * (musquared - 1.)));
-  const double Qnew = (0.75 * ((musquared - 1.) + (Qold * (musquared + 1.)))) / Inew;
-  const double Unew = (1.5 * mu * Uold) / Inew;
+  const double I_new = 0.75 * ((musquared + 1.) + (q_old * (musquared - 1.)));
+  const double q_new = (0.75 * ((musquared - 1.) + (q_old * (musquared + 1.)))) / I_new;
+  const double u_new = (1.5 * mu * u_old) / I_new;
 
   // Need to rotate Stokes Parameters out of the scattering plane to the meridian frame (Clockwise rotation of PI-i2)
 
@@ -346,13 +346,13 @@ constexpr auto scatter_polarisation_to_rf(const Vec3d& old_dir_cmf, const Vec3d&
   const double cos2i2 = cos(2 * i2);
   const double sin2i2 = sin(2 * i2);
 
-  const double q_cmf = (Qnew * cos2i2) + (Unew * sin2i2);
-  const double u_cmf = (-Qnew * sin2i2) + (Unew * cos2i2);
+  const double q_cmf = (q_new * cos2i2) + (u_new * sin2i2);
+  const double u_cmf = (-q_new * sin2i2) + (u_new * cos2i2);
 
   const auto [new_dir_rf, q_rf, u_rf] =
       (frame_transform(new_dir_cmf, q_cmf, u_cmf, Vec3d{-vel_vec[0], -vel_vec[1], -vel_vec[2]}));
 
-  const double pn = 3. / (16. * PI) * (1. + musquared + ((musquared - 1.) * Qold));
+  const double pn = 3. / (16. * PI) * (1. + musquared + ((musquared - 1.) * q_old));
   return {new_dir_rf, q_rf, u_rf, pn};
 }
 
