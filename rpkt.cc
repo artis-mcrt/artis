@@ -348,12 +348,12 @@ void electron_scatter_rpkt(Packet& pkt) {
     new_dir_cmf = {sin_tsc * cos(phisc), sin_tsc * sin(phisc), (old_dir_cmf[2] > 0) ? cos_tsc : -cos_tsc};
   }
 
-  if constexpr (!POL_ON) {
-    pkt.dir = angle_ab(new_dir_cmf, Vec3d{-vel_vec[0], -vel_vec[1], -vel_vec[2]});
-  } else {
+  if constexpr (POL_ON) {
     // Need to rotate Stokes Parameters in the scattering plane
     std::tie(pkt.dir, pkt.stokes_q, pkt.stokes_u, std::ignore) =
         scatter_polarisation_to_rf(old_dir_cmf, new_dir_cmf, q_i_cmf, u_i_cmf, vel_vec);
+  } else {
+    pkt.dir = angle_ab(new_dir_cmf, Vec3d{-vel_vec[0], -vel_vec[1], -vel_vec[2]});
   }
 
   // Check unit vector
