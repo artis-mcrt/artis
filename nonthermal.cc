@@ -50,10 +50,20 @@ namespace nonthermal {
 
 namespace {
 
+// number of energy points in the Spencer-Fano solution vector
+constexpr int SFPTS = 4096;
+
+// the minimum and maximum energies for the Spencer-Fano solution vector [eV]
+constexpr double SF_EMIN = 0.1;
+constexpr double SF_EMAX = 16000;
+
+// set true to divide up the mean Auger energy by the number of electrons that come out
+constexpr bool SF_AUGER_CONTRIBUTION_DISTRIBUTE_EN = false;
+
 // minimum number fraction of the total population to include in SF solution
 constexpr double MIN_ION_OVER_NNTOT = 1.e-8;
 
-// minimum deposition rate density (eV/s/cm^3) to solve SF equation
+// minimum deposition rate density [eV/s/cm3] to solve SF equation
 constexpr double MINDEPRATE = 0.;
 
 // Bohr radius squared in cm^2
@@ -95,7 +105,13 @@ struct ShellParams {
 std::vector<ShellParams> colliondata;
 
 static_assert(SF_EMIN > 0.);
+static_assert(SF_EMAX > SF_EMIN);
 constexpr double DELTA_E = (SF_EMAX - SF_EMIN) / (SFPTS - 1);
+
+// if this is greater than zero, make sure NT_USE_VALENCE_IONPOTENTIAL is false!
+static_assert(NT_MAX_AUGER_ELECTRONS == 0 || !NT_USE_VALENCE_IONPOTENTIAL,
+              "Overriding the shell potential with the valence potential is not compatible with including Auger "
+              "electrons, because the shell potential is used to calculate the energy of Auger electrons.");
 
 // energy grid on which solution is sampled [eV]
 constexpr auto engrid(int index) -> double { return SF_EMIN + (index * DELTA_E); }

@@ -91,12 +91,6 @@ constexpr bool NT_ON = false;
 
 constexpr bool NT_SOLVE_SPENCERFANO = false;
 
-constexpr int SFPTS = 4096;
-
-constexpr double SF_EMAX = 16000;
-
-constexpr double SF_EMIN = 0.1;
-
 constexpr int SF_MAX_TIMESTEPS_BETWEEN_SOLUTIONS = 0;
 
 constexpr double NT_MAX_FRACDIFF_NNEPERION_BETWEEN_SOLUTIONS = 0.05;
@@ -113,8 +107,6 @@ constexpr bool NT_USE_VALENCE_IONPOTENTIAL = false;
 constexpr int NT_MAX_AUGER_ELECTRONS = 2;
 
 constexpr bool SF_AUGER_CONTRIBUTION_ON = true;
-
-constexpr bool SF_AUGER_CONTRIBUTION_DISTRIBUTE_EN = false;
 
 constexpr double TEMPERATURE_SOLVER_ACCURACY = 1e-2;
 
