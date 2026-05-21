@@ -458,11 +458,17 @@ void write_specpol(const std::string& specpol_filename, const std::string& emiss
         if (do_emission_absorption) {
           for (int nproc = 0; nproc < proccount; nproc++) {
             const auto emindex = (nnu * ntimesteps * proccount) + (nts * proccount) + nproc;
-            std::print(emissionpol_file, " {:g}", spec->emissionalltimesteps[emindex]);
+            if (nproc > 0) {
+              std::print(emissionpol_file, " ");
+            }
+            std::print(emissionpol_file, "{:g}", spec->emissionalltimesteps[emindex]);
           }
           std::println(emissionpol_file, "");
 
           for (int i = 0; i < ioncount; i++) {
+            if (i > 0) {
+              std::print(absorptionpol_file, " ");
+            }
             std::print(absorptionpol_file, " {:g}", spec->absorptionalltimesteps[get_absindex(nts, nnu) + i]);
           }
           std::println(absorptionpol_file, "");
