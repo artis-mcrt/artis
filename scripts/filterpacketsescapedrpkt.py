@@ -60,7 +60,7 @@ def main() -> None:
         )
         fileout_rpkt_temp = Path(
             *fileout_rpkt.parts[:-1],
-            f"{fileout_rpkt.parts[-1]}.partial.tmp",
+            f"{fileout_rpkt.parts[-1]}.partial.tmp.nosync",
         )
         print("  filtering rpkts...", end="", flush=True)
         commentrows = 0
