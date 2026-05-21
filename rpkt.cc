@@ -225,7 +225,9 @@ auto get_possible_event_expansion_opacity(const int nonemptymgi, const Packet& p
     const double chi_cont = chi_rpkt_cont.total() * doppler;
     double chi_bb_expansionopac = 0.;
     if (binindex >= 0) {
+      // opacity in units of [cm^2/g]
       const auto kappa = expansionopacities[(nonemptymgi * expopac_nbins) + binindex];
+      // absorption coefficient in units of [1/cm]
       chi_bb_expansionopac = kappa * grid::get_rho(nonemptymgi);
     }
 
@@ -946,7 +948,7 @@ void calculate_expansion_opacities(const int nonemptymgi) {
       bin_linesum += (linelambda / expopac_deltalambda) * -std::expm1(-tau_line);
       lineindex++;
     }
-
+    // opacity in units of [cm^2/g]
     const auto bin_kappa_bb = static_cast<float>(1. / (CLIGHT * t_mid * rho) * bin_linesum);
     assert_always(std::isfinite(bin_kappa_bb));
 
