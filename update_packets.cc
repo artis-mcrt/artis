@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <array>
+#include <chrono>
 #include <cmath>
 #include <cstddef>
 #include <cstdlib>
@@ -432,6 +433,7 @@ void update_packets(const int nts, std::span<Packet> packets) {
   const double ts_end = ts + tw;
 
   const auto time_update_packets_start = std::time(nullptr);
+  const auto time_update_packets_start_highprecision = std::chrono::steady_clock::now();
   printlnlog("timestep {}: start update_packets at time {}", nts, time_update_packets_start);
   // first group will probably be the -1 no-cache required group, so -2 triggers the first update
   globals::cellcache[cellcacheslotid].nonemptymgi = -2;
@@ -491,13 +493,23 @@ void update_packets(const int nts, std::span<Packet> packets) {
   stats::pkt_action_counters_printout(nts);
 
   const auto time_update_packets_end_thisrank = std::time(nullptr);
+  const auto time_update_packets_end_thisrank_highprecision = std::chrono::steady_clock::now();
   printlnlog("timestep {}: finished update_packets for rank {} (took {} seconds)", nts, globals::my_rank,
              time_update_packets_end_thisrank - time_update_packets_start);
 
   MPI_Barrier_allranks();  // hold all processes once the packets are updated
-  const auto time_update_packets_end_allranks = std::time(nullptr);
-  printlnlog("timestep {}: time after update packets for all processes (rank {} took {}s, waited {}s, total {}s)", nts,
-             globals::my_rank, time_update_packets_end_thisrank - time_update_packets_start,
-             time_update_packets_end_allranks - time_update_packets_end_thisrank,
-             time_update_packets_end_allranks - time_update_packets_start);
+  const auto time_update_packets_end_allranks_highprecision = std::chrono::steady_clock::now();
+  const auto rank_process_time =
+      std::chrono::duration<double>(time_update_packets_end_thisrank_highprecision - time_update_packets_start_highprecision)
+          .count();
+  const auto rank_wait_time =
+      std::chrono::duration<double>(time_update_packets_end_allranks_highprecision -
+                                    time_update_packets_end_thisrank_highprecision)
+          .count();
+  const auto rank_total_time =
+      std::chrono::duration<double>(time_update_packets_end_allranks_highprecision - time_update_packets_start_highprecision)
+          .count();
+  printlnlog(
+      "timestep {}: time after update packets for all processes (rank {} took {:.1f}s, waited {:.1f}s, total {:.1f}s)",
+      nts, globals::my_rank, rank_process_time, rank_wait_time, rank_total_time);
 }
