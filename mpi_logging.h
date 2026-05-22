@@ -5,6 +5,7 @@
 #include <array>
 #include <atomic>
 #include <cassert>
+#include <chrono>
 #include <cstdarg>
 #include <cstddef>
 #include <cstdint>
@@ -132,10 +133,7 @@ inline auto printlnlog(std::string_view fmt, Args&&... args) -> void {
 #else
 inline void print_line_start() noexcept {
   if (outputstartofline) {
-    const time_t now_time = time(nullptr);
-    THREADLOCALONHOST tm timebuf{};
-    strftime(outputlinebuf.data(), 32, "%FT%TZ", gmtime_r(&now_time, &timebuf));
-    std::print(output_file, "{} ", outputlinebuf.data());
+    std::print(output_file, "{:%FT%TZ} ", std::chrono::floor<std::chrono::seconds>(std::chrono::system_clock::now()));
   }
 }
 
