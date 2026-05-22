@@ -529,9 +529,9 @@ auto walltime_sufficient_to_continue(const int nts, const int nts_prev, const in
   bool do_this_full_loop = true;
   if (walltimelimitseconds > 0 && nts < globals::timestep_finish) {
     const auto wallclock_used_seconds =
-        std::chrono::duration<double>(std::chrono::steady_clock::now() - real_time_start).count();
+        std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - real_time_start).count();
     const auto wallclock_remaining_seconds = walltimelimitseconds - wallclock_used_seconds;
-    printlnlog("TIMED_RESTARTS: Used {:.1f} of {} seconds of wall time.", wallclock_used_seconds, walltimelimitseconds);
+    printlnlog("TIMED_RESTARTS: Used {} of {} seconds of wall time.", wallclock_used_seconds, walltimelimitseconds);
 
     // This flag being false will make it update_grid, and then exit
     do_this_full_loop = (wallclock_remaining_seconds >= (1.5 * estimated_time_per_timestep));
