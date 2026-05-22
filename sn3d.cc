@@ -777,7 +777,7 @@ auto main(int argc, char* argv[]) -> int {
   printlnlog("GPU_ON is enabled");
 #endif
 
-  printlnlog("time at start (tstart + 0.0 seconds)");
+  printlnlog("time at start");
 
   printlog("Integration method is: ");
 
@@ -977,10 +977,9 @@ auto main(int argc, char* argv[]) -> int {
   const auto real_time_end = std::chrono::steady_clock::now();
   const auto wallclock_hours = std::chrono::duration<double>(real_time_end - real_time_start).count() / 3600.;
   printlnlog(
-      "sn3d finished at {} (job: pktprop ts {} to ts {} grid-preprop, {:.3f} wallclock hours * {} processes * {} "
+      "sn3d finished (job: pktprop ts {} to ts {} grid-preprop, {:.3f} wallclock hours * {} processes * {} "
       "threads = {:.3f} core hours)",
-      std::chrono::duration<double>(real_time_end - real_time_start).count(), globals::timestep_initial,
-      globals::timestep - 1, wallclock_hours, globals::nprocs, get_max_threads(),
+      globals::timestep_initial, globals::timestep - 1, wallclock_hours, globals::nprocs, get_max_threads(),
       wallclock_hours * globals::nprocs * get_max_threads());
 
   MPI_Finalize();
