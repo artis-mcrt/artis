@@ -4,6 +4,7 @@
 #include <array>
 #include <cassert>
 #include <cctype>
+#include <chrono>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
@@ -2108,7 +2109,7 @@ void read_ejecta_model() {
 void write_grid_restart_data(const int timestep) {
   const auto filename = std::format("gridsave_ts{}.tmp", timestep);
 
-  const auto sys_time_start_write_restart = std::time(nullptr);
+  const auto sys_time_start_write_restart = std::chrono::steady_clock::now();
   printlog("Write grid restart data to {}...", filename);
 
   FILE* gridsave_file = fopen_required(filename, "w");
@@ -2158,7 +2159,9 @@ void write_grid_restart_data(const int timestep) {
   nonthermal::write_restart_data(gridsave_file);
   nltepop_write_restart_data(gridsave_file);
   fclose(gridsave_file);
-  printlnlog("done in {} seconds.", std::time(nullptr) - sys_time_start_write_restart);
+  const auto write_restart_duration =
+      std::chrono::duration<double>(std::chrono::steady_clock::now() - sys_time_start_write_restart).count();
+  printlnlog("done in {:.1f} seconds.", write_restart_duration);
 }
 
 // get lowest modelgridindex assigned to this rank (for update_grid and output files)

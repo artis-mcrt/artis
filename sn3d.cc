@@ -4,6 +4,7 @@
 #include <unistd.h>
 
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 #include <cstddef>
 #include <cstdio>
@@ -53,8 +54,8 @@ std::fstream output_file;
 
 namespace {
 
-time_t real_time_start = -1;
-time_t time_timestep_start = -1;  // this will be set after the first update of the grid and before packet prop
+std::chrono::steady_clock::time_point real_time_start;
+std::chrono::steady_clock::time_point time_timestep_start;  // this will be set after the first update of the grid and before packet prop
 std::fstream estimators_file;
 
 void setup_cellcache() {
@@ -166,7 +167,7 @@ void write_deposition_file() {
   const int my_rank = globals::my_rank;
   const int nts = globals::timestep;
   printlog("Calculating and writing deposition.out...");
-  auto const time_write_deposition_file_start = std::time(nullptr);
+  const auto time_write_deposition_file_start = std::chrono::steady_clock::now();
   double mtot = 0.;
   const int nstart_nonempty = grid::get_nstart_nonempty(my_rank);
   const int ndo_nonempty = grid::get_ndo_nonempty(my_rank);
@@ -308,7 +309,9 @@ void write_deposition_file() {
     std::rename("deposition.out.tmp", "deposition.out");
   }
 
-  printlnlog("took {} seconds", std::time(nullptr) - time_write_deposition_file_start);
+  const auto deposition_write_duration =
+      std::chrono::duration<double>(std::chrono::steady_clock::now() - time_write_deposition_file_start).count();
+  printlnlog("took {:.1f} seconds", deposition_write_duration);
 }
 
 void write_timestep_file() {
@@ -517,15 +520,17 @@ void mpi_reduce_estimators(const int nts) {
 auto walltime_sufficient_to_continue(const int nts, const int nts_prev, const int walltimelimitseconds) -> bool {
   MPI_Barrier_allranks();
   // time is measured from just before packet propagation from one timestep to the next
-  const auto estimated_time_per_timestep = std::time(nullptr) - time_timestep_start;
-  printlnlog("TIME: time between timesteps is {} seconds (measured packet prop of ts {} and update grid of ts {})",
+  const auto estimated_time_per_timestep =
+      std::chrono::duration<double>(std::chrono::steady_clock::now() - time_timestep_start).count();
+  printlnlog("TIME: time between timesteps is {:.1f} seconds (measured packet prop of ts {} and update grid of ts {})",
              estimated_time_per_timestep, nts_prev, nts);
 
   bool do_this_full_loop = true;
   if (walltimelimitseconds > 0 && nts < globals::timestep_finish) {
-    const auto wallclock_used_seconds = std::time(nullptr) - real_time_start;
+    const auto wallclock_used_seconds =
+        std::chrono::duration<double>(std::chrono::steady_clock::now() - real_time_start).count();
     const auto wallclock_remaining_seconds = walltimelimitseconds - wallclock_used_seconds;
-    printlnlog("TIMED_RESTARTS: Used {} of {} seconds of wall time.", wallclock_used_seconds, walltimelimitseconds);
+    printlnlog("TIMED_RESTARTS: Used {:.1f} of {} seconds of wall time.", wallclock_used_seconds, walltimelimitseconds);
 
     // This flag being false will make it update_grid, and then exit
     do_this_full_loop = (wallclock_remaining_seconds >= (1.5 * estimated_time_per_timestep));
@@ -547,7 +552,7 @@ void save_grid_and_packets(const int nts, std::vector<Packet>& packets) {
   MPI_Barrier_allranks();
   const auto my_rank = globals::my_rank;
 
-  const auto time_write_packets_file_start = std::time(nullptr);
+  const auto time_write_packets_file_start = std::chrono::steady_clock::now();
 
   if constexpr (!KEEP_ESCAPED_GAMMAS) {
     std::erase_if(packets, [](const Packet& pkt) { return pkt.type == TYPE_ESCAPE && pkt.escape_type == TYPE_GAMMA; });
@@ -558,15 +563,20 @@ void save_grid_and_packets(const int nts, std::vector<Packet>& packets) {
 
   vpkt::write_timestep(nts, false);
 
-  const auto time_write_packets_finished_thisrank = std::time(nullptr);
+  const auto time_write_packets_finished_thisrank = std::chrono::steady_clock::now();
 
   MPI_Barrier_allranks();
 
-  const auto timenow = std::time(nullptr);
+  const auto timenow = std::chrono::steady_clock::now();
+  const auto packets_write_time =
+      std::chrono::duration<double>(time_write_packets_finished_thisrank - time_write_packets_file_start).count();
+  const auto packets_wait_time =
+      std::chrono::duration<double>(timenow - time_write_packets_finished_thisrank).count();
+  const auto packets_total_time =
+      std::chrono::duration<double>(timenow - time_write_packets_file_start).count();
 
-  printlnlog("timestep {}: finished writing temporary packets file (took {}, waited {}, total {} seconds)", nts,
-             time_write_packets_finished_thisrank - time_write_packets_file_start,
-             timenow - time_write_packets_finished_thisrank, timenow - time_write_packets_file_start);
+  printlnlog("timestep {}: finished writing temporary packets file (took {:.1f}, waited {:.1f}, total {:.1f} seconds)",
+             nts, packets_write_time, packets_wait_time, packets_total_time);
 
   if (my_rank == 0) {
     grid::write_grid_restart_data(nts);
@@ -639,13 +649,15 @@ auto do_timestep(const int nts, const int titer, std::vector<Packet>& packets, c
 
   update_grid(estimators_file, nts, nts_prev, titer, real_time_start);
 
-  const auto sys_time_start_communicate_grid = std::time(nullptr);
+  const auto sys_time_start_communicate_grid = std::chrono::steady_clock::now();
 
   // Each process has now updated its own set of cells. The results now need to be communicated between processes.
   mpi_communicate_grid_properties();
 
-  printlnlog("timestep {}: time after grid properties have been communicated {} (took {} seconds)", nts,
-             std::time(nullptr), std::time(nullptr) - sys_time_start_communicate_grid);
+  const auto communicate_grid_duration =
+      std::chrono::duration<double>(std::chrono::steady_clock::now() - sys_time_start_communicate_grid).count();
+  printlnlog("timestep {}: time after grid properties have been communicated (took {:.1f} seconds)", nts,
+             communicate_grid_duration);
 
   // If this is not the 0th time step of the current job step,
   // write out a snapshot of the grid properties for further restarts
@@ -654,7 +666,7 @@ auto do_timestep(const int nts, const int titer, std::vector<Packet>& packets, c
     save_grid_and_packets(nts, packets);
     do_this_full_loop = walltime_sufficient_to_continue(nts, nts_prev, walltimelimitseconds);
   }
-  time_timestep_start = std::time(nullptr);
+  time_timestep_start = std::chrono::steady_clock::now();
 
   // set all the estimators to zero before moving packets. This is now done
   // after update_grid so that, if requires, the gamma-ray heating estimator is known there
@@ -671,11 +683,13 @@ auto do_timestep(const int nts, const int titer, std::vector<Packet>& packets, c
     // Since these are going to be needed in the next time step, we will gather all the
     // estimators together now, sum them, and distribute the results
 
-    const auto time_communicate_estimators_start = std::time(nullptr);
+    const auto time_communicate_estimators_start = std::chrono::steady_clock::now();
     mpi_reduce_estimators(nts);
 
-    printlnlog("timestep {}: time after estimators have been communicated {} (took {} seconds)", nts,
-               std::time(nullptr), std::time(nullptr) - time_communicate_estimators_start);
+    const auto communicate_estimators_duration =
+        std::chrono::duration<double>(std::chrono::steady_clock::now() - time_communicate_estimators_start).count();
+    printlnlog("timestep {}: time after estimators have been communicated (took {:.1f} seconds)", nts,
+               communicate_estimators_duration);
 
     write_deposition_file();
 
@@ -706,7 +720,9 @@ auto do_timestep(const int nts, const int titer, std::vector<Packet>& packets, c
 
       vpkt::write_timestep(nts, true);
 
-      printlnlog("time after write final packets file {}", std::time(nullptr));
+      const auto after_final_packets_write =
+          std::chrono::duration<double>(std::chrono::steady_clock::now() - real_time_start).count();
+      printlnlog("time after write final packets file (tstart + {:.1f} seconds)", after_final_packets_write);
     }
   }
   return !do_this_full_loop;
@@ -715,7 +731,7 @@ auto do_timestep(const int nts, const int titer, std::vector<Packet>& packets, c
 }  // anonymous namespace
 
 auto main(int argc, char* argv[]) -> int {
-  real_time_start = std::time(nullptr);
+  real_time_start = std::chrono::steady_clock::now();
 
   // if DETAILED_BF_ESTIMATORS_ON is true, USE_LUT_PHOTOION must be false
   assert_always(!DETAILED_BF_ESTIMATORS_ON || !USE_LUT_PHOTOION);
@@ -761,7 +777,7 @@ auto main(int argc, char* argv[]) -> int {
   printlnlog("GPU_ON is enabled");
 #endif
 
-  printlnlog("time at start {}", real_time_start);
+  printlnlog("time at start (tstart + 0.0 seconds)");
 
   printlog("Integration method is: ");
 
@@ -958,13 +974,14 @@ auto main(int argc, char* argv[]) -> int {
   }
 
   MPI_Barrier_allranks();
-  const auto real_time_end = std::time(nullptr);
+  const auto real_time_end = std::chrono::steady_clock::now();
+  const auto wallclock_hours = std::chrono::duration<double>(real_time_end - real_time_start).count() / 3600.;
   printlnlog(
       "sn3d finished at {} (job: pktprop ts {} to ts {} grid-preprop, {:.3f} wallclock hours * {} processes * {} "
       "threads = {:.3f} core hours)",
-      real_time_end, globals::timestep_initial, globals::timestep - 1, (real_time_end - real_time_start) / 3600.,
-      globals::nprocs, get_max_threads(),
-      (real_time_end - real_time_start) / 3600. * globals::nprocs * get_max_threads());
+      std::chrono::duration<double>(real_time_end - real_time_start).count(), globals::timestep_initial,
+      globals::timestep - 1, wallclock_hours, globals::nprocs, get_max_threads(),
+      wallclock_hours * globals::nprocs * get_max_threads());
 
   MPI_Finalize();
 

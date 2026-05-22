@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 #include <cstddef>
 #include <cstdio>
@@ -1189,7 +1190,7 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
     return;
   }
 
-  const auto sys_time_start_nltesolver = std::time(nullptr);
+  const auto sys_time_start_nltesolver = std::chrono::steady_clock::now();
 
   const double t_mid = globals::timesteps[timestep].mid;
   const int nions = get_nions(element);
@@ -1397,8 +1398,11 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
     }
   }
 
-  if (const auto duration_nltesolver = std::time(nullptr) - sys_time_start_nltesolver; duration_nltesolver > 2) {
-    printlnlog("NLTE population solver call for Z={} took {} seconds", get_atomicnumber(element), duration_nltesolver);
+  if (const auto duration_nltesolver =
+          std::chrono::duration<double>(std::chrono::steady_clock::now() - sys_time_start_nltesolver).count();
+      duration_nltesolver > 2.) {
+    printlnlog("NLTE population solver call for Z={} took {:.1f} seconds", get_atomicnumber(element),
+               duration_nltesolver);
   }
 }
 

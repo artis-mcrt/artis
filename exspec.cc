@@ -3,6 +3,7 @@
 #include <unistd.h>
 
 #include <algorithm>
+#include <chrono>
 #include <cstddef>
 #include <cstdlib>
 #include <ctime>
@@ -137,7 +138,7 @@ void do_direction_bin(const int dirbin, const std::vector<std::vector<Packet>>& 
 }  // anonymous namespace
 
 auto main(int argc, char* argv[]) -> int {
-  const auto sys_time_start = std::time(nullptr);
+  const auto sys_time_start = std::chrono::steady_clock::now();
 
   MPI_Init(&argc, &argv);
 
@@ -198,7 +199,8 @@ auto main(int argc, char* argv[]) -> int {
     do_direction_bin(dirbin, packets_by_rank);
   }
 
-  printlnlog("exspec finished at {} (tstart + {} seconds)", std::time(nullptr), std::time(nullptr) - sys_time_start);
+  const auto exspec_duration = std::chrono::duration<double>(std::chrono::steady_clock::now() - sys_time_start).count();
+  printlnlog("exspec finished (took {:.1f} seconds)", exspec_duration);
 
   MPI_Finalize();
 

@@ -432,15 +432,14 @@ void update_packets(const int nts, std::span<Packet> packets) {
   const double tw = globals::timesteps[nts].width;
   const double ts_end = ts + tw;
 
-  const auto time_update_packets_start = std::time(nullptr);
-  const auto time_update_packets_start_highprecision = std::chrono::steady_clock::now();
-  printlnlog("timestep {}: start update_packets at time {}", nts, time_update_packets_start);
+  const auto time_update_packets_start = std::chrono::steady_clock::now();
+  printlnlog("timestep {}: start update_packets", nts);
   // first group will probably be the -1 no-cache required group, so -2 triggers the first update
   globals::cellcache[cellcacheslotid].nonemptymgi = -2;
   int prevpkt_cellcache_nonemptymgi = -2;
   int passnumber = 0;
   while (true) {
-    const auto sys_time_start_pass = std::time(nullptr);
+    const auto sys_time_start_pass = std::chrono::steady_clock::now();
 
     std::ranges::SORT_OR_STABLE_SORT(
         packets, [ts_end](const Packet& p1, const Packet& p2) { return compare_packet_order(p1, p2, ts_end); });
@@ -484,30 +483,28 @@ void update_packets(const int nts, std::span<Packet> packets) {
     }
 
     const auto cellcacheresets = stats::get_counter(stats::Counter::UPDATECELL) - updatecellcounter_beforepass;
-    printlnlog("  update_packets timestep {} pass {:3d}: packetsupdated {:7d} cellcacheresets {:7d} (took {}s)", nts,
-               passnumber, pass_packets_updated, cellcacheresets, std::time(nullptr) - sys_time_start_pass);
+    const auto pass_duration_s = std::chrono::duration<double>(std::chrono::steady_clock::now() - sys_time_start_pass).count();
+    printlnlog("  update_packets timestep {} pass {:3d}: packetsupdated {:7d} cellcacheresets {:7d} (took {:.1f}s)", nts,
+               passnumber, pass_packets_updated, cellcacheresets, pass_duration_s);
 
     passnumber++;
   }
 
   stats::pkt_action_counters_printout(nts);
 
-  const auto time_update_packets_end_thisrank = std::time(nullptr);
-  const auto time_update_packets_end_thisrank_highprecision = std::chrono::steady_clock::now();
-  printlnlog("timestep {}: finished update_packets for rank {} (took {} seconds)", nts, globals::my_rank,
-             time_update_packets_end_thisrank - time_update_packets_start);
+  const auto time_update_packets_end_thisrank = std::chrono::steady_clock::now();
+  const auto rank_process_time =
+      std::chrono::duration<double>(time_update_packets_end_thisrank - time_update_packets_start).count();
+  printlnlog("timestep {}: finished update_packets for rank {} (took {:.1f} seconds)", nts, globals::my_rank,
+             rank_process_time);
 
   MPI_Barrier_allranks();  // hold all processes once the packets are updated
-  const auto time_update_packets_end_allranks_highprecision = std::chrono::steady_clock::now();
-  const auto rank_process_time =
-      std::chrono::duration<double>(time_update_packets_end_thisrank_highprecision - time_update_packets_start_highprecision)
-          .count();
+  const auto time_update_packets_end_allranks = std::chrono::steady_clock::now();
   const auto rank_wait_time =
-      std::chrono::duration<double>(time_update_packets_end_allranks_highprecision -
-                                    time_update_packets_end_thisrank_highprecision)
+      std::chrono::duration<double>(time_update_packets_end_allranks - time_update_packets_end_thisrank)
           .count();
   const auto rank_total_time =
-      std::chrono::duration<double>(time_update_packets_end_allranks_highprecision - time_update_packets_start_highprecision)
+      std::chrono::duration<double>(time_update_packets_end_allranks - time_update_packets_start)
           .count();
   printlnlog(
       "timestep {}: time after update packets for all processes (rank {} took {:.1f}s, waited {:.1f}s, total {:.1f}s)",
