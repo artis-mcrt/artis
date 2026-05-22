@@ -128,11 +128,11 @@ void packet_init(std::span<Packet> packets)
   assert_always(etot_simtime > 0);
 
   constexpr auto strtimelow{INITIAL_PACKETS_ON ? "tmodel" : "tmin"};
-  printlnlog("etot ({} to tmax) {} erg", strtimelow, etot_simtime);
+  printlnlog("etot ({} to tmax) {:g} erg", strtimelow, etot_simtime);
 
   // So energy per pellet is:
   const double e_cmf_per_packet = etot_simtime / MPKTS;
-  printlnlog("e_cmf per packet ({} to tmax) {} erg", strtimelow, e_cmf_per_packet);
+  printlnlog("e_cmf per packet ({} to tmax) {:g} erg", strtimelow, e_cmf_per_packet);
 
   // Now place the pellets in the ejecta and decide at what time they will decay.
 
