@@ -55,7 +55,8 @@ std::fstream output_file;
 namespace {
 
 std::chrono::steady_clock::time_point real_time_start;
-std::chrono::steady_clock::time_point time_timestep_start;  // this will be set after the first update of the grid and before packet prop
+std::chrono::steady_clock::time_point
+    time_timestep_start;  // this will be set after the first update of the grid and before packet prop
 std::fstream estimators_file;
 
 void setup_cellcache() {
@@ -570,10 +571,8 @@ void save_grid_and_packets(const int nts, std::vector<Packet>& packets) {
   const auto timenow = std::chrono::steady_clock::now();
   const auto packets_write_time =
       std::chrono::duration<double>(time_write_packets_finished_thisrank - time_write_packets_file_start).count();
-  const auto packets_wait_time =
-      std::chrono::duration<double>(timenow - time_write_packets_finished_thisrank).count();
-  const auto packets_total_time =
-      std::chrono::duration<double>(timenow - time_write_packets_file_start).count();
+  const auto packets_wait_time = std::chrono::duration<double>(timenow - time_write_packets_finished_thisrank).count();
+  const auto packets_total_time = std::chrono::duration<double>(timenow - time_write_packets_file_start).count();
 
   printlnlog("timestep {}: finished writing temporary packets file (took {:.1f}, waited {:.1f}, total {:.1f} seconds)",
              nts, packets_write_time, packets_wait_time, packets_total_time);

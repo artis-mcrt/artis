@@ -185,7 +185,8 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
 
   calculate_bfheatingcoeffs(nonemptymgi, bfheatingcoeffs);
   const auto bfheating_duration =
-      std::chrono::duration<double>(std::chrono::steady_clock::now() - sys_time_start_calculate_bfheatingcoeffs).count();
+      std::chrono::duration<double>(std::chrono::steady_clock::now() - sys_time_start_calculate_bfheatingcoeffs)
+          .count();
   printlnlog("took {:.1f} seconds", bfheating_duration);
 
   constexpr double nne_reltol = 0.04;
@@ -225,7 +226,8 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
           std::chrono::duration<double>(std::chrono::steady_clock::now() - sys_time_start_pops).count();
 
       printlnlog(
-          "Grid solver cell {} timestep {}: time spent on: Spencer-Fano {:.1f}s, partfuncs/gamma {:.1f}s, T_e {:.1f}s, populations "
+          "Grid solver cell {} timestep {}: time spent on: Spencer-Fano {:.1f}s, partfuncs/gamma {:.1f}s, T_e {:.1f}s, "
+          "populations "
           "{:.1f}s",
           mgi, nts, duration_solve_spencerfano, duration_solve_partfuncs_or_gamma, duration_solve_T_e,
           duration_solve_pops);
@@ -249,7 +251,8 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
     calculate_ion_balance_nne(nonemptymgi);  // sets nne
     const auto fracdiff_nne = fabs((grid::get_nne(nonemptymgi) / nne_prev) - 1);
     printlnlog(
-        "NLTE solver mgi {} timestep {} iteration {}: time spent on: Spencer-Fano {:.1f}s, T_e {:.1f}s, NLTE populations {:.1f}s",
+        "NLTE solver mgi {} timestep {} iteration {}: time spent on: Spencer-Fano {:.1f}s, T_e {:.1f}s, NLTE "
+        "populations {:.1f}s",
         mgi, nts, nlte_iter, duration_solve_spencerfano, duration_solve_T_e, duration_solve_nltepops);
     printlnlog(
         "NLTE (Spencer-Fano/Te/pops) solver mgi {} timestep {} iteration {}: prev_iter nne {:e}, new nne is {:e}, "
@@ -479,7 +482,8 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
       solve_Te_nltepops(nonemptymgi, nts, nts_prev, heatingcoolingrates);
     }
     const auto temperature_corrections_duration =
-        std::chrono::duration<double>(std::chrono::steady_clock::now() - sys_time_start_temperature_corrections).count();
+        std::chrono::duration<double>(std::chrono::steady_clock::now() - sys_time_start_temperature_corrections)
+            .count();
     printlnlog("Temperature/NLTE solution for cell {} timestep {} took {:.1f} seconds", mgi, nts,
                temperature_corrections_duration);
   }
@@ -634,6 +638,6 @@ void update_grid(std::ostream& estimators_file, const int nts, const int nts_pre
   const auto rank_total_time =
       std::chrono::duration<double>(time_update_grid_end_allranks - sys_time_start_update_grid).count();
   printlnlog(
-      "timestep {}: time after update grid on all processes (rank {} took {:.1f}s, waited {:.1f}s, total {:.1f}s)",
-      nts, my_rank, rank_process_time, rank_wait_time, rank_total_time);
+      "timestep {}: time after update grid on all processes (rank {} took {:.1f}s, waited {:.1f}s, total {:.1f}s)", nts,
+      my_rank, rank_process_time, rank_wait_time, rank_total_time);
 }

@@ -1525,7 +1525,8 @@ void read_atomicdata_files() {
   globals::alltrans.lineindex = std::move(alltrans_lineindex);
 
   const auto establish_linelist_connections_duration =
-      std::chrono::duration<double>(std::chrono::steady_clock::now() - time_start_establish_linelist_connections).count();
+      std::chrono::duration<double>(std::chrono::steady_clock::now() - time_start_establish_linelist_connections)
+          .count();
   printlnlog("  took {:.1f}s", establish_linelist_connections_duration);
   MPI_Barrier_node();
 

@@ -483,9 +483,10 @@ void update_packets(const int nts, std::span<Packet> packets) {
     }
 
     const auto cellcacheresets = stats::get_counter(stats::Counter::UPDATECELL) - updatecellcounter_beforepass;
-    const auto pass_duration_s = std::chrono::duration<double>(std::chrono::steady_clock::now() - sys_time_start_pass).count();
-    printlnlog("  update_packets timestep {} pass {:3d}: packetsupdated {:7d} cellcacheresets {:7d} (took {:.1f}s)", nts,
-               passnumber, pass_packets_updated, cellcacheresets, pass_duration_s);
+    const auto pass_duration_s =
+        std::chrono::duration<double>(std::chrono::steady_clock::now() - sys_time_start_pass).count();
+    printlnlog("  update_packets timestep {} pass {:3d}: packetsupdated {:7d} cellcacheresets {:7d} (took {:.1f}s)",
+               nts, passnumber, pass_packets_updated, cellcacheresets, pass_duration_s);
 
     passnumber++;
   }
@@ -501,11 +502,9 @@ void update_packets(const int nts, std::span<Packet> packets) {
   MPI_Barrier_allranks();  // hold all processes once the packets are updated
   const auto time_update_packets_end_allranks = std::chrono::steady_clock::now();
   const auto rank_wait_time =
-      std::chrono::duration<double>(time_update_packets_end_allranks - time_update_packets_end_thisrank)
-          .count();
+      std::chrono::duration<double>(time_update_packets_end_allranks - time_update_packets_end_thisrank).count();
   const auto rank_total_time =
-      std::chrono::duration<double>(time_update_packets_end_allranks - time_update_packets_start)
-          .count();
+      std::chrono::duration<double>(time_update_packets_end_allranks - time_update_packets_start).count();
   printlnlog(
       "timestep {}: time after update packets for all processes (rank {} took {:.1f}s, waited {:.1f}s, total {:.1f}s)",
       nts, globals::my_rank, rank_process_time, rank_wait_time, rank_total_time);
