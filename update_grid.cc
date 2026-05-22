@@ -555,7 +555,7 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
 
   const auto update_grid_cell_seconds =
       std::chrono::duration<double>(std::chrono::steady_clock::now() - sys_time_start_update_cell).count();
-  if (update_grid_cell_seconds > 0.) {
+  if (update_grid_cell_seconds > 1.) {
     printlnlog("update_grid_cell for cell {} timestep {} took {:.1f} seconds", mgi, nts, update_grid_cell_seconds);
   }
 }
