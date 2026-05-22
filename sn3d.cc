@@ -574,7 +574,7 @@ void save_grid_and_packets(const int nts, std::vector<Packet>& packets) {
   const auto packets_wait_time = std::chrono::duration<double>(timenow - time_write_packets_finished_thisrank).count();
   const auto packets_total_time = std::chrono::duration<double>(timenow - time_write_packets_file_start).count();
 
-  printlnlog("timestep {}: finished writing temporary packets file (took {:.1f}, waited {:.1f}, total {:.1f} seconds)",
+  printlnlog("timestep {}: finished writing temporary packets file (took {:.1f}s, waited {:.1f}s, total {:.1f}s)",
              nts, packets_write_time, packets_wait_time, packets_total_time);
 
   if (my_rank == 0) {
