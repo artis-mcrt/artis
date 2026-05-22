@@ -9,7 +9,6 @@
 #include <cstddef>
 #include <cstdio>
 #include <cstdlib>
-#include <ctime>
 #include <filesystem>
 #include <format>
 #include <fstream>

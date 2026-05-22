@@ -6,7 +6,6 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdlib>
-#include <ctime>
 #include <functional>
 #include <limits>
 #include <span>

@@ -4,7 +4,6 @@
 #include <cstddef>
 #include <cstdio>
 #include <cstdlib>
-#include <ctime>
 #include <format>
 #include <fstream>
 #include <ios>
