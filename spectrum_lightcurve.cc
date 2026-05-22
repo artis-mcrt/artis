@@ -2,9 +2,9 @@
 
 #include <algorithm>
 #include <atomic>
+#include <chrono>
 #include <cmath>
 #include <cstddef>
-#include <ctime>
 #include <filesystem>
 #include <format>
 #include <fstream>
@@ -669,14 +669,16 @@ void write_partial_lightcurve_spectra(const int nts, std::span<const Packet> pkt
   const bool multdimensional = grid::get_modelgridtype() != GridType::SPHERICAL1D;
   const int dirbinend = (multdimensional && simulation_complete) ? MABINS : 0;
 
-  const auto time_func_start = std::time(nullptr);
+  const auto time_func_start = std::chrono::steady_clock::now();
 
   for (int dirbin = -1; dirbin < dirbinend; dirbin++) {
     write_partial_lightcurve_spectra_dirbin(nts, pkts, do_emission_absorption, dirbin);
   }
 
-  printlnlog("timestep {}: Saving light curves and {}spectra took {}s", nts,
-             do_emission_absorption ? "emission/absorption " : "", std::time(nullptr) - time_func_start);
+  const auto duration_write_spectra =
+      std::chrono::duration<double>(std::chrono::steady_clock::now() - time_func_start).count();
+  printlnlog("timestep {}: Saving light curves and {}spectra took {:.1f}s", nts,
+             do_emission_absorption ? "emission/absorption " : "", duration_write_spectra);
 }
 
 void write_light_curve(const std::string& lc_filename, const std::span<const double> light_curve_lum,

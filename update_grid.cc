@@ -1,10 +1,10 @@
 #include "update_grid.h"
 
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 #include <cstddef>
 #include <cstdlib>
-#include <ctime>
 #include <ostream>
 #include <print>
 #include <vector>
@@ -35,7 +35,7 @@ void write_to_estimators_file(std::ostream& estimators_file, const int nonemptym
   // return; disable for better performance (if estimators files are not needed)
   const int mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
 
-  const auto sys_time_start_write_estimators = std::time(nullptr);
+  const auto sys_time_start_write_estimators = std::chrono::steady_clock::now();
 
   const auto T_e = grid::get_Te(nonemptymgi);
   const auto nne = grid::get_nne(nonemptymgi);
@@ -166,9 +166,10 @@ void write_to_estimators_file(std::ostream& estimators_file, const int nonemptym
              heatingcoolingrates.cooling_ff, heatingcoolingrates.cooling_fb, heatingcoolingrates.cooling_collisional,
              heatingcoolingrates.cooling_adiabatic);
 
-  const auto write_estim_duration = std::time(nullptr) - sys_time_start_write_estimators;
-  if (write_estim_duration >= 1) {
-    printlnlog("writing estimators for timestep {} cell {} took {} seconds", timestep, mgi, write_estim_duration);
+  const auto write_estim_duration =
+      std::chrono::duration<double>(std::chrono::steady_clock::now() - sys_time_start_write_estimators).count();
+  if (write_estim_duration >= 1.) {
+    printlnlog("writing estimators for timestep {} cell {} took {:.1f} seconds", timestep, mgi, write_estim_duration);
   }
 }
 
@@ -178,54 +179,62 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
   // bfheating coefficients are needed for the T_e solver, but they only depend on the radiation field, which is fixed
   // during the iterations below
   printlog("calculate_bfheatingcoeffs for timestep {} cell {}...", nts, mgi);
-  const auto sys_time_start_calculate_bfheatingcoeffs = std::time(nullptr);
+  const auto sys_time_start_calculate_bfheatingcoeffs = std::chrono::steady_clock::now();
   THREADLOCALONHOST auto bfheatingcoeffs = std::vector<double>(get_includedlevels());
 
   calculate_bfheatingcoeffs(nonemptymgi, bfheatingcoeffs);
-  printlnlog("took {} seconds", std::time(nullptr) - sys_time_start_calculate_bfheatingcoeffs);
+  const auto bfheating_duration =
+      std::chrono::duration<double>(std::chrono::steady_clock::now() - sys_time_start_calculate_bfheatingcoeffs)
+          .count();
+  printlnlog("took {:.1f} seconds", bfheating_duration);
 
   constexpr double nne_reltol = 0.04;
   constexpr double T_e_reltol = 0.04;
   for (int nlte_iter = 0; nlte_iter <= NLTEITER; nlte_iter++) {
-    const auto sys_time_start_spencerfano = std::time(nullptr);
+    const auto sys_time_start_spencerfano = std::chrono::steady_clock::now();
     if (NT_ON && NT_SOLVE_SPENCERFANO) {
       // SF solution depends on the ionisation balance, and weakly on nne
       nonthermal::solve_spencerfano(nonemptymgi, nts, nlte_iter);
     }
-    const auto duration_solve_spencerfano = std::time(nullptr) - sys_time_start_spencerfano;
+    const auto duration_solve_spencerfano =
+        std::chrono::duration<double>(std::chrono::steady_clock::now() - sys_time_start_spencerfano).count();
 
-    const auto sys_time_start_partfuncs_or_gamma = std::time(nullptr);
+    const auto sys_time_start_partfuncs_or_gamma = std::chrono::steady_clock::now();
     for (int element = 0; element < get_nelements(); element++) {
       if (!elem_has_nlte_levels(element)) {
         calculate_cellpartfuncts(nonemptymgi, element);
       }
     }
-    const auto duration_solve_partfuncs_or_gamma = std::time(nullptr) - sys_time_start_partfuncs_or_gamma;
+    const auto duration_solve_partfuncs_or_gamma =
+        std::chrono::duration<double>(std::chrono::steady_clock::now() - sys_time_start_partfuncs_or_gamma).count();
 
     const double prev_T_e = grid::get_Te(nonemptymgi);
-    const auto sys_time_start_Te = std::time(nullptr);
+    const auto sys_time_start_Te = std::chrono::steady_clock::now();
 
     // Find T_e as solution for thermal balance
     call_T_e_finder(nonemptymgi, globals::timesteps[nts_prev].mid, MINTEMP, MAXTEMP, heatingcoolingrates,
                     bfheatingcoeffs);
 
-    const auto duration_solve_T_e = std::time(nullptr) - sys_time_start_Te;
+    const auto duration_solve_T_e =
+        std::chrono::duration<double>(std::chrono::steady_clock::now() - sys_time_start_Te).count();
 
     if (globals::total_nlte_levels == 0) {
-      const auto sys_time_start_pops = std::time(nullptr);
+      const auto sys_time_start_pops = std::chrono::steady_clock::now();
       calculate_ion_balance_nne(nonemptymgi);
-      const auto duration_solve_pops = std::time(nullptr) - sys_time_start_pops;
+      const auto duration_solve_pops =
+          std::chrono::duration<double>(std::chrono::steady_clock::now() - sys_time_start_pops).count();
 
       printlnlog(
-          "Grid solver cell {} timestep {}: time spent on: Spencer-Fano {}s, partfuncs/gamma {}s, T_e {}s, populations "
-          "{}s",
+          "Grid solver cell {} timestep {}: time spent on: Spencer-Fano {:.1f}s, partfuncs/gamma {:.1f}s, T_e {:.1f}s, "
+          "populations "
+          "{:.1f}s",
           mgi, nts, duration_solve_spencerfano, duration_solve_partfuncs_or_gamma, duration_solve_T_e,
           duration_solve_pops);
       break;  // no iteration is needed without nlte pops
     }
 
     const double fracdiff_T_e = fabs((grid::get_Te(nonemptymgi) / prev_T_e) - 1);
-    const auto sys_time_start_nltepops = std::time(nullptr);
+    const auto sys_time_start_nltepops = std::chrono::steady_clock::now();
     // fractional difference between previous and current iteration's (nne or max(ground state
     // population change))
     for (int element = 0; element < get_nelements(); element++) {
@@ -234,13 +243,15 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
         calculate_cellpartfuncts(nonemptymgi, element);
       }
     }
-    const auto duration_solve_nltepops = std::time(nullptr) - sys_time_start_nltepops;
+    const auto duration_solve_nltepops =
+        std::chrono::duration<double>(std::chrono::steady_clock::now() - sys_time_start_nltepops).count();
 
     const double nne_prev = grid::get_nne(nonemptymgi);
     calculate_ion_balance_nne(nonemptymgi);  // sets nne
     const auto fracdiff_nne = fabs((grid::get_nne(nonemptymgi) / nne_prev) - 1);
     printlnlog(
-        "NLTE solver mgi {} timestep {} iteration {}: time spent on: Spencer-Fano {}s, T_e {}s, NLTE populations {}s",
+        "NLTE solver mgi {} timestep {} iteration {}: time spent on: Spencer-Fano {:.1f}s, T_e {:.1f}s, NLTE "
+        "populations {:.1f}s",
         mgi, nts, nlte_iter, duration_solve_spencerfano, duration_solve_T_e, duration_solve_nltepops);
     printlnlog(
         "NLTE (Spencer-Fano/Te/pops) solver mgi {} timestep {} iteration {}: prev_iter nne {:e}, new nne is {:e}, "
@@ -359,7 +370,7 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
 
   const double deltaV =
       grid::get_modelcell_assocvolume_tmin(mgi) * pow3(globals::timesteps[nts_prev].mid / globals::tmin);
-  const auto sys_time_start_update_cell = std::time(nullptr);
+  const auto sys_time_start_update_cell = std::chrono::steady_clock::now();
 
   printlnlog("update_grid_cell: working on mgi {} before timestep {} titeration {}...", mgi, nts, titer);
 
@@ -414,7 +425,7 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
     // Then update T_R and W using the estimators.
     // (This could in principle also be done for empty cells)
 
-    const auto sys_time_start_temperature_corrections = std::time(nullptr);
+    const auto sys_time_start_temperature_corrections = std::chrono::steady_clock::now();
 
     radfield::normalise_J(nonemptymgi, estimator_normfactor_over4pi);  // this applies normalisation to the fullspec J
     // this stores the factor that will be applied later for the J bins but not fullspec J
@@ -469,8 +480,11 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
 
       solve_Te_nltepops(nonemptymgi, nts, nts_prev, heatingcoolingrates);
     }
-    printlnlog("Temperature/NLTE solution for cell {} timestep {} took {} seconds", mgi, nts,
-               std::time(nullptr) - sys_time_start_temperature_corrections);
+    const auto temperature_corrections_duration =
+        std::chrono::duration<double>(std::chrono::steady_clock::now() - sys_time_start_temperature_corrections)
+            .count();
+    printlnlog("Temperature/NLTE solution for cell {} timestep {} took {:.1f} seconds", mgi, nts,
+               temperature_corrections_duration);
   }
 
   const auto nne = grid::get_nne(nonemptymgi);
@@ -518,7 +532,7 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
   } else {
     // Cooling rates depend only on cell properties, precalculate total cooling
     // and ion contributions inside update grid and communicate between MPI tasks
-    const auto sys_time_start_calc_kpkt_rates = std::time(nullptr);
+    const auto sys_time_start_calc_kpkt_rates = std::chrono::steady_clock::now();
 
     printlog("calculating cooling_rates for timestep {} cell {}...", nts, mgi);
 
@@ -526,7 +540,9 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
     // used to determine T_e
     kpkt::calculate_cooling_rates(nonemptymgi, nullptr);
 
-    printlnlog("took {} seconds", std::time(nullptr) - sys_time_start_calc_kpkt_rates);
+    const auto calc_kpkt_rates_duration =
+        std::chrono::duration<double>(std::chrono::steady_clock::now() - sys_time_start_calc_kpkt_rates).count();
+    printlnlog("took {:.1f} seconds", calc_kpkt_rates_duration);
   }
 
   if constexpr (RPKT_USE_EXPANSION_OPACITIES || VPKT_USE_EXPANSION_OPACITIES ||
@@ -536,9 +552,10 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
     }
   }
 
-  const auto update_grid_cell_seconds = std::time(nullptr) - sys_time_start_update_cell;
-  if (update_grid_cell_seconds > 0) {
-    printlnlog("update_grid_cell for cell {} timestep {} took {} seconds", mgi, nts, update_grid_cell_seconds);
+  const auto update_grid_cell_seconds =
+      std::chrono::duration<double>(std::chrono::steady_clock::now() - sys_time_start_update_cell).count();
+  if (update_grid_cell_seconds > 1.) {
+    printlnlog("update_grid_cell for cell {} timestep {} took {:.1f} seconds", mgi, nts, update_grid_cell_seconds);
   }
 }
 
@@ -546,12 +563,14 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
 
 //  update the matter quantities in the grid cells at the start of the new timestep.
 void update_grid(std::ostream& estimators_file, const int nts, const int nts_prev, const int titer,
-                 const std::time_t real_time_start) {
+                 const std::chrono::steady_clock::time_point real_time_start) {
   const auto my_rank = globals::my_rank;
-  const auto sys_time_start_update_grid = std::time(nullptr);
+  const auto sys_time_start_update_grid = std::chrono::steady_clock::now();
+  const auto startup_elapsed_seconds =
+      std::chrono::duration<double>(sys_time_start_update_grid - real_time_start).count();
 
-  printlnlog("timestep {}: time before update grid (tstartup + {} seconds) simtime ts_mid {:g} days", nts,
-             sys_time_start_update_grid - real_time_start, globals::timesteps[nts].mid / DAY);
+  printlnlog("timestep {}: time before update grid (tstartup + {:.1f} seconds) simtime ts_mid {:g} days", nts,
+             startup_elapsed_seconds, globals::timesteps[nts].mid / DAY);
 
   globals::lte_iteration = (globals::timestep < globals::num_lte_timesteps);
   printlnlog("lte_iteration {}", globals::lte_iteration ? 1 : 0);
@@ -606,12 +625,18 @@ void update_grid(std::ostream& estimators_file, const int nts, const int nts_pre
   globals::max_path_step = std::min(1.e35, globals::rmax / 10.);
   printlnlog("max_path_step {:g}", globals::max_path_step);
 
-  const auto time_update_grid_end_thisrank = std::time(nullptr);
-  printlnlog("timestep {}: finished update grid for rank {} (took {} seconds)", nts, my_rank,
-             time_update_grid_end_thisrank - sys_time_start_update_grid);
+  const auto time_update_grid_end_thisrank = std::chrono::steady_clock::now();
+  const auto rank_process_time =
+      std::chrono::duration<double>(time_update_grid_end_thisrank - sys_time_start_update_grid).count();
+  printlnlog("timestep {}: finished update grid for rank {} (took {:.1f} seconds)", nts, my_rank, rank_process_time);
 
   MPI_Barrier_allranks();
-  printlnlog("timestep {}: time after update grid on all processes (rank {} took {}, waited {}, total {} seconds)", nts,
-             my_rank, time_update_grid_end_thisrank - sys_time_start_update_grid,
-             std::time(nullptr) - time_update_grid_end_thisrank, std::time(nullptr) - sys_time_start_update_grid);
+  const auto time_update_grid_end_allranks = std::chrono::steady_clock::now();
+  const auto rank_wait_time =
+      std::chrono::duration<double>(time_update_grid_end_allranks - time_update_grid_end_thisrank).count();
+  const auto rank_total_time =
+      std::chrono::duration<double>(time_update_grid_end_allranks - sys_time_start_update_grid).count();
+  printlnlog(
+      "timestep {}: time after update grid on all processes (rank {} took {:.1f}s, waited {:.1f}s, total {:.1f}s)", nts,
+      my_rank, rank_process_time, rank_wait_time, rank_total_time);
 }

@@ -2,10 +2,10 @@
 
 #include <algorithm>
 #include <array>
+#include <chrono>
 #include <cmath>
 #include <cstddef>
 #include <cstdlib>
-#include <ctime>
 #include <functional>
 #include <limits>
 #include <span>
@@ -924,7 +924,7 @@ void MPI_Bcast_binned_opacities(const ptrdiff_t nonemptymgi, const int root_node
 void calculate_expansion_opacities(const int nonemptymgi) {
   const auto rho = grid::get_rho(nonemptymgi);
 
-  const auto sys_time_start_calc = std::time(nullptr);
+  const auto sys_time_start_calc = std::chrono::steady_clock::now();
   const auto temperature = grid::get_TR(nonemptymgi);
 
   printlog("calculating expansion opacities for cell {}...", grid::get_mgi_of_nonemptymgi(nonemptymgi));
@@ -970,5 +970,7 @@ void calculate_expansion_opacities(const int nonemptymgi) {
       expansionopacity_planck_cumulative[(nonemptymgi * expopac_nbins) + binindex] = kappa_planck_cumulative;
     }
   }
-  printlnlog("took {} seconds", std::time(nullptr) - sys_time_start_calc);
+  const auto expansion_opacity_duration =
+      std::chrono::duration<double>(std::chrono::steady_clock::now() - sys_time_start_calc).count();
+  printlnlog("took {:.1f} seconds", expansion_opacity_duration);
 }

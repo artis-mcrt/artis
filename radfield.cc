@@ -1,11 +1,11 @@
 #include "radfield.h"
 
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 #include <cstddef>
 #include <cstdio>
 #include <cstdlib>
-#include <ctime>
 #include <format>
 #include <fstream>
 #include <ios>
@@ -930,18 +930,19 @@ void reduce_estimators() {
   }
 
   if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
-    const auto sys_time_start_reduction = std::time(nullptr);
+    const auto sys_time_start_reduction = std::chrono::steady_clock::now();
     printlog("Reducing binned radiation field estimators");
 
     MPI_Allreduce_safe(radfieldbins.J_raw, MPI_SUM, MPI_COMM_WORLD);
     MPI_Allreduce_safe(radfieldbins.nuJ_raw, MPI_SUM, MPI_COMM_WORLD);
 
-    const auto duration_reduction = std::time(nullptr) - sys_time_start_reduction;
-    printlnlog(" (took {} s)", duration_reduction);
+    const auto duration_reduction =
+        std::chrono::duration<double>(std::chrono::steady_clock::now() - sys_time_start_reduction).count();
+    printlnlog(" (took {:.1f} s)", duration_reduction);
   }
 
   if constexpr (DETAILED_LINE_ESTIMATORS_ON) {
-    const auto sys_time_start_reduction = std::time(nullptr);
+    const auto sys_time_start_reduction = std::chrono::steady_clock::now();
     printlog("Reducing detailed line estimators");
 
     for (int nonemptymgi = 0; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
@@ -950,8 +951,9 @@ void reduce_estimators() {
         MPI_Allreduce_safe(Jb_lu_raw[nonemptymgi][jblueindex].contribcount, MPI_SUM, MPI_COMM_WORLD);
       }
     }
-    const auto duration_reduction = std::time(nullptr) - sys_time_start_reduction;
-    printlnlog(" (took {} s)", duration_reduction);
+    const auto duration_reduction =
+        std::chrono::duration<double>(std::chrono::steady_clock::now() - sys_time_start_reduction).count();
+    printlnlog(" (took {:.1f} s)", duration_reduction);
   }
   MPI_Barrier_allranks();
 }

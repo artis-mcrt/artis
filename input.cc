@@ -2,13 +2,13 @@
 
 #include <algorithm>
 #include <array>
+#include <chrono>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <ctime>
 #include <filesystem>
 #include <format>
 #include <fstream>
@@ -1478,7 +1478,7 @@ void read_atomicdata_files() {
 
   printlnlog("establishing connection between transitions and sorted linelist...");
 
-  auto const time_start_establish_linelist_connections = std::time(nullptr);
+  const auto time_start_establish_linelist_connections = std::chrono::steady_clock::now();
 #ifdef _OPENMP
 #pragma omp parallel for schedule(dynamic)
 #endif
@@ -1523,7 +1523,10 @@ void read_atomicdata_files() {
   }
   globals::alltrans.lineindex = std::move(alltrans_lineindex);
 
-  printlnlog("  took {}s", std::time(nullptr) - time_start_establish_linelist_connections);
+  const auto establish_linelist_connections_duration =
+      std::chrono::duration<double>(std::chrono::steady_clock::now() - time_start_establish_linelist_connections)
+          .count();
+  printlnlog("  took {:.1f}s", establish_linelist_connections_duration);
   MPI_Barrier_node();
 
   for (int element = 0; element < get_nelements(); element++) {
