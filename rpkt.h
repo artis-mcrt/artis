@@ -14,9 +14,9 @@
 #include "mpi_logging.h"
 #include "packet.h"
 
-constexpr double expopac_lambdamin = 534.5;
-constexpr double expopac_lambdamax = 35000.;
-constexpr double expopac_deltalambda = 35.5;
+constexpr double expopac_lambdamin = 60.;
+constexpr double expopac_lambdamax = 40000.;
+constexpr double expopac_deltalambda = 20.;
 constexpr auto expopac_nbins = static_cast<ptrdiff_t>((expopac_lambdamax - expopac_lambdamin) / expopac_deltalambda);
 
 // wavelength bins are ordered by ascending wavelength (descending frequency)
