@@ -305,7 +305,7 @@ void read_phixs_file(const int phixs_file_version, std::vector<float>& tmpallphi
   int upperlevel_in = -1;
   int lowerionstage = -1;
   int lowerlevel_in = -1;
-  double phixs_threshold_ev = -1;  // currently just ignored, and epilson is used instead
+  double phixs_threshold_ev = -1;  // currently just ignored, and epsilon is used instead
   while (true) {
     int nphixspoints_inputtable = 0;
     if (!get_noncommentline(phixsfile, phixsline)) {
@@ -571,7 +571,7 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion,
               .lowerlevelindex = lowerlevel,
           });
 
-          // the line list has not been sorted yet, so the store the level index for now and
+          // the line list has not been sorted yet, so store the level index for now and
           // the index into the sorted line list will be set later
 
           temp_alltranslist[ion_levels[level].alltrans_startdown + nupperdowntrans - 1] = {
@@ -994,7 +994,7 @@ void read_autoion_data() {
 
   // Plan is that autoionizing levels will be explicitly included in the NLTE population solver, but that their level
   // populations do not need to be accurately known - so if the ion has a superlevel already, then we will try to attach
-  // the autoionizing level populations to that for all purposes outside the NLTE solber. For this, the ions need to
+  // the autoionizing level populations to that for all purposes outside the NLTE solver. For this, the ions need to
   // know how many autoionizing levels they have. So count those up now.
 
   int nlevels_autoion_sum = 0;
