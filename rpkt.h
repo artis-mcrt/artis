@@ -76,9 +76,11 @@ class Phixslist {
 
 struct ContinuumOpacity {
   double nu{-1.};  // frequency at which opacity was calculated
-  double chi_freefree_scatter{0.};
-  double chi_freefree_heat{0.};
-  double chi_boundfree{0.};
+  // chi is the absorption coefficient in units of [cm^-1], i.e. the opacity per unit length. The actual opacity
+  // experienced by the packet is chi * pathlength, and the optical depth is chi * pathlength * rho.
+  double chi_freefree_scatter{0.};  // free-free scattering (stay rpacket) contribution to the opacity
+  double chi_freefree_heat{0.};  // free-free heating (become kpacket) contribution to the opacity
+  double chi_boundfree{0.};  // bound-free (photoionization) contribution to the opacity
   int nonemptymgi{-1};
   int timestep{-1};
   Phixslist phixslist;
@@ -87,6 +89,8 @@ struct ContinuumOpacity {
       : phixslist{nbfcontinua_ground, nbfcontinua, bfestimcount} {}
 
   constexpr ContinuumOpacity() = default;
+
+  // total continuum absorption coefficient at nu [cm^-1]
   [[nodiscard]] constexpr auto total() const { return chi_freefree_scatter + chi_boundfree + chi_freefree_heat; }
 };
 
