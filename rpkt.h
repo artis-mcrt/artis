@@ -167,7 +167,7 @@ auto calculate_chi_ffheat_nnionpart(int nonemptymgi) -> double;
 [[gnu::pure]] [[nodiscard]] inline auto keep_this_cont(int element, const int ion, const int level,
                                                        const int nonemptymgi, const float nnetot) -> bool {
   if constexpr (DETAILED_BF_ESTIMATORS_ON) {
-    return grid::get_elem_abundance(nonemptymgi, element) > 0;
+    return grid::get_elem_massfrac(nonemptymgi, element) > 0;
   }
   return ((get_nnion(nonemptymgi, element, ion) / nnetot > 1.e-6) || (level == 0));
 }

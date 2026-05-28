@@ -198,8 +198,8 @@ void calculate_bfheatingcoeffs(int nonemptymgi, std::span<double> bfheatingcoeff
   assert_always(std::ssize(bfheatingcoeffs) == get_includedlevels());
   const double minelfrac = 0.01;
   for (int element = 0; element < get_nelements(); element++) {
-    if (grid::get_elem_abundance(nonemptymgi, element) <= minelfrac && !USE_ION_BFHEATING_ESTIMATORS) {
-      printlog("skipping Z={} X={:g}, ", get_atomicnumber(element), grid::get_elem_abundance(nonemptymgi, element));
+    if (grid::get_elem_massfrac(nonemptymgi, element) <= minelfrac && !USE_ION_BFHEATING_ESTIMATORS) {
+      printlog("skipping Z={} X={:g}, ", get_atomicnumber(element), grid::get_elem_massfrac(nonemptymgi, element));
     }
 
     const int nions = get_nions(element);
@@ -208,7 +208,7 @@ void calculate_bfheatingcoeffs(int nonemptymgi, std::span<double> bfheatingcoeff
       const auto levels = std::ranges::iota_view{0, nlevels};
       std::for_each(EXEC_PAR levels.begin(), levels.end(), [&](const int level) {
         double bfheatingcoeff = 0.;
-        if (grid::get_elem_abundance(nonemptymgi, element) > minelfrac || USE_ION_BFHEATING_ESTIMATORS) {
+        if (grid::get_elem_massfrac(nonemptymgi, element) > minelfrac || USE_ION_BFHEATING_ESTIMATORS) {
           const auto nphixstargets = get_nphixstargets(element, ion, level);
           for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
             bfheatingcoeff += calculate_bfheatingcoeff(element, ion, level, phixstargetindex, nonemptymgi);

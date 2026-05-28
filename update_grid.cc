@@ -52,7 +52,7 @@ void write_to_estimators_file(std::ostream& estimators_file, const int nonemptym
   }
 
   for (int element = 0; element < get_nelements(); element++) {
-    if (grid::get_elem_abundance(nonemptymgi, element) <= 0.) {  // skip elements with no abundance
+    if (grid::get_elem_massfrac(nonemptymgi, element) <= 0.) {  // skip elements with no abundance
       continue;
     }
 
@@ -74,7 +74,7 @@ void write_to_estimators_file(std::ostream& estimators_file, const int nonemptym
     }
     std::print(estimators_file, "  SUM: {:9.3e}", elpop);
 
-    decay::output_nuc_abundances(estimators_file, nonemptymgi, globals::timesteps[timestep].mid, element);
+    decay::output_isotopic_densities(estimators_file, nonemptymgi, globals::timesteps[timestep].mid, element);
 
     if (nions == 0 || elpop <= 0.) {
       // dummy element for nuclear abundances only
