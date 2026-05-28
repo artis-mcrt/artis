@@ -328,7 +328,7 @@ void set_elem_untrackedstable_massfrac(const int nonemptymgi, const int element,
   initmassfracuntrackedstable_allcells[(nonemptymgi * get_nelements()) + element] =
       static_cast<float>(massfrac_untrackedstable);
 
-  // (massfrac_allisotopes + massfrac_untrackedstable) might not exactly match elemabundance if we had to boost it to
+  // (massfrac_allisotopes + massfrac_untrackedstable) might not exactly match elem_massfrac if we had to boost it to
   // reach massfrac_allisotopes
   set_elem_massfrac(nonemptymgi, element, static_cast<float>(massfrac_allisotopes + massfrac_untrackedstable));
 }
