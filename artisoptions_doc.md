@@ -207,15 +207,13 @@ constexpr bool KEEP_ESCAPED_GAMMAS;
 
 // thermalisation scheme for non-thermal particles (positrons, electrons, alphas). INSTANTFULLDEPOSITION
 // instantly deposits all particle energy. TIMEDEPENDENT uses time-dependent Monte Carlo transport.
+// TIMEDEPENDENT_WITH_ADIABATIC_LOSS is the same as TIMEDEPENDENT but also includes adiabatic (expansion)
+// losses: particle energy decreases as E/t in addition to collisional losses, and the packet comoving
+// energy e_cmf is reduced by the expansion factor ts/t_new.
 // BARNES, and WOLLAEGER use analytic thermalisation efficiency functions.
 // TIMEDEPENDENTWITHGAMMAPRODUCTS also replaces the instant "gamma" deposition of Compton electrons and pair-production particles
 // with separate handling as particle deposition
 constexpr ParticleThermalisationScheme PARTICLE_THERMALISATION_SCHEME;
-
-// include adiabatic (expansion) losses in the time-dependent particle thermalisation (TIMEDEPENDENT or
-// TIMEDEPENDENTWITHGAMMAPRODUCTS). When enabled, particle energy decreases as E/t in addition to
-// collisional losses, and the packet comoving energy e_cmf is reduced by the expansion factor ts/t_new.
-constexpr bool PARTICLE_THERMALISATION_TIMEDEPENDENT_ADIABATIC_LOSSES = false;
 
 // thermalisation scheme for gamma-ray photons.
 // FREQUENCYDEPENDENT is time-dependent gamma-ray transport (with frequency-dependent opacities if GAMMA_USE_KAPPA_GREY is not set)

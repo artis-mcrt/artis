@@ -140,7 +140,6 @@ constexpr bool USE_XCOM_GAMMAPHOTOION = false;
 
 constexpr auto PARTICLE_THERMALISATION_SCHEME = ParticleThermalisationScheme::TIMEDEPENDENT;
 
-constexpr bool PARTICLE_THERMALISATION_TIMEDEPENDENT_ADIABATIC_LOSSES = false;
 
 constexpr auto GAMMA_THERMALISATION_SCHEME = GammaThermalisationScheme::FREQUENCYDEPENDENT;
 

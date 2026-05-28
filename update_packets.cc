@@ -76,6 +76,8 @@ void do_nonthermal_predeposit(Packet& pkt, const int nts, const double t2) {
       grid::change_cell(pkt, -99);
     }
   } else if constexpr (PARTICLE_THERMALISATION_SCHEME == ParticleThermalisationScheme::TIMEDEPENDENT ||
+                       PARTICLE_THERMALISATION_SCHEME ==
+                           ParticleThermalisationScheme::TIMEDEPENDENT_WITH_ADIABATIC_LOSS ||
                        PARTICLE_THERMALISATION_SCHEME == ParticleThermalisationScheme::TIMEDEPENDENTWITHGAMMAPRODUCTS) {
     // local time-dependent absorption described by Shingles et al. (2023)
     const double rho = grid::get_rho(nonemptymgi);
@@ -88,7 +90,8 @@ void do_nonthermal_predeposit(Packet& pkt, const int nts, const double t2) {
 
     double t_enzero{};  // time at which particle energy reaches zero
 
-    if constexpr (PARTICLE_THERMALISATION_TIMEDEPENDENT_ADIABATIC_LOSSES) {
+    if constexpr (PARTICLE_THERMALISATION_SCHEME ==
+                  ParticleThermalisationScheme::TIMEDEPENDENT_WITH_ADIABATIC_LOSS) {
       // With adiabatic losses: dE/dt = -endot - E/t
       // Solution: E(t) = (E0 * ts - endot/2 * (t^2 - ts^2)) / t
       // Time at which E=0: t_enzero = sqrt(ts^2 + 2 * E0 * ts / endot)
@@ -112,19 +115,10 @@ void do_nonthermal_predeposit(Packet& pkt, const int nts, const double t2) {
 
     const double rnd_en_absorb = rng_uniform() * particle_en;
 
-    double t_absorb{};
-    if constexpr (PARTICLE_THERMALISATION_TIMEDEPENDENT_ADIABATIC_LOSSES) {
-      // Find t such that collisional energy deposited from ts to t equals rnd_en_absorb
-      // Collisional deposition from ts to t is endot * (t - ts), so t_absorb = ts + rnd_en_absorb / endot
-      // (same as without adiabatic losses because endot is constant)
-      t_absorb = ts + (rnd_en_absorb / endot);
-      // but check the particle hasn't already lost all energy by then
-      if (t_absorb > t_enzero) {
-        t_absorb = t_enzero;
-      }
-    } else {
-      t_absorb = ts + (rnd_en_absorb / endot);
-    }
+    // Collisional deposition from ts to t is endot * (t - ts), so t_absorb = ts + rnd_en_absorb / endot.
+    // Clamp to t_enzero in case adiabatic losses bring the particle to zero energy before the collisional
+    // energy budget is exhausted.
+    const double t_absorb = std::min(ts + (rnd_en_absorb / endot), t_enzero);
 
     // if absorption happens beyond the end of the current timestep,
     // just reduce the particle energy up to the end of this timestep
@@ -133,7 +127,8 @@ void do_nonthermal_predeposit(Packet& pkt, const int nts, const double t2) {
     if (t_absorb <= t2) {
       pkt.type = deposit_type;
     } else {
-      if constexpr (PARTICLE_THERMALISATION_TIMEDEPENDENT_ADIABATIC_LOSSES) {
+      if constexpr (PARTICLE_THERMALISATION_SCHEME ==
+                    ParticleThermalisationScheme::TIMEDEPENDENT_WITH_ADIABATIC_LOSS) {
         // E(t) = (E0 * ts - endot/2 * (t^2 - ts^2)) / t
         const double en_new = (particle_en * ts - endot / 2. * (t_new * t_new - ts * ts)) / t_new;
         pkt.nu_cmf = std::max(0., en_new) / H;
@@ -144,7 +139,8 @@ void do_nonthermal_predeposit(Packet& pkt, const int nts, const double t2) {
 
     pkt.pos = vec_scale(pkt.pos, t_new / ts);
     pkt.prop_time = t_new;
-    if constexpr (PARTICLE_THERMALISATION_TIMEDEPENDENT_ADIABATIC_LOSSES) {
+    if constexpr (PARTICLE_THERMALISATION_SCHEME ==
+                  ParticleThermalisationScheme::TIMEDEPENDENT_WITH_ADIABATIC_LOSS) {
       pkt.e_cmf *= ts / t_new;
     }
     assert_testmodeonly(grid::get_cellindex_from_pos(pkt.pos, pkt.prop_time) == pkt.cellindex);
