@@ -90,8 +90,7 @@ void do_nonthermal_predeposit(Packet& pkt, const int nts, const double t2) {
 
     double t_enzero{};  // time at which particle energy reaches zero
 
-    if constexpr (PARTICLE_THERMALISATION_SCHEME ==
-                  ParticleThermalisationScheme::TIMEDEPENDENT_WITH_ADIABATIC_LOSS) {
+    if constexpr (PARTICLE_THERMALISATION_SCHEME == ParticleThermalisationScheme::TIMEDEPENDENT_WITH_ADIABATIC_LOSS) {
       // With adiabatic losses: dE/dt = -endot - E/t
       // Solution: E(t) = (E0 * ts - endot/2 * (t^2 - ts^2)) / t
       // Time at which E=0: t_enzero = sqrt(ts^2 + 2 * E0 * ts / endot)
@@ -127,8 +126,7 @@ void do_nonthermal_predeposit(Packet& pkt, const int nts, const double t2) {
     if (t_absorb <= t2) {
       pkt.type = deposit_type;
     } else {
-      if constexpr (PARTICLE_THERMALISATION_SCHEME ==
-                    ParticleThermalisationScheme::TIMEDEPENDENT_WITH_ADIABATIC_LOSS) {
+      if constexpr (PARTICLE_THERMALISATION_SCHEME == ParticleThermalisationScheme::TIMEDEPENDENT_WITH_ADIABATIC_LOSS) {
         // E(t) = (E0 * ts - endot/2 * (t^2 - ts^2)) / t
         const double en_new = (particle_en * ts - endot / 2. * (t_new * t_new - ts * ts)) / t_new;
         pkt.nu_cmf = std::max(0., en_new) / H;
@@ -139,8 +137,7 @@ void do_nonthermal_predeposit(Packet& pkt, const int nts, const double t2) {
 
     pkt.pos = vec_scale(pkt.pos, t_new / ts);
     pkt.prop_time = t_new;
-    if constexpr (PARTICLE_THERMALISATION_SCHEME ==
-                  ParticleThermalisationScheme::TIMEDEPENDENT_WITH_ADIABATIC_LOSS) {
+    if constexpr (PARTICLE_THERMALISATION_SCHEME == ParticleThermalisationScheme::TIMEDEPENDENT_WITH_ADIABATIC_LOSS) {
       pkt.e_cmf *= ts / t_new;
     }
     assert_testmodeonly(grid::get_cellindex_from_pos(pkt.pos, pkt.prop_time) == pkt.cellindex);
