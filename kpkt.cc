@@ -370,7 +370,7 @@ DEVICE_FUNC void do_kpkt(Packet& pkt, const double t2, const int nts) {
   const double t_current = std::min(pkt.prop_time + deltat, t2);
 
   pkt.pos = vec_scale(pkt.pos, t_current / pkt.prop_time);
-  // pkt.e_cmf *= pkt.prop_time / t_current;  // adjust energy for adiabatic losses
+  pkt.e_cmf *= pkt.prop_time / t_current;  // adjust energy for adiabatic losses
   pkt.prop_time = t_current;
 
   if (t_current >= t2) {
