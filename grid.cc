@@ -630,10 +630,10 @@ void read_elem_abundances() {
     // (or proportial to mass frac, e.g. element densities because they will be normalised anyway)
     // The abundances begin with hydrogen, helium, etc, going as far up the atomic numbers as required
     double normfactor = 0.;
-    std::array<float, 150> elem_abundances_in{};
-    std::ranges::fill(elem_abundances_in, 0.);
+    std::array<float, 150> elem_massfracs_in{};
+    std::ranges::fill(elem_massfracs_in, 0.);
     double abund_in = 0.;
-    for (int elem_z_index = 0; elem_z_index < std::ssize(elem_abundances_in); elem_z_index++) {
+    for (int elem_z_index = 0; elem_z_index < std::ssize(elem_massfracs_in); elem_z_index++) {
       const int atomic_number = elem_z_index + 1;
       if (!(ssline >> abund_in)) {
         // at least one element (hydrogen) should have been specified for nonempty cells
@@ -645,8 +645,8 @@ void read_elem_abundances() {
         assert_always(abund_in > -1e-6);
         abund_in = 0.;
       }
-      elem_abundances_in[elem_z_index] = static_cast<float>(abund_in);
-      normfactor += elem_abundances_in[elem_z_index];
+      elem_massfracs_in[elem_z_index] = static_cast<float>(abund_in);
+      normfactor += elem_massfracs_in[elem_z_index];
     }
 
     if (get_numpropcells(mgi) > 0) {
@@ -659,11 +659,11 @@ void read_elem_abundances() {
         // now set the abundances (by mass) of included elements, i.e.
         // read out the abundances specified in the atomic data file
         const int atomic_number = get_atomicnumber(element);
-        const auto elemabundance = static_cast<float>(elem_abundances_in[atomic_number - 1] / normfactor);
-        assert_always(elemabundance >= 0.);
+        const auto elemmassfrac = static_cast<float>(elem_massfracs_in[atomic_number - 1] / normfactor);
+        assert_always(elemmassfrac >= 0.);
 
         // radioactive nuclide abundances should have already been set by read_??_model
-        set_elem_untrackedstable_massfrac(nonemptymgi, element, elemabundance);
+        set_elem_untrackedstable_massfrac(nonemptymgi, element, elemmassfrac);
       }
     }
   }
