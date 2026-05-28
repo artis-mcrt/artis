@@ -395,7 +395,7 @@ void set_groundlevelpops(const int nonemptymgi, const int element, const float n
     return;
   }
 
-  // calculate number density of the current element (abundances are given by mass)
+  // calculate number density of the current element (derived from mass fraction)
   const double nnelement = grid::get_elem_numberdens(nonemptymgi, element);
 
   const bool use_phi_saha = force_saha || FORCE_SAHA_ION_BALANCE(get_atomicnumber(element));
