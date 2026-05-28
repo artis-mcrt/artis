@@ -212,6 +212,11 @@ constexpr bool KEEP_ESCAPED_GAMMAS;
 // with separate handling as particle deposition
 constexpr ParticleThermalisationScheme PARTICLE_THERMALISATION_SCHEME;
 
+// include adiabatic (expansion) losses in the time-dependent particle thermalisation (TIMEDEPENDENT or
+// TIMEDEPENDENTWITHGAMMAPRODUCTS). When enabled, particle energy decreases as E/t in addition to
+// collisional losses, and the packet comoving energy e_cmf is reduced by the expansion factor ts/t_new.
+constexpr bool PARTICLE_THERMALISATION_TIMEDEPENDENT_ADIABATIC_LOSSES = false;
+
 // thermalisation scheme for gamma-ray photons.
 // FREQUENCYDEPENDENT is time-dependent gamma-ray transport (with frequency-dependent opacities if GAMMA_USE_KAPPA_GREY is not set)
 // BARNES, WOLLAEGER, and GUTTMAN use analytic thermalisation efficiencies to instantly deposit some fraction of gamma energy.

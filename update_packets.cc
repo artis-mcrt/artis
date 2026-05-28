@@ -86,10 +86,20 @@ void do_nonthermal_predeposit(Packet& pkt, const int nts, const double t2) {
 
     const double particle_en = H * pkt.nu_cmf;  // energy of the particles in the packet
 
-    // for endot independent of energy, the next line is trivial (for E dependent endot, an integral would be needed)
+    double t_enzero{};  // time at which particle energy reaches zero
 
-    const double t_enzero = ts + (particle_en / endot);  // time at which zero energy is reached
-    en_deposited = pkt.e_cmf * (std::min(t2, t_enzero) - ts) / (particle_en / endot);
+    if constexpr (PARTICLE_THERMALISATION_TIMEDEPENDENT_ADIABATIC_LOSSES) {
+      // With adiabatic losses: dE/dt = -endot - E/t
+      // Solution: E(t) = (E0 * ts - endot/2 * (t^2 - ts^2)) / t
+      // Time at which E=0: t_enzero = sqrt(ts^2 + 2 * E0 * ts / endot)
+      t_enzero = std::sqrt(ts * ts + 2. * particle_en * ts / endot);
+    } else {
+      // for endot independent of energy, the next line is trivial (for E dependent endot, an integral would be needed)
+      t_enzero = ts + (particle_en / endot);  // time at which zero energy is reached
+    }
+
+    // Only collisional losses count as energy deposited into the gas
+    en_deposited = pkt.e_cmf * endot * (std::min(t2, t_enzero) - ts) / particle_en;
 
     // A discrete absorption event should occur somewhere along the
     // continuous track from initial kinetic energy to zero KE.
@@ -99,7 +109,20 @@ void do_nonthermal_predeposit(Packet& pkt, const int nts, const double t2) {
     // Choose random en_absorb [0, particle_en]
 
     const double rnd_en_absorb = rng_uniform() * particle_en;
-    const double t_absorb = ts + (rnd_en_absorb / endot);
+
+    double t_absorb{};
+    if constexpr (PARTICLE_THERMALISATION_TIMEDEPENDENT_ADIABATIC_LOSSES) {
+      // Find t such that collisional energy deposited from ts to t equals rnd_en_absorb
+      // Collisional deposition from ts to t is endot * (t - ts), so t_absorb = ts + rnd_en_absorb / endot
+      // (same as without adiabatic losses because endot is constant)
+      t_absorb = ts + (rnd_en_absorb / endot);
+      // but check the particle hasn't already lost all energy by then
+      if (t_absorb > t_enzero) {
+        t_absorb = t_enzero;
+      }
+    } else {
+      t_absorb = ts + (rnd_en_absorb / endot);
+    }
 
     // if absorption happens beyond the end of the current timestep,
     // just reduce the particle energy up to the end of this timestep
@@ -108,12 +131,20 @@ void do_nonthermal_predeposit(Packet& pkt, const int nts, const double t2) {
     if (t_absorb <= t2) {
       pkt.type = deposit_type;
     } else {
-      pkt.nu_cmf = (particle_en - (endot * (t_new - ts))) / H;
+      if constexpr (PARTICLE_THERMALISATION_TIMEDEPENDENT_ADIABATIC_LOSSES) {
+        // E(t) = (E0 * ts - endot/2 * (t^2 - ts^2)) / t
+        const double en_new = (particle_en * ts - endot / 2. * (t_new * t_new - ts * ts)) / t_new;
+        pkt.nu_cmf = std::max(0., en_new) / H;
+      } else {
+        pkt.nu_cmf = (particle_en - (endot * (t_new - ts))) / H;
+      }
     }
 
     pkt.pos = vec_scale(pkt.pos, t_new / ts);
     pkt.prop_time = t_new;
-    // pkt.e_cmf *= ts / t_new;
+    if constexpr (PARTICLE_THERMALISATION_TIMEDEPENDENT_ADIABATIC_LOSSES) {
+      pkt.e_cmf *= ts / t_new;
+    }
     assert_testmodeonly(grid::get_cellindex_from_pos(pkt.pos, pkt.prop_time) == pkt.cellindex);
   } else {
     assert_always(false);  // unhandled thermalisation scheme
