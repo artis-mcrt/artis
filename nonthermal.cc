@@ -752,7 +752,7 @@ constexpr auto xs_ionisation_lotz(const double en_erg, const ShellParams& collio
     // Equation 3.38 of Axelrod (1980) attributed to Lotz (1967)
     const double part_sigma_shell =
         (electronsinshell / ionpot *
-         (std::log(pow2(beta) * ME * pow2(CLIGHT) / 2.0 / ionpot) - std::log10(1 - pow2(beta)) - pow2(beta)));
+         (std::log(pow2(beta) * ME * pow2(CLIGHT) / 2.0 / ionpot) - std::log(1 - pow2(beta)) - pow2(beta)));
     if (part_sigma_shell > 0.) {
       constexpr double Aconst = 1.33e-14 * EV * EV;
       const double sigma = 2 * Aconst / ME / pow2(beta * CLIGHT) * part_sigma_shell;
