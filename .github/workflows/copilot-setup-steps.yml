@@ -20,7 +20,7 @@ jobs:
             - name: Checkout code
               uses: actions/checkout@v6
 
-            - name: Install gcc-14
+            - name: Set gcc-14 as default compiler
               run: |
                   echo "CXX=g++-14" >> $GITHUB_ENV
                   echo "OMPI_CXX=g++-14" >> $GITHUB_ENV
