@@ -1,0 +1,31 @@
+name: "Copilot Setup Steps"
+
+on:
+    workflow_dispatch:
+    push:
+        paths:
+            - .github/workflows/copilot-setup-steps.yml
+    pull_request:
+        paths:
+            - .github/workflows/copilot-setup-steps.yml
+
+jobs:
+    copilot-setup-steps:
+        runs-on: ubuntu-24.04
+
+        permissions:
+            contents: read
+
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v6
+
+            - name: Install gcc-14
+              run: |
+                  echo "CXX=g++-14" >> $GITHUB_ENV
+                  echo "OMPI_CXX=g++-14" >> $GITHUB_ENV
+
+            - name: Install Open MPI, GSL, and TBB
+              run: |
+                  sudo apt-get update
+                  sudo apt-get install -y --no-install-recommends openmpi-bin libopenmpi-dev libgsl-dev libtbb-dev
