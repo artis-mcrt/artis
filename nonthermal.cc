@@ -1085,7 +1085,7 @@ auto get_oneoverw_approx_axelrod(const int element, const int ion, const int non
 
   double Zbar = 0.;  // mass-weighted average atomic number
   for (int ielement = 0; ielement < get_nelements(); ielement++) {
-    Zbar += grid::get_elem_abundance(nonemptymgi, ielement) * get_atomicnumber(ielement);
+    Zbar += grid::get_elem_massfrac(nonemptymgi, ielement) * get_atomicnumber(ielement);
   }
 
   const double binding = get_sum_q_over_binding_energy(element, ion);

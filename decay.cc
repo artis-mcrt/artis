@@ -1216,7 +1216,7 @@ void update_abundances(const int nonemptymgi, const double t_current) {
     isomassfracsum += otherstablemassfrac;
     isomassfrac_on_nucmass_sum += otherstablemassfrac / globals::elements[element].initstablemeannucmass;
 
-    grid::set_elem_abundance(nonemptymgi, element, static_cast<float>(isomassfracsum));
+    grid::set_elem_massfrac(nonemptymgi, element, static_cast<float>(isomassfracsum));
     if (isomassfrac_on_nucmass_sum > 0.) {
       grid::set_element_meanweight(nonemptymgi, element,
                                    static_cast<float>(isomassfracsum / isomassfrac_on_nucmass_sum));
@@ -1229,8 +1229,8 @@ void update_abundances(const int nonemptymgi, const double t_current) {
   grid::set_nnetot(nonemptymgi);
 }
 
-void output_nuc_abundances(std::ostream& estimators_file, const int nonemptymgi, const double t_current,
-                           const int element) {
+void output_isotopic_massfracs(std::ostream& estimators_file, const int nonemptymgi, const double t_current,
+                               const int element) {
   const double rho = grid::get_rho(nonemptymgi);
 
   const int atomic_number = get_atomicnumber(element);

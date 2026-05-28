@@ -293,7 +293,7 @@ void set_initenergyq(const int modelgridindex, const float initenergyq) {
   modelgrid_input[modelgridindex].initenergyq = initenergyq;
 }
 
-void set_elem_untrackedstable_abund_from_total(const int nonemptymgi, const int element, const float elemabundance) {
+void set_elem_untrackedstable_massfrac(const int nonemptymgi, const int element, const float elem_massfrac) {
   // set the stable mass fraction of an element from the total element mass fraction
   // by subtracting the abundances of radioactive isotopes.
   // if the element Z=anumber has no specific stable abundance variable then the function does nothing
@@ -301,37 +301,36 @@ void set_elem_untrackedstable_abund_from_total(const int nonemptymgi, const int 
   const int atomic_number = get_atomicnumber(element);
   const int mgi = get_mgi_of_nonemptymgi(nonemptymgi);
 
-  double isofracsum = 0.;  // mass fraction sum of radioactive isotopes
+  double massfrac_allisotopes = 0.;
   for (int nucindex = 0; nucindex < decay::get_num_nuclides(); nucindex++) {
     if (decay::get_nuc_z(nucindex) == atomic_number) {
       // radioactive isotope of this element
-      isofracsum += get_modelinitnucmassfrac(mgi, nucindex);
+      massfrac_allisotopes += get_modelinitnucmassfrac(mgi, nucindex);
     }
   }
 
-  double massfrac_untrackedstable = elemabundance - isofracsum;
+  double massfrac_untrackedstable = elem_massfrac - massfrac_allisotopes;
 
   if (massfrac_untrackedstable < 0.) {
     //  allow some roundoff error before we complain
-    if ((isofracsum - elemabundance - 1.) > 1e-4 && std::abs(isofracsum - elemabundance) > 1e-6) {
+    if ((massfrac_allisotopes - elem_massfrac - 1.) > 1e-4 && std::abs(massfrac_allisotopes - elem_massfrac) > 1e-6) {
       printlnlog("WARNING: cell {} Z={} element abundance is less than the sum of its radioisotope abundances", mgi,
                  atomic_number);
-      printlnlog("  massfrac(Z) {:g} massfrac_radioisotopes(Z) {:g}", elemabundance, isofracsum);
-      printlnlog("  increasing elemental abundance to {:g} and setting stable isotopic abundance to zero", isofracsum);
+      printlnlog("  massfrac(Z) {:g} massfrac_radioisotopes(Z) {:g}", elem_massfrac, massfrac_allisotopes);
+      printlnlog("  increasing elemental abundance to {:g} and setting stable isotopic abundance to zero",
+                 massfrac_allisotopes);
     }
     // result is allowed to be slightly negative due to roundoff error
     assert_always(massfrac_untrackedstable >= -1e-2);
     massfrac_untrackedstable = 0.;  // bring up to zero if negative
   }
 
-  // if (globals::rank_in_node == 0)
-  {
-    initmassfracuntrackedstable_allcells[(nonemptymgi * get_nelements()) + element] =
-        static_cast<float>(massfrac_untrackedstable);
-  }
+  initmassfracuntrackedstable_allcells[(nonemptymgi * get_nelements()) + element] =
+      static_cast<float>(massfrac_untrackedstable);
 
-  // (isofracsum + massfracstable) might not exactly match elemabundance if we had to boost it to reach isofracsum
-  set_elem_abundance(nonemptymgi, element, static_cast<float>(isofracsum + massfrac_untrackedstable));
+  // (massfrac_allisotopes + massfrac_untrackedstable) might not exactly match elemabundance if we had to boost it to
+  // reach massfrac_allisotopes
+  set_elem_massfrac(nonemptymgi, element, static_cast<float>(massfrac_allisotopes + massfrac_untrackedstable));
 }
 
 // get the radial distance from the origin to the centre of the cell at time tmin
@@ -664,7 +663,7 @@ void read_elem_abundances() {
         assert_always(elemabundance >= 0.);
 
         // radioactive nuclide abundances should have already been set by read_??_model
-        set_elem_untrackedstable_abund_from_total(nonemptymgi, element, elemabundance);
+        set_elem_untrackedstable_massfrac(nonemptymgi, element, elemabundance);
       }
     }
   }
@@ -1537,21 +1536,21 @@ auto get_rho_tmin(const int modelgridindex) -> float { return modelgrid_input[mo
 }
 
 // mass fraction of an element (all isotopes combined)
-[[gnu::pure]] [[nodiscard]] auto get_elem_abundance(const std::ptrdiff_t nonemptymgi, const int element) -> float {
+[[gnu::pure]] [[nodiscard]] auto get_elem_massfrac(const std::ptrdiff_t nonemptymgi, const int element) -> float {
   const auto massfrac = elem_massfracs_allcells[(nonemptymgi * get_nelements()) + element];
   assert_testmodeonly(massfrac >= 0.0);
   return massfrac;
 }
 
 // mass fraction of an element (all isotopes combined)
-void set_elem_abundance(const ptrdiff_t nonemptymgi, const int element, const float newabundance) {
+void set_elem_massfrac(const ptrdiff_t nonemptymgi, const int element, const float newabundance) {
   elem_massfracs_allcells[(nonemptymgi * get_nelements()) + element] = newabundance;
 }
 
 // mass fraction of an element (all isotopes combined)
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_elem_numberdens(const ptrdiff_t nonemptymgi, const int element)
     -> double {
-  return get_elem_abundance(nonemptymgi, element) / static_cast<double>(get_element_meanweight(nonemptymgi, element)) *
+  return get_elem_massfrac(nonemptymgi, element) / static_cast<double>(get_element_meanweight(nonemptymgi, element)) *
          get_rho(nonemptymgi);
 }
 
@@ -1793,7 +1792,7 @@ void set_elements_uppermost_ion(const int nonemptymgi, const int element, const 
       for (int element = 0; element < get_nelements(); element++) {
         const int z = get_atomicnumber(element);
         if (z >= 57 && z <= 71) {
-          X_lan += get_elem_abundance(nonemptymgi, element);
+          X_lan += get_elem_massfrac(nonemptymgi, element);
         }
       }
       // first step: temperature-independent factor
@@ -2287,9 +2286,9 @@ void init_grid() {
         const double ratio = totmassnuclide[nucindex] / totmassnuclide_actual;
         for (int nonemptymgi = 0; nonemptymgi < get_nonempty_npts_model(); nonemptymgi++) {
           const int mgi = get_mgi_of_nonemptymgi(nonemptymgi);
-          const double prev_abund = get_modelinitnucmassfrac(mgi, nucindex);
-          const auto new_abund = static_cast<float>(prev_abund * ratio);
-          set_modelinitnucmassfrac(mgi, nucindex, new_abund);
+          const double prev_massfrac = get_modelinitnucmassfrac(mgi, nucindex);
+          const auto new_massfrac = static_cast<float>(prev_massfrac * ratio);
+          set_modelinitnucmassfrac(mgi, nucindex, new_massfrac);
         }
       }
     }

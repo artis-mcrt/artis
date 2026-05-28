@@ -368,7 +368,7 @@ auto find_converged_nne(const int nonemptymgi, double nne_max, const bool force_
                                                                 const int level) -> double {
   const auto [nn, skipminpop] = calculate_levelpop_nominpop(nonemptymgi, element, ion, level);
   if (!skipminpop && nn < MINPOP) {
-    if (grid::get_elem_abundance(nonemptymgi, element) > 0) {
+    if (grid::get_elem_massfrac(nonemptymgi, element) > 0) {
       return MINPOP;
     }
     return 0.;
@@ -438,7 +438,7 @@ auto calculate_ion_balance_nne(const int nonemptymgi) -> void {
 
   bool only_lowest_ionstage = true;  // could be completely neutral, or just at each element's lowest ion stage
   for (int element = 0; element < get_nelements(); element++) {
-    if (grid::get_elem_abundance(nonemptymgi, element) > 0) {
+    if (grid::get_elem_massfrac(nonemptymgi, element) > 0) {
       const auto uppermost_ion = find_uppermost_ion(nonemptymgi, element, nne_max, force_saha);
       grid::set_elements_uppermost_ion(nonemptymgi, element, uppermost_ion);
 
