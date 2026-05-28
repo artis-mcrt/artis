@@ -74,7 +74,7 @@ void write_to_estimators_file(std::ostream& estimators_file, const int nonemptym
     }
     std::print(estimators_file, "  SUM: {:9.3e}", elpop);
 
-    decay::output_isotopic_massfracs(estimators_file, nonemptymgi, globals::timesteps[timestep].mid, element);
+    decay::output_isotopic_densities(estimators_file, nonemptymgi, globals::timesteps[timestep].mid, element);
 
     if (nions == 0 || elpop <= 0.) {
       // dummy element for nuclear abundances only

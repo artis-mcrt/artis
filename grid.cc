@@ -313,11 +313,11 @@ void set_elem_untrackedstable_massfrac(const int nonemptymgi, const int element,
 
   if (massfrac_untrackedstable < 0.) {
     //  allow some roundoff error before we complain
-    if ((massfrac_allisotopes - elem_massfrac - 1.) > 1e-4 && std::abs(massfrac_allisotopes - elem_massfrac) > 1e-6) {
-      printlnlog("WARNING: cell {} Z={} element abundance is less than the sum of its radioisotope abundances", mgi,
+    if (std::abs(massfrac_allisotopes - elem_massfrac) > 1e-6) {
+      printlnlog("WARNING: cell {} Z={} element massfrac is less than the sum of its radioisotope massfracs", mgi,
                  atomic_number);
       printlnlog("  massfrac(Z) {:g} massfrac_radioisotopes(Z) {:g}", elem_massfrac, massfrac_allisotopes);
-      printlnlog("  increasing elemental abundance to {:g} and setting stable isotopic abundance to zero",
+      printlnlog("  increasing elemental massfrac to {:g} and setting stable isotopic massfrac to zero",
                  massfrac_allisotopes);
     }
     // result is allowed to be slightly negative due to roundoff error
@@ -1543,8 +1543,8 @@ auto get_rho_tmin(const int modelgridindex) -> float { return modelgrid_input[mo
 }
 
 // mass fraction of an element (all isotopes combined)
-void set_elem_massfrac(const ptrdiff_t nonemptymgi, const int element, const float newabundance) {
-  elem_massfracs_allcells[(nonemptymgi * get_nelements()) + element] = newabundance;
+void set_elem_massfrac(const ptrdiff_t nonemptymgi, const int element, const float newmassfrac) {
+  elem_massfracs_allcells[(nonemptymgi * get_nelements()) + element] = newmassfrac;
 }
 
 // mass fraction of an element (all isotopes combined)

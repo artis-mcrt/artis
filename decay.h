@@ -50,7 +50,7 @@ auto get_energy_per_mass_nonemptymgi_decaypath() -> MPI_shared_array<const doubl
 [[nodiscard]] auto get_particle_injection_rate(int nonemptymgi, double t, DecayType decaytype) -> double;
 [[nodiscard]] auto get_gamma_emission_rate(int nonemptymgi, double t) -> double;
 [[nodiscard]] auto get_global_etot_tmodel_tinf() -> double;
-void output_isotopic_massfracs(std::ostream& estimators_file, int nonemptymgi, double t_current, int element);
+void output_isotopic_densities(std::ostream& estimators_file, int nonemptymgi, double t_current, int element);
 void setup_radioactive_pellet(double e_cmf_per_packet, int nonemptymgi, Packet& pkt,
                               std::span<const double> energy_per_mass_nonemptymgi_decaypath);
 

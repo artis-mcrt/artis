@@ -49,7 +49,7 @@ void set_elements_uppermost_ion(int nonemptymgi, int element, int uppermost_ion)
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_ffegrp(int modelgridindex) -> float;
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_modelcell_mean_radial_pos(int modelgridindex, double tratmid)
     -> double;
-void set_elem_massfrac(std::ptrdiff_t nonemptymgi, int element, float newabundance);
+void set_elem_massfrac(std::ptrdiff_t nonemptymgi, int element, float newmassfrac);
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_elem_numberdens(std::ptrdiff_t nonemptymgi, int element) -> double;
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_initenergyq(int modelgridindex) -> double;
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_kappagrey(int nonemptymgi) -> float;
