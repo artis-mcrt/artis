@@ -755,6 +755,7 @@ constexpr auto xs_ionisation_lotz(const double en_erg, const ShellParams& collio
         (electronsinshell / ionpot *
          (std::log(pow2(beta) * ME * pow2(CLIGHT) / 2.0 / ionpot) - std::log10(1 - pow2(beta)) - pow2(beta)));
     if (part_sigma_shell > 0.) {
+      // See the comment about Aconst in get_oneoverw_approx_axelrod()
       constexpr double Aconst = 1.33e-14 * EV * EV;
       const double sigma = 2 * Aconst / ME / pow2(beta * CLIGHT) * part_sigma_shell;
       assert_always(sigma >= 0);
@@ -1096,6 +1097,10 @@ auto get_oneoverw_approx_axelrod(const int element, const int ion, const int non
   }
 
   const double binding = get_sum_q_over_binding_energy(element, ion);
+  // Axelrod 1980 says the constant A = 1.33e-14 [cm^2 eV^2] has been determined by normalising to the average of the
+  // values given by Jacobs et al (1979) and McGuire (1977) at 10 keV. However, this reduces the accuracy of the
+  // approximation at lower energies, and since we are mostly interested in the low energy end of the spectrum for
+  // calculating the heating and ionisation fractions, it would be better to use Lotz value of A = 4.5e-14 [cm2 eV2].
   constexpr double Aconst = 1.33e-14 * EV * EV;
 
   return Aconst * binding / Zbar / (2 * PI * pow4(QE));
