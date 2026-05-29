@@ -737,8 +737,6 @@ constexpr auto xs_ionisation_lotz(const double en_erg, const ShellParams& collio
   if (en_erg < ionpot) {
     return 0.;
   }
-  // const double gamma = (en_erg / (ME * std::pow(CLIGHT, 2))) + 1;
-  // const double beta = std::sqrt(1.0 - (1.0 / (std::pow(gamma, 2))));
   const double beta = std::sqrt(2 * en_erg / ME) / CLIGHT;
 
   const int ioncharge = colliondata_ion.ionstage - 1;
@@ -750,6 +748,9 @@ constexpr auto xs_ionisation_lotz(const double en_erg, const ShellParams& collio
 
   if (en_erg > ionpot) {
     // Equation 3.38 of Axelrod (1980) attributed to Lotz (1967)
+    // WARNING: The Axelrod equation uses both ln() and log10(), but the log10() term is likely a typo and should be
+    // ln() Fortunately, at our typical 16 keV value of EMAX, 511 keV electrons are only mildly relativistic and the
+    // log10 term is small anyway.
     const double part_sigma_shell =
         (electronsinshell / ionpot *
          (std::log(pow2(beta) * ME * pow2(CLIGHT) / 2.0 / ionpot) - std::log10(1 - pow2(beta)) - pow2(beta)));
