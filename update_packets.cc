@@ -93,13 +93,15 @@ void do_nonthermal_predeposit(Packet& pkt, const int nts, const double ts_end) {
         (PARTICLE_THERMALISATION_SCHEME == ParticleThermalisationScheme::TIMEDEPENDENT_WITH_ADIABATIC_LOSS)
             ? pkt.e_cmf / ts
             : 0.;
-    const double endot_total = endot_collisional + endot_adiabatic;
+    const double endot = endot_collisional + endot_adiabatic;
 
     // time at which particle kinetic energy reaches zero
-    const double t_enzero = ts + (particle_en / endot_total);  // time at which zero energy is reached
+    const double t_enzero = ts + (particle_en / endot);  // time at which zero energy is reached
+
+    const double t_end = std::min(ts_end, t_enzero);
 
     // Only collisional losses count as energy deposited into the gas.
-    const double t_end = std::min(ts_end, t_enzero);
+    // Without adiabatic losses, e_cmf is constant, so:
     // E[deposited] = pkt.e_cmf * endot_collisional * (t_end - ts) / particle_en
     en_deposited = pkt.e_cmf * endot_collisional * (t_end - ts) / particle_en;
 
@@ -111,7 +113,7 @@ void do_nonthermal_predeposit(Packet& pkt, const int nts, const double ts_end) {
 
     const double rnd_en_absorb = rng_uniform() * particle_en;
 
-    const double t_absorb = std::min(ts + (rnd_en_absorb / endot_total), t_enzero);
+    const double t_absorb = std::min(ts + (rnd_en_absorb / endot), t_enzero);
 
     // if absorption happens beyond the end of the current timestep,
     // just reduce the particle energy up to the end of this timestep
@@ -120,7 +122,7 @@ void do_nonthermal_predeposit(Packet& pkt, const int nts, const double ts_end) {
     if (t_absorb <= ts_end) {
       pkt.type = deposit_type;
     } else {
-      pkt.nu_cmf = (particle_en - (endot_total * (t_new - ts))) / H;
+      pkt.nu_cmf = (particle_en - (endot * (t_new - ts))) / H;
     }
 
     pkt.pos = vec_scale(pkt.pos, t_new / ts);
