@@ -112,7 +112,6 @@ void do_nonthermal_predeposit(Packet& pkt, const int nts, const double t2) {
     // draw a random number to
 
     const double rnd_en_absorb = rng_uniform() * particle_en;
-
     const double t_absorb = ts + (rnd_en_absorb / endot);
 
     // if absorption happens beyond the end of the current timestep,
