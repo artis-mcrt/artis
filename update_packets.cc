@@ -98,12 +98,8 @@ void do_nonthermal_predeposit(Packet& pkt, const int nts, const double t2) {
     // for constant endot (within a timestep), this is trivial
     const double t_enzero = ts + (particle_en / endot);  // time at which zero energy is reached
 
-    const double t_end = std::min(t2, t_enzero);
-
     // Only collisional losses count as energy deposited into the gas.
-    // Without adiabatic losses, e_cmf is constant, so:
-    // E[deposited] = pkt.e_cmf * endot_collisional * (t_end - ts) / particle_en
-    en_deposited = pkt.e_cmf * endot_collisional * (t_end - ts) / particle_en;
+    en_deposited = pkt.e_cmf * endot_collisional * (std::min(t2, t_enzero) - ts) / particle_en;
 
     // A discrete absorption event should occur somewhere along the continuous track from initial kinetic energy to zero
     // KE. The probability of being absorbed in energy range [E, E+delta_E] is proportional to endot_collisional *
