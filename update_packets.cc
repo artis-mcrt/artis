@@ -30,7 +30,7 @@
 
 namespace {
 
-void do_nonthermal_predeposit(Packet& pkt, const int nts, const double t2) {
+void do_nonthermal_predeposit(Packet& pkt, const int nts, const double t_timestep_end) {
   double en_deposited = pkt.e_cmf;
   const auto mgi = grid::get_propcell_modelgridindex(pkt.cellindex);
   const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(mgi);
@@ -80,71 +80,49 @@ void do_nonthermal_predeposit(Packet& pkt, const int nts, const double t2) {
                            ParticleThermalisationScheme::TIMEDEPENDENT_WITH_ADIABATIC_LOSS ||
                        PARTICLE_THERMALISATION_SCHEME == ParticleThermalisationScheme::TIMEDEPENDENTWITHGAMMAPRODUCTS) {
     // local time-dependent absorption described by Shingles et al. (2023)
+
     const double rho = grid::get_rho(nonemptymgi);
 
-    // endot_collisional is energy loss rate (positive) in [erg/s]
-    // endot_collisional [erg/s] from Barnes et al. (2016). see their figure 6.
+    // collisional energy loss rate (positive) in [erg/s] from Barnes et al. (2016, figure 6).
     const double endot_collisional =
         (pkt.type == TYPE_NONTHERMAL_PREDEPOSIT_ALPHA) ? 5.e11 * MEV * rho : 4.e10 * MEV * rho;
+    // energy loss rate from adiabatic expansion in [erg/s], assuming homologous expansion
+    const double endot_adiabatic =
+        (PARTICLE_THERMALISATION_SCHEME == ParticleThermalisationScheme::TIMEDEPENDENT_WITH_ADIABATIC_LOSS)
+            ? pkt.e_cmf / ts
+            : 0.;
+    const double endot_total = endot_collisional + endot_adiabatic;
 
-    const double particle_en = H * pkt.nu_cmf;  // energy of the particles in the packet
+    const double particle_en = H * pkt.nu_cmf;  // kinetic energy of the constituent particles in the energy packet
 
-    double t_enzero{};  // time at which particle energy reaches zero
-
-    if constexpr (PARTICLE_THERMALISATION_SCHEME == ParticleThermalisationScheme::TIMEDEPENDENT_WITH_ADIABATIC_LOSS) {
-      // With adiabatic losses: dE/dt = -endot_collisional - E/t
-      // Solution: E(t) = (E0 * ts - endot_collisional/2 * (t^2 - ts^2)) / t
-      // Time at which E=0: t_enzero = sqrt(ts^2 + 2 * E0 * ts / endot_collisional)
-      t_enzero = std::sqrt((ts * ts) + (2. * particle_en * ts / endot_collisional));
-    } else {
-      // for endot_collisional independent of energy, the next line is trivial (for energy-dependent endot_collisional,
-      // an integral would be needed)
-      t_enzero = ts + (particle_en / endot_collisional);  // time at which zero energy is reached
-    }
+    // time at which particle energy reaches zero
+    const double t_enzero = ts + (particle_en / endot_total);  // time at which zero energy is reached
 
     // Only collisional losses count as energy deposited into the gas.
     // t_absorb is uniform over [ts, t_enzero], so the expected energy deposited per packet depends on the scheme.
-    const double t_end = std::min(t2, t_enzero);
-    if constexpr (PARTICLE_THERMALISATION_SCHEME == ParticleThermalisationScheme::TIMEDEPENDENT_WITH_ADIABATIC_LOSS) {
-      // With adiabatic losses, e_cmf(t) = pkt.e_cmf * ts/t, so the expected energy deposited when absorbed at t_absorb
-      // is pkt.e_cmf * ts/t_absorb. Integrating over uniform t_absorb on [ts, t_end]:
-      // E[deposited] = (endot_collisional/particle_en) * pkt.e_cmf * ts * integral(1/t, ts, t_end)
-      //              = pkt.e_cmf * ts * endot_collisional * ln(t_end/ts) / particle_en
-      // t_end >= ts is guaranteed (t2 >= ts by definition, t_enzero >= ts since particle_en and ts are positive)
-      en_deposited = pkt.e_cmf * ts * endot_collisional * std::log(t_end / ts) / particle_en;
-    } else {
-      // Without adiabatic losses, e_cmf is constant, so:
-      // E[deposited] = pkt.e_cmf * endot_collisional * (t_end - ts) / particle_en
-      en_deposited = pkt.e_cmf * endot_collisional * (t_end - ts) / particle_en;
-    }
+    const double t_end = std::min(t_timestep_end, t_enzero);
+    // Without adiabatic losses, e_cmf is constant, so:
+    // E[deposited] = pkt.e_cmf * endot_collisional * (t_end - ts) / particle_en
+    en_deposited = pkt.e_cmf * endot_collisional * (t_end - ts) / particle_en;
 
-    // A discrete absorption event should occur somewhere along the
-    // continuous track from initial kinetic energy to zero KE.
-    // The probability of being absorbed in energy range [E, E+delta_E] is proportional to
-    // endot_collisional * delta_t = endot_collisional * delta_E / endot_collisional = delta_E (delta_t is the time
-    // spent in the bin range) so all final energies are equally likely. Choose random en_absorb [0, particle_en]
+    // A discrete absorption event should occur somewhere along the continuous track from initial kinetic energy to zero
+    // KE. The probability of being absorbed in energy range [E, E+delta_E] is proportional to endot_collisional *
+    // delta_t, where delta_t is the time to lose energy from E to E-delta_E. For endot_collisional independent of
+    // energy, this means that the probability of being absorbed in [E, E+delta_E] is uniform in energy, so we can just
+    // draw a random number to
 
-    const double rnd_en_absorb = (rng_uniform() * particle_en);
+    const double rnd_en_absorb = rng_uniform() * particle_en;
 
-    // Collisional deposition from ts to t is endot_collisional * (t - ts), so t_absorb = ts + rnd_en_absorb /
-    // endot_collisional. Clamp to t_enzero in case adiabatic losses bring the particle to zero energy before the
-    // collisional energy budget is exhausted.
-    const double t_absorb = std::min(ts + (rnd_en_absorb / endot_collisional), t_enzero);
+    const double t_absorb = std::min(ts + (rnd_en_absorb / endot_total), t_enzero);
 
     // if absorption happens beyond the end of the current timestep,
     // just reduce the particle energy up to the end of this timestep
-    const auto t_new = std::min(t_absorb, t2);
+    const auto t_new = std::min(t_absorb, t_timestep_end);
 
-    if (t_absorb <= t2) {
+    if (t_absorb <= t_timestep_end) {
       pkt.type = deposit_type;
     } else {
-      if constexpr (PARTICLE_THERMALISATION_SCHEME == ParticleThermalisationScheme::TIMEDEPENDENT_WITH_ADIABATIC_LOSS) {
-        // E(t) = (E0 * ts - endot_collisional/2 * (t^2 - ts^2)) / t
-        const double en_new = ((particle_en * ts) - (endot_collisional / 2. * (pow2(t_new) - pow2(ts)))) / t_new;
-        pkt.nu_cmf = std::max(0., en_new) / H;
-      } else {
-        pkt.nu_cmf = (particle_en - (endot_collisional * (t_new - ts))) / H;
-      }
+      pkt.nu_cmf = (particle_en - (endot_total * (t_new - ts))) / H;
     }
 
     pkt.pos = vec_scale(pkt.pos, t_new / ts);
