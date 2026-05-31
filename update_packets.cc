@@ -30,7 +30,7 @@
 
 namespace {
 
-void do_nonthermal_predeposit(Packet& pkt, const int nts, const double ts_end) {
+void do_nonthermal_predeposit(Packet& pkt, const int nts, const double t2) {
   double en_deposited = pkt.e_cmf;
   const auto mgi = grid::get_propcell_modelgridindex(pkt.cellindex);
   const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(mgi);
@@ -98,7 +98,7 @@ void do_nonthermal_predeposit(Packet& pkt, const int nts, const double ts_end) {
     // time at which particle kinetic energy reaches zero
     const double t_enzero = ts + (particle_en / endot);  // time at which zero energy is reached
 
-    const double t_end = std::min(ts_end, t_enzero);
+    const double t_end = std::min(t2, t_enzero);
 
     // Only collisional losses count as energy deposited into the gas.
     // Without adiabatic losses, e_cmf is constant, so:
@@ -117,9 +117,9 @@ void do_nonthermal_predeposit(Packet& pkt, const int nts, const double ts_end) {
 
     // if absorption happens beyond the end of the current timestep,
     // just reduce the particle energy up to the end of this timestep
-    const auto t_new = std::min(t_absorb, ts_end);
+    const auto t_new = std::min(t_absorb, t2);
 
-    if (t_absorb <= ts_end) {
+    if (t_absorb <= t2) {
       pkt.type = deposit_type;
     } else {
       pkt.nu_cmf = (particle_en - (endot * (t_new - ts))) / H;
