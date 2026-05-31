@@ -82,17 +82,17 @@ void do_nonthermal_predeposit(Packet& pkt, const int nts, const double t2) {
     // local time-dependent absorption described by Shingles et al. (2023)
     const double rho = grid::get_rho(nonemptymgi);
 
-    // the positive energy loss rate [erg/s] from Barnes et al. (2016). see their figure 6.
+    const double particle_en = H * pkt.nu_cmf;  // energy of the particles in the packet
+
+    // the positive energy loss rate per particle [erg/s] from Barnes et al. (2016). see their figure 6.
     const double endot_collisional =
         (pkt.type == TYPE_NONTHERMAL_PREDEPOSIT_ALPHA) ? 5.e11 * MEV * rho : 4.e10 * MEV * rho;
     // positive energy loss rate from adiabatic expansion in [erg/s], assuming homologous expansion
     const double endot_adiabatic =
         (PARTICLE_THERMALISATION_SCHEME == ParticleThermalisationScheme::TIMEDEPENDENT_WITH_ADIABATIC_LOSS)
-            ? pkt.e_cmf / ts
+            ? particle_en / ts
             : 0.;
     const double endot = endot_collisional + endot_adiabatic;
-
-    const double particle_en = H * pkt.nu_cmf;  // energy of the particles in the packet
 
     // time at which particle kinetic energy reaches zero
     // for constant endot (within a timestep), this is trivial
