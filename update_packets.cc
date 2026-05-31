@@ -128,7 +128,7 @@ void do_nonthermal_predeposit(Packet& pkt, const int nts, const double ts_end) {
     pkt.pos = vec_scale(pkt.pos, t_new / ts);
     pkt.prop_time = t_new;
     if constexpr (PARTICLE_THERMALISATION_SCHEME == ParticleThermalisationScheme::TIMEDEPENDENT_WITH_ADIABATIC_LOSS) {
-      pkt.e_cmf *= ts / t_new;
+      pkt.e_cmf *= ts / t_new;  // account for adiabatic losses
     }
     assert_testmodeonly(grid::get_cellindex_from_pos(pkt.pos, pkt.prop_time) == pkt.cellindex);
   } else {
