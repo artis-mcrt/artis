@@ -102,9 +102,20 @@ void do_nonthermal_predeposit(Packet& pkt, const int nts, const double t2) {
     }
 
     // Only collisional losses count as energy deposited into the gas.
-    // Since endot_collisional is constant (independent of particle energy), the collisional energy deposited per particle
-    // from ts to t_end is simply endot_collisional * (t_end - ts), regardless of whether adiabatic losses are included.
-    en_deposited = pkt.e_cmf * endot_collisional * (std::min(t2, t_enzero) - ts) / particle_en;
+    // t_absorb is uniform over [ts, t_enzero], so the expected energy deposited per packet depends on the scheme.
+    const double t_end = std::min(t2, t_enzero);
+    if constexpr (PARTICLE_THERMALISATION_SCHEME == ParticleThermalisationScheme::TIMEDEPENDENT_WITH_ADIABATIC_LOSS) {
+      // With adiabatic losses, e_cmf(t) = pkt.e_cmf * ts/t, so the expected energy deposited when absorbed at t_absorb
+      // is pkt.e_cmf * ts/t_absorb. Integrating over uniform t_absorb on [ts, t_end]:
+      // E[deposited] = (endot_collisional/particle_en) * pkt.e_cmf * ts * integral(1/t, ts, t_end)
+      //              = pkt.e_cmf * ts * endot_collisional * ln(t_end/ts) / particle_en
+      // t_end >= ts is guaranteed (t2 >= ts by definition, t_enzero >= ts since particle_en and ts are positive)
+      en_deposited = pkt.e_cmf * ts * endot_collisional * std::log(t_end / ts) / particle_en;
+    } else {
+      // Without adiabatic losses, e_cmf is constant, so:
+      // E[deposited] = pkt.e_cmf * endot_collisional * (t_end - ts) / particle_en
+      en_deposited = pkt.e_cmf * endot_collisional * (t_end - ts) / particle_en;
+    }
 
     // A discrete absorption event should occur somewhere along the
     // continuous track from initial kinetic energy to zero KE.
