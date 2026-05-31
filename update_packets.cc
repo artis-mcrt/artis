@@ -83,6 +83,8 @@ void do_nonthermal_predeposit(Packet& pkt, const int nts, const double ts_end) {
 
     const double rho = grid::get_rho(nonemptymgi);
 
+    const double particle_en = H * pkt.nu_cmf;  // kinetic energy of the constituent particles in the energy packet
+
     // collisional energy loss rate (positive) in [erg/s] from Barnes et al. (2016, figure 6).
     const double endot_collisional =
         (pkt.type == TYPE_NONTHERMAL_PREDEPOSIT_ALPHA) ? 5.e11 * MEV * rho : 4.e10 * MEV * rho;
@@ -93,15 +95,11 @@ void do_nonthermal_predeposit(Packet& pkt, const int nts, const double ts_end) {
             : 0.;
     const double endot_total = endot_collisional + endot_adiabatic;
 
-    const double particle_en = H * pkt.nu_cmf;  // kinetic energy of the constituent particles in the energy packet
-
-    // time at which particle energy reaches zero
+    // time at which particle kinetic energy reaches zero
     const double t_enzero = ts + (particle_en / endot_total);  // time at which zero energy is reached
 
     // Only collisional losses count as energy deposited into the gas.
-    // t_absorb is uniform over [ts, t_enzero], so the expected energy deposited per packet depends on the scheme.
     const double t_end = std::min(ts_end, t_enzero);
-    // Without adiabatic losses, e_cmf is constant, so:
     // E[deposited] = pkt.e_cmf * endot_collisional * (t_end - ts) / particle_en
     en_deposited = pkt.e_cmf * endot_collisional * (t_end - ts) / particle_en;
 
