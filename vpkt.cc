@@ -257,7 +257,7 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
       // Trace individual lines from nu_cmf until dist_limit. Returns false when all vpkt opacity setups exceed tau_max.
       const auto trace_lines_to_dist = [&](const double dist_limit, int& next_transition, const bool rewind_next_transition,
                                            const bool set_exhausted_transition,
-                                           const bool no_element_exclusion) -> bool {
+                                           const bool skip_atomic_number_filter) -> bool {
         while (true) {
           const int lineindex = closest_transition(nu_cmf, next_transition, globals::linelist.nu);
 
@@ -294,7 +294,7 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
           const auto n_l = calculate_levelpop(nonemptymgi, element, ion, lower);
           const double tau_line = std::max(0., ((B_lu * n_l) - (B_ul * n_u)) * HCLIGHTOVERFOURPI * t_line);
 
-          if (no_element_exclusion) {
+          if (skip_atomic_number_filter) {
             for (int opacchoiceindex = 0; opacchoiceindex < nspectraperobsdir; opacchoiceindex++) {
               assert_testmodeonly(exclude[opacchoiceindex] <= 0);
               if (exclude[opacchoiceindex] != -1) {
