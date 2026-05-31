@@ -95,9 +95,10 @@ void do_nonthermal_predeposit(Packet& pkt, const int nts, const double t2) {
       // With adiabatic losses: dE/dt = -endot_collisional - E/t
       // Solution: E(t) = (E0 * ts - endot_collisional/2 * (t^2 - ts^2)) / t
       // Time at which E=0: t_enzero = sqrt(ts^2 + 2 * E0 * ts / endot_collisional)
-      t_enzero = std::sqrt(ts * ts + 2. * particle_en * ts / endot_collisional);
+      t_enzero = std::sqrt((ts * ts) + (2. * particle_en * ts / endot_collisional));
     } else {
-      // for endot_collisional independent of energy, the next line is trivial (for energy-dependent endot_collisional, an integral would be needed)
+      // for endot_collisional independent of energy, the next line is trivial (for energy-dependent endot_collisional,
+      // an integral would be needed)
       t_enzero = ts + (particle_en / endot_collisional);  // time at which zero energy is reached
     }
 
@@ -120,15 +121,14 @@ void do_nonthermal_predeposit(Packet& pkt, const int nts, const double t2) {
     // A discrete absorption event should occur somewhere along the
     // continuous track from initial kinetic energy to zero KE.
     // The probability of being absorbed in energy range [E, E+delta_E] is proportional to
-    // endot_collisional * delta_t = endot_collisional * delta_E / endot_collisional = delta_E (delta_t is the time spent in the bin range)
-    // so all final energies are equally likely.
-    // Choose random en_absorb [0, particle_en]
+    // endot_collisional * delta_t = endot_collisional * delta_E / endot_collisional = delta_E (delta_t is the time
+    // spent in the bin range) so all final energies are equally likely. Choose random en_absorb [0, particle_en]
 
-    const double rnd_en_absorb = rng_uniform() * particle_en;
+    const double rnd_en_absorb = (rng_uniform() * particle_en);
 
-    // Collisional deposition from ts to t is endot_collisional * (t - ts), so t_absorb = ts + rnd_en_absorb / endot_collisional.
-    // Clamp to t_enzero in case adiabatic losses bring the particle to zero energy before the collisional
-    // energy budget is exhausted.
+    // Collisional deposition from ts to t is endot_collisional * (t - ts), so t_absorb = ts + rnd_en_absorb /
+    // endot_collisional. Clamp to t_enzero in case adiabatic losses bring the particle to zero energy before the
+    // collisional energy budget is exhausted.
     const double t_absorb = std::min(ts + (rnd_en_absorb / endot_collisional), t_enzero);
 
     // if absorption happens beyond the end of the current timestep,
@@ -140,7 +140,7 @@ void do_nonthermal_predeposit(Packet& pkt, const int nts, const double t2) {
     } else {
       if constexpr (PARTICLE_THERMALISATION_SCHEME == ParticleThermalisationScheme::TIMEDEPENDENT_WITH_ADIABATIC_LOSS) {
         // E(t) = (E0 * ts - endot_collisional/2 * (t^2 - ts^2)) / t
-        const double en_new = (particle_en * ts - endot_collisional / 2. * (t_new * t_new - ts * ts)) / t_new;
+        const double en_new = ((particle_en * ts) - (endot_collisional / 2. * (pow2(t_new) - pow2(ts)))) / t_new;
         pkt.nu_cmf = std::max(0., en_new) / H;
       } else {
         pkt.nu_cmf = (particle_en - (endot_collisional * (t_new - ts))) / H;
