@@ -101,11 +101,12 @@ void do_nonthermal_predeposit(Packet& pkt, const int nts, const double t2) {
     // Only collisional losses count as energy deposited into the gas.
     en_deposited = pkt.e_cmf * endot_collisional * (std::min(t2, t_enzero) - ts) / particle_en;
 
-    // A discrete absorption event should occur somewhere along the continuous track from initial kinetic energy to zero
-    // KE. The probability of being absorbed in energy range [E, E+delta_E] is proportional to endot_collisional *
-    // delta_t, where delta_t is the time to lose energy from E to E-delta_E. For endot_collisional independent of
-    // energy, this means that the probability of being absorbed in [E, E+delta_E] is uniform in energy, so we can just
-    // draw a random number to
+    // A discrete absorption event should occur somewhere along the
+    // continuous track from initial kinetic energy to zero KE.
+    // The probability of being absorbed in energy range [E, E+delta_E] is proportional to
+    // endot(E) * delta_t = endot(E) * delta_E / endot(E) = delta_E (delta_t is the time spent in the bin range)
+    // so all final energies are equally likely.
+    // Choose random en_absorb [0, particle_en]
 
     const double rnd_en_absorb = rng_uniform() * particle_en;
     const double t_absorb = ts + (rnd_en_absorb / endot);
