@@ -115,10 +115,10 @@ void do_nonthermal_predeposit(Packet& pkt, const int nts, const double t2) {
     // just reduce the particle energy up to the end of this timestep
     const auto t_new = std::min(t_absorb, t2);
 
-    pkt.nu_cmf -= (endot * (t_new - ts)) / H;
-
     if (t_absorb <= t2) {
       pkt.type = deposit_type;
+    } else {
+      pkt.nu_cmf -= (endot * (t_new - ts)) / H;
     }
 
     pkt.pos = vec_scale(pkt.pos, t_new / ts);
