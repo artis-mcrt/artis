@@ -254,21 +254,15 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
           nu_rf * calculate_doppler_nucmf_on_nurf(abort_pos, obsdir, t_future + (boundarydist / CLIGHT_PROP)), nu_cmf);
 
       const double dnu_on_dl = (nu_cmf_abort - nu_cmf) / boundarydist;
-      enum class LineExclusionMode : unsigned char { Elementwise, NoElementExclusion };
-      struct LineTraceOptions {
-        bool rewind_next_transition = false;
-        bool set_exhausted_transition = false;
-        LineExclusionMode exclusion_mode = LineExclusionMode::Elementwise;
-      };
-
       // Trace individual lines from nu_cmf until dist_limit. Returns false when all vpkt opacity setups exceed tau_max.
-      const auto trace_lines_to_dist = [&](const double dist_limit, int& next_transition,
-                                           const LineTraceOptions& options) -> bool {
+      const auto trace_lines_to_dist = [&](const double dist_limit, int& next_transition, const bool rewind_next_transition,
+                                           const bool set_exhausted_transition,
+                                           const bool no_element_exclusion) -> bool {
         while (true) {
           const int lineindex = closest_transition(nu_cmf, next_transition, globals::linelist.nu);
 
           if (lineindex < 0) {
-            if (options.set_exhausted_transition) {
+            if (set_exhausted_transition) {
               next_transition = globals::nlines + 1;
             }
             break;
@@ -280,7 +274,7 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
           const auto ldist = get_linedistance(t_future, nu_cmf, nutrans, dnu_on_dl);
 
           if (ldist > dist_limit) {
-            if (options.rewind_next_transition) {
+            if (rewind_next_transition) {
               next_transition--;
             }
             break;
@@ -300,17 +294,17 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
           const auto n_l = calculate_levelpop(nonemptymgi, element, ion, lower);
           const double tau_line = std::max(0., ((B_lu * n_l) - (B_ul * n_u)) * HCLIGHTOVERFOURPI * t_line);
 
-          if (options.exclusion_mode == LineExclusionMode::Elementwise) {
-            const int anumber = get_atomicnumber(element);
+          if (no_element_exclusion) {
             for (int opacchoiceindex = 0; opacchoiceindex < nspectraperobsdir; opacchoiceindex++) {
-              if (exclude[opacchoiceindex] != -1 && (exclude[opacchoiceindex] != anumber)) {
+              assert_testmodeonly(exclude[opacchoiceindex] <= 0);
+              if (exclude[opacchoiceindex] != -1) {
                 tau_vpkt[opacchoiceindex] += tau_line;
               }
             }
           } else {
+            const int anumber = get_atomicnumber(element);
             for (int opacchoiceindex = 0; opacchoiceindex < nspectraperobsdir; opacchoiceindex++) {
-              assert_testmodeonly(exclude[opacchoiceindex] <= 0);
-              if (exclude[opacchoiceindex] != -1) {
+              if (exclude[opacchoiceindex] != -1 && (exclude[opacchoiceindex] != anumber)) {
                 tau_vpkt[opacchoiceindex] += tau_line;
               }
             }
@@ -339,10 +333,7 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
           const auto first_bin_edge_dist = get_linedistance(t_future, nu_cmf, first_bin_edge_nu, dnu_on_dl);
           const double line_by_line_limit = std::min(first_bin_edge_dist, boundarydist);
           auto next_trans_expopac = -1;  // trigger binary search from nu_cmf
-          if (!trace_lines_to_dist(line_by_line_limit, next_trans_expopac,
-                                   {.rewind_next_transition = false,
-                                    .set_exhausted_transition = false,
-                                    .exclusion_mode = LineExclusionMode::NoElementExclusion})) {
+          if (!trace_lines_to_dist(line_by_line_limit, next_trans_expopac, false, false, true)) {
             return false;
           }
 
@@ -381,10 +372,7 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
           }
         }  // if (binindex_start < expopac_nbins)
       } else {
-        if (!trace_lines_to_dist(boundarydist, next_trans,
-                                 {.rewind_next_transition = true,
-                                  .set_exhausted_transition = true,
-                                  .exclusion_mode = LineExclusionMode::Elementwise})) {
+        if (!trace_lines_to_dist(boundarydist, next_trans, true, true, false)) {
           return false;
         }
       }
