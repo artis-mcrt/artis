@@ -113,7 +113,7 @@ void do_nonthermal_predeposit(Packet& pkt, const int nts, const double ts_end) {
 
     const double rnd_en_absorb = rng_uniform() * particle_en;
 
-    const double t_absorb = std::min(ts + (rnd_en_absorb / endot), t_enzero);
+    const double t_absorb = ts + (rnd_en_absorb / endot);
 
     // if absorption happens beyond the end of the current timestep,
     // just reduce the particle energy up to the end of this timestep
