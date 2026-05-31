@@ -30,7 +30,7 @@
 
 namespace {
 
-void do_nonthermal_predeposit(Packet& pkt, const int nts, const double t_timestep_end) {
+void do_nonthermal_predeposit(Packet& pkt, const int nts, const double ts_end) {
   double en_deposited = pkt.e_cmf;
   const auto mgi = grid::get_propcell_modelgridindex(pkt.cellindex);
   const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(mgi);
@@ -100,7 +100,7 @@ void do_nonthermal_predeposit(Packet& pkt, const int nts, const double t_timeste
 
     // Only collisional losses count as energy deposited into the gas.
     // t_absorb is uniform over [ts, t_enzero], so the expected energy deposited per packet depends on the scheme.
-    const double t_end = std::min(t_timestep_end, t_enzero);
+    const double t_end = std::min(ts_end, t_enzero);
     // Without adiabatic losses, e_cmf is constant, so:
     // E[deposited] = pkt.e_cmf * endot_collisional * (t_end - ts) / particle_en
     en_deposited = pkt.e_cmf * endot_collisional * (t_end - ts) / particle_en;
@@ -117,9 +117,9 @@ void do_nonthermal_predeposit(Packet& pkt, const int nts, const double t_timeste
 
     // if absorption happens beyond the end of the current timestep,
     // just reduce the particle energy up to the end of this timestep
-    const auto t_new = std::min(t_absorb, t_timestep_end);
+    const auto t_new = std::min(t_absorb, ts_end);
 
-    if (t_absorb <= t_timestep_end) {
+    if (t_absorb <= ts_end) {
       pkt.type = deposit_type;
     } else {
       pkt.nu_cmf = (particle_en - (endot_total * (t_new - ts))) / H;
