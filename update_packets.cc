@@ -31,6 +31,8 @@
 namespace {
 
 void do_nonthermal_predeposit(Packet& pkt, const int nts, const double ts_end) {
+  // handle deposition by non-thermal alpha and beta particles that are emitted from pellets and then
+  // deposit some or all of their energy locally in the ejecta (possibly after some time delay).
   double e_cmf_deposited = pkt.e_cmf;
   const auto mgi = grid::get_propcell_modelgridindex(pkt.cellindex);
   const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(mgi);
