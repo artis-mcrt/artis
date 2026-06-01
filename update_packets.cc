@@ -94,19 +94,15 @@ void do_nonthermal_predeposit(Packet& pkt, const int nts, const double t2) {
             : 0.;
     const double endot = endot_collisional + endot_adiabatic;
 
-    // time at which particle kinetic energy reaches zero
-    // for constant endot (within a timestep), this is trivial
-    const double t_enzero = ts + (particle_en / endot);  // time at which zero energy is reached
+    // time of deposition is the smaller out of (a) the time until which the particle loses all its energy according to
+    // the loss rates above and (b) the time remaining until the end of the current time step
+    // Only collisional losses count as energy deposited into the gas (not adiabatic losses)
+    en_deposited = pkt.e_cmf * endot_collisional * (std::min(t2 - ts, particle_en / endot)) / particle_en;
 
-    // Only collisional losses count as energy deposited into the gas.
-    en_deposited = pkt.e_cmf * endot_collisional * (std::min(t2, t_enzero) - ts) / particle_en;
-
-    // A discrete absorption event should occur somewhere along the
-    // continuous track from initial kinetic energy to zero KE.
-    // The probability of being absorbed in energy range [E, E+delta_E] is proportional to
-    // endot(E) * delta_t = endot(E) * delta_E / endot(E) = delta_E (delta_t is the time spent in the bin range)
-    // so all final energies are equally likely.
-    // Choose random en_absorb [0, particle_en]
+    // A discrete absorption event should occur somewhere along the continuous track from initial kinetic energy to zero
+    // KE with equal probability of happening at any energy in between. So we can just randomly
+    // select an energy at which the absorption happens between particle_en and 0 and then calculate the corresponding
+    // time.
 
     const double rnd_en_absorb = rng_uniform() * particle_en;
     const double t_absorb = ts + (rnd_en_absorb / endot);
