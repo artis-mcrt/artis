@@ -30,8 +30,8 @@
 
 namespace {
 
-void do_nonthermal_predeposit(Packet& pkt, const int nts, const double t2) {
-  double en_deposited = pkt.e_cmf;
+void do_nonthermal_predeposit(Packet& pkt, const int nts, const double ts_end) {
+  double e_cmf_deposited = pkt.e_cmf;
   const auto mgi = grid::get_propcell_modelgridindex(pkt.cellindex);
   const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(mgi);
   const auto priortype = pkt.type;
@@ -55,7 +55,7 @@ void do_nonthermal_predeposit(Packet& pkt, const int nts, const double t2) {
     if (rng_uniform() < f_p) {
       pkt.type = deposit_type;
     } else {
-      en_deposited = 0.;
+      e_cmf_deposited = 0.;
       pkt.type = TYPE_ESCAPE;
       grid::change_cell(pkt, -99);
     }
@@ -71,49 +71,56 @@ void do_nonthermal_predeposit(Packet& pkt, const int nts, const double t2) {
     if (rng_uniform() < f_p) {
       pkt.type = deposit_type;
     } else {
-      en_deposited = 0.;
+      e_cmf_deposited = 0.;
       pkt.type = TYPE_ESCAPE;
       grid::change_cell(pkt, -99);
     }
   } else if constexpr (PARTICLE_THERMALISATION_SCHEME == ParticleThermalisationScheme::TIMEDEPENDENT ||
+                       PARTICLE_THERMALISATION_SCHEME ==
+                           ParticleThermalisationScheme::TIMEDEPENDENT_WITH_ADIABATIC_LOSS ||
                        PARTICLE_THERMALISATION_SCHEME == ParticleThermalisationScheme::TIMEDEPENDENTWITHGAMMAPRODUCTS) {
     // local time-dependent absorption described by Shingles et al. (2023)
     const double rho = grid::get_rho(nonemptymgi);
 
-    // endot is energy loss rate (positive) in [erg/s]
-    // endot [erg/s] from Barnes et al. (2016). see their figure 6.
-    const double endot = (pkt.type == TYPE_NONTHERMAL_PREDEPOSIT_ALPHA) ? 5.e11 * MEV * rho : 4.e10 * MEV * rho;
-
     const double particle_en = H * pkt.nu_cmf;  // energy of the particles in the packet
 
-    // for endot independent of energy, the next line is trivial (for E dependent endot, an integral would be needed)
+    // the positive energy loss rate per particle [erg/s] from Barnes et al. (2016). see their figure 6.
+    const double endot_collisional =
+        (pkt.type == TYPE_NONTHERMAL_PREDEPOSIT_ALPHA) ? 5.e11 * MEV * rho : 4.e10 * MEV * rho;
+    // positive energy loss rate from adiabatic expansion in [erg/s], assuming homologous expansion
+    const double endot_adiabatic =
+        (PARTICLE_THERMALISATION_SCHEME == ParticleThermalisationScheme::TIMEDEPENDENT_WITH_ADIABATIC_LOSS)
+            ? particle_en / ts
+            : 0.;
+    const double endot = endot_collisional + endot_adiabatic;
 
-    const double t_enzero = ts + (particle_en / endot);  // time at which zero energy is reached
-    en_deposited = pkt.e_cmf * (std::min(t2, t_enzero) - ts) / (particle_en / endot);
+    // time of deposition is the smaller out of (a) the time until which the particle loses all its energy according to
+    // the loss rates above and (b) the time remaining until the end of the current time step
+    // Only collisional losses count as energy deposited into the gas (not adiabatic losses)
+    e_cmf_deposited = pkt.e_cmf * endot_collisional * (std::min(ts_end - ts, particle_en / endot)) / particle_en;
 
-    // A discrete absorption event should occur somewhere along the
-    // continuous track from initial kinetic energy to zero KE.
-    // The probability of being absorbed in energy range [E, E+delta_E] is proportional to
-    // endot(E) * delta_t = endot(E) * delta_E / endot(E) = delta_E (delta_t is the time spent in the bin range)
-    // so all final energies are equally likely.
-    // Choose random en_absorb [0, particle_en]
-
+    // A discrete absorption event should occur somewhere along the continuous track from initial kinetic energy to zero
+    // KE with equal probability of happening at any energy in between. So we can just randomly
+    // select an energy at which the absorption happens between particle_en and 0 and then calculate the corresponding
+    // time.
     const double rnd_en_absorb = rng_uniform() * particle_en;
     const double t_absorb = ts + (rnd_en_absorb / endot);
 
     // if absorption happens beyond the end of the current timestep,
     // just reduce the particle energy up to the end of this timestep
-    const auto t_new = std::min(t_absorb, t2);
+    const auto t_new = std::min(t_absorb, ts_end);
 
-    if (t_absorb <= t2) {
+    if (t_absorb <= ts_end) {
       pkt.type = deposit_type;
     } else {
-      pkt.nu_cmf = (particle_en - (endot * (t_new - ts))) / H;
+      pkt.nu_cmf -= (endot * (ts_end - ts)) / H;
     }
 
     pkt.pos = vec_scale(pkt.pos, t_new / ts);
     pkt.prop_time = t_new;
-    // pkt.e_cmf *= ts / t_new;
+    if constexpr (PARTICLE_THERMALISATION_SCHEME == ParticleThermalisationScheme::TIMEDEPENDENT_WITH_ADIABATIC_LOSS) {
+      pkt.e_cmf *= ts / t_new;  // account for adiabatic losses
+    }
     assert_testmodeonly(grid::get_cellindex_from_pos(pkt.pos, pkt.prop_time) == pkt.cellindex);
   } else {
     assert_always(false);  // unhandled thermalisation scheme
@@ -125,23 +132,23 @@ void do_nonthermal_predeposit(Packet& pkt, const int nts, const double t2) {
   // count toward "gamma deposition" not particle deposition
   if (pkt.originated_from_particlenotgamma) {
     if (priortype == TYPE_NONTHERMAL_PREDEPOSIT_BETAMINUS) {
-      atomicadd(globals::dep_estimator_electron[nonemptymgi], en_deposited);
+      atomicadd(globals::dep_estimator_electron[nonemptymgi], e_cmf_deposited);
       if (pkt.type == deposit_type) {
         atomicadd(globals::timesteps[nts].electron_dep_discrete, pkt.e_cmf);
       }
     } else if (priortype == TYPE_NONTHERMAL_PREDEPOSIT_BETAPLUS) {
-      atomicadd(globals::dep_estimator_positron[nonemptymgi], en_deposited);
+      atomicadd(globals::dep_estimator_positron[nonemptymgi], e_cmf_deposited);
       if (pkt.type == deposit_type) {
         atomicadd(globals::timesteps[nts].positron_dep_discrete, pkt.e_cmf);
       }
     } else if (priortype == TYPE_NONTHERMAL_PREDEPOSIT_ALPHA) {
-      atomicadd(globals::dep_estimator_alpha[nonemptymgi], en_deposited);
+      atomicadd(globals::dep_estimator_alpha[nonemptymgi], e_cmf_deposited);
       if (pkt.type == deposit_type) {
         atomicadd(globals::timesteps[nts].alpha_dep_discrete, pkt.e_cmf);
       }
     }
   } else if constexpr (PARTICLE_THERMALISATION_SCHEME == ParticleThermalisationScheme::TIMEDEPENDENTWITHGAMMAPRODUCTS) {
-    atomicadd(globals::dep_estimator_gamma[nonemptymgi], en_deposited);
+    atomicadd(globals::dep_estimator_gamma[nonemptymgi], e_cmf_deposited);
     if (pkt.type == TYPE_NTLEPTON_DEPOSITED) {
       atomicadd(globals::timesteps[nts].gamma_dep_discrete, pkt.e_cmf);
     }
