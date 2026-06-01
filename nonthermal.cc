@@ -755,6 +755,7 @@ constexpr auto xs_ionisation_lotz(const double en_erg, const ShellParams& collio
         (electronsinshell / ionpot *
          (std::log(pow2(beta) * ME * pow2(CLIGHT) / 2.0 / ionpot) - std::log10(1 - pow2(beta)) - pow2(beta)));
     if (part_sigma_shell > 0.) {
+      // See the comment about Aconst in get_oneoverw_approx_axelrod()
       constexpr double Aconst = 1.33e-14 * EV * EV;
       const double sigma = 2 * Aconst / ME / pow2(beta * CLIGHT) * part_sigma_shell;
       assert_always(sigma >= 0);
@@ -1084,12 +1085,22 @@ auto get_oneoverw_approx_axelrod(const int element, const int ion, const int non
   // We are going to start by taking all the high energy limits and ignoring Lelec, so that the
   // denominator is extremely simplified. Need to get the mean Z value.
 
-  double Zbar = 0.;  // mass-weighted average atomic number
+  double nntot = 0.;
+  double Zbar = 0.;  // number-weighted average atomic number
   for (int ielement = 0; ielement < get_nelements(); ielement++) {
-    Zbar += grid::get_elem_massfrac(nonemptymgi, ielement) * get_atomicnumber(ielement);
+    const double nnelement = grid::get_elem_numberdens(nonemptymgi, ielement);
+    Zbar += nnelement * get_atomicnumber(ielement);
+    nntot += nnelement;
+  }
+  if (nntot > 0) {
+    Zbar /= nntot;
   }
 
   const double binding = get_sum_q_over_binding_energy(element, ion);
+  // Axelrod 1980 says the constant A = 1.33e-14 [cm^2 eV^2] has been determined by normalising to the average of the
+  // values given by Jacobs et al (1979) and McGuire (1977) at 10 keV. However, this reduces the accuracy of the
+  // approximation at lower energies, and since we are mostly interested in the low energy end of the spectrum for
+  // calculating the heating and ionisation fractions, it would be better to use Lotz value of A = 4.5e-14 [cm2 eV2].
   constexpr double Aconst = 1.33e-14 * EV * EV;
 
   return Aconst * binding / Zbar / (2 * PI * pow4(QE));
