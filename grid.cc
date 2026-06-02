@@ -2377,42 +2377,46 @@ auto get_totmassnuclide_tmodel(const int z, const int a) -> double { return totm
       // flow, otherwise we might never enter the cell that we're supposed to be in
       const bool pos_component_vel_relative_to_flow = (pktvelgridcoord[d] * tstart) > pktposgridcoord[d];
 
-      bool isoutside_error = false;
-      double delta = 0.;
-      if (pos_component_vel_relative_to_flow) {
-        // check if packet pos is above cell max while moving in the positive direction relative to the grid flow
-        const double boundaryposmax = cellcoordmax[d] / globals::tmin * tstart;
-        delta = pktposgridcoord[d] - boundaryposmax;
-        isoutside_error = pktposgridcoord[d] > (boundaryposmax + 10.);
-      } else {
-        // check if packet pos is below cell min while moving in the negative direction relative to the grid flow
-        const double boundaryposmin = get_cellcoordmin(cellindex, d) / globals::tmin * tstart;
-        delta = pktposgridcoord[d] - boundaryposmin;
-        isoutside_error = pktposgridcoord[d] < (boundaryposmin - 10.);
-      }
-
-      if (isoutside_error) {
-        printout(
-            "[ERROR] packet outside coord %d %c%c boundary of cell %d. vel %g initpos %g "
-            "cellcoordmin %g, cellcoordmax %g\n",
-            d, pos_component_vel_relative_to_flow ? '+' : '-', get_coordlabel(prop_gridtype, d), cellindex,
-            pktvelgridcoord[d], pktposgridcoord[d], get_cellcoordmin(cellindex, d) / globals::tmin * tstart,
-            cellcoordmax[d] / globals::tmin * tstart);
-        printout("globals::tmin %g tstart %g tstart/globals::tmin %g\n", globals::tmin, tstart, tstart / globals::tmin);
-        printout(" delta %g\n", delta);
-
-        printout("packet dir [%g, %g, %g]\n", dir[0], dir[1], dir[2]);
-
-        const auto snext = get_cellindex_from_pos(pos, tstart);
-        if ((get_cellcoordpointnum(cellindex, d) == (ncoordgrid[d] - 1) && pos_component_vel_relative_to_flow) ||
-            (get_cellcoordpointnum(cellindex, d) == 0 && !pos_component_vel_relative_to_flow) || (snext < 0)) {
-          printout("[warning] escaping packet\n");
-          return {0., -99};
+      constexpr bool BOUNDARY_ERROR_CHECKING_CORRECTION = false;
+      if constexpr (BOUNDARY_ERROR_CHECKING_CORRECTION) {
+        bool isoutside_error = false;
+        double delta = 0.;
+        if (pos_component_vel_relative_to_flow) {
+          // check if packet pos is above cell max while moving in the positive direction relative to the grid flow
+          const double boundaryposmax = cellcoordmax[d] / globals::tmin * tstart;
+          delta = pktposgridcoord[d] - boundaryposmax;
+          isoutside_error = pktposgridcoord[d] > (boundaryposmax + 10.);
+        } else {
+          // check if packet pos is below cell min while moving in the negative direction relative to the grid flow
+          const double boundaryposmin = get_cellcoordmin(cellindex, d) / globals::tmin * tstart;
+          delta = pktposgridcoord[d] - boundaryposmin;
+          isoutside_error = pktposgridcoord[d] < (boundaryposmin - 10.);
         }
-        printout("[warning] swapping packet cellindex from %d to %d, which has cellcoordmin %g, cellcoordmax %g\n",
-                 cellindex, snext, get_cellcoordmin(snext, d) / globals::tmin * tstart,
-                 get_cellcoordmax(snext, d) / globals::tmin * tstart);
-        return {0., snext};
+
+        if (isoutside_error) {
+          printout(
+              "[ERROR] packet outside coord %d %c%c boundary of cell %d. vel %g initpos %g "
+              "cellcoordmin %g, cellcoordmax %g\n",
+              d, pos_component_vel_relative_to_flow ? '+' : '-', get_coordlabel(prop_gridtype, d), cellindex,
+              pktvelgridcoord[d], pktposgridcoord[d], get_cellcoordmin(cellindex, d) / globals::tmin * tstart,
+              cellcoordmax[d] / globals::tmin * tstart);
+          printout("globals::tmin %g tstart %g tstart/globals::tmin %g\n", globals::tmin, tstart,
+                   tstart / globals::tmin);
+          printout(" delta %g\n", delta);
+
+          printout("packet dir [%g, %g, %g]\n", dir[0], dir[1], dir[2]);
+
+          const auto snext = get_cellindex_from_pos(pos, tstart);
+          if ((get_cellcoordpointnum(cellindex, d) == (ncoordgrid[d] - 1) && pos_component_vel_relative_to_flow) ||
+              (get_cellcoordpointnum(cellindex, d) == 0 && !pos_component_vel_relative_to_flow) || (snext < 0)) {
+            printout("[warning] escaping packet\n");
+            return {0., -99};
+          }
+          printout("[warning] swapping packet cellindex from %d to %d, which has cellcoordmin %g, cellcoordmax %g\n",
+                   cellindex, snext, get_cellcoordmin(snext, d) / globals::tmin * tstart,
+                   get_cellcoordmax(snext, d) / globals::tmin * tstart);
+          return {0., snext};
+        }
       }
     }
   }
