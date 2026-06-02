@@ -2498,8 +2498,8 @@ auto get_totmassnuclide_tmodel(const int z, const int a) -> double { return totm
 
     if (pktvelgridcoord[1] > (cellcoordmax[1] / globals::tmin)) {
       const double d_coordmaxboundary_z = CLIGHT_PROP *
-                                          (pktposgridcoord[1] - cellcoordmax[1] / globals::tmin * tstart) /
-                                          (cellcoordmax[1] / globals::tmin - pktvelgridcoord[1]);
+                                          (pktposgridcoord[1] - (cellcoordmax[1] / globals::tmin * tstart)) /
+                                          ((cellcoordmax[1] / globals::tmin) - pktvelgridcoord[1]);
 
       if ((d_coordmaxboundary_z >= 0.) && (d_coordmaxboundary_z < distance)) {
         distance = d_coordmaxboundary_z;
@@ -2509,8 +2509,9 @@ auto get_totmassnuclide_tmodel(const int z, const int a) -> double { return totm
       }
     } else if (pktvelgridcoord[1] < (get_cellcoordmin(cellindex, 1) / globals::tmin)) {
       const double cellcoordmin_z = get_cellcoordmin(cellindex, 1);
-      const double d_coordminboundary_z = CLIGHT_PROP * (pktposgridcoord[1] - cellcoordmin_z / globals::tmin * tstart) /
-                                          (cellcoordmin_z / globals::tmin - pktvelgridcoord[1]);
+      const double d_coordminboundary_z = CLIGHT_PROP *
+                                          (pktposgridcoord[1] - (cellcoordmin_z / globals::tmin * tstart)) /
+                                          ((cellcoordmin_z / globals::tmin) - pktvelgridcoord[1]);
 
       if ((d_coordminboundary_z >= 0.) && (d_coordminboundary_z < distance)) {
         distance = d_coordminboundary_z;
@@ -2538,8 +2539,8 @@ auto get_totmassnuclide_tmodel(const int z, const int a) -> double { return totm
         // (pos - boundary_at_tstart) / (boundary_velocity - packet_velocity)
         // to avoid catastrophic cancellation when t_crossing ≈ tstart
         const double d_coordmaxboundary = CLIGHT_PROP *
-                                          (pktposgridcoord[d] - cellcoordmax[d] / globals::tmin * tstart) /
-                                          (cellcoordmax[d] / globals::tmin - pktvelgridcoord[d]);
+                                          (pktposgridcoord[d] - (cellcoordmax[d] / globals::tmin * tstart)) /
+                                          ((cellcoordmax[d] / globals::tmin) - pktvelgridcoord[d]);
 
         if ((d_coordmaxboundary >= 0.) && (d_coordmaxboundary < distance)) {
           distance = d_coordmaxboundary;
@@ -2549,8 +2550,9 @@ auto get_totmassnuclide_tmodel(const int z, const int a) -> double { return totm
         }
       } else if (pktvelgridcoord[d] < (get_cellcoordmin(cellindex, d) / globals::tmin)) {
         const double cellcoordmin_d = get_cellcoordmin(cellindex, d);
-        const double d_coordminboundary = CLIGHT_PROP * (pktposgridcoord[d] - cellcoordmin_d / globals::tmin * tstart) /
-                                          (cellcoordmin_d / globals::tmin - pktvelgridcoord[d]);
+        const double d_coordminboundary = CLIGHT_PROP *
+                                          (pktposgridcoord[d] - (cellcoordmin_d / globals::tmin * tstart)) /
+                                          ((cellcoordmin_d / globals::tmin) - pktvelgridcoord[d]);
 
         // lower d coordinate of the current cell
         if ((d_coordminboundary >= 0.) && (d_coordminboundary < distance)) {
