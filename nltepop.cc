@@ -1184,7 +1184,7 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
     printlnlog(
         "Not solving for NLTE populations in cell {} at timestep {} NLTE iteration {} for element Z={} due to low "
         "temperature Te=MINTEMP={:g} K",
-        modelgridindex, timestep, atomic_number, nlte_iter, cell_Te);
+        modelgridindex, timestep, nlte_iter, atomic_number, cell_Te);
     set_element_pops_lte(nonemptymgi, element);
     return;
   }
