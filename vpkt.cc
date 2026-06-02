@@ -255,15 +255,12 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
 
       const double dnu_on_dl = (nu_cmf_abort - nu_cmf) / boundarydist;
       // Trace individual lines from nu_cmf until dist_limit. Returns false when all vpkt opacity setups exceed tau_max.
-      const auto trace_lines_to_dist = [&](const double dist_limit, int& next_trans, const bool rewind_next_transition,
-                                           const bool set_exhausted_transition) -> bool {
+      const auto trace_lines_to_dist = [&](const double dist_limit, int& next_trans) -> bool {
         while (true) {
           const int lineindex = closest_transition(nu_cmf, next_trans, globals::linelist.nu);
 
           if (lineindex < 0) {
-            if (set_exhausted_transition) {
-              next_trans = globals::nlines + 1;
-            }
+            next_trans = globals::nlines + 1;
             break;
           }
           const double nutrans = globals::linelist.nu[lineindex];
@@ -273,9 +270,7 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
           const auto ldist = get_linedistance(t_future, nu_cmf, nutrans, dnu_on_dl);
 
           if (ldist > dist_limit) {
-            if (rewind_next_transition) {
-              next_trans--;
-            }
+            next_trans--;
             break;
           }
 
@@ -323,7 +318,7 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
           const auto first_bin_edge_dist = get_linedistance(t_future, nu_cmf, first_bin_edge_nu, dnu_on_dl);
           const double line_by_line_limit = std::min(first_bin_edge_dist, boundarydist);
           auto next_trans_expopac = -1;  // trigger binary search from nu_cmf
-          if (!trace_lines_to_dist(line_by_line_limit, next_trans_expopac, false, false)) {
+          if (!trace_lines_to_dist(line_by_line_limit, next_trans_expopac)) {
             return false;
           }
 
@@ -362,7 +357,7 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
           }
         }  // if (binindex_start < expopac_nbins)
       } else {
-        if (!trace_lines_to_dist(boundarydist, next_trans, true, true)) {
+        if (!trace_lines_to_dist(boundarydist, next_trans)) {
           return false;
         }
       }
