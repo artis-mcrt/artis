@@ -254,53 +254,12 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
           nu_rf * calculate_doppler_nucmf_on_nurf(abort_pos, obsdir, t_future + (boundarydist / CLIGHT_PROP)), nu_cmf);
 
       const double dnu_on_dl = (nu_cmf_abort - nu_cmf) / boundarydist;
-      if constexpr (VPKT_USE_EXPANSION_OPACITIES) {
-        auto binindex_start =
-            static_cast<ptrdiff_t>(((1e8 * CLIGHT / nu_cmf) - expopac_lambdamin) / expopac_deltalambda);
-        if (binindex_start < 0) {
-          binindex_start = -1;
-        }
-
-        double dist = 0.;
-
-        for (auto binindex = binindex_start; binindex < expopac_nbins; binindex++) {
-          // binindex could be -1, in which case we have only the continuum opacity and no expansion opacity
-          const auto next_bin_edge_nu =
-              (binindex < 0) ? get_expopac_bin_nu_upper(0) : get_expopac_bin_nu_lower(binindex);
-          const auto binedgedist = get_linedistance(t_future, nu_cmf, next_bin_edge_nu, dnu_on_dl);
-
-          double chi_bb_expansionopac = 0.;
-          if (binindex >= 0) {
-            const auto kappa = expansionopacities[(nonemptymgi * expopac_nbins) + binindex];
-            chi_bb_expansionopac = kappa * grid::get_rho(nonemptymgi);
-          }
-
-          const double tau_bin = chi_bb_expansionopac * (std::min(binedgedist, boundarydist) - dist);
-          dist = std::min(binedgedist, boundarydist);
-
-          for (int opacchoiceindex = 0; opacchoiceindex < nspectraperobsdir; opacchoiceindex++) {
-            assert_testmodeonly(exclude[opacchoiceindex] <= 0);  // expansion opacities include all elements, so cannot
-                                                                 // be used with custom lists that exclude some elements
-            if (exclude[opacchoiceindex] != -1) {
-              tau_vpkt[opacchoiceindex] += tau_bin;
-            }
-          }
-
-          // kill vpkt with high optical depth
-          if (all_taus_past_taumax(tau_vpkt, tau_max_vpkt)) {
-            return false;
-          }
-
-          if (dist >= boundarydist) {
-            break;
-          }
-        }
-      } else {
+      // Trace individual lines from nu_cmf until dist_limit. Returns false when all vpkt opacity setups exceed tau_max.
+      const auto trace_lines_to_dist = [&](const double dist_limit) -> bool {
         while (true) {
           const int lineindex = closest_transition(nu_cmf, next_trans, globals::linelist.nu);
 
           if (lineindex < 0) {
-            // no more lines below the current frequency
             next_trans = globals::nlines + 1;
             break;
           }
@@ -310,10 +269,7 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
 
           const auto ldist = get_linedistance(t_future, nu_cmf, nutrans, dnu_on_dl);
 
-          if (ldist > boundarydist) {
-            // exit the while loop if you reach the boundary; go back to the previous transition to start next cell with
-            // the excluded line
-
+          if (ldist > dist_limit) {
             next_trans--;
             break;
           }
@@ -333,9 +289,9 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
           const double tau_line = std::max(0., ((B_lu * n_l) - (B_ul * n_u)) * HCLIGHTOVERFOURPI * t_line);
 
           // Check on the element to exclude (or -1 for no line opacity)
-          const int anumber = get_atomicnumber(element);
+          const int Z = get_atomicnumber(element);
           for (int opacchoiceindex = 0; opacchoiceindex < nspectraperobsdir; opacchoiceindex++) {
-            if (exclude[opacchoiceindex] != -1 && (exclude[opacchoiceindex] != anumber)) {
+            if (exclude[opacchoiceindex] != -1 && (exclude[opacchoiceindex] != Z)) {
               tau_vpkt[opacchoiceindex] += tau_line;
             }
           }
@@ -344,6 +300,66 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
           if (all_taus_past_taumax(tau_vpkt, tau_max_vpkt)) {
             return false;
           }
+        }
+
+        return true;
+      };
+      if constexpr (VPKT_USE_EXPANSION_OPACITIES) {
+        auto binindex_start =
+            static_cast<ptrdiff_t>(((1e8 * CLIGHT / nu_cmf) - expopac_lambdamin) / expopac_deltalambda);
+        if (binindex_start < 0) {
+          binindex_start = -1;
+        }
+
+        if (binindex_start < expopac_nbins) {
+          // trace line-by-line from nu_cmf to the next bin edge, because the expansion opacity bin at nu_cmf includes
+          // lines with nu > nu_cmf
+          const auto first_bin_edge_nu =
+              (binindex_start < 0) ? get_expopac_bin_nu_upper(0) : get_expopac_bin_nu_lower(binindex_start);
+          const auto first_bin_edge_dist = get_linedistance(t_future, nu_cmf, first_bin_edge_nu, dnu_on_dl);
+          const double line_by_line_limit = std::min(first_bin_edge_dist, boundarydist);
+          next_trans = -1;  // trigger binary search from nu_cmf
+          if (!trace_lines_to_dist(line_by_line_limit)) {
+            return false;
+          }
+
+          double dist = line_by_line_limit;
+
+          if (dist < boundarydist) {
+            // continue with expansion opacities for subsequent full bins
+            for (auto binindex = binindex_start + 1; binindex < expopac_nbins; binindex++) {
+              const auto next_bin_edge_nu = get_expopac_bin_nu_lower(binindex);
+              const auto binedgedist = get_linedistance(t_future, nu_cmf, next_bin_edge_nu, dnu_on_dl);
+
+              const auto kappa = expansionopacities[(nonemptymgi * expopac_nbins) + binindex];
+              const double chi_bb_expansionopac = kappa * grid::get_rho(nonemptymgi);
+
+              const double tau_bin = chi_bb_expansionopac * (std::min(binedgedist, boundarydist) - dist);
+              dist = std::min(binedgedist, boundarydist);
+
+              for (int opacchoiceindex = 0; opacchoiceindex < nspectraperobsdir; opacchoiceindex++) {
+                assert_testmodeonly(exclude[opacchoiceindex] <=
+                                    0);  // expansion opacities include all elements, so cannot
+                                         // be used with custom lists that exclude some elements
+                if (exclude[opacchoiceindex] != -1) {
+                  tau_vpkt[opacchoiceindex] += tau_bin;
+                }
+              }
+
+              // kill vpkt with high optical depth
+              if (all_taus_past_taumax(tau_vpkt, tau_max_vpkt)) {
+                return false;
+              }
+
+              if (dist >= boundarydist) {
+                break;
+              }
+            }
+          }
+        }  // if (binindex_start < expopac_nbins)
+      } else {
+        if (!trace_lines_to_dist(boundarydist)) {
+          return false;
         }
       }
     }
