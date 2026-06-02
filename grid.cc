@@ -2377,7 +2377,7 @@ auto get_totmassnuclide_tmodel(const int z, const int a) -> double { return totm
       // flow, otherwise we might never enter the cell that we're supposed to be in
       const bool pos_component_vel_relative_to_flow = (pktvelgridcoord[d] * tstart) > pktposgridcoord[d];
 
-      constexpr bool BOUNDARY_ERROR_CHECKING_CORRECTION = false;
+      constexpr bool BOUNDARY_ERROR_CHECKING_CORRECTION = true;
       if constexpr (BOUNDARY_ERROR_CHECKING_CORRECTION) {
         bool isoutside_error = false;
         double delta = 0.;
