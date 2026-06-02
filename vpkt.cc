@@ -288,9 +288,10 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
           const auto n_l = calculate_levelpop(nonemptymgi, element, ion, lower);
           const double tau_line = std::max(0., ((B_lu * n_l) - (B_ul * n_u)) * HCLIGHTOVERFOURPI * t_line);
 
-          const int anumber = get_atomicnumber(element);
+          // Check on the element to exclude (or -1 for no line opacity)
+          const int Z = get_atomicnumber(element);
           for (int opacchoiceindex = 0; opacchoiceindex < nspectraperobsdir; opacchoiceindex++) {
-            if (exclude[opacchoiceindex] != -1 && (exclude[opacchoiceindex] != anumber)) {
+            if (exclude[opacchoiceindex] != -1 && (exclude[opacchoiceindex] != Z)) {
               tau_vpkt[opacchoiceindex] += tau_line;
             }
           }
