@@ -65,10 +65,10 @@ std::vector<double> vspec_numin_input;
 std::vector<double> vspec_numax_input;
 double tau_max_vpkt;
 
-std::vector<int> opacityexclusions;  // vector of opacity contribution setups:
-                                     // 0: full opacity
-                                     // -1: no line opacity; -2: no bf opacity; -3: no ff opacity; -4: no es opacity,
-                                     // +ve: exclude element with atomic number's contribution to bound-bound opacity
+std::vector<int> exclude;  // vector of opacity contribution setups:
+                           // 0: full opacity
+                           // -1: no line opacity; -2: no bf opacity; -3: no ff opacity; -4: no es opacity,
+                           // +ve: exclude element with atomic number's contribution to bound-bound opacity
 std::vector<double> tau_vpkt;
 
 std::ofstream vpkt_contrib_file;
@@ -228,13 +228,13 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
       const double chi_cont = chi_vpkt_cont.total();
 
       for (int opacchoiceindex = 0; opacchoiceindex < nspectraperobsdir; opacchoiceindex++) {
-        if (opacityexclusions[opacchoiceindex] == -2) {
+        if (exclude[opacchoiceindex] == -2) {
           const double chi_cont_nobf = chi_cont - chi_vpkt_cont.chi_boundfree;
           tau_vpkt[opacchoiceindex] += chi_cont_nobf * s_cont;
-        } else if (opacityexclusions[opacchoiceindex] == -3) {
+        } else if (exclude[opacchoiceindex] == -3) {
           const double chi_cont_noff = chi_cont - chi_vpkt_cont.chi_freefree_heat;
           tau_vpkt[opacchoiceindex] += chi_cont_noff * s_cont;
-        } else if (opacityexclusions[opacchoiceindex] == -4) {
+        } else if (exclude[opacchoiceindex] == -4) {
           const double chi_cont_noes = chi_cont - chi_vpkt_cont.chi_freefree_scatter;
           tau_vpkt[opacchoiceindex] += chi_cont_noes * s_cont;
         } else {
@@ -291,7 +291,7 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
           // Check on the element to exclude (or -1 for no line opacity)
           const int Z = get_atomicnumber(element);
           for (int opacchoiceindex = 0; opacchoiceindex < nspectraperobsdir; opacchoiceindex++) {
-            if (opacityexclusions[opacchoiceindex] != -1 && (opacityexclusions[opacchoiceindex] != Z)) {
+            if (exclude[opacchoiceindex] != -1 && (exclude[opacchoiceindex] != Z)) {
               tau_vpkt[opacchoiceindex] += tau_line;
             }
           }
@@ -338,10 +338,10 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
               dist = std::min(binedgedist, boundarydist);
 
               for (int opacchoiceindex = 0; opacchoiceindex < nspectraperobsdir; opacchoiceindex++) {
-                assert_testmodeonly(opacityexclusions[opacchoiceindex] <=
+                assert_testmodeonly(exclude[opacchoiceindex] <=
                                     0);  // expansion opacities include all elements, so cannot
                                          // be used with custom lists that exclude some elements
-                if (opacityexclusions[opacchoiceindex] != -1) {
+                if (exclude[opacchoiceindex] != -1) {
                   tau_vpkt[opacchoiceindex] += tau_bin;
                 }
               }
@@ -645,19 +645,19 @@ void read_vpktparameterfile() {
 
   if (nspectra_customlist_flag != 1) {
     nspectraperobsdir = 1;
-    opacityexclusions.resize(nspectraperobsdir, 0);
+    exclude.resize(nspectraperobsdir, 0);
 
-    opacityexclusions[0] = 0;
+    exclude[0] = 0;
   } else {
     assert_always(fscanf(input_file, "%d ", &nspectraperobsdir) == 1);
-    opacityexclusions.resize(nspectraperobsdir, 0);
+    exclude.resize(nspectraperobsdir, 0);
 
     for (int opacchoiceindex = 0; opacchoiceindex < nspectraperobsdir; opacchoiceindex++) {
-      assert_always(fscanf(input_file, "%d ", &opacityexclusions[opacchoiceindex]) == 1);
+      assert_always(fscanf(input_file, "%d ", &exclude[opacchoiceindex]) == 1);
 
       // The first number should be equal to zero!
-      assert_always(opacityexclusions[0] == 0);  // The first spectrum should allow for all opacities (exclude[i]=0)
-      assert_always(opacityexclusions[opacchoiceindex] <= 0 ||
+      assert_always(exclude[0] == 0);  // The first spectrum should allow for all opacities (exclude[i]=0)
+      assert_always(exclude[opacchoiceindex] <= 0 ||
                     !VPKT_USE_EXPANSION_OPACITIES);  // expansion opacities include all elements, so cannot be used
                                                      // with custom lists that exclude some elements
     }
