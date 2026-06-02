@@ -2377,42 +2377,46 @@ auto get_totmassnuclide_tmodel(const int z, const int a) -> double { return totm
       // flow, otherwise we might never enter the cell that we're supposed to be in
       const bool pos_component_vel_relative_to_flow = (pktvelgridcoord[d] * tstart) > pktposgridcoord[d];
 
-      bool isoutside_error = false;
-      double delta = 0.;
-      if (pos_component_vel_relative_to_flow) {
-        // check if packet pos is above cell max while moving in the positive direction relative to the grid flow
-        const double boundaryposmax = cellcoordmax[d] / globals::tmin * tstart;
-        delta = pktposgridcoord[d] - boundaryposmax;
-        isoutside_error = pktposgridcoord[d] > (boundaryposmax + 10.);
-      } else {
-        // check if packet pos is below cell min while moving in the negative direction relative to the grid flow
-        const double boundaryposmin = get_cellcoordmin(cellindex, d) / globals::tmin * tstart;
-        delta = pktposgridcoord[d] - boundaryposmin;
-        isoutside_error = pktposgridcoord[d] < (boundaryposmin - 10.);
-      }
-
-      if (isoutside_error) {
-        printout(
-            "[ERROR] packet outside coord %d %c%c boundary of cell %d. vel %g initpos %g "
-            "cellcoordmin %g, cellcoordmax %g\n",
-            d, pos_component_vel_relative_to_flow ? '+' : '-', get_coordlabel(prop_gridtype, d), cellindex,
-            pktvelgridcoord[d], pktposgridcoord[d], get_cellcoordmin(cellindex, d) / globals::tmin * tstart,
-            cellcoordmax[d] / globals::tmin * tstart);
-        printout("globals::tmin %g tstart %g tstart/globals::tmin %g\n", globals::tmin, tstart, tstart / globals::tmin);
-        printout(" delta %g\n", delta);
-
-        printout("packet dir [%g, %g, %g]\n", dir[0], dir[1], dir[2]);
-
-        const auto snext = get_cellindex_from_pos(pos, tstart);
-        if ((get_cellcoordpointnum(cellindex, d) == (ncoordgrid[d] - 1) && pos_component_vel_relative_to_flow) ||
-            (get_cellcoordpointnum(cellindex, d) == 0 && !pos_component_vel_relative_to_flow) || (snext < 0)) {
-          printout("[warning] escaping packet\n");
-          return {0., -99};
+      constexpr bool BOUNDARY_ERROR_CHECKING_CORRECTION = false;
+      if constexpr (BOUNDARY_ERROR_CHECKING_CORRECTION) {
+        bool isoutside_error = false;
+        double delta = 0.;
+        if (pos_component_vel_relative_to_flow) {
+          // check if packet pos is above cell max while moving in the positive direction relative to the grid flow
+          const double boundaryposmax = cellcoordmax[d] / globals::tmin * tstart;
+          delta = pktposgridcoord[d] - boundaryposmax;
+          isoutside_error = pktposgridcoord[d] > (boundaryposmax + 10.);
+        } else {
+          // check if packet pos is below cell min while moving in the negative direction relative to the grid flow
+          const double boundaryposmin = get_cellcoordmin(cellindex, d) / globals::tmin * tstart;
+          delta = pktposgridcoord[d] - boundaryposmin;
+          isoutside_error = pktposgridcoord[d] < (boundaryposmin - 10.);
         }
-        printout("[warning] swapping packet cellindex from %d to %d, which has cellcoordmin %g, cellcoordmax %g\n",
-                 cellindex, snext, get_cellcoordmin(snext, d) / globals::tmin * tstart,
-                 get_cellcoordmax(snext, d) / globals::tmin * tstart);
-        return {0., snext};
+
+        if (isoutside_error) {
+          printout(
+              "[ERROR] packet outside coord %d %c%c boundary of cell %d. vel %g initpos %g "
+              "cellcoordmin %g, cellcoordmax %g\n",
+              d, pos_component_vel_relative_to_flow ? '+' : '-', get_coordlabel(prop_gridtype, d), cellindex,
+              pktvelgridcoord[d], pktposgridcoord[d], get_cellcoordmin(cellindex, d) / globals::tmin * tstart,
+              cellcoordmax[d] / globals::tmin * tstart);
+          printout("globals::tmin %g tstart %g tstart/globals::tmin %g\n", globals::tmin, tstart,
+                   tstart / globals::tmin);
+          printout(" delta %g\n", delta);
+
+          printout("packet dir [%g, %g, %g]\n", dir[0], dir[1], dir[2]);
+
+          const auto snext = get_cellindex_from_pos(pos, tstart);
+          if ((get_cellcoordpointnum(cellindex, d) == (ncoordgrid[d] - 1) && pos_component_vel_relative_to_flow) ||
+              (get_cellcoordpointnum(cellindex, d) == 0 && !pos_component_vel_relative_to_flow) || (snext < 0)) {
+            printout("[warning] escaping packet\n");
+            return {0., -99};
+          }
+          printout("[warning] swapping packet cellindex from %d to %d, which has cellcoordmin %g, cellcoordmax %g\n",
+                   cellindex, snext, get_cellcoordmin(snext, d) / globals::tmin * tstart,
+                   get_cellcoordmax(snext, d) / globals::tmin * tstart);
+          return {0., snext};
+        }
       }
     }
   }
@@ -2497,10 +2501,9 @@ auto get_totmassnuclide_tmodel(const int z, const int a) -> double { return totm
     // handle Z boundaries as Cartesian
 
     if (pktvelgridcoord[1] > (cellcoordmax[1] / globals::tmin)) {
-      const double t_zcoordmaxboundary = ((pktposgridcoord[1] - (pktvelgridcoord[1] * tstart)) /
-                                          (cellcoordmax[1] - (pktvelgridcoord[1] * globals::tmin)) * globals::tmin) -
-                                         tstart;
-      const double d_coordmaxboundary_z = CLIGHT_PROP * t_zcoordmaxboundary;
+      const double d_coordmaxboundary_z = CLIGHT_PROP *
+                                          (pktposgridcoord[1] - (cellcoordmax[1] / globals::tmin * tstart)) /
+                                          ((cellcoordmax[1] / globals::tmin) - pktvelgridcoord[1]);
 
       if ((d_coordmaxboundary_z >= 0.) && (d_coordmaxboundary_z < distance)) {
         distance = d_coordmaxboundary_z;
@@ -2509,11 +2512,10 @@ auto get_totmassnuclide_tmodel(const int z, const int a) -> double { return totm
                     : cellindex + get_coordcellindexincrement(1);
       }
     } else if (pktvelgridcoord[1] < (get_cellcoordmin(cellindex, 1) / globals::tmin)) {
-      const double t_zcoordminboundary =
-          ((pktposgridcoord[1] - (pktvelgridcoord[1] * tstart)) /
-           ((get_cellcoordmin(cellindex, 1)) - (pktvelgridcoord[1] * globals::tmin)) * globals::tmin) -
-          tstart;
-      const double d_coordminboundary_z = CLIGHT_PROP * t_zcoordminboundary;
+      const double cellcoordmin_z = get_cellcoordmin(cellindex, 1);
+      const double d_coordminboundary_z = CLIGHT_PROP *
+                                          (pktposgridcoord[1] - (cellcoordmin_z / globals::tmin * tstart)) /
+                                          ((cellcoordmin_z / globals::tmin) - pktvelgridcoord[1]);
 
       if ((d_coordminboundary_z >= 0.) && (d_coordminboundary_z < distance)) {
         distance = d_coordminboundary_z;
@@ -2529,18 +2531,20 @@ auto get_totmassnuclide_tmodel(const int z, const int a) -> double { return totm
     // the boundaries follow
     // x+/- = x+/-(tmin) * (t/tmin)
     // so the crossing occurs when
-    // t = (x0 - (dir.x)*c*tstart)/(x+/-(tmin)/tmin - (dir.x)c)
+    // t - tstart = (x0 - x+/-(tmin)/tmin * tstart) / (x+/-(tmin)/tmin - (dir.x)*c)
+    // distance = c * (t - tstart)
 
     // Modified so that it also returns the distance to the closest cell
     // boundary, regardless of direction.
 
     for (int d = 0; d < 3; d++) {
       if (pktvelgridcoord[d] > (cellcoordmax[d] / globals::tmin)) {
-        const double t_coordmaxboundary = ((pktposgridcoord[d] - (pktvelgridcoord[d] * tstart)) /
-                                           (cellcoordmax[d] - (pktvelgridcoord[d] * globals::tmin)) * globals::tmin) -
-                                          tstart;
-
-        const double d_coordmaxboundary = CLIGHT_PROP * t_coordmaxboundary;
+        // numerically stable formulation: compute time difference directly as
+        // (pos - boundary_at_tstart) / (boundary_velocity - packet_velocity)
+        // to avoid catastrophic cancellation when t_crossing ≈ tstart
+        const double d_coordmaxboundary = CLIGHT_PROP *
+                                          (pktposgridcoord[d] - (cellcoordmax[d] / globals::tmin * tstart)) /
+                                          ((cellcoordmax[d] / globals::tmin) - pktvelgridcoord[d]);
 
         if ((d_coordmaxboundary >= 0.) && (d_coordmaxboundary < distance)) {
           distance = d_coordmaxboundary;
@@ -2549,12 +2553,10 @@ auto get_totmassnuclide_tmodel(const int z, const int a) -> double { return totm
                       : cellindex + get_coordcellindexincrement(d);
         }
       } else if (pktvelgridcoord[d] < (get_cellcoordmin(cellindex, d) / globals::tmin)) {
-        const double t_coordminboundary =
-            ((pktposgridcoord[d] - (pktvelgridcoord[d] * tstart)) /
-             (get_cellcoordmin(cellindex, d) - (pktvelgridcoord[d] * globals::tmin)) * globals::tmin) -
-            tstart;
-
-        const double d_coordminboundary = CLIGHT_PROP * t_coordminboundary;
+        const double cellcoordmin_d = get_cellcoordmin(cellindex, d);
+        const double d_coordminboundary = CLIGHT_PROP *
+                                          (pktposgridcoord[d] - (cellcoordmin_d / globals::tmin * tstart)) /
+                                          ((cellcoordmin_d / globals::tmin) - pktvelgridcoord[d]);
 
         // lower d coordinate of the current cell
         if ((d_coordminboundary >= 0.) && (d_coordminboundary < distance)) {
