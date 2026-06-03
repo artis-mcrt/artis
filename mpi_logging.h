@@ -554,7 +554,7 @@ inline void MPI_Reduce_safe(R&& data, MPI_Op op, const int root, MPI_Comm comm) 
     // search data folders in order to find file to read
     for (const auto& datadir : datafolders) {
       const auto datafolderfilename = std::format("{}{}", datadir, filename);
-      auto file = std::fstream(datafolderfilename.c_str(), mode);
+      auto file = std::fstream(datafolderfilename, mode);
       if (file.is_open()) {
         return file;
       }
