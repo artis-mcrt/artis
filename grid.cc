@@ -158,7 +158,6 @@ void read_possible_yefile() {
 // e.g., the minimum x position in xyz coords, or the minimum radius
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_cellcoordmin(const int cellindex, const int axis) -> double {
   return propcell_pos_min[cellindex][axis];
-  // return - coordmax[axis] + (2 * get_cellcoordpointnum(cellindex, axis) * coordmax[axis] / ncoordgrid[axis]);
 }
 
 // get the maximum position value of a coordinate axis at globals::tmin (xyz or radial coords) of a propagation cell
@@ -167,7 +166,7 @@ void read_possible_yefile() {
   return get_cellcoordmin(cellindex, axis) + propcell_width_tmin(cellindex, axis);
 }
 
-// return the inner radius (or equivalent) of a propagation cell at time tmin
+// return the inner radius of a propagation cell at time tmin
 auto get_cell_r_inner(const int cellindex, const GridType prop_gridtype) -> double {
   if (prop_gridtype == GridType::SPHERICAL1D) {
     return get_cellcoordmin(cellindex, 0);
@@ -1415,6 +1414,15 @@ auto get_element_meanweight(const std::ptrdiff_t nonemptymgi, const int element)
   return globals::elements[element].initstablemeannucmass;
 }
 
+[[nodiscard]] constexpr auto distance_cartesian_boundary(const double pktpos, const double cellboundarypos,
+                                                         const double tstart, const double pktvelgridcoord) -> double {
+  // numerically stable formulation: compute time difference directly as
+  // (pos - boundary_at_tstart) / (boundary_velocity - packet_velocity)
+  // to avoid catastrophic cancellation when t_crossing ≈ tstart
+  return CLIGHT_PROP * (pktpos - (cellboundarypos / globals::tmin * tstart)) /
+         ((cellboundarypos / globals::tmin) - pktvelgridcoord);
+}
+
 }  // anonymous namespace
 
 // for a uniform grid get the the extent along the x,y,z coordinate (x_2 - x_1, etc.) at time tmin
@@ -2347,7 +2355,7 @@ auto get_totmassnuclide_tmodel(const int z, const int a) -> double { return totm
                                                  const int cellindex) -> std::tuple<double, int> {
   const auto prop_gridtype = get_propgridtype();
   if constexpr (FORCE_SPHERICAL_ESCAPE_SURFACE) {
-    if (get_cell_r_inner(cellindex, prop_gridtype) > globals::vmax * globals::tmin) {
+    if (get_cell_r_inner(cellindex, prop_gridtype) > globals::rmax) {
       return {0., -99};
     }
   }
@@ -2361,12 +2369,22 @@ auto get_totmassnuclide_tmodel(const int z, const int a) -> double { return totm
   // dir * CLIGHT_PROP converted from xyz to grid coordinates
   const auto pktvelgridcoord = get_gridcoords_vel_from_xyz_pos_dir(pos, dir, pktposgridcoord, prop_gridtype);
 
-  const auto cellcoordmax = [cellindex, prop_gridtype]() {
+  const auto [cellcoordmin, cellcoordmax, cellcoordidx] = [cellindex, prop_gridtype]() {
+    auto _cellcoordmin = std::array<double, 3>{};  // position at time tmin
     auto _cellcoordmax = std::array<double, 3>{};  // position at time tmin
+    auto _cellcoordidx = std::array<int, 3>{};
     for (int d = 0; d < get_ndim(prop_gridtype); d++) {
-      _cellcoordmax[d] = get_cellcoordmax(cellindex, d);
+      _cellcoordidx[d] = get_cellcoordpointnum(cellindex, d);
+
+      _cellcoordmin[d] = get_cellcoordmin(cellindex, d);
+      if (_cellcoordidx[d] < (ncoordgrid[d] - 1)) {
+        // exactly match the next min pos of the next cell boundary
+        _cellcoordmax[d] = get_cellcoordmin(cellindex + get_coordcellindexincrement(d), d);
+      } else {
+        _cellcoordmax[d] = get_cellcoordmax(cellindex, d);
+      }
     }
-    return _cellcoordmax;
+    return std::make_tuple(_cellcoordmin, _cellcoordmax, _cellcoordidx);
   }();
 
   {
@@ -2388,7 +2406,7 @@ auto get_totmassnuclide_tmodel(const int z, const int a) -> double { return totm
           isoutside_error = pktposgridcoord[d] > (boundaryposmax + 10.);
         } else {
           // check if packet pos is below cell min while moving in the negative direction relative to the grid flow
-          const double boundaryposmin = get_cellcoordmin(cellindex, d) / globals::tmin * tstart;
+          const double boundaryposmin = cellcoordmin[d] / globals::tmin * tstart;
           delta = pktposgridcoord[d] - boundaryposmin;
           isoutside_error = pktposgridcoord[d] < (boundaryposmin - 10.);
         }
@@ -2398,7 +2416,7 @@ auto get_totmassnuclide_tmodel(const int z, const int a) -> double { return totm
               "[ERROR] packet outside coord %d %c%c boundary of cell %d. vel %g initpos %g "
               "cellcoordmin %g, cellcoordmax %g\n",
               d, pos_component_vel_relative_to_flow ? '+' : '-', get_coordlabel(prop_gridtype, d), cellindex,
-              pktvelgridcoord[d], pktposgridcoord[d], get_cellcoordmin(cellindex, d) / globals::tmin * tstart,
+              pktvelgridcoord[d], pktposgridcoord[d], cellcoordmin[d] / globals::tmin * tstart,
               cellcoordmax[d] / globals::tmin * tstart);
           printout("globals::tmin %g tstart %g tstart/globals::tmin %g\n", globals::tmin, tstart,
                    tstart / globals::tmin);
@@ -2406,9 +2424,11 @@ auto get_totmassnuclide_tmodel(const int z, const int a) -> double { return totm
 
           printout("packet dir [%g, %g, %g]\n", dir[0], dir[1], dir[2]);
 
+          assert_always(!isoutside_error);
+
           const auto snext = get_cellindex_from_pos(pos, tstart);
-          if ((get_cellcoordpointnum(cellindex, d) == (ncoordgrid[d] - 1) && pos_component_vel_relative_to_flow) ||
-              (get_cellcoordpointnum(cellindex, d) == 0 && !pos_component_vel_relative_to_flow) || (snext < 0)) {
+          if ((cellcoordidx[d] == (ncoordgrid[d] - 1) && pos_component_vel_relative_to_flow) ||
+              (cellcoordidx[d] == 0 && !pos_component_vel_relative_to_flow) || (snext < 0)) {
             printout("[warning] escaping packet\n");
             return {0., -99};
           }
@@ -2436,18 +2456,17 @@ auto get_totmassnuclide_tmodel(const int z, const int a) -> double { return totm
     // upper d coordinate of the current cell
     if ((d_coordmaxboundary >= 0.) && (d_coordmaxboundary < distance)) {
       distance = d_coordmaxboundary;
-      snext = (get_cellcoordpointnum(cellindex, 0) == (ncoordgrid[0] - 1)) ? -99
-                                                                           : cellindex + get_coordcellindexincrement(0);
+      snext = (cellcoordidx[0] == (ncoordgrid[0] - 1)) ? -99 : cellindex + get_coordcellindexincrement(0);
     }
 
-    const double r_inner = get_cellcoordmin(cellindex, 0) * tstart / globals::tmin;
+    const double r_inner = cellcoordmin[0] * tstart / globals::tmin;
     if (r_inner > 0.) {
       const double d_coordminboundary =
           expanding_shell_intersection<BoundaryType::INNER>(pos, dir, speed, r_inner, tstart);
       // lower d coordinate of the current cell
       if ((d_coordminboundary >= 0.) && (d_coordminboundary < distance)) {
         distance = d_coordminboundary;
-        snext = (get_cellcoordpointnum(cellindex, 0) == 0) ? -99 : cellindex - get_coordcellindexincrement(0);
+        snext = (cellcoordidx[0] == 0) ? -99 : cellindex - get_coordcellindexincrement(0);
       }
     }
   } else if (prop_gridtype == GridType::CYLINDRICAL2D) {
@@ -2474,13 +2493,11 @@ auto get_totmassnuclide_tmodel(const int z, const int a) -> double { return totm
                                                        (d_z_coordmaxboundary * d_z_coordmaxboundary));
       if ((d_coordmaxboundary_rcyl > 0) && (d_coordmaxboundary_rcyl < distance)) {
         distance = d_coordmaxboundary_rcyl;
-        snext = (get_cellcoordpointnum(cellindex, 0) == (ncoordgrid[0] - 1))
-                    ? -99
-                    : cellindex + get_coordcellindexincrement(0);
+        snext = (cellcoordidx[0] == (ncoordgrid[0] - 1)) ? -99 : cellindex + get_coordcellindexincrement(0);
       }
     }
 
-    const double r_inner = get_cellcoordmin(cellindex, 0) * tstart / globals::tmin;
+    const double r_inner = cellcoordmin[0] * tstart / globals::tmin;
     // don't try to calculate the intersection if the inner radius is zero
     if (r_inner > 0) {
       // calculate the distance in the xy plane to the inner boundary
@@ -2493,33 +2510,28 @@ auto get_totmassnuclide_tmodel(const int z, const int a) -> double { return totm
                                                          (d_z_coordminboundary * d_z_coordminboundary));
         if ((d_coordminboundary_rcyl >= 0.) && (d_coordminboundary_rcyl < distance)) {
           distance = d_coordminboundary_rcyl;
-          snext = (get_cellcoordpointnum(cellindex, 0) == 0) ? -99 : cellindex - get_coordcellindexincrement(0);
+          snext = (cellcoordidx[0] == 0) ? -99 : cellindex - get_coordcellindexincrement(0);
         }
       }
     }
 
-    // handle Z boundaries as Cartesian
-
-    if (pktvelgridcoord[1] > (cellcoordmax[1] / globals::tmin)) {
-      const double d_coordmaxboundary_z = CLIGHT_PROP *
-                                          (pktposgridcoord[1] - (cellcoordmax[1] / globals::tmin * tstart)) /
-                                          ((cellcoordmax[1] / globals::tmin) - pktvelgridcoord[1]);
+    // Z boundaries are Cartesian
+    constexpr int d = 1;
+    if (pktvelgridcoord[d] > (cellcoordmax[d] / globals::tmin)) {
+      const double d_coordmaxboundary_z =
+          distance_cartesian_boundary(pktposgridcoord[1], cellcoordmax[d], tstart, pktvelgridcoord[1]);
 
       if ((d_coordmaxboundary_z >= 0.) && (d_coordmaxboundary_z < distance)) {
         distance = d_coordmaxboundary_z;
-        snext = (get_cellcoordpointnum(cellindex, 1) == (ncoordgrid[1] - 1))
-                    ? -99
-                    : cellindex + get_coordcellindexincrement(1);
+        snext = (cellcoordidx[d] == (ncoordgrid[d] - 1)) ? -99 : cellindex + get_coordcellindexincrement(d);
       }
-    } else if (pktvelgridcoord[1] < (get_cellcoordmin(cellindex, 1) / globals::tmin)) {
-      const double cellcoordmin_z = get_cellcoordmin(cellindex, 1);
-      const double d_coordminboundary_z = CLIGHT_PROP *
-                                          (pktposgridcoord[1] - (cellcoordmin_z / globals::tmin * tstart)) /
-                                          ((cellcoordmin_z / globals::tmin) - pktvelgridcoord[1]);
+    } else if (pktvelgridcoord[d] < (cellcoordmin[d] / globals::tmin)) {
+      const double d_coordminboundary_z =
+          distance_cartesian_boundary(pktposgridcoord[d], cellcoordmin[d], tstart, pktvelgridcoord[1]);
 
       if ((d_coordminboundary_z >= 0.) && (d_coordminboundary_z < distance)) {
         distance = d_coordminboundary_z;
-        snext = (get_cellcoordpointnum(cellindex, 1) == 0) ? -99 : cellindex - get_coordcellindexincrement(1);
+        snext = (cellcoordidx[d] == 0) ? -99 : cellindex - get_coordcellindexincrement(d);
       }
     }
 
@@ -2539,29 +2551,21 @@ auto get_totmassnuclide_tmodel(const int z, const int a) -> double { return totm
 
     for (int d = 0; d < 3; d++) {
       if (pktvelgridcoord[d] > (cellcoordmax[d] / globals::tmin)) {
-        // numerically stable formulation: compute time difference directly as
-        // (pos - boundary_at_tstart) / (boundary_velocity - packet_velocity)
-        // to avoid catastrophic cancellation when t_crossing ≈ tstart
-        const double d_coordmaxboundary = CLIGHT_PROP *
-                                          (pktposgridcoord[d] - (cellcoordmax[d] / globals::tmin * tstart)) /
-                                          ((cellcoordmax[d] / globals::tmin) - pktvelgridcoord[d]);
+        const double d_coordmaxboundary =
+            distance_cartesian_boundary(pktposgridcoord[d], cellcoordmax[d], tstart, pktvelgridcoord[d]);
 
         if ((d_coordmaxboundary >= 0.) && (d_coordmaxboundary < distance)) {
           distance = d_coordmaxboundary;
-          snext = (get_cellcoordpointnum(cellindex, d) == (ncoordgrid[d] - 1))
-                      ? -99
-                      : cellindex + get_coordcellindexincrement(d);
+          snext = (cellcoordidx[d] == (ncoordgrid[d] - 1)) ? -99 : cellindex + get_coordcellindexincrement(d);
         }
-      } else if (pktvelgridcoord[d] < (get_cellcoordmin(cellindex, d) / globals::tmin)) {
-        const double cellcoordmin_d = get_cellcoordmin(cellindex, d);
-        const double d_coordminboundary = CLIGHT_PROP *
-                                          (pktposgridcoord[d] - (cellcoordmin_d / globals::tmin * tstart)) /
-                                          ((cellcoordmin_d / globals::tmin) - pktvelgridcoord[d]);
+      } else if (pktvelgridcoord[d] < (cellcoordmin[d] / globals::tmin)) {
+        const double d_coordminboundary =
+            distance_cartesian_boundary(pktposgridcoord[d], cellcoordmin[d], tstart, pktvelgridcoord[d]);
 
         // lower d coordinate of the current cell
         if ((d_coordminboundary >= 0.) && (d_coordminboundary < distance)) {
           distance = d_coordminboundary;
-          snext = (get_cellcoordpointnum(cellindex, d) == 0) ? -99 : cellindex - get_coordcellindexincrement(d);
+          snext = (cellcoordidx[d] == 0) ? -99 : cellindex - get_coordcellindexincrement(d);
         }
       }
     }
@@ -2579,8 +2583,8 @@ auto get_totmassnuclide_tmodel(const int z, const int a) -> double { return totm
       }
       printout("|initpos| %g |dir| %g |pos.dir| %g\n", vec_len(pos), vec_len(dir), dot(pos, dir));
       for (int d2 = 0; d2 < get_ndim(prop_gridtype); d2++) {
-        printout("coord %d: cellcoordmin %g cellcoordmax %g\n", d2,
-                 get_cellcoordmin(cellindex, d2) * tstart / globals::tmin, cellcoordmax[d2] * tstart / globals::tmin);
+        printout("coord %d: cellcoordmin %g cellcoordmax %g\n", d2, cellcoordmin[d2] * tstart / globals::tmin,
+                 cellcoordmax[d2] * tstart / globals::tmin);
       }
       printout("tstart %g\n", tstart);
     }
