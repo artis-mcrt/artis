@@ -746,21 +746,19 @@ constexpr auto xs_ionisation_lotz(const double en_erg, const ShellParams& collio
     return 0.;
   }
 
-  if (en_erg > ionpot) {
-    // Equation 3.38 of Axelrod (1980) attributed to Lotz (1967)
-    // WARNING: The Axelrod equation uses both ln() and log10(), but the log10() term is likely a typo has been
-    // corrected to ln(). Fortunately, at our typical 16 keV value of EMAX, 511 keV electrons are only mildly
-    // relativistic and the log(1 - beta^2) term is small anyway.
-    const double part_sigma_shell =
-        (electronsinshell / ionpot *
-         (std::log(pow2(beta) * ME * pow2(CLIGHT) / 2.0 / ionpot) - std::log(1 - pow2(beta)) - pow2(beta)));
-    if (part_sigma_shell > 0.) {
-      // See the comment about Aconst in get_oneoverw_approx_axelrod()
-      constexpr double Aconst = 1.33e-14 * EV * EV;
-      const double sigma = 2 * Aconst / ME / pow2(beta * CLIGHT) * part_sigma_shell;
-      assert_always(sigma >= 0);
-      return sigma;
-    }
+  // Equation 3.38 of Axelrod (1980) attributed to Lotz (1967)
+  // WARNING: The Axelrod equation uses both ln() and log10(), but the log10() term is likely a typo has been
+  // corrected to ln(). Fortunately, at our typical 16 keV value of EMAX, 511 keV electrons are only mildly
+  // relativistic and the log(1 - beta^2) term is small anyway.
+  const double part_sigma_shell =
+      (electronsinshell / ionpot *
+       (std::log(pow2(beta) * ME * pow2(CLIGHT) / 2.0 / ionpot) - std::log(1 - pow2(beta)) - pow2(beta)));
+  if (part_sigma_shell > 0.) {
+    // See the comment about Aconst in get_oneoverw_approx_axelrod()
+    constexpr double Aconst = 1.33e-14 * EV * EV;
+    const double sigma = 2 * Aconst / ME / pow2(beta * CLIGHT) * part_sigma_shell;
+    assert_always(sigma >= 0);
+    return sigma;
   }
 
   return 0.;
