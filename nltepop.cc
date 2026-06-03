@@ -714,7 +714,7 @@ auto matrix_row_or_col_norm(std::span<const double> matrix, const int i, const b
 
   for (size_t j = 0; j < n; j++) {
     const double val = row ? matrix[(i * n) + j] : matrix[(j * n) + i];
-    result += val * val;
+    result += pow2(val);
   }
 
   return std::sqrt(result);

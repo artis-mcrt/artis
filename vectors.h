@@ -229,7 +229,7 @@ constexpr auto move_pkt_withtime(Packet& pkt, const double distance) -> double {
     // if n is along z axis, we can just use x and y as the meridian frame axes
     return {Vec3d{1., 0., 0.}, Vec3d{0., 1., 0.}};
   }
-  const auto ref1 = Vec3d{-dir[0] * dir[2] / n_xylen, -dir[1] * dir[2] / n_xylen, (1 - (dir[2] * dir[2])) / n_xylen};
+  const auto ref1 = Vec3d{-dir[0] * dir[2] / n_xylen, -dir[1] * dir[2] / n_xylen, (1 - pow2(dir[2])) / n_xylen};
 
   // for ref_2 use vector product of n_cmf with ref1
   const auto ref2 = cross_prod(ref1, dir);

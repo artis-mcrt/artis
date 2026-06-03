@@ -2475,7 +2475,7 @@ auto get_totmassnuclide_tmodel(const int z, const int a) -> double { return totm
     const std::array<double, 2> posnoz = {pos[0], pos[1]};
 
     // r_cyl component of direction vector
-    const double dirxylen = std::sqrt((dir[0] * dir[0]) + (dir[1] * dir[1]));
+    const double dirxylen = std::sqrt(pow2(dir[0]) + pow2(dir[1]));
     // r_cyl component of velocity
     const double xyspeed = dirxylen * CLIGHT_PROP;
 
@@ -2489,8 +2489,7 @@ auto get_totmassnuclide_tmodel(const int z, const int a) -> double { return totm
       // how far did the packet travel in the z direction during this time?
       const double d_z_coordmaxboundary = d_rcyl_coordmaxboundary / xyspeed * dir[2] * CLIGHT_PROP;
       // distance from two perpendicular components to the r_cyl upper boundary
-      const double d_coordmaxboundary_rcyl = std::sqrt((d_rcyl_coordmaxboundary * d_rcyl_coordmaxboundary) +
-                                                       (d_z_coordmaxboundary * d_z_coordmaxboundary));
+      const double d_coordmaxboundary_rcyl = std::sqrt(pow2(d_rcyl_coordmaxboundary) + pow2(d_z_coordmaxboundary));
       if ((d_coordmaxboundary_rcyl > 0) && (d_coordmaxboundary_rcyl < distance)) {
         distance = d_coordmaxboundary_rcyl;
         snext = (cellcoordidx[0] == (ncoordgrid[0] - 1)) ? -99 : cellindex + get_coordcellindexincrement(0);
@@ -2506,8 +2505,7 @@ auto get_totmassnuclide_tmodel(const int z, const int a) -> double { return totm
       if (d_rcyl_coordminboundary >= 0.) {
         const double d_z_coordminboundary = d_rcyl_coordminboundary / xyspeed * dir[2] * CLIGHT_PROP;
         // distance from two perpendicular components to the r_cyl lower boundary
-        const double d_coordminboundary_rcyl = std::sqrt((d_rcyl_coordminboundary * d_rcyl_coordminboundary) +
-                                                         (d_z_coordminboundary * d_z_coordminboundary));
+        const double d_coordminboundary_rcyl = std::sqrt(pow2(d_rcyl_coordminboundary) + pow2(d_z_coordminboundary));
         if ((d_coordminboundary_rcyl >= 0.) && (d_coordminboundary_rcyl < distance)) {
           distance = d_coordminboundary_rcyl;
           snext = (cellcoordidx[0] == 0) ? -99 : cellindex - get_coordcellindexincrement(0);

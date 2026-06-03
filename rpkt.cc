@@ -334,7 +334,7 @@ void electron_scatter_rpkt(Packet& pkt) {
   Vec3d new_dir_cmf{};
 
   const double cos_tsc = M;  // M is cos(tsc) by construction
-  const double sin_tsc = std::sqrt(1. - (M * M));
+  const double sin_tsc = std::sqrt(1. - pow2(M));
 
   if (fabs(old_dir_cmf[2]) < 0.99999) {
     const double sin_polar = std::sqrt(1. - pow2(old_dir_cmf[2]));
@@ -794,7 +794,7 @@ auto calculate_chi_ffheat_nnionpart(const int nonemptymgi) -> double {
     for (int ion = 0; ion < nions; ion++) {
       const double nnion = get_nnion(nonemptymgi, element, ion);
       const int ioncharge = get_ionstage(element, ion) - 1;
-      chi_ff_nnionpart += ioncharge * ioncharge * g_ff * nnion;
+      chi_ff_nnionpart += pow2(ioncharge) * g_ff * nnion;
     }
   }
   const auto T_e = grid::get_Te(nonemptymgi);

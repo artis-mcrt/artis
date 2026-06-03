@@ -297,7 +297,7 @@ void init_xcom_photoion_data() {
 auto thomson_angle() -> double {
   const double B_coeff = (8. * rng_uniform()) - 4.;
 
-  const double t_coeff = std::cbrt((std::sqrt((B_coeff * B_coeff) + 4) - B_coeff) / 2);
+  const double t_coeff = std::cbrt((std::sqrt(pow2(B_coeff) + 4) - B_coeff) / 2);
 
   const double mu = (1 / t_coeff) - t_coeff;
 
@@ -313,7 +313,7 @@ auto thomson_angle() -> double {
 
   const double phi = rng_uniform() * 2 * PI;
 
-  const double sin_theta_sq = 1. - (cos_theta * cos_theta);
+  const double sin_theta_sq = 1. - pow2(cos_theta);
   const double sin_theta = std::sqrt(sin_theta_sq);
   const double zprime = cos_theta;
   const double xprime = sin_theta * cos(phi);
@@ -322,7 +322,7 @@ auto thomson_angle() -> double {
   // Now need to derotate the coordinates back to real x,y,z.
   // Rotation matrix is determined by dir_in.
 
-  const double norm1 = 1. / std::sqrt((dir_in[0] * dir_in[0]) + (dir_in[1] * dir_in[1]));
+  const double norm1 = 1. / std::sqrt(pow2(dir_in[0]) + pow2(dir_in[1]));
   const double norm2 = 1. / vec_len(dir_in);
 
   const double r11 = dir_in[1] * norm1;
