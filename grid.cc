@@ -1414,26 +1414,14 @@ auto get_element_meanweight(const std::ptrdiff_t nonemptymgi, const int element)
   return globals::elements[element].initstablemeannucmass;
 }
 
-#ifndef _CLANG_
-#pragma GCC push_options
-#pragma GCC optimize("no-fast-math")
-#endif
-[[nodiscard]]
-__attribute__((noinline)) constexpr auto distance_cartesian_boundary(const double pktpos, const double cellboundarypos,
-                                                                     const double tstart, const double pktvelgridcoord)
-    -> double {
-#ifdef _CLANG_
-#pragma clang fp reassociate(off) reciprocal(off)
-#endif
+[[nodiscard]] constexpr auto distance_cartesian_boundary(const double pktpos, const double cellboundarypos,
+                                                         const double tstart, const double pktvelgridcoord) -> double {
   // numerically stable formulation: compute time difference directly as
   // (pos - boundary_at_tstart) / (boundary_velocity - packet_velocity)
   // to avoid catastrophic cancellation when t_crossing ≈ tstart
   return CLIGHT_PROP * (pktpos - (cellboundarypos / globals::tmin * tstart)) /
          ((cellboundarypos / globals::tmin) - pktvelgridcoord);
 }
-#ifndef _CLANG_
-#pragma GCC pop_options
-#endif
 
 }  // anonymous namespace
 
