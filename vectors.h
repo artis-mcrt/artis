@@ -168,17 +168,18 @@ constexpr auto move_pkt_withtime(Packet& pkt, const double distance) -> double {
   const int costhetabin = std::clamp(static_cast<int>((costheta + 1.0) * NCOSTHETABINS / 2.0), 0, NCOSTHETABINS - 1);
 
   const auto vec1 = cross_prod(dir, syn_dir);
-
   constexpr auto vec2 = cross_prod(xhat, syn_dir);
-  const double cosphi = dot(vec1, vec2) / vec_len(vec1) / vec_len(vec2);
+  const double vec1_len = vec_len(vec1);
+  const double cosphi = vec1_len > 1e-12 ? std::clamp(dot(vec1, vec2) / vec1_len, -1.0, 1.0) : 1.0;
 
   constexpr auto vec3 = cross_prod(vec2, syn_dir);
   const double testphi = dot(vec1, vec3);
 
   // with phi defined according to y = cos(theta) * sin(phi), the
   // phibins are in decreasing phi order (i.e. the upper side of bin zero 0 is 2pi)
-  const int phibin = std::clamp(static_cast<int>((testphi > 0 ? acos(cosphi) : acos(cosphi) + PI) / 2. / PI * NPHIBINS),
-                                0, NPHIBINS - 1);
+  const int phibin =
+      std::clamp(static_cast<int>((testphi > 0 ? std::acos(cosphi) : std::acos(cosphi) + PI) / 2. / PI * NPHIBINS), 0,
+                 NPHIBINS - 1);
 
   const int na = static_cast<int>((costhetabin * NPHIBINS) + phibin);
   assert_always(na >= 0);
@@ -206,8 +207,12 @@ constexpr auto move_pkt_withtime(Packet& pkt, const double distance) -> double {
 
   // ref1_sc is the ref1 axis in the scattering plane ref1 = n1 x ( n1 x n2 )
   const double n1_dot_n2 = dot(n1, n2);
-  const auto ref1_sc =
-      vec_norm({(n1[0] * n1_dot_n2) - n2[0], (n1[1] * n1_dot_n2) - n2[1], (n1[2] * n1_dot_n2) - n2[2]});
+  const Vec3d ref1_sc_unnorm{(n1[0] * n1_dot_n2) - n2[0], (n1[1] * n1_dot_n2) - n2[1], (n1[2] * n1_dot_n2) - n2[2]};
+  const double len = vec_len(ref1_sc_unnorm);
+  if (len < 1e-12) {
+    return 0.0;
+  }
+  const auto ref1_sc = Vec3d{ref1_sc_unnorm[0] / len, ref1_sc_unnorm[1] / len, ref1_sc_unnorm[2] / len};
 
   const double cos_stokes_rot_1 = std::clamp(dot(ref1_sc, ref1), -1., 1.);
   const double cos_stokes_rot_2 = dot(ref1_sc, ref2);
