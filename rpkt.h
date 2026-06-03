@@ -111,8 +111,9 @@ auto calculate_chi_ffheat_nnionpart(int nonemptymgi) -> double;
   // distance from packet position to redshifting into line at frequency nu_trans
 
   if (nu_cmf <= nu_trans) {
-    return 0;  // photon was propagated too far, make sure that we don't miss a line
+    return 0.;  // photon was propagated too far, make sure that we don't miss a line
   }
+  const double delta_nu = nu_cmf - nu_trans;  // positive number
 
   if constexpr (USE_RELATIVISTIC_DOPPLER_SHIFT) {
     // With special relativity, the Doppler shift formula has an extra factor of 1/gamma in it,
@@ -120,10 +121,10 @@ auto calculate_chi_ffheat_nnionpart(int nonemptymgi) -> double;
     // on packet position and direction
 
     // use linear interpolation of frequency along the path
-    return (nu_trans - nu_cmf) / dnu_on_dl;
+    return -delta_nu / dnu_on_dl;  // dnu_on_dl is negative, so this is a positive distance
   }
 
-  return CLIGHT * prop_time * ((nu_cmf / nu_trans) - 1);
+  return CLIGHT * prop_time * delta_nu / nu_trans;
 }
 
 // find the next transition lineindex redder than nu_cmf
