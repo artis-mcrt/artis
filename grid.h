@@ -91,12 +91,16 @@ void write_grid_restart_data(int timestep);
 [[nodiscard]] auto get_propcell_random_position_tmin(int cellindex) -> Vec3d;
 [[nodiscard]] DEVICE_FUNC auto boundary_distance(const Vec3d& dir, const Vec3d& pos, double tstart, int cellindex)
     -> std::tuple<double, int>;
+void snap_pkt_to_crossed_boundary(Packet& pkt, int snext);
 
 [[nodiscard]] auto calculate_cell_kappagrey(int nonemptymgi) -> float;
 
 inline void change_cell(Packet& pkt, const int snext) {
   if (snext >= 0) {
-    // Just need to update cellindex.
+    // Snap the packet exactly onto the boundary face it just crossed, then update cellindex. The snap makes the
+    // destination cell's membership check hold by construction, rather than relying on exact FP cancellation in the
+    // boundary-distance/position-update arithmetic (see snap_pkt_to_crossed_boundary in grid.cc).
+    snap_pkt_to_crossed_boundary(pkt, snext);
     pkt.cellindex = snext;
     stats::increment(stats::Counter::CELLCROSSINGS);
   } else {

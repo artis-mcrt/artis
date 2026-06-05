@@ -35,6 +35,7 @@
 #include "mpi_logging.h"
 #include "nltepop.h"
 #include "nonthermal.h"
+#include "packet.h"
 #include "radfield.h"
 #include "random.h"
 #include "rpkt.h"
@@ -2353,6 +2354,59 @@ auto get_totmassnuclide_tmodel(const int z, const int a) -> double { return totm
     assert_always(posgridcoords[n] <= ((get_cellcoordmax(cellindex, n) * trat) + 10));
   }
   return cellindex;
+}
+
+// Project a packet that has just reached a cell boundary exactly onto that boundary face (at the packet's current
+// propagation time), so that the destination cell's membership check is satisfied by construction. This removes the
+// reliance on exact floating-point cancellation between boundary_distance() and the position update (pos + dir*sdist),
+// which is fragile under -ffast-math and otherwise leaves packets slightly outside the cell they cross into. Only the
+// crossed grid coordinate is adjusted (by a sub-cm amount); the others are left at their moved values.
+void snap_pkt_to_crossed_boundary(Packet& pkt, const int snext) {
+  const auto prop_gridtype = get_propgridtype();
+  const int oldcellindex = pkt.cellindex;
+
+  // Identify the coordinate whose cell index changed, and the boundary coordinate (at tmin) of the destination cell's
+  // face that the packet landed on. Comparing per-axis cell indices is unambiguous regardless of grid shape.
+  int crossedaxis = -1;
+  double boundarycoord_tmin = NAN;
+  for (int d = 0; d < get_ndim(prop_gridtype); d++) {
+    const int oldidx = get_cellcoordpointnum(oldcellindex, d);
+    const int newidx = get_cellcoordpointnum(snext, d);
+    if (newidx != oldidx) {
+      crossedaxis = d;
+      // moved up -> land on the destination cell's lower face; moved down -> its upper face
+      boundarycoord_tmin = (newidx > oldidx) ? get_cellcoordmin(snext, d) : get_cellcoordmax(snext, d);
+      break;
+    }
+  }
+
+  if (crossedaxis < 0) {
+    // not a simple single-face crossing (should not happen for a normal cell change); leave the position unchanged
+    return;
+  }
+
+  // boundary grid-coordinate value at the packet's current propagation time (single multiply: no cancellation)
+  const double target = boundarycoord_tmin / globals::tmin * pkt.prop_time;
+
+  switch (prop_gridtype) {
+    case GridType::CARTESIAN3D:
+      // the grid coordinate is the Cartesian position component itself
+      pkt.pos[crossedaxis] = target;
+      break;
+
+    case GridType::CYLINDRICAL2D:
+      if (crossedaxis == 1) {
+        // z coordinate is a Cartesian position component
+        pkt.pos[2] = target;
+      }
+      // the cylindrical-radius boundary (crossedaxis == 0) is solved robustly via the quadratic intersection and is
+      // not subject to the Cartesian-plane fragility, so it is left unsnapped
+      break;
+
+    case GridType::SPHERICAL1D:
+      // the spherical-radius boundary is solved robustly via the quadratic intersection; left unsnapped
+      break;
+  }
 }
 
 // compute distance to a cell boundary.
