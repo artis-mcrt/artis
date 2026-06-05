@@ -508,8 +508,9 @@ void nltepop_matrix_add_boundbound(const int nonemptymgi, const int element, con
       const double R = rad_deexcitation_ratecoeff(epsilon_trans, globals::alltrans.einstein_A[alltransindex],
                                                   statweight, lower_statweight, nnlevel, nnlevel_lower, t_mid) *
                        s_renorm[level];
-      const double C = col_deexcitation_ratecoeff(T_e, clumpednne, epsilon_trans, statweight, lower_statweight, alltransindex) *
-                       s_renorm[level];
+      const double C =
+          col_deexcitation_ratecoeff(T_e, clumpednne, epsilon_trans, statweight, lower_statweight, alltransindex) *
+          s_renorm[level];
 
       const int lower_index = get_nlte_vector_index(element, ion, lower, first_ion_used);
       const auto matrix_index_upper_upper = matrix_index_level_level;

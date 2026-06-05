@@ -171,8 +171,7 @@ void calculate_macroatom_transitionrates(std::span<double> levelrates, const int
       const double epsilon_trans = get_phixs_threshold(uniquelevelindex, phixstargetindex);
 
       const double R = get_corrphotoioncoeff(element, ion, level, phixstargetindex, nonemptymgi, true);
-      const double C =
-          col_ionisation_ratecoeff(T_e, clumpednne, element, ion, level, phixstargetindex, epsilon_trans);
+      const double C = col_ionisation_ratecoeff(T_e, clumpednne, element, ion, level, phixstargetindex, epsilon_trans);
 
       sum_up_higher += (R + C) * epsilon_current;
     }
@@ -243,8 +242,7 @@ void do_macroatom_raddeexcitation(Packet& pkt, const int ionuniquelevelindexstar
   int lowerionlevel = -1;
   for (int tmp_lowerionlevel = 0; tmp_lowerionlevel < nlevels; tmp_lowerionlevel++) {
     const double epsilon_trans = epsilon_current - epsilon(element, upperion - 1, tmp_lowerionlevel);
-    const double R =
-        rad_recombination_ratecoeff(T_e, clumpednne, element, upperion, upperionlevel, tmp_lowerionlevel);
+    const double R = rad_recombination_ratecoeff(T_e, clumpednne, element, upperion, upperionlevel, tmp_lowerionlevel);
 
     rate += R * epsilon_trans;
 
@@ -288,8 +286,7 @@ void do_macroatom_raddeexcitation(Packet& pkt, const int ionuniquelevelindexstar
   for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
     const double epsilon_trans = get_phixs_threshold(element, ion, level, phixstargetindex);
     const double R = get_corrphotoioncoeff(element, ion, level, phixstargetindex, nonemptymgi, true);
-    const double C =
-        col_ionisation_ratecoeff(T_e, clumpednne, element, ion, level, phixstargetindex, epsilon_trans);
+    const double C = col_ionisation_ratecoeff(T_e, clumpednne, element, ion, level, phixstargetindex, epsilon_trans);
     rate += (R + C) * epsilon_current;
     if (rate > targetrate) {
       // set the macroatom's new state
@@ -462,8 +459,7 @@ DEVICE_FUNC void do_macroatom(Packet& pkt, const MacroAtomState& pktmastate) {
           const double epsilon_target = epsilon(lowerionuniquelevelindexstart + tmp_lower);
           const double epsilon_trans = epsilon_current - epsilon_target;
           const double R = rad_recombination_ratecoeff(T_e, clumpednne, element, ion, level, tmp_lower);
-          const double C =
-              col_recombination_ratecoeff(T_e, clumpednne, element, ion, level, tmp_lower, epsilon_trans);
+          const double C = col_recombination_ratecoeff(T_e, clumpednne, element, ion, level, tmp_lower, epsilon_trans);
           rate += (R + C) * epsilon_target;
           if (rate > targetrate) {
             lower = tmp_lower;
@@ -591,8 +587,7 @@ void macroatom_open_file() {
 // multiply by upper level population to get a rate per second
 [[gnu::pure]] [[nodiscard]] auto rad_recombination_ratecoeff(const float T_e, float clumpednne, const int element,
                                                              const int upperion, const int upperionlevel,
-                                                             const int lowerionlevel)
-    -> double {
+                                                             const int lowerionlevel) -> double {
   // it's faster to only check this condition outside this function than to check it for every level
   assert_testmodeonly(upperionlevel <= get_maxrecombininglevel(element, upperion));
 
@@ -614,8 +609,7 @@ void macroatom_open_file() {
 // multiply by upper level population to get a rate per second
 [[gnu::pure]] [[nodiscard]] auto col_recombination_ratecoeff(const float T_e, float clumpednne, const int element,
                                                              const int upperion, const int upper, const int lower,
-                                                             const double epsilon_trans)
-    -> double {
+                                                             const double epsilon_trans) -> double {
   const auto lowerionlower_uniquelevelindex = get_uniquelevelindex(element, upperion - 1, lower);
   const double statw_lower = stat_weight(lowerionlower_uniquelevelindex);
   const int nphixstargets = get_nphixstargets(lowerionlower_uniquelevelindex);
@@ -632,8 +626,8 @@ void macroatom_open_file() {
 
       // Expanded and simplified from
       // nne * nne * sf * 1.55e13 * std::pow(T_e, -0.5) * g * sigma_bf * exp(-E/KB/T_e) / (E/KB/T_e)
-      const double C =
-          clumpednne * clumpednne * SAHACONST * statw_lower / statw_upper * 1.55e13 * g * sigma_bf * KB / T_e / epsilon_trans;
+      const double C = clumpednne * clumpednne * SAHACONST * statw_lower / statw_upper * 1.55e13 * g * sigma_bf * KB /
+                       T_e / epsilon_trans;
       assert_testmodeonly(std::isfinite(C));
 
       return C;
@@ -645,10 +639,9 @@ void macroatom_open_file() {
 
 // collisional ionisation rate: paperII 3.5.1
 // multiply by lower level population to get a rate per second
-[[gnu::pure]] [[nodiscard]] auto col_ionisation_ratecoeff(const float T_e, float clumpednne, const int element, const int ion,
-                                                          const int lower, const int phixstargetindex,
-                                                          const double epsilon_trans)
-    -> double {
+[[gnu::pure]] [[nodiscard]] auto col_ionisation_ratecoeff(const float T_e, float clumpednne, const int element,
+                                                          const int ion, const int lower, const int phixstargetindex,
+                                                          const double epsilon_trans) -> double {
   assert_testmodeonly(phixstargetindex >= 0);
   assert_testmodeonly(phixstargetindex < get_nphixstargets(element, ion, lower));
 
@@ -660,7 +653,8 @@ void macroatom_open_file() {
 
   const double sigma_bf =
       get_phixs_table(element, ion, lower)[0] * get_phixsprobability(element, ion, lower, phixstargetindex);
-  const double C = clumpednne * 1.55e13 * pow(T_e, -0.5) * g * sigma_bf * exp(-fac1) / fac1;  // photoionisation at the edge
+  const double C =
+      clumpednne * 1.55e13 * pow(T_e, -0.5) * g * sigma_bf * exp(-fac1) / fac1;  // photoionisation at the edge
 
   assert_testmodeonly(std::isfinite(C));
 
@@ -668,9 +662,9 @@ void macroatom_open_file() {
 }
 
 // multiply by upper level population to get a rate per second
-[[gnu::pure]] [[nodiscard]] auto col_deexcitation_ratecoeff(const float T_e, float clumpednne, const double epsilon_trans,
-                                                            const double upperstatweight, const double lowerstatweight,
-                                                            const int alltransindex)
+[[gnu::pure]] [[nodiscard]] auto col_deexcitation_ratecoeff(const float T_e, float clumpednne,
+                                                            const double epsilon_trans, const double upperstatweight,
+                                                            const double lowerstatweight, const int alltransindex)
     -> double {
   const auto coll_strength = globals::alltrans.coll_str[alltransindex];
   if (coll_strength < 0) {
@@ -700,8 +694,8 @@ void macroatom_open_file() {
 
       const double g_ratio = lowerstatweight / upperstatweight;
 
-      return C_0 * 14.51039491 * clumpednne * std::sqrt(T_e) * trans_osc_strength * pow2(H_ionpot / epsilon_trans) * eoverkt *
-             g_ratio * gauntfac;
+      return C_0 * 14.51039491 * clumpednne * std::sqrt(T_e) * trans_osc_strength * pow2(H_ionpot / epsilon_trans) *
+             eoverkt * g_ratio * gauntfac;
     }
 
     // forbidden transitions: magnetic dipole, electric quadropole...
@@ -716,9 +710,9 @@ void macroatom_open_file() {
 }
 
 // multiply by lower level population to get a rate per second
-[[gnu::pure]] [[nodiscard]] auto col_excitation_ratecoeff(const float T_e, float clumpednne, const double upperstatweight,
-                                                          const int alltransindex, const double epsilon_trans,
-                                                          const double lowerstatweight)
+[[gnu::pure]] [[nodiscard]] auto col_excitation_ratecoeff(const float T_e, float clumpednne,
+                                                          const double upperstatweight, const int alltransindex,
+                                                          const double epsilon_trans, const double lowerstatweight)
     -> double {
   const auto coll_strength = globals::alltrans.coll_str[alltransindex];
   const double eoverkt = epsilon_trans / (KB * T_e);
@@ -741,8 +735,8 @@ void macroatom_open_file() {
       const double exp_eoverkt = std::exp(eoverkt);
 
       const double Gamma = std::max(g_bar, 0.276 * exp_eoverkt * (-EULERGAMMA - std::log(eoverkt)));
-      return C_0 * clumpednne * std::sqrt(T_e) * 14.51039491 * trans_osc_strength * pow2(H_ionpot / epsilon_trans) * eoverkt /
-             exp_eoverkt * Gamma;
+      return C_0 * clumpednne * std::sqrt(T_e) * 14.51039491 * trans_osc_strength * pow2(H_ionpot / epsilon_trans) *
+             eoverkt / exp_eoverkt * Gamma;
     }
 
     // forbidden transitions: magnetic dipole, electric quadropole...
@@ -752,5 +746,6 @@ void macroatom_open_file() {
   }
 
   // from Osterbrock and Ferland, p51
-  return clumpednne * 8.629e-6 * static_cast<double>(coll_strength) * std::exp(-eoverkt) / lowerstatweight / std::sqrt(T_e);
+  return clumpednne * 8.629e-6 * static_cast<double>(coll_strength) * std::exp(-eoverkt) / lowerstatweight /
+         std::sqrt(T_e);
 }

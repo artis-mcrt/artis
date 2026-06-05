@@ -55,9 +55,10 @@ auto get_heating_ion_coll_deexc(const int nonemptymgi, const int element, const 
       const int lower = globals::alltrans.targetlevelindex[alltransindex];
       const double epsilon_trans = epsilon_level - epsilon(ionuniquelevelindexstart + lower);
       const auto lower_statweight = stat_weight(ionuniquelevelindexstart + lower);
-      const double C = nnlevel *
-                       col_deexcitation_ratecoeff(T_e, clumpednne, epsilon_trans, statweight, lower_statweight, alltransindex) *
-                       epsilon_trans;
+      const double C =
+          nnlevel *
+          col_deexcitation_ratecoeff(T_e, clumpednne, epsilon_trans, statweight, lower_statweight, alltransindex) *
+          epsilon_trans;
       C_deexc += C;
     }
   }

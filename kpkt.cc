@@ -128,8 +128,7 @@ auto calculate_cooling_rates_ion(const int nonemptymgi, const int element, const
         const double epsilon_upper = epsilon(element, ion + 1, upper);
         const double epsilon_trans = epsilon_upper - epsilon_current;
         const double C =
-            nnlevel *
-            col_ionisation_ratecoeff(T_e, clumpednne, element, ion, level, phixstargetindex, epsilon_trans) *
+            nnlevel * col_ionisation_ratecoeff(T_e, clumpednne, element, ion, level, phixstargetindex, epsilon_trans) *
             epsilon_trans;
 
         C_ion += C;
