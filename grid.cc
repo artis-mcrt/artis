@@ -2375,7 +2375,11 @@ void snap_pkt_to_crossed_boundary(Packet& pkt, const int snext) {
     if (newidx != oldidx) {
       crossedaxis = d;
       // moved up -> land on the destination cell's lower face; moved down -> its upper face
-      boundarycoord_tmin = (newidx > oldidx) ? get_cellcoordmin(snext, d) : get_cellcoordmax(snext, d);
+      if (newidx > oldidx) {
+        boundarycoord_tmin = get_cellcoordmin(snext, d);
+      } else {
+        boundarycoord_tmin = (newidx < (ncoordgrid[d] - 1)) ? get_cellcoordmax(snext, d) : globals::rmax;
+      }
       break;
     }
   }
@@ -2436,12 +2440,10 @@ void snap_pkt_to_crossed_boundary(Packet& pkt, const int snext) {
       _cellcoordidx[d] = get_cellcoordpointnum(cellindex, d);
 
       _cellcoordmin[d] = get_cellcoordmin(cellindex, d);
-      if (_cellcoordidx[d] < (ncoordgrid[d] - 1)) {
-        // exactly match the next min pos of the next cell boundary
-        _cellcoordmax[d] = get_cellcoordmin(cellindex + get_coordcellindexincrement(d), d);
-      } else {
-        _cellcoordmax[d] = get_cellcoordmax(cellindex, d);
-      }
+      // exactly match the next min pos of the next cell boundary
+      _cellcoordmax[d] = (_cellcoordidx[d] < (ncoordgrid[d] - 1))
+                             ? get_cellcoordmin(cellindex + get_coordcellindexincrement(d), d)
+                             : globals::rmax;
     }
     return std::make_tuple(_cellcoordmin, _cellcoordmax, _cellcoordidx);
   }();
