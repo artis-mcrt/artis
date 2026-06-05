@@ -264,11 +264,6 @@ constexpr std::optional<double> GAMMA_USE_KAPPA_GREY;
 // reciprocal of the volume filling factor (the "clumping factor")
 constexpr bool USE_MICROCLUMPING;
 
-// Read the volume filling factors from a plain text file with (num timesteps) rows * (num cells) cols.
-// Entries should be in (0,1] and formatted using %.6e.
-// Has no effect if USE_MICROCLUMPING is set to false.
-constexpr bool READ_VOLUME_FILLING_FACTORS_FROM_FILE;
-
 // Calculate volume filling factors based on time and radial velocity
 // Will be passed globals::timesteps[nts].mid and grid::get_modelcell_mean_radial_vel(mgi, globals::tmin)
 constexpr float volume_filling_factor([[maybe_unused]] double tmid, [[maybe_unused]] double rad_vel) { return 1.; }

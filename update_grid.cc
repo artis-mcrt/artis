@@ -379,7 +379,7 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
   grid::set_rho(nonemptymgi, rho);
 
   // Update clumping factors
-  if constexpr (USE_MICROCLUMPING && !READ_VOLUME_FILLING_FACTORS_FROM_FILE) {
+  if constexpr (USE_MICROCLUMPING) {
     const double tmid = globals::timesteps[nts].mid;
     const double rad_vel = grid::get_modelcell_mean_radial_pos(grid::get_mgi_of_nonemptymgi(nonemptymgi), tmid) / tmid;
     const float vol_filling_factor = volume_filling_factor(tmid, rad_vel);
@@ -607,26 +607,6 @@ void update_grid(std::ostream& estimators_file, const int nts, const int nts_pre
   for (int nonemptymgi = nstart_nonempty; nonemptymgi < (nstart_nonempty + ndo_nonempty); nonemptymgi++) {
     update_grid_cell(nonemptymgi, nts, nts_prev, titer, tratmid, deltat,
                      heatingcoolingrates_thisrankcells.at(nonemptymgi - nstart_nonempty));
-  }
-
-  // TODO: with this don't need to broadcast clumpfactor_allcells, reflect this in sn3d.cc?
-  // Only one rank per node needs to read volume filling factors
-  if constexpr (USE_MICROCLUMPING && READ_VOLUME_FILLING_FACTORS_FROM_FILE) {
-    if (globals::rank_in_node == 0) {
-      std::fstream vol_filling_factors_file = fstream_required("volume-filling-factors.txt", std::ios::in);
-      vol_filling_factors_file.seekg(nts * grid::get_npts_model() * (2 + 6 + 5));
-
-      float vol_filling_factor = NAN;
-      for (int mgi = 0; mgi < grid::get_npts_model(); mgi++) {
-        vol_filling_factors_file >> vol_filling_factor;
-
-        if (grid::get_numpropcells(mgi) > 0) {
-          grid::set_clumpfactor(grid::get_nonemptymgi_of_mgi(mgi), 1.F / vol_filling_factor);
-        }
-      }
-
-      vol_filling_factors_file.close();
-    }
   }
 
   // serial output of estimator data to this ranks estimator file cell by cell

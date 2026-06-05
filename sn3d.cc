@@ -756,15 +756,6 @@ auto main(int argc, char* argv[]) -> int {
     vpkt::nvpkt_esc_from_macroatom = 0;
   }
 
-  if constexpr (USE_MICROCLUMPING && READ_VOLUME_FILLING_FACTORS_FROM_FILE) {
-    bool clumping_factors_exists = false;
-    for (auto dir : datafolders) {
-      clumping_factors_exists =
-          clumping_factors_exists || std::filesystem::exists(std::format("{}/volume-filling-factors.txt", dir));
-    }
-    assert_always(clumping_factors_exists);
-  }
-
   MPI_Init(&argc, &argv);
 
   globals::setup_mpi_vars();
