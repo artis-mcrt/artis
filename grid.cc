@@ -1504,7 +1504,12 @@ auto get_element_meanweight(const std::ptrdiff_t nonemptymgi, const int element)
     case GridType::CARTESIAN3D: {
       Vec3d pos;
       for (int axis = 0; axis < 3; axis++) {
-        pos[axis] = get_cellcoordmin(cellindex, axis) + (rng_uniform_pos() * propcell_width_tmin(cellindex, axis));
+        const auto cellcoordidx = get_cellcoordpointnum(cellindex, axis);
+        const auto cellcoordmin = get_cellcoordmin(cellindex, axis);
+        const double cellcoordmax = (cellcoordidx < (ncoordgrid[axis] - 1))
+                                        ? get_cellcoordmin(cellindex + get_coordcellindexincrement(axis), axis)
+                                        : globals::rmax;
+        pos[axis] = std::lerp(cellcoordmin, cellcoordmax, rng_uniform_pos());
       }
       return pos;
     }
