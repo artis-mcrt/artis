@@ -666,7 +666,7 @@ auto do_timestep(const int nts, const int titer, std::vector<Packet>& packets, c
       assert_always(std::isfinite(clump_factor) && clump_factor >= 1.F);
     }
   }
-  
+
   const auto communicate_grid_duration =
       std::chrono::duration<double>(std::chrono::steady_clock::now() - sys_time_start_communicate_grid).count();
   printlnlog("timestep {}: time after grid properties have been communicated (took {:.1f} seconds)", nts,

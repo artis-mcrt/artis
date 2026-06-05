@@ -382,8 +382,7 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
   if constexpr (USE_MICROCLUMPING && !READ_VOLUME_FILLING_FACTORS_FROM_FILE) {
     const double tmid = globals::timesteps[nts].mid;
     const double rad_vel =
-      grid::get_modelcell_mean_radial_vel(grid::get_mgi_of_nonemptymgi(nonemptymgi),
-          globals::tmin);
+        grid::get_modelcell_mean_radial_vel(grid::get_mgi_of_nonemptymgi(nonemptymgi), globals::tmin);
     const float vol_filling_factor = volume_filling_factor(tmid, rad_vel);
 
     grid::set_clumpfactor(nonemptymgi, 1.F / vol_filling_factor);
@@ -616,7 +615,7 @@ void update_grid(std::ostream& estimators_file, const int nts, const int nts_pre
   if constexpr (USE_MICROCLUMPING && READ_VOLUME_FILLING_FACTORS_FROM_FILE) {
     if (globals::rank_in_node == 0) {
       std::fstream vol_filling_factors_file = fstream_required("volume-filling-factors.txt", std::ios::in);
-	  vol_filling_factors_file.seekg(nts * grid::get_npts_model() * (2 + 6 + 5));
+      vol_filling_factors_file.seekg(nts * grid::get_npts_model() * (2 + 6 + 5));
 
       float vol_filling_factor = NAN;
       for (int mgi = 0; mgi < grid::get_npts_model(); mgi++) {
