@@ -1,13 +1,14 @@
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 #include <cstddef>
 #include <cstdio>
 #include <cstdlib>
-#include <ctime>
 #include <format>
 #include <fstream>
 #include <ios>
 #include <numeric>
+#include <print>
 #include <ranges>
 #include <span>
 #include <string>
@@ -699,7 +700,7 @@ void nltepop_matrix_add_autoionisation(const int nonemptymgi, const int element,
 
       // capture (which is an excitation process, and the first part of di-electronic recomb)
       R = clumpednne * A_a * statweight / stat_weight(element, target_ion, target_level) * SAHACONST * pow(T_e, -1.5) *
-          exp(-1. * epsilon_trans / KB / T_e);
+          exp(-epsilon_trans / KB / T_e);
       // renorm??
 
       rate_matrices.autoion[(lower_index * nlte_dimension) + lower_index] -= R;
@@ -712,37 +713,57 @@ void nltepop_matrix_add_autoionisation(const int nonemptymgi, const int element,
   }
 }
 
-void nltepop_matrix_normalise(const int nonemptymgi, const int element, std::span<double> rate_matrix,
-                              std::span<double> pop_normfactors, const int first_ion_used, const int nions_used) {
+// Calculate the l2 norm of row or column `i` of `n*n` matrix
+auto matrix_row_or_col_norm(std::span<const double> matrix, const int i, const bool row, const size_t n) -> double {
+  double result = 0.;
+
+  for (size_t j = 0; j < n; j++) {
+    const double val = row ? matrix[(i * n) + j] : matrix[(j * n) + i];
+    result += pow2(val);
+  }
+
+  return std::sqrt(result);
+}
+
+// Multiply row or column `i` by `val`
+void matrix_scale_row_or_col(std::span<double> matrix, const int i, const bool row, const size_t n, const double val) {
+  for (size_t j = 0; j < n; j++) {
+    const size_t idx = row ? (i * n) + j : (j * n) + i;
+    matrix[idx] *= val;
+  }
+}
+
+void nltepop_matrix_normalise(std::span<double> rate_matrix, std::span<double> balance_vector,
+                              std::span<double> pop_normfactors) {
   const auto nlte_dimension = std::ssize(pop_normfactors);
   assert_always(std::ssize(rate_matrix) == (nlte_dimension * nlte_dimension));
 
-  for (auto column = 0; column < nlte_dimension; column++) {
-    const auto [ion, level] = get_ion_level_of_nlte_vector_index(column, element, first_ion_used, nions_used);
+  for (int iter = 0; iter < 10; iter++) {
+    bool changed = false;
 
-    pop_normfactors[column] = calculate_levelpop_boltzmann(nonemptymgi, element, ion, level);
+    for (auto i = 0; i < nlte_dimension; i++) {
+      const double row_norm = matrix_row_or_col_norm(rate_matrix, i, true, nlte_dimension);
+      const double col_norm = matrix_row_or_col_norm(rate_matrix, i, false, nlte_dimension);
+      if (row_norm == 0 || col_norm == 0) {
+        continue;
+      }
 
-    if (level_isinsuperlevel(element, ion, level)) {
-      // levels in the superlevel get combined together
-      for (int dummylevel = level + 1; dummylevel < get_nlevels(element, ion); dummylevel++) {
-        if (level_isinsuperlevel(element, ion, dummylevel)) {
-          pop_normfactors[column] += calculate_levelpop_boltzmann(nonemptymgi, element, ion, dummylevel);
-        }
+      const double f = std::sqrt(col_norm / row_norm);
+      if (std::abs(f - 1.) > 1e-3) {
+        matrix_scale_row_or_col(rate_matrix, i, true, nlte_dimension, f);
+        matrix_scale_row_or_col(rate_matrix, i, false, nlte_dimension, 1. / f);
+        pop_normfactors[i] /= f;
+        changed = true;
       }
     }
-    if (!std::isfinite(pop_normfactors[column]) || pop_normfactors[column] <= 0.) {
-      printlnlog(
-          "  WARNING: Boltzmann population for Z={} ionstage {} level {} is non-finite or negative ({}). Setting to "
-          "MINPOP",
-          get_atomicnumber(element), get_ionstage(element, ion), level, pop_normfactors[column]);
-      pop_normfactors[column] = MINPOP;
+
+    if (!changed) {
+      break;
     }
   }
 
-  for (auto column = 0; column < nlte_dimension; column++) {
-    for (auto row = 0; row < nlte_dimension; row++) {
-      rate_matrix[(row * nlte_dimension) + column] *= pop_normfactors[column];
-    }
+  for (int i = 0; i < nlte_dimension; i++) {
+    balance_vector[i] /= pop_normfactors[i];
   }
 }
 
@@ -776,8 +797,7 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
 }
 
 [[nodiscard]] auto solution_pops_are_valid(const int nonemptymgi, const int element, std::span<double> popvec,
-                                           std::span<const double> pop_normfactors, const int first_ion_used,
-                                           const int nions_used) -> bool {
+                                           const int first_ion_used, const int nions_used) -> bool {
   const size_t nlte_dimension = popvec.size();
   const auto superlevel_partfuncs = get_element_superlevelpartfuncs(nonemptymgi, element);
   for (auto index = 0ZU; index < nlte_dimension; index++) {
@@ -787,11 +807,29 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
 
     if constexpr (!STRICT_POPULATION_CHECKING) {
       if (population < 0.0 || !std::isfinite(population)) {
+        double ltepop = calculate_levelpop_boltzmann(nonemptymgi, element, ion, level);
+
+        if (level_isinsuperlevel(element, ion, level)) {
+          for (int dummylevel = level + 1; dummylevel < get_nlevels(element, ion); dummylevel++) {
+            if (level_isinsuperlevel(element, ion, dummylevel)) {
+              ltepop += calculate_levelpop_boltzmann(nonemptymgi, element, ion, dummylevel);
+            }
+          }
+        }
+
+        if (!std::isfinite(ltepop) || ltepop <= 0.) {
+          printlnlog(
+              "  WARNING: Boltzmann population for Z={} ionstage {} level {} is non-finite or non-positive ({}). "
+              "Setting to MINPOP",
+              get_atomicnumber(element), get_ionstage(element, ion), level, ltepop);
+          ltepop = MINPOP;
+        }
+
         printlnlog(
             "  WARNING: NLTE solver gave negative/non-finite population to index {} (Z={} ionstage {} level {}), pop = "
             "{:g}. Replacing with LTE pop of {:g}",
-            index, get_atomicnumber(element), ionstage, level, population, pop_normfactors[index]);
-        popvec[index] = pop_normfactors[index];
+            index, get_atomicnumber(element), ionstage, level, population, ltepop);
+        popvec[index] = ltepop;
       }
     } else {
       // if groundpop is below MINPOP then the NLTE solution fails
@@ -1058,7 +1096,7 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
     popvec[i] = vec_x[i] * pop_normfactors[i];
   }
 
-  return solution_pops_are_valid(nonemptymgi, element, popvec, pop_normfactors, first_ion_used, nions_used);
+  return solution_pops_are_valid(nonemptymgi, element, popvec, first_ion_used, nions_used);
 }
 
 auto can_remove_ion(const int element, const int ion, const int first_ion_used, const int nions_used,
@@ -1096,9 +1134,9 @@ auto can_remove_ion(const int element, const int ion, const int first_ion_used, 
     nlte_excited_pop_sum += fabs(levelpop);
     if (levelpop / nnelement > NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION) {
       printlnlog(
-          "  WARNING: {} ion excited state (level {}) population too large to remove ion (nlte_excited_pop_bottom_ion "
+          "  WARNING: {} ion excited state (level {}) population too large to remove ion (nlte_excited_pop_{}_ion "
           "/ nnelement) = ({}/{}) > ({}))",
-          ionname, level, levelpop, nnelement, NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION);
+          ionname, ionname, level, levelpop, nnelement, NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION);
       return false;
     }
   }
@@ -1110,9 +1148,9 @@ auto can_remove_ion(const int element, const int ion, const int first_ion_used, 
     superlevel_pop = popvec[index_superlevel];
     if (superlevel_pop / nnelement > NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION) {
       printlnlog(
-          "  WARNING: {} ion superlevel population too large to remove ion (superlevel_pop_bottom_ion / nnelement "
+          "  WARNING: {} ion superlevel population too large to remove ion (superlevel_pop_{}_ion / nnelement "
           "({:g}/{:g}) > ({:g}) NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION)",
-          ionname, superlevel_pop, nnelement, NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION);
+          ionname, ionname, superlevel_pop, nnelement, NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION);
       return false;
     }
   }
@@ -1134,7 +1172,7 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
   const int atomic_number = get_atomicnumber(element);
   const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
 
-  if (grid::get_elem_abundance(nonemptymgi, element) <= 0.) {
+  if (grid::get_elem_massfrac(nonemptymgi, element) <= 0.) {
     // abundance of this element is zero, so do not store any NLTE populations
     printlnlog(
         "Not solving for NLTE populations in cell {} at timestep {} NLTE iteration {} for element Z={} due to zero "
@@ -1151,12 +1189,12 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
     printlnlog(
         "Not solving for NLTE populations in cell {} at timestep {} NLTE iteration {} for element Z={} due to low "
         "temperature Te=MINTEMP={:g} K",
-        modelgridindex, timestep, atomic_number, nlte_iter, cell_Te);
+        modelgridindex, timestep, nlte_iter, atomic_number, cell_Te);
     set_element_pops_lte(nonemptymgi, element);
     return;
   }
 
-  const auto sys_time_start_nltesolver = std::time(nullptr);
+  const auto sys_time_start_nltesolver = std::chrono::steady_clock::now();
 
   const double t_mid = globals::timesteps[timestep].mid;
   const int nions = get_nions(element);
@@ -1165,7 +1203,7 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
   printlnlog(
       "Solving for NLTE populations in cell {} at timestep {} NLTE iteration {} for element Z={} (mass fraction "
       "{:.2e}, nnelement {:.2e} cm^-3)",
-      modelgridindex, timestep, nlte_iter, atomic_number, grid::get_elem_abundance(nonemptymgi, element), nnelement);
+      modelgridindex, timestep, nlte_iter, atomic_number, grid::get_elem_massfrac(nonemptymgi, element), nnelement);
 
   const auto superlevel_partfuncs = get_element_superlevelpartfuncs(nonemptymgi, element);
   int nions_used = nions;
@@ -1248,7 +1286,7 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
     pop_normfactors.reserve(max_nlte_dimension);
     pop_normfactors.resize(nlte_dimension);
     std::ranges::fill(pop_normfactors, 1.0);
-    nltepop_matrix_normalise(nonemptymgi, element, rate_matrix, pop_normfactors, first_ion_used, nions_used);
+    nltepop_matrix_normalise(rate_matrix, balance_vector, pop_normfactors);
 
     matrix_solve_success = nltepop_matrix_solve(element, nonemptymgi, rate_matrix, balance_vector, popvec,
                                                 pop_normfactors, max_nlte_dimension, first_ion_used, nions_used);
@@ -1364,8 +1402,11 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
     }
   }
 
-  if (const auto duration_nltesolver = std::time(nullptr) - sys_time_start_nltesolver; duration_nltesolver > 2) {
-    printlnlog("NLTE population solver call for Z={} took {} seconds", get_atomicnumber(element), duration_nltesolver);
+  if (const auto duration_nltesolver =
+          std::chrono::duration<double>(std::chrono::steady_clock::now() - sys_time_start_nltesolver).count();
+      duration_nltesolver > 2.) {
+    printlnlog("NLTE population solver call for Z={} took {:.1f} seconds", get_atomicnumber(element),
+               duration_nltesolver);
   }
 }
 
@@ -1384,7 +1425,7 @@ DEVICE_FUNC auto superlevel_boltzmann(const int nonemptymgi, const int element, 
 
 void nltepop_open_file() {
   nlte_file = fstream_required(std::format("nlte_{:04d}.out", globals::my_rank), std::ios::out | std::ios::trunc);
-  nlte_file << "timestep modelgridindex Z ionstage level n_LTE n_NLTE ion_popfrac\n";
+  std::println(nlte_file, "timestep modelgridindex Z ionstage level n_LTE n_NLTE ion_popfrac");
 }
 
 void nltepop_write_to_file(const int nonemptymgi, const int timestep) {
@@ -1409,10 +1450,10 @@ void nltepop_write_to_file(const int nonemptymgi, const int timestep) {
         double nnlevellte = calculate_levelpop_boltzmann(nonemptymgi, element, ion, level);
         double nnlevelnlte{NAN};
 
-        nlte_file << timestep << ' ' << modelgridindex << ' ' << get_atomicnumber(element) << ' '
-                  << get_ionstage(element, ion) << ' ';
+        std::print(nlte_file, "{} {} {} {} ", timestep, modelgridindex, get_atomicnumber(element),
+                   get_ionstage(element, ion));
         if (level <= nlevels_excited_nlte) {
-          nlte_file << level << ' ';
+          std::print(nlte_file, "{} ", level);
 
           if (level == 0) {
             nnlevelnlte = get_groundlevelpop(nonemptymgi, element, ion);
@@ -1425,7 +1466,7 @@ void nltepop_write_to_file(const int nonemptymgi, const int timestep) {
               get_nlte_superlevelpop_over_rho_over_slpartfunc(nonemptymgi, element, ion) * grid::get_rho(nonemptymgi);
 
           nnlevellte = 0;
-          nlte_file << -1 << ' ';
+          std::print(nlte_file, "-1 ");
           for (int level_sl = nlevels_excited_nlte + 1; level_sl < get_nlevels(element, ion); level_sl++) {
             if (level_isinsuperlevel(element, ion, level_sl)) {
               nnlevellte += calculate_levelpop_boltzmann(nonemptymgi, element, ion, level_sl);
@@ -1435,7 +1476,7 @@ void nltepop_write_to_file(const int nonemptymgi, const int timestep) {
           nnlevelnlte = slpopfactor * superlevel_partfuncs[ion];
         }
 
-        nlte_file << std::format("{:.5e} {:.5e} {:.5e}\n", nnlevellte, nnlevelnlte, nnlevelnlte / nnion);
+        std::println(nlte_file, "{:.5e} {:.5e} {:.5e}", nnlevellte, nnlevelnlte, nnlevelnlte / nnion);
       }
     }
   }

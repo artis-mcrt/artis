@@ -13,6 +13,7 @@
 #include <ios>
 #include <limits>
 #include <numeric>
+#include <print>
 #include <span>
 #include <sstream>
 #include <string>
@@ -191,18 +192,16 @@ void init_gamma_linelist() {
       return std::tie(g1.energy, g1.nucindex, g1.nucgammaindex) < std::tie(g2.energy, g2.nucindex, g2.nucgammaindex);
     });
 
-    auto gammalinelist = std::fstream("gammalinelist.out", std::ofstream::out | std::ofstream::trunc);
-    assert_always(gammalinelist.is_open());
-    gammalinelist << "#index nucindex Z A nucgammmaindex en_gamma_mev gammaline_probability\n";
+    auto gammalinelist = fstream_required("gammalinelist.out", std::ofstream::out | std::ofstream::trunc);
+    std::println(gammalinelist, "#index nucindex Z A nucgammmaindex en_gamma_mev gammaline_probability");
 
     for (auto i = 0Z; i < total_lines; i++) {
       const int nucindex = allnuc_gamma_line_list[i].nucindex;
       const int index = allnuc_gamma_line_list[i].nucgammaindex;
-      gammalinelist << static_cast<int>(i) << ' ' << allnuc_gamma_line_list[i].nucindex << ' '
-                    << decay::get_nuc_z(allnuc_gamma_line_list[i].nucindex) << ' '
-                    << decay::get_nuc_a(allnuc_gamma_line_list[i].nucindex) << ' '
-                    << allnuc_gamma_line_list[i].nucgammaindex << ' ' << gamma_spectra[nucindex][index].energy / MEV
-                    << ' ' << gamma_spectra[nucindex][index].probability << '\n';
+      std::println(gammalinelist, "{} {} {} {} {} {:g} {:g}", static_cast<int>(i), allnuc_gamma_line_list[i].nucindex,
+                   decay::get_nuc_z(allnuc_gamma_line_list[i].nucindex),
+                   decay::get_nuc_a(allnuc_gamma_line_list[i].nucindex), allnuc_gamma_line_list[i].nucgammaindex,
+                   gamma_spectra[nucindex][index].energy / MEV, gamma_spectra[nucindex][index].probability);
     }
     printlnlog("Wrote combined gamma-ray line list to gammalinelist.out");
   }
@@ -213,12 +212,8 @@ void init_xcom_photoion_data() {
   for (int Z = 0; Z < numb_xcom_elements; Z++) {
     photoion_data[Z].reserve(100);
   }
-  std::string filepath{"xcom_photoion_data.txt"};
-  if (!std::filesystem::exists(filepath)) {
-    filepath = "data/xcom_photoion_data.txt";
-  }
 
-  auto data_fs = fstream_required(filepath, std::ios::in);
+  auto data_fs = fstream_required("xcom_photoion_data.txt", std::ios::in);
   std::string line_str;
   while (get_noncommentline(data_fs, line_str)) {
     int Z = 0;
@@ -302,7 +297,7 @@ void init_xcom_photoion_data() {
 auto thomson_angle() -> double {
   const double B_coeff = (8. * rng_uniform()) - 4.;
 
-  const double t_coeff = std::cbrt((std::sqrt((B_coeff * B_coeff) + 4) - B_coeff) / 2);
+  const double t_coeff = std::cbrt((std::sqrt(pow2(B_coeff) + 4) - B_coeff) / 2);
 
   const double mu = (1 / t_coeff) - t_coeff;
 
@@ -318,7 +313,7 @@ auto thomson_angle() -> double {
 
   const double phi = rng_uniform() * 2 * PI;
 
-  const double sin_theta_sq = 1. - (cos_theta * cos_theta);
+  const double sin_theta_sq = 1. - pow2(cos_theta);
   const double sin_theta = std::sqrt(sin_theta_sq);
   const double zprime = cos_theta;
   const double xprime = sin_theta * cos(phi);
@@ -327,15 +322,15 @@ auto thomson_angle() -> double {
   // Now need to derotate the coordinates back to real x,y,z.
   // Rotation matrix is determined by dir_in.
 
-  const double norm1 = 1. / std::sqrt((dir_in[0] * dir_in[0]) + (dir_in[1] * dir_in[1]));
+  const double norm1 = 1. / std::sqrt(pow2(dir_in[0]) + pow2(dir_in[1]));
   const double norm2 = 1. / vec_len(dir_in);
 
   const double r11 = dir_in[1] * norm1;
-  const double r12 = -1 * dir_in[0] * norm1;
+  const double r12 = -dir_in[0] * norm1;
   const double r13 = 0.;
   const double r21 = dir_in[0] * dir_in[2] * norm1 * norm2;
   const double r22 = dir_in[1] * dir_in[2] * norm1 * norm2;
-  const double r23 = -1 * norm2 / norm1;
+  const double r23 = -norm2 / norm1;
   const double r31 = dir_in[0] * norm2;
   const double r32 = dir_in[1] * norm2;
   const double r33 = dir_in[2] * norm2;
@@ -558,9 +553,6 @@ void compton_scatter(Packet& pkt) {
 
   // multiply by the particle number density.
 
-  // sigma_cmf_cno *= rho * (1. - f_fe) / MH / 14;
-  // Assumes Z = 7. So mass = 14.
-
   const double chi_cmf_si = sigma_cmf_si * (rho / MH / 28);
   // Assumes Z = 14. So mass = 28.
 
@@ -572,7 +564,7 @@ void compton_scatter(Packet& pkt) {
   return std::max(chi_cmf, 0.);
 }
 
-// Routine to compute the mean energy converted to non-thermal electrons times the Klein-Nishina cross section.
+// Compute the mean energy converted to non-thermal electrons times the Klein-Nishina cross section.
 constexpr auto meanf_sigma(const double x) -> double {
   const double f = 1 + (2 * x);
 
@@ -591,8 +583,8 @@ constexpr auto meanf_sigma(const double x) -> double {
 [[nodiscard]] auto get_chi_loss_weighted(const Packet& pkt, const int nonemptymgi) -> double {
   const double xx = H * pkt.nu_cmf / ME / CLIGHT / CLIGHT;
   const auto doppler = calculate_doppler_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
-  const auto chi_photo_electric_rf = get_chi_photo_electric_cmf(pkt.where, pkt.nu_cmf) * doppler;
-  const auto chi_pair_prod_rf = get_chi_pair_prod_cmf(pkt.where, pkt.nu_cmf) * doppler;
+  const auto chi_photo_electric_rf = get_chi_photo_electric_cmf(pkt.cellindex, pkt.nu_cmf) * doppler;
+  const auto chi_pair_prod_rf = get_chi_pair_prod_cmf(pkt.cellindex, pkt.nu_cmf) * doppler;
 
   return ((meanf_sigma(xx) * grid::get_nnetot(nonemptymgi)) + chi_photo_electric_rf +
           (chi_pair_prod_rf * (1. - (2.46636e+20 / pkt.nu_cmf))));
@@ -607,7 +599,7 @@ void update_gamma_dep(const Packet& pkt, const double dist) {
     return;  // don't instantly deposit energy from gamma rays, handle the particles they produce instead
   }
 
-  const int nonemptymgi = grid::get_propcell_nonemptymgi(pkt.where);
+  const int nonemptymgi = grid::get_propcell_nonemptymgi(pkt.cellindex);
   if (nonemptymgi < 0) {
     return;  // empty cell
   }
@@ -664,7 +656,7 @@ void pair_prod(Packet& pkt) {
     // frame - use aberration of angles. We want to convert from cmf to
     // rest so need -ve velocity.
 
-    const auto vel_vec = get_velocity(pkt.pos, -1. * pkt.prop_time);
+    const auto vel_vec = get_velocity(pkt.pos, -pkt.prop_time);
     // negative time since we want the backwards transformation here
 
     pkt.dir = angle_ab(dir_cmf, vel_vec);
@@ -687,16 +679,16 @@ void transport_gamma(Packet& pkt, const double t2) {
   // boundaries. sdist is the boundary distance and snext is the
   // grid cell into which we pass.
 
-  const auto [sdist, snext] = grid::boundary_distance(pkt.dir, pkt.pos, pkt.prop_time, pkt.where);
+  const auto [sdist, snext] = grid::boundary_distance(pkt.dir, pkt.pos, pkt.prop_time, pkt.cellindex);
 
   // Now consider the scattering/destruction processes.
   // Compton scattering - need to determine the scattering co-efficient.
   // Routine returns the value in the rest frame.
 
   const auto doppler = calculate_doppler_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
-  const double chi_compton = get_chi_compton_cmf(pkt.where, pkt.nu_cmf) * doppler;
-  const double chi_photo_electric = get_chi_photo_electric_cmf(pkt.where, pkt.nu_cmf) * doppler;
-  const double chi_pair_prod = get_chi_pair_prod_cmf(pkt.where, pkt.nu_cmf) * doppler;
+  const double chi_compton = get_chi_compton_cmf(pkt.cellindex, pkt.nu_cmf) * doppler;
+  const double chi_photo_electric = get_chi_photo_electric_cmf(pkt.cellindex, pkt.nu_cmf) * doppler;
+  const double chi_pair_prod = get_chi_pair_prod_cmf(pkt.cellindex, pkt.nu_cmf) * doppler;
   const double chi_tot = chi_compton + chi_photo_electric + chi_pair_prod;
 
   assert_testmodeonly(std::isfinite(chi_compton));
@@ -725,7 +717,7 @@ void transport_gamma(Packet& pkt, const double t2) {
 
     move_pkt_withtime(pkt, sdist / 2.);
 
-    if (snext != pkt.where) {
+    if (snext != pkt.cellindex) {
       grid::change_cell(pkt, snext);
     }
   } else if ((tdist < sdist) && (tdist < edist)) {
@@ -818,9 +810,10 @@ void wollaeger_thermalisation(Packet& pkt) {
   bool end_packet = false;
   while (!end_packet) {
     // distance to the next cell
-    const auto [sdist, snext] = grid::boundary_distance(pkt_copy.dir, pkt_copy.pos, pkt_copy.prop_time, pkt_copy.where);
+    const auto [sdist, snext] =
+        grid::boundary_distance(pkt_copy.dir, pkt_copy.pos, pkt_copy.prop_time, pkt_copy.cellindex);
     const double s_cont = sdist * pow3(t_current / pkt_copy.prop_time);
-    const int mgi = grid::get_propcell_modelgridindex(pkt_copy.where);
+    const int mgi = grid::get_propcell_modelgridindex(pkt_copy.cellindex);
     if (mgi >= 0) {
       const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(mgi);
       tau += grid::get_rho(nonemptymgi) * s_cont * mean_gamma_opac;  // contribution to the integral
@@ -880,9 +873,9 @@ void guttman_thermalisation(Packet& pkt) {
     while (!end_packet) {
       // distance to the next cell
       const auto [sdist, snext] =
-          grid::boundary_distance(pkt_copy.dir, pkt_copy.pos, pkt_copy.prop_time, pkt_copy.where);
+          grid::boundary_distance(pkt_copy.dir, pkt_copy.pos, pkt_copy.prop_time, pkt_copy.cellindex);
       const double s_cont = sdist * pow3(t / pkt_copy.prop_time);
-      const int mgi = grid::get_propcell_modelgridindex(pkt_copy.where);
+      const int mgi = grid::get_propcell_modelgridindex(pkt_copy.cellindex);
       if (mgi >= 0) {
         column_densities[i] += grid::get_rho_tmin(mgi) * s_cont;  // contribution to the integral
       }
@@ -993,9 +986,6 @@ DEVICE_FUNC void pellet_gamma_decay(Packet& pkt) {
   pkt.e_rf = pkt.e_cmf / dopplerfactor;
 
   pkt.type = TYPE_GAMMA;
-
-  // initialise polarisation information
-  pkt.stokes = {1., 0., 0.};
 }
 
 DEVICE_FUNC void do_gamma(Packet& pkt, const int nts, const double t2) {
@@ -1018,7 +1008,7 @@ DEVICE_FUNC void do_gamma(Packet& pkt, const int nts, const double t2) {
 
     if constexpr (GAMMA_THERMALISATION_SCHEME != GammaThermalisationScheme::FREQUENCYDEPENDENT) {
       // no transport, so the path-based gamma deposition estimator won't get updated unless we do it here
-      const int mgi = grid::get_propcell_modelgridindex(pkt.where);
+      const int mgi = grid::get_propcell_modelgridindex(pkt.cellindex);
       const int nonemptymgi = grid::get_nonemptymgi_of_mgi(mgi);
       atomicadd(globals::dep_estimator_gamma[nonemptymgi], pkt.e_cmf);
     }

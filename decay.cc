@@ -14,6 +14,7 @@
 #include <iterator>
 #include <numbers>
 #include <numeric>
+#include <print>
 #include <ranges>
 #include <set>
 #include <span>
@@ -676,11 +677,10 @@ auto get_endecay_per_ejectamass_between_times(const int mgi, const int decaypath
 }
 
 auto write_nuclides_list() {
-  auto nuclides_file = std::fstream("nuclides.out", std::ofstream::out | std::ofstream::trunc);
-  assert_always(nuclides_file.is_open());
-  nuclides_file << "#nucindex Z A\n";
+  auto nuclides_file = fstream_required("nuclides.out", std::ofstream::out | std::ofstream::trunc);
+  std::println(nuclides_file, "#nucindex Z A");
   for (int nucindex = 0; nucindex < std::ssize(nuclides); nucindex++) {
-    nuclides_file << nucindex << ' ' << get_nuc_z(nucindex) << ' ' << get_nuc_a(nucindex) << '\n';
+    std::println(nuclides_file, "{} {} {}", nucindex, get_nuc_z(nucindex), get_nuc_a(nucindex));
   }
 }
 
@@ -1216,21 +1216,18 @@ void update_abundances(const int nonemptymgi, const double t_current) {
     isomassfracsum += otherstablemassfrac;
     isomassfrac_on_nucmass_sum += otherstablemassfrac / globals::elements[element].initstablemeannucmass;
 
-    grid::set_elem_abundance(nonemptymgi, element, static_cast<float>(isomassfracsum));
-    if (isomassfrac_on_nucmass_sum > 0.) {
-      grid::set_element_meanweight(nonemptymgi, element,
-                                   static_cast<float>(isomassfracsum / isomassfrac_on_nucmass_sum));
-    } else {
-      // avoid a divide by zero
-      grid::set_element_meanweight(nonemptymgi, element, globals::elements[element].initstablemeannucmass);
-    }
+    grid::set_elem_massfrac(nonemptymgi, element, static_cast<float>(isomassfracsum));
+    const auto meanweight = static_cast<float>(isomassfracsum / isomassfrac_on_nucmass_sum);
+    grid::set_element_meanweight(
+        nonemptymgi, element,
+        (std::isfinite(meanweight) && meanweight > 0.) ? meanweight : globals::elements[element].initstablemeannucmass);
   }
 
   grid::set_nnetot(nonemptymgi);
 }
 
-void output_nuc_abundances(std::ostream& estimators_file, const int nonemptymgi, const double t_current,
-                           const int element) {
+void output_isotopic_densities(std::ostream& estimators_file, const int nonemptymgi, const double t_current,
+                               const int element) {
   const double rho = grid::get_rho(nonemptymgi);
 
   const int atomic_number = get_atomicnumber(element);
@@ -1247,7 +1244,7 @@ void output_nuc_abundances(std::ostream& estimators_file, const int nonemptymgi,
     const double massfrac = get_nuc_massfrac(nonemptymgi, nucindex, t_current);
     if (massfrac > 0) {
       const double numberdens = massfrac / nucmass(nucindex) * rho;
-      estimators_file << std::format("  {}{}: {:9.3e}", get_elname(atomic_number), nuc_a, numberdens);
+      std::print(estimators_file, "  {}{}: {:9.3e}", get_elname(atomic_number), nuc_a, numberdens);
     }
   }
 
@@ -1256,9 +1253,9 @@ void output_nuc_abundances(std::ostream& estimators_file, const int nonemptymgi,
     // factor to convert convert mass fraction to number density
     const double meannucmass = globals::elements[element].initstablemeannucmass;
     const double otherstable_numberdens = otherstablemassfrac / meannucmass * grid::get_rho(nonemptymgi);
-    estimators_file << std::format("  {}_otherstable: {:9.3e}", get_elname(atomic_number), otherstable_numberdens);
+    std::print(estimators_file, "  {}_otherstable: {:9.3e}", get_elname(atomic_number), otherstable_numberdens);
   }
-  estimators_file << '\n';
+  std::println(estimators_file, "");
 }
 
 void setup_radioactive_pellet(const double e_cmf_per_packet, const int nonemptymgi, Packet& pkt,
@@ -1324,8 +1321,7 @@ void setup_radioactive_pellet(const double e_cmf_per_packet, const int nonemptym
     // use uniform decay time distribution and scale the packet energies instead.
     // keeping the pellet decay rate constant will give better statistics at late times
     // when very little energy and few packets are released
-    const double zrand = rng_uniform();
-    pkt.tdecay = (zrand * tdecaymin) + ((1. - zrand) * globals::tmax);
+    pkt.tdecay = std::lerp(globals::tmax, tdecaymin, rng_uniform());
 
     // we need to scale the packet energy up or down according to decay rate at the randomly selected time.
     // e_cmf_average is the average energy per packet for this cell and decaypath, so we scale this up or down

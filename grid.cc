@@ -4,13 +4,13 @@
 #include <array>
 #include <cassert>
 #include <cctype>
+#include <chrono>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <ctime>
 #include <filesystem>
 #include <format>
 #include <fstream>
@@ -18,6 +18,7 @@
 #include <limits>
 #include <numbers>
 #include <optional>
+#include <print>
 #include <span>
 #include <sstream>
 #include <string>
@@ -157,7 +158,6 @@ void read_possible_yefile() {
 // e.g., the minimum x position in xyz coords, or the minimum radius
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_cellcoordmin(const int cellindex, const int axis) -> double {
   return propcell_pos_min[cellindex][axis];
-  // return - coordmax[axis] + (2 * get_cellcoordpointnum(cellindex, axis) * coordmax[axis] / ncoordgrid[axis]);
 }
 
 // get the maximum position value of a coordinate axis at globals::tmin (xyz or radial coords) of a propagation cell
@@ -166,7 +166,7 @@ void read_possible_yefile() {
   return get_cellcoordmin(cellindex, axis) + propcell_width_tmin(cellindex, axis);
 }
 
-// return the inner radius (or equivalent) of a propagation cell at time tmin
+// return the inner radius of a propagation cell at time tmin
 auto get_cell_r_inner(const int cellindex, const GridType prop_gridtype) -> double {
   if (prop_gridtype == GridType::SPHERICAL1D) {
     return get_cellcoordmin(cellindex, 0);
@@ -292,7 +292,7 @@ void set_initenergyq(const int modelgridindex, const float initenergyq) {
   modelgrid_input[modelgridindex].initenergyq = initenergyq;
 }
 
-void set_elem_untrackedstable_abund_from_total(const int nonemptymgi, const int element, const float elemabundance) {
+void set_elem_untrackedstable_massfrac(const int nonemptymgi, const int element, const float elem_massfrac) {
   // set the stable mass fraction of an element from the total element mass fraction
   // by subtracting the abundances of radioactive isotopes.
   // if the element Z=anumber has no specific stable abundance variable then the function does nothing
@@ -300,37 +300,36 @@ void set_elem_untrackedstable_abund_from_total(const int nonemptymgi, const int 
   const int atomic_number = get_atomicnumber(element);
   const int mgi = get_mgi_of_nonemptymgi(nonemptymgi);
 
-  double isofracsum = 0.;  // mass fraction sum of radioactive isotopes
+  double massfrac_allisotopes = 0.;
   for (int nucindex = 0; nucindex < decay::get_num_nuclides(); nucindex++) {
     if (decay::get_nuc_z(nucindex) == atomic_number) {
       // radioactive isotope of this element
-      isofracsum += get_modelinitnucmassfrac(mgi, nucindex);
+      massfrac_allisotopes += get_modelinitnucmassfrac(mgi, nucindex);
     }
   }
 
-  double massfrac_untrackedstable = elemabundance - isofracsum;
+  double massfrac_untrackedstable = elem_massfrac - massfrac_allisotopes;
 
   if (massfrac_untrackedstable < 0.) {
     //  allow some roundoff error before we complain
-    if ((isofracsum - elemabundance - 1.) > 1e-4 && std::abs(isofracsum - elemabundance) > 1e-6) {
-      printlnlog("WARNING: cell {} Z={} element abundance is less than the sum of its radioisotope abundances", mgi,
+    if (std::abs(massfrac_allisotopes - elem_massfrac) > 1e-6) {
+      printlnlog("WARNING: cell {} Z={} element massfrac is less than the sum of its radioisotope massfracs", mgi,
                  atomic_number);
-      printlnlog("  massfrac(Z) {:g} massfrac_radioisotopes(Z) {:g}", elemabundance, isofracsum);
-      printlnlog("  increasing elemental abundance to {:g} and setting stable isotopic abundance to zero", isofracsum);
+      printlnlog("  massfrac(Z) {:g} massfrac_radioisotopes(Z) {:g}", elem_massfrac, massfrac_allisotopes);
+      printlnlog("  increasing elemental massfrac to {:g} and setting stable isotopic massfrac to zero",
+                 massfrac_allisotopes);
     }
     // result is allowed to be slightly negative due to roundoff error
     assert_always(massfrac_untrackedstable >= -1e-2);
     massfrac_untrackedstable = 0.;  // bring up to zero if negative
   }
 
-  // if (globals::rank_in_node == 0)
-  {
-    initmassfracuntrackedstable_allcells[(nonemptymgi * get_nelements()) + element] =
-        static_cast<float>(massfrac_untrackedstable);
-  }
+  initmassfracuntrackedstable_allcells[(nonemptymgi * get_nelements()) + element] =
+      static_cast<float>(massfrac_untrackedstable);
 
-  // (isofracsum + massfracstable) might not exactly match elemabundance if we had to boost it to reach isofracsum
-  set_elem_abundance(nonemptymgi, element, static_cast<float>(isofracsum + massfrac_untrackedstable));
+  // (massfrac_allisotopes + massfrac_untrackedstable) might not exactly match elem_massfrac if we had to boost it to
+  // reach massfrac_allisotopes
+  set_elem_massfrac(nonemptymgi, element, static_cast<float>(massfrac_allisotopes + massfrac_untrackedstable));
 }
 
 // get the radial distance from the origin to the centre of the cell at time tmin
@@ -474,7 +473,8 @@ void allocate_nonemptymodelcells() {
 
   allocate_nonemptycells_composition_cooling();
 
-  if constexpr (EXPANSIONOPACITIES_ON || RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.has_value()) {
+  if constexpr (RPKT_USE_EXPANSION_OPACITIES || VPKT_USE_EXPANSION_OPACITIES ||
+                RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.has_value()) {
     allocate_expansionopacities();
   }
 
@@ -633,10 +633,10 @@ void read_elem_abundances() {
     // (or proportial to mass frac, e.g. element densities because they will be normalised anyway)
     // The abundances begin with hydrogen, helium, etc, going as far up the atomic numbers as required
     double normfactor = 0.;
-    std::array<float, 150> elem_abundances_in{};
-    std::ranges::fill(elem_abundances_in, 0.);
+    std::array<float, 150> elem_massfracs_in{};
+    std::ranges::fill(elem_massfracs_in, 0.);
     double abund_in = 0.;
-    for (int elem_z_index = 0; elem_z_index < std::ssize(elem_abundances_in); elem_z_index++) {
+    for (int elem_z_index = 0; elem_z_index < std::ssize(elem_massfracs_in); elem_z_index++) {
       const int atomic_number = elem_z_index + 1;
       if (!(ssline >> abund_in)) {
         // at least one element (hydrogen) should have been specified for nonempty cells
@@ -648,8 +648,8 @@ void read_elem_abundances() {
         assert_always(abund_in > -1e-6);
         abund_in = 0.;
       }
-      elem_abundances_in[elem_z_index] = static_cast<float>(abund_in);
-      normfactor += elem_abundances_in[elem_z_index];
+      elem_massfracs_in[elem_z_index] = static_cast<float>(abund_in);
+      normfactor += elem_massfracs_in[elem_z_index];
     }
 
     if (get_numpropcells(mgi) > 0) {
@@ -662,11 +662,11 @@ void read_elem_abundances() {
         // now set the abundances (by mass) of included elements, i.e.
         // read out the abundances specified in the atomic data file
         const int atomic_number = get_atomicnumber(element);
-        const auto elemabundance = static_cast<float>(elem_abundances_in[atomic_number - 1] / normfactor);
-        assert_always(elemabundance >= 0.);
+        const auto elemmassfrac = static_cast<float>(elem_massfracs_in[atomic_number - 1] / normfactor);
+        assert_always(elemmassfrac >= 0.);
 
         // radioactive nuclide abundances should have already been set by read_??_model
-        set_elem_untrackedstable_abund_from_total(nonemptymgi, element, elemabundance);
+        set_elem_untrackedstable_massfrac(nonemptymgi, element, elemmassfrac);
       }
     }
   }
@@ -802,16 +802,16 @@ auto read_model_columns(std::istream& fmodel) -> std::tuple<std::vector<std::str
     // add a default header for unlabelled columns
     switch (get_modelgridtype()) {
       case GridType::SPHERICAL1D:
-        headerline = std::string("#inputcellid vel_r_max_kmps logrho");
+        headerline = "#inputcellid vel_r_max_kmps logrho";
         break;
       case GridType::CYLINDRICAL2D:
-        headerline = std::string("#inputcellid pos_rcyl_mid pos_z_mid rho");
+        headerline = "#inputcellid pos_rcyl_mid pos_z_mid rho";
         break;
       case GridType::CARTESIAN3D:
-        headerline = std::string("#inputcellid pos_x_min pos_y_min pos_z_min rho");
+        headerline = "#inputcellid pos_x_min pos_y_min pos_z_min rho";
         break;
     }
-    headerline += std::string(" X_Fegroup X_Ni56 X_Co56 X_Fe52 X_Cr48");
+    headerline += " X_Fegroup X_Ni56 X_Co56 X_Fe52 X_Cr48";
   }
 
   int colcount = get_token_count(line);
@@ -1418,6 +1418,15 @@ auto get_element_meanweight(const std::ptrdiff_t nonemptymgi, const int element)
   return globals::elements[element].initstablemeannucmass;
 }
 
+[[nodiscard]] constexpr auto distance_cartesian_boundary(const double pktpos, const double cellboundarypos,
+                                                         const double tstart, const double pktvelgridcoord) -> double {
+  // numerically stable formulation: compute time difference directly as
+  // (pos - boundary_at_tstart) / (boundary_velocity - packet_velocity)
+  // to avoid catastrophic cancellation when t_crossing ≈ tstart
+  return CLIGHT_PROP * (pktpos - (cellboundarypos / globals::tmin * tstart)) /
+         ((cellboundarypos / globals::tmin) - pktvelgridcoord);
+}
+
 }  // anonymous namespace
 
 // for a uniform grid get the the extent along the x,y,z coordinate (x_2 - x_1, etc.) at time tmin
@@ -1478,23 +1487,19 @@ auto get_element_meanweight(const std::ptrdiff_t nonemptymgi, const int element)
 [[nodiscard]] auto get_propcell_random_position_tmin(int cellindex) -> Vec3d {
   switch (get_propgridtype()) {
     case GridType::SPHERICAL1D: {
-      const double zrand = rng_uniform();
       const double r_inner = get_cellcoordmin(cellindex, 0);
       const double r_outer = get_cellcoordmax(cellindex, 0);
       // use equal volume probability distribution to select radius
-      const double radius = std::cbrt((zrand * pow3(r_inner)) + ((1. - zrand) * pow3(r_outer)));
-      // assert_always(radius >= r_inner);
-      // assert_always(radius <= r_outer);
+      const double radius = std::cbrt(std::lerp(pow3(r_outer), pow3(r_inner), rng_uniform()));
 
       return vec_scale(get_rand_isotropic_unitvec(), radius);
     }
 
     case GridType::CYLINDRICAL2D: {
-      const double zrand = rng_uniform_pos();
       const double rcyl_inner = get_cellcoordmin(cellindex, 0);
       const double rcyl_outer = get_cellcoordmax(cellindex, 0);
       // use equal area probability distribution to select radius
-      const double rcyl_rand = std::sqrt((zrand * pow2(rcyl_inner)) + ((1. - zrand) * pow2(rcyl_outer)));
+      const double rcyl_rand = std::sqrt(std::lerp(pow2(rcyl_outer), pow2(rcyl_inner), rng_uniform_pos()));
       const double theta_rand = rng_uniform() * 2 * PI;
       return {std::cos(theta_rand) * rcyl_rand, std::sin(theta_rand) * rcyl_rand,
               get_cellcoordmin(cellindex, 1) + (rng_uniform_pos() * propcell_width_tmin(cellindex, 1))};
@@ -1565,21 +1570,21 @@ auto get_rho_tmin(const int modelgridindex) -> float { return modelgrid_input[mo
 }
 
 // mass fraction of an element (all isotopes combined)
-[[gnu::pure]] [[nodiscard]] auto get_elem_abundance(const std::ptrdiff_t nonemptymgi, const int element) -> float {
+[[gnu::pure]] [[nodiscard]] auto get_elem_massfrac(const std::ptrdiff_t nonemptymgi, const int element) -> float {
   const auto massfrac = elem_massfracs_allcells[(nonemptymgi * get_nelements()) + element];
   assert_testmodeonly(massfrac >= 0.0);
   return massfrac;
 }
 
 // mass fraction of an element (all isotopes combined)
-void set_elem_abundance(const ptrdiff_t nonemptymgi, const int element, const float newabundance) {
-  elem_massfracs_allcells[(nonemptymgi * get_nelements()) + element] = newabundance;
+void set_elem_massfrac(const ptrdiff_t nonemptymgi, const int element, const float newmassfrac) {
+  elem_massfracs_allcells[(nonemptymgi * get_nelements()) + element] = newmassfrac;
 }
 
 // mass fraction of an element (all isotopes combined)
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_elem_numberdens(const ptrdiff_t nonemptymgi, const int element)
     -> double {
-  return get_elem_abundance(nonemptymgi, element) / static_cast<double>(get_element_meanweight(nonemptymgi, element)) *
+  return get_elem_massfrac(nonemptymgi, element) / static_cast<double>(get_element_meanweight(nonemptymgi, element)) *
          get_rho(nonemptymgi);
 }
 
@@ -1721,7 +1726,6 @@ DEVICE_FUNC auto get_modelgridtype() -> GridType {
   assert_testmodeonly(mgi < get_npts_model());
 
   const int nonemptymgi = nonemptymgi_of_mgi[mgi];
-  // assert_testmodeonly(nonemptymgi >= 0 || get_numpropcells(mgi) == 0);
   assert_testmodeonly(nonemptymgi >= 0);
   assert_testmodeonly(nonemptymgi < get_nonempty_npts_model());
 
@@ -1840,7 +1844,7 @@ void set_elements_uppermost_ion(const int nonemptymgi, const int element, const 
       for (int element = 0; element < get_nelements(); element++) {
         const int z = get_atomicnumber(element);
         if (z >= 57 && z <= 71) {
-          X_lan += get_elem_abundance(nonemptymgi, element);
+          X_lan += get_elem_massfrac(nonemptymgi, element);
         }
       }
       // first step: temperature-independent factor
@@ -2155,7 +2159,7 @@ void read_ejecta_model() {
 void write_grid_restart_data(const int timestep) {
   const auto filename = std::format("gridsave_ts{}.tmp", timestep);
 
-  const auto sys_time_start_write_restart = std::time(nullptr);
+  const auto sys_time_start_write_restart = std::chrono::steady_clock::now();
   printlog("Write grid restart data to {}...", filename);
 
   FILE* gridsave_file = fopen_required(filename, "w");
@@ -2205,7 +2209,9 @@ void write_grid_restart_data(const int timestep) {
   nonthermal::write_restart_data(gridsave_file);
   nltepop_write_restart_data(gridsave_file);
   fclose(gridsave_file);
-  printlnlog("done in {} seconds.", std::time(nullptr) - sys_time_start_write_restart);
+  const auto write_restart_duration =
+      std::chrono::duration<double>(std::chrono::steady_clock::now() - sys_time_start_write_restart).count();
+  printlnlog("done in {:.1f} seconds.", write_restart_duration);
 }
 
 // get lowest modelgridindex assigned to this rank (for update_grid and output files)
@@ -2287,12 +2293,11 @@ void init_grid() {
   }
 
   if (globals::my_rank == 0) {
-    auto grid_file = std::fstream("grid.out", std::ios::out | std::ios::trunc);
-    assert_always(grid_file.is_open());
+    auto grid_file = fstream_required("grid.out", std::ios::out | std::ios::trunc);
     for (int cellindex = 0; cellindex < ngrid; cellindex++) {
       const int mgi = get_propcell_modelgridindex(cellindex);
       if (mgi >= 0) {
-        grid_file << cellindex << ' ' << mgi << '\n';  // write only non-empty cells to grid file
+        std::println(grid_file, "{} {}", cellindex, mgi);  // write only non-empty cells to grid file
       }
     }
   }
@@ -2333,9 +2338,9 @@ void init_grid() {
         const double ratio = totmassnuclide[nucindex] / totmassnuclide_actual;
         for (int nonemptymgi = 0; nonemptymgi < get_nonempty_npts_model(); nonemptymgi++) {
           const int mgi = get_mgi_of_nonemptymgi(nonemptymgi);
-          const double prev_abund = get_modelinitnucmassfrac(mgi, nucindex);
-          const auto new_abund = static_cast<float>(prev_abund * ratio);
-          set_modelinitnucmassfrac(mgi, nucindex, new_abund);
+          const double prev_massfrac = get_modelinitnucmassfrac(mgi, nucindex);
+          const auto new_massfrac = static_cast<float>(prev_massfrac * ratio);
+          set_modelinitnucmassfrac(mgi, nucindex, new_massfrac);
         }
       }
     }
@@ -2394,7 +2399,7 @@ auto get_totmassnuclide_tmodel(const int z, const int a) -> double { return totm
                                                  const int cellindex) -> std::tuple<double, int> {
   const auto prop_gridtype = get_propgridtype();
   if constexpr (FORCE_SPHERICAL_ESCAPE_SURFACE) {
-    if (get_cell_r_inner(cellindex, prop_gridtype) > globals::vmax * globals::tmin) {
+    if (get_cell_r_inner(cellindex, prop_gridtype) > globals::rmax) {
       return {0., -99};
     }
   }
@@ -2408,12 +2413,22 @@ auto get_totmassnuclide_tmodel(const int z, const int a) -> double { return totm
   // dir * CLIGHT_PROP converted from xyz to grid coordinates
   const auto pktvelgridcoord = get_gridcoords_vel_from_xyz_pos_dir(pos, dir, pktposgridcoord, prop_gridtype);
 
-  const auto cellcoordmax = [cellindex, prop_gridtype]() {
+  const auto [cellcoordmin, cellcoordmax, cellcoordidx] = [cellindex, prop_gridtype]() {
+    auto _cellcoordmin = std::array<double, 3>{};  // position at time tmin
     auto _cellcoordmax = std::array<double, 3>{};  // position at time tmin
+    auto _cellcoordidx = std::array<int, 3>{};
     for (int d = 0; d < get_ndim(prop_gridtype); d++) {
-      _cellcoordmax[d] = get_cellcoordmax(cellindex, d);
+      _cellcoordidx[d] = get_cellcoordpointnum(cellindex, d);
+
+      _cellcoordmin[d] = get_cellcoordmin(cellindex, d);
+      if (_cellcoordidx[d] < (ncoordgrid[d] - 1)) {
+        // exactly match the next min pos of the next cell boundary
+        _cellcoordmax[d] = get_cellcoordmin(cellindex + get_coordcellindexincrement(d), d);
+      } else {
+        _cellcoordmax[d] = get_cellcoordmax(cellindex, d);
+      }
     }
-    return _cellcoordmax;
+    return std::make_tuple(_cellcoordmin, _cellcoordmax, _cellcoordidx);
   }();
 
   {
@@ -2424,42 +2439,48 @@ auto get_totmassnuclide_tmodel(const int z, const int a) -> double { return totm
       // flow, otherwise we might never enter the cell that we're supposed to be in
       const bool pos_component_vel_relative_to_flow = (pktvelgridcoord[d] * tstart) > pktposgridcoord[d];
 
-      bool isoutside_error = false;
-      double delta = 0.;
-      if (pos_component_vel_relative_to_flow) {
-        // check if packet pos is above cell max while moving in the positive direction relative to the grid flow
-        const double boundaryposmax = cellcoordmax[d] / globals::tmin * tstart;
-        delta = pktposgridcoord[d] - boundaryposmax;
-        isoutside_error = pktposgridcoord[d] > (boundaryposmax + 10.);
-      } else {
-        // check if packet pos is below cell min while moving in the negative direction relative to the grid flow
-        const double boundaryposmin = get_cellcoordmin(cellindex, d) / globals::tmin * tstart;
-        delta = pktposgridcoord[d] - boundaryposmin;
-        isoutside_error = pktposgridcoord[d] < (boundaryposmin - 10.);
-      }
-
-      if (isoutside_error) {
-        printout(
-            "[ERROR] packet outside coord %d %c%c boundary of cell %d. vel %g initpos %g "
-            "cellcoordmin %g, cellcoordmax %g\n",
-            d, pos_component_vel_relative_to_flow ? '+' : '-', get_coordlabel(prop_gridtype, d), cellindex,
-            pktvelgridcoord[d], pktposgridcoord[d], get_cellcoordmin(cellindex, d) / globals::tmin * tstart,
-            cellcoordmax[d] / globals::tmin * tstart);
-        printout("globals::tmin %g tstart %g tstart/globals::tmin %g\n", globals::tmin, tstart, tstart / globals::tmin);
-        printout(" delta %g\n", delta);
-
-        printout("packet dir [%g, %g, %g]\n", dir[0], dir[1], dir[2]);
-
-        const auto snext = get_cellindex_from_pos(pos, tstart);
-        if ((get_cellcoordpointnum(cellindex, d) == (ncoordgrid[d] - 1) && pos_component_vel_relative_to_flow) ||
-            (get_cellcoordpointnum(cellindex, d) == 0 && !pos_component_vel_relative_to_flow) || (snext < 0)) {
-          printout("[warning] escaping packet\n");
-          return {0., -99};
+      constexpr bool BOUNDARY_ERROR_CHECKING_CORRECTION = true;
+      if constexpr (BOUNDARY_ERROR_CHECKING_CORRECTION) {
+        bool isoutside_error = false;
+        double delta = 0.;
+        if (pos_component_vel_relative_to_flow) {
+          // check if packet pos is above cell max while moving in the positive direction relative to the grid flow
+          const double boundaryposmax = cellcoordmax[d] / globals::tmin * tstart;
+          delta = pktposgridcoord[d] - boundaryposmax;
+          isoutside_error = pktposgridcoord[d] > (boundaryposmax + 10.);
+        } else {
+          // check if packet pos is below cell min while moving in the negative direction relative to the grid flow
+          const double boundaryposmin = cellcoordmin[d] / globals::tmin * tstart;
+          delta = pktposgridcoord[d] - boundaryposmin;
+          isoutside_error = pktposgridcoord[d] < (boundaryposmin - 10.);
         }
-        printout("[warning] swapping packet cellindex from %d to %d, which has cellcoordmin %g, cellcoordmax %g\n",
-                 cellindex, snext, get_cellcoordmin(snext, d) / globals::tmin * tstart,
-                 get_cellcoordmax(snext, d) / globals::tmin * tstart);
-        return {0., snext};
+
+        if (isoutside_error) {
+          printout(
+              "[ERROR] packet outside coord %d %c%c boundary of cell %d. vel %g initpos %g "
+              "cellcoordmin %g, cellcoordmax %g\n",
+              d, pos_component_vel_relative_to_flow ? '+' : '-', get_coordlabel(prop_gridtype, d), cellindex,
+              pktvelgridcoord[d], pktposgridcoord[d], cellcoordmin[d] / globals::tmin * tstart,
+              cellcoordmax[d] / globals::tmin * tstart);
+          printout("globals::tmin %g tstart %g tstart/globals::tmin %g\n", globals::tmin, tstart,
+                   tstart / globals::tmin);
+          printout(" delta %g\n", delta);
+
+          printout("packet dir [%g, %g, %g]\n", dir[0], dir[1], dir[2]);
+
+          assert_always(!isoutside_error);
+
+          const auto snext = get_cellindex_from_pos(pos, tstart);
+          if ((cellcoordidx[d] == (ncoordgrid[d] - 1) && pos_component_vel_relative_to_flow) ||
+              (cellcoordidx[d] == 0 && !pos_component_vel_relative_to_flow) || (snext < 0)) {
+            printout("[warning] escaping packet\n");
+            return {0., -99};
+          }
+          printout("[warning] swapping packet cellindex from %d to %d, which has cellcoordmin %g, cellcoordmax %g\n",
+                   cellindex, snext, get_cellcoordmin(snext, d) / globals::tmin * tstart,
+                   get_cellcoordmax(snext, d) / globals::tmin * tstart);
+          return {0., snext};
+        }
       }
     }
   }
@@ -2479,18 +2500,17 @@ auto get_totmassnuclide_tmodel(const int z, const int a) -> double { return totm
     // upper d coordinate of the current cell
     if ((d_coordmaxboundary >= 0.) && (d_coordmaxboundary < distance)) {
       distance = d_coordmaxboundary;
-      snext = (get_cellcoordpointnum(cellindex, 0) == (ncoordgrid[0] - 1)) ? -99
-                                                                           : cellindex + get_coordcellindexincrement(0);
+      snext = (cellcoordidx[0] == (ncoordgrid[0] - 1)) ? -99 : cellindex + get_coordcellindexincrement(0);
     }
 
-    const double r_inner = get_cellcoordmin(cellindex, 0) * tstart / globals::tmin;
+    const double r_inner = cellcoordmin[0] * tstart / globals::tmin;
     if (r_inner > 0.) {
       const double d_coordminboundary =
           expanding_shell_intersection<BoundaryType::INNER>(pos, dir, speed, r_inner, tstart);
       // lower d coordinate of the current cell
       if ((d_coordminboundary >= 0.) && (d_coordminboundary < distance)) {
         distance = d_coordminboundary;
-        snext = (get_cellcoordpointnum(cellindex, 0) == 0) ? -99 : cellindex - get_coordcellindexincrement(0);
+        snext = (cellcoordidx[0] == 0) ? -99 : cellindex - get_coordcellindexincrement(0);
       }
     }
   } else if (prop_gridtype == GridType::CYLINDRICAL2D) {
@@ -2499,7 +2519,7 @@ auto get_totmassnuclide_tmodel(const int z, const int a) -> double { return totm
     const std::array<double, 2> posnoz = {pos[0], pos[1]};
 
     // r_cyl component of direction vector
-    const double dirxylen = std::sqrt((dir[0] * dir[0]) + (dir[1] * dir[1]));
+    const double dirxylen = std::sqrt(pow2(dir[0]) + pow2(dir[1]));
     // r_cyl component of velocity
     const double xyspeed = dirxylen * CLIGHT_PROP;
 
@@ -2513,17 +2533,14 @@ auto get_totmassnuclide_tmodel(const int z, const int a) -> double { return totm
       // how far did the packet travel in the z direction during this time?
       const double d_z_coordmaxboundary = d_rcyl_coordmaxboundary / xyspeed * dir[2] * CLIGHT_PROP;
       // distance from two perpendicular components to the r_cyl upper boundary
-      const double d_coordmaxboundary_rcyl = std::sqrt((d_rcyl_coordmaxboundary * d_rcyl_coordmaxboundary) +
-                                                       (d_z_coordmaxboundary * d_z_coordmaxboundary));
+      const double d_coordmaxboundary_rcyl = std::sqrt(pow2(d_rcyl_coordmaxboundary) + pow2(d_z_coordmaxboundary));
       if ((d_coordmaxboundary_rcyl > 0) && (d_coordmaxboundary_rcyl < distance)) {
         distance = d_coordmaxboundary_rcyl;
-        snext = (get_cellcoordpointnum(cellindex, 0) == (ncoordgrid[0] - 1))
-                    ? -99
-                    : cellindex + get_coordcellindexincrement(0);
+        snext = (cellcoordidx[0] == (ncoordgrid[0] - 1)) ? -99 : cellindex + get_coordcellindexincrement(0);
       }
     }
 
-    const double r_inner = get_cellcoordmin(cellindex, 0) * tstart / globals::tmin;
+    const double r_inner = cellcoordmin[0] * tstart / globals::tmin;
     // don't try to calculate the intersection if the inner radius is zero
     if (r_inner > 0) {
       // calculate the distance in the xy plane to the inner boundary
@@ -2532,39 +2549,31 @@ auto get_totmassnuclide_tmodel(const int z, const int a) -> double { return totm
       if (d_rcyl_coordminboundary >= 0.) {
         const double d_z_coordminboundary = d_rcyl_coordminboundary / xyspeed * dir[2] * CLIGHT_PROP;
         // distance from two perpendicular components to the r_cyl lower boundary
-        const double d_coordminboundary_rcyl = std::sqrt((d_rcyl_coordminboundary * d_rcyl_coordminboundary) +
-                                                         (d_z_coordminboundary * d_z_coordminboundary));
+        const double d_coordminboundary_rcyl = std::sqrt(pow2(d_rcyl_coordminboundary) + pow2(d_z_coordminboundary));
         if ((d_coordminboundary_rcyl >= 0.) && (d_coordminboundary_rcyl < distance)) {
           distance = d_coordminboundary_rcyl;
-          snext = (get_cellcoordpointnum(cellindex, 0) == 0) ? -99 : cellindex - get_coordcellindexincrement(0);
+          snext = (cellcoordidx[0] == 0) ? -99 : cellindex - get_coordcellindexincrement(0);
         }
       }
     }
 
-    // handle Z boundaries as Cartesian
-
-    if (pktvelgridcoord[1] > (cellcoordmax[1] / globals::tmin)) {
-      const double t_zcoordmaxboundary = ((pktposgridcoord[1] - (pktvelgridcoord[1] * tstart)) /
-                                          (cellcoordmax[1] - (pktvelgridcoord[1] * globals::tmin)) * globals::tmin) -
-                                         tstart;
-      const double d_coordmaxboundary_z = CLIGHT_PROP * t_zcoordmaxboundary;
+    // Z boundaries are Cartesian
+    constexpr int d = 1;
+    if (pktvelgridcoord[d] > (cellcoordmax[d] / globals::tmin)) {
+      const double d_coordmaxboundary_z =
+          distance_cartesian_boundary(pktposgridcoord[1], cellcoordmax[d], tstart, pktvelgridcoord[1]);
 
       if ((d_coordmaxboundary_z >= 0.) && (d_coordmaxboundary_z < distance)) {
         distance = d_coordmaxboundary_z;
-        snext = (get_cellcoordpointnum(cellindex, 1) == (ncoordgrid[1] - 1))
-                    ? -99
-                    : cellindex + get_coordcellindexincrement(1);
+        snext = (cellcoordidx[d] == (ncoordgrid[d] - 1)) ? -99 : cellindex + get_coordcellindexincrement(d);
       }
-    } else if (pktvelgridcoord[1] < (get_cellcoordmin(cellindex, 1) / globals::tmin)) {
-      const double t_zcoordminboundary =
-          ((pktposgridcoord[1] - (pktvelgridcoord[1] * tstart)) /
-           ((get_cellcoordmin(cellindex, 1)) - (pktvelgridcoord[1] * globals::tmin)) * globals::tmin) -
-          tstart;
-      const double d_coordminboundary_z = CLIGHT_PROP * t_zcoordminboundary;
+    } else if (pktvelgridcoord[d] < (cellcoordmin[d] / globals::tmin)) {
+      const double d_coordminboundary_z =
+          distance_cartesian_boundary(pktposgridcoord[d], cellcoordmin[d], tstart, pktvelgridcoord[1]);
 
       if ((d_coordminboundary_z >= 0.) && (d_coordminboundary_z < distance)) {
         distance = d_coordminboundary_z;
-        snext = (get_cellcoordpointnum(cellindex, 1) == 0) ? -99 : cellindex - get_coordcellindexincrement(1);
+        snext = (cellcoordidx[d] == 0) ? -99 : cellindex - get_coordcellindexincrement(d);
       }
     }
 
@@ -2576,37 +2585,29 @@ auto get_totmassnuclide_tmodel(const int z, const int a) -> double { return totm
     // the boundaries follow
     // x+/- = x+/-(tmin) * (t/tmin)
     // so the crossing occurs when
-    // t = (x0 - (dir.x)*c*tstart)/(x+/-(tmin)/tmin - (dir.x)c)
+    // t - tstart = (x0 - x+/-(tmin)/tmin * tstart) / (x+/-(tmin)/tmin - (dir.x)*c)
+    // distance = c * (t - tstart)
 
     // Modified so that it also returns the distance to the closest cell
     // boundary, regardless of direction.
 
     for (int d = 0; d < 3; d++) {
       if (pktvelgridcoord[d] > (cellcoordmax[d] / globals::tmin)) {
-        const double t_coordmaxboundary = ((pktposgridcoord[d] - (pktvelgridcoord[d] * tstart)) /
-                                           (cellcoordmax[d] - (pktvelgridcoord[d] * globals::tmin)) * globals::tmin) -
-                                          tstart;
-
-        const double d_coordmaxboundary = CLIGHT_PROP * t_coordmaxboundary;
+        const double d_coordmaxboundary =
+            distance_cartesian_boundary(pktposgridcoord[d], cellcoordmax[d], tstart, pktvelgridcoord[d]);
 
         if ((d_coordmaxboundary >= 0.) && (d_coordmaxboundary < distance)) {
           distance = d_coordmaxboundary;
-          snext = (get_cellcoordpointnum(cellindex, d) == (ncoordgrid[d] - 1))
-                      ? -99
-                      : cellindex + get_coordcellindexincrement(d);
+          snext = (cellcoordidx[d] == (ncoordgrid[d] - 1)) ? -99 : cellindex + get_coordcellindexincrement(d);
         }
-      } else if (pktvelgridcoord[d] < (get_cellcoordmin(cellindex, d) / globals::tmin)) {
-        const double t_coordminboundary =
-            ((pktposgridcoord[d] - (pktvelgridcoord[d] * tstart)) /
-             (get_cellcoordmin(cellindex, d) - (pktvelgridcoord[d] * globals::tmin)) * globals::tmin) -
-            tstart;
-
-        const double d_coordminboundary = CLIGHT_PROP * t_coordminboundary;
+      } else if (pktvelgridcoord[d] < (cellcoordmin[d] / globals::tmin)) {
+        const double d_coordminboundary =
+            distance_cartesian_boundary(pktposgridcoord[d], cellcoordmin[d], tstart, pktvelgridcoord[d]);
 
         // lower d coordinate of the current cell
         if ((d_coordminboundary >= 0.) && (d_coordminboundary < distance)) {
           distance = d_coordminboundary;
-          snext = (get_cellcoordpointnum(cellindex, d) == 0) ? -99 : cellindex - get_coordcellindexincrement(d);
+          snext = (cellcoordidx[d] == 0) ? -99 : cellindex - get_coordcellindexincrement(d);
         }
       }
     }
@@ -2624,8 +2625,8 @@ auto get_totmassnuclide_tmodel(const int z, const int a) -> double { return totm
       }
       printout("|initpos| %g |dir| %g |pos.dir| %g\n", vec_len(pos), vec_len(dir), dot(pos, dir));
       for (int d2 = 0; d2 < get_ndim(prop_gridtype); d2++) {
-        printout("coord %d: cellcoordmin %g cellcoordmax %g\n", d2,
-                 get_cellcoordmin(cellindex, d2) * tstart / globals::tmin, cellcoordmax[d2] * tstart / globals::tmin);
+        printout("coord %d: cellcoordmin %g cellcoordmax %g\n", d2, cellcoordmin[d2] * tstart / globals::tmin,
+                 cellcoordmax[d2] * tstart / globals::tmin);
       }
       printout("tstart %g\n", tstart);
     }

@@ -4,11 +4,11 @@
 #include <unistd.h>
 
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 #include <cstddef>
 #include <cstdio>
 #include <cstdlib>
-#include <ctime>
 #include <filesystem>
 #include <format>
 #include <fstream>
@@ -18,6 +18,7 @@
 #ifdef STDPAR_ON
 #include <ranges>
 #endif
+#include <print>
 #include <span>
 #include <vector>
 
@@ -52,8 +53,9 @@ std::fstream output_file;
 
 namespace {
 
-time_t real_time_start = -1;
-time_t time_timestep_start = -1;  // this will be set after the first update of the grid and before packet prop
+std::chrono::steady_clock::time_point real_time_start;
+std::chrono::steady_clock::time_point
+    time_timestep_start;  // this will be set after the first update of the grid and before packet prop
 std::fstream estimators_file;
 
 void setup_cellcache() {
@@ -136,36 +138,36 @@ void initialise_linestat_file() {
   auto linestat_file = fstream_required("linestat.out", std::ios::out | std::ios::trunc);
 
   for (int i = 0; i < globals::nlines; i++) {
-    linestat_file << CLIGHT / globals::linelist.nu[i] << ' ';  // wavelength in cm
+    std::print(linestat_file, "{:g} ", CLIGHT / globals::linelist.nu[i]);  // wavelength in cm
   }
-  linestat_file << '\n';
+  std::println(linestat_file, "");
 
   for (int i = 0; i < globals::nlines; i++) {
-    linestat_file << get_atomicnumber(globals::linelist.elementindex[i]) << ' ';
+    std::print(linestat_file, "{} ", get_atomicnumber(globals::linelist.elementindex[i]));
   }
-  linestat_file << '\n';
+  std::println(linestat_file, "");
 
   for (int i = 0; i < globals::nlines; i++) {
-    linestat_file << get_ionstage(globals::linelist.elementindex[i], globals::linelist.ionindex[i]) << ' ';
+    std::print(linestat_file, "{} ", get_ionstage(globals::linelist.elementindex[i], globals::linelist.ionindex[i]));
   }
-  linestat_file << '\n';
+  std::println(linestat_file, "");
 
   for (int i = 0; i < globals::nlines; i++) {
-    linestat_file << (globals::linelist.upperlevelindex[i] + 1) << ' ';
+    std::print(linestat_file, "{} ", (globals::linelist.upperlevelindex[i] + 1));
   }
-  linestat_file << '\n';
+  std::println(linestat_file, "");
 
   for (int i = 0; i < globals::nlines; i++) {
-    linestat_file << (globals::linelist.lowerlevelindex[i] + 1) << ' ';
+    std::print(linestat_file, "{} ", (globals::linelist.lowerlevelindex[i] + 1));
   }
-  linestat_file << '\n';
+  std::println(linestat_file, "");
 }
 
 void write_deposition_file() {
   const int my_rank = globals::my_rank;
   const int nts = globals::timestep;
   printlog("Calculating and writing deposition.out...");
-  auto const time_write_deposition_file_start = std::time(nullptr);
+  const auto time_write_deposition_file_start = std::chrono::steady_clock::now();
   double mtot = 0.;
   const int nstart_nonempty = grid::get_nstart_nonempty(my_rank);
   const int ndo_nonempty = grid::get_ndo_nonempty(my_rank);
@@ -228,21 +230,24 @@ void write_deposition_file() {
   if (my_rank == 0) {
     const bool any_fission = decay::decaytype_is_used(decay::DECAYTYPE_SPONTFISSION);
     auto dep_file = fstream_required("deposition.out.tmp", std::ios::out | std::ios::trunc);
-    dep_file << "#ts tmid_days tmid_s total_dep_Lsun gammadep_discrete_Lsun gammadep_Lsun positrondep_Lsun "
-                "eps_positron_ana_Lsun elecdep_Lsun eps_elec_Lsun eps_elec_ana_Lsun alphadep_Lsun eps_alpha_Lsun "
-                "eps_alpha_ana_Lsun";
+    std::print(dep_file,
+               "#ts tmid_days tmid_s total_dep_Lsun gammadep_discrete_Lsun gammadep_Lsun positrondep_Lsun "
+               "eps_positron_ana_Lsun elecdep_Lsun eps_elec_Lsun eps_elec_ana_Lsun alphadep_Lsun eps_alpha_Lsun "
+               "eps_alpha_ana_Lsun");
     if (any_fission) {
-      dep_file << " eps_spfission_ana_Lsun";
+      std::print(dep_file, " eps_spfission_ana_Lsun");
     }
-    dep_file << " eps_gamma_Lsun Qdot_betaminus_ana_erg/s/g Qdotalpha_ana_erg/s/g";
+    std::print(dep_file, " eps_gamma_Lsun Qdot_betaminus_ana_erg/s/g Qdotalpha_ana_erg/s/g");
     if (any_fission) {
-      dep_file << " Qdotspfission_ana_erg/s/g";
+      std::print(dep_file, " Qdotspfission_ana_erg/s/g");
     }
-    dep_file << " eps_erg/s/g Qdot_ana_erg/s/g positrondep_discrete_Lsun elecdep_discrete_Lsun alphadep_discrete_Lsun";
+    std::print(dep_file,
+               " eps_erg/s/g Qdot_ana_erg/s/g positrondep_discrete_Lsun elecdep_discrete_Lsun "
+               "alphadep_discrete_Lsun");
     if (any_fission) {
-      dep_file << " spfission_dep_discrete_Lsun";
+      std::print(dep_file, " spfission_dep_discrete_Lsun");
     }
-    dep_file << '\n';
+    std::println(dep_file, "");
 
     for (int i = 0; i <= nts; i++) {
       const double t_mid = globals::timesteps[i].mid;
@@ -256,39 +261,47 @@ void write_deposition_file() {
                                   globals::timesteps[i].spfission_dep_discrete) /
                                  mtot / t_width;
 
-      dep_file << i << ' ' << t_mid / DAY << ' ' << t_mid;
-      dep_file << ' ' << total_dep / t_width / LSUN;
-      dep_file << ' ' << globals::timesteps[i].gamma_dep_discrete / t_width / LSUN;
-      dep_file << ' ' << globals::timesteps[i].gamma_dep / t_width / LSUN;
-      dep_file << ' ' << globals::timesteps[i].positron_dep / t_width / LSUN;
-      dep_file << ' ' << globals::timesteps[i].eps_positron_ana_power / LSUN;
-      dep_file << ' ' << globals::timesteps[i].electron_dep / t_width / LSUN;
-      dep_file << ' ' << globals::timesteps[i].electron_emission / t_width / LSUN;
-      dep_file << ' ' << globals::timesteps[i].eps_electron_ana_power / LSUN;
-      dep_file << ' ' << globals::timesteps[i].alpha_dep / t_width / LSUN;
-      dep_file << ' ' << globals::timesteps[i].alpha_emission / t_width / LSUN;
-      dep_file << ' ' << globals::timesteps[i].eps_alpha_ana_power / LSUN;
+      std::print(dep_file, "{} {:g} {:g} {:g}", i, t_mid / DAY, t_mid, total_dep / t_width / LSUN);
+
+      std::print(dep_file, " {:g} {:g}", globals::timesteps[i].gamma_dep_discrete / t_width / LSUN,
+                 globals::timesteps[i].gamma_dep / t_width / LSUN);
+
+      std::print(dep_file, " {:g} {:g}", globals::timesteps[i].positron_dep / t_width / LSUN,
+                 globals::timesteps[i].eps_positron_ana_power / LSUN);
+
+      std::print(dep_file, " {:g} {:g} {:g}", globals::timesteps[i].electron_dep / t_width / LSUN,
+                 globals::timesteps[i].electron_emission / t_width / LSUN,
+                 globals::timesteps[i].eps_electron_ana_power / LSUN);
+
+      std::print(dep_file, " {:g} {:g} {:g}", globals::timesteps[i].alpha_dep / t_width / LSUN,
+                 globals::timesteps[i].alpha_emission / t_width / LSUN,
+                 globals::timesteps[i].eps_alpha_ana_power / LSUN);
+
       if (any_fission) {
-        dep_file << ' ' << globals::timesteps[i].eps_spfission_ana_power / LSUN;
+        std::print(dep_file, " {:g}", globals::timesteps[i].eps_spfission_ana_power / LSUN);
       } else {
         assert_testmodeonly(globals::timesteps[i].eps_spfission_ana_power == 0.);
       }
-      dep_file << ' ' << globals::timesteps[i].gamma_emission / t_width / LSUN;
-      dep_file << ' ' << globals::timesteps[i].qdot_betaminus / mtot;
-      dep_file << ' ' << globals::timesteps[i].qdot_alpha / mtot;
+
+      std::print(dep_file, " {:g} {:g} {:g}", globals::timesteps[i].gamma_emission / t_width / LSUN,
+                 globals::timesteps[i].qdot_betaminus / mtot, globals::timesteps[i].qdot_alpha / mtot);
+
       if (any_fission) {
-        dep_file << ' ' << globals::timesteps[i].qdot_spfission / mtot;
+        std::print(dep_file, " {:g}", globals::timesteps[i].qdot_spfission / mtot);
       } else {
         assert_testmodeonly(globals::timesteps[i].qdot_spfission == 0.);
       }
-      dep_file << ' ' << epsilon_tot << ' ' << globals::timesteps[i].qdot_total / mtot;
-      dep_file << ' ' << globals::timesteps[i].positron_dep_discrete / t_width / LSUN;
-      dep_file << ' ' << globals::timesteps[i].electron_dep_discrete / t_width / LSUN;
-      dep_file << ' ' << globals::timesteps[i].alpha_dep_discrete / t_width / LSUN;
+
+      std::print(dep_file, " {:g} {:g} {:g} {:g} {:g}", epsilon_tot, globals::timesteps[i].qdot_total / mtot,
+                 globals::timesteps[i].positron_dep_discrete / t_width / LSUN,
+                 globals::timesteps[i].electron_dep_discrete / t_width / LSUN,
+                 globals::timesteps[i].alpha_dep_discrete / t_width / LSUN);
+
       if (any_fission) {
-        dep_file << ' ' << globals::timesteps[i].spfission_dep_discrete / t_width / LSUN;
+        std::print(dep_file, " {:g}", globals::timesteps[i].spfission_dep_discrete / t_width / LSUN);
       }
-      dep_file << '\n';
+
+      std::println(dep_file, "");
     }
     dep_file.close();
 
@@ -296,16 +309,18 @@ void write_deposition_file() {
     std::rename("deposition.out.tmp", "deposition.out");
   }
 
-  printlnlog("took {} seconds", std::time(nullptr) - time_write_deposition_file_start);
+  const auto deposition_write_duration =
+      std::chrono::duration<double>(std::chrono::steady_clock::now() - time_write_deposition_file_start).count();
+  printlnlog("took {:.1f} seconds", deposition_write_duration);
 }
 
 void write_timestep_file() {
   auto timestepfile = std::fstream("timesteps.out", std::ofstream::out | std::ofstream::trunc);
   assert_always(timestepfile.is_open());
-  timestepfile << "#timestep tstart_days tmid_days twidth_days\n";
+  std::print(timestepfile, "#timestep tstart_days tmid_days twidth_days\n");
   for (int n = 0; n < globals::ntimesteps; n++) {
-    timestepfile << n << ' ' << globals::timesteps[n].start / DAY << ' ' << globals::timesteps[n].mid / DAY << ' '
-                 << globals::timesteps[n].width / DAY << '\n';
+    std::println(timestepfile, "{} {:g} {:g} {:g}", n, globals::timesteps[n].start / DAY,
+                 globals::timesteps[n].mid / DAY, globals::timesteps[n].width / DAY);
   }
 }
 
@@ -509,13 +524,15 @@ void mpi_reduce_estimators(const int nts) {
 auto walltime_sufficient_to_continue(const int nts, const int nts_prev, const int walltimelimitseconds) -> bool {
   MPI_Barrier_allranks();
   // time is measured from just before packet propagation from one timestep to the next
-  const auto estimated_time_per_timestep = std::time(nullptr) - time_timestep_start;
-  printlnlog("TIME: time between timesteps is {} seconds (measured packet prop of ts {} and update grid of ts {})",
+  const auto estimated_time_per_timestep =
+      std::chrono::duration<double>(std::chrono::steady_clock::now() - time_timestep_start).count();
+  printlnlog("TIME: time between timesteps is {:.1f} seconds (measured packet prop of ts {} and update grid of ts {})",
              estimated_time_per_timestep, nts_prev, nts);
 
   bool do_this_full_loop = true;
   if (walltimelimitseconds > 0 && nts < globals::timestep_finish) {
-    const auto wallclock_used_seconds = std::time(nullptr) - real_time_start;
+    const auto wallclock_used_seconds =
+        std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - real_time_start).count();
     const auto wallclock_remaining_seconds = walltimelimitseconds - wallclock_used_seconds;
     printlnlog("TIMED_RESTARTS: Used {} of {} seconds of wall time.", wallclock_used_seconds, walltimelimitseconds);
 
@@ -539,7 +556,7 @@ void save_grid_and_packets(const int nts, std::vector<Packet>& packets) {
   MPI_Barrier_allranks();
   const auto my_rank = globals::my_rank;
 
-  const auto time_write_packets_file_start = std::time(nullptr);
+  const auto time_write_packets_file_start = std::chrono::steady_clock::now();
 
   if constexpr (!KEEP_ESCAPED_GAMMAS) {
     std::erase_if(packets, [](const Packet& pkt) { return pkt.type == TYPE_ESCAPE && pkt.escape_type == TYPE_GAMMA; });
@@ -550,15 +567,18 @@ void save_grid_and_packets(const int nts, std::vector<Packet>& packets) {
 
   vpkt::write_timestep(nts, false);
 
-  const auto time_write_packets_finished_thisrank = std::time(nullptr);
+  const auto time_write_packets_finished_thisrank = std::chrono::steady_clock::now();
 
   MPI_Barrier_allranks();
 
-  const auto timenow = std::time(nullptr);
+  const auto timenow = std::chrono::steady_clock::now();
+  const auto packets_write_time =
+      std::chrono::duration<double>(time_write_packets_finished_thisrank - time_write_packets_file_start).count();
+  const auto packets_wait_time = std::chrono::duration<double>(timenow - time_write_packets_finished_thisrank).count();
+  const auto packets_total_time = std::chrono::duration<double>(timenow - time_write_packets_file_start).count();
 
-  printlnlog("timestep {}: finished writing temporary packets file (took {}, waited {}, total {} seconds)", nts,
-             time_write_packets_finished_thisrank - time_write_packets_file_start,
-             timenow - time_write_packets_finished_thisrank, timenow - time_write_packets_file_start);
+  printlnlog("timestep {}: finished writing temporary packets file (took {:.1f}s, waited {:.1f}s, total {:.1f}s)", nts,
+             packets_write_time, packets_wait_time, packets_total_time);
 
   if (my_rank == 0) {
     grid::write_grid_restart_data(nts);
@@ -631,7 +651,7 @@ auto do_timestep(const int nts, const int titer, std::vector<Packet>& packets, c
 
   update_grid(estimators_file, nts, nts_prev, titer, real_time_start);
 
-  const auto sys_time_start_communicate_grid = std::time(nullptr);
+  const auto sys_time_start_communicate_grid = std::chrono::steady_clock::now();
 
   // Each process has now updated its own set of cells. The results now need to be communicated between processes.
   mpi_communicate_grid_properties();
@@ -646,9 +666,11 @@ auto do_timestep(const int nts, const int titer, std::vector<Packet>& packets, c
       assert_always(std::isfinite(clump_factor) && clump_factor >= 1.F);
     }
   }
-
-  printlnlog("timestep {}: time after grid properties have been communicated {} (took {} seconds)", nts,
-             std::time(nullptr), std::time(nullptr) - sys_time_start_communicate_grid);
+  
+  const auto communicate_grid_duration =
+      std::chrono::duration<double>(std::chrono::steady_clock::now() - sys_time_start_communicate_grid).count();
+  printlnlog("timestep {}: time after grid properties have been communicated (took {:.1f} seconds)", nts,
+             communicate_grid_duration);
 
   // If this is not the 0th time step of the current job step,
   // write out a snapshot of the grid properties for further restarts
@@ -657,7 +679,7 @@ auto do_timestep(const int nts, const int titer, std::vector<Packet>& packets, c
     save_grid_and_packets(nts, packets);
     do_this_full_loop = walltime_sufficient_to_continue(nts, nts_prev, walltimelimitseconds);
   }
-  time_timestep_start = std::time(nullptr);
+  time_timestep_start = std::chrono::steady_clock::now();
 
   // set all the estimators to zero before moving packets. This is now done
   // after update_grid so that, if requires, the gamma-ray heating estimator is known there
@@ -674,11 +696,13 @@ auto do_timestep(const int nts, const int titer, std::vector<Packet>& packets, c
     // Since these are going to be needed in the next time step, we will gather all the
     // estimators together now, sum them, and distribute the results
 
-    const auto time_communicate_estimators_start = std::time(nullptr);
+    const auto time_communicate_estimators_start = std::chrono::steady_clock::now();
     mpi_reduce_estimators(nts);
 
-    printlnlog("timestep {}: time after estimators have been communicated {} (took {} seconds)", nts,
-               std::time(nullptr), std::time(nullptr) - time_communicate_estimators_start);
+    const auto communicate_estimators_duration =
+        std::chrono::duration<double>(std::chrono::steady_clock::now() - time_communicate_estimators_start).count();
+    printlnlog("timestep {}: time after estimators have been communicated (took {:.1f} seconds)", nts,
+               communicate_estimators_duration);
 
     write_deposition_file();
 
@@ -709,7 +733,9 @@ auto do_timestep(const int nts, const int titer, std::vector<Packet>& packets, c
 
       vpkt::write_timestep(nts, true);
 
-      printlnlog("time after write final packets file {}", std::time(nullptr));
+      const auto after_final_packets_write =
+          std::chrono::duration<double>(std::chrono::steady_clock::now() - real_time_start).count();
+      printlnlog("time after write final packets file (tstart + {:.1f} seconds)", after_final_packets_write);
     }
   }
   return !do_this_full_loop;
@@ -718,7 +744,7 @@ auto do_timestep(const int nts, const int titer, std::vector<Packet>& packets, c
 }  // anonymous namespace
 
 auto main(int argc, char* argv[]) -> int {
-  real_time_start = std::time(nullptr);
+  real_time_start = std::chrono::steady_clock::now();
 
   // if DETAILED_BF_ESTIMATORS_ON is true, USE_LUT_PHOTOION must be false
   assert_always(!DETAILED_BF_ESTIMATORS_ON || !USE_LUT_PHOTOION);
@@ -773,7 +799,7 @@ auto main(int argc, char* argv[]) -> int {
   printlnlog("GPU_ON is enabled");
 #endif
 
-  printlnlog("time at start {}", real_time_start);
+  printlnlog("time at start");
 
   printlog("Integration method is: ");
 
@@ -803,8 +829,8 @@ auto main(int argc, char* argv[]) -> int {
       walltimelimitseconds = static_cast<int>(walltimehours * 3600);
       printlnlog("walltimelimitseconds = {}", walltimelimitseconds);
     } else {
-      fprintf(stderr, "Usage: %s [-w WALLTIMELIMITHOURS]\n",
-              argv[0]);  // NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic,)
+      std::println(stderr, "Usage: {} [-w WALLTIMELIMITHOURS]",
+                   argv[0]);  // NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic,)
       std::abort();
     }
   }
@@ -840,7 +866,9 @@ auto main(int argc, char* argv[]) -> int {
   read_parameterfile();
 
   // Read in parameters from vpkt.txt
-  vpkt::read_vpktparameterfile();
+  if constexpr (VPKT_ON) {
+    vpkt::read_vpktparameterfile();
+  }
 
   read_atomicdata();
 
@@ -868,9 +896,8 @@ auto main(int argc, char* argv[]) -> int {
   MPI_Barrier_allranks();
 
   // Record the chosen syn_dir
-  auto syn_file = std::fstream("syn_dir.txt", std::ios::out | std::ios::trunc);
-  assert_always(syn_file.is_open());
-  syn_file << syn_dir[0] << ' ' << syn_dir[1] << ' ' << syn_dir[2];
+  auto syn_file = fstream_required("syn_dir.txt", std::ios::out | std::ios::trunc);
+  std::print(syn_file, "{} {} {}", syn_dir[0], syn_dir[1], syn_dir[2]);
   syn_file.close();
 
   bool terminate_early = false;
@@ -969,22 +996,13 @@ auto main(int argc, char* argv[]) -> int {
   }
 
   MPI_Barrier_allranks();
-  const auto real_time_end = std::time(nullptr);
+  const auto real_time_end = std::chrono::steady_clock::now();
+  const auto wallclock_hours = std::chrono::duration<double>(real_time_end - real_time_start).count() / 3600.;
   printlnlog(
-      "sn3d finished at {} (job: pktprop ts {} to ts {} grid-preprop, {:.3f} wallclock hours * {} processes * {} "
+      "sn3d finished (job: pktprop ts {} to ts {} grid-preprop, {:.3f} wallclock hours * {} processes * {} "
       "threads = {:.3f} core hours)",
-      real_time_end, globals::timestep_initial, globals::timestep - 1, (real_time_end - real_time_start) / 3600.,
-      globals::nprocs, get_max_threads(),
-      (real_time_end - real_time_start) / 3600. * globals::nprocs * get_max_threads());
-
-  if (estimators_file.is_open()) {
-    estimators_file.close();
-  }
-
-  macroatom_close_file();
-
-  radfield::close_file();
-  nonthermal::close_file();
+      globals::timestep_initial, globals::timestep - 1, wallclock_hours, globals::nprocs, get_max_threads(),
+      wallclock_hours * globals::nprocs * get_max_threads());
 
   MPI_Finalize();
 

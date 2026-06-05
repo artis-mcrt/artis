@@ -3,7 +3,6 @@
 
 #include <algorithm>
 #include <cstddef>
-#include <ctime>
 #include <functional>
 #include <memory>
 #include <span>
@@ -12,7 +11,30 @@
 #include "constants.h"
 #include "grid.h"
 #include "ltepop.h"
+#include "mpi_logging.h"
 #include "packet.h"
+
+constexpr double expopac_lambdamin = 60.;
+constexpr double expopac_lambdamax = 40000.;
+constexpr double expopac_deltalambda = 20.;
+constexpr auto expopac_nbins = static_cast<ptrdiff_t>((expopac_lambdamax - expopac_lambdamin) / expopac_deltalambda);
+
+// wavelength bins are ordered by ascending wavelength (descending frequency)
+
+constexpr auto get_expopac_bin_nu_upper(const ptrdiff_t binindex) -> double {
+  const auto binindex_f64 = static_cast<double>(binindex);
+  const auto lambda_lower = expopac_lambdamin + (binindex_f64 * expopac_deltalambda);
+  return 1e8 * CLIGHT / lambda_lower;
+}
+
+constexpr auto get_expopac_bin_nu_lower(const ptrdiff_t binindex) -> double {
+  const auto binindexplusone_f64 = static_cast<double>(binindex + 1);
+  const auto lambda_upper = expopac_lambdamin + (binindexplusone_f64 * expopac_deltalambda);
+  return 1e8 * CLIGHT / lambda_upper;
+}
+
+// kappa in cm^2/g for each bin of each non-empty cell
+inline MPI_shared_array<float> expansionopacities{};
 
 class Phixslist {
   // NOLINTBEGIN(*-avoid-c-arrays)
@@ -52,30 +74,32 @@ class Phixslist {
   // NOLINTEND(*-avoid-c-arrays)
 };
 
-struct Rpkt_continuum_absorptioncoeffs {
+struct ContinuumOpacity {
   double nu{-1.};  // frequency at which opacity was calculated
-  double ffescat{0.};
-  double ffheat{0.};
-  double bf{0.};
+  // chi is the absorption coefficient in units of [cm^-1], i.e. the opacity per unit length. The actual opacity
+  // experienced by the packet is chi * pathlength, and the optical depth is chi * pathlength * rho.
+  double chi_freefree_scatter{0.};  // free-free scattering (stay rpacket) contribution to the opacity
+  double chi_freefree_heat{0.};  // free-free heating (become kpacket) contribution to the opacity
+  double chi_boundfree{0.};  // bound-free (photoionization) contribution to the opacity
   int nonemptymgi{-1};
   int timestep{-1};
   Phixslist phixslist;
 
-  constexpr Rpkt_continuum_absorptioncoeffs(const int nbfcontinua_ground, const int nbfcontinua, const int bfestimcount)
+  constexpr ContinuumOpacity(const int nbfcontinua_ground, const int nbfcontinua, const int bfestimcount)
       : phixslist{nbfcontinua_ground, nbfcontinua, bfestimcount} {}
 
-  constexpr Rpkt_continuum_absorptioncoeffs() = default;
-  [[nodiscard]] constexpr auto total() const { return ffescat + bf + ffheat; }
+  constexpr ContinuumOpacity() = default;
+
+  // total continuum absorption coefficient at nu [cm^-1]
+  [[nodiscard]] constexpr auto total() const { return chi_freefree_scatter + chi_boundfree + chi_freefree_heat; }
 };
 
 DEVICE_FUNC void do_rpkt(Packet& pkt, double t2);
 DEVICE_FUNC void emit_rpkt(Packet& pkt);
 template <bool USECELLHISTANDUPDATEPHIXSLIST>
-void calculate_chi_rpkt_cont(double nu_cmf, Rpkt_continuum_absorptioncoeffs& chi_rpkt_cont, int nonemptymgi);
-extern template void calculate_chi_rpkt_cont<true>(double nu_cmf, Rpkt_continuum_absorptioncoeffs& chi_rpkt_cont,
-                                                   int nonemptymgi);
-extern template void calculate_chi_rpkt_cont<false>(double nu_cmf, Rpkt_continuum_absorptioncoeffs& chi_rpkt_cont,
-                                                    int nonemptymgi);
+void calculate_chi_rpkt_cont(double nu_cmf, ContinuumOpacity& chi_rpkt_cont, int nonemptymgi);
+extern template void calculate_chi_rpkt_cont<true>(double nu_cmf, ContinuumOpacity& chi_rpkt_cont, int nonemptymgi);
+extern template void calculate_chi_rpkt_cont<false>(double nu_cmf, ContinuumOpacity& chi_rpkt_cont, int nonemptymgi);
 [[nodiscard]] DEVICE_FUNC auto sample_planck_times_expansion_opacity(int nonemptymgi) -> double;
 void allocate_expansionopacities();
 void calculate_expansion_opacities(int nonemptymgi);
@@ -87,8 +111,9 @@ auto calculate_chi_ffheat_nnionpart(int nonemptymgi) -> double;
   // distance from packet position to redshifting into line at frequency nu_trans
 
   if (nu_cmf <= nu_trans) {
-    return 0;  // photon was propagated too far, make sure that we don't miss a line
+    return 0.;  // photon was propagated too far, make sure that we don't miss a line
   }
+  const double delta_nu = nu_cmf - nu_trans;  // positive number
 
   if constexpr (USE_RELATIVISTIC_DOPPLER_SHIFT) {
     // With special relativity, the Doppler shift formula has an extra factor of 1/gamma in it,
@@ -96,10 +121,10 @@ auto calculate_chi_ffheat_nnionpart(int nonemptymgi) -> double;
     // on packet position and direction
 
     // use linear interpolation of frequency along the path
-    return (nu_trans - nu_cmf) / dnu_on_dl;
+    return -delta_nu / dnu_on_dl;  // dnu_on_dl is negative, so this is a positive distance
   }
 
-  return CLIGHT * prop_time * ((nu_cmf / nu_trans) - 1);
+  return CLIGHT * prop_time * delta_nu / nu_trans;
 }
 
 // find the next transition lineindex redder than nu_cmf
@@ -143,7 +168,7 @@ auto calculate_chi_ffheat_nnionpart(int nonemptymgi) -> double;
 [[gnu::pure]] [[nodiscard]] inline auto keep_this_cont(int element, const int ion, const int level,
                                                        const int nonemptymgi, const float nnetot) -> bool {
   if constexpr (DETAILED_BF_ESTIMATORS_ON) {
-    return grid::get_elem_abundance(nonemptymgi, element) > 0;
+    return grid::get_elem_massfrac(nonemptymgi, element) > 0;
   }
   return ((get_nnion(nonemptymgi, element, ion) / nnetot > 1.e-6) || (level == 0));
 }

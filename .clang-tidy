@@ -50,7 +50,7 @@ Checks: [
     ]
 WarningsAsErrors: '*,-clang-diagnostic-unused-function'
 FormatStyle: file
-ExtraArgs: [-std=c++23]
+ExtraArgs: [-std=c++26]
 # HeaderFilterRegex: '.*'
 ExcludeHeaderFilterRegex: '^/opt/homebrew/include/.*'
 CheckOptions:
@@ -63,7 +63,7 @@ CheckOptions:
     - key: bugprone-narrowing-conversions.WarnOnFloatingPointNarrowingConversion
       value: 'true'
     - key: bugprone-narrowing-conversions.WarnOnIntegerToFloatingPointNarrowingConversion
-      value: 'false'
+      value: 'true'
     - key: cppcoreguidelines-init-variables.IncludeStyle
       value: google
     - key: cppcoreguidelines-init-variables.MathHeader

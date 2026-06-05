@@ -8,6 +8,7 @@
 #include <cstdlib>
 #include <format>
 #include <iostream>
+#include <print>
 #include <ranges>
 #include <span>
 #include <sstream>
@@ -39,7 +40,7 @@ constexpr auto get_packets_text_header() -> std::string {
       " em_posx em_posy em_posz"
       " absorption_type absorption_freq nscatterings em_time";
   if constexpr (POL_ON) {
-    header += " stokes1 stokes2 stokes3";
+    header += " stokes_q stokes_u";
   }
   header +=
       " originated_from_particlenotgamma"
@@ -60,7 +61,7 @@ void place_pellet(const double e_cmf_per_packet, const std::span<const double> e
   assert_always(cellindex < grid::ngrid);
 
   pkt = Packet{};
-  pkt.where = cellindex;
+  pkt.cellindex = cellindex;
   pkt.number = pktnumber;  // record the packets number for debugging
   pkt.prop_time = globals::tmin;
   pkt.originated_from_particlenotgamma = false;
@@ -127,11 +128,11 @@ void packet_init(std::span<Packet> packets)
   assert_always(etot_simtime > 0);
 
   constexpr auto strtimelow{INITIAL_PACKETS_ON ? "tmodel" : "tmin"};
-  printlnlog("etot ({} to tmax) {} erg", strtimelow, etot_simtime);
+  printlnlog("etot ({} to tmax) {:g} erg", strtimelow, etot_simtime);
 
   // So energy per pellet is:
   const double e_cmf_per_packet = etot_simtime / MPKTS;
-  printlnlog("e_cmf per packet ({} to tmax) {} erg", strtimelow, e_cmf_per_packet);
+  printlnlog("e_cmf per packet ({} to tmax) {:g} erg", strtimelow, e_cmf_per_packet);
 
   // Now place the pellets in the ejecta and decide at what time they will decay.
 
@@ -174,7 +175,7 @@ auto read_text_packets(const std::string& filename) -> std::vector<Packet> {
     Packet& pkt = packets.back();
 
     int pkt_type_in = 0;
-    ssline >> pkt.number >> pkt.where >> pkt_type_in;
+    ssline >> pkt.number >> pkt.cellindex >> pkt_type_in;
     pkt.type = static_cast<enum packet_type>(pkt_type_in);
 
     ssline >> pkt.pos[0] >> pkt.pos[1] >> pkt.pos[2];
@@ -192,7 +193,7 @@ auto read_text_packets(const std::string& filename) -> std::vector<Packet> {
     ssline >> pkt.em_time;
 
     if constexpr (POL_ON) {
-      ssline >> pkt.stokes[0] >> pkt.stokes[1] >> pkt.stokes[2];
+      ssline >> pkt.stokes_q >> pkt.stokes_u;
     }
 
     int int_originated_from_particlenotgamma = 0;
@@ -214,29 +215,28 @@ auto read_text_packets(const std::string& filename) -> std::vector<Packet> {
 
 void write_text_packets(const std::string& filename, const std::span<const Packet> packets) {
   auto packets_file = fstream_required(filename, std::ios::out | std::ios::trunc);
-  packets_file << get_packets_text_header() << '\n';
+  std::println(packets_file, "{}", get_packets_text_header());
 
   for (const auto& pkt : packets) {
     if (!KEEP_ESCAPED_GAMMAS && pkt.type == TYPE_ESCAPE && pkt.escape_type == TYPE_GAMMA) {
       continue;
     }
-    packets_file << pkt.number << ' ' << pkt.where << ' ' << std::to_underlying(pkt.type) << ' ';
-    packets_file << pkt.pos[0] << ' ' << pkt.pos[1] << ' ' << pkt.pos[2] << ' ';
-    packets_file << pkt.dir[0] << ' ' << pkt.dir[1] << ' ' << pkt.dir[2] << ' ';
-    packets_file << pkt.tdecay << ' ';
-    packets_file << pkt.e_cmf << ' ' << pkt.e_rf << ' ' << pkt.nu_cmf << ' ' << pkt.nu_rf << ' ';
-    packets_file << std::to_underlying(pkt.escape_type) << ' ' << pkt.escape_time << ' ';
-    packets_file << pkt.emissiontype << ' ' << pkt.trueemissiontype << ' ';
-    packets_file << pkt.em_pos[0] << ' ' << pkt.em_pos[1] << ' ' << pkt.em_pos[2];
-    packets_file << ' ' << pkt.absorptiontype << ' ' << pkt.absorptionfreq << ' ' << pkt.nscatterings << ' '
-                 << pkt.em_time;
+    std::print(packets_file, "{} {} {}", pkt.number, pkt.cellindex, std::to_underlying(pkt.type));
+    std::print(packets_file, " {:g} {:g} {:g}", pkt.pos[0], pkt.pos[1], pkt.pos[2]);
+    std::print(packets_file, " {:g} {:g} {:g}", pkt.dir[0], pkt.dir[1], pkt.dir[2]);
+    std::print(packets_file, " {:g}", pkt.tdecay);
+    std::print(packets_file, " {:g} {:g} {:g} {:g}", pkt.e_cmf, pkt.e_rf, pkt.nu_cmf, pkt.nu_rf);
+    std::print(packets_file, " {} {:g}", std::to_underlying(pkt.escape_type), pkt.escape_time);
+    std::print(packets_file, " {} {}", pkt.emissiontype, pkt.trueemissiontype);
+    std::print(packets_file, " {:g} {:g} {:g}", pkt.em_pos[0], pkt.em_pos[1], pkt.em_pos[2]);
+    std::print(packets_file, " {} {:g} {} {:g}", pkt.absorptiontype, pkt.absorptionfreq, pkt.nscatterings, pkt.em_time);
     if constexpr (POL_ON) {
-      packets_file << ' ' << pkt.stokes[0] << ' ' << pkt.stokes[1] << ' ' << pkt.stokes[2];
+      std::print(packets_file, " {:g} {:g}", pkt.stokes_q, pkt.stokes_u);
     }
-    packets_file << ' ' << static_cast<int>(pkt.originated_from_particlenotgamma);
-    packets_file << ' ' << pkt.trueem_pos[0] << ' ' << pkt.trueem_pos[1] << ' ' << pkt.trueem_pos[2];
-    packets_file << ' ' << pkt.trueem_time << ' ' << pkt.pellet_nucindex << ' ' << pkt.pellet_decaytype;
-    packets_file << '\n';
+    std::print(packets_file, " {}", static_cast<int>(pkt.originated_from_particlenotgamma));
+    std::print(packets_file, " {:g} {:g} {:g}", pkt.trueem_pos[0], pkt.trueem_pos[1], pkt.trueem_pos[2]);
+    std::print(packets_file, " {:g} {} {}", pkt.trueem_time, pkt.pellet_nucindex, pkt.pellet_decaytype);
+    std::println(packets_file, "");
   }
 }
 

@@ -5,18 +5,19 @@
 #include <array>
 #include <atomic>
 #include <cassert>
+#include <chrono>
 #include <cstdarg>
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <ctime>
 #include <format>
 #include <fstream>
 #include <iostream>
 #include <limits>
 #include <memory>
+#include <print>
 #include <ranges>
 #include <span>
 #include <string>
@@ -129,16 +130,13 @@ inline auto printlnlog(std::string_view fmt, Args&&... args) -> void {
   }
 
 #else
-inline void print_line_start() {
+inline void print_line_start() noexcept {
   if (outputstartofline) {
-    const time_t now_time = time(nullptr);
-    THREADLOCALONHOST tm timebuf{};
-    strftime(outputlinebuf.data(), 32, "%FT%TZ", gmtime_r(&now_time, &timebuf));
-    output_file << outputlinebuf.data() << ' ';
+    std::print(output_file, "{:%FT%TZ} ", std::chrono::floor<std::chrono::seconds>(std::chrono::system_clock::now()));
   }
 }
 
-__attribute__((__format__(__printf__, 1, 2))) inline auto printout(const char* format, ...) -> void {
+__attribute__((__format__(__printf__, 1, 2))) inline auto printout(const char* format, ...) noexcept -> void {
   print_line_start();
   va_list args{};
   va_start(args, format);
@@ -147,41 +145,41 @@ __attribute__((__format__(__printf__, 1, 2))) inline auto printout(const char* f
 
   const auto linebuflen = strlen(outputlinebuf.data());
   outputstartofline = (linebuflen == 0 || (outputlinebuf[linebuflen - 1] == '\n'));
-  output_file << outputlinebuf.data();
+  std::print(output_file, "{}", outputlinebuf.data());
   output_file.flush();
 }
 
 template <typename... Args>
-inline auto printlog(const std::format_string<Args...> fmt, Args&&... args) -> void {
+inline auto printlog(const std::format_string<Args...> fmt, Args&&... args) noexcept -> void {
   print_line_start();
   THREADLOCALONHOST std::string outputlinestr;
   outputlinestr = std::format(fmt, std::forward<Args>(args)...);
   outputstartofline = (outputlinestr.back() == '\n');
-  output_file << outputlinestr;
+  std::print(output_file, "{}", outputlinestr);
   output_file.flush();
 }
 
 template <typename... Args>
-inline auto printlnlog(const std::format_string<Args...> fmt, Args&&... args) -> void {
+inline auto printlnlog(const std::format_string<Args...> fmt, Args&&... args) noexcept -> void {
   print_line_start();
   outputstartofline = true;
-  output_file << std::format(fmt, std::forward<Args>(args)...) << '\n';
+  std::println(output_file, fmt, std::forward<Args>(args)...);
   output_file.flush();
 }
 
-#define __artis_assert(e)                                                                                              \
-  {                                                                                                                    \
-    const bool assertpass = static_cast<bool>(e);                                                                      \
-    if (!assertpass) [[unlikely]] {                                                                                    \
-      if (output_file) {                                                                                               \
-        output_file << "\n[rank " << globals::my_rank << "] " << __FILE__ << ":" << __LINE__ << ": failed assertion `" \
-                    << #e << "` in function " << __PRETTY_FUNCTION__ << '\n';                                          \
-        output_file.flush();                                                                                           \
-      }                                                                                                                \
-      std::cerr << "\n[rank " << globals::my_rank << "] " << __FILE__ << ":" << __LINE__ << ": failed assertion `"     \
-                << #e << "` in function " << __PRETTY_FUNCTION__ << '\n' STACKTRACEIFSUPPORTED;                        \
-    }                                                                                                                  \
-    assert(assertpass);                                                                                                \
+#define __artis_assert(e)                                                                                            \
+  {                                                                                                                  \
+    const bool assertpass = static_cast<bool>(e);                                                                    \
+    if (!assertpass) [[unlikely]] {                                                                                  \
+      if (output_file) {                                                                                             \
+        std::println(output_file, "\n[rank {}] {}:{}: failed assertion `{}` in function {}", globals::my_rank,       \
+                     __FILE__, __LINE__, #e, __PRETTY_FUNCTION__);                                                   \
+        output_file.flush();                                                                                         \
+      }                                                                                                              \
+      std::println(std::cerr, "\n[rank {}] {}:{}: failed assertion `{}` in function {}", globals::my_rank, __FILE__, \
+                   __LINE__, #e, __PRETTY_FUNCTION__);                                                               \
+    }                                                                                                                \
+    assert(assertpass);                                                                                              \
   }
 
 #endif
@@ -194,6 +192,12 @@ inline auto printlnlog(const std::format_string<Args...> fmt, Args&&... args) ->
 #define assert_testmodeonly(e) (void)0
 #endif
 
+// Chunk a range of integers into (approximately) equal contiguous pieces for getting around the MPI 32-bit limit
+// on counts.
+//
+// This won't be necessary after Open MPI 6.0, which supports MPI-4's 64-bit MPI_Count functions (e.g.,
+// MPI_Bcast_c instead of MPI_Bcast). For now we need this to be able to use more than ~2 billion items in a single
+// array.
 constexpr auto get_range_chunk(const ptrdiff_t size, const ptrdiff_t nchunks, const ptrdiff_t nchunk)
     -> std::tuple<ptrdiff_t, ptrdiff_t> {
   assert_always(size >= 0);
@@ -518,7 +522,7 @@ inline void MPI_Reduce_safe(R&& data, MPI_Op op, const int root, MPI_Comm comm) 
   if (mode[0] == 'r') {
     // search data folders in order to find file to read
     for (const auto& datadir : datafolders) {
-      const std::string datafolderfilename = std::string(datadir) + filename;
+      const auto datafolderfilename = std::format("{}{}", datadir, filename);
       auto* file = std::fopen(datafolderfilename.c_str(), mode.data());
       if (file != nullptr) {
         return file;
@@ -540,17 +544,17 @@ inline void MPI_Reduce_safe(R&& data, MPI_Op op, const int root, MPI_Comm comm) 
                                                [](FILE* fp) -> int { return std::fclose(fp); });
 }
 
-[[nodiscard]] inline auto fstream_required(const std::string& filename, std::ios_base::openmode mode) -> std::fstream {
+[[nodiscard]] inline auto fstream_required(const std::string& filename, std::ios::openmode mode) -> std::fstream {
   if (filename.empty()) {
     printlnlog("ERROR: Cannot open file with empty filename.");
     std::abort();
   }
 
-  if (mode == std::ios::in) {
+  if ((mode & std::ios::in) != 0U) {
     // search data folders in order to find file to read
     for (const auto& datadir : datafolders) {
-      auto datafolderfilename = std::string(datadir) + filename;
-      auto file = std::fstream(datafolderfilename.c_str(), mode);
+      const auto datafolderfilename = std::format("{}{}", datadir, filename);
+      auto file = std::fstream(datafolderfilename, mode);
       if (file.is_open()) {
         return file;
       }

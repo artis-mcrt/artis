@@ -13,7 +13,6 @@ namespace radfield {
 void zero_estimators();
 void init();
 void initialise_prev_titer_photoionestimators();
-void close_file();
 DEVICE_FUNC void update_estimators(ptrdiff_t nonemptymgi, double distance_e_cmf, double nu_cmf,
                                    double doppler_nucmf_on_nurf, const Phixslist& phixslist, bool thickcell);
 DEVICE_FUNC void update_lineestimator(int nonemptymgi, int lineindex, double increment);
@@ -35,9 +34,9 @@ void normalise_bf_estimators(int nts, int nts_prev, int titer, double deltat);
 [[nodiscard]] DEVICE_FUNC auto get_bfrate_estimator(int element, int lowerion, int lower, int phixstargetindex,
                                                     int nonemptymgi) -> double;
 
-// get J_nu [ergs/s/sr/cm2/Hz] for a dilute black body with temperature T and dilution factor W
-[[gnu::const]] [[nodiscard]] constexpr auto dbb(const double nu, const double T, const double W) -> double {
-  return W * TWOHOVERCLIGHTSQUARED * pow3(nu) / std::expm1(HOVERKB * nu / T);
+// get Planck function spectral radiance B_nu [ergs/s/sr/cm2/Hz] for a black body for some temperature [K]
+[[gnu::const]] [[nodiscard]] constexpr auto planck(const double nu, const double temperature) -> double {
+  return 2 * H * pow3(nu) / pow2(CLIGHT) / std::expm1(HOVERKB * nu / temperature);
 }
 
 }  // namespace radfield

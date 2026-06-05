@@ -39,15 +39,11 @@ constexpr double EULERGAMMA = std::numbers::egamma;
 // numerical constants
 
 constexpr double CLIGHTSQUARED = pow2(CLIGHT);  // Speed of light squared [cm^2/s^2]
-constexpr double TWOOVERCLIGHTSQUARED = 2 / CLIGHTSQUARED;
-constexpr double TWOHOVERCLIGHTSQUARED = 2 * H / CLIGHTSQUARED;
-constexpr double CLIGHTSQUAREDOVERTWOH = CLIGHTSQUARED / (2 * H);
+constexpr double CLIGHTSQUAREDOVERTWOH = pow2(CLIGHT) / (2 * H);
 
-constexpr double ONEOVERH = 1.0 / H;
 constexpr double HOVERKB = H / KB;
 constexpr double FOURPI = 4 * PI;
-constexpr double ONEOVER4PI = 1 / (4 * PI);
-constexpr double HCLIGHTOVERFOURPI = H * CLIGHT / FOURPI;
+constexpr double HCLIGHTOVERFOURPI = H * CLIGHT / (4 * PI);
 
 constexpr double H_ionpot = 13.5979996 * EV;
 
@@ -66,6 +62,7 @@ enum class GammaThermalisationScheme { FREQUENCYDEPENDENT, BARNES, WOLLAEGER, GU
 enum class ParticleThermalisationScheme {
   INSTANTFULLDEPOSITION,
   TIMEDEPENDENT,
+  TIMEDEPENDENT_WITH_ADIABATIC_LOSS,
   TIMEDEPENDENTWITHGAMMAPRODUCTS,
   BARNES,
   WOLLAEGER,
@@ -94,13 +91,6 @@ constexpr std::array datafolders{"./", "data/", "artis/data/"};
 #define DEVICE_FUNC __host__ __device__
 #else
 #define DEVICE_FUNC
-#endif
-
-#ifdef STACKTRACE_ON
-#include <stacktrace>
-#define STACKTRACEIFSUPPORTED << std::stacktrace::current()
-#else
-#define STACKTRACEIFSUPPORTED
 #endif
 
 #if defined REPRODUCIBLE && REPRODUCIBLE

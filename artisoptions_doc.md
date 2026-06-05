@@ -29,10 +29,6 @@ constexpr bool FORCE_SAHA_ION_BALANCE(int element_z);
 // Only include a single level for the highest ion stage
 constexpr bool SINGLE_LEVEL_TOP_ION;
 
-// if false, read from file or autodetect
-// this only affects the recombrates scaling, since rates are given per ground multiplet population.
-constexpr bool SINGLE_GROUND_LEVEL;
-
 // Add any missing collisional transitions between the lower n levels and all other levels (or disable by returning zero)
 // This can prevent fully disconnected levels, whose NLTE populations cannot be determined
 constexpr int NLEVELS_REQUIRETRANSITIONS(int Z, int ionstage) {
@@ -189,18 +185,11 @@ constexpr bool NT_EXCITATION_ON = false;
 constexpr bool NT_USE_VALENCE_IONPOTENTIAL;
 
 // allow ions to lose more than one electron per impact ionisation using Auger effect probabilities
-// associate with electron shells
-// if this is greater than zero, make sure NT_USE_VALENCE_IONPOTENTIAL is false!
+// associated with electron shells.
 constexpr int NT_MAX_AUGER_ELECTRONS;
 
 // add the Auger electron term to the Spencer-Fano equation
 constexpr bool SF_AUGER_CONTRIBUTION_ON;
-
-// set true to divide up the mean Auger energy by the number of electrons that come out
-constexpr bool SF_AUGER_CONTRIBUTION_DISTRIBUTE_EN;
-
-// load shells.txt containing shell occupancy data instead of simple algorithmic guesses
-constexpr bool NT_WORKFUNCTION_USE_SHELL_OCCUPANCY_FILE = false;
 
 constexpr double TEMPERATURE_SOLVER_ACCURACY;
 
@@ -218,6 +207,9 @@ constexpr bool KEEP_ESCAPED_GAMMAS;
 
 // thermalisation scheme for non-thermal particles (positrons, electrons, alphas). INSTANTFULLDEPOSITION
 // instantly deposits all particle energy. TIMEDEPENDENT uses time-dependent Monte Carlo transport.
+// TIMEDEPENDENT_WITH_ADIABATIC_LOSS is the same as TIMEDEPENDENT but also includes adiabatic (expansion)
+// losses: particle energy decreases as E/t in addition to collisional losses, and the packet comoving
+// energy e_cmf is reduced by the expansion factor ts/t_new.
 // BARNES, and WOLLAEGER use analytic thermalisation efficiency functions.
 // TIMEDEPENDENTWITHGAMMAPRODUCTS also replaces the instant "gamma" deposition of Compton electrons and pair-production particles
 // with separate handling as particle deposition
@@ -246,11 +238,13 @@ constexpr bool KEEP_ALL_RESTART_FILES;
 // multiply bound-free cooling coefficient by upper level population instead of the upper ion target level population
 constexpr bool BFCOOLING_USELEVELPOPNOTIONPOP;
 
-// set true to calculate and use expansion opacities instead of line-by-line
-constexpr bool EXPANSIONOPACITIES_ON;
+// set true to calculate and use expansion opacities instead of line-by-line in non-grey mode
+constexpr bool RPKT_USE_EXPANSION_OPACITIES;
 
-// thermalisation probability (1 - P is probability of scattering). EXPANSIONOPACITIES_ON must be true for this to work.
-// set this to < 0 to use the macroatom
+// set true to calculate and use expansion opacities instead of line-by-line for virtual packets
+constexpr bool VPKT_USE_EXPANSION_OPACITIES;
+
+// Optionally replace macroatom with a thermalisation probability P (where 1 - P is probability of scattering).
 constexpr std::optional<float> RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY;
 
 // For cells in grey mode, select a method of calculating opacity:

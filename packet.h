@@ -55,17 +55,18 @@ struct Packet {
                           // onset of the simulation (-7)
                           // decay of a positron pellet (-10)
   double absorptionfreq{};  // records nu_rf of packet at last absorption
-  Vec3d stokes{1., 0., 0.};  // I, Q and U Stokes parameters
+  double stokes_q{0.};  // normalised Stokes q = Q/I
+  double stokes_u{0.};  // normalised Stokes u = U/I
   int trueemissiontype = EMTYPE_NOTSET;  // emission type coming from a kpkt to rpkt (last thermal emission)
   Vec3d trueem_pos{NAN, NAN, NAN};
   float trueem_time{-1.};  // last thermal emission time [s]
   enum packet_type type {};  // type of packet (k-, r-, etc.)
-  int where{-1};  // The propagation grid cell that the packet is in.
+  int cellindex{-1};  // The propagation grid cell that the packet is in.
   enum packet_type escape_type {};  // In which form when escaped from the grid.
   float escape_time{-1};  // time at which is passes out of the grid [s]
   double tdecay{-1.};  // Time at which pellet decays
   int number{-1};  // A unique number to identify the packet
-  bool originated_from_particlenotgamma{false};  // first-non-pellet packet type was gamma
+  bool originated_from_particlenotgamma{false};  // first packet type after pellet decay
   int pellet_decaytype{-1};  // index into decay::decaytypes
   int pellet_nucindex{-1};  // nuclide index of the decaying species
 

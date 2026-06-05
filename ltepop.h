@@ -50,7 +50,7 @@ void set_groundlevelpops(int nonemptymgi, int element, float nne, bool force_sah
   const double nn = grid::ion_groundlevelpops_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * get_includedions()) +
                                                        get_uniqueionindex(element, ion)];
   if (nn < MINPOP) {
-    if (grid::get_elem_abundance(nonemptymgi, element) > 0) {
+    if (grid::get_elem_massfrac(nonemptymgi, element) > 0) {
       return MINPOP;
     }
     return 0.;

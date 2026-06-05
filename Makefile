@@ -13,8 +13,7 @@ endif
 
 CXX := mpicxx
 COMPILER_VERSION := $(shell $(CXX) --version)
-COMPILER_VERSION_NUMBER := $(shell $(CXX) -dumpversion -dumpfullversion | head -n1)
-COMPILER_VERSION_NUMBER_MAJOR := $(shell echo $(COMPILER_VERSION_NUMBER) | cut -f1 -d.)
+COMPILER_VERSION_NUMBER := $(shell $(CXX) -dumpfullversion -dumpversion | head -n1)
 $(info $(COMPILER_VERSION))
 CXX_STD := c++26
 
@@ -50,17 +49,9 @@ endef
 
 else ifneq (,$(or $(findstring g++,$(COMPILER_VERSION)),$(findstring gcc,$(COMPILER_VERSION))))
 	COMPILER_NAME := gcc
-	# std::stacktrace is available in gcc 14 and later
-	# but it is not enabled by default because it slowed down the GitHub CI by > 2x
-	ifeq ($(shell expr $(COMPILER_VERSION_NUMBER_MAJOR) \>= 14),1)
-		ifeq ($(STACKTRACE),ON)
-			CXXFLAGS += -DSTACKTRACE_ON=true -rdynamic
-			LDFLAGS += -lstdc++exp
-		endif
-	endif
-	# std=c++26 is not supported on gcc < 14
-	ifeq ($(shell expr $(COMPILER_VERSION_NUMBER_MAJOR) \<= 13),1)
-		CXX_STD := c++23
+	MIN_GCC_VERSION := 14
+	ifeq ($(shell expr $(COMPILER_VERSION_NUMBER) \< $(MIN_GCC_VERSION)),1)
+$(warning WARNING: Detected GCC version $(COMPILER_VERSION_NUMBER) but minimum supported version is $(MIN_GCC_VERSION))
 	endif
 	CXXFLAGS += -Wno-psabi
 # 	CXXFLAGS += -Wsuggest-attribute=pure -Wsuggest-attribute=const
@@ -70,8 +61,12 @@ else ifneq '' '$(findstring nvc++,$(COMPILER_VERSION))'
 	COMPILER_NAME := nvhpc
 	CXX_STD := c++23
 	# to use the pixi installed libstdc++
+	CXXFLAGS += -Minfo=accel
 # 	CXXFLAGS += --gcc-toolchain=$(PWD)/.pixi/envs/default -Wl,-rpath,$(PWD)/.pixi/envs/default/lib
-	ifneq (,$(shell hostname -A | grep .cosma.))
+
+	ifneq ($(GCCTOOLCHAIN),)
+		CXXFLAGS += --gcc-toolchain=$(GCCTOOLCHAIN)
+	else ifneq (,$(shell hostname -A | grep .cosma.))
 		CXXFLAGS += --gcc-toolchain=/cosma/local/gcc/14.1.0/
 	endif
 	CPU_ARCH := $(shell g++ -march=native -Q --help=target | grep -- '-march=  ' | cut -f3)
@@ -80,7 +75,7 @@ $(warning Unknown compiler)
 	COMPILER_NAME := unknown
 endif
 
-$(info detected compiler is $(COMPILER_NAME) version $(COMPILER_VERSION_NUMBER). Major version: $(COMPILER_VERSION_NUMBER_MAJOR))
+$(info detected compiler is $(COMPILER_NAME) $(COMPILER_VERSION_NUMBER))
 $(info detected CPU is $(CPU_ARCH))
 
 # Use a custom build directory for each combination of compiler, CPU architecture, and options to avoid conflicts and ensure that the correct binaries are used
@@ -113,7 +108,7 @@ endif
 # CXXFLAGS += -fprofile-use="profdataraw"
 
 ifeq ($(GPU),ON)
-	CXXFLAGS += -DGPU_ON -DUSE_SIMPSON_INTEGRATOR -DBOOST_MATH_NO_EXCEPTIONS -DBOOST_NO_IOSTREAM
+	CXXFLAGS += -DGPU_ON -DUSE_SIMPSON_INTEGRATOR -DBOOST_MATH_NO_EXCEPTIONS -DBOOST_NO_IOSTREAM -U_GLIBCXX_ASSERTIONS
 	BUILD_DIR := $(BUILD_DIR)_gpu
 else ifeq ($(GPU),OFF)
 else ifeq ($(GPU),)

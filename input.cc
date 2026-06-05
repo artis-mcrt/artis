@@ -2,13 +2,13 @@
 
 #include <algorithm>
 #include <array>
+#include <chrono>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <ctime>
 #include <filesystem>
 #include <format>
 #include <fstream>
@@ -17,6 +17,7 @@
 #include <istream>
 #include <iterator>
 #include <limits>
+#include <print>
 #include <ranges>
 #include <set>
 #include <span>
@@ -304,7 +305,7 @@ void read_phixs_file(const int phixs_file_version, std::vector<float>& tmpallphi
   int upperlevel_in = -1;
   int lowerionstage = -1;
   int lowerlevel_in = -1;
-  double phixs_threshold_ev = -1;  // currently just ignored, and epilson is used instead
+  double phixs_threshold_ev = -1;  // currently just ignored, and epsilon is used instead
   while (true) {
     int nphixspoints_inputtable = 0;
     if (!get_noncommentline(phixsfile, phixsline)) {
@@ -570,7 +571,7 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion,
               .lowerlevelindex = lowerlevel,
           });
 
-          // the line list has not been sorted yet, so the store the level index for now and
+          // the line list has not been sorted yet, so store the level index for now and
           // the index into the sorted line list will be set later
 
           temp_alltranslist[ion_levels[level].alltrans_startdown + nupperdowntrans - 1] = {
@@ -677,12 +678,11 @@ auto calculate_nlevels_groundterm(const int element, const int ion) -> int {
   return nlevels_groundterm;
 }
 
-auto search_groundphixslist(const double nu_edge, const int element_in, const int ion_in, const int level_in) -> int
 // Return the closest ground level continuum index to the given edge
 // frequency. If the given edge frequency is redder than the reddest
 // continuum return -1.
-// NB: groundphixslist must be in ascending order.
-{
+// groundcont_nu_edge is in ascending order (red to blue)
+auto search_groundphixslist(const double nu_edge, const int element_in, const int ion_in, const int level_in) -> int {
   assert_always((USE_LUT_PHOTOION || USE_ION_BFHEATING_ESTIMATORS));
 
   if (nu_edge < globals::groundcont_nu_edge[0]) {
@@ -704,22 +704,21 @@ auto search_groundphixslist(const double nu_edge, const int element_in, const in
     }
 
     printlnlog(
-        "[fatal] search_groundphixslist: element {}, ion {}, level {} has edge_frequency {:g} equal to the bluest "
+        "ERROR: search_groundphixslist: element {}, ion {}, level {} has edge_frequency {:g} equal to the bluest "
         "ground-level continuum",
         element_in, ion_in, level_in, nu_edge);
-    printlnlog("[fatal] search_groundphixslist: bluest ground level continuum is element {}, ion {} at nu_edge {:g}",
-               element, ion, globals::groundcont_nu_edge[i - 1]);
-    printlnlog("[fatal] search_groundphixslist: i {}, nbfcontinua_ground {}", i, globals::nbfcontinua_ground);
+    printlnlog("  search_groundphixslist: bluest ground level continuum is element {}, ion {} at nu_edge {:g}", element,
+               ion, globals::groundcont_nu_edge[i - 1]);
+    printlnlog("  search_groundphixslist: i {}, nbfcontinua_ground {}", i, globals::nbfcontinua_ground);
     printlnlog(
-        "[fatal] This shouldn't happen, is hoewever possible if there are multiple levels in the adata file at "
+        "  This shouldn't happen, but is possible if there are multiple levels in the adata file at "
         "energy=0");
     for (int looplevels = 0; looplevels < get_nlevels(element_in, ion_in); looplevels++) {
-      printlnlog("[fatal]   element {}, ion {}, level {}, energy {:g}", element_in, ion_in, looplevels,
+      printlnlog("  element {}, ion {}, level {}, energy {:g}", element_in, ion_in, looplevels,
                  epsilon(element_in, ion_in, looplevels));
     }
-    printlnlog("[fatal] Abort omitted ... MAKE SURE ATOMIC DATA ARE CONSISTENT");
+    assert_always(false);
     return i - 1;
-    // abort();
   }
 
   const double left_diff = nu_edge - globals::groundcont_nu_edge[i - 1];
@@ -901,9 +900,7 @@ void setup_phixs_list() {
     }
     globals::allcont.bfestimindex = std::move(allcont_bfestimindex);
     auto bfestim_nu_edge = MPI_shared_array<double>(std::ssize(temp_bfestim_nu_edge));
-    for (int i = 0; i < std::ssize(temp_bfestim_nu_edge); i++) {
-      bfestim_nu_edge[i] = temp_bfestim_nu_edge[i];
-    }
+    std::ranges::copy(temp_bfestim_nu_edge, bfestim_nu_edge.begin());
     globals::bfestim_nu_edge = std::move(bfestim_nu_edge);
 
     setup_photoion_luts();
@@ -991,13 +988,13 @@ void read_autoion_data() {
 
   globals::allautoion = MPI_shared_array<globals::LevelAutoion>(temp_allautoion.size());
   if (globals::rank_in_node == 0) {
-    std::copy_n(temp_allautoion.cbegin(), temp_allautoion.size(), globals::allautoion.data());
+    std::ranges::copy(temp_allautoion, globals::allautoion.begin());
   }
   MPI_Barrier_node();
 
   // Plan is that autoionizing levels will be explicitly included in the NLTE population solver, but that their level
   // populations do not need to be accurately known - so if the ion has a superlevel already, then we will try to attach
-  // the autoionizing level populations to that for all purposes outside the NLTE solber. For this, the ions need to
+  // the autoionizing level populations to that for all purposes outside the NLTE solver. For this, the ions need to
   // know how many autoionizing levels they have. So count those up now.
 
   int nlevels_autoion_sum = 0;
@@ -1086,7 +1083,7 @@ void read_phixs_data() {
     auto allphixstargets_probability = MPI_shared_array<double>(std::ssize(tmpallphixstargets));
 
     if (globals::rank_in_node == 0) {
-      std::copy_n(tmpallphixs.cbegin(), tmpallphixs.size(), globals::allphixs.data());
+      std::ranges::copy(tmpallphixs, globals::allphixs.begin());
 
       for (int i = 0; i < std::ssize(tmpallphixstargets); i++) {
         allphixstargets_levelindex[i] = tmpallphixstargets[i].levelindex;
@@ -1327,7 +1324,7 @@ void read_atomicdata_files() {
     assert_always(globals::nlines == std::ssize(temp_linelist));
     temp_linelist.shrink_to_fit();
 
-    // sort the lineline in descending frequency
+    // sort the linelist by frequency descending
     std::SORT_OR_STABLE_SORT(
         EXEC_PAR_UNSEQ temp_linelist.begin(), temp_linelist.end(), [](const auto& a, const auto& b) {
           if (a.nu != b.nu) {
@@ -1481,7 +1478,7 @@ void read_atomicdata_files() {
 
   printlnlog("establishing connection between transitions and sorted linelist...");
 
-  auto const time_start_establish_linelist_connections = std::time(nullptr);
+  const auto time_start_establish_linelist_connections = std::chrono::steady_clock::now();
 #ifdef _OPENMP
 #pragma omp parallel for schedule(dynamic)
 #endif
@@ -1526,19 +1523,16 @@ void read_atomicdata_files() {
   }
   globals::alltrans.lineindex = std::move(alltrans_lineindex);
 
-  printlnlog("  took {}s", std::time(nullptr) - time_start_establish_linelist_connections);
+  const auto establish_linelist_connections_duration =
+      std::chrono::duration<double>(std::chrono::steady_clock::now() - time_start_establish_linelist_connections)
+          .count();
+  printlnlog("  took {:.1f}s", establish_linelist_connections_duration);
   MPI_Barrier_node();
 
   for (int element = 0; element < get_nelements(); element++) {
     const int nions = get_nions(element);
     for (int ion = 0; ion < nions; ion++) {
-      if (globals::elements[element].ions[ion].nlevels_groundterm <= 0) {
-        if (SINGLE_GROUND_LEVEL) {
-          globals::elements[element].ions[ion].nlevels_groundterm = 1;
-        } else {
-          globals::elements[element].ions[ion].nlevels_groundterm = calculate_nlevels_groundterm(element, ion);
-        }
-      }
+      globals::elements[element].ions[ion].nlevels_groundterm = calculate_nlevels_groundterm(element, ion);
     }
   }
 
@@ -1581,14 +1575,14 @@ void write_bflist_file() {
 
   if (globals::my_rank == 0) {
     auto bflist_file = fstream_required("bflist.out", std::ios::out | std::ios::trunc);
-    bflist_file << globals::nbfcontinua << '\n';
+    std::println(bflist_file, "{}", globals::nbfcontinua);
     for (i = 0; i < globals::nbfcontinua; i++) {
       const int element = globals::bflist[i].elementindex;
       const int ion = globals::bflist[i].ionindex;
       const int level = globals::bflist[i].levelindex;
       const int phixstargetindex = globals::bflist[i].phixstargetindex;
       const int upperionlevel = get_phixsupperlevel(element, ion, level, phixstargetindex);
-      bflist_file << i << ' ' << element << ' ' << ion << ' ' << level << ' ' << upperionlevel << '\n';
+      std::println(bflist_file, "{} {} {} {} {}", i, element, ion, level, upperionlevel);
     }
   }
 }
@@ -1856,7 +1850,7 @@ void update_parameterfile(const int nts) {
       }
     }
 
-    fileout << line << '\n';
+    std::println(fileout, "{}", line);
   }
 
   fileout.close();

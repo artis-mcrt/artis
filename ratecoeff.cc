@@ -6,7 +6,6 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <ctime>
 #include <filesystem>
 #include <ios>
 #include <iterator>
@@ -53,19 +52,19 @@ auto alpha_sp_integrand(const double nu_minus_nu_edge, const double nu_edge, con
   const auto sigma_bf = photoionisation_crosssection_fromtable(photoion_xs, nu_edge, nu_minus_nu_edge + nu_edge);
   // the variable of integration has been changed from nu to nu_edge_minus_nu = nu - nu_edge
   // to get a cancellation with part of the saha factor
-  return TWOOVERCLIGHTSQUARED * sigma_bf * pow2(nu_edge + nu_minus_nu_edge) * exp(-HOVERKB * nu_minus_nu_edge / T_e);
+  return (2 / CLIGHTSQUARED) * sigma_bf * pow2(nu_edge + nu_minus_nu_edge) * exp(-HOVERKB * nu_minus_nu_edge / T_e);
 }
 
 // Integrand to calculate the rate coefficient for spontaneous recombination
 auto alpha_sp_E_integrand(const double nu, const double nu_edge, const float T_e,
                           const std::span<const float> photoion_xs) -> double {
   const auto sigma_bf = photoionisation_crosssection_fromtable(photoion_xs, nu_edge, nu);
-  return TWOOVERCLIGHTSQUARED * sigma_bf * pow3(nu) / nu_edge * exp(-HOVERKB * nu / T_e);
+  return (2 / CLIGHTSQUARED) * sigma_bf * pow3(nu) / nu_edge * exp(-HOVERKB * nu / T_e);
 }
 
 // Integrand to calculate the rate coefficient for photoionisation corrected for stimulated recombination.
-auto gammacorr_integrand(const double nu, const double nu_edge, const float T, const std::span<const float> photoion_xs)
-    -> double {
+auto gammacorr_integrand(const double nu, const double nu_edge, const float temperature,
+                         const std::span<const float> photoion_xs) -> double {
   const auto sigma_bf = photoionisation_crosssection_fromtable(photoion_xs, nu_edge, nu);
 
   // The correction factor for stimulated emission in gammacorr is set to its
@@ -75,7 +74,7 @@ auto gammacorr_integrand(const double nu, const double nu_edge, const float T, c
   // Dependence on dilution factor W is linear. This allows to set it here to
   // 1. and scale to its actual value later on.
   // Assumption T_e = T_R makes n_kappa/n_i * (n_i/n_kappa)* = 1
-  return sigma_bf * ONEOVERH / nu * radfield::dbb(nu, T, 1) * (1 - exp(-HOVERKB * nu / T));
+  return sigma_bf * (1. / H) / nu * radfield::planck(nu, temperature) * (1 - exp(-HOVERKB * nu / temperature));
 }
 
 // Integrand to precalculate the bound-free cooling rate coefficient
@@ -83,8 +82,8 @@ auto bfcooling_integrand(const double nu_minus_nu_edge, const double nu_edge, co
                          const std::span<const float> photoion_xs) -> double {
   const float sigma_bf = photoionisation_crosssection_fromtable(photoion_xs, nu_edge, nu_minus_nu_edge + nu_edge);
 
-  // return sigma_bf * (1-nu_edge/nu) * TWOHOVERCLIGHTSQUARED * pow(nu,3) * exp(-HOVERKB*nu/T);
-  return sigma_bf * nu_minus_nu_edge * TWOHOVERCLIGHTSQUARED * (nu_minus_nu_edge + nu_edge) *
+  // return sigma_bf * (1-nu_edge/nu) * (2 * H / CLIGHTSQUARED) * pow(nu,3) * exp(-HOVERKB*nu/T);
+  return sigma_bf * nu_minus_nu_edge * (2 * H / CLIGHTSQUARED) * (nu_minus_nu_edge + nu_edge) *
          (nu_minus_nu_edge + nu_edge) * exp(-HOVERKB * nu_minus_nu_edge / T_e);
 }
 
@@ -411,7 +410,7 @@ auto integrand_corrphotoioncoeff_custom_radfield(const double nu_minus_nu_edge, 
   const double Jnu = radfield::radfield(nu_minus_nu_edge + nu_edge, nonemptymgi);
 
   // TODO: MK thesis page 41, use population ratios and Te?
-  return ONEOVERH * sigma_bf / (nu_minus_nu_edge + nu_edge) * Jnu * corrfactor;
+  return (1. / H) * sigma_bf / (nu_minus_nu_edge + nu_edge) * Jnu * corrfactor;
 }
 
 auto calculate_corrphotoioncoeff_integral(const int element, const int ion, const int level, const int phixstargetindex,
@@ -419,7 +418,7 @@ auto calculate_corrphotoioncoeff_integral(const int element, const int ion, cons
   constexpr double epsrel = 1e-3;
 
   const auto loweruniquelevelindex = get_uniquelevelindex(element, ion, level);
-  const double nu_threshold = ONEOVERH * get_phixs_threshold(loweruniquelevelindex, phixstargetindex);
+  const double nu_threshold = (1. / H) * get_phixs_threshold(loweruniquelevelindex, phixstargetindex);
   const double nu_max_phixs = nu_threshold * last_phixs_nuovernuedge;  // nu of the uppermost point in the phixs table
 
   const auto T_e = grid::get_Te(nonemptymgi);
@@ -502,7 +501,7 @@ DEVICE_FUNC auto select_continuum_nu(int element, const int lowerion, const int 
   const auto lower_uniquelevelindex = get_uniquelevelindex(element, lowerion, lower);
   const int phixstargetindex = get_phixtargetindex(lower_uniquelevelindex, upperionlevel);
   const double E_threshold = get_phixs_threshold(lower_uniquelevelindex, phixstargetindex);
-  const double nu_threshold = ONEOVERH * E_threshold;
+  const double nu_threshold = (1. / H) * E_threshold;
 
   const double nu_max_phixs = nu_threshold * last_phixs_nuovernuedge;  // nu of the uppermost point in the phixs table
 
@@ -673,13 +672,11 @@ void ratecoefficients_init() {
 }
 
 // Returns the (stimulated recombination corrected) photoionisation rate coefficient.
-auto get_corrphotoioncoeff_ana(int element, const int ion, const int level, const int phixstargetindex,
-                               const int nonemptymgi) -> double {
+auto get_corrphotoioncoeff_ana(int element, const int ion, const int level, const int phixstargetindex, const float T_R)
+    -> double {
   assert_always(USE_LUT_PHOTOION);
-  const double W = grid::get_W(nonemptymgi);
-  const double T_R = grid::get_TR(nonemptymgi);
   const auto uniquelevelindex = get_uniquelevelindex(element, ion, level);
-  return W * lerp_or_last(std::span{corrphotoioncoeffs}, uniquelevelindex, phixstargetindex, T_R);
+  return lerp_or_last(std::span{corrphotoioncoeffs}, uniquelevelindex, phixstargetindex, T_R);
 }
 
 DEVICE_FUNC auto get_bfcoolingcoeff(const int element, const int lowerion, const int lowerionlevel,

@@ -11,6 +11,7 @@
 #include <functional>
 #include <ios>
 #include <numeric>
+#include <print>
 #include <span>
 
 #include "artisoptions.h"
@@ -217,7 +218,6 @@ void do_macroatom_raddeexcitation(Packet& pkt, const int ionuniquelevelindexstar
   }
 
   stats::increment(stats::Counter::MA_STAT_DEACTIVATION_BB);
-  stats::increment(stats::Counter::INTERACTIONS);
 
   // emit the rpkt in a random direction
   emit_rpkt(pkt);
@@ -263,7 +263,6 @@ void do_macroatom_raddeexcitation(Packet& pkt, const int ionuniquelevelindexstar
   pkt.nu_cmf = select_continuum_nu(element, upperion - 1, lowerionlevel, upperionlevel, T_e);
 
   stats::increment(stats::Counter::MA_STAT_DEACTIVATION_FB);
-  stats::increment(stats::Counter::INTERACTIONS);
 
   // Finally emit the packet into a randomly chosen direction, update the continuum opacity and set some flags
   emit_rpkt(pkt);
@@ -319,7 +318,7 @@ void do_macroatom_raddeexcitation(Packet& pkt, const int ionuniquelevelindexstar
 
 // handle activated macro atoms
 DEVICE_FUNC void do_macroatom(Packet& pkt, const MacroAtomState& pktmastate) {
-  const auto nonemptymgi = grid::get_propcell_nonemptymgi(pkt.where);
+  const auto nonemptymgi = grid::get_propcell_nonemptymgi(pkt.cellindex);
   assert_testmodeonly(nonemptymgi >= 0);
   const auto T_e = grid::get_Te(nonemptymgi);
 
@@ -391,17 +390,17 @@ DEVICE_FUNC void do_macroatom(Packet& pkt, const MacroAtomState& pktmastate) {
                                   cumulative_transitions.cbegin()),
                  MA_ACTION_COUNT - 1);
 
+    stats::increment(stats::Counter::INTERACTIONS);
     switch (selected_action) {
       case MA_ACTION_RADDEEXC: {
         do_macroatom_raddeexcitation(pkt, ionuniquelevelindexstart, uniquelevelindex, activatingline, epsilon_current,
                                      levelrates[MA_ACTION_RADDEEXC]);
 
         if constexpr (LOG_MACROATOM) {
-          macroatom_file << std::format(
-              "{:8d} {:14d} {:2d} {:12d} {:12d} {:9d} {:9d} {:9d} {:11.5e} {:11.5e} {:11.5e} {:11.5e}\n",
-              globals::timestep, grid::get_mgi_of_nonemptymgi(nonemptymgi), get_atomicnumber(element),
-              get_ionstage(element, ion_in), get_ionstage(element, ion), level_in, level, activatingline, nu_cmf_in,
-              pkt.nu_cmf, nu_rf_in, pkt.nu_rf);
+          std::println(macroatom_file, "{:d} {:d} {:d} {:d} {:d} {:d} {:d} {:d} {:.5e} {:.5e} {:.5e} {:.5e}",
+                       globals::timestep, grid::get_mgi_of_nonemptymgi(nonemptymgi), get_atomicnumber(element),
+                       get_ionstage(element, ion_in), get_ionstage(element, ion), level_in, level, activatingline,
+                       nu_cmf_in, pkt.nu_cmf, nu_rf_in, pkt.nu_rf);
         }
 
         end_packet = true;
@@ -410,10 +409,7 @@ DEVICE_FUNC void do_macroatom(Packet& pkt, const MacroAtomState& pktmastate) {
 
       case MA_ACTION_COLDEEXC: {
         // collisional deexcitation of macro atom => convert the packet into a k-packet
-
         stats::increment(stats::Counter::MA_STAT_DEACTIVATION_COLLDEEXC);
-        stats::increment(stats::Counter::INTERACTIONS);
-
         pkt.type = TYPE_KPKT;
         end_packet = true;
         if constexpr (!DIRECT_COL_HEAT) {
@@ -423,7 +419,6 @@ DEVICE_FUNC void do_macroatom(Packet& pkt, const MacroAtomState& pktmastate) {
       }
 
       case MA_ACTION_INTERNALDOWNSAME: {
-        stats::increment(stats::Counter::INTERACTIONS);
         // Randomly select the occurring transition
         const double targetval = rng_uniform() * levelrates[MA_ACTION_INTERNALDOWNSAME];
 
@@ -449,8 +444,6 @@ DEVICE_FUNC void do_macroatom(Packet& pkt, const MacroAtomState& pktmastate) {
       case MA_ACTION_COLRECOMB: {
         // collisional recombination of macro atom => convert the packet into a k-packet
         stats::increment(stats::Counter::MA_STAT_DEACTIVATION_COLLRECOMB);
-        stats::increment(stats::Counter::INTERACTIONS);
-
         pkt.type = TYPE_KPKT;
         end_packet = true;
         if constexpr (!DIRECT_COL_HEAT) {
@@ -460,7 +453,6 @@ DEVICE_FUNC void do_macroatom(Packet& pkt, const MacroAtomState& pktmastate) {
       }
 
       case MA_ACTION_INTERNALDOWNLOWER: {
-        stats::increment(stats::Counter::INTERACTIONS);
         stats::increment(stats::Counter::MA_STAT_INTERNALDOWNLOWER);
 
         // Randomly select the occurring transition
@@ -491,8 +483,6 @@ DEVICE_FUNC void do_macroatom(Packet& pkt, const MacroAtomState& pktmastate) {
       }
 
       case MA_ACTION_INTERNALUPSAME: {
-        stats::increment(stats::Counter::INTERACTIONS);
-
         // randomly select the occurring transition
         const auto sum_internal_up_same_exceptlast = get_sum_internal_up_same_exceptlast(uniquelevelindex);
 
@@ -510,8 +500,6 @@ DEVICE_FUNC void do_macroatom(Packet& pkt, const MacroAtomState& pktmastate) {
       }
 
       case MA_ACTION_INTERNALUPHIGHER: {
-        stats::increment(stats::Counter::INTERACTIONS);
-
         stats::increment(stats::Counter::MA_STAT_INTERNALUPHIGHER);
 
         level = do_macroatom_ionisation(nonemptymgi, element, ion, level, epsilon_current,
@@ -522,8 +510,6 @@ DEVICE_FUNC void do_macroatom(Packet& pkt, const MacroAtomState& pktmastate) {
       }
 
       case MA_ACTION_INTERNALUPHIGHERNT: {
-        stats::increment(stats::Counter::INTERACTIONS);
-
         ion = nonthermal::nt_random_upperion(nonemptymgi, element, ion, false);
         level = 0;
         stats::increment(stats::Counter::MA_STAT_INTERNALUPHIGHERNT);
@@ -551,7 +537,7 @@ DEVICE_FUNC void do_macroatom(Packet& pkt, const MacroAtomState& pktmastate) {
 
   if (pkt.type == TYPE_RPKT) {
     if constexpr (VPKT_ON) {
-      vpkt::call_estimators(pkt, TYPE_MA);
+      vpkt::trace_vpkts(pkt, TYPE_MA);
     }
   }
 }
@@ -564,15 +550,8 @@ void macroatom_open_file() {
   macroatom_file =
       fstream_required(std::format("macroatom_{:04d}.out", globals::my_rank), std::ios::out | std::ios::trunc);
 
-  macroatom_file << std::format("{:8s} {:14s} {:2s} {:12s} {:12s} {:9s} {:9s} {:9s} {:11s} {:11s} {:11s} {:11s}\n",
-                                "timestep", "modelgridindex", "Z", "ionstage_in", "ionstage_out", "level_in",
-                                "level_out", "activline", "nu_cmf_in", "nu_cmf_out", "nu_rf_in", "nu_rf_out");
-}
-
-void macroatom_close_file() {
-  if (macroatom_file.is_open()) {
-    macroatom_file.close();
-  }
+  std::println(macroatom_file, "timestep modelgridindex Z ionstage_in ionstage_out level_in level_out activline",
+               "nu_cmf_in nu_cmf_out nu_rf_in nu_rf_out");
 }
 
 // radiative excitation rate: paperII 3.5.2

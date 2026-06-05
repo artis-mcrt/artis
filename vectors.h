@@ -67,7 +67,7 @@ template <size_t VECDIM>
 
   const double ndotv = dot(dir1, vel);
   const double fact1 = gamma_rel * (1 - (ndotv / CLIGHT));
-  const double fact2 = (gamma_rel - (gamma_rel * gamma_rel * ndotv / (gamma_rel + 1) / CLIGHT)) / CLIGHT;
+  const double fact2 = (gamma_rel - (pow2(gamma_rel) * ndotv / (gamma_rel + 1) / CLIGHT)) / CLIGHT;
 
   return vec_norm({(dir1[0] - (vel[0] * fact2)) / fact1, (dir1[1] - (vel[1] * fact2)) / fact1,
                    (dir1[2] - (vel[2] * fact2)) / fact1});
@@ -168,17 +168,18 @@ constexpr auto move_pkt_withtime(Packet& pkt, const double distance) -> double {
   const int costhetabin = std::clamp(static_cast<int>((costheta + 1.0) * NCOSTHETABINS / 2.0), 0, NCOSTHETABINS - 1);
 
   const auto vec1 = cross_prod(dir, syn_dir);
-
   constexpr auto vec2 = cross_prod(xhat, syn_dir);
-  const double cosphi = dot(vec1, vec2) / vec_len(vec1) / vec_len(vec2);
+  const double vec1_len = vec_len(vec1);
+  const double cosphi = vec1_len > 1e-12 ? std::clamp(dot(vec1, vec2) / vec1_len, -1.0, 1.0) : 1.0;
 
   constexpr auto vec3 = cross_prod(vec2, syn_dir);
   const double testphi = dot(vec1, vec3);
 
   // with phi defined according to y = cos(theta) * sin(phi), the
   // phibins are in decreasing phi order (i.e. the upper side of bin zero 0 is 2pi)
-  const int phibin = std::clamp(static_cast<int>((testphi > 0 ? acos(cosphi) : acos(cosphi) + PI) / 2. / PI * NPHIBINS),
-                                0, NPHIBINS - 1);
+  const int phibin =
+      std::clamp(static_cast<int>((testphi > 0 ? std::acos(cosphi) : std::acos(cosphi) + PI) / 2. / PI * NPHIBINS), 0,
+                 NPHIBINS - 1);
 
   const int na = static_cast<int>((costhetabin * NPHIBINS) + phibin);
   assert_always(na >= 0);
@@ -193,7 +194,7 @@ constexpr auto move_pkt_withtime(Packet& pkt, const double distance) -> double {
 
   const double phi = rng_uniform() * 2 * PI;
 
-  const double sintheta = std::sqrt(1. - (costheta * costheta));
+  const double sintheta = std::sqrt(1. - pow2(costheta));
 
   return {sintheta * std::cos(phi), sintheta * std::sin(phi), costheta};
 }
@@ -206,8 +207,12 @@ constexpr auto move_pkt_withtime(Packet& pkt, const double distance) -> double {
 
   // ref1_sc is the ref1 axis in the scattering plane ref1 = n1 x ( n1 x n2 )
   const double n1_dot_n2 = dot(n1, n2);
-  const auto ref1_sc =
-      vec_norm({(n1[0] * n1_dot_n2) - n2[0], (n1[1] * n1_dot_n2) - n2[1], (n1[2] * n1_dot_n2) - n2[2]});
+  const Vec3d ref1_sc_unnorm{(n1[0] * n1_dot_n2) - n2[0], (n1[1] * n1_dot_n2) - n2[1], (n1[2] * n1_dot_n2) - n2[2]};
+  const double len = vec_len(ref1_sc_unnorm);
+  if (len < 1e-12) {
+    return 0.0;
+  }
+  const auto ref1_sc = Vec3d{ref1_sc_unnorm[0] / len, ref1_sc_unnorm[1] / len, ref1_sc_unnorm[2] / len};
 
   const double cos_stokes_rot_1 = std::clamp(dot(ref1_sc, ref1), -1., 1.);
   const double cos_stokes_rot_2 = dot(ref1_sc, ref2);
@@ -216,18 +221,18 @@ constexpr auto move_pkt_withtime(Packet& pkt, const double distance) -> double {
   return i < 0 ? i + (2 * PI) : i;
 }
 
-// Routine to compute the meridian frame axes ref1 and ref2
-[[gnu::pure]] [[nodiscard]] constexpr auto meridian(const Vec3d& n) -> std::tuple<Vec3d, Vec3d> {
+// Compute the meridian frame axes ref1 and ref2
+[[gnu::pure]] [[nodiscard]] constexpr auto meridian(const Vec3d& dir) -> std::tuple<Vec3d, Vec3d> {
   // for ref_1 use (from triple product rule)
-  const double n_xylen = std::sqrt((n[0] * n[0]) + (n[1] * n[1]));
+  const double n_xylen = std::sqrt(pow2(dir[0]) + pow2(dir[1]));
   if (n_xylen == 0.) {
     // if n is along z axis, we can just use x and y as the meridian frame axes
     return {Vec3d{1., 0., 0.}, Vec3d{0., 1., 0.}};
   }
-  const auto ref1 = Vec3d{-1. * n[0] * n[2] / n_xylen, -1. * n[1] * n[2] / n_xylen, (1 - (n[2] * n[2])) / n_xylen};
+  const auto ref1 = Vec3d{-dir[0] * dir[2] / n_xylen, -dir[1] * dir[2] / n_xylen, (1 - pow2(dir[2])) / n_xylen};
 
   // for ref_2 use vector product of n_cmf with ref1
-  const auto ref2 = cross_prod(ref1, n);
+  const auto ref2 = cross_prod(ref1, dir);
   return {ref1, ref2};
 }
 
@@ -258,27 +263,30 @@ constexpr auto move_pkt_withtime(Packet& pkt, const double distance) -> double {
   return elec_cmf;
 }
 
-// Routine to transform the Stokes Parameters from RF to CMF
-constexpr auto frame_transform(const Vec3d& n_rf, const double Q0, const double U0, const Vec3d& v)
+// Transform a direction and Stokes Parameters from RF to CMF
+constexpr auto frame_transform(const Vec3d& n_rf, const double q0, const double u0, const Vec3d& v)
     -> std::tuple<Vec3d, double, double> {
   // Meridian frame in the RF
   const auto [ref1_rf, ref2_rf] = meridian(n_rf);
 
   // Compute polarisation (which is invariant)
-  const double p = sqrt((Q0 * Q0) + (U0 * U0));
+  const double p = std::sqrt(pow2(q0) + pow2(u0));
 
   // We want to compute the angle between ref1 and the electric field
   double rot_angle = 0;
 
   if (p > 0) {
-    const double pol_angle = std::atan2(U0, Q0);
+    const double pol_angle = std::atan2(u0, q0);
     rot_angle = (pol_angle < 0 ? pol_angle + (2. * PI) : pol_angle) / 2.;
   }
 
+  const double cos_rot_angle = std::cos(rot_angle);
+  const double sin_rot_angle = std::sin(rot_angle);
+
   // Define electric field by linear combination of ref1 and ref2 (using the angle just computed)
-  const auto elec_rf = Vec3d{(cos(rot_angle) * ref1_rf[0]) - (sin(rot_angle) * ref2_rf[0]),
-                             (cos(rot_angle) * ref1_rf[1]) - (sin(rot_angle) * ref2_rf[1]),
-                             (cos(rot_angle) * ref1_rf[2]) - (sin(rot_angle) * ref2_rf[2])};
+  const auto elec_rf = Vec3d{(cos_rot_angle * ref1_rf[0]) - (sin_rot_angle * ref2_rf[0]),
+                             (cos_rot_angle * ref1_rf[1]) - (sin_rot_angle * ref2_rf[1]),
+                             (cos_rot_angle * ref1_rf[2]) - (sin_rot_angle * ref2_rf[2])};
 
   // Aberration
   const auto n_cmf = angle_ab(n_rf, v);
@@ -299,10 +307,58 @@ constexpr auto frame_transform(const Vec3d& n_rf, const double Q0, const double 
   }
 
   // Compute Stokes Parameters in the CMF
-  const auto Q = cos(2 * theta_rot) * p;
-  const auto U = sin(2 * theta_rot) * p;
+  const auto q_cmf = cos(2 * theta_rot) * p;
+  const auto u_cmf = sin(2 * theta_rot) * p;
 
-  return {n_cmf, Q, U};
+  return {n_cmf, q_cmf, u_cmf};
+}
+
+// Compute the new Stokes Parameters after scattering and transform them back to the RF.
+// Returns a tuple of the new direction in the RF, the new q and u in the RF and the scattering phase-function
+// probability pn
+constexpr auto scatter_polarisation_to_rf(const Vec3d& old_dir_cmf, const Vec3d& new_dir_cmf, const double q_i_cmf,
+                                          const double u_i_cmf, const Vec3d& vel_vec)
+    -> std::tuple<Vec3d, double, double, double> {
+  const auto [ref1_olddir, ref2_olddir] = meridian(old_dir_cmf);
+
+  // This is the i1 angle of Bulla+2015, obtained by computing the angle between the
+  // reference axes ref1 and ref2 in the meridian frame and the corresponding axes
+  // ref1_sc and ref2_sc in the scattering plane.
+  const double i1 = get_rot_angle(old_dir_cmf, new_dir_cmf, ref1_olddir, ref2_olddir);
+  const double cos2i1 = cos(2 * i1);
+  const double sin2i1 = sin(2 * i1);
+
+  const double q_old = (q_i_cmf * cos2i1) - (u_i_cmf * sin2i1);
+  const double u_old = (q_i_cmf * sin2i1) + (u_i_cmf * cos2i1);
+
+  // Scattering
+
+  const double mu = dot(old_dir_cmf, new_dir_cmf);
+  const double musquared = pow2(mu);
+
+  const double I_new = 0.75 * ((musquared + 1.) + (q_old * (musquared - 1.)));
+  const double q_new = (0.75 * ((musquared - 1.) + (q_old * (musquared + 1.)))) / I_new;
+  const double u_new = (1.5 * mu * u_old) / I_new;
+
+  // Need to rotate Stokes Parameters out of the scattering plane to the meridian frame (Clockwise rotation of PI-i2)
+
+  const auto [ref1, ref2] = meridian(new_dir_cmf);
+
+  // This is the i2 angle of Bulla+2015, obtained from the angle THETA between the
+  // reference axes ref1_sc and ref2_sc in the scattering plane and ref1 and ref2 in the
+  // meridian frame. NB: we need to add PI to transform THETA to i2
+  const double i2 = PI + get_rot_angle(new_dir_cmf, old_dir_cmf, ref1, ref2);
+  const double cos2i2 = cos(2 * i2);
+  const double sin2i2 = sin(2 * i2);
+
+  const double q_cmf = (q_new * cos2i2) + (u_new * sin2i2);
+  const double u_cmf = (-q_new * sin2i2) + (u_new * cos2i2);
+
+  const auto [new_dir_rf, q_rf, u_rf] =
+      (frame_transform(new_dir_cmf, q_cmf, u_cmf, Vec3d{-vel_vec[0], -vel_vec[1], -vel_vec[2]}));
+
+  const double pn = 3. / (16. * PI) * (1. + musquared + ((musquared - 1.) * q_old));
+  return {new_dir_rf, q_rf, u_rf, pn};
 }
 
 #endif  // VECTORS_H

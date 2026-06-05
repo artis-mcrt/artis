@@ -4,21 +4,21 @@ set -x
 
 runfolder=nltephotospheric_dynamic_ion_range_1d_1dgrid_testrun
 
+if [ ! -f atomicdata_hefeconi_fe_i_to_vii.tar.xz ]; then curl -O -L https://github.com/artis-mcrt/artis/releases/download/v2026.5.15/atomicdata_hefeconi_fe_i_to_vii.tar.xz; fi
+
 mkdir -p $runfolder
 
-if [ ! -f atomicdata_hefeconi_fe_i_to_vii.tar.xz ]; then curl --insecure -O https://theory.gsi.de/~lshingle/artis_http_public/artis/atomicdata_hefeconi_fe_i_to_vii.tar.xz; fi
-
-tar -xf atomicdata_hefeconi_fe_i_to_vii.tar.xz --directory $runfolder
-
-rsync -av --exclude="recombrates.txt" nebular_1d_3dgrid_inputfiles/ $runfolder/
-
-rsync -av --ignore-times nltephotospheric_dynamic_ion_range_1d_1dgrid_inputfiles/ $runfolder/
-
-cp ../data/* $runfolder
-
-cp ../artisoptions_nltephotospheric_dynamic_ion_range.h $runfolder/artisoptions.h
-
 cd $runfolder
+
+rsync -av --exclude="recombrates.txt" ../nebular_1d_3dgrid_inputfiles/ ./
+
+rsync --ignore-times -av ../nltephotospheric_dynamic_ion_range_1d_1dgrid_inputfiles/ ./
+
+tar -xf ../atomicdata_hefeconi_fe_i_to_vii.tar.xz --directory .
+
+ln -s ../../ artis
+
+cp artis/artisoptions_nltephotospheric_dynamic_ion_range.h artisoptions.h
 
 sed -i'' -e 's/constexpr int MPKTS.*/constexpr int MPKTS = 400;/g' artisoptions.h
 

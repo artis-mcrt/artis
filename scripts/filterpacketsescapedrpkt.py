@@ -17,7 +17,7 @@ def main() -> None:
     assert sys.version_info >= (3, 14), "This script requires Python 3.14 or higher."
     import compression
 
-    parser = argparse.ArgumentParser(description="Plot text file")
+    parser = argparse.ArgumentParser(description="Filter packets files to keep only escaped rpkts")
     parser.add_argument("--rm", action="store_true", help="Remove original files after processing")
     parser.add_argument("-f", action="store_true", help="Confirm performing the filtering")
     args = parser.parse_args()
@@ -30,7 +30,7 @@ def main() -> None:
         return
 
     for filein in matching_files:
-        if "parquet" in filein.name:
+        if "parquet" in filein.name or ".tmp" in filein.name:
             continue
         print(f"\n{filein}")
         linesin = at.zopen(filein).readlines()
@@ -60,7 +60,7 @@ def main() -> None:
         )
         fileout_rpkt_temp = Path(
             *fileout_rpkt.parts[:-1],
-            f"{fileout_rpkt.parts[-1]}.partial.tmp",
+            f"{fileout_rpkt.parts[-1]}.partial.tmp.nosync",
         )
         print("  filtering rpkts...", end="", flush=True)
         commentrows = 0

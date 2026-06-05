@@ -1,15 +1,16 @@
 #include "radfield.h"
 
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 #include <cstddef>
 #include <cstdio>
 #include <cstdlib>
-#include <ctime>
 #include <format>
 #include <fstream>
 #include <ios>
 #include <iterator>
+#include <print>
 #include <span>
 #include <vector>
 
@@ -433,8 +434,6 @@ void write_to_file(const int nonemptymgi, const int timestep) {
       float W = 0.;
       double J_nu_bar = 0.;
 
-      const bool skipoutput = false;
-
       if (binindex >= 0) {
         nu_lower = get_bin_nu_lower(binindex);
         nu_upper = get_bin_nu_upper(binindex);
@@ -461,10 +460,8 @@ void write_to_file(const int nonemptymgi, const int timestep) {
         J_nu_bar = prev_Jb_lu_normed[nonemptymgi][jblueindex].value;
       }
 
-      if (!skipoutput) {
-        radfieldfile << std::format("{:d} {:d} {:d} {:.5e} {:.5e} {:.3e} {:.3e} {:.3e} {:.1f} {:.5e}\n", timestep,
-                                    modelgridindex, binindex, nu_lower, nu_upper, nuJ_out, J_out, J_nu_bar, T_R, W);
-      }
+      std::println(radfieldfile, "{:d} {:d} {:d} {:.5e} {:.5e} {:.3e} {:.3e} {:.3e} {:.1f} {:.5e}", timestep,
+                   modelgridindex, binindex, nu_lower, nu_upper, nuJ_out, J_out, J_nu_bar, T_R, W);
     }
     radfieldfile.flush();
 #ifdef _OPENMP
@@ -551,7 +548,7 @@ void init() {
       assert_always(!radfieldfile.is_open());
       radfieldfile =
           fstream_required(std::format("radfield_{:04d}.out", globals::my_rank), std::ios::out | std::ios::trunc);
-      radfieldfile << "timestep modelgridindex bin_num nu_lower nu_upper nuJ J J_nu_avg ncontrib T_R W\n";
+      std::println(radfieldfile, "timestep modelgridindex bin_num nu_lower nu_upper nuJ J J_nu_avg ncontrib T_R W");
       radfieldfile.flush();
     }
 
@@ -658,22 +655,6 @@ auto get_Jb_lu(const int nonemptymgi, const int jblueindex) -> double {
   return prev_Jb_lu_normed[nonemptymgi][jblueindex].value;
 }
 
-void close_file() {
-  if (radfieldfile.is_open()) {
-    radfieldfile.close();
-  }
-
-  if (MULTIBIN_RADFIELD_MODEL_ON) {
-    radfieldbins = {};
-    radfieldbin_solutions_W.reset();
-    radfieldbin_solutions_T_R.reset();
-  }
-
-  if constexpr (DETAILED_BF_ESTIMATORS_ON) {
-    prev_bfrate_normed.reset();
-  }
-}
-
 // set up the new bins and clear the estimators in preparation for a timestep
 void zero_estimators() {
   std::ranges::fill(J_normfactor, -1.0);
@@ -742,14 +723,14 @@ DEVICE_FUNC auto radfield(const double nu, const int nonemptymgi) -> double {
       if (binindex >= 0) {
         const auto W = get_bin_W(nonemptymgi, binindex);
         if (W >= 0.) {
-          return dbb(nu, get_bin_T_R(nonemptymgi, binindex), W);
+          return W * planck(nu, get_bin_T_R(nonemptymgi, binindex));
         }
       }
       return 0.;
     }
   }
   // full spectrum fit to a single dilute blackbody
-  return dbb(nu, grid::get_TR(nonemptymgi), grid::get_W(nonemptymgi));
+  return grid::get_W(nonemptymgi) * planck(nu, grid::get_TR(nonemptymgi));
 }
 
 // finds the best fitting W and temperature parameters in each spectral bin using J and nuJ
@@ -949,18 +930,19 @@ void reduce_estimators() {
   }
 
   if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
-    const auto sys_time_start_reduction = std::time(nullptr);
+    const auto sys_time_start_reduction = std::chrono::steady_clock::now();
     printlog("Reducing binned radiation field estimators");
 
     MPI_Allreduce_safe(radfieldbins.J_raw, MPI_SUM, MPI_COMM_WORLD);
     MPI_Allreduce_safe(radfieldbins.nuJ_raw, MPI_SUM, MPI_COMM_WORLD);
 
-    const auto duration_reduction = std::time(nullptr) - sys_time_start_reduction;
-    printlnlog(" (took {} s)", duration_reduction);
+    const auto duration_reduction =
+        std::chrono::duration<double>(std::chrono::steady_clock::now() - sys_time_start_reduction).count();
+    printlnlog(" (took {:.1f} s)", duration_reduction);
   }
 
   if constexpr (DETAILED_LINE_ESTIMATORS_ON) {
-    const auto sys_time_start_reduction = std::time(nullptr);
+    const auto sys_time_start_reduction = std::chrono::steady_clock::now();
     printlog("Reducing detailed line estimators");
 
     for (int nonemptymgi = 0; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
@@ -969,8 +951,9 @@ void reduce_estimators() {
         MPI_Allreduce_safe(Jb_lu_raw[nonemptymgi][jblueindex].contribcount, MPI_SUM, MPI_COMM_WORLD);
       }
     }
-    const auto duration_reduction = std::time(nullptr) - sys_time_start_reduction;
-    printlnlog(" (took {} s)", duration_reduction);
+    const auto duration_reduction =
+        std::chrono::duration<double>(std::chrono::steady_clock::now() - sys_time_start_reduction).count();
+    printlnlog(" (took {:.1f} s)", duration_reduction);
   }
   MPI_Barrier_allranks();
 }

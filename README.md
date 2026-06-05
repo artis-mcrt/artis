@@ -4,7 +4,9 @@
 [![CI](https://github.com/artis-mcrt/artis/actions/workflows/ci.yml/badge.svg)](https://github.com/artis-mcrt/artis/actions/workflows/ci.yml)
 [![License](https://img.shields.io/github/license/artis-mcrt/artis)](https://github.com/artis-mcrt/artis/blob/develop/LICENSE)
 
-ARTIS is a 3D radiative transfer code that uses Monte Carlo methods with indivisible energy packets ([Lucy 2002](https://ui.adsabs.harvard.edu/abs/2002A%26A...384..725L/abstract)) for ejecta in homologous (ballistic) expansion.
+<img src="data/artislogo.png" alt="ARTIS logo" width="280" />
+
+ARTIS is a 3D radiative transfer code that uses Monte Carlo methods with indivisible energy packets ([Lucy 2002](https://ui.adsabs.harvard.edu/abs/2002A%26A...384..725L/abstract)) for ejecta in homologous (ballistic) expansion such as supernovae and kilonovae. The code is designed for high performance on modern HPC clusters, with a focus on physics fidelity and multi-dimensional geometry.
 
 ## Key Features
 
@@ -69,9 +71,10 @@ make
 cd ..
 ```
 
-The next steps are to ensure a full set of snapshot files (model.txt and abundances.txt) and an atomic database are present, and to configure the timesteps in input.txt. Then, queue the relevant job script with a command such as:
+The next steps are to ensure a full set of snapshot files (model.txt and abundances.txt) and an atomic database are present, and to configure the timesteps in input.txt. Then, edit the relevant job script (setting e.g. number of ranks and your email address) and queue it with `sbatch`. For example, on the Cosma8 cluster:
 ```sh
-sbatch artis/scripts/artis-juwels.sh
+vim artis/scripts/artis-cosma8.sh
+sbatch artis/scripts/artis-cosma8.sh
 ```
 
 ## Setting up for development

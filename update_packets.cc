@@ -2,10 +2,10 @@
 
 #include <algorithm>
 #include <array>
+#include <chrono>
 #include <cmath>
 #include <cstddef>
 #include <cstdlib>
-#include <ctime>
 #include <optional>
 #include <span>
 #include <tuple>
@@ -30,9 +30,11 @@
 
 namespace {
 
-void do_nonthermal_predeposit(Packet& pkt, const int nts, const double t2) {
-  double en_deposited = pkt.e_cmf;
-  const auto mgi = grid::get_propcell_modelgridindex(pkt.where);
+void do_nonthermal_predeposit(Packet& pkt, const int nts, const double ts_end) {
+  // handle deposition by non-thermal alpha and beta particles that are emitted from pellets and then
+  // deposit some or all of their energy locally in the ejecta (possibly after some time delay).
+  double e_cmf_deposited = pkt.e_cmf;
+  const auto mgi = grid::get_propcell_modelgridindex(pkt.cellindex);
   const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(mgi);
   const auto priortype = pkt.type;
   const double ts = pkt.prop_time;
@@ -55,7 +57,7 @@ void do_nonthermal_predeposit(Packet& pkt, const int nts, const double t2) {
     if (rng_uniform() < f_p) {
       pkt.type = deposit_type;
     } else {
-      en_deposited = 0.;
+      e_cmf_deposited = 0.;
       pkt.type = TYPE_ESCAPE;
       grid::change_cell(pkt, -99);
     }
@@ -71,50 +73,57 @@ void do_nonthermal_predeposit(Packet& pkt, const int nts, const double t2) {
     if (rng_uniform() < f_p) {
       pkt.type = deposit_type;
     } else {
-      en_deposited = 0.;
+      e_cmf_deposited = 0.;
       pkt.type = TYPE_ESCAPE;
       grid::change_cell(pkt, -99);
     }
   } else if constexpr (PARTICLE_THERMALISATION_SCHEME == ParticleThermalisationScheme::TIMEDEPENDENT ||
+                       PARTICLE_THERMALISATION_SCHEME ==
+                           ParticleThermalisationScheme::TIMEDEPENDENT_WITH_ADIABATIC_LOSS ||
                        PARTICLE_THERMALISATION_SCHEME == ParticleThermalisationScheme::TIMEDEPENDENTWITHGAMMAPRODUCTS) {
     // local time-dependent absorption described by Shingles et al. (2023)
     const double rho = grid::get_rho(nonemptymgi);
 
-    // endot is energy loss rate (positive) in [erg/s]
-    // endot [erg/s] from Barnes et al. (2016). see their figure 6.
-    const double endot = (pkt.type == TYPE_NONTHERMAL_PREDEPOSIT_ALPHA) ? 5.e11 * MEV * rho : 4.e10 * MEV * rho;
-
     const double particle_en = H * pkt.nu_cmf;  // energy of the particles in the packet
 
-    // for endot independent of energy, the next line is trivial (for E dependent endot, an integral would be needed)
+    // the positive energy loss rate per particle [erg/s] from Barnes et al. (2016). see their figure 6.
+    const double endot_collisional =
+        (pkt.type == TYPE_NONTHERMAL_PREDEPOSIT_ALPHA) ? 5.e11 * MEV * rho : 4.e10 * MEV * rho;
+    // positive energy loss rate from adiabatic expansion in [erg/s], assuming homologous expansion
+    const double endot_adiabatic =
+        (PARTICLE_THERMALISATION_SCHEME == ParticleThermalisationScheme::TIMEDEPENDENT_WITH_ADIABATIC_LOSS)
+            ? particle_en / ts
+            : 0.;
+    const double endot = endot_collisional + endot_adiabatic;
 
-    const double t_enzero = ts + (particle_en / endot);  // time at which zero energy is reached
-    en_deposited = pkt.e_cmf * (std::min(t2, t_enzero) - ts) / (particle_en / endot);
+    // time of deposition is the smaller out of (a) the time until which the particle loses all its energy according to
+    // the loss rates above and (b) the time remaining until the end of the current time step
+    // Only collisional losses count as energy deposited into the gas (not adiabatic losses)
+    e_cmf_deposited = pkt.e_cmf * endot_collisional * (std::min(ts_end - ts, particle_en / endot)) / particle_en;
 
-    // A discrete absorption event should occur somewhere along the
-    // continuous track from initial kinetic energy to zero KE.
-    // The probability of being absorbed in energy range [E, E+delta_E] is proportional to
-    // endot(E) * delta_t = endot(E) * delta_E / endot(E) = delta_E (delta_t is the time spent in the bin range)
-    // so all final energies are equally likely.
-    // Choose random en_absorb [0, particle_en]
-
+    // A discrete absorption event should occur somewhere along the continuous track from initial kinetic energy to zero
+    // KE with equal probability of happening at any energy in between. So we can just randomly
+    // select an energy at which the absorption happens between particle_en and 0 and then calculate the corresponding
+    // time.
     const double rnd_en_absorb = rng_uniform() * particle_en;
     const double t_absorb = ts + (rnd_en_absorb / endot);
 
     // if absorption happens beyond the end of the current timestep,
     // just reduce the particle energy up to the end of this timestep
-    const auto t_new = std::min(t_absorb, t2);
+    const auto t_new = std::min(t_absorb, ts_end);
 
-    if (t_absorb <= t2) {
+    if (t_absorb <= ts_end) {
       pkt.type = deposit_type;
     } else {
-      pkt.nu_cmf = (particle_en - (endot * (t_new - ts))) / H;
+      pkt.nu_cmf -= (endot * (ts_end - ts)) / H;
     }
 
     pkt.pos = vec_scale(pkt.pos, t_new / ts);
     pkt.prop_time = t_new;
-    // pkt.e_cmf *= ts / t_new;
-    assert_testmodeonly(grid::get_cellindex_from_pos(pkt.pos, pkt.prop_time) == pkt.where);
+    if constexpr (PARTICLE_THERMALISATION_SCHEME == ParticleThermalisationScheme::TIMEDEPENDENT_WITH_ADIABATIC_LOSS) {
+      pkt.e_cmf *= ts / t_new;  // account for adiabatic losses
+    }
+    assert_testmodeonly(grid::get_cellindex_from_pos(pkt.pos, pkt.prop_time) == pkt.cellindex);
   } else {
     assert_always(false);  // unhandled thermalisation scheme
   }
@@ -125,23 +134,23 @@ void do_nonthermal_predeposit(Packet& pkt, const int nts, const double t2) {
   // count toward "gamma deposition" not particle deposition
   if (pkt.originated_from_particlenotgamma) {
     if (priortype == TYPE_NONTHERMAL_PREDEPOSIT_BETAMINUS) {
-      atomicadd(globals::dep_estimator_electron[nonemptymgi], en_deposited);
+      atomicadd(globals::dep_estimator_electron[nonemptymgi], e_cmf_deposited);
       if (pkt.type == deposit_type) {
         atomicadd(globals::timesteps[nts].electron_dep_discrete, pkt.e_cmf);
       }
     } else if (priortype == TYPE_NONTHERMAL_PREDEPOSIT_BETAPLUS) {
-      atomicadd(globals::dep_estimator_positron[nonemptymgi], en_deposited);
+      atomicadd(globals::dep_estimator_positron[nonemptymgi], e_cmf_deposited);
       if (pkt.type == deposit_type) {
         atomicadd(globals::timesteps[nts].positron_dep_discrete, pkt.e_cmf);
       }
     } else if (priortype == TYPE_NONTHERMAL_PREDEPOSIT_ALPHA) {
-      atomicadd(globals::dep_estimator_alpha[nonemptymgi], en_deposited);
+      atomicadd(globals::dep_estimator_alpha[nonemptymgi], e_cmf_deposited);
       if (pkt.type == deposit_type) {
         atomicadd(globals::timesteps[nts].alpha_dep_discrete, pkt.e_cmf);
       }
     }
   } else if constexpr (PARTICLE_THERMALISATION_SCHEME == ParticleThermalisationScheme::TIMEDEPENDENTWITHGAMMAPRODUCTS) {
-    atomicadd(globals::dep_estimator_gamma[nonemptymgi], en_deposited);
+    atomicadd(globals::dep_estimator_gamma[nonemptymgi], e_cmf_deposited);
     if (pkt.type == TYPE_NTLEPTON_DEPOSITED) {
       atomicadd(globals::timesteps[nts].gamma_dep_discrete, pkt.e_cmf);
     }
@@ -161,7 +170,7 @@ void update_pellet(Packet& pkt, const int nts, const double t2) {
     // It won't decay in this timestep, so just need to move it on with the flow.
     pkt.pos = vec_scale(pkt.pos, t2 / ts);
     pkt.prop_time = t2;
-    assert_testmodeonly(grid::get_cellindex_from_pos(pkt.pos, pkt.prop_time) == pkt.where);
+    assert_testmodeonly(grid::get_cellindex_from_pos(pkt.pos, pkt.prop_time) == pkt.cellindex);
 
     // That's all that needs to be done for the inactive pellet.
   } else if (tdecay > ts) {
@@ -170,7 +179,7 @@ void update_pellet(Packet& pkt, const int nts, const double t2) {
 
     pkt.prop_time = tdecay;
     pkt.pos = vec_scale(pkt.pos, tdecay / ts);
-    assert_testmodeonly(grid::get_cellindex_from_pos(pkt.pos, pkt.prop_time) == pkt.where);
+    assert_testmodeonly(grid::get_cellindex_from_pos(pkt.pos, pkt.prop_time) == pkt.cellindex);
 
     if (pkt.originated_from_particlenotgamma) {
       // decay to non-thermal particle
@@ -263,10 +272,9 @@ void do_packet(Packet& pkt, const double t2, const int nts) {
     }
 
     case TYPE_KPKT: {
-      const int mgi = grid::get_propcell_modelgridindex(pkt.where);
+      const int mgi = grid::get_propcell_modelgridindex(pkt.cellindex);
       const int nonemptymgi = grid::get_nonemptymgi_of_mgi(mgi);
-      if (grid::thick_allcells[nonemptymgi] == 1 ||
-          (EXPANSIONOPACITIES_ON && RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.has_value())) {
+      if (grid::thick_allcells[nonemptymgi] == 1 || RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.has_value()) {
         kpkt::do_kpkt_blackbody(pkt);
       } else {
         kpkt::do_kpkt(pkt, t2, nts);
@@ -305,7 +313,7 @@ auto get_packet_cellcachenonemptymgi(const Packet& pkt) -> std::optional<int> {
   if (std::ranges::find(nocache_packettypes, pkt.type) != nocache_packettypes.end()) {
     return {};  // these types do not use the cell cache
   }
-  const auto mgi = grid::get_propcell_modelgridindex(pkt.where);
+  const auto mgi = grid::get_propcell_modelgridindex(pkt.cellindex);
   if (mgi < 0) {
     return {};  // for empty cell, no cell cache required
   }
@@ -342,7 +350,9 @@ auto compare_packet_order(const Packet& p1, const Packet& p2, const double ts_en
   const auto rho1 = cellcachenonemptymgi1 >= 0 ? grid::get_rho(cellcachenonemptymgi1) : 0.0;
   const auto rho2 = cellcachenonemptymgi2 >= 0 ? grid::get_rho(cellcachenonemptymgi2) : 0.0;
 
-  // rho 1 and 2 are swapped here since we want higher density cells to come first
+  // rho1 and rho2 are swapped here so that higher density cells are first (descending order of density)
+  // nu_cmf 1 and 2 are also swapped so that higher energy packets are first (descending order of nu_cmf)
+  // other fields are ascending order
   return std::tie(rho2, cellcachenonemptymgi1, p1.type, p2.nu_cmf) <
          std::tie(rho1, cellcachenonemptymgi2, p2.type, p1.nu_cmf);
 }
@@ -430,14 +440,14 @@ void update_packets(const int nts, std::span<Packet> packets) {
   const double tw = globals::timesteps[nts].width;
   const double ts_end = ts + tw;
 
-  const auto time_update_packets_start = std::time(nullptr);
-  printlnlog("timestep {}: start update_packets at time {}", nts, time_update_packets_start);
+  const auto time_update_packets_start = std::chrono::steady_clock::now();
+  printlnlog("timestep {}: start update_packets", nts);
   // first group will probably be the -1 no-cache required group, so -2 triggers the first update
   globals::cellcache[cellcacheslotid].nonemptymgi = -2;
   int prevpkt_cellcache_nonemptymgi = -2;
   int passnumber = 0;
   while (true) {
-    const auto sys_time_start_pass = std::time(nullptr);
+    const auto sys_time_start_pass = std::chrono::steady_clock::now();
 
     std::ranges::SORT_OR_STABLE_SORT(
         packets, [ts_end](const Packet& p1, const Packet& p2) { return compare_packet_order(p1, p2, ts_end); });
@@ -481,22 +491,29 @@ void update_packets(const int nts, std::span<Packet> packets) {
     }
 
     const auto cellcacheresets = stats::get_counter(stats::Counter::UPDATECELL) - updatecellcounter_beforepass;
-    printlnlog("  update_packets timestep {} pass {:3d}: packetsupdated {:7d} cellcacheresets {:7d} (took {}s)", nts,
-               passnumber, pass_packets_updated, cellcacheresets, std::time(nullptr) - sys_time_start_pass);
+    const auto pass_duration_s =
+        std::chrono::duration<double>(std::chrono::steady_clock::now() - sys_time_start_pass).count();
+    printlnlog("  update_packets timestep {} pass {:3d}: packetsupdated {:7d} cellcacheresets {:7d} (took {:.1f}s)",
+               nts, passnumber, pass_packets_updated, cellcacheresets, pass_duration_s);
 
     passnumber++;
   }
 
   stats::pkt_action_counters_printout(nts);
 
-  const auto time_update_packets_end_thisrank = std::time(nullptr);
-  printlnlog("timestep {}: finished update_packets for rank {} (took {} seconds)", nts, globals::my_rank,
-             time_update_packets_end_thisrank - time_update_packets_start);
+  const auto time_update_packets_end_thisrank = std::chrono::steady_clock::now();
+  const auto rank_process_time =
+      std::chrono::duration<double>(time_update_packets_end_thisrank - time_update_packets_start).count();
+  printlnlog("timestep {}: finished update_packets for rank {} (took {:.1f} seconds)", nts, globals::my_rank,
+             rank_process_time);
 
   MPI_Barrier_allranks();  // hold all processes once the packets are updated
-  const auto time_update_packets_end_allranks = std::time(nullptr);
-  printlnlog("timestep {}: time after update packets for all processes (rank {} took {}s, waited {}s, total {}s)", nts,
-             globals::my_rank, time_update_packets_end_thisrank - time_update_packets_start,
-             time_update_packets_end_allranks - time_update_packets_end_thisrank,
-             time_update_packets_end_allranks - time_update_packets_start);
+  const auto time_update_packets_end_allranks = std::chrono::steady_clock::now();
+  const auto rank_wait_time =
+      std::chrono::duration<double>(time_update_packets_end_allranks - time_update_packets_end_thisrank).count();
+  const auto rank_total_time =
+      std::chrono::duration<double>(time_update_packets_end_allranks - time_update_packets_start).count();
+  printlnlog(
+      "timestep {}: time after update packets for all processes (rank {} took {:.1f}s, waited {:.1f}s, total {:.1f}s)",
+      nts, globals::my_rank, rank_process_time, rank_wait_time, rank_total_time);
 }

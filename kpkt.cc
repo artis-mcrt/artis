@@ -220,11 +220,11 @@ void set_ncoolingterms() {
 // return a randomly chosen frequency according to the Planck distribution of temperature T using a Monte Carlo method
 auto sample_planck_montecarlo(const double T) -> double {
   const double nu_peak = 5.879e10 * T;
-  const double B_peak = radfield::dbb(nu_peak, T, 1);
+  const double B_peak = radfield::planck(nu_peak, T);
 
   while (true) {
     const double nu = NU_MIN_R + (rng_uniform() * (NU_MAX_R - NU_MIN_R));
-    if (rng_uniform() * B_peak <= radfield::dbb(nu, T, 1)) {
+    if (rng_uniform() * B_peak <= radfield::planck(nu, T)) {
       return nu;
     }
   }
@@ -346,7 +346,7 @@ void setup_coolinglist() {
 
 // handle a k-packet (e.g., in a thick cell) by emitting according to the planck function
 DEVICE_FUNC void do_kpkt_blackbody(Packet& pkt) {
-  const auto nonemptymgi = grid::get_propcell_nonemptymgi(pkt.where);
+  const auto nonemptymgi = grid::get_propcell_nonemptymgi(pkt.cellindex);
 
   if (RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.has_value() && grid::thick_allcells[nonemptymgi] != 1) {
     pkt.nu_cmf = sample_planck_times_expansion_opacity(nonemptymgi);
@@ -373,7 +373,7 @@ DEVICE_FUNC void do_kpkt(Packet& pkt, const double t2, const int nts) {
   const double t_current = std::min(pkt.prop_time + deltat, t2);
 
   pkt.pos = vec_scale(pkt.pos, t_current / pkt.prop_time);
-  // pkt.e_cmf *= pkt.prop_time / t_current;  // adjust energy for adiabatic losses
+  pkt.e_cmf *= pkt.prop_time / t_current;  // adjust energy for adiabatic losses
   pkt.prop_time = t_current;
 
   if (t_current >= t2) {
@@ -382,7 +382,7 @@ DEVICE_FUNC void do_kpkt(Packet& pkt, const double t2, const int nts) {
 
   stats::increment(stats::Counter::INTERACTIONS);
 
-  const auto nonemptymgi = grid::get_propcell_nonemptymgi(pkt.where);
+  const auto nonemptymgi = grid::get_propcell_nonemptymgi(pkt.cellindex);
   const std::span<const double> ion_cooling_contribs_thiscell = get_cell_ion_cooling_contribs(nonemptymgi);
   const double rndcool_ion = rng_uniform() * ion_cooling_contribs_thiscell.back();
 
@@ -444,7 +444,7 @@ DEVICE_FUNC void do_kpkt(Packet& pkt, const double t2, const int nts) {
     pkt.em_time = static_cast<float>(pkt.prop_time);
     pkt.nscatterings = 0;
     if constexpr (VPKT_ON) {
-      vpkt::call_estimators(pkt, TYPE_KPKT);
+      vpkt::trace_vpkts(pkt, TYPE_KPKT);
     }
 
   } else if (rndcoolingtype == CoolingType::FREEBOUND) {
@@ -457,13 +457,7 @@ DEVICE_FUNC void do_kpkt(Packet& pkt, const double t2, const int nts) {
     // then randomly sample the packets frequency according to the continuums energy distribution
 
     // Sample the packets comoving frame frequency according to paperII 4.2.2
-    // const double zrand = rng_uniform();
-    // if (zrand < 0.5) {
     pkt.nu_cmf = select_continuum_nu(element, lowerion, lowerlevel, upper, T_e);
-    // } else {
-    //   // Emit like a BB
-    //   pkt.nu_cmf = sample_planck(T_e);
-    // }
 
     // and then emit the packet randomly in the comoving frame
     emit_rpkt(pkt);
@@ -477,7 +471,7 @@ DEVICE_FUNC void do_kpkt(Packet& pkt, const double t2, const int nts) {
     pkt.nscatterings = 0;
 
     if constexpr (VPKT_ON) {
-      vpkt::call_estimators(pkt, TYPE_KPKT);
+      vpkt::trace_vpkts(pkt, TYPE_KPKT);
     }
   } else if (rndcoolingtype == CoolingType::COLLEXC) {
     // the k-packet activates a macro-atom due to collisional excitation

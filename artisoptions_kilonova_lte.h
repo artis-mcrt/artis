@@ -1,6 +1,6 @@
-#ifndef ARTISOPTIONS_H  // NOLINT(llvm-header-guard)
+#ifndef ARTISOPTIONS_H
 #define ARTISOPTIONS_H
-// NOLINTBEGIN(modernize*,misc-unused-parameters)
+// NOLINTBEGIN(modernize-use-trailing-return-type,misc-unused-parameters)
 
 #include <cstdlib>
 #include <optional>
@@ -24,8 +24,6 @@ constexpr bool LTEPOP_EXCITATION_USE_TJ = true;
 constexpr bool FORCE_SAHA_ION_BALANCE(int element_z) { return true; }
 
 constexpr bool SINGLE_LEVEL_TOP_ION = false;
-
-constexpr bool SINGLE_GROUND_LEVEL = false;
 
 constexpr int NLEVELS_REQUIRETRANSITIONS(int Z, int ionstage) {
   return ((Z == 26 || Z == 28) && ionstage >= 1) ? 80 : 0;
@@ -93,12 +91,6 @@ constexpr bool NT_ON = false;
 
 constexpr bool NT_SOLVE_SPENCERFANO = false;
 
-constexpr int SFPTS = 4096;
-
-constexpr double SF_EMAX = 16000;
-
-constexpr double SF_EMIN = 0.1;
-
 constexpr int SF_MAX_TIMESTEPS_BETWEEN_SOLUTIONS = 0;
 
 constexpr double NT_MAX_FRACDIFF_NNEPERION_BETWEEN_SOLUTIONS = 0.05;
@@ -115,10 +107,6 @@ constexpr bool NT_USE_VALENCE_IONPOTENTIAL = false;
 constexpr int NT_MAX_AUGER_ELECTRONS = 2;
 
 constexpr bool SF_AUGER_CONTRIBUTION_ON = true;
-
-constexpr bool SF_AUGER_CONTRIBUTION_DISTRIBUTE_EN = false;
-
-constexpr bool NT_WORKFUNCTION_USE_SHELL_OCCUPANCY_FILE = false;
 
 constexpr double TEMPERATURE_SOLVER_ACCURACY = 1e-3;
 
@@ -140,7 +128,9 @@ constexpr bool KEEP_ALL_RESTART_FILES = false;
 
 constexpr bool BFCOOLING_USELEVELPOPNOTIONPOP = false;
 
-constexpr bool EXPANSIONOPACITIES_ON = false;
+constexpr bool RPKT_USE_EXPANSION_OPACITIES = false;
+
+constexpr bool VPKT_USE_EXPANSION_OPACITIES = false;
 
 constexpr std::optional<float> RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY;
 
@@ -160,5 +150,5 @@ constexpr bool READ_VOLUME_FILLING_FACTORS_FROM_FILE = false;
 
 constexpr float volume_filling_factor([[maybe_unused]] double tmid, [[maybe_unused]] double rad_vel) { return 1.; }
 
-// NOLINTEND(modernize*,misc-unused-parameters)
+// NOLINTEND(modernize-use-trailing-return-type,misc-unused-parameters)
 #endif  // ARTISOPTIONS_H

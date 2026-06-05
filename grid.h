@@ -50,8 +50,7 @@ void set_elements_uppermost_ion(int nonemptymgi, int element, int uppermost_ion)
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_ffegrp(int modelgridindex) -> float;
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_modelcell_mean_radial_pos(int modelgridindex, double tratmid)
     -> double;
-[[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_modelcell_mean_radial_vel(int modelgridindex, double tmin) -> double;
-void set_elem_abundance(std::ptrdiff_t nonemptymgi, int element, float newabundance);
+void set_elem_massfrac(std::ptrdiff_t nonemptymgi, int element, float newmassfrac);
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_elem_numberdens(std::ptrdiff_t nonemptymgi, int element) -> double;
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_initenergyq(int modelgridindex) -> double;
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_kappagrey(int nonemptymgi) -> float;
@@ -70,7 +69,7 @@ void set_W(int nonemptymgi, float W);
 void init_grid();
 [[gnu::pure]] [[nodiscard]] auto get_modelinitnucmassfrac(int modelgridindex, int nucindex) -> float;
 [[gnu::pure]] [[nodiscard]] auto get_otherstable_initabund(std::ptrdiff_t nonemptymgi, int element) -> float;
-[[gnu::pure]] [[nodiscard]] auto get_elem_abundance(std::ptrdiff_t nonemptymgi, int element) -> float;
+[[gnu::pure]] [[nodiscard]] auto get_elem_massfrac(std::ptrdiff_t nonemptymgi, int element) -> float;
 void set_element_meanweight(std::ptrdiff_t nonemptymgi, int element, float meanweight);
 [[gnu::pure]] [[nodiscard]] auto get_electronfrac(int nonemptymgi) -> double;
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_numpropcells(int modelgridindex) -> int;
@@ -99,11 +98,10 @@ void set_clumpfactor(int nonemptymgi, float clumpfactor);
 
 [[nodiscard]] auto calculate_cell_kappagrey(int nonemptymgi) -> float;
 
-// Routine to take a packet across a boundary.
 inline void change_cell(Packet& pkt, const int snext) {
   if (snext >= 0) {
-    // Just need to update "where".
-    pkt.where = snext;
+    // Just need to update cellindex.
+    pkt.cellindex = snext;
     stats::increment(stats::Counter::CELLCROSSINGS);
   } else {
     // Then the packet is exiting the grid. We need to record
