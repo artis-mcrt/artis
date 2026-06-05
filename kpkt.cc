@@ -50,9 +50,8 @@ template <bool update_cellcache_contribs>
 auto calculate_cooling_rates_ion(const int nonemptymgi, const int element, const int ion,
                                  std::span<double> ion_contribs, double* const C_ff, double* const C_fb,
                                  double* const C_exc, double* const C_ionisation) -> double {
-  const auto nne = grid::get_nne(nonemptymgi);
+  const auto clumpednne = grid::get_clumpfactor(nonemptymgi) * grid::get_nne(nonemptymgi);
   const auto T_e = grid::get_Te(nonemptymgi);
-  const float clumpfactor = grid::get_clumpfactor(nonemptymgi);
 
   double C_ion = 0.;
   [[maybe_unused]] int i = 0;  // NOLINT(misc-const-correctness)
@@ -63,8 +62,8 @@ auto calculate_cooling_rates_ion(const int nonemptymgi, const int element, const
   // ff creation of rpkt
   const int ioncharge = get_ionstage(element, ion) - 1;
   if (ioncharge > 0) {
-    const double C_ff_ion = 1.426e-27 * sqrt(T_e) * pow2(ioncharge) * nncurrention * nne;
-    C_ion += C_ff_ion * clumpfactor;
+    const double C_ff_ion = 1.426e-27 * sqrt(T_e) * pow2(ioncharge) * nncurrention * clumpednne;
+    C_ion += C_ff_ion;
 
     if constexpr (update_cellcache_contribs) {
       ion_contribs[i] = C_ion;
@@ -96,7 +95,7 @@ auto calculate_cooling_rates_ion(const int nonemptymgi, const int element, const
       const auto upper_statweight = stat_weight(ionuniquelevelindexstart + upper);
       const double C =
           nnlevel *
-          col_excitation_ratecoeff(T_e, nne, upper_statweight, alltransindex, epsilon_trans, statweight, clumpfactor) *
+          col_excitation_ratecoeff(T_e, clumpednne, upper_statweight, alltransindex, epsilon_trans, statweight) *
           epsilon_trans;
       C_ion += C;
       if constexpr (!update_cellcache_contribs) {
@@ -130,7 +129,7 @@ auto calculate_cooling_rates_ion(const int nonemptymgi, const int element, const
         const double epsilon_trans = epsilon_upper - epsilon_current;
         const double C =
             nnlevel *
-            col_ionisation_ratecoeff(T_e, nne, element, ion, level, phixstargetindex, epsilon_trans, clumpfactor) *
+            col_ionisation_ratecoeff(T_e, clumpednne, element, ion, level, phixstargetindex, epsilon_trans) *
             epsilon_trans;
 
         C_ion += C;
@@ -161,8 +160,8 @@ auto calculate_cooling_rates_ion(const int nonemptymgi, const int element, const
           }
           return nnupperion;
         }();
-        const double C = get_bfcoolingcoeff(element, ion, level, phixstargetindex, T_e) * pop * nne;
-        C_ion += C * clumpfactor;
+        const double C = get_bfcoolingcoeff(element, ion, level, phixstargetindex, T_e) * pop * clumpednne;
+        C_ion += C;
 
         if constexpr (update_cellcache_contribs) {
           ion_contribs[i] = C_ion;
@@ -475,8 +474,7 @@ DEVICE_FUNC void do_kpkt(Packet& pkt, const double t2, const int nts) {
     }
   } else if (rndcoolingtype == CoolingType::COLLEXC) {
     // the k-packet activates a macro-atom due to collisional excitation
-    const float nne = grid::get_nne(nonemptymgi);
-    const float clumpfactor = grid::get_clumpfactor(nonemptymgi);
+    const float clumpednne = grid::get_clumpfactor(nonemptymgi) * grid::get_nne(nonemptymgi);
 
     // if the previous entry belongs to the same ion, then pick up the cumulative sum from
     // the previous entry, otherwise start from zero
@@ -500,7 +498,7 @@ DEVICE_FUNC void do_kpkt(Packet& pkt, const double t2, const int nts) {
       const auto upper_statweight = stat_weight(upperuniquelevelindex);
       const double C =
           nnlevel *
-          col_excitation_ratecoeff(T_e, nne, upper_statweight, alltransindex, epsilon_trans, statweight, clumpfactor) *
+          col_excitation_ratecoeff(T_e, clumpednne, upper_statweight, alltransindex, epsilon_trans, statweight) *
           epsilon_trans;
       contrib += C;
       if (contrib > rndcool_ion_process) {

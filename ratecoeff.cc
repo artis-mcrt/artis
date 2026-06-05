@@ -426,6 +426,7 @@ auto calculate_corrphotoioncoeff_integral(const int element, const int ion, cons
   // stimulated recombination is negative photoionisation
   const double nnlevel = use_cellcache ? get_cellcache_levelpop(nonemptymgi, loweruniquelevelindex)
                                        : calculate_levelpop(nonemptymgi, element, ion, level);
+  // TODO: should clumped nne always be a double???
   const double clumpednne = grid::get_nne(nonemptymgi) * grid::get_clumpfactor(nonemptymgi);
 
   const int upperionlevel = get_phixsupperlevel(loweruniquelevelindex, phixstargetindex);
@@ -644,11 +645,12 @@ auto calculate_ionrecombcoeff(const int nonemptymgi, const float T_e, const int 
       if (collisional_not_radiative) {
         const double epsilon_trans = epsilon(element, lowerion + 1, upper) - epsilon(element, lowerion, lower);
         recomb_coeff +=
-            col_recombination_ratecoeff(T_e, nne, element, upperion, upper, lower, epsilon_trans, clumpfactor);
+            col_recombination_ratecoeff(T_e, clumpfactor * nne, element, upperion, upper, lower, epsilon_trans);
       } else {
-        recomb_coeff += rad_recombination_ratecoeff(T_e, nne, element, lowerion + 1, upper, lower, clumpfactor);
+        recomb_coeff += rad_recombination_ratecoeff(T_e, clumpfactor * nne, element, lowerion + 1, upper, lower);
       }
 
+      // TODO: should this have a clumping factor?
       const double alpha_level = recomb_coeff / nne;
       const double alpha_ion_contrib = alpha_level * nnupperlevel / nnupperion;
       alpha += alpha_ion_contrib;
@@ -738,8 +740,7 @@ auto iongamma_is_zero(const int nonemptymgi, const int element, const int ion) -
   }
 
   const auto T_e = grid::get_Te(nonemptymgi);
-  const auto nne = grid::get_nne(nonemptymgi);
-  const float clumpfactor = grid::get_clumpfactor(nonemptymgi);
+  const auto clumpednne = grid::get_clumpfactor(nonemptymgi) * grid::get_nne(nonemptymgi);
 
   for (int level = 0; level < get_nlevels(element, ion); level++) {
     const double nnlevel = calculate_levelpop(nonemptymgi, element, ion, level);
@@ -757,7 +758,7 @@ auto iongamma_is_zero(const int nonemptymgi, const int element, const int ion) -
       const double epsilon_trans = epsilon(element, ion + 1, upperlevel) - epsilon(element, ion, level);
 
       if (nnlevel *
-              col_ionisation_ratecoeff(T_e, nne, element, ion, level, phixstargetindex, epsilon_trans, clumpfactor) >
+              col_ionisation_ratecoeff(T_e, clumpednne, element, ion, level, phixstargetindex, epsilon_trans) >
           0) {
         return false;
       }
@@ -774,8 +775,7 @@ auto calculate_iongamma_per_gspop(const int nonemptymgi, const int element, cons
   }
 
   const auto T_e = grid::get_Te(nonemptymgi);
-  const float nne = grid::get_nne(nonemptymgi);
-  const float clumpfactor = grid::get_clumpfactor(nonemptymgi);
+  const float clumpednne = grid::get_clumpfactor(nonemptymgi) * grid::get_nne(nonemptymgi);
 
   const int nlevels_ionising = get_nlevels_ionising(element, ion);
 
@@ -791,8 +791,8 @@ auto calculate_iongamma_per_gspop(const int nonemptymgi, const int element, cons
 
       const double epsilon_trans = epsilon(element, ion + 1, upperlevel) - epsilon(element, ion, level);
 
-      ionisation_rate_coll += nnlevel * col_ionisation_ratecoeff(T_e, nne, element, ion, level, phixstargetindex,
-                                                                 epsilon_trans, clumpfactor);
+      ionisation_rate_coll += nnlevel * col_ionisation_ratecoeff(T_e, clumpednne, element, ion, level, phixstargetindex,
+                                                                 epsilon_trans);
     }
   }
   const auto ionisation_rate = (ionisation_rate_rad + ionisation_rate_coll);
@@ -812,9 +812,8 @@ auto calculate_iongamma_per_ionpop(const int nonemptymgi, const int element, con
     return 0.;
   }
 
-  const auto nne = grid::get_nne(nonemptymgi);
+  const auto clumpednne = grid::get_clumpfactor(nonemptymgi) * grid::get_nne(nonemptymgi);
   const auto T_e = grid::get_Te(nonemptymgi);
-  const float clumpfactor = grid::get_clumpfactor(nonemptymgi);
 
   double ionisation_rate = 0.;  // rate per second
   const auto nlevels_ionising = get_nlevels_ionising(element, lowerion);
@@ -825,8 +824,8 @@ auto calculate_iongamma_per_ionpop(const int nonemptymgi, const int element, con
       if (collisional_not_radiative) {
         const int upper = get_phixsupperlevel(element, lowerion, lower, phixstargetindex);
         const double epsilon_trans = epsilon(element, lowerion + 1, upper) - epsilon(element, lowerion, lower);
-        ionisation_rate += nnlowerlevel * col_ionisation_ratecoeff(T_e, nne, element, lowerion, lower, phixstargetindex,
-                                                                   epsilon_trans, clumpfactor);
+        ionisation_rate += nnlowerlevel * col_ionisation_ratecoeff(T_e, clumpednne, element, lowerion, lower, phixstargetindex,
+                                                                   epsilon_trans);
       } else if (force_bfintegral) {
         // don't use any detailed bound-free estimators, even if they are on and available
         ionisation_rate += nnlowerlevel * calculate_corrphotoioncoeff_integral(element, lowerion, lower,

@@ -381,8 +381,7 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
   // Update clumping factors
   if constexpr (USE_MICROCLUMPING && !READ_VOLUME_FILLING_FACTORS_FROM_FILE) {
     const double tmid = globals::timesteps[nts].mid;
-    const double rad_vel =
-        grid::get_modelcell_mean_radial_vel(grid::get_mgi_of_nonemptymgi(nonemptymgi), globals::tmin);
+    const double rad_vel = grid::get_modelcell_mean_radial_pos(grid::get_mgi_of_nonemptymgi(nonemptymgi), tmid) / tmid;
     const float vol_filling_factor = volume_filling_factor(tmid, rad_vel);
 
     grid::set_clumpfactor(nonemptymgi, 1.F / vol_filling_factor);

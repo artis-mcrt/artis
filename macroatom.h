@@ -15,25 +15,25 @@ DEVICE_FUNC void do_macroatom(Packet& pkt, const MacroAtomState& pktmastate);
                                                           double nnlevel_upper, double statweight_lower,
                                                           int alltransindex, double t_current) -> double;
 
-[[gnu::pure]] [[nodiscard]] auto rad_recombination_ratecoeff(float T_e, float nne, int element, int upperion,
-                                                             int upperionlevel, int lowerionlevel, float clumpfactor)
+[[gnu::pure]] [[nodiscard]] auto rad_recombination_ratecoeff(float T_e, float clumpednne, int element, int upperion,
+                                                             int upperionlevel, int lowerionlevel)
     -> double;
 
-[[gnu::pure]] [[nodiscard]] auto col_recombination_ratecoeff(float T_e, float nne, int element, int upperion, int upper,
-                                                             int lower, double epsilon_trans, float clumpfactor)
+[[gnu::pure]] [[nodiscard]] auto col_recombination_ratecoeff(float T_e, float clumpednne, int element, int upperion, int upper,
+                                                             int lower, double epsilon_trans)
     -> double;
 
-[[gnu::pure]] [[nodiscard]] auto col_ionisation_ratecoeff(float T_e, float nne, int element, int ion, int lower,
-                                                          int phixstargetindex, double epsilon_trans, float clumpfactor)
+[[gnu::pure]] [[nodiscard]] auto col_ionisation_ratecoeff(float T_e, float clumpednne, int element, int ion, int lower,
+                                                          int phixstargetindex, double epsilon_trans)
     -> double;
 
-[[gnu::pure]] [[nodiscard]] auto col_deexcitation_ratecoeff(float T_e, float nne, double epsilon_trans,
+[[gnu::pure]] [[nodiscard]] auto col_deexcitation_ratecoeff(float T_e, float clumpednne, double epsilon_trans,
                                                             double upperstatweight, double lowerstatweight,
-                                                            int alltransindex, float clumpfactor) -> double;
+                                                            int alltransindex) -> double;
 
-[[gnu::pure]] [[nodiscard]] auto col_excitation_ratecoeff(float T_e, float nne, double upperstatweight,
+[[gnu::pure]] [[nodiscard]] auto col_excitation_ratecoeff(float T_e, float clumpednne, double upperstatweight,
                                                           int alltransindex, double epsilon_trans,
-                                                          double lowerstatweight, float clumpfactor) -> double;
+                                                          double lowerstatweight) -> double;
 
 // radiative deexcitation rate: paperII 3.5.2
 // multiply by upper level population to get a rate per second
