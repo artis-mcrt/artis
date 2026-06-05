@@ -757,8 +757,7 @@ auto iongamma_is_zero(const int nonemptymgi, const int element, const int ion) -
 
       const double epsilon_trans = epsilon(element, ion + 1, upperlevel) - epsilon(element, ion, level);
 
-      if (nnlevel *
-              col_ionisation_ratecoeff(T_e, clumpednne, element, ion, level, phixstargetindex, epsilon_trans) >
+      if (nnlevel * col_ionisation_ratecoeff(T_e, clumpednne, element, ion, level, phixstargetindex, epsilon_trans) >
           0) {
         return false;
       }
@@ -791,8 +790,8 @@ auto calculate_iongamma_per_gspop(const int nonemptymgi, const int element, cons
 
       const double epsilon_trans = epsilon(element, ion + 1, upperlevel) - epsilon(element, ion, level);
 
-      ionisation_rate_coll += nnlevel * col_ionisation_ratecoeff(T_e, clumpednne, element, ion, level, phixstargetindex,
-                                                                 epsilon_trans);
+      ionisation_rate_coll +=
+          nnlevel * col_ionisation_ratecoeff(T_e, clumpednne, element, ion, level, phixstargetindex, epsilon_trans);
     }
   }
   const auto ionisation_rate = (ionisation_rate_rad + ionisation_rate_coll);
@@ -824,8 +823,8 @@ auto calculate_iongamma_per_ionpop(const int nonemptymgi, const int element, con
       if (collisional_not_radiative) {
         const int upper = get_phixsupperlevel(element, lowerion, lower, phixstargetindex);
         const double epsilon_trans = epsilon(element, lowerion + 1, upper) - epsilon(element, lowerion, lower);
-        ionisation_rate += nnlowerlevel * col_ionisation_ratecoeff(T_e, clumpednne, element, lowerion, lower, phixstargetindex,
-                                                                   epsilon_trans);
+        ionisation_rate += nnlowerlevel * col_ionisation_ratecoeff(T_e, clumpednne, element, lowerion, lower,
+                                                                   phixstargetindex, epsilon_trans);
       } else if (force_bfintegral) {
         // don't use any detailed bound-free estimators, even if they are on and available
         ionisation_rate += nnlowerlevel * calculate_corrphotoioncoeff_integral(element, lowerion, lower,
