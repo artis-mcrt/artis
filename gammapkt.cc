@@ -604,7 +604,7 @@ void update_gamma_dep(const Packet& pkt, const double dist) {
     return;  // empty cell
   }
 
-  const double doppler_sq = doppler_squared_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
+  const double doppler_sq = pow2(calculate_doppler_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time));
   const double heating_cont = get_chi_loss_weighted(pkt, nonemptymgi) * pkt.e_rf * dist * doppler_sq;
 
   // The terms in the above are for Compton, photoelectric and pair production. The pair production one
