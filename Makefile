@@ -284,6 +284,10 @@ all: sn3d exspec
 $(BUILD_DIR)/%.o: %.cc Makefile
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
+# gammapkt.cc inlines some cell-geometry and boundary-crossing math. -ffast-math breaks the exact
+# crossing arithmetic and produces "[ERROR] packet outside coord" failures in some 3D models.
+$(BUILD_DIR)/gammapkt.o: CXXFLAGS += -fno-fast-math -fno-unsafe-math-optimizations
+
 check: $(sn3d_files)
 	run-clang-tidy $(sn3d_files)
 
