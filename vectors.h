@@ -73,32 +73,6 @@ template <size_t VECDIM>
                    (dir1[2] - (vel[2] * fact2)) / fact1});
 }
 
-// Doppler factor squared, either to first order v/c or fully relativisitic depending on USE_RELATIVISTIC_DOPPLER_SHIFT
-// Arguments:
-//   pos_rf: the rest frame position of the packet
-//   dir_rf: the rest frame direction (unit vector) of light propagation
-//   prop_time: the propagation time of the packet
-// returns: the ratio f = (nu_cmf / nu_rf) ^ 2
-[[gnu::pure]] [[nodiscard]] DEVICE_FUNC constexpr auto doppler_squared_nucmf_on_nurf(const Vec3d& pos_rf,
-                                                                                     const Vec3d& dir_rf,
-                                                                                     const double prop_time) -> double {
-  // velocity of the comoving frame relative to the rest frame
-  const auto vel_rf = get_velocity(pos_rf, prop_time);
-
-  assert_testmodeonly(dot(vel_rf, vel_rf) / CLIGHTSQUARED >= 0.);
-  assert_testmodeonly(dot(vel_rf, vel_rf) / CLIGHTSQUARED < 1.);
-
-  const double ndotv_on_c = dot(dir_rf, vel_rf) / CLIGHT;
-  const double dopplerfactorsq = USE_RELATIVISTIC_DOPPLER_SHIFT
-                                     ? pow2(1. - ndotv_on_c) / (1 - (dot(vel_rf, vel_rf) / CLIGHTSQUARED))
-                                     : (1. - (2 * ndotv_on_c));
-
-  assert_testmodeonly(std::isfinite(dopplerfactorsq));
-  assert_testmodeonly(dopplerfactorsq > 0);
-
-  return dopplerfactorsq;
-}
-
 // Doppler factor either to first order v/c or fully relativisitic depending on USE_RELATIVISTIC_DOPPLER_SHIFT
 // Arguments:
 //   pos_rf: the rest frame position of the packet
