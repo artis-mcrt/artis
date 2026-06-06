@@ -155,41 +155,6 @@ void read_possible_yefile() {
   }
 }
 
-// get the minimum value of a coordinate at globals::tmin (xyz or radial coords) of a propagation cell
-// e.g., the minimum x position in xyz coords, or the minimum radius
-[[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_cellcoordmin(const int cellindex, const int axis) -> double {
-  return propcell_pos_min[cellindex][axis];
-}
-
-// get the maximum position value of a coordinate axis at globals::tmin (xyz or radial coords) of a propagation cell
-// e.g., the maximum x position in xyz coords, or the maximum radius in spherical 1D
-[[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_cellcoordmax(const int cellindex, const int axis) -> double {
-  return get_cellcoordmin(cellindex, axis) + propcell_width_tmin(cellindex, axis);
-}
-
-// return the inner radius of a propagation cell at time tmin
-auto get_cell_r_inner(const int cellindex, const GridType prop_gridtype) -> double {
-  if (prop_gridtype == GridType::SPHERICAL1D) {
-    return get_cellcoordmin(cellindex, 0);
-  }
-
-  if (prop_gridtype == GridType::CYLINDRICAL2D) {
-    const auto rcyl_inner = get_cellcoordmin(cellindex, 0);
-    const auto z_inner = std::min(std::abs(get_cellcoordmin(cellindex, 1)), std::abs(get_cellcoordmax(cellindex, 1)));
-    return std::sqrt(pow2(rcyl_inner) + pow2(z_inner));
-  }
-
-  if (prop_gridtype == GridType::CARTESIAN3D) {
-    const auto x_inner = std::min(std::abs(get_cellcoordmin(cellindex, 0)), std::abs(get_cellcoordmax(cellindex, 0)));
-    const auto y_inner = std::min(std::abs(get_cellcoordmin(cellindex, 1)), std::abs(get_cellcoordmax(cellindex, 1)));
-    const auto z_inner = std::min(std::abs(get_cellcoordmin(cellindex, 2)), std::abs(get_cellcoordmax(cellindex, 2)));
-    return std::sqrt(pow2(x_inner) + pow2(y_inner) + pow2(z_inner));
-  }
-
-  assert_always(false);
-  return NAN;
-}
-
 [[gnu::pure]] DEVICE_FUNC auto get_propgridtype() -> GridType {
   if constexpr (GRID_TYPE_OVERRIDE.has_value()) {
     return GRID_TYPE_OVERRIDE.value();
@@ -249,6 +214,44 @@ auto get_cell_r_inner(const int cellindex, const GridType prop_gridtype) -> doub
 
   assert_always(false);
   return -1;
+}
+
+// get the minimum value of a coordinate at globals::tmin (xyz or radial coords) of a propagation cell
+// e.g., the minimum x position in xyz coords, or the minimum radius
+[[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_cellcoordmin(const int cellindex, const int axis) -> double {
+  return propcell_pos_min[cellindex][axis];
+}
+
+// get the maximum position value of a coordinate axis at globals::tmin (xyz or radial coords) of a propagation cell
+// e.g., the maximum x position in xyz coords, or the maximum radius in spherical 1D
+[[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_cellcoordmax(const int cellindex, const int axis) -> double {
+  const auto cellcoordidx = get_cellcoordpointnum(cellindex, axis);
+  return (cellcoordidx < (ncoordgrid[axis] - 1))
+             ? get_cellcoordmin((cellcoordidx + 1) * get_coordcellindexincrement(axis), axis)
+             : globals::rmax;
+}
+
+// return the inner radius of a propagation cell at time tmin
+auto get_cell_r_inner(const int cellindex, const GridType prop_gridtype) -> double {
+  if (prop_gridtype == GridType::SPHERICAL1D) {
+    return get_cellcoordmin(cellindex, 0);
+  }
+
+  if (prop_gridtype == GridType::CYLINDRICAL2D) {
+    const auto rcyl_inner = get_cellcoordmin(cellindex, 0);
+    const auto z_inner = std::min(std::abs(get_cellcoordmin(cellindex, 1)), std::abs(get_cellcoordmax(cellindex, 1)));
+    return std::sqrt(pow2(rcyl_inner) + pow2(z_inner));
+  }
+
+  if (prop_gridtype == GridType::CARTESIAN3D) {
+    const auto x_inner = std::min(std::abs(get_cellcoordmin(cellindex, 0)), std::abs(get_cellcoordmax(cellindex, 0)));
+    const auto y_inner = std::min(std::abs(get_cellcoordmin(cellindex, 1)), std::abs(get_cellcoordmax(cellindex, 1)));
+    const auto z_inner = std::min(std::abs(get_cellcoordmin(cellindex, 2)), std::abs(get_cellcoordmax(cellindex, 2)));
+    return std::sqrt(pow2(x_inner) + pow2(y_inner) + pow2(z_inner));
+  }
+
+  assert_always(false);
+  return NAN;
 }
 
 void set_ffegrp(const int modelgridindex, float x) {
@@ -1230,10 +1233,18 @@ constexpr auto get_grid_type_name(const GridType gridtype) -> std::string {
 auto get_poscoordpointnum(const double pos, const double time, const int axis) -> int {
   switch (get_propgridtype()) {
     case GridType::CARTESIAN3D: {
-      const auto idx = static_cast<int>(((pos / time) + globals::vmax) / 2 / globals::vmax * ncoordgrid[axis]);
-      assert_always(idx >= 0);
-      assert_always(idx < ncoordgrid[axis]);
-      return idx;
+      if (pos < get_cellcoordmin(get_coordcellindexincrement(axis), axis) / globals::tmin * time) {
+        return 0;
+      }
+      int idx = 0;
+      for (int i = 0; i < ncoordgrid[axis]; i++) {
+        const double cellcoordmin =
+            get_cellcoordmin(i * get_coordcellindexincrement(axis), axis) / globals::tmin * time;
+        if ((cellcoordmin <= pos)) {
+          idx = i;
+        }
+      }
+      return std::min(idx, ncoordgrid[axis] - 1);
     }
 
     case GridType::CYLINDRICAL2D: {
@@ -1505,11 +1516,8 @@ auto get_element_meanweight(const std::ptrdiff_t nonemptymgi, const int element)
     case GridType::CARTESIAN3D: {
       Vec3d pos;
       for (int axis = 0; axis < 3; axis++) {
-        const auto cellcoordidx = get_cellcoordpointnum(cellindex, axis);
         const auto cellcoordmin = get_cellcoordmin(cellindex, axis);
-        const double cellcoordmax = (cellcoordidx < (ncoordgrid[axis] - 1))
-                                        ? get_cellcoordmin(cellindex + get_coordcellindexincrement(axis), axis)
-                                        : globals::rmax;
+        const double cellcoordmax = get_cellcoordmax(cellindex, axis);
         pos[axis] = std::lerp(cellcoordmin, cellcoordmax, rng_uniform_pos());
       }
       return pos;
@@ -2348,10 +2356,9 @@ auto get_totmassnuclide_tmodel(const int z, const int a) -> double { return totm
   assert_always(cellindex < ngrid);
 
   // do a check that the position is within the cell
-  const double trat = time / globals::tmin;
   for (int n = 0; n < ndim; n++) {
-    assert_always(posgridcoords[n] >= ((get_cellcoordmin(cellindex, n) * trat) - 10));
-    assert_always(posgridcoords[n] <= ((get_cellcoordmax(cellindex, n) * trat) + 10));
+    assert_always(posgridcoords[n] >= ((get_cellcoordmin(cellindex, n) / globals::tmin * time) - 10));
+    assert_always(posgridcoords[n] <= ((get_cellcoordmax(cellindex, n) / globals::tmin * time) + 10));
   }
   return cellindex;
 }
@@ -2361,7 +2368,7 @@ auto get_totmassnuclide_tmodel(const int z, const int a) -> double { return totm
 // reliance on exact floating-point cancellation between boundary_distance() and the position update (pos + dir*sdist),
 // which is fragile under -ffast-math and otherwise leaves packets slightly outside the cell they cross into. Only the
 // crossed grid coordinate is adjusted (by a sub-cm amount); the others are left at their moved values.
-void snap_pkt_to_crossed_boundary(Packet& pkt, const int snext) {
+void snap_pkt_to_crossed_boundary(Packet& pkt, int snext) {
   const auto prop_gridtype = get_propgridtype();
   const int oldcellindex = pkt.cellindex;
 
@@ -2375,11 +2382,8 @@ void snap_pkt_to_crossed_boundary(Packet& pkt, const int snext) {
     if (newidx != oldidx) {
       crossedaxis = d;
       // moved up -> land on the destination cell's lower face; moved down -> its upper face
-      if (newidx > oldidx) {
-        boundarycoord_tmin = get_cellcoordmin(snext, d);
-      } else {
-        boundarycoord_tmin = (newidx < (ncoordgrid[d] - 1)) ? get_cellcoordmax(snext, d) : globals::rmax;
-      }
+      boundarycoord_tmin = (newidx > oldidx) ? (get_cellcoordmin(snext, d) / globals::tmin * pkt.prop_time)
+                                             : (get_cellcoordmax(snext, d) / globals::tmin * pkt.prop_time);
       break;
     }
   }
@@ -2390,15 +2394,23 @@ void snap_pkt_to_crossed_boundary(Packet& pkt, const int snext) {
   }
 
   // boundary grid-coordinate value at the packet's current propagation time (single multiply: no cancellation)
-  const double target = boundarycoord_tmin / globals::tmin * pkt.prop_time;
+  const double target = boundarycoord_tmin;
 
   switch (prop_gridtype) {
-    case GridType::CARTESIAN3D:
+    case GridType::CARTESIAN3D: {
       // the grid coordinate is the Cartesian position component itself
       pkt.pos[crossedaxis] = target;
+      const int pos_inferred_cellindex = get_cellindex_from_pos(pkt.pos, pkt.prop_time);
+      int new_snext = 0;
+      for (int d = 0; d < get_ndim(prop_gridtype); d++) {
+        const int coordpointnum = get_cellcoordpointnum(d == crossedaxis ? snext : pos_inferred_cellindex, d);
+        new_snext += get_coordcellindexincrement(d) * coordpointnum;
+      }
+      snext = new_snext;
       break;
+    }
 
-    case GridType::CYLINDRICAL2D:
+    case GridType::CYLINDRICAL2D: {
       if (crossedaxis == 1) {
         // z coordinate is a Cartesian position component
         pkt.pos[2] = target;
@@ -2406,11 +2418,13 @@ void snap_pkt_to_crossed_boundary(Packet& pkt, const int snext) {
       // the cylindrical-radius boundary (crossedaxis == 0) is solved robustly via the quadratic intersection and is
       // not subject to the Cartesian-plane fragility, so it is left unsnapped
       break;
+    }
 
     case GridType::SPHERICAL1D:
       // the spherical-radius boundary is solved robustly via the quadratic intersection; left unsnapped
       break;
   }
+  pkt.cellindex = snext;
 }
 
 // compute distance to a cell boundary.
@@ -2440,10 +2454,7 @@ void snap_pkt_to_crossed_boundary(Packet& pkt, const int snext) {
       _cellcoordidx[d] = get_cellcoordpointnum(cellindex, d);
 
       _cellcoordmin[d] = get_cellcoordmin(cellindex, d);
-      // exactly match the next min pos of the next cell boundary
-      _cellcoordmax[d] = (_cellcoordidx[d] < (ncoordgrid[d] - 1))
-                             ? get_cellcoordmin(cellindex + get_coordcellindexincrement(d), d)
-                             : globals::rmax;
+      _cellcoordmax[d] = get_cellcoordmax(cellindex, d);
     }
     return std::make_tuple(_cellcoordmin, _cellcoordmax, _cellcoordidx);
   }();

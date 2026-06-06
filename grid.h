@@ -101,7 +101,6 @@ inline void change_cell(Packet& pkt, const int snext) {
     // destination cell's membership check hold by construction, rather than relying on exact FP cancellation in the
     // boundary-distance/position-update arithmetic (see snap_pkt_to_crossed_boundary in grid.cc).
     snap_pkt_to_crossed_boundary(pkt, snext);
-    pkt.cellindex = snext;
     stats::increment(stats::Counter::CELLCROSSINGS);
   } else {
     // Then the packet is exiting the grid. We need to record
