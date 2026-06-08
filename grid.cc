@@ -165,23 +165,11 @@ void read_possible_yefile() {
 // how much do we change the cellindex to move along a coordinately axis (e.g., the x, y, z directions, or r
 // direction)
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_coordcellindexstride(const int axis) -> int {
-  switch (axis) {
-    case 0:
-      return 1;
-
-    case 1:
-      return ncoordgrid[0];
-
-    case 2:
-      return ncoordgrid[0] * ncoordgrid[1];
-
-    default:
-      if constexpr (TESTMODE) {
-        assert_testmodeonly(false);
-      } else {
-        __builtin_unreachable();
-      }
+  int stride = 1;
+  for (int a = 0; a < axis; ++a) {
+    stride *= ncoordgrid[a];
   }
+  return stride;
 }
 
 // convert a cell index number into an integer (x,y,z or r) coordinate index from 0 to ncoordgrid[axis]
