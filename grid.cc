@@ -1224,17 +1224,10 @@ constexpr auto get_grid_type_name(const GridType gridtype) -> std::string {
 auto get_poscoordpointnum(const double pos, const double time, const int axis) -> int {
   switch (get_propgridtype()) {
     case GridType::CARTESIAN3D: {
-      if (pos < get_coordposmax(0, axis) / globals::tmin * time) {
-        return 0;
-      }
-      int idx = 0;
-      for (int i = 0; i < ncoordgrid[axis]; i++) {
-        const double cellcoordmin = get_coordposmax(i, axis) / globals::tmin * time;
-        if ((cellcoordmin <= pos)) {
-          idx = i;
-        }
-      }
-      return std::min(idx, ncoordgrid[axis] - 1);
+      // first cell where pos < cell upper boundary, i.e. pos >= cell lower boundary
+      const int idx =
+          static_cast<int>(std::ranges::upper_bound(coord_bin_lower[axis], pos) - coord_bin_lower[axis].begin()) - 1;
+      return std::clamp(idx, 0, ncoordgrid[axis] - 1);
     }
 
     case GridType::CYLINDRICAL2D: {
