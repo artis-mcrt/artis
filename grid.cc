@@ -42,6 +42,7 @@
 #include "random.h"
 #include "rpkt.h"
 #include "sn3d.h"
+#include "stats.h"
 #include "vectors.h"
 
 namespace grid {
@@ -2276,19 +2277,24 @@ auto get_totmassnuclide_tmodel(const int z, const int a) -> double { return totm
   return cellindex;
 }
 
-// Project a packet that has just reached a cell boundary exactly onto that boundary face (at the packet's current
-// propagation time), so that the destination cell's membership check is satisfied by construction. This removes the
-// reliance on exact floating-point cancellation between boundary_distance() and the position update (pos + dir*sdist),
-// which is fragile under -ffast-math and otherwise leaves packets slightly outside the cell they cross into. Only the
-// crossed grid coordinate is adjusted (by a sub-cm amount); the others are left at their moved values.
-DEVICE_FUNC void snap_pkt_to_crossed_boundary(Packet& pkt, const int next_cellindex) {
+void change_cell(Packet& pkt, const int next_cellindex) {
+  if (next_cellindex < 0) {
+    // Then the packet is exiting the grid. We need to record
+    // where and at what time it leaves the grid.
+    pkt.escape_type = pkt.type;
+    pkt.escape_time = static_cast<float>(pkt.prop_time);
+    pkt.type = TYPE_ESCAPE;
+    stats::increment(stats::Counter::PKTESCAPES);
+    return;
+  }
+
   const auto prop_gridtype = get_propgridtype();
   const int oldcellindex = pkt.cellindex;
   pkt.cellindex = next_cellindex;
+  stats::increment(stats::Counter::CELLCROSSINGS);
 
-  // Identify the coordinate whose cell index changed, and the boundary coordinate of the destination cell's
-  // face that the packet landed on. Comparing per-axis cell indices is unambiguous regardless of grid shape.
-  // boundary grid-coordinate value at the packet's current propagation time (single multiply: no cancellation)
+  // For Cartesian axes (3D or 2D Z-coord), snap the packet exactly onto the boundary face it just crossed
+  // For 3D, also update the cellindex after snapping in case we actually crossed more than one boundary (e.g. a corner)
   for (int d = 0; d < get_ndim(prop_gridtype); d++) {
     const int oldidx = get_cellcoordindex(oldcellindex, d);
     const int newidx = get_cellcoordindex(next_cellindex, d);
@@ -2304,14 +2310,12 @@ DEVICE_FUNC void snap_pkt_to_crossed_boundary(Packet& pkt, const int next_cellin
           // z coordinate is a Cartesian position component
           pkt.pos[2] = boundaryposition;
         }
-        // the cylindrical-radius boundary (d == 0) is solved robustly via the quadratic intersection and is
-        // not subject to the Cartesian-plane fragility, so it is left unsnapped
       } else if (prop_gridtype == GridType::CARTESIAN3D) {
         // the grid coordinate is the Cartesian position component itself
         pkt.pos[d] = boundaryposition;
         pkt.cellindex = get_cellindex_from_pos(pkt.pos, pkt.prop_time);
       }
-      return;
+      break;  // can't have more than one coordinate change at once
     }
   }
 }

@@ -8,7 +8,6 @@
 #include "globals.h"
 #include "mpi_logging.h"
 #include "packet.h"
-#include "stats.h"
 
 namespace grid {
 
@@ -91,26 +90,10 @@ void write_grid_restart_data(int timestep);
 [[nodiscard]] auto get_propcell_random_position_tmin(int cellindex) -> Vec3d;
 [[nodiscard]] DEVICE_FUNC auto boundary_distance(const Vec3d& dir, const Vec3d& pos, double tstart, int cellindex)
     -> std::tuple<double, int>;
-DEVICE_FUNC void snap_pkt_to_crossed_boundary(Packet& pkt, int next_cellindex);
 
 [[nodiscard]] auto calculate_cell_kappagrey(int nonemptymgi) -> float;
 
-inline void change_cell(Packet& pkt, const int next_cellindex) {
-  if (next_cellindex < 0) {
-    // Then the packet is exiting the grid. We need to record
-    // where and at what time it leaves the grid.
-    pkt.escape_type = pkt.type;
-    pkt.escape_time = static_cast<float>(pkt.prop_time);
-    pkt.type = TYPE_ESCAPE;
-    stats::increment(stats::Counter::PKTESCAPES);
-    return;
-  }
-  // Snap the packet exactly onto the boundary face it just crossed, then update cellindex. The snap makes the
-  // destination cell's membership check hold by construction, rather than relying on exact FP cancellation in the
-  // boundary-distance/position-update arithmetic (see snap_pkt_to_crossed_boundary in grid.cc).
-  snap_pkt_to_crossed_boundary(pkt, next_cellindex);
-  stats::increment(stats::Counter::CELLCROSSINGS);
-}
+void change_cell(Packet& pkt, int next_cellindex);
 
 inline auto get_ejecta_kinetic_energy() {
   double E_kin = 0.;
