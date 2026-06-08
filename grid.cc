@@ -65,6 +65,7 @@ int first_cellindex{-1};  // auto-determine first cell index in model.txt (usual
 
 // Initial co-ordinates of inner most corner of cell.
 std::vector<Vec3d> propcell_pos_min{};
+std::array<std::vector<double>, 3> coord_bin_lower{};
 
 // associate each propagation cell with a model grid cell, or not, if the cell is empty (or doesn't get mapped to
 // anything such as 1D/2D to 3D)
@@ -164,7 +165,7 @@ void read_possible_yefile() {
 
 // how much do we change the cellindex to move along a coordinately axis (e.g., the x, y, z directions, or r
 // direction)
-[[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_coordcellindexincrement(const int axis) -> int {
+[[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_coordcellindexstride(const int axis) -> int {
   switch (axis) {
     case 0:
       return 1;
@@ -227,7 +228,7 @@ void read_possible_yefile() {
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_cellcoordmax(const int cellindex, const int axis) -> double {
   const auto cellcoordidx = get_cellcoordpointnum(cellindex, axis);
   return (cellcoordidx < (ncoordgrid[axis] - 1))
-             ? get_cellcoordmin((cellcoordidx + 1) * get_coordcellindexincrement(axis), axis)
+             ? get_cellcoordmin((cellcoordidx + 1) * get_coordcellindexstride(axis), axis)
              : globals::rmax;
 }
 
@@ -1153,6 +1154,15 @@ void setup_grid_cartesian_3d() {
 
   ngrid = ncoordgrid[0] * ncoordgrid[1] * ncoordgrid[2];
   resize_exactly(propcell_pos_min, ngrid);
+  resize_exactly(coord_bin_lower[0], ncoordgrid[0]);
+  resize_exactly(coord_bin_lower[1], ncoordgrid[1]);
+  resize_exactly(coord_bin_lower[2], ncoordgrid[2]);
+
+  for (int axis = 0; axis < 3; axis++) {
+    for (int i = 0; i < ncoordgrid[axis]; i++) {
+      coord_bin_lower[axis][i] = -globals::rmax + (2 * i * globals::rmax / ncoordgrid[axis]);
+    }
+  }
 
   std::array<int, 3> nxyz = {0, 0, 0};
   for (int n = 0; n < ngrid; n++) {
@@ -1183,11 +1193,13 @@ void setup_grid_spherical_1d() {
   ngrid = ncoordgrid[0] * ncoordgrid[1] * ncoordgrid[2];
 
   resize_exactly(propcell_pos_min, ngrid);
+  resize_exactly(coord_bin_lower[0], ngrid);
 
   for (int cellindex = 0; cellindex < ngrid; cellindex++) {
     const int mgi = cellindex;  // interchangeable in this mode
     const double v_inner = mgi > 0 ? vout_model[mgi - 1] : 0.;
     propcell_pos_min[cellindex] = {v_inner * globals::tmin, 0., 0.};
+    coord_bin_lower[0][cellindex] = v_inner * globals::tmin;
   }
 }
 
@@ -1204,6 +1216,16 @@ void setup_grid_cylindrical_2d() {
   assert_always(ngrid == get_npts_model());
 
   resize_exactly(propcell_pos_min, ngrid);
+
+  resize_exactly(coord_bin_lower[0], ncoordgrid[0]);
+  for (int n_rcyl = 0; n_rcyl < ncoordgrid[0]; n_rcyl++) {
+    coord_bin_lower[0][n_rcyl] = n_rcyl * globals::rmax / ncoord_model[0];
+  }
+
+  resize_exactly(coord_bin_lower[1], ncoordgrid[1]);
+  for (int n_z = 0; n_z < ncoordgrid[1]; n_z++) {
+    coord_bin_lower[1][n_z] = globals::rmax * (-1 + (n_z * 2. / ncoord_model[1]));
+  }
 
   for (int cellindex = 0; cellindex < ngrid; cellindex++) {
     const int n_rcyl = get_cellcoordpointnum(cellindex, 0);
@@ -1233,13 +1255,12 @@ constexpr auto get_grid_type_name(const GridType gridtype) -> std::string {
 auto get_poscoordpointnum(const double pos, const double time, const int axis) -> int {
   switch (get_propgridtype()) {
     case GridType::CARTESIAN3D: {
-      if (pos < get_cellcoordmin(get_coordcellindexincrement(axis), axis) / globals::tmin * time) {
+      if (pos < get_cellcoordmin(get_coordcellindexstride(axis), axis) / globals::tmin * time) {
         return 0;
       }
       int idx = 0;
       for (int i = 0; i < ncoordgrid[axis]; i++) {
-        const double cellcoordmin =
-            get_cellcoordmin(i * get_coordcellindexincrement(axis), axis) / globals::tmin * time;
+        const double cellcoordmin = get_cellcoordmin(i * get_coordcellindexstride(axis), axis) / globals::tmin * time;
         if ((cellcoordmin <= pos)) {
           idx = i;
         }
@@ -2350,7 +2371,7 @@ auto get_totmassnuclide_tmodel(const int z, const int a) -> double { return totm
       // outside grid
       return -99;
     }
-    cellindex += get_coordcellindexincrement(d) * get_poscoordpointnum(posgridcoords[d], time, d);
+    cellindex += get_coordcellindexstride(d) * get_poscoordpointnum(posgridcoords[d], time, d);
   }
   assert_always(cellindex >= 0);
   assert_always(cellindex < ngrid);
@@ -2404,7 +2425,7 @@ void snap_pkt_to_crossed_boundary(Packet& pkt, int snext) {
       int new_snext = 0;
       for (int d = 0; d < get_ndim(prop_gridtype); d++) {
         const int coordpointnum = get_cellcoordpointnum(d == crossedaxis ? snext : pos_inferred_cellindex, d);
-        new_snext += get_coordcellindexincrement(d) * coordpointnum;
+        new_snext += get_coordcellindexstride(d) * coordpointnum;
       }
       snext = new_snext;
       break;
@@ -2528,7 +2549,7 @@ void snap_pkt_to_crossed_boundary(Packet& pkt, int snext) {
     // upper d coordinate of the current cell
     if ((d_coordmaxboundary >= 0.) && (d_coordmaxboundary < distance)) {
       distance = d_coordmaxboundary;
-      snext = (cellcoordidx[0] == (ncoordgrid[0] - 1)) ? -99 : cellindex + get_coordcellindexincrement(0);
+      snext = (cellcoordidx[0] == (ncoordgrid[0] - 1)) ? -99 : cellindex + get_coordcellindexstride(0);
     }
 
     const double r_inner = cellcoordmin[0] * tstart / globals::tmin;
@@ -2538,7 +2559,7 @@ void snap_pkt_to_crossed_boundary(Packet& pkt, int snext) {
       // lower d coordinate of the current cell
       if ((d_coordminboundary >= 0.) && (d_coordminboundary < distance)) {
         distance = d_coordminboundary;
-        snext = (cellcoordidx[0] == 0) ? -99 : cellindex - get_coordcellindexincrement(0);
+        snext = (cellcoordidx[0] == 0) ? -99 : cellindex - get_coordcellindexstride(0);
       }
     }
   } else if (prop_gridtype == GridType::CYLINDRICAL2D) {
@@ -2564,7 +2585,7 @@ void snap_pkt_to_crossed_boundary(Packet& pkt, int snext) {
       const double d_coordmaxboundary_rcyl = std::sqrt(pow2(d_rcyl_coordmaxboundary) + pow2(d_z_coordmaxboundary));
       if ((d_coordmaxboundary_rcyl > 0) && (d_coordmaxboundary_rcyl < distance)) {
         distance = d_coordmaxboundary_rcyl;
-        snext = (cellcoordidx[0] == (ncoordgrid[0] - 1)) ? -99 : cellindex + get_coordcellindexincrement(0);
+        snext = (cellcoordidx[0] == (ncoordgrid[0] - 1)) ? -99 : cellindex + get_coordcellindexstride(0);
       }
     }
 
@@ -2580,7 +2601,7 @@ void snap_pkt_to_crossed_boundary(Packet& pkt, int snext) {
         const double d_coordminboundary_rcyl = std::sqrt(pow2(d_rcyl_coordminboundary) + pow2(d_z_coordminboundary));
         if ((d_coordminboundary_rcyl >= 0.) && (d_coordminboundary_rcyl < distance)) {
           distance = d_coordminboundary_rcyl;
-          snext = (cellcoordidx[0] == 0) ? -99 : cellindex - get_coordcellindexincrement(0);
+          snext = (cellcoordidx[0] == 0) ? -99 : cellindex - get_coordcellindexstride(0);
         }
       }
     }
@@ -2593,7 +2614,7 @@ void snap_pkt_to_crossed_boundary(Packet& pkt, int snext) {
 
       if ((d_coordmaxboundary_z >= 0.) && (d_coordmaxboundary_z < distance)) {
         distance = d_coordmaxboundary_z;
-        snext = (cellcoordidx[d] == (ncoordgrid[d] - 1)) ? -99 : cellindex + get_coordcellindexincrement(d);
+        snext = (cellcoordidx[d] == (ncoordgrid[d] - 1)) ? -99 : cellindex + get_coordcellindexstride(d);
       }
     } else if (pktvelgridcoord[d] < (cellcoordmin[d] / globals::tmin)) {
       const double d_coordminboundary_z =
@@ -2601,7 +2622,7 @@ void snap_pkt_to_crossed_boundary(Packet& pkt, int snext) {
 
       if ((d_coordminboundary_z >= 0.) && (d_coordminboundary_z < distance)) {
         distance = d_coordminboundary_z;
-        snext = (cellcoordidx[d] == 0) ? -99 : cellindex - get_coordcellindexincrement(d);
+        snext = (cellcoordidx[d] == 0) ? -99 : cellindex - get_coordcellindexstride(d);
       }
     }
 
@@ -2626,7 +2647,7 @@ void snap_pkt_to_crossed_boundary(Packet& pkt, int snext) {
 
         if ((d_coordmaxboundary >= 0.) && (d_coordmaxboundary < distance)) {
           distance = d_coordmaxboundary;
-          snext = (cellcoordidx[d] == (ncoordgrid[d] - 1)) ? -99 : cellindex + get_coordcellindexincrement(d);
+          snext = (cellcoordidx[d] == (ncoordgrid[d] - 1)) ? -99 : cellindex + get_coordcellindexstride(d);
         }
       } else if (pktvelgridcoord[d] < (cellcoordmin[d] / globals::tmin)) {
         const double d_coordminboundary =
@@ -2635,7 +2656,7 @@ void snap_pkt_to_crossed_boundary(Packet& pkt, int snext) {
         // lower d coordinate of the current cell
         if ((d_coordminboundary >= 0.) && (d_coordminboundary < distance)) {
           distance = d_coordminboundary;
-          snext = (cellcoordidx[d] == 0) ? -99 : cellindex - get_coordcellindexincrement(d);
+          snext = (cellcoordidx[d] == 0) ? -99 : cellindex - get_coordcellindexstride(d);
         }
       }
     }
