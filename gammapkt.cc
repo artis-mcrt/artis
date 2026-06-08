@@ -676,10 +676,10 @@ void transport_gamma(Packet& pkt, const double t2) {
   const double tau_next = -std::log(static_cast<double>(rng_uniform_pos()));
 
   // Start by finding the distance to the crossing of the grid cell
-  // boundaries. sdist is the boundary distance and snext is the
+  // boundaries. sdist is the boundary distance and next_cellindex is the
   // grid cell into which we pass.
 
-  const auto [sdist, snext] = grid::boundary_distance(pkt.dir, pkt.pos, pkt.prop_time, pkt.cellindex);
+  const auto [sdist, next_cellindex] = grid::boundary_distance(pkt.dir, pkt.pos, pkt.prop_time, pkt.cellindex);
 
   // Now consider the scattering/destruction processes.
   // Compton scattering - need to determine the scattering co-efficient.
@@ -717,8 +717,8 @@ void transport_gamma(Packet& pkt, const double t2) {
 
     move_pkt_withtime(pkt, sdist / 2.);
 
-    if (snext != pkt.cellindex) {
-      grid::change_cell(pkt, snext);
+    if (next_cellindex != pkt.cellindex) {
+      grid::change_cell(pkt, next_cellindex);
     }
   } else if ((tdist < sdist) && (tdist < edist)) {
     // Doesn't reach boundary.
@@ -810,7 +810,7 @@ void wollaeger_thermalisation(Packet& pkt) {
   bool end_packet = false;
   while (!end_packet) {
     // distance to the next cell
-    const auto [sdist, snext] =
+    const auto [sdist, next_cellindex] =
         grid::boundary_distance(pkt_copy.dir, pkt_copy.pos, pkt_copy.prop_time, pkt_copy.cellindex);
     const double s_cont = sdist * pow3(t_current / pkt_copy.prop_time);
     const int mgi = grid::get_propcell_modelgridindex(pkt_copy.cellindex);
@@ -821,7 +821,7 @@ void wollaeger_thermalisation(Packet& pkt) {
     // move packet copy now
     move_pkt_withtime(pkt_copy, sdist);
 
-    grid::change_cell(pkt_copy, snext);
+    grid::change_cell(pkt_copy, next_cellindex);
     end_packet = (pkt_copy.type == TYPE_ESCAPE);
   }
   const double f_gamma = 1. - std::exp(-tau);
@@ -872,7 +872,7 @@ void guttman_thermalisation(Packet& pkt) {
     bool end_packet = false;
     while (!end_packet) {
       // distance to the next cell
-      const auto [sdist, snext] =
+      const auto [sdist, next_cellindex] =
           grid::boundary_distance(pkt_copy.dir, pkt_copy.pos, pkt_copy.prop_time, pkt_copy.cellindex);
       const double s_cont = sdist * pow3(t / pkt_copy.prop_time);
       const int mgi = grid::get_propcell_modelgridindex(pkt_copy.cellindex);
@@ -882,7 +882,7 @@ void guttman_thermalisation(Packet& pkt) {
       // move packet copy now
       move_pkt_withtime(pkt_copy, sdist);
 
-      grid::change_cell(pkt_copy, snext);
+      grid::change_cell(pkt_copy, next_cellindex);
       end_packet = (pkt_copy.type == TYPE_ESCAPE);
     }
   }

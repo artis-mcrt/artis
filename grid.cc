@@ -2295,7 +2295,7 @@ auto get_totmassnuclide_tmodel(const int z, const int a) -> double { return totm
 // reliance on exact floating-point cancellation between boundary_distance() and the position update (pos + dir*sdist),
 // which is fragile under -ffast-math and otherwise leaves packets slightly outside the cell they cross into. Only the
 // crossed grid coordinate is adjusted (by a sub-cm amount); the others are left at their moved values.
-DEVICE_FUNC void snap_pkt_to_crossed_boundary(Packet& pkt, int snext) {
+DEVICE_FUNC void snap_pkt_to_crossed_boundary(Packet& pkt, int next_cellindex) {
   const auto prop_gridtype = get_propgridtype();
   const int oldcellindex = pkt.cellindex;
 
@@ -2305,12 +2305,13 @@ DEVICE_FUNC void snap_pkt_to_crossed_boundary(Packet& pkt, int snext) {
   double boundarycoord_tmin = NAN;
   for (int d = 0; d < get_ndim(prop_gridtype); d++) {
     const int oldidx = get_cellcoordindex(oldcellindex, d);
-    const int newidx = get_cellcoordindex(snext, d);
+    const int newidx = get_cellcoordindex(next_cellindex, d);
     if (newidx != oldidx) {
       crossedaxis = d;
       // moved up -> land on the destination cell's lower face; moved down -> its upper face
       boundarycoord_tmin =
-          ((newidx > oldidx) ? get_cellcoordmin(snext, d) : get_cellcoordmax(snext, d)) / globals::tmin * pkt.prop_time;
+          ((newidx > oldidx) ? get_cellcoordmin(next_cellindex, d) : get_cellcoordmax(next_cellindex, d)) /
+          globals::tmin * pkt.prop_time;
       break;
     }
   }
@@ -2330,12 +2331,12 @@ DEVICE_FUNC void snap_pkt_to_crossed_boundary(Packet& pkt, int snext) {
       const int pos_inferred_cellindex = get_cellindex_from_pos(pkt.pos, pkt.prop_time);
       // aside from the crossed boundary, set the other coordinate indices based on the position (in case we
       // crossed more than one cell boundary)
-      int new_snext = 0;
+      int new_next_cellindex = 0;
       for (int d = 0; d < get_ndim(prop_gridtype); d++) {
-        const int coordpointnum = get_cellcoordindex(d == crossedaxis ? snext : pos_inferred_cellindex, d);
-        new_snext += get_coordcellindexstride(d) * coordpointnum;
+        const int coordpointnum = get_cellcoordindex(d == crossedaxis ? next_cellindex : pos_inferred_cellindex, d);
+        new_next_cellindex += get_coordcellindexstride(d) * coordpointnum;
       }
-      snext = new_snext;
+      next_cellindex = new_next_cellindex;
       break;
     }
 
@@ -2353,7 +2354,7 @@ DEVICE_FUNC void snap_pkt_to_crossed_boundary(Packet& pkt, int snext) {
       // the spherical-radius boundary is solved robustly via the quadratic intersection; left unsnapped
       break;
   }
-  pkt.cellindex = snext;
+  pkt.cellindex = next_cellindex;
 }
 
 // compute distance to a cell boundary.
@@ -2427,23 +2428,23 @@ DEVICE_FUNC void snap_pkt_to_crossed_boundary(Packet& pkt, int snext) {
 
           assert_always(!isoutside_error);
 
-          const auto snext = get_cellindex_from_pos(pos, tstart);
+          const auto next_cellindex = get_cellindex_from_pos(pos, tstart);
           if ((cellcoordidx[d] == (ncoordgrid[d] - 1) && pos_component_vel_relative_to_flow) ||
-              (cellcoordidx[d] == 0 && !pos_component_vel_relative_to_flow) || (snext < 0)) {
+              (cellcoordidx[d] == 0 && !pos_component_vel_relative_to_flow) || (next_cellindex < 0)) {
             printout("[warning] escaping packet\n");
             return {0., -99};
           }
           printout("[warning] swapping packet cellindex from %d to %d, which has cellcoordmin %g, cellcoordmax %g\n",
-                   cellindex, snext, get_cellcoordmin(snext, d) / globals::tmin * tstart,
-                   get_cellcoordmax(snext, d) / globals::tmin * tstart);
-          return {0., snext};
+                   cellindex, next_cellindex, get_cellcoordmin(next_cellindex, d) / globals::tmin * tstart,
+                   get_cellcoordmax(next_cellindex, d) / globals::tmin * tstart);
+          return {0., next_cellindex};
         }
       }
     }
   }
 
   double distance = std::numeric_limits<double>::max();
-  int snext{-1};
+  int next_cellindex{-1};
 
   if (prop_gridtype == GridType::SPHERICAL1D) {
     // the only coordinate is the radius from the origin
@@ -2457,7 +2458,7 @@ DEVICE_FUNC void snap_pkt_to_crossed_boundary(Packet& pkt, int snext) {
     // upper d coordinate of the current cell
     if ((d_coordmaxboundary >= 0.) && (d_coordmaxboundary < distance)) {
       distance = d_coordmaxboundary;
-      snext = (cellcoordidx[0] == (ncoordgrid[0] - 1)) ? -99 : cellindex + get_coordcellindexstride(0);
+      next_cellindex = (cellcoordidx[0] == (ncoordgrid[0] - 1)) ? -99 : cellindex + get_coordcellindexstride(0);
     }
 
     const double r_inner = cellcoordmin[0] * tstart / globals::tmin;
@@ -2467,7 +2468,7 @@ DEVICE_FUNC void snap_pkt_to_crossed_boundary(Packet& pkt, int snext) {
       // lower d coordinate of the current cell
       if ((d_coordminboundary >= 0.) && (d_coordminboundary < distance)) {
         distance = d_coordminboundary;
-        snext = (cellcoordidx[0] == 0) ? -99 : cellindex - get_coordcellindexstride(0);
+        next_cellindex = (cellcoordidx[0] == 0) ? -99 : cellindex - get_coordcellindexstride(0);
       }
     }
   } else if (prop_gridtype == GridType::CYLINDRICAL2D) {
@@ -2493,7 +2494,7 @@ DEVICE_FUNC void snap_pkt_to_crossed_boundary(Packet& pkt, int snext) {
       const double d_coordmaxboundary_rcyl = std::sqrt(pow2(d_rcyl_coordmaxboundary) + pow2(d_z_coordmaxboundary));
       if ((d_coordmaxboundary_rcyl > 0) && (d_coordmaxboundary_rcyl < distance)) {
         distance = d_coordmaxboundary_rcyl;
-        snext = (cellcoordidx[0] == (ncoordgrid[0] - 1)) ? -99 : cellindex + get_coordcellindexstride(0);
+        next_cellindex = (cellcoordidx[0] == (ncoordgrid[0] - 1)) ? -99 : cellindex + get_coordcellindexstride(0);
       }
     }
 
@@ -2509,7 +2510,7 @@ DEVICE_FUNC void snap_pkt_to_crossed_boundary(Packet& pkt, int snext) {
         const double d_coordminboundary_rcyl = std::sqrt(pow2(d_rcyl_coordminboundary) + pow2(d_z_coordminboundary));
         if ((d_coordminboundary_rcyl >= 0.) && (d_coordminboundary_rcyl < distance)) {
           distance = d_coordminboundary_rcyl;
-          snext = (cellcoordidx[0] == 0) ? -99 : cellindex - get_coordcellindexstride(0);
+          next_cellindex = (cellcoordidx[0] == 0) ? -99 : cellindex - get_coordcellindexstride(0);
         }
       }
     }
@@ -2522,7 +2523,7 @@ DEVICE_FUNC void snap_pkt_to_crossed_boundary(Packet& pkt, int snext) {
 
       if ((d_coordmaxboundary_z >= 0.) && (d_coordmaxboundary_z < distance)) {
         distance = d_coordmaxboundary_z;
-        snext = (cellcoordidx[d] == (ncoordgrid[d] - 1)) ? -99 : cellindex + get_coordcellindexstride(d);
+        next_cellindex = (cellcoordidx[d] == (ncoordgrid[d] - 1)) ? -99 : cellindex + get_coordcellindexstride(d);
       }
     } else if (pktvelgridcoord[d] < (cellcoordmin[d] / globals::tmin)) {
       const double d_coordminboundary_z =
@@ -2530,7 +2531,7 @@ DEVICE_FUNC void snap_pkt_to_crossed_boundary(Packet& pkt, int snext) {
 
       if ((d_coordminboundary_z >= 0.) && (d_coordminboundary_z < distance)) {
         distance = d_coordminboundary_z;
-        snext = (cellcoordidx[d] == 0) ? -99 : cellindex - get_coordcellindexstride(d);
+        next_cellindex = (cellcoordidx[d] == 0) ? -99 : cellindex - get_coordcellindexstride(d);
       }
     }
 
@@ -2555,7 +2556,7 @@ DEVICE_FUNC void snap_pkt_to_crossed_boundary(Packet& pkt, int snext) {
 
         if ((d_coordmaxboundary >= 0.) && (d_coordmaxboundary < distance)) {
           distance = d_coordmaxboundary;
-          snext = (cellcoordidx[d] == (ncoordgrid[d] - 1)) ? -99 : cellindex + get_coordcellindexstride(d);
+          next_cellindex = (cellcoordidx[d] == (ncoordgrid[d] - 1)) ? -99 : cellindex + get_coordcellindexstride(d);
         }
       } else if (pktvelgridcoord[d] < (cellcoordmin[d] / globals::tmin)) {
         const double d_coordminboundary =
@@ -2564,7 +2565,7 @@ DEVICE_FUNC void snap_pkt_to_crossed_boundary(Packet& pkt, int snext) {
         // lower d coordinate of the current cell
         if ((d_coordminboundary >= 0.) && (d_coordminboundary < distance)) {
           distance = d_coordminboundary;
-          snext = (cellcoordidx[d] == 0) ? -99 : cellindex - get_coordcellindexstride(d);
+          next_cellindex = (cellcoordidx[d] == 0) ? -99 : cellindex - get_coordcellindexstride(d);
         }
       }
     }
@@ -2573,7 +2574,7 @@ DEVICE_FUNC void snap_pkt_to_crossed_boundary(Packet& pkt, int snext) {
   }
 
   if constexpr (TESTMODE) {
-    if (snext == -1) {
+    if (next_cellindex == -1) {
       printout("Something wrong in boundary crossing - didn't find anything.\n");
       printout("packet cell %d\n", cellindex);
       printout("globals::tmin %g tstart %g\n", globals::tmin, tstart);
@@ -2589,7 +2590,7 @@ DEVICE_FUNC void snap_pkt_to_crossed_boundary(Packet& pkt, int snext) {
     }
   }
 
-  assert_always((snext == -99) || ((snext >= 0) && (snext < ngrid)));
+  assert_always((next_cellindex == -99) || ((next_cellindex >= 0) && (next_cellindex < ngrid)));
 
   const double maxsdist =
       (prop_gridtype == GridType::CARTESIAN3D)
@@ -2603,7 +2604,7 @@ DEVICE_FUNC void snap_pkt_to_crossed_boundary(Packet& pkt, int snext) {
     return {globals::max_path_step, cellindex};
   }
 
-  return {distance, snext};
+  return {distance, next_cellindex};
 }
 
 }  // namespace grid
