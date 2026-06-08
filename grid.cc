@@ -2354,6 +2354,8 @@ void snap_pkt_to_crossed_boundary(Packet& pkt, int snext) {
       // the grid coordinate is the Cartesian position component itself
       pkt.pos[crossedaxis] = target;
       const int pos_inferred_cellindex = get_cellindex_from_pos(pkt.pos, pkt.prop_time);
+      // aside from the crossed boundary, set the other coordinate indices based on the position (in case we
+      // crossed more than one cell boundary)
       int new_snext = 0;
       for (int d = 0; d < get_ndim(prop_gridtype); d++) {
         const int coordpointnum = get_cellcoordpointnum(d == crossedaxis ? snext : pos_inferred_cellindex, d);
