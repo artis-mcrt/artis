@@ -810,16 +810,16 @@ void wollaeger_thermalisation(Packet& pkt) {
   bool end_packet = false;
   while (!end_packet) {
     // distance to the next cell
-    const auto [sdist, next_cellindex] =
+    const auto [boundarydist, next_cellindex] =
         grid::boundary_distance(pkt_copy.dir, pkt_copy.pos, pkt_copy.prop_time, pkt_copy.cellindex);
-    const double s_cont = sdist * pow3(t_current / pkt_copy.prop_time);
+    const double s_cont = boundarydist * pow3(t_current / pkt_copy.prop_time);
     const int mgi = grid::get_propcell_modelgridindex(pkt_copy.cellindex);
     if (mgi >= 0) {
       const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(mgi);
       tau += grid::get_rho(nonemptymgi) * s_cont * mean_gamma_opac;  // contribution to the integral
     }
     // move packet copy now
-    move_pkt_withtime(pkt_copy, sdist);
+    move_pkt_withtime(pkt_copy, boundarydist);
 
     grid::change_cell(pkt_copy, next_cellindex);
     end_packet = (pkt_copy.type == TYPE_ESCAPE);
