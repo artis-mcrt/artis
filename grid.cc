@@ -2289,15 +2289,14 @@ DEVICE_FUNC void snap_pkt_to_crossed_boundary(Packet& pkt, const int next_cellin
   // Identify the coordinate whose cell index changed, and the boundary coordinate of the destination cell's
   // face that the packet landed on. Comparing per-axis cell indices is unambiguous regardless of grid shape.
   // boundary grid-coordinate value at the packet's current propagation time (single multiply: no cancellation)
-  double boundaryposition = NAN;
   for (int d = 0; d < get_ndim(prop_gridtype); d++) {
     const int oldidx = get_cellcoordindex(oldcellindex, d);
     const int newidx = get_cellcoordindex(next_cellindex, d);
     if (newidx != oldidx) {
       const bool moved_up = (newidx > oldidx);
       // moved up -> land on the destination cell's lower face; moved down -> its upper face
-      boundaryposition = (moved_up ? get_cellcoordmin(next_cellindex, d) : get_cellcoordmax(next_cellindex, d)) /
-                         globals::tmin * pkt.prop_time;
+      double boundaryposition = (moved_up ? get_cellcoordmin(next_cellindex, d) : get_cellcoordmax(next_cellindex, d)) /
+                                globals::tmin * pkt.prop_time;
       boundaryposition = std::nextafter(boundaryposition, moved_up ? std::numeric_limits<double>::infinity()
                                                                    : -std::numeric_limits<double>::infinity());
       if (prop_gridtype == GridType::CYLINDRICAL2D) {
