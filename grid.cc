@@ -66,7 +66,7 @@ double mfegroup{0.};  // Total mass of Fe group elements in ejecta
 int first_cellindex{-1};  // auto-determine first cell index in model.txt (usually 1 or 0)
 
 // Initial co-ordinates of inner most corner of cell.
-std::array<std::vector<double>, 3> coord_bin_lower{};
+std::array<std::vector<double>, 3> coord_pos_min_tmin{};
 
 // associate each propagation cell with a model grid cell, or not, if the cell is empty (or doesn't get mapped to
 // anything such as 1D/2D to 3D)
@@ -182,13 +182,13 @@ void read_possible_yefile() {
 // get the minimum value of a coordinate at globals::tmin (xyz or radial coords) of a propagation cell
 // e.g., the minimum x position in xyz coords, or the minimum radius
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_cellcoordmin(const int cellindex, const int axis) -> double {
-  return coord_bin_lower[axis][get_cellcoordindex(cellindex, axis)];
+  return coord_pos_min_tmin[axis][get_cellcoordindex(cellindex, axis)];
 }
 
 // get the maximum position value of a coordinate at globals::tmin (xyz or radial coords)
 // e.g., the maximum x position in xyz coords, or the maximum radius in spherical 1D
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_coordposmax(const int cellcoordidx, const int axis) -> double {
-  return (cellcoordidx < (ncoordgrid[axis] - 1)) ? coord_bin_lower[axis][cellcoordidx + 1] : globals::rmax;
+  return (cellcoordidx < (ncoordgrid[axis] - 1)) ? coord_pos_min_tmin[axis][cellcoordidx + 1] : globals::rmax;
 }
 
 // get the maximum position value of a coordinate axis at globals::tmin (xyz or radial coords) of a propagation cell
@@ -1118,13 +1118,13 @@ void setup_grid_cartesian_3d() {
   assert_always(ncoordgrid[0] == ncoordgrid[2]);
 
   ngrid = ncoordgrid[0] * ncoordgrid[1] * ncoordgrid[2];
-  resize_exactly(coord_bin_lower[0], ncoordgrid[0]);
-  resize_exactly(coord_bin_lower[1], ncoordgrid[1]);
-  resize_exactly(coord_bin_lower[2], ncoordgrid[2]);
+  resize_exactly(coord_pos_min_tmin[0], ncoordgrid[0]);
+  resize_exactly(coord_pos_min_tmin[1], ncoordgrid[1]);
+  resize_exactly(coord_pos_min_tmin[2], ncoordgrid[2]);
 
   for (int axis = 0; axis < 3; axis++) {
     for (int i = 0; i < ncoordgrid[axis]; i++) {
-      coord_bin_lower[axis][i] = -globals::rmax + (2 * i * globals::rmax / ncoordgrid[axis]);
+      coord_pos_min_tmin[axis][i] = -globals::rmax + (2 * i * globals::rmax / ncoordgrid[axis]);
     }
   }
 }
@@ -1136,12 +1136,12 @@ void setup_grid_spherical_1d() {
 
   ngrid = ncoordgrid[0] * ncoordgrid[1] * ncoordgrid[2];
 
-  resize_exactly(coord_bin_lower[0], ncoordgrid[0]);
+  resize_exactly(coord_pos_min_tmin[0], ncoordgrid[0]);
 
   for (int cellindex = 0; cellindex < ngrid; cellindex++) {
     const int mgi = cellindex;  // interchangeable in this mode
     const double v_inner = mgi > 0 ? vout_model[mgi - 1] : 0.;
-    coord_bin_lower[0][cellindex] = v_inner * globals::tmin;
+    coord_pos_min_tmin[0][cellindex] = v_inner * globals::tmin;
   }
 }
 
@@ -1157,14 +1157,14 @@ void setup_grid_cylindrical_2d() {
   ngrid = ncoordgrid[0] * ncoordgrid[1];
   assert_always(ngrid == get_npts_model());
 
-  resize_exactly(coord_bin_lower[0], ncoordgrid[0]);
+  resize_exactly(coord_pos_min_tmin[0], ncoordgrid[0]);
   for (int n_rcyl = 0; n_rcyl < ncoordgrid[0]; n_rcyl++) {
-    coord_bin_lower[0][n_rcyl] = n_rcyl * globals::rmax / ncoord_model[0];
+    coord_pos_min_tmin[0][n_rcyl] = n_rcyl * globals::rmax / ncoord_model[0];
   }
 
-  resize_exactly(coord_bin_lower[1], ncoordgrid[1]);
+  resize_exactly(coord_pos_min_tmin[1], ncoordgrid[1]);
   for (int n_z = 0; n_z < ncoordgrid[1]; n_z++) {
-    coord_bin_lower[1][n_z] = globals::rmax * (-1 + (n_z * 2. / ncoord_model[1]));
+    coord_pos_min_tmin[1][n_z] = globals::rmax * (-1 + (n_z * 2. / ncoord_model[1]));
   }
 }
 
@@ -1186,13 +1186,11 @@ constexpr auto get_grid_type_name(const GridType gridtype) -> std::string {
 // necessarily xyz)
 auto get_poscoordpointnum(const double pos, const double time, const int axis) -> int {
   // coordinate bins are closed-lower, so we want the highest index such that coord_bin_lower[axis][index] <= pos
-  const auto coordbinlowertimescaled = coord_bin_lower[axis] | std::views::transform([time](double binlower) {
-                                         return binlower / globals::tmin * time;
-                                       });
+  const auto binposmin = coord_pos_min_tmin[axis] |
+                         std::views::transform([time](double binlower) { return binlower / globals::tmin * time; });
   // find the last index where binlower > pos and subtract 1 to get the last index where binlower <= pos
-  const auto idx = static_cast<int>(
-      std::ranges::distance(coordbinlowertimescaled.begin(), std::ranges::upper_bound(coordbinlowertimescaled, pos)) -
-      1);
+  const auto idx =
+      static_cast<int>(std::ranges::distance(binposmin.begin(), std::ranges::upper_bound(binposmin, pos)) - 1);
   return std::clamp(idx, 0, ncoordgrid[axis] - 1);
 }
 
