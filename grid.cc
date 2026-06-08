@@ -1398,11 +1398,11 @@ auto get_element_meanweight(const std::ptrdiff_t nonemptymgi, const int element)
 // return the propagation cell volume at globals::tmin
 // for a spherical grid, the cell index is required (and should be equivalent to a modelgridindex)
 [[gnu::pure]] [[nodiscard]] auto get_propcell_volume_tmin(const int cellindex) -> double {
-  const auto prop_gridtype = get_propgridtype();
-  if (prop_gridtype == GridType::CARTESIAN3D) {
+  if (get_propgridtype() == GridType::CARTESIAN3D) {
     return propcell_width_tmin(cellindex, 0) * propcell_width_tmin(cellindex, 1) * propcell_width_tmin(cellindex, 2);
   }
 
+  assert_testmodeonly(get_propgridtype() == get_modelgridtype());
   // 2D and 1D with direct mapping to propagation cells
   const int mgi = get_propcell_modelgridindex(cellindex);
   return get_modelcell_assocvolume_tmin(mgi);
@@ -2259,7 +2259,7 @@ auto get_totmassnuclide_tmodel(const int z, const int a) -> double { return totm
 [[nodiscard]] DEVICE_FUNC auto get_cellindex_from_pos(const Vec3d& pos, const double time) -> int {
   const auto prop_gridtype = get_propgridtype();
   const auto ndim = get_ndim(prop_gridtype);
-  auto posgridcoords = get_gridcoords_from_xyz(pos, prop_gridtype);
+  const auto posgridcoords = get_gridcoords_from_xyz(pos, prop_gridtype);
   int cellindex = 0;
   for (int d = 0; d < ndim; d++) {
     assert_testmodeonly(fabs(posgridcoords[d]) <=
