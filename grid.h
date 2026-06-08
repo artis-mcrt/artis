@@ -90,10 +90,9 @@ void write_grid_restart_data(int timestep);
 [[nodiscard]] auto get_propcell_random_position_tmin(int cellindex) -> Vec3d;
 [[nodiscard]] DEVICE_FUNC auto boundary_distance(const Vec3d& dir, const Vec3d& pos, double tstart, int cellindex)
     -> std::tuple<double, int>;
+DEVICE_FUNC void change_cell(Packet& pkt, int next_cellindex);
 
 [[nodiscard]] auto calculate_cell_kappagrey(int nonemptymgi) -> float;
-
-void change_cell(Packet& pkt, int next_cellindex);
 
 inline auto get_ejecta_kinetic_energy() {
   double E_kin = 0.;
