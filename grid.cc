@@ -2281,13 +2281,13 @@ auto get_totmassnuclide_tmodel(const int z, const int a) -> double { return totm
 // reliance on exact floating-point cancellation between boundary_distance() and the position update (pos + dir*sdist),
 // which is fragile under -ffast-math and otherwise leaves packets slightly outside the cell they cross into. Only the
 // crossed grid coordinate is adjusted (by a sub-cm amount); the others are left at their moved values.
-DEVICE_FUNC void snap_pkt_to_crossed_boundary(Packet& pkt, int next_cellindex) {
+DEVICE_FUNC void snap_pkt_to_crossed_boundary(Packet& pkt, const int next_cellindex) {
   const auto prop_gridtype = get_propgridtype();
   const int oldcellindex = pkt.cellindex;
+  pkt.cellindex = next_cellindex;
 
   // Identify the coordinate whose cell index changed, and the boundary coordinate of the destination cell's
   // face that the packet landed on. Comparing per-axis cell indices is unambiguous regardless of grid shape.
-  int crossedaxis = -1;
   // boundary grid-coordinate value at the packet's current propagation time (single multiply: no cancellation)
   double boundaryposition = NAN;
   for (int d = 0; d < get_ndim(prop_gridtype); d++) {
@@ -2295,44 +2295,26 @@ DEVICE_FUNC void snap_pkt_to_crossed_boundary(Packet& pkt, int next_cellindex) {
     const int newidx = get_cellcoordindex(next_cellindex, d);
     if (newidx != oldidx) {
       const bool moved_up = (newidx > oldidx);
-      crossedaxis = d;
       // moved up -> land on the destination cell's lower face; moved down -> its upper face
       boundaryposition = (moved_up ? get_cellcoordmin(next_cellindex, d) : get_cellcoordmax(next_cellindex, d)) /
                          globals::tmin * pkt.prop_time;
       boundaryposition = std::nextafter(boundaryposition, moved_up ? std::numeric_limits<double>::infinity()
                                                                    : -std::numeric_limits<double>::infinity());
-      break;
-    }
-  }
-
-  if (crossedaxis < 0) {
-    // not a simple single-face crossing (should not happen for a normal cell change); leave the position unchanged
-    return;
-  }
-
-  switch (prop_gridtype) {
-    case GridType::CARTESIAN3D: {
-      // the grid coordinate is the Cartesian position component itself
-      pkt.pos[crossedaxis] = boundaryposition;
-      next_cellindex = get_cellindex_from_pos(pkt.pos, pkt.prop_time);
-      break;
-    }
-
-    case GridType::CYLINDRICAL2D: {
-      if (crossedaxis == 1) {
-        // z coordinate is a Cartesian position component
-        pkt.pos[2] = boundaryposition;
+      if (prop_gridtype == GridType::CYLINDRICAL2D) {
+        if (d == 1) {
+          // z coordinate is a Cartesian position component
+          pkt.pos[2] = boundaryposition;
+        }
+        // the cylindrical-radius boundary (d == 0) is solved robustly via the quadratic intersection and is
+        // not subject to the Cartesian-plane fragility, so it is left unsnapped
+      } else if (prop_gridtype == GridType::CARTESIAN3D) {
+        // the grid coordinate is the Cartesian position component itself
+        pkt.pos[d] = boundaryposition;
+        pkt.cellindex = get_cellindex_from_pos(pkt.pos, pkt.prop_time);
       }
-      // the cylindrical-radius boundary (crossedaxis == 0) is solved robustly via the quadratic intersection and is
-      // not subject to the Cartesian-plane fragility, so it is left unsnapped
-      break;
+      return;
     }
-
-    case GridType::SPHERICAL1D:
-      // the spherical-radius boundary is solved robustly via the quadratic intersection; left unsnapped
-      break;
   }
-  pkt.cellindex = next_cellindex;
 }
 
 // compute distance to a cell boundary.
