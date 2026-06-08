@@ -64,7 +64,6 @@ double mfegroup{0.};  // Total mass of Fe group elements in ejecta
 int first_cellindex{-1};  // auto-determine first cell index in model.txt (usually 1 or 0)
 
 // Initial co-ordinates of inner most corner of cell.
-std::vector<Vec3d> propcell_pos_min{};
 std::array<std::vector<double>, 3> coord_bin_lower{};
 
 // associate each propagation cell with a model grid cell, or not, if the cell is empty (or doesn't get mapped to
@@ -1152,7 +1151,6 @@ void setup_grid_cartesian_3d() {
   assert_always(ncoordgrid[0] == ncoordgrid[2]);
 
   ngrid = ncoordgrid[0] * ncoordgrid[1] * ncoordgrid[2];
-  resize_exactly(propcell_pos_min, ngrid);
   resize_exactly(coord_bin_lower[0], ncoordgrid[0]);
   resize_exactly(coord_bin_lower[1], ncoordgrid[1]);
   resize_exactly(coord_bin_lower[2], ncoordgrid[2]);
@@ -1160,26 +1158,6 @@ void setup_grid_cartesian_3d() {
   for (int axis = 0; axis < 3; axis++) {
     for (int i = 0; i < ncoordgrid[axis]; i++) {
       coord_bin_lower[axis][i] = -globals::rmax + (2 * i * globals::rmax / ncoordgrid[axis]);
-    }
-  }
-
-  std::array<int, 3> nxyz = {0, 0, 0};
-  for (int n = 0; n < ngrid; n++) {
-    for (int axis = 0; axis < 3; axis++) {
-      assert_always(nxyz[axis] == get_cellcoordpointnum(n, axis));
-      propcell_pos_min[n][axis] = -globals::rmax + (2 * nxyz[axis] * globals::rmax / ncoordgrid[axis]);
-    }
-
-    assert_always(n == ((nxyz[2] * ncoordgrid[1]) * ncoordgrid[2]) + ((nxyz[1] * ncoordgrid[0]) + nxyz[0]));
-
-    nxyz[0]++;  // increment x coordinate
-    if (nxyz[0] == ncoordgrid[0]) {
-      nxyz[0] = 0;
-      nxyz[1]++;  // increment y coordinate
-    }
-    if (nxyz[1] == ncoordgrid[1]) {
-      nxyz[1] = 0;
-      nxyz[2]++;  // increment z coordinate
     }
   }
 }
@@ -1191,13 +1169,11 @@ void setup_grid_spherical_1d() {
 
   ngrid = ncoordgrid[0] * ncoordgrid[1] * ncoordgrid[2];
 
-  resize_exactly(propcell_pos_min, ngrid);
-  resize_exactly(coord_bin_lower[0], ngrid);
+  resize_exactly(coord_bin_lower[0], ncoordgrid[0]);
 
   for (int cellindex = 0; cellindex < ngrid; cellindex++) {
     const int mgi = cellindex;  // interchangeable in this mode
     const double v_inner = mgi > 0 ? vout_model[mgi - 1] : 0.;
-    propcell_pos_min[cellindex] = {v_inner * globals::tmin, 0., 0.};
     coord_bin_lower[0][cellindex] = v_inner * globals::tmin;
   }
 }
@@ -1214,8 +1190,6 @@ void setup_grid_cylindrical_2d() {
   ngrid = ncoordgrid[0] * ncoordgrid[1];
   assert_always(ngrid == get_npts_model());
 
-  resize_exactly(propcell_pos_min, ngrid);
-
   resize_exactly(coord_bin_lower[0], ncoordgrid[0]);
   for (int n_rcyl = 0; n_rcyl < ncoordgrid[0]; n_rcyl++) {
     coord_bin_lower[0][n_rcyl] = n_rcyl * globals::rmax / ncoord_model[0];
@@ -1224,14 +1198,6 @@ void setup_grid_cylindrical_2d() {
   resize_exactly(coord_bin_lower[1], ncoordgrid[1]);
   for (int n_z = 0; n_z < ncoordgrid[1]; n_z++) {
     coord_bin_lower[1][n_z] = globals::rmax * (-1 + (n_z * 2. / ncoord_model[1]));
-  }
-
-  for (int cellindex = 0; cellindex < ngrid; cellindex++) {
-    const int n_rcyl = get_cellcoordpointnum(cellindex, 0);
-    const int n_z = get_cellcoordpointnum(cellindex, 1);
-
-    propcell_pos_min[cellindex] = {n_rcyl * globals::rmax / ncoord_model[0],
-                                   globals::rmax * (-1 + (n_z * 2. / ncoord_model[1])), 0.};
   }
 }
 
