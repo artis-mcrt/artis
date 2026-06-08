@@ -1223,48 +1223,14 @@ constexpr auto get_grid_type_name(const GridType gridtype) -> std::string {
 // Get the discrete index of the coordinate value (where pos must be position in grid coordinate system, not
 // necessarily xyz)
 auto get_poscoordpointnum(const double pos, const double time, const int axis) -> int {
-  switch (get_propgridtype()) {
-    case GridType::CARTESIAN3D: {
-      const auto& bins = coord_bin_lower[axis];
-      // find first bin with pos_lower / tmin * time > pos, then take the previous one as the bin for this pos
-      const auto idx = static_cast<int>(std::ranges::lower_bound(bins.begin(), bins.begin() + ncoordgrid[axis], pos,
-                                                                 [time](double binlower, double pos_) {
-                                                                   return binlower / globals::tmin * time <= pos_;
-                                                                 }) -
-                                        bins.begin() - 1);
-      return std::clamp(idx, 0, ncoordgrid[axis] - 1);
-    }
-
-    case GridType::CYLINDRICAL2D: {
-      if (axis == 0) {
-        const auto n_rcyl = static_cast<int>(pos / time / globals::vmax * ncoordgrid[axis]);
-        assert_always(n_rcyl >= 0);
-        assert_always(n_rcyl < ncoordgrid[axis]);
-        return n_rcyl;
-      }
-      if (axis == 1) {
-        const auto n_z = static_cast<int>(((pos / time) + globals::vmax) / 2 / globals::vmax * ncoordgrid[axis]);
-        assert_always(n_z >= 0);
-        assert_always(n_z < ncoordgrid[axis]);
-        return n_z;
-      }
-      break;
-    }
-
-    case GridType::SPHERICAL1D: {
-      // radial spacing is non-uniform, so we have to do a search
-      const auto trat = time / globals::tmin;
-      for (int n_r = 0; n_r < ncoordgrid[0]; n_r++) {
-        if ((pos < get_cellcoordmax(n_r, 0) * trat) && (pos >= get_cellcoordmin(n_r, 0) * trat)) {
-          return n_r;
-        }
-      }
-      break;
-    }
-  }
-
-  assert_always(false);
-  return -1;
+  // bins are closed-lower, so we want the index of the largest bin lower bound that is still <= pos
+  const auto& bins = coord_bin_lower[axis];
+  const auto idx = static_cast<int>(std::ranges::lower_bound(bins.begin(), bins.begin() + ncoordgrid[axis], pos,
+                                                             [time](double binlower, double pos_) {
+                                                               return binlower / globals::tmin * time <= pos_;
+                                                             }) -
+                                    bins.begin() - 1);
+  return std::clamp(idx, 0, ncoordgrid[axis] - 1);
 }
 
 // Convert a position vector from Cartesian xyz to the grid coordinate system
