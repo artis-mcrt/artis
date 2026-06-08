@@ -1227,10 +1227,11 @@ auto get_poscoordpointnum(const double pos, const double time, const int axis) -
     case GridType::CARTESIAN3D: {
       const auto& bins = coord_bin_lower[axis];
       // find first bin with pos_lower / tmin * time > pos, then take the previous one as the bin for this pos
-      const auto idx = static_cast<int>(
-          std::lower_bound(bins.begin(), bins.begin() + ncoordgrid[axis], pos,
-                           [time](double binlower, double pos) { return binlower / globals::tmin * time <= pos; }) -
-          bins.begin() - 1);
+      const auto idx = static_cast<int>(std::ranges::lower_bound(bins.begin(), bins.begin() + ncoordgrid[axis], pos,
+                                                                 [time](double binlower, double pos_) {
+                                                                   return binlower / globals::tmin * time <= pos_;
+                                                                 }) -
+                                        bins.begin() - 1);
       return std::clamp(idx, 0, ncoordgrid[axis] - 1);
     }
 
