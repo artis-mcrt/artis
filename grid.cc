@@ -2299,17 +2299,18 @@ DEVICE_FUNC void snap_pkt_to_crossed_boundary(Packet& pkt, int next_cellindex) {
   const auto prop_gridtype = get_propgridtype();
   const int oldcellindex = pkt.cellindex;
 
-  // Identify the coordinate whose cell index changed, and the boundary coordinate (at tmin) of the destination cell's
+  // Identify the coordinate whose cell index changed, and the boundary coordinate of the destination cell's
   // face that the packet landed on. Comparing per-axis cell indices is unambiguous regardless of grid shape.
   int crossedaxis = -1;
-  double boundarycoord_tmin = NAN;
+  // boundary grid-coordinate value at the packet's current propagation time (single multiply: no cancellation)
+  double boundaryposition = NAN;
   for (int d = 0; d < get_ndim(prop_gridtype); d++) {
     const int oldidx = get_cellcoordindex(oldcellindex, d);
     const int newidx = get_cellcoordindex(next_cellindex, d);
     if (newidx != oldidx) {
       crossedaxis = d;
       // moved up -> land on the destination cell's lower face; moved down -> its upper face
-      boundarycoord_tmin =
+      boundaryposition =
           ((newidx > oldidx) ? get_cellcoordmin(next_cellindex, d) : get_cellcoordmax(next_cellindex, d)) /
           globals::tmin * pkt.prop_time;
       break;
@@ -2321,13 +2322,10 @@ DEVICE_FUNC void snap_pkt_to_crossed_boundary(Packet& pkt, int next_cellindex) {
     return;
   }
 
-  // boundary grid-coordinate value at the packet's current propagation time (single multiply: no cancellation)
-  const double target = boundarycoord_tmin;
-
   switch (prop_gridtype) {
     case GridType::CARTESIAN3D: {
       // the grid coordinate is the Cartesian position component itself
-      pkt.pos[crossedaxis] = target;
+      pkt.pos[crossedaxis] = boundaryposition;
       const int pos_inferred_cellindex = get_cellindex_from_pos(pkt.pos, pkt.prop_time);
       // aside from the crossed boundary, set the other coordinate indices based on the position (in case we
       // crossed more than one cell boundary)
@@ -2343,7 +2341,7 @@ DEVICE_FUNC void snap_pkt_to_crossed_boundary(Packet& pkt, int next_cellindex) {
     case GridType::CYLINDRICAL2D: {
       if (crossedaxis == 1) {
         // z coordinate is a Cartesian position component
-        pkt.pos[2] = target;
+        pkt.pos[2] = boundaryposition;
       }
       // the cylindrical-radius boundary (crossedaxis == 0) is solved robustly via the quadratic intersection and is
       // not subject to the Cartesian-plane fragility, so it is left unsnapped
