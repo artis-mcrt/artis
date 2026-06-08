@@ -2294,11 +2294,13 @@ DEVICE_FUNC void snap_pkt_to_crossed_boundary(Packet& pkt, int next_cellindex) {
     const int oldidx = get_cellcoordindex(oldcellindex, d);
     const int newidx = get_cellcoordindex(next_cellindex, d);
     if (newidx != oldidx) {
+      const bool moved_up = (newidx > oldidx);
       crossedaxis = d;
       // moved up -> land on the destination cell's lower face; moved down -> its upper face
-      boundaryposition =
-          ((newidx > oldidx) ? get_cellcoordmin(next_cellindex, d) : get_cellcoordmax(next_cellindex, d)) /
-          globals::tmin * pkt.prop_time;
+      boundaryposition = (moved_up ? get_cellcoordmin(next_cellindex, d) : get_cellcoordmax(next_cellindex, d)) /
+                         globals::tmin * pkt.prop_time;
+      boundaryposition = std::nextafter(boundaryposition, moved_up ? std::numeric_limits<double>::infinity()
+                                                                   : -std::numeric_limits<double>::infinity());
       break;
     }
   }
