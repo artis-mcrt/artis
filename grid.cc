@@ -2335,8 +2335,8 @@ void snap_pkt_to_crossed_boundary(Packet& pkt, int snext) {
     if (newidx != oldidx) {
       crossedaxis = d;
       // moved up -> land on the destination cell's lower face; moved down -> its upper face
-      boundarycoord_tmin = (newidx > oldidx) ? (get_cellcoordmin(snext, d) / globals::tmin * pkt.prop_time)
-                                             : (get_cellcoordmax(snext, d) / globals::tmin * pkt.prop_time);
+      boundarycoord_tmin =
+          ((newidx > oldidx) ? get_cellcoordmin(snext, d) : get_cellcoordmax(snext, d)) / globals::tmin * pkt.prop_time;
       break;
     }
   }
