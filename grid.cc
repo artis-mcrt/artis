@@ -227,9 +227,8 @@ void read_possible_yefile() {
 // e.g., the maximum x position in xyz coords, or the maximum radius in spherical 1D
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_cellcoordmax(const int cellindex, const int axis) -> double {
   const auto cellcoordidx = get_cellcoordpointnum(cellindex, axis);
-  return (cellcoordidx < (ncoordgrid[axis] - 1))
-             ? get_cellcoordmin((cellcoordidx + 1) * get_coordcellindexstride(axis), axis)
-             : globals::rmax;
+  return (cellcoordidx < (ncoordgrid[axis] - 1)) ? coord_bin_lower[axis][get_cellcoordpointnum(cellindex, axis) + 1]
+                                                 : globals::rmax;
 }
 
 // return the inner radius of a propagation cell at time tmin
