@@ -186,34 +186,11 @@ void read_possible_yefile() {
 
 // convert a cell index number into an integer (x,y,z or r) coordinate index from 0 to ncoordgrid[axis]
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_cellcoordpointnum(const int cellindex, const int axis) -> int {
-  const auto prop_gridtype = get_propgridtype();
-
-  if (prop_gridtype == GridType::SPHERICAL1D) {
-    return cellindex;
+  int stride = 1;
+  for (int a = 0; a < axis; ++a) {
+    stride *= ncoordgrid[a];
   }
-
-  switch (axis) {
-    // 3D Cartesian: increment x first, then y, then z
-    // 2D Cylindrical: increment r first, then z
-    case 0:
-      return cellindex % ncoordgrid[0];
-
-    case 1:
-      return (cellindex / ncoordgrid[0]) % ncoordgrid[1];
-
-    case 2:
-      return (cellindex / (ncoordgrid[0] * ncoordgrid[1])) % ncoordgrid[2];
-
-    default:
-      if constexpr (TESTMODE) {
-        assert_testmodeonly(false);
-      } else {
-        __builtin_unreachable();
-      }
-  }
-
-  assert_always(false);
-  return -1;
+  return (cellindex / stride) % ncoordgrid[axis];
 }
 
 // get the minimum value of a coordinate at globals::tmin (xyz or radial coords) of a propagation cell
