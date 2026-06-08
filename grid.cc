@@ -220,7 +220,7 @@ void read_possible_yefile() {
 // get the minimum value of a coordinate at globals::tmin (xyz or radial coords) of a propagation cell
 // e.g., the minimum x position in xyz coords, or the minimum radius
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_cellcoordmin(const int cellindex, const int axis) -> double {
-  return propcell_pos_min[cellindex][axis];
+  return coord_bin_lower[axis][get_cellcoordpointnum(cellindex, axis)];
 }
 
 // get the maximum position value of a coordinate axis at globals::tmin (xyz or radial coords) of a propagation cell
