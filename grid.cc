@@ -2275,10 +2275,8 @@ auto get_totmassnuclide_tmodel(const int z, const int a) -> double { return totm
   auto posgridcoords = get_gridcoords_from_xyz(pos, prop_gridtype);
   int cellindex = 0;
   for (int d = 0; d < ndim; d++) {
-    if (std::abs(posgridcoords[d]) > (globals::vmax * time)) {
-      // outside grid
-      return -99;
-    }
+    assert_testmodeonly(fabs(posgridcoords[d]) <=
+                        (globals::vmax * time) + 10);  // allow a small tolerance for test mode
     cellindex += get_coordcellindexstride(d) * get_poscoordpointnum(posgridcoords[d], time, d);
   }
   assert_always(cellindex >= 0);
@@ -2286,8 +2284,8 @@ auto get_totmassnuclide_tmodel(const int z, const int a) -> double { return totm
 
   // do a check that the position is within the cell
   for (int n = 0; n < ndim; n++) {
-    assert_always(posgridcoords[n] >= ((get_cellcoordmin(cellindex, n) / globals::tmin * time) - 10));
-    assert_always(posgridcoords[n] <= ((get_cellcoordmax(cellindex, n) / globals::tmin * time) + 10));
+    assert_always(posgridcoords[n] >= ((get_cellcoordmin(cellindex, n) / globals::tmin * time) - 10.));
+    assert_always(posgridcoords[n] <= ((get_cellcoordmax(cellindex, n) / globals::tmin * time) + 10.));
   }
   return cellindex;
 }
