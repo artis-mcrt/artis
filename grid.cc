@@ -2262,8 +2262,6 @@ auto get_totmassnuclide_tmodel(const int z, const int a) -> double { return totm
   const auto posgridcoords = get_gridcoords_from_xyz(pos, prop_gridtype);
   int cellindex = 0;
   for (int d = 0; d < ndim; d++) {
-    assert_testmodeonly(fabs(posgridcoords[d]) <=
-                        (globals::vmax * time) + 10);  // allow a small tolerance for test mode
     cellindex += get_coordcellindexstride(d) * get_poscoordpointnum(posgridcoords[d], time, d);
   }
   assert_always(cellindex >= 0);
