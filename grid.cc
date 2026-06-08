@@ -2339,17 +2339,16 @@ void change_cell(Packet& pkt, const int next_cellindex) {
   // dir * CLIGHT_PROP converted from xyz to grid coordinates
   const auto pktvelgridcoord = get_gridcoords_vel_from_xyz_pos_dir(pos, dir, pktposgridcoord, prop_gridtype);
 
-  const auto [cellcoordmin, cellcoordmax, cellcoordidx] = [cellindex, prop_gridtype]() {
-    auto _cellcoordmin = std::array<double, 3>{};  // position at time tmin
-    auto _cellcoordmax = std::array<double, 3>{};  // position at time tmin
+  const auto [cellcoordidx, cellcoordmin, cellcoordmax] = [cellindex, prop_gridtype]() {
     auto _cellcoordidx = std::array<int, 3>{};
+    auto _cellcoordmin = std::array<double, 3>{};
+    auto _cellcoordmax = std::array<double, 3>{};
     for (int d = 0; d < get_ndim(prop_gridtype); d++) {
       _cellcoordidx[d] = get_cellcoordindex(cellindex, d);
-
-      _cellcoordmin[d] = get_cellcoordmin(cellindex, d);
-      _cellcoordmax[d] = get_cellcoordmax(cellindex, d);
+      _cellcoordmin[d] = coord_pos_min_tmin[d][_cellcoordidx[d]];
+      _cellcoordmax[d] = get_coordposmax(_cellcoordidx[d], d);
     }
-    return std::make_tuple(_cellcoordmin, _cellcoordmax, _cellcoordidx);
+    return std::make_tuple(_cellcoordidx, _cellcoordmin, _cellcoordmax);
   }();
 
   {
