@@ -185,7 +185,7 @@ void read_possible_yefile() {
 }
 
 // convert a cell index number into an integer (x,y,z or r) coordinate index from 0 to ncoordgrid[axis]
-[[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_cellcoordpointnum(const int cellindex, const int axis) -> int {
+[[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_cellcoordindex(const int cellindex, const int axis) -> int {
   int stride = 1;
   for (int a = 0; a < axis; ++a) {
     stride *= ncoordgrid[a];
@@ -196,7 +196,7 @@ void read_possible_yefile() {
 // get the minimum value of a coordinate at globals::tmin (xyz or radial coords) of a propagation cell
 // e.g., the minimum x position in xyz coords, or the minimum radius
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_cellcoordmin(const int cellindex, const int axis) -> double {
-  return coord_bin_lower[axis][get_cellcoordpointnum(cellindex, axis)];
+  return coord_bin_lower[axis][get_cellcoordindex(cellindex, axis)];
 }
 
 // get the maximum position value of a coordinate at globals::tmin (xyz or radial coords)
@@ -208,7 +208,7 @@ void read_possible_yefile() {
 // get the maximum position value of a coordinate axis at globals::tmin (xyz or radial coords) of a propagation cell
 // e.g., the maximum x position in xyz coords, or the maximum radius in spherical 1D
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_cellcoordmax(const int cellindex, const int axis) -> double {
-  const auto cellcoordidx = get_cellcoordpointnum(cellindex, axis);
+  const auto cellcoordidx = get_cellcoordindex(cellindex, axis);
   return get_coordposmax(cellcoordidx, axis);
 }
 
@@ -1985,7 +1985,7 @@ void read_ejecta_model() {
 
       for (int axis = 0; axis < 3; axis++) {
         const double cellwidth = 2 * xmax_tmodel / ncoordgrid[axis];
-        const double cellpos_expected = -xmax_tmodel + (cellwidth * get_cellcoordpointnum(mgi, axis));
+        const double cellpos_expected = -xmax_tmodel + (cellwidth * get_cellcoordindex(mgi, axis));
         if (fabs(cellpos_expected - cellpos_in[axis]) > 0.5 * cellwidth) {
           posmatch_xyz = false;
         }
@@ -2307,8 +2307,8 @@ void snap_pkt_to_crossed_boundary(Packet& pkt, int snext) {
   int crossedaxis = -1;
   double boundarycoord_tmin = NAN;
   for (int d = 0; d < get_ndim(prop_gridtype); d++) {
-    const int oldidx = get_cellcoordpointnum(oldcellindex, d);
-    const int newidx = get_cellcoordpointnum(snext, d);
+    const int oldidx = get_cellcoordindex(oldcellindex, d);
+    const int newidx = get_cellcoordindex(snext, d);
     if (newidx != oldidx) {
       crossedaxis = d;
       // moved up -> land on the destination cell's lower face; moved down -> its upper face
@@ -2335,7 +2335,7 @@ void snap_pkt_to_crossed_boundary(Packet& pkt, int snext) {
       // crossed more than one cell boundary)
       int new_snext = 0;
       for (int d = 0; d < get_ndim(prop_gridtype); d++) {
-        const int coordpointnum = get_cellcoordpointnum(d == crossedaxis ? snext : pos_inferred_cellindex, d);
+        const int coordpointnum = get_cellcoordindex(d == crossedaxis ? snext : pos_inferred_cellindex, d);
         new_snext += get_coordcellindexstride(d) * coordpointnum;
       }
       snext = new_snext;
@@ -2383,7 +2383,7 @@ void snap_pkt_to_crossed_boundary(Packet& pkt, int snext) {
     auto _cellcoordmax = std::array<double, 3>{};  // position at time tmin
     auto _cellcoordidx = std::array<int, 3>{};
     for (int d = 0; d < get_ndim(prop_gridtype); d++) {
-      _cellcoordidx[d] = get_cellcoordpointnum(cellindex, d);
+      _cellcoordidx[d] = get_cellcoordindex(cellindex, d);
 
       _cellcoordmin[d] = get_cellcoordmin(cellindex, d);
       _cellcoordmax[d] = get_cellcoordmax(cellindex, d);
