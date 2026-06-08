@@ -363,7 +363,7 @@ class MPI_shared_array {
   // mutable span if T is not const
   template <typename U = T>
     requires(!std::is_const_v<U>)
-  explicit operator std::span<U>() {  // cppcheck-suppress functionConst
+  explicit operator std::span<U>() {
     return _span;
   }
   // Mutable span accessor.
