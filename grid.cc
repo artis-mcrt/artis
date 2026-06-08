@@ -186,11 +186,7 @@ void read_possible_yefile() {
 
 // convert a cell index number into an integer (x,y,z or r) coordinate index from 0 to ncoordgrid[axis]
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_cellcoordindex(const int cellindex, const int axis) -> int {
-  int stride = 1;
-  for (int a = 0; a < axis; ++a) {
-    stride *= ncoordgrid[a];
-  }
-  return (cellindex / stride) % ncoordgrid[axis];
+  return (cellindex / get_coordcellindexstride(axis)) % ncoordgrid[axis];
 }
 
 // get the minimum value of a coordinate at globals::tmin (xyz or radial coords) of a propagation cell
