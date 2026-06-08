@@ -15,10 +15,12 @@
 #include <format>
 #include <fstream>
 #include <iostream>
+#include <iterator>
 #include <limits>
 #include <numbers>
 #include <optional>
 #include <print>
+#include <ranges>
 #include <span>
 #include <sstream>
 #include <string>
@@ -1184,11 +1186,13 @@ constexpr auto get_grid_type_name(const GridType gridtype) -> std::string {
 // necessarily xyz)
 auto get_poscoordpointnum(const double pos, const double time, const int axis) -> int {
   // coordinate bins are closed-lower, so we want the highest index such that coord_bin_lower[axis][index] <= pos
-  const auto& bins = coord_bin_lower[axis];
+  const auto coordbinlowertimescaled = coord_bin_lower[axis] | std::views::transform([time](double binlower) {
+                                         return binlower / globals::tmin * time;
+                                       });
+  // find the last index where binlower > pos and subtract 1 to get the last index where binlower <= pos
   const auto idx = static_cast<int>(
-      std::ranges::lower_bound(
-          bins, pos, [time](double binlower, double pos_) { return binlower / globals::tmin * time <= pos_; }) -
-      bins.begin() - 1);
+      std::ranges::distance(coordbinlowertimescaled.begin(), std::ranges::upper_bound(coordbinlowertimescaled, pos)) -
+      1);
   return std::clamp(idx, 0, ncoordgrid[axis] - 1);
 }
 
