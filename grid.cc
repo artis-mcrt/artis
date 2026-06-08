@@ -2297,7 +2297,7 @@ auto get_totmassnuclide_tmodel(const int z, const int a) -> double { return totm
 // reliance on exact floating-point cancellation between boundary_distance() and the position update (pos + dir*sdist),
 // which is fragile under -ffast-math and otherwise leaves packets slightly outside the cell they cross into. Only the
 // crossed grid coordinate is adjusted (by a sub-cm amount); the others are left at their moved values.
-void snap_pkt_to_crossed_boundary(Packet& pkt, int snext) {
+DEVICE_FUNC void snap_pkt_to_crossed_boundary(Packet& pkt, int snext) {
   const auto prop_gridtype = get_propgridtype();
   const int oldcellindex = pkt.cellindex;
 
