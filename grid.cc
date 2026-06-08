@@ -222,6 +222,12 @@ void read_possible_yefile() {
   return coord_bin_lower[axis][get_cellcoordpointnum(cellindex, axis)];
 }
 
+// get the maximum position value of a coordinate at globals::tmin (xyz or radial coords)
+// e.g., the maximum x position in xyz coords, or the maximum radius in spherical 1D
+[[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_coordposmax(const int cellcoordidx, const int axis) -> double {
+  return (cellcoordidx < (ncoordgrid[axis] - 1)) ? coord_bin_lower[axis][cellcoordidx + 1] : globals::rmax;
+}
+
 // get the maximum position value of a coordinate axis at globals::tmin (xyz or radial coords) of a propagation cell
 // e.g., the maximum x position in xyz coords, or the maximum radius in spherical 1D
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_cellcoordmax(const int cellindex, const int axis) -> double {
