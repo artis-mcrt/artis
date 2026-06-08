@@ -1223,13 +1223,12 @@ constexpr auto get_grid_type_name(const GridType gridtype) -> std::string {
 // Get the discrete index of the coordinate value (where pos must be position in grid coordinate system, not
 // necessarily xyz)
 auto get_poscoordpointnum(const double pos, const double time, const int axis) -> int {
-  // bins are closed-lower, so we want the index of the largest bin lower bound that is still <= pos
+  // coordinate bins are closed-lower, so we want the highest index such that coord_bin_lower[axis][index] <= pos
   const auto& bins = coord_bin_lower[axis];
-  const auto idx = static_cast<int>(std::ranges::lower_bound(bins.begin(), bins.begin() + ncoordgrid[axis], pos,
-                                                             [time](double binlower, double pos_) {
-                                                               return binlower / globals::tmin * time <= pos_;
-                                                             }) -
-                                    bins.begin() - 1);
+  const auto idx = static_cast<int>(
+      std::ranges::lower_bound(
+          bins, pos, [time](double binlower, double pos_) { return binlower / globals::tmin * time <= pos_; }) -
+      bins.begin() - 1);
   return std::clamp(idx, 0, ncoordgrid[axis] - 1);
 }
 
