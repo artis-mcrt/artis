@@ -1225,17 +1225,13 @@ constexpr auto get_grid_type_name(const GridType gridtype) -> std::string {
 auto get_poscoordpointnum(const double pos, const double time, const int axis) -> int {
   switch (get_propgridtype()) {
     case GridType::CARTESIAN3D: {
-      if (pos < coord_bin_lower[axis][0] / globals::tmin * time) {
-        return 0;
-      }
-      int idx = 0;
-      for (int i = 0; i < ncoordgrid[axis]; i++) {
-        const double cellcoordmin = coord_bin_lower[axis][i] / globals::tmin * time;
-        if ((cellcoordmin <= pos)) {
-          idx = i;
-        }
-      }
-      return std::min(idx, ncoordgrid[axis] - 1);
+      const auto& bins = coord_bin_lower[axis];
+      // find first bin with pos_lower / tmin * time > pos, then take the previous one as the bin for this pos
+      const auto idx = static_cast<int>(
+          std::lower_bound(bins.begin(), bins.begin() + ncoordgrid[axis], pos,
+                           [time](double binlower, double pos) { return binlower / globals::tmin * time <= pos; }) -
+          bins.begin() - 1);
+      return std::clamp(idx, 0, ncoordgrid[axis] - 1);
     }
 
     case GridType::CYLINDRICAL2D: {
