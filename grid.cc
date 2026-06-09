@@ -1620,7 +1620,7 @@ void set_nne(const int nonemptymgi, const float nne) {
 
 void set_clumpfactor(const int nonemptymgi, const float clumpfactor) {
   assert_testmodeonly(USE_MICROCLUMPING);
-  assert_always(std::isfinite(clumpfactor) && clumpfactor >= 1);
+  assert_always(std::isfinite(clumpfactor) && clumpfactor >= 1.F);
   clumpfactor_allcells[nonemptymgi] = clumpfactor;
 }
 

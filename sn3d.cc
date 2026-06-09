@@ -656,17 +656,6 @@ auto do_timestep(const int nts, const int titer, std::vector<Packet>& packets, c
   // Each process has now updated its own set of cells. The results now need to be communicated between processes.
   mpi_communicate_grid_properties();
 
-  // Check that the clumping factors are physically sensible values
-  if constexpr (USE_MICROCLUMPING) {
-    const int nstart_nonempty = grid::get_nstart_nonempty(globals::my_rank);
-    const int ndo_nonempty = grid::get_ndo_nonempty(globals::my_rank);
-
-    for (int nonemptymgi = nstart_nonempty; nonemptymgi < (nstart_nonempty + ndo_nonempty); nonemptymgi++) {
-      const float clump_factor = grid::get_clumpfactor(nonemptymgi);
-      assert_always(std::isfinite(clump_factor) && clump_factor >= 1.F);
-    }
-  }
-
   const auto communicate_grid_duration =
       std::chrono::duration<double>(std::chrono::steady_clock::now() - sys_time_start_communicate_grid).count();
   printlnlog("timestep {}: time after grid properties have been communicated (took {:.1f} seconds)", nts,
