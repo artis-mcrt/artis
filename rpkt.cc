@@ -520,11 +520,11 @@ auto do_rpkt_step(Packet& pkt, const double t2) -> bool {
   const double tau_rnd = -std::log(static_cast<double>(rng_uniform_pos()));
 
   // Finding the distance to the crossing of the grid cell boundaries.
-  // sdist is the boundary distance to the next grid cell snext
-  const auto [sdist, snext] = grid::boundary_distance(pkt.dir, pkt.pos, pkt.prop_time, pkt.cellindex);
+  // boundarydist is the boundary distance to the next grid cell next_cellindex
+  const auto [boundarydist, next_cellindex] = grid::boundary_distance(pkt.dir, pkt.pos, pkt.prop_time, pkt.cellindex);
 
-  if (sdist == 0) {
-    grid::change_cell(pkt, snext);
+  if (boundarydist == 0) {
+    grid::change_cell_or_escape(pkt, next_cellindex);
     const int new_nonemptymgi = grid::get_propcell_nonemptymgi(pkt.cellindex);
 
     return (pkt.type == TYPE_RPKT && (new_nonemptymgi < 0 || new_nonemptymgi == nonemptymgi));
@@ -535,7 +535,7 @@ auto do_rpkt_step(Packet& pkt, const double t2) -> bool {
 
   assert_always(tdist >= 0);
 
-  const double abort_dist = std::min(tdist, sdist);
+  const double abort_dist = std::min(tdist, boundarydist);
 
   // Get distance to the next physical event (continuum or bound-bound)
   double edist = -1;
@@ -574,7 +574,7 @@ auto do_rpkt_step(Packet& pkt, const double t2) -> bool {
   }
   assert_always(edist >= 0);
 
-  if ((edist < sdist) && (edist <= tdist)) [[likely]] {
+  if ((edist < boundarydist) && (edist <= tdist)) [[likely]] {
     // bound-bound or continuum event occurs before cell crossing or end of timestep
     const double doppler_nucmf_on_nurf = move_pkt_withtime(pkt, edist / 2.);
     update_estimators(pkt.e_cmf, pkt.nu_cmf, edist, doppler_nucmf_on_nurf, nonemptymgi, chi_rpkt_cont, thickcell);
@@ -610,17 +610,18 @@ auto do_rpkt_step(Packet& pkt, const double t2) -> bool {
     return (pkt.type == TYPE_RPKT);
   }
 
-  if ((sdist <= tdist) && (sdist <= edist)) {
+  if ((boundarydist <= tdist) && (boundarydist <= edist)) {
     // cell crossing event occurs before interaction or end of timestep
-    const double doppler_nucmf_on_nurf = move_pkt_withtime(pkt, sdist / 2.);
+    const double doppler_nucmf_on_nurf = move_pkt_withtime(pkt, boundarydist / 2.);
     if (nonemptymgi >= 0) {
-      update_estimators(pkt.e_cmf, pkt.nu_cmf, sdist, doppler_nucmf_on_nurf, nonemptymgi, chi_rpkt_cont, thickcell);
+      update_estimators(pkt.e_cmf, pkt.nu_cmf, boundarydist, doppler_nucmf_on_nurf, nonemptymgi, chi_rpkt_cont,
+                        thickcell);
     }
-    move_pkt_withtime(pkt, sdist / 2.);
+    move_pkt_withtime(pkt, boundarydist / 2.);
 
-    if (snext != pkt.cellindex) {
-      grid::change_cell(pkt, snext);
-      if (snext < 0) {
+    if (next_cellindex != pkt.cellindex) {
+      grid::change_cell_or_escape(pkt, next_cellindex);
+      if (next_cellindex < 0) {
         // we left the grid, so we can stop tracking this packet
         return false;
       }
@@ -629,10 +630,10 @@ auto do_rpkt_step(Packet& pkt, const double t2) -> bool {
       // cache
       return ((new_nonemptymgi < 0) || (new_nonemptymgi == nonemptymgi));
     }
-    return true;  // if snext == pkt.cellindex, we reached the maximum path length and are not changing cell
+    return true;  // if next_cellindex == pkt.cellindex, we reached the maximum path length and are not changing cell
   }
 
-  if ((tdist < sdist) && (tdist <= edist)) [[unlikely]] {
+  if ((tdist < boundarydist) && (tdist <= edist)) [[unlikely]] {
     // reaches end of timestep before cell boundary or interaction
     const double doppler_nucmf_on_nurf = move_pkt_withtime(pkt, tdist / 2.);
     if (nonemptymgi >= 0) {

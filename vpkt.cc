@@ -216,7 +216,7 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
 
   while (!end_packet) {
     // distance to the next cell
-    const auto [boundarydist, snext] = grid::boundary_distance(obsdir, vpktpos, t_future, cellindex);
+    const auto [boundarydist, next_cellindex] = grid::boundary_distance(obsdir, vpktpos, t_future, cellindex);
     if (mgi < 0) {
       next_trans = -1;
     } else {
@@ -368,9 +368,9 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
 
     move_pkt_withtime(vpktpos, obsdir, t_future, nu_rf, nu_cmf, e_rf, e_cmf, boundarydist);
 
-    if (snext >= 0) {
+    if (next_cellindex >= 0) {
       // Just need to update cellindex.
-      cellindex = snext;
+      cellindex = next_cellindex;
       mgi = grid::get_propcell_modelgridindex(cellindex);
       if (mgi >= 0) {
         const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(mgi);

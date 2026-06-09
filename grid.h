@@ -94,10 +94,10 @@ void write_grid_restart_data(int timestep);
 
 [[nodiscard]] auto calculate_cell_kappagrey(int nonemptymgi) -> float;
 
-inline void change_cell(Packet& pkt, const int snext) {
-  if (snext >= 0) {
+inline void change_cell_or_escape(Packet& pkt, const int next_cellindex) {
+  if (next_cellindex >= 0) {
     // Just need to update cellindex.
-    pkt.cellindex = snext;
+    pkt.cellindex = next_cellindex;
     stats::increment(stats::Counter::CELLCROSSINGS);
   } else {
     // Then the packet is exiting the grid. We need to record

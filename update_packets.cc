@@ -59,7 +59,7 @@ void do_nonthermal_predeposit(Packet& pkt, const int nts, const double ts_end) {
     } else {
       e_cmf_deposited = 0.;
       pkt.type = TYPE_ESCAPE;
-      grid::change_cell(pkt, -99);
+      grid::change_cell_or_escape(pkt, -99);
     }
   } else if constexpr (PARTICLE_THERMALISATION_SCHEME == ParticleThermalisationScheme::WOLLAEGER) {
     // particle thermalisation from Wollaeger+2018, similar to Barnes but using a slightly different expression
@@ -75,7 +75,7 @@ void do_nonthermal_predeposit(Packet& pkt, const int nts, const double ts_end) {
     } else {
       e_cmf_deposited = 0.;
       pkt.type = TYPE_ESCAPE;
-      grid::change_cell(pkt, -99);
+      grid::change_cell_or_escape(pkt, -99);
     }
   } else if constexpr (PARTICLE_THERMALISATION_SCHEME == ParticleThermalisationScheme::TIMEDEPENDENT ||
                        PARTICLE_THERMALISATION_SCHEME ==
