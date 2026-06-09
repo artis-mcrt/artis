@@ -2299,8 +2299,9 @@ DEVICE_FUNC void change_cell_or_escape(Packet& pkt, const int next_cellindex) {
     if (newidx != oldidx) {
       const bool moved_up = (newidx > oldidx);
       // moved up -> land on the destination cell's lower face; moved down -> its upper face
-      double boundaryposition = (moved_up ? get_cellcoordmin(next_cellindex, d) : get_cellcoordmax(next_cellindex, d)) /
-                                globals::tmin * pkt.prop_time;
+      const double boundaryposition =
+          (moved_up ? get_cellcoordmin(next_cellindex, d) : get_cellcoordmax(next_cellindex, d)) / globals::tmin *
+          pkt.prop_time;
       if (prop_gridtype == GridType::CYLINDRICAL2D) {
         if (d == 1) {
           // z coordinate is a Cartesian position component
