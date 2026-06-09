@@ -2301,8 +2301,6 @@ DEVICE_FUNC void change_cell_or_escape(Packet& pkt, const int next_cellindex) {
       // moved up -> land on the destination cell's lower face; moved down -> its upper face
       double boundaryposition = (moved_up ? get_cellcoordmin(next_cellindex, d) : get_cellcoordmax(next_cellindex, d)) /
                                 globals::tmin * pkt.prop_time;
-      boundaryposition = std::nextafter(boundaryposition, moved_up ? std::numeric_limits<double>::infinity()
-                                                                   : -std::numeric_limits<double>::infinity());
       if (prop_gridtype == GridType::CYLINDRICAL2D) {
         if (d == 1) {
           // z coordinate is a Cartesian position component
@@ -2311,7 +2309,6 @@ DEVICE_FUNC void change_cell_or_escape(Packet& pkt, const int next_cellindex) {
       } else if (prop_gridtype == GridType::CARTESIAN3D) {
         // the grid coordinate is the Cartesian position component itself
         pkt.pos[d] = boundaryposition;
-        pkt.cellindex = get_cellindex_from_pos(pkt.pos, pkt.prop_time);
       }
       break;  // can't have more than one coordinate change at once
     }
