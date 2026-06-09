@@ -2286,13 +2286,13 @@ DEVICE_FUNC void change_cell(Packet& pkt, const int next_cellindex) {
     return;
   }
 
-  const auto prop_gridtype = get_propgridtype();
   const int oldcellindex = pkt.cellindex;
   pkt.cellindex = next_cellindex;
   stats::increment(stats::Counter::CELLCROSSINGS);
 
   // For Cartesian axes (3D or 2D Z-coord), snap the packet exactly onto the boundary face it just crossed
   // For 3D, also update the cellindex after snapping in case we actually crossed more than one boundary (e.g. a corner)
+  const auto prop_gridtype = get_propgridtype();
   for (int d = 0; d < get_ndim(prop_gridtype); d++) {
     const int oldidx = get_cellcoordindex(oldcellindex, d);
     const int newidx = get_cellcoordindex(next_cellindex, d);
