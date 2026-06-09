@@ -2292,32 +2292,28 @@ DEVICE_FUNC void change_cell_or_escape(Packet& pkt, const int next_cellindex) {
 
   // For Cartesian axes (3D or 2D Z-coord), snap the packet exactly onto the boundary face it just crossed
   // For 3D, also update the cellindex after snapping in case we actually crossed more than one boundary (e.g. a corner)
-  constexpr bool SNAP_TO_CELL_BOUNDARY = false;
-  if constexpr (SNAP_TO_CELL_BOUNDARY) {
-    const auto prop_gridtype = get_propgridtype();
-    for (int d = 0; d < get_ndim(prop_gridtype); d++) {
-      const int oldidx = get_cellcoordindex(oldcellindex, d);
-      const int newidx = get_cellcoordindex(next_cellindex, d);
-      if (newidx != oldidx) {
-        const bool moved_up = (newidx > oldidx);
-        // moved up -> land on the destination cell's lower face; moved down -> its upper face
-        double boundaryposition =
-            (moved_up ? get_cellcoordmin(next_cellindex, d) : get_cellcoordmax(next_cellindex, d)) / globals::tmin *
-            pkt.prop_time;
-        boundaryposition = std::nextafter(boundaryposition, moved_up ? std::numeric_limits<double>::infinity()
-                                                                     : -std::numeric_limits<double>::infinity());
-        if (prop_gridtype == GridType::CYLINDRICAL2D) {
-          if (d == 1) {
-            // z coordinate is a Cartesian position component
-            pkt.pos[2] = boundaryposition;
-          }
-        } else if (prop_gridtype == GridType::CARTESIAN3D) {
-          // the grid coordinate is the Cartesian position component itself
-          pkt.pos[d] = boundaryposition;
-          pkt.cellindex = get_cellindex_from_pos(pkt.pos, pkt.prop_time);
+  const auto prop_gridtype = get_propgridtype();
+  for (int d = 0; d < get_ndim(prop_gridtype); d++) {
+    const int oldidx = get_cellcoordindex(oldcellindex, d);
+    const int newidx = get_cellcoordindex(next_cellindex, d);
+    if (newidx != oldidx) {
+      const bool moved_up = (newidx > oldidx);
+      // moved up -> land on the destination cell's lower face; moved down -> its upper face
+      double boundaryposition = (moved_up ? get_cellcoordmin(next_cellindex, d) : get_cellcoordmax(next_cellindex, d)) /
+                                globals::tmin * pkt.prop_time;
+      boundaryposition = std::nextafter(boundaryposition, moved_up ? std::numeric_limits<double>::infinity()
+                                                                   : -std::numeric_limits<double>::infinity());
+      if (prop_gridtype == GridType::CYLINDRICAL2D) {
+        if (d == 1) {
+          // z coordinate is a Cartesian position component
+          pkt.pos[2] = boundaryposition;
         }
-        break;  // can't have more than one coordinate change at once
+      } else if (prop_gridtype == GridType::CARTESIAN3D) {
+        // the grid coordinate is the Cartesian position component itself
+        pkt.pos[d] = boundaryposition;
+        pkt.cellindex = get_cellindex_from_pos(pkt.pos, pkt.prop_time);
       }
+      break;  // can't have more than one coordinate change at once
     }
   }
 }
