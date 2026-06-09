@@ -91,12 +91,19 @@ void write_grid_restart_data(int timestep);
 [[nodiscard]] auto get_propcell_random_position_tmin(int cellindex) -> Vec3d;
 [[nodiscard]] DEVICE_FUNC auto boundary_distance(const Vec3d& dir, const Vec3d& pos, double tstart, int cellindex)
     -> std::tuple<double, int>;
+DEVICE_FUNC void snap_pos_to_cell(Vec3d& pos, double time, int cellindex);
 
 [[nodiscard]] auto calculate_cell_kappagrey(int nonemptymgi) -> float;
 
 inline void change_cell_or_escape(Packet& pkt, const int next_cellindex) {
   if (next_cellindex >= 0) {
-    // Just need to update cellindex.
+    if (next_cellindex != pkt.cellindex) {
+      // make the position exactly consistent with the new cell by snapping it onto the
+      // crossed boundary, so that rounding errors cannot accumulate over many crossings.
+      // (when boundary_distance() returns early due to max_path_step, next_cellindex equals
+      // pkt.cellindex and the packet is mid-cell, so it must not be snapped)
+      snap_pos_to_cell(pkt.pos, pkt.prop_time, next_cellindex);
+    }
     pkt.cellindex = next_cellindex;
     stats::increment(stats::Counter::CELLCROSSINGS);
   } else {

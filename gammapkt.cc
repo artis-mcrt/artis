@@ -707,6 +707,10 @@ void transport_gamma(Packet& pkt, const double t2) {
 
   assert_always(tdist >= 0);
 
+  // boundarydist can be zero when rounding error has put the packet just past a cell
+  // boundary that it is moving towards (an immediate crossing). This cannot repeat
+  // endlessly: the just-crossed face is excluded by the velocity conditions in the new
+  // cell, so at most ndim consecutive zero-distance crossings can occur (e.g. at a corner)
   if ((boundarydist < tdist) && (boundarydist < edist)) {
     move_pkt_withtime(pkt, boundarydist / 2.);
 

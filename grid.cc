@@ -1372,6 +1372,32 @@ auto get_element_meanweight(const std::ptrdiff_t nonemptymgi, const int element)
          ((cellboundarypos / globals::tmin) - pktvelgridcoord);
 }
 
+// maximum out-of-cell position error (in cm) attributable to floating-point rounding of the
+// packet position updates. The tolerance scales with the coordinate magnitude because
+// rounding errors are proportional to ulp(pos), e.g. about 8 cm at 4e16 cm.
+[[nodiscard]] constexpr auto cellbound_tolerance(const double boundarypos) -> double {
+  return std::max(10., std::abs(boundarypos) * 1e-12);
+}
+
+// Check if the packet is at or (within rounding-error tolerance) past a cell boundary that it
+// is moving towards relative to the boundary's homologous motion. In that case the
+// intersection calculation finds no forward crossing (a slightly negative distance, or no
+// intersection at all for the curved boundaries), and the crossing must instead be treated as
+// immediate (zero distance). If it were silently dropped, the crossing could never be
+// detected again (the packet is outrunning the boundary), and the out-of-cell position error
+// would grow without bound along the rest of the path until the outside-boundary check fails.
+template <bool is_upper_boundary>
+[[nodiscard]] constexpr auto is_boundary_overshoot_within_tolerance(const double pktposgridcoord,
+                                                                    const double pktvelgridcoord,
+                                                                    const double boundarypos_tmin, const double tstart)
+    -> bool {
+  const double boundaryvel = boundarypos_tmin / globals::tmin;
+  const double boundarypos = boundaryvel * tstart;
+  const double overshoot = is_upper_boundary ? (pktposgridcoord - boundarypos) : (boundarypos - pktposgridcoord);
+  const bool movingtowards = is_upper_boundary ? (pktvelgridcoord > boundaryvel) : (pktvelgridcoord < boundaryvel);
+  return movingtowards && (overshoot >= 0.) && (overshoot <= cellbound_tolerance(boundarypos));
+}
+
 }  // anonymous namespace
 
 // for a uniform grid get the the extent along the x,y,z coordinate (x_2 - x_1, etc.) at time tmin
@@ -2293,10 +2319,38 @@ auto get_totmassnuclide_tmodel(const int z, const int a) -> double { return totm
   // do a check that the position is within the cell
   const double trat = time / globals::tmin;
   for (int n = 0; n < ndim; n++) {
-    assert_always(posgridcoords[n] >= ((get_cellcoordmin(cellindex, n) * trat) - 10));
-    assert_always(posgridcoords[n] <= ((get_cellcoordmax(cellindex, n) * trat) + 10));
+    const double cellposmin = get_cellcoordmin(cellindex, n) * trat;
+    const double cellposmax = get_cellcoordmax(cellindex, n) * trat;
+    assert_always(posgridcoords[n] >= (cellposmin - cellbound_tolerance(cellposmin)));
+    assert_always(posgridcoords[n] <= (cellposmax + cellbound_tolerance(cellposmax)));
   }
   return cellindex;
+}
+
+// Re-establish the invariant that pos lies inside propagation cell cellindex at the given
+// time by clamping each grid coordinate into the cell bounds. Called after a boundary
+// crossing, this snaps the position exactly onto the crossed cell face(s), so that
+// floating-point rounding errors from the position updates (about one ulp per move, i.e.
+// up to several cm at the outer grid) cannot accumulate over many crossings.
+DEVICE_FUNC void snap_pos_to_cell(Vec3d& pos, const double time, const int cellindex) {
+  if (get_propgridtype() != GridType::CARTESIAN3D) {
+    // for spherical/cylindrical grids, overshoot past the curved boundaries is detected and
+    // corrected with tolerance by boundary_distance(). (If position snapping is ever needed
+    // here: clamp r = vec_len(pos) and rescale pos, or only the x,y components for r_cyl.)
+    return;
+  }
+  for (int d = 0; d < 3; d++) {
+    const double cellposmin = get_cellcoordmin(cellindex, d) / globals::tmin * time;
+    // exactly match the boundary used by boundary_distance(): the upper boundary is the
+    // lower edge of the neighbouring cell, except at the grid edge
+    const double cellposmax = (get_cellcoordindex(cellindex, d) < (ncoordgrid[d] - 1))
+                                  ? get_cellcoordmin(cellindex + get_coordcellindexstride(d), d) / globals::tmin * time
+                                  : get_cellcoordmax(cellindex, d) / globals::tmin * time;
+    const double newpos_d = std::clamp(pos[d], cellposmin, cellposmax);
+    // corrections should only ever be at the floating-point rounding error level
+    assert_testmodeonly(std::abs(newpos_d - pos[d]) <= cellbound_tolerance(pos[d]));
+    pos[d] = newpos_d;
+  }
 }
 
 // compute distance to a cell boundary.
@@ -2352,12 +2406,12 @@ auto get_totmassnuclide_tmodel(const int z, const int a) -> double { return totm
           // check if packet pos is above cell max while moving in the positive direction relative to the grid flow
           const double boundaryposmax = cellcoordmax[d] / globals::tmin * tstart;
           delta = pktposgridcoord[d] - boundaryposmax;
-          isoutside_error = pktposgridcoord[d] > (boundaryposmax + 10.);
+          isoutside_error = pktposgridcoord[d] > (boundaryposmax + cellbound_tolerance(boundaryposmax));
         } else {
           // check if packet pos is below cell min while moving in the negative direction relative to the grid flow
           const double boundaryposmin = cellcoordmin[d] / globals::tmin * tstart;
           delta = pktposgridcoord[d] - boundaryposmin;
-          isoutside_error = pktposgridcoord[d] < (boundaryposmin - 10.);
+          isoutside_error = pktposgridcoord[d] < (boundaryposmin - cellbound_tolerance(boundaryposmin));
         }
 
         if (isoutside_error) {
@@ -2373,7 +2427,9 @@ auto get_totmassnuclide_tmodel(const int z, const int a) -> double { return totm
 
           printout("packet dir [%g, %g, %g]\n", dir[0], dir[1], dir[2]);
 
-          assert_always(!isoutside_error);
+          // in production builds, recover by swapping the packet to the cell that actually
+          // contains its position (or letting it escape at the grid edge)
+          assert_testmodeonly(!isoutside_error);
 
           const auto next_cellindex = get_cellindex_from_pos(pos, tstart);
           if ((cellcoordidx[d] == (ncoordgrid[d] - 1) && pos_component_vel_relative_to_flow) ||
@@ -2400,7 +2456,9 @@ auto get_totmassnuclide_tmodel(const int z, const int a) -> double { return totm
 
     const double r_outer = cellcoordmax[0] * tstart / globals::tmin;
     const double d_coordmaxboundary =
-        expanding_shell_intersection<BoundaryType::OUTER>(pos, dir, speed, r_outer, tstart);
+        is_boundary_overshoot_within_tolerance<true>(pktposgridcoord[0], pktvelgridcoord[0], cellcoordmax[0], tstart)
+            ? 0.
+            : expanding_shell_intersection<BoundaryType::OUTER>(pos, dir, speed, r_outer, tstart);
 
     // upper d coordinate of the current cell
     if ((d_coordmaxboundary >= 0.) && (d_coordmaxboundary < distance)) {
@@ -2411,7 +2469,9 @@ auto get_totmassnuclide_tmodel(const int z, const int a) -> double { return totm
     const double r_inner = cellcoordmin[0] * tstart / globals::tmin;
     if (r_inner > 0.) {
       const double d_coordminboundary =
-          expanding_shell_intersection<BoundaryType::INNER>(pos, dir, speed, r_inner, tstart);
+          is_boundary_overshoot_within_tolerance<false>(pktposgridcoord[0], pktvelgridcoord[0], cellcoordmin[0], tstart)
+              ? 0.
+              : expanding_shell_intersection<BoundaryType::INNER>(pos, dir, speed, r_inner, tstart);
       // lower d coordinate of the current cell
       if ((d_coordminboundary >= 0.) && (d_coordminboundary < distance)) {
         distance = d_coordminboundary;
@@ -2433,13 +2493,15 @@ auto get_totmassnuclide_tmodel(const int z, const int a) -> double { return totm
 
     const double r_outer = cellcoordmax[0] * tstart / globals::tmin;
     const double d_rcyl_coordmaxboundary =
-        expanding_shell_intersection<BoundaryType::OUTER>(posnoz, dirnoz, xyspeed, r_outer, tstart);
+        is_boundary_overshoot_within_tolerance<true>(pktposgridcoord[0], pktvelgridcoord[0], cellcoordmax[0], tstart)
+            ? 0.
+            : expanding_shell_intersection<BoundaryType::OUTER>(posnoz, dirnoz, xyspeed, r_outer, tstart);
     if (d_rcyl_coordmaxboundary >= 0.) {
       // how far did the packet travel in the z direction during this time?
       const double d_z_coordmaxboundary = d_rcyl_coordmaxboundary / xyspeed * dir[2] * CLIGHT_PROP;
       // distance from two perpendicular components to the r_cyl upper boundary
       const double d_coordmaxboundary_rcyl = std::sqrt(pow2(d_rcyl_coordmaxboundary) + pow2(d_z_coordmaxboundary));
-      if ((d_coordmaxboundary_rcyl > 0) && (d_coordmaxboundary_rcyl < distance)) {
+      if ((d_coordmaxboundary_rcyl >= 0.) && (d_coordmaxboundary_rcyl < distance)) {
         distance = d_coordmaxboundary_rcyl;
         next_cellindex = (cellcoordidx[0] == (ncoordgrid[0] - 1)) ? -99 : cellindex + get_coordcellindexstride(0);
       }
@@ -2450,7 +2512,9 @@ auto get_totmassnuclide_tmodel(const int z, const int a) -> double { return totm
     if (r_inner > 0) {
       // calculate the distance in the xy plane to the inner boundary
       const double d_rcyl_coordminboundary =
-          expanding_shell_intersection<BoundaryType::INNER>(posnoz, dirnoz, xyspeed, r_inner, tstart);
+          is_boundary_overshoot_within_tolerance<false>(pktposgridcoord[0], pktvelgridcoord[0], cellcoordmin[0], tstart)
+              ? 0.
+              : expanding_shell_intersection<BoundaryType::INNER>(posnoz, dirnoz, xyspeed, r_inner, tstart);
       if (d_rcyl_coordminboundary >= 0.) {
         const double d_z_coordminboundary = d_rcyl_coordminboundary / xyspeed * dir[2] * CLIGHT_PROP;
         // distance from two perpendicular components to the r_cyl lower boundary
@@ -2466,7 +2530,9 @@ auto get_totmassnuclide_tmodel(const int z, const int a) -> double { return totm
     constexpr int d = 1;
     if (pktvelgridcoord[d] > (cellcoordmax[d] / globals::tmin)) {
       const double d_coordmaxboundary_z =
-          distance_cartesian_boundary(pktposgridcoord[1], cellcoordmax[d], tstart, pktvelgridcoord[1]);
+          is_boundary_overshoot_within_tolerance<true>(pktposgridcoord[d], pktvelgridcoord[d], cellcoordmax[d], tstart)
+              ? 0.
+              : distance_cartesian_boundary(pktposgridcoord[1], cellcoordmax[d], tstart, pktvelgridcoord[1]);
 
       if ((d_coordmaxboundary_z >= 0.) && (d_coordmaxboundary_z < distance)) {
         distance = d_coordmaxboundary_z;
@@ -2474,7 +2540,9 @@ auto get_totmassnuclide_tmodel(const int z, const int a) -> double { return totm
       }
     } else if (pktvelgridcoord[d] < (cellcoordmin[d] / globals::tmin)) {
       const double d_coordminboundary_z =
-          distance_cartesian_boundary(pktposgridcoord[d], cellcoordmin[d], tstart, pktvelgridcoord[1]);
+          is_boundary_overshoot_within_tolerance<false>(pktposgridcoord[d], pktvelgridcoord[d], cellcoordmin[d], tstart)
+              ? 0.
+              : distance_cartesian_boundary(pktposgridcoord[d], cellcoordmin[d], tstart, pktvelgridcoord[1]);
 
       if ((d_coordminboundary_z >= 0.) && (d_coordminboundary_z < distance)) {
         distance = d_coordminboundary_z;
@@ -2499,7 +2567,10 @@ auto get_totmassnuclide_tmodel(const int z, const int a) -> double { return totm
     for (int d = 0; d < 3; d++) {
       if (pktvelgridcoord[d] > (cellcoordmax[d] / globals::tmin)) {
         const double d_coordmaxboundary =
-            distance_cartesian_boundary(pktposgridcoord[d], cellcoordmax[d], tstart, pktvelgridcoord[d]);
+            is_boundary_overshoot_within_tolerance<true>(pktposgridcoord[d], pktvelgridcoord[d], cellcoordmax[d],
+                                                         tstart)
+                ? 0.
+                : distance_cartesian_boundary(pktposgridcoord[d], cellcoordmax[d], tstart, pktvelgridcoord[d]);
 
         if ((d_coordmaxboundary >= 0.) && (d_coordmaxboundary < distance)) {
           distance = d_coordmaxboundary;
@@ -2507,7 +2578,10 @@ auto get_totmassnuclide_tmodel(const int z, const int a) -> double { return totm
         }
       } else if (pktvelgridcoord[d] < (cellcoordmin[d] / globals::tmin)) {
         const double d_coordminboundary =
-            distance_cartesian_boundary(pktposgridcoord[d], cellcoordmin[d], tstart, pktvelgridcoord[d]);
+            is_boundary_overshoot_within_tolerance<false>(pktposgridcoord[d], pktvelgridcoord[d], cellcoordmin[d],
+                                                          tstart)
+                ? 0.
+                : distance_cartesian_boundary(pktposgridcoord[d], cellcoordmin[d], tstart, pktvelgridcoord[d]);
 
         // lower d coordinate of the current cell
         if ((d_coordminboundary >= 0.) && (d_coordminboundary < distance)) {

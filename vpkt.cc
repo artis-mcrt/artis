@@ -369,7 +369,12 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
     move_pkt_withtime(vpktpos, obsdir, t_future, nu_rf, nu_cmf, e_rf, e_cmf, boundarydist);
 
     if (next_cellindex >= 0) {
-      // Just need to update cellindex.
+      if (next_cellindex != cellindex) {
+        // snap the position onto the crossed cell boundary so that rounding errors cannot
+        // accumulate over many crossings (same-cell returns from boundary_distance() due to
+        // max_path_step leave the packet mid-cell and must not be snapped)
+        grid::snap_pos_to_cell(vpktpos, t_future, next_cellindex);
+      }
       cellindex = next_cellindex;
       mgi = grid::get_propcell_modelgridindex(cellindex);
       if (mgi >= 0) {
