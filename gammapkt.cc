@@ -718,7 +718,7 @@ void transport_gamma(Packet& pkt, const double t2) {
     move_pkt_withtime(pkt, sdist / 2.);
 
     if (next_cellindex != pkt.cellindex) {
-      grid::change_cell(pkt, next_cellindex);
+      grid::change_cell_or_escape(pkt, next_cellindex);
     }
   } else if ((tdist < sdist) && (tdist < edist)) {
     // Doesn't reach boundary.
@@ -793,7 +793,7 @@ void barnes_thermalisation(Packet& pkt)
   } else {
     // let packet escape, i.e. make it inactive
     pkt.type = TYPE_ESCAPE;
-    grid::change_cell(pkt, -99);
+    grid::change_cell_or_escape(pkt, -99);
   }
 }
 
@@ -821,7 +821,7 @@ void wollaeger_thermalisation(Packet& pkt) {
     // move packet copy now
     move_pkt_withtime(pkt_copy, boundarydist);
 
-    grid::change_cell(pkt_copy, next_cellindex);
+    grid::change_cell_or_escape(pkt_copy, next_cellindex);
     end_packet = (pkt_copy.type == TYPE_ESCAPE);
   }
   const double f_gamma = 1. - std::exp(-tau);
@@ -837,7 +837,7 @@ void wollaeger_thermalisation(Packet& pkt) {
   } else {
     // let packet escape, i.e. make it inactive
     pkt.type = TYPE_ESCAPE;
-    grid::change_cell(pkt, -99);
+    grid::change_cell_or_escape(pkt, -99);
   }
 }
 
@@ -882,7 +882,7 @@ void guttman_thermalisation(Packet& pkt) {
       // move packet copy now
       move_pkt_withtime(pkt_copy, sdist);
 
-      grid::change_cell(pkt_copy, next_cellindex);
+      grid::change_cell_or_escape(pkt_copy, next_cellindex);
       end_packet = (pkt_copy.type == TYPE_ESCAPE);
     }
   }
@@ -910,7 +910,7 @@ void guttman_thermalisation(Packet& pkt) {
   } else {
     // let packet escape, i.e. make it inactive
     pkt.type = TYPE_ESCAPE;
-    grid::change_cell(pkt, -99);
+    grid::change_cell_or_escape(pkt, -99);
   }
 }
 

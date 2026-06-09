@@ -524,7 +524,7 @@ auto do_rpkt_step(Packet& pkt, const double t2) -> bool {
   const auto [boundarydist, next_cellindex] = grid::boundary_distance(pkt.dir, pkt.pos, pkt.prop_time, pkt.cellindex);
 
   if (boundarydist == 0) {
-    grid::change_cell(pkt, next_cellindex);
+    grid::change_cell_or_escape(pkt, next_cellindex);
     const int new_nonemptymgi = grid::get_propcell_nonemptymgi(pkt.cellindex);
 
     return (pkt.type == TYPE_RPKT && (new_nonemptymgi < 0 || new_nonemptymgi == nonemptymgi));
@@ -620,7 +620,7 @@ auto do_rpkt_step(Packet& pkt, const double t2) -> bool {
     move_pkt_withtime(pkt, boundarydist / 2.);
 
     if (next_cellindex != pkt.cellindex) {
-      grid::change_cell(pkt, next_cellindex);
+      grid::change_cell_or_escape(pkt, next_cellindex);
       if (next_cellindex < 0) {
         // we left the grid, so we can stop tracking this packet
         return false;

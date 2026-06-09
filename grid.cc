@@ -2275,7 +2275,7 @@ auto get_totmassnuclide_tmodel(const int z, const int a) -> double { return totm
   return cellindex;
 }
 
-DEVICE_FUNC void change_cell(Packet& pkt, const int next_cellindex) {
+DEVICE_FUNC void change_cell_or_escape(Packet& pkt, const int next_cellindex) {
   if (next_cellindex < 0) {
     // Then the packet is exiting the grid. We need to record
     // where and at what time it leaves the grid.
