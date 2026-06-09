@@ -281,6 +281,8 @@ $(info build directory: $(BUILD_DIR))
 
 all: sn3d exspec
 
+$(BUILD_DIR)/gammapkt.o: CXXFLAGS += -fno-fast-math -fno-unsafe-math-optimizations
+
 $(BUILD_DIR)/%.o: %.cc Makefile
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
