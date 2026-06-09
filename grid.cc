@@ -2550,13 +2550,13 @@ DEVICE_FUNC void change_cell_or_escape(Packet& pkt, const int next_cellindex) {
 
   assert_always((next_cellindex == -99) || ((next_cellindex >= 0) && (next_cellindex < ngrid)));
 
-  const double maxsdist =
+  const double maxboundarydist =
       (prop_gridtype == GridType::CARTESIAN3D)
           ? std::numbers::sqrt3 * globals::rmax * (tstart + (distance / CLIGHT_PROP)) / globals::tmin
           : 2 * globals::rmax * (tstart + (distance / CLIGHT_PROP)) / globals::tmin;
 
   assert_always(distance >= 0.);
-  assert_always(distance <= maxsdist);
+  assert_always(distance <= maxboundarydist);
 
   if (distance > globals::max_path_step) {
     return {globals::max_path_step, cellindex};

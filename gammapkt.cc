@@ -676,10 +676,10 @@ void transport_gamma(Packet& pkt, const double t2) {
   const double tau_next = -std::log(static_cast<double>(rng_uniform_pos()));
 
   // Start by finding the distance to the crossing of the grid cell
-  // boundaries. sdist is the boundary distance and next_cellindex is the
+  // boundaries. boundarydist is the boundary distance and next_cellindex is the
   // grid cell into which we pass.
 
-  const auto [sdist, next_cellindex] = grid::boundary_distance(pkt.dir, pkt.pos, pkt.prop_time, pkt.cellindex);
+  const auto [boundarydist, next_cellindex] = grid::boundary_distance(pkt.dir, pkt.pos, pkt.prop_time, pkt.cellindex);
 
   // Now consider the scattering/destruction processes.
   // Compton scattering - need to determine the scattering co-efficient.
@@ -707,20 +707,20 @@ void transport_gamma(Packet& pkt, const double t2) {
 
   assert_always(tdist >= 0);
 
-  if ((sdist < tdist) && (sdist < edist)) {
-    move_pkt_withtime(pkt, sdist / 2.);
+  if ((boundarydist < tdist) && (boundarydist < edist)) {
+    move_pkt_withtime(pkt, boundarydist / 2.);
 
     // Move it into the new cell.
     if (chi_tot > 0) {
-      update_gamma_dep(pkt, sdist);
+      update_gamma_dep(pkt, boundarydist);
     }
 
-    move_pkt_withtime(pkt, sdist / 2.);
+    move_pkt_withtime(pkt, boundarydist / 2.);
 
     if (next_cellindex != pkt.cellindex) {
       grid::change_cell_or_escape(pkt, next_cellindex);
     }
-  } else if ((tdist < sdist) && (tdist < edist)) {
+  } else if ((tdist < boundarydist) && (tdist < edist)) {
     // Doesn't reach boundary.
     move_pkt_withtime(pkt, tdist / 2.);
 
@@ -729,7 +729,7 @@ void transport_gamma(Packet& pkt, const double t2) {
     }
     move_pkt_withtime(pkt, tdist / 2.);
     pkt.prop_time = t2;  // prevent roundoff error
-  } else if ((edist < sdist) && (edist < tdist)) {
+  } else if ((edist < boundarydist) && (edist < tdist)) {
     move_pkt_withtime(pkt, edist / 2.);
     if (chi_tot > 0) {
       update_gamma_dep(pkt, edist);
@@ -872,15 +872,15 @@ void guttman_thermalisation(Packet& pkt) {
     bool end_packet = false;
     while (!end_packet) {
       // distance to the next cell
-      const auto [sdist, next_cellindex] =
+      const auto [boundarydist, next_cellindex] =
           grid::boundary_distance(pkt_copy.dir, pkt_copy.pos, pkt_copy.prop_time, pkt_copy.cellindex);
-      const double s_cont = sdist * pow3(t / pkt_copy.prop_time);
+      const double s_cont = boundarydist * pow3(t / pkt_copy.prop_time);
       const int mgi = grid::get_propcell_modelgridindex(pkt_copy.cellindex);
       if (mgi >= 0) {
         column_densities[i] += grid::get_rho_tmin(mgi) * s_cont;  // contribution to the integral
       }
       // move packet copy now
-      move_pkt_withtime(pkt_copy, sdist);
+      move_pkt_withtime(pkt_copy, boundarydist);
 
       grid::change_cell_or_escape(pkt_copy, next_cellindex);
       end_packet = (pkt_copy.type == TYPE_ESCAPE);

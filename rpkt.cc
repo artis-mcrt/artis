@@ -520,7 +520,7 @@ auto do_rpkt_step(Packet& pkt, const double t2) -> bool {
   const double tau_rnd = -std::log(static_cast<double>(rng_uniform_pos()));
 
   // Finding the distance to the crossing of the grid cell boundaries.
-  // sdist is the boundary distance to the next grid cell next_cellindex
+  // boundarydist is the boundary distance to the next grid cell next_cellindex
   const auto [boundarydist, next_cellindex] = grid::boundary_distance(pkt.dir, pkt.pos, pkt.prop_time, pkt.cellindex);
 
   if (boundarydist == 0) {
