@@ -2429,9 +2429,9 @@ DEVICE_FUNC void snap_pos_to_cell(Vec3d& pos, const double time, const int celli
 
           printout("packet dir [%g, %g, %g]\n", dir[0], dir[1], dir[2]);
 
-          // in production builds, recover by swapping the packet to the cell that actually
-          // contains its position (or letting it escape at the grid edge)
-          assert_testmodeonly(!isoutside_error);
+          // this should not happen! Leave the check until late 2026 and it if never triggers on any runs, we can remove
+          // the check and correction code
+          assert_always(!isoutside_error);
 
           const auto next_cellindex = get_cellindex_from_pos(pos, tstart);
           if ((cellcoordidx[d] == (ncoordgrid[d] - 1) && pos_component_vel_relative_to_flow) ||
