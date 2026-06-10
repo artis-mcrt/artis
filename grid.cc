@@ -95,7 +95,7 @@ struct ModelGridCellInput {
 };
 MPI_shared_array<ModelGridCellInput> modelgrid_input{};
 
-enum class BoundaryType : std::uint8_t { INNER, OUTER };
+enum class BoundaryType : std::uint8_t { LOWER, UPPER };
 
 // Get number of dimensions
 constexpr auto get_ndim(const GridType gridtype) -> int {
@@ -1276,7 +1276,7 @@ template <BoundaryType boundarytype, size_t S1>
 
   if (discriminant < 0) {
     // no intersection
-    assert_testmodeonly(boundarytype == BoundaryType::INNER);
+    assert_testmodeonly(boundarytype == BoundaryType::LOWER);
     assert_testmodeonly(shellradiuststart < vec_len(pos));
     return -1;
   }
@@ -1301,7 +1301,7 @@ template <BoundaryType boundarytype, size_t S1>
     const double v_rad_final2 = dot(dir, posfinal2) * speed / vec_len(posfinal2);
 
     // invalidate any solutions that require entering the boundary from the wrong radial direction
-    if constexpr (boundarytype == BoundaryType::INNER) {
+    if constexpr (boundarytype == BoundaryType::LOWER) {
       // if the packet's radial velocity at intersection is greater than the inner shell's radial velocity,
       // then it is catching up from below the inner shell and should pass through it
       if (v_rad_final1 > v_rad_shell) {
@@ -1386,15 +1386,17 @@ auto get_element_meanweight(const std::ptrdiff_t nonemptymgi, const int element)
 // immediate (zero distance). If it were silently dropped, the crossing could never be
 // detected again (the packet is outrunning the boundary), and the out-of-cell position error
 // would grow without bound along the rest of the path until the outside-boundary check fails.
-template <bool is_upper_boundary>
+template <BoundaryType boundarytype>
 [[nodiscard]] constexpr auto is_boundary_overshoot_within_tolerance(const double pktposgridcoord,
                                                                     const double pktvelgridcoord,
                                                                     const double boundarypos_tmin, const double tstart)
     -> bool {
   const double boundaryvel = boundarypos_tmin / globals::tmin;
   const double boundarypos = boundaryvel * tstart;
-  const double overshoot = is_upper_boundary ? (pktposgridcoord - boundarypos) : (boundarypos - pktposgridcoord);
-  const bool movingtowards = is_upper_boundary ? (pktvelgridcoord > boundaryvel) : (pktvelgridcoord < boundaryvel);
+  const double overshoot =
+      boundarytype == BoundaryType::UPPER ? (pktposgridcoord - boundarypos) : (boundarypos - pktposgridcoord);
+  const bool movingtowards =
+      boundarytype == BoundaryType::UPPER ? (pktvelgridcoord > boundaryvel) : (pktvelgridcoord < boundaryvel);
   return movingtowards && (overshoot >= 0.) && (overshoot <= cellbound_tolerance(boundarypos));
 }
 
@@ -2456,9 +2458,10 @@ DEVICE_FUNC void snap_pos_to_cell(Vec3d& pos, const double time, const int celli
 
     const double r_outer = cellcoordmax[0] * tstart / globals::tmin;
     const double d_coordmaxboundary =
-        is_boundary_overshoot_within_tolerance<true>(pktposgridcoord[0], pktvelgridcoord[0], cellcoordmax[0], tstart)
+        is_boundary_overshoot_within_tolerance<BoundaryType::UPPER>(pktposgridcoord[0], pktvelgridcoord[0],
+                                                                    cellcoordmax[0], tstart)
             ? 0.
-            : expanding_shell_intersection<BoundaryType::OUTER>(pos, dir, speed, r_outer, tstart);
+            : expanding_shell_intersection<BoundaryType::UPPER>(pos, dir, speed, r_outer, tstart);
 
     // upper d coordinate of the current cell
     if ((d_coordmaxboundary >= 0.) && (d_coordmaxboundary < distance)) {
@@ -2469,9 +2472,10 @@ DEVICE_FUNC void snap_pos_to_cell(Vec3d& pos, const double time, const int celli
     const double r_inner = cellcoordmin[0] * tstart / globals::tmin;
     if (r_inner > 0.) {
       const double d_coordminboundary =
-          is_boundary_overshoot_within_tolerance<false>(pktposgridcoord[0], pktvelgridcoord[0], cellcoordmin[0], tstart)
+          is_boundary_overshoot_within_tolerance<BoundaryType::LOWER>(pktposgridcoord[0], pktvelgridcoord[0],
+                                                                      cellcoordmin[0], tstart)
               ? 0.
-              : expanding_shell_intersection<BoundaryType::INNER>(pos, dir, speed, r_inner, tstart);
+              : expanding_shell_intersection<BoundaryType::LOWER>(pos, dir, speed, r_inner, tstart);
       // lower d coordinate of the current cell
       if ((d_coordminboundary >= 0.) && (d_coordminboundary < distance)) {
         distance = d_coordminboundary;
@@ -2493,9 +2497,10 @@ DEVICE_FUNC void snap_pos_to_cell(Vec3d& pos, const double time, const int celli
 
     const double r_outer = cellcoordmax[0] * tstart / globals::tmin;
     const double d_rcyl_coordmaxboundary =
-        is_boundary_overshoot_within_tolerance<true>(pktposgridcoord[0], pktvelgridcoord[0], cellcoordmax[0], tstart)
+        is_boundary_overshoot_within_tolerance<BoundaryType::UPPER>(pktposgridcoord[0], pktvelgridcoord[0],
+                                                                    cellcoordmax[0], tstart)
             ? 0.
-            : expanding_shell_intersection<BoundaryType::OUTER>(posnoz, dirnoz, xyspeed, r_outer, tstart);
+            : expanding_shell_intersection<BoundaryType::UPPER>(posnoz, dirnoz, xyspeed, r_outer, tstart);
     if (d_rcyl_coordmaxboundary >= 0.) {
       // how far did the packet travel in the z direction during this time?
       const double d_z_coordmaxboundary = d_rcyl_coordmaxboundary / xyspeed * dir[2] * CLIGHT_PROP;
@@ -2512,9 +2517,10 @@ DEVICE_FUNC void snap_pos_to_cell(Vec3d& pos, const double time, const int celli
     if (r_inner > 0) {
       // calculate the distance in the xy plane to the inner boundary
       const double d_rcyl_coordminboundary =
-          is_boundary_overshoot_within_tolerance<false>(pktposgridcoord[0], pktvelgridcoord[0], cellcoordmin[0], tstart)
+          is_boundary_overshoot_within_tolerance<BoundaryType::LOWER>(pktposgridcoord[0], pktvelgridcoord[0],
+                                                                      cellcoordmin[0], tstart)
               ? 0.
-              : expanding_shell_intersection<BoundaryType::INNER>(posnoz, dirnoz, xyspeed, r_inner, tstart);
+              : expanding_shell_intersection<BoundaryType::LOWER>(posnoz, dirnoz, xyspeed, r_inner, tstart);
       if (d_rcyl_coordminboundary >= 0.) {
         const double d_z_coordminboundary = d_rcyl_coordminboundary / xyspeed * dir[2] * CLIGHT_PROP;
         // distance from two perpendicular components to the r_cyl lower boundary
@@ -2530,9 +2536,10 @@ DEVICE_FUNC void snap_pos_to_cell(Vec3d& pos, const double time, const int celli
     constexpr int d = 1;
     if (pktvelgridcoord[d] > (cellcoordmax[d] / globals::tmin)) {
       const double d_coordmaxboundary_z =
-          is_boundary_overshoot_within_tolerance<true>(pktposgridcoord[d], pktvelgridcoord[d], cellcoordmax[d], tstart)
+          is_boundary_overshoot_within_tolerance<BoundaryType::UPPER>(pktposgridcoord[d], pktvelgridcoord[d],
+                                                                      cellcoordmax[d], tstart)
               ? 0.
-              : distance_cartesian_boundary(pktposgridcoord[1], cellcoordmax[d], tstart, pktvelgridcoord[1]);
+              : distance_cartesian_boundary(pktposgridcoord[1], cellcoordmax[d], tstart, pktvelgridcoord[d]);
 
       if ((d_coordmaxboundary_z >= 0.) && (d_coordmaxboundary_z < distance)) {
         distance = d_coordmaxboundary_z;
@@ -2540,9 +2547,10 @@ DEVICE_FUNC void snap_pos_to_cell(Vec3d& pos, const double time, const int celli
       }
     } else if (pktvelgridcoord[d] < (cellcoordmin[d] / globals::tmin)) {
       const double d_coordminboundary_z =
-          is_boundary_overshoot_within_tolerance<false>(pktposgridcoord[d], pktvelgridcoord[d], cellcoordmin[d], tstart)
+          is_boundary_overshoot_within_tolerance<BoundaryType::LOWER>(pktposgridcoord[d], pktvelgridcoord[d],
+                                                                      cellcoordmin[d], tstart)
               ? 0.
-              : distance_cartesian_boundary(pktposgridcoord[d], cellcoordmin[d], tstart, pktvelgridcoord[1]);
+              : distance_cartesian_boundary(pktposgridcoord[d], cellcoordmin[d], tstart, pktvelgridcoord[d]);
 
       if ((d_coordminboundary_z >= 0.) && (d_coordminboundary_z < distance)) {
         distance = d_coordminboundary_z;
@@ -2567,8 +2575,8 @@ DEVICE_FUNC void snap_pos_to_cell(Vec3d& pos, const double time, const int celli
     for (int d = 0; d < 3; d++) {
       if (pktvelgridcoord[d] > (cellcoordmax[d] / globals::tmin)) {
         const double d_coordmaxboundary =
-            is_boundary_overshoot_within_tolerance<true>(pktposgridcoord[d], pktvelgridcoord[d], cellcoordmax[d],
-                                                         tstart)
+            is_boundary_overshoot_within_tolerance<BoundaryType::UPPER>(pktposgridcoord[d], pktvelgridcoord[d],
+                                                                        cellcoordmax[d], tstart)
                 ? 0.
                 : distance_cartesian_boundary(pktposgridcoord[d], cellcoordmax[d], tstart, pktvelgridcoord[d]);
 
@@ -2578,8 +2586,8 @@ DEVICE_FUNC void snap_pos_to_cell(Vec3d& pos, const double time, const int celli
         }
       } else if (pktvelgridcoord[d] < (cellcoordmin[d] / globals::tmin)) {
         const double d_coordminboundary =
-            is_boundary_overshoot_within_tolerance<false>(pktposgridcoord[d], pktvelgridcoord[d], cellcoordmin[d],
-                                                          tstart)
+            is_boundary_overshoot_within_tolerance<BoundaryType::LOWER>(pktposgridcoord[d], pktvelgridcoord[d],
+                                                                        cellcoordmin[d], tstart)
                 ? 0.
                 : distance_cartesian_boundary(pktposgridcoord[d], cellcoordmin[d], tstart, pktvelgridcoord[d]);
 
