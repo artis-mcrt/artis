@@ -23,6 +23,7 @@
 #include <sstream>
 #include <string>
 #include <tuple>
+#include <utility>
 #include <vector>
 
 #include "artisoptions.h"
@@ -1750,21 +1751,12 @@ void set_elements_uppermost_ion(const int nonemptymgi, const int element, const 
       const auto Ye = modelgrid_input[mgi].initelectronfrac;
       assert_always(Ye > 0.);
 
-      if (Ye <= 0.1) {
-        kappa = 19.5;
-      } else if (Ye <= 0.15) {
-        kappa = 32.2;
-      } else if (Ye <= 0.20) {
-        kappa = 22.3;
-      } else if (Ye <= 0.25) {
-        kappa = 5.6;
-      } else if (Ye <= 0.30) {
-        kappa = 5.36;
-      } else if (Ye <= 0.35) {
-        kappa = 3.3;
-      } else {
-        kappa = 0.96;
-      }
+      // pairs of (upper Ye limit, kappa [cm^2/g])
+      constexpr auto kappa_table = std::to_array<std::pair<double, double>>(
+          {{0.1, 19.5}, {0.15, 32.2}, {0.20, 22.3}, {0.25, 5.6}, {0.30, 5.36}, {0.35, 3.3}});
+      const auto* const entry =
+          std::ranges::find_if(kappa_table, [Ye](const auto& ye_kappa) { return Ye <= ye_kappa.first; });
+      kappa = (entry != kappa_table.end()) ? entry->second : 0.96;
       break;
     }
 
