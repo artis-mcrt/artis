@@ -479,15 +479,13 @@ void init() {
   resize_exactly(J_normfactor, nonempty_npts_model + 1);
   resize_exactly(J, nonempty_npts_model + 1);
 
-#ifdef DO_TITER
-  resize_exactly(J_reduced_save, nonempty_npts_model + 1);
-#endif
-
   // J and nuJ are accumulated and then normalised in-place
   // i.e. be sure the normalisation has been applied (exactly once) before using the values here!
   resize_exactly(nuJ, nonempty_npts_model + 1);
+
 #ifdef DO_TITER
-  resize_exactly(nuJ, nonempty_npts_model + 1);
+  resize_exactly(J_reduced_save, nonempty_npts_model + 1);
+  resize_exactly(nuJ_reduced_save, nonempty_npts_model + 1);
 #endif
 
   resize_exactly(prev_Jb_lu_normed, nonempty_npts_model);
