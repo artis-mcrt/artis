@@ -212,10 +212,8 @@ auto get_possible_event_expansion_opacity(const int nonemptymgi, const Packet& p
   assert_always(globals::cellcache[cellcacheslotid].nonemptymgi == nonemptymgi);
   double dist = 0.;
   double tau = 0.;
-  auto binindex_start = static_cast<ptrdiff_t>(((1e8 * CLIGHT / nu_cmf) - expopac_lambdamin) / expopac_deltalambda);
-  if (binindex_start < 0) {
-    binindex_start = -1;
-  }
+  const auto binindex_start =
+      std::max(static_cast<ptrdiff_t>(((1e8 * CLIGHT / nu_cmf) - expopac_lambdamin) / expopac_deltalambda), -1Z);
 
   for (auto binindex = binindex_start; binindex < expopac_nbins; binindex++) {
     // binindex could be -1, in which case we have only the continuum opacity and no expansion opacity

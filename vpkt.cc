@@ -304,11 +304,8 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
         return true;
       };
       if constexpr (VPKT_USE_EXPANSION_OPACITIES) {
-        auto binindex_start =
-            static_cast<ptrdiff_t>(((1e8 * CLIGHT / nu_cmf) - expopac_lambdamin) / expopac_deltalambda);
-        if (binindex_start < 0) {
-          binindex_start = -1;
-        }
+        const auto binindex_start =
+            std::max(static_cast<ptrdiff_t>(((1e8 * CLIGHT / nu_cmf) - expopac_lambdamin) / expopac_deltalambda), -1Z);
 
         if (binindex_start < expopac_nbins) {
           // trace line-by-line from nu_cmf to the next bin edge, because the expansion opacity bin at nu_cmf includes
