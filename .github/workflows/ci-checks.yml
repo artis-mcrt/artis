@@ -47,6 +47,8 @@ jobs:
 
             - name: Run pre-commit hooks
               uses: j178/prek-action@v2
+              with:
+                extra-args: '--all-files --skip make'
 
             - name: Run clang-tidy
               run: |
