@@ -20,6 +20,7 @@
 #include "globals.h"
 #include "grid.h"
 #include "input.h"
+#include "integrator.h"
 #include "ltepop.h"
 #include "macroatom.h"
 #include "mpi_logging.h"
