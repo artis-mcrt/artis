@@ -189,41 +189,11 @@ jobs:
                   make clean
                   make -j$(nproc) sn3d exspec
 
-            - name: Apple Clang Compile classic mode OPENMP=ON
-              run: |
-                  make clean
-                  make OPENMP=ON -j$(nproc) sn3d exspec
-
-            - name: Apple Clang Compile classic mode STDPAR=ON
-              run: |
-                  cp -v -p artisoptions_nltenebular.h artisoptions.h
-                  make clean
-                  make STDPAR=ON -j$(nproc) sn3d exspec
-
             - name: Apple Clang Compile nebular mode
               run: |
                   cp -v -p artisoptions_nltenebular.h artisoptions.h
                   make clean
                   make -j$(nproc) sn3d exspec
-
-            - name: Apple Clang Compile nebular mode OPENMP=ON
-              run: |
-                  cp -v -p artisoptions_nltenebular.h artisoptions.h
-                  make clean
-                  make OPENMP=ON -j$(nproc) sn3d exspec
-
-            - name: Apple Clang Compile nebular mode STDPAR=ON
-              run: |
-                  cp -v -p artisoptions_nltenebular.h artisoptions.h
-                  make clean
-                  make STDPAR=ON -j$(nproc) sn3d exspec
-
-            - name: Apple Clang Compile all remaining option files
-              run: |
-                  for file in $(find . -name "artisoptions_*.h" ! -name "artisoptions_classic.h" ! -name "artisoptions_nltenebular.h"); do
-                      cp -v -p "$file" artisoptions.h
-                      make sn3d
-                  done
 
             - name: Install LLVM
               run: |
