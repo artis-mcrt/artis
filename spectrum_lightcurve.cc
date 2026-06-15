@@ -392,21 +392,26 @@ void write_spectra(const std::string& spec_filename, const std::string& emission
     printout_tracemission_stats();
   }
 
-  // do each file write on a different node, if available
-  if ((1 % globals::node_count == globals::node_id) && (1 % globals::node_nprocs == globals::rank_in_node)) {
+  // only one rank should write each file. Try to choose different ranks on different nodes, if available
+  const auto this_rank_writes_file = [](const int filenum) {
+    return (filenum % globals::node_count == globals::node_id) &&
+           (filenum % globals::node_nprocs == globals::rank_in_node);
+  };
+
+  if (this_rank_writes_file(1)) {
     write_spectrum_file(spec_filename, spectra, numtimesteps);
   }
 
   if (spectra.do_emission_absorption) {
-    if ((2 % globals::node_count == globals::node_id) && (2 % globals::node_nprocs == globals::rank_in_node)) {
+    if (this_rank_writes_file(2)) {
       write_emission_spectrum_file(emission_filename, spectra, numtimesteps);
     }
 
-    if ((3 % globals::node_count == globals::node_id) && (3 % globals::node_nprocs == globals::rank_in_node)) {
+    if (this_rank_writes_file(3)) {
       write_trueemission_spectrum_file(trueemission_filename, spectra, numtimesteps);
     }
 
-    if ((4 % globals::node_count == globals::node_id) && (4 % globals::node_nprocs == globals::rank_in_node)) {
+    if (this_rank_writes_file(4)) {
       write_absorption_spectrum_file(absorption_filename, spectra, numtimesteps);
     }
   }

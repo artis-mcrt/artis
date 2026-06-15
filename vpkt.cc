@@ -141,10 +141,9 @@ void add_to_vpkt_grid(const double nu_rf, const double e_rf, const double prob, 
   } else {
     // Rotate velocity into projected area seen by the observer (see notes)
     // Rotate velocity from (x,y,z) to (obsdir,vref1,vref2) so that x corresponds to obsdir
-    vref1 = (-obsdir[1] * vel[0]) + ((obsdir[0] + (pow2(obsdir[2]) / (1 + obsdir[0]))) * vel[1]) -
-            (obsdir[1] * obsdir[2] * (1 - obsdir[0]) / sqrt(1 - pow2(obsdir[0])) * vel[2]);
-    vref2 = (-obsdir[2] * vel[0]) - (obsdir[1] * obsdir[2] * (1 - obsdir[0]) / sqrt(1 - pow2(obsdir[0])) * vel[1]) +
-            ((obsdir[0] + (pow2(obsdir[1]) / (1 + obsdir[0]))) * vel[2]);
+    const double crossterm = obsdir[1] * obsdir[2] / (1 + obsdir[0]);
+    vref1 = (-obsdir[1] * vel[0]) + ((obsdir[0] + (pow2(obsdir[2]) / (1 + obsdir[0]))) * vel[1]) - (crossterm * vel[2]);
+    vref2 = (-obsdir[2] * vel[0]) - (crossterm * vel[1]) + ((obsdir[0] + (pow2(obsdir[1]) / (1 + obsdir[0]))) * vel[2]);
   }
 
   // Outside the grid
@@ -216,7 +215,7 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
 
   while (!end_packet) {
     // distance to the next cell
-    const auto [boundarydist, snext] = grid::boundary_distance(obsdir, vpktpos, t_future, cellindex);
+    const auto [boundarydist, next_cellindex] = grid::boundary_distance(obsdir, vpktpos, t_future, cellindex);
     if (mgi < 0) {
       next_trans = -1;
     } else {
@@ -304,11 +303,8 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
         return true;
       };
       if constexpr (VPKT_USE_EXPANSION_OPACITIES) {
-        auto binindex_start =
-            static_cast<ptrdiff_t>(((1e8 * CLIGHT / nu_cmf) - expopac_lambdamin) / expopac_deltalambda);
-        if (binindex_start < 0) {
-          binindex_start = -1;
-        }
+        const auto binindex_start =
+            std::max(static_cast<ptrdiff_t>(((1e8 * CLIGHT / nu_cmf) - expopac_lambdamin) / expopac_deltalambda), -1Z);
 
         if (binindex_start < expopac_nbins) {
           // trace line-by-line from nu_cmf to the next bin edge, because the expansion opacity bin at nu_cmf includes
@@ -368,9 +364,14 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
 
     move_pkt_withtime(vpktpos, obsdir, t_future, nu_rf, nu_cmf, e_rf, e_cmf, boundarydist);
 
-    if (snext >= 0) {
-      // Just need to update cellindex.
-      cellindex = snext;
+    if (next_cellindex >= 0) {
+      if (next_cellindex != cellindex) {
+        // snap the position onto the crossed cell boundary so that rounding errors cannot
+        // accumulate over many crossings (same-cell returns from boundary_distance() due to
+        // max_path_step leave the packet mid-cell and must not be snapped)
+        grid::snap_pos_to_cell(vpktpos, t_future, next_cellindex);
+      }
+      cellindex = next_cellindex;
       mgi = grid::get_propcell_modelgridindex(cellindex);
       if (mgi >= 0) {
         const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(mgi);

@@ -914,7 +914,7 @@ constexpr auto xs_impactionisation(const double energy_ev, const ShellParams& co
     const int ion = colliondata_ion.ionstage - get_ionstage(element, 0);
     const int shellindex = -colliondata_ion.l;
     const int electronsinshell = allions_shell_occupancies[get_uniqueionindex(element, ion)][shellindex];
-    return xs_ionisation_lotz(energy_ev / EV, colliondata_ion, electronsinshell);
+    return xs_ionisation_lotz(energy_ev * EV, colliondata_ion, electronsinshell);
   }
 
   const double B = colliondata_ion.B;

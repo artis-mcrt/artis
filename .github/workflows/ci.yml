@@ -215,14 +215,13 @@ jobs:
                   name: ${{ matrix.testname }}_inputfiles
                   path: tests/${{ matrix.testname }}_inputfiles/results_md5*
 
-            - name: Set up Python
-              if: always() && inputs.testmode != 'ON'
-              uses: actions/setup-python@v6
+            - name: Setup uv
+              uses: astral-sh/setup-uv@v8.2.0
+              id: setup-uv
 
             - name: Install artistools
               if: always() && inputs.testmode != 'ON'
               run: |
-                  python3 -m pip install --upgrade uv
                   uv tool install artistools@latest
 
             - name: Plot light curve
@@ -274,7 +273,7 @@ jobs:
     combine_checksums:
         needs: testmodels
         if: always() && inputs.testmode != 'ON'
-        runs-on: ubuntu-24.04
+        runs-on: ubuntu-26.04
         steps:
             - name: Download test output
               uses: actions/download-artifact@v8

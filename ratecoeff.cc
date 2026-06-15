@@ -20,6 +20,7 @@
 #include "globals.h"
 #include "grid.h"
 #include "input.h"
+#include "integrator.h"
 #include "ltepop.h"
 #include "macroatom.h"
 #include "mpi_logging.h"
@@ -167,10 +168,6 @@ void precalculate_rate_coefficient_integrals() {
                   nu_threshold, nu_max_phixs, RATECOEFF_INTEGRAL_ACCURACY, &error);
               gammacorr *= FOURPI * phixstargetprobability;
               assert_always(gammacorr >= 0);
-              if (gammacorr < 0) {
-                printlnlog("WARNING: gammacorr was negative for level {}", level);
-                gammacorr = 0;
-              }
               corrphotoioncoeffs[bflutindex] = gammacorr;
             }
             const auto this_bfcooling_coeff =
@@ -522,7 +519,7 @@ DEVICE_FUNC auto select_continuum_nu(int element, const int lowerion, const int 
   double alpha_sp = total_alpha_sp;
 
   int i = 1;
-  for (i = 1; i < npieces; i++) {
+  for (; i < npieces; i++) {
     alpha_sp_old = alpha_sp;
     const double xlow = nu_threshold + (i * deltanu);
 

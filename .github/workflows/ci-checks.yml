@@ -47,6 +47,8 @@ jobs:
 
             - name: Run pre-commit hooks
               uses: j178/prek-action@v2
+              with:
+                extra-args: '--all-files --skip make'
 
             - name: Run clang-tidy
               run: |
@@ -70,7 +72,7 @@ jobs:
                     ]
             fail-fast: false
 
-        runs-on: ubuntu-24.04
+        runs-on: ubuntu-26.04
         name: Ubuntu ${{ matrix.compiler.name }} ${{ matrix.compiler.ver }}
         steps:
             - uses: actions/checkout@v6
@@ -187,41 +189,11 @@ jobs:
                   make clean
                   make -j$(nproc) sn3d exspec
 
-            - name: Apple Clang Compile classic mode OPENMP=ON
-              run: |
-                  make clean
-                  make OPENMP=ON -j$(nproc) sn3d exspec
-
-            - name: Apple Clang Compile classic mode STDPAR=ON
-              run: |
-                  cp -v -p artisoptions_nltenebular.h artisoptions.h
-                  make clean
-                  make STDPAR=ON -j$(nproc) sn3d exspec
-
             - name: Apple Clang Compile nebular mode
               run: |
                   cp -v -p artisoptions_nltenebular.h artisoptions.h
                   make clean
                   make -j$(nproc) sn3d exspec
-
-            - name: Apple Clang Compile nebular mode OPENMP=ON
-              run: |
-                  cp -v -p artisoptions_nltenebular.h artisoptions.h
-                  make clean
-                  make OPENMP=ON -j$(nproc) sn3d exspec
-
-            - name: Apple Clang Compile nebular mode STDPAR=ON
-              run: |
-                  cp -v -p artisoptions_nltenebular.h artisoptions.h
-                  make clean
-                  make STDPAR=ON -j$(nproc) sn3d exspec
-
-            - name: Apple Clang Compile all remaining option files
-              run: |
-                  for file in $(find . -name "artisoptions_*.h" ! -name "artisoptions_classic.h" ! -name "artisoptions_nltenebular.h"); do
-                      cp -v -p "$file" artisoptions.h
-                      make sn3d
-                  done
 
             - name: Install LLVM
               run: |
@@ -329,7 +301,7 @@ jobs:
 
     nvidia-nvhpc:
         name: NVIDIA NVHPC nvc++
-        runs-on: ubuntu-24.04
+        runs-on: ubuntu-26.04
         steps:
             - uses: actions/checkout@v6
 

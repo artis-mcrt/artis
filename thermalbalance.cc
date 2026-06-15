@@ -17,6 +17,7 @@
 #include "constants.h"
 #include "globals.h"
 #include "grid.h"
+#include "integrator.h"
 #include "kpkt.h"
 #include "ltepop.h"
 #include "macroatom.h"

@@ -944,20 +944,20 @@ void read_autoion_data() {
 
       const int upperion = upperionstage - get_ionstage(element, 0);
       const int lowerion = lowerionstage - get_ionstage(element, 0);
-      const int lowerlevel = lowerlevel_in - groundstate_index_in;
-      const int upperlevel = upperlevel_in - groundstate_index_in;
-
-      assert_always(upperion >= 0 && upperion < get_nions(element));
-      assert_always(lowerion >= 0 && lowerion < get_nions(element));
-      assert_always(lowerlevel >= 0 && lowerlevel < get_nlevels(element, lowerion));
-      assert_always(upperlevel >= 0 && upperlevel < get_nlevels(element, upperion));
-      assert_always(upperion > lowerion);
-      const bool level_is_nlte = is_nlte(element, lowerion, lowerlevel - 1);
-      allautoion_levels_are_not_nlte = allautoion_levels_are_not_nlte && !level_is_nlte;
-      allautoion_levels_are_nlte = allautoion_levels_are_nlte && level_is_nlte;
-
       // store only for ions that are part of the current model atom
       if (lowerion >= 0 && upperion < get_nions(element)) {
+        const int lowerlevel = lowerlevel_in - groundstate_index_in;
+        const int upperlevel = upperlevel_in - groundstate_index_in;
+
+        assert_always(upperion >= 0 && upperion < get_nions(element));
+        assert_always(lowerion >= 0 && lowerion < get_nions(element));
+        assert_always(lowerlevel >= 0 && lowerlevel < get_nlevels(element, lowerion));
+        assert_always(upperlevel >= 0 && upperlevel < get_nlevels(element, upperion));
+        assert_always(upperion > lowerion);
+        const bool level_is_nlte = is_nlte(element, lowerion, lowerlevel);
+        allautoion_levels_are_not_nlte = allautoion_levels_are_not_nlte && !level_is_nlte;
+        allautoion_levels_are_nlte = allautoion_levels_are_nlte && level_is_nlte;
+
         printlnlog("Got to noting data for Z {} upperion {} upperlvl {} lowerion {} lowerlvl {} with A {:g}", Z,
                    upperion, upperlevel, lowerion, lowerlevel, autoion_A);
 
