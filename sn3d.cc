@@ -14,11 +14,10 @@
 #include <fstream>
 #include <ios>
 #include <limits>
-
+#include <print>
 #ifdef STDPAR_ON
 #include <ranges>
 #endif
-#include <print>
 #include <span>
 #include <vector>
 
@@ -48,8 +47,6 @@
 #include "update_packets.h"
 #include "version.h"
 #include "vpkt.h"
-
-std::fstream output_file;
 
 namespace {
 
@@ -761,8 +758,7 @@ auto main(int argc, char* argv[]) -> int {
 #endif
   {
     // initialise the thread and rank specific output file
-    output_file = fstream_required(std::format("output_{}-{}.txt", globals::my_rank, get_thread_num()),
-                                   std::ios::out | std::ios::trunc);
+    set_log_file(std::format("output_{}-{}.txt", globals::my_rank, get_thread_num()));
 
 #ifdef _OPENMP
     printlnlog("OpenMP parallelisation is active with {} threads (max {})", omp_get_num_threads(), get_max_threads());

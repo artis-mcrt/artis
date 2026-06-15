@@ -5,7 +5,6 @@
 #include <array>
 #include <atomic>
 #include <cassert>
-#include <chrono>
 #include <cstdarg>
 #include <cstddef>
 #include <cstdint>
@@ -14,13 +13,13 @@
 #include <cstring>
 #include <format>
 #include <fstream>
-#include <iostream>
+#include <ios>
 #include <limits>
 #include <memory>
-#include <print>
 #include <ranges>
 #include <span>
 #include <string>
+#include <string_view>
 #include <tuple>
 #include <type_traits>
 #include <utility>
@@ -97,14 +96,17 @@ inline void MPI_Barrier_node() { MPI_Barrier(globals::mpi_comm_node); }
 
 extern std::fstream output_file;
 
-inline std::array<char, 1024> outputlinebuf{};
-inline bool outputstartofline = true;
-
 #ifdef _OPENMP
 #ifndef GPU_ON
-#pragma omp threadprivate(output_file, outputlinebuf, outputstartofline)
+#pragma omp threadprivate(output_file)
 #endif
 #endif
+
+void set_log_file(std::string_view filename) noexcept;
+
+// Report a failed assertion to output_file (if open) and stderr. Defined out-of-line in mpi_logging.cc so that the
+// heavyweight <iostream> dependency does not propagate into every translation unit that includes this header.
+[[gnu::cold]] void report_assert_failure(const char* file, int line, const char* expr, const char* func) noexcept;
 
 #ifdef __NVCOMPILER_CUDA_ARCH__
 #include <string_view>
@@ -130,56 +132,33 @@ inline auto printlnlog(std::string_view fmt, Args&&... args) -> void {
   }
 
 #else
-inline void print_line_start() noexcept {
-  if (outputstartofline) {
-    std::print(output_file, "{:%FT%TZ} ", std::chrono::floor<std::chrono::seconds>(std::chrono::system_clock::now()));
-  }
-}
+// The actual writes to output_file (and the timestamp prefix) are defined out-of-line in mpi_logging.cc. This keeps
+// the heavyweight <print>, <chrono> and std::print(std::ostream&) machinery out of every translation unit that
+// includes this header; the inline templates below only need <format> to build the message string.
 
-__attribute__((__format__(__printf__, 1, 2))) inline auto printout(const char* format, ...) noexcept -> void {
-  print_line_start();
-  va_list args{};
-  va_start(args, format);
-  vsnprintf(outputlinebuf.data(), outputlinebuf.size(), format, args);
-  va_end(args);
+// Write an already-formatted message to output_file, prepending a timestamp at the start of each line. When
+// add_newline is set, a trailing newline is appended and the next write starts a new line.
+void log_write(std::string_view message, bool add_newline) noexcept;
 
-  const auto linebuflen = strlen(outputlinebuf.data());
-  outputstartofline = (linebuflen == 0 || (outputlinebuf[linebuflen - 1] == '\n'));
-  std::print(output_file, "{}", outputlinebuf.data());
-  output_file.flush();
-}
+__attribute__((__format__(__printf__, 1, 2))) void printout(const char* format, ...) noexcept;
 
 template <typename... Args>
 inline auto printlog(const std::format_string<Args...> fmt, Args&&... args) noexcept -> void {
-  print_line_start();
-  THREADLOCALONHOST std::string outputlinestr;
-  outputlinestr = std::format(fmt, std::forward<Args>(args)...);
-  outputstartofline = (outputlinestr.back() == '\n');
-  std::print(output_file, "{}", outputlinestr);
-  output_file.flush();
+  log_write(std::format(fmt, std::forward<Args>(args)...), false);
 }
 
 template <typename... Args>
 inline auto printlnlog(const std::format_string<Args...> fmt, Args&&... args) noexcept -> void {
-  print_line_start();
-  outputstartofline = true;
-  std::println(output_file, fmt, std::forward<Args>(args)...);
-  output_file.flush();
+  log_write(std::format(fmt, std::forward<Args>(args)...), true);
 }
 
-#define __artis_assert(e)                                                                                            \
-  {                                                                                                                  \
-    const bool assertpass = static_cast<bool>(e);                                                                    \
-    if (!assertpass) [[unlikely]] {                                                                                  \
-      if (output_file) {                                                                                             \
-        std::println(output_file, "\n[rank {}] {}:{}: failed assertion `{}` in function {}", globals::my_rank,       \
-                     __FILE__, __LINE__, #e, __PRETTY_FUNCTION__);                                                   \
-        output_file.flush();                                                                                         \
-      }                                                                                                              \
-      std::println(std::cerr, "\n[rank {}] {}:{}: failed assertion `{}` in function {}", globals::my_rank, __FILE__, \
-                   __LINE__, #e, __PRETTY_FUNCTION__);                                                               \
-    }                                                                                                                \
-    assert(assertpass);                                                                                              \
+#define __artis_assert(e)                                                 \
+  {                                                                       \
+    const bool assertpass = static_cast<bool>(e);                         \
+    if (!assertpass) [[unlikely]] {                                       \
+      report_assert_failure(__FILE__, __LINE__, #e, __PRETTY_FUNCTION__); \
+    }                                                                     \
+    assert(assertpass);                                                   \
   }
 
 #endif
@@ -544,7 +523,7 @@ inline void MPI_Reduce_safe(R&& data, MPI_Op op, const int root, MPI_Comm comm) 
                                                [](FILE* fp) -> int { return std::fclose(fp); });
 }
 
-[[nodiscard]] inline auto fstream_required(const std::string& filename, std::ios::openmode mode) -> std::fstream {
+[[nodiscard]] inline auto fstream_required(const std::string_view filename, std::ios::openmode mode) -> std::fstream {
   if (filename.empty()) {
     printlnlog("ERROR: Cannot open file with empty filename.");
     std::abort();
@@ -561,7 +540,7 @@ inline void MPI_Reduce_safe(R&& data, MPI_Op op, const int root, MPI_Comm comm) 
     }
   } else {
     // don't prepend data folders when writing
-    auto file = std::fstream(filename, mode);
+    auto file = std::fstream(std::string(filename), mode);
     if (file.is_open()) {
       return file;
     }
