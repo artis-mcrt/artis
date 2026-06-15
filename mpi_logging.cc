@@ -14,11 +14,10 @@ namespace {
 
 std::array<char, 1024> outputlinebuf{};
 bool outputstartofline = true;
-std::fstream output_file;
 
 #ifdef _OPENMP
 #ifndef GPU_ON
-#pragma omp threadprivate(output_file, outputlinebuf, outputstartofline)
+#pragma omp threadprivate(outputlinebuf, outputstartofline)
 #endif
 #endif
 
@@ -29,6 +28,8 @@ void print_line_start() noexcept {
   }
 }
 }  // anonymous namespace
+
+std::fstream output_file;
 
 void set_log_file(const std::string_view filename) noexcept {
   output_file = fstream_required(filename, std::ios::out | std::ios::trunc);

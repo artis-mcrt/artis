@@ -94,6 +94,14 @@ inline void MPI_Barrier_node() { MPI_Barrier(globals::mpi_comm_node); }
 
 #include "constants.h"
 
+extern std::fstream output_file;
+
+#ifdef _OPENMP
+#ifndef GPU_ON
+#pragma omp threadprivate(output_file)
+#endif
+#endif
+
 void set_log_file(std::string_view filename) noexcept;
 
 // Report a failed assertion to output_file (if open) and stderr. Defined out-of-line in mpi_logging.cc so that the
