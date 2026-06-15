@@ -1,5 +1,6 @@
 #include "mpi_logging.h"
 
+#include <array>
 #include <chrono>
 #include <cstdarg>
 #include <cstdio>
@@ -13,6 +14,16 @@
 // mpi_logging.h. The behaviour matches the previous inline implementations exactly.
 
 namespace {
+
+inline std::array<char, 1024> outputlinebuf{};
+inline bool outputstartofline = true;
+
+#ifdef _OPENMP
+#ifndef GPU_ON
+#pragma omp threadprivate(output_file, outputlinebuf, outputstartofline)
+#endif
+#endif
+
 // Prepend an ISO-8601 timestamp when starting a new output line.
 void print_line_start() noexcept {
   if (outputstartofline) {
@@ -33,6 +44,7 @@ void log_write(const std::string_view message, const bool add_newline) noexcept 
   output_file.flush();
 }
 
+#ifndef __NVCOMPILER_CUDA_ARCH__
 void printout(const char* format, ...) noexcept {
   print_line_start();
   va_list args{};
@@ -55,3 +67,4 @@ void report_assert_failure(const char* file, const int line, const char* expr, c
   std::println(std::cerr, "\n[rank {}] {}:{}: failed assertion `{}` in function {}", globals::my_rank, file, line, expr,
                func);
 }
+#endif

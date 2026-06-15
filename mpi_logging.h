@@ -96,18 +96,15 @@ inline void MPI_Barrier_node() { MPI_Barrier(globals::mpi_comm_node); }
 
 extern std::fstream output_file;
 
+#ifdef _OPENMP
+#ifndef GPU_ON
+#pragma omp threadprivate(output_file)
+#endif
+#endif
+
 // Report a failed assertion to output_file (if open) and stderr. Defined out-of-line in mpi_logging.cc so that the
 // heavyweight <iostream> dependency does not propagate into every translation unit that includes this header.
 [[gnu::cold]] void report_assert_failure(const char* file, int line, const char* expr, const char* func) noexcept;
-
-inline std::array<char, 1024> outputlinebuf{};
-inline bool outputstartofline = true;
-
-#ifdef _OPENMP
-#ifndef GPU_ON
-#pragma omp threadprivate(output_file, outputlinebuf, outputstartofline)
-#endif
-#endif
 
 #ifdef __NVCOMPILER_CUDA_ARCH__
 #include <string_view>
