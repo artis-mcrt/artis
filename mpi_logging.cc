@@ -11,8 +11,8 @@
 
 namespace {
 
-std::array<char, 1024> outputlinebuf{};
-bool outputstartofline = true;
+thread_local std::array<char, 1024> outputlinebuf{};
+thread_local bool outputstartofline = true;
 
 #ifdef _OPENMP
 #ifndef GPU_ON
