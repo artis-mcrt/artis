@@ -14,11 +14,10 @@
 #include <fstream>
 #include <ios>
 #include <limits>
-
+#include <print>
 #ifdef STDPAR_ON
 #include <ranges>
 #endif
-#include <print>
 #include <span>
 #include <vector>
 
