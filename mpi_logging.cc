@@ -11,8 +11,8 @@
 
 namespace {
 
-inline std::array<char, 1024> outputlinebuf{};
-inline bool outputstartofline = true;
+std::array<char, 1024> outputlinebuf{};
+bool outputstartofline = true;
 
 #ifdef _OPENMP
 #ifndef GPU_ON
