@@ -9,10 +9,6 @@
 #include <print>
 #include <string_view>
 
-// These definitions are deliberately kept out-of-line so that the heavyweight <chrono>, <print>, <iostream> and the
-// std::print(std::ostream&) machinery are parsed in this single translation unit instead of every file that includes
-// mpi_logging.h. The behaviour matches the previous inline implementations exactly.
-
 namespace {
 
 inline std::array<char, 1024> outputlinebuf{};
@@ -20,7 +16,7 @@ inline bool outputstartofline = true;
 
 #ifdef _OPENMP
 #ifndef GPU_ON
-#pragma omp threadprivate(output_file, outputlinebuf, outputstartofline)
+#pragma omp threadprivate(outputlinebuf, outputstartofline)
 #endif
 #endif
 
@@ -30,7 +26,7 @@ void print_line_start() noexcept {
     std::print(output_file, "{:%FT%TZ} ", std::chrono::floor<std::chrono::seconds>(std::chrono::system_clock::now()));
   }
 }
-}  // namespace
+}  // anonymous namespace
 
 void log_write(const std::string_view message, const bool add_newline) noexcept {
   print_line_start();
