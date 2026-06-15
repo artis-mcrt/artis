@@ -8,8 +8,6 @@
 #include <cstdlib>
 #include <filesystem>
 #include <format>
-#include <fstream>
-#include <ios>
 #include <span>
 #include <vector>
 
@@ -27,8 +25,6 @@
 #include "sn3d.h"
 #include "spectrum_lightcurve.h"
 #include "version.h"
-
-std::fstream output_file;
 
 namespace {
 
@@ -146,7 +142,7 @@ auto main(int argc, char* argv[]) -> int {
   check_already_running();
 
   if (globals::my_rank == 0) {
-    output_file = fstream_required("exspec.txt", std::ios::out | std::ios::trunc);
+    set_log_file("exspec.txt");
   }
 
   printlnlog("git branch {}", GIT_BRANCH);

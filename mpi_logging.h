@@ -94,13 +94,7 @@ inline void MPI_Barrier_node() { MPI_Barrier(globals::mpi_comm_node); }
 
 #include "constants.h"
 
-extern std::fstream output_file;
-
-#ifdef _OPENMP
-#ifndef GPU_ON
-#pragma omp threadprivate(output_file)
-#endif
-#endif
+void set_log_file(std::string_view filename) noexcept;
 
 // Report a failed assertion to output_file (if open) and stderr. Defined out-of-line in mpi_logging.cc so that the
 // heavyweight <iostream> dependency does not propagate into every translation unit that includes this header.
@@ -521,7 +515,7 @@ inline void MPI_Reduce_safe(R&& data, MPI_Op op, const int root, MPI_Comm comm) 
                                                [](FILE* fp) -> int { return std::fclose(fp); });
 }
 
-[[nodiscard]] inline auto fstream_required(const std::string& filename, std::ios::openmode mode) -> std::fstream {
+[[nodiscard]] inline auto fstream_required(const std::string_view filename, std::ios::openmode mode) -> std::fstream {
   if (filename.empty()) {
     printlnlog("ERROR: Cannot open file with empty filename.");
     std::abort();
@@ -538,7 +532,7 @@ inline void MPI_Reduce_safe(R&& data, MPI_Op op, const int root, MPI_Comm comm) 
     }
   } else {
     // don't prepend data folders when writing
-    auto file = std::fstream(filename, mode);
+    auto file = std::fstream(std::string(filename), mode);
     if (file.is_open()) {
       return file;
     }

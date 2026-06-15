@@ -5,14 +5,22 @@
 #include <cstdarg>
 #include <cstdio>
 #include <cstring>
+#include <fstream>
 #include <iostream>
 #include <print>
 #include <string_view>
 
 namespace {
 
-thread_local std::array<char, 1024> outputlinebuf{};
-thread_local bool outputstartofline = true;
+std::array<char, 1024> outputlinebuf{};
+bool outputstartofline = true;
+std::fstream output_file;
+
+#ifdef _OPENMP
+#ifndef GPU_ON
+#pragma omp threadprivate(output_file, outputlinebuf, outputstartofline)
+#endif
+#endif
 
 // Prepend an ISO-8601 timestamp when starting a new output line.
 void print_line_start() noexcept {
@@ -21,6 +29,10 @@ void print_line_start() noexcept {
   }
 }
 }  // anonymous namespace
+
+void set_log_file(const std::string_view filename) noexcept {
+  output_file = fstream_required(filename, std::ios::out | std::ios::trunc);
+}
 
 void log_write(const std::string_view message, const bool add_newline) noexcept {
   print_line_start();
