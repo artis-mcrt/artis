@@ -35,7 +35,9 @@ void log_write(const std::string_view message, const bool add_newline) noexcept 
     outputstartofline = true;
   } else {
     std::print(output_file, "{}", message);
-    outputstartofline = (!message.empty() && message.back() == '\n');
+    if (!message.empty()) {
+      outputstartofline = (message.back() == '\n');
+    }
   }
   output_file.flush();
 }
