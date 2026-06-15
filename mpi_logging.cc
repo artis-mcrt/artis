@@ -14,12 +14,6 @@ namespace {
 thread_local std::array<char, 1024> outputlinebuf{};
 thread_local bool outputstartofline = true;
 
-#ifdef _OPENMP
-#ifndef GPU_ON
-#pragma omp threadprivate(outputlinebuf, outputstartofline)
-#endif
-#endif
-
 // Prepend an ISO-8601 timestamp when starting a new output line.
 void print_line_start() noexcept {
   if (outputstartofline) {
