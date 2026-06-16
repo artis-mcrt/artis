@@ -57,7 +57,7 @@ void printout(const char* format, ...) noexcept {
   vsnprintf(outputlinebuf.data(), outputlinebuf.size(), format, args);
   va_end(args);
 
-  MY_IF_DEVICE(printf("%s", outputlinebuf.data()););
+  // MY_IF_DEVICE(printf("%s", outputlinebuf.data()););
   MY_IF_HOST(const auto linebuflen = strlen(outputlinebuf.data());
              log_write(std::string_view(outputlinebuf.data(), linebuflen), false););
 }
