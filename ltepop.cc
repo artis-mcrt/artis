@@ -266,8 +266,8 @@ auto find_converged_nne(const int nonemptymgi, double nne_max, const bool force_
 
 }  // anonymous namespace
 
-[[nodiscard]] DEVICE_FUNC auto find_uppermost_ion(const int nonemptymgi, const int element, const double nne_hi,
-                                                  const bool force_saha) -> int {
+[[nodiscard]] auto find_uppermost_ion(const int nonemptymgi, const int element, const double nne_hi,
+                                      const bool force_saha) -> int {
   const int nions = get_nions(element);
   if (nions == 0) {
     return -1;
