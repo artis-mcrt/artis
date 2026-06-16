@@ -52,7 +52,6 @@ void log_write(const std::string_view message, const bool add_newline) noexcept 
 }
 
 void printout(const char* format, ...) noexcept {
-  print_line_start();
   va_list args{};
   va_start(args, format);
   vsnprintf(outputlinebuf.data(), outputlinebuf.size(), format, args);
