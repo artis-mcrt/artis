@@ -2395,7 +2395,7 @@ DEVICE_FUNC void snap_pos_to_cell(Vec3d& pos, const double time, const int celli
       constexpr bool BOUNDARY_ERROR_CHECKING_CORRECTION = true;
       if constexpr (BOUNDARY_ERROR_CHECKING_CORRECTION) {
         bool isoutside_error = false;
-        double delta = 0.;
+        [[maybe_unused]] double delta = 0.;
         if (pos_component_vel_relative_to_flow) {
           // check if packet pos is above cell max while moving in the positive direction relative to the grid flow
           const double boundaryposmax = cellcoordmax[d] / globals::tmin * tstart;
