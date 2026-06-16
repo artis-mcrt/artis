@@ -10,6 +10,8 @@
 #include <print>
 #include <string_view>
 
+#include "constants.h"
+
 namespace {
 
 std::array<char, 1024> outputlinebuf{};
@@ -49,7 +51,6 @@ void log_write(const std::string_view message, const bool add_newline) noexcept 
   output_file.flush();
 }
 
-#ifndef __NVCOMPILER_CUDA_ARCH__
 void printout(const char* format, ...) noexcept {
   print_line_start();
   va_list args{};
@@ -64,12 +65,12 @@ void printout(const char* format, ...) noexcept {
 }
 
 void report_assert_failure(const char* file, const int line, const char* expr, const char* func) noexcept {
-  if (output_file) {
+  MY_IF_DEVICE(
+      printf("\n[rank %d] %s:%d: failed assertion `%s` in function %s\n", globals::my_rank, file, line, expr, func););
+  MY_IF_HOST(if (output_file) {
     std::println(output_file, "\n[rank {}] {}:{}: failed assertion `{}` in function {}", globals::my_rank, file, line,
                  expr, func);
     output_file.flush();
-  }
-  std::println(std::cerr, "\n[rank {}] {}:{}: failed assertion `{}` in function {}", globals::my_rank, file, line, expr,
-               func);
+  } std::println(std::cerr, "\n[rank {}] {}:{}: failed assertion `{}` in function {}", globals::my_rank, file, line,
+                 expr, func););
 }
-#endif
