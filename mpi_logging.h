@@ -112,7 +112,15 @@ void log_write(std::string_view message, bool add_newline) noexcept;
 // heavyweight <iostream> dependency does not propagate into every translation unit that includes this header.
 [[gnu::cold]] void report_assert_failure(const char* file, int line, const char* expr, const char* func) noexcept;
 
-__attribute__((__format__(__printf__, 1, 2))) void printout(const char* format, ...) noexcept;
+template <typename... Args>
+void printout(Args&&... args) noexcept {
+  std::array<char, 1024> outputlinebuf{};
+  snprintf(outputlinebuf.data(), outputlinebuf.size(), std::forward<Args>(args)...);
+
+  MY_IF_DEVICE(printf("%s", outputlinebuf.data()););
+  MY_IF_HOST(const auto linebuflen = strlen(outputlinebuf.data());
+             log_write(std::string_view(outputlinebuf.data(), linebuflen), false););
+}
 
 #ifdef __NVCOMPILER_CUDA_ARCH__
 #define __artis_assert(e)                         \

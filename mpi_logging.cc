@@ -14,12 +14,11 @@
 
 namespace {
 
-std::array<char, 1024> outputlinebuf{};
 bool outputstartofline = true;
 
 #ifdef _OPENMP
 #ifndef GPU_ON
-#pragma omp threadprivate(outputlinebuf, outputstartofline)
+#pragma omp threadprivate(outputstartofline)
 #endif
 #endif
 
@@ -49,17 +48,6 @@ void log_write(const std::string_view message, const bool add_newline) noexcept 
     }
   }
   output_file.flush();
-}
-
-void printout(const char* format, ...) noexcept {
-  va_list args{};
-  va_start(args, format);
-  vsnprintf(outputlinebuf.data(), outputlinebuf.size(), format, args);
-  va_end(args);
-
-  // MY_IF_DEVICE(printf("%s", outputlinebuf.data()););
-  MY_IF_HOST(const auto linebuflen = strlen(outputlinebuf.data());
-             log_write(std::string_view(outputlinebuf.data(), linebuflen), false););
 }
 
 void report_assert_failure(const char* file, const int line, const char* expr, const char* func) noexcept {
