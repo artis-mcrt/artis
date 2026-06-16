@@ -110,7 +110,8 @@ void log_write(std::string_view message, bool add_newline) noexcept;
 
 // Report a failed assertion to output_file (if open) and stderr. Defined out-of-line in mpi_logging.cc so that the
 // heavyweight <iostream> dependency does not propagate into every translation unit that includes this header.
-[[gnu::cold]] void report_assert_failure(const char* file, int line, const char* expr, const char* func) noexcept;
+[[gnu::cold]] DEVICE_FUNC void report_assert_failure(const char* file, int line, const char* expr,
+                                                     const char* func) noexcept;
 
 #define __artis_assert(e)                                                 \
   {                                                                       \

@@ -48,7 +48,7 @@ void log_write(const std::string_view message, const bool add_newline) noexcept 
   output_file.flush();
 }
 
-void report_assert_failure(const char* file, const int line, const char* expr, const char* func) noexcept {
+DEVICE_FUNC void report_assert_failure(const char* file, const int line, const char* expr, const char* func) noexcept {
   MY_IF_DEVICE(
       printf("\n[rank %d] %s:%d: failed assertion `%s` in function %s\n", globals::my_rank, file, line, expr, func););
   MY_IF_HOST(if (output_file) {
