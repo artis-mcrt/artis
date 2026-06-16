@@ -112,15 +112,10 @@ void log_write(std::string_view message, bool add_newline) noexcept;
 // heavyweight <iostream> dependency does not propagate into every translation unit that includes this header.
 [[gnu::cold]] void report_assert_failure(const char* file, int line, const char* expr, const char* func) noexcept;
 
-inline void printout(const char* format, ...) noexcept {
-  MY_IF_DEVICE(va_list args{}; va_start(args, format); vprintf(format, args); va_end(args););
-  MY_IF_HOST(std::array<char, 1024> outputlinebuf{}; va_list args{}; va_start(args, format);
-             vsnprintf(outputlinebuf.data(), outputlinebuf.size(), format, args); va_end(args);
-             const auto linebuflen = strlen(outputlinebuf.data());
-             log_write(std::string_view(outputlinebuf.data(), linebuflen), false););
-}
-
 #ifdef __NVCOMPILER_CUDA_ARCH__
+
+#define printout(...) printf(__VA_ARGS__)
+
 #define __artis_assert(e)                         \
   {                                               \
     const bool assertpass = static_cast<bool>(e); \
@@ -128,6 +123,16 @@ inline void printout(const char* format, ...) noexcept {
   }
 
 #else
+
+inline void printout(const char* format, ...) noexcept {
+  std::array<char, 1024> outputlinebuf{};
+  va_list args{};
+  va_start(args, format);
+  vsnprintf(outputlinebuf.data(), outputlinebuf.size(), format, args);
+  va_end(args);
+  const auto linebuflen = strlen(outputlinebuf.data());
+  log_write(std::string_view(outputlinebuf.data(), linebuflen), false);
+}
 
 #define __artis_assert(e)                                                 \
   {                                                                       \
