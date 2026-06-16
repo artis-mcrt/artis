@@ -2395,7 +2395,7 @@ DEVICE_FUNC void snap_pos_to_cell(Vec3d& pos, const double time, const int celli
       constexpr bool BOUNDARY_ERROR_CHECKING_CORRECTION = true;
       if constexpr (BOUNDARY_ERROR_CHECKING_CORRECTION) {
         bool isoutside_error = false;
-        double delta = 0.;
+        [[maybe_unused]] double delta = 0.;
         if (pos_component_vel_relative_to_flow) {
           // check if packet pos is above cell max while moving in the positive direction relative to the grid flow
           const double boundaryposmax = cellcoordmax[d] / globals::tmin * tstart;
@@ -2409,17 +2409,18 @@ DEVICE_FUNC void snap_pos_to_cell(Vec3d& pos, const double time, const int celli
         }
 
         if (isoutside_error) {
-          printout(
-              "[ERROR] packet outside coord %d %c%c boundary of cell %d. vel %g initpos %g "
-              "cellcoordmin %g, cellcoordmax %g\n",
+#ifndef GPU_ON
+          printlnlog(
+              "[ERROR] packet outside coord {} {}{} boundary of cell {}. vel {:g} initpos {:g} "
+              "cellcoordmin {:g}, cellcoordmax {:g}",
               d, pos_component_vel_relative_to_flow ? '+' : '-', get_coordlabel(prop_gridtype, d), cellindex,
               pktvelgridcoord[d], pktposgridcoord[d], cellcoordmin[d] / globals::tmin * tstart,
               cellcoordmax[d] / globals::tmin * tstart);
-          printout("globals::tmin %g tstart %g tstart/globals::tmin %g\n", globals::tmin, tstart,
-                   tstart / globals::tmin);
-          printout(" delta %g\n", delta);
-
-          printout("packet dir [%g, %g, %g]\n", dir[0], dir[1], dir[2]);
+          printlnlog("globals::tmin {:g} tstart {:g} tstart/globals::tmin {:g}", globals::tmin, tstart,
+                     tstart / globals::tmin);
+          printlnlog(" delta {:g}", delta);
+          printlnlog("packet dir [{:g}, {:g}, {:g}]", dir[0], dir[1], dir[2]);
+#endif
 
           // this should not happen! Leave the check until late 2026 and it if never triggers on any runs, we can remove
           // the check and correction code
@@ -2428,12 +2429,17 @@ DEVICE_FUNC void snap_pos_to_cell(Vec3d& pos, const double time, const int celli
           const auto next_cellindex = get_cellindex_from_pos(pos, tstart);
           if ((cellcoordidx[d] == (ncoordgrid[d] - 1) && pos_component_vel_relative_to_flow) ||
               (cellcoordidx[d] == 0 && !pos_component_vel_relative_to_flow) || (next_cellindex < 0)) {
-            printout("[warning] escaping packet\n");
+#ifndef GPU_ON
+            printlnlog("[warning] escaping packet");
+#endif
             return {0., -99};
           }
-          printout("[warning] swapping packet cellindex from %d to %d, which has cellcoordmin %g, cellcoordmax %g\n",
-                   cellindex, next_cellindex, get_cellcoordmin(next_cellindex, d) / globals::tmin * tstart,
-                   get_cellcoordmax(next_cellindex, d) / globals::tmin * tstart);
+#ifndef GPU_ON
+          printlnlog(
+              "[warning] swapping packet cellindex from {} to {}, which has cellcoordmin {:g}, cellcoordmax {:g}",
+              cellindex, next_cellindex, get_cellcoordmin(next_cellindex, d) / globals::tmin * tstart,
+              get_cellcoordmax(next_cellindex, d) / globals::tmin * tstart);
+#endif
           return {0., next_cellindex};
         }
       }
@@ -2592,23 +2598,6 @@ DEVICE_FUNC void snap_pos_to_cell(Vec3d& pos, const double time, const int celli
     }
   } else {
     assert_always(false);
-  }
-
-  if constexpr (TESTMODE) {
-    if (next_cellindex == -1) {
-      printout("Something wrong in boundary crossing - didn't find anything.\n");
-      printout("packet cell %d\n", cellindex);
-      printout("globals::tmin %g tstart %g\n", globals::tmin, tstart);
-      for (int d2 = 0; d2 < 3; d2++) {
-        printout("coord %d: initpos %g dir %g\n", d2, pos[d2], dir[d2]);
-      }
-      printout("|initpos| %g |dir| %g |pos.dir| %g\n", vec_len(pos), vec_len(dir), dot(pos, dir));
-      for (int d2 = 0; d2 < get_ndim(prop_gridtype); d2++) {
-        printout("coord %d: cellcoordmin %g cellcoordmax %g\n", d2, cellcoordmin[d2] * tstart / globals::tmin,
-                 cellcoordmax[d2] * tstart / globals::tmin);
-      }
-      printout("tstart %g\n", tstart);
-    }
   }
 
   assert_always((next_cellindex == -99) || ((next_cellindex >= 0) && (next_cellindex < ngrid)));
