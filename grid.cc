@@ -2594,23 +2594,6 @@ DEVICE_FUNC void snap_pos_to_cell(Vec3d& pos, const double time, const int celli
     assert_always(false);
   }
 
-  if constexpr (TESTMODE) {
-    if (next_cellindex == -1) {
-      printout("Something wrong in boundary crossing - didn't find anything.\n");
-      printout("packet cell %d\n", cellindex);
-      printout("globals::tmin %g tstart %g\n", globals::tmin, tstart);
-      for (int d2 = 0; d2 < 3; d2++) {
-        printout("coord %d: initpos %g dir %g\n", d2, pos[d2], dir[d2]);
-      }
-      printout("|initpos| %g |dir| %g |pos.dir| %g\n", vec_len(pos), vec_len(dir), dot(pos, dir));
-      for (int d2 = 0; d2 < get_ndim(prop_gridtype); d2++) {
-        printout("coord %d: cellcoordmin %g cellcoordmax %g\n", d2, cellcoordmin[d2] * tstart / globals::tmin,
-                 cellcoordmax[d2] * tstart / globals::tmin);
-      }
-      printout("tstart %g\n", tstart);
-    }
-  }
-
   assert_always((next_cellindex == -99) || ((next_cellindex >= 0) && (next_cellindex < ngrid)));
 
   const double maxboundarydist =
