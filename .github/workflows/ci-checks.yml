@@ -317,7 +317,7 @@ jobs:
                        --slave /usr/bin/g++ g++ /usr/bin/g++-14
 
             - name: Install nvc++
-              uses: fortran-lang/setup-fortran@v1.9.0
+              uses: fortran-lang/setup-fortran@v1.9.1
               with:
                   compiler: nvidia-hpc
                   version: 26.1
