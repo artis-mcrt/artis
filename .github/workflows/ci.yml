@@ -38,7 +38,7 @@ jobs:
                     ]
             fail-fast: ${{ inputs.testmode == 'ON' }}
 
-        runs-on: ubuntu-26.04
+        runs-on: ubuntu-26.04-arm
         timeout-minutes: ${{ inputs.testmode == 'ON' && 360 || 40 }}
         name: ${{ matrix.testname }}
         env:
@@ -276,7 +276,7 @@ jobs:
     combine_checksums:
         needs: testmodels
         if: always() && inputs.testmode != 'ON'
-        runs-on: ubuntu-26.04
+        runs-on: ubuntu-26.04-arm
         steps:
             - name: Download test output
               uses: actions/download-artifact@v8
