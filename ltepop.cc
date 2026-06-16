@@ -298,9 +298,9 @@ auto find_converged_nne(const int nonemptymgi, double nne_max, const bool force_
     factor *= nne_hi * phifactor;
 
     if (!std::isfinite(factor)) {
-      printout(
-          "[info] calculate_ion_balance_nne: uppermost_ion limited by phi factors for element "
-          "Z=%d, ionstage %d in cell %d\n",
+      printlnlog(
+          "[info] calculate_ion_balance_nne: uppermost_ion limited by phi factors for element Z={}, ionstage {} in "
+          "cell {}",
           get_atomicnumber(element), get_ionstage(element, ion), modelgridindex);
       return ion;
     }
