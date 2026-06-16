@@ -113,7 +113,7 @@ void log_write(std::string_view message, bool add_newline) noexcept;
 [[gnu::cold]] void report_assert_failure(const char* file, int line, const char* expr, const char* func) noexcept;
 
 inline void printout(const char* format, ...) noexcept {
-  MY_IF_DEVICE(va_list args{}; va_start(args, format); vprintf("%s", format, args); va_end(args););
+  MY_IF_DEVICE(va_list args{}; va_start(args, format); vprintf(format, args); va_end(args););
   MY_IF_HOST(std::array<char, 1024> outputlinebuf{}; va_list args{}; va_start(args, format);
              vsnprintf(outputlinebuf.data(), outputlinebuf.size(), format, args); va_end(args);
              const auto linebuflen = strlen(outputlinebuf.data());
