@@ -147,14 +147,13 @@ inline void printout(const char* format, ...) noexcept {
 
 template <typename... Args>
 inline auto printlog(const std::format_string<Args...> fmt, Args&&... args) noexcept -> void {
-  // MY_IF_DEVICE(const auto str = std::vformat(fmt.get(), std::make_format_args(args...)); printf("%s", str.c_str()););
+  MY_IF_DEVICE(const auto str = std::vformat(fmt.get(), std::make_format_args(args...)); printf("%s", str.c_str()););
   MY_IF_HOST(log_write(std::format(fmt, std::forward<Args>(args)...), false););
 }
 
 template <typename... Args>
 inline auto printlnlog(const std::format_string<Args...> fmt, Args&&... args) noexcept -> void {
-  // MY_IF_DEVICE(const auto str = std::vformat(fmt.get(), std::make_format_args(args...)); printf("%s\n",
-  // str.c_str()););
+  MY_IF_DEVICE(const auto str = std::vformat(fmt.get(), std::make_format_args(args...)); printf("%s\n", str.c_str()););
   MY_IF_HOST(log_write(std::format(fmt, std::forward<Args>(args)...), true););
 }
 
