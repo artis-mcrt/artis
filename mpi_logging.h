@@ -32,6 +32,8 @@
 #include <mpi.h>
 #pragma clang unsafe_buffer_usage end
 
+#include "constants.h"
+
 inline void MPI_Barrier_allranks() { MPI_Barrier(MPI_COMM_WORLD); }
 
 namespace globals {
@@ -91,8 +93,6 @@ inline void setup_mpi_vars() {
 }  // namespace globals
 
 inline void MPI_Barrier_node() { MPI_Barrier(globals::mpi_comm_node); }
-
-#include "constants.h"
 
 extern std::fstream output_file;
 
