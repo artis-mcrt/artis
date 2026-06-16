@@ -59,9 +59,7 @@ void printout(const char* format, ...) noexcept {
   va_end(args);
 
   const auto linebuflen = strlen(outputlinebuf.data());
-  outputstartofline = (linebuflen == 0 || (outputlinebuf[linebuflen - 1] == '\n'));
-  std::print(output_file, "{}", outputlinebuf.data());
-  output_file.flush();
+  log_write(std::string_view(outputlinebuf.data(), linebuflen), false);
 }
 
 void report_assert_failure(const char* file, const int line, const char* expr, const char* func) noexcept {
