@@ -335,9 +335,9 @@ auto find_converged_nne(const int nonemptymgi, double nne_max, const bool force_
     ionfractions[ion] = ionfractions[ion] / normfactor;
 
     if (normfactor == 0. || !std::isfinite(ionfractions[ion])) {
-      printout("[warning] ionfract set to zero for ionstage %d of Z=%d in cell %d with T_e %g, T_R %g\n",
-               get_ionstage(element, ion), get_atomicnumber(element), grid::get_mgi_of_nonemptymgi(nonemptymgi),
-               grid::get_Te(nonemptymgi), grid::get_TR(nonemptymgi));
+      printlnlog("[warning] ionfract set to zero for ionstage {}, Z={} in cell {} with T_e {:g}, T_R {:g}",
+                 get_ionstage(element, ion), get_atomicnumber(element), grid::get_mgi_of_nonemptymgi(nonemptymgi),
+                 grid::get_Te(nonemptymgi), grid::get_TR(nonemptymgi));
       ionfractions[ion] = 0;
     }
   }
