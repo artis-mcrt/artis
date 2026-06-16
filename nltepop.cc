@@ -571,7 +571,7 @@ void nltepop_matrix_add_ionisation(const int nonemptymgi, const int element, con
   const auto nlte_dimension = rate_matrices.used_nlte_dimension;
 
   const auto levels = std::views::iota(0, nionisinglevels);
-  std::for_each(EXEC_PAR levels.begin(), levels.end(), [&](const auto level) {
+  std::for_each(levels.begin(), levels.end(), [&](const auto level) {
     const int lower_index = get_nlte_vector_index(element, ion, level, first_ion_used);
     const auto matrix_index_lower_lower = (lower_index * nlte_dimension) + lower_index;
 
