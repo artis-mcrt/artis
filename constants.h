@@ -98,12 +98,12 @@ constexpr std::array datafolders{"./", "data/", "artis/data/"};
 #define MY_IF_HOST(...) __VA_ARGS__
 #endif
 
-#define THREADLOCALONHOST thread_local static
-
 #ifdef GPU_ON
 #define DEVICE_FUNC __host__ __device__
+#define THREADLOCALONHOST
 #else
 #define DEVICE_FUNC
+#define THREADLOCALONHOST thread_local
 #endif
 
 #if defined REPRODUCIBLE && REPRODUCIBLE
