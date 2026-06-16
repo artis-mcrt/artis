@@ -207,7 +207,7 @@ void calculate_bfheatingcoeffs(int nonemptymgi, std::span<double> bfheatingcoeff
     for (int ion = 0; ion < nions; ion++) {
       const int nlevels = get_nlevels(element, ion);
       const auto levels = std::ranges::iota_view{0, nlevels};
-      std::for_each(levels.begin(), levels.end(), [&](const int level) {
+      std::for_each(EXEC_PAR levels.begin(), levels.end(), [&](const int level) {
         double bfheatingcoeff = 0.;
         if (grid::get_elem_massfrac(nonemptymgi, element) > minelfrac || USE_ION_BFHEATING_ESTIMATORS) {
           const auto nphixstargets = get_nphixstargets(element, ion, level);
