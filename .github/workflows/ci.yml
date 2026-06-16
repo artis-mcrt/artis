@@ -219,6 +219,7 @@ jobs:
 
             - name: Setup uv
               uses: astral-sh/setup-uv@v8.2.0
+              if: always() && inputs.testmode != 'ON'
               id: setup-uv
 
             - name: Install artistools
