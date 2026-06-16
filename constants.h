@@ -84,8 +84,8 @@ constexpr std::array datafolders{"./", "data/", "artis/data/"};
 #ifdef __NVCOMPILER
 // nvc++ : single-pass. Each macro becomes an independent "if target".
 #include <nv/target>
-#define MY_IF_DEVICE(...) NV_IF_TARGET(NV_IS_DEVICE, (__VA_ARGS__))  // cppcheck-suppress unknownMacro
-#define MY_IF_HOST(...) NV_IF_TARGET(NV_IS_HOST, (__VA_ARGS__))  // cppcheck-suppress unknownMacro
+#define MY_IF_DEVICE(...) NV_IF_TARGET(NV_IS_DEVICE, (__VA_ARGS__))
+#define MY_IF_HOST(...) NV_IF_TARGET(NV_IS_HOST, (__VA_ARGS__))
 
 #elif (defined(__HIP_DEVICE_COMPILE__) && __HIP_DEVICE_COMPILE__) || defined(__CUDA_ARCH__)
 // Device pass of a multi-pass compiler (HIP-Clang / nvcc).
