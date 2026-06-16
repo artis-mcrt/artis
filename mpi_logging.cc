@@ -1,9 +1,7 @@
 #include "mpi_logging.h"
 
-#include <array>
 #include <chrono>
 #include <cstdarg>
-#include <cstdio>
 #include <cstring>
 #include <fstream>
 #include <iostream>
