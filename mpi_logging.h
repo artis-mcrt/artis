@@ -112,16 +112,6 @@ void log_write(std::string_view message, bool add_newline) noexcept;
 // heavyweight <iostream> dependency does not propagate into every translation unit that includes this header.
 [[gnu::cold]] void report_assert_failure(const char* file, int line, const char* expr, const char* func) noexcept;
 
-#ifdef __NVCOMPILER_CUDA_ARCH__
-
-#define __artis_assert(e)                         \
-  {                                               \
-    const bool assertpass = static_cast<bool>(e); \
-    assert(assertpass);                           \
-  }
-
-#else
-
 #define __artis_assert(e)                                                 \
   {                                                                       \
     const bool assertpass = static_cast<bool>(e);                         \
@@ -130,8 +120,6 @@ void log_write(std::string_view message, bool add_newline) noexcept;
     }                                                                     \
     assert(assertpass);                                                   \
   }
-
-#endif
 
 template <typename... Args>
 inline auto printlog(const std::format_string<Args...> fmt, Args&&... args) noexcept -> void {
