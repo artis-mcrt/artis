@@ -2410,17 +2410,16 @@ DEVICE_FUNC void snap_pos_to_cell(Vec3d& pos, const double time, const int celli
 
         if (isoutside_error) {
           if constexpr (TESTMODE) {
-            printout(
-                "[ERROR] packet outside coord %d %c%c boundary of cell %d. vel %g initpos %g "
-                "cellcoordmin %g, cellcoordmax %g\n",
+            printlnlog(
+                "[ERROR] packet outside coord {} {}{} boundary of cell {}. vel {:g} initpos {:g} "
+                "cellcoordmin {:g}, cellcoordmax {:g}",
                 d, pos_component_vel_relative_to_flow ? '+' : '-', get_coordlabel(prop_gridtype, d), cellindex,
                 pktvelgridcoord[d], pktposgridcoord[d], cellcoordmin[d] / globals::tmin * tstart,
                 cellcoordmax[d] / globals::tmin * tstart);
-            printout("globals::tmin %g tstart %g tstart/globals::tmin %g\n", globals::tmin, tstart,
-                     tstart / globals::tmin);
-            printout(" delta %g\n", delta);
-
-            printout("packet dir [%g, %g, %g]\n", dir[0], dir[1], dir[2]);
+            printlnlog("globals::tmin {:g} tstart {:g} tstart/globals::tmin {:g}", globals::tmin, tstart,
+                       tstart / globals::tmin);
+            printlnlog(" delta {:g}", delta);
+            printlnlog("packet dir [{:g}, {:g}, {:g}]", dir[0], dir[1], dir[2]);
           }
 
           // this should not happen! Leave the check until late 2026 and it if never triggers on any runs, we can remove
@@ -2431,14 +2430,15 @@ DEVICE_FUNC void snap_pos_to_cell(Vec3d& pos, const double time, const int celli
           if ((cellcoordidx[d] == (ncoordgrid[d] - 1) && pos_component_vel_relative_to_flow) ||
               (cellcoordidx[d] == 0 && !pos_component_vel_relative_to_flow) || (next_cellindex < 0)) {
             if constexpr (TESTMODE) {
-              printout("[warning] escaping packet\n");
+              printlnlog("[warning] escaping packet");
             }
             return {0., -99};
           }
           if constexpr (TESTMODE) {
-            printout("[warning] swapping packet cellindex from %d to %d, which has cellcoordmin %g, cellcoordmax %g\n",
-                     cellindex, next_cellindex, get_cellcoordmin(next_cellindex, d) / globals::tmin * tstart,
-                     get_cellcoordmax(next_cellindex, d) / globals::tmin * tstart);
+            printlnlog(
+                "[warning] swapping packet cellindex from {} to {}, which has cellcoordmin {:g}, cellcoordmax {:g}",
+                cellindex, next_cellindex, get_cellcoordmin(next_cellindex, d) / globals::tmin * tstart,
+                get_cellcoordmax(next_cellindex, d) / globals::tmin * tstart);
           }
           return {0., next_cellindex};
         }
