@@ -2409,18 +2409,18 @@ DEVICE_FUNC void snap_pos_to_cell(Vec3d& pos, const double time, const int celli
         }
 
         if (isoutside_error) {
-          if constexpr (TESTMODE) {
-            printlnlog(
-                "[ERROR] packet outside coord {} {}{} boundary of cell {}. vel {:g} initpos {:g} "
-                "cellcoordmin {:g}, cellcoordmax {:g}",
-                d, pos_component_vel_relative_to_flow ? '+' : '-', get_coordlabel(prop_gridtype, d), cellindex,
-                pktvelgridcoord[d], pktposgridcoord[d], cellcoordmin[d] / globals::tmin * tstart,
-                cellcoordmax[d] / globals::tmin * tstart);
-            printlnlog("globals::tmin {:g} tstart {:g} tstart/globals::tmin {:g}", globals::tmin, tstart,
-                       tstart / globals::tmin);
-            printlnlog(" delta {:g}", delta);
-            printlnlog("packet dir [{:g}, {:g}, {:g}]", dir[0], dir[1], dir[2]);
-          }
+#ifndef GPU_ON
+          printlnlog(
+              "[ERROR] packet outside coord {} {}{} boundary of cell {}. vel {:g} initpos {:g} "
+              "cellcoordmin {:g}, cellcoordmax {:g}",
+              d, pos_component_vel_relative_to_flow ? '+' : '-', get_coordlabel(prop_gridtype, d), cellindex,
+              pktvelgridcoord[d], pktposgridcoord[d], cellcoordmin[d] / globals::tmin * tstart,
+              cellcoordmax[d] / globals::tmin * tstart);
+          printlnlog("globals::tmin {:g} tstart {:g} tstart/globals::tmin {:g}", globals::tmin, tstart,
+                     tstart / globals::tmin);
+          printlnlog(" delta {:g}", delta);
+          printlnlog("packet dir [{:g}, {:g}, {:g}]", dir[0], dir[1], dir[2]);
+#endif
 
           // this should not happen! Leave the check until late 2026 and it if never triggers on any runs, we can remove
           // the check and correction code
@@ -2429,17 +2429,17 @@ DEVICE_FUNC void snap_pos_to_cell(Vec3d& pos, const double time, const int celli
           const auto next_cellindex = get_cellindex_from_pos(pos, tstart);
           if ((cellcoordidx[d] == (ncoordgrid[d] - 1) && pos_component_vel_relative_to_flow) ||
               (cellcoordidx[d] == 0 && !pos_component_vel_relative_to_flow) || (next_cellindex < 0)) {
-            if constexpr (TESTMODE) {
-              printlnlog("[warning] escaping packet");
-            }
+#ifndef GPU_ON
+            printlnlog("[warning] escaping packet");
+#endif
             return {0., -99};
           }
-          if constexpr (TESTMODE) {
-            printlnlog(
-                "[warning] swapping packet cellindex from {} to {}, which has cellcoordmin {:g}, cellcoordmax {:g}",
-                cellindex, next_cellindex, get_cellcoordmin(next_cellindex, d) / globals::tmin * tstart,
-                get_cellcoordmax(next_cellindex, d) / globals::tmin * tstart);
-          }
+#ifndef GPU_ON
+          printlnlog(
+              "[warning] swapping packet cellindex from {} to {}, which has cellcoordmin {:g}, cellcoordmax {:g}",
+              cellindex, next_cellindex, get_cellcoordmin(next_cellindex, d) / globals::tmin * tstart,
+              get_cellcoordmax(next_cellindex, d) / globals::tmin * tstart);
+#endif
           return {0., next_cellindex};
         }
       }
