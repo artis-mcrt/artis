@@ -104,6 +104,10 @@ extern std::fstream output_file;
 
 void set_log_file(std::string_view filename) noexcept;
 
+// Write an already-formatted message to output_file, prepending a timestamp at the start of each line. When
+// add_newline is set, a trailing newline is appended and the next write starts a new line.
+void log_write(std::string_view message, bool add_newline) noexcept;
+
 // Report a failed assertion to output_file (if open) and stderr. Defined out-of-line in mpi_logging.cc so that the
 // heavyweight <iostream> dependency does not propagate into every translation unit that includes this header.
 [[gnu::cold]] void report_assert_failure(const char* file, int line, const char* expr, const char* func) noexcept;
@@ -120,14 +124,6 @@ void set_log_file(std::string_view filename) noexcept;
   }
 
 #else
-// The actual writes to output_file (and the timestamp prefix) are defined out-of-line in mpi_logging.cc. This keeps
-// the heavyweight <print>, <chrono> and std::print(std::ostream&) machinery out of every translation unit that
-// includes this header; the inline templates below only need <format> to build the message string.
-
-// Write an already-formatted message to output_file, prepending a timestamp at the start of each line. When
-// add_newline is set, a trailing newline is appended and the next write starts a new line.
-void log_write(std::string_view message, bool add_newline) noexcept;
-
 __attribute__((__format__(__printf__, 1, 2))) void printout(const char* format, ...) noexcept;
 
 #define __artis_assert(e)                                                 \
