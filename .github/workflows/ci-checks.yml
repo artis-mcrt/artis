@@ -132,7 +132,11 @@ jobs:
               if: always()
               run: |
                   clang-tidy --version
-                  run-clang-tidy -extra-arg=-nostdinc++ -extra-arg=-isystem"$LIBCXX" -extra-arg=-stdlib=libc++
+                  # mpicxx is a wrapper, so the compile DB carries no MPI include path;
+                  # feed clang-tidy the same dirs mpicxx would add, or <mpi.h> isn't found.
+                  mpiargs=""
+                  for d in $(mpicxx --showme:incdirs); do mpiargs="$mpiargs -extra-arg=-isystem$d"; done
+                  run-clang-tidy -extra-arg=-nostdinc++ -extra-arg=-isystem"$LIBCXX" $mpiargs
 
     compile:
         strategy:
