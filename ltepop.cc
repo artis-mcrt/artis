@@ -42,6 +42,8 @@ namespace {
 
 // Calculate population ratio (a saha factor) of two consecutive ionisation stages in nebular approximation phi_j,k* =
 // N_j,k*/(N_j+1,k* * nne)
+// should have units of [cm^3] so that when multiplied by nne it gives the population ratio of two consecutive
+// ionisation stages
 [[gnu::pure]] [[nodiscard]] auto phi_rate_balance(const int element, const int ion, const int nonemptymgi) -> double {
   assert_testmodeonly(element < get_nelements());
   assert_testmodeonly(ion < get_nions(element));
@@ -77,7 +79,8 @@ namespace {
   // gamma_nt should generally be higher than the Gamma term for nebular epoch
 
   assert_always((Gamma_ion + gamma_nt) > 0);
-
+  // numerator: ionisation rate per ion pop per nne
+  // denominator: recombination rate per ion pop
   const double phi = (Alpha_sp + Col_rec) / (Gamma_ion + gamma_nt);
   assert_always(phi > 0.);
 
