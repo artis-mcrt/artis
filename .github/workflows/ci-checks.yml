@@ -114,6 +114,8 @@ jobs:
                   echo "LIBCXX=$(brew --prefix llvm)/include/c++/v1" >> $GITHUB_ENV
                   echo "LDFLAGS=-L$(brew --prefix llvm)/lib/c++ -L$(brew --prefix llvm)/lib/unwind -lunwind -Wl,-rpath,$(brew --prefix llvm)/lib/c++" >> $GITHUB_ENV
                   cp artisoptions_nltenebular.h artisoptions.h
+                  sudo apt-get update
+                  sudo apt install -y openmpi-bin libopenmpi-dev
 
             - name: Install dependencies
               run: |
