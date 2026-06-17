@@ -260,11 +260,10 @@ constexpr bool USE_XCOM_GAMMAPHOTOION;
 constexpr std::optional<double> GAMMA_USE_KAPPA_GREY;
 
 // Use microclumping, which enhances collisional (de)excitation, collisional ionisation, collisional recombination,
-// radiative recombination, collisional capture, stimulated recombination, free-free heating, free-free cooling by the
-// reciprocal of the volume filling factor (the "clumping factor")
+// radiative recombination, collisional capture, stimulated recombination, free-free heating, free-free cooling by the clumping factor
 constexpr bool USE_MICROCLUMPING;
 
-// Calculate volume filling factors based on time and radial velocity
+// Calculate clumping factors based on time and radial velocity
 // Will be passed globals::timesteps[nts].mid and grid::get_modelcell_mean_radial_vel(mgi, globals::tmin)
-constexpr float volume_filling_factor([[maybe_unused]] double tmid, [[maybe_unused]] double rad_vel) { return 1.; }
+constexpr float clumping_factor([[maybe_unused]] double tmid, [[maybe_unused]] double rad_vel) { return 1.; }
 ```

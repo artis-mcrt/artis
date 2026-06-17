@@ -146,7 +146,7 @@ constexpr std::optional<double> GAMMA_USE_KAPPA_GREY;
 
 constexpr bool USE_MICROCLUMPING = false;
 
-constexpr float volume_filling_factor([[maybe_unused]] double tmid, [[maybe_unused]] double rad_vel) { return 1.; }
+constexpr float clumping_factor([[maybe_unused]] double tmid, [[maybe_unused]] double rad_vel) { return 1.; }
 
 // NOLINTEND(modernize-use-trailing-return-type,misc-unused-parameters)
 #endif  // ARTISOPTIONS_H
