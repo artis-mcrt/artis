@@ -72,7 +72,11 @@ jobs:
                   brew update
                   brew install cppcheck
                   echo "$(brew --prefix cppcheck)/bin" >> $GITHUB_PATH
+                  brew install llvm
+                  echo "$(brew --prefix llvm)/bin" >> $GITHUB_PATH
                   cp artisoptions_nltenebular.h artisoptions.h
+                  make clean
+                  python3 -m compiledb -n --full-path make TESTMODE=ON
 
             - name: Run pre-commit hooks
               uses: j178/prek-action@v2
@@ -89,8 +93,6 @@ jobs:
             - name: Run clang-tidy
               if: always()
               run: |
-                  brew install llvm
-                  echo "$(brew --prefix llvm)/bin" >> $GITHUB_PATH
                   clang-tidy --version
                   run-clang-tidy -extra-arg='-stdlib=libc++'
 
