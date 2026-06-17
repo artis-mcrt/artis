@@ -220,7 +220,7 @@ jobs:
 
             - name: Install LLVM
               run: |
-                  brew install llvm
+                  brew install llvm lld
                   echo "/opt/homebrew/opt/llvm/bin" >> $GITHUB_PATH
                   echo "LDFLAGS=-L/opt/homebrew/opt/llvm/lib -L/opt/homebrew/opt/llvm/lib/c++ -L/opt/homebrew/opt/llvm/lib/unwind -lunwind" >> $GITHUB_ENV
                   echo "CPPFLAGS=-I/opt/homebrew/opt/llvm/include" >> $GITHUB_ENV
