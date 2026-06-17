@@ -111,6 +111,7 @@ jobs:
                   echo "CPPFLAGS=-I/opt/homebrew/opt/llvm/include" >> $GITHUB_ENV
                   echo "CXX=clang++" >> $GITHUB_ENV
                   echo "OMPI_CXX=clang++" >> $GITHUB_ENV
+                  echo "LIBCXX=$(brew --prefix llvm)/include/c++/v1" >> $GITHUB_ENV
                   cp artisoptions_nltenebular.h artisoptions.h
 
             - name: Install dependencies
@@ -128,7 +129,7 @@ jobs:
               if: always()
               run: |
                   clang-tidy --version
-                  run-clang-tidy -extra-arg='-stdlib=libc++'
+                  run-clang-tidy -extra-arg=-stdlib=libc++ -extra-arg=-nostdinc++ -extra-arg=-isystem"$LIBCXX" -extra-arg=-stdlib=libc++
 
     compile:
         strategy:
