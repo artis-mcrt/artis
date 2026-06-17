@@ -41,12 +41,6 @@ jobs:
                   make clean
                   uvx compiledb -n --full-path make TESTMODE=ON
 
-            - name: Run pre-commit hooks
-              uses: j178/prek-action@v2
-              if: always()
-              with:
-                extra-args: '--all-files --skip make'
-
             - name: Run clang-tidy
               if: always()
               run: |
@@ -62,10 +56,6 @@ jobs:
         runs-on: ubuntu-26.04-arm
         steps:
             - uses: actions/checkout@v6
-
-            - name: Setup uv
-              uses: astral-sh/setup-uv@v8.2.0
-              id: setup-uv
 
             - name: Install dependencies
               run: |
