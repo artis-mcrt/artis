@@ -650,13 +650,13 @@ auto do_rpkt_step(Packet& pkt, const double t2) -> bool {
 // calculate the free-free absorption (to kpkt heating) coefficient [cm^-1]
 // = kappa(free-free) * nne
 auto calculate_chi_ffheating(const int nonemptymgi, const double nu, const bool use_cellcache) -> double {
-  const auto nne = grid::get_nne(nonemptymgi);
+  const auto clumpednne = grid::get_nne(nonemptymgi) * grid::get_clumpfactor(nonemptymgi);
   const auto T_e = grid::get_Te(nonemptymgi);
   assert_testmodeonly(!use_cellcache || globals::cellcache[cellcacheslotid].nonemptymgi == nonemptymgi);
   const auto chi_ff_nnionpart = use_cellcache ? globals::cellcache[cellcacheslotid].chi_ff_nnionpart
                                               : calculate_chi_ffheat_nnionpart(nonemptymgi);
 
-  const double chi_ff = chi_ff_nnionpart / pow3(nu) * nne * (1 - exp(-HOVERKB * nu / T_e));
+  const double chi_ff = chi_ff_nnionpart / pow3(nu) * clumpednne * (1 - exp(-HOVERKB * nu / T_e));
 
   assert_testmodeonly(std::isfinite(chi_ff));
   assert_testmodeonly(chi_ff >= 0);
@@ -676,7 +676,7 @@ auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixsli
   }
 
   const auto T_e = grid::get_Te(nonemptymgi);
-  const auto nne = grid::get_nne(nonemptymgi);
+  const auto clumpednne = grid::get_nne(nonemptymgi) * grid::get_clumpfactor(nonemptymgi);
   const auto nnetot = grid::get_nnetot(nonemptymgi);
   const auto& allcont_nu_edge = globals::allcont.nu_edge;
 
@@ -747,7 +747,8 @@ auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixsli
                                              : calculate_levelpop(nonemptymgi, element, ion + 1, upper);
           const double modified_sahafact =
               SAHACONST * stat_weight(element, ion, level) / stat_weight(element, ion + 1, upper) * std::pow(T_e, -1.5);
-          modified_departure_ratio = nnupperionlevel / nnlevel * nne * modified_sahafact;  // put that to phixslist
+          modified_departure_ratio =
+              nnupperionlevel / nnlevel * clumpednne * modified_sahafact;  // put that to phixslist
           if (USECELLHISTANDUPDATEPHIXSLIST) {
             globals::cellcache[cellcacheslotid].allcont_modified_departureratios[i] = modified_departure_ratio;
           }

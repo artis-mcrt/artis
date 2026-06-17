@@ -38,7 +38,7 @@ auto integrand_bfheatingcoeff(const double nu, const double nu_edge, const int n
 }
 
 auto get_heating_ion_coll_deexc(const int nonemptymgi, const int element, const int ion, const float T_e,
-                                const float nne) -> double {
+                                const float clumpednne) -> double {
   double C_deexc = 0.;
   const int nlevels = get_nlevels(element, ion);
   const auto ionuniquelevelindexstart = get_ionuniquelevelindexstart(element, ion);
@@ -57,7 +57,8 @@ auto get_heating_ion_coll_deexc(const int nonemptymgi, const int element, const 
       const double epsilon_trans = epsilon_level - epsilon(ionuniquelevelindexstart + lower);
       const auto lower_statweight = stat_weight(ionuniquelevelindexstart + lower);
       const double C =
-          nnlevel * col_deexcitation_ratecoeff(T_e, nne, epsilon_trans, statweight, lower_statweight, alltransindex) *
+          nnlevel *
+          col_deexcitation_ratecoeff(T_e, clumpednne, epsilon_trans, statweight, lower_statweight, alltransindex) *
           epsilon_trans;
       C_deexc += C;
     }
@@ -67,7 +68,7 @@ auto get_heating_ion_coll_deexc(const int nonemptymgi, const int element, const 
 
 // Calculate the heating rates for a given cell. Results are returned via the elements of the heatingrates data
 // structure.
-void calculate_heating_rates(const int nonemptymgi, const float T_e, const float nne,
+void calculate_heating_rates(const int nonemptymgi, const float T_e, const float clumpednne,
                              HeatingCoolingRates& heatingcoolingrates, const std::span<const double> bfheatingcoeffs) {
   double C_deexc = 0.;
 
@@ -79,7 +80,7 @@ void calculate_heating_rates(const int nonemptymgi, const float T_e, const float
     const int nions = get_nions(element);
     if constexpr (DIRECT_COL_HEAT) {
       for (int ion = 0; ion < nions; ion++) {
-        C_deexc += get_heating_ion_coll_deexc(nonemptymgi, element, ion, T_e, nne);
+        C_deexc += get_heating_ion_coll_deexc(nonemptymgi, element, ion, T_e, clumpednne);
       }
     }
 
@@ -142,10 +143,11 @@ auto T_e_eqn_heating_minus_cooling(const double T_e, int nonemptymgi, const doub
 
   calculate_ion_balance_nne(nonemptymgi);
   const auto nne = grid::get_nne(nonemptymgi);
+  const float clumpfactor = grid::get_clumpfactor(nonemptymgi);
 
   // Then calculate heating and cooling rates
   kpkt::calculate_cooling_rates(nonemptymgi, &heatingcoolingrates);
-  calculate_heating_rates(nonemptymgi, fT_e, nne, heatingcoolingrates, bfheatingcoeffs);
+  calculate_heating_rates(nonemptymgi, fT_e, clumpfactor * nne, heatingcoolingrates, bfheatingcoeffs);
 
   const auto ntlepton_frac_heating = nonthermal::get_nt_frac_heating(nonemptymgi);
   const auto ntlepton_dep = nonthermal::get_deposition_rate_density(nonemptymgi);

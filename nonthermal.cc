@@ -1687,7 +1687,8 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const std::a
               nnlevel_upper, statweight_lower, alltransindex, t_mid);
 
           const double collexc_ratecoeff =
-              col_excitation_ratecoeff(T_e, nne, statweight_upper, alltransindex, epsilon_trans, statweight_lower);
+              col_excitation_ratecoeff(T_e, grid::get_clumpfactor(nonemptymgi) * nne, statweight_upper, alltransindex,
+                                       epsilon_trans, statweight_lower);
 
           const double exc_ratecoeff = radexc_ratecoeff + collexc_ratecoeff + ntcollexc_ratecoeff;
           const auto coll_str = globals::alltrans.coll_str[alltransindex];

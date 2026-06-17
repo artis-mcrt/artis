@@ -24,6 +24,7 @@ inline MPI_shared_array<float> kappagrey_allcells;
 inline MPI_shared_array<float> grey_depth_allcells;  // Grey optical depth to surface of the modelgridcell
 inline MPI_shared_array<int>
     thick_allcells;  // whether the cell is optically thick (1) or not (0), or (2) thick for vpkts only
+inline MPI_shared_array<float> clumpfactor_allcells;
 
 inline ptrdiff_t ngrid{0};
 
@@ -74,6 +75,7 @@ void set_element_meanweight(std::ptrdiff_t nonemptymgi, int element, float meanw
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_numpropcells(int modelgridindex) -> int;
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_nonemptymgi_of_mgi(int mgi) -> int;
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_mgi_of_nonemptymgi(std::ptrdiff_t nonemptymgi) -> int;
+[[nodiscard]] DEVICE_FUNC auto check_mgi_is_nonempty(int mgi, int& nonemptymgi) -> bool;
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_modelgridtype() -> GridType;
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_npts_model() -> int;
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_nonempty_npts_model() -> int;
@@ -91,6 +93,8 @@ void write_grid_restart_data(int timestep);
 [[nodiscard]] auto get_propcell_random_position_tmin(int cellindex) -> Vec3d;
 [[nodiscard]] DEVICE_FUNC auto boundary_distance(const Vec3d& dir, const Vec3d& pos, double tstart, int cellindex)
     -> std::tuple<double, int>;
+void set_clumpfactor(int nonemptymgi, float clumpfactor);
+[[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_clumpfactor(int nonemptymgi) -> float;
 DEVICE_FUNC void snap_pos_to_cell(Vec3d& pos, double time, int cellindex);
 
 [[nodiscard]] auto calculate_cell_kappagrey(int nonemptymgi) -> float;

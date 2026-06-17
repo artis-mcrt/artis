@@ -423,7 +423,11 @@ void allocate_nonemptymodelcells() {
   kappagrey_allcells = MPI_shared_array<float>(nonempty_npts_model, 0.);
   grey_depth_allcells = MPI_shared_array<float>(nonempty_npts_model, 0.);
   thick_allcells = MPI_shared_array<int>(nonempty_npts_model, 0);
-  const auto modelgrid_mem_usage = nonempty_npts_model * ((sizeof(float) * 9) + sizeof(double) + sizeof(int));
+  if constexpr (USE_MICROCLUMPING) {
+    clumpfactor_allcells = MPI_shared_array<float>(nonempty_npts_model, -1.);
+  }
+  const auto modelgrid_mem_usage =
+      nonempty_npts_model * ((sizeof(float) * (USE_MICROCLUMPING ? 10 : 9)) + sizeof(double) + sizeof(int));
   printlnlog(
       "[info] mem_usage: the modelgrid properties (temperatures and electron densities) occupies {:.3f} MB (node "
       "shared memory)",
@@ -1505,6 +1509,18 @@ auto get_rho_tmin(const int modelgridindex) -> float { return modelgrid_input[mo
   return nne_allcells[nonemptymgi];
 }
 
+[[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_clumpfactor(const int nonemptymgi) -> float {
+  assert_testmodeonly(nonemptymgi >= 0);
+  assert_testmodeonly(nonemptymgi < get_nonempty_npts_model());
+
+  if constexpr (USE_MICROCLUMPING) {
+    assert_testmodeonly(std::isfinite(clumpfactor_allcells[nonemptymgi]) && clumpfactor_allcells[nonemptymgi] >= 1.F);
+    return clumpfactor_allcells[nonemptymgi];
+  }
+
+  return 1.;
+}
+
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_nnetot(const int nonemptymgi) -> float {
   assert_testmodeonly(nonemptymgi >= 0);
   assert_testmodeonly(nonemptymgi < get_nonempty_npts_model());
@@ -1578,6 +1594,12 @@ void set_nne(const int nonemptymgi, const float nne) {
   assert_always(nne >= 0.);
   assert_always(std::isfinite(nne));
   nne_allcells[nonemptymgi] = nne;
+}
+
+void set_clumpfactor(const int nonemptymgi, const float clumpfactor) {
+  assert_testmodeonly(USE_MICROCLUMPING);
+  assert_always(std::isfinite(clumpfactor) && clumpfactor >= 1.F);
+  clumpfactor_allcells[nonemptymgi] = clumpfactor;
 }
 
 // Calculate and set the total density of electrons (free and bound) in grid cell. These are targets for Compton
@@ -1676,6 +1698,18 @@ DEVICE_FUNC auto get_modelgridtype() -> GridType {
   assert_testmodeonly(nonemptymgi < get_nonempty_npts_model());
 
   return nonemptymgi;
+}
+
+// Check if cell with index `mgi` is a non-empty cell
+// If the cell is non-empty will return `true` and `nonemptymgi` will be set accordingly, otherwise returns `false` and
+// `nonemptymgi` is set to -1
+[[nodiscard]] DEVICE_FUNC auto check_mgi_is_nonempty(const int mgi, int& nonemptymgi) -> bool {
+  assert_testmodeonly(get_nonempty_npts_model() > 0);
+  assert_testmodeonly(mgi >= 0);
+  assert_testmodeonly(mgi < get_npts_model());
+
+  nonemptymgi = nonemptymgi_of_mgi[mgi];
+  return nonemptymgi >= 0;
 }
 
 // get the index in the list of non-empty cells for a given model grid cell

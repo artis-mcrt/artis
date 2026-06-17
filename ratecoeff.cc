@@ -423,7 +423,8 @@ auto calculate_corrphotoioncoeff_integral(const int element, const int ion, cons
   // stimulated recombination is negative photoionisation
   const double nnlevel = use_cellcache ? get_cellcache_levelpop(nonemptymgi, loweruniquelevelindex)
                                        : calculate_levelpop(nonemptymgi, element, ion, level);
-  const double nne = grid::get_nne(nonemptymgi);
+  const auto clumpednne = grid::get_nne(nonemptymgi) * grid::get_clumpfactor(nonemptymgi);
+
   const int upperionlevel = get_phixsupperlevel(loweruniquelevelindex, phixstargetindex);
   const auto upperuniquelevelindex = get_uniquelevelindex(element, ion + 1, upperionlevel);
   const double modified_sahafact =
@@ -431,7 +432,7 @@ auto calculate_corrphotoioncoeff_integral(const int element, const int ion, cons
   const double nnupperionlevel = use_cellcache ? get_cellcache_levelpop(nonemptymgi, upperuniquelevelindex)
                                                : calculate_levelpop(nonemptymgi, element, ion + 1, upperionlevel);
 
-  double modified_departure_ratio = nnlevel > 0. ? nnupperionlevel / nnlevel * nne * modified_sahafact : 1.;
+  double modified_departure_ratio = nnlevel > 0. ? nnupperionlevel / nnlevel * clumpednne * modified_sahafact : 1.;
   if (!std::isfinite(modified_departure_ratio)) {
     modified_departure_ratio = 0.;
   }
@@ -612,7 +613,7 @@ auto calculate_ionrecombcoeff(const int nonemptymgi, const float T_e, const int 
   }
 
   // this gets divided and cancelled out in the radiative case anyway
-  const auto nne = (nonemptymgi >= 0) ? grid::get_nne(nonemptymgi) : 1.F;
+  const auto clumpednne = (nonemptymgi >= 0) ? grid::get_clumpfactor(nonemptymgi) * grid::get_nne(nonemptymgi) : 1.F;
   double alpha = 0.;
   const int maxrecombininglevel = get_maxrecombininglevel(element, lowerion + 1);
   for (int upper = 0; upper <= maxrecombininglevel; upper++) {
@@ -636,12 +637,12 @@ auto calculate_ionrecombcoeff(const int nonemptymgi, const float T_e, const int 
       double recomb_coeff = 0.;
       if (collisional_not_radiative) {
         const double epsilon_trans = epsilon(element, lowerion + 1, upper) - epsilon(element, lowerion, lower);
-        recomb_coeff += col_recombination_ratecoeff(T_e, nne, element, upperion, upper, lower, epsilon_trans);
+        recomb_coeff += col_recombination_ratecoeff(T_e, clumpednne, element, upperion, upper, lower, epsilon_trans);
       } else {
-        recomb_coeff += rad_recombination_ratecoeff(T_e, nne, element, lowerion + 1, upper, lower);
+        recomb_coeff += rad_recombination_ratecoeff(T_e, clumpednne, element, lowerion + 1, upper, lower);
       }
 
-      const double alpha_level = recomb_coeff / nne;
+      const double alpha_level = recomb_coeff / clumpednne;
       const double alpha_ion_contrib = alpha_level * nnupperlevel / nnupperion;
       alpha += alpha_ion_contrib;
     }
@@ -730,7 +731,7 @@ auto iongamma_is_zero(const int nonemptymgi, const int element, const int ion) -
   }
 
   const auto T_e = grid::get_Te(nonemptymgi);
-  const auto nne = grid::get_nne(nonemptymgi);
+  const auto clumpednne = grid::get_clumpfactor(nonemptymgi) * grid::get_nne(nonemptymgi);
 
   for (int level = 0; level < get_nlevels(element, ion); level++) {
     const double nnlevel = calculate_levelpop(nonemptymgi, element, ion, level);
@@ -747,7 +748,8 @@ auto iongamma_is_zero(const int nonemptymgi, const int element, const int ion) -
 
       const double epsilon_trans = epsilon(element, ion + 1, upperlevel) - epsilon(element, ion, level);
 
-      if (nnlevel * col_ionisation_ratecoeff(T_e, nne, element, ion, level, phixstargetindex, epsilon_trans) > 0) {
+      if (nnlevel * col_ionisation_ratecoeff(T_e, clumpednne, element, ion, level, phixstargetindex, epsilon_trans) >
+          0) {
         return false;
       }
     }
@@ -763,7 +765,7 @@ auto calculate_iongamma_per_gspop(const int nonemptymgi, const int element, cons
   }
 
   const auto T_e = grid::get_Te(nonemptymgi);
-  const float nne = grid::get_nne(nonemptymgi);
+  const float clumpednne = grid::get_clumpfactor(nonemptymgi) * grid::get_nne(nonemptymgi);
 
   const int nlevels_ionising = get_nlevels_ionising(element, ion);
 
@@ -780,7 +782,7 @@ auto calculate_iongamma_per_gspop(const int nonemptymgi, const int element, cons
       const double epsilon_trans = epsilon(element, ion + 1, upperlevel) - epsilon(element, ion, level);
 
       ionisation_rate_coll +=
-          nnlevel * col_ionisation_ratecoeff(T_e, nne, element, ion, level, phixstargetindex, epsilon_trans);
+          nnlevel * col_ionisation_ratecoeff(T_e, clumpednne, element, ion, level, phixstargetindex, epsilon_trans);
     }
   }
   const auto ionisation_rate = (ionisation_rate_rad + ionisation_rate_coll);
@@ -800,7 +802,7 @@ auto calculate_iongamma_per_ionpop(const int nonemptymgi, const int element, con
     return 0.;
   }
 
-  const auto nne = grid::get_nne(nonemptymgi);
+  const auto clumpednne = grid::get_clumpfactor(nonemptymgi) * grid::get_nne(nonemptymgi);
   const auto T_e = grid::get_Te(nonemptymgi);
 
   double ionisation_rate = 0.;  // rate per second
@@ -812,8 +814,8 @@ auto calculate_iongamma_per_ionpop(const int nonemptymgi, const int element, con
       if (collisional_not_radiative) {
         const int upper = get_phixsupperlevel(element, lowerion, lower, phixstargetindex);
         const double epsilon_trans = epsilon(element, lowerion + 1, upper) - epsilon(element, lowerion, lower);
-        ionisation_rate += nnlowerlevel * col_ionisation_ratecoeff(T_e, nne, element, lowerion, lower, phixstargetindex,
-                                                                   epsilon_trans);
+        ionisation_rate += nnlowerlevel * col_ionisation_ratecoeff(T_e, clumpednne, element, lowerion, lower,
+                                                                   phixstargetindex, epsilon_trans);
       } else if (force_bfintegral) {
         // don't use any detailed bound-free estimators, even if they are on and available
         ionisation_rate += nnlowerlevel * calculate_corrphotoioncoeff_integral(element, lowerion, lower,
