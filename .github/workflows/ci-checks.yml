@@ -9,7 +9,7 @@ on:
     workflow_dispatch:
 
 jobs:
-    clang-tidy-cppcheck:
+    clang-format-tidy:
         name: Format and lint
         runs-on: macos-26
         steps:
@@ -59,6 +59,35 @@ jobs:
               run: |
                   cppcheck --version
                   cppcheck --force --error-exitcode=1 --language=c++ -i third_party --enable=all --inconclusive --inline-suppr --suppress=knownConditionTrueFalse --suppress=redundantAssignment --suppress=missingIncludeSystem --suppress=unusedFunction --suppress=useStlAlgorithm --check-level=exhaustive  -U__NVCOMPILER .
+
+    cppcheck:
+        name: Lint with cppcheck
+        runs-on: ubuntu-26.04-arm
+        steps:
+            - uses: actions/checkout@v6
+
+            - name: Install dependencies
+              run: |
+                  eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+                  brew update
+                  brew install cppcheck
+
+            - name: Run pre-commit hooks
+              uses: j178/prek-action@v2
+              with:
+                extra-args: '--all-files --skip make'
+
+            - name: Run cppcheck
+              run: |
+                  cppcheck --version
+                  cppcheck --force --error-exitcode=1 --language=c++ -i third_party --enable=all --inconclusive --inline-suppr --suppress=knownConditionTrueFalse --suppress=redundantAssignment --suppress=missingIncludeSystem --suppress=unusedFunction --suppress=useStlAlgorithm --check-level=exhaustive  -U__NVCOMPILER .
+
+            - name: Run clang-tidy
+              run: |
+                  brew install llvm
+                  clang-tidy --version
+                  run-clang-tidy
+
 
     compile:
         strategy:
