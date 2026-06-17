@@ -1325,14 +1325,13 @@ void read_atomicdata_files() {
     temp_linelist.shrink_to_fit();
 
     // sort the linelist by frequency descending
-    std::SORT_OR_STABLE_SORT(
-        EXEC_PAR_UNSEQ temp_linelist.begin(), temp_linelist.end(), [](const auto& a, const auto& b) {
-          if (a.nu != b.nu) {
-            return a.nu > b.nu;
-          }
-          return std::tie(a.elementindex, a.ionindex, a.lowerlevelindex, a.upperlevelindex, a.einstein_A) <
-                 std::tie(b.elementindex, b.ionindex, b.lowerlevelindex, b.upperlevelindex, b.einstein_A);
-        });
+    std::SORT_OR_STABLE_SORT(temp_linelist.begin(), temp_linelist.end(), [](const auto& a, const auto& b) {
+      if (a.nu != b.nu) {
+        return a.nu > b.nu;
+      }
+      return std::tie(a.elementindex, a.ionindex, a.lowerlevelindex, a.upperlevelindex, a.einstein_A) <
+             std::tie(b.elementindex, b.ionindex, b.lowerlevelindex, b.upperlevelindex, b.einstein_A);
+    });
 
     for (int i = 0; i < globals::nlines - 1; i++) {
       const double nu = temp_linelist[i].nu;
