@@ -105,18 +105,15 @@ jobs:
               run: |
                   eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
                   brew update
-                  brew install llvm openmpi
+                  brew install llvm
                   echo "$(brew --prefix llvm)/bin" >> $GITHUB_PATH
-                  echo "CPPFLAGS=-I$(brew --prefix llvm)/include" >> $GITHUB_ENV
-                  echo "CXX=$(brew --prefix llvm)/bin/clang++" >> $GITHUB_ENV
                   echo "OMPI_CXX=$(brew --prefix llvm)/bin/clang++" >> $GITHUB_ENV
                   echo "LIBCXX=$(brew --prefix llvm)/include/c++/v1" >> $GITHUB_ENV
-                  echo "LDFLAGS=-L$(brew --prefix llvm)/lib/c++ -L$(brew --prefix llvm)/lib/unwind -lunwind -Wl,-rpath,$(brew --prefix llvm)/lib/c++" >> $GITHUB_ENV
                   cp artisoptions_nltenebular.h artisoptions.h
                   sudo apt-get update
                   sudo apt install -y openmpi-bin libopenmpi-dev
 
-            - name: Install dependencies
+            - name: Generate compile database
               run: |
                   make clean
                   uvx compiledb -n --full-path make TESTMODE=ON
