@@ -613,8 +613,7 @@ auto calculate_ionrecombcoeff(const int nonemptymgi, const float T_e, const int 
   }
 
   // this gets divided and cancelled out in the radiative case anyway
-  const auto nne = (nonemptymgi >= 0) ? grid::get_nne(nonemptymgi) : 1.F;
-  const float clumpfactor = (nonemptymgi >= 0) ? grid::get_clumpfactor(nonemptymgi) : 1.F;
+  const auto clumpednne = (nonemptymgi >= 0) ? grid::get_clumpfactor(nonemptymgi) * grid::get_nne(nonemptymgi) : 1.F;
   double alpha = 0.;
   const int maxrecombininglevel = get_maxrecombininglevel(element, lowerion + 1);
   for (int upper = 0; upper <= maxrecombininglevel; upper++) {
@@ -638,14 +637,12 @@ auto calculate_ionrecombcoeff(const int nonemptymgi, const float T_e, const int 
       double recomb_coeff = 0.;
       if (collisional_not_radiative) {
         const double epsilon_trans = epsilon(element, lowerion + 1, upper) - epsilon(element, lowerion, lower);
-        recomb_coeff +=
-            col_recombination_ratecoeff(T_e, clumpfactor * nne, element, upperion, upper, lower, epsilon_trans);
+        recomb_coeff += col_recombination_ratecoeff(T_e, clumpednne, element, upperion, upper, lower, epsilon_trans);
       } else {
-        recomb_coeff += rad_recombination_ratecoeff(T_e, clumpfactor * nne, element, lowerion + 1, upper, lower);
+        recomb_coeff += rad_recombination_ratecoeff(T_e, clumpednne, element, lowerion + 1, upper, lower);
       }
 
-      // TODO: should this have a clumping factor?
-      const double alpha_level = recomb_coeff / nne;
+      const double alpha_level = recomb_coeff / clumpednne;
       const double alpha_ion_contrib = alpha_level * nnupperlevel / nnupperion;
       alpha += alpha_ion_contrib;
     }
