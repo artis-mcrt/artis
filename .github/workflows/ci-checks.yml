@@ -71,6 +71,7 @@ jobs:
                   eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
                   brew update
                   brew install cppcheck
+                  echo "$(brew --prefix cppcheck)/bin" >> $GITHUB_PATH
 
             - name: Run pre-commit hooks
               uses: j178/prek-action@v2
@@ -85,8 +86,9 @@ jobs:
             - name: Run clang-tidy
               run: |
                   brew install llvm
+                  echo "$(brew --prefix llvm)/bin" >> $GITHUB_PATH
                   clang-tidy --version
-                  run-clang-tidy
+                  run-clang-tidy -extra-arg='-stdlib=libc++'
 
 
     compile:
