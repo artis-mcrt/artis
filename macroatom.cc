@@ -586,7 +586,7 @@ void macroatom_open_file() {
 
 // radiative recombination rate: paperII 3.5.2
 // multiply by upper level population to get a rate per second
-[[gnu::pure]] [[nodiscard]] auto rad_recombination_ratecoeff(const float T_e, float clumpednne, const int element,
+[[gnu::pure]] [[nodiscard]] auto rad_recombination_ratecoeff(const float T_e, const float clumpednne, const int element,
                                                              const int upperion, const int upperionlevel,
                                                              const int lowerionlevel) -> double {
   // it's faster to only check this condition outside this function than to check it for every level
@@ -608,7 +608,7 @@ void macroatom_open_file() {
 }
 
 // multiply by upper level population to get a rate per second
-[[gnu::pure]] [[nodiscard]] auto col_recombination_ratecoeff(const float T_e, float clumpednne, const int element,
+[[gnu::pure]] [[nodiscard]] auto col_recombination_ratecoeff(const float T_e, const float clumpednne, const int element,
                                                              const int upperion, const int upper, const int lower,
                                                              const double epsilon_trans) -> double {
   const auto lowerionlower_uniquelevelindex = get_uniquelevelindex(element, upperion - 1, lower);
@@ -640,7 +640,7 @@ void macroatom_open_file() {
 
 // collisional ionisation rate: paperII 3.5.1
 // multiply by lower level population to get a rate per second
-[[gnu::pure]] [[nodiscard]] auto col_ionisation_ratecoeff(const float T_e, float clumpednne, const int element,
+[[gnu::pure]] [[nodiscard]] auto col_ionisation_ratecoeff(const float T_e, const float clumpednne, const int element,
                                                           const int ion, const int lower, const int phixstargetindex,
                                                           const double epsilon_trans) -> double {
   assert_testmodeonly(phixstargetindex >= 0);
@@ -663,7 +663,7 @@ void macroatom_open_file() {
 }
 
 // multiply by upper level population to get a rate per second
-[[gnu::pure]] [[nodiscard]] auto col_deexcitation_ratecoeff(const float T_e, float clumpednne,
+[[gnu::pure]] [[nodiscard]] auto col_deexcitation_ratecoeff(const float T_e, const float clumpednne,
                                                             const double epsilon_trans, const double upperstatweight,
                                                             const double lowerstatweight, const int alltransindex)
     -> double {
@@ -711,7 +711,7 @@ void macroatom_open_file() {
 }
 
 // multiply by lower level population to get a rate per second
-[[gnu::pure]] [[nodiscard]] auto col_excitation_ratecoeff(const float T_e, float clumpednne,
+[[gnu::pure]] [[nodiscard]] auto col_excitation_ratecoeff(const float T_e, const float clumpednne,
                                                           const double upperstatweight, const int alltransindex,
                                                           const double epsilon_trans, const double lowerstatweight)
     -> double {

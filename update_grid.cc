@@ -5,7 +5,7 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdlib>
-#include <iostream>
+#include <ostream>
 #include <print>
 #include <vector>
 
