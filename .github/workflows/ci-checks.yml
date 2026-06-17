@@ -10,92 +10,16 @@ on:
 
 jobs:
     clang-format-tidy:
-        name: Format and lint
-        runs-on: macos-26
-        steps:
-            - uses: actions/checkout@v6
-
-            - name: Set up Python
-              uses: actions/setup-python@v6
-
-            - uses: maxim-lobanov/setup-xcode@v1
-              with:
-                  xcode-version: 'latest-stable'
-
-            - name: Install dependencies
-              run: |
-                  brew update
-                  brew install coreutils llvm openmpi gsl cppcheck
-                  echo "/opt/homebrew/opt/llvm/bin" >> $GITHUB_PATH
-
-                  echo "LDFLAGS=-L/opt/homebrew/opt/llvm/lib" >> $GITHUB_ENV
-                  echo "CPPFLAGS=-I/opt/homebrew/opt/llvm/include" >> $GITHUB_ENV
-
-                  echo "CXXFLAGS=-I/opt/homebrew/opt/libomp/include" >> $GITHUB_ENV
-
-                  echo "LIBRARY_PATH=/opt/homebrew/opt/lib" >> $GITHUB_ENV
-                  echo "LD_LIBRARY_PATH=/opt/homebrew/opt/lib" >> $GITHUB_ENV
-                  echo "CPATH=$HOMEBREW_PREFIX/include:$CPATH" >> $GITHUB_ENV
-
-                  python3 -m pip install compiledb
-
-            - name: Generate compile_commands.json
-              run: |
-                  cp artisoptions_nltenebular.h artisoptions.h
-                  make clean
-                  python3 -m compiledb -n --full-path make TESTMODE=ON
-
-            - name: Run pre-commit hooks
-              uses: j178/prek-action@v2
-              with:
-                extra-args: '--all-files --skip make'
-
-            - name: Run clang-tidy
-              run: |
-                  clang-tidy --version
-                  xcrun run-clang-tidy
-
-            - name: Run cppcheck
-              run: |
-                  cppcheck --version
-                  cppcheck --force --error-exitcode=1 --language=c++ -i third_party --enable=all --inconclusive --inline-suppr --suppress=knownConditionTrueFalse --suppress=redundantAssignment --suppress=missingIncludeSystem --suppress=unusedFunction --suppress=useStlAlgorithm --check-level=exhaustive  -U__NVCOMPILER .
-
-    cppcheck:
-        name: Lint with cppcheck
+        name: Lint with clang-format and clang-tidy
         runs-on: ubuntu-26.04-arm
         steps:
             - uses: actions/checkout@v6
-
-            - name: Setup uv
-              uses: astral-sh/setup-uv@v8.2.0
-              id: setup-uv
-
-            - name: Install dependencies
-              run: |
-                  eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
-                  brew update
-                  brew install cppcheck
-                  echo "$(brew --prefix cppcheck)/bin" >> $GITHUB_PATH
-                  cp artisoptions_nltenebular.h artisoptions.h
-                  make clean
 
             - name: Run pre-commit hooks
               uses: j178/prek-action@v2
               if: always()
               with:
                 extra-args: '--all-files --skip make'
-
-            - name: Run cppcheck
-              if: always()
-              run: |
-                  cppcheck --version
-                  cppcheck --force --error-exitcode=1 --language=c++ -i third_party --enable=all --inconclusive --inline-suppr --suppress=knownConditionTrueFalse --suppress=redundantAssignment --suppress=missingIncludeSystem --suppress=unusedFunction --suppress=useStlAlgorithm --check-level=exhaustive  -U__NVCOMPILER .
-
-    clang-tidy:
-        name: Lint with clang-tidy
-        runs-on: ubuntu-26.04-arm
-        steps:
-            - uses: actions/checkout@v6
 
             - name: Setup uv
               uses: astral-sh/setup-uv@v8.2.0
@@ -133,6 +57,31 @@ jobs:
                   mpiargs=""
                   for d in $(mpicxx --showme:incdirs); do mpiargs="$mpiargs -extra-arg=-isystem$d"; done
                   run-clang-tidy -extra-arg=-nostdinc++ -extra-arg=-isystem"$LIBCXX" $mpiargs
+
+    cppcheck:
+        name: Lint with cppcheck
+        runs-on: ubuntu-26.04-arm
+        steps:
+            - uses: actions/checkout@v6
+
+            - name: Setup uv
+              uses: astral-sh/setup-uv@v8.2.0
+              id: setup-uv
+
+            - name: Install dependencies
+              run: |
+                  eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+                  brew update
+                  brew install cppcheck
+                  echo "$(brew --prefix cppcheck)/bin" >> $GITHUB_PATH
+                  cp artisoptions_nltenebular.h artisoptions.h
+                  make clean
+
+            - name: Run cppcheck
+              if: always()
+              run: |
+                  cppcheck --version
+                  cppcheck --force --error-exitcode=1 --language=c++ -i third_party --enable=all --inconclusive --inline-suppr --suppress=knownConditionTrueFalse --suppress=redundantAssignment --suppress=missingIncludeSystem --suppress=unusedFunction --suppress=useStlAlgorithm --check-level=exhaustive  -U__NVCOMPILER .
 
     compile:
         strategy:
