@@ -1,6 +1,6 @@
 #include "sn3d.h"
 
-#include <getopt.h>
+#include <getopt.h>  // NOLINT(misc-include-cleaner): glibc declares getopt/optarg in bits/, no IWYU mapping to <getopt.h>
 #include <unistd.h>
 
 #include <algorithm>
@@ -794,9 +794,10 @@ auto main(int argc, char* argv[]) -> int {
 #endif
 
   int opt = 0;
-  while ((opt = getopt(argc, argv, "w:")) != -1) {  // NOLINT(concurrency-mt-unsafe)
+  while ((opt = getopt(argc, argv, "w:")) != -1) {  // NOLINT(concurrency-mt-unsafe,misc-include-cleaner)
     if (opt == 'w') {
-      printlog("Command line argument specifies wall time hours '{}', setting ", optarg);
+      printlog("Command line argument specifies wall time hours '{}', setting ",
+               optarg);  // NOLINT(misc-include-cleaner)
       const float walltimehours = strtof(optarg, nullptr);
       walltimelimitseconds = static_cast<int>(walltimehours * 3600);
       printlnlog("walltimelimitseconds = {}", walltimelimitseconds);
