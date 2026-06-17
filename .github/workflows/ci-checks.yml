@@ -66,6 +66,10 @@ jobs:
         steps:
             - uses: actions/checkout@v6
 
+            - name: Setup uv
+              uses: astral-sh/setup-uv@v8.2.0
+              id: setup-uv
+
             - name: Install dependencies
               run: |
                   eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
@@ -76,7 +80,8 @@ jobs:
                   echo "$(brew --prefix llvm)/bin" >> $GITHUB_PATH
                   cp artisoptions_nltenebular.h artisoptions.h
                   make clean
-                  python3 -m compiledb -n --full-path make TESTMODE=ON
+                  uv tool install compiledb
+                  compiledb -n --full-path make TESTMODE=ON
 
             - name: Run pre-commit hooks
               uses: j178/prek-action@v2
