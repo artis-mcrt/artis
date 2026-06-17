@@ -72,18 +72,22 @@ jobs:
                   brew update
                   brew install cppcheck
                   echo "$(brew --prefix cppcheck)/bin" >> $GITHUB_PATH
+                  cp artisoptions_nltenebular.h artisoptions.h
 
             - name: Run pre-commit hooks
               uses: j178/prek-action@v2
+              if: always()
               with:
                 extra-args: '--all-files --skip make'
 
             - name: Run cppcheck
+              if: always()
               run: |
                   cppcheck --version
                   cppcheck --force --error-exitcode=1 --language=c++ -i third_party --enable=all --inconclusive --inline-suppr --suppress=knownConditionTrueFalse --suppress=redundantAssignment --suppress=missingIncludeSystem --suppress=unusedFunction --suppress=useStlAlgorithm --check-level=exhaustive  -U__NVCOMPILER .
 
             - name: Run clang-tidy
+              if: always()
               run: |
                   brew install llvm
                   echo "$(brew --prefix llvm)/bin" >> $GITHUB_PATH
