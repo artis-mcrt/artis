@@ -1700,18 +1700,6 @@ DEVICE_FUNC auto get_modelgridtype() -> GridType {
   return nonemptymgi;
 }
 
-// Check if cell with index `mgi` is a non-empty cell
-// If the cell is non-empty will return `true` and `nonemptymgi` will be set accordingly, otherwise returns `false` and
-// `nonemptymgi` is set to -1
-[[nodiscard]] DEVICE_FUNC auto check_mgi_is_nonempty(const int mgi, int& nonemptymgi) -> bool {
-  assert_testmodeonly(get_nonempty_npts_model() > 0);
-  assert_testmodeonly(mgi >= 0);
-  assert_testmodeonly(mgi < get_npts_model());
-
-  nonemptymgi = nonemptymgi_of_mgi[mgi];
-  return nonemptymgi >= 0;
-}
-
 // get the index in the list of non-empty cells for a given model grid cell
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_mgi_of_nonemptymgi(const ptrdiff_t nonemptymgi) -> int {
   assert_testmodeonly(get_nonempty_npts_model() > 0);
