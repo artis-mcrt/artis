@@ -54,7 +54,7 @@ jobs:
                   echo "CXX=g++-15" >> $GITHUB_ENV
                   echo "OMPI_CXX=g++-15" >> $GITHUB_ENV
                   sudo apt-get update
-                  sudo apt install -y openmpi-bin libopenmpi-dev
+                  sudo apt-get install -y openmpi-bin libopenmpi-dev
 
             - name: Show CPU type and core count
               id: cpu-count
@@ -200,7 +200,6 @@ jobs:
               if: always()
               working-directory: tests/${{ matrix.testname }}_testrun
               run: |
-                  touch requirements.txt
                   find . -name "*_res_*.out" -exec zstd -v -T0 --rm -f {} \;
 
             - name: Upload output files
