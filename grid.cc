@@ -2334,12 +2334,12 @@ DEVICE_FUNC void snap_pos_to_cell(Vec3d& pos, const double time, const int celli
     return;
   }
   for (int d = 0; d < 3; d++) {
-    const double cellposmin = get_cellcoordmin(cellindex, d) / globals::tmin * time;
+    const int idx = get_cellcoordindex(cellindex, d);
+    const double cellposmin = coord_pos_min_tmin[d][idx] / globals::tmin * time;
     // exactly match the boundary used by boundary_distance(): the upper boundary is the
     // lower edge of the neighbouring cell, except at the grid edge
-    const double cellposmax = (get_cellcoordindex(cellindex, d) < (ncoordgrid[d] - 1))
-                                  ? get_cellcoordmin(cellindex + get_coordcellindexstride(d), d) / globals::tmin * time
-                                  : get_cellcoordmax(cellindex, d) / globals::tmin * time;
+    const double cellposmax = (idx < (ncoordgrid[d] - 1)) ? coord_pos_min_tmin[d][idx + 1] / globals::tmin * time
+                                                          : get_cellcoordmax(cellindex, d) / globals::tmin * time;
     const double newpos_d = std::clamp(pos[d], cellposmin, cellposmax);
     // corrections should only ever be at the floating-point rounding error level
     assert_testmodeonly(std::abs(newpos_d - pos[d]) <= cellbound_tolerance(pos[d]));
