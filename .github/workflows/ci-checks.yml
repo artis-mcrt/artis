@@ -22,10 +22,12 @@ jobs:
                 extra-args: '--all-files --skip make'
 
             - name: Setup uv
+              if: always()
               uses: astral-sh/setup-uv@v8.2.0
               id: setup-uv
 
             - name: Install dependencies
+              if: always()
               run: |
                   wget https://apt.llvm.org/llvm.sh
                   chmod +x llvm.sh
@@ -37,6 +39,7 @@ jobs:
                   cp artisoptions_nltenebular.h artisoptions.h
 
             - name: Generate compile database
+              if: always()
               run: |
                   make clean
                   uvx compiledb -n --full-path make TESTMODE=ON
@@ -67,7 +70,6 @@ jobs:
                   make clean
 
             - name: Run cppcheck
-              if: always()
               run: |
                   cppcheck --version
                   cppcheck --force --error-exitcode=1 --language=c++ -i third_party --enable=all --inconclusive --inline-suppr --suppress=knownConditionTrueFalse --suppress=redundantAssignment --suppress=missingIncludeSystem --suppress=unusedFunction --suppress=useStlAlgorithm --check-level=exhaustive  -U__NVCOMPILER .
