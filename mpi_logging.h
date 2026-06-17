@@ -32,6 +32,8 @@
 #include <mpi.h>
 #pragma clang unsafe_buffer_usage end
 
+#include "constants.h"
+
 inline void MPI_Barrier_allranks() { MPI_Barrier(MPI_COMM_WORLD); }
 
 namespace globals {
@@ -92,8 +94,6 @@ inline void setup_mpi_vars() {
 
 inline void MPI_Barrier_node() { MPI_Barrier(globals::mpi_comm_node); }
 
-#include "constants.h"
-
 extern std::fstream output_file;
 
 #ifdef _OPENMP
@@ -104,53 +104,14 @@ extern std::fstream output_file;
 
 void set_log_file(std::string_view filename) noexcept;
 
-// Report a failed assertion to output_file (if open) and stderr. Defined out-of-line in mpi_logging.cc so that the
-// heavyweight <iostream> dependency does not propagate into every translation unit that includes this header.
-[[gnu::cold]] void report_assert_failure(const char* file, int line, const char* expr, const char* func) noexcept;
-
-#ifdef __NVCOMPILER_CUDA_ARCH__
-#include <string_view>
-
-#define printout(...) printf(__VA_ARGS__)
-
-template <typename... Args>
-inline auto printlog(std::string_view fmt, Args&&... args) -> void {
-  const auto str = std::vformat(fmt, std::make_format_args(args...));
-  printf("%s", str.c_str());
-}
-
-template <typename... Args>
-inline auto printlnlog(std::string_view fmt, Args&&... args) -> void {
-  const auto str = std::vformat(fmt, std::make_format_args(args...));
-  printf("%s\n", str.c_str());
-}
-
-#define __artis_assert(e)                         \
-  {                                               \
-    const bool assertpass = static_cast<bool>(e); \
-    assert(assertpass);                           \
-  }
-
-#else
-// The actual writes to output_file (and the timestamp prefix) are defined out-of-line in mpi_logging.cc. This keeps
-// the heavyweight <print>, <chrono> and std::print(std::ostream&) machinery out of every translation unit that
-// includes this header; the inline templates below only need <format> to build the message string.
-
 // Write an already-formatted message to output_file, prepending a timestamp at the start of each line. When
 // add_newline is set, a trailing newline is appended and the next write starts a new line.
 void log_write(std::string_view message, bool add_newline) noexcept;
 
-__attribute__((__format__(__printf__, 1, 2))) void printout(const char* format, ...) noexcept;
-
-template <typename... Args>
-inline auto printlog(const std::format_string<Args...> fmt, Args&&... args) noexcept -> void {
-  log_write(std::format(fmt, std::forward<Args>(args)...), false);
-}
-
-template <typename... Args>
-inline auto printlnlog(const std::format_string<Args...> fmt, Args&&... args) noexcept -> void {
-  log_write(std::format(fmt, std::forward<Args>(args)...), true);
-}
+// Report a failed assertion to output_file (if open) and stderr. Defined out-of-line in mpi_logging.cc so that the
+// heavyweight <iostream> dependency does not propagate into every translation unit that includes this header.
+[[gnu::cold]] DEVICE_FUNC void report_assert_failure(const char* file, int line, const char* expr,
+                                                     const char* func) noexcept;
 
 #define __artis_assert(e)                                                 \
   {                                                                       \
@@ -161,7 +122,17 @@ inline auto printlnlog(const std::format_string<Args...> fmt, Args&&... args) no
     assert(assertpass);                                                   \
   }
 
-#endif
+template <typename... Args>
+inline auto printlog(const std::format_string<Args...> fmt, Args&&... args) noexcept -> void {
+  MY_IF_DEVICE(const auto str = std::vformat(fmt.get(), std::make_format_args(args...)); printf("%s", str.c_str()););
+  MY_IF_HOST(log_write(std::format(fmt, std::forward<Args>(args)...), false););
+}
+
+template <typename... Args>
+inline auto printlnlog(const std::format_string<Args...> fmt, Args&&... args) noexcept -> void {
+  MY_IF_DEVICE(const auto str = std::vformat(fmt.get(), std::make_format_args(args...)); printf("%s\n", str.c_str()););
+  MY_IF_HOST(log_write(std::format(fmt, std::forward<Args>(args)...), true););
+}
 
 #define assert_always(e) __artis_assert(e)
 

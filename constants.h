@@ -81,16 +81,29 @@ constexpr std::array datafolders{"./", "data/", "artis/data/"};
 #define TESTMODE false
 #endif
 
-#if defined(__NVCOMPILER_CUDA_ARCH__) || defined(__HIP_DEVICE_COMPILE__)
-#define THREADLOCALONHOST
+#ifdef __NVCOMPILER
+// nvc++ : single-pass. Each macro becomes an independent "if target".
+#include <nv/target>
+#define MY_IF_DEVICE(...) NV_IF_TARGET(NV_IS_DEVICE, (__VA_ARGS__))
+#define MY_IF_HOST(...) NV_IF_TARGET(NV_IS_HOST, (__VA_ARGS__))
+
+#elif (defined(__HIP_DEVICE_COMPILE__) && __HIP_DEVICE_COMPILE__) || defined(__CUDA_ARCH__)
+// Device pass of a multi-pass compiler (HIP-Clang / nvcc).
+#define MY_IF_DEVICE(...) __VA_ARGS__
+#define MY_IF_HOST(...)
+
 #else
-#define THREADLOCALONHOST thread_local static
+// Host pass of HIP/nvcc, OR a plain CPU-only compiler (gcc/clang/icc).
+#define MY_IF_DEVICE(...)
+#define MY_IF_HOST(...) __VA_ARGS__
 #endif
 
 #ifdef GPU_ON
 #define DEVICE_FUNC __host__ __device__
+#define THREADLOCALONHOST
 #else
 #define DEVICE_FUNC
+#define THREADLOCALONHOST thread_local
 #endif
 
 #if defined REPRODUCIBLE && REPRODUCIBLE

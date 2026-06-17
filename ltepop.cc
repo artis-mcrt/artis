@@ -42,6 +42,8 @@ namespace {
 
 // Calculate population ratio (a saha factor) of two consecutive ionisation stages in nebular approximation phi_j,k* =
 // N_j,k*/(N_j+1,k* * nne)
+// should have units of [cm^3] so that when multiplied by nne it gives the population ratio of two consecutive
+// ionisation stages
 [[gnu::pure]] [[nodiscard]] auto phi_rate_balance(const int element, const int ion, const int nonemptymgi) -> double {
   assert_testmodeonly(element < get_nelements());
   assert_testmodeonly(ion < get_nions(element));
@@ -77,7 +79,8 @@ namespace {
   // gamma_nt should generally be higher than the Gamma term for nebular epoch
 
   assert_always((Gamma_ion + gamma_nt) > 0);
-
+  // numerator: ionisation rate per ion pop per nne
+  // denominator: recombination rate per ion pop
   const double phi = (Alpha_sp + Col_rec) / (Gamma_ion + gamma_nt);
   assert_always(phi > 0.);
 
@@ -266,8 +269,8 @@ auto find_converged_nne(const int nonemptymgi, double nne_max, const bool force_
 
 }  // anonymous namespace
 
-[[nodiscard]] DEVICE_FUNC auto find_uppermost_ion(const int nonemptymgi, const int element, const double nne_hi,
-                                                  const bool force_saha) -> int {
+[[nodiscard]] auto find_uppermost_ion(const int nonemptymgi, const int element, const double nne_hi,
+                                      const bool force_saha) -> int {
   const int nions = get_nions(element);
   if (nions == 0) {
     return -1;
@@ -298,9 +301,9 @@ auto find_converged_nne(const int nonemptymgi, double nne_max, const bool force_
     factor *= nne_hi * phifactor;
 
     if (!std::isfinite(factor)) {
-      printout(
-          "[info] calculate_ion_balance_nne: uppermost_ion limited by phi factors for element "
-          "Z=%d, ionstage %d in cell %d\n",
+      printlnlog(
+          "[info] calculate_ion_balance_nne: uppermost_ion limited by phi factors for element Z={}, ionstage {} in "
+          "cell {}",
           get_atomicnumber(element), get_ionstage(element, ion), modelgridindex);
       return ion;
     }
@@ -335,9 +338,9 @@ auto find_converged_nne(const int nonemptymgi, double nne_max, const bool force_
     ionfractions[ion] = ionfractions[ion] / normfactor;
 
     if (normfactor == 0. || !std::isfinite(ionfractions[ion])) {
-      printout("[warning] ionfract set to zero for ionstage %d of Z=%d in cell %d with T_e %g, T_R %g\n",
-               get_ionstage(element, ion), get_atomicnumber(element), grid::get_mgi_of_nonemptymgi(nonemptymgi),
-               grid::get_Te(nonemptymgi), grid::get_TR(nonemptymgi));
+      printlnlog("[warning] ionfract set to zero for ionstage {}, Z={} in cell {} with T_e {:g}, T_R {:g}",
+                 get_ionstage(element, ion), get_atomicnumber(element), grid::get_mgi_of_nonemptymgi(nonemptymgi),
+                 grid::get_Te(nonemptymgi), grid::get_TR(nonemptymgi));
       ionfractions[ion] = 0;
     }
   }

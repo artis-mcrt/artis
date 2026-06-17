@@ -38,19 +38,21 @@ jobs:
                     ]
             fail-fast: ${{ inputs.testmode == 'ON' }}
 
-        runs-on: ubuntu-24.04
+        runs-on: ubuntu-26.04-arm
         timeout-minutes: ${{ inputs.testmode == 'ON' && 360 || 40 }}
         name: ${{ matrix.testname }}
+        env:
+            OMPI_MCA_memory: ${{ inputs.testmode == 'ON' && '^patcher' || '' }}
 
         steps:
             - uses: actions/checkout@v6
               with:
                   fetch-depth: 0
 
-            - name: Install Open MPI
+            - name: Install Open MPI and set compiler to g++-15
               run: |
-                  echo "CXX=g++-14" >> $GITHUB_ENV
-                  echo "OMPI_CXX=g++-14" >> $GITHUB_ENV
+                  echo "CXX=g++-15" >> $GITHUB_ENV
+                  echo "OMPI_CXX=g++-15" >> $GITHUB_ENV
                   sudo apt-get update
                   sudo apt install -y openmpi-bin libopenmpi-dev
 
@@ -107,7 +109,7 @@ jobs:
               run: |
                   cp input-newrun.txt input.txt
                   touch output_0-0.txt
-                  time mpirun -np 4 --oversubscribe --mca mpi_yield_when_idle 1 ./sn3d
+                  time mpirun -np 4 --oversubscribe --mca osc ^ucx --mca mpi_yield_when_idle 1 ./sn3d
 
             - name: Move job0 files
               if: always()
@@ -139,7 +141,7 @@ jobs:
               working-directory: tests/${{ matrix.testname }}_testrun/
               run: |
                   cp input-resume.txt input.txt
-                  time mpirun -np 4 --oversubscribe --mca mpi_yield_when_idle 1 ./sn3d
+                  time mpirun -np 4 --oversubscribe --mca osc ^ucx --mca mpi_yield_when_idle 1 ./sn3d
 
             - name: Move job1 files
               if: always()
@@ -217,6 +219,7 @@ jobs:
 
             - name: Setup uv
               uses: astral-sh/setup-uv@v8.2.0
+              if: always() && inputs.testmode != 'ON'
               id: setup-uv
 
             - name: Install artistools
@@ -273,14 +276,10 @@ jobs:
     combine_checksums:
         needs: testmodels
         if: always() && inputs.testmode != 'ON'
-        runs-on: ubuntu-26.04
+        runs-on: ubuntu-26.04-arm
         steps:
             - name: Download test output
               uses: actions/download-artifact@v8
-
-            - name: List all files
-              if: always()
-              run: find .
 
             - name: Upload bundled checksum files
               uses: actions/upload-artifact@v7

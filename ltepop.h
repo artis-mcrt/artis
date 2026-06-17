@@ -18,7 +18,7 @@
 [[gnu::pure]] [[nodiscard]] auto calculate_levelpop_boltzmann(int nonemptymgi, int element, int ion, int level)
     -> double;
 
-[[nodiscard]] DEVICE_FUNC auto find_uppermost_ion(int nonemptymgi, int element, double nne_hi, bool force_saha) -> int;
+[[nodiscard]] auto find_uppermost_ion(int nonemptymgi, int element, double nne_hi, bool force_saha) -> int;
 void calculate_ion_balance_nne(int nonemptymgi);
 void calculate_cellpartfuncts(int nonemptymgi, int element);
 [[nodiscard]] auto calculate_ionfractions(int element, int nonemptymgi, double nne, bool use_phi_saha)
