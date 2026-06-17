@@ -76,11 +76,7 @@ jobs:
                   brew update
                   brew install cppcheck
                   echo "$(brew --prefix cppcheck)/bin" >> $GITHUB_PATH
-                  brew install llvm
-                  echo "$(brew --prefix llvm)/bin" >> $GITHUB_PATH
                   cp artisoptions_nltenebular.h artisoptions.h
-                  make clean
-                  uvx compiledb -n --full-path make TESTMODE=ON
 
             - name: Run pre-commit hooks
               uses: j178/prek-action@v2
@@ -94,12 +90,41 @@ jobs:
                   cppcheck --version
                   cppcheck --force --error-exitcode=1 --language=c++ -i third_party --enable=all --inconclusive --inline-suppr --suppress=knownConditionTrueFalse --suppress=redundantAssignment --suppress=missingIncludeSystem --suppress=unusedFunction --suppress=useStlAlgorithm --check-level=exhaustive  -U__NVCOMPILER .
 
+    clang-tidy:
+        name: Lint with clang-tidy
+        runs-on: ubuntu-26.04-arm
+        steps:
+            - uses: actions/checkout@v6
+
+            - name: Setup uv
+              uses: astral-sh/setup-uv@v8.2.0
+              id: setup-uv
+
+            - name: Install dependencies
+              run: |
+                  eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+                  brew update
+                  brew install llvm openmpi
+                  echo "$(brew --prefix llvm)/bin" >> $GITHUB_PATH
+                  echo "LDFLAGS=-L/opt/homebrew/opt/llvm/lib -L/opt/homebrew/opt/llvm/lib/c++ -L/opt/homebrew/opt/llvm/lib/unwind -lunwind" >> $GITHUB_ENV
+                  echo "CPPFLAGS=-I/opt/homebrew/opt/llvm/include" >> $GITHUB_ENV
+                  echo "CXX=clang++" >> $GITHUB_ENV
+                  echo "OMPI_CXX=clang++" >> $GITHUB_ENV
+                  cp artisoptions_nltenebular.h artisoptions.h
+                  make clean
+                  uvx compiledb -n --full-path make TESTMODE=ON
+
+            - name: Run pre-commit hooks
+              uses: j178/prek-action@v2
+              if: always()
+              with:
+                extra-args: '--all-files --skip make'
+
             - name: Run clang-tidy
               if: always()
               run: |
                   clang-tidy --version
                   run-clang-tidy -extra-arg='-stdlib=libc++'
-
 
     compile:
         strategy:
