@@ -2414,8 +2414,7 @@ DEVICE_FUNC void snap_pos_to_cell(Vec3d& pos, const double time, const int celli
       // flow, otherwise we might never enter the cell that we're supposed to be in
       const bool pos_component_vel_relative_to_flow = (pktvelgridcoord[d] * tstart) > pktposgridcoord[d];
 
-      constexpr bool BOUNDARY_ERROR_CHECKING_CORRECTION = true;
-      if constexpr (BOUNDARY_ERROR_CHECKING_CORRECTION) {
+      if constexpr (TESTMODE) {
         bool isoutside_error = false;
         [[maybe_unused]] double delta = 0.;
         if (pos_component_vel_relative_to_flow) {
