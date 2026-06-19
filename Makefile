@@ -68,6 +68,8 @@ else ifneq '' '$(findstring nvc++,$(COMPILER_VERSION))'
 		CXXFLAGS += --gcc-toolchain=$(GCCTOOLCHAIN)
 	else ifneq (,$(shell hostname -A | grep .cosma.))
 		CXXFLAGS += --gcc-toolchain=/cosma/local/gcc/14.1.0/
+	else ifneq (,$(shell hostname -A | grep heavymetalgb10.mp.qub.ac.uk))
+		CXXFLAGS += --gcc-toolchain=$(shell which g++-14)
 	endif
 	CPU_ARCH := $(shell g++ -march=native -Q --help=target | grep -- '-march=  ' | cut -f3)
 else
