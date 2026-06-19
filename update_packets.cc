@@ -7,6 +7,9 @@
 #include <cstddef>
 #include <cstdlib>
 #include <optional>
+#ifdef GPU_ON
+#include <ranges>
+#endif
 #include <span>
 #include <tuple>
 #include <vector>
@@ -20,6 +23,9 @@
 #include "grid.h"
 #include "kpkt.h"
 #include "ltepop.h"
+#ifdef GPU_ON
+#include "macroatom.h"
+#endif
 #include "mpi_logging.h"
 #include "nonthermal.h"
 #include "packet.h"
@@ -399,6 +405,23 @@ void cellcache_change_cell(globals::CellCache& cacheslot, const int nonemptymgi)
     cacheslot.allcont_keep[i] = nnlevel > 0 && keep_this_cont(globals::allcont.element[i], globals::allcont.ion[i],
                                                               globals::allcont.level[i], nonemptymgi, nnetot);
   }
+
+#ifdef GPU_ON
+  // On the device, the macroatom transition rates and k-packet cooling rates cannot be computed lazily
+  // during propagation (they are guarded by a mutex on the CPU, which is unavailable on the GPU). So
+  // prepopulate every cell's rates here, up front, while still on the host.
+  const double t_mid = globals::timesteps[globals::timestep].mid;
+  const auto alllevelindices = std::ranges::iota_view{0, get_includedlevels()};
+  std::for_each(EXEC_PAR alllevelindices.begin(), alllevelindices.end(),
+                [nonemptymgi, t_mid](const int uniquelevelindex) {
+                  calculate_cellcache_macroatom_transitionrates(nonemptymgi, uniquelevelindex, t_mid);
+                });
+
+  const auto allionindices = std::ranges::iota_view{0, get_includedions()};
+  std::for_each(EXEC_PAR allionindices.begin(), allionindices.end(), [nonemptymgi](const int uniqueionindex) {
+    kpkt::calculate_cellcache_cooling_rates_ion(nonemptymgi, uniqueionindex);
+  });
+#endif
 }
 
 void update_packet_cellcache_group(const int cellcache_nonemptymgi, std::span<Packet> packets, const int nts,

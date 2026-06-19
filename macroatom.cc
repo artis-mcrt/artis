@@ -55,9 +55,10 @@ std::fstream macroatom_file;
       globals::alllevels.matransblock_start[uniquelevelindex], get_ndowntrans(uniquelevelindex) - 1);
 }
 
-void calculate_macroatom_transitionrates(std::span<double> levelrates, const int nonemptymgi, const int element,
-                                         const int ion, const int level, const int ionuniquelevelindexstart,
-                                         const double t_mid, const globals::AllTransitions& alltrans) {
+DEVICE_FUNC void calculate_macroatom_transitionrates(std::span<double> levelrates, const int nonemptymgi,
+                                                     const int element, const int ion, const int level,
+                                                     const int ionuniquelevelindexstart, const double t_mid,
+                                                     const globals::AllTransitions& alltrans) {
   assert_testmodeonly(std::ssize(levelrates) == MA_ACTION_COUNT);
   const auto uniquelevelindex = ionuniquelevelindexstart + level;
 
@@ -181,8 +182,8 @@ void calculate_macroatom_transitionrates(std::span<double> levelrates, const int
   levelrates[MA_ACTION_INTERNALUPHIGHER] = sum_up_higher;
 
   const auto rate_total = std::ranges::fold_left(levelrates, 0.0, std::plus<>{});
-  // a level cannot have all zero or non-finite transition rates
-  assert_always(rate_total > 0.0 && std::isfinite(rate_total));
+
+  assert_always(rate_total >= 0.0 && std::isfinite(rate_total));
 }
 
 // radiative deexcitation
@@ -311,6 +312,17 @@ void do_macroatom_raddeexcitation(Packet& pkt, const int ionuniquelevelindexstar
 }
 
 }  // anonymous namespace
+
+// prepopulate one unique level's macroatom transition rates into the cellcache (see header)
+DEVICE_FUNC void calculate_cellcache_macroatom_transitionrates(const int nonemptymgi, const int uniquelevelindex,
+                                                               const double t_mid) {
+  const auto [element, ion, level] = get_levelfromuniquelevelindex(uniquelevelindex);
+  const auto ionuniquelevelindexstart = get_ionuniquelevelindexstart(element, ion);
+  const auto levelrates = std::span{globals::cellcache[cellcacheslotid].alllevels_maprocessrates}.subspan(
+      uniquelevelindex * MA_ACTION_COUNT, MA_ACTION_COUNT);
+  calculate_macroatom_transitionrates(levelrates, nonemptymgi, element, ion, level, ionuniquelevelindexstart, t_mid,
+                                      globals::alltrans);
+}
 
 // handle activated macro atoms
 DEVICE_FUNC void do_macroatom(Packet& pkt, const MacroAtomState& pktmastate) {

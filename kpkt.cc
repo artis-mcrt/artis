@@ -342,6 +342,16 @@ void setup_coolinglist() {
   printlnlog("kpkts diffuse {:g} of a time step's length", kpktdiffusion_timescale);
 }
 
+// prepopulate one ion's cooling-rate contributions into the cellcache (see header)
+DEVICE_FUNC void calculate_cellcache_cooling_rates_ion(const int nonemptymgi, const int uniqueionindex) {
+  const auto [element, ion] = get_ionfromuniqueionindex(uniqueionindex);
+  const int ionstart = get_coolinglistoffset(element, ion);
+  const int ncoolingterms_ion = get_ncoolingterms_ion(element, ion);
+  const auto ion_contribs =
+      std::span{globals::cellcache[cellcacheslotid].cooling_contrib}.subspan(ionstart, ncoolingterms_ion);
+  calculate_cooling_rates_ion<true>(nonemptymgi, element, ion, ion_contribs, nullptr, nullptr, nullptr, nullptr);
+}
+
 // handle a k-packet (e.g., in a thick cell) by emitting according to the planck function
 DEVICE_FUNC void do_kpkt_blackbody(Packet& pkt) {
   const auto nonemptymgi = grid::get_propcell_nonemptymgi(pkt.cellindex);
