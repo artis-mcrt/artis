@@ -190,7 +190,7 @@ void do_macroatom_raddeexcitation(Packet& pkt, const int ionuniquelevelindexstar
                                   const int activatingline, const double epsilon_current, const double totalrate) {
   // randomly select which line transitions occurs
 
-  const double targetval = rng_uniform() * totalrate;
+  const double targetval = rng_uniform(pkt.number) * totalrate;
   const auto sum_epstrans_rad_deexc_exceptlast = get_sum_epstrans_rad_deexc_exceptlast(uniquelevelindex);
 
   // first sum_epstrans_rad_deexc[i] such that sum_epstrans_rad_deexc[i] > targetval
@@ -237,7 +237,7 @@ void do_macroatom_raddeexcitation(Packet& pkt, const int ionuniquelevelindexstar
   const auto clumpednne = grid::get_clumpfactor(nonemptymgi) * grid::get_nne(nonemptymgi);
   const double epsilon_current = epsilon(element, upperion, upperionlevel);
   // Randomly select a continuum
-  const double targetval = rng_uniform() * rad_recomb;
+  const double targetval = rng_uniform(pkt.number) * rad_recomb;
   double rate = 0;
   const int nlevels = get_nlevels_ionising(element, upperion - 1);
   int lowerionlevel = -1;
@@ -257,7 +257,7 @@ void do_macroatom_raddeexcitation(Packet& pkt, const int ionuniquelevelindexstar
   // set the new state
   const int lowerion = upperion - 1;
 
-  pkt.nu_cmf = select_continuum_nu(element, upperion - 1, lowerionlevel, upperionlevel, T_e);
+  pkt.nu_cmf = select_continuum_nu(element, upperion - 1, lowerionlevel, upperionlevel, T_e, pkt.number);
 
   stats::increment(stats::Counter::MA_STAT_DEACTIVATION_FB);
 
@@ -275,12 +275,13 @@ void do_macroatom_raddeexcitation(Packet& pkt, const int ionuniquelevelindexstar
 // get the level index of the upper ionisation stage after randomly-selected photoionisation or thermal collisional
 // ionisation and update counters
 [[nodiscard]] auto do_macroatom_ionisation(const int nonemptymgi, const int element, const int ion, const int level,
-                                           const double epsilon_current, const double internal_up_higher) -> int {
+                                           const double epsilon_current, const double internal_up_higher,
+                                           const int packetnumber) -> int {
   const auto T_e = grid::get_Te(nonemptymgi);
   const auto clumpednne = grid::get_clumpfactor(nonemptymgi) * grid::get_nne(nonemptymgi);
 
   // Randomly select the occurring transition
-  const double targetrate = rng_uniform() * internal_up_higher;
+  const double targetrate = rng_uniform(packetnumber) * internal_up_higher;
   double rate = 0.;
   const auto uniquelevelindex = get_uniquelevelindex(element, ion, level);
   const int nphixstargets = get_nphixstargets(uniquelevelindex);
@@ -376,7 +377,7 @@ DEVICE_FUNC void do_macroatom(Packet& pkt, const MacroAtomState& pktmastate) {
     std::array<double, MA_ACTION_COUNT> cumulative_transitions{};
     std::partial_sum(levelrates.begin(), levelrates.end(), cumulative_transitions.begin());
 
-    const double randomrate = rng_uniform() * cumulative_transitions[MA_ACTION_COUNT - 1];
+    const double randomrate = rng_uniform(pkt.number) * cumulative_transitions[MA_ACTION_COUNT - 1];
 
     // first cumulative_transitions[i] such that cumulative_transitions[i] > randomrate
     const auto selected_action =
@@ -414,7 +415,7 @@ DEVICE_FUNC void do_macroatom(Packet& pkt, const MacroAtomState& pktmastate) {
 
       case MA_ACTION_INTERNALDOWNSAME: {
         // Randomly select the occurring transition
-        const double targetval = rng_uniform() * levelrates[MA_ACTION_INTERNALDOWNSAME];
+        const double targetval = rng_uniform(pkt.number) * levelrates[MA_ACTION_INTERNALDOWNSAME];
 
         // first sum_internal_down_same[i] such that sum_internal_down_same[i] > targetval
         const auto sum_internal_down_same_exceptlast = get_sum_internal_down_same_exceptlast(uniquelevelindex);
@@ -450,7 +451,7 @@ DEVICE_FUNC void do_macroatom(Packet& pkt, const MacroAtomState& pktmastate) {
         stats::increment(stats::Counter::MA_STAT_INTERNALDOWNLOWER);
 
         // Randomly select the occurring transition
-        const double targetrate = rng_uniform() * levelrates[MA_ACTION_INTERNALDOWNLOWER];
+        const double targetrate = rng_uniform(pkt.number) * levelrates[MA_ACTION_INTERNALDOWNLOWER];
         double rate = 0.;
 
         const int nlevels = get_nlevels_ionising(element, ion - 1);
@@ -479,7 +480,7 @@ DEVICE_FUNC void do_macroatom(Packet& pkt, const MacroAtomState& pktmastate) {
         // randomly select the occurring transition
         const auto sum_internal_up_same_exceptlast = get_sum_internal_up_same_exceptlast(uniquelevelindex);
 
-        const double targetval = rng_uniform() * levelrates[MA_ACTION_INTERNALUPSAME];
+        const double targetval = rng_uniform(pkt.number) * levelrates[MA_ACTION_INTERNALUPSAME];
 
         // first sum_internal_up_same[i] such that sum_internal_up_same[i] > targetval
         const auto uptransindex = std::ranges::upper_bound(sum_internal_up_same_exceptlast, targetval) -
@@ -496,14 +497,14 @@ DEVICE_FUNC void do_macroatom(Packet& pkt, const MacroAtomState& pktmastate) {
         stats::increment(stats::Counter::MA_STAT_INTERNALUPHIGHER);
 
         level = do_macroatom_ionisation(nonemptymgi, element, ion, level, epsilon_current,
-                                        levelrates[MA_ACTION_INTERNALUPHIGHER]);
+                                        levelrates[MA_ACTION_INTERNALUPHIGHER], pkt.number);
         ion += 1;
 
         break;
       }
 
       case MA_ACTION_INTERNALUPHIGHERNT: {
-        ion = nonthermal::nt_random_upperion(nonemptymgi, element, ion, false);
+        ion = nonthermal::nt_random_upperion(nonemptymgi, element, ion, false, pkt.number);
         level = 0;
         stats::increment(stats::Counter::MA_STAT_INTERNALUPHIGHERNT);
 

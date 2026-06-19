@@ -1670,11 +1670,6 @@ void read_parameterfile() {
   rng_seed(rngseed);
   printlnlog("rank {}: thread {} has rngseed {}", globals::my_rank, tid, rngseed);
 
-  // call it a few times
-  for (int n = 0; n < 100; n++) {
-    rng_uniform();
-  }
-
   assert_always(get_noncommentline(file, line));
   std::istringstream{line} >> globals::ntimesteps;  // number of time steps
   assert_always(globals::ntimesteps > 0);

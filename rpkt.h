@@ -113,7 +113,7 @@ template <bool USECELLHISTANDUPDATEPHIXSLIST>
 void calculate_chi_rpkt_cont(double nu_cmf, ContinuumOpacity& chi_rpkt_cont, int nonemptymgi);
 extern template void calculate_chi_rpkt_cont<true>(double nu_cmf, ContinuumOpacity& chi_rpkt_cont, int nonemptymgi);
 extern template void calculate_chi_rpkt_cont<false>(double nu_cmf, ContinuumOpacity& chi_rpkt_cont, int nonemptymgi);
-[[nodiscard]] DEVICE_FUNC auto sample_planck_times_expansion_opacity(int nonemptymgi) -> double;
+[[nodiscard]] DEVICE_FUNC auto sample_planck_times_expansion_opacity(int nonemptymgi, int packetnumber) -> double;
 void allocate_expansionopacities();
 void calculate_expansion_opacities(int nonemptymgi);
 void MPI_Bcast_binned_opacities(ptrdiff_t nonemptymgi, int root_node_id);

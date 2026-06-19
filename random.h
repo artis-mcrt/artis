@@ -165,17 +165,16 @@ constexpr auto generate_canonical_float(Gen& gen) noexcept(noexcept(gen())) -> f
 
 #ifdef GPU_ON
 #include <chrono>
-#ifdef __HIP_DEVICE_COMPILE__
-inline auto rng{utlrandom::generators::Xoshiro128PP{}};
-#else
-inline thread_local auto rng{utlrandom::generators::Xoshiro128PP{}};
-#endif
+#include <vector>
+
+#include "artisoptions.h"  // for MPKTS
+// per-packet RNG state, indexed by Packet.number, so that GPU threads (which can't use thread_local)
+// don't share and race on a single global generator
+inline std::array<utlrandom::generators::Xoshiro128PP, MPKTS> rng;
 #else
 #include <random>
 inline thread_local auto rng{std::mt19937{std::random_device{}()}};
 #endif
-
-inline auto rng_seed(auto&& seedval) { rng.seed(seedval); }
 
 [[nodiscard]] inline auto get_rng_random_seed() -> std::int64_t {
 #ifndef GPU_ON
@@ -185,15 +184,15 @@ inline auto rng_seed(auto&& seedval) { rng.seed(seedval); }
 #endif
 }
 
-inline auto rng_uniform() -> float {
+inline auto rng_uniform([[maybe_unused]] const int packetnumber) -> float {
   while (true) {
-#ifndef GPU_ON
-    // use std::generate_canonical in CPU mode, because it seems to be faster
-    const auto zrand = std::generate_canonical<float, std::numeric_limits<float>::digits>(rng);
-#else
     // std::random can't be used in device code on nvc++ (long double not supported)
     // so use custom generator instead
-    const auto zrand = utlrandom::generate_canonical_float(rng);
+#ifdef GPU_ON
+    const auto zrand = utlrandom::generate_canonical_float(rng[packetnumber]);
+#else
+    // use std::generate_canonical in CPU mode, because it seems to be faster
+    const auto zrand = std::generate_canonical<float, std::numeric_limits<float>::digits>(rng);
 #endif
     if (zrand != 1.) {
       return zrand;
@@ -201,13 +200,27 @@ inline auto rng_uniform() -> float {
   }
 }
 
-inline auto rng_uniform_pos() -> float {
+inline auto rng_uniform_pos(const int packetnumber) -> float {
   while (true) {
-    const auto zrand = rng_uniform();
+    const auto zrand = rng_uniform(packetnumber);
     if (zrand > 0) {
       return zrand;
     }
   }
+}
+
+inline auto rng_seed(auto&& seedval) {
+#ifdef GPU_ON
+  // give every packet its own independently-seeded generator
+  for (int packetnumber = 0; packetnumber < MPKTS; packetnumber++) {
+    rng[packetnumber].seed(static_cast<std::uint32_t>(seedval) + packetnumber);
+  }
+#else
+  rng.seed(seedval);
+  for (int n = 0; n < 100; n++) {
+    rng_uniform(0);
+  }
+#endif
 }
 
 #endif  // RANDOM_H

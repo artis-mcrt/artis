@@ -1462,31 +1462,32 @@ template <BoundaryType boundarytype>
   return get_modelcell_assocvolume_tmin(mgi);
 }
 
-[[nodiscard]] auto get_propcell_random_position_tmin(int cellindex) -> Vec3d {
+[[nodiscard]] auto get_propcell_random_position_tmin(int cellindex, const int packetnumber) -> Vec3d {
   switch (get_propgridtype()) {
     case GridType::SPHERICAL1D: {
       const double r_inner = get_cellcoordmin(cellindex, 0);
       const double r_outer = get_cellcoordmax(cellindex, 0);
       // use equal volume probability distribution to select radius
-      const double radius = std::cbrt(std::lerp(pow3(r_outer), pow3(r_inner), rng_uniform()));
+      const double radius = std::cbrt(std::lerp(pow3(r_outer), pow3(r_inner), rng_uniform(packetnumber)));
 
-      return vec_scale(get_rand_isotropic_unitvec(), radius);
+      return vec_scale(get_rand_isotropic_unitvec(packetnumber), radius);
     }
 
     case GridType::CYLINDRICAL2D: {
       const double rcyl_inner = get_cellcoordmin(cellindex, 0);
       const double rcyl_outer = get_cellcoordmax(cellindex, 0);
       // use equal area probability distribution to select radius
-      const double rcyl_rand = std::sqrt(std::lerp(pow2(rcyl_outer), pow2(rcyl_inner), rng_uniform_pos()));
-      const double theta_rand = rng_uniform() * 2 * PI;
+      const double rcyl_rand = std::sqrt(std::lerp(pow2(rcyl_outer), pow2(rcyl_inner), rng_uniform_pos(packetnumber)));
+      const double theta_rand = rng_uniform(packetnumber) * 2 * PI;
       return {std::cos(theta_rand) * rcyl_rand, std::sin(theta_rand) * rcyl_rand,
-              get_cellcoordmin(cellindex, 1) + (rng_uniform_pos() * propcell_width_tmin(cellindex, 1))};
+              get_cellcoordmin(cellindex, 1) + (rng_uniform_pos(packetnumber) * propcell_width_tmin(cellindex, 1))};
     }
 
     case GridType::CARTESIAN3D: {
       Vec3d pos;
       for (int axis = 0; axis < 3; axis++) {
-        pos[axis] = get_cellcoordmin(cellindex, axis) + (rng_uniform_pos() * propcell_width_tmin(cellindex, axis));
+        pos[axis] =
+            get_cellcoordmin(cellindex, axis) + (rng_uniform_pos(packetnumber) * propcell_width_tmin(cellindex, axis));
       }
       return pos;
     }

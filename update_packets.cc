@@ -54,7 +54,7 @@ void do_nonthermal_predeposit(Packet& pkt, const int nts, const double ts_end) {
     const double f_p = std::log1p(2. * ts * ts / tau_ineff / tau_ineff) / (2. * ts * ts / tau_ineff / tau_ineff);
     assert_always(f_p >= 0.);
     assert_always(f_p <= 1.);
-    if (rng_uniform() < f_p) {
+    if (rng_uniform(pkt.number) < f_p) {
       pkt.type = deposit_type;
     } else {
       e_cmf_deposited = 0.;
@@ -70,7 +70,7 @@ void do_nonthermal_predeposit(Packet& pkt, const int nts, const double ts_end) {
     const double f_p = std::log1p(aux_term) / aux_term;
     assert_always(f_p >= 0.);
     assert_always(f_p <= 1.);
-    if (rng_uniform() < f_p) {
+    if (rng_uniform(pkt.number) < f_p) {
       pkt.type = deposit_type;
     } else {
       e_cmf_deposited = 0.;
@@ -105,7 +105,7 @@ void do_nonthermal_predeposit(Packet& pkt, const int nts, const double ts_end) {
     // KE with equal probability of happening at any energy in between. So we can just randomly
     // select an energy at which the absorption happens between particle_en and 0 and then calculate the corresponding
     // time.
-    const double rnd_en_absorb = rng_uniform() * particle_en;
+    const double rnd_en_absorb = rng_uniform(pkt.number) * particle_en;
     const double t_absorb = ts + (rnd_en_absorb / endot);
 
     // if absorption happens beyond the end of the current timestep,
