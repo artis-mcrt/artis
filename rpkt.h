@@ -4,7 +4,6 @@
 #include <algorithm>
 #include <cstddef>
 #include <functional>
-#include <memory>
 #include <span>
 
 #include "artisoptions.h"
@@ -53,24 +52,38 @@ class Phixslist {
 
 #pragma clang unsafe_buffer_usage begin
   constexpr Phixslist(const int nbfcontinua_ground, const int nbfcontinua, const int bfestimcount)
-      : _groundcont_gamma_contr{std::make_unique<double[]>(nbfcontinua_ground)},
-        _chi_bf_sum{std::make_unique<double[]>(nbfcontinua)},
-        _gamma_contr{std::make_unique<double[]>(bfestimcount)} {
-    groundcont_gamma_contr = {_groundcont_gamma_contr.get(), static_cast<std::size_t>(nbfcontinua_ground)};
-    chi_bf_sum = {_chi_bf_sum.get(), static_cast<std::size_t>(nbfcontinua)};
-    gamma_contr = {_gamma_contr.get(), static_cast<std::size_t>(bfestimcount)};
+      : _groundcont_gamma_contr(new double[nbfcontinua_ground]),
+        _chi_bf_sum(new double[nbfcontinua]),
+        _gamma_contr(new double[bfestimcount]) {
+    groundcont_gamma_contr = {_groundcont_gamma_contr, static_cast<std::size_t>(nbfcontinua_ground)};
+    chi_bf_sum = {_chi_bf_sum, static_cast<std::size_t>(nbfcontinua)};
+    gamma_contr = {_gamma_contr, static_cast<std::size_t>(bfestimcount)};
+  }
+
+  // define a destructor to free the allocated memory
+  ~Phixslist() {
+    delete[] _groundcont_gamma_contr;
+    delete[] _chi_bf_sum;
+    delete[] _gamma_contr;
   }
 #pragma clang unsafe_buffer_usage end
+
+  // delete the copy constructor and copy assignment operator to prevent copying
+  Phixslist(const Phixslist&) = delete;
+  auto operator=(const Phixslist&) -> Phixslist& = delete;
+
+  // delete the move constructor and move assignment operator to prevent moving
+  Phixslist(Phixslist&&) = delete;
+  auto operator=(Phixslist&&) -> Phixslist& = delete;
 
   constexpr Phixslist() = default;
 
  private:
-  // unique ptrs are used instead of vectors for nvc++ compatibility,
-  // since std::bad_alloc exceptions are not supported on device
-  // (still true as of NVC++ 25.11)
-  std::unique_ptr<double[]> _groundcont_gamma_contr;
-  std::unique_ptr<double[]> _chi_bf_sum;
-  std::unique_ptr<double[]> _gamma_contr;
+  // std::vector and other type-safe containers are not used here because they are not supported on device code.
+  // Instead, we use raw pointers and manage memory manually.
+  double* _groundcont_gamma_contr{nullptr};
+  double* _chi_bf_sum{nullptr};
+  double* _gamma_contr{nullptr};
   // NOLINTEND(*-avoid-c-arrays)
 };
 
