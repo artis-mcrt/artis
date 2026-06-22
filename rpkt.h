@@ -61,7 +61,7 @@ class Phixslist {
   }
 
   // define a destructor to free the allocated memory
-  ~Phixslist() {
+  constexpr ~Phixslist() {
     delete[] _groundcont_gamma_contr;
     delete[] _chi_bf_sum;
     delete[] _gamma_contr;
