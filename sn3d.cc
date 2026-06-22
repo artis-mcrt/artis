@@ -749,7 +749,6 @@ auto main(int argc, char* argv[]) -> int {
   check_already_running();
 
 #ifdef STDPAR_ON
-  printlnlog("C++ standard parallelism (stdpar) is enabled with {} hardware threads", get_max_threads());
   for (int t = 1; t < get_max_threads(); t++) {
     std::filesystem::remove(std::format("output_{}-{}.txt", globals::my_rank, t));
   }
@@ -770,6 +769,10 @@ auto main(int argc, char* argv[]) -> int {
     printlnlog("OpenMP parallelisation is not enabled in this build (this is normal)");
 #endif
   }
+
+#ifdef STDPAR_ON
+  printlnlog("C++ standard parallelism (stdpar) is enabled with {} hardware threads", get_max_threads());
+#endif
 
 #ifdef GPU_ON
   printlnlog("GPU_ON is enabled");

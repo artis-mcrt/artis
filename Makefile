@@ -126,8 +126,7 @@ ifeq ($(OPENMP),ON)
 
 	ifeq ($(COMPILER_NAME),nvhpc)
 		ifeq ($(GPU),ON)
-			CXXFLAGS += -mp=gpu -gpu=mem:unified
-			CXXFLAGS += -gpu=cc80,rdc
+			CXXFLAGS += -mp=gpu
 		else
 			CXXFLAGS += -mp
 		endif
@@ -150,8 +149,7 @@ ifeq ($(STDPAR),ON)
 
 	ifeq ($(COMPILER_NAME),nvhpc)
 		ifeq ($(GPU),ON)
-			CXXFLAGS += -stdpar=gpu -gpu=mem:unified
-			CXXFLAGS += -gpu=cc80,rdc
+			CXXFLAGS += -stdpar=gpu
 		else
 			CXXFLAGS += -stdpar=multicore
 		endif
@@ -174,6 +172,14 @@ else ifeq ($(STDPAR),OFF)
 else ifeq ($(STDPAR),)
 else
   $(error bad value for STDPAR option. Should be ON or OFF)
+endif
+
+ifeq ($(COMPILER_NAME),nvhpc)
+	ifeq ($(GPU),ON)
+			CXXFLAGS += -gpu=mem:unified -gpu=ccnative,rdc
+			CXXFLAGS += -gpu=debug -g
+$(info to debug, run mpirun -np 1 compute-sanitizer --tool memcheck ./artis/sn3d)
+	endif
 endif
 
 ifeq ($(shell uname -s),Darwin)
