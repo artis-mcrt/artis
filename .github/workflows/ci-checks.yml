@@ -13,7 +13,7 @@ jobs:
         name: Format and lint
         runs-on: ubuntu-26.04-arm
         steps:
-            - uses: actions/checkout@v6
+            - uses: actions/checkout@v7
 
             - name: Run pre-commit hooks
               uses: j178/prek-action@v2
@@ -58,7 +58,7 @@ jobs:
         name: Lint with cppcheck
         runs-on: ubuntu-26.04-arm
         steps:
-            - uses: actions/checkout@v6
+            - uses: actions/checkout@v7
 
             - name: Install dependencies
               run: |
@@ -89,7 +89,7 @@ jobs:
         runs-on: ubuntu-26.04
         name: Ubuntu ${{ matrix.compiler.name }} ${{ matrix.compiler.ver }}
         steps:
-            - uses: actions/checkout@v6
+            - uses: actions/checkout@v7
 
             - name: Install gcc
               if: matrix.compiler.name == 'gcc' && matrix.compiler.ver >= 16
@@ -182,7 +182,7 @@ jobs:
         runs-on: macos-26
         name: Apple Clang and LLVM Clang
         steps:
-            - uses: actions/checkout@v6
+            - uses: actions/checkout@v7
 
             - uses: maxim-lobanov/setup-xcode@v1
               with:
@@ -266,7 +266,7 @@ jobs:
         container:
             image: rocm/dev-ubuntu-24.04:7.2.3-complete
         steps:
-            - uses: actions/checkout@v6
+            - uses: actions/checkout@v7
               with:
                     fetch-depth: 0
 
@@ -317,7 +317,7 @@ jobs:
         name: NVIDIA NVHPC nvc++
         runs-on: ubuntu-26.04
         steps:
-            - uses: actions/checkout@v6
+            - uses: actions/checkout@v7
 
             - name: Install gcc
               run: |
@@ -331,7 +331,7 @@ jobs:
                        --slave /usr/bin/g++ g++ /usr/bin/g++-14
 
             - name: Install nvc++
-              uses: fortran-lang/setup-fortran@v1.9.1
+              uses: fortran-lang/setup-fortran@v1.9.2
               with:
                   compiler: nvidia-hpc
                   version: 26.1
