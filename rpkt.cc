@@ -506,12 +506,10 @@ void update_estimators(const double e_cmf, const double nu_cmf, const double dis
 
 // Update an r-packet and return true if no mgi change (or it goes into an empty cell) and no pkttype change and not
 // reached end of timestep, otherwise false
-auto do_rpkt_step(Packet& pkt, const double t2) -> bool {
+auto do_rpkt_step(Packet& pkt, const double t2, ContinuumOpacity& chi_rpkt_cont) -> bool {
   const auto nonemptymgi = grid::get_propcell_nonemptymgi(pkt.cellindex);
 
   MacroAtomState pktmastate{};
-
-  THREADLOCALONHOST auto chi_rpkt_cont = ContinuumOpacity{};
 
   // draw random optical depth to next physical event
   const double tau_rnd = -std::log(static_cast<double>(rng_uniform_pos(pkt.number)));
@@ -836,8 +834,8 @@ DEVICE_FUNC auto sample_planck_times_expansion_opacity(const int nonemptymgi, co
   return nu;
 }
 
-DEVICE_FUNC void do_rpkt(Packet& pkt, const double t2) {
-  while (do_rpkt_step(pkt, t2)) {
+DEVICE_FUNC void do_rpkt(Packet& pkt, const double t2, ContinuumOpacity& chi_rpkt_cont) {
+  while (do_rpkt_step(pkt, t2, chi_rpkt_cont)) {
     {
     }
   }

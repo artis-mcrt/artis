@@ -81,7 +81,7 @@ struct ContinuumOpacity {
   [[nodiscard]] constexpr auto total() const { return chi_freefree_scatter + chi_boundfree + chi_freefree_heat; }
 };
 
-DEVICE_FUNC void do_rpkt(Packet& pkt, double t2);
+DEVICE_FUNC void do_rpkt(Packet& pkt, double t2, ContinuumOpacity& chi_rpkt_cont);
 DEVICE_FUNC void emit_rpkt(Packet& pkt);
 template <bool USECELLHISTANDUPDATEPHIXSLIST>
 void calculate_chi_rpkt_cont(double nu_cmf, ContinuumOpacity& chi_rpkt_cont, int nonemptymgi);
