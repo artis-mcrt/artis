@@ -9,6 +9,7 @@
 
 #include "artisoptions.h"
 #include "constants.h"
+#include "globals.h"
 #include "grid.h"
 #include "ltepop.h"
 #include "mpi_logging.h"
@@ -48,15 +49,6 @@ struct Phixslist {
   int allcontbegin{0};
   int bfestimend{-1};
   int bfestimbegin{0};
-
-  constexpr Phixslist(const int nbfcontinua_ground, const int nbfcontinua, const int bfestimcount) {
-    groundcont_gamma_contr.reserve(nbfcontinua_ground);
-    groundcont_gamma_contr.resize(nbfcontinua_ground);
-    chi_bf_sum.reserve(nbfcontinua);
-    chi_bf_sum.resize(nbfcontinua);
-    gamma_contr.reserve(bfestimcount);
-    gamma_contr.resize(bfestimcount);
-  }
 };
 
 struct ContinuumOpacity {
@@ -70,8 +62,20 @@ struct ContinuumOpacity {
   int timestep{-1};
   Phixslist phixslist;
 
-  constexpr ContinuumOpacity(const int nbfcontinua_ground, const int nbfcontinua, const int bfestimcount)
-      : phixslist{nbfcontinua_ground, nbfcontinua, bfestimcount} {}
+  constexpr explicit ContinuumOpacity(const bool alloc_phixslist) {
+    if (alloc_phixslist) {
+      phixslist.groundcont_gamma_contr.reserve(globals::nbfcontinua_ground);
+      phixslist.groundcont_gamma_contr.resize(globals::nbfcontinua_ground);
+      phixslist.chi_bf_sum.reserve(globals::nbfcontinua);
+      phixslist.chi_bf_sum.resize(globals::nbfcontinua);
+      const auto bfestimcount = globals::bfestim_nu_edge.size();
+      phixslist.gamma_contr.reserve(bfestimcount);
+      phixslist.gamma_contr.resize(bfestimcount);
+    }
+  }
+
+  // default constructor allocates phixslist
+  constexpr ContinuumOpacity() : ContinuumOpacity(true) {}
 
   // total continuum absorption coefficient at nu [cm^-1]
   [[nodiscard]] constexpr auto total() const { return chi_freefree_scatter + chi_boundfree + chi_freefree_heat; }

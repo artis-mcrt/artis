@@ -211,7 +211,7 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
   // compute the optical depth to boundary
 
   mgi = grid::get_propcell_modelgridindex(cellindex);
-  THREADLOCALONHOST auto chi_vpkt_cont = ContinuumOpacity{0, 0, 0};
+  THREADLOCALONHOST auto chi_vpkt_cont = ContinuumOpacity{false};
 
   while (!end_packet) {
     // distance to the next cell
