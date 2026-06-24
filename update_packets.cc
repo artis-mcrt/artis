@@ -430,8 +430,19 @@ void update_packet_cellcache_group(const int cellcache_nonemptymgi, std::span<Pa
     cellcache_change_cell(globals::cellcache[cellcacheslotid], cellcache_nonemptymgi);
   }
 
+#ifdef GPU_ON
+  // we don't know how many threads exist, and we can't use a thread_local variable on device for the chi_rpkt_cont
+  // vector. Instead, we assume the worst case that each packet is handled by a different thread.
+  thread_local static std::vector<ContinuumOpacity> chi_rpkt_cont_vec;
+  chi_rpkt_cont_vec.resize(packetgroup.size());
+#endif
+
   auto update_packet = [cellcache_nonemptymgi, ts_end, nts, &packetgroup](const ptrdiff_t pktgroupidx) {
+#ifdef GPU_ON
+    auto& chi_rpkt_cont = chi_rpkt_cont_vec[pktgroupidx];
+#else
     THREADLOCALONHOST auto chi_rpkt_cont = ContinuumOpacity{};
+#endif
     auto& pkt = packetgroup[pktgroupidx];
     while (packetprop_update_required(pkt, ts_end) &&
            (get_packet_cellcachenonemptymgi(pkt).value_or(cellcache_nonemptymgi) == cellcache_nonemptymgi)) {
