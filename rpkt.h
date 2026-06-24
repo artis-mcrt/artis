@@ -50,9 +50,7 @@ struct Phixslist {
   int bfestimend{-1};
   int bfestimbegin{0};
 
-  // unique ptrs are used instead of vectors for nvc++ compatibility,
-  // since std::bad_alloc exceptions are not supported on device
-  // (still true as of NVC++ 25.11)
+  // unique ptrs are used instead of vectors for nvc++ compatibility in device code
   // NOLINTBEGIN(*-avoid-c-arrays)
   std::unique_ptr<double[]> _groundcont_gamma_contr;
   std::unique_ptr<double[]> _chi_bf_sum;
