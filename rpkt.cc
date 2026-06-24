@@ -420,9 +420,9 @@ void rpkt_event_continuum(Packet& pkt, const ContinuumOpacity& chi_rpkt_cont) {
     // first chi_bf_sum[i] such that chi_bf_sum[i] > chi_bf_rand (or the last one if chi_bf_rand is larger than all
     // chi_bf_sum) gives the index of the continuum
     const auto allcontindex =
-        std::ranges::upper_bound(
-            phixslist.chi_bf_sum.subspan(phixslist.allcontbegin, phixslist.allcontend - phixslist.allcontbegin - 1),
-            chi_bf_rand) -
+        std::ranges::upper_bound(std::span{phixslist.chi_bf_sum}.subspan(
+                                     phixslist.allcontbegin, phixslist.allcontend - phixslist.allcontbegin - 1),
+                                 chi_bf_rand) -
         phixslist.chi_bf_sum.begin();
 
     const double nu_edge = globals::allcont.nu_edge[allcontindex];

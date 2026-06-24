@@ -5,6 +5,7 @@
 #include <cstddef>
 #include <functional>
 #include <span>
+#include <vector>
 
 #include "artisoptions.h"
 #include "constants.h"
@@ -35,56 +36,27 @@ constexpr auto get_expopac_bin_nu_lower(const ptrdiff_t binindex) -> double {
 // kappa in cm^2/g for each bin of each non-empty cell
 inline MPI_shared_array<float> expansionopacities{};
 
-class Phixslist {
-  // NOLINTBEGIN(*-avoid-c-arrays)
- public:
+struct Phixslist {
   // for either USE_LUT_PHOTOION = true or USE_ION_BFHEATING_ESTIMATORS = true. Size =
   // nbfcontinua_ground
-  std::span<double> groundcont_gamma_contr;
+  std::vector<double> groundcont_gamma_contr;
   // cumulative sum of all bound-free continua absorption coefficients. Size = nbfcontinua
-  std::span<double> chi_bf_sum;
+  std::vector<double> chi_bf_sum;
   // needed for DETAILED_BF_ESTIMATORS_ON. Size = bfestimcount
-  std::span<double> gamma_contr;
+  std::vector<double> gamma_contr;
   int allcontend{-1};
   int allcontbegin{0};
   int bfestimend{-1};
   int bfestimbegin{0};
 
-#pragma clang unsafe_buffer_usage begin
-  constexpr Phixslist(const int nbfcontinua_ground, const int nbfcontinua, const int bfestimcount)
-      : _groundcont_gamma_contr(new double[nbfcontinua_ground]),
-        _chi_bf_sum(new double[nbfcontinua]),
-        _gamma_contr(new double[bfestimcount]) {
-    groundcont_gamma_contr = {_groundcont_gamma_contr, static_cast<std::size_t>(nbfcontinua_ground)};
-    chi_bf_sum = {_chi_bf_sum, static_cast<std::size_t>(nbfcontinua)};
-    gamma_contr = {_gamma_contr, static_cast<std::size_t>(bfestimcount)};
+  constexpr Phixslist(const int nbfcontinua_ground, const int nbfcontinua, const int bfestimcount) {
+    groundcont_gamma_contr.reserve(nbfcontinua_ground);
+    groundcont_gamma_contr.resize(nbfcontinua_ground);
+    chi_bf_sum.reserve(nbfcontinua);
+    chi_bf_sum.resize(nbfcontinua);
+    gamma_contr.reserve(bfestimcount);
+    gamma_contr.resize(bfestimcount);
   }
-
-  // define a destructor to free the allocated memory
-  constexpr ~Phixslist() {
-    delete[] _groundcont_gamma_contr;
-    delete[] _chi_bf_sum;
-    delete[] _gamma_contr;
-  }
-#pragma clang unsafe_buffer_usage end
-
-  // delete the copy constructor and copy assignment operator to prevent copying
-  Phixslist(const Phixslist&) = delete;
-  auto operator=(const Phixslist&) -> Phixslist& = delete;
-
-  // delete the move constructor and move assignment operator to prevent moving
-  Phixslist(Phixslist&&) = delete;
-  auto operator=(Phixslist&&) -> Phixslist& = delete;
-
-  constexpr Phixslist() = default;
-
- private:
-  // std::vector and other type-safe containers are not used here because they are not supported on device code.
-  // Instead, we use raw pointers and manage memory manually.
-  double* _groundcont_gamma_contr{nullptr};
-  double* _chi_bf_sum{nullptr};
-  double* _gamma_contr{nullptr};
-  // NOLINTEND(*-avoid-c-arrays)
 };
 
 struct ContinuumOpacity {
@@ -100,8 +72,6 @@ struct ContinuumOpacity {
 
   constexpr ContinuumOpacity(const int nbfcontinua_ground, const int nbfcontinua, const int bfestimcount)
       : phixslist{nbfcontinua_ground, nbfcontinua, bfestimcount} {}
-
-  constexpr ContinuumOpacity() = default;
 
   // total continuum absorption coefficient at nu [cm^-1]
   [[nodiscard]] constexpr auto total() const { return chi_freefree_scatter + chi_boundfree + chi_freefree_heat; }
