@@ -432,11 +432,10 @@ void update_packet_cellcache_group(const int cellcache_nonemptymgi, std::span<Pa
 
   auto update_packet = [cellcache_nonemptymgi, ts_end, nts, &packetgroup](const ptrdiff_t pktgroupidx) {
     THREADLOCALONHOST auto chi_rpkt_cont = ContinuumOpacity{};
-
-    while (packetprop_update_required(packetgroup[pktgroupidx], ts_end) &&
-           (get_packet_cellcachenonemptymgi(packetgroup[pktgroupidx]).value_or(cellcache_nonemptymgi) ==
-            cellcache_nonemptymgi)) {
-      do_packet(packetgroup[pktgroupidx], ts_end, nts, chi_rpkt_cont);
+    auto& pkt = packetgroup[pktgroupidx];
+    while (packetprop_update_required(pkt, ts_end) &&
+           (get_packet_cellcachenonemptymgi(pkt).value_or(cellcache_nonemptymgi) == cellcache_nonemptymgi)) {
+      do_packet(pkt, ts_end, nts, chi_rpkt_cont);
     }
   };
 
