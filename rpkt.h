@@ -4,8 +4,8 @@
 #include <algorithm>
 #include <cstddef>
 #include <functional>
+#include <memory>
 #include <span>
-#include <vector>
 
 #include "artisoptions.h"
 #include "constants.h"
@@ -40,15 +40,24 @@ inline MPI_shared_array<float> expansionopacities{};
 struct Phixslist {
   // for either USE_LUT_PHOTOION = true or USE_ION_BFHEATING_ESTIMATORS = true. Size =
   // nbfcontinua_ground
-  std::vector<double> groundcont_gamma_contr;
+  std::span<double> groundcont_gamma_contr;
   // cumulative sum of all bound-free continua absorption coefficients. Size = nbfcontinua
-  std::vector<double> chi_bf_sum;
+  std::span<double> chi_bf_sum;
   // needed for DETAILED_BF_ESTIMATORS_ON. Size = bfestimcount
-  std::vector<double> gamma_contr;
+  std::span<double> gamma_contr;
   int allcontend{-1};
   int allcontbegin{0};
   int bfestimend{-1};
   int bfestimbegin{0};
+
+  // unique ptrs are used instead of vectors for nvc++ compatibility,
+  // since std::bad_alloc exceptions are not supported on device
+  // (still true as of NVC++ 25.11)
+  // NOLINTBEGIN(*-avoid-c-arrays)
+  std::unique_ptr<double[]> _groundcont_gamma_contr;
+  std::unique_ptr<double[]> _chi_bf_sum;
+  std::unique_ptr<double[]> _gamma_contr;
+  // NOLINTEND(*-avoid-c-arrays)
 };
 
 struct ContinuumOpacity {
@@ -64,13 +73,18 @@ struct ContinuumOpacity {
 
   constexpr explicit ContinuumOpacity(const bool alloc_phixslist) {
     if (alloc_phixslist) {
-      phixslist.groundcont_gamma_contr.reserve(globals::nbfcontinua_ground);
-      phixslist.groundcont_gamma_contr.resize(globals::nbfcontinua_ground);
-      phixslist.chi_bf_sum.reserve(globals::nbfcontinua);
-      phixslist.chi_bf_sum.resize(globals::nbfcontinua);
+// NOLINTBEGIN(*-avoid-c-arrays)
+#pragma clang unsafe_buffer_usage begin
+      phixslist._groundcont_gamma_contr = std::make_unique<double[]>(globals::nbfcontinua_ground);
+      phixslist.groundcont_gamma_contr =
+          std::span<double>(phixslist._groundcont_gamma_contr.get(), globals::nbfcontinua_ground);
+      phixslist._chi_bf_sum = std::make_unique<double[]>(globals::nbfcontinua);
+      phixslist.chi_bf_sum = std::span<double>(phixslist._chi_bf_sum.get(), globals::nbfcontinua);
       const auto bfestimcount = globals::bfestim_nu_edge.size();
-      phixslist.gamma_contr.reserve(bfestimcount);
-      phixslist.gamma_contr.resize(bfestimcount);
+      phixslist._gamma_contr = std::make_unique<double[]>(bfestimcount);
+      phixslist.gamma_contr = std::span<double>(phixslist._gamma_contr.get(), bfestimcount);
+#pragma clang unsafe_buffer_usage end
+      // NOLINTEND(*-avoid-c-arrays)
     }
   }
 
