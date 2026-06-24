@@ -432,7 +432,7 @@ void update_packet_cellcache_group(const int cellcache_nonemptymgi, std::span<Pa
 
 #ifdef GPU_ON
   // we don't know how many threads exist, and we can't use a thread_local variable on device for the chi_rpkt_cont
-  // vector. Instead, we assume the worst case that each packet is handled by a different thread.
+  // vector. Instead, we assume the worst case that each packet is handled by a different GPU thread.
   thread_local static std::vector<ContinuumOpacity> chi_rpkt_cont_vec;
   chi_rpkt_cont_vec.resize(packetgroup.size());
 #endif
@@ -450,13 +450,13 @@ void update_packet_cellcache_group(const int cellcache_nonemptymgi, std::span<Pa
     }
   };
 
-#ifdef STDPAR_ON
+#if defined(STDPAR_ON) || !defined(_OPENMP)
   const auto pktgroupindices = std::ranges::iota_view{0, static_cast<int>(std::ssize(packetgroup))};
   std::for_each(EXEC_PAR pktgroupindices.begin(), pktgroupindices.end(), update_packet);
 #else
 #ifdef GPU_ON
 #pragma omp target teams distribute parallel for
-#elifdef _OPENMP
+#else
 #pragma omp parallel for schedule(nonmonotonic : dynamic)
 #endif
   for (auto i = 0Z; i < std::ssize(packetgroup); i++) {
