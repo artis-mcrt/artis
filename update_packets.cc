@@ -424,29 +424,31 @@ void cellcache_change_cell(globals::CellCache& cacheslot, const int nonemptymgi)
 #endif
 }
 
-void update_packet_cellcache_group(const int cellcache_nonemptymgi, std::span<Packet> packets, const int nts,
+void update_packet_cellcache_group(const int cellcache_nonemptymgi, std::span<Packet> packetgroup, const int nts,
                                    const double ts_end) {
   if (cellcache_nonemptymgi >= 0 && globals::cellcache[cellcacheslotid].nonemptymgi != cellcache_nonemptymgi) {
     cellcache_change_cell(globals::cellcache[cellcacheslotid], cellcache_nonemptymgi);
   }
 
-  auto update_packet = [cellcache_nonemptymgi, ts_end, nts](auto& pkt) {
-    while (packetprop_update_required(pkt, ts_end) &&
-           (get_packet_cellcachenonemptymgi(pkt).value_or(cellcache_nonemptymgi) == cellcache_nonemptymgi)) {
-      do_packet(pkt, ts_end, nts);
+  auto update_packet = [cellcache_nonemptymgi, ts_end, nts, &packetgroup](int pktgroupidx) {
+    while (packetprop_update_required(packetgroup[pktgroupidx], ts_end) &&
+           (get_packet_cellcachenonemptymgi(packetgroup[pktgroupidx]).value_or(cellcache_nonemptymgi) ==
+            cellcache_nonemptymgi)) {
+      do_packet(packetgroup[pktgroupidx], ts_end, nts);
     }
   };
 
 #if defined(STDPAR_ON) || !defined(_OPENMP)
-  std::for_each(EXEC_PAR packets.begin(), packets.end(), update_packet);
+  const auto pktgroupindices = std::ranges::iota_view{0, static_cast<int>(std::ssize(packetgroup))};
+  std::for_each(EXEC_PAR pktgroupindices.begin(), pktgroupindices.end(), update_packet);
 #else
 #ifdef GPU_ON
 #pragma omp target teams distribute parallel for
 #else
 #pragma omp parallel for schedule(nonmonotonic : dynamic)
 #endif
-  for (auto i = 0Z; i < std::ssize(packets); i++) {
-    update_packet(packets[i]);
+  for (auto i = 0Z; i < std::ssize(packetgroup); i++) {
+    update_packet(i);
   }
 #endif
 }
