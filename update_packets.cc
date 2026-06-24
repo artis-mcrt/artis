@@ -430,7 +430,7 @@ void update_packet_cellcache_group(const int cellcache_nonemptymgi, std::span<Pa
     cellcache_change_cell(globals::cellcache[cellcacheslotid], cellcache_nonemptymgi);
   }
 
-  auto update_packet = [cellcache_nonemptymgi, ts_end, nts, &packetgroup](int pktgroupidx) {
+  auto update_packet = [cellcache_nonemptymgi, ts_end, nts, &packetgroup](const ptrdiff_t pktgroupidx) {
     while (packetprop_update_required(packetgroup[pktgroupidx], ts_end) &&
            (get_packet_cellcachenonemptymgi(packetgroup[pktgroupidx]).value_or(cellcache_nonemptymgi) ==
             cellcache_nonemptymgi)) {
@@ -438,13 +438,13 @@ void update_packet_cellcache_group(const int cellcache_nonemptymgi, std::span<Pa
     }
   };
 
-#if defined(STDPAR_ON) || !defined(_OPENMP)
+#ifdef STDPAR_ON
   const auto pktgroupindices = std::ranges::iota_view{0, static_cast<int>(std::ssize(packetgroup))};
   std::for_each(EXEC_PAR pktgroupindices.begin(), pktgroupindices.end(), update_packet);
 #else
 #ifdef GPU_ON
 #pragma omp target teams distribute parallel for
-#else
+#elifdef _OPENMP
 #pragma omp parallel for schedule(nonmonotonic : dynamic)
 #endif
   for (auto i = 0Z; i < std::ssize(packetgroup); i++) {
