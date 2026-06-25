@@ -56,6 +56,12 @@ enum class GridType {
 // constant for van-Regemorter approximation.
 constexpr double C_0 = 5.465e-11;
 
+#ifdef GPU_ON
+constexpr bool gpu_on = true;
+#else
+constexpr bool gpu_on = false;
+#endif
+
 enum class TimeStepSizeMethod { LOGARITHMIC, CONSTANT, LOGARITHMIC_THEN_CONSTANT, CONSTANT_THEN_LOGARITHMIC };
 
 enum class GammaThermalisationScheme { FREQUENCYDEPENDENT, BARNES, WOLLAEGER, GUTTMAN };
