@@ -371,8 +371,7 @@ DEVICE_FUNC void do_macroatom(Packet& pkt, const MacroAtomState& pktmastate) {
         uniquelevelindex * MA_ACTION_COUNT, MA_ACTION_COUNT);
 
     {
-#ifndef GPU_ON
-#if (defined(STDPAR_ON) || defined(_OPENMP))
+#if (defined(STDPAR_ON) || defined(_OPENMP)) && !defined(GPU_ON)
       [[maybe_unused]] ScopedMutex lock{
           globals::cellcache[cellcacheslotid].allmacroatomictransitions_locks[uniquelevelindex]};
 #endif
@@ -380,9 +379,7 @@ DEVICE_FUNC void do_macroatom(Packet& pkt, const MacroAtomState& pktmastate) {
       assert_testmodeonly(globals::cellcache[cellcacheslotid].nonemptymgi == nonemptymgi);
 
       // If there are no precalculated rates available then calculate them
-      if (levelrates[0] < 0.)
-#endif
-      {
+      if (levelrates[0] < 0.) {
         calculate_macroatom_transitionrates(levelrates, nonemptymgi, element, ion, level, ionuniquelevelindexstart,
                                             t_mid, globals::alltrans);
       }
