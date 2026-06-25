@@ -433,7 +433,7 @@ void update_packet_cellcache_group(const int cellcache_nonemptymgi, std::span<Pa
 #ifdef GPU_ON
   // we don't know how many threads exist, and we can't use a thread_local variable on device for the chi_rpkt_cont
   // vector. Instead, we assume the worst case that each packet is handled by a different GPU thread.
-  thread_local static std::vector<ContinuumOpacity> chi_rpkt_cont_vec;
+  static std::vector<ContinuumOpacity> chi_rpkt_cont_vec;
   if (cellcache_nonemptymgi >= 0) {
     chi_rpkt_cont_vec.resize(packetgroup.size());
   } else {
