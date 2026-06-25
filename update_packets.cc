@@ -392,10 +392,6 @@ void cellcache_change_cell(globals::CellCache& cacheslot, const int nonemptymgi)
 
   std::ranges::fill(cacheslot.allphixstargets_corrphotoioncoeff, -99.);
 
-  for (int uniquelevelindex = 0; uniquelevelindex < get_includedlevels(); uniquelevelindex++) {
-    cacheslot.alllevels_maprocessrates[uniquelevelindex * MA_ACTION_COUNT] = -99.;
-  }
-
   std::ranges::fill(cacheslot.allcont_modified_departureratios, -1.);
 
   const auto nnetot = grid::get_nnetot(nonemptymgi);
@@ -421,6 +417,10 @@ void cellcache_change_cell(globals::CellCache& cacheslot, const int nonemptymgi)
   std::for_each(EXEC_PAR allionindices.begin(), allionindices.end(), [nonemptymgi](const int uniqueionindex) {
     kpkt::calculate_cellcache_cooling_rates_ion(nonemptymgi, uniqueionindex);
   });
+#else
+  for (int uniquelevelindex = 0; uniquelevelindex < get_includedlevels(); uniquelevelindex++) {
+    cacheslot.alllevels_maprocessrates[uniquelevelindex * MA_ACTION_COUNT] = -99.;
+  }
 #endif
 }
 
