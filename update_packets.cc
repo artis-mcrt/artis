@@ -430,25 +430,9 @@ void update_packet_cellcache_group(const int cellcache_nonemptymgi, std::span<Pa
     cellcache_change_cell(globals::cellcache[cellcacheslotid], cellcache_nonemptymgi);
   }
 
-#ifdef GPU_ON
-  // we don't know how many GPU threads will exist, and we can't use a thread_local variables on device.
-  // Instead, we assume the worst case that each packet is handled simultaneously by a different GPU thread.
-  static std::vector<ContinuumOpacity> chi_rpkt_cont_vec;
-  if (cellcache_nonemptymgi >= 0) {
-    chi_rpkt_cont_vec.resize(packetgroup.size());
-  } else {
-    // we're not going to use this, but we need to pass a reference to something
-    chi_rpkt_cont_vec.resize(1);
-  }
-#endif
-
   auto update_packet = [cellcache_nonemptymgi, ts_end, nts, &packetgroup](const ptrdiff_t pktgroupidx) {
-#ifdef GPU_ON
-    auto& chi_rpkt_cont = chi_rpkt_cont_vec[(cellcache_nonemptymgi >= 0) ? pktgroupidx : 0];
-#else
     // thread_local lets us reuse this allocation on each CPU thread
     THREADLOCALONHOST auto chi_rpkt_cont = ContinuumOpacity{};
-#endif
     auto& pkt = packetgroup[pktgroupidx];
     while (packetprop_update_required(pkt, ts_end) &&
            (get_packet_cellcachenonemptymgi(pkt).value_or(cellcache_nonemptymgi) == cellcache_nonemptymgi)) {
@@ -458,7 +442,7 @@ void update_packet_cellcache_group(const int cellcache_nonemptymgi, std::span<Pa
 
 #if defined(STDPAR_ON) || !defined(_OPENMP)
   const auto pktgroupindices = std::ranges::iota_view{0, static_cast<int>(std::ssize(packetgroup))};
-  std::for_each(EXEC_PAR pktgroupindices.begin(), pktgroupindices.end(), update_packet);
+  std::for_each(pktgroupindices.begin(), pktgroupindices.end(), update_packet);
 #else
 #ifdef GPU_ON
 #pragma omp target teams distribute parallel for
