@@ -177,7 +177,7 @@ endif
 ifeq ($(COMPILER_NAME),nvhpc)
 	ifeq ($(GPU),ON)
 			CXXFLAGS += -gpu=mem:unified -gpu=ccnative,rdc
-			CXXFLAGS += -gpu=debug -g
+# 			CXXFLAGS += -gpu=debug -g
 $(info to debug, run mpirun -np 1 compute-sanitizer --tool memcheck ./artis/sn3d)
 	endif
 endif
