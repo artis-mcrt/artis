@@ -737,7 +737,7 @@ auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixsli
         double corrfactor = 1.;  // default to no subtraction of stimulated recombination
         double modified_departure_ratio = globals::cellcache[cellcacheslotid].allcont_modified_departureratios[i];
 
-        if (!USECELLHISTANDUPDATEPHIXSLIST || modified_departure_ratio < 0 || gpu_on) {
+        if (!USECELLHISTANDUPDATEPHIXSLIST || modified_departure_ratio < 0) {
           const int upper = allcont_upperlevel[i];
           const double nnupperionlevel = USECELLHISTANDUPDATEPHIXSLIST
                                              ? get_cellcache_levelpop(nonemptymgi, element, ion + 1, upper)
@@ -746,7 +746,7 @@ auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixsli
               SAHACONST * stat_weight(element, ion, level) / stat_weight(element, ion + 1, upper) * std::pow(T_e, -1.5);
           modified_departure_ratio =
               nnupperionlevel / nnlevel * clumpednne * modified_sahafact;  // put that to phixslist
-          if (USECELLHISTANDUPDATEPHIXSLIST && !gpu_on) {
+          if (USECELLHISTANDUPDATEPHIXSLIST) {
             globals::cellcache[cellcacheslotid].allcont_modified_departureratios[i] = modified_departure_ratio;
           }
         }
