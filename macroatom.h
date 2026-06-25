@@ -10,6 +10,10 @@ void macroatom_open_file();
 
 DEVICE_FUNC void do_macroatom(Packet& pkt, const MacroAtomState& pktmastate);
 
+// prepopulate one unique level's macroatom transition rates into the cellcache. Used in GPU mode, where
+// the lazy mutex-guarded calculation in do_macroatom() cannot run safely on the device.
+DEVICE_FUNC void calculate_cellcache_macroatom_transitionrates(int nonemptymgi, int uniquelevelindex, double t_mid);
+
 [[gnu::pure]] [[nodiscard]] auto rad_excitation_ratecoeff(int nonemptymgi, double upper_statweight, double einstein_A,
                                                           double epsilon_trans, double nnlevel_lower,
                                                           double nnlevel_upper, double statweight_lower,

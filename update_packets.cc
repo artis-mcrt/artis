@@ -7,6 +7,9 @@
 #include <cstddef>
 #include <cstdlib>
 #include <optional>
+#ifdef GPU_ON
+#include <ranges>
+#endif
 #include <span>
 #include <tuple>
 #include <vector>
@@ -20,6 +23,9 @@
 #include "grid.h"
 #include "kpkt.h"
 #include "ltepop.h"
+#ifdef GPU_ON
+#include "macroatom.h"
+#endif
 #include "mpi_logging.h"
 #include "nonthermal.h"
 #include "packet.h"
@@ -54,7 +60,7 @@ void do_nonthermal_predeposit(Packet& pkt, const int nts, const double ts_end) {
     const double f_p = std::log1p(2. * ts * ts / tau_ineff / tau_ineff) / (2. * ts * ts / tau_ineff / tau_ineff);
     assert_always(f_p >= 0.);
     assert_always(f_p <= 1.);
-    if (rng_uniform() < f_p) {
+    if (rng_uniform(pkt.number) < f_p) {
       pkt.type = deposit_type;
     } else {
       e_cmf_deposited = 0.;
@@ -70,7 +76,7 @@ void do_nonthermal_predeposit(Packet& pkt, const int nts, const double ts_end) {
     const double f_p = std::log1p(aux_term) / aux_term;
     assert_always(f_p >= 0.);
     assert_always(f_p <= 1.);
-    if (rng_uniform() < f_p) {
+    if (rng_uniform(pkt.number) < f_p) {
       pkt.type = deposit_type;
     } else {
       e_cmf_deposited = 0.;
@@ -105,7 +111,7 @@ void do_nonthermal_predeposit(Packet& pkt, const int nts, const double ts_end) {
     // KE with equal probability of happening at any energy in between. So we can just randomly
     // select an energy at which the absorption happens between particle_en and 0 and then calculate the corresponding
     // time.
-    const double rnd_en_absorb = rng_uniform() * particle_en;
+    const double rnd_en_absorb = rng_uniform(pkt.number) * particle_en;
     const double t_absorb = ts + (rnd_en_absorb / endot);
 
     // if absorption happens beyond the end of the current timestep,
@@ -232,7 +238,7 @@ void update_pellet(Packet& pkt, const int nts, const double t2) {
 }
 
 // update a packet no further than time t2
-void do_packet(Packet& pkt, const double t2, const int nts) {
+void do_packet(Packet& pkt, const double t2, const int nts, ContinuumOpacity& chi_rpkt_cont) {
   switch (pkt.type) {
     case TYPE_RADIOACTIVE_PELLET: {
       update_pellet(pkt, nts, t2);
@@ -245,7 +251,7 @@ void do_packet(Packet& pkt, const double t2, const int nts) {
     }
 
     case TYPE_RPKT: {
-      do_rpkt(pkt, t2);
+      do_rpkt(pkt, t2, chi_rpkt_cont);
       break;
     }
 
@@ -386,10 +392,6 @@ void cellcache_change_cell(globals::CellCache& cacheslot, const int nonemptymgi)
 
   std::ranges::fill(cacheslot.allphixstargets_corrphotoioncoeff, -99.);
 
-  for (int uniquelevelindex = 0; uniquelevelindex < get_includedlevels(); uniquelevelindex++) {
-    cacheslot.alllevels_maprocessrates[uniquelevelindex * MA_ACTION_COUNT] = -99.;
-  }
-
   std::ranges::fill(cacheslot.allcont_modified_departureratios, -1.);
 
   const auto nnetot = grid::get_nnetot(nonemptymgi);
@@ -399,31 +401,72 @@ void cellcache_change_cell(globals::CellCache& cacheslot, const int nonemptymgi)
     cacheslot.allcont_keep[i] = nnlevel > 0 && keep_this_cont(globals::allcont.element[i], globals::allcont.ion[i],
                                                               globals::allcont.level[i], nonemptymgi, nnetot);
   }
+
+#ifdef GPU_ON
+  // On the device, the macroatom transition rates and k-packet cooling rates cannot be computed lazily
+  // during propagation (they are guarded by a mutex on the CPU, which is unavailable on the GPU). So
+  // prepopulate every cell's rates here, up front, while still on the host.
+  const double t_mid = globals::timesteps[globals::timestep].mid;
+  const auto alllevelindices = std::ranges::iota_view{0, get_includedlevels()};
+  std::for_each(EXEC_PAR alllevelindices.begin(), alllevelindices.end(),
+                [nonemptymgi, t_mid](const int uniquelevelindex) {
+                  calculate_cellcache_macroatom_transitionrates(nonemptymgi, uniquelevelindex, t_mid);
+                });
+
+  const auto allionindices = std::ranges::iota_view{0, get_includedions()};
+  std::for_each(EXEC_PAR allionindices.begin(), allionindices.end(), [nonemptymgi](const int uniqueionindex) {
+    kpkt::calculate_cellcache_cooling_rates_ion(nonemptymgi, uniqueionindex);
+  });
+#else
+  for (int uniquelevelindex = 0; uniquelevelindex < get_includedlevels(); uniquelevelindex++) {
+    cacheslot.alllevels_maprocessrates[uniquelevelindex * MA_ACTION_COUNT] = -99.;
+  }
+#endif
 }
 
-void update_packet_cellcache_group(const int cellcache_nonemptymgi, std::span<Packet> packets, const int nts,
+void update_packet_cellcache_group(const int cellcache_nonemptymgi, std::span<Packet> packetgroup, const int nts,
                                    const double ts_end) {
   if (cellcache_nonemptymgi >= 0 && globals::cellcache[cellcacheslotid].nonemptymgi != cellcache_nonemptymgi) {
     cellcache_change_cell(globals::cellcache[cellcacheslotid], cellcache_nonemptymgi);
   }
 
-  auto update_packet = [cellcache_nonemptymgi, ts_end, nts](auto& pkt) {
+#ifdef GPU_ON
+  // we don't know how many GPU threads will exist, and we can't use a thread_local variables on device.
+  // Instead, we assume the worst case that each packet is handled simultaneously by a different GPU thread.
+  static std::vector<ContinuumOpacity> chi_rpkt_cont_vec;
+  if (cellcache_nonemptymgi >= 0) {
+    chi_rpkt_cont_vec.resize(packetgroup.size());
+  } else {
+    // we're not going to use this, but we need to pass a reference to something
+    chi_rpkt_cont_vec.resize(1);
+  }
+#endif
+
+  auto update_packet = [cellcache_nonemptymgi, ts_end, nts, &packetgroup](const ptrdiff_t pktgroupidx) {
+#ifdef GPU_ON
+    auto& chi_rpkt_cont = chi_rpkt_cont_vec[(cellcache_nonemptymgi >= 0) ? pktgroupidx : 0];
+#else
+    // thread_local lets us reuse this allocation on each CPU thread
+    THREADLOCALONHOST auto chi_rpkt_cont = ContinuumOpacity{};
+#endif
+    auto& pkt = packetgroup[pktgroupidx];
     while (packetprop_update_required(pkt, ts_end) &&
            (get_packet_cellcachenonemptymgi(pkt).value_or(cellcache_nonemptymgi) == cellcache_nonemptymgi)) {
-      do_packet(pkt, ts_end, nts);
+      do_packet(pkt, ts_end, nts, chi_rpkt_cont);
     }
   };
 
 #if defined(STDPAR_ON) || !defined(_OPENMP)
-  std::for_each(EXEC_PAR packets.begin(), packets.end(), update_packet);
+  const auto pktgroupindices = std::ranges::iota_view{0, static_cast<int>(std::ssize(packetgroup))};
+  std::for_each(EXEC_PAR pktgroupindices.begin(), pktgroupindices.end(), update_packet);
 #else
 #ifdef GPU_ON
 #pragma omp target teams distribute parallel for
 #else
 #pragma omp parallel for schedule(nonmonotonic : dynamic)
 #endif
-  for (auto i = 0Z; i < std::ssize(packets); i++) {
-    update_packet(packets[i]);
+  for (auto i = 0Z; i < std::ssize(packetgroup); i++) {
+    update_packet(i);
   }
 #endif
 }

@@ -4,10 +4,12 @@
 #include <algorithm>
 #include <cstddef>
 #include <functional>
+#include <memory>
 #include <span>
 
 #include "artisoptions.h"
 #include "constants.h"
+#include "globals.h"
 #include "grid.h"
 #include "ltepop.h"
 #include "mpi_logging.h"
@@ -35,9 +37,7 @@ constexpr auto get_expopac_bin_nu_lower(const ptrdiff_t binindex) -> double {
 // kappa in cm^2/g for each bin of each non-empty cell
 inline MPI_shared_array<float> expansionopacities{};
 
-class Phixslist {
-  // NOLINTBEGIN(*-avoid-c-arrays)
- public:
+struct Phixslist {
   // for either USE_LUT_PHOTOION = true or USE_ION_BFHEATING_ESTIMATORS = true. Size =
   // nbfcontinua_ground
   std::span<double> groundcont_gamma_contr;
@@ -50,40 +50,11 @@ class Phixslist {
   int bfestimend{-1};
   int bfestimbegin{0};
 
-#pragma clang unsafe_buffer_usage begin
-  constexpr Phixslist(const int nbfcontinua_ground, const int nbfcontinua, const int bfestimcount)
-      : _groundcont_gamma_contr(new double[nbfcontinua_ground]),
-        _chi_bf_sum(new double[nbfcontinua]),
-        _gamma_contr(new double[bfestimcount]) {
-    groundcont_gamma_contr = {_groundcont_gamma_contr, static_cast<std::size_t>(nbfcontinua_ground)};
-    chi_bf_sum = {_chi_bf_sum, static_cast<std::size_t>(nbfcontinua)};
-    gamma_contr = {_gamma_contr, static_cast<std::size_t>(bfestimcount)};
-  }
-
-  // define a destructor to free the allocated memory
-  constexpr ~Phixslist() {
-    delete[] _groundcont_gamma_contr;
-    delete[] _chi_bf_sum;
-    delete[] _gamma_contr;
-  }
-#pragma clang unsafe_buffer_usage end
-
-  // delete the copy constructor and copy assignment operator to prevent copying
-  Phixslist(const Phixslist&) = delete;
-  auto operator=(const Phixslist&) -> Phixslist& = delete;
-
-  // delete the move constructor and move assignment operator to prevent moving
-  Phixslist(Phixslist&&) = delete;
-  auto operator=(Phixslist&&) -> Phixslist& = delete;
-
-  constexpr Phixslist() = default;
-
- private:
-  // std::vector and other type-safe containers are not used here because they are not supported on device code.
-  // Instead, we use raw pointers and manage memory manually.
-  double* _groundcont_gamma_contr{nullptr};
-  double* _chi_bf_sum{nullptr};
-  double* _gamma_contr{nullptr};
+  // unique ptrs are used instead of vectors for nvc++ compatibility in device code
+  // NOLINTBEGIN(*-avoid-c-arrays)
+  std::unique_ptr<double[]> _groundcont_gamma_contr;
+  std::unique_ptr<double[]> _chi_bf_sum;
+  std::unique_ptr<double[]> _gamma_contr;
   // NOLINTEND(*-avoid-c-arrays)
 };
 
@@ -98,22 +69,37 @@ struct ContinuumOpacity {
   int timestep{-1};
   Phixslist phixslist;
 
-  constexpr ContinuumOpacity(const int nbfcontinua_ground, const int nbfcontinua, const int bfestimcount)
-      : phixslist{nbfcontinua_ground, nbfcontinua, bfestimcount} {}
+  constexpr explicit ContinuumOpacity(const bool alloc_phixslist) {
+    if (alloc_phixslist) {
+// NOLINTBEGIN(*-avoid-c-arrays)
+#pragma clang unsafe_buffer_usage begin
+      phixslist._groundcont_gamma_contr = std::make_unique<double[]>(globals::nbfcontinua_ground);
+      phixslist.groundcont_gamma_contr =
+          std::span<double>(phixslist._groundcont_gamma_contr.get(), globals::nbfcontinua_ground);
+      phixslist._chi_bf_sum = std::make_unique<double[]>(globals::nbfcontinua);
+      phixslist.chi_bf_sum = std::span<double>(phixslist._chi_bf_sum.get(), globals::nbfcontinua);
+      const auto bfestimcount = globals::bfestim_nu_edge.size();
+      phixslist._gamma_contr = std::make_unique<double[]>(bfestimcount);
+      phixslist.gamma_contr = std::span<double>(phixslist._gamma_contr.get(), bfestimcount);
+#pragma clang unsafe_buffer_usage end
+      // NOLINTEND(*-avoid-c-arrays)
+    }
+  }
 
-  constexpr ContinuumOpacity() = default;
+  // default constructor allocates phixslist
+  constexpr ContinuumOpacity() : ContinuumOpacity(true) {}
 
   // total continuum absorption coefficient at nu [cm^-1]
   [[nodiscard]] constexpr auto total() const { return chi_freefree_scatter + chi_boundfree + chi_freefree_heat; }
 };
 
-DEVICE_FUNC void do_rpkt(Packet& pkt, double t2);
+DEVICE_FUNC void do_rpkt(Packet& pkt, double t2, ContinuumOpacity& chi_rpkt_cont);
 DEVICE_FUNC void emit_rpkt(Packet& pkt);
 template <bool USECELLHISTANDUPDATEPHIXSLIST>
 void calculate_chi_rpkt_cont(double nu_cmf, ContinuumOpacity& chi_rpkt_cont, int nonemptymgi);
 extern template void calculate_chi_rpkt_cont<true>(double nu_cmf, ContinuumOpacity& chi_rpkt_cont, int nonemptymgi);
 extern template void calculate_chi_rpkt_cont<false>(double nu_cmf, ContinuumOpacity& chi_rpkt_cont, int nonemptymgi);
-[[nodiscard]] DEVICE_FUNC auto sample_planck_times_expansion_opacity(int nonemptymgi) -> double;
+[[nodiscard]] DEVICE_FUNC auto sample_planck_times_expansion_opacity(int nonemptymgi, int packetnumber) -> double;
 void allocate_expansionopacities();
 void calculate_expansion_opacities(int nonemptymgi);
 void MPI_Bcast_binned_opacities(ptrdiff_t nonemptymgi, int root_node_id);

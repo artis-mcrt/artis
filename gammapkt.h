@@ -8,7 +8,7 @@ namespace gammapkt {
 void init_gamma_data();
 DEVICE_FUNC void pellet_gamma_decay(Packet& pkt);
 DEVICE_FUNC void do_gamma(Packet& pkt, int nts, double t2);
-auto choose_gamma_ray(int nucindex) -> double;
+auto choose_gamma_ray(int nucindex, int packetnumber) -> double;
 
 }  // namespace gammapkt
 
