@@ -433,8 +433,8 @@ void update_packet_cellcache_group(const int cellcache_groupid, std::span<Packet
                                    const double ts_end) {
   if (cellcache_singleslot) {
     // in this case, a postive groupid is a nonemptymgi, and -1 is the no-cache-required group
-    if (cellcache_groupid >= 0 && get_cellcache(cellcache_groupid).nonemptymgi != cellcache_groupid) {
-      cellcacheslot_populate(get_cellcache(cellcache_groupid), cellcache_groupid);
+    if (cellcache_groupid >= 0 && globals::cellcache[0].nonemptymgi != cellcache_groupid) {
+      cellcacheslot_populate(globals::cellcache[0], cellcache_groupid);
     }
   }
 
