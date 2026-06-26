@@ -177,7 +177,7 @@ jobs:
               if: always()
               working-directory: tests/${{ matrix.testname }}_testrun/
               run: |
-                  time mpirun -np 1 ./exspec
+                  time mpirun -np 1 --mca osc ^ucx ./exspec
                   python3 ../../scripts/mergeangleres.py
                   rm -f light_curve_res_*.out spec_res_*.out specpol_res_*.out
 
