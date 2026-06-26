@@ -432,8 +432,6 @@ void cellcache_change_cell(globals::CellCache& cacheslot, const int nonemptymgi)
 void update_packet_cellcache_group(const int cellcache_nonemptymgi, std::span<Packet> packetgroup, const int nts,
                                    const double ts_end) {
   if (cellcache_nonemptymgi >= 0 && get_cellcache(cellcache_nonemptymgi).nonemptymgi != cellcache_nonemptymgi) {
-    assert_always(cellcache_singleslot);  // if not single-slot, then all cellcaches are already filled at the start of
-                                          // update_packets
     cellcache_change_cell(get_cellcache(cellcache_nonemptymgi), cellcache_nonemptymgi);
   }
 
