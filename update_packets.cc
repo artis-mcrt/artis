@@ -499,7 +499,7 @@ void update_packets(const int nts, std::span<Packet> packets) {
     const auto nonempty_npts_model = grid::get_nonempty_npts_model();
     // first group will probably be the -1 no-cache required group, so -2 triggers the first update
     for (int nonemptymgi = 0; nonemptymgi < nonempty_npts_model; nonemptymgi++) {
-      cellcache_change_cell(globals::cellcache.at(nonemptymgi), nonemptymgi);
+      cellcache_change_cell(globals::cellcache[nonemptymgi], nonemptymgi);
     }
     printlnlog("timestep {}: all {} cellcaches set (took {:.1f} s)", nts, nonempty_npts_model,
                std::chrono::duration<double>(std::chrono::steady_clock::now() - time_update_packets_start).count());
