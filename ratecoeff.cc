@@ -684,7 +684,7 @@ DEVICE_FUNC auto get_corrphotoioncoeff(const int element, const int ion, const i
   const auto uniquelevelindex = get_uniquelevelindex(element, ion, level);
   const auto allphisxtargetindex = get_allphixstargetindex(uniquelevelindex, phixstargetindex);
   double gammacorr =
-      use_cellcache ? globals::cellcache[nonemptymgi].allphixstargets_corrphotoioncoeff[allphisxtargetindex] : -1;
+      use_cellcache ? get_cellcache(nonemptymgi).allphixstargets_corrphotoioncoeff[allphisxtargetindex] : -1;
 
   if (!use_cellcache || gammacorr < 0) {
     if (DETAILED_BF_ESTIMATORS_ON && globals::timestep >= DETAILED_BF_ESTIMATORS_USEFROMTIMESTEP) {
@@ -709,7 +709,7 @@ DEVICE_FUNC auto get_corrphotoioncoeff(const int element, const int ion, const i
       }
     }
     if (use_cellcache) {
-      globals::cellcache[nonemptymgi].allphixstargets_corrphotoioncoeff[allphisxtargetindex] = gammacorr;
+      get_cellcache(nonemptymgi).allphixstargets_corrphotoioncoeff[allphisxtargetindex] = gammacorr;
     }
   }
 

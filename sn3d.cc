@@ -56,7 +56,7 @@ std::chrono::steady_clock::time_point
 std::fstream estimators_file;
 
 void setup_cellcache() {
-  const int num_cellcache_slots = grid::get_nonempty_npts_model();
+  const int num_cellcache_slots = cellcache_singleslot ? 1 : grid::get_nonempty_npts_model();
   resize_exactly(globals::cellcache, num_cellcache_slots);
 
   auto mem_usage_cellcache = 0ZU;
