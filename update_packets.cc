@@ -430,7 +430,7 @@ void cellcacheslot_populate(globals::CellCache& cacheslot, const int nonemptymgi
 void update_packet_cellcache_group(const int cellcache_groupid, std::span<Packet> packetgroup, const int nts,
                                    const double ts_end) {
   if (cellcache_singleslot) {
-    // in this case, a postive groupid is a nonemptymgi, and -1 is the no-cache-required group
+    // in this case, a positive groupid is a nonemptymgi, and -1 is the no-cache-required group
     if (cellcache_groupid >= 0 && globals::cellcache[0].nonemptymgi != cellcache_groupid) {
       cellcacheslot_populate(globals::cellcache[0], cellcache_groupid);
     }
@@ -438,7 +438,7 @@ void update_packet_cellcache_group(const int cellcache_groupid, std::span<Packet
 
 #ifdef GPU_ON
   // we don't know how many GPU threads will exist, and we can't use a thread_local variables on device.
-  // Instead, we assume the worst case that each packet is handled simultaneously by a different GPU thread.
+  // So, we assume the worst case that each packet is handled simultaneously by different GPU threads.
   static std::vector<ContinuumOpacity> chi_rpkt_cont_vec;
   if (cellcache_groupid >= 0) {
     chi_rpkt_cont_vec.resize(packetgroup.size());
