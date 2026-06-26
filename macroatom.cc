@@ -38,21 +38,24 @@ constexpr bool LOG_MACROATOM = false;
 
 std::fstream macroatom_file;
 
-[[nodiscard]] auto get_sum_internal_down_same_exceptlast(const int uniquelevelindex) -> std::span<const double> {
+[[nodiscard]] auto get_sum_internal_down_same_exceptlast(const std::span<double> allmacroatomictransitions,
+                                                         const int uniquelevelindex) -> std::span<const double> {
   const auto ndowntrans = get_ndowntrans(uniquelevelindex);
-  return std::span{globals::cellcache[cellcacheslotid].allmacroatomictransitions}.subspan(
-      globals::alllevels.matransblock_start[uniquelevelindex] + ndowntrans, ndowntrans - 1);
+  return allmacroatomictransitions.subspan(globals::alllevels.matransblock_start[uniquelevelindex] + ndowntrans,
+                                           ndowntrans - 1);
 }
 
-[[nodiscard]] auto get_sum_internal_up_same_exceptlast(const int uniquelevelindex) -> std::span<const double> {
-  return std::span{globals::cellcache[cellcacheslotid].allmacroatomictransitions}.subspan(
+[[nodiscard]] auto get_sum_internal_up_same_exceptlast(const std::span<double> allmacroatomictransitions,
+                                                       const int uniquelevelindex) -> std::span<const double> {
+  return allmacroatomictransitions.subspan(
       globals::alllevels.matransblock_start[uniquelevelindex] + (2 * get_ndowntrans(uniquelevelindex)),
       get_nuptrans(uniquelevelindex) - 1);
 }
 
-[[nodiscard]] auto get_sum_epstrans_rad_deexc_exceptlast(const int uniquelevelindex) -> std::span<const double> {
-  return std::span{globals::cellcache[cellcacheslotid].allmacroatomictransitions}.subspan(
-      globals::alllevels.matransblock_start[uniquelevelindex], get_ndowntrans(uniquelevelindex) - 1);
+[[nodiscard]] auto get_sum_epstrans_rad_deexc_exceptlast(const std::span<double> allmacroatomictransitions,
+                                                         const int uniquelevelindex) -> std::span<const double> {
+  return allmacroatomictransitions.subspan(globals::alllevels.matransblock_start[uniquelevelindex],
+                                           get_ndowntrans(uniquelevelindex) - 1);
 }
 
 DEVICE_FUNC void calculate_macroatom_transitionrates(std::span<double> levelrates, const int nonemptymgi,
@@ -62,7 +65,7 @@ DEVICE_FUNC void calculate_macroatom_transitionrates(std::span<double> levelrate
   assert_testmodeonly(std::ssize(levelrates) == MA_ACTION_COUNT);
   const auto uniquelevelindex = ionuniquelevelindexstart + level;
 
-  const auto transblock = std::span{globals::cellcache[cellcacheslotid].allmacroatomictransitions};
+  const auto transblock = std::span{globals::cellcache[nonemptymgi].allmacroatomictransitions};
   const auto alllevels_matransblock_start = globals::alllevels.matransblock_start[uniquelevelindex];
 
   const auto T_e = grid::get_Te(nonemptymgi);
@@ -192,7 +195,8 @@ void do_macroatom_raddeexcitation(Packet& pkt, const int ionuniquelevelindexstar
   // randomly select which line transitions occurs
 
   const double targetval = rng_uniform(pkt.number) * totalrate;
-  const auto sum_epstrans_rad_deexc_exceptlast = get_sum_epstrans_rad_deexc_exceptlast(uniquelevelindex);
+  const auto sum_epstrans_rad_deexc_exceptlast = get_sum_epstrans_rad_deexc_exceptlast(
+      std::span{globals::cellcache[cellcacheslotid].allmacroatomictransitions}, uniquelevelindex);
 
   // first sum_epstrans_rad_deexc[i] such that sum_epstrans_rad_deexc[i] > targetval
   const auto downtransindex = std::ranges::upper_bound(sum_epstrans_rad_deexc_exceptlast, targetval) -
@@ -318,7 +322,7 @@ DEVICE_FUNC void calculate_cellcache_macroatom_transitionrates(const int nonempt
                                                                const double t_mid) {
   const auto [element, ion, level] = get_levelfromuniquelevelindex(uniquelevelindex);
   const auto ionuniquelevelindexstart = get_ionuniquelevelindexstart(element, ion);
-  const auto levelrates = std::span{globals::cellcache[cellcacheslotid].alllevels_maprocessrates}.subspan(
+  const auto levelrates = std::span{globals::cellcache[nonemptymgi].alllevels_maprocessrates}.subspan(
       uniquelevelindex * MA_ACTION_COUNT, MA_ACTION_COUNT);
   calculate_macroatom_transitionrates(levelrates, nonemptymgi, element, ion, level, ionuniquelevelindexstart, t_mid,
                                       globals::alltrans);
@@ -367,16 +371,16 @@ DEVICE_FUNC void do_macroatom(Packet& pkt, const MacroAtomState& pktmastate) {
     const int uniquelevelindex = ionuniquelevelindexstart + level;
 
     const double epsilon_current = epsilon(uniquelevelindex);
-    auto levelrates = std::span{globals::cellcache[cellcacheslotid].alllevels_maprocessrates}.subspan(
+    auto levelrates = std::span{globals::cellcache[nonemptymgi].alllevels_maprocessrates}.subspan(
         uniquelevelindex * MA_ACTION_COUNT, MA_ACTION_COUNT);
 
     {
 #if (defined(STDPAR_ON) || defined(_OPENMP)) && !defined(GPU_ON)
       [[maybe_unused]] ScopedMutex lock{
-          globals::cellcache[cellcacheslotid].allmacroatomictransitions_locks[uniquelevelindex]};
+          globals::cellcache[nonemptymgi].allmacroatomictransitions_locks[uniquelevelindex]};
 #endif
 
-      assert_testmodeonly(globals::cellcache[cellcacheslotid].nonemptymgi == nonemptymgi);
+      assert_testmodeonly(globals::cellcache[nonemptymgi].nonemptymgi == nonemptymgi);
 
       // If there are no precalculated rates available then calculate them
       if (levelrates[0] < 0.) {
@@ -430,7 +434,8 @@ DEVICE_FUNC void do_macroatom(Packet& pkt, const MacroAtomState& pktmastate) {
         const double targetval = rng_uniform(pkt.number) * levelrates[MA_ACTION_INTERNALDOWNSAME];
 
         // first sum_internal_down_same[i] such that sum_internal_down_same[i] > targetval
-        const auto sum_internal_down_same_exceptlast = get_sum_internal_down_same_exceptlast(uniquelevelindex);
+        const auto sum_internal_down_same_exceptlast = get_sum_internal_down_same_exceptlast(
+            std::span{globals::cellcache[nonemptymgi].allmacroatomictransitions}, uniquelevelindex);
         const auto downtransindex = std::ranges::upper_bound(sum_internal_down_same_exceptlast, targetval) -
                                     sum_internal_down_same_exceptlast.begin();
 
@@ -490,7 +495,8 @@ DEVICE_FUNC void do_macroatom(Packet& pkt, const MacroAtomState& pktmastate) {
 
       case MA_ACTION_INTERNALUPSAME: {
         // randomly select the occurring transition
-        const auto sum_internal_up_same_exceptlast = get_sum_internal_up_same_exceptlast(uniquelevelindex);
+        const auto sum_internal_up_same_exceptlast = get_sum_internal_up_same_exceptlast(
+            std::span{globals::cellcache[cellcacheslotid].allmacroatomictransitions}, uniquelevelindex);
 
         const double targetval = rng_uniform(pkt.number) * levelrates[MA_ACTION_INTERNALUPSAME];
 
