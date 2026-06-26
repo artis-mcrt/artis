@@ -327,11 +327,9 @@ auto get_packet_cellcachegroupid(const Packet& pkt) -> std::optional<int> {
   if (grid::thick_allcells[nonemptymgi] == 1) {
     return std::nullopt;  // for thick cell, no cell cache required
   }
-#ifdef GPU_ON
   if (!cellcache_singleslot) {
-    return 0;  // all cell caches are available, so no partitioning is required. Avoid multiple kernel launches
+    return 0;  // all cell caches are available, so no partitioning is required
   }
-#endif
   return nonemptymgi;
 }
 
