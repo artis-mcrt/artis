@@ -369,7 +369,7 @@ auto compare_packet_order(const Packet& p1, const Packet& p2, const double ts_en
 }
 
 // fill the cellcache with values for the current cell
-void cellcache_change_cell(globals::CellCache& cacheslot, const int nonemptymgi) {
+void cellcacheslot_populate(globals::CellCache& cacheslot, const int nonemptymgi) {
   assert_always(nonemptymgi >= 0);
   stats::increment(stats::Counter::UPDATECELL);
 
@@ -434,7 +434,7 @@ void update_packet_cellcache_group(const int cellcache_groupid, std::span<Packet
   if (cellcache_singleslot) {
     // in this case, a postive groupid is a nonemptymgi, and -1 is the no-cache-required group
     if (cellcache_groupid >= 0 && get_cellcache(cellcache_groupid).nonemptymgi != cellcache_groupid) {
-      cellcache_change_cell(get_cellcache(cellcache_groupid), cellcache_groupid);
+      cellcacheslot_populate(get_cellcache(cellcache_groupid), cellcache_groupid);
     }
   }
 
@@ -500,7 +500,7 @@ void update_packets(const int nts, std::span<Packet> packets) {
     const auto nonempty_npts_model = grid::get_nonempty_npts_model();
     // first group will probably be the -1 no-cache required group, so -2 triggers the first update
     for (int nonemptymgi = 0; nonemptymgi < nonempty_npts_model; nonemptymgi++) {
-      cellcache_change_cell(globals::cellcache.at(nonemptymgi), nonemptymgi);
+      cellcacheslot_populate(globals::cellcache.at(nonemptymgi), nonemptymgi);
     }
     printlnlog("timestep {}: all {} cellcaches set (took {:.1f} s)", nts, nonempty_npts_model,
                std::chrono::duration<double>(std::chrono::steady_clock::now() - time_update_packets_start).count());
