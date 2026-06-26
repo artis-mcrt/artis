@@ -498,7 +498,6 @@ void update_packets(const int nts, std::span<Packet> packets) {
     globals::cellcache[0].nonemptymgi = -2;
   } else {
     const auto nonempty_npts_model = grid::get_nonempty_npts_model();
-    // first group will probably be the -1 no-cache required group, so -2 triggers the first update
     for (int nonemptymgi = 0; nonemptymgi < nonempty_npts_model; nonemptymgi++) {
       cellcacheslot_populate(globals::cellcache.at(nonemptymgi), nonemptymgi);
     }
