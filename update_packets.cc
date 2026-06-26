@@ -309,7 +309,9 @@ constexpr auto packetprop_update_required(const Packet& pkt, const double ts_end
 // Return the nonemptymgi for the cell cache if required (non-empty, non-thick cell),
 // otherwise return an empty std::optional to indicate that no cell cache is used
 auto get_packet_cellcachenonemptymgi(const Packet& pkt) -> std::optional<int> {
-  return {};  // all cell caches are available
+  if (!cellcache_singleslot) {
+    return {};  // all cell caches are available, so no partitioning is required
+  }
   constexpr auto nocache_packettypes = std::array{TYPE_RADIOACTIVE_PELLET,
                                                   TYPE_GAMMA,
                                                   TYPE_PRE_KPKT,
@@ -486,13 +488,15 @@ void update_packets(const int nts, std::span<Packet> packets) {
 
   const auto time_update_packets_start = std::chrono::steady_clock::now();
   printlnlog("timestep {}: start update_packets", nts);
-  const auto nonempty_npts_model = grid::get_nonempty_npts_model();
-  // first group will probably be the -1 no-cache required group, so -2 triggers the first update
-  for (int nonemptymgi = 0; nonemptymgi < nonempty_npts_model; nonemptymgi++) {
-    cellcache_change_cell(globals::cellcache[nonemptymgi], nonemptymgi);
+  if (!cellcache_singleslot) {
+    const auto nonempty_npts_model = grid::get_nonempty_npts_model();
+    // first group will probably be the -1 no-cache required group, so -2 triggers the first update
+    for (int nonemptymgi = 0; nonemptymgi < nonempty_npts_model; nonemptymgi++) {
+      cellcache_change_cell(globals::cellcache[nonemptymgi], nonemptymgi);
+    }
+    printlnlog("timestep {}: all {} cell caches set (took {} s)", nts, nonempty_npts_model,
+               std::chrono::duration<double>(std::chrono::steady_clock::now() - time_update_packets_start).count());
   }
-  printlnlog("timestep {}: all {} cell caches set (took {} s)", nts, nonempty_npts_model,
-             std::chrono::duration<double>(std::chrono::steady_clock::now() - time_update_packets_start).count());
   int prevpkt_cellcache_nonemptymgi = -2;
   int passnumber = 0;
   while (true) {
