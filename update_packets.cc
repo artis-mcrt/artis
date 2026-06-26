@@ -413,13 +413,13 @@ void cellcacheslot_populate(globals::CellCache& cacheslot, const int nonemptymgi
   // prepopulate every cell's rates here, up front, while still on the host.
   const double t_mid = globals::timesteps[globals::timestep].mid;
   const auto alllevelindices = std::ranges::iota_view{0, get_includedlevels()};
-  std::for_each(EXEC_PAR alllevelindices.begin(), alllevelindices.end(),
+  std::for_each(EXEC_PAR_UNSEQ alllevelindices.begin(), alllevelindices.end(),
                 [nonemptymgi, t_mid](const int uniquelevelindex) {
                   calculate_cellcache_macroatom_transitionrates(nonemptymgi, uniquelevelindex, t_mid);
                 });
 
   const auto allionindices = std::ranges::iota_view{0, get_includedions()};
-  std::for_each(EXEC_PAR allionindices.begin(), allionindices.end(), [nonemptymgi](const int uniqueionindex) {
+  std::for_each(EXEC_PAR_UNSEQ allionindices.begin(), allionindices.end(), [nonemptymgi](const int uniqueionindex) {
     kpkt::calculate_cellcache_cooling_rates_ion(nonemptymgi, uniqueionindex);
   });
 #else
@@ -509,9 +509,9 @@ void update_packets(const int nts, std::span<Packet> packets) {
   while (true) {
     const auto sys_time_start_pass = std::chrono::steady_clock::now();
 
-    std::SORT_OR_STABLE_SORT(EXEC_PAR packets.begin(), packets.end(), [ts_end](const Packet& p1, const Packet& p2) {
-      return compare_packet_order(p1, p2, ts_end);
-    });
+    std::SORT_OR_STABLE_SORT(
+        EXEC_PAR_UNSEQ packets.begin(), packets.end(),
+        [ts_end](const Packet& p1, const Packet& p2) { return compare_packet_order(p1, p2, ts_end); });
 
     static std::vector<std::tuple<int, std::span<Packet>>> packet_groups;
     packet_groups.clear();
