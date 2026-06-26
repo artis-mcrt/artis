@@ -492,8 +492,9 @@ void update_packets(const int nts, std::span<Packet> packets) {
   while (true) {
     const auto sys_time_start_pass = std::chrono::steady_clock::now();
 
-    std::ranges::SORT_OR_STABLE_SORT(
-        packets, [ts_end](const Packet& p1, const Packet& p2) { return compare_packet_order(p1, p2, ts_end); });
+    std::SORT_OR_STABLE_SORT(EXEC_PAR packets.begin(), packets.end(), [ts_end](const Packet& p1, const Packet& p2) {
+      return compare_packet_order(p1, p2, ts_end);
+    });
 
     static std::vector<std::tuple<int, std::span<Packet>>> packet_groups;
     packet_groups.clear();
