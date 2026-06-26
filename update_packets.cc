@@ -504,7 +504,7 @@ void update_packets(const int nts, std::span<Packet> packets) {
     printlnlog("timestep {}: all {} cellcaches set (took {:.1f} s)", nts, nonempty_npts_model,
                std::chrono::duration<double>(std::chrono::steady_clock::now() - time_update_packets_start).count());
   }
-  int prevpkt_cellcache_cellcache_groupid = -2;
+  int prev_cellcache_groupid = -2;
   int passnumber = 0;
   while (true) {
     const auto sys_time_start_pass = std::chrono::steady_clock::now();
@@ -527,16 +527,16 @@ void update_packets(const int nts, std::span<Packet> packets) {
         break;
       }
       const auto cellcache_groupid = get_packet_cellcachegroupid(pkt).value_or(-1);
-      if (cellcache_groupid != prevpkt_cellcache_cellcache_groupid && packetgroupstart != pktindex) {
-        packet_groups.emplace_back(prevpkt_cellcache_cellcache_groupid,
+      if (cellcache_groupid != prev_cellcache_groupid && packetgroupstart != pktindex) {
+        packet_groups.emplace_back(prev_cellcache_groupid,
                                    packets.subspan(packetgroupstart, pktindex - packetgroupstart));
         packetgroupstart = pktindex;
       }
-      prevpkt_cellcache_cellcache_groupid = cellcache_groupid;
+      prev_cellcache_groupid = cellcache_groupid;
     }
     if (packetgroupstart != pktindex) {
       // finish the last group of packets that needed updating
-      packet_groups.emplace_back(prevpkt_cellcache_cellcache_groupid,
+      packet_groups.emplace_back(prev_cellcache_groupid,
                                  packets.subspan(packetgroupstart, pktindex - packetgroupstart));
     }
     if (packet_groups.empty()) {
