@@ -11,8 +11,6 @@
 #include "packet.h"
 #include "thermalbalance.h"
 
-constexpr double COOLING_UNDEFINED = -99;
-
 namespace kpkt {
 
 inline MPI_shared_array<double> ion_cooling_contribs_allcells{};
