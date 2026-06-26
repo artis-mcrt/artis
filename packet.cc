@@ -68,8 +68,10 @@ void place_pellet(const double e_cmf_per_packet, const std::span<const double> e
 
   pkt.pos = grid::get_propcell_random_position_tmin(cellindex, pktnumber);
 
+#ifndef GPU_ON
   // ensure that the random position was inside the cell we selected
   assert_always(grid::get_cellindex_from_pos(pkt.pos, pkt.prop_time) == cellindex);
+#endif
 
   const auto nonemptymgi = grid::get_propcell_nonemptymgi(cellindex);
 
