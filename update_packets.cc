@@ -309,9 +309,11 @@ constexpr auto packetprop_update_required(const Packet& pkt, const double ts_end
 // Return the nonemptymgi for the cell cache if required (non-empty, non-thick cell),
 // otherwise return an empty std::optional to indicate that no cell cache is used
 auto get_packet_cellcachenonemptymgi(const Packet& pkt) -> std::optional<int> {
+#ifdef GPU_ON
   if (!cellcache_singleslot) {
-    return {};  // all cell caches are available, so no partitioning is required
+    return {};  // all cell caches are available, so no partitioning is required. Avoid multiple kernel launches
   }
+#endif
   constexpr auto nocache_packettypes = std::array{TYPE_RADIOACTIVE_PELLET,
                                                   TYPE_GAMMA,
                                                   TYPE_PRE_KPKT,
