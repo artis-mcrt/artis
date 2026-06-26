@@ -87,17 +87,21 @@ constexpr bool cellcache_singleslot = false;
 constexpr bool cellcache_singleslot = true;
 #endif
 
+#ifdef __HIPCC__
+#define THREADLOCALONHOST
+#else
+#define THREADLOCALONHOST thread_local
+#endif
+
 #ifdef __NVCOMPILER
 // nvc++ : single-pass. Each macro becomes an independent "if target".
 #include <nv/target>
 #define MY_IF_DEVICE(...) NV_IF_TARGET(NV_IS_DEVICE, (__VA_ARGS__))
 #define MY_IF_HOST(...) NV_IF_TARGET(NV_IS_HOST, (__VA_ARGS__))
-
 #elif (defined(__HIP_DEVICE_COMPILE__) && __HIP_DEVICE_COMPILE__) || defined(__CUDA_ARCH__)
 // Device pass of a multi-pass compiler (HIP-Clang / nvcc).
 #define MY_IF_DEVICE(...) __VA_ARGS__
 #define MY_IF_HOST(...)
-
 #else
 // Host pass of HIP/nvcc, OR a plain CPU-only compiler (gcc/clang/icc).
 #define MY_IF_DEVICE(...)
@@ -106,10 +110,8 @@ constexpr bool cellcache_singleslot = true;
 
 #ifdef GPU_ON
 #define DEVICE_FUNC __host__ __device__
-#define THREADLOCALONHOST
 #else
 #define DEVICE_FUNC
-#define THREADLOCALONHOST thread_local
 #endif
 
 #if defined REPRODUCIBLE && REPRODUCIBLE
@@ -120,7 +122,12 @@ constexpr bool cellcache_singleslot = true;
 
 #ifdef STDPAR_ON
 #include <execution>
+
+#ifdef __HIPCC__
+#define EXEC_PAR_UNSEQ std::execution::par,
+#else
 #define EXEC_PAR_UNSEQ std::execution::par_unseq,
+#endif
 #define EXEC_PAR std::execution::par,
 #else
 #define EXEC_PAR_UNSEQ
