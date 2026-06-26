@@ -84,7 +84,7 @@ constexpr std::array datafolders{"./", "data/", "artis/data/"};
 #ifdef GPU_ON
 constexpr bool cellcache_singleslot = false;
 #else
-constexpr bool cellcache_singleslot = false;
+constexpr bool cellcache_singleslot = true;
 #endif
 
 #ifdef __NVCOMPILER
