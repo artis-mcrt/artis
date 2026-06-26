@@ -81,6 +81,12 @@ constexpr std::array datafolders{"./", "data/", "artis/data/"};
 #define TESTMODE false
 #endif
 
+#ifdef GPU_ON
+constexpr bool cellcache_singleslot = false;
+#else
+constexpr bool cellcache_singleslot = true;
+#endif
+
 #ifdef __NVCOMPILER
 // nvc++ : single-pass. Each macro becomes an independent "if target".
 #include <nv/target>

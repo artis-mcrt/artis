@@ -209,7 +209,7 @@ auto get_possible_event_expansion_opacity(const int nonemptymgi, const Packet& p
 
   // with thermalisation or pure scattering, we don't keep track of line interactions
 
-  assert_always(globals::cellcache[cellcacheslotid].nonemptymgi == nonemptymgi);
+  assert_always(get_cellcache(nonemptymgi).nonemptymgi == nonemptymgi);
   double dist = 0.;
   double tau = 0.;
   const auto binindex_start =
@@ -649,9 +649,9 @@ auto do_rpkt_step(Packet& pkt, const double t2, ContinuumOpacity& chi_rpkt_cont)
 auto calculate_chi_ffheating(const int nonemptymgi, const double nu, const bool use_cellcache) -> double {
   const auto clumpednne = grid::get_nne(nonemptymgi) * grid::get_clumpfactor(nonemptymgi);
   const auto T_e = grid::get_Te(nonemptymgi);
-  assert_testmodeonly(!use_cellcache || globals::cellcache[cellcacheslotid].nonemptymgi == nonemptymgi);
-  const auto chi_ff_nnionpart = use_cellcache ? globals::cellcache[cellcacheslotid].chi_ff_nnionpart
-                                              : calculate_chi_ffheat_nnionpart(nonemptymgi);
+  assert_testmodeonly(!use_cellcache || get_cellcache(nonemptymgi).nonemptymgi == nonemptymgi);
+  const auto chi_ff_nnionpart =
+      use_cellcache ? get_cellcache(nonemptymgi).chi_ff_nnionpart : calculate_chi_ffheat_nnionpart(nonemptymgi);
 
   const double chi_ff = chi_ff_nnionpart / pow3(nu) * clumpednne * (1 - exp(-HOVERKB * nu / T_e));
 
@@ -722,11 +722,11 @@ auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixsli
     // The bf process happens only if the current cell contains
     // the involved atomic species
     const bool should_keep_this_cont = USECELLHISTANDUPDATEPHIXSLIST
-                                           ? globals::cellcache[cellcacheslotid].allcont_keep[i]
+                                           ? get_cellcache(nonemptymgi).allcont_keep[i]
                                            : keep_this_cont(element, ion, level, nonemptymgi, nnetot);
 
     if (should_keep_this_cont) [[likely]] {
-      const double nnlevel = USECELLHISTANDUPDATEPHIXSLIST ? globals::cellcache[cellcacheslotid].allcont_nnlevel[i]
+      const double nnlevel = USECELLHISTANDUPDATEPHIXSLIST ? get_cellcache(nonemptymgi).allcont_nnlevel[i]
                                                            : calculate_levelpop(nonemptymgi, element, ion, level);
 
       if (USECELLHISTANDUPDATEPHIXSLIST || nnlevel > 0) {
@@ -735,7 +735,7 @@ auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixsli
             photoionisation_crosssection_fromtable(get_phixs_table(allcont_uniquelevelindex[i]), nu_edge, nu);
 
         double corrfactor = 1.;  // default to no subtraction of stimulated recombination
-        double modified_departure_ratio = globals::cellcache[cellcacheslotid].allcont_modified_departureratios[i];
+        double modified_departure_ratio = get_cellcache(nonemptymgi).allcont_modified_departureratios[i];
 
         if (!USECELLHISTANDUPDATEPHIXSLIST || modified_departure_ratio < 0) {
           const int upper = allcont_upperlevel[i];
@@ -747,7 +747,7 @@ auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixsli
           modified_departure_ratio =
               nnupperionlevel / nnlevel * clumpednne * modified_sahafact;  // put that to phixslist
           if (USECELLHISTANDUPDATEPHIXSLIST) {
-            globals::cellcache[cellcacheslotid].allcont_modified_departureratios[i] = modified_departure_ratio;
+            get_cellcache(nonemptymgi).allcont_modified_departureratios[i] = modified_departure_ratio;
           }
         }
 

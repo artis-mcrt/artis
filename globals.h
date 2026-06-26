@@ -1,6 +1,7 @@
 #ifndef GLOBALS_H
 #define GLOBALS_H
 
+#include "constants.h"
 #ifdef STDPAR_ON
 #include <thread>
 #endif
@@ -296,8 +297,6 @@ inline bool lte_iteration{false};
 
 }  // namespace globals
 
-constexpr int cellcacheslotid = 0;
-
 [[nodiscard]] inline auto get_max_threads() -> int {
 #ifdef STDPAR_ON
   return static_cast<int>(std::thread::hardware_concurrency());
@@ -317,4 +316,11 @@ constexpr int cellcacheslotid = 0;
   return 0;
 #endif
 }
+
+inline auto get_cellcache(const int nonemptymgi) -> globals::CellCache& {
+  assert_always(nonemptymgi >= 0);
+  const int cacheslotid = cellcache_singleslot ? 0 : nonemptymgi;
+  return globals::cellcache[cacheslotid];
+}
+
 #endif  // GLOBALS_H
