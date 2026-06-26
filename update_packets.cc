@@ -329,8 +329,7 @@ auto get_packet_cellcachenonemptymgi(const Packet& pkt) -> std::optional<int> {
   }
 #ifdef GPU_ON
   if (!cellcache_singleslot) {
-    return std::make_optional(
-        0);  // all cell caches are available, so no partitioning is required. Avoid multiple kernel launches
+    return 0;  // all cell caches are available, so no partitioning is required. Avoid multiple kernel launches
   }
 #endif
   return nonemptymgi;
