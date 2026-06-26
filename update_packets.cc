@@ -488,7 +488,10 @@ void update_packets(const int nts, std::span<Packet> packets) {
 
   const auto time_update_packets_start = std::chrono::steady_clock::now();
   printlnlog("timestep {}: start update_packets", nts);
-  if (!cellcache_singleslot) {
+  if (cellcache_singleslot) {
+    // first group will probably be the -1 no-cache required group, so -2 triggers the first update
+    globals::cellcache[0].nonemptymgi = -2;
+  } else {
     const auto nonempty_npts_model = grid::get_nonempty_npts_model();
     // first group will probably be the -1 no-cache required group, so -2 triggers the first update
     for (int nonemptymgi = 0; nonemptymgi < nonempty_npts_model; nonemptymgi++) {
