@@ -429,8 +429,8 @@ void cellcache_change_cell(globals::CellCache& cacheslot, const int nonemptymgi)
 
 void update_packet_cellcache_group(const int cellcache_nonemptymgi, std::span<Packet> packetgroup, const int nts,
                                    const double ts_end) {
-  if (cellcache_nonemptymgi >= 0 && globals::cellcache[cellcache_nonemptymgi].nonemptymgi != cellcache_nonemptymgi) {
-    cellcache_change_cell(globals::cellcache[cellcache_nonemptymgi], cellcache_nonemptymgi);
+  if (cellcache_nonemptymgi >= 0 && get_cellcache(cellcache_nonemptymgi).nonemptymgi != cellcache_nonemptymgi) {
+    cellcache_change_cell(get_cellcache(cellcache_nonemptymgi), cellcache_nonemptymgi);
   }
 
 #ifdef GPU_ON
