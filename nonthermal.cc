@@ -1456,7 +1456,7 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const std::a
 
   // temporary storage of the full excitation list for current cell before possible truncation and copying to
   // node-shared memory
-  THREADLOCALONHOST std::vector<NonThermalExcitation> tmp_excitation_list;
+  thread_local static std::vector<NonThermalExcitation> tmp_excitation_list;
   tmp_excitation_list.clear();
 
   for (int element = 0; element < get_nelements(); element++) {
@@ -1915,14 +1915,14 @@ void sfmatrix_add_ionisation(std::span<double> sfmatrixuppertri, const int Z, co
 auto sfmatrix_solve(const std::span<const double> sfmatrix) -> std::array<double, SFPTS> {
   // solve the matrix-vector equation sfmatrix * yvec = rhsvec for yvec
 
-  THREADLOCALONHOST std::array<double, SFPTS> yvec_arr{};
+  thread_local static std::array<double, SFPTS> yvec_arr{};
 
 #ifdef EIGEN_OFF
 
   auto gsl_yvec = gsl_vector_view_array(yvec_arr.data(), SFPTS).vector;
   const auto gsl_rhsvec = gsl_vector_const_view_array(rhsvec.data(), SFPTS).vector;
 
-  THREADLOCALONHOST std::array<size_t, SFPTS> vec_permutation{};
+  thread_local static std::array<size_t, SFPTS> vec_permutation{};
   gsl_permutation p{.size = SFPTS, .data = vec_permutation.data()};
   gsl_permutation_init(&p);
 
@@ -1948,12 +1948,12 @@ auto sfmatrix_solve(const std::span<const double> sfmatrix) -> std::array<double
 
   // refine the solution
 
-  THREADLOCALONHOST std::array<double, SFPTS> yvec_best{};
+  thread_local static std::array<double, SFPTS> yvec_best{};
 #ifdef EIGEN_OFF
-  THREADLOCALONHOST std::array<double, SFPTS> residual_vec{};
+  thread_local static std::array<double, SFPTS> residual_vec{};
   auto gsl_residual_vec = gsl_vector_view_array(residual_vec.data(), SFPTS).vector;
 #else
-  THREADLOCALONHOST Eigen::Vector<double, SFPTS> eigen_residual_vec{};
+  thread_local static Eigen::Vector<double, SFPTS> eigen_residual_vec{};
 #endif
 
   double error_best = -1.;
@@ -2395,7 +2395,7 @@ void solve_spencerfano(const int nonemptymgi, const int timestep, const int iter
 
   // sfmatrix will be a compacted upper triangular matrix during construction and then expanded into a full matrix (with
   // lots of zeros) just before the solver is called
-  THREADLOCALONHOST std::vector<double> sfmatrix(SFPTS * SFPTS);
+  thread_local static std::vector<double> sfmatrix(SFPTS * SFPTS);
   // while we are filling the matrix, we only need to fill the upper triangular part in a compacted form (to reduce
   // cache misses). Later when we go to solve it, we will expand it back to a full square matrix with zeros in the lower
   // triangle

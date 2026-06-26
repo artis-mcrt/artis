@@ -104,13 +104,13 @@ constexpr bool cellcache_singleslot = true;
 #define MY_IF_HOST(...) __VA_ARGS__
 #endif
 
-#ifdef GPU_ON
-#define DEVICE_FUNC __host__ __device__
-#define THREADLOCALONHOST
-#else
-#define DEVICE_FUNC
-#define THREADLOCALONHOST thread_local
+#ifndef __host__
+#define __host__
 #endif
+#ifndef __device__
+#define __device__
+#endif
+#define DEVICE_FUNC __host__ __device__
 
 #if defined REPRODUCIBLE && REPRODUCIBLE
 #define SORT_OR_STABLE_SORT stable_sort

@@ -223,10 +223,10 @@ auto columnindex_from_emissiontype(const int et) -> int {
 
 void write_partial_lightcurve_spectra_dirbin(const int nts, std::span<const Packet> packets,
                                              const bool do_emission_absorption, const int dirbin) {
-  THREADLOCALONHOST std::vector<double> rpkt_light_curve_lum;
-  THREADLOCALONHOST std::vector<double> rpkt_light_curve_lumcmf;
-  THREADLOCALONHOST std::vector<double> gamma_light_curve_lum;
-  THREADLOCALONHOST std::vector<double> gamma_light_curve_lumcmf;
+  thread_local static std::vector<double> rpkt_light_curve_lum;
+  thread_local static std::vector<double> rpkt_light_curve_lumcmf;
+  thread_local static std::vector<double> gamma_light_curve_lum;
+  thread_local static std::vector<double> gamma_light_curve_lumcmf;
   resize_exactly(rpkt_light_curve_lum, globals::ntimesteps);
   std::ranges::fill(rpkt_light_curve_lum, 0.);
   resize_exactly(rpkt_light_curve_lumcmf, globals::ntimesteps);

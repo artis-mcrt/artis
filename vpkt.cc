@@ -211,7 +211,7 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
   // compute the optical depth to boundary
 
   mgi = grid::get_propcell_modelgridindex(cellindex);
-  THREADLOCALONHOST auto chi_vpkt_cont = ContinuumOpacity{false};
+  thread_local static auto chi_vpkt_cont = ContinuumOpacity{false};
 
   while (!end_packet) {
     // distance to the next cell
@@ -881,7 +881,7 @@ auto trace_vpkts(const Packet& pkt, const enum packet_type type_before_rpkt) -> 
     return;
   }
 
-  THREADLOCALONHOST std::string vpkt_contrib_row;
+  thread_local static std::string vpkt_contrib_row;
   vpkt_contrib_row.clear();
 
   bool any_dir_escaped = false;

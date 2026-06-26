@@ -924,13 +924,13 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
   assert_always(std::cmp_greater_equal(max_nlte_dimension, nlte_dimension));
 
   // solution vector for the matrix equation
-  THREADLOCALONHOST std::vector<double> vec_x;
+  thread_local static std::vector<double> vec_x;
   vec_x.reserve(max_nlte_dimension);
   vec_x.resize(nlte_dimension);
 
 #ifdef EIGEN_OFF
 
-  THREADLOCALONHOST std::vector<double> rate_matrix_LU_decomp;
+  thread_local static std::vector<double> rate_matrix_LU_decomp;
   rate_matrix_LU_decomp.reserve(max_nlte_dimension * max_nlte_dimension);
   rate_matrix_LU_decomp.resize(rate_matrix.size());
 
@@ -941,7 +941,7 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
   auto gsl_x = gsl_vector_view_array(vec_x.data(), nlte_dimension).vector;
   auto gsl_rate_matrix = gsl_matrix_const_view_array(rate_matrix.data(), nlte_dimension, nlte_dimension).matrix;
 
-  THREADLOCALONHOST std::vector<size_t> vec_permutation;
+  thread_local static std::vector<size_t> vec_permutation;
   vec_permutation.reserve(max_nlte_dimension);
   vec_permutation.resize(nlte_dimension);
   gsl_permutation_struct p{.size = nlte_dimension, .data = vec_permutation.data()};
@@ -990,7 +990,7 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
           rate_matrix.data(), nlte_dimension, nlte_dimension);
   assert_always(eigen_rate_matrix.allFinite());
 
-  THREADLOCALONHOST Eigen::PartialPivLU<Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> >
+  thread_local static Eigen::PartialPivLU<Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> >
       eigen_rate_matrix_lu;
 
   eigen_rate_matrix_lu.compute(eigen_rate_matrix);
@@ -1026,11 +1026,11 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
   double error_best = -1.;
 
   // population solution vector with lowest error
-  THREADLOCALONHOST std::vector<double> vec_x_best;
+  thread_local static std::vector<double> vec_x_best;
   vec_x_best.reserve(max_nlte_dimension);
   vec_x_best.resize(nlte_dimension);
 
-  THREADLOCALONHOST std::vector<double> vec_residual;
+  thread_local static std::vector<double> vec_residual;
   vec_residual.reserve(max_nlte_dimension);
   vec_residual.resize(nlte_dimension);
 
@@ -1210,10 +1210,10 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
   const auto max_nlte_dimension = get_max_nlte_dimension();
 
   // will hold the un-normalised population densities [cm^-3]
-  THREADLOCALONHOST std::vector<double> popvec;
+  thread_local static std::vector<double> popvec;
   popvec.reserve(max_nlte_dimension);
 
-  THREADLOCALONHOST RateMatrices rate_matrices{max_nlte_dimension};
+  thread_local static RateMatrices rate_matrices{max_nlte_dimension};
 
   bool matrix_solve_required = true;
   while (matrix_solve_required) {
@@ -1252,7 +1252,7 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
     auto rate_matrix = rate_matrices.get_summed_rate_matrix();
     std::ranges::fill(std::span{rate_matrix}.first(nlte_dimension), 1.0);
 
-    THREADLOCALONHOST std::vector<double> balance_vector;
+    thread_local static std::vector<double> balance_vector;
     balance_vector.reserve(max_nlte_dimension);
     balance_vector.resize(nlte_dimension);
     std::ranges::fill(balance_vector, 0.0);  // statistical equilibrium means balance vector is zero
@@ -1279,7 +1279,7 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
 
     // calculate the normalisation factors and apply them to the matrix
     // columns and balance vector elements
-    THREADLOCALONHOST std::vector<double> pop_normfactors;
+    thread_local static std::vector<double> pop_normfactors;
     pop_normfactors.reserve(max_nlte_dimension);
     pop_normfactors.resize(nlte_dimension);
     std::ranges::fill(pop_normfactors, 1.0);

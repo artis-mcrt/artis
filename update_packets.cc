@@ -453,7 +453,7 @@ void update_packet_cellcache_group(const int cellcache_groupid, std::span<Packet
     auto& chi_rpkt_cont = chi_rpkt_cont_vec[(cellcache_groupid >= 0) ? index_in_group : 0];
 #else
     // thread_local lets us reuse this allocation on each CPU thread
-    THREADLOCALONHOST auto chi_rpkt_cont = ContinuumOpacity{};
+    thread_local static auto chi_rpkt_cont = ContinuumOpacity{};
 #endif
     auto& pkt = packetgroup[index_in_group];
     while (packetprop_update_required(pkt, ts_end) &&

@@ -29,25 +29,25 @@
 namespace {
 
 void do_direction_bin(const int dirbin, const std::vector<std::vector<Packet>>& packets_by_rank) {
-  THREADLOCALONHOST std::vector<double> rpkt_light_curve_lum;
+  thread_local static std::vector<double> rpkt_light_curve_lum;
   resize_exactly(rpkt_light_curve_lum, globals::ntimesteps);
   std::ranges::fill(rpkt_light_curve_lum, 0.);
-  THREADLOCALONHOST std::vector<double> rpkt_light_curve_lumcmf;
+  thread_local static std::vector<double> rpkt_light_curve_lumcmf;
   resize_exactly(rpkt_light_curve_lumcmf, globals::ntimesteps);
   std::ranges::fill(rpkt_light_curve_lumcmf, 0.);
-  THREADLOCALONHOST std::vector<double> gamma_light_curve_lum;
+  thread_local static std::vector<double> gamma_light_curve_lum;
   resize_exactly(gamma_light_curve_lum, globals::ntimesteps);
   std::ranges::fill(gamma_light_curve_lum, 0.);
-  THREADLOCALONHOST std::vector<double> gamma_light_curve_lumcmf;
+  thread_local static std::vector<double> gamma_light_curve_lumcmf;
   resize_exactly(gamma_light_curve_lumcmf, globals::ntimesteps);
   std::ranges::fill(gamma_light_curve_lumcmf, 0.);
 
-  THREADLOCALONHOST Spectra rpkt_spectra_I;
+  thread_local static Spectra rpkt_spectra_I;
   // Set up the spectrum grid and initialise the bins to zero.
   init_spectra(rpkt_spectra_I, NU_MIN_R, NU_MAX_R, true);
 
-  THREADLOCALONHOST Spectra rpkt_spectra_Q;
-  THREADLOCALONHOST Spectra rpkt_spectra_U;
+  thread_local static Spectra rpkt_spectra_Q;
+  thread_local static Spectra rpkt_spectra_U;
 
   if constexpr (POL_ON) {
     init_spectra(rpkt_spectra_Q, NU_MIN_R, NU_MAX_R, true);
@@ -56,7 +56,7 @@ void do_direction_bin(const int dirbin, const std::vector<std::vector<Packet>>& 
 
   constexpr double nu_min_gamma = 0.05 * MEV / H;
   constexpr double nu_max_gamma = 4. * MEV / H;
-  THREADLOCALONHOST Spectra gamma_spectra;
+  thread_local static Spectra gamma_spectra;
   init_spectra(gamma_spectra, nu_min_gamma, nu_max_gamma, false);
   assert_always(globals::nprocs_exspec > 0);
   for (int p = 0; p < globals::nprocs_exspec; p++) {

@@ -501,7 +501,7 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion,
                                           std::span<TempEnergyLevel> temp_alllevels) {
   const auto nlevels = get_nlevels(element, ion);
   auto ion_levels = std::span{temp_alllevels}.subspan(get_ionuniquelevelindexstart(element, ion), nlevels);
-  THREADLOCALONHOST std::vector<int> iondowntranstmplineindices;
+  thread_local static std::vector<int> iondowntranstmplineindices;
   iondowntranstmplineindices.resize(downtranslevelstart(nlevels));
 
   const int nlines_initial = globals::nlines;

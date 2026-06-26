@@ -180,7 +180,7 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
   // during the iterations below
   printlog("calculate_bfheatingcoeffs for timestep {} cell {}...", nts, mgi);
   const auto sys_time_start_calculate_bfheatingcoeffs = std::chrono::steady_clock::now();
-  THREADLOCALONHOST auto bfheatingcoeffs = std::vector<double>(get_includedlevels());
+  thread_local static auto bfheatingcoeffs = std::vector<double>(get_includedlevels());
 
   calculate_bfheatingcoeffs(nonemptymgi, bfheatingcoeffs);
   const auto bfheating_duration =
