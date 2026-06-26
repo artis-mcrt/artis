@@ -450,14 +450,14 @@ void update_packet_cellcache_group(const int cellcache_groupid, std::span<Packet
   }
 #endif
 
-  auto update_packet = [cellcache_groupid, ts_end, nts, &packetgroup](const ptrdiff_t pktidx_in_group) {
+  auto update_packet = [cellcache_groupid, ts_end, nts, &packetgroup](const ptrdiff_t index_in_group) {
 #ifdef GPU_ON
-    auto& chi_rpkt_cont = chi_rpkt_cont_vec[(cellcache_groupid >= 0) ? pktidx_in_group : 0];
+    auto& chi_rpkt_cont = chi_rpkt_cont_vec[(cellcache_groupid >= 0) ? index_in_group : 0];
 #else
     // thread_local lets us reuse this allocation on each CPU thread
     THREADLOCALONHOST auto chi_rpkt_cont = ContinuumOpacity{};
 #endif
-    auto& pkt = packetgroup[pktidx_in_group];
+    auto& pkt = packetgroup[index_in_group];
     while (packetprop_update_required(pkt, ts_end) &&
            (get_packet_cellcachegroupid(pkt).value_or(cellcache_groupid) == cellcache_groupid)) {
       do_packet(pkt, ts_end, nts, chi_rpkt_cont);
