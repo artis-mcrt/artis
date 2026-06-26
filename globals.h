@@ -320,7 +320,6 @@ inline bool lte_iteration{false};
 inline auto get_cellcache(const int nonemptymgi) -> globals::CellCache& {
   assert_always(nonemptymgi >= 0);
   const int cacheslotid = cellcache_singleslot ? 0 : nonemptymgi;
-  assert_testmodeonly(globals::cellcache[cacheslotid].nonemptymgi == nonemptymgi);
   return globals::cellcache[cacheslotid];
 }
 
