@@ -317,15 +317,15 @@ auto get_packet_cellcachenonemptymgi(const Packet& pkt) -> std::optional<int> {
                                                   TYPE_NONTHERMAL_PREDEPOSIT_ALPHA,
                                                   TYPE_NTALPHA_FISPROD_DEPOSITED};
   if (std::ranges::find(nocache_packettypes, pkt.type) != nocache_packettypes.end()) {
-    return {};  // these types do not use the cell cache
+    return std::nullopt;  // these types do not use the cell cache
   }
   const auto mgi = grid::get_propcell_modelgridindex(pkt.cellindex);
   if (mgi < 0) {
-    return {};  // for empty cell, no cell cache required
+    return std::nullopt;  // for empty cell, no cell cache required
   }
   const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(mgi);
   if (grid::thick_allcells[nonemptymgi] == 1) {
-    return {};  // for thick cell, no cell cache required
+    return std::nullopt;  // for thick cell, no cell cache required
   }
 #ifdef GPU_ON
   if (!cellcache_singleslot) {
