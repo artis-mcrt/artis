@@ -446,7 +446,7 @@ void update_packet_cellcache_group(const int cellcache_nonemptymgi, std::span<Pa
 
   auto update_packet = [cellcache_nonemptymgi, ts_end, nts, &packetgroup](const ptrdiff_t pktgroupidx) {
 #ifdef GPU_ON
-    auto& chi_rpkt_cont = chi_rpkt_cont_vec[(cellcache_nonemptymgi >= 0) ? pktgroupidx : 0];
+    auto& chi_rpkt_cont = chi_rpkt_cont_vec[pktgroupidx];
 #else
     // thread_local lets us reuse this allocation on each CPU thread
     THREADLOCALONHOST auto chi_rpkt_cont = ContinuumOpacity{};
