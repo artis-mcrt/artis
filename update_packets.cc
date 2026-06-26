@@ -309,11 +309,6 @@ constexpr auto packetprop_update_required(const Packet& pkt, const double ts_end
 // Return the nonemptymgi for the cell cache if required (non-empty, non-thick cell),
 // otherwise return an empty std::optional to indicate that no cell cache is used
 auto get_packet_cellcachenonemptymgi(const Packet& pkt) -> std::optional<int> {
-#ifdef GPU_ON
-  if (!cellcache_singleslot) {
-    return {};  // all cell caches are available, so no partitioning is required. Avoid multiple kernel launches
-  }
-#endif
   constexpr auto nocache_packettypes = std::array{TYPE_RADIOACTIVE_PELLET,
                                                   TYPE_GAMMA,
                                                   TYPE_PRE_KPKT,
@@ -332,6 +327,11 @@ auto get_packet_cellcachenonemptymgi(const Packet& pkt) -> std::optional<int> {
   if (grid::thick_allcells[nonemptymgi] == 1) {
     return {};  // for thick cell, no cell cache required
   }
+#ifdef GPU_ON
+  if (!cellcache_singleslot) {
+    return {0};  // all cell caches are available, so no partitioning is required. Avoid multiple kernel launches
+  }
+#endif
   return {nonemptymgi};
 }
 
@@ -441,12 +441,17 @@ void update_packet_cellcache_group(const int cellcache_nonemptymgi, std::span<Pa
   // we don't know how many GPU threads will exist, and we can't use a thread_local variables on device.
   // Instead, we assume the worst case that each packet is handled simultaneously by a different GPU thread.
   static std::vector<ContinuumOpacity> chi_rpkt_cont_vec;
-  chi_rpkt_cont_vec.resize(packetgroup.size());
+  if (cellcache_nonemptymgi >= 0) {
+    chi_rpkt_cont_vec.resize(packetgroup.size());
+  } else {
+    // we're not going to use this, but we need to pass a reference to something
+    chi_rpkt_cont_vec.resize(1);
+  }
 #endif
 
   auto update_packet = [cellcache_nonemptymgi, ts_end, nts, &packetgroup](const ptrdiff_t pktgroupidx) {
 #ifdef GPU_ON
-    auto& chi_rpkt_cont = chi_rpkt_cont_vec[pktgroupidx];
+    auto& chi_rpkt_cont = chi_rpkt_cont_vec[(cellcache_nonemptymgi >= 0) ? pktgroupidx : 0];
 #else
     // thread_local lets us reuse this allocation on each CPU thread
     THREADLOCALONHOST auto chi_rpkt_cont = ContinuumOpacity{};
