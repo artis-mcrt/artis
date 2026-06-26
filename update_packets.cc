@@ -308,7 +308,7 @@ constexpr auto packetprop_update_required(const Packet& pkt, const double ts_end
 
 // Return the nonemptymgi for the cell cache if required (non-empty, non-thick cell),
 // otherwise return an empty std::optional to indicate that no cell cache is used
-auto get_packet_cellcachenonemptymgi(const Packet& pkt) -> std::optional<int> {
+auto get_packet_cellcachegroupid(const Packet& pkt) -> std::optional<int> {
   constexpr auto nocache_packettypes = std::array{TYPE_RADIOACTIVE_PELLET,
                                                   TYPE_GAMMA,
                                                   TYPE_PRE_KPKT,
@@ -356,8 +356,8 @@ auto compare_packet_order(const Packet& p1, const Packet& p2, const double ts_en
   }
 
   // all packets in empty or thick cells can be grouped together since they don't use the cell cache
-  const int cellcachenonemptymgi1 = get_packet_cellcachenonemptymgi(p1).value_or(-1);
-  const int cellcachenonemptymgi2 = get_packet_cellcachenonemptymgi(p2).value_or(-1);
+  const int cellcachenonemptymgi1 = get_packet_cellcachegroupid(p1).value_or(-1);
+  const int cellcachenonemptymgi2 = get_packet_cellcachegroupid(p2).value_or(-1);
   const auto rho1 = cellcachenonemptymgi1 >= 0 ? grid::get_rho(cellcachenonemptymgi1) : 0.0;
   const auto rho2 = cellcachenonemptymgi2 >= 0 ? grid::get_rho(cellcachenonemptymgi2) : 0.0;
 
@@ -429,19 +429,20 @@ void cellcache_change_cell(globals::CellCache& cacheslot, const int nonemptymgi)
 #endif
 }
 
-void update_packet_cellcache_group(const int cellcache_nonemptymgi, std::span<Packet> packetgroup, const int nts,
+void update_packet_cellcache_group(const int cellcache_groupid, std::span<Packet> packetgroup, const int nts,
                                    const double ts_end) {
-  if (cellcache_nonemptymgi >= 0 && get_cellcache(cellcache_nonemptymgi).nonemptymgi != cellcache_nonemptymgi) {
-    assert_always(cellcache_singleslot);  // if not single-slot, then all cellcaches are already filled at the
-                                          // start of update_packets
-    cellcache_change_cell(get_cellcache(cellcache_nonemptymgi), cellcache_nonemptymgi);
+  if (cellcache_singleslot) {
+    // in this case, a postive groupid is a nonemptymgi, and -1 is the no-cache-required group
+    if (cellcache_groupid >= 0 && get_cellcache(cellcache_groupid).nonemptymgi != cellcache_groupid) {
+      cellcache_change_cell(get_cellcache(cellcache_groupid), cellcache_groupid);
+    }
   }
 
 #ifdef GPU_ON
   // we don't know how many GPU threads will exist, and we can't use a thread_local variables on device.
   // Instead, we assume the worst case that each packet is handled simultaneously by a different GPU thread.
   static std::vector<ContinuumOpacity> chi_rpkt_cont_vec;
-  if (cellcache_nonemptymgi >= 0) {
+  if (cellcache_groupid >= 0) {
     chi_rpkt_cont_vec.resize(packetgroup.size());
   } else {
     // we're not going to use this, but we need to pass a reference to something
@@ -449,16 +450,16 @@ void update_packet_cellcache_group(const int cellcache_nonemptymgi, std::span<Pa
   }
 #endif
 
-  auto update_packet = [cellcache_nonemptymgi, ts_end, nts, &packetgroup](const ptrdiff_t pktgroupidx) {
+  auto update_packet = [cellcache_groupid, ts_end, nts, &packetgroup](const ptrdiff_t pktidx_in_group) {
 #ifdef GPU_ON
-    auto& chi_rpkt_cont = chi_rpkt_cont_vec[(cellcache_nonemptymgi >= 0) ? pktgroupidx : 0];
+    auto& chi_rpkt_cont = chi_rpkt_cont_vec[(cellcache_groupid >= 0) ? pktidx_in_group : 0];
 #else
     // thread_local lets us reuse this allocation on each CPU thread
     THREADLOCALONHOST auto chi_rpkt_cont = ContinuumOpacity{};
 #endif
-    auto& pkt = packetgroup[pktgroupidx];
+    auto& pkt = packetgroup[pktidx_in_group];
     while (packetprop_update_required(pkt, ts_end) &&
-           (get_packet_cellcachenonemptymgi(pkt).value_or(cellcache_nonemptymgi) == cellcache_nonemptymgi)) {
+           (get_packet_cellcachegroupid(pkt).value_or(cellcache_groupid) == cellcache_groupid)) {
       do_packet(pkt, ts_end, nts, chi_rpkt_cont);
     }
   };
@@ -504,7 +505,7 @@ void update_packets(const int nts, std::span<Packet> packets) {
     printlnlog("timestep {}: all {} cellcaches set (took {:.1f} s)", nts, nonempty_npts_model,
                std::chrono::duration<double>(std::chrono::steady_clock::now() - time_update_packets_start).count());
   }
-  int prevpkt_cellcache_nonemptymgi = -2;
+  int prevpkt_cellcache_cellcache_groupid = -2;
   int passnumber = 0;
   while (true) {
     const auto sys_time_start_pass = std::chrono::steady_clock::now();
@@ -526,17 +527,17 @@ void update_packets(const int nts, std::span<Packet> packets) {
         // due to the sorting, all following packets will also not require updating, so can break out of the loop
         break;
       }
-      const auto cellcache_nonemptymgi = get_packet_cellcachenonemptymgi(pkt).value_or(-1);
-      if (cellcache_nonemptymgi != prevpkt_cellcache_nonemptymgi && packetgroupstart != pktindex) {
-        packet_groups.emplace_back(prevpkt_cellcache_nonemptymgi,
+      const auto cellcache_groupid = get_packet_cellcachegroupid(pkt).value_or(-1);
+      if (cellcache_groupid != prevpkt_cellcache_cellcache_groupid && packetgroupstart != pktindex) {
+        packet_groups.emplace_back(prevpkt_cellcache_cellcache_groupid,
                                    packets.subspan(packetgroupstart, pktindex - packetgroupstart));
         packetgroupstart = pktindex;
       }
-      prevpkt_cellcache_nonemptymgi = cellcache_nonemptymgi;
+      prevpkt_cellcache_cellcache_groupid = cellcache_groupid;
     }
     if (packetgroupstart != pktindex) {
       // finish the last group of packets that needed updating
-      packet_groups.emplace_back(prevpkt_cellcache_nonemptymgi,
+      packet_groups.emplace_back(prevpkt_cellcache_cellcache_groupid,
                                  packets.subspan(packetgroupstart, pktindex - packetgroupstart));
     }
     if (packet_groups.empty()) {
@@ -546,8 +547,8 @@ void update_packets(const int nts, std::span<Packet> packets) {
 
     // process the packets grouped by their required cell cache, which should minimise the number of times we need to
     // change the cell cache during the packet updates
-    for (auto [cellcache_nonemptymgi, grouppackets] : packet_groups) {
-      update_packet_cellcache_group(cellcache_nonemptymgi, grouppackets, nts, ts_end);
+    for (auto [cellcache_groupid, grouppackets] : packet_groups) {
+      update_packet_cellcache_group(cellcache_groupid, grouppackets, nts, ts_end);
       pass_packets_updated += std::ssize(grouppackets);
     }
 
