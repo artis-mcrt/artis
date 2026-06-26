@@ -491,7 +491,8 @@ void update_packets(const int nts, std::span<Packet> packets) {
   for (int nonemptymgi = 0; nonemptymgi < nonempty_npts_model; nonemptymgi++) {
     cellcache_change_cell(globals::cellcache[nonemptymgi], nonemptymgi);
   }
-  printlnlog("timestep {}: all {} cell caches set", nts, nonempty_npts_model);
+  printlnlog("timestep {}: all {} cell caches set (took {} s)", nts, nonempty_npts_model,
+             std::chrono::duration<double>(std::chrono::steady_clock::now() - time_update_packets_start).count());
   int prevpkt_cellcache_nonemptymgi = -2;
   int passnumber = 0;
   while (true) {
