@@ -441,7 +441,14 @@ void update_packet_cellcache_group(const int cellcache_groupid, std::span<Packet
   // So, we assume the worst case that each packet is handled simultaneously by different GPU threads.
   static std::vector<ContinuumOpacity> chi_rpkt_cont_vec;
   if (cellcache_groupid >= 0) {
-    chi_rpkt_cont_vec.resize(packetgroup.size());
+    if (chi_rpkt_cont_vec.size() < packetgroup.size()) {
+      const auto size_mb = (static_cast<ptrdiff_t>(globals::nbfcontinua_ground) +
+                            static_cast<ptrdiff_t>(globals::nbfcontinua) + std::ssize(globals::bfestim_nu_edge)) *
+                           std::ssize(packetgroup) * sizeof(double) / 1024. / 1024.;
+      printlnlog("Resizing chi_rpkt_cont_vec from {} to {} ({:g} MB)", chi_rpkt_cont_vec.size(), packetgroup.size(),
+                 size_mb);
+      chi_rpkt_cont_vec.resize(packetgroup.size());
+    }
   } else {
     // we're not going to use this, but we need to pass a reference to something
     chi_rpkt_cont_vec.resize(1);
@@ -463,7 +470,7 @@ void update_packet_cellcache_group(const int cellcache_groupid, std::span<Packet
   };
 
 #if defined(STDPAR_ON) || !defined(_OPENMP)
-  const auto pktgroupindices = std::ranges::iota_view{0, static_cast<int>(std::ssize(packetgroup))};
+  const auto pktgroupindices = std::ranges::iota_view{0Z, std::ssize(packetgroup)};
   std::for_each(EXEC_PAR pktgroupindices.begin(), pktgroupindices.end(), update_packet);
 #else
 #ifdef GPU_ON
