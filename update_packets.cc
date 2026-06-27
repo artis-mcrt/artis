@@ -450,7 +450,7 @@ void update_packet_cellcache_group(const int cellcache_groupid, std::span<Packet
                  size_mb);
       chi_rpkt_cont_vec.resize(packetgroup.size());
     }
-  } else {
+  } else if (chi_rpkt_cont_vec.empty()) {
     // we're not going to use this, but we need to pass a reference to something
     chi_rpkt_cont_vec.resize(1);
   }
