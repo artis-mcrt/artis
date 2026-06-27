@@ -446,9 +446,10 @@ void update_packet_cellcache_group(const int cellcache_groupid, std::span<Packet
       const auto size_mb = (static_cast<ptrdiff_t>(globals::nbfcontinua_ground) +
                             static_cast<ptrdiff_t>(globals::nbfcontinua) + std::ssize(globals::bfestim_nu_edge)) *
                            std::ssize(packetgroup) * sizeof(double) / 1024. / 1024.;
-      printlnlog("Resizing chi_rpkt_cont_vec from {} to {} ({:g} MB)", chi_rpkt_cont_vec.size(), packetgroup.size(),
-                 size_mb);
+      printlog("Resizing chi_rpkt_cont_vec from {} to {} ({:g} MB)...", chi_rpkt_cont_vec.size(), packetgroup.size(),
+               size_mb);
       chi_rpkt_cont_vec.resize(packetgroup.size());
+      printlnlog("done.");
     }
   } else if (chi_rpkt_cont_vec.empty()) {
     // we're not going to use this, but we need to pass a reference to something
