@@ -566,7 +566,7 @@ void update_packets(const int nts, std::span<Packet> packets) {
       if (nchunks > 1) {
         printlnlog(
             "timestep {} pass {:3d}: packet group with cellcache_groupid {} has {} packets, splitting into {} "
-            "chunks of max size {}",
+            "chunks less than max size {}",
             nts, passnumber, cellcache_groupid, std::ssize(grouppackets), nchunks, max_packet_group_size);
       }
       assert_always(nchunks >= 1);
