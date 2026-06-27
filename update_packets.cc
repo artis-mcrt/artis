@@ -562,6 +562,12 @@ void update_packets(const int nts, std::span<Packet> packets) {
 #endif
       const auto nchunks = (std::ssize(grouppackets) / max_packet_group_size) +
                            ((std::ssize(grouppackets) % max_packet_group_size) == 0 ? 0 : 1);
+      if (nchunks > 1) {
+        printlnlog(
+            "timestep {} pass {:3d}: packet group with cellcache_groupid {} has {} packets, splitting into {} "
+            "chunks of max size {}",
+            nts, passnumber, cellcache_groupid, std::ssize(grouppackets), nchunks, max_packet_group_size);
+      }
       assert_always(nchunks >= 1);
       std::ptrdiff_t items_processed{0};
       for (auto chunk = 0Z; chunk < nchunks; chunk++) {
