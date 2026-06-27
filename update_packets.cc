@@ -553,11 +553,13 @@ void update_packets(const int nts, std::span<Packet> packets) {
     // process the packets grouped by their required cell cache, which should minimise the number of times we need to
     // change the cell cache during the packet updates
     for (auto [cellcache_groupid, grouppackets] : packet_groups) {
-      // todo: chunk group if groupid >= 0 and group is too large to fit in memory
+#ifdef GPU_ON
       // to avoid failed allocation of chi_rpkt_cont_vec on GPU
       // ~1e6 allocation was 155GB for classic model, so limit to 1e5 packets per group for now, which is ~15GB on GPU
-      const ptrdiff_t max_packet_group_size =
-          (cellcache_groupid >= 0) ? 100000Z : std::numeric_limits<ptrdiff_t>::max();
+      const ptrdiff_t max_packet_group_size = (cellcache_groupid >= 0) ? 100000Z : std::numeric_limits<int>::max();
+#else
+      const ptrdiff_t max_packet_group_size = std::numeric_limits<int>::max();
+#endif
       const auto nchunks = (std::ssize(grouppackets) / max_packet_group_size) +
                            ((std::ssize(grouppackets) % max_packet_group_size) == 0 ? 0 : 1);
       assert_always(nchunks >= 1);
