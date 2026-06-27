@@ -578,6 +578,10 @@ void update_packets(const int nts, std::span<Packet> packets) {
 
         update_packet_cellcache_group(cellcache_groupid, chunk_span, nts, ts_end);
         items_processed += chunksize;
+        if (nchunks > 1) {
+          printlnlog("timestep {} pass {:3d}: finished chunk {} of {} ({} packets)", nts, passnumber, chunk + 1,
+                     nchunks, chunksize);
+        }
       }
       assert_always(items_processed == std::ssize(grouppackets));
 
