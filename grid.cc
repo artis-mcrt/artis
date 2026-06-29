@@ -1436,16 +1436,17 @@ template <BoundaryType boundarytype>
 [[gnu::pure]] [[nodiscard]] auto get_modelcell_assocvolume_tmin(const int modelgridindex) -> double {
   switch (get_propgridtype()) {
     case GridType::CARTESIAN3D:
-      return (propcell_width_tmin(modelgridindex, 0) * propcell_width_tmin(modelgridindex, 1) *
-              propcell_width_tmin(modelgridindex, 2)) *
+      return (propcell_width_tmin(0, 0) * propcell_width_tmin(0, 1) * propcell_width_tmin(0, 2)) *
              get_numpropcells(modelgridindex);
 
     case GridType::CYLINDRICAL2D: {
-      return propcell_width_tmin(modelgridindex, 1) * PI *
-             (pow2(get_cellcoordmax(modelgridindex, 0)) - pow2(get_cellcoordmin(modelgridindex, 0)));
+      // direct mapping, so cellindex = modelgridindex
+      const auto delta_z = propcell_width_tmin(modelgridindex, 1);
+      return delta_z * PI * (pow2(get_cellcoordmax(modelgridindex, 0)) - pow2(get_cellcoordmin(modelgridindex, 0)));
     }
 
     case GridType::SPHERICAL1D: {
+      // direct mapping, so cellindex = modelgridindex
       return 4. / 3. * PI * (pow3(get_cellcoordmax(modelgridindex, 0)) - pow3(get_cellcoordmin(modelgridindex, 0)));
     }
   }
