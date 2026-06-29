@@ -533,9 +533,9 @@ void map_1dmodelto3dgrid() {
 void map_2dmodelto3dgrid() {
   for (int cellindex = 0; cellindex < ngrid; cellindex++) {
     // map to 3D Cartesian grid
-    const auto pos_mid = Vec3d{get_cellcoordmin(cellindex, 0) + (0.5 * propcell_width_tmin(cellindex, 0)),
-                               get_cellcoordmin(cellindex, 1) + (0.5 * propcell_width_tmin(cellindex, 1)),
-                               get_cellcoordmin(cellindex, 2) + (0.5 * propcell_width_tmin(cellindex, 2))};
+    const auto pos_mid = Vec3d{(get_cellcoordmin(cellindex, 0) + get_cellcoordmax(cellindex, 0)) / 2,
+                               (get_cellcoordmin(cellindex, 1) + get_cellcoordmax(cellindex, 1)) / 2,
+                               (get_cellcoordmin(cellindex, 2) + get_cellcoordmax(cellindex, 2)) / 2};
 
     const double rcylindrical = std::sqrt(pow2(pos_mid[0]) + pow2(pos_mid[1]));
 
