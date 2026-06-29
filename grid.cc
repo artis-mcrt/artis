@@ -186,7 +186,10 @@ void read_possible_yefile() {
 // get the maximum position value of a coordinate axis at globals::tmin (xyz or radial coords) of a propagation cell
 // e.g., the maximum x position in xyz coords, or the maximum radius in spherical 1D
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_cellcoordmax(const int cellindex, const int axis) -> double {
-  return get_cellcoordmin(cellindex, axis) + propcell_width_tmin(cellindex, axis);
+  const auto idx = get_cellcoordindex(cellindex, axis);
+  const auto idxlast = ncoordgrid[axis] - 1;
+  return idx < idxlast ? coord_pos_min_tmin[axis][idx + 1]
+                       : coord_pos_min_tmin[axis][idxlast] + propcell_width_tmin(cellindex, axis);
 }
 
 // return the inner radius of a propagation cell at time tmin
@@ -1418,6 +1421,7 @@ template <BoundaryType boundarytype>
       return (axis == 0) ? globals::rmax / ncoordgrid[axis] : 2 * globals::rmax / ncoordgrid[axis];
 
     case GridType::SPHERICAL1D: {
+      // cellindex matters here because the grid is not regularly spaced in radius
       const int modelgridindex = cellindex;
       const double v_inner = modelgridindex > 0 ? vout_model[modelgridindex - 1] : 0.;
       return (vout_model[modelgridindex] - v_inner) * globals::tmin;
@@ -2397,12 +2401,7 @@ DEVICE_FUNC void snap_pos_to_cell(Vec3d& pos, const double time, const int celli
       _cellcoordidx[d] = get_cellcoordindex(cellindex, d);
 
       _cellcoordmin[d] = get_cellcoordmin(cellindex, d);
-      if (_cellcoordidx[d] < (ncoordgrid[d] - 1)) {
-        // exactly match the next min pos of the next cell boundary
-        _cellcoordmax[d] = get_cellcoordmin(cellindex + get_coordcellindexstride(d), d);
-      } else {
-        _cellcoordmax[d] = get_cellcoordmax(cellindex, d);
-      }
+      _cellcoordmax[d] = get_cellcoordmax(cellindex, d);
     }
     return std::make_tuple(_cellcoordidx, _cellcoordmin, _cellcoordmax);
   }();
