@@ -314,12 +314,12 @@ auto get_cellradialposmid(const int cellindex) -> double {
   }
 
   // cubic grid requires taking the length of the 3D position vector
-  Vec3d dcen{};
+  double lensquared = 0.;
   for (int axis = 0; axis < 3; axis++) {
-    dcen[axis] = get_cellcoordmin(cellindex, axis) + (0.5 * propcell_width_tmin(cellindex, axis));
+    lensquared += pow2((get_cellcoordmin(cellindex, axis) + get_cellcoordmax(cellindex, axis)) / 2);
   }
 
-  return vec_len(dcen);
+  return std::sqrt(lensquared);
 }
 
 void allocate_nonemptycells_composition_cooling() {
