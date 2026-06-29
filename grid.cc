@@ -1466,7 +1466,7 @@ template <BoundaryType boundarytype>
   return get_modelcell_assocvolume_tmin(mgi);
 }
 
-[[nodiscard]] auto get_propcell_random_position_tmin(int cellindex, const int packetnumber) -> Vec3d {
+[[nodiscard]] auto get_propcell_random_xyz_position_tmin(int cellindex, const int packetnumber) -> Vec3d {
   switch (get_propgridtype()) {
     case GridType::SPHERICAL1D: {
       const double r_inner = get_cellcoordmin(cellindex, 0);
