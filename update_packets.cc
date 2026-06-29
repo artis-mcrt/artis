@@ -6,6 +6,7 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdlib>
+#include <limits>
 #include <optional>
 #ifdef GPU_ON
 #include <ranges>
@@ -445,11 +446,12 @@ void update_packet_cellcache_group(const int cellcache_groupid, std::span<Packet
       const auto size_mb = (static_cast<ptrdiff_t>(globals::nbfcontinua_ground) +
                             static_cast<ptrdiff_t>(globals::nbfcontinua) + std::ssize(globals::bfestim_nu_edge)) *
                            std::ssize(packetgroup) * sizeof(double) / 1024. / 1024.;
-      printlnlog("Resizing chi_rpkt_cont_vec from {} to {} ({:g} MB)", chi_rpkt_cont_vec.size(), packetgroup.size(),
-                 size_mb);
+      printlog("Resizing chi_rpkt_cont_vec from {} to {} ({:g} MB)...", chi_rpkt_cont_vec.size(), packetgroup.size(),
+               size_mb);
       chi_rpkt_cont_vec.resize(packetgroup.size());
+      printlnlog("done.");
     }
-  } else {
+  } else if (chi_rpkt_cont_vec.empty()) {
     // we're not going to use this, but we need to pass a reference to something
     chi_rpkt_cont_vec.resize(1);
   }
@@ -496,6 +498,14 @@ void update_packets(const int nts, std::span<Packet> packets) {
   const double tw = globals::timesteps[nts].width;
   const double ts_end = ts + tw;
 
+#ifdef GPU_ON
+  // to avoid failed allocation of chi_rpkt_cont_vec on GPU
+  // ~1e6 allocation was 155GB for classic model, so limit to 1e5 packets per group for now, which is ~15GB on GPU
+  constexpr auto MAX_PACKETGROUP_SIZE = 100'000Z;
+#else
+  constexpr auto MAX_PACKETGROUP_SIZE = static_cast<ptrdiff_t>(std::numeric_limits<int>::max());
+#endif
+
   const auto time_update_packets_start = std::chrono::steady_clock::now();
   printlnlog("timestep {}: start update_packets", nts);
   if (cellcache_singleslot) {
@@ -532,9 +542,11 @@ void update_packets(const int nts, std::span<Packet> packets) {
         break;
       }
       const auto cellcache_groupid = get_packet_cellcachegroupid(pkt).value_or(-1);
-      if (cellcache_groupid != prev_cellcache_groupid && packetgroupstart != pktindex) {
-        packet_groups.emplace_back(prev_cellcache_groupid,
-                                   packets.subspan(packetgroupstart, pktindex - packetgroupstart));
+      const auto packetgroupsize = pktindex - packetgroupstart;  // not counting the current packet, which would be in
+                                                                 // the next group if a new group is started
+      if (packetgroupsize > 0 &&
+          (cellcache_groupid != prev_cellcache_groupid || packetgroupsize >= MAX_PACKETGROUP_SIZE)) {
+        packet_groups.emplace_back(prev_cellcache_groupid, packets.subspan(packetgroupstart, packetgroupsize));
         packetgroupstart = pktindex;
       }
       prev_cellcache_groupid = cellcache_groupid;
