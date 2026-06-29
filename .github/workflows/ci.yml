@@ -65,7 +65,7 @@ jobs:
 
             - name: Cache test atomic data
               if: ${{ !startsWith(matrix.testname, 'classicmode') }}
-              uses: actions/cache@v5
+              uses: actions/cache@v6
               id: cache-testatomicdata
               with:
                   path: tests/atomicdata_feconi.tar.xz
@@ -73,7 +73,7 @@ jobs:
 
             - name: Cache test atomic data classic
               if: ${{ startsWith(matrix.testname, 'classicmode') }}
-              uses: actions/cache@v5
+              uses: actions/cache@v6
               id: cache-testatomicdata-classic
               with:
                   path: tests/atomicdata_classic.tar.xz
@@ -81,7 +81,7 @@ jobs:
 
             - name: Cache test atomic data nltephotospheric
               if: ${{ startsWith(matrix.testname, 'nltephotospheric') }}
-              uses: actions/cache@v5
+              uses: actions/cache@v6
               id: cache-testatomicdata-nltephotospheric
               with:
                   path: tests/atomicdata_hefeconi_fe_i_to_vii.tar.xz
