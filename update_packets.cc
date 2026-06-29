@@ -498,6 +498,14 @@ void update_packets(const int nts, std::span<Packet> packets) {
   const double tw = globals::timesteps[nts].width;
   const double ts_end = ts + tw;
 
+#ifdef GPU_ON
+  // to avoid failed allocation of chi_rpkt_cont_vec on GPU
+  // ~1e6 allocation was 155GB for classic model, so limit to 1e5 packets per group for now, which is ~15GB on GPU
+  constexpr auto MAX_PACKETGROUP_SIZE = 100'000Z;
+#else
+  constexpr auto MAX_PACKETGROUP_SIZE = static_cast<ptrdiff_t>(std::numeric_limits<int>::max());
+#endif
+
   const auto time_update_packets_start = std::chrono::steady_clock::now();
   printlnlog("timestep {}: start update_packets", nts);
   if (cellcache_singleslot) {
@@ -534,9 +542,10 @@ void update_packets(const int nts, std::span<Packet> packets) {
         break;
       }
       const auto cellcache_groupid = get_packet_cellcachegroupid(pkt).value_or(-1);
-      if (cellcache_groupid != prev_cellcache_groupid && packetgroupstart != pktindex) {
-        packet_groups.emplace_back(prev_cellcache_groupid,
-                                   packets.subspan(packetgroupstart, pktindex - packetgroupstart));
+      const auto packetgroupsize = pktindex - packetgroupstart;
+      if (packetgroupsize > 0 &&
+          (cellcache_groupid != prev_cellcache_groupid || packetgroupsize > MAX_PACKETGROUP_SIZE)) {
+        packet_groups.emplace_back(prev_cellcache_groupid, packets.subspan(packetgroupstart, packetgroupsize));
         packetgroupstart = pktindex;
       }
       prev_cellcache_groupid = cellcache_groupid;
@@ -554,37 +563,7 @@ void update_packets(const int nts, std::span<Packet> packets) {
     // process the packets grouped by their required cell cache, which should minimise the number of times we need to
     // change the cell cache during the packet updates
     for (auto [cellcache_groupid, grouppackets] : packet_groups) {
-#ifdef GPU_ON
-      // to avoid failed allocation of chi_rpkt_cont_vec on GPU
-      // ~1e6 allocation was 155GB for classic model, so limit to 1e5 packets per group for now, which is ~15GB on GPU
-      const ptrdiff_t max_packet_group_size = (cellcache_groupid >= 0) ? 100000Z : std::numeric_limits<int>::max();
-#else
-      constexpr ptrdiff_t max_packet_group_size = std::numeric_limits<int>::max();
-#endif
-      const auto nchunks = (std::ssize(grouppackets) / max_packet_group_size) +
-                           ((std::ssize(grouppackets) % max_packet_group_size) == 0 ? 0 : 1);
-      if (nchunks > 1) {
-        printlnlog(
-            "timestep {} pass {:3d}: packet group with cellcache_groupid {} has {} packets, splitting into {} "
-            "chunks less than max size {}",
-            nts, passnumber, cellcache_groupid, std::ssize(grouppackets), nchunks, max_packet_group_size);
-      }
-      assert_always(nchunks >= 1);
-      std::ptrdiff_t items_processed{0};
-      for (auto chunk = 0Z; chunk < nchunks; chunk++) {
-        const auto [nstart, chunksize] = get_range_chunk(std::ssize(grouppackets), nchunks, chunk);
-        assert_always(chunksize > 0);
-        const auto chunk_span = grouppackets.subspan(nstart, chunksize);
-
-        update_packet_cellcache_group(cellcache_groupid, chunk_span, nts, ts_end);
-        items_processed += chunksize;
-        if (nchunks > 1) {
-          printlnlog("timestep {} pass {:3d}: finished chunk {} of {} ({} packets)", nts, passnumber, chunk + 1,
-                     nchunks, chunksize);
-        }
-      }
-      assert_always(items_processed == std::ssize(grouppackets));
-
+      update_packet_cellcache_group(cellcache_groupid, grouppackets, nts, ts_end);
       pass_packets_updated += std::ssize(grouppackets);
     }
 
