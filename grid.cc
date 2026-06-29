@@ -1485,8 +1485,9 @@ template <BoundaryType boundarytype>
       // use equal area probability distribution to select radius
       const double rcyl_rand = std::sqrt(std::lerp(pow2(rcyl_outer), pow2(rcyl_inner), rng_uniform_pos(packetnumber)));
       const double theta_rand = rng_uniform(packetnumber) * 2 * PI;
-      return {std::cos(theta_rand) * rcyl_rand, std::sin(theta_rand) * rcyl_rand,
-              get_cellcoordmin(cellindex, 1) + (rng_uniform_pos(packetnumber) * propcell_width_tmin(cellindex, 1))};
+      const double z_rand =
+          std::lerp(get_cellcoordmin(cellindex, 1), get_cellcoordmax(cellindex, 1), rng_uniform_pos(packetnumber));
+      return {std::cos(theta_rand) * rcyl_rand, std::sin(theta_rand) * rcyl_rand, z_rand};
     }
 
     case GridType::CARTESIAN3D: {
