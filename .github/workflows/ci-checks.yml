@@ -25,6 +25,8 @@ jobs:
               if: always()
               uses: astral-sh/setup-uv@v8.2.0
               id: setup-uv
+              with:
+                enable-cache: "false"
 
             - name: Install dependencies
               if: always()

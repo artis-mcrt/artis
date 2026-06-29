@@ -220,6 +220,8 @@ jobs:
               uses: astral-sh/setup-uv@v8.2.0
               if: always() && inputs.testmode != 'ON'
               id: setup-uv
+              with:
+                enable-cache: "false"
 
             - name: Install artistools
               if: always() && inputs.testmode != 'ON'
