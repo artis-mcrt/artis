@@ -66,7 +66,7 @@ void place_pellet(const double e_cmf_per_packet, const std::span<const double> e
   pkt.prop_time = globals::tmin;
   pkt.originated_from_particlenotgamma = false;
 
-  pkt.pos = grid::get_propcell_random_position_tmin(cellindex, pktnumber);
+  pkt.pos = grid::get_propcell_random_xyz_position_tmin(cellindex, pktnumber);
 
 #ifndef GPU_ON
   // ensure that the random position was inside the cell we selected

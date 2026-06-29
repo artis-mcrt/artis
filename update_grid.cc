@@ -497,14 +497,16 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
   }
 
   const auto nne = grid::get_nne(nonemptymgi);
-  const double compton_optical_depth_across_cell = SIGMA_T * nne * grid::propcell_width_tmin(mgi, 0) * tratmid;
+  const auto propcell_width = grid::propcell_width_tmin(
+      mgi, 0);  // pass mgi here because cellindex = mgi for direct map 1D or 2D, and doesn't matter for 3D grid
+  const double compton_optical_depth_across_cell = SIGMA_T * nne * propcell_width * tratmid;
 
   if constexpr (RPKT_GREY_TYPE == RpktGreyType::JUST2022_TEMP_LANTHANIDEFRAC) {
     grid::set_kappagrey(nonemptymgi, grid::calculate_cell_kappagrey(nonemptymgi));
   }
   const double radial_pos = grid::get_modelcell_mean_radial_pos(mgi, tratmid);
   const double grey_optical_depth_across_cell =
-      grid::get_kappagrey(nonemptymgi) * grid::get_rho(nonemptymgi) * grid::propcell_width_tmin(mgi, 0) * tratmid;
+      grid::get_kappagrey(nonemptymgi) * grid::get_rho(nonemptymgi) * propcell_width * tratmid;
   // cube corners will have radial pos > rmax, so clamp to 0.
   const double dist_to_obs = std::max(0., (globals::rmax * tratmid) - radial_pos);
   const auto grey_optical_depth =

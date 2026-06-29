@@ -188,8 +188,7 @@ void read_possible_yefile() {
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_cellcoordmax(const int cellindex, const int axis) -> double {
   const auto idx = get_cellcoordindex(cellindex, axis);
   const auto idxlast = ncoordgrid[axis] - 1;
-  return idx < idxlast ? coord_pos_min_tmin[axis][idx + 1]
-                       : coord_pos_min_tmin[axis][idxlast] + propcell_width_tmin(cellindex, axis);
+  return idx < idxlast ? coord_pos_min_tmin[axis][idx + 1] : globals::rmax;
 }
 
 // return the inner radius of a propagation cell at time tmin
@@ -303,23 +302,23 @@ auto get_cellradialposmid(const int cellindex) -> double {
   if (prop_gridtype == GridType::SPHERICAL1D) {
     // volume averaged mean radius is slightly complex for radial shells
     const double r_inner = get_cellcoordmin(cellindex, 0);
-    const double r_outer = r_inner + propcell_width_tmin(cellindex, 0);
+    const double r_outer = get_cellcoordmax(cellindex, 0);
     return 3. / 4 * (pow4(r_outer) - pow4(r_inner)) / (pow3(r_outer) - pow3(r_inner));
   }
 
   if (prop_gridtype == GridType::CYLINDRICAL2D) {
-    const double rcyl_mid = get_cellcoordmin(cellindex, 0) + (0.5 * propcell_width_tmin(cellindex, 0));
-    const double z_mid = get_cellcoordmin(cellindex, 1) + (0.5 * propcell_width_tmin(cellindex, 1));
+    const double rcyl_mid = (get_cellcoordmin(cellindex, 0) + get_cellcoordmax(cellindex, 0)) / 2;
+    const double z_mid = (get_cellcoordmin(cellindex, 1) + get_cellcoordmax(cellindex, 1)) / 2;
     return std::sqrt(pow2(rcyl_mid) + pow2(z_mid));
   }
 
   // cubic grid requires taking the length of the 3D position vector
-  Vec3d dcen{};
+  double lensquared = 0.;
   for (int axis = 0; axis < 3; axis++) {
-    dcen[axis] = get_cellcoordmin(cellindex, axis) + (0.5 * propcell_width_tmin(cellindex, axis));
+    lensquared += pow2((get_cellcoordmin(cellindex, axis) + get_cellcoordmax(cellindex, axis)) / 2);
   }
 
-  return vec_len(dcen);
+  return std::sqrt(lensquared);
 }
 
 void allocate_nonemptycells_composition_cooling() {
@@ -533,9 +532,9 @@ void map_1dmodelto3dgrid() {
 void map_2dmodelto3dgrid() {
   for (int cellindex = 0; cellindex < ngrid; cellindex++) {
     // map to 3D Cartesian grid
-    const auto pos_mid = Vec3d{get_cellcoordmin(cellindex, 0) + (0.5 * propcell_width_tmin(cellindex, 0)),
-                               get_cellcoordmin(cellindex, 1) + (0.5 * propcell_width_tmin(cellindex, 1)),
-                               get_cellcoordmin(cellindex, 2) + (0.5 * propcell_width_tmin(cellindex, 2))};
+    const auto pos_mid = Vec3d{(get_cellcoordmin(cellindex, 0) + get_cellcoordmax(cellindex, 0)) / 2,
+                               (get_cellcoordmin(cellindex, 1) + get_cellcoordmax(cellindex, 1)) / 2,
+                               (get_cellcoordmin(cellindex, 2) + get_cellcoordmax(cellindex, 2)) / 2};
 
     const double rcylindrical = std::sqrt(pow2(pos_mid[0]) + pow2(pos_mid[1]));
 
@@ -1413,60 +1412,50 @@ template <BoundaryType boundarytype>
 // for a uniform grid get the the extent along the x,y,z coordinate (x_2 - x_1, etc.) at time tmin
 // for spherical grid get the radial extent (r_outer - r_inner) at time tmin
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto propcell_width_tmin(const int cellindex, const int axis) -> double {
-  switch (get_propgridtype()) {
-    case GridType::CARTESIAN3D:
-      return 2 * globals::rmax / ncoordgrid[axis];
-
-    case GridType::CYLINDRICAL2D:
-      return (axis == 0) ? globals::rmax / ncoordgrid[axis] : 2 * globals::rmax / ncoordgrid[axis];
-
-    case GridType::SPHERICAL1D: {
-      // cellindex matters here because the grid is not regularly spaced in radius
-      const int modelgridindex = cellindex;
-      const double v_inner = modelgridindex > 0 ? vout_model[modelgridindex - 1] : 0.;
-      return (vout_model[modelgridindex] - v_inner) * globals::tmin;
-    }
-  }
-  assert_always(false);
-  return NAN;
+  return get_cellcoordmax(cellindex, axis) - get_cellcoordmin(cellindex, axis);
 }
 
 // return the model cell volume (when mapped to the propagation cells) at globals::tmin
 // for a uniform cubic grid this is constant
 [[gnu::pure]] [[nodiscard]] auto get_modelcell_assocvolume_tmin(const int modelgridindex) -> double {
+  if (get_propgridtype() == GridType::CARTESIAN3D) {
+    // underlying input model could be 1D, 2D, or 3D
+    return get_propcell_volume_tmin(0) * get_numpropcells(modelgridindex);
+  }
+
+  // direct mapping, so cellindex = modelgridindex and one propagation cell per model cell
+  return get_propcell_volume_tmin(modelgridindex);
+}
+
+// return the propagation cell volume at globals::tmin
+// for a spherical grid, the cell index is required (and should be equivalent to a modelgridindex)
+[[gnu::pure]] [[nodiscard]] auto get_propcell_volume_tmin(const int cellindex) -> double {
   switch (get_propgridtype()) {
-    case GridType::CARTESIAN3D:
-      return (propcell_width_tmin(modelgridindex, 0) * propcell_width_tmin(modelgridindex, 1) *
-              propcell_width_tmin(modelgridindex, 2)) *
-             get_numpropcells(modelgridindex);
+    case GridType::CARTESIAN3D: {
+      // volume is constant for uniform grid, so any cell index will do
+      const double deltax = get_cellcoordmax(0, 0) - get_cellcoordmin(0, 0);
+      // deltax = deltay = deltaz for uniform grid
+      return pow3(deltax);
+    }
 
     case GridType::CYLINDRICAL2D: {
-      return propcell_width_tmin(modelgridindex, 1) * PI *
-             (pow2(get_cellcoordmax(modelgridindex, 0)) - pow2(get_cellcoordmin(modelgridindex, 0)));
+      // use cellindex = 0 because spacing is uniform
+      const auto delta_z = get_cellcoordmax(0, 1) - get_cellcoordmin(0, 1);
+      // delta_rcyl is uniform, but the area of a cylindrical shell is proportional to r^2
+      const auto delta_rcylsquared = pow2(get_cellcoordmax(cellindex, 0)) - pow2(get_cellcoordmin(cellindex, 0));
+      return delta_z * PI * delta_rcylsquared;
     }
 
     case GridType::SPHERICAL1D: {
-      return 4. / 3. * PI * (pow3(get_cellcoordmax(modelgridindex, 0)) - pow3(get_cellcoordmin(modelgridindex, 0)));
+      // the cellindex matters here because the radial spacing is non-uniform
+      return 4. / 3. * PI * (pow3(get_cellcoordmax(cellindex, 0)) - pow3(get_cellcoordmin(cellindex, 0)));
     }
   }
   assert_always(false);
   return NAN;
 }
 
-// return the propagation cell volume at globals::tmin
-// for a spherical grid, the cell index is required (and should be equivalent to a modelgridindex)
-[[gnu::pure]] [[nodiscard]] auto get_propcell_volume_tmin(const int cellindex) -> double {
-  if (get_propgridtype() == GridType::CARTESIAN3D) {
-    return propcell_width_tmin(cellindex, 0) * propcell_width_tmin(cellindex, 1) * propcell_width_tmin(cellindex, 2);
-  }
-
-  assert_testmodeonly(get_propgridtype() == get_modelgridtype());
-  // 2D and 1D with direct mapping to propagation cells
-  const int mgi = get_propcell_modelgridindex(cellindex);
-  return get_modelcell_assocvolume_tmin(mgi);
-}
-
-[[nodiscard]] auto get_propcell_random_position_tmin(int cellindex, const int packetnumber) -> Vec3d {
+[[nodiscard]] auto get_propcell_random_xyz_position_tmin(int cellindex, const int packetnumber) -> Vec3d {
   switch (get_propgridtype()) {
     case GridType::SPHERICAL1D: {
       const double r_inner = get_cellcoordmin(cellindex, 0);
@@ -1483,8 +1472,9 @@ template <BoundaryType boundarytype>
       // use equal area probability distribution to select radius
       const double rcyl_rand = std::sqrt(std::lerp(pow2(rcyl_outer), pow2(rcyl_inner), rng_uniform_pos(packetnumber)));
       const double theta_rand = rng_uniform(packetnumber) * 2 * PI;
-      return {std::cos(theta_rand) * rcyl_rand, std::sin(theta_rand) * rcyl_rand,
-              get_cellcoordmin(cellindex, 1) + (rng_uniform_pos(packetnumber) * propcell_width_tmin(cellindex, 1))};
+      const double z_rand =
+          std::lerp(get_cellcoordmin(cellindex, 1), get_cellcoordmax(cellindex, 1), rng_uniform_pos(packetnumber));
+      return {std::cos(theta_rand) * rcyl_rand, std::sin(theta_rand) * rcyl_rand, z_rand};
     }
 
     case GridType::CARTESIAN3D: {

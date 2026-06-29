@@ -19,7 +19,7 @@ template <size_t VECDIM>
 [[gnu::pure]] [[nodiscard]] constexpr auto vec_len(const std::array<double, VECDIM>& vec) -> double {
   double squaredlen = 0.;
   for (auto i = 0ZU; i < VECDIM; i++) {
-    squaredlen += vec[i] * vec[i];
+    squaredlen += pow2(vec[i]);
   }
   return std::sqrt(squaredlen);
 }
