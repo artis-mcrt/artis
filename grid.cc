@@ -1442,7 +1442,9 @@ template <BoundaryType boundarytype>
     case GridType::CYLINDRICAL2D: {
       // use cellindex = 0 because spacing is uniform
       const auto delta_z = propcell_width_tmin(0, 1);
-      const auto delta_rcylsquared = pow2(get_cellcoordmax(0, 0)) - pow2(get_cellcoordmin(0, 0));
+      // delta_rcyl is uniform, but the area of a cylindrical shell is proportional to r^2, so we can use the difference
+      // of squares
+      const auto delta_rcylsquared = pow2(get_cellcoordmax(cellindex, 0)) - pow2(get_cellcoordmin(cellindex, 0));
       return delta_z * PI * delta_rcylsquared;
     }
 
