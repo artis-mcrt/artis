@@ -1458,7 +1458,8 @@ template <BoundaryType boundarytype>
 // for a spherical grid, the cell index is required (and should be equivalent to a modelgridindex)
 [[gnu::pure]] [[nodiscard]] auto get_propcell_volume_tmin(const int cellindex) -> double {
   if (get_propgridtype() == GridType::CARTESIAN3D) {
-    return propcell_width_tmin(cellindex, 0) * propcell_width_tmin(cellindex, 1) * propcell_width_tmin(cellindex, 2);
+    // for a uniform cubic grid this is constant
+    return propcell_width_tmin(0, 0) * propcell_width_tmin(0, 1) * propcell_width_tmin(0, 2);
   }
 
   assert_testmodeonly(get_propgridtype() == get_modelgridtype());
