@@ -1413,59 +1413,48 @@ template <BoundaryType boundarytype>
 // for a uniform grid get the the extent along the x,y,z coordinate (x_2 - x_1, etc.) at time tmin
 // for spherical grid get the radial extent (r_outer - r_inner) at time tmin
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto propcell_width_tmin(const int cellindex, const int axis) -> double {
-  switch (get_propgridtype()) {
-    case GridType::CARTESIAN3D:
-      return 2 * globals::rmax / ncoordgrid[axis];
-
-    case GridType::CYLINDRICAL2D:
-      return (axis == 0) ? globals::rmax / ncoordgrid[axis] : 2 * globals::rmax / ncoordgrid[axis];
-
-    case GridType::SPHERICAL1D: {
-      // cellindex matters here because the grid is not regularly spaced in radius
-      const int modelgridindex = cellindex;
-      const double v_inner = modelgridindex > 0 ? vout_model[modelgridindex - 1] : 0.;
-      return (vout_model[modelgridindex] - v_inner) * globals::tmin;
-    }
-  }
-  assert_always(false);
-  return NAN;
+  return get_cellcoordmax(cellindex, axis) - get_cellcoordmin(cellindex, axis);
 }
 
 // return the model cell volume (when mapped to the propagation cells) at globals::tmin
 // for a uniform cubic grid this is constant
 [[gnu::pure]] [[nodiscard]] auto get_modelcell_assocvolume_tmin(const int modelgridindex) -> double {
-  switch (get_propgridtype()) {
-    case GridType::CARTESIAN3D:
-      return (propcell_width_tmin(0, 0) * propcell_width_tmin(0, 1) * propcell_width_tmin(0, 2)) *
-             get_numpropcells(modelgridindex);
-
-    case GridType::CYLINDRICAL2D: {
-      // direct mapping, so cellindex = modelgridindex
-      const auto delta_z = propcell_width_tmin(modelgridindex, 1);
-      return delta_z * PI * (pow2(get_cellcoordmax(modelgridindex, 0)) - pow2(get_cellcoordmin(modelgridindex, 0)));
-    }
-
-    case GridType::SPHERICAL1D: {
-      // direct mapping, so cellindex = modelgridindex
-      return 4. / 3. * PI * (pow3(get_cellcoordmax(modelgridindex, 0)) - pow3(get_cellcoordmin(modelgridindex, 0)));
-    }
+  if (get_propgridtype() == GridType::CARTESIAN3D) {
+    // underlying input model could be 1D, 2D, or 3D
+    return get_propcell_volume_tmin(0) * get_numpropcells(modelgridindex);
   }
-  assert_always(false);
-  return NAN;
+
+  // direct mapping, so cellindex = modelgridindex and one propagation cell per model cell
+  return get_propcell_volume_tmin(modelgridindex);
 }
 
 // return the propagation cell volume at globals::tmin
 // for a spherical grid, the cell index is required (and should be equivalent to a modelgridindex)
 [[gnu::pure]] [[nodiscard]] auto get_propcell_volume_tmin(const int cellindex) -> double {
-  if (get_propgridtype() == GridType::CARTESIAN3D) {
-    // for a uniform cubic grid this is constant
-    return propcell_width_tmin(0, 0) * propcell_width_tmin(0, 1) * propcell_width_tmin(0, 2);
-  }
+  switch (get_propgridtype()) {
+    case GridType::CARTESIAN3D: {
+      // volume is constant for uniform grid, so any cell index will do
+      const double deltax = get_cellcoordmax(0, 0) - get_cellcoordmin(0, 0);
+      // deltax = deltay = deltaz for uniform grid
+      return pow3(deltax);
+    }
 
-  assert_testmodeonly(get_propgridtype() == get_modelgridtype());
-  // 2D and 1D with direct mapping to propagation cells
-  const int mgi = get_propcell_modelgridindex(cellindex);
-  return get_modelcell_assocvolume_tmin(mgi);
+    case GridType::CYLINDRICAL2D: {
+      // use cellindex = 0 because spacing is uniform
+      const auto delta_z = propcell_width_tmin(0, 1);
+      // delta_rcyl is uniform, but the area of a cylindrical shell is proportional to r^2, so we can use the difference
+      // of squares
+      const auto delta_rcylsquared = pow2(get_cellcoordmax(cellindex, 0)) - pow2(get_cellcoordmin(cellindex, 0));
+      return delta_z * PI * delta_rcylsquared;
+    }
+
+    case GridType::SPHERICAL1D: {
+      // the cellindex matters here because the radial spacing is non-uniform
+      return 4. / 3. * PI * (pow3(get_cellcoordmax(cellindex, 0)) - pow3(get_cellcoordmin(cellindex, 0)));
+    }
+  }
+  assert_always(false);
+  return NAN;
 }
 
 [[nodiscard]] auto get_propcell_random_xyz_position_tmin(int cellindex, const int packetnumber) -> Vec3d {
