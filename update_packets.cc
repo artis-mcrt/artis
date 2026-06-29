@@ -542,9 +542,10 @@ void update_packets(const int nts, std::span<Packet> packets) {
         break;
       }
       const auto cellcache_groupid = get_packet_cellcachegroupid(pkt).value_or(-1);
-      const auto packetgroupsize = pktindex - packetgroupstart;
+      const auto packetgroupsize = pktindex - packetgroupstart;  // not counting the current packet, which would be in
+                                                                 // the next group if a new group is started
       if (packetgroupsize > 0 &&
-          (cellcache_groupid != prev_cellcache_groupid || packetgroupsize > MAX_PACKETGROUP_SIZE)) {
+          (cellcache_groupid != prev_cellcache_groupid || packetgroupsize >= MAX_PACKETGROUP_SIZE)) {
         packet_groups.emplace_back(prev_cellcache_groupid, packets.subspan(packetgroupstart, packetgroupsize));
         packetgroupstart = pktindex;
       }
