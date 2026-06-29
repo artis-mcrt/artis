@@ -188,8 +188,7 @@ void read_possible_yefile() {
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_cellcoordmax(const int cellindex, const int axis) -> double {
   const auto idx = get_cellcoordindex(cellindex, axis);
   const auto idxlast = ncoordgrid[axis] - 1;
-  return idx < idxlast ? coord_pos_min_tmin[axis][idx + 1]
-                       : coord_pos_min_tmin[axis][idxlast] + propcell_width_tmin(cellindex, axis);
+  return idx < idxlast ? coord_pos_min_tmin[axis][idx + 1] : globals::rmax;
 }
 
 // return the inner radius of a propagation cell at time tmin
