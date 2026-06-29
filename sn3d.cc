@@ -771,7 +771,12 @@ auto main(int argc, char* argv[]) -> int {
   }
 
 #ifdef STDPAR_ON
-  printlnlog("C++ standard parallelism (stdpar) is enabled with {} hardware threads", get_max_threads());
+  printlog("C++ standard parallelism (stdpar) is enabled");
+#ifdef GPU_ON
+  printlnlog(" with GPU support");
+#else
+  printlnlog(" with up to {} CPU threads", get_max_threads());
+#endif
 #endif
 
 #ifdef GPU_ON

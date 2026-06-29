@@ -298,14 +298,13 @@ inline bool lte_iteration{false};
 }  // namespace globals
 
 [[nodiscard]] inline auto get_max_threads() -> int {
-#ifdef STDPAR_ON
-  return static_cast<int>(std::thread::hardware_concurrency());
-#else
 #ifdef _OPENMP
   return omp_get_max_threads();
+#elif defined(STDPAR_ON) && !defined(GPU_ON)
+  // for GPU_ON mode, this call would return the number of CPU threads, which are not used.
+  return static_cast<int>(std::thread::hardware_concurrency());
 #else
   return 1;
-#endif
 #endif
 }
 
