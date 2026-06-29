@@ -108,7 +108,7 @@ constexpr bool cellcache_singleslot = true;
 #define MY_IF_HOST(...) __VA_ARGS__
 #endif
 
-#ifdef GPU_ON
+#if defined(__device__) && defined(GPU_ON)
 #define DEVICE_FUNC __host__ __device__
 #else
 #define DEVICE_FUNC
