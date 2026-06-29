@@ -1432,15 +1432,22 @@ template <BoundaryType boundarytype>
 // for a spherical grid, the cell index is required (and should be equivalent to a modelgridindex)
 [[gnu::pure]] [[nodiscard]] auto get_propcell_volume_tmin(const int cellindex) -> double {
   switch (get_propgridtype()) {
-    case GridType::CARTESIAN3D:
-      return propcell_width_tmin(0, 0) * propcell_width_tmin(0, 1) * propcell_width_tmin(0, 2);
+    case GridType::CARTESIAN3D: {
+      // volume is constant for uniform grid, so any cell index will do
+      const double deltax = get_cellcoordmax(0, 0) - get_cellcoordmin(0, 0);
+      // deltax = deltay = deltaz for uniform grid
+      return pow3(deltax);
+    }
 
     case GridType::CYLINDRICAL2D: {
-      const auto delta_z = propcell_width_tmin(cellindex, 1);
-      return delta_z * PI * (pow2(get_cellcoordmax(cellindex, 0)) - pow2(get_cellcoordmin(cellindex, 0)));
+      // use cellindex = 0 because spacing is uniform
+      const auto delta_z = propcell_width_tmin(0, 1);
+      const auto delta_rcylsquared = pow2(get_cellcoordmax(0, 0)) - pow2(get_cellcoordmin(0, 0));
+      return delta_z * PI * delta_rcylsquared;
     }
 
     case GridType::SPHERICAL1D: {
+      // the cellindex matters here because the radial spacing is non-uniform
       return 4. / 3. * PI * (pow3(get_cellcoordmax(cellindex, 0)) - pow3(get_cellcoordmin(cellindex, 0)));
     }
   }
