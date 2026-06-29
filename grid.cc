@@ -1480,8 +1480,8 @@ template <BoundaryType boundarytype>
     case GridType::CARTESIAN3D: {
       Vec3d pos;
       for (int axis = 0; axis < 3; axis++) {
-        pos[axis] = std::lerp(get_cellcoordmin(cellindex, axis), get_cellcoordmax(cellindex, axis),
-                              rng_uniform_pos(packetnumber));
+        pos[axis] =
+            get_cellcoordmin(cellindex, axis) + (rng_uniform_pos(packetnumber) * propcell_width_tmin(cellindex, axis));
       }
       return pos;
     }
