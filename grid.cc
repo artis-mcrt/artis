@@ -303,7 +303,7 @@ auto get_cellradialposmid(const int cellindex) -> double {
   if (prop_gridtype == GridType::SPHERICAL1D) {
     // volume averaged mean radius is slightly complex for radial shells
     const double r_inner = get_cellcoordmin(cellindex, 0);
-    const double r_outer = r_inner + propcell_width_tmin(cellindex, 0);
+    const double r_outer = get_cellcoordmax(cellindex, 0);
     return 3. / 4 * (pow4(r_outer) - pow4(r_inner)) / (pow3(r_outer) - pow3(r_inner));
   }
 
