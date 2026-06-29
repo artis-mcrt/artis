@@ -308,8 +308,8 @@ auto get_cellradialposmid(const int cellindex) -> double {
   }
 
   if (prop_gridtype == GridType::CYLINDRICAL2D) {
-    const double rcyl_mid = get_cellcoordmin(cellindex, 0) + (0.5 * propcell_width_tmin(cellindex, 0));
-    const double z_mid = get_cellcoordmin(cellindex, 1) + (0.5 * propcell_width_tmin(cellindex, 1));
+    const double rcyl_mid = (get_cellcoordmin(cellindex, 0) + get_cellcoordmax(cellindex, 0)) / 2;
+    const double z_mid = (get_cellcoordmin(cellindex, 1) + get_cellcoordmax(cellindex, 1)) / 2;
     return std::sqrt(pow2(rcyl_mid) + pow2(z_mid));
   }
 
