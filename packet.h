@@ -7,9 +7,6 @@
 #include <vector>
 
 #include "constants.h"
-#ifdef GPU_ON
-#include "random.h"
-#endif
 
 enum packet_type : int {
   TYPE_NONE = 0,
@@ -36,6 +33,10 @@ struct MacroAtomState {
   int level;  // and level=level (this is a level index)
   int activatingline;  // Linelistindex of the activating line for bb activated MAs, -99 else.
 };
+
+#ifdef GPU_ON
+#include "random.h"
+#endif
 
 struct Packet {
   double prop_time{-1.};  // internal clock to track how far in time the packet has been propagated
@@ -81,6 +82,20 @@ struct Packet {
 
   auto operator<=>(const Packet& rhs) const = default;
 };
+
+#ifdef GPU_ON
+constexpr DEVICE_FUNC auto rngstate([[maybe_unused]] Packet& packet) -> utlrandom::Xoshiro128PP& {
+  return packet.rngstate;
+}
+#else
+#include <random>
+
+constexpr auto rngstate() -> std::mt19937& {
+  thread_local std::mt19937 rng{std::random_device{}()};
+  return rng;
+}
+constexpr auto rngstate([[maybe_unused]] const Packet& packet) -> std::mt19937& { return rngstate(); }
+#endif
 
 void packet_init(std::span<Packet> packets);
 auto read_text_packets(const std::string& filename) -> std::vector<Packet>;
