@@ -848,7 +848,7 @@ auto main(int argc, char* argv[]) -> int {
 #endif
 
   // Read in parameters from input.txt
-  read_parameterfile();
+  read_parameterfile(packets);
 
   // Read in parameters from vpkt.txt
   if constexpr (VPKT_ON) {
