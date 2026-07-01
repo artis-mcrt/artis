@@ -84,17 +84,17 @@ struct Packet {
 };
 
 #ifdef GPU_ON
-constexpr DEVICE_FUNC auto rngstate([[maybe_unused]] Packet& packet) -> utlrandom::Xoshiro128PP& {
+constexpr DEVICE_FUNC auto get_rngstate([[maybe_unused]] Packet& packet) -> utlrandom::Xoshiro128PP& {
   return packet.rngstate;
 }
 #else
 #include <random>
 
-constexpr auto rngstate() -> std::mt19937& {
+constexpr auto get_rngstate() -> std::mt19937& {
   thread_local std::mt19937 rng{std::random_device{}()};
   return rng;
 }
-constexpr auto rngstate([[maybe_unused]] const Packet& packet) -> std::mt19937& { return rngstate(); }
+constexpr auto get_rngstate([[maybe_unused]] const Packet& packet) -> std::mt19937& { return get_rngstate(); }
 #endif
 
 void packet_init(std::span<Packet> packets);

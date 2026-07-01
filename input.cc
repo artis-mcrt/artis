@@ -1675,9 +1675,9 @@ void read_parameterfile(std::span<Packet> packets) {
                        ? pre_zseed + static_cast<std::int64_t>(13 * ((globals::my_rank * get_max_threads()) + tid))
                        : get_rng_random_seed();
 
-    rngstate().seed(rngseed);
+    get_rngstate().seed(rngseed);
     for (int n = 0; n < 100; n++) {
-      rng_uniform(rngstate());
+      rng_uniform(get_rngstate());
     }
     printlnlog("rank {}: thread {} has rngseed {}", globals::my_rank, tid, rngseed);
 #endif

@@ -356,9 +356,9 @@ DEVICE_FUNC void do_kpkt_blackbody(Packet& pkt) {
   const auto nonemptymgi = grid::get_propcell_nonemptymgi(pkt.cellindex);
 
   if (RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.has_value() && grid::thick_allcells[nonemptymgi] != 1) {
-    pkt.nu_cmf = sample_planck_times_expansion_opacity(nonemptymgi, rngstate(pkt));
+    pkt.nu_cmf = sample_planck_times_expansion_opacity(nonemptymgi, get_rngstate(pkt));
   } else {
-    pkt.nu_cmf = sample_planck_montecarlo(grid::get_Te(nonemptymgi), rngstate(pkt));
+    pkt.nu_cmf = sample_planck_montecarlo(grid::get_Te(nonemptymgi), get_rngstate(pkt));
   }
 
   assert_always(std::isfinite(pkt.nu_cmf));
@@ -391,7 +391,7 @@ DEVICE_FUNC void do_kpkt(Packet& pkt, const double t2, const int nts) {
 
   const auto nonemptymgi = grid::get_propcell_nonemptymgi(pkt.cellindex);
   const std::span<const double> ion_cooling_contribs_thiscell = get_cell_ion_cooling_contribs(nonemptymgi);
-  const double rndcool_ion = rng_uniform(rngstate(pkt)) * ion_cooling_contribs_thiscell.back();
+  const double rndcool_ion = rng_uniform(get_rngstate(pkt)) * ion_cooling_contribs_thiscell.back();
 
   // Randomly select the occurring cooling process
   const int uniqueionindex = static_cast<int>(std::ranges::lower_bound(ion_cooling_contribs_thiscell, rndcool_ion) -
@@ -421,7 +421,7 @@ DEVICE_FUNC void do_kpkt(Packet& pkt, const double t2, const int nts) {
 
   // with the ion selected, we now select a level and transition type
 
-  const double rndcool_ion_process = rng_uniform(rngstate(pkt)) * C_ion_procsum;
+  const double rndcool_ion_process = rng_uniform(get_rngstate(pkt)) * C_ion_procsum;
 
   const auto ionoffset = std::ranges::upper_bound(ion_contribs, rndcool_ion_process) - ion_contribs.begin();
   assert_always(ionoffset < ncoolingterms_ion);
@@ -437,7 +437,7 @@ DEVICE_FUNC void do_kpkt(Packet& pkt, const double t2, const int nts) {
 
     // Sample the packets comoving frame frequency according to paperII 5.4.3 eq.41
 
-    pkt.nu_cmf = -KB * T_e / H * std::log(static_cast<double>(rng_uniform_pos(rngstate(pkt))));
+    pkt.nu_cmf = -KB * T_e / H * std::log(static_cast<double>(rng_uniform_pos(get_rngstate(pkt))));
 
     assert_always(std::isfinite(pkt.nu_cmf));
 
@@ -464,7 +464,7 @@ DEVICE_FUNC void do_kpkt(Packet& pkt, const double t2, const int nts) {
     // then randomly sample the packets frequency according to the continuums energy distribution
 
     // Sample the packets comoving frame frequency according to paperII 4.2.2
-    pkt.nu_cmf = select_continuum_nu(element, lowerion, lowerlevel, upper, T_e, rngstate(pkt));
+    pkt.nu_cmf = select_continuum_nu(element, lowerion, lowerlevel, upper, T_e, get_rngstate(pkt));
 
     // and then emit the packet randomly in the comoving frame
     emit_rpkt(pkt);

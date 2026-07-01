@@ -365,12 +365,12 @@ void compton_scatter(Packet& pkt) {
   double f = 1.;
   bool stay_gamma = true;
   if (xx >= THOMSON_LIMIT) {
-    f = choose_f(xx, rng_uniform(rngstate(pkt)));
+    f = choose_f(xx, rng_uniform(get_rngstate(pkt)));
 
     // Prob of keeping gamma ray is...
     const double prob_gamma = 1. / f;
 
-    stay_gamma = (rng_uniform(rngstate(pkt)) < prob_gamma);
+    stay_gamma = (rng_uniform(get_rngstate(pkt)) < prob_gamma);
   }
 
   if (stay_gamma) {
@@ -388,9 +388,9 @@ void compton_scatter(Packet& pkt) {
 
     // Now change the direction through the scattering angle.
 
-    const double cos_theta = (xx < THOMSON_LIMIT) ? thomson_angle(rngstate(pkt)) : 1. - ((f - 1) / xx);
+    const double cos_theta = (xx < THOMSON_LIMIT) ? thomson_angle(get_rngstate(pkt)) : 1. - ((f - 1) / xx);
 
-    const auto new_dir = scatter_dir(cmf_dir, cos_theta, rngstate(pkt));
+    const auto new_dir = scatter_dir(cmf_dir, cos_theta, get_rngstate(pkt));
 
     assert_testmodeonly(fabs(1. - dot(new_dir, new_dir)) < 1e-8);
     assert_testmodeonly(fabs(dot(new_dir, cmf_dir) - cos_theta) < 1e-8);
@@ -633,11 +633,11 @@ void pair_prod(Packet& pkt) {
 
   assert_always(prob_gamma >= 0);
 
-  if (rng_uniform(rngstate(pkt)) > prob_gamma) {
+  if (rng_uniform(get_rngstate(pkt)) > prob_gamma) {
     if constexpr (PARTICLE_THERMALISATION_SCHEME == ParticleThermalisationScheme::TIMEDEPENDENTWITHGAMMAPRODUCTS) {
       // Convert it to an e-minus or positron kinetic energy packet
-      pkt.type = (rng_uniform(rngstate(pkt)) > 0.5) ? TYPE_NONTHERMAL_PREDEPOSIT_BETAMINUS
-                                                    : TYPE_NONTHERMAL_PREDEPOSIT_BETAPLUS;
+      pkt.type = (rng_uniform(get_rngstate(pkt)) > 0.5) ? TYPE_NONTHERMAL_PREDEPOSIT_BETAMINUS
+                                                        : TYPE_NONTHERMAL_PREDEPOSIT_BETAPLUS;
     } else {
       pkt.type = TYPE_NTLEPTON_DEPOSITED;
     }
@@ -651,7 +651,7 @@ void pair_prod(Packet& pkt) {
 
     // Now let's give the gamma ray a direction.
 
-    const auto dir_cmf = get_rand_isotropic_unitvec(rngstate(pkt));
+    const auto dir_cmf = get_rand_isotropic_unitvec(get_rngstate(pkt));
 
     // This direction is in the cmf - we want to convert it to the rest
     // frame - use aberration of angles. We want to convert from cmf to
@@ -674,7 +674,7 @@ void pair_prod(Packet& pkt) {
 void transport_gamma(Packet& pkt, const double t2) {
   // Assign optical depth to next physical event. And start counter of
   // optical depth for this path.
-  const double tau_next = -std::log(static_cast<double>(rng_uniform_pos(rngstate(pkt))));
+  const double tau_next = -std::log(static_cast<double>(rng_uniform_pos(get_rngstate(pkt))));
 
   // Start by finding the distance to the crossing of the grid cell
   // boundaries. boundarydist is the boundary distance and next_cellindex is the
@@ -742,7 +742,7 @@ void transport_gamma(Packet& pkt, const double t2) {
     move_pkt_withtime(pkt, edist / 2.);
 
     // event occurs. Choose which event and call the appropriate subroutine.
-    const double chi_rnd = rng_uniform(rngstate(pkt)) * chi_tot;
+    const double chi_rnd = rng_uniform(get_rngstate(pkt)) * chi_tot;
     if (chi_compton > chi_rnd) {
       // Compton scattering.
       compton_scatter(pkt);
@@ -791,7 +791,7 @@ void barnes_thermalisation(Packet& pkt)
   assert_always(f_gamma <= 1.);
 
   // either absorb packet or let it escape
-  if (rng_uniform(rngstate(pkt)) < f_gamma) {
+  if (rng_uniform(get_rngstate(pkt)) < f_gamma) {
     // packet is absorbed and contributes to the heating as a k-packet
     pkt.type = TYPE_NTLEPTON_DEPOSITED;
     pkt.absorptiontype = -4;
@@ -834,7 +834,7 @@ void wollaeger_thermalisation(Packet& pkt) {
   assert_always(f_gamma <= 1.);
 
   // either absorb packet or let it escape
-  if (rng_uniform(rngstate(pkt)) < f_gamma) {
+  if (rng_uniform(get_rngstate(pkt)) < f_gamma) {
     // packet is absorbed and contributes to the heating as a k-packet
     pkt.type = TYPE_NTLEPTON_DEPOSITED;
     pkt.absorptiontype = -4;
@@ -870,7 +870,7 @@ void guttman_thermalisation(Packet& pkt) {
     // step 1: draw a random direction
     Packet pkt_copy = pkt;
     // phi rotation: around z-axis
-    const auto random_dir = get_rand_isotropic_unitvec(rngstate(pkt));
+    const auto random_dir = get_rand_isotropic_unitvec(get_rngstate(pkt));
     pkt_copy.dir = random_dir;  // fix new direction
 
     // step 2: move packet into the calculated direction and integrate the density
@@ -908,7 +908,7 @@ void guttman_thermalisation(Packet& pkt) {
   assert_always(f_gamma <= 1.);
 
   // either absorb packet or let it escape
-  if (rng_uniform(rngstate(pkt)) < f_gamma) {
+  if (rng_uniform(get_rngstate(pkt)) < f_gamma) {
     // packet is absorbed and contributes to the heating as a k-packet
     pkt.type = TYPE_NTLEPTON_DEPOSITED;
     pkt.absorptiontype = -4;
@@ -972,7 +972,7 @@ DEVICE_FUNC void pellet_gamma_decay(Packet& pkt) {
   // Now let's give the gamma ray a direction.
   // Assuming isotropic emission in cmf
 
-  const auto dir_cmf = get_rand_isotropic_unitvec(rngstate(pkt));
+  const auto dir_cmf = get_rand_isotropic_unitvec(get_rngstate(pkt));
 
   // This direction is in the cmf - we want to convert it to the rest
   // frame - use aberration of angles. We want to convert from cmf to
