@@ -1409,8 +1409,8 @@ auto get_ntion_energyrate(const int nonemptymgi) -> double {
   return ratetotal;
 }
 
-auto select_nt_ionisation(const int nonemptymgi, const int packetnumber) -> std::tuple<int, int> {
-  const double zrand = rng_uniform(packetnumber);
+auto select_nt_ionisation(const int nonemptymgi, rngstate_type& rngstate) -> std::tuple<int, int> {
+  const double zrand = rng_uniform(rngstate);
 
   // // select based on stored frac_deposition for each ion
   // double frac_deposition_ion_sum = 0.;
@@ -2186,10 +2186,10 @@ DEVICE_FUNC auto nt_ionisation_maxupperion(const int element, const int lowerion
 }
 
 DEVICE_FUNC auto nt_random_upperion(const int nonemptymgi, const int element, const int lowerion,
-                                    const bool energyweighted, const int packetnumber) -> int {
+                                    const bool energyweighted, rngstate_type& rngstate) -> int {
   assert_testmodeonly(lowerion < get_nions(element) - 1);
   if (NT_SOLVE_SPENCERFANO && NT_MAX_AUGER_ELECTRONS > 0) {
-    const double zrand = rng_uniform(packetnumber);
+    const double zrand = rng_uniform(rngstate);
 
     double prob_sum = 0.;
     for (int upperion = lowerion + 1; upperion <= nt_ionisation_maxupperion(element, lowerion); upperion++) {
@@ -2270,7 +2270,7 @@ DEVICE_FUNC void do_ntlepton_deposit(Packet& pkt) {
     // here there is some probability to cause ionisation or excitation to a macroatom packet
     // instead of converting directly to k-packet (unless the heating channel is selected)
 
-    double zrand = rng_uniform(pkt.number);
+    double zrand = rng_uniform(pkt.rngstate());
     // zrand is initially between [0, 1), but we will subtract off each
     // component of the deposition fractions
     // until we end and select transition_ij when zrand < dep_frac_transition_ij
@@ -2281,8 +2281,8 @@ DEVICE_FUNC void do_ntlepton_deposit(Packet& pkt) {
     // const double frac_ionisation = 0.;
 
     if (zrand < frac_ionisation) {
-      const auto [element, lowerion] = select_nt_ionisation(nonemptymgi, pkt.number);
-      const int upperion = nt_random_upperion(nonemptymgi, element, lowerion, true, pkt.number);
+      const auto [element, lowerion] = select_nt_ionisation(nonemptymgi, pkt.rngstate());
+      const int upperion = nt_random_upperion(nonemptymgi, element, lowerion, true, pkt.rngstate());
       // const int upperion = lowerion + 1;
 
       stats::increment(stats::Counter::MA_STAT_ACTIVATION_NTCOLLION);

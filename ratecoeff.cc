@@ -494,7 +494,7 @@ void setup_photoion_luts() {
 }
 
 DEVICE_FUNC auto select_continuum_nu(int element, const int lowerion, const int lower, const int upperionlevel,
-                                     float T_e, const int packetnumber) -> double {
+                                     float T_e, rngstate_type& rngstate) -> double {
   const auto lower_uniquelevelindex = get_uniquelevelindex(element, lowerion, lower);
   const int phixstargetindex = get_phixtargetindex(lower_uniquelevelindex, upperionlevel);
   const double E_threshold = get_phixs_threshold(lower_uniquelevelindex, phixstargetindex);
@@ -506,7 +506,7 @@ DEVICE_FUNC auto select_continuum_nu(int element, const int lowerion, const int 
 
   const auto photoion_xs = get_phixs_table(lower_uniquelevelindex);
 
-  const double zrand = 1. - rng_uniform(packetnumber);  // Make sure that 0 < zrand <= 1
+  const double zrand = 1. - rng_uniform(rngstate);  // Make sure that 0 < zrand <= 1
 
   const double deltanu = (nu_max_phixs - nu_threshold) / npieces;
   double error{NAN};

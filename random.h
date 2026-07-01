@@ -171,9 +171,11 @@ constexpr auto generate_canonical_float(Gen& gen) noexcept(noexcept(gen())) -> f
 // per-packet RNG state, indexed by Packet.number, so that GPU threads (which can't use thread_local)
 // don't share and race on a single global generator
 inline std::array<utlrandom::generators::Xoshiro128PP, MPKTS> rng;
+using rngstate_type = decltype(rng)::value_type;
 #else
 #include <random>
 inline thread_local auto rng{std::mt19937{std::random_device{}()}};
+using rngstate_type = decltype(rng);
 #endif
 
 [[nodiscard]] inline auto get_rng_random_seed() -> std::int64_t {
@@ -184,15 +186,15 @@ inline thread_local auto rng{std::mt19937{std::random_device{}()}};
 #endif
 }
 
-inline auto rng_uniform([[maybe_unused]] const int packetnumber) -> float {
+inline auto rng_uniform(rngstate_type& rngstate) -> float {
   while (true) {
     // std::random can't be used in device code on nvc++ (long double not supported)
     // so use custom generator instead
 #ifdef GPU_ON
-    const auto zrand = utlrandom::generate_canonical_float(rng[packetnumber]);
+    const auto zrand = utlrandom::generate_canonical_float(rngstate);
 #else
     // use std::generate_canonical in CPU mode, because it seems to be faster
-    const auto zrand = std::generate_canonical<float, std::numeric_limits<float>::digits>(rng);
+    const auto zrand = std::generate_canonical<float, std::numeric_limits<float>::digits>(rngstate);
 #endif
     if (zrand != 1.) {
       return zrand;
@@ -200,9 +202,9 @@ inline auto rng_uniform([[maybe_unused]] const int packetnumber) -> float {
   }
 }
 
-inline auto rng_uniform_pos(const int packetnumber) -> float {
+inline auto rng_uniform_pos(rngstate_type& rngstate) -> float {
   while (true) {
-    const auto zrand = rng_uniform(packetnumber);
+    const auto zrand = rng_uniform(rngstate);
     if (zrand > 0) {
       return zrand;
     }
@@ -218,7 +220,7 @@ inline auto rng_seed(auto&& seedval) {
 #else
   rng.seed(seedval);
   for (int n = 0; n < 100; n++) {
-    rng_uniform(0);
+    rng_uniform(rng);
   }
 #endif
 }

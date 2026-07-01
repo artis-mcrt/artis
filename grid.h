@@ -8,6 +8,7 @@
 #include "globals.h"
 #include "mpi_logging.h"
 #include "packet.h"
+#include "random.h"
 #include "stats.h"
 
 namespace grid {
@@ -89,7 +90,7 @@ void write_grid_restart_data(int timestep);
 [[gnu::pure]] [[nodiscard]] auto get_ndo(int rank) -> int;
 [[gnu::pure]] [[nodiscard]] auto get_ndo_nonempty(int rank) -> int;
 [[gnu::pure]] [[nodiscard]] auto get_totmassnuclide_tmodel(int z, int a) -> double;
-[[nodiscard]] auto get_propcell_random_xyz_position_tmin(int cellindex, int packetnumber) -> Vec3d;
+[[nodiscard]] auto get_propcell_random_xyz_position_tmin(int cellindex, rngstate_type& rngstate) -> Vec3d;
 [[nodiscard]] DEVICE_FUNC auto boundary_distance(const Vec3d& dir, const Vec3d& pos, double tstart, int cellindex)
     -> std::tuple<double, int>;
 void set_clumpfactor(int nonemptymgi, float clumpfactor);

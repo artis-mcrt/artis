@@ -443,7 +443,7 @@ void filter_unused_nuclides(const std::span<const int> custom_zlist, const std::
   }
 }
 
-auto sample_decaytime(const int decaypathindex, const double tdecaymin, const double tdecaymax, const int packetnumber)
+auto sample_decaytime(const int decaypathindex, const double tdecaymin, const double tdecaymax, rngstate_type& rngstate)
     -> double {
   double tdecay = -1;
   const double t_model = grid::get_t_model();
@@ -453,7 +453,7 @@ auto sample_decaytime(const int decaypathindex, const double tdecaymin, const do
     const auto maxlength = std::ssize(decaypaths[decaypathindex].nucindex) - 1;
     for (auto i = 0Z; i < maxlength; i++) {
       tdecay -= get_meanlife(decaypaths[decaypathindex].nucindex[i]) *
-                std::log(static_cast<double>(rng_uniform_pos(packetnumber)));
+                std::log(static_cast<double>(rng_uniform_pos(rngstate)));
     }
   }
   return tdecay;
@@ -1286,7 +1286,7 @@ void setup_radioactive_pellet(const double e_cmf_per_packet, const int nonemptym
 
   assert_testmodeonly(cumulative_en_sum[num_decaychannels - 1] > 0.);
 
-  const double zrand_en = rng_uniform(pkt.number) * cumulative_en_sum[num_decaychannels - 1];
+  const double zrand_en = rng_uniform(pkt.rngstate()) * cumulative_en_sum[num_decaychannels - 1];
 
   // first decaychannelindex such that cumulative_en_sum[decaychannelindex] > zrand_en
   const int decaychannelindex =
@@ -1317,13 +1317,13 @@ void setup_radioactive_pellet(const double e_cmf_per_packet, const int nonemptym
   const double tdecaymin = !INITIAL_PACKETS_ON ? globals::tmin : grid::get_t_model();
 
   if constexpr (UNIFORM_PELLET_ENERGIES) {
-    pkt.tdecay = sample_decaytime(decaypathindex, tdecaymin, globals::tmax, pkt.number);
+    pkt.tdecay = sample_decaytime(decaypathindex, tdecaymin, globals::tmax, pkt.rngstate());
     pkt.e_cmf = e_cmf_per_packet;
   } else {
     // use uniform decay time distribution and scale the packet energies instead.
     // keeping the pellet decay rate constant will give better statistics at late times
     // when very little energy and few packets are released
-    pkt.tdecay = std::lerp(globals::tmax, tdecaymin, rng_uniform(pkt.number));
+    pkt.tdecay = std::lerp(globals::tmax, tdecaymin, rng_uniform(pkt.rngstate()));
 
     // we need to scale the packet energy up or down according to decay rate at the randomly selected time.
     // e_cmf_average is the average energy per packet for this cell and decaypath, so we scale this up or down
@@ -1346,13 +1346,13 @@ void setup_radioactive_pellet(const double e_cmf_per_packet, const int nonemptym
   const auto engamma = nucdecayenergygamma(pkt.pellet_nucindex);
   const auto enparticle = nucdecayenergyparticle(pkt.pellet_nucindex, static_cast<DecayType>(pkt.pellet_decaytype));
 
-  pkt.originated_from_particlenotgamma = (rng_uniform(pkt.number) >= engamma / (engamma + enparticle));
+  pkt.originated_from_particlenotgamma = (rng_uniform(pkt.rngstate()) >= engamma / (engamma + enparticle));
   if (pkt.originated_from_particlenotgamma) {
     // particle (positron, electron, or alpha) emitted
     pkt.nu_cmf = enparticle / H;
   } else {
     // gamma ray emitted
-    pkt.nu_cmf = gammapkt::choose_gamma_ray(pkt.pellet_nucindex, pkt.number);
+    pkt.nu_cmf = gammapkt::choose_gamma_ray(pkt.pellet_nucindex, pkt.rngstate());
   }
 }
 

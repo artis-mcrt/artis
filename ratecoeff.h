@@ -2,13 +2,14 @@
 #define RATECOEFF_H
 
 #include "constants.h"
+#include "random.h"
 
 void ratecoefficients_init();
 
 void setup_photoion_luts();
 
 [[nodiscard]] DEVICE_FUNC auto select_continuum_nu(int element, int lowerion, int lower, int upperionlevel, float T_e,
-                                                   int packetnumber) -> double;
+                                                   rngstate_type& rngstate) -> double;
 [[nodiscard]] DEVICE_FUNC auto get_spontrecombcoeff(int uniquelevelindex, int phixstargetindex, float T_e) -> double;
 
 [[nodiscard]] DEVICE_FUNC auto get_bfcoolingcoeff(int element, int lowerion, int lowerionlevel, int phixstargetindex,

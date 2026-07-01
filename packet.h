@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "constants.h"
+#include "random.h"
 
 enum packet_type : int {
   TYPE_NONE = 0,
@@ -69,6 +70,14 @@ struct Packet {
   bool originated_from_particlenotgamma{false};  // first packet type after pellet decay
   int pellet_decaytype{-1};  // index into decay::decaytypes
   int pellet_nucindex{-1};  // nuclide index of the decaying species
+
+  auto rngstate() -> rngstate_type& {
+#ifdef GPU_ON
+    return rng[number];
+#else
+    return rng;
+#endif
+  }
 
   auto operator<=>(const Packet& rhs) const = default;
 };

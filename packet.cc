@@ -53,7 +53,7 @@ constexpr auto get_packets_text_header() -> std::string {
 void place_pellet(const double e_cmf_per_packet, const std::span<const double> en_cumulative, const int pktnumber,
                   Packet& pkt, const std::span<const double> energy_per_mass_nonemptymgi_decaypath) {
   const auto etot_simtime = en_cumulative.back();
-  const double targetval = rng_uniform(pktnumber) * etot_simtime;
+  const double targetval = rng_uniform(pkt.rngstate()) * etot_simtime;
 
   // First choose a position for the pellet. In the cell.
   // first i such that en_cumulative[i] > targetval
@@ -66,7 +66,7 @@ void place_pellet(const double e_cmf_per_packet, const std::span<const double> e
   pkt.prop_time = globals::tmin;
   pkt.originated_from_particlenotgamma = false;
 
-  pkt.pos = grid::get_propcell_random_xyz_position_tmin(cellindex, pktnumber);
+  pkt.pos = grid::get_propcell_random_xyz_position_tmin(cellindex, pkt.rngstate());
 
 #ifndef GPU_ON
   // ensure that the random position was inside the cell we selected
