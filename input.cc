@@ -1670,8 +1670,8 @@ void read_parameterfile(std::span<Packet> packets) {
                        : get_rng_random_seed();
 #ifdef GPU_ON
     // give every packet its own independently-seeded generator
-    for (int packetnumber = 0; packetnumber < MPKTS; packetnumber++) {
-      get_rngstate(packets[packetnumber]).seed(rngseed + packetnumber);
+    for (auto packetnumber = 0ZU; packetnumber < std::size(packets); packetnumber++) {
+      get_rngstate(packets[packetnumber]).seed(static_cast<std::uint32_t>(rngseed) + packetnumber);
     }
 #else
     get_rngstate().seed(rngseed);
