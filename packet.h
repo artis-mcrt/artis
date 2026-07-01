@@ -80,8 +80,6 @@ struct Packet {
   utlrandom::generators::Xoshiro128PP rng{std::random_device{}()};
   auto rngstate() -> auto& { return rng; }
 #else
-  // function-local thread_local (rather than a static thread_local member) avoids
-  // an Apple LTO/linker failure to emit the TLS-init wrapper for the member
   // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
   auto rngstate() -> std::mt19937& {
     thread_local std::mt19937 rng{std::random_device{}()};
