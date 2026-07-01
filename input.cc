@@ -1664,7 +1664,7 @@ void read_parameterfile(std::span<Packet> packets) {
 #ifdef GPU_ON
     // give every packet its own independently-seeded generator
     for (int packetnumber = 0; packetnumber < MPKTS; packetnumber++) {
-      packets[packetnumber].rngstate().seed(get_rng_random_seed());
+      packets[packetnumber].rngstate().seed(get_rng_random_seed() + packetnumber);
     }
 #else
     // For MPI parallelisation, the random seed is changed based on the rank of the process
