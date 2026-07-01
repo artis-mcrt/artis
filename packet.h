@@ -2,6 +2,7 @@
 #define PACKET_H
 
 #include <cmath>
+#include <random>
 #include <span>
 #include <string>
 #include <vector>
@@ -71,13 +72,12 @@ struct Packet {
   int pellet_decaytype{-1};  // index into decay::decaytypes
   int pellet_nucindex{-1};  // nuclide index of the decaying species
 
-  auto rngstate() -> rngstate_type& {
 #ifdef GPU_ON
-    return rng[number];
+  auto rngstate() -> utlrandom::generators::Xoshiro128PP& { return rng[number]; }
 #else
-    return rng;
+  // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
+  auto rngstate() -> std::mt19937& { return rng; }
 #endif
-  }
 
   auto operator<=>(const Packet& rhs) const = default;
 };

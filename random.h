@@ -171,11 +171,11 @@ constexpr auto generate_canonical_float(Gen& gen) noexcept(noexcept(gen())) -> f
 // per-packet RNG state, indexed by Packet.number, so that GPU threads (which can't use thread_local)
 // don't share and race on a single global generator
 inline std::array<utlrandom::generators::Xoshiro128PP, MPKTS> rng;
-using rngstate_type = decltype(rng)::value_type;
+using rngstate_type = utlrandom::generators::Xoshiro128PP;
 #else
 #include <random>
 inline thread_local auto rng{std::mt19937{std::random_device{}()}};
-using rngstate_type = decltype(rng);
+using rngstate_type = std::mt19937;
 #endif
 
 [[nodiscard]] inline auto get_rng_random_seed() -> std::int64_t {
