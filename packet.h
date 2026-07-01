@@ -2,7 +2,11 @@
 #define PACKET_H
 
 #include <cmath>
+#ifdef GPU_ON
+#include "random.h"
+#else
 #include <random>
+#endif
 #include <span>
 #include <string>
 #include <vector>
