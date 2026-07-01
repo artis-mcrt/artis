@@ -2,7 +2,6 @@
 #define PACKET_H
 
 #include <cmath>
-#include <random>
 #include <span>
 #include <string>
 #include <vector>
@@ -77,14 +76,7 @@ struct Packet {
 #ifdef GPU_ON
   // per-packet RNG state so that GPU threads (which can't use thread_local)
   // don't share and race on a single global generator
-  utlrandom::Xoshiro128PP rng{};
-  constexpr DEVICE_FUNC auto rngstate() -> utlrandom::Xoshiro128PP& { return rng; }
-#else
-  // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
-  constexpr auto rngstate() -> std::mt19937& {  // cppcheck-suppress functionStatic
-    thread_local std::mt19937 rng{std::random_device{}()};
-    return rng;
-  }
+  utlrandom::Xoshiro128PP rngstate{};
 #endif
 
   auto operator<=>(const Packet& rhs) const = default;

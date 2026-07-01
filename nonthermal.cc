@@ -2270,7 +2270,7 @@ DEVICE_FUNC void do_ntlepton_deposit(Packet& pkt) {
     // here there is some probability to cause ionisation or excitation to a macroatom packet
     // instead of converting directly to k-packet (unless the heating channel is selected)
 
-    double zrand = rng_uniform(pkt.rngstate());
+    double zrand = rng_uniform(rngstate(pkt));
     // zrand is initially between [0, 1), but we will subtract off each
     // component of the deposition fractions
     // until we end and select transition_ij when zrand < dep_frac_transition_ij
@@ -2281,8 +2281,8 @@ DEVICE_FUNC void do_ntlepton_deposit(Packet& pkt) {
     // const double frac_ionisation = 0.;
 
     if (zrand < frac_ionisation) {
-      const auto [element, lowerion] = select_nt_ionisation(nonemptymgi, pkt.rngstate());
-      const int upperion = nt_random_upperion(nonemptymgi, element, lowerion, true, pkt.rngstate());
+      const auto [element, lowerion] = select_nt_ionisation(nonemptymgi, rngstate(pkt));
+      const int upperion = nt_random_upperion(nonemptymgi, element, lowerion, true, rngstate(pkt));
       // const int upperion = lowerion + 1;
 
       stats::increment(stats::Counter::MA_STAT_ACTIVATION_NTCOLLION);

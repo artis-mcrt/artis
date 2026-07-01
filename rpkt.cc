@@ -234,7 +234,7 @@ auto get_possible_event_expansion_opacity(const int nonemptymgi, Packet& pkt, co
       // interaction occurs
       if constexpr (RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.has_value()) {
         const auto edist = std::max(dist + ((tau_rnd - tau) / chi_tot), 0.);
-        const bool event_is_boundbound = rng_uniform(pkt.rngstate()) <= chi_bb_expansionopac / chi_tot;
+        const bool event_is_boundbound = rng_uniform(rngstate(pkt)) <= chi_bb_expansionopac / chi_tot;
         return {edist, event_is_boundbound};
       }
 
@@ -307,9 +307,9 @@ void electron_scatter_rpkt(Packet& pkt) {
     double p = 0.;
     double x = 1.;
     while (x > p) {
-      M = (2. * rng_uniform_pos(pkt.rngstate())) - 1.;
+      M = (2. * rng_uniform_pos(rngstate(pkt))) - 1.;
       const double mu = pow2(M);
-      phisc = 2 * PI * rng_uniform(pkt.rngstate());
+      phisc = 2 * PI * rng_uniform(rngstate(pkt));
 
       // NB: the rotational matrix R here is chosen in the clockwise direction ("+").
       // In Bulla+2015 equation (10) and (12) refer to the specific case shown in Fig.2 where the angle i2
@@ -320,12 +320,12 @@ void electron_scatter_rpkt(Packet& pkt) {
       p = (mu + 1) + ((mu - 1) * ((cos(2 * phisc) * q_i_cmf) + (sin(2 * phisc) * u_i_cmf)));
 
       // generate a number between 0 and the maximum of the previous function (2)
-      x = 2. * rng_uniform(pkt.rngstate());
+      x = 2. * rng_uniform(rngstate(pkt));
     }
   } else {
     // Assume isotropic scattering
-    M = (2. * rng_uniform(pkt.rngstate())) - 1.;
-    phisc = 2 * PI * rng_uniform(pkt.rngstate());
+    M = (2. * rng_uniform(rngstate(pkt))) - 1.;
+    phisc = 2 * PI * rng_uniform(rngstate(pkt));
   }
 
   Vec3d new_dir_cmf{};
@@ -378,7 +378,7 @@ void rpkt_event_continuum(Packet& pkt, const ContinuumOpacity& chi_rpkt_cont) {
   // continuum process happens. select due to its probabilities sigma/chi_cont, chi_ff/chi_cont,
   // chi_bf/chi_cont
 
-  const auto chi_rnd = rng_uniform(pkt.rngstate()) * chi_cont;
+  const auto chi_rnd = rng_uniform(rngstate(pkt)) * chi_cont;
   if (chi_rnd < chi_escatter) {
     // electron scattering occurs
     // in this case the packet stays a R_PKT of same nu_cmf as before (coherent scattering)
@@ -414,7 +414,7 @@ void rpkt_event_continuum(Packet& pkt, const ContinuumOpacity& chi_rpkt_cont) {
     assert_testmodeonly(phixslist.chi_bf_sum[phixslist.allcontend - 1] == chi_bf_inrest);
 
     // Determine in which continuum the bf-absorption occurs
-    const double chi_bf_rand = rng_uniform(pkt.rngstate()) * chi_bf_inrest;
+    const double chi_bf_rand = rng_uniform(rngstate(pkt)) * chi_bf_inrest;
 
     // first chi_bf_sum[i] such that chi_bf_sum[i] > chi_bf_rand (or the last one if chi_bf_rand is larger than all
     // chi_bf_sum) gives the index of the continuum
@@ -431,7 +431,7 @@ void rpkt_event_continuum(Packet& pkt, const ContinuumOpacity& chi_rpkt_cont) {
     const int phixstargetindex = globals::allcont.phixstargetindex[allcontindex];
 
     // decide whether we go to ionisation energy or to the thermal pool
-    if (rng_uniform(pkt.rngstate()) < nu_edge / nu) {
+    if (rng_uniform(rngstate(pkt)) < nu_edge / nu) {
       stats::increment(stats::Counter::MA_STAT_ACTIVATION_BF);
 
       do_macroatom(pkt, {.element = element,
@@ -511,7 +511,7 @@ auto do_rpkt_step(Packet& pkt, const double t2, ContinuumOpacity& chi_rpkt_cont)
   MacroAtomState pktmastate{};
 
   // draw random optical depth to next physical event
-  const double tau_rnd = -std::log(static_cast<double>(rng_uniform_pos(pkt.rngstate())));
+  const double tau_rnd = -std::log(static_cast<double>(rng_uniform_pos(rngstate(pkt))));
 
   // Finding the distance to the crossing of the grid cell boundaries.
   // boundarydist is the boundary distance to the next grid cell next_cellindex
@@ -590,12 +590,12 @@ auto do_rpkt_step(Packet& pkt, const double t2, ContinuumOpacity& chi_rpkt_cont)
     } else {
       // Probability based thermalisation (i.e. redistribution of the packet frequency) or scattering
       if (RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.value() >= 1. ||
-          rng_uniform(pkt.rngstate()) < RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.value()) {
+          rng_uniform(rngstate(pkt)) < RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.value()) {
         // Thermal redistribution of frequency
 
         pkt.absorptiontype = pktmastate.activatingline;
         pkt.absorptionfreq = pkt.nu_rf;
-        pkt.nu_cmf = sample_planck_times_expansion_opacity(nonemptymgi, pkt.rngstate());
+        pkt.nu_cmf = sample_planck_times_expansion_opacity(nonemptymgi, rngstate(pkt));
         pkt.next_trans = -1;
       }
       rpkt_event_thickcell(pkt);
@@ -846,7 +846,7 @@ DEVICE_FUNC void emit_rpkt(Packet& pkt) {
 
   // Need to assign a new direction. Assume isotropic emission in the cmf
 
-  const auto dir_cmf = get_rand_isotropic_unitvec(pkt.rngstate());
+  const auto dir_cmf = get_rand_isotropic_unitvec(rngstate(pkt));
 
   // This direction is in the cmf - we want to convert it to the rest
   // frame - use aberration of angles. We want to convert from cmf to

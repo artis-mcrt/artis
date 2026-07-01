@@ -10,6 +10,8 @@
 #include <limits>
 #include <type_traits>
 
+#include "packet.h"
+
 namespace utlrandom {
 
 // Helper method to crush large uints to uint32_t,
@@ -164,9 +166,18 @@ constexpr auto generate_canonical_float(Gen& gen) noexcept(noexcept(gen())) -> f
 #ifdef GPU_ON
 #include <chrono>
 using rngstate_type = utlrandom::Xoshiro128PP;
+constexpr DEVICE_FUNC auto rngstate([[maybe_unused]] Packet& packet) -> utlrandom::Xoshiro128PP& {
+  return packet.rngstate;
+}
 #else
 #include <random>
 using rngstate_type = std::mt19937;
+
+constexpr auto rngstate() -> std::mt19937& {
+  thread_local std::mt19937 rng{std::random_device{}()};
+  return rng;
+}
+constexpr auto rngstate([[maybe_unused]] const Packet& packet) -> std::mt19937& { return rngstate(); }
 #endif
 
 [[nodiscard]] inline auto get_rng_random_seed() -> std::int64_t {
