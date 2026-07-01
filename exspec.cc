@@ -168,7 +168,7 @@ auto main(int argc, char* argv[]) -> int {
   assert_always(globals::nprocs == 1);
 
   // Read in parameters from input.txt
-  read_parameterfile();
+  read_parameterfile({});
 
   read_atomicdata();
 

@@ -53,20 +53,18 @@ constexpr auto get_packets_text_header() -> std::string {
 void place_pellet(const double e_cmf_per_packet, const std::span<const double> en_cumulative, const int pktnumber,
                   Packet& pkt, const std::span<const double> energy_per_mass_nonemptymgi_decaypath) {
   const auto etot_simtime = en_cumulative.back();
-  const double targetval = rng_uniform(pktnumber) * etot_simtime;
+  const double targetval = rng_uniform(get_rngstate(pkt)) * etot_simtime;
 
   // First choose a position for the pellet. In the cell.
   // first i such that en_cumulative[i] > targetval
   const int cellindex = static_cast<int>(std::ranges::upper_bound(en_cumulative, targetval) - en_cumulative.begin());
   assert_always(cellindex < grid::ngrid);
 
-  pkt = Packet{};
   pkt.cellindex = cellindex;
   pkt.number = pktnumber;  // record the packets number for debugging
   pkt.prop_time = globals::tmin;
-  pkt.originated_from_particlenotgamma = false;
 
-  pkt.pos = grid::get_propcell_random_xyz_position_tmin(cellindex, pktnumber);
+  pkt.pos = grid::get_propcell_random_xyz_position_tmin(cellindex, get_rngstate(pkt));
 
 #ifndef GPU_ON
   // ensure that the random position was inside the cell we selected
@@ -84,8 +82,6 @@ void place_pellet(const double e_cmf_per_packet, const std::span<const double> e
   pkt.dir = vec_norm(pkt.pos);  // assign dir = pos / vec_len(pos)
   const double dopplerfactor = calculate_doppler_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
   pkt.e_rf = pkt.e_cmf / dopplerfactor;
-
-  pkt.trueemissiontype = EMTYPE_NOTSET;
 }
 
 }  // anonymous namespace

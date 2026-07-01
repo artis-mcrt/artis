@@ -1638,7 +1638,7 @@ void setup_nlte_levels() {
 }  // anonymous namespace
 
 // read input parameters from input.txt
-void read_parameterfile() {
+void read_parameterfile(std::span<Packet> packets) {
   auto file = fstream_required("input.txt", std::ios::in);
 
   std::string line;
@@ -1660,15 +1660,27 @@ void read_parameterfile() {
 #endif
   }
 
-  // For MPI parallelisation, the random seed is changed based on the rank of the process
-  // Multi-threaded runs (OpenMP or stdpar) are not reproducible due to accumulation to shared memory, so the seed is
-  // randomly generated
-  const auto tid = get_thread_num();
-  auto rngseed = (tid == 0) ? pre_zseed + static_cast<std::int64_t>(13 * ((globals::my_rank * get_max_threads()) + tid))
-                            : get_rng_random_seed();
-
-  rng_seed(rngseed);
-  printlnlog("rank {}: thread {} has rngseed {}", globals::my_rank, tid, rngseed);
+  if (!packets.empty()) {
+    // For MPI parallelisation, the random seed is changed based on the rank of the process
+    // Multi-threaded runs (OpenMP or stdpar) are not reproducible due to accumulation to shared memory, so the seed is
+    // randomly generated
+    const auto tid = get_thread_num();
+    auto rngseed = (tid == 0)
+                       ? pre_zseed + static_cast<std::int64_t>(13 * ((globals::my_rank * get_max_threads()) + tid))
+                       : get_rng_random_seed();
+#ifdef GPU_ON
+    // give every packet its own independently-seeded generator
+    for (int packetnumber = 0; packetnumber < MPKTS; packetnumber++) {
+      get_rngstate(packets[packetnumber]).seed(rngseed + packetnumber);
+    }
+#else
+    get_rngstate().seed(rngseed);
+    for (int n = 0; n < 100; n++) {
+      rng_uniform(get_rngstate());
+    }
+#endif
+    printlnlog("rank {}: thread {} has rngseed {}", globals::my_rank, tid, rngseed);
+  }
 
   assert_always(get_noncommentline(file, line));
   std::istringstream{line} >> globals::ntimesteps;  // number of time steps

@@ -2,11 +2,14 @@
 #define INPUT_H
 
 #include <istream>
+#include <span>
 #include <string>
 #include <string_view>
 
+#include "packet.h"
+
 void read_atomicdata();
-void read_parameterfile();
+void read_parameterfile(std::span<Packet> packets);
 void update_parameterfile(int nts);
 void setup_timesteps();
 

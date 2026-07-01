@@ -41,8 +41,6 @@ constexpr T _default_seed = (std::numeric_limits<T>::max() / 2) + 1;
 // an "overall decent" default seed - doesn't have too many zeroes,
 // unlikely to accidentally match with a user-defined seed
 
-namespace generators {
-
 // Implementation of 32-bit splitmix adopted from MurmurHash3, based on paper by Guy L. Steele,
 // Doug Lea, and Christine H. Flood. 2014. "Fast splittable pseudorandom number generators"
 // see http://marc-b-reynolds.github.io/shf/2017/09/27/LPRNS.html
@@ -129,9 +127,9 @@ class Xoshiro128PP {
     this->s[3] = std::rotl(this->s[3], 11);
     return result;
   }
-};
 
-}  // namespace generators
+  constexpr auto operator<=>(const Xoshiro128PP&) const noexcept = default;
+};
 
 template <class Gen>
 constexpr auto generate_canonical_float(Gen& gen) noexcept(noexcept(gen())) -> float {
@@ -165,15 +163,10 @@ constexpr auto generate_canonical_float(Gen& gen) noexcept(noexcept(gen())) -> f
 
 #ifdef GPU_ON
 #include <chrono>
-#include <vector>
-
-#include "artisoptions.h"  // for MPKTS
-// per-packet RNG state, indexed by Packet.number, so that GPU threads (which can't use thread_local)
-// don't share and race on a single global generator
-inline std::array<utlrandom::generators::Xoshiro128PP, MPKTS> rng;
+using rngstate_type = utlrandom::Xoshiro128PP;
 #else
 #include <random>
-inline thread_local auto rng{std::mt19937{std::random_device{}()}};
+using rngstate_type = std::mt19937;
 #endif
 
 [[nodiscard]] inline auto get_rng_random_seed() -> std::int64_t {
@@ -184,15 +177,15 @@ inline thread_local auto rng{std::mt19937{std::random_device{}()}};
 #endif
 }
 
-inline auto rng_uniform([[maybe_unused]] const int packetnumber) -> float {
+inline auto rng_uniform(rngstate_type& rngstate) -> float {
   while (true) {
     // std::random can't be used in device code on nvc++ (long double not supported)
     // so use custom generator instead
 #ifdef GPU_ON
-    const auto zrand = utlrandom::generate_canonical_float(rng[packetnumber]);
+    const auto zrand = utlrandom::generate_canonical_float(rngstate);
 #else
     // use std::generate_canonical in CPU mode, because it seems to be faster
-    const auto zrand = std::generate_canonical<float, std::numeric_limits<float>::digits>(rng);
+    const auto zrand = std::generate_canonical<float, std::numeric_limits<float>::digits>(rngstate);
 #endif
     if (zrand != 1.) {
       return zrand;
@@ -200,27 +193,13 @@ inline auto rng_uniform([[maybe_unused]] const int packetnumber) -> float {
   }
 }
 
-inline auto rng_uniform_pos(const int packetnumber) -> float {
+inline auto rng_uniform_pos(rngstate_type& rngstate) -> float {
   while (true) {
-    const auto zrand = rng_uniform(packetnumber);
+    const auto zrand = rng_uniform(rngstate);
     if (zrand > 0) {
       return zrand;
     }
   }
-}
-
-inline auto rng_seed(auto&& seedval) {
-#ifdef GPU_ON
-  // give every packet its own independently-seeded generator
-  for (int packetnumber = 0; packetnumber < MPKTS; packetnumber++) {
-    rng[packetnumber].seed(static_cast<std::uint32_t>(seedval) + packetnumber);
-  }
-#else
-  rng.seed(seedval);
-  for (int n = 0; n < 100; n++) {
-    rng_uniform(0);
-  }
-#endif
 }
 
 #endif  // RANDOM_H
