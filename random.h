@@ -211,18 +211,4 @@ inline auto rng_uniform_pos(rngstate_type& rngstate) -> float {
   }
 }
 
-inline auto rng_seed(auto&& seedval) {
-#ifdef GPU_ON
-  // give every packet its own independently-seeded generator
-  for (int packetnumber = 0; packetnumber < MPKTS; packetnumber++) {
-    rng[packetnumber].seed(static_cast<std::uint32_t>(seedval) + packetnumber);
-  }
-#else
-  rng.seed(seedval);
-  for (int n = 0; n < 100; n++) {
-    rng_uniform(rng);
-  }
-#endif
-}
-
 #endif  // RANDOM_H

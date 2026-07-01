@@ -1667,7 +1667,17 @@ void read_parameterfile() {
   auto rngseed = (tid == 0) ? pre_zseed + static_cast<std::int64_t>(13 * ((globals::my_rank * get_max_threads()) + tid))
                             : get_rng_random_seed();
 
-  rng_seed(rngseed);
+#ifdef GPU_ON
+  // give every packet its own independently-seeded generator
+  for (int packetnumber = 0; packetnumber < MPKTS; packetnumber++) {
+    rng[packetnumber].seed(static_cast<std::uint32_t>(rngseed) + packetnumber);
+  }
+#else
+  rng.seed(rngseed);
+  for (int n = 0; n < 100; n++) {
+    rng_uniform(rng);
+  }
+#endif
   printlnlog("rank {}: thread {} has rngseed {}", globals::my_rank, tid, rngseed);
 
   assert_always(get_noncommentline(file, line));
