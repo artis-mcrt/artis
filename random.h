@@ -129,6 +129,8 @@ class Xoshiro128PP {
     this->s[3] = std::rotl(this->s[3], 11);
     return result;
   }
+
+  constexpr auto operator<=>(const Xoshiro128PP&) const noexcept = default;
 };
 
 }  // namespace generators
@@ -164,6 +166,7 @@ constexpr auto generate_canonical_float(Gen& gen) noexcept(noexcept(gen())) -> f
 }  // namespace utlrandom
 
 #ifdef GPU_ON
+#include <chrono>
 using rngstate_type = utlrandom::generators::Xoshiro128PP;
 #else
 #include <random>

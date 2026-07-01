@@ -2,16 +2,15 @@
 #define PACKET_H
 
 #include <cmath>
-#ifdef GPU_ON
-#include "random.h"
-#else
 #include <random>
-#endif
 #include <span>
 #include <string>
 #include <vector>
 
 #include "constants.h"
+#ifdef GPU_ON
+#include "random.h"
+#endif
 
 enum packet_type : int {
   TYPE_NONE = 0,
@@ -78,13 +77,12 @@ struct Packet {
 #ifdef GPU_ON
   // per-packet RNG state so that GPU threads (which can't use thread_local)
   // don't share and race on a single global generator
-  utlrandom::generators::Xoshiro128PP rng;
-  auto rngstate() -> utlrandom::generators::Xoshiro128PP& { return rng[number]; }
+  utlrandom::generators::Xoshiro128PP rng{std::random_device{}()};
 #else
   inline static thread_local std::mt19937 rng{std::random_device{}()};
-  // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
-  auto rngstate() -> std::mt19937& { return rng; }
 #endif
+  // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
+  auto rngstate() -> auto& { return rng; }
 
   auto operator<=>(const Packet& rhs) const = default;
 };
