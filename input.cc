@@ -1661,6 +1661,12 @@ void read_parameterfile(std::span<Packet> packets) {
   }
 
   if (!packets.empty()) {
+#ifdef GPU_ON
+    // give every packet its own independently-seeded generator
+    for (int packetnumber = 0; packetnumber < MPKTS; packetnumber++) {
+      packets[packetnumber].rngstate().seed(get_rng_random_seed());
+    }
+#else
     // For MPI parallelisation, the random seed is changed based on the rank of the process
     // Multi-threaded runs (OpenMP or stdpar) are not reproducible due to accumulation to shared memory, so the seed is
     // randomly generated
@@ -1669,12 +1675,6 @@ void read_parameterfile(std::span<Packet> packets) {
                        ? pre_zseed + static_cast<std::int64_t>(13 * ((globals::my_rank * get_max_threads()) + tid))
                        : get_rng_random_seed();
 
-#ifdef GPU_ON
-    // give every packet its own independently-seeded generator
-    for (int packetnumber = 0; packetnumber < MPKTS; packetnumber++) {
-      packets[packetnumber].rngstate().seed(static_cast<std::uint32_t>(rngseed) + packetnumber);
-    }
-#else
     packets[0].rngstate().seed(rngseed);
     for (int n = 0; n < 100; n++) {
       rng_uniform(packets[0].rngstate());
