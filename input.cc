@@ -1679,8 +1679,8 @@ void read_parameterfile(std::span<Packet> packets) {
     for (int n = 0; n < 100; n++) {
       rng_uniform(packets[0].rngstate());
     }
-#endif
     printlnlog("rank {}: thread {} has rngseed {}", globals::my_rank, tid, rngseed);
+#endif
   }
 
   assert_always(get_noncommentline(file, line));
