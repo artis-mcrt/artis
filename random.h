@@ -41,8 +41,6 @@ constexpr T _default_seed = (std::numeric_limits<T>::max() / 2) + 1;
 // an "overall decent" default seed - doesn't have too many zeroes,
 // unlikely to accidentally match with a user-defined seed
 
-namespace generators {
-
 // Implementation of 32-bit splitmix adopted from MurmurHash3, based on paper by Guy L. Steele,
 // Doug Lea, and Christine H. Flood. 2014. "Fast splittable pseudorandom number generators"
 // see http://marc-b-reynolds.github.io/shf/2017/09/27/LPRNS.html
@@ -133,8 +131,6 @@ class Xoshiro128PP {
   constexpr auto operator<=>(const Xoshiro128PP&) const noexcept = default;
 };
 
-}  // namespace generators
-
 template <class Gen>
 constexpr auto generate_canonical_float(Gen& gen) noexcept(noexcept(gen())) -> float {
   using generated_type = Gen::result_type;
@@ -167,7 +163,7 @@ constexpr auto generate_canonical_float(Gen& gen) noexcept(noexcept(gen())) -> f
 
 #ifdef GPU_ON
 #include <chrono>
-using rngstate_type = utlrandom::generators::Xoshiro128PP;
+using rngstate_type = utlrandom::Xoshiro128PP;
 #else
 #include <random>
 using rngstate_type = std::mt19937;

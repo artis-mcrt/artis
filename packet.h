@@ -77,7 +77,7 @@ struct Packet {
 #ifdef GPU_ON
   // per-packet RNG state so that GPU threads (which can't use thread_local)
   // don't share and race on a single global generator
-  utlrandom::generators::Xoshiro128PP rng{std::random_device{}()};
+  utlrandom::Xoshiro128PP rng{std::random_device{}()};
   auto rngstate() -> auto& { return rng; }
 #else
   // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
