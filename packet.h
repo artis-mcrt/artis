@@ -81,7 +81,7 @@ struct Packet {
   constexpr DEVICE_FUNC auto rngstate() -> utlrandom::Xoshiro128PP& { return rng; }
 #else
   // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
-  constexpr auto rngstate() -> std::mt19937& {
+  constexpr auto rngstate() -> std::mt19937& {  // cppcheck-suppress functionStatic
     thread_local std::mt19937 rng{std::random_device{}()};
     return rng;
   }
