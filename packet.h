@@ -78,10 +78,10 @@ struct Packet {
   // per-packet RNG state so that GPU threads (which can't use thread_local)
   // don't share and race on a single global generator
   utlrandom::Xoshiro128PP rng{};
-  DEVICE_FUNC auto rngstate() -> utlrandom::Xoshiro128PP& { return rng; }  // cppcheck-suppress functionStatic
+  constexpr DEVICE_FUNC auto rngstate() -> utlrandom::Xoshiro128PP& { return rng; }  // cppcheck-suppress functionStatic
 #else
   // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
-  auto rngstate() -> std::mt19937& {
+  constexpr auto rngstate() -> std::mt19937& {
     thread_local std::mt19937 rng{std::random_device{}()};
     return rng;
   }
