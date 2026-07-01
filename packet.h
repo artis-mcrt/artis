@@ -78,11 +78,16 @@ struct Packet {
   // per-packet RNG state so that GPU threads (which can't use thread_local)
   // don't share and race on a single global generator
   utlrandom::generators::Xoshiro128PP rng{std::random_device{}()};
-#else
-  inline static thread_local std::mt19937 rng{std::random_device{}()};
-#endif
-  // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
   auto rngstate() -> auto& { return rng; }
+#else
+  // function-local thread_local (rather than a static thread_local member) avoids
+  // an Apple LTO/linker failure to emit the TLS-init wrapper for the member
+  // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
+  auto rngstate() -> std::mt19937& {
+    thread_local std::mt19937 rng{std::random_device{}()};
+    return rng;
+  }
+#endif
 
   auto operator<=>(const Packet& rhs) const = default;
 };
