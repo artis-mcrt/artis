@@ -1480,9 +1480,8 @@ void read_atomicdata_files() {
   const double linelist_mem_MB =
       ((globals::nlines * sizeof(double))  // nu
        + (globals::nlines * sizeof(float))  // einstein_A
-       + (globals::nlines * sizeof(int) * 4)  // elementindex, ionindex, upperlevelindex, lowerlevelindex
-       + (globals::nlines * sizeof(int) * 2)  // uniquelevelindex_lower, uniquelevelindex_upper
-       + (globals::nlines * sizeof(double) * 2)  // B_ul, gupper_over_glower
+       + (globals::nlines * sizeof(int) * 4)  // elementindex, ionindex, uniquelevelindex_lower, uniquelevelindex_upper
+       + (globals::nlines * sizeof(double) * 2)  // B_ul, B_lu
        ) /
       1024. / 1024;
 
