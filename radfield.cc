@@ -513,7 +513,7 @@ void init() {
         // else if (ionstage == 2 && lowerlevel == 9 && upperlevel == 64)
         //   addline = true;
 
-        if (lowerlevel <= 15) {  // ionstage <= 3 && A_ul > 1e3 &&
+        if (lowerlevel <= 15) {  // selection for detailed estimators (by lower-level index)
           addline = true;
         }
 
