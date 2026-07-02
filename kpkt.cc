@@ -489,9 +489,8 @@ DEVICE_FUNC void do_kpkt(Packet& pkt, const double t2, const int nts) {
     const double contrib_low = (i > ionstart) ? get_cellcache(nonemptymgi).cooling_contrib[i - 1] : 0.;
 
     double contrib = contrib_low;
-    const int level = coolinglist_level[i];
     const auto ionuniquelevelindexstart = get_ionuniquelevelindexstart(element, ion);
-    const auto uniquelevelindex = ionuniquelevelindexstart + level;
+    const auto uniquelevelindex = ionuniquelevelindexstart + coolinglist_level[i];
     const double epsilon_current = epsilon(uniquelevelindex);
     const double nnlevel = get_cellcache_levelpop(nonemptymgi, uniquelevelindex);
     const double statweight = stat_weight(uniquelevelindex);
