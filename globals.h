@@ -205,7 +205,7 @@ struct TransitionLines {
   MPI_shared_array<const int> uniquelevelindex_lower;  // globally unique index of the lower level of the transition
   MPI_shared_array<const int> uniquelevelindex_upper;  // globally unique index of the upper level of the transition
   MPI_shared_array<const double> B_ul;  // Einstein B coefficient for stimulated emission
-  MPI_shared_array<const double> B_lu;  // statweight(upper) / statweight(lower) * B_ul
+  MPI_shared_array<const double> B_lu;  // Einstein B coefficient for absorption (B_lu = (g_u/g_l) * B_ul)
 };
 inline TransitionLines linelist{};
 inline int nlines{-1};
