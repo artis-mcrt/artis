@@ -150,12 +150,18 @@ void initialise_linestat_file() {
   std::println(linestat_file, "");
 
   for (int i = 0; i < globals::nlines; i++) {
-    std::print(linestat_file, "{} ", (globals::linelist.upperlevelindex[i] + 1));
+    const auto ionuniquelevelindexstart =
+        get_ionuniquelevelindexstart(globals::linelist.elementindex[i], globals::linelist.ionindex[i]);
+    const auto upper = globals::linelist.uniquelevelindex_upper[i] - ionuniquelevelindexstart;
+    std::print(linestat_file, "{} ", (upper + 1));
   }
   std::println(linestat_file, "");
 
   for (int i = 0; i < globals::nlines; i++) {
-    std::print(linestat_file, "{} ", (globals::linelist.lowerlevelindex[i] + 1));
+    const auto ionuniquelevelindexstart =
+        get_ionuniquelevelindexstart(globals::linelist.elementindex[i], globals::linelist.ionindex[i]);
+    const auto lower = globals::linelist.uniquelevelindex_lower[i] - ionuniquelevelindexstart;
+    std::print(linestat_file, "{} ", (lower + 1));
   }
   std::println(linestat_file, "");
 }
