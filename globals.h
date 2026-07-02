@@ -203,8 +203,6 @@ struct TransitionLines {
   MPI_shared_array<const int> elementindex;  // It's a transition of element (not its atomic number,
                                              // but the (x-1)th element included in the simulation.
   MPI_shared_array<const int> ionindex;  // The same for the elements ion
-  MPI_shared_array<const int> upperlevelindex;  // And the participating upper
-  MPI_shared_array<const int> lowerlevelindex;  // and lower levels
 
   // precomputed values for the Sobolev optical depth calculation in the r-packet propagation hot loop,
   // avoiding the element/ion index and stat_weight lookup chains per line
