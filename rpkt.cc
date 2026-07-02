@@ -61,18 +61,27 @@ template <bool USECELLCACHE>
   const int uniquelevelindex_lower = globals::linelist.uniquelevelindex_lower[lineindex];
   const int uniquelevelindex_upper = globals::linelist.uniquelevelindex_upper[lineindex];
 
-  const double n_l = USECELLCACHE ? get_cellcache_levelpop(nonemptymgi, uniquelevelindex_lower)
-                                  : calculate_levelpop(nonemptymgi, globals::linelist.elementindex[lineindex],
-                                                       globals::linelist.ionindex[lineindex],
-                                                       globals::linelist.lowerlevelindex[lineindex]);
+  double n_l{NAN};
+  double n_u{NAN};
+  if constexpr (USECELLCACHE) {
+    n_l = get_cellcache_levelpop(nonemptymgi, uniquelevelindex_lower);
+    n_u = get_cellcache_levelpop(nonemptymgi, uniquelevelindex_upper);
+  } else {
+    const auto element = globals::linelist.elementindex[lineindex];
+    const auto ion = globals::linelist.ionindex[lineindex];
+    const auto ionuniquelevelindexstart =
+        get_ionuniquelevelindexstart(element, ion);  // get the starting index of the unique levels for this ion
+    const auto lower_uniquelevelindex = globals::linelist.uniquelevelindex_lower[lineindex];
+    const auto upper_uniquelevelindex = globals::linelist.uniquelevelindex_upper[lineindex];
+    const int lower = lower_uniquelevelindex - ionuniquelevelindexstart;
+    const int upper = upper_uniquelevelindex - ionuniquelevelindexstart;
+    n_l = calculate_levelpop(nonemptymgi, element, ion, lower);
+    n_u = calculate_levelpop(nonemptymgi, element, ion, upper);
+  }
 
   const double B_ul = globals::linelist.B_ul[lineindex];
   const double B_lu = globals::linelist.B_lu[lineindex];
 
-  const double n_u = USECELLCACHE ? get_cellcache_levelpop(nonemptymgi, uniquelevelindex_upper)
-                                  : calculate_levelpop(nonemptymgi, globals::linelist.elementindex[lineindex],
-                                                       globals::linelist.ionindex[lineindex],
-                                                       globals::linelist.upperlevelindex[lineindex]);
   return std::max(((B_lu * n_l) - (B_ul * n_u)) * HCLIGHTOVERFOURPI * t_current, 0.);
 }
 
