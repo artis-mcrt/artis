@@ -498,10 +498,10 @@ void init() {
       const int element = globals::linelist.elementindex[i];
       const int Z = get_atomicnumber(element);
       if (Z == 26) {
-        const int lowerlevel = globals::linelist.lowerlevelindex[i];
-        // const int upperlevel = linelist[i].upperlevelindex;
-        // const int ion = linelist[i].ionindex;
-        // const int ionstage = get_ionstage(element, ion);
+        const int ion = globals::linelist.ionindex[i];
+        const auto ionuniquelevelindexstart = get_ionuniquelevelindexstart(element, ion);
+        const auto lower_uniquelevelindex = globals::linelist.uniquelevelindex_lower[i];
+        const int lowerlevel = lower_uniquelevelindex - ionuniquelevelindexstart;
         const double A_ul = globals::linelist.einstein_A[i];
 
         bool addline = false;
