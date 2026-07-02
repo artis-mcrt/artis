@@ -153,11 +153,10 @@ auto get_possible_event(const int nonemptymgi, const Packet& pkt, const Continuu
 
       if ((tau_rnd - tau) <= (tau_cont + tau_line)) {
         // bound-bound process occurs
+        const auto [element, ion, level] =
+            get_levelfromuniquelevelindex(globals::linelist.uniquelevelindex_upper[lineindex]);
 
-        mastate = {.element = linelist.elementindex[lineindex],
-                   .ion = linelist.ionindex[lineindex],
-                   .level = linelist.upperlevelindex[lineindex],
-                   .activatingline = lineindex};
+        mastate = {.element = element, .ion = ion, .level = level, .activatingline = lineindex};
 
         if constexpr (DETAILED_LINE_ESTIMATORS_ON) {
           move_pkt_withtime(pos, pkt.dir, prop_time, pkt.nu_rf, nu_cmf, pkt.e_rf, e_cmf, ldist);
