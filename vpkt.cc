@@ -276,11 +276,14 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
 
           const int element = globals::linelist.elementindex[lineindex];
           const int ion = globals::linelist.ionindex[lineindex];
-          const int upper = globals::linelist.upperlevelindex[lineindex];
-          const int lower = globals::linelist.lowerlevelindex[lineindex];
+          const auto ionuniquelevelindexstart = get_ionuniquelevelindexstart(element, ion);
+          const auto lower_uniquelevelindex = globals::linelist.uniquelevelindex_lower[lineindex];
+          const auto upper_uniquelevelindex = globals::linelist.uniquelevelindex_upper[lineindex];
+          const int lower = lower_uniquelevelindex - ionuniquelevelindexstart;
+          const int upper = upper_uniquelevelindex - ionuniquelevelindexstart;
 
-          const double B_ul = CLIGHTSQUAREDOVERTWOH / pow3(nutrans) * globals::linelist.einstein_A[lineindex];
-          const double B_lu = stat_weight(element, ion, upper) / stat_weight(element, ion, lower) * B_ul;
+          const double B_ul = globals::linelist.B_ul[lineindex];
+          const double B_lu = globals::linelist.B_lu[lineindex];
 
           const auto n_u = calculate_levelpop(nonemptymgi, element, ion, upper);
           const auto n_l = calculate_levelpop(nonemptymgi, element, ion, lower);
