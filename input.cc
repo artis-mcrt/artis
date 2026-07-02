@@ -1446,7 +1446,7 @@ void read_atomicdata_files() {
   auto linelist_uniquelevelindex_lower = MPI_shared_array<int>(globals::nlines);
   auto linelist_uniquelevelindex_upper = MPI_shared_array<int>(globals::nlines);
   auto linelist_B_ul = MPI_shared_array<double>(globals::nlines);
-  auto linelist_gupper_over_glower = MPI_shared_array<double>(globals::nlines);
+  auto linelist_B_lu = MPI_shared_array<double>(globals::nlines);
 
   if (globals::rank_in_node == 0) {
     assert_always(std::ssize(temp_linelist) == globals::nlines);
@@ -1468,7 +1468,7 @@ void read_atomicdata_files() {
       linelist_uniquelevelindex_lower[t] = uniquelevelindex_lower;
       linelist_uniquelevelindex_upper[t] = uniquelevelindex_upper;
       linelist_B_ul[t] = CLIGHTSQUAREDOVERTWOH / pow3(linelist_nu[t]) * linelist_einstein_A[t];
-      linelist_gupper_over_glower[t] = stat_weight(uniquelevelindex_upper) / stat_weight(uniquelevelindex_lower);
+      linelist_B_lu[t] = stat_weight(uniquelevelindex_upper) / stat_weight(uniquelevelindex_lower) * linelist_B_ul[t];
     }
   }
   temp_linelist.clear();
@@ -1484,7 +1484,7 @@ void read_atomicdata_files() {
   globals::linelist.uniquelevelindex_lower = std::move(linelist_uniquelevelindex_lower);
   globals::linelist.uniquelevelindex_upper = std::move(linelist_uniquelevelindex_upper);
   globals::linelist.B_ul = std::move(linelist_B_ul);
-  globals::linelist.gupper_over_glower = std::move(linelist_gupper_over_glower);
+  globals::linelist.B_lu = std::move(linelist_B_lu);
 
   const double linelist_mem_MB =
       ((globals::nlines * sizeof(double))  // nu

@@ -211,7 +211,7 @@ struct TransitionLines {
   MPI_shared_array<const int> uniquelevelindex_lower;  // cellcache level population index of the lower level
   MPI_shared_array<const int> uniquelevelindex_upper;  // cellcache level population index of the upper level
   MPI_shared_array<const double> B_ul;  // Einstein B coefficient for stimulated emission
-  MPI_shared_array<const double> gupper_over_glower;  // ratio of upper to lower statistical weights (B_lu / B_ul)
+  MPI_shared_array<const double> B_lu;  // ratio of upper to lower statistical weights (B_lu / B_ul)
 };
 inline TransitionLines linelist{};
 inline int nlines{-1};

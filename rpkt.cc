@@ -67,7 +67,7 @@ template <bool USECELLCACHE>
                                                        globals::linelist.lowerlevelindex[lineindex]);
 
   const double B_ul = globals::linelist.B_ul[lineindex];
-  const double B_lu = globals::linelist.gupper_over_glower[lineindex] * B_ul;
+  const double B_lu = globals::linelist.B_lu[lineindex];
 
   const double n_u = USECELLCACHE ? get_cellcache_levelpop(nonemptymgi, uniquelevelindex_upper)
                                   : calculate_levelpop(nonemptymgi, globals::linelist.elementindex[lineindex],
