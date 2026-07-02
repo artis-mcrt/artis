@@ -502,7 +502,6 @@ void init() {
         const auto ionuniquelevelindexstart = get_ionuniquelevelindexstart(element, ion);
         const auto lower_uniquelevelindex = globals::linelist.uniquelevelindex_lower[i];
         const int lowerlevel = lower_uniquelevelindex - ionuniquelevelindexstart;
-        const double A_ul = globals::linelist.einstein_A[i];
 
         bool addline = false;
         // if (ionstage == 1 && lowerlevel == 6 && upperlevel == 55)
@@ -514,7 +513,7 @@ void init() {
         // else if (ionstage == 2 && lowerlevel == 9 && upperlevel == 64)
         //   addline = true;
 
-        if (lowerlevel <= 15 && A_ul > 0.) {  // ionstage <= 3 && A_ul > 1e3 &&
+        if (lowerlevel <= 15) {  // ionstage <= 3 && A_ul > 1e3 &&
           addline = true;
         }
 

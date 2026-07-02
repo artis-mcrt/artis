@@ -199,7 +199,6 @@ inline MPI_shared_array<Ion> allions;
 
 struct TransitionLines {
   MPI_shared_array<const double> nu;  // Frequency of the line transition
-  MPI_shared_array<const float> einstein_A;
   MPI_shared_array<const int> elementindex;  // It's a transition of element (not its atomic number,
                                              // but the (x-1)th element included in the simulation.
   MPI_shared_array<const int> ionindex;  // The same for the elements ion

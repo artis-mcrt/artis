@@ -1438,7 +1438,6 @@ void read_atomicdata_files() {
   // create a linelist shared on node and then copy data across, freeing the local copy
 
   auto linelist_nu = MPI_shared_array<double>(globals::nlines);
-  auto linelist_einstein_A = MPI_shared_array<float>(globals::nlines);
   auto linelist_elementindex = MPI_shared_array<int>(globals::nlines);
   auto linelist_ionindex = MPI_shared_array<int>(globals::nlines);
   auto linelist_uniquelevelindex_lower = MPI_shared_array<int>(globals::nlines);
@@ -1450,7 +1449,6 @@ void read_atomicdata_files() {
     assert_always(std::ssize(temp_linelist) == globals::nlines);
     for (int t = 0; t < globals::nlines; t++) {
       linelist_nu[t] = temp_linelist[t].nu;
-      linelist_einstein_A[t] = temp_linelist[t].einstein_A;
       linelist_elementindex[t] = temp_linelist[t].elementindex;
       linelist_ionindex[t] = temp_linelist[t].ionindex;
 
@@ -1460,7 +1458,7 @@ void read_atomicdata_files() {
       const int uniquelevelindex_upper = ionuniquelevelindexstart + temp_linelist[t].upperlevelindex;
       linelist_uniquelevelindex_lower[t] = uniquelevelindex_lower;
       linelist_uniquelevelindex_upper[t] = uniquelevelindex_upper;
-      linelist_B_ul[t] = CLIGHTSQUAREDOVERTWOH / pow3(linelist_nu[t]) * linelist_einstein_A[t];
+      linelist_B_ul[t] = CLIGHTSQUAREDOVERTWOH / pow3(linelist_nu[t]) * temp_linelist[t].einstein_A;
       linelist_B_lu[t] = stat_weight(uniquelevelindex_upper) / stat_weight(uniquelevelindex_lower) * linelist_B_ul[t];
     }
   }
@@ -1469,7 +1467,6 @@ void read_atomicdata_files() {
   MPI_Barrier_node();
 
   globals::linelist.nu = std::move(linelist_nu);
-  globals::linelist.einstein_A = std::move(linelist_einstein_A);
   globals::linelist.elementindex = std::move(linelist_elementindex);
   globals::linelist.ionindex = std::move(linelist_ionindex);
   globals::linelist.uniquelevelindex_lower = std::move(linelist_uniquelevelindex_lower);
@@ -1479,7 +1476,6 @@ void read_atomicdata_files() {
 
   const double linelist_mem_MB =
       ((globals::nlines * sizeof(double))  // nu
-       + (globals::nlines * sizeof(float))  // einstein_A
        + (globals::nlines * sizeof(int) * 4)  // elementindex, ionindex, uniquelevelindex_lower, uniquelevelindex_upper
        + (globals::nlines * sizeof(double) * 2)  // B_ul, B_lu
        ) /

@@ -95,8 +95,8 @@ void printout_tracemission_stats() {
     if (globals::nlines > maxlinesprinted) {
       nlines_limited = maxlinesprinted;
     }
-    printlnlog("{:>17} {:>4} {:>9} {:>5} {:>5} {:>8} {:>8} {:>4} {:>7} {:>7} {:>7} {:>7}", "energy", "Z", "ionstage",
-               "upper", "lower", "coll_str", "A", "forb", "lambda", "<v_rad>", "B_lu", "B_ul");
+    printlnlog("{:>17} {:>4} {:>9} {:>5} {:>8} {:>8} {:>4} {:>7} {:>7} {:>7} {:>7}", "energy", "Z", "ionstage", "upper",
+               "lower", "coll_str", "forb", "lambda", "<v_rad>", "B_lu", "B_ul");
     for (int i = 0; i < nlines_limited; i++) {
       double encontrib{NAN};
       double totalenergy{NAN};
@@ -143,10 +143,10 @@ void printout_tracemission_stats() {
         }
         assert_always(downtransid != -1);
 
-        printlnlog("{:7.2e} ({:5.1f}%) {:4} {:9} {:5} {:5} {:8.1f} {:8.2e} {:4} {:7.1f} {:7.1f} {:7.1e} {:7.1e}",
-                   encontrib, 100 * encontrib / totalenergy, get_atomicnumber(element), get_ionstage(element, ion),
-                   upper, lower, globals::alltrans.coll_str[downtransid], globals::linelist.einstein_A[lineindex],
-                   static_cast<int>(globals::alltrans.forbidden[downtransid]), linelambda, v_rad, B_lu, B_ul);
+        printlnlog("{:7.2e} ({:5.1f}%) {:4} {:9} {:5} {:5} {:8.1f}  {:4} {:7.1f} {:7.1f} {:7.1e} {:7.1e}", encontrib,
+                   100 * encontrib / totalenergy, get_atomicnumber(element), get_ionstage(element, ion), upper, lower,
+                   globals::alltrans.coll_str[downtransid], static_cast<int>(globals::alltrans.forbidden[downtransid]),
+                   linelambda, v_rad, B_lu, B_ul);
       } else {
         break;
       }
