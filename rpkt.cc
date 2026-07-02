@@ -69,8 +69,7 @@ template <bool USECELLCACHE>
   } else {
     const auto element = globals::linelist.elementindex[lineindex];
     const auto ion = globals::linelist.ionindex[lineindex];
-    const auto ionuniquelevelindexstart =
-        get_ionuniquelevelindexstart(element, ion);  // get the starting index of the unique levels for this ion
+    const auto ionuniquelevelindexstart = get_ionuniquelevelindexstart(element, ion);
     const auto lower_uniquelevelindex = globals::linelist.uniquelevelindex_lower[lineindex];
     const auto upper_uniquelevelindex = globals::linelist.uniquelevelindex_upper[lineindex];
     const int lower = lower_uniquelevelindex - ionuniquelevelindexstart;
