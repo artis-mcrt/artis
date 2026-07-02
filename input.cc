@@ -1443,6 +1443,10 @@ void read_atomicdata_files() {
   auto linelist_ionindex = MPI_shared_array<int>(globals::nlines);
   auto linelist_upperlevelindex = MPI_shared_array<int>(globals::nlines);
   auto linelist_lowerlevelindex = MPI_shared_array<int>(globals::nlines);
+  auto linelist_uniquelevelindex_lower = MPI_shared_array<int>(globals::nlines);
+  auto linelist_uniquelevelindex_upper = MPI_shared_array<int>(globals::nlines);
+  auto linelist_B_ul = MPI_shared_array<double>(globals::nlines);
+  auto linelist_gupper_over_glower = MPI_shared_array<double>(globals::nlines);
 
   if (globals::rank_in_node == 0) {
     assert_always(std::ssize(temp_linelist) == globals::nlines);
@@ -1453,6 +1457,18 @@ void read_atomicdata_files() {
       linelist_ionindex[t] = temp_linelist[t].ionindex;
       linelist_upperlevelindex[t] = temp_linelist[t].upperlevelindex;
       linelist_lowerlevelindex[t] = temp_linelist[t].lowerlevelindex;
+
+      // precompute the cellcache level population indices and Einstein B factors used by the Sobolev optical
+      // depth calculation in the r-packet propagation hot loop. Calculated from the shared-array values so
+      // that they exactly match the previously runtime-computed quantities.
+      const auto ionuniquelevelindexstart =
+          get_ionuniquelevelindexstart(temp_linelist[t].elementindex, temp_linelist[t].ionindex);
+      const int uniquelevelindex_lower = ionuniquelevelindexstart + temp_linelist[t].lowerlevelindex;
+      const int uniquelevelindex_upper = ionuniquelevelindexstart + temp_linelist[t].upperlevelindex;
+      linelist_uniquelevelindex_lower[t] = uniquelevelindex_lower;
+      linelist_uniquelevelindex_upper[t] = uniquelevelindex_upper;
+      linelist_B_ul[t] = CLIGHTSQUAREDOVERTWOH / pow3(linelist_nu[t]) * linelist_einstein_A[t];
+      linelist_gupper_over_glower[t] = stat_weight(uniquelevelindex_upper) / stat_weight(uniquelevelindex_lower);
     }
   }
   temp_linelist.clear();
@@ -1465,11 +1481,17 @@ void read_atomicdata_files() {
   globals::linelist.ionindex = std::move(linelist_ionindex);
   globals::linelist.upperlevelindex = std::move(linelist_upperlevelindex);
   globals::linelist.lowerlevelindex = std::move(linelist_lowerlevelindex);
+  globals::linelist.uniquelevelindex_lower = std::move(linelist_uniquelevelindex_lower);
+  globals::linelist.uniquelevelindex_upper = std::move(linelist_uniquelevelindex_upper);
+  globals::linelist.B_ul = std::move(linelist_B_ul);
+  globals::linelist.gupper_over_glower = std::move(linelist_gupper_over_glower);
 
   const double linelist_mem_MB =
       ((globals::nlines * sizeof(double))  // nu
        + (globals::nlines * sizeof(float))  // einstein_A
        + (globals::nlines * sizeof(int) * 4)  // elementindex, ionindex, upperlevelindex, lowerlevelindex
+       + (globals::nlines * sizeof(int) * 2)  // uniquelevelindex_lower, uniquelevelindex_upper
+       + (globals::nlines * sizeof(double) * 2)  // B_ul, gupper_over_glower
        ) /
       1024. / 1024;
 

@@ -205,6 +205,13 @@ struct TransitionLines {
   MPI_shared_array<const int> ionindex;  // The same for the elements ion
   MPI_shared_array<const int> upperlevelindex;  // And the participating upper
   MPI_shared_array<const int> lowerlevelindex;  // and lower levels
+
+  // precomputed values for the Sobolev optical depth calculation in the r-packet propagation hot loop,
+  // avoiding the element/ion index and stat_weight lookup chains per line
+  MPI_shared_array<const int> uniquelevelindex_lower;  // cellcache level population index of the lower level
+  MPI_shared_array<const int> uniquelevelindex_upper;  // cellcache level population index of the upper level
+  MPI_shared_array<const double> B_ul;  // Einstein B coefficient for stimulated emission
+  MPI_shared_array<const double> gupper_over_glower;  // ratio of upper to lower statistical weights (B_lu / B_ul)
 };
 inline TransitionLines linelist{};
 inline int nlines{-1};

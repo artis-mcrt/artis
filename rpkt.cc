@@ -58,19 +58,16 @@ auto get_nu_cmf_abort(const Vec3d& pos, const Vec3d& dir, const double prop_time
 
 template <bool USECELLCACHE>
 [[nodiscard]] auto get_tau_sobolev(const int nonemptymgi, const int lineindex, const double t_current) -> double {
-  const auto ionuniquelevelindexstart =
-      get_ionuniquelevelindexstart(globals::linelist.elementindex[lineindex], globals::linelist.ionindex[lineindex]);
-  const int uniquelevelindex_lower = ionuniquelevelindexstart + globals::linelist.lowerlevelindex[lineindex];
-  const int uniquelevelindex_upper = ionuniquelevelindexstart + globals::linelist.upperlevelindex[lineindex];
+  const int uniquelevelindex_lower = globals::linelist.uniquelevelindex_lower[lineindex];
+  const int uniquelevelindex_upper = globals::linelist.uniquelevelindex_upper[lineindex];
 
   const double n_l = USECELLCACHE ? get_cellcache_levelpop(nonemptymgi, uniquelevelindex_lower)
                                   : calculate_levelpop(nonemptymgi, globals::linelist.elementindex[lineindex],
                                                        globals::linelist.ionindex[lineindex],
                                                        globals::linelist.lowerlevelindex[lineindex]);
 
-  const double B_ul =
-      CLIGHTSQUAREDOVERTWOH / pow3(globals::linelist.nu[lineindex]) * globals::linelist.einstein_A[lineindex];
-  const double B_lu = stat_weight(uniquelevelindex_upper) / stat_weight(uniquelevelindex_lower) * B_ul;
+  const double B_ul = globals::linelist.B_ul[lineindex];
+  const double B_lu = globals::linelist.gupper_over_glower[lineindex] * B_ul;
 
   const double n_u = USECELLCACHE ? get_cellcache_levelpop(nonemptymgi, uniquelevelindex_upper)
                                   : calculate_levelpop(nonemptymgi, globals::linelist.elementindex[lineindex],
