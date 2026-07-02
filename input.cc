@@ -1438,21 +1438,28 @@ void read_atomicdata_files() {
   // create a linelist shared on node and then copy data across, freeing the local copy
 
   auto linelist_nu = MPI_shared_array<double>(globals::nlines);
-  auto linelist_einstein_A = MPI_shared_array<float>(globals::nlines);
   auto linelist_elementindex = MPI_shared_array<int>(globals::nlines);
   auto linelist_ionindex = MPI_shared_array<int>(globals::nlines);
-  auto linelist_upperlevelindex = MPI_shared_array<int>(globals::nlines);
-  auto linelist_lowerlevelindex = MPI_shared_array<int>(globals::nlines);
+  auto linelist_uniquelevelindex_lower = MPI_shared_array<int>(globals::nlines);
+  auto linelist_uniquelevelindex_upper = MPI_shared_array<int>(globals::nlines);
+  auto linelist_B_ul = MPI_shared_array<double>(globals::nlines);
+  auto linelist_B_lu = MPI_shared_array<double>(globals::nlines);
 
   if (globals::rank_in_node == 0) {
     assert_always(std::ssize(temp_linelist) == globals::nlines);
     for (int t = 0; t < globals::nlines; t++) {
       linelist_nu[t] = temp_linelist[t].nu;
-      linelist_einstein_A[t] = temp_linelist[t].einstein_A;
       linelist_elementindex[t] = temp_linelist[t].elementindex;
       linelist_ionindex[t] = temp_linelist[t].ionindex;
-      linelist_upperlevelindex[t] = temp_linelist[t].upperlevelindex;
-      linelist_lowerlevelindex[t] = temp_linelist[t].lowerlevelindex;
+
+      const auto ionuniquelevelindexstart =
+          get_ionuniquelevelindexstart(temp_linelist[t].elementindex, temp_linelist[t].ionindex);
+      const int uniquelevelindex_lower = ionuniquelevelindexstart + temp_linelist[t].lowerlevelindex;
+      const int uniquelevelindex_upper = ionuniquelevelindexstart + temp_linelist[t].upperlevelindex;
+      linelist_uniquelevelindex_lower[t] = uniquelevelindex_lower;
+      linelist_uniquelevelindex_upper[t] = uniquelevelindex_upper;
+      linelist_B_ul[t] = CLIGHTSQUAREDOVERTWOH / pow3(linelist_nu[t]) * temp_linelist[t].einstein_A;
+      linelist_B_lu[t] = stat_weight(uniquelevelindex_upper) / stat_weight(uniquelevelindex_lower) * linelist_B_ul[t];
     }
   }
   temp_linelist.clear();
@@ -1460,16 +1467,17 @@ void read_atomicdata_files() {
   MPI_Barrier_node();
 
   globals::linelist.nu = std::move(linelist_nu);
-  globals::linelist.einstein_A = std::move(linelist_einstein_A);
   globals::linelist.elementindex = std::move(linelist_elementindex);
   globals::linelist.ionindex = std::move(linelist_ionindex);
-  globals::linelist.upperlevelindex = std::move(linelist_upperlevelindex);
-  globals::linelist.lowerlevelindex = std::move(linelist_lowerlevelindex);
+  globals::linelist.uniquelevelindex_lower = std::move(linelist_uniquelevelindex_lower);
+  globals::linelist.uniquelevelindex_upper = std::move(linelist_uniquelevelindex_upper);
+  globals::linelist.B_ul = std::move(linelist_B_ul);
+  globals::linelist.B_lu = std::move(linelist_B_lu);
 
   const double linelist_mem_MB =
       ((globals::nlines * sizeof(double))  // nu
-       + (globals::nlines * sizeof(float))  // einstein_A
-       + (globals::nlines * sizeof(int) * 4)  // elementindex, ionindex, upperlevelindex, lowerlevelindex
+       + (globals::nlines * sizeof(int) * 4)  // elementindex, ionindex, uniquelevelindex_lower, uniquelevelindex_upper
+       + (globals::nlines * sizeof(double) * 2)  // B_ul, B_lu
        ) /
       1024. / 1024;
 
@@ -1488,13 +1496,15 @@ void read_atomicdata_files() {
 
     const int element = globals::linelist.elementindex[lineindex];
     const int ion = globals::linelist.ionindex[lineindex];
-    const int lowerlevel = globals::linelist.lowerlevelindex[lineindex];
-    const int upperlevel = globals::linelist.upperlevelindex[lineindex];
+    const auto ionuniquelevelindexstart = get_ionuniquelevelindexstart(element, ion);
+    const int upper_uniquelevelindex = globals::linelist.uniquelevelindex_upper[lineindex];
+    const auto lower_uniquelevelindex = globals::linelist.uniquelevelindex_lower[lineindex];
+    const auto upperlevel = upper_uniquelevelindex - ionuniquelevelindexstart;
+    const auto lowerlevel = lower_uniquelevelindex - ionuniquelevelindexstart;
 
     // there is never more than one transition per pair of levels,
     // so find the first up and the first down transition that match: element, ion, lowerlevel, upperlevel
 
-    const auto upper_uniquelevelindex = get_uniquelevelindex(element, ion, upperlevel);
     const auto alltrans_startdown = get_alltrans_startdown(upper_uniquelevelindex);
     const auto ndowntrans = get_ndowntrans(upper_uniquelevelindex);
     int downtransid = -1;
@@ -1507,7 +1517,6 @@ void read_atomicdata_files() {
     assert_always(downtransid != -1);
     alltrans_lineindex[downtransid] = lineindex;
 
-    const auto lower_uniquelevelindex = get_uniquelevelindex(element, ion, lowerlevel);
     const auto alltrans_startup = get_alltrans_startup(lower_uniquelevelindex);
     const auto nuptrans = get_nuptrans(lower_uniquelevelindex);
     int uptransid = -1;

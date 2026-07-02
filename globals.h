@@ -199,12 +199,13 @@ inline MPI_shared_array<Ion> allions;
 
 struct TransitionLines {
   MPI_shared_array<const double> nu;  // Frequency of the line transition
-  MPI_shared_array<const float> einstein_A;
   MPI_shared_array<const int> elementindex;  // It's a transition of element (not its atomic number,
                                              // but the (x-1)th element included in the simulation.
   MPI_shared_array<const int> ionindex;  // The same for the elements ion
-  MPI_shared_array<const int> upperlevelindex;  // And the participating upper
-  MPI_shared_array<const int> lowerlevelindex;  // and lower levels
+  MPI_shared_array<const int> uniquelevelindex_lower;  // globally unique index of the lower level of the transition
+  MPI_shared_array<const int> uniquelevelindex_upper;  // globally unique index of the upper level of the transition
+  MPI_shared_array<const double> B_ul;  // Einstein B coefficient for stimulated emission
+  MPI_shared_array<const double> B_lu;  // Einstein B coefficient for absorption (B_lu = (g_u/g_l) * B_ul)
 };
 inline TransitionLines linelist{};
 inline int nlines{-1};

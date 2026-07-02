@@ -58,24 +58,29 @@ auto get_nu_cmf_abort(const Vec3d& pos, const Vec3d& dir, const double prop_time
 
 template <bool USECELLCACHE>
 [[nodiscard]] auto get_tau_sobolev(const int nonemptymgi, const int lineindex, const double t_current) -> double {
-  const auto ionuniquelevelindexstart =
-      get_ionuniquelevelindexstart(globals::linelist.elementindex[lineindex], globals::linelist.ionindex[lineindex]);
-  const int uniquelevelindex_lower = ionuniquelevelindexstart + globals::linelist.lowerlevelindex[lineindex];
-  const int uniquelevelindex_upper = ionuniquelevelindexstart + globals::linelist.upperlevelindex[lineindex];
+  const int uniquelevelindex_lower = globals::linelist.uniquelevelindex_lower[lineindex];
+  const int uniquelevelindex_upper = globals::linelist.uniquelevelindex_upper[lineindex];
 
-  const double n_l = USECELLCACHE ? get_cellcache_levelpop(nonemptymgi, uniquelevelindex_lower)
-                                  : calculate_levelpop(nonemptymgi, globals::linelist.elementindex[lineindex],
-                                                       globals::linelist.ionindex[lineindex],
-                                                       globals::linelist.lowerlevelindex[lineindex]);
+  double n_l{NAN};
+  double n_u{NAN};
+  if constexpr (USECELLCACHE) {
+    n_l = get_cellcache_levelpop(nonemptymgi, uniquelevelindex_lower);
+    n_u = get_cellcache_levelpop(nonemptymgi, uniquelevelindex_upper);
+  } else {
+    const auto element = globals::linelist.elementindex[lineindex];
+    const auto ion = globals::linelist.ionindex[lineindex];
+    const auto ionuniquelevelindexstart = get_ionuniquelevelindexstart(element, ion);
+    const auto lower_uniquelevelindex = globals::linelist.uniquelevelindex_lower[lineindex];
+    const auto upper_uniquelevelindex = globals::linelist.uniquelevelindex_upper[lineindex];
+    const int lower = lower_uniquelevelindex - ionuniquelevelindexstart;
+    const int upper = upper_uniquelevelindex - ionuniquelevelindexstart;
+    n_l = calculate_levelpop(nonemptymgi, element, ion, lower);
+    n_u = calculate_levelpop(nonemptymgi, element, ion, upper);
+  }
 
-  const double B_ul =
-      CLIGHTSQUAREDOVERTWOH / pow3(globals::linelist.nu[lineindex]) * globals::linelist.einstein_A[lineindex];
-  const double B_lu = stat_weight(uniquelevelindex_upper) / stat_weight(uniquelevelindex_lower) * B_ul;
+  const double B_ul = globals::linelist.B_ul[lineindex];
+  const double B_lu = globals::linelist.B_lu[lineindex];
 
-  const double n_u = USECELLCACHE ? get_cellcache_levelpop(nonemptymgi, uniquelevelindex_upper)
-                                  : calculate_levelpop(nonemptymgi, globals::linelist.elementindex[lineindex],
-                                                       globals::linelist.ionindex[lineindex],
-                                                       globals::linelist.upperlevelindex[lineindex]);
   return std::max(((B_lu * n_l) - (B_ul * n_u)) * HCLIGHTOVERFOURPI * t_current, 0.);
 }
 
@@ -147,11 +152,12 @@ auto get_possible_event(const int nonemptymgi, const Packet& pkt, const Continuu
 
       if ((tau_rnd - tau) <= (tau_cont + tau_line)) {
         // bound-bound process occurs
+        const auto element = linelist.elementindex[lineindex];
+        const auto ion = linelist.ionindex[lineindex];
+        const auto ionuniquelevelindexstart = get_ionuniquelevelindexstart(element, ion);
+        const auto upper = globals::linelist.uniquelevelindex_upper[lineindex] - ionuniquelevelindexstart;
 
-        mastate = {.element = linelist.elementindex[lineindex],
-                   .ion = linelist.ionindex[lineindex],
-                   .level = linelist.upperlevelindex[lineindex],
-                   .activatingline = lineindex};
+        mastate = {.element = element, .ion = ion, .level = upper, .activatingline = lineindex};
 
         if constexpr (DETAILED_LINE_ESTIMATORS_ON) {
           move_pkt_withtime(pos, pkt.dir, prop_time, pkt.nu_rf, nu_cmf, pkt.e_rf, e_cmf, ldist);

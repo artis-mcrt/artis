@@ -1668,10 +1668,11 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const std::a
           const auto lineindex = globals::alltrans.lineindex[alltransindex];
           const int element = globals::linelist.elementindex[lineindex];
           const int ion = globals::linelist.ionindex[lineindex];
-          const int lower = globals::linelist.lowerlevelindex[lineindex];
-          const int upper = globals::linelist.upperlevelindex[lineindex];
-          const auto lower_uniquelevelindex = get_uniquelevelindex(element, ion, lower);
-          const auto upper_uniquelevelindex = get_uniquelevelindex(element, ion, upper);
+          const auto ionuniquelevelindexstart = get_ionuniquelevelindexstart(element, ion);
+          const auto lower_uniquelevelindex = globals::linelist.uniquelevelindex_lower[lineindex];
+          const auto upper_uniquelevelindex = globals::linelist.uniquelevelindex_upper[lineindex];
+          const int lower = lower_uniquelevelindex - ionuniquelevelindexstart;
+          const int upper = upper_uniquelevelindex - ionuniquelevelindexstart;
           const auto nnlevel_lower = calculate_levelpop(nonemptymgi, element, ion, lower);
           const auto nnlevel_upper = calculate_levelpop(nonemptymgi, element, ion, upper);
           const auto statweight_lower = stat_weight(lower_uniquelevelindex);
@@ -2306,9 +2307,8 @@ DEVICE_FUNC void do_ntlepton_deposit(Packet& pkt) {
         const double frac_deposition_exc = ntexcitation.frac_deposition;
         if (zrand < frac_deposition_exc) {
           const auto lineindex = globals::alltrans.lineindex[ntexcitation.alltransindex];
-          const int element = globals::linelist.elementindex[lineindex];
-          const int ion = globals::linelist.ionindex[lineindex];
-          const int upper = globals::linelist.upperlevelindex[lineindex];
+          const auto [element, ion, upper] =
+              get_levelfromuniquelevelindex(globals::linelist.uniquelevelindex_upper[lineindex]);
 
           stats::increment(stats::Counter::MA_STAT_ACTIVATION_NTCOLLEXC);
           stats::increment(stats::Counter::INTERACTIONS);
