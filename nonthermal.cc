@@ -2307,9 +2307,8 @@ DEVICE_FUNC void do_ntlepton_deposit(Packet& pkt) {
         const double frac_deposition_exc = ntexcitation.frac_deposition;
         if (zrand < frac_deposition_exc) {
           const auto lineindex = globals::alltrans.lineindex[ntexcitation.alltransindex];
-          const int element = globals::linelist.elementindex[lineindex];
-          const int ion = globals::linelist.ionindex[lineindex];
-          const int upper = globals::linelist.upperlevelindex[lineindex];
+          const auto [element, ion, upper] =
+              get_levelfromuniquelevelindex(globals::linelist.uniquelevelindex_upper[lineindex]);
 
           stats::increment(stats::Counter::MA_STAT_ACTIVATION_NTCOLLEXC);
           stats::increment(stats::Counter::INTERACTIONS);
