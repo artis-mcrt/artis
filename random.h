@@ -16,14 +16,6 @@
 #include <random>
 #endif
 
-[[nodiscard]] inline auto get_rng_random_seed() -> std::int64_t {
-#ifndef GPU_ON
-  return std::random_device{}();
-#else
-  return utlrandom::_crush_to_uint32(std::chrono::high_resolution_clock::now().time_since_epoch().count());
-#endif
-}
-
 namespace utlrandom {
 
 // Helper method to crush large uints to uint32_t,
@@ -96,6 +88,17 @@ class SplitMix32 {
     return result ^ (result >> 15);
   }
 };
+}  // namespace utlrandom
+
+[[nodiscard]] inline auto get_rng_random_seed() -> std::int64_t {
+#ifdef GPU_ON
+  return utlrandom::_crush_to_uint32(std::chrono::high_resolution_clock::now().time_since_epoch().count());
+#else
+  return std::random_device{}();
+#endif
+}
+
+namespace utlrandom {
 
 // Implementation of Xoshiro128++ suggested by David Blackman and Sebastiano Vigna,
 // see https://prng.di.unimi.it/
