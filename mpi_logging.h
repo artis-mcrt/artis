@@ -201,10 +201,12 @@ template <typename T>
 #pragma clang unsafe_buffer_usage begin
   const auto newspan = std::span<T>(ptr, num_allranks);
 #pragma clang unsafe_buffer_usage end
-  // initialise the shared memory
-  if (globals::rank_in_node == 0) {
-    std::ranges::fill(newspan, initval);
-  }
+  // initialise the shared memory. Each rank on the node fills its own contiguous slice so that,
+  // under the operating system's first-touch page placement policy, the physical pages are
+  // distributed across the NUMA domains spanned by the node's ranks instead of all being homed
+  // on the domain of rank 0 (relevant for multi-CCD/multi-socket x86; no effect on UMA systems)
+  const auto [slicestart, slicecount] = get_range_chunk(num_allranks, globals::node_nprocs, globals::rank_in_node);
+  std::ranges::fill(newspan.subspan(slicestart, slicecount), initval);
   MPI_Barrier(globals::mpi_comm_node);
   return {newspan, mpiwin};
 }
