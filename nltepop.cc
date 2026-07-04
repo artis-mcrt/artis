@@ -232,7 +232,7 @@ void print_level_rates_summary(const int element, const int selected_ion, const 
   const int selected_index = get_nlte_vector_index(element, selected_ion, selected_level, first_ion_used);
 
   for (int i = 0; i <= 3; i++) {
-    // rates in from below, in from above, out to below, out to above
+    // rates in from above, in from below, out to above, out to below
     if (i == 0) {
       const int nlevels_nlte = get_nlevels_excited_nlte(element, selected_ion);
       if (ion_has_superlevel(element, selected_ion) && (selected_level == nlevels_nlte + 1)) {

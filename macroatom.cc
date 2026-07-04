@@ -562,8 +562,9 @@ void macroatom_open_file() {
   macroatom_file =
       fstream_required(std::format("macroatom_{:04d}.out", globals::my_rank), std::ios::out | std::ios::trunc);
 
-  std::println(macroatom_file, "timestep modelgridindex Z ionstage_in ionstage_out level_in level_out activline",
-               "nu_cmf_in nu_cmf_out nu_rf_in nu_rf_out");
+  std::println(macroatom_file,
+               "timestep modelgridindex Z ionstage_in ionstage_out level_in level_out activline"
+               " nu_cmf_in nu_cmf_out nu_rf_in nu_rf_out");
 }
 
 // radiative excitation rate: paperII 3.5.2

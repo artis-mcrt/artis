@@ -279,7 +279,7 @@ void call_T_e_finder(const int nonemptymgi, const double t_current, const double
         "(T_R={:g},W={:g}). T_e forced to be MINTEMP",
         MINTEMP, modelgridindex, grid::get_TR(nonemptymgi), grid::get_W(nonemptymgi));
   } else {
-    // Thermal balance equation always negative ===> T_e = T_max
+    // Thermal balance equation always positive ===> T_e = T_max
     T_e = MAXTEMP;
     printlnlog(
         "[warning] call_T_e_finder: heating bigger than cooling over the whole T_e range [{:g},{:g}] in modelcell {} "
@@ -299,7 +299,7 @@ void call_T_e_finder(const int nonemptymgi, const double t_current, const double
 
   grid::set_Te(nonemptymgi, static_cast<float>(T_e));
 
-  // this call with make sure heating/cooling rates and populations are updated for the final T_e
+  // this call will make sure heating/cooling rates and populations are updated for the final T_e
   // in case T_e got modified after the T_e solver finished
   f_T_e(T_e);
 }

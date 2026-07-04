@@ -217,7 +217,7 @@ void set_calculated_nne(const int nonemptymgi) {
 
 // Special case of only neutral ions, set nne to some finite value so that packets are not lost in kpkts
 void set_groundlevelpops_neutral(const ptrdiff_t nonemptymgi) {
-  printlnlog("[warning] calculate_ion_balance_nne: only neutral ions in cell modelgridindex %d",
+  printlnlog("[warning] calculate_ion_balance_nne: only neutral ions in cell modelgridindex {}",
              grid::get_mgi_of_nonemptymgi(nonemptymgi));
   for (int element = 0; element < get_nelements(); element++) {
     const auto nnelement = grid::get_elem_numberdens(nonemptymgi, element);
@@ -432,8 +432,8 @@ void set_groundlevelpops(const int nonemptymgi, const int element, const float n
   }
 }
 
-// Determine the electron number density for a given cell using one of
-// libgsl's root_solvers and calculates the depending level populations.
+// Determine the electron number density for a given cell using a root
+// solver and calculate the dependent level populations.
 auto calculate_ion_balance_nne(const int nonemptymgi) -> void {
   const bool force_saha = globals::lte_iteration || grid::thick_allcells[nonemptymgi] == 1;
 

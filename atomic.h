@@ -16,10 +16,10 @@
 // highest number of ions for any element
 inline int maxnions = 0;
 
-// number of ions of any element
+// number of ions of all elements combined
 inline int includedions = 0;
 
-// total number of levels of any element
+// number of levels of all elements combined
 inline int includedlevels = 0;
 
 // last photoion cross section point as a factor of nu_edge = last_phixs_nuovernuedge
@@ -30,7 +30,7 @@ inline std::array<bool, 3> phixs_file_version_exists;
 
 inline const std::array phixsdata_filenames{"IGNORE", "phixsdata.txt", "phixsdata_v2.txt"};
 
-// return the number of ions of all elements combined
+// return the number of levels of all elements combined
 [[gnu::pure]] inline auto get_includedlevels() -> int { return includedlevels; }
 
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC inline auto get_nelements() -> int {
@@ -176,7 +176,7 @@ DEVICE_FUNC inline auto get_nphixstargets(const int element, const int ion, cons
   return get_phixsprobability(get_uniquelevelindex(element, ion, level), phixstargetindex);
 }
 
-// Return the number of bf-continua associated with ion ion of element element.
+// Return the level index of the highest level with a non-zero recombination rate for ion ion of element element.
 [[gnu::pure]] [[nodiscard]] inline auto get_maxrecombininglevel(const int element, const int ion) -> int {
   assert_testmodeonly(element < get_nelements());
   assert_testmodeonly(ion < get_nions(element));
@@ -211,7 +211,7 @@ DEVICE_FUNC inline auto get_nphixstargets(const int element, const int ion, cons
     // classic mode: no interpolation
     if (nu == nu_edge) {
       sigma_bf = photoion_xs[0];
-    } else if (nu <= nu_edge * (1 + (globals::NPHIXSNUINCREMENT * globals::NPHIXSPOINTS))) {
+    } else if (nu < nu_edge * (1 + (globals::NPHIXSNUINCREMENT * globals::NPHIXSPOINTS))) {
       const int i = static_cast<int>((nu - nu_edge) / (globals::NPHIXSNUINCREMENT * nu_edge));
       sigma_bf = photoion_xs[i];
     } else {
@@ -516,7 +516,7 @@ inline void set_nautoionuptrans(const int element, const int ion, const int leve
   globals::alllevels.nautoionuptrans[get_uniquelevelindex(element, ion, level)] = nautoionuptrans;
 }
 
-[[gnu::pure]] [[nodiscard]] inline auto get_phixtargetindex(const int uniquelevelindex, const int upperionlevel)
+[[gnu::pure]] [[nodiscard]] inline auto get_phixstargetindex(const int uniquelevelindex, const int upperionlevel)
     -> int {
   const auto nphixstargets = get_nphixstargets(uniquelevelindex);
   for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
@@ -537,7 +537,7 @@ inline void set_nautoionuptrans(const int element, const int ion, const int leve
 [[gnu::pure]] [[nodiscard]] inline auto get_emtype_continuum(const int element, const int ion, const int level,
                                                              const int upperionlevel) -> int {
   const auto uniquelevelindex = get_uniquelevelindex(element, ion, level);
-  const int phixstargetindex = get_phixtargetindex(uniquelevelindex, upperionlevel);
+  const int phixstargetindex = get_phixstargetindex(uniquelevelindex, upperionlevel);
   return -1 - globals::alllevels.bflist_start[uniquelevelindex] - phixstargetindex;
 }
 
