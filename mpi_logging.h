@@ -314,7 +314,7 @@ class MPI_shared_array {
       }
       _win = MPI_WIN_NULL;
     } else {
-      delete[] _span.data();
+      ::operator delete[](_span.data(), std::align_val_t(128));
     }
     _span = {};
   }
