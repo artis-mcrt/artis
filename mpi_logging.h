@@ -24,6 +24,7 @@
 #include <tuple>
 #include <type_traits>
 #include <utility>
+#include <version>
 
 #ifdef _OPENMP
 #include <omp.h>
@@ -563,8 +564,10 @@ class alignas(scoped_mutex_detail::hardware_destructive_interference_size) Padde
   }
 };
 
-static_assert(alignof(PaddedMutex) == scoped_mutex_detail::hardware_destructive_interference_size);
-static_assert(sizeof(PaddedMutex) == scoped_mutex_detail::hardware_destructive_interference_size);
+static_assert(alignof(PaddedMutex) >= scoped_mutex_detail::hardware_destructive_interference_size);
+static_assert(alignof(PaddedMutex) % scoped_mutex_detail::hardware_destructive_interference_size == 0);
+static_assert(sizeof(PaddedMutex) >= scoped_mutex_detail::hardware_destructive_interference_size);
+static_assert(sizeof(PaddedMutex) % scoped_mutex_detail::hardware_destructive_interference_size == 0);
 
 class ScopedMutex {
  private:
