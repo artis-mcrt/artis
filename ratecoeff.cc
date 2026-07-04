@@ -301,8 +301,8 @@ void read_recombrate_file() {
         const int nlevels = get_nlevels_ionising(element, ion - 1);
 
         const double x = (log_Te_estimate - T_highestbelow.log_Te) / (T_lowestabove.log_Te - T_highestbelow.log_Te);
-        const double input_rrc_low_n = ((1 - x) * T_highestbelow.rrc_low_n) + (x * T_lowestabove.rrc_low_n);
-        const double input_rrc_total = ((1 - x) * T_highestbelow.rrc_total) + (x * T_lowestabove.rrc_total);
+        const double input_rrc_low_n = std::lerp(T_highestbelow.rrc_low_n, T_lowestabove.rrc_low_n, x);
+        const double input_rrc_total = std::lerp(T_highestbelow.rrc_total, T_lowestabove.rrc_total, x);
 
         constexpr bool assume_lte = true;
         constexpr bool per_groundmultipletpop = true;
