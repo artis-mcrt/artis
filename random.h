@@ -147,15 +147,13 @@ class Xoshiro128PP {
 
 template <class Gen>
 constexpr auto generate_canonical_float(Gen& gen) noexcept(noexcept(gen())) -> float {
-  using generated_type = Gen::result_type;
-
   constexpr auto prng_min = Gen::min();
   constexpr auto prng_max = Gen::max();
 
   static_assert(prng_min < prng_max);
 
-  constexpr generated_type prng_range = prng_max - prng_min;
-  constexpr generated_type type_range = std::numeric_limits<generated_type>::max();
+  constexpr auto prng_range = prng_max - prng_min;
+  constexpr auto type_range = std::numeric_limits<typename Gen::result_type>::max();
   constexpr bool prng_is_bit_uniform = (prng_range == type_range);
 
   constexpr unsigned int exponent_bits_32 = 8;
@@ -166,7 +164,7 @@ constexpr auto generate_canonical_float(Gen& gen) noexcept(noexcept(gen())) -> f
   // Note 2: Floats have 'mantissa_size + 1' significant bits due to having a sign bit
 
   static_assert(std::numeric_limits<float>::digits == 24, "Platform not supported, 'float' is expected to be 32-bit.");
-  static_assert(prng_is_bit_uniform && sizeof(float) == 4 && sizeof(generated_type) == 4);
+  static_assert(prng_is_bit_uniform && sizeof(float) == 4 && sizeof(typename Gen::result_type) == 4);
 
   // 32-bit float, 32-bit uniform PRNG
   // => multiplication algorithm tweaked for 32-bit
