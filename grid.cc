@@ -276,7 +276,7 @@ void set_elem_untrackedstable_massfrac(const int nonemptymgi, const int element,
 
   if (massfrac_untrackedstable < 0.) {
     //  allow some roundoff error before we complain
-    if (std::abs(massfrac_allisotopes - elem_massfrac) > 1e-6) {
+    if (std::abs(massfrac_allisotopes - elem_massfrac) > 1e-5) {
       printlnlog("WARNING: cell {} Z={} element massfrac is less than the sum of its radioisotope massfracs", mgi,
                  atomic_number);
       printlnlog("  massfrac(Z) {:g} massfrac_radioisotopes(Z) {:g}", elem_massfrac, massfrac_allisotopes);
