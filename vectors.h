@@ -14,7 +14,7 @@
 #include "packet.h"
 #include "random.h"
 
-// return the the magnitude of a vector
+// return the magnitude of a vector
 template <size_t VECDIM>
 [[gnu::pure]] [[nodiscard]] constexpr auto vec_len(const std::array<double, VECDIM>& vec) -> double {
   double squaredlen = 0.;

@@ -959,7 +959,7 @@ auto main(int argc, char* argv[]) -> int {
     assert_always(globals::n_titer == 1);
 #endif
     if (globals::n_titer > 1) {
-      printlnlog("Doing %d iterations on timestep %d", globals::n_titer, globals::timestep);
+      printlnlog("Doing {} iterations on timestep {}", globals::n_titer, globals::timestep);
     }
 
     for (int titer = 0; titer < globals::n_titer; titer++) {

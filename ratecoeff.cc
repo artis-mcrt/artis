@@ -111,7 +111,7 @@ auto bfcooling_integrand(const double nu_minus_nu_edge, const double nu_edge, co
   const int contindex = globals::alllevels.bflist_start[uniquelevelindex] + phixstargetindex;
   const int bflutindex = (contindex * TABLESIZE) + temperatureindex;
   assert_testmodeonly(bflutindex >= 0);
-  assert_testmodeonly(bflutindex <= TABLESIZE * globals::nbfcontinua);
+  assert_testmodeonly(bflutindex < TABLESIZE * globals::nbfcontinua);
   return bflutindex;
 }
 
@@ -301,8 +301,8 @@ void read_recombrate_file() {
         const int nlevels = get_nlevels_ionising(element, ion - 1);
 
         const double x = (log_Te_estimate - T_highestbelow.log_Te) / (T_lowestabove.log_Te - T_highestbelow.log_Te);
-        const double input_rrc_low_n = (x * T_highestbelow.rrc_low_n) + ((1 - x) * T_lowestabove.rrc_low_n);
-        const double input_rrc_total = (x * T_highestbelow.rrc_total) + ((1 - x) * T_lowestabove.rrc_total);
+        const double input_rrc_low_n = std::lerp(T_highestbelow.rrc_low_n, T_lowestabove.rrc_low_n, x);
+        const double input_rrc_total = std::lerp(T_highestbelow.rrc_total, T_lowestabove.rrc_total, x);
 
         constexpr bool assume_lte = true;
         constexpr bool per_groundmultipletpop = true;
@@ -512,7 +512,7 @@ void setup_photoion_luts() {
 DEVICE_FUNC auto select_continuum_nu(int element, const int lowerion, const int lower, const int upperionlevel,
                                      float T_e, rngstate_type& rngstate) -> double {
   const auto lower_uniquelevelindex = get_uniquelevelindex(element, lowerion, lower);
-  const int phixstargetindex = get_phixtargetindex(lower_uniquelevelindex, upperionlevel);
+  const int phixstargetindex = get_phixstargetindex(lower_uniquelevelindex, upperionlevel);
   const double E_threshold = get_phixs_threshold(lower_uniquelevelindex, phixstargetindex);
   const double nu_threshold = (1. / H) * E_threshold;
 
@@ -696,9 +696,9 @@ DEVICE_FUNC auto get_bfcoolingcoeff(const int element, const int lowerion, const
 DEVICE_FUNC auto get_corrphotoioncoeff(const int element, const int ion, const int level, const int phixstargetindex,
                                        const int nonemptymgi, const bool use_cellcache) -> double {
   const auto uniquelevelindex = get_uniquelevelindex(element, ion, level);
-  const auto allphisxtargetindex = get_allphixstargetindex(uniquelevelindex, phixstargetindex);
+  const auto allphixstargetindex = get_allphixstargetindex(uniquelevelindex, phixstargetindex);
   double gammacorr =
-      use_cellcache ? get_cellcache(nonemptymgi).allphixstargets_corrphotoioncoeff[allphisxtargetindex] : -1;
+      use_cellcache ? get_cellcache(nonemptymgi).allphixstargets_corrphotoioncoeff[allphixstargetindex] : -1;
 
   if (!use_cellcache || gammacorr < 0) {
     if (DETAILED_BF_ESTIMATORS_ON && globals::timestep >= DETAILED_BF_ESTIMATORS_USEFROMTIMESTEP) {
@@ -723,7 +723,7 @@ DEVICE_FUNC auto get_corrphotoioncoeff(const int element, const int ion, const i
       }
     }
     if (use_cellcache) {
-      get_cellcache(nonemptymgi).allphixstargets_corrphotoioncoeff[allphisxtargetindex] = gammacorr;
+      get_cellcache(nonemptymgi).allphixstargets_corrphotoioncoeff[allphixstargetindex] = gammacorr;
     }
   }
 

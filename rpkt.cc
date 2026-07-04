@@ -890,10 +890,10 @@ void calculate_chi_rpkt_cont(const double nu_cmf, ContinuumOpacity& chi_rpkt_con
   // free-free absorption
   chi_rpkt_cont.chi_freefree_heat = calculate_chi_ffheating(nonemptymgi, nu_cmf, USECELLHISTANDUPDATEPHIXSLIST);
 
-  // First contribution: Thomson scattering on free electrons
+  // Thomson scattering on free electrons
   chi_rpkt_cont.chi_freefree_scatter = SIGMA_T * nne;
 
-  // Third contribution: bound-free absorption
+  // bound-free absorption
   chi_rpkt_cont.chi_boundfree =
       calculate_chi_bf_gammacontr<USECELLHISTANDUPDATEPHIXSLIST>(nonemptymgi, nu_cmf, chi_rpkt_cont.phixslist);
 

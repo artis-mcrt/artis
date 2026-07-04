@@ -55,7 +55,7 @@ constexpr int numb_xcom_elements = USE_XCOM_GAMMAPHOTOION ? 100 : 0;
 std::array<std::vector<el_photoion_data>, numb_xcom_elements> photoion_data;
 
 void read_gamma_spectrum(const int nucindex, const std::string& filename) {
-  // reads in gamma_spectra and returns the average energy in gamma rays per nuclear decay
+  // read the gamma ray lines and store the average energy in gamma rays per nuclear decay
   printlog("reading gamma spectrum for Z={} A={} from {}...", decay::get_nuc_z(nucindex), decay::get_nuc_a(nucindex),
            filename);
 
@@ -809,7 +809,7 @@ void wollaeger_thermalisation(Packet& pkt) {
   // integration: requires distances within single cells in radial direction and the corresponding densities
   // need to create a packet copy which is moved during the integration
   Packet pkt_copy = pkt;
-  pkt.dir = vec_norm(pkt_copy.pos);
+  pkt_copy.dir = vec_norm(pkt_copy.pos);  // integrate the optical depth radially outwards
   const double t_current = pkt.prop_time;
   double tau = 0.;
   bool end_packet = false;

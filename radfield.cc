@@ -545,7 +545,7 @@ void init() {
       assert_always(!radfieldfile.is_open());
       radfieldfile =
           fstream_required(std::format("radfield_{:04d}.out", globals::my_rank), std::ios::out | std::ios::trunc);
-      std::println(radfieldfile, "timestep modelgridindex bin_num nu_lower nu_upper nuJ J J_nu_avg ncontrib T_R W");
+      std::println(radfieldfile, "timestep modelgridindex bin_num nu_lower nu_upper nuJ J J_nu_avg T_R W");
       radfieldfile.flush();
     }
 

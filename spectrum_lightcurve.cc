@@ -628,7 +628,7 @@ void add_to_spec_res(const Packet& pkt, const int dirbin, Spectra& spectra_I, Sp
                                          4.e12 / PI / PARSEC / PARSEC / globals::nprocs_exspec * solidanglefactor;
         const int at = pkt.absorptiontype;
         if (at >= 0) {
-          // bb-emission
+          // bb-absorption
           const int element = globals::linelist.elementindex[at];
           const int ion = globals::linelist.ionindex[at];
           const auto absindex = get_absindex(nts, nnu_abs) + (element * get_max_nions()) + ion;

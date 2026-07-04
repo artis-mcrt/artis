@@ -53,7 +53,7 @@ struct Ion {
 struct Element {
   std::span<Ion> ions;  // subspan of the allions array for this element
   int anumber{-1};  // Atomic number
-  int lowest_ionstage{-1};  // ionisation stage (charge - 1) of ion 0 for this element
+  int lowest_ionstage{-1};  // ionisation stage (charge + 1) of ion 0 for this element
   int uniqueionindexstart{-1};  /// uniqueionindex index of the lowest ionisation stage of this element
   float initstablemeannucmass = {0.};  // Atomic mass number in multiple of MH
   bool has_nlte_levels{false};
