@@ -508,13 +508,13 @@ DEVICE_FUNC void do_kpkt(Packet& pkt, const double t2, const int nts) {
           col_excitation_ratecoeff(T_e, clumpednne, upper_statweight, alltransindex, epsilon_trans, statweight) *
           epsilon_trans;
       contrib += C;
-      if (contrib > rndcool_ion_process) {
+      if (contrib >= rndcool_ion_process) {
         upper = tmpupper;
         break;
       }
     }
 
-    assert_always(upper >= 0);
+    assert_always(contrib >= rndcool_ion_process);
 
     stats::increment(stats::Counter::MA_STAT_ACTIVATION_COLLEXC);
     stats::increment(stats::Counter::K_STAT_TO_MA_COLLEXC);
