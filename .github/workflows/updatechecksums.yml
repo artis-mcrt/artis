@@ -2,7 +2,7 @@
 name: Update checksums
 permissions:
     contents: write
-    actions: read
+    actions: write
 on:
     workflow_dispatch:
 
@@ -39,10 +39,12 @@ jobs:
                   rm -rf checksums_artifact
 
             - name: Commit and push updated checksums
+              id: commitpush
               run: |
                   git add tests/*_inputfiles/results_md5*.txt
                   if git diff --cached --quiet; then
                       echo "Expected checksums already match the latest CI results. Nothing to commit."
+                      echo "pushed=false" >> $GITHUB_OUTPUT
                       exit 0
                   fi
                   git diff --cached --stat
@@ -51,3 +53,11 @@ jobs:
                   git commit -m "Update expected checksums from CI run of ${{ steps.findartifact.outputs.head_sha }}" \
                       -m "Source: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ steps.findartifact.outputs.run_id }}"
                   git push origin HEAD:${{ github.ref_name }}
+                  echo "pushed=true" >> $GITHUB_OUTPUT
+
+            - name: Trigger CI on the updated branch
+              if: steps.commitpush.outputs.pushed == 'true'
+              env:
+                  GH_TOKEN: ${{ github.token }}
+              run: |
+                  gh workflow run ci.yml --ref ${{ github.ref_name }}
