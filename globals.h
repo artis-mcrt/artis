@@ -257,8 +257,8 @@ struct CellCache {
   std::vector<bool> allcont_keep;
   double chi_ff_nnionpart{-1};
   std::vector<double> allphixstargets_corrphotoioncoeff;
-  std::vector<int> cooling_contrib_locks;
-  std::vector<int> allmacroatomictransitions_locks;
+  std::vector<PaddedMutex> cooling_contrib_locks;
+  std::vector<PaddedMutex> allmacroatomictransitions_locks;
 
   [[nodiscard]] auto get_mem_usage() const {
     auto mem_usage = (cooling_contrib.size() * sizeof(cooling_contrib[0]));

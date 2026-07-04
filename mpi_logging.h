@@ -24,6 +24,7 @@
 #include <tuple>
 #include <type_traits>
 #include <utility>
+#include <version>
 
 #ifdef _OPENMP
 #include <omp.h>
@@ -294,7 +295,7 @@ class MPI_shared_array {
       std::tie(_span, _win) = MPI_shared_malloc_span_keepwin<T>(num_allranks, initval);
     } else {
 #pragma clang unsafe_buffer_usage begin
-      _span = std::span<T>(new (std::align_val_t(128)) T[num_allranks], num_allranks);
+      _span = std::span<T>(new T[num_allranks], num_allranks);
 #pragma clang unsafe_buffer_usage end
       std::ranges::fill(_span, initval);
     }
@@ -532,24 +533,53 @@ inline void MPI_Reduce_safe(R&& data, MPI_Op op, const int root, MPI_Comm comm) 
   std::abort();
 }
 
+namespace scoped_mutex_detail {
+#if defined(__cpp_lib_hardware_interference_size) && __cpp_lib_hardware_interference_size >= 201603
+inline constexpr std::size_t hardware_destructive_interference_size = std::hardware_destructive_interference_size;
+#else
+inline constexpr std::size_t hardware_destructive_interference_size = 64;
+#endif
+}  // namespace scoped_mutex_detail
+
+class alignas(scoped_mutex_detail::hardware_destructive_interference_size) PaddedMutex {
+ private:
+  int lock_{0};
+
+  friend class ScopedMutex;
+
+ public:
+  constexpr PaddedMutex() = default;
+  constexpr explicit PaddedMutex(const int lock) : lock_(lock) {}
+
+  constexpr auto operator=(const int lock) noexcept -> PaddedMutex& {
+    lock_ = lock;
+    return *this;
+  }
+};
+
+static_assert(alignof(PaddedMutex) >= scoped_mutex_detail::hardware_destructive_interference_size);
+static_assert(alignof(PaddedMutex) % scoped_mutex_detail::hardware_destructive_interference_size == 0);
+static_assert(sizeof(PaddedMutex) >= scoped_mutex_detail::hardware_destructive_interference_size);
+static_assert(sizeof(PaddedMutex) % scoped_mutex_detail::hardware_destructive_interference_size == 0);
+
 class ScopedMutex {
  private:
-  int* lock_;
+  PaddedMutex* lock_;
 
-  static void mutex_lock(int& lock) {
-    while (std::atomic_ref<int>(lock).exchange(1, std::memory_order_acquire) == 1) {
-      std::atomic_ref<int>(lock).wait(1, std::memory_order_relaxed);
+  static void mutex_lock(PaddedMutex& lock) {
+    while (std::atomic_ref<int>(lock.lock_).exchange(1, std::memory_order_acquire) == 1) {
+      std::atomic_ref<int>(lock.lock_).wait(1, std::memory_order_relaxed);
       // blocks until lock != 1 (i.e., someone called unlock->notify)
     }
   }
 
-  static void mutex_unlock(int& lock) {
-    std::atomic_ref<int>(lock).store(0, std::memory_order_release);
-    std::atomic_ref<int>(lock).notify_one();  // wake one sleeping thread
+  static void mutex_unlock(PaddedMutex& lock) {
+    std::atomic_ref<int>(lock.lock_).store(0, std::memory_order_release);
+    std::atomic_ref<int>(lock.lock_).notify_one();  // wake one sleeping thread
   }
 
  public:
-  explicit ScopedMutex(int& lock) : lock_(&lock) { mutex_lock(*lock_); }
+  explicit ScopedMutex(PaddedMutex& lock) : lock_(&lock) { mutex_lock(*lock_); }
   ~ScopedMutex() { mutex_unlock(*lock_); }
 
   // disable copying and moving to avoid accidentally sharing locks between threads

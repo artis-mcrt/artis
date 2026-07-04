@@ -53,7 +53,7 @@ else ifneq (,$(or $(findstring g++,$(COMPILER_VERSION)),$(findstring gcc,$(COMPI
 	ifeq ($(shell expr $(COMPILER_VERSION_NUMBER) \< $(MIN_GCC_VERSION)),1)
 $(warning WARNING: Detected GCC version $(COMPILER_VERSION_NUMBER) but minimum supported version is $(MIN_GCC_VERSION))
 	endif
-	CXXFLAGS += -Wno-psabi
+	CXXFLAGS += -Wno-psabi -Wno-interference-size
 # 	CXXFLAGS += -Wsuggest-attribute=pure -Wsuggest-attribute=const
 	CPU_ARCH := $(shell $(CXX) $(ARCH_FLAGS) -Q --help=target  | grep -- '-mtune=  ' | cut -f3)
 
