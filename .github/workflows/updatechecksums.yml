@@ -1,0 +1,63 @@
+---
+name: Update checksums
+permissions:
+    contents: write
+    actions: write
+on:
+    workflow_dispatch:
+
+jobs:
+    updatechecksums:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v7
+
+            - name: Find latest CI checksums artifact for this branch
+              id: findartifact
+              env:
+                  GH_TOKEN: ${{ github.token }}
+                  BRANCH: ${{ github.ref_name }}
+              run: |
+                  artifact=$(gh api "repos/${GITHUB_REPOSITORY}/actions/artifacts?name=checksums&per_page=100" \
+                      --jq '[.artifacts[] | select(.workflow_run.head_branch == env.BRANCH and .expired == false)] | sort_by(.created_at) | last')
+                  if [ -z "$artifact" ] || [ "$artifact" = "null" ]; then
+                      echo "No unexpired 'checksums' artifact found for branch ${BRANCH}. Has the CI workflow finished on this branch?"
+                      exit 1
+                  fi
+                  echo "$artifact" | jq .
+                  echo "run_id=$(echo "$artifact" | jq -r '.workflow_run.id')" >> $GITHUB_OUTPUT
+                  echo "head_sha=$(echo "$artifact" | jq -r '.workflow_run.head_sha')" >> $GITHUB_OUTPUT
+
+            - name: Download and extract checksums artifact
+              env:
+                  GH_TOKEN: ${{ github.token }}
+              run: |
+                  gh run download ${{ steps.findartifact.outputs.run_id }} --name checksums --dir checksums_artifact
+                  for dir in checksums_artifact/*_inputfiles; do
+                      cp -v "$dir"/results_md5*.txt "tests/$(basename "$dir")/"
+                  done
+                  rm -rf checksums_artifact
+
+            - name: Commit and push updated checksums
+              id: commitpush
+              run: |
+                  git add tests/*_inputfiles/results_md5*.txt
+                  if git diff --cached --quiet; then
+                      echo "Expected checksums already match the latest CI results. Nothing to commit."
+                      echo "pushed=false" >> $GITHUB_OUTPUT
+                      exit 0
+                  fi
+                  git diff --cached --stat
+                  git config user.name "github-actions[bot]"
+                  git config user.email "41898024+github-actions[bot]@users.noreply.github.com"
+                  git commit -m "Update expected checksums from CI run of ${{ steps.findartifact.outputs.head_sha }}" \
+                      -m "Source: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ steps.findartifact.outputs.run_id }}"
+                  git push origin HEAD:${{ github.ref_name }}
+                  echo "pushed=true" >> $GITHUB_OUTPUT
+
+            - name: Trigger CI on the updated branch
+              if: steps.commitpush.outputs.pushed == 'true'
+              env:
+                  GH_TOKEN: ${{ github.token }}
+              run: |
+                  gh workflow run ci.yml --ref ${{ github.ref_name }}
