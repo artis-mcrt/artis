@@ -10,6 +10,20 @@
 #include <limits>
 #include <type_traits>
 
+#ifdef GPU_ON
+#include <chrono>
+#else
+#include <random>
+#endif
+
+[[nodiscard]] inline auto get_rng_random_seed() -> std::int64_t {
+#ifndef GPU_ON
+  return std::random_device{}();
+#else
+  return utlrandom::_crush_to_uint32(std::chrono::high_resolution_clock::now().time_since_epoch().count());
+#endif
+}
+
 namespace utlrandom {
 
 // Helper method to crush large uints to uint32_t,
@@ -102,7 +116,7 @@ class Xoshiro128PP {
   std::array<result_type, 4> s{};
 
  public:
-  constexpr explicit Xoshiro128PP(result_type seed = _default_seed<result_type>) noexcept { this->seed(seed); }
+  constexpr explicit Xoshiro128PP(result_type seed = get_rng_random_seed()) noexcept { this->seed(seed); }
 
   [[nodiscard]] static constexpr auto min() noexcept -> result_type { return 0; }
   // while zero-state is considered invalid, PRNG can still produce 0 as a result
@@ -161,21 +175,7 @@ constexpr auto generate_canonical_float(Gen& gen) noexcept(noexcept(gen())) -> f
 
 }  // namespace utlrandom
 
-#ifdef GPU_ON
-#include <chrono>
 using rngstate_type = utlrandom::Xoshiro128PP;
-#else
-#include <random>
-using rngstate_type = std::mt19937;
-#endif
-
-[[nodiscard]] inline auto get_rng_random_seed() -> std::int64_t {
-#ifndef GPU_ON
-  return std::random_device{}();
-#else
-  return utlrandom::_crush_to_uint32(std::chrono::high_resolution_clock::now().time_since_epoch().count());
-#endif
-}
 
 inline auto rng_uniform(rngstate_type& rngstate) -> float {
   while (true) {
