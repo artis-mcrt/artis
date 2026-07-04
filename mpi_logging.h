@@ -16,6 +16,7 @@
 #include <ios>
 #include <limits>
 #include <memory>
+#include <new>
 #include <ranges>
 #include <span>
 #include <string>
@@ -186,15 +187,15 @@ template <typename T>
   T* ptr{};
   MPI_Info info{};
   assert_always(MPI_Info_create(&info) == MPI_SUCCESS);
-  // Request 64-byte alignment (e.g., for AVX-512)
-  assert_always(MPI_Info_set(info, "mpi_minimum_memory_alignment", "64") == MPI_SUCCESS);
+  // Request alignment (AVX-512 requires 64b, and 128b is Apple Silicon cache line size).
+  assert_always(MPI_Info_set(info, "mpi_minimum_memory_alignment", "128") == MPI_SUCCESS);
   assert_always(MPI_Win_allocate_shared(size, disp_unit, info, globals::mpi_comm_node, static_cast<void*>(&ptr),
                                         &mpiwin) == MPI_SUCCESS);
   assert_always(MPI_Info_free(&info) == MPI_SUCCESS);
   assert_always(MPI_Win_shared_query(mpiwin, 0, &size, &disp_unit, static_cast<void*>(&ptr)) == MPI_SUCCESS);
   assert_always(ptr != nullptr);
 #ifdef __cpp_lib_is_sufficiently_aligned
-  assert_always(std::is_sufficiently_aligned<64>(ptr));
+  assert_always(std::is_sufficiently_aligned<128>(ptr));
 #endif
 #pragma clang unsafe_buffer_usage begin
   const auto newspan = std::span<T>(ptr, num_allranks);
@@ -286,17 +287,23 @@ class MPI_shared_array {
 
   auto allocate(const ptrdiff_t num_allranks, const T& initval = {}) {
     assert_always(_span.empty() && (_win == MPI_WIN_NULL));  // should not be allocating if we already own a window
-    int initialized = 0;
-    MPI_Initialized(&initialized);
-    assert_always(initialized != 0);  // MPI must be initialized before constructing an MPI_shared_array
-    std::tie(_span, _win) = MPI_shared_malloc_span_keepwin<T>(num_allranks, initval);
+    if (globals::node_nprocs > 1) {
+      int initialized = 0;
+      MPI_Initialized(&initialized);
+      assert_always(initialized != 0);  // MPI must be initialized before constructing an MPI_shared_array
+      std::tie(_span, _win) = MPI_shared_malloc_span_keepwin<T>(num_allranks, initval);
+    } else {
+#pragma clang unsafe_buffer_usage begin
+      _span = std::span<T>(new (std::align_val_t(128)) T[num_allranks], num_allranks);
+#pragma clang unsafe_buffer_usage end
+      std::ranges::fill(_span, initval);
+    }
   }
 
   auto reset() {
     if constexpr (TESTMODE) {
       printlnlog("freeing MPI_shared_array of size {}", _span.size());
     }
-    _span = {};
     if (_win != MPI_WIN_NULL) {
       int finalized = 0;
       MPI_Finalized(&finalized);
@@ -304,9 +311,13 @@ class MPI_shared_array {
       if (finalized == 0) {
         MPI_Win_free(&_win);
       }
+      _win = MPI_WIN_NULL;
+    } else {
+      delete[] _span.data();
     }
-    _win = MPI_WIN_NULL;
+    _span = {};
   }
+
   // Conversion to a const span is allowed on const objects.
   explicit operator std::span<const T>() const { return _span; }
 
