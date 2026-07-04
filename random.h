@@ -88,17 +88,6 @@ class SplitMix32 {
     return result ^ (result >> 15);
   }
 };
-}  // namespace utlrandom
-
-[[nodiscard]] inline auto get_rng_random_seed() -> std::int64_t {
-#ifdef GPU_ON
-  return utlrandom::_crush_to_uint32(std::chrono::high_resolution_clock::now().time_since_epoch().count());
-#else
-  return std::random_device{}();
-#endif
-}
-
-namespace utlrandom {
 
 // Implementation of Xoshiro128++ suggested by David Blackman and Sebastiano Vigna,
 // see https://prng.di.unimi.it/
@@ -119,7 +108,7 @@ class Xoshiro128PP {
   std::array<result_type, 4> s{};
 
  public:
-  constexpr explicit Xoshiro128PP(result_type seed = get_rng_random_seed()) noexcept { this->seed(seed); }
+  constexpr explicit Xoshiro128PP(result_type seed = _default_seed<result_type>) noexcept { this->seed(seed); }
 
   [[nodiscard]] static constexpr auto min() noexcept -> result_type { return 0; }
   // while zero-state is considered invalid, PRNG can still produce 0 as a result
@@ -175,6 +164,14 @@ constexpr auto generate_canonical_float(Gen& gen) noexcept(noexcept(gen())) -> f
 }
 
 }  // namespace utlrandom
+
+[[nodiscard]] inline auto get_rng_random_seed() -> std::int64_t {
+#ifdef GPU_ON
+  return utlrandom::_crush_to_uint32(std::chrono::high_resolution_clock::now().time_since_epoch().count());
+#else
+  return std::random_device{}();
+#endif
+}
 
 using rngstate_type = utlrandom::Xoshiro128PP;
 
