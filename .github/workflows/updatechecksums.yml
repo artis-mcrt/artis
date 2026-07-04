@@ -61,3 +61,5 @@ jobs:
                   GH_TOKEN: ${{ github.token }}
               run: |
                   gh workflow run ci.yml --ref ${{ github.ref_name }}
+                  gh workflow run ci-checks.yml --ref ${{ github.ref_name }}
+                  gh workflow run cislowtestmode.yml --ref ${{ github.ref_name }}
