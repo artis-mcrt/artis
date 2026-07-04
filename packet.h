@@ -37,6 +37,11 @@ struct MacroAtomState {
 #include "random.h"
 
 struct Packet {
+#ifdef GPU_ON
+  // per-packet RNG state so that GPU threads (which can't use thread_local)
+  // don't share and race on a single global generator
+  rngstate_type rngstate{};
+#endif
   double prop_time{-1.};  // internal clock to track how far in time the packet has been propagated
   Vec3d pos{};  // Position of the packet (x,y,z).
   Vec3d dir{};  // Direction of propagation. (x,y,z). Always a unit vector.
@@ -71,12 +76,6 @@ struct Packet {
   bool originated_from_particlenotgamma{false};  // first packet type after pellet decay
   int pellet_decaytype{-1};  // index into decay::decaytypes
   int pellet_nucindex{-1};  // nuclide index of the decaying species
-
-#ifdef GPU_ON
-  // per-packet RNG state so that GPU threads (which can't use thread_local)
-  // don't share and race on a single global generator
-  rngstate_type rngstate{};
-#endif
 
   auto operator<=>(const Packet& rhs) const = default;
 };
