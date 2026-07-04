@@ -295,7 +295,7 @@ class MPI_shared_array {
       std::tie(_span, _win) = MPI_shared_malloc_span_keepwin<T>(num_allranks, initval);
     } else {
 #pragma clang unsafe_buffer_usage begin
-      _span = std::span<T>(static_cast<T*>(std::aligned_alloc(128, num_allranks * sizeof(T))), num_allranks);
+      _span = std::span<T>(new T[num_allranks], num_allranks);
 #pragma clang unsafe_buffer_usage end
       std::ranges::fill(_span, initval);
     }
@@ -314,8 +314,7 @@ class MPI_shared_array {
       }
       _win = MPI_WIN_NULL;
     } else {
-      // NOLINTNEXTLINE(*-no-malloc)
-      std::free(_span.data());
+      delete[] _span.data();
     }
     _span = {};
   }
