@@ -1442,8 +1442,8 @@ void read_atomicdata_files() {
   auto linelist_ionindex = MPI_shared_array<int>(globals::nlines);
   auto linelist_uniquelevelindex_lower = MPI_shared_array<int>(globals::nlines);
   auto linelist_uniquelevelindex_upper = MPI_shared_array<int>(globals::nlines);
-  auto linelist_B_ul = MPI_shared_array<double>(globals::nlines);
-  auto linelist_B_lu = MPI_shared_array<double>(globals::nlines);
+  auto linelist_B_ul = MPI_shared_array<float>(globals::nlines);
+  auto linelist_B_lu = MPI_shared_array<float>(globals::nlines);
 
   if (globals::rank_in_node == 0) {
     assert_always(std::ssize(temp_linelist) == globals::nlines);
@@ -1458,8 +1458,16 @@ void read_atomicdata_files() {
       const int uniquelevelindex_upper = ionuniquelevelindexstart + temp_linelist[t].upperlevelindex;
       linelist_uniquelevelindex_lower[t] = uniquelevelindex_lower;
       linelist_uniquelevelindex_upper[t] = uniquelevelindex_upper;
-      linelist_B_ul[t] = CLIGHTSQUAREDOVERTWOH / pow3(linelist_nu[t]) * temp_linelist[t].einstein_A;
-      linelist_B_lu[t] = stat_weight(uniquelevelindex_upper) / stat_weight(uniquelevelindex_lower) * linelist_B_ul[t];
+
+      const double B_ul = CLIGHTSQUAREDOVERTWOH / pow3(temp_linelist[t].nu) * temp_linelist[t].einstein_A;
+      const auto f_B_ul = static_cast<float>(B_ul);
+      assert_always(std::isfinite(f_B_ul));
+      linelist_B_ul[t] = f_B_ul;
+
+      const double B_lu = stat_weight(uniquelevelindex_upper) / stat_weight(uniquelevelindex_lower) * B_ul;
+      const auto f_B_lu = static_cast<float>(B_lu);
+      assert_always(std::isfinite(f_B_lu));
+      linelist_B_lu[t] = f_B_lu;
     }
   }
   temp_linelist.clear();
