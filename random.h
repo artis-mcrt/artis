@@ -10,6 +10,12 @@
 #include <limits>
 #include <type_traits>
 
+#ifdef GPU_ON
+#include <chrono>
+#else
+#include <random>
+#endif
+
 namespace utlrandom {
 
 // Helper method to crush large uints to uint32_t,
@@ -82,6 +88,17 @@ class SplitMix32 {
     return result ^ (result >> 15);
   }
 };
+}  // namespace utlrandom
+
+[[nodiscard]] inline auto get_rng_random_seed() -> std::int64_t {
+#ifdef GPU_ON
+  return utlrandom::_crush_to_uint32(std::chrono::high_resolution_clock::now().time_since_epoch().count());
+#else
+  return std::random_device{}();
+#endif
+}
+
+namespace utlrandom {
 
 // Implementation of Xoshiro128++ suggested by David Blackman and Sebastiano Vigna,
 // see https://prng.di.unimi.it/
@@ -102,7 +119,7 @@ class Xoshiro128PP {
   std::array<result_type, 4> s{};
 
  public:
-  constexpr explicit Xoshiro128PP(result_type seed = _default_seed<result_type>) noexcept { this->seed(seed); }
+  constexpr explicit Xoshiro128PP(result_type seed = get_rng_random_seed()) noexcept { this->seed(seed); }
 
   [[nodiscard]] static constexpr auto min() noexcept -> result_type { return 0; }
   // while zero-state is considered invalid, PRNG can still produce 0 as a result
@@ -133,15 +150,13 @@ class Xoshiro128PP {
 
 template <class Gen>
 constexpr auto generate_canonical_float(Gen& gen) noexcept(noexcept(gen())) -> float {
-  using generated_type = Gen::result_type;
-
-  constexpr generated_type prng_min = Gen::min();
-  constexpr generated_type prng_max = Gen::max();
+  constexpr auto prng_min = Gen::min();
+  constexpr auto prng_max = Gen::max();
 
   static_assert(prng_min < prng_max);
 
-  constexpr generated_type prng_range = prng_max - prng_min;
-  constexpr generated_type type_range = std::numeric_limits<generated_type>::max();
+  constexpr auto prng_range = prng_max - prng_min;
+  constexpr auto type_range = std::numeric_limits<typename Gen::result_type>::max();
   constexpr bool prng_is_bit_uniform = (prng_range == type_range);
 
   constexpr unsigned int exponent_bits_32 = 8;
@@ -152,7 +167,7 @@ constexpr auto generate_canonical_float(Gen& gen) noexcept(noexcept(gen())) -> f
   // Note 2: Floats have 'mantissa_size + 1' significant bits due to having a sign bit
 
   static_assert(std::numeric_limits<float>::digits == 24, "Platform not supported, 'float' is expected to be 32-bit.");
-  static_assert(prng_is_bit_uniform && sizeof(float) == 4 && sizeof(generated_type) == 4);
+  static_assert(prng_is_bit_uniform && sizeof(float) == 4 && sizeof(typename Gen::result_type) == 4);
 
   // 32-bit float, 32-bit uniform PRNG
   // => multiplication algorithm tweaked for 32-bit
@@ -161,21 +176,7 @@ constexpr auto generate_canonical_float(Gen& gen) noexcept(noexcept(gen())) -> f
 
 }  // namespace utlrandom
 
-#ifdef GPU_ON
-#include <chrono>
 using rngstate_type = utlrandom::Xoshiro128PP;
-#else
-#include <random>
-using rngstate_type = std::mt19937;
-#endif
-
-[[nodiscard]] inline auto get_rng_random_seed() -> std::int64_t {
-#ifndef GPU_ON
-  return std::random_device{}();
-#else
-  return utlrandom::_crush_to_uint32(std::chrono::high_resolution_clock::now().time_since_epoch().count());
-#endif
-}
 
 inline auto rng_uniform(rngstate_type& rngstate) -> float {
   while (true) {

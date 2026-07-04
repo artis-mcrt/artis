@@ -34,9 +34,7 @@ struct MacroAtomState {
   int activatingline;  // Linelistindex of the activating line for bb activated MAs, -99 else.
 };
 
-#ifdef GPU_ON
 #include "random.h"
-#endif
 
 struct Packet {
   double prop_time{-1.};  // internal clock to track how far in time the packet has been propagated
@@ -77,24 +75,21 @@ struct Packet {
 #ifdef GPU_ON
   // per-packet RNG state so that GPU threads (which can't use thread_local)
   // don't share and race on a single global generator
-  utlrandom::Xoshiro128PP rngstate{};
+  rngstate_type rngstate{};
 #endif
 
   auto operator<=>(const Packet& rhs) const = default;
 };
 
 #ifdef GPU_ON
-constexpr DEVICE_FUNC auto get_rngstate([[maybe_unused]] Packet& packet) -> utlrandom::Xoshiro128PP& {
-  return packet.rngstate;
-}
+constexpr DEVICE_FUNC auto get_rngstate([[maybe_unused]] Packet& packet) -> rngstate_type& { return packet.rngstate; }
 #else
-#include <random>
-
-constexpr auto get_rngstate() -> std::mt19937& {
-  thread_local std::mt19937 rng{std::random_device{}()};
+constexpr auto get_rngstate() -> rngstate_type& {
+  thread_local rngstate_type rng{};
   return rng;
 }
-constexpr auto get_rngstate([[maybe_unused]] const Packet& packet) -> std::mt19937& { return get_rngstate(); }
+
+constexpr auto get_rngstate([[maybe_unused]] const Packet& packet) -> rngstate_type& { return get_rngstate(); }
 #endif
 
 void packet_init(std::span<Packet> packets);
