@@ -1485,7 +1485,7 @@ void read_atomicdata_files() {
   const double linelist_mem_MB =
       ((globals::nlines * sizeof(double))  // nu
        + (globals::nlines * sizeof(int) * 4)  // elementindex, ionindex, uniquelevelindex_lower, uniquelevelindex_upper
-       + (globals::nlines * sizeof(double) * 2)  // B_ul, B_lu
+       + (globals::nlines * sizeof(float) * 2)  // B_ul, B_lu
        ) /
       1024. / 1024;
 
