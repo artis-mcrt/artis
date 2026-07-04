@@ -149,8 +149,8 @@ template <class Gen>
 constexpr auto generate_canonical_float(Gen& gen) noexcept(noexcept(gen())) -> float {
   using generated_type = Gen::result_type;
 
-  constexpr generated_type prng_min = Gen::min();
-  constexpr generated_type prng_max = Gen::max();
+  constexpr auto prng_min = Gen::min();
+  constexpr auto prng_max = Gen::max();
 
   static_assert(prng_min < prng_max);
 
