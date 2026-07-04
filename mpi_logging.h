@@ -532,24 +532,58 @@ inline void MPI_Reduce_safe(R&& data, MPI_Op op, const int root, MPI_Comm comm) 
   std::abort();
 }
 
+namespace scoped_mutex_detail {
+#if defined(__cpp_lib_hardware_interference_size) && __cpp_lib_hardware_interference_size >= 201603
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winterference-size"
+#endif
+inline constexpr std::size_t hardware_destructive_interference_size = std::hardware_destructive_interference_size;
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC diagnostic pop
+#endif
+#else
+inline constexpr std::size_t hardware_destructive_interference_size = 64;
+#endif
+}  // namespace scoped_mutex_detail
+
+class alignas(scoped_mutex_detail::hardware_destructive_interference_size) PaddedMutex {
+ private:
+  int lock_{0};
+
+  friend class ScopedMutex;
+
+ public:
+  constexpr PaddedMutex() = default;
+  constexpr explicit(false) PaddedMutex(const int lock) : lock_(lock) {}
+
+  constexpr auto operator=(const int lock) noexcept -> PaddedMutex& {
+    lock_ = lock;
+    return *this;
+  }
+};
+
+static_assert(alignof(PaddedMutex) == scoped_mutex_detail::hardware_destructive_interference_size);
+static_assert(sizeof(PaddedMutex) == scoped_mutex_detail::hardware_destructive_interference_size);
+
 class ScopedMutex {
  private:
-  int* lock_;
+  PaddedMutex* lock_;
 
-  static void mutex_lock(int& lock) {
-    while (std::atomic_ref<int>(lock).exchange(1, std::memory_order_acquire) == 1) {
-      std::atomic_ref<int>(lock).wait(1, std::memory_order_relaxed);
+  static void mutex_lock(PaddedMutex& lock) {
+    while (std::atomic_ref<int>(lock.lock_).exchange(1, std::memory_order_acquire) == 1) {
+      std::atomic_ref<int>(lock.lock_).wait(1, std::memory_order_relaxed);
       // blocks until lock != 1 (i.e., someone called unlock->notify)
     }
   }
 
-  static void mutex_unlock(int& lock) {
-    std::atomic_ref<int>(lock).store(0, std::memory_order_release);
-    std::atomic_ref<int>(lock).notify_one();  // wake one sleeping thread
+  static void mutex_unlock(PaddedMutex& lock) {
+    std::atomic_ref<int>(lock.lock_).store(0, std::memory_order_release);
+    std::atomic_ref<int>(lock.lock_).notify_one();  // wake one sleeping thread
   }
 
  public:
-  explicit ScopedMutex(int& lock) : lock_(&lock) { mutex_lock(*lock_); }
+  explicit ScopedMutex(PaddedMutex& lock) : lock_(&lock) { mutex_lock(*lock_); }
   ~ScopedMutex() { mutex_unlock(*lock_); }
 
   // disable copying and moving to avoid accidentally sharing locks between threads
