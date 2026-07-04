@@ -66,7 +66,7 @@ constexpr void atomicadd_always(T& var, U&& val) {
 }
 
 void printout_tracemission_stats() {
-  const int maxlinesprinted = 500;
+  const auto maxlinesprinted = 500Z;
 
   // mode is 0 for emission and 1 for absorption
   for (int mode = 0; mode < 2; mode++) {
@@ -90,14 +90,12 @@ void printout_tracemission_stats() {
           traceabsorption_totalenergy);
     }
 
-    // display the top entries of the sorted list
-    int nlines_limited = globals::nlines;
-    if (globals::nlines > maxlinesprinted) {
-      nlines_limited = maxlinesprinted;
-    }
     printlnlog("{:>17} {:>4} {:>9} {:>5} {:>8} {:>8} {:>4} {:>7} {:>7} {:>7} {:>7}", "energy", "Z", "ionstage", "upper",
                "lower", "coll_str", "forb", "lambda", "<v_rad>", "B_lu", "B_ul");
-    for (int i = 0; i < nlines_limited; i++) {
+
+    // display the top entries of the sorted list
+    const auto nlines_limited = std::min(std::ssize(globals::linelist.nu), maxlinesprinted);
+    for (auto i = 0Z; i < nlines_limited; i++) {
       double encontrib{NAN};
       double totalenergy{NAN};
       if (mode == 0) {
