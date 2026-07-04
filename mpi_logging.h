@@ -187,8 +187,8 @@ template <typename T>
   T* ptr{};
   MPI_Info info{};
   assert_always(MPI_Info_create(&info) == MPI_SUCCESS);
-  // Request 64-byte alignment (e.g., for AVX-512)
-  assert_always(MPI_Info_set(info, "mpi_minimum_memory_alignment", "64") == MPI_SUCCESS);
+  // Request alignment (AVX-512 requires 64b, and 128b is Apple Silicon cache line size).
+  assert_always(MPI_Info_set(info, "mpi_minimum_memory_alignment", "128") == MPI_SUCCESS);
   assert_always(MPI_Win_allocate_shared(size, disp_unit, info, globals::mpi_comm_node, static_cast<void*>(&ptr),
                                         &mpiwin) == MPI_SUCCESS);
   assert_always(MPI_Info_free(&info) == MPI_SUCCESS);
