@@ -541,7 +541,7 @@ class alignas(std::hardware_destructive_interference_size) PaddedMutex {
 
  public:
   constexpr PaddedMutex() = default;
-  constexpr explicit(false) PaddedMutex(const int lock) : lock_(lock) {}
+  constexpr explicit PaddedMutex(const int lock) : lock_(lock) {}
 
   constexpr auto operator=(const int lock) noexcept -> PaddedMutex& {
     lock_ = lock;
