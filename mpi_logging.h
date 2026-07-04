@@ -533,22 +533,7 @@ inline void MPI_Reduce_safe(R&& data, MPI_Op op, const int root, MPI_Comm comm) 
   std::abort();
 }
 
-namespace scoped_mutex_detail {
-#if defined(__cpp_lib_hardware_interference_size) && __cpp_lib_hardware_interference_size >= 201603
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Winterference-size"
-#endif
-inline constexpr std::size_t hardware_destructive_interference_size = std::hardware_destructive_interference_size;
-#if defined(__GNUC__) && !defined(__clang__)
-#pragma GCC diagnostic pop
-#endif
-#else
-inline constexpr std::size_t hardware_destructive_interference_size = 64;
-#endif
-}  // namespace scoped_mutex_detail
-
-class alignas(scoped_mutex_detail::hardware_destructive_interference_size) PaddedMutex {
+class alignas(std::hardware_destructive_interference_size) PaddedMutex {
  private:
   int lock_{0};
 
@@ -564,10 +549,10 @@ class alignas(scoped_mutex_detail::hardware_destructive_interference_size) Padde
   }
 };
 
-static_assert(alignof(PaddedMutex) >= scoped_mutex_detail::hardware_destructive_interference_size);
-static_assert(alignof(PaddedMutex) % scoped_mutex_detail::hardware_destructive_interference_size == 0);
-static_assert(sizeof(PaddedMutex) >= scoped_mutex_detail::hardware_destructive_interference_size);
-static_assert(sizeof(PaddedMutex) % scoped_mutex_detail::hardware_destructive_interference_size == 0);
+static_assert(alignof(PaddedMutex) >= std::hardware_destructive_interference_size);
+static_assert(alignof(PaddedMutex) % std::hardware_destructive_interference_size == 0);
+static_assert(sizeof(PaddedMutex) >= std::hardware_destructive_interference_size);
+static_assert(sizeof(PaddedMutex) % std::hardware_destructive_interference_size == 0);
 
 class ScopedMutex {
  private:
