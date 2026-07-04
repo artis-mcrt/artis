@@ -8,7 +8,6 @@
 #include <cstring>
 #include <filesystem>
 #include <ios>
-#include <iterator>
 #include <span>
 #include <sstream>
 #include <string>
@@ -30,8 +29,9 @@
 namespace {
 constexpr double RATECOEFF_INTEGRAL_ACCURACY = 1e-3;
 
+const double T_step_log = (std::log(MAXTEMP) - std::log(MINTEMP)) / (TABLESIZE - 1.);
+
 const auto temperature_grid = []() {
-  const double T_step_log = (std::log(MAXTEMP) - std::log(MINTEMP)) / (TABLESIZE - 1.);
   std::array<double, TABLESIZE + 1> grid{};
   for (auto i = 0UZ; i < grid.size(); i++) {
     grid[i] = MINTEMP * std::exp(i * T_step_log);
@@ -39,8 +39,25 @@ const auto temperature_grid = []() {
   return grid;
 }();
 
-MPI_shared_array<const float> ion_alpha_sp;  // size is nincludedions * TABLESIZE
-                                             //
+// Index of the first temperature grid point above the given temperature, matching
+// std::ranges::upper_bound(temperature_grid, temperature). The grid is log-uniform, so the
+// index can be computed directly instead of with a binary search. The correction loops
+// (almost always zero iterations) keep the result identical to upper_bound under floating-point
+// rounding of the analytic estimate.
+[[gnu::pure]] [[nodiscard]] auto get_temperature_gridupperindex(const double temperature) -> int {
+  const auto gridsize = static_cast<int>(temperature_grid.size());
+  int index = std::clamp(static_cast<int>(std::log(temperature / MINTEMP) / T_step_log) + 1, 0, gridsize);
+  while (index > 0 && temperature_grid[index - 1] > temperature) {
+    index--;
+  }
+  while (index < gridsize && temperature_grid[index] <= temperature) {
+    index++;
+  }
+  return index;
+}
+
+MPI_shared_array<const float> ion_alpha_sp;  // size is nincludedions * TABLESIZE, indexed
+                                             // by (uniqueionindex * TABLESIZE) + temperatureindex
 
 // the following spans are indexed by get_bflutindex()
 MPI_shared_array<double> spontrecombcoeffs{};  // indexed by get_bflutindex()
@@ -90,8 +107,9 @@ auto bfcooling_integrand(const double nu_minus_nu_edge, const double nu_edge, co
 
 [[gnu::pure]] [[nodiscard]] inline auto get_bflutindex(const int temperatureindex, const int uniquelevelindex,
                                                        const int phixstargetindex) -> int {
+  // continuum-major layout so that the two temperature samples read by an interpolation are adjacent
   const int contindex = globals::alllevels.bflist_start[uniquelevelindex] + phixstargetindex;
-  const int bflutindex = (temperatureindex * globals::nbfcontinua) + contindex;
+  const int bflutindex = (contindex * TABLESIZE) + temperatureindex;
   assert_testmodeonly(bflutindex >= 0);
   assert_testmodeonly(bflutindex <= TABLESIZE * globals::nbfcontinua);
   return bflutindex;
@@ -365,7 +383,6 @@ void read_recombrate_file() {
 void precalculate_ion_alpha_sp() {
   auto temp_ion_alpha_sp = MPI_shared_array<float>(get_includedions() * TABLESIZE, 0.);
   if (globals::rank_in_node == 0) {
-    const auto nincludedions = get_includedions();
     for (int tempindex = 0; tempindex < TABLESIZE; tempindex++) {
       const auto T_e = static_cast<float>(temperature_grid[tempindex]);
       for (int element = 0; element < get_nelements(); element++) {
@@ -382,7 +399,7 @@ void precalculate_ion_alpha_sp() {
               zeta += zeta_level;
             }
           }
-          temp_ion_alpha_sp[(tempindex * nincludedions) + uniqueionindex] = static_cast<float>(zeta);
+          temp_ion_alpha_sp[(uniqueionindex * TABLESIZE) + tempindex] = static_cast<float>(zeta);
         }
       }
     }
@@ -456,8 +473,7 @@ auto calculate_corrphotoioncoeff_integral(const int element, const int ion, cons
 template <typename T, typename U>
 [[nodiscard]] auto lerp_or_last(const std::span<T> table, const int uniquelevelindex, const int phixstargetindex,
                                 const U temperature) {
-  const auto upperindex =
-      std::ranges::distance(temperature_grid.begin(), std::ranges::upper_bound(temperature_grid, temperature));
+  const auto upperindex = get_temperature_gridupperindex(temperature);
   if (upperindex == 0) {
     return table[get_bflutindex(0, uniquelevelindex, phixstargetindex)];
   }
@@ -544,22 +560,20 @@ DEVICE_FUNC auto select_continuum_nu(int element, const int lowerion, const int 
 // Get an ion's rate coefficient for spontaneous recombination in LTE
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_ion_spontrecombcoeff(const int uniqueionindex, const float T_e)
     -> double {
-  const auto upperindex =
-      std::ranges::distance(temperature_grid.begin(), std::ranges::upper_bound(temperature_grid, T_e));
+  const auto upperindex = get_temperature_gridupperindex(T_e);
   if (upperindex == 0) {
-    return ion_alpha_sp[uniqueionindex];
+    return ion_alpha_sp[uniqueionindex * TABLESIZE];
   }
-  const auto nincludedions = get_includedions();
   if (upperindex < TABLESIZE) {
     const double T_lower = temperature_grid[upperindex - 1];
     const double T_upper = temperature_grid[upperindex];
 
-    const double f_lower = ion_alpha_sp[((upperindex - 1) * nincludedions) + uniqueionindex];
-    const double f_upper = ion_alpha_sp[(upperindex * nincludedions) + uniqueionindex];
+    const double f_lower = ion_alpha_sp[(uniqueionindex * TABLESIZE) + upperindex - 1];
+    const double f_upper = ion_alpha_sp[(uniqueionindex * TABLESIZE) + upperindex];
 
     return f_lower + ((f_upper - f_lower) / (T_upper - T_lower) * (T_e - T_lower));
   }
-  return ion_alpha_sp[((TABLESIZE - 1) * nincludedions) + uniqueionindex];
+  return ion_alpha_sp[(uniqueionindex * TABLESIZE) + (TABLESIZE - 1)];
 }
 
 // Return a level's rate coefficient for spontaneous recombination in LTE
