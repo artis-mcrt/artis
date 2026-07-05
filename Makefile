@@ -101,14 +101,6 @@ endif
 
 # CXXFLAGS += -DUSE_SIMPSON_INTEGRATOR
 
-# profile-guided optimisation
-# generate profile:
-# CXXFLAGS += -fprofile-generate="profdataraw"
-# for clang, run this to convert the raw data to profdata
-# llvm-profdata merge -output=profdata profdataraw/*
-# compile with PGO:
-# CXXFLAGS += -fprofile-use="profdataraw"
-
 ifeq ($(GPU),ON)
 	CXXFLAGS += -DGPU_ON -DUSE_SIMPSON_INTEGRATOR -DBOOST_MATH_NO_EXCEPTIONS -DBOOST_NO_IOSTREAM -U_GLIBCXX_ASSERTIONS
 	BUILD_DIR := $(BUILD_DIR)_gpu
@@ -256,6 +248,48 @@ else
 			CXXFLAGS += -ffast-math -funsafe-math-optimizations -fno-finite-math-only
 		endif
 	endif
+endif
+
+# profile-guided optimisation (gcc and clang):
+#   1. build with 'make PGO=GENERATE', then run a representative simulation to collect profile data
+#      (written into the build directory)
+#   2. clang only: merge the raw profiles with
+#      llvm-profdata merge -output=<build dir>/default.profdata <build dir>/*.profraw
+#   3. rebuild with 'make PGO=USE' (switching phase automatically discards the instrumented objects)
+ifneq ($(PGO),)
+  ifeq ($(filter $(PGO),GENERATE USE),)
+    $(error bad value for PGO option. Should be GENERATE or USE)
+  endif
+  ifeq ($(filter $(COMPILER_NAME),gcc clang),)
+    $(error PGO is only supported for gcc and clang)
+  endif
+
+  BUILD_DIR := $(BUILD_DIR)_pgo
+
+  # the profile output path is embedded in the binary and resolved against the runtime working
+  # directory, so it must be absolute for profiles to land in the build directory
+  PGO_PROFDIR := $(abspath $(BUILD_DIR))
+
+  ifeq ($(PGO),GENERATE)
+    ifeq ($(COMPILER_NAME),clang)
+      CXXFLAGS += -fprofile-generate="$(PGO_PROFDIR)"
+    else
+      CXXFLAGS += -fprofile-generate -fprofile-update=prefer-atomic
+    endif
+  else
+    ifeq ($(COMPILER_NAME),clang)
+      CXXFLAGS += -fprofile-use="$(PGO_PROFDIR)/default.profdata" -Wno-profile-instr-unprofiled -Wno-profile-instr-out-of-date
+    else
+      CXXFLAGS += -fprofile-use -fprofile-correction -Wno-missing-profile
+    endif
+  endif
+
+  # instrumented and optimised objects cannot be mixed, so start clean when the phase changes
+  ifneq ($(shell cat $(BUILD_DIR)/pgo_phase 2>/dev/null),$(PGO))
+    $(shell mkdir -p $(BUILD_DIR))
+    $(shell rm -f $(BUILD_DIR)/*.o $(BUILD_DIR)/*.d $(BUILD_DIR)/sn3d $(BUILD_DIR)/sn3dwhole $(BUILD_DIR)/exspec)
+    $(shell echo $(PGO) > $(BUILD_DIR)/pgo_phase)
+  endif
 endif
 
 # sn3d.cc and exspec.cc have main() defined
