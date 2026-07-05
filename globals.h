@@ -248,9 +248,8 @@ inline int NPHIXSPOINTS{-1};  // number of photoionisation cross-section points 
 inline double NPHIXSNUINCREMENT{-1};  // frequency increment between points as a fraction of nu_edge
 
 // A cell cache slot holds pre-calculated quantities for a single model grid cell. The large per-cell
-// arrays are non-owning views (spans) into backing storage held in globals::cellcache_backing. When
-// cellcache_singleslot is false, that backing lives in shared memory (MPI_shared_array) so that all MPI
-// ranks on a compute node share a single copy, and each slot points at its own cell's sub-range.
+// arrays are non-owning views (spans) into shared-memory backing storage held in
+// globals::cellcache_backing, with each slot viewing its own sub-range.
 struct CellCache {
   int nonemptymgi{-1};  // non-empty model grid index for this cache slot
   std::span<double> cooling_contrib;  // Cooling contributions by the different processes.
@@ -285,10 +284,11 @@ struct CellCache {
 };
 inline std::vector<CellCache> cellcache{};
 
-// Backing storage for the cell cache arrays.
+// Backing storage for the cell cache arrays, allocated in node-shared memory. When cellcache_singleslot
+// is false, each array spans every non-empty cell and cellcache[nonemptymgi] views the relevant sub-range,
+// shared by all MPI ranks on the node. When it is true, each array holds one reusable slot per node rank
+// and each rank uses only its own cellcache[rank_in_node] view.
 struct CellCacheBacking {
-  // Shared across all MPI ranks on a compute node. Used when cellcache_singleslot is false, in which case
-  // each array spans every non-empty cell and cellcache[nonemptymgi] views the relevant sub-range.
   MPI_shared_array<double> cooling_contrib;
   MPI_shared_array<double> alllevels_pops;
   MPI_shared_array<double> alllevels_maprocessrates;
@@ -298,17 +298,6 @@ struct CellCacheBacking {
   MPI_shared_array<std::uint8_t> allcont_keep;
   MPI_shared_array<double> chi_ff_nnionpart;
   MPI_shared_array<double> allphixstargets_corrphotoioncoeff;
-
-  // Per-process storage for the single reusable slot. Used when cellcache_singleslot is true.
-  std::vector<double> cooling_contrib_local;
-  std::vector<double> alllevels_pops_local;
-  std::vector<double> alllevels_maprocessrates_local;
-  std::vector<double> allmacroatomictransitions_local;
-  std::vector<double> allcont_modified_departureratios_local;
-  std::vector<double> allcont_nnlevel_local;
-  std::vector<std::uint8_t> allcont_keep_local;
-  std::vector<double> chi_ff_nnionpart_local;
-  std::vector<double> allphixstargets_corrphotoioncoeff_local;
 };
 inline CellCacheBacking cellcache_backing{};
 
@@ -354,7 +343,7 @@ inline bool lte_iteration{false};
 
 inline auto get_cellcache(const int nonemptymgi) -> globals::CellCache& {
   assert_always(nonemptymgi >= 0);
-  const int cacheslotid = cellcache_singleslot ? 0 : nonemptymgi;
+  const int cacheslotid = cellcache_singleslot ? globals::rank_in_node : nonemptymgi;
   return globals::cellcache[cacheslotid];
 }
 

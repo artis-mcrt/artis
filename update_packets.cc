@@ -434,8 +434,9 @@ void update_packet_cellcache_group(const int cellcache_groupid, std::span<Packet
                                    const double ts_end) {
   if (cellcache_singleslot) {
     // in this case, a positive groupid is a nonemptymgi, and -1 is the no-cache-required group
-    if (cellcache_groupid >= 0 && globals::cellcache[0].nonemptymgi != cellcache_groupid) {
-      cellcacheslot_populate(globals::cellcache[0], cellcache_groupid);
+    auto& cacheslot = globals::cellcache[globals::rank_in_node];
+    if (cellcache_groupid >= 0 && cacheslot.nonemptymgi != cellcache_groupid) {
+      cellcacheslot_populate(cacheslot, cellcache_groupid);
     }
   }
 
@@ -512,7 +513,7 @@ void update_packets(const int nts, std::span<Packet> packets) {
   printlnlog("timestep {}: start update_packets", nts);
   if constexpr (cellcache_singleslot) {
     // invalidate the cell cache, since it might match the nonemptymgi but with old values from the previous timestep
-    globals::cellcache[0].nonemptymgi = -2;
+    globals::cellcache[globals::rank_in_node].nonemptymgi = -2;
   } else {
     // The cell cache is shared between the node's MPI ranks, so distribute the populate (and up-front rate
     // pre-calculation) across those ranks. Each rank fills the cells in its chunk of the shared memory and
