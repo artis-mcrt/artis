@@ -56,71 +56,96 @@ std::chrono::steady_clock::time_point
 std::fstream estimators_file;
 
 void setup_cellcache() {
-  const int num_cellcache_slots = cellcache_singleslot ? 1 : grid::get_nonempty_npts_model();
+  // When cellcache_singleslot is false, every non-empty cell gets its own persistent cache slot, shared by
+  // all MPI ranks on the node. When it is true, each node rank gets a single reusable slot
+  // (globals::cellcache[rank_in_node]) that is repopulated as its packets move between cells.
+  const int num_cellcache_slots = cellcache_singleslot ? globals::node_nprocs : grid::get_nonempty_npts_model();
   resize_exactly(globals::cellcache, num_cellcache_slots);
+
+  // per-cell sizes of each cache array
+  const auto ncoolingterms = static_cast<size_t>(kpkt::ncoolingterms);
+  const auto nincludedlevels = static_cast<size_t>(get_includedlevels());
+  assert_always(globals::nbfcontinua >= 0);
+  const auto nbfcontinua = static_cast<size_t>(globals::nbfcontinua);
+
+  auto allphixstargetcount = 0ZU;
+  auto chtransblocksize = 0ZU;
+  for (int element = 0; element < get_nelements(); element++) {
+    const int nions = get_nions(element);
+    for (int ion = 0; ion < nions; ion++) {
+      const int nlevels = get_nlevels(element, ion);
+
+      for (int level = 0; level < nlevels; level++) {
+        allphixstargetcount += get_nphixstargets(element, ion, level);
+
+        const int ndowntrans = get_ndowntrans(element, ion, level);
+        const int nuptrans = get_nuptrans(element, ion, level);
+        chtransblocksize += ((2 * ndowntrans) + nuptrans);
+      }
+    }
+  }
+  assert_always(chtransblocksize <= std::numeric_limits<int>::max());
+
+  const auto nslots = static_cast<size_t>(num_cellcache_slots);
+  const auto maprocess_percell = nincludedlevels * MA_ACTION_COUNT;
+
+  // one shared allocation per array, with a sub-range for each slot
+  auto& backing = globals::cellcache_backing;
+  backing.cooling_contrib.allocate(static_cast<ptrdiff_t>(ncoolingterms * nslots));
+  backing.alllevels_pops.allocate(static_cast<ptrdiff_t>(nincludedlevels * nslots));
+  backing.alllevels_maprocessrates.allocate(static_cast<ptrdiff_t>(maprocess_percell * nslots));
+  backing.allmacroatomictransitions.allocate(static_cast<ptrdiff_t>(chtransblocksize * nslots));
+  backing.allcont_modified_departureratios.allocate(static_cast<ptrdiff_t>(nbfcontinua * nslots));
+  backing.allcont_nnlevel.allocate(static_cast<ptrdiff_t>(nbfcontinua * nslots));
+  backing.allcont_keep.allocate(static_cast<ptrdiff_t>(nbfcontinua * nslots));
+  backing.chi_ff_nnionpart.allocate(static_cast<ptrdiff_t>(nslots));
+  backing.allphixstargets_corrphotoioncoeff.allocate(static_cast<ptrdiff_t>(allphixstargetcount * nslots));
 
   auto mem_usage_cellcache = 0ZU;
   for (int cellcachenum = 0; cellcachenum < num_cellcache_slots; cellcachenum++) {
     globals::CellCache& cacheslot = globals::cellcache[cellcachenum];
 
-    cacheslot.nonemptymgi = -1;
+    // in multi-slot mode the slot index is the nonemptymgi (set here so that all node ranks agree on each
+    // slot's cell even though the populate work is distributed); in single-slot mode the cell is not yet known
+    cacheslot.nonemptymgi = cellcache_singleslot ? -1 : cellcachenum;
 
-    resize_exactly(cacheslot.cooling_contrib_locks, get_includedions());
-    std::ranges::fill(cacheslot.cooling_contrib_locks, 0);
-    resize_exactly(cacheslot.allmacroatomictransitions_locks, get_includedlevels());
-    std::ranges::fill(cacheslot.allmacroatomictransitions_locks, 0);
+    const auto s = static_cast<size_t>(cellcachenum);
+    cacheslot.cooling_contrib = backing.cooling_contrib.subspan(s * ncoolingterms, ncoolingterms);
+    cacheslot.alllevels_pops = backing.alllevels_pops.subspan(s * nincludedlevels, nincludedlevels);
+    cacheslot.alllevels_maprocessrates =
+        backing.alllevels_maprocessrates.subspan(s * maprocess_percell, maprocess_percell);
+    cacheslot.allmacroatomictransitions =
+        backing.allmacroatomictransitions.subspan(s * chtransblocksize, chtransblocksize);
+    cacheslot.allcont_modified_departureratios =
+        backing.allcont_modified_departureratios.subspan(s * nbfcontinua, nbfcontinua);
+    cacheslot.allcont_nnlevel = backing.allcont_nnlevel.subspan(s * nbfcontinua, nbfcontinua);
+    cacheslot.allcont_keep = backing.allcont_keep.subspan(s * nbfcontinua, nbfcontinua);
+    cacheslot.chi_ff_nnionpart = backing.chi_ff_nnionpart.subspan(s, 1);
+    cacheslot.allphixstargets_corrphotoioncoeff =
+        backing.allphixstargets_corrphotoioncoeff.subspan(s * allphixstargetcount, allphixstargetcount);
 
-    const auto ncoolingterms = kpkt::ncoolingterms;
-    resize_exactly(cacheslot.cooling_contrib, ncoolingterms);
-    std::ranges::fill(cacheslot.cooling_contrib, 0.0);
+    if (cellcache_singleslot && cellcachenum == globals::rank_in_node) {
+      // the lazy mutex-guarded rate calculation is only used in single-slot mode, and each rank only
+      // ever accesses its own slot
+      resize_exactly(cacheslot.cooling_contrib_locks, static_cast<size_t>(get_includedions()));
+      std::ranges::fill(cacheslot.cooling_contrib_locks, 0);
+      resize_exactly(cacheslot.allmacroatomictransitions_locks, nincludedlevels);
+      std::ranges::fill(cacheslot.allmacroatomictransitions_locks, 0);
+
+      for (size_t uniquelevelindex = 0; uniquelevelindex < nincludedlevels; uniquelevelindex++) {
+        cacheslot.alllevels_maprocessrates[uniquelevelindex * MA_ACTION_COUNT] = -99.;
+      }
+    }
 
     if (cellcachenum == 0) {
       printlnlog("[info] mem_usage: cellcache coolinglist contribs for slot 0 occupies {:.3f} MB",
                  ncoolingterms * sizeof(double) / 1024. / 1024.);
+      printlnlog("[info] mem_usage: cellcache macroatom stats for slot 0 occupies {:.3f} MB",
+                 chtransblocksize * sizeof(double) / 1024. / 1024.);
+      printlnlog("[info] mem_usage: cellcache for slot 0 occupies {:.3f} MB",
+                 cacheslot.get_mem_usage() / 1024. / 1024.);
     }
-
-    auto allphixstargetcount = 0ZU;
-    auto chtransblocksize = 0ZU;
-    for (int element = 0; element < get_nelements(); element++) {
-      const int nions = get_nions(element);
-      for (int ion = 0; ion < nions; ion++) {
-        const int nlevels = get_nlevels(element, ion);
-
-        for (int level = 0; level < nlevels; level++) {
-          const int nphixstargets = get_nphixstargets(element, ion, level);
-          allphixstargetcount += nphixstargets;
-
-          const int ndowntrans = get_ndowntrans(element, ion, level);
-          const int nuptrans = get_nuptrans(element, ion, level);
-          chtransblocksize += ((2 * ndowntrans) + nuptrans);
-        }
-      }
-    }
-    resize_exactly(cacheslot.alllevels_pops, get_includedlevels());
-    resize_exactly(cacheslot.alllevels_maprocessrates, get_includedlevels() * MA_ACTION_COUNT);
-
-    if (allphixstargetcount > 0) {
-      resize_exactly(cacheslot.allphixstargets_corrphotoioncoeff, allphixstargetcount);
-    }
-
-    assert_always(chtransblocksize <= std::numeric_limits<int>::max());
-    if (chtransblocksize > 0) {
-      resize_exactly(cacheslot.allmacroatomictransitions, chtransblocksize);
-    }
-
-    for (int uniquelevelindex = 0; uniquelevelindex < get_includedlevels(); uniquelevelindex++) {
-      cacheslot.alllevels_maprocessrates[uniquelevelindex * MA_ACTION_COUNT] = -99.;
-    }
-
-    assert_always(globals::nbfcontinua >= 0);
-    resize_exactly(cacheslot.allcont_modified_departureratios, globals::nbfcontinua);
-    resize_exactly(cacheslot.allcont_nnlevel, globals::nbfcontinua);
-    resize_exactly(cacheslot.allcont_keep, globals::nbfcontinua);
     mem_usage_cellcache += cacheslot.get_mem_usage();
-
-    if (cellcachenum == 0) {
-      printlnlog("[info] mem_usage: cellcache for slot 0 occupies {:.3f} MB", mem_usage_cellcache / 1024. / 1024.);
-    }
   }
   printlnlog("[info] mem_usage: cellcache for all {} slots occupies {:.3f} MB", num_cellcache_slots,
              mem_usage_cellcache / 1024. / 1024.);

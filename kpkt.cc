@@ -407,11 +407,22 @@ DEVICE_FUNC void do_kpkt(Packet& pkt, const double t2, const int nts) {
       std::span{get_cellcache(nonemptymgi).cooling_contrib}.subspan(ionstart, ncoolingterms_ion);
 
   {
+    const auto calc_cooling_if_needed = [&] {
+      if (ion_contribs[0] < 0.) {
+        calculate_cooling_rates_ion<true>(nonemptymgi, element, ion, ion_contribs, nullptr, nullptr, nullptr, nullptr);
+      }
+    };
 #if (defined(STDPAR_ON) || defined(_OPENMP)) && !defined(GPU_ON)
-    [[maybe_unused]] ScopedMutex lock{get_cellcache(nonemptymgi).cooling_contrib_locks[uniqueionindex]};
+    // Only single-slot mode shares a cache slot between threads working different cells and therefore needs
+    // the per-ion mutex. Multi-slot mode pre-calculates every cell's cooling rates in cellcacheslot_populate,
+    // so no locking (and no lazy calculation) is required here.
+    if constexpr (cellcache_singleslot) {
+      [[maybe_unused]] ScopedMutex lock{get_cellcache(nonemptymgi).cooling_contrib_locks[uniqueionindex]};
+      calc_cooling_if_needed();
+    } else
 #endif
-    if (ion_contribs[0] < 0.) {
-      calculate_cooling_rates_ion<true>(nonemptymgi, element, ion, ion_contribs, nullptr, nullptr, nullptr, nullptr);
+    {
+      calc_cooling_if_needed();
     }
   }
 

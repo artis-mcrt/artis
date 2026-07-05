@@ -5,6 +5,7 @@
 #include <chrono>
 #include <cmath>
 #include <cstddef>
+#include <cstdint>
 #include <cstdlib>
 #include <limits>
 #include <optional>
@@ -24,9 +25,7 @@
 #include "grid.h"
 #include "kpkt.h"
 #include "ltepop.h"
-#ifdef GPU_ON
 #include "macroatom.h"
-#endif
 #include "mpi_logging.h"
 #include "nonthermal.h"
 #include "packet.h"
@@ -373,7 +372,7 @@ void cellcacheslot_populate(globals::CellCache& cacheslot, const int nonemptymgi
   stats::increment(stats::Counter::UPDATECELL);
 
   cacheslot.nonemptymgi = nonemptymgi;
-  cacheslot.chi_ff_nnionpart = calculate_chi_ffheat_nnionpart(nonemptymgi);
+  cacheslot.chi_ff_nnionpart[0] = calculate_chi_ffheat_nnionpart(nonemptymgi);
 
   const int nelements = get_nelements();
   for (int element = 0; element < nelements; element++) {
@@ -402,38 +401,42 @@ void cellcacheslot_populate(globals::CellCache& cacheslot, const int nonemptymgi
   for (int i = 0; i < globals::nbfcontinua; i++) {
     const auto nnlevel = cacheslot.alllevels_pops[globals::allcont.uniquelevelindex[i]];
     cacheslot.allcont_nnlevel[i] = nnlevel;
-    cacheslot.allcont_keep[i] = nnlevel > 0 && keep_this_cont(globals::allcont.element[i], globals::allcont.ion[i],
-                                                              globals::allcont.level[i], nonemptymgi, nnetot);
+    cacheslot.allcont_keep[i] =
+        static_cast<std::uint8_t>(nnlevel > 0 && keep_this_cont(globals::allcont.element[i], globals::allcont.ion[i],
+                                                                globals::allcont.level[i], nonemptymgi, nnetot));
   }
 
-#ifdef GPU_ON
-  // On the device, the macroatom transition rates and k-packet cooling rates cannot be computed lazily
-  // during propagation (they are guarded by a mutex on the CPU, which is unavailable on the GPU). So
-  // prepopulate every cell's rates here, up front, while still on the host.
-  const double t_mid = globals::timesteps[globals::timestep].mid;
-  const auto alllevelindices = std::ranges::iota_view{0, get_includedlevels()};
-  std::for_each(EXEC_PAR_UNSEQ alllevelindices.begin(), alllevelindices.end(),
-                [nonemptymgi, t_mid](const int uniquelevelindex) {
-                  calculate_cellcache_macroatom_transitionrates(nonemptymgi, uniquelevelindex, t_mid);
-                });
+  if constexpr (!cellcache_singleslot) {
+    // The cache slot is shared between node ranks and persists for the whole timestep, so the macroatom
+    // transition rates and k-packet cooling rates cannot be filled in lazily under a per-cell mutex during
+    // propagation (that would race across ranks, and on the GPU there is no mutex at all). Instead
+    // pre-calculate every cell's rates here, up front. The populate calls are distributed across the node's
+    // ranks (see update_packets), so each rank only does this for a subset of cells.
+    const double t_mid = globals::timesteps[globals::timestep].mid;
+    const auto alllevelindices = std::ranges::iota_view{0, get_includedlevels()};
+    std::for_each(EXEC_PAR_UNSEQ alllevelindices.begin(), alllevelindices.end(),
+                  [nonemptymgi, t_mid](const int uniquelevelindex) {
+                    calculate_cellcache_macroatom_transitionrates(nonemptymgi, uniquelevelindex, t_mid);
+                  });
 
-  const auto allionindices = std::ranges::iota_view{0, get_includedions()};
-  std::for_each(EXEC_PAR_UNSEQ allionindices.begin(), allionindices.end(), [nonemptymgi](const int uniqueionindex) {
-    kpkt::calculate_cellcache_cooling_rates_ion(nonemptymgi, uniqueionindex);
-  });
-#else
-  for (int uniquelevelindex = 0; uniquelevelindex < get_includedlevels(); uniquelevelindex++) {
-    cacheslot.alllevels_maprocessrates[uniquelevelindex * MA_ACTION_COUNT] = -99.;
+    const auto allionindices = std::ranges::iota_view{0, get_includedions()};
+    std::for_each(EXEC_PAR_UNSEQ allionindices.begin(), allionindices.end(), [nonemptymgi](const int uniqueionindex) {
+      kpkt::calculate_cellcache_cooling_rates_ion(nonemptymgi, uniqueionindex);
+    });
+  } else {
+    for (int uniquelevelindex = 0; uniquelevelindex < get_includedlevels(); uniquelevelindex++) {
+      cacheslot.alllevels_maprocessrates[uniquelevelindex * MA_ACTION_COUNT] = -99.;
+    }
   }
-#endif
 }
 
 void update_packet_cellcache_group(const int cellcache_groupid, std::span<Packet> packetgroup, const int nts,
                                    const double ts_end) {
   if (cellcache_singleslot) {
     // in this case, a positive groupid is a nonemptymgi, and -1 is the no-cache-required group
-    if (cellcache_groupid >= 0 && globals::cellcache[0].nonemptymgi != cellcache_groupid) {
-      cellcacheslot_populate(globals::cellcache[0], cellcache_groupid);
+    auto& cacheslot = globals::cellcache[globals::rank_in_node];
+    if (cellcache_groupid >= 0 && cacheslot.nonemptymgi != cellcache_groupid) {
+      cellcacheslot_populate(cacheslot, cellcache_groupid);
     }
   }
 
@@ -508,14 +511,20 @@ void update_packets(const int nts, std::span<Packet> packets) {
 
   const auto time_update_packets_start = std::chrono::steady_clock::now();
   printlnlog("timestep {}: start update_packets", nts);
-  if (cellcache_singleslot) {
+  if constexpr (cellcache_singleslot) {
     // invalidate the cell cache, since it might match the nonemptymgi but with old values from the previous timestep
-    globals::cellcache[0].nonemptymgi = -2;
+    globals::cellcache[globals::rank_in_node].nonemptymgi = -2;
   } else {
+    // The cell cache is shared between the node's MPI ranks, so distribute the populate (and up-front rate
+    // pre-calculation) across those ranks. Each rank fills the cells in its chunk of the shared memory and
+    // then we wait at a node barrier so that every rank sees the fully-populated cache before propagation.
     const auto nonempty_npts_model = grid::get_nonempty_npts_model();
-    for (int nonemptymgi = 0; nonemptymgi < nonempty_npts_model; nonemptymgi++) {
-      cellcacheslot_populate(globals::cellcache.at(nonemptymgi), nonemptymgi);
+    const auto [nonemptymgi_start, nonemptymgi_count] =
+        get_range_chunk(nonempty_npts_model, globals::node_nprocs, globals::rank_in_node);
+    for (auto nonemptymgi = nonemptymgi_start; nonemptymgi < (nonemptymgi_start + nonemptymgi_count); nonemptymgi++) {
+      cellcacheslot_populate(globals::cellcache.at(nonemptymgi), static_cast<int>(nonemptymgi));
     }
+    MPI_Barrier_node();
     printlnlog("timestep {}: all {} cellcaches set (took {:.1f} s)", nts, nonempty_npts_model,
                std::chrono::duration<double>(std::chrono::steady_clock::now() - time_update_packets_start).count());
   }
