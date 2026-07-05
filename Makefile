@@ -286,7 +286,9 @@ ifneq ($(PGO),)
 
   # instrumented and optimised objects cannot be mixed, so start clean when the phase changes
   ifneq ($(shell cat $(BUILD_DIR)/pgo_phase 2>/dev/null),$(PGO))
+    $(shell mkdir -p $(BUILD_DIR))
     $(shell rm -f $(BUILD_DIR)/*.o $(BUILD_DIR)/*.d $(BUILD_DIR)/sn3d $(BUILD_DIR)/sn3dwhole $(BUILD_DIR)/exspec)
+    $(shell echo $(PGO) > $(BUILD_DIR)/pgo_phase)
   endif
 endif
 
