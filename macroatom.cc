@@ -390,8 +390,7 @@ DEVICE_FUNC void do_macroatom(Packet& pkt, const MacroAtomState& pktmastate) {
       // needs the per-level mutex. Multi-slot mode pre-calculates every cell's rates in
       // cellcacheslot_populate, so no locking (and no lazy calculation) is required here.
       if constexpr (cellcache_singleslot) {
-        [[maybe_unused]] ScopedMutex lock{
-            get_cellcache(nonemptymgi).allmacroatomictransitions_locks[uniquelevelindex]};
+        [[maybe_unused]] ScopedMutex lock{get_cellcache(nonemptymgi).allmacroatomictransitions_locks[uniquelevelindex]};
         calc_rates_if_needed();
       } else
 #endif
