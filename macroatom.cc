@@ -376,16 +376,27 @@ DEVICE_FUNC void do_macroatom(Packet& pkt, const MacroAtomState& pktmastate) {
         uniquelevelindex * MA_ACTION_COUNT, MA_ACTION_COUNT);
 
     {
-#if (defined(STDPAR_ON) || defined(_OPENMP)) && !defined(GPU_ON)
-      [[maybe_unused]] ScopedMutex lock{get_cellcache(nonemptymgi).allmacroatomictransitions_locks[uniquelevelindex]};
-#endif
-
       assert_testmodeonly(get_cellcache(nonemptymgi).nonemptymgi == nonemptymgi);
 
       // If there are no precalculated rates available then calculate them
-      if (levelrates[0] < 0.) {
-        calculate_macroatom_transitionrates(levelrates, nonemptymgi, element, ion, level, ionuniquelevelindexstart,
-                                            t_mid, globals::alltrans);
+      const auto calc_rates_if_needed = [&] {
+        if (levelrates[0] < 0.) {
+          calculate_macroatom_transitionrates(levelrates, nonemptymgi, element, ion, level, ionuniquelevelindexstart,
+                                              t_mid, globals::alltrans);
+        }
+      };
+#if (defined(STDPAR_ON) || defined(_OPENMP)) && !defined(GPU_ON)
+      // Only single-slot mode shares a cache slot between threads working different cells and therefore
+      // needs the per-level mutex. Multi-slot mode pre-calculates every cell's rates in
+      // cellcacheslot_populate, so no locking (and no lazy calculation) is required here.
+      if constexpr (cellcache_singleslot) {
+        [[maybe_unused]] ScopedMutex lock{
+            get_cellcache(nonemptymgi).allmacroatomictransitions_locks[uniquelevelindex]};
+        calc_rates_if_needed();
+      } else
+#endif
+      {
+        calc_rates_if_needed();
       }
     }
 

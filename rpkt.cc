@@ -656,7 +656,7 @@ auto calculate_chi_ffheating(const int nonemptymgi, const double nu, const bool 
   const auto T_e = grid::get_Te(nonemptymgi);
   assert_testmodeonly(!use_cellcache || get_cellcache(nonemptymgi).nonemptymgi == nonemptymgi);
   const auto chi_ff_nnionpart =
-      use_cellcache ? get_cellcache(nonemptymgi).chi_ff_nnionpart : calculate_chi_ffheat_nnionpart(nonemptymgi);
+      use_cellcache ? get_cellcache(nonemptymgi).chi_ff_nnionpart[0] : calculate_chi_ffheat_nnionpart(nonemptymgi);
 
   const double chi_ff = chi_ff_nnionpart / pow3(nu) * clumpednne * (1 - exp(-HOVERKB * nu / T_e));
 

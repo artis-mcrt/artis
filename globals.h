@@ -7,6 +7,7 @@
 #endif
 #include <cmath>
 #include <cstddef>
+#include <cstdint>
 #include <span>
 #include <vector>
 
@@ -246,36 +247,70 @@ inline int nbfcontinua_ground{-1};  // number of bf-continua from ground levels
 inline int NPHIXSPOINTS{-1};  // number of photoionisation cross-section points per level
 inline double NPHIXSNUINCREMENT{-1};  // frequency increment between points as a fraction of nu_edge
 
+// A cell cache slot holds pre-calculated quantities for a single model grid cell. The large per-cell
+// arrays are non-owning views (spans) into backing storage held in globals::cellcache_backing. When
+// cellcache_singleslot is false, that backing lives in shared memory (MPI_shared_array) so that all MPI
+// ranks on a compute node share a single copy, and each slot points at its own cell's sub-range.
 struct CellCache {
   int nonemptymgi{-1};  // non-empty model grid index for this cache slot
-  std::vector<double> cooling_contrib;  // Cooling contributions by the different processes.
-  std::vector<double> alllevels_pops;
-  std::vector<double> alllevels_maprocessrates;  // rates for macroatom processes
-  std::vector<double> allmacroatomictransitions;  // cumulative macroatom transition rates for all levels
-  std::vector<double> allcont_modified_departureratios;
-  std::vector<double> allcont_nnlevel;
-  std::vector<bool> allcont_keep;
-  double chi_ff_nnionpart{-1};
-  std::vector<double> allphixstargets_corrphotoioncoeff;
+  std::span<double> cooling_contrib;  // Cooling contributions by the different processes.
+  std::span<double> alllevels_pops;
+  std::span<double> alllevels_maprocessrates;  // rates for macroatom processes
+  std::span<double> allmacroatomictransitions;  // cumulative macroatom transition rates for all levels
+  std::span<double> allcont_modified_departureratios;
+  std::span<double> allcont_nnlevel;
+  std::span<std::uint8_t> allcont_keep;
+  std::span<double> chi_ff_nnionpart;  // single element per cell (stored as a span to allow shared backing)
+  std::span<double> allphixstargets_corrphotoioncoeff;
+  // The lazy mutex-guarded macroatom/cooling rate calculation is only used when cellcache_singleslot is
+  // true. When it is false, these rates are pre-calculated for every cell (see cellcacheslot_populate) so
+  // no locking is required during packet propagation and these vectors stay empty.
   std::vector<PaddedMutex> cooling_contrib_locks;
   std::vector<PaddedMutex> allmacroatomictransitions_locks;
 
   [[nodiscard]] auto get_mem_usage() const {
-    auto mem_usage = (cooling_contrib.size() * sizeof(cooling_contrib[0]));
-    mem_usage += (alllevels_pops.size() * sizeof(alllevels_pops[0]));
-    mem_usage += (alllevels_maprocessrates.size() * sizeof(alllevels_maprocessrates[0]));
-    mem_usage += (allmacroatomictransitions.size() * sizeof(allmacroatomictransitions[0]));
-    mem_usage += (allcont_modified_departureratios.size() * sizeof(allcont_modified_departureratios[0]));
-    mem_usage += (allcont_nnlevel.size() * sizeof(allcont_nnlevel[0]));
-    mem_usage += (allcont_keep.size() * sizeof(allcont_keep[0]));
-    mem_usage += sizeof(double);  // for chi_ff_nnionpart
-    mem_usage += (allphixstargets_corrphotoioncoeff.size() * sizeof(allphixstargets_corrphotoioncoeff[0]));
-    mem_usage += (cooling_contrib_locks.size() * sizeof(cooling_contrib_locks[0]));
-    mem_usage += (allmacroatomictransitions_locks.size() * sizeof(allmacroatomictransitions_locks[0]));
+    auto mem_usage = (cooling_contrib.size() * sizeof(double));
+    mem_usage += (alllevels_pops.size() * sizeof(double));
+    mem_usage += (alllevels_maprocessrates.size() * sizeof(double));
+    mem_usage += (allmacroatomictransitions.size() * sizeof(double));
+    mem_usage += (allcont_modified_departureratios.size() * sizeof(double));
+    mem_usage += (allcont_nnlevel.size() * sizeof(double));
+    mem_usage += (allcont_keep.size() * sizeof(std::uint8_t));
+    mem_usage += (chi_ff_nnionpart.size() * sizeof(double));
+    mem_usage += (allphixstargets_corrphotoioncoeff.size() * sizeof(double));
+    mem_usage += (cooling_contrib_locks.size() * sizeof(PaddedMutex));
+    mem_usage += (allmacroatomictransitions_locks.size() * sizeof(PaddedMutex));
     return mem_usage;
   }
 };
 inline std::vector<CellCache> cellcache{};
+
+// Backing storage for the cell cache arrays.
+struct CellCacheBacking {
+  // Shared across all MPI ranks on a compute node. Used when cellcache_singleslot is false, in which case
+  // each array spans every non-empty cell and cellcache[nonemptymgi] views the relevant sub-range.
+  MPI_shared_array<double> cooling_contrib;
+  MPI_shared_array<double> alllevels_pops;
+  MPI_shared_array<double> alllevels_maprocessrates;
+  MPI_shared_array<double> allmacroatomictransitions;
+  MPI_shared_array<double> allcont_modified_departureratios;
+  MPI_shared_array<double> allcont_nnlevel;
+  MPI_shared_array<std::uint8_t> allcont_keep;
+  MPI_shared_array<double> chi_ff_nnionpart;
+  MPI_shared_array<double> allphixstargets_corrphotoioncoeff;
+
+  // Per-process storage for the single reusable slot. Used when cellcache_singleslot is true.
+  std::vector<double> cooling_contrib_local;
+  std::vector<double> alllevels_pops_local;
+  std::vector<double> alllevels_maprocessrates_local;
+  std::vector<double> allmacroatomictransitions_local;
+  std::vector<double> allcont_modified_departureratios_local;
+  std::vector<double> allcont_nnlevel_local;
+  std::vector<std::uint8_t> allcont_keep_local;
+  std::vector<double> chi_ff_nnionpart_local;
+  std::vector<double> allphixstargets_corrphotoioncoeff_local;
+};
+inline CellCacheBacking cellcache_backing{};
 
 inline double vmax{NAN};
 inline double rmax{NAN};
