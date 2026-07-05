@@ -140,6 +140,8 @@ void setup_cellcache() {
     if (cellcachenum == 0) {
       printlnlog("[info] mem_usage: cellcache coolinglist contribs for slot 0 occupies {:.3f} MB",
                  ncoolingterms * sizeof(double) / 1024. / 1024.);
+      printlnlog("[info] mem_usage: cellcache macroatom stats for slot 0 occupies {:.3f} MB",
+                 chtransblocksize * sizeof(double) / 1024. / 1024.);
       printlnlog("[info] mem_usage: cellcache for slot 0 occupies {:.3f} MB",
                  cacheslot.get_mem_usage() / 1024. / 1024.);
     }
