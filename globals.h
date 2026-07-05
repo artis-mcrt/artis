@@ -274,7 +274,7 @@ struct CellCache {
     mem_usage += (allmacroatomictransitions.size() * sizeof(double));
     mem_usage += (allcont_modified_departureratios.size() * sizeof(double));
     mem_usage += (allcont_nnlevel.size() * sizeof(double));
-    mem_usage += (allcont_keep.size() * sizeof(std::uint8_t));
+    mem_usage += (allcont_keep.size() * sizeof(allcont_keep[0]));
     mem_usage += (chi_ff_nnionpart.size() * sizeof(double));
     mem_usage += (allphixstargets_corrphotoioncoeff.size() * sizeof(double));
     mem_usage += (cooling_contrib_locks.size() * sizeof(PaddedMutex));
