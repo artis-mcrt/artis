@@ -535,15 +535,8 @@ inline void MPI_Reduce_safe(R&& data, MPI_Op op, const int root, MPI_Comm comm) 
   std::abort();
 }
 
-namespace scoped_mutex_detail {
-#if defined(__cpp_lib_hardware_interference_size) && __cpp_lib_hardware_interference_size >= 201603
-inline constexpr std::size_t hardware_destructive_interference_size = std::hardware_destructive_interference_size;
-#else
-inline constexpr std::size_t hardware_destructive_interference_size = 64;
-#endif
-}  // namespace scoped_mutex_detail
-
-class alignas(scoped_mutex_detail::hardware_destructive_interference_size) PaddedMutex {
+// padded to a full cache line in CPU multithreaded modes so that adjacent mutexes in an array don't false share
+class ALIGNAS_AVOID_FALSE_SHARING PaddedMutex {
  private:
   int lock_{0};
 
@@ -559,10 +552,10 @@ class alignas(scoped_mutex_detail::hardware_destructive_interference_size) Padde
   }
 };
 
-static_assert(alignof(PaddedMutex) >= scoped_mutex_detail::hardware_destructive_interference_size);
-static_assert(alignof(PaddedMutex) % scoped_mutex_detail::hardware_destructive_interference_size == 0);
-static_assert(sizeof(PaddedMutex) >= scoped_mutex_detail::hardware_destructive_interference_size);
-static_assert(sizeof(PaddedMutex) % scoped_mutex_detail::hardware_destructive_interference_size == 0);
+static_assert(!align_to_avoid_false_sharing || alignof(PaddedMutex) >= DESTRUCTIVE_INTERFERENCE_SIZE);
+static_assert(!align_to_avoid_false_sharing || alignof(PaddedMutex) % DESTRUCTIVE_INTERFERENCE_SIZE == 0);
+static_assert(!align_to_avoid_false_sharing || sizeof(PaddedMutex) >= DESTRUCTIVE_INTERFERENCE_SIZE);
+static_assert(!align_to_avoid_false_sharing || sizeof(PaddedMutex) % DESTRUCTIVE_INTERFERENCE_SIZE == 0);
 
 class ScopedMutex {
  private:

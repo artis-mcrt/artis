@@ -18,19 +18,24 @@ namespace stats {
 
 namespace {
 
-std::array<ptrdiff_t, static_cast<size_t>(Counter::COUNT)> eventstats{};
+// counters are frequently incremented by all threads, so give each one its own cache line to prevent false sharing
+struct EventCounter {
+  ALIGNAS_AVOID_FALSE_SHARING ptrdiff_t count{0};
+};
+
+std::array<EventCounter, static_cast<size_t>(Counter::COUNT)> eventstats{};
 
 }  // anonymous namespace
 
-DEVICE_FUNC void increment(const Counter i) { atomicadd(eventstats[std::to_underlying(i)], 1Z); }
+DEVICE_FUNC void increment(const Counter i) { atomicadd(eventstats[std::to_underlying(i)].count, 1Z); }
 
 void pkt_action_counters_reset() {
-  std::ranges::fill(eventstats, 0);
+  std::ranges::fill(eventstats, EventCounter{});
 
   nonthermal::reset_stats();
 }
 
-auto get_counter(const Counter i) -> ptrdiff_t { return eventstats[std::to_underlying(i)]; }
+auto get_counter(const Counter i) -> ptrdiff_t { return eventstats[std::to_underlying(i)].count; }
 
 void pkt_action_counters_printout(const int nts) {
   const double meaninteractions = static_cast<double>(get_counter(Counter::INTERACTIONS)) / MPKTS;
