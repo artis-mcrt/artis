@@ -3,6 +3,7 @@
 
 #include <array>
 #include <cstddef>
+#include <new>
 #include <numbers>
 #include <string_view>
 
@@ -132,6 +133,23 @@ constexpr bool cellcache_singleslot = true;
 #else
 #define EXEC_PAR_UNSEQ
 #define EXEC_PAR
+#endif
+
+#if defined(__cpp_lib_hardware_interference_size) && __cpp_lib_hardware_interference_size >= 201603
+constexpr std::size_t DESTRUCTIVE_INTERFERENCE_SIZE = std::hardware_destructive_interference_size;
+#else
+constexpr std::size_t DESTRUCTIVE_INTERFERENCE_SIZE = 64;
+#endif
+
+// Give a hot thread-shared accumulator variable its own cache line to prevent false sharing in the CPU multithreaded
+// modes (OpenMP or C++ standard parallelism on multicore). Expands to nothing in single-threaded (MPI-only) and GPU
+// modes, where the cache-line contention between host threads doesn't exist and padding would only waste memory.
+#if (defined(_OPENMP) || defined(STDPAR_ON)) && !defined(GPU_ON)
+constexpr bool align_to_avoid_false_sharing = true;
+#define ALIGNAS_AVOID_FALSE_SHARING alignas(DESTRUCTIVE_INTERFERENCE_SIZE)
+#else
+constexpr bool align_to_avoid_false_sharing = false;
+#define ALIGNAS_AVOID_FALSE_SHARING
 #endif
 
 #ifdef _OPENMP

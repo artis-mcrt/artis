@@ -161,7 +161,8 @@ constexpr auto rhsvec = []() {
 }();
 
 // Monte Carlo result - compare to analytical expectation
-double nt_energy_deposited = 0;
+// cache-line aligned because it is accumulated atomically by all threads during packet propagation
+ALIGNAS_AVOID_FALSE_SHARING double nt_energy_deposited = 0;
 
 struct NonThermalExcitation {
   double frac_deposition;  // the fraction of the non-thermal deposition energy going to the excitation transition

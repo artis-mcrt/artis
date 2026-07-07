@@ -62,32 +62,40 @@ struct Element {
 
 namespace globals {
 
+// The *_discrete, *_emission, and pellet_decays members are accumulated atomically by all threads during packet
+// propagation, so they are cache-line aligned in CPU multithreaded modes to keep them from false sharing with each
+// other and with the constantly-read start/width/mid members.
 struct TimeStep {
   double start{0.};  // time at start of this timestep. [s]
   double width{0.};  // Width of timestep. [s]
   double mid{0.};  // Mid time in step - computed logarithmically. [s]
   double gamma_dep{0.};  // cmf gamma ray energy deposition from packet trajectories [erg]
-  double gamma_dep_discrete{0.};  // cmf gamma ray energy deposition from absorption events [erg]
+  ALIGNAS_AVOID_FALSE_SHARING double gamma_dep_discrete{
+      0.};  // cmf gamma ray energy deposition from absorption events [erg]
   double positron_dep{0.};  // cmf positron energy deposition from packet trajectories [erg]
-  double positron_dep_discrete{0.};  // cmf positron energy deposition from absorption events [erg]
-  double positron_emission{0.};  // cmf positron KE energy generation [erg]
+  ALIGNAS_AVOID_FALSE_SHARING double positron_dep_discrete{
+      0.};  // cmf positron energy deposition from absorption events [erg]
+  ALIGNAS_AVOID_FALSE_SHARING double positron_emission{0.};  // cmf positron KE energy generation [erg]
   double eps_positron_ana_power{0.};  // cmf positron KE energy generation rate analytical [erg/s]
   double electron_dep{0.};  // cmf electron energy deposition from packet trajectories [erg]
-  double electron_dep_discrete{0.};  // cmf electron energy deposition from absorption events [erg]
-  double electron_emission{0.};  // cmf electron KE energy generation [erg]
+  ALIGNAS_AVOID_FALSE_SHARING double electron_dep_discrete{
+      0.};  // cmf electron energy deposition from absorption events [erg]
+  ALIGNAS_AVOID_FALSE_SHARING double electron_emission{0.};  // cmf electron KE energy generation [erg]
   double eps_electron_ana_power{0.};  // cmf electron KE energy generation rate analytical [erg/s]
   double alpha_dep{0.};  // cmf alpha energy deposition from packet trajectories [erg]
-  double alpha_dep_discrete{0.};  // cmf alpha energy deposition from absorption events [erg]
-  double alpha_emission{0.};  // cmf alpha KE energy generation [erg]
+  ALIGNAS_AVOID_FALSE_SHARING double alpha_dep_discrete{
+      0.};  // cmf alpha energy deposition from absorption events [erg]
+  ALIGNAS_AVOID_FALSE_SHARING double alpha_emission{0.};  // cmf alpha KE energy generation [erg]
   double eps_alpha_ana_power{0.};  // cmf alpha KE energy generation rate analytical [erg/s]
-  double spfission_dep_discrete{0.};  // cmf spontaneous fission energy deposition from absorption events [erg]
+  ALIGNAS_AVOID_FALSE_SHARING double spfission_dep_discrete{
+      0.};  // cmf spontaneous fission energy deposition from absorption events [erg]
   double eps_spfission_ana_power{0.};  // cmf spontaneous fission energy generation rate analytical [erg/s]
-  double gamma_emission{0.};  // gamma decay energy generation in this timestep [erg]
+  ALIGNAS_AVOID_FALSE_SHARING double gamma_emission{0.};  // gamma decay energy generation in this timestep [erg]
   double qdot_betaminus{0.};  // energy generation from beta-minus decays (including neutrinos) [erg/s/g]
   double qdot_alpha{0.};  // energy generation from alpha decays (including neutrinos) [erg/s/g]
   double qdot_spfission{0.};  // energy generation from spontaneous fission decays (including neutrinos) [erg/s/g]
   double qdot_total{0.};  // energy generation from all decays (including neutrinos) [erg/s/g]
-  int pellet_decays{0};  // Number of pellets that decay in this time step.
+  ALIGNAS_AVOID_FALSE_SHARING int pellet_decays{0};  // Number of pellets that decay in this time step.
 };
 inline std::vector<TimeStep> timesteps;
 

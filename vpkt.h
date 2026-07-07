@@ -27,10 +27,11 @@ constexpr double VSPEC_TIMEMAX = 8 * DAY;
 constexpr int VSPEC_TIMEBINS = 5;
 
 // number of virtual packets in a given timestep
-inline int nvpkt_created{0};
-inline int nvpkt_esc_from_rpkt{0};  // electron scattering event
-inline int nvpkt_esc_from_kpkt{0};  // kpkt deactivation
-inline int nvpkt_esc_from_macroatom{0};  // macroatom deactivation
+// separately cache-line aligned because they are incremented by all threads
+ALIGNAS_AVOID_FALSE_SHARING inline int nvpkt_created{0};
+ALIGNAS_AVOID_FALSE_SHARING inline int nvpkt_esc_from_rpkt{0};  // electron scattering event
+ALIGNAS_AVOID_FALSE_SHARING inline int nvpkt_esc_from_kpkt{0};  // kpkt deactivation
+ALIGNAS_AVOID_FALSE_SHARING inline int nvpkt_esc_from_macroatom{0};  // macroatom deactivation
 
 inline double optical_depth_is_thick_vpkt;
 }  // namespace vpkt
