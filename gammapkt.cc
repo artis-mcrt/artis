@@ -621,14 +621,32 @@ void update_gamma_dep(const Packet& pkt, const double dist) {
   atomicadd(globals::dep_estimator_gamma[nonemptymgi], heating_cont);
 }
 
+// Give a gamma packet an isotropic direction in the comoving frame, then set its rest-frame
+// direction, frequency and energy. Assumes pkt.nu_cmf and pkt.e_cmf are already set.
+void emit_gamma_isotropic(Packet& pkt) {
+  const auto dir_cmf = get_rand_isotropic_unitvec(get_rngstate(pkt));
+
+  // This direction is in the cmf - convert it to the rest frame using aberration of angles.
+  // Converting cmf -> rest requires the -ve velocity (negative time for the backwards transform).
+  const auto vel_vec = get_velocity(pkt.pos, -pkt.prop_time);
+
+  pkt.dir = angle_ab(dir_cmf, vel_vec);
+
+  const double dopplerfactor = calculate_doppler_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
+  pkt.nu_rf = pkt.nu_cmf / dopplerfactor;
+  pkt.e_rf = pkt.e_cmf / dopplerfactor;
+
+  pkt.type = TYPE_GAMMA;
+}
+
 // handle physical pair production event
-//
-//  In pair production, the original gamma makes an electron positron pair - kinetic energy equal to
-//  gamma ray energy - 1.022 MeV. We assume that the electron deposits any kinetic energy directly to
-//  the thermal pool. The positron annihilates with an electron locally making a pair of gamma rays
-//  at 0.511 MeV in the local cmf (isotropic). So all the thermal energy goes to the thermal pool
-//  immediately and the remainder goes into gamma-rays at 0.511 MeV.
 void pair_prod(Packet& pkt) {
+  //  In pair production, the original gamma makes an electron positron pair - kinetic energy equal to
+  //  gamma ray energy - 1.022 MeV. We assume that the electron deposits any kinetic energy directly to
+  //  the thermal pool. The positron annihilates with an electron locally making a pair of gamma rays
+  //  at 0.511 MeV in the local cmf (isotropic). So all the thermal energy goes to the thermal pool
+  //  immediately and the remainder goes into gamma-rays at 0.511 MeV.
+
   const double prob_gamma = 1.022 * MEV / (H * pkt.nu_cmf);
 
   assert_always(prob_gamma >= 0);
@@ -649,24 +667,8 @@ void pair_prod(Packet& pkt) {
     // The energy goes into emission at 511 keV.
     pkt.nu_cmf = 0.511 * MEV / H;
 
-    // Now let's give the gamma ray a direction.
-
-    const auto dir_cmf = get_rand_isotropic_unitvec(get_rngstate(pkt));
-
-    // This direction is in the cmf - we want to convert it to the rest
-    // frame - use aberration of angles. We want to convert from cmf to
-    // rest so need -ve velocity.
-
-    const auto vel_vec = get_velocity(pkt.pos, -pkt.prop_time);
-    // negative time since we want the backwards transformation here
-
-    pkt.dir = angle_ab(dir_cmf, vel_vec);
-
-    const double dopplerfactor = calculate_doppler_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
-    pkt.nu_rf = pkt.nu_cmf / dopplerfactor;
-    pkt.e_rf = pkt.e_cmf / dopplerfactor;
-
-    pkt.type = TYPE_GAMMA;
+    // Now give the gamma ray an isotropic direction and set the rest-frame quantities.
+    emit_gamma_isotropic(pkt);
   }
 }
 
@@ -767,6 +769,23 @@ void transport_gamma(Packet& pkt, const double t2) {
   }
 }
 
+// With probability f_gamma, absorb the packet locally (depositing its energy as a k-packet);
+// otherwise let it escape. Shared tail of the gamma-ray thermalisation schemes.
+void absorb_or_escape_gamma(Packet& pkt, const double f_gamma) {
+  assert_always(f_gamma >= 0.);
+  assert_always(f_gamma <= 1.);
+
+  if (rng_uniform(get_rngstate(pkt)) < f_gamma) {
+    // packet is absorbed and contributes to the heating as a k-packet
+    pkt.type = TYPE_NTLEPTON_DEPOSITED;
+    pkt.absorptiontype = -4;
+  } else {
+    // let packet escape, i.e. make it inactive
+    pkt.type = TYPE_ESCAPE;
+    grid::change_cell_or_escape(pkt, -99);
+  }
+}
+
 void barnes_thermalisation(Packet& pkt)
 // Barnes treatment: packet is either getting absorbed immediately and locally
 // creating a k-packet or it escapes. The absorption probability matches the
@@ -787,19 +806,8 @@ void barnes_thermalisation(Packet& pkt)
   const double t_ineff = 1.4 * 86400. * sqrt(grid::mtot_input / (5.e-3 * 1.989 * 1.e33)) * ((0.2 * 29979200000) / v_ej);
   const double tau = pow2(t_ineff / pkt.prop_time);
   const double f_gamma = 1. - exp(-tau);
-  assert_always(f_gamma >= 0.);
-  assert_always(f_gamma <= 1.);
 
-  // either absorb packet or let it escape
-  if (rng_uniform(get_rngstate(pkt)) < f_gamma) {
-    // packet is absorbed and contributes to the heating as a k-packet
-    pkt.type = TYPE_NTLEPTON_DEPOSITED;
-    pkt.absorptiontype = -4;
-  } else {
-    // let packet escape, i.e. make it inactive
-    pkt.type = TYPE_ESCAPE;
-    grid::change_cell_or_escape(pkt, -99);
-  }
+  absorb_or_escape_gamma(pkt, f_gamma);
 }
 
 void wollaeger_thermalisation(Packet& pkt) {
@@ -830,20 +838,8 @@ void wollaeger_thermalisation(Packet& pkt) {
     end_packet = (pkt_copy.type == TYPE_ESCAPE);
   }
   const double f_gamma = 1. - std::exp(-tau);
-  assert_always(f_gamma >= 0.);
-  assert_always(f_gamma <= 1.);
 
-  // either absorb packet or let it escape
-  if (rng_uniform(get_rngstate(pkt)) < f_gamma) {
-    // packet is absorbed and contributes to the heating as a k-packet
-    pkt.type = TYPE_NTLEPTON_DEPOSITED;
-    pkt.absorptiontype = -4;
-
-  } else {
-    // let packet escape, i.e. make it inactive
-    pkt.type = TYPE_ESCAPE;
-    grid::change_cell_or_escape(pkt, -99);
-  }
+  absorb_or_escape_gamma(pkt, f_gamma);
 }
 
 void guttman_thermalisation(Packet& pkt) {
@@ -904,19 +900,7 @@ void guttman_thermalisation(Packet& pkt) {
   }
   f_gamma /= (4 * PI);
 
-  assert_always(f_gamma >= 0.);
-  assert_always(f_gamma <= 1.);
-
-  // either absorb packet or let it escape
-  if (rng_uniform(get_rngstate(pkt)) < f_gamma) {
-    // packet is absorbed and contributes to the heating as a k-packet
-    pkt.type = TYPE_NTLEPTON_DEPOSITED;
-    pkt.absorptiontype = -4;
-  } else {
-    // let packet escape, i.e. make it inactive
-    pkt.type = TYPE_ESCAPE;
-    grid::change_cell_or_escape(pkt, -99);
-  }
+  absorb_or_escape_gamma(pkt, f_gamma);
 }
 
 }  // anonymous namespace
@@ -969,28 +953,9 @@ DEVICE_FUNC void pellet_gamma_decay(Packet& pkt) {
 
   assert_testmodeonly(pkt.prop_time == pkt.tdecay);
 
-  // Now let's give the gamma ray a direction.
-  // Assuming isotropic emission in cmf
-
-  const auto dir_cmf = get_rand_isotropic_unitvec(get_rngstate(pkt));
-
-  // This direction is in the cmf - we want to convert it to the rest
-  // frame - use aberration of angles. We want to convert from cmf to
-  // rest so need -ve velocity.
-
-  const auto vel_vec = get_velocity(pkt.pos, -pkt.prop_time);
-  // negative time since we want the backwards transformation here
-
-  pkt.dir = angle_ab(dir_cmf, vel_vec);
-
-  // Finally we want to put in the rest frame energy and frequency. And record
-  // that it's now a gamma ray.
-
-  const double dopplerfactor = calculate_doppler_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
-  pkt.nu_rf = pkt.nu_cmf / dopplerfactor;
-  pkt.e_rf = pkt.e_cmf / dopplerfactor;
-
-  pkt.type = TYPE_GAMMA;
+  // Give the gamma ray an isotropic direction (isotropic emission in the cmf) and set the
+  // rest-frame energy and frequency, recording that it's now a gamma ray.
+  emit_gamma_isotropic(pkt);
 }
 
 DEVICE_FUNC void do_gamma(Packet& pkt, const int nts, const double t2) {
