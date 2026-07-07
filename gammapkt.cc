@@ -623,7 +623,7 @@ void update_gamma_dep(const Packet& pkt, const double dist) {
 
 // Give a gamma packet an isotropic direction in the comoving frame, then set its rest-frame
 // direction, frequency and energy. Assumes pkt.nu_cmf and pkt.e_cmf are already set.
-void emit_gamma_isotropic(Packet& pkt) {
+DEVICE_FUNC inline void emit_gamma_isotropic(Packet& pkt) {
   const auto dir_cmf = get_rand_isotropic_unitvec(get_rngstate(pkt));
 
   // This direction is in the cmf - convert it to the rest frame using aberration of angles.
