@@ -60,7 +60,7 @@ struct Nuclide {
   int z{-1};  // atomic number
   int a{-1};  // mass number
   double meanlife{-1};  // mean lifetime before decay [s]
-  double endecay_electron{0.};  // average energy per beta- decay in kinetic energy of emitted electons [erg]
+  double endecay_electron{0.};  // average energy per beta- decay in kinetic energy of emitted electrons [erg]
   double endecay_positron{0.};  // average energy per beta+ decay in kinetic energy of emitted positrons [erg]
   double endecay_gamma{0.};  // average energy per decay in gamma rays [erg]
   double endecay_alpha{0.};  // average energy per alpha decay in kinetic energy of alpha particles [erg]

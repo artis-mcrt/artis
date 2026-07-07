@@ -47,6 +47,19 @@ void do_nonthermal_predeposit(Packet& pkt, const int nts, const double ts_end) {
   const auto deposit_type =
       (pkt.type == TYPE_NONTHERMAL_PREDEPOSIT_ALPHA) ? TYPE_NTALPHA_FISPROD_DEPOSITED : TYPE_NTLEPTON_DEPOSITED;
 
+  // deposit the packet with probability f_p, otherwise discard its deposited energy and let it escape
+  [[maybe_unused]] const auto deposit_or_escape = [&](const double f_p) {
+    assert_always(f_p >= 0.);
+    assert_always(f_p <= 1.);
+    if (rng_uniform(get_rngstate(pkt)) < f_p) {
+      pkt.type = deposit_type;
+    } else {
+      e_cmf_deposited = 0.;
+      pkt.type = TYPE_ESCAPE;
+      grid::change_cell_or_escape(pkt, -99);
+    }
+  };
+
   if constexpr (PARTICLE_THERMALISATION_SCHEME == ParticleThermalisationScheme::INSTANTFULLDEPOSITION) {
     // absorption happens
     pkt.type = deposit_type;
@@ -58,15 +71,7 @@ void do_nonthermal_predeposit(Packet& pkt, const int nts, const double ts_end) {
     const double tau_ineff = prefactor * 86400 * std::sqrt(grid::mtot_input / (5.e-3 * 1.989 * 1.e33)) *
                              std::pow((0.2 * 29979200000) / v_ej, 3. / 2.);
     const double f_p = std::log1p(2. * ts * ts / tau_ineff / tau_ineff) / (2. * ts * ts / tau_ineff / tau_ineff);
-    assert_always(f_p >= 0.);
-    assert_always(f_p <= 1.);
-    if (rng_uniform(get_rngstate(pkt)) < f_p) {
-      pkt.type = deposit_type;
-    } else {
-      e_cmf_deposited = 0.;
-      pkt.type = TYPE_ESCAPE;
-      grid::change_cell_or_escape(pkt, -99);
-    }
+    deposit_or_escape(f_p);
   } else if constexpr (PARTICLE_THERMALISATION_SCHEME == ParticleThermalisationScheme::WOLLAEGER) {
     // particle thermalisation from Wollaeger+2018, similar to Barnes but using a slightly different expression
     const double A = (pkt.type == TYPE_NONTHERMAL_PREDEPOSIT_ALPHA) ? 1.2 * 1.e-11 : 1.3 * 1.e-11;
@@ -74,15 +79,7 @@ void do_nonthermal_predeposit(Packet& pkt, const int nts, const double ts_end) {
     // In Bulla 2023 (arXiv:2211.14348), the following line contains (<-> eq. 7) contains a typo. The way implemented
     // here is the original from Wollaeger paper without the typo
     const double f_p = std::log1p(aux_term) / aux_term;
-    assert_always(f_p >= 0.);
-    assert_always(f_p <= 1.);
-    if (rng_uniform(get_rngstate(pkt)) < f_p) {
-      pkt.type = deposit_type;
-    } else {
-      e_cmf_deposited = 0.;
-      pkt.type = TYPE_ESCAPE;
-      grid::change_cell_or_escape(pkt, -99);
-    }
+    deposit_or_escape(f_p);
   } else if constexpr (PARTICLE_THERMALISATION_SCHEME == ParticleThermalisationScheme::TIMEDEPENDENT ||
                        PARTICLE_THERMALISATION_SCHEME ==
                            ParticleThermalisationScheme::TIMEDEPENDENT_WITH_ADIABATIC_LOSS ||

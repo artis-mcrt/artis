@@ -273,7 +273,7 @@ void read_phixs_data_table(std::istream& phixsfile, const int nphixspoints_input
 
 void read_phixs_file(const int phixs_file_version, std::vector<float>& tmpallphixs,
                      std::vector<PhotoionTarget>& tmpallphixstargets) {
-  printlnlog("readin phixs data from {}", phixsdata_filenames[phixs_file_version]);
+  printlnlog("reading phixs data from {}", phixsdata_filenames[phixs_file_version]);
 
   auto phixsfile = fstream_required(phixsdata_filenames[phixs_file_version], std::ios::in);
   std::string phixsline;
@@ -330,7 +330,7 @@ void read_phixs_file(const int phixs_file_version, std::vector<float>& tmpallphi
     // store only photoionisation crosssections for elements that are part of the current model atom
     bool skip_this_phixs_table = true;  // will be set to false for good data
     if (element >= 0 && get_nions(element) > 0) {
-      // translate readin ionstages to ion indices
+      // translate read-in ionstages to ion indices
 
       const int upperion = upperionstage - get_ionstage(element, 0);
       const int lowerion = lowerionstage - get_ionstage(element, 0);
@@ -940,7 +940,7 @@ void read_autoion_data() {
     const int element = get_elementindex(Z);
 
     if (element >= 0 && get_nions(element) > 0) {
-      // translate readin ionstages to ion indices
+      // translate read-in ionstages to ion indices
 
       const int upperion = upperionstage - get_ionstage(element, 0);
       const int lowerion = lowerionstage - get_ionstage(element, 0);

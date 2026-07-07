@@ -580,10 +580,6 @@ void read_collion_data() {
       continue;
     }
 
-    std::ranges::fill(collionrow.prob_num_auger, 0.);
-    collionrow.prob_num_auger[0] = 1.;
-
-    collionrow.auger_g_accumulated = 0.;
     collionrow.en_auger_ev = 0.;
     collionrow.n_auger_elec_avg = 0.;
 
@@ -638,9 +634,6 @@ void read_collion_data() {
           collionrow.B = -1.;
           collionrow.C = -1.;
           collionrow.D = -1.;
-          std::ranges::fill(collionrow.prob_num_auger, 0.);
-          collionrow.prob_num_auger[0] = 1.;
-          collionrow.auger_g_accumulated = 0.;
           collionrow.en_auger_ev = 0.;
           collionrow.n_auger_elec_avg = 0.;
 
@@ -748,7 +741,7 @@ constexpr auto xs_ionisation_lotz(const double en_erg, const ShellParams& collio
   }
 
   // Equation 3.38 of Axelrod (1980) attributed to Lotz (1967)
-  // WARNING: The Axelrod equation uses both ln() and log10(), but the log10() term is likely a typo has been
+  // WARNING: The Axelrod equation uses both ln() and log10(), but the log10() term is likely a typo and has been
   // corrected to ln(). Fortunately, at our typical 16 keV value of EMAX, 511 keV electrons are only mildly
   // relativistic and the log(1 - beta^2) term is small anyway.
   const double part_sigma_shell =
