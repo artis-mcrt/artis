@@ -37,6 +37,8 @@ auto integrand_bfheatingcoeff(const double nu, const double nu_edge, const int n
   return sigma_bf * (1 - (nu_edge / nu)) * radfield::radfield(nu, nonemptymgi) * (1 - exp(-HOVERKB * nu / T_R));
 }
 
+// Sum the thermal heating rate from collisional de-excitations over all levels of a single ion (the energy given
+// to the thermal electron pool when bound electrons are collisionally de-excited).
 auto get_heating_ion_coll_deexc(const int nonemptymgi, const int element, const int ion, const float T_e,
                                 const float clumpednne) -> double {
   double C_deexc = 0.;
@@ -176,6 +178,8 @@ auto T_e_eqn_heating_minus_cooling(const double T_e, int nonemptymgi, const doub
 
 }  // anonymous namespace
 
+// Compute the bound-free (photoionisation) heating coefficient for one level's photoionisation target by
+// integrating the heating integrand over the cross-section's frequency range for the cell's radiation field.
 auto calculate_bfheatingcoeff(const int element, const int ion, const int level, const int phixstargetindex,
                               const int nonemptymgi) -> double {
   double error = 0.;
@@ -233,6 +237,8 @@ void calculate_bfheatingcoeffs(int nonemptymgi, std::span<double> bfheatingcoeff
   }
 }
 
+// Solve the thermal-balance equation (heating = cooling) for the electron temperature T_e in a cell by
+// root-finding between T_min and T_max, then store the resulting T_e in the grid.
 void call_T_e_finder(const int nonemptymgi, const double t_current, const double T_min, const double T_max,
                      HeatingCoolingRates& heatingcoolingrates, const std::span<const double> bfheatingcoeffs) {
   const int modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);

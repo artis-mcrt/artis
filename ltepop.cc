@@ -206,6 +206,7 @@ auto calculate_partfunct(const int element, const int ion, const int nonemptymgi
   return U_float;
 }
 
+// Set the cell's free electron density nne to the sum of every element's electron contribution (floored at MINPOP).
 void set_calculated_nne(const int nonemptymgi) {
   double nne = 0.;  // free electron density
   for (int element = 0; element < get_nelements(); element++) {
@@ -242,6 +243,8 @@ void set_groundlevelpops_neutral(const ptrdiff_t nonemptymgi) {
   }
 }
 
+// Solve for the free electron density nne in [0, nne_max] that makes the ion balance self-consistent, using the
+// Boost TOMS 748 root-finder on the charge-conservation residual.
 auto find_converged_nne(const int nonemptymgi, double nne_max, const bool force_lte) -> float {
   // search for nne solution in [0.,nne_max]
 
@@ -269,6 +272,8 @@ auto find_converged_nne(const int nonemptymgi, double nne_max, const bool force_
 
 }  // anonymous namespace
 
+// Determine the highest ion stage of an element that retains a non-negligible population in a cell (higher ions
+// are truncated), using either Saha or photoionisation/recombination rate balance.
 [[nodiscard]] auto find_uppermost_ion(const int nonemptymgi, const int element, const double nne_hi,
                                       const bool force_saha) -> int {
   const int nions = get_nions(element);
@@ -367,6 +372,8 @@ auto find_converged_nne(const int nonemptymgi, double nne_max, const bool force_
           exp(-E_aboveground / KB / T_exc));
 }
 
+// Return the population of a level, applying the MINPOP floor when the element is present (or 0 when it is absent),
+// unless the underlying calculation flags that the floor should be skipped.
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto calculate_levelpop(const int nonemptymgi, const int element, const int ion,
                                                                 const int level) -> double {
   const auto [nn, skipminpop] = calculate_levelpop_nominpop(nonemptymgi, element, ion, level);

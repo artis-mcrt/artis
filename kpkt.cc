@@ -46,6 +46,9 @@ constexpr float kpktdiffusion_timescale{0.001};
 
 // calculate the cooling contribution list of individual levels/processes for an ion
 // oldcoolingsum is the sum of lower ion (of same element or all ions of lower elements) cooling contributions
+// Compute the collisional cooling rate of a single ion, summing the free-free, free-bound, collisional-excitation
+// and collisional-ionisation contributions. Accumulates the per-process totals (C_ff/C_fb/C_exc/C_ionisation),
+// records each individual term in ion_contribs, and returns the ion's total cooling rate.
 template <bool update_cellcache_contribs>
 auto calculate_cooling_rates_ion(const int nonemptymgi, const int element, const int ion,
                                  std::span<double> ion_contribs, double* const C_ff, double* const C_fb,
@@ -185,6 +188,8 @@ auto calculate_cooling_rates_ion(const int nonemptymgi, const int element, const
   return C_ion;
 }
 
+// Count the total number of cooling processes (terms) over all ions and record each ion's starting offset
+// (coolingoffset) into the global cooling list.
 void set_ncoolingterms() {
   ncoolingterms = 0;
   for (int element = 0; element < get_nelements(); element++) {

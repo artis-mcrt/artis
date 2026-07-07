@@ -27,16 +27,21 @@ std::array<EventCounter, static_cast<size_t>(Counter::COUNT)> eventstats{};
 
 }  // anonymous namespace
 
+// Atomically add one to the given global event counter (safe to call from all threads).
 DEVICE_FUNC void increment(const Counter i) { atomicadd(eventstats[std::to_underlying(i)].count, 1Z); }
 
+// Reset all global event counters (and the non-thermal solver's stats) to zero, called at the start of each timestep.
 void pkt_action_counters_reset() {
   std::ranges::fill(eventstats, EventCounter{0});
 
   nonthermal::reset_stats();
 }
 
+// Return the current value of a global event counter.
 auto get_counter(const Counter i) -> ptrdiff_t { return eventstats[std::to_underlying(i)].count; }
 
+// Log all packet-interaction statistics (macroatom/kpkt/non-thermal transitions, scatterings, cell crossings, ...)
+// accumulated over timestep nts.
 void pkt_action_counters_printout(const int nts) {
   const double meaninteractions = static_cast<double>(get_counter(Counter::INTERACTIONS)) / MPKTS;
   printlnlog("timestep {}: mean number of interactions per packet = {:g}", nts, meaninteractions);

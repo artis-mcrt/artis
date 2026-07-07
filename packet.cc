@@ -29,6 +29,7 @@
 
 namespace {
 
+// Build the whitespace-separated column header line written at the top of the packets*.out text file.
 constexpr auto get_packets_text_header() -> std::string {
   std::string header;
   header =
@@ -49,7 +50,8 @@ constexpr auto get_packets_text_header() -> std::string {
   return header;
 }
 
-// Place pellet n with energy e_cmf_per_packet in cell m
+// Sample a grid cell (weighted by its cumulative energy in en_cumulative), then place packet pkt as a radioactive
+// pellet at a random position within that cell at t=tmin, assigning its decay time and initial rest-frame energy.
 void place_pellet(const double e_cmf_per_packet, const std::span<const double> en_cumulative, const int pktnumber,
                   Packet& pkt, const std::span<const double> energy_per_mass_nonemptymgi_decaypath) {
   const auto etot_simtime = en_cumulative.back();
@@ -211,6 +213,8 @@ auto read_text_packets(const std::string& filename) -> std::vector<Packet> {
   return packets;
 }
 
+// Write all packets to a packets*.out text file (columns matching get_packets_text_header), skipping escaped
+// gamma packets when KEEP_ESCAPED_GAMMAS is false.
 void write_text_packets(const std::string& filename, const std::span<const Packet> packets) {
   auto packets_file = fstream_required(filename, std::ios::out | std::ios::trunc);
   std::println(packets_file, "{}", get_packets_text_header());

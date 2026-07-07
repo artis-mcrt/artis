@@ -296,6 +296,8 @@ void do_packet(Packet& pkt, const double t2, const int nts, ContinuumOpacity& ch
   }
 }
 
+// Return true if the packet still needs propagating this timestep, i.e. it has not escaped and its propagation
+// time has not yet reached the end of the timestep.
 constexpr auto packetprop_update_required(const Packet& pkt, const double ts_end) -> bool {
   if (pkt.type == TYPE_ESCAPE) {
     return false;
@@ -330,6 +332,9 @@ auto get_packet_cellcachegroupid(const Packet& pkt) -> std::optional<int> {
   return nonemptymgi;
 }
 
+// Strict-weak ordering used to sort packets before propagation: packets still needing updates come first, then
+// they are grouped by cell-cache group and ordered by descending cell density and descending nu_cmf so that
+// packets sharing a cell (and cache state) are processed consecutively for cache efficiency.
 auto compare_packet_order(const Packet& p1, const Packet& p2, const double ts_end) -> bool {
   // return true if packet p1 goes before p2
 
@@ -427,6 +432,8 @@ void cellcacheslot_populate(globals::CellCache& cacheslot, const int nonemptymgi
   }
 }
 
+// Propagate a group of packets that share a cell-cache group until the end of the timestep, (re)populating the
+// single shared cache slot for that group's cell first when cellcache_singleslot is enabled.
 void update_packet_cellcache_group(const int cellcache_groupid, std::span<Packet> packetgroup, const int nts,
                                    const double ts_end) {
   if (cellcache_singleslot) {
