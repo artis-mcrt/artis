@@ -30,7 +30,7 @@ std::array<EventCounter, static_cast<size_t>(Counter::COUNT)> eventstats{};
 DEVICE_FUNC void increment(const Counter i) { atomicadd(eventstats[std::to_underlying(i)].count, 1Z); }
 
 void pkt_action_counters_reset() {
-  std::ranges::fill(eventstats, EventCounter{});
+  std::ranges::fill(eventstats, EventCounter{0});
 
   nonthermal::reset_stats();
 }
