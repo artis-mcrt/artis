@@ -707,8 +707,8 @@ DEVICE_FUNC void update_lineestimator(const int nonemptymgi, const int lineindex
 
   const int jblueindex = get_Jblueindex(lineindex);
   if (jblueindex >= 0) {
-    Jb_lu_raw[nonemptymgi][jblueindex].value += increment;
-    Jb_lu_raw[nonemptymgi][jblueindex].contribcount += 1;
+    atomicadd(Jb_lu_raw[nonemptymgi][jblueindex].value, increment);
+    atomicadd(Jb_lu_raw[nonemptymgi][jblueindex].contribcount, 1);
   }
 }
 
