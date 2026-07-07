@@ -271,16 +271,14 @@ ifneq ($(PGO),)
   PGO_PROFDIR := $(abspath $(BUILD_DIR))
 
   ifeq ($(PGO),GENERATE)
-    ifeq ($(COMPILER_NAME),clang)
-      CXXFLAGS += -fprofile-generate="$(PGO_PROFDIR)"
-    else
-      CXXFLAGS += -fprofile-generate -fprofile-update=prefer-atomic
-    endif
+      CXXFLAGS += -fprofile-generate="$(PGO_PROFDIR)" -fprofile-update=prefer-atomic
   else
     ifeq ($(COMPILER_NAME),clang)
-      CXXFLAGS += -fprofile-use="$(PGO_PROFDIR)/default.profdata" -Wno-profile-instr-unprofiled -Wno-profile-instr-out-of-date
+      $(shell llvm-profdata merge -output="$(PGO_PROFDIR)/default.profdata" "$(PGO_PROFDIR)/"*.profraw)
+      CXXFLAGS += -fprofile-use="$(PGO_PROFDIR)/default.profdata"
+#       CXXFLAGS += -Wno-profile-instr-unprofiled -Wno-profile-instr-out-of-date
     else
-      CXXFLAGS += -fprofile-use -fprofile-correction -Wno-missing-profile
+      CXXFLAGS += -fprofile-use="$(PGO_PROFDIR)" -fprofile-correction
     endif
   endif
 
