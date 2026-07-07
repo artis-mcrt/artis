@@ -944,7 +944,7 @@ DEVICE_FUNC void pellet_gamma_decay(Packet& pkt) {
   // Start by getting the position of the pellet at the point of decay. Pellet
   // is moving with the matter.
 
-  // if no gamma spectra is known, then covert straight to kpkts (e.g., Fe52, Mn52)
+  // if no gamma spectra is known, then convert straight to kpkts (e.g., Fe52, Mn52)
   if (pkt.nu_cmf < 0) {
     pkt.type = TYPE_KPKT;
     pkt.absorptiontype = -6;
