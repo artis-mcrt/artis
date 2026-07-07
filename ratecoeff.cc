@@ -606,20 +606,22 @@ auto calculate_ionrecombcoeff(const int nonemptymgi, const float T_e, const int 
     upper_nlevels = get_nlevels(element, lowerion + 1);
   }
 
-  for (int upper = 0; upper < upper_nlevels; upper++) {
-    double nnupperlevel{NAN};
+  // population of an upper-ion level: LTE (Boltzmann relative to ground) or the full NLTE level population
+  const auto calc_nnupperlevel = [&](const int upper) -> double {
     if (assume_lte) {
       const double T_exc = T_e;
       const double E_level = epsilon(element, lowerion + 1, upper);
       const double E_ground = epsilon(element, lowerion + 1, 0);
       const double nnground = (nonemptymgi >= 0) ? get_groundlevelpop(nonemptymgi, element, lowerion + 1) : 1.;
 
-      nnupperlevel = (nnground * stat_weight(element, lowerion + 1, upper) / stat_weight(element, lowerion + 1, 0) *
-                      exp(-(E_level - E_ground) / KB / T_exc));
-    } else {
-      nnupperlevel = calculate_levelpop(nonemptymgi, element, lowerion + 1, upper);
+      return (nnground * stat_weight(element, lowerion + 1, upper) / stat_weight(element, lowerion + 1, 0) *
+              exp(-(E_level - E_ground) / KB / T_exc));
     }
-    nnupperion += nnupperlevel;
+    return calculate_levelpop(nonemptymgi, element, lowerion + 1, upper);
+  };
+
+  for (int upper = 0; upper < upper_nlevels; upper++) {
+    nnupperion += calc_nnupperlevel(upper);
   }
 
   if (nnupperion <= 0.) {
@@ -631,18 +633,7 @@ auto calculate_ionrecombcoeff(const int nonemptymgi, const float T_e, const int 
   double alpha = 0.;
   const int maxrecombininglevel = get_maxrecombininglevel(element, lowerion + 1);
   for (int upper = 0; upper <= maxrecombininglevel; upper++) {
-    double nnupperlevel{NAN};
-    if (assume_lte) {
-      const double T_exc = T_e;
-      const double E_level = epsilon(element, lowerion + 1, upper);
-      const double E_ground = epsilon(element, lowerion + 1, 0);
-      const double nnground = (nonemptymgi >= 0) ? get_groundlevelpop(nonemptymgi, element, lowerion + 1) : 1.;
-
-      nnupperlevel = (nnground * stat_weight(element, lowerion + 1, upper) / stat_weight(element, lowerion + 1, 0) *
-                      exp(-(E_level - E_ground) / KB / T_exc));
-    } else {
-      nnupperlevel = calculate_levelpop(nonemptymgi, element, lowerion + 1, upper);
-    }
+    const double nnupperlevel = calc_nnupperlevel(upper);
     for (int lower = 0; lower < get_nlevels(element, lowerion); lower++) {
       if (lower_superlevel_only && (!level_isinsuperlevel(element, lowerion, lower))) {
         continue;
