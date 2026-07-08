@@ -703,7 +703,7 @@ void zero_all_effionpot(const ptrdiff_t nonemptymgi) {
 }
 
 [[nodiscard]] constexpr auto get_energyindex_ev_gteq(const double energy_ev) -> int
-// finds the highest energy point <= energy_ev
+// finds the lowest energy point >= energy_ev
 {
   const int index = std::ceil((energy_ev - SF_EMIN) / DELTA_E);
 

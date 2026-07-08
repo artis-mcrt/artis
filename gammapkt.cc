@@ -889,6 +889,13 @@ void guttman_thermalisation(Packet& pkt) {
   }
   const double avg_column_density =
       std::accumulate(column_densities.cbegin(), column_densities.cend(), 0.) / std::ssize(column_densities);
+
+  if (avg_column_density <= 0.) {
+    // no material along any sampled direction, so the packet escapes without thermalising
+    absorb_or_escape_gamma(pkt, 0.);
+    return;
+  }
+
   const double t_gamma = sqrt(mean_gamma_opac * avg_column_density * t_0 * t_0);
 
   // compute the (discretized) integral
