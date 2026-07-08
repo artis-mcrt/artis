@@ -335,7 +335,6 @@ void read_phixs_file(const int phixs_file_version, std::vector<float>& tmpallphi
       const int upperion = upperionstage - get_ionstage(element, 0);
       const int lowerion = lowerionstage - get_ionstage(element, 0);
       const int lowerlevel = lowerlevel_in - groundstate_index_in;
-      assert_always(lowerionstage >= 0);
       assert_always(lowerlevel >= 0);
 
       // store only photoionisation crosssections for ions that are part of the current model atom
