@@ -1828,7 +1828,6 @@ void read_ejecta_model() {
     // second number on the line for 2D means the line was n_r n_z
     detected_dim = GridType::CYLINDRICAL2D;
     printlnlog("Detected 2D model");
-    ssline >> npts_1;  // r and z (cylindrical polar)
     npts_model = npts_0 * npts_1;
   } else {
     // for 1D and 3D, this was the total number of model cells
