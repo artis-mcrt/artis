@@ -582,7 +582,7 @@ constexpr auto meanf_sigma(const double x) -> double {
 // get the comoving-frame gamma-ray absorption coefficient (with the expected energy loss fraction per interaction
 // factor included). All three terms are comoving-frame coefficients so that they can be combined and converted to
 // the deposition estimator with a single frame factor in update_gamma_dep().
-[[nodiscard]] auto get_chi_loss_weighted(const Packet& pkt, const int nonemptymgi) -> double {
+[[nodiscard]] auto get_chi_cmf_loss_weighted(const Packet& pkt, const int nonemptymgi) -> double {
   const double xx = H * pkt.nu_cmf / ME / CLIGHT / CLIGHT;
   const auto chi_photo_electric_cmf = get_chi_photo_electric_cmf(pkt.cellindex, pkt.nu_cmf);
   const auto chi_pair_prod_cmf = get_chi_pair_prod_cmf(pkt.cellindex, pkt.nu_cmf);
@@ -610,7 +610,7 @@ void update_gamma_dep(const Packet& pkt, const double dist) {
   // since e_cmf = e_rf * doppler and the interaction probability along the rest-frame path is
   // chi_rf * dist = chi_cmf * doppler * dist. get_chi_loss_weighted() returns the comoving-frame chi.
   const double doppler_sq = pow2(calculate_doppler_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time));
-  const double heating_cont = get_chi_loss_weighted(pkt, nonemptymgi) * pkt.e_rf * dist * doppler_sq;
+  const double heating_cont = get_chi_cmf_loss_weighted(pkt, nonemptymgi) * pkt.e_rf * dist * doppler_sq;
 
   // The terms in the above are for Compton, photoelectric and pair production. The pair production one
   // assumes that a fraction (1. - (1.022 MeV / nu)) of the gamma's energy is thermalised.
