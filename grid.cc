@@ -2345,9 +2345,6 @@ auto get_totmassnuclide_tmodel(const int z, const int a) -> double { return totm
 // up to several cm at the outer grid) cannot accumulate over many crossings.
 DEVICE_FUNC void snap_pos_to_cell(Vec3d& pos, const double time, const int cellindex) {
   if (get_propgridtype() != GridType::CARTESIAN3D) {
-    // for spherical/cylindrical grids, overshoot past the curved boundaries is detected and
-    // corrected with tolerance by boundary_distance(). (If position snapping is ever needed
-    // here: clamp r = vec_len(pos) and rescale pos, or only the x,y components for r_cyl.)
     return;
   }
   for (int d = 0; d < 3; d++) {
@@ -2467,10 +2464,7 @@ DEVICE_FUNC void snap_pos_to_cell(Vec3d& pos, const double time, const int celli
 
     const double r_outer = cellcoordmax[0] * tstart / globals::tmin;
     const double d_coordmaxboundary =
-        is_boundary_overshoot_within_tolerance<BoundaryType::UPPER>(pktposgridcoord[0], pktvelgridcoord[0],
-                                                                    cellcoordmax[0], tstart)
-            ? 0.
-            : expanding_shell_intersection<BoundaryType::UPPER>(pos, dir, speed, r_outer, tstart);
+        expanding_shell_intersection<BoundaryType::UPPER>(pos, dir, speed, r_outer, tstart);
 
     // upper d coordinate of the current cell
     if ((d_coordmaxboundary >= 0.) && (d_coordmaxboundary < distance)) {
@@ -2481,10 +2475,7 @@ DEVICE_FUNC void snap_pos_to_cell(Vec3d& pos, const double time, const int celli
     const double r_inner = cellcoordmin[0] * tstart / globals::tmin;
     if (r_inner > 0.) {
       const double d_coordminboundary =
-          is_boundary_overshoot_within_tolerance<BoundaryType::LOWER>(pktposgridcoord[0], pktvelgridcoord[0],
-                                                                      cellcoordmin[0], tstart)
-              ? 0.
-              : expanding_shell_intersection<BoundaryType::LOWER>(pos, dir, speed, r_inner, tstart);
+          expanding_shell_intersection<BoundaryType::LOWER>(pos, dir, speed, r_inner, tstart);
       // lower d coordinate of the current cell
       if ((d_coordminboundary >= 0.) && (d_coordminboundary < distance)) {
         distance = d_coordminboundary;
