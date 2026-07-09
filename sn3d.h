@@ -41,10 +41,8 @@ inline void check_already_running() {
       std::getline(pidfile, line);
       std::istringstream{line} >> artispid_in;
       std::getline(pidfile, line);
-      std::string working_directory;
-      std::istringstream{line} >> working_directory;
       pidfile.close();
-      if (is_pid_running(artispid_in) && std::filesystem::current_path().generic_string() == working_directory) {
+      if (is_pid_running(artispid_in) && std::filesystem::current_path().generic_string() == line) {
         std::println(stderr,
                      "\nERROR: artis or exspec is already running in this folder with existing pid {}. Refusing to "
                      "start. (delete artis.pid if you are sure this is incorrect)",
