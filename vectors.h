@@ -164,11 +164,11 @@ constexpr auto move_pkt_withtime(Packet& pkt, const double distance) -> double {
 
 // Assuming isotropic distribution, get a random direction vector
 [[nodiscard]] DEVICE_FUNC inline auto get_rand_isotropic_unitvec(rngstate_type& rngstate) -> Vec3d {
-  const double costheta = -1 + (2. * rng_uniform(rngstate));
+  const double u = rng_uniform(rngstate);  // [0, 1)
+  const double costheta = (2. * u) - 1.;
+  const double sintheta = 2. * std::sqrt(u * (1. - u));
 
   const double phi = rng_uniform(rngstate) * 2 * PI;
-
-  const double sintheta = std::sqrt(1. - pow2(costheta));
 
   return {sintheta * std::cos(phi), sintheta * std::sin(phi), costheta};
 }
