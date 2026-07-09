@@ -2060,13 +2060,10 @@ void setup_timesteps() {
 
   // check consistency of start + width = start_next
   for (int n = 1; n < globals::ntimesteps; n++) {
-    assert_always(
-        fabs((globals::timesteps[n - 1].start + globals::timesteps[n - 1].width) / globals::timesteps[n].start) - 1 <
-        0.001);
+    const auto tsprev_end = globals::timesteps[n - 1].start + globals::timesteps[n - 1].width;
+    assert_always(fabs((tsprev_end / globals::timesteps[n].start) - 1.) < 0.001);
   }
-  assert_always(
-      fabs((globals::timesteps[globals::ntimesteps - 1].start + globals::timesteps[globals::ntimesteps - 1].width) /
-           globals::tmax) -
-          1 <
-      0.001);
+  const auto tsfinal_end =
+      globals::timesteps[globals::ntimesteps - 1].start + globals::timesteps[globals::ntimesteps - 1].width;
+  assert_always(fabs((tsfinal_end / globals::tmax) - 1.) < 0.001);
 }
