@@ -621,10 +621,8 @@ void add_to_spec_res(const Packet& pkt, const int dirbin, Spectra& spectra_I, Sp
         }
       }
 
-      const int nnu_abs = (pkt.absorptionfreq > 0 && std::isfinite(pkt.absorptionfreq))
-                              ? static_cast<int>((log(pkt.absorptionfreq) - log(nu_min)) / dlognu)
-                              : -1;
-      if (nnu_abs >= 0 && nnu_abs < MNUBINS) {
+      if (pkt.absorptionfreq > nu_min && pkt.absorptionfreq < nu_max) {
+        const auto nnu_abs = static_cast<ptrdiff_t>((log(pkt.absorptionfreq) - log(nu_min)) / dlognu);
         const double deltaE_absorption = pkt.e_rf / globals::timesteps[nts].width / spectra_I.delta_freq[nnu_abs] /
                                          4.e12 / PI / PARSEC / PARSEC / globals::nprocs_exspec * solidanglefactor;
         const int at = pkt.absorptiontype;
