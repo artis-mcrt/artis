@@ -1,5 +1,5 @@
 f9bb214eb7f1ac22791a13c8025c4887  bflist.out
-c2664f088de6e453453f84b50791a2ce  deposition.out
+81ce1217ab265c3121c2e2e1f901706f  deposition.out
 522db43398bac05e48c87ec9469eea0a  gamma_light_curve.out
 3f5bfe0a49e6832660967ad0090c8789  gammalinelist.out
 29ac1cb06f3139df7cbca0bbdb426e1c  grid.out
@@ -13,10 +13,10 @@ cdc8435f27e7c2fa59d805a7e6c0f310  packets00_0001.out
 0b0829978c4e5047e99983c208f9e7e1  packets00_0003.out
 0947a30f0132f166ed0092b92df8a580  spec.out
 a351f1711fecd60c023d0ba7332092db  timesteps.out
-49d07dd93521d0b6fed0bd9df3225645  job0/estimators_0000.out
-d551f1511869fab67ee77c0247e6bea6  job0/estimators_0001.out
-b2a32e363c0dbb15cde10ea22d6dfb85  job0/estimators_0002.out
-797b4f5cbec87271a6d154cd0a02489d  job0/estimators_0003.out
+4183cf8c2c2dc27726b7e3e13815ebcb  job0/estimators_0000.out
+61b693e7c61c698b7f6a97168f3e5b80  job0/estimators_0001.out
+6e05126d671e36eda40f21d3ee4d07ed  job0/estimators_0002.out
+8432dc2d55d33d4fddd8127c84f8f0f3  job0/estimators_0003.out
 fcf81939f057413a61b05634387555f4  speclc_angle_res/light_curve_res_00.out
 ca7d18238c1ee92e5cbaf72adefeb27a  speclc_angle_res/light_curve_res_01.out
 fdcf4ead83db540ae6f4ab6a4b2af143  speclc_angle_res/light_curve_res_02.out

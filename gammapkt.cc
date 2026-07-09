@@ -579,15 +579,16 @@ constexpr auto meanf_sigma(const double x) -> double {
   return tot;
 }
 
-// get the gamma-ray absorption coefficient (with the expected energy loss fraction per interaction factor included)
-[[nodiscard]] auto get_chi_loss_weighted(const Packet& pkt, const int nonemptymgi) -> double {
+// get the comoving-frame gamma-ray absorption coefficient (with the expected energy loss fraction per interaction
+// factor included). All three terms are comoving-frame coefficients so that they can be combined and converted to
+// the deposition estimator with a single frame factor in update_gamma_dep().
+[[nodiscard]] auto get_chi_cmf_loss_weighted(const Packet& pkt, const int nonemptymgi) -> double {
   const double xx = H * pkt.nu_cmf / ME / CLIGHT / CLIGHT;
-  const auto doppler = calculate_doppler_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
-  const auto chi_photo_electric_rf = get_chi_photo_electric_cmf(pkt.cellindex, pkt.nu_cmf) * doppler;
-  const auto chi_pair_prod_rf = get_chi_pair_prod_cmf(pkt.cellindex, pkt.nu_cmf) * doppler;
+  const auto chi_photo_electric_cmf = get_chi_photo_electric_cmf(pkt.cellindex, pkt.nu_cmf);
+  const auto chi_pair_prod_cmf = get_chi_pair_prod_cmf(pkt.cellindex, pkt.nu_cmf);
 
-  return ((meanf_sigma(xx) * grid::get_nnetot(nonemptymgi)) + chi_photo_electric_rf +
-          (chi_pair_prod_rf * (1. - (2.46636e+20 / pkt.nu_cmf))));
+  return ((meanf_sigma(xx) * grid::get_nnetot(nonemptymgi)) + chi_photo_electric_cmf +
+          (chi_pair_prod_cmf * (1. - (2.46636e+20 / pkt.nu_cmf))));
 }
 
 // update the energy deposition estimator for gamma ray path increment
@@ -604,8 +605,12 @@ void update_gamma_dep(const Packet& pkt, const double dist) {
     return;  // empty cell
   }
 
+  // Comoving-frame energy deposited along a rest-frame path increment dist is
+  //   chi_cmf * e_cmf * doppler * dist = chi_cmf * e_rf * doppler^2 * dist,
+  // since e_cmf = e_rf * doppler and the interaction probability along the rest-frame path is
+  // chi_rf * dist = chi_cmf * doppler * dist.
   const double doppler_sq = pow2(calculate_doppler_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time));
-  const double heating_cont = get_chi_loss_weighted(pkt, nonemptymgi) * pkt.e_rf * dist * doppler_sq;
+  const double heating_cont = get_chi_cmf_loss_weighted(pkt, nonemptymgi) * pkt.e_rf * dist * doppler_sq;
 
   // The terms in the above are for Compton, photoelectric and pair production. The pair production one
   // assumes that a fraction (1. - (1.022 MeV / nu)) of the gamma's energy is thermalised.
