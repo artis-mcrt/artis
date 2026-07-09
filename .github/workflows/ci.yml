@@ -16,6 +16,10 @@ on:
                 required: false
                 default: 'OFF'
                 type: string
+            uploadoutputfiles:
+                required: false
+                default: 'OFF'
+                type: string
 env:
     ASAN_OPTIONS: detect_stack_use_after_return=1:detect_leaks=0
 
@@ -204,7 +208,7 @@ jobs:
 
             - name: Upload output files
               uses: actions/upload-artifact@v7
-              if: always() && inputs.testmode != 'ON'
+              if: always() && inputs.testmode != 'ON' && inputs.uploadoutputfiles == 'ON'
               with:
                   name: test-${{ matrix.testname }}-output
                   path: tests/${{ matrix.testname }}_testrun
@@ -268,7 +272,7 @@ jobs:
                   artistools plotspectra --frompackets -t 1.5 ${{ matrix.testname }}_testrun
 
             - name: Upload plot files
-              if: always() && inputs.testmode != 'ON'
+              if: always() && inputs.testmode != 'ON' && inputs.uploadoutputfiles == 'ON'
               uses: actions/upload-artifact@v7
               with:
                   name: test-${{ matrix.testname }}-output-pdf
