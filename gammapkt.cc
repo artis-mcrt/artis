@@ -644,8 +644,8 @@ DEVICE_FUNC void emit_gamma_isotropic(Packet& pkt) {
   pkt.type = TYPE_GAMMA;
 }
 
-// handle physical pair production event
-void pair_prod(Packet& pkt) {
+// handle gamma to electron-positron pair production event
+void pair_production(Packet& pkt) {
   //  In pair production, the original gamma makes an electron positron pair - kinetic energy equal to
   //  gamma ray energy - 1.022 MeV. We assume that the electron deposits any kinetic energy directly to
   //  the thermal pool. The positron annihilates with an electron locally making a pair of gamma rays
@@ -719,7 +719,7 @@ void transport_gamma(Packet& pkt, const double t2) {
   // boundary that it is moving towards (an immediate crossing). This cannot repeat
   // endlessly: the just-crossed face is excluded by the velocity conditions in the new
   // cell, so at most ndim consecutive zero-distance crossings can occur (e.g. at a corner)
-  if ((boundarydist < tdist) && (boundarydist < edist)) {
+  if ((boundarydist <= tdist) && (boundarydist <= edist)) {
     move_pkt_withtime(pkt, boundarydist / 2.);
 
     // Move it into the new cell.
@@ -732,7 +732,7 @@ void transport_gamma(Packet& pkt, const double t2) {
     if (next_cellindex != pkt.cellindex) {
       grid::change_cell_or_escape(pkt, next_cellindex);
     }
-  } else if ((tdist < boundarydist) && (tdist < edist)) {
+  } else if ((tdist < boundarydist) && (tdist <= edist)) {
     // Doesn't reach boundary.
     move_pkt_withtime(pkt, tdist / 2.);
 
@@ -741,7 +741,7 @@ void transport_gamma(Packet& pkt, const double t2) {
     }
     move_pkt_withtime(pkt, tdist / 2.);
     pkt.prop_time = t2;  // prevent roundoff error
-  } else if ((edist < boundarydist) && (edist < tdist)) {
+  } else if ((edist < boundarydist) && (edist <= tdist)) {
     move_pkt_withtime(pkt, edist / 2.);
     if (chi_tot > 0) {
       update_gamma_dep(pkt, edist);
@@ -767,7 +767,7 @@ void transport_gamma(Packet& pkt, const double t2) {
       stats::increment(stats::Counter::NT_STAT_FROM_GAMMA);
     } else {
       // It's a pair production
-      pair_prod(pkt);
+      pair_production(pkt);
     }
   } else {
     assert_always(false);
