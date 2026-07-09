@@ -567,11 +567,11 @@ void add_to_spec_res(const Packet& pkt, const int dirbin, Spectra& spectra_I, Sp
     const auto nts = get_timestep(t_arrive);
 
     // a binary search into freq_lower would probably be faster than this double logarithm
-    const auto nnu = static_cast<ptrdiff_t>((log(pkt.nu_rf) - log(nu_min)) / dlognu);
+    const auto nnu = std::clamp(static_cast<ptrdiff_t>((log(pkt.nu_rf) - log(nu_min)) / dlognu), 0Z, MNUBINS - 1);
 
     const double solidanglefactor = (dirbin >= 0) ? MABINS : 1.;
-    const double deltaE = pkt.e_rf / globals::timesteps[nts].width / spectra_I.delta_freq.at(nnu) / 4.e12 / PI /
-                          PARSEC / PARSEC / globals::nprocs_exspec * solidanglefactor;
+    const double deltaE = pkt.e_rf / globals::timesteps[nts].width / spectra_I.delta_freq[nnu] / 4.e12 / PI / PARSEC /
+                          PARSEC / globals::nprocs_exspec * solidanglefactor;
 
     const auto fluxindex = (nnu * static_cast<ptrdiff_t>(globals::ntimesteps)) + nts;
     atomicadd_always(spectra_I.fluxalltimesteps[fluxindex], deltaE);
@@ -622,7 +622,8 @@ void add_to_spec_res(const Packet& pkt, const int dirbin, Spectra& spectra_I, Sp
       }
 
       if (pkt.absorptionfreq > nu_min && pkt.absorptionfreq < nu_max) {
-        const auto nnu_abs = static_cast<ptrdiff_t>((log(pkt.absorptionfreq) - log(nu_min)) / dlognu);
+        const auto nnu_abs =
+            std::clamp(static_cast<ptrdiff_t>((log(pkt.absorptionfreq) - log(nu_min)) / dlognu), 0Z, MNUBINS - 1);
         const double deltaE_absorption = pkt.e_rf / globals::timesteps[nts].width / spectra_I.delta_freq[nnu_abs] /
                                          4.e12 / PI / PARSEC / PARSEC / globals::nprocs_exspec * solidanglefactor;
         const int at = pkt.absorptiontype;
