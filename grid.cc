@@ -1923,7 +1923,7 @@ void read_ejecta_model() {
     }
 
     if (mgi != get_npts_model()) {
-      printlnlog("ERROR in model.txt. Found only {} cells instead of {} expected.", mgi - 1, get_npts_model());
+      printlnlog("ERROR in model.txt. Found only {} cells instead of {} expected.", mgi, get_npts_model());
       std::abort();
     }
 
@@ -1976,7 +1976,7 @@ void read_ejecta_model() {
     }
 
     if (mgi != get_npts_model()) {
-      printlnlog("ERROR in model.txt. Found {} only cells instead of {} expected.", mgi - 1, get_npts_model());
+      printlnlog("ERROR in model.txt. Found only {} cells instead of {} expected.", mgi, get_npts_model());
       std::abort();
     }
   } else if (get_modelgridtype() == GridType::CARTESIAN3D) {
@@ -2055,7 +2055,7 @@ void read_ejecta_model() {
       mgi++;
     }
     if (mgi != npts_model) {
-      printlnlog("ERROR in model.txt. Found {} cells instead of {} expected.", mgi, npts_model);
+      printlnlog("ERROR in model.txt. Found only {} cells instead of {} expected.", mgi, npts_model);
       std::abort();
     }
 
