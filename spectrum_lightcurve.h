@@ -11,6 +11,7 @@
 #include "packet.h"
 
 struct Spectra {
+  double dlognu = -1.;
   double nu_min = -1.;
   double nu_max = -1.;
   std::array<float, MNUBINS> lower_freq{};

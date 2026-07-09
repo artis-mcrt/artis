@@ -500,6 +500,7 @@ void init_spectra(Spectra& spectra, const double nu_min, const double nu_max, co
   assert_always(MNUBINS > 0);
   const double dlognu = (log(nu_max) - log(nu_min)) / MNUBINS;
 
+  spectra.dlognu = dlognu;
   spectra.nu_min = nu_min;
   spectra.nu_max = nu_max;
   spectra.do_emission_absorption = do_emission_absorption;
@@ -560,9 +561,9 @@ void add_to_spec_res(const Packet& pkt, const int dirbin, Spectra& spectra_I, Sp
   // specific angle bins contain fewer packets than the full sphere, so must be normalised to match
   const double nu_min = spectra_I.nu_min;
   const double nu_max = spectra_I.nu_max;
+  const double dlognu = spectra_I.dlognu;
   const double t_arrive = pkt.escape_time - (dot(pkt.pos, pkt.dir) / CLIGHT_PROP);
   if (t_arrive > globals::tmin && t_arrive < globals::tmax && pkt.nu_rf > nu_min && pkt.nu_rf < nu_max) {
-    const double dlognu = (log(nu_max) - log(nu_min)) / MNUBINS;
     const auto nts = get_timestep(t_arrive);
 
     // a binary search into freq_lower would probably be faster than this double logarithm
