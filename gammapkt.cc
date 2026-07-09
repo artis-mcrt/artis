@@ -608,7 +608,7 @@ void update_gamma_dep(const Packet& pkt, const double dist) {
   // Comoving-frame energy deposited along a rest-frame path increment dist is
   //   chi_cmf * e_cmf * doppler * dist = chi_cmf * e_rf * doppler^2 * dist,
   // since e_cmf = e_rf * doppler and the interaction probability along the rest-frame path is
-  // chi_rf * dist = chi_cmf * doppler * dist. get_chi_loss_weighted() returns the comoving-frame chi.
+  // chi_rf * dist = chi_cmf * doppler * dist.
   const double doppler_sq = pow2(calculate_doppler_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time));
   const double heating_cont = get_chi_cmf_loss_weighted(pkt, nonemptymgi) * pkt.e_rf * dist * doppler_sq;
 
