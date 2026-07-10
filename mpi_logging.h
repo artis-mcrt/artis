@@ -153,8 +153,9 @@ inline auto printlnlog(const std::format_string<Args...> fmt, Args&&... args) no
 constexpr auto get_range_chunk(const ptrdiff_t size, const ptrdiff_t nchunks, const ptrdiff_t nchunk)
     -> std::tuple<ptrdiff_t, ptrdiff_t> {
   assert_always(size >= 0);
-  assert_always(nchunks >= 0);
+  assert_always(nchunks > 0);
   assert_always(nchunk >= 0);
+  assert_always(nchunk < nchunks);
   const auto minchunksize = size / nchunks;  // integer division, minimum non-empty cells per process
   const auto n_remainder = size % nchunks;
   const auto nstart =
@@ -421,10 +422,10 @@ inline void MPI_Bcast_safe(R&& data, const int root, MPI_Comm comm) {
   const ptrdiff_t sizefactor = mpi_datatype == MPI_BYTE ? sizeof(value_t) : 1;
 
   assert_always(MPI_COUNT_MAX > sizefactor);  // otherwise we can't make any progress
-  const auto MPI_COUNT_MAX_MPITYPE = MPI_COUNT_MAX / sizefactor;
-  const auto datasize_mpitype = std::ssize(dataspan) * sizefactor;
-  const auto nchunks =
-      (datasize_mpitype / MPI_COUNT_MAX_MPITYPE) + ((datasize_mpitype % MPI_COUNT_MAX_MPITYPE) == 0 ? 0 : 1);
+  // maximum number of items per chunk such that the MPI count (items * sizefactor) stays within MPI_COUNT_MAX
+  const auto max_items_per_chunk = MPI_COUNT_MAX / sizefactor;
+  const auto nitems = std::ssize(dataspan);
+  const auto nchunks = (nitems / max_items_per_chunk) + ((nitems % max_items_per_chunk) == 0 ? 0 : 1);
   assert_always(nchunks >= 1);
   std::ptrdiff_t items_processed{0};
   for (auto chunk = 0Z; chunk < nchunks; chunk++) {
@@ -474,7 +475,9 @@ inline void MPI_Reduce_safe(R&& data, MPI_Op op, const int root, MPI_Comm comm) 
     const auto chunk_span = dataspan.subspan(nstart, chunksize);
     const auto int_chunksize = static_cast<int>(chunk_span.size());
     assert_always(std::cmp_equal(int_chunksize, chunksize));
-    assert_always(MPI_Reduce(my_rank == 0 ? MPI_IN_PLACE : chunk_span.data(), chunk_span.data(), int_chunksize,
+    // MPI_IN_PLACE as the send buffer is only valid at the root rank; all other ranks must pass
+    // the data as the send buffer (their receive buffer is ignored)
+    assert_always(MPI_Reduce(my_rank == root ? MPI_IN_PLACE : chunk_span.data(), chunk_span.data(), int_chunksize,
                              mpi_datatype, op, root, comm) == MPI_SUCCESS);
 
     items_processed += chunksize;
