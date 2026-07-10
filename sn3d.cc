@@ -361,7 +361,7 @@ void mpi_communicate_grid_properties() {
     int root_node_id = globals::node_id;
     MPI_Bcast_safe(root_node_id, root, MPI_COMM_WORLD);
 
-    const auto root_ndo_nonempty = grid::get_ndo_nonempty(root);
+    const ptrdiff_t root_ndo_nonempty = grid::get_ndo_nonempty(root);
     if (root_ndo_nonempty <= 0) {
       continue;
     }

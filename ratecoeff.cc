@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <cstddef>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -221,7 +222,8 @@ void scale_level_phixs(const int element, const int ion, const int level, const 
     const auto uniquelevelindex = get_uniquelevelindex(element, ion, level);
     const auto phixsstart = globals::alllevels.phixsstart[uniquelevelindex];
 
-    auto phixstable = globals::allphixs.subspan(phixsstart * globals::NPHIXSPOINTS, globals::NPHIXSPOINTS);
+    auto phixstable =
+        globals::allphixs.subspan(static_cast<ptrdiff_t>(phixsstart) * globals::NPHIXSPOINTS, globals::NPHIXSPOINTS);
     for (int n = 0; n < globals::NPHIXSPOINTS; n++) {
       phixstable[n] = static_cast<float>(phixstable[n] * factor);
     }
@@ -492,16 +494,17 @@ template <typename T, typename U>
 
 void setup_photoion_luts() {
   assert_always(globals::nbfcontinua > 0);
-  size_t mem_usage_photoionluts = 2 * TABLESIZE * globals::nbfcontinua * sizeof(double);
+  const auto lutsize = static_cast<ptrdiff_t>(TABLESIZE) * globals::nbfcontinua;
+  size_t mem_usage_photoionluts = 2 * lutsize * sizeof(double);
 
-  spontrecombcoeffs = MPI_shared_array<double>(TABLESIZE * globals::nbfcontinua, 0.);
+  spontrecombcoeffs = MPI_shared_array<double>(lutsize, 0.);
 
   if constexpr (USE_LUT_PHOTOION) {
-    corrphotoioncoeffs = MPI_shared_array<double>(TABLESIZE * globals::nbfcontinua, 0.);
-    mem_usage_photoionluts += TABLESIZE * globals::nbfcontinua * sizeof(double);
+    corrphotoioncoeffs = MPI_shared_array<double>(lutsize, 0.);
+    mem_usage_photoionluts += lutsize * sizeof(double);
   }
 
-  bfcooling_coeffs = MPI_shared_array<double>(TABLESIZE * globals::nbfcontinua, 0.);
+  bfcooling_coeffs = MPI_shared_array<double>(lutsize, 0.);
 
   printlnlog(
       "[info] mem_usage: lookup tables derived from photoionisation (spontrecombcoeff, bfcooling and "

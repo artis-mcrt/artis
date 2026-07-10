@@ -507,7 +507,7 @@ void allocate_nonemptymodelcells() {
 
   printlnlog(
       "[info] mem_usage: NLTE populations for all allocated cells occupy a total of {:.3f} MB (node shared memory)",
-      get_nonempty_npts_model() * globals::total_nlte_levels * sizeof(double) / 1024. / 1024.);
+      static_cast<ptrdiff_t>(get_nonempty_npts_model()) * globals::total_nlte_levels * sizeof(double) / 1024. / 1024.);
 }
 
 // Map 1D spherical model grid onto 3D Cartesian propagation grid
@@ -1115,7 +1115,7 @@ void setup_grid_cartesian_3d() {
   assert_always(ncoordgrid[0] == ncoordgrid[1]);
   assert_always(ncoordgrid[0] == ncoordgrid[2]);
 
-  ngrid = ncoordgrid[0] * ncoordgrid[1] * ncoordgrid[2];
+  ngrid = static_cast<ptrdiff_t>(ncoordgrid[0]) * ncoordgrid[1] * ncoordgrid[2];
   resize_exactly(coord_pos_min_tmin[0], ncoordgrid[0]);
   resize_exactly(coord_pos_min_tmin[1], ncoordgrid[1]);
   resize_exactly(coord_pos_min_tmin[2], ncoordgrid[2]);
@@ -1132,7 +1132,7 @@ void setup_grid_spherical_1d() {
 
   ncoordgrid = {get_npts_model(), 1, 1};
 
-  ngrid = ncoordgrid[0] * ncoordgrid[1] * ncoordgrid[2];
+  ngrid = static_cast<ptrdiff_t>(ncoordgrid[0]) * ncoordgrid[1] * ncoordgrid[2];
 
   resize_exactly(coord_pos_min_tmin[0], ncoordgrid[0]);
 
@@ -1828,7 +1828,7 @@ void read_ejecta_model() {
     // second number on the line for 2D means the line was n_r n_z
     detected_dim = GridType::CYLINDRICAL2D;
     printlnlog("Detected 2D model");
-    npts_model = npts_0 * npts_1;
+    npts_model = static_cast<ptrdiff_t>(npts_0) * npts_1;
   } else {
     // for 1D and 3D, this was the total number of model cells
     npts_model = npts_0;
@@ -1983,7 +1983,7 @@ void read_ejecta_model() {
     ncoord_model[1] = ncoord_model[0];
     ncoord_model[2] = ncoord_model[0];
 
-    assert_always(ncoord_model[0] * ncoord_model[1] * ncoord_model[2] == npts_model);
+    assert_always(static_cast<ptrdiff_t>(ncoord_model[0]) * ncoord_model[1] * ncoord_model[2] == npts_model);
     // for a 3D input model, the propagation cells will match the input cells exactly
     ncoordgrid = ncoord_model;
     ngrid = npts_model;

@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <cstddef>
 #include <span>
 #include <tuple>
 
@@ -185,7 +186,7 @@ DEVICE_FUNC inline auto get_nphixstargets(const int element, const int ion, cons
 
 [[gnu::pure]] [[nodiscard]] inline DEVICE_FUNC auto get_phixs_table(const int uniquelevelindex)
     -> std::span<const float> {
-  const auto phixsstart = globals::alllevels.phixsstart[uniquelevelindex];
+  const ptrdiff_t phixsstart = globals::alllevels.phixsstart[uniquelevelindex];
   assert_testmodeonly(phixsstart >= 0);
   return globals::allphixs.subspan(phixsstart * globals::NPHIXSPOINTS, globals::NPHIXSPOINTS);
 }
