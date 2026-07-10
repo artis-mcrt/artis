@@ -310,8 +310,11 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
         return true;
       };
       if constexpr (VPKT_USE_EXPANSION_OPACITIES) {
-        const auto binindex_start =
-            std::max(static_cast<ptrdiff_t>(((1e8 * CLIGHT / nu_cmf) - expopac_lambdamin) / expopac_deltalambda), -1Z);
+        // floor() before the cast, because truncation toward zero would put wavelengths up to one bin
+        // width below expopac_lambdamin into bin 0 instead of -1 (the continuum-only case)
+        const auto binindex_start = std::max(
+            static_cast<ptrdiff_t>(std::floor(((1e8 * CLIGHT / nu_cmf) - expopac_lambdamin) / expopac_deltalambda)),
+            -1Z);
 
         if (binindex_start < expopac_nbins) {
           // trace line-by-line from nu_cmf to the next bin edge, because the expansion opacity bin at nu_cmf includes

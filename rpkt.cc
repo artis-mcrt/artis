@@ -217,8 +217,10 @@ auto get_possible_event_expansion_opacity(const int nonemptymgi, Packet& pkt, co
   assert_always(get_cellcache(nonemptymgi).nonemptymgi == nonemptymgi);
   double dist = 0.;
   double tau = 0.;
-  const auto binindex_start =
-      std::max(static_cast<ptrdiff_t>(((1e8 * CLIGHT / nu_cmf) - expopac_lambdamin) / expopac_deltalambda), -1Z);
+  // floor() before the cast, because truncation toward zero would put wavelengths up to one bin
+  // width below expopac_lambdamin into bin 0 instead of -1 (the continuum-only case)
+  const auto binindex_start = std::max(
+      static_cast<ptrdiff_t>(std::floor(((1e8 * CLIGHT / nu_cmf) - expopac_lambdamin) / expopac_deltalambda)), -1Z);
 
   for (auto binindex = binindex_start; binindex < expopac_nbins; binindex++) {
     // binindex could be -1, in which case we have only the continuum opacity and no expansion opacity

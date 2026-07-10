@@ -225,7 +225,9 @@ DEVICE_FUNC inline auto get_nphixstargets(const int element, const int ion, cons
   }
 
   const double ireal = ((nu / nu_edge) - 1.0) / globals::NPHIXSNUINCREMENT;
-  const int i = static_cast<int>(ireal);
+  // floor() so that nu < nu_edge always gives i < 0 (zero cross-section below the threshold);
+  // truncation toward zero would map ireal in (-1, 0) to the first table point instead
+  const int i = static_cast<int>(std::floor(ireal));
 
   if (i < 0) {
     sigma_bf = 0.;
