@@ -132,7 +132,7 @@ constexpr auto select_bin(const double nu) -> int {
     return RADFIELDBINCOUNT - 1;
   }
 
-  const int binindex = static_cast<int>((nu - RADFIELDBINS_NU_MIN) / radfieldbins_delta_nu);
+  const auto binindex = static_cast<int>(get_linearbinindex(nu, RADFIELDBINS_NU_MIN, radfieldbins_delta_nu));
 
   if (nu == get_bin_nu_upper(binindex)) {
     // exactly on the upper boundary of the bin, so add 1 to ensure we get the left-closed bin

@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <cmath>
 #include <csignal>
 #include <cstdarg>
 #include <cstddef>
@@ -70,6 +71,34 @@ constexpr void resize_exactly(std::vector<T>& vec, const size_t size) {
 template <double fractional_accuracy>
 inline auto ftol(const double a, const double b) -> bool {
   return std::abs(a - b) <= (fractional_accuracy * std::min(std::abs(a), std::abs(b)));
+}
+
+// Signed bin index of value on a grid spaced uniformly by binwidth, where bin 0 starts at minvalue.
+// Values below minvalue give negative indices and values past the last bin give indices >= nbins, so
+// the caller must range-check the result. Flooring matters here: a plain int cast would truncate toward
+// zero and misplace values up to one bin width below minvalue into bin 0.
+[[nodiscard]] constexpr auto get_linearbinindex(const double value, const double minvalue, const double binwidth)
+    -> ptrdiff_t {
+  const double fracindex = (value - minvalue) / binwidth;
+  // floor implemented with constexpr-legal operations (std::floor is not constant-evaluable on all
+  // of the supported standard libraries yet)
+  const auto truncated = static_cast<ptrdiff_t>(fracindex);
+  return (fracindex < static_cast<double>(truncated)) ? truncated - 1 : truncated;
+}
+
+static_assert(get_linearbinindex(1.5, 1., 1.) == 0);
+static_assert(get_linearbinindex(3., 1., 1.) == 2);
+static_assert(get_linearbinindex(1., 1., 1.) == 0);  // bins are left-closed
+static_assert(get_linearbinindex(0.5, 1., 1.) == -1);  // below the grid must not land in bin 0
+static_assert(get_linearbinindex(-5., 1., 2.) == -3);
+
+// Bin index of value on a grid of nbins bins spaced uniformly in the log of the value, where bin 0
+// starts at minvalue and each bin spans dlog in log space. The caller must ensure that value is within
+// the grid range (minvalue < value < maximum); the clamp only guards against floating-point rounding
+// placing an in-range value just outside [0, nbins-1].
+[[nodiscard]] inline auto get_logbinindex(const double value, const double minvalue, const double dlog,
+                                          const ptrdiff_t nbins) -> ptrdiff_t {
+  return std::clamp(static_cast<ptrdiff_t>(std::floor((std::log(value) - std::log(minvalue)) / dlog)), 0Z, nbins - 1);
 }
 
 #endif  // SN3D_H

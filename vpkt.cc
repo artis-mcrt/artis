@@ -104,15 +104,12 @@ void add_to_vspecpol(const double nu_rf, const double e_rf, const double prob, c
                      const int obsdirindex, const int opachoiceindex, const double t_arrive) {
   // Need to decide in which (1) time and (2) frequency bin the vpkt is escaping
 
-  // range-check the doubles before casting, because the int cast truncates toward zero and would
-  // otherwise put values up to one bin width below the minimum into bin 0
   if (t_arrive <= VSPEC_TIMEMIN || t_arrive >= VSPEC_TIMEMAX || nu_rf <= VSPEC_NUMIN || nu_rf >= VSPEC_NUMAX) {
     return;
   }
 
-  const int nt =
-      std::clamp(static_cast<int>((log(t_arrive) - log(VSPEC_TIMEMIN)) / dlogt_vspec), 0, VSPEC_TIMEBINS - 1);
-  const int nnu = std::clamp(static_cast<int>((log(nu_rf) - log(VSPEC_NUMIN)) / dlognu_vspec), 0, VSPEC_NUBINS - 1);
+  const auto nt = static_cast<int>(get_logbinindex(t_arrive, VSPEC_TIMEMIN, dlogt_vspec, VSPEC_TIMEBINS));
+  const auto nnu = static_cast<int>(get_logbinindex(nu_rf, VSPEC_NUMIN, dlognu_vspec, VSPEC_NUBINS));
 
   const int ind_comb = (nspectraperobsdir * obsdirindex) + opachoiceindex;
   const double pktcontrib = e_rf / vspecpol[nt][ind_comb].delta_t / delta_freq_vspec[nnu] / 4.e12 / PI / PARSEC /
@@ -310,11 +307,9 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
         return true;
       };
       if constexpr (VPKT_USE_EXPANSION_OPACITIES) {
-        // floor() before the cast, because truncation toward zero would put wavelengths up to one bin
-        // width below expopac_lambdamin into bin 0 instead of -1 (the continuum-only case)
-        const auto binindex_start = std::max(
-            static_cast<ptrdiff_t>(std::floor(((1e8 * CLIGHT / nu_cmf) - expopac_lambdamin) / expopac_deltalambda)),
-            -1Z);
+        // -1 means below the wavelength grid, in which case there is continuum opacity but no expansion opacity
+        const auto binindex_start =
+            std::max(get_linearbinindex(1e8 * CLIGHT / nu_cmf, expopac_lambdamin, expopac_deltalambda), -1Z);
 
         if (binindex_start < expopac_nbins) {
           // trace line-by-line from nu_cmf to the next bin edge, because the expansion opacity bin at nu_cmf includes
