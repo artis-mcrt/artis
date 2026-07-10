@@ -104,11 +104,15 @@ void add_to_vspecpol(const double nu_rf, const double e_rf, const double prob, c
                      const int obsdirindex, const int opachoiceindex, const double t_arrive) {
   // Need to decide in which (1) time and (2) frequency bin the vpkt is escaping
 
-  const int nt = static_cast<int>((log(t_arrive) - log(VSPEC_TIMEMIN)) / dlogt_vspec);
-  const int nnu = static_cast<int>((log(nu_rf) - log(VSPEC_NUMIN)) / dlognu_vspec);
-  if (nt < 0 || nt >= VSPEC_TIMEBINS || nnu < 0 || nnu >= VSPEC_NUBINS) {
+  // range-check the doubles before casting, because the int cast truncates toward zero and would
+  // otherwise put values up to one bin width below the minimum into bin 0
+  if (t_arrive <= VSPEC_TIMEMIN || t_arrive >= VSPEC_TIMEMAX || nu_rf <= VSPEC_NUMIN || nu_rf >= VSPEC_NUMAX) {
     return;
   }
+
+  const int nt =
+      std::clamp(static_cast<int>((log(t_arrive) - log(VSPEC_TIMEMIN)) / dlogt_vspec), 0, VSPEC_TIMEBINS - 1);
+  const int nnu = std::clamp(static_cast<int>((log(nu_rf) - log(VSPEC_NUMIN)) / dlognu_vspec), 0, VSPEC_NUBINS - 1);
 
   const int ind_comb = (nspectraperobsdir * obsdirindex) + opachoiceindex;
   const double pktcontrib = e_rf / vspecpol[nt][ind_comb].delta_t / delta_freq_vspec[nnu] / 4.e12 / PI / PARSEC /
