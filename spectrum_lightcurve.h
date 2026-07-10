@@ -25,8 +25,7 @@ struct Spectra {
   bool do_emission_absorption = false;
 
   [[nodiscard]] auto mem_usage_bytes() const -> size_t {
-    auto mem_usage = sizeof(Spectra);
-    mem_usage += sizeof(float) * (lower_freq.size() + delta_freq.size());
+    auto mem_usage = sizeof(Spectra);  // includes the inline lower_freq and delta_freq arrays
     mem_usage += sizeof(double) * (fluxalltimesteps.size() + absorptionalltimesteps.size() +
                                    emissionalltimesteps.size() + trueemissionalltimesteps.size());
     // Note: Allocator overhead is not included in this calculation.
