@@ -674,7 +674,7 @@ void transport_gamma(Packet& pkt, const double t2) {
   // Compton scattering - need to determine the scattering co-efficient.
   // Routine returns the value in the rest frame.
   const int mgi = grid::get_propcell_modelgridindex(pkt.cellindex);
-  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(mgi);
+  const auto nonemptymgi = (mgi >= 0) ? grid::get_nonemptymgi_of_mgi(mgi) : -1;
 
   const auto doppler = calculate_doppler_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
   const double ffegrp = (mgi >= 0) ? grid::get_ffegrp(mgi) : 0.;
