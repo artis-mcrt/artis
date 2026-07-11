@@ -562,15 +562,15 @@ constexpr auto meanf_sigma(const double x) -> double {
 // get the comoving-frame gamma-ray absorption coefficient (with the expected energy loss fraction per interaction
 // factor included). All three terms are comoving-frame coefficients so that they can be combined and converted to
 // the deposition estimator with a single frame factor in update_gamma_dep().
-[[nodiscard]] auto get_chi_cmf_loss_weighted(const Packet& pkt, const int nonemptymgi) -> double {
+[[nodiscard]] auto get_chi_cmf_loss_weighted(const int nonemptymgi, const double nu_cmf) -> double {
   assert_testmodeonly(nonemptymgi >= 0);
-  const double xx = H * pkt.nu_cmf / ME / CLIGHT / CLIGHT;
+  const double xx = H * nu_cmf / ME / CLIGHT / CLIGHT;
   const double ffegrp = grid::get_ffegrp(grid::get_mgi_of_nonemptymgi(nonemptymgi));
-  const auto chi_photo_electric_cmf = get_chi_photo_electric_cmf(nonemptymgi, ffegrp, pkt.nu_cmf);
-  const auto chi_pair_prod_cmf = get_chi_pair_prod_cmf(nonemptymgi, ffegrp, pkt.nu_cmf);
+  const auto chi_photo_electric_cmf = get_chi_photo_electric_cmf(nonemptymgi, ffegrp, nu_cmf);
+  const auto chi_pair_prod_cmf = get_chi_pair_prod_cmf(nonemptymgi, ffegrp, nu_cmf);
 
   return ((meanf_sigma(xx) * grid::get_nnetot(nonemptymgi)) + chi_photo_electric_cmf +
-          (chi_pair_prod_cmf * (1. - (2.46636e+20 / pkt.nu_cmf))));
+          (chi_pair_prod_cmf * (1. - (2.46636e+20 / nu_cmf))));
 }
 
 // update the energy deposition estimator for gamma ray path increment
@@ -591,7 +591,7 @@ void update_gamma_dep(const Packet& pkt, const int nonemptymgi, const double dis
   // since e_cmf = e_rf * doppler and the interaction probability along the rest-frame path is
   // chi_rf * dist = chi_cmf * doppler * dist.
   const double doppler_sq = pow2(calculate_doppler_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time));
-  const double heating_cont = get_chi_cmf_loss_weighted(pkt, nonemptymgi) * pkt.e_rf * dist * doppler_sq;
+  const double heating_cont = get_chi_cmf_loss_weighted(nonemptymgi, pkt.nu_cmf) * pkt.e_rf * dist * doppler_sq;
 
   // The terms in the above are for Compton, photoelectric and pair production. The pair production one
   // assumes that a fraction (1. - (1.022 MeV / nu)) of the gamma's energy is thermalised.
