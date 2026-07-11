@@ -681,9 +681,10 @@ void transport_gamma(Packet& pkt, const double t2) {
   const double f_fe = grid::get_ffegrp(grid::get_propcell_modelgridindex(pkt.cellindex));
   const auto nonemptymgi = grid::get_propcell_nonemptymgi(pkt.cellindex);
   const auto doppler = calculate_doppler_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
-  const double chi_compton = get_chi_compton_cmf(nonemptymgi, pkt.nu_cmf) * doppler;
-  const double chi_photo_electric = get_chi_photo_electric_cmf(nonemptymgi, f_fe, pkt.nu_cmf) * doppler;
-  const double chi_pair_prod = get_chi_pair_prod_cmf(nonemptymgi, f_fe, pkt.nu_cmf) * doppler;
+  const double chi_compton = (nonemptymgi > 0) ? get_chi_compton_cmf(nonemptymgi, pkt.nu_cmf) * doppler : 0.;
+  const double chi_photo_electric =
+      (nonemptymgi > 0) ? get_chi_photo_electric_cmf(nonemptymgi, f_fe, pkt.nu_cmf) * doppler : 0.;
+  const double chi_pair_prod = (nonemptymgi > 0) ? get_chi_pair_prod_cmf(nonemptymgi, f_fe, pkt.nu_cmf) * doppler : 0.;
   const double chi_tot = chi_compton + chi_photo_electric + chi_pair_prod;
 
   assert_testmodeonly(std::isfinite(chi_compton));
