@@ -192,11 +192,13 @@ auto get_bin_T_R(const std::ptrdiff_t nonemptymgi, const int binindex) -> float 
 }
 
 void update_bfestimators(const ptrdiff_t nonemptymgi, const double distance_e_cmf, const double nu_cmf,
-                         const double doppler_nucmf_on_nurf, const Phixslist& phixslist) {
+                         const Phixslist& phixslist) {
   assert_testmodeonly(DETAILED_BF_ESTIMATORS_ON);
 
-  const double distance_e_cmf_over_nu =
-      distance_e_cmf / nu_cmf * doppler_nucmf_on_nurf;  // TODO: Luke: why did I put a doppler factor here?
+  // No doppler factor: like J, the photoionisation rate coefficient is a comoving-frame volume estimator, and the
+  // frame conversion is already fully accounted for by e_cmf and evaluating sigma_bf at nu_cmf (consistent with the
+  // LUT gammaestimator in rpkt.cc)
+  const double distance_e_cmf_over_nu = distance_e_cmf / nu_cmf;
 
   // I think the nu_cmf slightly differs from when the phixslist was calculated
   // so the nu condition on this nu_cmf can truncate the list further compared to what was used in the calculation
@@ -672,8 +674,7 @@ void zero_estimators() {
 }
 
 DEVICE_FUNC void update_estimators(const ptrdiff_t nonemptymgi, const double distance_e_cmf, const double nu_cmf,
-                                   const double doppler_nucmf_on_nurf, const Phixslist& phixslist,
-                                   const bool thickcell) {
+                                   const Phixslist& phixslist, const bool thickcell) {
   if (distance_e_cmf == 0) {
     return;
   }
@@ -686,7 +687,7 @@ DEVICE_FUNC void update_estimators(const ptrdiff_t nonemptymgi, const double dis
   }
 
   if constexpr (DETAILED_BF_ESTIMATORS_ON) {
-    update_bfestimators(nonemptymgi, distance_e_cmf, nu_cmf, doppler_nucmf_on_nurf, phixslist);
+    update_bfestimators(nonemptymgi, distance_e_cmf, nu_cmf, phixslist);
   }
 
   if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
