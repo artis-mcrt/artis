@@ -499,16 +499,10 @@ void compton_scatter(Packet& pkt) {
 }
 
 // calculate the absorption coefficient [cm^-1] for pair production in the comoving frame
-[[nodiscard]] auto get_chi_pair_prod_cmf(const int cellindex, const double nu_cmf) -> double {
+[[nodiscard]] auto get_chi_pair_prod_cmf(const int nonemptymgi, const double nu_cmf) -> double {
   if constexpr (GAMMA_USE_KAPPA_GREY.has_value()) {
     return 0.;
   }
-  const int mgi = grid::get_propcell_modelgridindex(cellindex);
-  if (mgi < 0) {
-    return 0.;  // empty cell
-  }
-
-  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(mgi);
   const double rho = grid::get_rho(nonemptymgi);
 
   // 2.46636e+20 Hz = 1022 keV / H
@@ -519,7 +513,7 @@ void compton_scatter(Packet& pkt) {
   // double sigma_cmf_cno;
   double sigma_cmf_si{NAN};
   double sigma_cmf_fe{NAN};
-  const double f_fe = grid::get_ffegrp(mgi);
+  const double f_fe = grid::get_ffegrp(grid::get_mgi_of_nonemptymgi(nonemptymgi));
 
   // Cross sections from Equation 2 of Ambwani & Sutherland (1988), attributed to Hubbell (1969)
 
@@ -574,7 +568,7 @@ constexpr auto meanf_sigma(const double x) -> double {
   assert_testmodeonly(nonemptymgi >= 0);
   const double xx = H * pkt.nu_cmf / ME / CLIGHT / CLIGHT;
   const auto chi_photo_electric_cmf = get_chi_photo_electric_cmf(nonemptymgi, pkt.nu_cmf);
-  const auto chi_pair_prod_cmf = get_chi_pair_prod_cmf(pkt.cellindex, pkt.nu_cmf);
+  const auto chi_pair_prod_cmf = get_chi_pair_prod_cmf(nonemptymgi, pkt.nu_cmf);
 
   return ((meanf_sigma(xx) * grid::get_nnetot(nonemptymgi)) + chi_photo_electric_cmf +
           (chi_pair_prod_cmf * (1. - (2.46636e+20 / pkt.nu_cmf))));
@@ -687,7 +681,7 @@ void transport_gamma(Packet& pkt, const double t2) {
   const auto doppler = calculate_doppler_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
   const double chi_compton = (mgi >= 0) ? get_chi_compton_cmf(nonemptymgi, pkt.nu_cmf) * doppler : 0.;
   const double chi_photo_electric = (mgi >= 0) ? get_chi_photo_electric_cmf(nonemptymgi, pkt.nu_cmf) * doppler : 0.;
-  const double chi_pair_prod = get_chi_pair_prod_cmf(pkt.cellindex, pkt.nu_cmf) * doppler;
+  const double chi_pair_prod = (mgi >= 0) ? get_chi_pair_prod_cmf(nonemptymgi, pkt.nu_cmf) * doppler : 0.;
   const double chi_tot = chi_compton + chi_photo_electric + chi_pair_prod;
 
   assert_testmodeonly(std::isfinite(chi_compton));
