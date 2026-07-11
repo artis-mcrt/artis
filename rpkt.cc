@@ -464,8 +464,6 @@ void rpkt_event_thickcell(Packet& pkt) {
 
   emit_rpkt(pkt);
   // Electron scattering does not modify the last emission flag but it updates the last emission position
-  pkt.em_pos = pkt.pos;
-  pkt.em_time = static_cast<float>(pkt.prop_time);
 }
 
 // Update the volume estimators J and nuJ
@@ -873,6 +871,9 @@ DEVICE_FUNC void emit_rpkt(Packet& pkt) {
     pkt.stokes_u = 0.;
     pkt.stokes_q = 0.;
   }
+
+  pkt.em_pos = pkt.pos;
+  pkt.em_time = static_cast<float>(pkt.prop_time);
 }
 
 template <bool USECELLHISTANDUPDATEPHIXSLIST>
