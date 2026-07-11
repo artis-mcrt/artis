@@ -415,7 +415,8 @@ void compton_scatter(Packet& pkt) {
 }
 
 // calculate the absorption coefficient [cm^-1] for photo electric effect scattering in the co-moving frame
-[[nodiscard]] auto get_chi_photo_electric_cmf(const int nonemptymgi, const double nu_cmf) -> double {
+[[nodiscard]] auto get_chi_photo_electric_cmf(const int nonemptymgi, const double ffegrp, const double nu_cmf)
+    -> double {
   const double rho = grid::get_rho(nonemptymgi);
 
   if constexpr (GAMMA_USE_KAPPA_GREY.has_value()) {
@@ -442,9 +443,7 @@ void compton_scatter(Packet& pkt) {
     const double chi_cmf_fe = sigma_cmf_fe * (rho / MH / 56);
     // Assumes Z = 28. So mass = 56.
 
-    const double f_fe = grid::get_ffegrp(grid::get_mgi_of_nonemptymgi(nonemptymgi));
-
-    return (chi_cmf_fe * f_fe) + (chi_cmf_si * (1. - f_fe));
+    return (chi_cmf_fe * ffegrp) + (chi_cmf_si * (1. - ffegrp));
   }
 
   const double hnu_over_1MeV = nu_cmf / 2.41326e+20;
@@ -567,7 +566,8 @@ constexpr auto meanf_sigma(const double x) -> double {
 [[nodiscard]] auto get_chi_cmf_loss_weighted(const Packet& pkt, const int nonemptymgi) -> double {
   assert_testmodeonly(nonemptymgi >= 0);
   const double xx = H * pkt.nu_cmf / ME / CLIGHT / CLIGHT;
-  const auto chi_photo_electric_cmf = get_chi_photo_electric_cmf(nonemptymgi, pkt.nu_cmf);
+  const auto chi_photo_electric_cmf =
+      get_chi_photo_electric_cmf(nonemptymgi, grid::get_ffegrp(grid::get_mgi_of_nonemptymgi(nonemptymgi)), pkt.nu_cmf);
   const auto chi_pair_prod_cmf = get_chi_pair_prod_cmf(nonemptymgi, pkt.nu_cmf);
 
   return ((meanf_sigma(xx) * grid::get_nnetot(nonemptymgi)) + chi_photo_electric_cmf +
@@ -680,7 +680,8 @@ void transport_gamma(Packet& pkt, const double t2) {
 
   const auto doppler = calculate_doppler_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
   const double chi_compton = (mgi >= 0) ? get_chi_compton_cmf(nonemptymgi, pkt.nu_cmf) * doppler : 0.;
-  const double chi_photo_electric = (mgi >= 0) ? get_chi_photo_electric_cmf(nonemptymgi, pkt.nu_cmf) * doppler : 0.;
+  const double chi_photo_electric =
+      (mgi >= 0) ? get_chi_photo_electric_cmf(nonemptymgi, grid::get_ffegrp(mgi), pkt.nu_cmf) * doppler : 0.;
   const double chi_pair_prod = (mgi >= 0) ? get_chi_pair_prod_cmf(nonemptymgi, pkt.nu_cmf) * doppler : 0.;
   const double chi_tot = chi_compton + chi_photo_electric + chi_pair_prod;
 
