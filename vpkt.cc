@@ -222,6 +222,7 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
     } else {
       const double s_cont = boundarydist * pow3(t_start / t_future);
       const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(mgi);
+      const auto doppler = calculate_doppler_nucmf_on_nurf(vpktpos, obsdir, t_future);
       calculate_chi_rpkt_cont<false>(nu_cmf, chi_vpkt_cont, nonemptymgi);
 
       const double chi_cont = chi_vpkt_cont.total();
@@ -229,15 +230,15 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
       for (int opacchoiceindex = 0; opacchoiceindex < nspectraperobsdir; opacchoiceindex++) {
         if (opacityexclusions[opacchoiceindex] == -2) {
           const double chi_cont_nobf = chi_cont - chi_vpkt_cont.chi_boundfree;
-          tau_vpkt[opacchoiceindex] += chi_cont_nobf * s_cont;
+          tau_vpkt[opacchoiceindex] += chi_cont_nobf * s_cont * doppler;
         } else if (opacityexclusions[opacchoiceindex] == -3) {
           const double chi_cont_noff = chi_cont - chi_vpkt_cont.chi_freefree_heat;
-          tau_vpkt[opacchoiceindex] += chi_cont_noff * s_cont;
+          tau_vpkt[opacchoiceindex] += chi_cont_noff * s_cont * doppler;
         } else if (opacityexclusions[opacchoiceindex] == -4) {
           const double chi_cont_noes = chi_cont - chi_vpkt_cont.chi_freefree_scatter;
-          tau_vpkt[opacchoiceindex] += chi_cont_noes * s_cont;
+          tau_vpkt[opacchoiceindex] += chi_cont_noes * s_cont * doppler;
         } else {
-          tau_vpkt[opacchoiceindex] += chi_cont * s_cont;
+          tau_vpkt[opacchoiceindex] += chi_cont * s_cont * doppler;
         }
       }
 
@@ -246,13 +247,14 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
         return false;
       }
 
-      const Vec3d abort_pos{vpktpos[0] + (obsdir[0] * boundarydist), vpktpos[1] + (obsdir[1] * boundarydist),
-                            vpktpos[2] + (obsdir[2] * boundarydist)};
+      const Vec3d pos_boundary{vpktpos[0] + (obsdir[0] * boundarydist), vpktpos[1] + (obsdir[1] * boundarydist),
+                               vpktpos[2] + (obsdir[2] * boundarydist)};
 
-      const double nu_cmf_abort = std::min(
-          nu_rf * calculate_doppler_nucmf_on_nurf(abort_pos, obsdir, t_future + (boundarydist / CLIGHT_PROP)), nu_cmf);
+      const double nu_cmf_boundary = std::min(
+          nu_rf * calculate_doppler_nucmf_on_nurf(pos_boundary, obsdir, t_future + (boundarydist / CLIGHT_PROP)),
+          nu_cmf);
 
-      const double dnu_on_dl = (nu_cmf_abort - nu_cmf) / boundarydist;
+      const double dnu_on_dl = (nu_cmf_boundary - nu_cmf) / boundarydist;
       // Trace individual lines from nu_cmf until dist_limit. Returns false when all vpkt opacity setups exceed tau_max.
       const auto trace_lines_to_dist = [&](const double dist_limit) -> bool {
         while (true) {
