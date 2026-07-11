@@ -219,7 +219,7 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
     const auto [boundarydist, next_cellindex] = grid::boundary_distance(obsdir, vpktpos, t_future, cellindex);
     if (mgi < 0) {
       next_trans = -1;
-    } else {
+    } else if (boundarydist > 0) {
       const double s_cont = boundarydist * pow3(t_start / t_future);
       const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(mgi);
       const auto doppler = calculate_doppler_nucmf_on_nurf(vpktpos, obsdir, t_future);
