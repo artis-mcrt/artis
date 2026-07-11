@@ -545,16 +545,6 @@ inline void set_nautoionuptrans(const int element, const int ion, const int leve
 }
 
 // Return the photionisation threshold energy [erg]
-[[gnu::pure]] [[nodiscard]] inline auto get_phixs_threshold(const int uniquelevelindex, const int phixstargetindex)
-    -> double {
-  assert_testmodeonly(phixstargetindex < get_nphixstargets(uniquelevelindex));
-  const int upperlevel = get_phixsupperlevel(uniquelevelindex, phixstargetindex);
-  const auto [element, ion, _] = get_levelfromuniquelevelindex(uniquelevelindex);
-  const double E_threshold = epsilon(element, ion + 1, upperlevel) - epsilon(uniquelevelindex);
-  return E_threshold;
-}
-
-// Return the photionisation threshold energy [erg]
 [[gnu::pure]] [[nodiscard]] inline auto get_phixs_threshold(const int element, const int ion, const int level,
                                                             const int phixstargetindex) -> double {
   assert_testmodeonly(element < get_nelements());

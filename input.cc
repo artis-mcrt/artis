@@ -811,14 +811,14 @@ void setup_phixs_list() {
 
           int index_in_groundphixslist = -1;
           if constexpr (USE_LUT_PHOTOION || USE_ION_BFHEATING_ESTIMATORS) {
-            const double nu_edge_target0 = get_phixs_threshold(uniquelevelindex, 0) / H;
+            const double nu_edge_target0 = get_phixs_threshold(element, ion, level, 0) / H;
             index_in_groundphixslist = search_groundphixslist(nu_edge_target0, element, ion, level);
 
             globals::alllevels.closestgroundlevelcont[uniquelevelindex] = index_in_groundphixslist;
           }
 
           allcont[allcontindex] = {
-              .nu_edge = get_phixs_threshold(uniquelevelindex, phixstargetindex) / H,
+              .nu_edge = get_phixs_threshold(element, ion, level, phixstargetindex) / H,
               .element = element,
               .ion = ion,
               .level = level,

@@ -434,7 +434,7 @@ auto calculate_corrphotoioncoeff_integral(const int element, const int ion, cons
   constexpr double epsrel = 1e-3;
 
   const auto loweruniquelevelindex = get_uniquelevelindex(element, ion, level);
-  const double nu_threshold = (1. / H) * get_phixs_threshold(loweruniquelevelindex, phixstargetindex);
+  const double nu_threshold = (1. / H) * get_phixs_threshold(element, ion, level, phixstargetindex);
   const double nu_max_phixs = nu_threshold * last_phixs_nuovernuedge;  // nu of the uppermost point in the phixs table
 
   const auto T_e = grid::get_Te(nonemptymgi);
@@ -516,7 +516,7 @@ DEVICE_FUNC auto select_continuum_nu(int element, const int lowerion, const int 
                                      float T_e, rngstate_type& rngstate) -> double {
   const auto lower_uniquelevelindex = get_uniquelevelindex(element, lowerion, lower);
   const int phixstargetindex = get_phixstargetindex(lower_uniquelevelindex, upperionlevel);
-  const double E_threshold = get_phixs_threshold(lower_uniquelevelindex, phixstargetindex);
+  const double E_threshold = get_phixs_threshold(element, lowerion, lower, phixstargetindex);
   const double nu_threshold = (1. / H) * E_threshold;
 
   const double nu_max_phixs = nu_threshold * last_phixs_nuovernuedge;  // nu of the uppermost point in the phixs table
