@@ -239,14 +239,9 @@ void init_xcom_photoion_data() {
 }
 
 // the absorption coefficient [cm^-1] for Compton scattering in the co-moving frame
-[[nodiscard]] auto get_chi_compton_cmf(const int cellindex, const double nu_cmf) -> double {
+[[nodiscard]] auto get_chi_compton_cmf(const int nonemptymgi, const double nu_cmf) -> double {
   if constexpr (GAMMA_USE_KAPPA_GREY.has_value()) {
     return 0.;
-  }
-
-  const auto nonemptymgi = grid::get_propcell_nonemptymgi(cellindex);
-  if (nonemptymgi < 0) {
-    return 0.;  // empty cell
   }
 
   const double xx = H * nu_cmf / ME / CLIGHT / CLIGHT;
@@ -420,14 +415,8 @@ void compton_scatter(Packet& pkt) {
 }
 
 // calculate the absorption coefficient [cm^-1] for photo electric effect scattering in the co-moving frame
-[[nodiscard]] auto get_chi_photo_electric_cmf(const int cellindex, const double nu_cmf) -> double {
-  const int mgi = grid::get_propcell_modelgridindex(cellindex);
-
-  if (mgi < 0) {
-    return 0.;  // empty cell
-  }
-  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(mgi);
-
+[[nodiscard]] auto get_chi_photo_electric_cmf(const int nonemptymgi, const double ffegrp, const double nu_cmf)
+    -> double {
   const double rho = grid::get_rho(nonemptymgi);
 
   if constexpr (GAMMA_USE_KAPPA_GREY.has_value()) {
@@ -454,9 +443,7 @@ void compton_scatter(Packet& pkt) {
     const double chi_cmf_fe = sigma_cmf_fe * (rho / MH / 56);
     // Assumes Z = 28. So mass = 56.
 
-    const double f_fe = grid::get_ffegrp(mgi);
-
-    return (chi_cmf_fe * f_fe) + (chi_cmf_si * (1. - f_fe));
+    return (chi_cmf_fe * ffegrp) + (chi_cmf_si * (1. - ffegrp));
   }
 
   const double hnu_over_1MeV = nu_cmf / 2.41326e+20;
@@ -511,16 +498,10 @@ void compton_scatter(Packet& pkt) {
 }
 
 // calculate the absorption coefficient [cm^-1] for pair production in the comoving frame
-[[nodiscard]] auto get_chi_pair_prod_cmf(const int cellindex, const double nu_cmf) -> double {
+[[nodiscard]] auto get_chi_pair_prod_cmf(const int nonemptymgi, const double ffegrp, const double nu_cmf) -> double {
   if constexpr (GAMMA_USE_KAPPA_GREY.has_value()) {
     return 0.;
   }
-  const int mgi = grid::get_propcell_modelgridindex(cellindex);
-  if (mgi < 0) {
-    return 0.;  // empty cell
-  }
-
-  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(mgi);
   const double rho = grid::get_rho(nonemptymgi);
 
   // 2.46636e+20 Hz = 1022 keV / H
@@ -531,7 +512,6 @@ void compton_scatter(Packet& pkt) {
   // double sigma_cmf_cno;
   double sigma_cmf_si{NAN};
   double sigma_cmf_fe{NAN};
-  const double f_fe = grid::get_ffegrp(mgi);
 
   // Cross sections from Equation 2 of Ambwani & Sutherland (1988), attributed to Hubbell (1969)
 
@@ -559,7 +539,7 @@ void compton_scatter(Packet& pkt) {
   const double chi_cmf_fe = sigma_cmf_fe * (rho / MH / 56);
   // Assumes Z = 28. So mass = 56.
 
-  const double chi_cmf = (chi_cmf_fe * f_fe) + (chi_cmf_si * (1. - f_fe));
+  const double chi_cmf = (chi_cmf_fe * ffegrp) + (chi_cmf_si * (1. - ffegrp));
 
   return std::max(chi_cmf, 0.);
 }
@@ -582,17 +562,19 @@ constexpr auto meanf_sigma(const double x) -> double {
 // get the comoving-frame gamma-ray absorption coefficient (with the expected energy loss fraction per interaction
 // factor included). All three terms are comoving-frame coefficients so that they can be combined and converted to
 // the deposition estimator with a single frame factor in update_gamma_dep().
-[[nodiscard]] auto get_chi_cmf_loss_weighted(const Packet& pkt, const int nonemptymgi) -> double {
-  const double xx = H * pkt.nu_cmf / ME / CLIGHT / CLIGHT;
-  const auto chi_photo_electric_cmf = get_chi_photo_electric_cmf(pkt.cellindex, pkt.nu_cmf);
-  const auto chi_pair_prod_cmf = get_chi_pair_prod_cmf(pkt.cellindex, pkt.nu_cmf);
+[[nodiscard]] auto get_chi_cmf_loss_weighted(const int nonemptymgi, const double nu_cmf) -> double {
+  assert_testmodeonly(nonemptymgi >= 0);
+  const double xx = H * nu_cmf / ME / CLIGHT / CLIGHT;
+  const double ffegrp = grid::get_ffegrp(grid::get_mgi_of_nonemptymgi(nonemptymgi));
+  const auto chi_photo_electric_cmf = get_chi_photo_electric_cmf(nonemptymgi, ffegrp, nu_cmf);
+  const auto chi_pair_prod_cmf = get_chi_pair_prod_cmf(nonemptymgi, ffegrp, nu_cmf);
 
   return ((meanf_sigma(xx) * grid::get_nnetot(nonemptymgi)) + chi_photo_electric_cmf +
-          (chi_pair_prod_cmf * (1. - (2.46636e+20 / pkt.nu_cmf))));
+          (chi_pair_prod_cmf * (1. - (2.46636e+20 / nu_cmf))));
 }
 
 // update the energy deposition estimator for gamma ray path increment
-void update_gamma_dep(const Packet& pkt, const double dist) {
+void update_gamma_dep(const Packet& pkt, const int nonemptymgi, const double dist) {
   if (!(dist > 0)) {
     return;
   }
@@ -600,7 +582,6 @@ void update_gamma_dep(const Packet& pkt, const double dist) {
     return;  // don't instantly deposit energy from gamma rays, handle the particles they produce instead
   }
 
-  const int nonemptymgi = grid::get_propcell_nonemptymgi(pkt.cellindex);
   if (nonemptymgi < 0) {
     return;  // empty cell
   }
@@ -610,7 +591,7 @@ void update_gamma_dep(const Packet& pkt, const double dist) {
   // since e_cmf = e_rf * doppler and the interaction probability along the rest-frame path is
   // chi_rf * dist = chi_cmf * doppler * dist.
   const double doppler_sq = pow2(calculate_doppler_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time));
-  const double heating_cont = get_chi_cmf_loss_weighted(pkt, nonemptymgi) * pkt.e_rf * dist * doppler_sq;
+  const double heating_cont = get_chi_cmf_loss_weighted(nonemptymgi, pkt.nu_cmf) * pkt.e_rf * dist * doppler_sq;
 
   // The terms in the above are for Compton, photoelectric and pair production. The pair production one
   // assumes that a fraction (1. - (1.022 MeV / nu)) of the gamma's energy is thermalised.
@@ -692,11 +673,15 @@ void transport_gamma(Packet& pkt, const double t2) {
   // Now consider the scattering/destruction processes.
   // Compton scattering - need to determine the scattering co-efficient.
   // Routine returns the value in the rest frame.
+  const int mgi = grid::get_propcell_modelgridindex(pkt.cellindex);
+  const auto nonemptymgi = (mgi >= 0) ? grid::get_nonemptymgi_of_mgi(mgi) : -1;
 
   const auto doppler = calculate_doppler_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
-  const double chi_compton = get_chi_compton_cmf(pkt.cellindex, pkt.nu_cmf) * doppler;
-  const double chi_photo_electric = get_chi_photo_electric_cmf(pkt.cellindex, pkt.nu_cmf) * doppler;
-  const double chi_pair_prod = get_chi_pair_prod_cmf(pkt.cellindex, pkt.nu_cmf) * doppler;
+  const double ffegrp = (mgi >= 0) ? grid::get_ffegrp(mgi) : 0.;
+  const double chi_compton = (mgi >= 0) ? get_chi_compton_cmf(nonemptymgi, pkt.nu_cmf) * doppler : 0.;
+  const double chi_photo_electric =
+      (mgi >= 0) ? get_chi_photo_electric_cmf(nonemptymgi, ffegrp, pkt.nu_cmf) * doppler : 0.;
+  const double chi_pair_prod = (mgi >= 0) ? get_chi_pair_prod_cmf(nonemptymgi, ffegrp, pkt.nu_cmf) * doppler : 0.;
   const double chi_tot = chi_compton + chi_photo_electric + chi_pair_prod;
 
   assert_testmodeonly(std::isfinite(chi_compton));
@@ -724,7 +709,7 @@ void transport_gamma(Packet& pkt, const double t2) {
 
     // Move it into the new cell.
     if (chi_tot > 0) {
-      update_gamma_dep(pkt, boundarydist);
+      update_gamma_dep(pkt, nonemptymgi, boundarydist);
     }
 
     move_pkt_withtime(pkt, boundarydist / 2.);
@@ -737,14 +722,14 @@ void transport_gamma(Packet& pkt, const double t2) {
     move_pkt_withtime(pkt, tdist / 2.);
 
     if (chi_tot > 0) {
-      update_gamma_dep(pkt, tdist);
+      update_gamma_dep(pkt, nonemptymgi, tdist);
     }
     move_pkt_withtime(pkt, tdist / 2.);
     pkt.prop_time = t2;  // prevent roundoff error
   } else if ((edist < boundarydist) && (edist <= tdist)) {
     move_pkt_withtime(pkt, edist / 2.);
     if (chi_tot > 0) {
-      update_gamma_dep(pkt, edist);
+      update_gamma_dep(pkt, nonemptymgi, edist);
     }
     move_pkt_withtime(pkt, edist / 2.);
 
