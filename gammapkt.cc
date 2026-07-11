@@ -574,7 +574,7 @@ constexpr auto meanf_sigma(const double x) -> double {
 }
 
 // update the energy deposition estimator for gamma ray path increment
-void update_gamma_dep(const Packet& pkt, const double dist) {
+void update_gamma_dep(const Packet& pkt, const int nonemptymgi, const double dist) {
   if (!(dist > 0)) {
     return;
   }
@@ -582,7 +582,6 @@ void update_gamma_dep(const Packet& pkt, const double dist) {
     return;  // don't instantly deposit energy from gamma rays, handle the particles they produce instead
   }
 
-  const int nonemptymgi = grid::get_propcell_nonemptymgi(pkt.cellindex);
   if (nonemptymgi < 0) {
     return;  // empty cell
   }
@@ -710,7 +709,7 @@ void transport_gamma(Packet& pkt, const double t2) {
 
     // Move it into the new cell.
     if (chi_tot > 0) {
-      update_gamma_dep(pkt, boundarydist);
+      update_gamma_dep(pkt, nonemptymgi, boundarydist);
     }
 
     move_pkt_withtime(pkt, boundarydist / 2.);
@@ -723,14 +722,14 @@ void transport_gamma(Packet& pkt, const double t2) {
     move_pkt_withtime(pkt, tdist / 2.);
 
     if (chi_tot > 0) {
-      update_gamma_dep(pkt, tdist);
+      update_gamma_dep(pkt, nonemptymgi, tdist);
     }
     move_pkt_withtime(pkt, tdist / 2.);
     pkt.prop_time = t2;  // prevent roundoff error
   } else if ((edist < boundarydist) && (edist <= tdist)) {
     move_pkt_withtime(pkt, edist / 2.);
     if (chi_tot > 0) {
-      update_gamma_dep(pkt, edist);
+      update_gamma_dep(pkt, nonemptymgi, edist);
     }
     move_pkt_withtime(pkt, edist / 2.);
 
