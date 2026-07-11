@@ -498,7 +498,7 @@ void compton_scatter(Packet& pkt) {
 }
 
 // calculate the absorption coefficient [cm^-1] for pair production in the comoving frame
-[[nodiscard]] auto get_chi_pair_prod_cmf(const int nonemptymgi, const double nu_cmf) -> double {
+[[nodiscard]] auto get_chi_pair_prod_cmf(const int nonemptymgi, const double ffegrp, const double nu_cmf) -> double {
   if constexpr (GAMMA_USE_KAPPA_GREY.has_value()) {
     return 0.;
   }
@@ -512,7 +512,6 @@ void compton_scatter(Packet& pkt) {
   // double sigma_cmf_cno;
   double sigma_cmf_si{NAN};
   double sigma_cmf_fe{NAN};
-  const double f_fe = grid::get_ffegrp(grid::get_mgi_of_nonemptymgi(nonemptymgi));
 
   // Cross sections from Equation 2 of Ambwani & Sutherland (1988), attributed to Hubbell (1969)
 
@@ -540,7 +539,7 @@ void compton_scatter(Packet& pkt) {
   const double chi_cmf_fe = sigma_cmf_fe * (rho / MH / 56);
   // Assumes Z = 28. So mass = 56.
 
-  const double chi_cmf = (chi_cmf_fe * f_fe) + (chi_cmf_si * (1. - f_fe));
+  const double chi_cmf = (chi_cmf_fe * ffegrp) + (chi_cmf_si * (1. - ffegrp));
 
   return std::max(chi_cmf, 0.);
 }
@@ -566,9 +565,9 @@ constexpr auto meanf_sigma(const double x) -> double {
 [[nodiscard]] auto get_chi_cmf_loss_weighted(const Packet& pkt, const int nonemptymgi) -> double {
   assert_testmodeonly(nonemptymgi >= 0);
   const double xx = H * pkt.nu_cmf / ME / CLIGHT / CLIGHT;
-  const auto chi_photo_electric_cmf =
-      get_chi_photo_electric_cmf(nonemptymgi, grid::get_ffegrp(grid::get_mgi_of_nonemptymgi(nonemptymgi)), pkt.nu_cmf);
-  const auto chi_pair_prod_cmf = get_chi_pair_prod_cmf(nonemptymgi, pkt.nu_cmf);
+  const double ffegrp = grid::get_ffegrp(grid::get_mgi_of_nonemptymgi(nonemptymgi));
+  const auto chi_photo_electric_cmf = get_chi_photo_electric_cmf(nonemptymgi, ffegrp, pkt.nu_cmf);
+  const auto chi_pair_prod_cmf = get_chi_pair_prod_cmf(nonemptymgi, ffegrp, pkt.nu_cmf);
 
   return ((meanf_sigma(xx) * grid::get_nnetot(nonemptymgi)) + chi_photo_electric_cmf +
           (chi_pair_prod_cmf * (1. - (2.46636e+20 / pkt.nu_cmf))));
@@ -679,10 +678,11 @@ void transport_gamma(Packet& pkt, const double t2) {
   const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(mgi);
 
   const auto doppler = calculate_doppler_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
+  const double ffegrp = (mgi >= 0) ? grid::get_ffegrp(mgi) : 0.;
   const double chi_compton = (mgi >= 0) ? get_chi_compton_cmf(nonemptymgi, pkt.nu_cmf) * doppler : 0.;
   const double chi_photo_electric =
-      (mgi >= 0) ? get_chi_photo_electric_cmf(nonemptymgi, grid::get_ffegrp(mgi), pkt.nu_cmf) * doppler : 0.;
-  const double chi_pair_prod = (mgi >= 0) ? get_chi_pair_prod_cmf(nonemptymgi, pkt.nu_cmf) * doppler : 0.;
+      (mgi >= 0) ? get_chi_photo_electric_cmf(nonemptymgi, ffegrp, pkt.nu_cmf) * doppler : 0.;
+  const double chi_pair_prod = (mgi >= 0) ? get_chi_pair_prod_cmf(nonemptymgi, ffegrp, pkt.nu_cmf) * doppler : 0.;
   const double chi_tot = chi_compton + chi_photo_electric + chi_pair_prod;
 
   assert_testmodeonly(std::isfinite(chi_compton));
