@@ -239,14 +239,9 @@ void init_xcom_photoion_data() {
 }
 
 // the absorption coefficient [cm^-1] for Compton scattering in the co-moving frame
-[[nodiscard]] auto get_chi_compton_cmf(const int cellindex, const double nu_cmf) -> double {
+[[nodiscard]] auto get_chi_compton_cmf(const int nonemptymgi, const double nu_cmf) -> double {
   if constexpr (GAMMA_USE_KAPPA_GREY.has_value()) {
     return 0.;
-  }
-
-  const auto nonemptymgi = grid::get_propcell_nonemptymgi(cellindex);
-  if (nonemptymgi < 0) {
-    return 0.;  // empty cell
   }
 
   const double xx = H * nu_cmf / ME / CLIGHT / CLIGHT;
@@ -692,9 +687,11 @@ void transport_gamma(Packet& pkt, const double t2) {
   // Now consider the scattering/destruction processes.
   // Compton scattering - need to determine the scattering co-efficient.
   // Routine returns the value in the rest frame.
+  const int mgi = grid::get_propcell_modelgridindex(pkt.cellindex);
+  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(mgi);
 
   const auto doppler = calculate_doppler_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
-  const double chi_compton = get_chi_compton_cmf(pkt.cellindex, pkt.nu_cmf) * doppler;
+  const double chi_compton = (mgi >= 0) ? get_chi_compton_cmf(nonemptymgi, pkt.nu_cmf) * doppler : 0.;
   const double chi_photo_electric = get_chi_photo_electric_cmf(pkt.cellindex, pkt.nu_cmf) * doppler;
   const double chi_pair_prod = get_chi_pair_prod_cmf(pkt.cellindex, pkt.nu_cmf) * doppler;
   const double chi_tot = chi_compton + chi_photo_electric + chi_pair_prod;
