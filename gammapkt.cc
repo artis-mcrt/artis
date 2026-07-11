@@ -571,6 +571,7 @@ constexpr auto meanf_sigma(const double x) -> double {
 // factor included). All three terms are comoving-frame coefficients so that they can be combined and converted to
 // the deposition estimator with a single frame factor in update_gamma_dep().
 [[nodiscard]] auto get_chi_cmf_loss_weighted(const Packet& pkt, const int nonemptymgi) -> double {
+  assert_testmodeonly(nonemptymgi >= 0);
   const double xx = H * pkt.nu_cmf / ME / CLIGHT / CLIGHT;
   const auto chi_photo_electric_cmf = get_chi_photo_electric_cmf(nonemptymgi, pkt.nu_cmf);
   const auto chi_pair_prod_cmf = get_chi_pair_prod_cmf(pkt.cellindex, pkt.nu_cmf);
