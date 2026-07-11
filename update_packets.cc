@@ -40,8 +40,7 @@ void do_nonthermal_predeposit(Packet& pkt, const int nts, const double ts_end) {
   // handle deposition by non-thermal alpha and beta particles that are emitted from pellets and then
   // deposit some or all of their energy locally in the ejecta (possibly after some time delay).
   double e_cmf_deposited = pkt.e_cmf;
-  const auto mgi = grid::get_propcell_modelgridindex(pkt.cellindex);
-  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(mgi);
+  const auto nonemptymgi = grid::get_propcell_nonemptymgi(pkt.cellindex);
   const auto priortype = pkt.type;
   const double ts = pkt.prop_time;
   const auto deposit_type =
@@ -275,8 +274,7 @@ void do_packet(Packet& pkt, const double t2, const int nts, ContinuumOpacity& ch
     }
 
     case TYPE_KPKT: {
-      const int mgi = grid::get_propcell_modelgridindex(pkt.cellindex);
-      const int nonemptymgi = grid::get_nonemptymgi_of_mgi(mgi);
+      const int nonemptymgi = grid::get_propcell_nonemptymgi(pkt.cellindex);
       if (grid::thick_allcells[nonemptymgi] == 1 || RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.has_value()) {
         kpkt::do_kpkt_blackbody(pkt);
       } else {
