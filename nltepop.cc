@@ -1267,7 +1267,8 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
         // sum of this ion's level populations is equal to the ion population
         const double nnion = nnelement * ionfractions[ion];
         const int index_ion_ground = get_nlte_vector_index(element, ion, 0, first_ion_used);
-        const int index_ion_toplevel = get_nlte_vector_index(element, ion, get_nlevels(element, ion), first_ion_used);
+        const int index_ion_toplevel =
+            get_nlte_vector_index(element, ion, get_nlevels(element, ion) - 1, first_ion_used);
         for (int index = 0; index < nlte_dimension; index++) {
           rate_matrix[(index_ion_ground * nlte_dimension) + index] =
               (index >= index_ion_ground && index <= index_ion_toplevel) ? 1.0 : 0.0;
