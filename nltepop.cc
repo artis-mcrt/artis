@@ -568,7 +568,7 @@ void nltepop_matrix_add_ionisation(const int nonemptymgi, const int element, con
   const auto T_e = grid::get_Te(nonemptymgi);
   const float clumpednne = grid::get_clumpfactor(nonemptymgi) * grid::get_nne(nonemptymgi);
   const int nionisinglevels = get_nlevels_ionising(element, ion);
-  const int maxrecombininglevel = get_maxrecombininglevel(element, ion + 1);
+  const int upperionmaxrecombininglevel = get_maxrecombininglevel(element, ion + 1);
   const auto nlte_dimension = rate_matrices.used_nlte_dimension;
 
   const auto levels = std::views::iota(0, nionisinglevels);
@@ -599,7 +599,8 @@ void nltepop_matrix_add_ionisation(const int nonemptymgi, const int element, con
       assert_always((R_ionisation >= 0) && (C_ionisation >= 0));
 
       // recombination
-      if (upper <= maxrecombininglevel) {
+      if (upper <= upperionmaxrecombininglevel) {
+        assert_always(!level_isinsuperlevel(element, ion + 1, upper));  // can't recombine from a superlevel
         const double R_recomb = rad_recombination_ratecoeff(T_e, clumpednne, element, ion + 1, upper, level);
         const double C_recomb =
             col_recombination_ratecoeff(T_e, clumpednne, element, ion + 1, upper, level, epsilon_trans);
@@ -607,10 +608,12 @@ void nltepop_matrix_add_ionisation(const int nonemptymgi, const int element, con
         const auto matrix_index_upper_upper = (upper_index * nlte_dimension) + upper_index;
         const auto matrix_index_lower_upper = (lower_index * nlte_dimension) + upper_index;
 
-        atomicadd(rate_matrices.rad_bf[matrix_index_upper_upper], -R_recomb * s_renorm[upper]);
-        atomicadd(rate_matrices.rad_bf[matrix_index_lower_upper], R_recomb * s_renorm[upper]);
-        atomicadd(rate_matrices.coll_bf[matrix_index_upper_upper], -C_recomb * s_renorm[upper]);
-        atomicadd(rate_matrices.coll_bf[matrix_index_lower_upper], C_recomb * s_renorm[upper]);
+        // no s_renorm factor here because those are for the wrong ion, and we've checked that the upper level
+        // is not in a superlevel (so s_norm is 1 for that level)
+        atomicadd(rate_matrices.rad_bf[matrix_index_upper_upper], -R_recomb);
+        atomicadd(rate_matrices.rad_bf[matrix_index_lower_upper], R_recomb);
+        atomicadd(rate_matrices.coll_bf[matrix_index_upper_upper], -C_recomb);
+        atomicadd(rate_matrices.coll_bf[matrix_index_lower_upper], C_recomb);
 
         assert_always((R_recomb >= 0) && (C_recomb >= 0));
       }
