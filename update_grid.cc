@@ -382,7 +382,7 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
   if constexpr (USE_MICROCLUMPING) {
     const double tmid = globals::timesteps[nts].mid;
     const double rad_vel =
-        grid::get_modelcell_mean_radial_pos(grid::get_mgi_of_nonemptymgi(nonemptymgi), 1.) / globals::tmin;
+        grid::get_modelcell_mean_radial_pos_tmin(grid::get_mgi_of_nonemptymgi(nonemptymgi)) / globals::tmin;
     const float clumpfactor = clumping_factor(tmid, rad_vel);
 
     grid::set_clumpfactor(nonemptymgi, clumpfactor);
@@ -505,7 +505,7 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
   if constexpr (RPKT_GREY_TYPE == RpktGreyType::JUST2022_TEMP_LANTHANIDEFRAC) {
     grid::set_kappagrey(nonemptymgi, grid::calculate_cell_kappagrey(nonemptymgi));
   }
-  const double radial_pos = grid::get_modelcell_mean_radial_pos(mgi, tratmid);
+  const double radial_pos = grid::get_modelcell_mean_radial_pos_tmin(mgi) * tratmid;
   const double grey_optical_depth_across_cell =
       grid::get_kappagrey(nonemptymgi) * grid::get_rho(nonemptymgi) * propcell_width * tratmid;
   // cube corners will have radial pos > rmax, so clamp to 0.
