@@ -601,6 +601,9 @@ auto do_rpkt_step(Packet& pkt, const double t2, ContinuumOpacity& chi_rpkt_cont)
         pkt.absorptionfreq = pkt.nu_rf;
         pkt.nu_cmf = sample_planck_times_expansion_opacity(nonemptymgi, get_rngstate(pkt));
         pkt.next_trans = -1;
+        // a thermal re-emission at a new frequency, so the packet no longer traces back to the previous emission
+        pkt.emissiontype = EMTYPE_FREEFREE;
+        pkt.trueemissiontype = EMTYPE_FREEFREE;
       }
       rpkt_event_thickcell(pkt);
     }
