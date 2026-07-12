@@ -598,6 +598,8 @@ auto do_rpkt_step(Packet& pkt, const double t2, ContinuumOpacity& chi_rpkt_cont)
         // a thermal re-emission at a new frequency, so the packet no longer traces back to the previous emission
         pkt.emissiontype = EMTYPE_NOTSET;
         pkt.trueemissiontype = EMTYPE_NOTSET;
+        pkt.trueem_pos = {NAN, NAN, NAN};
+        pkt.trueem_time = -1.;
 
         // re-emit rather than scatter, so that this event is not counted as an electron scattering
         pkt.nscatterings = 0;
