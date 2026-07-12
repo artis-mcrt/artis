@@ -1217,6 +1217,25 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
   THREADLOCALONHOST std::vector<double> popvec;
   popvec.reserve(max_nlte_dimension);
 
+  // superlevel population renormalisation factors for every ion of the element:
+  // superlevel members get their Boltzmann fraction of the superlevel population, while levels
+  // with their own matrix entries (ground, NLTE excited, and autoionising levels) get a weight of 1.
+  THREADLOCALONHOST std::vector<std::vector<double>> s_renorm_allions;
+  s_renorm_allions.reserve(get_max_nions());
+  s_renorm_allions.resize(nions);
+  for (int ion = 0; ion < nions; ion++) {
+    const int nlevels = get_nlevels(element, ion);
+    s_renorm_allions[ion].resize(nlevels);
+    std::ranges::fill(s_renorm_allions[ion], 1.0);  // default to 1. for all levels
+    const int level_superlevel_start = get_nlevels_excited_nlte(element, ion) + 1;
+    const int first_autoion = get_nlevels_nonautoion(element, ion);
+
+    // set the superlevel renormalisation factors for all levels in the superlevel
+    for (int level = level_superlevel_start; level < first_autoion; level++) {
+      s_renorm_allions[ion][level] = superlevel_boltzmann(nonemptymgi, element, ion, level) / superlevel_partfuncs[ion];
+    }
+  }
+
   THREADLOCALONHOST RateMatrices rate_matrices{max_nlte_dimension};
 
   bool matrix_solve_required = true;
@@ -1226,24 +1245,6 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
     popvec.resize(nlte_dimension);
 
     const int max_ion_used = first_ion_used + nions_used - 1;
-
-    // superlevel population renormalisation factors for every ion of the element:
-    // superlevel members get their Boltzmann fraction of the superlevel population, while levels
-    // with their own matrix entries (ground, NLTE excited, and autoionising levels) get a weight of 1.
-    auto s_renorm_allions = std::vector<std::vector<double>>(nions);
-    for (int ion = first_ion_used; ion <= max_ion_used; ion++) {
-      const int nlevels = get_nlevels(element, ion);
-      const int level_superlevel_start = get_nlevels_excited_nlte(element, ion) + 1;
-      const int first_autoion = get_nlevels_nonautoion(element, ion);
-
-      s_renorm_allions[ion].assign(nlevels, 1.);
-
-      // nlevels_nlte is the lowest superlevel index
-      for (int level = level_superlevel_start; level < first_autoion; level++) {
-        s_renorm_allions[ion][level] =
-            superlevel_boltzmann(nonemptymgi, element, ion, level) / superlevel_partfuncs[ion];
-      }
-    }
 
     const auto ions = std::views::iota(first_ion_used, max_ion_used + 1);
     std::for_each(ions.begin(), ions.end(), [&](const auto ion) {
