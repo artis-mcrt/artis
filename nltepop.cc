@@ -345,8 +345,8 @@ void print_level_rates(const int nonemptymgi, const int timestep, const int elem
   const double rad_bf_in_total = get_total_rate_in(selected_index, rate_matrices.rad_bf, popvec);
   const double coll_bf_in_total = get_total_rate_in(selected_index, rate_matrices.coll_bf, popvec);
   const double ntcoll_bf_in_total = get_total_rate_in(selected_index, rate_matrices.ntcoll_bf, popvec);
-  const double total_rate_in = rad_bb_in_total + coll_bb_in_total + ntcoll_bb_in_total + rad_bf_in_total +
-                               coll_bf_in_total + ntcoll_bf_in_total;
+  const double total_rate_in =
+      rad_bb_in_total + coll_bb_in_total + ntcoll_bb_in_total + rad_bf_in_total + coll_bf_in_total + ntcoll_bf_in_total;
   printlnlog(
       "  TOTAL rates in:             rad_bb_in  {:8.2e} coll_bb_in  {:8.2e} ntcoll_bb_in  {:8.2e} rad_bf_in  {:8.2e} "
       "coll_bf_in  {:8.2e} ntcoll_bf_in  {:8.2e}",
@@ -985,16 +985,16 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
 
 #else
 
-  auto eigen_vec_x = Eigen::Map<Eigen::VectorX<double> >(vec_x.data(), nlte_dimension);
-  const auto eigen_balance_vector = Eigen::Map<const Eigen::VectorX<double> >(balance_vector.data(), nlte_dimension);
+  auto eigen_vec_x = Eigen::Map<Eigen::VectorX<double>>(vec_x.data(), nlte_dimension);
+  const auto eigen_balance_vector = Eigen::Map<const Eigen::VectorX<double>>(balance_vector.data(), nlte_dimension);
   assert_always(eigen_balance_vector.allFinite());
 
   const auto eigen_rate_matrix =
-      Eigen::Map<const Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> >(
+      Eigen::Map<const Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>>(
           rate_matrix.data(), nlte_dimension, nlte_dimension);
   assert_always(eigen_rate_matrix.allFinite());
 
-  THREADLOCALONHOST Eigen::PartialPivLU<Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> >
+  THREADLOCALONHOST Eigen::PartialPivLU<Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>>
       eigen_rate_matrix_lu;
 
   eigen_rate_matrix_lu.compute(eigen_rate_matrix);
@@ -1041,7 +1041,7 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
 #ifdef EIGEN_OFF
   auto gsl_vec_residual = gsl_vector_view_array(vec_residual.data(), nlte_dimension).vector;
 #else
-  auto eigen_vec_residual = Eigen::Map<Eigen::VectorX<double> >(vec_residual.data(), nlte_dimension);
+  auto eigen_vec_residual = Eigen::Map<Eigen::VectorX<double>>(vec_residual.data(), nlte_dimension);
 #endif
 
   int iteration = 0;

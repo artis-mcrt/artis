@@ -130,10 +130,9 @@ void write_to_estimators_file(std::ostream& estimators_file, const int nonemptym
       std::print(estimators_file, "gammaestimator     Z={:2d}", get_atomicnumber(element));
       for (int ion = 0; ion < nions - 1; ion++) {
         if (get_groundcontindex(element, ion) >= 0) {
-          std::print(
-              estimators_file, "  {}: {:9.3e}", get_ionstage(element, ion),
-              globals::gammaestimator[(static_cast<ptrdiff_t>(nonemptymgi) * globals::nbfcontinua_ground) +
-                                      get_groundcontindex(element, ion)]);
+          std::print(estimators_file, "  {}: {:9.3e}", get_ionstage(element, ion),
+                     globals::gammaestimator[(static_cast<ptrdiff_t>(nonemptymgi) * globals::nbfcontinua_ground) +
+                                             get_groundcontindex(element, ion)]);
         }
       }
       std::println(estimators_file);

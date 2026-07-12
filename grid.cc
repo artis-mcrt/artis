@@ -948,8 +948,8 @@ void read_grid_restart_data(const int timestep) {
       for (int i = 0; i < globals::nbfcontinua_ground; i++) {
         const ptrdiff_t estimindex = (static_cast<ptrdiff_t>(nonemptymgi) * globals::nbfcontinua_ground) + i;
         double corrphotoionrenorm_in = 0.;
-        assert_always(
-            fscanf(gridsave_file, " %la %la", &corrphotoionrenorm_in, &globals::gammaestimator[estimindex]) == 2);
+        assert_always(fscanf(gridsave_file, " %la %la", &corrphotoionrenorm_in, &globals::gammaestimator[estimindex]) ==
+                      2);
         if (globals::rank_in_node == 0) {
           // corrphotoionrenorm is node-shared (gammaestimator is per-rank, so every rank reads into it)
           globals::corrphotoionrenorm[estimindex] = corrphotoionrenorm_in;

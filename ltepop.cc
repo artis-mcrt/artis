@@ -62,10 +62,10 @@ namespace {
   // photoionisation plus collisional ionisation rate coefficient per ground level pop
   const auto groundcontindex = get_groundcontindex(element, ion);
   const double Gamma_groundlevel =
-      groundcontindex >= 0 ? globals::gammaestimator[(static_cast<ptrdiff_t>(nonemptymgi) *
-                                                      globals::nbfcontinua_ground) +
-                                                     groundcontindex]
-                           : 0.;
+      groundcontindex >= 0
+          ? globals::gammaestimator[(static_cast<ptrdiff_t>(nonemptymgi) * globals::nbfcontinua_ground) +
+                                    groundcontindex]
+          : 0.;
 
   // Convert Gamma to the photoionisation rate per ion pop
   const double Gamma_ion = Gamma_groundlevel * stat_weight(element, ion, 0) / partfunc_ion;
