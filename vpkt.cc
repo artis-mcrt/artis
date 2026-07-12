@@ -209,6 +209,11 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
     assert_testmodeonly(type_before_rpkt == TYPE_KPKT || type_before_rpkt == TYPE_MA);
   }
 
+  // pn is the emission probability per unit solid angle in the CMF, but the vpkt escapes along a fixed
+  // rest-frame direction. Convert with the solid-angle transformation dOmega_cmf / dOmega_rf = 1 / doppler^2
+  // (relativistic beaming), consistent with real packets, whose CMF-sampled directions are aberrated to the RF
+  pn /= pow2(calculate_doppler_nucmf_on_nurf(rpkt.pos, obsdir, t_start));
+
   // compute the optical depth to boundary
 
   mgi = grid::get_propcell_modelgridindex(cellindex);
