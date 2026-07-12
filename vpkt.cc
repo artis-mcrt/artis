@@ -167,8 +167,8 @@ void add_to_vpkt_grid(const double nu_rf, const double e_rf, const double prob, 
 }
 
 auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const double nu_rf, const double e_rf,
-                          const int obsdirindex, const Vec3d& obsdir, const enum packet_type type_before_rpkt,
-                          std::string& vpkt_contrib_row) -> bool {
+                          const double rpkt_doppler, const int obsdirindex, const Vec3d& obsdir,
+                          const enum packet_type type_before_rpkt, std::string& vpkt_contrib_row) -> bool {
   int mgi = 0;
 
   auto cellindex = rpkt.cellindex;
@@ -212,7 +212,7 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
   // pn is the emission probability per unit solid angle in the CMF, but the vpkt escapes along a fixed
   // rest-frame direction. Convert with the solid-angle transformation dOmega_cmf / dOmega_rf = 1 / doppler^2
   // (relativistic beaming), consistent with real packets, whose CMF-sampled directions are aberrated to the RF
-  pn /= pow2(calculate_doppler_nucmf_on_nurf(rpkt.pos, obsdir, t_start));
+  pn /= pow2(rpkt_doppler);
 
   // compute the optical depth to boundary
 
@@ -921,7 +921,7 @@ auto trace_vpkts(const Packet& pkt, const enum packet_type type_before_rpkt) -> 
         if ((nu_rf > vspec_numin_input[i] && nu_rf < vspec_numax_input[i]) ||
             (pkt.absorptionfreq > vspec_numin_input[i] && pkt.absorptionfreq < vspec_numax_input[i])) {
           // frequency selection
-          dir_escaped = dir_escaped || trace_vpkt_direction(pkt, t_arrive, nu_rf, e_rf, obsdirindex, obsdir,
+          dir_escaped = dir_escaped || trace_vpkt_direction(pkt, t_arrive, nu_rf, e_rf, doppler, obsdirindex, obsdir,
                                                             type_before_rpkt, vpkt_contrib_row);
           break;  // we only need to match one frequency interval to trace the vpkt
         }
