@@ -345,8 +345,8 @@ void print_level_rates(const int nonemptymgi, const int timestep, const int elem
   const double rad_bf_in_total = get_total_rate_in(selected_index, rate_matrices.rad_bf, popvec);
   const double coll_bf_in_total = get_total_rate_in(selected_index, rate_matrices.coll_bf, popvec);
   const double ntcoll_bf_in_total = get_total_rate_in(selected_index, rate_matrices.ntcoll_bf, popvec);
-  const double total_rate_in =
-      rad_bb_in_total + coll_bb_in_total + rad_bf_in_total + coll_bf_in_total + ntcoll_bf_in_total;
+  const double total_rate_in = rad_bb_in_total + coll_bb_in_total + ntcoll_bb_in_total + rad_bf_in_total +
+                               coll_bf_in_total + ntcoll_bf_in_total;
   printlnlog(
       "  TOTAL rates in:             rad_bb_in  {:8.2e} coll_bb_in  {:8.2e} ntcoll_bb_in  {:8.2e} rad_bf_in  {:8.2e} "
       "coll_bf_in  {:8.2e} ntcoll_bf_in  {:8.2e}",
@@ -358,8 +358,8 @@ void print_level_rates(const int nonemptymgi, const int timestep, const int elem
   const double rad_bf_out_total = get_total_rate_out(selected_index, rate_matrices.rad_bf, popvec);
   const double coll_bf_out_total = get_total_rate_out(selected_index, rate_matrices.coll_bf, popvec);
   const double ntcoll_bf_out_total = get_total_rate_out(selected_index, rate_matrices.ntcoll_bf, popvec);
-  const double total_rate_out =
-      rad_bb_out_total + coll_bb_out_total + rad_bf_out_total + coll_bf_out_total + ntcoll_bf_out_total;
+  const double total_rate_out = rad_bb_out_total + coll_bb_out_total + ntcoll_bb_out_total + rad_bf_out_total +
+                                coll_bf_out_total + ntcoll_bf_out_total;
   printlnlog(
       "  TOTAL rates out:            rad_bb_out {:8.2e} coll_bb_out {:8.2e} ntcoll_bb_out {:8.2e} rad_bf_out {:8.2e} "
       "coll_bf_out {:8.2e} ntcoll_bf_out {:8.2e}",
@@ -562,7 +562,8 @@ void nltepop_matrix_add_boundbound(const int nonemptymgi, const int element, con
 
 // add photoionisation and thermal collisional ionisation to NLTE matrix
 void nltepop_matrix_add_ionisation(const int nonemptymgi, const int element, const int ion,
-                                   const std::span<const double> s_renorm, RateMatrices& rate_matrices,
+                                   const std::span<const double> s_renorm,
+                                   const std::span<const double> s_renorm_upperion, RateMatrices& rate_matrices,
                                    const int first_ion_used, const int nions_used) {
   assert_always((ion + 1) < (nions_used + first_ion_used));  // can't ionise top ion stage
   const auto T_e = grid::get_Te(nonemptymgi);
@@ -607,10 +608,10 @@ void nltepop_matrix_add_ionisation(const int nonemptymgi, const int element, con
         const auto matrix_index_upper_upper = (upper_index * nlte_dimension) + upper_index;
         const auto matrix_index_lower_upper = (lower_index * nlte_dimension) + upper_index;
 
-        atomicadd(rate_matrices.rad_bf[matrix_index_upper_upper], -R_recomb * s_renorm[upper]);
-        atomicadd(rate_matrices.rad_bf[matrix_index_lower_upper], R_recomb * s_renorm[upper]);
-        atomicadd(rate_matrices.coll_bf[matrix_index_upper_upper], -C_recomb * s_renorm[upper]);
-        atomicadd(rate_matrices.coll_bf[matrix_index_lower_upper], C_recomb * s_renorm[upper]);
+        atomicadd(rate_matrices.rad_bf[matrix_index_upper_upper], -R_recomb * s_renorm_upperion[upper]);
+        atomicadd(rate_matrices.rad_bf[matrix_index_lower_upper], R_recomb * s_renorm_upperion[upper]);
+        atomicadd(rate_matrices.coll_bf[matrix_index_upper_upper], -C_recomb * s_renorm_upperion[upper]);
+        atomicadd(rate_matrices.coll_bf[matrix_index_lower_upper], C_recomb * s_renorm_upperion[upper]);
 
         assert_always((R_recomb >= 0) && (C_recomb >= 0));
       }
@@ -1222,23 +1223,33 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
     popvec.resize(nlte_dimension);
 
     const int max_ion_used = first_ion_used + nions_used - 1;
-    const auto ions = std::views::iota(first_ion_used, max_ion_used + 1);
-    std::for_each(ions.begin(), ions.end(), [&](const auto ion) {
+
+    // superlevel population renormalisation factors for every ion of the element
+    // (1. for levels handled fully in NLTE, superlevel Boltzmann fraction for superlevel members)
+    auto s_renorm_allions = std::vector<std::vector<double>>(nions);
+    for (int ion = first_ion_used; ion <= max_ion_used; ion++) {
       const int nlevels = get_nlevels(element, ion);
       const int level_superlevel_start = get_nlevels_excited_nlte(element, ion) + 1;
 
-      auto s_renorm = std::vector<double>(nlevels);
-      std::fill_n(s_renorm.begin(), level_superlevel_start, 1.);
+      s_renorm_allions[ion].resize(nlevels);
+      std::fill_n(s_renorm_allions[ion].begin(), std::min(level_superlevel_start, nlevels), 1.);
 
       // nlevels_nlte is the lowest superlevel index
       for (int level = level_superlevel_start; level < nlevels; level++) {
-        s_renorm[level] = superlevel_boltzmann(nonemptymgi, element, ion, level) / superlevel_partfuncs[ion];
+        s_renorm_allions[ion][level] =
+            superlevel_boltzmann(nonemptymgi, element, ion, level) / superlevel_partfuncs[ion];
       }
+    }
+
+    const auto ions = std::views::iota(first_ion_used, max_ion_used + 1);
+    std::for_each(ions.begin(), ions.end(), [&](const auto ion) {
+      const auto& s_renorm = s_renorm_allions[ion];
 
       nltepop_matrix_add_boundbound(nonemptymgi, element, ion, t_mid, s_renorm, rate_matrices, first_ion_used);
 
       if (ion < max_ion_used) {
-        nltepop_matrix_add_ionisation(nonemptymgi, element, ion, s_renorm, rate_matrices, first_ion_used, nions_used);
+        nltepop_matrix_add_ionisation(nonemptymgi, element, ion, s_renorm, s_renorm_allions[ion + 1], rate_matrices,
+                                      first_ion_used, nions_used);
         nltepop_matrix_add_nt_ionisation(nonemptymgi, element, ion, s_renorm, rate_matrices, first_ion_used,
                                          nions_used);
         nltepop_matrix_add_autoionisation(nonemptymgi, element, ion, s_renorm, rate_matrices, first_ion_used,
