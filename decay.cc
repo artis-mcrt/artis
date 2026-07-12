@@ -485,6 +485,8 @@ constexpr auto calculate_decaychain(const double firstinitabund, const std::span
     double denominator = 1.;
     for (int p = 0; p < num_nuclides; p++) {
       if (p != j) {
+        // the Bateman solution is singular when two nuclides in a chain have equal decay constants
+        assert_always(lambdas[p] != lambda_j);
         denominator *= (lambdas[p] - lambda_j);
       }
     }

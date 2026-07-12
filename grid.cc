@@ -911,11 +911,12 @@ void read_grid_restart_data(const int timestep) {
     float T_J = 0.;
     int thick = 0;
 
+    float nne_in = -1.;
+    float nnetot_in = -1.;
     assert_always(fscanf(gridsave_file, "%d %a %a %a %a %d %la %la %la %la %a %a", &mgi_in, &T_R, &T_e, &W, &T_J,
                          &thick, &globals::dep_estimator_gamma[nonemptymgi],
                          &globals::dep_estimator_positron[nonemptymgi], &globals::dep_estimator_electron[nonemptymgi],
-                         &globals::dep_estimator_alpha[nonemptymgi], &nne_allcells[nonemptymgi],
-                         &nnetot_allcells[nonemptymgi]) == 12);
+                         &globals::dep_estimator_alpha[nonemptymgi], &nne_in, &nnetot_in) == 12);
 
     if (mgi_in != mgi) {
       printlnlog("[fatal] read_grid_restart_data: cell mismatch in reading input gridsave.dat ... abort");
@@ -932,17 +933,27 @@ void read_grid_restart_data(const int timestep) {
     assert_always(globals::dep_estimator_electron[nonemptymgi] >= 0.);
     assert_always(globals::dep_estimator_alpha[nonemptymgi] >= 0.);
 
-    set_TR(nonemptymgi, T_R);
-    set_Te(nonemptymgi, T_e);
-    set_W(nonemptymgi, W);
-    set_TJ(nonemptymgi, T_J);
-    thick_allcells[nonemptymgi] = thick;
+    if (globals::rank_in_node == 0) {
+      // node-shared arrays are written by the node master only (all ranks read identical values from the file)
+      set_TR(nonemptymgi, T_R);
+      set_Te(nonemptymgi, T_e);
+      set_W(nonemptymgi, W);
+      set_TJ(nonemptymgi, T_J);
+      thick_allcells[nonemptymgi] = thick;
+      nne_allcells[nonemptymgi] = nne_in;
+      nnetot_allcells[nonemptymgi] = nnetot_in;
+    }
 
     if constexpr (USE_LUT_PHOTOION) {
       for (int i = 0; i < globals::nbfcontinua_ground; i++) {
-        const int estimindex = (nonemptymgi * globals::nbfcontinua_ground) + i;
-        assert_always(fscanf(gridsave_file, " %la %la", &globals::corrphotoionrenorm[estimindex],
-                             &globals::gammaestimator[estimindex]) == 2);
+        const ptrdiff_t estimindex = (static_cast<ptrdiff_t>(nonemptymgi) * globals::nbfcontinua_ground) + i;
+        double corrphotoionrenorm_in = 0.;
+        assert_always(
+            fscanf(gridsave_file, " %la %la", &corrphotoionrenorm_in, &globals::gammaestimator[estimindex]) == 2);
+        if (globals::rank_in_node == 0) {
+          // corrphotoionrenorm is node-shared (gammaestimator is per-rank, so every rank reads into it)
+          globals::corrphotoionrenorm[estimindex] = corrphotoionrenorm_in;
+        }
       }
     }
   }
@@ -2136,7 +2147,7 @@ void write_grid_restart_data(const int timestep) {
 
     if constexpr (USE_LUT_PHOTOION) {
       for (int i = 0; i < globals::nbfcontinua_ground; i++) {
-        const int estimindex = (nonemptymgi * globals::nbfcontinua_ground) + i;
+        const ptrdiff_t estimindex = (static_cast<ptrdiff_t>(nonemptymgi) * globals::nbfcontinua_ground) + i;
         fprintf(gridsave_file, " %la %la", globals::corrphotoionrenorm[estimindex],
                 globals::gammaestimator[estimindex]);
       }

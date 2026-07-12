@@ -131,8 +131,8 @@ auto T_e_eqn_heating_minus_cooling(const double T_e, int nonemptymgi, const doub
           for (int ion = 0; ion < nions - 1; ion++) {
             const auto groundcontindex = get_groundcontindex(element, ion);
             if (groundcontindex >= 0) {
-              globals::gammaestimator[(nonemptymgi * globals::nbfcontinua_ground) + groundcontindex] =
-                  calculate_iongamma_per_gspop(nonemptymgi, element, ion);
+              globals::gammaestimator[(static_cast<ptrdiff_t>(nonemptymgi) * globals::nbfcontinua_ground) +
+                                      groundcontindex] = calculate_iongamma_per_gspop(nonemptymgi, element, ion);
             }
           }
         }
@@ -231,8 +231,9 @@ void calculate_bfheatingcoeffs(int nonemptymgi, std::span<double> bfheatingcoeff
             const auto uniquelevelindex = get_uniquelevelindex(element, ion, level);
             const int index_in_groundlevelcontestimator = globals::alllevels.closestgroundlevelcont[uniquelevelindex];
             if (index_in_groundlevelcontestimator >= 0) {
-              bfheatingcoeff *= globals::bfheatingestimator[(nonemptymgi * globals::nbfcontinua_ground) +
-                                                            index_in_groundlevelcontestimator];
+              bfheatingcoeff *=
+                  globals::bfheatingestimator[(static_cast<ptrdiff_t>(nonemptymgi) * globals::nbfcontinua_ground) +
+                                              index_in_groundlevelcontestimator];
             }
           }
         }

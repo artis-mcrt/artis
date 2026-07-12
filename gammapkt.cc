@@ -932,8 +932,8 @@ void init_gamma_data() {
     }
   }
 
-  assert_always(false);
-  return NAN;
+  // the probabilities sum to one only up to floating-point rounding, so attribute the remainder to the last line
+  return gamma_spectra[nucindex].back().energy / H;
 }
 
 // convert a pellet to a gamma ray (or kpkt if no gamma spec loaded)

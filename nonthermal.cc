@@ -2525,6 +2525,10 @@ void read_restart_data(FILE* gridsave_file) {
       int frac_excitations_list_size_in = 0;
       assert_always(fscanf(gridsave_file, "%d\n", &frac_excitations_list_size_in) == 1);
 
+      // gridsave file must not have been written with a larger per-cell excitation list capacity
+      assert_always(frac_excitations_list_size_in >= 0);
+      assert_always(frac_excitations_list_size_in <= nt_excitations_stored);
+
       nt_solution[nonemptymgi].frac_excitations_list_size = frac_excitations_list_size_in;
 
       for (auto& excitation : get_cell_ntexcitations(nonemptymgi)) {

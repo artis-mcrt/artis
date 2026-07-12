@@ -275,6 +275,7 @@ void do_packet(Packet& pkt, const double t2, const int nts, ContinuumOpacity& ch
 
     case TYPE_KPKT: {
       const int nonemptymgi = grid::get_propcell_nonemptymgi(pkt.cellindex);
+      assert_testmodeonly(nonemptymgi >= 0);  // k-packets can only exist in non-empty cells
       if (grid::thick_allcells[nonemptymgi] == 1 || RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.has_value()) {
         kpkt::do_kpkt_blackbody(pkt);
       } else {

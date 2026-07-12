@@ -482,7 +482,7 @@ void update_estimators(const double e_cmf, const double nu_cmf, const double dis
         // because groundcont is sorted by nu_edge ascending, nu_cmf < nu_edge for all remaining items
         return;
       }
-      const int ionestimindex = (nonemptymgi * globals::nbfcontinua_ground) + i;
+      const ptrdiff_t ionestimindex = (static_cast<ptrdiff_t>(nonemptymgi) * globals::nbfcontinua_ground) + i;
 
       if constexpr (USE_LUT_PHOTOION) {
         atomicadd(globals::gammaestimator[ionestimindex],

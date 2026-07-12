@@ -122,7 +122,7 @@ void write_to_estimators_file(std::ostream& estimators_file, const int nonemptym
       for (int ion = 0; ion < nions - 1; ion++) {
         if (get_groundcontindex(element, ion) >= 0) {
           std::print(estimators_file, "  {}: {:9.3e}", get_ionstage(element, ion),
-                     globals::corrphotoionrenorm[(nonemptymgi * globals::nbfcontinua_ground) +
+                     globals::corrphotoionrenorm[(static_cast<ptrdiff_t>(nonemptymgi) * globals::nbfcontinua_ground) +
                                                  get_groundcontindex(element, ion)]);
         }
       }
@@ -132,7 +132,8 @@ void write_to_estimators_file(std::ostream& estimators_file, const int nonemptym
         if (get_groundcontindex(element, ion) >= 0) {
           std::print(
               estimators_file, "  {}: {:9.3e}", get_ionstage(element, ion),
-              globals::gammaestimator[(nonemptymgi * globals::nbfcontinua_ground) + get_groundcontindex(element, ion)]);
+              globals::gammaestimator[(static_cast<ptrdiff_t>(nonemptymgi) * globals::nbfcontinua_ground) +
+                                      get_groundcontindex(element, ion)]);
         }
       }
       std::println(estimators_file);
@@ -286,7 +287,8 @@ void update_gamma_corrphotoionrenorm_bfheating_estimators(const int nonemptymgi,
         if (groundcontindex < 0) {
           continue;
         }
-        const int ionestimindex = (nonemptymgi * globals::nbfcontinua_ground) + groundcontindex;
+        const ptrdiff_t ionestimindex =
+            (static_cast<ptrdiff_t>(nonemptymgi) * globals::nbfcontinua_ground) + groundcontindex;
 
         globals::gammaestimator[ionestimindex] *= estimator_normfactor / H;
 #ifdef DO_TITER
@@ -320,7 +322,8 @@ void update_gamma_corrphotoionrenorm_bfheating_estimators(const int nonemptymgi,
       if (groundcontindex < 0) {
         continue;
       }
-      const int ionestimindex = (nonemptymgi * globals::nbfcontinua_ground) + groundcontindex;
+      const ptrdiff_t ionestimindex =
+          (static_cast<ptrdiff_t>(nonemptymgi) * globals::nbfcontinua_ground) + groundcontindex;
 
       if (!elem_has_nlte_levels(element)) {
         globals::gammaestimator[ionestimindex] = calculate_iongamma_per_gspop(nonemptymgi, element, ion);

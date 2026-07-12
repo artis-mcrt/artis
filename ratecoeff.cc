@@ -711,8 +711,9 @@ DEVICE_FUNC auto get_corrphotoioncoeff(const int element, const int ion, const i
         gammacorr = W * lerp_or_last(std::span{corrphotoioncoeffs}, uniquelevelindex, phixstargetindex, T_R);
         const int index_in_groundlevelcontestimator = globals::alllevels.closestgroundlevelcont[uniquelevelindex];
         if (index_in_groundlevelcontestimator >= 0) {
-          gammacorr *= globals::corrphotoionrenorm[(nonemptymgi * globals::nbfcontinua_ground) +
-                                                   index_in_groundlevelcontestimator];
+          gammacorr *=
+              globals::corrphotoionrenorm[(static_cast<ptrdiff_t>(nonemptymgi) * globals::nbfcontinua_ground) +
+                                          index_in_groundlevelcontestimator];
         }
       }
     }
@@ -735,7 +736,8 @@ auto iongamma_is_zero(const int nonemptymgi, const int element, const int ion) -
     if (groundcontindex < 0) {
       return true;
     }
-    return (globals::gammaestimator[(nonemptymgi * globals::nbfcontinua_ground) + groundcontindex] == 0);
+    return (globals::gammaestimator[(static_cast<ptrdiff_t>(nonemptymgi) * globals::nbfcontinua_ground) +
+                                    groundcontindex] == 0);
   }
 
   const auto T_e = grid::get_Te(nonemptymgi);

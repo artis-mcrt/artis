@@ -610,11 +610,11 @@ void initialise_prev_titer_photoionestimators() {
       const int nions = get_nions(element);
       for (int ion = 0; ion < nions - 1; ion++) {
         if constexpr (USE_LUT_PHOTOION) {
-          globals::gammaestimator_save[(nonemptymgi * globals::nbfcontinua_ground) +
+          globals::gammaestimator_save[(static_cast<ptrdiff_t>(nonemptymgi) * globals::nbfcontinua_ground) +
                                        get_groundcontindex(element, ion)] = -1.;
         }
         if constexpr (USE_ION_BFHEATING_ESTIMATORS) {
-          globals::bfheatingestimator_save[(nonemptymgi * globals::nbfcontinua_ground) +
+          globals::bfheatingestimator_save[(static_cast<ptrdiff_t>(nonemptymgi) * globals::nbfcontinua_ground) +
                                            get_groundcontindex(element, ion)] = -1.;
         }
       }
