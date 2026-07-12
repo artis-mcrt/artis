@@ -456,16 +456,6 @@ void rpkt_event_continuum(Packet& pkt, const ContinuumOpacity& chi_rpkt_cont) {
   }
 }
 
-// Handle r-packet interaction in thick cell (grey opacity).
-// The packet stays an RPKT of same nu_cmf as before (coherent scattering) but with a different direction.
-void rpkt_event_thickcell(Packet& pkt) {
-  pkt.nscatterings++;
-  stats::increment(stats::Counter::ELECTRON_SCATTERINGS);
-
-  emit_rpkt(pkt);
-  // Electron scattering does not modify the last emission flag but it updates the last emission position
-}
-
 // Update the volume estimators J and nuJ
 // This is done in another routine than move, as we sometimes move dummy
 // packets which do not contribute to the radiation field.
@@ -581,7 +571,11 @@ auto do_rpkt_step(Packet& pkt, const double t2, ContinuumOpacity& chi_rpkt_cont)
     // The previously selected event occurs
     stats::increment(stats::Counter::INTERACTIONS);
     if (thickcell) {
-      rpkt_event_thickcell(pkt);
+      pkt.nscatterings++;
+      stats::increment(stats::Counter::ELECTRON_SCATTERINGS);
+
+      emit_rpkt(pkt);
+      // Electron scattering does not modify the last emission flag but it updates the last emission position
     } else if (!event_is_boundbound) {
       rpkt_event_continuum(pkt, chi_rpkt_cont);
     } else if constexpr (!RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.has_value()) {
@@ -606,11 +600,13 @@ auto do_rpkt_step(Packet& pkt, const double t2, ContinuumOpacity& chi_rpkt_cont)
         pkt.trueemissiontype = EMTYPE_FREEFREE;
 
         // re-emit rather than scatter, so that this event is not counted as an electron scattering
-        emit_rpkt(pkt);
         pkt.nscatterings = 0;
       } else {
-        rpkt_event_thickcell(pkt);
+        // pure scattering, so the packet keeps its co-moving frequency and direction is changed
+        pkt.nscatterings++;
+        stats::increment(stats::Counter::ELECTRON_SCATTERINGS);
       }
+      emit_rpkt(pkt);
     }
 
     return (pkt.type == TYPE_RPKT);
