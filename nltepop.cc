@@ -1216,6 +1216,8 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
   THREADLOCALONHOST std::vector<double> popvec;
   popvec.reserve(max_nlte_dimension);
 
+  THREADLOCALONHOST std::vector<double> s_renorm;
+
   THREADLOCALONHOST RateMatrices rate_matrices{max_nlte_dimension};
 
   bool matrix_solve_required = true;
@@ -1230,7 +1232,7 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
       const int nlevels = get_nlevels(element, ion);
       const int level_superlevel_start = get_nlevels_excited_nlte(element, ion) + 1;
 
-      auto s_renorm = std::vector<double>(nlevels);
+      s_renorm.resize(nlevels);
       std::fill_n(s_renorm.begin(), level_superlevel_start, 1.);
 
       // nlevels_nlte is the lowest superlevel index
