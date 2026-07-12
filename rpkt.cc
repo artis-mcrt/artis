@@ -604,8 +604,13 @@ auto do_rpkt_step(Packet& pkt, const double t2, ContinuumOpacity& chi_rpkt_cont)
         // a thermal re-emission at a new frequency, so the packet no longer traces back to the previous emission
         pkt.emissiontype = EMTYPE_FREEFREE;
         pkt.trueemissiontype = EMTYPE_FREEFREE;
+
+        // re-emit rather than scatter, so that this event is not counted as an electron scattering
+        emit_rpkt(pkt);
+        pkt.nscatterings = 0;
+      } else {
+        rpkt_event_thickcell(pkt);
       }
-      rpkt_event_thickcell(pkt);
     }
 
     return (pkt.type == TYPE_RPKT);
