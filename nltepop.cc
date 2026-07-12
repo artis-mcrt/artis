@@ -656,11 +656,12 @@ void nltepop_matrix_add_nt_ionisation(const int nonemptymgi, const int element, 
 
 // Add autoionisation and inverse (i.e. collisional capture part of di-el)
 void nltepop_matrix_add_autoionisation(const int nonemptymgi, const int element, const int ion,
-                                       const std::span<const double> s_renorm, RateMatrices& rate_matrices,
-                                       const int first_ion_used, const int nions_used) {
+                                       const std::span<const std::vector<double>> s_renorm_allions,
+                                       RateMatrices& rate_matrices, const int first_ion_used, const int nions_used) {
   if (get_nlevels_autoion(element, ion) == 0) {
     return;  // no autoionising levels for this ion
   }
+  const auto& s_renorm = s_renorm_allions[ion];
 
   const auto nlte_dimension = rate_matrices.used_nlte_dimension;
   const int max_ion_used = first_ion_used + nions_used - 1;
@@ -681,6 +682,7 @@ void nltepop_matrix_add_autoionisation(const int nonemptymgi, const int element,
       const double A_a = autoiontransition.autoion_A;
       const int target_ion = autoiontransition.upperionindex;
       const int target_level = autoiontransition.upperlevelindex;
+      assert_always(target_ion <= max_ion_used);  // the target ion must be included in the NLTE matrix
 
       const double epsilon_trans = epsilon_level - epsilon(element, target_ion, target_level);
 
@@ -696,10 +698,11 @@ void nltepop_matrix_add_autoionisation(const int nonemptymgi, const int element,
                    get_ionstage(element, ion), level, target_level);
       }
 
-      // capture (which is an excitation process, and the first part of di-electronic recomb)
+      // capture (which is an excitation process, and the first part of di-electronic recomb).
+      // the rate is out of the target ion's level, so if that level is folded into the target ion's
+      // superlevel, weight the rate by its Boltzmann fraction of the superlevel population
       R = clumpednne * A_a * statweight / stat_weight(element, target_ion, target_level) * SAHACONST * pow(T_e, -1.5) *
-          exp(-epsilon_trans / KB / T_e);
-      // renorm??
+          exp(-epsilon_trans / KB / T_e) * s_renorm_allions[target_ion][target_level];
 
       rate_matrices.autoion[(lower_index * nlte_dimension) + lower_index] -= R;
       rate_matrices.autoion[(upper_index * nlte_dimension) + lower_index] += R;
@@ -1224,18 +1227,19 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
 
     const int max_ion_used = first_ion_used + nions_used - 1;
 
-    // superlevel population renormalisation factors for every ion of the element
-    // (1. for levels handled fully in NLTE, superlevel Boltzmann fraction for superlevel members)
+    // superlevel population renormalisation factors for every ion of the element:
+    // superlevel members get their Boltzmann fraction of the superlevel population, while levels
+    // with their own matrix entries (ground, NLTE excited, and autoionising levels) get a weight of 1.
     auto s_renorm_allions = std::vector<std::vector<double>>(nions);
     for (int ion = first_ion_used; ion <= max_ion_used; ion++) {
       const int nlevels = get_nlevels(element, ion);
       const int level_superlevel_start = get_nlevels_excited_nlte(element, ion) + 1;
+      const int first_autoion = get_nlevels_nonautoion(element, ion);
 
-      s_renorm_allions[ion].resize(nlevels);
-      std::fill_n(s_renorm_allions[ion].begin(), std::min(level_superlevel_start, nlevels), 1.);
+      s_renorm_allions[ion].assign(nlevels, 1.);
 
       // nlevels_nlte is the lowest superlevel index
-      for (int level = level_superlevel_start; level < nlevels; level++) {
+      for (int level = level_superlevel_start; level < first_autoion; level++) {
         s_renorm_allions[ion][level] =
             superlevel_boltzmann(nonemptymgi, element, ion, level) / superlevel_partfuncs[ion];
       }
@@ -1252,7 +1256,7 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
                                       first_ion_used, nions_used);
         nltepop_matrix_add_nt_ionisation(nonemptymgi, element, ion, s_renorm, rate_matrices, first_ion_used,
                                          nions_used);
-        nltepop_matrix_add_autoionisation(nonemptymgi, element, ion, s_renorm, rate_matrices, first_ion_used,
+        nltepop_matrix_add_autoionisation(nonemptymgi, element, ion, s_renorm_allions, rate_matrices, first_ion_used,
                                           nions_used);
       }
     });
