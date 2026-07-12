@@ -346,7 +346,7 @@ void print_level_rates(const int nonemptymgi, const int timestep, const int elem
   const double coll_bf_in_total = get_total_rate_in(selected_index, rate_matrices.coll_bf, popvec);
   const double ntcoll_bf_in_total = get_total_rate_in(selected_index, rate_matrices.ntcoll_bf, popvec);
   const double total_rate_in =
-      rad_bb_in_total + coll_bb_in_total + rad_bf_in_total + coll_bf_in_total + ntcoll_bf_in_total;
+      rad_bb_in_total + coll_bb_in_total + ntcoll_bb_in_total + rad_bf_in_total + coll_bf_in_total + ntcoll_bf_in_total;
   printlnlog(
       "  TOTAL rates in:             rad_bb_in  {:8.2e} coll_bb_in  {:8.2e} ntcoll_bb_in  {:8.2e} rad_bf_in  {:8.2e} "
       "coll_bf_in  {:8.2e} ntcoll_bf_in  {:8.2e}",
@@ -358,8 +358,8 @@ void print_level_rates(const int nonemptymgi, const int timestep, const int elem
   const double rad_bf_out_total = get_total_rate_out(selected_index, rate_matrices.rad_bf, popvec);
   const double coll_bf_out_total = get_total_rate_out(selected_index, rate_matrices.coll_bf, popvec);
   const double ntcoll_bf_out_total = get_total_rate_out(selected_index, rate_matrices.ntcoll_bf, popvec);
-  const double total_rate_out =
-      rad_bb_out_total + coll_bb_out_total + rad_bf_out_total + coll_bf_out_total + ntcoll_bf_out_total;
+  const double total_rate_out = rad_bb_out_total + coll_bb_out_total + ntcoll_bb_out_total + rad_bf_out_total +
+                                coll_bf_out_total + ntcoll_bf_out_total;
   printlnlog(
       "  TOTAL rates out:            rad_bb_out {:8.2e} coll_bb_out {:8.2e} ntcoll_bb_out {:8.2e} rad_bf_out {:8.2e} "
       "coll_bf_out {:8.2e} ntcoll_bf_out {:8.2e}",
