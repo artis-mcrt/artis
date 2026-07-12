@@ -1,5 +1,5 @@
-#ifndef GRIDINIT_H
-#define GRIDINIT_H
+#ifndef GRID_H
+#define GRID_H
 
 #include <cstddef>
 #include <tuple>
@@ -49,8 +49,7 @@ void set_elements_uppermost_ion(int nonemptymgi, int element, int uppermost_ion)
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_nne(int nonemptymgi) -> float;
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_nnetot(int nonemptymgi) -> float;
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_ffegrp(int modelgridindex) -> float;
-[[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_modelcell_mean_radial_pos(int modelgridindex, double tratmid)
-    -> double;
+[[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_modelcell_mean_radial_pos_tmin(int modelgridindex) -> double;
 void set_elem_massfrac(std::ptrdiff_t nonemptymgi, int element, float newmassfrac);
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_elem_numberdens(std::ptrdiff_t nonemptymgi, int element) -> double;
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_initenergyq(int modelgridindex) -> double;
@@ -125,7 +124,7 @@ inline auto get_ejecta_kinetic_energy() {
   for (int nonemptymgi = 0; nonemptymgi < get_nonempty_npts_model(); nonemptymgi++) {
     const int mgi = get_mgi_of_nonemptymgi(nonemptymgi);
     double const M_cell = get_rho_tmin(mgi) * grid::get_modelcell_assocvolume_tmin(mgi);
-    const double radial_pos = get_modelcell_mean_radial_pos(mgi, 1.);
+    const double radial_pos = get_modelcell_mean_radial_pos_tmin(mgi);
     E_kin += 0.5 * M_cell * pow2(radial_pos / globals::tmin);
   }
 
@@ -134,4 +133,4 @@ inline auto get_ejecta_kinetic_energy() {
 
 }  // namespace grid
 
-#endif  // GRIDINIT_H
+#endif  // GRID_H

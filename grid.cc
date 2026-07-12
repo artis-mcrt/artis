@@ -1526,10 +1526,9 @@ auto get_rho_tmin(const int modelgridindex) -> float { return modelgrid_input[mo
   return modelgrid_input[modelgridindex].ffegrp;
 }
 
-[[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_modelcell_mean_radial_pos(const int modelgridindex,
-                                                                           const double tratmid) -> double {
+[[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_modelcell_mean_radial_pos_tmin(const int modelgridindex) -> double {
   const int assoc_cells = get_numpropcells(modelgridindex);
-  return modelgrid_input[modelgridindex].initial_radial_pos_sum * tratmid / assoc_cells;
+  return modelgrid_input[modelgridindex].initial_radial_pos_sum / assoc_cells;
 }
 
 // mass fraction of an element (all isotopes combined)
