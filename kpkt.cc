@@ -396,8 +396,10 @@ DEVICE_FUNC void do_kpkt(Packet& pkt, const double t2, const int nts) {
   const std::span<const double> ion_cooling_contribs_thiscell = get_cell_ion_cooling_contribs(nonemptymgi);
   const double rndcool_ion = rng_uniform(get_rngstate(pkt)) * ion_cooling_contribs_thiscell.back();
 
-  // Randomly select the occurring cooling process
-  const int uniqueionindex = static_cast<int>(std::ranges::lower_bound(ion_cooling_contribs_thiscell, rndcool_ion) -
+  // Randomly select the occurring cooling process: first ion whose cumulative cooling exceeds rndcool_ion.
+  // upper_bound (not lower_bound) so that a zero-cooling ion is never selected when rndcool_ion ties its
+  // cumulative value exactly (which would give a zero total and an ill-defined process selection).
+  const int uniqueionindex = static_cast<int>(std::ranges::upper_bound(ion_cooling_contribs_thiscell, rndcool_ion) -
                                               ion_cooling_contribs_thiscell.begin());
   assert_always(uniqueionindex < get_includedions());
   const auto [element, ion] = get_ionfromuniqueionindex(uniqueionindex);

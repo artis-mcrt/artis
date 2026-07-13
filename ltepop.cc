@@ -415,19 +415,20 @@ void set_groundlevelpops(const int nonemptymgi, const int element, const float n
   const auto ionfractions =
       (nnelement > 0) ? calculate_ionfractions(element, nonemptymgi, nne, use_phi_saha) : std::vector<double>();
 
-  const int uppermost_ion = static_cast<int>(ionfractions.size() - 1);
+  // -1 when the element is absent (ionfractions is empty); cast to int before subtracting to avoid
+  // unsigned wraparound to a huge positive value.
+  const int uppermost_ion = static_cast<int>(ionfractions.size()) - 1;
   const ptrdiff_t nincludedions = get_includedions();
 
   // Use ion fractions to calculate the groundlevel populations
   for (int ion = 0; ion < nions; ion++) {
     const int uniqueionindex = get_uniqueionindex(element, ion);
     double nnion{NAN};
-    if (ion <= uppermost_ion) {
-      if (nnelement > 0) {
-        nnion = std::max(MINPOP, nnelement * ionfractions[ion]);
-      } else {
-        nnion = 0.;
-      }
+    if (nnelement <= 0) {
+      // absent element: every ion has zero population (do not floor to MINPOP)
+      nnion = 0.;
+    } else if (ion <= uppermost_ion) {
+      nnion = std::max(MINPOP, nnelement * ionfractions[ion]);
     } else {
       nnion = MINPOP;
     }

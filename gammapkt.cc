@@ -306,6 +306,8 @@ auto thomson_angle(rngstate_type& rngstate) -> double {
   // begin with setting the direction in coordinates where original direction
   // is parallel to z-hat.
 
+  assert_testmodeonly(std::fabs(vec_len(dir_in) - 1.) < 1e-10);  // dir_in must be a unit vector
+
   const double phi = rng_uniform(rngstate) * 2 * PI;
 
   const double sin_theta_sq = 1. - pow2(cos_theta);
@@ -313,6 +315,15 @@ auto thomson_angle(rngstate_type& rngstate) -> double {
   const double zprime = cos_theta;
   const double xprime = sin_theta * cos(phi);
   const double yprime = sin_theta * sin(phi);
+
+  // When dir_in is (anti)parallel to the z-axis the rotation below is singular (norm1 -> inf, giving
+  // 0*inf = NaN). Handle it directly: the scattering frame's z-axis is dir_in, so just (anti)align the
+  // result along z (matching the pole handling in electron_scatter_rpkt).
+  if (std::fabs(dir_in[2]) > 0.999999999) {
+    const auto dir_out = Vec3d{xprime, yprime, (dir_in[2] > 0) ? zprime : -zprime};
+    assert_testmodeonly(std::fabs(vec_len(dir_out) - 1.) < 1e-10);
+    return dir_out;
+  }
 
   // Now need to derotate the coordinates back to real x,y,z.
   // Rotation matrix is determined by dir_in.
@@ -452,7 +463,10 @@ void compton_scatter(Packet& pkt) {
   for (int i = 0; i < get_nelements(); i++) {
     // determine charge number:
     const int Z = get_atomicnumber(i);
-    auto numb_energies = std::ssize(photoion_data[Z - 1]);
+    if (Z > numb_xcom_elements) {
+      continue;  // no XCOM photoionisation data available (table only covers Z = 1..numb_xcom_elements)
+    }
+    const auto numb_energies = std::ssize(photoion_data[Z - 1]);
     if (numb_energies == 0) {
       continue;
     }
@@ -770,8 +784,9 @@ void absorb_or_escape_gamma(Packet& pkt, const double f_gamma) {
     pkt.type = TYPE_NTLEPTON_DEPOSITED;
     pkt.absorptiontype = -4;
   } else {
-    // let packet escape, i.e. make it inactive
-    pkt.type = TYPE_ESCAPE;
+    // let packet escape, i.e. make it inactive. change_cell_or_escape() records pkt.escape_type = pkt.type
+    // before setting the type to TYPE_ESCAPE, so leave pkt.type as TYPE_GAMMA here so the escaped gamma is
+    // correctly identified (e.g. for the gamma light curve).
     grid::change_cell_or_escape(pkt, -99);
   }
 }

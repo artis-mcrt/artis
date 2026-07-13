@@ -212,8 +212,7 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
     const auto sys_time_start_Te = std::chrono::steady_clock::now();
 
     // Find T_e as solution for thermal balance
-    call_T_e_finder(nonemptymgi, globals::timesteps[nts_prev].mid, MINTEMP, MAXTEMP, heatingcoolingrates,
-                    bfheatingcoeffs);
+    call_T_e_finder(nonemptymgi, globals::timesteps[nts_prev].mid, heatingcoolingrates, bfheatingcoeffs);
 
     const auto duration_solve_T_e =
         std::chrono::duration<double>(std::chrono::steady_clock::now() - sys_time_start_Te).count();

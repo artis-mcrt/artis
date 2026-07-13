@@ -596,13 +596,14 @@ auto get_endecay_per_ejectamass_tmodel_to_time_withexpansion_chain_numerical(con
       std::ranges::min(decaypaths[decaypathindex].nucindex |
                        std::views::transform([](const auto nucindex) { return get_meanlife(nucindex); }) |
                        std::views::filter([](const auto meanlife) { return meanlife > 0.; }));
-  // min steps across the meanlifetime
-  const int nsteps = static_cast<int>(ceil((tstart - grid::get_t_model()) / min_meanlife) * 100000);
+  // min steps across the meanlifetime. Use a wide type: for short-lived nuclides the product easily
+  // exceeds INT_MAX, which would overflow (undefined behaviour) if cast to int.
+  const auto nsteps = static_cast<ptrdiff_t>(std::ceil((tstart - grid::get_t_model()) / min_meanlife) * 100000);
 
   double chain_endecay = 0.;
   double last_chain_endecay = -1.;
   double last_t = -1.;
-  for (int i = 0; i < nsteps; i++) {
+  for (ptrdiff_t i = 0; i < nsteps; i++) {
     const double t = grid::get_t_model() + ((tstart - grid::get_t_model()) * i / nsteps);
     const double chain_endecay_t = get_endecay_to_tinf_per_ejectamass_at_time(modelgridindex, decaypathindex, t);
     if (last_chain_endecay >= 0) {

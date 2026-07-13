@@ -1735,8 +1735,10 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const std::a
     printlnlog("  frac_sum:            {:g} (should be close to 1.0)", frac_sum);
   }
 
-  // force frac_sum to be 1.0 by adjusting frac_heating
-  nt_solution[nonemptymgi].frac_heating = static_cast<float>(1. - frac_excitation_total - frac_ionisation_total);
+  // force frac_sum to be 1.0 by adjusting frac_heating. Clamp to [0, 1] so a bad solution (where
+  // excitation + ionisation exceed 1) cannot feed a negative heating fraction into the T_e solver.
+  nt_solution[nonemptymgi].frac_heating =
+      static_cast<float>(std::clamp(1. - frac_excitation_total - frac_ionisation_total, 0., 1.));
 
   if (!ftol<0.02>(frac_sum, 1.0)) {
     printlnlog("WARNING: frac_sum is {:g}, but should be 1.0", frac_sum);
@@ -1789,8 +1791,11 @@ void sfmatrix_add_excitation(std::span<double> sfmatrixuppertri, const int nonem
             atomicadd(sfmatrixuppertri[rowoffset + j], nnlevel * vec_xs_excitation_deltae[j]);
           }
 
-          // do the last bit separately because we're not using the full delta_e interval
-          const double delta_en_actual = (en + epsilon_trans_ev - engrid(stopindex));
+          // do the last bit separately because we're not using the full delta_e interval.
+          // clamp to DELTA_E: when en + epsilon_trans_ev exceeds SF_EMAX, get_energyindex_ev_lteq()
+          // clamps stopindex to SFPTS-1, so the raw remainder can exceed DELTA_E and would over-weight
+          // the top energy point. Capping it gives that bin a full (not inflated) contribution.
+          const double delta_en_actual = std::min(en + epsilon_trans_ev - engrid(stopindex), DELTA_E);
           atomicadd(sfmatrixuppertri[rowoffset + stopindex],
                     nnlevel * vec_xs_excitation_deltae[stopindex] * delta_en_actual / DELTA_E);
         }

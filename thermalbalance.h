@@ -26,8 +26,8 @@ struct HeatingCoolingRates {
   double eps_spfission_ana{0};
 };
 
-void call_T_e_finder(int nonemptymgi, double t_current, double T_min, double T_max,
-                     HeatingCoolingRates& heatingcoolingrates, std::span<const double> bfheatingcoeffs);
+void call_T_e_finder(int nonemptymgi, double t_current, HeatingCoolingRates& heatingcoolingrates,
+                     std::span<const double> bfheatingcoeffs);
 auto calculate_bfheatingcoeff(int element, int ion, int level, int phixstargetindex, int nonemptymgi) -> double;
 void calculate_bfheatingcoeffs(int nonemptymgi, std::span<double> bfheatingcoeffs);
 

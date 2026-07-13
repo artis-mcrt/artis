@@ -65,7 +65,7 @@ struct RateMatrices {
   explicit RateMatrices(int max_nlte_dimension) {
     // allocation of the maximum required size is done once,
     // while the used_nlte_dimension is set later
-    const auto max_dim_squared = max_nlte_dimension * max_nlte_dimension;
+    const auto max_dim_squared = static_cast<ptrdiff_t>(max_nlte_dimension) * max_nlte_dimension;
     summed_rates.reserve(max_dim_squared);
     rad_bb.reserve(max_dim_squared);
     coll_bb.reserve(max_dim_squared);
@@ -935,7 +935,7 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
 #ifdef EIGEN_OFF
 
   THREADLOCALONHOST std::vector<double> rate_matrix_LU_decomp;
-  rate_matrix_LU_decomp.reserve(max_nlte_dimension * max_nlte_dimension);
+  rate_matrix_LU_decomp.reserve(static_cast<ptrdiff_t>(max_nlte_dimension) * max_nlte_dimension);
   rate_matrix_LU_decomp.resize(rate_matrix.size());
 
   // make a copy of the rate matrix for the LU decomp call as gsl_linalg_LU_decomp modifies the input matrix
@@ -1243,6 +1243,10 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
     const auto nlte_dimension = get_element_nlte_dimension(element, first_ion_used, nions_used);
     rate_matrices.set_used_dimension(nlte_dimension);
     popvec.resize(nlte_dimension);
+    // popvec is a reused (thread-local) buffer. Clear it so that if the solve fails before writing a
+    // solution (e.g. singular matrix), can_remove_ion() reads zeros for this element rather than stale
+    // populations left over from a previous element or cell.
+    std::ranges::fill(popvec, 0.);
 
     const int max_ion_used = first_ion_used + nions_used - 1;
 
