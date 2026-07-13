@@ -306,6 +306,8 @@ auto thomson_angle(rngstate_type& rngstate) -> double {
   // begin with setting the direction in coordinates where original direction
   // is parallel to z-hat.
 
+  assert_testmodeonly(std::fabs(vec_len(dir_in) - 1.) < 1e-10);  // dir_in must be a unit vector
+
   const double phi = rng_uniform(rngstate) * 2 * PI;
 
   const double sin_theta_sq = 1. - pow2(cos_theta);
