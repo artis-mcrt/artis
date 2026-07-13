@@ -259,9 +259,9 @@ void call_T_e_finder(const int nonemptymgi, const double t_current, const double
   const bool invalid_values = (!std::isfinite(f_T_min) || !std::isfinite(f_T_max));
   if (invalid_values) {
     printlnlog(
-        "[warning] call_T_e_finder: non-finite results in modelcell {} (T_R={:g}, W={:g}). T_e forced to be "
-        "T_min={:g}",
-        modelgridindex, grid::get_TR(nonemptymgi), grid::get_W(nonemptymgi), T_min);
+        "[abort request] call_T_e_finder: non-finite results in modelcell {} (T_R={:g}, W={:g}). T_e forced to be "
+        "MINTEMP",
+        modelgridindex, grid::get_TR(nonemptymgi), grid::get_W(nonemptymgi));
   }
 
   double T_e{NAN};
@@ -283,18 +283,18 @@ void call_T_e_finder(const int nonemptymgi, const double t_current, const double
     }
   } else if (invalid_values || f_T_max < 0) {
     // Thermal balance equation always negative ===> T_e = T_min
-    T_e = T_min;
+    T_e = MINTEMP;
     printlnlog(
         "[warning] call_T_e_finder: cooling bigger than heating at lower T_e boundary {:g} in modelcell {} "
-        "(T_R={:g},W={:g}). T_e forced to be T_min",
-        T_min, modelgridindex, grid::get_TR(nonemptymgi), grid::get_W(nonemptymgi));
+        "(T_R={:g},W={:g}). T_e forced to be MINTEMP",
+        MINTEMP, modelgridindex, grid::get_TR(nonemptymgi), grid::get_W(nonemptymgi));
   } else {
     // Thermal balance equation always positive ===> T_e = T_max
-    T_e = T_max;
+    T_e = MAXTEMP;
     printlnlog(
         "[warning] call_T_e_finder: heating bigger than cooling over the whole T_e range [{:g},{:g}] in modelcell {} "
-        "(T_R={:g},W={:g}). T_e forced to be T_max",
-        T_min, T_max, modelgridindex, grid::get_TR(nonemptymgi), grid::get_W(nonemptymgi));
+        "(T_R={:g},W={:g}). T_e forced to be MAXTEMP",
+        MINTEMP, MAXTEMP, modelgridindex, grid::get_TR(nonemptymgi), grid::get_W(nonemptymgi));
   }
 
   if (T_e > 2 * T_e_old) {
