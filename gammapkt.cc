@@ -461,7 +461,10 @@ void compton_scatter(Packet& pkt) {
   for (int i = 0; i < get_nelements(); i++) {
     // determine charge number:
     const int Z = get_atomicnumber(i);
-    auto numb_energies = std::ssize(photoion_data[Z - 1]);
+    if (Z < 1 || Z > numb_xcom_elements) {
+      continue;  // no XCOM photoionisation data available (table only covers Z = 1..numb_xcom_elements)
+    }
+    const auto numb_energies = std::ssize(photoion_data[Z - 1]);
     if (numb_energies == 0) {
       continue;
     }
