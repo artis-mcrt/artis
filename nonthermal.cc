@@ -1735,8 +1735,10 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const std::a
     printlnlog("  frac_sum:            {:g} (should be close to 1.0)", frac_sum);
   }
 
-  // force frac_sum to be 1.0 by adjusting frac_heating
-  nt_solution[nonemptymgi].frac_heating = static_cast<float>(1. - frac_excitation_total - frac_ionisation_total);
+  // force frac_sum to be 1.0 by adjusting frac_heating. Clamp to [0, 1] so a bad solution (where
+  // excitation + ionisation exceed 1) cannot feed a negative heating fraction into the T_e solver.
+  nt_solution[nonemptymgi].frac_heating =
+      static_cast<float>(std::clamp(1. - frac_excitation_total - frac_ionisation_total, 0., 1.));
 
   if (!ftol<0.02>(frac_sum, 1.0)) {
     printlnlog("WARNING: frac_sum is {:g}, but should be 1.0", frac_sum);
