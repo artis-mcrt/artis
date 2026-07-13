@@ -243,8 +243,8 @@ void calculate_bfheatingcoeffs(int nonemptymgi, std::span<double> bfheatingcoeff
 
 // Solve the thermal-balance equation (heating = cooling) for the electron temperature T_e in a cell by
 // root-finding between T_min and T_max, then store the resulting T_e in the grid.
-void call_T_e_finder(const int nonemptymgi, const double t_current, const double T_min, const double T_max,
-                     HeatingCoolingRates& heatingcoolingrates, const std::span<const double> bfheatingcoeffs) {
+void call_T_e_finder(const int nonemptymgi, const double t_current, HeatingCoolingRates& heatingcoolingrates,
+                     const std::span<const double> bfheatingcoeffs) {
   const int modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
   const double T_e_old = grid::get_Te(nonemptymgi);
   printlog("Finding T_e in cell {} at timestep {}...", modelgridindex, globals::timestep);
@@ -253,13 +253,13 @@ void call_T_e_finder(const int nonemptymgi, const double t_current, const double
     return T_e_eqn_heating_minus_cooling(T_e, nonemptymgi, t_current, heatingcoolingrates, bfheatingcoeffs);
   };
 
-  const double f_T_min = f_T_e(T_min);
-  const double f_T_max = f_T_e(T_max);
+  const double f_T_min = f_T_e(MINTEMP);
+  const double f_T_max = f_T_e(MAXTEMP);
 
   const bool invalid_values = (!std::isfinite(f_T_min) || !std::isfinite(f_T_max));
   if (invalid_values) {
     printlnlog(
-        "[abort request] call_T_e_finder: non-finite results in modelcell {} (T_R={:g}, W={:g}). T_e forced to be "
+        "[warning] call_T_e_finder: non-finite results in modelcell {} (T_R={:g}, W={:g}). T_e forced to be "
         "MINTEMP",
         modelgridindex, grid::get_TR(nonemptymgi), grid::get_W(nonemptymgi));
   }
@@ -272,7 +272,7 @@ void call_T_e_finder(const int nonemptymgi, const double t_current, const double
 
     // use TOMS 748 solver from Boost
     uintmax_t iternum = maxit;
-    auto result = boost::math::tools::toms748_solve(f_T_e, T_min, T_max, f_T_min, f_T_max,
+    auto result = boost::math::tools::toms748_solve(f_T_e, MINTEMP, MAXTEMP, f_T_min, f_T_max,
                                                     ftol<TEMPERATURE_SOLVER_ACCURACY>, iternum);
     T_e = 0.5 * (result.first + result.second);
     if (iternum >= maxit) {
