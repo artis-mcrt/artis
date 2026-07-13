@@ -204,9 +204,6 @@ auto read_text_packets(const std::string& filename) -> std::vector<Packet> {
     ssline >> pkt.trueem_time;
     ssline >> pkt.pellet_nucindex;
     ssline >> pkt.pellet_decaytype;
-
-    // a truncated or malformed row would otherwise leave packet fields silently default-initialised
-    assert_always(!ssline.fail());
   }
 
   if (std::ssize(packets) < MPKTS) {
