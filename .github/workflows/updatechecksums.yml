@@ -17,11 +17,13 @@ jobs:
               env:
                   GH_TOKEN: ${{ github.token }}
                   BRANCH: ${{ github.ref_name }}
+                  HEAD_SHA: ${{ github.sha }}
               run: |
                   artifact=$(gh api "repos/${GITHUB_REPOSITORY}/actions/artifacts?name=checksums&per_page=100" \
-                      --jq '[.artifacts[] | select(.workflow_run.head_branch == env.BRANCH and .expired == false)] | sort_by(.created_at) | last')
+                      --jq '[.artifacts[] | select(.workflow_run.head_branch == env.BRANCH and .workflow_run.head_sha == env.HEAD_SHA and .expired == false)] | sort_by(.created_at) | last')
                   if [ -z "$artifact" ] || [ "$artifact" = "null" ]; then
-                      echo "No unexpired 'checksums' artifact found for branch ${BRANCH}. Has the CI workflow finished on this branch?"
+                      echo "No unexpired 'checksums' artifact found for commit ${HEAD_SHA} on branch ${BRANCH}."
+                      echo "Has the CI workflow finished for the latest commit on this branch? Otherwise this workflow could pick up a stale artifact from an earlier commit and wrongly report that the checksums are unchanged."
                       exit 1
                   fi
                   echo "$artifact" | jq .
