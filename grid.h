@@ -120,13 +120,19 @@ inline void change_cell_or_escape(Packet& pkt, const int next_cellindex) {
 }
 
 inline auto get_ejecta_kinetic_energy() {
-  double E_kin = 0.;
-  for (int nonemptymgi = 0; nonemptymgi < get_nonempty_npts_model(); nonemptymgi++) {
-    const int mgi = get_mgi_of_nonemptymgi(nonemptymgi);
-    double const M_cell = get_rho_tmin(mgi) * grid::get_modelcell_assocvolume_tmin(mgi);
-    const double radial_pos = get_modelcell_mean_radial_pos_tmin(mgi);
-    E_kin += 0.5 * M_cell * pow2(radial_pos / globals::tmin);
-  }
+  // Fixed by the tmin-frame cell masses and velocities, so compute once and cache. It is queried once per
+  // packet by the Barnes / time-dependent particle thermalisation schemes; callers only run during packet
+  // propagation, after the grid is fully set up.
+  static const double E_kin = [] {
+    double e_kin = 0.;
+    for (int nonemptymgi = 0; nonemptymgi < get_nonempty_npts_model(); nonemptymgi++) {
+      const int mgi = get_mgi_of_nonemptymgi(nonemptymgi);
+      const double M_cell = get_rho_tmin(mgi) * grid::get_modelcell_assocvolume_tmin(mgi);
+      const double radial_pos = get_modelcell_mean_radial_pos_tmin(mgi);
+      e_kin += 0.5 * M_cell * pow2(radial_pos / globals::tmin);
+    }
+    return e_kin;
+  }();
 
   return E_kin;
 }
