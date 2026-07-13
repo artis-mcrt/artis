@@ -1789,8 +1789,11 @@ void sfmatrix_add_excitation(std::span<double> sfmatrixuppertri, const int nonem
             atomicadd(sfmatrixuppertri[rowoffset + j], nnlevel * vec_xs_excitation_deltae[j]);
           }
 
-          // do the last bit separately because we're not using the full delta_e interval
-          const double delta_en_actual = (en + epsilon_trans_ev - engrid(stopindex));
+          // do the last bit separately because we're not using the full delta_e interval.
+          // clamp to DELTA_E: when en + epsilon_trans_ev exceeds SF_EMAX, get_energyindex_ev_lteq()
+          // clamps stopindex to SFPTS-1, so the raw remainder can exceed DELTA_E and would over-weight
+          // the top energy point. Capping it gives that bin a full (not inflated) contribution.
+          const double delta_en_actual = std::min(en + epsilon_trans_ev - engrid(stopindex), DELTA_E);
           atomicadd(sfmatrixuppertri[rowoffset + stopindex],
                     nnlevel * vec_xs_excitation_deltae[stopindex] * delta_en_actual / DELTA_E);
         }
