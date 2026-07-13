@@ -280,7 +280,7 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
             break;
           }
 
-          const double t_line = t_future + (ldist / CLIGHT);
+          const double t_line = t_future + (ldist / CLIGHT_PROP);
 
           const int element = globals::linelist.elementindex[lineindex];
           const int ion = globals::linelist.ionindex[lineindex];
