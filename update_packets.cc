@@ -54,7 +54,8 @@ void do_nonthermal_predeposit(Packet& pkt, const int nts, const double ts_end) {
       pkt.type = deposit_type;
     } else {
       e_cmf_deposited = 0.;
-      pkt.type = TYPE_ESCAPE;
+      // change_cell_or_escape() records pkt.escape_type = pkt.type before setting the type to
+      // TYPE_ESCAPE, so leave pkt.type as the predeposit particle type here to preserve it.
       grid::change_cell_or_escape(pkt, -99);
     }
   };

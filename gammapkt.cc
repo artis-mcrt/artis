@@ -770,8 +770,9 @@ void absorb_or_escape_gamma(Packet& pkt, const double f_gamma) {
     pkt.type = TYPE_NTLEPTON_DEPOSITED;
     pkt.absorptiontype = -4;
   } else {
-    // let packet escape, i.e. make it inactive
-    pkt.type = TYPE_ESCAPE;
+    // let packet escape, i.e. make it inactive. change_cell_or_escape() records pkt.escape_type = pkt.type
+    // before setting the type to TYPE_ESCAPE, so leave pkt.type as TYPE_GAMMA here so the escaped gamma is
+    // correctly identified (e.g. for the gamma light curve).
     grid::change_cell_or_escape(pkt, -99);
   }
 }
