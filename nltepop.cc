@@ -65,7 +65,7 @@ struct RateMatrices {
   explicit RateMatrices(int max_nlte_dimension) {
     // allocation of the maximum required size is done once,
     // while the used_nlte_dimension is set later
-    const auto max_dim_squared = max_nlte_dimension * max_nlte_dimension;
+    const auto max_dim_squared = static_cast<ptrdiff_t>(max_nlte_dimension) * max_nlte_dimension;
     summed_rates.reserve(max_dim_squared);
     rad_bb.reserve(max_dim_squared);
     coll_bb.reserve(max_dim_squared);
@@ -935,7 +935,7 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
 #ifdef EIGEN_OFF
 
   THREADLOCALONHOST std::vector<double> rate_matrix_LU_decomp;
-  rate_matrix_LU_decomp.reserve(max_nlte_dimension * max_nlte_dimension);
+  rate_matrix_LU_decomp.reserve(static_cast<ptrdiff_t>(max_nlte_dimension) * max_nlte_dimension);
   rate_matrix_LU_decomp.resize(rate_matrix.size());
 
   // make a copy of the rate matrix for the LU decomp call as gsl_linalg_LU_decomp modifies the input matrix
