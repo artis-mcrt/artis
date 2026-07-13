@@ -1243,6 +1243,10 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
     const auto nlte_dimension = get_element_nlte_dimension(element, first_ion_used, nions_used);
     rate_matrices.set_used_dimension(nlte_dimension);
     popvec.resize(nlte_dimension);
+    // popvec is a reused (thread-local) buffer. Clear it so that if the solve fails before writing a
+    // solution (e.g. singular matrix), can_remove_ion() reads zeros for this element rather than stale
+    // populations left over from a previous element or cell.
+    std::ranges::fill(popvec, 0.);
 
     const int max_ion_used = first_ion_used + nions_used - 1;
 
