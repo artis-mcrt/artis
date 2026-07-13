@@ -314,6 +314,15 @@ auto thomson_angle(rngstate_type& rngstate) -> double {
   const double xprime = sin_theta * cos(phi);
   const double yprime = sin_theta * sin(phi);
 
+  // When dir_in is (anti)parallel to the z-axis the rotation below is singular (norm1 -> inf, giving
+  // 0*inf = NaN). Handle it directly: the scattering frame's z-axis is dir_in, so just (anti)align the
+  // result along z (matching the pole handling in electron_scatter_rpkt).
+  if (std::fabs(dir_in[2]) > 0.99999) {
+    const auto dir_out = Vec3d{xprime, yprime, (dir_in[2] > 0) ? zprime : -zprime};
+    assert_testmodeonly(std::fabs(vec_len(dir_out) - 1.) < 1e-10);
+    return dir_out;
+  }
+
   // Now need to derotate the coordinates back to real x,y,z.
   // Rotation matrix is determined by dir_in.
 
