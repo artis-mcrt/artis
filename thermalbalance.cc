@@ -242,7 +242,7 @@ void calculate_bfheatingcoeffs(int nonemptymgi, std::span<double> bfheatingcoeff
 }
 
 // Solve the thermal-balance equation (heating = cooling) for the electron temperature T_e in a cell by
-// root-finding between T_min and T_max, then store the resulting T_e in the grid.
+// root-finding between MINTEMP and MAXTEMP, then store the resulting T_e in the grid.
 void call_T_e_finder(const int nonemptymgi, const double t_current, HeatingCoolingRates& heatingcoolingrates,
                      const std::span<const double> bfheatingcoeffs) {
   const int modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
