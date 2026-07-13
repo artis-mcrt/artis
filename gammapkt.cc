@@ -306,6 +306,8 @@ auto thomson_angle(rngstate_type& rngstate) -> double {
   // begin with setting the direction in coordinates where original direction
   // is parallel to z-hat.
 
+  assert_testmodeonly(std::fabs(vec_len(dir_in) - 1.) < 1e-10);  // dir_in must be a unit vector
+
   const double phi = rng_uniform(rngstate) * 2 * PI;
 
   const double sin_theta_sq = 1. - pow2(cos_theta);
@@ -319,7 +321,6 @@ auto thomson_angle(rngstate_type& rngstate) -> double {
   // result along z (matching the pole handling in electron_scatter_rpkt).
   if (std::fabs(dir_in[2]) > 0.999999999) {
     const auto dir_out = Vec3d{xprime, yprime, (dir_in[2] > 0) ? zprime : -zprime};
-    assert_testmodeonly(std::fabs(vec_len(dir_out) - 1.) < 1e-10);
     return dir_out;
   }
 
@@ -327,17 +328,16 @@ auto thomson_angle(rngstate_type& rngstate) -> double {
   // Rotation matrix is determined by dir_in.
 
   const double norm1 = 1. / std::sqrt(pow2(dir_in[0]) + pow2(dir_in[1]));
-  const double norm2 = 1. / vec_len(dir_in);
 
   const double r11 = dir_in[1] * norm1;
   const double r12 = -dir_in[0] * norm1;
   const double r13 = 0.;
-  const double r21 = dir_in[0] * dir_in[2] * norm1 * norm2;
-  const double r22 = dir_in[1] * dir_in[2] * norm1 * norm2;
-  const double r23 = -norm2 / norm1;
-  const double r31 = dir_in[0] * norm2;
-  const double r32 = dir_in[1] * norm2;
-  const double r33 = dir_in[2] * norm2;
+  const double r21 = dir_in[0] * dir_in[2] * norm1;
+  const double r22 = dir_in[1] * dir_in[2] * norm1;
+  const double r23 = -1. / norm1;
+  const double r31 = dir_in[0];
+  const double r32 = dir_in[1];
+  const double r33 = dir_in[2];
 
   const auto dir_out =
       Vec3d{(r11 * xprime) + (r21 * yprime) + (r31 * zprime), (r12 * xprime) + (r22 * yprime) + (r32 * zprime),
