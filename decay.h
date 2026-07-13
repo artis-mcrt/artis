@@ -38,6 +38,7 @@ void init_nuclides(std::span<const int> custom_zlist, std::span<const int> custo
 [[nodiscard]] auto nuc_exists(int z, int a) -> bool;
 [[nodiscard]] auto nucdecayenergygamma(int nucindex) -> double;
 [[nodiscard]] auto nucdecayenergygamma(int z, int a) -> double;
+[[nodiscard]] auto get_decay_neutrino_frac(int nucindex, DecayType decaytype) -> double;
 void set_nucdecayenergygamma(int nucindex, double value);
 void update_abundances(int nonemptymgi, double t_current);
 [[nodiscard]] auto get_endecay_per_ejectamass_tmodel_to_time_withexpansion(int nonemptymgi, double tstart) -> double;
