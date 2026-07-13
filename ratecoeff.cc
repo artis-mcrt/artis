@@ -795,7 +795,13 @@ auto calculate_iongamma_per_gspop(const int nonemptymgi, const int element, cons
     }
   }
   const auto ionisation_rate = (ionisation_rate_rad + ionisation_rate_coll);
-  return ionisation_rate / get_groundlevelpop(nonemptymgi, element, ion);
+  const auto groundlevelpop = get_groundlevelpop(nonemptymgi, element, ion);
+  // groundlevelpop is exactly zero only for an absent element (massfrac == 0), where ionisation_rate is
+  // also zero. Avoid the resulting 0/0 = NaN being stored in the gamma estimator.
+  if (groundlevelpop <= 0.) {
+    return 0.;
+  }
+  return ionisation_rate / groundlevelpop;
 }
 
 // ionisation rate coefficient. multiply by the lower ion pop to get a rate.
