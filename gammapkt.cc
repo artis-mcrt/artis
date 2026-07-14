@@ -641,26 +641,30 @@ DEVICE_FUNC void emit_gamma_isotropic(Packet& pkt) {
 
 // handle gamma to electron-positron pair production event
 void pair_production(Packet& pkt) {
-  //  In pair production, the original gamma makes an electron positron pair - kinetic energy equal to
-  //  gamma ray energy - 1.022 MeV. We assume that the electron deposits any kinetic energy directly to
-  //  the thermal pool. The positron annihilates with an electron locally making a pair of gamma rays
-  //  at 0.511 MeV in the local cmf (isotropic). So all the thermal energy goes to the thermal pool
-  //  immediately and the remainder goes into gamma-rays at 0.511 MeV.
+  // In pair production, the original gamma makes an electron-positron pair with total kinetic energy equal to the
+  // gamma-ray energy minus the 1.022 MeV rest-mass energy. The indivisible-packet branch selection assigns either this
+  // kinetic-energy share or the rest-mass energy to the packet. The latter produces 0.511 MeV annihilation gamma rays.
 
-  const double prob_gamma = 1.022 * MEV / (H * pkt.nu_cmf);
+  constexpr double pair_rest_mass_energy = 1.022 * MEV;
+  const double gamma_energy = H * pkt.nu_cmf;
+  const double prob_gamma = pair_rest_mass_energy / gamma_energy;
 
   assert_always(prob_gamma >= 0);
 
   if (rng_uniform(get_rngstate(pkt)) > prob_gamma) {
     if constexpr (PARTICLE_THERMALISATION_SCHEME == ParticleThermalisationScheme::TIMEDEPENDENTWITHGAMMAPRODUCTS) {
-      // Convert it to an e-minus or positron kinetic energy packet
+      // Represent one of the two particles, assuming that they share the available kinetic energy equally. e_cmf stays
+      // unchanged because it is the indivisible macro-packet energy; nu_cmf stores the physical particle energy used by
+      // the time-dependent thermalisation calculation.
+      const double particle_kinetic_energy = (gamma_energy - pair_rest_mass_energy) / 2;
+      assert_testmodeonly(particle_kinetic_energy > 0.);
+      pkt.nu_cmf = particle_kinetic_energy / H;
       pkt.type = (rng_uniform(get_rngstate(pkt)) > 0.5) ? TYPE_NONTHERMAL_PREDEPOSIT_BETAMINUS
                                                         : TYPE_NONTHERMAL_PREDEPOSIT_BETAPLUS;
     } else {
       pkt.type = TYPE_NTLEPTON_DEPOSITED;
     }
 
-    // nu_cmf stays the same as the gamma energy becomes the kinetic energy of the electron
     pkt.absorptiontype = -5;
     stats::increment(stats::Counter::NT_STAT_FROM_GAMMA);
   } else {
