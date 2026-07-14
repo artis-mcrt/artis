@@ -12,7 +12,6 @@
 #include <fstream>
 #include <ios>
 #include <limits>
-#include <numeric>
 #include <print>
 #include <span>
 #include <sstream>
@@ -853,70 +852,34 @@ void wollaeger_thermalisation(Packet& pkt) {
 
 void guttman_thermalisation(Packet& pkt) {
   // Guttman+2024, arXiv:2403.08769v1
-  // extension of the Wollaeger scheme. Rather than calculating a single optical depth in radial outward
-  // direction, it calculates a spherical average in all possible gamma-ray emission directions.
+  // Extension of the Wollaeger scheme that averages the deposition probability over random emission directions.
 
-  // toy value for the mean gamma ray opacity for a start, the paper discuss this some more detail, too
-  constexpr double mean_gamma_opac =
-      0.03;  // mean gamma opacity from section 3.2, taken the lower one due to almost symmetrical matter at late times
+  // Mean gamma opacity from section 3.2, using the lower value for nearly symmetric matter at late times.
+  constexpr double mean_gamma_opac = 0.03;
 
-  const double t_0 = globals::tmin;
-  const double t = pkt.prop_time;
-
-  // calculate average optical w.r.t. to emission direction
-  // discretize the two sphere into octants, i.e. four values in phi and two in theta
-  constexpr int numb_rnd_dirs = 100;
-  auto column_densities = std::array<double, numb_rnd_dirs>{};
-  for (int i = 0; i < numb_rnd_dirs; i++) {
-    // compute column density by moving an artificial packet outwards and integrating over local density
-    // WARNING: This simple implementation relies on a relatively large number of random directions
-    // as it assumes that the directions are distributed equally which is likely not the case with low statistics.
-
-    // step 1: draw a random direction
+  constexpr int num_directions = 100;
+  double deposition_probability_sum = 0.;
+  for (int i = 0; i < num_directions; i++) {
     Packet pkt_copy = pkt;
-    // phi rotation: around z-axis
-    const auto random_dir = get_rand_isotropic_unitvec(get_rngstate(pkt));
-    pkt_copy.dir = random_dir;  // fix new direction
+    pkt_copy.dir = get_rand_isotropic_unitvec(get_rngstate(pkt));
 
-    // step 2: move packet into the calculated direction and integrate the density
-    bool end_packet = false;
-    while (!end_packet) {
-      // distance to the next cell
+    double tau = 0.;
+    while (pkt_copy.type != TYPE_ESCAPE) {
       const auto [boundarydist, next_cellindex] =
           grid::boundary_distance(pkt_copy.dir, pkt_copy.pos, pkt_copy.prop_time, pkt_copy.cellindex);
-      const double s_cont = boundarydist * pow3(t / pkt_copy.prop_time);
       const int mgi = grid::get_propcell_modelgridindex(pkt_copy.cellindex);
       if (mgi >= 0) {
-        column_densities[i] += grid::get_rho_tmin(mgi) * s_cont;  // contribution to the integral
+        const double rho = grid::get_rho_tmin(mgi) * pow3(globals::tmin / pkt_copy.prop_time);
+        tau += mean_gamma_opac * rho * boundarydist;
       }
-      // move packet copy now
       move_pkt_withtime(pkt_copy, boundarydist);
-
       grid::change_cell_or_escape(pkt_copy, next_cellindex);
-      end_packet = (pkt_copy.type == TYPE_ESCAPE);
     }
-  }
-  const double avg_column_density =
-      std::accumulate(column_densities.cbegin(), column_densities.cend(), 0.) / std::ssize(column_densities);
 
-  if (avg_column_density <= 0.) {
-    // no material along any sampled direction, so the packet escapes without thermalising
-    absorb_or_escape_gamma(pkt, 0.);
-    return;
+    deposition_probability_sum -= std::expm1(-tau);
   }
 
-  const double t_gamma = sqrt(mean_gamma_opac * avg_column_density * t_0 * t_0);
-
-  // compute the (discretized) integral
-  double f_gamma = 0.;
-  const double width = 4 * PI / numb_rnd_dirs;
-  for (int i = 0; i < numb_rnd_dirs; i++) {
-    const double summand = width * (1 - std::exp(-pow2(t_gamma / t) * column_densities[i] / avg_column_density));
-    f_gamma += summand;
-  }
-  f_gamma /= (4 * PI);
-
-  absorb_or_escape_gamma(pkt, f_gamma);
+  absorb_or_escape_gamma(pkt, deposition_probability_sum / num_directions);
 }
 
 }  // anonymous namespace
