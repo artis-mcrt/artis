@@ -21,11 +21,7 @@ cd ..
 
 echo "CPU type: $(c++ -march=native -Q --help=target | grep -- '-march=  ' | cut -f3)"
 
-if [[ -f emission.out || -f emission.out.zst ]] && [[ -f exspec.txt ]]; then
-  echo 'Not running exspec because emission.out[.zst] and exspec.txt were found'
-else
-  source ./artis/scripts/exspec-before.sh
-  ./artis/exspec
-fi
+
+source ./artis/scripts/run-exspec-if-needed.sh
 
 source ./artis/scripts/exspec-after.sh
