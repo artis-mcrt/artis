@@ -13,7 +13,7 @@ function trap_ctrlc() {
 
 trap "trap_ctrlc" 2
 
-if [ -f logfiles.tar* ]; then
+if compgen -G 'logfiles.tar*' > /dev/null; then
     echo "logfiles.tar* already exists! Not overwriting"
     exit 1
 else
