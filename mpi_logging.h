@@ -171,6 +171,17 @@ static_assert(get_range_chunk(10, 3, 0) == std::tuple{0, 4});
 static_assert(get_range_chunk(10, 3, 1) == std::tuple{4, 3});
 static_assert(get_range_chunk(10, 3, 2) == std::tuple{7, 3});
 
+constexpr auto get_chunk_count(const ptrdiff_t size, const ptrdiff_t max_chunksize) -> ptrdiff_t {
+  assert_always(size >= 0);
+  assert_always(max_chunksize > 0);
+  return (size / max_chunksize) + ((size % max_chunksize) != 0 ? 1 : 0);
+}
+
+static_assert(get_chunk_count(0, 3) == 0);
+static_assert(get_chunk_count(1, 3) == 1);
+static_assert(get_chunk_count(3, 3) == 1);
+static_assert(get_chunk_count(4, 3) == 2);
+
 template <typename T>
   requires(!std::is_const_v<T>)
 [[nodiscard]] auto MPI_shared_malloc_span_keepwin(const ptrdiff_t num_allranks, const T& initval = {})
@@ -384,7 +395,7 @@ inline void MPI_Allreduce_safe(R&& data, MPI_Op op, MPI_Comm comm) {
   const auto mpi_datatype = GET_MPI_TYPE<std::ranges::range_value_t<R>>();
   assert_always(mpi_datatype != MPI_BYTE);  // we can't reduce MPI_BYTE types
 
-  const auto nchunks = (std::ssize(dataspan) / MPI_COUNT_MAX) + ((std::ssize(dataspan) % MPI_COUNT_MAX) == 0 ? 0 : 1);
+  const auto nchunks = get_chunk_count(std::ssize(dataspan), MPI_COUNT_MAX);
   assert_always(nchunks >= 1);
   std::ptrdiff_t items_processed{0};
   for (auto chunk = 0Z; chunk < nchunks; chunk++) {
@@ -425,7 +436,7 @@ inline void MPI_Bcast_safe(R&& data, const int root, MPI_Comm comm) {
   // maximum number of items per chunk such that the MPI count (items * sizefactor) stays within MPI_COUNT_MAX
   const auto max_items_per_chunk = MPI_COUNT_MAX / sizefactor;
   const auto nitems = std::ssize(dataspan);
-  const auto nchunks = (nitems / max_items_per_chunk) + ((nitems % max_items_per_chunk) == 0 ? 0 : 1);
+  const auto nchunks = get_chunk_count(nitems, max_items_per_chunk);
   assert_always(nchunks >= 1);
   std::ptrdiff_t items_processed{0};
   for (auto chunk = 0Z; chunk < nchunks; chunk++) {
@@ -466,7 +477,7 @@ inline void MPI_Reduce_safe(R&& data, MPI_Op op, const int root, MPI_Comm comm) 
   const auto mpi_datatype = GET_MPI_TYPE<std::ranges::range_value_t<R>>();
   assert_always(mpi_datatype != MPI_BYTE);  // we can't reduce MPI_BYTE types
 
-  const auto nchunks = (std::ssize(dataspan) / MPI_COUNT_MAX) + ((std::ssize(dataspan) % MPI_COUNT_MAX) == 0 ? 0 : 1);
+  const auto nchunks = get_chunk_count(std::ssize(dataspan), MPI_COUNT_MAX);
   assert_always(nchunks >= 1);
   std::ptrdiff_t items_processed{0};
   for (auto chunk = 0Z; chunk < nchunks; chunk++) {
