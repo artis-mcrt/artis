@@ -26,13 +26,13 @@ if [[ -f emission.out || -f emission.out.zst || -f emissionpol.out ]]; then
 
   # 3D kilonova model.txt and abundances.txt can be huge, so compress txt files
   # do maxdepth 1 first in case job gets killed during run folder compression
-  find . -maxdepth 1 -name '*.txt' ! -name "output_0-0.txt" -size +200k -print0 | sort -z | xargs -r0 zstd -T0 -13 -v --rm -f
-  find . -maxdepth 1 -name '*.out' ! -name "slurm-*.out" -size +200k -print0 | sort -z | xargs -r0 zstd -T0 -13 -v --rm -f
+  find . -maxdepth 1 -name '*.txt' ! -name "output_0-0.txt" -size +200k -print0 | sort -z | xargs -r0 -P8 zstd -T0 -13 -v --rm -f
+  find . -maxdepth 1 -name '*.out' ! -name "slurm-*.out" -size +200k -print0 | sort -z | xargs -r0 -P8 zstd -T0 -13 -v --rm -f
 
-  find packets/ -name 'packets*.out' -size +200k -print0 | sort -z | xargs -r0 zstd -T0 -13 -v --rm -f
+  find packets/ -name 'packets*.out' -size +200k -print0 | sort -z | xargs -r0 -P8 zstd -T0 -13 -v --rm -f
 
-  find . -name '*.txt' ! -name "output_0-0.txt" -size +400k -print0 | sort -z | xargs -r0 zstd -T0 -13 -v --rm -f
-  find . -name '*.out' ! -name "slurm-*.out" -size +200k -print0 | sort -z | xargs -r0 zstd -T0 -13 -v --rm -f
+  find . -name '*.txt' ! -name "output_0-0.txt" -size +200k -print0 | sort -z | xargs -r0 -P8 zstd -T0 -13 -v --rm -f
+  find . -name '*.out' ! -name "slurm-*.out" -size +200k -print0 | sort -z | xargs -r0 -P8 zstd -T0 -13 -v --rm -f
 
   ./artis/scripts/tar_rm_logs.sh
 
