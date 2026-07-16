@@ -1,6 +1,6 @@
 5f1161041ac8efecc19b48f53d17ad80  absorption.out
 9cbb3a257dd95b6b3dd92d1d7d913e6c  bflist.out
-998f77fb33d5d3738a72525d1e993d05  deposition.out
+018d0d85f4f046828f8efc08adbc06ea  deposition.out
 164b6b997ca7776ea343b3d412a8e9cf  emission.out
 be5a03bf2fd379fc73ec03b89a0c196c  emissiontrue.out
 0276e19a222ca8d8c343ecc16f983dc5  gamma_light_curve.out
