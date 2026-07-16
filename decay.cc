@@ -777,7 +777,7 @@ void init_nuclides(const std::span<const int> custom_zlist, const std::span<cons
   assert_always(custom_zlist.size() == custom_alist.size());
 
   // Ni57
-  nuclides.push_back({.z = 28, .a = 57, .meanlife = 51.36 * 60});
+  nuclides.push_back({.z = 28, .a = 57, .meanlife = 51.36 * 3600.});
   nuclides.back().endecay_positron = 0.354 * MEV;
   nuclides.back().branchprobs[DECAYTYPE_BETAPLUS] = 0.436;
   nuclides.back().branchprobs[DECAYTYPE_ELECTRONCAPTURE] = 1. - 0.436;
