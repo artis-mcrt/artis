@@ -781,9 +781,9 @@ void init_nuclides(const std::span<const int> custom_zlist, const std::span<cons
   nuclides.back().endecay_positron = 0.354 * MEV;
   nuclides.back().branchprobs[DECAYTYPE_BETAPLUS] = 0.436;
   nuclides.back().branchprobs[DECAYTYPE_ELECTRONCAPTURE] = 1. - 0.436;
-  const double q_ec = 3.261697 * MEV;
-  nuclides.back().endecay_q[DECAYTYPE_ELECTRONCAPTURE] = q_ec;
-  nuclides.back().endecay_q[DECAYTYPE_BETAPLUS] = q_ec - (2. * ME * CLIGHTSQUARED);
+  const double ni57_q_ec = 3.261697 * MEV;
+  nuclides.back().endecay_q[DECAYTYPE_ELECTRONCAPTURE] = ni57_q_ec;
+  nuclides.back().endecay_q[DECAYTYPE_BETAPLUS] = ni57_q_ec - (2. * ME * CLIGHTSQUARED);
 
   // Ni56
   nuclides.push_back({.z = 28, .a = 56, .meanlife = 8.80 * DAY});
@@ -795,9 +795,9 @@ void init_nuclides(const std::span<const int> custom_zlist, const std::span<cons
   nuclides.back().endecay_positron = 0.63 * MEV;
   nuclides.back().branchprobs[DECAYTYPE_BETAPLUS] = 0.19;
   nuclides.back().branchprobs[DECAYTYPE_ELECTRONCAPTURE] = 1 - 0.19;
-  const double q_ec = 4.566645 * MEV;
-  nuclides.back().endecay_q[DECAYTYPE_ELECTRONCAPTURE] = q_ec;
-  nuclides.back().endecay_q[DECAYTYPE_BETAPLUS] = q_ec - (2. * ME * CLIGHTSQUARED);
+  const double co56_q_ec = 4.566645 * MEV;
+  nuclides.back().endecay_q[DECAYTYPE_ELECTRONCAPTURE] = co56_q_ec;
+  nuclides.back().endecay_q[DECAYTYPE_BETAPLUS] = co56_q_ec - (2. * ME * CLIGHTSQUARED);
 
   // Cr48
   nuclides.push_back({.z = 24, .a = 48, .meanlife = 1.29602 * DAY});
@@ -809,9 +809,9 @@ void init_nuclides(const std::span<const int> custom_zlist, const std::span<cons
   nuclides.back().branchprobs[DECAYTYPE_BETAPLUS] = 0.499;
   nuclides.back().branchprobs[DECAYTYPE_ELECTRONCAPTURE] = 1. - 0.499;
   nuclides.back().endecay_positron = 0.290 * MEV;
-  const double q_ec = 4.014947 * MEV;
-  nuclides.back().endecay_q[DECAYTYPE_ELECTRONCAPTURE] = q_ec;
-  nuclides.back().endecay_q[DECAYTYPE_BETAPLUS] = q_ec - (2. * ME * CLIGHTSQUARED);
+  const double v48_q_ec = 4.014947 * MEV;
+  nuclides.back().endecay_q[DECAYTYPE_ELECTRONCAPTURE] = v48_q_ec;
+  nuclides.back().endecay_q[DECAYTYPE_BETAPLUS] = v48_q_ec - (2. * ME * CLIGHTSQUARED);
 
   // Co57
   nuclides.push_back({.z = 27, .a = 57, .meanlife = 392.03 * DAY});
