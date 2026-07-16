@@ -419,7 +419,7 @@ void compton_scatter(Packet& pkt) {
     } else {
       pkt.type = TYPE_NTLEPTON_DEPOSITED;
     }
-    pkt.absorptiontype = -3;
+    pkt.absorptiontype = ABSTYPE_GAMMA_COMPTON;
     stats::increment(stats::Counter::NT_STAT_FROM_GAMMA);
   }
 }
@@ -664,7 +664,7 @@ void pair_production(Packet& pkt) {
       pkt.type = TYPE_NTLEPTON_DEPOSITED;
     }
 
-    pkt.absorptiontype = -5;
+    pkt.absorptiontype = ABSTYPE_GAMMA_PAIRPRODUCTION;
     stats::increment(stats::Counter::NT_STAT_FROM_GAMMA);
   } else {
     // The energy goes into emission at 511 keV.
@@ -765,7 +765,7 @@ void transport_gamma(Packet& pkt, const double t2) {
         pkt.type = TYPE_NTLEPTON_DEPOSITED;
       }
 
-      pkt.absorptiontype = -4;
+      pkt.absorptiontype = ABSTYPE_GAMMA_PHOTOELECTRIC;
       stats::increment(stats::Counter::NT_STAT_FROM_GAMMA);
     } else {
       // It's a pair production
@@ -785,7 +785,7 @@ void absorb_or_escape_gamma(Packet& pkt, const double f_gamma) {
   if (rng_uniform(get_rngstate(pkt)) < f_gamma) {
     // packet is absorbed and contributes to the heating as a k-packet
     pkt.type = TYPE_NTLEPTON_DEPOSITED;
-    pkt.absorptiontype = -4;
+    pkt.absorptiontype = ABSTYPE_GAMMA_PHOTOELECTRIC;
   } else {
     // let packet escape, i.e. make it inactive. change_cell_or_escape() records pkt.escape_type = pkt.type
     // before setting the type to TYPE_ESCAPE, so leave pkt.type as TYPE_GAMMA here so the escaped gamma is
@@ -926,7 +926,7 @@ DEVICE_FUNC void pellet_gamma_decay(Packet& pkt) {
   // if no gamma spectra is known, then convert straight to kpkts (e.g., Fe52, Mn52)
   if (pkt.nu_cmf < 0) {
     pkt.type = TYPE_KPKT;
-    pkt.absorptiontype = -6;
+    pkt.absorptiontype = ABSTYPE_PELLET_NOGAMMASPEC;
     return;
   }
 

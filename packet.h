@@ -27,6 +27,18 @@ enum packet_type : int {
 constexpr int EMTYPE_NOTSET{-9999000};
 constexpr int EMTYPE_FREEFREE{-9999999};
 
+// negative absorptiontype values; non-negative values are linelist indices of bound-bound absorption
+enum absorption_type : int {
+  ABSTYPE_FREEFREE = -1,
+  ABSTYPE_BOUNDFREE = -2,
+  ABSTYPE_GAMMA_COMPTON = -3,
+  ABSTYPE_GAMMA_PHOTOELECTRIC = -4,
+  ABSTYPE_GAMMA_PAIRPRODUCTION = -5,
+  ABSTYPE_PELLET_NOGAMMASPEC = -6,  // pellet decay with no known gamma spectrum (e.g. 52Fe chain)
+  ABSTYPE_PELLET_BEFORESIMSTART = -7,  // pellet decayed before the onset of the simulation
+  ABSTYPE_PELLET_PARTICLEDECAY = -10,  // pellet decay to non-thermal particle (e.g. positron)
+};
+
 struct MacroAtomState {
   int element;  // macro atom of type element (this is an element index)
   int ion;  // in ionstage ion (this is an ion index)
@@ -55,12 +67,8 @@ struct Packet {
   int emissiontype{EMTYPE_NOTSET};  // records how the packet was emitted if it is a r-pkt
   Vec3d em_pos{NAN};  // Position of the last emission (x,y,z).
   float em_time{-1.};
-  int absorptiontype{0};  // records linelistindex of the last absorption
-                          // negative values give ff-abs (-1), bf-abs (-2), compton scattering of gammas (-3),
-                          // photoelectric effect of gammas (-4), pair production of gammas (-5)
-                          // decaying pellets of the 52Fe chain (-6) and pellets which decayed before the
-                          // onset of the simulation (-7)
-                          // decay of a positron pellet (-10)
+  int absorptiontype{0};  // records linelistindex of the last absorption,
+                          // or a negative absorption_type enum value
   double absorptionfreq{};  // records nu_rf of packet at last absorption
   double stokes_q{0.};  // normalised Stokes q = Q/I
   double stokes_u{0.};  // normalised Stokes u = U/I
