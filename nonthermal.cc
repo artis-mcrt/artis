@@ -431,7 +431,9 @@ void read_auger_data() {
 
       float n_auger_elec_avg = 0;
       std::array<double, (NT_MAX_AUGER_ELECTRONS + 1)> prob_num_auger{};
-      for (int a = 0; a < 9; a++) {
+      // probability columns are P(1..10 ejected electrons), which includes the primary electron,
+      // so column index a corresponds to a Auger electrons
+      for (int a = 0; a < 10; a++) {
         linepos = 26 + (a * 5);
         // have to read out exactly 5 characters at a time because the columns are sometimes not separated by a space
         std::array<char, 6> strprob{"00000"};
@@ -1227,7 +1229,7 @@ void calculate_eff_ionpot_auger_rates(const int nonemptymgi, const int element, 
     }
   }
 
-  if (NT_MAX_AUGER_ELECTRONS > 0 && matching_nlsubshell_count > 0) {
+  if (NT_MAX_AUGER_ELECTRONS > 0 && matching_nlsubshell_count > 0 && eta_over_ionpot_sum > 0.) {
     const int nions = get_nions(element);
     const int topion = nions - 1;
     if (ion < topion)  // don't try to ionise the top ion
@@ -1489,7 +1491,12 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const std::a
         }
         const double frac_ionisation_ion_shell =
             calculate_nt_frac_ionisation_shell(nonemptymgi, element, ion, collionrow, yfunc);
-        frac_ionisation_ion += frac_ionisation_ion_shell;
+        // with SF_AUGER_CONTRIBUTION_ON, the mean Auger energy per ionisation is re-injected into the
+        // electron pool and gets counted in the heating/excitation fractions, so only the net energy
+        // removed per ionisation (shell potential minus Auger energy) counts as ionisation here
+        const double frac_auger_recycled =
+            SF_AUGER_CONTRIBUTION_ON ? frac_ionisation_ion_shell * collionrow.en_auger_ev / collionrow.ionpot_ev : 0.;
+        frac_ionisation_ion += frac_ionisation_ion_shell - frac_auger_recycled;
         matching_subshell_count++;
 
         if (verbose) {
@@ -1873,7 +1880,9 @@ void sfmatrix_add_ionisation(std::span<double> sfmatrixuppertri, const int Z, co
         }
       }
 
-      if constexpr (SF_AUGER_CONTRIBUTION_ON) {
+      // shells with no Auger data have en_auger_ev == 0 (and prob_num_auger[0] == 1, which would make the
+      // energy boost factor below infinite) and inject no Auger electrons
+      if (SF_AUGER_CONTRIBUTION_ON && en_auger_ev > 0.) {
         int augerstopindex = 0;
         if constexpr (SF_AUGER_CONTRIBUTION_DISTRIBUTE_EN) {
           // en_auger_ev is (if LJS understands it correctly) averaged to include some probability of zero Auger
@@ -1891,17 +1900,20 @@ void sfmatrix_add_ionisation(std::span<double> sfmatrixuppertri, const int Z, co
           const double en = engrid(i);
           const int jstart = std::max(i, xsstartindex);
           for (int j = jstart; j < SFPTS; j++) {
+            // the Auger electron source is an integral of the ionisation rate over E', so each column
+            // carries a DELTA_E integration weight like the other ionisation integrals above
             const double xs = vec_xs_ionisation[j];
             if constexpr (SF_AUGER_CONTRIBUTION_DISTRIBUTE_EN) {
               const double en_boost = 1 / (1. - collionrow.prob_num_auger[0]);
               for (int a = 1; a <= NT_MAX_AUGER_ELECTRONS; a++) {
                 if (en < (en_auger_ev * en_boost / a)) {
-                  sfmatrixuppertri[rowoffset + j] -= nnion * xs * collionrow.prob_num_auger[a] * a;
+                  sfmatrixuppertri[rowoffset + j] -= nnion * xs * collionrow.prob_num_auger[a] * a * DELTA_E;
                 }
               }
             } else {
+              // inject a single electron per ionisation carrying the mean total Auger energy
               assert_always(en < en_auger_ev);
-              sfmatrixuppertri[rowoffset + j] -= nnion * xs;  // * n_auger_elec_avg; // * en_auger_ev???
+              sfmatrixuppertri[rowoffset + j] -= nnion * xs * DELTA_E;
             }
           }
         }
