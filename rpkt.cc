@@ -410,13 +410,13 @@ void rpkt_event_continuum(Packet& pkt, const ContinuumOpacity& chi_rpkt_cont) {
     // ff: transform to k-pkt
     stats::increment(stats::Counter::K_STAT_FROM_FF);
     pkt.type = TYPE_KPKT;
-    pkt.absorptiontype = -1;
+    pkt.absorptiontype = ABSTYPE_FREEFREE;
   } else if (chi_rnd < chi_escatter + chi_ff + chi_bf) {
     // bf: transform to k-pkt or activate macroatom corresponding to probabilities
 
     const auto& phixslist = chi_rpkt_cont.phixslist;
 
-    pkt.absorptiontype = -2;
+    pkt.absorptiontype = ABSTYPE_BOUNDFREE;
 
     const double chi_bf_inrest = chi_rpkt_cont.chi_boundfree;
     assert_testmodeonly(phixslist.chi_bf_sum[phixslist.allcontend - 1] == chi_bf_inrest);

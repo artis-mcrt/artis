@@ -207,7 +207,7 @@ void update_pellet(Packet& pkt, const int nts, const double t2) {
         __builtin_unreachable();
       }
       pkt.em_time = static_cast<float>(pkt.prop_time);
-      pkt.absorptiontype = -10;
+      pkt.absorptiontype = ABSTYPE_PELLET_PARTICLEDECAY;
     } else {
       // decay to gamma-ray packet
       atomicadd(globals::timesteps[nts].gamma_emission, pkt.e_cmf);
@@ -222,7 +222,7 @@ void update_pellet(Packet& pkt, const int nts, const double t2) {
 
     pkt.e_cmf *= tdecay / globals::tmin;
     pkt.type = TYPE_PRE_KPKT;
-    pkt.absorptiontype = -7;
+    pkt.absorptiontype = ABSTYPE_PELLET_BEFORESIMSTART;
     stats::increment(stats::Counter::K_STAT_FROM_EARLIERDECAY);
 
     pkt.prop_time = globals::tmin;
