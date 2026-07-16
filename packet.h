@@ -36,7 +36,7 @@ enum absorption_type : int {
   ABSTYPE_GAMMA_PAIRPRODUCTION = -5,
   ABSTYPE_PELLET_NOGAMMASPEC = -6,  // pellet decay with no known gamma spectrum (e.g. 52Fe chain)
   ABSTYPE_PELLET_BEFORESIMSTART = -7,  // pellet decayed before the onset of the simulation
-  ABSTYPE_PELLET_PARTICLEDECAY = -10,  // pellet decay to non-thermal particle (e.g. positron)
+  ABSTYPE_PELLET_PARTICLEDECAY = -10,  // pellet decay to non-thermal particle (beta+/-, alpha, fission fragment)
 };
 
 struct MacroAtomState {
@@ -67,7 +67,7 @@ struct Packet {
   int emissiontype{EMTYPE_NOTSET};  // records how the packet was emitted if it is a r-pkt
   Vec3d em_pos{NAN};  // Position of the last emission (x,y,z).
   float em_time{-1.};
-  int absorptiontype{0};  // records linelistindex of the last absorption,
+  int absorptiontype{0};  // records linelistindex of the last absorption
                           // or a negative absorption_type enum value
   double absorptionfreq{};  // records nu_rf of packet at last absorption
   double stokes_q{0.};  // normalised Stokes q = Q/I
