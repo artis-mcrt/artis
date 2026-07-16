@@ -151,8 +151,7 @@ constexpr auto GAMMA_THERMALISATION_SCHEME = GammaThermalisationScheme::FREQUENC
 
 constexpr std::optional<double> GAMMA_USE_KAPPA_GREY;
 
-constexpr bool USE_MICROCLUMPING = false;
-
+// Clumping enhances collisional (de)excitation, collisional ionisation, collisional recombination, radiative recombination, collisional capture, stimulated recombination, free-free heating, free-free cooling by the clumping factor
 constexpr float clumping_factor([[maybe_unused]] double tmid, [[maybe_unused]] double rad_vel) { return 1.; }
 
 // NOLINTEND(modernize-use-trailing-return-type,misc-unused-parameters)

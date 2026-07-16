@@ -425,11 +425,8 @@ void allocate_nonemptymodelcells() {
   kappagrey_allcells = MPI_shared_array<float>(nonempty_npts_model, 0.);
   grey_depth_allcells = MPI_shared_array<float>(nonempty_npts_model, 0.);
   thick_allcells = MPI_shared_array<int>(nonempty_npts_model, 0);
-  if constexpr (USE_MICROCLUMPING) {
-    clumpfactor_allcells = MPI_shared_array<float>(nonempty_npts_model, -1.);
-  }
   const auto modelgrid_mem_usage =
-      nonempty_npts_model * ((sizeof(float) * (USE_MICROCLUMPING ? 10 : 9)) + sizeof(double) + sizeof(int));
+      nonempty_npts_model * (sizeof(float) * 9 + sizeof(double) + sizeof(int));
   printlnlog(
       "[info] mem_usage: the modelgrid properties (temperatures and electron densities) occupies {:.3f} MB (node "
       "shared memory)",
@@ -1519,12 +1516,13 @@ auto get_rho_tmin(const int modelgridindex) -> float { return modelgrid_input[mo
   assert_testmodeonly(nonemptymgi >= 0);
   assert_testmodeonly(nonemptymgi < get_nonempty_npts_model());
 
-  if constexpr (USE_MICROCLUMPING) {
-    assert_testmodeonly(std::isfinite(clumpfactor_allcells[nonemptymgi]) && clumpfactor_allcells[nonemptymgi] >= 1.F);
-    return clumpfactor_allcells[nonemptymgi];
-  }
+  const double tmid = globals::timesteps[globals::timestep].mid;
+  const double rad_vel =
+      grid::get_modelcell_mean_radial_pos_tmin(grid::get_mgi_of_nonemptymgi(nonemptymgi)) / globals::tmin;
+  const float clumpfactor = clumping_factor(tmid, rad_vel);
+  assert_testmodeonly(std::isfinite(clumpfactor) && clumpfactor >= 1.F);
 
-  return 1.;
+  return clumpfactor;
 }
 
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_nnetot(const int nonemptymgi) -> float {
@@ -1599,12 +1597,6 @@ void set_nne(const int nonemptymgi, const float nne) {
   assert_always(nne >= 0.);
   assert_always(std::isfinite(nne));
   nne_allcells[nonemptymgi] = nne;
-}
-
-void set_clumpfactor(const int nonemptymgi, const float clumpfactor) {
-  assert_testmodeonly(USE_MICROCLUMPING);
-  assert_always(std::isfinite(clumpfactor) && clumpfactor >= 1.F);
-  clumpfactor_allcells[nonemptymgi] = clumpfactor;
 }
 
 // Calculate and set the total density of electrons (free and bound) in grid cell. These are targets for Compton
