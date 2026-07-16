@@ -880,7 +880,7 @@ auto get_T_J_from_J(const int nonemptymgi) -> float {
     const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
     printlnlog("[warning] get_T_J_from_J: T_J estimator infinite in cell {}, use value of last timestep",
                modelgridindex);
-    return grid::get_TR(nonemptymgi);
+    return grid::get_TJ(nonemptymgi);
   }
   // Make sure that T is in the allowed temperature range.
   if (T_J > MAXTEMP) {
