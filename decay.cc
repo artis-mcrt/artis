@@ -781,38 +781,49 @@ void init_nuclides(const std::span<const int> custom_zlist, const std::span<cons
   nuclides.back().endecay_positron = 0.354 * MEV;
   nuclides.back().branchprobs[DECAYTYPE_BETAPLUS] = 0.436;
   nuclides.back().branchprobs[DECAYTYPE_ELECTRONCAPTURE] = 1. - 0.436;
+  nuclides.back().endecay_q[DECAYTYPE_BETAPLUS] = 3.261697 * MEV;
+  nuclides.back().endecay_q[DECAYTYPE_ELECTRONCAPTURE] = 3.261697 * MEV;
 
   // Ni56
   nuclides.push_back({.z = 28, .a = 56, .meanlife = 8.80 * DAY});
   nuclides.back().branchprobs[DECAYTYPE_ELECTRONCAPTURE] = 1.;
+  nuclides.back().endecay_q[DECAYTYPE_ELECTRONCAPTURE] = 2.132869 * MEV;
 
   // Co56
   nuclides.push_back({.z = 27, .a = 56, .meanlife = 113.7 * DAY});
   nuclides.back().endecay_positron = 0.63 * MEV;
   nuclides.back().branchprobs[DECAYTYPE_BETAPLUS] = 0.19;
   nuclides.back().branchprobs[DECAYTYPE_ELECTRONCAPTURE] = 1 - 0.19;
+  nuclides.back().endecay_q[DECAYTYPE_BETAPLUS] = 4.566645 * MEV;
+  nuclides.back().endecay_q[DECAYTYPE_ELECTRONCAPTURE] = 4.566645 * MEV;
 
   // Cr48
   nuclides.push_back({.z = 24, .a = 48, .meanlife = 1.29602 * DAY});
   nuclides.back().branchprobs[DECAYTYPE_ELECTRONCAPTURE] = 1.;
+  nuclides.back().endecay_q[DECAYTYPE_ELECTRONCAPTURE] = 1.656692 * MEV;
 
   // V48
   nuclides.push_back({.z = 23, .a = 48, .meanlife = 23.0442 * DAY});
   nuclides.back().branchprobs[DECAYTYPE_BETAPLUS] = 0.499;
   nuclides.back().branchprobs[DECAYTYPE_ELECTRONCAPTURE] = 1. - 0.499;
   nuclides.back().endecay_positron = 0.290 * MEV;
+  nuclides.back().endecay_q[DECAYTYPE_BETAPLUS] = 4.014947 * MEV;
+  nuclides.back().endecay_q[DECAYTYPE_ELECTRONCAPTURE] = 4.014947 * MEV;
 
   // Co57
   nuclides.push_back({.z = 27, .a = 57, .meanlife = 392.03 * DAY});
   nuclides.back().branchprobs[DECAYTYPE_ELECTRONCAPTURE] = 1.;
+  nuclides.back().endecay_q[DECAYTYPE_ELECTRONCAPTURE] = 0.836359 * MEV;
 
   // Fe52
   nuclides.push_back({.z = 26, .a = 52, .meanlife = 0.497429 * DAY});
   nuclides.back().branchprobs[DECAYTYPE_ELECTRONCAPTURE] = 1.;
+  nuclides.back().endecay_q[DECAYTYPE_ELECTRONCAPTURE] = 2.001543 * MEV;
 
   // Mn52
   nuclides.push_back({.z = 25, .a = 52, .meanlife = 0.0211395 * DAY});
   nuclides.back().branchprobs[DECAYTYPE_ELECTRONCAPTURE] = 1.;
+  nuclides.back().endecay_q[DECAYTYPE_ELECTRONCAPTURE] = 5.085870 * MEV;
 
   const auto standard_nuclides = nuclides;
 
