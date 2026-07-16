@@ -1,6 +1,6 @@
 f3dbb4063d5e87cb8cadc86cafdc0e62  absorption.out
 aff44ecad68d986f04fcd6110331ba8b  bflist.out
-bbd852338bca08ca92fa49a05417c9cd  deposition.out
+8070cee9ff60b6216895e07f02a94378  deposition.out
 3fbc31b3fe4519b2b12fc96df33c67cc  emission.out
 7fce731f61acd345271b0dcdccfa33d2  emissiontrue.out
 20dadbc26e8f98511b3a587798c9e190  gammalinelist.out
