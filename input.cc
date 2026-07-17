@@ -556,10 +556,11 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion,
         ion_updowntranscount += 2;
 
         if (pass == 1) {
+          // absorption oscillator strength f_lu from A_ul via f_lu = (g_u/g_l) * m_e c^3 / (8 pi^2 e^2 nu^2) * A_ul
           const auto g_ratio = static_cast<double>(ion_levels[level].stat_weight) / ion_levels[lowerlevel].stat_weight;
-          const auto f_ul =
+          const auto f_lu =
               static_cast<float>(g_ratio * ME * pow3(CLIGHT) / (8 * pow2(QE * nu_trans * PI)) * transition.A);
-          assert_always(std::isfinite(f_ul));
+          assert_always(std::isfinite(f_lu));
 
           temp_linelist.push_back({
               .nu = nu_trans,
@@ -578,14 +579,14 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion,
               .targetlevelindex = lowerlevel,
               .einstein_A = transition.A,
               .coll_str = transition.coll_str,
-              .osc_strength = f_ul,
+              .osc_strength = f_lu,
               .forbidden = transition.forbidden};
           const auto lowerstartup = ion_levels[lowerlevel].alltrans_startup();
           temp_alltranslist[lowerstartup + nloweruptrans - 1] = {.lineindex = -1,
                                                                  .targetlevelindex = level,
                                                                  .einstein_A = transition.A,
                                                                  .coll_str = transition.coll_str,
-                                                                 .osc_strength = f_ul,
+                                                                 .osc_strength = f_lu,
                                                                  .forbidden = transition.forbidden};
         }
 
@@ -610,7 +611,7 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion,
         }
 
         const auto g_ratio = static_cast<double>(ion_levels[level].stat_weight) / ion_levels[lowerlevel].stat_weight;
-        const auto f_ul =
+        const auto f_lu =
             static_cast<float>(g_ratio * ME * pow3(CLIGHT) / (8 * pow2(QE * nu_trans * PI)) * transition.A);
 
         auto& downtransition =
@@ -619,7 +620,7 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion,
         assert_always(downtransition.targetlevelindex == lowerlevel);
 
         downtransition.einstein_A += transition.A;
-        downtransition.osc_strength += f_ul;
+        downtransition.osc_strength += f_lu;
         downtransition.coll_str = std::max(downtransition.coll_str, transition.coll_str);
 
         const auto lowerstartup = ion_levels[lowerlevel].alltrans_startup();
@@ -629,7 +630,7 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion,
         // assert_always(uptransition.targetlevelindex == level);
 
         uptransition.einstein_A += transition.A;
-        uptransition.osc_strength += f_ul;
+        uptransition.osc_strength += f_lu;
         uptransition.coll_str = std::max(uptransition.coll_str, transition.coll_str);
       }
     }
