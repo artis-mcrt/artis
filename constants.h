@@ -37,10 +37,10 @@ constexpr double SAHACONST = 2.0706659e-16;  // Saha constant
 
 constexpr double EULERGAMMA = std::numbers::egamma;
 
-// exp(EULERGAMMA) = 1.781072... Used as the gamma in Coulomb logarithms of the form
-// ln[m v^3 / (gamma e^2 omega_p)] (Schunk & Hays 1971; Kozma & Fransson 1992 eq. 2). Note that the
-// classical Bohr stopping logarithm ln[1.123 m v^3 / (e^2 omega_p)] is larger by ln 2, since
-// 1.123 = 2 exp(-EULERGAMMA) = 2 / EXP_EULERGAMMA.
+// exp(EULERGAMMA) = 1.781072... This is the gamma of the Coulomb logarithm
+// ln[m v^3 / (gamma e^2 omega_p)] in Schunk & Hays (1971) eq. 4 and Kozma & Fransson (1992) eq. 2.
+// Schunk & Hays (p. 114) define it by "ln gamma is Euler's constant", i.e. gamma = exp(EULERGAMMA),
+// not EULERGAMMA itself.
 // Not calculated with std::exp() because that is not constexpr in libc++.
 constexpr double EXP_EULERGAMMA = 1.7810724179901979852;
 

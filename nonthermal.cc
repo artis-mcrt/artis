@@ -894,10 +894,9 @@ constexpr auto electron_loss_rate(const double energy, const double nne) -> doub
     return boostfactor * nne * 2 * PI * pow4(QE) / energy * std::log(2 * energy / zetae);
   }
   const double v = std::sqrt(2 * energy / ME);
-  // The gamma in the Coulomb logarithm of Kozma & Fransson (1992) eq. 2 ("Euler's constant", from
-  // Schunk & Hays 1971) is the exponentiated Euler-Mascheroni constant exp(0.5772) = 1.781, not
-  // 0.5772 itself. This implements KF92 eq. 2 as written; the classical Bohr stopping logarithm
-  // ln[1.123 m v^3 / (e^2 omega_p)], with 1.123 = 2 exp(-0.5772), would be larger by ln 2.
+  // Kozma & Fransson (1992) eq. 2 describes the gamma in this Coulomb logarithm as "Euler's constant
+  // (Schunk & Hays 1971)", but Schunk & Hays (1971, p. 114) define it by "ln gamma is Euler's
+  // constant", i.e. gamma = exp(0.5772) = 1.781 rather than 0.5772 itself.
   return boostfactor * nne * 2 * PI * pow4(QE) / energy * std::log(ME * pow3(v) / (EXP_EULERGAMMA * pow2(QE) * omegap));
 }
 
