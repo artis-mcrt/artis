@@ -150,6 +150,9 @@ constexpr double E_init_ev = []() {
 }();
 
 // rhs is the constant term (not dependent on y func) in each equation
+// rhsvec[i] is the source integral from engrid(i) to SF_EMAX, discretised as a rectangle sum that
+// excludes point i itself (i.e. it effectively integrates from engrid(i+1)). The half-bin offset is
+// negligible because the source is spread over source_spread_pts (~3% of SFPTS) grid points.
 constexpr auto rhsvec = []() {
   std::array<double, SFPTS> _rhsvec{};
   double source_integral_to_SF_EMAX = 0.;
