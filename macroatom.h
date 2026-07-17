@@ -53,7 +53,10 @@ DEVICE_FUNC void calculate_cellcache_macroatom_transitionrates(int nonemptymgi, 
     const auto R = A_ul * beta;
     return R;
   }
-  return 0.;
+  // tau_sobolev ~ zero (optically thin, escape probability beta -> 1) or negative (inverted level
+  // populations, where the Sobolev beta would exceed one and is clamped to the thin-limit value here,
+  // consistent with get_tau_sobolev() clamping tau >= 0 so that r-packets see a transparent line)
+  return A_ul;
 }
 
 #endif  // MACROATOM_H
