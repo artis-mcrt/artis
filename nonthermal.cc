@@ -2316,8 +2316,11 @@ DEVICE_FUNC void do_ntlepton_deposit(Packet& pkt) {
       return;
     }
 
-    // const double frac_excitation = NT_EXCITATION_ON ? get_nt_frac_excitation(nonemptymgi) : 0;
-    const double frac_excitation = 0.;
+    // Route the excitation share of the deposition to macroatoms. Whatever is left over after the
+    // ionisation and excitation channels becomes a k-packet (heating) below, so the k-packet
+    // probability is 1 - frac_ionisation - frac_excitation, matching the frac_heating that
+    // analyse_sf_solution() stores and the T_e solver applies to the deposition rate.
+    const double frac_excitation = NT_EXCITATION_ON ? get_nt_frac_excitation(nonemptymgi) : 0.;
     if (zrand < (frac_ionisation + frac_excitation)) {
       zrand -= frac_ionisation;
       // now zrand is between zero and frac_excitation
@@ -2341,8 +2344,10 @@ DEVICE_FUNC void do_ntlepton_deposit(Packet& pkt) {
         }
         zrand -= frac_deposition_exc;
       }
-      // in case we reached here because the excitation reactions that were stored didn't add up to frac_excitation_ion
-      // then just convert it to a kpkt
+      // Reaching here means zrand landed in the part of frac_excitation that the stored list does not
+      // cover: the list is truncated to MAX_NT_EXCITATIONS_STORED and excludes some transitions (e.g.
+      // Fe V, and ions below MIN_ION_OVER_NNTOT), while frac_excitation counts every transition. That
+      // unresolved remainder falls through to a k-packet, i.e. it is treated as heating.
     }
   }
 
