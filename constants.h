@@ -37,6 +37,13 @@ constexpr double SAHACONST = 2.0706659e-16;  // Saha constant
 
 constexpr double EULERGAMMA = std::numbers::egamma;
 
+// exp(EULERGAMMA) = 1.781072... This is the gamma of the Coulomb logarithm
+// ln[m v^3 / (gamma e^2 omega_p)] in Schunk & Hays (1971) eq. 4 and Kozma & Fransson (1992) eq. 2.
+// Schunk & Hays (p. 114) define it by "ln gamma is Euler's constant", i.e. gamma = exp(EULERGAMMA),
+// not EULERGAMMA itself.
+// Not calculated with std::exp() because that is not constexpr in libc++.
+constexpr double EXP_EULERGAMMA = 1.7810724179901979852;
+
 // numerical constants
 
 constexpr double CLIGHTSQUARED = pow2(CLIGHT);  // Speed of light squared [cm^2/s^2]
