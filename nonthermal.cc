@@ -1386,37 +1386,59 @@ auto calculate_nt_excitation_ratecoeff_perdeposition(const std::array<double, SF
   return 0.;
 }
 
-// Select an ion (element, lowerion) to ionise, weighted by each ion's stored fraction of the deposition
-// energy going into ionising it (fracdep_ionisation_ion, set by analyse_sf_solution()). These sum to the
-// stored frac_ionisation that gates this channel, so the gate and selection are consistent, and they are
-// shape fractions (independent of the deposition rate magnitude) so they remain valid when the deposition
-// rate density is zero. Returns {-1, -1} when the stored fractions are all zero (e.g. the Spencer-Fano
-// solution was skipped, so no per-ion data exists); the caller then deposits the packet as heat.
-auto select_nt_ionisation(const int nonemptymgi, rngstate_type& rngstate) -> std::tuple<int, int> {
-  const auto allions_data = get_cell_allions_data(nonemptymgi);
-  const int nincludedions = get_includedions();
-
-  double fracdep_total = 0.;
-  for (int uniqueionindex = 0; uniqueionindex < nincludedions; uniqueionindex++) {
-    fracdep_total += allions_data[uniqueionindex].fracdep_ionisation_ion;
+// returns the energy rate [erg/cm3/s] going toward non-thermal ionisation of lowerion
+auto ion_ntion_energyrate(const int nonemptymgi, const int element, const int lowerion) -> double {
+  const double nnlowerion = get_nnion(nonemptymgi, element, lowerion);
+  double enrate = 0.;
+  const auto maxupperion = nt_ionisation_maxupperion(element, lowerion);
+  for (int upperion = lowerion + 1; upperion <= maxupperion; upperion++) {
+    const double upperionprobfrac = nt_ionisation_upperion_probability(nonemptymgi, element, lowerion, upperion, false);
+    const double epsilon_trans = epsilon(element, upperion, 0) - epsilon(element, lowerion, 0);
+    enrate += nnlowerion * upperionprobfrac * epsilon_trans;
   }
 
-  if (!(fracdep_total > 0.)) {
+  const double gamma_nt = nt_ionisation_ratecoeff(nonemptymgi, element, lowerion);
+  return gamma_nt * enrate;
+}
+
+// returns the energy rate [erg/s] going toward non-thermal ionisation in a modelgrid cell
+auto get_ntion_energyrate(const int nonemptymgi) -> double {
+  double ratetotal = 0.;
+  for (int ielement = 0; ielement < get_nelements(); ielement++) {
+    const int nions = get_nions(ielement);
+    for (int ilowerion = 0; ilowerion < nions - 1; ilowerion++) {
+      ratetotal += ion_ntion_energyrate(nonemptymgi, ielement, ilowerion);
+    }
+  }
+  return ratetotal;
+}
+
+// select an ion to ionise, weighted by each ion's non-thermal ionisation energy rate. Returns {-1, -1}
+// if no ion can be selected because the total rate is zero (the caller then deposits the packet as heat).
+auto select_nt_ionisation(const int nonemptymgi, rngstate_type& rngstate) -> std::tuple<int, int> {
+  const double ratetotal = get_ntion_energyrate(nonemptymgi);
+
+  if (!(ratetotal > 0.)) {
+    // No ion has a non-zero non-thermal ionisation energy rate. This happens when the cell's deposition
+    // rate density is zero (nt_ionisation_ratecoeff is then zero everywhere), e.g. a cell reached by
+    // energy for the first time this timestep, whose stored deposition rate is still from the previous
+    // (dark) timestep. Signal that no ion can be selected.
     return {-1, -1};
   }
 
-  const double targetval = rng_uniform(rngstate) * fracdep_total;
+  const double zrand = rng_uniform(rngstate);
 
-  double fracdep_sum = 0.;
-  for (int uniqueionindex = 0; uniqueionindex < nincludedions; uniqueionindex++) {
-    fracdep_sum += allions_data[uniqueionindex].fracdep_ionisation_ion;
-    if (fracdep_sum >= targetval) {
-      // fracdep_ionisation_ion is zero for the top ion of each element, so the selected ion is always a
-      // valid lower ion for nt_random_upperion()
-      return get_ionfromuniqueionindex(uniqueionindex);
+  // select based on the calculated energy going to ionisation for each ion
+  double ratesum = 0.;
+  for (int ielement = 0; ielement < get_nelements(); ielement++) {
+    const int nions = get_nions(ielement);
+    for (int ilowerion = 0; ilowerion < nions - 1; ilowerion++) {
+      ratesum += ion_ntion_energyrate(nonemptymgi, ielement, ilowerion);
+      if (ratesum >= zrand * ratetotal) {
+        return {ielement, ilowerion};
+      }
     }
   }
-
   assert_always(false);
   return {-1, -1};
 }
@@ -2269,9 +2291,11 @@ DEVICE_FUNC void do_ntlepton_deposit(Packet& pkt) {
 
     // Gate on the stored ionisation fraction so that the k-packet probability below is exactly
     // 1 - frac_ionisation - frac_excitation = frac_heating, the deposition partition that
-    // analyse_sf_solution() stores and the T_e solver applies. select_nt_ionisation() then picks the ion
-    // using the stored per-ion fractions (fracdep_ionisation_ion), which sum to frac_ionisation, so the
-    // gate and the ion selection derive from the same solution.
+    // analyse_sf_solution() stores and the T_e solver applies. (The live get_ntion_energyrate() /
+    // deposition estimate used previously is a different estimator and does not sum with frac_excitation
+    // to give frac_heating.) The live per-ion rates still choose which ion is ionised in
+    // select_nt_ionisation(), via a separate random draw that is renormalised internally, so the gate
+    // and the ion selection do not need to share a normalisation.
     const double frac_ionisation = get_nt_frac_ionisation(nonemptymgi);
 
     if (zrand < frac_ionisation) {
@@ -2291,9 +2315,8 @@ DEVICE_FUNC void do_ntlepton_deposit(Packet& pkt) {
         return;
       }
 
-      // No ion could be selected because the stored per-ion ionisation fractions are all zero (the
-      // Spencer-Fano solution was skipped, so no per-ion data exists). Deposit the packet as heat rather
-      // than falling through to the excitation block below, where the outer zrand (< frac_ionisation)
+      // No ion could be selected because the deposition rate density is zero. Deposit the packet as heat
+      // rather than falling through to the excitation block below, where the outer zrand (< frac_ionisation)
       // would be an invalid position in the excitation list.
       pkt.type = TYPE_KPKT;
       stats::increment(stats::Counter::NT_STAT_TO_KPKT);
