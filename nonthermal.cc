@@ -855,9 +855,9 @@ constexpr auto xs_excitation(const int element, const int ion, const int lower, 
   const auto alltransindex = alltrans_startup + uptransindex;
   if (globals::alltrans.coll_str[alltransindex] >= 0) {
     // collision strength is available, so use it
-    // Li et al. 2012 equation 11
-    return pow2(H_ionpot / energy) / lowerstatweight * globals::alltrans.coll_str[alltransindex] * PI *
-           A_naught_squared;
+    // Li et al. 2012 equation 11: sigma = pi * a_0^2 * (I_H / E) * Omega / g_lower,
+    // with k_i^2 = E / I_H in units of the inverse Bohr radius squared
+    return (H_ionpot / energy) / lowerstatweight * globals::alltrans.coll_str[alltransindex] * PI * A_naught_squared;
   }
   if (!globals::alltrans.forbidden[alltransindex]) {
     // permitted E1 electric dipole transitions
@@ -894,7 +894,10 @@ constexpr auto electron_loss_rate(const double energy, const double nne) -> doub
     return boostfactor * nne * 2 * PI * pow4(QE) / energy * std::log(2 * energy / zetae);
   }
   const double v = std::sqrt(2 * energy / ME);
-  return boostfactor * nne * 2 * PI * pow4(QE) / energy * std::log(ME * pow3(v) / (EULERGAMMA * pow2(QE) * omegap));
+  // The gamma in the Coulomb logarithm of Kozma & Fransson (1992) eq. 2 ("Euler's constant", from
+  // Schunk & Hays 1971) is the exponentiated Euler-Mascheroni constant exp(0.5772) = 1.781, as in the
+  // classical Bohr stopping logarithm ln[1.123 m v^3 / (e^2 omega_p)] where 1.123 = 2 exp(-0.5772).
+  return boostfactor * nne * 2 * PI * pow4(QE) / energy * std::log(ME * pow3(v) / (EXP_EULERGAMMA * pow2(QE) * omegap));
 }
 
 // impact ionisation cross section in cm^2
@@ -1311,9 +1314,10 @@ auto get_xs_excitation_vector(const int alltransindex, const double statweight_l
   std::array<double, SFPTS> xs_excitation_vec{};
   if (globals::alltrans.coll_str[alltransindex] >= 0) {
     // collision strength is available, so use it
-    // Li et al. 2012 equation 11
+    // Li et al. 2012 equation 11: sigma = pi * a_0^2 * (I_H / E) * Omega / g_lower,
+    // with k_i^2 = E / I_H in units of the inverse Bohr radius squared
     const double constantfactor =
-        pow2(H_ionpot) / statweight_lower * globals::alltrans.coll_str[alltransindex] * PI * A_naught_squared;
+        H_ionpot / statweight_lower * globals::alltrans.coll_str[alltransindex] * PI * A_naught_squared;
 
     const int en_startindex = get_energyindex_ev_gteq(epsilon_trans / EV);
 
@@ -1321,7 +1325,7 @@ auto get_xs_excitation_vector(const int alltransindex, const double statweight_l
 
     for (int j = en_startindex; j < SFPTS; j++) {
       const double energy = engrid(j) * EV;
-      xs_excitation_vec[j] = constantfactor / pow2(energy);
+      xs_excitation_vec[j] = constantfactor / energy;
     }
     return {xs_excitation_vec, en_startindex};
   }

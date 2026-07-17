@@ -37,6 +37,11 @@ constexpr double SAHACONST = 2.0706659e-16;  // Saha constant
 
 constexpr double EULERGAMMA = std::numbers::egamma;
 
+// exp(EULERGAMMA) = 1.781072... This (not EULERGAMMA itself) is the constant that appears in the
+// classical Coulomb/Bohr stopping logarithm, e.g. ln[2 exp(-EULERGAMMA) m v^3 / (e^2 omega_p)].
+// Not calculated with std::exp() because that is not constexpr in libc++.
+constexpr double EXP_EULERGAMMA = 1.7810724179901979852;
+
 // numerical constants
 
 constexpr double CLIGHTSQUARED = pow2(CLIGHT);  // Speed of light squared [cm^2/s^2]
