@@ -1413,26 +1413,20 @@ auto get_ntion_energyrate(const int nonemptymgi) -> double {
   return ratetotal;
 }
 
+// select an ion to ionise, weighted by each ion's non-thermal ionisation energy rate. Returns {-1, -1}
+// if no ion can be selected because the total rate is zero (the caller then deposits the packet as heat).
 auto select_nt_ionisation(const int nonemptymgi, rngstate_type& rngstate) -> std::tuple<int, int> {
-  const double zrand = rng_uniform(rngstate);
-
-  // // select based on stored frac_deposition for each ion
-  // double frac_deposition_ion_sum = 0.;
-  // // zrand is between zero and frac_ionisation
-  // // keep subtracting off deposition fractions of ionisations transitions until we hit the right one
-  // // e.g. if zrand was less than frac_dep_trans1, then use the first transition
-  // // e.g. if zrand was between frac_dep_trans1 and frac_dep_trans2 then use the second transition, etc
-  // for (int allionindex = 0; allionindex < get_includedions(); allionindex++) {
-  //   frac_deposition_ion_sum += nt_solution[nonemptymgi].fracdep_ionisation_ion[allionindex];
-  //   if (frac_deposition_ion_sum >= zrand) {
-  //     get_ionfromuniqueionindex(allionindex, element, lowerion);
-
-  //     return;
-  //   }
-  // }
-  // assert_always(false);  // should not reach here
-
   const double ratetotal = get_ntion_energyrate(nonemptymgi);
+
+  if (!(ratetotal > 0.)) {
+    // No ion has a non-zero non-thermal ionisation energy rate. This happens when the cell's deposition
+    // rate density is zero (nt_ionisation_ratecoeff is then zero everywhere), e.g. a cell reached by
+    // energy for the first time this timestep, whose stored deposition rate is still from the previous
+    // (dark) timestep. Signal that no ion can be selected.
+    return {-1, -1};
+  }
+
+  const double zrand = rng_uniform(rngstate);
 
   // select based on the calculated energy going to ionisation for each ion
   double ratesum = 0.;
@@ -2295,29 +2289,45 @@ DEVICE_FUNC void do_ntlepton_deposit(Packet& pkt) {
     // component of the deposition fractions
     // until we end and select transition_ij when zrand < dep_frac_transition_ij
 
-    // const double frac_ionisation = get_nt_frac_ionisation(nonemptymgi);
-    const double frac_ionisation = get_ntion_energyrate(nonemptymgi) / get_deposition_rate_density(nonemptymgi);
-    // printlnlog("frac_ionisation compare {:g} and {:g}", frac_ionisation, get_nt_frac_ionisation(nonemptymgi));
-    // const double frac_ionisation = 0.;
+    // Gate on the stored ionisation fraction so that the k-packet probability below is exactly
+    // 1 - frac_ionisation - frac_excitation = frac_heating, the deposition partition that
+    // analyse_sf_solution() stores and the T_e solver applies. (The live get_ntion_energyrate() /
+    // deposition estimate used previously is a different estimator and does not sum with frac_excitation
+    // to give frac_heating.) The live per-ion rates still choose which ion is ionised in
+    // select_nt_ionisation(), via a separate random draw that is renormalised internally, so the gate
+    // and the ion selection do not need to share a normalisation.
+    const double frac_ionisation = get_nt_frac_ionisation(nonemptymgi);
 
     if (zrand < frac_ionisation) {
       const auto [element, lowerion] = select_nt_ionisation(nonemptymgi, get_rngstate(pkt));
-      const int upperion = nt_random_upperion(nonemptymgi, element, lowerion, true, get_rngstate(pkt));
-      // const int upperion = lowerion + 1;
 
-      stats::increment(stats::Counter::MA_STAT_ACTIVATION_NTCOLLION);
-      stats::increment(stats::Counter::INTERACTIONS);
-      pkt.trueemissiontype = EMTYPE_NOTSET;
-      pkt.trueem_pos = {NAN, NAN, NAN};
+      if (lowerion >= 0) {
+        const int upperion = nt_random_upperion(nonemptymgi, element, lowerion, true, get_rngstate(pkt));
 
-      stats::increment(stats::Counter::NT_STAT_TO_IONISATION);
+        stats::increment(stats::Counter::MA_STAT_ACTIVATION_NTCOLLION);
+        stats::increment(stats::Counter::INTERACTIONS);
+        pkt.trueemissiontype = EMTYPE_NOTSET;
+        pkt.trueem_pos = {NAN, NAN, NAN};
 
-      do_macroatom(pkt, {.element = element, .ion = upperion, .level = 0, .activatingline = -99});
+        stats::increment(stats::Counter::NT_STAT_TO_IONISATION);
+
+        do_macroatom(pkt, {.element = element, .ion = upperion, .level = 0, .activatingline = -99});
+        return;
+      }
+
+      // No ion could be selected because the deposition rate density is zero. Deposit the packet as heat
+      // rather than falling through to the excitation block below, where the outer zrand (< frac_ionisation)
+      // would be an invalid position in the excitation list.
+      pkt.type = TYPE_KPKT;
+      stats::increment(stats::Counter::NT_STAT_TO_KPKT);
       return;
     }
 
-    // const double frac_excitation = NT_EXCITATION_ON ? get_nt_frac_excitation(nonemptymgi) : 0;
-    const double frac_excitation = 0.;
+    // Route the excitation share of the deposition to macroatoms. Whatever is left over after the
+    // ionisation and excitation channels becomes a k-packet (heating) below, so the k-packet
+    // probability is 1 - frac_ionisation - frac_excitation, matching the frac_heating that
+    // analyse_sf_solution() stores and the T_e solver applies to the deposition rate.
+    const double frac_excitation = NT_EXCITATION_ON ? get_nt_frac_excitation(nonemptymgi) : 0.;
     if (zrand < (frac_ionisation + frac_excitation)) {
       zrand -= frac_ionisation;
       // now zrand is between zero and frac_excitation
@@ -2341,8 +2351,10 @@ DEVICE_FUNC void do_ntlepton_deposit(Packet& pkt) {
         }
         zrand -= frac_deposition_exc;
       }
-      // in case we reached here because the excitation reactions that were stored didn't add up to frac_excitation_ion
-      // then just convert it to a kpkt
+      // Reaching here means zrand landed in the part of frac_excitation that the stored list does not
+      // cover: the list is truncated to MAX_NT_EXCITATIONS_STORED and excludes some transitions (e.g.
+      // Fe V, and ions below MIN_ION_OVER_NNTOT), while frac_excitation counts every transition. That
+      // unresolved remainder falls through to a k-packet, i.e. it is treated as heating.
     }
   }
 
