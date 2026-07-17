@@ -2295,10 +2295,14 @@ DEVICE_FUNC void do_ntlepton_deposit(Packet& pkt) {
     // component of the deposition fractions
     // until we end and select transition_ij when zrand < dep_frac_transition_ij
 
-    // const double frac_ionisation = get_nt_frac_ionisation(nonemptymgi);
-    const double frac_ionisation = get_ntion_energyrate(nonemptymgi) / get_deposition_rate_density(nonemptymgi);
-    // printlnlog("frac_ionisation compare {:g} and {:g}", frac_ionisation, get_nt_frac_ionisation(nonemptymgi));
-    // const double frac_ionisation = 0.;
+    // Gate on the stored ionisation fraction so that the k-packet probability below is exactly
+    // 1 - frac_ionisation - frac_excitation = frac_heating, the deposition partition that
+    // analyse_sf_solution() stores and the T_e solver applies. (The live get_ntion_energyrate() /
+    // deposition estimate used previously is a different estimator and does not sum with frac_excitation
+    // to give frac_heating.) The live per-ion rates still choose which ion is ionised in
+    // select_nt_ionisation(), via a separate random draw that is renormalised internally, so the gate
+    // and the ion selection do not need to share a normalisation.
+    const double frac_ionisation = get_nt_frac_ionisation(nonemptymgi);
 
     if (zrand < frac_ionisation) {
       const auto [element, lowerion] = select_nt_ionisation(nonemptymgi, get_rngstate(pkt));
