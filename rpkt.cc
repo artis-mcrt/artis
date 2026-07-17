@@ -933,7 +933,7 @@ void calculate_expansion_opacities(const int nonemptymgi) {
   const auto rho = grid::get_rho(nonemptymgi);
 
   const auto sys_time_start_calc = std::chrono::steady_clock::now();
-  const auto temperature = grid::get_TR(nonemptymgi);
+  const auto temperature = grid::get_Te(nonemptymgi);
 
   printlog("calculating expansion opacities for cell {}...", grid::get_mgi_of_nonemptymgi(nonemptymgi));
 
