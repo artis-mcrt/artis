@@ -81,8 +81,8 @@ namespace {
   // gamma_nt should generally be higher than the Gamma term for nebular epoch
 
   assert_always((Gamma_ion + gamma_nt) > 0);
-  // numerator: ionisation rate per ion pop per nne
-  // denominator: recombination rate per ion pop
+  // numerator: recombination rate coefficient, i.e. rate per upper ion pop per nne [cm^3/s]
+  // denominator: ionisation rate per lower ion pop [1/s]
   const double phi = (Alpha_sp + Col_rec) / (Gamma_ion + gamma_nt);
   assert_always(phi > 0.);
 
