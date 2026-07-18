@@ -150,15 +150,16 @@ constexpr double E_init_ev = []() {
 }();
 
 // rhs is the constant term (not dependent on y func) in each equation
-// rhsvec[i] is the source integral from engrid(i) to SF_EMAX, discretised as a rectangle sum that
-// excludes point i itself (i.e. it effectively integrates from engrid(i+1)). The half-bin offset is
-// negligible because the source is spread over source_spread_pts (~3% of SFPTS) grid points.
+// rhsvec[i] is the source integral from engrid(i) to SF_EMAX, discretised as a left-endpoint rectangle
+// sum that includes point i itself. This matches the convention used for the integrals over y(E') on the
+// left-hand side, where sfmatrix_add_excitation() and sfmatrix_add_ionisation() both sum from j = i with
+// weight DELTA_E, and the convention used for E_init_ev above.
 constexpr auto rhsvec = []() {
   std::array<double, SFPTS> _rhsvec{};
   double source_integral_to_SF_EMAX = 0.;
   for (int i = SFPTS - 1; i >= 0; i--) {
-    _rhsvec[i] = source_integral_to_SF_EMAX * DELTA_E;
     source_integral_to_SF_EMAX += sourcevec(i);
+    _rhsvec[i] = source_integral_to_SF_EMAX * DELTA_E;
   }
   return _rhsvec;
 }();
