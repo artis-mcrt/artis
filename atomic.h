@@ -39,7 +39,7 @@ inline const std::array phixsdata_filenames{"IGNORE", "phixsdata.txt", "phixsdat
 }
 
 // Bounds check (active only in TESTMODE builds) for an elementindex
-DEVICE_FUNC inline void assert_valid_element([[maybe_unused]] const int element) {
+DEVICE_FUNC inline void testmodeassert_valid_element([[maybe_unused]] const int element) {
   assert_testmodeonly(element >= 0);
   assert_testmodeonly(element < get_nelements());
 }
@@ -56,47 +56,47 @@ DEVICE_FUNC inline void assert_valid_element([[maybe_unused]] const int element)
 
 // Return the number of ions associated with a specific element given by its elementindex.
 [[gnu::pure]] inline auto get_nions(const int element) -> int {
-  assert_valid_element(element);
+  testmodeassert_valid_element(element);
   return static_cast<int>(globals::elements[element].ions.size());
 }
 
 // Bounds check (active only in TESTMODE builds) for an elementindex and ionindex
-DEVICE_FUNC inline void assert_valid_ion([[maybe_unused]] const int element, [[maybe_unused]] const int ion) {
-  assert_valid_element(element);
+DEVICE_FUNC inline void testmodeassert_valid_ion([[maybe_unused]] const int element, [[maybe_unused]] const int ion) {
+  testmodeassert_valid_element(element);
   assert_testmodeonly(ion >= 0);
   assert_testmodeonly(ion < get_nions(element));
 }
 
 // Return the number of levels associated with a specific ion given its elementindex and ionindex.
 [[gnu::pure]] DEVICE_FUNC inline auto get_nlevels(const int element, const int ion) -> int {
-  assert_valid_ion(element, ion);
+  testmodeassert_valid_ion(element, ion);
   return globals::elements[element].ions[ion].nlevels;
 }
 
 // Bounds check (active only in TESTMODE builds) for elementindex, ionindex, and levelindex
-DEVICE_FUNC inline void assert_valid_level([[maybe_unused]] const int element, [[maybe_unused]] const int ion,
-                                           [[maybe_unused]] const int level) {
-  assert_valid_ion(element, ion);
+DEVICE_FUNC inline void testmodeassert_valid_level([[maybe_unused]] const int element, [[maybe_unused]] const int ion,
+                                                   [[maybe_unused]] const int level) {
+  testmodeassert_valid_ion(element, ion);
   assert_testmodeonly(level >= 0);
   assert_testmodeonly(level < get_nlevels(element, ion));
 }
 
 // get the uniquelevelindex of the lowest level of an ion (excited levels are offset from this)
 [[nodiscard]] DEVICE_FUNC inline auto get_ionuniquelevelindexstart(const int element, const int ion) -> int {
-  assert_valid_ion(element, ion);
+  testmodeassert_valid_ion(element, ion);
   return globals::elements[element].ions[ion].uniquelevelindexstart;
 }
 
 // get the index into the nltepops_allcells array of the lowest NLTE level of an ion
 // higher levels are consecutive offsets from this
 [[nodiscard]] DEVICE_FUNC inline auto get_allnltelevelsindexstart(const int element, const int ion) -> int {
-  assert_valid_ion(element, ion);
+  testmodeassert_valid_ion(element, ion);
   return globals::elements[element].ions[ion].allnltelevelsindexstart;
 }
 
 // Get an index for level of an ionstage of an element that is unique across every ion of every element
 [[nodiscard]] inline auto get_uniquelevelindex(const int element, const int ion, const int level) -> int {
-  assert_valid_level(element, ion, level);
+  testmodeassert_valid_level(element, ion, level);
   const auto uniquelevelindex = get_ionuniquelevelindexstart(element, ion) + level;
   assert_testmodeonly(uniquelevelindex < get_includedlevels());
 
@@ -105,25 +105,25 @@ DEVICE_FUNC inline void assert_valid_level([[maybe_unused]] const int element, [
 
 // Return the ionisation stage of an ion specified by its elementindex and ionindex.
 [[nodiscard]] DEVICE_FUNC inline auto get_ionstage(const int element, const int ion) -> int {
-  assert_valid_ion(element, ion);
+  testmodeassert_valid_ion(element, ion);
   return globals::elements[element].lowest_ionstage + ion;
 }
 
 // Return the ionisation potential of an ion in erg.
 [[nodiscard]] DEVICE_FUNC inline auto get_ionpot(const int element, const int ion) -> double {
-  assert_valid_ion(element, ion);
+  testmodeassert_valid_ion(element, ion);
   return globals::elements[element].ions[ion].ionpot;
 }
 
 // Return the index in the groundcont array for the ground state photoion continuum of an ion.
 [[nodiscard]] DEVICE_FUNC inline auto get_groundcontindex(const int element, const int ion) -> int {
-  assert_valid_ion(element, ion);
+  testmodeassert_valid_ion(element, ion);
   return globals::elements[element].ions[ion].groundcontindex;
 }
 
 // Return the number of levels associated with an ion that have energies below the ionisation threshold.
 [[nodiscard]] DEVICE_FUNC inline auto get_nlevels_ionising(const int element, const int ion) -> int {
-  assert_valid_ion(element, ion);
+  testmodeassert_valid_ion(element, ion);
   return globals::elements[element].ions[ion].nlevels_ionising;
 }
 
@@ -134,7 +134,7 @@ DEVICE_FUNC inline auto get_nphixstargets(const int uniquelevelindex) -> int {
 
 // Returns the number of target states for photoionisation of (element,ion,level).
 DEVICE_FUNC inline auto get_nphixstargets(const int element, const int ion, const int level) -> int {
-  assert_valid_ion(element, ion);
+  testmodeassert_valid_ion(element, ion);
   const auto nphixstargets = get_nphixstargets(get_uniquelevelindex(element, ion, level));
   assert_testmodeonly(nphixstargets == 0 ||
                       ((ion < (get_nions(element) - 1)) && (level < get_nlevels_ionising(element, ion))));
@@ -172,14 +172,14 @@ DEVICE_FUNC inline auto get_nphixstargets(const int element, const int ion, cons
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC inline auto get_phixsprobability(const int element, const int ion,
                                                                          const int level, const int phixstargetindex)
     -> double {
-  assert_valid_level(element, ion, level);
+  testmodeassert_valid_level(element, ion, level);
 
   return get_phixsprobability(get_uniquelevelindex(element, ion, level), phixstargetindex);
 }
 
 // Return the level index of the highest level with a non-zero recombination rate for ion ion of element element.
 [[gnu::pure]] [[nodiscard]] inline auto get_maxrecombininglevel(const int element, const int ion) -> int {
-  assert_valid_ion(element, ion);
+  testmodeassert_valid_ion(element, ion);
   return globals::elements[element].ions[ion].maxrecombininglevel;
 }
 
@@ -275,7 +275,7 @@ DEVICE_FUNC inline auto get_nphixstargets(const int element, const int ion, cons
 // Return the statistical weight of (element,ion,level).
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC inline auto stat_weight(const int element, const int ion, const int level)
     -> double {
-  assert_valid_level(element, ion, level);
+  testmodeassert_valid_level(element, ion, level);
   return stat_weight(get_uniquelevelindex(element, ion, level));
 }
 
@@ -291,7 +291,7 @@ DEVICE_FUNC inline auto get_nphixstargets(const int element, const int ion, cons
 
 // Returns the atomic number associated with a given elementindex.
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC inline auto get_atomicnumber(const int element) -> int {
-  assert_valid_element(element);
+  testmodeassert_valid_element(element);
   return globals::elements[element].anumber;
 }
 
@@ -299,7 +299,7 @@ DEVICE_FUNC inline auto get_nphixstargets(const int element, const int ion, cons
 // (note this function returns true for the ground state,
 //  although it is stored separately from the excited NLTE states)
 [[gnu::pure]] [[nodiscard]] inline auto is_nlte(const int element, const int ion, const int level) -> bool {
-  assert_valid_level(element, ion, level);
+  testmodeassert_valid_level(element, ion, level);
   return level <= ION_NLEVELS_EXCITED_NLTE(get_atomicnumber(element), get_ionstage(element, ion));
 }
 
@@ -356,19 +356,19 @@ inline void update_includedionslevels_maxnions() {
 // Return the number of NLTE levels associated with with a specific ion given
 // its elementindex and ionindex. Does not include the ground state or superlevel
 [[gnu::pure]] [[nodiscard]] inline auto get_nlevels_excited_nlte(const int element, const int ion) -> int {
-  assert_valid_ion(element, ion);
+  testmodeassert_valid_ion(element, ion);
   return globals::elements[element].ions[ion].nlevels_excited_nlte;
 }
 
 // Returns the number of autoionising levels for an ion
 [[gnu::pure]] [[nodiscard]] inline auto get_nlevels_autoion(const int element, const int ion) -> int {
-  assert_valid_ion(element, ion);
+  testmodeassert_valid_ion(element, ion);
   return globals::elements[element].ions[ion].nlevels_autoion;
 }
 
 // get the number of levels that are not autoionising
 [[gnu::pure]] [[nodiscard]] inline auto get_nlevels_nonautoion(const int element, const int ion) -> int {
-  assert_valid_ion(element, ion);
+  testmodeassert_valid_ion(element, ion);
   return get_nlevels(element, ion) - get_nlevels_autoion(element, ion);
 }
 
@@ -379,7 +379,7 @@ inline void update_includedionslevels_maxnions() {
 
 [[gnu::pure]] [[nodiscard]] inline auto get_nautoiondowntrans(const int element, const int ion, const int level)
     -> int {
-  assert_valid_level(element, ion, level);
+  testmodeassert_valid_level(element, ion, level);
   return get_nautoiondowntrans(get_uniquelevelindex(element, ion, level));
 }
 
@@ -400,13 +400,13 @@ inline void update_includedionslevels_maxnions() {
 }
 
 [[gnu::pure]] [[nodiscard]] inline auto get_nlevels_groundterm(const int element, const int ion) -> int {
-  assert_valid_ion(element, ion);
+  testmodeassert_valid_ion(element, ion);
   return globals::elements[element].ions[ion].nlevels_groundterm;
 }
 
 // Get an index for an ionstage of an element that is unique for every ion of every element
 [[gnu::pure]] [[nodiscard]] inline auto get_uniqueionindex(const int element, const int ion) -> int {
-  assert_valid_ion(element, ion);
+  testmodeassert_valid_ion(element, ion);
 
   const auto uniqueionindex = globals::elements[element].uniqueionindexstart + ion;
   assert_testmodeonly(uniqueionindex < get_includedions());
@@ -444,7 +444,7 @@ inline void update_includedionslevels_maxnions() {
 }
 
 [[gnu::pure]] [[nodiscard]] inline auto ion_has_superlevel(const int element, const int ion) -> bool {
-  assert_valid_ion(element, ion);
+  testmodeassert_valid_ion(element, ion);
   return (get_nlevels(element, ion) > (get_nlevels_excited_nlte(element, ion) + get_nlevels_autoion(element, ion) + 1));
 }
 
@@ -455,7 +455,7 @@ inline void update_includedionslevels_maxnions() {
 
 // the number of downward bound-bound transitions from the specified level
 [[gnu::pure]] [[nodiscard]] inline auto get_ndowntrans(const int element, const int ion, const int level) -> int {
-  assert_valid_level(element, ion, level);
+  testmodeassert_valid_level(element, ion, level);
   return get_ndowntrans(get_uniquelevelindex(element, ion, level));
 }
 
@@ -481,7 +481,7 @@ inline void update_includedionslevels_maxnions() {
 
 // the number of upward bound-bound transitions from the specified level
 [[gnu::pure]] [[nodiscard]] inline auto get_nuptrans(const int element, const int ion, const int level) -> int {
-  assert_valid_level(element, ion, level);
+  testmodeassert_valid_level(element, ion, level);
   return get_nuptrans(get_uniquelevelindex(element, ion, level));
 }
 
@@ -491,19 +491,19 @@ inline void update_includedionslevels_maxnions() {
 }
 
 [[gnu::pure]] [[nodiscard]] inline auto get_nautoionuptrans(const int element, const int ion, const int level) -> int {
-  assert_valid_level(element, ion, level);
+  testmodeassert_valid_level(element, ion, level);
   return globals::alllevels.nautoionuptrans[get_uniquelevelindex(element, ion, level)];
 }
 
 // the number of autoion transitions from the specified level
 inline void set_nautoiondowntrans(const int element, const int ion, const int level, const int nautoiondowntrans) {
-  assert_valid_level(element, ion, level);
+  testmodeassert_valid_level(element, ion, level);
   globals::alllevels.nautoiondowntrans[get_uniquelevelindex(element, ion, level)] = nautoiondowntrans;
 }
 
 // the number of autoion transitions from the specified level
 inline void set_nautoionuptrans(const int element, const int ion, const int level, const int nautoionuptrans) {
-  assert_valid_level(element, ion, level);
+  testmodeassert_valid_level(element, ion, level);
   globals::alllevels.nautoionuptrans[get_uniquelevelindex(element, ion, level)] = nautoionuptrans;
 }
 
@@ -535,7 +535,7 @@ inline void set_nautoionuptrans(const int element, const int ion, const int leve
 // Return the photionisation threshold energy [erg]
 [[gnu::pure]] [[nodiscard]] inline auto get_phixs_threshold(const int element, const int ion, const int level,
                                                             const int phixstargetindex) -> double {
-  assert_valid_level(element, ion, level);
+  testmodeassert_valid_level(element, ion, level);
   const int uniquelevelindex = get_uniquelevelindex(element, ion, level);
   assert_testmodeonly(phixstargetindex < get_nphixstargets(uniquelevelindex));
   const int upperlevel = get_phixsupperlevel(uniquelevelindex, phixstargetindex);

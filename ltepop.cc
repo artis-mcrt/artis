@@ -42,7 +42,7 @@ namespace {
 // should have units of [cm^3] so that when multiplied by nne it gives the population ratio of two consecutive
 // ionisation stages
 [[gnu::pure]] [[nodiscard]] auto phi_rate_balance(const int element, const int ion, const int nonemptymgi) -> double {
-  assert_valid_ion(element, ion);
+  testmodeassert_valid_ion(element, ion);
 
   assert_testmodeonly(!globals::lte_iteration);
   assert_testmodeonly(grid::thick_allcells[nonemptymgi] != 1);  // should use use phi_lte instead
@@ -132,7 +132,7 @@ auto nne_solution_f(const double nne_assumed, const int nonemptymgi, const bool 
 // return population and whether the population came from the nlte solver
 auto calculate_levelpop_nominpop(const int nonemptymgi, const int element, const int ion, const int level)
     -> std::tuple<double, bool> {
-  assert_valid_level(element, ion, level);
+  testmodeassert_valid_level(element, ion, level);
 
   if (level == 0) {
     return {get_groundlevelpop(nonemptymgi, element, ion), false};
@@ -163,7 +163,7 @@ auto calculate_levelpop_nominpop(const int nonemptymgi, const int element, const
 
 // Calculate the partition function for ion=ion of element=element in a cell modelgridindex
 auto calculate_partfunct(const int element, const int ion, const int nonemptymgi) -> float {
-  assert_valid_ion(element, ion);
+  testmodeassert_valid_ion(element, ion);
   double pop_store{NAN};
 
   bool initial = false;
@@ -343,7 +343,7 @@ auto find_converged_nne(const int nonemptymgi, double nne_max, const bool force_
 // Calculate occupation population of a level assuming LTE excitation
 [[gnu::pure]] [[nodiscard]] auto calculate_levelpop_boltzmann(const int nonemptymgi, const int element, const int ion,
                                                               const int level) -> double {
-  assert_valid_level(element, ion, level);
+  testmodeassert_valid_level(element, ion, level);
   const auto nnground = get_groundlevelpop(nonemptymgi, element, ion);
   if (level == 0) {
     return nnground;

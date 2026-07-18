@@ -44,7 +44,7 @@ void set_groundlevelpops(int nonemptymgi, int element, float nne, bool force_sah
 // during update_grid and stored to the grid.
 [[gnu::pure]] [[nodiscard]] inline DEVICE_FUNC auto get_groundlevelpop(const int nonemptymgi, const int element,
                                                                        const int ion) -> double {
-  assert_valid_ion(element, ion);
+  testmodeassert_valid_ion(element, ion);
 
   const double nn = grid::ion_groundlevelpops_allcells[get_cellionindex(nonemptymgi, element, ion)];
   if (nn < MINPOP) {
@@ -57,12 +57,13 @@ void set_groundlevelpops(int nonemptymgi, int element, float nne, bool force_sah
 }
 
 // Store an ion's ground level population for a cell (usually calculated during update_grid).
-inline void set_groundlevelpop(const int nonemptymgi, const int element, const int ion, const float groundlevelpop) {
+inline void set_groundlevelpop(const ptrdiff_t nonemptymgi, const int element, const int ion,
+                               const float groundlevelpop) {
   grid::ion_groundlevelpops_allcells[get_cellionindex(nonemptymgi, element, ion)] = groundlevelpop;
 }
 
 // Return an ion's partition function for a cell, which was precalculated during update_grid.
-[[gnu::pure]] [[nodiscard]] inline auto get_ion_partfunct(const int nonemptymgi, const int element, const int ion)
+[[gnu::pure]] [[nodiscard]] inline auto get_ion_partfunct(const ptrdiff_t nonemptymgi, const int element, const int ion)
     -> float {
   return grid::ion_partfuncts_allcells[get_cellionindex(nonemptymgi, element, ion)];
 }
