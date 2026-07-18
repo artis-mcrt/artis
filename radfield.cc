@@ -311,9 +311,10 @@ auto calculate_planck_mean_frequency(const double temperature, const double nu_l
   const double x_low = (H * nu_low) / (KB * temperature);
   const double x_high = (H * nu_high) / (KB * temperature);
 
-  // For x >= 100, 1 / (exp(x) - 1) differs from exp(-x) by less than 4e-44. Factoring exp(-x_low)
-  // out of both moments prevents the individual Planck integrals from underflowing. Using expm1 also keeps the
-  // difference between the two incomplete-gamma polynomials accurate for narrow bins.
+  // For x >= 100, replacing 1 / (exp(x) - 1) with exp(-x) has a relative error below 4e-44 (and an absolute error
+  // proportional to exp(-2x)). Factoring exp(-x_low) out of both moments prevents the individual Planck integrals
+  // from underflowing. Using expm1 also keeps the difference between the two incomplete-gamma polynomials accurate
+  // for narrow bins.
   constexpr double wien_tail_threshold = 100.;
   if (x_low >= wien_tail_threshold) {
     const auto moment3_tail_polynomial = [](const double x) { return pow3(x) + (3 * pow2(x)) + (6 * x) + 6; };
@@ -353,8 +354,9 @@ auto nu_bar_planck_minus_estimator(const double T_R, const int nonemptymgi, cons
   const double delta_nu_bar = nu_bar_planck_T_R - nu_bar_estimator;
 
   if (!std::isfinite(delta_nu_bar)) {
-    printlnlog("delta_nu_bar is {:g}. nu_bar_planck_T_R {:g} nu_bar_estimator {:g}", delta_nu_bar, nu_bar_planck_T_R,
-               nu_bar_estimator);
+    printlnlog(
+        "delta_nu_bar is {:g}. T_R {:g} nu_lower {:g} nu_upper {:g} nu_bar_planck_T_R {:g} nu_bar_estimator {:g}",
+        delta_nu_bar, T_R, nu_lower, nu_upper, nu_bar_planck_T_R, nu_bar_estimator);
   }
 
   return delta_nu_bar;
