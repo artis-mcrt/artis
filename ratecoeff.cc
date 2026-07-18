@@ -551,11 +551,24 @@ DEVICE_FUNC auto select_continuum_nu(int element, const int lowerion, const int 
     }
   }
 
-  const double nuoffset =
-      (alpha_sp != alpha_sp_old) ? ((total_alpha_sp * zrand) - alpha_sp_old) / (alpha_sp - alpha_sp_old) * deltanu : 0.;
+  double nuoffset = 0.;
+  if (i < npieces) {
+    // the loop found the piece containing the target value, so interpolate between the remaining
+    // integrals at the piece boundaries
+    nuoffset = (alpha_sp != alpha_sp_old)
+                   ? ((total_alpha_sp * zrand) - alpha_sp_old) / (alpha_sp - alpha_sp_old) * deltanu
+                   : 0.;
+  } else if (alpha_sp > 0.) {
+    // the loop completed without a break, so the target lies in the topmost piece, where the
+    // remaining integral falls from alpha_sp at the piece's lower boundary to zero at nu_max_phixs.
+    // Interpolating with the previous piece's values here would extrapolate to nu_lower > nu_max_phixs.
+    nuoffset = (alpha_sp - (total_alpha_sp * zrand)) / alpha_sp * deltanu;
+  }
   const double nu_lower = nu_threshold + ((i - 1) * deltanu) + nuoffset;
 
   assert_testmodeonly(std::isfinite(nu_lower));
+  assert_testmodeonly(nu_lower >= nu_threshold);
+  assert_testmodeonly(nu_lower <= nu_max_phixs);
 
   return nu_lower;
 }
