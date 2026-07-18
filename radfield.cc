@@ -894,19 +894,9 @@ auto get_T_J_from_J(const int nonemptymgi) -> float {
 }
 
 #ifdef DO_TITER
-void titer_J(const int nonemptymgi) {
-  if (J_reduced_save[nonemptymgi] >= 0) {
-    J[nonemptymgi] = (J[nonemptymgi] + J_reduced_save[nonemptymgi]) / 2;
-  }
-  J_reduced_save[nonemptymgi] = J[nonemptymgi];
-}
+void titer_J(const int nonemptymgi) { titer_average(J[nonemptymgi], J_reduced_save[nonemptymgi]); }
 
-void titer_nuJ(const int nonemptymgi) {
-  if (nuJ_reduced_save[nonemptymgi] >= 0) {
-    nuJ[nonemptymgi] = (nuJ[nonemptymgi] + nuJ_reduced_save[nonemptymgi]) / 2;
-  }
-  nuJ_reduced_save[nonemptymgi] = nuJ[nonemptymgi];
-}
+void titer_nuJ(const int nonemptymgi) { titer_average(nuJ[nonemptymgi], nuJ_reduced_save[nonemptymgi]); }
 #endif
 
 // reduce and broadcast (allreduce) the estimators for J and nuJ in all bins

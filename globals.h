@@ -330,6 +330,15 @@ inline bool lte_iteration{false};
 
 }  // namespace globals
 
+// DO_TITER mode: average an estimator with its saved value from the previous timestep iteration
+// (if one exists) and store the result as the new saved value.
+inline void titer_average(double& value, double& saved) {
+  if (saved >= 0) {
+    value = (value + saved) / 2;
+  }
+  saved = value;
+}
+
 [[nodiscard]] inline auto get_max_threads() -> int {
 #ifdef _OPENMP
   return omp_get_max_threads();
