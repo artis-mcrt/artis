@@ -128,6 +128,14 @@ constexpr void move_pkt_withtime(Packet& pkt, const double distance) {
   move_pkt_withtime(pkt.pos, pkt.dir, pkt.prop_time, pkt.nu_rf, pkt.nu_cmf, pkt.e_rf, pkt.e_cmf, distance);
 }
 
+// Set the packet's rest-frame frequency and energy from its co-moving frame values using the
+// Doppler factor for its current position, direction, and propagation time.
+DEVICE_FUNC constexpr void set_pkt_restframe_from_cmf(Packet& pkt) {
+  const double dopplerfactor = calculate_doppler_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
+  pkt.nu_rf = pkt.nu_cmf / dopplerfactor;
+  pkt.e_rf = pkt.e_cmf / dopplerfactor;
+}
+
 [[gnu::pure]] [[nodiscard]] constexpr auto get_escapedirectionbin(const Vec3d& dir_in) -> int {
   constexpr auto xhat = Vec3d{1.0, 0.0, 0.0};
 

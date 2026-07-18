@@ -408,9 +408,7 @@ void compton_scatter(Packet& pkt) {
 
     // It now has a rest frame direction and a co-moving frequency.
     //  Just need to set the rest frame energy.
-    const double dopplerfactor = calculate_doppler_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
-    pkt.nu_rf = pkt.nu_cmf / dopplerfactor;
-    pkt.e_rf = pkt.e_cmf / dopplerfactor;
+    set_pkt_restframe_from_cmf(pkt);
   } else {
     // energy loss of the gamma becomes energy of the electron (needed to calculate time-dependent thermalisation rate)
     if constexpr (PARTICLE_THERMALISATION_SCHEME == ParticleThermalisationScheme::TIMEDEPENDENTWITHGAMMAPRODUCTS) {
@@ -631,9 +629,7 @@ DEVICE_FUNC void emit_gamma_isotropic(Packet& pkt) {
 
   pkt.dir = angle_ab(dir_cmf, vel_vec);
 
-  const double dopplerfactor = calculate_doppler_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
-  pkt.nu_rf = pkt.nu_cmf / dopplerfactor;
-  pkt.e_rf = pkt.e_cmf / dopplerfactor;
+  set_pkt_restframe_from_cmf(pkt);
 
   pkt.type = TYPE_GAMMA;
 }
