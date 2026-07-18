@@ -626,6 +626,7 @@ void read_collion_data() {
           const double ionpot = ionpot_ev * EV;
           if (enbinding <= 0) {
             // if we don't have the shell's binding energy, use the previous one
+            assert_always(shellindex > 0);  // first shell binding energy must be positive
             enbinding = elements_electron_binding.at(Z - 1).at(shellindex - 1);
             assert_always(enbinding > 0);
           }
