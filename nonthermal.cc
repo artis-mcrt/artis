@@ -785,12 +785,19 @@ auto get_xs_ionisation_vector_lotz(std::array<double, SFPTS>& xs_vec, const Shel
 // xs_vec will be set with impact ionisation cross sections [cm2] for E > ionpot_ev (and zeros below this energy)
 // returns the index of the first energy point >= ionpot_ev
 auto get_xs_ionisation_vector(std::array<double, SFPTS>& xs_vec, const ShellParams& colliondata_ion) -> int {
+  const double ionpot_ev = colliondata_ion.ionpot_ev;
+  if (ionpot_ev > SF_EMAX) {
+    // every grid point is below the ionisation threshold, so all cross sections are zero.
+    // Without this, the clamped startindex below would evaluate the Younger fitting formula at
+    // u = E / I < 1, where it goes negative.
+    xs_vec.fill(0.);
+    return SFPTS;
+  }
   const double A = colliondata_ion.A;
   if (A < 0) {
     return get_xs_ionisation_vector_lotz(xs_vec, colliondata_ion);
   }
 
-  const double ionpot_ev = colliondata_ion.ionpot_ev;
   const int startindex = get_energyindex_ev_gteq(ionpot_ev);
 
   std::fill_n(xs_vec.begin(), startindex, 0.);
@@ -1313,6 +1320,12 @@ auto nt_ionisation_ratecoeff_sf(const int nonemptymgi, const int element, const 
 auto get_xs_excitation_vector(const int alltransindex, const double statweight_lower, const double epsilon_trans)
     -> std::tuple<std::array<double, SFPTS>, int> {
   std::array<double, SFPTS> xs_excitation_vec{};
+  if (epsilon_trans / EV > SF_EMAX) {
+    // the excitation threshold is above the top of the energy grid, so the cross section is zero at
+    // every grid point. Without this, the clamped startindex below would give a nonzero cross
+    // section at the top grid point, which is below the excitation threshold.
+    return {xs_excitation_vec, -1};
+  }
   if (globals::alltrans.coll_str[alltransindex] >= 0) {
     // collision strength is available, so use it
     // Li et al. 2012 equation 11: sigma = pi * a_0^2 * (I_H / E) * Omega / g_lower,
