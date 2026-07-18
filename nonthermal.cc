@@ -978,6 +978,11 @@ auto N_e(const int nonemptymgi, const double energy, const std::array<double, SF
           }
           const double epsilon_trans = epsilon(element, ion, upper) - epsilon_lower;
           const double epsilon_trans_ev = epsilon_trans / EV;
+          if (epsilon_trans_ev < SF_EMIN) {
+            // sfmatrix_add_excitation() does not include these transitions in the solution, so skip
+            // them here too for a consistent energy accounting
+            continue;
+          }
           N_e_ion += (nnlevel / nnion) * get_y(yfunc, energy_ev + epsilon_trans_ev) *
                      xs_excitation(element, ion, lower, t, epsilon_trans, statweight_lower, energy + epsilon_trans);
         }
@@ -1571,6 +1576,14 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const std::a
           }
 
           const double epsilon_trans = epsilon(element, ion, upper) - epsilon_lower;
+          if (epsilon_trans / EV < SF_EMIN) {
+            // sfmatrix_add_excitation() does not include these transitions in the solution (their
+            // energy sink is below the grid), so exclude them from the excitation fractions and the
+            // stored excitation list too. Otherwise they would contribute to frac_excitation (making
+            // frac_sum differ from 1.0) and receive packet excitation events and NLTE rates that the
+            // Spencer-Fano solution never accounted for.
+            continue;
+          }
           const double ratecoeffperdeposition =
               calculate_nt_excitation_ratecoeff_perdeposition(yfunc, alltransindex, statweight_lower, epsilon_trans);
           const double frac_excitation_thistrans = nnlevel * epsilon_trans * ratecoeffperdeposition;
