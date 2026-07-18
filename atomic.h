@@ -209,7 +209,10 @@ DEVICE_FUNC inline auto get_nphixstargets(const int element, const int ion, cons
 
   if constexpr (PHIXS_CLASSIC_NO_INTERPOLATION) {
     // classic mode: no interpolation
-    if (nu == nu_edge) {
+    if (nu < nu_edge) {
+      // below the threshold the cross section is zero (and the table index below would be negative)
+      sigma_bf = 0.;
+    } else if (nu == nu_edge) {
       sigma_bf = photoion_xs[0];
     } else if (nu < nu_edge * (1 + (globals::NPHIXSNUINCREMENT * globals::NPHIXSPOINTS))) {
       const int i = static_cast<int>((nu - nu_edge) / (globals::NPHIXSNUINCREMENT * nu_edge));

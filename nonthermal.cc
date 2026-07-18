@@ -626,6 +626,7 @@ void read_collion_data() {
           const double ionpot = ionpot_ev * EV;
           if (enbinding <= 0) {
             // if we don't have the shell's binding energy, use the previous one
+            assert_always(shellindex > 0);  // first shell binding energy must be positive
             enbinding = elements_electron_binding.at(Z - 1).at(shellindex - 1);
             assert_always(enbinding > 0);
           }
@@ -783,14 +784,22 @@ auto get_xs_ionisation_vector_lotz(std::array<double, SFPTS>& xs_vec, const Shel
 }
 
 // xs_vec will be set with impact ionisation cross sections [cm2] for E > ionpot_ev (and zeros below this energy)
-// returns the index of the first energy point >= ionpot_ev
+// returns the index of the first energy point >= ionpot_ev, or SFPTS (one past the last index, with xs_vec
+// all zeros) when ionpot_ev is above the top of the energy grid
 auto get_xs_ionisation_vector(std::array<double, SFPTS>& xs_vec, const ShellParams& colliondata_ion) -> int {
+  const double ionpot_ev = colliondata_ion.ionpot_ev;
+  if (ionpot_ev > SF_EMAX) {
+    // every grid point is below the ionisation threshold, so all cross sections are zero.
+    // Without this, the clamped startindex below would evaluate the Younger fitting formula at
+    // u = E / I < 1, where it goes negative.
+    xs_vec.fill(0.);
+    return SFPTS;
+  }
   const double A = colliondata_ion.A;
   if (A < 0) {
     return get_xs_ionisation_vector_lotz(xs_vec, colliondata_ion);
   }
 
-  const double ionpot_ev = colliondata_ion.ionpot_ev;
   const int startindex = get_energyindex_ev_gteq(ionpot_ev);
 
   std::fill_n(xs_vec.begin(), startindex, 0.);
@@ -1313,6 +1322,12 @@ auto nt_ionisation_ratecoeff_sf(const int nonemptymgi, const int element, const 
 auto get_xs_excitation_vector(const int alltransindex, const double statweight_lower, const double epsilon_trans)
     -> std::tuple<std::array<double, SFPTS>, int> {
   std::array<double, SFPTS> xs_excitation_vec{};
+  if (epsilon_trans / EV > SF_EMAX) {
+    // the excitation threshold is above the top of the energy grid, so the cross section is zero at
+    // every grid point. Without this, the clamped startindex below would give a nonzero cross
+    // section at the top grid point, which is below the excitation threshold.
+    return {xs_excitation_vec, -1};
+  }
   if (globals::alltrans.coll_str[alltransindex] >= 0) {
     // collision strength is available, so use it
     // Li et al. 2012 equation 11: sigma = pi * a_0^2 * (I_H / E) * Omega / g_lower,
@@ -1536,6 +1551,10 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const std::a
       const int nlevels = std::min(get_nlevels(element, ion), NTEXCITATION_MAXNLEVELS_LOWER);
       const bool above_minionfraction = (nnion >= MIN_ION_OVER_NNTOT * get_nnion_tot(nonemptymgi));
 
+      // mark the current size so that this ion's entries can be removed again if its
+      // frac_excitation_ion total turns out to be invalid below
+      const auto tmp_excitation_list_size_before_ion = std::ssize(tmp_excitation_list);
+
       for (int lower = 0; lower < nlevels; lower++) {
         const auto uniquelevelindex = get_uniquelevelindex(element, ion, lower);
         const double statweight_lower = stat_weight(uniquelevelindex);
@@ -1582,6 +1601,11 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const std::a
       if (frac_excitation_ion > 1. || !std::isfinite(frac_excitation_ion)) {
         printlnlog("      WARNING: invalid frac_excitation. Replacing with zero");
         frac_excitation_ion = 0.;
+        // remove this ion's transitions from the excitation list. Otherwise their (invalid, possibly
+        // huge) frac_deposition and ratecoeffperdeposition values would remain in the stored list and
+        // distort the packet excitation-channel selection and the NLTE non-thermal excitation rates,
+        // even though the ion's contribution has been excluded from frac_excitation_total.
+        tmp_excitation_list.resize(tmp_excitation_list_size_before_ion);
       }
       frac_excitation_total += frac_excitation_ion;
 
