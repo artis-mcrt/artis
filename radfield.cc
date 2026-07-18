@@ -302,6 +302,45 @@ auto calculate_planck_integral(double temperature, double nu_low, double nu_high
   return constant_factor * (low_to_inf - high_to_inf);
 }
 
+// Calculate the intensity-weighted mean frequency without allowing the common Wien-tail exponential to underflow.
+auto calculate_planck_mean_frequency(const double temperature, const double nu_low, const double nu_high) -> double {
+  assert_testmodeonly(temperature > 0.);
+  assert_testmodeonly(nu_low >= 0.);
+  assert_testmodeonly(nu_high > nu_low);
+
+  const double x_low = (H * nu_low) / (KB * temperature);
+  const double x_high = (H * nu_high) / (KB * temperature);
+
+  // For x >= 100, 1 / (exp(x) - 1) differs from exp(-x) by less than 4e-44. Factoring exp(-x_low)
+  // out of both moments prevents the individual Planck integrals from underflowing. Using expm1 also keeps the
+  // difference between the two incomplete-gamma polynomials accurate for narrow bins.
+  constexpr double wien_tail_threshold = 100.;
+  if (x_low >= wien_tail_threshold) {
+    const auto moment3_tail_polynomial = [](const double x) { return pow3(x) + (3 * pow2(x)) + (6 * x) + 6; };
+    const auto moment4_tail_polynomial = [](const double x) {
+      return pow4(x) + (4 * pow3(x)) + (12 * pow2(x)) + (24 * x) + 24;
+    };
+    const auto scaled_bin_moment = [x_low, x_high](const auto tail_polynomial) {
+      const double bin_width = x_high - x_low;
+      const double exp_minus_bin_width = std::exp(-bin_width);
+      const double polynomial_low = tail_polynomial(x_low);
+      const double polynomial_high = tail_polynomial(x_high);
+      return (-std::expm1(-bin_width) * polynomial_low) - (exp_minus_bin_width * (polynomial_high - polynomial_low));
+    };
+
+    const double planck_moment = scaled_bin_moment(moment3_tail_polynomial);
+    const double nu_planck_moment = scaled_bin_moment(moment4_tail_polynomial);
+    assert_testmodeonly(planck_moment > 0.);
+    assert_testmodeonly(nu_planck_moment > 0.);
+
+    return (KB * temperature / H) * (nu_planck_moment / planck_moment);
+  }
+
+  const double nu_planck_integral = calculate_planck_integral(temperature, nu_low, nu_high, true);
+  const double planck_integral = calculate_planck_integral(temperature, nu_low, nu_high, false);
+  return nu_planck_integral / planck_integral;
+}
+
 // nu_bar_planck_minus_estimator = nu_bar_planck(T_R) - nu_bar_estimator, where nu_bar is the intensity-weighted mean
 // frequency in a bin, which is given by the ratio of nuJ and J estimators.
 auto nu_bar_planck_minus_estimator(const double T_R, const int nonemptymgi, const int binindex) -> double {
@@ -309,17 +348,13 @@ auto nu_bar_planck_minus_estimator(const double T_R, const int nonemptymgi, cons
   const double nu_upper = get_bin_nu_upper(binindex);
   const double nu_bar_estimator = get_bin_nu_bar(nonemptymgi, binindex);
 
-  const double nu_planck_integral = calculate_planck_integral(T_R, nu_lower, nu_upper, true);
-  const double planck_integral = calculate_planck_integral(T_R, nu_lower, nu_upper, false);
-  const double nu_bar_planck_T_R = nu_planck_integral / planck_integral;
+  const double nu_bar_planck_T_R = calculate_planck_mean_frequency(T_R, nu_lower, nu_upper);
 
   const double delta_nu_bar = nu_bar_planck_T_R - nu_bar_estimator;
 
   if (!std::isfinite(delta_nu_bar)) {
-    printlnlog(
-        "delta_nu_bar is {:g}. nu_bar_planck_T_R {:g} nu_times_planck_integral {:g} planck_integral {:g} "
-        "nu_bar_estimator {:g}",
-        delta_nu_bar, nu_bar_planck_T_R, nu_planck_integral, planck_integral, nu_bar_estimator);
+    printlnlog("delta_nu_bar is {:g}. nu_bar_planck_T_R {:g} nu_bar_estimator {:g}", delta_nu_bar, nu_bar_planck_T_R,
+               nu_bar_estimator);
   }
 
   return delta_nu_bar;
