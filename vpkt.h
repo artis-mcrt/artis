@@ -8,6 +8,9 @@ namespace vpkt {
 
 void read_vpktparameterfile();
 void init(int nts, bool continued_from_saved);
+// At a physical emission or scattering event, launch an event-based virtual packet toward each configured observer,
+// propagate it through the ejecta, and accumulate its escape-probability-weighted Stokes contribution to the spectrum.
+// Bulla, Sim & Kromer (2015), doi:10.1093/mnras/stv657.
 void trace_vpkts(const Packet& pkt, enum packet_type type_before_rpkt);
 void write_timestep(int nts, bool is_final);
 

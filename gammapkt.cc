@@ -851,7 +851,7 @@ void wollaeger_thermalisation(Packet& pkt) {
 }
 
 void guttman_thermalisation(Packet& pkt) {
-  // Guttman+2024, arXiv:2403.08769v1
+  // Guttman et al. (2024), doi:10.1093/mnras/stae1795.
   // Extension of the Wollaeger scheme that averages the deposition probability over random emission directions.
 
   // Mean gamma opacity from section 3.2, using the lower value for nearly symmetric matter at late times.

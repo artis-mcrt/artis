@@ -51,6 +51,9 @@ auto get_energy_per_mass_nonemptymgi_decaypath() -> MPI_shared_array<const doubl
 [[nodiscard]] auto get_gamma_emission_rate(int nonemptymgi, double t) -> double;
 [[nodiscard]] auto get_global_etot_tmodel_tinf() -> double;
 void output_isotopic_densities(std::ostream& estimators_file, int nonemptymgi, double t_current, int element);
+// Construct an indivisible radioactive pellet by energy-weighted sampling a decay path or the optional initial-energy
+// channel, then sample its release time and record the emitting nuclide and decay type.
+// Lucy (2005), doi:10.1051/0004-6361:20041656.
 void setup_radioactive_pellet(double e_cmf_per_packet, int nonemptymgi, Packet& pkt,
                               std::span<const double> energy_per_mass_nonemptymgi_decaypath);
 

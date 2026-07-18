@@ -325,7 +325,6 @@ DEVICE_FUNC void calculate_cellcache_macroatom_transitionrates(const int nonempt
                                       globals::alltrans);
 }
 
-// handle activated macro atoms
 DEVICE_FUNC void do_macroatom(Packet& pkt, const MacroAtomState& pktmastate) {
   const auto nonemptymgi = grid::get_propcell_nonemptymgi(pkt.cellindex);
   assert_testmodeonly(nonemptymgi >= 0);
@@ -337,12 +336,6 @@ DEVICE_FUNC void do_macroatom(Packet& pkt, const MacroAtomState& pktmastate) {
 
   assert_testmodeonly(grid::thick_allcells[nonemptymgi] != 1);  // macroatom should not be used in thick cells
 
-  // calculate occupation number for active MA level ////////////////////////////////////
-  // general QUESTION: is it better to calculate the n_1 (later the n_ionstage and
-  // U_ionstage) here where we need them or once in update_grid for each grid cell
-  // not sure whether this reduces the number of calculations, as number of grid cells
-  // is much larger than number of pellets (next question: connection to number of
-  // photons)
   const int element = pktmastate.element;
   int ion = pktmastate.ion;
   int level = pktmastate.level;
@@ -573,8 +566,9 @@ void macroatom_open_file() {
                " nu_cmf_in nu_cmf_out nu_rf_in nu_rf_out");
 }
 
-// radiative excitation rate: paperII 3.5.2
-// multiply by lower level population to get a rate per second
+// The approximate radiative and collisional rates below follow Kromer & Sim (2009), Sections 3.5.1-3.5.2,
+// doi:10.1111/j.1365-2966.2009.15256.x.
+// Radiative excitation rate. Multiply by the lower-level population to obtain a rate per second.
 [[gnu::pure]] [[nodiscard]] auto rad_excitation_ratecoeff(const int nonemptymgi, const double upper_statweight,
                                                           const double einstein_A, const double epsilon_trans,
                                                           const double nnlevel_lower, const double nnlevel_upper,
@@ -610,8 +604,7 @@ void macroatom_open_file() {
   return 0.;
 }
 
-// radiative recombination rate: paperII 3.5.2
-// multiply by upper level population to get a rate per second
+// Radiative recombination rate. Multiply by the upper-level population to obtain a rate per second.
 [[gnu::pure]] [[nodiscard]] auto rad_recombination_ratecoeff(const float T_e, const float clumpednne, const int element,
                                                              const int upperion, const int upperionlevel,
                                                              const int lowerionlevel) -> double {
@@ -664,8 +657,7 @@ void macroatom_open_file() {
   return 0.;
 }
 
-// collisional ionisation rate: paperII 3.5.1
-// multiply by lower level population to get a rate per second
+// Collisional ionisation rate. Multiply by the lower-level population to obtain a rate per second.
 [[gnu::pure]] [[nodiscard]] auto col_ionisation_ratecoeff(const float T_e, const float clumpednne, const int element,
                                                           const int ion, const int lower, const int phixstargetindex,
                                                           const double epsilon_trans) -> double {

@@ -17,6 +17,9 @@ DEVICE_FUNC void update_estimators(ptrdiff_t nonemptymgi, double distance_e_cmf,
                                    const Phixslist& phixslist, bool thickcell);
 DEVICE_FUNC void update_lineestimator(int nonemptymgi, int lineindex, double increment);
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto radfield(double nu, int nonemptymgi) -> double;
+// Fit a windowed dilute Planck spectrum in each frequency bin: choose T_R to reproduce the trajectory-estimator ratio
+// nuJ/J, then choose W to reproduce the integrated intensity J.
+// Shingles et al. (2020), Section 2.2.2, doi:10.1093/mnras/stz3412.
 void fit_parameters(int nonemptymgi, int timestep);
 void set_J_normfactor(int nonemptymgi, double normfactor);
 void normalise_J(int nonemptymgi, double estimator_normfactor_over4pi);

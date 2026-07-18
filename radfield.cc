@@ -731,7 +731,6 @@ DEVICE_FUNC auto radfield(const double nu, const int nonemptymgi) -> double {
   return grid::get_W(nonemptymgi) * planck(nu, grid::get_TR(nonemptymgi));
 }
 
-// finds the best fitting W and temperature parameters in each spectral bin using J and nuJ
 void fit_parameters(const int nonemptymgi, const int timestep) {
   set_params_fullspec(nonemptymgi, timestep);
   if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {

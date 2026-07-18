@@ -2363,8 +2363,8 @@ DEVICE_FUNC void do_ntlepton_deposit(Packet& pkt) {
   stats::increment(stats::Counter::NT_STAT_TO_KPKT);
 }
 
-// solve the Spencer-Fano equation to get the non-thermal electron flux energy distribution
-// based on Equation (2) of Li et al. (2012)
+// The matrix discretisation follows Equation (2) of Li et al. (2012); the Auger-electron extension is described by
+// Shingles et al. (2020), Section 2.5, doi:10.1093/mnras/stz3412.
 void solve_spencerfano(const int nonemptymgi, const int timestep, const int iteration) {
   const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
   bool skip_solution = false;

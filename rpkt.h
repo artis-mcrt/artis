@@ -61,8 +61,8 @@ struct Phixslist {
 
 struct ContinuumOpacity {
   double nu{-1.};  // frequency at which opacity was calculated
-  // chi is the absorption coefficient in units of [cm^-1], i.e. the opacity per unit length. The actual opacity
-  // experienced by the packet is chi * pathlength, and the optical depth is chi * pathlength * rho.
+  // Each chi is an extinction coefficient [cm^-1]; density is already included when it is calculated, so a
+  // homogeneous path contributes an optical depth chi * pathlength.
   double chi_freefree_scatter{0.};  // free-free scattering (stay rpacket) contribution to the opacity
   double chi_freefree_heat{0.};  // free-free heating (become kpacket) contribution to the opacity
   double chi_boundfree{0.};  // bound-free (photoionization) contribution to the opacity
@@ -103,6 +103,9 @@ extern template void calculate_chi_rpkt_cont<false>(double nu_cmf, ContinuumOpac
 [[nodiscard]] DEVICE_FUNC auto sample_planck_times_expansion_opacity(int nonemptymgi, rngstate_type& rngstate)
     -> double;
 void allocate_expansionopacities();
+// Convert Sobolev line optical depths in each wavelength bin into an expansion mass opacity. When requested, also
+// construct the Planck-weighted cumulative distribution used to sample thermal re-emission frequencies.
+// Eastman & Pinto (1993), doi:10.1086/172957; Karp et al. (1977), doi:10.1086/155241.
 void calculate_expansion_opacities(int nonemptymgi);
 void MPI_Bcast_binned_opacities(ptrdiff_t nonemptymgi, int root_node_id);
 auto calculate_chi_ffheat_nnionpart(int nonemptymgi) -> double;

@@ -11,6 +11,10 @@
 
 namespace nonthermal {
 void init();
+// Assemble and solve the cell's discretised Spencer-Fano degradation balance, including Coulomb heating, excitation,
+// ionisation, secondary electrons, and Auger electrons. Convert the electron flux into deposition fractions and
+// non-thermal rate coefficients, reusing a recent solution while the ionisation state remains sufficiently similar.
+// Shingles et al. (2020), Section 2.5, doi:10.1093/mnras/stz3412.
 void solve_spencerfano(int nonemptymgi, int timestep, int iteration);
 [[nodiscard]] DEVICE_FUNC auto nt_ionisation_ratecoeff(int nonemptymgi, int element, int ion) -> double;
 [[nodiscard]] DEVICE_FUNC auto nt_ionisation_upperion_probability(int nonemptymgi, int element, int lowerion,

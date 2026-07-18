@@ -8,6 +8,9 @@
 
 void macroatom_open_file();
 
+// Follow an activated macro-atom through stochastic internal energy-flow transitions until it deactivates as an
+// r-packet or k-packet. Actions are selected in proportion to the local radiative, collisional, and non-thermal rates.
+// Lucy (2002), doi:10.1051/0004-6361:20011756; Lucy (2003), arXiv:astro-ph/0303202.
 DEVICE_FUNC void do_macroatom(Packet& pkt, const MacroAtomState& pktmastate);
 
 // prepopulate one unique level's macroatom transition rates into the cellcache. Used in GPU mode, where
@@ -36,8 +39,8 @@ DEVICE_FUNC void calculate_cellcache_macroatom_transitionrates(int nonemptymgi, 
                                                           int alltransindex, double epsilon_trans,
                                                           double lowerstatweight) -> double;
 
-// radiative deexcitation rate: paperII 3.5.2
-// multiply by upper level population to get a rate per second
+// Sobolev-escape radiative deexcitation rate; multiply by the upper-level population to obtain a rate per second.
+// Kromer & Sim (2009), Section 3.5.2, doi:10.1111/j.1365-2966.2009.15256.x.
 [[gnu::const]] [[nodiscard]] constexpr auto rad_deexcitation_ratecoeff(
     const double epsilon_trans, const float A_ul, const double upperstatweight, const double lowerstatweight,
     const double nnlevelupper, const double nnlevellower, const double t_current) -> double {
