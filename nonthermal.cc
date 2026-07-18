@@ -784,7 +784,8 @@ auto get_xs_ionisation_vector_lotz(std::array<double, SFPTS>& xs_vec, const Shel
 }
 
 // xs_vec will be set with impact ionisation cross sections [cm2] for E > ionpot_ev (and zeros below this energy)
-// returns the index of the first energy point >= ionpot_ev
+// returns the index of the first energy point >= ionpot_ev, or SFPTS (one past the last index, with xs_vec
+// all zeros) when ionpot_ev is above the top of the energy grid
 auto get_xs_ionisation_vector(std::array<double, SFPTS>& xs_vec, const ShellParams& colliondata_ion) -> int {
   const double ionpot_ev = colliondata_ion.ionpot_ev;
   if (ionpot_ev > SF_EMAX) {
