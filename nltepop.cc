@@ -1360,8 +1360,7 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
         printlnlog("  WARNING: Z={} ionstage {} removed from NLTE rate matrix. Setting all levelpops for ion to zero ",
                    get_atomicnumber(element), get_ionstage(element, ion));
 
-        grid::ion_groundlevelpops_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * get_includedions()) +
-                                           get_uniqueionindex(element, ion)] = 0.;
+        set_groundlevelpop(nonemptymgi, element, ion, 0.);
 
         for (int level = 1; level <= nlevels_excited_nlte; level++) {
           set_nlte_levelpop_over_rho(nonemptymgi, element, ion, level, 0.);
@@ -1371,8 +1370,7 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
           set_nlte_superlevelpop_over_rho_over_slpartfunc(nonemptymgi, element, ion, 0.);
         }
       } else {
-        grid::ion_groundlevelpops_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * get_includedions()) +
-                                           get_uniqueionindex(element, ion)] = static_cast<float>(popvec[index_gs]);
+        set_groundlevelpop(nonemptymgi, element, ion, static_cast<float>(popvec[index_gs]));
 
         for (int level = 1; level <= nlevels_excited_nlte; level++) {
           const int index = get_nlte_vector_index(element, ion, level, first_ion_used);

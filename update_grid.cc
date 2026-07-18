@@ -290,11 +290,7 @@ void update_gamma_corrphotoionrenorm_bfheating_estimators(const int nonemptymgi,
 
         globals::gammaestimator[ionestimindex] *= estimator_normfactor / H;
 #ifdef DO_TITER
-        if (globals::gammaestimator_save[ionestimindex] >= 0) {
-          globals::gammaestimator[ionestimindex] =
-              (globals::gammaestimator[ionestimindex] + globals::gammaestimator_save[ionestimindex]) / 2;
-        }
-        globals::gammaestimator_save[ionestimindex] = globals::gammaestimator[ionestimindex];
+        titer_average(globals::gammaestimator[ionestimindex], globals::gammaestimator_save[ionestimindex]);
 #endif
 
         globals::corrphotoionrenorm[ionestimindex] =
@@ -330,11 +326,7 @@ void update_gamma_corrphotoionrenorm_bfheating_estimators(const int nonemptymgi,
       if constexpr (USE_ION_BFHEATING_ESTIMATORS) {
         globals::bfheatingestimator[ionestimindex] *= estimator_normfactor;
 #ifdef DO_TITER
-        if (globals::bfheatingestimator_save[ionestimindex] >= 0) {
-          globals::bfheatingestimator[ionestimindex] =
-              (globals::bfheatingestimator[ionestimindex] + globals::bfheatingestimator_save[ionestimindex]) / 2;
-        }
-        globals::bfheatingestimator_save[ionestimindex] = globals::bfheatingestimator[ionestimindex];
+        titer_average(globals::bfheatingestimator[ionestimindex], globals::bfheatingestimator_save[ionestimindex]);
 #endif
         // Now convert bfheatingestimator into the bfheating renormalisation coefficient used in
         // for the remaining part of update_grid. At the start of the next update_packets, it will be reset
@@ -350,17 +342,9 @@ void update_gamma_corrphotoionrenorm_bfheating_estimators(const int nonemptymgi,
 
 #ifdef DO_TITER
 static void titer_average_estimators(const int nonemptymgi) {
-  if (globals::ffheatingestimator_save[nonemptymgi] >= 0) {
-    globals::ffheatingestimator[nonemptymgi] =
-        (globals::ffheatingestimator[nonemptymgi] + globals::ffheatingestimator_save[nonemptymgi]) / 2;
-  }
-  globals::ffheatingestimator_save[nonemptymgi] = globals::ffheatingestimator[nonemptymgi];
+  titer_average(globals::ffheatingestimator[nonemptymgi], globals::ffheatingestimator_save[nonemptymgi]);
   if constexpr (!DIRECT_COL_HEAT) {
-    if (globals::colheatingestimator_save[nonemptymgi] >= 0) {
-      globals::colheatingestimator[nonemptymgi] =
-          (globals::colheatingestimator[nonemptymgi] + globals::colheatingestimator_save[nonemptymgi]) / 2;
-    }
-    globals::colheatingestimator_save.at(nonemptymgi) = globals::colheatingestimator.at(nonemptymgi);
+    titer_average(globals::colheatingestimator[nonemptymgi], globals::colheatingestimator_save[nonemptymgi]);
   }
 }
 #endif

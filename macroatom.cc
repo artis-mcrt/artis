@@ -355,8 +355,7 @@ DEVICE_FUNC void do_macroatom(Packet& pkt, const MacroAtomState& pktmastate) {
     // originating levels population cancels out in the macroatom transition probabilities
     // which are based on detailed balance.
 
-    assert_testmodeonly(ion >= 0);
-    assert_testmodeonly(ion < get_nions(element));
+    testmodeassert_valid_ion(element, ion);
     const auto ionuniquelevelindexstart = get_ionuniquelevelindexstart(element, ion);
     const int uniquelevelindex = ionuniquelevelindexstart + level;
 

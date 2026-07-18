@@ -321,8 +321,10 @@ void write_spectrum_file(const std::string& spec_filename, const Spectra& spectr
   }
 }
 
-void write_emission_spectrum_file(const std::string& emission_filename, const Spectra& spectra,
-                                  const int numtimesteps) {
+// Write an emission-type spectrum (emission or true emission) with a line for each frequency bin of
+// each timestep, holding one column per emission process (see get_proccount).
+void write_emission_spectrum_file(const std::string& emission_filename,
+                                  const std::span<const double> emission_alltimesteps, const int numtimesteps) {
   assert_always(numtimesteps <= globals::ntimesteps);
   assert_always(!emission_filename.empty());
   auto emission_file = fstream_required(emission_filename, std::ios::out | std::ios::trunc);
@@ -332,27 +334,9 @@ void write_emission_spectrum_file(const std::string& emission_filename, const Sp
     for (auto nts = 0Z; nts < numtimesteps; nts++) {
       const auto emindex_nts_nubin = (nubin * ntimesteps_all * proccount) + (nts * proccount);
       for (int nproc = 0; nproc < proccount; nproc++) {
-        std::print(emission_file, "{:g} ", spectra.emissionalltimesteps[emindex_nts_nubin + nproc]);
+        std::print(emission_file, "{:g} ", emission_alltimesteps[emindex_nts_nubin + nproc]);
       }
       std::println(emission_file, "");
-    }
-  }
-}
-
-void write_trueemission_spectrum_file(const std::string& trueemission_filename, const Spectra& spectra,
-                                      const int numtimesteps) {
-  assert_always(numtimesteps <= globals::ntimesteps);
-  assert_always(!trueemission_filename.empty());
-  auto trueemission_file = fstream_required(trueemission_filename, std::ios::out | std::ios::trunc);
-  const auto ntimesteps_all = static_cast<ptrdiff_t>(globals::ntimesteps);
-  const auto proccount = static_cast<ptrdiff_t>(get_proccount());
-  for (auto nubin = 0Z; nubin < MNUBINS; nubin++) {
-    for (auto nts = 0Z; nts < numtimesteps; nts++) {
-      const auto emindex_nts_nubin = (nubin * ntimesteps_all * proccount) + (nts * proccount);
-      for (int truenproc = 0; truenproc < proccount; truenproc++) {
-        std::print(trueemission_file, "{:g} ", spectra.trueemissionalltimesteps[emindex_nts_nubin + truenproc]);
-      }
-      std::println(trueemission_file, "");
     }
   }
 }
@@ -397,11 +381,11 @@ void write_spectra(const std::string& spec_filename, const std::string& emission
 
   if (spectra.do_emission_absorption) {
     if (this_rank_writes_file(2)) {
-      write_emission_spectrum_file(emission_filename, spectra, numtimesteps);
+      write_emission_spectrum_file(emission_filename, spectra.emissionalltimesteps.span(), numtimesteps);
     }
 
     if (this_rank_writes_file(3)) {
-      write_trueemission_spectrum_file(trueemission_filename, spectra, numtimesteps);
+      write_emission_spectrum_file(trueemission_filename, spectra.trueemissionalltimesteps.span(), numtimesteps);
     }
 
     if (this_rank_writes_file(4)) {

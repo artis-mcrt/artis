@@ -369,9 +369,7 @@ void electron_scatter_rpkt(Packet& pkt) {
   // Finally we want to put in the rest frame energy and frequency.
   // And record that it's now a r-pkt.
 
-  const double dopplerfactor = calculate_doppler_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
-  pkt.nu_rf = pkt.nu_cmf / dopplerfactor;
-  pkt.e_rf = pkt.e_cmf / dopplerfactor;
+  set_pkt_restframe_from_cmf(pkt);
 }
 
 void rpkt_event_continuum(Packet& pkt, const ContinuumOpacity& chi_rpkt_cont) {
@@ -868,9 +866,7 @@ DEVICE_FUNC void emit_rpkt(Packet& pkt) {
   // Finally we want to put in the rest frame energy and frequency. And record
   // that it's now a r-pkt.
 
-  const double dopplerfactor = calculate_doppler_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
-  pkt.nu_rf = pkt.nu_cmf / dopplerfactor;
-  pkt.e_rf = pkt.e_cmf / dopplerfactor;
+  set_pkt_restframe_from_cmf(pkt);
 
   if constexpr (POL_ON) {
     // Reset to unpolarised
