@@ -343,8 +343,7 @@ void write_deposition_file() {
 }
 
 void write_timestep_file() {
-  auto timestepfile = std::fstream("timesteps.out", std::ofstream::out | std::ofstream::trunc);
-  assert_always(timestepfile.is_open());
+  auto timestepfile = fstream_required("timesteps.out", std::ofstream::out | std::ofstream::trunc);
   std::print(timestepfile, "#timestep tstart_days tmid_days twidth_days\n");
   for (int n = 0; n < globals::ntimesteps; n++) {
     std::println(timestepfile, "{} {:g} {:g} {:g}", n, globals::timesteps[n].start / DAY,
