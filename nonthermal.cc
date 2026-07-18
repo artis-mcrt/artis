@@ -1536,6 +1536,10 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const std::a
       const int nlevels = std::min(get_nlevels(element, ion), NTEXCITATION_MAXNLEVELS_LOWER);
       const bool above_minionfraction = (nnion >= MIN_ION_OVER_NNTOT * get_nnion_tot(nonemptymgi));
 
+      // mark the current size so that this ion's entries can be removed again if its
+      // frac_excitation_ion total turns out to be invalid below
+      const auto tmp_excitation_list_size_before_ion = std::ssize(tmp_excitation_list);
+
       for (int lower = 0; lower < nlevels; lower++) {
         const auto uniquelevelindex = get_uniquelevelindex(element, ion, lower);
         const double statweight_lower = stat_weight(uniquelevelindex);
@@ -1582,6 +1586,11 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const std::a
       if (frac_excitation_ion > 1. || !std::isfinite(frac_excitation_ion)) {
         printlnlog("      WARNING: invalid frac_excitation. Replacing with zero");
         frac_excitation_ion = 0.;
+        // remove this ion's transitions from the excitation list. Otherwise their (invalid, possibly
+        // huge) frac_deposition and ratecoeffperdeposition values would remain in the stored list and
+        // distort the packet excitation-channel selection and the NLTE non-thermal excitation rates,
+        // even though the ion's contribution has been excluded from frac_excitation_total.
+        tmp_excitation_list.resize(tmp_excitation_list_size_before_ion);
       }
       frac_excitation_total += frac_excitation_ion;
 
