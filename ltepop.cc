@@ -28,11 +28,8 @@ namespace {
 
 // use Saha equation for LTE ionisation balance
 [[gnu::pure]] [[nodiscard]] auto phi_saha(const int element, const int ion, const int nonemptymgi) -> double {
-  const int uniqueionindex = get_uniqueionindex(element, ion);
-  const auto partfunc_ion =
-      grid::ion_partfuncts_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * get_includedions()) + uniqueionindex];
-  const auto partfunc_upperion =
-      grid::ion_partfuncts_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * get_includedions()) + uniqueionindex + 1];
+  const auto partfunc_ion = get_ion_partfunct(nonemptymgi, element, ion);
+  const auto partfunc_upperion = get_ion_partfunct(nonemptymgi, element, ion + 1);
 
   const auto T_e = grid::get_Te(nonemptymgi);
   const double ionpot = epsilon(element, ion + 1, 0) - epsilon(element, ion, 0);
@@ -45,8 +42,7 @@ namespace {
 // should have units of [cm^3] so that when multiplied by nne it gives the population ratio of two consecutive
 // ionisation stages
 [[gnu::pure]] [[nodiscard]] auto phi_rate_balance(const int element, const int ion, const int nonemptymgi) -> double {
-  assert_testmodeonly(element < get_nelements());
-  assert_testmodeonly(ion < get_nions(element));
+  assert_valid_ion(element, ion);
 
   assert_testmodeonly(!globals::lte_iteration);
   assert_testmodeonly(grid::thick_allcells[nonemptymgi] != 1);  // should use use phi_lte instead
@@ -54,8 +50,7 @@ namespace {
   assert_testmodeonly(!elem_has_nlte_levels(element));  // don't use this function if the NLTE solver is active
 
   const int uniqueionindex = get_uniqueionindex(element, ion);
-  const auto partfunc_ion =
-      grid::ion_partfuncts_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * get_includedions()) + uniqueionindex];
+  const auto partfunc_ion = get_ion_partfunct(nonemptymgi, element, ion);
 
   const auto T_e = grid::get_Te(nonemptymgi);
 
@@ -137,9 +132,7 @@ auto nne_solution_f(const double nne_assumed, const int nonemptymgi, const bool 
 // return population and whether the population came from the nlte solver
 auto calculate_levelpop_nominpop(const int nonemptymgi, const int element, const int ion, const int level)
     -> std::tuple<double, bool> {
-  assert_testmodeonly(element < get_nelements());
-  assert_testmodeonly(ion < get_nions(element));
-  assert_testmodeonly(level < get_nlevels(element, ion));
+  assert_valid_level(element, ion, level);
 
   if (level == 0) {
     return {get_groundlevelpop(nonemptymgi, element, ion), false};
@@ -170,11 +163,8 @@ auto calculate_levelpop_nominpop(const int nonemptymgi, const int element, const
 
 // Calculate the partition function for ion=ion of element=element in a cell modelgridindex
 auto calculate_partfunct(const int element, const int ion, const int nonemptymgi) -> float {
-  assert_testmodeonly(element < get_nelements());
-  assert_testmodeonly(ion < get_nions(element));
+  assert_valid_ion(element, ion);
   double pop_store{NAN};
-
-  const int uniqueionindex = get_uniqueionindex(element, ion);
 
   bool initial = false;
   if (get_groundlevelpop(nonemptymgi, element, ion) < MINPOP) {
@@ -183,8 +173,7 @@ auto calculate_partfunct(const int element, const int ion, const int nonemptymgi
     // of groundlevelpop for this calculation doesn't matter, so long as it's not zero!
     pop_store = get_groundlevelpop(nonemptymgi, element, ion);
     initial = true;
-    grid::ion_groundlevelpops_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * get_includedions()) + uniqueionindex] =
-        1.;
+    set_groundlevelpop(nonemptymgi, element, ion, 1.);
   }
 
   double U = 1.;
@@ -201,8 +190,7 @@ auto calculate_partfunct(const int element, const int ion, const int nonemptymgi
 
   if (initial) {
     // put back the zero, just in case it matters for something
-    grid::ion_groundlevelpops_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * get_includedions()) + uniqueionindex] =
-        static_cast<float>(pop_store);
+    set_groundlevelpop(nonemptymgi, element, ion, static_cast<float>(pop_store));
   }
 
   return U_float;
@@ -227,7 +215,6 @@ void set_groundlevelpops_neutral(const ptrdiff_t nonemptymgi) {
     const int nions = get_nions(element);
     // Assign the species population to the neutral ion and set higher ions to MINPOP
     for (int ion = 0; ion < nions; ion++) {
-      const int uniqueionindex = get_uniqueionindex(element, ion);
       double nnion{NAN};
       if (ion == 0) {
         nnion = nnelement;
@@ -237,10 +224,9 @@ void set_groundlevelpops_neutral(const ptrdiff_t nonemptymgi) {
         nnion = 0.;
       }
       const auto groundpop =
-          static_cast<float>(nnion * stat_weight(element, ion, 0) /
-                             grid::ion_partfuncts_allcells[(nonemptymgi * get_includedions()) + uniqueionindex]);
+          static_cast<float>(nnion * stat_weight(element, ion, 0) / get_ion_partfunct(nonemptymgi, element, ion));
 
-      grid::ion_groundlevelpops_allcells[(nonemptymgi * get_includedions()) + uniqueionindex] = groundpop;
+      set_groundlevelpop(nonemptymgi, element, ion, groundpop);
     }
   }
 }
@@ -357,9 +343,7 @@ auto find_converged_nne(const int nonemptymgi, double nne_max, const bool force_
 // Calculate occupation population of a level assuming LTE excitation
 [[gnu::pure]] [[nodiscard]] auto calculate_levelpop_boltzmann(const int nonemptymgi, const int element, const int ion,
                                                               const int level) -> double {
-  assert_testmodeonly(element < get_nelements());
-  assert_testmodeonly(ion < get_nions(element));
-  assert_testmodeonly(level < get_nlevels(element, ion));
+  assert_valid_level(element, ion, level);
   const auto nnground = get_groundlevelpop(nonemptymgi, element, ion);
   if (level == 0) {
     return nnground;
@@ -393,8 +377,7 @@ auto find_converged_nne(const int nonemptymgi, double nne_max, const bool force_
 void calculate_cellpartfuncts(const int nonemptymgi, const int element) {
   const int nions = get_nions(element);
   for (int ion = 0; ion < nions; ion++) {
-    grid::ion_partfuncts_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * get_includedions()) +
-                                  get_uniqueionindex(element, ion)] = calculate_partfunct(element, ion, nonemptymgi);
+    set_ion_partfunct(nonemptymgi, element, ion, calculate_partfunct(element, ion, nonemptymgi));
   }
 }
 

@@ -44,11 +44,9 @@ void set_groundlevelpops(int nonemptymgi, int element, float nne, bool force_sah
 // during update_grid and stored to the grid.
 [[gnu::pure]] [[nodiscard]] inline DEVICE_FUNC auto get_groundlevelpop(const int nonemptymgi, const int element,
                                                                        const int ion) -> double {
-  assert_testmodeonly(element < get_nelements());
-  assert_testmodeonly(ion < get_nions(element));
+  assert_valid_ion(element, ion);
 
-  const double nn = grid::ion_groundlevelpops_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * get_includedions()) +
-                                                       get_uniqueionindex(element, ion)];
+  const double nn = grid::ion_groundlevelpops_allcells[get_cellionindex(nonemptymgi, element, ion)];
   if (nn < MINPOP) {
     if (grid::get_elem_massfrac(nonemptymgi, element) > 0) {
       return MINPOP;
@@ -58,11 +56,25 @@ void set_groundlevelpops(int nonemptymgi, int element, float nne, bool force_sah
   return nn;
 }
 
+// Store an ion's ground level population for a cell (usually calculated during update_grid).
+inline void set_groundlevelpop(const int nonemptymgi, const int element, const int ion, const float groundlevelpop) {
+  grid::ion_groundlevelpops_allcells[get_cellionindex(nonemptymgi, element, ion)] = groundlevelpop;
+}
+
+// Return an ion's partition function for a cell, which was precalculated during update_grid.
+[[gnu::pure]] [[nodiscard]] inline auto get_ion_partfunct(const int nonemptymgi, const int element, const int ion)
+    -> float {
+  return grid::ion_partfuncts_allcells[get_cellionindex(nonemptymgi, element, ion)];
+}
+
+// Store an ion's partition function for a cell.
+inline void set_ion_partfunct(const int nonemptymgi, const int element, const int ion, const float partfunct) {
+  grid::ion_partfuncts_allcells[get_cellionindex(nonemptymgi, element, ion)] = partfunct;
+}
+
 // Use the ground level population and partition function to get an ion population
 [[gnu::pure]] [[nodiscard]] inline auto get_nnion(const int nonemptymgi, const int element, const int ion) -> double {
-  const auto nnion = get_groundlevelpop(nonemptymgi, element, ion) *
-                     grid::ion_partfuncts_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * get_includedions()) +
-                                                   get_uniqueionindex(element, ion)] /
+  const auto nnion = get_groundlevelpop(nonemptymgi, element, ion) * get_ion_partfunct(nonemptymgi, element, ion) /
                      stat_weight(element, ion, 0);
   assert_testmodeonly(nnion >= 0.);
   assert_testmodeonly(std::isfinite(nnion));
