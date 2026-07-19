@@ -2440,7 +2440,7 @@ DEVICE_FUNC void snap_pos_to_cell(Vec3d& pos, const double time, const int celli
           printlnlog("packet dir [{:g}, {:g}, {:g}]", dir[0], dir[1], dir[2]);
 #endif
 
-          // this should not happen! Leave the check until late 2026 and it if never triggers on any runs, we can remove
+          // this should not happen! Leave the check until late 2026 and if it never triggers on any runs, we can remove
           // the check and correction code
           assert_always(!isoutside_error);
 

@@ -36,16 +36,11 @@ MPI_shared_array<const CoolingType> coolinglist_type;
 MPI_shared_array<const int> coolinglist_level;
 MPI_shared_array<const int> coolinglist_upperlevel;
 
-// MK: To reduce the work imbalance between different MPI tasks I introduced a diffusion
-// for kpkts, since it turned out that this work imbalance was largely dominated
-// by continuous collisional interactions. By introducing a diffusion time for kpkts
-// this loop is broken.
-// kpktdiffusion_timescale gives the relative fraction of a time step which individual
-// kpkts live.
+// Fraction of a time step that individual k-packets live before further processing. This
+// diffusion time breaks up the chains of continuous collisional interactions that would
+// otherwise dominate the work imbalance between MPI ranks.
 constexpr float kpktdiffusion_timescale{0.001};
 
-// calculate the cooling contribution list of individual levels/processes for an ion
-// oldcoolingsum is the sum of lower ion (of same element or all ions of lower elements) cooling contributions
 // Compute the collisional cooling rate of a single ion, summing the free-free, free-bound, collisional-excitation
 // and collisional-ionisation contributions. Accumulates the per-process totals (C_ff/C_fb/C_exc/C_ionisation),
 // records each individual term in ion_contribs, and returns the ion's total cooling rate.

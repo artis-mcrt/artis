@@ -396,7 +396,7 @@ void print_level_rates(const int nonemptymgi, const int timestep, const int elem
     if (nonzero_rate_in || nonzero_rate_out) {
       const double epsilon_trans = fabs(epsilon(element, ion, level) - epsilon(element, selected_ion, selected_level));
       const double nu_trans = epsilon_trans / H;
-      const double lambda = 1e8 * CLIGHT / nu_trans;  // should be in Angstroms
+      const double lambda = 1e8 * CLIGHT / nu_trans;  // [Angstroms]
       const double level_rate_in = rad_bb_in + coll_bb_in + ntcoll_bb_in + rad_bf_in + coll_bf_in + ntcoll_bf_in;
       const double level_rate_out = rad_bb_out + coll_bb_out + ntcoll_bb_out + rad_bf_out + coll_bf_out + ntcoll_bf_out;
       const double level_percent_in = level_rate_in / total_rate_in * 100.;

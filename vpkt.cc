@@ -183,11 +183,11 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
 
   std::ranges::fill(tau_vpkt, 0.);
 
-  atomicadd(nvpkt_created, 1);  // increment the number of virtual packet in the given timestep
+  atomicadd(nvpkt_created, 1);
 
   const auto vel_vec = get_velocity(rpkt.pos, t_start);
 
-  // ------------ SCATTERING EVENT: dipole function --------------------
+  // Scattering event: dipole function
 
   // MACROATOM and KPKT: isotropic emission
   double pn{1 / (4 * PI)};
@@ -407,7 +407,7 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
     atomicadd(nvpkt_esc_from_macroatom, 1);
   }
 
-  // -------------- final stokes vector ---------------
+  // Final Stokes vector
 
   if (VPKT_WRITE_CONTRIBS) {
     std::format_to(std::back_inserter(vpkt_contrib_row), " {:g} {:g}", t_arrive / DAY, nu_rf);
