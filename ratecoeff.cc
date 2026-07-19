@@ -74,11 +74,13 @@ auto alpha_sp_integrand(const double nu_minus_nu_edge, const double nu_edge, con
   return (2 / CLIGHTSQUARED) * sigma_bf * pow2(nu_edge + nu_minus_nu_edge) * exp(-HOVERKB * nu_minus_nu_edge / T_e);
 }
 
-// Integrand to calculate the rate coefficient for spontaneous recombination
-auto alpha_sp_E_integrand(const double nu, const double nu_edge, const float T_e,
+// Energy-weighted integrand used to sample the frequency of a spontaneous free-bound emission
+auto alpha_sp_E_integrand(const double nu_minus_nu_edge, const double nu_edge, const float T_e,
                           const std::span<const float> photoion_xs) -> double {
+  const double nu = nu_edge + nu_minus_nu_edge;
   const auto sigma_bf = photoionisation_crosssection_fromtable(photoion_xs, nu_edge, nu);
-  return (2 / CLIGHTSQUARED) * sigma_bf * pow3(nu) / nu_edge * exp(-HOVERKB * nu / T_e);
+  // The omitted exp(-h nu_edge / kT_e) factor is constant across the continuum and cancels from the normalised CDF.
+  return (2 / CLIGHTSQUARED) * sigma_bf * pow3(nu) / nu_edge * exp(-HOVERKB * nu_minus_nu_edge / T_e);
 }
 
 // Integrand to calculate the rate coefficient for photoionisation corrected for stimulated recombination.
@@ -527,12 +529,21 @@ DEVICE_FUNC auto select_continuum_nu(int element, const int lowerion, const int 
 
   const double zrand = 1. - rng_uniform(rngstate);  // Make sure that 0 < zrand <= 1
 
-  const double deltanu = (nu_max_phixs - nu_threshold) / npieces;
+  const double nu_range = nu_max_phixs - nu_threshold;
+  const double deltanu = nu_range / npieces;
   double error{NAN};
 
-  auto total_alpha_sp =
-      integrator<31>([&](const double nu) { return alpha_sp_E_integrand(nu, nu_threshold, T_e, photoion_xs); },
-                     nu_threshold, nu_max_phixs, RATECOEFF_INTEGRAL_ACCURACY, &error);
+  const auto total_alpha_sp = integrator<31>(
+      [&](const double nu_minus_nu_edge) {
+        return alpha_sp_E_integrand(nu_minus_nu_edge, nu_threshold, T_e, photoion_xs);
+      },
+      0., nu_range, RATECOEFF_INTEGRAL_ACCURACY, &error);
+
+  assert_testmodeonly(std::isfinite(total_alpha_sp));
+  assert_testmodeonly(total_alpha_sp > 0.);
+  if (!(total_alpha_sp > 0.) || !std::isfinite(total_alpha_sp)) {
+    return nu_threshold;
+  }
 
   double alpha_sp_old = total_alpha_sp;
   double alpha_sp = total_alpha_sp;
@@ -540,11 +551,14 @@ DEVICE_FUNC auto select_continuum_nu(int element, const int lowerion, const int 
   int i = 1;
   for (; i < npieces; i++) {
     alpha_sp_old = alpha_sp;
-    const double xlow = nu_threshold + (i * deltanu);
+    const double nu_minus_nu_edge_low = i * deltanu;
 
     // Spontaneous recombination and bf-cooling coefficient don't depend on the radiation field
-    alpha_sp = integrator<31>([&](const double nu) { return alpha_sp_E_integrand(nu, nu_threshold, T_e, photoion_xs); },
-                              xlow, nu_max_phixs, RATECOEFF_INTEGRAL_ACCURACY, &error);
+    alpha_sp = integrator<31>(
+        [&](const double nu_minus_nu_edge) {
+          return alpha_sp_E_integrand(nu_minus_nu_edge, nu_threshold, T_e, photoion_xs);
+        },
+        nu_minus_nu_edge_low, nu_range, RATECOEFF_INTEGRAL_ACCURACY, &error);
 
     if (zrand >= alpha_sp / total_alpha_sp) {
       break;
