@@ -1,3 +1,7 @@
+// The per-timestep grid update: for each nonempty model cell, normalises the Monte Carlo
+// estimators collected during the previous timestep and solves for the new radiation field
+// parameters, electron temperature, ion/level populations, and cooling rates.
+
 #include "update_grid.h"
 
 #include <algorithm>

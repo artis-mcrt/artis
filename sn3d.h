@@ -1,3 +1,7 @@
+// Small shared helpers for the simulation executables: the already-running lock check and
+// inline numeric utilities (exact vector resize, fractional-tolerance comparison, bin-index
+// lookups).
+
 #ifndef SN3D_H
 #define SN3D_H
 

@@ -1,3 +1,8 @@
+// The model grid and propagation grid: reads the input ejecta model (model.txt), sets up cell
+// densities, abundances, and temperatures, maps model cells onto the propagation grid (1D
+// spherical, 2D cylindrical, or 3D Cartesian), and provides the cell geometry and
+// boundary-crossing calculations used during packet propagation.
+
 #include "grid.h"
 
 #include <algorithm>

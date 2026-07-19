@@ -1,3 +1,6 @@
+// Physical constants (CGS units), unit conversions, and low-level helpers (atomicadd,
+// cache-line alignment) used throughout the code.
+
 #ifndef CONSTANTS_H
 #define CONSTANTS_H
 

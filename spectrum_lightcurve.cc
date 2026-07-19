@@ -1,3 +1,6 @@
+// Binning of escaped packets into spectra and light curves for each observer direction bin,
+// optionally decomposed into the emission and absorption contributions of each atomic process.
+
 #include "spectrum_lightcurve.h"
 
 #include <algorithm>

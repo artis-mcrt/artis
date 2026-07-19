@@ -1,3 +1,6 @@
+// Inline accessors for the atomic dataset: elements, ions, levels, transitions, and
+// photoionisation cross-section tables.
+
 #ifndef ATOMIC_H
 #define ATOMIC_H
 

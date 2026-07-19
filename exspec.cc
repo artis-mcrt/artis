@@ -1,3 +1,7 @@
+// Main program of the exspec post-processing tool: reads the packet files written by an sn3d
+// run and bins the escaped packets into spectra and light curves for each observer direction
+// bin, optionally with per-process emission and absorption contributions.
+
 #include "exspec.h"
 
 #include <unistd.h>

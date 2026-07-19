@@ -1,3 +1,5 @@
+// Declarations for the radiation field model (radfield.cc).
+
 #ifndef RADFIELD_H
 #define RADFIELD_H
 

@@ -1,3 +1,7 @@
+// Global simulation state: the core data structs (elements, ions, levels, transitions,
+// timesteps, cell cache) and the globals namespace of shared arrays, estimators, and run
+// parameters used throughout the code.
+
 #ifndef GLOBALS_H
 #define GLOBALS_H
 

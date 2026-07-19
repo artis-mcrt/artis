@@ -1,3 +1,8 @@
+// The radiation field model: accumulates Monte Carlo estimators of the radiation field
+// (full-spectrum and binned J_nu, plus detailed bound-bound Jb_lu estimators) and fits diluted
+// blackbodies (W, T_R) per cell and per frequency bin for use in the photoionisation and
+// heating rates.
+
 #include "radfield.h"
 
 #include <algorithm>

@@ -1,3 +1,7 @@
+// Radioactive decays: nuclide properties, decay paths, time-dependent nuclide abundances
+// (Bateman equation solutions), and the energy release rates and decay-time sampling used to
+// set up the radioactive energy pellets.
+
 #include "decay.h"
 
 #include <algorithm>

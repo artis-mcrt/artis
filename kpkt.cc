@@ -1,3 +1,7 @@
+// k-packets: packets of thermal kinetic energy. Computes the cooling rates of all processes
+// (free-free, free-bound, collisional excitation and ionisation) and samples a cooling channel
+// to convert a k-packet into radiation or a macro-atom excitation.
+
 #include "kpkt.h"
 
 #include <algorithm>

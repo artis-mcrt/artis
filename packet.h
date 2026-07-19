@@ -1,3 +1,6 @@
+// The Packet struct holding the full state of a Monte Carlo energy packet, and the enums for
+// the packet types and interaction/emission types.
+
 #ifndef PACKET_H
 #define PACKET_H
 

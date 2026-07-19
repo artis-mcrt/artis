@@ -1,3 +1,5 @@
+// Declarations for virtual packet spectra (vpkt.cc).
+
 #ifndef VPKT_H
 #define VPKT_H
 

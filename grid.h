@@ -1,3 +1,5 @@
+// Declarations for the model/propagation grid (grid.cc) and inline cell-property accessors.
+
 #ifndef GRID_H
 #define GRID_H
 

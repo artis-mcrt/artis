@@ -1,3 +1,6 @@
+// Inline 3-vector geometry and special relativity helpers: dot/cross products, Doppler
+// factors, angle aberration, and observer-frame/comoving-frame transformations.
+
 #ifndef VECTORS_H
 #define VECTORS_H
 

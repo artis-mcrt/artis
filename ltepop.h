@@ -1,3 +1,5 @@
+// Declarations for LTE/approximate-NLTE level populations and ionisation balance (ltepop.cc).
+
 #ifndef LTEPOP_H
 #define LTEPOP_H
 

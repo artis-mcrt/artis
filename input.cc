@@ -1,3 +1,7 @@
+// Reading of the main input files: the atomic dataset (adata.txt, compositiondata.txt,
+// transitiondata.txt, phixsdata_v2.txt) and the run parameters (input.txt), plus the setup of
+// the simulation timesteps.
+
 #include "input.h"
 
 #include <algorithm>

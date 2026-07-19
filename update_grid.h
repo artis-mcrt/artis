@@ -1,3 +1,5 @@
+// Declarations for the per-timestep grid update (update_grid.cc).
+
 #ifndef UPDATE_GRID_H
 #define UPDATE_GRID_H
 

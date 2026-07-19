@@ -1,3 +1,7 @@
+// The macro-atom machinery for line and continuum interactions: after an absorption event, the
+// macro-atom performs internal radiative and collisional transitions between levels and ions
+// until the packet energy is re-emitted as radiation or converted to thermal energy (a k-packet).
+
 #include "macroatom.h"
 
 #include <algorithm>

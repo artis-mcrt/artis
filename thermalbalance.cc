@@ -1,3 +1,7 @@
+// The electron thermal balance: computes the heating rates (bound-free, free-free, collisional
+// deexcitation, and non-thermal) and solves heating = cooling for the electron temperature T_e
+// of each cell.
+
 #include "thermalbalance.h"
 
 #include <algorithm>

@@ -1,3 +1,6 @@
+// Initialisation of the Monte Carlo energy packets (pellets of radioactive decay energy
+// distributed through the ejecta) and reading/writing of packet save files.
+
 #include "packet.h"
 
 #include <algorithm>

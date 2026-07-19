@@ -1,3 +1,5 @@
+// Declarations for gamma-ray packet transport (gammapkt.cc).
+
 #ifndef GAMMAPKT_H
 #define GAMMAPKT_H
 

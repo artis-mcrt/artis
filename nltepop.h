@@ -1,3 +1,5 @@
+// Declarations for the NLTE level population solver (nltepop.cc).
+
 #ifndef NLTEPOP_H
 #define NLTEPOP_H
 

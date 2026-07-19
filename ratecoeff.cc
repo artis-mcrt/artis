@@ -1,3 +1,7 @@
+// Photoionisation, recombination, and bound-free heating/cooling rate coefficients:
+// precalculates tables of the temperature-dependent integrals at startup and evaluates the
+// radiation-field-dependent photoionisation coefficients during the simulation.
+
 #include "ratecoeff.h"
 
 #include <algorithm>

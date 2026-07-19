@@ -1,3 +1,6 @@
+// Declarations for r-packet propagation (rpkt.cc) plus inline helpers for line-list searches
+// and the continuum opacity structure.
+
 #ifndef RPKT_H
 #define RPKT_H
 

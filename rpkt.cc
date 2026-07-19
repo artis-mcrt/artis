@@ -1,3 +1,7 @@
+// r-packet (UVOIR photon packet) propagation: bound-free and free-free continuum opacity,
+// distances to the next line or continuum event, and the interaction events themselves
+// (electron scattering, continuum absorption, and line absorption into a macro-atom).
+
 #include "rpkt.h"
 
 #include <algorithm>

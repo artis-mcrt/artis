@@ -1,3 +1,5 @@
+// Declarations for k-packet (thermal energy packet) handling (kpkt.cc).
+
 #ifndef KPKT_H
 #define KPKT_H
 

@@ -1,3 +1,8 @@
+// Non-thermal energy deposition by the fast leptons produced in radioactive decays: solves the
+// Spencer-Fano equation for the electron degradation spectrum (Kozma & Fransson 1992) to obtain
+// the fractions of the deposited energy going into heating, ionisation, and excitation, and the
+// resulting non-thermal ionisation and excitation rates.
+
 #include "nonthermal.h"
 
 #include <algorithm>

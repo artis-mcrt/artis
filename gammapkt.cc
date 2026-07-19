@@ -1,3 +1,7 @@
+// Gamma-ray packet transport: radioactive decay line spectra, Compton scattering, photoelectric
+// absorption, and pair production, propagating gamma packets through the ejecta until they
+// deposit their energy or escape.
+
 #include "gammapkt.h"
 
 #include <algorithm>

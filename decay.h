@@ -1,3 +1,5 @@
+// Declarations for the radioactive decay module (decay.cc).
+
 #ifndef DECAY_H
 #define DECAY_H
 

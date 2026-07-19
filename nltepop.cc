@@ -1,3 +1,7 @@
+// The full NLTE level population solver: assembles the statistical equilibrium rate matrix
+// (radiative and collisional bound-bound and bound-free rates, plus non-thermal ionisation)
+// for all levels of all ions of an element and solves for the level populations.
+
 #include <algorithm>
 #include <chrono>
 #include <cmath>
