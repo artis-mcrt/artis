@@ -74,7 +74,6 @@ void calculate_heating_rates(const int nonemptymgi, const float T_e, const float
                              HeatingCoolingRates& heatingcoolingrates, const std::span<const double> bfheatingcoeffs) {
   double C_deexc = 0.;
 
-  // double C_recomb = 0.;
   double bfheating = 0.;
   double ffheating = 0.;
 

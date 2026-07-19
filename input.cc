@@ -2035,24 +2035,6 @@ void setup_timesteps() {
       assert_always(false);
   }
 
-  // to limit the timestep durations
-  // const double maxt = 0.5 * DAY;
-  // for (int n = globals::ntimesteps - 1; n > 0; n--)
-  // {
-  //   if (globals::timesteps[n].width > maxt)
-  //   {
-  //     const double boundaryshift = globals::timesteps[n].width - maxt;
-  //     globals::timesteps[n].width -= boundaryshift;
-  //     globals::timesteps[n].start += boundaryshift;
-  //     globals::timesteps[n - 1].width += boundaryshift;
-  //   }
-  //   else if (n < globals::ntimesteps - 1 && globals::timesteps[n + 1].width > maxt)
-  //   {
-  //     printout("TIME: Keeping logarithmic durations for timesteps <= %d\n", n);
-  //   }
-  // }
-  // assert_always(globals::timesteps[0].width <= maxt); // no solution is possible with these constraints!
-
   // and add a dummy timestep which contains the endtime
   // of the calculation
   globals::timesteps[globals::ntimesteps].start = globals::tmax;

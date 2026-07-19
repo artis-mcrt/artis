@@ -543,15 +543,6 @@ void init() {
         const int lowerlevel = lower_uniquelevelindex - ionuniquelevelindexstart;
 
         bool addline = false;
-        // if (ionstage == 1 && lowerlevel == 6 && upperlevel == 55)
-        //   addline = true;
-        // else if (ionstage == 1 && lowerlevel == 10 && upperlevel == 104)
-        //   addline = true;
-        // else if (ionstage == 1 && lowerlevel == 10 && upperlevel == 112)
-        //   addline = true;
-        // else if (ionstage == 2 && lowerlevel == 9 && upperlevel == 64)
-        //   addline = true;
-
         if (lowerlevel <= 15) {  // selection for detailed estimators (by lower-level index)
           addline = true;
         }

@@ -503,8 +503,6 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
 
   grid::grey_depth_allcells[nonemptymgi] = grey_optical_depth;
 
-  // grey_optical_depth = compton_optical_depth;
-
   if ((grey_optical_depth >= globals::optical_depth_is_thick) && (nts < globals::num_grey_timesteps)) {
     printlnlog("timestep {} cell {} is treated in grey approximation (chi_grey {:g} [cm2/g], tau {:g} >= {:g})", nts,
                mgi, grid::get_kappagrey(nonemptymgi), grey_optical_depth, globals::optical_depth_is_thick);

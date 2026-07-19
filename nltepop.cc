@@ -1071,8 +1071,6 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
       std::ranges::copy(vec_x, vec_x_best.begin());
       error_best = error;
     }
-    // printlnlog("  NLTE pops LU_refine: After {} iterations, solution vector has a max residual of {:g}", iteration,
-    //            error);
     if (error < 1e-40) {
       break;
     }
@@ -1404,7 +1402,6 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
     }
 
     // detailed levels stats (very verbose, only for debugging)
-    // const bool print_detailed_stats = ((atomic_number == 26) && ((timestep % 5) == 0) && (nlte_iter == 0))
     const bool print_detailed_level_stats = false;
     if (print_detailed_level_stats) {
       const int ionstage = 2;

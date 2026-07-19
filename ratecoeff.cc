@@ -101,7 +101,6 @@ auto bfcooling_integrand(const double nu_minus_nu_edge, const double nu_edge, co
                          const std::span<const float> photoion_xs) -> double {
   const float sigma_bf = photoionisation_crosssection_fromtable(photoion_xs, nu_edge, nu_minus_nu_edge + nu_edge);
 
-  // return sigma_bf * (1-nu_edge/nu) * (2 * H / CLIGHTSQUARED) * pow(nu,3) * exp(-HOVERKB*nu/T);
   return sigma_bf * nu_minus_nu_edge * (2 * H / CLIGHTSQUARED) * (nu_minus_nu_edge + nu_edge) *
          (nu_minus_nu_edge + nu_edge) * exp(-HOVERKB * nu_minus_nu_edge / T_e);
 }
@@ -150,7 +149,6 @@ void precalculate_rate_coefficient_integrals() {
           const double phixstargetprobability = get_phixsprobability(element, ion, level, phixstargetindex);
           const double statw_upper = stat_weight(element, ion + 1, upperlevel);
 
-          // const double E_threshold = epsilon(element,ion+1,upperlevel) - epsilon(element,ion,level);
           const double E_threshold = get_phixs_threshold(element, ion, level, phixstargetindex);
           const double nu_threshold = E_threshold / H;
           const double nu_max_phixs =
@@ -614,9 +612,6 @@ auto calculate_ionrecombcoeff(const int nonemptymgi, const float T_e, const int 
   int upper_nlevels = 0;
   if (per_groundmultipletpop) {
     // assume that photoionisation of the ion below is only to the ground multiplet levels of the current ion
-    // const int nphixstargets = get_nphixstargets(element, lowerion, 0);
-    // upper_nlevels = get_phixsupperlevel(element, lowerion, 0, nphixstargets - 1) + 1;
-
     upper_nlevels = get_nlevels_groundterm(element, lowerion + 1);
   } else {
     upper_nlevels = get_nlevels(element, lowerion + 1);

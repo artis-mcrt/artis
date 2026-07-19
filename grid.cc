@@ -2068,7 +2068,8 @@ void read_ejecta_model() {
       std::abort();
     }
 
-    //   assert_always(posmatch_zyx ^ posmatch_xyz);  // xor because if both match then probably an infinity occurred
+    // posmatch_xyz and posmatch_zyx should be mutually exclusive: if both column orders matched, an
+    // infinity probably occurred in the calculated positions
     if (posmatch_xyz) {
       printlnlog("Cell positions in model.txt are consistent with calculated values when x-y-z column order is used.");
     }

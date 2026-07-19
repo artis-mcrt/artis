@@ -199,12 +199,6 @@ DEVICE_FUNC inline auto get_nphixstargets(const int element, const int ion, cons
 [[gnu::pure]] [[nodiscard]] inline auto photoionisation_crosssection_fromtable(std::span<const float> photoion_xs,
                                                                                const double nu_edge, const double nu)
     -> float {
-  // if (nu < nu_edge || nu > nu_edge * 1.05)
-  //   return 0;
-  // else
-  //   return 1.;
-  // return 1. * pow(nu_edge / nu, 3);
-
   float sigma_bf = 0.;
 
   if constexpr (PHIXS_CLASSIC_NO_INTERPOLATION) {
