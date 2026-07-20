@@ -621,6 +621,8 @@ void remove_temp_vpkt_file(const int nts, const int my_rank) {
   }
 }
 
+// read the virtual packet configuration from vpkt.txt: the observer directions, wavelength
+// ranges, emission-time window, and the optical-depth and cell-selection limits
 void read_vpktparameterfile() {
   FILE* input_file = fopen_required("vpkt.txt", "r");
 

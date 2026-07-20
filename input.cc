@@ -1303,6 +1303,9 @@ void read_levels_and_transitions(std::vector<TempEnergyLevel>& temp_alllevels,
   printlnlog("nbfcheck {}", nbfcheck);
 }
 
+// read the full atomic dataset: the composition (compositiondata.txt), then the levels and
+// transitions (adata.txt, transitiondata.txt) and photoionisation cross-sections
+// (phixsdata_v2.txt) for every included ion, building the global element/ion/level/line lists
 void read_atomicdata_files() {
   auto nlevelsmax_readin = read_compositiondata();
 

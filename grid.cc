@@ -343,6 +343,8 @@ void allocate_nonemptycells_composition_cooling() {
   nltepops_allcells = MPI_shared_array<double>(nonempty_npts_model_ptrdifft * globals::total_nlte_levels, -1.);
 }
 
+// build the mapping between model cells and propagation cells, then allocate the per-cell
+// shared-memory arrays (populations, estimators, temperatures) for the nonempty model cells only
 void allocate_nonemptymodelcells() {
   // Determine the number of simulation cells associated with the model cells
   std::ranges::fill(modelgrid_numpropcells, 0);
@@ -1828,6 +1830,9 @@ void set_elements_uppermost_ion(const int nonemptymgi, const int element, const 
   return kappa_float;
 }
 
+// read the input ejecta model from model.txt, auto-detecting its dimensionality (1D spherical,
+// 2D cylindrical, or 3D Cartesian) and reading the per-cell densities, abundances, and any
+// optional extra columns into the model grid
 void read_ejecta_model() {
   auto fmodel = fstream_required("model.txt", std::ios::in);
   std::string line;

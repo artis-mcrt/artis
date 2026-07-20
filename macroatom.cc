@@ -193,7 +193,8 @@ DEVICE_FUNC void calculate_macroatom_transitionrates(std::span<double> levelrate
   assert_always(rate_total >= 0.0 && std::isfinite(rate_total));
 }
 
-// radiative deexcitation
+// radiative deexcitation: randomly select a downward line transition (weighted by its rate out
+// of the current level) and convert the macro-atom into an emitted r-packet on that line
 void do_macroatom_raddeexcitation(Packet& pkt, const int ionuniquelevelindexstart, const int uniquelevelindex,
                                   const int activatingline, const double epsilon_current, const double totalrate,
                                   const int nonemptymgi) {
