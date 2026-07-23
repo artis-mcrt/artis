@@ -6,6 +6,7 @@
 #include <new>
 #include <numbers>
 #include <string_view>
+#include <version>
 
 [[gnu::const]] constexpr auto pow2(auto x) { return x * x; }
 [[gnu::const]] constexpr auto pow3(auto x) { return x * x * x; }
