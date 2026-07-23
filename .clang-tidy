@@ -47,6 +47,7 @@ Checks: [
         -readability-identifier-length,
         -readability-function-cognitive-complexity,
         -readability-magic-numbers,
+        -zircon-temporary-objects,
     ]
 WarningsAsErrors: '*,-clang-diagnostic-unused-function'
 FormatStyle: file
