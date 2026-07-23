@@ -9,7 +9,6 @@
 #include <functional>
 #include <ios>
 #include <numeric>
-#include <print>
 #include <ranges>
 #include <span>
 #include <sstream>
@@ -2520,35 +2519,35 @@ void solve_spencerfano(const int nonemptymgi, const int timestep, const int iter
 void write_restart_data(FILE* gridsave_file) {
   printlog("non-thermal solver, ");
 
-  std::println(gridsave_file, "{}", 24724518);  // special number marking the beginning of NT data
-  std::println(gridsave_file, "{} {:a} {:a}", SFPTS, SF_EMIN, SF_EMAX);
+  fprintf(gridsave_file, "%d\n", 24724518);  // special number marking the beginning of NT data
+  fprintf(gridsave_file, "%d %la %la\n", SFPTS, SF_EMIN, SF_EMAX);
 
   for (int nonemptymgi = 0; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
-    std::print(gridsave_file, "{} {:a} ", nonemptymgi, deposition_rate_density_all_cells[nonemptymgi]);
+    fprintf(gridsave_file, "%d %la ", nonemptymgi, deposition_rate_density_all_cells[nonemptymgi]);
 
     if (NT_ON && NT_SOLVE_SPENCERFANO) {
       check_auger_probabilities(nonemptymgi);
 
-      std::println(gridsave_file, "{:a} {:a} {:a} {:a}", nt_solution[nonemptymgi].nneperion_when_solved,
-                   nt_solution[nonemptymgi].frac_heating, nt_solution[nonemptymgi].frac_ionisation,
-                   nt_solution[nonemptymgi].frac_excitation);
+      fprintf(gridsave_file, "%a %a %a %a\n", nt_solution[nonemptymgi].nneperion_when_solved,
+              nt_solution[nonemptymgi].frac_heating, nt_solution[nonemptymgi].frac_ionisation,
+              nt_solution[nonemptymgi].frac_excitation);
 
       for (int uniqueionindex = 0; uniqueionindex < get_includedions(); uniqueionindex++) {
         const auto& celliondata = get_cell_allions_data(nonemptymgi)[uniqueionindex];
-        std::print(gridsave_file, "{:a} ", celliondata.fracdep_ionisation_ion);
-        std::print(gridsave_file, "{:a} ", celliondata.eff_ionpot);
+        fprintf(gridsave_file, "%la ", celliondata.fracdep_ionisation_ion);
+        fprintf(gridsave_file, "%a ", celliondata.eff_ionpot);
 
         for (int a = 0; a <= NT_MAX_AUGER_ELECTRONS; a++) {
-          std::print(gridsave_file, "{:a} {:a} ", celliondata.prob_num_auger[a], celliondata.ionenfrac_num_auger[a]);
+          fprintf(gridsave_file, "%a %a ", celliondata.prob_num_auger[a], celliondata.ionenfrac_num_auger[a]);
         }
       }
 
       // write NT excitations
-      std::println(gridsave_file, "{}", nt_solution[nonemptymgi].frac_excitations_list_size);
+      fprintf(gridsave_file, "%d\n", nt_solution[nonemptymgi].frac_excitations_list_size);
 
       for (const auto& excitation : get_cell_ntexcitations(nonemptymgi)) {
-        std::println(gridsave_file, "{:a} {:a} {}", excitation.frac_deposition, excitation.ratecoeffperdeposition,
-                     excitation.alltransindex);
+        fprintf(gridsave_file, "%la %la %d\n", excitation.frac_deposition, excitation.ratecoeffperdeposition,
+                excitation.alltransindex);
       }
     }
   }

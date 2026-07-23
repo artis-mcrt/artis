@@ -2118,46 +2118,44 @@ void write_grid_restart_data(const int timestep) {
 
   FILE* gridsave_file = fopen_required(filename, "w");
 
-  std::print(gridsave_file, "{} ", globals::ntimesteps);
-  std::print(gridsave_file, "{} ", globals::nprocs);
+  fprintf(gridsave_file, "%d ", globals::ntimesteps);
+  fprintf(gridsave_file, "%d ", globals::nprocs);
 
   for (int nts = 0; nts < globals::ntimesteps; nts++) {
-    std::print(
-        gridsave_file,
-        "{:a} {:a} {:a} {:a} {:a} {:a} {:a} {:a} {:a} {:a} {:a} {:a} {:a} {:a} {:a} {:a} {:a} {:a} {:a} {:a} {:a} {} ",
-        globals::timesteps[nts].gamma_dep, globals::timesteps[nts].gamma_dep_discrete,
-        globals::timesteps[nts].positron_dep, globals::timesteps[nts].positron_dep_discrete,
-        globals::timesteps[nts].positron_emission, globals::timesteps[nts].eps_positron_ana_power,
-        globals::timesteps[nts].electron_dep, globals::timesteps[nts].electron_dep_discrete,
-        globals::timesteps[nts].electron_emission, globals::timesteps[nts].eps_electron_ana_power,
-        globals::timesteps[nts].alpha_dep, globals::timesteps[nts].alpha_dep_discrete,
-        globals::timesteps[nts].alpha_emission, globals::timesteps[nts].eps_alpha_ana_power,
-        globals::timesteps[nts].spfission_dep_discrete, globals::timesteps[nts].eps_spfission_ana_power,
-        globals::timesteps[nts].qdot_betaminus, globals::timesteps[nts].qdot_alpha,
-        globals::timesteps[nts].qdot_spfission, globals::timesteps[nts].qdot_total,
-        globals::timesteps[nts].gamma_emission, globals::timesteps[nts].pellet_decays);
+    fprintf(gridsave_file, "%la %la %la %la %la %la %la %la %la %la %la %la %la %la %la %la %la %la %la %la %la %d ",
+            globals::timesteps[nts].gamma_dep, globals::timesteps[nts].gamma_dep_discrete,
+            globals::timesteps[nts].positron_dep, globals::timesteps[nts].positron_dep_discrete,
+            globals::timesteps[nts].positron_emission, globals::timesteps[nts].eps_positron_ana_power,
+            globals::timesteps[nts].electron_dep, globals::timesteps[nts].electron_dep_discrete,
+            globals::timesteps[nts].electron_emission, globals::timesteps[nts].eps_electron_ana_power,
+            globals::timesteps[nts].alpha_dep, globals::timesteps[nts].alpha_dep_discrete,
+            globals::timesteps[nts].alpha_emission, globals::timesteps[nts].eps_alpha_ana_power,
+            globals::timesteps[nts].spfission_dep_discrete, globals::timesteps[nts].eps_spfission_ana_power,
+            globals::timesteps[nts].qdot_betaminus, globals::timesteps[nts].qdot_alpha,
+            globals::timesteps[nts].qdot_spfission, globals::timesteps[nts].qdot_total,
+            globals::timesteps[nts].gamma_emission, globals::timesteps[nts].pellet_decays);
   }
 
-  std::print(gridsave_file, "{} ", timestep);
+  fprintf(gridsave_file, "%d ", timestep);
 
   for (int nonemptymgi = 0; nonemptymgi < get_nonempty_npts_model(); nonemptymgi++) {
     const int mgi = get_mgi_of_nonemptymgi(nonemptymgi);
 
     assert_always(globals::dep_estimator_gamma[nonemptymgi] >= 0.);
-    std::print(gridsave_file, "{} {:a} {:a} {:a} {:a} {} {:a} {:a} {:a} {:a} {:a} {:a}", mgi, get_TR(nonemptymgi),
-               get_Te(nonemptymgi), get_W(nonemptymgi), get_TJ(nonemptymgi),
-               static_cast<int>(thick_allcells[nonemptymgi]), globals::dep_estimator_gamma[nonemptymgi],
-               globals::dep_estimator_positron[nonemptymgi], globals::dep_estimator_electron[nonemptymgi],
-               globals::dep_estimator_alpha[nonemptymgi], nne_allcells[nonemptymgi], nnetot_allcells[nonemptymgi]);
+    fprintf(gridsave_file, "%d %a %a %a %a %d %la %la %la %la %a %a", mgi, get_TR(nonemptymgi), get_Te(nonemptymgi),
+            get_W(nonemptymgi), get_TJ(nonemptymgi), static_cast<int>(thick_allcells[nonemptymgi]),
+            globals::dep_estimator_gamma[nonemptymgi], globals::dep_estimator_positron[nonemptymgi],
+            globals::dep_estimator_electron[nonemptymgi], globals::dep_estimator_alpha[nonemptymgi],
+            nne_allcells[nonemptymgi], nnetot_allcells[nonemptymgi]);
 
     if constexpr (USE_LUT_PHOTOION) {
       for (int i = 0; i < globals::nbfcontinua_ground; i++) {
         const ptrdiff_t estimindex = (static_cast<ptrdiff_t>(nonemptymgi) * globals::nbfcontinua_ground) + i;
-        std::print(gridsave_file, " {:a} {:a}", globals::corrphotoionrenorm[estimindex],
-                   globals::gammaestimator[estimindex]);
+        fprintf(gridsave_file, " %la %la", globals::corrphotoionrenorm[estimindex],
+                globals::gammaestimator[estimindex]);
       }
     }
-    std::println(gridsave_file, "");
+    fprintf(gridsave_file, "\n");
   }
 
   // the order of these calls is very important!
