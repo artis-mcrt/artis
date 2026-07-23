@@ -69,8 +69,10 @@ constexpr double MINDEPRATE = 0.;
 // Bohr radius squared in cm^2
 constexpr double A_naught_squared = 2.800285203e-17;
 
-constexpr std::array shellnames{"K ", "L1", "L2", "L3", "M1", "M2", "M3", "M4", "M5", "N1", "N2", "N3", "N4", "N5",
-                                "N6", "N7", "O1", "O2", "O3", "O4", "O5", "O6", "O7", "P1", "P2", "P3", "P4", "Q1"};
+constexpr std::array shellnames{
+    "K ", "L1", "L2", "L3", "M1", "M2", "M3", "M4", "M5", "N1", "N2", "N3", "N4", "N5",
+    "N6", "N7", "O1", "O2", "O3", "O4", "O5", "O6", "O7", "P1", "P2", "P3", "P4", "Q1",
+};
 
 std::vector<std::vector<double>> elements_electron_binding;
 std::vector<std::vector<int>> allions_shell_occupancies;
@@ -116,7 +118,7 @@ static_assert(NT_MAX_AUGER_ELECTRONS == 0 || !NT_USE_VALENCE_IONPOTENTIAL,
 // energy grid on which solution is sampled [eV]
 constexpr auto engrid(int index) -> double { return SF_EMIN + (index * DELTA_E); }
 
-const auto logengrid = []() {
+const auto logengrid = [] {
   std::vector<double> _logengrid(SFPTS);
   for (int i = 0; i < SFPTS; i++) {
     _logengrid[i] = std::log(engrid(i));
@@ -141,7 +143,7 @@ constexpr auto sourcevec(const int index) {
 
 // the energy injection rate density (integral of E * S(e) dE) in eV/s/cm3 that the Spencer-Fano equation is solved for.
 // This is arbitrary and and the solution will be scaled to match the actual energy deposition rate density.
-constexpr double E_init_ev = []() {
+constexpr double E_init_ev = [] {
   double integral = 0.;
   for (int s = 0; s < SFPTS; s++) {
     integral += sourcevec(s) * DELTA_E * engrid(s);
@@ -154,7 +156,7 @@ constexpr double E_init_ev = []() {
 // sum that includes point i itself. This matches the convention used for the integrals over y(E') on the
 // left-hand side, where sfmatrix_add_excitation() and sfmatrix_add_ionisation() both sum from j = i with
 // weight DELTA_E, and the convention used for E_init_ev above.
-constexpr auto rhsvec = []() {
+constexpr auto rhsvec = [] {
   std::array<double, SFPTS> _rhsvec{};
   double source_integral_to_SF_EMAX = 0.;
   for (int i = SFPTS - 1; i >= 0; i--) {
@@ -1992,7 +1994,7 @@ auto sfmatrix_solve(const std::span<const double> sfmatrix) -> std::array<double
   const Eigen::Map<const Eigen::Matrix<double, SFPTS, SFPTS, Eigen::RowMajor>> eigen_sfmatrix{sfmatrix.data()};
   assert_testmodeonly(eigen_sfmatrix.isUpperTriangular());
 
-  auto eigen_sfmatrix_LU = eigen_sfmatrix.triangularView<Eigen::Upper>();
+  const auto eigen_sfmatrix_LU = eigen_sfmatrix.triangularView<Eigen::Upper>();
   Eigen::Map<Eigen::Vector<double, SFPTS>> eigen_yvec{yvec_arr.data()};
   eigen_yvec = eigen_sfmatrix_LU.solve(eigen_rhsvec);
 

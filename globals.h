@@ -71,24 +71,29 @@ struct TimeStep {
   double mid{0.};  // Mid time in step - computed logarithmically. [s]
   double gamma_dep{0.};  // cmf gamma ray energy deposition from packet trajectories [erg]
   ALIGNAS_AVOID_FALSE_SHARING double gamma_dep_discrete{
-      0.};  // cmf gamma ray energy deposition from absorption events [erg]
+      0.,
+  };  // cmf gamma ray energy deposition from absorption events [erg]
   double positron_dep{0.};  // cmf positron energy deposition from packet trajectories [erg]
   ALIGNAS_AVOID_FALSE_SHARING double positron_dep_discrete{
-      0.};  // cmf positron energy deposition from absorption events [erg]
+      0.,
+  };  // cmf positron energy deposition from absorption events [erg]
   ALIGNAS_AVOID_FALSE_SHARING double positron_emission{0.};  // cmf positron KE energy generation [erg]
   double eps_positron_ana_power{0.};  // cmf positron KE energy generation rate analytical [erg/s]
   double electron_dep{0.};  // cmf electron energy deposition from packet trajectories [erg]
   ALIGNAS_AVOID_FALSE_SHARING double electron_dep_discrete{
-      0.};  // cmf electron energy deposition from absorption events [erg]
+      0.,
+  };  // cmf electron energy deposition from absorption events [erg]
   ALIGNAS_AVOID_FALSE_SHARING double electron_emission{0.};  // cmf electron KE energy generation [erg]
   double eps_electron_ana_power{0.};  // cmf electron KE energy generation rate analytical [erg/s]
   double alpha_dep{0.};  // cmf alpha energy deposition from packet trajectories [erg]
   ALIGNAS_AVOID_FALSE_SHARING double alpha_dep_discrete{
-      0.};  // cmf alpha energy deposition from absorption events [erg]
+      0.,
+  };  // cmf alpha energy deposition from absorption events [erg]
   ALIGNAS_AVOID_FALSE_SHARING double alpha_emission{0.};  // cmf alpha KE energy generation [erg]
   double eps_alpha_ana_power{0.};  // cmf alpha KE energy generation rate analytical [erg/s]
   ALIGNAS_AVOID_FALSE_SHARING double spfission_dep_discrete{
-      0.};  // cmf spontaneous fission energy deposition from absorption events [erg]
+      0.,
+  };  // cmf spontaneous fission energy deposition from absorption events [erg]
   double eps_spfission_ana_power{0.};  // cmf spontaneous fission energy generation rate analytical [erg/s]
   ALIGNAS_AVOID_FALSE_SHARING double gamma_emission{0.};  // gamma decay energy generation in this timestep [erg]
   double qdot_betaminus{0.};  // energy generation from beta-minus decays (including neutrinos) [erg/s/g]

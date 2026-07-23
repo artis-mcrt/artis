@@ -340,9 +340,11 @@ auto thomson_angle(rngstate_type& rngstate) -> double {
   const double r32 = dir_in[1] * norm2;
   const double r33 = dir_in[2] * norm2;
 
-  const auto dir_out =
-      Vec3d{(r11 * xprime) + (r21 * yprime) + (r31 * zprime), (r12 * xprime) + (r22 * yprime) + (r32 * zprime),
-            (r13 * xprime) + (r23 * yprime) + (r33 * zprime)};
+  const auto dir_out = Vec3d{
+      (r11 * xprime) + (r21 * yprime) + (r31 * zprime),
+      (r12 * xprime) + (r22 * yprime) + (r32 * zprime),
+      (r13 * xprime) + (r23 * yprime) + (r33 * zprime),
+  };
 
   assert_testmodeonly(std::fabs(vec_len(dir_out) - 1.) < 1e-10);
 
@@ -387,9 +389,9 @@ void compton_scatter(Packet& pkt) {
     // The packet has stored the direction in the rest frame.
     // Use aberration of angles to get this into the co-moving frame.
 
-    auto vel_vec = get_velocity(pkt.pos, pkt.prop_time);
+    const auto vel_vec = get_velocity(pkt.pos, pkt.prop_time);
 
-    auto cmf_dir = angle_ab(pkt.dir, vel_vec);
+    const auto cmf_dir = angle_ab(pkt.dir, vel_vec);
 
     // Now change the direction through the scattering angle.
 

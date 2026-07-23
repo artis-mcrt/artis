@@ -1269,7 +1269,7 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
     // replace the zeroth row of the matrix and balance vector with the normalisation
     // constraint (sum of levelpops = total element population)
 
-    auto rate_matrix = rate_matrices.get_summed_rate_matrix();
+    const auto rate_matrix = rate_matrices.get_summed_rate_matrix();
     std::ranges::fill(std::span{rate_matrix}.first(nlte_dimension), 1.0);
 
     THREADLOCALONHOST std::vector<double> balance_vector;

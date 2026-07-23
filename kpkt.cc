@@ -154,7 +154,7 @@ auto calculate_cooling_rates_ion(const int nonemptymgi, const int element, const
       const auto uniquelevelindex = ionuniquelevelindexstart + level;
       const int nphixstargets = get_nphixstargets(uniquelevelindex);
       for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
-        const double pop = [&]() {
+        const double pop = [&] {
           if constexpr (BFCOOLING_USELEVELPOPNOTIONPOP) {
             const int upperlevel = get_phixsupperlevel(uniquelevelindex, phixstargetindex);
             return update_cellcache_contribs ? get_cellcache_levelpop(nonemptymgi, element, ion + 1, upperlevel)

@@ -224,7 +224,7 @@ void scale_level_phixs(const int element, const int ion, const int level, const 
     const auto uniquelevelindex = get_uniquelevelindex(element, ion, level);
     const auto phixsstart = globals::alllevels.phixsstart[uniquelevelindex];
 
-    auto phixstable =
+    const auto phixstable =
         globals::allphixs.subspan(static_cast<ptrdiff_t>(phixsstart) * globals::NPHIXSPOINTS, globals::NPHIXSPOINTS);
     for (int n = 0; n < globals::NPHIXSPOINTS; n++) {
       phixstable[n] = static_cast<float>(phixstable[n] * factor);
