@@ -42,6 +42,7 @@ Checks: [
         -misc-non-private-member-variables-in-classes,
         -modernize-avoid-variadic-functions,
         -modernize-use-ranges, # things like sort and for_each don't support parallel execution policies yet (C++26 will?)
+        -modernize-use-std-print,
         -performance-enum-size,
         -readability-identifier-length,
         -readability-function-cognitive-complexity,
