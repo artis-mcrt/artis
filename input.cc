@@ -1400,7 +1400,7 @@ void read_atomicdata_files() {
   temp_alllevels.clear();
   temp_alllevels.shrink_to_fit();
 
-  const int updowntranscount = [] -> int {
+  const int updowntranscount = []() -> int {
     const int downtranscount = std::ranges::fold_left(globals::alllevels.ndowntrans, 0, std::plus<>{});
     const int uptranscount = std::ranges::fold_left(globals::alllevels.nuptrans, 0, std::plus<>{});
 

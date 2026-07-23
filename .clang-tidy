@@ -42,11 +42,11 @@ Checks: [
         -misc-non-private-member-variables-in-classes,
         -modernize-avoid-variadic-functions,
         -modernize-use-ranges, # things like sort and for_each don't support parallel execution policies yet (C++26 will?)
-        -modernize-use-std-print, # replace printout macro with a function when we want to autofix to use std::format gcc >=13
         -performance-enum-size,
         -readability-identifier-length,
         -readability-function-cognitive-complexity,
         -readability-magic-numbers,
+        -readability-redundant-lambda-parameter-list,
         -zircon-temporary-objects,
     ]
 WarningsAsErrors: '*,-clang-diagnostic-unused-function'
