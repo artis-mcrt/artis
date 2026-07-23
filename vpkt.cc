@@ -252,8 +252,11 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
         return false;
       }
 
-      const Vec3d pos_boundary{vpktpos[0] + (obsdir[0] * boundarydist), vpktpos[1] + (obsdir[1] * boundarydist),
-                               vpktpos[2] + (obsdir[2] * boundarydist)};
+      const Vec3d pos_boundary{
+          vpktpos[0] + (obsdir[0] * boundarydist),
+          vpktpos[1] + (obsdir[1] * boundarydist),
+          vpktpos[2] + (obsdir[2] * boundarydist),
+      };
 
       const double nu_cmf_boundary = std::min(
           nu_rf * calculate_doppler_nucmf_on_nurf(pos_boundary, obsdir, t_future + (boundarydist / CLIGHT_PROP)),
@@ -431,10 +434,10 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
     const double prob = pn * exp(-tau_vpkt[0]);
 
     for (int wlbin = 0; wlbin < grid_nwavelengthranges; wlbin++) {
-      if (nu_rf > nu_grid_min[wlbin] && nu_rf < nu_grid_max[wlbin]) {  // Frequency selection
-        if (t_arrive > tmin_grid && t_arrive < tmax_grid) {  // Time selection
-          add_to_vpkt_grid(nu_rf, e_rf, prob, q_rf, u_rf, vel_vec, wlbin, obsdirindex, obsdir);
-        }
+      if ((nu_rf > nu_grid_min[wlbin] && nu_rf < nu_grid_max[wlbin]) &&
+          (t_arrive > tmin_grid && t_arrive < tmax_grid))  // Frequency selection
+      {  // Time selection
+        add_to_vpkt_grid(nu_rf, e_rf, prob, q_rf, u_rf, vel_vec, wlbin, obsdirindex, obsdir);
       }
     }
   }
@@ -606,9 +609,11 @@ void read_vpkt_grid(const int my_rank, const int nts) {
 }  // anonymous namespace
 
 void remove_temp_vpkt_file(const int nts, const int my_rank) {
-  const std::array filenames{std::format("vspecpol_{:04d}_ts{}.tmp", my_rank, nts),
-                             std::format("vpkt_grid_{:04d}_ts{}.tmp", my_rank, nts),
-                             std::format("vpackets_{:04d}_ts{}.tmp", my_rank, nts)};
+  const std::array filenames{
+      std::format("vspecpol_{:04d}_ts{}.tmp", my_rank, nts),
+      std::format("vpkt_grid_{:04d}_ts{}.tmp", my_rank, nts),
+      std::format("vpackets_{:04d}_ts{}.tmp", my_rank, nts),
+  };
 
   for (const auto& filename : filenames) {
     if (std::filesystem::remove(filename)) {
@@ -632,7 +637,8 @@ void read_vpktparameterfile() {
     if (fabs(obsdirs_costheta[i]) > 1) {
       printlnlog("Wrong observer direction");
       std::abort();
-    } else if (obsdirs_costheta[i] == 1) {
+    }
+    if (obsdirs_costheta[i] == 1) {
       obsdirs_costheta[i] = 0.9999;
     } else if (obsdirs_costheta[i] == -1) {
       obsdirs_costheta[i] = -0.9999;
@@ -900,10 +906,11 @@ auto trace_vpkts(const Packet& pkt, const enum packet_type type_before_rpkt) -> 
   for (int obsdirindex = 0; obsdirindex < nobsdirections; obsdirindex++) {
     // loop over different observer directions
 
-    const auto obsdir =
-        Vec3d{sqrt(1 - (obsdirs_costheta[obsdirindex] * obsdirs_costheta[obsdirindex])) * cos(obsdirs_phi[obsdirindex]),
-              sqrt(1 - (obsdirs_costheta[obsdirindex] * obsdirs_costheta[obsdirindex])) * sin(obsdirs_phi[obsdirindex]),
-              obsdirs_costheta[obsdirindex]};
+    const auto obsdir = Vec3d{
+        sqrt(1 - (obsdirs_costheta[obsdirindex] * obsdirs_costheta[obsdirindex])) * cos(obsdirs_phi[obsdirindex]),
+        sqrt(1 - (obsdirs_costheta[obsdirindex] * obsdirs_costheta[obsdirindex])) * sin(obsdirs_phi[obsdirindex]),
+        obsdirs_costheta[obsdirindex],
+    };
 
     const double t_arrive = pkt.prop_time - (dot(pkt.pos, obsdir) / CLIGHT_PROP);
 

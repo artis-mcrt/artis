@@ -32,7 +32,7 @@ constexpr double RATECOEFF_INTEGRAL_ACCURACY = 1e-3;
 
 const double T_step_log = (std::log(MAXTEMP) - std::log(MINTEMP)) / (TABLESIZE - 1.);
 
-const auto temperature_grid = []() {
+const auto temperature_grid = [] {
   std::array<double, TABLESIZE + 1> grid{};
   for (auto i = 0UZ; i < grid.size(); i++) {
     grid[i] = MINTEMP * std::exp(i * T_step_log);
@@ -224,7 +224,7 @@ void scale_level_phixs(const int element, const int ion, const int level, const 
     const auto uniquelevelindex = get_uniquelevelindex(element, ion, level);
     const auto phixsstart = globals::alllevels.phixsstart[uniquelevelindex];
 
-    auto phixstable =
+    const auto phixstable =
         globals::allphixs.subspan(static_cast<ptrdiff_t>(phixsstart) * globals::NPHIXSPOINTS, globals::NPHIXSPOINTS);
     for (int n = 0; n < globals::NPHIXSPOINTS; n++) {
       phixstable[n] = static_cast<float>(phixstable[n] * factor);

@@ -593,15 +593,14 @@ void add_to_spec_res(const Packet& pkt, const int dirbin, Spectra& spectra_I, Sp
 
       if (TRACE_EMISSION_ABSORPTION_REGION_ON && (dirbin == -1)) {
         const int et = pkt.trueemissiontype;
-        if (et >= 0) {
-          if (t_arrive >= traceemissabs_timemin && t_arrive <= traceemissabs_timemax) {
-            if (pkt.nu_rf >= traceemissabs_nulower && pkt.nu_rf <= traceemissabs_nuupper) {
-              traceemissionabsorption[et].energyemitted += deltaE;
-              traceemissionabsorption[et].emission_weightedvelocity_sum +=
-                  vec_len(pkt.trueem_pos) / pkt.trueem_time * deltaE;
-              traceemission_totalenergy += deltaE;
-            }
-          }
+        if ((et >= 0) && (t_arrive >= traceemissabs_timemin && t_arrive <= traceemissabs_timemax) &&
+            (pkt.nu_rf >= traceemissabs_nulower && pkt.nu_rf <= traceemissabs_nuupper))
+
+        {
+          traceemissionabsorption[et].energyemitted += deltaE;
+          traceemissionabsorption[et].emission_weightedvelocity_sum +=
+              vec_len(pkt.trueem_pos) / pkt.trueem_time * deltaE;
+          traceemission_totalenergy += deltaE;
         }
       }
 
@@ -624,14 +623,13 @@ void add_to_spec_res(const Packet& pkt, const int dirbin, Spectra& spectra_I, Sp
             atomicadd_always(spectra_U->absorptionalltimesteps[absindex], pkt.stokes_u * deltaE_absorption);
           }
 
-          if (TRACE_EMISSION_ABSORPTION_REGION_ON && t_arrive >= traceemissabs_timemin &&
-              t_arrive <= traceemissabs_timemax) {
-            if ((dirbin == -1) && (pkt.nu_rf >= traceemissabs_nulower) && (pkt.nu_rf <= traceemissabs_nuupper)) {
-              traceemissionabsorption[at].energyabsorbed += deltaE_absorption;
-              const auto vel_vec = get_velocity(pkt.em_pos, pkt.em_time);
-              traceemissionabsorption[at].absorption_weightedvelocity_sum += vec_len(vel_vec) * deltaE_absorption;
-              traceabsorption_totalenergy += deltaE_absorption;
-            }
+          if ((TRACE_EMISSION_ABSORPTION_REGION_ON && t_arrive >= traceemissabs_timemin &&
+               t_arrive <= traceemissabs_timemax) &&
+              ((dirbin == -1) && (pkt.nu_rf >= traceemissabs_nulower) && (pkt.nu_rf <= traceemissabs_nuupper))) {
+            traceemissionabsorption[at].energyabsorbed += deltaE_absorption;
+            const auto vel_vec = get_velocity(pkt.em_pos, pkt.em_time);
+            traceemissionabsorption[at].absorption_weightedvelocity_sum += vec_len(vel_vec) * deltaE_absorption;
+            traceabsorption_totalenergy += deltaE_absorption;
           }
         }
       }

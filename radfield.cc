@@ -381,8 +381,8 @@ auto find_bin_T_R(const int nonemptymgi, const int binindex) -> float {
 
     // use TOMS 748 solver from Boost
     uintmax_t iteration_num = maxit;
-    auto result = boost::math::tools::toms748_solve(f_deltanubar, bins_T_R_min, bins_T_R_max, f_Tmin, f_Tmax,
-                                                    ftol<epsrel>, iteration_num);
+    const auto result = boost::math::tools::toms748_solve(f_deltanubar, bins_T_R_min, bins_T_R_max, f_Tmin, f_Tmax,
+                                                          ftol<epsrel>, iteration_num);
     const auto T_R_solution = static_cast<float>(0.5 * (result.first + result.second));
     if (iteration_num >= maxit) {
       printlnlog("[warning] find_bin_T_R: T_R did not converge within {} iterations.", iteration_num);

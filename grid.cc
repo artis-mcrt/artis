@@ -22,6 +22,7 @@
 #include <span>
 #include <sstream>
 #include <string>
+#include <string_view>
 #include <tuple>
 #include <utility>
 #include <vector>
@@ -140,7 +141,7 @@ void read_possible_yefile() {
     return;
   }
 
-  auto filein = fopen_required_uniqueptr("Ye.txt", "r");
+  const auto filein = fopen_required_uniqueptr("Ye.txt", "r");
   int nlines_in = 0;
   assert_always(fscanf(filein.get(), "%d", &nlines_in) == 1);
 
@@ -532,9 +533,11 @@ void map_1dmodelto3dgrid() {
 void map_2dmodelto3dgrid() {
   for (int cellindex = 0; cellindex < ngrid; cellindex++) {
     // map to 3D Cartesian grid
-    const auto pos_mid = Vec3d{(get_cellcoordmin(cellindex, 0) + get_cellcoordmax(cellindex, 0)) / 2,
-                               (get_cellcoordmin(cellindex, 1) + get_cellcoordmax(cellindex, 1)) / 2,
-                               (get_cellcoordmin(cellindex, 2) + get_cellcoordmax(cellindex, 2)) / 2};
+    const auto pos_mid = Vec3d{
+        (get_cellcoordmin(cellindex, 0) + get_cellcoordmax(cellindex, 0)) / 2,
+        (get_cellcoordmin(cellindex, 1) + get_cellcoordmax(cellindex, 1)) / 2,
+        (get_cellcoordmin(cellindex, 2) + get_cellcoordmax(cellindex, 2)) / 2,
+    };
 
     const double rcylindrical = std::sqrt(pow2(pos_mid[0]) + pow2(pos_mid[1]));
 
@@ -689,7 +692,7 @@ void parse_model_headerline(const std::string& line, std::vector<int>& zlist, st
   }
 }
 
-auto get_token_count(std::string& line) -> int {
+auto get_token_count(std::string const& line) -> int {
   std::string token;
   int abundcolcount = 0;
   auto ssline = std::istringstream{line};
@@ -1177,7 +1180,7 @@ void setup_grid_cylindrical_2d() {
   }
 }
 
-constexpr auto get_grid_type_name(const GridType gridtype) -> std::string {
+constexpr auto get_grid_type_name(const GridType gridtype) -> std::string_view {
   switch (gridtype) {
     case GridType::SPHERICAL1D:
       return "spherical";
@@ -1304,7 +1307,7 @@ template <BoundaryType boundarytype, size_t S1>
     double dist1 = (-b + sqrt(discriminant)) / 2 / a;
     double dist2 = (-b - sqrt(discriminant)) / 2 / a;
 
-    const auto [posfinal1, posfinal2] = [&]() {
+    const auto [posfinal1, posfinal2] = [&] {
       std::array<double, S1> posf1{};
       std::array<double, S1> posf2{};
       for (auto d = 0ZU; d < S1; d++) {
@@ -1855,7 +1858,7 @@ void read_ejecta_model() {
   // if the next line is a single float, it is the vmax (so 2D or 3D)
   // otherwise, it is the first line of the model or a header comment (so 1D)
   std::getline(fmodel, line);
-  if (!line.starts_with("#")) {
+  if (!line.starts_with('#')) {
     double num_after_vmax{NAN};
     auto sslinevmax = std::istringstream{line};
     if ((sslinevmax >> globals::vmax) && !(sslinevmax >> num_after_vmax)) {
@@ -2389,7 +2392,7 @@ DEVICE_FUNC void snap_pos_to_cell(Vec3d& pos, const double time, const int celli
   // dir * CLIGHT_PROP converted from xyz to grid coordinates
   const auto pktvelgridcoord = get_gridcoords_vel_from_xyz_pos_dir(pos, dir, pktposgridcoord, prop_gridtype);
 
-  const auto [cellcoordidx, cellcoordmin, cellcoordmax] = [cellindex, prop_gridtype]() {
+  const auto [cellcoordidx, cellcoordmin, cellcoordmax] = [cellindex, prop_gridtype] {
     auto _cellcoordidx = std::array<int, 3>{};
     auto _cellcoordmin = std::array<double, 3>{};
     auto _cellcoordmax = std::array<double, 3>{};

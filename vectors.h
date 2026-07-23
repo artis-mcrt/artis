@@ -49,8 +49,11 @@ template <size_t VECDIM>
 }
 
 [[gnu::pure]] [[nodiscard]] constexpr auto cross_prod(const Vec3d& vec_a, const Vec3d& vec_b) -> Vec3d {
-  return Vec3d{(vec_a[1] * vec_b[2]) - (vec_b[1] * vec_a[2]), (vec_a[2] * vec_b[0]) - (vec_b[2] * vec_a[0]),
-               (vec_a[0] * vec_b[1]) - (vec_b[0] * vec_a[1])};
+  return Vec3d{
+      (vec_a[1] * vec_b[2]) - (vec_b[1] * vec_a[2]),
+      (vec_a[2] * vec_b[0]) - (vec_b[2] * vec_a[0]),
+      (vec_a[0] * vec_b[1]) - (vec_b[0] * vec_a[1]),
+  };
 }
 
 [[gnu::pure]] [[nodiscard]] constexpr auto vec_scale(const Vec3d& vec, const double scalefactor) -> Vec3d {
@@ -69,8 +72,11 @@ template <size_t VECDIM>
   const double fact1 = gamma_rel * (1 - (ndotv / CLIGHT));
   const double fact2 = (gamma_rel - (pow2(gamma_rel) * ndotv / (gamma_rel + 1) / CLIGHT)) / CLIGHT;
 
-  return vec_norm({(dir1[0] - (vel[0] * fact2)) / fact1, (dir1[1] - (vel[1] * fact2)) / fact1,
-                   (dir1[2] - (vel[2] * fact2)) / fact1});
+  return vec_norm({
+      (dir1[0] - (vel[0] * fact2)) / fact1,
+      (dir1[1] - (vel[1] * fact2)) / fact1,
+      (dir1[2] - (vel[2] * fact2)) / fact1,
+  });
 }
 
 // Doppler factor either to first order v/c or fully relativisitic depending on USE_RELATIVISTIC_DOPPLER_SHIFT
@@ -161,7 +167,7 @@ DEVICE_FUNC constexpr void set_pkt_restframe_from_cmf(Packet& pkt) {
       std::clamp(static_cast<int>((testphi > 0 ? std::acos(cosphi) : std::acos(cosphi) + PI) / 2. / PI * NPHIBINS), 0,
                  NPHIBINS - 1);
 
-  const int na = static_cast<int>((costhetabin * NPHIBINS) + phibin);
+  const int na = ((costhetabin * NPHIBINS) + phibin);
   assert_always(na >= 0);
   assert_always(na < MABINS);
 
@@ -225,11 +231,14 @@ DEVICE_FUNC constexpr void set_pkt_restframe_from_cmf(Packet& pkt) {
     return elec_rf;
   }
 
-  const double gamma_rel = 1. / (sqrt(1 - betasquared));
+  const double gamma_rel = 1. / sqrt(1 - betasquared);
   const double elec_rf_dot_beta = dot(elec_rf, beta);
 
-  const Vec3d elec_par{elec_rf_dot_beta * beta[0] / betasquared, elec_rf_dot_beta * beta[1] / betasquared,
-                       elec_rf_dot_beta * beta[2] / betasquared};
+  const Vec3d elec_par{
+      elec_rf_dot_beta * beta[0] / betasquared,
+      elec_rf_dot_beta * beta[1] / betasquared,
+      elec_rf_dot_beta * beta[2] / betasquared,
+  };
 
   const Vec3d elec_perp{elec_rf[0] - elec_par[0], elec_rf[1] - elec_par[1], elec_rf[2] - elec_par[2]};
 
@@ -237,9 +246,11 @@ DEVICE_FUNC constexpr void set_pkt_restframe_from_cmf(Packet& pkt) {
 
   const auto v_cross_b = cross_prod(beta, b_rf);
 
-  const auto elec_cmf = vec_norm({elec_par[0] + (gamma_rel * (elec_perp[0] + v_cross_b[0])),
-                                  elec_par[1] + (gamma_rel * (elec_perp[1] + v_cross_b[1])),
-                                  elec_par[2] + (gamma_rel * (elec_perp[2] + v_cross_b[2]))});
+  const auto elec_cmf = vec_norm({
+      elec_par[0] + (gamma_rel * (elec_perp[0] + v_cross_b[0])),
+      elec_par[1] + (gamma_rel * (elec_perp[1] + v_cross_b[1])),
+      elec_par[2] + (gamma_rel * (elec_perp[2] + v_cross_b[2])),
+  });
   return elec_cmf;
 }
 
@@ -264,9 +275,11 @@ constexpr auto frame_transform(const Vec3d& n_rf, const double q0, const double 
   const double sin_rot_angle = std::sin(rot_angle);
 
   // Define electric field by linear combination of ref1 and ref2 (using the angle just computed)
-  const auto elec_rf = Vec3d{(cos_rot_angle * ref1_rf[0]) - (sin_rot_angle * ref2_rf[0]),
-                             (cos_rot_angle * ref1_rf[1]) - (sin_rot_angle * ref2_rf[1]),
-                             (cos_rot_angle * ref1_rf[2]) - (sin_rot_angle * ref2_rf[2])};
+  const auto elec_rf = Vec3d{
+      (cos_rot_angle * ref1_rf[0]) - (sin_rot_angle * ref2_rf[0]),
+      (cos_rot_angle * ref1_rf[1]) - (sin_rot_angle * ref2_rf[1]),
+      (cos_rot_angle * ref1_rf[2]) - (sin_rot_angle * ref2_rf[2]),
+  };
 
   // Aberration
   const auto n_cmf = angle_ab(n_rf, v);
@@ -335,7 +348,7 @@ constexpr auto scatter_polarisation_to_rf(const Vec3d& old_dir_cmf, const Vec3d&
   const double u_cmf = (-q_new * sin2i2) + (u_new * cos2i2);
 
   const auto [new_dir_rf, q_rf, u_rf] =
-      (frame_transform(new_dir_cmf, q_cmf, u_cmf, Vec3d{-vel_vec[0], -vel_vec[1], -vel_vec[2]}));
+      frame_transform(new_dir_cmf, q_cmf, u_cmf, Vec3d{-vel_vec[0], -vel_vec[1], -vel_vec[2]});
 
   const double pn = 3. / (16. * PI) * (1. + musquared + ((musquared - 1.) * q_old));
   return {new_dir_rf, q_rf, u_rf, pn};

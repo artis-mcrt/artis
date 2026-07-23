@@ -248,7 +248,7 @@ auto find_converged_nne(const int nonemptymgi, double nne_max, const bool force_
 
   // use TOMS 748 solver from Boost
   uintmax_t iter = maxit;
-  auto result =
+  const auto result =
       boost::math::tools::toms748_solve(f_nne, nne_min, nne_max, f_nne_min, f_nne_max, ftol<fractional_accuracy>, iter);
   const double nne_solution = 0.5 * (result.first + result.second);
   if (iter >= maxit) {
