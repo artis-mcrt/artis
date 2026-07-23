@@ -1503,25 +1503,25 @@ void nltepop_write_to_file(const int nonemptymgi, const int timestep) {
 void nltepop_write_restart_data(FILE* restart_file) {
   printlog("populations, ");
 
-  fprintf(restart_file, "%d\n", 75618527);  // special number marking the beginning of nlte data
+  std::println(restart_file, "{}", 75618527);  // special number marking the beginning of nlte data
 
-  fprintf(restart_file, "%d\n", globals::total_nlte_levels);
+  std::println(restart_file, "{}", globals::total_nlte_levels);
   const auto nincludedions = get_includedions();
 
   for (auto nonemptymgi = 0Z; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
     const int modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
-    fprintf(restart_file, "%d\n", modelgridindex);
+    std::println(restart_file, "{}", modelgridindex);
     for (int element = 0; element < get_nelements(); element++) {
       for (int ion = 0; ion < get_nions(element); ion++) {
         const int uniqueionindex = get_uniqueionindex(element, ion);
-        fprintf(restart_file, "%d %a %a %la\n", ion,
-                grid::ion_groundlevelpops_allcells[(nonemptymgi * nincludedions) + uniqueionindex],
-                grid::ion_partfuncts_allcells[(nonemptymgi * nincludedions) + uniqueionindex],
-                kpkt::ion_cooling_contribs_allcells[(nonemptymgi * nincludedions) + uniqueionindex]);
+        std::println(restart_file, "{} {:a} {:a} {:a}", ion,
+                     grid::ion_groundlevelpops_allcells[(nonemptymgi * nincludedions) + uniqueionindex],
+                     grid::ion_partfuncts_allcells[(nonemptymgi * nincludedions) + uniqueionindex],
+                     kpkt::ion_cooling_contribs_allcells[(nonemptymgi * nincludedions) + uniqueionindex]);
       }
     }
     for (int nlteindex = 0; nlteindex < globals::total_nlte_levels; nlteindex++) {
-      fprintf(restart_file, "%la ", nltepops_allcells[(nonemptymgi * globals::total_nlte_levels) + nlteindex]);
+      std::print(restart_file, "{:a} ", nltepops_allcells[(nonemptymgi * globals::total_nlte_levels) + nlteindex]);
     }
   }
 }
