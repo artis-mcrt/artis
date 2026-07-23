@@ -67,9 +67,11 @@ struct Nuclide {
   double endecay_alpha{0.};  // average energy per alpha decay in kinetic energy of alpha particles [erg]
   double endecay_fission{0.};  // average energy per fission decay in kinetic energy of fission fragments [erg]
   std::array<double, DecayType::DECAYTYPE_COUNT> endecay_q = {
-      0.,
+      0., 0., 0., 0., 0., 0.,
   };  // Q-value (reactant minus product energy) for each decay type
-  std::array<double, DecayType::DECAYTYPE_COUNT> branchprobs = {0.};  // branch probability of each decay type
+  std::array<double, DecayType::DECAYTYPE_COUNT> branchprobs = {
+      0., 0., 0., 0., 0., 0.,
+  };  // branch probability of each decay type
 
   // (Z, A, probability) of fission daughters
   std::vector<DecayDaughter> fission_daughters_z_a_prob{};  // NOLINT(readability-redundant-member-init)
@@ -244,7 +246,7 @@ void printout_nuclidemeanlife(const int z, const int a) {
   return nucdecayenergy(nucindex, decaypath.decaytypes[secondlastindex]) / nuclides[nucindex].decay_daughters_probsum;
 }
 
-[[nodiscard]] auto get_str_decaytype(const DecayType decaytype) -> std::string {
+[[nodiscard]] auto get_str_decaytype(const DecayType decaytype) -> std::string_view {
   switch (decaytype) {
     case DecayType::DECAYTYPE_ALPHA: {
       return "alpha";
