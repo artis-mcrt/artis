@@ -1039,7 +1039,7 @@ void init_nuclides(const std::span<const int> custom_zlist, const std::span<cons
     }
   }
 
-  resize_exactly(alldecaytypes_is_used, DecayType::DECAYTYPE_COUNT);
+  reserve_resize(alldecaytypes_is_used, DecayType::DECAYTYPE_COUNT);
   for (DecayType decaytype : all_decaytypes) {
     alldecaytypes_is_used[decaytype] = std::ranges::any_of(
         std::views::iota(0UZ, nuclides.size()),

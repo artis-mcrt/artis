@@ -62,7 +62,7 @@ inline void check_already_running() {
 }
 
 template <typename T>
-constexpr void resize_exactly(std::vector<T>& vec, const size_t size) {
+constexpr void reserve_resize(std::vector<T>& vec, const size_t size) {
   // just resizing can (only with libstdc++?) allocate a larger capacity than needed
   vec.reserve(size);
   vec.resize(size);

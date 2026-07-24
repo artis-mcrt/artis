@@ -562,10 +562,10 @@ void init_vpkt_grid() {
       vgrid[n][m].yvel = yvel;
       vgrid[n][m].zvel = zvel;
 
-      resize_exactly(vgrid[n][m].flux, grid_nwavelengthranges);
+      reserve_resize(vgrid[n][m].flux, grid_nwavelengthranges);
 
       for (int wlbin = 0; wlbin < grid_nwavelengthranges; wlbin++) {
-        resize_exactly(vgrid[n][m].flux[wlbin], nobsdirections);
+        reserve_resize(vgrid[n][m].flux[wlbin], nobsdirections);
         std::ranges::fill(vgrid[n][m].flux[wlbin], StokesParams{.I = 0., .Q = 0., .U = 0.});
       }
     }

@@ -427,7 +427,7 @@ void nltepop_reset_element(const int nonemptymgi, const int element) {
 
 auto get_element_superlevelpartfuncs(const int nonemptymgi, const int element) -> std::vector<double> {
   std::vector<double> superlevel_partfuncs;
-  resize_exactly(superlevel_partfuncs, get_nions(element));
+  reserve_resize(superlevel_partfuncs, get_nions(element));
   for (int ion = 0; ion < get_nions(element); ion++) {
     if (ion_has_superlevel(element, ion)) {
       superlevel_partfuncs[ion] = 0.;

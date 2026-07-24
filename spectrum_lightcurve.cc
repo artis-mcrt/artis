@@ -220,14 +220,14 @@ void write_partial_lightcurve_spectra_dirbin(const int nts, std::span<const Pack
   THREADLOCALONHOST std::vector<double> rpkt_light_curve_lumcmf;
   THREADLOCALONHOST std::vector<double> gamma_light_curve_lum;
   THREADLOCALONHOST std::vector<double> gamma_light_curve_lumcmf;
-  resize_exactly(rpkt_light_curve_lum, globals::ntimesteps);
+  reserve_resize(rpkt_light_curve_lum, globals::ntimesteps);
   std::ranges::fill(rpkt_light_curve_lum, 0.);
-  resize_exactly(rpkt_light_curve_lumcmf, globals::ntimesteps);
+  reserve_resize(rpkt_light_curve_lumcmf, globals::ntimesteps);
   std::ranges::fill(rpkt_light_curve_lumcmf, 0.);
   if constexpr (KEEP_ESCAPED_GAMMAS) {
-    resize_exactly(gamma_light_curve_lum, globals::ntimesteps);
+    reserve_resize(gamma_light_curve_lum, globals::ntimesteps);
     std::ranges::fill(gamma_light_curve_lum, 0.);
-    resize_exactly(gamma_light_curve_lumcmf, globals::ntimesteps);
+    reserve_resize(gamma_light_curve_lumcmf, globals::ntimesteps);
     std::ranges::fill(gamma_light_curve_lumcmf, 0.);
   }
 
@@ -465,7 +465,7 @@ void write_specpol(const std::string& specpol_filename, const std::string& emiss
 void init_spectrum_trace() {
   if (TRACE_EMISSION_ABSORPTION_REGION_ON) {
     traceemission_totalenergy = 0.;
-    resize_exactly(traceemissionabsorption, globals::nlines);
+    reserve_resize(traceemissionabsorption, globals::nlines);
     traceabsorption_totalenergy = 0.;
     for (int i = 0; i < globals::nlines; i++) {
       traceemissionabsorption[i].energyemitted = 0.;

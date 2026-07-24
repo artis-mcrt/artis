@@ -240,7 +240,7 @@ auto calculate_ion_shell_occupancies(const int atomic_number, const int nbound,
   const auto shellcount =
       std::min(element_shells_q_neutral.size(), elements_electron_binding[atomic_number - 1].size());
   std::vector<int> element_shells_q;
-  resize_exactly(element_shells_q, shellcount);
+  reserve_resize(element_shells_q, shellcount);
 
   int electron_count = 0;
   for (auto shellindex = 0ZU; shellindex < shellcount; shellindex++) {
@@ -328,7 +328,7 @@ void read_binding_energies() {
   std::vector<std::vector<int>> elements_neutral_shells_q;
   elements_neutral_shells_q = read_shell_configs();
 
-  resize_exactly(allions_shell_occupancies, get_includedions());
+  reserve_resize(allions_shell_occupancies, get_includedions());
   for (int element = 0; element < get_nelements(); element++) {
     for (int ion = 0; ion < get_nions(element); ion++) {
       const int ioncharge = get_ionstage(element, ion) - 1;

@@ -1564,7 +1564,7 @@ void read_atomicdata_files() {
 }
 
 void write_bflist_file() {
-  resize_exactly(globals::bflist, globals::nbfcontinua);
+  reserve_resize(globals::bflist, globals::nbfcontinua);
 
   int i = 0;
   for (int element = 0; element < get_nelements(); element++) {
