@@ -1457,7 +1457,8 @@ auto select_nt_ionisation(const int nonemptymgi, rngstate_type& rngstate) -> std
     const int nions = get_nions(ielement);
     for (int ilowerion = 0; ilowerion < nions - 1; ilowerion++) {
       ratesum += ion_ntion_energyrate(nonemptymgi, ielement, ilowerion);
-      if (ratesum >= zrand * ratetotal) {
+      // Strict comparison ensures that zrand == 0 skips leading ions with zero rate.
+      if (ratesum > zrand * ratetotal) {
         return {ielement, ilowerion};
       }
     }
@@ -2249,7 +2250,8 @@ DEVICE_FUNC auto nt_random_upperion(const int nonemptymgi, const int element, co
     for (int upperion = lowerion + 1; upperion <= nt_ionisation_maxupperion(element, lowerion); upperion++) {
       prob_sum += nt_ionisation_upperion_probability(nonemptymgi, element, lowerion, upperion, energyweighted);
 
-      if (zrand <= prob_sum) {
+      // Strict comparison ensures that zrand == 0 skips leading zero-probability outcomes.
+      if (zrand < prob_sum) {
         return upperion;
       }
     }
