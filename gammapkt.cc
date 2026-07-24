@@ -907,7 +907,8 @@ void init_gamma_data() {
   double runtot = 0.;
   for (auto n = 0Z; n < std::ssize(gamma_spectra[nucindex]); n++) {
     runtot += gamma_spectra[nucindex][n].probability * gamma_spectra[nucindex][n].energy / E_gamma;
-    if (zrand <= runtot) {
+    // Strict comparison ensures that zrand == 0 does not select a leading zero-probability line.
+    if (zrand < runtot) {
       return gamma_spectra[nucindex][n].energy / H;
     }
   }
