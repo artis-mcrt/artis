@@ -1,3 +1,7 @@
+// Virtual packets (optional VPKT mode): at real-packet emission and scattering events, virtual
+// packets are launched toward predefined observer directions and their optical-depth-weighted
+// energies are accumulated into viewing-angle-dependent (and optionally polarised) spectra.
+
 #include "vpkt.h"
 
 #include <algorithm>
@@ -183,11 +187,11 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
 
   std::ranges::fill(tau_vpkt, 0.);
 
-  atomicadd(nvpkt_created, 1);  // increment the number of virtual packet in the given timestep
+  atomicadd(nvpkt_created, 1);
 
   const auto vel_vec = get_velocity(rpkt.pos, t_start);
 
-  // ------------ SCATTERING EVENT: dipole function --------------------
+  // Scattering event: dipole function
 
   // MACROATOM and KPKT: isotropic emission
   double pn{1 / (4 * PI)};
@@ -410,7 +414,7 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
     atomicadd(nvpkt_esc_from_macroatom, 1);
   }
 
-  // -------------- final stokes vector ---------------
+  // Final Stokes vector
 
   if (VPKT_WRITE_CONTRIBS) {
     std::format_to(std::back_inserter(vpkt_contrib_row), " {:g} {:g}", t_arrive / DAY, nu_rf);
@@ -622,6 +626,8 @@ void remove_temp_vpkt_file(const int nts, const int my_rank) {
   }
 }
 
+// read the virtual packet configuration from vpkt.txt: the observer directions, wavelength
+// ranges, emission-time window, and the optical-depth and cell-selection limits
 void read_vpktparameterfile() {
   FILE* input_file = fopen_required("vpkt.txt", "r");
 

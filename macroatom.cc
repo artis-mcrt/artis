@@ -1,3 +1,7 @@
+// The macro-atom machinery for line and continuum interactions: after an absorption event, the
+// macro-atom performs internal radiative and collisional transitions between levels and ions
+// until the packet energy is re-emitted as radiation or converted to thermal energy (a k-packet).
+
 #include "macroatom.h"
 
 #include <algorithm>
@@ -189,7 +193,8 @@ DEVICE_FUNC void calculate_macroatom_transitionrates(std::span<double> levelrate
   assert_always(rate_total >= 0.0 && std::isfinite(rate_total));
 }
 
-// radiative deexcitation
+// radiative deexcitation: randomly select a downward line transition (weighted by its rate out
+// of the current level) and convert the macro-atom into an emitted r-packet on that line
 void do_macroatom_raddeexcitation(Packet& pkt, const int ionuniquelevelindexstart, const int uniquelevelindex,
                                   const int activatingline, const double epsilon_current, const double totalrate,
                                   const int nonemptymgi) {
@@ -689,24 +694,18 @@ void macroatom_open_file() {
     if (!globals::alltrans.forbidden[alltransindex])  // alternative: (coll_strength > -1.5) i.e. to catch -1
     {
       // permitted E1 electric dipole transitions
-      // collisional deexcitation: formula valid only for atoms!!!!!!!!!!!
-      // Rutten script eq. 3.33. p.50
-      // f = osc_strength(element,ion,upper,lower);
-      // C = n_u * 2.16 * pow(fac1,-1.68) * pow(T_e,-1.5) *
-      // stat_weight(element,ion,lower)/stat_weight(element,ion,upper)  * nne * f;
+      // collisional deexcitation: formula valid only for atoms!
+      // (an alternative expression is Rutten script eq. 3.33, p.50:
+      //  C = n_u * 2.16 * pow(eoverkt, -1.68) * pow(T_e, -1.5) * (g_lower / g_upper) * nne * f)
       const double trans_osc_strength = globals::alltrans.osc_strength[alltransindex];
 
       const double eoverkt = epsilon_trans / (KB * T_e);
       // Van-Regemorter formula, Mihalas (1978), eq.5-75, p.133
       constexpr double g_bar = 0.2;  // this should be read in from transitions data: it is 0.2 for transitions nl ->
                                      // n'l' and 0.7 for transitions nl -> nl'
-      // test = 0.276 * exp(fac1) * gsl_sf_expint_E1(fac1);
-      // crude approximation to the already crude Van-Regemorter formula
-
-      // double test = 0.276 * exp(fac1) * (-EULERGAMMA - log(fac1));
-      // double Gamma = (g_bar > test) ? g_bar : test;
-
-      // optimisation
+      // gauntfac = max(g_bar, 0.276 * exp(eoverkt) * E1(eoverkt)), a crude approximation to the already
+      // crude Van-Regemorter formula, with the exponential integral E1 replaced by its small-argument
+      // expansion E1(x) ~ -EULERGAMMA - log(x). The two branches cross at eoverkt = 0.33421.
       const double gauntfac =
           (eoverkt > 0.33421) ? g_bar : 0.276 * std::exp(eoverkt) * (-EULERGAMMA - std::log(eoverkt));
 
@@ -740,16 +739,16 @@ void macroatom_open_file() {
     if (!forbidden) {
       const double trans_osc_strength = globals::alltrans.osc_strength[alltransindex];
       // permitted E1 electric dipole transitions
-      // collisional excitation: formula valid only for atoms!!!!!!!!!!!
-      // Rutten script eq. 3.32. p.50
-      // C = n_l * 2.16 * pow(eoverkt,-1.68) * pow(T_e,-1.5) * exp(-eoverkt) * nne *
-      // osc_strength(element,ion,upper,lower);
+      // collisional excitation: formula valid only for atoms!
+      // (an alternative expression is Rutten script eq. 3.32, p.50:
+      //  C = n_l * 2.16 * pow(eoverkt, -1.68) * pow(T_e, -1.5) * exp(-eoverkt) * nne * f)
 
       // Van-Regemorter formula, Mihalas (1978), eq.5-75, p.133
       constexpr double g_bar = 0.2;  // this should be read in from transitions data: it is 0.2 for transitions nl ->
                                      // n'l' and 0.7 for transitions nl -> nl'
-      // test = 0.276 * std::exp(eoverkt) * gsl_sf_expint_E1(eoverkt);
-      // crude approximation to the already crude Van-Regemorter formula
+      // Gamma = max(g_bar, 0.276 * exp(eoverkt) * E1(eoverkt)), a crude approximation to the already
+      // crude Van-Regemorter formula, with the exponential integral E1 replaced by its small-argument
+      // expansion E1(x) ~ -EULERGAMMA - log(x)
       const double exp_eoverkt = std::exp(eoverkt);
 
       const double Gamma = std::max(g_bar, 0.276 * exp_eoverkt * (-EULERGAMMA - std::log(eoverkt)));

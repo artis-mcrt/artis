@@ -1,3 +1,7 @@
+// The electron thermal balance: computes the heating rates (bound-free, free-free, collisional
+// deexcitation, and non-thermal) and solves heating = cooling for the electron temperature T_e
+// of each cell.
+
 #include "thermalbalance.h"
 
 #include <algorithm>
@@ -74,7 +78,6 @@ void calculate_heating_rates(const int nonemptymgi, const float T_e, const float
                              HeatingCoolingRates& heatingcoolingrates, const std::span<const double> bfheatingcoeffs) {
   double C_deexc = 0.;
 
-  // double C_recomb = 0.;
   double bfheating = 0.;
   double ffheating = 0.;
 

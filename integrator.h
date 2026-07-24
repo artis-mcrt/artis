@@ -1,3 +1,6 @@
+// The numerical integrator used for the rate coefficient integrals: Boost's Gauss-Kronrod
+// quadrature by default, or Simpson's rule when USE_SIMPSON_INTEGRATOR is defined.
+
 #ifndef INTEGRATOR_H
 #define INTEGRATOR_H
 

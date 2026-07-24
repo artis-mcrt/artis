@@ -1,3 +1,5 @@
+// Declarations for spectrum and light curve construction (spectrum_lightcurve.cc).
+
 #ifndef SPECTRUM_H
 #define SPECTRUM_H
 

@@ -1,3 +1,7 @@
+// The full NLTE level population solver: assembles the statistical equilibrium rate matrix
+// (radiative and collisional bound-bound and bound-free rates, plus non-thermal ionisation)
+// for all levels of all ions of an element and solves for the level populations.
+
 #include <algorithm>
 #include <chrono>
 #include <cmath>
@@ -396,7 +400,7 @@ void print_level_rates(const int nonemptymgi, const int timestep, const int elem
     if (nonzero_rate_in || nonzero_rate_out) {
       const double epsilon_trans = fabs(epsilon(element, ion, level) - epsilon(element, selected_ion, selected_level));
       const double nu_trans = epsilon_trans / H;
-      const double lambda = 1e8 * CLIGHT / nu_trans;  // should be in Angstroms
+      const double lambda = 1e8 * CLIGHT / nu_trans;  // [Angstroms]
       const double level_rate_in = rad_bb_in + coll_bb_in + ntcoll_bb_in + rad_bf_in + coll_bf_in + ntcoll_bf_in;
       const double level_rate_out = rad_bb_out + coll_bb_out + ntcoll_bb_out + rad_bf_out + coll_bf_out + ntcoll_bf_out;
       const double level_percent_in = level_rate_in / total_rate_in * 100.;
@@ -1071,8 +1075,6 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
       std::ranges::copy(vec_x, vec_x_best.begin());
       error_best = error;
     }
-    // printlnlog("  NLTE pops LU_refine: After {} iterations, solution vector has a max residual of {:g}", iteration,
-    //            error);
     if (error < 1e-40) {
       break;
     }
@@ -1404,7 +1406,6 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
     }
 
     // detailed levels stats (very verbose, only for debugging)
-    // const bool print_detailed_stats = ((atomic_number == 26) && ((timestep % 5) == 0) && (nlte_iter == 0))
     const bool print_detailed_level_stats = false;
     if (print_detailed_level_stats) {
       const int ionstage = 2;

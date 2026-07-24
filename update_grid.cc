@@ -1,3 +1,7 @@
+// The per-timestep grid update: for each nonempty model cell, normalises the Monte Carlo
+// estimators collected during the previous timestep and solves for the new radiation field
+// parameters, electron temperature, ion/level populations, and cooling rates.
+
 #include "update_grid.h"
 
 #include <algorithm>
@@ -501,8 +505,6 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
   printlnlog("radial_pos {:g}, distance_to_obs {:g}, tau_dist {:g}", radial_pos, dist_to_obs, grey_optical_depth);
 
   grid::grey_depth_allcells[nonemptymgi] = grey_optical_depth;
-
-  // grey_optical_depth = compton_optical_depth;
 
   if ((grey_optical_depth >= globals::optical_depth_is_thick) && (nts < globals::num_grey_timesteps)) {
     printlnlog("timestep {} cell {} is treated in grey approximation (chi_grey {:g} [cm2/g], tau {:g} >= {:g})", nts,

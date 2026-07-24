@@ -1,3 +1,5 @@
+// Declarations for photoionisation/recombination rate coefficients (ratecoeff.cc).
+
 #ifndef RATECOEFF_H
 #define RATECOEFF_H
 

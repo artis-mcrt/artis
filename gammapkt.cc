@@ -1,3 +1,7 @@
+// Gamma-ray packet transport: radioactive decay line spectra, Compton scattering, photoelectric
+// absorption, and pair production, propagating gamma packets through the ejecta until they
+// deposit their energy or escape.
+
 #include "gammapkt.h"
 
 #include <algorithm>
@@ -439,8 +443,6 @@ void compton_scatter(Packet& pkt) {
     // 2.41326e19 Hz = 100 keV / H
     const double hnu_over_100kev = nu_cmf / 2.41326e+19;
 
-    // double sigma_cmf_cno = 0.0448e-24 * pow(hnu_over_100kev, -3.2);
-
     const double sigma_cmf_si = 1.16e-24 * pow(hnu_over_100kev, -3.13);
 
     const double sigma_cmf_fe = 25.7e-24 * pow(hnu_over_100kev, -3.0);
@@ -522,7 +524,6 @@ void compton_scatter(Packet& pkt) {
     return 0.;
   }
 
-  // double sigma_cmf_cno;
   double sigma_cmf_si{NAN};
   double sigma_cmf_fe{NAN};
 
@@ -531,14 +532,10 @@ void compton_scatter(Packet& pkt) {
   // 3.61990e+20 = 1500 keV in frequency / H
   const double hnu_over_mev = nu_cmf / 2.41326e+20;
   if (nu_cmf > 3.61990e+20) {
-    // sigma_cmf_cno = (0.0481 + (0.301 * (hnu_over_mev - 1.5))) * 49.e-27;
-
     sigma_cmf_si = (0.0481 + (0.301 * (hnu_over_mev - 1.5))) * 196.e-27;
 
     sigma_cmf_fe = (0.0481 + (0.301 * (hnu_over_mev - 1.5))) * 784.e-27;
   } else {
-    // sigma_cmf_cno = 1.0063 * (hnu_over_mev - 1.022) * 49.e-27;
-
     sigma_cmf_si = 1.0063 * (hnu_over_mev - 1.022) * 196.e-27;
 
     sigma_cmf_fe = 1.0063 * (hnu_over_mev - 1.022) * 784.e-27;
@@ -798,17 +795,15 @@ void barnes_thermalisation(Packet& pkt)
 // Barnes thermalization efficiency, for expressions see the original paper:
 // https://ui.adsabs.harvard.edu/abs/2016ApJ...829..110B
 {
-  // compute thermalization efficiency (= absorption probability)
-  // 0.1 is an average value to fit the analytic approximations from the paper.
-  // Alternative: Distinguish between low-E (kappa = 1) or high-E (kappa = 0.05)
-  // packets.
-  // constexpr double mean_gamma_opac = 0.1;
+  // compute thermalization efficiency (= absorption probability) using a mean gamma-ray opacity
+  // of 0.1, an average value chosen to fit the analytic approximations from the paper.
+  // Alternative: distinguish between low-E (kappa = 1) and high-E (kappa = 0.05) packets.
 
   // determine average initial density via kinetic energy
   const double E_kin = grid::get_ejecta_kinetic_energy();
   const double v_ej = sqrt(E_kin * 2 / grid::mtot_input);
 
-  // const double t_ineff = sqrt(rho_0 * R_0 * pow(t_0, 2) * mean_gamma_opac);
+  // t_ineff = sqrt(rho_0 * R_0 * t_0^2 * mean_gamma_opac), expressed via the paper's scaling relation:
   const double t_ineff = 1.4 * 86400. * sqrt(grid::mtot_input / (5.e-3 * 1.989 * 1.e33)) * ((0.2 * 29979200000) / v_ej);
   const double tau = pow2(t_ineff / pkt.prop_time);
   const double f_gamma = 1. - exp(-tau);

@@ -1,3 +1,7 @@
+// Reading of the main input files: the atomic dataset (adata.txt, compositiondata.txt,
+// transitiondata.txt, phixsdata_v2.txt) and the run parameters (input.txt), plus the setup of
+// the simulation timesteps.
+
 #include "input.h"
 
 #include <algorithm>
@@ -1305,6 +1309,9 @@ void read_levels_and_transitions(std::vector<TempEnergyLevel>& temp_alllevels,
   printlnlog("nbfcheck {}", nbfcheck);
 }
 
+// read the full atomic dataset: the composition (compositiondata.txt), then the levels and
+// transitions (adata.txt, transitiondata.txt) and photoionisation cross-sections
+// (phixsdata_v2.txt) for every included ion, building the global element/ion/level/line lists
 void read_atomicdata_files() {
   const auto nlevelsmax_readin = read_compositiondata();
 
@@ -2040,24 +2047,6 @@ void setup_timesteps() {
     default:
       assert_always(false);
   }
-
-  // to limit the timestep durations
-  // const double maxt = 0.5 * DAY;
-  // for (int n = globals::ntimesteps - 1; n > 0; n--)
-  // {
-  //   if (globals::timesteps[n].width > maxt)
-  //   {
-  //     const double boundaryshift = globals::timesteps[n].width - maxt;
-  //     globals::timesteps[n].width -= boundaryshift;
-  //     globals::timesteps[n].start += boundaryshift;
-  //     globals::timesteps[n - 1].width += boundaryshift;
-  //   }
-  //   else if (n < globals::ntimesteps - 1 && globals::timesteps[n + 1].width > maxt)
-  //   {
-  //     printout("TIME: Keeping logarithmic durations for timesteps <= %d\n", n);
-  //   }
-  // }
-  // assert_always(globals::timesteps[0].width <= maxt); // no solution is possible with these constraints!
 
   // and add a dummy timestep which contains the endtime
   // of the calculation

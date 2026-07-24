@@ -1,3 +1,8 @@
+// Non-thermal energy deposition by the fast leptons produced in radioactive decays: solves the
+// Spencer-Fano equation for the electron degradation spectrum (Kozma & Fransson 1992) to obtain
+// the fractions of the deposited energy going into heating, ionisation, and excitation, and the
+// resulting non-thermal ionisation and excitation rates.
+
 #include "nonthermal.h"
 
 #include <algorithm>
@@ -875,7 +880,6 @@ constexpr auto xs_excitation(const int element, const int ion, const int lower, 
     // permitted E1 electric dipole transitions
     const double U = energy / epsilon_trans;
 
-    // constexpr double g_bar = 0.2;
     constexpr double A = 0.28;
     constexpr double B = 0.15;
     const double g_bar = (A * std::log(U)) + B;
@@ -1305,8 +1309,6 @@ void calculate_eff_ionpot_auger_rates(const int nonemptymgi, const int element, 
 // a value of 0. should be treated as invalid
 auto get_eff_ionpot(const int nonemptymgi, const int element, const int ion) {
   return get_cell_allions_data(nonemptymgi)[get_uniqueionindex(element, ion)].eff_ionpot;
-  // OR
-  // return calculate_eff_ionpot(modelgridindex, element, ion);
 }
 
 // Kozma & Fransson 1992 equation 13
@@ -1315,8 +1317,6 @@ auto nt_ionisation_ratecoeff_sf(const int nonemptymgi, const int element, const 
   const double deposition_rate_density = get_deposition_rate_density(nonemptymgi);
   if (deposition_rate_density > 0.) {
     return deposition_rate_density / get_nnion_tot(nonemptymgi) / get_eff_ionpot(nonemptymgi, element, ion);
-    // alternatively, if the y vector is still in memory:
-    // return calculate_nt_ionisation_ratecoeff(nonemptymgi, element, ion);
   }
 
   return 0.;
@@ -1356,7 +1356,6 @@ auto get_xs_excitation_vector(const int alltransindex, const double statweight_l
     const double trans_osc_strength = globals::alltrans.osc_strength[alltransindex];
     // permitted E1 electric dipole transitions
 
-    // constexpr double g_bar = 0.2;
     constexpr double A = 0.28;
     constexpr double B = 0.15;
 
@@ -1495,7 +1494,6 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const std::a
       }
       const double nnion = get_nnion(nonemptymgi, element, ion);
 
-      // if (nnion < minionfraction * get_nnion_tot(nonemptymgi)) // skip negligible ions
       if (nnion <= 0.) {  // skip zero-abundance ions
         continue;
       }
@@ -1597,10 +1595,6 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const std::a
             // the atomic data set was limited for Fe V, which caused the ground multiplet to be massively
             // depleted, and then almost no recombination happened!
             if (above_minionfraction && ratecoeffperdeposition > 0 && (Z != 26 || ionstage != 5)) {
-              // if (get_coll_str(lineindex) < 0) // if collision strength is not defined, the rate coefficient is
-              // unreliable
-              //   ratecoeffperdeposition = 0.;
-
               tmp_excitation_list.push_back({
                   .frac_deposition = frac_excitation_thistrans,
                   .ratecoeffperdeposition = ratecoeffperdeposition,
@@ -1861,7 +1855,6 @@ void sfmatrix_add_ionisation(std::span<double> sfmatrixuppertri, const int Z, co
     if (collionrow.Z == Z && collionrow.ionstage == ionstage) {
       const double ionpot_ev = collionrow.ionpot_ev;
       const double en_auger_ev = collionrow.en_auger_ev;
-      // const double n_auger_elec_avg = colliondata[n].n_auger_elec_avg;
       const double J = get_J(Z, ionstage, ionpot_ev);
 
       assert_always(ionpot_ev >= SF_EMIN);
@@ -2036,8 +2029,6 @@ auto sfmatrix_solve(const std::span<const double> sfmatrix) -> std::array<double
       std::ranges::copy(yvec_arr, yvec_best.begin());
       error_best = error;
     }
-    // printlnlog("  SF solver LU_refine: After {} iterations, solution vector has a max residual of {:g}", iteration,
-    //            error);
   }
 
   assert_always(error_best >= 0.);

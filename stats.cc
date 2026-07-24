@@ -1,3 +1,5 @@
+// Counters of Monte Carlo packet events (interactions, macro-atom transitions, estimator
+// contributions), collected per timestep and printed to the log.
 
 #include "stats.h"
 

@@ -1,3 +1,5 @@
+// Declarations for input file reading (input.cc).
+
 #ifndef INPUT_H
 #define INPUT_H
 

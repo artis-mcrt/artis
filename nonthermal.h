@@ -1,3 +1,5 @@
+// Declarations for non-thermal energy deposition (nonthermal.cc).
+
 #ifndef NONTHERMAL_H
 #define NONTHERMAL_H
 

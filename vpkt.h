@@ -1,3 +1,5 @@
+// Declarations for virtual packet spectra (vpkt.cc).
+
 #ifndef VPKT_H
 #define VPKT_H
 
@@ -31,6 +33,7 @@ constexpr int VSPEC_TIMEBINS = 5;
 
 // number of virtual packets in a given timestep
 // separately cache-line aligned because they are incremented by all threads
+// per-rank counts of virtual packets created and escaped in the current timestep
 ALIGNAS_AVOID_FALSE_SHARING inline int nvpkt_created{0};
 ALIGNAS_AVOID_FALSE_SHARING inline int nvpkt_esc_from_rpkt{0};  // electron scattering event
 ALIGNAS_AVOID_FALSE_SHARING inline int nvpkt_esc_from_kpkt{0};  // kpkt deactivation

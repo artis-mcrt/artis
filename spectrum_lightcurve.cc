@@ -1,3 +1,6 @@
+// Binning of escaped packets into spectra and light curves for each observer direction bin,
+// optionally decomposed into the emission and absorption contributions of each atomic process.
+
 #include "spectrum_lightcurve.h"
 
 #include <algorithm>
@@ -179,7 +182,7 @@ auto columnindex_from_emissiontype(const int et) -> int {
   // bf-emission
   const int bfindex = -1 - et;
   if (globals::nbfcontinua == 0) {
-    // assert_always(false);  // if there are no bf processes, we should not get here
+    // no bf continua are in use, so a bf emission type should be impossible; count it in the free-free column
     return 2 * get_nelements() * get_max_nions();
   }
   assert_always(bfindex < globals::nbfcontinua);

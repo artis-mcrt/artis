@@ -1,3 +1,8 @@
+// The radiation field model: accumulates Monte Carlo estimators of the radiation field
+// (full-spectrum and binned J_nu, plus detailed bound-bound Jb_lu estimators) and fits diluted
+// blackbodies (W, T_R) per cell and per frequency bin for use in the photoionisation and
+// heating rates.
+
 #include "radfield.h"
 
 #include <algorithm>
@@ -543,15 +548,6 @@ void init() {
         const int lowerlevel = lower_uniquelevelindex - ionuniquelevelindexstart;
 
         bool addline = false;
-        // if (ionstage == 1 && lowerlevel == 6 && upperlevel == 55)
-        //   addline = true;
-        // else if (ionstage == 1 && lowerlevel == 10 && upperlevel == 104)
-        //   addline = true;
-        // else if (ionstage == 1 && lowerlevel == 10 && upperlevel == 112)
-        //   addline = true;
-        // else if (ionstage == 2 && lowerlevel == 9 && upperlevel == 64)
-        //   addline = true;
-
         if (lowerlevel <= 15) {  // selection for detailed estimators (by lower-level index)
           addline = true;
         }

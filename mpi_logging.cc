@@ -1,3 +1,5 @@
+// Implementation of the log-file output routines declared in mpi_logging.h.
+
 #include "mpi_logging.h"
 
 #include <chrono>

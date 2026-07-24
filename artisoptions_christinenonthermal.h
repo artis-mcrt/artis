@@ -1,3 +1,6 @@
+// A compile-time options preset: symlink or copy one of the artisoptions_*.h files to
+// artisoptions.h to select the run configuration. Every option is described in artisoptions_doc.md.
+
 #ifndef ARTISOPTIONS_H
 #define ARTISOPTIONS_H
 // NOLINTBEGIN(modernize-use-trailing-return-type,misc-unused-parameters)

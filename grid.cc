@@ -1,3 +1,8 @@
+// The model grid and propagation grid: reads the input ejecta model (model.txt), sets up cell
+// densities, abundances, and temperatures, maps model cells onto the propagation grid (1D
+// spherical, 2D cylindrical, or 3D Cartesian), and provides the cell geometry and
+// boundary-crossing calculations used during packet propagation.
+
 #include "grid.h"
 
 #include <algorithm>
@@ -339,6 +344,8 @@ void allocate_nonemptycells_composition_cooling() {
   nltepops_allcells = MPI_shared_array<double>(nonempty_npts_model_ptrdifft * globals::total_nlte_levels, -1.);
 }
 
+// build the mapping between model cells and propagation cells, then allocate the per-cell
+// shared-memory arrays (populations, estimators, temperatures) for the nonempty model cells only
 void allocate_nonemptymodelcells() {
   // Determine the number of simulation cells associated with the model cells
   std::ranges::fill(modelgrid_numpropcells, 0);
@@ -1826,6 +1833,9 @@ void set_elements_uppermost_ion(const int nonemptymgi, const int element, const 
   return kappa_float;
 }
 
+// read the input ejecta model from model.txt, auto-detecting its dimensionality (1D spherical,
+// 2D cylindrical, or 3D Cartesian) and reading the per-cell densities, abundances, and any
+// optional extra columns into the model grid
 void read_ejecta_model() {
   auto fmodel = fstream_required("model.txt", std::ios::in);
   std::string line;
@@ -2071,7 +2081,8 @@ void read_ejecta_model() {
       std::abort();
     }
 
-    //   assert_always(posmatch_zyx ^ posmatch_xyz);  // xor because if both match then probably an infinity occurred
+    // posmatch_xyz and posmatch_zyx should be mutually exclusive: if both column orders matched, an
+    // infinity probably occurred in the calculated positions
     if (posmatch_xyz) {
       printlnlog("Cell positions in model.txt are consistent with calculated values when x-y-z column order is used.");
     }
@@ -2442,7 +2453,7 @@ DEVICE_FUNC void snap_pos_to_cell(Vec3d& pos, const double time, const int celli
           printlnlog("packet dir [{:g}, {:g}, {:g}]", dir[0], dir[1], dir[2]);
 #endif
 
-          // this should not happen! Leave the check until late 2026 and it if never triggers on any runs, we can remove
+          // this should not happen! Leave the check until late 2026 and if it never triggers on any runs, we can remove
           // the check and correction code
           assert_always(!isoutside_error);
 

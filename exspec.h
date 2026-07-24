@@ -1,3 +1,5 @@
+// Constants for the exspec post-processing tool (exspec.cc).
+
 #ifndef EXSPEC_H
 #define EXSPEC_H
 

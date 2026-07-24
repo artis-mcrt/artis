@@ -1,3 +1,7 @@
+// r-packet (UVOIR photon packet) propagation: bound-free and free-free continuum opacity,
+// distances to the next line or continuum event, and the interaction events themselves
+// (electron scattering, continuum absorption, and line absorption into a macro-atom).
+
 #include "rpkt.h"
 
 #include <algorithm>
@@ -313,7 +317,9 @@ void electron_scatter_rpkt(Packet& pkt) {
   double phisc = 0.;
 
   if constexpr (DIPOLE) {
-    // Assume dipole function (rejecton method, see Code & Whitney 1995)
+    // Assume dipole function: sample the scattering direction cosine M and azimuth angle phisc by
+    // rejection (see Code & Whitney 1995). p is the phase function value for the trial angles and
+    // x is a uniform draw from [0, 2] (an upper bound on p); the trial is accepted when x <= p.
     double p = 0.;
     double x = 1.;
     while (x > p) {
@@ -673,7 +679,10 @@ auto calculate_chi_ffheating(const int nonemptymgi, const double nu, const bool 
   return chi_ff;
 }
 
-// get bound-free opacity
+// sum the bound-free opacity at frequency nu over all photoionisation continua (using the
+// binary-searched frequency window of contributing edges). When USECELLHISTANDUPDATEPHIXSLIST is
+// true, also record each continuum's contribution in the phixslist and cache the running sum for
+// reuse within the cell.
 template <bool USECELLHISTANDUPDATEPHIXSLIST>
 auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixslist& phixslist) -> double {
   double chi_bf_sum = 0.;

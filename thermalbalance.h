@@ -1,3 +1,6 @@
+// The HeatingCoolingRates struct and declarations for the electron thermal balance solver
+// (thermalbalance.cc).
+
 #ifndef THERMALBALANCE_H
 #define THERMALBALANCE_H
 

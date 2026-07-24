@@ -1,3 +1,7 @@
+// The per-timestep packet update: sorts the packet population and advances every packet to the
+// end of the timestep, handling pellet decays and non-thermal deposition and dispatching gamma,
+// r-, and k-packets to their propagation and interaction routines.
+
 #include "update_packets.h"
 
 #include <algorithm>

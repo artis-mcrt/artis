@@ -1,3 +1,6 @@
+// Monte Carlo event counters (stats.cc): the Counter enum and functions to increment, read,
+// and print the per-timestep event counts.
+
 #ifndef STATS_H
 #define STATS_H
 

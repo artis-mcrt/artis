@@ -1,3 +1,5 @@
+// Declarations for the macro-atom machinery (macroatom.cc).
+
 #ifndef MACROATOM_H
 #define MACROATOM_H
 

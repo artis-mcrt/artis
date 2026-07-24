@@ -1,3 +1,9 @@
+// Main program of the sn3d simulation: time-dependent Monte Carlo radiative transfer for
+// supernova and kilonova ejecta. Sets up the grid, packets, and MPI environment, then runs the
+// timestep loop alternating update_grid() (solving temperatures, populations, and opacities
+// from the previous timestep's estimators) with update_packets() (packet propagation), with
+// periodic restart-file and output writing.
+
 #include "sn3d.h"
 
 #include <getopt.h>  // NOLINT(misc-include-cleaner): glibc declares getopt/optarg in bits/, no IWYU mapping to <getopt.h>

@@ -1,3 +1,5 @@
+// Declarations for the per-timestep packet update (update_packets.cc).
+
 #ifndef UPDATE_PACKETS_H
 #define UPDATE_PACKETS_H
 
