@@ -52,9 +52,11 @@ auto get_nu_cmf_abort(const Vec3d& pos, const Vec3d& dir, const double prop_time
   const auto half_abort_dist = abort_dist / 2.;
   const auto abort_time = prop_time + (half_abort_dist / CLIGHT_PROP) + (half_abort_dist / CLIGHT_PROP);
 
-  const Vec3d abort_pos{pos[0] + (dir[0] * half_abort_dist) + (dir[0] * half_abort_dist),
-                        pos[1] + (dir[1] * half_abort_dist) + (dir[1] * half_abort_dist),
-                        pos[2] + (dir[2] * half_abort_dist) + (dir[2] * half_abort_dist)};
+  const Vec3d abort_pos{
+      pos[0] + (dir[0] * half_abort_dist) + (dir[0] * half_abort_dist),
+      pos[1] + (dir[1] * half_abort_dist) + (dir[1] * half_abort_dist),
+      pos[2] + (dir[2] * half_abort_dist) + (dir[2] * half_abort_dist),
+  };
 
   const double nu_cmf_abort = nu_rf * calculate_doppler_nucmf_on_nurf(abort_pos, dir, abort_time);
 
@@ -352,11 +354,13 @@ void electron_scatter_rpkt(Packet& pkt) {
     const double common_factor = sin_tsc / sin_polar;
     const double cos_phisc = cos(phisc);
     const double sin_phisc = sin(phisc);
-    new_dir_cmf = {(common_factor * ((old_dir_cmf[1] * sin_phisc) - (old_dir_cmf[0] * old_dir_cmf[2] * cos_phisc))) +
-                       (old_dir_cmf[0] * cos_tsc),
-                   (common_factor * ((-old_dir_cmf[0] * sin_phisc) - (old_dir_cmf[1] * old_dir_cmf[2] * cos_phisc))) +
-                       (old_dir_cmf[1] * cos_tsc),
-                   (sin_tsc * cos_phisc * sin_polar) + (old_dir_cmf[2] * cos_tsc)};
+    new_dir_cmf = {
+        (common_factor * ((old_dir_cmf[1] * sin_phisc) - (old_dir_cmf[0] * old_dir_cmf[2] * cos_phisc))) +
+            (old_dir_cmf[0] * cos_tsc),
+        (common_factor * ((-old_dir_cmf[0] * sin_phisc) - (old_dir_cmf[1] * old_dir_cmf[2] * cos_phisc))) +
+            (old_dir_cmf[1] * cos_tsc),
+        (sin_tsc * cos_phisc * sin_polar) + (old_dir_cmf[2] * cos_tsc),
+    };
   } else {
     new_dir_cmf = {sin_tsc * cos(phisc), sin_tsc * sin(phisc), (old_dir_cmf[2] > 0) ? cos_tsc : -cos_tsc};
   }
@@ -446,10 +450,12 @@ void rpkt_event_continuum(Packet& pkt, const ContinuumOpacity& chi_rpkt_cont) {
     if (rng_uniform(get_rngstate(pkt)) < nu_edge / nu) {
       stats::increment(stats::Counter::MA_STAT_ACTIVATION_BF);
 
-      do_macroatom(pkt, {.element = element,
-                         .ion = ion + 1,
-                         .level = get_phixsupperlevel(element, ion, level, phixstargetindex),
-                         .activatingline = -99});
+      do_macroatom(pkt, {
+                            .element = element,
+                            .ion = ion + 1,
+                            .level = get_phixsupperlevel(element, ion, level, phixstargetindex),
+                            .activatingline = -99,
+                        });
     } else {
       // transform to k-pkt
       stats::increment(stats::Counter::K_STAT_FROM_BF);

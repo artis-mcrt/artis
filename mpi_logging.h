@@ -20,7 +20,6 @@
 #include <ios>
 #include <limits>
 #include <memory>
-#include <new>
 #include <ranges>
 #include <span>
 #include <string>
@@ -273,7 +272,7 @@ class MPI_shared_array {
 
   template <typename U>
     requires(std::is_same_v<T, const U> && !std::is_const_v<U>)
-  // NOLINTNEXTLINE(cppcoreguidelines-rvalue-reference-param-not-moved,google-explicit-constructor,hicpp-explicit-conversions)
+  // NOLINTNEXTLINE(cppcoreguidelines-rvalue-reference-param-not-moved,*-explicit-constructor,hicpp-explicit-conversions)
   MPI_shared_array(MPI_shared_array<U>&& other) noexcept  // cppcheck-suppress noExplicitConstructor
       : _win(std::exchange(other._win, MPI_WIN_NULL)), _span(std::exchange(other._span, {})) {}
 
@@ -388,7 +387,7 @@ constexpr std::ptrdiff_t MPI_COUNT_MAX = std::numeric_limits<int>::max();
 template <typename R>
   requires std::ranges::random_access_range<R>
 inline void MPI_Allreduce_safe(R&& data, MPI_Op op, MPI_Comm comm) {
-  auto dataspan = std::span{std::forward<R>(data)};
+  const auto dataspan = std::span{std::forward<R>(data)};
   if (dataspan.empty()) {
     return;
   }
@@ -424,7 +423,7 @@ inline void MPI_Allreduce_safe(T& data, MPI_Op op, MPI_Comm comm) {
 template <typename R>
   requires std::ranges::random_access_range<R>
 inline void MPI_Bcast_safe(R&& data, const int root, MPI_Comm comm) {
-  auto dataspan = std::span{std::forward<R>(data)};
+  const auto dataspan = std::span{std::forward<R>(data)};
   if (dataspan.empty()) {
     return;
   }
@@ -466,7 +465,7 @@ inline void MPI_Bcast_safe(T& data, const int root, MPI_Comm comm) {
 template <typename R>
   requires std::ranges::random_access_range<R>
 inline void MPI_Reduce_safe(R&& data, MPI_Op op, const int root, MPI_Comm comm) {
-  auto dataspan = std::span{std::forward<R>(data)};
+  const auto dataspan = std::span{std::forward<R>(data)};
   if (dataspan.empty()) {
     return;
   }

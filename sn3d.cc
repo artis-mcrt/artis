@@ -66,7 +66,7 @@ void setup_cellcache() {
   // all MPI ranks on the node. When it is true, each node rank gets a single reusable slot
   // (globals::cellcache[rank_in_node]) that is repopulated as its packets move between cells.
   const int num_cellcache_slots = cellcache_singleslot ? globals::node_nprocs : grid::get_nonempty_npts_model();
-  resize_exactly(globals::cellcache, num_cellcache_slots);
+  reserve_resize(globals::cellcache, num_cellcache_slots);
 
   // per-cell sizes of each cache array
   const auto ncoolingterms = static_cast<size_t>(kpkt::ncoolingterms);
@@ -133,9 +133,9 @@ void setup_cellcache() {
     if (cellcache_singleslot && cellcachenum == globals::rank_in_node) {
       // the lazy mutex-guarded rate calculation is only used in single-slot mode, and each rank only
       // ever accesses its own slot
-      resize_exactly(cacheslot.cooling_contrib_locks, static_cast<size_t>(get_includedions()));
+      reserve_resize(cacheslot.cooling_contrib_locks, static_cast<size_t>(get_includedions()));
       std::ranges::fill(cacheslot.cooling_contrib_locks, 0);
-      resize_exactly(cacheslot.allmacroatomictransitions_locks, nincludedlevels);
+      reserve_resize(cacheslot.allmacroatomictransitions_locks, nincludedlevels);
       std::ranges::fill(cacheslot.allmacroatomictransitions_locks, 0);
 
       for (size_t uniquelevelindex = 0; uniquelevelindex < nincludedlevels; uniquelevelindex++) {
@@ -857,7 +857,7 @@ auto main(int argc, char* argv[]) -> int {
   }
 
   std::vector<Packet> packets;
-  resize_exactly(packets, MPKTS);
+  reserve_resize(packets, MPKTS);
 
   printlnlog("git branch {}", GIT_BRANCH);
 

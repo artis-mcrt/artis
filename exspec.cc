@@ -34,16 +34,16 @@ namespace {
 
 void do_direction_bin(const int dirbin, const std::vector<std::vector<Packet>>& packets_by_rank) {
   THREADLOCALONHOST std::vector<double> rpkt_light_curve_lum;
-  resize_exactly(rpkt_light_curve_lum, globals::ntimesteps);
+  reserve_resize(rpkt_light_curve_lum, globals::ntimesteps);
   std::ranges::fill(rpkt_light_curve_lum, 0.);
   THREADLOCALONHOST std::vector<double> rpkt_light_curve_lumcmf;
-  resize_exactly(rpkt_light_curve_lumcmf, globals::ntimesteps);
+  reserve_resize(rpkt_light_curve_lumcmf, globals::ntimesteps);
   std::ranges::fill(rpkt_light_curve_lumcmf, 0.);
   THREADLOCALONHOST std::vector<double> gamma_light_curve_lum;
-  resize_exactly(gamma_light_curve_lum, globals::ntimesteps);
+  reserve_resize(gamma_light_curve_lum, globals::ntimesteps);
   std::ranges::fill(gamma_light_curve_lum, 0.);
   THREADLOCALONHOST std::vector<double> gamma_light_curve_lumcmf;
-  resize_exactly(gamma_light_curve_lumcmf, globals::ntimesteps);
+  reserve_resize(gamma_light_curve_lumcmf, globals::ntimesteps);
   std::ranges::fill(gamma_light_curve_lumcmf, 0.);
 
   THREADLOCALONHOST Spectra rpkt_spectra_I;
@@ -186,7 +186,7 @@ auto main(int argc, char* argv[]) -> int {
   // (not the number of ranks used to run exspec, which is always 1 for now)
 
   std::vector<std::vector<Packet>> packets_by_rank;
-  resize_exactly(packets_by_rank, globals::nprocs_exspec);
+  reserve_resize(packets_by_rank, globals::nprocs_exspec);
 
   for (int p = 0; p < globals::nprocs_exspec; p++) {
     packets_by_rank[p] = read_text_packets(std::format("packets{:02d}_{:04d}.out", 0, p));

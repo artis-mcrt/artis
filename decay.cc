@@ -51,7 +51,8 @@ constexpr std::array elsymbols{
     "Sb", "Te", "I",  "Xe", "Cs", "Ba", "La", "Ce", "Pr", "Nd", "Pm", "Sm",  "Eu", "Gd",  "Tb", "Dy",  "Ho",
     "Er", "Tm", "Yb", "Lu", "Hf", "Ta", "W",  "Re", "Os", "Ir", "Pt", "Au",  "Hg", "Tl",  "Pb", "Bi",  "Po",
     "At", "Rn", "Fr", "Ra", "Ac", "Th", "Pa", "U",  "Np", "Pu", "Am", "Cm",  "Bk", "Cf",  "Es", "Fm",  "Md",
-    "No", "Lr", "Rf", "Db", "Sg", "Bh", "Hs", "Mt", "Ds", "Rg", "Cn", "Uut", "Fl", "Uup", "Lv", "Uus", "Uuo"};
+    "No", "Lr", "Rf", "Db", "Sg", "Bh", "Hs", "Mt", "Ds", "Rg", "Cn", "Uut", "Fl", "Uup", "Lv", "Uus", "Uuo",
+};
 constexpr int Z_MAX = elsymbols.size() - 1;
 
 struct DecayDaughter {
@@ -70,8 +71,11 @@ struct Nuclide {
   double endecay_alpha{0.};  // average energy per alpha decay in kinetic energy of alpha particles [erg]
   double endecay_fission{0.};  // average energy per fission decay in kinetic energy of fission fragments [erg]
   std::array<double, DecayType::DECAYTYPE_COUNT> endecay_q = {
-      0.};  // Q-value (reactant minus product energy) for each decay type
-  std::array<double, DecayType::DECAYTYPE_COUNT> branchprobs = {0.};  // branch probability of each decay type
+      0., 0., 0., 0., 0., 0.,
+  };  // Q-value (reactant minus product energy) for each decay type
+  std::array<double, DecayType::DECAYTYPE_COUNT> branchprobs = {
+      0., 0., 0., 0., 0., 0.,
+  };  // branch probability of each decay type
 
   // (Z, A, probability) of fission daughters
   std::vector<DecayDaughter> fission_daughters_z_a_prob{};  // NOLINT(readability-redundant-member-init)
@@ -91,7 +95,8 @@ struct DecayPath {
   std::vector<DecayType> decaytypes;
   std::vector<double> lambdas;
   double branchproduct{
-      0.};  // product of all branching factors along the path set by calculate_decaypath_branchproduct()
+      0.,
+  };  // product of all branching factors along the path set by calculate_decaypath_branchproduct()
 };
 
 std::vector<Nuclide> nuclides;
@@ -105,9 +110,13 @@ std::vector<bool> alldecaytypes_is_used;
 
   switch (static_cast<enum DecayType>(decaytype)) {
     case DecayType::DECAYTYPE_ALPHA: {
-      return {DecayDaughter{.z = z_parent - 2,
-                            .a = a_parent - 4,
-                            .probability = 1.}};  // lose two protons and two neutrons (He4 handled separately)
+      return {
+          DecayDaughter{
+              .z = z_parent - 2,
+              .a = a_parent - 4,
+              .probability = 1.,
+          },
+      };  // lose two protons and two neutrons (He4 handled separately)
     }
     case DecayType::DECAYTYPE_BETAPLUS:
     case DecayType::DECAYTYPE_ELECTRONCAPTURE: {
@@ -241,7 +250,7 @@ void printout_nuclidemeanlife(const int z, const int a) {
   return nucdecayenergy(nucindex, decaypath.decaytypes[secondlastindex]) / nuclides[nucindex].decay_daughters_probsum;
 }
 
-[[nodiscard]] auto get_str_decaytype(const DecayType decaytype) -> std::string {
+[[nodiscard]] auto get_str_decaytype(const DecayType decaytype) -> std::string_view {
   switch (decaytype) {
     case DecayType::DECAYTYPE_ALPHA: {
       return "alpha";
@@ -353,13 +362,14 @@ auto find_decaypaths(const std::span<const int> custom_zlist, const std::span<co
       }
 
       for (const auto& daughter : decay_daughters_z_a_prob(z, a, decaytype)) {
-        localdecaypaths.push_back(
-            {.z = {z, daughter.z},
-             .a = {a, daughter.a},
-             .nucindex = {startnucindex, get_nucindex(daughter.z, daughter.a)},
-             .decaytypes = {decaytype, DecayType::DECAYTYPE_NONE},
-             .lambdas = {},
-             .branchproduct = get_nuc_decaybranchprob(startnucindex, decaytype) * daughter.probability});
+        localdecaypaths.push_back({
+            .z = {z, daughter.z},
+            .a = {a, daughter.a},
+            .nucindex = {startnucindex, get_nucindex(daughter.z, daughter.a)},
+            .decaytypes = {decaytype, DecayType::DECAYTYPE_NONE},
+            .lambdas = {},
+            .branchproduct = get_nuc_decaybranchprob(startnucindex, decaytype) * daughter.probability,
+        });
 
         extend_lastdecaypath(localdecaypaths);  // take this single step chain and find all descendants
       }
@@ -525,10 +535,9 @@ auto get_nuc_massfrac(const int nonemptymgi, const int nucindex, const double ti
   for (const auto& decaypath : decaypaths) {
     const auto last_decaytype = decaypath.decaytypes[decaypath.nucindex.size() - 2];
     // match 4He abundance to alpha decay of any nucleus (no continue), otherwise check daughter nuclide matches
-    if (z != 2 || a != 4 || last_decaytype != DecayType::DECAYTYPE_ALPHA) {
-      if (decaypath.z.back() != z || decaypath.a.back() != a) {
-        continue;
-      }
+    if ((z != 2 || a != 4 || last_decaytype != DecayType::DECAYTYPE_ALPHA) &&
+        (decaypath.z.back() != z || decaypath.a.back() != a)) {
+      continue;
     }
 
     const int nucindex_top = decaypath.nucindex[0];
@@ -1034,7 +1043,7 @@ void init_nuclides(const std::span<const int> custom_zlist, const std::span<cons
     }
   }
 
-  resize_exactly(alldecaytypes_is_used, DecayType::DECAYTYPE_COUNT);
+  reserve_resize(alldecaytypes_is_used, DecayType::DECAYTYPE_COUNT);
   for (DecayType decaytype : all_decaytypes) {
     alldecaytypes_is_used[decaytype] = std::ranges::any_of(
         std::views::iota(0UZ, nuclides.size()),

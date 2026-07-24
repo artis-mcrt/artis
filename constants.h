@@ -9,6 +9,7 @@
 #include <new>
 #include <numbers>
 #include <string_view>
+#include <version>
 
 [[gnu::const]] constexpr auto pow2(auto x) { return x * x; }
 [[gnu::const]] constexpr auto pow3(auto x) { return x * x * x; }
@@ -61,7 +62,7 @@ constexpr double H_ionpot = 13.5979996 * EV;
 enum class GridType {
   SPHERICAL1D,  // 1D radial shells (non-uniform dr)
   CYLINDRICAL2D,  // 2D cylindrical grid with uniform dz, drcyl
-  CARTESIAN3D  // 3D Cartesian cubic grid with uniform dx=dy=dz
+  CARTESIAN3D,  // 3D Cartesian cubic grid with uniform dx=dy=dz
 };
 
 // constant for van-Regemorter approximation.

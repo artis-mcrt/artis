@@ -28,16 +28,16 @@ template <class T>
   } else {
     std::uint64_t res = value;
     res *= 0xbc2ad017d719504d;
-    return static_cast<std::uint32_t>(res ^ (res >> 32));
+    return static_cast<std::uint32_t>(res ^ (res >> 32U));
   }
 }
 
 template <class ResultType>
 [[nodiscard]] constexpr auto _mix_seed(ResultType seed) -> ResultType {
   std::uint64_t state = (static_cast<std::uint64_t>(seed) + 0x9E3779B97f4A7C15);
-  state = (state ^ (state >> 30)) * 0xBF58476D1CE4E5B9;
-  state = (state ^ (state >> 27)) * 0x94D049BB133111EB;
-  return static_cast<ResultType>(state ^ (state >> 31));
+  state = (state ^ (state >> 30U)) * 0xBF58476D1CE4E5B9;
+  state = (state ^ (state >> 27U)) * 0x94D049BB133111EB;
+  return static_cast<ResultType>(state ^ (state >> 31U));
   // some of the 16/32-bit PRNGs have bad correlation on the successive seeds, this usually
   // can be alleviated by using a single iteration of a "good" PRNG to pre-mix the seed
 }
@@ -83,9 +83,9 @@ class SplitMix32 {
 
   constexpr auto operator()() noexcept -> result_type {
     result_type result = (this->s += 0x9e3779b9);
-    result = (result ^ (result >> 16)) * 0x21f0aaad;
-    result = (result ^ (result >> 15)) * 0x735a2d97;
-    return result ^ (result >> 15);
+    result = (result ^ (result >> 16U)) * 0x21f0aaad;
+    result = (result ^ (result >> 15U)) * 0x735a2d97;
+    return result ^ (result >> 15U);
   }
 };
 
@@ -123,14 +123,14 @@ class Xoshiro128PP {
   }
 
   constexpr auto operator()() noexcept -> result_type {
-    const result_type result = std::rotl(this->s[0] + this->s[3], 7) + this->s[0];
-    const result_type t = s[1] << 9;
+    const result_type result = std::rotl(this->s[0] + this->s[3], 7U) + this->s[0];
+    const result_type t = s[1] << 9U;
     this->s[2] ^= this->s[0];
     this->s[3] ^= this->s[1];
     this->s[1] ^= this->s[2];
     this->s[0] ^= this->s[3];
     this->s[2] ^= t;
-    this->s[3] = std::rotl(this->s[3], 11);
+    this->s[3] = std::rotl(this->s[3], 11U);
     return result;
   }
 

@@ -59,8 +59,8 @@ struct RadFieldBins {
   std::vector<double> nuJ_raw;
 
   void resize(const ptrdiff_t nonempty_npts_model) {
-    resize_exactly(J_raw, nonempty_npts_model * RADFIELDBINCOUNT);
-    resize_exactly(nuJ_raw, nonempty_npts_model * RADFIELDBINCOUNT);
+    reserve_resize(J_raw, nonempty_npts_model * RADFIELDBINCOUNT);
+    reserve_resize(nuJ_raw, nonempty_npts_model * RADFIELDBINCOUNT);
   }
 };
 
@@ -386,8 +386,8 @@ auto find_bin_T_R(const int nonemptymgi, const int binindex) -> float {
 
     // use TOMS 748 solver from Boost
     uintmax_t iteration_num = maxit;
-    auto result = boost::math::tools::toms748_solve(f_deltanubar, bins_T_R_min, bins_T_R_max, f_Tmin, f_Tmax,
-                                                    ftol<epsrel>, iteration_num);
+    const auto result = boost::math::tools::toms748_solve(f_deltanubar, bins_T_R_min, bins_T_R_max, f_Tmin, f_Tmax,
+                                                          ftol<epsrel>, iteration_num);
     const auto T_R_solution = static_cast<float>(0.5 * (result.first + result.second));
     if (iteration_num >= maxit) {
       printlnlog("[warning] find_bin_T_R: T_R did not converge within {} iterations.", iteration_num);
@@ -520,20 +520,20 @@ void init() {
 
   const ptrdiff_t nonempty_npts_model = grid::get_nonempty_npts_model();
 
-  resize_exactly(J_normfactor, nonempty_npts_model + 1);
-  resize_exactly(J, nonempty_npts_model + 1);
+  reserve_resize(J_normfactor, nonempty_npts_model + 1);
+  reserve_resize(J, nonempty_npts_model + 1);
 
   // J and nuJ are accumulated and then normalised in-place
   // i.e. be sure the normalisation has been applied (exactly once) before using the values here!
-  resize_exactly(nuJ, nonempty_npts_model + 1);
+  reserve_resize(nuJ, nonempty_npts_model + 1);
 
 #ifdef DO_TITER
-  resize_exactly(J_reduced_save, nonempty_npts_model + 1);
-  resize_exactly(nuJ_reduced_save, nonempty_npts_model + 1);
+  reserve_resize(J_reduced_save, nonempty_npts_model + 1);
+  reserve_resize(nuJ_reduced_save, nonempty_npts_model + 1);
 #endif
 
-  resize_exactly(prev_Jb_lu_normed, nonempty_npts_model);
-  resize_exactly(Jb_lu_raw, nonempty_npts_model);
+  reserve_resize(prev_Jb_lu_normed, nonempty_npts_model);
+  reserve_resize(Jb_lu_raw, nonempty_npts_model);
 
   detailed_linecount = 0;
 
@@ -612,7 +612,7 @@ void init() {
     printlnlog("[info] mem_usage: detailed bf estimators for non-empty cells occupy {:.3f} MB (node shared memory)",
                nonempty_npts_model * bfestimcount * sizeof(float) / 1024. / 1024.);
 
-    resize_exactly(bfrate_raw, nonempty_npts_model * bfestimcount);
+    reserve_resize(bfrate_raw, nonempty_npts_model * bfestimcount);
 
     printlnlog("[info] mem_usage: detailed bf estimator acculumators for non-empty cells occupy {:.3f} MB",
                nonempty_npts_model * bfestimcount * sizeof(double) / 1024. / 1024.);

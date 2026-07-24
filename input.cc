@@ -123,7 +123,8 @@ constexpr auto inputlinecomments = std::array{
     "20: UNUSED max_bf_continua: (>0: max bound-free continua per ion, <0 unlimited)",
     "21: nprocs_exspec: extract spectra for n MPI tasks. sn3d will set this on start of new sim.",
     "22: UNUSED do_emission_res: this is always true for exspec, sometimes true during sn3d",
-    "23: UNUSED kpktdiffusion_timescale n_kpktdiffusion_timesteps: now set in kpkt.cc"};
+    "23: UNUSED kpktdiffusion_timescale n_kpktdiffusion_timesteps: now set in kpkt.cc",
+};
 
 void read_phixs_data_table(std::istream& phixsfile, const int nphixspoints_inputtable, const int element,
                            const int lowerion, const int lowerlevel, const int upperion, int upperlevel_in,
@@ -503,7 +504,7 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion,
                                           std::vector<TempAllTransInput>& temp_alltranslist,
                                           std::span<TempEnergyLevel> temp_alllevels) {
   const auto nlevels = get_nlevels(element, ion);
-  auto ion_levels = std::span{temp_alllevels}.subspan(get_ionuniquelevelindexstart(element, ion), nlevels);
+  const auto ion_levels = std::span{temp_alllevels}.subspan(get_ionuniquelevelindexstart(element, ion), nlevels);
   THREADLOCALONHOST std::vector<int> iondowntranstmplineindices;
   iondowntranstmplineindices.resize(downtranslevelstart(nlevels));
 
@@ -584,14 +585,17 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion,
               .einstein_A = transition.A,
               .coll_str = transition.coll_str,
               .osc_strength = f_lu,
-              .forbidden = transition.forbidden};
+              .forbidden = transition.forbidden,
+          };
           const auto lowerstartup = ion_levels[lowerlevel].alltrans_startup();
-          temp_alltranslist[lowerstartup + nloweruptrans - 1] = {.lineindex = -1,
-                                                                 .targetlevelindex = level,
-                                                                 .einstein_A = transition.A,
-                                                                 .coll_str = transition.coll_str,
-                                                                 .osc_strength = f_lu,
-                                                                 .forbidden = transition.forbidden};
+          temp_alltranslist[lowerstartup + nloweruptrans - 1] = {
+              .lineindex = -1,
+              .targetlevelindex = level,
+              .einstein_A = transition.A,
+              .coll_str = transition.coll_str,
+              .osc_strength = f_lu,
+              .forbidden = transition.forbidden,
+          };
         }
 
       } else if (pass == 1) {
@@ -978,12 +982,14 @@ void read_autoion_data() {
               static_cast<int>(temp_allautoion.size());
         }
 
-        temp_allautoion.push_back({.autoion_A = static_cast<float>(autoion_A),
-                                   .elementindex = element,
-                                   .lowerionindex = lowerion,
-                                   .lowerlevelindex = lowerlevel,
-                                   .upperionindex = upperion,
-                                   .upperlevelindex = upperlevel});
+        temp_allautoion.push_back({
+            .autoion_A = static_cast<float>(autoion_A),
+            .elementindex = element,
+            .lowerionindex = lowerion,
+            .lowerlevelindex = lowerlevel,
+            .upperionindex = upperion,
+            .upperlevelindex = upperlevel,
+        });
       }
     }
   }
@@ -1307,7 +1313,7 @@ void read_levels_and_transitions(std::vector<TempEnergyLevel>& temp_alllevels,
 // transitions (adata.txt, transitiondata.txt) and photoionisation cross-sections
 // (phixsdata_v2.txt) for every included ion, building the global element/ion/level/line lists
 void read_atomicdata_files() {
-  auto nlevelsmax_readin = read_compositiondata();
+  const auto nlevelsmax_readin = read_compositiondata();
 
   printlnlog("SINGLE_LEVEL_TOP_ION: {}", SINGLE_LEVEL_TOP_ION ? "true" : "false");
 
@@ -1316,8 +1322,8 @@ void read_atomicdata_files() {
   std::vector<TempAllTransInput> temp_alltranslist;
 
   if (globals::rank_in_node == 0) {
-    temp_linelist.reserve(1 << 22);  // reserve initial space for 4 million lines to avoid too many reallocations
-    temp_alltranslist.reserve(1 << 22);
+    temp_linelist.reserve(1U << 22U);  // reserve initial space for 4 million lines to avoid too many reallocations
+    temp_alltranslist.reserve(1U << 22U);
     read_levels_and_transitions(temp_alllevels, temp_linelist, temp_alltranslist, nlevelsmax_readin);
   }
   MPI_Barrier_node();
@@ -1565,7 +1571,7 @@ void read_atomicdata_files() {
 }
 
 void write_bflist_file() {
-  resize_exactly(globals::bflist, globals::nbfcontinua);
+  reserve_resize(globals::bflist, globals::nbfcontinua);
 
   int i = 0;
   for (int element = 0; element < get_nelements(); element++) {

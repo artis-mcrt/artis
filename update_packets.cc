@@ -106,7 +106,7 @@ void do_nonthermal_predeposit(Packet& pkt, const int nts, const double ts_end) {
     // time of deposition is the smaller out of (a) the time until which the particle loses all its energy according to
     // the loss rates above and (b) the time remaining until the end of the current time step
     // Only collisional losses count as energy deposited into the gas (not adiabatic losses)
-    e_cmf_deposited = pkt.e_cmf * endot_collisional * (std::min(ts_end - ts, particle_en / endot)) / particle_en;
+    e_cmf_deposited = pkt.e_cmf * endot_collisional * std::min(ts_end - ts, particle_en / endot) / particle_en;
 
     // A discrete absorption event should occur somewhere along the continuous track from initial kinetic energy to zero
     // KE with equal probability of happening at any energy in between. So we can just randomly
@@ -312,13 +312,15 @@ constexpr auto packetprop_update_required(const Packet& pkt, const double ts_end
 // Return the nonemptymgi for the cell cache if required (non-empty, non-thick cell),
 // otherwise return an empty std::optional to indicate that no cell cache is used
 auto get_packet_cellcachegroupid(const Packet& pkt) -> std::optional<int> {
-  constexpr auto nocache_packettypes = std::array{TYPE_RADIOACTIVE_PELLET,
-                                                  TYPE_GAMMA,
-                                                  TYPE_PRE_KPKT,
-                                                  TYPE_NONTHERMAL_PREDEPOSIT_BETAMINUS,
-                                                  TYPE_NONTHERMAL_PREDEPOSIT_BETAPLUS,
-                                                  TYPE_NONTHERMAL_PREDEPOSIT_ALPHA,
-                                                  TYPE_NTALPHA_FISPROD_DEPOSITED};
+  constexpr auto nocache_packettypes = std::array{
+      TYPE_RADIOACTIVE_PELLET,
+      TYPE_GAMMA,
+      TYPE_PRE_KPKT,
+      TYPE_NONTHERMAL_PREDEPOSIT_BETAMINUS,
+      TYPE_NONTHERMAL_PREDEPOSIT_BETAPLUS,
+      TYPE_NONTHERMAL_PREDEPOSIT_ALPHA,
+      TYPE_NTALPHA_FISPROD_DEPOSITED,
+  };
   if (std::ranges::find(nocache_packettypes, pkt.type) != nocache_packettypes.end()) {
     return std::nullopt;  // these types do not use the cell cache
   }
@@ -468,7 +470,7 @@ void update_packet_cellcache_group(const int cellcache_groupid, std::span<Packet
   }
 #endif
 
-  auto update_packet = [cellcache_groupid, ts_end, nts, &packetgroup](const ptrdiff_t index_in_group) {
+  const auto update_packet = [cellcache_groupid, ts_end, nts, &packetgroup](const ptrdiff_t index_in_group) {
 #ifdef GPU_ON
     auto& chi_rpkt_cont = chi_rpkt_cont_vec[(cellcache_groupid >= 0) ? index_in_group : 0];
 #else

@@ -27,6 +27,7 @@
 #include <span>
 #include <sstream>
 #include <string>
+#include <string_view>
 #include <tuple>
 #include <utility>
 #include <vector>
@@ -145,7 +146,7 @@ void read_possible_yefile() {
     return;
   }
 
-  auto filein = fopen_required_uniqueptr("Ye.txt", "r");
+  const auto filein = fopen_required_uniqueptr("Ye.txt", "r");
   int nlines_in = 0;
   assert_always(fscanf(filein.get(), "%d", &nlines_in) == 1);
 
@@ -389,10 +390,10 @@ void allocate_nonemptymodelcells() {
   printlnlog("There are {} modelgrid cells with associated propagation cells (nonempty_npts_model)",
              nonempty_npts_model);
 
-  resize_exactly(mgi_of_nonemptymgi, nonempty_npts_model);
+  reserve_resize(mgi_of_nonemptymgi, nonempty_npts_model);
   std::ranges::fill(mgi_of_nonemptymgi, -2);
 
-  resize_exactly(propcell_nonemptymgi, ngrid);
+  reserve_resize(propcell_nonemptymgi, ngrid);
   std::ranges::fill(propcell_nonemptymgi, -1);
 
   int nonemptymgi = 0;  // index within list of non-empty modelgrid cells
@@ -449,16 +450,16 @@ void allocate_nonemptymodelcells() {
     allocate_expansionopacities();
   }
 
-  resize_exactly(globals::dep_estimator_gamma, nonempty_npts_model);
+  reserve_resize(globals::dep_estimator_gamma, nonempty_npts_model);
   std::ranges::fill(globals::dep_estimator_gamma, 0.);
 
-  resize_exactly(globals::dep_estimator_positron, nonempty_npts_model);
+  reserve_resize(globals::dep_estimator_positron, nonempty_npts_model);
   std::ranges::fill(globals::dep_estimator_positron, 0.);
 
-  resize_exactly(globals::dep_estimator_electron, nonempty_npts_model);
+  reserve_resize(globals::dep_estimator_electron, nonempty_npts_model);
   std::ranges::fill(globals::dep_estimator_electron, 0.);
 
-  resize_exactly(globals::dep_estimator_alpha, nonempty_npts_model);
+  reserve_resize(globals::dep_estimator_alpha, nonempty_npts_model);
   std::ranges::fill(globals::dep_estimator_alpha, 0.);
 
   const auto ionestimcount = nonempty_npts_model * globals::nbfcontinua_ground;
@@ -467,10 +468,10 @@ void allocate_nonemptymodelcells() {
   if (ionestimsize > 0) {
     globals::corrphotoionrenorm = MPI_shared_array<double>(ionestimcount, 1.);
 
-    resize_exactly(globals::gammaestimator, ionestimcount);
+    reserve_resize(globals::gammaestimator, ionestimcount);
     std::ranges::fill(globals::gammaestimator, 0.);
 #ifdef DO_TITER
-    resize_exactly(globals::gammaestimator_save, ionestimcount);
+    reserve_resize(globals::gammaestimator_save, ionestimcount);
     std::ranges::fill(globals::gammaestimator_save, 0.);
 #endif
   } else {
@@ -482,10 +483,10 @@ void allocate_nonemptymodelcells() {
   }
 
   if (USE_ION_BFHEATING_ESTIMATORS && ionestimsize > 0) {
-    resize_exactly(globals::bfheatingestimator, ionestimcount);
+    reserve_resize(globals::bfheatingestimator, ionestimcount);
     std::ranges::fill(globals::bfheatingestimator, 0.);
 #ifdef DO_TITER
-    resize_exactly(globals::bfheatingestimator_save, ionestimcount);
+    reserve_resize(globals::bfheatingestimator_save, ionestimcount);
     std::ranges::fill(globals::bfheatingestimator_save, 0.);
 #endif
   } else {
@@ -495,17 +496,17 @@ void allocate_nonemptymodelcells() {
 #endif
   }
 
-  resize_exactly(globals::ffheatingestimator, nonempty_npts_model);
+  reserve_resize(globals::ffheatingestimator, nonempty_npts_model);
   std::ranges::fill(globals::ffheatingestimator, 0.);
 
-  resize_exactly(globals::colheatingestimator, DIRECT_COL_HEAT ? 0 : nonempty_npts_model);
+  reserve_resize(globals::colheatingestimator, DIRECT_COL_HEAT ? 0 : nonempty_npts_model);
   std::ranges::fill(globals::colheatingestimator, 0.);
 
 #ifdef DO_TITER
-  resize_exactly(globals::ffheatingestimator_save, nonempty_npts_model);
+  reserve_resize(globals::ffheatingestimator_save, nonempty_npts_model);
   std::ranges::fill(globals::ffheatingestimator_save, 0.);
 
-  resize_exactly(globals::colheatingestimator_save, DIRECT_COL_HEAT ? 0 : nonempty_npts_model);
+  reserve_resize(globals::colheatingestimator_save, DIRECT_COL_HEAT ? 0 : nonempty_npts_model);
   std::ranges::fill(globals::colheatingestimator_save, 0.);
 #endif
 
@@ -539,9 +540,11 @@ void map_1dmodelto3dgrid() {
 void map_2dmodelto3dgrid() {
   for (int cellindex = 0; cellindex < ngrid; cellindex++) {
     // map to 3D Cartesian grid
-    const auto pos_mid = Vec3d{(get_cellcoordmin(cellindex, 0) + get_cellcoordmax(cellindex, 0)) / 2,
-                               (get_cellcoordmin(cellindex, 1) + get_cellcoordmax(cellindex, 1)) / 2,
-                               (get_cellcoordmin(cellindex, 2) + get_cellcoordmax(cellindex, 2)) / 2};
+    const auto pos_mid = Vec3d{
+        (get_cellcoordmin(cellindex, 0) + get_cellcoordmax(cellindex, 0)) / 2,
+        (get_cellcoordmin(cellindex, 1) + get_cellcoordmax(cellindex, 1)) / 2,
+        (get_cellcoordmin(cellindex, 2) + get_cellcoordmax(cellindex, 2)) / 2,
+    };
 
     const double rcylindrical = std::sqrt(pow2(pos_mid[0]) + pow2(pos_mid[1]));
 
@@ -696,7 +699,7 @@ void parse_model_headerline(const std::string& line, std::vector<int>& zlist, st
   }
 }
 
-auto get_token_count(std::string& line) -> int {
+auto get_token_count(std::string const& line) -> int {
   std::string token;
   int abundcolcount = 0;
   auto ssline = std::istringstream{line};
@@ -858,7 +861,7 @@ void calc_modelinit_totmassnuclides() {
   mtot_input = 0.;
   mfegroup = 0.;
 
-  resize_exactly(totmassnuclide, decay::get_num_nuclides());
+  reserve_resize(totmassnuclide, decay::get_num_nuclides());
   std::ranges::fill(totmassnuclide, 0.);
 
   for (int mgi = 0; mgi < get_npts_model(); mgi++) {
@@ -1134,9 +1137,9 @@ void setup_grid_cartesian_3d() {
   assert_always(ncoordgrid[0] == ncoordgrid[2]);
 
   ngrid = static_cast<ptrdiff_t>(ncoordgrid[0]) * ncoordgrid[1] * ncoordgrid[2];
-  resize_exactly(coord_pos_min_tmin[0], ncoordgrid[0]);
-  resize_exactly(coord_pos_min_tmin[1], ncoordgrid[1]);
-  resize_exactly(coord_pos_min_tmin[2], ncoordgrid[2]);
+  reserve_resize(coord_pos_min_tmin[0], ncoordgrid[0]);
+  reserve_resize(coord_pos_min_tmin[1], ncoordgrid[1]);
+  reserve_resize(coord_pos_min_tmin[2], ncoordgrid[2]);
 
   for (int axis = 0; axis < 3; axis++) {
     for (int i = 0; i < ncoordgrid[axis]; i++) {
@@ -1152,7 +1155,7 @@ void setup_grid_spherical_1d() {
 
   ngrid = static_cast<ptrdiff_t>(ncoordgrid[0]) * ncoordgrid[1] * ncoordgrid[2];
 
-  resize_exactly(coord_pos_min_tmin[0], ncoordgrid[0]);
+  reserve_resize(coord_pos_min_tmin[0], ncoordgrid[0]);
 
   for (int cellindex = 0; cellindex < ngrid; cellindex++) {
     const int mgi = cellindex;  // interchangeable in this mode
@@ -1173,18 +1176,18 @@ void setup_grid_cylindrical_2d() {
   ngrid = ncoordgrid[0] * ncoordgrid[1];
   assert_always(ngrid == get_npts_model());
 
-  resize_exactly(coord_pos_min_tmin[0], ncoordgrid[0]);
+  reserve_resize(coord_pos_min_tmin[0], ncoordgrid[0]);
   for (int n_rcyl = 0; n_rcyl < ncoordgrid[0]; n_rcyl++) {
     coord_pos_min_tmin[0][n_rcyl] = n_rcyl * globals::rmax / ncoord_model[0];
   }
 
-  resize_exactly(coord_pos_min_tmin[1], ncoordgrid[1]);
+  reserve_resize(coord_pos_min_tmin[1], ncoordgrid[1]);
   for (int n_z = 0; n_z < ncoordgrid[1]; n_z++) {
     coord_pos_min_tmin[1][n_z] = globals::rmax * (-1 + (n_z * 2. / ncoord_model[1]));
   }
 }
 
-constexpr auto get_grid_type_name(const GridType gridtype) -> std::string {
+constexpr auto get_grid_type_name(const GridType gridtype) -> std::string_view {
   switch (gridtype) {
     case GridType::SPHERICAL1D:
       return "spherical";
@@ -1311,7 +1314,7 @@ template <BoundaryType boundarytype, size_t S1>
     double dist1 = (-b + sqrt(discriminant)) / 2 / a;
     double dist2 = (-b - sqrt(discriminant)) / 2 / a;
 
-    const auto [posfinal1, posfinal2] = [&]() {
+    const auto [posfinal1, posfinal2] = [&] {
       std::array<double, S1> posf1{};
       std::array<double, S1> posf2{};
       for (auto d = 0ZU; d < S1; d++) {
@@ -1865,7 +1868,7 @@ void read_ejecta_model() {
   // if the next line is a single float, it is the vmax (so 2D or 3D)
   // otherwise, it is the first line of the model or a header comment (so 1D)
   std::getline(fmodel, line);
-  if (!line.starts_with("#")) {
+  if (!line.starts_with('#')) {
     double num_after_vmax{NAN};
     auto sslinevmax = std::istringstream{line};
     if ((sslinevmax >> globals::vmax) && !(sslinevmax >> num_after_vmax)) {
@@ -2400,7 +2403,7 @@ DEVICE_FUNC void snap_pos_to_cell(Vec3d& pos, const double time, const int celli
   // dir * CLIGHT_PROP converted from xyz to grid coordinates
   const auto pktvelgridcoord = get_gridcoords_vel_from_xyz_pos_dir(pos, dir, pktposgridcoord, prop_gridtype);
 
-  const auto [cellcoordidx, cellcoordmin, cellcoordmax] = [cellindex, prop_gridtype]() {
+  const auto [cellcoordidx, cellcoordmin, cellcoordmax] = [cellindex, prop_gridtype] {
     auto _cellcoordidx = std::array<int, 3>{};
     auto _cellcoordmin = std::array<double, 3>{};
     auto _cellcoordmax = std::array<double, 3>{};

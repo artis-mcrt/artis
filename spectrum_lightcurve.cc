@@ -223,14 +223,14 @@ void write_partial_lightcurve_spectra_dirbin(const int nts, std::span<const Pack
   THREADLOCALONHOST std::vector<double> rpkt_light_curve_lumcmf;
   THREADLOCALONHOST std::vector<double> gamma_light_curve_lum;
   THREADLOCALONHOST std::vector<double> gamma_light_curve_lumcmf;
-  resize_exactly(rpkt_light_curve_lum, globals::ntimesteps);
+  reserve_resize(rpkt_light_curve_lum, globals::ntimesteps);
   std::ranges::fill(rpkt_light_curve_lum, 0.);
-  resize_exactly(rpkt_light_curve_lumcmf, globals::ntimesteps);
+  reserve_resize(rpkt_light_curve_lumcmf, globals::ntimesteps);
   std::ranges::fill(rpkt_light_curve_lumcmf, 0.);
   if constexpr (KEEP_ESCAPED_GAMMAS) {
-    resize_exactly(gamma_light_curve_lum, globals::ntimesteps);
+    reserve_resize(gamma_light_curve_lum, globals::ntimesteps);
     std::ranges::fill(gamma_light_curve_lum, 0.);
-    resize_exactly(gamma_light_curve_lumcmf, globals::ntimesteps);
+    reserve_resize(gamma_light_curve_lumcmf, globals::ntimesteps);
     std::ranges::fill(gamma_light_curve_lumcmf, 0.);
   }
 
@@ -468,7 +468,7 @@ void write_specpol(const std::string& specpol_filename, const std::string& emiss
 void init_spectrum_trace() {
   if (TRACE_EMISSION_ABSORPTION_REGION_ON) {
     traceemission_totalenergy = 0.;
-    resize_exactly(traceemissionabsorption, globals::nlines);
+    reserve_resize(traceemissionabsorption, globals::nlines);
     traceabsorption_totalenergy = 0.;
     for (int i = 0; i < globals::nlines; i++) {
       traceemissionabsorption[i].energyemitted = 0.;
@@ -596,15 +596,14 @@ void add_to_spec_res(const Packet& pkt, const int dirbin, Spectra& spectra_I, Sp
 
       if (TRACE_EMISSION_ABSORPTION_REGION_ON && (dirbin == -1)) {
         const int et = pkt.trueemissiontype;
-        if (et >= 0) {
-          if (t_arrive >= traceemissabs_timemin && t_arrive <= traceemissabs_timemax) {
-            if (pkt.nu_rf >= traceemissabs_nulower && pkt.nu_rf <= traceemissabs_nuupper) {
-              traceemissionabsorption[et].energyemitted += deltaE;
-              traceemissionabsorption[et].emission_weightedvelocity_sum +=
-                  vec_len(pkt.trueem_pos) / pkt.trueem_time * deltaE;
-              traceemission_totalenergy += deltaE;
-            }
-          }
+        if ((et >= 0) && (t_arrive >= traceemissabs_timemin && t_arrive <= traceemissabs_timemax) &&
+            (pkt.nu_rf >= traceemissabs_nulower && pkt.nu_rf <= traceemissabs_nuupper))
+
+        {
+          traceemissionabsorption[et].energyemitted += deltaE;
+          traceemissionabsorption[et].emission_weightedvelocity_sum +=
+              vec_len(pkt.trueem_pos) / pkt.trueem_time * deltaE;
+          traceemission_totalenergy += deltaE;
         }
       }
 
@@ -627,14 +626,13 @@ void add_to_spec_res(const Packet& pkt, const int dirbin, Spectra& spectra_I, Sp
             atomicadd_always(spectra_U->absorptionalltimesteps[absindex], pkt.stokes_u * deltaE_absorption);
           }
 
-          if (TRACE_EMISSION_ABSORPTION_REGION_ON && t_arrive >= traceemissabs_timemin &&
-              t_arrive <= traceemissabs_timemax) {
-            if ((dirbin == -1) && (pkt.nu_rf >= traceemissabs_nulower) && (pkt.nu_rf <= traceemissabs_nuupper)) {
-              traceemissionabsorption[at].energyabsorbed += deltaE_absorption;
-              const auto vel_vec = get_velocity(pkt.em_pos, pkt.em_time);
-              traceemissionabsorption[at].absorption_weightedvelocity_sum += vec_len(vel_vec) * deltaE_absorption;
-              traceabsorption_totalenergy += deltaE_absorption;
-            }
+          if ((TRACE_EMISSION_ABSORPTION_REGION_ON && t_arrive >= traceemissabs_timemin &&
+               t_arrive <= traceemissabs_timemax) &&
+              ((dirbin == -1) && (pkt.nu_rf >= traceemissabs_nulower) && (pkt.nu_rf <= traceemissabs_nuupper))) {
+            traceemissionabsorption[at].energyabsorbed += deltaE_absorption;
+            const auto vel_vec = get_velocity(pkt.em_pos, pkt.em_time);
+            traceemissionabsorption[at].absorption_weightedvelocity_sum += vec_len(vel_vec) * deltaE_absorption;
+            traceabsorption_totalenergy += deltaE_absorption;
           }
         }
       }

@@ -74,8 +74,10 @@ constexpr double MINDEPRATE = 0.;
 // Bohr radius squared in cm^2
 constexpr double A_naught_squared = 2.800285203e-17;
 
-constexpr std::array shellnames{"K ", "L1", "L2", "L3", "M1", "M2", "M3", "M4", "M5", "N1", "N2", "N3", "N4", "N5",
-                                "N6", "N7", "O1", "O2", "O3", "O4", "O5", "O6", "O7", "P1", "P2", "P3", "P4", "Q1"};
+constexpr std::array shellnames{
+    "K ", "L1", "L2", "L3", "M1", "M2", "M3", "M4", "M5", "N1", "N2", "N3", "N4", "N5",
+    "N6", "N7", "O1", "O2", "O3", "O4", "O5", "O6", "O7", "P1", "P2", "P3", "P4", "Q1",
+};
 
 std::vector<std::vector<double>> elements_electron_binding;
 std::vector<std::vector<int>> allions_shell_occupancies;
@@ -121,7 +123,7 @@ static_assert(NT_MAX_AUGER_ELECTRONS == 0 || !NT_USE_VALENCE_IONPOTENTIAL,
 // energy grid on which solution is sampled [eV]
 constexpr auto engrid(int index) -> double { return SF_EMIN + (index * DELTA_E); }
 
-const auto logengrid = []() {
+const auto logengrid = [] {
   std::vector<double> _logengrid(SFPTS);
   for (int i = 0; i < SFPTS; i++) {
     _logengrid[i] = std::log(engrid(i));
@@ -146,7 +148,7 @@ constexpr auto sourcevec(const int index) {
 
 // the energy injection rate density (integral of E * S(e) dE) in eV/s/cm3 that the Spencer-Fano equation is solved for.
 // This is arbitrary and and the solution will be scaled to match the actual energy deposition rate density.
-constexpr double E_init_ev = []() {
+constexpr double E_init_ev = [] {
   double integral = 0.;
   for (int s = 0; s < SFPTS; s++) {
     integral += sourcevec(s) * DELTA_E * engrid(s);
@@ -159,7 +161,7 @@ constexpr double E_init_ev = []() {
 // sum that includes point i itself. This matches the convention used for the integrals over y(E') on the
 // left-hand side, where sfmatrix_add_excitation() and sfmatrix_add_ionisation() both sum from j = i with
 // weight DELTA_E, and the convention used for E_init_ev above.
-constexpr auto rhsvec = []() {
+constexpr auto rhsvec = [] {
   std::array<double, SFPTS> _rhsvec{};
   double source_integral_to_SF_EMAX = 0.;
   for (int i = SFPTS - 1; i >= 0; i--) {
@@ -243,7 +245,7 @@ auto calculate_ion_shell_occupancies(const int atomic_number, const int nbound,
   const auto shellcount =
       std::min(element_shells_q_neutral.size(), elements_electron_binding[atomic_number - 1].size());
   std::vector<int> element_shells_q;
-  resize_exactly(element_shells_q, shellcount);
+  reserve_resize(element_shells_q, shellcount);
 
   int electron_count = 0;
   for (auto shellindex = 0ZU; shellindex < shellcount; shellindex++) {
@@ -331,7 +333,7 @@ void read_binding_energies() {
   std::vector<std::vector<int>> elements_neutral_shells_q;
   elements_neutral_shells_q = read_shell_configs();
 
-  resize_exactly(allions_shell_occupancies, get_includedions());
+  reserve_resize(allions_shell_occupancies, get_includedions());
   for (int element = 0; element < get_nelements(); element++) {
     for (int ion = 0; ion < get_nions(element); ion++) {
       const int ioncharge = get_ionstage(element, ion) - 1;
@@ -1454,7 +1456,8 @@ auto select_nt_ionisation(const int nonemptymgi, rngstate_type& rngstate) -> std
     const int nions = get_nions(ielement);
     for (int ilowerion = 0; ilowerion < nions - 1; ilowerion++) {
       ratesum += ion_ntion_energyrate(nonemptymgi, ielement, ilowerion);
-      if (ratesum >= zrand * ratetotal) {
+      // Strict comparison ensures that zrand == 0 skips leading ions with zero rate.
+      if (ratesum > zrand * ratetotal) {
         return {ielement, ilowerion};
       }
     }
@@ -1985,7 +1988,7 @@ auto sfmatrix_solve(const std::span<const double> sfmatrix) -> std::array<double
   const Eigen::Map<const Eigen::Matrix<double, SFPTS, SFPTS, Eigen::RowMajor>> eigen_sfmatrix{sfmatrix.data()};
   assert_testmodeonly(eigen_sfmatrix.isUpperTriangular());
 
-  auto eigen_sfmatrix_LU = eigen_sfmatrix.triangularView<Eigen::Upper>();
+  const auto eigen_sfmatrix_LU = eigen_sfmatrix.triangularView<Eigen::Upper>();
   Eigen::Map<Eigen::Vector<double, SFPTS>> eigen_yvec{yvec_arr.data()};
   eigen_yvec = eigen_sfmatrix_LU.solve(eigen_rhsvec);
 
@@ -2238,7 +2241,8 @@ DEVICE_FUNC auto nt_random_upperion(const int nonemptymgi, const int element, co
     for (int upperion = lowerion + 1; upperion <= nt_ionisation_maxupperion(element, lowerion); upperion++) {
       prob_sum += nt_ionisation_upperion_probability(nonemptymgi, element, lowerion, upperion, energyweighted);
 
-      if (zrand <= prob_sum) {
+      // Strict comparison ensures that zrand == 0 skips leading zero-probability outcomes.
+      if (zrand < prob_sum) {
         return upperion;
       }
     }

@@ -278,10 +278,9 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
 }
 
 void update_gamma_corrphotoionrenorm_bfheating_estimators(const int nonemptymgi, const double estimator_normfactor) {
-  const auto W = grid::get_W(nonemptymgi);
-  const auto T_R = grid::get_TR(nonemptymgi);
-
   if constexpr (USE_LUT_PHOTOION) {
+    const auto W = grid::get_W(nonemptymgi);
+    const auto T_R = grid::get_TR(nonemptymgi);
     for (int element = 0; element < get_nelements(); element++) {
       const int nions = get_nions(element);
       for (int ion = 0; ion < nions - 1; ion++) {
