@@ -812,9 +812,7 @@ void barnes_thermalisation(Packet& pkt)
   const double v_ej = sqrt(E_kin * 2 / grid::mtot_input);
 
   // t_ineff = sqrt(rho_0 * R_0 * t_0^2 * mean_gamma_opac), expressed via the paper's scaling relation.
-  // The 29979200000 literal is the speed of light in cm/s (it differs from CLIGHT in the 7th digit, and is
-  // left as-is here so that results are unchanged), so 0.2 * it is the paper's reference velocity of 0.2c.
-  const double t_ineff = 1.4 * 86400. * sqrt(grid::mtot_input / (5.e-3 * 1.989 * 1.e33)) * ((0.2 * 29979200000) / v_ej);
+  const double t_ineff = 1.4 * DAY * sqrt(grid::mtot_input / (5.e-3 * MSUN)) * ((0.2 * CLIGHT) / v_ej);
   const double tau = pow2(t_ineff / pkt.prop_time);
   const double f_gamma = 1. - exp(-tau);
 

@@ -2105,7 +2105,7 @@ void read_ejecta_model() {
   globals::rmax = globals::vmax * globals::tmin;
   printlnlog("vmax {:g} [cm/s] ({:.2f}c)", globals::vmax, globals::vmax / CLIGHT);
   assert_always(globals::vmax < CLIGHT);
-  printlnlog("tmin {:g} [s] = {:.2f} [d]", globals::tmin, globals::tmin / 86400.);
+  printlnlog("tmin {:g} [s] = {:.2f} [d]", globals::tmin, globals::tmin / DAY);
   printlnlog("rmax {:g} [cm] (at t=tmin)", globals::rmax);
 
   calc_modelinit_totmassnuclides();
