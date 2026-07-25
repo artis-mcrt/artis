@@ -952,8 +952,10 @@ DEVICE_FUNC void do_gamma(Packet& pkt, const int nts, const double t2) {
     if constexpr (GAMMA_THERMALISATION_SCHEME != GammaThermalisationScheme::FREQUENCYDEPENDENT) {
       // no transport, so the path-based gamma deposition estimator won't get updated unless we do it here
       const int mgi = grid::get_propcell_modelgridindex(pkt.cellindex);
-      const int nonemptymgi = grid::get_nonemptymgi_of_mgi(mgi);
-      atomicadd(globals::dep_estimator_gamma[nonemptymgi], pkt.e_cmf);
+      if (mgi >= 0) {  // empty cells have no deposition estimator
+        const int nonemptymgi = grid::get_nonemptymgi_of_mgi(mgi);
+        atomicadd(globals::dep_estimator_gamma[nonemptymgi], pkt.e_cmf);
+      }
     }
   }
 }

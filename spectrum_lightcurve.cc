@@ -38,7 +38,10 @@
 
 namespace {
 
-bool TRACE_EMISSION_ABSORPTION_REGION_ON = false;
+// Set to true to print the strongest line emission/absorption contributions in a fixed wavelength and time
+// window (see the traceemissabs_* limits below). This only works in exspec, which is the only caller of
+// init_spectrum_trace(), i.e. the only place where the traceemissionabsorption list is allocated.
+constexpr bool TRACE_EMISSION_ABSORPTION_REGION_ON = false;
 
 constexpr double traceemissabs_lambdamin = 1000.;  // in Angstroms
 constexpr double traceemissabs_lambdamax = 25000.;
@@ -233,8 +236,6 @@ void write_partial_lightcurve_spectra_dirbin(const int nts, std::span<const Pack
     reserve_resize(gamma_light_curve_lumcmf, globals::ntimesteps);
     std::ranges::fill(gamma_light_curve_lumcmf, 0.);
   }
-
-  TRACE_EMISSION_ABSORPTION_REGION_ON = false;
 
   init_spectra(rpkt_spectra_I, NU_MIN_R, NU_MAX_R, do_emission_absorption);
 
@@ -594,7 +595,9 @@ void add_to_spec_res(const Packet& pkt, const int dirbin, Spectra& spectra_I, Sp
         }
       }
 
-      if (TRACE_EMISSION_ABSORPTION_REGION_ON && (dirbin == -1)) {
+      // traceemissionabsorption is only allocated by init_spectrum_trace(), which sn3d never calls, so
+      // check that it has been set up before indexing into it
+      if (TRACE_EMISSION_ABSORPTION_REGION_ON && (dirbin == -1) && !traceemissionabsorption.empty()) {
         const int et = pkt.trueemissiontype;
         if ((et >= 0) && (t_arrive >= traceemissabs_timemin && t_arrive <= traceemissabs_timemax) &&
             (pkt.nu_rf >= traceemissabs_nulower && pkt.nu_rf <= traceemissabs_nuupper))
@@ -626,8 +629,8 @@ void add_to_spec_res(const Packet& pkt, const int dirbin, Spectra& spectra_I, Sp
             atomicadd_always(spectra_U->absorptionalltimesteps[absindex], pkt.stokes_u * deltaE_absorption);
           }
 
-          if ((TRACE_EMISSION_ABSORPTION_REGION_ON && t_arrive >= traceemissabs_timemin &&
-               t_arrive <= traceemissabs_timemax) &&
+          if ((TRACE_EMISSION_ABSORPTION_REGION_ON && !traceemissionabsorption.empty() &&
+               t_arrive >= traceemissabs_timemin && t_arrive <= traceemissabs_timemax) &&
               ((dirbin == -1) && (pkt.nu_rf >= traceemissabs_nulower) && (pkt.nu_rf <= traceemissabs_nuupper))) {
             traceemissionabsorption[at].energyabsorbed += deltaE_absorption;
             const auto vel_vec = get_velocity(pkt.em_pos, pkt.em_time);

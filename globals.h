@@ -97,7 +97,11 @@ struct TimeStep {
   double eps_alpha_ana_power{0.};  // cmf alpha KE energy generation rate analytical [erg/s]
   ALIGNAS_AVOID_FALSE_SHARING double spfission_dep_discrete{
       0.,
-  };  // cmf spontaneous fission energy deposition from absorption events [erg]
+  };  // cmf spontaneous fission energy deposition from absorption events [erg].
+      // Unlike the other *_dep_discrete counters, this is accumulated at pellet decay in update_pellet()
+      // rather than at a separate deposition event, because a spontaneous fission pellet converts straight
+      // to TYPE_NTALPHA_FISPROD_DEPOSITED. Emission and deposition therefore coincide, which is why
+      // write_deposition_file() uses this same member in both the total deposition and the total emission sums.
   double eps_spfission_ana_power{0.};  // cmf spontaneous fission energy generation rate analytical [erg/s]
   ALIGNAS_AVOID_FALSE_SHARING double gamma_emission{0.};  // gamma decay energy generation in this timestep [erg]
   double qdot_betaminus{0.};  // energy generation from beta-minus decays (including neutrinos) [erg/s/g]
