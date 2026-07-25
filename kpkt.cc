@@ -56,7 +56,8 @@ auto calculate_cooling_rates_ion(const int nonemptymgi, const int element, const
   const auto T_e = grid::get_Te(nonemptymgi);
 
   double C_ion = 0.;
-  [[maybe_unused]] int i = 0;  // NOLINT(misc-const-correctness)
+  // cursor into this ion's slice of the cooling list, only advanced when we are filling the cellcache
+  [[maybe_unused]] int coolinglistindex = 0;  // NOLINT(misc-const-correctness)
 
   const int nionisinglevels = get_nlevels_ionising(element, ion);
   const double nncurrention = get_nnion(nonemptymgi, element, ion);
@@ -68,11 +69,12 @@ auto calculate_cooling_rates_ion(const int nonemptymgi, const int element, const
     C_ion += C_ff_ion;
 
     if constexpr (update_cellcache_contribs) {
-      ion_contribs[i] = C_ion;
+      ion_contribs[coolinglistindex] = C_ion;
 
-      assert_testmodeonly(coolinglist_type[get_coolinglistoffset(element, ion) + i] == CoolingType::FREEFREE);
+      assert_testmodeonly(coolinglist_type[get_coolinglistoffset(element, ion) + coolinglistindex] ==
+                          CoolingType::FREEFREE);
 
-      i++;
+      coolinglistindex++;
     } else {
       *C_ff += C_ff_ion;
     }
@@ -106,11 +108,12 @@ auto calculate_cooling_rates_ion(const int nonemptymgi, const int element, const
     }
     if constexpr (update_cellcache_contribs) {
       if (nuptrans > 0) {
-        ion_contribs[i] = C_ion;
+        ion_contribs[coolinglistindex] = C_ion;
 
-        assert_testmodeonly(coolinglist_type[get_coolinglistoffset(element, ion) + i] == CoolingType::COLLEXC);
+        assert_testmodeonly(coolinglist_type[get_coolinglistoffset(element, ion) + coolinglistindex] ==
+                            CoolingType::COLLEXC);
 
-        i++;
+        coolinglistindex++;
       }
     }
   }
@@ -135,13 +138,14 @@ auto calculate_cooling_rates_ion(const int nonemptymgi, const int element, const
 
         C_ion += C;
         if constexpr (update_cellcache_contribs) {
-          ion_contribs[i] = C_ion;
+          ion_contribs[coolinglistindex] = C_ion;
 
-          assert_testmodeonly(coolinglist_type[get_coolinglistoffset(element, ion) + i] == CoolingType::COLLION);
-          assert_testmodeonly(coolinglist_level[get_coolinglistoffset(element, ion) + i] == level);
-          assert_testmodeonly(coolinglist_upperlevel[get_coolinglistoffset(element, ion) + i] == upper);
+          assert_testmodeonly(coolinglist_type[get_coolinglistoffset(element, ion) + coolinglistindex] ==
+                              CoolingType::COLLION);
+          assert_testmodeonly(coolinglist_level[get_coolinglistoffset(element, ion) + coolinglistindex] == level);
+          assert_testmodeonly(coolinglist_upperlevel[get_coolinglistoffset(element, ion) + coolinglistindex] == upper);
 
-          i++;
+          coolinglistindex++;
         } else {
           *C_ionisation += C;
         }
@@ -165,14 +169,15 @@ auto calculate_cooling_rates_ion(const int nonemptymgi, const int element, const
         C_ion += C;
 
         if constexpr (update_cellcache_contribs) {
-          ion_contribs[i] = C_ion;
+          ion_contribs[coolinglistindex] = C_ion;
 
-          assert_testmodeonly(coolinglist_type[get_coolinglistoffset(element, ion) + i] == CoolingType::FREEBOUND);
-          assert_testmodeonly(coolinglist_level[get_coolinglistoffset(element, ion) + i] == level);
-          assert_testmodeonly(coolinglist_upperlevel[get_coolinglistoffset(element, ion) + i] ==
+          assert_testmodeonly(coolinglist_type[get_coolinglistoffset(element, ion) + coolinglistindex] ==
+                              CoolingType::FREEBOUND);
+          assert_testmodeonly(coolinglist_level[get_coolinglistoffset(element, ion) + coolinglistindex] == level);
+          assert_testmodeonly(coolinglist_upperlevel[get_coolinglistoffset(element, ion) + coolinglistindex] ==
                               get_phixsupperlevel(uniquelevelindex, phixstargetindex));
 
-          i++;
+          coolinglistindex++;
         } else {
           *C_fb += C;
         }
@@ -181,7 +186,7 @@ auto calculate_cooling_rates_ion(const int nonemptymgi, const int element, const
   }
 
   if constexpr (update_cellcache_contribs) {
-    assert_always(i == std::ssize(ion_contribs));
+    assert_always(coolinglistindex == std::ssize(ion_contribs));
   }
 
   return C_ion;

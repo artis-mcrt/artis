@@ -535,34 +535,38 @@ DEVICE_FUNC auto select_continuum_nu(int element, const int lowerion, const int 
   const double deltanu = nu_range / npieces;
   double error{NAN};
 
-  const auto total_alpha_sp = integrator<31>(
+  // integral of the energy-weighted emissivity over the whole continuum, i.e. the normalisation of the
+  // distribution that we are sampling a frequency from
+  const auto emissivity_integral_total = integrator<31>(
       [&](const double nu_minus_nu_edge) {
         return alpha_sp_E_integrand(nu_minus_nu_edge, nu_threshold, T_e, photoion_xs);
       },
       0., nu_range, RATECOEFF_INTEGRAL_ACCURACY, &error);
 
-  assert_testmodeonly(std::isfinite(total_alpha_sp));
-  assert_testmodeonly(total_alpha_sp > 0.);
-  if (!(total_alpha_sp > 0.) || !std::isfinite(total_alpha_sp)) {
+  assert_testmodeonly(std::isfinite(emissivity_integral_total));
+  assert_testmodeonly(emissivity_integral_total > 0.);
+  if (!(emissivity_integral_total > 0.) || !std::isfinite(emissivity_integral_total)) {
     return nu_threshold;
   }
 
-  double alpha_sp_old = total_alpha_sp;
-  double alpha_sp = total_alpha_sp;
+  // emissivity_tailintegral is the part of the integral above the current piece's lower boundary, so it
+  // decreases from emissivity_integral_total to zero as we step up in frequency. _prev is its value at the
+  // previous piece boundary.
+  double emissivity_tailintegral_prev = emissivity_integral_total;
+  double emissivity_tailintegral = emissivity_integral_total;
 
   int i = 1;
   for (; i < npieces; i++) {
-    alpha_sp_old = alpha_sp;
+    emissivity_tailintegral_prev = emissivity_tailintegral;
     const double nu_minus_nu_edge_low = i * deltanu;
 
-    // Spontaneous recombination and bf-cooling coefficient don't depend on the radiation field
-    alpha_sp = integrator<31>(
+    emissivity_tailintegral = integrator<31>(
         [&](const double nu_minus_nu_edge) {
           return alpha_sp_E_integrand(nu_minus_nu_edge, nu_threshold, T_e, photoion_xs);
         },
         nu_minus_nu_edge_low, nu_range, RATECOEFF_INTEGRAL_ACCURACY, &error);
 
-    if (zrand >= alpha_sp / total_alpha_sp) {
+    if (zrand >= emissivity_tailintegral / emissivity_integral_total) {
       break;
     }
   }
@@ -571,22 +575,23 @@ DEVICE_FUNC auto select_continuum_nu(int element, const int lowerion, const int 
   if (i < npieces) {
     // the loop found the piece containing the target value, so interpolate between the remaining
     // integrals at the piece boundaries
-    nuoffset = (alpha_sp != alpha_sp_old)
-                   ? ((total_alpha_sp * zrand) - alpha_sp_old) / (alpha_sp - alpha_sp_old) * deltanu
+    nuoffset = (emissivity_tailintegral != emissivity_tailintegral_prev)
+                   ? ((emissivity_integral_total * zrand) - emissivity_tailintegral_prev) /
+                         (emissivity_tailintegral - emissivity_tailintegral_prev) * deltanu
                    : 0.;
-  } else if (alpha_sp > 0.) {
-    // the loop completed without a break, so the target lies in the topmost piece, where the
-    // remaining integral falls from alpha_sp at the piece's lower boundary to zero at nu_max_phixs.
-    // Interpolating with the previous piece's values here would extrapolate to nu_lower > nu_max_phixs.
-    nuoffset = (alpha_sp - (total_alpha_sp * zrand)) / alpha_sp * deltanu;
+  } else if (emissivity_tailintegral > 0.) {
+    // the loop completed without a break, so the target lies in the topmost piece, where the remaining
+    // integral falls from emissivity_tailintegral at the piece's lower boundary to zero at nu_max_phixs.
+    // Interpolating with the previous piece's values here would extrapolate beyond nu_max_phixs.
+    nuoffset = (emissivity_tailintegral - (emissivity_integral_total * zrand)) / emissivity_tailintegral * deltanu;
   }
-  const double nu_lower = nu_threshold + ((i - 1) * deltanu) + nuoffset;
+  const double nu_sampled = nu_threshold + ((i - 1) * deltanu) + nuoffset;
 
-  assert_testmodeonly(std::isfinite(nu_lower));
-  assert_testmodeonly(nu_lower >= nu_threshold);
-  assert_testmodeonly(nu_lower <= nu_max_phixs);
+  assert_testmodeonly(std::isfinite(nu_sampled));
+  assert_testmodeonly(nu_sampled >= nu_threshold);
+  assert_testmodeonly(nu_sampled <= nu_max_phixs);
 
-  return nu_lower;
+  return nu_sampled;
 }
 
 // Get an ion's rate coefficient for spontaneous recombination in LTE

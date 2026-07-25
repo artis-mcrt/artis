@@ -155,7 +155,7 @@ auto T_e_eqn_heating_minus_cooling(const double T_e, int nonemptymgi, const doub
   calculate_heating_rates(nonemptymgi, fT_e, clumpfactor * nne, heatingcoolingrates, bfheatingcoeffs);
 
   const auto ntlepton_frac_heating = nonthermal::get_nt_frac_heating(nonemptymgi);
-  const auto ntlepton_dep = nonthermal::get_deposition_rate_density(nonemptymgi);
+  const auto ntlepton_dep = nonthermal::get_ntlepton_deposition_rate_density(nonemptymgi);
   const auto ntalpha_dep = heatingcoolingrates.dep_alpha;
   // spontaneous fission fragments deposit as pure heating via k-packets (like alpha particles)
   const auto ntspfission_dep = heatingcoolingrates.dep_spfission;

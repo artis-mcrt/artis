@@ -290,14 +290,15 @@ auto find_converged_nne(const int nonemptymgi, double nne_max, const bool force_
     }
   }
 
-  double factor = 1.;
-  int ion = 0;
-  for (ion = 0; ion < uppermost_ion; ion++) {
+  // running product of nne * phi over the ions below, i.e. the population ratio of the ground ion to ion+1.
+  // Once it overflows to infinity the higher ions are utterly negligible, so the list is truncated there.
+  double pop_ratio_ground_to_upper = 1.;
+  for (int ion = 0; ion < uppermost_ion; ion++) {
     const auto phifactor =
         use_phi_saha ? phi_saha(element, ion, nonemptymgi) : phi_rate_balance(element, ion, nonemptymgi);
-    factor *= nne_hi * phifactor;
+    pop_ratio_ground_to_upper *= nne_hi * phifactor;
 
-    if (!std::isfinite(factor)) {
+    if (!std::isfinite(pop_ratio_ground_to_upper)) {
       printlnlog(
           "[info] calculate_ion_balance_nne: uppermost_ion limited by phi factors for element Z={}, ionstage {} in "
           "cell {}",

@@ -216,11 +216,14 @@ void update_bfestimators(const ptrdiff_t nonemptymgi, const double distance_e_cm
                             std::ranges::upper_bound(globals::bfestim_nu_edge.first(phixslist.bfestimend), nu_cmf));
   assert_testmodeonly(bfestimend <= bfestimcount);
   assert_testmodeonly(phixslist.bfestimbegin >= 0);
+  // bfestimend was recalculated from the current (lower) nu_cmf, so it can fall below the bfestimbegin that
+  // was stored for the higher nu_cmf. Clamp so that the subspan count below can never go negative (which
+  // would wrap to a huge size_t), which just leaves an empty range with no contributions to make.
+  const auto bfestimbegin_stored = std::min<ptrdiff_t>(phixslist.bfestimbegin, bfestimend);
   const auto bfestimbegin = std::ranges::distance(
       globals::bfestim_nu_edge.begin(),
-      std::ranges::lower_bound(
-          globals::bfestim_nu_edge.subspan(phixslist.bfestimbegin, bfestimend - phixslist.bfestimbegin),
-          nu_cmf / last_phixs_nuovernuedge));
+      std::ranges::lower_bound(globals::bfestim_nu_edge.subspan(bfestimbegin_stored, bfestimend - bfestimbegin_stored),
+                               nu_cmf / last_phixs_nuovernuedge));
 
   for (auto bfestimindex = bfestimbegin; bfestimindex < bfestimend; bfestimindex++) {
     atomicadd(bfrate_raw[(nonemptymgi * bfestimcount) + bfestimindex],
@@ -443,7 +446,7 @@ void set_params_fullspec(const int nonemptymgi, const int timestep) {
   }
 }
 
-auto get_bfcontindex(const int element, const int lowerion, const int lower, const int phixstargetindex) -> int {
+auto get_allcontindex(const int element, const int lowerion, const int lower, const int phixstargetindex) -> int {
   // simple linear search seems to be faster than the binary search
   // possibly because lower frequency transitions near start of list are more likely to be called?
   int bfcontindex = 0;
@@ -888,7 +891,7 @@ void normalise_bf_estimators(const int nts, const int nts_prev, const int titer,
                                                                   const int lower, const int phixstargetindex,
                                                                   const int nonemptymgi) -> double {
   if constexpr (DETAILED_BF_ESTIMATORS_ON) {
-    const int allcontindex = get_bfcontindex(element, lowerion, lower, phixstargetindex);
+    const int allcontindex = get_allcontindex(element, lowerion, lower, phixstargetindex);
     if (allcontindex >= 0) {
       const auto bfestimindex = globals::allcont.bfestimindex[allcontindex];
       if (bfestimindex >= 0) {

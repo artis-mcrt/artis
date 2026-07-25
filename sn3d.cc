@@ -372,7 +372,8 @@ void mpi_communicate_grid_properties() {
     }
     const ptrdiff_t root_nstart_nonempty = grid::get_nstart_nonempty(root);
     assert_always(root_nstart_nonempty >= 0);
-    assert_always((root_nstart_nonempty + root_ndo_nonempty - 1) <= grid::get_nonempty_npts_model());
+    // the highest index accessed below is (nstart + ndo - 1), which must be a valid index
+    assert_always((root_nstart_nonempty + root_ndo_nonempty - 1) < grid::get_nonempty_npts_model());
 
     if (USE_LUT_PHOTOION && globals::nbfcontinua_ground > 0) {
       MPI_Bcast_safe(std::span{globals::gammaestimator}.subspan(root_nstart_nonempty * globals::nbfcontinua_ground,
@@ -542,6 +543,9 @@ void mpi_reduce_estimators(const int nts) {
 
   MPI_Allreduce_safe(globals::timesteps[nts].alpha_emission, MPI_SUM, MPI_COMM_WORLD);
   globals::timesteps[nts].alpha_emission /= globals::nprocs;
+
+  MPI_Allreduce_safe(globals::timesteps[nts].spfission_dep_discrete, MPI_SUM, MPI_COMM_WORLD);
+  globals::timesteps[nts].spfission_dep_discrete /= globals::nprocs;
 
   MPI_Allreduce_safe(globals::timesteps[nts].gamma_emission, MPI_SUM, MPI_COMM_WORLD);
   globals::timesteps[nts].gamma_emission /= globals::nprocs;
@@ -916,10 +920,12 @@ auto main(int argc, char* argv[]) -> int {
 
   MPI_Barrier_allranks();
 
-  // Record the chosen syn_dir
-  auto syn_file = fstream_required("syn_dir.txt", std::ios::out | std::ios::trunc);
-  std::print(syn_file, "{} {} {}", syn_dir[0], syn_dir[1], syn_dir[2]);
-  syn_file.close();
+  // Record the chosen syn_dir (only one rank writes it, since every rank would write the same file)
+  if (globals::my_rank == 0) {
+    auto syn_file = fstream_required("syn_dir.txt", std::ios::out | std::ios::trunc);
+    std::print(syn_file, "{} {} {}", syn_dir[0], syn_dir[1], syn_dir[2]);
+    syn_file.close();
+  }
 
   bool terminate_early = false;
 
