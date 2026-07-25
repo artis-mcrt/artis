@@ -302,7 +302,13 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
 
           const auto n_u = calculate_levelpop(nonemptymgi, element, ion, upper);
           const auto n_l = calculate_levelpop(nonemptymgi, element, ion, lower);
-          const double tau_line = std::max(0., ((B_lu * n_l) - (B_ul * n_u)) * HCLIGHTOVERFOURPI * t_line);
+          // The level populations belong to the current grid state (i.e. t_start), but the packet only reaches
+          // this line resonance at t_line, by which time the ejecta have expanded further. Scale them with
+          // n ∝ t^-3, exactly as s_cont does for the continuum opacity. Combined with the explicit factor of
+          // t_line in the Sobolev optical depth this gives the expected tau_sobolev ∝ t^-2.
+          const double popscalefactor = pow3(t_start / t_line);
+          const double tau_line =
+              std::max(0., ((B_lu * n_l) - (B_ul * n_u)) * popscalefactor * HCLIGHTOVERFOURPI * t_line);
 
           // Check on the element to exclude (or -1 for no line opacity)
           const int Z = get_atomicnumber(element);
@@ -346,7 +352,12 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
               const auto binedgedist = get_linedistance(t_future, nu_cmf, next_bin_edge_nu, dnu_on_dl);
 
               const auto kappa = expansionopacities[(nonemptymgi * expopac_nbins) + binindex];
-              const double chi_bb_expansionopac = kappa * grid::get_rho(nonemptymgi);
+              // kappa_exp * rho = (1 / (c t)) * sum_lines (lambda_line / delta_lambda) * (1 - exp(-tau_sobolev))
+              // and was tabulated for the current grid state (i.e. t_start), so scale the explicit 1/(c t)
+              // prefactor to the packet's time. That factor is exact however saturated the lines are. The
+              // remaining time dependence sits inside (1 - exp(-tau_sobolev)) and cannot be recovered from the
+              // binned kappa: it is 1 for saturated lines and (t_start / t_future)^2 in the optically thin limit.
+              const double chi_bb_expansionopac = kappa * grid::get_rho(nonemptymgi) * (t_start / t_future);
 
               const double tau_bin = chi_bb_expansionopac * (std::min(binedgedist, boundarydist) - dist);
               dist = std::min(binedgedist, boundarydist);
