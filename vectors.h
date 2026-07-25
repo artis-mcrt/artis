@@ -206,8 +206,8 @@ DEVICE_FUNC constexpr void set_pkt_restframe_from_cmf(Packet& pkt) {
   const double cos_stokes_rot_1 = std::clamp(dot(ref1_sc, ref1), -1., 1.);
   const double cos_stokes_rot_2 = dot(ref1_sc, ref2);
 
-  const double i = std::atan2(cos_stokes_rot_2, cos_stokes_rot_1);
-  return i < 0 ? i + (2 * PI) : i;
+  const double rot_angle = std::atan2(cos_stokes_rot_2, cos_stokes_rot_1);
+  return rot_angle < 0 ? rot_angle + (2 * PI) : rot_angle;
 }
 
 // Compute the meridian frame axes ref1 and ref2

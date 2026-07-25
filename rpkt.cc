@@ -45,8 +45,10 @@ namespace {
 // kappa times Planck function for each bin of each non-empty cell
 MPI_shared_array<double> expansionopacity_planck_cumulative{};
 
-// get the frequency change per distance travelled assuming linear change to the abort distance
-// this is done is two parts to get identical results to do_rpkt_step()
+// get the comoving-frame frequency that the packet will have redshifted to at the abort distance (the cell
+// boundary or the end of the timestep, whichever is nearer). The caller turns this into a frequency change
+// per unit distance for the linear interpolation along the path.
+// The move is done in two halves to give bit-identical results to the two half-steps in do_rpkt_step().
 auto get_nu_cmf_abort(const Vec3d& pos, const Vec3d& dir, const double prop_time, const double nu_rf,
                       const double abort_dist) -> double {
   const auto half_abort_dist = abort_dist / 2.;

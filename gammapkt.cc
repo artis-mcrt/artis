@@ -48,14 +48,23 @@ struct GammaLine {
 
 std::vector<std::vector<GammaLine>> gamma_spectra;
 
-struct el_photoion_data {
+struct ElementPhotoionData {
   double energy;  // energy in MeV
   double sigma_xcom;  // cross section in barns/atom
 };
 
-constexpr int numb_xcom_elements = USE_XCOM_GAMMAPHOTOION ? 100 : 0;
+// the XCOM table covers Z = 1..xcom_max_atomic_number (indexed by Z - 1)
+constexpr int xcom_max_atomic_number = USE_XCOM_GAMMAPHOTOION ? 100 : 0;
 
-std::array<std::vector<el_photoion_data>, numb_xcom_elements> photoion_data;
+std::array<std::vector<ElementPhotoionData>, xcom_max_atomic_number> photoion_data;
+
+// Gamma-ray energies expressed as frequencies [Hz]. NB: these are very slightly inconsistent with MEV / H
+// from constants.h (which gives 2.41805e+20 for 1 MeV); the historical values are kept here so that
+// results are unchanged.
+constexpr double nu_100kev = 2.41326e+19;
+constexpr double nu_1mev = 2.41326e+20;
+constexpr double nu_1p022mev = 2.46636e+20;  // electron-positron pair rest mass energy (pair production threshold)
+constexpr double nu_1p5mev = 3.61990e+20;
 
 void read_gamma_spectrum(const int nucindex, const std::string& filename) {
   // read the gamma ray lines and store the average energy in gamma rays per nuclear decay
@@ -212,7 +221,7 @@ void init_gamma_linelist() {
 
 void init_xcom_photoion_data() {
   printlnlog("reading XCOM photoionisation data...");
-  for (int Z = 0; Z < numb_xcom_elements; Z++) {
+  for (int Z = 0; Z < xcom_max_atomic_number; Z++) {
     photoion_data[Z].reserve(100);
   }
 
@@ -224,7 +233,7 @@ void init_xcom_photoion_data() {
     double sigma = 0;
     std::stringstream(line_str) >> Z >> E >> sigma;
     assert_always(Z > 0);
-    assert_always(Z <= numb_xcom_elements);
+    assert_always(Z <= xcom_max_atomic_number);
     // convert XCOM data to cgs units already here
     photoion_data[Z - 1].push_back({.energy = E, .sigma_xcom = sigma * 1e-24});
   }
@@ -440,32 +449,31 @@ void compton_scatter(Packet& pkt) {
   if constexpr (!USE_XCOM_GAMMAPHOTOION) {
     // Cross sections from Equation 2 of Ambwani & Sutherland (1988), attributed to Veigele (1973)
 
-    // 2.41326e19 Hz = 100 keV / H
-    const double hnu_over_100kev = nu_cmf / 2.41326e+19;
+    const double hnu_over_100kev = nu_cmf / nu_100kev;
 
     const double sigma_cmf_si = 1.16e-24 * pow(hnu_over_100kev, -3.13);
 
     const double sigma_cmf_fe = 25.7e-24 * pow(hnu_over_100kev, -3.0);
 
-    // Now need to multiply by the particle number density.
+    // Now need to multiply by the particle number density. The composition is approximated as a mix of just
+    // two species: an iron-group one with mass fraction ffegrp, and silicon for the remainder. The nuclide
+    // number densities therefore use A = 56 for the iron group and A = 28 for silicon.
 
     const double chi_cmf_si = sigma_cmf_si * (rho / MH / 28);
-    // Assumes Z = 14. So mass = 28.
 
     const double chi_cmf_fe = sigma_cmf_fe * (rho / MH / 56);
-    // Assumes Z = 28. So mass = 56.
 
     return (chi_cmf_fe * ffegrp) + (chi_cmf_si * (1. - ffegrp));
   }
 
-  const double hnu_over_1MeV = nu_cmf / 2.41326e+20;
+  const double hnu_over_1MeV = nu_cmf / nu_1mev;
   const double log10_hnu_over_1MeV = log10(hnu_over_1MeV);
   double chi_cmf{0.};
   for (int i = 0; i < get_nelements(); i++) {
     // determine charge number:
     const int Z = get_atomicnumber(i);
-    if (Z > numb_xcom_elements) {
-      continue;  // no XCOM photoionisation data available (table only covers Z = 1..numb_xcom_elements)
+    if (Z > xcom_max_atomic_number) {
+      continue;  // no XCOM photoionisation data available (table only covers Z = 1..xcom_max_atomic_number)
     }
     const auto numb_energies = std::ssize(photoion_data[Z - 1]);
     if (numb_energies == 0) {
@@ -476,37 +484,37 @@ void compton_scatter(Packet& pkt) {
       continue;
     }
     // get indices of lower and upper boundary
-    int E_gtr_idx = -1;
+    int idx_above = -1;
 
     for (int j = 0; j < numb_energies; j++) {
       if (photoion_data[Z - 1][j].energy > hnu_over_1MeV) {
-        E_gtr_idx = j;
+        idx_above = j;
         break;
       }
     }
-    if (E_gtr_idx == 0) {  // packet energy smaller than all tabulated values
+    if (idx_above == 0) {  // packet energy smaller than all tabulated values
       chi_cmf += photoion_data[Z - 1][0].sigma_xcom * n_i;
       continue;
     }
-    if (E_gtr_idx == -1) {  // packet energy greater than all tabulated values
+    if (idx_above == -1) {  // packet energy greater than all tabulated values
       chi_cmf += photoion_data[Z - 1][numb_energies - 1].sigma_xcom * n_i;
       continue;
     }
-    assert_always(E_gtr_idx > 0);
-    assert_always(E_gtr_idx < numb_energies);
-    const int E_smaller_idx = E_gtr_idx - 1;
-    assert_always(E_smaller_idx >= 0);
+    assert_always(idx_above > 0);
+    assert_always(idx_above < numb_energies);
+    const int idx_below = idx_above - 1;
+    assert_always(idx_below >= 0);
     const double log10_E = log10_hnu_over_1MeV;
-    const double log10_E_gtr = log10(photoion_data[Z - 1][E_gtr_idx].energy);
-    const double log10_E_smaller = log10(photoion_data[Z - 1][E_smaller_idx].energy);
-    const double log10_sigma_lower = log10(photoion_data[Z - 1][E_smaller_idx].sigma_xcom);
-    const double log10_sigma_gtr = log10(photoion_data[Z - 1][E_gtr_idx].sigma_xcom);
+    const double log10_E_above = log10(photoion_data[Z - 1][idx_above].energy);
+    const double log10_E_below = log10(photoion_data[Z - 1][idx_below].energy);
+    const double log10_sigma_below = log10(photoion_data[Z - 1][idx_below].sigma_xcom);
+    const double log10_sigma_above = log10(photoion_data[Z - 1][idx_above].sigma_xcom);
     // interpolate or extrapolate, both linear in log10-log10 space
-    const double log10_intpol = log10_sigma_lower + ((log10_sigma_gtr - log10_sigma_lower) /
-                                                     (log10_E_gtr - log10_E_smaller) * (log10_E - log10_E_smaller));
-    const double sigma_intpol = pow(10., log10_intpol);
-    const double chi_cmf_contrib = sigma_intpol * n_i;
-    assert_always(sigma_intpol >= 0.);
+    const double log10_sigma_interp = log10_sigma_below + ((log10_sigma_above - log10_sigma_below) /
+                                                           (log10_E_above - log10_E_below) * (log10_E - log10_E_below));
+    const double sigma_interp = pow(10., log10_sigma_interp);
+    const double chi_cmf_contrib = sigma_interp * n_i;
+    assert_always(sigma_interp >= 0.);
     chi_cmf += chi_cmf_contrib;
   }
   return chi_cmf;
@@ -519,8 +527,8 @@ void compton_scatter(Packet& pkt) {
   }
   const double rho = grid::get_rho(nonemptymgi);
 
-  // 2.46636e+20 Hz = 1022 keV / H
-  if (nu_cmf <= 2.46636e+20) {
+  // below the pair production threshold there is no pair production
+  if (nu_cmf <= nu_1p022mev) {
     return 0.;
   }
 
@@ -529,9 +537,8 @@ void compton_scatter(Packet& pkt) {
 
   // Cross sections from Equation 2 of Ambwani & Sutherland (1988), attributed to Hubbell (1969)
 
-  // 3.61990e+20 = 1500 keV in frequency / H
-  const double hnu_over_mev = nu_cmf / 2.41326e+20;
-  if (nu_cmf > 3.61990e+20) {
+  const double hnu_over_mev = nu_cmf / nu_1mev;
+  if (nu_cmf > nu_1p5mev) {
     sigma_cmf_si = (0.0481 + (0.301 * (hnu_over_mev - 1.5))) * 196.e-27;
 
     sigma_cmf_fe = (0.0481 + (0.301 * (hnu_over_mev - 1.5))) * 784.e-27;
@@ -541,13 +548,12 @@ void compton_scatter(Packet& pkt) {
     sigma_cmf_fe = 1.0063 * (hnu_over_mev - 1.022) * 784.e-27;
   }
 
-  // multiply by the particle number density.
+  // multiply by the particle number density. As in get_chi_photo_electric_cmf(), the composition is
+  // approximated as an iron-group species (A = 56) with mass fraction ffegrp plus silicon (A = 28).
 
   const double chi_cmf_si = sigma_cmf_si * (rho / MH / 28);
-  // Assumes Z = 14. So mass = 28.
 
   const double chi_cmf_fe = sigma_cmf_fe * (rho / MH / 56);
-  // Assumes Z = 28. So mass = 56.
 
   const double chi_cmf = (chi_cmf_fe * ffegrp) + (chi_cmf_si * (1. - ffegrp));
 
@@ -580,7 +586,7 @@ constexpr auto meanf_sigma(const double x) -> double {
   const auto chi_pair_prod_cmf = get_chi_pair_prod_cmf(nonemptymgi, ffegrp, nu_cmf);
 
   return ((meanf_sigma(xx) * grid::get_nnetot(nonemptymgi)) + chi_photo_electric_cmf +
-          (chi_pair_prod_cmf * (1. - (2.46636e+20 / nu_cmf))));
+          (chi_pair_prod_cmf * (1. - (nu_1p022mev / nu_cmf))));
 }
 
 // update the energy deposition estimator for gamma ray path increment
@@ -778,7 +784,9 @@ void absorb_or_escape_gamma(Packet& pkt, const double f_gamma) {
   assert_always(f_gamma <= 1.);
 
   if (rng_uniform(get_rngstate(pkt)) < f_gamma) {
-    // packet is absorbed and contributes to the heating as a k-packet
+    // packet is absorbed and contributes to the heating as a k-packet.
+    // These parameterised thermalisation schemes don't resolve which process absorbed the gamma ray, so the
+    // absorption is recorded under the photoelectric type (the dominant absorber at the relevant energies).
     pkt.type = TYPE_NTLEPTON_DEPOSITED;
     pkt.absorptiontype = ABSTYPE_GAMMA_PHOTOELECTRIC;
   } else {
@@ -803,7 +811,9 @@ void barnes_thermalisation(Packet& pkt)
   const double E_kin = grid::get_ejecta_kinetic_energy();
   const double v_ej = sqrt(E_kin * 2 / grid::mtot_input);
 
-  // t_ineff = sqrt(rho_0 * R_0 * t_0^2 * mean_gamma_opac), expressed via the paper's scaling relation:
+  // t_ineff = sqrt(rho_0 * R_0 * t_0^2 * mean_gamma_opac), expressed via the paper's scaling relation.
+  // The 29979200000 literal is the speed of light in cm/s (it differs from CLIGHT in the 7th digit, and is
+  // left as-is here so that results are unchanged), so 0.2 * it is the paper's reference velocity of 0.2c.
   const double t_ineff = 1.4 * 86400. * sqrt(grid::mtot_input / (5.e-3 * 1.989 * 1.e33)) * ((0.2 * 29979200000) / v_ej);
   const double tau = pow2(t_ineff / pkt.prop_time);
   const double f_gamma = 1. - exp(-tau);

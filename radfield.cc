@@ -446,7 +446,7 @@ void set_params_fullspec(const int nonemptymgi, const int timestep) {
   }
 }
 
-auto get_bfcontindex(const int element, const int lowerion, const int lower, const int phixstargetindex) -> int {
+auto get_allcontindex(const int element, const int lowerion, const int lower, const int phixstargetindex) -> int {
   // simple linear search seems to be faster than the binary search
   // possibly because lower frequency transitions near start of list are more likely to be called?
   int bfcontindex = 0;
@@ -891,7 +891,7 @@ void normalise_bf_estimators(const int nts, const int nts_prev, const int titer,
                                                                   const int lower, const int phixstargetindex,
                                                                   const int nonemptymgi) -> double {
   if constexpr (DETAILED_BF_ESTIMATORS_ON) {
-    const int allcontindex = get_bfcontindex(element, lowerion, lower, phixstargetindex);
+    const int allcontindex = get_allcontindex(element, lowerion, lower, phixstargetindex);
     if (allcontindex >= 0) {
       const auto bfestimindex = globals::allcont.bfestimindex[allcontindex];
       if (bfestimindex >= 0) {

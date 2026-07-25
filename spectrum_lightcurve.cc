@@ -50,7 +50,7 @@ constexpr double traceemissabs_nuupper = (1.e8 * CLIGHT / traceemissabs_lambdami
 constexpr double traceemissabs_timemin = (320. * DAY);
 constexpr double traceemissabs_timemax = (340. * DAY);
 
-struct emissionabsorptioncontrib {
+struct EmissionAbsorptionContrib {
   double energyemitted;
   double emission_weightedvelocity_sum;
   double energyabsorbed;
@@ -58,7 +58,7 @@ struct emissionabsorptioncontrib {
   int lineindex;  // this will be important when the list gets sorted
 };
 
-std::vector<emissionabsorptioncontrib> traceemissionabsorption;
+std::vector<EmissionAbsorptionContrib> traceemissionabsorption;
 double traceemission_totalenergy = 0.;
 double traceabsorption_totalenergy = 0.;
 
@@ -88,7 +88,7 @@ void printout_tracemission_stats() {
           traceemission_totalenergy);
     } else {
       std::ranges::SORT_OR_STABLE_SORT(traceemissionabsorption, std::ranges::greater{},
-                                       &emissionabsorptioncontrib::energyabsorbed);
+                                       &EmissionAbsorptionContrib::energyabsorbed);
       printlnlog(
           "Top line absorption contributions in the range lambda [{:5.1f}, {:5.1f}] time [{:5.1f}d, {:5.1f}d] ({:g} "
           "erg)",
@@ -200,7 +200,7 @@ auto columnindex_from_emissiontype(const int et) -> int {
   return (get_nelements() * get_max_nions()) + (element * get_max_nions()) + ion;
 }
 
-[[nodiscard]] auto get_absindex(const ptrdiff_t nts, const ptrdiff_t nnu_abs) -> ptrdiff_t {
+[[nodiscard]] auto get_absorption_spectrum_index(const ptrdiff_t nts, const ptrdiff_t nnu_abs) -> ptrdiff_t {
   const ptrdiff_t nelements = get_nelements();
   const ptrdiff_t max_nions = get_max_nions();
   return (nnu_abs * globals::ntimesteps * nelements * max_nions) + (nts * nelements * max_nions);
@@ -354,7 +354,8 @@ void write_absorption_spectrum_file(const std::string& absorption_filename, cons
   for (auto nubin = 0Z; nubin < MNUBINS; nubin++) {
     for (auto nts = 0Z; nts < numtimesteps; nts++) {
       for (int i = 0; i < ioncount; i++) {
-        std::print(absorption_file, "{:g} ", spectra.absorptionalltimesteps[get_absindex(nts, nubin) + i]);
+        std::print(absorption_file, "{:g} ",
+                   spectra.absorptionalltimesteps[get_absorption_spectrum_index(nts, nubin) + i]);
       }
       std::println(absorption_file, "");
     }
@@ -455,7 +456,8 @@ void write_specpol(const std::string& specpol_filename, const std::string& emiss
             if (i > 0) {
               std::print(absorptionpol_file, " ");
             }
-            std::print(absorptionpol_file, "{:g}", spec->absorptionalltimesteps[get_absindex(nts, nnu) + i]);
+            std::print(absorptionpol_file, "{:g}",
+                       spec->absorptionalltimesteps[get_absorption_spectrum_index(nts, nnu) + i]);
           }
           std::println(absorptionpol_file, "");
         }
@@ -619,7 +621,7 @@ void add_to_spec_res(const Packet& pkt, const int dirbin, Spectra& spectra_I, Sp
           // bb-absorption
           const int element = globals::linelist.elementindex[at];
           const int ion = globals::linelist.ionindex[at];
-          const auto absindex = get_absindex(nts, nnu_abs) + (element * get_max_nions()) + ion;
+          const auto absindex = get_absorption_spectrum_index(nts, nnu_abs) + (element * get_max_nions()) + ion;
           atomicadd_always(spectra_I.absorptionalltimesteps[absindex], deltaE_absorption);
 
           if (spectra_Q != nullptr && spectra_Q->do_emission_absorption) {

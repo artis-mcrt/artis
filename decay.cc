@@ -1353,6 +1353,9 @@ void setup_radioactive_pellet(const double e_cmf_per_packet, const int nonemptym
     // use uniform decay time distribution and scale the packet energies instead.
     // keeping the pellet decay rate constant will give better statistics at late times
     // when very little energy and few packets are released
+    // NB: the interpolation endpoints are deliberately (tmax, tdecaymin) rather than the other way round.
+    // The draw is uniform over [tdecaymin, tmax] either way; swapping them would change which decay time
+    // each random number maps to, and hence every result.
     pkt.tdecay = std::lerp(globals::tmax, tdecaymin, rng_uniform(get_rngstate(pkt)));
 
     // we need to scale the packet energy up or down according to decay rate at the randomly selected time.

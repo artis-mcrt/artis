@@ -303,9 +303,8 @@ DEVICE_FUNC inline auto get_nphixstargets(const int element, const int ion, cons
   return level <= ION_NLEVELS_EXCITED_NLTE(get_atomicnumber(element), get_ionstage(element, ion));
 }
 
-// Return the elementindex associated with a given atomic number.
-// If there is no element with the given atomic number in the atomic data,
-// then return a negative value
+// Return the elementindex associated with a given atomic number, or -1 if there is no element with the
+// given atomic number in the atomic data.
 [[gnu::pure]] [[nodiscard]] inline auto get_elementindex(const int Z) -> int {
   const auto elem =
       std::ranges::find_if(globals::elements, [Z](const Element& element) { return element.anumber == Z; });
@@ -313,7 +312,7 @@ DEVICE_FUNC inline auto get_nphixstargets(const int element, const int ion, cons
     return static_cast<int>(elem - globals::elements.begin());
   }
 
-  return -100;
+  return -1;
 }
 
 inline void update_includedionslevels_maxnions() {

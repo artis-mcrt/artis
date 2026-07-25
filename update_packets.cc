@@ -72,6 +72,8 @@ void do_nonthermal_predeposit(Packet& pkt, const int nts, const double ts_end) {
     const double v_ej = std::sqrt(E_kin * 2 / grid::mtot_input);
 
     const double prefactor = (pkt.type == TYPE_NONTHERMAL_PREDEPOSIT_ALPHA) ? 7.74 : 7.4;
+    // the 29979200000 literal is the speed of light in cm/s (it differs from CLIGHT in the 7th digit, and is
+    // left as-is here so that results are unchanged), so 0.2 * it is the paper's reference velocity of 0.2c
     const double tau_ineff = prefactor * 86400 * std::sqrt(grid::mtot_input / (5.e-3 * 1.989 * 1.e33)) *
                              std::pow((0.2 * 29979200000) / v_ej, 3. / 2.);
     const double f_p = std::log1p(2. * ts * ts / tau_ineff / tau_ineff) / (2. * ts * ts / tau_ineff / tau_ineff);
@@ -309,8 +311,11 @@ constexpr auto packetprop_update_required(const Packet& pkt, const double ts_end
   return pkt.prop_time < ts_end;
 }
 
-// Return the nonemptymgi for the cell cache if required (non-empty, non-thick cell),
-// otherwise return an empty std::optional to indicate that no cell cache is used
+// Return the id of the cell cache group that this packet belongs to, or an empty std::optional if the
+// packet does not use the cell cache at all (pellet/gamma/predeposit types, empty cells, thick cells).
+// In single-slot mode the group id is the nonemptymgi, because packets of a given cell must be processed
+// together while that cell occupies the rank's one cache slot. In multi-slot mode every cell has its own
+// persistent slot, so no partitioning is needed and all cache-using packets share group 0.
 auto get_packet_cellcachegroupid(const Packet& pkt) -> std::optional<int> {
   constexpr auto nocache_packettypes = std::array{
       TYPE_RADIOACTIVE_PELLET,

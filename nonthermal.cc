@@ -213,7 +213,10 @@ struct NonThermalCellSolution {
 
 MPI_shared_array<NonThermalCellSolution> nt_solution;
 
-MPI_shared_array<double> deposition_rate_density_all_cells;
+// Deposition rate density [erg/s/cm3] available to the non-thermal lepton (Spencer-Fano) treatment:
+// gamma-ray, positron and electron deposition only. Alpha particles and spontaneous fission fragments
+// deposit as pure heating and are accounted for separately in HeatingCoolingRates (see thermalbalance.cc).
+MPI_shared_array<double> ntlepton_deposition_rate_density_all_cells;
 
 constexpr auto uppertriangular(const int i, const int j) -> int {
   assert_testmodeonly(i >= 0);
@@ -1146,7 +1149,7 @@ auto calculate_nt_frac_ionisation_shell(const int nonemptymgi, const int element
 
 // non-thermal ionisation rate coefficient (multiply by population to get rate)
 auto nt_ionisation_ratecoeff_wfapprox(const int nonemptymgi, const int element, const int ion) -> double {
-  const double deposition_rate_density = get_deposition_rate_density(nonemptymgi);
+  const double deposition_rate_density = get_ntlepton_deposition_rate_density(nonemptymgi);
   // to get the non-thermal ionisation rate we need to divide the energy deposited
   // per unit volume per unit time in the grid cell (sum of terms above)
   // by the total ion number density and the "work per ion pair"
@@ -1195,7 +1198,7 @@ auto calculate_nt_ionisation_ratecoeff(const int nonemptymgi, const int element,
   const double y_xs_de =
       std::inner_product(yfunc.begin(), yfunc.end(), cross_section_vec_allshells.begin(), 0.0) * DELTA_E;
 
-  const double deposition_rate_density_ev = get_deposition_rate_density(nonemptymgi) / EV;
+  const double deposition_rate_density_ev = get_ntlepton_deposition_rate_density(nonemptymgi) / EV;
   const double yscalefactor = deposition_rate_density_ev / E_init_ev;
 
   return yscalefactor * y_xs_de;
@@ -1314,7 +1317,7 @@ auto get_eff_ionpot(const int nonemptymgi, const int element, const int ion) {
 // Kozma & Fransson 1992 equation 13
 // returns the rate coefficient in s^-1
 auto nt_ionisation_ratecoeff_sf(const int nonemptymgi, const int element, const int ion) -> double {
-  const double deposition_rate_density = get_deposition_rate_density(nonemptymgi);
+  const double deposition_rate_density = get_ntlepton_deposition_rate_density(nonemptymgi);
   if (deposition_rate_density > 0.) {
     return deposition_rate_density / get_nnion_tot(nonemptymgi) / get_eff_ionpot(nonemptymgi, element, ion);
   }
@@ -1681,7 +1684,7 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const std::a
                                      &NonThermalExcitation::frac_deposition);
 
     // the excitation list is now sorted by frac_deposition descending
-    const double deposition_rate_density = get_deposition_rate_density(nonemptymgi);
+    const double deposition_rate_density = get_ntlepton_deposition_rate_density(nonemptymgi);
 
     if (std::ssize(tmp_excitation_list) > nt_excitations_stored) {
       // truncate the sorted list to save memory
@@ -1749,14 +1752,15 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const std::a
   }  // NT_EXCITATION_ON
 
   // calculate number density of non-thermal electrons
-  const double deposition_rate_density_ev = get_deposition_rate_density(nonemptymgi) / EV;
+  const double deposition_rate_density_ev = get_ntlepton_deposition_rate_density(nonemptymgi) / EV;
   const double yscalefactor = deposition_rate_density_ev / E_init_ev;
 
   double nne_nt_max = 0.;
   for (int i = 0; i < SFPTS; i++) {
     const double endash = engrid(i);
     const double delta_endash = DELTA_E;
-    const double oneovervelocity = std::sqrt(9.10938e-31 / 2 / endash / 1.60218e-19) / 100;  // in sec/cm
+    // 1 / v for a non-relativistic electron of kinetic energy endash [eV], in sec/cm
+    const double oneovervelocity = std::sqrt(ME / (2 * endash * EV));
     nne_nt_max += yscalefactor * yfunc[i] * oneovervelocity * delta_endash;
   }
 
@@ -2049,10 +2053,10 @@ auto sfmatrix_solve(const std::span<const double> sfmatrix) -> std::array<double
 void init() {
   const ptrdiff_t nonempty_npts_model = grid::get_nonempty_npts_model();
 
-  deposition_rate_density_all_cells = MPI_shared_array<double>(nonempty_npts_model);
+  ntlepton_deposition_rate_density_all_cells = MPI_shared_array<double>(nonempty_npts_model);
 
   if (globals::rank_in_node == 0) {
-    std::ranges::fill(deposition_rate_density_all_cells, -1.);
+    std::ranges::fill(ntlepton_deposition_rate_density_all_cells, -1.);
   }
 
   if (!NT_ON) {
@@ -2159,14 +2163,15 @@ void calculate_deposition_rate_density(const int nonemptymgi, const int timestep
   // spontaneous fission contribution is always treated as instant deposition
   heatingcoolingrates.dep_spfission = heatingcoolingrates.eps_spfission_ana;
 
-  deposition_rate_density_all_cells[nonemptymgi] =
+  ntlepton_deposition_rate_density_all_cells[nonemptymgi] =
       (heatingcoolingrates.dep_gamma + heatingcoolingrates.dep_positron + heatingcoolingrates.dep_electron);
 }
 
-// get non-thermal deposition rate density in erg / s / cm^3 previously stored by calculate_deposition_rate_density()
-DEVICE_FUNC auto get_deposition_rate_density(const int nonemptymgi) -> double {
-  assert_always(deposition_rate_density_all_cells[nonemptymgi] >= 0);
-  return deposition_rate_density_all_cells[nonemptymgi];
+// get the non-thermal lepton deposition rate density (gamma + positron + electron, excluding alpha and
+// spontaneous fission) in erg / s / cm^3, previously stored by calculate_deposition_rate_density()
+DEVICE_FUNC auto get_ntlepton_deposition_rate_density(const int nonemptymgi) -> double {
+  assert_always(ntlepton_deposition_rate_density_all_cells[nonemptymgi] >= 0);
+  return ntlepton_deposition_rate_density_all_cells[nonemptymgi];
 }
 
 auto get_nt_frac_heating(const int nonemptymgi) -> float {
@@ -2291,7 +2296,7 @@ DEVICE_FUNC auto nt_excitation_ratecoeff(const int nonemptymgi, const int lowerl
     return 0.;
   }
 
-  const double deposition_rate_density = get_deposition_rate_density(nonemptymgi);
+  const double deposition_rate_density = get_ntlepton_deposition_rate_density(nonemptymgi);
   const double ratecoeffperdeposition = ntexcitation->ratecoeffperdeposition;
 
   return ratecoeffperdeposition * deposition_rate_density;
@@ -2403,11 +2408,11 @@ void solve_spencerfano(const int nonemptymgi, const int timestep, const int iter
   if (timestep < globals::num_lte_timesteps + 1) {
     printlnlog("Skipping Spencer-Fano solution for first NLTE timestep");
     skip_solution = true;
-  } else if (get_deposition_rate_density(nonemptymgi) / EV < MINDEPRATE) {
+  } else if (get_ntlepton_deposition_rate_density(nonemptymgi) / EV < MINDEPRATE) {
     printlnlog(
         "Non-thermal deposition rate of {:g} eV/cm/s/cm^3 below  MINDEPRATE {:g} in cell {} at timestep {}. Skipping "
         "Spencer-Fano solution.",
-        get_deposition_rate_density(nonemptymgi) / EV, MINDEPRATE, modelgridindex, timestep);
+        get_ntlepton_deposition_rate_density(nonemptymgi) / EV, MINDEPRATE, modelgridindex, timestep);
 
     skip_solution = true;
   }
@@ -2516,7 +2521,7 @@ void write_restart_data(FILE* gridsave_file) {
   fprintf(gridsave_file, "%d %la %la\n", SFPTS, SF_EMIN, SF_EMAX);
 
   for (int nonemptymgi = 0; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
-    fprintf(gridsave_file, "%d %la ", nonemptymgi, deposition_rate_density_all_cells[nonemptymgi]);
+    fprintf(gridsave_file, "%d %la ", nonemptymgi, ntlepton_deposition_rate_density_all_cells[nonemptymgi]);
 
     if (NT_ON && NT_SOLVE_SPENCERFANO) {
       check_auger_probabilities(nonemptymgi);
@@ -2568,8 +2573,8 @@ void read_restart_data(FILE* gridsave_file) {
 
   for (int nonemptymgi = 0; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
     int nonemptymgi_in = 0;
-    assert_always(fscanf(gridsave_file, "%d %la ", &nonemptymgi_in, &deposition_rate_density_all_cells[nonemptymgi]) ==
-                  2);
+    assert_always(fscanf(gridsave_file, "%d %la ", &nonemptymgi_in,
+                         &ntlepton_deposition_rate_density_all_cells[nonemptymgi]) == 2);
     assert_always(nonemptymgi_in == nonemptymgi);
 
     if (NT_ON && NT_SOLVE_SPENCERFANO) {
@@ -2609,7 +2614,7 @@ void read_restart_data(FILE* gridsave_file) {
 }
 
 void nt_MPI_Bcast(const ptrdiff_t nonemptymgi, const int root_node_id) {
-  MPI_Bcast_safe(deposition_rate_density_all_cells[nonemptymgi], root_node_id, globals::mpi_comm_internode);
+  MPI_Bcast_safe(ntlepton_deposition_rate_density_all_cells[nonemptymgi], root_node_id, globals::mpi_comm_internode);
 
   if (NT_ON && NT_SOLVE_SPENCERFANO) {
     if (globals::rank_in_node == 0) {
