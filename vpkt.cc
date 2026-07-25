@@ -353,11 +353,13 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
 
               const auto kappa = expansionopacities[(nonemptymgi * expopac_nbins) + binindex];
               // kappa_exp * rho = (1 / (c t)) * sum_lines (lambda_line / delta_lambda) * (1 - exp(-tau_sobolev))
-              // and was tabulated for the current grid state (i.e. t_start), so scale the explicit 1/(c t)
-              // prefactor to the packet's time. That factor is exact however saturated the lines are. The
-              // remaining time dependence sits inside (1 - exp(-tau_sobolev)) and cannot be recovered from the
-              // binned kappa: it is 1 for saturated lines and (t_start / t_future)^2 in the optically thin limit.
-              const double chi_bb_expansionopac = kappa * grid::get_rho(nonemptymgi) * (t_start / t_future);
+              // and was tabulated for the current grid state (i.e. t_start), so scale it to the packet's time.
+              // In the optically thin limit (1 - exp(-tau_sobolev)) -> tau_sobolev ∝ t^-2, which together with
+              // the explicit 1/(c t) prefactor gives kappa_exp * rho ∝ t^-3, i.e. the same density scaling that
+              // s_cont and the Sobolev line term above apply. Saturated lines keep (1 - exp(-tau_sobolev)) ~ 1
+              // and so fall off only as 1/t, but their individual tau_sobolev cannot be recovered from the
+              // binned kappa, so the thin limit is used for all bins.
+              const double chi_bb_expansionopac = kappa * grid::get_rho(nonemptymgi) * pow3(t_start / t_future);
 
               const double tau_bin = chi_bb_expansionopac * (std::min(binedgedist, boundarydist) - dist);
               dist = std::min(binedgedist, boundarydist);
