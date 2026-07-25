@@ -790,7 +790,7 @@ void init_nuclides(const std::span<const int> custom_zlist, const std::span<cons
   assert_always(custom_zlist.size() == custom_alist.size());
 
   // Ni57
-  nuclides.push_back({.z = 28, .a = 57, .meanlife = 51.36 * 3600.});
+  nuclides.push_back({.z = 28, .a = 57, .meanlife = 51.36 * HOUR});
   nuclides.back().endecay_positron = 0.354 * MEV;
   nuclides.back().branchprobs[DECAYTYPE_BETAPLUS] = 0.436;
   nuclides.back().branchprobs[DECAYTYPE_ELECTRONCAPTURE] = 1. - 0.436;
@@ -927,7 +927,7 @@ void init_nuclides(const std::span<const int> custom_zlist, const std::span<cons
     nuclides.back().endecay_q[DECAYTYPE_SPONTFISSION] = q_fission_mev * MEV;
     nuclides.back().endecay_fission = q_fission_mev * MEV;  // will be overwritten if we have fission product data
     printlnlog("  added spontaneous fission nuclide: (Z={}){}{} meanlife {:.1e} days", z_in, get_elname(z_in), a_in,
-               tau_sec / 86400.0);
+               tau_sec / DAY);
   }
 
   auto ffission_products = fstream_required("fissionproducts_GEF_100keV.txt", std::ios::in);

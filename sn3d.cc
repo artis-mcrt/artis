@@ -851,7 +851,7 @@ auto main(int argc, char* argv[]) -> int {
       printlog("Command line argument specifies wall time hours '{}', setting ",
                optarg);  // NOLINT(misc-include-cleaner)
       const float walltimehours = strtof(optarg, nullptr);
-      walltimelimitseconds = static_cast<int>(walltimehours * 3600);
+      walltimelimitseconds = static_cast<int>(walltimehours * HOUR);
       printlnlog("walltimelimitseconds = {}", walltimelimitseconds);
     } else {
       std::println(stderr, "Usage: {} [-w WALLTIMELIMITHOURS]",
@@ -1024,7 +1024,7 @@ auto main(int argc, char* argv[]) -> int {
 
   MPI_Barrier_allranks();
   const auto real_time_end = std::chrono::steady_clock::now();
-  const auto wallclock_hours = std::chrono::duration<double>(real_time_end - real_time_start).count() / 3600.;
+  const auto wallclock_hours = std::chrono::duration<double>(real_time_end - real_time_start).count() / HOUR;
   printlnlog(
       "sn3d finished (job: pktprop ts {} to ts {} grid-preprop, {:.3f} wallclock hours * {} processes * {} "
       "threads = {:.3f} core hours)",

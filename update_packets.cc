@@ -72,10 +72,8 @@ void do_nonthermal_predeposit(Packet& pkt, const int nts, const double ts_end) {
     const double v_ej = std::sqrt(E_kin * 2 / grid::mtot_input);
 
     const double prefactor = (pkt.type == TYPE_NONTHERMAL_PREDEPOSIT_ALPHA) ? 7.74 : 7.4;
-    // the 29979200000 literal is the speed of light in cm/s (it differs from CLIGHT in the 7th digit, and is
-    // left as-is here so that results are unchanged), so 0.2 * it is the paper's reference velocity of 0.2c
-    const double tau_ineff = prefactor * 86400 * std::sqrt(grid::mtot_input / (5.e-3 * 1.989 * 1.e33)) *
-                             std::pow((0.2 * 29979200000) / v_ej, 3. / 2.);
+    const double tau_ineff =
+        prefactor * DAY * std::sqrt(grid::mtot_input / (5.e-3 * MSUN)) * std::pow((0.2 * CLIGHT) / v_ej, 3. / 2.);
     const double f_p = std::log1p(2. * ts * ts / tau_ineff / tau_ineff) / (2. * ts * ts / tau_ineff / tau_ineff);
     deposit_or_escape(f_p);
   } else if constexpr (PARTICLE_THERMALISATION_SCHEME == ParticleThermalisationScheme::WOLLAEGER) {
