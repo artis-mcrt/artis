@@ -562,6 +562,23 @@ void compton_scatter(Packet& pkt) {
 
 // Compute the mean energy converted to non-thermal electrons times the Klein-Nishina cross section.
 constexpr auto meanf_sigma(const double x) -> double {
+  if (x < THOMSON_LIMIT) {
+    // The closed form below sums five terms of order 1/x^2 that have to cancel down to O(x), so it
+    // loses about 8 decimal digits per decade in x: the relative error is 2e-9 at x = 1e-2, 2e-6 at
+    // 1e-3, 25% at 1e-4, and the result turns negative below ~1e-6. Use the exact Taylor series of
+    // the same expression instead, which is accurate to 6e-11 at the x = THOMSON_LIMIT crossover
+    // and better below it. The leading term is the Thomson-limit mean fractional energy transfer x.
+    constexpr std::array taylor_coeffs{
+        1., -21. / 5., 147. / 10., -1616. / 35., 940. / 7., -2584. / 7., 14588. / 15., -409088. / 165.,
+    };
+    // Horner evaluation, starting from the highest-order coefficient
+    double series = taylor_coeffs.back();
+    for (int i = static_cast<int>(taylor_coeffs.size()) - 2; i >= 0; i--) {
+      series = taylor_coeffs[i] + (x * series);
+    }
+    return SIGMA_T * x * series;
+  }
+
   const double f = 1 + (2 * x);
 
   const double term0 = 2 / x;

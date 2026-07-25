@@ -306,6 +306,19 @@ void read_recombrate_file() {
 
         const int nlevels = get_nlevels_ionising(element, ion - 1);
 
+        // scale_level_phixs() writes node-shared memory (allphixs and the derived rate coefficient
+        // tables) from rank_in_node == 0 only, while every rank on the node is reading those same
+        // arrays in calculate_ionrecombcoeff(). Bracket the writes with node barriers so that no
+        // rank can read a partially rescaled table.
+        const auto scale_levels = [element, ion, nlevels](const int firstlevel, const double multiplier) {
+          assert_always(std::isfinite(multiplier) && multiplier >= 0.);
+          MPI_Barrier_node();
+          for (int level = firstlevel; level < nlevels; level++) {
+            scale_level_phixs(element, ion - 1, level, multiplier);
+          }
+          MPI_Barrier_node();
+        };
+
         const double x = (log_Te_estimate - T_highestbelow.log_Te) / (T_lowestabove.log_Te - T_highestbelow.log_Te);
         const double input_rrc_low_n = std::lerp(T_highestbelow.rrc_low_n, T_lowestabove.rrc_low_n, x);
         const double input_rrc_total = std::lerp(T_highestbelow.rrc_total, T_lowestabove.rrc_total, x);
@@ -318,19 +331,25 @@ void read_recombrate_file() {
                                               false, per_groundmultipletpop);
         printlnlog("              rrc: {:10.3e}", rrc);
 
+        if (!(rrc > 0.)) {
+          // no recombination into this ion from the atomic data (e.g. the ion below has no
+          // photoionisation targets), so there is nothing to calibrate and the multipliers below
+          // would all be a division by zero
+          printlnlog("    rrc is not positive, so skipping the recombination rate calibration for this ion");
+          continue;
+        }
+
         if (input_rrc_low_n >= 0)  // if it's < 0, ignore it
         {
           printlnlog("  input_rrc_low_n: {:10.3e}", input_rrc_low_n);
 
           const double phixs_multiplier = input_rrc_low_n / rrc;
-          if (phixs_multiplier < 0.05 || phixs_multiplier >= 2.0) {
+          if (!(phixs_multiplier >= 0.05) || phixs_multiplier >= 2.0) {
             printlnlog("    Not scaling phixs of all levels by {:.3f} (because < 0.05 or >= 2.0)", phixs_multiplier);
           } else {
             printlnlog("    scaling phixs of all levels by {:.3f}", phixs_multiplier);
 
-            for (int level = 0; level < nlevels; level++) {
-              scale_level_phixs(element, ion - 1, level, phixs_multiplier);
-            }
+            scale_levels(0, phixs_multiplier);
 
             rrc = calculate_ionrecombcoeff(-1, Te_estimate, element, ion, assume_lte, collisional_not_radiative, false,
                                            per_groundmultipletpop);
@@ -343,7 +362,10 @@ void read_recombrate_file() {
 
         printlnlog("  input_rrc_total: {:10.3e}", input_rrc_total);
 
-        if (rrc < input_rrc_total) {
+        if (input_rrc_total < 0) {
+          // negative means no tabulated total, in the same way that a negative rrc_low_n is ignored above
+          printlnlog("    input_rrc_total is negative, so not scaling to the total recombination rate");
+        } else if (rrc < input_rrc_total) {
           const double rrc_superlevel = calculate_ionrecombcoeff(
               -1, Te_estimate, element, ion, assume_lte, collisional_not_radiative, true, per_groundmultipletpop);
           printlnlog("  rrc(superlevel): {:10.3e}", rrc_superlevel);
@@ -351,31 +373,22 @@ void read_recombrate_file() {
           if (rrc_superlevel > 0) {
             const double phixs_multiplier_superlevel = 1.0 + ((input_rrc_total - rrc) / rrc_superlevel);
             printlnlog("    scaling phixs of levels in the superlevel by {:.3f}", phixs_multiplier_superlevel);
-            assert_always(phixs_multiplier_superlevel >= 0);
 
             const int first_superlevel_level = get_nlevels_excited_nlte(element, ion - 1) + 1;
-            for (int level = first_superlevel_level; level < nlevels; level++) {
-              scale_level_phixs(element, ion - 1, level, phixs_multiplier_superlevel);
-            }
+            scale_levels(first_superlevel_level, phixs_multiplier_superlevel);
           } else {
             printlnlog("There is no superlevel recombination, so multiplying all levels instead");
             const double phixs_multiplier = input_rrc_total / rrc;
             printlnlog("    scaling phixs of all levels by {:.3f}", phixs_multiplier);
-            assert_always(phixs_multiplier >= 0);
 
-            for (int level = 0; level < nlevels; level++) {
-              scale_level_phixs(element, ion - 1, level, phixs_multiplier);
-            }
+            scale_levels(0, phixs_multiplier);
           }
         } else {
           printlnlog("rrc >= input_rrc_total!");
           const double phixs_multiplier = input_rrc_total / rrc;
           printlnlog("    scaling phixs of all levels by {:.3f}", phixs_multiplier);
-          assert_always(phixs_multiplier >= 0);
 
-          for (int level = 0; level < nlevels; level++) {
-            scale_level_phixs(element, ion - 1, level, phixs_multiplier);
-          }
+          scale_levels(0, phixs_multiplier);
         }
 
         rrc = calculate_ionrecombcoeff(-1, Te_estimate, element, ion, assume_lte, collisional_not_radiative, false,

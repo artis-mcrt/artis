@@ -2487,7 +2487,10 @@ DEVICE_FUNC void snap_pos_to_cell(Vec3d& pos, const double time, const int celli
 
     const double r_outer = cellcoordmax[0] * tstart / globals::tmin;
     const double d_coordmaxboundary =
-        expanding_shell_intersection<BoundaryType::UPPER>(pos, dir, speed, r_outer, tstart);
+        is_boundary_overshoot_within_tolerance<BoundaryType::UPPER>(pktposgridcoord[0], pktvelgridcoord[0],
+                                                                    cellcoordmax[0], tstart)
+            ? 0.
+            : expanding_shell_intersection<BoundaryType::UPPER>(pos, dir, speed, r_outer, tstart);
 
     // upper d coordinate of the current cell
     if ((d_coordmaxboundary >= 0.) && (d_coordmaxboundary < distance)) {
@@ -2498,7 +2501,10 @@ DEVICE_FUNC void snap_pos_to_cell(Vec3d& pos, const double time, const int celli
     const double r_inner = cellcoordmin[0] * tstart / globals::tmin;
     if (r_inner > 0.) {
       const double d_coordminboundary =
-          expanding_shell_intersection<BoundaryType::LOWER>(pos, dir, speed, r_inner, tstart);
+          is_boundary_overshoot_within_tolerance<BoundaryType::LOWER>(pktposgridcoord[0], pktvelgridcoord[0],
+                                                                      cellcoordmin[0], tstart)
+              ? 0.
+              : expanding_shell_intersection<BoundaryType::LOWER>(pos, dir, speed, r_inner, tstart);
       // lower d coordinate of the current cell
       if ((d_coordminboundary >= 0.) && (d_coordminboundary < distance)) {
         distance = d_coordminboundary;
