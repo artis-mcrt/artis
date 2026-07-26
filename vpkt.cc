@@ -185,6 +185,11 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
   const double t_start = rpkt.prop_time;
   double t_future = t_start;
 
+  // The cell's material state (level populations, rho, and the binned expansion opacities) was calculated
+  // for the middle of the current timestep, so t_gridstate is the reference time when scaling those
+  // quantities to the packet's own time as it propagates outwards through the expanding ejecta.
+  const double t_gridstate = globals::timesteps[globals::timestep].mid;
+
   std::ranges::fill(tau_vpkt, 0.);
 
   atomicadd(nvpkt_created, 1);
@@ -229,26 +234,35 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
     if (mgi < 0) {
       next_trans = -1;
     } else if (boundarydist > 0) {
-      const double s_cont = boundarydist * pow3(t_start / t_future);
       const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(mgi);
       const auto doppler = calculate_doppler_nucmf_on_nurf(vpktpos, obsdir, t_future);
       calculate_chi_rpkt_cont<false>(nu_cmf, chi_vpkt_cont, nonemptymgi);
 
-      const double chi_cont = chi_vpkt_cont.total();
+      // ratio of the number densities when the packet crosses this cell to those of the grid state the
+      // opacities were calculated from
+      const double densityscalefactor = pow3(t_gridstate / t_future);
+
+      // Scale each continuum process by its own power of the density rather than by a single common
+      // factor. Electron scattering (sigma_T * nne) and bound-free (nnlevel * sigma_bf) are linear in a
+      // number density, but free-free (nnion * nne) is quadratic. NB: the stimulated recombination that
+      // is subtracted inside chi_boundfree is also quadratic in density, but it is not separable from the
+      // sum that calculate_chi_bf_gammacontr() returns, so bound-free is scaled as purely linear here.
+      const double chi_escatter = chi_vpkt_cont.chi_freefree_scatter * densityscalefactor;
+      const double chi_bf = chi_vpkt_cont.chi_boundfree * densityscalefactor;
+      const double chi_ff = chi_vpkt_cont.chi_freefree_heat * pow2(densityscalefactor);
+
+      const double chi_cont = chi_escatter + chi_bf + chi_ff;
 
       for (int opacchoiceindex = 0; opacchoiceindex < nspectraperobsdir; opacchoiceindex++) {
+        double chi_cont_thischoice = chi_cont;
         if (opacityexclusions[opacchoiceindex] == -2) {
-          const double chi_cont_nobf = chi_cont - chi_vpkt_cont.chi_boundfree;
-          tau_vpkt[opacchoiceindex] += chi_cont_nobf * s_cont * doppler;
+          chi_cont_thischoice -= chi_bf;
         } else if (opacityexclusions[opacchoiceindex] == -3) {
-          const double chi_cont_noff = chi_cont - chi_vpkt_cont.chi_freefree_heat;
-          tau_vpkt[opacchoiceindex] += chi_cont_noff * s_cont * doppler;
+          chi_cont_thischoice -= chi_ff;
         } else if (opacityexclusions[opacchoiceindex] == -4) {
-          const double chi_cont_noes = chi_cont - chi_vpkt_cont.chi_freefree_scatter;
-          tau_vpkt[opacchoiceindex] += chi_cont_noes * s_cont * doppler;
-        } else {
-          tau_vpkt[opacchoiceindex] += chi_cont * s_cont * doppler;
+          chi_cont_thischoice -= chi_escatter;
         }
+        tau_vpkt[opacchoiceindex] += chi_cont_thischoice * boundarydist * doppler;
       }
 
       // kill vpkt with high optical depth
@@ -302,7 +316,13 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
 
           const auto n_u = calculate_levelpop(nonemptymgi, element, ion, upper);
           const auto n_l = calculate_levelpop(nonemptymgi, element, ion, lower);
-          const double tau_line = std::max(0., ((B_lu * n_l) - (B_ul * n_u)) * HCLIGHTOVERFOURPI * t_line);
+          // The level populations belong to the grid state at t_gridstate, but the packet only reaches this
+          // line resonance at t_line, by which time the ejecta have expanded further. Scale them with
+          // n ∝ t^-3, exactly as densityscalefactor does for the continuum opacity. Combined with the factor of
+          // t_line in the Sobolev optical depth this gives the expected tau_sobolev ∝ t^-2.
+          const double popscalefactor = pow3(t_gridstate / t_line);
+          const double tau_line =
+              std::max(0., ((B_lu * n_l) - (B_ul * n_u)) * popscalefactor * HCLIGHTOVERFOURPI * t_line);
 
           // Check on the element to exclude (or -1 for no line opacity)
           const int Z = get_atomicnumber(element);
@@ -346,7 +366,14 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
               const auto binedgedist = get_linedistance(t_future, nu_cmf, next_bin_edge_nu, dnu_on_dl);
 
               const auto kappa = expansionopacities[(nonemptymgi * expopac_nbins) + binindex];
-              const double chi_bb_expansionopac = kappa * grid::get_rho(nonemptymgi);
+              // kappa_exp * rho = (1 / (c t)) * sum_lines (lambda_line / delta_lambda) * (1 - exp(-tau_sobolev))
+              // and was tabulated at t_gridstate, so scale it to the packet's time. In the optically thin limit
+              // (1 - exp(-tau_sobolev)) -> tau_sobolev ∝ t^-2, which together with the explicit 1/(c t)
+              // prefactor gives kappa_exp * rho ∝ t^-3, i.e. the same density scaling as the linear continuum
+              // terms above. Saturated lines keep (1 - exp(-tau_sobolev)) ~ 1 and so fall off only as 1/t, but
+              // their individual tau_sobolev cannot be recovered from the binned kappa, so the thin limit is
+              // used for all bins.
+              const double chi_bb_expansionopac = kappa * grid::get_rho(nonemptymgi) * densityscalefactor;
 
               const double tau_bin = chi_bb_expansionopac * (std::min(binedgedist, boundarydist) - dist);
               dist = std::min(binedgedist, boundarydist);
