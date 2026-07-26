@@ -138,7 +138,7 @@ inline std::vector<double> colheatingestimator_save{};
 
 inline int nprocs_exspec{1};
 
-inline double max_path_step;
+inline double max_path_step{NAN};  // set at the end of update_grid(); NaN disables the cap until then
 
 // ATOMIC DATA
 

@@ -73,9 +73,12 @@ std::vector<int> opacityexclusions;  // vector of opacity contribution setups:
                                      // 0: full opacity
                                      // -1: no line opacity; -2: no bf opacity; -3: no ff opacity; -4: no es opacity,
                                      // +ve: exclude element with atomic number's contribution to bound-bound opacity
-std::vector<double> tau_vpkt;
+// per-thread accumulated optical depths (one per opacity-choice spectrum), since vpkts are traced
+// from within the OpenMP/stdpar-parallel packet loop
+THREADLOCALONHOST std::vector<double> tau_vpkt;
 
 std::ofstream vpkt_contrib_file;
+PaddedMutex vpkt_contrib_file_mutex;
 
 struct VGrid {
   std::vector<std::vector<StokesParams>> flux;
@@ -190,7 +193,7 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
   // quantities to the packet's own time as it propagates outwards through the expanding ejecta.
   const double t_gridstate = globals::timesteps[globals::timestep].mid;
 
-  std::ranges::fill(tau_vpkt, 0.);
+  tau_vpkt.assign(nspectraperobsdir, 0.);  // sizes this thread's copy on first use and zeroes it
 
   atomicadd(nvpkt_created, 1);
 
@@ -715,7 +718,6 @@ void read_vpktparameterfile() {
   }
 
   printlnlog("vpkt.txt: Nspectra {} per observer", nspectraperobsdir);
-  tau_vpkt.resize(nspectraperobsdir, 0.);
 
   // time window. If dum4=1 it restrict vpkt to time windown (dum5,dum6)
   int override_tminmax = 0;
@@ -978,6 +980,8 @@ auto trace_vpkts(const Packet& pkt, const enum packet_type type_before_rpkt) -> 
     }
   }
   if (VPKT_WRITE_CONTRIBS && any_dir_escaped) {
+    // serialise writes so that rows from concurrent threads cannot interleave
+    [[maybe_unused]] ScopedMutex lock{vpkt_contrib_file_mutex};
     std::println(vpkt_contrib_file, "{} {} {} {:g}{}", pkt.emissiontype, pkt.trueemissiontype, pkt.absorptiontype,
                  pkt.absorptionfreq, vpkt_contrib_row);
   }

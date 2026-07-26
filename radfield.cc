@@ -861,30 +861,33 @@ void normalise_J(const int nonemptymgi, const double estimator_normfactor_over4p
 }
 
 void normalise_bf_estimators(const int nts, const int nts_prev, const int titer, const double deltat) {
-  if (globals::rank_in_node != 0) {
-    return;
-  }
+  // these conditions are the same on every rank, so all node ranks reach the barrier below together
   if (globals::lte_iteration) {
     return;
   }
   if (nts == globals::timestep_initial && titer == 0) {
     return;
   }
-  const auto bfestimcount = std::ssize(globals::bfestim_nu_edge);
-  const ptrdiff_t nonempty_npts_model = grid::get_nonempty_npts_model();
-  for (auto nonemptymgi = 0Z; nonemptymgi < nonempty_npts_model; nonemptymgi++) {
-    if (grid::thick_allcells[nonemptymgi] == 1) {
-      continue;
-    }
-    const auto mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
-    const double deltaV =
-        grid::get_modelcell_assocvolume_tmin(mgi) * pow3(globals::timesteps[nts_prev].mid / globals::tmin);
-    const double estimator_normfactor = 1 / deltaV / deltat / globals::nprocs;
-    for (int i = 0; i < bfestimcount; i++) {
-      const auto mgibfindex = (nonemptymgi * bfestimcount) + i;
-      prev_bfrate_normed[mgibfindex] = static_cast<float>(bfrate_raw[mgibfindex] * (estimator_normfactor / H));
+  if (globals::rank_in_node == 0) {
+    const auto bfestimcount = std::ssize(globals::bfestim_nu_edge);
+    const ptrdiff_t nonempty_npts_model = grid::get_nonempty_npts_model();
+    for (auto nonemptymgi = 0Z; nonemptymgi < nonempty_npts_model; nonemptymgi++) {
+      if (grid::thick_allcells[nonemptymgi] == 1) {
+        continue;
+      }
+      const auto mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
+      const double deltaV =
+          grid::get_modelcell_assocvolume_tmin(mgi) * pow3(globals::timesteps[nts_prev].mid / globals::tmin);
+      const double estimator_normfactor = 1 / deltaV / deltat / globals::nprocs;
+      for (int i = 0; i < bfestimcount; i++) {
+        const auto mgibfindex = (nonemptymgi * bfestimcount) + i;
+        prev_bfrate_normed[mgibfindex] = static_cast<float>(bfrate_raw[mgibfindex] * (estimator_normfactor / H));
+      }
     }
   }
+  // every rank on the node reads prev_bfrate_normed during the upcoming grid update, so
+  // wait here for the node leader to finish writing the node-shared array
+  MPI_Barrier_node();
 }
 
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_bfrate_estimator(const int element, const int lowerion,

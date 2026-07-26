@@ -5,6 +5,7 @@
 #define PACKET_H
 
 #include <cmath>
+#include <cstdint>
 #include <span>
 #include <string>
 #include <vector>
@@ -43,10 +44,10 @@ enum absorption_type : int {
 };
 
 struct MacroAtomState {
-  int element;  // macro atom of type element (this is an element index)
-  int ion;  // in ionstage ion (this is an ion index)
-  int level;  // and level=level (this is a level index)
-  int activatingline;  // Linelistindex of the activating line for bb activated MAs, -99 else.
+  int element{-1};  // macro atom of type element (this is an element index)
+  int ion{-1};  // in ionstage ion (this is an ion index)
+  int level{-1};  // and level=level (this is a level index)
+  int activatingline{-99};  // Linelistindex of the activating line for bb activated MAs, -99 else.
 };
 
 #include "random.h"
@@ -68,7 +69,7 @@ struct Packet {
                        // its linelist index (to overcome numerical problems in propagating the rpkts).
   int nscatterings{0};  // records number of electron scatterings a r-pkt undergone since it was emitted
   int emissiontype{EMTYPE_NOTSET};  // records how the packet was emitted if it is a r-pkt
-  Vec3d em_pos{NAN};  // Position of the last emission (x,y,z).
+  Vec3d em_pos{NAN, NAN, NAN};  // Position of the last emission (x,y,z).
   float em_time{-1.};
   int absorptiontype{0};  // records linelistindex of the last absorption
                           // or a negative absorption_type enum value
@@ -94,12 +95,16 @@ struct Packet {
 #ifdef GPU_ON
 constexpr DEVICE_FUNC auto get_rngstate([[maybe_unused]] Packet& packet) -> rngstate_type& { return packet.rngstate; }
 #else
-constexpr auto get_rngstate() -> rngstate_type& {
-  thread_local rngstate_type rng{};
+inline auto get_rngstate() -> rngstate_type& {
+  // Every thread lazily seeds its own generator from a random source, so that OpenMP/stdpar worker
+  // threads (which never run the seeding code in read_parameterfile) do not all share the identical
+  // default-seeded sequence. The main thread is re-seeded deterministically in read_parameterfile()
+  // to keep single-threaded runs reproducible.
+  thread_local rngstate_type rng{static_cast<std::uint32_t>(get_rng_random_seed())};
   return rng;
 }
 
-constexpr auto get_rngstate([[maybe_unused]] const Packet& packet) -> rngstate_type& { return get_rngstate(); }
+inline auto get_rngstate([[maybe_unused]] const Packet& packet) -> rngstate_type& { return get_rngstate(); }
 #endif
 
 void packet_init(std::span<Packet> packets);

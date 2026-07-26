@@ -298,7 +298,14 @@ auto get_possible_event_expansion_opacity(const int nonemptymgi, Packet& pkt, co
     }
   }
 
-  // no more bins, so no opacity and no chance of further interaction below this frequency
+  // no more expansion-opacity bins (the packet is redshifting past the red end of the wavelength
+  // grid), but the continuum processes (electron scattering, bound-free, free-free) still provide
+  // opacity, so sample the remaining optical depth against them (cf. the vpkt tracer, which adds
+  // the continuum opacity independently of the expansion-opacity bin range)
+  const double chi_cont = chi_rpkt_cont.total() * doppler;
+  if (chi_cont > 0.) {
+    return {dist + ((tau_rnd - tau) / chi_cont), false};
+  }
   return {std::numeric_limits<double>::max(), false};
 }
 

@@ -203,16 +203,21 @@ auto get_cell_r_inner(const int cellindex, const GridType prop_gridtype) -> doub
     return get_cellcoordmin(cellindex, 0);
   }
 
+  // minimum |coordinate| within the cell along one axis: zero if the cell straddles the coordinate plane
+  const auto axis_mindist = [](const double coordmin, const double coordmax) {
+    return (coordmin <= 0. && coordmax >= 0.) ? 0. : std::min(std::abs(coordmin), std::abs(coordmax));
+  };
+
   if (prop_gridtype == GridType::CYLINDRICAL2D) {
     const auto rcyl_inner = get_cellcoordmin(cellindex, 0);
-    const auto z_inner = std::min(std::abs(get_cellcoordmin(cellindex, 1)), std::abs(get_cellcoordmax(cellindex, 1)));
+    const auto z_inner = axis_mindist(get_cellcoordmin(cellindex, 1), get_cellcoordmax(cellindex, 1));
     return std::sqrt(pow2(rcyl_inner) + pow2(z_inner));
   }
 
   if (prop_gridtype == GridType::CARTESIAN3D) {
-    const auto x_inner = std::min(std::abs(get_cellcoordmin(cellindex, 0)), std::abs(get_cellcoordmax(cellindex, 0)));
-    const auto y_inner = std::min(std::abs(get_cellcoordmin(cellindex, 1)), std::abs(get_cellcoordmax(cellindex, 1)));
-    const auto z_inner = std::min(std::abs(get_cellcoordmin(cellindex, 2)), std::abs(get_cellcoordmax(cellindex, 2)));
+    const auto x_inner = axis_mindist(get_cellcoordmin(cellindex, 0), get_cellcoordmax(cellindex, 0));
+    const auto y_inner = axis_mindist(get_cellcoordmin(cellindex, 1), get_cellcoordmax(cellindex, 1));
+    const auto z_inner = axis_mindist(get_cellcoordmin(cellindex, 2), get_cellcoordmax(cellindex, 2));
     return std::sqrt(pow2(x_inner) + pow2(y_inner) + pow2(z_inner));
   }
 
@@ -406,9 +411,13 @@ void allocate_nonemptymodelcells() {
       nonemptymgi++;
     } else {
       nonemptymgi_of_mgi[mgi] = -1;
-      set_rho_tmin(mgi, 0.);
-      for (int nucindex = 0; nucindex < decay::get_num_nuclides(); nucindex++) {
-        set_modelinitnucmassfrac(mgi, nucindex, 0.);
+      if (globals::rank_in_node == 0) {
+        // these arrays are in node-shared memory, so only the node leader writes them
+        // (synchronised by the barrier below)
+        set_rho_tmin(mgi, 0.);
+        for (int nucindex = 0; nucindex < decay::get_num_nuclides(); nucindex++) {
+          set_modelinitnucmassfrac(mgi, nucindex, 0.);
+        }
       }
     }
   }
@@ -626,7 +635,9 @@ void read_elem_abundances() {
       normfactor += elem_massfracs_in[elem_z_index];
     }
 
-    if (get_numpropcells(mgi) > 0) {
+    if (get_numpropcells(mgi) > 0 && globals::rank_in_node == 0) {
+      // the mass fraction arrays are in node-shared memory, so only the node leader writes them
+      // (synchronised by the barrier below)
       if (threedimensional || normfactor <= 0.) {
         normfactor = 1.;
       }
@@ -1006,14 +1017,17 @@ void assign_initial_temperatures() {
     auto T_initial = static_cast<float>(std::pow(
         CLIGHT / 4 / STEBO * pow3(globals::tmin / tstart) * get_rho_tmin(mgi) * decayedenergy_per_mass, 1. / 4.));
 
-    if (T_initial < MINTEMP) {
+    if (!std::isfinite(T_initial)) {
+      // check this first: a NaN would fall through every comparison below and be stored unclamped
+      printlnlog("mgi {}: T_initial of {:g} is not finite! Setting to MINTEMP.", mgi, T_initial);
+      T_initial = MINTEMP;
+      cells_below_mintemp++;
+    } else if (T_initial < MINTEMP) {
       T_initial = MINTEMP;
       cells_below_mintemp++;
     } else if (T_initial > MAXTEMP) {
       T_initial = MAXTEMP;
       cells_above_maxtemp++;
-    } else if (!std::isfinite(T_initial)) {
-      printlnlog("mgi {}: T_initial of {:g} is infinite!", mgi, T_initial);
     }
 
     if (globals::rank_in_node == 0) {
@@ -1482,7 +1496,8 @@ template <BoundaryType boundarytype>
       const double r_inner = get_cellcoordmin(cellindex, 0);
       const double r_outer = get_cellcoordmax(cellindex, 0);
       // use equal volume probability distribution to select radius
-      const double radius = std::cbrt(std::lerp(pow3(r_outer), pow3(r_inner), rng_uniform(rngstate)));
+      // (rng_uniform_pos avoids a zero draw placing the packet exactly on the exclusive outer boundary)
+      const double radius = std::cbrt(std::lerp(pow3(r_outer), pow3(r_inner), rng_uniform_pos(rngstate)));
 
       return vec_scale(get_rand_isotropic_unitvec(rngstate), radius);
     }

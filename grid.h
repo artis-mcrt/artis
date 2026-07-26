@@ -101,7 +101,9 @@ DEVICE_FUNC void snap_pos_to_cell(Vec3d& pos, double time, int cellindex);
 
 [[nodiscard]] auto calculate_cell_kappagrey(int nonemptymgi) -> float;
 
-inline void change_cell_or_escape(Packet& pkt, const int next_cellindex) {
+// pass tally_stats = false for virtual ray traces on packet copies, so that the global
+// cell-crossing and escape counters only reflect real packet propagation
+inline void change_cell_or_escape(Packet& pkt, const int next_cellindex, const bool tally_stats = true) {
   if (next_cellindex >= 0) {
     if (next_cellindex != pkt.cellindex) {
       // make the position exactly consistent with the new cell by snapping it onto the
@@ -111,14 +113,18 @@ inline void change_cell_or_escape(Packet& pkt, const int next_cellindex) {
       snap_pos_to_cell(pkt.pos, pkt.prop_time, next_cellindex);
     }
     pkt.cellindex = next_cellindex;
-    stats::increment(stats::Counter::CELLCROSSINGS);
+    if (tally_stats) {
+      stats::increment(stats::Counter::CELLCROSSINGS);
+    }
   } else {
     // Then the packet is exiting the grid. We need to record
     // where and at what time it leaves the grid.
     pkt.escape_type = pkt.type;
     pkt.escape_time = static_cast<float>(pkt.prop_time);
     pkt.type = TYPE_ESCAPE;
-    stats::increment(stats::Counter::PKTESCAPES);
+    if (tally_stats) {
+      stats::increment(stats::Counter::PKTESCAPES);
+    }
   }
 }
 

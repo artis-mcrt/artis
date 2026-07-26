@@ -148,8 +148,14 @@ auto get_nlte_vector_index(const int element, const int ion, const int level, co
   const int gs_index = get_allnltelevelsindexstart(element, ion) -
                        get_allnltelevelsindexstart(element, first_ion_used) + (ion - first_ion_used) + offset_autoion;
   const int first_autoion = get_nlevels_nonautoion(element, ion);
-  if (ion_has_superlevel(element, ion) && level >= first_autoion) {
-    return (gs_index + get_nlevels_excited_nlte(element, ion) + level - first_autoion + 2);
+  if (level >= first_autoion) {
+    if (ion_has_superlevel(element, ion)) {
+      // autoionising levels are stored after the ground state, the NLTE levels, and the superlevel
+      return (gs_index + get_nlevels_excited_nlte(element, ion) + level - first_autoion + 2);
+    }
+    // without a superlevel every level of the ion has its own slot (see get_element_nlte_dimension),
+    // so autoionising levels must not collapse onto the (non-existent) superlevel index
+    return gs_index + level;
   }
   // add in level or superlevel number
   const int level_index =
@@ -312,12 +318,6 @@ void print_element_rates_summary(const int element, const int modelgridindex, co
       }
 
       print_level_rates_summary(element, ion, level, popvec, rate_matrices, first_ion_used);
-    }
-
-    if (ion_has_superlevel(element, ion) && max_printed_levels < (nlevels_nlte + 1)) {
-      const int level_superlevel = nlevels_nlte + 1;
-
-      print_level_rates_summary(element, ion, level_superlevel, popvec, rate_matrices, first_ion_used);
     }
   }
 }
@@ -1283,7 +1283,8 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
 
     if (FORCE_SAHA_ION_BALANCE(atomic_number)) {
       const auto ionfractions = calculate_ionfractions(element, nonemptymgi, grid::get_nne(nonemptymgi), true);
-      const int uppermost_ion = static_cast<int>(ionfractions.size() - 1);
+      // ssize() to avoid unsigned wraparound to a huge positive value when the vector is empty
+      const int uppermost_ion = static_cast<int>(std::ssize(ionfractions)) - 1;
       for (int ion = first_ion_used + 1; ion <= std::min(uppermost_ion, max_ion_used); ion++) {
         // replace matrix row for ion's ground state with:
         // sum of this ion's level populations is equal to the ion population
@@ -1356,7 +1357,6 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
     // set the ground level, excited level and possible superlevel populations for this element
     for (int ion = 0; ion < nions; ion++) {
       const int nlevels_excited_nlte = get_nlevels_excited_nlte(element, ion);
-      const int index_gs = get_nlte_vector_index(element, ion, 0, first_ion_used);
 
       if (ion < first_ion_used || ion >= (first_ion_used + nions_used)) {
         printlnlog("  WARNING: Z={} ionstage {} removed from NLTE rate matrix. Setting all levelpops for ion to zero ",
@@ -1372,6 +1372,8 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
           set_nlte_superlevelpop_over_rho_over_slpartfunc(nonemptymgi, element, ion, 0.);
         }
       } else {
+        // only valid for ions inside the solved range [first_ion_used, first_ion_used + nions_used)
+        const int index_gs = get_nlte_vector_index(element, ion, 0, first_ion_used);
         set_groundlevelpop(nonemptymgi, element, ion, static_cast<float>(popvec[index_gs]));
 
         for (int level = 1; level <= nlevels_excited_nlte; level++) {
@@ -1430,7 +1432,9 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
 // Get a Boltzman factor for a level within the super level (combined Non-LTE level)
 DEVICE_FUNC auto superlevel_boltzmann(const int nonemptymgi, const int element, const int ion, const int level)
     -> double {
-  assert_testmodeonly(level_isinsuperlevel(element, ion, level));
+  // autoionising levels are also allowed here: outside the NLTE solver their populations are
+  // attached to the superlevel (see the comment in read_autoion_data())
+  assert_testmodeonly(level_isinsuperlevel(element, ion, level) || level_isautoionising(element, ion, level));
   const int level_superlevel_start = get_nlevels_excited_nlte(element, ion) + 1;
   const double T_exc = LTEPOP_EXCITATION_USE_TJ ? grid::get_TJ(nonemptymgi) : grid::get_Te(nonemptymgi);
   const double E_level = epsilon(element, ion, level);

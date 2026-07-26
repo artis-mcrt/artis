@@ -925,6 +925,13 @@ void read_autoion_data() {
 
   std::vector<globals::LevelAutoion> temp_allautoion;
 
+  // every rank parses the file, so count transitions into rank-local arrays rather than doing
+  // concurrent read-modify-writes on the node-shared arrays; the node leader publishes them below
+  const auto uniquelevelcount = std::ssize(globals::alllevels.nautoiondowntrans);
+  std::vector<int> temp_nautoiondowntrans(uniquelevelcount, 0);
+  std::vector<int> temp_nautoionuptrans(uniquelevelcount, 0);
+  std::vector<int> temp_allautoion_start(uniquelevelcount, -1);
+
   printlnlog("Reading autoion.txt for autoionisation data.");
   auto autoionfile = fstream_required("autoion.txt", std::ios::in);
   std::string autoionline;
@@ -969,17 +976,16 @@ void read_autoion_data() {
         printlnlog("Got to noting data for Z {} upperion {} upperlvl {} lowerion {} lowerlvl {} with A {:g}", Z,
                    upperion, upperlevel, lowerion, lowerlevel, autoion_A);
 
-        const int nautoiondowntrans = get_nautoiondowntrans(element, lowerion, lowerlevel) + 1;
-        set_nautoiondowntrans(element, lowerion, lowerlevel, nautoiondowntrans);
+        const auto lower_uniquelevelindex = get_uniquelevelindex(element, lowerion, lowerlevel);
+        const auto upper_uniquelevelindex = get_uniquelevelindex(element, upperion, upperlevel);
 
-        const int nautoionuptrans = get_nautoionuptrans(element, upperion, upperlevel) + 1;
-        set_nautoionuptrans(element, upperion, upperlevel, nautoionuptrans);
+        temp_nautoiondowntrans[lower_uniquelevelindex] += 1;
+        temp_nautoionuptrans[upper_uniquelevelindex] += 1;
 
-        if (globals::alllevels.allautoion_start[get_uniquelevelindex(element, lowerion, lowerlevel)] < 0) {
-          assert_always(nautoiondowntrans == 1);
+        if (temp_allautoion_start[lower_uniquelevelindex] < 0) {
+          assert_always(temp_nautoiondowntrans[lower_uniquelevelindex] == 1);
           //  this is the first autoionizing transition for this level, so set the start index
-          globals::alllevels.allautoion_start[get_uniquelevelindex(element, lowerion, lowerlevel)] =
-              static_cast<int>(temp_allautoion.size());
+          temp_allautoion_start[lower_uniquelevelindex] = static_cast<int>(temp_allautoion.size());
         }
 
         temp_allautoion.push_back({
@@ -999,6 +1005,9 @@ void read_autoion_data() {
   globals::allautoion = MPI_shared_array<globals::LevelAutoion>(temp_allautoion.size());
   if (globals::rank_in_node == 0) {
     std::ranges::copy(temp_allautoion, globals::allautoion.begin());
+    std::ranges::copy(temp_nautoiondowntrans, globals::alllevels.nautoiondowntrans.begin());
+    std::ranges::copy(temp_nautoionuptrans, globals::alllevels.nautoionuptrans.begin());
+    std::ranges::copy(temp_allautoion_start, globals::alllevels.allautoion_start.begin());
   }
   MPI_Barrier_node();
 
@@ -1643,7 +1652,9 @@ void setup_nlte_levels() {
         }
         globals::elements[element].ions[ion].nlevels_excited_nlte = nlevels_excited_nlte;
 
-        const bool has_superlevel = (nlevels > (nlevels_excited_nlte + 1));
+        // use the same definition as ion_has_superlevel(): autoionising levels get their own
+        // NLTE-solver slots, so they must not count towards needing a superlevel
+        const bool has_superlevel = ion_has_superlevel(element, ion);
         if (has_superlevel) {
           // If there are more levels that the ground state + the number of NLTE levels then we need an extra
           // slot to store data for the "superlevel", which is a representation of all the other levels that
@@ -1651,8 +1662,6 @@ void setup_nlte_levels() {
           globals::total_nlte_levels++;
           n_super_levels++;
         }
-
-        assert_always(has_superlevel == ion_has_superlevel(element, ion));
 
         printlnlog("[input]  element {:2} Z={:2} ionstage {:2} has {:5} NLTE excited levels{}. Starting at index {}",
                    element, get_atomicnumber(element), get_ionstage(element, ion),
@@ -1691,13 +1700,11 @@ void read_parameterfile(std::span<Packet> packets) {
   }
 
   if (!packets.empty()) {
-    // For MPI parallelisation, the random seed is changed based on the rank of the process
-    // Multi-threaded runs (OpenMP or stdpar) are not reproducible due to accumulation to shared memory, so the seed is
-    // randomly generated
-    const auto tid = get_thread_num();
-    auto rngseed = (tid == 0)
-                       ? pre_zseed + static_cast<std::int64_t>(13 * ((globals::my_rank * get_max_threads()) + tid))
-                       : get_rng_random_seed();
+    // For MPI parallelisation, the random seed is changed based on the rank of the process.
+    // This runs on the main thread only; OpenMP/stdpar worker threads get their own randomly-seeded
+    // thread_local generators on first use (see get_rngstate()), so multi-threaded runs are not
+    // reproducible (they also accumulate to shared memory in a non-deterministic order)
+    const auto rngseed = pre_zseed + static_cast<std::int64_t>(13 * globals::my_rank * get_max_threads());
 #ifdef GPU_ON
     // give every packet its own independently-seeded generator
     for (auto packetnumber = 0ZU; packetnumber < std::size(packets); packetnumber++) {
@@ -1709,7 +1716,7 @@ void read_parameterfile(std::span<Packet> packets) {
       rng_uniform(get_rngstate());
     }
 #endif
-    printlnlog("rank {}: thread {} has rngseed {}", globals::my_rank, tid, rngseed);
+    printlnlog("rank {}: main thread has rngseed {}", globals::my_rank, rngseed);
   }
 
   assert_always(get_noncommentline(file, line));
@@ -1866,7 +1873,10 @@ void update_parameterfile(const int nts) {
         }
       }
 
-      if (noncomment_linenum == 21) {
+      // only rewrite this line when updating input.txt for a restart (sn3d), where nprocs is the
+      // number of packet files being written. The nts == -1 backup path may be run by exspec
+      // (nprocs == 1), which must not clobber the nprocs_exspec value it just read
+      if (nts >= 0 && noncomment_linenum == 21) {
         // by default, exspec should use all available packet files
         globals::nprocs_exspec = globals::nprocs;
         line = std::format("{}", globals::nprocs_exspec);
@@ -1880,7 +1890,12 @@ void update_parameterfile(const int nts) {
           line.resize(line.find('#'));
         }
 
-        line.resize(commentstart, ' ');
+        // pad the data field out to the comment column, but never truncate it
+        if (std::ssize(line) < commentstart) {
+          line.resize(commentstart, ' ');
+        } else {
+          line.push_back(' ');
+        }
         line.append("# ");
         line.append(inputlinecomments[noncomment_linenum]);
       }

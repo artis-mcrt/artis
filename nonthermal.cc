@@ -998,29 +998,34 @@ auto N_e(const int nonemptymgi, const double energy, const std::array<double, SF
       }
 
       // ionisation terms
-      for (const auto& collionrow : colliondata) {
-        if (collionrow.Z == Z && collionrow.ionstage == ionstage) {
-          const double ionpot_ev = collionrow.ionpot_ev;
-          const double J = get_J(Z, ionstage, ionpot_ev);
-          const double lambda = std::min(SF_EMAX - energy_ev, energy_ev + ionpot_ev);
+      // sfmatrix_add_ionisation() is only called for ion < nions - 1 (the top ion is not ionised in
+      // the solution), so skip the top ion here too for a consistent energy accounting.
+      // NB: the Auger-electron source that sfmatrix_add_ionisation() injects has no counterpart here
+      if (ion < nions - 1) {
+        for (const auto& collionrow : colliondata) {
+          if (collionrow.Z == Z && collionrow.ionstage == ionstage) {
+            const double ionpot_ev = collionrow.ionpot_ev;
+            const double J = get_J(Z, ionstage, ionpot_ev);
+            const double lambda = std::min(SF_EMAX - energy_ev, energy_ev + ionpot_ev);
 
-          const int integral1startindex = get_energyindex_ev_lteq(ionpot_ev);
-          const int integral1stopindex = get_energyindex_ev_lteq(lambda);
+            const int integral1startindex = get_energyindex_ev_lteq(ionpot_ev);
+            const int integral1stopindex = get_energyindex_ev_lteq(lambda);
 
-          // integral from ionpot up to lambda
-          for (int i = integral1startindex; i <= integral1stopindex; i++) {
-            const double endash = engrid(i);
+            // integral from ionpot up to lambda
+            for (int i = integral1startindex; i <= integral1stopindex; i++) {
+              const double endash = engrid(i);
 
-            N_e_ion += get_y(yfunc, energy_ev + endash) * xs_impactionisation(energy_ev + endash, collionrow) *
-                       Psecondary(energy_ev + endash, endash, ionpot_ev, J) * DELTA_E;
-          }
+              N_e_ion += get_y(yfunc, energy_ev + endash) * xs_impactionisation(energy_ev + endash, collionrow) *
+                         Psecondary(energy_ev + endash, endash, ionpot_ev, J) * DELTA_E;
+            }
 
-          // integral from 2E + I up to E_max
-          const int integral2startindex = get_energyindex_ev_lteq((2 * energy_ev) + ionpot_ev);
-          for (int i = integral2startindex; i < SFPTS; i++) {
-            const double endash = engrid(i);
-            N_e_ion += yfunc[i] * xs_impactionisation(endash, collionrow) *
-                       Psecondary(endash, energy_ev + ionpot_ev, ionpot_ev, J) * DELTA_E;
+            // integral from 2E + I up to E_max
+            const int integral2startindex = get_energyindex_ev_lteq((2 * energy_ev) + ionpot_ev);
+            for (int i = integral2startindex; i < SFPTS; i++) {
+              const double endash = engrid(i);
+              N_e_ion += yfunc[i] * xs_impactionisation(endash, collionrow) *
+                         Psecondary(endash, energy_ev + ionpot_ev, ionpot_ev, J) * DELTA_E;
+            }
           }
         }
       }
@@ -1284,6 +1289,11 @@ void calculate_eff_ionpot_auger_rates(const int nonemptymgi, const int element, 
           celliondata.ionenfrac_num_auger[a] = 0.;
         }
       }
+    } else {
+      // the top ion cannot be ionised further; keep the documented invariant that the
+      // probabilities sum to one (matching zero_all_effionpot())
+      celliondata.prob_num_auger[0] = 1.;
+      celliondata.ionenfrac_num_auger[0] = 1.;
     }
   } else {
     const int a = 0;
@@ -2614,7 +2624,11 @@ void read_restart_data(FILE* gridsave_file) {
 }
 
 void nt_MPI_Bcast(const ptrdiff_t nonemptymgi, const int root_node_id) {
-  MPI_Bcast_safe(ntlepton_deposition_rate_density_all_cells[nonemptymgi], root_node_id, globals::mpi_comm_internode);
+  if (globals::rank_in_node == 0) {
+    // node-shared memory, so only node leaders participate in the internode broadcast
+    // (root_node_id is only a valid root rank within the rank_in_node == 0 communicator)
+    MPI_Bcast_safe(ntlepton_deposition_rate_density_all_cells[nonemptymgi], root_node_id, globals::mpi_comm_internode);
+  }
 
   if (NT_ON && NT_SOLVE_SPENCERFANO) {
     if (globals::rank_in_node == 0) {

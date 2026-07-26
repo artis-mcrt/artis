@@ -149,8 +149,10 @@ auto calculate_levelpop_nominpop(const int nonemptymgi, const int element, const
         const double nn = nltepop_over_rho * grid::get_rho(nonemptymgi);
         return {nn, true};
       }
-    } else {
-      // level is in the superlevel
+    } else if (ion_has_superlevel(element, ion)) {
+      // level is in the superlevel (or is an autoionising level, whose population is attached
+      // to the superlevel outside the NLTE solver). Ions without a superlevel fall through to
+      // the Boltzmann fallback below rather than reading a non-existent superlevel slot
       assert_testmodeonly(level_isinsuperlevel(element, ion, level) || level_isautoionising(element, ion, level));
 
       const double superlevelpop_over_rho = get_nlte_superlevelpop_over_rho_over_slpartfunc(nonemptymgi, element, ion);

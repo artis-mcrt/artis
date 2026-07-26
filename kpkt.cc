@@ -377,6 +377,11 @@ DEVICE_FUNC void do_kpkt_blackbody(Packet& pkt) {
   stats::increment(stats::Counter::K_STAT_TO_R_BB);
   stats::increment(stats::Counter::INTERACTIONS);
   pkt.emissiontype = EMTYPE_FREEFREE;
+  // this is a thermal emission, so record it as the packet's last thermal ("true") emission
+  // (emit_rpkt has just set em_pos/em_time to the current position and time)
+  pkt.trueemissiontype = pkt.emissiontype;
+  pkt.trueem_pos = pkt.em_pos;
+  pkt.trueem_time = pkt.em_time;
   pkt.nscatterings = 0;
 }
 
@@ -467,6 +472,11 @@ DEVICE_FUNC void do_kpkt(Packet& pkt, const double t2, const int nts) {
     stats::increment(stats::Counter::K_STAT_TO_R_FF);
 
     pkt.emissiontype = EMTYPE_FREEFREE;
+    // this is a thermal emission, so record it as the packet's last thermal ("true") emission
+    // (emit_rpkt has just set em_pos/em_time to the current position and time)
+    pkt.trueemissiontype = pkt.emissiontype;
+    pkt.trueem_pos = pkt.em_pos;
+    pkt.trueem_time = pkt.em_time;
     pkt.nscatterings = 0;
     if constexpr (VPKT_ON) {
       vpkt::trace_vpkts(pkt, TYPE_KPKT);
@@ -491,6 +501,8 @@ DEVICE_FUNC void do_kpkt(Packet& pkt, const double t2, const int nts) {
     stats::increment(stats::Counter::K_STAT_TO_R_FB);
     pkt.emissiontype = get_emtype_continuum(element, lowerion, lowerlevel, upper);
     pkt.trueemissiontype = pkt.emissiontype;
+    pkt.trueem_pos = pkt.em_pos;
+    pkt.trueem_time = pkt.em_time;
     pkt.nscatterings = 0;
 
     if constexpr (VPKT_ON) {
