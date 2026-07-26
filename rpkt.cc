@@ -326,7 +326,7 @@ void electron_scatter_rpkt(Packet& pkt) {
     double x = 1.;
     while (x > p) {
       M = (2. * rng_uniform_pos(get_rngstate(pkt))) - 1.;
-      const double mu = pow2(M);
+      const double musquared = pow2(M);
       phisc = 2 * PI * rng_uniform(get_rngstate(pkt));
 
       // NB: the rotational matrix R here is chosen in the clockwise direction ("+").
@@ -335,7 +335,7 @@ void electron_scatter_rpkt(Packet& pkt) {
       // with -i1. Here, instead, we calculate the angle in the clockwise direction from 0 to 2PI.
       // For instance, the i1 angle in Fig.2 of Bulla+2015 corresponds to 2PI-i1 here.
       // NB2: the i1 and i2 angles computed in the code (before and after scattering) are instead as in Bulla+2015
-      p = (mu + 1) + ((mu - 1) * ((cos(2 * phisc) * q_i_cmf) + (sin(2 * phisc) * u_i_cmf)));
+      p = (musquared + 1) + ((musquared - 1) * ((cos(2 * phisc) * q_i_cmf) + (sin(2 * phisc) * u_i_cmf)));
 
       // generate a number between 0 and the maximum of the previous function (2)
       x = 2. * rng_uniform(get_rngstate(pkt));
@@ -389,7 +389,7 @@ void rpkt_event_continuum(Packet& pkt, const ContinuumOpacity& chi_rpkt_cont) {
 
   const double dopplerfactor = calculate_doppler_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
   const double chi_cont = chi_rpkt_cont.total() * dopplerfactor;
-  const double chi_escatter = chi_rpkt_cont.chi_freefree_scatter * dopplerfactor;
+  const double chi_escatter = chi_rpkt_cont.chi_escatter * dopplerfactor;
   const double chi_ff = chi_rpkt_cont.chi_freefree_heat * dopplerfactor;
   const double chi_bf = chi_rpkt_cont.chi_boundfree * dopplerfactor;
 
@@ -910,7 +910,7 @@ void calculate_chi_rpkt_cont(const double nu_cmf, ContinuumOpacity& chi_rpkt_con
   chi_rpkt_cont.chi_freefree_heat = calculate_chi_ffheating(nonemptymgi, nu_cmf, USECELLHISTANDUPDATEPHIXSLIST);
 
   // Thomson scattering on free electrons
-  chi_rpkt_cont.chi_freefree_scatter = SIGMA_T * nne;
+  chi_rpkt_cont.chi_escatter = SIGMA_T * nne;
 
   // bound-free absorption
   chi_rpkt_cont.chi_boundfree =

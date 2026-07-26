@@ -70,7 +70,8 @@ void set_TJ(int nonemptymgi, float TJ);
 void set_W(int nonemptymgi, float W);
 void init_grid();
 [[gnu::pure]] [[nodiscard]] auto get_modelinitnucmassfrac(int modelgridindex, int nucindex) -> float;
-[[gnu::pure]] [[nodiscard]] auto get_otherstable_initabund(std::ptrdiff_t nonemptymgi, int element) -> float;
+[[gnu::pure]] [[nodiscard]] auto get_elem_untrackedstable_initmassfrac(std::ptrdiff_t nonemptymgi, int element)
+    -> float;
 [[gnu::pure]] [[nodiscard]] auto get_elem_massfrac(std::ptrdiff_t nonemptymgi, int element) -> float;
 void set_element_meanweight(std::ptrdiff_t nonemptymgi, int element, float meanweight);
 [[gnu::pure]] [[nodiscard]] auto get_electronfrac(int nonemptymgi) -> double;

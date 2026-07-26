@@ -1244,7 +1244,7 @@ void update_abundances(const int nonemptymgi, const double t_current) {
       }
     }
 
-    const double otherstablemassfrac = grid::get_otherstable_initabund(nonemptymgi, element);
+    const double otherstablemassfrac = grid::get_elem_untrackedstable_initmassfrac(nonemptymgi, element);
     isomassfracsum += otherstablemassfrac;
     isomassfrac_on_nucmass_sum += otherstablemassfrac / globals::elements[element].initstablemeannucmass;
 
@@ -1280,7 +1280,7 @@ void output_isotopic_densities(std::ostream& estimators_file, const int nonempty
     }
   }
 
-  const double otherstablemassfrac = grid::get_otherstable_initabund(nonemptymgi, element);
+  const double otherstablemassfrac = grid::get_elem_untrackedstable_initmassfrac(nonemptymgi, element);
   if (otherstablemassfrac > 0) {
     // factor to convert convert mass fraction to number density
     const double meannucmass = globals::elements[element].initstablemeannucmass;

@@ -953,7 +953,7 @@ constexpr auto xs_impactionisation(const double energy_ev, const ShellParams& co
 auto N_e(const int nonemptymgi, const double energy, const std::array<double, SFPTS>& yfunc) -> double {
   const double energy_ev = energy / EV;
   const double nnion_tot = get_nnion_tot(nonemptymgi);
-  double N_e = 0.;
+  double N_e_total = 0.;  // named to avoid shadowing the enclosing function N_e()
 
   for (int element = 0; element < get_nelements(); element++) {
     const int Z = get_atomicnumber(element);
@@ -1025,15 +1025,15 @@ auto N_e(const int nonemptymgi, const double energy, const std::array<double, SF
         }
       }
 
-      N_e += nnion * N_e_ion;
+      N_e_total += nnion * N_e_ion;
     }
   }
 
   // source term, should be zero at the low end anyway
-  N_e += sourcevec(get_energyindex_ev_lteq(energy_ev));
+  N_e_total += sourcevec(get_energyindex_ev_lteq(energy_ev));
 
-  assert_always(std::isfinite(N_e));
-  return N_e;
+  assert_always(std::isfinite(N_e_total));
+  return N_e_total;
 }
 
 // fraction of deposited energy that goes into heating the thermal electrons
@@ -1213,7 +1213,7 @@ void calculate_eff_ionpot_auger_rates(const int nonemptymgi, const int element, 
   const int uniqueionindex = get_uniqueionindex(element, ion);
   const double nnion = get_nnion(nonemptymgi, element, ion);  // ions/cm^3
   const double tot_nion = get_nnion_tot(nonemptymgi);
-  const double X_ion = nnion / tot_nion;  // molar fraction of this ion
+  const double X_ion = nnion / tot_nion;  // number fraction of this ion
 
   // The ionisation rates of all shells of an ion add to make the ion's total ionisation rate,
   // i.e., Gamma_ion = Gamma_shell_a + Gamma_shell_b + ...

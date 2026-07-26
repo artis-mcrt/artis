@@ -702,11 +702,12 @@ void add_to_lc_res(const Packet& pkt, const int dirbin, std::span<double> light_
 
   const double inverse_gamma = std::sqrt(1. - (globals::vmax * globals::vmax / CLIGHTSQUARED));
 
-  // Now do the cmf light curve.
-  const double t_arrive_cmf = pkt.escape_time * inverse_gamma;
+  // Now do the cmf light curve. Unlike t_arrive above, this has no light-travel-time term:
+  // it is the escape time transformed (time-dilated) into the comoving frame.
+  const double t_escape_cmf = pkt.escape_time * inverse_gamma;
 
-  if (t_arrive_cmf > globals::tmin && t_arrive_cmf < globals::tmax) {
-    const int nts = get_timestep(t_arrive_cmf);
+  if (t_escape_cmf > globals::tmin && t_escape_cmf < globals::tmax) {
+    const int nts = get_timestep(t_escape_cmf);
     atomicadd_always(light_curve_lumcmf[nts], pkt.e_cmf / globals::timesteps[nts].width * solidanglefactor /
                                                   globals::nprocs_exspec / inverse_gamma);
   }

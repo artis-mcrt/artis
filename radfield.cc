@@ -183,9 +183,9 @@ auto get_bin_nuJ(const std::ptrdiff_t nonemptymgi, const int binindex) -> double
 
 // get <nuJ> / <J> for a bin
 auto get_bin_nu_bar(const std::ptrdiff_t nonemptymgi, const int binindex) -> double {
-  const double nuJ_sum = get_bin_nuJ(nonemptymgi, binindex);
-  const double J_sum = get_bin_J(nonemptymgi, binindex);
-  return nuJ_sum / J_sum;
+  const double nuJ_bin = get_bin_nuJ(nonemptymgi, binindex);
+  const double J_bin = get_bin_J(nonemptymgi, binindex);
+  return nuJ_bin / J_bin;
 }
 
 auto get_bin_W(const std::ptrdiff_t nonemptymgi, const int binindex) -> float {

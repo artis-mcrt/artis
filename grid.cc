@@ -1032,8 +1032,8 @@ void assign_initial_temperatures() {
   MPI_Barrier_allranks();
 }
 
-// start at mgi_start and find the next non-empty cell, or return -1 if none found
-[[nodiscard]] auto get_next_nonemptymgi(const int mgi_start) -> int {
+// find the non-empty model grid index of the first non-empty cell at or after mgi_start, or return -1 if none found
+[[nodiscard]] auto get_nonemptymgi_at_or_after(const int mgi_start) -> int {
   for (int mgi = mgi_start; mgi < get_npts_model(); mgi++) {
     if (get_numpropcells(mgi) > 0) {
       return nonemptymgi_of_mgi[mgi];
@@ -1081,7 +1081,7 @@ void setup_nstart_ndo() {
         // current rank has enough non-empty cells, so start assigning cells to the next rank
         rank++;
         ranks_nstart[rank] = mgi;
-        ranks_nstart_nonempty[rank] = get_next_nonemptymgi(mgi);
+        ranks_nstart_nonempty[rank] = get_nonemptymgi_at_or_after(mgi);
         assert_always(ranks_nstart_nonempty[rank] >= 0 || rank >= get_nonempty_npts_model());
       }
 
@@ -1734,7 +1734,8 @@ auto get_modelinitnucmassfrac(const int modelgridindex, const int nucindex) -> f
   return initnucmassfrac_allcells[(modelgridindex * decay::get_num_nuclides()) + nucindex];
 }
 
-auto get_otherstable_initabund(const std::ptrdiff_t nonemptymgi, const int element) -> float {
+// get the t=t_model mass fraction of an element's untracked stable component (i.e. excluding radioactive nuclides)
+auto get_elem_untrackedstable_initmassfrac(const std::ptrdiff_t nonemptymgi, const int element) -> float {
   return initmassfracuntrackedstable_allcells[(nonemptymgi * get_nelements()) + element];
 }
 

@@ -247,7 +247,7 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
       // number density, but free-free (nnion * nne) is quadratic. NB: the stimulated recombination that
       // is subtracted inside chi_boundfree is also quadratic in density, but it is not separable from the
       // sum that calculate_chi_bf_gammacontr() returns, so bound-free is scaled as purely linear here.
-      const double chi_escatter = chi_vpkt_cont.chi_freefree_scatter * densityscalefactor;
+      const double chi_escatter = chi_vpkt_cont.chi_escatter * densityscalefactor;
       const double chi_bf = chi_vpkt_cont.chi_boundfree * densityscalefactor;
       const double chi_ff = chi_vpkt_cont.chi_freefree_heat * pow2(densityscalefactor);
 
