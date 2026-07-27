@@ -928,9 +928,15 @@ void read_autoion_data() {
   // every rank parses the file, so count transitions into rank-local arrays rather than doing
   // concurrent read-modify-writes on the node-shared arrays; the node leader publishes them below
   const auto uniquelevelcount = std::ssize(globals::alllevels.nautoiondowntrans);
-  std::vector<int> temp_nautoiondowntrans(uniquelevelcount, 0);
-  std::vector<int> temp_nautoionuptrans(uniquelevelcount, 0);
-  std::vector<int> temp_allautoion_start(uniquelevelcount, -1);
+  std::vector<int> temp_nautoiondowntrans;
+  reserve_resize(temp_nautoiondowntrans, uniquelevelcount);
+  std::ranges::fill(temp_nautoiondowntrans, 0);
+  std::vector<int> temp_nautoionuptrans;
+  reserve_resize(temp_nautoionuptrans, uniquelevelcount);
+  std::ranges::fill(temp_nautoionuptrans, 0);
+  std::vector<int> temp_allautoion_start;
+  reserve_resize(temp_allautoion_start, uniquelevelcount);
+  std::ranges::fill(temp_allautoion_start, -1);
 
   printlnlog("Reading autoion.txt for autoionisation data.");
   auto autoionfile = fstream_required("autoion.txt", std::ios::in);
