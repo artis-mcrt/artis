@@ -1324,30 +1324,8 @@ void read_levels_and_transitions(std::vector<TempEnergyLevel>& temp_alllevels,
   printlnlog("nbfcheck {}", nbfcheck);
 }
 
-// read the full atomic dataset: the composition (compositiondata.txt), then the levels and
-// transitions (adata.txt, transitiondata.txt) and photoionisation cross-sections
-// (phixsdata_v2.txt) for every included ion, building the global element/ion/level/line lists
-void read_atomicdata_files() {
-  const auto nlevelsmax_readin = read_compositiondata();
-
-  printlnlog("SINGLE_LEVEL_TOP_ION: {}", SINGLE_LEVEL_TOP_ION ? "true" : "false");
-
-  std::vector<TempEnergyLevel> temp_alllevels;
-  std::vector<TempLineTransitionInput> temp_linelist;
-  std::vector<TempAllTransInput> temp_alltranslist;
-
-  if (globals::rank_in_node == 0) {
-    temp_linelist.reserve(1U << 22U);  // reserve initial space for 4 million lines to avoid too many reallocations
-    temp_alltranslist.reserve(1U << 22U);
-    read_levels_and_transitions(temp_alllevels, temp_linelist, temp_alltranslist, nlevelsmax_readin);
-  }
-  MPI_Barrier_node();
-
-  update_includedionslevels_maxnions();
-
-  MPI_Bcast_safe(globals::nlines, 0, globals::mpi_comm_node);
-  printlnlog("nlines {}", globals::nlines);
-
+// sort the temporary linelist by descending frequency and warn about any duplicate transitions
+void sort_temp_linelist(std::vector<TempLineTransitionInput>& temp_linelist) {
   if (globals::rank_in_node == 0) {
     assert_always(globals::nlines == std::ssize(temp_linelist));
     temp_linelist.shrink_to_fit();
@@ -1381,8 +1359,10 @@ void read_atomicdata_files() {
       }
     }
   }
+}
 
-  // create a shared level list and copy data across, freeing the local copy
+// copy the level data into node-shared memory arrays (globals::alllevels), freeing the local copy
+void create_shared_levellist(std::vector<TempEnergyLevel>& temp_alllevels) {
   ptrdiff_t nlevels = std::ssize(temp_alllevels);
   MPI_Bcast_safe(nlevels, 0, globals::mpi_comm_node);
 
@@ -1421,7 +1401,12 @@ void read_atomicdata_files() {
   globals::alllevels.matransblock_start = std::move(alllevels_matransblock_start);
   temp_alllevels.clear();
   temp_alllevels.shrink_to_fit();
+}
 
+// copy the transition data into node-shared memory arrays (globals::alltrans), freeing the
+// local copy. Returns the transitions' lineindex array, which establish_linelist_connections()
+// fills in after the frequency-sorted linelist has been created.
+auto create_shared_alltranslist(std::vector<TempAllTransInput>& temp_alltranslist) -> MPI_shared_array<int> {
   const int updowntranscount = []() -> int {
     const int downtranscount = std::ranges::fold_left(globals::alllevels.ndowntrans, 0, std::plus<>{});
     const int uptranscount = std::ranges::fold_left(globals::alllevels.nuptrans, 0, std::plus<>{});
@@ -1433,7 +1418,6 @@ void read_atomicdata_files() {
   printlnlog("[info] mem_usage: transition lists occupy {:.3f} MB (node shared memory)",
              updowntranscount * ((2 * sizeof(int)) + (3 * sizeof(float)) + sizeof(bool)) / 1024. / 1024.);
 
-  // create a shared all transitions list and then copy data across, freeing the local copy
   MPI_Barrier_node();
 
   auto alltrans_lineindex = MPI_shared_array<int>(updowntranscount);
@@ -1463,8 +1447,12 @@ void read_atomicdata_files() {
   globals::alltrans.osc_strength = std::move(alltrans_osc_strength);
   globals::alltrans.forbidden = std::move(alltrans_forbidden);
 
-  // create a linelist shared on node and then copy data across, freeing the local copy
+  return alltrans_lineindex;
+}
 
+// copy the line data into node-shared memory arrays (globals::linelist), calculating the
+// Einstein B coefficients, and free the local copy
+void create_shared_linelist(std::vector<TempLineTransitionInput>& temp_linelist) {
   auto linelist_nu = MPI_shared_array<double>(globals::nlines);
   auto linelist_elementindex = MPI_shared_array<int>(globals::nlines);
   auto linelist_ionindex = MPI_shared_array<int>(globals::nlines);
@@ -1518,7 +1506,11 @@ void read_atomicdata_files() {
       1024. / 1024;
 
   printlnlog("[info] mem_usage: linelist occupies {:.3f} MB (node shared memory)", linelist_mem_MB);
+}
 
+// point every up and down transition at its index in the frequency-sorted linelist and store
+// the result in globals::alltrans.lineindex
+void establish_linelist_connections(MPI_shared_array<int>& alltrans_lineindex) {
   printlnlog("establishing connection between transitions and sorted linelist...");
 
   const auto time_start_establish_linelist_connections = std::chrono::steady_clock::now();
@@ -1572,6 +1564,43 @@ void read_atomicdata_files() {
           .count();
   printlnlog("  took {:.1f}s", establish_linelist_connections_duration);
   MPI_Barrier_node();
+}
+
+// read the full atomic dataset: the composition (compositiondata.txt), then the levels and
+// transitions (adata.txt, transitiondata.txt) and photoionisation cross-sections
+// (phixsdata_v2.txt) for every included ion, building the global element/ion/level/line lists
+void read_atomicdata_files() {
+  const auto nlevelsmax_readin = read_compositiondata();
+
+  printlnlog("SINGLE_LEVEL_TOP_ION: {}", SINGLE_LEVEL_TOP_ION ? "true" : "false");
+
+  std::vector<TempEnergyLevel> temp_alllevels;
+  std::vector<TempLineTransitionInput> temp_linelist;
+  std::vector<TempAllTransInput> temp_alltranslist;
+
+  if (globals::rank_in_node == 0) {
+    temp_linelist.reserve(1U << 22U);  // reserve initial space for 4 million lines to avoid too many reallocations
+    temp_alltranslist.reserve(1U << 22U);
+    read_levels_and_transitions(temp_alllevels, temp_linelist, temp_alltranslist, nlevelsmax_readin);
+  }
+  MPI_Barrier_node();
+
+  update_includedionslevels_maxnions();
+
+  MPI_Bcast_safe(globals::nlines, 0, globals::mpi_comm_node);
+  printlnlog("nlines {}", globals::nlines);
+
+  sort_temp_linelist(temp_linelist);
+
+  // create a shared level list and copy data across, freeing the local copy
+  create_shared_levellist(temp_alllevels);
+
+  auto alltrans_lineindex = create_shared_alltranslist(temp_alltranslist);
+
+  // create a linelist shared on node and then copy data across, freeing the local copy
+  create_shared_linelist(temp_linelist);
+
+  establish_linelist_connections(alltrans_lineindex);
 
   for (int element = 0; element < get_nelements(); element++) {
     const int nions = get_nions(element);
