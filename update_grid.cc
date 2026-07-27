@@ -366,9 +366,10 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
   const auto rho = static_cast<float>(grid::get_rho_tmin(mgi) / pow3(tratmid));
   grid::set_rho(nonemptymgi, rho);
 
+  const auto tmid = globals::timesteps[nts].mid;
+
   // Update clumping factors
   if constexpr (USE_MICROCLUMPING) {
-    const double tmid = globals::timesteps[nts].mid;
     const double rad_vel =
         grid::get_modelcell_mean_radial_pos_tmin(grid::get_mgi_of_nonemptymgi(nonemptymgi)) / globals::tmin;
     const float clumpfactor = clumping_factor(tmid, rad_vel);
@@ -377,7 +378,7 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
   }
 
   // Update elemental abundances with radioactive decays
-  decay::update_abundances(nonemptymgi, globals::timesteps[nts].mid);
+  decay::update_abundances(nonemptymgi, tmid);
   nonthermal::calculate_deposition_rate_density(nonemptymgi, nts, heatingcoolingrates);
 
   const double estimator_normfactor = 1 / deltaV / deltat / globals::nprocs;
@@ -566,15 +567,15 @@ void update_grid(std::ostream& estimators_file, const int nts, const int nts_pre
   const auto sys_time_start_update_grid = std::chrono::steady_clock::now();
   const auto startup_elapsed_seconds =
       std::chrono::duration<double>(sys_time_start_update_grid - real_time_start).count();
-
+  const auto tmid = globals::timesteps[nts].mid;
   printlnlog("timestep {}: time before update grid (tstartup + {:.1f} seconds) simtime ts_mid {:g} days", nts,
-             startup_elapsed_seconds, globals::timesteps[nts].mid / DAY);
+             startup_elapsed_seconds, tmid / DAY);
 
   globals::lte_iteration = (nts < globals::num_lte_timesteps);
   printlnlog("lte_iteration {}", globals::lte_iteration ? 1 : 0);
   assert_always(globals::num_lte_timesteps > 0);  // The first time step must solve the ionisation balance in LTE
 
-  const double tratmid = globals::timesteps[nts].mid / globals::tmin;
+  const double tratmid = tmid / globals::tmin;
 
   // These values will not be used if nts == 0, but set them anyway
   // nts_prev is the previous timestep, unless this is timestep zero
