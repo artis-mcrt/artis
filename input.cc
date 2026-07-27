@@ -379,7 +379,7 @@ void read_phixs_file(const int phixs_file_version, std::vector<float>& tmpallphi
     }
   }
 
-  printlnlog("[info] mem_usage: photoionisation tables occupy {:.3f} [MB]", mem_usage_phixs / 1024. / 1024.);
+  printlnlog("[info] mem_usage: photoionisation tables occupy {:.3f} MB", mem_usage_phixs / 1024. / 1024.);
 }
 
 constexpr auto downtranslevelstart(const int level) {
@@ -797,7 +797,7 @@ void setup_phixs_list() {
   globals::groundcont_ion = std::move(groundcont_ion);
 
   auto allcont = MPI_shared_array<TempPhotoionTransitionInput>(globals::nbfcontinua);
-  printlnlog("[info] mem_usage: photoionisation list occupies {:.3f} [MB]",
+  printlnlog("[info] mem_usage: photoionisation list occupies {:.3f} MB",
              globals::nbfcontinua * (sizeof(TempPhotoionTransitionInput)) / 1024. / 1024.);
   const auto groundcontindices = std::ranges::iota_view{0, globals::nbfcontinua_ground};
   int allcontindex = 0;
@@ -1416,7 +1416,7 @@ void create_shared_alltranslist(std::vector<TempAllTransInput>& temp_alltranslis
     printlnlog("total downtrans {}", downtranscount);
     return downtranscount + uptranscount;
   }();
-  printlnlog("[info] mem_usage: transition lists occupy {:.3f} [MB] (node shared memory)",
+  printlnlog("[info] mem_usage: transition lists occupy {:.3f} MB (node shared memory)",
              updowntranscount * ((2 * sizeof(int)) + (3 * sizeof(float)) + sizeof(bool)) / 1024. / 1024.);
 
   MPI_Barrier_node();
@@ -1566,7 +1566,7 @@ void create_shared_linelist(std::vector<TempLineTransitionInput>& temp_linelist)
        ) /
       1024. / 1024;
 
-  printlnlog("[info] mem_usage: linelist occupies {:.3f} [MB] (node shared memory)", linelist_mem_MB);
+  printlnlog("[info] mem_usage: linelist occupies {:.3f} MB (node shared memory)", linelist_mem_MB);
 }
 
 // read the full atomic dataset: the composition (compositiondata.txt), then the levels and

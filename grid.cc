@@ -498,7 +498,7 @@ void allocate_nonemptymodelcells() {
   const auto modelgrid_mem_usage =
       nonempty_npts_model * ((sizeof(float) * (USE_MICROCLUMPING ? 10 : 9)) + sizeof(double) + sizeof(int));
   printlnlog(
-      "[info] mem_usage: the modelgrid properties (temperatures and electron densities) occupies {:.3f} [MB] (node "
+      "[info] mem_usage: the modelgrid properties (temperatures and electron densities) occupies {:.3f} MB (node "
       "shared memory)",
       modelgrid_mem_usage / 1024. / 1024.);
 
@@ -573,7 +573,7 @@ void allocate_nonemptymodelcells() {
   MPI_Barrier_allranks();
 
   printlnlog(
-      "[info] mem_usage: NLTE populations for all allocated cells occupy a total of {:.3f} [MB] (node shared memory)",
+      "[info] mem_usage: NLTE populations for all allocated cells occupy a total of {:.3f} MB (node shared memory)",
       static_cast<ptrdiff_t>(get_nonempty_npts_model()) * globals::total_nlte_levels * sizeof(double) / 1024. / 1024.);
 }
 
@@ -886,7 +886,7 @@ auto read_model_columns(std::istream& fmodel) -> std::tuple<std::vector<std::str
 
   initnucmassfrac_allcells = MPI_shared_array<float>((npts_model + 1) * num_nuclides, 0.);
   printlnlog(
-      "[info] mem_usage: input abundance data for {} nuclides for {} cells occupies {:.3f} [MB] (node shared memory)",
+      "[info] mem_usage: input abundance data for {} nuclides for {} cells occupies {:.3f} MB (node shared memory)",
       num_nuclides, npts_model, (initnucmassfrac_allcells.size() * sizeof(float)) / 1024. / 1024.);
 
   return {colnames, nucindexlist, one_line_per_cell};

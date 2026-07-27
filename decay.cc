@@ -1169,7 +1169,7 @@ auto get_energy_per_mass_nonemptymgi_decaypath() -> MPI_shared_array<const doubl
   const ptrdiff_t nonempty_npts_model = grid::get_nonempty_npts_model();
   printlog(
       "[info] mem_usage: energy_per_mass_nonemptymgi_decaypath[nonempty_npts_model*num_decaypaths] occupies {:.1f} "
-      "[MB] (node shared memory)...",
+      "MB (node shared memory)...",
       nonempty_npts_model * get_num_decaypaths() * sizeof(double) / 1024. / 1024.);
   auto energy_per_mass_nonemptymgi_decaypath = MPI_shared_array<double>{nonempty_npts_model * get_num_decaypaths(), 0.};
   printlnlog("done.");

@@ -529,7 +529,7 @@ void setup_photoion_luts() {
 
   printlnlog(
       "[info] mem_usage: lookup tables derived from photoionisation (spontrecombcoeff, bfcooling and "
-      "corrphotoioncoeff if USE_LUT_PHOTOION) occupy {:.3f} [MB]",
+      "corrphotoioncoeff if USE_LUT_PHOTOION) occupy {:.3f} MB",
       mem_usage_photoionluts / 1024. / 1024.);
 }
 

@@ -144,16 +144,16 @@ void setup_cellcache() {
     }
 
     if (cellcachenum == 0) {
-      printlnlog("[info] mem_usage: cellcache coolinglist contribs for slot 0 occupies {:.3f} [MB]",
+      printlnlog("[info] mem_usage: cellcache coolinglist contribs for slot 0 occupies {:.3f} MB",
                  ncoolingterms * sizeof(double) / 1024. / 1024.);
-      printlnlog("[info] mem_usage: cellcache macroatom stats for slot 0 occupies {:.3f} [MB]",
+      printlnlog("[info] mem_usage: cellcache macroatom stats for slot 0 occupies {:.3f} MB",
                  chtransblocksize * sizeof(double) / 1024. / 1024.);
-      printlnlog("[info] mem_usage: cellcache for slot 0 occupies {:.3f} [MB]",
+      printlnlog("[info] mem_usage: cellcache for slot 0 occupies {:.3f} MB",
                  cacheslot.get_mem_usage() / 1024. / 1024.);
     }
     mem_usage_cellcache += cacheslot.get_mem_usage();
   }
-  printlnlog("[info] mem_usage: cellcache for all {} slots occupies {:.3f} [MB]", num_cellcache_slots,
+  printlnlog("[info] mem_usage: cellcache for all {} slots occupies {:.3f} MB", num_cellcache_slots,
              mem_usage_cellcache / 1024. / 1024.);
 }
 
@@ -939,7 +939,7 @@ auto main(int argc, char* argv[]) -> int {
   printlnlog("Simulation propagates {:g} packets per process (total {:g} with nprocs {})", 1. * MPKTS,
              1. * MPKTS * globals::nprocs, globals::nprocs);
 
-  printlnlog("[info] mem_usage: packets occupy {:.3f} [MB]", MPKTS * sizeof(Packet) / 1024. / 1024.);
+  printlnlog("[info] mem_usage: packets occupy {:.3f} MB", MPKTS * sizeof(Packet) / 1024. / 1024.);
 
   if (!globals::simulation_continued_from_saved) {
     std::remove("deposition.out");

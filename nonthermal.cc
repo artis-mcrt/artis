@@ -2118,7 +2118,7 @@ void init() {
 
   if (NT_EXCITATION_ON) {
     nt_excitations_stored = std::min(MAX_NT_EXCITATIONS_STORED, get_possible_nt_excitation_count());
-    printlnlog("[info] mem_usage: storing {} non-thermal excitations for non-empty cells occupies {:.3f} [MB]",
+    printlnlog("[info] mem_usage: storing {} non-thermal excitations for non-empty cells occupies {:.3f} MB",
                nt_excitations_stored,
                nonempty_npts_model * sizeof(NonThermalExcitation) * nt_excitations_stored / 1024. / 1024.);
 

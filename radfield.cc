@@ -597,7 +597,7 @@ void init() {
     const size_t mem_usage_bins = nonempty_npts_model * RADFIELDBINCOUNT * ((2 * sizeof(double)) + sizeof(int));
     radfieldbins.resize(nonempty_npts_model);
 
-    printlnlog("[info] mem_usage: radiation field bin accumulators for non-empty cells occupy {:.3f} [MB]",
+    printlnlog("[info] mem_usage: radiation field bin accumulators for non-empty cells occupy {:.3f} MB",
                mem_usage_bins / 1024. / 1024.);
 
     radfieldbin_solutions_W = MPI_shared_array<float>(nonempty_npts_model * RADFIELDBINCOUNT);
@@ -606,7 +606,7 @@ void init() {
 
     const size_t mem_usage_bin_solutions = nonempty_npts_model * RADFIELDBINCOUNT * sizeof(RadFieldBinSolution);
     printlnlog(
-        "[info] mem_usage: radiation field bin solutions for non-empty cells occupy {:.3f} [MB] (node shared memory)",
+        "[info] mem_usage: radiation field bin solutions for non-empty cells occupy {:.3f} MB (node shared memory)",
         mem_usage_bin_solutions / 1024. / 1024.);
   } else {
     printlnlog("The radiation field model is a full-spectrum fit to a single dilute blackbody TR & W.");
@@ -619,12 +619,12 @@ void init() {
       std::ranges::fill(prev_bfrate_normed, 0.);
     }
     MPI_Barrier_node();
-    printlnlog("[info] mem_usage: detailed bf estimators for non-empty cells occupy {:.3f} [MB] (node shared memory)",
+    printlnlog("[info] mem_usage: detailed bf estimators for non-empty cells occupy {:.3f} MB (node shared memory)",
                nonempty_npts_model * bfestimcount * sizeof(float) / 1024. / 1024.);
 
     reserve_resize(bfrate_raw, nonempty_npts_model * bfestimcount);
 
-    printlnlog("[info] mem_usage: detailed bf estimator acculumators for non-empty cells occupy {:.3f} [MB]",
+    printlnlog("[info] mem_usage: detailed bf estimator acculumators for non-empty cells occupy {:.3f} MB",
                nonempty_npts_model * bfestimcount * sizeof(double) / 1024. / 1024.);
   }
 
