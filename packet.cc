@@ -209,9 +209,7 @@ auto read_text_packets(const std::string& filename) -> std::vector<Packet> {
     ssline >> pkt.pellet_decaytype;
   }
 
-  if (std::ssize(packets) < MPKTS) {
-    printlnlog("  found {} out of a possible {} packets.", std::ssize(packets), MPKTS);
-  }
+  printlnlog("  read {} packets from {} (MPKTS {})", std::ssize(packets), filename, MPKTS);
   packets.shrink_to_fit();
   return packets;
 }
@@ -249,7 +247,6 @@ void read_temp_packetsfile(const int timestep, const int my_rank, std::vector<Pa
   // read binary packets file
   const auto filename = std::format("packets_{:04d}_ts{:d}.tmp", my_rank, timestep);
 
-  printlnlog("Reading {}", filename);
   const auto packets_file = fopen_required_uniqueptr(filename, "rb");
   std::int64_t packet_count_in_file = 0;
   assert_always(std::fread(&packet_count_in_file, sizeof(std::int64_t), 1, packets_file.get()) == 1);
@@ -258,7 +255,7 @@ void read_temp_packetsfile(const int timestep, const int my_rank, std::vector<Pa
   reserve_resize(packets, packet_count_in_file);
   assert_always(std::fread(packets.data(), sizeof(Packet), packet_count_in_file, packets_file.get()) ==
                 static_cast<size_t>(packet_count_in_file));
-  printlnlog("done");
+  printlnlog("read {} packets from {}", packet_count_in_file, filename);
 }
 
 void write_temp_packetsfile(const int timestep, const int my_rank, const std::span<const Packet> packets) {

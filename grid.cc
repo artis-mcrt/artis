@@ -24,6 +24,7 @@
 #include <numbers>
 #include <optional>
 #include <print>
+#include <set>
 #include <span>
 #include <sstream>
 #include <string>
@@ -142,7 +143,7 @@ void set_initelectronfrac(const int modelgridindex, const float electronfrac) {
 
 void read_possible_yefile() {
   if (!std::filesystem::exists("Ye.txt")) {
-    printlnlog("Ye.txt not found");
+    printlnlog("Ye.txt not present, so no initial electron fractions will be applied from it");
     return;
   }
 
@@ -150,6 +151,8 @@ void read_possible_yefile() {
   int nlines_in = 0;
   assert_always(fscanf(filein.get(), "%d", &nlines_in) == 1);
 
+  int cells_set = 0;
+  int entries_ignored = 0;
   for (int n = 0; n < nlines_in; n++) {
     int mgiplusone = -1;
     float initelecfrac = 0.;
@@ -157,8 +160,13 @@ void read_possible_yefile() {
     const int mgi = mgiplusone - 1;
     if (mgi >= 0 && mgi < get_npts_model()) {
       set_initelectronfrac(mgi, initelecfrac);
+      cells_set++;
+    } else {
+      entries_ignored++;
     }
   }
+  printlnlog("Ye.txt: set the initial electron fraction for {} of {} model cells ({} out-of-range entries ignored)",
+             cells_set, get_npts_model(), entries_ignored);
 }
 
 [[gnu::pure]] DEVICE_FUNC auto get_propgridtype() -> GridType {
@@ -233,6 +241,9 @@ double most_negative_input_massfrac = 0.;
 int first_negative_massfrac_mgi = -1;
 int first_negative_massfrac_z = -1;  // -1 means the Fe-group mass fraction column
 int first_negative_massfrac_a = -1;
+
+// names of model.txt columns that were not recognised, reported after the model read
+std::set<std::string> ignored_model_columns;
 
 void count_negative_input_massfrac(const int modelgridindex, const int z, const int a, const double massfrac) {
   n_negative_input_massfrac++;
@@ -790,10 +801,8 @@ void read_model_radioabundances(std::istream& fmodel, std::istringstream& ssline
     } else if (colnames[i] == "tracercount") {
       ;
     } else {
-      if (mgi == 0) {
-        printlnlog("WARNING: ignoring column '{}' nucindex {} valuein[mgi=0] {:g}", colnames[i], nucindexlist[i],
-                   valuein);
-      }
+      // reported once after the model read (checking only mgi == 0 could miss it entirely if cell 0 is empty)
+      ignored_model_columns.insert(colnames[i]);
     }
   }
   double valuein = 0.;
@@ -2100,6 +2109,16 @@ void read_ejecta_model() {
              get_totmassnuclide_tmodel(28, 57) / MSUN, get_totmassnuclide_tmodel(27, 57) / MSUN);
 
   report_negative_input_massfracs();
+
+  if (!ignored_model_columns.empty()) {
+    std::string columnliststr;
+    for (const auto& colname : ignored_model_columns) {
+      columnliststr += std::format(" '{}'", colname);
+    }
+    printlnlog(
+        "WARNING: ignored model.txt columns not recognised as a known nuclide, X_Fegroup, Ye, q, or tracercount:{}",
+        columnliststr);
+  }
 
   read_possible_yefile();
 }

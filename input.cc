@@ -1738,14 +1738,17 @@ void read_parameterfile(std::span<Packet> packets) {
   if (pre_zseed > 0) {
     printlnlog("input.txt specified random number seed is {}", pre_zseed);
   } else {
+#if defined REPRODUCIBLE && REPRODUCIBLE
+    printlnlog(
+        "ERROR: REPRODUCIBLE mode requires a positive random number seed on the first non-comment line of input.txt "
+        "(found {})",
+        pre_zseed);
+    std::abort();
+#endif
     pre_zseed = get_rng_random_seed();
     // broadcast randomly-generated seed from rank 0 to all ranks
     MPI_Bcast_safe(pre_zseed, 0, MPI_COMM_WORLD);
     printlnlog("randomly-generated random number seed is {}", pre_zseed);
-#if defined REPRODUCIBLE && REPRODUCIBLE
-    printlnlog("ERROR: reproducible mode is on, so random number seed is required.");
-    std::abort();
-#endif
   }
 
   if (!packets.empty()) {
@@ -2131,4 +2134,23 @@ void setup_timesteps() {
   const auto tsfinal_end =
       globals::timesteps[globals::ntimesteps - 1].start + globals::timesteps[globals::ntimesteps - 1].width;
   assert_always(fabs((tsfinal_end / globals::tmax) - 1.) < 0.001);
+
+  const auto* const method_name = [] {
+    switch (TIMESTEP_SIZE_METHOD) {
+      case TimeStepSizeMethod::LOGARITHMIC:
+        return "logarithmic";
+      case TimeStepSizeMethod::CONSTANT:
+        return "constant";
+      case TimeStepSizeMethod::LOGARITHMIC_THEN_CONSTANT:
+        return "logarithmic then constant";
+      case TimeStepSizeMethod::CONSTANT_THEN_LOGARITHMIC:
+        return "constant then logarithmic";
+    }
+    return "unknown";
+  }();
+  printlnlog(
+      "timesteps: {} steps from tmin {:.4f} d to tmax {:.4f} d with {} sizing (first width {:.4f} d, last "
+      "width {:.4f} d)",
+      globals::ntimesteps, globals::tmin / DAY, globals::tmax / DAY, method_name, globals::timesteps[0].width / DAY,
+      globals::timesteps[globals::ntimesteps - 1].width / DAY);
 }

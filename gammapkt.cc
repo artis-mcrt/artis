@@ -127,6 +127,7 @@ void read_decaydata() {
 
   gamma_spectra.resize(decay::get_num_nuclides(), {});
   int tables_found = 0;
+  std::string trivial_spectrum_nuclides;
   for (int nucindex = 0; nucindex < decay::get_num_nuclides(); nucindex++) {
     gamma_spectra[nucindex].clear();
     const int z = decay::get_nuc_z(nucindex);
@@ -167,6 +168,7 @@ void read_decaydata() {
       assert_always(z != 28 || a != 57);  // Ni-57 must have a gamma spectrum if present in list of nuclides
       assert_always(z != 27 || a != 57);  // Co-57 must have a gamma spectrum if present in list of nuclides
       set_trivial_gamma_spectrum(nucindex);
+      trivial_spectrum_nuclides += std::format(" (Z={},A={})", z, a);
     }
   }
 
@@ -178,6 +180,12 @@ void read_decaydata() {
   }
 
   printlnlog("read gamma-ray table files for {} nuclides", tables_found);
+  if (!trivial_spectrum_nuclides.empty()) {
+    printlnlog(
+        "WARNING: no gamma-ray line table found for the following nuclides with non-zero gamma decay energy, so a "
+        "single line carrying the mean gamma energy per decay will be used:{}",
+        trivial_spectrum_nuclides);
+  }
 }
 
 // construct an energy ordered gamma ray line list.

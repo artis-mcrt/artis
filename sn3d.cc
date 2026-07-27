@@ -200,7 +200,6 @@ void initialise_linestat_file() {
 void write_deposition_file() {
   const int my_rank = globals::my_rank;
   const int nts = globals::timestep;
-  printlog("Calculating and writing deposition.out...");
   const auto time_write_deposition_file_start = std::chrono::steady_clock::now();
   double mtot = 0.;
   const int nstart_nonempty = grid::get_nstart_nonempty(my_rank);
@@ -345,7 +344,7 @@ void write_deposition_file() {
 
   const auto deposition_write_duration =
       std::chrono::duration<double>(std::chrono::steady_clock::now() - time_write_deposition_file_start).count();
-  printlnlog("took {:.1f} seconds", deposition_write_duration);
+  printlnlog("calculating and writing deposition.out took {:.1f} seconds", deposition_write_duration);
 }
 
 void write_timestep_file() {
