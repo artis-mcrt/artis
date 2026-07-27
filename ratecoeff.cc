@@ -73,7 +73,7 @@ MPI_shared_array<double> bfcooling_coeffs{};
 auto alpha_sp_integrand(const double nu_minus_nu_edge, const double nu_edge, const float T_e,
                         const std::span<const float> photoion_xs) -> double {
   const auto sigma_bf = photoionisation_crosssection_fromtable(photoion_xs, nu_edge, nu_minus_nu_edge + nu_edge);
-  // the variable of integration has been changed from nu to nu_edge_minus_nu = nu - nu_edge
+  // the variable of integration has been changed from nu to nu_minus_nu_edge = nu - nu_edge
   // to get a cancellation with part of the saha factor
   return (2 / CLIGHTSQUARED) * sigma_bf * pow2(nu_edge + nu_minus_nu_edge) * exp(-HOVERKB * nu_minus_nu_edge / T_e);
 }
@@ -409,16 +409,16 @@ void precalculate_ion_alpha_sp() {
         for (int ion = 0; ion < nions; ion++) {
           const auto uniqueionindex = get_uniqueionindex(element, ion);
           const int nionisinglevels = get_nlevels_ionising(element, ion);
-          double zeta = 0.;
+          double alpha_sp = 0.;
           for (int level = 0; level < nionisinglevels; level++) {
             const auto uniquelevelindex = get_uniquelevelindex(element, ion, level);
             const auto nphixstargets = get_nphixstargets(uniquelevelindex);
             for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
-              const double zeta_level = get_spontrecombcoeff(uniquelevelindex, phixstargetindex, T_e);
-              zeta += zeta_level;
+              const double alpha_sp_level = get_spontrecombcoeff(uniquelevelindex, phixstargetindex, T_e);
+              alpha_sp += alpha_sp_level;
             }
           }
-          temp_ion_alpha_sp[(uniqueionindex * TABLESIZE) + tempindex] = static_cast<float>(zeta);
+          temp_ion_alpha_sp[(uniqueionindex * TABLESIZE) + tempindex] = static_cast<float>(alpha_sp);
         }
       }
     }

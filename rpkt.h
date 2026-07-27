@@ -66,7 +66,7 @@ struct ContinuumOpacity {
   double nu{-1.};  // frequency at which opacity was calculated
   // Each chi is an extinction coefficient [cm^-1]; density is already included when it is calculated, so a
   // homogeneous path contributes an optical depth chi * pathlength.
-  double chi_freefree_scatter{0.};  // free-free scattering (stay rpacket) contribution to the opacity
+  double chi_escatter{0.};  // Thomson scattering on free electrons (stay rpacket) contribution to the opacity
   double chi_freefree_heat{0.};  // free-free heating (become kpacket) contribution to the opacity
   double chi_boundfree{0.};  // bound-free (photoionization) contribution to the opacity
   int nonemptymgi{-1};
@@ -94,7 +94,7 @@ struct ContinuumOpacity {
   constexpr ContinuumOpacity() : ContinuumOpacity(true) {}
 
   // total continuum absorption coefficient at nu [cm^-1]
-  [[nodiscard]] constexpr auto total() const { return chi_freefree_scatter + chi_boundfree + chi_freefree_heat; }
+  [[nodiscard]] constexpr auto total() const { return chi_escatter + chi_boundfree + chi_freefree_heat; }
 };
 
 DEVICE_FUNC void do_rpkt(Packet& pkt, double t2, ContinuumOpacity& chi_rpkt_cont);

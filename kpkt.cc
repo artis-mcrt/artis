@@ -43,7 +43,7 @@ MPI_shared_array<const int> coolinglist_upperlevel;
 // Fraction of a time step that individual k-packets live before further processing. This
 // diffusion time breaks up the chains of continuous collisional interactions that would
 // otherwise dominate the work imbalance between MPI ranks.
-constexpr float kpktdiffusion_timescale{0.001};
+constexpr float kpktdiffusion_timestep_fraction{0.001};
 
 // Compute the collisional cooling rate of a single ion, summing the free-free, free-bound, collisional-excitation
 // and collisional-ionisation contributions. Accumulates the per-process totals (C_ff/C_fb/C_exc/C_ionisation),
@@ -348,7 +348,7 @@ void setup_coolinglist() {
   coolinglist_upperlevel = std::move(temp_coolinglist_upperlevel);
   MPI_Barrier_node();
 
-  printlnlog("kpkts diffuse {:g} of a time step's length", kpktdiffusion_timescale);
+  printlnlog("kpkts diffuse {:g} of a time step's length", kpktdiffusion_timestep_fraction);
 }
 
 // prepopulate one ion's cooling-rate contributions into the cellcache (see header)
@@ -377,12 +377,17 @@ DEVICE_FUNC void do_kpkt_blackbody(Packet& pkt) {
   stats::increment(stats::Counter::K_STAT_TO_R_BB);
   stats::increment(stats::Counter::INTERACTIONS);
   pkt.emissiontype = EMTYPE_FREEFREE;
+  // this is a thermal emission, so record it as the packet's last thermal ("true") emission
+  // (emit_rpkt has just set em_pos/em_time to the current position and time)
+  pkt.trueemissiontype = pkt.emissiontype;
+  pkt.trueem_pos = pkt.em_pos;
+  pkt.trueem_time = pkt.em_time;
   pkt.nscatterings = 0;
 }
 
 // handle a k-packet (kinetic energy of the free electrons)
 DEVICE_FUNC void do_kpkt(Packet& pkt, const double t2, const int nts) {
-  const double deltat = kpktdiffusion_timescale * globals::timesteps[nts].width;
+  const double deltat = kpktdiffusion_timestep_fraction * globals::timesteps[nts].width;
 
   const double t_current = std::min(pkt.prop_time + deltat, t2);
 
@@ -467,6 +472,11 @@ DEVICE_FUNC void do_kpkt(Packet& pkt, const double t2, const int nts) {
     stats::increment(stats::Counter::K_STAT_TO_R_FF);
 
     pkt.emissiontype = EMTYPE_FREEFREE;
+    // this is a thermal emission, so record it as the packet's last thermal ("true") emission
+    // (emit_rpkt has just set em_pos/em_time to the current position and time)
+    pkt.trueemissiontype = pkt.emissiontype;
+    pkt.trueem_pos = pkt.em_pos;
+    pkt.trueem_time = pkt.em_time;
     pkt.nscatterings = 0;
     if constexpr (VPKT_ON) {
       vpkt::trace_vpkts(pkt, TYPE_KPKT);
@@ -491,6 +501,8 @@ DEVICE_FUNC void do_kpkt(Packet& pkt, const double t2, const int nts) {
     stats::increment(stats::Counter::K_STAT_TO_R_FB);
     pkt.emissiontype = get_emtype_continuum(element, lowerion, lowerlevel, upper);
     pkt.trueemissiontype = pkt.emissiontype;
+    pkt.trueem_pos = pkt.em_pos;
+    pkt.trueem_time = pkt.em_time;
     pkt.nscatterings = 0;
 
     if constexpr (VPKT_ON) {

@@ -494,18 +494,6 @@ inline void update_includedionslevels_maxnions() {
   return globals::alllevels.nautoionuptrans[get_uniquelevelindex(element, ion, level)];
 }
 
-// the number of autoion transitions from the specified level
-inline void set_nautoiondowntrans(const int element, const int ion, const int level, const int nautoiondowntrans) {
-  testmodeassert_valid_level(element, ion, level);
-  globals::alllevels.nautoiondowntrans[get_uniquelevelindex(element, ion, level)] = nautoiondowntrans;
-}
-
-// the number of autoion transitions from the specified level
-inline void set_nautoionuptrans(const int element, const int ion, const int level, const int nautoionuptrans) {
-  testmodeassert_valid_level(element, ion, level);
-  globals::alllevels.nautoionuptrans[get_uniquelevelindex(element, ion, level)] = nautoionuptrans;
-}
-
 [[gnu::pure]] [[nodiscard]] inline auto get_phixstargetindex(const int uniquelevelindex, const int upperionlevel)
     -> int {
   const auto nphixstargets = get_nphixstargets(uniquelevelindex);

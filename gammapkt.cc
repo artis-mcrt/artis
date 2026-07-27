@@ -597,9 +597,17 @@ constexpr auto meanf_sigma(const double x) -> double {
 // the deposition estimator with a single frame factor in update_gamma_dep().
 [[nodiscard]] auto get_chi_cmf_loss_weighted(const int nonemptymgi, const double nu_cmf) -> double {
   assert_testmodeonly(nonemptymgi >= 0);
-  const double xx = H * nu_cmf / ME / CLIGHT / CLIGHT;
   const double ffegrp = grid::get_ffegrp(grid::get_mgi_of_nonemptymgi(nonemptymgi));
   const auto chi_photo_electric_cmf = get_chi_photo_electric_cmf(nonemptymgi, ffegrp, nu_cmf);
+
+  if constexpr (GAMMA_USE_KAPPA_GREY.has_value()) {
+    // grey-mode transport interacts only via the grey photoabsorption opacity (the Compton and
+    // pair-production coefficients are zero), and every interaction deposits the full packet
+    // energy, so the estimator must not include the Compton energy-loss term
+    return chi_photo_electric_cmf;
+  }
+
+  const double xx = H * nu_cmf / ME / CLIGHT / CLIGHT;
   const auto chi_pair_prod_cmf = get_chi_pair_prod_cmf(nonemptymgi, ffegrp, nu_cmf);
 
   return ((meanf_sigma(xx) * grid::get_nnetot(nonemptymgi)) + chi_photo_electric_cmf +
@@ -860,7 +868,7 @@ void wollaeger_thermalisation(Packet& pkt) {
     // move packet copy now
     move_pkt_withtime(pkt_copy, boundarydist);
 
-    grid::change_cell_or_escape(pkt_copy, next_cellindex);
+    grid::change_cell_or_escape(pkt_copy, next_cellindex, false);
     end_packet = (pkt_copy.type == TYPE_ESCAPE);
   }
   const double f_gamma = 1. - std::exp(-tau);
@@ -891,7 +899,7 @@ void guttman_thermalisation(Packet& pkt) {
         tau += mean_gamma_opac * rho * boundarydist;
       }
       move_pkt_withtime(pkt_copy, boundarydist);
-      grid::change_cell_or_escape(pkt_copy, next_cellindex);
+      grid::change_cell_or_escape(pkt_copy, next_cellindex, false);
     }
 
     deposition_probability_sum -= std::expm1(-tau);
