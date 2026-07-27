@@ -8,7 +8,7 @@
 
 ARTIS is a 3D radiative transfer code that uses Monte Carlo methods with indivisible energy packets ([Lucy 2002](https://ui.adsabs.harvard.edu/abs/2002A%26A...384..725L/abstract)) for ejecta in homologous (ballistic) expansion such as supernovae and kilonovae. The code is designed for high performance on modern HPC clusters, with a focus on physics fidelity and multi-dimensional geometry.
 
-## Key Features
+## Key features
 
 ### Multi-dimensional geometry
 ARTIS simulates ejecta in 1D spherical, 2D cylindrical, and 3D Cartesian coordinates, enabling the study of asymmetric explosions and geometry-dependent observables such as polarisation that are inaccessible to 1D codes.
@@ -23,7 +23,7 @@ ARTIS simulates ejecta in 1D spherical, 2D cylindrical, and 3D Cartesian coordin
 - **Full-phase coverage**: a single simulation framework spans both the photospheric and nebular phases of a transient, eliminating the need to switch between specialised codes.
 
 ### High-performance computing
-- **Modern C++23**: the codebase uses current language standards, including `constexpr`, concepts, ranges, and structured bindings, resulting in expressive and maintainable code that benefits from the full optimisation pipeline of modern compilers.
+- **Modern C++**: the codebase uses current language standards, including `constexpr`, concepts, ranges, and structured bindings, resulting in expressive and maintainable code that benefits from the full optimisation pipeline of modern compilers. Builds use C++26 with gcc and clang, and C++23 with the nvc++ and hipcc GPU compilers.
 - **Distributed memory parallelism with MPI**: the simulation scales to thousands of CPU cores across multiple nodes. Intra-node communication uses MPI shared-memory windows to avoid redundant data copies between ranks on the same host.
 - **Cache-friendly data layout**: data structures are organised for spatial locality so that packet updates and cell lookups achieve high cache hit rates, reducing memory-bandwidth bottlenecks on modern CPU architectures.
 - **Cell-batched packet updates**: packets are processed in cell-ordered batches — analogous to ray-coherence methods used in production rendering engines — further improving instruction and data cache reuse.
@@ -48,7 +48,7 @@ An early version of the code is described in [Sim (2007)](https://ui.adsabs.harv
 The ARTIS source code is available under a [BSD 3-Clause license](https://github.com/artis-mcrt/artis/blob/develop/LICENSE), which requires attribution and preservation of copyright notices on any substantial copies. If you find the ARTIS code useful in any way, we request that you cite us as described above and star the repository to help show impact in funding proposals.
 
 ## Setting up production runs on Linux
-We recommended retaining the exact source code and Git metadata within each simulation folder for future reference (i.e., don't just copy the executables).
+We recommend retaining the exact source code and Git metadata within each simulation folder for future reference (i.e., don't just copy the executables).
 
 Clone the source code repository from the release branch:
 ```sh
@@ -56,7 +56,7 @@ git clone --branch release https://github.com/artis-mcrt/artis.git
 cd artis
 ```
 
-To compile and run artis, you will need a recent C++ compiler (g++, Clang, or nvc++) and an MPI library (e.g., Open MPI) that provides an `mpicxx` command. Usually, these are available on HPC clusters using module or spack commands. For systems that we use, look at the top of the relevant SLURM script in scripts/artis-*.sh to find compatible modules specifications. For Open MPI, set the C++ compiler using `export OMPI_CXX=g++`.
+To compile and run ARTIS, you will need a recent C++ compiler (gcc 14 or newer, Clang, nvc++, or hipcc) and an MPI library (e.g., Open MPI) that provides an `mpicxx` command. Usually, these are available on HPC clusters using module or spack commands. For systems that we use, look at the top of the relevant SLURM script in scripts/artis-*.sh to find compatible modules specifications. For Open MPI, set the C++ compiler using `export OMPI_CXX=g++`.
 
 Next, select an options preset. For example:
 ```sh
@@ -71,14 +71,16 @@ make
 cd ..
 ```
 
-The next steps are to ensure a full set of snapshot files (model.txt and abundances.txt) and an atomic database are present, and to configure the timesteps in input.txt. Then, edit the relevant job script (setting e.g. number of ranks and your email address) and queue it with `sbatch`. For example, on the Cosma8 cluster:
+The next steps are to ensure a full set of input model files (model.txt and abundances.txt) and an atomic database are present, and to configure the timesteps in input.txt. Then, edit the relevant job script (setting e.g. number of ranks and your email address) and queue it with `sbatch`. For example, on the Cosma8 cluster:
 ```sh
 vim artis/scripts/artis-cosma8.sh
 sbatch artis/scripts/artis-cosma8.sh
 ```
 
+The job scripts resubmit themselves until the simulation is finished and then queue a post-processing job (scripts/exspec-zip-*.sh) that runs exspec and compresses the output files. The post-processing job also converts the packets and estimator files to parquet format with [artistools](https://github.com/artis-mcrt/artistools), which it installs automatically using uv. See [Post-processing with exspec](#post-processing-with-exspec) below for what exspec does.
+
 ## Setting up for development
-Clone the source code repository and checkout the default branch:
+Clone the source code repository and check out the default branch `develop` (`release` is the production branch):
 ```sh
 git clone https://github.com/artis-mcrt/artis.git
 cd artis
@@ -102,27 +104,71 @@ tail -f output_0-0.txt
 ```
 Press Ctrl+C to stop following the log file.
 
-## Bundled Scripts
+### Output files
+A run writes the following into the simulation folder:
+- output_n-0.txt: a log file for each MPI rank n.
+- packets00_nnnn.out: the Monte Carlo packets from each rank, which exspec turns into spectra and light curves.
+- estimators_nnnn.out: the plasma conditions of each cell (temperatures, ionisation, heating and cooling rates) at each timestep.
+- deposition.out: the radioactive energy deposition rate as a function of time.
+- gridsave_ts*.tmp and packets_*_ts*.tmp: restart files that allow a later job to continue from the end of a timestep.
+
+Run scripts/movefiles.sh to move the per-job output files into a subfolder afterwards. The cluster job scripts do this automatically.
+
+### Post-processing with exspec
+As well as sn3d, `make` builds exspec, which combines the packets files from all ranks into spectra and light curves. Run it in the simulation folder using a single rank:
+```bash
+mpirun -np 1 ./exspec
+```
+exspec reads the same input.txt, model, and atomic data files as sn3d, so it must be run in the same folder. The nprocs_exspec line of input.txt sets how many ranks' packets files it reads.
+
+It writes light_curve.out, spec.out, emission.out, emissiontrue.out, and absorption.out (plus gamma-ray and polarisation versions, depending on the compile-time options), direction-resolved versions of these in the speclc_angle_res folder, and a log file exspec.txt.
+
+To plot and analyse the output, use [artistools](https://github.com/artis-mcrt/artistools), a companion Python package for working with ARTIS light curves, spectra, and estimators.
+
+### Testing
+The tests folder contains ten small end-to-end test models. Each tests/setup_*.sh script downloads the atomic data it needs and assembles a folder that is ready to run:
+```sh
+cd tests
+source ./setup_kilonova_1d.sh   # creates tests/kilonova_1d_testrun/
+```
+[CI](.github/workflows/ci.yml) runs all of these on every push. It builds with `REPRODUCIBLE=ON FASTMATH=OFF MAX_NODE_SIZE=2` and compares md5 checksums of the output files against reference checksums stored in the tests/*_inputfiles folders. A change that legitimately alters the numerical results therefore needs new reference checksums, which maintainers regenerate using the "Update checksums" workflow. CI also compiles every artisoptions_*.h preset with gcc and clang, and the classic and NLTE nebular presets additionally with Apple Clang, nvc++, and hipcc (including the GPU code paths).
+
+## Bundled scripts
 - clean.sh: Remove all output files while keeping input files and resetting the simulation to the beginning.
 - movefiles.sh [DIRNAME]: Move artis output files from the simulation folder into another folder. Usually called automatically by the job scripts, but should be run manually if the simulation crashes or is terminated early.
 - sumcorehourslogs.py: Calculate the summed core hours of all jobs using the timing information in the last line of the output*.txt log files. This cannot include runs where the job was terminated early.
 - sumcorehoursslurm.py: Calculate the summed core hours of all jobs from the slurm job output files.
 
-## make options
+## Make options
 - TESTMODE=ON: Enable additional assertions and the address and undefined behaviour sanitizers.
 - FASTMATH=OFF: Don't enable compiler transformations that affect round-off-level results (e.g. a*(b\*c) = (a\*b)*c).
 - EIGEN=OFF: Use GSL (not Eigen) for matrix-vector solving (Spencer-Fano and NLTE pops).
 - MAX_NODE_SIZE=N: Artificially limit MPI node size to N ranks. Useful for testing and preventing MPI shared memory windows from crossing CPU sockets.
 - REPRODUCIBLE=ON: Use stable sorts and disable FASTMATH.
 - GPU=ON: Required to compile for GPUs. Works around incompatible function calls and uses a Simpson-rule integrator in place of Gauss-Kronrod.
+- OPENMP=ON: Parallelise with OpenMP threads within each MPI rank. Cannot be combined with STDPAR.
+- STDPAR=ON: Parallelise with C++ standard library parallel algorithms, either on multicore CPUs or, together with GPU=ON, on GPUs.
+- OPTIMIZE=OFF: Compile without optimisation. This is the quickest way to check that everything still compiles.
+- PGO=GENERATE and PGO=USE: Profile-guided optimisation with gcc or clang. Build with GENERATE, run a representative simulation to collect profile data, then rebuild with USE.
 
 ## Input files
+These files go in the simulation folder, which should always contain the ARTIS source folder (or a symlink to it) named artis. The physics data bundled with the code (nuclear decay data, gamma-ray spectra, and the collisional ionisation and binding energy tables) is then found automatically in artis/data and does not need to be copied.
+
 ### input.txt
 Run-time configuration with:
+- the random number seed, which must be a fixed value for reproducible runs
 - number of timesteps
+- the first and last timestep of this job, so that a long simulation can be split over several resubmitted jobs
 - the start and end time in days
-- number of pure LTE timesteps,
-- optically-thick condition that switches cells to a grey opacity treatment.
+- whether the run continues from the restart files of a previous job
+- number of pure LTE timesteps
+- optically-thick condition that switches cells to a grey opacity treatment
+- nprocs_exspec: the number of ranks whose packets files exspec will read
+
+The format is positional, so every line must be present and in order, including those that are no longer used. See [tests/classicmode_3d_inputfiles/input-newrun.txt](tests/classicmode_3d_inputfiles/input-newrun.txt) for a complete example with a comment on every line.
+
+### vpkt.txt
+Required when virtual packets are enabled (VPKT_ON in artisoptions.h). Sets the observer directions, the number of spectra per observer, and the time and wavelength ranges to record. See [tests/classicmode_3d_inputfiles/vpkt.txt](tests/classicmode_3d_inputfiles/vpkt.txt) for an example.
 
 ### model.txt
 Grid parameters, cell densities and nuclear composition.
