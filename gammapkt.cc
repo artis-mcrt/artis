@@ -21,6 +21,7 @@
 #include <sstream>
 #include <string>
 #include <string_view>
+#include <system_error>
 #include <tuple>
 #include <vector>
 
@@ -109,13 +110,23 @@ void set_trivial_gamma_spectrum(const int nucindex) {
 void read_decaydata() {
   // migrate from old filenames that didn't specify the nuclide mass number
   if (!std::filesystem::exists("gamma_ni56.txt") && std::filesystem::exists("ni_lines.txt")) {
-    printlnlog("Moving ni_lines.txt to gamma_ni56.txt");
-    std::rename("ni_lines.txt", "gamma_ni56.txt");
+    std::error_code rename_error;
+    std::filesystem::rename("ni_lines.txt", "gamma_ni56.txt", rename_error);
+    if (rename_error) {
+      printlnlog("ERROR: failed to move ni_lines.txt to gamma_ni56.txt: {}", rename_error.message());
+    } else {
+      printlnlog("Moved ni_lines.txt to gamma_ni56.txt");
+    }
   }
 
   if (!std::filesystem::exists("gamma_co56.txt") && std::filesystem::exists("co_lines.txt")) {
-    printlnlog("Moving co_lines.txt to gamma_co56.txt");
-    std::rename("co_lines.txt", "gamma_co56.txt");
+    std::error_code rename_error;
+    std::filesystem::rename("co_lines.txt", "gamma_co56.txt", rename_error);
+    if (rename_error) {
+      printlnlog("ERROR: failed to move co_lines.txt to gamma_co56.txt: {}", rename_error.message());
+    } else {
+      printlnlog("Moved co_lines.txt to gamma_co56.txt");
+    }
   }
 
   gamma_spectra.resize(decay::get_num_nuclides(), {});
@@ -438,8 +449,8 @@ void compton_scatter(Packet& pkt) {
 }
 
 // calculate the absorption coefficient [cm^-1] for photo electric effect scattering in the co-moving frame
-[[nodiscard]] auto get_chi_photo_electric_cmf(const int nonemptymgi, const double ffegrp, const double nu_cmf)
-    -> double {
+[[nodiscard]] auto get_chi_photo_electric_cmf(const int nonemptymgi, const double ffegrp,
+                                              const double nu_cmf) -> double {
   const double rho = grid::get_rho(nonemptymgi);
 
   if constexpr (GAMMA_USE_KAPPA_GREY.has_value()) {

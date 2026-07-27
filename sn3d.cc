@@ -882,7 +882,7 @@ auto main(int argc, char* argv[]) -> int {
              globals::node_id, globals::node_count - 1);
 #ifdef MAX_NODE_SIZE
   printlnlog(
-      "WARNING: Compiled with MAX_NODE_SIZE {}, which may mean mean that there are more nodes reported than physically "
+      "WARNING: Compiled with MAX_NODE_SIZE {}, which may mean that there are more nodes reported than physically "
       "present",
       MAX_NODE_SIZE);
 #endif

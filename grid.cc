@@ -892,7 +892,7 @@ void calc_modelinit_totmassnuclides() {
 void read_grid_restart_data(const int timestep) {
   const auto filename = std::format("gridsave_ts{}.tmp", timestep);
 
-  printlnlog("READIN GRID SNAPSHOT from {}", filename);
+  printlnlog("reading grid restart snapshot from {}", filename);
   FILE* gridsave_file = fopen_required(filename, "r");
 
   int ntimesteps_in = -1;
@@ -1431,8 +1431,8 @@ auto get_element_meanweight(const std::ptrdiff_t nonemptymgi, const int element)
 template <BoundaryType boundarytype>
 [[nodiscard]] constexpr auto is_boundary_overshoot_within_tolerance(const double pktposgridcoord,
                                                                     const double pktvelgridcoord,
-                                                                    const double boundarypos_tmin, const double tstart)
-    -> bool {
+                                                                    const double boundarypos_tmin,
+                                                                    const double tstart) -> bool {
   const double boundaryvel = boundarypos_tmin / globals::tmin;
   const double boundarypos = boundaryvel * tstart;
   const double overshoot =
@@ -1580,8 +1580,8 @@ void set_elem_massfrac(const ptrdiff_t nonemptymgi, const int element, const flo
 }
 
 // mass fraction of an element (all isotopes combined)
-[[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_elem_numberdens(const ptrdiff_t nonemptymgi, const int element)
-    -> double {
+[[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_elem_numberdens(const ptrdiff_t nonemptymgi,
+                                                                 const int element) -> double {
   return get_elem_massfrac(nonemptymgi, element) / static_cast<double>(get_element_meanweight(nonemptymgi, element)) *
          get_rho(nonemptymgi);
 }

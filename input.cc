@@ -28,6 +28,7 @@
 #include <sstream>
 #include <string>
 #include <string_view>
+#include <system_error>
 #include <tuple>
 #include <utility>
 #include <vector>
@@ -173,8 +174,10 @@ void read_phixs_data_table(std::istream& phixsfile, const int nphixspoints_input
         probability_sum += phixstargetprobability;
       }
       if (fabs(probability_sum - 1.0) > 0.01) {
-        printlog("ERROR: photoionisation table for Z={} ionstage {} has probabilities that sum to {:g}",
-                 get_atomicnumber(element), get_ionstage(element, lowerion), probability_sum);
+        printlnlog(
+            "ERROR: photoionisation table for Z={} ionstage {} level {} has target probabilities that sum to "
+            "{:g} (expected 1.0 +/- 0.01)",
+            get_atomicnumber(element), get_ionstage(element, lowerion), lowerlevel, probability_sum);
         assert_always(false);
       }
     } else {  // file has table of target states and probabilities but our top ion is limited to one level
@@ -1939,11 +1942,16 @@ void update_parameterfile(const int nts) {
   fileout.close();
   file.close();
 
+  std::error_code rename_error;
   if (nts < 0) {
-    std::rename("input.txt.tmp", "input-newrun.txt");  // back up the original for starting a new simulation
+    // back up the original for starting a new simulation
+    std::filesystem::rename("input.txt.tmp", "input-newrun.txt", rename_error);
   } else {
-    std::remove("input.txt");
-    std::rename("input.txt.tmp", "input.txt");
+    std::filesystem::rename("input.txt.tmp", "input.txt", rename_error);
+  }
+  if (rename_error) {
+    printlnlog("ERROR: failed to move input.txt.tmp to {}: {}", (nts < 0) ? "input-newrun.txt" : "input.txt",
+               rename_error.message());
   }
 
   printlnlog("done");

@@ -440,8 +440,8 @@ void set_params_fullspec(const int nonemptymgi, const int timestep) {
     grid::set_W(nonemptymgi, W);
 
     printlnlog(
-        "Full-spectrum fit radfield for cell {} at timestep {}: J {:g}, nubar {:5.1f} Angstrom, T_J {:g}, T_R {:g}, W "
-        "{:g}",
+        "Full-spectrum fit radfield for cell {} at timestep {}: J {:g}, lambda_bar {:5.1f} Angstrom, T_J {:g} K, T_R "
+        "{:g} K, W {:g}",
         modelgridindex, timestep, J[nonemptymgi], 1e8 * CLIGHT / nubar, T_J, T_R, W);
   }
 }

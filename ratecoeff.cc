@@ -12,6 +12,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <filesystem>
+#include <format>
 #include <ios>
 #include <span>
 #include <sstream>
@@ -133,14 +134,16 @@ void precalculate_rate_coefficient_integrals() {
   // Calculate the rate coefficients for each level of each ion of each element
   for (int element = 0; element < get_nelements(); element++) {
     const int atomic_number = get_atomicnumber(element);
-    printlog("Performing rate integrals for Z = {}: ion stages", atomic_number);
     const int nions = get_nions(element) - 1;
+    std::string ionstagelist;
+    for (int ion = 0; ion < nions; ion++) {
+      ionstagelist += std::format(" {}", get_ionstage(element, ion));
+    }
+    printlnlog("Performing rate integrals for Z = {}: ion stages{}", atomic_number, ionstagelist);
 #ifdef _OPENMP
 #pragma omp parallel for
 #endif
     for (int ion = 0; ion < nions; ion++) {
-      const int ionstage = get_ionstage(element, ion);
-      printlog(" {}", ionstage);
       const int nlevels = get_nlevels_ionising(element, ion);
 
       for (int level = 0; level < nlevels; level++) {
@@ -207,7 +210,6 @@ void precalculate_rate_coefficient_integrals() {
         }  // phixstarget loop
       }  // level loop
     }  // ion loop
-    printlnlog("");
   }
 
   MPI_Barrier_node();
@@ -608,8 +610,8 @@ DEVICE_FUNC auto select_continuum_nu(int element, const int lowerion, const int 
 }
 
 // Get an ion's rate coefficient for spontaneous recombination in LTE
-[[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_ion_spontrecombcoeff(const int uniqueionindex, const float T_e)
-    -> double {
+[[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_ion_spontrecombcoeff(const int uniqueionindex,
+                                                                      const float T_e) -> double {
   const auto upperindex = get_temperature_gridupperindex(T_e);
   if (upperindex == 0) {
     return ion_alpha_sp[uniqueionindex * TABLESIZE];
@@ -628,8 +630,8 @@ DEVICE_FUNC auto select_continuum_nu(int element, const int lowerion, const int 
 
 // Return a level's rate coefficient for spontaneous recombination in LTE
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_spontrecombcoeff(const int uniquelevelindex,
-                                                                  const int phixstargetindex, const float T_e)
-    -> double {
+                                                                  const int phixstargetindex,
+                                                                  const float T_e) -> double {
   return lerp_or_last(std::span{spontrecombcoeffs}, uniquelevelindex, phixstargetindex, T_e);
 }
 
@@ -717,8 +719,8 @@ void ratecoefficients_init() {
 }
 
 // Returns the (stimulated recombination corrected) photoionisation rate coefficient.
-auto get_corrphotoioncoeff_ana(int element, const int ion, const int level, const int phixstargetindex, const float T_R)
-    -> double {
+auto get_corrphotoioncoeff_ana(int element, const int ion, const int level, const int phixstargetindex,
+                               const float T_R) -> double {
   assert_always(USE_LUT_PHOTOION);
   const auto uniquelevelindex = get_uniquelevelindex(element, ion, level);
   return lerp_or_last(std::span{corrphotoioncoeffs}, uniquelevelindex, phixstargetindex, T_R);

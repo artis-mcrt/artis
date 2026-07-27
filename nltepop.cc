@@ -164,8 +164,8 @@ auto get_nlte_vector_index(const int element, const int ion, const int level, co
 }
 
 [[nodiscard]] auto get_ion_level_of_nlte_vector_index(const std::ptrdiff_t index, const int element,
-                                                      const int first_ion_used, const int nions_used)
-    -> std::tuple<int, int> {
+                                                      const int first_ion_used,
+                                                      const int nions_used) -> std::tuple<int, int> {
   // this could easily be optimized if need be
   for (int dion = first_ion_used; dion < first_ion_used + nions_used; dion++) {
     for (int dlevel = 0; dlevel < get_nlevels(element, dion); dlevel++) {
@@ -447,8 +447,8 @@ auto get_element_superlevelpartfuncs(const int nonemptymgi, const int element) -
   return superlevel_partfuncs;
 }
 
-[[nodiscard]] auto get_element_nlte_dimension(const int element, const int first_ion_used, const int nions_used)
-    -> int {
+[[nodiscard]] auto get_element_nlte_dimension(const int element, const int first_ion_used,
+                                              const int nions_used) -> int {
   assert_testmodeonly(nions_used >= 0);
   assert_testmodeonly(nions_used <= get_nions(element));
   assert_testmodeonly(first_ion_used >= 0);
@@ -1138,8 +1138,8 @@ auto can_remove_ion(const int element, const int ion, const int first_ion_used, 
     if (levelpop / nnelement > NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION) {
       printlnlog(
           "  WARNING: {} ion excited state (level {}) population too large to remove ion (nlte_excited_pop_{}_ion "
-          "/ nnelement) = ({}/{}) > ({}))",
-          ionname, ionname, level, levelpop, nnelement, NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION);
+          "/ nnelement) = ({}/{}) > ({})",
+          ionname, level, ionname, levelpop, nnelement, NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION);
       return false;
     }
   }
@@ -1172,8 +1172,8 @@ auto can_remove_ion(const int element, const int ion, const int first_ion_used, 
 auto nltepop_solve_matrix_with_ion_reduction(const int element, const int nonemptymgi, const double t_mid,
                                              const double nnelement,
                                              const std::vector<std::vector<double>>& s_renorm_allions,
-                                             RateMatrices& rate_matrices, std::vector<double>& popvec)
-    -> std::tuple<bool, int, int> {
+                                             RateMatrices& rate_matrices,
+                                             std::vector<double>& popvec) -> std::tuple<bool, int, int> {
   const int atomic_number = get_atomicnumber(element);
   const int nions = get_nions(element);
   const auto max_nlte_dimension = get_max_nlte_dimension();
@@ -1462,8 +1462,8 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
 }
 
 // Get a Boltzman factor for a level within the super level (combined Non-LTE level)
-DEVICE_FUNC auto superlevel_boltzmann(const int nonemptymgi, const int element, const int ion, const int level)
-    -> double {
+DEVICE_FUNC auto superlevel_boltzmann(const int nonemptymgi, const int element, const int ion,
+                                      const int level) -> double {
   // autoionising levels are also allowed here: outside the NLTE solver their populations are
   // attached to the superlevel (see the comment in read_autoion_data())
   assert_testmodeonly(level_isinsuperlevel(element, ion, level) || level_isautoionising(element, ion, level));
@@ -1604,8 +1604,8 @@ void nltepop_read_restart_data(FILE* restart_file) {
   }
 }
 
-DEVICE_FUNC auto get_nlte_levelpop_over_rho(const int nonemptymgi, const int element, const int ion, const int level)
-    -> double {
+DEVICE_FUNC auto get_nlte_levelpop_over_rho(const int nonemptymgi, const int element, const int ion,
+                                            const int level) -> double {
   assert_testmodeonly(level > 0);  // ground state is stored separately
   assert_testmodeonly(level <= get_nlevels_excited_nlte(element, ion));
   return nltepops_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * globals::total_nlte_levels) +

@@ -725,7 +725,7 @@ void read_vpktparameterfile() {
   double vspec_tmax_in_days = 0.;
   assert_always(fscanf(input_file, "%d %lg %lg", &override_tminmax, &vspec_tmin_in_days, &vspec_tmax_in_days) == 3);
 
-  printlnlog("vpkt: compiled with VSPEC_TIMEMIN {:.1f}d VSPEC_TIMEMAX {:1f}d VSPEC_TIMEBINS {}", VSPEC_TIMEMIN / DAY,
+  printlnlog("vpkt: compiled with VSPEC_TIMEMIN {:.1f}d VSPEC_TIMEMAX {:.1f}d VSPEC_TIMEBINS {}", VSPEC_TIMEMIN / DAY,
              VSPEC_TIMEMAX / DAY, VSPEC_TIMEBINS);
   if (override_tminmax == 1) {
     vspec_timemin_input = vspec_tmin_in_days * DAY;
