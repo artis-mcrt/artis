@@ -12,7 +12,6 @@
 #include <cstdlib>
 #include <filesystem>
 #include <format>
-#include <limits>
 #include <span>
 #include <vector>
 
@@ -64,11 +63,6 @@ void do_direction_bin(const int dirbin, const std::vector<std::vector<Packet>>& 
   THREADLOCALONHOST Spectra gamma_spectra;
   init_spectra(gamma_spectra, nu_min_gamma, nu_max_gamma, false);
   assert_always(globals::nprocs_exspec > 0);
-  ptrdiff_t nesc_rpkt_total = 0;
-  ptrdiff_t nesc_gamma_total = 0;
-  int nesc_rpkt_min = std::numeric_limits<int>::max();
-  int nesc_rpkt_max = 0;
-  int ranks_with_no_escapes = 0;
   for (int p = 0; p < globals::nprocs_exspec; p++) {
     const auto& pkts_thisrank = packets_by_rank[p];
 
@@ -93,23 +87,7 @@ void do_direction_bin(const int dirbin, const std::vector<std::vector<Packet>>& 
       }
     }
     if (dirbin == -1) {
-      nesc_rpkt_total += nesc_rpkt;
-      nesc_gamma_total += nesc_gamma;
-      nesc_rpkt_min = std::min(nesc_rpkt_min, nesc_rpkt);
-      nesc_rpkt_max = std::max(nesc_rpkt_max, nesc_rpkt);
-      if (nesc_rpkt == 0 && nesc_gamma == 0) {
-        ranks_with_no_escapes++;
-        printlnlog("[warning] packet file of rank {} contains no escaped packets", p);
-      }
-    }
-  }
-
-  if (dirbin == -1) {
-    printlnlog("  {} ranks: {} escaped r-packets (per-rank min {} max {}) and {} escaped gamma-packets",
-               globals::nprocs_exspec, nesc_rpkt_total, nesc_rpkt_min, nesc_rpkt_max, nesc_gamma_total);
-    if (ranks_with_no_escapes > 0) {
-      printlnlog("[warning] {} of {} rank packet files contained no escaped packets", ranks_with_no_escapes,
-                 globals::nprocs_exspec);
+      printlnlog("  rank {}: {} escaped r-packets and {} escaped gamma-pkts", p, nesc_rpkt, nesc_gamma);
     }
   }
 
