@@ -1059,6 +1059,8 @@ void init_nuclides(const std::span<const int> custom_zlist, const std::span<cons
 
   add_standard_nuclides();
 
+  // deliberately a copy, not a reference: the decay-data readers below add further nuclides
+  // cppcheck-suppress redundantCopyLocalConst
   const auto standard_nuclides = nuclides;
 
   read_betaminus_decaydata();
