@@ -486,6 +486,20 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
                temperature_corrections_duration);
   }
 
+  // Check the temperature that the cell has ended up with for this timestep. This is done here rather
+  // than in grid::set_Te() because that setter is also called with the intermediate guesses that the
+  // T_e solver rejects, and it would report those too.
+  const auto T_e_cell = grid::get_Te(nonemptymgi);
+  if (T_e_cell > 0.) {
+    const double nu_peak_planck = 5.879e10 * T_e_cell;  // Wien's displacement law
+    if (nu_peak_planck > NU_MAX_R || nu_peak_planck < NU_MIN_R) {
+      printlnlog(
+          "[warning] cell {} timestep {}: B_planck(T_e={:g} [K]) peak at {:g} [Hz] is outside the radiation field "
+          "frequency range [{:g}, {:g}] [Hz]",
+          mgi, nts, T_e_cell, nu_peak_planck, NU_MIN_R, NU_MAX_R);
+    }
+  }
+
   const auto nne = grid::get_nne(nonemptymgi);
   const auto propcell_width = grid::propcell_width_tmin(
       mgi, 0);  // pass mgi here because cellindex = mgi for direct map 1D or 2D, and doesn't matter for 3D grid
