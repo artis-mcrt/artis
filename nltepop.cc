@@ -252,17 +252,16 @@ void print_level_rates_summary(const int element, const int selected_ion, const 
 
   for (int i = 0; i <= 3; i++) {
     // rates in from above, in from below, out to above, out to below
-    std::string rowprefix;
     if (i == 0) {
       const int nlevels_nlte = get_nlevels_excited_nlte(element, selected_ion);
       if (ion_has_superlevel(element, selected_ion) && (selected_level == nlevels_nlte + 1)) {
-        rowprefix = "      superlevel ";
+        printlog("      superlevel ");
       } else {
-        rowprefix = std::format("    level{:7} ", selected_level);
+        printlog("    level{:7} ", selected_level);
       }
-      rowprefix += std::format(" {:10.2e} ", popvec[selected_index]);
+      printlog(" {:10.2e} ", popvec[selected_index]);
     } else {
-      rowprefix = std::string(29, ' ');
+      printlog("                             ");
     }
 
     const bool into_level = (i <= 1);
@@ -284,9 +283,9 @@ void print_level_rates_summary(const int element, const int selected_ion, const 
     const double autoion_total =
         get_total_rate(selected_index, rate_matrices.autoion, popvec, into_level, only_levels_below, only_levels_above);
 
-    printlnlog("{}{}{}{:10.2e} {:10.2e} {:10.2e} {:10.2e} {:10.2e} {:10.2e} {:10.2e}", rowprefix,
-               into_level ? " from " : "   to ", only_levels_below ? "below " : "above ", rad_bb_total, coll_bb_total,
-               ntcoll_bb_total, rad_bf_total, coll_bf_total, ntcoll_bf_total, autoion_total);
+    printlnlog("{}{}{:10.2e} {:10.2e} {:10.2e} {:10.2e} {:10.2e} {:10.2e} {:10.2e}", into_level ? " from " : "   to ",
+               only_levels_below ? "below " : "above ", rad_bb_total, coll_bb_total, ntcoll_bb_total, rad_bf_total,
+               coll_bf_total, ntcoll_bf_total, autoion_total);
   }
 }
 
@@ -928,25 +927,28 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
 template <typename GetDiagElement>
 [[nodiscard]] auto lumatrix_is_singular(GetDiagElement getdiagelement, const size_t nlte_dimension, const int element,
                                         const int first_ion_used, const int nions_used) -> bool {
-  std::string disconnectedlist;
+  bool is_singular = false;
   for (auto i = 0ZU; i < nlte_dimension; i++) {
     // diagonal elements of LU matrix must be non-zero and finite
     const double matrixelement = getdiagelement(i);
     if (matrixelement == 0. || !std::isfinite(matrixelement)) {
+      if (!is_singular) {
+        printlog("  [error] cell {} ts {}: NLTE matrix is singular for element Z={} (disconnected:",
+                 nltelog.modelgridindex, nltelog.timestep, get_atomicnumber(element));
+        is_singular = true;
+      }
       const auto [ion, level] = get_ion_level_of_nlte_vector_index(i, element, first_ion_used, nions_used);
       if (is_nlte(element, ion, level)) {
-        disconnectedlist += std::format(" ionstage {} level {}", get_ionstage(element, ion), level);
+        printlog(" ionstage {} level {}", get_ionstage(element, ion), level);
       } else {
-        disconnectedlist += std::format(" ionstage {} superlevel", get_ionstage(element, ion));
+        printlog(" ionstage {} superlevel", get_ionstage(element, ion));
       }
     }
   }
-  if (!disconnectedlist.empty()) {
-    printlnlog("  [error] cell {} ts {}: NLTE matrix is singular for element Z={} (disconnected:{})",
-               nltelog.modelgridindex, nltelog.timestep, get_atomicnumber(element), disconnectedlist);
-    return true;
+  if (is_singular) {
+    printlnlog(")");
   }
-  return false;
+  return is_singular;
 }
 
 // solve rate_matrix * x = balance_vector, so that popvec[i] = x[i] * pop_normfactors[i]

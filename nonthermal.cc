@@ -385,28 +385,27 @@ void check_auger_probabilities(const ptrdiff_t nonemptymgi) {
       }
 
       if (fabs(prob_sum - 1.0) > 0.001) {
-        std::string probliststr;
-        for (int a = 0; a <= NT_MAX_AUGER_ELECTRONS; a++) {
-          probliststr += std::format(" {}:{:g}", a, get_auger_probability(nonemptymgi, element, ion, a));
-        }
-        printlnlog(
+        printlog(
             "[error] Auger probabilities sum to {:g} (expected 1.0 +/- 0.001) for cell {} Z={} ionstage {}: "
-            "P(n_Auger):{}",
-            prob_sum, grid::get_mgi_of_nonemptymgi(nonemptymgi), get_atomicnumber(element), get_ionstage(element, ion),
-            probliststr);
+            "P(n_Auger):",
+            prob_sum, grid::get_mgi_of_nonemptymgi(nonemptymgi), get_atomicnumber(element), get_ionstage(element, ion));
+        for (int a = 0; a <= NT_MAX_AUGER_ELECTRONS; a++) {
+          printlog(" {}:{:g}", a, get_auger_probability(nonemptymgi, element, ion, a));
+        }
+        printlnlog("");
         problem_found = true;
       }
 
       if (fabs(ionenfrac_sum - 1.0) > 0.001) {
-        std::string enfracliststr;
-        for (int a = 0; a <= NT_MAX_AUGER_ELECTRONS; a++) {
-          enfracliststr += std::format(" {}:{:g}", a, get_ion_auger_enfrac(nonemptymgi, element, ion, a));
-        }
-        printlnlog(
+        printlog(
             "[error] Auger energy fractions sum to {:g} (expected 1.0 +/- 0.001) for cell {} Z={} ionstage {}: "
-            "enfrac(n_Auger):{}",
+            "enfrac(n_Auger):",
             ionenfrac_sum, grid::get_mgi_of_nonemptymgi(nonemptymgi), get_atomicnumber(element),
-            get_ionstage(element, ion), enfracliststr);
+            get_ionstage(element, ion));
+        for (int a = 0; a <= NT_MAX_AUGER_ELECTRONS; a++) {
+          printlog(" {}:{:g}", a, get_ion_auger_enfrac(nonemptymgi, element, ion, a));
+        }
+        printlnlog("");
         problem_found = true;
       }
     }
@@ -2510,7 +2509,6 @@ void solve_spencerfano(const int nonemptymgi, const int timestep, const int iter
     sfmatrix[uppertriangular(i, i)] += electron_loss_rate(engrid(i) * EV, nne) / EV;
   }
 
-  std::string includedionsstr;
   for (int element = 0; element < get_nelements(); element++) {
     const int Z = get_atomicnumber(element);
     const int nions = get_nions(element);
@@ -2525,11 +2523,14 @@ void solve_spencerfano(const int nonemptymgi, const int timestep, const int iter
 
       const int ionstage = get_ionstage(element, ion);
       if (first_included_ion_of_element) {
-        includedionsstr += std::format(" Z={} ionstages", Z);
+        printlog("  including Z={:2} ionstages: ", Z);
+        for (int i = 1; i < get_ionstage(element, ion); i++) {
+          printlog("  ");
+        }
         first_included_ion_of_element = false;
       }
 
-      includedionsstr += std::format(" {}", ionstage);
+      printlog("{} ", ionstage);
 
       sfmatrix_add_excitation(sfmatrix, nonemptymgi, element, ion);
 
@@ -2537,13 +2538,9 @@ void solve_spencerfano(const int nonemptymgi, const int timestep, const int iter
         sfmatrix_add_ionisation(sfmatrix, Z, ionstage, nnion);
       }
     }
-  }
-
-  // the included set rarely changes between solves, so only log it when it differs from the last report
-  THREADLOCALONHOST auto last_logged_includedionsstr = std::string();
-  if (includedionsstr != last_logged_includedionsstr) {
-    last_logged_includedionsstr = includedionsstr;
-    printlnlog("  including{} (list logged when it changes)", includedionsstr);
+    if (!first_included_ion_of_element) {
+      printlnlog("");
+    }
   }
 
   decompactify_triangular_matrix(sfmatrix);

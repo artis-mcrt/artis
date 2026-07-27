@@ -135,11 +135,13 @@ void precalculate_rate_coefficient_integrals() {
   for (int element = 0; element < get_nelements(); element++) {
     const int atomic_number = get_atomicnumber(element);
     const int nions = get_nions(element) - 1;
-    std::string ionstagelist;
+    // print the full list before the parallel loop below, since worker threads have their own
+    // (unopened) threadprivate output streams
+    printlog("Performing rate integrals for Z = {}: ion stages", atomic_number);
     for (int ion = 0; ion < nions; ion++) {
-      ionstagelist += std::format(" {}", get_ionstage(element, ion));
+      printlog(" {}", get_ionstage(element, ion));
     }
-    printlnlog("Performing rate integrals for Z = {}: ion stages{}", atomic_number, ionstagelist);
+    printlnlog("");
 #ifdef _OPENMP
 #pragma omp parallel for
 #endif

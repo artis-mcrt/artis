@@ -313,12 +313,11 @@ void extend_lastdecaypath(std::vector<DecayPath>& localdecaypaths) {
       // check for nuclide in existing path, which would indicate a loop
       for (const auto [z, a] : std::views::zip(initial_last_decaypath.z, initial_last_decaypath.a)) {
         if (z == daughter.z && a == daughter.a) {
-          std::string chainstr;
+          printlog("[error] loop in nuclear decay chain: ");
           for (const auto [chain_z, chain_a] : std::views::zip(initial_last_decaypath.z, initial_last_decaypath.a)) {
-            chainstr += std::format("(Z={},A={}) -> ", chain_z, chain_a);
+            printlog("(Z={},A={}) -> ", chain_z, chain_a);
           }
-          printlnlog("[error] loop in nuclear decay chain: {}(Z={},A={}) already occurred. aborting", chainstr,
-                     daughter.z, daughter.a);
+          printlnlog("(Z={},A={}) already occurred. aborting", daughter.z, daughter.a);
           std::abort();
         }
       }

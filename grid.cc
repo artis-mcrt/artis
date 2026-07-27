@@ -257,13 +257,15 @@ void count_negative_input_massfrac(const int modelgridindex, const int z, const 
 
 void report_negative_input_massfracs() {
   if (n_negative_input_massfrac > 0) {
-    const auto first_species = (first_negative_massfrac_z < 0)
-                                   ? std::string("X_Fegroup")
-                                   : std::format("Z={} A={}", first_negative_massfrac_z, first_negative_massfrac_a);
-    printlnlog(
+    printlog(
         "[warning] {} negative mass fraction(s) in the input model were clamped to zero (most negative {:g}; first "
-        "in cell {} for {})",
-        n_negative_input_massfrac, most_negative_input_massfrac, first_negative_massfrac_mgi, first_species);
+        "in cell {} for ",
+        n_negative_input_massfrac, most_negative_input_massfrac, first_negative_massfrac_mgi);
+    if (first_negative_massfrac_z < 0) {
+      printlnlog("X_Fegroup)");
+    } else {
+      printlnlog("Z={} A={})", first_negative_massfrac_z, first_negative_massfrac_a);
+    }
   }
 }
 
@@ -2115,13 +2117,12 @@ void read_ejecta_model() {
   report_negative_input_massfracs();
 
   if (!ignored_model_columns.empty()) {
-    std::string columnliststr;
+    printlog(
+        "[warning] ignored model.txt columns not recognised as a known nuclide, X_Fegroup, Ye, q, or tracercount:");
     for (const auto& colname : ignored_model_columns) {
-      columnliststr += std::format(" '{}'", colname);
+      printlog(" '{}'", colname);
     }
-    printlnlog(
-        "[warning] ignored model.txt columns not recognised as a known nuclide, X_Fegroup, Ye, q, or tracercount:{}",
-        columnliststr);
+    printlnlog("");
   }
 
   read_possible_yefile();
