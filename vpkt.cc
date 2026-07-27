@@ -650,12 +650,10 @@ void remove_temp_vpkt_file(const int nts, const int my_rank) {
   };
 
   for (const auto& filename : filenames) {
-    // deleting a temp file is routine and not logged, but a failure to delete an existing file is
+    // these temp files are not needed again, so deletion failures are ignored (the error_code
+    // overload of remove() reports the failure here instead of throwing)
     std::error_code remove_error;
     std::filesystem::remove(filename, remove_error);
-    if (remove_error) {
-      printlnlog("[warning] failed to delete {}: {}", filename, remove_error.message());
-    }
   }
 }
 
