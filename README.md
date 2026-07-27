@@ -152,7 +152,7 @@ source ./setup_kilonova_1d.sh   # creates tests/kilonova_1d_testrun/
 - PGO=GENERATE and PGO=USE: Profile-guided optimisation with gcc or clang. Build with GENERATE, run a representative simulation to collect profile data, then rebuild with USE.
 
 ## Input files
-These files go in the simulation folder. The physics data bundled with the code (nuclear decay data, gamma-ray spectra, and the collisional ionisation and binding energy tables) does not need to be copied there: those files are found automatically in the repository's data folder when the source folder (or a symlink to it named artis) is in the simulation folder, as in the recommended layout.
+These files go in the simulation folder, which should always contain the ARTIS source folder (or a symlink to it) named artis. The physics data bundled with the code (nuclear decay data, gamma-ray spectra, and the collisional ionisation and binding energy tables) is then found automatically in artis/data and does not need to be copied.
 
 ### input.txt
 Run-time configuration with:
