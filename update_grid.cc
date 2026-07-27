@@ -621,7 +621,7 @@ void update_grid(std::ostream& estimators_file, const int nts, const int nts_pre
     }
   }
 
-  globals::max_path_step = std::min(1.e35, globals::rmax / 10.);
+  globals::max_path_step = std::min(1.e35, globals::vmax * tmid / 10.);
   printlnlog("max_path_step {:g}", globals::max_path_step);
 
   const auto time_update_grid_end_thisrank = std::chrono::steady_clock::now();
