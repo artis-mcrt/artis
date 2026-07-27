@@ -1362,8 +1362,7 @@ void nltepop_apply_solution(const int element, const int nonemptymgi, const int 
 
     const int nlevels = get_nlevels_excited_nlte(element, ion) + (ion_has_superlevel(element, ion) ? 1 : 0);
     for (int level = 0; level <= nlevels; level++) {
-      print_level_rates(nonemptymgi, timestep, element, ion, level, popvec, rate_matrices, first_ion_used,
-                        nions_used);
+      print_level_rates(nonemptymgi, timestep, element, ion, level, popvec, rate_matrices, first_ion_used, nions_used);
     }
   }
 }
