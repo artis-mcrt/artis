@@ -785,10 +785,11 @@ auto get_nucstring_a(const std::string& strnuc) -> int {
   return a;
 }
 
-// add all nuclides and decays, and later trim any irrelevant ones (not connected to input-specified nuclei)
-void init_nuclides(const std::span<const int> custom_zlist, const std::span<const int> custom_alist) {
-  assert_always(custom_zlist.size() == custom_alist.size());
+namespace {
 
+// add the standard set of nuclides for the classical double-decay chains (56Ni, 57Ni, 48Cr,
+// and 52Fe parents) with hardcoded decay data
+void add_standard_nuclides() {
   // Ni57
   nuclides.push_back({.z = 28, .a = 57, .meanlife = 51.36 * HOUR});
   nuclides.back().endecay_positron = 0.354 * MEV;
@@ -840,9 +841,10 @@ void init_nuclides(const std::span<const int> custom_zlist, const std::span<cons
   nuclides.push_back({.z = 25, .a = 52, .meanlife = 0.0211395 * DAY});
   nuclides.back().branchprobs[DECAYTYPE_ELECTRONCAPTURE] = 1.;
   nuclides.back().endecay_q[DECAYTYPE_ELECTRONCAPTURE] = 5.085870 * MEV;
+}
 
-  const auto standard_nuclides = nuclides;
-
+// add the nuclides with beta-minus decay data from betaminusdecays.txt
+void read_betaminus_decaydata() {
   auto fbetaminus = fstream_required("betaminusdecays.txt", std::ios::in);
   std::string line;
   while (get_noncommentline(fbetaminus, line)) {
@@ -867,8 +869,13 @@ void init_nuclides(const std::span<const int> custom_zlist, const std::span<cons
       assert_always(e_elec_mev >= 0.);
     }
   }
+}
 
+// add or update the nuclides with alpha decay data from alphadecays.txt (also ensures that He4
+// exists as a decay product)
+void read_alpha_decaydata() {
   auto falpha = fstream_required("alphadecays.txt", std::ios::in);
+  std::string line;
   if (!nuc_exists(2, 4)) {
     nuclides.push_back({.z = 2, .a = 4, .meanlife = -1});
   }
@@ -905,8 +912,12 @@ void init_nuclides(const std::span<const int> custom_zlist, const std::span<cons
       nuclides[alphanucindex].endecay_q[DECAYTYPE_ALPHA] = Q_alphadecay_mev * MEV;
     }
   }
+}
 
+// add the nuclides with spontaneous fission decay data from fissiondecays.txt
+void read_spontfission_decaydata() {
   auto ffission = fstream_required("fissiondecays.txt", std::ios::in);
+  std::string line;
   while (get_noncommentline(ffission, line)) {
     int z_in = -1;
     int a_in = -1;
@@ -929,8 +940,13 @@ void init_nuclides(const std::span<const int> custom_zlist, const std::span<cons
     printlnlog("  added spontaneous fission nuclide: (Z={}){}{} meanlife {:.1e} days", z_in, get_elname(z_in), a_in,
                tau_sec / DAY);
   }
+}
 
+// read the fission product tables from fissionproducts_GEF_100keV.txt for the spontaneous
+// fission nuclides that are in use
+void read_fissionproduct_data() {
   auto ffission_products = fstream_required("fissionproducts_GEF_100keV.txt", std::ios::in);
+  std::string line;
   while (get_noncommentline(ffission_products, line)) {
     int z_parent = -1;
     int a_parent = -1;
@@ -968,7 +984,12 @@ void init_nuclides(const std::span<const int> custom_zlist, const std::span<cons
       nuclides[nucindex].decay_daughters_probsum = daughter_prob_sum;
     }
   }
+}
 
+// make sure that the input-specified nuclides and all decay daughters exist in the nuclide
+// list, adding any missing ones as stable nuclides
+void add_custom_and_daughter_nuclides(const std::span<const int> custom_zlist,
+                                      const std::span<const int> custom_alist) {
   std::set<std::tuple<int, int>> nuclides_ensure_list{};
 
   // add any extra nuclides that were specified but not in the decay data files
@@ -992,7 +1013,11 @@ void init_nuclides(const std::span<const int> custom_zlist, const std::span<cons
       nuclides.push_back({.z = z, .a = a, .meanlife = -1});
     }
   }
+}
 
+// consistency checks on the nuclide list: no duplicate nuclides, branching probabilities that
+// sum to one for unstable nuclides, and decay energies present for every active decay type
+void check_nuclide_data() {
   std::set<std::tuple<int, int>> seen_z_a{};
   for (const auto& nuc : nuclides) {
     assert_always(!seen_z_a.contains({nuc.z, nuc.a}));  // duplicate nuclide detected
@@ -1024,6 +1049,28 @@ void init_nuclides(const std::span<const int> custom_zlist, const std::span<cons
     }
     assert_always(nuc.endecay_gamma >= 0.);
   }
+}
+
+}  // anonymous namespace
+
+// add all nuclides and decays, and later trim any irrelevant ones (not connected to input-specified nuclei)
+void init_nuclides(const std::span<const int> custom_zlist, const std::span<const int> custom_alist) {
+  assert_always(custom_zlist.size() == custom_alist.size());
+
+  add_standard_nuclides();
+
+  // deliberately a copy, not a reference: the decay-data readers below add further nuclides
+  // cppcheck-suppress redundantCopyLocalConst
+  const auto standard_nuclides = nuclides;
+
+  read_betaminus_decaydata();
+  read_alpha_decaydata();
+  read_spontfission_decaydata();
+  read_fissionproduct_data();
+
+  add_custom_and_daughter_nuclides(custom_zlist, custom_alist);
+
+  check_nuclide_data();
 
   printlnlog("Number of nuclides before filtering: {}", std::ssize(nuclides));
   decaypaths = find_decaypaths(custom_zlist, custom_alist, standard_nuclides);

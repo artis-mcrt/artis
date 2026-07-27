@@ -1912,85 +1912,59 @@ void read_ejecta_model() {
   modelgrid_numpropcells.resize(npts_model + 1, 0);
   nonemptymgi_of_mgi.resize(npts_model + 1, -1);
 
+  // geometry-specific setup of the model coordinate counts
   if (get_modelgridtype() == GridType::SPHERICAL1D) {
     ncoord_model[0] = npts_0;
     ncoord_model[1] = 0;
     ncoord_model[2] = 0;
     vout_model.resize(get_npts_model(), NAN);
+  } else if (get_modelgridtype() == GridType::CYLINDRICAL2D) {
+    ncoord_model[0] = npts_0;
+    ncoord_model[1] = npts_1;
+    ncoord_model[2] = 0;
+  } else {
+    ncoord_model[0] = static_cast<int>(round(std::cbrt(npts_model)));
+    ncoord_model[1] = ncoord_model[0];
+    ncoord_model[2] = ncoord_model[0];
+    assert_always(static_cast<ptrdiff_t>(ncoord_model[0]) * ncoord_model[1] * ncoord_model[2] == npts_model);
+    // for a 3D input model, the propagation cells will match the input cells exactly
+    ncoordgrid = ncoord_model;
+    ngrid = npts_model;
+    min_den = -1.;
+  }
 
-    // Now read in the lines of the model. Each line has 5 entries: the
-    // cell number (integer) the velocity at outer boundary of cell (float),
-    // the mass density in the cell (float), the abundance of Ni56 by mass
-    // in the cell (float) and the total abundance of all Fe-grp elements
-    // in the cell (float). For now, the last number is recorded but never
-    // used.
+  const auto [colnames, nucindexlist, one_line_per_cell] = read_model_columns(fmodel);
 
-    const auto [colnames, nucindexlist, one_line_per_cell] = read_model_columns(fmodel);
+  // 3D only: whether the input cell positions match the expected values in x-y-z or z-y-x
+  // column order (set false when a mismatch is detected)
+  bool posmatch_xyz = true;
+  bool posmatch_zyx = true;
 
-    int mgi = 0;
-    while (std::getline(fmodel, line)) {
+  int mgi = 0;
+  while (mgi < get_npts_model() && std::getline(fmodel, line)) {
+    ssline.clear();
+    ssline.str(line);
+    int cellnumberin = 0;
+    double rho_tmodel{NAN};  // the cell density [g/cm3] at the model snapshot time t_model
+
+    // parse the geometry-specific part of the cell line to get the density (and for 1D, the
+    // outer velocity), and check that any cell midpoint coordinates match the expected values
+    if (get_modelgridtype() == GridType::SPHERICAL1D) {
+      // columns: cell number, outer velocity [km/s], log10 of the density
       double vout_kmps{NAN};
       double log_rho{NAN};
-      int cellnumberin = 0;
-      ssline.clear();
-      ssline.str(line);
-
       if (!(ssline >> cellnumberin >> vout_kmps >> log_rho)) {
         printlnlog("Unexpected number of values in model.txt");
         printlnlog("line: {}", line);
         assert_always(false);
       }
-
-      if (mgi == 0) {
-        first_cellindex = cellnumberin;
-        printlnlog("first_cellindex {}", first_cellindex);
-      }
-      assert_always(cellnumberin == mgi + first_cellindex);
-
       vout_model[mgi] = vout_kmps * 1.e5;
-
-      const auto rho_tmin = static_cast<float>(log_rho > -90 ? pow(10., log_rho) * pow3(t_model / globals::tmin) : 0.);
-      set_rho_tmin(mgi, rho_tmin);
-      const bool keepcell = (rho_tmin > 0);
-      read_model_radioabundances(fmodel, ssline, mgi, keepcell, colnames, nucindexlist, one_line_per_cell);
-
-      mgi += 1;
-      if (mgi == get_npts_model()) {
-        break;
-      }
-    }
-
-    if (mgi != get_npts_model()) {
-      printlnlog("ERROR in model.txt. Found only {} cells instead of {} expected.", mgi, get_npts_model());
-      std::abort();
-    }
-
-    globals::vmax = vout_model[get_npts_model() - 1];
-  } else if (get_modelgridtype() == GridType::CYLINDRICAL2D) {
-    ncoord_model[0] = npts_0;
-    ncoord_model[1] = npts_1;
-    ncoord_model[2] = 0;
-    const auto [colnames, nucindexlist, one_line_per_cell] = read_model_columns(fmodel);
-
-    // Now read in the model. Each point in the model has two lines of input.
-    // First is an index for the cell then its r-mid point then its z-mid point
-    // then its total mass density.
-    // Second is the total FeG mass, initial 56Ni mass, initial 56Co mass
-
-    int mgi = 0;
-    while (std::getline(fmodel, line)) {
-      int cellnumberin = 0;
+      rho_tmodel = (log_rho > -90) ? pow(10., log_rho) : 0.;
+    } else if (get_modelgridtype() == GridType::CYLINDRICAL2D) {
+      // columns: cell number, r midpoint, z midpoint, density
       float cell_r_in{NAN};
       float cell_z_in{NAN};
-      double rho_tmodel{NAN};
-      ssline.clear();
-      ssline.str(line);
       assert_always(ssline >> cellnumberin >> cell_r_in >> cell_z_in >> rho_tmodel);
-
-      if (mgi == 0) {
-        first_cellindex = cellnumberin;
-      }
-      assert_always(cellnumberin == mgi + first_cellindex);
 
       const int n_rcyl = (mgi % ncoord_model[0]);
       const double pos_r_cyl_mid = (n_rcyl + 0.5) * globals::vmax * t_model / ncoord_model[0];
@@ -1998,63 +1972,12 @@ void read_ejecta_model() {
       const int n_z = (mgi / ncoord_model[0]);
       const double pos_z_mid = globals::vmax * t_model * (-1 + (2 * (n_z + 0.5) / ncoord_model[1]));
       assert_always(fabs((cell_z_in / pos_z_mid) - 1) < 1e-3);
-
-      if (rho_tmodel < 0) {
-        printlnlog("negative input density {:g} {}", rho_tmodel, mgi);
-        std::abort();
-      }
-
-      const bool keepcell = (rho_tmodel > 0);
-      const auto rho_tmin = static_cast<float>(rho_tmodel * pow3(t_model / globals::tmin));
-      set_rho_tmin(mgi, rho_tmin);
-
-      read_model_radioabundances(fmodel, ssline, mgi, keepcell, colnames, nucindexlist, one_line_per_cell);
-
-      mgi++;
-    }
-
-    if (mgi != get_npts_model()) {
-      printlnlog("ERROR in model.txt. Found only {} cells instead of {} expected.", mgi, get_npts_model());
-      std::abort();
-    }
-  } else if (get_modelgridtype() == GridType::CARTESIAN3D) {
-    ncoord_model[0] = static_cast<int>(round(std::cbrt(npts_model)));
-    ncoord_model[1] = ncoord_model[0];
-    ncoord_model[2] = ncoord_model[0];
-
-    assert_always(static_cast<ptrdiff_t>(ncoord_model[0]) * ncoord_model[1] * ncoord_model[2] == npts_model);
-    // for a 3D input model, the propagation cells will match the input cells exactly
-    ncoordgrid = ncoord_model;
-    ngrid = npts_model;
-
-    const double xmax_tmodel = globals::vmax * t_model;
-
-    // Now read in the lines of the model.
-    min_den = -1.;
-
-    // check if expected positions match in either xyz or zyx column order
-    // set false if a problem is detected
-    bool posmatch_xyz = true;
-    bool posmatch_zyx = true;
-
-    const auto [colnames, nucindexlist, one_line_per_cell] = read_model_columns(fmodel);
-
-    // mgi is the index to the model grid - empty cells are sent to special value get_npts_model(),
-    // otherwise each input cell is one modelgrid cell
-    int mgi = 0;  // corresponds to model.txt index column, but zero indexed! (model.txt might be 1-indexed)
-    while (std::getline(fmodel, line)) {
-      int cellnumberin = 0;
+    } else {
+      // columns: cell number, x midpoint, y midpoint, z midpoint, density
       std::array<float, 3> cellpos_in{};
-      float rho_model{NAN};
-      ssline.clear();
-      ssline.str(line);
-
-      assert_always(ssline >> cellnumberin >> cellpos_in[0] >> cellpos_in[1] >> cellpos_in[2] >> rho_model);
-
-      if (mgi == 0) {
-        first_cellindex = cellnumberin;
-      }
-      assert_always(cellnumberin == mgi + first_cellindex);
+      float rho_model_in{NAN};
+      assert_always(ssline >> cellnumberin >> cellpos_in[0] >> cellpos_in[1] >> cellpos_in[2] >> rho_model_in);
+      rho_tmodel = rho_model_in;
 
       if (mgi % (ncoord_model[1] * ncoord_model[2]) == 0) {
         printlnlog("read up to cell mgi {}", mgi);
@@ -2062,7 +1985,7 @@ void read_ejecta_model() {
 
       // cell coordinates in the 3D model.txt file are sometimes reordered by the scaling script
       // however, the cellindex always should increment X first, then Y, then Z
-
+      const double xmax_tmodel = globals::vmax * t_model;
       for (int axis = 0; axis < 3; axis++) {
         const double cellwidth = 2 * xmax_tmodel / ncoordgrid[axis];
         const double cellpos_expected = -xmax_tmodel + (cellwidth * get_cellcoordindex(mgi, axis));
@@ -2074,44 +1997,50 @@ void read_ejecta_model() {
         }
       }
 
-      if (rho_model < 0) {
-        printlnlog("negative input density {:g} {}", rho_model, mgi);
-        std::abort();
+      if (min_den < 0. || min_den > rho_tmodel) {
+        min_den = rho_tmodel;
       }
-
-      // in 3D cartesian, cellindex and modelgridindex are interchangeable
-      const bool keepcell = (rho_model > 0);
-      const auto rho_tmin = static_cast<float>(rho_model * pow3(t_model / globals::tmin));
-      set_rho_tmin(mgi, rho_tmin);
-
-      if (min_den < 0. || min_den > rho_model) {
-        min_den = rho_model;
-      }
-
-      read_model_radioabundances(fmodel, ssline, mgi, keepcell, colnames, nucindexlist, one_line_per_cell);
-
-      mgi++;
     }
-    if (mgi != npts_model) {
-      printlnlog("ERROR in model.txt. Found only {} cells instead of {} expected.", mgi, npts_model);
+
+    if (mgi == 0) {
+      first_cellindex = cellnumberin;
+      printlnlog("first_cellindex {}", first_cellindex);
+    }
+    assert_always(cellnumberin == mgi + first_cellindex);
+
+    if (rho_tmodel < 0) {
+      printlnlog("negative input density {:g} {}", rho_tmodel, mgi);
       std::abort();
     }
 
+    const bool keepcell = (rho_tmodel > 0);
+    set_rho_tmin(mgi, static_cast<float>(rho_tmodel * pow3(t_model / globals::tmin)));
+
+    read_model_radioabundances(fmodel, ssline, mgi, keepcell, colnames, nucindexlist, one_line_per_cell);
+
+    mgi++;
+  }
+
+  if (mgi != get_npts_model()) {
+    printlnlog("ERROR in model.txt. Found only {} cells instead of {} expected.", mgi, get_npts_model());
+    std::abort();
+  }
+
+  if (get_modelgridtype() == GridType::SPHERICAL1D) {
+    // for 1D models, vmax is the outer velocity of the last cell
+    globals::vmax = vout_model[get_npts_model() - 1];
+  } else if (get_modelgridtype() == GridType::CARTESIAN3D) {
     // posmatch_xyz and posmatch_zyx should be mutually exclusive: if both column orders matched, an
     // infinity probably occurred in the calculated positions
     if (posmatch_xyz) {
       printlnlog("Cell positions in model.txt are consistent with calculated values when x-y-z column order is used.");
-    }
-    if (posmatch_zyx) {
+    } else if (posmatch_zyx) {
       printlnlog("Cell positions in model.txt are consistent with calculated values when z-y-x column order is used.");
-    }
-
-    if (!posmatch_xyz && !posmatch_zyx) {
+    } else {
       printlnlog(
           "WARNING: Cell positions in model.txt are not consistent with calculated values in either x-y-z or z-y-x "
           "order.");
     }
-
     printlnlog("min_den {:g} [g/cm3]", min_den);
   }
 

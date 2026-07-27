@@ -74,7 +74,6 @@ struct IonTransitionsInput {
 };
 
 struct TempAllTransInput {
-  int lineindex;
   int targetlevelindex;
   float einstein_A;
   float coll_str;
@@ -576,11 +575,10 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion,
               .lowerlevelindex = lowerlevel,
           });
 
-          // the line list has not been sorted yet, so store the level index for now and
-          // the index into the sorted line list will be set later
+          // (each transition's index into the frequency-sorted linelist is set later by
+          // create_shared_alltranslist)
 
           temp_alltranslist[ion_levels[level].alltrans_startdown + nupperdowntrans - 1] = {
-              .lineindex = -1,
               .targetlevelindex = lowerlevel,
               .einstein_A = transition.A,
               .coll_str = transition.coll_str,
@@ -589,7 +587,6 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion,
           };
           const auto lowerstartup = ion_levels[lowerlevel].alltrans_startup();
           temp_alltranslist[lowerstartup + nloweruptrans - 1] = {
-              .lineindex = -1,
               .targetlevelindex = level,
               .einstein_A = transition.A,
               .coll_str = transition.coll_str,
@@ -1324,30 +1321,8 @@ void read_levels_and_transitions(std::vector<TempEnergyLevel>& temp_alllevels,
   printlnlog("nbfcheck {}", nbfcheck);
 }
 
-// read the full atomic dataset: the composition (compositiondata.txt), then the levels and
-// transitions (adata.txt, transitiondata.txt) and photoionisation cross-sections
-// (phixsdata_v2.txt) for every included ion, building the global element/ion/level/line lists
-void read_atomicdata_files() {
-  const auto nlevelsmax_readin = read_compositiondata();
-
-  printlnlog("SINGLE_LEVEL_TOP_ION: {}", SINGLE_LEVEL_TOP_ION ? "true" : "false");
-
-  std::vector<TempEnergyLevel> temp_alllevels;
-  std::vector<TempLineTransitionInput> temp_linelist;
-  std::vector<TempAllTransInput> temp_alltranslist;
-
-  if (globals::rank_in_node == 0) {
-    temp_linelist.reserve(1U << 22U);  // reserve initial space for 4 million lines to avoid too many reallocations
-    temp_alltranslist.reserve(1U << 22U);
-    read_levels_and_transitions(temp_alllevels, temp_linelist, temp_alltranslist, nlevelsmax_readin);
-  }
-  MPI_Barrier_node();
-
-  update_includedionslevels_maxnions();
-
-  MPI_Bcast_safe(globals::nlines, 0, globals::mpi_comm_node);
-  printlnlog("nlines {}", globals::nlines);
-
+// sort the temporary linelist by descending frequency and warn about any duplicate transitions
+void sort_temp_linelist(std::vector<TempLineTransitionInput>& temp_linelist) {
   if (globals::rank_in_node == 0) {
     assert_always(globals::nlines == std::ssize(temp_linelist));
     temp_linelist.shrink_to_fit();
@@ -1381,8 +1356,10 @@ void read_atomicdata_files() {
       }
     }
   }
+}
 
-  // create a shared level list and copy data across, freeing the local copy
+// copy the level data into node-shared memory arrays (globals::alllevels), freeing the local copy
+void create_shared_levellist(std::vector<TempEnergyLevel>& temp_alllevels) {
   ptrdiff_t nlevels = std::ssize(temp_alllevels);
   MPI_Bcast_safe(nlevels, 0, globals::mpi_comm_node);
 
@@ -1421,7 +1398,12 @@ void read_atomicdata_files() {
   globals::alllevels.matransblock_start = std::move(alllevels_matransblock_start);
   temp_alllevels.clear();
   temp_alllevels.shrink_to_fit();
+}
 
+// copy the transition data into node-shared memory arrays (globals::alltrans), freeing the
+// local copy, and point every up and down transition at its index in the frequency-sorted
+// linelist. Requires globals::alllevels and globals::linelist to have been created already.
+void create_shared_alltranslist(std::vector<TempAllTransInput>& temp_alltranslist) {
   const int updowntranscount = []() -> int {
     const int downtranscount = std::ranges::fold_left(globals::alllevels.ndowntrans, 0, std::plus<>{});
     const int uptranscount = std::ranges::fold_left(globals::alllevels.nuptrans, 0, std::plus<>{});
@@ -1433,7 +1415,6 @@ void read_atomicdata_files() {
   printlnlog("[info] mem_usage: transition lists occupy {:.3f} MB (node shared memory)",
              updowntranscount * ((2 * sizeof(int)) + (3 * sizeof(float)) + sizeof(bool)) / 1024. / 1024.);
 
-  // create a shared all transitions list and then copy data across, freeing the local copy
   MPI_Barrier_node();
 
   auto alltrans_lineindex = MPI_shared_array<int>(updowntranscount);
@@ -1446,7 +1427,6 @@ void read_atomicdata_files() {
   if (globals::rank_in_node == 0) {
     assert_always(std::ssize(temp_alltranslist) == updowntranscount);
     for (int t = 0; t < updowntranscount; t++) {
-      alltrans_lineindex[t] = temp_alltranslist[t].lineindex;
       alltrans_targetlevelindex[t] = temp_alltranslist[t].targetlevelindex;
       alltrans_einstein_A[t] = temp_alltranslist[t].einstein_A;
       alltrans_coll_str[t] = temp_alltranslist[t].coll_str;
@@ -1463,8 +1443,72 @@ void read_atomicdata_files() {
   globals::alltrans.osc_strength = std::move(alltrans_osc_strength);
   globals::alltrans.forbidden = std::move(alltrans_forbidden);
 
-  // create a linelist shared on node and then copy data across, freeing the local copy
+  // make sure that all ranks can see the filled transition arrays before the striped loop below
+  MPI_Barrier_node();
 
+  printlnlog("establishing connection between transitions and sorted linelist...");
+
+  const auto time_start_establish_linelist_connections = std::chrono::steady_clock::now();
+
+  // every transition entry belongs to exactly one line (one down and one up entry per line), so
+  // the loop below writes every element of alltrans_lineindex
+  assert_always(updowntranscount == 2 * globals::nlines);
+
+#ifdef _OPENMP
+#pragma omp parallel for schedule(dynamic)
+#endif
+  for (int lineindex = 0; lineindex < globals::nlines; lineindex++) {
+    if (lineindex % globals::node_nprocs != globals::rank_in_node) {
+      continue;
+    }
+
+    const int element = globals::linelist.elementindex[lineindex];
+    const int ion = globals::linelist.ionindex[lineindex];
+    const auto ionuniquelevelindexstart = get_ionuniquelevelindexstart(element, ion);
+    const int upper_uniquelevelindex = globals::linelist.uniquelevelindex_upper[lineindex];
+    const auto lower_uniquelevelindex = globals::linelist.uniquelevelindex_lower[lineindex];
+    const auto upperlevel = upper_uniquelevelindex - ionuniquelevelindexstart;
+    const auto lowerlevel = lower_uniquelevelindex - ionuniquelevelindexstart;
+
+    // there is never more than one transition per pair of levels,
+    // so find the first up and the first down transition that match: element, ion, lowerlevel, upperlevel
+
+    const auto alltrans_startdown = get_alltrans_startdown(upper_uniquelevelindex);
+    const auto ndowntrans = get_ndowntrans(upper_uniquelevelindex);
+    int downtransid = -1;
+    for (int i = alltrans_startdown; i < alltrans_startdown + ndowntrans; i++) {
+      if (globals::alltrans.targetlevelindex[i] == lowerlevel) {
+        downtransid = i;
+        break;
+      }
+    }
+    assert_always(downtransid != -1);
+    alltrans_lineindex[downtransid] = lineindex;
+
+    const auto alltrans_startup = get_alltrans_startup(lower_uniquelevelindex);
+    const auto nuptrans = get_nuptrans(lower_uniquelevelindex);
+    int uptransid = -1;
+    for (int i = alltrans_startup; i < alltrans_startup + nuptrans; i++) {
+      if (globals::alltrans.targetlevelindex[i] == upperlevel) {
+        uptransid = i;
+        break;
+      }
+    }
+    assert_always(uptransid != -1);
+    alltrans_lineindex[uptransid] = lineindex;
+  }
+  globals::alltrans.lineindex = std::move(alltrans_lineindex);
+
+  const auto establish_linelist_connections_duration =
+      std::chrono::duration<double>(std::chrono::steady_clock::now() - time_start_establish_linelist_connections)
+          .count();
+  printlnlog("  took {:.1f}s", establish_linelist_connections_duration);
+  MPI_Barrier_node();
+}
+
+// copy the line data into node-shared memory arrays (globals::linelist), calculating the
+// Einstein B coefficients, and free the local copy
+void create_shared_linelist(std::vector<TempLineTransitionInput>& temp_linelist) {
   auto linelist_nu = MPI_shared_array<double>(globals::nlines);
   auto linelist_elementindex = MPI_shared_array<int>(globals::nlines);
   auto linelist_ionindex = MPI_shared_array<int>(globals::nlines);
@@ -1518,60 +1562,42 @@ void read_atomicdata_files() {
       1024. / 1024;
 
   printlnlog("[info] mem_usage: linelist occupies {:.3f} MB (node shared memory)", linelist_mem_MB);
+}
 
-  printlnlog("establishing connection between transitions and sorted linelist...");
+// read the full atomic dataset: the composition (compositiondata.txt), then the levels and
+// transitions (adata.txt, transitiondata.txt) and photoionisation cross-sections
+// (phixsdata_v2.txt) for every included ion, building the global element/ion/level/line lists
+void read_atomicdata_files() {
+  const auto nlevelsmax_readin = read_compositiondata();
 
-  const auto time_start_establish_linelist_connections = std::chrono::steady_clock::now();
-#ifdef _OPENMP
-#pragma omp parallel for schedule(dynamic)
-#endif
-  for (int lineindex = 0; lineindex < globals::nlines; lineindex++) {
-    if (lineindex % globals::node_nprocs != globals::rank_in_node) {
-      continue;
-    }
+  printlnlog("SINGLE_LEVEL_TOP_ION: {}", SINGLE_LEVEL_TOP_ION ? "true" : "false");
 
-    const int element = globals::linelist.elementindex[lineindex];
-    const int ion = globals::linelist.ionindex[lineindex];
-    const auto ionuniquelevelindexstart = get_ionuniquelevelindexstart(element, ion);
-    const int upper_uniquelevelindex = globals::linelist.uniquelevelindex_upper[lineindex];
-    const auto lower_uniquelevelindex = globals::linelist.uniquelevelindex_lower[lineindex];
-    const auto upperlevel = upper_uniquelevelindex - ionuniquelevelindexstart;
-    const auto lowerlevel = lower_uniquelevelindex - ionuniquelevelindexstart;
+  std::vector<TempEnergyLevel> temp_alllevels;
+  std::vector<TempLineTransitionInput> temp_linelist;
+  std::vector<TempAllTransInput> temp_alltranslist;
 
-    // there is never more than one transition per pair of levels,
-    // so find the first up and the first down transition that match: element, ion, lowerlevel, upperlevel
-
-    const auto alltrans_startdown = get_alltrans_startdown(upper_uniquelevelindex);
-    const auto ndowntrans = get_ndowntrans(upper_uniquelevelindex);
-    int downtransid = -1;
-    for (int i = alltrans_startdown; i < alltrans_startdown + ndowntrans; i++) {
-      if (globals::alltrans.targetlevelindex[i] == lowerlevel) {
-        downtransid = i;
-        break;
-      }
-    }
-    assert_always(downtransid != -1);
-    alltrans_lineindex[downtransid] = lineindex;
-
-    const auto alltrans_startup = get_alltrans_startup(lower_uniquelevelindex);
-    const auto nuptrans = get_nuptrans(lower_uniquelevelindex);
-    int uptransid = -1;
-    for (int i = alltrans_startup; i < alltrans_startup + nuptrans; i++) {
-      if (globals::alltrans.targetlevelindex[i] == upperlevel) {
-        uptransid = i;
-        break;
-      }
-    }
-    assert_always(uptransid != -1);
-    alltrans_lineindex[uptransid] = lineindex;
+  if (globals::rank_in_node == 0) {
+    temp_linelist.reserve(1U << 22U);  // reserve initial space for 4 million lines to avoid too many reallocations
+    temp_alltranslist.reserve(1U << 22U);
+    read_levels_and_transitions(temp_alllevels, temp_linelist, temp_alltranslist, nlevelsmax_readin);
   }
-  globals::alltrans.lineindex = std::move(alltrans_lineindex);
-
-  const auto establish_linelist_connections_duration =
-      std::chrono::duration<double>(std::chrono::steady_clock::now() - time_start_establish_linelist_connections)
-          .count();
-  printlnlog("  took {:.1f}s", establish_linelist_connections_duration);
   MPI_Barrier_node();
+
+  update_includedionslevels_maxnions();
+
+  MPI_Bcast_safe(globals::nlines, 0, globals::mpi_comm_node);
+  printlnlog("nlines {}", globals::nlines);
+
+  sort_temp_linelist(temp_linelist);
+
+  // create a shared level list and copy data across, freeing the local copy
+  create_shared_levellist(temp_alllevels);
+
+  // create a linelist shared on node and then copy data across, freeing the local copy
+  create_shared_linelist(temp_linelist);
+
+  // create the shared transitions list and point each transition at the sorted linelist
+  create_shared_alltranslist(temp_alltranslist);
 
   for (int element = 0; element < get_nelements(); element++) {
     const int nions = get_nions(element);
