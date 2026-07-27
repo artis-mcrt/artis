@@ -69,9 +69,7 @@ constexpr double nu_1p5mev = 3.61990e+20;
 
 void read_gamma_spectrum(const int nucindex, const std::string& filename) {
   // read the gamma ray lines and store the average energy in gamma rays per nuclear decay
-  printlog("reading gamma spectrum for Z={} A={} from {}...", decay::get_nuc_z(nucindex), decay::get_nuc_a(nucindex),
-           filename);
-
+  // (the total table and line counts are reported by read_decaydata and init_gamma_linelist)
   auto gammafile = fstream_required(filename, std::ios::in);
   std::string line;
   get_noncommentline(gammafile, line);
@@ -95,8 +93,6 @@ void read_gamma_spectrum(const int nucindex, const std::string& filename) {
   }
 
   decay::set_nucdecayenergygamma(nucindex, E_gamma_avg);
-
-  printlnlog("nlines {} avg_en_gamma {:g} MeV", nlines, E_gamma_avg / MEV);
 }
 
 void set_trivial_gamma_spectrum(const int nucindex) {

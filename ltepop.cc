@@ -30,6 +30,18 @@
 
 namespace {
 
+// The conditions behind these warnings can persist across the many evaluations that the nne and T_e
+// root solvers make for a single cell, so they are counted here and summarised by
+// calculate_ion_balance_nne at most once per cell per timestep instead of being logged at every
+// solver evaluation.
+THREADLOCALONHOST int ionfract_zeroed_count = 0;
+THREADLOCALONHOST int nne_solver_maxit_count = 0;
+THREADLOCALONHOST int uppermost_ion_limited_count = 0;
+THREADLOCALONHOST ptrdiff_t ionbalance_warned_nonemptymgi = -1;
+THREADLOCALONHOST int ionbalance_warned_timestep = -1;
+THREADLOCALONHOST ptrdiff_t neutralcell_warned_nonemptymgi = -1;
+THREADLOCALONHOST int neutralcell_warned_timestep = -1;
+
 // use Saha equation for LTE ionisation balance
 [[gnu::pure]] [[nodiscard]] auto phi_saha(const int element, const int ion, const int nonemptymgi) -> double {
   const auto partfunc_ion = get_ion_partfunct(nonemptymgi, element, ion);
@@ -134,8 +146,8 @@ auto nne_solution_f(const double nne_assumed, const int nonemptymgi, const bool 
 }
 
 // return population and whether the population came from the nlte solver
-auto calculate_levelpop_nominpop(const int nonemptymgi, const int element, const int ion, const int level)
-    -> std::tuple<double, bool> {
+auto calculate_levelpop_nominpop(const int nonemptymgi, const int element, const int ion,
+                                 const int level) -> std::tuple<double, bool> {
   testmodeassert_valid_level(element, ion, level);
 
   if (level == 0) {
@@ -214,8 +226,12 @@ void set_calculated_nne(const int nonemptymgi) {
 
 // Special case of only neutral ions, set nne to some finite value so that packets are not lost in kpkts
 void set_groundlevelpops_neutral(const ptrdiff_t nonemptymgi) {
-  printlnlog("[warning] calculate_ion_balance_nne: only neutral ions in cell modelgridindex {}",
-             grid::get_mgi_of_nonemptymgi(nonemptymgi));
+  if (nonemptymgi != neutralcell_warned_nonemptymgi || globals::timestep != neutralcell_warned_timestep) {
+    neutralcell_warned_nonemptymgi = nonemptymgi;
+    neutralcell_warned_timestep = globals::timestep;
+    printlnlog("[warning] set_groundlevelpops_neutral: only neutral ions in cell {} timestep {} (repeats suppressed)",
+               grid::get_mgi_of_nonemptymgi(nonemptymgi), globals::timestep);
+  }
   for (int element = 0; element < get_nelements(); element++) {
     const auto nnelement = grid::get_elem_numberdens(nonemptymgi, element);
     const int nions = get_nions(element);
@@ -258,7 +274,7 @@ auto find_converged_nne(const int nonemptymgi, double nne_max, const bool force_
       boost::math::tools::toms748_solve(f_nne, nne_min, nne_max, f_nne_min, f_nne_max, ftol<fractional_accuracy>, iter);
   const double nne_solution = 0.5 * (result.first + result.second);
   if (iter >= maxit) {
-    printlnlog("[warning] calculate_ion_balance_nne: nne did not converge within {} iterations", iter);
+    nne_solver_maxit_count++;
   }
 
   return static_cast<float>(std::max(MINPOP, nne_solution));
@@ -301,10 +317,7 @@ auto find_converged_nne(const int nonemptymgi, double nne_max, const bool force_
     pop_ratio_ground_to_upper *= nne_hi * phifactor;
 
     if (!std::isfinite(pop_ratio_ground_to_upper)) {
-      printlnlog(
-          "[info] calculate_ion_balance_nne: uppermost_ion limited by phi factors for element Z={}, ionstage {} in "
-          "cell {}",
-          get_atomicnumber(element), get_ionstage(element, ion), modelgridindex);
+      uppermost_ion_limited_count++;
       return ion;
     }
   }
@@ -338,9 +351,7 @@ auto find_converged_nne(const int nonemptymgi, double nne_max, const bool force_
     ionfractions[ion] = ionfractions[ion] / normfactor;
 
     if (normfactor == 0. || !std::isfinite(ionfractions[ion])) {
-      printlnlog("[warning] ionfract set to zero for ionstage {}, Z={} in cell {} with T_e {:g}, T_R {:g}",
-                 get_ionstage(element, ion), get_atomicnumber(element), grid::get_mgi_of_nonemptymgi(nonemptymgi),
-                 grid::get_Te(nonemptymgi), grid::get_TR(nonemptymgi));
+      ionfract_zeroed_count++;
       ionfractions[ion] = 0;
     }
   }
@@ -435,6 +446,10 @@ void set_groundlevelpops(const int nonemptymgi, const int element, const float n
 // Determine the electron number density for a given cell using a root
 // solver and calculate the dependent level populations.
 auto calculate_ion_balance_nne(const int nonemptymgi) -> void {
+  ionfract_zeroed_count = 0;
+  nne_solver_maxit_count = 0;
+  uppermost_ion_limited_count = 0;
+
   const bool force_saha = globals::lte_iteration || grid::thick_allcells[nonemptymgi] == 1;
 
   const double nne_max = grid::get_rho(nonemptymgi) / MH;
@@ -467,4 +482,32 @@ auto calculate_ion_balance_nne(const int nonemptymgi) -> void {
   }
 
   set_calculated_nne(nonemptymgi);
+
+  const bool any_warnings =
+      (ionfract_zeroed_count > 0) || (nne_solver_maxit_count > 0) || (uppermost_ion_limited_count > 0);
+  if (any_warnings &&
+      (nonemptymgi != ionbalance_warned_nonemptymgi || globals::timestep != ionbalance_warned_timestep)) {
+    ionbalance_warned_nonemptymgi = nonemptymgi;
+    ionbalance_warned_timestep = globals::timestep;
+    const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
+    if (ionfract_zeroed_count > 0) {
+      printlnlog(
+          "[warning] calculate_ion_balance_nne: cell {} timestep {}: {} non-finite ionfract value(s) set to zero "
+          "(T_e {:g} K, T_R {:g} K; repeats suppressed)",
+          modelgridindex, globals::timestep, ionfract_zeroed_count, grid::get_Te(nonemptymgi),
+          grid::get_TR(nonemptymgi));
+    }
+    if (nne_solver_maxit_count > 0) {
+      printlnlog(
+          "[warning] calculate_ion_balance_nne: cell {} timestep {}: nne solver failed to converge within the "
+          "iteration limit (repeats suppressed)",
+          modelgridindex, globals::timestep);
+    }
+    if (uppermost_ion_limited_count > 0) {
+      printlnlog(
+          "[info] calculate_ion_balance_nne: cell {} timestep {}: uppermost ion stage limited by phi factor overflow "
+          "for {} element(s) (repeats suppressed)",
+          modelgridindex, globals::timestep, uppermost_ion_limited_count);
+    }
+  }
 }

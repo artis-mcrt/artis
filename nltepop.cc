@@ -243,16 +243,17 @@ void print_level_rates_summary(const int element, const int selected_ion, const 
 
   for (int i = 0; i <= 3; i++) {
     // rates in from above, in from below, out to above, out to below
+    std::string rowprefix;
     if (i == 0) {
       const int nlevels_nlte = get_nlevels_excited_nlte(element, selected_ion);
       if (ion_has_superlevel(element, selected_ion) && (selected_level == nlevels_nlte + 1)) {
-        printlog("      superlevel ");
+        rowprefix = "      superlevel ";
       } else {
-        printlog("    level{:7} ", selected_level);
+        rowprefix = std::format("    level{:7} ", selected_level);
       }
-      printlog(" {:10.2e} ", popvec[selected_index]);
+      rowprefix += std::format(" {:10.2e} ", popvec[selected_index]);
     } else {
-      printlog("                             ");
+      rowprefix = std::string(29, ' ');
     }
 
     const bool into_level = (i <= 1);
@@ -274,21 +275,8 @@ void print_level_rates_summary(const int element, const int selected_ion, const 
     const double autoion_total =
         get_total_rate(selected_index, rate_matrices.autoion, popvec, into_level, only_levels_below, only_levels_above);
 
-    if (into_level) {
-      // into this level
-      printlog(" from ");
-    } else {
-      // out of this level
-      printlog("   to ");
-    }
-
-    if (only_levels_below) {
-      printlog("below ");
-    } else {
-      printlog("above ");
-    }
-
-    printlnlog("{:10.2e} {:10.2e} {:10.2e} {:10.2e} {:10.2e} {:10.2e} {:10.2e}", rad_bb_total, coll_bb_total,
+    printlnlog("{}{}{}{:10.2e} {:10.2e} {:10.2e} {:10.2e} {:10.2e} {:10.2e} {:10.2e}", rowprefix,
+               into_level ? " from " : "   to ", only_levels_below ? "below " : "above ", rad_bb_total, coll_bb_total,
                ntcoll_bb_total, rad_bf_total, coll_bf_total, ntcoll_bf_total, autoion_total);
   }
 }
@@ -1378,11 +1366,6 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
 
   if (grid::get_elem_massfrac(nonemptymgi, element) <= 0.) {
     // abundance of this element is zero, so do not store any NLTE populations
-    printlnlog(
-        "Not solving for NLTE populations in cell {} at timestep {} NLTE iteration {} for element Z={} due to zero "
-        "abundance",
-        modelgridindex, timestep, nlte_iter, atomic_number);
-
     nltepop_reset_element(nonemptymgi, element);
     return;
   }
@@ -1404,10 +1387,14 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
   const int nions = get_nions(element);
   const double nnelement = grid::get_elem_numberdens(nonemptymgi, element);
 
-  printlnlog(
-      "Solving for NLTE populations in cell {} at timestep {} NLTE iteration {} for element Z={} (mass fraction "
-      "{:.2e}, nnelement {:.2e} cm^-3)",
-      modelgridindex, timestep, nlte_iter, atomic_number, grid::get_elem_massfrac(nonemptymgi, element), nnelement);
+  if (nlte_iter == 0) {
+    // the per-iteration progress is summarised by the NLTE convergence messages in update_grid.cc,
+    // so this announcement is only made for the first iteration
+    printlnlog(
+        "Solving for NLTE populations in cell {} at timestep {} for element Z={} (mass fraction "
+        "{:.2e}, nnelement {:.2e} cm^-3)",
+        modelgridindex, timestep, atomic_number, grid::get_elem_massfrac(nonemptymgi, element), nnelement);
+  }
 
   const auto superlevel_partfuncs = get_element_superlevelpartfuncs(nonemptymgi, element);
 

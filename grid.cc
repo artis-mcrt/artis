@@ -225,10 +225,44 @@ auto get_cell_r_inner(const int cellindex, const GridType prop_gridtype) -> doub
   return NAN;
 }
 
+// Negative input mass fractions (within roundoff of zero) are counted as they are clamped during
+// the model read and summarised once at the end of read_ejecta_model() rather than being logged
+// per cell and nuclide, which could produce millions of lines for hydro-derived models.
+int n_negative_input_massfrac = 0;
+double most_negative_input_massfrac = 0.;
+int first_negative_massfrac_mgi = -1;
+int first_negative_massfrac_z = -1;  // -1 means the Fe-group mass fraction column
+int first_negative_massfrac_a = -1;
+
+void count_negative_input_massfrac(const int modelgridindex, const int z, const int a, const double massfrac) {
+  n_negative_input_massfrac++;
+  most_negative_input_massfrac = std::min(most_negative_input_massfrac, massfrac);
+  if (first_negative_massfrac_mgi < 0) {
+    first_negative_massfrac_mgi = modelgridindex;
+    first_negative_massfrac_z = z;
+    first_negative_massfrac_a = a;
+  }
+}
+
+void report_negative_input_massfracs() {
+  if (n_negative_input_massfrac > 0) {
+    const auto first_species = (first_negative_massfrac_z < 0)
+                                   ? std::string("X_Fegroup")
+                                   : std::format("Z={} A={}", first_negative_massfrac_z, first_negative_massfrac_a);
+    printlnlog(
+        "[warning] {} negative mass fraction(s) in the input model were clamped to zero (most negative {:g}; first "
+        "in cell {} for {})",
+        n_negative_input_massfrac, most_negative_input_massfrac, first_negative_massfrac_mgi, first_species);
+  }
+}
+
 void set_ffegrp(const int modelgridindex, float x) {
   if (!(x >= 0.)) {
-    printlnlog("WARNING: Fe-group mass fraction {:g} is negative in cell {}", x, modelgridindex);
+    if (!(x > -1e-6)) {
+      printlnlog("[error] Fe-group mass fraction {:g} is negative in cell {}", x, modelgridindex);
+    }
     assert_always(x > -1e-6);
+    count_negative_input_massfrac(modelgridindex, -1, -1, x);
     x = 0.;
   }
 
@@ -250,9 +284,12 @@ void set_modelinitnucmassfrac(const int modelgridindex, const int nucindex, floa
   // initnucmassfrac array is in node shared memory
   assert_always(nucindex >= 0);
   if (!(abund >= 0.)) {
-    printlnlog("WARNING: nuclear mass fraction for nucindex {} = {:g} is negative in cell {}", nucindex, abund,
-               modelgridindex);
+    if (!(abund > -1e-6)) {
+      printlnlog("[error] mass fraction {:g} for Z={} A={} is negative in cell {}", abund, decay::get_nuc_z(nucindex),
+                 decay::get_nuc_a(nucindex), modelgridindex);
+    }
     assert_always(abund > -1e-6);
+    count_negative_input_massfrac(modelgridindex, decay::get_nuc_z(nucindex), decay::get_nuc_a(nucindex), abund);
     abund = 0.;
   }
 
@@ -1648,21 +1685,7 @@ void set_nnetot(const int nonemptymgi) {
 
 void set_kappagrey(const int nonemptymgi, const float kappagrey) { kappagrey_allcells[nonemptymgi] = kappagrey; }
 
-void set_Te(const int nonemptymgi, const float Te) {
-  if (Te > 0.) {
-    // ignore the zero initialisation value for this check
-    const double nu_peak = 5.879e10 * Te;
-    if (nu_peak > NU_MAX_R || nu_peak < NU_MIN_R) {
-      const auto modelgridindex = get_mgi_of_nonemptymgi(nonemptymgi);
-      printlnlog(
-          "[warning] modelgridindex {} B_planck(Te={:g} K) peak at {:g} Hz is outside frequency range NU_MIN_R {:g} "
-          "NU_MAX_R {:g}",
-          modelgridindex, Te, nu_peak, NU_MIN_R, NU_MAX_R);
-    }
-  }
-
-  Te_allcells[nonemptymgi] = Te;
-}
+void set_Te(const int nonemptymgi, const float Te) { Te_allcells[nonemptymgi] = Te; }
 
 void set_TR(const int nonemptymgi, const float TR) { TR_allcells[nonemptymgi] = TR; }
 
@@ -1979,10 +2002,6 @@ void read_ejecta_model() {
       assert_always(ssline >> cellnumberin >> cellpos_in[0] >> cellpos_in[1] >> cellpos_in[2] >> rho_model_in);
       rho_tmodel = rho_model_in;
 
-      if (mgi % (ncoord_model[1] * ncoord_model[2]) == 0) {
-        printlnlog("read up to cell mgi {}", mgi);
-      }
-
       // cell coordinates in the 3D model.txt file are sometimes reordered by the scaling script
       // however, the cellindex always should increment X first, then Y, then Z
       const double xmax_tmodel = globals::vmax * t_model;
@@ -2062,6 +2081,8 @@ void read_ejecta_model() {
              get_totmassnuclide_tmodel(24, 48) / MSUN);
   printlnlog("  Fe-group: {:9.3e}  57Ni: {:9.3e}  57Co: {:9.3e}", mfegroup / MSUN,
              get_totmassnuclide_tmodel(28, 57) / MSUN, get_totmassnuclide_tmodel(27, 57) / MSUN);
+
+  report_negative_input_massfracs();
 
   read_possible_yefile();
 }

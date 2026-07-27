@@ -18,6 +18,7 @@
 #include <print>
 #include <sstream>
 #include <string>
+#include <system_error>
 #include <tuple>
 #include <vector>
 
@@ -511,7 +512,6 @@ void init_vspecpol() {
 }
 
 void write_vspecpol(const std::string& filename) {
-  printlnlog("Writing {}", filename);
   auto vspecpol_file = fstream_required(filename, std::ios::out | std::ios::trunc);
   for (int ind_comb = 0; ind_comb < (nobsdirections * nspectraperobsdir); ind_comb++) {
     std::print(vspecpol_file, "{:g}", 0.);
@@ -650,8 +650,11 @@ void remove_temp_vpkt_file(const int nts, const int my_rank) {
   };
 
   for (const auto& filename : filenames) {
-    if (std::filesystem::remove(filename)) {
-      printlnlog("Deleted {}", filename);
+    // deleting a temp file is routine and not logged, but a failure to delete an existing file is
+    std::error_code remove_error;
+    std::filesystem::remove(filename, remove_error);
+    if (remove_error) {
+      printlnlog("[warning] failed to delete {}: {}", filename, remove_error.message());
     }
   }
 }
@@ -856,7 +859,6 @@ void write_timestep(const int nts, const bool is_final) {
   if (vgrid_on) {
     const auto filename_vpktgrid = is_final ? std::format("vpkt_grid_{:04d}.out", my_rank)
                                             : std::format("vpkt_grid_{:04d}_ts{}.tmp", my_rank, nts);
-    printlnlog("Writing vpkt grid file {}", filename_vpktgrid);
     write_vpkt_grid(filename_vpktgrid);
   }
 
@@ -867,12 +869,13 @@ void write_timestep(const int nts, const bool is_final) {
                                         : std::format("vpackets_{:04d}_ts{}.tmp", my_rank, nts + 1);
 
     std::filesystem::copy_file(filename_source, filename_dest, std::filesystem::copy_options::overwrite_existing);
-    printlnlog("Copying {} to {}", filename_source, filename_dest);
 
     if (!is_final) {
       vpkt_contrib_file = std::ofstream(filename_dest, std::ios::app);
     }
   }
+
+  printlnlog("timestep {}: wrote {}vpkt output files", nts, is_final ? "final " : "temporary ");
 }
 
 void init(const int nts, const bool continued_from_saved) {

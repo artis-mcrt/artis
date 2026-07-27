@@ -721,9 +721,14 @@ auto search_groundphixslist(const double nu_edge, const int element_in, const in
     printlnlog(
         "  This shouldn't happen, but is possible if there are multiple levels in the adata file at "
         "energy=0");
-    for (int looplevels = 0; looplevels < get_nlevels(element_in, ion_in); looplevels++) {
+    const int nlevels_in = get_nlevels(element_in, ion_in);
+    constexpr int maxshownlevels = 10;
+    for (int looplevels = 0; looplevels < std::min(nlevels_in, maxshownlevels); looplevels++) {
       printlnlog("  element {}, ion {}, level {}, energy {:g}", element_in, ion_in, looplevels,
                  epsilon(element_in, ion_in, looplevels));
+    }
+    if (nlevels_in > maxshownlevels) {
+      printlnlog("  (energies of the remaining {} levels omitted)", nlevels_in - maxshownlevels);
     }
     assert_always(false);
     return i - 1;
@@ -949,10 +954,12 @@ void read_autoion_data() {
   double autoion_A = -1;
   bool allautoion_levels_are_not_nlte = true;
   bool allautoion_levels_are_nlte = true;
+  int autoion_transitions_read = 0;
 
   while (get_noncommentline(autoionfile, autoionline)) {
     assert_always(std::istringstream(autoionline) >> Z >> upperionstage >> upperlevel_in >> lowerionstage >>
                   lowerlevel_in >> autoion_A);
+    autoion_transitions_read++;
 
     assert_always(Z > 0);
     assert_always(upperionstage >= 2);
@@ -979,9 +986,6 @@ void read_autoion_data() {
         allautoion_levels_are_not_nlte = allautoion_levels_are_not_nlte && !level_is_nlte;
         allautoion_levels_are_nlte = allautoion_levels_are_nlte && level_is_nlte;
 
-        printlnlog("Got to noting data for Z {} upperion {} upperlvl {} lowerion {} lowerlvl {} with A {:g}", Z,
-                   upperion, upperlevel, lowerion, lowerlevel, autoion_A);
-
         const auto lower_uniquelevelindex = get_uniquelevelindex(element, lowerion, lowerlevel);
         const auto upper_uniquelevelindex = get_uniquelevelindex(element, upperion, upperlevel);
 
@@ -1007,6 +1011,9 @@ void read_autoion_data() {
   }
 
   assert_always(allautoion_levels_are_not_nlte || allautoion_levels_are_nlte);
+
+  printlnlog("autoion.txt: read {} autoionisation transitions, stored {} for the included ions",
+             autoion_transitions_read, temp_allautoion.size());
 
   globals::allautoion = MPI_shared_array<globals::LevelAutoion>(temp_allautoion.size());
   if (globals::rank_in_node == 0) {
@@ -1096,7 +1103,6 @@ void read_phixs_data() {
       }
     }
   }
-  printlnlog("cont_index {}", cont_index);
   assert_always(cont_index == std::ssize(tmpallphixstargets));
 
   if (!tmpallphixs.empty()) {
@@ -1210,7 +1216,6 @@ void read_levels_and_transitions(std::vector<TempEnergyLevel>& temp_alllevels,
   auto adata = fstream_required("adata.txt", std::ios::in);
   auto ftransitiondata = fstream_required("transitiondata.txt", std::ios::in);
   int uniquelevelindex = 0;  // index into list of all levels of all ions of all elements
-  int nbfcheck = 0;
   for (int element = 0; element < get_nelements(); element++) {
     // now read in data for all ions of the current element. before doing so initialize
     // energy scale for the current element (all level energies are stored relative to
@@ -1277,9 +1282,6 @@ void read_levels_and_transitions(std::vector<TempEnergyLevel>& temp_alllevels,
                       temp_alllevels);
       uniquelevelindex += get_nlevels(element, ion);
 
-      if (ion < nions - 1) {
-        nbfcheck += get_nlevels_ionising(element, ion);
-      }
       // and proceed through the transitionlist till we match this ionstage (if it was not the neutral one)
       int transdata_Z_in = -1;
       int transdata_ionstage_in = -1;
@@ -1321,7 +1323,6 @@ void read_levels_and_transitions(std::vector<TempEnergyLevel>& temp_alllevels,
       }
     }
   }
-  printlnlog("nbfcheck {}", nbfcheck);
 }
 
 // sort the temporary linelist by descending frequency and warn about any duplicate transitions
@@ -1339,6 +1340,9 @@ void sort_temp_linelist(std::vector<TempLineTransitionInput>& temp_linelist) {
              std::tie(b.elementindex, b.ionindex, b.lowerlevelindex, b.upperlevelindex, b.einstein_A);
     });
 
+    int duplicate_count = 0;
+    int duplicate_exact_nu_count = 0;
+    constexpr int max_duplicates_shown = 10;
     for (int i = 0; i < globals::nlines - 1; i++) {
       const double nu = temp_linelist[i].nu;
       const double nu_next = temp_linelist[i + 1].nu;
@@ -1348,15 +1352,25 @@ void sort_temp_linelist(std::vector<TempLineTransitionInput>& temp_linelist) {
 
         if ((a1.elementindex == a2.elementindex) && (a1.ionindex == a2.ionindex) &&
             (a1.lowerlevelindex == a2.lowerlevelindex) && (a1.upperlevelindex == a2.upperlevelindex)) {
-          printlnlog("Duplicate transition line? {}", a1.nu == a2.nu ? "nu match exact" : "close to nu match");
-          printlnlog("a: Z={} ionstage {} lower {} upper {} nu {:g} lambda {:g}", get_atomicnumber(a1.elementindex),
-                     get_ionstage(a1.elementindex, a1.ionindex), a1.lowerlevelindex, a1.upperlevelindex, a1.nu,
-                     1e8 * CLIGHT / a1.nu);
-          printlnlog("b: Z={} ionstage {} lower {} upper {} nu {:g} lambda {:g}", get_atomicnumber(a2.elementindex),
-                     get_ionstage(a2.elementindex, a2.ionindex), a2.lowerlevelindex, a2.upperlevelindex, a2.nu,
-                     1e8 * CLIGHT / a2.nu);
+          duplicate_count++;
+          if (a1.nu == a2.nu) {
+            duplicate_exact_nu_count++;
+          }
+          if (duplicate_count <= max_duplicates_shown) {
+            printlnlog(
+                "[warning] duplicate bb-transition Z={} ionstage {} levels {} to {}: nu {:g} Hz and {:g} Hz (lambda "
+                "{:.2f} Angstrom)",
+                get_atomicnumber(a1.elementindex), get_ionstage(a1.elementindex, a1.ionindex), a1.lowerlevelindex,
+                a1.upperlevelindex, a1.nu, a2.nu, 1e8 * CLIGHT / a1.nu);
+          }
         }
       }
+    }
+    if (duplicate_count > 0) {
+      printlnlog(
+          "[warning] found {} duplicate bb-transitions in the linelist ({} with exactly matching nu; first {} "
+          "listed above)",
+          duplicate_count, duplicate_exact_nu_count, std::min(duplicate_count, max_duplicates_shown));
     }
   }
 }

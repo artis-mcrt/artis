@@ -667,6 +667,27 @@ void read_collion_data() {
     return std::tie(a.Z, a.ionstage, a.ionpot_ev, a.n, a.l) < std::tie(b.Z, b.ionstage, b.ionpot_ev, b.n, b.l);
   });
 
+  // this condition is checked here once per ion (it does not depend on the cell), so that
+  // calculate_eff_ionpot_auger_rates does not have to report it for every cell
+  for (int element = 0; element < get_nelements(); element++) {
+    const int Z = get_atomicnumber(element);
+    for (int ion = 0; ion < get_nions(element); ion++) {
+      const int ionstage = get_ionstage(element, ion);
+      if ((Z - (ionstage - 1)) <= 0) {
+        continue;  // no bound electrons, so no NT impact ionisation
+      }
+      const bool any_subshells = std::ranges::any_of(colliondata, [Z, ionstage](const ShellParams& collionrow) {
+        return collionrow.Z == Z && collionrow.ionstage == ionstage;
+      });
+      if (!any_subshells) {
+        printlnlog(
+            "[warning] no NT impact ionisation subshell data for Z={} ionstage {}: the Spencer-Fano solver will "
+            "default to the work function approximation and not account for the ionisation energy",
+            Z, ionstage);
+      }
+    }
+  }
+
   if (NT_MAX_AUGER_ELECTRONS > 0) {
     read_auger_data();
   }
@@ -1308,12 +1329,7 @@ void calculate_eff_ionpot_auger_rates(const int nonemptymgi, const int element, 
     }
     celliondata.eff_ionpot = static_cast<float>(eff_ionpot);
   } else {
-    printlnlog("WARNING! No matching subshells in NT impact ionisation cross section data for Z={} ionstage {}.",
-               get_atomicnumber(element), get_ionstage(element, ion));
-    printlnlog(
-        "-> Defaulting to work function approximation and ionisation energy is not accounted for in Spencer-Fano "
-        "solution.");
-
+    // the absence of matching subshell data is reported once at startup by read_collion_data()
     celliondata.eff_ionpot = static_cast<float>(1. / get_oneoverw_approx_axelrod(element, ion, nonemptymgi));
   }
 }
@@ -2414,7 +2430,7 @@ void solve_spencerfano(const int nonemptymgi, const int timestep, const int iter
   const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
   bool skip_solution = false;
   if (timestep < globals::num_lte_timesteps + 1) {
-    printlnlog("Skipping Spencer-Fano solution for first NLTE timestep");
+    // this global condition is reported once per timestep by update_grid(), not once per cell
     skip_solution = true;
   } else if (get_ntlepton_deposition_rate_density(nonemptymgi) / EV < MINDEPRATE) {
     printlnlog(
@@ -2482,6 +2498,7 @@ void solve_spencerfano(const int nonemptymgi, const int timestep, const int iter
     sfmatrix[uppertriangular(i, i)] += electron_loss_rate(engrid(i) * EV, nne) / EV;
   }
 
+  std::string includedionsstr;
   for (int element = 0; element < get_nelements(); element++) {
     const int Z = get_atomicnumber(element);
     const int nions = get_nions(element);
@@ -2496,14 +2513,11 @@ void solve_spencerfano(const int nonemptymgi, const int timestep, const int iter
 
       const int ionstage = get_ionstage(element, ion);
       if (first_included_ion_of_element) {
-        printlog("  including Z={:2} ionstages: ", Z);
-        for (int i = 1; i < get_ionstage(element, ion); i++) {
-          printlog("  ");
-        }
+        includedionsstr += std::format(" Z={} ionstages", Z);
         first_included_ion_of_element = false;
       }
 
-      printlog("{} ", ionstage);
+      includedionsstr += std::format(" {}", ionstage);
 
       sfmatrix_add_excitation(sfmatrix, nonemptymgi, element, ion);
 
@@ -2511,9 +2525,13 @@ void solve_spencerfano(const int nonemptymgi, const int timestep, const int iter
         sfmatrix_add_ionisation(sfmatrix, Z, ionstage, nnion);
       }
     }
-    if (!first_included_ion_of_element) {
-      printlnlog("");
-    }
+  }
+
+  // the included set rarely changes between solves, so only log it when it differs from the last report
+  THREADLOCALONHOST auto last_logged_includedionsstr = std::string();
+  if (includedionsstr != last_logged_includedionsstr) {
+    last_logged_includedionsstr = includedionsstr;
+    printlnlog("  including{} (list logged when it changes)", includedionsstr);
   }
 
   decompactify_triangular_matrix(sfmatrix);

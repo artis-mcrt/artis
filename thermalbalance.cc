@@ -312,6 +312,15 @@ void call_T_e_finder(const int nonemptymgi, const double t_current, HeatingCooli
 
   grid::set_Te(nonemptymgi, static_cast<float>(T_e));
 
+  // check the converged T_e only (grid::set_Te is also called with rejected intermediate solver guesses)
+  const double nu_peak = 5.879e10 * T_e;  // Wien's displacement law
+  if (nu_peak > NU_MAX_R || nu_peak < NU_MIN_R) {
+    printlnlog(
+        "[warning] cell {} timestep {}: B_planck(T_e={:g} K) peak at {:g} Hz is outside the radiation field frequency "
+        "range [{:g}, {:g}] Hz",
+        modelgridindex, globals::timestep, T_e, nu_peak, NU_MIN_R, NU_MAX_R);
+  }
+
   // this call will make sure heating/cooling rates and populations are updated for the final T_e
   // in case T_e got modified after the T_e solver finished
   f_T_e(T_e);
