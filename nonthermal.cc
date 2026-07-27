@@ -623,7 +623,7 @@ void read_collion_data() {
       if (!any_data_matched) {
         const double ionpot_ev = get_ionpot(element, ion) / EV;
         printlnlog(
-            "No collisional ionisation data for Z={} ionstage {}. Using Lotz approximation with ionpot = {:g} eV", Z,
+            "No collisional ionisation data for Z={} ionstage {}. Using Lotz approximation with ionpot = {:g} [eV]", Z,
             ionstage, ionpot_ev);
 
         // get the approximate shell occupancy if we don't have the data file
@@ -1565,7 +1565,7 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const std::a
           } else {
             printlog("{} (Lotz)", shellnames.at(-collionrow.l));
           }
-          printlog(" I {:5.1f} eV: frac_ionisation {:10.4e}", collionrow.ionpot_ev, frac_ionisation_ion_shell);
+          printlog(" I {:5.1f} [eV]: frac_ionisation {:10.4e}", collionrow.ionpot_ev, frac_ionisation_ion_shell);
 
           if (NT_MAX_AUGER_ELECTRONS > 0) {
             printlog("  prob(n Auger elec):");
@@ -1660,9 +1660,9 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const std::a
       frac_excitation_total += frac_excitation_ion;
 
       if (verbose) {
-        printlnlog("    approxworkfn: {:9.2f} eV  (without using the Spencer-Fano solution)",
+        printlnlog("    approxworkfn: {:9.2f} [eV]  (without using the Spencer-Fano solution)",
                    (1. / get_oneoverw_approx_axelrod(element, ion, nonemptymgi)) / EV);
-        printlnlog("    eff_ionpot:   {:9.2f} eV  (always use valence potential is {})",
+        printlnlog("    eff_ionpot:   {:9.2f} [eV]  (always use valence potential is {})",
                    get_eff_ionpot(nonemptymgi, element, ion) / EV, (NT_USE_VALENCE_IONPOTENTIAL ? "true" : "false"));
 
         printlnlog("    approxworkfn Gamma:      {:9.3e}", nt_ionisation_ratecoeff_wfapprox(nonemptymgi, element, ion));
@@ -1807,10 +1807,10 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const std::a
   const double frac_sum = frac_heating_calculated + frac_excitation_total + frac_ionisation_total;
 
   if (verbose) {
-    printlnlog("  deposition:  {:9.2f} eV/s/cm^3", deposition_rate_density_ev);
-    printlnlog("  nne:         {:9.3e} e-/cm^3", nne);
-    printlnlog("  nnetot:      {:9.3e} e-/cm^3", nnetot);
-    printlnlog("  nne_nt     < {:9.3e} e-/cm^3", nne_nt_max);
+    printlnlog("  deposition:  {:9.2f} [eV/s/cm^3]", deposition_rate_density_ev);
+    printlnlog("  nne:         {:9.3e} [e-/cm^3]", nne);
+    printlnlog("  nnetot:      {:9.3e} [e-/cm^3]", nnetot);
+    printlnlog("  nne_nt     < {:9.3e} [e-/cm^3]", nne_nt_max);
     printlnlog("  nne_nt/nne < {:9.3e}", nne_nt_max / nne);
 
     printlnlog("  frac_heating_tot:    {:g}", frac_heating_calculated);
@@ -2110,8 +2110,8 @@ void init() {
   printlnlog("  NTEXCITATION_MAXNLEVELS_LOWER {}", NTEXCITATION_MAXNLEVELS_LOWER);
   printlnlog("  NTEXCITATION_MAXNLEVELS_UPPER {}", NTEXCITATION_MAXNLEVELS_UPPER);
   printlnlog("  SFPTS {}", SFPTS);
-  printlnlog("  SF_EMIN {:g} eV", SF_EMIN);
-  printlnlog("  SF_EMAX {:g} eV", SF_EMAX);
+  printlnlog("  SF_EMIN {:g} [eV]", SF_EMIN);
+  printlnlog("  SF_EMAX {:g} [eV]", SF_EMAX);
   printlnlog("  NT_USE_VALENCE_IONPOTENTIAL {}", NT_USE_VALENCE_IONPOTENTIAL ? "on" : "off");
   printlnlog("  NT_MAX_AUGER_ELECTRONS {}", NT_MAX_AUGER_ELECTRONS);
   printlnlog("  SF_AUGER_CONTRIBUTION {}", SF_AUGER_CONTRIBUTION_ON ? "on" : "off");
@@ -2119,7 +2119,7 @@ void init() {
 
   if (NT_EXCITATION_ON) {
     nt_excitations_stored = std::min(MAX_NT_EXCITATIONS_STORED, get_possible_nt_excitation_count());
-    printlnlog("[info] mem_usage: storing {} non-thermal excitations for non-empty cells occupies {:.3f} MB",
+    printlnlog("[info] mem_usage: storing {} non-thermal excitations for non-empty cells occupies {:.3f} [MB]",
                nt_excitations_stored,
                nonempty_npts_model * sizeof(NonThermalExcitation) * nt_excitations_stored / 1024. / 1024.);
 
@@ -2150,7 +2150,7 @@ void init() {
   const double sourceintegral = std::ranges::fold_left(
       std::views::iota(0, SFPTS), 0.0, [](double sum, int s) { return sum + (sourcevec(s) * DELTA_E); });
 
-  printlnlog("E_init: {:14.7e} eV/s/cm3", E_init_ev);
+  printlnlog("E_init: {:14.7e} [eV/s/cm^3]", E_init_ev);
   printlnlog("source function integral: {:14.7e}", sourceintegral);
 
   read_collion_data();
@@ -2445,7 +2445,8 @@ void solve_spencerfano(const int nonemptymgi, const int timestep, const int iter
     skip_solution = true;
   } else if (get_ntlepton_deposition_rate_density(nonemptymgi) / EV < MINDEPRATE) {
     printlnlog(
-        "Non-thermal deposition rate of {:g} eV/s/cm^3 below MINDEPRATE {:g} in cell {} at timestep {}. Skipping "
+        "Non-thermal deposition rate of {:g} [eV/s/cm^3] below MINDEPRATE {:g} [eV/s/cm^3] in cell {} at timestep {}. "
+        "Skipping "
         "Spencer-Fano solution.",
         get_ntlepton_deposition_rate_density(nonemptymgi) / EV, MINDEPRATE, modelgridindex, timestep);
 
@@ -2490,8 +2491,8 @@ void solve_spencerfano(const int nonemptymgi, const int timestep, const int iter
     return;
   }
   printlnlog(
-      "Setting up Spencer-Fano equation with {} energy points from {:g} eV to {:g} eV in cell {} at timestep {} "
-      "iteration {} (nne={:g} e-/cm^3)",
+      "Setting up Spencer-Fano equation with {} energy points from {:g} [eV] to {:g} [eV] in cell {} at timestep {} "
+      "iteration {} (nne={:g} [e-/cm^3])",
       SFPTS, SF_EMIN, SF_EMAX, modelgridindex, timestep, iteration, nne);
 
   nt_solution[nonemptymgi].nneperion_when_solved = static_cast<float>(nne_per_ion);

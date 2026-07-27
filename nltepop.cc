@@ -1390,7 +1390,7 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
   if (cell_Te == MINTEMP) {
     printlnlog(
         "Not solving for NLTE populations in cell {} at timestep {} NLTE iteration {} for element Z={} due to low "
-        "temperature Te=MINTEMP={:g} K",
+        "temperature Te=MINTEMP={:g} [K]",
         modelgridindex, timestep, nlte_iter, atomic_number, cell_Te);
     set_element_pops_lte(nonemptymgi, element);
     return;
@@ -1407,7 +1407,7 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
     // so this announcement is only made for the first iteration
     printlnlog(
         "Solving for NLTE populations in cell {} at timestep {} for element Z={} (mass fraction "
-        "{:.2e}, nnelement {:.2e} cm^-3)",
+        "{:.2e}, nnelement {:.2e} [cm^-3])",
         modelgridindex, timestep, atomic_number, grid::get_elem_massfrac(nonemptymgi, element), nnelement);
   }
 

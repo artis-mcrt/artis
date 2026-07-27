@@ -79,19 +79,21 @@ void printout_tracemission_stats() {
     if (mode == 0) {
       std::ranges::SORT_OR_STABLE_SORT(traceemissionabsorption,
                                        [](const auto& a, const auto& b) { return a.energyemitted > b.energyemitted; });
-      printlnlog("lambda [{:5.1f}, {:5.1f}] nu {:g} {:g}", traceemissabs_lambdamin, traceemissabs_lambdamax,
-                 traceemissabs_nulower, traceemissabs_nuupper);
+      printlnlog("lambda [{:5.1f}, {:5.1f}] [Angstrom] nu [{:g}, {:g}] [Hz]", traceemissabs_lambdamin,
+                 traceemissabs_lambdamax, traceemissabs_nulower, traceemissabs_nuupper);
 
       printlnlog(
-          "Top line emission contributions in the range lambda [{:5.1f}, {:5.1f}] time [{:5.1f}d, {:5.1f}d] ({:g} erg)",
+          "Top line emission contributions in the range lambda [{:5.1f}, {:5.1f}] [Angstrom] time [{:5.1f}, {:5.1f}] "
+          "[d] "
+          "({:g} [erg])",
           traceemissabs_lambdamin, traceemissabs_lambdamax, traceemissabs_timemin / DAY, traceemissabs_timemax / DAY,
           traceemission_totalenergy);
     } else {
       std::ranges::SORT_OR_STABLE_SORT(traceemissionabsorption, std::ranges::greater{},
                                        &EmissionAbsorptionContrib::energyabsorbed);
       printlnlog(
-          "Top line absorption contributions in the range lambda [{:5.1f}, {:5.1f}] time [{:5.1f}d, {:5.1f}d] ({:g} "
-          "erg)",
+          "Top line absorption contributions in the range lambda [{:5.1f}, {:5.1f}] [Angstrom] time [{:5.1f}, {:5.1f}] "
+          "[d] ({:g} [erg])",
           traceemissabs_lambdamin, traceemissabs_lambdamax, traceemissabs_timemin / DAY, traceemissabs_timemax / DAY,
           traceabsorption_totalenergy);
     }
@@ -534,7 +536,7 @@ void init_spectra(Spectra& spectra, const double nu_min, const double nu_max, co
   MPI_Barrier_allranks();
 
   if (print_memusage) {
-    printlnlog("[info] mem_usage: set of spectra{} occupy {:.3f} MB (node shared memory)",
+    printlnlog("[info] mem_usage: set of spectra{} occupy {:.3f} [MB] (node shared memory)",
                do_emission_absorption ? " (with emission/absorption tracing)" : "",
                spectra.mem_usage_bytes() / 1024. / 1024.);
   }

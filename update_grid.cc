@@ -568,7 +568,7 @@ void update_grid(std::ostream& estimators_file, const int nts, const int nts_pre
   const auto startup_elapsed_seconds =
       std::chrono::duration<double>(sys_time_start_update_grid - real_time_start).count();
   const auto tmid = globals::timesteps[nts].mid;
-  printlnlog("timestep {}: time before update grid (tstartup + {:.1f} seconds) simtime ts_mid {:g} days", nts,
+  printlnlog("timestep {}: time before update grid (tstartup + {:.1f} seconds) simtime ts_mid {:g} [days]", nts,
              startup_elapsed_seconds, tmid / DAY);
 
   globals::lte_iteration = (nts < globals::num_lte_timesteps);

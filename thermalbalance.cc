@@ -279,10 +279,10 @@ void call_T_e_finder(const int nonemptymgi, const double t_current, HeatingCooli
                                                     ftol<TEMPERATURE_SOLVER_ACCURACY>, iternum);
     T_e = 0.5 * (result.first + result.second);
     if (iternum >= maxit) {
-      printlnlog("[warning] call_T_e_finder: T_e did not converge within {} iterations. interval [{:g}, {:g}] K",
+      printlnlog("[warning] call_T_e_finder: T_e did not converge within {} iterations. interval [{:g}, {:g}] [K]",
                  iternum, result.first, result.second);
     } else {
-      printlnlog("after {} iterations, T_e = {:g} K, interval [{:g}, {:g}] K", iternum, T_e, result.first,
+      printlnlog("after {} iterations, T_e = {:g} [K], interval [{:g}, {:g}] [K]", iternum, T_e, result.first,
                  result.second);
     }
   } else if (invalid_values || f_T_max < 0) {
@@ -305,15 +305,15 @@ void call_T_e_finder(const int nonemptymgi, const double t_current, HeatingCooli
     const double T_e_solved = T_e;
     T_e = std::min(2 * T_e_old, MAXTEMP);
     printlnlog(
-        "T_e damping in cell {} at timestep {}: solver gave T_e {:g} K, clamping the rise from the previous value "
-        "{:g} K to {:g} K",
+        "T_e damping in cell {} at timestep {}: solver gave T_e {:g} [K], clamping the rise from the previous value "
+        "{:g} [K] to {:g} [K]",
         modelgridindex, globals::timestep, T_e_solved, T_e_old, T_e);
   } else if (T_e < 0.5 * T_e_old) {
     const double T_e_solved = T_e;
     T_e = std::max(0.5 * T_e_old, MINTEMP);
     printlnlog(
-        "T_e damping in cell {} at timestep {}: solver gave T_e {:g} K, clamping the fall from the previous value "
-        "{:g} K to {:g} K",
+        "T_e damping in cell {} at timestep {}: solver gave T_e {:g} [K], clamping the fall from the previous value "
+        "{:g} [K] to {:g} [K]",
         modelgridindex, globals::timestep, T_e_solved, T_e_old, T_e);
   }
 
@@ -323,8 +323,8 @@ void call_T_e_finder(const int nonemptymgi, const double t_current, HeatingCooli
   const double nu_peak = 5.879e10 * T_e;  // Wien's displacement law
   if (nu_peak > NU_MAX_R || nu_peak < NU_MIN_R) {
     printlnlog(
-        "[warning] cell {} timestep {}: B_planck(T_e={:g} K) peak at {:g} Hz is outside the radiation field frequency "
-        "range [{:g}, {:g}] Hz",
+        "[warning] cell {} timestep {}: B_planck(T_e={:g} [K]) peak at {:g} [Hz] is outside the radiation field "
+        "frequency range [{:g}, {:g}] [Hz]",
         modelgridindex, globals::timestep, T_e, nu_peak, NU_MIN_R, NU_MAX_R);
   }
 

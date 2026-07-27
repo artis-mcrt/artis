@@ -493,7 +493,7 @@ auto calculate_ion_balance_nne(const int nonemptymgi) -> void {
     if (ionfract_zeroed_count > 0) {
       printlnlog(
           "[warning] calculate_ion_balance_nne: cell {} timestep {}: {} non-finite ionfract value(s) set to zero "
-          "(T_e {:g} K, T_R {:g} K; repeats suppressed)",
+          "(T_e {:g} [K], T_R {:g} [K]; repeats suppressed)",
           modelgridindex, globals::timestep, ionfract_zeroed_count, grid::get_Te(nonemptymgi),
           grid::get_TR(nonemptymgi));
     }

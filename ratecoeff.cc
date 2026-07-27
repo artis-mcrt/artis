@@ -262,7 +262,7 @@ void read_recombrate_file() {
   const float Te_estimate = RECOMBCALIBRATION_T_ELEC;
   const double log_Te_estimate = log10(RECOMBCALIBRATION_T_ELEC);
 
-  printlnlog("Calibrating recombination rates for a temperature of {:.1f} K", Te_estimate);
+  printlnlog("Calibrating recombination rates for a temperature of {:.1f} [K]", Te_estimate);
 
   struct RRCRow {
     double log_Te;
@@ -331,7 +331,7 @@ void read_recombrate_file() {
 
         double rrc = calculate_ionrecombcoeff(-1, Te_estimate, element, ion, assume_lte, collisional_not_radiative,
                                               false, per_groundmultipletpop);
-        printlnlog("    rrc (initial): {:10.3e} cm^3/s", rrc);
+        printlnlog("    rrc (initial): {:10.3e} [cm^3/s]", rrc);
 
         if (!(rrc > 0.)) {
           // no recombination into this ion from the atomic data (e.g. the ion below has no
@@ -355,14 +355,14 @@ void read_recombrate_file() {
 
             rrc = calculate_ionrecombcoeff(-1, Te_estimate, element, ion, assume_lte, collisional_not_radiative, false,
                                            per_groundmultipletpop);
-            printlnlog("    rrc (after low-n scaling): {:10.3e} cm^3/s", rrc);
+            printlnlog("    rrc (after low-n scaling): {:10.3e} [cm^3/s]", rrc);
           }
         }
 
         // hopefully the RRC now matches the low_n value well, if it was defined
         // Next, use the superlevel recombination rates to make up the excess needed to reach the total RRC
 
-        printlnlog("  input_rrc_total: {:10.3e} cm^3/s", input_rrc_total);
+        printlnlog("  input_rrc_total: {:10.3e} [cm^3/s]", input_rrc_total);
 
         if (input_rrc_total < 0) {
           // negative means no tabulated total, in the same way that a negative rrc_low_n is ignored above
@@ -370,7 +370,7 @@ void read_recombrate_file() {
         } else if (rrc < input_rrc_total) {
           const double rrc_superlevel = calculate_ionrecombcoeff(
               -1, Te_estimate, element, ion, assume_lte, collisional_not_radiative, true, per_groundmultipletpop);
-          printlnlog("  rrc(superlevel): {:10.3e} cm^3/s", rrc_superlevel);
+          printlnlog("  rrc(superlevel): {:10.3e} [cm^3/s]", rrc_superlevel);
 
           if (rrc_superlevel > 0) {
             const double phixs_multiplier_superlevel = 1.0 + ((input_rrc_total - rrc) / rrc_superlevel);
@@ -386,7 +386,7 @@ void read_recombrate_file() {
             scale_levels(0, phixs_multiplier);
           }
         } else {
-          printlnlog("    rrc {:10.3e} >= input_rrc_total {:10.3e} cm^3/s", rrc, input_rrc_total);
+          printlnlog("    rrc {:10.3e} >= input_rrc_total {:10.3e} [cm^3/s]", rrc, input_rrc_total);
           const double phixs_multiplier = input_rrc_total / rrc;
           printlnlog("    scaling phixs of all levels by {:.3f}", phixs_multiplier);
 
@@ -395,7 +395,7 @@ void read_recombrate_file() {
 
         rrc = calculate_ionrecombcoeff(-1, Te_estimate, element, ion, assume_lte, collisional_not_radiative, false,
                                        per_groundmultipletpop);
-        printlnlog("    rrc (final): {:10.3e} cm^3/s", rrc);
+        printlnlog("    rrc (final): {:10.3e} [cm^3/s]", rrc);
       }
     }
   }
@@ -527,7 +527,7 @@ void setup_photoion_luts() {
 
   printlnlog(
       "[info] mem_usage: lookup tables derived from photoionisation (spontrecombcoeff, bfcooling and "
-      "corrphotoioncoeff if USE_LUT_PHOTOION) occupy {:.3f} MB",
+      "corrphotoioncoeff if USE_LUT_PHOTOION) occupy {:.3f} [MB]",
       mem_usage_photoionluts / 1024. / 1024.);
 }
 

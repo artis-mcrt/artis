@@ -363,8 +363,9 @@ auto nu_bar_planck_minus_estimator(const double T_R, const int nonemptymgi, cons
 
   if (!std::isfinite(delta_nu_bar)) {
     printlnlog(
-        "[warning] nu_bar_planck_minus_estimator: cell {} bin {}: delta_nu_bar is {:g}. T_R {:g} K nu_lower {:g} Hz "
-        "nu_upper {:g} Hz nu_bar_planck_T_R {:g} Hz nu_bar_estimator {:g} Hz",
+        "[warning] nu_bar_planck_minus_estimator: cell {} bin {}: delta_nu_bar is {:g}. T_R {:g} [K] nu_lower {:g} "
+        "[Hz] "
+        "nu_upper {:g} [Hz] nu_bar_planck_T_R {:g} [Hz] nu_bar_estimator {:g} [Hz]",
         grid::get_mgi_of_nonemptymgi(nonemptymgi), binindex, delta_nu_bar, T_R, nu_lower, nu_upper, nu_bar_planck_T_R,
         nu_bar_estimator);
   }
@@ -397,7 +398,7 @@ auto find_bin_T_R(const int nonemptymgi, const int binindex) -> float {
     if (iteration_num >= maxit) {
       printlnlog(
           "[warning] find_bin_T_R: cell {} bin {}: T_R did not converge within {} iterations. interval [{:g}, "
-          "{:g}] K",
+          "{:g}] [K]",
           grid::get_mgi_of_nonemptymgi(nonemptymgi), binindex, iteration_num, result.first, result.second);
     }
     return T_R_solution;
@@ -445,8 +446,9 @@ void set_params_fullspec(const int nonemptymgi, const int timestep) {
     grid::set_W(nonemptymgi, W);
 
     printlnlog(
-        "Full-spectrum fit radfield for cell {} at timestep {}: J {:g}, lambda_bar {:5.1f} Angstrom, T_J {:g} K, T_R "
-        "{:g} K, W {:g}",
+        "Full-spectrum fit radfield for cell {} at timestep {}: J {:g}, lambda_bar {:5.1f} [Angstrom], T_J {:g} [K], "
+        "T_R "
+        "{:g} [K], W {:g}",
         modelgridindex, timestep, J[nonemptymgi], 1e8 * CLIGHT / nubar, T_J, T_R, W);
   }
 }
@@ -579,8 +581,8 @@ void init() {
     printlnlog("The multibin radiation field is being used from timestep {} onwards.", FIRST_NLTE_RADFIELD_TIMESTEP);
 
     printlnlog(
-        "Initialising multibin radiation field with {} bins from ({:.2f} eV, {:6.1f} A) to ({:.2f} eV, {:6.1f} A) and "
-        "a T_e superbin up to ({:.2f} eV, {:6.1f} A).",
+        "Initialising multibin radiation field with {} bins from ({:.2f} [eV], {:6.1f} [A]) to ({:.2f} [eV], "
+        "{:6.1f} [A]) and a T_e superbin up to ({:.2f} [eV], {:6.1f} [A]).",
         RADFIELDBINCOUNT - 1, H * RADFIELDBINS_NU_MIN / EV, 1e8 * CLIGHT / RADFIELDBINS_NU_MIN,
         H * RADFIELDBINS_NU_MAX / EV, 1e8 * CLIGHT / RADFIELDBINS_NU_MAX, H * RADFIELDBINS_T_E_SUPERBIN_NU_MAX / EV,
         1e8 * CLIGHT / RADFIELDBINS_T_E_SUPERBIN_NU_MAX);
@@ -595,7 +597,7 @@ void init() {
     const size_t mem_usage_bins = nonempty_npts_model * RADFIELDBINCOUNT * ((2 * sizeof(double)) + sizeof(int));
     radfieldbins.resize(nonempty_npts_model);
 
-    printlnlog("[info] mem_usage: radiation field bin accumulators for non-empty cells occupy {:.3f} MB",
+    printlnlog("[info] mem_usage: radiation field bin accumulators for non-empty cells occupy {:.3f} [MB]",
                mem_usage_bins / 1024. / 1024.);
 
     radfieldbin_solutions_W = MPI_shared_array<float>(nonempty_npts_model * RADFIELDBINCOUNT);
@@ -604,7 +606,7 @@ void init() {
 
     const size_t mem_usage_bin_solutions = nonempty_npts_model * RADFIELDBINCOUNT * sizeof(RadFieldBinSolution);
     printlnlog(
-        "[info] mem_usage: radiation field bin solutions for non-empty cells occupy {:.3f} MB (node shared memory)",
+        "[info] mem_usage: radiation field bin solutions for non-empty cells occupy {:.3f} [MB] (node shared memory)",
         mem_usage_bin_solutions / 1024. / 1024.);
   } else {
     printlnlog("The radiation field model is a full-spectrum fit to a single dilute blackbody TR & W.");
@@ -617,12 +619,12 @@ void init() {
       std::ranges::fill(prev_bfrate_normed, 0.);
     }
     MPI_Barrier_node();
-    printlnlog("[info] mem_usage: detailed bf estimators for non-empty cells occupy {:.3f} MB (node shared memory)",
+    printlnlog("[info] mem_usage: detailed bf estimators for non-empty cells occupy {:.3f} [MB] (node shared memory)",
                nonempty_npts_model * bfestimcount * sizeof(float) / 1024. / 1024.);
 
     reserve_resize(bfrate_raw, nonempty_npts_model * bfestimcount);
 
-    printlnlog("[info] mem_usage: detailed bf estimator acculumators for non-empty cells occupy {:.3f} MB",
+    printlnlog("[info] mem_usage: detailed bf estimator acculumators for non-empty cells occupy {:.3f} [MB]",
                nonempty_npts_model * bfestimcount * sizeof(double) / 1024. / 1024.);
   }
 
@@ -823,15 +825,15 @@ void fit_parameters(const int nonemptymgi, const int timestep) {
           W_bin = static_cast<float>(J_bin / planck_integral_result);
           if (W_bin > 1e4) {
             printlnlog(
-                "[warning] cell {} ts {} bin {}: W {:g} too high or non-finite (T_R {:7.1f} K, J_bin {:g}) and W "
-                "{:g} still too high after retry at T_R_max {:g} K. Zeroing bin (T_R set to sentinel -99)",
+                "[warning] cell {} ts {} bin {}: W {:g} too high or non-finite (T_R {:7.1f} [K], J_bin {:g}) and W "
+                "{:g} still too high after retry at T_R_max {:g} [K]. Zeroing bin (T_R set to sentinel -99)",
                 mgi, timestep, binindex, W_bin_first, T_R_bin, J_bin, W_bin, bins_T_R_max);
             T_R_bin = -99.;
             W_bin = 0.;
           } else {
             printlnlog(
-                "[warning] cell {} ts {} bin {}: W {:g} too high or non-finite (T_R {:7.1f} K, J_bin {:g}); "
-                "continuing with W {:g} at T_R_max {:g} K",
+                "[warning] cell {} ts {} bin {}: W {:g} too high or non-finite (T_R {:7.1f} [K], J_bin {:g}); "
+                "continuing with W {:g} at T_R_max {:g} [K]",
                 mgi, timestep, binindex, W_bin_first, T_R_bin, J_bin, W_bin, bins_T_R_max);
             T_R_bin = bins_T_R_max;
           }
@@ -931,13 +933,13 @@ auto get_T_J_from_J(const int nonemptymgi) -> float {
   // Make sure that T is in the allowed temperature range.
   if (T_J > MAXTEMP) {
     printlnlog(
-        "[warning] get_T_J_from_J: cell {} ts {}: T_J would be {:.1f} K > MAXTEMP. Clamping to MAXTEMP = {:.0f} K",
+        "[warning] get_T_J_from_J: cell {} ts {}: T_J would be {:.1f} [K] > MAXTEMP. Clamping to MAXTEMP = {:.0f} [K]",
         grid::get_mgi_of_nonemptymgi(nonemptymgi), globals::timestep, T_J, MAXTEMP);
     return MAXTEMP;
   }
   if (T_J < MINTEMP) {
     printlnlog(
-        "[warning] get_T_J_from_J: cell {} ts {}: T_J would be {:.1f} K < MINTEMP. Clamping to MINTEMP = {:.0f} K",
+        "[warning] get_T_J_from_J: cell {} ts {}: T_J would be {:.1f} [K] < MINTEMP. Clamping to MINTEMP = {:.0f} [K]",
         grid::get_mgi_of_nonemptymgi(nonemptymgi), globals::timestep, T_J, MINTEMP);
     return MINTEMP;
   }

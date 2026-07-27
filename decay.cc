@@ -942,7 +942,7 @@ void read_spontfission_decaydata() {
     nuclides.back().branchprobs[DECAYTYPE_SPONTFISSION] = 1.;
     nuclides.back().endecay_q[DECAYTYPE_SPONTFISSION] = q_fission_mev * MEV;
     nuclides.back().endecay_fission = q_fission_mev * MEV;  // will be overwritten if we have fission product data
-    printlnlog("  added spontaneous fission nuclide: (Z={}){}{} meanlife {:.1e} days", z_in, get_elname(z_in), a_in,
+    printlnlog("  added spontaneous fission nuclide: (Z={}){}{} meanlife {:.1e} [days]", z_in, get_elname(z_in), a_in,
                tau_sec / DAY);
   }
 }
@@ -1106,13 +1106,13 @@ void init_nuclides(const std::span<const int> custom_zlist, const std::span<cons
   gammapkt::init_gamma_data();
 
   // TODO: generalise this to all included nuclides
-  printlnlog("decayenergy(NI56) {:g} MeV, decayenergy(CO56) {:g} MeV, decayenergy_gamma(CO56) {:g} MeV",
+  printlnlog("decayenergy(NI56) {:g} [MeV], decayenergy(CO56) {:g} [MeV], decayenergy_gamma(CO56) {:g} [MeV]",
              nucdecayenergytotal(28, 56) / MEV, nucdecayenergytotal(27, 56) / MEV, nucdecayenergygamma(27, 56) / MEV);
-  printlnlog("decayenergy(NI57) {:g} MeV, decayenergy_gamma(NI57) {:g} MeV, decayenergy(CO57) {:g} MeV",
+  printlnlog("decayenergy(NI57) {:g} [MeV], decayenergy_gamma(NI57) {:g} [MeV], decayenergy(CO57) {:g} [MeV]",
              nucdecayenergytotal(28, 57) / MEV, nucdecayenergygamma(28, 57) / MEV, nucdecayenergytotal(27, 57) / MEV);
-  printlnlog("decayenergy(CR48) {:g} MeV, decayenergy(V48) {:g} MeV", nucdecayenergytotal(24, 48) / MEV,
+  printlnlog("decayenergy(CR48) {:g} [MeV], decayenergy(V48) {:g} [MeV]", nucdecayenergytotal(24, 48) / MEV,
              nucdecayenergytotal(23, 48) / MEV);
-  printlnlog("decayenergy(FE52) {:g} MeV, decayenergy(MN52) {:g} MeV", nucdecayenergytotal(26, 52) / MEV,
+  printlnlog("decayenergy(FE52) {:g} [MeV], decayenergy(MN52) {:g} [MeV]", nucdecayenergytotal(26, 52) / MEV,
              nucdecayenergytotal(25, 52) / MEV);
 
   if (globals::my_rank == 0 && !globals::simulation_continued_from_saved) {
@@ -1170,7 +1170,7 @@ auto get_energy_per_mass_nonemptymgi_decaypath() -> MPI_shared_array<const doubl
   const ptrdiff_t nonempty_npts_model = grid::get_nonempty_npts_model();
   printlog(
       "[info] mem_usage: energy_per_mass_nonemptymgi_decaypath[nonempty_npts_model*num_decaypaths] occupies {:.1f} "
-      "MB (node shared memory)...",
+      "[MB] (node shared memory)...",
       nonempty_npts_model * get_num_decaypaths() * sizeof(double) / 1024. / 1024.);
   auto energy_per_mass_nonemptymgi_decaypath = MPI_shared_array<double>{nonempty_npts_model * get_num_decaypaths(), 0.};
   printlnlog("done.");

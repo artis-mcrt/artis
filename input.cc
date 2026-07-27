@@ -379,7 +379,7 @@ void read_phixs_file(const int phixs_file_version, std::vector<float>& tmpallphi
     }
   }
 
-  printlnlog("[info] mem_usage: photoionisation tables occupy {:.3f} MB", mem_usage_phixs / 1024. / 1024.);
+  printlnlog("[info] mem_usage: photoionisation tables occupy {:.3f} [MB]", mem_usage_phixs / 1024. / 1024.);
 }
 
 constexpr auto downtranslevelstart(const int level) {
@@ -797,7 +797,7 @@ void setup_phixs_list() {
   globals::groundcont_ion = std::move(groundcont_ion);
 
   auto allcont = MPI_shared_array<TempPhotoionTransitionInput>(globals::nbfcontinua);
-  printlnlog("[info] mem_usage: photoionisation list occupies {:.3f} MB",
+  printlnlog("[info] mem_usage: photoionisation list occupies {:.3f} [MB]",
              globals::nbfcontinua * (sizeof(TempPhotoionTransitionInput)) / 1024. / 1024.);
   const auto groundcontindices = std::ranges::iota_view{0, globals::nbfcontinua_ground};
   int allcontindex = 0;
@@ -1358,8 +1358,9 @@ void sort_temp_linelist(std::vector<TempLineTransitionInput>& temp_linelist) {
           }
           if (duplicate_count <= max_duplicates_shown) {
             printlnlog(
-                "[warning] duplicate bb-transition Z={} ionstage {} levels {} to {}: nu {:g} Hz and {:g} Hz (lambda "
-                "{:.2f} Angstrom)",
+                "[warning] duplicate bb-transition Z={} ionstage {} levels {} to {}: nu {:g} [Hz] and {:g} [Hz] "
+                "(lambda "
+                "{:.2f} [Angstrom])",
                 get_atomicnumber(a1.elementindex), get_ionstage(a1.elementindex, a1.ionindex), a1.lowerlevelindex,
                 a1.upperlevelindex, a1.nu, a2.nu, 1e8 * CLIGHT / a1.nu);
           }
@@ -1429,7 +1430,7 @@ void create_shared_alltranslist(std::vector<TempAllTransInput>& temp_alltranslis
     printlnlog("total downtrans {}", downtranscount);
     return downtranscount + uptranscount;
   }();
-  printlnlog("[info] mem_usage: transition lists occupy {:.3f} MB (node shared memory)",
+  printlnlog("[info] mem_usage: transition lists occupy {:.3f} [MB] (node shared memory)",
              updowntranscount * ((2 * sizeof(int)) + (3 * sizeof(float)) + sizeof(bool)) / 1024. / 1024.);
 
   MPI_Barrier_node();
@@ -1579,7 +1580,7 @@ void create_shared_linelist(std::vector<TempLineTransitionInput>& temp_linelist)
        ) /
       1024. / 1024;
 
-  printlnlog("[info] mem_usage: linelist occupies {:.3f} MB (node shared memory)", linelist_mem_MB);
+  printlnlog("[info] mem_usage: linelist occupies {:.3f} [MB] (node shared memory)", linelist_mem_MB);
 }
 
 // read the full atomic dataset: the composition (compositiondata.txt), then the levels and
@@ -2001,7 +2002,7 @@ void read_atomicdata() {
 
       printlnlog(
           "[input]    ionstage {}: {:4} levels ({:4} ionising) {:7} lines {:6} bf transitions ("
-          "epsilon_ground: {:7.2f} eV)",
+          "epsilon_ground: {:7.2f} [eV])",
           get_ionstage(element, ion), get_nlevels(element, ion), get_nlevels_ionising(element, ion), ion_bbtransitions,
           ion_photoiontransitions, epsilon(element, ion, 0) / EV);
 
@@ -2150,8 +2151,8 @@ void setup_timesteps() {
     return "unknown";
   }();
   printlnlog(
-      "timesteps: {} steps from tmin {:.4f} d to tmax {:.4f} d with {} sizing (first width {:.4f} d, last "
-      "width {:.4f} d)",
+      "timesteps: {} steps from tmin {:.4f} [d] to tmax {:.4f} [d] with {} sizing (first width {:.4f} [d], last "
+      "width {:.4f} [d])",
       globals::ntimesteps, globals::tmin / DAY, globals::tmax / DAY, method_name, globals::timesteps[0].width / DAY,
       globals::timesteps[globals::ntimesteps - 1].width / DAY);
 }

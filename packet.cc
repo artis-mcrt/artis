@@ -103,9 +103,9 @@ void packet_init(std::span<Packet> packets)
   // npkts. The total energy of the pellets is given by etot.
   const double etot_tmodel_tinf = decay::get_global_etot_tmodel_tinf();
 
-  printlnlog("etot {:g} erg (t_model to t_inf)", etot_tmodel_tinf);
+  printlnlog("etot {:g} [erg] (t_model to t_inf)", etot_tmodel_tinf);
 
-  printlnlog("e_cmf per packet (t_model to t_inf) {:g} erg", etot_tmodel_tinf / MPKTS);
+  printlnlog("e_cmf per packet (t_model to t_inf) {:g} [erg]", etot_tmodel_tinf / MPKTS);
 
   const auto energy_per_mass_nonemptymgi_decaypath = decay::get_energy_per_mass_nonemptymgi_decaypath();
 
@@ -131,11 +131,11 @@ void packet_init(std::span<Packet> packets)
   assert_always(etot_simtime > 0);
 
   constexpr auto strtimelow{INITIAL_PACKETS_ON ? "tmodel" : "tmin"};
-  printlnlog("etot ({} to tmax) {:g} erg", strtimelow, etot_simtime);
+  printlnlog("etot ({} to tmax) {:g} [erg]", strtimelow, etot_simtime);
 
   // So energy per pellet is:
   const double e_cmf_per_packet = etot_simtime / MPKTS;
-  printlnlog("e_cmf per packet ({} to tmax) {:g} erg", strtimelow, e_cmf_per_packet);
+  printlnlog("e_cmf per packet ({} to tmax) {:g} [erg]", strtimelow, e_cmf_per_packet);
 
   // Now place the pellets in the ejecta and decide at what time they will decay.
 
@@ -148,7 +148,7 @@ void packet_init(std::span<Packet> packets)
   double e_cmf_total =
       std::ranges::fold_left(packets, 0., [](const double sum, const Packet& p) { return sum + p.e_cmf; });
   const double e_ratio = etot_simtime / e_cmf_total;
-  printlnlog("packet energy sum {:g} erg should be {:g} erg, so normalisation factor is {:g}", e_cmf_total,
+  printlnlog("packet energy sum {:g} [erg] should be {:g} [erg], so normalisation factor is {:g}", e_cmf_total,
              etot_simtime, e_ratio);
   assert_always(std::isfinite(e_cmf_total));
   e_cmf_total *= e_ratio;
@@ -156,7 +156,7 @@ void packet_init(std::span<Packet> packets)
     pkt.e_cmf *= e_ratio;
     pkt.e_rf *= e_ratio;
   }
-  printlnlog("total energy that will be freed during simulation time: {:g} erg", e_cmf_total);
+  printlnlog("total energy that will be freed during simulation time: {:g} [erg]", e_cmf_total);
 }
 
 // read packets*.out text format file

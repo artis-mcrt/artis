@@ -496,7 +496,7 @@ void allocate_nonemptymodelcells() {
   const auto modelgrid_mem_usage =
       nonempty_npts_model * ((sizeof(float) * (USE_MICROCLUMPING ? 10 : 9)) + sizeof(double) + sizeof(int));
   printlnlog(
-      "[info] mem_usage: the modelgrid properties (temperatures and electron densities) occupies {:.3f} MB (node "
+      "[info] mem_usage: the modelgrid properties (temperatures and electron densities) occupies {:.3f} [MB] (node "
       "shared memory)",
       modelgrid_mem_usage / 1024. / 1024.);
 
@@ -571,7 +571,7 @@ void allocate_nonemptymodelcells() {
   MPI_Barrier_allranks();
 
   printlnlog(
-      "[info] mem_usage: NLTE populations for all allocated cells occupy a total of {:.3f} MB (node shared memory)",
+      "[info] mem_usage: NLTE populations for all allocated cells occupy a total of {:.3f} [MB] (node shared memory)",
       static_cast<ptrdiff_t>(get_nonempty_npts_model()) * globals::total_nlte_levels * sizeof(double) / 1024. / 1024.);
 }
 
@@ -884,7 +884,7 @@ auto read_model_columns(std::istream& fmodel) -> std::tuple<std::vector<std::str
 
   initnucmassfrac_allcells = MPI_shared_array<float>((npts_model + 1) * num_nuclides, 0.);
   printlnlog(
-      "[info] mem_usage: input abundance data for {} nuclides for {} cells occupies {:.3f} MB (node shared memory)",
+      "[info] mem_usage: input abundance data for {} nuclides for {} cells occupies {:.3f} [MB] (node shared memory)",
       num_nuclides, npts_model, (initnucmassfrac_allcells.size() * sizeof(float)) / 1024. / 1024.);
 
   return {colnames, nucindexlist, one_line_per_cell};
@@ -1095,12 +1095,12 @@ void assign_initial_temperatures() {
       thick_allcells[nonemptymgi] = 0;
     }
   }
-  printlnlog("  cells below MINTEMP {:g} K: {}", MINTEMP, cells_below_mintemp);
-  printlnlog("  cells above MAXTEMP {:g} K: {}", MAXTEMP, cells_above_maxtemp);
+  printlnlog("  cells below MINTEMP {:g} [K]: {}", MINTEMP, cells_below_mintemp);
+  printlnlog("  cells above MAXTEMP {:g} [K]: {}", MAXTEMP, cells_above_maxtemp);
   if (cells_nonfinite_temp > 0) {
     printlnlog(
         "[warning] {} cells had a non-finite initial temperature and were set to MINTEMP (first was mgi {} with "
-        "rho_tmin {:g} g/cm3 and decayed energy {:g} erg/g)",
+        "rho_tmin {:g} [g/cm3] and decayed energy {:g} [erg/g])",
         cells_nonfinite_temp, first_nonfinite_mgi, first_nonfinite_rho_tmin, first_nonfinite_endecay);
   }
   MPI_Barrier_allranks();
@@ -1191,7 +1191,7 @@ void setup_grid_cartesian_3d() {
   // vmax is per coordinate, but the simulation volume corners will
   // have a higher expansion velocity than the sides
   const double vmax_corner = sqrt(3 * pow2(globals::vmax));
-  printlnlog("corner vmax {:g} cm/s ({:.2f}c)", vmax_corner, vmax_corner / CLIGHT);
+  printlnlog("corner vmax {:g} [cm/s] ({:.2f}c)", vmax_corner, vmax_corner / CLIGHT);
   if (!FORCE_SPHERICAL_ESCAPE_SURFACE) {
     assert_always(vmax_corner < CLIGHT);
   }
@@ -1240,7 +1240,7 @@ void setup_grid_spherical_1d() {
 
 void setup_grid_cylindrical_2d() {
   const double vmax_corner = sqrt(2 * pow2(globals::vmax));
-  printlnlog("corner vmax {:g} cm/s ({:.2f}c)", vmax_corner, vmax_corner / CLIGHT);
+  printlnlog("corner vmax {:g} [cm/s] ({:.2f}c)", vmax_corner, vmax_corner / CLIGHT);
   assert_always(vmax_corner < CLIGHT);
 
   assert_always(get_modelgridtype() == GridType::CYLINDRICAL2D);
@@ -2027,6 +2027,10 @@ void read_ejecta_model() {
       assert_always(ssline >> cellnumberin >> cellpos_in[0] >> cellpos_in[1] >> cellpos_in[2] >> rho_model_in);
       rho_tmodel = rho_model_in;
 
+      if (mgi % (ncoord_model[1] * ncoord_model[2]) == 0) {
+        printlnlog("read up to cell mgi {}", mgi);
+      }
+
       // cell coordinates in the 3D model.txt file are sometimes reordered by the scaling script
       // however, the cellindex always should increment X first, then Y, then Z
       const double xmax_tmodel = globals::vmax * t_model;
@@ -2053,8 +2057,8 @@ void read_ejecta_model() {
     assert_always(cellnumberin == mgi + first_cellindex);
 
     if (rho_tmodel < 0) {
-      printlnlog("[error] model.txt cell {} (inputcellid {}) has negative density {:g} g/cm3 at t_model. aborting", mgi,
-                 cellnumberin, rho_tmodel);
+      printlnlog("[error] model.txt cell {} (inputcellid {}) has negative density {:g} [g/cm3] at t_model. aborting",
+                 mgi, cellnumberin, rho_tmodel);
       std::abort();
     }
 
@@ -2086,22 +2090,22 @@ void read_ejecta_model() {
           "[warning] Cell positions in model.txt are not consistent with calculated values in either x-y-z or z-y-x "
           "order.");
     }
-    printlnlog("minimum model density {:g} g/cm3", min_den);
+    printlnlog("minimum model density {:g} [g/cm3]", min_den);
   }
 
   assert_always(get_npts_model() ==
                 std::max(1, ncoord_model[0]) * std::max(1, ncoord_model[1]) * std::max(1, ncoord_model[2]));
   printlnlog("npts_model: {}", get_npts_model());
   globals::rmax = globals::vmax * globals::tmin;
-  printlnlog("vmax {:g} cm/s ({:.2f}c)", globals::vmax, globals::vmax / CLIGHT);
+  printlnlog("vmax {:g} [cm/s] ({:.2f}c)", globals::vmax, globals::vmax / CLIGHT);
   assert_always(globals::vmax < CLIGHT);
-  printlnlog("tmin {:g} s = {:.2f} d", globals::tmin, globals::tmin / DAY);
-  printlnlog("rmax {:g} cm (at t=tmin)", globals::rmax);
+  printlnlog("tmin {:g} [s] = {:.2f} [d]", globals::tmin, globals::tmin / DAY);
+  printlnlog("rmax {:g} [cm] (at t=tmin)", globals::rmax);
 
   calc_modelinit_totmassnuclides();
 
-  printlnlog("Total input model mass: {:9.3e} Msun", mtot_input / MSUN);
-  printlnlog("Nuclide masses at t=t_model_init in Msun:");
+  printlnlog("Total input model mass: {:9.3e} [Msun]", mtot_input / MSUN);
+  printlnlog("Nuclide masses at t=t_model_init [Msun]:");
   printlnlog("  56Ni: {:9.3e}  56Co: {:9.3e}  52Fe: {:9.3e}  48Cr: {:9.3e}", get_totmassnuclide_tmodel(28, 56) / MSUN,
              get_totmassnuclide_tmodel(27, 56) / MSUN, get_totmassnuclide_tmodel(26, 52) / MSUN,
              get_totmassnuclide_tmodel(24, 48) / MSUN);

@@ -96,7 +96,7 @@ void read_gamma_spectrum(const int nucindex, const std::string& filename) {
 
   decay::set_nucdecayenergygamma(nucindex, E_gamma_avg);
 
-  printlnlog("nlines {} avg_en_gamma {:g} MeV", nlines, E_gamma_avg / MEV);
+  printlnlog("nlines {} avg_en_gamma {:g} [MeV]", nlines, E_gamma_avg / MEV);
 }
 
 void set_trivial_gamma_spectrum(const int nucindex) {

@@ -276,7 +276,7 @@ void setup_coolinglist() {
   auto temp_coolinglist_level = MPI_shared_array<int>(ncoolingterms);
   auto temp_coolinglist_upperlevel = MPI_shared_array<int>(ncoolingterms);
   const size_t mem_usage_coolinglist = ncoolingterms * (sizeof(CoolingType) + (2 * sizeof(int)));
-  printlnlog("[info] mem_usage: coolinglist occupies {:.3f} MB", mem_usage_coolinglist / 1024. / 1024.);
+  printlnlog("[info] mem_usage: coolinglist occupies {:.3f} [MB]", mem_usage_coolinglist / 1024. / 1024.);
 
   int i = 0;  // cooling list index
   for (int element = 0; element < get_nelements(); element++) {
