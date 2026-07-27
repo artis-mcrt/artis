@@ -2034,11 +2034,9 @@ void read_ejecta_model() {
     // infinity probably occurred in the calculated positions
     if (posmatch_xyz) {
       printlnlog("Cell positions in model.txt are consistent with calculated values when x-y-z column order is used.");
-    }
-    if (posmatch_zyx) {
+    } else if (posmatch_zyx) {
       printlnlog("Cell positions in model.txt are consistent with calculated values when z-y-x column order is used.");
-    }
-    if (!posmatch_xyz && !posmatch_zyx) {
+    } else {
       printlnlog(
           "WARNING: Cell positions in model.txt are not consistent with calculated values in either x-y-z or z-y-x "
           "order.");
