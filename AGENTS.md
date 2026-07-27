@@ -80,10 +80,10 @@ regenerated — maintainers do this via the "Update checksums" workflow
 produced by the last CI run of the branch. Say so in the PR/commit message when
 results are expected to change.
 
-CI also compiles every `artisoptions_*.h` preset with gcc, clang, Apple Clang,
-nvc++, and hipcc — so a new compile-time option must be added to **all** preset
-files and documented in `artisoptions_doc.md`, and code must compile under all
-of those compilers (including `GPU=ON` paths).
+CI also compiles every `artisoptions_*.h` preset with gcc and clang, and key
+presets with Apple Clang, nvc++, and hipcc — so a new compile-time option must
+be added to **all** preset files and documented in `artisoptions_doc.md`, and
+code must compile under all of those compilers (including `GPU=ON` paths).
 
 ## Linting and formatting
 

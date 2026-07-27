@@ -77,7 +77,7 @@ vim artis/scripts/artis-cosma8.sh
 sbatch artis/scripts/artis-cosma8.sh
 ```
 
-The job scripts resubmit themselves until the simulation is finished and then queue a post-processing job (scripts/exspec-zip-*.sh) that runs exspec and compresses the output files. This post-processing step uses [artistools](https://github.com/artis-mcrt/artistools), so install it on the cluster beforehand. See [Post-processing with exspec](#post-processing-with-exspec) below for what exspec does.
+The job scripts resubmit themselves until the simulation is finished and then queue a post-processing job (scripts/exspec-zip-*.sh) that runs exspec and compresses the output files. The post-processing job also converts the packets and estimator files to parquet format with [artistools](https://github.com/artis-mcrt/artistools), which it installs automatically using uv. See [Post-processing with exspec](#post-processing-with-exspec) below for what exspec does.
 
 ## Setting up for development
 Clone the source code repository and check out the default branch `develop` (`release` is the production branch):
@@ -121,7 +121,7 @@ mpirun -np 1 ./exspec
 ```
 exspec reads the same input.txt, model, and atomic data files as sn3d, so it must be run in the same folder. The nprocs_exspec line of input.txt sets how many ranks' packets files it reads.
 
-It writes light_curve.out, spec.out, emission.out, and absorption.out (plus specpol.out and the other Stokes parameter files when polarisation is enabled), direction-resolved versions of these in the speclc_angle_res folder, and a log file exspec.txt.
+It writes light_curve.out, spec.out, emission.out, emissiontrue.out, and absorption.out (plus gamma-ray and polarisation versions, depending on the compile-time options), direction-resolved versions of these in the speclc_angle_res folder, and a log file exspec.txt.
 
 To plot and analyse the output, use [artistools](https://github.com/artis-mcrt/artistools), a companion Python package for working with ARTIS light curves, spectra, and estimators.
 
@@ -131,7 +131,7 @@ The tests folder contains ten small end-to-end test models. Each tests/setup_*.s
 cd tests
 source ./setup_kilonova_1d.sh   # creates tests/kilonova_1d_testrun/
 ```
-[CI](.github/workflows/ci.yml) runs all of these on every push. It builds with `REPRODUCIBLE=ON FASTMATH=OFF MAX_NODE_SIZE=2` and compares md5 checksums of the output files against reference checksums stored in the tests/*_inputfiles folders. A change that legitimately alters the numerical results therefore needs new reference checksums, which maintainers regenerate using the "Update checksums" workflow. CI also compiles every artisoptions_*.h preset with gcc, clang, nvc++, and hipcc.
+[CI](.github/workflows/ci.yml) runs all of these on every push. It builds with `REPRODUCIBLE=ON FASTMATH=OFF MAX_NODE_SIZE=2` and compares md5 checksums of the output files against reference checksums stored in the tests/*_inputfiles folders. A change that legitimately alters the numerical results therefore needs new reference checksums, which maintainers regenerate using the "Update checksums" workflow. CI also compiles every artisoptions_*.h preset with gcc and clang, and the classic and NLTE nebular presets additionally with Apple Clang, nvc++, and hipcc (including the GPU code paths).
 
 ## Bundled scripts
 - clean.sh: Remove all output files while keeping input files and resetting the simulation to the beginning.
@@ -152,7 +152,7 @@ source ./setup_kilonova_1d.sh   # creates tests/kilonova_1d_testrun/
 - PGO=GENERATE and PGO=USE: Profile-guided optimisation with gcc or clang. Build with GENERATE, run a representative simulation to collect profile data, then rebuild with USE.
 
 ## Input files
-These files go in the simulation folder. The physics data bundled with the code (nuclear decay data, gamma-ray spectra, and the collisional ionisation and binding energy tables) does not need to be copied there: those files are found automatically in the repository's data folder, as long as the source folder, or a symlink to it named artis, is in the simulation folder.
+These files go in the simulation folder. The physics data bundled with the code (nuclear decay data, gamma-ray spectra, and the collisional ionisation and binding energy tables) does not need to be copied there: those files are found automatically in the repository's data folder when the source folder (or a symlink to it named artis) is in the simulation folder, as in the recommended layout.
 
 ### input.txt
 Run-time configuration with:
@@ -161,8 +161,8 @@ Run-time configuration with:
 - the first and last timestep of this job, so that a long simulation can be split over several resubmitted jobs
 - the start and end time in days
 - whether the run continues from the restart files of a previous job
-- number of pure LTE timesteps,
-- optically-thick condition that switches cells to a grey opacity treatment.
+- number of pure LTE timesteps
+- optically-thick condition that switches cells to a grey opacity treatment
 - nprocs_exspec: the number of ranks whose packets files exspec will read
 
 The format is positional, so every line must be present and in order, including those that are no longer used. See [tests/classicmode_3d_inputfiles/input-newrun.txt](tests/classicmode_3d_inputfiles/input-newrun.txt) for a complete example with a comment on every line.
@@ -175,9 +175,6 @@ Grid parameters, cell densities and nuclear composition.
 
 ### abundances.txt
 Per-cell elemental mass fractions (in case the set of isotopic abundances in model.txt is not complete).
-
-### Ye.txt
-Optional per-cell initial electron fraction.
 
 ### adata.txt
 One block per ion consisting of:
