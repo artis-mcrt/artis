@@ -342,7 +342,7 @@ void setup_coolinglist() {
   }
 
   assert_always(ncoolingterms == i);  // if this doesn't match, we miscalculated the number of cooling terms
-  printlnlog("[info] read_atomicdata: number of coolingterms {}", ncoolingterms);
+  printlnlog("[info] setup_coolinglist: number of coolingterms {}", ncoolingterms);
   coolinglist_type = std::move(temp_coolinglist_type);
   coolinglist_level = std::move(temp_coolinglist_level);
   coolinglist_upperlevel = std::move(temp_coolinglist_upperlevel);

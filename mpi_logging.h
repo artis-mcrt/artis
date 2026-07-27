@@ -516,7 +516,7 @@ inline void MPI_Reduce_safe(R&& data, MPI_Op op, const int root, MPI_Comm comm) 
     }
   }
 
-  printlnlog("ERROR: Could not open file '{}' for mode '{}'.", filename, mode.data());
+  printlnlog("[error] Could not open file '{}' for mode '{}'.", filename, mode.data());
   std::abort();
 }
 
@@ -527,7 +527,7 @@ inline void MPI_Reduce_safe(R&& data, MPI_Op op, const int root, MPI_Comm comm) 
 
 [[nodiscard]] inline auto fstream_required(const std::string_view filename, std::ios::openmode mode) -> std::fstream {
   if (filename.empty()) {
-    printlnlog("ERROR: Cannot open file with empty filename.");
+    printlnlog("[error] Cannot open file with empty filename.");
     std::abort();
   }
 
@@ -548,7 +548,7 @@ inline void MPI_Reduce_safe(R&& data, MPI_Op op, const int root, MPI_Comm comm) 
     }
   }
 
-  printlnlog("ERROR: Could not open file '{}'", filename);
+  printlnlog("[error] Could not open file '{}'", filename);
   std::abort();
 }
 

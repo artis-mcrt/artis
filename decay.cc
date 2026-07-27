@@ -317,7 +317,7 @@ void extend_lastdecaypath(std::vector<DecayPath>& localdecaypaths) {
           for (const auto [chain_z, chain_a] : std::views::zip(initial_last_decaypath.z, initial_last_decaypath.a)) {
             chainstr += std::format("(Z={},A={}) -> ", chain_z, chain_a);
           }
-          printlnlog("ERROR: loop in nuclear decay chain: {}(Z={},A={}) already occurred. aborting", chainstr,
+          printlnlog("[error] loop in nuclear decay chain: {}(Z={},A={}) already occurred. aborting", chainstr,
                      daughter.z, daughter.a);
           std::abort();
         }
@@ -740,7 +740,7 @@ auto write_nuclides_list() {
   if (nucindex >= 0) {
     return nucindex;
   }
-  printlnlog("ERROR: nuclide Z={} A={} not found in nuclide list", z, a);
+  printlnlog("[error] nuclide Z={} A={} not found in nuclide list", z, a);
   assert_always(false);  // nuclide not found
   return -1;
 }
@@ -1106,13 +1106,13 @@ void init_nuclides(const std::span<const int> custom_zlist, const std::span<cons
   gammapkt::init_gamma_data();
 
   // TODO: generalise this to all included nuclides
-  printlnlog("decayenergy(NI56), decayenergy(CO56), decayenergy_gamma(CO56): {:g}, {:g}, {:g}",
+  printlnlog("decayenergy(NI56) {:g} MeV, decayenergy(CO56) {:g} MeV, decayenergy_gamma(CO56) {:g} MeV",
              nucdecayenergytotal(28, 56) / MEV, nucdecayenergytotal(27, 56) / MEV, nucdecayenergygamma(27, 56) / MEV);
-  printlnlog("decayenergy(NI57), decayenergy_gamma(NI57), nucdecayenergy(CO57): {:g}, {:g}, {:g}",
+  printlnlog("decayenergy(NI57) {:g} MeV, decayenergy_gamma(NI57) {:g} MeV, decayenergy(CO57) {:g} MeV",
              nucdecayenergytotal(28, 57) / MEV, nucdecayenergygamma(28, 57) / MEV, nucdecayenergytotal(27, 57) / MEV);
-  printlnlog("decayenergy(CR48), decayenergy(V48): {:g} {:g}", nucdecayenergytotal(24, 48) / MEV,
+  printlnlog("decayenergy(CR48) {:g} MeV, decayenergy(V48) {:g} MeV", nucdecayenergytotal(24, 48) / MEV,
              nucdecayenergytotal(23, 48) / MEV);
-  printlnlog("decayenergy(FE52), decayenergy(MN52): {:g} {:g}", nucdecayenergytotal(26, 52) / MEV,
+  printlnlog("decayenergy(FE52) {:g} MeV, decayenergy(MN52) {:g} MeV", nucdecayenergytotal(26, 52) / MEV,
              nucdecayenergytotal(25, 52) / MEV);
 
   if (globals::my_rank == 0 && !globals::simulation_continued_from_saved) {
@@ -1167,13 +1167,11 @@ auto get_modelcell_simtime_endecay_per_mass(
 // decay energy per mass [erg/g] released by chain i in cell mgi during the simulation time range tmin to tmax
 auto get_energy_per_mass_nonemptymgi_decaypath() -> MPI_shared_array<const double> {
   const ptrdiff_t nonempty_npts_model = grid::get_nonempty_npts_model();
-  printlog(
-      "[info] mem_usage: energy_per_mass_nonemptymgi_decaypath[nonempty_npts_model*num_decaypaths] occupies {:.1f} "
-      "MB (node shared "
-      "memory)...",
-      nonempty_npts_model * get_num_decaypaths() * sizeof(double) / 1024. / 1024.);
   auto energy_per_mass_nonemptymgi_decaypath = MPI_shared_array<double>{nonempty_npts_model * get_num_decaypaths(), 0.};
-  printlnlog("done.");
+  printlnlog(
+      "[info] mem_usage: energy_per_mass_nonemptymgi_decaypath[nonempty_npts_model*num_decaypaths] occupies {:.1f} "
+      "MB (node shared memory)",
+      nonempty_npts_model * get_num_decaypaths() * sizeof(double) / 1024. / 1024.);
 
   MPI_Barrier_allranks();
   const auto time_min_decay = INITIAL_PACKETS_ON ? grid::get_t_model() : globals::tmin;

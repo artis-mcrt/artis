@@ -204,7 +204,7 @@ void update_pellet(Packet& pkt, const int nts, const double t2) {
         pkt.type = TYPE_NTALPHA_FISPROD_DEPOSITED;
       } else if constexpr (TESTMODE) {
         printlnlog(
-            "ERROR: pellet marked as particle emission is for decaytype {} != any of (alpha, beta+, beta-, spfission)",
+            "[error] pellet marked as particle emission is for decaytype {} != any of (alpha, beta+, beta-, spfission)",
             pkt.pellet_decaytype);
         std::abort();
       } else {
@@ -231,7 +231,7 @@ void update_pellet(Packet& pkt, const int nts, const double t2) {
 
     pkt.prop_time = globals::tmin;
   } else if constexpr (TESTMODE) {
-    printlnlog("ERROR: Something wrong with decaying pellets. tdecay {:g} ts {:g} (ts + tw) {:g}", tdecay, ts, t2);
+    printlnlog("[error] Something wrong with decaying pellets. tdecay {:g} ts {:g} (ts + tw) {:g}", tdecay, ts, t2);
     assert_testmodeonly(false);
   } else {
     __builtin_unreachable();
@@ -291,7 +291,7 @@ void do_packet(Packet& pkt, const double t2, const int nts, ContinuumOpacity& ch
 
     default: {
       if constexpr (TESTMODE) {
-        printlnlog("ERROR: Unknown packet type {}", static_cast<int>(pkt.type));
+        printlnlog("[error] Unknown packet type {}", static_cast<int>(pkt.type));
         assert_testmodeonly(false);
       } else {
         __builtin_unreachable();
@@ -462,10 +462,9 @@ void update_packet_cellcache_group(const int cellcache_groupid, std::span<Packet
       const auto size_mb = (static_cast<ptrdiff_t>(globals::nbfcontinua_ground) +
                             static_cast<ptrdiff_t>(globals::nbfcontinua) + std::ssize(globals::bfestim_nu_edge)) *
                            std::ssize(packetgroup) * sizeof(double) / 1024. / 1024.;
-      printlog("Resizing chi_rpkt_cont_vec from {} to {} ({:g} MB)...", chi_rpkt_cont_vec.size(), packetgroup.size(),
-               size_mb);
+      const auto oldsize = chi_rpkt_cont_vec.size();
       chi_rpkt_cont_vec.resize(packetgroup.size());
-      printlnlog("done.");
+      printlnlog("resized chi_rpkt_cont_vec from {} to {} ({:g} MB)", oldsize, chi_rpkt_cont_vec.size(), size_mb);
     }
   } else if (chi_rpkt_cont_vec.empty()) {
     // we're not going to use this, but we need to pass a reference to something

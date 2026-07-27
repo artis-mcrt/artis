@@ -822,7 +822,7 @@ auto main(int argc, char* argv[]) -> int {
   printlnlog("GPU_ON is enabled");
 #endif
 
-  printlnlog("time at start");
+  printlnlog("sn3d launched (this line marks the start time)");
 
   printlog("Integration method is: ");
 
@@ -847,11 +847,10 @@ auto main(int argc, char* argv[]) -> int {
   int opt = 0;
   while ((opt = getopt(argc, argv, "w:")) != -1) {  // NOLINT(concurrency-mt-unsafe,misc-include-cleaner)
     if (opt == 'w') {
-      printlog("Command line argument specifies wall time hours '{}', setting ",
-               optarg);  // NOLINT(misc-include-cleaner)
-      const float walltimehours = strtof(optarg, nullptr);
+      const float walltimehours = strtof(optarg, nullptr);  // NOLINT(misc-include-cleaner)
       walltimelimitseconds = static_cast<int>(walltimehours * HOUR);
-      printlnlog("walltimelimitseconds = {}", walltimelimitseconds);
+      printlnlog("command line argument specifies wall time hours '{}', so setting walltimelimitseconds = {}", optarg,
+                 walltimelimitseconds);
     } else {
       std::println(stderr, "Usage: {} [-w WALLTIMELIMITHOURS]",
                    argv[0]);  // NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic,)
@@ -862,11 +861,11 @@ auto main(int argc, char* argv[]) -> int {
   std::vector<Packet> packets;
   reserve_resize(packets, MPKTS);
 
-  printlnlog("git branch {}", GIT_BRANCH);
+  printlnlog("git branch: {}", GIT_BRANCH);
 
   printlnlog("git version: {}", GIT_VERSION);
 
-  printlnlog("git status {}", GIT_STATUS);
+  printlnlog("git status: {}", GIT_STATUS);
 
   printlnlog("sn3d compiled at {} on {}", __TIME__, __DATE__);
 
@@ -881,7 +880,7 @@ auto main(int argc, char* argv[]) -> int {
              globals::node_id, globals::node_count - 1);
 #ifdef MAX_NODE_SIZE
   printlnlog(
-      "WARNING: Compiled with MAX_NODE_SIZE {}, which may mean that there are more nodes reported than physically "
+      "[warning] Compiled with MAX_NODE_SIZE {}, which may mean that there are more nodes reported than physically "
       "present",
       MAX_NODE_SIZE);
 #endif
@@ -954,12 +953,14 @@ auto main(int argc, char* argv[]) -> int {
   const int nstart = grid::get_nstart(globals::my_rank);
   const int ndo = grid::get_ndo(globals::my_rank);
   const int ndo_nonempty = grid::get_ndo_nonempty(globals::my_rank);
-  printlog("process rank {} (global max rank {}) assigned {} modelgrid cells ({} nonempty)", globals::my_rank,
-           globals::nprocs - 1, ndo, ndo_nonempty);
   if (ndo > 0) {
-    printlnlog(": cells [{}..{}] (model has max mgi {})", nstart, nstart + ndo - 1, grid::get_npts_model() - 1);
+    printlnlog(
+        "process rank {} (global max rank {}) assigned {} modelgrid cells ({} nonempty): cells [{}..{}] (model "
+        "has max mgi {})",
+        globals::my_rank, globals::nprocs - 1, ndo, ndo_nonempty, nstart, nstart + ndo - 1, grid::get_npts_model() - 1);
   } else {
-    printlnlog("");
+    printlnlog("process rank {} (global max rank {}) assigned {} modelgrid cells ({} nonempty)", globals::my_rank,
+               globals::nprocs - 1, ndo, ndo_nonempty);
   }
 
   MPI_Barrier_allranks();

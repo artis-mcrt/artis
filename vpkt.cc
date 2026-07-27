@@ -674,7 +674,7 @@ void read_vpktparameterfile() {
     assert_always(fscanf(input_file, "%lg", &obsdirs_costheta[i]) == 1);
 
     if (fabs(obsdirs_costheta[i]) > 1) {
-      printlnlog("ERROR: vpkt.txt observer direction {} has costheta {:g}, which is outside [-1, 1]. aborting", i,
+      printlnlog("[error] vpkt.txt observer direction {} has costheta {:g}, which is outside [-1, 1]. aborting", i,
                  obsdirs_costheta[i]);
       std::abort();
     }
@@ -693,8 +693,8 @@ void read_vpktparameterfile() {
     obsdirs_phi[i] = phi_degrees * PI / 180.;
     const double theta_degrees = std::acos(obsdirs_costheta[i]) / PI * 180.;
 
-    printlnlog("vpkt.txt:   direction {} costheta {:g} ({:.1f} degrees) phi {:g} ({:.1f} degrees)", i,
-               obsdirs_costheta[i], theta_degrees, obsdirs_phi[i], phi_degrees);
+    printlnlog("vpkt.txt:   direction {}: theta {:.1f} degrees (costheta {:g}), phi {:.1f} degrees ({:g} radians)", i,
+               theta_degrees, obsdirs_costheta[i], phi_degrees, obsdirs_phi[i]);
   }
 
   // Nspectra opacity choices (i.e. Nspectra spectra for each observer)

@@ -175,7 +175,7 @@ void read_phixs_data_table(std::istream& phixsfile, const int nphixspoints_input
       }
       if (fabs(probability_sum - 1.0) > 0.01) {
         printlnlog(
-            "ERROR: photoionisation table for Z={} ionstage {} level {} has target probabilities that sum to "
+            "[error] photoionisation table for Z={} ionstage {} level {} has target probabilities that sum to "
             "{:g} (expected 1.0 +/- 0.01)",
             get_atomicnumber(element), get_ionstage(element, lowerion), lowerlevel, probability_sum);
         assert_always(false);
@@ -712,7 +712,7 @@ auto search_groundphixslist(const double nu_edge, const int element_in, const in
     }
 
     printlnlog(
-        "ERROR: search_groundphixslist: element {}, ion {}, level {} has edge_frequency {:g} equal to the bluest "
+        "[error] search_groundphixslist: element {}, ion {}, level {} has edge_frequency {:g} equal to the bluest "
         "ground-level continuum",
         element_in, ion_in, level_in, nu_edge);
     printlnlog("  search_groundphixslist: bluest ground level continuum is element {}, ion {} at nu_edge {:g}", element,
@@ -742,8 +742,8 @@ auto search_groundphixslist(const double nu_edge, const int element_in, const in
 // set up the photoionisation transition lists
 // and temporary gamma/kappa lists for each thread
 void setup_phixs_list() {
-  printlnlog("[info] read_atomicdata: number of bfcontinua {}", globals::nbfcontinua);
-  printlnlog("[info] read_atomicdata: number of ground-level bfcontinua {}", globals::nbfcontinua_ground);
+  printlnlog("[info] setup_phixs_list: number of bfcontinua {}", globals::nbfcontinua);
+  printlnlog("[info] setup_phixs_list: number of ground-level bfcontinua {}", globals::nbfcontinua_ground);
 
   struct TempGroundPhotoion {
     double nu_edge;
@@ -1140,7 +1140,7 @@ void read_phixs_data() {
           const int phixstargetlevels = get_phixsupperlevel(element, ion - 1, 0, nphixstargets - 1) + 1;
 
           if (nlevels_groundterm != phixstargetlevels) {
-            printlnlog("WARNING: Z={} ionstage {} nlevels_groundterm {} phixstargetlevels(ion-1) {}.",
+            printlnlog("[warning] Z={} ionstage {} nlevels_groundterm {} phixstargetlevels(ion-1) {}.",
                        get_atomicnumber(element), get_ionstage(element, ion), nlevels_groundterm, phixstargetlevels);
           }
         }
@@ -1258,7 +1258,7 @@ void read_levels_and_transitions(std::vector<TempEnergyLevel>& temp_alllevels,
       const int nlevelskept = (nlevelslimit < 0) ? nlevels_in_file : std::min(nlevelslimit, nlevels_in_file);
 
       if (nlevels_in_file > nlevelskept) {
-        printlnlog("[info] read_atomicdata: reduce number of levels from {} to {} for Z {:2} ionstage {}",
+        printlnlog("[info] read_levels_and_transitions: reduce number of levels from {} to {} for Z {:2} ionstage {}",
                    nlevels_in_file, nlevelskept, adata_Z_in, adata_ionstage_in);
       }
       assert_always(nlevelskept > 0);
@@ -1519,7 +1519,8 @@ void create_shared_alltranslist(std::vector<TempAllTransInput>& temp_alltranslis
   const auto establish_linelist_connections_duration =
       std::chrono::duration<double>(std::chrono::steady_clock::now() - time_start_establish_linelist_connections)
           .count();
-  printlnlog("  took {:.1f}s", establish_linelist_connections_duration);
+  printlnlog("established connections between transitions and sorted linelist (took {:.1f} seconds)",
+             establish_linelist_connections_duration);
   MPI_Barrier_node();
 }
 
@@ -1740,7 +1741,7 @@ void read_parameterfile(std::span<Packet> packets) {
   } else {
 #if defined REPRODUCIBLE && REPRODUCIBLE
     printlnlog(
-        "ERROR: REPRODUCIBLE mode requires a positive random number seed on the first non-comment line of input.txt "
+        "[error] REPRODUCIBLE mode requires a positive random number seed on the first non-comment line of input.txt "
         "(found {})",
         pre_zseed);
     std::abort();
@@ -1897,11 +1898,6 @@ void read_parameterfile(std::span<Packet> packets) {
 // write out an updated input.txt to restart the simulation
 void update_parameterfile(const int nts) {
   assert_always(globals::my_rank == 0);
-  if (nts >= 0) {
-    printlog("Update input.txt for restart at timestep {}...", nts);
-  } else {
-    printlog("Copying input.txt to input-newrun.txt...");
-  }
 
   auto file = fstream_required("input.txt", std::ios::in);
 
@@ -1967,11 +1963,15 @@ void update_parameterfile(const int nts) {
     std::filesystem::rename("input.txt.tmp", "input.txt", rename_error);
   }
   if (rename_error) {
-    printlnlog("ERROR: failed to move input.txt.tmp to {}: {}", (nts < 0) ? "input-newrun.txt" : "input.txt",
+    printlnlog("[error] failed to move input.txt.tmp to {}: {}", (nts < 0) ? "input-newrun.txt" : "input.txt",
                rename_error.message());
   }
 
-  printlnlog("done");
+  if (nts >= 0) {
+    printlnlog("updated input.txt for restart at timestep {}", nts);
+  } else {
+    printlnlog("copied input.txt to input-newrun.txt");
+  }
 }
 
 void read_atomicdata() {

@@ -109,7 +109,7 @@ void read_decaydata() {
     std::error_code rename_error;
     std::filesystem::rename("ni_lines.txt", "gamma_ni56.txt", rename_error);
     if (rename_error) {
-      printlnlog("ERROR: failed to move ni_lines.txt to gamma_ni56.txt: {}", rename_error.message());
+      printlnlog("[error] failed to move ni_lines.txt to gamma_ni56.txt: {}", rename_error.message());
     } else {
       printlnlog("Moved ni_lines.txt to gamma_ni56.txt");
     }
@@ -119,7 +119,7 @@ void read_decaydata() {
     std::error_code rename_error;
     std::filesystem::rename("co_lines.txt", "gamma_co56.txt", rename_error);
     if (rename_error) {
-      printlnlog("ERROR: failed to move co_lines.txt to gamma_co56.txt: {}", rename_error.message());
+      printlnlog("[error] failed to move co_lines.txt to gamma_co56.txt: {}", rename_error.message());
     } else {
       printlnlog("Moved co_lines.txt to gamma_co56.txt");
     }
@@ -182,7 +182,7 @@ void read_decaydata() {
   printlnlog("read gamma-ray table files for {} nuclides", tables_found);
   if (!trivial_spectrum_nuclides.empty()) {
     printlnlog(
-        "WARNING: no gamma-ray line table found for the following nuclides with non-zero gamma decay energy, so a "
+        "[warning] no gamma-ray line table found for the following nuclides with non-zero gamma decay energy, so a "
         "single line carrying the mean gamma energy per decay will be used:{}",
         trivial_spectrum_nuclides);
   }

@@ -695,7 +695,7 @@ void nltepop_matrix_add_autoionisation(const int nonemptymgi, const int element,
       rate_matrices.autoion[(upper_index * nlte_dimension) + upper_index] -= R;
       rate_matrices.autoion[(lower_index * nlte_dimension) + upper_index] += R;
       if ((R < 0)) {
-        printlnlog("  WARNING: cell {} ts {}: negative autoionisation rate from Z={} ionstage {} level {} to level {}",
+        printlnlog("  [warning] cell {} ts {}: negative autoionisation rate from Z={} ionstage {} level {} to level {}",
                    nltelog.modelgridindex, nltelog.timestep, get_atomicnumber(element), get_ionstage(element, ion),
                    level, target_level);
       }
@@ -709,7 +709,7 @@ void nltepop_matrix_add_autoionisation(const int nonemptymgi, const int element,
       rate_matrices.autoion[(lower_index * nlte_dimension) + lower_index] -= R;
       rate_matrices.autoion[(upper_index * nlte_dimension) + lower_index] += R;
       if ((R < 0)) {
-        printlnlog("  WARNING: cell {} ts {}: negative autoionisation rate from Z={} ionstage {} level {} to level {}",
+        printlnlog("  [warning] cell {} ts {}: negative autoionisation rate from Z={} ionstage {} level {} to level {}",
                    nltelog.modelgridindex, nltelog.timestep, get_atomicnumber(element), get_ionstage(element, ion),
                    level, target_level);
       }
@@ -793,7 +793,7 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
   // set_groundlevelpops uses uppermost_ion. Previously, this was set based on the NLTE phi factors. Therefore we need
   // to call find_uppermost_ion with force_saha = true so the uppermost ion used in set_groundlevelpops is changed to
   // the one based on the correct LTE phi factors instead
-  printlnlog("  WARNING: cell {} ts {}: NLTEPOP setting element Z={} level pops to LTE", nltelog.modelgridindex,
+  printlnlog("  [warning] cell {} ts {}: NLTEPOP setting element Z={} level pops to LTE", nltelog.modelgridindex,
              nltelog.timestep, get_atomicnumber(element));
   const double nne_hi = grid::get_rho(nonemptymgi) / MH;
   constexpr bool force_saha = true;
@@ -824,7 +824,7 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
 
         if (!std::isfinite(ltepop) || ltepop <= 0.) {
           printlnlog(
-              "  WARNING: cell {} ts {}: Boltzmann population for Z={} ionstage {} level {} is non-finite or "
+              "  [warning] cell {} ts {}: Boltzmann population for Z={} ionstage {} level {} is non-finite or "
               "non-positive ({}). Setting to MINPOP",
               nltelog.modelgridindex, nltelog.timestep, get_atomicnumber(element), get_ionstage(element, ion), level,
               ltepop);
@@ -832,7 +832,7 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
         }
 
         printlnlog(
-            "  WARNING: cell {} ts {}: NLTE solver gave negative/non-finite population to index {} (Z={} ionstage {} "
+            "  [warning] cell {} ts {}: NLTE solver gave negative/non-finite population to index {} (Z={} ionstage {} "
             "level {}), pop = {:g}. Replacing with LTE pop of {:g}",
             nltelog.modelgridindex, nltelog.timestep, index, get_atomicnumber(element), ionstage, level, population,
             ltepop);
@@ -843,7 +843,7 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
       const size_t index_ion_ground = get_nlte_vector_index(element, ion, 0, first_ion_used);
       if (index == index_ion_ground && population < MINPOP) {
         printlnlog(
-            "  WARNING: cell {} ts {}: NLTE solver gave ground pop less than MINPOP for index {} (Z={} ionstage {} "
+            "  [warning] cell {} ts {}: NLTE solver gave ground pop less than MINPOP for index {} (Z={} ionstage {} "
             "level {}), pop = {:g}. Returning nltepop_matrix_solve fail",
             nltelog.modelgridindex, nltelog.timestep, index, get_atomicnumber(element), ionstage, level, population);
         return false;
@@ -851,18 +851,19 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
 
       if (population < 0.0 || !std::isfinite(population)) {
         printlnlog(
-            "  WARNING: cell {} ts {}: NLTE solver gave negative/non-finite population for index {} (Z={} ionstage {} "
+            "  [warning] cell {} ts {}: NLTE solver gave negative/non-finite population for index {} (Z={} ionstage {} "
             "level {}), pop = {:g}",
             nltelog.modelgridindex, nltelog.timestep, index, get_atomicnumber(element), ionstage, level, population);
         if (population < -MINPOP) {
           printlnlog(
-              "  WARNING: negative pop = {:g} less than -MINPOP (-{:g}) unlikely a rounding error to zero so returning "
+              "  [warning] negative pop = {:g} less than -MINPOP (-{:g}) unlikely a rounding error to zero so "
+              "returning "
               "nltepop_matrix_solve fail",
               population, MINPOP);
           return false;
         }
         printlnlog(
-            "  WARNING: negative pop = {:g} greater than -MINPOP (-{:g}) likely a rounding error to zero so continue "
+            "  [warning] negative pop = {:g} greater than -MINPOP (-{:g}) likely a rounding error to zero so continue "
             "with NLTE pops but set this level to MINPOP",
             population, MINPOP);
         popvec[index] = MINPOP;
@@ -879,7 +880,7 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
           if (inversion_factor > STRICT_POPULATION_CHECKING_INVERSION_FACTOR_PRINTOUT_WARNING) {
             const bool solve_failed = (inversion_factor > STRICT_POPULATION_CHECKING_INVERSION_FACTOR_SOLVER_FAIL);
             printlnlog(
-                "  WARNING: cell {} ts {}: pop inversion greater than factor {:g}: (g_pop {:g})/(e_pop {:g}) = {:g} "
+                "  [warning] cell {} ts {}: pop inversion greater than factor {:g}: (g_pop {:g})/(e_pop {:g}) = {:g} "
                 "is less than (g_sw {:g})/(e_sw {:g}) = {:g} for index {} Z={} ionstage {} level {} (factor {:g} "
                 "inversion) - {}",
                 nltelog.modelgridindex, nltelog.timestep, STRICT_POPULATION_CHECKING_INVERSION_FACTOR_PRINTOUT_WARNING,
@@ -902,7 +903,7 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
             assert_testmodeonly(ion_has_superlevel(element, ion));
             const bool solve_failed = (inversion_factor > STRICT_POPULATION_CHECKING_INVERSION_FACTOR_SOLVER_FAIL);
             printlnlog(
-                "  WARNING: cell {} ts {}: superlevel pop inversion greater than factor {:g}: (g_pop "
+                "  [warning] cell {} ts {}: superlevel pop inversion greater than factor {:g}: (g_pop "
                 "{:g})/(SL_first_level_pop {:g}) = {:g} is less than (g_sw {:g})/(SL_first_level_sw {:g}) = {:g} for "
                 "index {} Z={} ionstage {} level {} (factor {:g} inversion) - {}",
                 nltelog.modelgridindex, nltelog.timestep, STRICT_POPULATION_CHECKING_INVERSION_FACTOR_PRINTOUT_WARNING,
@@ -941,7 +942,7 @@ template <typename GetDiagElement>
     }
   }
   if (!disconnectedlist.empty()) {
-    printlnlog("  ERROR: cell {} ts {}: NLTE matrix is singular for element Z={} (disconnected:{})",
+    printlnlog("  [error] cell {} ts {}: NLTE matrix is singular for element Z={} (disconnected:{})",
                nltelog.modelgridindex, nltelog.timestep, get_atomicnumber(element), disconnectedlist);
     return true;
   }
@@ -1074,7 +1075,7 @@ template <typename GetDiagElement>
   }
 
   if (!(error_best >= 0.)) {
-    printlnlog("  ERROR: cell {} ts {}: NLTE solver failed to find a solution with finite error for element Z={}",
+    printlnlog("  [error] cell {} ts {}: NLTE solver failed to find a solution with finite error for element Z={}",
                nltelog.modelgridindex, nltelog.timestep, get_atomicnumber(element));
     return false;
   }
@@ -1082,7 +1083,7 @@ template <typename GetDiagElement>
 
   if (error_best > 1e-8) {
     printlnlog(
-        "  WARNING: cell {} ts {}: NLTE solver matrix LU_refine: after {} iterations, best solution vector has a max "
+        "  [warning] cell {} ts {}: NLTE solver matrix LU_refine: after {} iterations, best solution vector has a max "
         "residual of {:g}",
         nltelog.modelgridindex, nltelog.timestep, iteration, error_best);
   }
@@ -1100,7 +1101,7 @@ auto can_remove_ion(const int element, const int ion, const int first_ion_used, 
   if (nions_used <= 1) {
     // can't remove an ion if there is only one ion stage used in the NLTE matrix
     printlnlog(
-        "  WARNING: cell {} ts {}: can't remove ion stage {} from NLTE matrix for element Z={} as only one ion stage "
+        "  [warning] cell {} ts {}: can't remove ion stage {} from NLTE matrix for element Z={} as only one ion stage "
         "used",
         nltelog.modelgridindex, nltelog.timestep, get_ionstage(element, ion), get_atomicnumber(element));
     return false;
@@ -1115,7 +1116,7 @@ auto can_remove_ion(const int element, const int ion, const int first_ion_used, 
   if (ground_pop / nnelement > NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION) {
     // ground pop relative to the element population must not exceed the limit
     printlnlog(
-        "  WARNING: cell {} ts {}: {} ion (Z={} ionstage {}) ground state population too large to remove ion "
+        "  [warning] cell {} ts {}: {} ion (Z={} ionstage {}) ground state population too large to remove ion "
         "(ground_pop / nnelement) = ({}/{}) = {} > {}",
         nltelog.modelgridindex, nltelog.timestep, ionname, get_atomicnumber(element), get_ionstage(element, ion),
         ground_pop, nnelement, ground_pop / nnelement, NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION);
@@ -1132,7 +1133,7 @@ auto can_remove_ion(const int element, const int ion, const int first_ion_used, 
     nlte_excited_pop_sum += fabs(levelpop);
     if (levelpop / nnelement > NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION) {
       printlnlog(
-          "  WARNING: cell {} ts {}: {} ion (Z={} ionstage {}) excited state (level {}) population too large to "
+          "  [warning] cell {} ts {}: {} ion (Z={} ionstage {}) excited state (level {}) population too large to "
           "remove ion (nlte_excited_pop_{}_ion / nnelement) = ({}/{}) > ({})",
           nltelog.modelgridindex, nltelog.timestep, ionname, get_atomicnumber(element), get_ionstage(element, ion),
           level, ionname, levelpop, nnelement, NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION);
@@ -1147,7 +1148,7 @@ auto can_remove_ion(const int element, const int ion, const int first_ion_used, 
     superlevel_pop = popvec[index_superlevel];
     if (superlevel_pop / nnelement > NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION) {
       printlnlog(
-          "  WARNING: cell {} ts {}: {} ion (Z={} ionstage {}) superlevel population too large to remove ion "
+          "  [warning] cell {} ts {}: {} ion (Z={} ionstage {}) superlevel population too large to remove ion "
           "(superlevel_pop_{}_ion / nnelement) = ({:g}/{:g}) > ({:g})",
           nltelog.modelgridindex, nltelog.timestep, ionname, get_atomicnumber(element), get_ionstage(element, ion),
           ionname, superlevel_pop, nnelement, NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION);
@@ -1258,7 +1259,7 @@ auto nltepop_solve_matrix_with_ion_reduction(const int element, const int nonemp
             atomic_number, get_ionstage(element, first_ion_used), get_ionstage(element, max_ion_used));
       }
     } else if (NLTE_LIMIT_ION_STAGES_AFTER_FAILURE) {
-      printlnlog("  WARNING: cell {} ts {}: NLTE matrix solution failed for element Z={} using ionstage {} to {}",
+      printlnlog("  [warning] cell {} ts {}: NLTE matrix solution failed for element Z={} using ionstage {} to {}",
                  nltelog.modelgridindex, nltelog.timestep, atomic_number, get_ionstage(element, first_ion_used),
                  get_ionstage(element, max_ion_used));
 
@@ -1273,7 +1274,7 @@ auto nltepop_solve_matrix_with_ion_reduction(const int element, const int nonemp
         matrix_solve_required = true;
       } else {
         printlnlog(
-            "  WARNING: cell {} ts {}: can't remove top or bottom ion stage from NLTE equations, therefore unable to "
+            "  [warning] cell {} ts {}: can't remove top or bottom ion stage from NLTE equations, therefore unable to "
             "find an NLTE solution for element Z={}",
             nltelog.modelgridindex, nltelog.timestep, atomic_number);
       }
@@ -1306,7 +1307,7 @@ void nltepop_apply_solution(const int element, const int nonemptymgi, const int 
 
     if (ion < first_ion_used || ion >= (first_ion_used + nions_used)) {
       printlnlog(
-          "  WARNING: cell {} ts {}: Z={} ionstage {} removed from NLTE rate matrix. Setting all levelpops for ion to "
+          "  [warning] cell {} ts {}: Z={} ionstage {} removed from NLTE rate matrix. Setting all levelpops for ion to "
           "zero",
           modelgridindex, timestep, get_atomicnumber(element), get_ionstage(element, ion));
 
@@ -1343,7 +1344,7 @@ void nltepop_apply_solution(const int element, const int nonemptymgi, const int 
   const double elem_pop_error_percent = fabs((nnelement / elem_pop_matrix) - 1) * 100;
   if (elem_pop_error_percent > 1.0) {
     printlnlog(
-        "  WARNING: timestep {} nlteiter {} Z={} element population is: {:g} (from abundance) and {:g} (from matrix "
+        "  [warning] timestep {} nlteiter {} Z={} element population is: {:g} (from abundance) and {:g} (from matrix "
         "solution), error: {:.2f}%. Forcing element pops to LTE.",
         timestep, nlte_iter, atomic_number, nnelement, elem_pop_matrix, elem_pop_error_percent);
     set_element_pops_lte(nonemptymgi, element);
@@ -1444,7 +1445,7 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
 
   if (!matrix_solve_success) {
     printlnlog(
-        "WARNING: Can't solve for NLTE populations in cell {} at timestep {} for element Z={} due to singular matrix, "
+        "[warning] Can't solve for NLTE populations in cell {} at timestep {} for element Z={} due to singular matrix, "
         "negative pop or large pop inversion and unable to recover solution by reducing ion range. Attempting to use "
         "LTE solution instead",
         modelgridindex, timestep, atomic_number);
@@ -1574,7 +1575,7 @@ void nltepop_read_restart_data(FILE* restart_file) {
   int total_nlte_levels_in = 0;
   assert_always(fscanf(restart_file, "%d\n", &total_nlte_levels_in) == 1);
   if (total_nlte_levels_in != globals::total_nlte_levels) {
-    printlnlog("ERROR: Expected {} NLTE levels but found {} in restart file", globals::total_nlte_levels,
+    printlnlog("[error] Expected {} NLTE levels but found {} in restart file", globals::total_nlte_levels,
                total_nlte_levels_in);
     std::abort();
   }

@@ -1107,7 +1107,7 @@ void read_restart_data(FILE* gridsave_file) {
 
     if (bincount_in != RADFIELDBINCOUNT || T_R_min_in != bins_T_R_min || T_R_max_in != bins_T_R_max ||
         nu_lower_first_ratio < 0.999 || nu_upper_last_ratio < 0.999) {
-      printlnlog("ERROR: gridsave file specifies {} bins, nu_min {} nu_max {} T_R_min {} T_R_max {}", bincount_in,
+      printlnlog("[error] gridsave file specifies {} bins, nu_min {} nu_max {} T_R_min {} T_R_max {}", bincount_in,
                  nu_min_in, nu_max_in, T_R_min_in, T_R_max_in);
       printlnlog("require {} bins, RADFIELDBINS_NU_MIN {:g} RADFIELDBINS_NU_MAX {:g} T_R_min {:g} T_R_max {:g}",
                  RADFIELDBINCOUNT, RADFIELDBINS_NU_MIN, RADFIELDBINS_NU_MAX, bins_T_R_min, bins_T_R_max);
@@ -1153,7 +1153,7 @@ void read_restart_data(FILE* gridsave_file) {
     assert_always(fscanf(gridsave_file, "%d\n", &detailed_linecount_in) == 1);
 
     if (detailed_linecount_in != detailed_linecount) {
-      printlnlog("ERROR: gridsave file specifies {} detailed lines but this simulation has {}.", detailed_linecount_in,
+      printlnlog("[error] gridsave file specifies {} detailed lines but this simulation has {}.", detailed_linecount_in,
                  detailed_linecount);
       std::abort();
     }

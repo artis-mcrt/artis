@@ -390,7 +390,7 @@ void check_auger_probabilities(const ptrdiff_t nonemptymgi) {
           probliststr += std::format(" {}:{:g}", a, get_auger_probability(nonemptymgi, element, ion, a));
         }
         printlnlog(
-            "ERROR: Auger probabilities sum to {:g} (expected 1.0 +/- 0.001) for cell {} Z={} ionstage {}: "
+            "[error] Auger probabilities sum to {:g} (expected 1.0 +/- 0.001) for cell {} Z={} ionstage {}: "
             "P(n_Auger):{}",
             prob_sum, grid::get_mgi_of_nonemptymgi(nonemptymgi), get_atomicnumber(element), get_ionstage(element, ion),
             probliststr);
@@ -403,7 +403,7 @@ void check_auger_probabilities(const ptrdiff_t nonemptymgi) {
           enfracliststr += std::format(" {}:{:g}", a, get_ion_auger_enfrac(nonemptymgi, element, ion, a));
         }
         printlnlog(
-            "ERROR: Auger energy fractions sum to {:g} (expected 1.0 +/- 0.001) for cell {} Z={} ionstage {}: "
+            "[error] Auger energy fractions sum to {:g} (expected 1.0 +/- 0.001) for cell {} Z={} ionstage {}: "
             "enfrac(n_Auger):{}",
             ionenfrac_sum, grid::get_mgi_of_nonemptymgi(nonemptymgi), get_atomicnumber(element),
             get_ionstage(element, ion), enfracliststr);
@@ -488,7 +488,7 @@ void read_auger_data() {
       const int g = xrayg[shellnum - 1];
 
       if (!std::isfinite(en_auger_ev) || en_auger_ev < 0) {
-        printlnlog("  WARNING: Z={:2} ionstage {:2} shellnum {} en_auger_ev is {:g}. Setting to zero.", Z, ionstage,
+        printlnlog("  [warning] Z={:2} ionstage {:2} shellnum {} en_auger_ev is {:g}. Setting to zero.", Z, ionstage,
                    shellnum, en_auger_ev);
         en_auger_ev = 0.;
       }
@@ -1099,7 +1099,7 @@ auto calculate_frac_heating(const int nonemptymgi, const std::array<double, SFPT
   const auto frac_heating = static_cast<float>(frac_heating_Einit / E_init_ev);
 
   if (!std::isfinite(frac_heating) || frac_heating < 0 || frac_heating > 1.0) {
-    printlnlog("WARNING: calculate_frac_heating: cell {} ts {}: invalid result of {:g}. Setting to 1.0 instead",
+    printlnlog("[warning] calculate_frac_heating: cell {} ts {}: invalid result of {:g}. Setting to 1.0 instead",
                grid::get_mgi_of_nonemptymgi(nonemptymgi), globals::timestep, frac_heating);
     return 1.;
   }
@@ -1646,7 +1646,7 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const std::a
       }
       if (frac_excitation_ion > 1. || !std::isfinite(frac_excitation_ion)) {
         printlnlog(
-            "      WARNING: cell {} ts {}: Z={} ionstage {}: invalid frac_excitation {:g}. Replacing with zero and "
+            "      [warning] cell {} ts {}: Z={} ionstage {}: invalid frac_excitation {:g}. Replacing with zero and "
             "dropping {} stored excitations for this ion",
             grid::get_mgi_of_nonemptymgi(nonemptymgi), timestep, Z, ionstage, frac_excitation_ion,
             std::ssize(tmp_excitation_list) - tmp_excitation_list_size_before_ion);
@@ -1825,7 +1825,7 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const std::a
       static_cast<float>(std::clamp(1. - frac_excitation_total - frac_ionisation_total, 0., 1.));
 
   if (!ftol<0.02>(frac_sum, 1.0)) {
-    printlnlog("WARNING: frac_sum is {:g}, but should be 1.0", frac_sum);
+    printlnlog("[warning] frac_sum is {:g}, but should be 1.0", frac_sum);
     printlnlog("  (replacing calculated frac_heating_tot {:g} with {:g} to make frac_sum = 1.0)",
                frac_heating_calculated, nt_solution[nonemptymgi].frac_heating);
   }
@@ -2601,9 +2601,9 @@ void read_restart_data(FILE* gridsave_file) {
   assert_always(fscanf(gridsave_file, "%d %la %la\n", &sfpts_in, &SF_EMIN_in, &SF_EMAX_in) == 3);
 
   if (sfpts_in != SFPTS || SF_EMIN_in != SF_EMIN || SF_EMAX_in != SF_EMAX) {
-    printlnlog("ERROR: gridsave file specifies {} Spencer-Fano samples, SF_EMIN {:g} SF_EMAX {:g}", sfpts_in,
+    printlnlog("[error] gridsave file specifies {} Spencer-Fano samples, SF_EMIN {:g} SF_EMAX {:g}", sfpts_in,
                SF_EMIN_in, SF_EMAX_in);
-    printlnlog("ERROR: This simulation has {} Spencer-Fano samples, SF_EMIN {:g} SF_EMAX {:g}", SFPTS, SF_EMIN,
+    printlnlog("[error] This simulation has {} Spencer-Fano samples, SF_EMIN {:g} SF_EMAX {:g}", SFPTS, SF_EMIN,
                SF_EMAX);
     std::abort();
   }

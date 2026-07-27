@@ -336,7 +336,7 @@ void set_elem_untrackedstable_massfrac(const int nonemptymgi, const int element,
   if (massfrac_untrackedstable < 0.) {
     //  allow some roundoff error before we complain
     if (std::abs(massfrac_allisotopes - elem_massfrac) > 1e-4) {
-      printlnlog("WARNING: cell {} Z={} element massfrac is less than the sum of its radioisotope massfracs", mgi,
+      printlnlog("[warning] cell {} Z={} element massfrac is less than the sum of its radioisotope massfracs", mgi,
                  atomic_number);
       printlnlog("  massfrac(Z) {:g} massfrac_radioisotopes(Z) {:g}", elem_massfrac, massfrac_allisotopes);
       printlnlog("  increasing elemental massfrac to {:g} and setting stable isotopic massfrac to zero",
@@ -635,7 +635,7 @@ void map_modeltogrid_direct() {
 void read_elem_abundances() {
   // barrier to make sure node master has set values in node shared memory
   MPI_Barrier_allranks();
-  printlog("reading abundances.txt...");
+  printlnlog("reading abundances.txt...");
   const bool threedimensional = (get_modelgridtype() == GridType::CARTESIAN3D);
 
   // Open the abundances file
@@ -706,7 +706,7 @@ void read_elem_abundances() {
 
   // barrier to make sure node master has set values in node shared memory
   MPI_Barrier_allranks();
-  printlnlog("done.");
+  printlnlog("finished reading abundances.txt");
 }
 
 void parse_model_headerline(const std::string& line, std::vector<int>& zlist, std::vector<int>& alist,
@@ -986,7 +986,7 @@ void read_grid_restart_data(const int timestep) {
                          &globals::dep_estimator_alpha[nonemptymgi], &nne_in, &nnetot_in) == 12);
 
     if (mgi_in != mgi) {
-      printlnlog("ERROR: read_grid_restart_data: cell mismatch in {}: read cellnumber {}, expected {}. aborting",
+      printlnlog("[error] read_grid_restart_data: cell mismatch in {}: read cellnumber {}, expected {}. aborting",
                  filename, mgi_in, mgi);
       assert_always(mgi_in == mgi);
     }
@@ -1099,7 +1099,7 @@ void assign_initial_temperatures() {
   printlnlog("  cells above MAXTEMP {:g} K: {}", MAXTEMP, cells_above_maxtemp);
   if (cells_nonfinite_temp > 0) {
     printlnlog(
-        "WARNING: {} cells had a non-finite initial temperature and were set to MINTEMP (first was mgi {} with "
+        "[warning] {} cells had a non-finite initial temperature and were set to MINTEMP (first was mgi {} with "
         "rho_tmin {:g} g/cm3 and decayed energy {:g} erg/g)",
         cells_nonfinite_temp, first_nonfinite_mgi, first_nonfinite_rho_tmin, first_nonfinite_endecay);
   }
@@ -1191,7 +1191,7 @@ void setup_grid_cartesian_3d() {
   // vmax is per coordinate, but the simulation volume corners will
   // have a higher expansion velocity than the sides
   const double vmax_corner = sqrt(3 * pow2(globals::vmax));
-  printlnlog("corner vmax {:g} [cm/s] ({:.2f}c)", vmax_corner, vmax_corner / CLIGHT);
+  printlnlog("corner vmax {:g} cm/s ({:.2f}c)", vmax_corner, vmax_corner / CLIGHT);
   if (!FORCE_SPHERICAL_ESCAPE_SURFACE) {
     assert_always(vmax_corner < CLIGHT);
   }
@@ -1240,7 +1240,7 @@ void setup_grid_spherical_1d() {
 
 void setup_grid_cylindrical_2d() {
   const double vmax_corner = sqrt(2 * pow2(globals::vmax));
-  printlnlog("corner vmax {:g} [cm/s] ({:.2f}c)", vmax_corner, vmax_corner / CLIGHT);
+  printlnlog("corner vmax {:g} cm/s ({:.2f}c)", vmax_corner, vmax_corner / CLIGHT);
   assert_always(vmax_corner < CLIGHT);
 
   assert_always(get_modelgridtype() == GridType::CYLINDRICAL2D);
@@ -2001,7 +2001,7 @@ void read_ejecta_model() {
       double log_rho{NAN};
       if (!(ssline >> cellnumberin >> vout_kmps >> log_rho)) {
         printlnlog(
-            "ERROR: model.txt cell {}: expected at least 3 values (inputcellid vel_r_max_kmps log10rho) but could "
+            "[error] model.txt cell {}: expected at least 3 values (inputcellid vel_r_max_kmps log10rho) but could "
             "not parse line: {}",
             mgi, line);
         assert_always(false);
@@ -2053,7 +2053,7 @@ void read_ejecta_model() {
     assert_always(cellnumberin == mgi + first_cellindex);
 
     if (rho_tmodel < 0) {
-      printlnlog("ERROR: model.txt cell {} (inputcellid {}) has negative density {:g} g/cm3 at t_model. aborting", mgi,
+      printlnlog("[error] model.txt cell {} (inputcellid {}) has negative density {:g} g/cm3 at t_model. aborting", mgi,
                  cellnumberin, rho_tmodel);
       std::abort();
     }
@@ -2067,7 +2067,7 @@ void read_ejecta_model() {
   }
 
   if (mgi != get_npts_model()) {
-    printlnlog("ERROR in model.txt. Found only {} cells instead of {} expected.", mgi, get_npts_model());
+    printlnlog("[error] model.txt: found only {} cells instead of {} expected.", mgi, get_npts_model());
     std::abort();
   }
 
@@ -2083,25 +2083,25 @@ void read_ejecta_model() {
       printlnlog("Cell positions in model.txt are consistent with calculated values when z-y-x column order is used.");
     } else {
       printlnlog(
-          "WARNING: Cell positions in model.txt are not consistent with calculated values in either x-y-z or z-y-x "
+          "[warning] Cell positions in model.txt are not consistent with calculated values in either x-y-z or z-y-x "
           "order.");
     }
-    printlnlog("min_den {:g} [g/cm3]", min_den);
+    printlnlog("minimum model density {:g} g/cm3", min_den);
   }
 
   assert_always(get_npts_model() ==
                 std::max(1, ncoord_model[0]) * std::max(1, ncoord_model[1]) * std::max(1, ncoord_model[2]));
   printlnlog("npts_model: {}", get_npts_model());
   globals::rmax = globals::vmax * globals::tmin;
-  printlnlog("vmax {:g} [cm/s] ({:.2f}c)", globals::vmax, globals::vmax / CLIGHT);
+  printlnlog("vmax {:g} cm/s ({:.2f}c)", globals::vmax, globals::vmax / CLIGHT);
   assert_always(globals::vmax < CLIGHT);
-  printlnlog("tmin {:g} [s] = {:.2f} [d]", globals::tmin, globals::tmin / DAY);
-  printlnlog("rmax {:g} [cm] (at t=tmin)", globals::rmax);
+  printlnlog("tmin {:g} s = {:.2f} d", globals::tmin, globals::tmin / DAY);
+  printlnlog("rmax {:g} cm (at t=tmin)", globals::rmax);
 
   calc_modelinit_totmassnuclides();
 
-  printlnlog("Total input model mass: {:9.3e} [Msun]", mtot_input / MSUN);
-  printlnlog("Nuclide masses at t=t_model_init [Msun]:");
+  printlnlog("Total input model mass: {:9.3e} Msun", mtot_input / MSUN);
+  printlnlog("Nuclide masses at t=t_model_init in Msun:");
   printlnlog("  56Ni: {:9.3e}  56Co: {:9.3e}  52Fe: {:9.3e}  48Cr: {:9.3e}", get_totmassnuclide_tmodel(28, 56) / MSUN,
              get_totmassnuclide_tmodel(27, 56) / MSUN, get_totmassnuclide_tmodel(26, 52) / MSUN,
              get_totmassnuclide_tmodel(24, 48) / MSUN);
@@ -2116,7 +2116,7 @@ void read_ejecta_model() {
       columnliststr += std::format(" '{}'", colname);
     }
     printlnlog(
-        "WARNING: ignored model.txt columns not recognised as a known nuclide, X_Fegroup, Ye, q, or tracercount:{}",
+        "[warning] ignored model.txt columns not recognised as a known nuclide, X_Fegroup, Ye, q, or tracercount:{}",
         columnliststr);
   }
 
@@ -2127,7 +2127,6 @@ void write_grid_restart_data(const int timestep) {
   const auto filename = std::format("gridsave_ts{}.tmp", timestep);
 
   const auto sys_time_start_write_restart = std::chrono::steady_clock::now();
-  printlog("Write grid restart data to {}...", filename);
 
   FILE* gridsave_file = fopen_required(filename, "w");
 
@@ -2178,7 +2177,7 @@ void write_grid_restart_data(const int timestep) {
   fclose(gridsave_file);
   const auto write_restart_duration =
       std::chrono::duration<double>(std::chrono::steady_clock::now() - sys_time_start_write_restart).count();
-  printlnlog("done in {:.1f} seconds.", write_restart_duration);
+  printlnlog("wrote grid restart data to {} in {:.1f} seconds", filename, write_restart_duration);
 }
 
 // get lowest modelgridindex assigned to this rank (for update_grid and output files)
@@ -2444,7 +2443,7 @@ DEVICE_FUNC void snap_pos_to_cell(Vec3d& pos, const double time, const int celli
         if (isoutside_error) {
 #ifndef GPU_ON
           printlnlog(
-              "ERROR: timestep {}: packet outside coord {} {}{} boundary of cell {} by delta {:g}. vel {:g} initpos "
+              "[error] timestep {}: packet outside coord {} {}{} boundary of cell {} by delta {:g}. vel {:g} initpos "
               "{:g} cellcoordmin {:g} cellcoordmax {:g} dir [{:g}, {:g}, {:g}] tmin {:g} s tstart {:g} s",
               globals::timestep, d, pos_component_vel_relative_to_flow ? '+' : '-', get_coordlabel(prop_gridtype, d),
               cellindex, delta, pktvelgridcoord[d], pktposgridcoord[d], cellcoordmin[d] / globals::tmin * tstart,

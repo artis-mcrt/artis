@@ -95,15 +95,15 @@ void packet_init(std::span<Packet> packets)
 // Subroutine that initialises the packets if we start a new simulation.
 {
   MPI_Barrier_allranks();
-  printlnlog("UNIFORM_PELLET_ENERGIES is {}", (UNIFORM_PELLET_ENERGIES ? "true" : "false"));
+  printlnlog("UNIFORM_PELLET_ENERGIES is {}", UNIFORM_PELLET_ENERGIES ? "true" : "false");
 
-  printlnlog("INITIAL_PACKETS_ON is {}", (INITIAL_PACKETS_ON ? "on" : "off"));
+  printlnlog("INITIAL_PACKETS_ON is {}", INITIAL_PACKETS_ON ? "true" : "false");
 
   // The total number of pellets that we want to start with is just
   // npkts. The total energy of the pellets is given by etot.
   const double etot_tmodel_tinf = decay::get_global_etot_tmodel_tinf();
 
-  printlnlog("etot {:g} (t_model to t_inf)", etot_tmodel_tinf);
+  printlnlog("etot {:g} erg (t_model to t_inf)", etot_tmodel_tinf);
 
   printlnlog("e_cmf per packet (t_model to t_inf) {:g} erg", etot_tmodel_tinf / MPKTS);
 
@@ -148,7 +148,8 @@ void packet_init(std::span<Packet> packets)
   double e_cmf_total =
       std::ranges::fold_left(packets, 0., [](const double sum, const Packet& p) { return sum + p.e_cmf; });
   const double e_ratio = etot_simtime / e_cmf_total;
-  printlnlog("packet energy sum {:g} should be {:g} normalisation factor: {:g}", e_cmf_total, etot_simtime, e_ratio);
+  printlnlog("packet energy sum {:g} erg should be {:g} erg, so normalisation factor is {:g}", e_cmf_total,
+             etot_simtime, e_ratio);
   assert_always(std::isfinite(e_cmf_total));
   e_cmf_total *= e_ratio;
   for (auto& pkt : packets) {
@@ -266,13 +267,12 @@ void write_temp_packetsfile(const int timestep, const int my_rank, const std::sp
   bool write_success = false;
   while (!write_success) {
     if (tries > 10) {
-      printlnlog("ERROR: Failed to write {} after {} tries. Aborting.", filename, tries);
+      printlnlog("[error] Failed to write {} after {} tries. Aborting.", filename, tries);
       std::abort();
     }
-    printlog("timestep {}: writing {}...", timestep, filename);
     FILE* packets_file = fopen(filename.c_str(), "wb");
     if (packets_file == nullptr) {
-      printlnlog("ERROR: Could not open file '{}' for mode 'wb'.", filename);
+      printlnlog("[error] Could not open file '{}' for mode 'wb'.", filename);
       write_success = false;
     } else {
       auto packet_count = static_cast<std::int64_t>(std::ssize(packets));
@@ -281,12 +281,12 @@ void write_temp_packetsfile(const int timestep, const int my_rank, const std::sp
       write_success = write_success &&
                       (std::fwrite(packets.data(), sizeof(Packet), packets.size(), packets_file) == packets.size());
       if (!write_success) {
-        printlnlog("WARNING: fwrite to {} failed on attempt {} of 10. will retry...", filename, tries + 1);
+        printlnlog("[warning] fwrite to {} failed on attempt {} of 10. will retry...", filename, tries + 1);
       }
 
       fclose(packets_file);
     }
     tries++;
   }
-  printlnlog("done");
+  printlnlog("timestep {}: wrote {} packets to {}", timestep, std::ssize(packets), filename);
 }
