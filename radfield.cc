@@ -363,8 +363,10 @@ auto nu_bar_planck_minus_estimator(const double T_R, const int nonemptymgi, cons
 
   if (!std::isfinite(delta_nu_bar)) {
     printlnlog(
-        "delta_nu_bar is {:g}. T_R {:g} nu_lower {:g} nu_upper {:g} nu_bar_planck_T_R {:g} nu_bar_estimator {:g}",
-        delta_nu_bar, T_R, nu_lower, nu_upper, nu_bar_planck_T_R, nu_bar_estimator);
+        "[warning] nu_bar_planck_minus_estimator: cell {} bin {}: delta_nu_bar is {:g}. T_R {:g} K nu_lower {:g} Hz "
+        "nu_upper {:g} Hz nu_bar_planck_T_R {:g} Hz nu_bar_estimator {:g} Hz",
+        grid::get_mgi_of_nonemptymgi(nonemptymgi), binindex, delta_nu_bar, T_R, nu_lower, nu_upper, nu_bar_planck_T_R,
+        nu_bar_estimator);
   }
 
   return delta_nu_bar;
@@ -393,7 +395,10 @@ auto find_bin_T_R(const int nonemptymgi, const int binindex) -> float {
                                                           ftol<epsrel>, iteration_num);
     const auto T_R_solution = static_cast<float>(0.5 * (result.first + result.second));
     if (iteration_num >= maxit) {
-      printlnlog("[warning] find_bin_T_R: T_R did not converge within {} iterations.", iteration_num);
+      printlnlog(
+          "[warning] find_bin_T_R: cell {} bin {}: T_R did not converge within {} iterations. interval [{:g}, "
+          "{:g}] K",
+          grid::get_mgi_of_nonemptymgi(nonemptymgi), binindex, iteration_num, result.first, result.second);
     }
     return T_R_solution;
   }
@@ -813,18 +818,21 @@ void fit_parameters(const int nonemptymgi, const int timestep) {
         W_bin = static_cast<float>(J_bin / planck_integral_result);
 
         if (W_bin > 1e4 || !std::isfinite(W_bin)) {
-          printlog(
-              "bin {} T_R {:7.1f} W {:g} too high or non-finite, trying setting T_R to {:g}. J_bin {:g} "
-              "planck_integral {:g}...",
-              binindex, T_R_bin, W_bin, bins_T_R_max, J_bin, planck_integral_result);
+          const auto W_bin_first = W_bin;
           planck_integral_result = calculate_planck_integral(bins_T_R_max, nu_lower, nu_upper, false);
           W_bin = static_cast<float>(J_bin / planck_integral_result);
           if (W_bin > 1e4) {
-            printlnlog("W still very high, W={:g}. Zeroing bin...", W_bin);
+            printlnlog(
+                "[warning] cell {} ts {} bin {}: W {:g} too high or non-finite (T_R {:7.1f} K, J_bin {:g}) and W "
+                "{:g} still too high after retry at T_R_max {:g} K. Zeroing bin (T_R set to sentinel -99)",
+                mgi, timestep, binindex, W_bin_first, T_R_bin, J_bin, W_bin, bins_T_R_max);
             T_R_bin = -99.;
             W_bin = 0.;
           } else {
-            printlnlog("new W is {:g}. Continuing...", W_bin);
+            printlnlog(
+                "[warning] cell {} ts {} bin {}: W {:g} too high or non-finite (T_R {:7.1f} K, J_bin {:g}); "
+                "continuing with W {:g} at T_R_max {:g} K",
+                mgi, timestep, binindex, W_bin_first, T_R_bin, J_bin, W_bin, bins_T_R_max);
             T_R_bin = bins_T_R_max;
           }
         }
@@ -922,11 +930,15 @@ auto get_T_J_from_J(const int nonemptymgi) -> float {
   }
   // Make sure that T is in the allowed temperature range.
   if (T_J > MAXTEMP) {
-    printlnlog("[warning] get_T_J_from_J: T_J would be {:.1f} > MAXTEMP. Clamping to MAXTEMP = {:.0f} K", T_J, MAXTEMP);
+    printlnlog(
+        "[warning] get_T_J_from_J: cell {} ts {}: T_J would be {:.1f} K > MAXTEMP. Clamping to MAXTEMP = {:.0f} K",
+        grid::get_mgi_of_nonemptymgi(nonemptymgi), globals::timestep, T_J, MAXTEMP);
     return MAXTEMP;
   }
   if (T_J < MINTEMP) {
-    printlnlog("[warning] get_T_J_from_J: T_J would be {:.1f} < MINTEMP. Clamping to MINTEMP = {:.0f} K", T_J, MINTEMP);
+    printlnlog(
+        "[warning] get_T_J_from_J: cell {} ts {}: T_J would be {:.1f} K < MINTEMP. Clamping to MINTEMP = {:.0f} K",
+        grid::get_mgi_of_nonemptymgi(nonemptymgi), globals::timestep, T_J, MINTEMP);
     return MINTEMP;
   }
   return T_J;

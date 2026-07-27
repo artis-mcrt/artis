@@ -250,7 +250,6 @@ void call_T_e_finder(const int nonemptymgi, const double t_current, HeatingCooli
                      const std::span<const double> bfheatingcoeffs) {
   const int modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
   const double T_e_old = grid::get_Te(nonemptymgi);
-  printlog("Finding T_e in cell {} at timestep {}...", modelgridindex, globals::timestep);
 
   const auto f_T_e = [&](double T_e) -> double {
     return T_e_eqn_heating_minus_cooling(T_e, nonemptymgi, t_current, heatingcoolingrates, bfheatingcoeffs);
@@ -279,10 +278,13 @@ void call_T_e_finder(const int nonemptymgi, const double t_current, HeatingCooli
                                                     ftol<TEMPERATURE_SOLVER_ACCURACY>, iternum);
     T_e = 0.5 * (result.first + result.second);
     if (iternum >= maxit) {
-      printlnlog("[warning] call_T_e_finder: T_e did not converge within {} iterations. interval [{:g}, {:g}]", iternum,
-                 result.first, result.second);
+      printlnlog(
+          "[warning] call_T_e_finder: cell {} timestep {}: T_e did not converge within {} iterations. interval [{:g}, "
+          "{:g}] K",
+          modelgridindex, globals::timestep, iternum, result.first, result.second);
     } else {
-      printlnlog("after {} iterations, T_e = {:g} K, interval [{:g}, {:g}]", iternum, T_e, result.first, result.second);
+      printlnlog("T_e found in cell {} at timestep {} after {} iterations: T_e = {:g} K, interval [{:g}, {:g}] K",
+                 modelgridindex, globals::timestep, iternum, T_e, result.first, result.second);
     }
   } else if (invalid_values || f_T_max < 0) {
     // Thermal balance equation always negative ===> T_e = T_min
@@ -301,13 +303,19 @@ void call_T_e_finder(const int nonemptymgi, const double t_current, HeatingCooli
   }
 
   if (T_e > 2 * T_e_old) {
-    T_e = 2 * T_e_old;
-    printlnlog("use T_e damping in cell {}", modelgridindex);
-    T_e = std::min(T_e, MAXTEMP);
+    const double T_e_solved = T_e;
+    T_e = std::min(2 * T_e_old, MAXTEMP);
+    printlnlog(
+        "T_e damping in cell {} at timestep {}: solver gave T_e {:g} K, clamping the rise from the previous value "
+        "{:g} K to {:g} K",
+        modelgridindex, globals::timestep, T_e_solved, T_e_old, T_e);
   } else if (T_e < 0.5 * T_e_old) {
-    T_e = 0.5 * T_e_old;
-    printlnlog("use T_e damping in cell {}", modelgridindex);
-    T_e = std::max(T_e, MINTEMP);
+    const double T_e_solved = T_e;
+    T_e = std::max(0.5 * T_e_old, MINTEMP);
+    printlnlog(
+        "T_e damping in cell {} at timestep {}: solver gave T_e {:g} K, clamping the fall from the previous value "
+        "{:g} K to {:g} K",
+        modelgridindex, globals::timestep, T_e_solved, T_e_old, T_e);
   }
 
   grid::set_Te(nonemptymgi, static_cast<float>(T_e));

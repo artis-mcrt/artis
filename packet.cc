@@ -284,7 +284,7 @@ void write_temp_packetsfile(const int timestep, const int my_rank, const std::sp
       write_success = write_success &&
                       (std::fwrite(packets.data(), sizeof(Packet), packets.size(), packets_file) == packets.size());
       if (!write_success) {
-        printlnlog("fwrite() FAILED! will retry...");
+        printlnlog("WARNING: fwrite to {} failed on attempt {} of 10. will retry...", filename, tries + 1);
       }
 
       fclose(packets_file);

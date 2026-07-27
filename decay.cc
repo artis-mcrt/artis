@@ -103,8 +103,8 @@ std::vector<Nuclide> nuclides;
 std::vector<DecayPath> decaypaths;
 std::vector<bool> alldecaytypes_is_used;
 
-[[nodiscard]] constexpr auto decay_daughters_z_a_prob(const int z_parent, const int a_parent, const DecayType decaytype)
-    -> std::vector<DecayDaughter> {
+[[nodiscard]] constexpr auto decay_daughters_z_a_prob(const int z_parent, const int a_parent,
+                                                      const DecayType decaytype) -> std::vector<DecayDaughter> {
   assert_always(decaytype >= 0);
   assert_always(decaytype < DecayType::DECAYTYPE_COUNT);
 
@@ -313,7 +313,12 @@ void extend_lastdecaypath(std::vector<DecayPath>& localdecaypaths) {
       // check for nuclide in existing path, which would indicate a loop
       for (const auto [z, a] : std::views::zip(initial_last_decaypath.z, initial_last_decaypath.a)) {
         if (z == daughter.z && a == daughter.a) {
-          printlnlog("\nERROR: Loop found in nuclear decay chain.");
+          std::string chainstr;
+          for (const auto [chain_z, chain_a] : std::views::zip(initial_last_decaypath.z, initial_last_decaypath.a)) {
+            chainstr += std::format("(Z={},A={}) -> ", chain_z, chain_a);
+          }
+          printlnlog("ERROR: loop in nuclear decay chain: {}(Z={},A={}) already occurred. aborting", chainstr,
+                     daughter.z, daughter.a);
           std::abort();
         }
       }
@@ -457,8 +462,8 @@ void filter_unused_nuclides(const std::span<const int> custom_zlist, const std::
   }
 }
 
-auto sample_decaytime(const int decaypathindex, const double tdecaymin, const double tdecaymax, rngstate_type& rngstate)
-    -> double {
+auto sample_decaytime(const int decaypathindex, const double tdecaymin, const double tdecaymax,
+                      rngstate_type& rngstate) -> double {
   double tdecay = -1;
   const double t_model = grid::get_t_model();
   // rejection method. draw random times with the right distribution until they are within the correct range.
@@ -570,8 +575,8 @@ auto get_nuc_massfrac(const int nonemptymgi, const int nucindex, const double ti
 // Get the decay energy [erg/g] that would be released from time tstart [s] to time infinity by a given decaypath
 // e.g. Ni56 -> Co56, represents the decays of Co56 nuclei that were produced from Ni56 in the initial abundance.
 // Decays from Co56 due to the initial abundance of Co56 are not counted here, nor is the energy from Ni56 decays
-auto get_endecay_to_tinf_per_ejectamass_at_time(const int modelgridindex, const int decaypathindex, const double time)
-    -> double {
+auto get_endecay_to_tinf_per_ejectamass_at_time(const int modelgridindex, const int decaypathindex,
+                                                const double time) -> double {
   assert_testmodeonly(decaypathindex >= 0);
   assert_testmodeonly(decaypathindex < get_num_decaypaths());
   const auto& decaypath = decaypaths[decaypathindex];
@@ -1148,9 +1153,8 @@ auto get_endecay_per_ejectamass_tmodel_to_time_withexpansion(const int nonemptym
 
 // get the decay energy that will be released during the simulation time [(tmodel if initial packets else tmin) to tmax]
 // indexed by nonemptymgi and decaypathindex [erg/g]
-auto get_modelcell_simtime_endecay_per_mass(const int nonemptymgi,
-                                            const std::span<const double> energy_per_mass_nonemptymgi_decaypath)
-    -> double {
+auto get_modelcell_simtime_endecay_per_mass(
+    const int nonemptymgi, const std::span<const double> energy_per_mass_nonemptymgi_decaypath) -> double {
   const auto num_decaypaths = get_num_decaypaths();
   double endecay_per_mass = 0.;
   for (int decaypathindex = 0; decaypathindex < num_decaypaths; decaypathindex++) {
@@ -1192,8 +1196,8 @@ auto get_energy_per_mass_nonemptymgi_decaypath() -> MPI_shared_array<const doubl
 }
 
 // energy release rate in form of kinetic energy of positrons, electrons, and alpha particles in [erg/s/g]
-[[nodiscard]] auto get_particle_injection_rate(const int nonemptymgi, const double t, const DecayType decaytype)
-    -> double {
+[[nodiscard]] auto get_particle_injection_rate(const int nonemptymgi, const double t,
+                                               const DecayType decaytype) -> double {
   double dep_sum = 0.;
   const auto num_nuclides = std::ssize(nuclides);
   for (int nucindex = 0; nucindex < num_nuclides; nucindex++) {

@@ -674,7 +674,8 @@ void read_vpktparameterfile() {
     assert_always(fscanf(input_file, "%lg", &obsdirs_costheta[i]) == 1);
 
     if (fabs(obsdirs_costheta[i]) > 1) {
-      printlnlog("Wrong observer direction");
+      printlnlog("ERROR: vpkt.txt observer direction {} has costheta {:g}, which is outside [-1, 1]. aborting", i,
+                 obsdirs_costheta[i]);
       std::abort();
     }
     if (obsdirs_costheta[i] == 1) {

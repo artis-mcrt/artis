@@ -690,8 +690,8 @@ void macroatom_open_file() {
 // multiply by upper level population to get a rate per second
 [[gnu::pure]] [[nodiscard]] auto col_deexcitation_ratecoeff(const float T_e, const float clumpednne,
                                                             const double epsilon_trans, const double upperstatweight,
-                                                            const double lowerstatweight, const int alltransindex)
-    -> double {
+                                                            const double lowerstatweight,
+                                                            const int alltransindex) -> double {
   const auto coll_strength = globals::alltrans.coll_str[alltransindex];
   if (coll_strength < 0) {
     if (!globals::alltrans.forbidden[alltransindex])  // alternative: (coll_strength > -1.5) i.e. to catch -1
@@ -732,8 +732,8 @@ void macroatom_open_file() {
 // multiply by lower level population to get a rate per second
 [[gnu::pure]] [[nodiscard]] auto col_excitation_ratecoeff(const float T_e, const float clumpednne,
                                                           const double upperstatweight, const int alltransindex,
-                                                          const double epsilon_trans, const double lowerstatweight)
-    -> double {
+                                                          const double epsilon_trans,
+                                                          const double lowerstatweight) -> double {
   const auto coll_strength = globals::alltrans.coll_str[alltransindex];
   const double eoverkt = epsilon_trans / (KB * T_e);
 

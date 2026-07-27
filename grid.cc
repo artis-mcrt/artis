@@ -977,8 +977,8 @@ void read_grid_restart_data(const int timestep) {
                          &globals::dep_estimator_alpha[nonemptymgi], &nne_in, &nnetot_in) == 12);
 
     if (mgi_in != mgi) {
-      printlnlog("[fatal] read_grid_restart_data: cell mismatch in reading input gridsave.dat ... abort");
-      printlnlog("[fatal] read_grid_restart_data: read cellnumber {}, expected cellnumber {}", mgi_in, mgi);
+      printlnlog("ERROR: read_grid_restart_data: cell mismatch in {}: read cellnumber {}, expected {}. aborting",
+                 filename, mgi_in, mgi);
       assert_always(mgi_in == mgi);
     }
 
@@ -1043,6 +1043,10 @@ void assign_initial_temperatures() {
   const double tstart = globals::timesteps[0].mid;
   int cells_below_mintemp = 0;
   int cells_above_maxtemp = 0;
+  int cells_nonfinite_temp = 0;
+  int first_nonfinite_mgi = -1;
+  double first_nonfinite_rho_tmin = 0.;
+  double first_nonfinite_endecay = 0.;
 
   for (int nonemptymgi = 0; nonemptymgi < get_nonempty_npts_model(); nonemptymgi++) {
     const int mgi = get_mgi_of_nonemptymgi(nonemptymgi);
@@ -1056,9 +1060,13 @@ void assign_initial_temperatures() {
 
     if (!std::isfinite(T_initial)) {
       // check this first: a NaN would fall through every comparison below and be stored unclamped
-      printlnlog("mgi {}: T_initial of {:g} is not finite! Setting to MINTEMP.", mgi, T_initial);
+      cells_nonfinite_temp++;
+      if (first_nonfinite_mgi < 0) {
+        first_nonfinite_mgi = mgi;
+        first_nonfinite_rho_tmin = get_rho_tmin(mgi);
+        first_nonfinite_endecay = decayedenergy_per_mass;
+      }
       T_initial = MINTEMP;
-      cells_below_mintemp++;
     } else if (T_initial < MINTEMP) {
       T_initial = MINTEMP;
       cells_below_mintemp++;
@@ -1078,8 +1086,14 @@ void assign_initial_temperatures() {
       thick_allcells[nonemptymgi] = 0;
     }
   }
-  printlnlog("  cells below MINTEMP {:g}: {}", MINTEMP, cells_below_mintemp);
-  printlnlog("  cells above MAXTEMP {:g}: {}", MAXTEMP, cells_above_maxtemp);
+  printlnlog("  cells below MINTEMP {:g} K: {}", MINTEMP, cells_below_mintemp);
+  printlnlog("  cells above MAXTEMP {:g} K: {}", MAXTEMP, cells_above_maxtemp);
+  if (cells_nonfinite_temp > 0) {
+    printlnlog(
+        "WARNING: {} cells had a non-finite initial temperature and were set to MINTEMP (first was mgi {} with "
+        "rho_tmin {:g} g/cm3 and decayed energy {:g} erg/g)",
+        cells_nonfinite_temp, first_nonfinite_mgi, first_nonfinite_rho_tmin, first_nonfinite_endecay);
+  }
   MPI_Barrier_allranks();
 }
 
@@ -1977,8 +1991,10 @@ void read_ejecta_model() {
       double vout_kmps{NAN};
       double log_rho{NAN};
       if (!(ssline >> cellnumberin >> vout_kmps >> log_rho)) {
-        printlnlog("Unexpected number of values in model.txt");
-        printlnlog("line: {}", line);
+        printlnlog(
+            "ERROR: model.txt cell {}: expected at least 3 values (inputcellid vel_r_max_kmps log10rho) but could "
+            "not parse line: {}",
+            mgi, line);
         assert_always(false);
       }
       vout_model[mgi] = vout_kmps * 1.e5;
@@ -2028,7 +2044,8 @@ void read_ejecta_model() {
     assert_always(cellnumberin == mgi + first_cellindex);
 
     if (rho_tmodel < 0) {
-      printlnlog("negative input density {:g} {}", rho_tmodel, mgi);
+      printlnlog("ERROR: model.txt cell {} (inputcellid {}) has negative density {:g} g/cm3 at t_model. aborting", mgi,
+                 cellnumberin, rho_tmodel);
       std::abort();
     }
 
@@ -2408,15 +2425,11 @@ DEVICE_FUNC void snap_pos_to_cell(Vec3d& pos, const double time, const int celli
         if (isoutside_error) {
 #ifndef GPU_ON
           printlnlog(
-              "[ERROR] packet outside coord {} {}{} boundary of cell {}. vel {:g} initpos {:g} "
-              "cellcoordmin {:g}, cellcoordmax {:g}",
-              d, pos_component_vel_relative_to_flow ? '+' : '-', get_coordlabel(prop_gridtype, d), cellindex,
-              pktvelgridcoord[d], pktposgridcoord[d], cellcoordmin[d] / globals::tmin * tstart,
-              cellcoordmax[d] / globals::tmin * tstart);
-          printlnlog("globals::tmin {:g} tstart {:g} tstart/globals::tmin {:g}", globals::tmin, tstart,
-                     tstart / globals::tmin);
-          printlnlog(" delta {:g}", delta);
-          printlnlog("packet dir [{:g}, {:g}, {:g}]", dir[0], dir[1], dir[2]);
+              "ERROR: timestep {}: packet outside coord {} {}{} boundary of cell {} by delta {:g}. vel {:g} initpos "
+              "{:g} cellcoordmin {:g} cellcoordmax {:g} dir [{:g}, {:g}, {:g}] tmin {:g} s tstart {:g} s",
+              globals::timestep, d, pos_component_vel_relative_to_flow ? '+' : '-', get_coordlabel(prop_gridtype, d),
+              cellindex, delta, pktvelgridcoord[d], pktposgridcoord[d], cellcoordmin[d] / globals::tmin * tstart,
+              cellcoordmax[d] / globals::tmin * tstart, dir[0], dir[1], dir[2], globals::tmin, tstart);
 #endif
 
           // this should not happen! Leave the check until late 2026 and if it never triggers on any runs, we can remove
@@ -2427,7 +2440,7 @@ DEVICE_FUNC void snap_pos_to_cell(Vec3d& pos, const double time, const int celli
           if ((cellcoordidx[d] == (ncoordgrid[d] - 1) && pos_component_vel_relative_to_flow) ||
               (cellcoordidx[d] == 0 && !pos_component_vel_relative_to_flow) || (next_cellindex < 0)) {
 #ifndef GPU_ON
-            printlnlog("[warning] escaping packet");
+            printlnlog("[warning] treating out-of-boundary packet in cell {} as escaping the grid", cellindex);
 #endif
             return {0., -99};
           }

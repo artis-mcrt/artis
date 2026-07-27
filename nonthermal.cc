@@ -385,22 +385,28 @@ void check_auger_probabilities(const ptrdiff_t nonemptymgi) {
       }
 
       if (fabs(prob_sum - 1.0) > 0.001) {
-        printlnlog("Problem with Auger probabilities for cell {} Z={} ionstage {} prob_sum {:g}",
-                   grid::get_mgi_of_nonemptymgi(nonemptymgi), get_atomicnumber(element), get_ionstage(element, ion),
-                   prob_sum);
+        std::string probliststr;
         for (int a = 0; a <= NT_MAX_AUGER_ELECTRONS; a++) {
-          printlnlog("{}: {:g}", a, get_auger_probability(nonemptymgi, element, ion, a));
+          probliststr += std::format(" {}:{:g}", a, get_auger_probability(nonemptymgi, element, ion, a));
         }
+        printlnlog(
+            "ERROR: Auger probabilities sum to {:g} (expected 1.0 +/- 0.001) for cell {} Z={} ionstage {}: "
+            "P(n_Auger):{}",
+            prob_sum, grid::get_mgi_of_nonemptymgi(nonemptymgi), get_atomicnumber(element), get_ionstage(element, ion),
+            probliststr);
         problem_found = true;
       }
 
       if (fabs(ionenfrac_sum - 1.0) > 0.001) {
-        printlnlog("Problem with Auger energy frac sum for cell {} Z={} ionstage {} ionenfrac_sum {:g}",
-                   grid::get_mgi_of_nonemptymgi(nonemptymgi), get_atomicnumber(element), get_ionstage(element, ion),
-                   ionenfrac_sum);
+        std::string enfracliststr;
         for (int a = 0; a <= NT_MAX_AUGER_ELECTRONS; a++) {
-          printlnlog("{}: {:g}", a, get_ion_auger_enfrac(nonemptymgi, element, ion, a));
+          enfracliststr += std::format(" {}:{:g}", a, get_ion_auger_enfrac(nonemptymgi, element, ion, a));
         }
+        printlnlog(
+            "ERROR: Auger energy fractions sum to {:g} (expected 1.0 +/- 0.001) for cell {} Z={} ionstage {}: "
+            "enfrac(n_Auger):{}",
+            ionenfrac_sum, grid::get_mgi_of_nonemptymgi(nonemptymgi), get_atomicnumber(element),
+            get_ionstage(element, ion), enfracliststr);
         problem_found = true;
       }
     }
@@ -1093,7 +1099,8 @@ auto calculate_frac_heating(const int nonemptymgi, const std::array<double, SFPT
   const auto frac_heating = static_cast<float>(frac_heating_Einit / E_init_ev);
 
   if (!std::isfinite(frac_heating) || frac_heating < 0 || frac_heating > 1.0) {
-    printlnlog("WARNING: calculate_frac_heating: invalid result of {:g}. Setting to 1.0 instead", frac_heating);
+    printlnlog("WARNING: calculate_frac_heating: cell {} ts {}: invalid result of {:g}. Setting to 1.0 instead",
+               grid::get_mgi_of_nonemptymgi(nonemptymgi), globals::timestep, frac_heating);
     return 1.;
   }
 
@@ -1638,7 +1645,11 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const std::a
         printlnlog("    frac_excitation: {:g}", frac_excitation_ion);
       }
       if (frac_excitation_ion > 1. || !std::isfinite(frac_excitation_ion)) {
-        printlnlog("      WARNING: invalid frac_excitation. Replacing with zero");
+        printlnlog(
+            "      WARNING: cell {} ts {}: Z={} ionstage {}: invalid frac_excitation {:g}. Replacing with zero and "
+            "dropping {} stored excitations for this ion",
+            grid::get_mgi_of_nonemptymgi(nonemptymgi), timestep, Z, ionstage, frac_excitation_ion,
+            std::ssize(tmp_excitation_list) - tmp_excitation_list_size_before_ion);
         frac_excitation_ion = 0.;
         // remove this ion's transitions from the excitation list. Otherwise their (invalid, possibly
         // huge) frac_deposition and ratecoeffperdeposition values would remain in the stored list and
