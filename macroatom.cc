@@ -541,19 +541,22 @@ DEVICE_FUNC void do_macroatom(Packet& pkt, const MacroAtomState& pktmastate) {
     }
   }
 
-  // TODO Luke: we should probably only do this if the packet has become a r-packet, otherwise we should set
-  // trueemissiontype to EM_TYPE_NOTSET, but this method has already been published. If the difference is small for
-  // nebular Type Ias then just fix it.
-  if (pkt.trueemissiontype == EMTYPE_NOTSET) {
-    pkt.trueemissiontype = pkt.emissiontype;
-    pkt.trueem_pos = pkt.em_pos;
-    pkt.trueem_time = pkt.em_time;
-  }
-
   if (pkt.type == TYPE_RPKT) {
+    // radiative deactivation. If the packet had no thermal provenance (it was activated collisionally
+    // or by non-thermal deposition), then this emission is the packet's last thermal ("true") emission
+    if (pkt.trueemissiontype == EMTYPE_NOTSET) {
+      pkt.trueemissiontype = pkt.emissiontype;
+      pkt.trueem_pos = pkt.em_pos;
+      pkt.trueem_time = pkt.em_time;
+    }
+
     if constexpr (VPKT_ON) {
       vpkt::trace_vpkts(pkt, TYPE_MA);
     }
+  } else {
+    // collisional deactivation to a k-packet: no photon was emitted, so there is no thermal emission
+    // to record. The k-packet's eventual radiative emission will set the true emission fields.
+    pkt.trueemissiontype = EMTYPE_NOTSET;
   }
 }
 
