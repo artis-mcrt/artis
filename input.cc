@@ -1898,6 +1898,11 @@ void read_parameterfile(std::span<Packet> packets) {
 // write out an updated input.txt to restart the simulation
 void update_parameterfile(const int nts) {
   assert_always(globals::my_rank == 0);
+  if (nts >= 0) {
+    printlog("Update input.txt for restart at timestep {}...", nts);
+  } else {
+    printlog("Copying input.txt to input-newrun.txt...");
+  }
 
   auto file = fstream_required("input.txt", std::ios::in);
 
@@ -1967,11 +1972,7 @@ void update_parameterfile(const int nts) {
                rename_error.message());
   }
 
-  if (nts >= 0) {
-    printlnlog("updated input.txt for restart at timestep {}", nts);
-  } else {
-    printlnlog("copied input.txt to input-newrun.txt");
-  }
+  printlnlog("done");
 }
 
 void read_atomicdata() {

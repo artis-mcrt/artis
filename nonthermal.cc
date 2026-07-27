@@ -770,8 +770,8 @@ void zero_all_effionpot(const ptrdiff_t nonemptymgi) {
   return std::lerp(ybelow, yabove, (energy_ev - enbelow) / (enabove - enbelow));
 }
 
-constexpr auto xs_ionisation_lotz(const double en_erg, const ShellParams& colliondata_ion,
-                                  const int electronsinshell) -> double {
+constexpr auto xs_ionisation_lotz(const double en_erg, const ShellParams& colliondata_ion, const int electronsinshell)
+    -> double {
   const double ionpot = colliondata_ion.ionpot_ev * EV;
   if (en_erg < ionpot) {
     return 0.;
@@ -858,8 +858,8 @@ auto get_xs_ionisation_vector(std::array<double, SFPTS>& xs_vec, const ShellPara
 
 // distribution of secondary electron energies for primary electron with energy e_p
 // Opal, Peterson, & Beaty (1971)
-[[nodiscard]] constexpr auto Psecondary(const double e_p, const double en_epsilon, const double I,
-                                        const double J) -> double {
+[[nodiscard]] constexpr auto Psecondary(const double e_p, const double en_epsilon, const double I, const double J)
+    -> double {
   const double e_s = en_epsilon - I;
 
   if (e_p <= I || e_s < 0.) {
@@ -1166,8 +1166,8 @@ auto get_oneoverw_approx_axelrod(const int element, const int ion, const int non
 
 // the fraction of deposited energy that goes into ionising electrons in a particular shell
 auto calculate_nt_frac_ionisation_shell(const int nonemptymgi, const int element, const int ion,
-                                        const ShellParams& collionrow,
-                                        const std::array<double, SFPTS>& yfunc) -> double {
+                                        const ShellParams& collionrow, const std::array<double, SFPTS>& yfunc)
+    -> double {
   const double nnion = get_nnion(nonemptymgi, element, ion);
   const double ionpot_ev = collionrow.ionpot_ev;
 
@@ -1194,8 +1194,8 @@ auto nt_ionisation_ratecoeff_wfapprox(const int nonemptymgi, const int element, 
 // propagation, as the y vector may not be in memory! IMPORTANT: we are dividing by the shell potential, not the
 // valence potential here! To change this set assumeshellpotentialisvalence to true
 auto calculate_nt_ionisation_ratecoeff(const int nonemptymgi, const int element, const int ion,
-                                       const bool assumeshellpotentialisvalence,
-                                       const std::array<double, SFPTS>& yfunc) -> double {
+                                       const bool assumeshellpotentialisvalence, const std::array<double, SFPTS>& yfunc)
+    -> double {
   std::array<double, SFPTS> cross_section_vec{};
   std::array<double, SFPTS> cross_section_vec_allshells{};
 
@@ -1362,8 +1362,8 @@ auto nt_ionisation_ratecoeff_sf(const int nonemptymgi, const int element, const 
 // epsilon_trans is in erg
 // returns the index of the first valid cross section point (en >= epsilon_trans)
 // all elements below this index are invalid and should not be used
-auto get_xs_excitation_vector(const int alltransindex, const double statweight_lower,
-                              const double epsilon_trans) -> std::tuple<std::array<double, SFPTS>, int> {
+auto get_xs_excitation_vector(const int alltransindex, const double statweight_lower, const double epsilon_trans)
+    -> std::tuple<std::array<double, SFPTS>, int> {
   std::array<double, SFPTS> xs_excitation_vec{};
   if (epsilon_trans / EV > SF_EMAX) {
     // the excitation threshold is above the top of the energy grid, so the cross section is zero at
@@ -1425,8 +1425,8 @@ auto get_xs_excitation_vector(const int alltransindex, const double statweight_l
 // Kozma & Fransson equation 9 divided by level population and epsilon_trans
 // returns the rate coefficient in s^-1 divided by deposition rate density in erg/cm^3/s
 auto calculate_nt_excitation_ratecoeff_perdeposition(const std::array<double, SFPTS>& yvec, const int alltransindex,
-                                                     const double statweight_lower,
-                                                     const double epsilon_trans) -> double {
+                                                     const double statweight_lower, const double epsilon_trans)
+    -> double {
   const auto [xs_excitation_vec, xsstartindex] =
       get_xs_excitation_vector(alltransindex, statweight_lower, epsilon_trans);
 

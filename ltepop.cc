@@ -146,8 +146,8 @@ auto nne_solution_f(const double nne_assumed, const int nonemptymgi, const bool 
 }
 
 // return population and whether the population came from the nlte solver
-auto calculate_levelpop_nominpop(const int nonemptymgi, const int element, const int ion,
-                                 const int level) -> std::tuple<double, bool> {
+auto calculate_levelpop_nominpop(const int nonemptymgi, const int element, const int ion, const int level)
+    -> std::tuple<double, bool> {
   testmodeassert_valid_level(element, ion, level);
 
   if (level == 0) {

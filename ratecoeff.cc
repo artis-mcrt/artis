@@ -610,8 +610,8 @@ DEVICE_FUNC auto select_continuum_nu(int element, const int lowerion, const int 
 }
 
 // Get an ion's rate coefficient for spontaneous recombination in LTE
-[[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_ion_spontrecombcoeff(const int uniqueionindex,
-                                                                      const float T_e) -> double {
+[[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_ion_spontrecombcoeff(const int uniqueionindex, const float T_e)
+    -> double {
   const auto upperindex = get_temperature_gridupperindex(T_e);
   if (upperindex == 0) {
     return ion_alpha_sp[uniqueionindex * TABLESIZE];
@@ -630,8 +630,8 @@ DEVICE_FUNC auto select_continuum_nu(int element, const int lowerion, const int 
 
 // Return a level's rate coefficient for spontaneous recombination in LTE
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_spontrecombcoeff(const int uniquelevelindex,
-                                                                  const int phixstargetindex,
-                                                                  const float T_e) -> double {
+                                                                  const int phixstargetindex, const float T_e)
+    -> double {
   return lerp_or_last(std::span{spontrecombcoeffs}, uniquelevelindex, phixstargetindex, T_e);
 }
 
@@ -719,8 +719,8 @@ void ratecoefficients_init() {
 }
 
 // Returns the (stimulated recombination corrected) photoionisation rate coefficient.
-auto get_corrphotoioncoeff_ana(int element, const int ion, const int level, const int phixstargetindex,
-                               const float T_R) -> double {
+auto get_corrphotoioncoeff_ana(int element, const int ion, const int level, const int phixstargetindex, const float T_R)
+    -> double {
   assert_always(USE_LUT_PHOTOION);
   const auto uniquelevelindex = get_uniquelevelindex(element, ion, level);
   return lerp_or_last(std::span{corrphotoioncoeffs}, uniquelevelindex, phixstargetindex, T_R);

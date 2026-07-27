@@ -96,7 +96,7 @@ void printout_tracemission_stats() {
           traceabsorption_totalenergy);
     }
 
-    printlnlog("{:>16} {:>4} {:>9} {:>5} {:>5} {:>8} {:>5} {:>7} {:>7} {:>7} {:>7}", "energy (frac)", "Z", "ionstage",
+    printlnlog("{:>17} {:>4} {:>9} {:>5} {:>5} {:>8} {:>5} {:>7} {:>7} {:>7} {:>7}", "energy (frac)", "Z", "ionstage",
                "upper", "lower", "coll_str", "forb", "lambda", "<v_rad>", "B_lu", "B_ul");
 
     // display the top entries of the sorted list

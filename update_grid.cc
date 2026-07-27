@@ -182,6 +182,7 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
   const int mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
   // bfheating coefficients are needed for the T_e solver, but they only depend on the radiation field, which is fixed
   // during the iterations below
+  printlog("calculate_bfheatingcoeffs for timestep {} cell {}...", nts, mgi);
   const auto sys_time_start_calculate_bfheatingcoeffs = std::chrono::steady_clock::now();
   THREADLOCALONHOST auto bfheatingcoeffs = std::vector<double>(get_includedlevels());
 
@@ -189,9 +190,7 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
   const auto bfheating_duration =
       std::chrono::duration<double>(std::chrono::steady_clock::now() - sys_time_start_calculate_bfheatingcoeffs)
           .count();
-  if (bfheating_duration >= 1.) {
-    printlnlog("calculate_bfheatingcoeffs for timestep {} cell {} took {:.1f} seconds", nts, mgi, bfheating_duration);
-  }
+  printlnlog("took {:.1f} seconds", bfheating_duration);
 
   constexpr double nne_reltol = 0.04;
   constexpr double T_e_reltol = 0.04;
@@ -534,16 +533,15 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
     // and ion contributions inside update grid and communicate between MPI tasks
     const auto sys_time_start_calc_kpkt_rates = std::chrono::steady_clock::now();
 
+    printlog("calculating cooling_rates for timestep {} cell {}...", nts, mgi);
+
     // don't pass pointer to heatingcoolingrates because current populations and rates weren't
     // used to determine T_e
     kpkt::calculate_cooling_rates(nonemptymgi, nullptr);
 
     const auto calc_kpkt_rates_duration =
         std::chrono::duration<double>(std::chrono::steady_clock::now() - sys_time_start_calc_kpkt_rates).count();
-    if (calc_kpkt_rates_duration >= 1.) {
-      printlnlog("calculating cooling_rates for timestep {} cell {} took {:.1f} seconds", nts, mgi,
-                 calc_kpkt_rates_duration);
-    }
+    printlnlog("took {:.1f} seconds", calc_kpkt_rates_duration);
   }
 
   if constexpr (RPKT_USE_EXPANSION_OPACITIES || VPKT_USE_EXPANSION_OPACITIES ||

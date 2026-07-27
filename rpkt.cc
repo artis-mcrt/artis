@@ -955,6 +955,8 @@ void calculate_expansion_opacities(const int nonemptymgi) {
   const auto sys_time_start_calc = std::chrono::steady_clock::now();
   const auto temperature = grid::get_Te(nonemptymgi);
 
+  printlog("calculating expansion opacities for cell {}...", grid::get_mgi_of_nonemptymgi(nonemptymgi));
+
   const auto t_mid = globals::timesteps[globals::timestep].mid;
 
   // find the first line with nu below the upper limit of the first bin
@@ -998,8 +1000,5 @@ void calculate_expansion_opacities(const int nonemptymgi) {
   }
   const auto expansion_opacity_duration =
       std::chrono::duration<double>(std::chrono::steady_clock::now() - sys_time_start_calc).count();
-  if (expansion_opacity_duration >= 1.) {
-    printlnlog("calculating expansion opacities for cell {} timestep {} took {:.1f} seconds",
-               grid::get_mgi_of_nonemptymgi(nonemptymgi), globals::timestep, expansion_opacity_duration);
-  }
+  printlnlog("took {:.1f} seconds", expansion_opacity_duration);
 }

@@ -1491,8 +1491,8 @@ auto get_element_meanweight(const std::ptrdiff_t nonemptymgi, const int element)
 template <BoundaryType boundarytype>
 [[nodiscard]] constexpr auto is_boundary_overshoot_within_tolerance(const double pktposgridcoord,
                                                                     const double pktvelgridcoord,
-                                                                    const double boundarypos_tmin,
-                                                                    const double tstart) -> bool {
+                                                                    const double boundarypos_tmin, const double tstart)
+    -> bool {
   const double boundaryvel = boundarypos_tmin / globals::tmin;
   const double boundarypos = boundaryvel * tstart;
   const double overshoot =
@@ -1640,8 +1640,8 @@ void set_elem_massfrac(const ptrdiff_t nonemptymgi, const int element, const flo
 }
 
 // mass fraction of an element (all isotopes combined)
-[[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_elem_numberdens(const ptrdiff_t nonemptymgi,
-                                                                 const int element) -> double {
+[[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_elem_numberdens(const ptrdiff_t nonemptymgi, const int element)
+    -> double {
   return get_elem_massfrac(nonemptymgi, element) / static_cast<double>(get_element_meanweight(nonemptymgi, element)) *
          get_rho(nonemptymgi);
 }
@@ -2127,6 +2127,7 @@ void write_grid_restart_data(const int timestep) {
   const auto filename = std::format("gridsave_ts{}.tmp", timestep);
 
   const auto sys_time_start_write_restart = std::chrono::steady_clock::now();
+  printlog("Write grid restart data to {}...", filename);
 
   FILE* gridsave_file = fopen_required(filename, "w");
 
@@ -2177,7 +2178,7 @@ void write_grid_restart_data(const int timestep) {
   fclose(gridsave_file);
   const auto write_restart_duration =
       std::chrono::duration<double>(std::chrono::steady_clock::now() - sys_time_start_write_restart).count();
-  printlnlog("wrote grid restart data to {} in {:.1f} seconds", filename, write_restart_duration);
+  printlnlog("done in {:.1f} seconds.", write_restart_duration);
 }
 
 // get lowest modelgridindex assigned to this rank (for update_grid and output files)

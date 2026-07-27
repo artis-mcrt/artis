@@ -74,11 +74,9 @@ void pkt_action_counters_printout(const int nts) {
   printlnlog("timestep {}: k_stat_from: ff {} bf {} earlierdecay {}", nts, get_counter(Counter::K_STAT_FROM_FF),
              get_counter(Counter::K_STAT_FROM_BF), get_counter(Counter::K_STAT_FROM_EARLIERDECAY));
 
-  if constexpr (NT_ON) {
-    printlnlog("timestep {}: nt_stat: from_gamma {} to_ionisation {} to_excitation {} to_kpkt {}", nts,
-               get_counter(Counter::NT_STAT_FROM_GAMMA), get_counter(Counter::NT_STAT_TO_IONISATION),
-               get_counter(Counter::NT_STAT_TO_EXCITATION), get_counter(Counter::NT_STAT_TO_KPKT));
-  }
+  printlnlog("timestep {}: nt_stat: from_gamma {} to_ionisation {} to_excitation {} to_kpkt {}", nts,
+             get_counter(Counter::NT_STAT_FROM_GAMMA), get_counter(Counter::NT_STAT_TO_IONISATION),
+             get_counter(Counter::NT_STAT_TO_EXCITATION), get_counter(Counter::NT_STAT_TO_KPKT));
   nonthermal::print_stats(modelvolume, deltat);
 
   printlnlog("timestep {}: electron_scatterings {} resonancescatterings {} upscatterings {} downscatterings {}", nts,

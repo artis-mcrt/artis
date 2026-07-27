@@ -248,6 +248,7 @@ void read_temp_packetsfile(const int timestep, const int my_rank, std::vector<Pa
   // read binary packets file
   const auto filename = std::format("packets_{:04d}_ts{:d}.tmp", my_rank, timestep);
 
+  printlnlog("Reading {}", filename);
   const auto packets_file = fopen_required_uniqueptr(filename, "rb");
   std::int64_t packet_count_in_file = 0;
   assert_always(std::fread(&packet_count_in_file, sizeof(std::int64_t), 1, packets_file.get()) == 1);
@@ -270,6 +271,7 @@ void write_temp_packetsfile(const int timestep, const int my_rank, const std::sp
       printlnlog("[error] Failed to write {} after {} tries. Aborting.", filename, tries);
       std::abort();
     }
+    printlog("timestep {}: writing {}...", timestep, filename);
     FILE* packets_file = fopen(filename.c_str(), "wb");
     if (packets_file == nullptr) {
       printlnlog("[error] Could not open file '{}' for mode 'wb'.", filename);
@@ -288,5 +290,5 @@ void write_temp_packetsfile(const int timestep, const int my_rank, const std::sp
     }
     tries++;
   }
-  printlnlog("timestep {}: wrote {} packets to {}", timestep, std::ssize(packets), filename);
+  printlnlog("done");
 }
