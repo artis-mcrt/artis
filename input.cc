@@ -1340,9 +1340,6 @@ void sort_temp_linelist(std::vector<TempLineTransitionInput>& temp_linelist) {
              std::tie(b.elementindex, b.ionindex, b.lowerlevelindex, b.upperlevelindex, b.einstein_A);
     });
 
-    int duplicate_count = 0;
-    int duplicate_exact_nu_count = 0;
-    constexpr int max_duplicates_shown = 10;
     for (int i = 0; i < globals::nlines - 1; i++) {
       const double nu = temp_linelist[i].nu;
       const double nu_next = temp_linelist[i + 1].nu;
@@ -1352,26 +1349,15 @@ void sort_temp_linelist(std::vector<TempLineTransitionInput>& temp_linelist) {
 
         if ((a1.elementindex == a2.elementindex) && (a1.ionindex == a2.ionindex) &&
             (a1.lowerlevelindex == a2.lowerlevelindex) && (a1.upperlevelindex == a2.upperlevelindex)) {
-          duplicate_count++;
-          if (a1.nu == a2.nu) {
-            duplicate_exact_nu_count++;
-          }
-          if (duplicate_count <= max_duplicates_shown) {
-            printlnlog(
-                "[warning] duplicate bb-transition Z={} ionstage {} levels {} to {}: nu {:g} [Hz] and {:g} [Hz] "
-                "(lambda "
-                "{:.2f} [Angstrom])",
-                get_atomicnumber(a1.elementindex), get_ionstage(a1.elementindex, a1.ionindex), a1.lowerlevelindex,
-                a1.upperlevelindex, a1.nu, a2.nu, 1e8 * CLIGHT / a1.nu);
-          }
+          printlnlog("Duplicate transition line? {}", a1.nu == a2.nu ? "nu match exact" : "close to nu match");
+          printlnlog("a: Z={} ionstage {} lower {} upper {} nu {:g} [Hz] lambda {:g} [Angstrom]",
+                     get_atomicnumber(a1.elementindex), get_ionstage(a1.elementindex, a1.ionindex), a1.lowerlevelindex,
+                     a1.upperlevelindex, a1.nu, 1e8 * CLIGHT / a1.nu);
+          printlnlog("b: Z={} ionstage {} lower {} upper {} nu {:g} [Hz] lambda {:g} [Angstrom]",
+                     get_atomicnumber(a2.elementindex), get_ionstage(a2.elementindex, a2.ionindex), a2.lowerlevelindex,
+                     a2.upperlevelindex, a2.nu, 1e8 * CLIGHT / a2.nu);
         }
       }
-    }
-    if (duplicate_count > 0) {
-      printlnlog(
-          "[warning] found {} duplicate bb-transitions in the linelist ({} with exactly matching nu; first {} "
-          "listed above)",
-          duplicate_count, duplicate_exact_nu_count, std::min(duplicate_count, max_duplicates_shown));
     }
   }
 }
