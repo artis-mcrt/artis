@@ -21,8 +21,8 @@ same sources:
   (`grid::`, `decay::`, `radfield::`, ...). `sn3d.cc` and `exspec.cc` contain the
   two `main()` functions; everything else is shared.
 - `artisoptions_*.h`: compile-time option presets. The build requires an
-  `artisoptions.h` in the repo root (gitignored), normally a copy or symlink of
-  one of the presets. Options are documented in `artisoptions_doc.md`.
+  `artisoptions.h` in the repo root (gitignored), normally a symlink to one of
+  the presets. Options are documented in `artisoptions_doc.md`.
 - `data/`: physics data bundled with the code (decay data, gamma spectra, etc.).
 - `tests/`: integration test setups (`setup_*.sh` plus `*_inputfiles/` folders).
 - `scripts/`: HPC cluster job scripts and helper utilities.
@@ -35,9 +35,14 @@ providing `mpicxx`. With Open MPI, select the underlying compiler via
 `export OMPI_CXX=g++`.
 
 ```sh
-cp artisoptions_classic.h artisoptions.h   # or another preset; required, gitignored
-make -j$(nproc)                            # builds sn3d and exspec
+ln -s artisoptions_classic.h artisoptions.h   # or another preset; required, gitignored
+make -j$(nproc)                               # builds sn3d and exspec
 ```
+
+Symlinking (rather than copying) the preset keeps `artisoptions.h` in sync when
+the preset changes, e.g. after switching branches. Add
+`--check-symlink-times` to your make flags so that make notices preset edits
+through the symlink.
 
 Objects go into a per-configuration `build/` subdirectory and the binaries are
 symlinked into the repo root. `make OPTIMIZE=OFF` is the fastest way to check
