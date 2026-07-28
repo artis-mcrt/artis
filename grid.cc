@@ -1094,8 +1094,8 @@ void assign_initial_temperatures() {
       thick_allcells[nonemptymgi] = 0;
     }
   }
-  printlog("  cells below MINTEMP {:g} [K]: {}. Above MAXTEMP {:g} [K]: {}", MINTEMP, cells_below_mintemp, MAXTEMP,
-           cells_above_maxtemp);
+  printlnlog("  cells below MINTEMP {:g} [K]: {}. Above MAXTEMP {:g} [K]: {}", MINTEMP, cells_below_mintemp, MAXTEMP,
+             cells_above_maxtemp);
   if (cells_nonfinite_temp > 0) {
     printlnlog(
         "[warning] {} cells had a non-finite initial temperature and were set to MINTEMP (first was mgi {} with "
