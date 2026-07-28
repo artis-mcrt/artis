@@ -82,8 +82,7 @@ inline auto ftol(const double a, const double b) -> bool {
 // target is exactly equal to a repeated cumulative value.
 template <typename Range, typename Value>
 [[nodiscard]] constexpr auto index_upperbound(const Range& cumulative_values, const Value& target) -> ptrdiff_t {
-  return std::upper_bound(std::begin(cumulative_values), std::end(cumulative_values), target) -
-         std::begin(cumulative_values);
+  return std::ranges::upper_bound(cumulative_values, target) - std::begin(cumulative_values);
 }
 
 template <typename Range, typename Value>
