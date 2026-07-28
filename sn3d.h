@@ -1,5 +1,5 @@
 // Small shared helpers for the simulation executables: the already-running lock check and
-// inline numeric utilities (exact vector resize, fractional-tolerance comparison, bin-index lookups).
+// inline numeric utilities (vector sizing, tolerance comparisons, cumulative sampling, and bin-index lookups).
 
 #ifndef SN3D_H
 #define SN3D_H
@@ -19,6 +19,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <iterator>
 #include <print>
 #include <sstream>
 #include <string>
@@ -74,6 +75,18 @@ constexpr void reserve_resize(std::vector<T>& vec, const size_t size) {
 template <double fractional_accuracy>
 inline auto ftol(const double a, const double b) -> bool {
   return std::abs(a - b) <= (fractional_accuracy * std::min(std::abs(a), std::abs(b)));
+}
+
+// Return the first index whose cumulative value is strictly greater than target.
+// Using upper_bound consistently prevents zero-weight entries from being selected when
+// target is exactly equal to a repeated cumulative value.
+template <typename Range, typename Value>
+[[nodiscard]] constexpr auto index_upperbound_or_last(const Range& cumulative_values, const Value& target) {
+  const auto index = std::upper_bound(std::begin(cumulative_values), std::end(cumulative_values), target) -
+                     std::begin(cumulative_values);
+  assert_testmodeonly(index >= 0);
+  assert_testmodeonly(index < std::ssize(cumulative_values));
+  return index;
 }
 
 // Signed bin index of value on a grid spaced uniformly by binwidth, where bin 0 starts at minvalue.

@@ -1367,8 +1367,7 @@ void setup_radioactive_pellet(const double e_cmf_per_packet, const int nonemptym
   const double zrand_en = rng_uniform(get_rngstate(pkt)) * cumulative_en_sum[num_decaychannels - 1];
 
   // first decaychannelindex such that cumulative_en_sum[decaychannelindex] > zrand_en
-  const int decaychannelindex =
-      static_cast<int>(std::ranges::upper_bound(cumulative_en_sum, zrand_en) - cumulative_en_sum.cbegin());
+  const int decaychannelindex = static_cast<int>(index_upperbound_or_last(cumulative_en_sum, zrand_en));
 
   assert_always(decaychannelindex >= 0);
   assert_always(decaychannelindex < num_decaychannels);

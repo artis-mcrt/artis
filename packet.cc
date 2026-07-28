@@ -56,7 +56,7 @@ void place_pellet(const double e_cmf_per_packet, const std::span<const double> e
 
   // First choose a position for the pellet. In the cell.
   // first i such that en_cumulative[i] > targetval
-  const int cellindex = static_cast<int>(std::ranges::upper_bound(en_cumulative, targetval) - en_cumulative.begin());
+  const int cellindex = static_cast<int>(index_upperbound_or_last(en_cumulative, targetval));
   assert_always(cellindex < grid::ngrid);
 
   pkt.cellindex = cellindex;
