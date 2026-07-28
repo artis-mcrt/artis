@@ -133,11 +133,12 @@ void precalculate_rate_coefficient_integrals() {
   // Calculate the rate coefficients for each level of each ion of each element
   for (int element = 0; element < get_nelements(); element++) {
     const int atomic_number = get_atomicnumber(element);
-    const int nions = get_nions(element) - 1;
-    // print the full list before the parallel loop below, since worker threads have their own
-    // (unopened) threadprivate output streams
+    const int nions = get_nions(element);
+    if (nions == 0) {
+      continue;
+    }
     printlog("Performing rate integrals for Z = {}: ion stages", atomic_number);
-    for (int ion = 0; ion < nions; ion++) {
+    for (int ion = 0; ion < nions - 1; ion++) {
       printlog(" {}", get_ionstage(element, ion));
     }
     printlnlog("");
