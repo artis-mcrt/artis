@@ -68,9 +68,6 @@ constexpr double nu_1p5mev = 3.61990e+20;
 
 void read_gamma_spectrum(const int nucindex, const std::string& filename) {
   // read the gamma ray lines and store the average energy in gamma rays per nuclear decay
-  printlog("reading gamma spectrum for Z={} A={} from {}...", decay::get_nuc_z(nucindex), decay::get_nuc_a(nucindex),
-           filename);
-
   auto gammafile = fstream_required(filename, std::ios::in);
   std::string line;
   get_noncommentline(gammafile, line);
@@ -94,8 +91,6 @@ void read_gamma_spectrum(const int nucindex, const std::string& filename) {
   }
 
   decay::set_nucdecayenergygamma(nucindex, E_gamma_avg);
-
-  printlnlog("nlines {} avg_en_gamma {:g} [MeV]", nlines, E_gamma_avg / MEV);
 }
 
 void set_trivial_gamma_spectrum(const int nucindex) {
@@ -130,6 +125,7 @@ void read_decaydata() {
 
   gamma_spectra.resize(decay::get_num_nuclides(), {});
   int tables_found = 0;
+  int nuclides_without_table = 0;
   for (int nucindex = 0; nucindex < decay::get_num_nuclides(); nucindex++) {
     gamma_spectra[nucindex].clear();
     const int z = decay::get_nuc_z(nucindex);
@@ -170,10 +166,7 @@ void read_decaydata() {
       assert_always(z != 28 || a != 57);  // Ni-57 must have a gamma spectrum if present in list of nuclides
       assert_always(z != 27 || a != 57);  // Co-57 must have a gamma spectrum if present in list of nuclides
       set_trivial_gamma_spectrum(nucindex);
-      printlnlog(
-          "[warning] no gamma-ray line table found for Z={} A={} despite its non-zero gamma decay energy, so a single "
-          "line carrying the mean gamma energy per decay will be used",
-          z, a);
+      nuclides_without_table++;
     }
   }
 
@@ -184,7 +177,13 @@ void read_decaydata() {
     decay::set_nucdecayenergygamma(decay::get_nucindex(25, 52), 3.415 * MEV);  // Mn52
   }
 
-  printlnlog("read gamma-ray table files for {} nuclides", tables_found);
+  printlnlog("read gamma-ray line tables for {} nuclides", tables_found);
+  if (nuclides_without_table > 0) {
+    printlnlog(
+        "[warning] no gamma-ray line table found for {} nuclides with non-zero gamma decay energy, so a single line "
+        "carrying the mean gamma energy per decay is used for each",
+        nuclides_without_table);
+  }
 }
 
 // construct an energy ordered gamma ray line list.
