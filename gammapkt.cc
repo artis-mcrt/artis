@@ -177,10 +177,10 @@ void read_decaydata() {
     decay::set_nucdecayenergygamma(decay::get_nucindex(25, 52), 3.415 * MEV);  // Mn52
   }
 
-  printlnlog("read gamma-ray line tables for {} nuclides", tables_found);
+  printlnlog("[info] read gamma-ray line tables for {} nuclides", tables_found);
   if (nuclides_without_table > 0) {
     printlnlog(
-        "[warning] no gamma-ray line table found for {} nuclides with non-zero gamma decay energy, so a single line "
+        "[info] no gamma-ray line table found for {} nuclides with non-zero gamma decay energy, so a single line "
         "carrying the mean gamma energy per decay is used for each",
         nuclides_without_table);
   }
