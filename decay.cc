@@ -1166,12 +1166,11 @@ auto get_modelcell_simtime_endecay_per_mass(const int nonemptymgi,
 // decay energy per mass [erg/g] released by chain i in cell mgi during the simulation time range tmin to tmax
 auto get_energy_per_mass_nonemptymgi_decaypath() -> MPI_shared_array<const double> {
   const ptrdiff_t nonempty_npts_model = grid::get_nonempty_npts_model();
-  printlog(
+  printlnlog(
       "[info] mem_usage: energy_per_mass_nonemptymgi_decaypath[nonempty_npts_model*num_decaypaths] occupies {:.1f} "
-      "MB (node shared memory)...",
+      "MB (node shared memory).",
       nonempty_npts_model * get_num_decaypaths() * sizeof(double) / 1024. / 1024.);
   auto energy_per_mass_nonemptymgi_decaypath = MPI_shared_array<double>{nonempty_npts_model * get_num_decaypaths(), 0.};
-  printlnlog("done.");
 
   MPI_Barrier_allranks();
   const auto time_min_decay = INITIAL_PACKETS_ON ? grid::get_t_model() : globals::tmin;

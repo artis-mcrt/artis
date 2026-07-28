@@ -2288,7 +2288,6 @@ void init_grid() {
   MPI_Barrier_allranks();
 
   if (globals::rank_in_node == 0) {
-    printlnlog("Calculating initial grey opacities for model cells.");
     for (int nonemptymgi = 0; nonemptymgi < get_nonempty_npts_model(); nonemptymgi++) {
       kappagrey_allcells[nonemptymgi] = calculate_cell_kappagrey(nonemptymgi);
     }

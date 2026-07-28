@@ -358,8 +358,6 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
       grid::get_modelcell_assocvolume_tmin(mgi) * pow3(globals::timesteps[nts_prev].mid / globals::tmin);
   const auto sys_time_start_update_cell = std::chrono::steady_clock::now();
 
-  printlnlog("update_grid_cell: working on mgi {} before timestep {} titeration {}...", mgi, nts, titer);
-
   // Update current mass density of cell
   const auto rho = static_cast<float>(grid::get_rho_tmin(mgi) / pow3(tratmid));
   grid::set_rho(nonemptymgi, rho);
@@ -577,7 +575,7 @@ void update_grid(std::ostream& estimators_file, const int nts, const int nts_pre
   const auto startup_elapsed_seconds =
       std::chrono::duration<double>(sys_time_start_update_grid - real_time_start).count();
   const auto tmid = globals::timesteps[nts].mid;
-  printlnlog("timestep {}: time before update grid (tstartup + {:.1f} seconds) simtime ts_mid {:g} [days]", nts,
+  printlnlog("timestep {}: time before update grid (tstart + {:.1f} seconds) simtime ts_mid {:g} [days]", nts,
              startup_elapsed_seconds, tmid / DAY);
 
   globals::lte_iteration = (nts < globals::num_lte_timesteps);
