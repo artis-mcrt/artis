@@ -81,12 +81,14 @@ inline auto ftol(const double a, const double b) -> bool {
 // Using upper_bound consistently prevents zero-weight entries from being selected when
 // target is exactly equal to a repeated cumulative value.
 template <typename Range, typename Value>
-[[nodiscard]] constexpr auto index_upperbound_or_last(const Range& cumulative_values, const Value& target) {
-  const auto index = std::upper_bound(std::begin(cumulative_values), std::end(cumulative_values), target) -
-                     std::begin(cumulative_values);
-  assert_testmodeonly(index >= 0);
-  assert_testmodeonly(index < std::ssize(cumulative_values));
-  return index;
+[[nodiscard]] constexpr auto index_upperbound(const Range& cumulative_values, const Value& target) -> ptrdiff_t {
+  return std::upper_bound(std::begin(cumulative_values), std::end(cumulative_values), target) -
+         std::begin(cumulative_values);
+}
+
+template <typename Range, typename Value>
+[[nodiscard]] constexpr auto int_index_upperbound(const Range& cumulative_values, const Value& target) -> int {
+  return static_cast<int>(index_upperbound(cumulative_values, target));
 }
 
 // Signed bin index of value on a grid spaced uniformly by binwidth, where bin 0 starts at minvalue.

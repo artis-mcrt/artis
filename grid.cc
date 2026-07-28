@@ -580,7 +580,7 @@ void allocate_nonemptymodelcells() {
 void map_1dmodelto3dgrid() {
   for (int cellindex = 0; cellindex < ngrid; cellindex++) {
     const double cellvmid = get_cellradialposmid(cellindex) / globals::tmin;
-    const int mgi = static_cast<int>(index_upperbound_or_last(vout_model, cellvmid));
+    const int mgi = int_index_upperbound(vout_model, cellvmid);
 
     if (mgi < get_npts_model() && modelgrid_input[mgi].rhoinit > 0) {
       set_propcell_modelgridindex(cellindex, mgi);

@@ -206,7 +206,7 @@ void do_macroatom_raddeexcitation(Packet& pkt, const int ionuniquelevelindexstar
       std::span{get_cellcache(nonemptymgi).allmacroatomictransitions}, uniquelevelindex);
 
   // first sum_epstrans_rad_deexc[i] such that sum_epstrans_rad_deexc[i] > targetval
-  const auto downtransindex = index_upperbound_or_last(sum_epstrans_rad_deexc_exceptlast, targetval);
+  const auto downtransindex = index_upperbound(sum_epstrans_rad_deexc_exceptlast, targetval);
   const auto alltrans_startdown = get_alltrans_startdown(uniquelevelindex);
 
   const auto lineindex = globals::alltrans.lineindex[alltrans_startdown + downtransindex];
@@ -400,7 +400,7 @@ DEVICE_FUNC void do_macroatom(Packet& pkt, const MacroAtomState& pktmastate) {
 
     // first cumulative_transitions[i] such that cumulative_transitions[i] > randomrate
     const auto selected_action =
-        std::min(static_cast<int>(index_upperbound_or_last(cumulative_transitions, randomrate)), MA_ACTION_COUNT - 1);
+        std::min(int_index_upperbound(cumulative_transitions, randomrate), MA_ACTION_COUNT - 1);
 
     stats::increment(stats::Counter::INTERACTIONS);
     switch (selected_action) {
@@ -437,7 +437,7 @@ DEVICE_FUNC void do_macroatom(Packet& pkt, const MacroAtomState& pktmastate) {
         // first sum_internal_down_same[i] such that sum_internal_down_same[i] > targetval
         const auto sum_internal_down_same_exceptlast = get_sum_internal_down_same_exceptlast(
             std::span{get_cellcache(nonemptymgi).allmacroatomictransitions}, uniquelevelindex);
-        const auto downtransindex = index_upperbound_or_last(sum_internal_down_same_exceptlast, targetval);
+        const auto downtransindex = index_upperbound(sum_internal_down_same_exceptlast, targetval);
 
         level = globals::alltrans.targetlevelindex[get_alltrans_startdown(uniquelevelindex) + downtransindex];
 
@@ -501,7 +501,7 @@ DEVICE_FUNC void do_macroatom(Packet& pkt, const MacroAtomState& pktmastate) {
         const double targetval = rng_uniform(get_rngstate(pkt)) * levelrates[MA_ACTION_INTERNALUPSAME];
 
         // first sum_internal_up_same[i] such that sum_internal_up_same[i] > targetval
-        const auto uptransindex = index_upperbound_or_last(sum_internal_up_same_exceptlast, targetval);
+        const auto uptransindex = index_upperbound(sum_internal_up_same_exceptlast, targetval);
         const auto alltrans_startup = get_alltrans_startup(uniquelevelindex);
 
         const int upper = globals::alltrans.targetlevelindex[alltrans_startup + uptransindex];
