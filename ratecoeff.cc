@@ -12,6 +12,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <filesystem>
+#include <format>
 #include <ios>
 #include <span>
 #include <sstream>
@@ -93,8 +94,7 @@ auto gammacorr_integrand(const double nu, const double nu_edge, const float temp
   const auto sigma_bf = photoionisation_crosssection_fromtable(photoion_xs, nu_edge, nu);
 
   // The correction factor for stimulated emission in gammacorr is set to its
-  // LTE value. Because the T_e dependence of gammacorr is weak, this correction
-  // correction may be evaluated at T_R!
+  // LTE value. Because the T_e dependence of gammacorr is weak, this correction correction may be evaluated at T_R!
 
   // Dependence on dilution factor W is linear. This allows to set it here to
   // 1. and scale to its actual value later on.
@@ -133,14 +133,19 @@ void precalculate_rate_coefficient_integrals() {
   // Calculate the rate coefficients for each level of each ion of each element
   for (int element = 0; element < get_nelements(); element++) {
     const int atomic_number = get_atomicnumber(element);
+    const int nions = get_nions(element);
+    if (nions == 0) {
+      continue;
+    }
     printlog("Performing rate integrals for Z = {}: ion stages", atomic_number);
-    const int nions = get_nions(element) - 1;
+    for (int ion = 0; ion < nions - 1; ion++) {
+      printlog(" {}", get_ionstage(element, ion));
+    }
+    printlnlog("");
 #ifdef _OPENMP
 #pragma omp parallel for
 #endif
     for (int ion = 0; ion < nions; ion++) {
-      const int ionstage = get_ionstage(element, ion);
-      printlog(" {}", ionstage);
       const int nlevels = get_nlevels_ionising(element, ion);
 
       for (int level = 0; level < nlevels; level++) {
@@ -207,7 +212,6 @@ void precalculate_rate_coefficient_integrals() {
         }  // phixstarget loop
       }  // level loop
     }  // ion loop
-    printlnlog("");
   }
 
   MPI_Barrier_node();
@@ -260,7 +264,7 @@ void read_recombrate_file() {
   const float Te_estimate = RECOMBCALIBRATION_T_ELEC;
   const double log_Te_estimate = log10(RECOMBCALIBRATION_T_ELEC);
 
-  printlnlog("Calibrating recombination rates for a temperature of {:.1f} K", Te_estimate);
+  printlnlog("Calibrating recombination rates for a temperature of {:.1f} [K]", Te_estimate);
 
   struct RRCRow {
     double log_Te;
@@ -329,7 +333,7 @@ void read_recombrate_file() {
 
         double rrc = calculate_ionrecombcoeff(-1, Te_estimate, element, ion, assume_lte, collisional_not_radiative,
                                               false, per_groundmultipletpop);
-        printlnlog("              rrc: {:10.3e}", rrc);
+        printlnlog("    rrc (initial): {:10.3e} [cm^3/s]", rrc);
 
         if (!(rrc > 0.)) {
           // no recombination into this ion from the atomic data (e.g. the ion below has no
@@ -353,14 +357,14 @@ void read_recombrate_file() {
 
             rrc = calculate_ionrecombcoeff(-1, Te_estimate, element, ion, assume_lte, collisional_not_radiative, false,
                                            per_groundmultipletpop);
-            printlnlog("              rrc: {:10.3e}", rrc);
+            printlnlog("    rrc (after low-n scaling): {:10.3e} [cm^3/s]", rrc);
           }
         }
 
         // hopefully the RRC now matches the low_n value well, if it was defined
         // Next, use the superlevel recombination rates to make up the excess needed to reach the total RRC
 
-        printlnlog("  input_rrc_total: {:10.3e}", input_rrc_total);
+        printlnlog("  input_rrc_total: {:10.3e} [cm^3/s]", input_rrc_total);
 
         if (input_rrc_total < 0) {
           // negative means no tabulated total, in the same way that a negative rrc_low_n is ignored above
@@ -368,7 +372,7 @@ void read_recombrate_file() {
         } else if (rrc < input_rrc_total) {
           const double rrc_superlevel = calculate_ionrecombcoeff(
               -1, Te_estimate, element, ion, assume_lte, collisional_not_radiative, true, per_groundmultipletpop);
-          printlnlog("  rrc(superlevel): {:10.3e}", rrc_superlevel);
+          printlnlog("  rrc(superlevel): {:10.3e} [cm^3/s]", rrc_superlevel);
 
           if (rrc_superlevel > 0) {
             const double phixs_multiplier_superlevel = 1.0 + ((input_rrc_total - rrc) / rrc_superlevel);
@@ -384,7 +388,7 @@ void read_recombrate_file() {
             scale_levels(0, phixs_multiplier);
           }
         } else {
-          printlnlog("rrc >= input_rrc_total!");
+          printlnlog("    rrc {:10.3e} >= input_rrc_total {:10.3e} [cm^3/s]", rrc, input_rrc_total);
           const double phixs_multiplier = input_rrc_total / rrc;
           printlnlog("    scaling phixs of all levels by {:.3f}", phixs_multiplier);
 
@@ -393,7 +397,7 @@ void read_recombrate_file() {
 
         rrc = calculate_ionrecombcoeff(-1, Te_estimate, element, ion, assume_lte, collisional_not_radiative, false,
                                        per_groundmultipletpop);
-        printlnlog("              rrc: {:10.3e}", rrc);
+        printlnlog("    rrc (final): {:10.3e} [cm^3/s]", rrc);
       }
     }
   }
@@ -454,7 +458,7 @@ auto calculate_corrphotoioncoeff_integral(const int element, const int ion, cons
   const double nu_threshold = (1. / H) * get_phixs_threshold(element, ion, level, phixstargetindex);
   const double nu_max_phixs = nu_threshold * last_phixs_nuovernuedge;  // nu of the uppermost point in the phixs table
 
-  const auto T_e = grid::get_Te(nonemptymgi);
+  const auto T_e = grid::Te_allcells[nonemptymgi];
 
   // stimulated recombination is negative photoionisation
   const double nnlevel = use_cellcache ? get_cellcache_levelpop(nonemptymgi, loweruniquelevelindex)
@@ -749,8 +753,8 @@ DEVICE_FUNC auto get_corrphotoioncoeff(const int element, const int ion, const i
         gammacorr =
             calculate_corrphotoioncoeff_integral(element, ion, level, phixstargetindex, nonemptymgi, use_cellcache);
       } else {
-        const double W = grid::get_W(nonemptymgi);
-        const double T_R = grid::get_TR(nonemptymgi);
+        const double W = grid::W_allcells[nonemptymgi];
+        const double T_R = grid::TR_allcells[nonemptymgi];
 
         gammacorr = W * lerp_or_last(std::span{corrphotoioncoeffs}, uniquelevelindex, phixstargetindex, T_R);
         const int index_in_groundlevelcontestimator = globals::alllevels.closestgroundlevelcont[uniquelevelindex];
@@ -783,7 +787,7 @@ auto iongamma_is_zero(const int nonemptymgi, const int element, const int ion) -
                                     groundcontindex] == 0);
   }
 
-  const auto T_e = grid::get_Te(nonemptymgi);
+  const auto T_e = grid::Te_allcells[nonemptymgi];
   const auto clumpednne = grid::get_clumpfactor(nonemptymgi) * grid::get_nne(nonemptymgi);
 
   for (int level = 0; level < get_nlevels(element, ion); level++) {
@@ -817,7 +821,7 @@ auto calculate_iongamma_per_gspop(const int nonemptymgi, const int element, cons
     return 0.;
   }
 
-  const auto T_e = grid::get_Te(nonemptymgi);
+  const auto T_e = grid::Te_allcells[nonemptymgi];
   const float clumpednne = grid::get_clumpfactor(nonemptymgi) * grid::get_nne(nonemptymgi);
 
   const int nlevels_ionising = get_nlevels_ionising(element, ion);
@@ -862,7 +866,7 @@ auto calculate_iongamma_per_ionpop(const int nonemptymgi, const int element, con
   }
 
   const auto clumpednne = grid::get_clumpfactor(nonemptymgi) * grid::get_nne(nonemptymgi);
-  const auto T_e = grid::get_Te(nonemptymgi);
+  const auto T_e = grid::Te_allcells[nonemptymgi];
 
   double ionisation_rate = 0.;  // rate per second
   const auto nlevels_ionising = get_nlevels_ionising(element, lowerion);

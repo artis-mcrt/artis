@@ -107,7 +107,7 @@ void do_direction_bin(const int dirbin, const std::vector<std::vector<Packet>>& 
       write_spectra("gamma_spec.out", "", "", "", gamma_spectra, globals::ntimesteps);
     }
 
-    printlnlog("finished angle-averaged stuff");
+    printlnlog("wrote the angle-averaged light curves and spectra");
   } else {
     // direction bin a
     // line-of-sight dependent spectra and light curves
@@ -130,7 +130,7 @@ void do_direction_bin(const int dirbin, const std::vector<std::vector<Packet>>& 
                     rpkt_spectra_Q, rpkt_spectra_U);
     }
 
-    printlnlog("Did {} of {} angle bins.", dirbin + 1, MABINS);
+    printlnlog("finished direction bin {} (highest bin is {})", dirbin, MABINS - 1);
   }
 }
 
@@ -149,11 +149,11 @@ auto main(int argc, char* argv[]) -> int {
     set_log_file("exspec.txt");
   }
 
-  printlnlog("git branch {}", GIT_BRANCH);
+  printlnlog("git branch: {}", GIT_BRANCH);
 
   printlnlog("git version: {}", GIT_VERSION);
 
-  printlnlog("git status {}", GIT_STATUS);
+  printlnlog("git status: {}", GIT_STATUS);
 
   printlnlog("exspec compiled at {} on {}", __TIME__, __DATE__);
 

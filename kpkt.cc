@@ -53,7 +53,7 @@ auto calculate_cooling_rates_ion(const int nonemptymgi, const int element, const
                                  std::span<double> ion_contribs, double* const C_ff, double* const C_fb,
                                  double* const C_exc, double* const C_ionisation) -> double {
   const auto clumpednne = grid::get_clumpfactor(nonemptymgi) * grid::get_nne(nonemptymgi);
-  const auto T_e = grid::get_Te(nonemptymgi);
+  const auto T_e = grid::Te_allcells[nonemptymgi];
 
   double C_ion = 0.;
   // cursor into this ion's slice of the cooling list, only advanced when we are filling the cellcache
@@ -342,7 +342,7 @@ void setup_coolinglist() {
   }
 
   assert_always(ncoolingterms == i);  // if this doesn't match, we miscalculated the number of cooling terms
-  printlnlog("[info] read_atomicdata: number of coolingterms {}", ncoolingterms);
+  printlnlog("[info] setup_coolinglist: number of coolingterms {}", ncoolingterms);
   coolinglist_type = std::move(temp_coolinglist_type);
   coolinglist_level = std::move(temp_coolinglist_level);
   coolinglist_upperlevel = std::move(temp_coolinglist_upperlevel);
@@ -367,7 +367,7 @@ DEVICE_FUNC void do_kpkt_blackbody(Packet& pkt) {
   if (RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.has_value() && grid::thick_allcells[nonemptymgi] != 1) {
     pkt.nu_cmf = sample_planck_times_expansion_opacity(nonemptymgi, get_rngstate(pkt));
   } else {
-    pkt.nu_cmf = sample_planck_montecarlo(grid::get_Te(nonemptymgi), get_rngstate(pkt));
+    pkt.nu_cmf = sample_planck_montecarlo(grid::Te_allcells[nonemptymgi], get_rngstate(pkt));
   }
 
   assert_always(std::isfinite(pkt.nu_cmf));
@@ -453,12 +453,11 @@ DEVICE_FUNC void do_kpkt(Packet& pkt, const double t2, const int nts) {
   const auto i = ionstart + ionoffset;
 
   const auto rndcoolingtype = coolinglist_type[i];
-  const auto T_e = grid::get_Te(nonemptymgi);
+  const auto T_e = grid::Te_allcells[nonemptymgi];
 
   if (rndcoolingtype == CoolingType::FREEFREE) {
     // The k-packet converts directly into a r-packet by free-free emission.
-    // Need to select the r-packets frequency and a random direction in the
-    // co-moving frame.
+    // Need to select the r-packets frequency and a random direction in the co-moving frame.
 
     // Sample the packets comoving frame frequency according to paperII 5.4.3 eq.41
 

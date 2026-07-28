@@ -124,8 +124,7 @@ auto calculate_chi_ffheat_nnionpart(int nonemptymgi) -> double;
 
   if constexpr (USE_RELATIVISTIC_DOPPLER_SHIFT) {
     // With special relativity, the Doppler shift formula has an extra factor of 1/gamma in it,
-    // which changes the distance reach a line resonance and creates a dependence
-    // on packet position and direction
+    // which changes the distance reach a line resonance and creates a dependence on packet position and direction
 
     // use linear interpolation of frequency along the path
     return -delta_nu / dnu_on_dl;  // dnu_on_dl is negative, so this is a positive distance
@@ -161,8 +160,7 @@ auto calculate_chi_ffheat_nnionpart(int nonemptymgi) -> double;
     return 0;
   }
   // otherwise go through the list until nu_cmf is located between two
-  // entries in the line list and get the index of the closest line
-  // to lower frequencies
+  // entries in the line list and get the index of the closest line to lower frequencies
 
   // will find the highest frequency (lowest index) line with nu_line <= nu_cmf
   // lower_bound matches the first element where the comparison function is false

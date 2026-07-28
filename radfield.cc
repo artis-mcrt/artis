@@ -1,7 +1,6 @@
 // The radiation field model: accumulates Monte Carlo estimators of the radiation field
 // (full-spectrum and binned J_nu, plus detailed bound-bound Jb_lu estimators) and fits diluted
-// blackbodies (W, T_R) per cell and per frequency bin for use in the photoionisation and
-// heating rates.
+// blackbodies (W, T_R) per cell and per frequency bin for use in the photoionisation and heating rates.
 
 #include "radfield.h"
 
@@ -149,8 +148,7 @@ constexpr auto select_bin(const double nu) -> int {
   return binindex;
 }
 
-// associate a Jb_lu estimator with a particular lineindex to be used
-// instead of the general radiation field model
+// associate a Jb_lu estimator with a particular lineindex to be used instead of the general radiation field model
 void add_detailed_line(const int lineindex) {
   detailed_linecount++;
   for (int nonemptymgi = 0; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
@@ -363,8 +361,10 @@ auto nu_bar_planck_minus_estimator(const double T_R, const int nonemptymgi, cons
 
   if (!std::isfinite(delta_nu_bar)) {
     printlnlog(
-        "delta_nu_bar is {:g}. T_R {:g} nu_lower {:g} nu_upper {:g} nu_bar_planck_T_R {:g} nu_bar_estimator {:g}",
-        delta_nu_bar, T_R, nu_lower, nu_upper, nu_bar_planck_T_R, nu_bar_estimator);
+        "[warning] nu_bar_planck_minus_estimator: cell {} bin {}: delta_nu_bar is {:g}. T_R {:g} [K] nu_lower {:g} "
+        "[Hz] nu_upper {:g} [Hz] nu_bar_planck_T_R {:g} [Hz] nu_bar_estimator {:g} [Hz]",
+        grid::get_mgi_of_nonemptymgi(nonemptymgi), binindex, delta_nu_bar, T_R, nu_lower, nu_upper, nu_bar_planck_T_R,
+        nu_bar_estimator);
   }
 
   return delta_nu_bar;
@@ -393,7 +393,10 @@ auto find_bin_T_R(const int nonemptymgi, const int binindex) -> float {
                                                           ftol<epsrel>, iteration_num);
     const auto T_R_solution = static_cast<float>(0.5 * (result.first + result.second));
     if (iteration_num >= maxit) {
-      printlnlog("[warning] find_bin_T_R: T_R did not converge within {} iterations.", iteration_num);
+      printlnlog(
+          "[warning] find_bin_T_R: cell {} bin {}: T_R did not converge within {} iterations. interval [{:g}, "
+          "{:g}] [K]",
+          grid::get_mgi_of_nonemptymgi(nonemptymgi), binindex, iteration_num, result.first, result.second);
     }
     return T_R_solution;
   }
@@ -422,7 +425,7 @@ void set_params_fullspec(const int nonemptymgi, const int timestep) {
                  MINTEMP, modelgridindex);
       T_J = MINTEMP;
     }
-    grid::set_TJ(nonemptymgi, T_J);
+    grid::TJ_allcells[nonemptymgi] = T_J;
 
     auto T_R = static_cast<float>(H * nubar / KB / 3.832229494);
     if (T_R > MAXTEMP) {
@@ -434,14 +437,14 @@ void set_params_fullspec(const int nonemptymgi, const int timestep) {
                  MINTEMP, modelgridindex);
       T_R = MINTEMP;
     }
-    grid::set_TR(nonemptymgi, T_R);
+    grid::TR_allcells[nonemptymgi] = T_R;
 
     const auto W = static_cast<float>(J[nonemptymgi] * PI / STEBO / pow4(T_R));
-    grid::set_W(nonemptymgi, W);
+    grid::W_allcells[nonemptymgi] = W;
 
     printlnlog(
-        "Full-spectrum fit radfield for cell {} at timestep {}: J {:g}, nubar {:5.1f} Angstrom, T_J {:g}, T_R {:g}, W "
-        "{:g}",
+        "Full-spectrum fit radfield for cell {} at timestep {}: J {:g}, lambda_bar {:5.1f} [Angstrom], T_J {:g} [K], "
+        "T_R {:g} [K], W {:g}",
         modelgridindex, timestep, J[nonemptymgi], 1e8 * CLIGHT / nubar, T_J, T_R, W);
   }
 }
@@ -492,8 +495,8 @@ void write_to_file(const int nonemptymgi, const int timestep) {
       } else if (binindex == -1) {  // bin -1 is the full spectrum fit
         nuJ_out = nuJ[nonemptymgi];
         J_out = J[nonemptymgi];
-        T_R = grid::get_TR(nonemptymgi);
-        W = grid::get_W(nonemptymgi);
+        T_R = grid::TR_allcells[nonemptymgi];
+        W = grid::W_allcells[nonemptymgi];
       } else {  // use binindex < -1 for detailed line Jb_lu estimators
         const int jblueindex = -2 - binindex;  // -2 is the first detailed line, -3 is the second, etc
         const int lineindex = detailed_lineindices[jblueindex];
@@ -574,8 +577,8 @@ void init() {
     printlnlog("The multibin radiation field is being used from timestep {} onwards.", FIRST_NLTE_RADFIELD_TIMESTEP);
 
     printlnlog(
-        "Initialising multibin radiation field with {} bins from ({:.2f} eV, {:6.1f} A) to ({:.2f} eV, {:6.1f} A) and "
-        "a T_e superbin up to ({:.2f} eV, {:6.1f} A).",
+        "Initialising multibin radiation field with {} bins from ({:.2f} [eV], {:6.1f} [A]) to ({:.2f} [eV], "
+        "{:6.1f} [A]) and a T_e superbin up to ({:.2f} [eV], {:6.1f} [A]).",
         RADFIELDBINCOUNT - 1, H * RADFIELDBINS_NU_MIN / EV, 1e8 * CLIGHT / RADFIELDBINS_NU_MIN,
         H * RADFIELDBINS_NU_MAX / EV, 1e8 * CLIGHT / RADFIELDBINS_NU_MAX, H * RADFIELDBINS_T_E_SUPERBIN_NU_MAX / EV,
         1e8 * CLIGHT / RADFIELDBINS_T_E_SUPERBIN_NU_MAX);
@@ -764,7 +767,7 @@ DEVICE_FUNC auto radfield(const double nu, const int nonemptymgi) -> double {
     }
   }
   // full spectrum fit to a single dilute blackbody
-  return grid::get_W(nonemptymgi) * planck(nu, grid::get_TR(nonemptymgi));
+  return grid::W_allcells[nonemptymgi] * planck(nu, grid::TR_allcells[nonemptymgi]);
 }
 
 void fit_parameters(const int nonemptymgi, const int timestep) {
@@ -799,7 +802,7 @@ void fit_parameters(const int nonemptymgi, const int timestep) {
 
       if (J_bin > 0) {
         if (binindex == RADFIELDBINCOUNT - 1) {
-          T_R_bin = grid::get_Te(nonemptymgi);
+          T_R_bin = grid::Te_allcells[nonemptymgi];
         } else {
           T_R_bin = find_bin_T_R(nonemptymgi, binindex);
           if (T_R_bin <= bins_T_R_min) {
@@ -813,18 +816,21 @@ void fit_parameters(const int nonemptymgi, const int timestep) {
         W_bin = static_cast<float>(J_bin / planck_integral_result);
 
         if (W_bin > 1e4 || !std::isfinite(W_bin)) {
-          printlog(
-              "bin {} T_R {:7.1f} W {:g} too high or non-finite, trying setting T_R to {:g}. J_bin {:g} "
-              "planck_integral {:g}...",
-              binindex, T_R_bin, W_bin, bins_T_R_max, J_bin, planck_integral_result);
+          const auto W_bin_first = W_bin;
           planck_integral_result = calculate_planck_integral(bins_T_R_max, nu_lower, nu_upper, false);
           W_bin = static_cast<float>(J_bin / planck_integral_result);
           if (W_bin > 1e4) {
-            printlnlog("W still very high, W={:g}. Zeroing bin...", W_bin);
+            printlnlog(
+                "[warning] cell {} ts {} bin {}: W {:g} too high or non-finite (T_R {:7.1f} [K], J_bin {:g}) and W "
+                "{:g} still too high after retry at T_R_max {:g} [K]. Zeroing bin (T_R set to sentinel -99)",
+                mgi, timestep, binindex, W_bin_first, T_R_bin, J_bin, W_bin, bins_T_R_max);
             T_R_bin = -99.;
             W_bin = 0.;
           } else {
-            printlnlog("new W is {:g}. Continuing...", W_bin);
+            printlnlog(
+                "[warning] cell {} ts {} bin {}: W {:g} too high or non-finite (T_R {:7.1f} [K], J_bin {:g}); "
+                "continuing with W {:g} at T_R_max {:g} [K]",
+                mgi, timestep, binindex, W_bin_first, T_R_bin, J_bin, W_bin, bins_T_R_max);
             T_R_bin = bins_T_R_max;
           }
         }
@@ -918,15 +924,19 @@ auto get_T_J_from_J(const int nonemptymgi) -> float {
     const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
     printlnlog("[warning] get_T_J_from_J: T_J estimator infinite in cell {}, use value of last timestep",
                modelgridindex);
-    return grid::get_TJ(nonemptymgi);
+    return grid::TJ_allcells[nonemptymgi];
   }
   // Make sure that T is in the allowed temperature range.
   if (T_J > MAXTEMP) {
-    printlnlog("[warning] get_T_J_from_J: T_J would be {:.1f} > MAXTEMP. Clamping to MAXTEMP = {:.0f} K", T_J, MAXTEMP);
+    printlnlog(
+        "[warning] get_T_J_from_J: cell {} ts {}: T_J would be {:.1f} [K] > MAXTEMP. Clamping to MAXTEMP = {:.0f} [K]",
+        grid::get_mgi_of_nonemptymgi(nonemptymgi), globals::timestep, T_J, MAXTEMP);
     return MAXTEMP;
   }
   if (T_J < MINTEMP) {
-    printlnlog("[warning] get_T_J_from_J: T_J would be {:.1f} < MINTEMP. Clamping to MINTEMP = {:.0f} K", T_J, MINTEMP);
+    printlnlog(
+        "[warning] get_T_J_from_J: cell {} ts {}: T_J would be {:.1f} [K] < MINTEMP. Clamping to MINTEMP = {:.0f} [K]",
+        grid::get_mgi_of_nonemptymgi(nonemptymgi), globals::timestep, T_J, MINTEMP);
     return MINTEMP;
   }
   return T_J;
@@ -946,8 +956,7 @@ void reduce_estimators() {
   if constexpr (DETAILED_BF_ESTIMATORS_ON) {
     // reduce all ranks on each node first, then reduce the node leaders
     // then broadcast the final result to all ranks on each node
-    // this seems necessary to avoid congestion compared to a single MPI_Allreduce
-    // when using many ranks per node
+    // this seems necessary to avoid congestion compared to a single MPI_Allreduce when using many ranks per node
     MPI_Reduce_safe(bfrate_raw, MPI_SUM, 0, globals::mpi_comm_node);
     if (globals::rank_in_node == 0) {
       MPI_Allreduce_safe(bfrate_raw, MPI_SUM, globals::mpi_comm_internode);
@@ -984,8 +993,7 @@ void reduce_estimators() {
   MPI_Barrier_allranks();
 }
 
-// broadcast computed radfield results including parameters
-// from the cells belonging to root process to all processes
+// broadcast computed radfield results including parameters from the cells belonging to root process to all processes
 void do_MPI_Bcast(const ptrdiff_t nonemptymgi, const int root, const int root_node_id) {
   MPI_Bcast_safe(J_normfactor[nonemptymgi], root, MPI_COMM_WORLD);
 
@@ -1095,7 +1103,7 @@ void read_restart_data(FILE* gridsave_file) {
 
     if (bincount_in != RADFIELDBINCOUNT || T_R_min_in != bins_T_R_min || T_R_max_in != bins_T_R_max ||
         nu_lower_first_ratio < 0.999 || nu_upper_last_ratio < 0.999) {
-      printlnlog("ERROR: gridsave file specifies {} bins, nu_min {} nu_max {} T_R_min {} T_R_max {}", bincount_in,
+      printlnlog("[error] gridsave file specifies {} bins, nu_min {} nu_max {} T_R_min {} T_R_max {}", bincount_in,
                  nu_min_in, nu_max_in, T_R_min_in, T_R_max_in);
       printlnlog("require {} bins, RADFIELDBINS_NU_MIN {:g} RADFIELDBINS_NU_MAX {:g} T_R_min {:g} T_R_max {:g}",
                  RADFIELDBINCOUNT, RADFIELDBINS_NU_MIN, RADFIELDBINS_NU_MAX, bins_T_R_min, bins_T_R_max);
@@ -1141,7 +1149,7 @@ void read_restart_data(FILE* gridsave_file) {
     assert_always(fscanf(gridsave_file, "%d\n", &detailed_linecount_in) == 1);
 
     if (detailed_linecount_in != detailed_linecount) {
-      printlnlog("ERROR: gridsave file specifies {} detailed lines but this simulation has {}.", detailed_linecount_in,
+      printlnlog("[error] gridsave file specifies {} detailed lines but this simulation has {}.", detailed_linecount_in,
                  detailed_linecount);
       std::abort();
     }

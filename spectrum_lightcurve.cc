@@ -79,25 +79,26 @@ void printout_tracemission_stats() {
     if (mode == 0) {
       std::ranges::SORT_OR_STABLE_SORT(traceemissionabsorption,
                                        [](const auto& a, const auto& b) { return a.energyemitted > b.energyemitted; });
-      printlnlog("lambda [{:5.1f}, {:5.1f}] nu {:g} {:g}", traceemissabs_lambdamin, traceemissabs_lambdamax,
-                 traceemissabs_nulower, traceemissabs_nuupper);
+      printlnlog("lambda [{:5.1f}, {:5.1f}] [Angstrom] nu [{:g}, {:g}] [Hz]", traceemissabs_lambdamin,
+                 traceemissabs_lambdamax, traceemissabs_nulower, traceemissabs_nuupper);
 
       printlnlog(
-          "Top line emission contributions in the range lambda [{:5.1f}, {:5.1f}] time [{:5.1f}d, {:5.1f}d] ({:g} erg)",
+          "Top line emission contributions in the range lambda [{:5.1f}, {:5.1f}] [Angstrom] time [{:5.1f}, {:5.1f}] "
+          "[d] ({:g} [erg])",
           traceemissabs_lambdamin, traceemissabs_lambdamax, traceemissabs_timemin / DAY, traceemissabs_timemax / DAY,
           traceemission_totalenergy);
     } else {
       std::ranges::SORT_OR_STABLE_SORT(traceemissionabsorption, std::ranges::greater{},
                                        &EmissionAbsorptionContrib::energyabsorbed);
       printlnlog(
-          "Top line absorption contributions in the range lambda [{:5.1f}, {:5.1f}] time [{:5.1f}d, {:5.1f}d] ({:g} "
-          "erg)",
+          "Top line absorption contributions in the range lambda [{:5.1f}, {:5.1f}] [Angstrom] time [{:5.1f}, {:5.1f}] "
+          "[d] ({:g} [erg])",
           traceemissabs_lambdamin, traceemissabs_lambdamax, traceemissabs_timemin / DAY, traceemissabs_timemax / DAY,
           traceabsorption_totalenergy);
     }
 
-    printlnlog("{:>17} {:>4} {:>9} {:>5} {:>8} {:>8} {:>4} {:>7} {:>7} {:>7} {:>7}", "energy", "Z", "ionstage", "upper",
-               "lower", "coll_str", "forb", "lambda", "<v_rad>", "B_lu", "B_ul");
+    printlnlog("{:>17} {:>4} {:>9} {:>5} {:>5} {:>8} {:>5} {:>7} {:>7} {:>7} {:>7}", "energy (frac)", "Z", "ionstage",
+               "upper", "lower", "coll_str", "forb", "lambda", "<v_rad>", "B_lu", "B_ul");
 
     // display the top entries of the sorted list
     const auto nlines_limited = std::min(std::ssize(globals::linelist.nu), maxlinesprinted);
@@ -147,7 +148,7 @@ void printout_tracemission_stats() {
         }
         assert_always(downtransid != -1);
 
-        printlnlog("{:7.2e} ({:5.1f}%) {:4} {:9} {:5} {:5} {:8.1f}  {:4} {:7.1f} {:7.1f} {:7.1e} {:7.1e}", encontrib,
+        printlnlog("{:7.2e} ({:5.1f}%) {:4} {:9} {:5} {:5} {:8.1f} {:5} {:7.1f} {:7.1f} {:7.1e} {:7.1e}", encontrib,
                    100 * encontrib / totalenergy, get_atomicnumber(element), get_ionstage(element, ion), upper, lower,
                    globals::alltrans.coll_str[downtransid], static_cast<int>(globals::alltrans.forbidden[downtransid]),
                    linelambda, v_rad, B_lu, B_ul);
@@ -646,8 +647,7 @@ void add_to_spec_res(const Packet& pkt, const int dirbin, Spectra& spectra_I, Sp
 }
 
 void write_partial_lightcurve_spectra(const int nts, std::span<const Packet> pkts) {
-  // this is called by sn3d (not exspec) when each rank has its own set of packets
-  // in memory
+  // this is called by sn3d (not exspec) when each rank has its own set of packets in memory
   const bool simulation_complete = (nts >= globals::timestep_finish - 1);
 
   // the emission resolved spectra are slow to generate, and require a lot of memory

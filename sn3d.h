@@ -1,6 +1,5 @@
 // Small shared helpers for the simulation executables: the already-running lock check and
-// inline numeric utilities (exact vector resize, fractional-tolerance comparison, bin-index
-// lookups).
+// inline numeric utilities (exact vector resize, fractional-tolerance comparison, bin-index lookups).
 
 #ifndef SN3D_H
 #define SN3D_H
@@ -49,7 +48,7 @@ inline void check_already_running() {
       pidfile.close();
       if (is_pid_running(artispid_in) && std::filesystem::current_path().generic_string() == line) {
         std::println(stderr,
-                     "\nERROR: artis or exspec is already running in this folder with existing pid {}. Refusing to "
+                     "\n[error] artis or exspec is already running in this folder with existing pid {}. Refusing to "
                      "start. (delete artis.pid if you are sure this is incorrect)",
                      artispid_in);
         std::abort();

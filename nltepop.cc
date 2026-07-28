@@ -55,6 +55,15 @@ static_assert(STRICT_POPULATION_CHECKING_INVERSION_FACTOR_PRINTOUT_WARNING <
 namespace {
 std::fstream nlte_file;
 
+// context so that log messages from the NLTE solver helpers can identify the cell, timestep, and
+// iteration of the solve they were emitted from (set by solve_nlte_pops_element)
+struct NLTELogContext {
+  int modelgridindex = -1;
+  int timestep = -1;
+  int nlte_iter = -1;
+};
+THREADLOCALONHOST NLTELogContext nltelog{};
+
 struct RateMatrices {
   int used_nlte_dimension{0};
 
@@ -274,22 +283,9 @@ void print_level_rates_summary(const int element, const int selected_ion, const 
     const double autoion_total =
         get_total_rate(selected_index, rate_matrices.autoion, popvec, into_level, only_levels_below, only_levels_above);
 
-    if (into_level) {
-      // into this level
-      printlog(" from ");
-    } else {
-      // out of this level
-      printlog("   to ");
-    }
-
-    if (only_levels_below) {
-      printlog("below ");
-    } else {
-      printlog("above ");
-    }
-
-    printlnlog("{:10.2e} {:10.2e} {:10.2e} {:10.2e} {:10.2e} {:10.2e} {:10.2e}", rad_bb_total, coll_bb_total,
-               ntcoll_bb_total, rad_bf_total, coll_bf_total, ntcoll_bf_total, autoion_total);
+    printlnlog("{}{}{:10.2e} {:10.2e} {:10.2e} {:10.2e} {:10.2e} {:10.2e} {:10.2e}", into_level ? " from " : "   to ",
+               only_levels_below ? "below " : "above ", rad_bb_total, coll_bb_total, ntcoll_bb_total, rad_bf_total,
+               coll_bf_total, ntcoll_bf_total, autoion_total);
   }
 }
 
@@ -310,8 +306,8 @@ void print_element_rates_summary(const int element, const int modelgridindex, co
       if (level == 0) {
         printlnlog(
             "  modelgridindex {} timestep {} NLTE iteration {} Te {:g} nne {:g}: NLTE summary for Z={} ionstage {}:",
-            modelgridindex, timestep, nlte_iter, grid::get_Te(nonemptymgi), grid::get_nne(nonemptymgi), atomic_number,
-            ionstage);
+            modelgridindex, timestep, nlte_iter, grid::Te_allcells[nonemptymgi], grid::get_nne(nonemptymgi),
+            atomic_number, ionstage);
         printlnlog(
             "                         pop       rates     bb_rad     bb_col   bb_ntcol     bf_rad     bf_col   "
             "bf_ntcol autoion");
@@ -340,7 +336,7 @@ void print_level_rates(const int nonemptymgi, const int timestep, const int elem
   printlnlog(
       "timestep {} cell {} Te {:g} nne {:g} NLTE level diagnostics for Z={} ionstage {} level {} rates into and out of "
       "this level",
-      timestep, grid::get_mgi_of_nonemptymgi(nonemptymgi), grid::get_Te(nonemptymgi), grid::get_nne(nonemptymgi),
+      timestep, grid::get_mgi_of_nonemptymgi(nonemptymgi), grid::Te_allcells[nonemptymgi], grid::get_nne(nonemptymgi),
       atomic_number, selected_ionstage, selected_level);
 
   const double rad_bb_in_total = get_total_rate_in(selected_index, rate_matrices.rad_bb, popvec);
@@ -482,7 +478,7 @@ auto get_element_superlevelpartfuncs(const int nonemptymgi, const int element) -
 void nltepop_matrix_add_boundbound(const int nonemptymgi, const int element, const int ion, const double t_mid,
                                    const std::span<const double> s_renorm, RateMatrices& rate_matrices,
                                    const int first_ion_used) {
-  const auto T_e = grid::get_Te(nonemptymgi);
+  const auto T_e = grid::Te_allcells[nonemptymgi];
   const auto clumpednne = grid::get_clumpfactor(nonemptymgi) * grid::get_nne(nonemptymgi);
   const int nlevels = get_nlevels(element, ion);
   const auto ionuniquelevelindexstart = get_ionuniquelevelindexstart(element, ion);
@@ -570,7 +566,7 @@ void nltepop_matrix_add_ionisation(const int nonemptymgi, const int element, con
                                    const std::span<const double> s_renorm_upperion, RateMatrices& rate_matrices,
                                    const int first_ion_used, const int nions_used) {
   assert_always((ion + 1) < (nions_used + first_ion_used));  // can't ionise top ion stage
-  const auto T_e = grid::get_Te(nonemptymgi);
+  const auto T_e = grid::Te_allcells[nonemptymgi];
   const float clumpednne = grid::get_clumpfactor(nonemptymgi) * grid::get_nne(nonemptymgi);
   const int nionisinglevels = get_nlevels_ionising(element, ion);
   const int maxrecombininglevel = get_maxrecombininglevel(element, ion + 1);
@@ -670,7 +666,7 @@ void nltepop_matrix_add_autoionisation(const int nonemptymgi, const int element,
   const auto nlte_dimension = rate_matrices.used_nlte_dimension;
   const int max_ion_used = first_ion_used + nions_used - 1;
   assert_always(ion < max_ion_used);  // can't ionise top ion stage
-  const auto T_e = grid::get_Te(nonemptymgi);
+  const auto T_e = grid::Te_allcells[nonemptymgi];
   const float clumpednne = grid::get_clumpfactor(nonemptymgi) * grid::get_nne(nonemptymgi);
   const int nlevels = get_nlevels(element, ion);
   for (int level = 0; level < nlevels; level++) {
@@ -698,8 +694,9 @@ void nltepop_matrix_add_autoionisation(const int nonemptymgi, const int element,
       rate_matrices.autoion[(upper_index * nlte_dimension) + upper_index] -= R;
       rate_matrices.autoion[(lower_index * nlte_dimension) + upper_index] += R;
       if ((R < 0)) {
-        printlnlog("  WARNING: Negative autoionisation rate from ionstage {} level {} to level {}",
-                   get_ionstage(element, ion), level, target_level);
+        printlnlog("  [warning] cell {} ts {}: negative autoionisation rate from Z={} ionstage {} level {} to level {}",
+                   nltelog.modelgridindex, nltelog.timestep, get_atomicnumber(element), get_ionstage(element, ion),
+                   level, target_level);
       }
 
       // capture (which is an excitation process, and the first part of di-electronic recomb).
@@ -711,8 +708,9 @@ void nltepop_matrix_add_autoionisation(const int nonemptymgi, const int element,
       rate_matrices.autoion[(lower_index * nlte_dimension) + lower_index] -= R;
       rate_matrices.autoion[(upper_index * nlte_dimension) + lower_index] += R;
       if ((R < 0)) {
-        printlnlog("  WARNING: Negative autoionisation rate from ionstage {} level {} to level {}",
-                   get_ionstage(element, ion), level, target_level);
+        printlnlog("  [warning] cell {} ts {}: negative autoionisation rate from Z={} ionstage {} level {} to level {}",
+                   nltelog.modelgridindex, nltelog.timestep, get_atomicnumber(element), get_ionstage(element, ion),
+                   level, target_level);
       }
     }
   }
@@ -794,7 +792,8 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
   // set_groundlevelpops uses uppermost_ion. Previously, this was set based on the NLTE phi factors. Therefore we need
   // to call find_uppermost_ion with force_saha = true so the uppermost ion used in set_groundlevelpops is changed to
   // the one based on the correct LTE phi factors instead
-  printlnlog("  WARNING: NLTEPOP setting element Z={} level pops to LTE", get_atomicnumber(element));
+  printlnlog("  [warning] cell {} ts {}: NLTEPOP setting element Z={} level pops to LTE", nltelog.modelgridindex,
+             nltelog.timestep, get_atomicnumber(element));
   const double nne_hi = grid::get_rho(nonemptymgi) / MH;
   constexpr bool force_saha = true;
   grid::set_elements_uppermost_ion(nonemptymgi, element, find_uppermost_ion(nonemptymgi, element, nne_hi, force_saha));
@@ -824,16 +823,18 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
 
         if (!std::isfinite(ltepop) || ltepop <= 0.) {
           printlnlog(
-              "  WARNING: Boltzmann population for Z={} ionstage {} level {} is non-finite or non-positive ({}). "
-              "Setting to MINPOP",
-              get_atomicnumber(element), get_ionstage(element, ion), level, ltepop);
+              "  [warning] cell {} ts {}: Boltzmann population for Z={} ionstage {} level {} is non-finite or "
+              "non-positive ({}). Setting to MINPOP",
+              nltelog.modelgridindex, nltelog.timestep, get_atomicnumber(element), get_ionstage(element, ion), level,
+              ltepop);
           ltepop = MINPOP;
         }
 
         printlnlog(
-            "  WARNING: NLTE solver gave negative/non-finite population to index {} (Z={} ionstage {} level {}), pop = "
-            "{:g}. Replacing with LTE pop of {:g}",
-            index, get_atomicnumber(element), ionstage, level, population, ltepop);
+            "  [warning] cell {} ts {}: NLTE solver gave negative/non-finite population to index {} (Z={} ionstage {} "
+            "level {}), pop = {:g}. Replacing with LTE pop of {:g}",
+            nltelog.modelgridindex, nltelog.timestep, index, get_atomicnumber(element), ionstage, level, population,
+            ltepop);
         popvec[index] = ltepop;
       }
     } else {
@@ -841,26 +842,26 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
       const size_t index_ion_ground = get_nlte_vector_index(element, ion, 0, first_ion_used);
       if (index == index_ion_ground && population < MINPOP) {
         printlnlog(
-            "  WARNING: NLTE solver gave ground pop less than MINPOP for index {} (Z={} ionstage {} level {}), pop = "
-            "{:g}. Returning nltepop_matrix_solve fail",
-            index, get_atomicnumber(element), ionstage, level, population);
+            "  [warning] cell {} ts {}: NLTE solver gave ground pop less than MINPOP for index {} (Z={} ionstage {} "
+            "level {}), pop = {:g}. Returning nltepop_matrix_solve fail",
+            nltelog.modelgridindex, nltelog.timestep, index, get_atomicnumber(element), ionstage, level, population);
         return false;
       }
 
       if (population < 0.0 || !std::isfinite(population)) {
         printlnlog(
-            "  WARNING: NLTE solver gave negative/non-finite population for index {} (Z={} ionstage {} level {}), pop "
-            "= {:g}",
-            index, get_atomicnumber(element), ionstage, level, population);
+            "  [warning] cell {} ts {}: NLTE solver gave negative/non-finite population for index {} (Z={} ionstage {} "
+            "level {}), pop = {:g}",
+            nltelog.modelgridindex, nltelog.timestep, index, get_atomicnumber(element), ionstage, level, population);
         if (population < -MINPOP) {
           printlnlog(
-              "  WARNING: negative pop = {:g} less than -MINPOP (-{:g}) unlikely a rounding error to zero so returning "
-              "nltepop_matrix_solve fail",
+              "  [warning] negative pop = {:g} less than -MINPOP (-{:g}) unlikely a rounding error to zero so "
+              "returning nltepop_matrix_solve fail",
               population, MINPOP);
           return false;
         }
         printlnlog(
-            "  WARNING: negative pop = {:g} greater than -MINPOP (-{:g}) likely a rounding error to zero so continue "
+            "  [warning] negative pop = {:g} greater than -MINPOP (-{:g}) likely a rounding error to zero so continue "
             "with NLTE pops but set this level to MINPOP",
             population, MINPOP);
         popvec[index] = MINPOP;
@@ -875,18 +876,19 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
           const double inversion_factor = (population / statweight) / (ground_pop / statweight_ground);
 
           if (inversion_factor > STRICT_POPULATION_CHECKING_INVERSION_FACTOR_PRINTOUT_WARNING) {
-            printlog(
-                " WARNING: pop inversion greater than factor {:g}: (g_pop {:g})/(e_pop {:g}) = {:g} is less "
-                "than (g_sw {:g})/(e_sw {:g}) = {:g} for index {} Z={} ionstage {} level {} (factor {:g} inversion) - ",
-                STRICT_POPULATION_CHECKING_INVERSION_FACTOR_PRINTOUT_WARNING, ground_pop, population,
-                ground_pop / population, statweight_ground, statweight, statweight_ground / statweight, index,
-                get_atomicnumber(element), ionstage, level, inversion_factor);
-
-            if (inversion_factor > STRICT_POPULATION_CHECKING_INVERSION_FACTOR_SOLVER_FAIL) {
-              printlnlog("large pop inversion - matrix solve failed");
+            const bool solve_failed = (inversion_factor > STRICT_POPULATION_CHECKING_INVERSION_FACTOR_SOLVER_FAIL);
+            printlnlog(
+                "  [warning] cell {} ts {}: pop inversion greater than factor {:g}: (g_pop {:g})/(e_pop {:g}) = {:g} "
+                "is less than (g_sw {:g})/(e_sw {:g}) = {:g} for index {} Z={} ionstage {} level {} (factor {:g} "
+                "inversion) - {}",
+                nltelog.modelgridindex, nltelog.timestep, STRICT_POPULATION_CHECKING_INVERSION_FACTOR_PRINTOUT_WARNING,
+                ground_pop, population, ground_pop / population, statweight_ground, statweight,
+                statweight_ground / statweight, index, get_atomicnumber(element), ionstage, level, inversion_factor,
+                solve_failed ? "large pop inversion so matrix solve failed"
+                             : "relatively small pop inversion so continue with NLTE solution");
+            if (solve_failed) {
               return false;
             }
-            printlnlog("relatively small pop inversion so continue with NLTE solution");
           }
         } else {
           // check if the first sublevel in the superlevel is inverted relative to the ground state. Only need to check
@@ -897,25 +899,55 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
           const double inversion_factor = (sublevel_pop / statweight) / (ground_pop / statweight_ground);
           if (inversion_factor > STRICT_POPULATION_CHECKING_INVERSION_FACTOR_PRINTOUT_WARNING) {
             assert_testmodeonly(ion_has_superlevel(element, ion));
-            printlog(
-                " WARNING: superlevel pop inversion greater than factor {:g}: (g_pop {:g})/(SL_first_level_pop "
-                "{:g}) = {:g} is less than (g_sw {:g})/(SL_first_level_sw {:g}) = {:g} for index {} Z={} ionstage {} "
-                "level {} (factor {:g} inversion) - ",
-                STRICT_POPULATION_CHECKING_INVERSION_FACTOR_PRINTOUT_WARNING, ground_pop, sublevel_pop,
-                ground_pop / sublevel_pop, statweight_ground, statweight, statweight_ground / statweight, index,
-                get_atomicnumber(element), ionstage, level, inversion_factor);
-
-            if (inversion_factor > STRICT_POPULATION_CHECKING_INVERSION_FACTOR_SOLVER_FAIL) {
-              printlnlog("large pop inversion for superlevel - matrix solve failed");
+            const bool solve_failed = (inversion_factor > STRICT_POPULATION_CHECKING_INVERSION_FACTOR_SOLVER_FAIL);
+            printlnlog(
+                "  [warning] cell {} ts {}: superlevel pop inversion greater than factor {:g}: (g_pop "
+                "{:g})/(SL_first_level_pop {:g}) = {:g} is less than (g_sw {:g})/(SL_first_level_sw {:g}) = {:g} for "
+                "index {} Z={} ionstage {} level {} (factor {:g} inversion) - {}",
+                nltelog.modelgridindex, nltelog.timestep, STRICT_POPULATION_CHECKING_INVERSION_FACTOR_PRINTOUT_WARNING,
+                ground_pop, sublevel_pop, ground_pop / sublevel_pop, statweight_ground, statweight,
+                statweight_ground / statweight, index, get_atomicnumber(element), ionstage, level, inversion_factor,
+                solve_failed ? "large pop inversion so matrix solve failed"
+                             : "relatively small pop inversion so continue with NLTE solution");
+            if (solve_failed) {
               return false;
             }
-            printlnlog("relatively small pop inversion for superlevel so continue with NLTE solution");
           }
         }
       }
     }
   }
   return true;
+}
+
+// Check the diagonal of an LU decomposition for zero or non-finite elements, which indicate levels that are
+// disconnected from the rest of the NLTE rate matrix. Reports and returns true if the matrix is singular.
+// Shared between the GSL and Eigen builds so that the log messages cannot drift apart.
+template <typename GetDiagElement>
+[[nodiscard]] auto lumatrix_is_singular(GetDiagElement getdiagelement, const size_t nlte_dimension, const int element,
+                                        const int first_ion_used, const int nions_used) -> bool {
+  bool is_singular = false;
+  for (auto i = 0ZU; i < nlte_dimension; i++) {
+    // diagonal elements of LU matrix must be non-zero and finite
+    const double matrixelement = getdiagelement(i);
+    if (matrixelement == 0. || !std::isfinite(matrixelement)) {
+      if (!is_singular) {
+        printlog("  [error] cell {} ts {}: NLTE matrix is singular for element Z={} (disconnected:",
+                 nltelog.modelgridindex, nltelog.timestep, get_atomicnumber(element));
+        is_singular = true;
+      }
+      const auto [ion, level] = get_ion_level_of_nlte_vector_index(i, element, first_ion_used, nions_used);
+      if (is_nlte(element, ion, level)) {
+        printlog(" ionstage {} level {}", get_ionstage(element, ion), level);
+      } else {
+        printlog(" ionstage {} superlevel", get_ionstage(element, ion));
+      }
+    }
+  }
+  if (is_singular) {
+    printlnlog(")");
+  }
+  return is_singular;
 }
 
 // solve rate_matrix * x = balance_vector, so that popvec[i] = x[i] * pop_normfactors[i]
@@ -960,27 +992,8 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
   int s = 0;  // sign of the transformation
   assert_always(gsl_linalg_LU_decomp(&gsl_rate_matrix_LU_decomp, &p, &s) == GSL_SUCCESS);
 
-  bool lumatrix_is_singular = false;
-  for (auto i = 0ZU; i < nlte_dimension; i++) {
-    // diagonal elements of LU matrix must be non-zero and finite
-    const double& matrixelement = rate_matrix_LU_decomp[(i * nlte_dimension) + i];
-    if (matrixelement == 0. || !std::isfinite(matrixelement)) {
-      const auto [ion, level] = get_ion_level_of_nlte_vector_index(i, element, first_ion_used, nions_used);
-      if (!lumatrix_is_singular) {
-        printlog("ERROR: NLTE disconnected: Z={}", get_atomicnumber(element));
-      }
-      if (is_nlte(element, ion, level)) {
-        printlog(" ionstage {} level {}", get_ionstage(element, ion), level);
-      } else {
-        printlog(" ionstage {} superlevel ", get_ionstage(element, ion));
-      }
-
-      lumatrix_is_singular = true;
-    }
-  }
-  if (lumatrix_is_singular) {
-    printlnlog("");
-    printlnlog("  ERROR: NLTE matrix is singular for element Z={}!", get_atomicnumber(element));
+  if (lumatrix_is_singular([&](const size_t i) { return rate_matrix_LU_decomp[(i * nlte_dimension) + i]; },
+                           nlte_dimension, element, first_ion_used, nions_used)) {
     return false;
   }
 
@@ -1002,27 +1015,9 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
       eigen_rate_matrix_lu;
 
   eigen_rate_matrix_lu.compute(eigen_rate_matrix);
-  bool lumatrix_is_singular = false;
-  for (auto i = 0ZU; i < nlte_dimension; i++) {
-    // diagonal elements of LU matrix must be non-zero and finite
-    const double& matrixelement = eigen_rate_matrix_lu.matrixLU().diagonal()[i];
-    if (matrixelement == 0. || !std::isfinite(matrixelement)) {
-      const auto [ion, level] = get_ion_level_of_nlte_vector_index(i, element, first_ion_used, nions_used);
-      if (!lumatrix_is_singular) {
-        printlog("ERROR: NLTE disconnected: Z={}", get_atomicnumber(element));
-      }
-      if (is_nlte(element, ion, level)) {
-        printlog(" ionstage {} level {}", get_ionstage(element, ion), level);
-      } else {
-        printlog(" ionstage {} superlevel ", get_ionstage(element, ion));
-      }
-
-      lumatrix_is_singular = true;
-    }
-  }
-  if (lumatrix_is_singular) {
-    printlnlog("");
-    printlnlog("ERROR: NLTE matrix is singular for element Z={}!", get_atomicnumber(element));
+  if (lumatrix_is_singular(
+          [&](const size_t i) { return eigen_rate_matrix_lu.matrixLU().diagonal()[static_cast<ptrdiff_t>(i)]; },
+          nlte_dimension, element, first_ion_used, nions_used)) {
     return false;
   }
 
@@ -1081,17 +1076,17 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
   }
 
   if (!(error_best >= 0.)) {
-    printlnlog("  ERROR: NLTE solver failed to find a solution with finite error for element Z={}",
-               get_atomicnumber(element));
+    printlnlog("  [error] cell {} ts {}: NLTE solver failed to find a solution with finite error for element Z={}",
+               nltelog.modelgridindex, nltelog.timestep, get_atomicnumber(element));
     return false;
   }
   std::ranges::copy(vec_x_best, vec_x.begin());
 
   if (error_best > 1e-8) {
     printlnlog(
-        "  NLTE solver matrix LU_refine: After {} iterations, best solution vector has a max residual of {:g} "
-        "(WARNING!)",
-        iteration, error_best);
+        "  [warning] cell {} ts {}: NLTE solver matrix LU_refine: after {} iterations, best solution vector has a max "
+        "residual of {:g}",
+        nltelog.modelgridindex, nltelog.timestep, iteration, error_best);
   }
 
   // get the unnormalised populations from the x solution vector and the normalisation factors
@@ -1106,8 +1101,10 @@ auto can_remove_ion(const int element, const int ion, const int first_ion_used, 
                     const double nnelement, std::span<const double> popvec) -> bool {
   if (nions_used <= 1) {
     // can't remove an ion if there is only one ion stage used in the NLTE matrix
-    printlnlog("  WARNING: can't remove ion stage {} from NLTE matrix for element Z={} as only one ion stage used",
-               get_ionstage(element, ion), get_atomicnumber(element));
+    printlnlog(
+        "  [warning] cell {} ts {}: can't remove ion stage {} from NLTE matrix for element Z={} as only one ion stage "
+        "used",
+        nltelog.modelgridindex, nltelog.timestep, get_ionstage(element, ion), get_atomicnumber(element));
     return false;
   }
 
@@ -1120,10 +1117,10 @@ auto can_remove_ion(const int element, const int ion, const int first_ion_used, 
   if (ground_pop / nnelement > NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION) {
     // ground pop relative to the element population must not exceed the limit
     printlnlog(
-        "  WARNING: {} ion ground state population too large to remove ion (ground_pop / nnelement) = ({}/{}) = {} "
-        "> {}",
-        ionname, ground_pop, nnelement, ground_pop / nnelement,
-        NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION);
+        "  [warning] cell {} ts {}: {} ion (Z={} ionstage {}) ground state population too large to remove ion "
+        "(ground_pop / nnelement) = ({}/{}) = {} > {}",
+        nltelog.modelgridindex, nltelog.timestep, ionname, get_atomicnumber(element), get_ionstage(element, ion),
+        ground_pop, nnelement, ground_pop / nnelement, NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION);
 
     return false;
   }
@@ -1137,9 +1134,10 @@ auto can_remove_ion(const int element, const int ion, const int first_ion_used, 
     nlte_excited_pop_sum += fabs(levelpop);
     if (levelpop / nnelement > NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION) {
       printlnlog(
-          "  WARNING: {} ion excited state (level {}) population too large to remove ion (nlte_excited_pop_{}_ion "
-          "/ nnelement) = ({}/{}) > ({}))",
-          ionname, ionname, level, levelpop, nnelement, NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION);
+          "  [warning] cell {} ts {}: {} ion (Z={} ionstage {}) excited state (level {}) population too large to "
+          "remove ion (nlte_excited_pop_{}_ion / nnelement) = ({}/{}) > ({})",
+          nltelog.modelgridindex, nltelog.timestep, ionname, get_atomicnumber(element), get_ionstage(element, ion),
+          level, ionname, levelpop, nnelement, NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION);
       return false;
     }
   }
@@ -1151,9 +1149,10 @@ auto can_remove_ion(const int element, const int ion, const int first_ion_used, 
     superlevel_pop = popvec[index_superlevel];
     if (superlevel_pop / nnelement > NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION) {
       printlnlog(
-          "  WARNING: {} ion superlevel population too large to remove ion (superlevel_pop_{}_ion / nnelement "
-          "({:g}/{:g}) > ({:g}) NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION)",
-          ionname, ionname, superlevel_pop, nnelement, NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION);
+          "  [warning] cell {} ts {}: {} ion (Z={} ionstage {}) superlevel population too large to remove ion "
+          "(superlevel_pop_{}_ion / nnelement) = ({:g}/{:g}) > ({:g})",
+          nltelog.modelgridindex, nltelog.timestep, ionname, get_atomicnumber(element), get_ionstage(element, ion),
+          ionname, superlevel_pop, nnelement, NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION);
       return false;
     }
   }
@@ -1242,8 +1241,7 @@ auto nltepop_solve_matrix_with_ion_reduction(const int element, const int nonemp
       }
     }
 
-    // calculate the normalisation factors and apply them to the matrix
-    // columns and balance vector elements
+    // calculate the normalisation factors and apply them to the matrix columns and balance vector elements
     THREADLOCALONHOST std::vector<double> pop_normfactors;
     pop_normfactors.reserve(max_nlte_dimension);
     pop_normfactors.resize(nlte_dimension);
@@ -1261,8 +1259,9 @@ auto nltepop_solve_matrix_with_ion_reduction(const int element, const int nonemp
             atomic_number, get_ionstage(element, first_ion_used), get_ionstage(element, max_ion_used));
       }
     } else if (NLTE_LIMIT_ION_STAGES_AFTER_FAILURE) {
-      printlnlog("  WARNING: NLTE matrix solution failed for element Z={} using ionstage {} to {}", atomic_number,
-                 get_ionstage(element, first_ion_used), get_ionstage(element, max_ion_used));
+      printlnlog("  [warning] cell {} ts {}: NLTE matrix solution failed for element Z={} using ionstage {} to {}",
+                 nltelog.modelgridindex, nltelog.timestep, atomic_number, get_ionstage(element, first_ion_used),
+                 get_ionstage(element, max_ion_used));
 
       if (can_remove_ion(element, max_ion_used, first_ion_used, nions_used, nnelement, popvec)) {
         // we can remove the top ion from the solution
@@ -1275,8 +1274,9 @@ auto nltepop_solve_matrix_with_ion_reduction(const int element, const int nonemp
         matrix_solve_required = true;
       } else {
         printlnlog(
-            "  WARNING: can't remove top or bottom ion stage from NLTE equations, therefore unable to find an NLTE "
-            "solution for this element");
+            "  [warning] cell {} ts {}: can't remove top or bottom ion stage from NLTE equations, therefore unable to "
+            "find an NLTE solution for element Z={}",
+            nltelog.modelgridindex, nltelog.timestep, atomic_number);
       }
     }
   }
@@ -1306,8 +1306,10 @@ void nltepop_apply_solution(const int element, const int nonemptymgi, const int 
     const int nlevels_excited_nlte = get_nlevels_excited_nlte(element, ion);
 
     if (ion < first_ion_used || ion >= (first_ion_used + nions_used)) {
-      printlnlog("  WARNING: Z={} ionstage {} removed from NLTE rate matrix. Setting all levelpops for ion to zero ",
-                 get_atomicnumber(element), get_ionstage(element, ion));
+      printlnlog(
+          "  [warning] cell {} ts {}: Z={} ionstage {} removed from NLTE rate matrix. Setting all levelpops for ion to "
+          "zero",
+          modelgridindex, timestep, get_atomicnumber(element), get_ionstage(element, ion));
 
       set_groundlevelpop(nonemptymgi, element, ion, 0.);
 
@@ -1342,7 +1344,7 @@ void nltepop_apply_solution(const int element, const int nonemptymgi, const int 
   const double elem_pop_error_percent = fabs((nnelement / elem_pop_matrix) - 1) * 100;
   if (elem_pop_error_percent > 1.0) {
     printlnlog(
-        "  WARNING: timestep {} nlteiter {} Z={} element population is: {:g} (from abundance) and {:g} (from matrix "
+        "  [warning] timestep {} nlteiter {} Z={} element population is: {:g} (from abundance) and {:g} (from matrix "
         "solution), error: {:.2f}%. Forcing element pops to LTE.",
         timestep, nlte_iter, atomic_number, nnelement, elem_pop_matrix, elem_pop_error_percent);
     set_element_pops_lte(nonemptymgi, element);
@@ -1375,24 +1377,20 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
 
   const int atomic_number = get_atomicnumber(element);
   const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
+  nltelog = {.modelgridindex = modelgridindex, .timestep = timestep, .nlte_iter = nlte_iter};
 
   if (grid::get_elem_massfrac(nonemptymgi, element) <= 0.) {
     // abundance of this element is zero, so do not store any NLTE populations
-    printlnlog(
-        "Not solving for NLTE populations in cell {} at timestep {} NLTE iteration {} for element Z={} due to zero "
-        "abundance",
-        modelgridindex, timestep, nlte_iter, atomic_number);
-
     nltepop_reset_element(nonemptymgi, element);
     return;
   }
 
-  const double cell_Te = grid::get_Te(nonemptymgi);
+  const double cell_Te = grid::Te_allcells[nonemptymgi];
 
   if (cell_Te == MINTEMP) {
     printlnlog(
         "Not solving for NLTE populations in cell {} at timestep {} NLTE iteration {} for element Z={} due to low "
-        "temperature Te=MINTEMP={:g} K",
+        "temperature Te=MINTEMP={:g} [K]",
         modelgridindex, timestep, nlte_iter, atomic_number, cell_Te);
     set_element_pops_lte(nonemptymgi, element);
     return;
@@ -1404,10 +1402,14 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
   const int nions = get_nions(element);
   const double nnelement = grid::get_elem_numberdens(nonemptymgi, element);
 
-  printlnlog(
-      "Solving for NLTE populations in cell {} at timestep {} NLTE iteration {} for element Z={} (mass fraction "
-      "{:.2e}, nnelement {:.2e} cm^-3)",
-      modelgridindex, timestep, nlte_iter, atomic_number, grid::get_elem_massfrac(nonemptymgi, element), nnelement);
+  if (nlte_iter == 0) {
+    // the per-iteration progress is summarised by the NLTE convergence messages in update_grid.cc,
+    // so this announcement is only made for the first iteration
+    printlnlog(
+        "Solving for NLTE populations in cell {} at timestep {} for element Z={} (mass fraction "
+        "{:.2e}, nnelement {:.2e} [cm^-3])",
+        modelgridindex, timestep, atomic_number, grid::get_elem_massfrac(nonemptymgi, element), nnelement);
+  }
 
   const auto superlevel_partfuncs = get_element_superlevelpartfuncs(nonemptymgi, element);
 
@@ -1443,7 +1445,7 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
 
   if (!matrix_solve_success) {
     printlnlog(
-        "WARNING: Can't solve for NLTE populations in cell {} at timestep {} for element Z={} due to singular matrix, "
+        "[warning] Can't solve for NLTE populations in cell {} at timestep {} for element Z={} due to singular matrix, "
         "negative pop or large pop inversion and unable to recover solution by reducing ion range. Attempting to use "
         "LTE solution instead",
         modelgridindex, timestep, atomic_number);
@@ -1468,7 +1470,7 @@ DEVICE_FUNC auto superlevel_boltzmann(const int nonemptymgi, const int element, 
   // attached to the superlevel (see the comment in read_autoion_data())
   assert_testmodeonly(level_isinsuperlevel(element, ion, level) || level_isautoionising(element, ion, level));
   const int level_superlevel_start = get_nlevels_excited_nlte(element, ion) + 1;
-  const double T_exc = LTEPOP_EXCITATION_USE_TJ ? grid::get_TJ(nonemptymgi) : grid::get_Te(nonemptymgi);
+  const double T_exc = LTEPOP_EXCITATION_USE_TJ ? grid::TJ_allcells[nonemptymgi] : grid::Te_allcells[nonemptymgi];
   const double E_level = epsilon(element, ion, level);
   const double E_superlevel = epsilon(element, ion, level_superlevel_start);
 
@@ -1573,7 +1575,7 @@ void nltepop_read_restart_data(FILE* restart_file) {
   int total_nlte_levels_in = 0;
   assert_always(fscanf(restart_file, "%d\n", &total_nlte_levels_in) == 1);
   if (total_nlte_levels_in != globals::total_nlte_levels) {
-    printlnlog("ERROR: Expected {} NLTE levels but found {} in restart file", globals::total_nlte_levels,
+    printlnlog("[error] Expected {} NLTE levels but found {} in restart file", globals::total_nlte_levels,
                total_nlte_levels_in);
     std::abort();
   }

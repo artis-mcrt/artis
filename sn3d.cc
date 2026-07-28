@@ -276,8 +276,7 @@ void write_deposition_file() {
       std::print(dep_file, " Qdotspfission_ana_erg/s/g");
     }
     std::print(dep_file,
-               " eps_erg/s/g Qdot_ana_erg/s/g positrondep_discrete_Lsun elecdep_discrete_Lsun "
-               "alphadep_discrete_Lsun");
+               " eps_erg/s/g Qdot_ana_erg/s/g positrondep_discrete_Lsun elecdep_discrete_Lsun alphadep_discrete_Lsun");
     if (any_fission) {
       std::print(dep_file, " spfission_dep_discrete_Lsun");
     }
@@ -699,8 +698,7 @@ auto do_timestep(const int nts, const int titer, std::vector<Packet>& packets, c
              communicate_grid_duration);
 
   // If this is not the 0th time step of the current job step,
-  // write out a snapshot of the grid properties for further restarts
-  // and update input.txt accordingly
+  // write out a snapshot of the grid properties for further restarts and update input.txt accordingly
   if (((nts - globals::timestep_initial) != 0)) {
     save_grid_and_packets(nts, packets);
     do_this_full_loop = walltime_sufficient_to_continue(nts, nts_prev, walltimelimitseconds);
@@ -734,7 +732,7 @@ auto do_timestep(const int nts, const int titer, std::vector<Packet>& packets, c
 
     write_partial_lightcurve_spectra(nts, packets);
 
-    printlnlog("During timestep {} on MPI process {}, {} pellets decayed and {} packets escaped. (t={:g}d)", nts,
+    printlnlog("During timestep {} on MPI process {}, {} pellets decayed and {} packets escaped. (t={:g} [d])", nts,
                globals::my_rank, globals::timesteps[nts].pellet_decays, stats::get_counter(stats::Counter::PKTESCAPES),
                globals::timesteps[nts].mid / DAY);
 
@@ -823,7 +821,7 @@ auto main(int argc, char* argv[]) -> int {
   printlnlog("GPU_ON is enabled");
 #endif
 
-  printlnlog("time at start");
+  printlnlog("sn3d launched (this line marks the start time)");
 
   printlog("Integration method is: ");
 
@@ -848,11 +846,10 @@ auto main(int argc, char* argv[]) -> int {
   int opt = 0;
   while ((opt = getopt(argc, argv, "w:")) != -1) {  // NOLINT(concurrency-mt-unsafe,misc-include-cleaner)
     if (opt == 'w') {
-      printlog("Command line argument specifies wall time hours '{}', setting ",
-               optarg);  // NOLINT(misc-include-cleaner)
-      const float walltimehours = strtof(optarg, nullptr);
+      const float walltimehours = strtof(optarg, nullptr);  // NOLINT(misc-include-cleaner)
       walltimelimitseconds = static_cast<int>(walltimehours * HOUR);
-      printlnlog("walltimelimitseconds = {}", walltimelimitseconds);
+      printlnlog("command line argument specifies wall time hours '{}', so setting walltimelimitseconds = {}", optarg,
+                 walltimelimitseconds);
     } else {
       std::println(stderr, "Usage: {} [-w WALLTIMELIMITHOURS]",
                    argv[0]);  // NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic,)
@@ -863,11 +860,11 @@ auto main(int argc, char* argv[]) -> int {
   std::vector<Packet> packets;
   reserve_resize(packets, MPKTS);
 
-  printlnlog("git branch {}", GIT_BRANCH);
+  printlnlog("git branch: {}", GIT_BRANCH);
 
   printlnlog("git version: {}", GIT_VERSION);
 
-  printlnlog("git status {}", GIT_STATUS);
+  printlnlog("git status: {}", GIT_STATUS);
 
   printlnlog("sn3d compiled at {} on {}", __TIME__, __DATE__);
 
@@ -882,7 +879,7 @@ auto main(int argc, char* argv[]) -> int {
              globals::node_id, globals::node_count - 1);
 #ifdef MAX_NODE_SIZE
   printlnlog(
-      "WARNING: Compiled with MAX_NODE_SIZE {}, which may mean mean that there are more nodes reported than physically "
+      "[warning] Compiled with MAX_NODE_SIZE {}, which may mean that there are more nodes reported than physically "
       "present",
       MAX_NODE_SIZE);
 #endif
@@ -955,12 +952,14 @@ auto main(int argc, char* argv[]) -> int {
   const int nstart = grid::get_nstart(globals::my_rank);
   const int ndo = grid::get_ndo(globals::my_rank);
   const int ndo_nonempty = grid::get_ndo_nonempty(globals::my_rank);
-  printlog("process rank {} (global max rank {}) assigned {} modelgrid cells ({} nonempty)", globals::my_rank,
-           globals::nprocs - 1, ndo, ndo_nonempty);
   if (ndo > 0) {
-    printlnlog(": cells [{}..{}] (model has max mgi {})", nstart, nstart + ndo - 1, grid::get_npts_model() - 1);
+    printlnlog(
+        "process rank {} (global max rank {}) assigned {} modelgrid cells ({} nonempty): cells [{}..{}] (model "
+        "has max mgi {})",
+        globals::my_rank, globals::nprocs - 1, ndo, ndo_nonempty, nstart, nstart + ndo - 1, grid::get_npts_model() - 1);
   } else {
-    printlnlog("");
+    printlnlog("process rank {} (global max rank {}) assigned {} modelgrid cells ({} nonempty)", globals::my_rank,
+               globals::nprocs - 1, ndo, ndo_nonempty);
   }
 
   MPI_Barrier_allranks();
@@ -1011,8 +1010,7 @@ auto main(int argc, char* argv[]) -> int {
 
   // The main calculation is now over. The packets now have all stored the time, place and direction
   // at which they left the grid. Also their rest frame energies and frequencies.
-  // Spectra and light curves are now extracted using exspec which is another make target of this
-  // code.
+  // Spectra and light curves are now extracted using exspec which is another make target of this code.
 
   MPI_Barrier_allranks();
 

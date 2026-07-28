@@ -385,22 +385,27 @@ void check_auger_probabilities(const ptrdiff_t nonemptymgi) {
       }
 
       if (fabs(prob_sum - 1.0) > 0.001) {
-        printlnlog("Problem with Auger probabilities for cell {} Z={} ionstage {} prob_sum {:g}",
-                   grid::get_mgi_of_nonemptymgi(nonemptymgi), get_atomicnumber(element), get_ionstage(element, ion),
-                   prob_sum);
+        printlog(
+            "[error] Auger probabilities sum to {:g} (expected 1.0 +/- 0.001) for cell {} Z={} ionstage {}: "
+            "P(n_Auger):",
+            prob_sum, grid::get_mgi_of_nonemptymgi(nonemptymgi), get_atomicnumber(element), get_ionstage(element, ion));
         for (int a = 0; a <= NT_MAX_AUGER_ELECTRONS; a++) {
-          printlnlog("{}: {:g}", a, get_auger_probability(nonemptymgi, element, ion, a));
+          printlog(" {}:{:g}", a, get_auger_probability(nonemptymgi, element, ion, a));
         }
+        printlnlog("");
         problem_found = true;
       }
 
       if (fabs(ionenfrac_sum - 1.0) > 0.001) {
-        printlnlog("Problem with Auger energy frac sum for cell {} Z={} ionstage {} ionenfrac_sum {:g}",
-                   grid::get_mgi_of_nonemptymgi(nonemptymgi), get_atomicnumber(element), get_ionstage(element, ion),
-                   ionenfrac_sum);
+        printlog(
+            "[error] Auger energy fractions sum to {:g} (expected 1.0 +/- 0.001) for cell {} Z={} ionstage {}: "
+            "enfrac(n_Auger):",
+            ionenfrac_sum, grid::get_mgi_of_nonemptymgi(nonemptymgi), get_atomicnumber(element),
+            get_ionstage(element, ion));
         for (int a = 0; a <= NT_MAX_AUGER_ELECTRONS; a++) {
-          printlnlog("{}: {:g}", a, get_ion_auger_enfrac(nonemptymgi, element, ion, a));
+          printlog(" {}:{:g}", a, get_ion_auger_enfrac(nonemptymgi, element, ion, a));
         }
+        printlnlog("");
         problem_found = true;
       }
     }
@@ -482,7 +487,7 @@ void read_auger_data() {
       const int g = xrayg[shellnum - 1];
 
       if (!std::isfinite(en_auger_ev) || en_auger_ev < 0) {
-        printlnlog("  WARNING: Z={:2} ionstage {:2} shellnum {} en_auger_ev is {:g}. Setting to zero.", Z, ionstage,
+        printlnlog("  [warning] Z={:2} ionstage {:2} shellnum {} en_auger_ev is {:g}. Setting to zero.", Z, ionstage,
                    shellnum, en_auger_ev);
         en_auger_ev = 0.;
       }
@@ -617,7 +622,7 @@ void read_collion_data() {
       if (!any_data_matched) {
         const double ionpot_ev = get_ionpot(element, ion) / EV;
         printlnlog(
-            "No collisional ionisation data for Z={} ionstage {}. Using Lotz approximation with ionpot = {:g} eV", Z,
+            "No collisional ionisation data for Z={} ionstage {}. Using Lotz approximation with ionpot = {:g} [eV]", Z,
             ionstage, ionpot_ev);
 
         // get the approximate shell occupancy if we don't have the data file
@@ -666,6 +671,27 @@ void read_collion_data() {
   std::ranges::stable_sort(colliondata, [](const ShellParams& a, const ShellParams& b) {
     return std::tie(a.Z, a.ionstage, a.ionpot_ev, a.n, a.l) < std::tie(b.Z, b.ionstage, b.ionpot_ev, b.n, b.l);
   });
+
+  // this condition is checked here once per ion (it does not depend on the cell), so that
+  // calculate_eff_ionpot_auger_rates does not have to report it for every cell
+  for (int element = 0; element < get_nelements(); element++) {
+    const int Z = get_atomicnumber(element);
+    for (int ion = 0; ion < get_nions(element); ion++) {
+      const int ionstage = get_ionstage(element, ion);
+      if ((Z - (ionstage - 1)) <= 0) {
+        continue;  // no bound electrons, so no NT impact ionisation
+      }
+      const bool any_subshells = std::ranges::any_of(colliondata, [Z, ionstage](const ShellParams& collionrow) {
+        return collionrow.Z == Z && collionrow.ionstage == ionstage;
+      });
+      if (!any_subshells) {
+        printlnlog(
+            "[warning] no NT impact ionisation subshell data for Z={} ionstage {}: the Spencer-Fano solver will "
+            "default to the work function approximation and not account for the ionisation energy",
+            Z, ionstage);
+      }
+    }
+  }
 
   if (NT_MAX_AUGER_ELECTRONS > 0) {
     read_auger_data();
@@ -1072,7 +1098,8 @@ auto calculate_frac_heating(const int nonemptymgi, const std::array<double, SFPT
   const auto frac_heating = static_cast<float>(frac_heating_Einit / E_init_ev);
 
   if (!std::isfinite(frac_heating) || frac_heating < 0 || frac_heating > 1.0) {
-    printlnlog("WARNING: calculate_frac_heating: invalid result of {:g}. Setting to 1.0 instead", frac_heating);
+    printlnlog("[warning] calculate_frac_heating: cell {} ts {}: invalid result of {:g}. Setting to 1.0 instead",
+               grid::get_mgi_of_nonemptymgi(nonemptymgi), globals::timestep, frac_heating);
     return 1.;
   }
 
@@ -1222,8 +1249,7 @@ void calculate_eff_ionpot_auger_rates(const int nonemptymgi, const int element, 
 
   // The ionisation rates of all shells of an ion add to make the ion's total ionisation rate,
   // i.e., Gamma_ion = Gamma_shell_a + Gamma_shell_b + ...
-  // And since the ionisation rate is inversely proportional to the effective ion potential,
-  // we solve:
+  // And since the ionisation rate is inversely proportional to the effective ion potential, we solve:
   // (eta_ion / ionpot_ion) = (eta_shell_a / ionpot_shell_a) + (eta_shell_b / ionpot_shell_b) + ...
   // where eta is the fraction of the deposition energy going into ionisation of the ion or shell
 
@@ -1308,12 +1334,7 @@ void calculate_eff_ionpot_auger_rates(const int nonemptymgi, const int element, 
     }
     celliondata.eff_ionpot = static_cast<float>(eff_ionpot);
   } else {
-    printlnlog("WARNING! No matching subshells in NT impact ionisation cross section data for Z={} ionstage {}.",
-               get_atomicnumber(element), get_ionstage(element, ion));
-    printlnlog(
-        "-> Defaulting to work function approximation and ionisation energy is not accounted for in Spencer-Fano "
-        "solution.");
-
+    // the absence of matching subshell data is reported once at startup by read_collion_data()
     celliondata.eff_ionpot = static_cast<float>(1. / get_oneoverw_approx_axelrod(element, ion, nonemptymgi));
   }
 }
@@ -1542,7 +1563,7 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const std::a
           } else {
             printlog("{} (Lotz)", shellnames.at(-collionrow.l));
           }
-          printlog(" I {:5.1f} eV: frac_ionisation {:10.4e}", collionrow.ionpot_ev, frac_ionisation_ion_shell);
+          printlog(" I {:5.1f} [eV]: frac_ionisation {:10.4e}", collionrow.ionpot_ev, frac_ionisation_ion_shell);
 
           if (NT_MAX_AUGER_ELECTRONS > 0) {
             printlog("  prob(n Auger elec):");
@@ -1622,7 +1643,11 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const std::a
         printlnlog("    frac_excitation: {:g}", frac_excitation_ion);
       }
       if (frac_excitation_ion > 1. || !std::isfinite(frac_excitation_ion)) {
-        printlnlog("      WARNING: invalid frac_excitation. Replacing with zero");
+        printlnlog(
+            "      [warning] cell {} ts {}: Z={} ionstage {}: invalid frac_excitation {:g}. Replacing with zero and "
+            "dropping {} stored excitations for this ion",
+            grid::get_mgi_of_nonemptymgi(nonemptymgi), timestep, Z, ionstage, frac_excitation_ion,
+            std::ssize(tmp_excitation_list) - tmp_excitation_list_size_before_ion);
         frac_excitation_ion = 0.;
         // remove this ion's transitions from the excitation list. Otherwise their (invalid, possibly
         // huge) frac_deposition and ratecoeffperdeposition values would remain in the stored list and
@@ -1633,9 +1658,9 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const std::a
       frac_excitation_total += frac_excitation_ion;
 
       if (verbose) {
-        printlnlog("    approxworkfn: {:9.2f} eV  (without using the Spencer-Fano solution)",
+        printlnlog("    approxworkfn: {:9.2f} [eV]  (without using the Spencer-Fano solution)",
                    (1. / get_oneoverw_approx_axelrod(element, ion, nonemptymgi)) / EV);
-        printlnlog("    eff_ionpot:   {:9.2f} eV  (always use valence potential is {})",
+        printlnlog("    eff_ionpot:   {:9.2f} [eV]  (always use valence potential is {})",
                    get_eff_ionpot(nonemptymgi, element, ion) / EV, (NT_USE_VALENCE_IONPOTENTIAL ? "true" : "false"));
 
         printlnlog("    approxworkfn Gamma:      {:9.3e}", nt_ionisation_ratecoeff_wfapprox(nonemptymgi, element, ion));
@@ -1706,7 +1731,7 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const std::a
     nt_solution[nonemptymgi].frac_excitations_list_size = static_cast<int>(std::ssize(tmp_excitation_list));
     std::ranges::copy(tmp_excitation_list, get_cell_ntexcitations(nonemptymgi).begin());
 
-    const auto T_e = grid::get_Te(nonemptymgi);
+    const auto T_e = grid::Te_allcells[nonemptymgi];
     if (verbose) {
       printlnlog("  Top non-thermal excitation fractions (total excitations = {}):",
                  nt_solution[nonemptymgi].frac_excitations_list_size);
@@ -1780,10 +1805,10 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const std::a
   const double frac_sum = frac_heating_calculated + frac_excitation_total + frac_ionisation_total;
 
   if (verbose) {
-    printlnlog("  deposition:  {:9.2f} eV/s/cm^3", deposition_rate_density_ev);
-    printlnlog("  nne:         {:9.3e} e-/cm^3", nne);
-    printlnlog("  nnetot:      {:9.3e} e-/cm^3", nnetot);
-    printlnlog("  nne_nt     < {:9.3e} e-/cm^3", nne_nt_max);
+    printlnlog("  deposition:  {:9.2f} [eV/s/cm^3]", deposition_rate_density_ev);
+    printlnlog("  nne:         {:9.3e} [e-/cm^3]", nne);
+    printlnlog("  nnetot:      {:9.3e} [e-/cm^3]", nnetot);
+    printlnlog("  nne_nt     < {:9.3e} [e-/cm^3]", nne_nt_max);
     printlnlog("  nne_nt/nne < {:9.3e}", nne_nt_max / nne);
 
     printlnlog("  frac_heating_tot:    {:g}", frac_heating_calculated);
@@ -1798,7 +1823,7 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const std::a
       static_cast<float>(std::clamp(1. - frac_excitation_total - frac_ionisation_total, 0., 1.));
 
   if (!ftol<0.02>(frac_sum, 1.0)) {
-    printlnlog("WARNING: frac_sum is {:g}, but should be 1.0", frac_sum);
+    printlnlog("[warning] frac_sum is {:g}, but should be 1.0", frac_sum);
     printlnlog("  (replacing calculated frac_heating_tot {:g} with {:g} to make frac_sum = 1.0)",
                frac_heating_calculated, nt_solution[nonemptymgi].frac_heating);
   }
@@ -1935,8 +1960,7 @@ void sfmatrix_add_ionisation(std::span<double> sfmatrixuppertri, const int Z, co
         int augerstopindex = 0;
         if constexpr (SF_AUGER_CONTRIBUTION_DISTRIBUTE_EN) {
           // en_auger_ev is (if LJS understands it correctly) averaged to include some probability of zero Auger
-          // electrons so we need a boost to get the average energy of Auger electrons given that there are one or
-          // more
+          // electrons so we need a boost to get the average energy of Auger electrons given that there are one or more
           const double en_boost = 1 / (1. - collionrow.prob_num_auger[0]);
 
           augerstopindex = get_energyindex_ev_gteq(en_auger_ev * en_boost);
@@ -2019,8 +2043,7 @@ auto sfmatrix_solve(const std::span<const double> sfmatrix) -> std::array<double
 #endif
 
   double error_best = -1.;
-  int iteration = 0;
-  for (iteration = 0; iteration < 10; iteration++) {
+  for (int iteration = 0; iteration < 10; iteration++) {
 #ifdef EIGEN_OFF
     if (iteration > 0) {
       // use gsl_vec_residual as the temporary work vector
@@ -2049,8 +2072,7 @@ auto sfmatrix_solve(const std::span<const double> sfmatrix) -> std::array<double
   std::ranges::copy(yvec_best, yvec_arr.begin());
 
   if (error_best > 1e-10) {
-    printlnlog("  SF solver LU_refine: After {} iterations, best solution vector has a max residual of {:g}", iteration,
-               error_best);
+    printlnlog("  SF solver LU_refine: best solution vector has a max residual of {:g}", error_best);
   }
 
   assert_always(std::ranges::all_of(yvec_arr, [](double y) { return y >= 0.; }));
@@ -2085,8 +2107,8 @@ void init() {
   printlnlog("  NTEXCITATION_MAXNLEVELS_LOWER {}", NTEXCITATION_MAXNLEVELS_LOWER);
   printlnlog("  NTEXCITATION_MAXNLEVELS_UPPER {}", NTEXCITATION_MAXNLEVELS_UPPER);
   printlnlog("  SFPTS {}", SFPTS);
-  printlnlog("  SF_EMIN {:g} eV", SF_EMIN);
-  printlnlog("  SF_EMAX {:g} eV", SF_EMAX);
+  printlnlog("  SF_EMIN {:g} [eV]", SF_EMIN);
+  printlnlog("  SF_EMAX {:g} [eV]", SF_EMAX);
   printlnlog("  NT_USE_VALENCE_IONPOTENTIAL {}", NT_USE_VALENCE_IONPOTENTIAL ? "on" : "off");
   printlnlog("  NT_MAX_AUGER_ELECTRONS {}", NT_MAX_AUGER_ELECTRONS);
   printlnlog("  SF_AUGER_CONTRIBUTION {}", SF_AUGER_CONTRIBUTION_ON ? "on" : "off");
@@ -2125,7 +2147,7 @@ void init() {
   const double sourceintegral = std::ranges::fold_left(
       std::views::iota(0, SFPTS), 0.0, [](double sum, int s) { return sum + (sourcevec(s) * DELTA_E); });
 
-  printlnlog("E_init: {:14.7e} eV/s/cm3", E_init_ev);
+  printlnlog("E_init: {:14.7e} [eV/s/cm^3]", E_init_ev);
   printlnlog("source function integral: {:14.7e}", sourceintegral);
 
   read_collion_data();
@@ -2333,8 +2355,7 @@ DEVICE_FUNC void do_ntlepton_deposit(Packet& pkt) {
     // instead of converting directly to k-packet (unless the heating channel is selected)
 
     double zrand = rng_uniform(get_rngstate(pkt));
-    // zrand is initially between [0, 1), but we will subtract off each
-    // component of the deposition fractions
+    // zrand is initially between [0, 1), but we will subtract off each component of the deposition fractions
     // until we end and select transition_ij when zrand < dep_frac_transition_ij
 
     // Gate on the stored ionisation fraction so that the k-packet probability below is exactly
@@ -2416,12 +2437,12 @@ void solve_spencerfano(const int nonemptymgi, const int timestep, const int iter
   const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
   bool skip_solution = false;
   if (timestep < globals::num_lte_timesteps + 1) {
-    printlnlog("Skipping Spencer-Fano solution for first NLTE timestep");
+    // this global condition is reported once per timestep by update_grid(), not once per cell
     skip_solution = true;
   } else if (get_ntlepton_deposition_rate_density(nonemptymgi) / EV < MINDEPRATE) {
     printlnlog(
-        "Non-thermal deposition rate of {:g} eV/cm/s/cm^3 below  MINDEPRATE {:g} in cell {} at timestep {}. Skipping "
-        "Spencer-Fano solution.",
+        "Non-thermal deposition rate of {:g} [eV/s/cm^3] below MINDEPRATE {:g} [eV/s/cm^3] in cell {} at timestep {}. "
+        "Skipping Spencer-Fano solution.",
         get_ntlepton_deposition_rate_density(nonemptymgi) / EV, MINDEPRATE, modelgridindex, timestep);
 
     skip_solution = true;
@@ -2465,8 +2486,8 @@ void solve_spencerfano(const int nonemptymgi, const int timestep, const int iter
     return;
   }
   printlnlog(
-      "Setting up Spencer-Fano equation with {} energy points from {:g} eV to {:g} eV in cell {} at timestep {} "
-      "iteration {} (nne={:g} e-/cm^3)",
+      "Setting up Spencer-Fano equation with {} energy points from {:g} [eV] to {:g} [eV] in cell {} at timestep {} "
+      "iteration {} (nne={:g} [e-/cm^3])",
       SFPTS, SF_EMIN, SF_EMAX, modelgridindex, timestep, iteration, nne);
 
   nt_solution[nonemptymgi].nneperion_when_solved = static_cast<float>(nne_per_ion);
@@ -2574,9 +2595,9 @@ void read_restart_data(FILE* gridsave_file) {
   assert_always(fscanf(gridsave_file, "%d %la %la\n", &sfpts_in, &SF_EMIN_in, &SF_EMAX_in) == 3);
 
   if (sfpts_in != SFPTS || SF_EMIN_in != SF_EMIN || SF_EMAX_in != SF_EMAX) {
-    printlnlog("ERROR: gridsave file specifies {} Spencer-Fano samples, SF_EMIN {:g} SF_EMAX {:g}", sfpts_in,
+    printlnlog("[error] gridsave file specifies {} Spencer-Fano samples, SF_EMIN {:g} SF_EMAX {:g}", sfpts_in,
                SF_EMIN_in, SF_EMAX_in);
-    printlnlog("ERROR: This simulation has {} Spencer-Fano samples, SF_EMIN {:g} SF_EMAX {:g}", SFPTS, SF_EMIN,
+    printlnlog("[error] This simulation has {} Spencer-Fano samples, SF_EMIN {:g} SF_EMAX {:g}", SFPTS, SF_EMIN,
                SF_EMAX);
     std::abort();
   }

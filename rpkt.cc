@@ -385,8 +385,7 @@ void electron_scatter_rpkt(Packet& pkt) {
   // Check unit vector
   assert_testmodeonly(fabs(vec_len(pkt.dir) - 1.) < 1.e-6);
 
-  // Finally we want to put in the rest frame energy and frequency.
-  // And record that it's now a r-pkt.
+  // Finally we want to put in the rest frame energy and frequency. And record that it's now a r-pkt.
 
   set_pkt_restframe_from_cmf(pkt);
 }
@@ -400,14 +399,12 @@ void rpkt_event_continuum(Packet& pkt, const ContinuumOpacity& chi_rpkt_cont) {
   const double chi_ff = chi_rpkt_cont.chi_freefree_heat * dopplerfactor;
   const double chi_bf = chi_rpkt_cont.chi_boundfree * dopplerfactor;
 
-  // continuum process happens. select due to its probabilities sigma/chi_cont, chi_ff/chi_cont,
-  // chi_bf/chi_cont
+  // continuum process happens. select due to its probabilities sigma/chi_cont, chi_ff/chi_cont, chi_bf/chi_cont
 
   const auto chi_rnd = rng_uniform(get_rngstate(pkt)) * chi_cont;
   if (chi_rnd < chi_escatter) {
     // electron scattering occurs
-    // in this case the packet stays a R_PKT of same nu_cmf as before (coherent scattering)
-    // but with different direction
+    // in this case the packet stays a R_PKT of same nu_cmf as before (coherent scattering) but with different direction
     pkt.nscatterings++;
     stats::increment(stats::Counter::ELECTRON_SCATTERINGS);
 
@@ -418,8 +415,7 @@ void rpkt_event_continuum(Packet& pkt, const ContinuumOpacity& chi_rpkt_cont) {
 
     electron_scatter_rpkt(pkt);
 
-    // Electron scattering does not modify the last emission flag
-    // but it updates the last emission position
+    // Electron scattering does not modify the last emission flag but it updates the last emission position
     pkt.em_pos = pkt.pos;
     pkt.em_time = static_cast<float>(pkt.prop_time);
 
@@ -555,7 +551,7 @@ auto do_rpkt_step(Packet& pkt, const double t2, ContinuumOpacity& chi_rpkt_cont)
   } else if (thickcell) {
     // In the case of optically thick cells, we treat the packets in grey approximation to speed up the calculation
 
-    const double chi_grey = grid::get_kappagrey(nonemptymgi) * grid::get_rho(nonemptymgi) *
+    const double chi_grey = grid::kappagrey_allcells[nonemptymgi] * grid::get_rho(nonemptymgi) *
                             calculate_doppler_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
 
     edist = tau_rnd / chi_grey;
@@ -675,7 +671,7 @@ auto do_rpkt_step(Packet& pkt, const double t2, ContinuumOpacity& chi_rpkt_cont)
 // = kappa(free-free) * nne
 auto calculate_chi_ffheating(const int nonemptymgi, const double nu, const bool use_cellcache) -> double {
   const auto clumpednne = grid::get_nne(nonemptymgi) * grid::get_clumpfactor(nonemptymgi);
-  const auto T_e = grid::get_Te(nonemptymgi);
+  const auto T_e = grid::Te_allcells[nonemptymgi];
   assert_testmodeonly(!use_cellcache || get_cellcache(nonemptymgi).nonemptymgi == nonemptymgi);
   const auto chi_ff_nnionpart =
       use_cellcache ? get_cellcache(nonemptymgi).chi_ff_nnionpart[0] : calculate_chi_ffheat_nnionpart(nonemptymgi);
@@ -690,8 +686,7 @@ auto calculate_chi_ffheating(const int nonemptymgi, const double nu, const bool 
 
 // sum the bound-free opacity at frequency nu over all photoionisation continua (using the
 // binary-searched frequency window of contributing edges). When USECELLHISTANDUPDATEPHIXSLIST is
-// true, also record each continuum's contribution in the phixslist and cache the running sum for
-// reuse within the cell.
+// true, also record each continuum's contribution in the phixslist and cache the running sum for reuse within the cell.
 template <bool USECELLHISTANDUPDATEPHIXSLIST>
 auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixslist& phixslist) -> double {
   double chi_bf_sum = 0.;
@@ -702,7 +697,7 @@ auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixsli
     }
   }
 
-  const auto T_e = grid::get_Te(nonemptymgi);
+  const auto T_e = grid::Te_allcells[nonemptymgi];
   const auto clumpednne = grid::get_nne(nonemptymgi) * grid::get_clumpfactor(nonemptymgi);
   const auto nnetot = grid::get_nnetot(nonemptymgi);
   const auto& allcont_nu_edge = globals::allcont.nu_edge;
@@ -749,8 +744,7 @@ auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixsli
     const int level = allcont_level[i];
     double sigma_contr = 0.;
 
-    // The bf process happens only if the current cell contains
-    // the involved atomic species
+    // The bf process happens only if the current cell contains the involved atomic species
     const bool should_keep_this_cont = USECELLHISTANDUPDATEPHIXSLIST
                                            ? get_cellcache(nonemptymgi).allcont_keep[i]
                                            : keep_this_cont(element, ion, level, nonemptymgi, nnetot);
@@ -824,7 +818,7 @@ auto calculate_chi_ffheat_nnionpart(const int nonemptymgi) -> double {
       chi_ff_nnionpart += pow2(ioncharge) * g_ff * nnion;
     }
   }
-  const auto T_e = grid::get_Te(nonemptymgi);
+  const auto T_e = grid::Te_allcells[nonemptymgi];
 
   return chi_ff_nnionpart * 3.69255e8 / sqrt(T_e);
 }
@@ -887,8 +881,7 @@ DEVICE_FUNC void emit_rpkt(Packet& pkt) {
 
   pkt.dir = angle_ab(dir_cmf, vel_vec);
 
-  // Finally we want to put in the rest frame energy and frequency. And record
-  // that it's now a r-pkt.
+  // Finally we want to put in the rest frame energy and frequency. And record that it's now a r-pkt.
 
   set_pkt_restframe_from_cmf(pkt);
 
@@ -953,7 +946,7 @@ void calculate_expansion_opacities(const int nonemptymgi) {
   const auto rho = grid::get_rho(nonemptymgi);
 
   const auto sys_time_start_calc = std::chrono::steady_clock::now();
-  const auto temperature = grid::get_Te(nonemptymgi);
+  const auto temperature = grid::Te_allcells[nonemptymgi];
 
   printlog("calculating expansion opacities for cell {}...", grid::get_mgi_of_nonemptymgi(nonemptymgi));
 

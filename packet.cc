@@ -36,20 +36,14 @@ namespace {
 constexpr auto get_packets_text_header() -> std::string {
   std::string header;
   header =
-      "#number where type_id"
-      " posx posy posz"
-      " dirx diry dirz"
-      " tdecay e_cmf e_rf nu_cmf nu_rf"
-      " escape_type_id escape_time emissiontype trueemissiontype"
-      " em_posx em_posy em_posz"
-      " absorption_type absorption_freq nscatterings em_time";
+      "#number where type_id posx posy posz dirx diry dirz tdecay e_cmf e_rf nu_cmf nu_rf escape_type_id escape_time "
+      "emissiontype trueemissiontype em_posx em_posy em_posz absorption_type absorption_freq nscatterings em_time";
   if constexpr (POL_ON) {
     header += " stokes_q stokes_u";
   }
   header +=
-      " originated_from_particlenotgamma"
-      " trueem_posx trueem_posy trueem_posz trueem_time"
-      " pellet_nucindex pellet_decaytype";
+      " originated_from_particlenotgamma trueem_posx trueem_posy trueem_posz trueem_time pellet_nucindex "
+      "pellet_decaytype";
   return header;
 }
 
@@ -95,17 +89,17 @@ void packet_init(std::span<Packet> packets)
 // Subroutine that initialises the packets if we start a new simulation.
 {
   MPI_Barrier_allranks();
-  printlnlog("UNIFORM_PELLET_ENERGIES is {}", (UNIFORM_PELLET_ENERGIES ? "true" : "false"));
+  printlnlog("UNIFORM_PELLET_ENERGIES is {}", UNIFORM_PELLET_ENERGIES ? "true" : "false");
 
-  printlnlog("INITIAL_PACKETS_ON is {}", (INITIAL_PACKETS_ON ? "on" : "off"));
+  printlnlog("INITIAL_PACKETS_ON is {}", INITIAL_PACKETS_ON ? "true" : "false");
 
   // The total number of pellets that we want to start with is just
   // npkts. The total energy of the pellets is given by etot.
   const double etot_tmodel_tinf = decay::get_global_etot_tmodel_tinf();
 
-  printlnlog("etot {:g} (t_model to t_inf)", etot_tmodel_tinf);
+  printlnlog("etot {:g} [erg] (t_model to t_inf)", etot_tmodel_tinf);
 
-  printlnlog("e_cmf per packet (t_model to t_inf) {:g} erg", etot_tmodel_tinf / MPKTS);
+  printlnlog("e_cmf per packet (t_model to t_inf) {:g} [erg]", etot_tmodel_tinf / MPKTS);
 
   const auto energy_per_mass_nonemptymgi_decaypath = decay::get_energy_per_mass_nonemptymgi_decaypath();
 
@@ -131,11 +125,11 @@ void packet_init(std::span<Packet> packets)
   assert_always(etot_simtime > 0);
 
   constexpr auto strtimelow{INITIAL_PACKETS_ON ? "tmodel" : "tmin"};
-  printlnlog("etot ({} to tmax) {:g} erg", strtimelow, etot_simtime);
+  printlnlog("etot ({} to tmax) {:g} [erg]", strtimelow, etot_simtime);
 
   // So energy per pellet is:
   const double e_cmf_per_packet = etot_simtime / MPKTS;
-  printlnlog("e_cmf per packet ({} to tmax) {:g} erg", strtimelow, e_cmf_per_packet);
+  printlnlog("e_cmf per packet ({} to tmax) {:g} [erg]", strtimelow, e_cmf_per_packet);
 
   // Now place the pellets in the ejecta and decide at what time they will decay.
 
@@ -148,14 +142,15 @@ void packet_init(std::span<Packet> packets)
   double e_cmf_total =
       std::ranges::fold_left(packets, 0., [](const double sum, const Packet& p) { return sum + p.e_cmf; });
   const double e_ratio = etot_simtime / e_cmf_total;
-  printlnlog("packet energy sum {:g} should be {:g} normalisation factor: {:g}", e_cmf_total, etot_simtime, e_ratio);
+  printlnlog("packet energy sum {:g} [erg] should be {:g} [erg], so normalisation factor is {:g}", e_cmf_total,
+             etot_simtime, e_ratio);
   assert_always(std::isfinite(e_cmf_total));
   e_cmf_total *= e_ratio;
   for (auto& pkt : packets) {
     pkt.e_cmf *= e_ratio;
     pkt.e_rf *= e_ratio;
   }
-  printlnlog("total energy that will be freed during simulation time: {:g} erg", e_cmf_total);
+  printlnlog("total energy that will be freed during simulation time: {:g} [erg]", e_cmf_total);
 }
 
 // read packets*.out text format file
@@ -209,9 +204,7 @@ auto read_text_packets(const std::string& filename) -> std::vector<Packet> {
     ssline >> pkt.pellet_decaytype;
   }
 
-  if (std::ssize(packets) < MPKTS) {
-    printlnlog("  found {} out of a possible {} packets.", std::ssize(packets), MPKTS);
-  }
+  printlnlog("  read {} packets from {} (MPKTS {})", std::ssize(packets), filename, MPKTS);
   packets.shrink_to_fit();
   return packets;
 }
@@ -258,7 +251,7 @@ void read_temp_packetsfile(const int timestep, const int my_rank, std::vector<Pa
   reserve_resize(packets, packet_count_in_file);
   assert_always(std::fread(packets.data(), sizeof(Packet), packet_count_in_file, packets_file.get()) ==
                 static_cast<size_t>(packet_count_in_file));
-  printlnlog("done");
+  printlnlog("read {} packets from {}", packet_count_in_file, filename);
 }
 
 void write_temp_packetsfile(const int timestep, const int my_rank, const std::span<const Packet> packets) {
@@ -269,13 +262,13 @@ void write_temp_packetsfile(const int timestep, const int my_rank, const std::sp
   bool write_success = false;
   while (!write_success) {
     if (tries > 10) {
-      printlnlog("ERROR: Failed to write {} after {} tries. Aborting.", filename, tries);
+      printlnlog("[error] Failed to write {} after {} tries. Aborting.", filename, tries);
       std::abort();
     }
     printlog("timestep {}: writing {}...", timestep, filename);
     FILE* packets_file = fopen(filename.c_str(), "wb");
     if (packets_file == nullptr) {
-      printlnlog("ERROR: Could not open file '{}' for mode 'wb'.", filename);
+      printlnlog("[error] Could not open file '{}' for mode 'wb'.", filename);
       write_success = false;
     } else {
       auto packet_count = static_cast<std::int64_t>(std::ssize(packets));
@@ -284,7 +277,7 @@ void write_temp_packetsfile(const int timestep, const int my_rank, const std::sp
       write_success = write_success &&
                       (std::fwrite(packets.data(), sizeof(Packet), packets.size(), packets_file) == packets.size());
       if (!write_success) {
-        printlnlog("fwrite() FAILED! will retry...");
+        printlnlog("[warning] fwrite to {} failed on attempt {} of 10. will retry...", filename, tries + 1);
       }
 
       fclose(packets_file);

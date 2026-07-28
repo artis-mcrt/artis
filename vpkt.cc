@@ -18,6 +18,7 @@
 #include <print>
 #include <sstream>
 #include <string>
+#include <system_error>
 #include <tuple>
 #include <vector>
 
@@ -650,7 +651,10 @@ void remove_temp_vpkt_file(const int nts, const int my_rank) {
   };
 
   for (const auto& filename : filenames) {
-    if (std::filesystem::remove(filename)) {
+    // these temp files are not needed again, so deletion failures are ignored (the error_code
+    // overload of remove() reports the failure here instead of throwing)
+    std::error_code remove_error;
+    if (std::filesystem::remove(filename, remove_error)) {
       printlnlog("Deleted {}", filename);
     }
   }
@@ -671,7 +675,8 @@ void read_vpktparameterfile() {
     assert_always(fscanf(input_file, "%lg", &obsdirs_costheta[i]) == 1);
 
     if (fabs(obsdirs_costheta[i]) > 1) {
-      printlnlog("Wrong observer direction");
+      printlnlog("[error] vpkt.txt observer direction {} has costheta {:g}, which is outside [-1, 1]. aborting", i,
+                 obsdirs_costheta[i]);
       std::abort();
     }
     if (obsdirs_costheta[i] == 1) {
@@ -689,8 +694,9 @@ void read_vpktparameterfile() {
     obsdirs_phi[i] = phi_degrees * PI / 180.;
     const double theta_degrees = std::acos(obsdirs_costheta[i]) / PI * 180.;
 
-    printlnlog("vpkt.txt:   direction {} costheta {:g} ({:.1f} degrees) phi {:g} ({:.1f} degrees)", i,
-               obsdirs_costheta[i], theta_degrees, obsdirs_phi[i], phi_degrees);
+    printlnlog(
+        "vpkt.txt:   direction {}: theta {:.1f} [degrees] (costheta {:g}), phi {:.1f} [degrees] ({:g} [radians])", i,
+        theta_degrees, obsdirs_costheta[i], phi_degrees, obsdirs_phi[i]);
   }
 
   // Nspectra opacity choices (i.e. Nspectra spectra for each observer)
@@ -725,18 +731,18 @@ void read_vpktparameterfile() {
   double vspec_tmax_in_days = 0.;
   assert_always(fscanf(input_file, "%d %lg %lg", &override_tminmax, &vspec_tmin_in_days, &vspec_tmax_in_days) == 3);
 
-  printlnlog("vpkt: compiled with VSPEC_TIMEMIN {:.1f}d VSPEC_TIMEMAX {:1f}d VSPEC_TIMEBINS {}", VSPEC_TIMEMIN / DAY,
-             VSPEC_TIMEMAX / DAY, VSPEC_TIMEBINS);
+  printlnlog("vpkt: compiled with VSPEC_TIMEMIN {:.1f} [d] VSPEC_TIMEMAX {:.1f} [d] VSPEC_TIMEBINS {}",
+             VSPEC_TIMEMIN / DAY, VSPEC_TIMEMAX / DAY, VSPEC_TIMEBINS);
   if (override_tminmax == 1) {
     vspec_timemin_input = vspec_tmin_in_days * DAY;
     vspec_timemax_input = vspec_tmax_in_days * DAY;
-    printlnlog("vpkt.txt: VSPEC_TIMEMIN_input {:.1f}d, VSPEC_TIMEMAX_input {:.1f}d", vspec_timemin_input / DAY,
+    printlnlog("vpkt.txt: VSPEC_TIMEMIN_input {:.1f} [d], VSPEC_TIMEMAX_input {:.1f} [d]", vspec_timemin_input / DAY,
                vspec_timemax_input / DAY);
   } else {
     vspec_timemin_input = VSPEC_TIMEMIN;
     vspec_timemax_input = VSPEC_TIMEMAX;
     printlnlog(
-        "vpkt.txt: VSPEC_TIMEMIN_input {:.1f}d, VSPEC_TIMEMAX_input {:.1f}d (inherited from VSPEC_TIMEMIN and "
+        "vpkt.txt: VSPEC_TIMEMIN_input {:.1f} [d], VSPEC_TIMEMAX_input {:.1f} [d] (inherited from VSPEC_TIMEMIN and "
         "VSPEC_TIMEMAX)",
         vspec_timemin_input / DAY, vspec_timemax_input / DAY);
   }
@@ -753,8 +759,10 @@ void read_vpktparameterfile() {
 
   printlnlog("vpkt: compiled with VSPEC_NUBINS {}", VSPEC_NUBINS);
   assert_always(VSPEC_NUMAX > VSPEC_NUMIN);
-  printlnlog("vpkt: compiled with VSPEC_NUMAX {:g} lambda_min {:g} Angstroms", VSPEC_NUMAX, 1e8 * CLIGHT / VSPEC_NUMAX);
-  printlnlog("vpkt: compiled with VSPEC_NUMIN {:g} lambda_max {:g} Angstroms", VSPEC_NUMIN, 1e8 * CLIGHT / VSPEC_NUMIN);
+  printlnlog("vpkt: compiled with VSPEC_NUMAX {:g} [Hz] lambda_min {:g} [Angstroms]", VSPEC_NUMAX,
+             1e8 * CLIGHT / VSPEC_NUMAX);
+  printlnlog("vpkt: compiled with VSPEC_NUMIN {:g} [Hz] lambda_max {:g} [Angstroms]", VSPEC_NUMIN,
+             1e8 * CLIGHT / VSPEC_NUMIN);
 
   if (flag_custom_freq_ranges == 1) {
     assert_always(fscanf(input_file, "%d ", &nwavelengthranges) == 1);
@@ -784,7 +792,7 @@ void read_vpktparameterfile() {
   }
 
   for (int i = 0; i < nwavelengthranges; i++) {
-    printlnlog("vpkt.txt:   range {} lambda [{:g}, {:g}] Angstroms", i, 1e8 * CLIGHT / vspec_numax_input[i],
+    printlnlog("vpkt.txt:   range {} lambda [{:g}, {:g}] [Angstroms]", i, 1e8 * CLIGHT / vspec_numax_input[i],
                1e8 * CLIGHT / vspec_numin_input[i]);
   }
 
@@ -818,7 +826,8 @@ void read_vpktparameterfile() {
     tmin_grid = tmin_grid_in_days * DAY;
     tmax_grid = tmax_grid_in_days * DAY;
 
-    printlnlog("vpkt.txt: velocity grid time range tmin_grid {:g}d tmax_grid {:g}d", tmin_grid / DAY, tmax_grid / DAY);
+    printlnlog("vpkt.txt: velocity grid time range tmin_grid {:g} [d] tmax_grid {:g} [d]", tmin_grid / DAY,
+               tmax_grid / DAY);
 
     // Specify wavelength range: number of intervals (dum9) and limits (dum10,dum11)
     assert_always(fscanf(input_file, "%d ", &grid_nwavelengthranges) == 1);
@@ -835,7 +844,7 @@ void read_vpktparameterfile() {
       nu_grid_max[i] = CLIGHT / (range_lambda_min * 1e-8);
       nu_grid_min[i] = CLIGHT / (range_lambda_max * 1e-8);
 
-      printlnlog("vpkt.txt:   velgrid range {} lambda [{:g}, {:g}] Angstroms", i, 1e8 * CLIGHT / nu_grid_max[i],
+      printlnlog("vpkt.txt:   velgrid range {} lambda [{:g}, {:g}] [Angstroms]", i, 1e8 * CLIGHT / nu_grid_max[i],
                  1e8 * CLIGHT / nu_grid_min[i]);
     }
   }

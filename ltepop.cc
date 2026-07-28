@@ -1,6 +1,5 @@
 // Level populations and ionisation balance in LTE and approximate NLTE: partition functions,
-// Boltzmann/Saha level and ion populations, and the solver for a self-consistent free electron
-// density (nne).
+// Boltzmann/Saha level and ion populations, and the solver for a self-consistent free electron density (nne).
 
 #include "ltepop.h"
 
@@ -30,12 +29,36 @@
 
 namespace {
 
+// The conditions behind the warnings below can persist across the many evaluations that the nne and
+// T_e root solvers make for a single cell, so each one is reported only on its first occurrence for
+// a given cell and timestep. The check is made at the warning site so that the warnings are still
+// reported when the NLTE solver calls into these functions itself.
+struct CellWarningMarker {
+  ptrdiff_t nonemptymgi{-1};
+  int timestep{-1};
+
+  // returns true the first time it is called for a particular cell and timestep
+  auto is_first_occurrence(const ptrdiff_t nonemptymgi_in) -> bool {
+    if (nonemptymgi_in == nonemptymgi && globals::timestep == timestep) {
+      return false;
+    }
+    nonemptymgi = nonemptymgi_in;
+    timestep = globals::timestep;
+    return true;
+  }
+};
+
+THREADLOCALONHOST CellWarningMarker neutralcell_warned;
+THREADLOCALONHOST CellWarningMarker nne_maxit_warned;
+THREADLOCALONHOST CellWarningMarker uppermost_ion_warned;
+THREADLOCALONHOST CellWarningMarker ionfract_zeroed_warned;
+
 // use Saha equation for LTE ionisation balance
 [[gnu::pure]] [[nodiscard]] auto phi_saha(const int element, const int ion, const int nonemptymgi) -> double {
   const auto partfunc_ion = get_ion_partfunct(nonemptymgi, element, ion);
   const auto partfunc_upperion = get_ion_partfunct(nonemptymgi, element, ion + 1);
 
-  const auto T_e = grid::get_Te(nonemptymgi);
+  const auto T_e = grid::Te_allcells[nonemptymgi];
   const double ionpot = epsilon(element, ion + 1, 0) - epsilon(element, ion, 0);
   const double partfunct_ratio = partfunc_ion / partfunc_upperion;
   return partfunct_ratio * SAHACONST * pow(T_e, -1.5) * exp(ionpot / KB / T_e);
@@ -56,7 +79,7 @@ namespace {
   const int uniqueionindex = get_uniqueionindex(element, ion);
   const auto partfunc_ion = get_ion_partfunct(nonemptymgi, element, ion);
 
-  const auto T_e = grid::get_Te(nonemptymgi);
+  const auto T_e = grid::Te_allcells[nonemptymgi];
 
   // photoionisation plus collisional ionisation rate coefficient per ground level pop
   const auto groundcontindex = get_groundcontindex(element, ion);
@@ -214,8 +237,10 @@ void set_calculated_nne(const int nonemptymgi) {
 
 // Special case of only neutral ions, set nne to some finite value so that packets are not lost in kpkts
 void set_groundlevelpops_neutral(const ptrdiff_t nonemptymgi) {
-  printlnlog("[warning] calculate_ion_balance_nne: only neutral ions in cell modelgridindex {}",
-             grid::get_mgi_of_nonemptymgi(nonemptymgi));
+  if (neutralcell_warned.is_first_occurrence(nonemptymgi)) {
+    printlnlog("[warning] set_groundlevelpops_neutral: only neutral ions in cell {} timestep {} (repeats suppressed)",
+               grid::get_mgi_of_nonemptymgi(nonemptymgi), globals::timestep);
+  }
   for (int element = 0; element < get_nelements(); element++) {
     const auto nnelement = grid::get_elem_numberdens(nonemptymgi, element);
     const int nions = get_nions(element);
@@ -257,8 +282,11 @@ auto find_converged_nne(const int nonemptymgi, double nne_max, const bool force_
   const auto result =
       boost::math::tools::toms748_solve(f_nne, nne_min, nne_max, f_nne_min, f_nne_max, ftol<fractional_accuracy>, iter);
   const double nne_solution = 0.5 * (result.first + result.second);
-  if (iter >= maxit) {
-    printlnlog("[warning] calculate_ion_balance_nne: nne did not converge within {} iterations", iter);
+  if (iter >= maxit && nne_maxit_warned.is_first_occurrence(nonemptymgi)) {
+    printlnlog(
+        "[warning] find_converged_nne: cell {} timestep {}: nne did not converge within {} iterations "
+        "(repeats suppressed)",
+        grid::get_mgi_of_nonemptymgi(nonemptymgi), globals::timestep, iter);
   }
 
   return static_cast<float>(std::max(MINPOP, nne_solution));
@@ -301,10 +329,12 @@ auto find_converged_nne(const int nonemptymgi, double nne_max, const bool force_
     pop_ratio_ground_to_upper *= nne_hi * phifactor;
 
     if (!std::isfinite(pop_ratio_ground_to_upper)) {
-      printlnlog(
-          "[info] calculate_ion_balance_nne: uppermost_ion limited by phi factors for element Z={}, ionstage {} in "
-          "cell {}",
-          get_atomicnumber(element), get_ionstage(element, ion), modelgridindex);
+      if (uppermost_ion_warned.is_first_occurrence(nonemptymgi)) {
+        printlnlog(
+            "[info] find_uppermost_ion: cell {} timestep {}: uppermost ion stage limited by phi factor overflow for "
+            "Z={} ionstage {} (repeats suppressed)",
+            modelgridindex, globals::timestep, get_atomicnumber(element), get_ionstage(element, ion));
+      }
       return ion;
     }
   }
@@ -338,9 +368,13 @@ auto find_converged_nne(const int nonemptymgi, double nne_max, const bool force_
     ionfractions[ion] = ionfractions[ion] / normfactor;
 
     if (normfactor == 0. || !std::isfinite(ionfractions[ion])) {
-      printlnlog("[warning] ionfract set to zero for ionstage {}, Z={} in cell {} with T_e {:g}, T_R {:g}",
-                 get_ionstage(element, ion), get_atomicnumber(element), grid::get_mgi_of_nonemptymgi(nonemptymgi),
-                 grid::get_Te(nonemptymgi), grid::get_TR(nonemptymgi));
+      if (ionfract_zeroed_warned.is_first_occurrence(nonemptymgi)) {
+        printlnlog(
+            "[warning] calculate_ionfractions: cell {} timestep {}: non-finite ionfract set to zero for Z={} "
+            "ionstage {} (T_e {:g} [K], T_R {:g} [K]; repeats suppressed)",
+            grid::get_mgi_of_nonemptymgi(nonemptymgi), globals::timestep, get_atomicnumber(element),
+            get_ionstage(element, ion), grid::Te_allcells[nonemptymgi], grid::TR_allcells[nonemptymgi]);
+      }
       ionfractions[ion] = 0;
     }
   }
@@ -356,7 +390,7 @@ auto find_converged_nne(const int nonemptymgi, double nne_max, const bool force_
     return nnground;
   }
 
-  const auto T_exc = LTEPOP_EXCITATION_USE_TJ ? grid::get_TJ(nonemptymgi) : grid::get_Te(nonemptymgi);
+  const auto T_exc = LTEPOP_EXCITATION_USE_TJ ? grid::TJ_allcells[nonemptymgi] : grid::Te_allcells[nonemptymgi];
   const auto ionuniquelevelindexstart = get_ionuniquelevelindexstart(element, ion);
 
   const double E_aboveground = epsilon(ionuniquelevelindexstart + level) - epsilon(ionuniquelevelindexstart);

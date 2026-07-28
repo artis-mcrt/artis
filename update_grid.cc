@@ -41,12 +41,13 @@ void write_to_estimators_file(std::ostream& estimators_file, const int nonemptym
 
   const auto sys_time_start_write_estimators = std::chrono::steady_clock::now();
 
-  const auto T_e = grid::get_Te(nonemptymgi);
+  const auto T_e = grid::Te_allcells[nonemptymgi];
   const auto nne = grid::get_nne(nonemptymgi);
   const auto Y_e = grid::get_electronfrac(nonemptymgi);
 
   std::print(estimators_file, "timestep {} modelgridindex {} titeration {} TR {:g} Te {:g} W {:g} TJ {:g}", timestep,
-             mgi, titer, grid::get_TR(nonemptymgi), T_e, grid::get_W(nonemptymgi), grid::get_TJ(nonemptymgi));
+             mgi, titer, grid::TR_allcells[nonemptymgi], T_e, grid::W_allcells[nonemptymgi],
+             grid::TJ_allcells[nonemptymgi]);
   std::println(estimators_file, " grey_depth {:g} thick {} nne {:g} Ye {:g} tdays {:7.2f}",
                grid::grey_depth_allcells[nonemptymgi], grid::thick_allcells[nonemptymgi], nne, Y_e,
                globals::timesteps[timestep].mid / DAY);
@@ -212,7 +213,7 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
     const auto duration_solve_partfuncs_or_gamma =
         std::chrono::duration<double>(std::chrono::steady_clock::now() - sys_time_start_partfuncs_or_gamma).count();
 
-    const double prev_T_e = grid::get_Te(nonemptymgi);
+    const double prev_T_e = grid::Te_allcells[nonemptymgi];
     const auto sys_time_start_Te = std::chrono::steady_clock::now();
 
     // Find T_e as solution for thermal balance
@@ -229,17 +230,15 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
 
       printlnlog(
           "Grid solver cell {} timestep {}: time spent on: Spencer-Fano {:.1f}s, partfuncs/gamma {:.1f}s, T_e {:.1f}s, "
-          "populations "
-          "{:.1f}s",
+          "populations {:.1f}s",
           mgi, nts, duration_solve_spencerfano, duration_solve_partfuncs_or_gamma, duration_solve_T_e,
           duration_solve_pops);
       break;  // no iteration is needed without nlte pops
     }
 
-    const double fracdiff_T_e = fabs((grid::get_Te(nonemptymgi) / prev_T_e) - 1);
+    const double fracdiff_T_e = fabs((grid::Te_allcells[nonemptymgi] / prev_T_e) - 1);
     const auto sys_time_start_nltepops = std::chrono::steady_clock::now();
-    // fractional difference between previous and current iteration's (nne or max(ground state
-    // population change))
+    // fractional difference between previous and current iteration's (nne or max(ground state population change))
     for (int element = 0; element < get_nelements(); element++) {
       if (get_nions(element) > 0 && elem_has_nlte_levels(element)) {
         solve_nlte_pops_element(element, nonemptymgi, nts, nlte_iter);
@@ -259,8 +258,8 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
     printlnlog(
         "NLTE (Spencer-Fano/Te/pops) solver mgi {} timestep {} iteration {}: prev_iter nne {:e}, new nne is {:e}, "
         "fracdiff {:g}, prev T_e {:g} new T_e {:g} fracdiff {:g}",
-        mgi, nts, nlte_iter, nne_prev, grid::get_nne(nonemptymgi), fracdiff_nne, prev_T_e, grid::get_Te(nonemptymgi),
-        fracdiff_T_e);
+        mgi, nts, nlte_iter, nne_prev, grid::get_nne(nonemptymgi), fracdiff_nne, prev_T_e,
+        grid::Te_allcells[nonemptymgi], fracdiff_T_e);
     if (fracdiff_nne <= nne_reltol && fracdiff_T_e <= T_e_reltol) {
       printlnlog(
           "NLTE (Spencer-Fano/Te/pops) solver mgi {} timestep {} iteration {}: nne converged to tolerance {:g} <= {:g} "
@@ -279,8 +278,8 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
 
 void update_gamma_corrphotoionrenorm_bfheating_estimators(const int nonemptymgi, const double estimator_normfactor) {
   if constexpr (USE_LUT_PHOTOION) {
-    const auto W = grid::get_W(nonemptymgi);
-    const auto T_R = grid::get_TR(nonemptymgi);
+    const auto W = grid::W_allcells[nonemptymgi];
+    const auto T_R = grid::TR_allcells[nonemptymgi];
     for (int element = 0; element < get_nelements(); element++) {
       const int nions = get_nions(element);
       for (int ion = 0; ion < nions - 1; ion++) {
@@ -305,8 +304,7 @@ void update_gamma_corrphotoionrenorm_bfheating_estimators(const int nonemptymgi,
       // 2012-01-11. These loops should terminate here to precalculate *ALL* corrphotoionrenorm
       // values so that the values are known when required by the call to get_corrphotoioncoeff in
       // the following loops. Otherwise get_corrphotoioncoeff tries to renormalize by the closest
-      // corrphotoionrenorm in frequency space which can lead to zero contributions to the total
-      // photoionsation rate!
+      // corrphotoionrenorm in frequency space which can lead to zero contributions to the total photoionsation rate!
     }
   }
   for (int element = 0; element < get_nelements(); element++) {
@@ -360,8 +358,6 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
       grid::get_modelcell_assocvolume_tmin(mgi) * pow3(globals::timesteps[nts_prev].mid / globals::tmin);
   const auto sys_time_start_update_cell = std::chrono::steady_clock::now();
 
-  printlnlog("update_grid_cell: working on mgi {} before timestep {} titeration {}...", mgi, nts, titer);
-
   // Update current mass density of cell
   const auto rho = static_cast<float>(grid::get_rho_tmin(mgi) / pow3(tratmid));
   grid::set_rho(nonemptymgi, rho);
@@ -397,9 +393,8 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
     }
 
     // W == 1 indicates that this modelgrid cell was treated grey in the
-    // last timestep. Therefore it has no valid Gamma estimators and must
-    // be treated in LTE at restart.
-    if (grid::thick_allcells[nonemptymgi] != 1 && grid::get_W(nonemptymgi) == 1) {
+    // last timestep. Therefore it has no valid Gamma estimators and must be treated in LTE at restart.
+    if (grid::thick_allcells[nonemptymgi] != 1 && grid::W_allcells[nonemptymgi] == 1) {
       printlnlog(
           "force modelgrid cell {} to grey/LTE thick = 1 for update grid since existing W == 1. (will not have gamma "
           "estimators)",
@@ -420,8 +415,7 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
 
     // we have to calculate the electron density
     // and all the level populations
-    // Normalise estimators and make sure that they are finite.
-    // Then update T_R and W using the estimators.
+    // Normalise estimators and make sure that they are finite. Then update T_R and W using the estimators.
     // (This could in principle also be done for empty cells)
 
     const auto sys_time_start_temperature_corrections = std::chrono::steady_clock::now();
@@ -439,10 +433,10 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
       // LTE mode or grey mode (where temperature doesn't matter but is calculated anyway)
 
       const auto T_J = radfield::get_T_J_from_J(nonemptymgi);
-      grid::set_TR(nonemptymgi, T_J);
-      grid::set_Te(nonemptymgi, T_J);
-      grid::set_TJ(nonemptymgi, T_J);
-      grid::set_W(nonemptymgi, 1);
+      grid::TR_allcells[nonemptymgi] = T_J;
+      grid::Te_allcells[nonemptymgi] = T_J;
+      grid::TJ_allcells[nonemptymgi] = T_J;
+      grid::W_allcells[nonemptymgi] = 1;
 
       if constexpr (USE_LUT_PHOTOION) {
         std::ranges::fill(
@@ -486,21 +480,35 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
                temperature_corrections_duration);
   }
 
+  // Check the temperature that the cell has ended up with for this timestep. This is done here rather
+  // than where T_e is stored, because the T_e solver also stores the intermediate guesses that it
+  // rejects, and those would be reported too.
+  const auto T_e_cell = grid::Te_allcells[nonemptymgi];
+  if (T_e_cell > 0.) {
+    const double nu_peak_planck = 5.879e10 * T_e_cell;  // Wien's displacement law
+    if (nu_peak_planck > NU_MAX_R || nu_peak_planck < NU_MIN_R) {
+      printlnlog(
+          "[warning] cell {} timestep {}: B_planck(T_e={:g} [K]) peak at {:g} [Hz] is outside the radiation field "
+          "frequency range [{:g}, {:g}] [Hz]",
+          mgi, nts, T_e_cell, nu_peak_planck, NU_MIN_R, NU_MAX_R);
+    }
+  }
+
   const auto nne = grid::get_nne(nonemptymgi);
   const auto propcell_width = grid::propcell_width_tmin(
       mgi, 0);  // pass mgi here because cellindex = mgi for direct map 1D or 2D, and doesn't matter for 3D grid
   const double compton_optical_depth_across_cell = SIGMA_T * nne * propcell_width * tratmid;
 
   if constexpr (RPKT_GREY_TYPE == RpktGreyType::JUST2022_TEMP_LANTHANIDEFRAC) {
-    grid::set_kappagrey(nonemptymgi, grid::calculate_cell_kappagrey(nonemptymgi));
+    grid::kappagrey_allcells[nonemptymgi] = grid::calculate_cell_kappagrey(nonemptymgi);
   }
   const double radial_pos = grid::get_modelcell_mean_radial_pos_tmin(mgi) * tratmid;
   const double grey_optical_depth_across_cell =
-      grid::get_kappagrey(nonemptymgi) * grid::get_rho(nonemptymgi) * propcell_width * tratmid;
+      grid::kappagrey_allcells[nonemptymgi] * grid::get_rho(nonemptymgi) * propcell_width * tratmid;
   // cube corners will have radial pos > rmax, so clamp to 0.
   const double dist_to_obs = std::max(0., (globals::rmax * tratmid) - radial_pos);
   const auto grey_optical_depth =
-      static_cast<float>(grid::get_kappagrey(nonemptymgi) * grid::get_rho(nonemptymgi) * dist_to_obs);
+      static_cast<float>(grid::kappagrey_allcells[nonemptymgi] * grid::get_rho(nonemptymgi) * dist_to_obs);
   printlnlog("modelgridindex {}, compton optical depth (/propgridcell) {:g}, grey optical depth (/propgridcell) {:g}",
              mgi, compton_optical_depth_across_cell, grey_optical_depth_across_cell);
   printlnlog("radial_pos {:g}, distance_to_obs {:g}, tau_dist {:g}", radial_pos, dist_to_obs, grey_optical_depth);
@@ -509,7 +517,7 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
 
   if ((grey_optical_depth >= globals::optical_depth_is_thick) && (nts < globals::num_grey_timesteps)) {
     printlnlog("timestep {} cell {} is treated in grey approximation (chi_grey {:g} [cm2/g], tau {:g} >= {:g})", nts,
-               mgi, grid::get_kappagrey(nonemptymgi), grey_optical_depth, globals::optical_depth_is_thick);
+               mgi, grid::kappagrey_allcells[nonemptymgi], grey_optical_depth, globals::optical_depth_is_thick);
     grid::thick_allcells[nonemptymgi] = 1;
   } else if (VPKT_ON && (grey_optical_depth > vpkt::optical_depth_is_thick_vpkt)) {
     grid::thick_allcells[nonemptymgi] = 2;
@@ -535,8 +543,7 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
 
     printlog("calculating cooling_rates for timestep {} cell {}...", nts, mgi);
 
-    // don't pass pointer to heatingcoolingrates because current populations and rates weren't
-    // used to determine T_e
+    // don't pass pointer to heatingcoolingrates because current populations and rates weren't used to determine T_e
     kpkt::calculate_cooling_rates(nonemptymgi, nullptr);
 
     const auto calc_kpkt_rates_duration =
@@ -568,12 +575,17 @@ void update_grid(std::ostream& estimators_file, const int nts, const int nts_pre
   const auto startup_elapsed_seconds =
       std::chrono::duration<double>(sys_time_start_update_grid - real_time_start).count();
   const auto tmid = globals::timesteps[nts].mid;
-  printlnlog("timestep {}: time before update grid (tstartup + {:.1f} seconds) simtime ts_mid {:g} days", nts,
+  printlnlog("timestep {}: time before update grid (tstart + {:.1f} seconds) simtime ts_mid {:g} [days]", nts,
              startup_elapsed_seconds, tmid / DAY);
 
   globals::lte_iteration = (nts < globals::num_lte_timesteps);
   printlnlog("lte_iteration {}", globals::lte_iteration ? 1 : 0);
   assert_always(globals::num_lte_timesteps > 0);  // The first time step must solve the ionisation balance in LTE
+
+  if (NT_ON && NT_SOLVE_SPENCERFANO && (nts < globals::num_lte_timesteps + 1)) {
+    printlnlog("timestep {}: skipping Spencer-Fano solutions for all cells (solver starts at timestep {})", nts,
+               globals::num_lte_timesteps + 1);
+  }
 
   const double tratmid = tmid / globals::tmin;
 

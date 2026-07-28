@@ -72,7 +72,7 @@ DEVICE_FUNC void calculate_macroatom_transitionrates(std::span<double> levelrate
   const auto transblock = std::span{get_cellcache(nonemptymgi).allmacroatomictransitions};
   const auto alllevels_matransblock_start = globals::alllevels.matransblock_start[uniquelevelindex];
 
-  const auto T_e = grid::get_Te(nonemptymgi);
+  const auto T_e = grid::Te_allcells[nonemptymgi];
   const auto clumpednne = grid::get_clumpfactor(nonemptymgi) * grid::get_nne(nonemptymgi);
   const double epsilon_current = epsilon(uniquelevelindex);
   const double statweight = stat_weight(uniquelevelindex);
@@ -242,7 +242,7 @@ void do_macroatom_raddeexcitation(Packet& pkt, const int ionuniquelevelindexstar
 // counters
 [[nodiscard]] auto do_macroatom_radrecomb(Packet& pkt, const int nonemptymgi, const int element, const int upperion,
                                           const int upperionlevel, const double rad_recomb) -> int {
-  const auto T_e = grid::get_Te(nonemptymgi);
+  const auto T_e = grid::Te_allcells[nonemptymgi];
   const auto clumpednne = grid::get_clumpfactor(nonemptymgi) * grid::get_nne(nonemptymgi);
   const double epsilon_current = epsilon(element, upperion, upperionlevel);
   // Randomly select a continuum
@@ -284,7 +284,7 @@ void do_macroatom_raddeexcitation(Packet& pkt, const int ionuniquelevelindexstar
 [[nodiscard]] auto do_macroatom_ionisation(const int nonemptymgi, const int element, const int ion, const int level,
                                            const double epsilon_current, const double internal_up_higher,
                                            rngstate_type& rngstate) -> int {
-  const auto T_e = grid::get_Te(nonemptymgi);
+  const auto T_e = grid::Te_allcells[nonemptymgi];
   const auto clumpednne = grid::get_clumpfactor(nonemptymgi) * grid::get_nne(nonemptymgi);
 
   // Randomly select the occurring transition
@@ -333,7 +333,7 @@ DEVICE_FUNC void calculate_cellcache_macroatom_transitionrates(const int nonempt
 DEVICE_FUNC void do_macroatom(Packet& pkt, const MacroAtomState& pktmastate) {
   const auto nonemptymgi = grid::get_propcell_nonemptymgi(pkt.cellindex);
   assert_testmodeonly(nonemptymgi >= 0);
-  const auto T_e = grid::get_Te(nonemptymgi);
+  const auto T_e = grid::Te_allcells[nonemptymgi];
 
   const double t_mid = globals::timesteps[globals::timestep].mid;
 
@@ -759,8 +759,7 @@ void macroatom_open_file() {
              eoverkt / exp_eoverkt * Gamma;
     }
 
-    // forbidden transitions: magnetic dipole, electric quadropole...
-    // Axelrod's approximation (thesis 1980)
+    // forbidden transitions: magnetic dipole, electric quadropole... Axelrod's approximation (thesis 1980)
 
     return clumpednne * 8.629e-6 * 0.01 * std::exp(-eoverkt) * upperstatweight / std::sqrt(T_e);
   }

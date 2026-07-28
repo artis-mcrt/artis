@@ -122,8 +122,7 @@ constexpr void move_pkt_withtime(Vec3d& pos_rf, const Vec3d& dir_rf, double& pro
 
   pos_rf = {pos_rf[0] + (dir_rf[0] * distance), pos_rf[1] + (dir_rf[1] * distance), pos_rf[2] + (dir_rf[2] * distance)};
 
-  // During motion, rest frame energy and frequency are conserved.
-  // But need to update the co-moving ones.
+  // During motion, rest frame energy and frequency are conserved. But need to update the co-moving ones.
   const double dopplerfactor = calculate_doppler_nucmf_on_nurf(pos_rf, dir_rf, prop_time);
 
   // frequency should only ever decrease during packet movement with homologous expansion
