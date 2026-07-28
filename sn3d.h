@@ -77,7 +77,7 @@ inline auto ftol(const double a, const double b) -> bool {
   return std::abs(a - b) <= (fractional_accuracy * std::min(std::abs(a), std::abs(b)));
 }
 
-// Return the first index whose cumulative value is strictly greater than target.
+// Return the first index whose array value is strictly greater than target.
 // Using upper_bound consistently prevents zero-weight entries from being selected when
 // target is exactly equal to a repeated cumulative value.
 template <typename Range, typename Value>
@@ -88,6 +88,17 @@ template <typename Range, typename Value>
 template <typename Range, typename Value>
 [[nodiscard]] constexpr auto int_index_upperbound(const Range& cumulative_values, const Value& target) -> int {
   return static_cast<int>(index_upperbound(cumulative_values, target));
+}
+
+// Return the first index whose array value is greater than or equal to target.
+template <typename Range, typename Value>
+[[nodiscard]] constexpr auto index_lowerbound(const Range& cumulative_values, const Value& target) -> ptrdiff_t {
+  return std::ranges::lower_bound(cumulative_values, target) - std::begin(cumulative_values);
+}
+
+template <typename Range, typename Value>
+[[nodiscard]] constexpr auto int_index_lowerbound(const Range& cumulative_values, const Value& target) -> int {
+  return static_cast<int>(index_lowerbound(cumulative_values, target));
 }
 
 // Signed bin index of value on a grid spaced uniformly by binwidth, where bin 0 starts at minvalue.
