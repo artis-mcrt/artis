@@ -1,6 +1,5 @@
 // Reading of the main input files: the atomic dataset (adata.txt, compositiondata.txt,
-// transitiondata.txt, phixsdata_v2.txt) and the run parameters (input.txt), plus the setup of
-// the simulation timesteps.
+// transitiondata.txt, phixsdata_v2.txt) and the run parameters (input.txt), plus the setup of the simulation timesteps.
 
 #include "input.h"
 
@@ -254,10 +253,8 @@ void read_phixs_data_table(std::istream& phixsfile, const int nphixspoints_input
     }
   }
 
-  // The level contributes to the ionisinglevels if its energy
-  // is below the ionisation potential and the level doesn't
-  // belong to the topmost ion included.
-  // Rate coefficients are only available for ionising levels.
+  // The level contributes to the ionisinglevels if its energy is below the ionisation potential and the level doesn't
+  // belong to the topmost ion included. Rate coefficients are only available for ionising levels.
   //  also need (levelenergy < ionpot && ...)?
   if (lowerion < get_nions(element) - 1) {
     for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element, lowerion, lowerlevel);
@@ -370,8 +367,7 @@ void read_phixs_file(const int phixs_file_version, std::vector<float>& tmpallphi
         if (phixs_file_version == 1) {
           assert_always(get_noncommentline(phixsfile, phixsline));
         } else {
-          // one day we might want to put all of the cross section points onto a single line,
-          // so don't use getline here
+          // one day we might want to put all of the cross section points onto a single line, so don't use getline here
           float phixs = 0;
           assert_always(phixsfile >> phixs);
         }
@@ -416,8 +412,7 @@ void read_ion_levels(std::istream& adata, const int element, const int ion, cons
       });
 
       // The level contributes to the ionisinglevels if its energy
-      // is below the ionisation potential and the level doesn't
-      // belong to the topmost ion included.
+      // is below the ionisation potential and the level doesn't belong to the topmost ion included.
       // Rate coefficients are only available for ionising levels.
       if (levelenergy_ev < ionpot_ev && ion < nions - 1) {
         globals::elements[element].ions[ion].nlevels_ionising++;
@@ -546,8 +541,7 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion,
         continue;
       }
 
-      // Make sure that we don't allow duplicate. In that case take only the lines
-      // first occurrence
+      // Make sure that we don't allow duplicate. In that case take only the lines first occurrence
       int& downtranslineindex = iondowntranstmplineindices[downtranslevelstart(level) + lowerlevel];
 
       // negative means that the transition hasn't been seen yet
@@ -578,8 +572,7 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion,
               .lowerlevelindex = lowerlevel,
           });
 
-          // (each transition's index into the frequency-sorted linelist is set later by
-          // create_shared_alltranslist)
+          // (each transition's index into the frequency-sorted linelist is set later by create_shared_alltranslist)
 
           temp_alltranslist[ion_levels[level].alltrans_startdown + nupperdowntrans - 1] = {
               .targetlevelindex = lowerlevel,
@@ -718,9 +711,7 @@ auto search_groundphixslist(const double nu_edge, const int element_in, const in
     printlnlog("  search_groundphixslist: bluest ground level continuum is element {}, ion {} at nu_edge {:g}", element,
                ion, globals::groundcont_nu_edge[i - 1]);
     printlnlog("  search_groundphixslist: i {}, nbfcontinua_ground {}", i, globals::nbfcontinua_ground);
-    printlnlog(
-        "  This shouldn't happen, but is possible if there are multiple levels in the adata file at "
-        "energy=0");
+    printlnlog("  This shouldn't happen, but is possible if there are multiple levels in the adata file at energy=0");
     const int nlevels_in = get_nlevels(element_in, ion_in);
     constexpr int maxshownlevels = 10;
     for (int looplevels = 0; looplevels < std::min(nlevels_in, maxshownlevels); looplevels++) {

@@ -1,6 +1,5 @@
 // MPI setup (global and per-node communicators, rank and node identifiers) plus the logging
-// (printlog/printlnlog) and assertion (assert_always/assert_testmodeonly) facilities used
-// throughout the code.
+// (printlog/printlnlog) and assertion (assert_always/assert_testmodeonly) facilities used throughout the code.
 
 #ifndef MPI_LOGGING_H
 #define MPI_LOGGING_H

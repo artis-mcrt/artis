@@ -457,8 +457,7 @@ DEVICE_FUNC void do_kpkt(Packet& pkt, const double t2, const int nts) {
 
   if (rndcoolingtype == CoolingType::FREEFREE) {
     // The k-packet converts directly into a r-packet by free-free emission.
-    // Need to select the r-packets frequency and a random direction in the
-    // co-moving frame.
+    // Need to select the r-packets frequency and a random direction in the co-moving frame.
 
     // Sample the packets comoving frame frequency according to paperII 5.4.3 eq.41
 

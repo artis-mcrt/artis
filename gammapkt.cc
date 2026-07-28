@@ -328,8 +328,7 @@ auto thomson_angle(rngstate_type& rngstate) -> double {
 
 // scattering a direction through angle theta.
 [[nodiscard]] auto scatter_dir(const Vec3d& dir_in, const double cos_theta, rngstate_type& rngstate) -> Vec3d {
-  // begin with setting the direction in coordinates where original direction
-  // is parallel to z-hat.
+  // begin with setting the direction in coordinates where original direction is parallel to z-hat.
 
   assert_testmodeonly(std::fabs(vec_len(dir_in) - 1.) < 1e-10);  // dir_in must be a unit vector
 
@@ -350,8 +349,7 @@ auto thomson_angle(rngstate_type& rngstate) -> double {
     return dir_out;
   }
 
-  // Now need to derotate the coordinates back to real x,y,z.
-  // Rotation matrix is determined by dir_in.
+  // Now need to derotate the coordinates back to real x,y,z. Rotation matrix is determined by dir_in.
 
   const double norm1 = 1. / std::sqrt(pow2(dir_in[0]) + pow2(dir_in[1]));
   const double norm2 = 1. / vec_len(dir_in);
@@ -390,8 +388,7 @@ void compton_scatter(Packet& pkt) {
   // scattering angle. Probability of scattering into particular angle
   // (i.e. final energy) is related to the partial cross-section.
 
-  // Choose a random number to get the energy. Want to find the
-  // factor by which the energy changes "f" such that
+  // Choose a random number to get the energy. Want to find the factor by which the energy changes "f" such that
   // sigma_partial/sigma_tot = zrand
 
   // initialise with Thomson limit case (no energy loss)
@@ -407,8 +404,7 @@ void compton_scatter(Packet& pkt) {
   }
 
   if (stay_gamma) {
-    // It stays as a gamma ray. Change frequency and direction in
-    // co-moving frame then transfer back to rest frame.
+    // It stays as a gamma ray. Change frequency and direction in co-moving frame then transfer back to rest frame.
 
     pkt.nu_cmf = pkt.nu_cmf / f;  // reduce frequency
 
@@ -434,8 +430,7 @@ void compton_scatter(Packet& pkt) {
 
     assert_testmodeonly(std::fabs(vec_len(pkt.dir) - 1.) < 1e-10);
 
-    // It now has a rest frame direction and a co-moving frequency.
-    //  Just need to set the rest frame energy.
+    // It now has a rest frame direction and a co-moving frequency. Just need to set the rest frame energy.
     set_pkt_restframe_from_cmf(pkt);
   } else {
     // energy loss of the gamma becomes energy of the electron (needed to calculate time-dependent thermalisation rate)
@@ -716,13 +711,11 @@ void pair_production(Packet& pkt) {
 
 // move a gamma packet until time t2
 void transport_gamma(Packet& pkt, const double t2) {
-  // Assign optical depth to next physical event. And start counter of
-  // optical depth for this path.
+  // Assign optical depth to next physical event. And start counter of optical depth for this path.
   const double tau_next = -std::log(static_cast<double>(rng_uniform_pos(get_rngstate(pkt))));
 
   // Start by finding the distance to the crossing of the grid cell
-  // boundaries. boundarydist is the boundary distance and next_cellindex is the
-  // grid cell into which we pass.
+  // boundaries. boundarydist is the boundary distance and next_cellindex is the grid cell into which we pass.
 
   const auto [boundarydist, next_cellindex] = grid::boundary_distance(pkt.dir, pkt.pos, pkt.prop_time, pkt.cellindex);
 
@@ -960,8 +953,7 @@ void init_gamma_data() {
 
 // convert a pellet to a gamma ray (or kpkt if no gamma spec loaded)
 DEVICE_FUNC void pellet_gamma_decay(Packet& pkt) {
-  // Start by getting the position of the pellet at the point of decay. Pellet
-  // is moving with the matter.
+  // Start by getting the position of the pellet at the point of decay. Pellet is moving with the matter.
 
   // if no gamma spectra is known, then convert straight to kpkts (e.g., Fe52, Mn52)
   if (pkt.nu_cmf < 0) {

@@ -166,8 +166,7 @@ void do_nonthermal_predeposit(Packet& pkt, const int nts, const double ts_end) {
 
 // Handle inactive pellets. Need to do two things (a) check if it
 // decays in this time step and if it does handle that. (b) if it doesn't decay in
-// this time step then just move the packet along with the matter for the
-// start of the next time step.
+// this time step then just move the packet along with the matter for the start of the next time step.
 void update_pellet(Packet& pkt, const int nts, const double t2) {
   assert_always(pkt.prop_time < t2);
   const double ts = pkt.prop_time;
@@ -219,8 +218,7 @@ void update_pellet(Packet& pkt, const int nts, const double t2) {
     }
   } else if ((tdecay > 0) && (nts == 0)) {
     // These are pellets whose decay times were before the first time step
-    // They will be made into r-packets with energy reduced for doing work on the
-    // ejecta following Lucy 2004.
+    // They will be made into r-packets with energy reduced for doing work on the ejecta following Lucy 2004.
     // The position is already set at globals::tmin so don't need to move it. Assume
     // that it is fixed in place from decay to globals::tmin - i.e. short mfp.
 
@@ -508,8 +506,7 @@ void update_packet_cellcache_group(const int cellcache_groupid, std::span<Packet
 void update_packets(const int nts, std::span<Packet> packets) {
   // At the start, the packets have all either just been initialised or have already been
   // processed for one or more timesteps. Those that are pellets will just be sitting in the
-  // matter. Those that are photons (or one sort or another) will already have a position and
-  // a direction.
+  // matter. Those that are photons (or one sort or another) will already have a position and a direction.
   const double ts = globals::timesteps[nts].start;
   const double tw = globals::timesteps[nts].width;
   const double ts_end = ts + tw;

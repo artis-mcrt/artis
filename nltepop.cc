@@ -856,8 +856,7 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
         if (population < -MINPOP) {
           printlnlog(
               "  [warning] negative pop = {:g} less than -MINPOP (-{:g}) unlikely a rounding error to zero so "
-              "returning "
-              "nltepop_matrix_solve fail",
+              "returning nltepop_matrix_solve fail",
               population, MINPOP);
           return false;
         }
@@ -1242,8 +1241,7 @@ auto nltepop_solve_matrix_with_ion_reduction(const int element, const int nonemp
       }
     }
 
-    // calculate the normalisation factors and apply them to the matrix
-    // columns and balance vector elements
+    // calculate the normalisation factors and apply them to the matrix columns and balance vector elements
     THREADLOCALONHOST std::vector<double> pop_normfactors;
     pop_normfactors.reserve(max_nlte_dimension);
     pop_normfactors.resize(nlte_dimension);

@@ -36,20 +36,14 @@ namespace {
 constexpr auto get_packets_text_header() -> std::string {
   std::string header;
   header =
-      "#number where type_id"
-      " posx posy posz"
-      " dirx diry dirz"
-      " tdecay e_cmf e_rf nu_cmf nu_rf"
-      " escape_type_id escape_time emissiontype trueemissiontype"
-      " em_posx em_posy em_posz"
-      " absorption_type absorption_freq nscatterings em_time";
+      "#number where type_id posx posy posz dirx diry dirz tdecay e_cmf e_rf nu_cmf nu_rf escape_type_id escape_time "
+      "emissiontype trueemissiontype em_posx em_posy em_posz absorption_type absorption_freq nscatterings em_time";
   if constexpr (POL_ON) {
     header += " stokes_q stokes_u";
   }
   header +=
-      " originated_from_particlenotgamma"
-      " trueem_posx trueem_posy trueem_posz trueem_time"
-      " pellet_nucindex pellet_decaytype";
+      " originated_from_particlenotgamma trueem_posx trueem_posy trueem_posz trueem_time pellet_nucindex "
+      "pellet_decaytype";
   return header;
 }
 

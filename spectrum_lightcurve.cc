@@ -84,8 +84,7 @@ void printout_tracemission_stats() {
 
       printlnlog(
           "Top line emission contributions in the range lambda [{:5.1f}, {:5.1f}] [Angstrom] time [{:5.1f}, {:5.1f}] "
-          "[d] "
-          "({:g} [erg])",
+          "[d] ({:g} [erg])",
           traceemissabs_lambdamin, traceemissabs_lambdamax, traceemissabs_timemin / DAY, traceemissabs_timemax / DAY,
           traceemission_totalenergy);
     } else {
@@ -648,8 +647,7 @@ void add_to_spec_res(const Packet& pkt, const int dirbin, Spectra& spectra_I, Sp
 }
 
 void write_partial_lightcurve_spectra(const int nts, std::span<const Packet> pkts) {
-  // this is called by sn3d (not exspec) when each rank has its own set of packets
-  // in memory
+  // this is called by sn3d (not exspec) when each rank has its own set of packets in memory
   const bool simulation_complete = (nts >= globals::timestep_finish - 1);
 
   // the emission resolved spectra are slow to generate, and require a lot of memory

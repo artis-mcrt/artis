@@ -230,8 +230,7 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
 
       printlnlog(
           "Grid solver cell {} timestep {}: time spent on: Spencer-Fano {:.1f}s, partfuncs/gamma {:.1f}s, T_e {:.1f}s, "
-          "populations "
-          "{:.1f}s",
+          "populations {:.1f}s",
           mgi, nts, duration_solve_spencerfano, duration_solve_partfuncs_or_gamma, duration_solve_T_e,
           duration_solve_pops);
       break;  // no iteration is needed without nlte pops
@@ -239,8 +238,7 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
 
     const double fracdiff_T_e = fabs((grid::Te_allcells[nonemptymgi] / prev_T_e) - 1);
     const auto sys_time_start_nltepops = std::chrono::steady_clock::now();
-    // fractional difference between previous and current iteration's (nne or max(ground state
-    // population change))
+    // fractional difference between previous and current iteration's (nne or max(ground state population change))
     for (int element = 0; element < get_nelements(); element++) {
       if (get_nions(element) > 0 && elem_has_nlte_levels(element)) {
         solve_nlte_pops_element(element, nonemptymgi, nts, nlte_iter);
@@ -306,8 +304,7 @@ void update_gamma_corrphotoionrenorm_bfheating_estimators(const int nonemptymgi,
       // 2012-01-11. These loops should terminate here to precalculate *ALL* corrphotoionrenorm
       // values so that the values are known when required by the call to get_corrphotoioncoeff in
       // the following loops. Otherwise get_corrphotoioncoeff tries to renormalize by the closest
-      // corrphotoionrenorm in frequency space which can lead to zero contributions to the total
-      // photoionsation rate!
+      // corrphotoionrenorm in frequency space which can lead to zero contributions to the total photoionsation rate!
     }
   }
   for (int element = 0; element < get_nelements(); element++) {
@@ -398,8 +395,7 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
     }
 
     // W == 1 indicates that this modelgrid cell was treated grey in the
-    // last timestep. Therefore it has no valid Gamma estimators and must
-    // be treated in LTE at restart.
+    // last timestep. Therefore it has no valid Gamma estimators and must be treated in LTE at restart.
     if (grid::thick_allcells[nonemptymgi] != 1 && grid::W_allcells[nonemptymgi] == 1) {
       printlnlog(
           "force modelgrid cell {} to grey/LTE thick = 1 for update grid since existing W == 1. (will not have gamma "
@@ -421,8 +417,7 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
 
     // we have to calculate the electron density
     // and all the level populations
-    // Normalise estimators and make sure that they are finite.
-    // Then update T_R and W using the estimators.
+    // Normalise estimators and make sure that they are finite. Then update T_R and W using the estimators.
     // (This could in principle also be done for empty cells)
 
     const auto sys_time_start_temperature_corrections = std::chrono::steady_clock::now();
@@ -550,8 +545,7 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
 
     printlog("calculating cooling_rates for timestep {} cell {}...", nts, mgi);
 
-    // don't pass pointer to heatingcoolingrates because current populations and rates weren't
-    // used to determine T_e
+    // don't pass pointer to heatingcoolingrates because current populations and rates weren't used to determine T_e
     kpkt::calculate_cooling_rates(nonemptymgi, nullptr);
 
     const auto calc_kpkt_rates_duration =

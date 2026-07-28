@@ -276,8 +276,7 @@ void write_deposition_file() {
       std::print(dep_file, " Qdotspfission_ana_erg/s/g");
     }
     std::print(dep_file,
-               " eps_erg/s/g Qdot_ana_erg/s/g positrondep_discrete_Lsun elecdep_discrete_Lsun "
-               "alphadep_discrete_Lsun");
+               " eps_erg/s/g Qdot_ana_erg/s/g positrondep_discrete_Lsun elecdep_discrete_Lsun alphadep_discrete_Lsun");
     if (any_fission) {
       std::print(dep_file, " spfission_dep_discrete_Lsun");
     }
@@ -699,8 +698,7 @@ auto do_timestep(const int nts, const int titer, std::vector<Packet>& packets, c
              communicate_grid_duration);
 
   // If this is not the 0th time step of the current job step,
-  // write out a snapshot of the grid properties for further restarts
-  // and update input.txt accordingly
+  // write out a snapshot of the grid properties for further restarts and update input.txt accordingly
   if (((nts - globals::timestep_initial) != 0)) {
     save_grid_and_packets(nts, packets);
     do_this_full_loop = walltime_sufficient_to_continue(nts, nts_prev, walltimelimitseconds);
@@ -1012,8 +1010,7 @@ auto main(int argc, char* argv[]) -> int {
 
   // The main calculation is now over. The packets now have all stored the time, place and direction
   // at which they left the grid. Also their rest frame energies and frequencies.
-  // Spectra and light curves are now extracted using exspec which is another make target of this
-  // code.
+  // Spectra and light curves are now extracted using exspec which is another make target of this code.
 
   MPI_Barrier_allranks();
 

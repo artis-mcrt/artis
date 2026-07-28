@@ -262,8 +262,7 @@ void call_T_e_finder(const int nonemptymgi, const double t_current, HeatingCooli
   const bool invalid_values = (!std::isfinite(f_T_min) || !std::isfinite(f_T_max));
   if (invalid_values) {
     printlnlog(
-        "[warning] call_T_e_finder: non-finite results in modelcell {} (T_R={:g}, W={:g}). T_e forced to be "
-        "MINTEMP",
+        "[warning] call_T_e_finder: non-finite results in modelcell {} (T_R={:g}, W={:g}). T_e forced to be MINTEMP",
         modelgridindex, grid::TR_allcells[nonemptymgi], grid::W_allcells[nonemptymgi]);
   }
 

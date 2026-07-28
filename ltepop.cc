@@ -1,6 +1,5 @@
 // Level populations and ionisation balance in LTE and approximate NLTE: partition functions,
-// Boltzmann/Saha level and ion populations, and the solver for a self-consistent free electron
-// density (nne).
+// Boltzmann/Saha level and ion populations, and the solver for a self-consistent free electron density (nne).
 
 #include "ltepop.h"
 

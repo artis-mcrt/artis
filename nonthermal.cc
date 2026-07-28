@@ -1249,8 +1249,7 @@ void calculate_eff_ionpot_auger_rates(const int nonemptymgi, const int element, 
 
   // The ionisation rates of all shells of an ion add to make the ion's total ionisation rate,
   // i.e., Gamma_ion = Gamma_shell_a + Gamma_shell_b + ...
-  // And since the ionisation rate is inversely proportional to the effective ion potential,
-  // we solve:
+  // And since the ionisation rate is inversely proportional to the effective ion potential, we solve:
   // (eta_ion / ionpot_ion) = (eta_shell_a / ionpot_shell_a) + (eta_shell_b / ionpot_shell_b) + ...
   // where eta is the fraction of the deposition energy going into ionisation of the ion or shell
 
@@ -1961,8 +1960,7 @@ void sfmatrix_add_ionisation(std::span<double> sfmatrixuppertri, const int Z, co
         int augerstopindex = 0;
         if constexpr (SF_AUGER_CONTRIBUTION_DISTRIBUTE_EN) {
           // en_auger_ev is (if LJS understands it correctly) averaged to include some probability of zero Auger
-          // electrons so we need a boost to get the average energy of Auger electrons given that there are one or
-          // more
+          // electrons so we need a boost to get the average energy of Auger electrons given that there are one or more
           const double en_boost = 1 / (1. - collionrow.prob_num_auger[0]);
 
           augerstopindex = get_energyindex_ev_gteq(en_auger_ev * en_boost);
@@ -2357,8 +2355,7 @@ DEVICE_FUNC void do_ntlepton_deposit(Packet& pkt) {
     // instead of converting directly to k-packet (unless the heating channel is selected)
 
     double zrand = rng_uniform(get_rngstate(pkt));
-    // zrand is initially between [0, 1), but we will subtract off each
-    // component of the deposition fractions
+    // zrand is initially between [0, 1), but we will subtract off each component of the deposition fractions
     // until we end and select transition_ij when zrand < dep_frac_transition_ij
 
     // Gate on the stored ionisation fraction so that the k-packet probability below is exactly
@@ -2445,8 +2442,7 @@ void solve_spencerfano(const int nonemptymgi, const int timestep, const int iter
   } else if (get_ntlepton_deposition_rate_density(nonemptymgi) / EV < MINDEPRATE) {
     printlnlog(
         "Non-thermal deposition rate of {:g} [eV/s/cm^3] below MINDEPRATE {:g} [eV/s/cm^3] in cell {} at timestep {}. "
-        "Skipping "
-        "Spencer-Fano solution.",
+        "Skipping Spencer-Fano solution.",
         get_ntlepton_deposition_rate_density(nonemptymgi) / EV, MINDEPRATE, modelgridindex, timestep);
 
     skip_solution = true;

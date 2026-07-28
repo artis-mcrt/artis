@@ -176,8 +176,7 @@ void read_possible_yefile() {
   return get_modelgridtype();
 }
 
-// how much do we change the cellindex to move along a coordinately axis (e.g., the x, y, z directions, or r
-// direction)
+// how much do we change the cellindex to move along a coordinately axis (e.g., the x, y, z directions, or r direction)
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_coordcellindexstride(const int axis) -> int {
   int stride = 1;
   for (int a = 0; a < axis; ++a) {
@@ -588,8 +587,7 @@ void map_1dmodelto3dgrid() {
       assert_always(vout_model[mgi] >= cellvmid);
       assert_always((mgi > 0 ? vout_model[mgi - 1] : 0.0) <= cellvmid);
     } else {
-      // corner cells outside of the outermost model shell are empty
-      // and so are any shells with zero density
+      // corner cells outside of the outermost model shell are empty and so are any shells with zero density
       set_propcell_modelgridindex(cellindex, -1);
     }
   }
@@ -1088,8 +1086,7 @@ void assign_initial_temperatures() {
 
     if (globals::rank_in_node == 0) {
       // set the initial temperatures in the modelgrid
-      // this is only done by the node master, so that the values are shared
-      // in the node shared memory
+      // this is only done by the node master, so that the values are shared in the node shared memory
       Te_allcells[nonemptymgi] = T_initial;
       TJ_allcells[nonemptymgi] = T_initial;
       TR_allcells[nonemptymgi] = T_initial;
@@ -1190,8 +1187,7 @@ void setup_nstart_ndo() {
 
 // set up a uniform cuboidal grid.
 void setup_grid_cartesian_3d() {
-  // vmax is per coordinate, but the simulation volume corners will
-  // have a higher expansion velocity than the sides
+  // vmax is per coordinate, but the simulation volume corners will have a higher expansion velocity than the sides
   const double vmax_corner = sqrt(3 * pow2(globals::vmax));
   printlnlog("corner vmax {:g} [cm/s] ({:.2f}c)", vmax_corner, vmax_corner / CLIGHT);
   if (!FORCE_SPHERICAL_ESCAPE_SURFACE) {
@@ -2554,8 +2550,7 @@ DEVICE_FUNC void snap_pos_to_cell(Vec3d& pos, const double time, const int celli
 
   } else if (prop_gridtype == GridType::CARTESIAN3D) {
     // There are six possible boundary crossings. Each of the three
-    // cartesian coordinates may be taken in turn. For x, the packet
-    // trajectory is
+    // cartesian coordinates may be taken in turn. For x, the packet trajectory is
     // x = x0 + (dir.x) * c * (t - tstart)
     // the boundaries follow
     // x+/- = x+/-(tmin) * (t/tmin)
@@ -2563,8 +2558,7 @@ DEVICE_FUNC void snap_pos_to_cell(Vec3d& pos, const double time, const int celli
     // t - tstart = (x0 - x+/-(tmin)/tmin * tstart) / (x+/-(tmin)/tmin - (dir.x)*c)
     // distance = c * (t - tstart)
 
-    // Modified so that it also returns the distance to the closest cell
-    // boundary, regardless of direction.
+    // Modified so that it also returns the distance to the closest cell boundary, regardless of direction.
 
     for (int d = 0; d < 3; d++) {
       if (pktvelgridcoord[d] > (cellcoordmax[d] / globals::tmin)) {

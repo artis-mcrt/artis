@@ -759,8 +759,7 @@ void macroatom_open_file() {
              eoverkt / exp_eoverkt * Gamma;
     }
 
-    // forbidden transitions: magnetic dipole, electric quadropole...
-    // Axelrod's approximation (thesis 1980)
+    // forbidden transitions: magnetic dipole, electric quadropole... Axelrod's approximation (thesis 1980)
 
     return clumpednne * 8.629e-6 * 0.01 * std::exp(-eoverkt) * upperstatweight / std::sqrt(T_e);
   }

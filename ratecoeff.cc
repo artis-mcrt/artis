@@ -94,8 +94,7 @@ auto gammacorr_integrand(const double nu, const double nu_edge, const float temp
   const auto sigma_bf = photoionisation_crosssection_fromtable(photoion_xs, nu_edge, nu);
 
   // The correction factor for stimulated emission in gammacorr is set to its
-  // LTE value. Because the T_e dependence of gammacorr is weak, this correction
-  // correction may be evaluated at T_R!
+  // LTE value. Because the T_e dependence of gammacorr is weak, this correction correction may be evaluated at T_R!
 
   // Dependence on dilution factor W is linear. This allows to set it here to
   // 1. and scale to its actual value later on.

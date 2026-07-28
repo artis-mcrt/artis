@@ -292,8 +292,7 @@ void printout_decaypath(const int decaypathindex) {
   printlnlog("");
 }
 
-// follow decays at the ends of the current list of decaypaths
-// to get decaypaths from all descendants
+// follow decays at the ends of the current list of decaypaths to get decaypaths from all descendants
 void extend_lastdecaypath(std::vector<DecayPath>& localdecaypaths) {
   const auto initial_last_decaypath = localdecaypaths.back();
 

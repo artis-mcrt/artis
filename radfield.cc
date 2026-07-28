@@ -1,7 +1,6 @@
 // The radiation field model: accumulates Monte Carlo estimators of the radiation field
 // (full-spectrum and binned J_nu, plus detailed bound-bound Jb_lu estimators) and fits diluted
-// blackbodies (W, T_R) per cell and per frequency bin for use in the photoionisation and
-// heating rates.
+// blackbodies (W, T_R) per cell and per frequency bin for use in the photoionisation and heating rates.
 
 #include "radfield.h"
 
@@ -149,8 +148,7 @@ constexpr auto select_bin(const double nu) -> int {
   return binindex;
 }
 
-// associate a Jb_lu estimator with a particular lineindex to be used
-// instead of the general radiation field model
+// associate a Jb_lu estimator with a particular lineindex to be used instead of the general radiation field model
 void add_detailed_line(const int lineindex) {
   detailed_linecount++;
   for (int nonemptymgi = 0; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
@@ -364,8 +362,7 @@ auto nu_bar_planck_minus_estimator(const double T_R, const int nonemptymgi, cons
   if (!std::isfinite(delta_nu_bar)) {
     printlnlog(
         "[warning] nu_bar_planck_minus_estimator: cell {} bin {}: delta_nu_bar is {:g}. T_R {:g} [K] nu_lower {:g} "
-        "[Hz] "
-        "nu_upper {:g} [Hz] nu_bar_planck_T_R {:g} [Hz] nu_bar_estimator {:g} [Hz]",
+        "[Hz] nu_upper {:g} [Hz] nu_bar_planck_T_R {:g} [Hz] nu_bar_estimator {:g} [Hz]",
         grid::get_mgi_of_nonemptymgi(nonemptymgi), binindex, delta_nu_bar, T_R, nu_lower, nu_upper, nu_bar_planck_T_R,
         nu_bar_estimator);
   }
@@ -447,8 +444,7 @@ void set_params_fullspec(const int nonemptymgi, const int timestep) {
 
     printlnlog(
         "Full-spectrum fit radfield for cell {} at timestep {}: J {:g}, lambda_bar {:5.1f} [Angstrom], T_J {:g} [K], "
-        "T_R "
-        "{:g} [K], W {:g}",
+        "T_R {:g} [K], W {:g}",
         modelgridindex, timestep, J[nonemptymgi], 1e8 * CLIGHT / nubar, T_J, T_R, W);
   }
 }
@@ -960,8 +956,7 @@ void reduce_estimators() {
   if constexpr (DETAILED_BF_ESTIMATORS_ON) {
     // reduce all ranks on each node first, then reduce the node leaders
     // then broadcast the final result to all ranks on each node
-    // this seems necessary to avoid congestion compared to a single MPI_Allreduce
-    // when using many ranks per node
+    // this seems necessary to avoid congestion compared to a single MPI_Allreduce when using many ranks per node
     MPI_Reduce_safe(bfrate_raw, MPI_SUM, 0, globals::mpi_comm_node);
     if (globals::rank_in_node == 0) {
       MPI_Allreduce_safe(bfrate_raw, MPI_SUM, globals::mpi_comm_internode);
@@ -998,8 +993,7 @@ void reduce_estimators() {
   MPI_Barrier_allranks();
 }
 
-// broadcast computed radfield results including parameters
-// from the cells belonging to root process to all processes
+// broadcast computed radfield results including parameters from the cells belonging to root process to all processes
 void do_MPI_Bcast(const ptrdiff_t nonemptymgi, const int root, const int root_node_id) {
   MPI_Bcast_safe(J_normfactor[nonemptymgi], root, MPI_COMM_WORLD);
 
