@@ -599,12 +599,12 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion,
             (temp_linelist[downtranslineindex].ionindex != ion) ||
             (temp_linelist[downtranslineindex].upperlevelindex != level) ||
             (temp_linelist[downtranslineindex].lowerlevelindex != lowerlevel)) {
-          printlnlog("[input] Failure to identify level pair for duplicate bb-transition ... going to abort now");
-          printlnlog("[input]   element {} ion {} targetlevel {} level {}", element, ion, lowerlevel, level);
-          printlnlog("[input]   transitions[level].to[targetlevel]=lineindex {}", downtranslineindex);
-          printlnlog("[input]   A_ul {:g}, coll_str {:g}", transition.A, transition.coll_str);
+          printlnlog("[error] Failure to identify level pair for duplicate bb-transition ... going to abort now");
+          printlnlog("   element {} ion {} targetlevel {} level {}", element, ion, lowerlevel, level);
+          printlnlog("   transitions[level].to[targetlevel]=lineindex {}", downtranslineindex);
+          printlnlog("   A_ul {:g}, coll_str {:g}", transition.A, transition.coll_str);
           printlnlog(
-              "[input]   globals::linelist[lineindex].elementindex {}, globals::linelist[lineindex].ionindex {}, "
+              "   globals::linelist[lineindex].elementindex {}, globals::linelist[lineindex].ionindex {}, "
               "globals::linelist[lineindex].upperlevelindex {}, globals::linelist[lineindex].lowerlevelindex {}",
               temp_linelist[downtranslineindex].elementindex, temp_linelist[downtranslineindex].ionindex,
               temp_linelist[downtranslineindex].upperlevelindex, temp_linelist[downtranslineindex].lowerlevelindex);
@@ -1691,7 +1691,7 @@ void setup_nlte_levels() {
           n_super_levels++;
         }
 
-        printlnlog("[input]  element {:2} Z={:2} ionstage {:2} has {:5} NLTE excited levels{}. Starting at index {}",
+        printlnlog("[info]  element {:2} Z={:2} ionstage {:2} has {:5} NLTE excited levels{}. Starting at index {}",
                    element, get_atomicnumber(element), get_ionstage(element, ion),
                    get_nlevels_excited_nlte(element, ion), has_superlevel ? " plus a superlevel" : "",
                    get_allnltelevelsindexstart(element, ion));
@@ -1699,7 +1699,7 @@ void setup_nlte_levels() {
     }
   }
 
-  printlnlog("[input] Total NLTE levels: {}, of which {} are superlevels", globals::total_nlte_levels, n_super_levels);
+  printlnlog("[info] Total NLTE levels: {}, of which {} are superlevels", globals::total_nlte_levels, n_super_levels);
 }
 
 }  // anonymous namespace
@@ -1821,12 +1821,13 @@ void read_parameterfile(std::span<Packet> packets) {
 
   if (NT_ON) {
     if (NT_SOLVE_SPENCERFANO) {
-      printlnlog("input: Non-thermal ionisation with a Spencer-Fano solution is switched on for this run.");
+      printlnlog("NT_ON = true: Non-thermal ionisation with a Spencer-Fano solution is switched on for this run.");
     } else {
-      printlnlog("input: Non-thermal ionisation with the work function approximation is switched on for this run.");
+      printlnlog(
+          "NT_ON = true: Non-thermal ionisation with the work function approximation is switched on for this run.");
     }
   } else {
-    printlnlog("input: No non-thermal ionisation is used in this run.");
+    printlnlog("NT_ON = false: No non-thermal ionisation is used in this run.");
   }
 
   if (USE_LUT_PHOTOION) {
@@ -1963,10 +1964,8 @@ void read_atomicdata() {
   int includedionisinglevels = 0;
   int includedboundboundtransitions = 0;
   int includedphotoiontransitions = 0;
-  printlnlog("[input] this simulation contains");
-  printlnlog("----------------------------------");
   for (int element = 0; element < get_nelements(); element++) {
-    printlnlog("[input]  element {} (Z={:2} {})", element, get_atomicnumber(element),
+    printlnlog("[info]  element {} (Z={:2} {})", element, get_atomicnumber(element),
                decay::get_elname(get_atomicnumber(element)));
     const int nions = get_nions(element);
     for (int ion = 0; ion < nions; ion++) {
@@ -1978,7 +1977,7 @@ void read_atomicdata() {
       }
 
       printlnlog(
-          "[input]    ionstage {}: {:4} levels ({:4} ionising) {:7} lines {:6} bf transitions ("
+          "[info]    ionstage {}: {:4} levels ({:4} ionising) {:7} lines {:6} bf transitions ("
           "epsilon_ground: {:7.2f} [eV])",
           get_ionstage(element, ion), get_nlevels(element, ion), get_nlevels_ionising(element, ion), ion_bbtransitions,
           ion_photoiontransitions, epsilon(element, ion, 0) / EV);
@@ -1991,7 +1990,7 @@ void read_atomicdata() {
   assert_always(includedphotoiontransitions == globals::nbfcontinua);
   assert_always(globals::nlines == includedboundboundtransitions);
 
-  printlnlog("[input]  in total {} ions, {} levels ({} ionising), {} lines, {} photoionisation transitions",
+  printlnlog("[info]  in total {} ions, {} levels ({} ionising), {} lines, {} photoionisation transitions",
              get_includedions(), get_includedlevels(), includedionisinglevels, globals::nlines, globals::nbfcontinua);
 
   write_bflist_file();
