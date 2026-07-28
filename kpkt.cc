@@ -25,6 +25,7 @@
 #include "random.h"
 #include "ratecoeff.h"
 #include "rpkt.h"
+#include "sn3d.h"
 #include "stats.h"
 #include "thermalbalance.h"
 #include "vectors.h"
@@ -408,8 +409,7 @@ DEVICE_FUNC void do_kpkt(Packet& pkt, const double t2, const int nts) {
   // Randomly select the occurring cooling process: first ion whose cumulative cooling exceeds rndcool_ion.
   // upper_bound (not lower_bound) so that a zero-cooling ion is never selected when rndcool_ion ties its
   // cumulative value exactly (which would give a zero total and an ill-defined process selection).
-  const int uniqueionindex = static_cast<int>(std::ranges::upper_bound(ion_cooling_contribs_thiscell, rndcool_ion) -
-                                              ion_cooling_contribs_thiscell.begin());
+  const int uniqueionindex = int_index_upperbound(ion_cooling_contribs_thiscell, rndcool_ion);
   assert_always(uniqueionindex < get_includedions());
   const auto [element, ion] = get_ionfromuniqueionindex(uniqueionindex);
 
@@ -448,7 +448,7 @@ DEVICE_FUNC void do_kpkt(Packet& pkt, const double t2, const int nts) {
 
   const double rndcool_ion_process = rng_uniform(get_rngstate(pkt)) * C_ion_procsum;
 
-  const auto ionoffset = std::ranges::upper_bound(ion_contribs, rndcool_ion_process) - ion_contribs.begin();
+  const auto ionoffset = index_upperbound(ion_contribs, rndcool_ion_process);
   assert_always(ionoffset < ncoolingterms_ion);
   const auto i = ionstart + ionoffset;
 

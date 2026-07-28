@@ -1,5 +1,5 @@
 // Small shared helpers for the simulation executables: the already-running lock check and
-// inline numeric utilities (exact vector resize, fractional-tolerance comparison, bin-index lookups).
+// inline numeric utilities (vector sizing, tolerance comparisons, cumulative sampling, and bin-index lookups).
 
 #ifndef SN3D_H
 #define SN3D_H
@@ -19,6 +19,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <iterator>
 #include <print>
 #include <sstream>
 #include <string>
@@ -74,6 +75,30 @@ constexpr void reserve_resize(std::vector<T>& vec, const size_t size) {
 template <double fractional_accuracy>
 inline auto ftol(const double a, const double b) -> bool {
   return std::abs(a - b) <= (fractional_accuracy * std::min(std::abs(a), std::abs(b)));
+}
+
+// Return the first index whose array value is strictly greater than target.
+// Using upper_bound consistently prevents zero-weight entries from being selected when
+// target is exactly equal to a repeated cumulative value.
+template <typename Range, typename Value>
+[[nodiscard]] constexpr auto index_upperbound(const Range& cumulative_values, const Value& target) -> ptrdiff_t {
+  return std::ranges::upper_bound(cumulative_values, target) - std::begin(cumulative_values);
+}
+
+template <typename Range, typename Value>
+[[nodiscard]] constexpr auto int_index_upperbound(const Range& cumulative_values, const Value& target) -> int {
+  return static_cast<int>(index_upperbound(cumulative_values, target));
+}
+
+// Return the first index whose array value is greater than or equal to target.
+template <typename Range, typename Value>
+[[nodiscard]] constexpr auto index_lowerbound(const Range& cumulative_values, const Value& target) -> ptrdiff_t {
+  return std::ranges::lower_bound(cumulative_values, target) - std::begin(cumulative_values);
+}
+
+template <typename Range, typename Value>
+[[nodiscard]] constexpr auto int_index_lowerbound(const Range& cumulative_values, const Value& target) -> int {
+  return static_cast<int>(index_lowerbound(cumulative_values, target));
 }
 
 // Signed bin index of value on a grid spaced uniformly by binwidth, where bin 0 starts at minvalue.
