@@ -125,8 +125,8 @@ auto T_e_eqn_heating_minus_cooling(const double T_e, int nonemptymgi, const doub
   const auto fT_e = static_cast<float>(T_e);
 
   if constexpr (!LTEPOP_EXCITATION_USE_TJ) {
-    if (std::abs((T_e / grid::get_Te(nonemptymgi)) - 1.) > 0.1) {
-      grid::set_Te(nonemptymgi, fT_e);
+    if (std::abs((T_e / grid::Te_allcells[nonemptymgi]) - 1.) > 0.1) {
+      grid::Te_allcells[nonemptymgi] = fT_e;
       for (int element = 0; element < get_nelements(); element++) {
         if (!elem_has_nlte_levels(element)) {
           // recalculate the Gammas using the current level populations
@@ -144,7 +144,7 @@ auto T_e_eqn_heating_minus_cooling(const double T_e, int nonemptymgi, const doub
   }
 
   // Set new T_e guess for the current cell and update populations
-  grid::set_Te(nonemptymgi, fT_e);
+  grid::Te_allcells[nonemptymgi] = fT_e;
 
   calculate_ion_balance_nne(nonemptymgi);
   const auto nne = grid::get_nne(nonemptymgi);
@@ -196,7 +196,7 @@ auto calculate_bfheatingcoeff(const int element, const int ion, const int level,
   const double nu_threshold = (1. / H) * E_threshold;
   const double nu_max_phixs = nu_threshold * last_phixs_nuovernuedge;  // nu of the uppermost point in the phixs table
   const auto photoion_xs = get_phixs_table(element, ion, level);
-  const auto T_R = grid::get_TR(nonemptymgi);
+  const auto T_R = grid::TR_allcells[nonemptymgi];
   auto bfheating = integrator(
       [&](const double nu) { return integrand_bfheatingcoeff(nu, nu_threshold, nonemptymgi, T_R, photoion_xs); },
       nu_threshold, nu_max_phixs, epsrel, &error);
@@ -249,7 +249,7 @@ void calculate_bfheatingcoeffs(int nonemptymgi, std::span<double> bfheatingcoeff
 void call_T_e_finder(const int nonemptymgi, const double t_current, HeatingCoolingRates& heatingcoolingrates,
                      const std::span<const double> bfheatingcoeffs) {
   const int modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
-  const double T_e_old = grid::get_Te(nonemptymgi);
+  const double T_e_old = grid::Te_allcells[nonemptymgi];
   printlog("Finding T_e in cell {} at timestep {}...", modelgridindex, globals::timestep);
 
   const auto f_T_e = [&](double T_e) -> double {
@@ -264,7 +264,7 @@ void call_T_e_finder(const int nonemptymgi, const double t_current, HeatingCooli
     printlnlog(
         "[warning] call_T_e_finder: non-finite results in modelcell {} (T_R={:g}, W={:g}). T_e forced to be "
         "MINTEMP",
-        modelgridindex, grid::get_TR(nonemptymgi), grid::get_W(nonemptymgi));
+        modelgridindex, grid::TR_allcells[nonemptymgi], grid::W_allcells[nonemptymgi]);
   }
 
   double T_e{NAN};
@@ -291,14 +291,14 @@ void call_T_e_finder(const int nonemptymgi, const double t_current, HeatingCooli
     printlnlog(
         "[warning] call_T_e_finder: cooling bigger than heating at lower T_e boundary {:g} in modelcell {} "
         "(T_R={:g},W={:g}). T_e forced to be MINTEMP",
-        MINTEMP, modelgridindex, grid::get_TR(nonemptymgi), grid::get_W(nonemptymgi));
+        MINTEMP, modelgridindex, grid::TR_allcells[nonemptymgi], grid::W_allcells[nonemptymgi]);
   } else {
     // Thermal balance equation always positive ===> T_e = T_max
     T_e = MAXTEMP;
     printlnlog(
         "[warning] call_T_e_finder: heating bigger than cooling over the whole T_e range [{:g},{:g}] in modelcell {} "
         "(T_R={:g},W={:g}). T_e forced to be MAXTEMP",
-        MINTEMP, MAXTEMP, modelgridindex, grid::get_TR(nonemptymgi), grid::get_W(nonemptymgi));
+        MINTEMP, MAXTEMP, modelgridindex, grid::TR_allcells[nonemptymgi], grid::W_allcells[nonemptymgi]);
   }
 
   if (T_e > 2 * T_e_old) {
@@ -317,7 +317,7 @@ void call_T_e_finder(const int nonemptymgi, const double t_current, HeatingCooli
         modelgridindex, globals::timestep, T_e_solved, T_e_old, T_e);
   }
 
-  grid::set_Te(nonemptymgi, static_cast<float>(T_e));
+  grid::Te_allcells[nonemptymgi] = static_cast<float>(T_e);
 
   // this call will make sure heating/cooling rates and populations are updated for the final T_e
   // in case T_e got modified after the T_e solver finished

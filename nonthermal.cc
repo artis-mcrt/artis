@@ -1732,7 +1732,7 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const std::a
     nt_solution[nonemptymgi].frac_excitations_list_size = static_cast<int>(std::ssize(tmp_excitation_list));
     std::ranges::copy(tmp_excitation_list, get_cell_ntexcitations(nonemptymgi).begin());
 
-    const auto T_e = grid::get_Te(nonemptymgi);
+    const auto T_e = grid::Te_allcells[nonemptymgi];
     if (verbose) {
       printlnlog("  Top non-thermal excitation fractions (total excitations = {}):",
                  nt_solution[nonemptymgi].frac_excitations_list_size);

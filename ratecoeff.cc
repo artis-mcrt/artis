@@ -458,7 +458,7 @@ auto calculate_corrphotoioncoeff_integral(const int element, const int ion, cons
   const double nu_threshold = (1. / H) * get_phixs_threshold(element, ion, level, phixstargetindex);
   const double nu_max_phixs = nu_threshold * last_phixs_nuovernuedge;  // nu of the uppermost point in the phixs table
 
-  const auto T_e = grid::get_Te(nonemptymgi);
+  const auto T_e = grid::Te_allcells[nonemptymgi];
 
   // stimulated recombination is negative photoionisation
   const double nnlevel = use_cellcache ? get_cellcache_levelpop(nonemptymgi, loweruniquelevelindex)
@@ -753,8 +753,8 @@ DEVICE_FUNC auto get_corrphotoioncoeff(const int element, const int ion, const i
         gammacorr =
             calculate_corrphotoioncoeff_integral(element, ion, level, phixstargetindex, nonemptymgi, use_cellcache);
       } else {
-        const double W = grid::get_W(nonemptymgi);
-        const double T_R = grid::get_TR(nonemptymgi);
+        const double W = grid::W_allcells[nonemptymgi];
+        const double T_R = grid::TR_allcells[nonemptymgi];
 
         gammacorr = W * lerp_or_last(std::span{corrphotoioncoeffs}, uniquelevelindex, phixstargetindex, T_R);
         const int index_in_groundlevelcontestimator = globals::alllevels.closestgroundlevelcont[uniquelevelindex];
@@ -787,7 +787,7 @@ auto iongamma_is_zero(const int nonemptymgi, const int element, const int ion) -
                                     groundcontindex] == 0);
   }
 
-  const auto T_e = grid::get_Te(nonemptymgi);
+  const auto T_e = grid::Te_allcells[nonemptymgi];
   const auto clumpednne = grid::get_clumpfactor(nonemptymgi) * grid::get_nne(nonemptymgi);
 
   for (int level = 0; level < get_nlevels(element, ion); level++) {
@@ -821,7 +821,7 @@ auto calculate_iongamma_per_gspop(const int nonemptymgi, const int element, cons
     return 0.;
   }
 
-  const auto T_e = grid::get_Te(nonemptymgi);
+  const auto T_e = grid::Te_allcells[nonemptymgi];
   const float clumpednne = grid::get_clumpfactor(nonemptymgi) * grid::get_nne(nonemptymgi);
 
   const int nlevels_ionising = get_nlevels_ionising(element, ion);
@@ -866,7 +866,7 @@ auto calculate_iongamma_per_ionpop(const int nonemptymgi, const int element, con
   }
 
   const auto clumpednne = grid::get_clumpfactor(nonemptymgi) * grid::get_nne(nonemptymgi);
-  const auto T_e = grid::get_Te(nonemptymgi);
+  const auto T_e = grid::Te_allcells[nonemptymgi];
 
   double ionisation_rate = 0.;  // rate per second
   const auto nlevels_ionising = get_nlevels_ionising(element, lowerion);

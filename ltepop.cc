@@ -59,7 +59,7 @@ THREADLOCALONHOST CellWarningMarker ionfract_zeroed_warned;
   const auto partfunc_ion = get_ion_partfunct(nonemptymgi, element, ion);
   const auto partfunc_upperion = get_ion_partfunct(nonemptymgi, element, ion + 1);
 
-  const auto T_e = grid::get_Te(nonemptymgi);
+  const auto T_e = grid::Te_allcells[nonemptymgi];
   const double ionpot = epsilon(element, ion + 1, 0) - epsilon(element, ion, 0);
   const double partfunct_ratio = partfunc_ion / partfunc_upperion;
   return partfunct_ratio * SAHACONST * pow(T_e, -1.5) * exp(ionpot / KB / T_e);
@@ -80,7 +80,7 @@ THREADLOCALONHOST CellWarningMarker ionfract_zeroed_warned;
   const int uniqueionindex = get_uniqueionindex(element, ion);
   const auto partfunc_ion = get_ion_partfunct(nonemptymgi, element, ion);
 
-  const auto T_e = grid::get_Te(nonemptymgi);
+  const auto T_e = grid::Te_allcells[nonemptymgi];
 
   // photoionisation plus collisional ionisation rate coefficient per ground level pop
   const auto groundcontindex = get_groundcontindex(element, ion);
@@ -374,7 +374,7 @@ auto find_converged_nne(const int nonemptymgi, double nne_max, const bool force_
             "[warning] calculate_ionfractions: cell {} timestep {}: non-finite ionfract set to zero for Z={} "
             "ionstage {} (T_e {:g} [K], T_R {:g} [K]; repeats suppressed)",
             grid::get_mgi_of_nonemptymgi(nonemptymgi), globals::timestep, get_atomicnumber(element),
-            get_ionstage(element, ion), grid::get_Te(nonemptymgi), grid::get_TR(nonemptymgi));
+            get_ionstage(element, ion), grid::Te_allcells[nonemptymgi], grid::TR_allcells[nonemptymgi]);
       }
       ionfractions[ion] = 0;
     }
@@ -391,7 +391,7 @@ auto find_converged_nne(const int nonemptymgi, double nne_max, const bool force_
     return nnground;
   }
 
-  const auto T_exc = LTEPOP_EXCITATION_USE_TJ ? grid::get_TJ(nonemptymgi) : grid::get_Te(nonemptymgi);
+  const auto T_exc = LTEPOP_EXCITATION_USE_TJ ? grid::TJ_allcells[nonemptymgi] : grid::Te_allcells[nonemptymgi];
   const auto ionuniquelevelindexstart = get_ionuniquelevelindexstart(element, ion);
 
   const double E_aboveground = epsilon(ionuniquelevelindexstart + level) - epsilon(ionuniquelevelindexstart);

@@ -1004,10 +1004,10 @@ void read_grid_restart_data(const int timestep) {
 
     if (globals::rank_in_node == 0) {
       // node-shared arrays are written by the node master only (all ranks read identical values from the file)
-      set_TR(nonemptymgi, T_R);
-      set_Te(nonemptymgi, T_e);
-      set_W(nonemptymgi, W);
-      set_TJ(nonemptymgi, T_J);
+      TR_allcells[nonemptymgi] = T_R;
+      Te_allcells[nonemptymgi] = T_e;
+      W_allcells[nonemptymgi] = W;
+      TJ_allcells[nonemptymgi] = T_J;
       thick_allcells[nonemptymgi] = thick;
       nne_allcells[nonemptymgi] = nne_in;
       nnetot_allcells[nonemptymgi] = nnetot_in;
@@ -1090,10 +1090,10 @@ void assign_initial_temperatures() {
       // set the initial temperatures in the modelgrid
       // this is only done by the node master, so that the values are shared
       // in the node shared memory
-      set_Te(nonemptymgi, T_initial);
-      set_TJ(nonemptymgi, T_initial);
-      set_TR(nonemptymgi, T_initial);
-      set_W(nonemptymgi, 1.);
+      Te_allcells[nonemptymgi] = T_initial;
+      TJ_allcells[nonemptymgi] = T_initial;
+      TR_allcells[nonemptymgi] = T_initial;
+      W_allcells[nonemptymgi] = 1.;
       thick_allcells[nonemptymgi] = 0;
     }
   }
@@ -1648,34 +1648,6 @@ void set_elem_massfrac(const ptrdiff_t nonemptymgi, const int element, const flo
          get_rho(nonemptymgi);
 }
 
-[[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_kappagrey(const int nonemptymgi) -> float {
-  return kappagrey_allcells[nonemptymgi];
-}
-
-[[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_Te(const int nonemptymgi) -> float {
-  assert_testmodeonly(nonemptymgi >= 0);
-  assert_testmodeonly(nonemptymgi < get_nonempty_npts_model());
-  return Te_allcells[nonemptymgi];
-}
-
-[[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_TR(const int nonemptymgi) -> float {
-  assert_testmodeonly(nonemptymgi >= 0);
-  assert_testmodeonly(nonemptymgi < get_nonempty_npts_model());
-  return TR_allcells[nonemptymgi];
-}
-
-[[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_TJ(const int nonemptymgi) -> float {
-  assert_testmodeonly(nonemptymgi >= 0);
-  assert_testmodeonly(nonemptymgi < get_nonempty_npts_model());
-  return TJ_allcells[nonemptymgi];
-}
-
-[[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_W(const int nonemptymgi) -> float {
-  assert_testmodeonly(nonemptymgi >= 0);
-  assert_testmodeonly(nonemptymgi < get_nonempty_npts_model());
-  return W_allcells[nonemptymgi];
-}
-
 void set_rho(const int nonemptymgi, const float rho) {
   assert_always(rho >= 0.);
   assert_always(std::isfinite(rho));
@@ -1707,16 +1679,6 @@ void set_nnetot(const int nonemptymgi) {
   assert_always(f_nnetot >= 0.);
   nnetot_allcells[nonemptymgi] = f_nnetot;
 }
-
-void set_kappagrey(const int nonemptymgi, const float kappagrey) { kappagrey_allcells[nonemptymgi] = kappagrey; }
-
-void set_Te(const int nonemptymgi, const float Te) { Te_allcells[nonemptymgi] = Te; }
-
-void set_TR(const int nonemptymgi, const float TR) { TR_allcells[nonemptymgi] = TR; }
-
-void set_TJ(const int nonemptymgi, const float TJ) { TJ_allcells[nonemptymgi] = TJ; }
-
-void set_W(const int nonemptymgi, const float W) { W_allcells[nonemptymgi] = W; }
 
 DEVICE_FUNC auto get_modelgridtype() -> GridType {
   assert_testmodeonly(model_type.has_value());
@@ -1865,7 +1827,7 @@ void set_elements_uppermost_ion(const int nonemptymgi, const int element, const 
       // grey opacity used in Just+2022, https://ui.adsabs.harvard.edu/abs/2022MNRAS.510.2820J/abstract
       // kappa is a simple analytic function of temperature and lanthanide mass fraction
       // adapted to best fit lightcurves from Kasen+2017 in ALCAR simulations
-      const double T_rad = get_TR(nonemptymgi);
+      const double T_rad = TR_allcells[nonemptymgi];
       double X_lan = 0.;
       for (int element = 0; element < get_nelements(); element++) {
         const int z = get_atomicnumber(element);
@@ -2160,11 +2122,11 @@ void write_grid_restart_data(const int timestep) {
     const int mgi = get_mgi_of_nonemptymgi(nonemptymgi);
 
     assert_always(globals::dep_estimator_gamma[nonemptymgi] >= 0.);
-    fprintf(gridsave_file, "%d %a %a %a %a %d %la %la %la %la %a %a", mgi, get_TR(nonemptymgi), get_Te(nonemptymgi),
-            get_W(nonemptymgi), get_TJ(nonemptymgi), static_cast<int>(thick_allcells[nonemptymgi]),
-            globals::dep_estimator_gamma[nonemptymgi], globals::dep_estimator_positron[nonemptymgi],
-            globals::dep_estimator_electron[nonemptymgi], globals::dep_estimator_alpha[nonemptymgi],
-            nne_allcells[nonemptymgi], nnetot_allcells[nonemptymgi]);
+    fprintf(gridsave_file, "%d %a %a %a %a %d %la %la %la %la %a %a", mgi, TR_allcells[nonemptymgi],
+            Te_allcells[nonemptymgi], W_allcells[nonemptymgi], TJ_allcells[nonemptymgi],
+            static_cast<int>(thick_allcells[nonemptymgi]), globals::dep_estimator_gamma[nonemptymgi],
+            globals::dep_estimator_positron[nonemptymgi], globals::dep_estimator_electron[nonemptymgi],
+            globals::dep_estimator_alpha[nonemptymgi], nne_allcells[nonemptymgi], nnetot_allcells[nonemptymgi]);
 
     if constexpr (USE_LUT_PHOTOION) {
       for (int i = 0; i < globals::nbfcontinua_ground; i++) {
@@ -2332,7 +2294,7 @@ void init_grid() {
   if (globals::rank_in_node == 0) {
     printlnlog("Calculating initial grey opacities for model cells.");
     for (int nonemptymgi = 0; nonemptymgi < get_nonempty_npts_model(); nonemptymgi++) {
-      set_kappagrey(nonemptymgi, calculate_cell_kappagrey(nonemptymgi));
+      kappagrey_allcells[nonemptymgi] = calculate_cell_kappagrey(nonemptymgi);
     }
   }
 

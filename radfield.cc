@@ -428,7 +428,7 @@ void set_params_fullspec(const int nonemptymgi, const int timestep) {
                  MINTEMP, modelgridindex);
       T_J = MINTEMP;
     }
-    grid::set_TJ(nonemptymgi, T_J);
+    grid::TJ_allcells[nonemptymgi] = T_J;
 
     auto T_R = static_cast<float>(H * nubar / KB / 3.832229494);
     if (T_R > MAXTEMP) {
@@ -440,10 +440,10 @@ void set_params_fullspec(const int nonemptymgi, const int timestep) {
                  MINTEMP, modelgridindex);
       T_R = MINTEMP;
     }
-    grid::set_TR(nonemptymgi, T_R);
+    grid::TR_allcells[nonemptymgi] = T_R;
 
     const auto W = static_cast<float>(J[nonemptymgi] * PI / STEBO / pow4(T_R));
-    grid::set_W(nonemptymgi, W);
+    grid::W_allcells[nonemptymgi] = W;
 
     printlnlog(
         "Full-spectrum fit radfield for cell {} at timestep {}: J {:g}, lambda_bar {:5.1f} [Angstrom], T_J {:g} [K], "
@@ -499,8 +499,8 @@ void write_to_file(const int nonemptymgi, const int timestep) {
       } else if (binindex == -1) {  // bin -1 is the full spectrum fit
         nuJ_out = nuJ[nonemptymgi];
         J_out = J[nonemptymgi];
-        T_R = grid::get_TR(nonemptymgi);
-        W = grid::get_W(nonemptymgi);
+        T_R = grid::TR_allcells[nonemptymgi];
+        W = grid::W_allcells[nonemptymgi];
       } else {  // use binindex < -1 for detailed line Jb_lu estimators
         const int jblueindex = -2 - binindex;  // -2 is the first detailed line, -3 is the second, etc
         const int lineindex = detailed_lineindices[jblueindex];
@@ -771,7 +771,7 @@ DEVICE_FUNC auto radfield(const double nu, const int nonemptymgi) -> double {
     }
   }
   // full spectrum fit to a single dilute blackbody
-  return grid::get_W(nonemptymgi) * planck(nu, grid::get_TR(nonemptymgi));
+  return grid::W_allcells[nonemptymgi] * planck(nu, grid::TR_allcells[nonemptymgi]);
 }
 
 void fit_parameters(const int nonemptymgi, const int timestep) {
@@ -806,7 +806,7 @@ void fit_parameters(const int nonemptymgi, const int timestep) {
 
       if (J_bin > 0) {
         if (binindex == RADFIELDBINCOUNT - 1) {
-          T_R_bin = grid::get_Te(nonemptymgi);
+          T_R_bin = grid::Te_allcells[nonemptymgi];
         } else {
           T_R_bin = find_bin_T_R(nonemptymgi, binindex);
           if (T_R_bin <= bins_T_R_min) {
@@ -928,7 +928,7 @@ auto get_T_J_from_J(const int nonemptymgi) -> float {
     const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
     printlnlog("[warning] get_T_J_from_J: T_J estimator infinite in cell {}, use value of last timestep",
                modelgridindex);
-    return grid::get_TJ(nonemptymgi);
+    return grid::TJ_allcells[nonemptymgi];
   }
   // Make sure that T is in the allowed temperature range.
   if (T_J > MAXTEMP) {

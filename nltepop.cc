@@ -306,8 +306,8 @@ void print_element_rates_summary(const int element, const int modelgridindex, co
       if (level == 0) {
         printlnlog(
             "  modelgridindex {} timestep {} NLTE iteration {} Te {:g} nne {:g}: NLTE summary for Z={} ionstage {}:",
-            modelgridindex, timestep, nlte_iter, grid::get_Te(nonemptymgi), grid::get_nne(nonemptymgi), atomic_number,
-            ionstage);
+            modelgridindex, timestep, nlte_iter, grid::Te_allcells[nonemptymgi], grid::get_nne(nonemptymgi),
+            atomic_number, ionstage);
         printlnlog(
             "                         pop       rates     bb_rad     bb_col   bb_ntcol     bf_rad     bf_col   "
             "bf_ntcol autoion");
@@ -336,7 +336,7 @@ void print_level_rates(const int nonemptymgi, const int timestep, const int elem
   printlnlog(
       "timestep {} cell {} Te {:g} nne {:g} NLTE level diagnostics for Z={} ionstage {} level {} rates into and out of "
       "this level",
-      timestep, grid::get_mgi_of_nonemptymgi(nonemptymgi), grid::get_Te(nonemptymgi), grid::get_nne(nonemptymgi),
+      timestep, grid::get_mgi_of_nonemptymgi(nonemptymgi), grid::Te_allcells[nonemptymgi], grid::get_nne(nonemptymgi),
       atomic_number, selected_ionstage, selected_level);
 
   const double rad_bb_in_total = get_total_rate_in(selected_index, rate_matrices.rad_bb, popvec);
@@ -478,7 +478,7 @@ auto get_element_superlevelpartfuncs(const int nonemptymgi, const int element) -
 void nltepop_matrix_add_boundbound(const int nonemptymgi, const int element, const int ion, const double t_mid,
                                    const std::span<const double> s_renorm, RateMatrices& rate_matrices,
                                    const int first_ion_used) {
-  const auto T_e = grid::get_Te(nonemptymgi);
+  const auto T_e = grid::Te_allcells[nonemptymgi];
   const auto clumpednne = grid::get_clumpfactor(nonemptymgi) * grid::get_nne(nonemptymgi);
   const int nlevels = get_nlevels(element, ion);
   const auto ionuniquelevelindexstart = get_ionuniquelevelindexstart(element, ion);
@@ -566,7 +566,7 @@ void nltepop_matrix_add_ionisation(const int nonemptymgi, const int element, con
                                    const std::span<const double> s_renorm_upperion, RateMatrices& rate_matrices,
                                    const int first_ion_used, const int nions_used) {
   assert_always((ion + 1) < (nions_used + first_ion_used));  // can't ionise top ion stage
-  const auto T_e = grid::get_Te(nonemptymgi);
+  const auto T_e = grid::Te_allcells[nonemptymgi];
   const float clumpednne = grid::get_clumpfactor(nonemptymgi) * grid::get_nne(nonemptymgi);
   const int nionisinglevels = get_nlevels_ionising(element, ion);
   const int maxrecombininglevel = get_maxrecombininglevel(element, ion + 1);
@@ -666,7 +666,7 @@ void nltepop_matrix_add_autoionisation(const int nonemptymgi, const int element,
   const auto nlte_dimension = rate_matrices.used_nlte_dimension;
   const int max_ion_used = first_ion_used + nions_used - 1;
   assert_always(ion < max_ion_used);  // can't ionise top ion stage
-  const auto T_e = grid::get_Te(nonemptymgi);
+  const auto T_e = grid::Te_allcells[nonemptymgi];
   const float clumpednne = grid::get_clumpfactor(nonemptymgi) * grid::get_nne(nonemptymgi);
   const int nlevels = get_nlevels(element, ion);
   for (int level = 0; level < nlevels; level++) {
@@ -1387,7 +1387,7 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
     return;
   }
 
-  const double cell_Te = grid::get_Te(nonemptymgi);
+  const double cell_Te = grid::Te_allcells[nonemptymgi];
 
   if (cell_Te == MINTEMP) {
     printlnlog(
@@ -1472,7 +1472,7 @@ DEVICE_FUNC auto superlevel_boltzmann(const int nonemptymgi, const int element, 
   // attached to the superlevel (see the comment in read_autoion_data())
   assert_testmodeonly(level_isinsuperlevel(element, ion, level) || level_isautoionising(element, ion, level));
   const int level_superlevel_start = get_nlevels_excited_nlte(element, ion) + 1;
-  const double T_exc = LTEPOP_EXCITATION_USE_TJ ? grid::get_TJ(nonemptymgi) : grid::get_Te(nonemptymgi);
+  const double T_exc = LTEPOP_EXCITATION_USE_TJ ? grid::TJ_allcells[nonemptymgi] : grid::Te_allcells[nonemptymgi];
   const double E_level = epsilon(element, ion, level);
   const double E_superlevel = epsilon(element, ion, level_superlevel_start);
 

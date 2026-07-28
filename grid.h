@@ -55,19 +55,9 @@ void set_elements_uppermost_ion(int nonemptymgi, int element, int uppermost_ion)
 void set_elem_massfrac(std::ptrdiff_t nonemptymgi, int element, float newmassfrac);
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_elem_numberdens(std::ptrdiff_t nonemptymgi, int element) -> double;
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_initenergyq(int modelgridindex) -> double;
-[[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_kappagrey(int nonemptymgi) -> float;
-[[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_Te(int nonemptymgi) -> float;
-[[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_TR(int nonemptymgi) -> float;
-[[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_TJ(int nonemptymgi) -> float;
-[[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_W(int nonemptymgi) -> float;
 void set_nne(int nonemptymgi, float nne);
 void set_nnetot(int nonemptymgi);
-void set_kappagrey(int nonemptymgi, float kappagrey);
 void set_rho(int nonemptymgi, float rho);
-void set_Te(int nonemptymgi, float Te);
-void set_TR(int nonemptymgi, float TR);
-void set_TJ(int nonemptymgi, float TJ);
-void set_W(int nonemptymgi, float W);
 void init_grid();
 [[gnu::pure]] [[nodiscard]] auto get_modelinitnucmassfrac(int modelgridindex, int nucindex) -> float;
 [[gnu::pure]] [[nodiscard]] auto get_elem_untrackedstable_initmassfrac(std::ptrdiff_t nonemptymgi, int element)

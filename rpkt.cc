@@ -555,7 +555,7 @@ auto do_rpkt_step(Packet& pkt, const double t2, ContinuumOpacity& chi_rpkt_cont)
   } else if (thickcell) {
     // In the case of optically thick cells, we treat the packets in grey approximation to speed up the calculation
 
-    const double chi_grey = grid::get_kappagrey(nonemptymgi) * grid::get_rho(nonemptymgi) *
+    const double chi_grey = grid::kappagrey_allcells[nonemptymgi] * grid::get_rho(nonemptymgi) *
                             calculate_doppler_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
 
     edist = tau_rnd / chi_grey;
@@ -675,7 +675,7 @@ auto do_rpkt_step(Packet& pkt, const double t2, ContinuumOpacity& chi_rpkt_cont)
 // = kappa(free-free) * nne
 auto calculate_chi_ffheating(const int nonemptymgi, const double nu, const bool use_cellcache) -> double {
   const auto clumpednne = grid::get_nne(nonemptymgi) * grid::get_clumpfactor(nonemptymgi);
-  const auto T_e = grid::get_Te(nonemptymgi);
+  const auto T_e = grid::Te_allcells[nonemptymgi];
   assert_testmodeonly(!use_cellcache || get_cellcache(nonemptymgi).nonemptymgi == nonemptymgi);
   const auto chi_ff_nnionpart =
       use_cellcache ? get_cellcache(nonemptymgi).chi_ff_nnionpart[0] : calculate_chi_ffheat_nnionpart(nonemptymgi);
@@ -702,7 +702,7 @@ auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixsli
     }
   }
 
-  const auto T_e = grid::get_Te(nonemptymgi);
+  const auto T_e = grid::Te_allcells[nonemptymgi];
   const auto clumpednne = grid::get_nne(nonemptymgi) * grid::get_clumpfactor(nonemptymgi);
   const auto nnetot = grid::get_nnetot(nonemptymgi);
   const auto& allcont_nu_edge = globals::allcont.nu_edge;
@@ -824,7 +824,7 @@ auto calculate_chi_ffheat_nnionpart(const int nonemptymgi) -> double {
       chi_ff_nnionpart += pow2(ioncharge) * g_ff * nnion;
     }
   }
-  const auto T_e = grid::get_Te(nonemptymgi);
+  const auto T_e = grid::Te_allcells[nonemptymgi];
 
   return chi_ff_nnionpart * 3.69255e8 / sqrt(T_e);
 }
@@ -953,7 +953,7 @@ void calculate_expansion_opacities(const int nonemptymgi) {
   const auto rho = grid::get_rho(nonemptymgi);
 
   const auto sys_time_start_calc = std::chrono::steady_clock::now();
-  const auto temperature = grid::get_Te(nonemptymgi);
+  const auto temperature = grid::Te_allcells[nonemptymgi];
 
   printlog("calculating expansion opacities for cell {}...", grid::get_mgi_of_nonemptymgi(nonemptymgi));
 
