@@ -1047,7 +1047,7 @@ void assign_initial_temperatures() {
   // according to the local energy density resulting from the 56Ni decay.
   // The dilution factor is W=1 in LTE.
 
-  printlnlog("Assigning initial temperatures...");
+  printlog("Assigning initial temperatures...");
 
   const double tstart = globals::timesteps[0].mid;
   int cells_below_mintemp = 0;
@@ -1094,8 +1094,8 @@ void assign_initial_temperatures() {
       thick_allcells[nonemptymgi] = 0;
     }
   }
-  printlnlog("  cells below MINTEMP {:g} [K]: {}", MINTEMP, cells_below_mintemp);
-  printlnlog("  cells above MAXTEMP {:g} [K]: {}", MAXTEMP, cells_above_maxtemp);
+  printlog("  cells below MINTEMP {:g} [K]: {}. Above MAXTEMP {:g} [K]: {}", MINTEMP, cells_below_mintemp, MAXTEMP,
+           cells_above_maxtemp);
   if (cells_nonfinite_temp > 0) {
     printlnlog(
         "[warning] {} cells had a non-finite initial temperature and were set to MINTEMP (first was mgi {} with "
