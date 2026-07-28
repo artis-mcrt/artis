@@ -130,7 +130,7 @@ void do_direction_bin(const int dirbin, const std::vector<std::vector<Packet>>& 
                     rpkt_spectra_Q, rpkt_spectra_U);
     }
 
-    printlnlog("finished direction bin {} of {}", dirbin + 1, MABINS);
+    printlnlog("finished direction bin {} (highest bin is {})", dirbin, MABINS - 1);
   }
 }
 
