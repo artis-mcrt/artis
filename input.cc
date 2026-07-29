@@ -125,6 +125,15 @@ constexpr auto inputlinecomments = std::array{
     "23: UNUSED kpktdiffusion_timescale n_kpktdiffusion_timesteps: now set in kpkt.cc",
 };
 
+// indices of the noncomment lines of input.txt that update_parameterfile() rewrites for a restart
+// (the static_asserts tie each index to its description in inputlinecomments)
+constexpr int inputline_timestep_range = 2;
+constexpr int inputline_continue_from_saved = 16;
+constexpr int inputline_nprocs_exspec = 21;
+static_assert(std::string_view{inputlinecomments[inputline_timestep_range]}.starts_with(" 2:"));
+static_assert(std::string_view{inputlinecomments[inputline_continue_from_saved]}.starts_with("16:"));
+static_assert(std::string_view{inputlinecomments[inputline_nprocs_exspec]}.starts_with("21:"));
+
 void read_phixs_data_table(std::istream& phixsfile, const int nphixspoints_inputtable, const int element,
                            const int lowerion, const int lowerlevel, const int upperion, int upperlevel_in,
                            std::vector<float>& tmpallphixs, std::vector<PhotoionTarget>& tmpallphixstargets,
@@ -378,12 +387,6 @@ void read_phixs_file(const int phixs_file_version, std::vector<float>& tmpallphi
   printlnlog("[info] mem_usage: photoionisation tables occupy {:.3f} MB", mem_usage_phixs / 1024. / 1024.);
 }
 
-constexpr auto downtranslevelstart(const int level) {
-  // each level index is associated with a block of size levelindex spanning all possible down transitions.
-  // so use the formula for the sum of 1 + 2 + 3 + 4 + ... + level
-  return level * (level + 1) / 2;
-}
-
 void read_ion_levels(std::istream& adata, const int element, const int ion, const int nions, const int nlevels,
                      int nlevelsmax, const double energyoffset_ev, const double ionpot_ev,
                      std::vector<TempEnergyLevel>& temp_alllevels) {
@@ -502,8 +505,6 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion,
                                           std::span<TempEnergyLevel> temp_alllevels) {
   const auto nlevels = get_nlevels(element, ion);
   const auto ion_levels = std::span{temp_alllevels}.subspan(get_ionuniquelevelindexstart(element, ion), nlevels);
-  THREADLOCALONHOST std::vector<int> iondowntranstmplineindices;
-  iondowntranstmplineindices.resize(downtranslevelstart(nlevels));
 
   const int nlines_initial = globals::nlines;
   ptrdiff_t ion_updowntranscount = 0;
@@ -526,7 +527,11 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion,
       assert_always(alltransindex < std::numeric_limits<int>::max());
     }
 
-    std::ranges::fill(iondowntranstmplineindices, -99);
+    // iontransitiontable is sorted by (lower, upper), so any duplicate transitions between the same
+    // pair of levels are adjacent. Track the previous accepted transition to detect them.
+    int prev_lower = -1;
+    int prev_upper = -1;
+    int prev_lineindex = -1;
 
     ion_updowntranscount = 0;
     for (const auto& transition : iontransitiontable) {
@@ -542,11 +547,12 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion,
       }
 
       // Make sure that we don't allow duplicate. In that case take only the lines first occurrence
-      int& downtranslineindex = iondowntranstmplineindices[downtranslevelstart(level) + lowerlevel];
+      const bool is_duplicate = (lowerlevel == prev_lower && level == prev_upper);
 
-      // negative means that the transition hasn't been seen yet
-      if (downtranslineindex < 0) {
-        downtranslineindex = globals::nlines++;
+      if (!is_duplicate) {
+        prev_lower = lowerlevel;
+        prev_upper = level;
+        prev_lineindex = globals::nlines++;
 
         const int nupperdowntrans = ion_levels[level].ndowntrans + 1;
         ion_levels[level].ndowntrans = nupperdowntrans;
@@ -592,22 +598,23 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion,
         }
 
       } else if (pass == 1) {
-        // This is a new branch to deal with lines that have different types of transition. It should trip after a
-        // transition is already known.
+        // A second transition between the same pair of levels (e.g. from a different physical process):
+        // combine it into the existing line. The duplicate immediately follows the first occurrence
+        // (the table is sorted), so the transition entries filled most recently are the ones to update.
 
-        if ((temp_linelist[downtranslineindex].elementindex != element) ||
-            (temp_linelist[downtranslineindex].ionindex != ion) ||
-            (temp_linelist[downtranslineindex].upperlevelindex != level) ||
-            (temp_linelist[downtranslineindex].lowerlevelindex != lowerlevel)) {
+        if ((temp_linelist[prev_lineindex].elementindex != element) ||
+            (temp_linelist[prev_lineindex].ionindex != ion) ||
+            (temp_linelist[prev_lineindex].upperlevelindex != level) ||
+            (temp_linelist[prev_lineindex].lowerlevelindex != lowerlevel)) {
           printlnlog("[error] Failure to identify level pair for duplicate bb-transition ... going to abort now");
           printlnlog("   element {} ion {} targetlevel {} level {}", element, ion, lowerlevel, level);
-          printlnlog("   transitions[level].to[targetlevel]=lineindex {}", downtranslineindex);
+          printlnlog("   duplicate of lineindex {}", prev_lineindex);
           printlnlog("   A_ul {:g}, coll_str {:g}", transition.A, transition.coll_str);
           printlnlog(
               "   globals::linelist[lineindex].elementindex {}, globals::linelist[lineindex].ionindex {}, "
               "globals::linelist[lineindex].upperlevelindex {}, globals::linelist[lineindex].lowerlevelindex {}",
-              temp_linelist[downtranslineindex].elementindex, temp_linelist[downtranslineindex].ionindex,
-              temp_linelist[downtranslineindex].upperlevelindex, temp_linelist[downtranslineindex].lowerlevelindex);
+              temp_linelist[prev_lineindex].elementindex, temp_linelist[prev_lineindex].ionindex,
+              temp_linelist[prev_lineindex].upperlevelindex, temp_linelist[prev_lineindex].lowerlevelindex);
           std::abort();
         }
 
@@ -627,8 +634,7 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion,
         const auto lowerstartup = ion_levels[lowerlevel].alltrans_startup();
         auto& uptransition = temp_alltranslist[lowerstartup + ion_levels[lowerlevel].nuptrans - 1];
 
-        // as above, the downtrans list should be searched to find the correct index instead of using the last one.
-        // assert_always(uptransition.targetlevelindex == level);
+        assert_always(uptransition.targetlevelindex == level);
 
         uptransition.einstein_A += transition.A;
         uptransition.osc_strength += f_lu;
@@ -1896,10 +1902,10 @@ void update_parameterfile(const int nts) {
 
       // overwrite particular lines to enable restarting from the current timestep
       if (nts >= 0) {
-        if (noncomment_linenum == 2) {
+        if (noncomment_linenum == inputline_timestep_range) {
           // Number of start and end time step
           line = std::format("{:03d} {:03d}", nts, globals::timestep_finish);
-        } else if (noncomment_linenum == 16) {
+        } else if (noncomment_linenum == inputline_continue_from_saved) {
           // resume from gridsave file
           line = "1";  // Force continuation
         }
@@ -1908,7 +1914,7 @@ void update_parameterfile(const int nts) {
       // only rewrite this line when updating input.txt for a restart (sn3d), where nprocs is the
       // number of packet files being written. The nts == -1 backup path may be run by exspec
       // (nprocs == 1), which must not clobber the nprocs_exspec value it just read
-      if (nts >= 0 && noncomment_linenum == 21) {
+      if (nts >= 0 && noncomment_linenum == inputline_nprocs_exspec) {
         // by default, exspec should use all available packet files
         globals::nprocs_exspec = globals::nprocs;
         line = std::format("{}", globals::nprocs_exspec);

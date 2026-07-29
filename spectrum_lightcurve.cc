@@ -175,7 +175,7 @@ auto columnindex_from_emissiontype(const int et) -> int {
   if (et == EMTYPE_FREEFREE) {
     // ff-emission
 
-    const int contindex = -1 - et;
+    const int contindex = get_bflistindex_from_emtype_continuum(et);
     assert_always(contindex >= globals::nbfcontinua);  // make sure the special value didn't collide with a real process
 
     return 2 * get_nelements() * get_max_nions();
@@ -184,7 +184,7 @@ auto columnindex_from_emissiontype(const int et) -> int {
     return -1;
   }
   // bf-emission
-  const int bfindex = -1 - et;
+  const int bfindex = get_bflistindex_from_emtype_continuum(et);
   if (globals::nbfcontinua == 0) {
     // no bf continua are in use, so a bf emission type should be impossible; count it in the free-free column
     return 2 * get_nelements() * get_max_nions();
@@ -499,9 +499,9 @@ void init_spectra(Spectra& spectra, const double nu_min, const double nu_max, co
       (spectra.fluxalltimesteps.empty() || (do_emission_absorption && spectra.absorptionalltimesteps.empty()));
 
   for (auto nnu = 0Z; nnu < MNUBINS; nnu++) {
-    spectra.lower_freq[nnu] = static_cast<float>(std::exp(log(nu_min) + (nnu * dlognu)));
+    spectra.lower_freq[nnu] = static_cast<float>(get_loggrid_edge(nu_min, dlognu, static_cast<double>(nnu)));
     spectra.delta_freq[nnu] =
-        static_cast<float>(std::exp(log(nu_min) + ((nnu + 1) * dlognu)) - spectra.lower_freq[nnu]);
+        static_cast<float>(get_loggrid_edge(nu_min, dlognu, static_cast<double>(nnu + 1)) - spectra.lower_freq[nnu]);
   }
 
   if (spectra.fluxalltimesteps.empty()) {

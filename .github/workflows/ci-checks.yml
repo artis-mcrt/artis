@@ -141,6 +141,11 @@ jobs:
                   make clean
                   make -j$(nproc) sn3d exspec
 
+            - name: Build and run unit tests (classic mode)
+              run: |
+                  make -j$(nproc) unittests
+                  ./unittests
+
             - name: Compile classic mode OPENMP=ON
               run: |
                   make clean
@@ -157,6 +162,11 @@ jobs:
                   cp -v -p artisoptions_nltenebular.h artisoptions.h
                   make clean
                   make -j$(nproc) sn3d exspec
+
+            - name: Build and run unit tests (nebular mode)
+              run: |
+                  make -j$(nproc) unittests
+                  ./unittests
 
             - name: Compile nebular mode EIGEN=OFF
               run: |
@@ -321,34 +331,43 @@ jobs:
     nvidia-nvhpc:
         name: NVIDIA NVHPC nvc++
         runs-on: ubuntu-26.04
+        # NVIDIA's container registry serves the SDK preinstalled, avoiding the apt repository on
+        # developer.download.nvidia.com, which (as of 2026-07) returns 404 for the SDK debs when
+        # fetched from GitHub's runner network (same approach as the AMD ROCm job above).
+        # 26.1 is the previously-validated SDK version: 26.5's bundled stdexec headers fail to
+        # compile with its own frontend in -stdpar=gpu mode ("operator= has already been declared"
+        # in include-stdexec/stdexec/__detail/__any.hpp)
+        container:
+            image: nvcr.io/nvidia/nvhpc:26.1-devel-cuda13.1-ubuntu24.04
         steps:
             - uses: actions/checkout@v7
+              with:
+                    fetch-depth: 0
 
             - name: Install gcc
               run: |
-                  sudo apt-get update
-                  sudo apt-get install -y --no-install-recommends software-properties-common
-                  sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
-                  sudo apt-get update
-                  sudo apt-get install -y --no-install-recommends gcc-14 g++-14
-                  sudo update-alternatives \
+                  apt-get update
+                  apt-get install -y --no-install-recommends software-properties-common
+                  add-apt-repository -y ppa:ubuntu-toolchain-r/test
+                  apt-get update
+                  # gfortran-14 completes the toolchain that nvc++ validates when passed --gcc-toolchain
+                  apt-get install -y --no-install-recommends gcc-14 g++-14 gfortran-14
+                  update-alternatives \
                        --install /usr/bin/gcc gcc /usr/bin/gcc-14 100 \
                        --slave /usr/bin/g++ g++ /usr/bin/g++-14
 
-            - name: Install nvc++
-              uses: fortran-lang/setup-fortran@v1.9.2
-              with:
-                  compiler: nvidia-hpc
-                  version: 26.1
-
             - name: Set nvc++ as compiler
               run: |
+                  nvc++ --version
                   echo "CXX=nvc++" >> $GITHUB_ENV
                   echo "OMPI_CXX=nvc++" >> $GITHUB_ENV
+                  # make nvc++ use the gcc-14 toolchain (the image's preconfigured system gcc is older)
+                  echo "GCCTOOLCHAIN=$(which g++-14)" >> $GITHUB_ENV
 
-            - name: Install Open MPI
+            - name: Install Open MPI and git
               run: |
-                  sudo apt-get install -y --no-install-recommends openmpi-bin libopenmpi-dev
+                  apt-get install -y --no-install-recommends openmpi-bin libopenmpi-dev git
+                  git config --global --add safe.directory /__w/artis/artis
 
             - name: Compile classic mode STDPAR=ON GPU=ON
               run: |

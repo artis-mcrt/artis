@@ -107,6 +107,26 @@ void do_direction_bin(const int dirbin, const std::vector<std::vector<Packet>>& 
       write_spectra("gamma_spec.out", "", "", "", gamma_spectra, globals::ntimesteps);
     }
 
+    // consistency check (log only): the frequency-integrated spectrum must reproduce the light curve, minus
+    // the packets whose frequencies fall outside the spectrum's frequency range
+    for (int nts = 0; nts < globals::ntimesteps; nts++) {
+      double lum_from_spec = 0.;
+      for (ptrdiff_t nnu = 0; nnu < MNUBINS; nnu++) {
+        lum_from_spec += rpkt_spectra_I.fluxalltimesteps[(nnu * static_cast<ptrdiff_t>(globals::ntimesteps)) + nts] *
+                         rpkt_spectra_I.delta_freq[nnu];
+      }
+      // undo the flux normalisation applied in add_to_spec_res() to get back to a luminosity
+      lum_from_spec *= 4.e12 * PI * PARSEC * PARSEC;
+      const double lum_lightcurve = rpkt_light_curve_lum[nts];
+      if (lum_lightcurve > 0. && lum_from_spec > (lum_lightcurve * 1.001)) {
+        printlnlog(
+            "[warning] consistency check failed for timestep {}: frequency-integrated spec.out luminosity {:g} "
+            "[erg/s] exceeds the light_curve.out luminosity {:g} [erg/s], but the spectrum's packets should be a "
+            "subset of the light curve's packets",
+            nts, lum_from_spec, lum_lightcurve);
+      }
+    }
+
     printlnlog("wrote the angle-averaged light curves and spectra");
   } else {
     // direction bin a

@@ -194,6 +194,11 @@ auto get_possible_event(const int nonemptymgi, const Packet& pkt, const Continuu
         prop_time += ldist / CLIGHT_PROP;
         nu_cmf = pkt.nu_cmf + (dnu_on_dl * dist);  // should equal nu_trans;
         assert_testmodeonly(nu_cmf <= pkt.nu_cmf);
+        if constexpr (DETAILED_LINE_ESTIMATORS_ON) {
+          // keep e_cmf consistent with the linearly-approximated nu_cmf for the line estimator below
+          // (e_cmf / nu_cmf = e_rf / nu_rf is invariant along a free path)
+          e_cmf = nu_cmf * pkt.e_rf / pkt.nu_rf;
+        }
       }
 
       if constexpr (DETAILED_LINE_ESTIMATORS_ON) {
@@ -290,6 +295,11 @@ auto get_possible_event_expansion_opacity(const int nonemptymgi, Packet& pkt, co
       prop_time += binedgedist / CLIGHT_PROP;
       nu_cmf = pkt.nu_cmf + (dnu_on_dl * dist);  // should equal nu_trans;
       assert_testmodeonly(nu_cmf <= pkt.nu_cmf);
+      if constexpr (DETAILED_LINE_ESTIMATORS_ON) {
+        // keep e_cmf consistent with the linearly-approximated nu_cmf, since it seeds the packet copy
+        // used for the line-by-line retrace (whose line estimator updates divide e_cmf by nu_cmf)
+        e_cmf = nu_cmf * e_rf / nu_rf;
+      }
     }
 
     if (nu_cmf <= nu_cmf_abort) {

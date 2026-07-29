@@ -340,6 +340,25 @@ void write_deposition_file() {
 
     std::remove("deposition.out");
     std::rename("deposition.out.tmp", "deposition.out");
+
+    // energy-conservation consistency check (log only): the cumulative deposition should not exceed the
+    // cumulative decay emission by more than the Monte Carlo noise of the trajectory estimators allows
+    double cumulative_emission = 0.;
+    double cumulative_dep = 0.;
+    for (int i = 0; i <= nts; i++) {
+      cumulative_emission += globals::timesteps[i].gamma_emission + globals::timesteps[i].positron_emission +
+                             globals::timesteps[i].electron_emission + globals::timesteps[i].alpha_emission +
+                             globals::timesteps[i].spfission_dep_discrete;
+      cumulative_dep += globals::timesteps[i].gamma_dep + globals::timesteps[i].positron_dep +
+                        globals::timesteps[i].electron_dep + globals::timesteps[i].alpha_dep +
+                        globals::timesteps[i].spfission_dep_discrete;
+    }
+    if (cumulative_emission > 0. && cumulative_dep > (1.2 * cumulative_emission)) {
+      printlnlog(
+          "[warning] energy conservation check: cumulative deposition {:g} [erg] exceeds cumulative decay emission "
+          "{:g} [erg] by more than 20 percent, which is more than Monte Carlo noise should produce",
+          cumulative_dep, cumulative_emission);
+    }
   }
 
   const auto deposition_write_duration =
@@ -846,7 +865,13 @@ auto main(int argc, char* argv[]) -> int {
   int opt = 0;
   while ((opt = getopt(argc, argv, "w:")) != -1) {  // NOLINT(concurrency-mt-unsafe,misc-include-cleaner)
     if (opt == 'w') {
-      const float walltimehours = strtof(optarg, nullptr);  // NOLINT(misc-include-cleaner)
+      char* parse_end = nullptr;
+      const float walltimehours = strtof(optarg, &parse_end);  // NOLINT(misc-include-cleaner)
+      if (parse_end == optarg || *parse_end != '\0' || !std::isfinite(walltimehours) || walltimehours <= 0.) {
+        // silently accepting a bad value would disable the wall time limit instead of applying it
+        std::println(stderr, "[error] invalid wall time hours '{}' given with -w option", optarg);
+        std::abort();
+      }
       walltimelimitseconds = static_cast<int>(walltimehours * HOUR);
       printlnlog("command line argument specifies wall time hours '{}', so setting walltimelimitseconds = {}", optarg,
                  walltimelimitseconds);

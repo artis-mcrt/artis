@@ -290,8 +290,8 @@ ifneq ($(PGO),)
   endif
 endif
 
-# sn3d.cc and exspec.cc have main() defined
-common_files := $(filter-out sn3d.cc exspec.cc, $(wildcard *.cc))
+# sn3d.cc, exspec.cc, and unittests.cc have main() defined
+common_files := $(filter-out sn3d.cc exspec.cc unittests.cc, $(wildcard *.cc))
 
 sn3d_files = $(common_files) sn3d.cc
 sn3d_objects = $(addprefix $(BUILD_DIR)/,$(sn3d_files:.cc=.o))
@@ -300,6 +300,10 @@ sn3d_dep = $(sn3d_objects:%.o=%.d)
 exspec_files = $(common_files) exspec.cc
 exspec_objects = $(addprefix $(BUILD_DIR)/,$(exspec_files:.cc=.o))
 exspec_dep = $(exspec_objects:%.o=%.d)
+
+unittests_files = $(common_files) unittests.cc
+unittests_objects = $(addprefix $(BUILD_DIR)/,$(unittests_files:.cc=.o))
+unittests_dep = $(unittests_objects:%.o=%.d)
 
 .ONESHELL:
 define version_h
@@ -350,7 +354,14 @@ $(BUILD_DIR)/exspec: $(exspec_objects)
 exspec: $(BUILD_DIR)/exspec
 	ln -sf $(BUILD_DIR)/exspec exspec
 
-.PHONY: clean sn3d sn3dwhole exspec
+$(BUILD_DIR)/unittests: $(unittests_objects)
+	$(CXX) $(CXXFLAGS) $(unittests_objects) $(gsl_objects) $(LDFLAGS) -o $(BUILD_DIR)/unittests
+-include $(unittests_dep)
+
+unittests: $(BUILD_DIR)/unittests
+	ln -sf $(BUILD_DIR)/unittests unittests
+
+.PHONY: clean sn3d sn3dwhole exspec unittests
 
 clean:
-	rm -rf sn3d exspec build *.o *.d
+	rm -rf sn3d exspec unittests build *.o *.d

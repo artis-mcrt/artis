@@ -292,6 +292,28 @@ void printout_decaypath(const int decaypathindex) {
   printlnlog("");
 }
 
+// The Bateman solution in calculate_decaychain() is singular when two nuclides in a chain have exactly
+// equal decay constants. Rather than failing an assertion deep inside packet setup, detect this
+// input-data problem up front and report the offending chain.
+void abort_if_decaypath_has_duplicate_lambdas() {
+  for (int decaypathindex = 0; decaypathindex < get_num_decaypaths(); decaypathindex++) {
+    const auto& lambdas = decaypaths[decaypathindex].lambdas;
+    for (auto i = 0Z; i < std::ssize(lambdas); i++) {
+      for (auto j = i + 1; j < std::ssize(lambdas); j++) {
+        if (lambdas[i] > 0. && lambdas[i] == lambdas[j]) {
+          printlnlog(
+              "[error] decay path contains two nuclides with identical decay constants {:g} [1/s], which makes the "
+              "Bateman solution singular. Slightly perturb one of the mean lifetimes in the decay data to break the "
+              "degeneracy.",
+              lambdas[i]);
+          printout_decaypath(decaypathindex);
+          std::abort();
+        }
+      }
+    }
+  }
+}
+
 // follow decays at the ends of the current list of decaypaths to get decaypaths from all descendants
 void extend_lastdecaypath(std::vector<DecayPath>& localdecaypaths) {
   const auto initial_last_decaypath = localdecaypaths.back();
@@ -474,55 +496,6 @@ auto sample_decaytime(const int decaypathindex, const double tdecaymin, const do
     }
   }
   return tdecay;
-}
-
-// calculate final number abundance from multiple decays, e.g., Ni56 -> Co56 -> Fe56 (nuc[0] -> nuc[1] -> nuc[2])
-// the top nuclide initial abundance is set and the chain-end abundance is returned (all intermediates nuclides
-// are assumed to start with zero abundance)
-// note: first and last can be nuclide can be the same if num_nuclides==1, reducing to simple decay formula
-//
-// timediff:           time elapsed for decays [seconds]
-// lambdas:            array of 1/(mean lifetime) for nuc[0]..nuc[num_nuclides-1]  [seconds^-1]
-// useexpansionfactor: if true, return a modified 'abundance' at the end of the chain, with a weighting factor
-//                          accounting for adiabatic loss from expansion since the decays occurred
-//                          (This is needed to get the initial temperature)
-constexpr auto calculate_decaychain(const double firstinitabund, const std::span<const double> lambdas,
-                                    const double timediff, const bool useexpansionfactor) -> double {
-  const int num_nuclides = static_cast<int>(lambdas.size());
-  assert_testmodeonly(num_nuclides >= 1);
-
-  double lambdaproduct = 1.;
-  for (int j = 0; j < (num_nuclides - 1); j++) {
-    lambdaproduct *= lambdas[j];
-  }
-
-  double sum = 0;
-  for (int j = 0; j < num_nuclides; j++) {
-    const auto lambda_j = lambdas[j];
-    double denominator = 1.;
-    for (int p = 0; p < num_nuclides; p++) {
-      if (p != j) {
-        denominator *= (lambdas[p] - lambda_j);
-      }
-    }
-
-    // the Bateman solution is singular when two nuclides in a chain have equal decay constants
-    assert_always(std::abs(denominator) > 0.);
-    if (!useexpansionfactor) {
-      // get abundance output
-      sum += exp(-lambda_j * timediff) / denominator;
-    } else {
-      if (lambda_j > 0.) {
-        const double sumtermtop =
-            ((1 + (1 / lambda_j / timediff)) * exp(-timediff * lambda_j)) - (1. / lambda_j / timediff);
-        sum += sumtermtop / denominator;
-      }
-    }
-  }
-
-  const double lastabund = firstinitabund * lambdaproduct * sum;
-  assert_always(std::isfinite(lastabund));
-  return lastabund;
 }
 
 // Get the mass fraction of a nuclide accounting for all decays and initial abundances.
@@ -1077,6 +1050,7 @@ void init_nuclides(const std::span<const int> custom_zlist, const std::span<cons
 
   printlnlog("Number of nuclides before filtering: {}", std::ssize(nuclides));
   decaypaths = find_decaypaths(custom_zlist, custom_alist, standard_nuclides);
+  abort_if_decaypath_has_duplicate_lambdas();
   filter_unused_nuclides(custom_zlist, custom_alist, standard_nuclides);
 
   printlnlog("Number of nuclides: {}", std::ssize(nuclides));

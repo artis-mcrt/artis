@@ -4,6 +4,7 @@
 #define DECAY_H
 
 #include <array>
+#include <cmath>
 #include <cstddef>
 #include <ostream>
 #include <span>
@@ -28,6 +29,56 @@ constexpr std::array all_decaytypes{
     DecayType::DECAYTYPE_ALPHA,     DecayType::DECAYTYPE_ELECTRONCAPTURE, DecayType::DECAYTYPE_BETAPLUS,
     DecayType::DECAYTYPE_BETAMINUS, DecayType::DECAYTYPE_SPONTFISSION,
 };
+
+// calculate final number abundance from multiple decays, e.g., Ni56 -> Co56 -> Fe56 (nuc[0] -> nuc[1] -> nuc[2])
+// the top nuclide initial abundance is set and the chain-end abundance is returned (all intermediates nuclides
+// are assumed to start with zero abundance)
+// note: first and last can be nuclide can be the same if num_nuclides==1, reducing to simple decay formula
+//
+// timediff:           time elapsed for decays [seconds]
+// lambdas:            array of 1/(mean lifetime) for nuc[0]..nuc[num_nuclides-1]  [seconds^-1]
+// useexpansionfactor: if true, return a modified 'abundance' at the end of the chain, with a weighting factor
+//                          accounting for adiabatic loss from expansion since the decays occurred
+//                          (This is needed to get the initial temperature)
+constexpr auto calculate_decaychain(const double firstinitabund, const std::span<const double> lambdas,
+                                    const double timediff, const bool useexpansionfactor) -> double {
+  const int num_nuclides = static_cast<int>(lambdas.size());
+  assert_testmodeonly(num_nuclides >= 1);
+
+  double lambdaproduct = 1.;
+  for (int j = 0; j < (num_nuclides - 1); j++) {
+    lambdaproduct *= lambdas[j];
+  }
+
+  double sum = 0;
+  for (int j = 0; j < num_nuclides; j++) {
+    const auto lambda_j = lambdas[j];
+    double denominator = 1.;
+    for (int p = 0; p < num_nuclides; p++) {
+      if (p != j) {
+        denominator *= (lambdas[p] - lambda_j);
+      }
+    }
+
+    // the Bateman solution is singular when two nuclides in a chain have equal decay constants
+    // (init_nuclides() rejects decay data that could trigger this)
+    assert_always(std::abs(denominator) > 0.);
+    if (!useexpansionfactor) {
+      // get abundance output
+      sum += exp(-lambda_j * timediff) / denominator;
+    } else {
+      if (lambda_j > 0.) {
+        const double sumtermtop =
+            ((1 + (1 / lambda_j / timediff)) * exp(-timediff * lambda_j)) - (1. / lambda_j / timediff);
+        sum += sumtermtop / denominator;
+      }
+    }
+  }
+
+  const double lastabund = firstinitabund * lambdaproduct * sum;
+  assert_always(std::isfinite(lastabund));
+  return lastabund;
+}
 
 void init_nuclides(std::span<const int> custom_zlist, std::span<const int> custom_alist);
 [[nodiscard]] auto decaytype_is_used(DecayType decaytype) -> bool;

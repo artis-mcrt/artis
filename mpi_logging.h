@@ -372,7 +372,8 @@ class MPI_shared_array {
     return std::span<const T>{_span}.first(count);
   }
   [[nodiscard]] auto size() const -> size_t { return _span.size(); }
-  [[nodiscard]] auto ssize() const -> ptrdiff_t { return _span.ssize(); }
+  // (std::span has no ssize() member, so compute the signed size from size())
+  [[nodiscard]] auto ssize() const -> ptrdiff_t { return static_cast<ptrdiff_t>(_span.size()); }
 
   // define operator[] to allow direct indexing into the span
   auto operator[](const size_t index) noexcept -> T& { return _span[index]; }
