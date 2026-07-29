@@ -434,9 +434,14 @@ void set_params_fullspec(const int nonemptymgi, const int timestep) {
 
 auto get_allcontindex(const int element, const int lowerion, const int lower, const int phixstargetindex) -> int {
   // direct lookup via the precomputed inverse of the nu_edge sort permutation (built in init())
-  assert_testmodeonly(!allcontindex_of_allphixstargetindex.empty());
+  if (allcontindex_of_allphixstargetindex.empty()) {
+    // there are no continua (or init() has not been called), so nothing can be found
+    return -1;
+  }
   const auto allphixstargetindex =
       get_allphixstargetindex(get_uniquelevelindex(element, lowerion, lower), phixstargetindex);
+  assert_testmodeonly(allphixstargetindex >= 0);
+  assert_testmodeonly(allphixstargetindex < allcontindex_of_allphixstargetindex.ssize());
   return allcontindex_of_allphixstargetindex[allphixstargetindex];
 }
 

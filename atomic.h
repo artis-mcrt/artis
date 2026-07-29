@@ -524,7 +524,9 @@ inline void update_includedionslevels_maxnions() {
 }
 
 // Inverse of get_emtype_continuum(): decode a (negative) bound-free continuum emission type into its index into
-// globals::bflist. Only valid for emission types below the ABSTYPE/EMTYPE special values, i.e. actual continua.
+// globals::bflist. Only valid for actual continuum emission types as returned by get_emtype_continuum(); the
+// caller must first exclude the EMTYPE_NOTSET and EMTYPE_FREEFREE sentinel values (large negative numbers that
+// would decode to out-of-range bflist indices).
 [[nodiscard]] constexpr auto get_bflistindex_from_emtype_continuum(const int emissiontype) -> int {
   return -1 - emissiontype;
 }
