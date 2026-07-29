@@ -333,9 +333,12 @@ jobs:
         runs-on: ubuntu-26.04
         # NVIDIA's container registry serves the SDK preinstalled, avoiding the apt repository on
         # developer.download.nvidia.com, which (as of 2026-07) returns 404 for the SDK debs when
-        # fetched from GitHub's runner network (same approach as the AMD ROCm job above)
+        # fetched from GitHub's runner network (same approach as the AMD ROCm job above).
+        # 26.1 is the previously-validated SDK version: 26.5's bundled stdexec headers fail to
+        # compile with its own frontend in -stdpar=gpu mode ("operator= has already been declared"
+        # in include-stdexec/stdexec/__detail/__any.hpp)
         container:
-            image: nvcr.io/nvidia/nvhpc:26.5-devel-cuda13.2-ubuntu24.04
+            image: nvcr.io/nvidia/nvhpc:26.1-devel-cuda13.1-ubuntu24.04
         steps:
             - uses: actions/checkout@v7
               with:
