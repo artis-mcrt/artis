@@ -212,7 +212,11 @@ DEVICE_FUNC inline auto get_nphixstargets(const int element, const int ion, cons
     } else if (nu == nu_edge) {
       sigma_bf = photoion_xs[0];
     } else if (nu < nu_edge * (1 + (globals::NPHIXSNUINCREMENT * globals::NPHIXSPOINTS))) {
-      const int i = static_cast<int>((nu - nu_edge) / (globals::NPHIXSNUINCREMENT * nu_edge));
+      // the range guard above and the index below are computed with different floating-point
+      // expressions, so for nu just under the bound the division can round up to exactly
+      // NPHIXSPOINTS. Clamp so that the read stays inside this level's table
+      const int i = std::min(static_cast<int>((nu - nu_edge) / (globals::NPHIXSNUINCREMENT * nu_edge)),
+                             globals::NPHIXSPOINTS - 1);
       sigma_bf = photoion_xs[i];
     } else {
       // use a parameterization of sigma_bf by the Kramers formula
@@ -517,6 +521,12 @@ inline void update_includedionslevels_maxnions() {
   const auto uniquelevelindex = get_uniquelevelindex(element, ion, level);
   const int phixstargetindex = get_phixstargetindex(uniquelevelindex, upperionlevel);
   return -1 - globals::alllevels.bflist_start[uniquelevelindex] - phixstargetindex;
+}
+
+// Inverse of get_emtype_continuum(): decode a (negative) bound-free continuum emission type into its index into
+// globals::bflist. Only valid for emission types below the ABSTYPE/EMTYPE special values, i.e. actual continua.
+[[nodiscard]] constexpr auto get_bflistindex_from_emtype_continuum(const int emissiontype) -> int {
+  return -1 - emissiontype;
 }
 
 // Return the photionisation threshold energy [erg]

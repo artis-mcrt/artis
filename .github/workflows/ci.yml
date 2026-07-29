@@ -279,6 +279,59 @@ jobs:
                   name: test-${{ matrix.testname }}-output-pdf
                   path: tests/*.pdf
 
+    # Runs one small model with OpenMP threading to exercise the mutex/atomic code paths that the
+    # single-threaded checksum tests never enter. No checksum comparison: multithreaded runs are not
+    # reproducible (worker threads have independently seeded generators and race on shared estimators).
+    openmp_smoke:
+        runs-on: ubuntu-26.04-arm
+        timeout-minutes: ${{ inputs.testmode == 'ON' && 360 || 40 }}
+        name: kilonova_1d_openmp_norun_checksums
+        env:
+            OMPI_MCA_memory: ${{ inputs.testmode == 'ON' && '^patcher' || '' }}
+        steps:
+            - uses: actions/checkout@v7
+              with:
+                  fetch-depth: 0
+
+            - name: Install Open MPI and set compiler to g++-15
+              run: |
+                  echo "CXX=g++-15" >> $GITHUB_ENV
+                  echo "OMPI_CXX=g++-15" >> $GITHUB_ENV
+                  sudo apt-get update
+                  sudo apt-get install -y openmpi-bin libopenmpi-dev
+
+            - name: Cache test atomic data
+              uses: actions/cache@v6
+              id: cache-testatomicdata
+              with:
+                  path: tests/atomicdata_feconi.tar.xz
+                  key: tests/atomicdata_feconi.tar.xz
+
+            - name: Download/extract test data
+              working-directory: tests/
+              run: |
+                  source ./setup_kilonova_1d.sh
+
+            - name: Compile
+              run: |
+                  cp tests/kilonova_1d_testrun/artisoptions.h .
+                  make OPENMP=ON TESTMODE=${{ inputs.testmode }} MAX_NODE_SIZE=2 FASTMATH=OFF -j$(nproc) sn3d exspec
+                  cp sn3d exspec tests/kilonova_1d_testrun/
+
+            - name: Run test job0 with OpenMP threads
+              working-directory: tests/kilonova_1d_testrun/
+              env:
+                  OMP_NUM_THREADS: 2
+              run: |
+                  cp input-newrun.txt input.txt
+                  touch output_0-0.txt
+                  time mpirun -np 2 --oversubscribe --mca osc ^ucx --mca mpi_yield_when_idle 1 ./sn3d
+
+            - name: cat output log
+              if: always()
+              working-directory: tests/kilonova_1d_testrun/
+              run: cat output_0-0.txt
+
     combine_checksums:
         needs: testmodels
         if: always() && inputs.testmode != 'ON'

@@ -88,6 +88,11 @@ std::vector<std::vector<Jb_lu_estimator>> Jb_lu_raw{};  // unnormalised estimato
 MPI_shared_array<float> prev_bfrate_normed{};  // values from the previous timestep
 std::vector<double> bfrate_raw;  // unnormalised estimators for the current timestep
 
+// for DETAILED_BF_ESTIMATORS_ON: maps an index into the allphixstargets arrays (the
+// element/ion/level/phixstargetindex ordering) to the same continuum's index in the nu_edge-sorted
+// globals::allcont arrays. Built in init() as the inverse of the sort permutation from setup_phixs_list().
+MPI_shared_array<int> allcontindex_of_allphixstargetindex{};
+
 // J and nuJ are accumulated and then normalised in-place
 // i.e. be sure the normalisation has been applied (exactly once) before using the values here!
 
@@ -147,6 +152,12 @@ constexpr auto select_bin(const double nu) -> int {
 
   return binindex;
 }
+
+static_assert(get_bin_nu_lower(1) == get_bin_nu_upper(0));  // bins are contiguous
+static_assert(select_bin(RADFIELDBINS_NU_MIN / 2) == -2);  // below the lowest bin
+static_assert(select_bin(RADFIELDBINS_NU_MIN) == 0);  // bins are left-closed
+static_assert(select_bin(RADFIELDBINS_NU_MAX) == RADFIELDBINCOUNT - 1);  // start of the T_e superbin
+static_assert(select_bin(RADFIELDBINS_T_E_SUPERBIN_NU_MAX) == -1);  // at and above the superbin upper bound
 
 // associate a Jb_lu estimator with a particular lineindex to be used instead of the general radiation field model
 void add_detailed_line(const int lineindex) {
@@ -277,35 +288,6 @@ auto partial_nu_planck_integral_x_to_inf(const double x, const double epsrel) ->
     }
   }
   return sum;
-}
-
-// Computes the integral of the Planck function (or nu times the Planck function) between frequency nu=nu_low to
-// nu=nu_high. Units are ergs/s/sr/cm2 for the integral of the Planck function, and ergs/s2/sr/cm2 for the integral of
-// nu times the Planck function.
-auto calculate_planck_integral(double temperature, double nu_low, double nu_high, const bool times_nu) -> double {
-  if (temperature <= 0) {
-    return 0.0;
-  }
-
-  constexpr double epsrel = 1e-15;  // relative error for convergence of the series expansion
-
-  // integration variable x = H * nu / (KB * T_R)
-  const double x_low = (H * nu_low) / (KB * temperature);
-  const double x_high = (H * nu_high) / (KB * temperature);
-
-  if (times_nu) {
-    const double constant_factor = (2.0 * pow5(KB) * pow5(temperature)) / (pow4(H) * pow2(CLIGHT));
-    const auto low_to_inf = partial_nu_planck_integral_x_to_inf(x_low, epsrel);
-    const auto high_to_inf = partial_nu_planck_integral_x_to_inf(x_high, epsrel);
-
-    return constant_factor * (low_to_inf - high_to_inf);
-  }
-
-  const double constant_factor = (2.0 * pow4(KB) * pow4(temperature)) / (pow3(H) * pow2(CLIGHT));
-  const auto low_to_inf = partial_planck_integral_x_to_inf(x_low, epsrel);
-  const auto high_to_inf = partial_planck_integral_x_to_inf(x_high, epsrel);
-
-  return constant_factor * (low_to_inf - high_to_inf);
 }
 
 // Calculate the intensity-weighted mean frequency without allowing the common Wien-tail exponential to underflow.
@@ -450,21 +432,11 @@ void set_params_fullspec(const int nonemptymgi, const int timestep) {
 }
 
 auto get_allcontindex(const int element, const int lowerion, const int lower, const int phixstargetindex) -> int {
-  // simple linear search seems to be faster than the binary search
-  // possibly because lower frequency transitions near start of list are more likely to be called?
-  int bfcontindex = 0;
-  for (; bfcontindex < globals::nbfcontinua; bfcontindex++) {
-    if ((globals::allcont.element[bfcontindex] == element) && (globals::allcont.ion[bfcontindex] == lowerion) &&
-        (globals::allcont.level[bfcontindex] == lower) &&
-        (globals::allcont.phixstargetindex[bfcontindex] == phixstargetindex)) {
-      break;
-    }
-  }
-  if (bfcontindex < globals::nbfcontinua) {
-    return bfcontindex;
-  }
-  // not found in the continua list
-  return -1;
+  // direct lookup via the precomputed inverse of the nu_edge sort permutation (built in init())
+  assert_testmodeonly(!allcontindex_of_allphixstargetindex.empty());
+  const auto allphixstargetindex =
+      get_allphixstargetindex(get_uniquelevelindex(element, lowerion, lower), phixstargetindex);
+  return allcontindex_of_allphixstargetindex[allphixstargetindex];
 }
 
 void write_to_file(const int nonemptymgi, const int timestep) {
@@ -520,6 +492,36 @@ void write_to_file(const int nonemptymgi, const int timestep) {
 }
 
 }  // anonymous namespace
+
+// Computes the integral of the Planck function (or nu times the Planck function) between frequency nu=nu_low to
+// nu=nu_high. Units are ergs/s/sr/cm2 for the integral of the Planck function, and ergs/s2/sr/cm2 for the integral of
+// nu times the Planck function.
+auto calculate_planck_integral(const double temperature, const double nu_low, const double nu_high, const bool times_nu)
+    -> double {
+  if (temperature <= 0) {
+    return 0.0;
+  }
+
+  constexpr double epsrel = 1e-15;  // relative error for convergence of the series expansion
+
+  // integration variable x = H * nu / (KB * T_R)
+  const double x_low = (H * nu_low) / (KB * temperature);
+  const double x_high = (H * nu_high) / (KB * temperature);
+
+  if (times_nu) {
+    const double constant_factor = (2.0 * pow5(KB) * pow5(temperature)) / (pow4(H) * pow2(CLIGHT));
+    const auto low_to_inf = partial_nu_planck_integral_x_to_inf(x_low, epsrel);
+    const auto high_to_inf = partial_nu_planck_integral_x_to_inf(x_high, epsrel);
+
+    return constant_factor * (low_to_inf - high_to_inf);
+  }
+
+  const double constant_factor = (2.0 * pow4(KB) * pow4(temperature)) / (pow3(H) * pow2(CLIGHT));
+  const auto low_to_inf = partial_planck_integral_x_to_inf(x_low, epsrel);
+  const auto high_to_inf = partial_planck_integral_x_to_inf(x_high, epsrel);
+
+  return constant_factor * (low_to_inf - high_to_inf);
+}
 
 void init() {
   // this should be called only after the atomic data is in memory
@@ -609,6 +611,21 @@ void init() {
   }
 
   if constexpr (DETAILED_BF_ESTIMATORS_ON) {
+    if (globals::nbfcontinua > 0) {
+      // build the O(1) lookup used by get_allcontindex(): for each continuum in the nu_edge-sorted
+      // allcont list, record its position under the allphixstargets (element/ion/level/target) ordering
+      auto temp_allcontindex = MPI_shared_array<int>(globals::nbfcontinua, -1);
+      if (globals::rank_in_node == 0) {
+        for (int allcontindex = 0; allcontindex < globals::nbfcontinua; allcontindex++) {
+          const auto allphixstargetindex = get_allphixstargetindex(globals::allcont.uniquelevelindex[allcontindex],
+                                                                   globals::allcont.phixstargetindex[allcontindex]);
+          temp_allcontindex[allphixstargetindex] = allcontindex;
+        }
+      }
+      MPI_Barrier_node();
+      allcontindex_of_allphixstargetindex = std::move(temp_allcontindex);
+    }
+
     const auto bfestimcount = std::ssize(globals::bfestim_nu_edge);
     prev_bfrate_normed = MPI_shared_array<float>(nonempty_npts_model * bfestimcount);
     if (globals::rank_in_node == 0) {

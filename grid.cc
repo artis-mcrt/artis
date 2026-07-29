@@ -2481,39 +2481,59 @@ DEVICE_FUNC void snap_pos_to_cell(Vec3d& pos, const double time, const int celli
     // r_cyl component of velocity
     const double xyspeed = dirxylen * CLIGHT_PROP;
 
-    // make a normalised 2D direction vector in the xy plane
-    const std::array<double, 2> dirnoz = {dir[0] / dirxylen, dir[1] / dirxylen};
+    if (dirxylen > 0.) {
+      // make a normalised 2D direction vector in the xy plane
+      const std::array<double, 2> dirnoz = {dir[0] / dirxylen, dir[1] / dirxylen};
 
-    const double r_outer = cellcoordmax[0] * tstart / globals::tmin;
-    const double d_rcyl_coordmaxboundary =
-        is_boundary_overshoot_within_tolerance<BoundaryType::UPPER>(pktposgridcoord[0], pktvelgridcoord[0],
-                                                                    cellcoordmax[0], tstart)
-            ? 0.
-            : expanding_shell_intersection<BoundaryType::UPPER>(posnoz, dirnoz, xyspeed, r_outer, tstart);
-    if (d_rcyl_coordmaxboundary >= 0.) {
-      // how far did the packet travel in the z direction during this time?
-      const double d_z_coordmaxboundary = d_rcyl_coordmaxboundary / xyspeed * dir[2] * CLIGHT_PROP;
-      // distance from two perpendicular components to the r_cyl upper boundary
-      const double d_coordmaxboundary_rcyl = std::sqrt(pow2(d_rcyl_coordmaxboundary) + pow2(d_z_coordmaxboundary));
-      if ((d_coordmaxboundary_rcyl >= 0.) && (d_coordmaxboundary_rcyl < distance)) {
-        distance = d_coordmaxboundary_rcyl;
-        next_cellindex = (cellcoordidx[0] == (ncoordgrid[0] - 1)) ? -99 : cellindex + get_coordcellindexstride(0);
-      }
-    }
-
-    const double r_inner = cellcoordmin[0] * tstart / globals::tmin;
-    // don't try to calculate the intersection if the inner radius is zero
-    if (r_inner > 0) {
-      // calculate the distance in the xy plane to the inner boundary
-      const double d_rcyl_coordminboundary =
-          is_boundary_overshoot_within_tolerance<BoundaryType::LOWER>(pktposgridcoord[0], pktvelgridcoord[0],
-                                                                      cellcoordmin[0], tstart)
+      const double r_outer = cellcoordmax[0] * tstart / globals::tmin;
+      const double d_rcyl_coordmaxboundary =
+          is_boundary_overshoot_within_tolerance<BoundaryType::UPPER>(pktposgridcoord[0], pktvelgridcoord[0],
+                                                                      cellcoordmax[0], tstart)
               ? 0.
-              : expanding_shell_intersection<BoundaryType::LOWER>(posnoz, dirnoz, xyspeed, r_inner, tstart);
-      if (d_rcyl_coordminboundary >= 0.) {
-        const double d_z_coordminboundary = d_rcyl_coordminboundary / xyspeed * dir[2] * CLIGHT_PROP;
-        // distance from two perpendicular components to the r_cyl lower boundary
-        const double d_coordminboundary_rcyl = std::sqrt(pow2(d_rcyl_coordminboundary) + pow2(d_z_coordminboundary));
+              : expanding_shell_intersection<BoundaryType::UPPER>(posnoz, dirnoz, xyspeed, r_outer, tstart);
+      if (d_rcyl_coordmaxboundary >= 0.) {
+        // how far did the packet travel in the z direction during this time?
+        const double d_z_coordmaxboundary = d_rcyl_coordmaxboundary / xyspeed * dir[2] * CLIGHT_PROP;
+        // distance from two perpendicular components to the r_cyl upper boundary
+        const double d_coordmaxboundary_rcyl = std::sqrt(pow2(d_rcyl_coordmaxboundary) + pow2(d_z_coordmaxboundary));
+        if ((d_coordmaxboundary_rcyl >= 0.) && (d_coordmaxboundary_rcyl < distance)) {
+          distance = d_coordmaxboundary_rcyl;
+          next_cellindex = (cellcoordidx[0] == (ncoordgrid[0] - 1)) ? -99 : cellindex + get_coordcellindexstride(0);
+        }
+      }
+
+      const double r_inner = cellcoordmin[0] * tstart / globals::tmin;
+      // don't try to calculate the intersection if the inner radius is zero
+      if (r_inner > 0) {
+        // calculate the distance in the xy plane to the inner boundary
+        const double d_rcyl_coordminboundary =
+            is_boundary_overshoot_within_tolerance<BoundaryType::LOWER>(pktposgridcoord[0], pktvelgridcoord[0],
+                                                                        cellcoordmin[0], tstart)
+                ? 0.
+                : expanding_shell_intersection<BoundaryType::LOWER>(posnoz, dirnoz, xyspeed, r_inner, tstart);
+        if (d_rcyl_coordminboundary >= 0.) {
+          const double d_z_coordminboundary = d_rcyl_coordminboundary / xyspeed * dir[2] * CLIGHT_PROP;
+          // distance from two perpendicular components to the r_cyl lower boundary
+          const double d_coordminboundary_rcyl = std::sqrt(pow2(d_rcyl_coordminboundary) + pow2(d_z_coordminboundary));
+          if ((d_coordminboundary_rcyl >= 0.) && (d_coordminboundary_rcyl < distance)) {
+            distance = d_coordminboundary_rcyl;
+            next_cellindex = (cellcoordidx[0] == 0) ? -99 : cellindex - get_coordcellindexstride(0);
+          }
+        }
+      }
+    } else {
+      // The packet is moving exactly along the z axis (reachable when the comoving emission direction
+      // is sampled at exactly costheta = +/-1 and the local velocity is parallel to z), so the
+      // general-direction code above would divide by zero. The packet's cylindrical radius stays
+      // constant while the grid expands: the receding outer r_cyl boundary can never be crossed, and
+      // the expanding inner boundary catches up to the packet at t_cross = rcyl / (rcyl_inner_tmin / tmin)
+      const double rcyl_inner_tmin = cellcoordmin[0];
+      if (rcyl_inner_tmin > 0.) {
+        const double d_coordminboundary_rcyl =
+            is_boundary_overshoot_within_tolerance<BoundaryType::LOWER>(pktposgridcoord[0], pktvelgridcoord[0],
+                                                                        cellcoordmin[0], tstart)
+                ? 0.
+                : ((pktposgridcoord[0] * globals::tmin / rcyl_inner_tmin) - tstart) * CLIGHT_PROP;
         if ((d_coordminboundary_rcyl >= 0.) && (d_coordminboundary_rcyl < distance)) {
           distance = d_coordminboundary_rcyl;
           next_cellindex = (cellcoordidx[0] == 0) ? -99 : cellindex - get_coordcellindexstride(0);

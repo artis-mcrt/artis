@@ -4,6 +4,7 @@
 #include "packet.h"
 
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
@@ -16,6 +17,7 @@
 #include <span>
 #include <sstream>
 #include <string>
+#include <thread>
 #include <utility>
 #include <vector>
 
@@ -264,6 +266,11 @@ void write_temp_packetsfile(const int timestep, const int my_rank, const std::sp
     if (tries > 10) {
       printlnlog("[error] Failed to write {} after {} tries. Aborting.", filename, tries);
       std::abort();
+    }
+    if (tries > 0) {
+      // give transient filesystem problems (e.g. contention on a cluster parallel filesystem) a
+      // chance to clear instead of burning through all of the retries within milliseconds
+      std::this_thread::sleep_for(std::chrono::seconds(5));
     }
     printlog("timestep {}: writing {}...", timestep, filename);
     FILE* packets_file = fopen(filename.c_str(), "wb");

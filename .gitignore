@@ -5,6 +5,7 @@ version*.h
 *.d
 sn3d
 exspec
+unittests
 tags
 browse.VC.db
 *.optrpt

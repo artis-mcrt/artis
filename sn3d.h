@@ -8,6 +8,7 @@
 #include <unistd.h>
 
 #include <algorithm>
+#include <array>
 #include <cassert>
 #include <cmath>
 #include <csignal>
@@ -101,6 +102,12 @@ template <typename Range, typename Value>
   return static_cast<int>(index_lowerbound(cumulative_values, target));
 }
 
+static_assert(index_upperbound(std::array{1., 2., 2., 3.}, 2.) == 3);  // skips over repeated (zero-weight) entries
+static_assert(index_upperbound(std::array{1., 2., 2., 3.}, 0.5) == 0);
+static_assert(index_upperbound(std::array{1., 2., 2., 3.}, 3.) == 4);  // target >= all values gives the past-end index
+static_assert(index_lowerbound(std::array{1., 2., 2., 3.}, 2.) == 1);
+static_assert(index_lowerbound(std::array{1., 2., 2., 3.}, 4.) == 4);
+
 // Signed bin index of value on a grid spaced uniformly by binwidth, where bin 0 starts at minvalue.
 // Values below minvalue give negative indices and values past the last bin give indices >= nbins, so
 // the caller must range-check the result. Flooring matters here: a plain int cast would truncate toward
@@ -127,6 +134,13 @@ static_assert(get_linearbinindex(-5., 1., 2.) == -3);
 [[nodiscard]] inline auto get_logbinindex(const double value, const double minvalue, const double dlog,
                                           const ptrdiff_t nbins) -> ptrdiff_t {
   return std::clamp(static_cast<ptrdiff_t>(std::floor((std::log(value) - std::log(minvalue)) / dlog)), 0Z, nbins - 1);
+}
+
+// Edge value of a log-uniformly spaced grid whose bin 0 starts at minvalue with logarithmic spacing
+// dlog, i.e. bin i spans [get_loggrid_edge(minvalue, dlog, i), get_loggrid_edge(minvalue, dlog, i + 1)).
+// Inverse of get_logbinindex().
+[[nodiscard]] inline auto get_loggrid_edge(const double minvalue, const double dlog, const double index) -> double {
+  return std::exp(std::log(minvalue) + (index * dlog));
 }
 
 #endif  // SN3D_H

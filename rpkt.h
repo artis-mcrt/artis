@@ -5,6 +5,7 @@
 #define RPKT_H
 
 #include <algorithm>
+#include <array>
 #include <cstddef>
 #include <functional>
 #include <memory>
@@ -37,6 +38,10 @@ constexpr auto get_expopac_bin_nu_lower(const ptrdiff_t binindex) -> double {
   const auto lambda_upper = expopac_lambdamin + (binindexplusone_f64 * expopac_deltalambda);
   return 1e8 * CLIGHT / lambda_upper;
 }
+
+static_assert(get_expopac_bin_nu_lower(0) == get_expopac_bin_nu_upper(1));  // bins are contiguous
+static_assert(get_expopac_bin_nu_lower(0) < get_expopac_bin_nu_upper(0));
+static_assert(get_expopac_bin_nu_upper(expopac_nbins - 1) > get_expopac_bin_nu_lower(expopac_nbins - 1));
 
 // kappa in cm^2/g for each bin of each non-empty cell
 inline MPI_shared_array<float> expansionopacities{};
@@ -133,6 +138,10 @@ auto calculate_chi_ffheat_nnionpart(int nonemptymgi) -> double;
   return CLIGHT * prop_time * delta_nu / nu_trans;
 }
 
+static_assert(get_linedistance(100., 1., 2., -0.5) == 0.);  // overshot the line resonance
+static_assert(USE_RELATIVISTIC_DOPPLER_SHIFT || get_linedistance(2., 4., 2., -1.) == (CLIGHT * 2. * 2. / 2.));
+static_assert(!USE_RELATIVISTIC_DOPPLER_SHIFT || get_linedistance(2., 4., 2., -1.) == 2.);
+
 // find the next transition lineindex redder than nu_cmf
 // for the propagation through non empty cells
 // return -1 if no transition can be reached
@@ -169,6 +178,15 @@ auto calculate_chi_ffheat_nnionpart(int nonemptymgi) -> double;
 
   return matchindex;
 }
+
+// the linelist is sorted by descending frequency
+inline constexpr std::array<double, 4> test_closest_transition_linelist_nu{9., 7., 5., 3.};
+static_assert(closest_transition(10., -1, test_closest_transition_linelist_nu) == 0);  // bluer than the whole list
+static_assert(closest_transition(8., -1, test_closest_transition_linelist_nu) == 1);  // binary search case
+static_assert(closest_transition(5., -1, test_closest_transition_linelist_nu) == 2);  // exact frequency match
+static_assert(closest_transition(2., -1, test_closest_transition_linelist_nu) == -1);  // redder than the whole list
+static_assert(closest_transition(8., 2, test_closest_transition_linelist_nu) == 2);  // known next transition
+static_assert(closest_transition(8., 4, test_closest_transition_linelist_nu) == -1);  // no more line interactions
 
 [[gnu::pure]] [[nodiscard]] inline auto keep_this_cont(int element, const int ion, const int level,
                                                        const int nonemptymgi, const float nnetot) -> bool {

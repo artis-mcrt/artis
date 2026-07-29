@@ -57,11 +57,17 @@ The build uses `-Werror` with extensive warnings — new warnings break CI.
 
 ## Testing
 
-There are no unit tests. Testing is done through end-to-end regression runs
+Unit tests for the pure numeric helpers live in `unittests.cc` (built with
+`make unittests`, run as `./unittests`; CI runs them for the classic and nebular
+presets), and compile-time checks of the `constexpr` helpers are `static_assert`s
+next to their definitions. The main coverage is end-to-end regression runs
 (`.github/workflows/ci.yml`): each test in `tests/` runs a small model with
 `REPRODUCIBLE=ON FASTMATH=OFF MAX_NODE_SIZE=2` and compares `md5sum` checksums of
-the output files against `tests/<testname>_inputfiles/results_md5_*.txt`. To run
-one locally (downloads atomic data on first use):
+the output files against `tests/<testname>_inputfiles/results_md5_*.txt` (all
+`*.out` files are checksummed; `output_*.txt` logs are not). A separate CI job
+runs one model with `OPENMP=ON` and no checksum comparison to exercise the
+threaded code paths. To run a regression test locally (downloads atomic data on
+first use):
 
 ```sh
 cd tests
