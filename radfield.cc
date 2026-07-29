@@ -16,6 +16,7 @@
 #include <iterator>
 #include <print>
 #include <span>
+#include <utility>
 #include <vector>
 
 #pragma clang unsafe_buffer_usage begin
