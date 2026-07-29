@@ -368,9 +368,11 @@ void test_phixs_table_lookup() {
     // the tabulated range from below (the last few representable values fall in the final table cell)
     bool tail_reads_in_table = true;
     const double nu_out_bound = nu_edge * (1 + (globals::NPHIXSNUINCREMENT * globals::NPHIXSPOINTS));
-    for (double nu = nu_out_bound * (1. - 1e-13); nu < nu_out_bound; nu = std::nextafter(nu, nu_out_bound)) {
+    double nu = nu_out_bound * (1. - 1e-13);
+    while (nu < nu_out_bound) {
       const auto sigma = photoionisation_crosssection_fromtable(photoion_xs, nu_edge, nu);
       tail_reads_in_table = tail_reads_in_table && (std::ranges::find(photoion_xs, sigma) != photoion_xs.end());
+      nu = std::nextafter(nu, nu_out_bound);
     }
     check(tail_reads_in_table, "classic mode reads within the table for every nu below the tabulated range's end");
   } else {
