@@ -150,14 +150,13 @@ void test_vector_geometry() {
   // moving a packet must preserve the frame-invariant ratio e_cmf / nu_cmf = e_rf / nu_rf
   // (an outward-moving packet, so that the monotonic-nu_cmf clamp in move_pkt_withtime stays inactive)
   auto pos = vec_scale(dir_rf, 2.0e14);
-  auto dir = dir_rf;
   double t_current = 10. * DAY;
   const double nu_rf = 3e15;
   const double e_rf = 4e-12;
-  const double dopplerfactor = calculate_doppler_nucmf_on_nurf(pos, dir, t_current);
+  const double dopplerfactor = calculate_doppler_nucmf_on_nurf(pos, dir_rf, t_current);
   double nu_cmf = nu_rf * dopplerfactor;
   double e_cmf = e_rf * dopplerfactor;
-  move_pkt_withtime(pos, dir, t_current, nu_rf, nu_cmf, e_rf, e_cmf, 3.0e13);
+  move_pkt_withtime(pos, dir_rf, t_current, nu_rf, nu_cmf, e_rf, e_cmf, 3.0e13);
   check_close(e_cmf / nu_cmf, e_rf / nu_rf, 1e-12, "move_pkt_withtime preserves e_cmf / nu_cmf = e_rf / nu_rf");
 }
 
@@ -291,8 +290,8 @@ void test_compton() {
   // sigma_T
   const auto sigma_kleinnishina_total = [](const double x) -> double {
     return 0.75 * SIGMA_T *
-           ((((1. + x) / pow3(x)) * (((2. * x * (1. + x)) / (1. + (2. * x))) - std::log(1. + (2. * x)))) +
-            (std::log(1. + (2. * x)) / (2. * x)) - ((1. + (3. * x)) / pow2(1. + (2. * x))));
+           ((((1. + x) / pow3(x)) * (((2. * x * (1. + x)) / (1. + (2. * x))) - std::log1p(2. * x))) +
+            (std::log1p(2. * x) / (2. * x)) - ((1. + (3. * x)) / pow2(1. + (2. * x))));
   };
 
   bool total_matches = true;
@@ -357,10 +356,11 @@ void test_phixs_table_lookup() {
 
   check(photoionisation_crosssection_fromtable(photoion_xs, nu_edge, nu_edge * 0.99) == 0.,
         "cross section is zero below the threshold");
-  check(photoionisation_crosssection_fromtable(photoion_xs, nu_edge, nu_edge) == photoion_xs[0],
-        "cross section at the threshold is the first table point");
 
   if constexpr (PHIXS_CLASSIC_NO_INTERPOLATION) {
+    // classic mode compares nu == nu_edge directly, so the threshold value is exact in every build
+    check(photoionisation_crosssection_fromtable(photoion_xs, nu_edge, nu_edge) == photoion_xs[0],
+          "classic mode cross section at the threshold is the first table point");
     check(photoionisation_crosssection_fromtable(photoion_xs, nu_edge, nu_edge * (1. + 0.25)) == photoion_xs[2],
           "classic mode truncates to the nearest lower table point");
     // regression test for the former out-of-bounds read: scan frequencies approaching the upper limit of
@@ -373,6 +373,10 @@ void test_phixs_table_lookup() {
     }
     check(tail_reads_in_table, "classic mode reads within the table for every nu below the tabulated range's end");
   } else {
+    // probe just above the threshold rather than exactly at it: the fast-math production builds can
+    // round the interpolation index at exactly nu_edge to either side of zero
+    check_close(photoionisation_crosssection_fromtable(photoion_xs, nu_edge, nu_edge * (1. + 1e-9)), photoion_xs[0],
+                1e-6, "cross section just above the threshold is the first table point");
     check_close(photoionisation_crosssection_fromtable(photoion_xs, nu_edge, nu_edge * (1. + 0.05)),
                 0.5 * (photoion_xs[0] + photoion_xs[1]), 1e-6, "cross section is interpolated between table points");
   }
