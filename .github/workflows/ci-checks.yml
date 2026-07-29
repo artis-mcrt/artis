@@ -347,7 +347,8 @@ jobs:
                   apt-get install -y --no-install-recommends software-properties-common
                   add-apt-repository -y ppa:ubuntu-toolchain-r/test
                   apt-get update
-                  apt-get install -y --no-install-recommends gcc-14 g++-14
+                  # gfortran-14 completes the toolchain that nvc++ validates when passed --gcc-toolchain
+                  apt-get install -y --no-install-recommends gcc-14 g++-14 gfortran-14
                   update-alternatives \
                        --install /usr/bin/gcc gcc /usr/bin/gcc-14 100 \
                        --slave /usr/bin/g++ g++ /usr/bin/g++-14
