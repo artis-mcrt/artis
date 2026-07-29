@@ -105,7 +105,11 @@ THREADLOCALONHOST CellWarningMarker ionfract_zeroed_warned;
   assert_always((Gamma_ion + gamma_nt) > 0);
   // numerator: recombination rate coefficient, i.e. rate per upper ion pop per nne [cm^3/s]
   // denominator: ionisation rate per lower ion pop [1/s]
-  const double phi = (Alpha_sp + Col_rec) / (Gamma_ion + gamma_nt);
+  // With microclumping, recombining ions see the in-clump electron density (clumpfactor * nne), while phi is
+  // later multiplied by the volume-mean nne, so the clumping factor is applied here. This also gives collisional
+  // (three-body) recombination its full clumpfactor^2, since calculate_ionrecombcoeff() divides its
+  // clumpednne^2-scaled rate by clumpednne, leaving one factor of clumpfactor in Col_rec.
+  const double phi = grid::get_clumpfactor(nonemptymgi) * (Alpha_sp + Col_rec) / (Gamma_ion + gamma_nt);
   assert_always(phi > 0.);
 
   return phi;

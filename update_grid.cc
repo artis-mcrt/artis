@@ -366,8 +366,7 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
 
   // Update clumping factors
   if constexpr (USE_MICROCLUMPING) {
-    const double rad_vel =
-        grid::get_modelcell_mean_radial_pos_tmin(grid::get_mgi_of_nonemptymgi(nonemptymgi)) / globals::tmin;
+    const double rad_vel = grid::get_modelcell_mean_radial_pos_tmin(mgi) / globals::tmin;
     const float clumpfactor = clumping_factor(tmid, rad_vel);
 
     grid::set_clumpfactor(nonemptymgi, clumpfactor);
