@@ -261,9 +261,14 @@ constexpr std::optional<double> GAMMA_USE_KAPPA_GREY;
 
 // Use microclumping, which enhances collisional (de)excitation, collisional ionisation, collisional recombination,
 // radiative recombination, collisional capture, stimulated recombination, free-free heating, free-free cooling by the clumping factor
+// (including in the photoionisation-equilibrium ionisation balance for elements without NLTE levels; the Saha LTE
+// ion balance is unaffected). Note: with USE_LUT_PHOTOION, the stimulated recombination correction inside the
+// tabulated photoionisation coefficients cannot include the per-cell clumping factor; the enhancement applies to the
+// direct bound-free integrals and the packet opacity departure ratios.
 constexpr bool USE_MICROCLUMPING;
 
 // Calculate clumping factors based on time and radial velocity
-// Will be passed globals::timesteps[nts].mid and grid::get_modelcell_mean_radial_vel(mgi, globals::tmin)
+// Will be passed globals::timesteps[nts].mid and the cell's mean radial velocity
+// (grid::get_modelcell_mean_radial_pos_tmin(mgi) / globals::tmin) [cm/s]
 constexpr float clumping_factor([[maybe_unused]] double tmid, [[maybe_unused]] double rad_vel) { return 1.; }
 ```
