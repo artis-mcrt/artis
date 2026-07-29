@@ -15,7 +15,7 @@ def get_type_escapetype(line: str, type_id_index: int, escape_type_id_index: int
 
 def main() -> None:
     assert sys.version_info >= (3, 14), "This script requires Python 3.14 or higher."
-    import compression
+    import compression.zstd
 
     parser = argparse.ArgumentParser(description="Filter packets files to keep only escaped rpkts")
     parser.add_argument("--rm", action="store_true", help="Remove original files after processing")
