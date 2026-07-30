@@ -287,16 +287,24 @@ void test_bateman() {
   // so for a single decay into a stable sink it is the closed form of
   // integral_0^t lambda N_0 exp(-lambda t') (t'/t) dt'. It is positive for every lambda*t > 0:
   // adiabatic losses cannot remove more energy than the decay released.
-  for (const double t_expansion : {1e-9 / lambda_a, 0.5 / lambda_a, 30. * DAY, 1e4 / lambda_a}) {
-    const double x = lambda_a * t_expansion;
+  for (const double x : {0.5, 3.4, 1e4}) {
     const double weighted_decaycount = (-std::expm1(-x) / x) - std::exp(-x);
-    check_close(decay::calculate_decaychain(initabund, std::array{lambda_a, 0.}, t_expansion, true),
+    check_close(decay::calculate_decaychain(initabund, std::array{lambda_a, 0.}, x / lambda_a, true),
                 initabund * weighted_decaycount, 1e-12,
                 "expansion factor is the energy-weighted decay count of a chain into a stable sink");
   }
 
-  // and it stays finite and non-negative at the endpoints, where the naive
-  // (1 + 1/x) exp(-x) - 1/x form loses all precision below x ~ 1e-8 and divides by zero at x = 0
+  // Below x of about 1e-3 the closed form is itself a difference of two quantities near one and
+  // loses accuracy as epsilon/x, so compare against its series x/2 - x^2/3 instead. What matters
+  // here is that the value is there at all: the (1 + 1/x) exp(-x) - 1/x form this replaced was 0.6%
+  // wrong at x = 1e-7 and underflowed to exactly zero below about 1e-8, which silently cost every
+  // long-lived nuclide its contribution to the initial temperature.
+  for (const double x : {1e-9, 1e-7, 1e-5}) {
+    check_close(decay::calculate_decaychain(initabund, std::array{lambda_a, 0.}, x / lambda_a, true),
+                initabund * ((x / 2.) - (x * x / 3.)), 1e-5, "expansion factor at small lambda*timediff");
+  }
+
+  // and it is finite at the endpoint, where both forms divide by x
   check_close(decay::calculate_decaychain(initabund, std::array{lambda_a, 0.}, 0., true), 0., 1e-12,
               "expansion factor is zero when no time has elapsed");
 }
