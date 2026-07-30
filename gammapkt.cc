@@ -491,13 +491,13 @@ void compton_scatter(Packet& pkt) {
 // Sutherland (1988), attributed to Hubbell (1969). Multiply by Z^2 * 1e-27 for a cross section in
 // cm^2. Only valid above the 1.022 MeV threshold.
 [[nodiscard]] constexpr auto get_sigma_pair_prod_factor(const double nu_cmf) -> double {
-  const double hnu_over_mev = nu_cmf / nu_1mev;
+  const double hnu_over_1MeV = nu_cmf / nu_1mev;
   if (nu_cmf > nu_1p5mev) {
-    return 0.0481 + (0.301 * (hnu_over_mev - 1.5));
+    return 0.0481 + (0.301 * (hnu_over_1MeV - 1.5));
   }
   // the coefficient below 1.5 MeV is 0.10063, not the 1.0063 printed in the paper: the latter makes
   // the fit jump by a factor of ten at the junction between the two branches
-  return 0.10063 * (hnu_over_mev - 1.022);
+  return 0.10063 * (hnu_over_1MeV - 1.022);
 }
 
 // the two branches of the fit must agree where they meet at 1.5 MeV
