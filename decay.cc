@@ -77,11 +77,12 @@ struct Nuclide {
       0., 0., 0., 0., 0., 0.,
   };  // branch probability of each decay type
 
-  // (Z, A, probability) of fission daughters
+  // (Z, A, probability) of fission daughters, where the probability is the expected number of these
+  // daughter nuclei produced per fission
   std::vector<DecayDaughter> fission_daughters_z_a_prob{};  // NOLINT(readability-redundant-member-init)
 
-  // sum of daughter probabilities for all decay types
-  // default to 1.0 for the single-daughter decays and replace for fission
+  // sum of the daughter probabilities, i.e. the expected number of daughter nuclei per decay.
+  // One for the single-daughter decays, and two for the binary fission of the tabulated nuclides
   double decay_daughters_probsum{1.};
 };
 
@@ -947,16 +948,23 @@ void read_fissionproduct_data() {
       if (keep_table) {
         int daughter_a = -1;
         int daughter_z = -1;
-        double probability_before_neutron_emission = 0.;
-        double probability = 0.;
-        assert_always(std::stringstream(line) >> daughter_a >> daughter_z >> probability_before_neutron_emission >>
-                      probability);
+        double yieldpercent_before_neutron_emission = 0.;
+        double yieldpercent = 0.;
+        assert_always(std::stringstream(line) >> daughter_a >> daughter_z >> yieldpercent_before_neutron_emission >>
+                      yieldpercent);
+        // the table lists yields as a percentage per fission, so convert to the expected number of
+        // these daughter nuclei produced per fission
+        const double probability = yieldpercent / 100.;
         nuclides[nucindex].fission_daughters_z_a_prob.push_back(
             {.z = daughter_z, .a = daughter_a, .probability = probability});
         daughter_prob_sum += probability;
       }
     }
     if (keep_table) {
+      // the yields sum to the number of fragments produced per fission, which is two for the binary
+      // fission of the tabulated nuclides. This also guards against a table in different units.
+      assert_always(daughter_prob_sum > 1.9);
+      assert_always(daughter_prob_sum < 2.1);
       nuclides[nucindex].decay_daughters_probsum = daughter_prob_sum;
     }
   }
