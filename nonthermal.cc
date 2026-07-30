@@ -775,7 +775,14 @@ constexpr auto xs_ionisation_lotz(const double en_erg, const ShellParams& collio
   if (en_erg < ionpot) {
     return 0.;
   }
-  const double beta = std::sqrt(2 * en_erg / ME) / CLIGHT;
+  // relativistic, to match the relativistic correction terms in the Axelrod equation below. The classical
+  // betasq = 2 * en_erg / (ME * pow2(CLIGHT)) is 5% high at the 16 keV top of the energy grid, 30% high at 100 keV,
+  // and reaches one at 255 keV, where log(1 - betasq) would be undefined and the cross section spuriously zero.
+  const double gamma = (en_erg / (ME * pow2(CLIGHT))) + 1.;
+  const double betasq = 1. - (1. / pow2(gamma));
+  // 0 < betasq < 1 holds for any finite en_erg >= ionpot, so this only fires on a non-finite input. Both log terms
+  // below need it, and without the check a NaN would make part_sigma_shell fail its > 0 test and return a silent zero.
+  assert_testmodeonly(betasq > 0. && betasq < 1.);
 
   const int ioncharge = colliondata_ion.ionstage - 1;
   const int nbound = colliondata_ion.Z - ioncharge;  // number of bound electrons
@@ -790,11 +797,11 @@ constexpr auto xs_ionisation_lotz(const double en_erg, const ShellParams& collio
   // relativistic and the log(1 - beta^2) term is small anyway.
   const double part_sigma_shell =
       (electronsinshell / ionpot *
-       (std::log(pow2(beta) * ME * pow2(CLIGHT) / 2.0 / ionpot) - std::log(1 - pow2(beta)) - pow2(beta)));
+       (std::log(betasq * ME * pow2(CLIGHT) / 2.0 / ionpot) - std::log(1 - betasq) - betasq));
   if (part_sigma_shell > 0.) {
     // See the comment about Aconst in get_oneoverw_approx_axelrod()
     constexpr double Aconst = 1.33e-14 * EV * EV;
-    const double sigma = 2 * Aconst / ME / pow2(beta * CLIGHT) * part_sigma_shell;
+    const double sigma = 2 * Aconst / ME / (betasq * pow2(CLIGHT)) * part_sigma_shell;
     assert_always(sigma >= 0);
     return sigma;
   }
