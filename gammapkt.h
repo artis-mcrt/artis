@@ -17,9 +17,10 @@ DEVICE_FUNC void pellet_gamma_decay(Packet& pkt);
 DEVICE_FUNC void do_gamma(Packet& pkt, int nts, double t2);
 auto choose_gamma_ray(int nucindex, rngstate_type& rngstate) -> double;
 
-// The partial cross section for Compton scattering.
-// - xx: is the photon energy (in units of electron mass)
-// - f_max: is the energy loss factor up to which we wish to integrate
+// The Klein-Nishina (1929) Compton cross section, integrated over the energy loss factor from 1 up to f_max.
+// Passing f_max = 1 + 2x (the maximum possible loss, i.e. backscattering) gives the total cross section.
+// - x: the photon energy in units of the electron rest mass
+// - f_max: the energy loss factor (nu_before / nu_after) up to which we integrate
 [[nodiscard]] constexpr auto sigma_compton_partial(const double x, const double f_max) -> double {
   const double term1 = ((x * x) - (2 * x) - 2) * std::log(f_max) / x / x;
   const double term2 = (((f_max * f_max) - 1) / (f_max * f_max)) / 2;
@@ -28,7 +29,8 @@ auto choose_gamma_ray(int nucindex, rngstate_type& rngstate) -> double;
   return (3 * SIGMA_T * (term1 + term2 + term3) / (8 * x));
 }
 
-// To choose the value of f to integrate to - idea is we want sigma_compton_partial(xx,f) = zrand.
+// Sample an energy loss factor f from the Klein-Nishina distribution, by bisecting for the f at which the
+// partial cross section reaches the fraction zrand of the total.
 [[nodiscard]] inline auto choose_f(const double xx, const double zrand) -> double {
   double f_max = 1 + (2 * xx);
   double f_min = 1;

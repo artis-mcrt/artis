@@ -661,7 +661,7 @@ void read_elem_abundances() {
     assert_always(cellnumberinput == mgi + first_cellindex);
 
     // the abundances.txt file specifies the elemental mass fractions for each model cell
-    // (or proportial to mass frac, e.g. element densities because they will be normalised anyway)
+    // (or proportional to mass frac, e.g. element densities, because they will be normalised anyway)
     // The abundances begin with hydrogen, helium, etc, going as far up the atomic numbers as required
     double normfactor = 0.;
     std::array<float, 150> elem_massfracs_in{};
@@ -1204,7 +1204,7 @@ void setup_grid_cartesian_3d() {
     ncoordgrid = {CUBOID_NCOORDGRID_X, CUBOID_NCOORDGRID_Y, CUBOID_NCOORDGRID_Z};
   }
 
-  // artis assumes in some places that the cells are cubes, not cubioids
+  // artis assumes in some places that the cells are cubes, not cuboids
   assert_always(ncoordgrid[0] == ncoordgrid[1]);
   assert_always(ncoordgrid[0] == ncoordgrid[2]);
 
@@ -1502,7 +1502,7 @@ template <BoundaryType boundarytype>
 
 }  // anonymous namespace
 
-// for a uniform grid get the the extent along the x,y,z coordinate (x_2 - x_1, etc.) at time tmin
+// for a uniform grid get the extent along the x,y,z coordinate (x_2 - x_1, etc.) at time tmin
 // for spherical grid get the radial extent (r_outer - r_inner) at time tmin
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto propcell_width_tmin(const int cellindex, const int axis) -> double {
   return get_cellcoordmax(cellindex, axis) - get_cellcoordmin(cellindex, axis);
@@ -1632,12 +1632,12 @@ auto get_rho_tmin(const int modelgridindex) -> float { return modelgrid_input[mo
   return massfrac;
 }
 
-// mass fraction of an element (all isotopes combined)
+// set the mass fraction of an element (all isotopes combined)
 void set_elem_massfrac(const ptrdiff_t nonemptymgi, const int element, const float newmassfrac) {
   elem_massfracs_allcells[(nonemptymgi * get_nelements()) + element] = newmassfrac;
 }
 
-// mass fraction of an element (all isotopes combined)
+// number density [cm^-3] of an element (all isotopes combined)
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_elem_numberdens(const ptrdiff_t nonemptymgi, const int element)
     -> double {
   return get_elem_massfrac(nonemptymgi, element) / static_cast<double>(get_element_meanweight(nonemptymgi, element)) *
@@ -1681,14 +1681,13 @@ DEVICE_FUNC auto get_modelgridtype() -> GridType {
   return model_type.value();
 }
 
-[[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_npts_model() -> int
-// number of model grid cells
-{
+// total number of model grid cells, including empty ones
+[[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_npts_model() -> int {
   assert_testmodeonly(npts_model > 0);
   return static_cast<int>(npts_model);
 }
 
-// number of model grid cells
+// number of non-empty model grid cells, i.e. the length of the nonemptymgi index space
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_nonempty_npts_model() -> int {
   assert_testmodeonly(nonempty_npts_model > 0);
   return static_cast<int>(nonempty_npts_model);
@@ -1736,7 +1735,7 @@ DEVICE_FUNC auto get_modelgridtype() -> GridType {
   return nonemptymgi;
 }
 
-// get the index in the list of non-empty cells for a given model grid cell
+// inverse of get_nonemptymgi_of_mgi(): get the model grid index of an entry in the list of non-empty cells
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_mgi_of_nonemptymgi(const ptrdiff_t nonemptymgi) -> int {
   assert_testmodeonly(get_nonempty_npts_model() > 0);
   assert_testmodeonly(nonemptymgi >= 0);

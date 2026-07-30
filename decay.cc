@@ -570,7 +570,6 @@ auto get_endecay_to_tinf_per_ejectamass_at_time(const int modelgridindex, const 
 
   const double abund_endsink = calculate_decaychain(top_initabund, lambdas, t_afterinit, false);
   const double ndecays_remaining = decaypath.branchproduct * (top_initabund - abund_endsink);
-  // TODO ensure non-negative due to numerical precision?
 
   const double endecay = ndecays_remaining * get_decaypath_lastdecayenergy(decaypath);
 
@@ -896,11 +895,13 @@ void read_alpha_decaydata() {
         // The electron and gamma energies are only taken for a nuclide that this file introduces.
         // betaminusdecays.txt is read first and stays authoritative for a nuclide listed in both
         // (its E_elec agrees with the E_beta column here for every such nuclide anyway).
-        nuclides.push_back({.z = z,
-                            .a = a,
-                            .meanlife = tau_sec,
-                            .endecay_electron = e_beta_mev * MEV,
-                            .endecay_gamma = e_gamma_mev * MEV});
+        nuclides.push_back({
+            .z = z,
+            .a = a,
+            .meanlife = tau_sec,
+            .endecay_electron = e_beta_mev * MEV,
+            .endecay_gamma = e_gamma_mev * MEV,
+        });
         alphanucindex = static_cast<int>(nuclides.size() - 1);
       }
       nuclides[alphanucindex].branchprobs[DECAYTYPE_BETAMINUS] = branch_beta;
@@ -1152,7 +1153,6 @@ void init_nuclides(const std::span<const int> custom_zlist, const std::span<cons
   // Read in data for gamma ray lines and make a list of them in energy order.
   gammapkt::init_gamma_data();
 
-  // TODO: generalise this to all included nuclides
   printlnlog("decayenergy(NI56) {:g} [MeV], decayenergy(CO56) {:g} [MeV], decayenergy_gamma(CO56) {:g} [MeV]",
              nucdecayenergytotal(28, 56) / MEV, nucdecayenergytotal(27, 56) / MEV, nucdecayenergygamma(27, 56) / MEV);
   printlnlog("decayenergy(NI57) {:g} [MeV], decayenergy_gamma(NI57) {:g} [MeV], decayenergy(CO57) {:g} [MeV]",

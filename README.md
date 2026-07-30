@@ -121,7 +121,7 @@ mpirun -np 1 ./exspec
 ```
 exspec reads the same input.txt, model, and atomic data files as sn3d, so it must be run in the same folder. The nprocs_exspec line of input.txt sets how many ranks' packets files it reads.
 
-It writes light_curve.out, spec.out, emission.out, emissiontrue.out, and absorption.out (plus gamma-ray and polarisation versions, depending on the compile-time options), direction-resolved versions of these in the speclc_angle_res folder, and a log file exspec.txt.
+It writes light_curve.out, spec.out, emission.out, emissiontrue.out, and absorption.out, plus gamma_light_curve.out and gamma_spec.out when KEEP_ESCAPED_GAMMAS is set, and specpol.out, emissionpol.out and absorptionpol.out when POL_ON is set. Direction-resolved versions of these go in the speclc_angle_res folder, alongside a log file exspec.txt.
 
 To plot and analyse the output, use [artistools](https://github.com/artis-mcrt/artistools), a companion Python package for working with ARTIS light curves, spectra, and estimators.
 
@@ -195,6 +195,8 @@ Transition count rows of:<br/>
 `[lower level index] [upper level index] [A value] [collision strength] [forbidden flag]`
 
 In case the collision strength is not available, it will be -1.0 for permitted and -2.0 for forbidden transitions.
+
+A legacy four-column format (`[transition index] [lower level index] [upper level index] [A value]`, with no collision strength or forbidden columns) is also accepted. The format is detected from the column count of the first row of each block.
 
 ### compositiondata.txt
 Sets a filter on the elements, ion stages, and energy levels that are read in from atomic data files.

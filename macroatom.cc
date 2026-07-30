@@ -635,7 +635,8 @@ void macroatom_open_file() {
   return 0.;
 }
 
-// multiply by upper level population to get a rate per second
+// Collisional (three-body) recombination rate, the detailed-balance reverse of col_ionisation_ratecoeff().
+// Multiply by the upper-level population to obtain a rate per second.
 [[gnu::pure]] [[nodiscard]] auto col_recombination_ratecoeff(const float T_e, const float clumpednne, const int element,
                                                              const int upperion, const int upper, const int lower,
                                                              const double epsilon_trans) -> double {
@@ -679,17 +680,17 @@ void macroatom_open_file() {
 
   const double fac1 = epsilon_trans / KB / T_e;
 
+  // the Seaton formula uses the photoionisation cross-section at the threshold edge, i.e. the first table point
   const double sigma_bf =
       get_phixs_table(element, ion, lower)[0] * get_phixsprobability(element, ion, lower, phixstargetindex);
-  const double C =
-      clumpednne * 1.55e13 * pow(T_e, -0.5) * g * sigma_bf * exp(-fac1) / fac1;  // photoionisation at the edge
+  const double C = clumpednne * 1.55e13 * pow(T_e, -0.5) * g * sigma_bf * exp(-fac1) / fac1;
 
   assert_testmodeonly(std::isfinite(C));
 
   return C;
 }
 
-// multiply by upper level population to get a rate per second
+// Collisional de-excitation rate. Multiply by the upper-level population to obtain a rate per second.
 [[gnu::pure]] [[nodiscard]] auto col_deexcitation_ratecoeff(const float T_e, const float clumpednne,
                                                             const double epsilon_trans, const double upperstatweight,
                                                             const double lowerstatweight, const int alltransindex)
@@ -720,18 +721,19 @@ void macroatom_open_file() {
              eoverkt * g_ratio * gauntfac;
     }
 
-    // forbidden transitions: magnetic dipole, electric quadropole...
-    // could be Axelrod? or Maurer
+    // forbidden transitions: magnetic dipole, electric quadrupole... Axelrod's approximation (thesis 1980),
+    // i.e. the effective-collision-strength form below with an assumed Omega = 0.01 * lowerstatweight.
+    // This is the detailed-balance reverse of the branch in col_excitation_ratecoeff().
     return clumpednne * 8.629e-6 * 0.01 * lowerstatweight / std::sqrt(T_e);
   }
 
-  // positive coll_str is treated as effective collision strength
-
-  // from Osterbrock and Ferland, p51
+  // a positive coll_str in the atomic data is the effective collision strength Omega, giving the
+  // de-excitation rate coefficient 8.629e-6 * Omega / (g_upper * sqrt(T_e)) [cm^3/s]
+  // (Osterbrock & Ferland 2006, Astrophysics of Gaseous Nebulae and AGN, 2nd ed., eq. 3.20, p. 51)
   return clumpednne * 8.629e-6 * static_cast<double>(coll_strength) / upperstatweight / std::sqrt(T_e);
 }
 
-// multiply by lower level population to get a rate per second
+// Collisional excitation rate. Multiply by the lower-level population to obtain a rate per second.
 [[gnu::pure]] [[nodiscard]] auto col_excitation_ratecoeff(const float T_e, const float clumpednne,
                                                           const double upperstatweight, const int alltransindex,
                                                           const double epsilon_trans, const double lowerstatweight)
@@ -761,12 +763,14 @@ void macroatom_open_file() {
              eoverkt / exp_eoverkt * Gamma;
     }
 
-    // forbidden transitions: magnetic dipole, electric quadropole... Axelrod's approximation (thesis 1980)
-
+    // forbidden transitions: magnetic dipole, electric quadrupole... Axelrod's approximation (thesis 1980),
+    // i.e. the effective-collision-strength form below with an assumed Omega = 0.01 * upperstatweight
     return clumpednne * 8.629e-6 * 0.01 * std::exp(-eoverkt) * upperstatweight / std::sqrt(T_e);
   }
 
-  // from Osterbrock and Ferland, p51
+  // a positive coll_str in the atomic data is the effective collision strength Omega, giving the
+  // excitation rate coefficient 8.629e-6 * Omega * exp(-dE/kT) / (g_lower * sqrt(T_e)) [cm^3/s]
+  // (Osterbrock & Ferland 2006, Astrophysics of Gaseous Nebulae and AGN, 2nd ed., eq. 3.20, p. 51)
   return clumpednne * 8.629e-6 * static_cast<double>(coll_strength) * std::exp(-eoverkt) / lowerstatweight /
          std::sqrt(T_e);
 }

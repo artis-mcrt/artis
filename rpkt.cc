@@ -113,12 +113,9 @@ auto get_possible_event(const int nonemptymgi, const Packet& pkt, const Continuu
   double tau = 0.;  // optical depth along path
   double dist = 0.;  // position on path
   while (true) {
-    // calculate distance to next line encounter ldist
-    // first select the closest transition in frequency
-    // we need its frequency nu_trans, the element/ion and the corresponding levels
-    // create therefore new variables in packet, which contain next_lowerlevel, ...
-
-    // returns negative value if nu_cmf > nu_trans
+    // step to the next line the packet will redshift onto, accumulating the continuum optical depth over the
+    // distance to it. closest_transition() returns a negative index once no line remains at or below nu_cmf, or
+    // when the packet has already been tagged as having no further line interactions.
     const int lineindex = closest_transition(nu_cmf, next_trans, linelist.nu);
 
     if (lineindex < 0) [[unlikely]] {
@@ -135,13 +132,12 @@ auto get_possible_event(const int nonemptymgi, const Packet& pkt, const Continuu
       return {dist + ((tau_rnd - tau) / chi_cont), globals::nlines + 1, false};
     }
 
-    // line interaction is possible (nu_cmf > nu_trans)
+    // a line interaction is possible, i.e. the packet redshifts onto this line before nu_cmf_abort
 
     const double nu_trans = linelist.nu[lineindex];
 
-    // helper variable to overcome numerical problems after line scattering
-    // further scattering events should be located at lower frequencies to prevent
-    // multiple scattering events of one packet in a single line
+    // advance past this line so that any further event this step is found at a lower frequency. Without this the
+    // packet could scatter repeatedly in the same line when rounding leaves nu_cmf marginally above nu_trans.
     next_trans = lineindex + 1;
 
     const double ldist = get_linedistance(prop_time, nu_cmf, nu_trans, dnu_on_dl);

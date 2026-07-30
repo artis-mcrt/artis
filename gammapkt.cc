@@ -38,7 +38,6 @@
 #include "vectors.h"
 
 namespace gammapkt {
-// Code for handing gamma rays - creation and propagation
 
 namespace {
 struct GammaLine {
@@ -262,13 +261,12 @@ void init_xcom_photoion_data() {
     return 0.;
   }
 
+  // photon energy in units of the electron rest mass, the parameter that sets how far the Klein-Nishina cross
+  // section departs from the low-energy Thomson limit
   const double xx = H * nu_cmf / ME / CLIGHT / CLIGHT;
-
-  // Use this to decide whether the Thompson limit is acceptable.
 
   const double sigma_cmf = (xx < THOMSON_LIMIT) ? SIGMA_T : sigma_compton_partial(xx, 1 + (2 * xx));
 
-  // Now need to multiply by the electron number density.
   const double chi_cmf = sigma_cmf * grid::get_nnetot(nonemptymgi);
 
   assert_testmodeonly(std::isfinite(chi_cmf));

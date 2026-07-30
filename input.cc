@@ -262,9 +262,9 @@ void read_phixs_data_table(std::istream& phixsfile, const int nphixspoints_input
     }
   }
 
-  // The level contributes to the ionisinglevels if its energy is below the ionisation potential and the level doesn't
-  // belong to the topmost ion included. Rate coefficients are only available for ionising levels.
-  //  also need (levelenergy < ionpot && ...)?
+  // Every photoionisation target of this level is a level that the upper ion can recombine from, so raise the
+  // upper ion's maxrecombininglevel to cover them. The topmost included ion is skipped because it has no ion
+  // above it to recombine into.
   if (lowerion < get_nions(element) - 1) {
     for (int phixstargetindex = 0; phixstargetindex < get_nphixstargets(element, lowerion, lowerlevel);
          phixstargetindex++) {

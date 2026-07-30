@@ -107,7 +107,7 @@ constexpr auto all_taus_past_taumax(std::vector<double>& tau, const double tau_m
   return std::ranges::all_of(tau, [tau_max](const double tau_i) { return tau_i > tau_max; });
 }
 
-// Add a packet to the outgoing spectrum
+// Add an escaping virtual packet's Stokes I, Q and U contributions to the observer's time/frequency spectrum
 void add_to_vspecpol(const double nu_rf, const double e_rf, const double prob, const double q_rf, const double u_rf,
                      const int obsdirindex, const int opachoiceindex, const double t_arrive) {
   // Need to decide in which (1) time and (2) frequency bin the vpkt is escaping
@@ -128,7 +128,8 @@ void add_to_vspecpol(const double nu_rf, const double e_rf, const double prob, c
   atomicadd(vspecpol[nt][ind_comb].flux[nnu].U, prob * u_rf * pktcontrib);
 }
 
-// Add a packet to the outgoing spectrum
+// Add an escaping virtual packet to the optional velocity-space map, binned by the emitting material's
+// velocity projected onto the plane perpendicular to the observer direction
 void add_to_vpkt_grid(const double nu_rf, const double e_rf, const double prob, const double stokes_q,
                       const double stokes_u, const Vec3d& vel, const int wlbin, const int obsdirindex,
                       const Vec3d& obsdir) {
@@ -180,7 +181,10 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
   int mgi = 0;
 
   auto cellindex = rpkt.cellindex;
-  auto next_trans = rpkt.next_trans;  // should be -1 since doppler factor changed it?
+  // The vpkt leaves from the real packet's position with the same comoving-frame frequency (nu_cmf does not
+  // depend on direction, only nu_rf does), so the same lines lie ahead of it and it can inherit the real
+  // packet's line list position.
+  auto next_trans = rpkt.next_trans;
   auto e_cmf = rpkt.e_cmf;
   auto nu_cmf = rpkt.nu_cmf;
   auto vpktpos = rpkt.pos;
@@ -724,7 +728,8 @@ void read_vpktparameterfile() {
 
   printlnlog("vpkt.txt: Nspectra {} per observer", nspectraperobsdir);
 
-  // time window. If dum4=1 it restrict vpkt to time windown (dum5,dum6)
+  // Emission time window: a leading 1 restricts vpkts to the [tmin, tmax] (in days) that follow on the same
+  // line, otherwise the compile-time VSPEC_TIMEMIN/VSPEC_TIMEMAX are used and the two values are ignored.
   int override_tminmax = 0;
   double vspec_tmin_in_days = 0.;
   double vspec_tmax_in_days = 0.;
@@ -751,8 +756,9 @@ void read_vpktparameterfile() {
   assert_always(vspec_timemin_input >= globals::tmin);
   assert_always(vspec_timemax_input <= globals::tmax);
 
-  // frequency window. dum4 restrict vpkt to a frequency range, dum5 indicates the number of ranges,
-  // followed by a list of ranges (dum6,dum7)
+  // Wavelength windows: a leading 1 selects custom ranges, followed by the number of ranges and then that
+  // many (lambda_min, lambda_max) pairs in Angstroms. Otherwise a single range spanning the compile-time
+  // VSPEC_NUMIN to VSPEC_NUMAX is used.
   int flag_custom_freq_ranges = 0;
   assert_always(fscanf(input_file, "%d ", &flag_custom_freq_ranges) == 1);
 
@@ -795,7 +801,8 @@ void read_vpktparameterfile() {
                1e8 * CLIGHT / vspec_numin_input[i]);
   }
 
-  // if dum7=1, vpkt are not created when cell optical depth is larger than optical_depth_is_thick_vpkt
+  // Thick-cell threshold: a leading 1 overrides optical_depth_is_thick_vpkt with the value that follows,
+  // otherwise the global optical_depth_is_thick is inherited. vpkts are not created in cells above it.
   int override_thickcell_tau = 0;
   assert_always(fscanf(input_file, "%d %lg", &override_thickcell_tau, &optical_depth_is_thick_vpkt) == 2);
 
@@ -807,7 +814,7 @@ void read_vpktparameterfile() {
                optical_depth_is_thick_vpkt);
   }
 
-  // Maximum optical depth. If a vpkt reaches dum7 is thrown away
+  // Maximum optical depth: a vpkt is discarded once it exceeds tau_max_vpkt in every opacity setup
   assert_always(fscanf(input_file, "%lg", &tau_max_vpkt) == 1);
   printlnlog("vpkt.txt: tau_max_vpkt {:g}", tau_max_vpkt);
 
@@ -828,7 +835,8 @@ void read_vpktparameterfile() {
     printlnlog("vpkt.txt: velocity grid time range tmin_grid {:g} [d] tmax_grid {:g} [d]", tmin_grid / DAY,
                tmax_grid / DAY);
 
-    // Specify wavelength range: number of intervals (dum9) and limits (dum10,dum11)
+    // Velocity grid map wavelength ranges: the number of intervals, then that many
+    // (lambda_min, lambda_max) pairs in Angstroms
     assert_always(fscanf(input_file, "%d ", &grid_nwavelengthranges) == 1);
 
     printlnlog("vpkt.txt: velocity grid frequency intervals {}", grid_nwavelengthranges);

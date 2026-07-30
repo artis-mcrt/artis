@@ -435,7 +435,9 @@ void precalculate_ion_alpha_sp() {
   MPI_Barrier_node();
 }
 
-// Integrand to calculate the rate coefficient for photoionisation. Corrected for stimulated recombination.
+// Integrand to calculate the rate coefficient for photoionisation, corrected for stimulated recombination.
+// Unlike integrand_corrphotoioncoeff() above, which assumes LTE at T_R, the correction factor here is built from
+// the cell's actual level populations (via modified_departure_ratio) and T_e.
 auto integrand_corrphotoioncoeff_custom_radfield(const double nu_minus_nu_edge, const double nu_edge,
                                                  const double modified_departure_ratio,
                                                  const std::span<const float> photoion_xs, const float T_e,
@@ -449,7 +451,7 @@ auto integrand_corrphotoioncoeff_custom_radfield(const double nu_minus_nu_edge, 
 
   const double Jnu = radfield::radfield(nu_minus_nu_edge + nu_edge, nonemptymgi);
 
-  // TODO: MK thesis page 41, use population ratios and Te?
+  // 4 pi / (h nu) * sigma_bf * J_nu, with the 4 pi applied by the caller
   return (1. / H) * sigma_bf / (nu_minus_nu_edge + nu_edge) * Jnu * corrfactor;
 }
 
@@ -682,7 +684,9 @@ auto calculate_ionrecombcoeff(const int nonemptymgi, const float T_e, const int 
     return 0.;
   }
 
-  // this gets divided and cancelled out in the radiative case anyway
+  // the rate coefficients below are divided by clumpednne again at alpha_level, so this factor cancels exactly in
+  // the radiative case. In the collisional case the rate goes as clumpednne^2, so one factor of clumpednne survives
+  // into the returned coefficient (see the clumping note in ltepop.cc's phi_rate_balance()).
   const auto clumpednne = (nonemptymgi >= 0) ? grid::get_clumpfactor(nonemptymgi) * grid::get_nne(nonemptymgi) : 1.F;
   double alpha = 0.;
   const int maxrecombininglevel = get_maxrecombininglevel(element, lowerion + 1);
@@ -887,7 +891,8 @@ auto calculate_iongamma_per_ionpop(const int nonemptymgi, const int element, con
         ionisation_rate += nnlowerlevel * calculate_corrphotoioncoeff_integral(element, lowerion, lower,
                                                                                phixstargetindex, nonemptymgi, false);
       } else {
-        // whatever ARTIS uses internally, maybe using detailed bound-free estimators
+        // the same coefficient the simulation itself uses, which draws on the detailed bound-free estimators
+        // when they are enabled and available
         ionisation_rate +=
             nnlowerlevel * get_corrphotoioncoeff(element, lowerion, lower, phixstargetindex, nonemptymgi, false);
       }
