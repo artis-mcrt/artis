@@ -77,11 +77,12 @@ struct Nuclide {
       0., 0., 0., 0., 0., 0.,
   };  // branch probability of each decay type
 
-  // (Z, A, probability) of fission daughters, where the probability is the expected number of these
-  // daughter nuclei produced per fission
+  // (Z, A, yield) of the fission daughters. The value held in DecayDaughter::probability is a yield
+  // rather than a probability: it is the expected number of these daughter nuclei produced per
+  // fission, so it sums over the daughters to the number of fragments per fission, not to one.
   std::vector<DecayDaughter> fission_daughters_z_a_prob{};  // NOLINT(readability-redundant-member-init)
 
-  // sum of the daughter probabilities, i.e. the expected number of daughter nuclei per decay.
+  // expected number of daughter nuclei produced per decay, i.e. the sum of the daughter yields.
   // One for the single-daughter decays, and two for the binary fission of the tabulated nuclides
   double decay_daughters_probsum{1.};
 };
@@ -942,7 +943,7 @@ void read_fissionproduct_data() {
       nuclides[nucindex].fission_daughters_z_a_prob.reserve(tablesize);
     }
 
-    double daughter_prob_sum = 0.;
+    double daughter_yield_sum = 0.;
     for (int i = 0; i < tablesize; i++) {
       assert_always(get_noncommentline(ffission_products, line));
       if (keep_table) {
@@ -954,18 +955,18 @@ void read_fissionproduct_data() {
                       yieldpercent);
         // the table lists yields as a percentage per fission, so convert to the expected number of
         // these daughter nuclei produced per fission
-        const double probability = yieldpercent / 100.;
+        const double yield_per_fission = yieldpercent / 100.;
         nuclides[nucindex].fission_daughters_z_a_prob.push_back(
-            {.z = daughter_z, .a = daughter_a, .probability = probability});
-        daughter_prob_sum += probability;
+            {.z = daughter_z, .a = daughter_a, .probability = yield_per_fission});
+        daughter_yield_sum += yield_per_fission;
       }
     }
     if (keep_table) {
       // the yields sum to the number of fragments produced per fission, which is two for the binary
       // fission of the tabulated nuclides. This also guards against a table in different units.
-      assert_always(daughter_prob_sum > 1.9);
-      assert_always(daughter_prob_sum < 2.1);
-      nuclides[nucindex].decay_daughters_probsum = daughter_prob_sum;
+      assert_always(daughter_yield_sum > 1.9);
+      assert_always(daughter_yield_sum < 2.1);
+      nuclides[nucindex].decay_daughters_probsum = daughter_yield_sum;
     }
   }
 }
