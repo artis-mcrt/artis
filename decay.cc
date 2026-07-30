@@ -857,6 +857,7 @@ void read_alpha_decaydata() {
   if (!nuc_exists(2, 4)) {
     nuclides.push_back({.z = 2, .a = 4, .meanlife = -1});
   }
+  std::set<std::tuple<int, int>> seen_z_a{};
   while (get_noncommentline(falpha, line)) {
     // columns: # A, Z, branch_alpha, branch_beta, halflife[s], Q_total_alphadec[MeV], Q_total_betadec[MeV],
     // E_alpha[MeV], E_gamma[MeV], E_beta[MeV]
@@ -875,6 +876,10 @@ void read_alpha_decaydata() {
 
     const bool keeprow = ((branch_alpha > 0. || branch_beta > 0.) && halflife > 0.);
     if (keeprow) {
+      // one row per nuclide: the branching ratios below are divided out of the tabulated energies
+      // in place, so a second row for the same nuclide would apply that division twice
+      assert_always(!seen_z_a.contains({z, a}));
+      seen_z_a.insert({z, a});
       const double tau_sec = halflife / std::numbers::ln2;
       int alphanucindex = -1;
       if (nuc_exists(z, a)) {
@@ -890,11 +895,22 @@ void read_alpha_decaydata() {
                             .endecay_gamma = e_gamma_mev * MEV});
         alphanucindex = static_cast<int>(nuclides.size() - 1);
       }
-      nuclides[alphanucindex].endecay_alpha = e_alpha_mev * MEV;
       nuclides[alphanucindex].branchprobs[DECAYTYPE_BETAMINUS] = branch_beta;
       nuclides[alphanucindex].endecay_q[DECAYTYPE_BETAMINUS] = Q_betadecay_mev * MEV;
       nuclides[alphanucindex].branchprobs[DECAYTYPE_ALPHA] = branch_alpha;
       nuclides[alphanucindex].endecay_q[DECAYTYPE_ALPHA] = Q_alphadecay_mev * MEV;
+
+      // The decay data files tabulate the particle energies as averages per decay of the parent
+      // nuclide, so a branch taken by only a fraction of the decays contributes an energy that is
+      // already scaled by that fraction. endecay_alpha and endecay_electron are instead averages
+      // per decay of their own type, which is the convention of the hardcoded nuclides in
+      // add_standard_nuclides() and the one the consumers assume when they multiply by
+      // get_nuc_decaybranchprob(). Divide the branching ratio out here so it is applied once.
+      // The gamma energy needs no such division: it is a single per-nuclide value covering all
+      // branches at once, and is used without a branching factor.
+      nuclides[alphanucindex].endecay_alpha = (branch_alpha > 0.) ? (e_alpha_mev * MEV / branch_alpha) : 0.;
+      nuclides[alphanucindex].endecay_electron =
+          (branch_beta > 0.) ? (nuclides[alphanucindex].endecay_electron / branch_beta) : 0.;
     }
   }
 }
@@ -1035,6 +1051,11 @@ void check_nuclide_data() {
     if (nuc.branchprobs[DECAYTYPE_BETAMINUS] > 0.) {
       assert_always(nuc.endecay_electron >= 0.);
       assert_always(nuc.endecay_q[DECAYTYPE_BETAMINUS] >= 0.);
+      // the mean kinetic energy carried away by the electron is a share of the decay energy, the
+      // rest going to the neutrino and the gamma rays. The largest share in the current data is
+      // 0.47, so this has room to spare and would only fire if a branching ratio were divided out
+      // of the tabulated energy more than once.
+      assert_always(nuc.endecay_electron <= nuc.endecay_q[DECAYTYPE_BETAMINUS]);
     }
     if (nuc.branchprobs[DECAYTYPE_ALPHA] > 0.) {
       assert_always(nuc.endecay_alpha >= 0.);
