@@ -396,7 +396,13 @@ DEVICE_FUNC void do_macroatom(Packet& pkt, const MacroAtomState& pktmastate) {
     std::array<double, MA_ACTION_COUNT> cumulative_transitions{};
     std::partial_sum(levelrates.begin(), levelrates.end(), cumulative_transitions.begin());
 
-    const double randomrate = rng_uniform(get_rngstate(pkt)) * cumulative_transitions[MA_ACTION_COUNT - 1];
+    // With every rate zero the selection below would silently settle on the last action despite its
+    // rate being zero, and that only fails later somewhere much less obvious, such as in
+    // nt_random_upperion() for an ion that has no higher stage to ionise to.
+    const double total_rate = cumulative_transitions[MA_ACTION_COUNT - 1];
+    assert_always(total_rate > 0.);
+
+    const double randomrate = rng_uniform(get_rngstate(pkt)) * total_rate;
 
     // first cumulative_transitions[i] such that cumulative_transitions[i] > randomrate
     const auto selected_action =

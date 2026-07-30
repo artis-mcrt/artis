@@ -933,7 +933,11 @@ constexpr auto xs_excitation(const int element, const int ion, const int lower, 
 // nne is the thermal electron density [cm^-3]
 // return value has units of erg/cm
 constexpr auto electron_loss_rate(const double energy, const double nne) -> double {
-  if (energy <= 0.) {
+  // with no thermal electrons there is no Coulomb energy loss. Without this guard the plasma
+  // frequency is zero and the Coulomb logarithm diverges, giving 0 * inf = NaN in a fully neutral
+  // cell (nne can reach exactly zero because the MINPOP floor is a float denormal that is flushed
+  // to zero by the default -ffast-math build)
+  if (energy <= 0. || nne <= 0.) {
     return 0;
   }
 
@@ -1826,8 +1830,12 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const std::a
 
   // force frac_sum to be 1.0 by adjusting frac_heating. Clamp to [0, 1] so a bad solution (where
   // excitation + ionisation exceed 1) cannot feed a negative heating fraction into the T_e solver.
+  // When non-thermal excitation is not being modelled, do_ntlepton_deposit() sends the excitation
+  // share to k-packets instead, so it has to be counted as heating here for the energy that the
+  // packets carry to match the heating rate that the T_e solver is given.
+  const double frac_excitation_nonheating = NT_EXCITATION_ON ? frac_excitation_total : 0.;
   nt_solution[nonemptymgi].frac_heating =
-      static_cast<float>(std::clamp(1. - frac_excitation_total - frac_ionisation_total, 0., 1.));
+      static_cast<float>(std::clamp(1. - frac_excitation_nonheating - frac_ionisation_total, 0., 1.));
 
   if (!ftol<0.02>(frac_sum, 1.0)) {
     printlnlog("[warning] frac_sum is {:g}, but should be 1.0", frac_sum);
@@ -2291,8 +2299,13 @@ DEVICE_FUNC auto nt_random_upperion(const int nonemptymgi, const int element, co
       }
     }
 
-    assert_always(false);  // should never get here
-    return -1;
+    // the channel probabilities are stored as floats and the tabulated Auger yields are only
+    // normalised to about one part in a thousand, so a draw very close to one can fall past the end
+    // of the cumulative sum. Absorb that small deficit into the highest reachable ion rather than
+    // failing the whole run, but still reject a distribution that is badly wrong rather than
+    // silently returning the top ion for every draw.
+    assert_always(prob_sum > 0.99);
+    return nt_ionisation_maxupperion(element, lowerion);
   }
   return lowerion + 1;
 }

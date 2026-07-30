@@ -1978,8 +1978,16 @@ void read_ejecta_model() {
       const double pos_r_cyl_mid = (n_rcyl + 0.5) * globals::vmax * t_model / ncoord_model[0];
       assert_always(fabs((cell_r_in / pos_r_cyl_mid) - 1) < 1e-3);
       const int n_z = (mgi / ncoord_model[0]);
-      const double pos_z_mid = globals::vmax * t_model * (-1 + (2 * (n_z + 0.5) / ncoord_model[1]));
-      assert_always(fabs((cell_z_in / pos_z_mid) - 1) < 1e-3);
+      if (((2 * n_z) + 1) == ncoord_model[1]) {
+        // an odd number of z rows puts the middle row at the origin, where a relative comparison
+        // has nothing to divide by. Compare against the cell size instead. The row is identified
+        // from the integer index rather than by testing the coordinate against zero, because the
+        // expression below is not required to evaluate to exactly zero under -ffast-math.
+        assert_always(fabs(cell_z_in) < (1e-3 * globals::vmax * t_model / ncoord_model[1]));
+      } else {
+        const double pos_z_mid = globals::vmax * t_model * (-1 + (2 * (n_z + 0.5) / ncoord_model[1]));
+        assert_always(fabs((cell_z_in / pos_z_mid) - 1) < 1e-3);
+      }
     } else {
       // columns: cell number, x midpoint, y midpoint, z midpoint, density
       std::array<float, 3> cellpos_in{};

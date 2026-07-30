@@ -287,7 +287,13 @@ void write_temp_packetsfile(const int timestep, const int my_rank, const std::sp
         printlnlog("[warning] fwrite to {} failed on attempt {} of 10. will retry...", filename, tries + 1);
       }
 
-      fclose(packets_file);
+      // a buffered write can fail at the flush that fclose() performs, so without checking it here a
+      // truncated restart file would be reported as having been written successfully
+      const bool closed_ok = (fclose(packets_file) == 0);
+      if (write_success && !closed_ok) {
+        printlnlog("[warning] fclose of {} failed on attempt {} of 10. will retry...", filename, tries + 1);
+      }
+      write_success = write_success && closed_ok;
     }
     tries++;
   }

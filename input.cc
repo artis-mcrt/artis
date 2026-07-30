@@ -1737,23 +1737,33 @@ void read_parameterfile(std::span<Packet> packets) {
   }
 
   if (!packets.empty()) {
+#ifdef GPU_ON
+    // Give every packet its own independently-seeded generator. The ranks are spaced by the number
+    // of packets that they own, so that their seed ranges do not overlap. get_max_threads() is one
+    // for a GPU build, so spacing the ranks by 13 as the host generator below does would leave
+    // neighbouring ranks sharing all but 13 of their seeds, and two packets given the same seed
+    // follow identical histories because the grid state that they see is rank-invariant.
+    // Xoshiro128PP is seeded from a 32 bit value, so distinct seeds only exist for as many packets
+    // as fit in that space and the whole run has to stay within it.
+    assert_always((static_cast<std::int64_t>(globals::nprocs) * std::ssize(packets)) <= (1LL << 32));
+    const auto rank_seed_base =
+        static_cast<std::uint32_t>(pre_zseed + (static_cast<std::int64_t>(globals::my_rank) * std::ssize(packets)));
+    for (auto packetnumber = 0ZU; packetnumber < std::size(packets); packetnumber++) {
+      get_rngstate(packets[packetnumber]).seed(rank_seed_base + static_cast<std::uint32_t>(packetnumber));
+    }
+    printlnlog("rank {}: packet rngseeds start at {}", globals::my_rank, rank_seed_base);
+#else
     // For MPI parallelisation, the random seed is changed based on the rank of the process.
     // This runs on the main thread only; OpenMP/stdpar worker threads get their own randomly-seeded
     // thread_local generators on first use (see get_rngstate()), so multi-threaded runs are not
     // reproducible (they also accumulate to shared memory in a non-deterministic order)
     const auto rngseed = pre_zseed + static_cast<std::int64_t>(13 * globals::my_rank * get_max_threads());
-#ifdef GPU_ON
-    // give every packet its own independently-seeded generator
-    for (auto packetnumber = 0ZU; packetnumber < std::size(packets); packetnumber++) {
-      get_rngstate(packets[packetnumber]).seed(static_cast<std::uint32_t>(rngseed) + packetnumber);
-    }
-#else
     get_rngstate().seed(rngseed);
     for (int n = 0; n < 100; n++) {
       rng_uniform(get_rngstate());
     }
-#endif
     printlnlog("rank {}: main thread has rngseed {}", globals::my_rank, rngseed);
+#endif
   }
 
   assert_always(get_noncommentline(file, line));
