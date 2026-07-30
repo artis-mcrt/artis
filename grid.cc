@@ -1979,7 +1979,13 @@ void read_ejecta_model() {
       assert_always(fabs((cell_r_in / pos_r_cyl_mid) - 1) < 1e-3);
       const int n_z = (mgi / ncoord_model[0]);
       const double pos_z_mid = globals::vmax * t_model * (-1 + (2 * (n_z + 0.5) / ncoord_model[1]));
-      assert_always(fabs((cell_z_in / pos_z_mid) - 1) < 1e-3);
+      if (pos_z_mid != 0.) {
+        assert_always(fabs((cell_z_in / pos_z_mid) - 1) < 1e-3);
+      } else {
+        // an odd number of z rows puts the middle row at exactly zero, where the relative
+        // comparison used for every other row cannot be evaluated
+        assert_always(fabs(cell_z_in) < (1e-3 * globals::vmax * t_model / ncoord_model[1]));
+      }
     } else {
       // columns: cell number, x midpoint, y midpoint, z midpoint, density
       std::array<float, 3> cellpos_in{};

@@ -170,10 +170,14 @@ void read_decaydata() {
     }
   }
 
-  if (decay::nuc_exists(26, 52)) {
+  // Historical mean gamma energies for the nuclides that decay straight to k-packets. Only apply
+  // these where no gamma-ray line table was found: a table sets the mean energy from its own lines,
+  // and overwriting it would leave choose_gamma_ray() normalising its cumulative distribution by a
+  // total that does not match the lines it is sampling from.
+  if (decay::nuc_exists(26, 52) && gamma_spectra[decay::get_nucindex(26, 52)].empty()) {
     decay::set_nucdecayenergygamma(decay::get_nucindex(26, 52), 0.86 * MEV);  // Fe52
   }
-  if (decay::nuc_exists(25, 52)) {
+  if (decay::nuc_exists(25, 52) && gamma_spectra[decay::get_nucindex(25, 52)].empty()) {
     decay::set_nucdecayenergygamma(decay::get_nucindex(25, 52), 3.415 * MEV);  // Mn52
   }
 
@@ -792,18 +796,20 @@ void wollaeger_thermalisation(Packet& pkt) {
   // need to create a packet copy which is moved during the integration
   Packet pkt_copy = pkt;
   pkt_copy.dir = vec_norm(pkt_copy.pos);  // integrate the optical depth radially outwards
-  const double t_current = pkt.prop_time;
   double tau = 0.;
   bool end_packet = false;
   while (!end_packet) {
     // distance to the next cell
     const auto [boundarydist, next_cellindex] =
         grid::boundary_distance(pkt_copy.dir, pkt_copy.pos, pkt_copy.prop_time, pkt_copy.cellindex);
-    const double s_cont = boundarydist * pow3(t_current / pkt_copy.prop_time);
     const int mgi = grid::get_propcell_modelgridindex(pkt_copy.cellindex);
     if (mgi >= 0) {
-      const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(mgi);
-      tau += grid::get_rho(nonemptymgi) * s_cont * mean_gamma_opac;  // contribution to the integral
+      // the density is evaluated at the time that the ray reaches each cell, as in
+      // guttman_thermalisation(). Scaling grid::get_rho() by the packet's own decay time instead
+      // left every contribution wrong by a factor of (t_decay / t_mid)^3, since the grid state is
+      // held at the middle of the current timestep rather than at the time of the decay.
+      const double rho = grid::get_rho_tmin(mgi) * pow3(globals::tmin / pkt_copy.prop_time);
+      tau += mean_gamma_opac * rho * boundarydist;  // contribution to the integral
     }
     // move packet copy now
     move_pkt_withtime(pkt_copy, boundarydist);

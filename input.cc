@@ -1743,9 +1743,15 @@ void read_parameterfile(std::span<Packet> packets) {
     // reproducible (they also accumulate to shared memory in a non-deterministic order)
     const auto rngseed = pre_zseed + static_cast<std::int64_t>(13 * globals::my_rank * get_max_threads());
 #ifdef GPU_ON
-    // give every packet its own independently-seeded generator
+    // Give every packet its own independently-seeded generator. The ranks are spaced by the number
+    // of packets that they own so that their seed ranges cannot overlap. get_max_threads() is one
+    // for a GPU build, so seeding from rngseed (spaced by only 13 per rank) would leave neighbouring
+    // ranks sharing all but 13 of their seeds, and two packets given the same seed follow identical
+    // histories because the grid state that they see is rank-invariant.
+    const auto rank_seed_base =
+        static_cast<std::uint32_t>(pre_zseed + (static_cast<std::int64_t>(globals::my_rank) * std::ssize(packets)));
     for (auto packetnumber = 0ZU; packetnumber < std::size(packets); packetnumber++) {
-      get_rngstate(packets[packetnumber]).seed(static_cast<std::uint32_t>(rngseed) + packetnumber);
+      get_rngstate(packets[packetnumber]).seed(rank_seed_base + static_cast<std::uint32_t>(packetnumber));
     }
 #else
     get_rngstate().seed(rngseed);

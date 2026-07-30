@@ -219,7 +219,10 @@ auto calculate_partfunct(const int element, const int ion, const int nonemptymgi
   }
   U *= stat_weight(element, ion, 0);
   const auto U_float = static_cast<float>(U);
+  // an overflow to infinity passes a bare positivity test, and would then propagate silently
+  // through get_nnion() into the free electron density
   assert_always(U_float > 0.);
+  assert_always(std::isfinite(U_float));
 
   if (initial) {
     // put back the zero, just in case it matters for something

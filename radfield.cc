@@ -1205,6 +1205,13 @@ void read_restart_data(FILE* gridsave_file) {
       for (int jblueindex = 0; jblueindex < detailed_linecount; jblueindex++) {
         assert_always(fscanf(gridsave_file, "%la %d\n", &Jb_lu_raw[nonemptymgi][jblueindex].value,
                              &Jb_lu_raw[nonemptymgi][jblueindex].contribcount) == 2);
+        // normalise_J() is skipped on the timestep that a run resumes from, so the normalised values
+        // that the macro atom reads have to be rebuilt here. Otherwise every detailed line estimator
+        // would be zero for the first timestep after each restart. J_normfactor holds exactly the
+        // factor that normalise_J() applies.
+        prev_Jb_lu_normed[nonemptymgi][jblueindex].value =
+            Jb_lu_raw[nonemptymgi][jblueindex].value * J_normfactor[nonemptymgi];
+        prev_Jb_lu_normed[nonemptymgi][jblueindex].contribcount = Jb_lu_raw[nonemptymgi][jblueindex].contribcount;
       }
     }
   }
