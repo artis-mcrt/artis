@@ -119,7 +119,8 @@ void do_nonthermal_predeposit(Packet& pkt, const int nts, const double ts_end) {
     // just reduce the particle energy up to the end of this timestep
     const auto t_new = std::min(t_absorb, ts_end);
 
-    if (t_absorb <= ts_end) {
+    const bool absorbed = (t_absorb <= ts_end);
+    if (absorbed) {
       pkt.type = deposit_type;
     } else {
       pkt.nu_cmf -= (endot * (ts_end - ts)) / H;
@@ -128,7 +129,19 @@ void do_nonthermal_predeposit(Packet& pkt, const int nts, const double ts_end) {
     pkt.pos = vec_scale(pkt.pos, t_new / ts);
     pkt.prop_time = t_new;
     if constexpr (PARTICLE_THERMALISATION_SCHEME == ParticleThermalisationScheme::TIMEDEPENDENT_WITH_ADIABATIC_LOSS) {
-      pkt.e_cmf *= ts / t_new;  // account for adiabatic losses
+      if (absorbed) {
+        // Only the collisional part of the energy loss heats the gas, so the packet must not carry
+        // the adiabatic part into its deposition. Taking the collisional share of the energy pool
+        // makes the deposited energy agree with the trajectory estimator above in expectation: a
+        // packet is absorbed during this step with probability endot * dt / particle_en, while the
+        // estimator adds e_cmf * endot_collisional * dt / particle_en over the same step, so the
+        // two sums agree when the deposit is the collisional fraction of the pool as it stood at
+        // the start of the step. Depositing all of it instead overestimated the energy given to the
+        // gas by a factor that grows without bound as the adiabatic losses come to dominate.
+        pkt.e_cmf *= endot_collisional / endot;
+      } else {
+        pkt.e_cmf *= ts / t_new;  // account for adiabatic losses
+      }
     }
     assert_testmodeonly(grid::get_cellindex_from_pos(pkt.pos, pkt.prop_time) == pkt.cellindex);
   } else {
