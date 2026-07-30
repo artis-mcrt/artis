@@ -71,8 +71,12 @@ constexpr auto calculate_decaychain(const double firstinitabund, const std::span
       sumterm = exp(-lambda_j * timediff) / denominator;
     } else {
       if (lambda_j > 0.) {
-        sumterm =
-            (((1 + (1 / lambda_j / timediff)) * exp(-timediff * lambda_j)) - (1. / lambda_j / timediff)) / denominator;
+        // (1 + 1/x) * exp(-x) - 1/x, rearranged as exp(-x) + expm1(-x)/x. Written the first way it
+        // subtracts two numbers of size 1/x to leave a result of size x/2, so the relative error
+        // grows as epsilon/x^2 and it underflows to exactly zero below x of about 1e-8. 237-Np at
+        // 1e5 s has x = 1e-9, so every long-lived nuclide was contributing nothing at all here.
+        const double x = lambda_j * timediff;
+        sumterm = (exp(-x) + std::expm1(-x) / x) / denominator;
       }
     }
     sum += sumterm;
@@ -83,24 +87,19 @@ constexpr auto calculate_decaychain(const double firstinitabund, const std::span
   const double lastabund = firstinitabund * lambdaproduct * sum;
   assert_always(std::isfinite(lastabund));
 
-  // The terms alternate in sign and their magnitudes scale with the spread of the decay constants, so
-  // for a long chain of very differently-lived nuclides the sum is a small difference of much larger
-  // numbers. A chain reaching from 238-U to 206-Pb spans twenty-one orders of magnitude in decay
-  // constant and cancels away every significant digit. Once the sum drops to the rounding error of
-  // that cancellation there is nothing left in it: report zero rather than noise, which can otherwise
-  // come out negative and trip the assertions in get_qdot_modelcell() and get_particle_injection_rate()
-  // that an abundance is not negative.
+  // Neither quantity returned here can be negative. An abundance is a number of nuclei, and the
+  // expansion-factor result is the decay energy still available after adiabatic losses, which cannot
+  // remove more than the decay released. So a negative only ever means the Bateman sum has lost its
+  // significance, which happens readily now that the actinide chains are connected: the terms
+  // alternate in sign with magnitudes scaling as the spread of the decay constants, and a chain from
+  // 238-U to 206-Pb spans twenty-one orders of magnitude. Evaluated in 60-digit precision the 237-Np
+  // chain at 1e5 s gives +3.5e-54 where double precision gives -5.8e-23.
   //
-  // Testing the magnitude rather than the sign keeps the result independent of which way the rounding
-  // happened to fall, which a bit-reproducible build needs. At timediff = 0 the exact sum is zero for
-  // any chain of two or more nuclides, and the four supernova chains land on both signs of 1e-16 there
-  // purely by accident of rounding.
-  //
-  // The expansion-factor mode is deliberately excluded. Its result is a weighting factor rather than
-  // an abundance and is legitimately negative once the decays happened long before timediff, the term
-  // tending to -1/(lambda*timediff) for lambda*timediff >> 1, so a single 56-Ni at 1e6 s correctly
-  // gives -0.288. Clamping that would corrupt the initial temperature.
-  if (!useexpansionfactor && std::abs(sum) <= (num_nuclides * std::numeric_limits<double>::epsilon() * maxabsterm)) {
+  // The magnitude test additionally covers timediff = 0, where the exact sum is zero for any chain of
+  // two or more nuclides and the four supernova chains land on either sign of 1e-16 purely by accident
+  // of rounding. Testing only the sign there would leave the answer depending on which way it fell,
+  // which a bit-reproducible build cannot have.
+  if ((lastabund < 0.) || (std::abs(sum) <= (num_nuclides * std::numeric_limits<double>::epsilon() * maxabsterm))) {
     return 0.;
   }
 
