@@ -204,6 +204,11 @@ auto read_text_packets(const std::string& filename) -> std::vector<Packet> {
     ssline >> pkt.trueem_time;
     ssline >> pkt.pellet_nucindex;
     ssline >> pkt.pellet_decaytype;
+
+    // Deliberately no check on the stream state here. Packets that never emitted carry NAN in
+    // em_pos, trueem_pos and absorptionfreq, and extracting "nan" into a floating point type sets
+    // failbit in libstdc++, so a failed stream is an ordinary outcome for a valid row rather than a
+    // sign of a malformed one. Rejecting it stops exspec from reading its own packets files.
   }
 
   printlnlog("  read {} packets from {} (MPKTS {})", std::ssize(packets), filename, MPKTS);
