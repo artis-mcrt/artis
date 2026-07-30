@@ -130,12 +130,12 @@ DEVICE_FUNC inline void testmodeassert_valid_level([[maybe_unused]] const int el
   return globals::elements[element].ions[ion].nlevels_ionising;
 }
 
-// Returns the number of target states for photoionisation of (element,ion,level).
+// Returns the number of target states for photoionisation of a level, by unique level index or by
+// (element, ion, level).
 DEVICE_FUNC inline auto get_nphixstargets(const int uniquelevelindex) -> int {
   return globals::alllevels.nphixstargets[uniquelevelindex];
 }
 
-// Returns the number of target states for photoionisation of (element,ion,level).
 DEVICE_FUNC inline auto get_nphixstargets(const int element, const int ion, const int level) -> int {
   testmodeassert_valid_ion(element, ion);
   const auto nphixstargets = get_nphixstargets(get_uniquelevelindex(element, ion, level));
@@ -152,26 +152,26 @@ DEVICE_FUNC inline auto get_nphixstargets(const int element, const int ion, cons
 
   return globals::alllevels.phixstargetstart[uniquelevelindex] + phixstargetindex;
 }
-// Return the level index of a target state for photoionisation of (element,ion,level).
+// Return the upper-ion level index of a photoionisation target state, by unique level index or by
+// (element, ion, level).
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC inline auto get_phixsupperlevel(const int uniquelevelindex,
                                                                         const int phixstargetindex) -> int {
   return globals::allphixstargets_levelindex[get_allphixstargetindex(uniquelevelindex, phixstargetindex)];
 }
 
-// Return the level index of a target state for photoionisation of (element,ion,level).
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC inline auto get_phixsupperlevel(const int element, const int ion,
                                                                         const int level, const int phixstargetindex)
     -> int {
   return get_phixsupperlevel(get_uniquelevelindex(element, ion, level), phixstargetindex);
 }
 
-// Return the probability of a target state for photoionisation of (element,ion,level).
+// Return the branching probability of a photoionisation target state (the targets of a level sum to one),
+// by unique level index or by (element, ion, level).
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC inline auto get_phixsprobability(const int uniquelevelindex,
                                                                          const int phixstargetindex) -> double {
   return globals::allphixstargets_probability[get_allphixstargetindex(uniquelevelindex, phixstargetindex)];
 }
 
-// Return the probability of a target state for photoionisation of (element,ion,level).
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC inline auto get_phixsprobability(const int element, const int ion,
                                                                          const int level, const int phixstargetindex)
     -> double {
@@ -219,9 +219,9 @@ DEVICE_FUNC inline auto get_nphixstargets(const int element, const int ion, cons
                              globals::NPHIXSPOINTS - 1);
       sigma_bf = photoion_xs[i];
     } else {
-      // use a parameterization of sigma_bf by the Kramers formula
-      // which anchor point should we take ??? the cross-section at the edge or at the highest grid point ???
-      // so far the highest grid point, otherwise the cross-section is not continuous
+      // above the top of the table, extrapolate with the Kramers (1923) nu^-3 scaling. It is anchored to the
+      // highest tabulated point rather than to the threshold value so that the cross-section stays continuous
+      // across the end of the table.
       sigma_bf = static_cast<float>(photoion_xs[globals::NPHIXSPOINTS - 1] *
                                     pow(nu_edge * (1 + (globals::NPHIXSNUINCREMENT * globals::NPHIXSPOINTS)) / nu, 3));
     }
@@ -241,9 +241,9 @@ DEVICE_FUNC inline auto get_nphixstargets(const int element, const int ion, cons
     const double factor_b = ireal - i;
     sigma_bf = static_cast<float>(((1. - factor_b) * sigma_bf_a) + (factor_b * sigma_bf_b));
   } else {
-    // use a parameterization of sigma_bf by the Kramers formula
-    // which anchor point should we take ??? the cross-section at the edge or at the highest grid point ???
-    // so far the highest grid point, otherwise the cross-section is not continuous
+    // above the top of the table, extrapolate with the Kramers (1923) nu^-3 scaling. It is anchored to the
+    // highest tabulated point rather than to the threshold value so that the cross-section stays continuous
+    // across the end of the table.
     const double nu_max_phixs = nu_edge * last_phixs_nuovernuedge;  // nu of the uppermost point in the phixs table
     sigma_bf = static_cast<float>(photoion_xs[globals::NPHIXSPOINTS - 1] * pow3(nu_max_phixs / nu));
   }
@@ -271,12 +271,11 @@ DEVICE_FUNC inline auto get_nphixstargets(const int element, const int ion, cons
   assert_always(false);  // uniquelevelindex too high to be valid
   return {-1, -1, -1};
 }
-// Return the statistical weight of (element,ion,level).
+// Return the statistical weight of a level, by unique level index or by (element, ion, level).
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC inline auto stat_weight(const int uniquelevelindex) -> double {
   return globals::alllevels.statweight[uniquelevelindex];
 }
 
-// Return the statistical weight of (element,ion,level).
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC inline auto stat_weight(const int element, const int ion, const int level)
     -> double {
   testmodeassert_valid_level(element, ion, level);
@@ -451,12 +450,11 @@ inline void update_includedionslevels_maxnions() {
   return (get_nlevels(element, ion) > (get_nlevels_excited_nlte(element, ion) + get_nlevels_autoion(element, ion) + 1));
 }
 
-// the number of downward bound-bound transitions from the specified level
+// the number of downward bound-bound transitions from a level, by unique level index or by (element, ion, level)
 [[gnu::pure]] [[nodiscard]] inline auto get_ndowntrans(const int uniquelevelindex) -> int {
   return globals::alllevels.ndowntrans[uniquelevelindex];
 }
 
-// the number of downward bound-bound transitions from the specified level
 [[gnu::pure]] [[nodiscard]] inline auto get_ndowntrans(const int element, const int ion, const int level) -> int {
   testmodeassert_valid_level(element, ion, level);
   return get_ndowntrans(get_uniquelevelindex(element, ion, level));
@@ -477,12 +475,11 @@ inline void update_includedionslevels_maxnions() {
   return get_alltrans_startup(uniquelevelindex);
 }
 
-// the number of upward bound-bound transitions from the specified level
+// the number of upward bound-bound transitions from a level, by unique level index or by (element, ion, level)
 [[gnu::pure]] [[nodiscard]] inline auto get_nuptrans(const int uniquelevelindex) -> int {
   return globals::alllevels.nuptrans[uniquelevelindex];
 }
 
-// the number of upward bound-bound transitions from the specified level
 [[gnu::pure]] [[nodiscard]] inline auto get_nuptrans(const int element, const int ion, const int level) -> int {
   testmodeassert_valid_level(element, ion, level);
   return get_nuptrans(get_uniquelevelindex(element, ion, level));

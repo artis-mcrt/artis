@@ -147,14 +147,9 @@ constexpr bool NT_ON;
 // use the detailed Spencer-Fano solver instead of the work function approximation (only works if NT_ON)
 constexpr bool NT_SOLVE_SPENCERFANO;
 
-// number of energy points in the Spencer-Fano solution vector
-constexpr int SFPTS;
-
-// eV
-constexpr double SF_EMAX;
-
-// eV
-constexpr double SF_EMIN;
+// NB: the energy grid of the Spencer-Fano solution vector is not an artisoptions.h option. SFPTS (the number of
+// energy points) and SF_EMIN / SF_EMAX (the grid limits in eV) are set at the top of nonthermal.cc and apply to
+// every preset.
 
 // trigger a Spencer-Fano solution at least once every n timesteps
 // 0 can only re-use solutions from previous NLTE iterations of the current timestep

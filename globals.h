@@ -60,7 +60,7 @@ struct Element {
   int anumber{-1};  // Atomic number
   int lowest_ionstage{-1};  // ionisation stage (charge + 1) of ion 0 for this element
   int uniqueionindexstart{-1};  // uniqueionindex of the lowest ionisation stage of this element
-  float initstablemeannucmass = {0.};  // Atomic mass number in multiple of MH
+  float initstablemeannucmass = {0.};  // mean nuclear mass [g] of the element's stable component (mass_amu * MH)
   bool has_nlte_levels{false};
 };
 
@@ -221,8 +221,8 @@ inline MPI_shared_array<Ion> allions;
 
 struct TransitionLines {
   MPI_shared_array<const double> nu;  // Frequency of the line transition
-  MPI_shared_array<const int> elementindex;  // It's a transition of element (not its atomic number,
-                                             // but the (x-1)th element included in the simulation.
+  MPI_shared_array<const int> elementindex;  // index into the list of elements included in the simulation
+                                             // (not the atomic number)
   MPI_shared_array<const int> ionindex;  // The same for the elements ion
   MPI_shared_array<const int> uniquelevelindex_lower;  // globally unique index of the lower level of the transition
   MPI_shared_array<const int> uniquelevelindex_upper;  // globally unique index of the upper level of the transition

@@ -53,7 +53,8 @@ THREADLOCALONHOST CellWarningMarker nne_maxit_warned;
 THREADLOCALONHOST CellWarningMarker uppermost_ion_warned;
 THREADLOCALONHOST CellWarningMarker ionfract_zeroed_warned;
 
-// use Saha equation for LTE ionisation balance
+// LTE ionisation balance from the Saha equation. Returns phi = N_ion / (N_(ion+1) * nne) in [cm^3], the same
+// quantity that phi_rate_balance() returns for the nebular approximation.
 [[gnu::pure]] [[nodiscard]] auto phi_saha(const int element, const int ion, const int nonemptymgi) -> double {
   const auto partfunc_ion = get_ion_partfunct(nonemptymgi, element, ion);
   const auto partfunc_upperion = get_ion_partfunct(nonemptymgi, element, ion + 1);
@@ -242,7 +243,9 @@ void set_calculated_nne(const int nonemptymgi) {
   grid::set_nne(nonemptymgi, static_cast<float>(std::max(MINPOP, nne)));
 }
 
-// Special case of only neutral ions, set nne to some finite value so that packets are not lost in kpkts
+// Fallback for a cell in which every element is confined to its lowest included ion stage: put each element's whole
+// population in that stage and floor the higher stages at MINPOP. The MINPOP floor leaves nne slightly above zero,
+// which keeps the collisional rates in the k-packet treatment finite so that packets are not lost there.
 void set_groundlevelpops_neutral(const ptrdiff_t nonemptymgi) {
   if (neutralcell_warned.is_first_occurrence(nonemptymgi)) {
     printlnlog("[warning] set_groundlevelpops_neutral: only neutral ions in cell {} timestep {} (repeats suppressed)",
@@ -272,8 +275,6 @@ void set_groundlevelpops_neutral(const ptrdiff_t nonemptymgi) {
 // Solve for the free electron density nne in [0, nne_max] that makes the ion balance self-consistent, using the
 // Boost TOMS 748 root-finder on the charge-conservation residual.
 auto find_converged_nne(const int nonemptymgi, double nne_max, const bool force_lte) -> float {
-  // search for nne solution in [0.,nne_max]
-
   const auto f_nne = [nonemptymgi, force_lte](const double nne) { return nne_solution_f(nne, nonemptymgi, force_lte); };
 
   constexpr double nne_min = 0.;
@@ -284,7 +285,6 @@ auto find_converged_nne(const int nonemptymgi, double nne_max, const bool force_
   constexpr double fractional_accuracy = 1e-3;
   constexpr auto maxit = 50U;
 
-  // use TOMS 748 solver from Boost
   uintmax_t iter = maxit;
   const auto result =
       boost::math::tools::toms748_solve(f_nne, nne_min, nne_max, f_nne_min, f_nne_max, ftol<fractional_accuracy>, iter);
@@ -478,6 +478,7 @@ void set_groundlevelpops(const int nonemptymgi, const int element, const float n
 auto calculate_ion_balance_nne(const int nonemptymgi) -> void {
   const bool force_saha = globals::lte_iteration || grid::thick_allcells[nonemptymgi] == 1;
 
+  // upper bound on nne: at most one free electron per nucleon, i.e. fully ionised hydrogen
   const double nne_max = grid::get_rho(nonemptymgi) / MH;
 
   bool only_lowest_ionstage = true;  // could be completely neutral, or just at each element's lowest ion stage

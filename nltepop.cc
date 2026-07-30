@@ -175,7 +175,8 @@ auto get_nlte_vector_index(const int element, const int ion, const int level, co
 [[nodiscard]] auto get_ion_level_of_nlte_vector_index(const std::ptrdiff_t index, const int element,
                                                       const int first_ion_used, const int nions_used)
     -> std::tuple<int, int> {
-  // this could easily be optimized if need be
+  // inverse of get_nlte_vector_index() by linear search. Called once per vector entry when validating or
+  // reporting a solution, never from the rate matrix assembly, so the O(nlevels) scan is not on a hot path.
   for (int dion = first_ion_used; dion < first_ion_used + nions_used; dion++) {
     for (int dlevel = 0; dlevel < get_nlevels(element, dion); dlevel++) {
       if (get_nlte_vector_index(element, dion, dlevel, first_ion_used) == index) {
@@ -677,7 +678,7 @@ void nltepop_matrix_add_autoionisation(const int nonemptymgi, const int element,
     const auto uniquelevelindex = get_uniquelevelindex(element, ion, level);
     const int nautoiondowntrans = get_nautoiondowntrans(uniquelevelindex);
     for (int i = 0; i < nautoiondowntrans; i++) {
-      // autoionisation (which is a de-excitation propcess)
+      // autoionisation (which is a de-excitation process)
       const auto& autoiontransition = globals::allautoion[globals::alllevels.allautoion_start[uniquelevelindex] + i];
       const double A_a = autoiontransition.autoion_A;
       const int target_ion = autoiontransition.upperionindex;

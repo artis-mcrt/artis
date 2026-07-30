@@ -233,8 +233,10 @@ void update_pellet(Packet& pkt, const int nts, const double t2) {
       gammapkt::pellet_gamma_decay(pkt);
     }
   } else if ((tdecay > 0) && (nts == 0)) {
-    // These are pellets whose decay times were before the first time step
-    // They will be made into r-packets with energy reduced for doing work on the ejecta following Lucy 2004.
+    // These are pellets whose decay times were before the first time step. They become pre-k-packets, which
+    // do_packet() immediately re-emits as r-packets with a blackbody frequency. The energy is reduced by
+    // tdecay / tmin to account for the work done on the ejecta by the trapped radiation between the decay and
+    // the start of the simulation (equation 18 of Lucy 2005, as also applied in decay.cc).
     // The position is already set at globals::tmin so don't need to move it. Assume
     // that it is fixed in place from decay to globals::tmin - i.e. short mfp.
 

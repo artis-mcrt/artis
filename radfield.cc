@@ -215,9 +215,9 @@ void update_bfestimators(const ptrdiff_t nonemptymgi, const double distance_e_cm
   // LUT gammaestimator in rpkt.cc)
   const double distance_e_cmf_over_nu = distance_e_cmf / nu_cmf;
 
-  // I think the nu_cmf slightly differs from when the phixslist was calculated
-  // so the nu condition on this nu_cmf can truncate the list further compared to what was used in the calculation
-  // of phixslist.gamma_contr
+  // The packet has propagated since the phixslist was built, so nu_cmf has drifted (downwards) from the value the
+  // list was truncated at. Re-deriving the bounds from the current nu_cmf can therefore narrow the range further
+  // than the stored phixslist.bfestimbegin/bfestimend, and the contributions are only made over that narrower range.
   const auto bfestimcount = std::ssize(globals::bfestim_nu_edge);
 
   assert_testmodeonly(phixslist.bfestimend <= bfestimcount);
@@ -353,24 +353,24 @@ auto nu_bar_planck_minus_estimator(const double T_R, const int nonemptymgi, cons
   return delta_nu_bar;
 }
 
+// Find the radiation temperature of a bin by matching the Planck mean frequency to the bin's nuJ/J estimator.
+// nu_bar_planck_minus_estimator() increases with T_R, so a root outside [bins_T_R_min, bins_T_R_max] is clamped to
+// whichever bound it lies beyond.
 auto find_bin_T_R(const int nonemptymgi, const int binindex) -> float {
   const auto f_deltanubar = [nonemptymgi, binindex](const double T_R) {
     return nu_bar_planck_minus_estimator(T_R, nonemptymgi, binindex);
   };
 
-  // Check whether the equation has a root in [T_min,T_max]
   const double f_Tmin = f_deltanubar(bins_T_R_min);
   const double f_Tmax = f_deltanubar(bins_T_R_max);
 
   const bool invalid_values = (!std::isfinite(f_Tmin) || !std::isfinite(f_Tmax));
 
+  // a sign change over the interval guarantees a root that the bracketing solver can find
   if (!invalid_values && f_Tmin * f_Tmax < 0) {
-    // If there is a root in the interval, solve for T_R
-
     constexpr double epsrel = 1e-4;
     const auto maxit = 100U;
 
-    // use TOMS 748 solver from Boost
     uintmax_t iteration_num = maxit;
     const auto result = boost::math::tools::toms748_solve(f_deltanubar, bins_T_R_min, bins_T_R_max, f_Tmin, f_Tmax,
                                                           ftol<epsrel>, iteration_num);
@@ -384,10 +384,12 @@ auto find_bin_T_R(const int nonemptymgi, const int binindex) -> float {
     return T_R_solution;
   }
   if (invalid_values || f_Tmax < 0) {
-    // At T_R_max, nu_bar_planck_minus_estimator is negative or not finite, so any root lies above T_R_max; clamp to
-    // upper bound
+    // the Planck mean frequency is still below the estimator at the top of the range (or the residual is not
+    // finite), so any root lies above bins_T_R_max
     return bins_T_R_max;
   }
+  // the residual is positive at both ends, so the Planck mean frequency already exceeds the estimator at the
+  // bottom of the range and any root lies below bins_T_R_min
   return bins_T_R_min;
 }
 

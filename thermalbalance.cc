@@ -109,16 +109,19 @@ void calculate_heating_rates(const int nonemptymgi, const float T_e, const float
   if constexpr (DIRECT_COL_HEAT) {
     heatingcoolingrates.heating_collisional = C_deexc;
   } else {
-    // Collisional heating (from estimators)
-    heatingcoolingrates.heating_collisional = globals::colheatingestimator.at(nonemptymgi);  // C_deexc + C_recomb;
+    // from Monte Carlo estimators, which accumulate collisional recombination heating as well as
+    // the collisional de-excitation heating that the DIRECT_COL_HEAT branch above sums analytically
+    heatingcoolingrates.heating_collisional = globals::colheatingestimator.at(nonemptymgi);
   }
 
   heatingcoolingrates.heating_bf = bfheating;
   heatingcoolingrates.heating_ff = ffheating;
 }
 
-// Thermal balance equation on which we have to iterate to get T_e
-
+// Residual (total heating minus total cooling) of the thermal balance equation, as a function of T_e.
+// NB: this is not a pure function of T_e. Evaluating it stores T_e in the grid and re-solves the cell's
+// ionisation balance, populations and nne at that temperature, so the cell is left in the state belonging
+// to the last T_e passed in. call_T_e_finder() relies on this and re-evaluates at the final T_e.
 auto T_e_eqn_heating_minus_cooling(const double T_e, int nonemptymgi, const double t_current,
                                    HeatingCoolingRates& heatingcoolingrates,
                                    const std::span<const double> bfheatingcoeffs) -> double {
@@ -165,9 +168,10 @@ auto T_e_eqn_heating_minus_cooling(const double T_e, int nonemptymgi, const doub
           ? heatingcoolingrates.heating_dep / (ntlepton_dep + ntalpha_dep + ntspfission_dep)
           : ntlepton_frac_heating;
 
-  // Adiabatic cooling term
+  // Adiabatic cooling p dV/dt per unit volume. Homologous expansion gives V proportional to t^3, so this
+  // reduces to 3p/t, but it is written out below in terms of the cell volume at tmin.
   const double nntot = get_nnion_tot(nonemptymgi) + nne;
-  const double p = nntot * KB * T_e;  // pressure in [erg/cm^3]
+  const double p = nntot * KB * T_e;  // ideal gas pressure in [erg/cm^3]
   const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
   const double volumetmin = grid::get_modelcell_assocvolume_tmin(modelgridindex);
   const double dV_on_dt = 3 * volumetmin / pow3(globals::tmin) * pow2(t_current);
@@ -206,7 +210,9 @@ auto calculate_bfheatingcoeff(const int element, const int ion, const int level,
   return bfheating;
 }
 
-// depends only the radiation field - no dependence on T_e or populations
+// Calculate the bound-free heating coefficient of every level in a cell. These depend only on the radiation
+// field, not on T_e or the populations, so they are computed once per cell and reused at every T_e that the
+// temperature solver tries.
 void calculate_bfheatingcoeffs(int nonemptymgi, std::span<double> bfheatingcoeffs) {
   assert_always(std::ssize(bfheatingcoeffs) == get_includedlevels());
   const double minelfrac = 0.01;
@@ -245,7 +251,9 @@ void calculate_bfheatingcoeffs(int nonemptymgi, std::span<double> bfheatingcoeff
 }
 
 // Solve the thermal-balance equation (heating = cooling) for the electron temperature T_e in a cell by
-// root-finding between MINTEMP and MAXTEMP, then store the resulting T_e in the grid.
+// root-finding between MINTEMP and MAXTEMP, then store the resulting T_e in the grid. If the equation has no
+// sign change over that range, T_e is pinned to whichever bound the residual points towards. The change from
+// the previous timestep's T_e is then damped to at most a factor of two in either direction.
 void call_T_e_finder(const int nonemptymgi, const double t_current, HeatingCoolingRates& heatingcoolingrates,
                      const std::span<const double> bfheatingcoeffs) {
   const int modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
@@ -267,12 +275,13 @@ void call_T_e_finder(const int nonemptymgi, const double t_current, HeatingCooli
   }
 
   double T_e{NAN};
-  // Check whether the thermal balance equation has a root in [T_min,T_max]
+  // a sign change over [MINTEMP, MAXTEMP] guarantees a root that the bracketing solver can find
   if (!invalid_values && f_T_min * f_T_max < 0) {
     const auto maxit = 100U;
-    // If it has, then solve for the root T_e
 
-    // use TOMS 748 solver from Boost
+    // TOMS 748 (Alefeld, Potra & Shi 1995, ACM Trans. Math. Softw. 21, 327, doi:10.1145/210089.210111):
+    // bracketing solver with inverse cubic interpolation, so it keeps the root bracketed like bisection
+    // but converges superlinearly on the smooth part of the residual
     uintmax_t iternum = maxit;
     auto result = boost::math::tools::toms748_solve(f_T_e, MINTEMP, MAXTEMP, f_T_min, f_T_max,
                                                     ftol<TEMPERATURE_SOLVER_ACCURACY>, iternum);

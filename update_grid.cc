@@ -36,7 +36,8 @@ std::vector<HeatingCoolingRates> heatingcoolingrates_thisrankcells;
 
 void write_to_estimators_file(std::ostream& estimators_file, const int nonemptymgi, const int timestep, const int titer,
                               const HeatingCoolingRates& heatingcoolingrates) {
-  // return; disable for better performance (if estimators files are not needed)
+  // writing the estimators file is a measurable cost per cell per timestep. If the estimators output is not
+  // needed, an early return here skips it.
   const int mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
 
   const auto sys_time_start_write_estimators = std::chrono::steady_clock::now();
@@ -304,7 +305,7 @@ void update_gamma_corrphotoionrenorm_bfheating_estimators(const int nonemptymgi,
       // 2012-01-11. These loops should terminate here to precalculate *ALL* corrphotoionrenorm
       // values so that the values are known when required by the call to get_corrphotoioncoeff in
       // the following loops. Otherwise get_corrphotoioncoeff tries to renormalize by the closest
-      // corrphotoionrenorm in frequency space which can lead to zero contributions to the total photoionsation rate!
+      // corrphotoionrenorm in frequency space which can lead to zero contributions to the total photoionisation rate!
     }
   }
   for (int element = 0; element < get_nelements(); element++) {

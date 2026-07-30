@@ -724,9 +724,9 @@ auto do_timestep(const int nts, const int titer, std::vector<Packet>& packets, c
   }
   time_timestep_start = std::chrono::steady_clock::now();
 
-  // set all the estimators to zero before moving packets. This is now done
-  // after update_grid so that, if requires, the gamma-ray heating estimator is known there
-  // and also the photoion and stimrecomb estimators
+  // set all the estimators to zero before moving packets. This is done after update_grid() so that the
+  // gamma-ray heating estimator, and the photoionisation and stimulated recombination estimators, are still
+  // available to it from the previous timestep.
   zero_estimators();
 
   MPI_Barrier_allranks();
@@ -812,7 +812,9 @@ auto main(int argc, char* argv[]) -> int {
 #endif
 
 #if defined(_OPENMP) && !defined(GPU_ON)
-  // Explicitly turn off dynamic threads because we use the threadprivate directive!!!
+  // Explicitly turn off dynamic threads. The per-thread log file handles in mpi_logging.h are threadprivate,
+  // and OpenMP only guarantees that threadprivate data persists between parallel regions while the team size
+  // stays fixed, which dynamic adjustment would break.
   omp_set_dynamic(0);
 #pragma omp parallel
 #endif

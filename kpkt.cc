@@ -225,9 +225,11 @@ void set_ncoolingterms() {
   }
 }
 
-// return a randomly chosen frequency according to the Planck distribution of temperature T using a Monte Carlo method
+// Draw a frequency from the Planck distribution at temperature T, truncated to the [NU_MIN_R, NU_MAX_R] range
+// that r-packets are tracked over. Uses rejection sampling against a uniform proposal, with the envelope set by
+// the peak of the Planck function, so it stays valid whatever part of the curve falls inside the range.
 auto sample_planck_montecarlo(const double T, rngstate_type& rngstate) -> double {
-  const double nu_peak = 5.879e10 * T;
+  const double nu_peak = 5.879e10 * T;  // Wien displacement law in frequency [Hz/K]
   const double B_peak = radfield::planck(nu_peak, T);
 
   while (true) {
@@ -457,10 +459,9 @@ DEVICE_FUNC void do_kpkt(Packet& pkt, const double t2, const int nts) {
 
   if (rndcoolingtype == CoolingType::FREEFREE) {
     // The k-packet converts directly into a r-packet by free-free emission.
-    // Need to select the r-packets frequency and a random direction in the co-moving frame.
-
-    // Sample the packets comoving frame frequency according to paperII 5.4.3 eq.41
-
+    // Sample the comoving-frame frequency from the free-free emissivity (paper II, Sect. 5.4.3 eq. 41). The
+    // emissivity is treated as frequency-independent apart from its exp(-h nu / k T_e) factor, so nu is
+    // exponentially distributed with mean k T_e / h and can be drawn by inverting the CDF.
     pkt.nu_cmf = -KB * T_e / H * std::log(static_cast<double>(rng_uniform_pos(get_rngstate(pkt))));
 
     assert_always(std::isfinite(pkt.nu_cmf));
@@ -482,15 +483,14 @@ DEVICE_FUNC void do_kpkt(Packet& pkt, const double t2, const int nts) {
     }
 
   } else if (rndcoolingtype == CoolingType::FREEBOUND) {
-    // The k-packet converts directly into a r-packet by free-bound-emission.
-    // Need to select the r-packets frequency and a random direction in the co-moving frame.
+    // The k-packet converts directly into a r-packet by free-bound emission.
     const int lowerion = ion;
     const int lowerlevel = coolinglist_level[i];
     const int upper = coolinglist_upperlevel[i];
 
-    // then randomly sample the packets frequency according to the continuums energy distribution
-
-    // Sample the packets comoving frame frequency according to paperII 4.2.2
+    // Sample the comoving-frame frequency from the energy distribution of this recombination continuum
+    // (paper II, Sect. 4.2.2), i.e. by inverting the CDF of the energy-weighted emissivity over the
+    // continuum's frequency range.
     pkt.nu_cmf = select_continuum_nu(element, lowerion, lowerlevel, upper, T_e, get_rngstate(pkt));
 
     // and then emit the packet randomly in the comoving frame
