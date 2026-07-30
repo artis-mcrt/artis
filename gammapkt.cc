@@ -487,6 +487,23 @@ void compton_scatter(Packet& pkt) {
   return chi_cmf;
 }
 
+// energy-dependent factor of the pair-production cross section, from Equation 2 of Ambwani &
+// Sutherland (1988), attributed to Hubbell (1969). Multiply by Z^2 * 1e-27 for a cross section in
+// cm^2. Only valid above the 1.022 MeV threshold.
+[[nodiscard]] constexpr auto get_sigma_pair_prod_factor(const double nu_cmf) -> double {
+  const double hnu_over_1MeV = nu_cmf / nu_1mev;
+  if (nu_cmf > nu_1p5mev) {
+    return 0.0481 + (0.301 * (hnu_over_1MeV - 1.5));
+  }
+  // the coefficient below 1.5 MeV is 0.10063, not the 1.0063 printed in the paper: the latter makes
+  // the fit jump by a factor of ten at the junction between the two branches
+  return 0.10063 * (hnu_over_1MeV - 1.022);
+}
+
+// the two branches of the fit must agree where they meet at 1.5 MeV
+static_assert((get_sigma_pair_prod_factor(nu_1p5mev * (1. + 1e-12)) - get_sigma_pair_prod_factor(nu_1p5mev)) < 1e-6);
+static_assert((get_sigma_pair_prod_factor(nu_1p5mev) - get_sigma_pair_prod_factor(nu_1p5mev * (1. + 1e-12))) < 1e-6);
+
 // calculate the absorption coefficient [cm^-1] for pair production in the comoving frame
 [[nodiscard]] auto get_chi_pair_prod_cmf(const int nonemptymgi, const double ffegrp, const double nu_cmf) -> double {
   if constexpr (GAMMA_USE_KAPPA_GREY.has_value()) {
@@ -499,21 +516,11 @@ void compton_scatter(Packet& pkt) {
     return 0.;
   }
 
-  double sigma_cmf_si{NAN};
-  double sigma_cmf_fe{NAN};
+  const double sigma_factor = get_sigma_pair_prod_factor(nu_cmf);
 
-  // Cross sections from Equation 2 of Ambwani & Sutherland (1988), attributed to Hubbell (1969)
+  const double sigma_cmf_si = sigma_factor * 196.e-27;
 
-  const double hnu_over_mev = nu_cmf / nu_1mev;
-  if (nu_cmf > nu_1p5mev) {
-    sigma_cmf_si = (0.0481 + (0.301 * (hnu_over_mev - 1.5))) * 196.e-27;
-
-    sigma_cmf_fe = (0.0481 + (0.301 * (hnu_over_mev - 1.5))) * 784.e-27;
-  } else {
-    sigma_cmf_si = 1.0063 * (hnu_over_mev - 1.022) * 196.e-27;
-
-    sigma_cmf_fe = 1.0063 * (hnu_over_mev - 1.022) * 784.e-27;
-  }
+  const double sigma_cmf_fe = sigma_factor * 784.e-27;
 
   // multiply by the particle number density. As in get_chi_photo_electric_cmf(), the composition is
   // approximated as an iron-group species (A = 56) with mass fraction ffegrp plus silicon (A = 28).
