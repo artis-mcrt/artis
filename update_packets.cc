@@ -130,17 +130,20 @@ void do_nonthermal_predeposit(Packet& pkt, const int nts, const double ts_end) {
     pkt.prop_time = t_new;
     if constexpr (PARTICLE_THERMALISATION_SCHEME == ParticleThermalisationScheme::TIMEDEPENDENT_WITH_ADIABATIC_LOSS) {
       if (absorbed) {
-        // Only the collisional part of the energy loss heats the gas, so the packet must not carry
-        // the adiabatic part into its deposition. Taking the collisional share of the energy pool
-        // makes the deposited energy agree with the trajectory estimator above in expectation: a
-        // packet is absorbed during this step with probability endot * dt / particle_en, while the
-        // estimator adds e_cmf * endot_collisional * dt / particle_en over the same step, so the
-        // two sums agree when the deposit is the collisional fraction of the pool as it stood at
-        // the start of the step. Depositing all of it instead overestimated the energy given to the
-        // gas by a factor that grows without bound as the adiabatic losses come to dominate.
+        // Only the collisional part of the energy loss heats the gas, so the packet gives up that
+        // share of its energy and the remainder goes to the expansion.
+        //
+        // The packet energy is deliberately not degraded adiabatically while the particle is still
+        // travelling. The absorption energy is drawn uniformly, so a packet survives to time t with
+        // probability E(t) / E_start, and the expected total of the trajectory estimator above is
+        // (endot_collisional / E_start) times the integral of e_cmf over time. The energy that the
+        // particles really surrender to the gas is endot_collisional * (t_end - t_start) each, so
+        // the two agree only while e_cmf is held constant. The adiabatic loss is already carried by
+        // that survival weighting, because it shortens the particle's life; degrading e_cmf as well
+        // counted it a second time and made the deposition low by a factor
+        // t_start * ln(t_end / t_start) / (t_end - t_start), which falls to 0.42 once the adiabatic
+        // losses dominate.
         pkt.e_cmf *= endot_collisional / endot;
-      } else {
-        pkt.e_cmf *= ts / t_new;  // account for adiabatic losses
       }
     }
     assert_testmodeonly(grid::get_cellindex_from_pos(pkt.pos, pkt.prop_time) == pkt.cellindex);
