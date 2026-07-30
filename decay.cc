@@ -826,7 +826,10 @@ void read_betaminus_decaydata() {
   auto fbetaminus = fstream_required("betaminusdecays.txt", std::ios::in);
   std::string line;
   while (get_noncommentline(fbetaminus, line)) {
-    // energies are average per beta decay
+    // energies are averages per decay of the parent nuclide, summed over its decay branches, as
+    // are the ENDF MF=8/MT=457 quantities they derive from. Every nuclide added here is given a
+    // beta-minus branching ratio of one, so the two conventions coincide unless read_alpha_decaydata()
+    // later gives the nuclide a fractional branch, where it divides the ratio back out.
     // columns: # A, Z, Q[MeV], E_gamma[MeV], E_elec[MeV], E_neutrino[MeV], meanlife[s]
     int a = -1;
     int z = -1;
