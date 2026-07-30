@@ -77,11 +77,13 @@ struct Nuclide {
       0., 0., 0., 0., 0., 0.,
   };  // branch probability of each decay type
 
-  // (Z, A, probability) of fission daughters
+  // (Z, A, yield) of the fission daughters. The value held in DecayDaughter::probability is a yield
+  // rather than a probability: it is the expected number of these daughter nuclei produced per
+  // fission, so it sums over the daughters to the number of fragments per fission, not to one.
   std::vector<DecayDaughter> fission_daughters_z_a_prob{};  // NOLINT(readability-redundant-member-init)
 
-  // sum of daughter probabilities for all decay types
-  // default to 1.0 for the single-daughter decays and replace for fission
+  // expected number of daughter nuclei produced per decay, i.e. the sum of the daughter yields.
+  // One for the single-daughter decays, and two for the binary fission of the tabulated nuclides
   double decay_daughters_probsum{1.};
 };
 
@@ -912,7 +914,9 @@ void read_spontfission_decaydata() {
     nuclides.push_back({.z = z_in, .a = a_in, .meanlife = tau_sec});
     nuclides.back().branchprobs[DECAYTYPE_SPONTFISSION] = 1.;
     nuclides.back().endecay_q[DECAYTYPE_SPONTFISSION] = q_fission_mev * MEV;
-    nuclides.back().endecay_fission = q_fission_mev * MEV;  // will be overwritten if we have fission product data
+    // only the kinetic energy carried by the two fragments is deposited locally. The Q column of
+    // this file happens to hold almost the same value, but E1 and E2 are the quantity itself.
+    nuclides.back().endecay_fission = (e_1_mev + e_2_mev) * MEV;
     printlnlog("  added spontaneous fission nuclide: (Z={}){}{} meanlife {:.1e} [days]", z_in, get_elname(z_in), a_in,
                tau_sec / DAY);
   }
@@ -935,29 +939,39 @@ void read_fissionproduct_data() {
     const int nucindex = get_nucindex_or_neg_one(z_parent, a_parent);
     const bool keep_table = (nucindex >= 0) && (nuclides[nucindex].branchprobs[DECAYTYPE_SPONTFISSION] > 0.);
     if (keep_table) {
+      // This is the total energy released by the fission event, which is shared between the kinetic
+      // energy of the fragments, the prompt neutrons, and the prompt gamma rays. Only the fragment
+      // kinetic energy is deposited locally as heavy charged particles, so endecay_fission keeps the
+      // value from fissiondecays.txt and only the total Q value is taken from this table.
       nuclides[nucindex].endecay_q[DECAYTYPE_SPONTFISSION] = q_fission_mev * MEV;
-      nuclides[nucindex].endecay_fission = q_fission_mev * MEV;
       nuclides[nucindex].fission_daughters_z_a_prob.clear();
       nuclides[nucindex].fission_daughters_z_a_prob.reserve(tablesize);
     }
 
-    double daughter_prob_sum = 0.;
+    double daughter_yield_sum = 0.;
     for (int i = 0; i < tablesize; i++) {
       assert_always(get_noncommentline(ffission_products, line));
       if (keep_table) {
         int daughter_a = -1;
         int daughter_z = -1;
-        double probability_before_neutron_emission = 0.;
-        double probability = 0.;
-        assert_always(std::stringstream(line) >> daughter_a >> daughter_z >> probability_before_neutron_emission >>
-                      probability);
+        double yieldpercent_before_neutron_emission = 0.;
+        double yieldpercent = 0.;
+        assert_always(std::stringstream(line) >> daughter_a >> daughter_z >> yieldpercent_before_neutron_emission >>
+                      yieldpercent);
+        // the table lists yields as a percentage per fission, so convert to the expected number of
+        // these daughter nuclei produced per fission
+        const double yield_per_fission = yieldpercent / 100.;
         nuclides[nucindex].fission_daughters_z_a_prob.push_back(
-            {.z = daughter_z, .a = daughter_a, .probability = probability});
-        daughter_prob_sum += probability;
+            {.z = daughter_z, .a = daughter_a, .probability = yield_per_fission});
+        daughter_yield_sum += yield_per_fission;
       }
     }
     if (keep_table) {
-      nuclides[nucindex].decay_daughters_probsum = daughter_prob_sum;
+      // the yields sum to the number of fragments produced per fission, which is two for the binary
+      // fission of the tabulated nuclides. This also guards against a table in different units.
+      assert_always(daughter_yield_sum > 1.9);
+      assert_always(daughter_yield_sum < 2.1);
+      nuclides[nucindex].decay_daughters_probsum = daughter_yield_sum;
     }
   }
 }
@@ -1022,6 +1036,9 @@ void check_nuclide_data() {
     if (nuc.branchprobs[DECAYTYPE_SPONTFISSION] > 0.) {
       assert_always(nuc.endecay_fission >= 0.);
       assert_always(nuc.endecay_q[DECAYTYPE_SPONTFISSION] >= 0.);
+      // the fragment kinetic energy is only part of the energy released by the fission, the rest
+      // going to the prompt neutrons and gamma rays
+      assert_always(nuc.endecay_fission <= nuc.endecay_q[DECAYTYPE_SPONTFISSION]);
     }
     assert_always(nuc.endecay_gamma >= 0.);
   }
