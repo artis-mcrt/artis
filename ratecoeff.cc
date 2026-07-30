@@ -278,15 +278,18 @@ void read_recombrate_file() {
 
   std::string line;
   while (get_noncommentline(recombrate_file, line)) {
-    std::stringstream(line) >> atomicnumber >> upperionstage >> tablerows;
+    assert_always(std::stringstream(line) >> atomicnumber >> upperionstage >> tablerows);
+    assert_always(tablerows >= 0);
     RRCRow T_highestbelow = {.log_Te = 0, .rrc_low_n = 0, .rrc_total = 0};
     RRCRow T_lowestabove = {.log_Te = 0, .rrc_low_n = 0, .rrc_total = 0};
     T_highestbelow.log_Te = -1;
     T_lowestabove.log_Te = -1;
     for (int i = 0; i < tablerows; i++) {
       RRCRow row{};
-      get_noncommentline(recombrate_file, line);
-      std::stringstream(line) >> row.log_Te >> row.rrc_low_n >> row.rrc_total;
+      // without these checks a truncated or malformed table would leave the previous line's values
+      // in place and silently calibrate the wrong ion
+      assert_always(get_noncommentline(recombrate_file, line));
+      assert_always(std::stringstream(line) >> row.log_Te >> row.rrc_low_n >> row.rrc_total);
 
       if (row.log_Te < log_Te_estimate && row.log_Te > T_highestbelow.log_Te) {
         T_highestbelow.log_Te = row.log_Te;

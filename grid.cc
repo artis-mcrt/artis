@@ -1967,6 +1967,9 @@ void read_ejecta_model() {
         assert_always(false);
       }
       vout_model[mgi] = vout_kmps * 1.e5;
+      // the velocity grid is binary searched by int_index_lowerbound(), so it has to increase
+      // outwards. Without this check a non-monotonic model.txt gives silently wrong cell lookups.
+      assert_always(mgi == 0 || vout_model[mgi] > vout_model[mgi - 1]);
       rho_tmodel = (log_rho > -90) ? pow(10., log_rho) : 0.;
     } else if (get_modelgridtype() == GridType::CYLINDRICAL2D) {
       // columns: cell number, r midpoint, z midpoint, density

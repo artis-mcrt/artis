@@ -692,6 +692,12 @@ auto calculate_nlevels_groundterm(const int element, const int ion) -> int {
 auto search_groundphixslist(const double nu_edge, const int element_in, const int ion_in, const int level_in) -> int {
   assert_always((USE_LUT_PHOTOION || USE_ION_BFHEATING_ESTIMATORS));
 
+  // an atomic dataset where no ground level has a photoionisation table leaves this list empty,
+  // which the rest of the code allows for, so do not index into it before checking
+  if (globals::nbfcontinua_ground <= 0) {
+    return -1;
+  }
+
   if (nu_edge < globals::groundcont_nu_edge[0]) {
     return -1;
   }
