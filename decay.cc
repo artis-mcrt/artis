@@ -895,11 +895,13 @@ void read_alpha_decaydata() {
         // The electron and gamma energies are only taken for a nuclide that this file introduces.
         // betaminusdecays.txt is read first and stays authoritative for a nuclide listed in both
         // (its E_elec agrees with the E_beta column here for every such nuclide anyway).
-        nuclides.push_back({.z = z,
-                            .a = a,
-                            .meanlife = tau_sec,
-                            .endecay_electron = e_beta_mev * MEV,
-                            .endecay_gamma = e_gamma_mev * MEV});
+        nuclides.push_back({
+            .z = z,
+            .a = a,
+            .meanlife = tau_sec,
+            .endecay_electron = e_beta_mev * MEV,
+            .endecay_gamma = e_gamma_mev * MEV,
+        });
         alphanucindex = static_cast<int>(nuclides.size() - 1);
       }
       nuclides[alphanucindex].branchprobs[DECAYTYPE_BETAMINUS] = branch_beta;
