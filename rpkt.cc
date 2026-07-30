@@ -255,7 +255,11 @@ auto get_possible_event_expansion_opacity(const int nonemptymgi, Packet& pkt, co
       // interaction occurs
       if constexpr (RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.has_value()) {
         const auto edist = std::max(dist + ((tau_rnd - tau) / chi_tot), 0.);
-        const bool event_is_boundbound = rng_uniform(get_rngstate(pkt)) <= chi_bb_expansionopac / chi_tot;
+        // strict comparison, so that a draw of exactly zero cannot select the bound-bound channel
+        // when its opacity is zero (rng_uniform() rejects one but can return zero). Otherwise a
+        // wavelength bin with no line opacity could take the thermalisation branch, and in a cell
+        // with no line opacity at all the Planck sampling that follows has nothing to sample from.
+        const bool event_is_boundbound = rng_uniform(get_rngstate(pkt)) < chi_bb_expansionopac / chi_tot;
         return {edist, event_is_boundbound};
       }
 
