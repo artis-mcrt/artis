@@ -76,7 +76,7 @@ constexpr auto calculate_decaychain(const double firstinitabund, const std::span
         // grows as epsilon/x^2 and it underflows to exactly zero below x of about 1e-8. 237-Np at
         // 1e5 s has x = 1e-9, so every long-lived nuclide was contributing nothing at all here.
         const double x = lambda_j * timediff;
-        sumterm = (exp(-x) + std::expm1(-x) / x) / denominator;
+        sumterm = (exp(-x) + (std::expm1(-x) / x)) / denominator;
       }
     }
     sum += sumterm;
