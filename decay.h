@@ -86,17 +86,21 @@ constexpr auto calculate_decaychain(const double firstinitabund, const std::span
   // The terms alternate in sign and their magnitudes scale with the spread of the decay constants, so
   // for a long chain of very differently-lived nuclides the sum is a small difference of much larger
   // numbers. A chain reaching from 238-U to 206-Pb spans twenty-one orders of magnitude in decay
-  // constant and cancels away every significant digit, leaving rounding error that is as likely to be
-  // negative as positive. An abundance cannot be negative, and a negative one trips the assertions in
-  // get_qdot_modelcell() and get_particle_injection_rate(), so return zero instead.
+  // constant and cancels away every significant digit. Once the sum drops to the rounding error of
+  // that cancellation there is nothing left in it: report zero rather than noise, which can otherwise
+  // come out negative and trip the assertions in get_qdot_modelcell() and get_particle_injection_rate()
+  // that an abundance is not negative.
   //
-  // This applies to the abundance only. The expansion-factor result is a weighting factor rather than
-  // an abundance and is legitimately negative whenever the decays happened long before timediff: the
-  // term tends to -1/(lambda*timediff) for lambda*timediff >> 1. Clamping that would corrupt the
-  // initial temperature. Only a negative abundance is touched, so every well-conditioned chain stays
-  // bit-identical, and the assertion holds the line against a negative too large to be rounding error.
-  if (!useexpansionfactor && lastabund < 0.) {
-    assert_always(std::abs(sum) <= (num_nuclides * std::numeric_limits<double>::epsilon() * maxabsterm));
+  // Testing the magnitude rather than the sign keeps the result independent of which way the rounding
+  // happened to fall, which a bit-reproducible build needs. At timediff = 0 the exact sum is zero for
+  // any chain of two or more nuclides, and the four supernova chains land on both signs of 1e-16 there
+  // purely by accident of rounding.
+  //
+  // The expansion-factor mode is deliberately excluded. Its result is a weighting factor rather than
+  // an abundance and is legitimately negative once the decays happened long before timediff, the term
+  // tending to -1/(lambda*timediff) for lambda*timediff >> 1, so a single 56-Ni at 1e6 s correctly
+  // gives -0.288. Clamping that would corrupt the initial temperature.
+  if (!useexpansionfactor && std::abs(sum) <= (num_nuclides * std::numeric_limits<double>::epsilon() * maxabsterm)) {
     return 0.;
   }
 
