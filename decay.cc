@@ -1060,6 +1060,13 @@ void check_nuclide_data() {
     if (nuc.branchprobs[DECAYTYPE_ALPHA] > 0.) {
       assert_always(nuc.endecay_alpha >= 0.);
       assert_always(nuc.endecay_q[DECAYTYPE_ALPHA] >= 0.);
+      // Two-body kinematics gives the alpha particle a share (A-4)/A of whatever the gamma rays
+      // leave of the Q value, so scaling back up by A/(A-4) has to recover most of it. The floor is
+      // Rn-221 at 0.90, which is low only because its tabulated gamma energy is dominated by the
+      // competing beta branch. A branching ratio left in the tabulated energy would land orders of
+      // magnitude below this: it would put Fr-223 at 6e-5 of its Q value.
+      assert_always((nuc.endecay_alpha * static_cast<double>(nuc.a) / (nuc.a - 4)) >
+                    (0.85 * nuc.endecay_q[DECAYTYPE_ALPHA]));
     }
     if (nuc.branchprobs[DECAYTYPE_SPONTFISSION] > 0.) {
       assert_always(nuc.endecay_fission >= 0.);
