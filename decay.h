@@ -80,19 +80,26 @@ constexpr auto calculate_decaychain(const double firstinitabund, const std::span
     maxabsterm = (abssumterm > maxabsterm) ? abssumterm : maxabsterm;
   }
 
+  const double lastabund = firstinitabund * lambdaproduct * sum;
+  assert_always(std::isfinite(lastabund));
+
   // The terms alternate in sign and their magnitudes scale with the spread of the decay constants, so
   // for a long chain of very differently-lived nuclides the sum is a small difference of much larger
   // numbers. A chain reaching from 238-U to 206-Pb spans twenty-one orders of magnitude in decay
-  // constant and cancels away every significant digit: what is left is rounding error, which is as
-  // likely to be negative as positive. Report zero rather than pass on a meaningless abundance, since
-  // a negative one trips the assertions in get_qdot_modelcell() and get_particle_injection_rate().
-  const double roundofffloor = num_nuclides * std::numeric_limits<double>::epsilon() * maxabsterm;
-  if (std::abs(sum) <= roundofffloor) {
+  // constant and cancels away every significant digit, leaving rounding error that is as likely to be
+  // negative as positive. An abundance cannot be negative, and a negative one trips the assertions in
+  // get_qdot_modelcell() and get_particle_injection_rate(), so return zero instead.
+  //
+  // This applies to the abundance only. The expansion-factor result is a weighting factor rather than
+  // an abundance and is legitimately negative whenever the decays happened long before timediff: the
+  // term tends to -1/(lambda*timediff) for lambda*timediff >> 1. Clamping that would corrupt the
+  // initial temperature. Only a negative abundance is touched, so every well-conditioned chain stays
+  // bit-identical, and the assertion holds the line against a negative too large to be rounding error.
+  if (!useexpansionfactor && lastabund < 0.) {
+    assert_always(std::abs(sum) <= (num_nuclides * std::numeric_limits<double>::epsilon() * maxabsterm));
     return 0.;
   }
 
-  const double lastabund = firstinitabund * lambdaproduct * sum;
-  assert_always(std::isfinite(lastabund));
   return lastabund;
 }
 
