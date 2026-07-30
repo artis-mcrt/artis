@@ -830,9 +830,11 @@ void read_betaminus_decaydata() {
     // are the ENDF MF=8/MT=457 average decay energies they are taken from. Every nuclide added
     // here is given a beta-minus branching ratio of one, so the two conventions coincide unless
     // read_alpha_decaydata() later gives the nuclide a fractional branch, where it divides the
-    // ratio back out. E_gamma covers X-rays as well as gamma rays and E_elec covers conversion and
-    // Auger electrons as well as the beta continuum, so neither is zero merely because ENDF
-    // tabulates no spectrum for the nuclide.
+    // ratio back out. E_gamma covers X-rays as well as gamma rays, so it is not zero merely because
+    // ENDF tabulates no spectrum for the nuclide. E_elec likewise covers conversion and Auger
+    // electrons, but only where the branching ratio stays one: a nuclide that alphadecays.txt gives
+    // a fractional beta-minus branch carries the beta continuum alone, because ELP sums the discrete
+    // electrons over every branch and there is no branch to divide that by.
     // columns: # A, Z, Q[MeV], E_gamma[MeV], E_elec[MeV], E_neutrino[MeV], meanlife[s]
     int a = -1;
     int z = -1;
@@ -915,9 +917,11 @@ void read_alpha_decaydata() {
       // The gamma energy needs no such division: it is a single per-nuclide value covering all
       // branches at once, and is used without a branching factor.
       // A nuclide with no beta-minus branch keeps no electron energy, which drops the conversion
-      // and Auger electrons that follow its alpha decay: at most 2.8% of the Q value, for Th-229.
-      // ENDF sums those electrons over all branches, so there is no branch to attribute them to,
-      // and they cannot go into the gamma energy without being transported as photons.
+      // and Auger electrons that follow its alpha decay. Of the pure alpha emitters, U-235 leaves
+      // the most of its Q value unaccounted for by E_alpha and E_gamma, 3.7% counting the recoil
+      // nucleus and 2.0% without it, then Pa-231 and Ra-223. ENDF sums those electrons over all
+      // branches, so there is no branch to attribute them to, and they cannot go into the gamma
+      // energy without being transported as photons.
       nuclides[alphanucindex].endecay_alpha = (branch_alpha > 0.) ? (e_alpha_mev * MEV / branch_alpha) : 0.;
       nuclides[alphanucindex].endecay_electron =
           (branch_beta > 0.) ? (nuclides[alphanucindex].endecay_electron / branch_beta) : 0.;
