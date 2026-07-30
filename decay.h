@@ -70,12 +70,17 @@ constexpr auto calculate_decaychain(const double firstinitabund, const std::span
       // get abundance output
       sumterm = exp(-lambda_j * timediff) / denominator;
     } else {
-      if (lambda_j > 0.) {
-        // (1 + 1/x) * exp(-x) - 1/x, rearranged as exp(-x) + expm1(-x)/x. Written the first way it
-        // subtracts two numbers of size 1/x to leave a result of size x/2, so the relative error
-        // grows as epsilon/x^2 and it underflows to exactly zero below x of about 1e-8. 237-Np at
-        // 1e5 s has x = 1e-9, so every long-lived nuclide was contributing nothing at all here.
-        const double x = lambda_j * timediff;
+      // (1 + 1/x) * exp(-x) - 1/x, rearranged as exp(-x) + expm1(-x)/x. Written the first way it
+      // subtracts two numbers of size 1/x to leave a result of size x/2, so the relative error
+      // grows as epsilon/x^2 and it underflows to exactly zero below x of about 1e-8. 237-Np at
+      // 1e5 s has x = 1e-9, so every long-lived nuclide was contributing nothing at all here.
+      //
+      // x is zero for a stable nuclide, and also if timediff is zero, which would need the first
+      // timestep midpoint to fall exactly on the model snapshot time. Either way the term is zero:
+      // expm1(-x)/x tends to -1 as x tends to zero, so the bracket tends to zero. Both forms divide
+      // by x, so leaving it unguarded would give 0/0 here and inf - inf in the original.
+      const double x = lambda_j * timediff;
+      if (x > 0.) {
         sumterm = (exp(-x) + (std::expm1(-x) / x)) / denominator;
       }
     }
