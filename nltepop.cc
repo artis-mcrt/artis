@@ -964,6 +964,17 @@ template <typename GetDiagElement>
   assert_always(rate_matrix.size() == (nlte_dimension * nlte_dimension));
   assert_always(std::cmp_greater_equal(max_nlte_dimension, nlte_dimension));
 
+  // A non-finite entry anywhere makes the solve meaningless. Checked here rather than in the backend-specific code
+  // below so that both builds react the same way: report and return false, which lets the caller drop an ion stage and
+  // retry, instead of aborting the run.
+  const auto is_finite = [](const double x) { return std::isfinite(x); };
+  if (!std::ranges::all_of(rate_matrix, is_finite) || !std::ranges::all_of(balance_vector, is_finite)) {
+    printlnlog(
+        "  [error] cell {} ts {}: NLTE rate matrix or balance vector contains a non-finite value for element Z={}",
+        nltelog.modelgridindex, nltelog.timestep, get_atomicnumber(element));
+    return false;
+  }
+
   // solution vector for the matrix equation
   THREADLOCALONHOST std::vector<double> vec_x;
   vec_x.reserve(max_nlte_dimension);
@@ -1005,12 +1016,10 @@ template <typename GetDiagElement>
 
   auto eigen_vec_x = Eigen::Map<Eigen::VectorX<double>>(vec_x.data(), nlte_dimension);
   const auto eigen_balance_vector = Eigen::Map<const Eigen::VectorX<double>>(balance_vector.data(), nlte_dimension);
-  assert_always(eigen_balance_vector.allFinite());
 
   const auto eigen_rate_matrix =
       Eigen::Map<const Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>>(
           rate_matrix.data(), nlte_dimension, nlte_dimension);
-  assert_always(eigen_rate_matrix.allFinite());
 
   THREADLOCALONHOST Eigen::PartialPivLU<Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>>
       eigen_rate_matrix_lu;
@@ -1022,8 +1031,9 @@ template <typename GetDiagElement>
     return false;
   }
 
+  // a non-finite solution is not checked for here: it leaves error_best negative below, which is reported and returned
+  // as a solver failure in both builds
   eigen_vec_x = eigen_rate_matrix_lu.solve(eigen_balance_vector);
-  assert_always(eigen_vec_x.allFinite());
 
 #endif
 
@@ -1067,7 +1077,10 @@ template <typename GetDiagElement>
     const double error = eigen_vec_residual.cwiseAbs().maxCoeff();
 #endif
 
-    if ((std::isfinite(error) && (error < error_best)) || error_best < 0.) {
+    // only ever store a finite error, so that a non-finite iteration cannot latch error_best and block a later
+    // iteration from being accepted. If every iteration is non-finite then error_best stays negative and the solve is
+    // reported as a failure below.
+    if (std::isfinite(error) && (error_best < 0. || error < error_best)) {
       std::ranges::copy(vec_x, vec_x_best.begin());
       error_best = error;
     }

@@ -2018,6 +2018,21 @@ auto sfmatrix_solve(const std::span<const double> sfmatrix) -> std::array<double
 
   THREADLOCALONHOST std::array<double, SFPTS> yvec_arr{};
 
+  // Both branches below require sfmatrix to be upper triangular, so the check belongs here rather than in either one.
+  // The GSL branch is the one that silently depends on it: it passes the full matrix to gsl_linalg_LU_solve with an
+  // identity permutation, so anything left below the diagonal would be taken as the unit-lower factor L and a
+  // different system would be solved. The Eigen branch is correct by construction via triangularView<Upper>().
+  assert_testmodeonly([sfmatrix] {
+    for (int i = 1; i < SFPTS; i++) {
+      for (int j = 0; j < i; j++) {
+        if (sfmatrix[(i * SFPTS) + j] != 0.) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }());
+
 #ifdef EIGEN_OFF
 
   auto gsl_yvec = gsl_vector_view_array(yvec_arr.data(), SFPTS).vector;
@@ -2039,7 +2054,6 @@ auto sfmatrix_solve(const std::span<const double> sfmatrix) -> std::array<double
 
   const Eigen::Map<const Eigen::Vector<double, SFPTS>> eigen_rhsvec{rhsvec.data()};
   const Eigen::Map<const Eigen::Matrix<double, SFPTS, SFPTS, Eigen::RowMajor>> eigen_sfmatrix{sfmatrix.data()};
-  assert_testmodeonly(eigen_sfmatrix.isUpperTriangular());
 
   const auto eigen_sfmatrix_LU = eigen_sfmatrix.triangularView<Eigen::Upper>();
   Eigen::Map<Eigen::Vector<double, SFPTS>> eigen_yvec{yvec_arr.data()};
@@ -2077,7 +2091,10 @@ auto sfmatrix_solve(const std::span<const double> sfmatrix) -> std::array<double
     const double error = eigen_residual_vec.cwiseAbs().maxCoeff();
 #endif
 
-    if (error < error_best || error_best < 0.) {
+    // only ever store a finite error, so that a non-finite iteration cannot latch error_best and block a later
+    // iteration from being accepted. If every iteration is non-finite then error_best stays negative and the assertion
+    // below fails.
+    if (std::isfinite(error) && (error_best < 0. || error < error_best)) {
       std::ranges::copy(yvec_arr, yvec_best.begin());
       error_best = error;
     }
