@@ -826,7 +826,15 @@ void read_betaminus_decaydata() {
   auto fbetaminus = fstream_required("betaminusdecays.txt", std::ios::in);
   std::string line;
   while (get_noncommentline(fbetaminus, line)) {
-    // energies are average per beta decay
+    // energies are averages per decay of the parent nuclide, summed over its decay branches, as
+    // are the ENDF MF=8/MT=457 average decay energies they are taken from. Every nuclide added
+    // here is given a beta-minus branching ratio of one, so the two conventions coincide unless
+    // read_alpha_decaydata() later gives the nuclide a fractional branch, where it divides the
+    // ratio back out. E_gamma covers X-rays as well as gamma rays, so it is not zero merely because
+    // ENDF tabulates no spectrum for the nuclide. E_elec likewise covers conversion and Auger
+    // electrons, but only where the branching ratio stays one: a nuclide that alphadecays.txt gives
+    // a fractional beta-minus branch carries the beta continuum alone, because ELP sums the discrete
+    // electrons over every branch and there is no branch to divide that by.
     // columns: # A, Z, Q[MeV], E_gamma[MeV], E_elec[MeV], E_neutrino[MeV], meanlife[s]
     int a = -1;
     int z = -1;
@@ -857,6 +865,7 @@ void read_alpha_decaydata() {
   if (!nuc_exists(2, 4)) {
     nuclides.push_back({.z = 2, .a = 4, .meanlife = -1});
   }
+  std::set<std::tuple<int, int>> seen_z_a{};
   while (get_noncommentline(falpha, line)) {
     // columns: # A, Z, branch_alpha, branch_beta, halflife[s], Q_total_alphadec[MeV], Q_total_betadec[MeV],
     // E_alpha[MeV], E_gamma[MeV], E_beta[MeV]
@@ -875,19 +884,47 @@ void read_alpha_decaydata() {
 
     const bool keeprow = ((branch_alpha > 0. || branch_beta > 0.) && halflife > 0.);
     if (keeprow) {
+      // one row per nuclide: the branching ratios below are divided out of the tabulated energies
+      // in place, so a second row for the same nuclide would apply that division twice
+      assert_always(!seen_z_a.contains({z, a}));
+      seen_z_a.insert({z, a});
       const double tau_sec = halflife / std::numbers::ln2;
       int alphanucindex = -1;
       if (nuc_exists(z, a)) {
         alphanucindex = get_nucindex(z, a);
       } else {
-        nuclides.push_back({.z = z, .a = a, .meanlife = tau_sec, .endecay_gamma = e_gamma_mev * MEV});
+        // The electron and gamma energies are only taken for a nuclide that this file introduces.
+        // betaminusdecays.txt is read first and stays authoritative for a nuclide listed in both
+        // (its E_elec agrees with the E_beta column here for every such nuclide anyway).
+        nuclides.push_back({.z = z,
+                            .a = a,
+                            .meanlife = tau_sec,
+                            .endecay_electron = e_beta_mev * MEV,
+                            .endecay_gamma = e_gamma_mev * MEV});
         alphanucindex = static_cast<int>(nuclides.size() - 1);
       }
-      nuclides[alphanucindex].endecay_alpha = e_alpha_mev * MEV;
       nuclides[alphanucindex].branchprobs[DECAYTYPE_BETAMINUS] = branch_beta;
       nuclides[alphanucindex].endecay_q[DECAYTYPE_BETAMINUS] = Q_betadecay_mev * MEV;
       nuclides[alphanucindex].branchprobs[DECAYTYPE_ALPHA] = branch_alpha;
       nuclides[alphanucindex].endecay_q[DECAYTYPE_ALPHA] = Q_alphadecay_mev * MEV;
+
+      // The decay data files tabulate the particle energies as averages per decay of the parent
+      // nuclide, so a branch taken by only a fraction of the decays contributes an energy that is
+      // already scaled by that fraction. endecay_alpha and endecay_electron are instead averages
+      // per decay of their own type, which is the convention of the hardcoded nuclides in
+      // add_standard_nuclides() and the one the consumers assume when they multiply by
+      // get_nuc_decaybranchprob(). Divide the branching ratio out here so it is applied once.
+      // The gamma energy needs no such division: it is a single per-nuclide value covering all
+      // branches at once, and is used without a branching factor.
+      // A nuclide with no beta-minus branch keeps no electron energy, which drops the conversion
+      // and Auger electrons that follow its alpha decay. Of the pure alpha emitters, U-235 leaves
+      // the most of its Q value unaccounted for by E_alpha and E_gamma, 3.7% counting the recoil
+      // nucleus and 2.0% without it, then Pa-231 and Ra-223. ENDF sums those electrons over all
+      // branches, so there is no branch to attribute them to, and they cannot go into the gamma
+      // energy without being transported as photons.
+      nuclides[alphanucindex].endecay_alpha = (branch_alpha > 0.) ? (e_alpha_mev * MEV / branch_alpha) : 0.;
+      nuclides[alphanucindex].endecay_electron =
+          (branch_beta > 0.) ? (nuclides[alphanucindex].endecay_electron / branch_beta) : 0.;
     }
   }
 }
@@ -1028,10 +1065,31 @@ void check_nuclide_data() {
     if (nuc.branchprobs[DECAYTYPE_BETAMINUS] > 0.) {
       assert_always(nuc.endecay_electron >= 0.);
       assert_always(nuc.endecay_q[DECAYTYPE_BETAMINUS] >= 0.);
+      // the mean kinetic energy carried away by the electron is a share of the decay energy, the
+      // rest going to the neutrino and the gamma rays. The largest share in the current data is
+      // Pb-210 at 0.62, whose Q value of 63.5 keV is small enough that the conversion electrons
+      // dominate, so this has room to spare and would only fire if a branching ratio were divided
+      // out of the tabulated energy more than once.
+      assert_always(nuc.endecay_electron <= nuc.endecay_q[DECAYTYPE_BETAMINUS]);
     }
     if (nuc.branchprobs[DECAYTYPE_ALPHA] > 0.) {
       assert_always(nuc.endecay_alpha >= 0.);
       assert_always(nuc.endecay_q[DECAYTYPE_ALPHA] >= 0.);
+      // Two-body kinematics gives the alpha particle a share (A-4)/A of whatever the gamma rays
+      // leave of the Q value, so scaling back up by A/(A-4) has to recover most of it. The floor is
+      // Rn-221 at 0.90, which is low only because its tabulated gamma energy is dominated by the
+      // competing beta branch. A branching ratio left in the tabulated energy would land orders of
+      // magnitude below this: it would put Fr-223 at 6e-5 of its Q value.
+      assert_always((nuc.endecay_alpha * static_cast<double>(nuc.a) / (nuc.a - 4)) >
+                    (0.85 * nuc.endecay_q[DECAYTYPE_ALPHA]));
+      // and it cannot exceed the Q value either, since the alpha and the recoil are all the decay
+      // has to give. The highest real row is Fr-221 at 1.0025, which is the precision of the
+      // four-significant-figure energies, so 1% is the tolerance. This catches an E_alpha
+      // normalised to a different branching ratio than the one in the branch column: Ac-227 was
+      // tabulated against 1.419% rather than the 1.38% beside it, which left its alpha carrying
+      // 5.09 MeV out of a 5.04 MeV decay.
+      assert_always((nuc.endecay_alpha * static_cast<double>(nuc.a) / (nuc.a - 4)) <
+                    (1.01 * nuc.endecay_q[DECAYTYPE_ALPHA]));
     }
     if (nuc.branchprobs[DECAYTYPE_SPONTFISSION] > 0.) {
       assert_always(nuc.endecay_fission >= 0.);

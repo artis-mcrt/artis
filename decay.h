@@ -6,6 +6,7 @@
 #include <array>
 #include <cmath>
 #include <cstddef>
+#include <limits>
 #include <ostream>
 #include <span>
 #include <string>
@@ -44,6 +45,11 @@ constexpr auto calculate_decaychain(const double firstinitabund, const std::span
                                     const double timediff, const bool useexpansionfactor) -> double {
   const int num_nuclides = static_cast<int>(lambdas.size());
   assert_testmodeonly(num_nuclides >= 1);
+  // The expansion-factor result is only the energy-weighted count of decays reaching the end of the
+  // chain, and so only non-negative, if the chain end is treated as a sink. Left decaying, the same
+  // sum is the weighted integral of a signed derivative and may legitimately come out negative,
+  // which the clamp at the end would then swallow. The one caller zeroes it; require that.
+  assert_testmodeonly(!useexpansionfactor || (lambdas.back() == 0.));
 
   double lambdaproduct = 1.;
   for (int j = 0; j < (num_nuclides - 1); j++) {
@@ -51,6 +57,7 @@ constexpr auto calculate_decaychain(const double firstinitabund, const std::span
   }
 
   double sum = 0;
+  double maxabsterm = 0.;
   for (int j = 0; j < num_nuclides; j++) {
     const auto lambda_j = lambdas[j];
     double denominator = 1.;
@@ -63,20 +70,49 @@ constexpr auto calculate_decaychain(const double firstinitabund, const std::span
     // the Bateman solution is singular when two nuclides in a chain have equal decay constants
     // (init_nuclides() rejects decay data that could trigger this)
     assert_always(std::abs(denominator) > 0.);
+    double sumterm = 0.;
     if (!useexpansionfactor) {
       // get abundance output
-      sum += exp(-lambda_j * timediff) / denominator;
+      sumterm = exp(-lambda_j * timediff) / denominator;
     } else {
-      if (lambda_j > 0.) {
-        const double sumtermtop =
-            ((1 + (1 / lambda_j / timediff)) * exp(-timediff * lambda_j)) - (1. / lambda_j / timediff);
-        sum += sumtermtop / denominator;
+      // (1 + 1/x) * exp(-x) - 1/x, rearranged as exp(-x) + expm1(-x)/x. Written the first way it
+      // subtracts two numbers of size 1/x to leave a result of size x/2, so the relative error
+      // grows as epsilon/x^2 and it underflows to exactly zero below x of about 1e-8. 237-Np at
+      // 1e5 s has x = 1e-9, so every long-lived nuclide was contributing nothing at all here.
+      //
+      // x is zero for a stable nuclide, and also if timediff is zero, which would need the first
+      // timestep midpoint to fall exactly on the model snapshot time. Either way the term is zero:
+      // expm1(-x)/x tends to -1 as x tends to zero, so the bracket tends to zero. Both forms divide
+      // by x, so leaving it unguarded would give 0/0 here and inf - inf in the original.
+      const double x = lambda_j * timediff;
+      if (x > 0.) {
+        sumterm = (exp(-x) + (std::expm1(-x) / x)) / denominator;
       }
     }
+    sum += sumterm;
+    const auto abssumterm = std::abs(sumterm);
+    maxabsterm = (abssumterm > maxabsterm) ? abssumterm : maxabsterm;
   }
 
   const double lastabund = firstinitabund * lambdaproduct * sum;
   assert_always(std::isfinite(lastabund));
+
+  // Neither quantity returned here can be negative. An abundance is a number of nuclei, and the
+  // expansion-factor result is the decay energy still available after adiabatic losses, which cannot
+  // remove more than the decay released. So a negative only ever means the Bateman sum has lost its
+  // significance, which happens readily now that the actinide chains are connected: the terms
+  // alternate in sign with magnitudes scaling as the spread of the decay constants, and a chain from
+  // 238-U to 206-Pb spans twenty-one orders of magnitude. Evaluated in 60-digit precision the 237-Np
+  // chain at 1e5 s gives +3.5e-54 where double precision gives -5.8e-23.
+  //
+  // The magnitude test additionally covers timediff = 0, where the exact sum is zero for any chain of
+  // two or more nuclides and the four supernova chains land on either sign of 1e-16 purely by accident
+  // of rounding. Testing only the sign there would leave the answer depending on which way it fell,
+  // which a bit-reproducible build cannot have.
+  if ((lastabund < 0.) || (std::abs(sum) <= (num_nuclides * std::numeric_limits<double>::epsilon() * maxabsterm))) {
+    return 0.;
+  }
+
   return lastabund;
 }
 
