@@ -914,9 +914,9 @@ void read_spontfission_decaydata() {
     nuclides.push_back({.z = z_in, .a = a_in, .meanlife = tau_sec});
     nuclides.back().branchprobs[DECAYTYPE_SPONTFISSION] = 1.;
     nuclides.back().endecay_q[DECAYTYPE_SPONTFISSION] = q_fission_mev * MEV;
-    // the Q value in this file is the kinetic energy shared by the two fragments (it matches
-    // E1 + E2), which is the part of the fission energy that thermalises locally
-    nuclides.back().endecay_fission = q_fission_mev * MEV;
+    // only the kinetic energy carried by the two fragments is deposited locally. The Q column of
+    // this file happens to hold almost the same value, but E1 and E2 are the quantity itself.
+    nuclides.back().endecay_fission = (e_1_mev + e_2_mev) * MEV;
     printlnlog("  added spontaneous fission nuclide: (Z={}){}{} meanlife {:.1e} [days]", z_in, get_elname(z_in), a_in,
                tau_sec / DAY);
   }
