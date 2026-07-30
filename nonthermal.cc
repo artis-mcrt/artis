@@ -2301,7 +2301,10 @@ DEVICE_FUNC auto nt_random_upperion(const int nonemptymgi, const int element, co
 
     // the channel probabilities are stored as floats and the tabulated Auger yields are only
     // normalised to about one part in a thousand, so a draw very close to one can fall past the end
-    // of the cumulative sum. Use the highest reachable ion rather than failing the whole run.
+    // of the cumulative sum. Absorb that small deficit into the highest reachable ion rather than
+    // failing the whole run, but still reject a distribution that is badly wrong rather than
+    // silently returning the top ion for every draw.
+    assert_always(prob_sum > 0.99);
     return nt_ionisation_maxupperion(element, lowerion);
   }
   return lowerion + 1;
