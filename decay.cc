@@ -880,10 +880,9 @@ void read_alpha_decaydata() {
       if (nuc_exists(z, a)) {
         alphanucindex = get_nucindex(z, a);
       } else {
-        // The beta and gamma energies are only taken for a nuclide that this file introduces.
-        // betaminusdecays.txt is read first and is the better source where a nuclide is in both:
-        // this table leaves E_beta at zero for Pb-210, Ac-227 and Ra-228 even though they do emit
-        // electrons, so overwriting would lose those values.
+        // The electron and gamma energies are only taken for a nuclide that this file introduces.
+        // betaminusdecays.txt is read first and stays authoritative for a nuclide listed in both
+        // (its E_elec agrees with the E_beta column here for every such nuclide anyway).
         nuclides.push_back({.z = z,
                             .a = a,
                             .meanlife = tau_sec,
