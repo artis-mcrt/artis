@@ -914,7 +914,9 @@ void read_spontfission_decaydata() {
     nuclides.push_back({.z = z_in, .a = a_in, .meanlife = tau_sec});
     nuclides.back().branchprobs[DECAYTYPE_SPONTFISSION] = 1.;
     nuclides.back().endecay_q[DECAYTYPE_SPONTFISSION] = q_fission_mev * MEV;
-    nuclides.back().endecay_fission = q_fission_mev * MEV;  // will be overwritten if we have fission product data
+    // the Q value in this file is the kinetic energy shared by the two fragments (it matches
+    // E1 + E2), which is the part of the fission energy that thermalises locally
+    nuclides.back().endecay_fission = q_fission_mev * MEV;
     printlnlog("  added spontaneous fission nuclide: (Z={}){}{} meanlife {:.1e} [days]", z_in, get_elname(z_in), a_in,
                tau_sec / DAY);
   }
@@ -937,8 +939,11 @@ void read_fissionproduct_data() {
     const int nucindex = get_nucindex_or_neg_one(z_parent, a_parent);
     const bool keep_table = (nucindex >= 0) && (nuclides[nucindex].branchprobs[DECAYTYPE_SPONTFISSION] > 0.);
     if (keep_table) {
+      // This is the total energy released by the fission event, which is shared between the kinetic
+      // energy of the fragments, the prompt neutrons, and the prompt gamma rays. Only the fragment
+      // kinetic energy is deposited locally as heavy charged particles, so endecay_fission keeps the
+      // value from fissiondecays.txt and only the total Q value is taken from this table.
       nuclides[nucindex].endecay_q[DECAYTYPE_SPONTFISSION] = q_fission_mev * MEV;
-      nuclides[nucindex].endecay_fission = q_fission_mev * MEV;
       nuclides[nucindex].fission_daughters_z_a_prob.clear();
       nuclides[nucindex].fission_daughters_z_a_prob.reserve(tablesize);
     }
@@ -1031,6 +1036,9 @@ void check_nuclide_data() {
     if (nuc.branchprobs[DECAYTYPE_SPONTFISSION] > 0.) {
       assert_always(nuc.endecay_fission >= 0.);
       assert_always(nuc.endecay_q[DECAYTYPE_SPONTFISSION] >= 0.);
+      // the fragment kinetic energy is only part of the energy released by the fission, the rest
+      // going to the prompt neutrons and gamma rays
+      assert_always(nuc.endecay_fission <= nuc.endecay_q[DECAYTYPE_SPONTFISSION]);
     }
     assert_always(nuc.endecay_gamma >= 0.);
   }
