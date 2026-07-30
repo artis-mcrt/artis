@@ -45,6 +45,11 @@ constexpr auto calculate_decaychain(const double firstinitabund, const std::span
                                     const double timediff, const bool useexpansionfactor) -> double {
   const int num_nuclides = static_cast<int>(lambdas.size());
   assert_testmodeonly(num_nuclides >= 1);
+  // The expansion-factor result is only the energy-weighted count of decays reaching the end of the
+  // chain, and so only non-negative, if the chain end is treated as a sink. Left decaying, the same
+  // sum is the weighted integral of a signed derivative and may legitimately come out negative,
+  // which the clamp at the end would then swallow. The one caller zeroes it; require that.
+  assert_testmodeonly(!useexpansionfactor || (lambdas.back() == 0.));
 
   double lambdaproduct = 1.;
   for (int j = 0; j < (num_nuclides - 1); j++) {
