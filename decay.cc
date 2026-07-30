@@ -570,7 +570,6 @@ auto get_endecay_to_tinf_per_ejectamass_at_time(const int modelgridindex, const 
 
   const double abund_endsink = calculate_decaychain(top_initabund, lambdas, t_afterinit, false);
   const double ndecays_remaining = decaypath.branchproduct * (top_initabund - abund_endsink);
-  // TODO ensure non-negative due to numerical precision?
 
   const double endecay = ndecays_remaining * get_decaypath_lastdecayenergy(decaypath);
 
@@ -1152,7 +1151,6 @@ void init_nuclides(const std::span<const int> custom_zlist, const std::span<cons
   // Read in data for gamma ray lines and make a list of them in energy order.
   gammapkt::init_gamma_data();
 
-  // TODO: generalise this to all included nuclides
   printlnlog("decayenergy(NI56) {:g} [MeV], decayenergy(CO56) {:g} [MeV], decayenergy_gamma(CO56) {:g} [MeV]",
              nucdecayenergytotal(28, 56) / MEV, nucdecayenergytotal(27, 56) / MEV, nucdecayenergygamma(27, 56) / MEV);
   printlnlog("decayenergy(NI57) {:g} [MeV], decayenergy_gamma(NI57) {:g} [MeV], decayenergy(CO57) {:g} [MeV]",
