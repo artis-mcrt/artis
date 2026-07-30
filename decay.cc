@@ -827,9 +827,12 @@ void read_betaminus_decaydata() {
   std::string line;
   while (get_noncommentline(fbetaminus, line)) {
     // energies are averages per decay of the parent nuclide, summed over its decay branches, as
-    // are the ENDF MF=8/MT=457 quantities they derive from. Every nuclide added here is given a
-    // beta-minus branching ratio of one, so the two conventions coincide unless read_alpha_decaydata()
-    // later gives the nuclide a fractional branch, where it divides the ratio back out.
+    // are the ENDF MF=8/MT=457 average decay energies they are taken from. Every nuclide added
+    // here is given a beta-minus branching ratio of one, so the two conventions coincide unless
+    // read_alpha_decaydata() later gives the nuclide a fractional branch, where it divides the
+    // ratio back out. E_gamma covers X-rays as well as gamma rays and E_elec covers conversion and
+    // Auger electrons as well as the beta continuum, so neither is zero merely because ENDF
+    // tabulates no spectrum for the nuclide.
     // columns: # A, Z, Q[MeV], E_gamma[MeV], E_elec[MeV], E_neutrino[MeV], meanlife[s]
     int a = -1;
     int z = -1;
@@ -911,6 +914,10 @@ void read_alpha_decaydata() {
       // get_nuc_decaybranchprob(). Divide the branching ratio out here so it is applied once.
       // The gamma energy needs no such division: it is a single per-nuclide value covering all
       // branches at once, and is used without a branching factor.
+      // A nuclide with no beta-minus branch keeps no electron energy, which drops the conversion
+      // and Auger electrons that follow its alpha decay: at most 2.8% of the Q value, for Th-229.
+      // ENDF sums those electrons over all branches, so there is no branch to attribute them to,
+      // and they cannot go into the gamma energy without being transported as photons.
       nuclides[alphanucindex].endecay_alpha = (branch_alpha > 0.) ? (e_alpha_mev * MEV / branch_alpha) : 0.;
       nuclides[alphanucindex].endecay_electron =
           (branch_beta > 0.) ? (nuclides[alphanucindex].endecay_electron / branch_beta) : 0.;
@@ -1056,8 +1063,9 @@ void check_nuclide_data() {
       assert_always(nuc.endecay_q[DECAYTYPE_BETAMINUS] >= 0.);
       // the mean kinetic energy carried away by the electron is a share of the decay energy, the
       // rest going to the neutrino and the gamma rays. The largest share in the current data is
-      // 0.47, so this has room to spare and would only fire if a branching ratio were divided out
-      // of the tabulated energy more than once.
+      // Pb-210 at 0.62, whose Q value of 63.5 keV is small enough that the conversion electrons
+      // dominate, so this has room to spare and would only fire if a branching ratio were divided
+      // out of the tabulated energy more than once.
       assert_always(nuc.endecay_electron <= nuc.endecay_q[DECAYTYPE_BETAMINUS]);
     }
     if (nuc.branchprobs[DECAYTYPE_ALPHA] > 0.) {
