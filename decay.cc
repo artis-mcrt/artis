@@ -1078,6 +1078,14 @@ void check_nuclide_data() {
       // magnitude below this: it would put Fr-223 at 6e-5 of its Q value.
       assert_always((nuc.endecay_alpha * static_cast<double>(nuc.a) / (nuc.a - 4)) >
                     (0.85 * nuc.endecay_q[DECAYTYPE_ALPHA]));
+      // and it cannot exceed the Q value either, since the alpha and the recoil are all the decay
+      // has to give. The highest real row is Fr-221 at 1.0025, which is the precision of the
+      // four-significant-figure energies, so 1% is the tolerance. This catches an E_alpha
+      // normalised to a different branching ratio than the one in the branch column: Ac-227 was
+      // tabulated against 1.419% rather than the 1.38% beside it, which left its alpha carrying
+      // 5.09 MeV out of a 5.04 MeV decay.
+      assert_always((nuc.endecay_alpha * static_cast<double>(nuc.a) / (nuc.a - 4)) <
+                    (1.01 * nuc.endecay_q[DECAYTYPE_ALPHA]));
     }
     if (nuc.branchprobs[DECAYTYPE_SPONTFISSION] > 0.) {
       assert_always(nuc.endecay_fission >= 0.);
