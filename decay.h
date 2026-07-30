@@ -6,6 +6,7 @@
 #include <array>
 #include <cmath>
 #include <cstddef>
+#include <limits>
 #include <ostream>
 #include <span>
 #include <string>
@@ -51,6 +52,7 @@ constexpr auto calculate_decaychain(const double firstinitabund, const std::span
   }
 
   double sum = 0;
+  double maxabsterm = 0.;
   for (int j = 0; j < num_nuclides; j++) {
     const auto lambda_j = lambdas[j];
     double denominator = 1.;
@@ -63,16 +65,30 @@ constexpr auto calculate_decaychain(const double firstinitabund, const std::span
     // the Bateman solution is singular when two nuclides in a chain have equal decay constants
     // (init_nuclides() rejects decay data that could trigger this)
     assert_always(std::abs(denominator) > 0.);
+    double sumterm = 0.;
     if (!useexpansionfactor) {
       // get abundance output
-      sum += exp(-lambda_j * timediff) / denominator;
+      sumterm = exp(-lambda_j * timediff) / denominator;
     } else {
       if (lambda_j > 0.) {
-        const double sumtermtop =
-            ((1 + (1 / lambda_j / timediff)) * exp(-timediff * lambda_j)) - (1. / lambda_j / timediff);
-        sum += sumtermtop / denominator;
+        sumterm =
+            (((1 + (1 / lambda_j / timediff)) * exp(-timediff * lambda_j)) - (1. / lambda_j / timediff)) / denominator;
       }
     }
+    sum += sumterm;
+    const auto abssumterm = std::abs(sumterm);
+    maxabsterm = (abssumterm > maxabsterm) ? abssumterm : maxabsterm;
+  }
+
+  // The terms alternate in sign and their magnitudes scale with the spread of the decay constants, so
+  // for a long chain of very differently-lived nuclides the sum is a small difference of much larger
+  // numbers. A chain reaching from 238-U to 206-Pb spans twenty-one orders of magnitude in decay
+  // constant and cancels away every significant digit: what is left is rounding error, which is as
+  // likely to be negative as positive. Report zero rather than pass on a meaningless abundance, since
+  // a negative one trips the assertions in get_qdot_modelcell() and get_particle_injection_rate().
+  const double roundofffloor = num_nuclides * std::numeric_limits<double>::epsilon() * maxabsterm;
+  if (std::abs(sum) <= roundofffloor) {
+    return 0.;
   }
 
   const double lastabund = firstinitabund * lambdaproduct * sum;
