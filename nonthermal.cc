@@ -780,6 +780,9 @@ constexpr auto xs_ionisation_lotz(const double en_erg, const ShellParams& collio
   // and reaches one at 255 keV, where log(1 - betasq) would be undefined and the cross section spuriously zero.
   const double gamma = (en_erg / (ME * pow2(CLIGHT))) + 1.;
   const double betasq = 1. - (1. / pow2(gamma));
+  // 0 < betasq < 1 holds for any finite en_erg >= ionpot, so this only fires on a non-finite input. Both log terms
+  // below need it, and without the check a NaN would make part_sigma_shell fail its > 0 test and return a silent zero.
+  assert_testmodeonly(betasq > 0. && betasq < 1.);
 
   const int ioncharge = colliondata_ion.ionstage - 1;
   const int nbound = colliondata_ion.Z - ioncharge;  // number of bound electrons
