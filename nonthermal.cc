@@ -13,6 +13,7 @@
 #include <cstdlib>
 #include <functional>
 #include <ios>
+#include <iterator>
 #include <numeric>
 #include <ranges>
 #include <span>
@@ -2013,7 +2014,8 @@ void sfmatrix_add_ionisation(std::span<double> sfmatrixuppertri, const int Z, co
 // solve the Spencer-Fano matrix equation and return the y vector (samples of the Spencer-Fano solution function).
 // Multiply y by energy interval [eV] to get non-thermal electron number flux. y(E) * dE is the flux of electrons with
 // energy in the range (E, E + dE) in units of particles/cm2/s. y has units of particles/cm2/s/eV
-auto sfmatrix_solve(const std::span<const double> sfmatrix) -> std::array<double, SFPTS> {
+auto sfmatrix_solve(const std::span<const double> sfmatrix, const int modelgridindex, const int timestep,
+                    const double nne) -> std::array<double, SFPTS> {
   // solve the matrix-vector equation sfmatrix * yvec = rhsvec for yvec
 
   THREADLOCALONHOST std::array<double, SFPTS> yvec_arr{};
@@ -2032,6 +2034,45 @@ auto sfmatrix_solve(const std::span<const double> sfmatrix) -> std::array<double
     }
     return true;
   }());
+
+  // Both branches below need every element to be finite and every diagonal element to be non-zero: the matrix is upper
+  // triangular, so it is solved by back-substitution, which divides by each diagonal element in turn and accumulates
+  // the off-diagonal ones. Checked here rather than in either branch so that both builds stop at the same point with
+  // the same message. Otherwise GSL aborts inside gsl_linalg_LU_solve via its own singularity test and the default
+  // error handler, naming neither the cell nor the energy point, while Eigen's triangularView<Upper>().solve() does
+  // not check at all and divides by zero, failing only later on a non-finite residual that points at the refinement
+  // loop rather than the cause. nltepop_matrix_solve checks its own matrix the same way.
+
+  // an off-diagonal non-finite element is just as fatal as a diagonal one, because back-substitution accumulates it
+  // into every solution component below it
+  const auto nonfinite = std::ranges::find_if_not(sfmatrix, [](const double x) { return std::isfinite(x); });
+  if (nonfinite != sfmatrix.end()) {
+    const auto flatindex = std::ranges::distance(sfmatrix.begin(), nonfinite);
+    printlnlog(
+        "  [error] cell {} ts {}: Spencer-Fano matrix element [{}][{}] is non-finite ({:g}) (nne={:g} [e-/cm^3])",
+        modelgridindex, timestep, flatindex / SFPTS, flatindex % SFPTS, *nonfinite, nne);
+  }
+  assert_always(nonfinite == sfmatrix.end());
+
+  // A zero diagonal usually means the cell has no free electrons: electron_loss_rate() returns exactly zero for
+  // nne <= 0, and nothing else reaches the diagonal when every ion is below MIN_ION_OVER_NNTOT.
+  int zero_diag_count = 0;
+  int zero_diag_first = -1;
+  for (int i = 0; i < SFPTS; i++) {
+    if (sfmatrix[(i * SFPTS) + i] == 0.) {
+      zero_diag_count++;
+      if (zero_diag_first < 0) {
+        zero_diag_first = i;
+      }
+    }
+  }
+  if (zero_diag_count > 0) {
+    printlnlog(
+        "  [error] cell {} ts {}: Spencer-Fano matrix is singular: {} of {} diagonal elements are zero, first at "
+        "energy point {} ({:g} [eV]) (nne={:g} [e-/cm^3])",
+        modelgridindex, timestep, zero_diag_count, SFPTS, zero_diag_first, engrid(zero_diag_first), nne);
+  }
+  assert_always(zero_diag_count == 0);
 
 #ifdef EIGEN_OFF
 
@@ -2577,7 +2618,7 @@ void solve_spencerfano(const int nonemptymgi, const int timestep, const int iter
   }
 
   decompactify_triangular_matrix(sfmatrix);
-  const auto yfunc = sfmatrix_solve(sfmatrix);
+  const auto yfunc = sfmatrix_solve(sfmatrix, modelgridindex, timestep, nne);
   constexpr bool verbose = false;
   analyse_sf_solution(nonemptymgi, timestep, yfunc, verbose);
 }
