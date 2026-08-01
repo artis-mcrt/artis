@@ -839,16 +839,19 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
         popvec[index] = ltepop;
       }
     } else {
-      // A non-finite population is unrecoverable, and has to be rejected before the triage below, because every
-      // comparison there is false for a NaN: the MINPOP ground check, the -MINPOP negative check, and the inversion
-      // factors. Without this, NaN and +inf reach the "rounding error to zero" branch, are replaced by MINPOP, and
-      // the solve is reported as successful - which then satisfies the assert_always(std::isfinite(pop)) in
-      // nltepop_apply_solution instead of tripping it.
+      // A non-finite population (reachable via the popvec[i] = vec_x[i] * pop_normfactors[i] denormalisation
+      // product overflowing - the solver itself rejects a non-finite solution vector through the residual score)
+      // fails every comparison in the triage below, so without this rejection it would pass through unhandled and
+      // trip the assert_always(std::isfinite(pop)) in nltepop_apply_solution, aborting the run instead of letting
+      // the caller drop an ion stage and retry.
       if (!std::isfinite(population)) {
         printlnlog(
             "  [warning] cell {} ts {}: NLTE solver gave non-finite population for index {} (Z={} ionstage {} level "
             "{}), pop = {:g}. Returning nltepop_matrix_solve failure",
             nltelog.modelgridindex, nltelog.timestep, index, get_atomicnumber(element), ionstage, level, population);
+        // clear the failed attempt so that can_remove_ion's triage reads zeros, as it does after a singular-matrix
+        // failure, rather than non-finite values whose comparisons would all be meaningless
+        std::ranges::fill(popvec, 0.);
         return false;
       }
 
@@ -964,15 +967,21 @@ template <typename GetDiagElement>
   return is_singular;
 }
 
-// Largest absolute element of a vector, propagating non-finite elements: as soon as one is found, its magnitude
-// (inf or nan) is returned instead of the largest finite magnitude.
-// Neither backend's own reduction can be used for this, because neither propagates a NaN reliably and the two drop
-// them in different places, so the same residual can be scored differently by the two builds. gslcblas's idamax
-// seeds its running maximum at zero and selects with a bare `>`, so it skips a NaN in any position and only returns
-// one when every element is NaN. Eigen's maxCoeff defaults to PropagateFast, which Eigen documents as giving an
-// undefined result for NaN; in practice it keeps the running maximum on the left of the comparison, so it returns a
-// NaN only when the first element is one. Either way a solution vector that is entirely garbage can be scored with a
-// small finite residual and accepted. (An infinity does propagate through both.)
+// The non-finite detection in this solver relies on std::isfinite and NaN comparisons keeping their IEEE semantics,
+// which the FASTMATH build preserves only because -fno-finite-math-only is appended after -ffast-math (Makefile).
+#if defined(__FINITE_MATH_ONLY__) && __FINITE_MATH_ONLY__
+#error \
+    "the NLTE solver requires std::isfinite to detect NaN/inf: compile without -ffinite-math-only (see FASTMATH in the Makefile)"
+#endif
+
+// Largest absolute element of a vector, except that the magnitude of the first non-finite element (inf or nan) is
+// returned as soon as one is found - so callers must test the result only with std::isfinite, never distinguishing
+// inf from nan. Neither linear algebra backend's own reduction is usable here, because neither propagates a NaN
+// reliably and the two drop them in different positions, so the same residual could be scored differently by the two
+// builds: gslcblas's idamax selects with a bare `>` comparison, which a NaN never satisfies, and Eigen's default
+// maxCoeff uses PropagateFast, which Eigen documents as undefined for NaN (its scalar and SIMD paths genuinely
+// differ). Eigen does provide maxCoeff<PropagateNaN>, but GSL has no counterpart, and scoring through one shared
+// scalar function guarantees the two builds agree.
 [[nodiscard]] auto max_abs_propagate_nonfinite(const std::span<const double> values) -> double {
   double maxabs = 0.;
   for (const double value : values) {
@@ -985,27 +994,33 @@ template <typename GetDiagElement>
   return maxabs;
 }
 
-// The size of the largest row of |balance_vector| + |rate_matrix| * |x|, i.e. of the terms that were differenced to
-// form the residual balance_vector - rate_matrix * x.
-// The residual on its own is not a convergence measure. nltepop_matrix_normalise() row-scales row i by
-// 1/pop_normfactors[i], so the residual keeps physical units: cm^-3 for the row-0 population normalisation
-// constraint (where the right hand side is the element number density) and cm^-3 s^-1 for the statistical
-// equilibrium rows. Dividing by this scale gives a dimensionless backward error that a fixed tolerance can
-// meaningfully be compared against. A single scalar scale is representative of every row because the matrix has
-// already been equilibrated.
-[[nodiscard]] auto get_residual_scale(const std::span<const double> rate_matrix,
-                                      const std::span<const double> balance_vector, const std::span<const double> vec_x)
-    -> double {
+// The largest componentwise relative backward error of a solution: max_i |b_i - (A*x)_i| / (|b_i| + sum_j |A_ij *
+// x_j|), i.e. each row's residual measured against the size of the terms that were differenced to form it. The
+// residual on its own is not a convergence measure: nltepop_matrix_normalise() rescales each row by an arbitrary
+// accumulated balancing factor, so the raw residual elements carry no fixed physical magnitude, while in the
+// per-row ratio those factors cancel. The measure must be per-row rather than a single normwise scale because the
+// equilibration only balances each row's norm against its column's, never rows against each other, and with
+// FORCE_SAHA_ION_BALANCE the constraint rows carry right hand sides that differ by many orders of magnitude - a
+// normwise ratio would let a badly violated small-scale row hide behind the largest row. A row whose scale is
+// exactly zero has an exactly zero residual and is skipped.
+[[nodiscard]] auto get_max_relative_residual(const std::span<const double> rate_matrix,
+                                             const std::span<const double> balance_vector,
+                                             const std::span<const double> vec_x) -> double {
   const auto nlte_dimension = balance_vector.size();
-  double scale = 0.;
+  double max_relative_residual = 0.;
   for (auto i = 0ZU; i < nlte_dimension; i++) {
+    double rowdot = 0.;
     double rowscale = std::abs(balance_vector[i]);
     for (auto j = 0ZU; j < nlte_dimension; j++) {
-      rowscale += std::abs(rate_matrix[(i * nlte_dimension) + j] * vec_x[j]);
+      const double term = rate_matrix[(i * nlte_dimension) + j] * vec_x[j];
+      rowdot += term;
+      rowscale += std::abs(term);
     }
-    scale = std::max(scale, rowscale);
+    if (rowscale > 0.) {
+      max_relative_residual = std::max(max_relative_residual, std::abs(balance_vector[i] - rowdot) / rowscale);
+    }
   }
-  return scale;
+  return max_relative_residual;
 }
 
 // solve rate_matrix * x = balance_vector, so that popvec[i] = x[i] * pop_normfactors[i]
@@ -1059,7 +1074,6 @@ template <typename GetDiagElement>
   auto gsl_balance_vector = gsl_vector_const_view_array(balance_vector.data(), nlte_dimension).vector;
 
   int s = 0;  // sign of the transformation
-  // the decomposition is a side effect, so it must not be written inside the assertion
   const int lu_decomp_status = gsl_linalg_LU_decomp(&gsl_rate_matrix_LU_decomp, &p, &s);
   assert_always(lu_decomp_status == GSL_SUCCESS);
 
@@ -1110,11 +1124,12 @@ template <typename GetDiagElement>
   vec_residual.reserve(max_nlte_dimension);
   vec_residual.resize(nlte_dimension);
 
-  // correction applied to the solution vector by the iterative refinement below. Eigen needs a buffer distinct from
-  // vec_residual because its solve begins with dst = P * rhs, which would alias, and assigning the solve to its own
-  // vector also avoids `vec_x += lu.solve(...)`, for which Eigen has no in-place assignment specialisation and so
-  // heap-allocates a temporary on every iteration. The GSL branch could solve in place on vec_residual, but shares
-  // the buffer so that both branches read the residual and write the correction.
+  // correction applied to the solution vector by the iterative refinement below. A named buffer distinct from
+  // vec_residual is a symmetry choice, not a necessity - the GSL branch could solve in place on the residual, and
+  // Eigen's solve handles an aliased destination by materialising the permuted right hand side into a temporary -
+  // but with it both branches read the residual and write the correction, and the assignment form avoids the extra
+  // evaluator temporary that Eigen heap-allocates for `vec_x += lu.solve(...)` on every iteration (the internal
+  // permuted-rhs temporary inside solve remains either way).
   THREADLOCALONHOST std::vector<double> vec_correction;
   vec_correction.reserve(max_nlte_dimension);
   vec_correction.resize(nlte_dimension);
@@ -1127,12 +1142,9 @@ template <typename GetDiagElement>
   auto eigen_vec_correction = Eigen::Map<Eigen::VectorX<double>>(vec_correction.data(), nlte_dimension);
 #endif
 
-  // counted rather than taken from the loop variable afterwards, which would be short by one whenever the loop
-  // exits through the break below
-  int iterations_done = 0;
-  int iteration_best = -1;
-  for (int iteration = 0; iteration < 10; iteration++) {
-    iterations_done = iteration + 1;
+  constexpr int maxiterations = 10;
+  int iteration_best = -1;  // 1-based pass that produced vec_x_best (pass 1 is the unrefined LU solution)
+  for (int iteration = 0; iteration < maxiterations; iteration++) {
     // one step of iterative refinement, x <- x + A^-1 (b - A x), using the residual left by the previous iteration.
     // Spelled out in both branches rather than calling gsl_linalg_LU_refine (which performs exactly these steps
     // internally) so that the two builds run the same operations in the same order under the same sign convention,
@@ -1168,12 +1180,12 @@ template <typename GetDiagElement>
     if (std::isfinite(error) && (error_best < 0. || error < error_best)) {
       std::ranges::copy(vec_x, vec_x_best.begin());
       error_best = error;
-      iteration_best = iterations_done;
+      iteration_best = iteration + 1;
     }
 
-    // only an exactly zero residual can reach this: the residual carries the units described at get_residual_scale(),
-    // so 1e-40 is far below the rounding level of the dot products that form it. Deliberately not converted into a
-    // usable relative tolerance, which would truncate the best-of-ten selection above and change the solution.
+    // deliberately not converted into a usable relative tolerance, which would truncate the best-of-ten selection
+    // above and change the solution. As an absolute threshold on residual rows that carry arbitrary equilibration
+    // factors, it is unreachable in any realistic solve, so every solve runs all of the refinement passes.
     if (error < 1e-40) {
       break;
     }
@@ -1186,19 +1198,17 @@ template <typename GetDiagElement>
   }
   std::ranges::copy(vec_x_best, vec_x.begin());
 
-  // error_best carries units, so it is compared against the size of the terms it was formed from rather than against
-  // a fixed constant. Element number densities span at least 1e6 to 1e11 cm^-3 between the nebular and photospheric
-  // regimes, so an absolute threshold either fires on every healthy solve or never fires at all.
-  const double residual_scale = get_residual_scale(rate_matrix, balance_vector, vec_x);
-  // fall back to the unscaled residual if the scale is unusable, so that a bad solve is still reported
-  const double error_best_relative =
-      (residual_scale > 0. && std::isfinite(residual_scale)) ? (error_best / residual_scale) : error_best;
-  if (error_best_relative > 1e-8) {
+  // error_best carries arbitrary per-row equilibration factors, so convergence is judged by the componentwise
+  // relative backward error rather than by comparison against a fixed absolute constant, which either fired on
+  // every healthy solve or never fired at all depending only on the element number density.
+  constexpr double relative_residual_warn_tolerance = 1e-8;
+  const double max_relative_residual = get_max_relative_residual(rate_matrix, balance_vector, vec_x);
+  if (max_relative_residual > relative_residual_warn_tolerance) {
     printlnlog(
-        "  [warning] cell {} ts {}: NLTE solver iterative refinement: after {} iterations, the best solution vector "
-        "was the one from iteration {}, with a max residual of {:g} ({:g} relative to the size of the terms it was "
-        "formed from)",
-        nltelog.modelgridindex, nltelog.timestep, iterations_done, iteration_best, error_best, error_best_relative);
+        "  [warning] cell {} ts {}: NLTE solver iterative refinement: the best solution vector was from pass {} of "
+        "up to {} (pass 1 is the unrefined LU solution), with a max residual of {:g} in the equilibrated system and "
+        "a max componentwise relative backward error of {:g}",
+        nltelog.modelgridindex, nltelog.timestep, iteration_best, maxiterations, error_best, max_relative_residual);
   }
 
   // get the unnormalised populations from the x solution vector and the normalisation factors
