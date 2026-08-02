@@ -11,6 +11,8 @@
 
 module load Stages/2025
 module load ParaStationMPI
+# GSL is no longer used by artis, but is still loaded so that these scripts work with older versions too
+module load GSL
 module load zstd/.1.5.6
 module list
 

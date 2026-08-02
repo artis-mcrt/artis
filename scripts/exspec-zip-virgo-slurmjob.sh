@@ -6,8 +6,11 @@ export APPTAINER_SHARENS=true
 export APPTAINER_CONFIGDIR=/tmp/$USER
 
 eval `spack load --first --sh openmpi%gcc`
+# GSL is no longer used by artis, but is still loaded so that these scripts work with older versions too
+eval `spack load --first --sh gsl%gcc`
 eval `spack load --first --sh gcc%gcc`
 
+export LD_LIBRARY_PATH=$(gsl-config --prefix)/lib/:$LD_LIBRARY_PATH
 export MAKEFLAGS="--check-symlink-times --jobs=$(nproc --all)"
 export OMPI_CXX=g++
 

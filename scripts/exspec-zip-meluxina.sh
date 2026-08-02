@@ -9,7 +9,8 @@
 #SBATCH --mail-type=ALL
 ##SBATCH --mail-user=luke.shingles@gmail.com
 
-module load env/release/2025.1 gompi/2025a zstd git Python
+# GSL is no longer used by artis, but is still loaded so that these scripts work with older versions too
+module load env/release/2025.1 gompi/2025a zstd GSL git Python
 module list
 
 cd $SLURM_SUBMIT_DIR
