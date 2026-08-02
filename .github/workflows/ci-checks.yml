@@ -125,10 +125,10 @@ jobs:
                   echo "OMPI_CXX=clang++-${{ matrix.compiler.ver }}" >> $GITHUB_ENV
                   echo "LDFLAGS=-L/usr/lib/llvm-${{ matrix.compiler.ver }}/lib" >> $GITHUB_ENV
 
-            - name: Install Open MPI and GSL
+            - name: Install Open MPI
               run: |
                   sudo apt-get update
-                  sudo apt-get install -y --no-install-recommends openmpi-bin libopenmpi-dev libgsl-dev
+                  sudo apt-get install -y --no-install-recommends openmpi-bin libopenmpi-dev
 
             - name: Install TBB
               if: matrix.compiler.name == 'gcc'
@@ -167,12 +167,6 @@ jobs:
               run: |
                   make -j$(nproc) unittests
                   ./unittests
-
-            - name: Compile nebular mode EIGEN=OFF
-              run: |
-                  cp -v -p artisoptions_nltenebular.h artisoptions.h
-                  make clean
-                  make -j$(nproc) EIGEN=OFF sn3d exspec
 
             - name: Compile nebular mode OPENMP=ON
               run: |

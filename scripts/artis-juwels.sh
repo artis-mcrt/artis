@@ -10,6 +10,7 @@
 #SBATCH --mail-type=ALL
 ##SBATCH --mail-user=luke.shingles@gmail.com
 
+# GSL is no longer used by artis, but is still loaded so that these scripts work with older versions too
 module load Stages/2025 GCC ParaStationMPI GSL
 module load UCX-settings/plain
 

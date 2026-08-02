@@ -16,6 +16,7 @@
 module purge
 module load cosma
 module load gnu_comp
+# GSL is no longer used by artis, but is still loaded so that these scripts work with older versions too
 module load gsl
 module load openmpi
 module load python

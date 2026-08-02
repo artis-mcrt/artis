@@ -9,6 +9,7 @@
 ##SBATCH --mail-user=fmcneill07@qub.ac.uk
 
 module load libs/gcc/14.1.0
+# GSL is no longer used by artis, but is still loaded so that these scripts work with older versions too
 module load gsl/2.8/gcc-14.1.0
 module load compilers/gcc/14.1.0
 module load mpi/openmpi/5.0.3/gcc-14.1.0

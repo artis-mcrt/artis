@@ -187,20 +187,6 @@ ifeq ($(shell uname -s),Darwin)
 	# CXXFLAGS += -Rpass-analysis=loop-vectorize
 endif
 
-ifeq ($(EIGEN),OFF)
-	BUILD_DIR := $(BUILD_DIR)_eigenoff
-
-	# if EIGEN is off, we need GSL for linear algebra
-	CXXFLAGS += -DEIGEN_OFF $(shell pkg-config --cflags gsl) -DHAVE_INLINE -DGSL_C99_INLINE
-
-	# static linking
-	gsllibdir := $(shell pkg-config --variable=libdir gsl)
-	gsl_objects = $(gsllibdir)/libgsl.a $(gsllibdir)/libgslcblas.a
-
-	# dynamic linking
-# 	LDFLAGS += $(shell pkg-config --libs gsl)
-endif
-
 ifneq ($(MAX_NODE_SIZE),)
 	CXXFLAGS += -DMAX_NODE_SIZE=$(MAX_NODE_SIZE)
 endif
@@ -220,10 +206,6 @@ ifeq ($(TESTMODE),ON)
 	CXXFLAGS += -fsanitize=undefined,address
 
 	BUILD_DIR := $(BUILD_DIR)_testmode
-else
-	ifeq ($(GSL),ON)
-		CXXFLAGS += -DGSL_RANGE_CHECK_OFF
-	endif
 endif
 
 ifeq ($(OPTIMIZE),OFF)
@@ -334,28 +316,28 @@ check: $(sn3d_files)
 	run-clang-tidy $(sn3d_files)
 
 $(BUILD_DIR)/sn3d: $(sn3d_objects)
-	$(CXX) $(CXXFLAGS) $(sn3d_objects) $(gsl_objects) $(LDFLAGS) -o $(BUILD_DIR)/sn3d
+	$(CXX) $(CXXFLAGS) $(sn3d_objects) $(LDFLAGS) -o $(BUILD_DIR)/sn3d
 -include $(sn3d_dep)
 
 sn3d: $(BUILD_DIR)/sn3d
 	ln -sf $(BUILD_DIR)/sn3d sn3d
 
 $(BUILD_DIR)/sn3dwhole: $(sn3d_files) version.h artisoptions.h Makefile
-	$(CXX) $(CXXFLAGS) $(sn3d_files) $(gsl_objects) $(LDFLAGS) -o $(BUILD_DIR)/sn3dwhole
+	$(CXX) $(CXXFLAGS) $(sn3d_files) $(LDFLAGS) -o $(BUILD_DIR)/sn3dwhole
 -include $(sn3d_dep)
 
 sn3dwhole: $(BUILD_DIR)/sn3dwhole
 	ln -sf $(BUILD_DIR)/sn3dwhole sn3d
 
 $(BUILD_DIR)/exspec: $(exspec_objects)
-	$(CXX) $(CXXFLAGS) $(exspec_objects) $(gsl_objects) $(LDFLAGS) -o $(BUILD_DIR)/exspec
+	$(CXX) $(CXXFLAGS) $(exspec_objects) $(LDFLAGS) -o $(BUILD_DIR)/exspec
 -include $(exspec_dep)
 
 exspec: $(BUILD_DIR)/exspec
 	ln -sf $(BUILD_DIR)/exspec exspec
 
 $(BUILD_DIR)/unittests: $(unittests_objects)
-	$(CXX) $(CXXFLAGS) $(unittests_objects) $(gsl_objects) $(LDFLAGS) -o $(BUILD_DIR)/unittests
+	$(CXX) $(CXXFLAGS) $(unittests_objects) $(LDFLAGS) -o $(BUILD_DIR)/unittests
 -include $(unittests_dep)
 
 unittests: $(BUILD_DIR)/unittests

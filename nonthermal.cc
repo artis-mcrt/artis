@@ -22,17 +22,8 @@
 #include <vector>
 
 #pragma clang unsafe_buffer_usage begin
-#ifdef EIGEN_OFF
-#include <gsl/gsl_blas.h>
-#include <gsl/gsl_cblas.h>
-#include <gsl/gsl_linalg.h>
-#include <gsl/gsl_matrix_double.h>
-#include <gsl/gsl_permutation.h>
-#include <gsl/gsl_vector_double.h>
-#else
 #include <Eigen/Core>
 #include <Eigen/Dense>
-#endif
 #pragma clang unsafe_buffer_usage end
 
 #include "artisoptions.h"
@@ -2018,10 +2009,9 @@ auto sfmatrix_solve(const std::span<const double> sfmatrix) -> std::array<double
 
   THREADLOCALONHOST std::array<double, SFPTS> yvec_arr{};
 
-  // Both branches below require sfmatrix to be upper triangular, so the check belongs here rather than in either one.
-  // The GSL branch is the one that silently depends on it: it passes the full matrix to gsl_linalg_LU_solve with an
-  // identity permutation, so anything left below the diagonal would be taken as the unit-lower factor L and a
-  // different system would be solved. The Eigen branch is correct by construction via triangularView<Upper>().
+  // The solve below reads only the upper triangle (via triangularView<Upper>()) while the residual is formed from the
+  // full matrix, so anything left below the diagonal would make the refinement iterate on a different system than the
+  // one that was solved.
   assert_testmodeonly([sfmatrix] {
     for (int i = 1; i < SFPTS; i++) {
       for (int j = 0; j < i; j++) {
@@ -2033,63 +2023,29 @@ auto sfmatrix_solve(const std::span<const double> sfmatrix) -> std::array<double
     return true;
   }());
 
-#ifdef EIGEN_OFF
-
-  auto gsl_yvec = gsl_vector_view_array(yvec_arr.data(), SFPTS).vector;
-  const auto gsl_rhsvec = gsl_vector_const_view_array(rhsvec.data(), SFPTS).vector;
-
-  THREADLOCALONHOST std::array<size_t, SFPTS> vec_permutation{};
-  gsl_permutation p{.size = SFPTS, .data = vec_permutation.data()};
-  gsl_permutation_init(&p);
-
-  const auto gsl_sfmatrix = gsl_matrix_const_view_array(sfmatrix.data(), SFPTS, SFPTS).matrix;
-
-  // sfmatrix is already in upper triangular form
-  const auto& gsl_sfmatrix_LU = gsl_sfmatrix;
-
-  // solve matrix equation: sf_matrix * y_vec = rhsvec for yvec
-  gsl_linalg_LU_solve(&gsl_sfmatrix_LU, &p, &gsl_rhsvec, &gsl_yvec);
-
-#else
-
   const Eigen::Map<const Eigen::Vector<double, SFPTS>> eigen_rhsvec{rhsvec.data()};
   const Eigen::Map<const Eigen::Matrix<double, SFPTS, SFPTS, Eigen::RowMajor>> eigen_sfmatrix{sfmatrix.data()};
 
-  const auto eigen_sfmatrix_LU = eigen_sfmatrix.triangularView<Eigen::Upper>();
+  const auto eigen_sfmatrix_upper = eigen_sfmatrix.triangularView<Eigen::Upper>();
   Eigen::Map<Eigen::Vector<double, SFPTS>> eigen_yvec{yvec_arr.data()};
-  eigen_yvec = eigen_sfmatrix_LU.solve(eigen_rhsvec);
-
-#endif
+  eigen_yvec = eigen_sfmatrix_upper.solve(eigen_rhsvec);
 
   // refine the solution
 
   THREADLOCALONHOST std::array<double, SFPTS> yvec_best{};
-#ifdef EIGEN_OFF
-  THREADLOCALONHOST std::array<double, SFPTS> residual_vec{};
-  auto gsl_residual_vec = gsl_vector_view_array(residual_vec.data(), SFPTS).vector;
-#else
   THREADLOCALONHOST Eigen::Vector<double, SFPTS> eigen_residual_vec{};
-#endif
 
   double error_best = -1.;
   for (int iteration = 0; iteration < 10; iteration++) {
-#ifdef EIGEN_OFF
     if (iteration > 0) {
-      // use gsl_vec_residual as the temporary work vector
-      gsl_linalg_LU_refine(&gsl_sfmatrix, &gsl_sfmatrix_LU, &p, &gsl_rhsvec, &gsl_yvec, &gsl_residual_vec);
-    }
-    // residual = sfmatrix * yvec - rhsvec
-    std::ranges::copy(rhsvec, residual_vec.begin());
-    gsl_blas_dgemv(CblasNoTrans, 1.0, &gsl_sfmatrix, &gsl_yvec, -1.0, &gsl_residual_vec);
-    // error is the largest absolute residual element
-    const double error = fabs(gsl_vector_get(&gsl_residual_vec, gsl_blas_idamax(&gsl_residual_vec)));
-#else
-    if (iteration > 0) {
-      eigen_yvec += eigen_sfmatrix_LU.solve(eigen_residual_vec);
+      eigen_yvec += eigen_sfmatrix_upper.solve(eigen_residual_vec);
     }
     eigen_residual_vec = eigen_rhsvec - eigen_sfmatrix * eigen_yvec;
-    const double error = eigen_residual_vec.cwiseAbs().maxCoeff();
-#endif
+
+    // PropagateNaN is required for the non-finite test below: Eigen documents the default (PropagateFast) as
+    // undefined in the presence of a NaN, and its scalar and SIMD paths genuinely differ there, so a NaN residual
+    // could otherwise be scored as a finite value and accepted. For an all-finite residual the two agree exactly.
+    const double error = eigen_residual_vec.cwiseAbs().maxCoeff<Eigen::PropagateNaN>();
 
     // only ever store a finite error, so that a non-finite iteration cannot latch error_best and block a later
     // iteration from being accepted. If every iteration is non-finite then error_best stays negative and the assertion
@@ -2104,7 +2060,7 @@ auto sfmatrix_solve(const std::span<const double> sfmatrix) -> std::array<double
   std::ranges::copy(yvec_best, yvec_arr.begin());
 
   if (error_best > 1e-10) {
-    printlnlog("  SF solver LU_refine: best solution vector has a max residual of {:g}", error_best);
+    printlnlog("  SF solver iterative refinement: best solution vector has a max residual of {:g}", error_best);
   }
 
   assert_always(std::ranges::all_of(yvec_arr, [](double y) { return y >= 0.; }));
