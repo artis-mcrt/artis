@@ -21,18 +21,8 @@
 #include <vector>
 
 #pragma clang unsafe_buffer_usage begin
-#ifdef EIGEN_OFF
-#include <gsl/gsl_blas.h>
-#include <gsl/gsl_cblas.h>
-#include <gsl/gsl_errno.h>
-#include <gsl/gsl_linalg.h>
-#include <gsl/gsl_matrix_double.h>
-#include <gsl/gsl_permutation.h>
-#include <gsl/gsl_vector_double.h>
-#else
 #include <Eigen/Core>
 #include <Eigen/Dense>
-#endif
 #pragma clang unsafe_buffer_usage end
 
 #include "artisoptions.h"
@@ -937,16 +927,17 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
   return true;
 }
 
+// row-major so that the rate matrix assembled in a flat std::vector can be mapped without a copy
+using RowMajorMatrixXd = Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>;
+
 // Check the diagonal of an LU decomposition for zero or non-finite elements, which indicate levels that are
 // disconnected from the rest of the NLTE rate matrix. Reports and returns true if the matrix is singular.
-// Shared between the GSL and Eigen builds so that the log messages cannot drift apart.
-template <typename GetDiagElement>
-[[nodiscard]] auto lumatrix_is_singular(GetDiagElement getdiagelement, const size_t nlte_dimension, const int element,
-                                        const int first_ion_used, const int nions_used) -> bool {
+[[nodiscard]] auto lumatrix_is_singular(const RowMajorMatrixXd& lumatrix, const int element, const int first_ion_used,
+                                        const int nions_used) -> bool {
   bool is_singular = false;
-  for (auto i = 0ZU; i < nlte_dimension; i++) {
+  for (Eigen::Index i = 0; i < lumatrix.rows(); i++) {
     // diagonal elements of LU matrix must be non-zero and finite
-    const double matrixelement = getdiagelement(i);
+    const double matrixelement = lumatrix(i, i);
     if (matrixelement == 0. || !std::isfinite(matrixelement)) {
       if (!is_singular) {
         printlog("  [error] cell {} ts {}: NLTE matrix is singular for element Z={} (disconnected:",
@@ -973,26 +964,6 @@ template <typename GetDiagElement>
 #error \
     "the NLTE solver requires std::isfinite to detect NaN/inf: compile without -ffinite-math-only (see FASTMATH in the Makefile)"
 #endif
-
-// Largest absolute element of a vector, except that the magnitude of the first non-finite element (inf or nan) is
-// returned as soon as one is found - so callers must test the result only with std::isfinite, never distinguishing
-// inf from nan. Neither linear algebra backend's own reduction is usable here, because neither propagates a NaN
-// reliably and the two drop them in different positions, so the same residual could be scored differently by the two
-// builds: gslcblas's idamax selects with a bare `>` comparison, which a NaN never satisfies, and Eigen's default
-// maxCoeff uses PropagateFast, which Eigen documents as undefined for NaN (its scalar and SIMD paths genuinely
-// differ). Eigen does provide maxCoeff<PropagateNaN>, but GSL has no counterpart, and scoring through one shared
-// scalar function guarantees the two builds agree.
-[[nodiscard]] auto max_abs_propagate_nonfinite(const std::span<const double> values) -> double {
-  double maxabs = 0.;
-  for (const double value : values) {
-    const double absvalue = std::abs(value);
-    if (!std::isfinite(absvalue)) {
-      return absvalue;
-    }
-    maxabs = std::max(maxabs, absvalue);
-  }
-  return maxabs;
-}
 
 // The largest componentwise relative backward error of a solution: max_i |b_i - (A*x)_i| / (|b_i| + sum_j |A_ij *
 // x_j|), i.e. each row's residual measured against the size of the terms that were differenced to form it. The
@@ -1036,9 +1007,8 @@ template <typename GetDiagElement>
   assert_always(rate_matrix.size() == (nlte_dimension * nlte_dimension));
   assert_always(std::cmp_greater_equal(max_nlte_dimension, nlte_dimension));
 
-  // A non-finite entry anywhere makes the solve meaningless. Checked here rather than in the backend-specific code
-  // below so that both builds react the same way: report and return false, which lets the caller drop an ion stage and
-  // retry, instead of aborting the run.
+  // A non-finite entry anywhere makes the solve meaningless. Report and return false, which lets the caller drop an
+  // ion stage and retry, instead of aborting the run.
   const auto is_finite = [](const double x) { return std::isfinite(x); };
   if (!std::ranges::all_of(rate_matrix, is_finite) || !std::ranges::all_of(balance_vector, is_finite)) {
     printlnlog(
@@ -1052,68 +1022,24 @@ template <typename GetDiagElement>
   vec_x.reserve(max_nlte_dimension);
   vec_x.resize(nlte_dimension);
 
-#ifdef EIGEN_OFF
-
-  THREADLOCALONHOST std::vector<double> rate_matrix_LU_decomp;
-  rate_matrix_LU_decomp.reserve(static_cast<ptrdiff_t>(max_nlte_dimension) * max_nlte_dimension);
-  rate_matrix_LU_decomp.resize(rate_matrix.size());
-
-  // make a copy of the rate matrix for the LU decomp call as gsl_linalg_LU_decomp modifies the input matrix
-  std::ranges::copy(rate_matrix, rate_matrix_LU_decomp.begin());
-  auto gsl_rate_matrix_LU_decomp =
-      gsl_matrix_view_array(rate_matrix_LU_decomp.data(), nlte_dimension, nlte_dimension).matrix;
-  auto gsl_x = gsl_vector_view_array(vec_x.data(), nlte_dimension).vector;
-  auto gsl_rate_matrix = gsl_matrix_const_view_array(rate_matrix.data(), nlte_dimension, nlte_dimension).matrix;
-
-  THREADLOCALONHOST std::vector<size_t> vec_permutation;
-  vec_permutation.reserve(max_nlte_dimension);
-  vec_permutation.resize(nlte_dimension);
-  gsl_permutation_struct p{.size = nlte_dimension, .data = vec_permutation.data()};
-  gsl_permutation_init(&p);
-
-  auto gsl_balance_vector = gsl_vector_const_view_array(balance_vector.data(), nlte_dimension).vector;
-
-  int s = 0;  // sign of the transformation
-  const int lu_decomp_status = gsl_linalg_LU_decomp(&gsl_rate_matrix_LU_decomp, &p, &s);
-  assert_always(lu_decomp_status == GSL_SUCCESS);
-
-  if (lumatrix_is_singular([&](const size_t i) { return rate_matrix_LU_decomp[(i * nlte_dimension) + i]; },
-                           nlte_dimension, element, first_ion_used, nions_used)) {
-    return false;
-  }
-
-  // solve matrix equation: rate_matrix * x = balance_vector for x (population vector)
-  gsl_linalg_LU_solve(&gsl_rate_matrix_LU_decomp, &p, &gsl_balance_vector, &gsl_x);
-
-#else
-
   auto eigen_vec_x = Eigen::Map<Eigen::VectorX<double>>(vec_x.data(), nlte_dimension);
   const auto eigen_balance_vector = Eigen::Map<const Eigen::VectorX<double>>(balance_vector.data(), nlte_dimension);
 
-  const auto eigen_rate_matrix =
-      Eigen::Map<const Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>>(
-          rate_matrix.data(), nlte_dimension, nlte_dimension);
+  const auto eigen_rate_matrix = Eigen::Map<const RowMajorMatrixXd>(rate_matrix.data(), nlte_dimension, nlte_dimension);
 
-  THREADLOCALONHOST Eigen::PartialPivLU<Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>>
-      eigen_rate_matrix_lu;
+  THREADLOCALONHOST Eigen::PartialPivLU<RowMajorMatrixXd> eigen_rate_matrix_lu;
 
   eigen_rate_matrix_lu.compute(eigen_rate_matrix);
-  if (lumatrix_is_singular(
-          [&](const size_t i) { return eigen_rate_matrix_lu.matrixLU().diagonal()[static_cast<ptrdiff_t>(i)]; },
-          nlte_dimension, element, first_ion_used, nions_used)) {
+  if (lumatrix_is_singular(eigen_rate_matrix_lu.matrixLU(), element, first_ion_used, nions_used)) {
     return false;
   }
 
   // a non-finite solution is not checked for here: every column of the rate matrix has a non-zero element (an
   // all-zero column would make the matrix singular, which is rejected above), so a non-finite element of the solution
-  // vector makes at least one element of the residual below non-finite, wherever it lands, and
-  // max_abs_propagate_nonfinite() reports that as a non-finite error. It then leaves error_best negative, which is
-  // reported and returned as a solver failure in both builds.
+  // vector makes at least one element of the residual below non-finite, wherever it lands, and the residual reduction
+  // reports that as a non-finite error. It then leaves error_best negative, which is reported and returned as a
+  // solver failure.
   eigen_vec_x = eigen_rate_matrix_lu.solve(eigen_balance_vector);
-
-#endif
-
-  double error_best = -1.;
 
   // population solution vector with lowest error
   THREADLOCALONHOST std::vector<double> vec_x_best;
@@ -1124,42 +1050,21 @@ template <typename GetDiagElement>
   vec_residual.reserve(max_nlte_dimension);
   vec_residual.resize(nlte_dimension);
 
-  // correction applied to the solution vector by the iterative refinement below. A named buffer distinct from
-  // vec_residual is a symmetry choice, not a necessity - the GSL branch could solve in place on the residual, and
-  // Eigen's solve handles an aliased destination by materialising the permuted right hand side into a temporary -
-  // but with it both branches read the residual and write the correction, and the assignment form avoids the extra
-  // evaluator temporary that Eigen heap-allocates for `vec_x += lu.solve(...)` on every iteration (the internal
-  // permuted-rhs temporary inside solve remains either way).
+  // correction applied to the solution vector by the iterative refinement below. Solving into a named buffer and
+  // adding it on avoids the evaluator temporary that Eigen heap-allocates for `vec_x += lu.solve(...)` on every
+  // iteration (the permuted-rhs temporary inside solve itself remains either way).
   THREADLOCALONHOST std::vector<double> vec_correction;
   vec_correction.reserve(max_nlte_dimension);
   vec_correction.resize(nlte_dimension);
 
-#ifdef EIGEN_OFF
-  auto gsl_vec_residual = gsl_vector_view_array(vec_residual.data(), nlte_dimension).vector;
-  auto gsl_vec_correction = gsl_vector_view_array(vec_correction.data(), nlte_dimension).vector;
-#else
   auto eigen_vec_residual = Eigen::Map<Eigen::VectorX<double>>(vec_residual.data(), nlte_dimension);
   auto eigen_vec_correction = Eigen::Map<Eigen::VectorX<double>>(vec_correction.data(), nlte_dimension);
-#endif
 
   constexpr int maxiterations = 10;
+  double error_best = -1.;
   int iteration_best = -1;  // 1-based pass that produced vec_x_best (pass 1 is the unrefined LU solution)
   for (int iteration = 0; iteration < maxiterations; iteration++) {
-    // one step of iterative refinement, x <- x + A^-1 (b - A x), using the residual left by the previous iteration.
-    // Spelled out in both branches rather than calling gsl_linalg_LU_refine (which performs exactly these steps
-    // internally) so that the two builds run the same operations in the same order under the same sign convention,
-    // and so that the GSL build does not form the residual twice per iteration.
-#ifdef EIGEN_OFF
-    if (iteration > 0) {
-      std::ranges::copy(vec_residual, vec_correction.begin());
-      gsl_linalg_LU_svx(&gsl_rate_matrix_LU_decomp, &p, &gsl_vec_correction);
-      gsl_blas_daxpy(1., &gsl_vec_correction, &gsl_x);
-    }
-
-    // residual = b - A x
-    std::ranges::copy(balance_vector, vec_residual.begin());
-    gsl_blas_dgemv(CblasNoTrans, -1., &gsl_rate_matrix, &gsl_x, 1., &gsl_vec_residual);
-#else
+    // one step of iterative refinement, x <- x + A^-1 (b - A x), using the residual left by the previous iteration
     if (iteration > 0) {
       eigen_vec_correction = eigen_rate_matrix_lu.solve(eigen_vec_residual);
       eigen_vec_x += eigen_vec_correction;
@@ -1167,12 +1072,10 @@ template <typename GetDiagElement>
 
     // residual = b - A x
     eigen_vec_residual = eigen_balance_vector - eigen_rate_matrix * eigen_vec_x;
-#endif
 
-    // computed outside the backend switch so that the two builds cannot score the same residual differently. For an
-    // all-finite residual this is exactly the largest absolute element, i.e. what each backend's own reduction
-    // returns today.
-    const double error = max_abs_propagate_nonfinite(vec_residual);
+    // PropagateNaN is required for the non-finite detection below: Eigen documents the default (PropagateFast) as
+    // undefined in the presence of a NaN, and its scalar and SIMD paths genuinely differ there.
+    const double error = eigen_vec_residual.cwiseAbs().maxCoeff<Eigen::PropagateNaN>();
 
     // only ever store a finite error, so that a non-finite iteration cannot latch error_best and block a later
     // iteration from being accepted. If every iteration is non-finite then error_best stays negative and the solve is

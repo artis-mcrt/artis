@@ -9,7 +9,6 @@
 ##SBATCH --mail-user=fmcneill07@qub.ac.uk
 
 module load libs/gcc/14.1.0
-module load gsl/2.8/gcc-14.1.0
 module load compilers/gcc/14.1.0
 module load mpi/openmpi/5.0.3/gcc-14.1.0
 module load apps/python3/3.12.4/gcc-14.1.0

@@ -10,7 +10,7 @@
 #SBATCH --mail-type=ALL
 ##SBATCH --mail-user=luke.shingles@gmail.com
 
-module load env/release/2025.1 gompi/2025a zstd GSL git Python
+module load env/release/2025.1 gompi/2025a zstd git Python
 
 module list
 

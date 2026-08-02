@@ -50,8 +50,7 @@ that everything compiles (this is what the pre-commit hook runs).
 
 Useful make options (see README for the full list): `TESTMODE=ON` (assertions +
 address/UB sanitizers), `REPRODUCIBLE=ON`, `FASTMATH=OFF`, `OPTIMIZE=OFF`,
-`EIGEN=OFF` (use GSL instead of Eigen), `OPENMP=ON`, `STDPAR=ON`, `GPU=ON`,
-`MAX_NODE_SIZE=N`.
+`OPENMP=ON`, `STDPAR=ON`, `GPU=ON`, `MAX_NODE_SIZE=N`.
 
 The build uses `-Werror` with extensive warnings — new warnings break CI.
 

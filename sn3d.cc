@@ -852,12 +852,6 @@ auto main(int argc, char* argv[]) -> int {
   printlnlog("Boost Gauss-Kronrod quadrature");
 #endif
 
-#ifdef EIGEN_OFF
-  printlnlog("Linear algebra solvers are from GSL");
-#else
-  printlnlog("Linear algebra solvers are from Eigen");
-#endif
-
 #ifdef WALLTIMELIMITSECONDS
   int walltimelimitseconds = WALLTIMELIMITSECONDS;
 #else

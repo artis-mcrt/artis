@@ -25,10 +25,10 @@ jobs:
                   echo "CXX=g++-14" >> $GITHUB_ENV
                   echo "OMPI_CXX=g++-14" >> $GITHUB_ENV
 
-            - name: Install Open MPI, GSL, and TBB
+            - name: Install Open MPI and TBB
               run: |
                   sudo apt-get update
-                  sudo apt-get install -y --no-install-recommends openmpi-bin libopenmpi-dev libgsl-dev libtbb-dev
+                  sudo apt-get install -y --no-install-recommends openmpi-bin libopenmpi-dev libtbb-dev
 
             - name: Set artisoptions to nltenebular
               run: |

@@ -19,7 +19,6 @@
 module purge
 module load cosma
 module load gnu_comp
-module load gsl
 module load openmpi
 module load python
 

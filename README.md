@@ -87,7 +87,7 @@ cd artis
 ```
 On macOS, it's recommended that you install homebrew llvm to get clang-format, clang-tidy, clangd language server, and the clang C++ compiler. You can install this and other dependencies with:
 ```sh
-brew install llvm open-mpi gsl prek compiledb
+brew install llvm open-mpi prek compiledb
 ```
 Install the pre-commit hooks and generate a compilation database for clang tools:
 ```sh
@@ -142,7 +142,6 @@ source ./setup_kilonova_1d.sh   # creates tests/kilonova_1d_testrun/
 ## Make options
 - TESTMODE=ON: Enable additional assertions and the address and undefined behaviour sanitizers.
 - FASTMATH=OFF: Don't enable compiler transformations that affect round-off-level results (e.g. a*(b\*c) = (a\*b)*c).
-- EIGEN=OFF: Use GSL (not Eigen) for matrix-vector solving (Spencer-Fano and NLTE pops).
 - MAX_NODE_SIZE=N: Artificially limit MPI node size to N ranks. Useful for testing and preventing MPI shared memory windows from crossing CPU sockets.
 - REPRODUCIBLE=ON: Use stable sorts and disable FASTMATH.
 - GPU=ON: Required to compile for GPUs. Works around incompatible function calls and uses a Simpson-rule integrator in place of Gauss-Kronrod.

@@ -11,7 +11,6 @@
 
 module load Stages/2025
 module load ParaStationMPI
-module load GSL
 module load zstd/.1.5.6
 module list
 
