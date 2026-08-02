@@ -2041,7 +2041,11 @@ auto sfmatrix_solve(const std::span<const double> sfmatrix) -> std::array<double
       eigen_yvec += eigen_sfmatrix_upper.solve(eigen_residual_vec);
     }
     eigen_residual_vec = eigen_rhsvec - eigen_sfmatrix * eigen_yvec;
-    const double error = eigen_residual_vec.cwiseAbs().maxCoeff();
+
+    // PropagateNaN is required for the non-finite test below: Eigen documents the default (PropagateFast) as
+    // undefined in the presence of a NaN, and its scalar and SIMD paths genuinely differ there, so a NaN residual
+    // could otherwise be scored as a finite value and accepted. For an all-finite residual the two agree exactly.
+    const double error = eigen_residual_vec.cwiseAbs().maxCoeff<Eigen::PropagateNaN>();
 
     // only ever store a finite error, so that a non-finite iteration cannot latch error_best and block a later
     // iteration from being accepted. If every iteration is non-finite then error_best stays negative and the assertion
