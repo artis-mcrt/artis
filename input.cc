@@ -432,7 +432,8 @@ void read_ion_levels(std::istream& adata, const int element, const int ion, cons
 
 void read_ion_transitions(std::istream& ftransitiondata, const int ion_transition_count_in_file,
                           std::vector<IonTransitionsInput>& iontransitiontable, const int nlevels_requiretransitions,
-                          const int nlevelskept) {
+                          const int nlevelskept, const int atomicnumber, const int ionstage,
+                          const int nlevels_in_file) {
   iontransitiontable.clear();
   iontransitiontable.reserve(ion_transition_count_in_file);
   bool found_groundstate_lower = false;
@@ -476,6 +477,13 @@ void read_ion_transitions(std::istream& ftransitiondata, const int ion_transitio
     assert_always(lower >= 0);
     assert_always(lower < upper);
     found_groundstate_lower = found_groundstate_lower || (lower == 0);
+    if (upper >= nlevels_in_file) {
+      printlnlog(
+          "[error] transitiondata.txt: Z={} ionstage {}: transition {} -> {} refers to a level beyond the {} levels of "
+          "this ion in adata.txt. The level numbering may not match the ground state index {} detected from adata.txt",
+          atomicnumber, ionstage, lower_in, upper_in, nlevels_in_file, groundstate_index_in);
+      assert_always(false);
+    }
     if (lower >= nlevelskept || upper >= nlevelskept) {
       continue;
     }
@@ -484,14 +492,14 @@ void read_ion_transitions(std::istream& ftransitiondata, const int ion_transitio
         {.lower = lower, .upper = upper, .A = A, .coll_str = coll_str, .forbidden = (intforbidden == 1)});
   }
 
-  // if the ion has any transitions then the ground state must be the lower level of at least one of them,
-  // otherwise the level numbering in transitiondata.txt disagrees with the numbering detected from adata.txt
+  // if the ion has any transitions then the ground state is normally the lower level of at least one of them. A
+  // sparse table could legitimately omit the ground state (missing transitions are filled in below), so warn
+  // without aborting
   if (ion_transition_count_in_file > 0 && !found_groundstate_lower) {
     printlnlog(
-        "[error] transitiondata.txt: no transition has the ground state (level index {} in the input files) as its "
-        "lower level",
-        groundstate_index_in);
-    assert_always(false);
+        "[warning] transitiondata.txt: Z={} ionstage {}: no transition has the ground state (level index {} in the "
+        "input files) as its lower level. Check that the level numbering matches adata.txt",
+        atomicnumber, ionstage, groundstate_index_in);
   }
 
   std::ranges::sort(iontransitiontable, std::less<>{},
@@ -1154,16 +1162,16 @@ void read_phixs_data() {
       // below is just an extra warning consistency check
       const int nlevels_groundterm = globals::elements[element].ions[ion].nlevels_groundterm;
 
-      // if any level of the ion has a photoionisation cross-section then the ground state must have one too,
-      // otherwise the phixs data numbers levels differently from adata.txt
+      // an ion whose ground state has no photoionisation cross-section while an excited level has one suggests that
+      // the phixs data numbers levels differently from adata.txt, but a dataset could also legitimately provide
+      // cross-sections for excited levels only, so warn without aborting
       if (get_nphixstargets(element, ion, 0) == 0 &&
           std::ranges::any_of(std::views::iota(0, get_nlevels(element, ion)),
                               [element, ion](const int level) { return get_nphixstargets(element, ion, level) > 0; })) {
         printlnlog(
-            "[error] Z={} ionstage {}: an excited level has a photoionisation cross-section but the ground state does "
-            "not. The phixs level numbering may not match the ground state index {} detected from adata.txt",
+            "[warning] Z={} ionstage {}: an excited level has a photoionisation cross-section but the ground state "
+            "does not. Check that the phixs level numbering matches the ground state index {} detected from adata.txt",
             get_atomicnumber(element), get_ionstage(element, ion), groundstate_index_in);
-        assert_always(false);
       }
 
       // all levels in the ground term should be photoionisation targets from the lower ground state
@@ -1350,7 +1358,7 @@ void read_levels_and_transitions(std::vector<TempEnergyLevel>& temp_alllevels,
             std::min(nlevelskept, NLEVELS_REQUIRETRANSITIONS(atomicnumber, adata_ionstage_in));
 
         read_ion_transitions(ftransitiondata, ion_transition_count_in_file, iontransitiontable,
-                             nlevels_requiretransitions, nlevelskept);
+                             nlevels_requiretransitions, nlevelskept, atomicnumber, ionstage, nlevels_in_file);
         add_transitions_to_unsorted_linelist(element, ion, iontransitiontable, temp_linelist, temp_alltranslist,
                                              temp_alllevels);
       }
@@ -1623,6 +1631,7 @@ void read_atomicdata_files() {
 
   // only the node leaders read adata.txt, but all ranks parse level indices in autoion.txt and the phixs files
   MPI_Bcast_safe(groundstate_index_in, 0, globals::mpi_comm_node);
+  assert_always(groundstate_index_in == 0 || groundstate_index_in == 1);
 
   update_includedionslevels_maxnions();
 
