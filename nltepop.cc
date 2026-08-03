@@ -1476,8 +1476,9 @@ void nltepop_apply_solution(const int element, const int nonemptymgi, const int 
 
 // Grassmann-Taksar-Heyman (GTH) state-elimination solve for the stationary distribution of the continuous-time
 // Markov chain whose generator is stored transposed in the NLTE rate matrix layout, i.e. rate_matrix[(to * n) +
-// from] with n = vec_x.size(). Only sums, products, and divisions of the (non-negative) off-diagonal rates are
-// used and the diagonal is never read, so there is no subtractive cancellation and assembly rounding in the
+// from] with n = vec_x.size(). The off-diagonal rates must be finite (the caller checks this) and non-negative.
+// Only sums, products, and divisions of the rates are used
+// and the diagonal is never read, so there is no subtractive cancellation and assembly rounding in the
 // column sums cannot affect the result. Small negative autoionisation off-diagonals (warned about during
 // assembly) only weaken that guarantee locally; any resulting invalid populations are policed by the caller.
 // rate_matrix is overwritten. On success, returns std::nullopt and fills vec_x with the stationary distribution
@@ -1513,23 +1514,31 @@ auto gth_stationary_distribution(std::span<double> rate_matrix, std::span<double
     }
   }
 
-  // back-substitution: stationary weights relative to vec_x[0] = 1
+  // back-substitution: stationary weights, starting relative to vec_x[0] = 1
   vec_x[0] = 1.;
   for (auto k = 1Z; k < n; k++) {
-    double inflow = 0.;
-    for (auto j = 0Z; j < k; j++) {
-      inflow += vec_x[j] * rate_matrix[(k * n) + j];
-    }
-    vec_x[k] = inflow / rate_matrix[(k * n) + k];
-    // subtraction-free overflow rescue: with extreme population ratios the raw weights can approach the double
-    // range, so rescale everything computed so far (the ratios are preserved, and the normalising sum below then
-    // cannot overflow because every weight stays at or below 1e250)
-    if (vec_x[k] > 1e250) {
-      const double downscale = 1. / vec_x[k];
-      for (auto j = 0Z; j <= k; j++) {
-        vec_x[j] *= downscale;
+    const double departure_sum = rate_matrix[(k * n) + k];
+    const auto get_inflow = [&] {
+      double inflow = 0.;
+      for (auto j = 0Z; j < k; j++) {
+        inflow += vec_x[j] * rate_matrix[(k * n) + j];
       }
+      return inflow;
+    };
+    double inflow = get_inflow();
+    // subtraction-free overflow rescue, applied before the division so that even a single weight ratio beyond the
+    // double range (e.g. rates of 1e200 up and 1e-200 back between two states) cannot overflow to infinity: while
+    // the next weight would exceed 1e250, rescale the earlier weights and recompute the inflow. The ratios are
+    // preserved, weights that underflow to zero are at least ~1e58 times smaller than the largest weight and
+    // physically negligible, and capping every stored weight at 1e250 keeps the normalising sum below from
+    // overflowing.
+    while (!std::isfinite(inflow) || inflow > departure_sum * 1e250) {
+      for (auto j = 0Z; j < k; j++) {
+        vec_x[j] *= 1e-200;
+      }
+      inflow = get_inflow();
     }
+    vec_x[k] = inflow / departure_sum;
   }
 
   const double x_sum = std::accumulate(vec_x.begin(), vec_x.end(), 0.);

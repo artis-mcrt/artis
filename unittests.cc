@@ -555,6 +555,18 @@ void test_gth_solver() {
   }
 
   {
+    // a single up/down rate ratio of 1e400 exceeds the double range outright: the pre-division rescaling must keep
+    // the dominant state finite instead of letting the weight overflow to infinity and decay into NaNs
+    auto matrix = make_chain_matrix(std::vector<double>(1, 1e200), std::vector<double>(1, 1e-200));
+    std::vector<double> vec_x(2, 0.);
+    const auto result = gth_stationary_distribution(matrix, vec_x);
+    check(!result.has_value(), "GTH solves a two-state chain with a weight ratio beyond the double range");
+    check(std::ranges::all_of(vec_x, [](const double x) { return std::isfinite(x) && x >= 0.; }),
+          "GTH beyond-range-ratio distribution is finite and non-negative");
+    check_close(vec_x[1], 1., 1e-12, "GTH beyond-range-ratio distribution is dominated by the top state");
+  }
+
+  {
     // state 2 has no departure rate: the chain is reducible, so the solve must fail, identify state 2, and leave the
     // output vector untouched
     std::vector<double> matrix(3 * 3, 0.);
