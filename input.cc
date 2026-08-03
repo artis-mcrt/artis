@@ -50,7 +50,8 @@
 
 namespace {
 
-const int groundstate_index_in = 1;  // starting level index in the input files
+// level index of the ground state in the input files (0 or 1), autodetected from the first level in adata.txt
+int groundstate_index_in = -1;
 
 struct TempEnergyLevel {
   double epsilon{-1};  // Excitation energy of this level relative to the neutral ground level.
@@ -401,6 +402,11 @@ void read_ion_levels(std::istream& adata, const int element, const int ion, cons
     ssline.clear();
     ssline.str(line);
     assert_always(ssline >> levelindex_in >> levelenergy_ev >> statweight >> ntransitions);
+    if (level == 0 && groundstate_index_in < 0) {
+      assert_always(levelindex_in == 0 || levelindex_in == 1);
+      groundstate_index_in = levelindex_in;
+      printlnlog("adata.txt: autodetected level numbering starting from {}", groundstate_index_in);
+    }
     assert_always(levelindex_in == level + groundstate_index_in);
 
     if (level < nlevelsmax) {
@@ -429,6 +435,7 @@ void read_ion_transitions(std::istream& ftransitiondata, const int ion_transitio
                           const int nlevelskept) {
   iontransitiontable.clear();
   iontransitiontable.reserve(ion_transition_count_in_file);
+  bool found_groundstate_lower = false;
 
   std::string line;
   static std::istringstream ssline;
@@ -468,12 +475,23 @@ void read_ion_transitions(std::istream& ftransitiondata, const int ion_transitio
     const int upper = upper_in - groundstate_index_in;
     assert_always(lower >= 0);
     assert_always(lower < upper);
+    found_groundstate_lower = found_groundstate_lower || (lower == 0);
     if (lower >= nlevelskept || upper >= nlevelskept) {
       continue;
     }
     existingtransitions.insert({lower, upper});
     iontransitiontable.push_back(
         {.lower = lower, .upper = upper, .A = A, .coll_str = coll_str, .forbidden = (intforbidden == 1)});
+  }
+
+  // if the ion has any transitions then the ground state must be the lower level of at least one of them,
+  // otherwise the level numbering in transitiondata.txt disagrees with the numbering detected from adata.txt
+  if (ion_transition_count_in_file > 0 && !found_groundstate_lower) {
+    printlnlog(
+        "[error] transitiondata.txt: no transition has the ground state (level index {} in the input files) as its "
+        "lower level",
+        groundstate_index_in);
+    assert_always(false);
   }
 
   std::ranges::sort(iontransitiontable, std::less<>{},
@@ -1136,6 +1154,18 @@ void read_phixs_data() {
       // below is just an extra warning consistency check
       const int nlevels_groundterm = globals::elements[element].ions[ion].nlevels_groundterm;
 
+      // if any level of the ion has a photoionisation cross-section then the ground state must have one too,
+      // otherwise the phixs data numbers levels differently from adata.txt
+      if (get_nphixstargets(element, ion, 0) == 0 &&
+          std::ranges::any_of(std::views::iota(0, get_nlevels(element, ion)),
+                              [element, ion](const int level) { return get_nphixstargets(element, ion, level) > 0; })) {
+        printlnlog(
+            "[error] Z={} ionstage {}: an excited level has a photoionisation cross-section but the ground state does "
+            "not. The phixs level numbering may not match the ground state index {} detected from adata.txt",
+            get_atomicnumber(element), get_ionstage(element, ion), groundstate_index_in);
+        assert_always(false);
+      }
+
       // all levels in the ground term should be photoionisation targets from the lower ground state
       if (ion > 0 && ion < get_nions(element) - 1) {
         const int nphixstargets = get_nphixstargets(element, ion - 1, 0);
@@ -1590,6 +1620,9 @@ void read_atomicdata_files() {
     read_levels_and_transitions(temp_alllevels, temp_linelist, temp_alltranslist, nlevelsmax_readin);
   }
   MPI_Barrier_node();
+
+  // only the node leaders read adata.txt, but all ranks parse level indices in autoion.txt and the phixs files
+  MPI_Bcast_safe(groundstate_index_in, 0, globals::mpi_comm_node);
 
   update_includedionslevels_maxnions();
 
