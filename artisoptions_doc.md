@@ -141,6 +141,15 @@ constexpr float STRICT_POPULATION_CHECKING_INVERSION_FACTOR_PRINTOUT_WARNING;
 // population are all individually checked.
 constexpr double NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION;
 
+// Solve the NLTE level population equations with the Grassmann-Taksar-Heyman (GTH) state-elimination
+// algorithm instead of the default LU decomposition of the rate matrix with a normalisation row.
+// GTH exploits the fact that the assembled rate matrix is the transpose of a Markov-chain generator:
+// it never reads the diagonal and performs no subtractions, giving populations with componentwise
+// relative accuracy even when they span many orders of magnitude, with no matrix equilibration,
+// balance vector, or iterative refinement. Elements with FORCE_SAHA_ION_BALANCE always use the LU
+// solver, because the Saha constraint rows break the generator structure that GTH requires.
+constexpr bool NLTE_USE_GTH_SOLVER;
+
 // non-thermal ionisation
 constexpr bool NT_ON;
 

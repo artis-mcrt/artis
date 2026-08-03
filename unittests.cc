@@ -11,7 +11,9 @@
 #include <cstddef>
 #include <cstdlib>
 #include <functional>
+#include <optional>
 #include <print>
+#include <span>
 #include <string_view>
 #include <vector>
 
@@ -25,6 +27,7 @@
 #include "input.h"
 #include "macroatom.h"
 #include "mpi_logging.h"
+#include "nltepop.h"
 #include "radfield.h"
 #include "random.h"
 #include "rpkt.h"
@@ -458,6 +461,148 @@ void test_input_helpers() {
   check(!lineiscommentonly("1 2 3 # trailing comment"), "data line with trailing comment is not comment-only");
 }
 
+void test_gth_solver() {
+  std::println("GTH stationary distribution solver...");
+
+  // build matrices in the NLTE solver layout A[(to * n) + from]: each off-diagonal holds a transition rate and each
+  // diagonal element holds the negated column sum, as the NLTE rate matrix assembly does (GTH must never read it)
+  const auto set_rate = [](std::vector<double>& matrix, const ptrdiff_t n, const ptrdiff_t from, const ptrdiff_t to,
+                           const double rate) {
+    matrix[(to * n) + from] += rate;
+    matrix[(from * n) + from] -= rate;
+  };
+
+  // three-state chain with the exact stationary distribution {53, 23, 18} / 94 from the Markov chain tree theorem
+  // (each state's weight is the sum over its rooted spanning trees of the product of the tree's rates)
+  const auto make_threestate_matrix = [&set_rate] {
+    std::vector<double> matrix(3 * 3, 0.);
+    set_rate(matrix, 3, 0, 1, 1.);
+    set_rate(matrix, 3, 0, 2, 2.);
+    set_rate(matrix, 3, 1, 0, 3.);
+    set_rate(matrix, 3, 1, 2, 4.);
+    set_rate(matrix, 3, 2, 0, 5.);
+    set_rate(matrix, 3, 2, 1, 6.);
+    return matrix;
+  };
+
+  const auto check_threestate_result = [](const std::vector<double>& vec_x, const std::string_view description) {
+    constexpr std::array expected{53. / 94., 23. / 94., 18. / 94.};
+    for (ptrdiff_t k = 0; k < std::ssize(expected); k++) {
+      check_close(vec_x[k], expected[k], 1e-14, description);
+    }
+  };
+
+  // nearest-neighbour birth-death chain: rate_up[k] is the rate from state k to k + 1 and rate_down[k] the reverse
+  const auto make_chain_matrix = [&set_rate](const std::span<const double> rate_up,
+                                             const std::span<const double> rate_down) {
+    const auto n = std::ssize(rate_up) + 1;
+    std::vector<double> matrix(n * n, 0.);
+    for (ptrdiff_t k = 0; k < n - 1; k++) {
+      set_rate(matrix, n, k, k + 1, rate_up[k]);
+      set_rate(matrix, n, k + 1, k, rate_down[k]);
+    }
+    return matrix;
+  };
+
+  {
+    auto matrix = make_threestate_matrix();
+    std::vector<double> vec_x(3, 0.);
+    const auto result = gth_stationary_distribution(matrix, vec_x);
+    check(!result.has_value(), "GTH solves an irreducible three-state chain");
+    check_threestate_result(vec_x, "GTH three-state stationary distribution");
+    check_close(vec_x[0] + vec_x[1] + vec_x[2], 1., 1e-14, "GTH stationary distribution sums to one");
+  }
+
+  {
+    // corrupting the diagonal cannot change the result because GTH never reads it
+    auto matrix = make_threestate_matrix();
+    matrix[(0 * 3) + 0] = 12345.;
+    matrix[(1 * 3) + 1] = -67890.;
+    matrix[(2 * 3) + 2] = 0.5;
+    std::vector<double> vec_x(3, 0.);
+    const auto result = gth_stationary_distribution(matrix, vec_x);
+    check(!result.has_value(), "GTH solves with a corrupted diagonal");
+    check_threestate_result(vec_x, "GTH ignores the diagonal");
+  }
+
+  {
+    // birth-death chain with extreme dynamic range: GTH must reproduce the exact detailed-balance ratios of
+    // neighbouring populations (the componentwise relative accuracy that motivates the algorithm, where an LU solve
+    // with a normalisation row loses the small components to absolute rounding)
+    constexpr std::array<double, 3> rate_up = {2e10, 3e-4, 5e2};
+    constexpr std::array<double, 3> rate_down = {7e-6, 1e8, 4e-1};
+    auto matrix = make_chain_matrix(rate_up, rate_down);
+    std::vector<double> vec_x(rate_up.size() + 1, 0.);
+    const auto result = gth_stationary_distribution(matrix, vec_x);
+    check(!result.has_value(), "GTH solves a birth-death chain");
+    for (ptrdiff_t k = 0; k < std::ssize(rate_up); k++) {
+      check_close(vec_x[k + 1] / vec_x[k], rate_up[k] / rate_down[k], 1e-13,
+                  "GTH birth-death chain preserves a detailed-balance population ratio");
+    }
+  }
+
+  {
+    // seven-state chain whose raw stationary weights span 1e360 relative to state zero, which would overflow the
+    // double range without the subtraction-free rescaling in the back-substitution
+    auto matrix = make_chain_matrix(std::vector<double>(6, 1e30), std::vector<double>(6, 1e-30));
+    std::vector<double> vec_x(7, 0.);
+    const auto result = gth_stationary_distribution(matrix, vec_x);
+    check(!result.has_value(), "GTH survives raw weights beyond the double range");
+    check(std::ranges::all_of(vec_x, [](const double x) { return std::isfinite(x) && x >= 0.; }),
+          "GTH extreme-ratio distribution is finite and non-negative");
+    check_close(vec_x[6], 1., 1e-12, "GTH extreme-ratio distribution is dominated by the top state");
+    check_close(vec_x[5] / vec_x[6], 1e-60, 1e-12, "GTH extreme-ratio detailed-balance ratio survives the rescaling");
+  }
+
+  {
+    // a single up/down rate ratio of 1e400 exceeds the double range outright: the pre-division rescaling must keep
+    // the dominant state finite instead of letting the weight overflow to infinity and decay into NaNs
+    auto matrix = make_chain_matrix(std::vector<double>(1, 1e200), std::vector<double>(1, 1e-200));
+    std::vector<double> vec_x(2, 0.);
+    const auto result = gth_stationary_distribution(matrix, vec_x);
+    check(!result.has_value(), "GTH solves a two-state chain with a weight ratio beyond the double range");
+    check(std::ranges::all_of(vec_x, [](const double x) { return std::isfinite(x) && x >= 0.; }),
+          "GTH beyond-range-ratio distribution is finite and non-negative");
+    check_close(vec_x[1], 1., 1e-12, "GTH beyond-range-ratio distribution is dominated by the top state");
+  }
+
+  {
+    // state 2 has no departure rate: the chain is reducible, so the solve must fail, identify state 2, and leave the
+    // output vector untouched
+    std::vector<double> matrix(3 * 3, 0.);
+    set_rate(matrix, 3, 0, 1, 1.);
+    set_rate(matrix, 3, 1, 0, 2.);
+    set_rate(matrix, 3, 1, 2, 3.);
+    std::vector<double> vec_x(3, -42.);
+    const auto result = gth_stationary_distribution(matrix, vec_x);
+    check(result.has_value() && result.value() == 2, "GTH reports a state with no departure rate");
+    check(std::ranges::all_of(vec_x, [](const double x) { return x == -42.; }),
+          "GTH leaves the output vector untouched on failure");
+  }
+
+  {
+    // two decoupled two-state blocks: eliminating state 3 succeeds (it connects to state 2), then state 2 has no
+    // rate into states 0 or 1 and the solve must fail there
+    std::vector<double> matrix(4 * 4, 0.);
+    set_rate(matrix, 4, 0, 1, 1.);
+    set_rate(matrix, 4, 1, 0, 2.);
+    set_rate(matrix, 4, 2, 3, 3.);
+    set_rate(matrix, 4, 3, 2, 4.);
+    std::vector<double> vec_x(4, 0.);
+    const auto result = gth_stationary_distribution(matrix, vec_x);
+    check(result.has_value() && result.value() == 2, "GTH detects decoupled blocks of states");
+  }
+
+  {
+    // a single state has stationary distribution {1}, and the value in the (never-read) diagonal is irrelevant
+    std::vector<double> matrix{12345.};
+    std::vector<double> vec_x(1, 0.);
+    const auto result = gth_stationary_distribution(matrix, vec_x);
+    check(!result.has_value(), "GTH solves the single-state chain");
+    check_close(vec_x[0], 1., 1e-15, "GTH single-state distribution is {1}");
+  }
+}
+
 }  // anonymous namespace
 
 auto main() -> int {
@@ -474,6 +619,7 @@ auto main() -> int {
   test_phixs_table_lookup();
   test_closest_transition_randomised();
   test_input_helpers();
+  test_gth_solver();
 
   std::println("unit tests: {} of {} checks passed", checks_total - checks_failed, checks_total);
 
