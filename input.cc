@@ -1162,16 +1162,17 @@ void read_phixs_data() {
       // below is just an extra warning consistency check
       const int nlevels_groundterm = globals::elements[element].ions[ion].nlevels_groundterm;
 
-      // an ion whose ground state has no photoionisation cross-section while an excited level has one suggests that
-      // the phixs data numbers levels differently from adata.txt, but a dataset could also legitimately provide
-      // cross-sections for excited levels only, so warn without aborting
+      // every ion with any photoionisation data must include a cross-section for the ground state, so an excited
+      // level having a cross-section without the ground state means the phixs data numbers levels differently from
+      // adata.txt
       if (get_nphixstargets(element, ion, 0) == 0 &&
           std::ranges::any_of(std::views::iota(0, get_nlevels(element, ion)),
                               [element, ion](const int level) { return get_nphixstargets(element, ion, level) > 0; })) {
         printlnlog(
-            "[warning] Z={} ionstage {}: an excited level has a photoionisation cross-section but the ground state "
-            "does not. Check that the phixs level numbering matches the ground state index {} detected from adata.txt",
+            "[error] Z={} ionstage {}: an excited level has a photoionisation cross-section but the ground state does "
+            "not. The phixs level numbering may not match the ground state index {} detected from adata.txt",
             get_atomicnumber(element), get_ionstage(element, ion), groundstate_index_in);
+        assert_always(false);
       }
 
       // all levels in the ground term should be photoionisation targets from the lower ground state
