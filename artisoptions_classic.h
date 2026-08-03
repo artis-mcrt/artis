@@ -90,6 +90,8 @@ constexpr float STRICT_POPULATION_CHECKING_INVERSION_FACTOR_PRINTOUT_WARNING = 1
 
 constexpr double NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION = 1e-9;
 
+constexpr bool NLTE_USE_GTH_SOLVER = false;
+
 constexpr bool NT_ON = false;
 
 constexpr bool NT_SOLVE_SPENCERFANO = false;
