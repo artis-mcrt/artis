@@ -13,6 +13,7 @@
 #include <functional>
 #include <optional>
 #include <print>
+#include <span>
 #include <string_view>
 #include <vector>
 
@@ -484,14 +485,31 @@ void test_gth_solver() {
     return matrix;
   };
 
+  const auto check_threestate_result = [](const std::vector<double>& vec_x, const std::string_view description) {
+    constexpr std::array expected{53. / 94., 23. / 94., 18. / 94.};
+    for (ptrdiff_t k = 0; k < std::ssize(expected); k++) {
+      check_close(vec_x[k], expected[k], 1e-14, description);
+    }
+  };
+
+  // nearest-neighbour birth-death chain: rate_up[k] is the rate from state k to k + 1 and rate_down[k] the reverse
+  const auto make_chain_matrix = [&set_rate](const std::span<const double> rate_up,
+                                             const std::span<const double> rate_down) {
+    const auto n = std::ssize(rate_up) + 1;
+    std::vector<double> matrix(n * n, 0.);
+    for (ptrdiff_t k = 0; k < n - 1; k++) {
+      set_rate(matrix, n, k, k + 1, rate_up[k]);
+      set_rate(matrix, n, k + 1, k, rate_down[k]);
+    }
+    return matrix;
+  };
+
   {
     auto matrix = make_threestate_matrix();
     std::vector<double> vec_x(3, 0.);
-    const std::optional<std::ptrdiff_t> result = gth_stationary_distribution(matrix, vec_x);
+    const auto result = gth_stationary_distribution(matrix, vec_x);
     check(!result.has_value(), "GTH solves an irreducible three-state chain");
-    check_close(vec_x[0], 53. / 94., 1e-14, "GTH three-state stationary distribution element 0");
-    check_close(vec_x[1], 23. / 94., 1e-14, "GTH three-state stationary distribution element 1");
-    check_close(vec_x[2], 18. / 94., 1e-14, "GTH three-state stationary distribution element 2");
+    check_threestate_result(vec_x, "GTH three-state stationary distribution");
     check_close(vec_x[0] + vec_x[1] + vec_x[2], 1., 1e-14, "GTH stationary distribution sums to one");
   }
 
@@ -502,27 +520,22 @@ void test_gth_solver() {
     matrix[(1 * 3) + 1] = -67890.;
     matrix[(2 * 3) + 2] = 0.5;
     std::vector<double> vec_x(3, 0.);
-    check(!gth_stationary_distribution(matrix, vec_x).has_value(), "GTH solves with a corrupted diagonal");
-    check_close(vec_x[0], 53. / 94., 1e-14, "GTH ignores the diagonal (element 0)");
-    check_close(vec_x[1], 23. / 94., 1e-14, "GTH ignores the diagonal (element 1)");
-    check_close(vec_x[2], 18. / 94., 1e-14, "GTH ignores the diagonal (element 2)");
+    const auto result = gth_stationary_distribution(matrix, vec_x);
+    check(!result.has_value(), "GTH solves with a corrupted diagonal");
+    check_threestate_result(vec_x, "GTH ignores the diagonal");
   }
 
   {
     // birth-death chain with extreme dynamic range: GTH must reproduce the exact detailed-balance ratios of
     // neighbouring populations (the componentwise relative accuracy that motivates the algorithm, where an LU solve
     // with a normalisation row loses the small components to absolute rounding)
-    constexpr ptrdiff_t n = 4;
     constexpr std::array<double, 3> rate_up = {2e10, 3e-4, 5e2};
     constexpr std::array<double, 3> rate_down = {7e-6, 1e8, 4e-1};
-    std::vector<double> matrix(n * n, 0.);
-    for (ptrdiff_t k = 0; k < n - 1; k++) {
-      set_rate(matrix, n, k, k + 1, rate_up[k]);
-      set_rate(matrix, n, k + 1, k, rate_down[k]);
-    }
-    std::vector<double> vec_x(n, 0.);
-    check(!gth_stationary_distribution(matrix, vec_x).has_value(), "GTH solves a birth-death chain");
-    for (ptrdiff_t k = 0; k < n - 1; k++) {
+    auto matrix = make_chain_matrix(rate_up, rate_down);
+    std::vector<double> vec_x(rate_up.size() + 1, 0.);
+    const auto result = gth_stationary_distribution(matrix, vec_x);
+    check(!result.has_value(), "GTH solves a birth-death chain");
+    for (ptrdiff_t k = 0; k < std::ssize(rate_up); k++) {
       check_close(vec_x[k + 1] / vec_x[k], rate_up[k] / rate_down[k], 1e-13,
                   "GTH birth-death chain preserves a detailed-balance population ratio");
     }
@@ -531,19 +544,14 @@ void test_gth_solver() {
   {
     // seven-state chain whose raw stationary weights span 1e360 relative to state zero, which would overflow the
     // double range without the subtraction-free rescaling in the back-substitution
-    constexpr ptrdiff_t n = 7;
-    std::vector<double> matrix(n * n, 0.);
-    for (ptrdiff_t k = 0; k < n - 1; k++) {
-      set_rate(matrix, n, k, k + 1, 1e30);
-      set_rate(matrix, n, k + 1, k, 1e-30);
-    }
-    std::vector<double> vec_x(n, 0.);
-    check(!gth_stationary_distribution(matrix, vec_x).has_value(), "GTH survives raw weights beyond the double range");
+    auto matrix = make_chain_matrix(std::vector<double>(6, 1e30), std::vector<double>(6, 1e-30));
+    std::vector<double> vec_x(7, 0.);
+    const auto result = gth_stationary_distribution(matrix, vec_x);
+    check(!result.has_value(), "GTH survives raw weights beyond the double range");
     check(std::ranges::all_of(vec_x, [](const double x) { return std::isfinite(x) && x >= 0.; }),
           "GTH extreme-ratio distribution is finite and non-negative");
-    check_close(vec_x[n - 1], 1., 1e-12, "GTH extreme-ratio distribution is dominated by the top state");
-    check_close(vec_x[n - 2] / vec_x[n - 1], 1e-60, 1e-12,
-                "GTH extreme-ratio detailed-balance ratio survives the rescaling");
+    check_close(vec_x[6], 1., 1e-12, "GTH extreme-ratio distribution is dominated by the top state");
+    check_close(vec_x[5] / vec_x[6], 1e-60, 1e-12, "GTH extreme-ratio detailed-balance ratio survives the rescaling");
   }
 
   {
@@ -577,7 +585,8 @@ void test_gth_solver() {
     // a single state has stationary distribution {1}, and the value in the (never-read) diagonal is irrelevant
     std::vector<double> matrix{12345.};
     std::vector<double> vec_x(1, 0.);
-    check(!gth_stationary_distribution(matrix, vec_x).has_value(), "GTH solves the single-state chain");
+    const auto result = gth_stationary_distribution(matrix, vec_x);
+    check(!result.has_value(), "GTH solves the single-state chain");
     check_close(vec_x[0], 1., 1e-15, "GTH single-state distribution is {1}");
   }
 }

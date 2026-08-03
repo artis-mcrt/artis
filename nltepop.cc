@@ -179,6 +179,17 @@ auto get_nlte_vector_index(const int element, const int ion, const int level, co
   return {-1, -1};
 }
 
+// log " ionstage {} level {}" or " ionstage {} superlevel" (no newline) identifying an NLTE vector index in a message
+void printlog_nlte_vector_index(const std::ptrdiff_t index, const int element, const int first_ion_used,
+                                const int nions_used) {
+  const auto [ion, level] = get_ion_level_of_nlte_vector_index(index, element, first_ion_used, nions_used);
+  if (is_nlte(element, ion, level)) {
+    printlog(" ionstage {} level {}", get_ionstage(element, ion), level);
+  } else {
+    printlog(" ionstage {} superlevel", get_ionstage(element, ion));
+  }
+}
+
 [[nodiscard]] auto get_total_rate(const ptrdiff_t index_selected, const std::span<const double> rate_matrix,
                                   const std::span<const double> popvec, const bool into_level,
                                   const bool only_levels_below, const bool only_levels_above) -> double {
@@ -945,12 +956,7 @@ using RowMajorMatrixXd = Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, E
                  nltelog.modelgridindex, nltelog.timestep, get_atomicnumber(element));
         is_singular = true;
       }
-      const auto [ion, level] = get_ion_level_of_nlte_vector_index(i, element, first_ion_used, nions_used);
-      if (is_nlte(element, ion, level)) {
-        printlog(" ionstage {} level {}", get_ionstage(element, ion), level);
-      } else {
-        printlog(" ionstage {} superlevel", get_ionstage(element, ion));
-      }
+      printlog_nlte_vector_index(i, element, first_ion_used, nions_used);
     }
   }
   if (is_singular) {
@@ -966,6 +972,23 @@ using RowMajorMatrixXd = Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, E
     "the NLTE solver requires std::isfinite to detect NaN/inf: compile without -ffinite-math-only (see FASTMATH in the Makefile)"
 #endif
 
+// A non-finite entry anywhere makes a solve meaningless. Report and return false, which lets the caller drop an
+// ion stage and retry, instead of aborting the run. balance_vector may be empty (the GTH path has none).
+[[nodiscard]] auto nlte_system_is_finite(const std::span<const double> rate_matrix,
+                                         const std::span<const double> balance_vector, const int element) -> bool {
+  const auto is_finite = [](const double x) { return std::isfinite(x); };
+  if (!std::ranges::all_of(rate_matrix, is_finite) || !std::ranges::all_of(balance_vector, is_finite)) {
+    printlnlog(
+        "  [error] cell {} ts {}: NLTE rate matrix or balance vector contains a non-finite value for element Z={}",
+        nltelog.modelgridindex, nltelog.timestep, get_atomicnumber(element));
+    return false;
+  }
+  return true;
+}
+
+// warn above this componentwise relative backward error (from get_max_relative_residual) on either solver path
+constexpr double RELATIVE_RESIDUAL_WARN_TOLERANCE = 1e-8;
+
 // The largest componentwise relative backward error of a solution: max_i |b_i - (A*x)_i| / (|b_i| + sum_j |A_ij *
 // x_j|), i.e. each row's residual measured against the size of the terms that were differenced to form it. The
 // residual on its own is not a convergence measure: nltepop_matrix_normalise() rescales each row by an arbitrary
@@ -974,22 +997,24 @@ using RowMajorMatrixXd = Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, E
 // equilibration only balances each row's norm against its column's, never rows against each other, and with
 // FORCE_SAHA_ION_BALANCE the constraint rows carry right hand sides that differ by many orders of magnitude - a
 // normwise ratio would let a badly violated small-scale row hide behind the largest row. A row whose scale is
-// exactly zero has an exactly zero residual and is skipped.
+// exactly zero has an exactly zero residual and is skipped. An empty balance_vector is treated as all-zero (the
+// homogeneous system solved on the GTH path).
 [[nodiscard]] auto get_max_relative_residual(const std::span<const double> rate_matrix,
                                              const std::span<const double> balance_vector,
                                              const std::span<const double> vec_x) -> double {
-  const auto nlte_dimension = balance_vector.size();
+  const auto nlte_dimension = vec_x.size();
   double max_relative_residual = 0.;
   for (auto i = 0ZU; i < nlte_dimension; i++) {
+    const double b_i = balance_vector.empty() ? 0. : balance_vector[i];
     double rowdot = 0.;
-    double rowscale = std::abs(balance_vector[i]);
+    double rowscale = std::abs(b_i);
     for (auto j = 0ZU; j < nlte_dimension; j++) {
       const double term = rate_matrix[(i * nlte_dimension) + j] * vec_x[j];
       rowdot += term;
       rowscale += std::abs(term);
     }
     if (rowscale > 0.) {
-      max_relative_residual = std::max(max_relative_residual, std::abs(balance_vector[i] - rowdot) / rowscale);
+      max_relative_residual = std::max(max_relative_residual, std::abs(b_i - rowdot) / rowscale);
     }
   }
   return max_relative_residual;
@@ -1008,13 +1033,7 @@ using RowMajorMatrixXd = Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, E
   assert_always(rate_matrix.size() == (nlte_dimension * nlte_dimension));
   assert_always(std::cmp_greater_equal(max_nlte_dimension, nlte_dimension));
 
-  // A non-finite entry anywhere makes the solve meaningless. Report and return false, which lets the caller drop an
-  // ion stage and retry, instead of aborting the run.
-  const auto is_finite = [](const double x) { return std::isfinite(x); };
-  if (!std::ranges::all_of(rate_matrix, is_finite) || !std::ranges::all_of(balance_vector, is_finite)) {
-    printlnlog(
-        "  [error] cell {} ts {}: NLTE rate matrix or balance vector contains a non-finite value for element Z={}",
-        nltelog.modelgridindex, nltelog.timestep, get_atomicnumber(element));
+  if (!nlte_system_is_finite(rate_matrix, balance_vector, element)) {
     return false;
   }
 
@@ -1105,9 +1124,8 @@ using RowMajorMatrixXd = Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, E
   // error_best carries arbitrary per-row equilibration factors, so convergence is judged by the componentwise
   // relative backward error rather than by comparison against a fixed absolute constant, which either fired on
   // every healthy solve or never fired at all depending only on the element number density.
-  constexpr double relative_residual_warn_tolerance = 1e-8;
   const double max_relative_residual = get_max_relative_residual(rate_matrix, balance_vector, vec_x);
-  if (max_relative_residual > relative_residual_warn_tolerance) {
+  if (max_relative_residual > RELATIVE_RESIDUAL_WARN_TOLERANCE) {
     printlnlog(
         "  [warning] cell {} ts {}: NLTE solver iterative refinement: the best solution vector was from pass {} of "
         "up to {} (pass 1 is the unrefined LU solution), with a max residual of {:g} in the equilibrated system and "
@@ -1124,62 +1142,44 @@ using RowMajorMatrixXd = Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, E
 }
 
 // GTH counterpart of nltepop_matrix_solve: solve for the stationary populations of the assembled rate matrix
-// directly, with no normalisation row, balance vector, equilibration, or iterative refinement. The summed rate
-// matrix is consumed in place by the elimination; the per-process matrices are untouched, and the summed matrix is
-// regenerated from them for the residual check (and by the caller on any retry). popvec must be zero-filled on
-// entry and holds a solution only on success.
+// directly, with no normalisation row, balance vector, equilibration, or iterative refinement. popvec must be
+// zero-filled on entry and holds a solution only on success.
 [[nodiscard]] auto nltepop_matrix_solve_gth(const int element, const int nonemptymgi, RateMatrices& rate_matrices,
-                                            std::span<double> popvec, const double nnelement,
-                                            const int max_nlte_dimension, const int first_ion_used,
+                                            std::span<double> popvec, const double nnelement, const int first_ion_used,
                                             const int nions_used) -> bool {
   const auto nlte_dimension = std::ssize(popvec);
-  assert_always(std::cmp_greater_equal(max_nlte_dimension, nlte_dimension));
 
   const auto rate_matrix = rate_matrices.get_summed_rate_matrix();
   assert_always(std::ssize(rate_matrix) == (nlte_dimension * nlte_dimension));
 
-  // A non-finite entry anywhere makes the solve meaningless. Report and return false, which lets the caller drop an
-  // ion stage and retry, instead of aborting the run.
-  if (!std::ranges::all_of(rate_matrix, [](const double x) { return std::isfinite(x); })) {
-    printlnlog("  [error] cell {} ts {}: NLTE rate matrix contains a non-finite value for element Z={}",
-               nltelog.modelgridindex, nltelog.timestep, get_atomicnumber(element));
+  if (!nlte_system_is_finite(rate_matrix, {}, element)) {
     return false;
   }
 
-  if (const auto disconnected_index = gth_stationary_distribution(rate_matrix, popvec)) {
-    // report the state with no departure rate into the rest of the chain (popvec is still zero-filled, which is
-    // what can_remove_ion's triage expects)
-    const auto [ion, level] =
-        get_ion_level_of_nlte_vector_index(*disconnected_index, element, first_ion_used, nions_used);
+  // run the elimination on a scratch copy so that the summed matrix stays pristine for the residual check below
+  THREADLOCALONHOST std::vector<double> elimination_matrix;
+  elimination_matrix.assign(rate_matrix.begin(), rate_matrix.end());
+
+  if (const auto disconnected_index = gth_stationary_distribution(elimination_matrix, popvec)) {
+    // popvec is still zero-filled here, which is what can_remove_ion's triage expects
     printlog(
         "  [error] cell {} ts {}: NLTE matrix is singular for element Z={} (GTH elimination found no departure rate "
         "from:",
         nltelog.modelgridindex, nltelog.timestep, get_atomicnumber(element));
-    if (is_nlte(element, ion, level)) {
-      printlnlog(" ionstage {} level {})", get_ionstage(element, ion), level);
-    } else {
-      printlnlog(" ionstage {} superlevel)", get_ionstage(element, ion));
-    }
+    printlog_nlte_vector_index(*disconnected_index, element, first_ion_used, nions_used);
+    printlnlog(")");
     return false;
   }
 
-  // scale the unit-sum stationary distribution to the element number density (the same normalisation that the LU
-  // path imposes through its replaced zeroth matrix row)
-  for (auto i = 0Z; i < nlte_dimension; i++) {
-    popvec[i] *= nnelement;
+  // scale the unit-sum stationary distribution to the element number density
+  for (double& pop : popvec) {
+    pop *= nnelement;
   }
 
-  // the elimination consumed the summed matrix, so regenerate it from the per-process matrices to measure the
-  // componentwise relative backward error of the statistical equilibrium equations rate_matrix * popvec = 0 (every
-  // row is a rate equation on this path)
-  const auto rate_matrix_check = rate_matrices.get_summed_rate_matrix();
-  THREADLOCALONHOST std::vector<double> zero_balance_vector;
-  zero_balance_vector.reserve(max_nlte_dimension);
-  zero_balance_vector.resize(nlte_dimension);
-  std::ranges::fill(zero_balance_vector, 0.);
-  constexpr double relative_residual_warn_tolerance = 1e-8;
-  const double max_relative_residual = get_max_relative_residual(rate_matrix_check, zero_balance_vector, popvec);
-  if (max_relative_residual > relative_residual_warn_tolerance) {
+  // componentwise relative backward error of the statistical equilibrium equations rate_matrix * popvec = 0 (with
+  // no normalisation row on this path, every row is a rate equation)
+  const double max_relative_residual = get_max_relative_residual(rate_matrix, {}, popvec);
+  if (max_relative_residual > RELATIVE_RESIDUAL_WARN_TOLERANCE) {
     printlnlog(
         "  [warning] cell {} ts {}: NLTE GTH solution for element Z={} has a max componentwise relative backward "
         "error of {:g}",
@@ -1260,6 +1260,9 @@ auto can_remove_ion(const int element, const int ion, const int first_ion_used, 
 // Assemble and solve the NLTE rate matrix, retrying with a reduced range of ion stages when the
 // solve fails and NLTE_LIMIT_ION_STAGES_AFTER_FAILURE allows an edge ion to be removed.
 // Returns whether a solution was found and the range of ions included in it.
+// Both solver paths normalise the solution so that the sum over every matrix slot equals the element number
+// density: the LU path through its replaced zeroth matrix row, the GTH path by scaling its unit-sum stationary
+// distribution.
 auto nltepop_solve_matrix_with_ion_reduction(const int element, const int nonemptymgi, const double t_mid,
                                              const double nnelement,
                                              const std::vector<std::vector<double>>& s_renorm_allions,
@@ -1268,6 +1271,9 @@ auto nltepop_solve_matrix_with_ion_reduction(const int element, const int nonemp
   const int atomic_number = get_atomicnumber(element);
   const int nions = get_nions(element);
   const auto max_nlte_dimension = get_max_nlte_dimension();
+  // the solver choice is fixed for the element: FORCE_SAHA_ION_BALANCE constraint rows are incompatible with the
+  // Markov-generator structure that the GTH elimination requires, so those elements always use the LU path
+  const bool use_gth_solver = NLTE_USE_GTH_SOLVER && !FORCE_SAHA_ION_BALANCE(atomic_number);
   int nions_used = nions;
   int first_ion_used = 0;
   bool matrix_solve_success = false;
@@ -1300,12 +1306,9 @@ auto nltepop_solve_matrix_with_ion_reduction(const int element, const int nonemp
       }
     });
 
-    if (NLTE_USE_GTH_SOLVER && !FORCE_SAHA_ION_BALANCE(atomic_number)) {
-      // solve the pristine rate matrix directly for the stationary populations. The GTH elimination needs the
-      // unmodified Markov-generator structure, so the normalisation row, balance vector, and equilibration of the
-      // LU path below are all skipped.
-      matrix_solve_success = nltepop_matrix_solve_gth(element, nonemptymgi, rate_matrices, popvec, nnelement,
-                                                      max_nlte_dimension, first_ion_used, nions_used);
+    if (use_gth_solver) {
+      matrix_solve_success =
+          nltepop_matrix_solve_gth(element, nonemptymgi, rate_matrices, popvec, nnelement, first_ion_used, nions_used);
     } else {
       // replace the zeroth row of the matrix and balance vector with the normalisation
       // constraint (sum of levelpops = total element population)
@@ -1480,6 +1483,7 @@ void nltepop_apply_solution(const int element, const int nonemptymgi, const int 
 // rate_matrix is overwritten. On success, returns std::nullopt and fills vec_x with the stationary distribution
 // normalised to a sum of one. On failure, returns the index of a state with no departure rate into the remaining
 // chain (a reducible/disconnected matrix) and leaves vec_x untouched.
+// Defined with external linkage (declared in nltepop.h) so that unittests.cc can exercise it.
 auto gth_stationary_distribution(std::span<double> rate_matrix, std::span<double> vec_x)
     -> std::optional<std::ptrdiff_t> {
   const auto n = std::ssize(vec_x);
@@ -1528,12 +1532,9 @@ auto gth_stationary_distribution(std::span<double> rate_matrix, std::span<double
     }
   }
 
-  double x_sum = 0.;
-  for (auto j = 0Z; j < n; j++) {
-    x_sum += vec_x[j];
-  }
-  for (auto j = 0Z; j < n; j++) {
-    vec_x[j] /= x_sum;
+  const double x_sum = std::accumulate(vec_x.begin(), vec_x.end(), 0.);
+  for (double& x : vec_x) {
+    x /= x_sum;
   }
 
   return std::nullopt;
