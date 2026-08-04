@@ -62,7 +62,9 @@ template <typename T>
   }
   const auto tokenend = std::min(remainder.find_first_of(whitespace, tokenstart), remainder.size());
   auto token = remainder.substr(tokenstart, tokenend - tokenstart);
-  if (token.front() == '+') {  // stream extraction accepted a leading plus sign, but from_chars does not
+  // stream extraction accepted a leading plus sign, but from_chars does not. Only remove the plus if it is not
+  // followed by another sign, so that malformed tokens like "+-0" stay rejected
+  if (token.size() >= 2 && token.front() == '+' && token[1] != '-' && token[1] != '+') {
     token.remove_prefix(1);
   }
   const auto* const tokenfirst = token.data();
