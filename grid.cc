@@ -638,66 +638,65 @@ void read_elem_abundances() {
   printlnlog("reading abundances.txt...");
   const bool threedimensional = (get_modelgridtype() == GridType::CARTESIAN3D);
 
-  // Open the abundances file
-  auto abundance_file = fstream_required("abundances.txt", std::ios::in);
-
-  // and process through the grid to read in the abundances per cell
+  // Process through the grid to read in the abundances per cell.
   // The abundance file should only contain information for non-empty
   // cells. Its format must be cellnumber (integer), abundance for
   // element Z=1 (float) up to abundance for element Z=30 (float)
   // i.e. in total one integer and 30 floats.
 
-  static std::string line;
+  // the mass fraction arrays are in node-shared memory, so only the node leader of each node parses the file and
+  // writes the values (synchronised by the barrier below). The other ranks would just discard everything they read
+  if (globals::rank_in_node == 0) {
+    auto abundance_file = fstream_required("abundances.txt", std::ios::in);
+    std::string line;
 
-  // loop over propagation cells for 3D models, or modelgrid cells
-  for (int mgi = 0; mgi < get_npts_model(); mgi++) {
-    assert_always(get_noncommentline(abundance_file, line));
-    auto remainder = std::string_view{line};
+    // loop over propagation cells for 3D models, or modelgrid cells
+    for (int mgi = 0; mgi < get_npts_model(); mgi++) {
+      assert_always(get_noncommentline(abundance_file, line));
+      auto remainder = std::string_view{line};
 
-    int cellnumberinput = -1;
-    assert_always(parse_next_token(remainder, cellnumberinput));
-    assert_always(cellnumberinput == mgi + first_input_cellid);
+      int cellnumberinput = -1;
+      assert_always(parse_next_token(remainder, cellnumberinput));
+      assert_always(cellnumberinput == mgi + first_input_cellid);
 
-    // the abundances.txt file specifies the elemental mass fractions for each model cell
-    // (or proportional to mass frac, e.g. element densities, because they will be normalised anyway)
-    // The abundances begin with hydrogen, helium, etc, going as far up the atomic numbers as required
-    double normfactor = 0.;
-    std::array<float, 150> elem_massfracs_in{};
-    std::ranges::fill(elem_massfracs_in, 0.);
-    double abund_in = 0.;
-    for (int elem_z_index = 0; elem_z_index < std::ssize(elem_massfracs_in); elem_z_index++) {
-      const int atomic_number = elem_z_index + 1;
-      if (!parse_next_token(remainder, abund_in)) {
-        // at least one element (hydrogen) should have been specified for nonempty cells
-        assert_always(atomic_number > 1 || get_numpropcells(mgi) == 0);
-        break;
+      // the abundances.txt file specifies the elemental mass fractions for each model cell
+      // (or proportional to mass frac, e.g. element densities, because they will be normalised anyway)
+      // The abundances begin with hydrogen, helium, etc, going as far up the atomic numbers as required
+      double normfactor = 0.;
+      std::array<float, 150> elem_massfracs_in{};
+      double abund_in = 0.;
+      for (int elem_z_index = 0; elem_z_index < std::ssize(elem_massfracs_in); elem_z_index++) {
+        const int atomic_number = elem_z_index + 1;
+        if (!parse_next_token(remainder, abund_in)) {
+          // at least one element (hydrogen) should have been specified for nonempty cells
+          assert_always(atomic_number > 1 || get_numpropcells(mgi) == 0);
+          break;
+        }
+
+        if (abund_in < 0. || abund_in < std::numeric_limits<float>::min()) {
+          assert_always(abund_in > -1e-6);
+          abund_in = 0.;
+        }
+        elem_massfracs_in[elem_z_index] = static_cast<float>(abund_in);
+        normfactor += elem_massfracs_in[elem_z_index];
       }
 
-      if (abund_in < 0. || abund_in < std::numeric_limits<float>::min()) {
-        assert_always(abund_in > -1e-6);
-        abund_in = 0.;
-      }
-      elem_massfracs_in[elem_z_index] = static_cast<float>(abund_in);
-      normfactor += elem_massfracs_in[elem_z_index];
-    }
+      if (get_numpropcells(mgi) > 0) {
+        if (threedimensional || normfactor <= 0.) {
+          normfactor = 1.;
+        }
+        const int nonemptymgi = get_nonemptymgi_of_mgi(mgi);
 
-    if (get_numpropcells(mgi) > 0 && globals::rank_in_node == 0) {
-      // the mass fraction arrays are in node-shared memory, so only the node leader writes them
-      // (synchronised by the barrier below)
-      if (threedimensional || normfactor <= 0.) {
-        normfactor = 1.;
-      }
-      const int nonemptymgi = get_nonemptymgi_of_mgi(mgi);
+        for (int element = 0; element < get_nelements(); element++) {
+          // now set the abundances (by mass) of included elements, i.e.
+          // read out the abundances specified in the atomic data file
+          const int atomic_number = get_atomicnumber(element);
+          const auto elemmassfrac = static_cast<float>(elem_massfracs_in[atomic_number - 1] / normfactor);
+          assert_always(elemmassfrac >= 0.);
 
-      for (int element = 0; element < get_nelements(); element++) {
-        // now set the abundances (by mass) of included elements, i.e.
-        // read out the abundances specified in the atomic data file
-        const int atomic_number = get_atomicnumber(element);
-        const auto elemmassfrac = static_cast<float>(elem_massfracs_in[atomic_number - 1] / normfactor);
-        assert_always(elemmassfrac >= 0.);
-
-        // radioactive nuclide abundances should have already been set by read_??_model
-        set_elem_untrackedstable_massfrac(nonemptymgi, element, elemmassfrac);
+          // radioactive nuclide abundances should have already been set by read_??_model
+          set_elem_untrackedstable_massfrac(nonemptymgi, element, elemmassfrac);
+        }
       }
     }
   }
