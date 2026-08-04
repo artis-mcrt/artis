@@ -8,6 +8,7 @@
 #include <charconv>
 #include <chrono>
 #include <cmath>
+#include <concepts>
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
@@ -21,6 +22,7 @@
 #include <istream>
 #include <iterator>
 #include <limits>
+#include <memory>
 #include <print>
 #include <ranges>
 #include <span>
@@ -440,13 +442,27 @@ template <typename T>
     return false;
   }
   const auto tokenend = std::min(remainder.find_first_of(whitespace, tokenstart), remainder.size());
-  const auto token = remainder.substr(tokenstart, tokenend - tokenstart);
-#pragma clang unsafe_buffer_usage begin
+  auto token = remainder.substr(tokenstart, tokenend - tokenstart);
+  if (token.front() == '+') {  // stream extraction accepted a leading plus sign, but from_chars does not
+    token.remove_prefix(1);
+  }
   const auto* const tokenfirst = token.data();
-  const auto* const tokenlast = token.data() + token.size();
-#pragma clang unsafe_buffer_usage end
+  const auto* const tokenlast = std::to_address(token.cend());
   const auto [ptr, ec] = std::from_chars(tokenfirst, tokenlast, value);
   if (ec != std::errc{} || ptr != tokenlast) {
+    if constexpr (std::same_as<T, float>) {
+      // a valid number outside float range (such as an underflowing A value): reparse with double range and
+      // round to float, giving zero for underflow as stream extraction did
+      if (ec == std::errc::result_out_of_range && ptr == tokenlast) {
+        double dvalue{};
+        const auto [dptr, dec] = std::from_chars(tokenfirst, tokenlast, dvalue);
+        if (dec == std::errc{} && dptr == tokenlast) {
+          value = static_cast<float>(dvalue);
+          remainder.remove_prefix(tokenend);
+          return true;
+        }
+      }
+    }
     return false;
   }
   remainder.remove_prefix(tokenend);
