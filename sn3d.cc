@@ -19,8 +19,10 @@
 #include <format>
 #include <fstream>
 #include <ios>
+#include <iterator>
 #include <limits>
 #include <print>
+#include <string>
 #ifdef STDPAR_ON
 #include <ranges>
 #endif
@@ -165,36 +167,56 @@ void initialise_linestat_file() {
 
   auto linestat_file = fstream_required("linestat.out", std::ios::out | std::ios::trunc);
 
-  for (int i = 0; i < globals::nlines; i++) {
-    std::print(linestat_file, "{:g} ", CLIGHT / globals::linelist.nu[i]);  // wavelength in cm
-  }
-  std::println(linestat_file, "");
+  // with tens of millions of lines, per-value std::print calls to the stream are slow (each one re-checks whether
+  // the stream is a terminal), so format into a buffer and write it out in large chunks
+  std::string buffer;
+  constexpr auto flushsize = 1UZ << 22U;
+  buffer.reserve(flushsize + 64);
+  const auto flush_if_full = [&linestat_file, &buffer]() {
+    if (buffer.size() >= flushsize) {
+      linestat_file.write(buffer.data(), static_cast<std::streamsize>(buffer.size()));
+      buffer.clear();
+    }
+  };
 
   for (int i = 0; i < globals::nlines; i++) {
-    std::print(linestat_file, "{} ", get_atomicnumber(globals::linelist.elementindex[i]));
+    std::format_to(std::back_inserter(buffer), "{:g} ", CLIGHT / globals::linelist.nu[i]);  // wavelength in cm
+    flush_if_full();
   }
-  std::println(linestat_file, "");
+  buffer += '\n';
 
   for (int i = 0; i < globals::nlines; i++) {
-    std::print(linestat_file, "{} ", get_ionstage(globals::linelist.elementindex[i], globals::linelist.ionindex[i]));
+    std::format_to(std::back_inserter(buffer), "{} ", get_atomicnumber(globals::linelist.elementindex[i]));
+    flush_if_full();
   }
-  std::println(linestat_file, "");
+  buffer += '\n';
+
+  for (int i = 0; i < globals::nlines; i++) {
+    std::format_to(std::back_inserter(buffer), "{} ",
+                   get_ionstage(globals::linelist.elementindex[i], globals::linelist.ionindex[i]));
+    flush_if_full();
+  }
+  buffer += '\n';
 
   for (int i = 0; i < globals::nlines; i++) {
     const auto ionuniquelevelindexstart =
         get_ionuniquelevelindexstart(globals::linelist.elementindex[i], globals::linelist.ionindex[i]);
     const auto upper = globals::linelist.uniquelevelindex_upper[i] - ionuniquelevelindexstart;
-    std::print(linestat_file, "{} ", (upper + 1));
+    std::format_to(std::back_inserter(buffer), "{} ", (upper + 1));
+    flush_if_full();
   }
-  std::println(linestat_file, "");
+  buffer += '\n';
 
   for (int i = 0; i < globals::nlines; i++) {
     const auto ionuniquelevelindexstart =
         get_ionuniquelevelindexstart(globals::linelist.elementindex[i], globals::linelist.ionindex[i]);
     const auto lower = globals::linelist.uniquelevelindex_lower[i] - ionuniquelevelindexstart;
-    std::print(linestat_file, "{} ", (lower + 1));
+    std::format_to(std::back_inserter(buffer), "{} ", (lower + 1));
+    flush_if_full();
   }
-  std::println(linestat_file, "");
+  buffer += '\n';
+
+  linestat_file.write(buffer.data(), static_cast<std::streamsize>(buffer.size()));
 }
 
 void write_deposition_file() {
