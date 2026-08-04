@@ -10,6 +10,7 @@
 #include <unistd.h>
 
 #include <algorithm>
+#include <array>
 #include <chrono>
 #include <cmath>
 #include <cstddef>
@@ -228,8 +229,15 @@ void write_deposition_file() {
   const int nstart_nonempty = grid::get_nstart_nonempty(my_rank);
   const int ndo_nonempty = grid::get_ndo_nonempty(my_rank);
 
-  // calculate analytical decay rates
+  // calculate analytical decay rates. The decay chain calculations depend only on the timestep midpoint, so the
+  // per-source-nuclide rate coefficients are computed once and applied to every cell's initial mass fractions
   const double t_mid_nts = globals::timesteps[nts].mid;
+  const auto nuc_massfrac_coeffs = decay::calc_nuc_massfrac_coeffs(t_mid_nts);
+  const auto emissionratecoeffs = decay::calc_ana_emission_ratecoeffs(nuc_massfrac_coeffs);
+  auto qdot_ratecoeffs = std::array<std::vector<double>, decay::DECAYTYPE_COUNT>{};
+  for (const auto decaytype : decay::all_decaytypes) {
+    qdot_ratecoeffs[decaytype] = decay::calc_qdot_ratecoeffs(nuc_massfrac_coeffs, decaytype);
+  }
 
   // power in [erg/s]
   globals::timesteps[nts].eps_positron_ana_power = 0.;
@@ -246,19 +254,19 @@ void write_deposition_file() {
     const double cellmass = grid::get_rho_tmin(mgi) * grid::get_modelcell_assocvolume_tmin(mgi);
 
     globals::timesteps[nts].eps_positron_ana_power +=
-        cellmass * decay::get_particle_injection_rate(nonemptymgi, t_mid_nts, decay::DECAYTYPE_BETAPLUS);
+        cellmass * decay::get_modelcell_decayrate(nonemptymgi, emissionratecoeffs.positron);
     globals::timesteps[nts].eps_electron_ana_power +=
-        cellmass * decay::get_particle_injection_rate(nonemptymgi, t_mid_nts, decay::DECAYTYPE_BETAMINUS);
+        cellmass * decay::get_modelcell_decayrate(nonemptymgi, emissionratecoeffs.electron);
     globals::timesteps[nts].eps_alpha_ana_power +=
-        cellmass * decay::get_particle_injection_rate(nonemptymgi, t_mid_nts, decay::DECAYTYPE_ALPHA);
+        cellmass * decay::get_modelcell_decayrate(nonemptymgi, emissionratecoeffs.alpha);
     globals::timesteps[nts].eps_spfission_ana_power +=
-        cellmass * decay::get_particle_injection_rate(nonemptymgi, t_mid_nts, decay::DECAYTYPE_SPONTFISSION);
+        cellmass * decay::get_modelcell_decayrate(nonemptymgi, emissionratecoeffs.spfission);
 
     mtot += cellmass;
 
     for (const auto decaytype : decay::all_decaytypes) {
       // Qdot here has been multiplied by mass, so it is in units of [erg/s]
-      const double qdot_cell = decay::get_qdot_modelcell(nonemptymgi, t_mid_nts, decaytype) * cellmass;
+      const double qdot_cell = decay::get_modelcell_decayrate(nonemptymgi, qdot_ratecoeffs[decaytype]) * cellmass;
       globals::timesteps[nts].qdot_total += qdot_cell;
       if (decaytype == decay::DECAYTYPE_BETAMINUS) {
         globals::timesteps[nts].qdot_betaminus += qdot_cell;

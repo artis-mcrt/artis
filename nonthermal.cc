@@ -2145,26 +2145,22 @@ void init() {
 
 // set total non-thermal deposition rate from individual gamma/positron/electron/alpha rates. This should be called
 // after packet propagation is finished for this timestep and normalise_deposition_estimators() has been done
-void calculate_deposition_rate_density(const int nonemptymgi, const int timestep,
-                                       HeatingCoolingRates& heatingcoolingrates) {
+void calculate_deposition_rate_density(const int nonemptymgi, HeatingCoolingRates& heatingcoolingrates,
+                                       const decay::AnaEmissionRateCoeffs& emissionratecoeffs) {
   heatingcoolingrates.dep_gamma = globals::dep_estimator_gamma[nonemptymgi];
 
-  const double tmid = globals::timesteps[timestep].mid;
   const double rho = grid::get_rho(nonemptymgi);
 
-  heatingcoolingrates.eps_gamma_ana = rho * decay::get_gamma_emission_rate(nonemptymgi, tmid);
+  heatingcoolingrates.eps_gamma_ana = rho * decay::get_modelcell_decayrate(nonemptymgi, emissionratecoeffs.gamma);
 
-  heatingcoolingrates.eps_positron_ana =
-      rho * decay::get_particle_injection_rate(nonemptymgi, tmid, decay::DECAYTYPE_BETAPLUS);
+  heatingcoolingrates.eps_positron_ana = rho * decay::get_modelcell_decayrate(nonemptymgi, emissionratecoeffs.positron);
 
-  heatingcoolingrates.eps_electron_ana =
-      (rho * decay::get_particle_injection_rate(nonemptymgi, tmid, decay::DECAYTYPE_BETAMINUS));
+  heatingcoolingrates.eps_electron_ana = rho * decay::get_modelcell_decayrate(nonemptymgi, emissionratecoeffs.electron);
 
-  heatingcoolingrates.eps_alpha_ana =
-      rho * decay::get_particle_injection_rate(nonemptymgi, tmid, decay::DECAYTYPE_ALPHA);
+  heatingcoolingrates.eps_alpha_ana = rho * decay::get_modelcell_decayrate(nonemptymgi, emissionratecoeffs.alpha);
 
   heatingcoolingrates.eps_spfission_ana =
-      rho * decay::get_particle_injection_rate(nonemptymgi, tmid, decay::DECAYTYPE_SPONTFISSION);
+      rho * decay::get_modelcell_decayrate(nonemptymgi, emissionratecoeffs.spfission);
 
   if (PARTICLE_THERMALISATION_SCHEME == ParticleThermalisationScheme::INSTANTFULLDEPOSITION) {
     // for instant full deposition, the deposition rate is the same as the emission rate, which we know analytically

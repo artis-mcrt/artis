@@ -142,9 +142,26 @@ void update_abundances(int nonemptymgi_start, int nonemptymgi_count,
 [[nodiscard]] auto calc_energy_per_massoftopnuc_decaypath_withexpansion(double tstart) -> std::vector<double>;
 [[nodiscard]] auto get_modelcell_endecay_per_mass(int nonemptymgi,
                                                   std::span<const double> energy_per_massoftopnuc_decaypath) -> double;
-[[nodiscard]] auto get_qdot_modelcell(int nonemptymgi, double t, DecayType decaytype) -> double;
-[[nodiscard]] auto get_particle_injection_rate(int nonemptymgi, double t, DecayType decaytype) -> double;
-[[nodiscard]] auto get_gamma_emission_rate(int nonemptymgi, double t) -> double;
+// per-source-nuclide coefficient vectors for the analytic emission rates at one time. A cell's rate [erg/s/g] is
+// the dot product of a coefficient vector with the cell's initial nuclide mass fractions
+// (get_modelcell_decayrate)
+struct AnaEmissionRateCoeffs {
+  std::vector<double> gamma;
+  std::vector<double> positron;
+  std::vector<double> electron;
+  std::vector<double> alpha;
+  std::vector<double> spfission;
+};
+[[nodiscard]] auto calc_particle_injection_ratecoeffs(
+    std::span<const std::vector<std::pair<int, double>>> nuc_massfrac_coeffs, DecayType decaytype)
+    -> std::vector<double>;
+[[nodiscard]] auto calc_gamma_emission_ratecoeffs(
+    std::span<const std::vector<std::pair<int, double>>> nuc_massfrac_coeffs) -> std::vector<double>;
+[[nodiscard]] auto calc_qdot_ratecoeffs(std::span<const std::vector<std::pair<int, double>>> nuc_massfrac_coeffs,
+                                        DecayType decaytype) -> std::vector<double>;
+[[nodiscard]] auto calc_ana_emission_ratecoeffs(
+    std::span<const std::vector<std::pair<int, double>>> nuc_massfrac_coeffs) -> AnaEmissionRateCoeffs;
+[[nodiscard]] auto get_modelcell_decayrate(int nonemptymgi, std::span<const double> ratecoeffs_per_source) -> double;
 [[nodiscard]] auto get_global_etot_tmodel_tinf() -> double;
 // per-nuclide (source nuclide, coefficient) pairs giving each nuclide's mass fraction as a linear function of a
 // cell's initial nuclide mass fractions, for applying the same decay calculations to every cell at one time
