@@ -7,10 +7,13 @@
 #include <cstdio>
 
 #include "constants.h"
-#include "decay.h"
 #include "packet.h"
 #include "random.h"
 #include "thermalbalance.h"
+
+namespace decay {
+struct AnaEmissionRateCoeffs;
+}  // namespace decay
 
 namespace nonthermal {
 void init();

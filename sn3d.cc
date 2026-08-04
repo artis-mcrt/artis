@@ -10,7 +10,6 @@
 #include <unistd.h>
 
 #include <algorithm>
-#include <array>
 #include <chrono>
 #include <cmath>
 #include <cstddef>
@@ -234,10 +233,7 @@ void write_deposition_file() {
   const double t_mid_nts = globals::timesteps[nts].mid;
   const auto nuc_massfrac_coeffs = decay::calc_nuc_massfrac_coeffs(t_mid_nts);
   const auto emissionratecoeffs = decay::calc_ana_emission_ratecoeffs(nuc_massfrac_coeffs);
-  auto qdot_ratecoeffs = std::array<std::vector<double>, decay::DECAYTYPE_COUNT>{};
-  for (const auto decaytype : decay::all_decaytypes) {
-    qdot_ratecoeffs[decaytype] = decay::calc_qdot_ratecoeffs(nuc_massfrac_coeffs, decaytype);
-  }
+  const auto qdot_ratecoeffs = decay::calc_qdot_ratecoeffs(nuc_massfrac_coeffs);
 
   // power in [erg/s]
   globals::timesteps[nts].eps_positron_ana_power = 0.;

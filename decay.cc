@@ -1150,16 +1150,21 @@ auto calc_energy_per_massoftopnuc_decaypath_withexpansion(const double tstart) -
 }
 
 namespace {
-// build per-source-nuclide rate coefficients from the mass fraction coefficient table and a per-nuclide weight
-// (the rate contribution per unit current mass fraction of the nuclide), so that a cell's rate is the dot product
-// of the returned coefficients with the cell's initial nuclide mass fractions
-auto calc_ratecoeffs_per_source(const std::span<const std::vector<std::pair<int, double>>> nuc_massfrac_coeffs,
-                                const auto& nucweight) -> std::vector<double> {
+// build per-source-nuclide rate coefficients from the mass fraction coefficient table and the energy [erg]
+// released per decay of each nuclide (decays happen at a rate of 1 / meanlife / nucmass per unit current mass
+// fraction), so that a cell's rate [erg/s/g] is the dot product of the returned coefficients with the cell's
+// initial nuclide mass fractions
+auto calc_ratecoeffs_per_source(const NucMassFracCoeffsSpan nuc_massfrac_coeffs, const auto& nucenergyperdecay)
+    -> std::vector<double> {
   assert_always(std::ssize(nuc_massfrac_coeffs) == std::ssize(nuclides));
   const auto num_nuclides = std::ssize(nuclides);
   auto ratecoeffs = std::vector<double>(num_nuclides, 0.);
   for (int nucindex = 0; nucindex < num_nuclides; nucindex++) {
-    const double weight = nucweight(nucindex);
+    const double meanlife = get_meanlife(nucindex);
+    if (meanlife < 0.) {
+      continue;
+    }
+    const double weight = nucenergyperdecay(nucindex) / meanlife / nucmass(nucindex);
     if (weight <= 0.) {
       continue;
     }
@@ -1170,59 +1175,51 @@ auto calc_ratecoeffs_per_source(const std::span<const std::vector<std::pair<int,
   return ratecoeffs;
 }
 
-}  // anonymous namespace
-
-// rate of energy release as kinetic energy of positrons, electrons, alpha particles, or fission fragments per
-// unit current mass fraction of each nuclide, combined into per-source-nuclide coefficients [erg/s/g]
-[[nodiscard]] auto calc_particle_injection_ratecoeffs(
-    const std::span<const std::vector<std::pair<int, double>>> nuc_massfrac_coeffs, const DecayType decaytype)
+// coefficients for the rate of energy release as kinetic energy of positrons, electrons, alpha particles, or
+// fission fragments
+auto calc_particle_injection_ratecoeffs(const NucMassFracCoeffsSpan nuc_massfrac_coeffs, const DecayType decaytype)
     -> std::vector<double> {
   return calc_ratecoeffs_per_source(nuc_massfrac_coeffs, [decaytype](const int nucindex) {
-    const double meanlife = get_meanlife(nucindex);
-    if (meanlife < 0.) {
-      return 0.;
-    }
-    return nucdecayenergyparticle(nucindex, decaytype) * get_nuc_decaybranchprob(nucindex, decaytype) / meanlife /
-           nucmass(nucindex);
+    return nucdecayenergyparticle(nucindex, decaytype) * get_nuc_decaybranchprob(nucindex, decaytype);
   });
 }
 
-// rate of energy release as gamma rays, as per-source-nuclide coefficients [erg/s/g]
-[[nodiscard]] auto calc_gamma_emission_ratecoeffs(
-    const std::span<const std::vector<std::pair<int, double>>> nuc_massfrac_coeffs) -> std::vector<double> {
-  return calc_ratecoeffs_per_source(nuc_massfrac_coeffs, [](const int nucindex) {
-    const double meanlife = get_meanlife(nucindex);
-    if (meanlife < 0.) {
-      return 0.;
-    }
-    return nucdecayenergygamma(nucindex) / meanlife / nucmass(nucindex);
-  });
+// current mass fraction of one nuclide in a cell: its (source nuclide, coefficient) list applied to the cell's
+// initial nuclide mass fractions
+auto get_nuc_massfrac_from_coeffs(const int mgi, const std::span<const std::pair<int, double>> coeffs) -> double {
+  double massfrac = 0.;
+  for (const auto& [source_nucindex, coeff] : coeffs) {
+    massfrac += coeff * grid::get_modelinitnucmassfrac(mgi, source_nucindex);
+  }
+  return massfrac;
 }
 
-// total energy release rate (including neutrinos that are ignored elsewhere) for one decay type, as
-// per-source-nuclide coefficients [erg/s/g]
-[[nodiscard]] auto calc_qdot_ratecoeffs(const std::span<const std::vector<std::pair<int, double>>> nuc_massfrac_coeffs,
-                                        const DecayType decaytype) -> std::vector<double> {
-  return calc_ratecoeffs_per_source(nuc_massfrac_coeffs, [decaytype](const int nucindex) {
-    const double meanlife = get_meanlife(nucindex);
-    if (meanlife < 0.) {
-      return 0.;
-    }
-    return nucdecayenergyqval(nucindex, decaytype) * get_nuc_decaybranchprob(nucindex, decaytype) / meanlife /
-           nucmass(nucindex);
-  });
-}
+}  // anonymous namespace
 
 // the analytic emission rate coefficient vectors used by the non-thermal deposition calculation
-[[nodiscard]] auto calc_ana_emission_ratecoeffs(
-    const std::span<const std::vector<std::pair<int, double>>> nuc_massfrac_coeffs) -> AnaEmissionRateCoeffs {
+[[nodiscard]] auto calc_ana_emission_ratecoeffs(const NucMassFracCoeffsSpan nuc_massfrac_coeffs)
+    -> AnaEmissionRateCoeffs {
   return {
-      .gamma = calc_gamma_emission_ratecoeffs(nuc_massfrac_coeffs),
+      .gamma = calc_ratecoeffs_per_source(nuc_massfrac_coeffs,
+                                          [](const int nucindex) { return nucdecayenergygamma(nucindex); }),
       .positron = calc_particle_injection_ratecoeffs(nuc_massfrac_coeffs, DECAYTYPE_BETAPLUS),
       .electron = calc_particle_injection_ratecoeffs(nuc_massfrac_coeffs, DECAYTYPE_BETAMINUS),
       .alpha = calc_particle_injection_ratecoeffs(nuc_massfrac_coeffs, DECAYTYPE_ALPHA),
       .spfission = calc_particle_injection_ratecoeffs(nuc_massfrac_coeffs, DECAYTYPE_SPONTFISSION),
   };
+}
+
+// coefficients for the total energy release rate (including neutrinos that are ignored elsewhere) of each decay
+// type (DECAYTYPE_NONE is left empty)
+[[nodiscard]] auto calc_qdot_ratecoeffs(const NucMassFracCoeffsSpan nuc_massfrac_coeffs)
+    -> std::array<std::vector<double>, DECAYTYPE_COUNT> {
+  auto qdot_ratecoeffs = std::array<std::vector<double>, DECAYTYPE_COUNT>{};
+  for (const auto decaytype : all_decaytypes) {
+    qdot_ratecoeffs[decaytype] = calc_ratecoeffs_per_source(nuc_massfrac_coeffs, [decaytype](const int nucindex) {
+      return nucdecayenergyqval(nucindex, decaytype) * get_nuc_decaybranchprob(nucindex, decaytype);
+    });
+  }
+  return qdot_ratecoeffs;
 }
 
 // a cell's decay energy release rate [erg/s/g]: the dot product of per-source-nuclide rate coefficients with the
@@ -1260,7 +1257,7 @@ auto get_global_etot_tmodel_tinf() -> double {
 // with coefficients from the Bateman solution that depend only on the elapsed time, so the coefficients are
 // computed once and applied to every cell
 void update_abundances(const int nonemptymgi_start, const int nonemptymgi_count,
-                       const std::span<const std::vector<std::pair<int, double>>> nuc_massfrac_coeffs) {
+                       const NucMassFracCoeffsSpan nuc_massfrac_coeffs) {
   assert_always(std::ssize(nuc_massfrac_coeffs) == std::ssize(nuclides));
   const auto num_nuclides = std::ssize(nuclides);
   const auto nelements = get_nelements();
@@ -1330,10 +1327,10 @@ void update_abundances(const int nonemptymgi_start, const int nonemptymgi_count,
 // For each nuclide, the (source nuclide, coefficient) pairs such that the nuclide's mass fraction in a cell at
 // time t_current is the sum over the pairs of coeff * (the cell's initial mass fraction of the source nuclide),
 // ordered as decay path contributions in decay path order, then the nuclide's own surviving initial abundance
-auto calc_nuc_massfrac_coeffs(const double t_current) -> std::vector<std::vector<std::pair<int, double>>> {
+auto calc_nuc_massfrac_coeffs(const double t_current) -> NucMassFracCoeffs {
   const double t_afterinit = t_current - grid::get_t_model();
   const auto num_nuclides = std::ssize(nuclides);
-  auto nuc_massfrac_coeffs = std::vector<std::vector<std::pair<int, double>>>(num_nuclides);
+  auto nuc_massfrac_coeffs = NucMassFracCoeffs(num_nuclides);
 
   // decay chain contributions to each chain-end nuclide from the chain-top nuclide's initial abundance, and to
   // He4 from alpha-terminated chains (with the chain end treated as stable so that every alpha decay through the
@@ -1367,7 +1364,7 @@ auto calc_nuc_massfrac_coeffs(const double t_current) -> std::vector<std::vector
 }
 
 void output_isotopic_densities(std::ostream& estimators_file, const int nonemptymgi, const int element,
-                               const std::span<const std::vector<std::pair<int, double>>> nuc_massfrac_coeffs) {
+                               const NucMassFracCoeffsSpan nuc_massfrac_coeffs) {
   const double rho = grid::get_rho(nonemptymgi);
   const auto mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
 
@@ -1382,10 +1379,7 @@ void output_isotopic_densities(std::ostream& estimators_file, const int nonempty
   }
 
   for (const auto& [nuc_a, nucindex] : a_isotopes) {
-    double massfrac = 0.;
-    for (const auto& [source_nucindex, coeff] : nuc_massfrac_coeffs[nucindex]) {
-      massfrac += coeff * grid::get_modelinitnucmassfrac(mgi, source_nucindex);
-    }
+    const double massfrac = get_nuc_massfrac_from_coeffs(mgi, nuc_massfrac_coeffs[nucindex]);
     if (massfrac > 0) {
       const double numberdens = massfrac / nucmass(nucindex) * rho;
       std::print(estimators_file, "  {}{}: {:9.3e}", get_elname(atomic_number), nuc_a, numberdens);
