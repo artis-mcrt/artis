@@ -5,8 +5,10 @@
 
 #include <algorithm>
 #include <array>
+#include <charconv>
 #include <chrono>
 #include <cmath>
+#include <concepts>
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
@@ -20,9 +22,9 @@
 #include <istream>
 #include <iterator>
 #include <limits>
+#include <memory>
 #include <print>
 #include <ranges>
-#include <set>
 #include <span>
 #include <sstream>
 #include <string>
@@ -50,7 +52,8 @@
 
 namespace {
 
-const int groundstate_index_in = 1;  // starting level index in the input files
+// level index of the ground state in the input files (0 or 1), autodetected from the first level in adata.txt
+int groundstate_index_in = -1;
 
 struct TempEnergyLevel {
   double epsilon{-1};  // Excitation energy of this level relative to the neutral ground level.
@@ -285,7 +288,7 @@ void read_phixs_data_table(std::istream& phixsfile, const int nphixspoints_input
 }
 
 void read_phixs_file(const int phixs_file_version, std::vector<float>& tmpallphixs,
-                     std::vector<PhotoionTarget>& tmpallphixstargets) {
+                     std::vector<PhotoionTarget>& tmpallphixstargets, std::vector<int>& ion_minphixslevel_infile) {
   printlnlog("reading phixs data from {}", phixsdata_filenames[phixs_file_version]);
 
   auto phixsfile = fstream_required(phixsdata_filenames[phixs_file_version], std::ios::in);
@@ -350,6 +353,15 @@ void read_phixs_file(const int phixs_file_version, std::vector<float>& tmpallphi
       const int lowerlevel = lowerlevel_in - groundstate_index_in;
       assert_always(lowerlevel >= 0);
 
+      // record the lowest level the file supplies a table for in each included ion, before any filtering on
+      // retained levels, so that mismatched level numbering can be detected even if the misnumbered table would
+      // be filtered out
+      if (lowerion >= 0 && lowerion < get_nions(element)) {
+        const auto lowerion_uniqueionindex = get_uniqueionindex(element, lowerion);
+        ion_minphixslevel_infile[lowerion_uniqueionindex] =
+            std::min(ion_minphixslevel_infile[lowerion_uniqueionindex], lowerlevel);
+      }
+
       // store only photoionisation crosssections for ions that are part of the current model atom
       if (lowerion >= 0 && upperion < get_nions(element) && lowerlevel < get_nlevels_ionising(element, lowerion)) {
         read_phixs_data_table(phixsfile, nphixspoints_inputtable, element, lowerion, lowerlevel, upperion,
@@ -401,6 +413,12 @@ void read_ion_levels(std::istream& adata, const int element, const int ion, cons
     ssline.clear();
     ssline.str(line);
     assert_always(ssline >> levelindex_in >> levelenergy_ev >> statweight >> ntransitions);
+    if (groundstate_index_in < 0) {
+      // this is the first level line of the whole file, so level == 0 and levelindex_in is the ground state index
+      assert_always(levelindex_in == 0 || levelindex_in == 1);
+      groundstate_index_in = levelindex_in;
+      printlnlog("adata.txt: autodetected level numbering starting from {}", groundstate_index_in);
+    }
     assert_always(levelindex_in == level + groundstate_index_in);
 
     if (level < nlevelsmax) {
@@ -424,19 +442,64 @@ void read_ion_levels(std::istream& adata, const int element, const int ion, cons
   }
 }
 
+// parse the next whitespace-delimited token of the line as a number and advance past it.
+// Returns false if there is no token left or the token is not fully numeric
+template <typename T>
+[[nodiscard]] auto parse_next_token(std::string_view& remainder, T& value) -> bool {
+  constexpr std::string_view whitespace = " \t\r";
+  const auto tokenstart = remainder.find_first_not_of(whitespace);
+  if (tokenstart == std::string_view::npos) {
+    return false;
+  }
+  const auto tokenend = std::min(remainder.find_first_of(whitespace, tokenstart), remainder.size());
+  auto token = remainder.substr(tokenstart, tokenend - tokenstart);
+  if (token.front() == '+') {  // stream extraction accepted a leading plus sign, but from_chars does not
+    token.remove_prefix(1);
+  }
+  const auto* const tokenfirst = token.data();
+  const auto* const tokenlast = std::to_address(token.cend());
+  const auto [ptr, ec] = std::from_chars(tokenfirst, tokenlast, value);
+  if (ptr != tokenlast) {
+    return false;
+  }
+  if constexpr (std::floating_point<T>) {
+    if (ec == std::errc{} && !std::isfinite(value)) {
+      // reject nan and inf spellings, which from_chars accepts but stream extraction did not
+      return false;
+    }
+    if (ec == std::errc::result_out_of_range) {
+      // a syntactically valid number outside the range of T. Stream extraction stored zero for underflow (even
+      // below double range, such as 1e-400) but rejected overflow, so use strtod, which returns zero for
+      // underflow, to distinguish the two (the token views a null-terminated getline buffer, and strtod stops
+      // at the whitespace or end of line that terminates the token)
+      char* parseend{};
+      const double dvalue = std::strtod(tokenfirst, &parseend);
+      if (parseend == tokenlast && std::fabs(dvalue) <= std::numeric_limits<T>::max()) {
+        value = static_cast<T>(dvalue);
+        remainder.remove_prefix(tokenend);
+        return true;
+      }
+    }
+  }
+  if (ec != std::errc{}) {
+    return false;
+  }
+  remainder.remove_prefix(tokenend);
+  return true;
+}
+
 void read_ion_transitions(std::istream& ftransitiondata, const int ion_transition_count_in_file,
                           std::vector<IonTransitionsInput>& iontransitiontable, const int nlevels_requiretransitions,
-                          const int nlevelskept) {
+                          const int nlevelskept, const int atomicnumber, const int ionstage,
+                          const int nlevels_in_file) {
   iontransitiontable.clear();
   iontransitiontable.reserve(ion_transition_count_in_file);
+  bool found_groundstate_lower = false;
 
   std::string line;
-  static std::istringstream ssline;
 
   // will be autodetected from first table row. old format had an index column and no collstr or forbidden columns
   bool oldtransitionformat = false;
-  static std::set<std::tuple<int, int>> existingtransitions{};
-  existingtransitions.clear();
 
   for (int i = 0; i < ion_transition_count_in_file; i++) {
     int lower_in = -1;
@@ -446,46 +509,67 @@ void read_ion_transitions(std::istream& ftransitiondata, const int ion_transitio
     int intforbidden = 0;
     assert_always(getline(ftransitiondata, line));
     if (i == 0) {
-      ssline.clear();
-      ssline.str(line);
-      std::string word;
       int column_count = 0;
-      while (ssline >> word) {
+      auto remainder = std::string_view{line};
+      double dummy{};
+      while (parse_next_token(remainder, dummy)) {
         column_count++;
       }
       assert_always(column_count == 4 || column_count == 5);
       oldtransitionformat = (column_count == 4);
     }
-    ssline.clear();
-    ssline.str(line);
+    auto remainder = std::string_view{line};
     if (!oldtransitionformat) {
-      assert_always(ssline >> lower_in >> upper_in >> A >> coll_str >> intforbidden);
+      assert_always(parse_next_token(remainder, lower_in) && parse_next_token(remainder, upper_in) &&
+                    parse_next_token(remainder, A) && parse_next_token(remainder, coll_str) &&
+                    parse_next_token(remainder, intforbidden));
     } else {
       int transindex = 0;  // not used
-      assert_always(ssline >> transindex >> lower_in >> upper_in >> A);
+      assert_always(parse_next_token(remainder, transindex) && parse_next_token(remainder, lower_in) &&
+                    parse_next_token(remainder, upper_in) && parse_next_token(remainder, A));
     }
     const int lower = lower_in - groundstate_index_in;
     const int upper = upper_in - groundstate_index_in;
     assert_always(lower >= 0);
     assert_always(lower < upper);
+    found_groundstate_lower = found_groundstate_lower || (lower == 0);
+    if (upper >= nlevels_in_file) {
+      printlnlog(
+          "[error] transitiondata.txt: Z={} ionstage {}: transition {} -> {} refers to a level beyond the {} levels of "
+          "this ion in adata.txt. The level numbering may not match the ground state index {} detected from adata.txt",
+          atomicnumber, ionstage, lower_in, upper_in, nlevels_in_file, groundstate_index_in);
+      assert_always(false);
+    }
     if (lower >= nlevelskept || upper >= nlevelskept) {
       continue;
     }
-    existingtransitions.insert({lower, upper});
     iontransitiontable.push_back(
         {.lower = lower, .upper = upper, .A = A, .coll_str = coll_str, .forbidden = (intforbidden == 1)});
   }
 
-  std::ranges::sort(iontransitiontable, std::less<>{},
-                    [](const IonTransitionsInput& t) { return std::tie(t.lower, t.upper); });
+  // if the ion has any transitions then the ground state is normally the lower level of at least one of them. A
+  // sparse table could legitimately omit the ground state (missing transitions are filled in below), so warn
+  // without aborting
+  if (ion_transition_count_in_file > 0 && !found_groundstate_lower) {
+    printlnlog(
+        "[warning] transitiondata.txt: Z={} ionstage {}: no transition has the ground state (level index {} in the "
+        "input files) as its lower level. Check that the level numbering matches adata.txt",
+        atomicnumber, ionstage, groundstate_index_in);
+  }
+
+  const auto proj_lowerupper = [](const IonTransitionsInput& t) { return std::tie(t.lower, t.upper); };
+  std::ranges::sort(iontransitiontable, std::less<>{}, proj_lowerupper);
 
   assert_always(nlevels_requiretransitions <= nlevelskept);
 
   const auto old_transitioncount = std::ssize(iontransitiontable);
   for (int lower = 0; lower < nlevels_requiretransitions; lower++) {
     for (int upper = lower + 1; upper < nlevelskept; upper++) {
-      if (!existingtransitions.contains({lower, upper})) {
-        existingtransitions.insert({lower, upper});
+      // binary search the sorted table read from the file (excluding any pairs appended by this loop)
+      const bool transition_exists =
+          std::ranges::binary_search(iontransitiontable.begin(), iontransitiontable.begin() + old_transitioncount,
+                                     std::tuple{lower, upper}, std::ranges::less{}, proj_lowerupper);
+      if (!transition_exists) {
         iontransitiontable.push_back({.lower = lower, .upper = upper, .A = 0., .coll_str = -2., .forbidden = true});
       }
     }
@@ -493,8 +577,7 @@ void read_ion_transitions(std::istream& ftransitiondata, const int ion_transitio
   const auto added_transitions = std::ssize(iontransitiontable) - old_transitioncount;
   if (added_transitions > 0) {
     printlnlog("[info] added {} missing transitions with A=0 to iontransitiontable", added_transitions);
-    std::ranges::sort(iontransitiontable, std::less<>{},
-                      [](const IonTransitionsInput& t) { return std::tie(t.lower, t.upper); });
+    std::ranges::sort(iontransitiontable, std::less<>{}, proj_lowerupper);
   }
 }
 
@@ -959,6 +1042,9 @@ void read_autoion_data() {
   bool allautoion_levels_are_nlte = true;
   int autoion_transitions_read = 0;
 
+  // highest autoionising level index of each included ion as numbered in the file, before conversion
+  auto ion_max_autoionlevel_in = std::vector<int>(get_includedions(), -1);
+
   while (get_noncommentline(autoionfile, autoionline)) {
     assert_always(std::istringstream(autoionline) >> Z >> upperionstage >> upperlevel_in >> lowerionstage >>
                   lowerlevel_in >> autoion_A);
@@ -977,6 +1063,10 @@ void read_autoion_data() {
       const int lowerion = lowerionstage - get_ionstage(element, 0);
       // store only for ions that are part of the current model atom
       if (lowerion >= 0 && upperion < get_nions(element)) {
+        const auto lower_uniqueionindex = get_uniqueionindex(element, lowerion);
+        ion_max_autoionlevel_in[lower_uniqueionindex] =
+            std::max(ion_max_autoionlevel_in[lower_uniqueionindex], lowerlevel_in);
+
         const int lowerlevel = lowerlevel_in - groundstate_index_in;
         const int upperlevel = upperlevel_in - groundstate_index_in;
 
@@ -1014,6 +1104,26 @@ void read_autoion_data() {
   }
 
   assert_always(allautoion_levels_are_not_nlte || allautoion_levels_are_nlte);
+
+  // the autoionising levels of an ion must be a contiguous block ending at its highest level (asserted below), so
+  // for each ion with autoionisation data the highest autoionising level in the file must be the ion's top level.
+  // Checking the raw file indices detects an autoion.txt whose level numbering disagrees with adata.txt
+  for (int element = 0; element < get_nelements(); element++) {
+    const int nions = get_nions(element);
+    for (int ion = 0; ion < nions; ion++) {
+      const auto max_autoionlevel_in = ion_max_autoionlevel_in[get_uniqueionindex(element, ion)];
+      const auto toplevel_in = get_nlevels(element, ion) - 1 + groundstate_index_in;
+      if (max_autoionlevel_in >= 0 && max_autoionlevel_in != toplevel_in) {
+        printlnlog(
+            "[error] autoion.txt: Z={} ionstage {}: the highest autoionising level index {} is not the ion's highest "
+            "level index {}. The autoion.txt level numbering may not match the ground state index {} detected from "
+            "adata.txt",
+            get_atomicnumber(element), get_ionstage(element, ion), max_autoionlevel_in, toplevel_in,
+            groundstate_index_in);
+        assert_always(false);
+      }
+    }
+  }
 
   printlnlog("autoion.txt: read {} autoionisation transitions, stored {} for the included ions",
              autoion_transitions_read, temp_allautoion.size());
@@ -1079,14 +1189,53 @@ void read_phixs_data() {
         "phixsdata_v2.txt to interpolate the phixsdata.txt data");
   }
 
+  // per phixs file version: lowest level of each included ion that the file supplies a cross-section table for,
+  // recorded before any filtering on retained levels (INT_MAX where the file has no tables for the ion)
+  auto ion_minphixslevel_infile = std::array<std::vector<int>, 3>{};
+  for (const int v : {1, 2}) {
+    ion_minphixslevel_infile[v].assign(get_includedions(), std::numeric_limits<int>::max());
+  }
+
   if (phixs_file_version_exists[2]) {
-    read_phixs_file(2, tmpallphixs, tmpallphixstargets);
+    read_phixs_file(2, tmpallphixs, tmpallphixstargets, ion_minphixslevel_infile[2]);
     MPI_Barrier_node();
   }
 
   if (phixs_file_version_exists[1]) {
-    read_phixs_file(1, tmpallphixs, tmpallphixstargets);
+    read_phixs_file(1, tmpallphixs, tmpallphixstargets, ion_minphixslevel_infile[1]);
     MPI_Barrier_node();
+  }
+
+  // every ion with any photoionisation data must include a cross-section from the ground state, so an excited level
+  // having one without the ground state means the phixs data numbers levels differently from adata.txt. Checked on
+  // the raw file contents (recorded before filtering on retained levels) so that a misnumbered ground state table
+  // cannot be filtered out silently. A file relying on its companion phixs file for the ground state table is
+  // allowed with a warning, since the combined dataset satisfies the invariant
+  for (const int v : {1, 2}) {
+    const int othv = 3 - v;
+    for (int element = 0; element < get_nelements(); element++) {
+      const int nions = get_nions(element);
+      for (int ion = 0; ion < nions; ion++) {
+        const auto uniqueionindex = get_uniqueionindex(element, ion);
+        const auto minphixslevel = ion_minphixslevel_infile[v][uniqueionindex];
+        if (minphixslevel == std::numeric_limits<int>::max() || minphixslevel == 0) {
+          continue;  // the file has no tables for this ion, or it includes the ground state table
+        }
+        if (ion_minphixslevel_infile[othv][uniqueionindex] == 0) {
+          printlnlog(
+              "[warning] {}: Z={} ionstage {}: the file includes a cross-section for an excited level of this ion but "
+              "the ground state table comes from {}. Check that the two files use the same level numbering",
+              phixsdata_filenames[v], get_atomicnumber(element), get_ionstage(element, ion), phixsdata_filenames[othv]);
+        } else {
+          printlnlog(
+              "[error] {}: Z={} ionstage {}: the file includes a cross-section for an excited level of this ion but "
+              "none for the ground state. The phixs level numbering may not match the ground state index {} detected "
+              "from adata.txt",
+              phixsdata_filenames[v], get_atomicnumber(element), get_ionstage(element, ion), groundstate_index_in);
+          assert_always(false);
+        }
+      }
+    }
   }
 
   int cont_index = 0;
@@ -1320,7 +1469,7 @@ void read_levels_and_transitions(std::vector<TempEnergyLevel>& temp_alllevels,
             std::min(nlevelskept, NLEVELS_REQUIRETRANSITIONS(atomicnumber, adata_ionstage_in));
 
         read_ion_transitions(ftransitiondata, ion_transition_count_in_file, iontransitiontable,
-                             nlevels_requiretransitions, nlevelskept);
+                             nlevels_requiretransitions, nlevelskept, atomicnumber, ionstage, nlevels_in_file);
         add_transitions_to_unsorted_linelist(element, ion, iontransitiontable, temp_linelist, temp_alltranslist,
                                              temp_alllevels);
       }
@@ -1590,6 +1739,10 @@ void read_atomicdata_files() {
     read_levels_and_transitions(temp_alllevels, temp_linelist, temp_alltranslist, nlevelsmax_readin);
   }
   MPI_Barrier_node();
+
+  // only the node leaders read adata.txt, but all ranks parse level indices in autoion.txt and the phixs files
+  MPI_Bcast_safe(groundstate_index_in, 0, globals::mpi_comm_node);
+  assert_always(groundstate_index_in == 0 || groundstate_index_in == 1);
 
   update_includedionslevels_maxnions();
 
