@@ -484,12 +484,12 @@ template <typename T>
   const auto* const tokenfirst = token.data();
   const auto* const tokenlast = std::to_address(token.cend());
   const auto [ptr, ec] = std::from_chars(tokenfirst, tokenlast, value);
-  bool token_is_valid = (ec == std::errc{} && ptr == tokenlast);
   if constexpr (std::floating_point<T>) {
-    if (token_is_valid && !(std::fabs(value) <= std::numeric_limits<T>::max())) {
+    if (ec == std::errc{} && ptr == tokenlast && !(std::fabs(value) <= std::numeric_limits<T>::max())) {
       // reject nan and inf spellings, which from_chars accepts but stream extraction did not
-      token_is_valid = false;
-    } else if (!token_is_valid && ec == std::errc::result_out_of_range && ptr == tokenlast) {
+      return false;
+    }
+    if (ec == std::errc::result_out_of_range && ptr == tokenlast) {
       // a syntactically valid number outside the range of T. Stream extraction stored zero for underflow (even
       // below double range, such as 1e-400) but rejected overflow, so use strtod, which returns zero for
       // underflow, to distinguish the two (the token views a null-terminated getline buffer, and strtod stops
@@ -498,11 +498,12 @@ template <typename T>
       const double dvalue = std::strtod(tokenfirst, &parseend);
       if (parseend == tokenlast && std::fabs(dvalue) <= std::numeric_limits<T>::max()) {
         value = static_cast<T>(dvalue);
-        token_is_valid = true;
+        remainder.remove_prefix(tokenend);
+        return true;
       }
     }
   }
-  if (!token_is_valid) {
+  if (ec != std::errc{} || ptr != tokenlast) {
     return false;
   }
   remainder.remove_prefix(tokenend);
