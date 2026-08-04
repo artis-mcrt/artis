@@ -288,13 +288,9 @@ void read_phixs_data_table(std::istream& phixsfile, const int nphixspoints_input
 }
 
 void read_phixs_file(const int phixs_file_version, std::vector<float>& tmpallphixs,
-                     std::vector<PhotoionTarget>& tmpallphixstargets) {
+                     std::vector<PhotoionTarget>& tmpallphixstargets, std::vector<bool>& ion_has_phixstable_infile,
+                     std::vector<bool>& ion_has_groundstate_phixstable_infile) {
   printlnlog("reading phixs data from {}", phixsdata_filenames[phixs_file_version]);
-
-  // per-file record of which included ions the file supplies any cross-section table and a ground state table for,
-  // taken before any filtering on retained levels
-  auto ion_has_phixstable_infile = std::vector<bool>(get_includedions(), false);
-  auto ion_has_groundstate_phixstable_infile = std::vector<bool>(get_includedions(), false);
 
   auto phixsfile = fstream_required(phixsdata_filenames[phixs_file_version], std::ios::in);
   std::string phixsline;
@@ -398,26 +394,6 @@ void read_phixs_file(const int phixs_file_version, std::vector<float>& tmpallphi
           float phixs = 0;
           assert_always(phixsfile >> phixs);
         }
-      }
-    }
-  }
-
-  // every ion with any photoionisation data must include a cross-section from the ground state, so an excited level
-  // having one without the ground state means this file numbers levels differently from adata.txt. Checked on the
-  // raw per-file contents so that a misnumbered table cannot be filtered out silently, and so that a correctly
-  // numbered second phixs file cannot mask a mismatch in this one
-  for (int element = 0; element < get_nelements(); element++) {
-    const int nions = get_nions(element);
-    for (int ion = 0; ion < nions; ion++) {
-      const auto uniqueionindex = get_uniqueionindex(element, ion);
-      if (ion_has_phixstable_infile[uniqueionindex] && !ion_has_groundstate_phixstable_infile[uniqueionindex]) {
-        printlnlog(
-            "[error] {}: Z={} ionstage {}: the file includes a cross-section for an excited level of this ion but "
-            "none for the ground state. The phixs level numbering may not match the ground state index {} detected "
-            "from adata.txt",
-            phixsdata_filenames[phixs_file_version], get_atomicnumber(element), get_ionstage(element, ion),
-            groundstate_index_in);
-        assert_always(false);
       }
     }
   }
@@ -1065,6 +1041,9 @@ void read_autoion_data() {
   bool allautoion_levels_are_nlte = true;
   int autoion_transitions_read = 0;
 
+  // highest autoionising level index of each included ion as numbered in the file, before conversion
+  auto ion_max_autoionlevel_in = std::vector<int>(get_includedions(), -1);
+
   while (get_noncommentline(autoionfile, autoionline)) {
     assert_always(std::istringstream(autoionline) >> Z >> upperionstage >> upperlevel_in >> lowerionstage >>
                   lowerlevel_in >> autoion_A);
@@ -1083,6 +1062,10 @@ void read_autoion_data() {
       const int lowerion = lowerionstage - get_ionstage(element, 0);
       // store only for ions that are part of the current model atom
       if (lowerion >= 0 && upperion < get_nions(element)) {
+        const auto lower_uniqueionindex = get_uniqueionindex(element, lowerion);
+        ion_max_autoionlevel_in[lower_uniqueionindex] =
+            std::max(ion_max_autoionlevel_in[lower_uniqueionindex], lowerlevel_in);
+
         const int lowerlevel = lowerlevel_in - groundstate_index_in;
         const int upperlevel = upperlevel_in - groundstate_index_in;
 
@@ -1120,6 +1103,26 @@ void read_autoion_data() {
   }
 
   assert_always(allautoion_levels_are_not_nlte || allautoion_levels_are_nlte);
+
+  // the autoionising levels of an ion must be a contiguous block ending at its highest level (asserted below), so
+  // for each ion with autoionisation data the highest autoionising level in the file must be the ion's top level.
+  // Checking the raw file indices detects an autoion.txt whose level numbering disagrees with adata.txt
+  for (int element = 0; element < get_nelements(); element++) {
+    const int nions = get_nions(element);
+    for (int ion = 0; ion < nions; ion++) {
+      const auto max_autoionlevel_in = ion_max_autoionlevel_in[get_uniqueionindex(element, ion)];
+      const auto toplevel_in = get_nlevels(element, ion) - 1 + groundstate_index_in;
+      if (max_autoionlevel_in >= 0 && max_autoionlevel_in != toplevel_in) {
+        printlnlog(
+            "[error] autoion.txt: Z={} ionstage {}: the highest autoionising level index {} is not the ion's highest "
+            "level index {}. The autoion.txt level numbering may not match the ground state index {} detected from "
+            "adata.txt",
+            get_atomicnumber(element), get_ionstage(element, ion), max_autoionlevel_in, toplevel_in,
+            groundstate_index_in);
+        assert_always(false);
+      }
+    }
+  }
 
   printlnlog("autoion.txt: read {} autoionisation transitions, stored {} for the included ions",
              autoion_transitions_read, temp_allautoion.size());
@@ -1185,14 +1188,59 @@ void read_phixs_data() {
         "phixsdata_v2.txt to interpolate the phixsdata.txt data");
   }
 
+  // per phixs file version: which included ions the file supplies any cross-section table and a ground state table
+  // for, recorded before any filtering on retained levels
+  auto ion_has_phixstable_infile = std::array<std::vector<bool>, 3>{};
+  auto ion_has_groundstate_phixstable_infile = std::array<std::vector<bool>, 3>{};
+  for (const int v : {1, 2}) {
+    ion_has_phixstable_infile[v].assign(get_includedions(), false);
+    ion_has_groundstate_phixstable_infile[v].assign(get_includedions(), false);
+  }
+
   if (phixs_file_version_exists[2]) {
-    read_phixs_file(2, tmpallphixs, tmpallphixstargets);
+    read_phixs_file(2, tmpallphixs, tmpallphixstargets, ion_has_phixstable_infile[2],
+                    ion_has_groundstate_phixstable_infile[2]);
     MPI_Barrier_node();
   }
 
   if (phixs_file_version_exists[1]) {
-    read_phixs_file(1, tmpallphixs, tmpallphixstargets);
+    read_phixs_file(1, tmpallphixs, tmpallphixstargets, ion_has_phixstable_infile[1],
+                    ion_has_groundstate_phixstable_infile[1]);
     MPI_Barrier_node();
+  }
+
+  // every ion with any photoionisation data must include a cross-section from the ground state, so an excited level
+  // having one without the ground state means the phixs data numbers levels differently from adata.txt. Checked on
+  // the raw file contents (recorded before filtering on retained levels) so that a misnumbered ground state table
+  // cannot be filtered out silently. A file relying on its companion phixs file for the ground state table is
+  // allowed with a warning, since the combined dataset satisfies the invariant
+  for (const int v : {2, 1}) {
+    if (!phixs_file_version_exists[v]) {
+      continue;
+    }
+    const int othv = (v == 2) ? 1 : 2;
+    for (int element = 0; element < get_nelements(); element++) {
+      const int nions = get_nions(element);
+      for (int ion = 0; ion < nions; ion++) {
+        const auto uniqueionindex = get_uniqueionindex(element, ion);
+        if (!ion_has_phixstable_infile[v][uniqueionindex] || ion_has_groundstate_phixstable_infile[v][uniqueionindex]) {
+          continue;
+        }
+        if (phixs_file_version_exists[othv] && ion_has_groundstate_phixstable_infile[othv][uniqueionindex]) {
+          printlnlog(
+              "[warning] {}: Z={} ionstage {}: the file includes a cross-section for an excited level of this ion but "
+              "the ground state table comes from {}. Check that the two files use the same level numbering",
+              phixsdata_filenames[v], get_atomicnumber(element), get_ionstage(element, ion), phixsdata_filenames[othv]);
+        } else {
+          printlnlog(
+              "[error] {}: Z={} ionstage {}: the file includes a cross-section for an excited level of this ion but "
+              "none for the ground state. The phixs level numbering may not match the ground state index {} detected "
+              "from adata.txt",
+              phixsdata_filenames[v], get_atomicnumber(element), get_ionstage(element, ion), groundstate_index_in);
+          assert_always(false);
+        }
+      }
+    }
   }
 
   int cont_index = 0;
