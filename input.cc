@@ -288,9 +288,13 @@ void read_phixs_data_table(std::istream& phixsfile, const int nphixspoints_input
 }
 
 void read_phixs_file(const int phixs_file_version, std::vector<float>& tmpallphixs,
-                     std::vector<PhotoionTarget>& tmpallphixstargets, std::vector<bool>& ion_has_phixstable_infile,
-                     std::vector<bool>& ion_has_groundstate_phixstable_infile) {
+                     std::vector<PhotoionTarget>& tmpallphixstargets) {
   printlnlog("reading phixs data from {}", phixsdata_filenames[phixs_file_version]);
+
+  // per-file record of which included ions the file supplies any cross-section table and a ground state table for,
+  // taken before any filtering on retained levels
+  auto ion_has_phixstable_infile = std::vector<bool>(get_includedions(), false);
+  auto ion_has_groundstate_phixstable_infile = std::vector<bool>(get_includedions(), false);
 
   auto phixsfile = fstream_required(phixsdata_filenames[phixs_file_version], std::ios::in);
   std::string phixsline;
@@ -398,6 +402,26 @@ void read_phixs_file(const int phixs_file_version, std::vector<float>& tmpallphi
     }
   }
 
+  // every ion with any photoionisation data must include a cross-section from the ground state, so an excited level
+  // having one without the ground state means this file numbers levels differently from adata.txt. Checked on the
+  // raw per-file contents so that a misnumbered table cannot be filtered out silently, and so that a correctly
+  // numbered second phixs file cannot mask a mismatch in this one
+  for (int element = 0; element < get_nelements(); element++) {
+    const int nions = get_nions(element);
+    for (int ion = 0; ion < nions; ion++) {
+      const auto uniqueionindex = get_uniqueionindex(element, ion);
+      if (ion_has_phixstable_infile[uniqueionindex] && !ion_has_groundstate_phixstable_infile[uniqueionindex]) {
+        printlnlog(
+            "[error] {}: Z={} ionstage {}: the file includes a cross-section for an excited level of this ion but "
+            "none for the ground state. The phixs level numbering may not match the ground state index {} detected "
+            "from adata.txt",
+            phixsdata_filenames[phixs_file_version], get_atomicnumber(element), get_ionstage(element, ion),
+            groundstate_index_in);
+        assert_always(false);
+      }
+    }
+  }
+
   printlnlog("[info] mem_usage: photoionisation tables occupy {:.3f} MB", mem_usage_phixs / 1024. / 1024.);
 }
 
@@ -460,20 +484,25 @@ template <typename T>
   const auto* const tokenfirst = token.data();
   const auto* const tokenlast = std::to_address(token.cend());
   const auto [ptr, ec] = std::from_chars(tokenfirst, tokenlast, value);
-  if (ec != std::errc{} || ptr != tokenlast) {
-    if constexpr (std::same_as<T, float>) {
-      // a valid number below float range (such as an underflowing A value): reparse with double range and
-      // round to float, giving zero for underflow as stream extraction did. Overflow is still rejected
-      if (ec == std::errc::result_out_of_range && ptr == tokenlast) {
-        double dvalue{};
-        const auto [dptr, dec] = std::from_chars(tokenfirst, tokenlast, dvalue);
-        if (dec == std::errc{} && dptr == tokenlast && std::fabs(dvalue) <= std::numeric_limits<float>::max()) {
-          value = static_cast<float>(dvalue);
-          remainder.remove_prefix(tokenend);
-          return true;
-        }
+  bool token_is_valid = (ec == std::errc{} && ptr == tokenlast);
+  if constexpr (std::floating_point<T>) {
+    if (token_is_valid && !(std::fabs(value) <= std::numeric_limits<T>::max())) {
+      // reject nan and inf spellings, which from_chars accepts but stream extraction did not
+      token_is_valid = false;
+    } else if (!token_is_valid && ec == std::errc::result_out_of_range && ptr == tokenlast) {
+      // a syntactically valid number outside the range of T. Stream extraction stored zero for underflow (even
+      // below double range, such as 1e-400) but rejected overflow, so use strtod, which returns zero for
+      // underflow, to distinguish the two (the token views a null-terminated getline buffer, and strtod stops
+      // at the whitespace or end of line that terminates the token)
+      char* parseend{};
+      const double dvalue = std::strtod(tokenfirst, &parseend);
+      if (parseend == tokenlast && std::fabs(dvalue) <= std::numeric_limits<T>::max()) {
+        value = static_cast<T>(dvalue);
+        token_is_valid = true;
       }
     }
+  }
+  if (!token_is_valid) {
     return false;
   }
   remainder.remove_prefix(tokenend);
@@ -1155,38 +1184,14 @@ void read_phixs_data() {
         "phixsdata_v2.txt to interpolate the phixsdata.txt data");
   }
 
-  auto ion_has_phixstable_infile = std::vector<bool>(get_includedions(), false);
-  auto ion_has_groundstate_phixstable_infile = std::vector<bool>(get_includedions(), false);
-
   if (phixs_file_version_exists[2]) {
-    read_phixs_file(2, tmpallphixs, tmpallphixstargets, ion_has_phixstable_infile,
-                    ion_has_groundstate_phixstable_infile);
+    read_phixs_file(2, tmpallphixs, tmpallphixstargets);
     MPI_Barrier_node();
   }
 
   if (phixs_file_version_exists[1]) {
-    read_phixs_file(1, tmpallphixs, tmpallphixstargets, ion_has_phixstable_infile,
-                    ion_has_groundstate_phixstable_infile);
+    read_phixs_file(1, tmpallphixs, tmpallphixstargets);
     MPI_Barrier_node();
-  }
-
-  // every ion with any photoionisation data must include a cross-section from the ground state, so an excited level
-  // having one without the ground state means the phixs data numbers levels differently from adata.txt. This checks
-  // the raw file contents (recorded before filtering on retained levels) so that a misnumbered ground state table
-  // cannot be silently filtered out
-  for (int element = 0; element < get_nelements(); element++) {
-    const int nions = get_nions(element);
-    for (int ion = 0; ion < nions; ion++) {
-      const auto uniqueionindex = get_uniqueionindex(element, ion);
-      if (ion_has_phixstable_infile[uniqueionindex] && !ion_has_groundstate_phixstable_infile[uniqueionindex]) {
-        printlnlog(
-            "[error] Z={} ionstage {}: the phixs data include a cross-section for an excited level of this ion but "
-            "none for the ground state. The phixs level numbering may not match the ground state index {} detected "
-            "from adata.txt",
-            get_atomicnumber(element), get_ionstage(element, ion), groundstate_index_in);
-        assert_always(false);
-      }
-    }
   }
 
   int cont_index = 0;
