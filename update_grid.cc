@@ -359,10 +359,6 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
       grid::get_modelcell_assocvolume_tmin(mgi) * pow3(globals::timesteps[nts_prev].mid / globals::tmin);
   const auto sys_time_start_update_cell = std::chrono::steady_clock::now();
 
-  // Update current mass density of cell
-  const auto rho = static_cast<float>(grid::get_rho_tmin(mgi) / pow3(tratmid));
-  grid::set_rho(nonemptymgi, rho);
-
   const auto tmid = globals::timesteps[nts].mid;
 
   // Update clumping factors
@@ -373,8 +369,6 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
     grid::set_clumpfactor(nonemptymgi, clumpfactor);
   }
 
-  // Update elemental abundances with radioactive decays
-  decay::update_abundances(nonemptymgi, tmid);
   nonthermal::calculate_deposition_rate_density(nonemptymgi, nts, heatingcoolingrates);
 
   const double estimator_normfactor = 1 / deltaV / deltat / globals::nprocs;
@@ -602,6 +596,15 @@ void update_grid(std::ostream& estimators_file, const int nts, const int nts_pre
   std::ranges::fill(heatingcoolingrates_thisrankcells, HeatingCoolingRates{});
 
   const auto nstart_nonempty = grid::get_nstart_nonempty(my_rank);
+
+  // for this rank's cells: update the elemental abundances (with radioactive decays to the timestep midpoint),
+  // then the mass densities and the total ion number densities that depend on both
+  decay::update_abundances(nstart_nonempty, ndo_nonempty, globals::timesteps[nts].mid);
+  for (int nonemptymgi = nstart_nonempty; nonemptymgi < (nstart_nonempty + ndo_nonempty); nonemptymgi++) {
+    const int mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
+    grid::set_rho(nonemptymgi, static_cast<float>(grid::get_rho_tmin(mgi) / pow3(tratmid)));
+    grid::set_nnetot(nonemptymgi);
+  }
 
 #ifdef _OPENMP
 #pragma omp parallel for schedule(dynamic)

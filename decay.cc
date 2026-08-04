@@ -103,6 +103,7 @@ struct DecayPath {
 
 std::vector<Nuclide> nuclides;
 std::vector<DecayPath> decaypaths;
+std::vector<int> decaypath_topnucindex;  // the chain-top nuclide index of each decaypath (flat copy for fast access)
 std::vector<bool> alldecaytypes_is_used;
 
 [[nodiscard]] constexpr auto decay_daughters_z_a_prob(const int z_parent, const int a_parent, const DecayType decaytype)
@@ -545,6 +546,14 @@ auto get_nuc_massfrac(const int nonemptymgi, const int nucindex, const double ti
   return nuctotal;
 }
 
+// the chain-end abundance per unit chain-top initial abundance for one decaypath at the given time, with the
+// chain end treated as stable (so it counts the fraction of chain-top nuclei that decayed past the chain end)
+auto calc_decaypath_unitfactor(const int decaypathindex, const double time, const bool useexpansionfactor) -> double {
+  auto lambdas = decaypaths[decaypathindex].lambdas;
+  lambdas[lambdas.size() - 1] = 0.;
+  return calculate_decaychain(1., lambdas, time - grid::get_t_model(), useexpansionfactor);
+}
+
 // Get the decay energy [erg/g] that would be released from time tstart [s] to time infinity by a given decaypath
 // e.g. Ni56 -> Co56, represents the decays of Co56 nuclei that were produced from Ni56 in the initial abundance.
 // Decays from Co56 due to the initial abundance of Co56 are not counted here, nor is the energy from Ni56 decays
@@ -561,14 +570,8 @@ auto get_endecay_to_tinf_per_ejectamass_at_time(const int modelgridindex, const 
     return 0.;
   }
 
-  const double t_afterinit = time - grid::get_t_model();
-
   // count the number of chain-top nuclei that haven't decayed past the end of the chain
-  auto lambdas = decaypath.lambdas;
-  // treat the end nuclide as stable to count how many got produced
-  lambdas[lambdas.size() - 1] = 0.;
-
-  const double abund_endsink = calculate_decaychain(top_initabund, lambdas, t_afterinit, false);
+  const double abund_endsink = top_initabund * calc_decaypath_unitfactor(decaypathindex, time, false);
   const double ndecays_remaining = decaypath.branchproduct * (top_initabund - abund_endsink);
 
   const double endecay = ndecays_remaining * get_decaypath_lastdecayenergy(decaypath);
@@ -615,23 +618,6 @@ auto get_endecay_per_ejectamass_tmodel_to_time_withexpansion_chain_numerical(con
   printlnlog("  expansion energy factor:    {:g}", chain_endecay / chain_endecay_noexpansion);
 
   return chain_endecay;
-}
-
-// get decay energy per mass [erg/g] released by a decaypath between times tlow [s] and thigh [s]
-auto get_endecay_per_ejectamass_between_times(const int mgi, const int decaypathindex, const double tlow,
-                                              const double thigh) -> double {
-  assert_testmodeonly(mgi < grid::get_npts_model());
-  assert_testmodeonly(tlow <= thigh);
-  const double energy_tlow = get_endecay_to_tinf_per_ejectamass_at_time(mgi, decaypathindex, tlow);
-  const double energy_thigh = get_endecay_to_tinf_per_ejectamass_at_time(mgi, decaypathindex, thigh);
-  const double endiff = energy_tlow - energy_thigh;
-  assert_always(std::isfinite(endiff));
-  if (endiff < 0.) {
-    // if the error is larger than just roundoff, this is a problem
-    assert_always((energy_tlow * (1 + 2e-5)) >= energy_thigh);
-    return 0.;
-  }
-  return endiff;
 }
 
 // Get the total decay power per mass [erg/s/g] for a given decaypath
@@ -1129,6 +1115,12 @@ void init_nuclides(const std::span<const int> custom_zlist, const std::span<cons
   abort_if_decaypath_has_duplicate_lambdas();
   filter_unused_nuclides(custom_zlist, custom_alist, standard_nuclides);
 
+  // cache the chain-top nuclide index of every decaypath (only after filter_unused_nuclides, which remaps the
+  // nuclide indices)
+  decaypath_topnucindex.resize(decaypaths.size());
+  std::ranges::transform(decaypaths, decaypath_topnucindex.begin(),
+                         [](const auto& decaypath) { return decaypath.nucindex[0]; });
+
   printlnlog("Number of nuclides: {}", std::ssize(nuclides));
 
   const int maxdecaypathlength = std::ranges::fold_left(decaypaths, 0ZU, [](const auto maxlen, const auto& decaypath) {
@@ -1174,71 +1166,53 @@ void init_nuclides(const std::span<const int> custom_zlist, const std::span<cons
   return alldecaytypes_is_used[decaytype];
 }
 
-// calculate the decay energy per unit mass [erg/g] released from time t_model (can be before tmin) to tstart,
-// accounting for the photon energy loss due to expansion between time of decays and tstart (equation 18 of Lucy 2005)
-auto get_endecay_per_ejectamass_tmodel_to_time_withexpansion(const int nonemptymgi, const double tstart) -> double {
-  const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
-  const double t_afterinit = tstart - grid::get_t_model();
-  double tot_endecay = 0.;
-  for (const auto& decaypath : decaypaths) {
-    const int nucindex_top = decaypath.nucindex[0];
-
-    const double top_initabund = grid::get_modelinitnucmassfrac(modelgridindex, nucindex_top) / nucmass(nucindex_top);
-    auto lambdas = decaypath.lambdas;
-    // treat the end nuclide as stable to count how many got produced by the chain
-    lambdas[lambdas.size() - 1] = 0.;
-
-    const double chain_endecay =
-        (decaypath.branchproduct * calculate_decaychain(top_initabund, lambdas, t_afterinit, true) *
-         get_decaypath_lastdecayenergy(decaypath));
-
-    tot_endecay += chain_endecay;
-  }
-
-  return tot_endecay;
-}
-
-// get the decay energy that will be released during the simulation time [(tmodel if initial packets else tmin) to tmax]
-// indexed by nonemptymgi and decaypathindex [erg/g]
-auto get_modelcell_simtime_endecay_per_mass(const int nonemptymgi,
-                                            const std::span<const double> energy_per_mass_nonemptymgi_decaypath)
-    -> double {
-  const auto num_decaypaths = get_num_decaypaths();
+// get the decay energy per unit ejecta mass [erg/g] that a model cell releases over the time range of the given
+// per-decaypath energy coefficients (each an energy per unit mass of that decaypath's chain-top nuclide)
+auto get_modelcell_endecay_per_mass(const int nonemptymgi,
+                                    const std::span<const double> energy_per_massoftopnuc_decaypath) -> double {
+  assert_testmodeonly(std::ssize(energy_per_massoftopnuc_decaypath) == get_num_decaypaths());
+  const auto mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
   double endecay_per_mass = 0.;
-  for (int decaypathindex = 0; decaypathindex < num_decaypaths; decaypathindex++) {
-    endecay_per_mass += energy_per_mass_nonemptymgi_decaypath[(nonemptymgi * num_decaypaths) + decaypathindex];
+  for (int decaypathindex = 0; decaypathindex < std::ssize(energy_per_massoftopnuc_decaypath); decaypathindex++) {
+    endecay_per_mass += grid::get_modelinitnucmassfrac(mgi, decaypath_topnucindex[decaypathindex]) *
+                        energy_per_massoftopnuc_decaypath[decaypathindex];
   }
   return endecay_per_mass;
 }
 
-// energy_per_mass_nonemptymgi_decaypath is an array indexed by [nonemptymgi * num_decaypaths + i] will hold the
-// decay energy per mass [erg/g] released by chain i in cell mgi during the simulation time range tmin to tmax
-auto get_energy_per_mass_nonemptymgi_decaypath() -> MPI_shared_array<const double> {
-  const ptrdiff_t nonempty_npts_model = grid::get_nonempty_npts_model();
-  printlnlog(
-      "[info] mem_usage: energy_per_mass_nonemptymgi_decaypath[nonempty_npts_model*num_decaypaths] occupies {:.1f} "
-      "MB (node shared memory).",
-      nonempty_npts_model * get_num_decaypaths() * sizeof(double) / 1024. / 1024.);
-  auto energy_per_mass_nonemptymgi_decaypath = MPI_shared_array<double>{nonempty_npts_model * get_num_decaypaths(), 0.};
-
-  MPI_Barrier_allranks();
+// decay energy per unit mass of the chain-top nuclide [erg/(g of chain-top nuclide)] released by each decaypath
+// during the simulation time [(tmodel if initial packets else tmin) to tmax]. Multiplying by a cell's initial
+// mass fraction of the chain-top nuclide gives the decay energy per unit ejecta mass
+auto calc_energy_per_massoftopnuc_decaypath() -> std::vector<double> {
   const auto time_min_decay = INITIAL_PACKETS_ON ? grid::get_t_model() : globals::tmin;
-  const ptrdiff_t num_decaypaths = get_num_decaypaths();
-  for (int nonemptymgi = 0; nonemptymgi < nonempty_npts_model; nonemptymgi++) {
-    if (nonemptymgi % globals::node_nprocs == globals::rank_in_node) {
-      const int mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
-      for (int decaypathindex = 0; decaypathindex < num_decaypaths; decaypathindex++) {
-        const double energy_per_mass =
-            get_endecay_per_ejectamass_between_times(mgi, decaypathindex, time_min_decay, globals::tmax);
-        assert_testmodeonly(energy_per_mass >= 0.);
-        assert_testmodeonly(std::isfinite(energy_per_mass));
-        energy_per_mass_nonemptymgi_decaypath[(nonemptymgi * num_decaypaths) + decaypathindex] = energy_per_mass;
-      }
-    }
+  const auto num_decaypaths = get_num_decaypaths();
+  std::vector<double> energy_per_massoftopnuc(num_decaypaths);
+  for (int decaypathindex = 0; decaypathindex < num_decaypaths; decaypathindex++) {
+    const auto& decaypath = decaypaths[decaypathindex];
+    // fraction of chain-top nuclei that decay past the end of the chain between the two times
+    const double fdecayed = std::max(0., calc_decaypath_unitfactor(decaypathindex, globals::tmax, false) -
+                                             calc_decaypath_unitfactor(decaypathindex, time_min_decay, false));
+    energy_per_massoftopnuc[decaypathindex] =
+        decaypath.branchproduct * fdecayed * get_decaypath_lastdecayenergy(decaypath) / nucmass(decaypath.nucindex[0]);
+    assert_always(std::isfinite(energy_per_massoftopnuc[decaypathindex]));
   }
+  return energy_per_massoftopnuc;
+}
 
-  MPI_Barrier_allranks();
-  return energy_per_mass_nonemptymgi_decaypath;
+// decay energy per unit mass of the chain-top nuclide [erg/(g of chain-top nuclide)] released by each decaypath
+// from time t_model to tstart, weighted for the photon energy loss due to expansion between the time of decay and
+// tstart (equation 18 of Lucy 2005)
+auto calc_energy_per_massoftopnuc_decaypath_withexpansion(const double tstart) -> std::vector<double> {
+  const auto num_decaypaths = get_num_decaypaths();
+  std::vector<double> energy_per_massoftopnuc(num_decaypaths);
+  for (int decaypathindex = 0; decaypathindex < num_decaypaths; decaypathindex++) {
+    const auto& decaypath = decaypaths[decaypathindex];
+    energy_per_massoftopnuc[decaypathindex] = decaypath.branchproduct *
+                                              calc_decaypath_unitfactor(decaypathindex, tstart, true) *
+                                              get_decaypath_lastdecayenergy(decaypath) / nucmass(decaypath.nucindex[0]);
+    assert_always(std::isfinite(energy_per_massoftopnuc[decaypathindex]));
+  }
+  return energy_per_massoftopnuc;
 }
 
 // energy release rate in form of kinetic energy of positrons, electrons, and alpha particles in [erg/s/g]
@@ -1324,35 +1298,97 @@ auto get_global_etot_tmodel_tinf() -> double {
   return etot_tinf;
 }
 
-// Update the mass fractions of elements using the current abundances of nuclides
-void update_abundances(const int nonemptymgi, const double t_current) {
-  for (int element = get_nelements() - 1; element >= 0; element--) {
-    const int atomic_number = get_atomicnumber(element);
+// Update the mass fractions of elements from the decayed nuclide abundances for a contiguous range of cells at
+// time t_current. Each nuclide's mass fraction is a linear function of the cell's initial nuclide mass fractions,
+// with coefficients from the Bateman solution that depend only on the elapsed time, so the coefficients are
+// computed once and applied to every cell
+void update_abundances(const int nonemptymgi_start, const int nonemptymgi_count, const double t_current) {
+  const double t_afterinit = t_current - grid::get_t_model();
+  const auto num_nuclides = std::ssize(nuclides);
+  const auto nelements = get_nelements();
 
-    // the mass fraction sum of radioactive isotopes, and stable nuclei coming from other decays for the current element
-    double isomassfracsum = 0.;
-    double isomassfrac_on_nucmass_sum = 0.;
-    const auto num_nuclides = std::ssize(nuclides);
-    for (int nucindex = 0; nucindex < num_nuclides; nucindex++) {
-      if (get_nuc_z(nucindex) == atomic_number) {
-        const double nuc_massfrac = get_nuc_massfrac(nonemptymgi, nucindex, t_current);
-        isomassfracsum += nuc_massfrac;
-        isomassfrac_on_nucmass_sum += nuc_massfrac / nucmass(nucindex);
-      }
+  // Each nuclide's mass fraction is a linear function of the cell's initial nuclide mass fractions, so build a
+  // flat list of contributions (each a coefficient to multiply by the cell's initial mass fraction of a source
+  // nuclide and add to the element sums) that depends only on the elapsed time, then apply it to every cell.
+  struct MassFracContribution {
+    int elementindex;
+    int source_nucindex;
+    double massfrac_coeff;  // contribution to the element mass fraction sum
+    double numberfrac_coeff;  // massfrac_coeff / (mass of the contributing nuclide), for the mean weight
+  };
+  std::vector<MassFracContribution> contributions;
+
+  const auto add_contribution = [&contributions](const int nucindex, const int source_nucindex, const double coeff) {
+    const int element = get_elementindex(get_nuc_z(nucindex));
+    if (element >= 0 && coeff > 0.) {
+      contributions.push_back({.elementindex = element,
+                               .source_nucindex = source_nucindex,
+                               .massfrac_coeff = coeff,
+                               .numberfrac_coeff = coeff / nucmass(nucindex)});
     }
+  };
 
-    const double otherstablemassfrac = grid::get_elem_untrackedstable_initmassfrac(nonemptymgi, element);
-    isomassfracsum += otherstablemassfrac;
-    isomassfrac_on_nucmass_sum += otherstablemassfrac / globals::elements[element].initstablemeannucmass;
-
-    grid::set_elem_massfrac(nonemptymgi, element, static_cast<float>(isomassfracsum));
-    const auto meanweight = static_cast<float>(isomassfracsum / isomassfrac_on_nucmass_sum);
-    grid::set_element_meanweight(
-        nonemptymgi, element,
-        (std::isfinite(meanweight) && meanweight > 0.) ? meanweight : globals::elements[element].initstablemeannucmass);
+  // exponential decay of each nuclide's own initial abundance
+  for (int nucindex = 0; nucindex < num_nuclides; nucindex++) {
+    const auto meanlife = get_meanlife(nucindex);
+    const auto lambda = (meanlife > 0.) ? 1. / meanlife : 0.;
+    add_contribution(nucindex, nucindex, exp(-t_afterinit * lambda));
   }
 
-  grid::set_nnetot(nonemptymgi);
+  // decay chain contributions to each chain-end nuclide from the chain-top nuclide's initial abundance
+  const int he4_nucindex = nuc_exists(2, 4) ? get_nucindex(2, 4) : -1;
+  for (int decaypathindex = 0; decaypathindex < get_num_decaypaths(); decaypathindex++) {
+    const auto& decaypath = decaypaths[decaypathindex];
+    const int nucindex_top = decaypath.nucindex[0];
+    const int nucindex_end = decaypath.nucindex.back();
+
+    add_contribution(nucindex_end, nucindex_top,
+                     decaypath.branchproduct * calculate_decaychain(1., decaypath.lambdas, t_afterinit, false) *
+                         nucmass(nucindex_end) / nucmass(nucindex_top));
+
+    // match He4 production to alpha decay of any nucleus, with the chain end treated as stable so that every
+    // alpha decay through the last step of the chain is counted
+    const auto last_decaytype = decaypath.decaytypes[decaypath.decaytypes.size() - 2];
+    if (he4_nucindex >= 0 && last_decaytype == DecayType::DECAYTYPE_ALPHA && nucindex_end != he4_nucindex) {
+      // NOLINTNEXTLINE(readability-suspicious-call-argument)
+      add_contribution(he4_nucindex, nucindex_top,
+                       decaypath.branchproduct * calc_decaypath_unitfactor(decaypathindex, t_current, false) *
+                           nucmass(he4_nucindex) / nucmass(nucindex_top));
+    }
+  }
+
+#ifdef _OPENMP
+#pragma omp parallel for
+#endif
+  for (int nonemptymgi = nonemptymgi_start; nonemptymgi < (nonemptymgi_start + nonemptymgi_count); nonemptymgi++) {
+    const auto mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
+
+    // the mass fraction sums of radioactive isotopes, and stable nuclei coming from other decays, for each element
+    auto elem_isomassfracsum = std::vector<double>(nelements, 0.);
+    auto elem_isomassfrac_on_nucmass_sum = std::vector<double>(nelements, 0.);
+
+    for (const auto& contrib : contributions) {
+      const double source_initmassfrac = grid::get_modelinitnucmassfrac(mgi, contrib.source_nucindex);
+      elem_isomassfracsum[contrib.elementindex] += contrib.massfrac_coeff * source_initmassfrac;
+      elem_isomassfrac_on_nucmass_sum[contrib.elementindex] += contrib.numberfrac_coeff * source_initmassfrac;
+    }
+
+    for (int element = 0; element < nelements; element++) {
+      const double otherstablemassfrac = grid::get_elem_untrackedstable_initmassfrac(nonemptymgi, element);
+      const double isomassfracsum = elem_isomassfracsum[element] + otherstablemassfrac;
+      const double isomassfrac_on_nucmass_sum =
+          elem_isomassfrac_on_nucmass_sum[element] +
+          (otherstablemassfrac / globals::elements[element].initstablemeannucmass);
+
+      grid::set_elem_massfrac(nonemptymgi, element, static_cast<float>(isomassfracsum));
+      const auto meanweight = static_cast<float>(isomassfracsum / isomassfrac_on_nucmass_sum);
+      grid::set_element_meanweight(nonemptymgi, element,
+                                   (std::isfinite(meanweight) && meanweight > 0.)
+                                       ? meanweight
+                                       : globals::elements[element].initstablemeannucmass);
+    }
+    // note: the caller must call grid::set_nnetot() for each cell after the cell densities have been updated
+  }
 }
 
 void output_isotopic_densities(std::ostream& estimators_file, const int nonemptymgi, const double t_current,
@@ -1388,8 +1424,10 @@ void output_isotopic_densities(std::ostream& estimators_file, const int nonempty
 }
 
 void setup_radioactive_pellet(const double e_cmf_per_packet, const int nonemptymgi, Packet& pkt,
-                              const std::span<const double> energy_per_mass_nonemptymgi_decaypath) {
-  const int num_decaypaths = get_num_decaypaths();
+                              const std::span<const double> energy_per_massoftopnuc_decaypath) {
+  assert_testmodeonly(std::ssize(energy_per_massoftopnuc_decaypath) == get_num_decaypaths());
+  const int num_decaypaths = static_cast<int>(std::ssize(energy_per_massoftopnuc_decaypath));
+  const auto mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
 
   // decay channels include all radioactive decay paths, and possibly also an initial cell energy channel
   const int num_decaychannels = num_decaypaths + ((INITIAL_PACKETS_ON && USE_MODEL_INITIAL_ENERGY) ? 1 : 0);
@@ -1399,14 +1437,14 @@ void setup_radioactive_pellet(const double e_cmf_per_packet, const int nonemptym
 
   // add the radioactive decay paths
   for (int decaypathindex = 0; decaypathindex < num_decaypaths; decaypathindex++) {
-    energysum += energy_per_mass_nonemptymgi_decaypath[(nonemptymgi * num_decaypaths) + decaypathindex];
+    energysum += grid::get_modelinitnucmassfrac(mgi, decaypath_topnucindex[decaypathindex]) *
+                 energy_per_massoftopnuc_decaypath[decaypathindex];
     cumulative_en_sum[decaypathindex] = energysum;
   }
 
   if (num_decaychannels > num_decaypaths) {
     // the t_model / tmin expansion factor was already applied at model read in
     // so "init" here means at tmin
-    const auto mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
     energysum += grid::get_initenergyq(mgi);
     cumulative_en_sum[num_decaychannels - 1] = energysum;
   }
@@ -1457,8 +1495,8 @@ void setup_radioactive_pellet(const double e_cmf_per_packet, const int nonemptym
     // we need to scale the packet energy up or down according to decay rate at the randomly selected time.
     // e_cmf_average is the average energy per packet for this cell and decaypath, so we scale this up or down
     // according to: decay power at this time relative to the average decay power
-    const double avgpower = energy_per_mass_nonemptymgi_decaypath[(nonemptymgi * num_decaypaths) + decaypathindex] /
-                            (globals::tmax - tdecaymin);
+    const double avgpower = grid::get_modelinitnucmassfrac(mgi, decaypath_topnucindex[decaypathindex]) *
+                            energy_per_massoftopnuc_decaypath[decaypathindex] / (globals::tmax - tdecaymin);
     assert_always(avgpower > 0.);
     pkt.e_cmf =
         e_cmf_per_packet * get_decaypath_power_per_ejectamass(decaypathindex, nonemptymgi, pkt.tdecay) / avgpower;

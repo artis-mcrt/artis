@@ -10,6 +10,7 @@
 #include <ostream>
 #include <span>
 #include <string>
+#include <vector>
 
 #include "mpi_logging.h"
 #include "packet.h"
@@ -130,12 +131,15 @@ void init_nuclides(std::span<const int> custom_zlist, std::span<const int> custo
 [[nodiscard]] auto nucdecayenergygamma(int z, int a) -> double;
 [[nodiscard]] auto get_decay_neutrino_frac(int nucindex, DecayType decaytype) -> double;
 void set_nucdecayenergygamma(int nucindex, double value);
-void update_abundances(int nonemptymgi, double t_current);
-[[nodiscard]] auto get_endecay_per_ejectamass_tmodel_to_time_withexpansion(int nonemptymgi, double tstart) -> double;
-[[nodiscard]] auto get_modelcell_simtime_endecay_per_mass(int nonemptymgi,
-                                                          std::span<const double> energy_per_mass_nonemptymgi_decaypath)
-    -> double;
-auto get_energy_per_mass_nonemptymgi_decaypath() -> MPI_shared_array<const double>;
+void update_abundances(int nonemptymgi_start, int nonemptymgi_count, double t_current);
+// the calc_energy_per_massoftopnuc_* functions return the decay energy per unit mass of the chain-top nuclide
+// [erg/(g of chain-top nuclide)] released by each decaypath over some time range. Multiplying by a cell's initial
+// mass fraction of the chain-top nuclide (via get_modelcell_endecay_per_mass) gives the cell's decay energy per
+// unit ejecta mass, so these small per-decaypath arrays replace per-cell-per-decaypath calculations
+[[nodiscard]] auto calc_energy_per_massoftopnuc_decaypath() -> std::vector<double>;
+[[nodiscard]] auto calc_energy_per_massoftopnuc_decaypath_withexpansion(double tstart) -> std::vector<double>;
+[[nodiscard]] auto get_modelcell_endecay_per_mass(int nonemptymgi,
+                                                  std::span<const double> energy_per_massoftopnuc_decaypath) -> double;
 [[nodiscard]] auto get_qdot_modelcell(int nonemptymgi, double t, DecayType decaytype) -> double;
 [[nodiscard]] auto get_particle_injection_rate(int nonemptymgi, double t, DecayType decaytype) -> double;
 [[nodiscard]] auto get_gamma_emission_rate(int nonemptymgi, double t) -> double;
@@ -145,7 +149,7 @@ void output_isotopic_densities(std::ostream& estimators_file, int nonemptymgi, d
 // channel, then sample its release time and record the emitting nuclide and decay type.
 // Lucy (2005), doi:10.1051/0004-6361:20041656.
 void setup_radioactive_pellet(double e_cmf_per_packet, int nonemptymgi, Packet& pkt,
-                              std::span<const double> energy_per_mass_nonemptymgi_decaypath);
+                              std::span<const double> energy_per_massoftopnuc_decaypath);
 
 }  // namespace decay
 

@@ -1062,6 +1062,10 @@ void assign_initial_temperatures() {
   double first_nonfinite_rho_tmin = 0.;
   double first_nonfinite_endecay = 0.;
 
+  // the Bateman factors depend only on the decay path and time, so compute them once and apply them to every
+  // cell's initial abundances
+  const auto endecay_per_massoftopnuc = decay::calc_energy_per_massoftopnuc_decaypath_withexpansion(tstart);
+
   // the decayed energy calculation is expensive and the temperature arrays are in node-shared memory, so stripe
   // the cells across the ranks of each node, with each rank writing its own disjoint subset of the shared arrays
   for (int nonemptymgi = globals::rank_in_node; nonemptymgi < get_nonempty_npts_model();
@@ -1070,7 +1074,7 @@ void assign_initial_temperatures() {
 
     const auto q = (INITIAL_PACKETS_ON && USE_MODEL_INITIAL_ENERGY) ? get_initenergyq(mgi) : 0.;
     const double decayedenergy_per_mass =
-        decay::get_endecay_per_ejectamass_tmodel_to_time_withexpansion(nonemptymgi, tstart) + q;
+        decay::get_modelcell_endecay_per_mass(nonemptymgi, endecay_per_massoftopnuc) + q;
 
     auto T_initial = static_cast<float>(std::pow(
         CLIGHT / 4 / STEBO * pow3(globals::tmin / tstart) * get_rho_tmin(mgi) * decayedenergy_per_mass, 1. / 4.));
