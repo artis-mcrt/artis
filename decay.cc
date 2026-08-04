@@ -1112,11 +1112,14 @@ void init_nuclides(const std::span<const int> custom_zlist, const std::span<cons
 
   printlnlog("Number of nuclides before filtering: {}", std::ssize(nuclides));
   decaypaths = find_decaypaths(custom_zlist, custom_alist, standard_nuclides);
+  abort_if_decaypath_has_duplicate_lambdas();
+  filter_unused_nuclides(custom_zlist, custom_alist, standard_nuclides);
+
+  // cache the chain-top nuclide index of every decaypath (only after filter_unused_nuclides, which remaps the
+  // nuclide indices)
   decaypath_topnucindex.resize(decaypaths.size());
   std::ranges::transform(decaypaths, decaypath_topnucindex.begin(),
                          [](const auto& decaypath) { return decaypath.nucindex[0]; });
-  abort_if_decaypath_has_duplicate_lambdas();
-  filter_unused_nuclides(custom_zlist, custom_alist, standard_nuclides);
 
   printlnlog("Number of nuclides: {}", std::ssize(nuclides));
 
@@ -1167,6 +1170,7 @@ void init_nuclides(const std::span<const int> custom_zlist, const std::span<cons
 // per-decaypath energy coefficients (each an energy per unit mass of that decaypath's chain-top nuclide)
 auto get_modelcell_endecay_per_mass(const int nonemptymgi,
                                     const std::span<const double> energy_per_massoftopnuc_decaypath) -> double {
+  assert_testmodeonly(std::ssize(energy_per_massoftopnuc_decaypath) == get_num_decaypaths());
   const auto mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
   double endecay_per_mass = 0.;
   for (int decaypathindex = 0; decaypathindex < std::ssize(energy_per_massoftopnuc_decaypath); decaypathindex++) {
@@ -1346,6 +1350,7 @@ void update_abundances(const int nonemptymgi_start, const int nonemptymgi_count,
     // alpha decay through the last step of the chain is counted
     const auto last_decaytype = decaypath.decaytypes[decaypath.decaytypes.size() - 2];
     if (he4_nucindex >= 0 && last_decaytype == DecayType::DECAYTYPE_ALPHA && nucindex_end != he4_nucindex) {
+      // NOLINTNEXTLINE(readability-suspicious-call-argument)
       add_contribution(he4_nucindex, nucindex_top,
                        decaypath.branchproduct * calc_decaypath_unitfactor(decaypathindex, t_current, false) *
                            nucmass(he4_nucindex) / nucmass(nucindex_top));
@@ -1420,6 +1425,7 @@ void output_isotopic_densities(std::ostream& estimators_file, const int nonempty
 
 void setup_radioactive_pellet(const double e_cmf_per_packet, const int nonemptymgi, Packet& pkt,
                               const std::span<const double> energy_per_massoftopnuc_decaypath) {
+  assert_testmodeonly(std::ssize(energy_per_massoftopnuc_decaypath) == get_num_decaypaths());
   const int num_decaypaths = static_cast<int>(std::ssize(energy_per_massoftopnuc_decaypath));
   const auto mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
 
