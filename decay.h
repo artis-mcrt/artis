@@ -132,19 +132,14 @@ void init_nuclides(std::span<const int> custom_zlist, std::span<const int> custo
 [[nodiscard]] auto get_decay_neutrino_frac(int nucindex, DecayType decaytype) -> double;
 void set_nucdecayenergygamma(int nucindex, double value);
 void update_abundances(int nonemptymgi_start, int nonemptymgi_count, double t_current);
-// precompute for each decaypath the chain-end abundance per unit chain-top initial abundance at the given time
-// (with the chain end treated as stable), for applying the same decay chain calculations to every cell
-[[nodiscard]] auto calc_decaypath_factors(double time, bool useexpansionfactor) -> std::vector<double>;
-[[nodiscard]] auto get_endecay_per_ejectamass_tmodel_to_time_withexpansion(int nonemptymgi,
-                                                                           std::span<const double> decaypathfactors)
-    -> double;
-[[nodiscard]] auto get_modelcell_simtime_endecay_per_mass(int nonemptymgi,
-                                                          std::span<const double> energy_per_massoftopnuc_decaypath)
-    -> double;
-// decay energy per unit mass of the chain-top nuclide [erg/(g of chain-top nuclide)] released by each decaypath
-// during the simulation time. Multiplying by a cell's initial mass fraction of the chain-top nuclide gives the
-// decay energy per unit ejecta mass, so this small per-decaypath array replaces a per-cell-per-decaypath array
+// the calc_energy_per_massoftopnuc_* functions return the decay energy per unit mass of the chain-top nuclide
+// [erg/(g of chain-top nuclide)] released by each decaypath over some time range. Multiplying by a cell's initial
+// mass fraction of the chain-top nuclide (via get_modelcell_endecay_per_mass) gives the cell's decay energy per
+// unit ejecta mass, so these small per-decaypath arrays replace per-cell-per-decaypath calculations
 [[nodiscard]] auto calc_energy_per_massoftopnuc_decaypath() -> std::vector<double>;
+[[nodiscard]] auto calc_energy_per_massoftopnuc_decaypath_withexpansion(double tstart) -> std::vector<double>;
+[[nodiscard]] auto get_modelcell_endecay_per_mass(int nonemptymgi,
+                                                  std::span<const double> energy_per_massoftopnuc_decaypath) -> double;
 [[nodiscard]] auto get_qdot_modelcell(int nonemptymgi, double t, DecayType decaytype) -> double;
 [[nodiscard]] auto get_particle_injection_rate(int nonemptymgi, double t, DecayType decaytype) -> double;
 [[nodiscard]] auto get_gamma_emission_rate(int nonemptymgi, double t) -> double;

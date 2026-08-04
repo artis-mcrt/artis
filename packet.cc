@@ -105,6 +105,14 @@ void packet_init(std::span<Packet> packets)
 
   const auto energy_per_massoftopnuc_decaypath = decay::calc_energy_per_massoftopnuc_decaypath();
 
+  // decay energy per unit ejecta mass of each model cell (computed once per model cell, since many propagation
+  // cells can map to the same model cell)
+  auto cell_endecay_per_mass = std::vector<double>(grid::get_nonempty_npts_model());
+  for (int nonemptymgi = 0; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
+    cell_endecay_per_mass[nonemptymgi] =
+        decay::get_modelcell_endecay_per_mass(nonemptymgi, energy_per_massoftopnuc_decaypath);
+  }
+
   // Need to get a normalisation factor
   auto en_cumulative = std::vector<double>(grid::ngrid);
 
@@ -114,13 +122,11 @@ void packet_init(std::span<Packet> packets)
     // some grid cells are empty
     if (mgi >= 0) {
       const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(mgi);
-      const double decay_en_per_mass =
-          decay::get_modelcell_simtime_endecay_per_mass(nonemptymgi, energy_per_massoftopnuc_decaypath);
       const auto initial_en_per_mass =
           (INITIAL_PACKETS_ON && USE_MODEL_INITIAL_ENERGY) ? grid::get_initenergyq(mgi) : 0.;
 
       etot_simtime += grid::get_propcell_volume_tmin(propcellindex) * grid::get_rho_tmin(mgi) *
-                      (decay_en_per_mass + initial_en_per_mass);
+                      (cell_endecay_per_mass[nonemptymgi] + initial_en_per_mass);
     }
     en_cumulative[propcellindex] = etot_simtime;
   }

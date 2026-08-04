@@ -597,14 +597,12 @@ void update_grid(std::ostream& estimators_file, const int nts, const int nts_pre
 
   const auto nstart_nonempty = grid::get_nstart_nonempty(my_rank);
 
-  // for this rank's cells: update the mass densities, then the elemental abundances (with radioactive decays to
-  // the timestep midpoint), and then the total ion number densities that depend on both
+  // for this rank's cells: update the elemental abundances (with radioactive decays to the timestep midpoint),
+  // then the mass densities and the total ion number densities that depend on both
+  decay::update_abundances(nstart_nonempty, ndo_nonempty, globals::timesteps[nts].mid);
   for (int nonemptymgi = nstart_nonempty; nonemptymgi < (nstart_nonempty + ndo_nonempty); nonemptymgi++) {
     const int mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
     grid::set_rho(nonemptymgi, static_cast<float>(grid::get_rho_tmin(mgi) / pow3(tratmid)));
-  }
-  decay::update_abundances(nstart_nonempty, ndo_nonempty, globals::timesteps[nts].mid);
-  for (int nonemptymgi = nstart_nonempty; nonemptymgi < (nstart_nonempty + ndo_nonempty); nonemptymgi++) {
     grid::set_nnetot(nonemptymgi);
   }
 
