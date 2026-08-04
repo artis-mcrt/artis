@@ -1066,9 +1066,8 @@ void assign_initial_temperatures() {
   // cell's initial abundances
   const auto endecay_per_massoftopnuc = decay::calc_energy_per_massoftopnuc_decaypath_withexpansion(tstart);
 
-  // each rank assigns the temperatures of its own update_grid cell block. The cells of ranks on other nodes are
-  // filled in on this node's shared arrays by mpi_communicate_grid_properties() after the first update_grid(),
-  // and nothing reads them before then
+  // each rank assigns the temperatures of its own update_grid cell block, and the blocks of ranks on other nodes
+  // are broadcast into this node's shared arrays below
   const int nstart_nonempty = get_nstart_nonempty(globals::my_rank);
   const int ndo_nonempty = get_ndo_nonempty(globals::my_rank);
   for (int nonemptymgi = nstart_nonempty; nonemptymgi < (nstart_nonempty + ndo_nonempty); nonemptymgi++) {
@@ -1103,6 +1102,31 @@ void assign_initial_temperatures() {
     TR_allcells[nonemptymgi] = T_initial;
     W_allcells[nonemptymgi] = 1.;
     thick_allcells[nonemptymgi] = 0;
+  }
+
+  // make every cell's initial state available on every node (later startup steps such as the grey opacity
+  // calculation can read the temperatures of cells belonging to other ranks' blocks)
+  MPI_Barrier_allranks();
+  for (int root = 0; root < globals::nprocs; root++) {
+    int root_node_id = globals::node_id;
+    MPI_Bcast_safe(root_node_id, root, MPI_COMM_WORLD);
+    const int root_ndo_nonempty = get_ndo_nonempty(root);
+    if (root_ndo_nonempty <= 0) {
+      continue;
+    }
+    const int root_nstart_nonempty = get_nstart_nonempty(root);
+    if (globals::rank_in_node == 0) {
+      MPI_Bcast_safe(Te_allcells.subspan(root_nstart_nonempty, root_ndo_nonempty), root_node_id,
+                     globals::mpi_comm_internode);
+      MPI_Bcast_safe(TJ_allcells.subspan(root_nstart_nonempty, root_ndo_nonempty), root_node_id,
+                     globals::mpi_comm_internode);
+      MPI_Bcast_safe(TR_allcells.subspan(root_nstart_nonempty, root_ndo_nonempty), root_node_id,
+                     globals::mpi_comm_internode);
+      MPI_Bcast_safe(W_allcells.subspan(root_nstart_nonempty, root_ndo_nonempty), root_node_id,
+                     globals::mpi_comm_internode);
+      MPI_Bcast_safe(thick_allcells.subspan(root_nstart_nonempty, root_ndo_nonempty), root_node_id,
+                     globals::mpi_comm_internode);
+    }
   }
 
   // combine the diagnostic counts over all ranks (each cell belongs to exactly one rank's block)
