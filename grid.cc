@@ -2065,8 +2065,6 @@ void read_ejecta_model() {
       mgi++;
     }
 
-    printlnlog("Finished reading {} model cells from model.txt", mgi);
-
     if (mgi != get_npts_model()) {
       printlnlog("[error] model.txt: found only {} cells instead of {} expected.", mgi, get_npts_model());
       std::abort();
