@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <array>
+#include <charconv>
 #include <chrono>
 #include <cmath>
 #include <cstddef>
@@ -22,7 +23,6 @@
 #include <limits>
 #include <print>
 #include <ranges>
-#include <set>
 #include <span>
 #include <sstream>
 #include <string>
@@ -430,6 +430,29 @@ void read_ion_levels(std::istream& adata, const int element, const int ion, cons
   }
 }
 
+// parse the next whitespace-delimited token of the line as a number and advance past it.
+// Returns false if there is no token left or the token is not fully numeric
+template <typename T>
+[[nodiscard]] auto parse_next_token(std::string_view& remainder, T& value) -> bool {
+  constexpr std::string_view whitespace = " \t\r";
+  const auto tokenstart = remainder.find_first_not_of(whitespace);
+  if (tokenstart == std::string_view::npos) {
+    return false;
+  }
+  const auto tokenend = std::min(remainder.find_first_of(whitespace, tokenstart), remainder.size());
+  const auto token = remainder.substr(tokenstart, tokenend - tokenstart);
+#pragma clang unsafe_buffer_usage begin
+  const auto* const tokenfirst = token.data();
+  const auto* const tokenlast = token.data() + token.size();
+#pragma clang unsafe_buffer_usage end
+  const auto [ptr, ec] = std::from_chars(tokenfirst, tokenlast, value);
+  if (ec != std::errc{} || ptr != tokenlast) {
+    return false;
+  }
+  remainder.remove_prefix(tokenend);
+  return true;
+}
+
 void read_ion_transitions(std::istream& ftransitiondata, const int ion_transition_count_in_file,
                           std::vector<IonTransitionsInput>& iontransitiontable, const int nlevels_requiretransitions,
                           const int nlevelskept, const int atomicnumber, const int ionstage,
@@ -439,12 +462,9 @@ void read_ion_transitions(std::istream& ftransitiondata, const int ion_transitio
   bool found_groundstate_lower = false;
 
   std::string line;
-  static std::istringstream ssline;
 
   // will be autodetected from first table row. old format had an index column and no collstr or forbidden columns
   bool oldtransitionformat = false;
-  static std::set<std::tuple<int, int>> existingtransitions{};
-  existingtransitions.clear();
 
   for (int i = 0; i < ion_transition_count_in_file; i++) {
     int lower_in = -1;
@@ -454,23 +474,24 @@ void read_ion_transitions(std::istream& ftransitiondata, const int ion_transitio
     int intforbidden = 0;
     assert_always(getline(ftransitiondata, line));
     if (i == 0) {
-      ssline.clear();
-      ssline.str(line);
-      std::string word;
       int column_count = 0;
-      while (ssline >> word) {
+      auto remainder = std::string_view{line};
+      double dummy{};
+      while (parse_next_token(remainder, dummy)) {
         column_count++;
       }
       assert_always(column_count == 4 || column_count == 5);
       oldtransitionformat = (column_count == 4);
     }
-    ssline.clear();
-    ssline.str(line);
+    auto remainder = std::string_view{line};
     if (!oldtransitionformat) {
-      assert_always(ssline >> lower_in >> upper_in >> A >> coll_str >> intforbidden);
+      assert_always(parse_next_token(remainder, lower_in) && parse_next_token(remainder, upper_in) &&
+                    parse_next_token(remainder, A) && parse_next_token(remainder, coll_str) &&
+                    parse_next_token(remainder, intforbidden));
     } else {
       int transindex = 0;  // not used
-      assert_always(ssline >> transindex >> lower_in >> upper_in >> A);
+      assert_always(parse_next_token(remainder, transindex) && parse_next_token(remainder, lower_in) &&
+                    parse_next_token(remainder, upper_in) && parse_next_token(remainder, A));
     }
     const int lower = lower_in - groundstate_index_in;
     const int upper = upper_in - groundstate_index_in;
@@ -487,7 +508,6 @@ void read_ion_transitions(std::istream& ftransitiondata, const int ion_transitio
     if (lower >= nlevelskept || upper >= nlevelskept) {
       continue;
     }
-    existingtransitions.insert({lower, upper});
     iontransitiontable.push_back(
         {.lower = lower, .upper = upper, .A = A, .coll_str = coll_str, .forbidden = (intforbidden == 1)});
   }
@@ -510,8 +530,11 @@ void read_ion_transitions(std::istream& ftransitiondata, const int ion_transitio
   const auto old_transitioncount = std::ssize(iontransitiontable);
   for (int lower = 0; lower < nlevels_requiretransitions; lower++) {
     for (int upper = lower + 1; upper < nlevelskept; upper++) {
-      if (!existingtransitions.contains({lower, upper})) {
-        existingtransitions.insert({lower, upper});
+      // binary search the sorted table read from the file (excluding any pairs appended by this loop)
+      const bool transition_exists = std::ranges::binary_search(
+          iontransitiontable.begin(), iontransitiontable.begin() + old_transitioncount, std::tuple{lower, upper},
+          std::ranges::less{}, [](const IonTransitionsInput& t) { return std::tie(t.lower, t.upper); });
+      if (!transition_exists) {
         iontransitiontable.push_back({.lower = lower, .upper = upper, .A = 0., .coll_str = -2., .forbidden = true});
       }
     }
