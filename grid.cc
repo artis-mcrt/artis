@@ -648,16 +648,14 @@ void read_elem_abundances() {
   // i.e. in total one integer and 30 floats.
 
   static std::string line;
-  static std::istringstream ssline;
 
   // loop over propagation cells for 3D models, or modelgrid cells
   for (int mgi = 0; mgi < get_npts_model(); mgi++) {
     assert_always(get_noncommentline(abundance_file, line));
-    ssline.clear();
-    ssline.str(line);
+    auto remainder = std::string_view{line};
 
     int cellnumberinput = -1;
-    assert_always(ssline >> cellnumberinput);
+    assert_always(parse_next_token(remainder, cellnumberinput));
     assert_always(cellnumberinput == mgi + first_cellindex);
 
     // the abundances.txt file specifies the elemental mass fractions for each model cell
@@ -669,7 +667,7 @@ void read_elem_abundances() {
     double abund_in = 0.;
     for (int elem_z_index = 0; elem_z_index < std::ssize(elem_massfracs_in); elem_z_index++) {
       const int atomic_number = elem_z_index + 1;
-      if (!(ssline >> abund_in)) {
+      if (!parse_next_token(remainder, abund_in)) {
         // at least one element (hydrogen) should have been specified for nonempty cells
         assert_always(atomic_number > 1 || get_numpropcells(mgi) == 0);
         break;
@@ -770,14 +768,13 @@ auto get_token_count(std::string const& line) -> int {
   return abundcolcount;
 }
 
-void read_model_radioabundances(std::istream& fmodel, std::istringstream& ssline, const int mgi, const bool keepcell,
+void read_model_radioabundances(std::istream& fmodel, std::string_view& remainder, const int mgi, const bool keepcell,
                                 const std::vector<std::string>& colnames, const std::vector<int>& nucindexlist,
                                 const bool one_line_per_cell) {
   if (!one_line_per_cell) {
     static std::string line;
     assert_always(std::getline(fmodel, line));
-    ssline.clear();
-    ssline.str(line);
+    remainder = std::string_view{line};
   }
 
   if (!keepcell) {
@@ -786,7 +783,7 @@ void read_model_radioabundances(std::istream& fmodel, std::istringstream& ssline
 
   for (auto i = 0Z; i < std::ssize(colnames); i++) {
     double valuein = 0.;
-    assert_always(ssline >> valuein);  // usually a mass fraction, but now can be anything
+    assert_always(parse_next_token(remainder, valuein));  // usually a mass fraction, but now can be anything
 
     if (nucindexlist[i] >= 0) {
       assert_testmodeonly(valuein <= 1.);
@@ -806,7 +803,7 @@ void read_model_radioabundances(std::istream& fmodel, std::istringstream& ssline
     }
   }
   double valuein = 0.;
-  assert_always(!(ssline >> valuein));  // should be no tokens left!
+  assert_always(!parse_next_token(remainder, valuein));  // should be no tokens left!
 }
 
 auto read_model_columns(std::istream& fmodel) -> std::tuple<std::vector<std::string>, std::vector<int>, bool> {
@@ -1947,8 +1944,7 @@ void read_ejecta_model() {
 
   int mgi = 0;
   while (mgi < get_npts_model() && std::getline(fmodel, line)) {
-    ssline.clear();
-    ssline.str(line);
+    auto remainder = std::string_view{line};
     int cellnumberin = 0;
     double rho_tmodel{NAN};  // the cell density [g/cm3] at the model snapshot time t_model
 
@@ -1958,7 +1954,8 @@ void read_ejecta_model() {
       // columns: cell number, outer velocity [km/s], log10 of the density
       double vout_kmps{NAN};
       double log_rho{NAN};
-      if (!(ssline >> cellnumberin >> vout_kmps >> log_rho)) {
+      if (!(parse_next_token(remainder, cellnumberin) && parse_next_token(remainder, vout_kmps) &&
+            parse_next_token(remainder, log_rho))) {
         printlnlog(
             "[error] model.txt cell {}: expected at least 3 values (inputcellid vel_r_max_kmps log10rho) but could "
             "not parse line: {}",
@@ -1974,7 +1971,8 @@ void read_ejecta_model() {
       // columns: cell number, r midpoint, z midpoint, density
       float cell_r_in{NAN};
       float cell_z_in{NAN};
-      assert_always(ssline >> cellnumberin >> cell_r_in >> cell_z_in >> rho_tmodel);
+      assert_always(parse_next_token(remainder, cellnumberin) && parse_next_token(remainder, cell_r_in) &&
+                    parse_next_token(remainder, cell_z_in) && parse_next_token(remainder, rho_tmodel));
 
       const int n_rcyl = (mgi % ncoord_model[0]);
       const double pos_r_cyl_mid = (n_rcyl + 0.5) * globals::vmax * t_model / ncoord_model[0];
@@ -1994,7 +1992,9 @@ void read_ejecta_model() {
       // columns: cell number, x midpoint, y midpoint, z midpoint, density
       std::array<float, 3> cellpos_in{};
       float rho_model_in{NAN};
-      assert_always(ssline >> cellnumberin >> cellpos_in[0] >> cellpos_in[1] >> cellpos_in[2] >> rho_model_in);
+      assert_always(parse_next_token(remainder, cellnumberin) && parse_next_token(remainder, cellpos_in[0]) &&
+                    parse_next_token(remainder, cellpos_in[1]) && parse_next_token(remainder, cellpos_in[2]) &&
+                    parse_next_token(remainder, rho_model_in));
       rho_tmodel = rho_model_in;
 
       if (mgi % (ncoord_model[1] * ncoord_model[2]) == 0) {
@@ -2035,7 +2035,7 @@ void read_ejecta_model() {
     const bool keepcell = (rho_tmodel > 0);
     set_rho_tmin(mgi, static_cast<float>(rho_tmodel * pow3(t_model / globals::tmin)));
 
-    read_model_radioabundances(fmodel, ssline, mgi, keepcell, colnames, nucindexlist, one_line_per_cell);
+    read_model_radioabundances(fmodel, remainder, mgi, keepcell, colnames, nucindexlist, one_line_per_cell);
 
     mgi++;
   }
