@@ -1066,10 +1066,12 @@ void assign_initial_temperatures() {
   // cell's initial abundances
   const auto endecay_per_massoftopnuc = decay::calc_energy_per_massoftopnuc_decaypath_withexpansion(tstart);
 
-  // the decayed energy calculation is expensive and the temperature arrays are in node-shared memory, so stripe
-  // the cells across the ranks of each node, with each rank writing its own disjoint subset of the shared arrays
-  for (int nonemptymgi = globals::rank_in_node; nonemptymgi < get_nonempty_npts_model();
-       nonemptymgi += globals::node_nprocs) {
+  // each rank assigns the temperatures of its own update_grid cell block. The cells of ranks on other nodes are
+  // filled in on this node's shared arrays by mpi_communicate_grid_properties() after the first update_grid(),
+  // and nothing reads them before then
+  const int nstart_nonempty = get_nstart_nonempty(globals::my_rank);
+  const int ndo_nonempty = get_ndo_nonempty(globals::my_rank);
+  for (int nonemptymgi = nstart_nonempty; nonemptymgi < (nstart_nonempty + ndo_nonempty); nonemptymgi++) {
     const int mgi = get_mgi_of_nonemptymgi(nonemptymgi);
 
     const auto q = (INITIAL_PACKETS_ON && USE_MODEL_INITIAL_ENERGY) ? get_initenergyq(mgi) : 0.;
@@ -1103,20 +1105,24 @@ void assign_initial_temperatures() {
     thick_allcells[nonemptymgi] = 0;
   }
 
-  // combine the diagnostic counts over the node communicator (the ranks of each node together cover every cell
-  // exactly once)
-  MPI_Allreduce_safe(cells_below_mintemp, MPI_SUM, globals::mpi_comm_node);
-  MPI_Allreduce_safe(cells_above_maxtemp, MPI_SUM, globals::mpi_comm_node);
-  MPI_Allreduce_safe(cells_nonfinite_temp, MPI_SUM, globals::mpi_comm_node);
+  // combine the diagnostic counts over all ranks (each cell belongs to exactly one rank's block)
+  MPI_Allreduce_safe(cells_below_mintemp, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce_safe(cells_above_maxtemp, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce_safe(cells_nonfinite_temp, MPI_SUM, MPI_COMM_WORLD);
 
   printlnlog("  cells below MINTEMP {:g} [K]: {}. Above MAXTEMP {:g} [K]: {}", MINTEMP, cells_below_mintemp, MAXTEMP,
              cells_above_maxtemp);
   if (cells_nonfinite_temp > 0) {
-    MPI_Allreduce_safe(first_nonfinite_nonemptymgi, MPI_MIN, globals::mpi_comm_node);
-    // get the details of the earliest example from the rank that computed that cell
-    const int ownerrank = first_nonfinite_nonemptymgi % globals::node_nprocs;
-    MPI_Bcast_safe(first_nonfinite_rho_tmin, ownerrank, globals::mpi_comm_node);
-    MPI_Bcast_safe(first_nonfinite_endecay, ownerrank, globals::mpi_comm_node);
+    MPI_Allreduce_safe(first_nonfinite_nonemptymgi, MPI_MIN, MPI_COMM_WORLD);
+    // get the details of the earliest example from the rank whose cell block contains it
+    int ownerrank = 0;
+    while (first_nonfinite_nonemptymgi >= (get_nstart_nonempty(ownerrank) + get_ndo_nonempty(ownerrank)) ||
+           get_ndo_nonempty(ownerrank) == 0) {
+      ownerrank++;
+      assert_always(ownerrank < globals::nprocs);
+    }
+    MPI_Bcast_safe(first_nonfinite_rho_tmin, ownerrank, MPI_COMM_WORLD);
+    MPI_Bcast_safe(first_nonfinite_endecay, ownerrank, MPI_COMM_WORLD);
     printlnlog(
         "[warning] {} cells had a non-finite initial temperature and were set to MINTEMP (first was mgi {} with "
         "rho_tmin {:g} [g/cm3] and decayed energy {:g} [erg/g])",

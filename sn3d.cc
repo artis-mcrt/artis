@@ -977,21 +977,11 @@ auto main(int argc, char* argv[]) -> int {
 
   grid::init_grid();
 
-  printlnlog("Simulation propagates {:g} packets per process (total {:g} with nprocs {})", 1. * MPKTS,
-             1. * MPKTS * globals::nprocs, globals::nprocs);
-
-  printlnlog("[info] mem_usage: packets occupy {:.3f} MB", MPKTS * sizeof(Packet) / 1024. / 1024.);
-
-  if (!globals::simulation_continued_from_saved) {
-    std::remove("deposition.out");
-    packet_init(packets);
-    zero_estimators();
-  }
-
   // For the parallelisation of update_grid, the process needs to be told which cells belong to it.
   // The next loop is over all grid cells. For parallelisation, we want to split this loop between
   // processes. This is done by assigning each MPI process nblock cells. The residual n_leftover
   // cells are sent to processes 0 ... process n_leftover -1.
+  // (the cell assignments are already needed within grid::init_grid() for the initial temperatures)
   const int nstart = grid::get_nstart(globals::my_rank);
   const int ndo = grid::get_ndo(globals::my_rank);
   const int ndo_nonempty = grid::get_ndo_nonempty(globals::my_rank);
@@ -1003,6 +993,17 @@ auto main(int argc, char* argv[]) -> int {
   } else {
     printlnlog("process rank {} (of 0..{}) assigned {} modelgrid cells ({} nonempty)", globals::my_rank,
                globals::nprocs - 1, ndo, ndo_nonempty);
+  }
+
+  printlnlog("Simulation propagates {:g} packets per process (total {:g} with nprocs {})", 1. * MPKTS,
+             1. * MPKTS * globals::nprocs, globals::nprocs);
+
+  printlnlog("[info] mem_usage: packets occupy {:.3f} MB", MPKTS * sizeof(Packet) / 1024. / 1024.);
+
+  if (!globals::simulation_continued_from_saved) {
+    std::remove("deposition.out");
+    packet_init(packets);
+    zero_estimators();
   }
 
   MPI_Barrier_allranks();
