@@ -17,7 +17,6 @@
 #include <iostream>
 #include <iterator>
 #include <numbers>
-#include <numeric>
 #include <print>
 #include <ranges>
 #include <set>
@@ -214,17 +213,6 @@ void printout_nuclidemeanlife(const int z, const int a) {
       return 0.;
     }
   }
-}
-
-// average energy (erg) per decay in the form of gammas and particles [erg]
-[[nodiscard]] auto nucdecayenergytotal(const int z, const int a) -> double {
-  const int nucindex = get_nucindex(z, a);
-  const auto endecay_particles = std::accumulate(
-      all_decaytypes.cbegin(), all_decaytypes.cend(), 0., [nucindex](const double ensum, const auto& decaytype) {
-        return ensum + (nucdecayenergyparticle(nucindex, decaytype) * get_nuc_decaybranchprob(nucindex, decaytype));
-      });
-
-  return nuclides[nucindex].endecay_gamma + endecay_particles;
 }
 
 // contributed energy release per decay [erg] for decaytype (e.g. decaytypes::DECAYTYPE_BETAPLUS) (excludes neutrinos!)
@@ -1145,15 +1133,6 @@ void init_nuclides(const std::span<const int> custom_zlist, const std::span<cons
   // Read in data for gamma ray lines and make a list of them in energy order.
   gammapkt::init_gamma_data();
 
-  printlnlog("decayenergy(NI56) {:g} [MeV], decayenergy(CO56) {:g} [MeV], decayenergy_gamma(CO56) {:g} [MeV]",
-             nucdecayenergytotal(28, 56) / MEV, nucdecayenergytotal(27, 56) / MEV, nucdecayenergygamma(27, 56) / MEV);
-  printlnlog("decayenergy(NI57) {:g} [MeV], decayenergy_gamma(NI57) {:g} [MeV], decayenergy(CO57) {:g} [MeV]",
-             nucdecayenergytotal(28, 57) / MEV, nucdecayenergygamma(28, 57) / MEV, nucdecayenergytotal(27, 57) / MEV);
-  printlnlog("decayenergy(CR48) {:g} [MeV], decayenergy(V48) {:g} [MeV]", nucdecayenergytotal(24, 48) / MEV,
-             nucdecayenergytotal(23, 48) / MEV);
-  printlnlog("decayenergy(FE52) {:g} [MeV], decayenergy(MN52) {:g} [MeV]", nucdecayenergytotal(26, 52) / MEV,
-             nucdecayenergytotal(25, 52) / MEV);
-
   if (globals::my_rank == 0 && !globals::simulation_continued_from_saved) {
     write_nuclides_list();
   }
@@ -1321,10 +1300,12 @@ void update_abundances(const int nonemptymgi_start, const int nonemptymgi_count,
   const auto add_contribution = [&contributions](const int nucindex, const int source_nucindex, const double coeff) {
     const int element = get_elementindex(get_nuc_z(nucindex));
     if (element >= 0 && coeff > 0.) {
-      contributions.push_back({.elementindex = element,
-                               .source_nucindex = source_nucindex,
-                               .massfrac_coeff = coeff,
-                               .numberfrac_coeff = coeff / nucmass(nucindex)});
+      contributions.push_back({
+          .elementindex = element,
+          .source_nucindex = source_nucindex,
+          .massfrac_coeff = coeff,
+          .numberfrac_coeff = coeff / nucmass(nucindex),
+      });
     }
   };
 
