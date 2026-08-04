@@ -837,56 +837,60 @@ void setup_phixs_list() {
   printlnlog("[info] mem_usage: photoionisation list occupies {:.3f} MB",
              globals::nbfcontinua * (sizeof(TempPhotoionTransitionInput)) / 1024. / 1024.);
   const auto groundcontindices = std::ranges::iota_view{0, globals::nbfcontinua_ground};
-  int allcontindex = 0;
-  for (int element = 0; element < get_nelements(); element++) {
-    const int nions = get_nions(element);
-    for (int ion = 0; ion < nions - 1; ion++) {
-      int groundcontindex =
-          static_cast<int>(std::ranges::find_if(groundcontindices,
-                                                [=](const auto& i) {
-                                                  return (globals::groundcont_element[i] == element) &&
-                                                         (globals::groundcont_ion[i] == ion);
-                                                }) -
-                           groundcontindices.begin());
-      if (groundcontindex >= globals::nbfcontinua_ground) {
-        groundcontindex = -1;
-      }
-      globals::elements[element].ions[ion].groundcontindex = groundcontindex;
-      const int nlevels = get_nlevels_ionising(element, ion);
-      for (int level = 0; level < nlevels; level++) {
-        const auto uniquelevelindex = get_uniquelevelindex(element, ion, level);
-        const int nphixstargets = get_nphixstargets(uniquelevelindex);
+  // the continuum list, ion ground continuum indices, and closest ground level continua are all in node-shared
+  // memory, so only the node leaders fill them (synchronised by the barriers below)
+  if (globals::rank_in_node == 0) {
+    int allcontindex = 0;
+    for (int element = 0; element < get_nelements(); element++) {
+      const int nions = get_nions(element);
+      for (int ion = 0; ion < nions - 1; ion++) {
+        int groundcontindex =
+            static_cast<int>(std::ranges::find_if(groundcontindices,
+                                                  [=](const auto& i) {
+                                                    return (globals::groundcont_element[i] == element) &&
+                                                           (globals::groundcont_ion[i] == ion);
+                                                  }) -
+                             groundcontindices.begin());
+        if (groundcontindex >= globals::nbfcontinua_ground) {
+          groundcontindex = -1;
+        }
+        globals::elements[element].ions[ion].groundcontindex = groundcontindex;
+        const int nlevels = get_nlevels_ionising(element, ion);
+        for (int level = 0; level < nlevels; level++) {
+          const auto uniquelevelindex = get_uniquelevelindex(element, ion, level);
+          const int nphixstargets = get_nphixstargets(uniquelevelindex);
 
-        for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
-          assert_always(allcontindex < std::ssize(allcont));
+          for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
+            assert_always(allcontindex < std::ssize(allcont));
 
-          int index_in_groundphixslist = -1;
-          if constexpr (USE_LUT_PHOTOION || USE_ION_BFHEATING_ESTIMATORS) {
-            const double nu_edge_target0 = get_phixs_threshold(element, ion, level, 0) / H;
-            index_in_groundphixslist = search_groundphixslist(nu_edge_target0, element, ion, level);
+            int index_in_groundphixslist = -1;
+            if constexpr (USE_LUT_PHOTOION || USE_ION_BFHEATING_ESTIMATORS) {
+              const double nu_edge_target0 = get_phixs_threshold(element, ion, level, 0) / H;
+              index_in_groundphixslist = search_groundphixslist(nu_edge_target0, element, ion, level);
 
-            globals::alllevels.closestgroundlevelcont[uniquelevelindex] = index_in_groundphixslist;
+              globals::alllevels.closestgroundlevelcont[uniquelevelindex] = index_in_groundphixslist;
+            }
+
+            allcont[allcontindex] = {
+                .nu_edge = get_phixs_threshold(element, ion, level, phixstargetindex) / H,
+                .element = element,
+                .ion = ion,
+                .level = level,
+                .phixstargetindex = phixstargetindex,
+                .upperlevel = get_phixsupperlevel(uniquelevelindex, phixstargetindex),
+                .uniquelevelindex = uniquelevelindex,
+                .probability = get_phixsprobability(uniquelevelindex, phixstargetindex),
+                .index_in_groundphixslist = index_in_groundphixslist,
+            };
+
+            allcontindex++;
           }
-
-          allcont[allcontindex] = {
-              .nu_edge = get_phixs_threshold(element, ion, level, phixstargetindex) / H,
-              .element = element,
-              .ion = ion,
-              .level = level,
-              .phixstargetindex = phixstargetindex,
-              .upperlevel = get_phixsupperlevel(uniquelevelindex, phixstargetindex),
-              .uniquelevelindex = uniquelevelindex,
-              .probability = get_phixsprobability(uniquelevelindex, phixstargetindex),
-              .index_in_groundphixslist = index_in_groundphixslist,
-          };
-
-          allcontindex++;
         }
       }
     }
-  }
 
-  assert_always(allcontindex == globals::nbfcontinua);
+    assert_always(allcontindex == globals::nbfcontinua);
+  }
   assert_always(globals::nbfcontinua >= 0);  // was initialised as -1 before startup
   // just so that clang-tidy doesn't throw errors on the assumption that nbfcontinua is changing
   const auto nbfcontinua = globals::nbfcontinua;
@@ -937,20 +941,27 @@ void setup_phixs_list() {
 
     auto allcont_bfestimindex = MPI_shared_array<int>(nbfcontinua);
     std::vector<double> temp_bfestim_nu_edge;
-    for (int i = 0; i < nbfcontinua; i++) {
-      if (DETAILED_BF_ESTIMATORS_ON &&
-          LEVEL_HAS_BFEST(get_atomicnumber(globals::allcont.element[i]),
-                          get_ionstage(globals::allcont.element[i], globals::allcont.ion[i]),
-                          globals::allcont.level[i])) {
-        allcont_bfestimindex[i] = static_cast<int>(temp_bfestim_nu_edge.size());
-        temp_bfestim_nu_edge.push_back(globals::allcont.nu_edge[i]);
-      } else {
-        allcont_bfestimindex[i] = -1;
+    if (globals::rank_in_node == 0) {
+      for (int i = 0; i < nbfcontinua; i++) {
+        if (DETAILED_BF_ESTIMATORS_ON &&
+            LEVEL_HAS_BFEST(get_atomicnumber(globals::allcont.element[i]),
+                            get_ionstage(globals::allcont.element[i], globals::allcont.ion[i]),
+                            globals::allcont.level[i])) {
+          allcont_bfestimindex[i] = static_cast<int>(temp_bfestim_nu_edge.size());
+          temp_bfestim_nu_edge.push_back(globals::allcont.nu_edge[i]);
+        } else {
+          allcont_bfestimindex[i] = -1;
+        }
       }
     }
     globals::allcont.bfestimindex = std::move(allcont_bfestimindex);
-    auto bfestim_nu_edge = MPI_shared_array<double>(std::ssize(temp_bfestim_nu_edge));
-    std::ranges::copy(temp_bfestim_nu_edge, bfestim_nu_edge.begin());
+    auto bfestimcount = std::ssize(temp_bfestim_nu_edge);
+    MPI_Bcast_safe(bfestimcount, 0, globals::mpi_comm_node);
+    auto bfestim_nu_edge = MPI_shared_array<double>(bfestimcount);
+    if (globals::rank_in_node == 0) {
+      std::ranges::copy(temp_bfestim_nu_edge, bfestim_nu_edge.begin());
+    }
+    MPI_Barrier_node();
     globals::bfestim_nu_edge = std::move(bfestim_nu_edge);
 
     setup_photoion_luts();
@@ -967,119 +978,126 @@ void read_autoion_data() {
 
   std::vector<globals::LevelAutoion> temp_allautoion;
 
-  // every rank parses the file, so count transitions into rank-local arrays rather than doing
-  // concurrent read-modify-writes on the node-shared arrays; the node leader publishes them below
+  // only the node leaders parse the file, counting transitions into rank-local arrays and publishing them to the
+  // node-shared arrays below
   const auto uniquelevelcount = std::ssize(globals::alllevels.nautoiondowntrans);
   std::vector<int> temp_nautoiondowntrans;
-  reserve_resize(temp_nautoiondowntrans, uniquelevelcount);
-  std::ranges::fill(temp_nautoiondowntrans, 0);
   std::vector<int> temp_nautoionuptrans;
-  reserve_resize(temp_nautoionuptrans, uniquelevelcount);
-  std::ranges::fill(temp_nautoionuptrans, 0);
   std::vector<int> temp_allautoion_start;
-  reserve_resize(temp_allautoion_start, uniquelevelcount);
-  std::ranges::fill(temp_allautoion_start, -1);
+  ptrdiff_t nautoion_stored = 0;  // for the collective node-shared allocation below
 
-  printlnlog("Reading autoion.txt for autoionisation data.");
-  auto autoionfile = fstream_required("autoion.txt", std::ios::in);
-  std::string autoionline;
-  int Z = -1;
-  int upperionstage = -1;
-  int upperlevel_in = -1;
-  int lowerionstage = -1;
-  int lowerlevel_in = -1;
-  double autoion_A = -1;
-  bool allautoion_levels_are_not_nlte = true;
-  bool allautoion_levels_are_nlte = true;
-  int autoion_transitions_read = 0;
+  if (globals::rank_in_node == 0) {
+    reserve_resize(temp_nautoiondowntrans, uniquelevelcount);
+    std::ranges::fill(temp_nautoiondowntrans, 0);
+    reserve_resize(temp_nautoionuptrans, uniquelevelcount);
+    std::ranges::fill(temp_nautoionuptrans, 0);
+    reserve_resize(temp_allautoion_start, uniquelevelcount);
+    std::ranges::fill(temp_allautoion_start, -1);
 
-  // highest autoionising level index of each included ion as numbered in the file, before conversion
-  auto ion_max_autoionlevel_in = std::vector<int>(get_includedions(), -1);
+    printlnlog("Reading autoion.txt for autoionisation data.");
+    auto autoionfile = fstream_required("autoion.txt", std::ios::in);
+    std::string autoionline;
+    int Z = -1;
+    int upperionstage = -1;
+    int upperlevel_in = -1;
+    int lowerionstage = -1;
+    int lowerlevel_in = -1;
+    double autoion_A = -1;
+    bool allautoion_levels_are_not_nlte = true;
+    bool allautoion_levels_are_nlte = true;
+    int autoion_transitions_read = 0;
 
-  while (get_noncommentline(autoionfile, autoionline)) {
-    assert_always(std::istringstream(autoionline) >> Z >> upperionstage >> upperlevel_in >> lowerionstage >>
-                  lowerlevel_in >> autoion_A);
-    autoion_transitions_read++;
+    // highest autoionising level index of each included ion as numbered in the file, before conversion
+    auto ion_max_autoionlevel_in = std::vector<int>(get_includedions(), -1);
 
-    assert_always(Z > 0);
-    assert_always(upperionstage >= 2);
-    assert_always(lowerionstage >= 1);
+    while (get_noncommentline(autoionfile, autoionline)) {
+      assert_always(std::istringstream(autoionline) >> Z >> upperionstage >> upperlevel_in >> lowerionstage >>
+                    lowerlevel_in >> autoion_A);
+      autoion_transitions_read++;
 
-    const int element = get_elementindex(Z);
+      assert_always(Z > 0);
+      assert_always(upperionstage >= 2);
+      assert_always(lowerionstage >= 1);
 
-    if (element >= 0 && get_nions(element) > 0) {
-      // translate read-in ionstages to ion indices
+      const int element = get_elementindex(Z);
 
-      const int upperion = upperionstage - get_ionstage(element, 0);
-      const int lowerion = lowerionstage - get_ionstage(element, 0);
-      // store only for ions that are part of the current model atom
-      if (lowerion >= 0 && upperion < get_nions(element)) {
-        const auto lower_uniqueionindex = get_uniqueionindex(element, lowerion);
-        ion_max_autoionlevel_in[lower_uniqueionindex] =
-            std::max(ion_max_autoionlevel_in[lower_uniqueionindex], lowerlevel_in);
+      if (element >= 0 && get_nions(element) > 0) {
+        // translate read-in ionstages to ion indices
 
-        const int lowerlevel = lowerlevel_in - groundstate_index_in;
-        const int upperlevel = upperlevel_in - groundstate_index_in;
+        const int upperion = upperionstage - get_ionstage(element, 0);
+        const int lowerion = lowerionstage - get_ionstage(element, 0);
+        // store only for ions that are part of the current model atom
+        if (lowerion >= 0 && upperion < get_nions(element)) {
+          const auto lower_uniqueionindex = get_uniqueionindex(element, lowerion);
+          ion_max_autoionlevel_in[lower_uniqueionindex] =
+              std::max(ion_max_autoionlevel_in[lower_uniqueionindex], lowerlevel_in);
 
-        assert_always(upperion >= 0 && upperion < get_nions(element));
-        assert_always(lowerion >= 0 && lowerion < get_nions(element));
-        assert_always(lowerlevel >= 0 && lowerlevel < get_nlevels(element, lowerion));
-        assert_always(upperlevel >= 0 && upperlevel < get_nlevels(element, upperion));
-        assert_always(upperion > lowerion);
-        const bool level_is_nlte = is_nlte(element, lowerion, lowerlevel);
-        allautoion_levels_are_not_nlte = allautoion_levels_are_not_nlte && !level_is_nlte;
-        allautoion_levels_are_nlte = allautoion_levels_are_nlte && level_is_nlte;
+          const int lowerlevel = lowerlevel_in - groundstate_index_in;
+          const int upperlevel = upperlevel_in - groundstate_index_in;
 
-        const auto lower_uniquelevelindex = get_uniquelevelindex(element, lowerion, lowerlevel);
-        const auto upper_uniquelevelindex = get_uniquelevelindex(element, upperion, upperlevel);
+          assert_always(upperion >= 0 && upperion < get_nions(element));
+          assert_always(lowerion >= 0 && lowerion < get_nions(element));
+          assert_always(lowerlevel >= 0 && lowerlevel < get_nlevels(element, lowerion));
+          assert_always(upperlevel >= 0 && upperlevel < get_nlevels(element, upperion));
+          assert_always(upperion > lowerion);
+          const bool level_is_nlte = is_nlte(element, lowerion, lowerlevel);
+          allautoion_levels_are_not_nlte = allautoion_levels_are_not_nlte && !level_is_nlte;
+          allautoion_levels_are_nlte = allautoion_levels_are_nlte && level_is_nlte;
 
-        temp_nautoiondowntrans[lower_uniquelevelindex] += 1;
-        temp_nautoionuptrans[upper_uniquelevelindex] += 1;
+          const auto lower_uniquelevelindex = get_uniquelevelindex(element, lowerion, lowerlevel);
+          const auto upper_uniquelevelindex = get_uniquelevelindex(element, upperion, upperlevel);
 
-        if (temp_allautoion_start[lower_uniquelevelindex] < 0) {
-          assert_always(temp_nautoiondowntrans[lower_uniquelevelindex] == 1);
-          //  this is the first autoionizing transition for this level, so set the start index
-          temp_allautoion_start[lower_uniquelevelindex] = static_cast<int>(temp_allautoion.size());
+          temp_nautoiondowntrans[lower_uniquelevelindex] += 1;
+          temp_nautoionuptrans[upper_uniquelevelindex] += 1;
+
+          if (temp_allautoion_start[lower_uniquelevelindex] < 0) {
+            assert_always(temp_nautoiondowntrans[lower_uniquelevelindex] == 1);
+            //  this is the first autoionizing transition for this level, so set the start index
+            temp_allautoion_start[lower_uniquelevelindex] = static_cast<int>(temp_allautoion.size());
+          }
+
+          temp_allautoion.push_back({
+              .autoion_A = static_cast<float>(autoion_A),
+              .elementindex = element,
+              .lowerionindex = lowerion,
+              .lowerlevelindex = lowerlevel,
+              .upperionindex = upperion,
+              .upperlevelindex = upperlevel,
+          });
         }
-
-        temp_allautoion.push_back({
-            .autoion_A = static_cast<float>(autoion_A),
-            .elementindex = element,
-            .lowerionindex = lowerion,
-            .lowerlevelindex = lowerlevel,
-            .upperionindex = upperion,
-            .upperlevelindex = upperlevel,
-        });
       }
     }
-  }
 
-  assert_always(allautoion_levels_are_not_nlte || allautoion_levels_are_nlte);
+    assert_always(allautoion_levels_are_not_nlte || allautoion_levels_are_nlte);
 
-  // the autoionising levels of an ion must be a contiguous block ending at its highest level (asserted below), so
-  // for each ion with autoionisation data the highest autoionising level in the file must be the ion's top level.
-  // Checking the raw file indices detects an autoion.txt whose level numbering disagrees with adata.txt
-  for (int element = 0; element < get_nelements(); element++) {
-    const int nions = get_nions(element);
-    for (int ion = 0; ion < nions; ion++) {
-      const auto max_autoionlevel_in = ion_max_autoionlevel_in[get_uniqueionindex(element, ion)];
-      const auto toplevel_in = get_nlevels(element, ion) - 1 + groundstate_index_in;
-      if (max_autoionlevel_in >= 0 && max_autoionlevel_in != toplevel_in) {
-        printlnlog(
-            "[error] autoion.txt: Z={} ionstage {}: the highest autoionising level index {} is not the ion's highest "
-            "level index {}. The autoion.txt level numbering may not match the ground state index {} detected from "
-            "adata.txt",
-            get_atomicnumber(element), get_ionstage(element, ion), max_autoionlevel_in, toplevel_in,
-            groundstate_index_in);
-        assert_always(false);
+    // the autoionising levels of an ion must be a contiguous block ending at its highest level (asserted below), so
+    // for each ion with autoionisation data the highest autoionising level in the file must be the ion's top level.
+    // Checking the raw file indices detects an autoion.txt whose level numbering disagrees with adata.txt
+    for (int element = 0; element < get_nelements(); element++) {
+      const int nions = get_nions(element);
+      for (int ion = 0; ion < nions; ion++) {
+        const auto max_autoionlevel_in = ion_max_autoionlevel_in[get_uniqueionindex(element, ion)];
+        const auto toplevel_in = get_nlevels(element, ion) - 1 + groundstate_index_in;
+        if (max_autoionlevel_in >= 0 && max_autoionlevel_in != toplevel_in) {
+          printlnlog(
+              "[error] autoion.txt: Z={} ionstage {}: the highest autoionising level index {} is not the ion's highest "
+              "level index {}. The autoion.txt level numbering may not match the ground state index {} detected from "
+              "adata.txt",
+              get_atomicnumber(element), get_ionstage(element, ion), max_autoionlevel_in, toplevel_in,
+              groundstate_index_in);
+          assert_always(false);
+        }
       }
     }
+
+    printlnlog("autoion.txt: read {} autoionisation transitions, stored {} for the included ions",
+               autoion_transitions_read, temp_allautoion.size());
+
+    nautoion_stored = std::ssize(temp_allautoion);
   }
+  MPI_Bcast_safe(nautoion_stored, 0, globals::mpi_comm_node);
 
-  printlnlog("autoion.txt: read {} autoionisation transitions, stored {} for the included ions",
-             autoion_transitions_read, temp_allautoion.size());
-
-  globals::allautoion = MPI_shared_array<globals::LevelAutoion>(temp_allautoion.size());
+  globals::allautoion = MPI_shared_array<globals::LevelAutoion>(nautoion_stored);
   if (globals::rank_in_node == 0) {
     std::ranges::copy(temp_allautoion, globals::allautoion.begin());
     std::ranges::copy(temp_nautoiondowntrans, globals::alllevels.nautoiondowntrans.begin());
@@ -1091,33 +1109,37 @@ void read_autoion_data() {
   // Plan is that autoionizing levels will be explicitly included in the NLTE population solver, but that their level
   // populations do not need to be accurately known - so if the ion has a superlevel already, then we will try to attach
   // the autoionizing level populations to that for all purposes outside the NLTE solver. For this, the ions need to
-  // know how many autoionizing levels they have. So count those up now.
+  // know how many autoionizing levels they have. So count those up now (only the node leaders, since the counts are
+  // written to the node-shared ion data).
 
-  int nlevels_autoion_sum = 0;
-  for (int element = 0; element < get_nelements(); element++) {
-    const int nions = get_nions(element);
-    for (int ion = 0; ion < nions; ion++) {
-      const int nlevels = get_nlevels(element, ion);
-      int nlevels_autoion = 0;
-      bool found_autoion_level = false;
-      for (int level = 0; level < nlevels; level++) {
-        const auto level_is_autoionizing = get_nautoiondowntrans(element, ion, level) > 0;
+  if (globals::rank_in_node == 0) {
+    int nlevels_autoion_sum = 0;
+    for (int element = 0; element < get_nelements(); element++) {
+      const int nions = get_nions(element);
+      for (int ion = 0; ion < nions; ion++) {
+        const int nlevels = get_nlevels(element, ion);
+        int nlevels_autoion = 0;
+        bool found_autoion_level = false;
+        for (int level = 0; level < nlevels; level++) {
+          const auto level_is_autoionizing = get_nautoiondowntrans(element, ion, level) > 0;
 
-        if (level_is_autoionizing) {
-          nlevels_autoion++;
-          found_autoion_level = true;
+          if (level_is_autoionizing) {
+            nlevels_autoion++;
+            found_autoion_level = true;
+          }
+
+          // once we have found one autoionizing level, all higher levels should also be autoionizing
+          if (found_autoion_level) {
+            assert_always(level_is_autoionizing);
+          }
         }
-
-        // once we have found one autoionizing level, all higher levels should also be autoionizing
-        if (found_autoion_level) {
-          assert_always(level_is_autoionizing);
-        }
+        globals::elements[element].ions[ion].nlevels_autoion = nlevels_autoion;
+        nlevels_autoion_sum += nlevels_autoion;
       }
-      globals::elements[element].ions[ion].nlevels_autoion = nlevels_autoion;
-      nlevels_autoion_sum += nlevels_autoion;
     }
+    assert_always(nlevels_autoion_sum == nautoion_stored);
   }
-  assert_always(nlevels_autoion_sum == std::ssize(temp_allautoion));
+  MPI_Barrier_node();
 }
 
 void read_phixs_data() {
@@ -1147,47 +1169,59 @@ void read_phixs_data() {
     ion_minphixslevel_infile[v].assign(get_includedions(), std::numeric_limits<int>::max());
   }
 
-  if (phixs_file_version_exists[2]) {
-    read_phixs_file(2, tmpallphixs, tmpallphixstargets, ion_minphixslevel_infile[2]);
-    MPI_Barrier_node();
-  }
+  // only the node leaders parse the phixs files: the level lists they populate are in node-shared memory, and the
+  // rank-local totals parsed from the files are broadcast within the node below
+  if (globals::rank_in_node == 0) {
+    if (phixs_file_version_exists[2]) {
+      read_phixs_file(2, tmpallphixs, tmpallphixstargets, ion_minphixslevel_infile[2]);
+    }
 
-  if (phixs_file_version_exists[1]) {
-    read_phixs_file(1, tmpallphixs, tmpallphixstargets, ion_minphixslevel_infile[1]);
-    MPI_Barrier_node();
-  }
+    if (phixs_file_version_exists[1]) {
+      read_phixs_file(1, tmpallphixs, tmpallphixstargets, ion_minphixslevel_infile[1]);
+    }
 
-  // every ion with any photoionisation data must include a cross-section from the ground state, so an excited level
-  // having one without the ground state means the phixs data numbers levels differently from adata.txt. Checked on
-  // the raw file contents (recorded before filtering on retained levels) so that a misnumbered ground state table
-  // cannot be filtered out silently. A file relying on its companion phixs file for the ground state table is
-  // allowed with a warning, since the combined dataset satisfies the invariant
-  for (const int v : {1, 2}) {
-    const int othv = 3 - v;
-    for (int element = 0; element < get_nelements(); element++) {
-      const int nions = get_nions(element);
-      for (int ion = 0; ion < nions; ion++) {
-        const auto uniqueionindex = get_uniqueionindex(element, ion);
-        const auto minphixslevel = ion_minphixslevel_infile[v][uniqueionindex];
-        if (minphixslevel == std::numeric_limits<int>::max() || minphixslevel == 0) {
-          continue;  // the file has no tables for this ion, or it includes the ground state table
-        }
-        if (ion_minphixslevel_infile[othv][uniqueionindex] == 0) {
-          printlnlog(
-              "[warning] {}: Z={} ionstage {}: the file includes a cross-section for an excited level of this ion but "
-              "the ground state table comes from {}. Check that the two files use the same level numbering",
-              phixsdata_filenames[v], get_atomicnumber(element), get_ionstage(element, ion), phixsdata_filenames[othv]);
-        } else {
-          printlnlog(
-              "[error] {}: Z={} ionstage {}: the file includes a cross-section for an excited level of this ion but "
-              "none for the ground state. The phixs level numbering may not match the ground state index {} detected "
-              "from adata.txt",
-              phixsdata_filenames[v], get_atomicnumber(element), get_ionstage(element, ion), groundstate_index_in);
-          assert_always(false);
+    // every ion with any photoionisation data must include a cross-section from the ground state, so an excited
+    // level having one without the ground state means the phixs data numbers levels differently from adata.txt.
+    // Checked on the raw file contents (recorded before filtering on retained levels) so that a misnumbered ground
+    // state table cannot be filtered out silently. A file relying on its companion phixs file for the ground state
+    // table is allowed with a warning, since the combined dataset satisfies the invariant
+    for (const int v : {1, 2}) {
+      const int othv = 3 - v;
+      for (int element = 0; element < get_nelements(); element++) {
+        const int nions = get_nions(element);
+        for (int ion = 0; ion < nions; ion++) {
+          const auto uniqueionindex = get_uniqueionindex(element, ion);
+          const auto minphixslevel = ion_minphixslevel_infile[v][uniqueionindex];
+          if (minphixslevel == std::numeric_limits<int>::max() || minphixslevel == 0) {
+            continue;  // the file has no tables for this ion, or it includes the ground state table
+          }
+          if (ion_minphixslevel_infile[othv][uniqueionindex] == 0) {
+            printlnlog(
+                "[warning] {}: Z={} ionstage {}: the file includes a cross-section for an excited level of this ion "
+                "but the ground state table comes from {}. Check that the two files use the same level numbering",
+                phixsdata_filenames[v], get_atomicnumber(element), get_ionstage(element, ion),
+                phixsdata_filenames[othv]);
+          } else {
+            printlnlog(
+                "[error] {}: Z={} ionstage {}: the file includes a cross-section for an excited level of this ion but "
+                "none for the ground state. The phixs level numbering may not match the ground state index {} "
+                "detected from adata.txt",
+                phixsdata_filenames[v], get_atomicnumber(element), get_ionstage(element, ion), groundstate_index_in);
+            assert_always(false);
+          }
         }
       }
     }
   }
+
+  // share the values parsed from the phixs file headers and the continuum totals with the other ranks in the node
+  // (the node-shared level lists are synchronised by the barrier)
+  MPI_Bcast_safe(globals::NPHIXSPOINTS, 0, globals::mpi_comm_node);
+  MPI_Bcast_safe(globals::NPHIXSNUINCREMENT, 0, globals::mpi_comm_node);
+  MPI_Bcast_safe(last_phixs_nuovernuedge, 0, globals::mpi_comm_node);
+  MPI_Bcast_safe(globals::nbfcontinua, 0, globals::mpi_comm_node);
+  MPI_Bcast_safe(globals::nbfcontinua_ground, 0, globals::mpi_comm_node);
+  MPI_Barrier_node();
 
   int cont_index = 0;
   ptrdiff_t nbftables = 0;
@@ -1198,7 +1232,9 @@ void read_phixs_data() {
       for (int level = 0; level < nlevels; level++) {
         const int nphixstargets = get_nphixstargets(element, ion, level);
         const auto uniquelevelindex = get_uniquelevelindex(element, ion, level);
-        globals::alllevels.bflist_start[uniquelevelindex] = (nphixstargets > 0) ? cont_index : -1;
+        if (globals::rank_in_node == 0) {
+          globals::alllevels.bflist_start[uniquelevelindex] = (nphixstargets > 0) ? cont_index : -1;
+        }
         cont_index += nphixstargets;
         if (nphixstargets > 0) {
           nbftables++;
@@ -1206,17 +1242,18 @@ void read_phixs_data() {
       }
     }
   }
-  assert_always(cont_index == std::ssize(tmpallphixstargets));
+  if (globals::rank_in_node == 0) {
+    assert_always(cont_index == std::ssize(tmpallphixstargets));
+  }
 
-  if (!tmpallphixs.empty()) {
-    assert_always((nbftables * globals::NPHIXSPOINTS) == std::ssize(tmpallphixs));
-
+  if (cont_index > 0) {
     // copy the photoionisation tables into one contiguous block of memory
-    globals::allphixs = MPI_shared_array<float>(std::ssize(tmpallphixs));
-    auto allphixstargets_levelindex = MPI_shared_array<int>(std::ssize(tmpallphixstargets));
-    auto allphixstargets_probability = MPI_shared_array<double>(std::ssize(tmpallphixstargets));
+    globals::allphixs = MPI_shared_array<float>(nbftables * globals::NPHIXSPOINTS);
+    auto allphixstargets_levelindex = MPI_shared_array<int>(cont_index);
+    auto allphixstargets_probability = MPI_shared_array<double>(cont_index);
 
     if (globals::rank_in_node == 0) {
+      assert_always((nbftables * globals::NPHIXSPOINTS) == std::ssize(tmpallphixs));
       std::ranges::copy(tmpallphixs, globals::allphixs.begin());
 
       for (int i = 0; i < std::ssize(tmpallphixstargets); i++) {
