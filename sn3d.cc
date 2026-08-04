@@ -997,11 +997,11 @@ auto main(int argc, char* argv[]) -> int {
   const int ndo_nonempty = grid::get_ndo_nonempty(globals::my_rank);
   if (ndo > 0) {
     printlnlog(
-        "process rank {} (global max rank {}) assigned {} modelgrid cells ({} nonempty): cells [{}..{}] (model "
+        "process rank {} (of 0..{}) assigned {} modelgrid cells ({} nonempty): cells [{}..{}] (model "
         "has max mgi {})",
         globals::my_rank, globals::nprocs - 1, ndo, ndo_nonempty, nstart, nstart + ndo - 1, grid::get_npts_model() - 1);
   } else {
-    printlnlog("process rank {} (global max rank {}) assigned {} modelgrid cells ({} nonempty)", globals::my_rank,
+    printlnlog("process rank {} (of 0..{}) assigned {} modelgrid cells ({} nonempty)", globals::my_rank,
                globals::nprocs - 1, ndo, ndo_nonempty);
   }
 
