@@ -301,7 +301,9 @@ void update_gamma_corrphotoionrenorm_bfheating_estimators(const int nonemptymgi,
         // dilute-blackbody radiation field. In cold and/or dilute cells the analytic rate can underflow to zero
         // for high-threshold continua (and the ratio can overflow for subnormal denominators). Fall back to
         // no renormalisation (factor 1) there, matching the initialisation value and the LTE/grey-cell treatment,
-        // so the uncorrected analytic LUT rate is used for such continua.
+        // so the uncorrected analytic LUT rate is used for such continua. This drops any positive MC estimator
+        // for the continuum, but no finite factor could preserve it: get_corrphotoioncoeff multiplies this factor
+        // by the same analytic rate, so the product stays zero wherever that rate still underflows.
         const double gammacorr_ana = W * get_corrphotoioncoeff_ana(element, ion, 0, 0, T_R);
         // a non-finite analytic rate or MC estimator would be an upstream bug, not an underflowing denominator
         assert_always(std::isfinite(gammacorr_ana));
@@ -354,7 +356,10 @@ void update_gamma_corrphotoionrenorm_bfheating_estimators(const int nonemptymgi,
 
         // as for corrphotoionrenorm above, the analytic bf heating coefficient can be exactly zero in cells where
         // the radiation field model gives no flux above a continuum's threshold (e.g. empty radfield bins), so
-        // guard the renormalisation and fall back to no renormalisation (factor 1) if the ratio is not finite
+        // guard the renormalisation and fall back to no renormalisation (factor 1) if the ratio is not finite.
+        // A positive MC estimator over a zero analytic coefficient is dropped: calculate_bfheatingcoeffs multiplies
+        // this factor by per-level coefficients from the same radiation field model, which are then zero too, so
+        // no finite factor could carry the estimator's contribution through.
         const double bfheatingcoeff_ground = calculate_bfheatingcoeff(element, ion, 0, 0, nonemptymgi);
         // a non-finite analytic coefficient or MC estimator would be an upstream bug, not an underflow
         assert_always(std::isfinite(bfheatingcoeff_ground));
