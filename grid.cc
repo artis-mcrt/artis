@@ -33,6 +33,10 @@
 #include <utility>
 #include <vector>
 
+#pragma clang unsafe_buffer_usage begin
+#include <mpi.h>
+#pragma clang unsafe_buffer_usage end
+
 #include "artisoptions.h"
 #include "atomic.h"
 #include "constants.h"
@@ -68,7 +72,7 @@ double min_den{-1.};  // minimum model density
 
 double mfegroup{0.};  // Total mass of Fe group elements in ejecta
 
-int first_cellindex{-1};  // auto-determine first cell index in model.txt (usually 1 or 0)
+int first_input_cellid{-1};  // auto-determine first cell index in model.txt (usually 1 or 0)
 
 // Initial co-ordinates of inner most corner of cell.
 std::array<std::vector<double>, 3> coord_pos_min_tmin{};
@@ -147,26 +151,31 @@ void read_possible_yefile() {
     return;
   }
 
-  const auto filein = fopen_required_uniqueptr("Ye.txt", "r");
-  int nlines_in = 0;
-  assert_always(fscanf(filein.get(), "%d", &nlines_in) == 1);
+  // the electron fractions are written to node-shared memory, so only the node leaders read the file
+  // (synchronised by the barrier below)
+  if (globals::rank_in_node == 0) {
+    const auto filein = fopen_required_uniqueptr("Ye.txt", "r");
+    int nlines_in = 0;
+    assert_always(fscanf(filein.get(), "%d", &nlines_in) == 1);
 
-  int cells_set = 0;
-  int entries_ignored = 0;
-  for (int n = 0; n < nlines_in; n++) {
-    int mgiplusone = -1;
-    float initelecfrac = 0.;
-    assert_always(fscanf(filein.get(), "%d %g", &mgiplusone, &initelecfrac) == 2);
-    const int mgi = mgiplusone - 1;
-    if (mgi >= 0 && mgi < get_npts_model()) {
-      set_initelectronfrac(mgi, initelecfrac);
-      cells_set++;
-    } else {
-      entries_ignored++;
+    int cells_set = 0;
+    int entries_ignored = 0;
+    for (int n = 0; n < nlines_in; n++) {
+      int mgiplusone = -1;
+      float initelecfrac = 0.;
+      assert_always(fscanf(filein.get(), "%d %g", &mgiplusone, &initelecfrac) == 2);
+      const int mgi = mgiplusone - 1;
+      if (mgi >= 0 && mgi < get_npts_model()) {
+        set_initelectronfrac(mgi, initelecfrac);
+        cells_set++;
+      } else {
+        entries_ignored++;
+      }
     }
+    printlnlog("Ye.txt: set the initial electron fraction for {} of {} model cells ({} out-of-range entries ignored)",
+               cells_set, get_npts_model(), entries_ignored);
   }
-  printlnlog("Ye.txt: set the initial electron fraction for {} of {} model cells ({} out-of-range entries ignored)",
-             cells_set, get_npts_model(), entries_ignored);
+  MPI_Barrier_allranks();
 }
 
 [[gnu::pure]] DEVICE_FUNC auto get_propgridtype() -> GridType {
@@ -638,68 +647,65 @@ void read_elem_abundances() {
   printlnlog("reading abundances.txt...");
   const bool threedimensional = (get_modelgridtype() == GridType::CARTESIAN3D);
 
-  // Open the abundances file
-  auto abundance_file = fstream_required("abundances.txt", std::ios::in);
-
-  // and process through the grid to read in the abundances per cell
+  // Process through the grid to read in the abundances per cell.
   // The abundance file should only contain information for non-empty
   // cells. Its format must be cellnumber (integer), abundance for
   // element Z=1 (float) up to abundance for element Z=30 (float)
   // i.e. in total one integer and 30 floats.
 
-  static std::string line;
-  static std::istringstream ssline;
+  // the mass fraction arrays are in node-shared memory, so only the node leader of each node parses the file and
+  // writes the values (synchronised by the barrier below). The other ranks would just discard everything they read
+  if (globals::rank_in_node == 0) {
+    auto abundance_file = fstream_required("abundances.txt", std::ios::in);
+    std::string line;
 
-  // loop over propagation cells for 3D models, or modelgrid cells
-  for (int mgi = 0; mgi < get_npts_model(); mgi++) {
-    assert_always(get_noncommentline(abundance_file, line));
-    ssline.clear();
-    ssline.str(line);
+    // loop over propagation cells for 3D models, or modelgrid cells
+    for (int mgi = 0; mgi < get_npts_model(); mgi++) {
+      assert_always(get_noncommentline(abundance_file, line));
+      auto remainder = std::string_view{line};
 
-    int cellnumberinput = -1;
-    assert_always(ssline >> cellnumberinput);
-    assert_always(cellnumberinput == mgi + first_cellindex);
+      int cellnumberinput = -1;
+      assert_always(parse_next_token(remainder, cellnumberinput));
+      assert_always(cellnumberinput == mgi + first_input_cellid);
 
-    // the abundances.txt file specifies the elemental mass fractions for each model cell
-    // (or proportional to mass frac, e.g. element densities, because they will be normalised anyway)
-    // The abundances begin with hydrogen, helium, etc, going as far up the atomic numbers as required
-    double normfactor = 0.;
-    std::array<float, 150> elem_massfracs_in{};
-    std::ranges::fill(elem_massfracs_in, 0.);
-    double abund_in = 0.;
-    for (int elem_z_index = 0; elem_z_index < std::ssize(elem_massfracs_in); elem_z_index++) {
-      const int atomic_number = elem_z_index + 1;
-      if (!(ssline >> abund_in)) {
-        // at least one element (hydrogen) should have been specified for nonempty cells
-        assert_always(atomic_number > 1 || get_numpropcells(mgi) == 0);
-        break;
+      // the abundances.txt file specifies the elemental mass fractions for each model cell
+      // (or proportional to mass frac, e.g. element densities, because they will be normalised anyway)
+      // The abundances begin with hydrogen, helium, etc, going as far up the atomic numbers as required
+      double normfactor = 0.;
+      std::array<float, 150> elem_massfracs_in{};
+      double abund_in = 0.;
+      for (int elem_z_index = 0; elem_z_index < std::ssize(elem_massfracs_in); elem_z_index++) {
+        const int atomic_number = elem_z_index + 1;
+        if (!parse_next_token(remainder, abund_in)) {
+          // at least one element (hydrogen) should have been specified for nonempty cells
+          assert_always(atomic_number > 1 || get_numpropcells(mgi) == 0);
+          break;
+        }
+
+        if (abund_in < 0. || abund_in < std::numeric_limits<float>::min()) {
+          assert_always(abund_in > -1e-6);
+          abund_in = 0.;
+        }
+        elem_massfracs_in[elem_z_index] = static_cast<float>(abund_in);
+        normfactor += elem_massfracs_in[elem_z_index];
       }
 
-      if (abund_in < 0. || abund_in < std::numeric_limits<float>::min()) {
-        assert_always(abund_in > -1e-6);
-        abund_in = 0.;
-      }
-      elem_massfracs_in[elem_z_index] = static_cast<float>(abund_in);
-      normfactor += elem_massfracs_in[elem_z_index];
-    }
+      if (get_numpropcells(mgi) > 0) {
+        if (threedimensional || normfactor <= 0.) {
+          normfactor = 1.;
+        }
+        const int nonemptymgi = get_nonemptymgi_of_mgi(mgi);
 
-    if (get_numpropcells(mgi) > 0 && globals::rank_in_node == 0) {
-      // the mass fraction arrays are in node-shared memory, so only the node leader writes them
-      // (synchronised by the barrier below)
-      if (threedimensional || normfactor <= 0.) {
-        normfactor = 1.;
-      }
-      const int nonemptymgi = get_nonemptymgi_of_mgi(mgi);
+        for (int element = 0; element < get_nelements(); element++) {
+          // now set the abundances (by mass) of included elements, i.e.
+          // read out the abundances specified in the atomic data file
+          const int atomic_number = get_atomicnumber(element);
+          const auto elemmassfrac = static_cast<float>(elem_massfracs_in[atomic_number - 1] / normfactor);
+          assert_always(elemmassfrac >= 0.);
 
-      for (int element = 0; element < get_nelements(); element++) {
-        // now set the abundances (by mass) of included elements, i.e.
-        // read out the abundances specified in the atomic data file
-        const int atomic_number = get_atomicnumber(element);
-        const auto elemmassfrac = static_cast<float>(elem_massfracs_in[atomic_number - 1] / normfactor);
-        assert_always(elemmassfrac >= 0.);
-
-        // radioactive nuclide abundances should have already been set by read_??_model
-        set_elem_untrackedstable_massfrac(nonemptymgi, element, elemmassfrac);
+          // radioactive nuclide abundances should have already been set by read_??_model
+          set_elem_untrackedstable_massfrac(nonemptymgi, element, elemmassfrac);
+        }
       }
     }
   }
@@ -770,14 +776,13 @@ auto get_token_count(std::string const& line) -> int {
   return abundcolcount;
 }
 
-void read_model_radioabundances(std::istream& fmodel, std::istringstream& ssline, const int mgi, const bool keepcell,
+void read_model_radioabundances(std::istream& fmodel, std::string_view& remainder, const int mgi, const bool keepcell,
                                 const std::vector<std::string>& colnames, const std::vector<int>& nucindexlist,
                                 const bool one_line_per_cell) {
   if (!one_line_per_cell) {
     static std::string line;
     assert_always(std::getline(fmodel, line));
-    ssline.clear();
-    ssline.str(line);
+    remainder = std::string_view{line};
   }
 
   if (!keepcell) {
@@ -786,7 +791,7 @@ void read_model_radioabundances(std::istream& fmodel, std::istringstream& ssline
 
   for (auto i = 0Z; i < std::ssize(colnames); i++) {
     double valuein = 0.;
-    assert_always(ssline >> valuein);  // usually a mass fraction, but now can be anything
+    assert_always(parse_next_token(remainder, valuein));  // usually a mass fraction, but now can be anything
 
     if (nucindexlist[i] >= 0) {
       assert_testmodeonly(valuein <= 1.);
@@ -806,7 +811,7 @@ void read_model_radioabundances(std::istream& fmodel, std::istringstream& ssline
     }
   }
   double valuein = 0.;
-  assert_always(!(ssline >> valuein));  // should be no tokens left!
+  assert_always(!parse_next_token(remainder, valuein));  // should be no tokens left!
 }
 
 auto read_model_columns(std::istream& fmodel) -> std::tuple<std::vector<std::string>, std::vector<int>, bool> {
@@ -1053,11 +1058,14 @@ void assign_initial_temperatures() {
   int cells_below_mintemp = 0;
   int cells_above_maxtemp = 0;
   int cells_nonfinite_temp = 0;
-  int first_nonfinite_mgi = -1;
+  int first_nonfinite_nonemptymgi = std::numeric_limits<int>::max();
   double first_nonfinite_rho_tmin = 0.;
   double first_nonfinite_endecay = 0.;
 
-  for (int nonemptymgi = 0; nonemptymgi < get_nonempty_npts_model(); nonemptymgi++) {
+  // the decayed energy calculation is expensive and the temperature arrays are in node-shared memory, so stripe
+  // the cells across the ranks of each node, with each rank writing its own disjoint subset of the shared arrays
+  for (int nonemptymgi = globals::rank_in_node; nonemptymgi < get_nonempty_npts_model();
+       nonemptymgi += globals::node_nprocs) {
     const int mgi = get_mgi_of_nonemptymgi(nonemptymgi);
 
     const auto q = (INITIAL_PACKETS_ON && USE_MODEL_INITIAL_ENERGY) ? get_initenergyq(mgi) : 0.;
@@ -1070,8 +1078,8 @@ void assign_initial_temperatures() {
     if (!std::isfinite(T_initial)) {
       // check this first: a NaN would fall through every comparison below and be stored unclamped
       cells_nonfinite_temp++;
-      if (first_nonfinite_mgi < 0) {
-        first_nonfinite_mgi = mgi;
+      if (first_nonfinite_nonemptymgi == std::numeric_limits<int>::max()) {
+        first_nonfinite_nonemptymgi = nonemptymgi;
         first_nonfinite_rho_tmin = get_rho_tmin(mgi);
         first_nonfinite_endecay = decayedenergy_per_mass;
       }
@@ -1084,23 +1092,32 @@ void assign_initial_temperatures() {
       cells_above_maxtemp++;
     }
 
-    if (globals::rank_in_node == 0) {
-      // set the initial temperatures in the modelgrid
-      // this is only done by the node master, so that the values are shared in the node shared memory
-      Te_allcells[nonemptymgi] = T_initial;
-      TJ_allcells[nonemptymgi] = T_initial;
-      TR_allcells[nonemptymgi] = T_initial;
-      W_allcells[nonemptymgi] = 1.;
-      thick_allcells[nonemptymgi] = 0;
-    }
+    Te_allcells[nonemptymgi] = T_initial;
+    TJ_allcells[nonemptymgi] = T_initial;
+    TR_allcells[nonemptymgi] = T_initial;
+    W_allcells[nonemptymgi] = 1.;
+    thick_allcells[nonemptymgi] = 0;
   }
+
+  // combine the diagnostic counts over the node communicator (the ranks of each node together cover every cell
+  // exactly once)
+  MPI_Allreduce_safe(cells_below_mintemp, MPI_SUM, globals::mpi_comm_node);
+  MPI_Allreduce_safe(cells_above_maxtemp, MPI_SUM, globals::mpi_comm_node);
+  MPI_Allreduce_safe(cells_nonfinite_temp, MPI_SUM, globals::mpi_comm_node);
+
   printlnlog("  cells below MINTEMP {:g} [K]: {}. Above MAXTEMP {:g} [K]: {}", MINTEMP, cells_below_mintemp, MAXTEMP,
              cells_above_maxtemp);
   if (cells_nonfinite_temp > 0) {
+    MPI_Allreduce_safe(first_nonfinite_nonemptymgi, MPI_MIN, globals::mpi_comm_node);
+    // get the details of the earliest example from the rank that computed that cell
+    const int ownerrank = first_nonfinite_nonemptymgi % globals::node_nprocs;
+    MPI_Bcast_safe(first_nonfinite_rho_tmin, ownerrank, globals::mpi_comm_node);
+    MPI_Bcast_safe(first_nonfinite_endecay, ownerrank, globals::mpi_comm_node);
     printlnlog(
         "[warning] {} cells had a non-finite initial temperature and were set to MINTEMP (first was mgi {} with "
         "rho_tmin {:g} [g/cm3] and decayed energy {:g} [erg/g])",
-        cells_nonfinite_temp, first_nonfinite_mgi, first_nonfinite_rho_tmin, first_nonfinite_endecay);
+        cells_nonfinite_temp, get_mgi_of_nonemptymgi(first_nonfinite_nonemptymgi), first_nonfinite_rho_tmin,
+        first_nonfinite_endecay);
   }
   MPI_Barrier_allranks();
 }
@@ -1940,128 +1957,151 @@ void read_ejecta_model() {
 
   const auto [colnames, nucindexlist, one_line_per_cell] = read_model_columns(fmodel);
 
-  // 3D only: whether the input cell positions match the expected values in x-y-z or z-y-x
-  // column order (set false when a mismatch is detected)
-  bool posmatch_xyz = true;
-  bool posmatch_zyx = true;
+  // only global rank 0 parses the cell data. The node-shared arrays it fills are broadcast to the leaders of the
+  // other nodes below, and the rank-local results are broadcast to all ranks, so that only one rank reads the
+  // (potentially very large) file
+  if (globals::my_rank == 0) {
+    // 3D only: whether the input cell positions match the expected values in x-y-z or z-y-x
+    // column order (set false when a mismatch is detected)
+    bool posmatch_xyz = true;
+    bool posmatch_zyx = true;
 
-  int mgi = 0;
-  while (mgi < get_npts_model() && std::getline(fmodel, line)) {
-    ssline.clear();
-    ssline.str(line);
-    int cellnumberin = 0;
-    double rho_tmodel{NAN};  // the cell density [g/cm3] at the model snapshot time t_model
+    int mgi = 0;
+    while (mgi < get_npts_model() && std::getline(fmodel, line)) {
+      auto remainder = std::string_view{line};
+      int cellnumberin = 0;
+      double rho_tmodel{NAN};  // the cell density [g/cm3] at the model snapshot time t_model
 
-    // parse the geometry-specific part of the cell line to get the density (and for 1D, the
-    // outer velocity), and check that any cell midpoint coordinates match the expected values
-    if (get_modelgridtype() == GridType::SPHERICAL1D) {
-      // columns: cell number, outer velocity [km/s], log10 of the density
-      double vout_kmps{NAN};
-      double log_rho{NAN};
-      if (!(ssline >> cellnumberin >> vout_kmps >> log_rho)) {
-        printlnlog(
-            "[error] model.txt cell {}: expected at least 3 values (inputcellid vel_r_max_kmps log10rho) but could "
-            "not parse line: {}",
-            mgi, line);
-        assert_always(false);
-      }
-      vout_model[mgi] = vout_kmps * 1.e5;
-      // the velocity grid is binary searched by int_index_lowerbound(), so it has to increase
-      // outwards. Without this check a non-monotonic model.txt gives silently wrong cell lookups.
-      assert_always(mgi == 0 || vout_model[mgi] > vout_model[mgi - 1]);
-      rho_tmodel = (log_rho > -90) ? pow(10., log_rho) : 0.;
-    } else if (get_modelgridtype() == GridType::CYLINDRICAL2D) {
-      // columns: cell number, r midpoint, z midpoint, density
-      float cell_r_in{NAN};
-      float cell_z_in{NAN};
-      assert_always(ssline >> cellnumberin >> cell_r_in >> cell_z_in >> rho_tmodel);
+      // parse the geometry-specific part of the cell line to get the density (and for 1D, the
+      // outer velocity), and check that any cell midpoint coordinates match the expected values
+      if (get_modelgridtype() == GridType::SPHERICAL1D) {
+        // columns: cell number, outer velocity [km/s], log10 of the density
+        double vout_kmps{NAN};
+        double log_rho{NAN};
+        if (!(parse_next_token(remainder, cellnumberin) && parse_next_token(remainder, vout_kmps) &&
+              parse_next_token(remainder, log_rho))) {
+          printlnlog(
+              "[error] model.txt cell {}: expected at least 3 values (inputcellid vel_r_max_kmps log10rho) but could "
+              "not parse line: {}",
+              mgi, line);
+          assert_always(false);
+        }
+        vout_model[mgi] = vout_kmps * 1.e5;
+        // the velocity grid is binary searched by int_index_lowerbound(), so it has to increase
+        // outwards. Without this check a non-monotonic model.txt gives silently wrong cell lookups.
+        assert_always(mgi == 0 || vout_model[mgi] > vout_model[mgi - 1]);
+        rho_tmodel = (log_rho > -90) ? pow(10., log_rho) : 0.;
+      } else if (get_modelgridtype() == GridType::CYLINDRICAL2D) {
+        // columns: cell number, r midpoint, z midpoint, density
+        float cell_r_in{NAN};
+        float cell_z_in{NAN};
+        assert_always(parse_next_token(remainder, cellnumberin) && parse_next_token(remainder, cell_r_in) &&
+                      parse_next_token(remainder, cell_z_in) && parse_next_token(remainder, rho_tmodel));
 
-      const int n_rcyl = (mgi % ncoord_model[0]);
-      const double pos_r_cyl_mid = (n_rcyl + 0.5) * globals::vmax * t_model / ncoord_model[0];
-      assert_always(fabs((cell_r_in / pos_r_cyl_mid) - 1) < 1e-3);
-      const int n_z = (mgi / ncoord_model[0]);
-      if (((2 * n_z) + 1) == ncoord_model[1]) {
-        // an odd number of z rows puts the middle row at the origin, where a relative comparison
-        // has nothing to divide by. Compare against the cell size instead. The row is identified
-        // from the integer index rather than by testing the coordinate against zero, because the
-        // expression below is not required to evaluate to exactly zero under -ffast-math.
-        assert_always(fabs(cell_z_in) < (1e-3 * globals::vmax * t_model / ncoord_model[1]));
+        const int n_rcyl = (mgi % ncoord_model[0]);
+        const double pos_r_cyl_mid = (n_rcyl + 0.5) * globals::vmax * t_model / ncoord_model[0];
+        assert_always(fabs((cell_r_in / pos_r_cyl_mid) - 1) < 1e-3);
+        const int n_z = (mgi / ncoord_model[0]);
+        if (((2 * n_z) + 1) == ncoord_model[1]) {
+          // an odd number of z rows puts the middle row at the origin, where a relative comparison
+          // has nothing to divide by. Compare against the cell size instead. The row is identified
+          // from the integer index rather than by testing the coordinate against zero, because the
+          // expression below is not required to evaluate to exactly zero under -ffast-math.
+          assert_always(fabs(cell_z_in) < (1e-3 * globals::vmax * t_model / ncoord_model[1]));
+        } else {
+          const double pos_z_mid = globals::vmax * t_model * (-1 + (2 * (n_z + 0.5) / ncoord_model[1]));
+          assert_always(fabs((cell_z_in / pos_z_mid) - 1) < 1e-3);
+        }
       } else {
-        const double pos_z_mid = globals::vmax * t_model * (-1 + (2 * (n_z + 0.5) / ncoord_model[1]));
-        assert_always(fabs((cell_z_in / pos_z_mid) - 1) < 1e-3);
-      }
-    } else {
-      // columns: cell number, x midpoint, y midpoint, z midpoint, density
-      std::array<float, 3> cellpos_in{};
-      float rho_model_in{NAN};
-      assert_always(ssline >> cellnumberin >> cellpos_in[0] >> cellpos_in[1] >> cellpos_in[2] >> rho_model_in);
-      rho_tmodel = rho_model_in;
+        // columns: cell number, x midpoint, y midpoint, z midpoint, density
+        std::array<float, 3> cellpos_in{};
+        float rho_model_in{NAN};
+        assert_always(parse_next_token(remainder, cellnumberin) && parse_next_token(remainder, cellpos_in[0]) &&
+                      parse_next_token(remainder, cellpos_in[1]) && parse_next_token(remainder, cellpos_in[2]) &&
+                      parse_next_token(remainder, rho_model_in));
+        rho_tmodel = rho_model_in;
 
-      if (mgi % (ncoord_model[1] * ncoord_model[2]) == 0) {
-        printlnlog("read up to cell mgi {}", mgi);
-      }
-
-      // cell coordinates in the 3D model.txt file are sometimes reordered by the scaling script
-      // however, the cellindex always should increment X first, then Y, then Z
-      const double xmax_tmodel = globals::vmax * t_model;
-      for (int axis = 0; axis < 3; axis++) {
-        const double cellwidth = 2 * xmax_tmodel / ncoordgrid[axis];
-        const double cellpos_expected = -xmax_tmodel + (cellwidth * get_cellcoordindex(mgi, axis));
-        if (fabs(cellpos_expected - cellpos_in[axis]) > 0.5 * cellwidth) {
-          posmatch_xyz = false;
+        // cell coordinates in the 3D model.txt file are sometimes reordered by the scaling script
+        // however, the cellindex always should increment X first, then Y, then Z
+        const double xmax_tmodel = globals::vmax * t_model;
+        for (int axis = 0; axis < 3; axis++) {
+          const double cellwidth = 2 * xmax_tmodel / ncoordgrid[axis];
+          const double cellpos_expected = -xmax_tmodel + (cellwidth * get_cellcoordindex(mgi, axis));
+          if (fabs(cellpos_expected - cellpos_in[axis]) > 0.5 * cellwidth) {
+            posmatch_xyz = false;
+          }
+          if (fabs(cellpos_expected - cellpos_in[2 - axis]) > 0.5 * cellwidth) {
+            posmatch_zyx = false;
+          }
         }
-        if (fabs(cellpos_expected - cellpos_in[2 - axis]) > 0.5 * cellwidth) {
-          posmatch_zyx = false;
+
+        if (min_den < 0. || min_den > rho_tmodel) {
+          min_den = rho_tmodel;
         }
       }
 
-      if (min_den < 0. || min_den > rho_tmodel) {
-        min_den = rho_tmodel;
+      if (mgi == 0) {
+        first_input_cellid = cellnumberin;
+        printlnlog("first_input_cellid {}", first_input_cellid);
+        assert_always(first_input_cellid == 0 || first_input_cellid == 1);
       }
+      assert_always(cellnumberin == mgi + first_input_cellid);
+
+      if (rho_tmodel < 0) {
+        printlnlog("[error] model.txt cell {} (inputcellid {}) has negative density {:g} [g/cm3] at t_model. aborting",
+                   mgi, cellnumberin, rho_tmodel);
+        std::abort();
+      }
+
+      const bool keepcell = (rho_tmodel > 0);
+      set_rho_tmin(mgi, static_cast<float>(rho_tmodel * pow3(t_model / globals::tmin)));
+
+      read_model_radioabundances(fmodel, remainder, mgi, keepcell, colnames, nucindexlist, one_line_per_cell);
+
+      mgi++;
     }
 
-    if (mgi == 0) {
-      first_cellindex = cellnumberin;
-      printlnlog("first_cellindex {}", first_cellindex);
-    }
-    assert_always(cellnumberin == mgi + first_cellindex);
+    printlnlog("Finished reading {} model cells from model.txt", mgi);
 
-    if (rho_tmodel < 0) {
-      printlnlog("[error] model.txt cell {} (inputcellid {}) has negative density {:g} [g/cm3] at t_model. aborting",
-                 mgi, cellnumberin, rho_tmodel);
+    if (mgi != get_npts_model()) {
+      printlnlog("[error] model.txt: found only {} cells instead of {} expected.", mgi, get_npts_model());
       std::abort();
     }
 
-    const bool keepcell = (rho_tmodel > 0);
-    set_rho_tmin(mgi, static_cast<float>(rho_tmodel * pow3(t_model / globals::tmin)));
-
-    read_model_radioabundances(fmodel, ssline, mgi, keepcell, colnames, nucindexlist, one_line_per_cell);
-
-    mgi++;
-  }
-
-  if (mgi != get_npts_model()) {
-    printlnlog("[error] model.txt: found only {} cells instead of {} expected.", mgi, get_npts_model());
-    std::abort();
-  }
-
-  if (get_modelgridtype() == GridType::SPHERICAL1D) {
-    // for 1D models, vmax is the outer velocity of the last cell
-    globals::vmax = vout_model[get_npts_model() - 1];
-  } else if (get_modelgridtype() == GridType::CARTESIAN3D) {
-    // posmatch_xyz and posmatch_zyx should be mutually exclusive: if both column orders matched, an
-    // infinity probably occurred in the calculated positions
-    if (posmatch_xyz) {
-      printlnlog("Cell positions in model.txt are consistent with calculated values when x-y-z column order is used.");
-    } else if (posmatch_zyx) {
-      printlnlog("Cell positions in model.txt are consistent with calculated values when z-y-x column order is used.");
-    } else {
-      printlnlog(
-          "[warning] Cell positions in model.txt are not consistent with calculated values in either x-y-z or z-y-x "
-          "order.");
+    if (get_modelgridtype() == GridType::SPHERICAL1D) {
+      // for 1D models, vmax is the outer velocity of the last cell
+      globals::vmax = vout_model[get_npts_model() - 1];
+    } else if (get_modelgridtype() == GridType::CARTESIAN3D) {
+      // posmatch_xyz and posmatch_zyx should be mutually exclusive: if both column orders matched, an
+      // infinity probably occurred in the calculated positions
+      if (posmatch_xyz) {
+        printlnlog(
+            "Cell positions in model.txt are consistent with calculated values when x-y-z column order is used.");
+      } else if (posmatch_zyx) {
+        printlnlog(
+            "Cell positions in model.txt are consistent with calculated values when z-y-x column order is used.");
+      } else {
+        printlnlog(
+            "[warning] Cell positions in model.txt are not consistent with calculated values in either x-y-z or z-y-x "
+            "order.");
+      }
+      printlnlog("minimum model density {:g} [g/cm3]", min_den);
     }
-    printlnlog("minimum model density {:g} [g/cm3]", min_den);
   }
+
+  // share the rank-local results of the cell parsing with the other ranks
+  MPI_Bcast_safe(first_input_cellid, 0, MPI_COMM_WORLD);
+  MPI_Bcast_safe(globals::vmax, 0, MPI_COMM_WORLD);
+  if (get_modelgridtype() == GridType::SPHERICAL1D) {
+    MPI_Bcast_safe(vout_model, 0, MPI_COMM_WORLD);
+  }
+
+  // send the node-shared model data filled by rank 0 to the node leaders of the other nodes
+  if (globals::rank_in_node == 0) {
+    MPI_Bcast_safe(modelgrid_input, 0, globals::mpi_comm_internode);
+    MPI_Bcast_safe(initnucmassfrac_allcells, 0, globals::mpi_comm_internode);
+  }
+  MPI_Barrier_allranks();
 
   assert_always(get_npts_model() ==
                 std::max(1, ncoord_model[0]) * std::max(1, ncoord_model[1]) * std::max(1, ncoord_model[2]));
