@@ -1577,31 +1577,24 @@ void create_shared_alltranslist(std::vector<TempAllTransInput>& temp_alltranslis
     const auto upperlevel = upper_uniquelevelindex - ionuniquelevelindexstart;
     const auto lowerlevel = lower_uniquelevelindex - ionuniquelevelindexstart;
 
-    // there is never more than one transition per pair of levels,
-    // so find the first up and the first down transition that match: element, ion, lowerlevel, upperlevel
+    // there is exactly one transition per pair of levels, and each level's down and up transition target lists
+    // are sorted in ascending order (add_transitions_to_unsorted_linelist fills them by iterating the transition
+    // table in (lower, upper) order), so the matching entries can be found by binary search
 
     const auto alltrans_startdown = get_alltrans_startdown(upper_uniquelevelindex);
     const auto ndowntrans = get_ndowntrans(upper_uniquelevelindex);
-    int downtransid = -1;
-    for (int i = alltrans_startdown; i < alltrans_startdown + ndowntrans; i++) {
-      if (globals::alltrans.targetlevelindex[i] == lowerlevel) {
-        downtransid = i;
-        break;
-      }
-    }
-    assert_always(downtransid != -1);
+    const auto downtargets = globals::alltrans.targetlevelindex.subspan(alltrans_startdown, ndowntrans);
+    const auto downit = std::ranges::lower_bound(downtargets, lowerlevel);
+    assert_always(downit != downtargets.end() && *downit == lowerlevel);
+    const auto downtransid = alltrans_startdown + static_cast<int>(downit - downtargets.begin());
     alltrans_lineindex[downtransid] = lineindex;
 
     const auto alltrans_startup = get_alltrans_startup(lower_uniquelevelindex);
     const auto nuptrans = get_nuptrans(lower_uniquelevelindex);
-    int uptransid = -1;
-    for (int i = alltrans_startup; i < alltrans_startup + nuptrans; i++) {
-      if (globals::alltrans.targetlevelindex[i] == upperlevel) {
-        uptransid = i;
-        break;
-      }
-    }
-    assert_always(uptransid != -1);
+    const auto uptargets = globals::alltrans.targetlevelindex.subspan(alltrans_startup, nuptrans);
+    const auto upit = std::ranges::lower_bound(uptargets, upperlevel);
+    assert_always(upit != uptargets.end() && *upit == upperlevel);
+    const auto uptransid = alltrans_startup + static_cast<int>(upit - uptargets.begin());
     alltrans_lineindex[uptransid] = lineindex;
   }
   globals::alltrans.lineindex = std::move(alltrans_lineindex);
