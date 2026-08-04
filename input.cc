@@ -1553,7 +1553,7 @@ void create_shared_alltranslist(std::vector<TempAllTransInput>& temp_alltranslis
   // make sure that all ranks can see the filled transition arrays before the striped loop below
   MPI_Barrier_node();
 
-  printlnlog("establishing connection between transitions and sorted linelist...");
+  printlog("establishing connection between transitions and sorted linelist...");
 
   const auto time_start_establish_linelist_connections = std::chrono::steady_clock::now();
 
@@ -1602,8 +1602,7 @@ void create_shared_alltranslist(std::vector<TempAllTransInput>& temp_alltranslis
   const auto establish_linelist_connections_duration =
       std::chrono::duration<double>(std::chrono::steady_clock::now() - time_start_establish_linelist_connections)
           .count();
-  printlnlog("established connections between transitions and sorted linelist (took {:.1f} seconds)",
-             establish_linelist_connections_duration);
+  printlnlog(" (took {:.1f} seconds)", establish_linelist_connections_duration);
   MPI_Barrier_node();
 }
 
