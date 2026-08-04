@@ -296,10 +296,26 @@ void update_gamma_corrphotoionrenorm_bfheating_estimators(const int nonemptymgi,
         titer_average(globals::gammaestimator[ionestimindex], globals::gammaestimator_save[ionestimindex]);
 #endif
 
-        globals::corrphotoionrenorm[ionestimindex] =
-            globals::gammaestimator[ionestimindex] / (W * get_corrphotoioncoeff_ana(element, ion, 0, 0, T_R));
-
-        assert_always(std::isfinite(globals::corrphotoionrenorm[ionestimindex]));
+        // renormalisation factor of the MC photoionisation rate estimate over the analytic rate for the cell's
+        // dilute-blackbody radiation field. In cold and/or dilute cells the analytic rate can underflow to zero
+        // for high-threshold continua, making the ratio inf (or NaN if the estimator is also zero). Fall back to
+        // no renormalisation (factor 1) there, matching the initialisation value and the LTE/grey-cell treatment,
+        // so the uncorrected analytic LUT rate is used for such continua.
+        const double gammacorr_ana = W * get_corrphotoioncoeff_ana(element, ion, 0, 0, T_R);
+        const double renorm = globals::gammaestimator[ionestimindex] / gammacorr_ana;
+        if (std::isfinite(renorm)) {
+          globals::corrphotoionrenorm[ionestimindex] = renorm;
+        } else {
+          // a non-finite estimator would be a bug upstream, not an underflowing denominator
+          assert_always(std::isfinite(globals::gammaestimator[ionestimindex]));
+          printlnlog(
+              "[warning] update_grid cell {} timestep {} Z={} ionstage {}: gammaestimator {:g} cannot be "
+              "renormalised by W * corrphotoioncoeff_ana = {:g} (W {:g}, T_R {:g}). Setting corrphotoionrenorm = 1 "
+              "(no renormalisation)",
+              grid::get_mgi_of_nonemptymgi(nonemptymgi), globals::timestep, get_atomicnumber(element),
+              get_ionstage(element, ion), globals::gammaestimator[ionestimindex], gammacorr_ana, W, T_R);
+          globals::corrphotoionrenorm[ionestimindex] = 1.;
+        }
       }
 
       // 2012-01-11. These loops should terminate here to precalculate *ALL* corrphotoionrenorm
@@ -333,10 +349,22 @@ void update_gamma_corrphotoionrenorm_bfheating_estimators(const int nonemptymgi,
         // Now convert bfheatingestimator into the bfheating renormalisation coefficient used in
         // for the remaining part of update_grid. At the start of the next update_packets, it will be reset
 
+        // as for corrphotoionrenorm above, the analytic bf heating coefficient can be exactly zero in cells where
+        // the radiation field model gives no flux above a continuum's threshold (e.g. empty radfield bins), so
+        // guard the renormalisation and fall back to no renormalisation (factor 1) if the ratio is not finite
         const double bfheatingcoeff_ground = calculate_bfheatingcoeff(element, ion, 0, 0, nonemptymgi);
-        globals::bfheatingestimator[ionestimindex] /= bfheatingcoeff_ground;
-
-        assert_always(std::isfinite(globals::bfheatingestimator[ionestimindex]));
+        const double bfheatingrenorm = globals::bfheatingestimator[ionestimindex] / bfheatingcoeff_ground;
+        if (std::isfinite(bfheatingrenorm)) {
+          globals::bfheatingestimator[ionestimindex] = bfheatingrenorm;
+        } else {
+          assert_always(std::isfinite(globals::bfheatingestimator[ionestimindex]));
+          printlnlog(
+              "[warning] update_grid cell {} timestep {} Z={} ionstage {}: bfheatingestimator {:g} cannot be "
+              "renormalised by bfheatingcoeff_ground = {:g}. Setting bfheating renormalisation factor = 1",
+              grid::get_mgi_of_nonemptymgi(nonemptymgi), globals::timestep, get_atomicnumber(element),
+              get_ionstage(element, ion), globals::bfheatingestimator[ionestimindex], bfheatingcoeff_ground);
+          globals::bfheatingestimator[ionestimindex] = 1.;
+        }
       }
     }
   }
