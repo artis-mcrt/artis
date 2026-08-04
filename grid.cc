@@ -68,7 +68,7 @@ double min_den{-1.};  // minimum model density
 
 double mfegroup{0.};  // Total mass of Fe group elements in ejecta
 
-int first_cellindex{-1};  // auto-determine first cell index in model.txt (usually 1 or 0)
+int first_input_cellid{-1};  // auto-determine first cell index in model.txt (usually 1 or 0)
 
 // Initial co-ordinates of inner most corner of cell.
 std::array<std::vector<double>, 3> coord_pos_min_tmin{};
@@ -656,7 +656,7 @@ void read_elem_abundances() {
 
     int cellnumberinput = -1;
     assert_always(parse_next_token(remainder, cellnumberinput));
-    assert_always(cellnumberinput == mgi + first_cellindex);
+    assert_always(cellnumberinput == mgi + first_input_cellid);
 
     // the abundances.txt file specifies the elemental mass fractions for each model cell
     // (or proportional to mass frac, e.g. element densities, because they will be normalised anyway)
@@ -1997,10 +1997,6 @@ void read_ejecta_model() {
                     parse_next_token(remainder, rho_model_in));
       rho_tmodel = rho_model_in;
 
-      if (mgi % (ncoord_model[1] * ncoord_model[2]) == 0) {
-        printlnlog("read up to cell mgi {}", mgi);
-      }
-
       // cell coordinates in the 3D model.txt file are sometimes reordered by the scaling script
       // however, the cellindex always should increment X first, then Y, then Z
       const double xmax_tmodel = globals::vmax * t_model;
@@ -2021,10 +2017,11 @@ void read_ejecta_model() {
     }
 
     if (mgi == 0) {
-      first_cellindex = cellnumberin;
-      printlnlog("first_cellindex {}", first_cellindex);
+      first_input_cellid = cellnumberin;
+      printlnlog("first_input_cellid {}", first_input_cellid);
+      assert_always(first_input_cellid == 0 || first_input_cellid == 1);
     }
-    assert_always(cellnumberin == mgi + first_cellindex);
+    assert_always(cellnumberin == mgi + first_input_cellid);
 
     if (rho_tmodel < 0) {
       printlnlog("[error] model.txt cell {} (inputcellid {}) has negative density {:g} [g/cm3] at t_model. aborting",
