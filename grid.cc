@@ -1058,11 +1058,14 @@ void assign_initial_temperatures() {
   int cells_below_mintemp = 0;
   int cells_above_maxtemp = 0;
   int cells_nonfinite_temp = 0;
-  int first_nonfinite_mgi = -1;
+  int first_nonfinite_nonemptymgi = std::numeric_limits<int>::max();
   double first_nonfinite_rho_tmin = 0.;
   double first_nonfinite_endecay = 0.;
 
-  for (int nonemptymgi = 0; nonemptymgi < get_nonempty_npts_model(); nonemptymgi++) {
+  // the decayed energy calculation is expensive and the temperature arrays are in node-shared memory, so stripe
+  // the cells across the ranks of each node, with each rank writing its own disjoint subset of the shared arrays
+  for (int nonemptymgi = globals::rank_in_node; nonemptymgi < get_nonempty_npts_model();
+       nonemptymgi += globals::node_nprocs) {
     const int mgi = get_mgi_of_nonemptymgi(nonemptymgi);
 
     const auto q = (INITIAL_PACKETS_ON && USE_MODEL_INITIAL_ENERGY) ? get_initenergyq(mgi) : 0.;
@@ -1075,8 +1078,8 @@ void assign_initial_temperatures() {
     if (!std::isfinite(T_initial)) {
       // check this first: a NaN would fall through every comparison below and be stored unclamped
       cells_nonfinite_temp++;
-      if (first_nonfinite_mgi < 0) {
-        first_nonfinite_mgi = mgi;
+      if (first_nonfinite_nonemptymgi == std::numeric_limits<int>::max()) {
+        first_nonfinite_nonemptymgi = nonemptymgi;
         first_nonfinite_rho_tmin = get_rho_tmin(mgi);
         first_nonfinite_endecay = decayedenergy_per_mass;
       }
@@ -1089,23 +1092,32 @@ void assign_initial_temperatures() {
       cells_above_maxtemp++;
     }
 
-    if (globals::rank_in_node == 0) {
-      // set the initial temperatures in the modelgrid
-      // this is only done by the node master, so that the values are shared in the node shared memory
-      Te_allcells[nonemptymgi] = T_initial;
-      TJ_allcells[nonemptymgi] = T_initial;
-      TR_allcells[nonemptymgi] = T_initial;
-      W_allcells[nonemptymgi] = 1.;
-      thick_allcells[nonemptymgi] = 0;
-    }
+    Te_allcells[nonemptymgi] = T_initial;
+    TJ_allcells[nonemptymgi] = T_initial;
+    TR_allcells[nonemptymgi] = T_initial;
+    W_allcells[nonemptymgi] = 1.;
+    thick_allcells[nonemptymgi] = 0;
   }
+
+  // combine the diagnostic counts over the node communicator (the ranks of each node together cover every cell
+  // exactly once)
+  MPI_Allreduce_safe(cells_below_mintemp, MPI_SUM, globals::mpi_comm_node);
+  MPI_Allreduce_safe(cells_above_maxtemp, MPI_SUM, globals::mpi_comm_node);
+  MPI_Allreduce_safe(cells_nonfinite_temp, MPI_SUM, globals::mpi_comm_node);
+
   printlnlog("  cells below MINTEMP {:g} [K]: {}. Above MAXTEMP {:g} [K]: {}", MINTEMP, cells_below_mintemp, MAXTEMP,
              cells_above_maxtemp);
   if (cells_nonfinite_temp > 0) {
+    MPI_Allreduce_safe(first_nonfinite_nonemptymgi, MPI_MIN, globals::mpi_comm_node);
+    // get the details of the earliest example from the rank that computed that cell
+    const int ownerrank = first_nonfinite_nonemptymgi % globals::node_nprocs;
+    MPI_Bcast_safe(first_nonfinite_rho_tmin, ownerrank, globals::mpi_comm_node);
+    MPI_Bcast_safe(first_nonfinite_endecay, ownerrank, globals::mpi_comm_node);
     printlnlog(
         "[warning] {} cells had a non-finite initial temperature and were set to MINTEMP (first was mgi {} with "
         "rho_tmin {:g} [g/cm3] and decayed energy {:g} [erg/g])",
-        cells_nonfinite_temp, first_nonfinite_mgi, first_nonfinite_rho_tmin, first_nonfinite_endecay);
+        cells_nonfinite_temp, get_mgi_of_nonemptymgi(first_nonfinite_nonemptymgi), first_nonfinite_rho_tmin,
+        first_nonfinite_endecay);
   }
   MPI_Barrier_allranks();
 }
