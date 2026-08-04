@@ -1305,35 +1305,92 @@ auto get_global_etot_tmodel_tinf() -> double {
   return etot_tinf;
 }
 
-// Update the mass fractions of elements using the current abundances of nuclides
-void update_abundances(const int nonemptymgi, const double t_current) {
-  for (int element = get_nelements() - 1; element >= 0; element--) {
-    const int atomic_number = get_atomicnumber(element);
+// Update the mass fractions of elements from the decayed nuclide abundances for a contiguous range of cells at
+// time t_current. Each nuclide's mass fraction is a linear function of the cell's initial nuclide mass fractions,
+// with coefficients from the Bateman solution that depend only on the elapsed time, so the coefficients are
+// computed once and applied to every cell
+void update_abundances(const int nonemptymgi_start, const int nonemptymgi_count, const double t_current) {
+  const double t_afterinit = t_current - grid::get_t_model();
+  const auto num_nuclides = std::ssize(nuclides);
+  const auto nelements = get_nelements();
 
-    // the mass fraction sum of radioactive isotopes, and stable nuclei coming from other decays for the current element
-    double isomassfracsum = 0.;
-    double isomassfrac_on_nucmass_sum = 0.;
-    const auto num_nuclides = std::ssize(nuclides);
-    for (int nucindex = 0; nucindex < num_nuclides; nucindex++) {
-      if (get_nuc_z(nucindex) == atomic_number) {
-        const double nuc_massfrac = get_nuc_massfrac(nonemptymgi, nucindex, t_current);
-        isomassfracsum += nuc_massfrac;
-        isomassfrac_on_nucmass_sum += nuc_massfrac / nucmass(nucindex);
-      }
-    }
+  // for each nuclide, the (source nuclide, coefficient) contributions such that the nuclide's mass fraction is
+  // the sum over contributions of coeff * (cell's initial mass fraction of the source nuclide)
+  auto contributions = std::vector<std::vector<std::pair<int, double>>>(num_nuclides);
 
-    const double otherstablemassfrac = grid::get_elem_untrackedstable_initmassfrac(nonemptymgi, element);
-    isomassfracsum += otherstablemassfrac;
-    isomassfrac_on_nucmass_sum += otherstablemassfrac / globals::elements[element].initstablemeannucmass;
-
-    grid::set_elem_massfrac(nonemptymgi, element, static_cast<float>(isomassfracsum));
-    const auto meanweight = static_cast<float>(isomassfracsum / isomassfrac_on_nucmass_sum);
-    grid::set_element_meanweight(
-        nonemptymgi, element,
-        (std::isfinite(meanweight) && meanweight > 0.) ? meanweight : globals::elements[element].initstablemeannucmass);
+  // exponential decay of each nuclide's own initial abundance
+  for (int nucindex = 0; nucindex < num_nuclides; nucindex++) {
+    const auto meanlife = get_meanlife(nucindex);
+    const auto lambda = (meanlife > 0.) ? 1. / meanlife : 0.;
+    contributions[nucindex].emplace_back(nucindex, exp(-t_afterinit * lambda));
   }
 
-  grid::set_nnetot(nonemptymgi);
+  // decay chain contributions to each chain-end nuclide from the chain-top nuclide's initial abundance
+  const int he4_nucindex = nuc_exists(2, 4) ? get_nucindex(2, 4) : -1;
+  for (const auto& decaypath : decaypaths) {
+    const int nucindex_top = decaypath.nucindex[0];
+    const int nucindex_end = decaypath.nucindex.back();
+
+    contributions[nucindex_end].emplace_back(
+        nucindex_top, decaypath.branchproduct * calculate_decaychain(1., decaypath.lambdas, t_afterinit, false) *
+                          nucmass(nucindex_end) / nucmass(nucindex_top));
+
+    // match He4 production to alpha decay of any nucleus, with the chain end treated as stable so that every
+    // alpha decay through the last step of the chain is counted
+    const auto last_decaytype = decaypath.decaytypes[decaypath.decaytypes.size() - 2];
+    if (he4_nucindex >= 0 && last_decaytype == DecayType::DECAYTYPE_ALPHA && nucindex_end != he4_nucindex) {
+      auto lambdas = decaypath.lambdas;
+      lambdas[lambdas.size() - 1] = 0.;
+      contributions[he4_nucindex].emplace_back(nucindex_top, decaypath.branchproduct *
+                                                                 calculate_decaychain(1., lambdas, t_afterinit, false) *
+                                                                 nucmass(he4_nucindex) / nucmass(nucindex_top));
+    }
+  }
+
+  // element of each nuclide, or -1 if the element is not in the simulation
+  auto elementindex_of_nuc = std::vector<int>(num_nuclides);
+  for (int nucindex = 0; nucindex < num_nuclides; nucindex++) {
+    elementindex_of_nuc[nucindex] = get_elementindex(get_nuc_z(nucindex));
+  }
+
+  // the mass fraction sums of radioactive isotopes, and stable nuclei coming from other decays, for each element
+  auto elem_isomassfracsum = std::vector<double>(nelements);
+  auto elem_isomassfrac_on_nucmass_sum = std::vector<double>(nelements);
+
+  for (int nonemptymgi = nonemptymgi_start; nonemptymgi < (nonemptymgi_start + nonemptymgi_count); nonemptymgi++) {
+    const auto mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
+    std::ranges::fill(elem_isomassfracsum, 0.);
+    std::ranges::fill(elem_isomassfrac_on_nucmass_sum, 0.);
+
+    for (int nucindex = 0; nucindex < num_nuclides; nucindex++) {
+      const int element = elementindex_of_nuc[nucindex];
+      if (element < 0) {
+        continue;
+      }
+      double nuc_massfrac = 0.;
+      for (const auto& [source_nucindex, coeff] : contributions[nucindex]) {
+        nuc_massfrac += coeff * grid::get_modelinitnucmassfrac(mgi, source_nucindex);
+      }
+      elem_isomassfracsum[element] += nuc_massfrac;
+      elem_isomassfrac_on_nucmass_sum[element] += nuc_massfrac / nucmass(nucindex);
+    }
+
+    for (int element = 0; element < nelements; element++) {
+      const double otherstablemassfrac = grid::get_elem_untrackedstable_initmassfrac(nonemptymgi, element);
+      const double isomassfracsum = elem_isomassfracsum[element] + otherstablemassfrac;
+      const double isomassfrac_on_nucmass_sum =
+          elem_isomassfrac_on_nucmass_sum[element] +
+          (otherstablemassfrac / globals::elements[element].initstablemeannucmass);
+
+      grid::set_elem_massfrac(nonemptymgi, element, static_cast<float>(isomassfracsum));
+      const auto meanweight = static_cast<float>(isomassfracsum / isomassfrac_on_nucmass_sum);
+      grid::set_element_meanweight(nonemptymgi, element,
+                                   (std::isfinite(meanweight) && meanweight > 0.)
+                                       ? meanweight
+                                       : globals::elements[element].initstablemeannucmass);
+    }
+    // note: the caller must call grid::set_nnetot() for each cell after the cell densities have been updated
+  }
 }
 
 void output_isotopic_densities(std::ostream& estimators_file, const int nonemptymgi, const double t_current,
