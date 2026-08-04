@@ -33,6 +33,10 @@
 #include <utility>
 #include <vector>
 
+#pragma clang unsafe_buffer_usage begin
+#include <mpi.h>
+#pragma clang unsafe_buffer_usage end
+
 #include "artisoptions.h"
 #include "atomic.h"
 #include "constants.h"
@@ -1941,16 +1945,16 @@ void read_ejecta_model() {
 
   const auto [colnames, nucindexlist, one_line_per_cell] = read_model_columns(fmodel);
 
-  // 3D only: whether the input cell positions match the expected values in x-y-z or z-y-x
-  // column order (set false when a mismatch is detected)
-  bool posmatch_xyz = true;
-  bool posmatch_zyx = true;
-
-  int mgi = 0;
   // only global rank 0 parses the cell data. The node-shared arrays it fills are broadcast to the leaders of the
   // other nodes below, and the rank-local results are broadcast to all ranks, so that only one rank reads the
   // (potentially very large) file
   if (globals::my_rank == 0) {
+    // 3D only: whether the input cell positions match the expected values in x-y-z or z-y-x
+    // column order (set false when a mismatch is detected)
+    bool posmatch_xyz = true;
+    bool posmatch_zyx = true;
+
+    int mgi = 0;
     while (mgi < get_npts_model() && std::getline(fmodel, line)) {
       auto remainder = std::string_view{line};
       int cellnumberin = 0;
