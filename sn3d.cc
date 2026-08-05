@@ -24,6 +24,7 @@
 #include <numeric>
 #include <print>
 #include <string>
+#include <utility>
 #ifdef STDPAR_ON
 #include <ranges>
 #endif
@@ -230,27 +231,23 @@ void write_deposition_file() {
   // nuclide mass fractions), which factors into (rate coefficients) dot (total initial mass of each nuclide in
   // the gridded ejecta). The nuclide mass totals are time-independent, so compute them on the first call (each
   // rank sums its cell block, then a reduction) and reuse them for every timestep.
-  struct GriddedMasses {
-    std::vector<double> totmassnuclide;
-    double mtot;
-  };
-  static const auto gridded = [] {
-    auto masses = GriddedMasses{.totmassnuclide = std::vector<double>(decay::get_num_nuclides(), 0.), .mtot = 0.};
+  static const auto [totmassnuclide_gridded, mtot] = [] {
+    auto totmassnuclide = std::vector<double>(decay::get_num_nuclides(), 0.);
+    double masstot = 0.;
     const int nstart_nonempty = grid::get_nstart_nonempty(globals::my_rank);
     const int ndo_nonempty = grid::get_ndo_nonempty(globals::my_rank);
     for (int nonemptymgi = nstart_nonempty; nonemptymgi < (nstart_nonempty + ndo_nonempty); nonemptymgi++) {
       const int mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
       const double cellmass = grid::get_rho_tmin(mgi) * grid::get_modelcell_assocvolume_tmin(mgi);
-      masses.mtot += cellmass;
+      masstot += cellmass;
       for (int nucindex = 0; nucindex < decay::get_num_nuclides(); nucindex++) {
-        masses.totmassnuclide[nucindex] += cellmass * grid::get_modelinitnucmassfrac(mgi, nucindex);
+        totmassnuclide[nucindex] += cellmass * grid::get_modelinitnucmassfrac(mgi, nucindex);
       }
     }
-    MPI_Allreduce_safe(std::span{masses.totmassnuclide}, MPI_SUM, MPI_COMM_WORLD);
-    MPI_Allreduce_safe(masses.mtot, MPI_SUM, MPI_COMM_WORLD);
-    return masses;
+    MPI_Allreduce_safe(std::span{totmassnuclide}, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce_safe(masstot, MPI_SUM, MPI_COMM_WORLD);
+    return std::pair{std::move(totmassnuclide), masstot};
   }();
-  const double mtot = gridded.mtot;
 
   // The decay chain calculations depend only on the timestep midpoint, so the per-source-nuclide rate
   // coefficients are computed once and each power is a single dot product with the nuclide mass totals
@@ -261,7 +258,7 @@ void write_deposition_file() {
 
   const auto total_power = [&](const std::vector<double>& ratecoeffs_per_source) {
     return std::transform_reduce(ratecoeffs_per_source.cbegin(), ratecoeffs_per_source.cend(),
-                                 gridded.totmassnuclide.cbegin(), 0.);
+                                 totmassnuclide_gridded.cbegin(), 0.);
   };
 
   // power in [erg/s]
