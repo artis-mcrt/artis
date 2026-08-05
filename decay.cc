@@ -1139,7 +1139,13 @@ auto calc_particle_injection_ratecoeffs(const NucMassFracCoeffs& nuc_massfrac_co
 
 }  // anonymous namespace
 
-// the analytic emission rate coefficient vectors used by the non-thermal deposition calculation
+// Analytic (Bateman-solution abundances and decay data, not Monte Carlo) emission rate coefficients for one
+// point in time, used by the non-thermal deposition calculation. For each energy release channel (gamma-ray
+// photons, and the kinetic energy of emitted positrons, electrons, alpha particles, and spontaneous fission
+// fragments), the vector holds the channel's energy release rate per unit ejecta mass per unit initial mass
+// fraction of each source nuclide [erg/s/g, since mass fractions are dimensionless]. The dot product of a
+// vector with a cell's initial nuclide mass fractions (get_modelcell_decayrate) gives that cell's specific
+// emission rate [erg/s/g] in the channel.
 [[nodiscard]] auto calc_ana_emission_ratecoeffs(const NucMassFracCoeffs& nuc_massfrac_coeffs) -> AnaEmissionRateCoeffs {
   return {
       .gamma = calc_ratecoeffs_per_source(nuc_massfrac_coeffs,
