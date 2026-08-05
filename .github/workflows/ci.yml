@@ -332,6 +332,59 @@ jobs:
               working-directory: tests/kilonova_1d_testrun/
               run: cat output_0-0.txt
 
+    # Runs the same small model with C++ standard parallelism on multicore CPUs (no GPU offload), which
+    # reaches the same shared-state code paths as the OpenMP job but through std::execution::par_unseq and
+    # std::atomic_ref instead of OpenMP pragmas. As for the OpenMP job, there is no checksum comparison
+    # because multithreaded runs are not reproducible. The thread count is whatever libtbb picks from the
+    # runner's hardware concurrency: unlike OpenMP there is no environment variable to cap it.
+    stdpar_smoke:
+        runs-on: ubuntu-26.04-arm
+        timeout-minutes: ${{ inputs.testmode == 'ON' && 360 || 40 }}
+        name: kilonova_1d_stdpar_norun_checksums
+        env:
+            OMPI_MCA_memory: ${{ inputs.testmode == 'ON' && '^patcher' || '' }}
+        steps:
+            - uses: actions/checkout@v7
+              with:
+                  fetch-depth: 0
+
+            - name: Install Open MPI and TBB and set compiler to g++-15
+              run: |
+                  echo "CXX=g++-15" >> $GITHUB_ENV
+                  echo "OMPI_CXX=g++-15" >> $GITHUB_ENV
+                  sudo apt-get update
+                  sudo apt-get install -y openmpi-bin libopenmpi-dev libtbb-dev
+
+            - name: Cache test atomic data
+              uses: actions/cache@v6
+              id: cache-testatomicdata
+              with:
+                  path: tests/atomicdata_feconi.tar.xz
+                  key: tests/atomicdata_feconi.tar.xz
+
+            - name: Download/extract test data
+              working-directory: tests/
+              run: |
+                  source ./setup_kilonova_1d.sh
+
+            - name: Compile
+              run: |
+                  cp tests/kilonova_1d_testrun/artisoptions.h .
+                  make STDPAR=ON TESTMODE=${{ inputs.testmode }} MAX_NODE_SIZE=2 FASTMATH=OFF -j$(nproc) sn3d exspec
+                  cp sn3d exspec tests/kilonova_1d_testrun/
+
+            - name: Run test job0 with stdpar threads
+              working-directory: tests/kilonova_1d_testrun/
+              run: |
+                  cp input-newrun.txt input.txt
+                  touch output_0-0.txt
+                  time mpirun -np 2 --oversubscribe --mca osc ^ucx --mca mpi_yield_when_idle 1 ./sn3d
+
+            - name: cat output log
+              if: always()
+              working-directory: tests/kilonova_1d_testrun/
+              run: cat output_0-0.txt
+
     combine_checksums:
         needs: testmodels
         if: always() && inputs.testmode != 'ON'
