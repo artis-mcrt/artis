@@ -1252,18 +1252,18 @@ auto get_global_etot_tmodel_tinf() -> double {
 }
 
 // current mass fraction of every nuclide in one cell: the decay path and surviving-fraction coefficients
-// applied to the cell's initial nuclide mass fractions, filled into the caller-provided buffer (which the
-// caller can reuse across cells to avoid repeated heap allocations)
+// applied to the cell's initial nuclide mass fractions, filled into the caller-provided buffer of
+// get_num_nuclides() elements (which the caller can reuse across cells to avoid repeated heap allocations)
 void calc_cell_nuc_massfracs(const int nonemptymgi, const NucMassFracCoeffs& nuc_massfrac_coeffs,
-                             std::vector<double>& massfracs) {
+                             const std::span<double> massfracs) {
   const auto num_nuclides = std::ssize(nuclides);
   const auto num_decaypaths = get_num_decaypaths();
+  assert_always(std::ssize(massfracs) == num_nuclides);
   assert_testmodeonly(std::ssize(nuc_massfrac_coeffs.nuc_survivingfrac) == num_nuclides);
   assert_testmodeonly(std::ssize(nuc_massfrac_coeffs.decaypath_coeff) == num_decaypaths);
   const auto mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
   const int he4_nucindex = nuc_exists(2, 4) ? get_nucindex(2, 4) : -1;
 
-  reserve_resize(massfracs, num_nuclides);
   std::ranges::fill(massfracs, 0.);
   for (int decaypathindex = 0; decaypathindex < num_decaypaths; decaypathindex++) {
     const double top_initmassfrac = grid::get_modelinitnucmassfrac(mgi, decaypath_topnucindex[decaypathindex]);
@@ -1303,6 +1303,7 @@ void update_abundances(const int nonemptymgi_start, const int nonemptymgi_count,
   for (int nonemptymgi = nonemptymgi_start; nonemptymgi < (nonemptymgi_start + nonemptymgi_count); nonemptymgi++) {
     // thread_local lets us reuse this allocation for every cell on each CPU thread
     THREADLOCALONHOST std::vector<double> massfracs;
+    reserve_resize(massfracs, num_nuclides);
     calc_cell_nuc_massfracs(nonemptymgi, nuc_massfrac_coeffs, massfracs);
 
     // the mass fraction sums of radioactive isotopes, and stable nuclei coming from other decays, for each element

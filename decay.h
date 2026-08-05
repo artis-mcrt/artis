@@ -168,7 +168,7 @@ struct AnaEmissionRateCoeffs {
 [[nodiscard]] auto get_global_etot_tmodel_tinf() -> double;
 [[nodiscard]] auto calc_nuc_massfrac_coeffs(double t_current) -> NucMassFracCoeffs;
 void calc_cell_nuc_massfracs(int nonemptymgi, const NucMassFracCoeffs& nuc_massfrac_coeffs,
-                             std::vector<double>& massfracs);
+                             std::span<double> massfracs);
 void output_isotopic_densities(std::ostream& estimators_file, int nonemptymgi, int element,
                                std::span<const double> nuc_massfracs);
 // Construct an indivisible radioactive pellet by energy-weighted sampling a decay path or the optional initial-energy
