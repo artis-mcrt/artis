@@ -38,7 +38,7 @@ std::vector<HeatingCoolingRates> heatingcoolingrates_thisrankcells;
 
 void write_to_estimators_file(std::ostream& estimators_file, const int nonemptymgi, const int timestep, const int titer,
                               const HeatingCoolingRates& heatingcoolingrates,
-                              const decay::NucMassFracCoeffsSpan nuc_massfrac_coeffs) {
+                              const decay::NucMassFracCoeffs& nuc_massfrac_coeffs) {
   // writing the estimators file is a measurable cost per cell per timestep. If the estimators output is not
   // needed, an early return here skips it.
   const int mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
@@ -59,6 +59,8 @@ void write_to_estimators_file(std::ostream& estimators_file, const int nonemptym
   if (globals::total_nlte_levels > 0) {
     nltepop_write_to_file(nonemptymgi, timestep);
   }
+
+  const auto nuc_massfracs = decay::calc_cell_nuc_massfracs(nonemptymgi, nuc_massfrac_coeffs);
 
   for (int element = 0; element < get_nelements(); element++) {
     if (grid::get_elem_massfrac(nonemptymgi, element) <= 0.) {  // skip elements with no abundance
@@ -83,7 +85,7 @@ void write_to_estimators_file(std::ostream& estimators_file, const int nonemptym
     }
     std::print(estimators_file, "  SUM: {:9.3e}", elpop);
 
-    decay::output_isotopic_densities(estimators_file, nonemptymgi, element, nuc_massfrac_coeffs);
+    decay::output_isotopic_densities(estimators_file, nonemptymgi, element, nuc_massfracs);
 
     if (nions == 0 || elpop <= 0.) {
       // dummy element for nuclear abundances only

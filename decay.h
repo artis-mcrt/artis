@@ -10,7 +10,6 @@
 #include <ostream>
 #include <span>
 #include <string>
-#include <utility>
 #include <vector>
 
 #include "mpi_logging.h"
@@ -33,10 +32,16 @@ constexpr std::array all_decaytypes{
     DecayType::DECAYTYPE_BETAMINUS, DecayType::DECAYTYPE_SPONTFISSION,
 };
 
-// per-nuclide (source nuclide, coefficient) pairs giving each nuclide's mass fraction as a linear function of a
-// cell's initial nuclide mass fractions, for applying the same decay calculations to every cell at one time
-using NucMassFracCoeffs = std::vector<std::vector<std::pair<int, double>>>;
-using NucMassFracCoeffsSpan = std::span<const std::vector<std::pair<int, double>>>;
+// coefficients giving every nuclide's mass fraction at one time as a linear function of a cell's initial
+// nuclide mass fractions: each decay path contributes decaypath_coeff[decaypathindex] times the cell's initial
+// mass fraction of the chain-top nuclide to the chain-end nuclide (and alpha-terminated paths also
+// decaypath_he4_coeff[decaypathindex] to He4), and each nuclide keeps nuc_survivingfrac[nucindex] of its own
+// initial mass fraction. Computing these once per timestep applies the same decay calculations to every cell.
+struct NucMassFracCoeffs {
+  std::vector<double> decaypath_coeff;  // [decaypathindex] coefficient for the chain-end nuclide
+  std::vector<double> decaypath_he4_coeff;  // [decaypathindex] coefficient for He4 (zero for non-alpha-ended paths)
+  std::vector<double> nuc_survivingfrac;  // [nucindex] surviving fraction of the nuclide's own initial abundance
+};
 
 // calculate final number abundance from multiple decays, e.g., Ni56 -> Co56 -> Fe56 (nuc[0] -> nuc[1] -> nuc[2])
 // the top nuclide initial abundance is set and the chain-end abundance is returned (all intermediates nuclides
@@ -137,7 +142,7 @@ void init_nuclides(std::span<const int> custom_zlist, std::span<const int> custo
 [[nodiscard]] auto nucdecayenergygamma(int z, int a) -> double;
 [[nodiscard]] auto get_decay_neutrino_frac(int nucindex, DecayType decaytype) -> double;
 void set_nucdecayenergygamma(int nucindex, double value);
-void update_abundances(int nonemptymgi_start, int nonemptymgi_count, NucMassFracCoeffsSpan nuc_massfrac_coeffs);
+void update_abundances(int nonemptymgi_start, int nonemptymgi_count, const NucMassFracCoeffs& nuc_massfrac_coeffs);
 // the calc_energy_per_massoftopnuc_* functions return the decay energy per unit mass of the chain-top nuclide
 // [erg/(g of chain-top nuclide)] released by each decaypath over some time range. Multiplying by a cell's initial
 // mass fraction of the chain-top nuclide (via get_modelcell_endecay_per_mass) gives the cell's decay energy per
@@ -156,14 +161,16 @@ struct AnaEmissionRateCoeffs {
   std::vector<double> alpha;
   std::vector<double> spfission;
 };
-[[nodiscard]] auto calc_ana_emission_ratecoeffs(NucMassFracCoeffsSpan nuc_massfrac_coeffs) -> AnaEmissionRateCoeffs;
-[[nodiscard]] auto calc_qdot_ratecoeffs(NucMassFracCoeffsSpan nuc_massfrac_coeffs)
+[[nodiscard]] auto calc_ana_emission_ratecoeffs(const NucMassFracCoeffs& nuc_massfrac_coeffs) -> AnaEmissionRateCoeffs;
+[[nodiscard]] auto calc_qdot_ratecoeffs(const NucMassFracCoeffs& nuc_massfrac_coeffs)
     -> std::array<std::vector<double>, DECAYTYPE_COUNT>;
 [[nodiscard]] auto get_modelcell_decayrate(int nonemptymgi, std::span<const double> ratecoeffs_per_source) -> double;
 [[nodiscard]] auto get_global_etot_tmodel_tinf() -> double;
 [[nodiscard]] auto calc_nuc_massfrac_coeffs(double t_current) -> NucMassFracCoeffs;
+[[nodiscard]] auto calc_cell_nuc_massfracs(int nonemptymgi, const NucMassFracCoeffs& nuc_massfrac_coeffs)
+    -> std::vector<double>;
 void output_isotopic_densities(std::ostream& estimators_file, int nonemptymgi, int element,
-                               NucMassFracCoeffsSpan nuc_massfrac_coeffs);
+                               std::span<const double> nuc_massfracs);
 // Construct an indivisible radioactive pellet by energy-weighted sampling a decay path or the optional initial-energy
 // channel, then sample its release time and record the emitting nuclide and decay type.
 // Lucy (2005), doi:10.1051/0004-6361:20041656.
