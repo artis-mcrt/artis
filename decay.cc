@@ -104,6 +104,14 @@ std::vector<Nuclide> nuclides;
 std::vector<DecayPath> decaypaths;
 std::vector<int> decaypath_topnucindex;  // the chain-top nuclide index of each decaypath (flat copy for fast access)
 std::vector<int> decaypath_endnucindex;  // the chain-end nuclide index of each decaypath (flat copy for fast access)
+int he4_nucindex = -1;  // the nuclide index of He4 (or -1 if not in the network), the alpha-decay byproduct
+
+struct ZIsotope {
+  int a;  // mass number
+  int nucindex;
+};
+// for each atomic number, the (mass number, nuclide index) pairs of that element's nuclides sorted by mass number
+std::vector<std::vector<ZIsotope>> isotopes_of_z;
 std::vector<bool> alldecaytypes_is_used;
 
 [[nodiscard]] constexpr auto decay_daughters_z_a_prob(const int z_parent, const int a_parent, const DecayType decaytype)
@@ -1059,14 +1067,24 @@ void init_nuclides(const std::span<const int> custom_zlist, const std::span<cons
   abort_if_decaypath_has_duplicate_lambdas();
   filter_unused_nuclides(custom_zlist, custom_alist, standard_nuclides);
 
-  // cache the chain-top and chain-end nuclide index of every decaypath (only after filter_unused_nuclides, which
-  // remaps the nuclide indices)
+  // cache the chain-top and chain-end nuclide index of every decaypath, the He4 nuclide index, and the isotope
+  // lists per atomic number (only after filter_unused_nuclides, which remaps the nuclide indices)
   decaypath_topnucindex.resize(decaypaths.size());
   std::ranges::transform(decaypaths, decaypath_topnucindex.begin(),
                          [](const auto& decaypath) { return decaypath.nucindex[0]; });
   decaypath_endnucindex.resize(decaypaths.size());
   std::ranges::transform(decaypaths, decaypath_endnucindex.begin(),
                          [](const auto& decaypath) { return decaypath.nucindex.back(); });
+  he4_nucindex = get_nucindex_or_neg_one(2, 4);
+  isotopes_of_z.assign(1 + std::ranges::max(nuclides | std::views::transform(&Nuclide::z)), {});
+  for (int nucindex = 0; nucindex < std::ssize(nuclides); nucindex++) {
+    if (nuclides[nucindex].z >= 0) {
+      isotopes_of_z[nuclides[nucindex].z].push_back({.a = nuclides[nucindex].a, .nucindex = nucindex});
+    }
+  }
+  for (auto& isotopes : isotopes_of_z) {
+    std::ranges::sort(isotopes, {}, &ZIsotope::a);
+  }
 
   printlnlog("Number of nuclides: {}", std::ssize(nuclides));
 
@@ -1163,18 +1181,15 @@ auto calc_ratecoeffs_per_source(const NucMassFracCoeffs& nuc_massfrac_coeffs, co
   const auto num_nuclides = std::ssize(nuclides);
   assert_always(std::ssize(nuc_massfrac_coeffs.nuc_survivingfrac) == num_nuclides);
 
-  // decay rate [erg/s/g] per unit current mass fraction of each nuclide
-  auto nucweight = std::vector<double>(num_nuclides, 0.);
-  for (int nucindex = 0; nucindex < num_nuclides; nucindex++) {
-    const double meanlife = get_meanlife(nucindex);
-    if (meanlife > 0.) {
-      nucweight[nucindex] = nucenergyperdecay(nucindex) / meanlife / nucmass(nucindex);
-    }
-  }
-
+  // per-nuclide decay rate [erg/s/g] per unit current mass fraction (nucweight, needed again for the decay path
+  // loop below), and the rate from each nuclide's own surviving initial abundance
+  auto nucweight = std::vector<double>(num_nuclides);
   auto ratecoeffs = std::vector<double>(num_nuclides);
   for (int nucindex = 0; nucindex < num_nuclides; nucindex++) {
-    ratecoeffs[nucindex] = nucweight[nucindex] * nuc_massfrac_coeffs.nuc_survivingfrac[nucindex];
+    const double meanlife = get_meanlife(nucindex);
+    const double weight = (meanlife > 0.) ? nucenergyperdecay(nucindex) / meanlife / nucmass(nucindex) : 0.;
+    nucweight[nucindex] = weight;
+    ratecoeffs[nucindex] = weight * nuc_massfrac_coeffs.nuc_survivingfrac[nucindex];
   }
 
   // He4 is stable, so the decaypath_he4_coeff contributions have zero weight and are not needed here
@@ -1258,11 +1273,10 @@ void calc_cell_nuc_massfracs(const int nonemptymgi, const NucMassFracCoeffs& nuc
                              const std::span<double> massfracs) {
   const auto num_nuclides = std::ssize(nuclides);
   const auto num_decaypaths = get_num_decaypaths();
-  assert_always(std::ssize(massfracs) == num_nuclides);
+  assert_testmodeonly(std::ssize(massfracs) == num_nuclides);
   assert_testmodeonly(std::ssize(nuc_massfrac_coeffs.nuc_survivingfrac) == num_nuclides);
   assert_testmodeonly(std::ssize(nuc_massfrac_coeffs.decaypath_coeff) == num_decaypaths);
   const auto mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
-  const int he4_nucindex = nuc_exists(2, 4) ? get_nucindex(2, 4) : -1;
 
   std::ranges::fill(massfracs, 0.);
   for (int decaypathindex = 0; decaypathindex < num_decaypaths; decaypathindex++) {
@@ -1288,33 +1302,31 @@ void update_abundances(const int nonemptymgi_start, const int nonemptymgi_count,
   const auto num_nuclides = std::ssize(nuclides);
   const auto nelements = get_nelements();
 
-  // map each nuclide to its element in the simulation (or -1) and cache the inverse nuclide masses for the
-  // mean-weight sums
+  // map each nuclide to its element in the simulation (or -1)
   auto nuc_elementindex = std::vector<int>(num_nuclides);
-  auto nuc_invmass = std::vector<double>(num_nuclides);
   for (int nucindex = 0; nucindex < num_nuclides; nucindex++) {
     nuc_elementindex[nucindex] = get_elementindex(get_nuc_z(nucindex));
-    nuc_invmass[nucindex] = 1. / nucmass(nucindex);
   }
 
 #ifdef _OPENMP
 #pragma omp parallel for
 #endif
   for (int nonemptymgi = nonemptymgi_start; nonemptymgi < (nonemptymgi_start + nonemptymgi_count); nonemptymgi++) {
-    // thread_local lets us reuse this allocation for every cell on each CPU thread
-    THREADLOCALONHOST std::vector<double> massfracs;
-    reserve_resize(massfracs, num_nuclides);
+    // thread_local lets us reuse these allocations for every cell on each CPU thread
+    THREADLOCALONHOST auto massfracs = std::vector<double>(num_nuclides);
     calc_cell_nuc_massfracs(nonemptymgi, nuc_massfrac_coeffs, massfracs);
 
     // the mass fraction sums of radioactive isotopes, and stable nuclei coming from other decays, for each element
-    auto elem_isomassfracsum = std::vector<double>(nelements, 0.);
-    auto elem_isomassfrac_on_nucmass_sum = std::vector<double>(nelements, 0.);
+    THREADLOCALONHOST auto elem_isomassfracsum = std::vector<double>(nelements);
+    THREADLOCALONHOST auto elem_isomassfrac_on_nucmass_sum = std::vector<double>(nelements);
+    std::ranges::fill(elem_isomassfracsum, 0.);
+    std::ranges::fill(elem_isomassfrac_on_nucmass_sum, 0.);
 
     for (int nucindex = 0; nucindex < num_nuclides; nucindex++) {
       const int element = nuc_elementindex[nucindex];
       if (element >= 0) {
         elem_isomassfracsum[element] += massfracs[nucindex];
-        elem_isomassfrac_on_nucmass_sum[element] += massfracs[nucindex] * nuc_invmass[nucindex];
+        elem_isomassfrac_on_nucmass_sum[element] += massfracs[nucindex] / nucmass(nucindex);
       }
     }
 
@@ -1343,7 +1355,6 @@ auto calc_nuc_massfrac_coeffs(const double t_current) -> NucMassFracCoeffs {
   const double t_afterinit = t_current - grid::get_t_model();
   const auto num_nuclides = std::ssize(nuclides);
   const auto num_decaypaths = get_num_decaypaths();
-  const int he4_nucindex = nuc_exists(2, 4) ? get_nucindex(2, 4) : -1;
 
   auto nuc_massfrac_coeffs = NucMassFracCoeffs{
       .decaypath_coeff = std::vector<double>(num_decaypaths),
@@ -1383,20 +1394,13 @@ void output_isotopic_densities(std::ostream& estimators_file, const int nonempty
   const double rho = grid::get_rho(nonemptymgi);
 
   const int atomic_number = get_atomicnumber(element);
-  std::set<std::tuple<int, int>> a_isotopes;  // so that we output sorted by mass number
-  const auto num_nuclides = std::ssize(nuclides);
-  for (int nucindex = 0; nucindex < num_nuclides; nucindex++) {
-    const auto [nuc_z, nuc_a] = get_nuc_z_a(nucindex);
-    if (nuc_z == atomic_number) {
-      a_isotopes.insert({nuc_a, nucindex});
-    }
-  }
-
-  for (const auto& [nuc_a, nucindex] : a_isotopes) {
-    const double massfrac = nuc_massfracs[nucindex];
-    if (massfrac > 0) {
-      const double numberdens = massfrac / nucmass(nucindex) * rho;
-      std::print(estimators_file, "  {}{}: {:9.3e}", get_elname(atomic_number), nuc_a, numberdens);
+  if (atomic_number < std::ssize(isotopes_of_z)) {
+    for (const auto& [nuc_a, nucindex] : isotopes_of_z[atomic_number]) {
+      const double massfrac = nuc_massfracs[nucindex];
+      if (massfrac > 0) {
+        const double numberdens = massfrac / nucmass(nucindex) * rho;
+        std::print(estimators_file, "  {}{}: {:9.3e}", get_elname(atomic_number), nuc_a, numberdens);
+      }
     }
   }
 

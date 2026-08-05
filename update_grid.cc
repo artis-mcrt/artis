@@ -61,8 +61,7 @@ void write_to_estimators_file(std::ostream& estimators_file, const int nonemptym
   }
 
   // thread_local lets us reuse this allocation for every cell on each CPU thread
-  THREADLOCALONHOST std::vector<double> nuc_massfracs;
-  nuc_massfracs.resize(decay::get_num_nuclides());
+  THREADLOCALONHOST auto nuc_massfracs = std::vector<double>(decay::get_num_nuclides());
   decay::calc_cell_nuc_massfracs(nonemptymgi, nuc_massfrac_coeffs, nuc_massfracs);
 
   for (int element = 0; element < get_nelements(); element++) {
