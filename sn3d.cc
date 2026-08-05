@@ -288,14 +288,18 @@ void write_deposition_file() {
     const auto columns = std::vector<DepositionColumn>{
         {.header = "tmid_days", .value = [](const auto& ts) { return ts.mid / DAY; }},
         {.header = "tmid_s", .value = [](const auto& ts) { return ts.mid; }},
-        {.header = "total_dep_Lsun",
-         .value =
-             [](const auto& ts) {
-               return (ts.gamma_dep + ts.positron_dep + ts.electron_dep + ts.alpha_dep + ts.spfission_dep_discrete) /
-                      ts.width / LSUN;
-             }},
-        {.header = "gammadep_discrete_Lsun",
-         .value = [](const auto& ts) { return ts.gamma_dep_discrete / ts.width / LSUN; }},
+        {
+            .header = "total_dep_Lsun",
+            .value =
+                [](const auto& ts) {
+                  return (ts.gamma_dep + ts.positron_dep + ts.electron_dep + ts.alpha_dep + ts.spfission_dep_discrete) /
+                         ts.width / LSUN;
+                },
+        },
+        {
+            .header = "gammadep_discrete_Lsun",
+            .value = [](const auto& ts) { return ts.gamma_dep_discrete / ts.width / LSUN; },
+        },
         {.header = "gammadep_Lsun", .value = [](const auto& ts) { return ts.gamma_dep / ts.width / LSUN; }},
         {.header = "positrondep_Lsun", .value = [](const auto& ts) { return ts.positron_dep / ts.width / LSUN; }},
         {.header = "eps_positron_ana_Lsun", .value = [](const auto& ts) { return ts.eps_positron_ana_power / LSUN; }},
@@ -305,32 +309,46 @@ void write_deposition_file() {
         {.header = "alphadep_Lsun", .value = [](const auto& ts) { return ts.alpha_dep / ts.width / LSUN; }},
         {.header = "eps_alpha_Lsun", .value = [](const auto& ts) { return ts.alpha_emission / ts.width / LSUN; }},
         {.header = "eps_alpha_ana_Lsun", .value = [](const auto& ts) { return ts.eps_alpha_ana_power / LSUN; }},
-        {.header = "eps_spfission_ana_Lsun",
-         .value = [](const auto& ts) { return ts.eps_spfission_ana_power / LSUN; },
-         .enabled = any_fission},
+        {
+            .header = "eps_spfission_ana_Lsun",
+            .value = [](const auto& ts) { return ts.eps_spfission_ana_power / LSUN; },
+            .enabled = any_fission,
+        },
         {.header = "eps_gamma_Lsun", .value = [](const auto& ts) { return ts.gamma_emission / ts.width / LSUN; }},
         {.header = "Qdot_betaminus_ana_erg/s/g", .value = [&](const auto& ts) { return ts.qdot_betaminus / mtot; }},
         {.header = "Qdotalpha_ana_erg/s/g", .value = [&](const auto& ts) { return ts.qdot_alpha / mtot; }},
-        {.header = "Qdotspfission_ana_erg/s/g",
-         .value = [&](const auto& ts) { return ts.qdot_spfission / mtot; },
-         .enabled = any_fission},
-        {.header = "eps_erg/s/g",
-         .value =
-             [&](const auto& ts) {
-               return (ts.gamma_emission + ts.positron_emission + ts.electron_emission + ts.alpha_emission +
-                       ts.spfission_dep_discrete) /
-                      mtot / ts.width;
-             }},
+        {
+            .header = "Qdotspfission_ana_erg/s/g",
+            .value = [&](const auto& ts) { return ts.qdot_spfission / mtot; },
+            .enabled = any_fission,
+        },
+        {
+            .header = "eps_erg/s/g",
+            .value =
+                [&](const auto& ts) {
+                  return (ts.gamma_emission + ts.positron_emission + ts.electron_emission + ts.alpha_emission +
+                          ts.spfission_dep_discrete) /
+                         mtot / ts.width;
+                },
+        },
         {.header = "Qdot_ana_erg/s/g", .value = [&](const auto& ts) { return ts.qdot_total / mtot; }},
-        {.header = "positrondep_discrete_Lsun",
-         .value = [](const auto& ts) { return ts.positron_dep_discrete / ts.width / LSUN; }},
-        {.header = "elecdep_discrete_Lsun",
-         .value = [](const auto& ts) { return ts.electron_dep_discrete / ts.width / LSUN; }},
-        {.header = "alphadep_discrete_Lsun",
-         .value = [](const auto& ts) { return ts.alpha_dep_discrete / ts.width / LSUN; }},
-        {.header = "spfission_dep_discrete_Lsun",
-         .value = [](const auto& ts) { return ts.spfission_dep_discrete / ts.width / LSUN; },
-         .enabled = any_fission},
+        {
+            .header = "positrondep_discrete_Lsun",
+            .value = [](const auto& ts) { return ts.positron_dep_discrete / ts.width / LSUN; },
+        },
+        {
+            .header = "elecdep_discrete_Lsun",
+            .value = [](const auto& ts) { return ts.electron_dep_discrete / ts.width / LSUN; },
+        },
+        {
+            .header = "alphadep_discrete_Lsun",
+            .value = [](const auto& ts) { return ts.alpha_dep_discrete / ts.width / LSUN; },
+        },
+        {
+            .header = "spfission_dep_discrete_Lsun",
+            .value = [](const auto& ts) { return ts.spfission_dep_discrete / ts.width / LSUN; },
+            .enabled = any_fission,
+        },
     };
 
     auto dep_file = fstream_required("deposition.out.tmp", std::ios::out | std::ios::trunc);
