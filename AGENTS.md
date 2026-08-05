@@ -63,10 +63,10 @@ next to their definitions. The main coverage is end-to-end regression runs
 (`.github/workflows/ci.yml`): each test in `tests/` runs a small model with
 `REPRODUCIBLE=ON FASTMATH=OFF MAX_NODE_SIZE=2` and compares `md5sum` checksums of
 the output files against `tests/<testname>_inputfiles/results_md5_*.txt` (all
-`*.out` files are checksummed; `output_*.txt` logs are not). A separate CI job
-runs one model with `OPENMP=ON` and no checksum comparison to exercise the
-threaded code paths. To run a regression test locally (downloads atomic data on
-first use):
+`*.out` files are checksummed; `output_*.txt` logs are not). Two separate smoke
+test jobs run one model with `OPENMP=ON` and with `STDPAR=ON` (multicore CPU),
+both without checksum comparison, to exercise the threaded code paths. To run a
+regression test locally (downloads atomic data on first use):
 
 ```sh
 cd tests
