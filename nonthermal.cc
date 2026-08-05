@@ -691,7 +691,8 @@ void read_collion_data() {
 
 auto get_possible_nt_excitation_count() -> int {
   // count the number of excitation transitions that pass the MAXNLEVELS_LOWER and MAXNLEVELS_UPPER conditions
-  // this count might be higher than the number of stored ratecoeffs due to the MAX_NT_EXCITATIONS_STORED limit
+  // this count might be higher than the number of stored power_per_source_mass due to the MAX_NT_EXCITATIONS_STORED
+  // limit
   int ntexcitationcount = 0;
   for (int element = 0; element < get_nelements(); element++) {
     for (int ion = 0; ion < get_nions(element); ion++) {
@@ -2146,21 +2147,25 @@ void init() {
 // set total non-thermal deposition rate from individual gamma/positron/electron/alpha rates. This should be called
 // after packet propagation is finished for this timestep and normalise_deposition_estimators() has been done
 void calculate_deposition_rate_density(const int nonemptymgi, HeatingCoolingRates& heatingcoolingrates,
-                                       const decay::AnaEmissionRateCoeffs& emissionratecoeffs) {
+                                       const decay::AnaEmissionPowerPerMass& emission_power_per_mass) {
   heatingcoolingrates.dep_gamma = globals::dep_estimator_gamma[nonemptymgi];
 
   const double rho = grid::get_rho(nonemptymgi);
 
-  heatingcoolingrates.eps_gamma_ana = rho * decay::get_modelcell_decayrate(nonemptymgi, emissionratecoeffs.gamma);
+  heatingcoolingrates.eps_gamma_ana =
+      rho * decay::get_modelcell_decaypower_per_mass(nonemptymgi, emission_power_per_mass.gamma);
 
-  heatingcoolingrates.eps_positron_ana = rho * decay::get_modelcell_decayrate(nonemptymgi, emissionratecoeffs.positron);
+  heatingcoolingrates.eps_positron_ana =
+      rho * decay::get_modelcell_decaypower_per_mass(nonemptymgi, emission_power_per_mass.positron);
 
-  heatingcoolingrates.eps_electron_ana = rho * decay::get_modelcell_decayrate(nonemptymgi, emissionratecoeffs.electron);
+  heatingcoolingrates.eps_electron_ana =
+      rho * decay::get_modelcell_decaypower_per_mass(nonemptymgi, emission_power_per_mass.electron);
 
-  heatingcoolingrates.eps_alpha_ana = rho * decay::get_modelcell_decayrate(nonemptymgi, emissionratecoeffs.alpha);
+  heatingcoolingrates.eps_alpha_ana =
+      rho * decay::get_modelcell_decaypower_per_mass(nonemptymgi, emission_power_per_mass.alpha);
 
   heatingcoolingrates.eps_spfission_ana =
-      rho * decay::get_modelcell_decayrate(nonemptymgi, emissionratecoeffs.spfission);
+      rho * decay::get_modelcell_decaypower_per_mass(nonemptymgi, emission_power_per_mass.spfission);
 
   if (PARTICLE_THERMALISATION_SCHEME == ParticleThermalisationScheme::INSTANTFULLDEPOSITION) {
     // for instant full deposition, the deposition rate is the same as the emission rate, which we know analytically

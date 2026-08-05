@@ -1100,11 +1100,12 @@ auto calc_energy_per_massoftopnuc_decaypath_withexpansion(const double tstart) -
 }
 
 namespace {
-// build per-source-nuclide rate coefficients from the mass fraction coefficients and the energy [erg] released
-// per decay of each nuclide (decays happen at a rate of 1 / meanlife / nucmass per unit current mass fraction),
-// so that a cell's rate [erg/s/g] is the dot product of the returned coefficients with the cell's initial
-// nuclide mass fractions
-auto calc_ratecoeffs_per_source(const NucMassFracCoeffs& nuc_massfrac_coeffs, const auto& nucenergyperdecay)
+// From the mass fraction coefficients and the energy [erg] released per decay of each nuclide (decays happen at
+// a rate of 1 / meanlife / nucmass per unit current mass fraction), build the power emitted per unit initial
+// mass of each source nuclide [erg/s per gram of the source nuclide]. The dot product with a cell's initial
+// nuclide mass fractions gives the cell's power per unit ejecta mass [erg/s/g], and with the nuclides' total
+// initial masses [g] the total power [erg/s].
+auto calc_power_per_source_mass(const NucMassFracCoeffs& nuc_massfrac_coeffs, const auto& nucenergyperdecay)
     -> std::vector<double> {
   const auto num_nuclides = std::ssize(nuclides);
   assert_always(std::ssize(nuc_massfrac_coeffs.nuc_survivingfrac) == num_nuclides);
@@ -1112,76 +1113,76 @@ auto calc_ratecoeffs_per_source(const NucMassFracCoeffs& nuc_massfrac_coeffs, co
   // per-nuclide decay rate [erg/s/g] per unit current mass fraction (nucweight, needed again for the decay path
   // loop below), and the rate from each nuclide's own surviving initial abundance
   auto nucweight = std::vector<double>(num_nuclides);
-  auto ratecoeffs = std::vector<double>(num_nuclides);
+  auto power_per_source_mass = std::vector<double>(num_nuclides);
   for (int nucindex = 0; nucindex < num_nuclides; nucindex++) {
     const double meanlife = get_meanlife(nucindex);
     const double weight = (meanlife > 0.) ? nucenergyperdecay(nucindex) / meanlife / nucmass(nucindex) : 0.;
     nucweight[nucindex] = weight;
-    ratecoeffs[nucindex] = weight * nuc_massfrac_coeffs.nuc_survivingfrac[nucindex];
+    power_per_source_mass[nucindex] = weight * nuc_massfrac_coeffs.nuc_survivingfrac[nucindex];
   }
 
   // He4 is stable, so the decaypath_he4_coeff contributions have zero weight and are not needed here
   for (int decaypathindex = 0; decaypathindex < get_num_decaypaths(); decaypathindex++) {
-    ratecoeffs[decaypath_topnucindex[decaypathindex]] +=
+    power_per_source_mass[decaypath_topnucindex[decaypathindex]] +=
         nucweight[decaypath_endnucindex[decaypathindex]] * nuc_massfrac_coeffs.decaypath_coeff[decaypathindex];
   }
-  return ratecoeffs;
+  return power_per_source_mass;
 }
 
-// coefficients for the rate of energy release as kinetic energy of positrons, electrons, alpha particles, or
-// fission fragments
-auto calc_particle_injection_ratecoeffs(const NucMassFracCoeffs& nuc_massfrac_coeffs, const DecayType decaytype)
+// power emitted as kinetic energy of positrons, electrons, alpha particles, or fission fragments, per unit
+// initial mass of each source nuclide [erg/s/g]
+auto calc_particle_injection_power_per_mass(const NucMassFracCoeffs& nuc_massfrac_coeffs, const DecayType decaytype)
     -> std::vector<double> {
-  return calc_ratecoeffs_per_source(nuc_massfrac_coeffs, [decaytype](const int nucindex) {
+  return calc_power_per_source_mass(nuc_massfrac_coeffs, [decaytype](const int nucindex) {
     return nucdecayenergyparticle(nucindex, decaytype) * get_nuc_decaybranchprob(nucindex, decaytype);
   });
 }
 
 }  // anonymous namespace
 
-// Analytic (Bateman-solution abundances and decay data, not Monte Carlo) emission rate coefficients for one
-// point in time, used by the non-thermal deposition calculation. For each energy release channel (gamma-ray
-// photons, and the kinetic energy of emitted positrons, electrons, alpha particles, and spontaneous fission
-// fragments), the vector holds the channel's energy release rate per unit ejecta mass per unit initial mass
-// fraction of each source nuclide [erg/s/g, since mass fractions are dimensionless]. The dot product of a
-// vector with a cell's initial nuclide mass fractions (get_modelcell_decayrate) gives that cell's specific
-// emission rate [erg/s/g] in the channel.
-[[nodiscard]] auto calc_ana_emission_ratecoeffs(const NucMassFracCoeffs& nuc_massfrac_coeffs) -> AnaEmissionRateCoeffs {
+// Analytic (Bateman-solution abundances and decay data, not Monte Carlo) emission powers for one point in
+// time, used by the non-thermal deposition calculation. For each energy release channel (gamma-ray photons,
+// and the kinetic energy of emitted positrons, electrons, alpha particles, and spontaneous fission fragments),
+// the vector holds the channel's power per unit initial mass of each source nuclide [erg/s per gram of the
+// source nuclide]. The dot product of a vector with a cell's initial nuclide mass fractions
+// (get_modelcell_decaypower_per_mass) gives that cell's emission power per unit ejecta mass [erg/s/g].
+[[nodiscard]] auto calc_ana_emission_power_per_mass(const NucMassFracCoeffs& nuc_massfrac_coeffs)
+    -> AnaEmissionPowerPerMass {
   return {
-      .gamma = calc_ratecoeffs_per_source(nuc_massfrac_coeffs,
+      .gamma = calc_power_per_source_mass(nuc_massfrac_coeffs,
                                           [](const int nucindex) { return nucdecayenergygamma(nucindex); }),
-      .positron = calc_particle_injection_ratecoeffs(nuc_massfrac_coeffs, DECAYTYPE_BETAPLUS),
-      .electron = calc_particle_injection_ratecoeffs(nuc_massfrac_coeffs, DECAYTYPE_BETAMINUS),
-      .alpha = calc_particle_injection_ratecoeffs(nuc_massfrac_coeffs, DECAYTYPE_ALPHA),
-      .spfission = calc_particle_injection_ratecoeffs(nuc_massfrac_coeffs, DECAYTYPE_SPONTFISSION),
+      .positron = calc_particle_injection_power_per_mass(nuc_massfrac_coeffs, DECAYTYPE_BETAPLUS),
+      .electron = calc_particle_injection_power_per_mass(nuc_massfrac_coeffs, DECAYTYPE_BETAMINUS),
+      .alpha = calc_particle_injection_power_per_mass(nuc_massfrac_coeffs, DECAYTYPE_ALPHA),
+      .spfission = calc_particle_injection_power_per_mass(nuc_massfrac_coeffs, DECAYTYPE_SPONTFISSION),
   };
 }
 
-// coefficients for the total energy release rate (including neutrinos that are ignored elsewhere) of each decay
-// type (DECAYTYPE_NONE is left empty)
-[[nodiscard]] auto calc_qdot_ratecoeffs(const NucMassFracCoeffs& nuc_massfrac_coeffs)
+// total emitted power including neutrinos (that are ignored elsewhere) of each decay type, per unit initial
+// mass of each source nuclide [erg/s/g] (DECAYTYPE_NONE is left empty)
+[[nodiscard]] auto calc_qdot_power_per_mass(const NucMassFracCoeffs& nuc_massfrac_coeffs)
     -> std::array<std::vector<double>, DECAYTYPE_COUNT> {
-  auto qdot_ratecoeffs = std::array<std::vector<double>, DECAYTYPE_COUNT>{};
+  auto qdot_power_per_mass = std::array<std::vector<double>, DECAYTYPE_COUNT>{};
   for (const auto decaytype : all_decaytypes) {
-    qdot_ratecoeffs[decaytype] = calc_ratecoeffs_per_source(nuc_massfrac_coeffs, [decaytype](const int nucindex) {
+    qdot_power_per_mass[decaytype] = calc_power_per_source_mass(nuc_massfrac_coeffs, [decaytype](const int nucindex) {
       return nucdecayenergyqval(nucindex, decaytype) * get_nuc_decaybranchprob(nucindex, decaytype);
     });
   }
-  return qdot_ratecoeffs;
+  return qdot_power_per_mass;
 }
 
-// a cell's decay energy release rate [erg/s/g]: the dot product of per-source-nuclide rate coefficients with the
-// cell's initial nuclide mass fractions
-[[nodiscard]] auto get_modelcell_decayrate(const int nonemptymgi, const std::span<const double> ratecoeffs_per_source)
-    -> double {
-  assert_testmodeonly(std::ssize(ratecoeffs_per_source) == std::ssize(nuclides));
+// a cell's decay power per unit ejecta mass [erg/s/g]: the dot product of the per-source-nuclide powers with
+// the cell's initial nuclide mass fractions
+[[nodiscard]] auto get_modelcell_decaypower_per_mass(const int nonemptymgi,
+                                                     const std::span<const double> power_per_source_mass) -> double {
+  assert_testmodeonly(std::ssize(power_per_source_mass) == std::ssize(nuclides));
   const auto mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
-  double rate = 0.;
-  for (int source_nucindex = 0; source_nucindex < std::ssize(ratecoeffs_per_source); source_nucindex++) {
-    rate += ratecoeffs_per_source[source_nucindex] * grid::get_modelinitnucmassfrac(mgi, source_nucindex);
+  double power_per_mass = 0.;
+  for (int source_nucindex = 0; source_nucindex < std::ssize(power_per_source_mass); source_nucindex++) {
+    power_per_mass += power_per_source_mass[source_nucindex] * grid::get_modelinitnucmassfrac(mgi, source_nucindex);
   }
-  assert_always(std::isfinite(rate) && rate >= 0.);
-  return rate;
+  assert_always(std::isfinite(power_per_mass) && power_per_mass >= 0.);
+  return power_per_mass;
 }
 
 // total decay energy [erg] that will be released from all decay paths in the model from snapshot time until time

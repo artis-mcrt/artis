@@ -399,7 +399,7 @@ static void titer_average_estimators(const int nonemptymgi) {
 
 void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, const int titer, const double tratmid,
                       const double deltat, HeatingCoolingRates& heatingcoolingrates,
-                      const decay::AnaEmissionRateCoeffs& emissionratecoeffs) {
+                      const decay::AnaEmissionPowerPerMass& emission_power_per_mass) {
   const int mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
 
   const double deltaV =
@@ -416,7 +416,7 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
     grid::set_clumpfactor(nonemptymgi, clumpfactor);
   }
 
-  nonthermal::calculate_deposition_rate_density(nonemptymgi, heatingcoolingrates, emissionratecoeffs);
+  nonthermal::calculate_deposition_rate_density(nonemptymgi, heatingcoolingrates, emission_power_per_mass);
 
   const double estimator_normfactor = 1 / deltaV / deltat / globals::nprocs;
   const double estimator_normfactor_over4pi = (1. / (4 * PI)) * estimator_normfactor;
@@ -648,7 +648,7 @@ void update_grid(std::ostream& estimators_file, const int nts, const int nts_pre
   // coefficients are computed once and reused for the abundance update, the analytic emission rates of the
   // deposition calculation, and the estimator output
   const auto nuc_massfrac_coeffs = decay::calc_nuc_massfrac_coeffs(globals::timesteps[nts].mid);
-  const auto emissionratecoeffs = decay::calc_ana_emission_ratecoeffs(nuc_massfrac_coeffs);
+  const auto emission_power_per_mass = decay::calc_ana_emission_power_per_mass(nuc_massfrac_coeffs);
 
   // for this rank's cells: update the elemental abundances (with radioactive decays to the timestep midpoint),
   // then the mass densities and the total ion number densities that depend on both
@@ -664,7 +664,7 @@ void update_grid(std::ostream& estimators_file, const int nts, const int nts_pre
 #endif
   for (int nonemptymgi = nstart_nonempty; nonemptymgi < (nstart_nonempty + ndo_nonempty); nonemptymgi++) {
     update_grid_cell(nonemptymgi, nts, nts_prev, titer, tratmid, deltat,
-                     heatingcoolingrates_thisrankcells.at(nonemptymgi - nstart_nonempty), emissionratecoeffs);
+                     heatingcoolingrates_thisrankcells.at(nonemptymgi - nstart_nonempty), emission_power_per_mass);
   }
 
   // serial output of estimator data to this ranks estimator file cell by cell

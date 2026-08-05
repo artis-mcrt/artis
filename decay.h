@@ -151,20 +151,22 @@ void update_abundances(int nonemptymgi_start, int nonemptymgi_count, const NucMa
 [[nodiscard]] auto calc_energy_per_massoftopnuc_decaypath_withexpansion(double tstart) -> std::vector<double>;
 [[nodiscard]] auto get_modelcell_endecay_per_mass(int nonemptymgi,
                                                   std::span<const double> energy_per_massoftopnuc_decaypath) -> double;
-// per-source-nuclide coefficient vectors for the analytic emission rates at one time. A cell's rate [erg/s/g] is
-// the dot product of a coefficient vector with the cell's initial nuclide mass fractions
-// (get_modelcell_decayrate)
-struct AnaEmissionRateCoeffs {
+// the analytic emission power of each channel per unit initial mass of each source nuclide [erg/s per gram of
+// the source nuclide]. A cell's emission power per unit ejecta mass [erg/s/g] is the dot product of a vector
+// with the cell's initial nuclide mass fractions (get_modelcell_decaypower_per_mass)
+struct AnaEmissionPowerPerMass {
   std::vector<double> gamma;
   std::vector<double> positron;
   std::vector<double> electron;
   std::vector<double> alpha;
   std::vector<double> spfission;
 };
-[[nodiscard]] auto calc_ana_emission_ratecoeffs(const NucMassFracCoeffs& nuc_massfrac_coeffs) -> AnaEmissionRateCoeffs;
-[[nodiscard]] auto calc_qdot_ratecoeffs(const NucMassFracCoeffs& nuc_massfrac_coeffs)
+[[nodiscard]] auto calc_ana_emission_power_per_mass(const NucMassFracCoeffs& nuc_massfrac_coeffs)
+    -> AnaEmissionPowerPerMass;
+[[nodiscard]] auto calc_qdot_power_per_mass(const NucMassFracCoeffs& nuc_massfrac_coeffs)
     -> std::array<std::vector<double>, DECAYTYPE_COUNT>;
-[[nodiscard]] auto get_modelcell_decayrate(int nonemptymgi, std::span<const double> ratecoeffs_per_source) -> double;
+[[nodiscard]] auto get_modelcell_decaypower_per_mass(int nonemptymgi, std::span<const double> power_per_source_mass)
+    -> double;
 [[nodiscard]] auto get_global_etot_tmodel_tinf() -> double;
 [[nodiscard]] auto calc_nuc_massfrac_coeffs(double t_current) -> NucMassFracCoeffs;
 void calc_cell_nuc_massfracs(int nonemptymgi, const NucMassFracCoeffs& nuc_massfrac_coeffs,

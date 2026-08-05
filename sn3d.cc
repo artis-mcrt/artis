@@ -227,8 +227,8 @@ void write_deposition_file() {
   printlog("Calculating and writing deposition.out...");
   const auto time_write_deposition_file_start = std::chrono::steady_clock::now();
 
-  // Each analytic power [erg/s] is a sum over cells of cellmass * (rate coefficients dot the cell's initial
-  // nuclide mass fractions), which factors into (rate coefficients) dot (total initial mass of each nuclide in
+  // Each analytic power [erg/s] is a sum over cells of cellmass * (power per source mass dot the cell's initial
+  // nuclide mass fractions), which factors into (power per source mass) dot (total initial mass of each nuclide in
   // the gridded ejecta). The nuclide mass totals are time-independent, so compute them on the first call (each
   // rank sums its cell block, then a reduction) and reuse them for every timestep.
   static const auto [totmassnuclide_gridded, mtot] = [] {
@@ -249,34 +249,34 @@ void write_deposition_file() {
     return std::pair{std::move(totmassnuclide), masstot};
   }();
 
-  // The decay chain calculations depend only on the timestep midpoint, so the per-source-nuclide rate
-  // coefficients are computed once and each power is a single dot product with the nuclide mass totals
+  // The decay chain calculations depend only on the timestep midpoint, so the per-source-nuclide powers are
+  // computed once and each channel's total power is a single dot product with the nuclide mass totals
   const double t_mid_nts = globals::timesteps[nts].mid;
   const auto nuc_massfrac_coeffs = decay::calc_nuc_massfrac_coeffs(t_mid_nts);
-  const auto emissionratecoeffs = decay::calc_ana_emission_ratecoeffs(nuc_massfrac_coeffs);
-  const auto qdot_ratecoeffs = decay::calc_qdot_ratecoeffs(nuc_massfrac_coeffs);
+  const auto emission_power_per_mass = decay::calc_ana_emission_power_per_mass(nuc_massfrac_coeffs);
+  const auto qdot_power_per_mass = decay::calc_qdot_power_per_mass(nuc_massfrac_coeffs);
 
   // a channel's analytic power [erg/s] over the whole ejecta: sum over the source nuclides of the emission rate
   // per gram per unit initial mass fraction [erg/s/g] times the total initial mass of that nuclide [g]
-  const auto total_power = [&](const std::vector<double>& ratecoeffs_per_source) {
+  const auto total_power = [&](const std::vector<double>& power_per_source_mass) {
     double power = 0.;
-    for (ptrdiff_t nucindex = 0; nucindex < std::ssize(ratecoeffs_per_source); nucindex++) {
-      power += ratecoeffs_per_source[nucindex] * totmassnuclide_gridded[nucindex];
+    for (ptrdiff_t nucindex = 0; nucindex < std::ssize(power_per_source_mass); nucindex++) {
+      power += power_per_source_mass[nucindex] * totmassnuclide_gridded[nucindex];
     }
     return power;
   };
 
   // power in [erg/s]
-  globals::timesteps[nts].eps_positron_ana_power = total_power(emissionratecoeffs.positron);
-  globals::timesteps[nts].eps_electron_ana_power = total_power(emissionratecoeffs.electron);
-  globals::timesteps[nts].eps_alpha_ana_power = total_power(emissionratecoeffs.alpha);
-  globals::timesteps[nts].eps_spfission_ana_power = total_power(emissionratecoeffs.spfission);
-  globals::timesteps[nts].qdot_betaminus = total_power(qdot_ratecoeffs[decay::DECAYTYPE_BETAMINUS]);
-  globals::timesteps[nts].qdot_alpha = total_power(qdot_ratecoeffs[decay::DECAYTYPE_ALPHA]);
-  globals::timesteps[nts].qdot_spfission = total_power(qdot_ratecoeffs[decay::DECAYTYPE_SPONTFISSION]);
+  globals::timesteps[nts].eps_positron_ana_power = total_power(emission_power_per_mass.positron);
+  globals::timesteps[nts].eps_electron_ana_power = total_power(emission_power_per_mass.electron);
+  globals::timesteps[nts].eps_alpha_ana_power = total_power(emission_power_per_mass.alpha);
+  globals::timesteps[nts].eps_spfission_ana_power = total_power(emission_power_per_mass.spfission);
+  globals::timesteps[nts].qdot_betaminus = total_power(qdot_power_per_mass[decay::DECAYTYPE_BETAMINUS]);
+  globals::timesteps[nts].qdot_alpha = total_power(qdot_power_per_mass[decay::DECAYTYPE_ALPHA]);
+  globals::timesteps[nts].qdot_spfission = total_power(qdot_power_per_mass[decay::DECAYTYPE_SPONTFISSION]);
   globals::timesteps[nts].qdot_total = 0.;
   for (const auto decaytype : decay::all_decaytypes) {
-    globals::timesteps[nts].qdot_total += total_power(qdot_ratecoeffs[decaytype]);
+    globals::timesteps[nts].qdot_total += total_power(qdot_power_per_mass[decaytype]);
   }
 
   if (my_rank == 0) {
