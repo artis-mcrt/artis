@@ -500,31 +500,6 @@ auto calc_decaypath_unitfactor(const int decaypathindex, const double time, cons
   return calculate_decaychain(1., lambdas, time - grid::get_t_model(), useexpansionfactor);
 }
 
-// Get the decay energy [erg/g] that would be released from time tstart [s] to time infinity by a given decaypath
-// e.g. Ni56 -> Co56, represents the decays of Co56 nuclei that were produced from Ni56 in the initial abundance.
-// Decays from Co56 due to the initial abundance of Co56 are not counted here, nor is the energy from Ni56 decays
-auto get_endecay_to_tinf_per_ejectamass_at_time(const int modelgridindex, const int decaypathindex, const double time)
-    -> double {
-  assert_testmodeonly(decaypathindex >= 0);
-  assert_testmodeonly(decaypathindex < get_num_decaypaths());
-  const auto& decaypath = decaypaths[decaypathindex];
-
-  const int nucindex_top = decaypath.nucindex[0];
-
-  const double top_initabund = grid::get_modelinitnucmassfrac(modelgridindex, nucindex_top) / nucmass(nucindex_top);
-  if (top_initabund <= 0.) {
-    return 0.;
-  }
-
-  // count the number of chain-top nuclei that haven't decayed past the end of the chain
-  const double abund_endsink = top_initabund * calc_decaypath_unitfactor(decaypathindex, time, false);
-  const double ndecays_remaining = decaypath.branchproduct * (top_initabund - abund_endsink);
-
-  const double endecay = ndecays_remaining * get_decaypath_lastdecayenergy(decaypath);
-
-  return endecay;
-}
-
 // Get the total decay power per mass [erg/s/g] for a given decaypath
 // We only count the power from the last decay in the chain to avoid double counting of decay energy (all sub paths are
 // handled separately)
