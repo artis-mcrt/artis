@@ -1086,7 +1086,7 @@ void init_nuclides(const std::span<const int> custom_zlist, const std::span<cons
     std::ranges::sort(isotopes, {}, &ZIsotope::a);
   }
 
-  printlnlog("Number of nuclides: {}", std::ssize(nuclides));
+  printlnlog("Number of nuclides after filtering: {}", std::ssize(nuclides));
 
   const int maxdecaypathlength = std::ranges::fold_left(decaypaths, 0ZU, [](const auto maxlen, const auto& decaypath) {
     return std::max(maxlen, decaypath.nucindex.size());
