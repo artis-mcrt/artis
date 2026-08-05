@@ -1252,9 +1252,10 @@ auto get_global_etot_tmodel_tinf() -> double {
 }
 
 // current mass fraction of every nuclide in one cell: the decay path and surviving-fraction coefficients
-// applied to the cell's initial nuclide mass fractions
+// applied to the cell's initial nuclide mass fractions. The returned span points at a per-thread buffer that
+// stays valid until the next call on the same thread.
 auto calc_cell_nuc_massfracs(const int nonemptymgi, const NucMassFracCoeffs& nuc_massfrac_coeffs)
-    -> std::vector<double> {
+    -> std::span<const double> {
   const auto num_nuclides = std::ssize(nuclides);
   const auto num_decaypaths = get_num_decaypaths();
   assert_testmodeonly(std::ssize(nuc_massfrac_coeffs.nuc_survivingfrac) == num_nuclides);
@@ -1262,7 +1263,10 @@ auto calc_cell_nuc_massfracs(const int nonemptymgi, const NucMassFracCoeffs& nuc
   const auto mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
   const int he4_nucindex = nuc_exists(2, 4) ? get_nucindex(2, 4) : -1;
 
-  auto massfracs = std::vector<double>(num_nuclides, 0.);
+  // thread_local lets us reuse this allocation for every cell on each CPU thread
+  THREADLOCALONHOST std::vector<double> massfracs;
+  reserve_resize(massfracs, num_nuclides);
+  std::ranges::fill(massfracs, 0.);
   for (int decaypathindex = 0; decaypathindex < num_decaypaths; decaypathindex++) {
     const double top_initmassfrac = grid::get_modelinitnucmassfrac(mgi, decaypath_topnucindex[decaypathindex]);
     massfracs[decaypath_endnucindex[decaypathindex]] +=
