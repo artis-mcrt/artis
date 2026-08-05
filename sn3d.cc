@@ -22,7 +22,6 @@
 #include <ios>
 #include <iterator>
 #include <limits>
-#include <numeric>
 #include <print>
 #include <string>
 #include <utility>
@@ -257,9 +256,14 @@ void write_deposition_file() {
   const auto emissionratecoeffs = decay::calc_ana_emission_ratecoeffs(nuc_massfrac_coeffs);
   const auto qdot_ratecoeffs = decay::calc_qdot_ratecoeffs(nuc_massfrac_coeffs);
 
+  // a channel's analytic power [erg/s] over the whole ejecta: sum over the source nuclides of the emission rate
+  // per gram per unit initial mass fraction [erg/s/g] times the total initial mass of that nuclide [g]
   const auto total_power = [&](const std::vector<double>& ratecoeffs_per_source) {
-    return std::transform_reduce(ratecoeffs_per_source.cbegin(), ratecoeffs_per_source.cend(),
-                                 totmassnuclide_gridded.cbegin(), 0.);
+    double power = 0.;
+    for (ptrdiff_t nucindex = 0; nucindex < std::ssize(ratecoeffs_per_source); nucindex++) {
+      power += ratecoeffs_per_source[nucindex] * totmassnuclide_gridded[nucindex];
+    }
+    return power;
   };
 
   // power in [erg/s]
