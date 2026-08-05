@@ -1110,21 +1110,21 @@ auto calc_power_per_source_mass(const NucMassFracCoeffs& nuc_massfrac_coeffs, co
   const auto num_nuclides = std::ssize(nuclides);
   assert_always(std::ssize(nuc_massfrac_coeffs.nuc_survivingfrac) == num_nuclides);
 
-  // per-nuclide decay rate [erg/s/g] per unit current mass fraction (nucweight, needed again for the decay path
-  // loop below), and the rate from each nuclide's own surviving initial abundance
-  auto nucweight = std::vector<double>(num_nuclides);
+  // each nuclide's emitted power per unit mass of the nuclide currently present [erg/s/g] (needed again for the
+  // decay path loop below), and the power from each nuclide's own surviving initial abundance
+  auto power_per_currentmass = std::vector<double>(num_nuclides);
   auto power_per_source_mass = std::vector<double>(num_nuclides);
   for (int nucindex = 0; nucindex < num_nuclides; nucindex++) {
     const double meanlife = get_meanlife(nucindex);
-    const double weight = (meanlife > 0.) ? nucenergyperdecay(nucindex) / meanlife / nucmass(nucindex) : 0.;
-    nucweight[nucindex] = weight;
-    power_per_source_mass[nucindex] = weight * nuc_massfrac_coeffs.nuc_survivingfrac[nucindex];
+    power_per_currentmass[nucindex] = (meanlife > 0.) ? nucenergyperdecay(nucindex) / meanlife / nucmass(nucindex) : 0.;
+    power_per_source_mass[nucindex] = power_per_currentmass[nucindex] * nuc_massfrac_coeffs.nuc_survivingfrac[nucindex];
   }
 
-  // He4 is stable, so the decaypath_he4_coeff contributions have zero weight and are not needed here
+  // He4 is stable (zero power per mass), so the decaypath_he4_coeff contributions are not needed here
   for (int decaypathindex = 0; decaypathindex < get_num_decaypaths(); decaypathindex++) {
     power_per_source_mass[decaypath_topnucindex[decaypathindex]] +=
-        nucweight[decaypath_endnucindex[decaypathindex]] * nuc_massfrac_coeffs.decaypath_coeff[decaypathindex];
+        power_per_currentmass[decaypath_endnucindex[decaypathindex]] *
+        nuc_massfrac_coeffs.decaypath_endnuc_coeff[decaypathindex];
   }
   return power_per_source_mass;
 }
@@ -1158,8 +1158,8 @@ auto calc_particle_injection_power_per_mass(const NucMassFracCoeffs& nuc_massfra
   };
 }
 
-// total emitted power including neutrinos (that are ignored elsewhere) of each decay type, per unit initial
-// mass of each source nuclide [erg/s/g] (DECAYTYPE_NONE is left empty)
+// the total decay power of each decay type per unit initial mass of each source nuclide [erg/s/g], including
+// the neutrino energy that the emission channels exclude (DECAYTYPE_NONE is left empty)
 [[nodiscard]] auto calc_qdot_power_per_mass(const NucMassFracCoeffs& nuc_massfrac_coeffs)
     -> std::array<std::vector<double>, DECAYTYPE_COUNT> {
   auto qdot_power_per_mass = std::array<std::vector<double>, DECAYTYPE_COUNT>{};
@@ -1210,7 +1210,7 @@ void calc_cell_nuc_massfracs(const int nonemptymgi, const NucMassFracCoeffs& nuc
   const auto num_decaypaths = get_num_decaypaths();
   assert_testmodeonly(std::ssize(massfracs) == num_nuclides);
   assert_testmodeonly(std::ssize(nuc_massfrac_coeffs.nuc_survivingfrac) == num_nuclides);
-  assert_testmodeonly(std::ssize(nuc_massfrac_coeffs.decaypath_coeff) == num_decaypaths);
+  assert_testmodeonly(std::ssize(nuc_massfrac_coeffs.decaypath_endnuc_coeff) == num_decaypaths);
   const auto mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
 
   // start from each nuclide's own surviving initial abundance, then add the decay path contributions
@@ -1221,17 +1221,15 @@ void calc_cell_nuc_massfracs(const int nonemptymgi, const NucMassFracCoeffs& nuc
   for (int decaypathindex = 0; decaypathindex < num_decaypaths; decaypathindex++) {
     const double top_initmassfrac = grid::get_modelinitnucmassfrac(mgi, decaypath_topnucindex[decaypathindex]);
     massfracs[decaypath_endnucindex[decaypathindex]] +=
-        nuc_massfrac_coeffs.decaypath_coeff[decaypathindex] * top_initmassfrac;
+        nuc_massfrac_coeffs.decaypath_endnuc_coeff[decaypathindex] * top_initmassfrac;
     if (he4_nucindex >= 0) {
       massfracs[he4_nucindex] += nuc_massfrac_coeffs.decaypath_he4_coeff[decaypathindex] * top_initmassfrac;
     }
   }
 }
 
-// Update the mass fractions of elements from the decayed nuclide abundances for a contiguous range of cells at
-// time t_current. Each nuclide's mass fraction is a linear function of the cell's initial nuclide mass fractions,
-// with coefficients from the Bateman solution that depend only on the elapsed time, so the coefficients are
-// computed once and applied to every cell
+// Update the element mass fractions from the decayed nuclide abundances for a contiguous range of cells,
+// evaluated at the time the shared coefficients were computed for (calc_nuc_massfrac_coeffs)
 void update_abundances(const int nonemptymgi_start, const int nonemptymgi_count,
                        const NucMassFracCoeffs& nuc_massfrac_coeffs) {
   const auto num_nuclides = std::ssize(nuclides);
@@ -1292,7 +1290,7 @@ auto calc_nuc_massfrac_coeffs(const double t_current) -> NucMassFracCoeffs {
   const auto num_decaypaths = get_num_decaypaths();
 
   auto nuc_massfrac_coeffs = NucMassFracCoeffs{
-      .decaypath_coeff = std::vector<double>(num_decaypaths),
+      .decaypath_endnuc_coeff = std::vector<double>(num_decaypaths),
       .decaypath_he4_coeff = std::vector<double>(num_decaypaths, 0.),
       .nuc_survivingfrac = std::vector<double>(num_nuclides),
   };
@@ -1302,7 +1300,7 @@ auto calc_nuc_massfrac_coeffs(const double t_current) -> NucMassFracCoeffs {
     const int nucindex_top = decaypath.nucindex[0];
     const int nucindex_end = decaypath.nucindex.back();
 
-    nuc_massfrac_coeffs.decaypath_coeff[decaypathindex] =
+    nuc_massfrac_coeffs.decaypath_endnuc_coeff[decaypathindex] =
         decaypath.branchproduct * calculate_decaychain(1., decaypath.lambdas, t_afterinit, false) *
         nucmass(nucindex_end) / nucmass(nucindex_top);
 

@@ -33,12 +33,12 @@ constexpr std::array all_decaytypes{
 };
 
 // coefficients giving every nuclide's mass fraction at one time as a linear function of a cell's initial
-// nuclide mass fractions: each decay path contributes decaypath_coeff[decaypathindex] times the cell's initial
+// nuclide mass fractions: each decay path contributes decaypath_endnuc_coeff[decaypathindex] times the cell's initial
 // mass fraction of the chain-top nuclide to the chain-end nuclide (and alpha-terminated paths also
 // decaypath_he4_coeff[decaypathindex] to He4), and each nuclide keeps nuc_survivingfrac[nucindex] of its own
 // initial mass fraction. Computing these once per timestep applies the same decay calculations to every cell.
 struct NucMassFracCoeffs {
-  std::vector<double> decaypath_coeff;  // [decaypathindex] coefficient for the chain-end nuclide
+  std::vector<double> decaypath_endnuc_coeff;  // [decaypathindex] coefficient for the chain-end nuclide
   std::vector<double> decaypath_he4_coeff;  // [decaypathindex] coefficient for He4 (zero for non-alpha-ended paths)
   std::vector<double> nuc_survivingfrac;  // [nucindex] surviving fraction of the nuclide's own initial abundance
 };

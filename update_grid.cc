@@ -39,8 +39,6 @@ std::vector<HeatingCoolingRates> heatingcoolingrates_thisrankcells;
 void write_to_estimators_file(std::ostream& estimators_file, const int nonemptymgi, const int timestep, const int titer,
                               const HeatingCoolingRates& heatingcoolingrates,
                               const decay::NucMassFracCoeffs& nuc_massfrac_coeffs) {
-  // writing the estimators file is a measurable cost per cell per timestep. If the estimators output is not
-  // needed, an early return here skips it.
   const int mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
 
   const auto sys_time_start_write_estimators = std::chrono::steady_clock::now();
