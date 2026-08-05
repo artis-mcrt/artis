@@ -60,7 +60,9 @@ void write_to_estimators_file(std::ostream& estimators_file, const int nonemptym
     nltepop_write_to_file(nonemptymgi, timestep);
   }
 
-  const auto nuc_massfracs = decay::calc_cell_nuc_massfracs(nonemptymgi, nuc_massfrac_coeffs);
+  // thread_local lets us reuse this allocation for every cell on each CPU thread
+  THREADLOCALONHOST std::vector<double> nuc_massfracs;
+  decay::calc_cell_nuc_massfracs(nonemptymgi, nuc_massfrac_coeffs, nuc_massfracs);
 
   for (int element = 0; element < get_nelements(); element++) {
     if (grid::get_elem_massfrac(nonemptymgi, element) <= 0.) {  // skip elements with no abundance
