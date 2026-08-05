@@ -21,6 +21,7 @@
 #include <ios>
 #include <iterator>
 #include <limits>
+#include <numeric>
 #include <print>
 #include <string>
 #ifdef STDPAR_ON
@@ -224,68 +225,57 @@ void write_deposition_file() {
   const int nts = globals::timestep;
   printlog("Calculating and writing deposition.out...");
   const auto time_write_deposition_file_start = std::chrono::steady_clock::now();
-  double mtot = 0.;
-  const int nstart_nonempty = grid::get_nstart_nonempty(my_rank);
-  const int ndo_nonempty = grid::get_ndo_nonempty(my_rank);
 
-  // calculate analytical decay rates. The decay chain calculations depend only on the timestep midpoint, so the
-  // per-source-nuclide rate coefficients are computed once and applied to every cell's initial mass fractions
+  // Each analytic power [erg/s] is a sum over cells of cellmass * (rate coefficients dot the cell's initial
+  // nuclide mass fractions), which factors into (rate coefficients) dot (total initial mass of each nuclide in
+  // the gridded ejecta). The nuclide mass totals are time-independent, so compute them on the first call (each
+  // rank sums its cell block, then a reduction) and reuse them for every timestep.
+  struct GriddedMasses {
+    std::vector<double> totmassnuclide;
+    double mtot;
+  };
+  static const auto gridded = [] {
+    auto masses = GriddedMasses{.totmassnuclide = std::vector<double>(decay::get_num_nuclides(), 0.), .mtot = 0.};
+    const int nstart_nonempty = grid::get_nstart_nonempty(globals::my_rank);
+    const int ndo_nonempty = grid::get_ndo_nonempty(globals::my_rank);
+    for (int nonemptymgi = nstart_nonempty; nonemptymgi < (nstart_nonempty + ndo_nonempty); nonemptymgi++) {
+      const int mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
+      const double cellmass = grid::get_rho_tmin(mgi) * grid::get_modelcell_assocvolume_tmin(mgi);
+      masses.mtot += cellmass;
+      for (int nucindex = 0; nucindex < decay::get_num_nuclides(); nucindex++) {
+        masses.totmassnuclide[nucindex] += cellmass * grid::get_modelinitnucmassfrac(mgi, nucindex);
+      }
+    }
+    MPI_Allreduce_safe(std::span{masses.totmassnuclide}, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce_safe(masses.mtot, MPI_SUM, MPI_COMM_WORLD);
+    return masses;
+  }();
+  const double mtot = gridded.mtot;
+
+  // The decay chain calculations depend only on the timestep midpoint, so the per-source-nuclide rate
+  // coefficients are computed once and each power is a single dot product with the nuclide mass totals
   const double t_mid_nts = globals::timesteps[nts].mid;
   const auto nuc_massfrac_coeffs = decay::calc_nuc_massfrac_coeffs(t_mid_nts);
   const auto emissionratecoeffs = decay::calc_ana_emission_ratecoeffs(nuc_massfrac_coeffs);
   const auto qdot_ratecoeffs = decay::calc_qdot_ratecoeffs(nuc_massfrac_coeffs);
 
+  const auto total_power = [&](const std::vector<double>& ratecoeffs_per_source) {
+    return std::transform_reduce(ratecoeffs_per_source.cbegin(), ratecoeffs_per_source.cend(),
+                                 gridded.totmassnuclide.cbegin(), 0.);
+  };
+
   // power in [erg/s]
-  globals::timesteps[nts].eps_positron_ana_power = 0.;
-  globals::timesteps[nts].eps_electron_ana_power = 0.;
-  globals::timesteps[nts].eps_alpha_ana_power = 0.;
-  globals::timesteps[nts].eps_spfission_ana_power = 0.;
-  globals::timesteps[nts].qdot_betaminus = 0.;
-  globals::timesteps[nts].qdot_alpha = 0.;
-  globals::timesteps[nts].qdot_spfission = 0.;
+  globals::timesteps[nts].eps_positron_ana_power = total_power(emissionratecoeffs.positron);
+  globals::timesteps[nts].eps_electron_ana_power = total_power(emissionratecoeffs.electron);
+  globals::timesteps[nts].eps_alpha_ana_power = total_power(emissionratecoeffs.alpha);
+  globals::timesteps[nts].eps_spfission_ana_power = total_power(emissionratecoeffs.spfission);
+  globals::timesteps[nts].qdot_betaminus = total_power(qdot_ratecoeffs[decay::DECAYTYPE_BETAMINUS]);
+  globals::timesteps[nts].qdot_alpha = total_power(qdot_ratecoeffs[decay::DECAYTYPE_ALPHA]);
+  globals::timesteps[nts].qdot_spfission = total_power(qdot_ratecoeffs[decay::DECAYTYPE_SPONTFISSION]);
   globals::timesteps[nts].qdot_total = 0.;
-
-  for (int nonemptymgi = nstart_nonempty; nonemptymgi < (nstart_nonempty + ndo_nonempty); nonemptymgi++) {
-    const int mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
-    const double cellmass = grid::get_rho_tmin(mgi) * grid::get_modelcell_assocvolume_tmin(mgi);
-
-    globals::timesteps[nts].eps_positron_ana_power +=
-        cellmass * decay::get_modelcell_decayrate(nonemptymgi, emissionratecoeffs.positron);
-    globals::timesteps[nts].eps_electron_ana_power +=
-        cellmass * decay::get_modelcell_decayrate(nonemptymgi, emissionratecoeffs.electron);
-    globals::timesteps[nts].eps_alpha_ana_power +=
-        cellmass * decay::get_modelcell_decayrate(nonemptymgi, emissionratecoeffs.alpha);
-    globals::timesteps[nts].eps_spfission_ana_power +=
-        cellmass * decay::get_modelcell_decayrate(nonemptymgi, emissionratecoeffs.spfission);
-
-    mtot += cellmass;
-
-    for (const auto decaytype : decay::all_decaytypes) {
-      // Qdot here has been multiplied by mass, so it is in units of [erg/s]
-      const double qdot_cell = decay::get_modelcell_decayrate(nonemptymgi, qdot_ratecoeffs[decaytype]) * cellmass;
-      globals::timesteps[nts].qdot_total += qdot_cell;
-      if (decaytype == decay::DECAYTYPE_BETAMINUS) {
-        globals::timesteps[nts].qdot_betaminus += qdot_cell;
-      } else if (decaytype == decay::DECAYTYPE_ALPHA) {
-        globals::timesteps[nts].qdot_alpha += qdot_cell;
-      } else if (decaytype == decay::DECAYTYPE_SPONTFISSION) {
-        globals::timesteps[nts].qdot_spfission += qdot_cell;
-      }
-    }
+  for (const auto decaytype : decay::all_decaytypes) {
+    globals::timesteps[nts].qdot_total += total_power(qdot_ratecoeffs[decaytype]);
   }
-
-  // each MPI rank only calculated the contribution of a subset of cells
-  MPI_Allreduce_safe(globals::timesteps[nts].eps_positron_ana_power, MPI_SUM, MPI_COMM_WORLD);
-  MPI_Allreduce_safe(globals::timesteps[nts].eps_electron_ana_power, MPI_SUM, MPI_COMM_WORLD);
-  MPI_Allreduce_safe(globals::timesteps[nts].eps_alpha_ana_power, MPI_SUM, MPI_COMM_WORLD);
-  MPI_Allreduce_safe(globals::timesteps[nts].eps_spfission_ana_power, MPI_SUM, MPI_COMM_WORLD);
-  MPI_Allreduce_safe(globals::timesteps[nts].qdot_betaminus, MPI_SUM, MPI_COMM_WORLD);
-  MPI_Allreduce_safe(globals::timesteps[nts].qdot_alpha, MPI_SUM, MPI_COMM_WORLD);
-  MPI_Allreduce_safe(globals::timesteps[nts].qdot_spfission, MPI_SUM, MPI_COMM_WORLD);
-  MPI_Allreduce_safe(globals::timesteps[nts].qdot_total, MPI_SUM, MPI_COMM_WORLD);
-
-  MPI_Allreduce_safe(mtot, MPI_SUM, MPI_COMM_WORLD);
-  MPI_Barrier_allranks();
 
   if (my_rank == 0) {
     const bool any_fission = decay::decaytype_is_used(decay::DECAYTYPE_SPONTFISSION);
