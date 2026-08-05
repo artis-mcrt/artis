@@ -162,12 +162,6 @@ std::vector<bool> alldecaytypes_is_used;
 
 [[nodiscard]] auto nucmass(int nucindex) -> double { return get_nuc_a(nucindex) * MH; }
 
-[[nodiscard]] auto get_nuc_z_a(const int nucindex) -> std::tuple<int, int> {
-  assert_testmodeonly(nucindex >= 0);
-  assert_testmodeonly(nucindex < std::ssize(nuclides));
-  return {nuclides[nucindex].z, nuclides[nucindex].a};
-}
-
 // get the nuclide array index from the atomic number and mass number
 [[nodiscard]] auto get_nucindex_or_neg_one(const int z, const int a) -> int {
   assert_testmodeonly(std::ssize(nuclides) > 0);
@@ -529,47 +523,6 @@ auto get_endecay_to_tinf_per_ejectamass_at_time(const int modelgridindex, const 
   const double endecay = ndecays_remaining * get_decaypath_lastdecayenergy(decaypath);
 
   return endecay;
-}
-
-// Simple Euler integration as a check on the analytic result from
-// get_endecay_per_ejectamass_tmodel_to_time_withexpansion()
-auto get_endecay_per_ejectamass_tmodel_to_time_withexpansion_chain_numerical(const int nonemptymgi,
-                                                                             const int decaypathindex,
-                                                                             const double tstart) -> double {
-  const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
-  const double min_meanlife =
-      std::ranges::min(decaypaths[decaypathindex].nucindex |
-                       std::views::transform([](const auto nucindex) { return get_meanlife(nucindex); }) |
-                       std::views::filter([](const auto meanlife) { return meanlife > 0.; }));
-  // min steps across the meanlifetime. Use a wide type: for short-lived nuclides the product easily
-  // exceeds INT_MAX, which would overflow (undefined behaviour) if cast to int.
-  const auto nsteps = static_cast<ptrdiff_t>(std::ceil((tstart - grid::get_t_model()) / min_meanlife) * 100000);
-
-  double chain_endecay = 0.;
-  double last_chain_endecay = -1.;
-  double last_t = -1.;
-  for (ptrdiff_t i = 0; i < nsteps; i++) {
-    const double t = grid::get_t_model() + ((tstart - grid::get_t_model()) * i / nsteps);
-    const double chain_endecay_t = get_endecay_to_tinf_per_ejectamass_at_time(modelgridindex, decaypathindex, t);
-    if (last_chain_endecay >= 0) {
-      const double chain_step_endecay_diff = last_chain_endecay - chain_endecay_t;
-      const double expansionfactor =
-          0.5 * (t + last_t) / tstart;  // photons lose energy as 1/t for homologous expansion
-      chain_endecay += chain_step_endecay_diff * expansionfactor;
-    }
-    last_chain_endecay = chain_endecay_t;
-    last_t = t;
-  }
-
-  const double chain_endecay_noexpansion =
-      (get_endecay_to_tinf_per_ejectamass_at_time(modelgridindex, decaypathindex, grid::get_t_model()) -
-       get_endecay_to_tinf_per_ejectamass_at_time(modelgridindex, decaypathindex, tstart));
-
-  printlnlog("  chain_endecay:              {:g}", chain_endecay);
-  printlnlog("  chain_endecay_noexpansion:  {:g}", chain_endecay_noexpansion);
-  printlnlog("  expansion energy factor:    {:g}", chain_endecay / chain_endecay_noexpansion);
-
-  return chain_endecay;
 }
 
 // Get the total decay power per mass [erg/s/g] for a given decaypath
