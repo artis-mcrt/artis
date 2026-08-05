@@ -11,6 +11,10 @@
 #include "random.h"
 #include "thermalbalance.h"
 
+namespace decay {
+struct AnaEmissionRateCoeffs;
+}  // namespace decay
+
 namespace nonthermal {
 void init();
 // Assemble and solve the cell's discretised Spencer-Fano degradation balance, including Coulomb heating, excitation,
@@ -24,7 +28,8 @@ void solve_spencerfano(int nonemptymgi, int timestep, int iteration);
 [[nodiscard]] DEVICE_FUNC auto nt_ionisation_maxupperion(int element, int lowerion) -> int;
 [[nodiscard]] DEVICE_FUNC auto nt_random_upperion(int nonemptymgi, int element, int lowerion, bool energyweighted,
                                                   rngstate_type& rngstate) -> int;
-void calculate_deposition_rate_density(int nonemptymgi, int timestep, HeatingCoolingRates& heatingcoolingrates);
+void calculate_deposition_rate_density(int nonemptymgi, HeatingCoolingRates& heatingcoolingrates,
+                                       const decay::AnaEmissionRateCoeffs& emissionratecoeffs);
 // deposition rate density [erg/s/cm3] of the non-thermal leptons handled by the Spencer-Fano solver, i.e.
 // gamma + positron + electron. Alpha and spontaneous fission deposition are tracked separately.
 [[nodiscard]] DEVICE_FUNC auto get_ntlepton_deposition_rate_density(int nonemptymgi) -> double;

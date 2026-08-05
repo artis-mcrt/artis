@@ -12,6 +12,7 @@
 #include <limits>
 #include <ostream>
 #include <print>
+#include <span>
 #include <vector>
 
 #include "artisoptions.h"
@@ -36,7 +37,8 @@ namespace {
 std::vector<HeatingCoolingRates> heatingcoolingrates_thisrankcells;
 
 void write_to_estimators_file(std::ostream& estimators_file, const int nonemptymgi, const int timestep, const int titer,
-                              const HeatingCoolingRates& heatingcoolingrates) {
+                              const HeatingCoolingRates& heatingcoolingrates,
+                              const decay::NucMassFracCoeffs& nuc_massfrac_coeffs) {
   // writing the estimators file is a measurable cost per cell per timestep. If the estimators output is not
   // needed, an early return here skips it.
   const int mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
@@ -57,6 +59,10 @@ void write_to_estimators_file(std::ostream& estimators_file, const int nonemptym
   if (globals::total_nlte_levels > 0) {
     nltepop_write_to_file(nonemptymgi, timestep);
   }
+
+  // thread_local lets us reuse this allocation for every cell on each CPU thread
+  THREADLOCALONHOST auto nuc_massfracs = std::vector<double>(decay::get_num_nuclides());
+  decay::calc_cell_nuc_massfracs(nonemptymgi, nuc_massfrac_coeffs, nuc_massfracs);
 
   for (int element = 0; element < get_nelements(); element++) {
     if (grid::get_elem_massfrac(nonemptymgi, element) <= 0.) {  // skip elements with no abundance
@@ -81,7 +87,7 @@ void write_to_estimators_file(std::ostream& estimators_file, const int nonemptym
     }
     std::print(estimators_file, "  SUM: {:9.3e}", elpop);
 
-    decay::output_isotopic_densities(estimators_file, nonemptymgi, globals::timesteps[timestep].mid, element);
+    decay::output_isotopic_densities(estimators_file, nonemptymgi, element, nuc_massfracs);
 
     if (nions == 0 || elpop <= 0.) {
       // dummy element for nuclear abundances only
@@ -392,7 +398,8 @@ static void titer_average_estimators(const int nonemptymgi) {
 #endif
 
 void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, const int titer, const double tratmid,
-                      const double deltat, HeatingCoolingRates& heatingcoolingrates) {
+                      const double deltat, HeatingCoolingRates& heatingcoolingrates,
+                      const decay::AnaEmissionRateCoeffs& emissionratecoeffs) {
   const int mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
 
   const double deltaV =
@@ -409,7 +416,7 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
     grid::set_clumpfactor(nonemptymgi, clumpfactor);
   }
 
-  nonthermal::calculate_deposition_rate_density(nonemptymgi, nts, heatingcoolingrates);
+  nonthermal::calculate_deposition_rate_density(nonemptymgi, heatingcoolingrates, emissionratecoeffs);
 
   const double estimator_normfactor = 1 / deltaV / deltat / globals::nprocs;
   const double estimator_normfactor_over4pi = (1. / (4 * PI)) * estimator_normfactor;
@@ -637,9 +644,15 @@ void update_grid(std::ostream& estimators_file, const int nts, const int nts_pre
 
   const auto nstart_nonempty = grid::get_nstart_nonempty(my_rank);
 
+  // the decay chain calculations depend only on the timestep midpoint, so the per-nuclide mass fraction
+  // coefficients are computed once and reused for the abundance update, the analytic emission rates of the
+  // deposition calculation, and the estimator output
+  const auto nuc_massfrac_coeffs = decay::calc_nuc_massfrac_coeffs(globals::timesteps[nts].mid);
+  const auto emissionratecoeffs = decay::calc_ana_emission_ratecoeffs(nuc_massfrac_coeffs);
+
   // for this rank's cells: update the elemental abundances (with radioactive decays to the timestep midpoint),
   // then the mass densities and the total ion number densities that depend on both
-  decay::update_abundances(nstart_nonempty, ndo_nonempty, globals::timesteps[nts].mid);
+  decay::update_abundances(nstart_nonempty, ndo_nonempty, nuc_massfrac_coeffs);
   for (int nonemptymgi = nstart_nonempty; nonemptymgi < (nstart_nonempty + ndo_nonempty); nonemptymgi++) {
     const int mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
     grid::set_rho(nonemptymgi, static_cast<float>(grid::get_rho_tmin(mgi) / pow3(tratmid)));
@@ -651,7 +664,7 @@ void update_grid(std::ostream& estimators_file, const int nts, const int nts_pre
 #endif
   for (int nonemptymgi = nstart_nonempty; nonemptymgi < (nstart_nonempty + ndo_nonempty); nonemptymgi++) {
     update_grid_cell(nonemptymgi, nts, nts_prev, titer, tratmid, deltat,
-                     heatingcoolingrates_thisrankcells.at(nonemptymgi - nstart_nonempty));
+                     heatingcoolingrates_thisrankcells.at(nonemptymgi - nstart_nonempty), emissionratecoeffs);
   }
 
   // serial output of estimator data to this ranks estimator file cell by cell
@@ -665,7 +678,8 @@ void update_grid(std::ostream& estimators_file, const int nts, const int nts_pre
         assert_always(nonemptymgi >= nstart_nonempty);
         assert_always(nonemptymgi < (nstart_nonempty + ndo_nonempty));
         write_to_estimators_file(estimators_file, nonemptymgi, nts, titer,
-                                 heatingcoolingrates_thisrankcells.at(nonemptymgi - nstart_nonempty));
+                                 heatingcoolingrates_thisrankcells.at(nonemptymgi - nstart_nonempty),
+                                 nuc_massfrac_coeffs);
       } else {
         // modelgrid cells that are not represented in the simulation grid
         std::println(estimators_file, "timestep {} modelgridindex {} EMPTYCELL", nts, mgi);

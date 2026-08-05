@@ -18,11 +18,13 @@
 #include <filesystem>
 #include <format>
 #include <fstream>
+#include <functional>
 #include <ios>
 #include <iterator>
 #include <limits>
 #include <print>
 #include <string>
+#include <utility>
 #ifdef STDPAR_ON
 #include <ranges>
 #endif
@@ -224,138 +226,156 @@ void write_deposition_file() {
   const int nts = globals::timestep;
   printlog("Calculating and writing deposition.out...");
   const auto time_write_deposition_file_start = std::chrono::steady_clock::now();
-  double mtot = 0.;
-  const int nstart_nonempty = grid::get_nstart_nonempty(my_rank);
-  const int ndo_nonempty = grid::get_ndo_nonempty(my_rank);
 
-  // calculate analytical decay rates
-  const double t_mid_nts = globals::timesteps[nts].mid;
-
-  // power in [erg/s]
-  globals::timesteps[nts].eps_positron_ana_power = 0.;
-  globals::timesteps[nts].eps_electron_ana_power = 0.;
-  globals::timesteps[nts].eps_alpha_ana_power = 0.;
-  globals::timesteps[nts].eps_spfission_ana_power = 0.;
-  globals::timesteps[nts].qdot_betaminus = 0.;
-  globals::timesteps[nts].qdot_alpha = 0.;
-  globals::timesteps[nts].qdot_spfission = 0.;
-  globals::timesteps[nts].qdot_total = 0.;
-
-  for (int nonemptymgi = nstart_nonempty; nonemptymgi < (nstart_nonempty + ndo_nonempty); nonemptymgi++) {
-    const int mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
-    const double cellmass = grid::get_rho_tmin(mgi) * grid::get_modelcell_assocvolume_tmin(mgi);
-
-    globals::timesteps[nts].eps_positron_ana_power +=
-        cellmass * decay::get_particle_injection_rate(nonemptymgi, t_mid_nts, decay::DECAYTYPE_BETAPLUS);
-    globals::timesteps[nts].eps_electron_ana_power +=
-        cellmass * decay::get_particle_injection_rate(nonemptymgi, t_mid_nts, decay::DECAYTYPE_BETAMINUS);
-    globals::timesteps[nts].eps_alpha_ana_power +=
-        cellmass * decay::get_particle_injection_rate(nonemptymgi, t_mid_nts, decay::DECAYTYPE_ALPHA);
-    globals::timesteps[nts].eps_spfission_ana_power +=
-        cellmass * decay::get_particle_injection_rate(nonemptymgi, t_mid_nts, decay::DECAYTYPE_SPONTFISSION);
-
-    mtot += cellmass;
-
-    for (const auto decaytype : decay::all_decaytypes) {
-      // Qdot here has been multiplied by mass, so it is in units of [erg/s]
-      const double qdot_cell = decay::get_qdot_modelcell(nonemptymgi, t_mid_nts, decaytype) * cellmass;
-      globals::timesteps[nts].qdot_total += qdot_cell;
-      if (decaytype == decay::DECAYTYPE_BETAMINUS) {
-        globals::timesteps[nts].qdot_betaminus += qdot_cell;
-      } else if (decaytype == decay::DECAYTYPE_ALPHA) {
-        globals::timesteps[nts].qdot_alpha += qdot_cell;
-      } else if (decaytype == decay::DECAYTYPE_SPONTFISSION) {
-        globals::timesteps[nts].qdot_spfission += qdot_cell;
+  // Each analytic power [erg/s] is a sum over cells of cellmass * (rate coefficients dot the cell's initial
+  // nuclide mass fractions), which factors into (rate coefficients) dot (total initial mass of each nuclide in
+  // the gridded ejecta). The nuclide mass totals are time-independent, so compute them on the first call (each
+  // rank sums its cell block, then a reduction) and reuse them for every timestep.
+  static const auto [totmassnuclide_gridded, mtot] = [] {
+    auto totmassnuclide = std::vector<double>(decay::get_num_nuclides(), 0.);
+    double masstot = 0.;
+    const int nstart_nonempty = grid::get_nstart_nonempty(globals::my_rank);
+    const int ndo_nonempty = grid::get_ndo_nonempty(globals::my_rank);
+    for (int nonemptymgi = nstart_nonempty; nonemptymgi < (nstart_nonempty + ndo_nonempty); nonemptymgi++) {
+      const int mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
+      const double cellmass = grid::get_rho_tmin(mgi) * grid::get_modelcell_assocvolume_tmin(mgi);
+      masstot += cellmass;
+      for (int nucindex = 0; nucindex < decay::get_num_nuclides(); nucindex++) {
+        totmassnuclide[nucindex] += cellmass * grid::get_modelinitnucmassfrac(mgi, nucindex);
       }
     }
+    MPI_Allreduce_safe(std::span{totmassnuclide}, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce_safe(masstot, MPI_SUM, MPI_COMM_WORLD);
+    return std::pair{std::move(totmassnuclide), masstot};
+  }();
+
+  // The decay chain calculations depend only on the timestep midpoint, so the per-source-nuclide rate
+  // coefficients are computed once and each power is a single dot product with the nuclide mass totals
+  const double t_mid_nts = globals::timesteps[nts].mid;
+  const auto nuc_massfrac_coeffs = decay::calc_nuc_massfrac_coeffs(t_mid_nts);
+  const auto emissionratecoeffs = decay::calc_ana_emission_ratecoeffs(nuc_massfrac_coeffs);
+  const auto qdot_ratecoeffs = decay::calc_qdot_ratecoeffs(nuc_massfrac_coeffs);
+
+  // a channel's analytic power [erg/s] over the whole ejecta: sum over the source nuclides of the emission rate
+  // per gram per unit initial mass fraction [erg/s/g] times the total initial mass of that nuclide [g]
+  const auto total_power = [&](const std::vector<double>& ratecoeffs_per_source) {
+    double power = 0.;
+    for (ptrdiff_t nucindex = 0; nucindex < std::ssize(ratecoeffs_per_source); nucindex++) {
+      power += ratecoeffs_per_source[nucindex] * totmassnuclide_gridded[nucindex];
+    }
+    return power;
+  };
+
+  // power in [erg/s]
+  globals::timesteps[nts].eps_positron_ana_power = total_power(emissionratecoeffs.positron);
+  globals::timesteps[nts].eps_electron_ana_power = total_power(emissionratecoeffs.electron);
+  globals::timesteps[nts].eps_alpha_ana_power = total_power(emissionratecoeffs.alpha);
+  globals::timesteps[nts].eps_spfission_ana_power = total_power(emissionratecoeffs.spfission);
+  globals::timesteps[nts].qdot_betaminus = total_power(qdot_ratecoeffs[decay::DECAYTYPE_BETAMINUS]);
+  globals::timesteps[nts].qdot_alpha = total_power(qdot_ratecoeffs[decay::DECAYTYPE_ALPHA]);
+  globals::timesteps[nts].qdot_spfission = total_power(qdot_ratecoeffs[decay::DECAYTYPE_SPONTFISSION]);
+  globals::timesteps[nts].qdot_total = 0.;
+  for (const auto decaytype : decay::all_decaytypes) {
+    globals::timesteps[nts].qdot_total += total_power(qdot_ratecoeffs[decaytype]);
   }
-
-  // each MPI rank only calculated the contribution of a subset of cells
-  MPI_Allreduce_safe(globals::timesteps[nts].eps_positron_ana_power, MPI_SUM, MPI_COMM_WORLD);
-  MPI_Allreduce_safe(globals::timesteps[nts].eps_electron_ana_power, MPI_SUM, MPI_COMM_WORLD);
-  MPI_Allreduce_safe(globals::timesteps[nts].eps_alpha_ana_power, MPI_SUM, MPI_COMM_WORLD);
-  MPI_Allreduce_safe(globals::timesteps[nts].eps_spfission_ana_power, MPI_SUM, MPI_COMM_WORLD);
-  MPI_Allreduce_safe(globals::timesteps[nts].qdot_betaminus, MPI_SUM, MPI_COMM_WORLD);
-  MPI_Allreduce_safe(globals::timesteps[nts].qdot_alpha, MPI_SUM, MPI_COMM_WORLD);
-  MPI_Allreduce_safe(globals::timesteps[nts].qdot_spfission, MPI_SUM, MPI_COMM_WORLD);
-  MPI_Allreduce_safe(globals::timesteps[nts].qdot_total, MPI_SUM, MPI_COMM_WORLD);
-
-  MPI_Allreduce_safe(mtot, MPI_SUM, MPI_COMM_WORLD);
-  MPI_Barrier_allranks();
 
   if (my_rank == 0) {
     const bool any_fission = decay::decaytype_is_used(decay::DECAYTYPE_SPONTFISSION);
+
+    // each deposition.out column after the timestep number: the header name paired with the function computing
+    // the value for one timestep row, so that the header and the printed values cannot fall out of alignment
+    struct DepositionColumn {
+      const char* header = "";
+      std::function<double(const globals::TimeStep&)> value;
+      bool enabled = true;
+    };
+    const auto columns = std::vector<DepositionColumn>{
+        {.header = "tmid_days", .value = [](const auto& ts) { return ts.mid / DAY; }},
+        {.header = "tmid_s", .value = [](const auto& ts) { return ts.mid; }},
+        {
+            .header = "total_dep_Lsun",
+            .value =
+                [](const auto& ts) {
+                  return (ts.gamma_dep + ts.positron_dep + ts.electron_dep + ts.alpha_dep + ts.spfission_dep_discrete) /
+                         ts.width / LSUN;
+                },
+        },
+        {
+            .header = "gammadep_discrete_Lsun",
+            .value = [](const auto& ts) { return ts.gamma_dep_discrete / ts.width / LSUN; },
+        },
+        {.header = "gammadep_Lsun", .value = [](const auto& ts) { return ts.gamma_dep / ts.width / LSUN; }},
+        {.header = "positrondep_Lsun", .value = [](const auto& ts) { return ts.positron_dep / ts.width / LSUN; }},
+        {.header = "eps_positron_ana_Lsun", .value = [](const auto& ts) { return ts.eps_positron_ana_power / LSUN; }},
+        {.header = "elecdep_Lsun", .value = [](const auto& ts) { return ts.electron_dep / ts.width / LSUN; }},
+        {.header = "eps_elec_Lsun", .value = [](const auto& ts) { return ts.electron_emission / ts.width / LSUN; }},
+        {.header = "eps_elec_ana_Lsun", .value = [](const auto& ts) { return ts.eps_electron_ana_power / LSUN; }},
+        {.header = "alphadep_Lsun", .value = [](const auto& ts) { return ts.alpha_dep / ts.width / LSUN; }},
+        {.header = "eps_alpha_Lsun", .value = [](const auto& ts) { return ts.alpha_emission / ts.width / LSUN; }},
+        {.header = "eps_alpha_ana_Lsun", .value = [](const auto& ts) { return ts.eps_alpha_ana_power / LSUN; }},
+        {
+            .header = "eps_spfission_ana_Lsun",
+            .value = [](const auto& ts) { return ts.eps_spfission_ana_power / LSUN; },
+            .enabled = any_fission,
+        },
+        {.header = "eps_gamma_Lsun", .value = [](const auto& ts) { return ts.gamma_emission / ts.width / LSUN; }},
+        {.header = "Qdot_betaminus_ana_erg/s/g", .value = [&](const auto& ts) { return ts.qdot_betaminus / mtot; }},
+        {.header = "Qdotalpha_ana_erg/s/g", .value = [&](const auto& ts) { return ts.qdot_alpha / mtot; }},
+        {
+            .header = "Qdotspfission_ana_erg/s/g",
+            .value = [&](const auto& ts) { return ts.qdot_spfission / mtot; },
+            .enabled = any_fission,
+        },
+        {
+            .header = "eps_erg/s/g",
+            .value =
+                [&](const auto& ts) {
+                  return (ts.gamma_emission + ts.positron_emission + ts.electron_emission + ts.alpha_emission +
+                          ts.spfission_dep_discrete) /
+                         mtot / ts.width;
+                },
+        },
+        {.header = "Qdot_ana_erg/s/g", .value = [&](const auto& ts) { return ts.qdot_total / mtot; }},
+        {
+            .header = "positrondep_discrete_Lsun",
+            .value = [](const auto& ts) { return ts.positron_dep_discrete / ts.width / LSUN; },
+        },
+        {
+            .header = "elecdep_discrete_Lsun",
+            .value = [](const auto& ts) { return ts.electron_dep_discrete / ts.width / LSUN; },
+        },
+        {
+            .header = "alphadep_discrete_Lsun",
+            .value = [](const auto& ts) { return ts.alpha_dep_discrete / ts.width / LSUN; },
+        },
+        {
+            .header = "spfission_dep_discrete_Lsun",
+            .value = [](const auto& ts) { return ts.spfission_dep_discrete / ts.width / LSUN; },
+            .enabled = any_fission,
+        },
+    };
+
     auto dep_file = fstream_required("deposition.out.tmp", std::ios::out | std::ios::trunc);
-    std::print(dep_file,
-               "#ts tmid_days tmid_s total_dep_Lsun gammadep_discrete_Lsun gammadep_Lsun positrondep_Lsun "
-               "eps_positron_ana_Lsun elecdep_Lsun eps_elec_Lsun eps_elec_ana_Lsun alphadep_Lsun eps_alpha_Lsun "
-               "eps_alpha_ana_Lsun");
-    if (any_fission) {
-      std::print(dep_file, " eps_spfission_ana_Lsun");
-    }
-    std::print(dep_file, " eps_gamma_Lsun Qdot_betaminus_ana_erg/s/g Qdotalpha_ana_erg/s/g");
-    if (any_fission) {
-      std::print(dep_file, " Qdotspfission_ana_erg/s/g");
-    }
-    std::print(dep_file,
-               " eps_erg/s/g Qdot_ana_erg/s/g positrondep_discrete_Lsun elecdep_discrete_Lsun alphadep_discrete_Lsun");
-    if (any_fission) {
-      std::print(dep_file, " spfission_dep_discrete_Lsun");
+    std::print(dep_file, "#ts");
+    for (const auto& column : columns) {
+      if (column.enabled) {
+        std::print(dep_file, " {}", column.header);
+      }
     }
     std::println(dep_file, "");
 
     for (int i = 0; i <= nts; i++) {
-      const double t_mid = globals::timesteps[i].mid;
-      const double t_width = globals::timesteps[i].width;
-      const double total_dep =
-          (globals::timesteps[i].gamma_dep + globals::timesteps[i].positron_dep + globals::timesteps[i].electron_dep +
-           globals::timesteps[i].alpha_dep + globals::timesteps[i].spfission_dep_discrete);
-
-      const double epsilon_tot = (globals::timesteps[i].gamma_emission + globals::timesteps[i].positron_emission +
-                                  globals::timesteps[i].electron_emission + globals::timesteps[i].alpha_emission +
-                                  globals::timesteps[i].spfission_dep_discrete) /
-                                 mtot / t_width;
-
-      std::print(dep_file, "{} {:g} {:g} {:g}", i, t_mid / DAY, t_mid, total_dep / t_width / LSUN);
-
-      std::print(dep_file, " {:g} {:g}", globals::timesteps[i].gamma_dep_discrete / t_width / LSUN,
-                 globals::timesteps[i].gamma_dep / t_width / LSUN);
-
-      std::print(dep_file, " {:g} {:g}", globals::timesteps[i].positron_dep / t_width / LSUN,
-                 globals::timesteps[i].eps_positron_ana_power / LSUN);
-
-      std::print(dep_file, " {:g} {:g} {:g}", globals::timesteps[i].electron_dep / t_width / LSUN,
-                 globals::timesteps[i].electron_emission / t_width / LSUN,
-                 globals::timesteps[i].eps_electron_ana_power / LSUN);
-
-      std::print(dep_file, " {:g} {:g} {:g}", globals::timesteps[i].alpha_dep / t_width / LSUN,
-                 globals::timesteps[i].alpha_emission / t_width / LSUN,
-                 globals::timesteps[i].eps_alpha_ana_power / LSUN);
-
-      if (any_fission) {
-        std::print(dep_file, " {:g}", globals::timesteps[i].eps_spfission_ana_power / LSUN);
-      } else {
-        assert_testmodeonly(globals::timesteps[i].eps_spfission_ana_power == 0.);
+      const auto& ts = globals::timesteps[i];
+      if (!any_fission) {
+        assert_testmodeonly(ts.eps_spfission_ana_power == 0.);
+        assert_testmodeonly(ts.qdot_spfission == 0.);
       }
-
-      std::print(dep_file, " {:g} {:g} {:g}", globals::timesteps[i].gamma_emission / t_width / LSUN,
-                 globals::timesteps[i].qdot_betaminus / mtot, globals::timesteps[i].qdot_alpha / mtot);
-
-      if (any_fission) {
-        std::print(dep_file, " {:g}", globals::timesteps[i].qdot_spfission / mtot);
-      } else {
-        assert_testmodeonly(globals::timesteps[i].qdot_spfission == 0.);
+      std::print(dep_file, "{}", i);
+      for (const auto& column : columns) {
+        if (column.enabled) {
+          std::print(dep_file, " {:g}", column.value(ts));
+        }
       }
-
-      std::print(dep_file, " {:g} {:g} {:g} {:g} {:g}", epsilon_tot, globals::timesteps[i].qdot_total / mtot,
-                 globals::timesteps[i].positron_dep_discrete / t_width / LSUN,
-                 globals::timesteps[i].electron_dep_discrete / t_width / LSUN,
-                 globals::timesteps[i].alpha_dep_discrete / t_width / LSUN);
-
-      if (any_fission) {
-        std::print(dep_file, " {:g}", globals::timesteps[i].spfission_dep_discrete / t_width / LSUN);
-      }
-
       std::println(dep_file, "");
     }
     dep_file.close();
