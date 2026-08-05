@@ -281,7 +281,7 @@ void write_deposition_file() {
     // each deposition.out column after the timestep number: the header name paired with the function computing
     // the value for one timestep row, so that the header and the printed values cannot fall out of alignment
     struct DepositionColumn {
-      const char* header;
+      const char* header = "";
       std::function<double(const globals::TimeStep&)> value;
       bool enabled = true;
     };
