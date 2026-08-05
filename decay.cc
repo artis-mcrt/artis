@@ -1278,7 +1278,11 @@ void calc_cell_nuc_massfracs(const int nonemptymgi, const NucMassFracCoeffs& nuc
   assert_testmodeonly(std::ssize(nuc_massfrac_coeffs.decaypath_coeff) == num_decaypaths);
   const auto mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
 
-  std::ranges::fill(massfracs, 0.);
+  // start from each nuclide's own surviving initial abundance, then add the decay path contributions
+  for (int nucindex = 0; nucindex < num_nuclides; nucindex++) {
+    massfracs[nucindex] =
+        nuc_massfrac_coeffs.nuc_survivingfrac[nucindex] * grid::get_modelinitnucmassfrac(mgi, nucindex);
+  }
   for (int decaypathindex = 0; decaypathindex < num_decaypaths; decaypathindex++) {
     const double top_initmassfrac = grid::get_modelinitnucmassfrac(mgi, decaypath_topnucindex[decaypathindex]);
     massfracs[decaypath_endnucindex[decaypathindex]] +=
@@ -1286,10 +1290,6 @@ void calc_cell_nuc_massfracs(const int nonemptymgi, const NucMassFracCoeffs& nuc
     if (he4_nucindex >= 0) {
       massfracs[he4_nucindex] += nuc_massfrac_coeffs.decaypath_he4_coeff[decaypathindex] * top_initmassfrac;
     }
-  }
-  for (int nucindex = 0; nucindex < num_nuclides; nucindex++) {
-    massfracs[nucindex] +=
-        nuc_massfrac_coeffs.nuc_survivingfrac[nucindex] * grid::get_modelinitnucmassfrac(mgi, nucindex);
   }
 }
 
