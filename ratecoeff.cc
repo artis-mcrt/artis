@@ -145,7 +145,8 @@ void precalculate_rate_coefficient_integrals() {
 #ifdef _OPENMP
 #pragma omp parallel for
 #endif
-    for (int ion = 0; ion < nions; ion++) {
+    // the topmost ion has no continua to ionise into, so it has no rate coefficients to integrate
+    for (int ion = 0; ion < nions - 1; ion++) {
       const int nlevels = get_nlevels_ionising(element, ion);
 
       for (int level = 0; level < nlevels; level++) {

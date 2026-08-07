@@ -769,9 +769,17 @@ auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixsli
             photoionisation_crosssection_fromtable(get_phixs_table(allcont_uniquelevelindex[i]), nu_edge, nu);
 
         double corrfactor = 1.;  // default to no subtraction of stimulated recombination
-        double modified_departure_ratio = get_cellcache(nonemptymgi).allcont_modified_departureratios[i];
 
-        if (!USECELLHISTANDUPDATEPHIXSLIST || modified_departure_ratio < 0) {
+        // negative means "not computed for this cell yet", which is what cellcacheslot_populate() fills the
+        // cache with. Only the cellcache path has a stored ratio to reuse: without it there is no cache entry
+        // belonging to this cell to read, because in single-slot mode get_cellcache() returns the calling
+        // rank's one shared slot, which generally holds a different cell entirely.
+        double modified_departure_ratio = -1.;
+        if constexpr (USECELLHISTANDUPDATEPHIXSLIST) {
+          modified_departure_ratio = get_cellcache(nonemptymgi).allcont_modified_departureratios[i];
+        }
+
+        if (modified_departure_ratio < 0) {
           const int upper = allcont_upperlevel[i];
           const double nnupperionlevel = USECELLHISTANDUPDATEPHIXSLIST
                                              ? get_cellcache_levelpop(nonemptymgi, element, ion + 1, upper)

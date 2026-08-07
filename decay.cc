@@ -547,12 +547,6 @@ auto write_nuclides_list() {
 
 }  // anonymous namespace
 
-[[nodiscard]] auto get_decay_neutrino_frac(const int nucindex, const DecayType decaytype) -> double {
-  // subtract fraction of other decay products, nucdecayenergy() excludes neutrinos!
-  const double nu_frac = 1. - (nucdecayenergy(nucindex, decaytype) / nuclides[nucindex].endecay_q[decaytype]);
-  return nu_frac;
-}
-
 [[gnu::pure]] [[nodiscard]] auto get_num_nuclides() -> ptrdiff_t { return std::ssize(nuclides); }
 
 [[nodiscard]] auto get_elname(const int z) -> std::string {

@@ -2299,9 +2299,15 @@ void init_grid() {
     assign_initial_temperatures();
   }
 
-  // when mapping 1D spherical or 2D cylindrical model onto cubic grid, scale up the
-  // radioactive abundances to account for the missing masses in
-  // the model cells that are not associated with any propagation cells
+  // when mapping a 1D spherical model onto a cubic grid, rescale the nuclide abundances so that each nuclide's
+  // total mass matches the input model again. Every propagation cell takes the model shell that its centre falls
+  // in, so the volume associated with a shell is a staircase approximation of the true shell volume and the
+  // mapped mass of each nuclide differs from the input.
+  //
+  // NB: a 2D cylindrical model is mapped onto the cubic grid by the same centre-of-cell rule
+  // (map_2dmodelto3dgrid) and loses mass the same way, but is deliberately not corrected here, because doing so
+  // would change existing results. The "Total grid-mapped mass" line logged below shows the size of the
+  // discrepancy for any model.
   if (prop_gridtype == GridType::CARTESIAN3D && get_modelgridtype() == GridType::SPHERICAL1D &&
       globals::rank_in_node == 0) {
     for (int nucindex = 0; nucindex < decay::get_num_nuclides(); nucindex++) {

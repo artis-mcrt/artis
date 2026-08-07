@@ -1483,7 +1483,9 @@ void nltepop_apply_solution(const int element, const int nonemptymgi, const int 
 // assembly) only weaken that guarantee locally; any resulting invalid populations are policed by the caller.
 // rate_matrix is overwritten. On success, returns std::nullopt and fills vec_x with the stationary distribution
 // normalised to a sum of one. On failure, returns the index of a state with no departure rate into the remaining
-// chain (a reducible/disconnected matrix) and leaves vec_x untouched.
+// chain (a reducible/disconnected matrix) and leaves vec_x untouched. An off-diagonal that grows to infinity
+// during the elimination is not a failure here: it is passed through as a non-finite distribution for the
+// caller's population validity check to handle, rather than being rescued (see the back-substitution below).
 // Defined with external linkage (declared in nltepop.h) so that unittests.cc can exercise it.
 auto gth_stationary_distribution(std::span<double> rate_matrix, std::span<double> vec_x)
     -> std::optional<std::ptrdiff_t> {
@@ -1532,7 +1534,15 @@ auto gth_stationary_distribution(std::span<double> rate_matrix, std::span<double
     // preserved, weights that underflow to zero are at least ~1e58 times smaller than the largest weight and
     // physically negligible, and capping every stored weight at 1e250 keeps the normalising sum below from
     // overflowing.
-    while (!std::isfinite(inflow) || inflow > departure_sum * 1e250) {
+    //
+    // The number of passes is capped because rescaling cannot rescue every non-finite inflow. Once a weight has
+    // underflowed to zero, an infinite rate out of that state gives inflow = 0 * inf = NaN, which survives any
+    // number of further passes, so an uncapped loop would spin here forever. Three passes already span the whole
+    // dynamic range of a double, so the cap never cuts a rescue that would have succeeded. Giving up leaves a
+    // non-finite population for solution_pops_are_valid() to reject or replace, as for any other unusable solve.
+    constexpr int max_rescale_passes = 8;
+    for (int pass = 0; pass < max_rescale_passes && (!std::isfinite(inflow) || inflow > departure_sum * 1e250);
+         pass++) {
       for (auto j = 0Z; j < k; j++) {
         vec_x[j] *= 1e-200;
       }
