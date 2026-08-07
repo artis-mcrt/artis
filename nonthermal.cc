@@ -53,6 +53,17 @@ constexpr int SFPTS = 4096;
 constexpr double SF_EMIN = 0.1;
 constexpr double SF_EMAX = 16000;
 
+// number of nodes resolving the integral over the secondary energy epsilon in the first term of Kozma &
+// Fransson equation 6. That integral spans at most SF_EMIN, far narrower than one cell of the solution
+// energy grid, so it needs a sub-grid of its own rather than being sampled on that grid.
+constexpr int NPTS_EPSILON_SUBGRID = 64;
+
+// number of nodes for the integral over E in [0, SF_EMIN] in the third term of Kozma & Fransson equation 3.
+// This is a property of that integral alone, not of the solution energy grid. Each node costs a full N_e()
+// over every ion and shell, so it dominates the cost of calculate_frac_heating().
+constexpr int NPTS_SUB_E0_INTEGRAL = 17;
+static_assert(NPTS_SUB_E0_INTEGRAL > 1);
+
 // set true to divide up the mean Auger energy by the number of electrons that come out
 constexpr bool SF_AUGER_CONTRIBUTION_DISTRIBUTE_EN = false;
 
@@ -1037,23 +1048,47 @@ auto N_e(const int nonemptymgi, const double energy, const std::array<double, SF
             const double J = get_J(Z, ionstage, ionpot_ev);
             const double lambda = std::min(SF_EMAX - energy_ev, energy_ev + ionpot_ev);
 
-            const int integral1startindex = get_energyindex_ev_lteq(ionpot_ev);
-            const int integral1stopindex = get_energyindex_ev_lteq(lambda);
+            // integral from ionpot up to lambda, over its own sub-grid. This domain is only
+            // (lambda - ionpot_ev) <= energy_ev < SF_EMIN wide, some forty times narrower than one cell of
+            // the solution grid, so sampling it on that grid was wrong twice over: it gave a full DELTA_E of
+            // weight to the whole domain, and it snapped the limits down onto the grid point at or below
+            // ionpot_ev, where Psecondary() sees a negative secondary energy and returns zero. The term was
+            // therefore dropped entirely for most shells, and for the few whose threshold sits just below a
+            // grid point it instead contributed that oversized weight next to the 1/atan((e_p - I) / 2J)
+            // normalisation pole. Midpoint sampling keeps every node strictly inside the domain, away from
+            // both of those edges.
+            if (lambda > ionpot_ev) {
+              const double delta_epsilon = (lambda - ionpot_ev) / NPTS_EPSILON_SUBGRID;
+              for (int i = 0; i < NPTS_EPSILON_SUBGRID; i++) {
+                const double endash = ionpot_ev + ((i + 0.5) * delta_epsilon);
 
-            // integral from ionpot up to lambda
-            for (int i = integral1startindex; i <= integral1stopindex; i++) {
-              const double endash = engrid(i);
-
-              N_e_ion += get_y(yfunc, energy_ev + endash) * xs_impactionisation(energy_ev + endash, collionrow) *
-                         Psecondary(energy_ev + endash, endash, ionpot_ev, J) * DELTA_E;
+                N_e_ion += get_y(yfunc, energy_ev + endash) * xs_impactionisation(energy_ev + endash, collionrow) *
+                           Psecondary(energy_ev + endash, endash, ionpot_ev, J) * delta_epsilon;
+              }
             }
 
-            // integral from 2E + I up to E_max
-            const int integral2startindex = get_energyindex_ev_lteq((2 * energy_ev) + ionpot_ev);
-            for (int i = integral2startindex; i < SFPTS; i++) {
-              const double endash = engrid(i);
-              N_e_ion += yfunc[i] * xs_impactionisation(endash, collionrow) *
-                         Psecondary(endash, energy_ev + ionpot_ev, ionpot_ev, J) * DELTA_E;
+            // integral from 2E + I up to E_max. The lower limit falls between grid points, so the
+            // grid-aligned sum starts at the first point at or above it and the leading partial cell is
+            // added separately. Starting at the point at or below the limit instead placed a node under the
+            // ionisation threshold: usually harmless because Psecondary() returns zero there, but for a
+            // shell whose threshold falls within 2E of a grid point that node cleared the e_p > I guard and
+            // contributed a spike near the normalisation pole in place of a finite value.
+            const double integral2_min = (2 * energy_ev) + ionpot_ev;
+            if (integral2_min < SF_EMAX) {
+              const int integral2startindex = get_energyindex_ev_gteq(integral2_min);
+
+              const double partialcellwidth = engrid(integral2startindex) - integral2_min;
+              if (partialcellwidth > 0.) {
+                const double endash = integral2_min + (partialcellwidth / 2.);
+                N_e_ion += get_y(yfunc, endash) * xs_impactionisation(endash, collionrow) *
+                           Psecondary(endash, energy_ev + ionpot_ev, ionpot_ev, J) * partialcellwidth;
+              }
+
+              for (int i = integral2startindex; i < SFPTS; i++) {
+                const double endash = engrid(i);
+                N_e_ion += yfunc[i] * xs_impactionisation(endash, collionrow) *
+                           Psecondary(endash, energy_ev + ionpot_ev, ionpot_ev, J) * DELTA_E;
+              }
             }
           }
         }
@@ -1088,13 +1123,16 @@ auto calculate_frac_heating(const int nonemptymgi, const std::array<double, SFPT
   frac_heating_Einit += SF_EMIN * get_y(yfunc, SF_EMIN) * (electron_loss_rate(SF_EMIN * EV, nne) / EV);
 
   double N_e_contrib_Einit = 0.;
-  // third term (integral from zero to SF_EMIN)
-  constexpr int nsteps = (static_cast<int>(SF_EMIN / DELTA_E) + 1) * 10;
-  static_assert(nsteps > 0);
-  constexpr double delta_endash = SF_EMIN / nsteps;
-  for (int j = 1; j < nsteps; j++) {
+  // third term (integral from zero to SF_EMIN), on a sub-grid of its own. Sizing the node count from
+  // DELTA_E tied it to the solution energy grid, which this integral has nothing to do with, and left only
+  // nine interior nodes. Integrating by trapezoid rather than by summing interior nodes also recovers the
+  // half node that was dropped at the SF_EMIN end; the zero end costs nothing, since the integrand carries
+  // a factor of endash and so vanishes there.
+  constexpr double delta_endash = SF_EMIN / (NPTS_SUB_E0_INTEGRAL - 1);
+  for (int j = 1; j < NPTS_SUB_E0_INTEGRAL; j++) {
     const double endash = delta_endash * j;
-    N_e_contrib_Einit += N_e(nonemptymgi, endash * EV, yfunc) * endash * delta_endash;
+    const double weight = (j == (NPTS_SUB_E0_INTEGRAL - 1)) ? 0.5 : 1.;
+    N_e_contrib_Einit += weight * N_e(nonemptymgi, endash * EV, yfunc) * endash * delta_endash;
   }
   frac_heating_Einit += N_e_contrib_Einit;
 
