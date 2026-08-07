@@ -11,6 +11,7 @@
 #include <cstddef>
 #include <cstdlib>
 #include <functional>
+#include <limits>
 #include <optional>
 #include <print>
 #include <span>
@@ -591,6 +592,25 @@ void test_gth_solver() {
     std::vector<double> vec_x(4, 0.);
     const auto result = gth_stationary_distribution(matrix, vec_x);
     check(result.has_value() && result.value() == 2, "GTH detects decoupled blocks of states");
+  }
+
+  {
+    // an infinite rate reaching a weight that the overflow rescaling has already driven to zero gives an inflow of
+    // 0 * inf = NaN, which no further rescaling can clear. The rescue must give up after a bounded number of
+    // passes and hand the non-finite result to the caller's population check: an unbounded loop hangs here rather
+    // than returning a wrong answer, so reaching the checks below at all is most of what this pins down.
+    // States 0 and 1 carry the beyond-range ratio that forces a rescale, and the rate from 0 to 2 is infinite.
+    // Row 2 is never rewritten by the elimination (it is eliminated first), so that infinity survives into the
+    // back-substitution for state 2.
+    std::vector<double> matrix(3 * 3, 0.);
+    set_rate(matrix, 3, 0, 1, 1e200);
+    set_rate(matrix, 3, 1, 0, 1e-200);
+    set_rate(matrix, 3, 2, 0, 1.);
+    set_rate(matrix, 3, 0, 2, std::numeric_limits<double>::infinity());
+    std::vector<double> vec_x(3, 0.);
+    const auto result = gth_stationary_distribution(matrix, vec_x);
+    check(!result.has_value(), "GTH terminates on an unrescuable non-finite inflow");
+    check(!std::isfinite(vec_x[2]), "GTH passes the unrescuable inflow through as a non-finite population");
   }
 
   {

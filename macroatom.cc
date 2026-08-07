@@ -722,7 +722,8 @@ void macroatom_open_file() {
     }
 
     // forbidden transitions: magnetic dipole, electric quadrupole... Axelrod's approximation (thesis 1980),
-    // i.e. the effective-collision-strength form below with an assumed Omega = 0.01 * lowerstatweight.
+    // i.e. the effective-collision-strength form below with an assumed Omega = 0.01 * lowerstatweight *
+    // upperstatweight, so that Omega / g_upper leaves the 0.01 * lowerstatweight below.
     // This is the detailed-balance reverse of the branch in col_excitation_ratecoeff().
     return clumpednne * 8.629e-6 * 0.01 * lowerstatweight / std::sqrt(T_e);
   }
@@ -764,7 +765,10 @@ void macroatom_open_file() {
     }
 
     // forbidden transitions: magnetic dipole, electric quadrupole... Axelrod's approximation (thesis 1980),
-    // i.e. the effective-collision-strength form below with an assumed Omega = 0.01 * upperstatweight
+    // i.e. the effective-collision-strength form below with an assumed Omega = 0.01 * lowerstatweight *
+    // upperstatweight, so that Omega / g_lower leaves the 0.01 * upperstatweight below. The same Omega is
+    // assumed by the matching branch of col_deexcitation_ratecoeff(), which is what makes the pair satisfy
+    // detailed balance: C_lu / C_ul = (g_upper / g_lower) * exp(-eoverkt).
     return clumpednne * 8.629e-6 * 0.01 * std::exp(-eoverkt) * upperstatweight / std::sqrt(T_e);
   }
 
