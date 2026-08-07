@@ -1048,15 +1048,17 @@ auto N_e(const int nonemptymgi, const double energy, const std::array<double, SF
             const double J = get_J(Z, ionstage, ionpot_ev);
             const double lambda = std::min(SF_EMAX - energy_ev, energy_ev + ionpot_ev);
 
-            // integral from ionpot up to lambda, over its own sub-grid. This domain is only
-            // (lambda - ionpot_ev) <= energy_ev < SF_EMIN wide, some forty times narrower than one cell of
-            // the solution grid, so sampling it on that grid was wrong twice over: it gave a full DELTA_E of
-            // weight to the whole domain, and it snapped the limits down onto the grid point at or below
-            // ionpot_ev, where Psecondary() sees a negative secondary energy and returns zero. The term was
-            // therefore dropped entirely for most shells, and for the few whose threshold sits just below a
-            // grid point it instead contributed that oversized weight next to the 1/atan((e_p - I) / 2J)
-            // normalisation pole. Midpoint sampling keeps every node strictly inside the domain, away from
-            // both of those edges.
+            // integral from ionpot up to lambda, over its own sub-grid. This is an integral over the
+            // secondary energy epsilon, not over the solution grid variable (y is sampled at energy_ev +
+            // endash by interpolation), so the left-endpoint rectangle convention used elsewhere in this
+            // module does not apply to it. The domain is only (lambda - ionpot_ev) <= energy_ev < SF_EMIN
+            // wide, some forty times narrower than one cell of the solution grid, so sampling it on that
+            // grid was wrong twice over: it gave a full DELTA_E of weight to the whole domain, and it
+            // snapped both limits down onto the grid point at or below ionpot_ev, where Psecondary() sees a
+            // negative secondary energy and returns zero. The term was therefore dropped entirely for the
+            // great majority of shells, and the few whose threshold happens to have a grid point just above
+            // it contributed instead with that oversized weight, too large by DELTA_E / energy_ev. Midpoint
+            // sampling keeps every node strictly inside the domain and away from both limits.
             if (lambda > ionpot_ev) {
               const double delta_epsilon = (lambda - ionpot_ev) / NPTS_EPSILON_SUBGRID;
               for (int i = 0; i < NPTS_EPSILON_SUBGRID; i++) {
@@ -1067,22 +1069,18 @@ auto N_e(const int nonemptymgi, const double energy, const std::array<double, SF
               }
             }
 
-            // integral from 2E + I up to E_max. The lower limit falls between grid points, so the
-            // grid-aligned sum starts at the first point at or above it and the leading partial cell is
-            // added separately. Starting at the point at or below the limit instead placed a node under the
-            // ionisation threshold: usually harmless because Psecondary() returns zero there, but for a
-            // shell whose threshold falls within 2E of a grid point that node cleared the e_p > I guard and
-            // contributed a spike near the normalisation pole in place of a finite value.
+            // integral from 2E + I up to E_max. Unlike the epsilon integral above this one runs over the
+            // solution grid variable and reads yfunc[i] directly, so it keeps the left-endpoint rectangle
+            // convention described at the top of this file, which the matrix that yfunc was solved from
+            // uses. Sub-cell refinement here would leave calculate_frac_heating() discretised differently
+            // from that matrix, and frac_sum only tests energy conservation to the extent that the two
+            // share a discretisation. Honouring the lower limit therefore means starting at the first grid
+            // point at or above it, as get_xs_ionisation_vector() does for its own threshold, rather than
+            // adding a partial cell. Starting at the point at or below it instead put a node below the
+            // limit, contributing a whole DELTA_E of weight from outside the integration range.
             const double integral2_min = (2 * energy_ev) + ionpot_ev;
             if (integral2_min < SF_EMAX) {
               const int integral2startindex = get_energyindex_ev_gteq(integral2_min);
-
-              const double partialcellwidth = engrid(integral2startindex) - integral2_min;
-              if (partialcellwidth > 0.) {
-                const double endash = integral2_min + (partialcellwidth / 2.);
-                N_e_ion += get_y(yfunc, endash) * xs_impactionisation(endash, collionrow) *
-                           Psecondary(endash, energy_ev + ionpot_ev, ionpot_ev, J) * partialcellwidth;
-              }
 
               for (int i = integral2startindex; i < SFPTS; i++) {
                 const double endash = engrid(i);

@@ -768,8 +768,6 @@ auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixsli
         const double sigma_bf =
             photoionisation_crosssection_fromtable(get_phixs_table(allcont_uniquelevelindex[i]), nu_edge, nu);
 
-        double corrfactor = 1.;  // default to no subtraction of stimulated recombination
-
         // negative means "not computed for this cell yet", which is what cellcacheslot_populate() fills the
         // cache with. Only the cellcache path has a stored ratio to reuse: without it there is no cache entry
         // belonging to this cell to read, because in single-slot mode get_cellcache() returns the calling
@@ -794,7 +792,8 @@ auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixsli
         }
 
         const double stimfactor = modified_departure_ratio * exp(-HOVERKB * (nu - nu_edge) / T_e);
-        corrfactor = std::max(0., 1 - stimfactor);  // photoionisation minus stimulated recombination
+        // photoionisation minus stimulated recombination
+        const double corrfactor = std::max(0., 1 - stimfactor);
 
         sigma_contr = sigma_bf * allcont_probability[i] * corrfactor;
 
