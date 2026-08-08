@@ -23,7 +23,7 @@
 
 #pragma clang unsafe_buffer_usage begin
 #include <Eigen/Core>
-#include <Eigen/Dense>
+#include <Eigen/LU>
 #pragma clang unsafe_buffer_usage end
 
 #include "artisoptions.h"
