@@ -12,10 +12,10 @@ jobs:
         steps:
             - name: Check checksum update token
               env:
-                  CHECKSUM_UPDATE_TOKEN: ${{ secrets.CHECKSUM_UPDATE_TOKEN }}
+                  CHECKSUM_PUSH_TOKEN: ${{ secrets.GH_TOKEN }}
               run: |
-                  if [ -z "$CHECKSUM_UPDATE_TOKEN" ]; then
-                      echo "::error::Configure the CHECKSUM_UPDATE_TOKEN repository secret with Contents read/write access."
+                  if [ -z "$CHECKSUM_PUSH_TOKEN" ]; then
+                      echo "::error::The GH_TOKEN organisation secret is not available to this repository. It needs Contents read/write access."
                       exit 1
                   fi
 
@@ -23,7 +23,10 @@ jobs:
               with:
                   # A push authenticated with github.token does not trigger workflows.
                   # Use a separate token so the checksum commit gets normal push checks.
-                  token: ${{ secrets.CHECKSUM_UPDATE_TOKEN }}
+                  # NB: this is the GH_TOKEN *organisation secret*, which is not the same thing as the GH_TOKEN
+                  # environment variable that the gh CLI reads in the steps below. Those deliberately keep the
+                  # job's own github.token, which is all the read-only API calls there need.
+                  token: ${{ secrets.GH_TOKEN }}
 
             - name: Find latest CI checksums artifact for this branch
               id: findartifact
