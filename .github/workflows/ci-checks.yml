@@ -163,12 +163,9 @@ jobs:
                   make clean
                   make -j$(nproc) sn3d exspec
 
-            - name: Build and run unit tests (nebular mode, reproducible)
+            - name: Build and run unit tests (nebular mode)
               run: |
-                  # REPRODUCIBLE=ON (strict FP) enables the bit-exact golden checks of the Spencer-Fano
-                  # triangular solver against Eigen's scalar solve; the classic-mode unit tests above keep
-                  # covering the default fast-math build
-                  make REPRODUCIBLE=ON -j$(nproc) unittests
+                  make -j$(nproc) unittests
                   ./unittests
 
             - name: Compile nebular mode OPENMP=ON

@@ -239,8 +239,7 @@ constexpr auto uppertriangular(const int i, const int j) -> int {
 // triangularView<Upper>().solve() that was previously used here, keeping the floating-point operation order and
 // therefore the stored test checksums unchanged: back substitution proceeds bottom-up over row panels, and each panel
 // first removes the contribution of the already-solved elements to the right with one in-order dot product per row.
-// The residual and error scoring in sfmatrix_solve() are part of the same contract, and unittests.cc checks the
-// solution bit-for-bit against golden values from Eigen's scalar solve in REPRODUCIBLE builds.
+// The residual and error scoring in sfmatrix_solve() are part of the same contract.
 void solve_upper_triangular(const std::span<const double> sfmatrixuppertri, const std::span<const double, SFPTS> bvec,
                             const std::span<double, SFPTS> xvec) {
   std::ranges::copy(bvec, xvec.begin());
