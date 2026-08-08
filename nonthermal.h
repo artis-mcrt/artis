@@ -5,6 +5,7 @@
 
 #include <cstddef>
 #include <cstdio>
+#include <span>
 
 #include "constants.h"
 #include "packet.h"
@@ -16,6 +17,15 @@ struct AnaEmissionPowerPerMass;
 }  // namespace decay
 
 namespace nonthermal {
+// number of energy points in the Spencer-Fano solution vector
+inline constexpr int SFPTS = 4096;
+
+// Solve U * x = b for x, where U is a compacted upper triangular matrix: only the upper triangle is stored, with
+// element (i, j) at flattened index (SFPTS * i) - (i * (i + 1) / 2) + j. Externally visible so that unittests.cc can
+// check the solution.
+void solve_upper_triangular(std::span<const double> uppertri, std::span<const double, SFPTS> bvec,
+                            std::span<double, SFPTS> xvec);
+
 void init();
 // Assemble and solve the cell's discretised Spencer-Fano degradation balance, including Coulomb heating, excitation,
 // ionisation, secondary electrons, and Auger electrons. Convert the electron flux into deposition fractions and
