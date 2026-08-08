@@ -12,8 +12,9 @@
 #include <vector>
 
 #pragma clang unsafe_buffer_usage begin
-#include <boost/math/tools/toms748_solve.hpp>
 #include <cstdint>
+
+#include "toms748.h"
 #pragma clang unsafe_buffer_usage end
 
 #include "artisoptions.h"
@@ -283,8 +284,7 @@ void call_T_e_finder(const int nonemptymgi, const double t_current, HeatingCooli
     // bracketing solver with inverse cubic interpolation, so it keeps the root bracketed like bisection
     // but converges superlinearly on the smooth part of the residual
     uintmax_t iternum = maxit;
-    auto result = boost::math::tools::toms748_solve(f_T_e, MINTEMP, MAXTEMP, f_T_min, f_T_max,
-                                                    ftol<TEMPERATURE_SOLVER_ACCURACY>, iternum);
+    auto result = toms748_solve(f_T_e, MINTEMP, MAXTEMP, f_T_min, f_T_max, ftol<TEMPERATURE_SOLVER_ACCURACY>, iternum);
     T_e = 0.5 * (result.first + result.second);
     if (iternum >= maxit) {
       printlnlog("[warning] call_T_e_finder: T_e did not converge within {} iterations. interval [{:g}, {:g}] [K]",

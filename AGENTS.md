@@ -26,7 +26,7 @@ same sources:
 - `data/`: physics data bundled with the code (decay data, gamma spectra, etc.).
 - `tests/`: integration test setups (`setup_*.sh` plus `*_inputfiles/` folders).
 - `scripts/`: HPC cluster job scripts and helper utilities.
-- `third_party/`: vendored Eigen and Boost. Never edit or lint these.
+- `third_party/`: vendored Eigen and Random123. Never edit or lint these.
 
 ## Building
 

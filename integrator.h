@@ -1,4 +1,4 @@
-// The numerical integrator used for the rate coefficient integrals: Boost's Gauss-Kronrod
+// The numerical integrator used for the rate coefficient integrals: adaptive Gauss-Kronrod
 // quadrature by default, or Simpson's rule when USE_SIMPSON_INTEGRATOR is defined.
 
 #ifndef INTEGRATOR_H
@@ -41,19 +41,13 @@ constexpr auto simpson_integrator(const F& func_integrand, const double a, const
   return integral;
 }
 #else
-#include <cstdlib>
-
-#pragma clang unsafe_buffer_usage begin
-#include <boost/math/quadrature/gauss_kronrod.hpp>
-#pragma clang unsafe_buffer_usage end
+#include "gausskronrod.h"
 
 #endif
 
 template <int GKNPOINTS = 61, class F>
 auto integrator(const F& func_integrand, const double a, const double b, [[maybe_unused]] const double epsrel,
                 double* abserr) -> double {
-  static_assert(GKNPOINTS == 15 || GKNPOINTS == 31 || GKNPOINTS == 41 || GKNPOINTS == 51 || GKNPOINTS == 61,
-                "Unsupported GKNPOINTS value");
 #ifdef USE_SIMPSON_INTEGRATOR
   // need an odd number for Simpson rule
   const int samplecount = std::max(3, (globals::NPHIXSPOINTS * 2) + 1);
@@ -63,8 +57,8 @@ auto integrator(const F& func_integrand, const double a, const double b, [[maybe
 
 #else
 
-  // Boost's Gauss-Kronrod integrator
-  return boost::math::quadrature::gauss_kronrod<double, GKNPOINTS>::integrate(func_integrand, a, b, 15, epsrel, abserr);
+  // adaptive Gauss-Kronrod integrator (bit-identical extraction of Boost.Math's gauss_kronrod::integrate)
+  return gauss_kronrod_integrate<GKNPOINTS>(func_integrand, a, b, 15, epsrel, abserr);
 
 #endif
 }

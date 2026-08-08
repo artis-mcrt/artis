@@ -12,7 +12,7 @@
 #include <vector>
 
 #pragma clang unsafe_buffer_usage begin
-#include <boost/math/tools/toms748_solve.hpp>
+#include "toms748.h"
 #pragma clang unsafe_buffer_usage end
 
 #include "artisoptions.h"
@@ -272,7 +272,7 @@ void set_groundlevelpops_neutral(const ptrdiff_t nonemptymgi) {
 }
 
 // Solve for the free electron density nne in [0, nne_max] that makes the ion balance self-consistent, using the
-// Boost TOMS 748 root-finder on the charge-conservation residual.
+// TOMS 748 root-finder on the charge-conservation residual.
 auto find_converged_nne(const int nonemptymgi, double nne_max, const bool force_lte) -> float {
   const auto f_nne = [nonemptymgi, force_lte](const double nne) { return nne_solution_f(nne, nonemptymgi, force_lte); };
 
@@ -285,8 +285,7 @@ auto find_converged_nne(const int nonemptymgi, double nne_max, const bool force_
   constexpr auto maxit = 50U;
 
   uintmax_t iter = maxit;
-  const auto result =
-      boost::math::tools::toms748_solve(f_nne, nne_min, nne_max, f_nne_min, f_nne_max, ftol<fractional_accuracy>, iter);
+  const auto result = toms748_solve(f_nne, nne_min, nne_max, f_nne_min, f_nne_max, ftol<fractional_accuracy>, iter);
   const double nne_solution = 0.5 * (result.first + result.second);
   if (iter >= maxit && nne_maxit_warned.is_first_occurrence(nonemptymgi)) {
     printlnlog(
