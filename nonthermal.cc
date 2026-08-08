@@ -41,8 +41,7 @@ namespace nonthermal {
 
 namespace {
 
-// number of energy points in the Spencer-Fano solution vector
-constexpr int SFPTS = 4096;
+// SFPTS (the number of energy points in the Spencer-Fano solution vector) is defined in nonthermal.h
 
 // the minimum and maximum energies for the Spencer-Fano solution vector [eV]
 constexpr double SF_EMIN = 0.1;
@@ -233,12 +232,15 @@ constexpr auto uppertriangular(const int i, const int j) -> int {
   return (SFPTS * i) - (i * (i + 1) / 2) + j;
 }
 
+}  // anonymous namespace
+
 // Solve U * x = b for x, where U is the compacted upper triangular matrix (indexed via uppertriangular()). The loop
 // structure replicates the scalar (EIGEN_DONT_VECTORIZE, as set by REPRODUCIBLE builds) code path of Eigen's
 // triangularView<Upper>().solve() that was previously used here, keeping the floating-point operation order and
 // therefore the stored test checksums unchanged: back substitution proceeds bottom-up over row panels, and each panel
 // first removes the contribution of the already-solved elements to the right with one in-order dot product per row.
-// The residual and error scoring in sfmatrix_solve() are part of the same contract.
+// The residual and error scoring in sfmatrix_solve() are part of the same contract, and unittests.cc checks the
+// solution bit-for-bit against golden values from Eigen's scalar solve in REPRODUCIBLE builds.
 void solve_upper_triangular(const std::span<const double> sfmatrixuppertri, const std::span<const double, SFPTS> bvec,
                             const std::span<double, SFPTS> xvec) {
   std::ranges::copy(bvec, xvec.begin());
@@ -273,6 +275,8 @@ void solve_upper_triangular(const std::span<const double> sfmatrixuppertri, cons
     }
   }
 }
+
+namespace {
 
 auto calculate_ion_shell_occupancies(const int atomic_number, const int nbound,
                                      const std::vector<int>& element_shells_q_neutral) {

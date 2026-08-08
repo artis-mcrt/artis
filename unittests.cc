@@ -7,8 +7,10 @@
 
 #include <algorithm>
 #include <array>
+#include <bit>
 #include <cmath>
 #include <cstddef>
+#include <cstdint>
 #include <cstdlib>
 #include <functional>
 #include <limits>
@@ -29,6 +31,7 @@
 #include "macroatom.h"
 #include "mpi_logging.h"
 #include "nltepop.h"
+#include "nonthermal.h"
 #include "radfield.h"
 #include "random.h"
 #include "rpkt.h"
@@ -623,6 +626,79 @@ void test_gth_solver() {
   }
 }
 
+void test_nonthermal_solve_upper_triangular() {
+  std::println("Spencer-Fano compacted upper triangular solver...");
+  constexpr int sfpts = nonthermal::SFPTS;
+
+  // deterministic 64-bit LCG (Knuth MMIX constants) giving uniform doubles in [0, 1). The generated sequence must
+  // stay fixed: the golden values below depend on it. Regenerate them with
+  // scripts/generate_triangular_solver_golden.cc if this system setup is ever changed.
+  uint64_t lcgstate = 20260808;
+  const auto next_uniform = [&lcgstate] {
+    lcgstate = (lcgstate * 6364136223846793005ULL) + 1442695040888963407ULL;
+    return std::ldexp(static_cast<double>(lcgstate >> 11), -53);
+  };
+
+  // element (i, j) of the compacted upper triangular matrix (same layout as nonthermal.cc's uppertriangular())
+  const auto uppertriangular = [](const int i, const int j) { return (sfpts * i) - (i * (i + 1) / 2) + j; };
+
+  // diagonally dominant upper triangular system: diagonal in [1, 2), off-diagonal magnitude < 2^-13
+  std::vector<double> uppertri(static_cast<size_t>(sfpts) * (sfpts + 1) / 2);
+  for (int i = 0; i < sfpts; i++) {
+    uppertri[uppertriangular(i, i)] = 1. + next_uniform();
+    for (int j = i + 1; j < sfpts; j++) {
+      uppertri[uppertriangular(i, j)] = std::ldexp(next_uniform() - 0.5, -12);
+    }
+  }
+  std::array<double, sfpts> bvec{};
+  for (auto& b : bvec) {
+    b = 2. * (next_uniform() - 0.5);
+  }
+  // exact zeros in the last rows (solved first) exercise the skip-division-on-exact-zero path
+  for (int i = sfpts - 8; i < sfpts; i++) {
+    bvec[i] = 0.;
+  }
+
+  std::array<double, sfpts> xvec{};
+  nonthermal::solve_upper_triangular(uppertri, bvec, xvec);
+
+  // back substitution on this diagonally dominant system is accurate to a small multiple of machine epsilon
+  double maxresidual = 0.;
+  for (int i = 0; i < sfpts; i++) {
+    double matvecprod = 0.;
+    for (int j = i; j < sfpts; j++) {
+      matvecprod += uppertri[uppertriangular(i, j)] * xvec[j];
+    }
+    maxresidual = std::max(maxresidual, std::fabs(bvec[i] - matvecprod));
+  }
+  check(maxresidual < 1e-11, "small residual");
+  check(std::bit_cast<uint64_t>(xvec[sfpts - 1]) == std::bit_cast<uint64_t>(0.),
+        "exactly-zero rhs rows give exactly +0. solution values");
+
+#ifdef REPRODUCIBLE
+  // In REPRODUCIBLE builds (strict FP, -ffp-contract=off) the solution must be bit-identical to Eigen's scalar
+  // (EIGEN_DONT_VECTORIZE) triangularView<Upper>().solve() of the same system: that operation-order contract is what
+  // keeps the stored regression-test checksums valid (see solve_upper_triangular() in nonthermal.cc). The golden
+  // values were produced by scripts/generate_triangular_solver_golden.cc from the vendored Eigen, and are
+  // platform-independent because every operation involved is correctly-rounded IEEE arithmetic.
+  check(std::bit_cast<uint64_t>(xvec[0]) == std::bit_cast<uint64_t>(-0x1.f2e676680305cp-5),
+        "x[0] bit-identical to Eigen scalar solve");
+  check(std::bit_cast<uint64_t>(xvec[2048]) == std::bit_cast<uint64_t>(0x1.0458949f6426cp-1),
+        "x[2048] bit-identical to Eigen scalar solve");
+
+  // FNV-1a 64-bit hash over the full solution, hashing each double's bits low byte first (endian-independent)
+  uint64_t hash = 14695981039346656037ULL;
+  for (const double x : xvec) {
+    const auto bits = std::bit_cast<uint64_t>(x);
+    for (int byteindex = 0; byteindex < 8; byteindex++) {
+      hash ^= (bits >> (8 * byteindex)) & 0xffU;
+      hash *= 1099511628211ULL;
+    }
+  }
+  check(hash == 0x91894b30cef3217eULL, "full solution vector bit-identical to Eigen scalar solve");
+#endif
+}
+
 }  // anonymous namespace
 
 auto main() -> int {
@@ -640,6 +716,7 @@ auto main() -> int {
   test_closest_transition_randomised();
   test_input_helpers();
   test_gth_solver();
+  test_nonthermal_solve_upper_triangular();
 
   std::println("unit tests: {} of {} checks passed", checks_total - checks_failed, checks_total);
 
