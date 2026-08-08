@@ -717,6 +717,8 @@ auto main() -> int {
   test_input_helpers();
   test_gth_solver();
   test_nonthermal_solve_upper_triangular();
+  // the solver/integrator throw std::domain_error only on precondition violations that this test does not trigger
+  // cppcheck-suppress throwInEntryPoint
   test_toms748_and_gauss_kronrod();
 
   std::println("unit tests: {} of {} checks passed", checks_total - checks_failed, checks_total);
