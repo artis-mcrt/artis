@@ -1,0 +1,15 @@
+3.5.0 (pruned)
+
+The vendored copy is pruned to the modules ARTIS uses (dense LU in nltepop.cc):
+
+  Eigen/Core  Eigen/LU  Eigen/Version
+  Eigen/src/Core  Eigen/src/LU  Eigen/src/misc  Eigen/src/plugins
+
+All of src/Core is kept (including every arch/ backend) so that x86, ARM, and
+GPU (nvc++/hipcc) builds keep working. The retained files are unmodified, so
+simulation results are unchanged by the pruning.
+
+Updating:
+Download a release from https://gitlab.com/libeigen/eigen/-/releases and copy
+the directories listed above from its Eigen/ folder into artis/third_party/Eigen/.
+Include <Eigen/LU> rather than <Eigen/Dense> in ARTIS code (Dense is not vendored).
