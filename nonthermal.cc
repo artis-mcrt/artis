@@ -232,51 +232,6 @@ constexpr auto uppertriangular(const int i, const int j) -> int {
   return (SFPTS * i) - (i * (i + 1) / 2) + j;
 }
 
-}  // anonymous namespace
-
-// Solve U * x = b for x, where U is the compacted upper triangular matrix (indexed via uppertriangular()). The loop
-// structure replicates the scalar (EIGEN_DONT_VECTORIZE, as set by REPRODUCIBLE builds) code path of Eigen's
-// triangularView<Upper>().solve() that was previously used here, keeping the floating-point operation order and
-// therefore the stored test checksums unchanged: back substitution proceeds bottom-up over row panels, and each panel
-// first removes the contribution of the already-solved elements to the right with one in-order dot product per row.
-// The residual and error scoring in sfmatrix_solve() are part of the same contract.
-void solve_upper_triangular(const std::span<const double> sfmatrixuppertri, const std::span<const double, SFPTS> bvec,
-                            const std::span<double, SFPTS> xvec) {
-  std::ranges::copy(bvec, xvec.begin());
-  // Eigen's EIGEN_TUNE_TRIANGULAR_PANEL_WIDTH; not a tuning knob: changing it regroups the additions
-  constexpr int panelwidth = 8;
-  for (int pi = SFPTS; pi > 0; pi -= panelwidth) {
-    const int actualpanelwidth = std::min(pi, panelwidth);
-    for (int i = pi - actualpanelwidth; i < pi; i++) {
-      const int rowoffset = uppertriangular(i, 0);
-      double dotprod = 0.;
-      for (int j = pi; j < SFPTS; j++) {
-        dotprod += sfmatrixuppertri[rowoffset + j] * xvec[j];
-      }
-      xvec[i] -= dotprod;
-    }
-    for (int k = 0; k < actualpanelwidth; k++) {
-      const int i = pi - k - 1;
-      const int rowoffset = uppertriangular(i, 0);
-      if (k > 0) {
-        // the sum starts from the first product rather than from zero (this can only affect the sign of an
-        // exactly-zero result)
-        double dotprod = sfmatrixuppertri[rowoffset + i + 1] * xvec[i + 1];
-        for (int j = i + 2; j < pi; j++) {
-          dotprod += sfmatrixuppertri[rowoffset + j] * xvec[j];
-        }
-        xvec[i] -= dotprod;
-      }
-      // an exactly-zero numerator skips the division (it could otherwise become NaN or -0)
-      if (xvec[i] != 0.) {
-        xvec[i] /= sfmatrixuppertri[rowoffset + i];
-      }
-    }
-  }
-}
-
-namespace {
-
 auto calculate_ion_shell_occupancies(const int atomic_number, const int nbound,
                                      const std::vector<int>& element_shells_q_neutral) {
   assert_testmodeonly(nbound >= 0);
@@ -2141,6 +2096,47 @@ auto sfmatrix_solve(const std::span<const double> sfmatrixuppertri) -> std::arra
 }
 
 }  // anonymous namespace
+
+// Solve U * x = b for x, where U is the compacted upper triangular matrix (indexed via uppertriangular()). The loop
+// structure replicates the scalar (EIGEN_DONT_VECTORIZE, as set by REPRODUCIBLE builds) code path of Eigen's
+// triangularView<Upper>().solve() that was previously used here, keeping the floating-point operation order and
+// therefore the stored test checksums unchanged: back substitution proceeds bottom-up over row panels, and each panel
+// first removes the contribution of the already-solved elements to the right with one in-order dot product per row.
+// The residual and error scoring in sfmatrix_solve() are part of the same contract.
+void solve_upper_triangular(const std::span<const double> sfmatrixuppertri, const std::span<const double, SFPTS> bvec,
+                            const std::span<double, SFPTS> xvec) {
+  std::ranges::copy(bvec, xvec.begin());
+  // Eigen's EIGEN_TUNE_TRIANGULAR_PANEL_WIDTH; not a tuning knob: changing it regroups the additions
+  constexpr int panelwidth = 8;
+  for (int pi = SFPTS; pi > 0; pi -= panelwidth) {
+    const int actualpanelwidth = std::min(pi, panelwidth);
+    for (int i = pi - actualpanelwidth; i < pi; i++) {
+      const int rowoffset = uppertriangular(i, 0);
+      double dotprod = 0.;
+      for (int j = pi; j < SFPTS; j++) {
+        dotprod += sfmatrixuppertri[rowoffset + j] * xvec[j];
+      }
+      xvec[i] -= dotprod;
+    }
+    for (int k = 0; k < actualpanelwidth; k++) {
+      const int i = pi - k - 1;
+      const int rowoffset = uppertriangular(i, 0);
+      if (k > 0) {
+        // the sum starts from the first product rather than from zero (this can only affect the sign of an
+        // exactly-zero result)
+        double dotprod = sfmatrixuppertri[rowoffset + i + 1] * xvec[i + 1];
+        for (int j = i + 2; j < pi; j++) {
+          dotprod += sfmatrixuppertri[rowoffset + j] * xvec[j];
+        }
+        xvec[i] -= dotprod;
+      }
+      // an exactly-zero numerator skips the division (it could otherwise become NaN or -0)
+      if (xvec[i] != 0.) {
+        xvec[i] /= sfmatrixuppertri[rowoffset + i];
+      }
+    }
+  }
+}
 
 void init() {
   const ptrdiff_t nonempty_npts_model = grid::get_nonempty_npts_model();
