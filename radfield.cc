@@ -22,8 +22,9 @@
 #pragma clang unsafe_buffer_usage begin
 #include <mpi.h>
 
-#include <boost/math/tools/toms748_solve.hpp>
 #include <cstdint>
+
+#include "toms748.h"
 #pragma clang unsafe_buffer_usage end
 
 #include "artisoptions.h"
@@ -372,8 +373,8 @@ auto find_bin_T_R(const int nonemptymgi, const int binindex) -> float {
     const auto maxit = 100U;
 
     uintmax_t iteration_num = maxit;
-    const auto result = boost::math::tools::toms748_solve(f_deltanubar, bins_T_R_min, bins_T_R_max, f_Tmin, f_Tmax,
-                                                          ftol<epsrel>, iteration_num);
+    const auto result =
+        toms748_solve(f_deltanubar, bins_T_R_min, bins_T_R_max, f_Tmin, f_Tmax, ftol<epsrel>, iteration_num);
     const auto T_R_solution = static_cast<float>(0.5 * (result.first + result.second));
     if (iteration_num >= maxit) {
       printlnlog(

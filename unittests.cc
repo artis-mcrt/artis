@@ -28,6 +28,7 @@
 #include "gammapkt.h"
 #include "globals.h"
 #include "input.h"
+#include "integrator.h"
 #include "macroatom.h"
 #include "mpi_logging.h"
 #include "nltepop.h"
@@ -36,6 +37,7 @@
 #include "random.h"
 #include "rpkt.h"
 #include "sn3d.h"
+#include "toms748.h"
 #include "vectors.h"
 
 namespace {
@@ -674,6 +676,29 @@ void test_nonthermal_solve_upper_triangular() {
         "exactly-zero rhs rows give exactly +0. solution values");
 }
 
+// the TOMS 748 root finder and Gauss-Kronrod quadrature extracted from Boost.Math
+void test_toms748_and_gauss_kronrod() {
+  const auto f_cosfixedpoint = [](const double x) { return std::cos(x) - x; };
+  std::uintmax_t iterations = 50;
+  const auto [rootlow, roothigh] =
+      toms748_solve(f_cosfixedpoint, 0., 1., f_cosfixedpoint(0.), f_cosfixedpoint(1.), ftol<1e-12>, iterations);
+  const double root = 0.5 * (rootlow + roothigh);
+  check(std::fabs(root - 0.7390851332151607) < 1e-10, "toms748_solve finds the fixed point of cos(x)");
+  check(iterations < 50, "toms748_solve converges in fewer than the maximum iterations");
+
+  double abserr{NAN};
+  const double integral_sin =
+      integrator([](const double x) { return std::sin(x); }, 0., 3.141592653589793, 1e-10, &abserr);
+  check(std::fabs(integral_sin - 2.) < 1e-12, "gauss_kronrod_integrate of sin over [0, pi] is 2");
+  check(abserr < 1e-10, "gauss_kronrod_integrate error estimate is small for a smooth integrand");
+
+  // sqrt(pi / 100) / 2 * (erf(117) + erf(3))
+  const double integral_bump =
+      integrator<31>([](const double x) { return std::exp(-100. * (x - 0.3) * (x - 0.3)); }, 0., 12., 1e-10, &abserr);
+  check(std::fabs(integral_bump - 0.17724342737116647) < 1e-9,
+        "31-point adaptive gauss_kronrod_integrate resolves a narrow Gaussian bump");
+}
+
 }  // anonymous namespace
 
 auto main() -> int {
@@ -692,6 +717,7 @@ auto main() -> int {
   test_input_helpers();
   test_gth_solver();
   test_nonthermal_solve_upper_triangular();
+  test_toms748_and_gauss_kronrod();
 
   std::println("unit tests: {} of {} checks passed", checks_total - checks_failed, checks_total);
 
