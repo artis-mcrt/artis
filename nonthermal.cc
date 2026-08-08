@@ -2031,7 +2031,7 @@ void sfmatrix_add_ionisation(std::span<double> sfmatrixuppertri, const int Z, co
 // Multiply y by energy interval [eV] to get non-thermal electron number flux. y(E) * dE is the flux of electrons with
 // energy in the range (E, E + dE) in units of particles/cm2/s. y has units of particles/cm2/s/eV
 auto sfmatrix_solve(const std::span<const double> sfmatrixuppertri) -> std::array<double, SFPTS> {
-  // solve the matrix-vector equation sfmatrix * yvec = rhsvec for yvec
+  // solve the matrix-vector equation sfmatrixuppertri * yvec = rhsvec for yvec
 
   THREADLOCALONHOST std::array<double, SFPTS> yvec_arr{};
 
@@ -2050,10 +2050,10 @@ auto sfmatrix_solve(const std::span<const double> sfmatrixuppertri) -> std::arra
       std::ranges::transform(yvec_arr, correction_vec, yvec_arr.begin(), std::plus{});
     }
 
-    // residual = rhsvec - sfmatrix * yvec, computed as if sfmatrix were a full square matrix whose lower triangle
-    // holds explicit zeros (part of the checksum contract of solve_upper_triangular()): a non-finite yvec element
-    // turns the (0 * yvec[j]) terms of every later row into NaN, so those iterations are scored (and rejected) the
-    // same way as with the full matrix product.
+    // residual = rhsvec - sfmatrixuppertri * yvec, computed as if sfmatrixuppertri were a full square matrix whose
+    // lower triangle holds explicit zeros (part of the checksum contract of solve_upper_triangular()): a non-finite
+    // yvec element turns the (0 * yvec[j]) terms of every later row into NaN, so those iterations are scored (and
+    // rejected) the same way as with the full matrix product.
     bool y_nonfinite_in_earlier_row = false;
     for (int i = 0; i < SFPTS; i++) {
       double matvecprod = y_nonfinite_in_earlier_row ? NAN : 0.;
