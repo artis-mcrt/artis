@@ -2285,24 +2285,17 @@ void init_grid() {
   }
 
   allocate_nonemptymodelcells();
-  read_elem_abundances();
-
-  radfield::init();
-  nonthermal::init();
-
-  // and assign a temperature to the cells
-  if (globals::simulation_continued_from_saved) {
-    // For continuation of an existing simulation we read the temperatures
-    // at the end of the simulation and write them to the grid.
-    read_grid_restart_data(globals::timestep_initial);
-  } else {
-    assign_initial_temperatures();
-  }
 
   // when mapping a 1D spherical model onto a cubic grid, rescale the nuclide abundances so that each nuclide's
   // total mass matches the input model again. Every propagation cell takes the model shell that its centre falls
   // in, so the volume associated with a shell is a staircase approximation of the true shell volume and the
   // mapped mass of each nuclide differs from the input.
+  //
+  // This has to happen before anything derives a quantity from the nuclide mass fractions, which is why it sits
+  // ahead of read_elem_abundances() (which subtracts them from the elemental mass fractions to get the untracked
+  // stable remainder) and assign_initial_temperatures() (which sums their decay energy). Rescaling afterwards
+  // left those two using the unscaled abundances while every later consumer used the scaled ones, so a cell
+  // carried two different sets of nuclide abundances at once.
   //
   // NB: a 2D cylindrical model is mapped onto the cubic grid by the same centre-of-cell rule
   // (map_2dmodelto3dgrid) and loses mass the same way, but is deliberately not corrected here, because doing so
@@ -2334,7 +2327,23 @@ void init_grid() {
     }
   }
 
+  // the rescale above is written by the node leader into node-shared memory, so hold the other ranks until it
+  // is complete before read_elem_abundances() reads the nuclide mass fractions back
   MPI_Barrier_node();
+
+  read_elem_abundances();
+
+  radfield::init();
+  nonthermal::init();
+
+  // and assign a temperature to the cells
+  if (globals::simulation_continued_from_saved) {
+    // For continuation of an existing simulation we read the temperatures
+    // at the end of the simulation and write them to the grid.
+    read_grid_restart_data(globals::timestep_initial);
+  } else {
+    assign_initial_temperatures();
+  }
 
   double mtot_mapped = 0.;
   for (int mgi = 0; mgi < get_npts_model(); mgi++) {
