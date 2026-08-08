@@ -325,44 +325,54 @@ void set_initenergyq(const int modelgridindex, const float initenergyq) {
   modelgrid_input[modelgridindex].initenergyq = initenergyq;
 }
 
-void set_elem_untrackedstable_massfrac(const int nonemptymgi, const int element, const float elem_massfrac) {
-  // set the stable mass fraction of an element from the total element mass fraction
-  // by subtracting the abundances of radioactive isotopes.
-  // if the element Z=anumber has no specific stable abundance variable then the function does nothing
-
-  const int atomic_number = get_atomicnumber(element);
-  const int mgi = get_mgi_of_nonemptymgi(nonemptymgi);
-
-  double massfrac_allisotopes = 0.;
+// sum of the mass fractions of an element's tracked isotopes in a model cell
+[[nodiscard]] auto get_elem_trackedisotope_massfracsum(const int mgi, const int atomic_number) -> double {
+  double massfracsum = 0.;
   for (int nucindex = 0; nucindex < decay::get_num_nuclides(); nucindex++) {
     if (decay::get_nuc_z(nucindex) == atomic_number) {
-      // radioactive isotope of this element
-      massfrac_allisotopes += get_modelinitnucmassfrac(mgi, nucindex);
+      massfracsum += get_modelinitnucmassfrac(mgi, nucindex);
     }
   }
+  return massfracsum;
+}
 
-  double massfrac_untrackedstable = elem_massfrac - massfrac_allisotopes;
-
-  if (massfrac_untrackedstable < 0.) {
-    //  allow some roundoff error before we complain
-    if (std::abs(massfrac_allisotopes - elem_massfrac) > 1e-4) {
-      printlnlog("[warning] cell {} Z={} element massfrac is less than the sum of its radioisotope massfracs", mgi,
-                 atomic_number);
-      printlnlog("  massfrac(Z) {:g} massfrac_radioisotopes(Z) {:g}", elem_massfrac, massfrac_allisotopes);
-      printlnlog("  increasing elemental massfrac to {:g} and setting stable isotopic massfrac to zero",
-                 massfrac_allisotopes);
-    }
-    // result is allowed to be slightly negative due to roundoff error
-    assert_always(massfrac_untrackedstable >= -1e-2);
-    massfrac_untrackedstable = 0.;  // bring up to zero if negative
+// Split each element's mass fraction into its tracked isotopes and an untracked stable remainder, for every
+// non-empty cell. Must run after any mapping rescale of the nuclide mass fractions, so that the remainder is
+// the one left over from the values everything downstream will use. read_elem_abundances() has already checked
+// that the input gives each element at least as much mass as its isotopes, so a negative remainder here is an
+// artefact of the rescale rather than bad input, and is clamped away.
+void set_untrackedstable_massfracs() {
+  if (globals::rank_in_node != 0) {
+    return;
   }
+  for (int nonemptymgi = 0; nonemptymgi < get_nonempty_npts_model(); nonemptymgi++) {
+    const int mgi = get_mgi_of_nonemptymgi(nonemptymgi);
+    for (int element = 0; element < get_nelements(); element++) {
+      const int atomic_number = get_atomicnumber(element);
+      const double elem_massfrac = get_elem_massfrac(nonemptymgi, element);
+      const double massfrac_allisotopes = get_elem_trackedisotope_massfracsum(mgi, atomic_number);
 
-  initmassfracuntrackedstable_allcells[(nonemptymgi * get_nelements()) + element] =
-      static_cast<float>(massfrac_untrackedstable);
+      double massfrac_untrackedstable = elem_massfrac - massfrac_allisotopes;
+      if (massfrac_untrackedstable < 0.) {
+        //  allow some roundoff error before we complain
+        if (std::abs(massfrac_allisotopes - elem_massfrac) > 1e-4) {
+          printlnlog("[warning] cell {} Z={} element massfrac is less than the sum of its radioisotope massfracs", mgi,
+                     atomic_number);
+          printlnlog("  massfrac(Z) {:g} massfrac_radioisotopes(Z) {:g}", elem_massfrac, massfrac_allisotopes);
+          printlnlog("  increasing elemental massfrac to {:g} and setting stable isotopic massfrac to zero",
+                     massfrac_allisotopes);
+        }
+        massfrac_untrackedstable = 0.;  // bring up to zero if negative
+      }
 
-  // (massfrac_allisotopes + massfrac_untrackedstable) might not exactly match elem_massfrac if we had to boost it to
-  // reach massfrac_allisotopes
-  set_elem_massfrac(nonemptymgi, element, static_cast<float>(massfrac_allisotopes + massfrac_untrackedstable));
+      initmassfracuntrackedstable_allcells[(nonemptymgi * get_nelements()) + element] =
+          static_cast<float>(massfrac_untrackedstable);
+
+      // (massfrac_allisotopes + massfrac_untrackedstable) might not exactly match elem_massfrac if we had to boost
+      // it to reach massfrac_allisotopes
+      set_elem_massfrac(nonemptymgi, element, static_cast<float>(massfrac_allisotopes + massfrac_untrackedstable));
+    }
+  }
 }
 
 // get the radial distance from the origin to the centre of the cell at time tmin
@@ -703,8 +713,14 @@ void read_elem_abundances() {
           const auto elemmassfrac = static_cast<float>(elem_massfracs_in[atomic_number - 1] / normfactor);
           assert_always(elemmassfrac >= 0.);
 
-          // radioactive nuclide abundances should have already been set by read_??_model
-          set_elem_untrackedstable_massfrac(nonemptymgi, element, elemmassfrac);
+          // radioactive nuclide abundances should have already been set by read_??_model. Check here, while
+          // the mass fractions are still exactly as the input files gave them, that abundances.txt gives the
+          // element at least as much mass as model.txt gives its tracked isotopes. Any later mapping rescale
+          // changes the nuclide mass fractions but not the elemental ones, so this cannot be tested afterwards.
+          // a small negative remainder is allowed for roundoff error
+          assert_always((elemmassfrac - get_elem_trackedisotope_massfracsum(mgi, get_atomicnumber(element))) >= -1e-2);
+
+          set_elem_massfrac(nonemptymgi, element, elemmassfrac);
         }
       }
     }
@@ -2285,24 +2301,19 @@ void init_grid() {
   }
 
   allocate_nonemptymodelcells();
+
   read_elem_abundances();
-
-  radfield::init();
-  nonthermal::init();
-
-  // and assign a temperature to the cells
-  if (globals::simulation_continued_from_saved) {
-    // For continuation of an existing simulation we read the temperatures
-    // at the end of the simulation and write them to the grid.
-    read_grid_restart_data(globals::timestep_initial);
-  } else {
-    assign_initial_temperatures();
-  }
 
   // when mapping a 1D spherical model onto a cubic grid, rescale the nuclide abundances so that each nuclide's
   // total mass matches the input model again. Every propagation cell takes the model shell that its centre falls
   // in, so the volume associated with a shell is a staircase approximation of the true shell volume and the
   // mapped mass of each nuclide differs from the input.
+  //
+  // This has to happen before anything derives a quantity from the nuclide mass fractions, which is why it sits
+  // ahead of set_untrackedstable_massfracs() (which subtracts them from the elemental mass fractions to get the
+  // untracked stable remainder) and assign_initial_temperatures() (which sums their decay energy). It has to
+  // come after read_elem_abundances(), which checks the input files against each other while the mass fractions
+  // are still the ones they gave.
   //
   // NB: a 2D cylindrical model is mapped onto the cubic grid by the same centre-of-cell rule
   // (map_2dmodelto3dgrid) and loses mass the same way, but is deliberately not corrected here, because doing so
@@ -2334,7 +2345,22 @@ void init_grid() {
     }
   }
 
+  // the untracked stable remainder is whatever the rescaled isotopes leave of each element, so it can only be
+  // worked out once the rescale above is done
+  set_untrackedstable_massfracs();
   MPI_Barrier_node();
+
+  radfield::init();
+  nonthermal::init();
+
+  // and assign a temperature to the cells
+  if (globals::simulation_continued_from_saved) {
+    // For continuation of an existing simulation we read the temperatures
+    // at the end of the simulation and write them to the grid.
+    read_grid_restart_data(globals::timestep_initial);
+  } else {
+    assign_initial_temperatures();
+  }
 
   double mtot_mapped = 0.;
   for (int mgi = 0; mgi < get_npts_model(); mgi++) {
