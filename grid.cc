@@ -2315,12 +2315,14 @@ void init_grid() {
   // come after read_elem_abundances(), which checks the input files against each other while the mass fractions
   // are still the ones they gave.
   //
-  // NB: a 2D cylindrical model is mapped onto the cubic grid by the same centre-of-cell rule
-  // (map_2dmodelto3dgrid) and loses mass the same way, but is deliberately not corrected here, because doing so
-  // would change existing results. The "Total grid-mapped mass" line logged below shows the size of the
-  // discrepancy for any model.
-  if (prop_gridtype == GridType::CARTESIAN3D && get_modelgridtype() == GridType::SPHERICAL1D &&
-      globals::rank_in_node == 0) {
+  // Gated on the two geometries differing rather than on a particular pair of them, because every such mapping
+  // loses mass the same way: map_1dmodelto3dgrid() and map_2dmodelto3dgrid() both place a propagation cell by
+  // its centre. Only GRID_TYPE_OVERRIDE makes them differ; left alone, get_propgridtype() returns the model's
+  // own geometry and map_modeltogrid_direct() gives each model cell exactly its own volume, so there is no
+  // discretisation error to correct and the ratio would be one throughout. The "Total grid-mapped mass" line
+  // logged below shows the size of the discrepancy for any model.
+  const bool mapping_loses_nuclide_mass = (get_modelgridtype() != prop_gridtype);
+  if (mapping_loses_nuclide_mass && globals::rank_in_node == 0) {
     for (int nucindex = 0; nucindex < decay::get_num_nuclides(); nucindex++) {
       if (totmassnuclide[nucindex] <= 0) {
         continue;
