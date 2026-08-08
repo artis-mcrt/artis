@@ -21,11 +21,6 @@
 #include <tuple>
 #include <vector>
 
-#pragma clang unsafe_buffer_usage begin
-#include <Eigen/Core>
-#include <Eigen/Dense>
-#pragma clang unsafe_buffer_usage end
-
 #include "artisoptions.h"
 #include "atomic.h"
 #include "constants.h"
@@ -238,16 +233,43 @@ constexpr auto uppertriangular(const int i, const int j) -> int {
   return (SFPTS * i) - (i * (i + 1) / 2) + j;
 }
 
-constexpr void decompactify_triangular_matrix(std::span<double> matrix) {
-  // the indices work in decreasing order because we're working in-place and
-  // don't want to overwrite data that we still need to read
-  for (int i = SFPTS - 1; i > 0; i--) {
-    const int rowoffset = uppertriangular(i, 0);
-    for (int j = SFPTS - 1; j >= i; j--) {
-      matrix[(i * SFPTS) + j] = matrix[rowoffset + j];
+// Solve U * x = b for x, where U is the compacted upper triangular matrix (indexed via uppertriangular()). The loop
+// structure replicates the scalar (EIGEN_DONT_VECTORIZE, as set by REPRODUCIBLE builds) code path of Eigen's
+// triangularView<Upper>().solve() that was previously used here, keeping the floating-point operation order and
+// therefore the stored test checksums unchanged: back substitution proceeds bottom-up over row panels, and each panel
+// first removes the contribution of the already-solved elements to the right with one in-order dot product per row.
+// The residual and error scoring in sfmatrix_solve() are part of the same contract.
+void solve_upper_triangular(const std::span<const double> sfmatrixuppertri, const std::span<const double, SFPTS> bvec,
+                            const std::span<double, SFPTS> xvec) {
+  std::ranges::copy(bvec, xvec.begin());
+  // Eigen's EIGEN_TUNE_TRIANGULAR_PANEL_WIDTH; not a tuning knob: changing it regroups the additions
+  constexpr int panelwidth = 8;
+  for (int pi = SFPTS; pi > 0; pi -= panelwidth) {
+    const int actualpanelwidth = std::min(pi, panelwidth);
+    for (int i = pi - actualpanelwidth; i < pi; i++) {
+      const int rowoffset = uppertriangular(i, 0);
+      double dotprod = 0.;
+      for (int j = pi; j < SFPTS; j++) {
+        dotprod += sfmatrixuppertri[rowoffset + j] * xvec[j];
+      }
+      xvec[i] -= dotprod;
     }
-    for (int j = i - 1; j >= 0; j--) {
-      matrix[(i * SFPTS) + j] = 0.;
+    for (int k = 0; k < actualpanelwidth; k++) {
+      const int i = pi - k - 1;
+      const int rowoffset = uppertriangular(i, 0);
+      if (k > 0) {
+        // the sum starts from the first product rather than from zero (this can only affect the sign of an
+        // exactly-zero result)
+        double dotprod = sfmatrixuppertri[rowoffset + i + 1] * xvec[i + 1];
+        for (int j = i + 2; j < pi; j++) {
+          dotprod += sfmatrixuppertri[rowoffset + j] * xvec[j];
+        }
+        xvec[i] -= dotprod;
+      }
+      // an exactly-zero numerator skips the division (it could otherwise become NaN or -0)
+      if (xvec[i] != 0.) {
+        xvec[i] /= sfmatrixuppertri[rowoffset + i];
+      }
     }
   }
 }
@@ -2050,48 +2072,49 @@ void sfmatrix_add_ionisation(std::span<double> sfmatrixuppertri, const int Z, co
 // solve the Spencer-Fano matrix equation and return the y vector (samples of the Spencer-Fano solution function).
 // Multiply y by energy interval [eV] to get non-thermal electron number flux. y(E) * dE is the flux of electrons with
 // energy in the range (E, E + dE) in units of particles/cm2/s. y has units of particles/cm2/s/eV
-auto sfmatrix_solve(const std::span<const double> sfmatrix) -> std::array<double, SFPTS> {
+auto sfmatrix_solve(const std::span<const double> sfmatrixuppertri) -> std::array<double, SFPTS> {
   // solve the matrix-vector equation sfmatrix * yvec = rhsvec for yvec
 
   THREADLOCALONHOST std::array<double, SFPTS> yvec_arr{};
 
-  // The solve below reads only the upper triangle (via triangularView<Upper>()) while the residual is formed from the
-  // full matrix, so anything left below the diagonal would make the refinement iterate on a different system than the
-  // one that was solved.
-  assert_testmodeonly([sfmatrix] {
-    for (int i = 1; i < SFPTS; i++) {
-      for (int j = 0; j < i; j++) {
-        if (sfmatrix[(i * SFPTS) + j] != 0.) {
-          return false;
-        }
-      }
-    }
-    return true;
-  }());
-
-  const Eigen::Map<const Eigen::Vector<double, SFPTS>> eigen_rhsvec{rhsvec.data()};
-  const Eigen::Map<const Eigen::Matrix<double, SFPTS, SFPTS, Eigen::RowMajor>> eigen_sfmatrix{sfmatrix.data()};
-
-  const auto eigen_sfmatrix_upper = eigen_sfmatrix.triangularView<Eigen::Upper>();
-  Eigen::Map<Eigen::Vector<double, SFPTS>> eigen_yvec{yvec_arr.data()};
-  eigen_yvec = eigen_sfmatrix_upper.solve(eigen_rhsvec);
+  solve_upper_triangular(sfmatrixuppertri, rhsvec, yvec_arr);
 
   // refine the solution
 
   THREADLOCALONHOST std::array<double, SFPTS> yvec_best{};
-  THREADLOCALONHOST Eigen::Vector<double, SFPTS> eigen_residual_vec{};
+  THREADLOCALONHOST std::array<double, SFPTS> residual_vec{};
+  THREADLOCALONHOST std::array<double, SFPTS> correction_vec{};
 
   double error_best = -1.;
   for (int iteration = 0; iteration < 10; iteration++) {
     if (iteration > 0) {
-      eigen_yvec += eigen_sfmatrix_upper.solve(eigen_residual_vec);
+      solve_upper_triangular(sfmatrixuppertri, residual_vec, correction_vec);
+      std::ranges::transform(yvec_arr, correction_vec, yvec_arr.begin(), std::plus{});
     }
-    eigen_residual_vec = eigen_rhsvec - eigen_sfmatrix * eigen_yvec;
 
-    // PropagateNaN is required for the non-finite test below: Eigen documents the default (PropagateFast) as
-    // undefined in the presence of a NaN, and its scalar and SIMD paths genuinely differ there, so a NaN residual
-    // could otherwise be scored as a finite value and accepted. For an all-finite residual the two agree exactly.
-    const double error = eigen_residual_vec.cwiseAbs().maxCoeff<Eigen::PropagateNaN>();
+    // residual = rhsvec - sfmatrix * yvec, computed as if sfmatrix were a full square matrix whose lower triangle
+    // holds explicit zeros (part of the checksum contract of solve_upper_triangular()): a non-finite yvec element
+    // turns the (0 * yvec[j]) terms of every later row into NaN, so those iterations are scored (and rejected) the
+    // same way as with the full matrix product.
+    bool y_nonfinite_in_earlier_row = false;
+    for (int i = 0; i < SFPTS; i++) {
+      double matvecprod = y_nonfinite_in_earlier_row ? NAN : 0.;
+      const int rowoffset = uppertriangular(i, 0);
+      for (int j = i; j < SFPTS; j++) {
+        matvecprod += sfmatrixuppertri[rowoffset + j] * yvec_arr[j];
+      }
+      residual_vec[i] = rhsvec[i] - matvecprod;
+      y_nonfinite_in_earlier_row = y_nonfinite_in_earlier_row || !std::isfinite(yvec_arr[i]);
+    }
+
+    // the maximum absolute residual, or NaN if any element is NaN. The NaN propagation is required for the
+    // non-finite test below (std::fmax alone would ignore a NaN operand), so that a NaN residual cannot be scored
+    // as a finite value and accepted.
+    double error = std::fabs(residual_vec[0]);
+    for (int i = 1; i < SFPTS && !std::isnan(error); i++) {
+      const double absresidual = std::fabs(residual_vec[i]);
+      error = std::isnan(absresidual) ? absresidual : std::fmax(error, absresidual);
+    }
 
     // only ever store a finite error, so that a non-finite iteration cannot latch error_best and block a later
     // iteration from being accepted. If every iteration is non-finite then error_best stays negative and the assertion
@@ -2532,16 +2555,12 @@ void solve_spencerfano(const int nonemptymgi, const int timestep, const int iter
   nt_solution[nonemptymgi].nneperion_when_solved = static_cast<float>(nne_per_ion);
   nt_solution[nonemptymgi].timestep_last_solved = timestep;
 
-  // sfmatrix will be a compacted upper triangular matrix during construction and then expanded into a full matrix (with
-  // lots of zeros) just before the solver is called
-  THREADLOCALONHOST std::vector<double> sfmatrix(SFPTS * SFPTS);
-  // while we are filling the matrix, we only need to fill the upper triangular part in a compacted form (to reduce
-  // cache misses). Later when we go to solve it, we will expand it back to a full square matrix with zeros in the lower
-  // triangle
-  std::fill_n(sfmatrix.begin(), SFPTS * (SFPTS + 1) / 2, 0.);
+  // only the upper triangle of the Spencer-Fano matrix is stored, with elements addressed via uppertriangular(i, j)
+  THREADLOCALONHOST std::vector<double> sfmatrixuppertri(SFPTS * (SFPTS + 1) / 2);
+  std::ranges::fill(sfmatrixuppertri, 0.);
   // loss terms and source terms
   for (int i = 0; i < SFPTS; i++) {
-    sfmatrix[uppertriangular(i, i)] += electron_loss_rate(engrid(i) * EV, nne) / EV;
+    sfmatrixuppertri[uppertriangular(i, i)] += electron_loss_rate(engrid(i) * EV, nne) / EV;
   }
 
   for (int element = 0; element < get_nelements(); element++) {
@@ -2567,10 +2586,10 @@ void solve_spencerfano(const int nonemptymgi, const int timestep, const int iter
 
       printlog("{} ", ionstage);
 
-      sfmatrix_add_excitation(sfmatrix, nonemptymgi, element, ion);
+      sfmatrix_add_excitation(sfmatrixuppertri, nonemptymgi, element, ion);
 
       if ((ion < nions - 1)) {
-        sfmatrix_add_ionisation(sfmatrix, Z, ionstage, nnion);
+        sfmatrix_add_ionisation(sfmatrixuppertri, Z, ionstage, nnion);
       }
     }
     if (!first_included_ion_of_element) {
@@ -2578,8 +2597,7 @@ void solve_spencerfano(const int nonemptymgi, const int timestep, const int iter
     }
   }
 
-  decompactify_triangular_matrix(sfmatrix);
-  const auto yfunc = sfmatrix_solve(sfmatrix);
+  const auto yfunc = sfmatrix_solve(sfmatrixuppertri);
   constexpr bool verbose = false;
   analyse_sf_solution(nonemptymgi, timestep, yfunc, verbose);
 }
