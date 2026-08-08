@@ -175,16 +175,16 @@ auto integrate_non_adaptive_m1_1(F f, double* error) -> double {
   using Tables = GaussKronrodTables<NPOINTS>;
   constexpr unsigned gauss_order = (NPOINTS - 1) / 2;
 
-  unsigned gauss_start = 2;
-  unsigned kronrod_start = 1;
+  // for an odd-order embedded Gauss rule, x = 0 is a shared Gauss/Kronrod node; for an even order it is a
+  // Kronrod-only node and the interleaving of the remaining nodes is swapped
+  constexpr bool centre_is_gauss_node = (gauss_order & 1U) != 0;
+  constexpr unsigned gauss_start = centre_is_gauss_node ? 2 : 1;
+  constexpr unsigned kronrod_start = centre_is_gauss_node ? 1 : 2;
   const double f_centre = f(0.);
   double kronrod_result = f_centre * Tables::weights[0];
   double gauss_result = 0.;
-  if constexpr (gauss_order & 1U) {
+  if constexpr (centre_is_gauss_node) {
     gauss_result += f_centre * Tables::gauss_weights[0];
-  } else {
-    gauss_start = 1;
-    kronrod_start = 2;
   }
   for (unsigned i = gauss_start; i < Tables::abscissa.size(); i += 2) {
     const double fp = f(Tables::abscissa[i]);
