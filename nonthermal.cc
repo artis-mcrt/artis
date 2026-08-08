@@ -61,7 +61,16 @@ constexpr int NPTS_EPSILON_SUBGRID = 64;
 // number of nodes for the integral over E in [0, SF_EMIN] in the third term of Kozma & Fransson equation 3.
 // This is a property of that integral alone, not of the solution energy grid. Each node costs a full N_e()
 // over every ion and shell, so it dominates the cost of calculate_frac_heating().
-constexpr int NPTS_SUB_E0_INTEGRAL = 17;
+//
+// Nine is far more than the term needs. Measured on nebular_1d_3dgrid by recomputing this integral at node
+// counts from 3 to 513 on one unchanged yfunc, so that only the quadrature varied: frac_heating moved by at
+// most 6e-9 relative even at three nodes, against the 1.2e-7 relative precision of the float it is stored
+// in, so every count in that range gives a bit-identical result. The term carries only about 2e-5 of
+// frac_heating, because the source is injected near SF_EMAX while this integral covers [0, 0.1 eV], so even
+// a wildly wrong value could not move the total. Raising the count does not help in any case: the error is
+// not monotonic in the node count (17 measured worse than 5, and 129 worse than 65), because N_e(E) steps
+// discontinuously wherever 2E + I crosses a solution grid point.
+constexpr int NPTS_SUB_E0_INTEGRAL = 9;
 static_assert(NPTS_SUB_E0_INTEGRAL > 1);
 
 // set true to divide up the mean Auger energy by the number of electrons that come out
@@ -1865,7 +1874,7 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const std::a
   nt_solution[nonemptymgi].frac_heating =
       static_cast<float>(std::clamp(1. - frac_excitation_nonheating - frac_ionisation_total, 0., 1.));
 
-  if (!ftol<0.02>(frac_sum, 1.0)) {
+  if (!ftol<0.002>(frac_sum, 1.0)) {
     printlnlog("[warning] frac_sum is {:g}, but should be 1.0", frac_sum);
     printlnlog("  (replacing calculated frac_heating_tot {:g} with {:g} to make frac_sum = 1.0)",
                frac_heating_calculated, nt_solution[nonemptymgi].frac_heating);
