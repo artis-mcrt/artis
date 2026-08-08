@@ -18,7 +18,6 @@
 #include "artisoptions.h"
 #include "atomic.h"
 #include "constants.h"
-#include "decay.h"
 #include "globals.h"
 #include "grid.h"
 #include "mpi_logging.h"
@@ -317,10 +316,14 @@ auto find_converged_nne(const int nonemptymgi, double nne_max, const bool force_
   int uppermost_ion = nions - 1;
   if (!use_phi_saha) {
     for (int ion = 0; ion < nions - 1; ion++) {
+      // Truncate the ion list at the first ion the radiation field cannot reach, unless non-thermal ionisation
+      // could still populate the ions above it, i.e. unless non-thermal energy is being deposited in this cell.
+      // get_ntlepton_deposition_rate_density() sums the gamma, positron and electron deposition, which is the
+      // whole of what drives non-thermal ionisation; alpha deposition is excluded here as it is in the solver,
+      // since alphas are passed to the thermal pool as k-packets. It is populated by the time it is read:
+      // update_grid_cell() sets it before the ion balance, and this loop is skipped while lte_iteration holds.
       if (iongamma_is_zero(nonemptymgi, element, ion) &&
-          (!NT_ON || ((globals::dep_estimator_gamma[nonemptymgi] == 0.) &&
-                      (grid::get_modelinitnucmassfrac(modelgridindex, decay::get_nucindex(24, 48)) == 0.) &&
-                      (grid::get_modelinitnucmassfrac(modelgridindex, decay::get_nucindex(28, 56)) == 0.)))) {
+          (!NT_ON || nonthermal::get_ntlepton_deposition_rate_density(nonemptymgi) <= 0.)) {
         uppermost_ion = ion;
         break;
       }
