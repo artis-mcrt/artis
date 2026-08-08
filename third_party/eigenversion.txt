@@ -1,4 +1,4 @@
-3.5.0 (pruned)
+5.0.1 (pruned)
 
 The vendored copy is pruned to the modules ARTIS uses (dense LU in nltepop.cc):
 
