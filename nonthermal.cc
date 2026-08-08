@@ -1874,7 +1874,7 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const std::a
   nt_solution[nonemptymgi].frac_heating =
       static_cast<float>(std::clamp(1. - frac_excitation_nonheating - frac_ionisation_total, 0., 1.));
 
-  if (!ftol<0.02>(frac_sum, 1.0)) {
+  if (!ftol<0.002>(frac_sum, 1.0)) {
     printlnlog("[warning] frac_sum is {:g}, but should be 1.0", frac_sum);
     printlnlog("  (replacing calculated frac_heating_tot {:g} with {:g} to make frac_sum = 1.0)",
                frac_heating_calculated, nt_solution[nonemptymgi].frac_heating);
