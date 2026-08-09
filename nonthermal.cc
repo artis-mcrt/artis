@@ -1,7 +1,13 @@
 // Non-thermal energy deposition by the fast leptons produced in radioactive decays: solves the
-// Spencer-Fano equation for the electron degradation spectrum (Kozma & Fransson 1992) to obtain
-// the fractions of the deposited energy going into heating, ionisation, and excitation, and the
-// resulting non-thermal ionisation and excitation rates.
+// Spencer-Fano equation for the electron degradation spectrum to obtain the fractions of the
+// deposited energy going into heating, ionisation, and excitation, and the resulting non-thermal
+// ionisation and excitation rates.
+//
+// The degradation equation is that of Spencer & Fano (1954, Phys. Rev., 93, 1172); this
+// implementation follows the supernova application of Kozma & Fransson (1992, ApJ, 390, 602),
+// hereafter KF92, whose equation numbers are cited throughout this file. The integral form of the
+// degradation equation (KF92 equation 7) is discretised on a uniform energy grid as an upper
+// triangular matrix equation and solved by back-substitution in solve_spencerfano().
 
 #include "nonthermal.h"
 
@@ -47,14 +53,15 @@ namespace {
 constexpr double SF_EMIN = 0.1;
 constexpr double SF_EMAX = 16000;
 
-// number of nodes resolving the integral over the secondary energy epsilon in the first term of Kozma &
-// Fransson equation 6. That integral spans at most SF_EMIN, far narrower than one cell of the solution
-// energy grid, so it needs a sub-grid of its own rather than being sampled on that grid.
+// number of nodes resolving the integral over the secondary energy epsilon in KF92 equation 11, the term
+// for primaries carried across E by an ionisation energy loss. That integral spans at most SF_EMIN, far
+// narrower than one cell of the solution energy grid, so it needs a sub-grid of its own rather than being
+// sampled on that grid.
 constexpr int NPTS_EPSILON_SUBGRID = 64;
 
-// number of nodes for the integral over E in [0, SF_EMIN] in the third term of Kozma & Fransson equation 3.
-// This is a property of that integral alone, not of the solution energy grid. Each node costs a full N_e()
-// over every ion and shell, so it dominates the cost of calculate_frac_heating().
+// number of nodes for the integral over E in [0, SF_EMIN] in the third term of the heating fraction,
+// KF92 equation 8. This is a property of that integral alone, not of the solution energy grid. Each node
+// costs a full N_e() over every ion and shell, so it dominates the cost of calculate_frac_heating().
 //
 // Nine is far more than the term needs. Measured on nebular_1d_3dgrid by recomputing this integral at node
 // counts from 3 to 513 on one unchanged yfunc, so that only the quadrature varied: frac_heating moved by at
@@ -729,17 +736,15 @@ void zero_all_effionpot(const ptrdiff_t nonemptymgi) {
   check_auger_probabilities(nonemptymgi);
 }
 
-[[nodiscard]] constexpr auto get_energyindex_ev_lteq(const double energy_ev) -> int
 // finds the highest energy point <= energy_ev
-{
+[[nodiscard]] constexpr auto get_energyindex_ev_lteq(const double energy_ev) -> int {
   const auto index = static_cast<int>(get_linearbinindex(energy_ev, SF_EMIN, DELTA_E));
 
   return std::clamp(index, 0, SFPTS - 1);
 }
 
-[[nodiscard]] constexpr auto get_energyindex_ev_gteq(const double energy_ev) -> int
 // finds the lowest energy point >= energy_ev
-{
+[[nodiscard]] constexpr auto get_energyindex_ev_gteq(const double energy_ev) -> int {
   const int index = std::ceil((energy_ev - SF_EMIN) / DELTA_E);
 
   return std::clamp(index, 0, SFPTS - 1);
@@ -854,8 +859,9 @@ auto get_xs_ionisation_vector(std::array<double, SFPTS>& xs_vec, const ShellPara
   return startindex;
 }
 
-// distribution of secondary electron energies for primary electron with energy e_p
-// Opal, Peterson, & Beaty (1971)
+// distribution of secondary electron energies for primary electron with energy e_p: KF92 equation 4,
+// a fit by Opal, Peterson, & Beaty (1971) to their measurements. KF92 equation 5 uses it to factorise
+// the differential ionisation cross section into this distribution times the total cross section.
 [[nodiscard]] constexpr auto Psecondary(const double e_p, const double en_epsilon, const double I, const double J)
     -> double {
   const double e_s = en_epsilon - I;
@@ -920,7 +926,9 @@ constexpr auto xs_excitation(const int element, const int ion, const int lower, 
   return 0.;
 }
 
-// -dE / dx for fast electrons
+// -dE / dx for fast electrons: the loss function L(E) of the Spencer-Fano equation, the energy loss
+// rate to the free thermal electrons. KF92 equation 1 above 14 eV and equation 2 below it, with the
+// plasma energy zeta_e of their equation 3 in the high-energy Coulomb logarithm.
 // energy is in ergs
 // nne is the thermal electron density [cm^-3]
 // return value has units of erg/cm
@@ -951,7 +959,8 @@ constexpr auto electron_loss_rate(const double energy, const double nne) -> doub
 // impact ionisation cross section in cm^2
 // energy and ionisation_potential should be in eV
 // fitting formula of Younger 1981
-// called Q_i(E) in KF92 equation 7
+// this is the total ionisation cross section that KF92 write as sigma_ic (their equations 5, 10 and 11,
+// and the ionisation term of equation 7)
 constexpr auto xs_impactionisation(const double energy_ev, const ShellParams& colliondata_ion) -> double {
   const double ionpot_ev = colliondata_ion.ionpot_ev;
   const double u = energy_ev / ionpot_ev;
@@ -976,8 +985,11 @@ constexpr auto xs_impactionisation(const double energy_ev, const ShellParams& co
          (u * pow2(ionpot_ev));
 }
 
-// Kozma & Fransson equation 6.
-// Something related to a number of electrons, needed to calculate the heating fraction in equation 3
+// N(E) of KF92 equation 11: the rate at which electrons appear at an energy E below the solved grid.
+// Its three terms are electrons that excited an ion from E + epsilon_trans, primaries carried down to E
+// by an ionisation energy loss, and the secondaries of ionisations by primaries above 2E + I. The third
+// term of the heating fraction (KF92 equation 8) integrates E * N(E) over [0, SF_EMIN] for the energy
+// that thermalises below the grid.
 // not valid for energy > SF_EMIN
 auto N_e(const int nonemptymgi, const double energy, const std::array<double, SFPTS>& yfunc) -> double {
   const double energy_ev = energy / EV;
@@ -1092,8 +1104,10 @@ auto N_e(const int nonemptymgi, const double energy, const std::array<double, SF
   return N_e_total;
 }
 
-// fraction of deposited energy that goes into heating the thermal electrons
-// Kozma & Fransson equation 3
+// fraction of deposited energy that goes into heating the thermal electrons: KF92 equation 8. Its three
+// terms below are the loss-function integral over the solved grid, the boundary term
+// SF_EMIN * y(SF_EMIN) * L(SF_EMIN) for the electrons flowing through the bottom of the grid, and the
+// energy of the electrons that first appear below SF_EMIN (N(E) of KF92 equation 11).
 auto calculate_frac_heating(const int nonemptymgi, const std::array<double, SFPTS>& yfunc) -> float {
   // frac_heating multiplied by E_init, which will be divided out at the end
   double frac_heating_Einit = 0.;
@@ -1373,7 +1387,8 @@ auto get_eff_ionpot(const int nonemptymgi, const int element, const int ion) {
   return get_cell_allions_data(nonemptymgi)[get_uniqueionindex(element, ion)].eff_ionpot;
 }
 
-// Kozma & Fransson 1992 equation 13
+// KF92 equation 13, with the non-thermal deposition rate density per ion in place of their gamma-ray
+// energy absorption rate 4 pi J_gamma sigma_gamma
 // returns the rate coefficient in s^-1
 auto nt_ionisation_ratecoeff_sf(const int nonemptymgi, const int element, const int ion) -> double {
   const double deposition_rate_density = get_ntlepton_deposition_rate_density(nonemptymgi);
@@ -1861,6 +1876,8 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const std::a
   }
 }
 
+// add the excitation terms of KF92 equation 7 to the Spencer-Fano matrix: for each transition, the level
+// population times the integral of y(E') sigma_ij(E') dE' over E' in [E, E + epsilon_trans]
 void sfmatrix_add_excitation(std::span<double> sfmatrixuppertri, const int nonemptymgi, const int element,
                              const int ion) {
   // excitation terms
@@ -1918,9 +1935,12 @@ void sfmatrix_add_excitation(std::span<double> sfmatrixuppertri, const int nonem
   });
 }
 
-void sfmatrix_add_ionisation(std::span<double> sfmatrixuppertri, const int Z, const int ionstage, const double nnion)
-// add the ionisation terms to the Spencer-Fano matrix
-{
+// add the ionisation terms of KF92 equation 7 to the Spencer-Fano matrix: integrals of
+// y(E') sigma_ic(E') P(E', epsilon - I), using the KF92 equation 5 factorisation into the shell's total
+// cross section times the secondary-electron energy distribution of their equation 4. The first integral
+// covers primaries carried across E by an ionisation energy loss, and the second (subtracted) covers
+// ionisations by primaries above 2E + I, whose secondary is left above E.
+void sfmatrix_add_ionisation(std::span<double> sfmatrixuppertri, const int Z, const int ionstage, const double nnion) {
   std::array<double, SFPTS> vec_xs_ionisation{};
   for (const auto& collionrow : colliondata) {
     if (collionrow.Z == Z && collionrow.ionstage == ionstage) {
@@ -2492,8 +2512,9 @@ DEVICE_FUNC void do_ntlepton_deposit(Packet& pkt) {
   stats::increment(stats::Counter::NT_STAT_TO_KPKT);
 }
 
-// The matrix discretisation follows Equation (2) of Li et al. (2012); the Auger-electron extension is described by
-// Shingles et al. (2020), Section 2.5, doi:10.1093/mnras/stz3412.
+// The matrix discretisation follows the integral form of the degradation equation (KF92 equation 7), as written
+// in Equation (2) of Li et al. (2012); the Auger-electron extension is described by Shingles et al. (2020),
+// Section 2.5, doi:10.1093/mnras/stz3412.
 void solve_spencerfano(const int nonemptymgi, const int timestep, const int iteration) {
   const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
   bool skip_solution = false;

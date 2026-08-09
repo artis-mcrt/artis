@@ -764,12 +764,11 @@ void absorb_or_escape_gamma(Packet& pkt, const double f_gamma) {
   }
 }
 
-void barnes_thermalisation(Packet& pkt)
 // Barnes treatment: packet is either getting absorbed immediately and locally
 // creating a k-packet or it escapes. The absorption probability matches the
 // Barnes thermalization efficiency, for expressions see the original paper:
 // https://ui.adsabs.harvard.edu/abs/2016ApJ...829..110B
-{
+void barnes_thermalisation(Packet& pkt) {
   // compute thermalization efficiency (= absorption probability) using a mean gamma-ray opacity
   // of 0.1, an average value chosen to fit the analytic approximations from the paper.
   // Alternative: distinguish between low-E (kappa = 1) and high-E (kappa = 0.05) packets.
