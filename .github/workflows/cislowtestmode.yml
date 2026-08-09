@@ -9,9 +9,9 @@ on:
     workflow_dispatch:
 
 concurrency:
-  # unlimited concurrency on develop branch ()
+  # unlimited concurrency on main branch ()
   # Otherwise use the ref name (branch or tag) as concurrency group, so that only one workflow runs per branch or tag at a time
-  group: ${{ github.workflow }}-${{ github.ref_name == 'develop' && github.run_id || github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref_name == 'main' && github.run_id || github.ref }}
   cancel-in-progress: false
 
 jobs:
@@ -20,7 +20,7 @@ jobs:
         runs-on: ubuntu-latest
         steps:
             - run: |
-                echo "Concurrency group: ${{ github.workflow }}-${{ github.ref_name == 'develop' && github.run_id || github.ref }}"
+                echo "Concurrency group: ${{ github.workflow }}-${{ github.ref_name == 'main' && github.run_id || github.ref }}"
 
     citestmode:
         name: testmode ON

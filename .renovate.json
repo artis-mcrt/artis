@@ -3,7 +3,7 @@
   "extends": [
     "config:recommended"
   ],
-  "baseBranches": ["develop"],
+  "baseBranches": ["main"],
   "bumpVersion": "minor",
   "pre-commit": {
     "enabled": true

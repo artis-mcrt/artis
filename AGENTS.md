@@ -116,5 +116,5 @@ Before committing, at minimum run clang-format on changed files and make sure
   unless there is a crash.
 - The Makefile regenerates `version.h` from git metadata on every invocation;
   `version*.h` is gitignored.
-- The default branch is `develop`; `release` is the production branch. CI runs
+- The default branch is `main`; `release` is the production branch. CI runs
   on every push.
