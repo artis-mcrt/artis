@@ -100,7 +100,7 @@ struct DecayPath {
   std::vector<double> lambdas;
   double branchproduct{
       0.,
-  };  // product of all branching factors along the path set by calculate_decaypath_branchproduct()
+  };  // product of all branching factors along the path, accumulated as the path is built
 };
 
 std::vector<Nuclide> nuclides;

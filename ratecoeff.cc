@@ -442,7 +442,7 @@ void precalculate_ion_alpha_sp() {
 }
 
 // Integrand to calculate the rate coefficient for photoionisation, corrected for stimulated recombination.
-// Unlike integrand_corrphotoioncoeff() above, which assumes LTE at T_R, the correction factor here is built from
+// Unlike gammacorr_integrand() above, which assumes LTE at T_R, the correction factor here is built from
 // the cell's actual level populations (via modified_departure_ratio) and T_e.
 auto integrand_corrphotoioncoeff_custom_radfield(const double nu_minus_nu_edge, const double nu_edge,
                                                  const double modified_departure_ratio,

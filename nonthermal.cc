@@ -696,10 +696,10 @@ void read_collion_data() {
   }
 }
 
+// Count the excitation transitions that pass the NTEXCITATION_MAXNLEVELS_LOWER and
+// NTEXCITATION_MAXNLEVELS_UPPER conditions. This count might be higher than the number of stored
+// power_per_source_mass due to the MAX_NT_EXCITATIONS_STORED limit.
 auto get_possible_nt_excitation_count() -> int {
-  // count the number of excitation transitions that pass the MAXNLEVELS_LOWER and MAXNLEVELS_UPPER conditions
-  // this count might be higher than the number of stored power_per_source_mass due to the MAX_NT_EXCITATIONS_STORED
-  // limit
   int ntexcitationcount = 0;
   for (int element = 0; element < get_nelements(); element++) {
     for (int ion = 0; ion < get_nions(element); ion++) {
