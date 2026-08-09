@@ -333,14 +333,16 @@ DEVICE_FUNC void calculate_cellcache_macroatom_transitionrates(const int nonempt
                                       globals::alltrans);
 }
 
-// Perform the macro-atom internal random walk for a packet that has just been absorbed, and convert it
-// back into an r-packet or a k-packet.
+// Perform the macro-atom internal random walk and leave the packet as an r-packet or a k-packet.
 //
-// Starting from the activated level in pktmastate, repeatedly sample the next macro-atom transition
-// from the rates of the internal upward/downward transitions against the radiative and collisional
-// deactivation channels, until the packet either escapes as a line or continuum r-packet or is
-// converted to thermal energy as a k-packet. This is the transition-probability scheme of Lucy (2002),
-// doi:10.1051/0004-6361:20011756; Lucy (2003), arXiv:astro-ph/0303202.
+// The macro-atom starts in the state given by pktmastate, which the caller has activated by a
+// bound-bound or bound-free absorption (rpkt.cc), by collisional excitation or ionisation when a
+// k-packet is destroyed (kpkt.cc), or by non-thermal excitation or ionisation (nonthermal.cc).
+// Repeatedly sample the next macro-atom transition from the rates of the internal upward and downward
+// transitions against the radiative and collisional deactivation channels, until the packet leaves as
+// a line or continuum r-packet or is converted to thermal energy as a k-packet. This is the
+// transition-probability scheme of Lucy (2002), doi:10.1051/0004-6361:20011756; Lucy (2003),
+// arXiv:astro-ph/0303202.
 DEVICE_FUNC void do_macroatom(Packet& pkt, const MacroAtomState& pktmastate) {
   const auto nonemptymgi = grid::get_propcell_nonemptymgi(pkt.cellindex);
   assert_testmodeonly(nonemptymgi >= 0);

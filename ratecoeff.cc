@@ -787,8 +787,10 @@ DEVICE_FUNC auto get_corrphotoioncoeff(const int element, const int ion, const i
 
 // Return true if the ionisation rate out of an ion is zero, so that callers can skip the ion without
 // evaluating the full rate. The top ion of an element is always treated as having zero rate. For an
-// element without NLTE levels this tests the ground-state photoionisation estimator; otherwise it tests
-// both the photoionisation and the thermal collisional ionisation rate of every populated level.
+// element without NLTE levels this tests the ground-state ionisation rate estimator, which holds either
+// the Monte Carlo photoionisation estimator or the radiative-plus-collisional rate from
+// calculate_iongamma_per_gspop(); otherwise it tests both the photoionisation and the thermal
+// collisional ionisation rate of every populated level.
 auto iongamma_is_zero(const int nonemptymgi, const int element, const int ion) -> bool {
   const int nions = get_nions(element);
   if (ion >= nions - 1) {

@@ -323,9 +323,9 @@ auto get_possible_event_expansion_opacity(const int nonemptymgi, Packet& pkt, co
   return {std::numeric_limits<double>::max(), false};
 }
 
-// Scatter an r-packet off a free electron, sampling the new direction (and, with POL_ON, the new Stokes
-// parameters) in the comoving frame before transforming back to the rest frame. The scattering is
-// coherent in the comoving frame, so only the direction changes there.
+// Scatter an r-packet off a free electron: sample the new direction in the comoving frame and transform
+// it back to the rest frame, also updating the Stokes parameters when POL_ON. The scattering is
+// coherent, so the comoving-frame frequency and energy are unchanged.
 void electron_scatter_rpkt(Packet& pkt) {
   // now make the packet a r-pkt and set further flags
   pkt.type = TYPE_RPKT;
@@ -410,7 +410,8 @@ void electron_scatter_rpkt(Packet& pkt) {
 // Handle a continuum interaction of an r-packet by sampling which continuum process occurs, in
 // proportion to its share of the total continuum opacity: electron scattering (coherent, direction
 // change only), free-free absorption (packet becomes a k-packet), or bound-free absorption (packet
-// activates a macro-atom, or becomes a k-packet for the non-macroatom fraction).
+// activates a macro-atom in the upper ion with probability nu_edge/nu, the ionisation energy fraction,
+// and otherwise becomes a k-packet carrying the freed electron's kinetic energy).
 void rpkt_event_continuum(Packet& pkt, const ContinuumOpacity& chi_rpkt_cont) {
   const double nu = pkt.nu_cmf;
 
