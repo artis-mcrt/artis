@@ -2003,7 +2003,11 @@ void sfmatrix_add_ionisation(std::span<double> sfmatrixuppertri, const int Z, co
         const double endash = engrid(j);
         const double epsilon_upper = std::min((endash + ionpot_ev) / 2, endash);
         int_eps_upper[j] = std::atan((epsilon_upper - ionpot_ev) / J);
-        prefactors[j] = vec_xs_ionisation[j] * nnion * DELTA_E / std::atan((endash - ionpot_ev) / 2 / J);
+        // if the ionisation threshold falls exactly on a grid point, the normalisation is atan(0) = 0
+        // there; the epsilon integration range is then empty (epsilon_upper == I == epsilon_lower), so the
+        // contribution is zero, and the guard avoids a 0/0 or x/0 that would put NaN into the matrix
+        const double atan_norm = std::atan((endash - ionpot_ev) / 2 / J);
+        prefactors[j] = (atan_norm > 0.) ? vec_xs_ionisation[j] * nnion * DELTA_E / atan_norm : 0.;
       }
 
       // The first KF92 integral's lower limit is epsilon = E' - E, the smallest energy loss that drops a
