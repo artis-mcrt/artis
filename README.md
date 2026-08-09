@@ -2,7 +2,7 @@
 
 [![DOI](https://zenodo.org/badge/11279591.svg)](https://zenodo.org/badge/latestdoi/11279591)
 [![CI](https://github.com/artis-mcrt/artis/actions/workflows/ci.yml/badge.svg)](https://github.com/artis-mcrt/artis/actions/workflows/ci.yml)
-[![License](https://img.shields.io/github/license/artis-mcrt/artis)](https://github.com/artis-mcrt/artis/blob/develop/LICENSE)
+[![License](https://img.shields.io/github/license/artis-mcrt/artis)](https://github.com/artis-mcrt/artis/blob/main/LICENSE)
 
 <img src="data/artislogo.png" alt="ARTIS logo" width="280" />
 
@@ -45,7 +45,7 @@ An early version of the code is described in [Sim (2007)](https://ui.adsabs.harv
 - Expansion opacities and parameterised scattering/thermalisation ratio (instead of default line-by-line opacity and macroatom): Shingles et al. (in prep)
 
 ## Source code availability and license
-The ARTIS source code is available under a [BSD 3-Clause license](https://github.com/artis-mcrt/artis/blob/develop/LICENSE), which requires attribution and preservation of copyright notices on any substantial copies. If you find the ARTIS code useful in any way, we request that you cite us as described above and star the repository to help show impact in funding proposals.
+The ARTIS source code is available under a [BSD 3-Clause license](https://github.com/artis-mcrt/artis/blob/main/LICENSE), which requires attribution and preservation of copyright notices on any substantial copies. If you find the ARTIS code useful in any way, we request that you cite us as described above and star the repository to help show impact in funding proposals.
 
 ## Setting up production runs on Linux
 We recommend retaining the exact source code and Git metadata within each simulation folder for future reference (i.e., don't just copy the executables).
@@ -63,7 +63,7 @@ Next, select an options preset. For example:
 ln -s artisoptions_classic.h artisoptions.h
 ```
 
-You will likely want to change the number of packets per rank (MPKTS) using a text editor, e.g. `vim artisoptions.h`. The options are explained in [artisoptions_doc.md](https://github.com/artis-mcrt/artis/blob/develop/artisoptions_doc.md).
+You will likely want to change the number of packets per rank (MPKTS) using a text editor, e.g. `vim artisoptions.h`. The options are explained in [artisoptions_doc.md](https://github.com/artis-mcrt/artis/blob/main/artisoptions_doc.md).
 
 Next, compile with `make` and go up a level to the model folder:
 ```sh
@@ -80,7 +80,16 @@ sbatch artis/scripts/artis-cosma8.sh
 The job scripts resubmit themselves until the simulation is finished and then queue a post-processing job (scripts/exspec-zip-*.sh) that runs exspec and compresses the output files. The post-processing job also converts the packets and estimator files to parquet format with [artistools](https://github.com/artis-mcrt/artistools), which it installs automatically using uv. See [Post-processing with exspec](#post-processing-with-exspec) below for what exspec does.
 
 ## Setting up for development
-Clone the source code repository and check out the default branch `develop` (`release` is the production branch):
+> [!IMPORTANT]
+> **The develop branch is now called main**: Run the following commands to update your git repo:
+> ```sh
+> git branch -m develop main
+> git fetch origin
+> git branch -u origin/main main
+> git remote set-head origin -a
+> ```
+
+Clone the source code repository and check out the default branch `main` (`release` is the production branch):
 ```sh
 git clone https://github.com/artis-mcrt/artis.git
 cd artis
