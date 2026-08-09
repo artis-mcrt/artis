@@ -106,6 +106,10 @@ Before committing, at minimum run clang-format on changed files and make sure
 
 ## Conventions and gotchas
 
+- Output files (e.g. `linestat.out`, `*.out` spectra/light curve files) are
+  parsed downstream by the artistools Python package. Do not change their
+  formats or make them optional — `linestat.out` in particular must remain
+  byte-compatible.
 - Prefer modern C++: `constexpr`, `std::ranges`, `std::span`, structured
   bindings. Compile-time configuration lives in `artisoptions.h` as `constexpr`
   values rather than runtime flags.
