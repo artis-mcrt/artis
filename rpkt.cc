@@ -408,10 +408,10 @@ void electron_scatter_rpkt(Packet& pkt) {
 }
 
 // Handle a continuum interaction of an r-packet by sampling which continuum process occurs, in
-// proportion to its share of the total continuum opacity: electron scattering (coherent, direction
-// change only), free-free absorption (packet becomes a k-packet), or bound-free absorption (packet
-// activates a macro-atom in the upper ion with probability nu_edge/nu, the ionisation energy fraction,
-// and otherwise becomes a k-packet carrying the freed electron's kinetic energy).
+// proportion to its share of the total continuum opacity: electron scattering (coherent in the comoving
+// frame; see electron_scatter_rpkt()), free-free absorption (packet becomes a k-packet), or bound-free absorption
+// (packet activates a macro-atom in the upper ion with probability nu_edge/nu, the ionisation energy fraction, and
+// otherwise becomes a k-packet carrying the freed electron's kinetic energy).
 void rpkt_event_continuum(Packet& pkt, const ContinuumOpacity& chi_rpkt_cont) {
   const double nu = pkt.nu_cmf;
 
