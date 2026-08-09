@@ -2,8 +2,8 @@
 // (radiative and collisional bound-bound and bound-free rates, plus non-thermal ionisation)
 // for all levels of all ions of an element and solves for the level populations.
 //
-// The NLTE population solver is described by Shingles et al. (2020), MNRAS, 492, 2029,
-// doi:10.1093/mnras/stz3412.
+// The NLTE ionisation and population solver is described by Shingles et al. (2020), MNRAS, 492,
+// 2029, section 2.3, doi:10.1093/mnras/stz3412.
 
 #include <algorithm>
 #include <chrono>

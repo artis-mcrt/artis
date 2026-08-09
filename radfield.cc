@@ -2,8 +2,8 @@
 // (full-spectrum and binned J_nu, plus detailed bound-bound Jb_lu estimators) and fits diluted
 // blackbodies (W, T_R) per cell and per frequency bin for use in the photoionisation and heating rates.
 //
-// The multibin radiation field model and the trajectory-based photoionisation estimators are
-// described by Shingles et al. (2020), MNRAS, 492, 2029, doi:10.1093/mnras/stz3412.
+// The multibin radiation field model and the photoionisation, bound-bound, and heating estimators
+// are described by Shingles et al. (2020), MNRAS, 492, 2029, section 2.2, doi:10.1093/mnras/stz3412.
 
 #include "radfield.h"
 
