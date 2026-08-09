@@ -307,6 +307,8 @@ void do_macroatom_raddeexcitation(Packet& pkt, const int ionuniquelevelindexstar
   return -1;
 }
 
+// Get the effective Gaunt factor used in the van Regemorter collisional excitation rate, approximated
+// by a single value per ion stage (neutral, singly ionised, and more highly ionised).
 [[gnu::const]] [[nodiscard]] constexpr auto gaunt_factor(const int ionstage) -> double {
   if (ionstage == 1) {
     return 0.1;
@@ -330,6 +332,14 @@ DEVICE_FUNC void calculate_cellcache_macroatom_transitionrates(const int nonempt
                                       globals::alltrans);
 }
 
+// Perform the macro-atom internal random walk for a packet that has just been absorbed, and convert it
+// back into an r-packet or a k-packet.
+//
+// Starting from the activated level in pktmastate, repeatedly sample the next macro-atom transition
+// from the rates of the internal upward/downward transitions against the radiative and collisional
+// deactivation channels, until the packet either escapes as a line or continuum r-packet or is
+// converted to thermal energy as a k-packet. This is the transition-probability scheme of Lucy (2002),
+// doi:10.1051/0004-6361:20011756; Lucy (2003), arXiv:astro-ph/0303202.
 DEVICE_FUNC void do_macroatom(Packet& pkt, const MacroAtomState& pktmastate) {
   const auto nonemptymgi = grid::get_propcell_nonemptymgi(pkt.cellindex);
   assert_testmodeonly(nonemptymgi >= 0);

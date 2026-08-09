@@ -50,7 +50,7 @@ inline auto get_noncommentline(std::istream& input, std::string& line) -> bool {
 }
 
 // parse the next whitespace-delimited token of the line as a number and advance past it.
-// Returns false if there is no token left or the token is not fully numeric.
+// Return false if there is no token left or the token is not fully numeric.
 // Accepts the same number spellings as stream extraction: leading plus signs are allowed, magnitudes below the
 // range of T (or of double) read as zero, and out-of-range magnitudes and nan/inf spellings are rejected
 template <typename T>

@@ -87,7 +87,7 @@ void place_pellet(const double e_cmf_per_packet, const std::span<const double> e
 
 }  // anonymous namespace
 
-// Subroutine that initialises the packets if we start a new simulation.
+// Initialise the packets at the start of a new simulation.
 void packet_init(std::span<Packet> packets) {
   MPI_Barrier_allranks();
   printlnlog("UNIFORM_PELLET_ENERGIES is {}", UNIFORM_PELLET_ENERGIES ? "true" : "false");

@@ -144,7 +144,7 @@ const auto logengrid = [] {
 }();
 
 // evaluate the source function (distribution of deposited energy) [s^-1 cm^-3 eV^-1] at energy engrid(index)
-// This function returns only the spectral shape of the deposited-energy source, spread over a finite energy interval
+// The result is only the spectral shape of the deposited-energy source, spread over a finite energy interval
 // and normalized so its integral over energy is 1 (i.e. effective units of eV^-1); the final deposition-rate density
 // scaling is applied separately.
 constexpr auto sourcevec(const int index) {
@@ -736,14 +736,14 @@ void zero_all_effionpot(const ptrdiff_t nonemptymgi) {
   check_auger_probabilities(nonemptymgi);
 }
 
-// finds the highest energy point <= energy_ev
+// Find the highest energy point <= energy_ev
 [[nodiscard]] constexpr auto get_energyindex_ev_lteq(const double energy_ev) -> int {
   const auto index = static_cast<int>(get_linearbinindex(energy_ev, SF_EMIN, DELTA_E));
 
   return std::clamp(index, 0, SFPTS - 1);
 }
 
-// finds the lowest energy point >= energy_ev
+// Find the lowest energy point >= energy_ev
 [[nodiscard]] constexpr auto get_energyindex_ev_gteq(const double energy_ev) -> int {
   const int index = std::ceil((energy_ev - SF_EMIN) / DELTA_E);
 
@@ -824,7 +824,7 @@ auto get_xs_ionisation_vector_lotz(std::array<double, SFPTS>& xs_vec, const Shel
 }
 
 // xs_vec will be set with impact ionisation cross sections [cm2] for E > ionpot_ev (and zeros below this energy)
-// returns the index of the first energy point >= ionpot_ev, or SFPTS (one past the last index, with xs_vec
+// Return the index of the first energy point >= ionpot_ev, or SFPTS (one past the last index, with xs_vec
 // all zeros) when ionpot_ev is above the top of the energy grid
 auto get_xs_ionisation_vector(std::array<double, SFPTS>& xs_vec, const ShellParams& colliondata_ion) -> int {
   const double ionpot_ev = colliondata_ion.ionpot_ev;
@@ -1389,7 +1389,7 @@ auto get_eff_ionpot(const int nonemptymgi, const int element, const int ion) {
 
 // KF92 equation 13, with the non-thermal deposition rate density per ion in place of their gamma-ray
 // energy absorption rate 4 pi J_gamma sigma_gamma
-// returns the rate coefficient in s^-1
+// Return the rate coefficient in s^-1
 auto nt_ionisation_ratecoeff_sf(const int nonemptymgi, const int element, const int ion) -> double {
   const double deposition_rate_density = get_ntlepton_deposition_rate_density(nonemptymgi);
   if (deposition_rate_density > 0.) {
@@ -1401,7 +1401,7 @@ auto nt_ionisation_ratecoeff_sf(const int nonemptymgi, const int element, const 
 
 // vector of collisional excitation cross sections in cm^2
 // epsilon_trans is in erg
-// returns the index of the first valid cross section point (en >= epsilon_trans)
+// Return the index of the first valid cross section point (en >= epsilon_trans)
 // all elements below this index are invalid and should not be used
 auto get_xs_excitation_vector(const int alltransindex, const double statweight_lower, const double epsilon_trans)
     -> std::tuple<std::array<double, SFPTS>, int> {
@@ -1464,7 +1464,7 @@ auto get_xs_excitation_vector(const int alltransindex, const double statweight_l
 }
 
 // Kozma & Fransson equation 9 divided by level population and epsilon_trans
-// returns the rate coefficient in s^-1 divided by deposition rate density in erg/cm^3/s
+// Return the rate coefficient in s^-1 divided by the deposition rate density in erg/cm^3/s
 auto calculate_nt_excitation_ratecoeff_perdeposition(const std::array<double, SFPTS>& yvec, const int alltransindex,
                                                      const double statweight_lower, const double epsilon_trans)
     -> double {
@@ -1485,7 +1485,7 @@ auto calculate_nt_excitation_ratecoeff_perdeposition(const std::array<double, SF
   return 0.;
 }
 
-// returns the energy rate [erg/cm3/s] going toward non-thermal ionisation of lowerion
+// Return the energy rate [erg/cm3/s] going toward non-thermal ionisation of lowerion
 auto ion_ntion_energyrate(const int nonemptymgi, const int element, const int lowerion) -> double {
   const double nnlowerion = get_nnion(nonemptymgi, element, lowerion);
   double enrate = 0.;
@@ -1500,7 +1500,7 @@ auto ion_ntion_energyrate(const int nonemptymgi, const int element, const int lo
   return gamma_nt * enrate;
 }
 
-// returns the energy rate [erg/s] going toward non-thermal ionisation in a modelgrid cell
+// Return the energy rate [erg/s] going toward non-thermal ionisation in a modelgrid cell
 auto get_ntion_energyrate(const int nonemptymgi) -> double {
   double ratetotal = 0.;
   for (int ielement = 0; ielement < get_nelements(); ielement++) {

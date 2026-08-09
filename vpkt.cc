@@ -1,6 +1,9 @@
 // Virtual packets (optional VPKT mode): at real-packet emission and scattering events, virtual
 // packets are launched toward predefined observer directions and their optical-depth-weighted
 // energies are accumulated into viewing-angle-dependent (and optionally polarised) spectra.
+//
+// The virtual-packet scheme and the polarised radiative transfer it feeds are described by
+// Bulla et al. (2015), MNRAS, 450, 967, doi:10.1093/mnras/stv657.
 
 #include "vpkt.h"
 

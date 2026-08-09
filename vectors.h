@@ -87,7 +87,7 @@ template <size_t VECDIM>
 //   pos_rf: the rest frame position of the packet
 //   dir_rf: the rest frame direction (unit vector) of light propagation
 //   prop_time: the propagation time of the packet
-// returns: the ratio f = nu_cmf / nu_rf
+// Returns: the ratio f = nu_cmf / nu_rf
 [[nodiscard]] DEVICE_FUNC constexpr auto calculate_doppler_nucmf_on_nurf(const Vec3d& pos_rf, const Vec3d& dir_rf,
                                                                          const double prop_time) -> double {
   // velocity of the comoving frame relative to the rest frame
@@ -309,7 +309,7 @@ constexpr auto frame_transform(const Vec3d& n_rf, const double q0, const double 
 }
 
 // Compute the new Stokes Parameters after scattering and transform them back to the RF.
-// Returns a tuple of the new direction in the RF, the new q and u in the RF and the scattering phase-function
+// Return a tuple of the new direction in the RF, the new q and u in the RF and the scattering phase-function
 // probability pn
 constexpr auto scatter_polarisation_to_rf(const Vec3d& old_dir_cmf, const Vec3d& new_dir_cmf, const double q_i_cmf,
                                           const double u_i_cmf, const Vec3d& vel_vec)

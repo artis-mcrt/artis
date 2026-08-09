@@ -65,6 +65,10 @@ auto get_nu_cmf_abort(const Vec3d& pos, const Vec3d& dir, const double prop_time
   return nu_cmf_abort;
 }
 
+// Get the Sobolev optical depth of a line at the current propagation time, from the stimulated-emission
+// corrected level populations (B_lu n_l - B_ul n_u) h nu / (4 pi) times t_current for homologous
+// expansion. Negative values (population inversion) are clamped to zero.
+// With USECELLCACHE the level populations come from the cell cache rather than being recalculated.
 template <bool USECELLCACHE>
 [[nodiscard]] auto get_tau_sobolev(const int nonemptymgi, const int lineindex, const double t_current) -> double {
   const int uniquelevelindex_lower = globals::linelist.uniquelevelindex_lower[lineindex];
@@ -94,7 +98,7 @@ template <bool USECELLCACHE>
 }
 
 // find any line or continuum interaction occurring before frequency decreases to nu_cmf_abort at distance abort_dist
-// returns tuple of (distance to event, next transition index for pkt.next_trans, bool for whether line event)
+// Return a tuple of (distance to event, next transition index for pkt.next_trans, bool for whether line event)
 // the next transition index is lineindex + 1 for a line event, may remain the current next_trans if no event occurs,
 // and is globals::nlines + 1 for a continuum event
 auto get_possible_event(const int nonemptymgi, const Packet& pkt, const ContinuumOpacity& chi_rpkt_cont,
@@ -319,6 +323,9 @@ auto get_possible_event_expansion_opacity(const int nonemptymgi, Packet& pkt, co
   return {std::numeric_limits<double>::max(), false};
 }
 
+// Scatter an r-packet off a free electron, sampling the new direction (and, with POL_ON, the new Stokes
+// parameters) in the comoving frame before transforming back to the rest frame. The scattering is
+// coherent in the comoving frame, so only the direction changes there.
 void electron_scatter_rpkt(Packet& pkt) {
   // now make the packet a r-pkt and set further flags
   pkt.type = TYPE_RPKT;
@@ -400,6 +407,10 @@ void electron_scatter_rpkt(Packet& pkt) {
   set_pkt_restframe_from_cmf(pkt);
 }
 
+// Handle a continuum interaction of an r-packet by sampling which continuum process occurs, in
+// proportion to its share of the total continuum opacity: electron scattering (coherent, direction
+// change only), free-free absorption (packet becomes a k-packet), or bound-free absorption (packet
+// activates a macro-atom, or becomes a k-packet for the non-macroatom fraction).
 void rpkt_event_continuum(Packet& pkt, const ContinuumOpacity& chi_rpkt_cont) {
   const double nu = pkt.nu_cmf;
 
@@ -958,6 +969,9 @@ void MPI_Bcast_binned_opacities(const ptrdiff_t nonemptymgi, const int root_node
   }
 }
 
+// Calculate the binned expansion opacities of one cell, used in place of line-by-line Sobolev opacity
+// when EXPANSIONOPACITIES_ON is set: within each frequency bin, the Sobolev optical depths of all lines
+// are combined into a single effective opacity for the bin.
 void calculate_expansion_opacities(const int nonemptymgi) {
   const auto rho = grid::get_rho(nonemptymgi);
 

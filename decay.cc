@@ -1,6 +1,9 @@
 // Radioactive decays: nuclide properties, decay paths, time-dependent nuclide abundances
 // (Bateman equation solutions), and the energy release rates and decay-time sampling used to
 // set up the radioactive energy pellets.
+//
+// The alpha, beta, and fission decay treatment for kilonovae is described by Shingles et al.
+// (2023), ApJ, 954, L41.
 
 #include "decay.h"
 
