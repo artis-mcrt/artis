@@ -39,7 +39,7 @@ void normalise_bf_estimators(int nts, int nts_prev, int titer, double deltat);
 [[nodiscard]] DEVICE_FUNC auto get_bfrate_estimator(int element, int lowerion, int lower, int phixstargetindex,
                                                     int nonemptymgi) -> double;
 
-// Computes the integral of the Planck function (or nu times the Planck function) between frequency nu=nu_low to
+// Compute the integral of the Planck function (or nu times the Planck function) between frequency nu=nu_low to
 // nu=nu_high. Units are ergs/s/sr/cm2 for the integral of the Planck function, and ergs/s2/sr/cm2 for the integral of
 // nu times the Planck function.
 [[nodiscard]] auto calculate_planck_integral(double temperature, double nu_low, double nu_high, bool times_nu)

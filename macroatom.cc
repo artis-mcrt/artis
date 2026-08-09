@@ -307,6 +307,9 @@ void do_macroatom_raddeexcitation(Packet& pkt, const int ionuniquelevelindexstar
   return -1;
 }
 
+// Get the Gaunt factor used by the Seaton approximation in col_ionisation_ratecoeff() and
+// col_recombination_ratecoeff(), approximated by a single value per ionic charge (neutral, singly
+// ionised, and more highly ionised).
 [[gnu::const]] [[nodiscard]] constexpr auto gaunt_factor(const int ionstage) -> double {
   if (ionstage == 1) {
     return 0.1;
@@ -330,6 +333,16 @@ DEVICE_FUNC void calculate_cellcache_macroatom_transitionrates(const int nonempt
                                       globals::alltrans);
 }
 
+// Perform the macro-atom internal random walk and leave the packet as an r-packet or a k-packet.
+//
+// The macro-atom starts in the state given by pktmastate, which the caller has activated by a
+// bound-bound or bound-free absorption (rpkt.cc), by collisional excitation or ionisation when a
+// k-packet is destroyed (kpkt.cc), or by non-thermal excitation or ionisation (nonthermal.cc).
+// Repeatedly sample the next macro-atom transition from the rates of the internal upward and downward
+// transitions against the radiative and collisional deactivation channels, until the packet leaves as
+// a line or continuum r-packet or is converted to thermal energy as a k-packet. This is the
+// transition-probability scheme of Lucy (2002), doi:10.1051/0004-6361:20011756; Lucy (2003),
+// arXiv:astro-ph/0303202.
 DEVICE_FUNC void do_macroatom(Packet& pkt, const MacroAtomState& pktmastate) {
   const auto nonemptymgi = grid::get_propcell_nonemptymgi(pkt.cellindex);
   assert_testmodeonly(nonemptymgi >= 0);

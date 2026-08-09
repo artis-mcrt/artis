@@ -6,8 +6,9 @@
 // The degradation equation is that of Spencer & Fano (1954, Phys. Rev., 93, 1172); this
 // implementation follows the supernova application of Kozma & Fransson (1992, ApJ, 390, 602),
 // hereafter KF92, whose equation numbers are cited throughout this file. The integral form of the
-// degradation equation (KF92 equation 7) is discretised on a uniform energy grid as an upper
-// triangular matrix equation and solved by back-substitution in solve_spencerfano().
+// degradation equation (KF92 equation 7), extended with an Auger-electron source term as equation 8
+// of Shingles et al. (2020), is discretised on a uniform energy grid as an upper triangular matrix
+// equation and solved by back-substitution in solve_spencerfano().
 
 #include "nonthermal.h"
 
@@ -144,7 +145,7 @@ const auto logengrid = [] {
 }();
 
 // evaluate the source function (distribution of deposited energy) [s^-1 cm^-3 eV^-1] at energy engrid(index)
-// This function returns only the spectral shape of the deposited-energy source, spread over a finite energy interval
+// The result is only the spectral shape of the deposited-energy source, spread over a finite energy interval
 // and normalized so its integral over energy is 1 (i.e. effective units of eV^-1); the final deposition-rate density
 // scaling is applied separately.
 constexpr auto sourcevec(const int index) {
@@ -696,10 +697,10 @@ void read_collion_data() {
   }
 }
 
+// Count the excitation transitions that pass the NTEXCITATION_MAXNLEVELS_LOWER and
+// NTEXCITATION_MAXNLEVELS_UPPER conditions. This count might be higher than the number of stored
+// power_per_source_mass due to the MAX_NT_EXCITATIONS_STORED limit.
 auto get_possible_nt_excitation_count() -> int {
-  // count the number of excitation transitions that pass the MAXNLEVELS_LOWER and MAXNLEVELS_UPPER conditions
-  // this count might be higher than the number of stored power_per_source_mass due to the MAX_NT_EXCITATIONS_STORED
-  // limit
   int ntexcitationcount = 0;
   for (int element = 0; element < get_nelements(); element++) {
     for (int ion = 0; ion < get_nions(element); ion++) {
@@ -736,14 +737,14 @@ void zero_all_effionpot(const ptrdiff_t nonemptymgi) {
   check_auger_probabilities(nonemptymgi);
 }
 
-// finds the highest energy point <= energy_ev
+// Find the highest energy point <= energy_ev
 [[nodiscard]] constexpr auto get_energyindex_ev_lteq(const double energy_ev) -> int {
   const auto index = static_cast<int>(get_linearbinindex(energy_ev, SF_EMIN, DELTA_E));
 
   return std::clamp(index, 0, SFPTS - 1);
 }
 
-// finds the lowest energy point >= energy_ev
+// Find the lowest energy point >= energy_ev
 [[nodiscard]] constexpr auto get_energyindex_ev_gteq(const double energy_ev) -> int {
   const int index = std::ceil((energy_ev - SF_EMIN) / DELTA_E);
 
@@ -824,7 +825,7 @@ auto get_xs_ionisation_vector_lotz(std::array<double, SFPTS>& xs_vec, const Shel
 }
 
 // xs_vec will be set with impact ionisation cross sections [cm2] for E > ionpot_ev (and zeros below this energy)
-// returns the index of the first energy point >= ionpot_ev, or SFPTS (one past the last index, with xs_vec
+// Return the index of the first energy point >= ionpot_ev, or SFPTS (one past the last index, with xs_vec
 // all zeros) when ionpot_ev is above the top of the energy grid
 auto get_xs_ionisation_vector(std::array<double, SFPTS>& xs_vec, const ShellParams& colliondata_ion) -> int {
   const double ionpot_ev = colliondata_ion.ionpot_ev;
@@ -919,7 +920,8 @@ constexpr auto xs_excitation(const int element, const int ion, const int lower, 
     const double g_bar = (A * std::log(U)) + B;
 
     constexpr double prefactor = 45.585750051;  // 8 * pi^2/sqrt(3)
-    // Eq 4 of Mewe 1972, possibly from Seaton 1962?
+    // van Regemorter (1962) approximation with the g_bar above from the first two terms of the
+    // fitting formula in equation 5 of Mewe (1972); see Shingles et al. (2020), section 2.5
     return prefactor * A_naught_squared * pow2(H_ionpot / epsilon_trans) *
            globals::alltrans.osc_strength[alltransindex] * g_bar / U;
   }
@@ -941,7 +943,9 @@ constexpr auto electron_loss_rate(const double energy, const double nne) -> doub
     return 0;
   }
 
-  // normally set to 1.0, but Shingles et al. (2021) boosted this to increase heating
+  // normally 1.0, but the heatboost4/heatboost8 models of Shingles et al. (2022), MNRAS, 512, 6150,
+  // doi:10.1093/mnras/stac902, boosted this loss rate by factors of four and eight to test the
+  // sensitivity of nebular Type Ia ionisation to the non-thermal heating fraction
   constexpr double boostfactor = 1.;
 
   const double omegap = std::sqrt(4 * PI * nne * pow2(QE) / ME);
@@ -1278,7 +1282,8 @@ auto calculate_nt_ionisation_ratecoeff(const int nonemptymgi, const int element,
   return yscalefactor * y_xs_de;
 }
 
-// Kozma & Fransson 1992 equation 12, except modified to be a sum over all shells of an ion.
+// Kozma & Fransson 1992 equation 12, except modified to be a sum over all shells of an ion (the
+// per-shell ionisation fractions are equation 11 of Shingles et al. 2020).
 // the result is in [erg]
 void calculate_eff_ionpot_auger_rates(const int nonemptymgi, const int element, const int ion,
                                       const std::array<double, SFPTS>& yfunc) {
@@ -1388,8 +1393,8 @@ auto get_eff_ionpot(const int nonemptymgi, const int element, const int ion) {
 }
 
 // KF92 equation 13, with the non-thermal deposition rate density per ion in place of their gamma-ray
-// energy absorption rate 4 pi J_gamma sigma_gamma
-// returns the rate coefficient in s^-1
+// energy absorption rate 4 pi J_gamma sigma_gamma (equivalent to equation 12 of Shingles et al. 2020)
+// Return the rate coefficient in s^-1
 auto nt_ionisation_ratecoeff_sf(const int nonemptymgi, const int element, const int ion) -> double {
   const double deposition_rate_density = get_ntlepton_deposition_rate_density(nonemptymgi);
   if (deposition_rate_density > 0.) {
@@ -1401,7 +1406,7 @@ auto nt_ionisation_ratecoeff_sf(const int nonemptymgi, const int element, const 
 
 // vector of collisional excitation cross sections in cm^2
 // epsilon_trans is in erg
-// returns the index of the first valid cross section point (en >= epsilon_trans)
+// Return the index of the first valid cross section point (en >= epsilon_trans)
 // all elements below this index are invalid and should not be used
 auto get_xs_excitation_vector(const int alltransindex, const double statweight_lower, const double epsilon_trans)
     -> std::tuple<std::array<double, SFPTS>, int> {
@@ -1439,7 +1444,8 @@ auto get_xs_excitation_vector(const int alltransindex, const double statweight_l
     constexpr double prefactor = 45.585750051;  // 8 * pi^2/sqrt(3)
     const double epsilon_trans_ev = epsilon_trans / EV;
 
-    // Eq 4 of Mewe 1972, possibly from Seaton 1962?
+    // van Regemorter (1962) approximation with g_bar from the first two terms of the fitting
+    // formula in equation 5 of Mewe (1972); see Shingles et al. (2020), section 2.5
     const double constantfactor =
         epsilon_trans_ev * prefactor * A_naught_squared * pow2(H_ionpot / epsilon_trans) * trans_osc_strength;
 
@@ -1464,7 +1470,7 @@ auto get_xs_excitation_vector(const int alltransindex, const double statweight_l
 }
 
 // Kozma & Fransson equation 9 divided by level population and epsilon_trans
-// returns the rate coefficient in s^-1 divided by deposition rate density in erg/cm^3/s
+// Return the rate coefficient in s^-1 divided by the deposition rate density in erg/cm^3/s
 auto calculate_nt_excitation_ratecoeff_perdeposition(const std::array<double, SFPTS>& yvec, const int alltransindex,
                                                      const double statweight_lower, const double epsilon_trans)
     -> double {
@@ -1485,7 +1491,7 @@ auto calculate_nt_excitation_ratecoeff_perdeposition(const std::array<double, SF
   return 0.;
 }
 
-// returns the energy rate [erg/cm3/s] going toward non-thermal ionisation of lowerion
+// Return the energy rate [erg/cm3/s] going toward non-thermal ionisation of lowerion
 auto ion_ntion_energyrate(const int nonemptymgi, const int element, const int lowerion) -> double {
   const double nnlowerion = get_nnion(nonemptymgi, element, lowerion);
   double enrate = 0.;
@@ -1500,7 +1506,7 @@ auto ion_ntion_energyrate(const int nonemptymgi, const int element, const int lo
   return gamma_nt * enrate;
 }
 
-// returns the energy rate [erg/s] going toward non-thermal ionisation in a modelgrid cell
+// Return the energy rate [erg/s] going toward non-thermal ionisation in a modelgrid cell
 auto get_ntion_energyrate(const int nonemptymgi) -> double {
   double ratetotal = 0.;
   for (int ielement = 0; ielement < get_nelements(); ielement++) {
@@ -2006,6 +2012,8 @@ void sfmatrix_add_ionisation(std::span<double> sfmatrixuppertri, const int Z, co
         }
       }
 
+      // the Auger-electron source term of Shingles et al. (2020) equation 8, which injects the shell's
+      // mean Auger electron energy as a delta function (or spread below it, see below).
       // shells with no Auger data have en_auger_ev == 0 (and prob_num_auger[0] == 1, which would make the
       // energy boost factor below infinite) and inject no Auger electrons
       if (SF_AUGER_CONTRIBUTION_ON && en_auger_ev > 0.) {
@@ -2512,9 +2520,9 @@ DEVICE_FUNC void do_ntlepton_deposit(Packet& pkt) {
   stats::increment(stats::Counter::NT_STAT_TO_KPKT);
 }
 
-// The matrix discretisation follows the integral form of the degradation equation (KF92 equation 7), as written
-// in Equation (2) of Li et al. (2012); the Auger-electron extension is described by Shingles et al. (2020),
-// Section 2.5, doi:10.1093/mnras/stz3412.
+// The discretised equation is the integral form of the degradation equation (KF92 equation 7; equation 2 of
+// Li et al. 2012) extended with the Auger-electron source term: equation 8 of Shingles et al. (2020),
+// section 2.5, doi:10.1093/mnras/stz3412.
 void solve_spencerfano(const int nonemptymgi, const int timestep, const int iteration) {
   const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
   bool skip_solution = false;

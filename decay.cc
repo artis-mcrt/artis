@@ -1,6 +1,9 @@
 // Radioactive decays: nuclide properties, decay paths, time-dependent nuclide abundances
 // (Bateman equation solutions), and the energy release rates and decay-time sampling used to
 // set up the radioactive energy pellets.
+//
+// The alpha, beta, and fission decay treatment for kilonovae is described by Shingles et al.
+// (2023), ApJ, 954, L41.
 
 #include "decay.h"
 
@@ -97,7 +100,7 @@ struct DecayPath {
   std::vector<double> lambdas;
   double branchproduct{
       0.,
-  };  // product of all branching factors along the path set by calculate_decaypath_branchproduct()
+  };  // product of all branching factors along the path, accumulated as the path is built
 };
 
 std::vector<Nuclide> nuclides;

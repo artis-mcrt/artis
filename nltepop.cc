@@ -1,6 +1,9 @@
 // The full NLTE level population solver: assembles the statistical equilibrium rate matrix
 // (radiative and collisional bound-bound and bound-free rates, plus non-thermal ionisation)
 // for all levels of all ions of an element and solves for the level populations.
+//
+// The NLTE ionisation and population solver is described by Shingles et al. (2020), MNRAS, 492,
+// 2029, section 2.3, doi:10.1093/mnras/stz3412.
 
 #include <algorithm>
 #include <chrono>
@@ -1259,7 +1262,7 @@ auto can_remove_ion(const int element, const int ion, const int first_ion_used, 
 
 // Assemble and solve the NLTE rate matrix, retrying with a reduced range of ion stages when the
 // solve fails and NLTE_LIMIT_ION_STAGES_AFTER_FAILURE allows an edge ion to be removed.
-// Returns whether a solution was found and the range of ions included in it.
+// Return whether a solution was found and the range of ions included in it.
 // Both solver paths normalise the solution so that the sum over every matrix slot equals the element number
 // density: the LU path through its replaced zeroth matrix row, the GTH path by scaling its unit-sum stationary
 // distribution.
@@ -1559,10 +1562,10 @@ auto gth_stationary_distribution(std::span<double> rate_matrix, std::span<double
   return std::nullopt;
 }
 
+// Solve the statistical balance equations to find NLTE level populations for all ions of an element
+// (ionisation balance follows from this too). Failure modes can lead to quasi-LTE populations being set
+// instead.
 void solve_nlte_pops_element(const int element, const int nonemptymgi, const int timestep, const int nlte_iter) {
-  // solve the statistical balance equations to find NLTE level populations for all ions of an element
-  // (ionisation balance follows from this too). Failure modes can lead to quasi-LTE populations being set instead.
-
   const int atomic_number = get_atomicnumber(element);
   const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
   nltelog = {.modelgridindex = modelgridindex, .timestep = timestep, .nlte_iter = nlte_iter};

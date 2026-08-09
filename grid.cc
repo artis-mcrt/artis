@@ -1390,9 +1390,9 @@ auto get_poscoordpointnum(const double pos, const double time, const int axis) -
   return {NAN, NAN, NAN};
 }
 
-// find the closest forward distance to the intersection of a ray with an expanding spherical shell (pos and dir are
-// 2-vectors or 3-vectors) or expanding circle (2D vectors)
-// returns -1 if there are no forward intersections (or if the intersection
+// Find the closest forward distance to the intersection of a ray with an expanding spherical shell (pos and dir are
+// 2-vectors or 3-vectors) or expanding circle (2D vectors).
+// Return -1 if there are no forward intersections (or if the intersection
 // is tangential to the shell)
 template <BoundaryType boundarytype, size_t S1>
 [[gnu::pure]] [[nodiscard]] constexpr auto expanding_shell_intersection(const std::array<double, S1>& pos,

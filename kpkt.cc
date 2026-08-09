@@ -1,6 +1,9 @@
 // k-packets: packets of thermal kinetic energy. Computes the cooling rates of all processes
 // (free-free, free-bound, collisional excitation and ionisation) and samples a cooling channel
 // to convert a k-packet into radiation or a macro-atom excitation.
+//
+// k-packets are the thermal-pool state of the indivisible energy packet scheme of Lucy (2002),
+// doi:10.1051/0004-6361:20011756; Lucy (2003), arXiv:astro-ph/0303202, which macroatom.cc implements.
 
 #include "kpkt.h"
 
@@ -266,13 +269,14 @@ void calculate_cooling_rates(const int nonemptymgi, HeatingCoolingRates* heating
   }
 }
 
+// Build the list of cooling processes that a k-packet can convert through.
+//
+// The number of processes is given by the collisional excitations (so far determined from the oscillator
+// strengths by the van Regemorter formula, therefore totaluptrans), the number of free-bound emissions and
+// collisional ionisations (as long as we only deal with ionisation to the ground level this means for both
+// of these \sum_{elements,ions}get_nlevels(element,ion)) and free-free, which is
+// \sum_{elements} get_nions(element)-1.
 void setup_coolinglist() {
-  // Determine number of processes which allow kpkts to convert to something else.
-  // This number is given by the collisional excitations (so far determined from the oscillator strengths
-  // by the van Regemorter formula, therefore totaluptrans), the number of free-bound emissions and collisional
-  // ionisations (as long as we only deal with ionisation to the ground level this means for both of these
-  // \sum_{elements,ions}get_nlevels(element,ion) and free-free which is \sum_{elements} get_nions(element)-1
-
   set_ncoolingterms();
   assert_always(ncoolingterms > 0);
   auto temp_coolinglist_type = MPI_shared_array<CoolingType>(ncoolingterms);

@@ -130,7 +130,7 @@ DEVICE_FUNC inline void testmodeassert_valid_level([[maybe_unused]] const int el
   return globals::elements[element].ions[ion].nlevels_ionising;
 }
 
-// Returns the number of target states for photoionisation of a level, by unique level index or by
+// Get the number of target states for photoionisation of a level, by unique level index or by
 // (element, ion, level).
 DEVICE_FUNC inline auto get_nphixstargets(const int uniquelevelindex) -> int {
   return globals::alllevels.nphixstargets[uniquelevelindex];
@@ -292,13 +292,13 @@ DEVICE_FUNC inline auto get_nphixstargets(const int element, const int ion, cons
   return epsilon(get_uniquelevelindex(element, ion, level));
 }
 
-// Returns the atomic number associated with a given elementindex.
+// Get the atomic number associated with a given elementindex.
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC inline auto get_atomicnumber(const int element) -> int {
   testmodeassert_valid_element(element);
   return globals::elements[element].anumber;
 }
 
-// Returns true if (element,ion,level) is to be treated in nlte.
+// Return true if (element,ion,level) is to be treated in NLTE.
 // (note this function returns true for the ground state,
 //  although it is stored separately from the excited NLTE states)
 [[gnu::pure]] [[nodiscard]] inline auto is_nlte(const int element, const int ion, const int level) -> bool {
@@ -362,7 +362,7 @@ inline void update_includedionslevels_maxnions() {
   return globals::elements[element].ions[ion].nlevels_excited_nlte;
 }
 
-// Returns the number of autoionising levels for an ion
+// Get the number of autoionising levels for an ion
 [[gnu::pure]] [[nodiscard]] inline auto get_nlevels_autoion(const int element, const int ion) -> int {
   testmodeassert_valid_ion(element, ion);
   return globals::elements[element].ions[ion].nlevels_autoion;

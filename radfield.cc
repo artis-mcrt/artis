@@ -1,6 +1,9 @@
 // The radiation field model: accumulates Monte Carlo estimators of the radiation field
 // (full-spectrum and binned J_nu, plus detailed bound-bound Jb_lu estimators) and fits diluted
 // blackbodies (W, T_R) per cell and per frequency bin for use in the photoionisation and heating rates.
+//
+// The multibin radiation field model and the photoionisation, bound-bound, and heating estimators
+// are described by Shingles et al. (2020), MNRAS, 492, 2029, section 2.2, doi:10.1093/mnras/stz3412.
 
 #include "radfield.h"
 
@@ -502,7 +505,7 @@ void write_to_file(const int nonemptymgi, const int timestep) {
 
 }  // anonymous namespace
 
-// Computes the integral of the Planck function (or nu times the Planck function) between frequency nu=nu_low to
+// Compute the integral of the Planck function (or nu times the Planck function) between frequency nu=nu_low to
 // nu=nu_high. Units are ergs/s/sr/cm2 for the integral of the Planck function, and ergs/s2/sr/cm2 for the integral of
 // nu times the Planck function.
 auto calculate_planck_integral(const double temperature, const double nu_low, const double nu_high, const bool times_nu)
@@ -796,6 +799,9 @@ DEVICE_FUNC auto radfield(const double nu, const int nonemptymgi) -> double {
   return grid::W_allcells[nonemptymgi] * planck(nu, grid::TR_allcells[nonemptymgi]);
 }
 
+// Fit the radiation field parameters of one cell to the estimators accumulated over the last timestep:
+// the full-spectrum diluted blackbody (W, T_R), and with MULTIBIN_RADFIELD_MODEL_ON a separate (W, T_R)
+// per frequency bin.
 void fit_parameters(const int nonemptymgi, const int timestep) {
   set_params_fullspec(nonemptymgi, timestep);
   if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
@@ -943,6 +949,9 @@ void normalise_nuJ(const int nonemptymgi, const double estimator_normfactor_over
   nuJ[nonemptymgi] *= estimator_normfactor_over4pi;
 }
 
+// Get the radiation temperature of a cell from the mean intensity alone, by equating J to the
+// Stefan-Boltzmann law (T_J = (pi J / sigma)^1/4). Non-finite values keep the previous timestep's value,
+// and the result is clamped to [MINTEMP, MAXTEMP].
 auto get_T_J_from_J(const int nonemptymgi) -> float {
   const auto T_J = static_cast<float>(pow(J[nonemptymgi] * PI / STEBO, 1. / 4.));
   if (!std::isfinite(T_J)) {

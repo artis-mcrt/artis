@@ -126,6 +126,11 @@ auto bfcooling_integrand(const double nu_minus_nu_edge, const double nu_edge, co
   return get_bflutindex(temperatureindex, get_uniquelevelindex(element, ion, level), phixstargetindex);
 }
 
+// Tabulate the temperature-dependent rate coefficient integrals on the temperature grid, so that the
+// simulation only has to interpolate them: spontaneous recombination, bound-free cooling, and (with
+// USE_LUT_PHOTOION) corrected photoionisation. The tables cover each ionising level of each ion below
+// the top ion stage, and each of that level's photoionisation targets. They are held in MPI shared
+// memory and computed once at startup.
 void precalculate_rate_coefficient_integrals() {
   // we're writing to shared memory, so we need to synchronise
   MPI_Barrier_node();
@@ -437,7 +442,7 @@ void precalculate_ion_alpha_sp() {
 }
 
 // Integrand to calculate the rate coefficient for photoionisation, corrected for stimulated recombination.
-// Unlike integrand_corrphotoioncoeff() above, which assumes LTE at T_R, the correction factor here is built from
+// Unlike gammacorr_integrand() above, which assumes LTE at T_R, the correction factor here is built from
 // the cell's actual level populations (via modified_departure_ratio) and T_e.
 auto integrand_corrphotoioncoeff_custom_radfield(const double nu_minus_nu_edge, const double nu_edge,
                                                  const double modified_departure_ratio,
@@ -728,7 +733,7 @@ void ratecoefficients_init() {
   precalculate_ion_alpha_sp();
 }
 
-// Returns the (stimulated recombination corrected) photoionisation rate coefficient.
+// Get the (stimulated recombination corrected) photoionisation rate coefficient.
 auto get_corrphotoioncoeff_ana(int element, const int ion, const int level, const int phixstargetindex, const float T_R)
     -> double {
   assert_always(USE_LUT_PHOTOION);
@@ -780,6 +785,12 @@ DEVICE_FUNC auto get_corrphotoioncoeff(const int element, const int ion, const i
   return gammacorr;
 }
 
+// Return true if the ionisation rate out of an ion is zero, so that callers can skip the ion without
+// evaluating the full rate. The top ion of an element is always treated as having zero rate. For an
+// element without NLTE levels this tests the ground-state ionisation rate estimator, which holds either
+// the Monte Carlo photoionisation estimator or the radiative-plus-collisional rate from
+// calculate_iongamma_per_gspop(); otherwise it tests both the photoionisation and the thermal
+// collisional ionisation rate of every populated level.
 auto iongamma_is_zero(const int nonemptymgi, const int element, const int ion) -> bool {
   const int nions = get_nions(element);
   if (ion >= nions - 1) {
