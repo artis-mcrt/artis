@@ -308,7 +308,7 @@ void read_binding_energies() {
   int nshells = 0;  // number of shell in binding energy file
   int n_z_binding = 0;  // number of elements in binding energy file
 
-  constexpr auto filename = "binding_energies_lotz_tab1and2.txt";
+  constexpr auto filename = "binding_energies_lotz1970.txt";
   auto binding_energies_file = fstream_required(filename, std::ios::in);
 
   std::string line;
@@ -861,8 +861,10 @@ auto get_xs_ionisation_vector(std::array<double, SFPTS>& xs_vec, const ShellPara
 }
 
 // distribution of secondary electron energies for primary electron with energy e_p: KF92 equation 4,
-// a fit by Opal, Peterson, & Beaty (1971) to their measurements. KF92 equation 5 uses it to factorise
-// the differential ionisation cross section into this distribution times the total cross section.
+// their analytically integrable Lorentzian adaptation of the shape Opal, Peterson, & Beaty (1971)
+// fitted to their measurements (whose published exponent is 2.1 rather than 2). KF92 equation 5 uses
+// it to factorise the differential ionisation cross section into this distribution times the total
+// cross section.
 [[nodiscard]] constexpr auto Psecondary(const double e_p, const double en_epsilon, const double I, const double J)
     -> double {
   const double e_s = en_epsilon - I;
@@ -915,13 +917,16 @@ constexpr auto xs_excitation(const int element, const int ion, const int lower, 
     // permitted E1 electric dipole transitions
     const double U = energy / epsilon_trans;
 
-    constexpr double A = 0.28;
-    constexpr double B = 0.15;
-    const double g_bar = (A * std::log(U)) + B;
+    // Mewe (1972) equation 5 fits g(U) = A + B/U + C/U^2 + D*ln(U); keep the A and D ln(U) terms,
+    // with the D = sqrt(3)/(2 pi) that Mewe recommends for all optically allowed transitions rounded
+    // to 0.28 (Shingles et al. 2020, section 2.5, where this pair is described as the formula's
+    // "first two terms")
+    constexpr double mewe_A = 0.15;
+    constexpr double mewe_D = 0.28;
+    const double g_bar = (mewe_D * std::log(U)) + mewe_A;
 
     constexpr double prefactor = 45.585750051;  // 8 * pi^2/sqrt(3)
-    // van Regemorter (1962) approximation with the g_bar above from the first two terms of the
-    // fitting formula in equation 5 of Mewe (1972); see Shingles et al. (2020), section 2.5
+    // van Regemorter (1962) approximation with the g_bar above from Mewe (1972)
     return prefactor * A_naught_squared * pow2(H_ionpot / epsilon_trans) *
            globals::alltrans.osc_strength[alltransindex] * g_bar / U;
   }
@@ -1438,14 +1443,15 @@ auto get_xs_excitation_vector(const int alltransindex, const double statweight_l
     const double trans_osc_strength = globals::alltrans.osc_strength[alltransindex];
     // permitted E1 electric dipole transitions
 
-    constexpr double A = 0.28;
-    constexpr double B = 0.15;
+    // the A and D ln(U) terms of the Mewe (1972) equation 5 fitting formula
+    // g(U) = A + B/U + C/U^2 + D*ln(U); see the comment in xs_excitation()
+    constexpr double mewe_A = 0.15;
+    constexpr double mewe_D = 0.28;
 
     constexpr double prefactor = 45.585750051;  // 8 * pi^2/sqrt(3)
     const double epsilon_trans_ev = epsilon_trans / EV;
 
-    // van Regemorter (1962) approximation with g_bar from the first two terms of the fitting
-    // formula in equation 5 of Mewe (1972); see Shingles et al. (2020), section 2.5
+    // van Regemorter (1962) approximation with the g_bar below from Mewe (1972)
     const double constantfactor =
         epsilon_trans_ev * prefactor * A_naught_squared * pow2(H_ionpot / epsilon_trans) * trans_osc_strength;
 
@@ -1454,12 +1460,12 @@ auto get_xs_excitation_vector(const int alltransindex, const double statweight_l
     std::fill_n(xs_excitation_vec.begin(), en_startindex, 0.);
 
     // U = en / epsilon
-    // g_bar = A * std::log(U) + b
+    // g_bar = mewe_D * std::log(U) + mewe_A
     // xs[j] = constantfactor * g_bar / engrid(j)
     const double logepsilon = std::log(epsilon_trans_ev);
     for (int j = en_startindex; j < SFPTS; j++) {
       const double logU = logengrid[j] - logepsilon;
-      const double g_bar = (A * logU) + B;
+      const double g_bar = (mewe_D * logU) + mewe_A;
       xs_excitation_vec[j] = constantfactor * g_bar / engrid(j);
     }
 
