@@ -2011,7 +2011,7 @@ void sfmatrix_add_ionisation(std::span<double> sfmatrixuppertri, const int Z, co
       // transfer). epsilon_lower = max(endash - en, ionpot_ev) depends on the matrix indices (i, j) only
       // through the energy difference endash - en = (j - i) * DELTA_E on this uniform grid, so the
       // antiderivative atan((epsilon_lower - I) / J) can be tabulated by the column offset (j - i).
-      std::array<double, SFPTS> int_eps_lower_tab;
+      std::array<double, SFPTS> int_eps_lower_tab{};
       for (int d = 0; d < SFPTS; d++) {
         const double epsilon_lower = std::max(d * DELTA_E, ionpot_ev);
         int_eps_lower_tab[d] = std::atan((epsilon_lower - ionpot_ev) / J);
