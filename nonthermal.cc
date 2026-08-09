@@ -144,7 +144,10 @@ const auto logengrid = [] {
   return _logengrid;
 }();
 
-// evaluate the source function (distribution of deposited energy) [s^-1 cm^-3 eV^-1] at energy engrid(index)
+// evaluate the source function (distribution of deposited energy) [s^-1 cm^-3 eV^-1] at energy engrid(index):
+// S(E) of KF92 equation 7. Following the boundary condition KF92 favour (their section 2), the source is a
+// constant spread over a narrow interval at the top of the energy grid rather than a delta function at
+// SF_EMAX, which they note makes the degradation spectrum spiky at high energies and harder to integrate.
 // The result is only the spectral shape of the deposited-energy source, spread over a finite energy interval
 // and normalized so its integral over energy is 1 (i.e. effective units of eV^-1); the final deposition-rate density
 // scaling is applied separately.
@@ -169,11 +172,13 @@ constexpr double E_init_ev = [] {
   return integral;
 }();
 
-// rhs is the constant term (not dependent on y func) in each equation
-// rhsvec[i] is the source integral from engrid(i) to SF_EMAX, discretised as a left-endpoint rectangle
-// sum that includes point i itself. This matches the convention used for the integrals over y(E') on the
-// left-hand side, where sfmatrix_add_excitation() and sfmatrix_add_ionisation() both sum from j = i with
-// weight DELTA_E, and the convention used for E_init_ev above.
+// rhs is the constant term (not dependent on y func) in each equation: the source term of KF92
+// equation 7, the integral of S(E') over E' in [E, SF_EMAX] (the injection rate of electrons above the
+// row energy E = engrid(i)).
+// rhsvec[i] discretises it as a left-endpoint rectangle sum that includes point i itself. This matches
+// the convention used for the integrals over y(E') on the left-hand side, where
+// sfmatrix_add_excitation() and sfmatrix_add_ionisation() both sum from j = i with weight DELTA_E, and
+// the convention used for E_init_ev above.
 constexpr auto rhsvec = [] {
   std::array<double, SFPTS> _rhsvec{};
   double source_integral_to_SF_EMAX = 0.;
@@ -1888,8 +1893,14 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const std::a
   }
 }
 
-// add the excitation terms of KF92 equation 7 to the Spencer-Fano matrix: for each transition, the level
-// population times the integral of y(E') sigma_ij(E') dE' over E' in [E, E + epsilon_trans]
+// add the excitation terms of KF92 equation 7 to the Spencer-Fano matrix. A primary electron loses exactly
+// epsilon_trans when it excites a transition, so the rate at which primaries are carried below the row energy
+// E = engrid(i) is the first left-hand-side term of that equation: for each transition from a level with
+// population nnlevel,
+//   nnlevel * (integral of y(E') sigma_exc(E') dE' over E' in [E, E + epsilon_trans]).
+// The integral is discretised with quadrature weight DELTA_E per column (folded into
+// vec_xs_excitation_nnlevel_deltae below); the final column, which contains the endpoint E + epsilon_trans,
+// gets only the partial weight delta_en_actual.
 void sfmatrix_add_excitation(std::span<double> sfmatrixuppertri, const int nonemptymgi, const int element,
                              const int ion) {
   // excitation terms
@@ -1917,11 +1928,11 @@ void sfmatrix_add_excitation(std::span<double> sfmatrixuppertri, const int nonem
         continue;
       }
 
-      auto [vec_xs_excitation_deltae, xsstartindex] =
+      auto [vec_xs_excitation_nnlevel_deltae, xsstartindex] =
           get_xs_excitation_vector(alltransindex, statweight_lower, epsilon_trans);
       if (xsstartindex >= 0) {
         for (int j = xsstartindex; j < SFPTS; j++) {
-          vec_xs_excitation_deltae[j] *= DELTA_E;
+          vec_xs_excitation_nnlevel_deltae[j] = vec_xs_excitation_nnlevel_deltae[j] * DELTA_E * nnlevel;
         }
 
         for (int i = 0; i < SFPTS; i++) {
@@ -1931,7 +1942,7 @@ void sfmatrix_add_excitation(std::span<double> sfmatrixuppertri, const int nonem
 
           const int startindex = std::max(i, xsstartindex);
           for (int j = startindex; j < stopindex; j++) {
-            atomicadd(sfmatrixuppertri[rowoffset + j], nnlevel * vec_xs_excitation_deltae[j]);
+            atomicadd(sfmatrixuppertri[rowoffset + j], vec_xs_excitation_nnlevel_deltae[j]);
           }
 
           // do the last bit separately because we're not using the full delta_e interval.
@@ -1940,18 +1951,25 @@ void sfmatrix_add_excitation(std::span<double> sfmatrixuppertri, const int nonem
           // the top energy point. Capping it gives that bin a full (not inflated) contribution.
           const double delta_en_actual = std::min(en + epsilon_trans_ev - engrid(stopindex), DELTA_E);
           atomicadd(sfmatrixuppertri[rowoffset + stopindex],
-                    nnlevel * vec_xs_excitation_deltae[stopindex] * delta_en_actual / DELTA_E);
+                    vec_xs_excitation_nnlevel_deltae[stopindex] * delta_en_actual / DELTA_E);
         }
       }
     }
   });
 }
 
-// add the ionisation terms of KF92 equation 7 to the Spencer-Fano matrix: integrals of
-// y(E') sigma_ic(E') P(E', epsilon - I), using the KF92 equation 5 factorisation into the shell's total
-// cross section times the secondary-electron energy distribution of their equation 4. The first integral
-// covers primaries carried across E by an ionisation energy loss, and the second (subtracted) covers
-// ionisations by primaries above 2E + I, whose secondary is left above E.
+// add the ionisation terms of KF92 equation 7 to the Spencer-Fano matrix. With E = engrid(i) the row energy,
+// E' = engrid(j) the primary energy, I = ionpot_ev, and epsilon = I + E_secondary the energy transfer, each
+// shell contributes the two double integrals of that equation over y(E') sigma_ic(E', epsilon):
+//   first (left-hand side):   E' in [E, SF_EMAX],       epsilon in [E' - E, (E' + I) / 2]:
+//     primaries that fall below E by losing at least E' - E to an ionisation;
+//   second (right-hand side): E' in [2E + I, SF_EMAX],  epsilon in [E + I, (E' + I) / 2]:
+//     ionisations whose ejected secondary is born above E (E_secondary = epsilon - I > E), brought onto the
+//     left-hand side of the matrix equation with a minus sign.
+// The KF92 equation 5 factorisation sigma_ic(E', epsilon) = sigma_ic(E') P(E', epsilon - I) into the shell's
+// total cross section times the secondary-electron energy distribution of their equation 4 makes the inner
+// epsilon integrals analytic (the atan expressions below); the outer E' integrals are discretised with
+// quadrature weight DELTA_E per column.
 void sfmatrix_add_ionisation(std::span<double> sfmatrixuppertri, const int Z, const int ionstage, const double nnion) {
   std::array<double, SFPTS> vec_xs_ionisation{};
   for (const auto& collionrow : colliondata) {
@@ -1970,13 +1988,33 @@ void sfmatrix_add_ionisation(std::span<double> sfmatrixuppertri, const int Z, co
       // I had neglected this, so the limits of integration were incorrect. The fix didn't massively affect
       // ionisation rates or spectra, but it was a source of error that led to energy fractions not adding up to
       // 100%
+      // The inner epsilon integral of P(E', epsilon - I) has the closed form
+      //   [atan((epsilon - I) / J)] / atan((E' - I) / (2 J))
+      // evaluated between the epsilon limits: J * atan((epsilon - I) / J) is the antiderivative of the
+      // Lorentzian 1 / (1 + (epsilon - I)^2 / J^2) in KF92 equation 4, and the J cancels against
+      // equation 4's normalisation factor 1 / (J * atan((E' - I) / (2 J))).
+      // int_eps_upper[j] is the antiderivative at epsilon = (E' + I) / 2, the upper limit shared by both
+      // KF92 integrals (the faster post-collision electron is by convention the primary, so the energy
+      // transfer cannot exceed (E' + I) / 2). prefactors[j] collects the column-only factors: ion density,
+      // shell cross section sigma_ic(E'), the dE' quadrature weight, and equation 4's normalisation.
       std::array<double, SFPTS> int_eps_upper = {0};
       std::array<double, SFPTS> prefactors = {0};
       for (int j = xsstartindex; j < SFPTS; j++) {
         const double endash = engrid(j);
         const double epsilon_upper = std::min((endash + ionpot_ev) / 2, endash);
         int_eps_upper[j] = std::atan((epsilon_upper - ionpot_ev) / J);
-        prefactors[j] = vec_xs_ionisation[j] * nnion / std::atan((endash - ionpot_ev) / 2 / J);
+        prefactors[j] = vec_xs_ionisation[j] * nnion * DELTA_E / std::atan((endash - ionpot_ev) / 2 / J);
+      }
+
+      // The first KF92 integral's lower limit is epsilon = E' - E, the smallest energy loss that drops a
+      // primary at E' below the row energy E (clamped to at least I, the smallest physical energy
+      // transfer). epsilon_lower = max(endash - en, ionpot_ev) depends on the matrix indices (i, j) only
+      // through the energy difference endash - en = (j - i) * DELTA_E on this uniform grid, so the
+      // antiderivative atan((epsilon_lower - I) / J) can be tabulated by the column offset (j - i).
+      std::array<double, SFPTS> int_eps_lower_tab;
+      for (int d = 0; d < SFPTS; d++) {
+        const double epsilon_lower = std::max(d * DELTA_E, ionpot_ev);
+        int_eps_lower_tab[d] = std::atan((epsilon_lower - ionpot_ev) / J);
       }
 
       for (int i = 0; i < SFPTS; i++) {
@@ -1984,37 +2022,22 @@ void sfmatrix_add_ionisation(std::span<double> sfmatrixuppertri, const int Z, co
         const double en = engrid(i);
         const int rowoffset = uppertriangular(i, 0);
 
-        // endash ranges from en to SF_EMAX, but skip over the zero-cross section points
+        // The second KF92 integral's lower limit is epsilon = E + I, the smallest energy transfer that
+        // leaves the ejected secondary above the row energy (E_secondary = epsilon - I > E), so its
+        // antiderivative atan((epsilon_lower - I) / J) reduces to atan(en / J)
+        const double int_eps_lower2 = std::atan(en / J);
+
+        // both integrals run over endash >= en (skipping the zero-cross-section points below xsstartindex),
+        // but each contributes only where its epsilon_lower <= epsilon_upper, enforced by the max(x, 0.)
+        // clamps (the atan values are monotonic in epsilon): the first integral vanishes for
+        // endash > 2 * en + ionpot_ev and the second for endash < 2 * en + ionpot_ev
         const int jstart = std::max(i, xsstartindex);
         for (int j = jstart; j < SFPTS; j++) {
           // j is the matrix column index which corresponds to the piece of the integral at y(E') where E' >= E and E'
           // = engrid(j)
-          const double endash = engrid(j);
-
-          // J * atan[(epsilon - ionpot_ev) / J] is the indefinite integral of 1/[1 + (epsilon - ionpot_ev)^2/ J^2]
-          // in Kozma & Fransson 1992 equation 4
-
-          const double epsilon_lower =
-              std::max(endash - en, ionpot_ev);  // and epsilon_upper = (endash + ionpot_ev) / 2;
-          const double int_eps_lower = std::atan((epsilon_lower - ionpot_ev) / J);
-          if (int_eps_lower <= int_eps_upper[j]) {
-            sfmatrixuppertri[rowoffset + j] += prefactors[j] * (int_eps_upper[j] - int_eps_lower) * DELTA_E;
-          }
-        }
-
-        // below is std::atan((epsilon_lower - ionpot_ev) / J) where epsilon_lower = en + ionpot_ev;
-        const double int_eps_lower2 = std::atan(en / J);
-
-        // endash ranges from 2 * en + ionpot_ev to SF_EMAX
-        if ((2 * en) + ionpot_ev <= SF_EMAX) {
-          const int secondintegralstartindex = std::max(xsstartindex, get_energyindex_ev_lteq((2 * en) + ionpot_ev));
-          for (int j = secondintegralstartindex; j < SFPTS; j++) {
-            // epsilon_lower = en + ionpot_ev;
-            // epsilon_upper = (endash + ionpot_ev) / 2;
-            if (int_eps_lower2 <= int_eps_upper[j]) {
-              sfmatrixuppertri[rowoffset + j] -= prefactors[j] * (int_eps_upper[j] - int_eps_lower2) * DELTA_E;
-            }
-          }
+          const double int_eps_diff1 = std::max(int_eps_upper[j] - int_eps_lower_tab[j - i], 0.);
+          const double int_eps_diff2 = std::max(int_eps_upper[j] - int_eps_lower2, 0.);
+          sfmatrixuppertri[rowoffset + j] += prefactors[j] * (int_eps_diff1 - int_eps_diff2);
         }
       }
 
@@ -2592,7 +2615,8 @@ void solve_spencerfano(const int nonemptymgi, const int timestep, const int iter
   // only the upper triangle of the Spencer-Fano matrix is stored, with elements addressed via uppertriangular(i, j)
   THREADLOCALONHOST std::vector<double> sfmatrixuppertri(SFPTS * (SFPTS + 1) / 2);
   std::ranges::fill(sfmatrixuppertri, 0.);
-  // loss terms and source terms
+  // the y(E) L_e(E) term of KF92 equation 7: Coulomb losses to the thermal electrons are treated as
+  // continuous slowing-down, so the term involves y only at the row energy itself and is diagonal
   for (int i = 0; i < SFPTS; i++) {
     sfmatrixuppertri[uppertriangular(i, i)] += electron_loss_rate(engrid(i) * EV, nne) / EV;
   }
