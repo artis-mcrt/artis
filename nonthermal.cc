@@ -736,17 +736,15 @@ void zero_all_effionpot(const ptrdiff_t nonemptymgi) {
   check_auger_probabilities(nonemptymgi);
 }
 
-[[nodiscard]] constexpr auto get_energyindex_ev_lteq(const double energy_ev) -> int
 // finds the highest energy point <= energy_ev
-{
+[[nodiscard]] constexpr auto get_energyindex_ev_lteq(const double energy_ev) -> int {
   const auto index = static_cast<int>(get_linearbinindex(energy_ev, SF_EMIN, DELTA_E));
 
   return std::clamp(index, 0, SFPTS - 1);
 }
 
-[[nodiscard]] constexpr auto get_energyindex_ev_gteq(const double energy_ev) -> int
 // finds the lowest energy point >= energy_ev
-{
+[[nodiscard]] constexpr auto get_energyindex_ev_gteq(const double energy_ev) -> int {
   const int index = std::ceil((energy_ev - SF_EMIN) / DELTA_E);
 
   return std::clamp(index, 0, SFPTS - 1);
@@ -1937,13 +1935,12 @@ void sfmatrix_add_excitation(std::span<double> sfmatrixuppertri, const int nonem
   });
 }
 
-void sfmatrix_add_ionisation(std::span<double> sfmatrixuppertri, const int Z, const int ionstage, const double nnion)
 // add the ionisation terms of KF92 equation 7 to the Spencer-Fano matrix: integrals of
 // y(E') sigma_ic(E') P(E', epsilon - I), using the KF92 equation 5 factorisation into the shell's total
 // cross section times the secondary-electron energy distribution of their equation 4. The first integral
 // covers primaries carried across E by an ionisation energy loss, and the second (subtracted) covers
 // ionisations by primaries above 2E + I, whose secondary is left above E.
-{
+void sfmatrix_add_ionisation(std::span<double> sfmatrixuppertri, const int Z, const int ionstage, const double nnion) {
   std::array<double, SFPTS> vec_xs_ionisation{};
   for (const auto& collionrow : colliondata) {
     if (collionrow.Z == Z && collionrow.ionstage == ionstage) {
