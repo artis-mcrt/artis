@@ -126,10 +126,11 @@ auto bfcooling_integrand(const double nu_minus_nu_edge, const double nu_edge, co
   return get_bflutindex(temperatureindex, get_uniquelevelindex(element, ion, level), phixstargetindex);
 }
 
-// Tabulate the temperature-dependent photoionisation, recombination, and bound-free heating/cooling
-// integrals for every level of every ion on the temperature grid, so that the simulation only has to
-// interpolate them. The tables are held in MPI shared memory and are computed once at startup (or read
-// from the ratecoeff.dat cache file).
+// Tabulate the temperature-dependent rate coefficient integrals on the temperature grid, so that the
+// simulation only has to interpolate them: spontaneous recombination, bound-free cooling, and (with
+// USE_LUT_PHOTOION) corrected photoionisation. The tables cover each ionising level of each ion below
+// the top ion stage, and each of that level's photoionisation targets. They are held in MPI shared
+// memory and computed once at startup.
 void precalculate_rate_coefficient_integrals() {
   // we're writing to shared memory, so we need to synchronise
   MPI_Barrier_node();
@@ -784,8 +785,10 @@ DEVICE_FUNC auto get_corrphotoioncoeff(const int element, const int ion, const i
   return gammacorr;
 }
 
-// Return true if the total photoionisation rate out of an ion is zero, so that callers can skip the ion
-// without evaluating the full rate. The top ion of an element is always treated as having zero rate.
+// Return true if the ionisation rate out of an ion is zero, so that callers can skip the ion without
+// evaluating the full rate. The top ion of an element is always treated as having zero rate. For an
+// element without NLTE levels this tests the ground-state photoionisation estimator; otherwise it tests
+// both the photoionisation and the thermal collisional ionisation rate of every populated level.
 auto iongamma_is_zero(const int nonemptymgi, const int element, const int ion) -> bool {
   const int nions = get_nions(element);
   if (ion >= nions - 1) {

@@ -307,8 +307,9 @@ void do_macroatom_raddeexcitation(Packet& pkt, const int ionuniquelevelindexstar
   return -1;
 }
 
-// Get the effective Gaunt factor used in the van Regemorter collisional excitation rate, approximated
-// by a single value per ion stage (neutral, singly ionised, and more highly ionised).
+// Get the Gaunt factor used by the Seaton approximation in col_ionisation_ratecoeff() and
+// col_recombination_ratecoeff(), approximated by a single value per ionic charge (neutral, singly
+// ionised, and more highly ionised).
 [[gnu::const]] [[nodiscard]] constexpr auto gaunt_factor(const int ionstage) -> double {
   if (ionstage == 1) {
     return 0.1;

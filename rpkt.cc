@@ -66,7 +66,7 @@ auto get_nu_cmf_abort(const Vec3d& pos, const Vec3d& dir, const double prop_time
 }
 
 // Get the Sobolev optical depth of a line at the current propagation time, from the stimulated-emission
-// corrected level populations (B_lu n_l - B_ul n_u) h nu / (4 pi) times t_current for homologous
+// corrected level populations: (B_lu n_l - B_ul n_u) h c / (4 pi) times t_current for homologous
 // expansion. Negative values (population inversion) are clamped to zero.
 // With USECELLCACHE the level populations come from the cell cache rather than being recalculated.
 template <bool USECELLCACHE>
@@ -969,9 +969,10 @@ void MPI_Bcast_binned_opacities(const ptrdiff_t nonemptymgi, const int root_node
   }
 }
 
-// Calculate the binned expansion opacities of one cell, used in place of line-by-line Sobolev opacity
-// when EXPANSIONOPACITIES_ON is set: within each frequency bin, the Sobolev optical depths of all lines
-// are combined into a single effective opacity for the bin.
+// Calculate the binned expansion opacities of one cell: within each frequency bin, the Sobolev optical
+// depths of all lines are combined into a single effective opacity for the bin. Called when
+// RPKT_USE_EXPANSION_OPACITIES or VPKT_USE_EXPANSION_OPACITIES replaces the line-by-line opacity for
+// r-packets or virtual packets, and also when RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY is set.
 void calculate_expansion_opacities(const int nonemptymgi) {
   const auto rho = grid::get_rho(nonemptymgi);
 
