@@ -515,6 +515,7 @@ void nltepop_matrix_add_boundbound(const int nonemptymgi, const int element, con
     std::for_each(ndowntransindices.begin(), ndowntransindices.end(), [&](const auto& i) {
       const auto alltransindex = alltrans_startdown + i;
       const int lower = globals::alltrans.targetlevelindex[alltransindex];
+      assert_testmodeonly(lower >= 0 && lower < nlevels);
       const auto lower_uniquelevelindex = ionuniquelevelindexstart + lower;
       const auto lower_statweight = stat_weight(lower_uniquelevelindex);
       const auto nnlevel_lower = levelpops[lower];
@@ -544,6 +545,7 @@ void nltepop_matrix_add_boundbound(const int nonemptymgi, const int element, con
     std::for_each(nuptransindices.begin(), nuptransindices.end(), [&](const auto i) {
       const auto alltransindex = alltrans_startup + i;
       const int upper = globals::alltrans.targetlevelindex[alltransindex];
+      assert_testmodeonly(upper >= 0 && upper < nlevels);
       const auto upper_uniquelevelindex = ionuniquelevelindexstart + upper;
       const double epsilon_trans = epsilon(upper_uniquelevelindex) - epsilon_level;
       const auto upper_statweight = stat_weight(upper_uniquelevelindex);
