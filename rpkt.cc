@@ -14,6 +14,7 @@
 #include <limits>
 #include <span>
 #include <tuple>
+#include <type_traits>
 #include <vector>
 
 #include "artisoptions.h"
@@ -407,8 +408,10 @@ void electron_scatter_rpkt(Packet& pkt) {
   set_pkt_restframe_from_cmf(pkt);
 }
 
-template <bool USECELLHISTANDUPDATEPHIXSLIST, bool FILLCHIBFSUM = false, bool FILLESTIMCONTRIBS = true>
-auto calculate_chi_bf_gammacontr(int nonemptymgi, double nu, Phixslist& phixslist) -> double;
+template <bool USECELLHISTANDUPDATEPHIXSLIST, bool SELECTCONTINUUM = false>
+auto calculate_chi_bf_gammacontr(int nonemptymgi, double nu, Phixslist& phixslist,
+                                 double chi_bf_sum_selectionthreshold = 0.)
+    -> std::conditional_t<SELECTCONTINUUM, int, double>;
 
 // Handle a continuum interaction of an r-packet by sampling which continuum process occurs, in
 // proportion to its share of the total continuum opacity: electron scattering (coherent in the comoving
@@ -452,38 +455,19 @@ void rpkt_event_continuum(Packet& pkt, ContinuumOpacity& chi_rpkt_cont) {
   } else if (chi_rnd < chi_escatter + chi_ff + chi_bf) {
     // bf: transform to k-pkt or activate macroatom corresponding to probabilities
 
-    auto& phixslist = chi_rpkt_cont.phixslist;
-
     pkt.absorptiontype = ABSTYPE_BOUNDFREE;
 
-    const double chi_bf_inrest = chi_rpkt_cont.chi_boundfree;
+    // Determine in which continuum the bf-absorption occurs: the first continuum for which the
+    // cumulative opacity exceeds a random fraction of the total (or the last one if none does).
+    // The cumulative sum is not recorded during opacity evaluations (it is only needed here, and
+    // continuum events are far rarer than evaluations), so redo the summation, stopping at the
+    // selected continuum. Evaluating at the frequency of the last opacity calculation (not the
+    // packet's current frequency, which may have drifted within the recalculation tolerance)
+    // reproduces the running sum that chi_boundfree was accumulated from.
+    const double chi_bf_rand = rng_uniform(get_rngstate(pkt)) * chi_rpkt_cont.chi_boundfree;
 
-    // the opacity evaluations skip filling the cumulative bound-free opacity list (it is only consumed
-    // here, and continuum events are far rarer than evaluations), so fill it now. Evaluating at the
-    // frequency of the last opacity calculation (not the packet's current frequency, which may have
-    // drifted within the recalculation tolerance) reproduces the values that chi_boundfree was
-    // accumulated from. The estimator contributions (gamma_contr and groundcont_gamma_contr) must be
-    // left untouched: they still hold exactly what the original evaluation stored, and rewriting them
-    // here could change them in the last bit (via cellcache entries that the original evaluation
-    // itself populated), which would leak into the estimators if the cached opacity is reused.
-    [[maybe_unused]] const double chi_bf_refilled =
-        calculate_chi_bf_gammacontr<true, true, false>(chi_rpkt_cont.nonemptymgi, chi_rpkt_cont.nu, phixslist);
-    // the refill normally reproduces chi_boundfree bitwise, but the original evaluation may itself have
-    // populated lazy cellcache entries (departure ratios and stimfactor edge parts) whose cached-factorised
-    // form can differ in the last bit from the direct expression that the evaluation used, so allow a
-    // roundoff-level difference here
-    assert_testmodeonly(fabs((chi_bf_refilled / chi_bf_inrest) - 1.) < 1e-10);
-
-    // Determine in which continuum the bf-absorption occurs
-    const double chi_bf_rand = rng_uniform(get_rngstate(pkt)) * chi_bf_inrest;
-
-    // first chi_bf_sum[i] such that chi_bf_sum[i] > chi_bf_rand (or the last one if chi_bf_rand is larger than all
-    // chi_bf_sum) gives the index of the continuum
-    const auto allcontindex =
-        std::ranges::upper_bound(
-            phixslist.chi_bf_sum.subspan(phixslist.allcontbegin, phixslist.allcontend - phixslist.allcontbegin - 1),
-            chi_bf_rand) -
-        phixslist.chi_bf_sum.begin();
+    const int allcontindex = calculate_chi_bf_gammacontr<true, true>(chi_rpkt_cont.nonemptymgi, chi_rpkt_cont.nu,
+                                                                     chi_rpkt_cont.phixslist, chi_bf_rand);
 
     const double nu_edge = globals::allcont.nu_edge[allcontindex];
     const int element = globals::allcont.element[allcontindex];
@@ -725,21 +709,22 @@ auto calculate_chi_ffheating(const int nonemptymgi, const double nu, const bool 
 }
 
 // sum the bound-free opacity at frequency nu over all photoionisation continua (using the
-// binary-searched frequency window of contributing edges). When USECELLHISTANDUPDATEPHIXSLIST is
-// true, also record each continuum's estimator contribution in the phixslist (FILLESTIMCONTRIBS).
-// The cumulative opacity list (phixslist.chi_bf_sum) is only consumed when a bound-free absorption
-// event is sampled, which is far rarer than opacity evaluations, so it is only filled when
-// FILLCHIBFSUM is set: the propagation hot path skips those stores and rpkt_event_continuum()
-// refills the list on demand at the same frequency as the last evaluation (with FILLESTIMCONTRIBS
-// off, so that the estimator contributions keep the values of the original evaluation).
-template <bool USECELLHISTANDUPDATEPHIXSLIST, bool FILLCHIBFSUM, bool FILLESTIMCONTRIBS>
-auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixslist& phixslist) -> double {
+// binary-searched frequency window of contributing edges), returning the total. When
+// USECELLHISTANDUPDATEPHIXSLIST is true, also record each continuum's estimator contribution in
+// the phixslist. With SELECTCONTINUUM instead return the index of the continuum at which the
+// running opacity sum first exceeds chi_bf_sum_selectionthreshold (or the last continuum in the
+// window if it never does): rpkt_event_continuum() uses this to sample which continuum absorbs,
+// redoing the same summation as the opacity evaluation and stopping at the selected continuum.
+// In that mode nothing is written to the phixslist, so the estimator contributions keep the
+// values of the original evaluation.
+template <bool USECELLHISTANDUPDATEPHIXSLIST, bool SELECTCONTINUUM>
+auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixslist& phixslist,
+                                 const double chi_bf_sum_selectionthreshold)
+    -> std::conditional_t<SELECTCONTINUUM, int, double> {
   double chi_bf_sum = 0.;
-  if constexpr (USECELLHISTANDUPDATEPHIXSLIST) {
-    assert_testmodeonly(std::ssize(phixslist.chi_bf_sum) == globals::nbfcontinua);
-    if constexpr ((USE_LUT_PHOTOION || USE_ION_BFHEATING_ESTIMATORS) && FILLESTIMCONTRIBS) {
-      std::ranges::fill(phixslist.groundcont_gamma_contr, 0.);
-    }
+  if constexpr (USECELLHISTANDUPDATEPHIXSLIST && !SELECTCONTINUUM &&
+                (USE_LUT_PHOTOION || USE_ION_BFHEATING_ESTIMATORS)) {
+    std::ranges::fill(phixslist.groundcont_gamma_contr, 0.);
   }
 
   const auto T_e = grid::Te_allcells[nonemptymgi];
@@ -772,7 +757,7 @@ auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixsli
   assert_testmodeonly(allcontend <= globals::nbfcontinua);
   assert_testmodeonly(allcontbegin <= allcontend);
 
-  if constexpr (USECELLHISTANDUPDATEPHIXSLIST) {
+  if constexpr (USECELLHISTANDUPDATEPHIXSLIST && !SELECTCONTINUUM) {
     phixslist.allcontbegin = allcontbegin;
     phixslist.allcontend = allcontend;
 
@@ -872,30 +857,37 @@ auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixsli
 
         sigma_contr = sigma_bf * allcont_probability[i] * corrfactor;
 
-        if constexpr (USECELLHISTANDUPDATEPHIXSLIST && FILLESTIMCONTRIBS) {
+        if constexpr (USECELLHISTANDUPDATEPHIXSLIST && !SELECTCONTINUUM) {
           if ((USE_LUT_PHOTOION || USE_ION_BFHEATING_ESTIMATORS) && level == 0 && allcont_phixstargetindex[i] == 0) {
             phixslist.groundcont_gamma_contr[allcont_index_in_groundphixslist[i]] = sigma_contr;
           }
         }
 
         chi_bf_sum += nnlevel * sigma_contr;
+
+        if constexpr (SELECTCONTINUUM) {
+          if (chi_bf_sum > chi_bf_sum_selectionthreshold) {
+            return i;
+          }
+        }
       }
     }
-    if constexpr (USECELLHISTANDUPDATEPHIXSLIST) {
-      if constexpr (FILLCHIBFSUM) {
-        phixslist.chi_bf_sum[i] = chi_bf_sum;
-      }
-      if constexpr (DETAILED_BF_ESTIMATORS_ON && FILLESTIMCONTRIBS) {
-        if (allcont_bfestimindex[i] >= 0) {
-          phixslist.gamma_contr[allcont_bfestimindex[i]] = sigma_contr;
-        }
+    if constexpr (USECELLHISTANDUPDATEPHIXSLIST && !SELECTCONTINUUM && DETAILED_BF_ESTIMATORS_ON) {
+      if (allcont_bfestimindex[i] >= 0) {
+        phixslist.gamma_contr[allcont_bfestimindex[i]] = sigma_contr;
       }
     }
   }
 
-  assert_always(std::isfinite(chi_bf_sum));
+  if constexpr (SELECTCONTINUUM) {
+    // the running sum never exceeded the threshold, which the roundoff of redoing the summation can
+    // cause even though the threshold is below the previously-computed total: select the last continuum
+    return allcontend - 1;
+  } else {
+    assert_always(std::isfinite(chi_bf_sum));
 
-  return chi_bf_sum;
+    return chi_bf_sum;
+  }
 }
 
 }  // anonymous namespace

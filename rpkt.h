@@ -50,8 +50,6 @@ struct Phixslist {
   // for either USE_LUT_PHOTOION = true or USE_ION_BFHEATING_ESTIMATORS = true. Size =
   // nbfcontinua_ground
   std::span<double> groundcont_gamma_contr;
-  // cumulative sum of all bound-free continua absorption coefficients. Size = nbfcontinua
-  std::span<double> chi_bf_sum;
   // needed for DETAILED_BF_ESTIMATORS_ON. Size = bfestimcount
   std::span<double> gamma_contr;
   int allcontend{-1};
@@ -62,7 +60,6 @@ struct Phixslist {
   // unique ptrs are used instead of vectors for nvc++ compatibility in device code
   // NOLINTBEGIN(*-avoid-c-arrays)
   std::unique_ptr<double[]> _groundcont_gamma_contr;
-  std::unique_ptr<double[]> _chi_bf_sum;
   std::unique_ptr<double[]> _gamma_contr;
   // NOLINTEND(*-avoid-c-arrays)
 };
@@ -85,8 +82,6 @@ struct ContinuumOpacity {
       phixslist._groundcont_gamma_contr = std::make_unique<double[]>(globals::nbfcontinua_ground);
       phixslist.groundcont_gamma_contr =
           std::span<double>(phixslist._groundcont_gamma_contr.get(), globals::nbfcontinua_ground);
-      phixslist._chi_bf_sum = std::make_unique<double[]>(globals::nbfcontinua);
-      phixslist.chi_bf_sum = std::span<double>(phixslist._chi_bf_sum.get(), globals::nbfcontinua);
       const auto bfestimcount = globals::bfestim_nu_edge.size();
       phixslist._gamma_contr = std::make_unique<double[]>(bfestimcount);
       phixslist.gamma_contr = std::span<double>(phixslist._gamma_contr.get(), bfestimcount);
