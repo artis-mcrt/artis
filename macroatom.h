@@ -41,6 +41,21 @@ DEVICE_FUNC void calculate_cellcache_macroatom_transitionrates(int nonemptymgi, 
                                                           int alltransindex, double epsilon_trans,
                                                           double lowerstatweight) -> double;
 
+// all four bound-bound rate coefficients of a single transition, as computed together by
+// calculate_boundbound_ratecoeffs()
+struct BoundBoundRatecoeffs {
+  double rad_deexc;
+  double rad_exc;
+  double col_deexc;
+  double col_exc;
+};
+
+[[gnu::pure]] [[nodiscard]] auto calculate_boundbound_ratecoeffs(int nonemptymgi, int alltransindex,
+                                                                 double epsilon_trans, double upperstatweight,
+                                                                 double lowerstatweight, double nnlevel_upper,
+                                                                 double nnlevel_lower, float T_e, float clumpednne,
+                                                                 double t_current) -> BoundBoundRatecoeffs;
+
 // Sobolev-escape radiative deexcitation rate; multiply by the upper-level population to obtain a rate per second.
 // Kromer & Sim (2009), Section 3.5.2, doi:10.1111/j.1365-2966.2009.15256.x.
 [[gnu::const]] [[nodiscard]] constexpr auto rad_deexcitation_ratecoeff(

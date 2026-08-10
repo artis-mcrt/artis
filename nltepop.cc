@@ -501,44 +501,19 @@ void nltepop_matrix_add_boundbound(const int nonemptymgi, const int element, con
 
   const auto levels = std::views::iota(0, nlevels);
   std::for_each(levels.begin(), levels.end(), [&](const auto level) {
+    // every bound-bound transition appears in the up-transition list of exactly one level (its lower
+    // level), so this adds the de-excitation and excitation terms of each transition in a single visit,
+    // sharing the rate coefficient computations between the two directions. The up-transition
+    // alltransindex is used for all of the transition data because the non-thermal excitation list is
+    // keyed on it.
     const int level_index = levelindices[level];
-    const auto matrix_index_level_level = (level_index * nlte_dimension) + level_index;
+    const auto matrix_index_lower_lower = (level_index * nlte_dimension) + level_index;
     const auto uniquelevelindex = ionuniquelevelindexstart + level;
     const double epsilon_level = epsilon(uniquelevelindex);
     const double statweight = stat_weight(uniquelevelindex);
     const auto nnlevel = levelpops[level];
+    const double s_renorm_level = s_renorm[level];
 
-    // de-excitation
-    const auto alltrans_startdown = get_alltrans_startdown(uniquelevelindex);
-    const int ndowntrans = get_ndowntrans(uniquelevelindex);
-    const auto ndowntransindices = std::views::iota(0, ndowntrans);
-    std::for_each(ndowntransindices.begin(), ndowntransindices.end(), [&](const auto& i) {
-      const auto alltransindex = alltrans_startdown + i;
-      const int lower = globals::alltrans.targetlevelindex[alltransindex];
-      assert_testmodeonly(lower >= 0 && lower < nlevels);
-      const auto lower_uniquelevelindex = ionuniquelevelindexstart + lower;
-      const auto lower_statweight = stat_weight(lower_uniquelevelindex);
-      const auto nnlevel_lower = levelpops[lower];
-
-      const double epsilon_trans = epsilon_level - epsilon(lower_uniquelevelindex);
-      const double R = rad_deexcitation_ratecoeff(epsilon_trans, globals::alltrans.einstein_A[alltransindex],
-                                                  statweight, lower_statweight, nnlevel, nnlevel_lower, t_mid) *
-                       s_renorm[level];
-      const double C =
-          col_deexcitation_ratecoeff(T_e, clumpednne, epsilon_trans, statweight, lower_statweight, alltransindex) *
-          s_renorm[level];
-
-      const int lower_index = levelindices[lower];
-      const auto matrix_index_upper_upper = matrix_index_level_level;
-      const auto matrix_index_lower_upper = (lower_index * nlte_dimension) + level_index;
-
-      atomicadd(rate_matrices.rad_bb[matrix_index_upper_upper], -R);
-      atomicadd(rate_matrices.rad_bb[matrix_index_lower_upper], R);
-      atomicadd(rate_matrices.coll_bb[matrix_index_upper_upper], -C);
-      atomicadd(rate_matrices.coll_bb[matrix_index_lower_upper], C);
-    });
-
-    // excitation
     const int nuptrans = get_nuptrans(uniquelevelindex);
     const auto alltrans_startup = get_alltrans_startup(uniquelevelindex);
     const auto nuptransindices = std::views::iota(0, nuptrans);
@@ -551,28 +526,33 @@ void nltepop_matrix_add_boundbound(const int nonemptymgi, const int element, con
       const auto upper_statweight = stat_weight(upper_uniquelevelindex);
       const auto nnlevel_upper = levelpops[upper];
 
-      const double R =
-          rad_excitation_ratecoeff(nonemptymgi, upper_statweight, globals::alltrans.einstein_A[alltransindex],
-                                   epsilon_trans, nnlevel, nnlevel_upper, statweight, alltransindex, t_mid) *
-          s_renorm[level];
+      const auto ratecoeffs =
+          calculate_boundbound_ratecoeffs(nonemptymgi, alltransindex, epsilon_trans, upper_statweight, statweight,
+                                          nnlevel_upper, nnlevel, T_e, clumpednne, t_mid);
 
-      const double C =
-          col_excitation_ratecoeff(T_e, clumpednne, upper_statweight, alltransindex, epsilon_trans, statweight) *
-          s_renorm[level];
-
-      const double NTC =
-          nonthermal::nt_excitation_ratecoeff(nonemptymgi, level, upper, alltransindex) * s_renorm[level];
+      const double R_deexc = ratecoeffs.rad_deexc * s_renorm[upper];
+      const double C_deexc = ratecoeffs.col_deexc * s_renorm[upper];
+      const double R_exc = ratecoeffs.rad_exc * s_renorm_level;
+      const double C_exc = ratecoeffs.col_exc * s_renorm_level;
+      const double NTC_exc =
+          nonthermal::nt_excitation_ratecoeff(nonemptymgi, level, upper, alltransindex) * s_renorm_level;
 
       const int upper_index = levelindices[upper];
-      const auto matrix_index_lower_lower = matrix_index_level_level;
+      const auto matrix_index_upper_upper = (upper_index * nlte_dimension) + upper_index;
+      const auto matrix_index_lower_upper = (level_index * nlte_dimension) + upper_index;
       const auto matrix_index_upper_lower = (upper_index * nlte_dimension) + level_index;
 
-      atomicadd(rate_matrices.rad_bb[matrix_index_lower_lower], -R);
-      atomicadd(rate_matrices.rad_bb[matrix_index_upper_lower], R);
-      atomicadd(rate_matrices.coll_bb[matrix_index_lower_lower], -C);
-      atomicadd(rate_matrices.coll_bb[matrix_index_upper_lower], C);
-      atomicadd(rate_matrices.ntcoll_bb[matrix_index_lower_lower], -NTC);
-      atomicadd(rate_matrices.ntcoll_bb[matrix_index_upper_lower], NTC);
+      atomicadd(rate_matrices.rad_bb[matrix_index_upper_upper], -R_deexc);
+      atomicadd(rate_matrices.rad_bb[matrix_index_lower_upper], R_deexc);
+      atomicadd(rate_matrices.coll_bb[matrix_index_upper_upper], -C_deexc);
+      atomicadd(rate_matrices.coll_bb[matrix_index_lower_upper], C_deexc);
+
+      atomicadd(rate_matrices.rad_bb[matrix_index_lower_lower], -R_exc);
+      atomicadd(rate_matrices.rad_bb[matrix_index_upper_lower], R_exc);
+      atomicadd(rate_matrices.coll_bb[matrix_index_lower_lower], -C_exc);
+      atomicadd(rate_matrices.coll_bb[matrix_index_upper_lower], C_exc);
+      atomicadd(rate_matrices.ntcoll_bb[matrix_index_lower_lower], -NTC_exc);
+      atomicadd(rate_matrices.ntcoll_bb[matrix_index_upper_lower], NTC_exc);
     });
   });
 }
@@ -733,52 +713,60 @@ void nltepop_matrix_add_autoionisation(const int nonemptymgi, const int element,
   }
 }
 
-// Calculate the l2 norm of row or column `i` of `n*n` matrix
-auto matrix_row_or_col_norm(std::span<const double> matrix, const int i, const bool row, const size_t n) -> double {
-  double result = 0.;
-
-  for (size_t j = 0; j < n; j++) {
-    const double val = row ? matrix[(i * n) + j] : matrix[(j * n) + i];
-    result += pow2(val);
-  }
-
-  return std::sqrt(result);
-}
-
-// Multiply row or column `i` by `val`
-void matrix_scale_row_or_col(std::span<double> matrix, const int i, const bool row, const size_t n, const double val) {
-  for (size_t j = 0; j < n; j++) {
-    const size_t idx = row ? (i * n) + j : (j * n) + i;
-    matrix[idx] *= val;
-  }
-}
-
+// Iterative equilibration: repeatedly scale row i by f_i = sqrt(col_norm_i / row_norm_i) and column i
+// by 1 / f_i until every f_i is within 1e-3 of one, tracking the accumulated column scalings in
+// pop_normfactors so the caller can recover the populations. Each sweep computes all row and column l2
+// norms in a single row-major pass and then applies every scaling in a second row-major pass (rather
+// than making a strided pass through the matrix per index), so within a sweep the factors are computed
+// from the same norm snapshot. The scalings are exactly undone via pop_normfactors, so they only affect
+// the conditioning of the LU solve, not the system being solved.
 void nltepop_matrix_normalise(std::span<double> rate_matrix, std::span<double> balance_vector,
                               std::span<double> pop_normfactors) {
   const auto nlte_dimension = std::ssize(pop_normfactors);
   assert_always(std::ssize(rate_matrix) == (nlte_dimension * nlte_dimension));
 
+  std::vector<double> row_sumsq(nlte_dimension);
+  std::vector<double> col_sumsq(nlte_dimension);
+  std::vector<double> rowscale(nlte_dimension);
+  std::vector<double> colscale_inv(nlte_dimension);
+
   for (int iter = 0; iter < 10; iter++) {
-    bool changed = false;
-
-    for (auto i = 0; i < nlte_dimension; i++) {
-      const double row_norm = matrix_row_or_col_norm(rate_matrix, i, true, nlte_dimension);
-      const double col_norm = matrix_row_or_col_norm(rate_matrix, i, false, nlte_dimension);
-      if (row_norm == 0 || col_norm == 0) {
-        continue;
+    std::ranges::fill(row_sumsq, 0.);
+    std::ranges::fill(col_sumsq, 0.);
+    for (int r = 0; r < nlte_dimension; r++) {
+      const auto rowstart = r * nlte_dimension;
+      for (int c = 0; c < nlte_dimension; c++) {
+        const double sq = pow2(rate_matrix[rowstart + c]);
+        row_sumsq[r] += sq;
+        col_sumsq[c] += sq;
       }
+    }
 
-      const double f = std::sqrt(col_norm / row_norm);
-      if (std::abs(f - 1.) > 1e-3) {
-        matrix_scale_row_or_col(rate_matrix, i, true, nlte_dimension, f);
-        matrix_scale_row_or_col(rate_matrix, i, false, nlte_dimension, 1. / f);
-        pop_normfactors[i] /= f;
-        changed = true;
+    bool changed = false;
+    for (int i = 0; i < nlte_dimension; i++) {
+      rowscale[i] = 1.;
+      colscale_inv[i] = 1.;
+      if (row_sumsq[i] > 0. && col_sumsq[i] > 0.) {
+        const double f = std::sqrt(std::sqrt(col_sumsq[i]) / std::sqrt(row_sumsq[i]));
+        if (std::abs(f - 1.) > 1e-3) {
+          rowscale[i] = f;
+          colscale_inv[i] = 1. / f;
+          pop_normfactors[i] /= f;
+          changed = true;
+        }
       }
     }
 
     if (!changed) {
       break;
+    }
+
+    for (int r = 0; r < nlte_dimension; r++) {
+      const auto rowstart = r * nlte_dimension;
+      const double f_row = rowscale[r];
+      for (int c = 0; c < nlte_dimension; c++) {
+        rate_matrix[rowstart + c] *= f_row * colscale_inv[c];
+      }
     }
   }
 

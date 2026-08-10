@@ -791,3 +791,56 @@ void macroatom_open_file() {
   return clumpednne * 8.629e-6 * static_cast<double>(coll_strength) * std::exp(-eoverkt) / lowerstatweight /
          std::sqrt(T_e);
 }
+
+// Compute all four bound-bound rate coefficients of one transition together, more cheaply than the four
+// single-coefficient functions: the Sobolev optical depth and escape probability are shared between the
+// radiative directions, and collisional excitation comes from de-excitation via the detailed balance
+// relation C_lu / C_ul = (g_upper / g_lower) * exp(-epsilon_trans / (k T_e)), which every branch pair of
+// col_excitation_ratecoeff() and col_deexcitation_ratecoeff() satisfies. Results must stay equivalent (to
+// within rounding) to rad_deexcitation_ratecoeff(), rad_excitation_ratecoeff(), col_deexcitation_ratecoeff(),
+// and col_excitation_ratecoeff() for the same transition.
+[[gnu::pure]] [[nodiscard]] auto calculate_boundbound_ratecoeffs(
+    const int nonemptymgi, const int alltransindex, const double epsilon_trans, const double upperstatweight,
+    const double lowerstatweight, const double nnlevel_upper, const double nnlevel_lower, const float T_e,
+    const float clumpednne, const double t_current) -> BoundBoundRatecoeffs {
+  const double A_ul = globals::alltrans.einstein_A[alltransindex];
+  const double nu_trans = epsilon_trans / H;
+  const double B_ul = CLIGHTSQUAREDOVERTWOH / pow3(nu_trans) * A_ul;
+  const double B_lu = upperstatweight / lowerstatweight * B_ul;
+
+  const double tau_sobolev = ((B_lu * nnlevel_lower) - (B_ul * nnlevel_upper)) * HCLIGHTOVERFOURPI * t_current;
+
+  // tau_sobolev ~ zero (optically thin, escape probability beta -> 1) or negative (inverted level
+  // populations, where beta is clamped to the thin-limit value): de-excitation gets the full A_ul and
+  // the excitation rate is zero, matching the single-coefficient functions
+  double rad_deexc = A_ul;
+  double rad_exc = 0.;
+  if (tau_sobolev > 1e-100) {
+    const double beta = 1.0 / tau_sobolev * (-std::expm1(-tau_sobolev));
+    rad_deexc = A_ul * beta;
+
+    const double R_over_J_nu =
+        nnlevel_lower > 0. ? (B_lu - (B_ul * nnlevel_upper / nnlevel_lower)) * beta : B_lu * beta;
+
+    bool used_detailed_estimator = false;
+    if (DETAILED_LINE_ESTIMATORS_ON && !globals::lte_iteration) {
+      // check for a detailed line flux estimator to replace the binned/blackbody radiation field estimate
+      const int jblueindex = radfield::get_Jblueindex(globals::alltrans.lineindex[alltransindex]);
+      if (jblueindex >= 0) {
+        rad_exc = R_over_J_nu * radfield::get_Jb_lu(nonemptymgi, jblueindex);
+        used_detailed_estimator = true;
+      }
+    }
+    if (!used_detailed_estimator) {
+      rad_exc = R_over_J_nu * radfield::radfield(nu_trans, nonemptymgi);
+      assert_testmodeonly(rad_exc >= 0.);
+      assert_testmodeonly(std::isfinite(rad_exc));
+    }
+  }
+
+  const double col_deexc =
+      col_deexcitation_ratecoeff(T_e, clumpednne, epsilon_trans, upperstatweight, lowerstatweight, alltransindex);
+  const double col_exc = col_deexc * (upperstatweight / lowerstatweight) * std::exp(-epsilon_trans / (KB * T_e));
+
+  return {.rad_deexc = rad_deexc, .rad_exc = rad_exc, .col_deexc = col_deexc, .col_exc = col_exc};
+}
