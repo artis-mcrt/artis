@@ -490,14 +490,23 @@ void nltepop_matrix_add_boundbound(const int nonemptymgi, const int element, con
   const auto ionuniquelevelindexstart = get_ionuniquelevelindexstart(element, ion);
   const auto nlte_dimension = rate_matrices.used_nlte_dimension;
 
+  // the level populations and matrix indices are constants of the fill but are needed for both
+  // endpoints of every transition, so look them up once per level instead of twice per transition
+  std::vector<double> levelpops(nlevels);
+  std::vector<int> levelindices(nlevels);
+  for (int level = 0; level < nlevels; level++) {
+    levelpops[level] = calculate_levelpop(nonemptymgi, element, ion, level);
+    levelindices[level] = get_nlte_vector_index(element, ion, level, first_ion_used);
+  }
+
   const auto levels = std::views::iota(0, nlevels);
   std::for_each(levels.begin(), levels.end(), [&](const auto level) {
-    const int level_index = get_nlte_vector_index(element, ion, level, first_ion_used);
+    const int level_index = levelindices[level];
     const auto matrix_index_level_level = (level_index * nlte_dimension) + level_index;
     const auto uniquelevelindex = ionuniquelevelindexstart + level;
     const double epsilon_level = epsilon(uniquelevelindex);
     const double statweight = stat_weight(uniquelevelindex);
-    const auto nnlevel = calculate_levelpop(nonemptymgi, element, ion, level);
+    const auto nnlevel = levelpops[level];
 
     // de-excitation
     const auto alltrans_startdown = get_alltrans_startdown(uniquelevelindex);
@@ -508,7 +517,7 @@ void nltepop_matrix_add_boundbound(const int nonemptymgi, const int element, con
       const int lower = globals::alltrans.targetlevelindex[alltransindex];
       const auto lower_uniquelevelindex = ionuniquelevelindexstart + lower;
       const auto lower_statweight = stat_weight(lower_uniquelevelindex);
-      const auto nnlevel_lower = calculate_levelpop(nonemptymgi, element, ion, lower);
+      const auto nnlevel_lower = levelpops[lower];
 
       const double epsilon_trans = epsilon_level - epsilon(lower_uniquelevelindex);
       const double R = rad_deexcitation_ratecoeff(epsilon_trans, globals::alltrans.einstein_A[alltransindex],
@@ -518,7 +527,7 @@ void nltepop_matrix_add_boundbound(const int nonemptymgi, const int element, con
           col_deexcitation_ratecoeff(T_e, clumpednne, epsilon_trans, statweight, lower_statweight, alltransindex) *
           s_renorm[level];
 
-      const int lower_index = get_nlte_vector_index(element, ion, lower, first_ion_used);
+      const int lower_index = levelindices[lower];
       const auto matrix_index_upper_upper = matrix_index_level_level;
       const auto matrix_index_lower_upper = (lower_index * nlte_dimension) + level_index;
 
@@ -538,7 +547,7 @@ void nltepop_matrix_add_boundbound(const int nonemptymgi, const int element, con
       const auto upper_uniquelevelindex = ionuniquelevelindexstart + upper;
       const double epsilon_trans = epsilon(upper_uniquelevelindex) - epsilon_level;
       const auto upper_statweight = stat_weight(upper_uniquelevelindex);
-      const auto nnlevel_upper = calculate_levelpop(nonemptymgi, element, ion, upper);
+      const auto nnlevel_upper = levelpops[upper];
 
       const double R =
           rad_excitation_ratecoeff(nonemptymgi, upper_statweight, globals::alltrans.einstein_A[alltransindex],
@@ -552,7 +561,7 @@ void nltepop_matrix_add_boundbound(const int nonemptymgi, const int element, con
       const double NTC =
           nonthermal::nt_excitation_ratecoeff(nonemptymgi, level, upper, alltransindex) * s_renorm[level];
 
-      const int upper_index = get_nlte_vector_index(element, ion, upper, first_ion_used);
+      const int upper_index = levelindices[upper];
       const auto matrix_index_lower_lower = matrix_index_level_level;
       const auto matrix_index_upper_lower = (upper_index * nlte_dimension) + level_index;
 
