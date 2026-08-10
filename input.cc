@@ -928,8 +928,15 @@ void setup_phixs_list() {
       std::ranges::copy(std::views::transform(allcont, &TempPhotoionTransitionInput::index_in_groundphixslist),
                         allcont_index_in_groundphixslist.begin());
     }
+    auto allcont_recip_nu_edge_incr = MPI_shared_array<double>(nbfcontinua);
+    if (globals::rank_in_node == 0) {
+      for (int i = 0; i < nbfcontinua; i++) {
+        allcont_recip_nu_edge_incr[i] = 1. / (allcont_nu_edge[i] * globals::NPHIXSNUINCREMENT);
+      }
+    }
     MPI_Barrier_node();
     globals::allcont.nu_edge = std::move(allcont_nu_edge);
+    globals::allcont.recip_nu_edge_incr = std::move(allcont_recip_nu_edge_incr);
     globals::allcont.element = std::move(allcont_element);
     globals::allcont.ion = std::move(allcont_ion);
     globals::allcont.level = std::move(allcont_level);

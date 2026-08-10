@@ -245,6 +245,8 @@ inline MPI_shared_array<const double> bfestim_nu_edge{};
 
 struct AllCont {
   MPI_shared_array<const double> nu_edge;
+  // 1 / (nu_edge * NPHIXSNUINCREMENT): turns the phixs table index calculation into a multiply
+  MPI_shared_array<const double> recip_nu_edge_incr;
   MPI_shared_array<const int> element;
   MPI_shared_array<const int> ion;
   MPI_shared_array<const int> level;

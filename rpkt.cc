@@ -797,8 +797,8 @@ auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixsli
 
       if (USECELLHISTANDUPDATEPHIXSLIST || nnlevel > 0) {
         const double nu_edge = allcont_nu_edge[i];
-        const double sigma_bf =
-            photoionisation_crosssection_fromtable(get_phixs_table(allcont_uniquelevelindex[i]), nu_edge, nu);
+        const double sigma_bf = photoionisation_crosssection_fromtable_recip(
+            get_phixs_table(allcont_uniquelevelindex[i]), nu_edge, globals::allcont.recip_nu_edge_incr[i], nu);
 
         // negative means "not computed for this cell yet", which is what cellcacheslot_populate() fills the
         // cache with. Only the cellcache path has a stored ratio to reuse: without it there is no cache entry

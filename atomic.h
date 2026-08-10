@@ -198,13 +198,40 @@ DEVICE_FUNC inline auto get_nphixstargets(const int element, const int ion, cons
   return get_phixs_table(get_uniquelevelindex(element, ion, level));
 }
 
+// Interpolate the photoionisation cross-section from the table at fractional table position ireal
+// (= ((nu / nu_edge) - 1) / NPHIXSNUINCREMENT), extrapolating above the table with the Kramers
+// (1923) nu^-3 scaling anchored to the highest tabulated point so that the cross-section stays
+// continuous across the end of the table.
+[[gnu::pure]] [[nodiscard]] inline auto photoionisation_crosssection_attableposition(std::span<const float> photoion_xs,
+                                                                                     const double nu_edge,
+                                                                                     const double nu,
+                                                                                     const double ireal) -> float {
+  float sigma_bf = 0.;
+  // floor() so that nu < nu_edge always gives i < 0 (zero cross-section below the threshold);
+  // truncation toward zero would map ireal in (-1, 0) to the first table point instead
+  const int i = static_cast<int>(std::floor(ireal));
+
+  if (i < 0) {
+    sigma_bf = 0.;
+  } else if (i < globals::NPHIXSPOINTS - 1) {
+    const double sigma_bf_a = photoion_xs[i];
+    const double sigma_bf_b = photoion_xs[i + 1];
+    const double factor_b = ireal - i;
+    sigma_bf = static_cast<float>(((1. - factor_b) * sigma_bf_a) + (factor_b * sigma_bf_b));
+  } else {
+    const double nu_max_phixs = nu_edge * last_phixs_nuovernuedge;  // nu of the uppermost point in the phixs table
+    sigma_bf = static_cast<float>(photoion_xs[globals::NPHIXSPOINTS - 1] * pow3(nu_max_phixs / nu));
+  }
+
+  return sigma_bf;
+}
+
 // Calculate the photoionisation cross-section at frequency nu out of the atomic data.
 [[gnu::pure]] [[nodiscard]] inline auto photoionisation_crosssection_fromtable(std::span<const float> photoion_xs,
                                                                                const double nu_edge, const double nu)
     -> float {
-  float sigma_bf = 0.;
-
   if constexpr (PHIXS_CLASSIC_NO_INTERPOLATION) {
+    float sigma_bf = 0.;
     // classic mode: no interpolation
     if (nu < nu_edge) {
       // below the threshold the cross section is zero (and the table index below would be negative)
@@ -229,26 +256,23 @@ DEVICE_FUNC inline auto get_nphixstargets(const int element, const int ion, cons
   }
 
   const double ireal = ((nu / nu_edge) - 1.0) / globals::NPHIXSNUINCREMENT;
-  // floor() so that nu < nu_edge always gives i < 0 (zero cross-section below the threshold);
-  // truncation toward zero would map ireal in (-1, 0) to the first table point instead
-  const int i = static_cast<int>(std::floor(ireal));
+  return photoionisation_crosssection_attableposition(photoion_xs, nu_edge, nu, ireal);
+}
 
-  if (i < 0) {
-    sigma_bf = 0.;
-  } else if (i < globals::NPHIXSPOINTS - 1) {
-    const double sigma_bf_a = photoion_xs[i];
-    const double sigma_bf_b = photoion_xs[i + 1];
-    const double factor_b = ireal - i;
-    sigma_bf = static_cast<float>(((1. - factor_b) * sigma_bf_a) + (factor_b * sigma_bf_b));
-  } else {
-    // above the top of the table, extrapolate with the Kramers (1923) nu^-3 scaling. It is anchored to the
-    // highest tabulated point rather than to the threshold value so that the cross-section stays continuous
-    // across the end of the table.
-    const double nu_max_phixs = nu_edge * last_phixs_nuovernuedge;  // nu of the uppermost point in the phixs table
-    sigma_bf = static_cast<float>(photoion_xs[globals::NPHIXSPOINTS - 1] * pow3(nu_max_phixs / nu));
+// as photoionisation_crosssection_fromtable(), but with the table position computed from a
+// precomputed reciprocal (1 / (nu_edge * NPHIXSNUINCREMENT)) so that the propagation hot loop
+// avoids a floating-point division per continuum. The table position can differ from the
+// division-based expression in the last bit.
+[[gnu::pure]] [[nodiscard]] inline auto photoionisation_crosssection_fromtable_recip(std::span<const float> photoion_xs,
+                                                                                     const double nu_edge,
+                                                                                     const double recip_nu_edge_incr,
+                                                                                     const double nu) -> float {
+  if constexpr (PHIXS_CLASSIC_NO_INTERPOLATION) {
+    return photoionisation_crosssection_fromtable(photoion_xs, nu_edge, nu);
   }
 
-  return sigma_bf;
+  const double ireal = (nu - nu_edge) * recip_nu_edge_incr;
+  return photoionisation_crosssection_attableposition(photoion_xs, nu_edge, nu, ireal);
 }
 
 // inverse of get_uniquelevelindex(). get the element/ion/level from a unique level index
