@@ -423,6 +423,7 @@ void cellcacheslot_populate(globals::CellCache& cacheslot, const int nonemptymgi
   std::ranges::fill(cacheslot.allphixstargets_corrphotoioncoeff, -99.);
 
   std::ranges::fill(cacheslot.allcont_modified_departureratios, -1.);
+  std::ranges::fill(cacheslot.allcont_stimfactor_edgepart, -1.);
 
   const auto nnetot = grid::get_nnetot(nonemptymgi);
   for (int i = 0; i < globals::nbfcontinua; i++) {

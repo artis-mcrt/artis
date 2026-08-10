@@ -170,6 +170,23 @@ constexpr bool align_to_avoid_false_sharing = false;
     _Pragma("omp atomic update") var += val; \
   }
 
+// relaxed atomic read/write for values that concurrent workers may lazily fill with identical
+// values (e.g. the continuum caches in the cell cache): the atomicity makes the unsynchronised
+// same-value stores well-defined without imposing any ordering
+template <typename T>
+[[nodiscard]] auto atomicload(T& var) -> T {
+  T val{};
+#pragma omp atomic read
+  val = var;
+  return val;
+}
+
+template <typename T, typename U>
+void atomicstore(T& var, const U val) {
+#pragma omp atomic write
+  var = val;
+}
+
 #elifdef STDPAR_ON
 #include <atomic>
 
@@ -178,9 +195,32 @@ constexpr void atomicadd(T& var, U&& val) {
   std::atomic_ref<T>(var).fetch_add(std::forward<U>(val), std::memory_order_relaxed);
 }
 
+// relaxed atomic read/write for values that concurrent workers may lazily fill with identical
+// values (e.g. the continuum caches in the cell cache): the atomicity makes the unsynchronised
+// same-value stores well-defined without imposing any ordering
+template <typename T>
+[[nodiscard]] constexpr auto atomicload(T& var) -> T {
+  return std::atomic_ref<T>(var).load(std::memory_order_relaxed);
+}
+
+template <typename T, typename U>
+constexpr void atomicstore(T& var, const U val) {
+  std::atomic_ref<T>(var).store(val, std::memory_order_relaxed);
+}
+
 #else
 
 #define atomicadd(var, val) var += (val);
+
+template <typename T>
+[[nodiscard]] constexpr auto atomicload(T& var) -> T {
+  return var;
+}
+
+template <typename T, typename U>
+constexpr void atomicstore(T& var, const U val) {
+  var = val;
+}
 
 #endif
 
