@@ -106,6 +106,7 @@ void setup_cellcache() {
   backing.alllevels_maprocessrates.allocate(static_cast<ptrdiff_t>(maprocess_percell * nslots));
   backing.allmacroatomictransitions.allocate(static_cast<ptrdiff_t>(chtransblocksize * nslots));
   backing.allcont_modified_departureratios.allocate(static_cast<ptrdiff_t>(nbfcontinua * nslots));
+  backing.allcont_stimfactor_edgepart.allocate(static_cast<ptrdiff_t>(nbfcontinua * nslots));
   backing.allcont_nnlevel.allocate(static_cast<ptrdiff_t>(nbfcontinua * nslots));
   backing.allcont_keep.allocate(static_cast<ptrdiff_t>(nbfcontinua * nslots));
   backing.chi_ff_nnionpart.allocate(static_cast<ptrdiff_t>(nslots));
@@ -128,6 +129,7 @@ void setup_cellcache() {
         backing.allmacroatomictransitions.subspan(s * chtransblocksize, chtransblocksize);
     cacheslot.allcont_modified_departureratios =
         backing.allcont_modified_departureratios.subspan(s * nbfcontinua, nbfcontinua);
+    cacheslot.allcont_stimfactor_edgepart = backing.allcont_stimfactor_edgepart.subspan(s * nbfcontinua, nbfcontinua);
     cacheslot.allcont_nnlevel = backing.allcont_nnlevel.subspan(s * nbfcontinua, nbfcontinua);
     cacheslot.allcont_keep = backing.allcont_keep.subspan(s * nbfcontinua, nbfcontinua);
     cacheslot.chi_ff_nnionpart = backing.chi_ff_nnionpart.subspan(s, 1);

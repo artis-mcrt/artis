@@ -278,6 +278,11 @@ struct CellCache {
   std::span<double> alllevels_maprocessrates;  // rates for macroatom processes
   std::span<double> allmacroatomictransitions;  // cumulative macroatom transition rates for all levels
   std::span<double> allcont_modified_departureratios;
+  // modified departure ratio times exp(H * nu_edge / (KB * T_e)), so that the stimulated correction
+  // factor at any nu needs only a multiply by the per-call exp(-H * nu / (KB * T_e)). Negative means
+  // not cached for this cell (either not evaluated yet, or the product would overflow), in which case
+  // the factor is computed directly from nu - nu_edge (see calculate_chi_bf_gammacontr())
+  std::span<double> allcont_stimfactor_edgepart;
   std::span<double> allcont_nnlevel;
   std::span<std::uint8_t> allcont_keep;
   std::span<double> chi_ff_nnionpart;  // single element per cell (stored as a span to allow shared backing)
@@ -294,6 +299,7 @@ struct CellCache {
     mem_usage += (alllevels_maprocessrates.size() * sizeof(double));
     mem_usage += (allmacroatomictransitions.size() * sizeof(double));
     mem_usage += (allcont_modified_departureratios.size() * sizeof(double));
+    mem_usage += (allcont_stimfactor_edgepart.size() * sizeof(double));
     mem_usage += (allcont_nnlevel.size() * sizeof(double));
     mem_usage += (allcont_keep.size() * sizeof(allcont_keep[0]));
     mem_usage += (chi_ff_nnionpart.size() * sizeof(double));
@@ -315,6 +321,7 @@ struct CellCacheBacking {
   MPI_shared_array<double> alllevels_maprocessrates;
   MPI_shared_array<double> allmacroatomictransitions;
   MPI_shared_array<double> allcont_modified_departureratios;
+  MPI_shared_array<double> allcont_stimfactor_edgepart;
   MPI_shared_array<double> allcont_nnlevel;
   MPI_shared_array<std::uint8_t> allcont_keep;
   MPI_shared_array<double> chi_ff_nnionpart;

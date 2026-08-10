@@ -724,6 +724,18 @@ auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixsli
   const auto nnetot = grid::get_nnetot(nonemptymgi);
   const auto& allcont_nu_edge = globals::allcont.nu_edge;
 
+  const double modified_sahafact_statweightpart = SAHACONST * std::pow(T_e, -1.5);
+  // the stimulated correction factor exp(-H (nu - nu_edge) / (KB T_e)) factorises into this per-call
+  // part times a cached per-continuum part (see allcont_stimfactor_edgepart in globals.h)
+  const double exp_minus_hnu_over_kte = std::exp(-HOVERKB * nu / T_e);
+  // if the per-call factor is subnormal (flushed to zero under fast-math) or zero, multiplying it by a
+  // large finite cached edge part could wrongly zero a stimulated correction of order unity, so the
+  // factorisation is unusable and every continuum takes the direct path for this call
+  const bool stimfactor_split_usable = (exp_minus_hnu_over_kte >= std::numeric_limits<double>::min());
+  // above this exponent the cached edge part would overflow, so such continua stay uncached and keep
+  // computing the factor directly
+  constexpr double stimfactor_edgepart_maxexponent = 690.;
+
   // The phixslist is sorted by nu_edge in ascending order, so if nu < allcont[i].nu_edge then no absorption in any of
   // the remaining continua is possible. so set their kappas to zero and break
   const int allcontend = static_cast<int>(std::ranges::upper_bound(allcont_nu_edge, nu) - allcont_nu_edge.begin());
@@ -784,26 +796,54 @@ auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixsli
         // cache with. Only the cellcache path has a stored ratio to reuse: without it there is no cache entry
         // belonging to this cell to read, because in single-slot mode get_cellcache() returns the calling
         // rank's one shared slot, which generally holds a different cell entirely.
-        double modified_departure_ratio = -1.;
-        if constexpr (USECELLHISTANDUPDATEPHIXSLIST) {
-          modified_departure_ratio = get_cellcache(nonemptymgi).allcont_modified_departureratios[i];
-        }
+        // These lazy caches may be filled by concurrent workers of the same cell: every writer stores
+        // identical values and a stale read of a sentinel just repeats the computation, with the relaxed
+        // atomic accesses (plain loads and stores in a serial build) making that well-defined. Each cached
+        // value must also be usable on its own, so the slow path below never infers the validity of one
+        // cached entry from the other.
+        const double stimfactor_edgepart =
+            USECELLHISTANDUPDATEPHIXSLIST ? atomicload(get_cellcache(nonemptymgi).allcont_stimfactor_edgepart[i]) : -1.;
 
-        if (modified_departure_ratio < 0) {
-          const int upper = allcont_upperlevel[i];
-          const double nnupperionlevel = USECELLHISTANDUPDATEPHIXSLIST
-                                             ? get_cellcache_levelpop(nonemptymgi, element, ion + 1, upper)
-                                             : calculate_levelpop(nonemptymgi, element, ion + 1, upper);
-          const double modified_sahafact =
-              SAHACONST * stat_weight(element, ion, level) / stat_weight(element, ion + 1, upper) * std::pow(T_e, -1.5);
-          modified_departure_ratio =
-              nnupperionlevel / nnlevel * clumpednne * modified_sahafact;  // put that to phixslist
-          if (USECELLHISTANDUPDATEPHIXSLIST) {
-            get_cellcache(nonemptymgi).allcont_modified_departureratios[i] = modified_departure_ratio;
+        double stimfactor{};
+        if (stimfactor_edgepart >= 0. && stimfactor_split_usable) [[likely]] {
+          stimfactor = stimfactor_edgepart * exp_minus_hnu_over_kte;
+        } else {
+          // the edge part is not cached, so compute the stimulated correction factor directly from
+          // nu - nu_edge
+          double modified_departure_ratio = -1.;
+          if constexpr (USECELLHISTANDUPDATEPHIXSLIST) {
+            modified_departure_ratio = atomicload(get_cellcache(nonemptymgi).allcont_modified_departureratios[i]);
+          }
+          if (modified_departure_ratio < 0) {
+            const int upper = allcont_upperlevel[i];
+            const double nnupperionlevel = USECELLHISTANDUPDATEPHIXSLIST
+                                               ? get_cellcache_levelpop(nonemptymgi, element, ion + 1, upper)
+                                               : calculate_levelpop(nonemptymgi, element, ion + 1, upper);
+            const double modified_sahafact = modified_sahafact_statweightpart * stat_weight(element, ion, level) /
+                                             stat_weight(element, ion + 1, upper);
+            modified_departure_ratio = nnupperionlevel / nnlevel * clumpednne * modified_sahafact;
+            if constexpr (USECELLHISTANDUPDATEPHIXSLIST) {
+              atomicstore(get_cellcache(nonemptymgi).allcont_modified_departureratios[i], modified_departure_ratio);
+            }
+          }
+
+          stimfactor = modified_departure_ratio * exp(-HOVERKB * (nu - nu_edge) / T_e);
+
+          if constexpr (USECELLHISTANDUPDATEPHIXSLIST) {
+            // cache the edge part for subsequent evaluations of this continuum in this cell.
+            // The complete cached product must be finite: for a large enough departure ratio the product
+            // can overflow even when the edge exponential alone does not, and recombining an infinity with
+            // the per-call factor would wrongly zero the continuum's opacity contribution. Continua whose
+            // product is not representable are simply never cached and keep taking this direct path.
+            const double edge_exponent = HOVERKB * nu_edge / T_e;
+            if (edge_exponent < stimfactor_edgepart_maxexponent) {
+              const double edgepart = modified_departure_ratio * std::exp(edge_exponent);
+              if (std::isfinite(edgepart)) {
+                atomicstore(get_cellcache(nonemptymgi).allcont_stimfactor_edgepart[i], edgepart);
+              }
+            }
           }
         }
-
-        const double stimfactor = modified_departure_ratio * exp(-HOVERKB * (nu - nu_edge) / T_e);
         // photoionisation minus stimulated recombination
         const double corrfactor = std::max(0., 1 - stimfactor);
 
