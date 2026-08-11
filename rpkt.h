@@ -52,8 +52,6 @@ struct Phixslist {
   std::span<double> groundcont_gamma_contr;
   // needed for DETAILED_BF_ESTIMATORS_ON. Size = bfestimcount
   std::span<double> gamma_contr;
-  int allcontend{-1};
-  int allcontbegin{0};
   int bfestimend{-1};
   int bfestimbegin{0};
 
@@ -183,6 +181,9 @@ static_assert(closest_transition(2., -1, test_closest_transition_linelist_nu) ==
 static_assert(closest_transition(8., 2, test_closest_transition_linelist_nu) == 2);  // known next transition
 static_assert(closest_transition(8., 4, test_closest_transition_linelist_nu) == -1);  // no more line interactions
 
+// Whether a bound-free continuum contributes to the opacity of a cell, i.e. whether the cell contains enough
+// of the involved atomic species. Continua that fail this are given a zero level population (see
+// CellCache::allcont_nnlevel), which is the single condition that calculate_chi_bf_gammacontr() skips on.
 [[gnu::pure]] [[nodiscard]] inline auto keep_this_cont(int element, const int ion, const int level,
                                                        const int nonemptymgi, const float nnetot) -> bool {
   if constexpr (DETAILED_BF_ESTIMATORS_ON) {

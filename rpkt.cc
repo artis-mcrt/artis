@@ -758,9 +758,6 @@ auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixsli
   assert_testmodeonly(allcontbegin <= allcontend);
 
   if constexpr (USECELLHISTANDUPDATEPHIXSLIST && !SELECTCONTINUUM) {
-    phixslist.allcontbegin = allcontbegin;
-    phixslist.allcontend = allcontend;
-
     phixslist.bfestimend =
         static_cast<int>(std::ranges::upper_bound(globals::bfestim_nu_edge, nu) - globals::bfestim_nu_edge.begin());
 
@@ -776,99 +773,113 @@ auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixsli
   const auto& allcont_bfestimindex = globals::allcont.bfestimindex;
   const auto& allcont_upperlevel = globals::allcont.upperlevel;
   const auto& allcont_uniquelevelindex = globals::allcont.uniquelevelindex;
-  const auto& allcont_index_in_groundphixslist = globals::allcont.index_in_groundphixslist;
+  const auto& allcont_groundcontestimindex = globals::allcont.groundcontestimindex;
   const auto& allcont_probability = globals::allcont.probability;
-  const auto& allcont_phixstargetindex = globals::allcont.phixstargetindex;
+
+  // The cell's cache slot does not change during the loop, so resolve it once instead of on every access.
+  // These stay empty in the no-cellcache instantiation, which reads nothing from the cache: in single-slot
+  // mode get_cellcache() returns the calling rank's one shared slot, which generally holds a different cell.
+  std::span<const double> cache_nnlevel;
+  std::span<double> cache_stimfactor_edgepart;
+  std::span<double> cache_modified_departureratios;
+  if constexpr (USECELLHISTANDUPDATEPHIXSLIST) {
+    const auto& cacheslot = get_cellcache(nonemptymgi);
+    assert_testmodeonly(cacheslot.nonemptymgi == nonemptymgi);
+    cache_nnlevel = cacheslot.allcont_nnlevel;
+    cache_stimfactor_edgepart = cacheslot.allcont_stimfactor_edgepart;
+    cache_modified_departureratios = cacheslot.allcont_modified_departureratios;
+  }
 
   for (int i = allcontbegin; i < allcontend; i++) {
-    const int element = allcont_element[i];
-    const int ion = allcont_ion[i];
-    const int level = allcont_level[i];
     double sigma_contr = 0.;
 
-    // The bf process happens only if the current cell contains the involved atomic species
-    const bool should_keep_this_cont = USECELLHISTANDUPDATEPHIXSLIST
-                                           ? get_cellcache(nonemptymgi).allcont_keep[i]
-                                           : keep_this_cont(element, ion, level, nonemptymgi, nnetot);
+    // zero when the cell does not contain enough of the involved atomic species (see keep_this_cont) or the
+    // level is simply unpopulated. Either way the continuum contributes nothing, so one test covers both.
+    const double nnlevel = [&] {
+      if constexpr (USECELLHISTANDUPDATEPHIXSLIST) {
+        return cache_nnlevel[i];
+      } else {
+        return keep_this_cont(allcont_element[i], allcont_ion[i], allcont_level[i], nonemptymgi, nnetot)
+                   ? calculate_levelpop(nonemptymgi, allcont_element[i], allcont_ion[i], allcont_level[i])
+                   : 0.;
+      }
+    }();
 
-    if (should_keep_this_cont) [[likely]] {
-      const double nnlevel = USECELLHISTANDUPDATEPHIXSLIST ? get_cellcache(nonemptymgi).allcont_nnlevel[i]
-                                                           : calculate_levelpop(nonemptymgi, element, ion, level);
+    if (nnlevel > 0) [[likely]] {
+      const double nu_edge = allcont_nu_edge[i];
+      const double sigma_bf =
+          photoionisation_crosssection_fromtable(get_phixs_table(allcont_uniquelevelindex[i]), nu_edge, nu);
 
-      if (USECELLHISTANDUPDATEPHIXSLIST || nnlevel > 0) {
-        const double nu_edge = allcont_nu_edge[i];
-        const double sigma_bf =
-            photoionisation_crosssection_fromtable(get_phixs_table(allcont_uniquelevelindex[i]), nu_edge, nu);
+      // negative means "not computed for this cell yet", which is what cellcacheslot_populate() fills the
+      // cache with.
+      // These lazy caches may be filled by concurrent workers of the same cell: every writer stores
+      // identical values and a stale read of a sentinel just repeats the computation, with the relaxed
+      // atomic accesses (plain loads and stores in a serial build) making that well-defined. Each cached
+      // value must also be usable on its own, so the slow path below never infers the validity of one
+      // cached entry from the other.
+      const double stimfactor_edgepart = USECELLHISTANDUPDATEPHIXSLIST ? atomicload(cache_stimfactor_edgepart[i]) : -1.;
 
-        // negative means "not computed for this cell yet", which is what cellcacheslot_populate() fills the
-        // cache with. Only the cellcache path has a stored ratio to reuse: without it there is no cache entry
-        // belonging to this cell to read, because in single-slot mode get_cellcache() returns the calling
-        // rank's one shared slot, which generally holds a different cell entirely.
-        // These lazy caches may be filled by concurrent workers of the same cell: every writer stores
-        // identical values and a stale read of a sentinel just repeats the computation, with the relaxed
-        // atomic accesses (plain loads and stores in a serial build) making that well-defined. Each cached
-        // value must also be usable on its own, so the slow path below never infers the validity of one
-        // cached entry from the other.
-        const double stimfactor_edgepart =
-            USECELLHISTANDUPDATEPHIXSLIST ? atomicload(get_cellcache(nonemptymgi).allcont_stimfactor_edgepart[i]) : -1.;
+      double stimfactor{};
+      if (stimfactor_edgepart >= 0. && stimfactor_split_usable) [[likely]] {
+        stimfactor = stimfactor_edgepart * exp_minus_hnu_over_kte;
+      } else {
+        // the edge part is not cached, so compute the stimulated correction factor directly from
+        // nu - nu_edge
+        const int element = allcont_element[i];
+        const int ion = allcont_ion[i];
+        const int level = allcont_level[i];
 
-        double stimfactor{};
-        if (stimfactor_edgepart >= 0. && stimfactor_split_usable) [[likely]] {
-          stimfactor = stimfactor_edgepart * exp_minus_hnu_over_kte;
-        } else {
-          // the edge part is not cached, so compute the stimulated correction factor directly from
-          // nu - nu_edge
-          double modified_departure_ratio = -1.;
-          if constexpr (USECELLHISTANDUPDATEPHIXSLIST) {
-            modified_departure_ratio = atomicload(get_cellcache(nonemptymgi).allcont_modified_departureratios[i]);
-          }
-          if (modified_departure_ratio < 0) {
-            const int upper = allcont_upperlevel[i];
-            const double nnupperionlevel = USECELLHISTANDUPDATEPHIXSLIST
-                                               ? get_cellcache_levelpop(nonemptymgi, element, ion + 1, upper)
-                                               : calculate_levelpop(nonemptymgi, element, ion + 1, upper);
-            const double modified_sahafact = modified_sahafact_statweightpart * stat_weight(element, ion, level) /
-                                             stat_weight(element, ion + 1, upper);
-            modified_departure_ratio = nnupperionlevel / nnlevel * clumpednne * modified_sahafact;
-            if constexpr (USECELLHISTANDUPDATEPHIXSLIST) {
-              atomicstore(get_cellcache(nonemptymgi).allcont_modified_departureratios[i], modified_departure_ratio);
-            }
-          }
-
-          stimfactor = modified_departure_ratio * exp(-HOVERKB * (nu - nu_edge) / T_e);
-
-          if constexpr (USECELLHISTANDUPDATEPHIXSLIST) {
-            // cache the edge part for subsequent evaluations of this continuum in this cell.
-            // The complete cached product must be finite: for a large enough departure ratio the product
-            // can overflow even when the edge exponential alone does not, and recombining an infinity with
-            // the per-call factor would wrongly zero the continuum's opacity contribution. Continua whose
-            // product is not representable are simply never cached and keep taking this direct path.
-            const double edge_exponent = HOVERKB * nu_edge / T_e;
-            if (edge_exponent < stimfactor_edgepart_maxexponent) {
-              const double edgepart = modified_departure_ratio * std::exp(edge_exponent);
-              if (std::isfinite(edgepart)) {
-                atomicstore(get_cellcache(nonemptymgi).allcont_stimfactor_edgepart[i], edgepart);
-              }
-            }
-          }
+        double modified_departure_ratio = -1.;
+        if constexpr (USECELLHISTANDUPDATEPHIXSLIST) {
+          modified_departure_ratio = atomicload(cache_modified_departureratios[i]);
         }
-        // photoionisation minus stimulated recombination
-        const double corrfactor = std::max(0., 1 - stimfactor);
-
-        sigma_contr = sigma_bf * allcont_probability[i] * corrfactor;
-
-        if constexpr (USECELLHISTANDUPDATEPHIXSLIST && !SELECTCONTINUUM) {
-          if ((USE_LUT_PHOTOION || USE_ION_BFHEATING_ESTIMATORS) && level == 0 && allcont_phixstargetindex[i] == 0) {
-            phixslist.groundcont_gamma_contr[allcont_index_in_groundphixslist[i]] = sigma_contr;
+        if (modified_departure_ratio < 0) {
+          const int upper = allcont_upperlevel[i];
+          const double nnupperionlevel = USECELLHISTANDUPDATEPHIXSLIST
+                                             ? get_cellcache_levelpop(nonemptymgi, element, ion + 1, upper)
+                                             : calculate_levelpop(nonemptymgi, element, ion + 1, upper);
+          const double modified_sahafact = modified_sahafact_statweightpart * stat_weight(element, ion, level) /
+                                           stat_weight(element, ion + 1, upper);
+          modified_departure_ratio = nnupperionlevel / nnlevel * clumpednne * modified_sahafact;
+          if constexpr (USECELLHISTANDUPDATEPHIXSLIST) {
+            atomicstore(cache_modified_departureratios[i], modified_departure_ratio);
           }
         }
 
-        chi_bf_sum += nnlevel * sigma_contr;
+        stimfactor = modified_departure_ratio * exp(-HOVERKB * (nu - nu_edge) / T_e);
 
-        if constexpr (SELECTCONTINUUM) {
-          if (chi_bf_sum > chi_bf_sum_selectionthreshold) {
-            return i;
+        if constexpr (USECELLHISTANDUPDATEPHIXSLIST) {
+          // cache the edge part for subsequent evaluations of this continuum in this cell.
+          // The complete cached product must be finite: for a large enough departure ratio the product
+          // can overflow even when the edge exponential alone does not, and recombining an infinity with
+          // the per-call factor would wrongly zero the continuum's opacity contribution. Continua whose
+          // product is not representable are simply never cached and keep taking this direct path.
+          const double edge_exponent = HOVERKB * nu_edge / T_e;
+          if (edge_exponent < stimfactor_edgepart_maxexponent) {
+            const double edgepart = modified_departure_ratio * std::exp(edge_exponent);
+            if (std::isfinite(edgepart)) {
+              atomicstore(cache_stimfactor_edgepart[i], edgepart);
+            }
           }
+        }
+      }
+      // photoionisation minus stimulated recombination
+      const double corrfactor = std::max(0., 1 - stimfactor);
+
+      sigma_contr = sigma_bf * allcont_probability[i] * corrfactor;
+
+      if constexpr (USECELLHISTANDUPDATEPHIXSLIST && !SELECTCONTINUUM &&
+                    (USE_LUT_PHOTOION || USE_ION_BFHEATING_ESTIMATORS)) {
+        if (allcont_groundcontestimindex[i] >= 0) {
+          phixslist.groundcont_gamma_contr[allcont_groundcontestimindex[i]] = sigma_contr;
+        }
+      }
+
+      chi_bf_sum += nnlevel * sigma_contr;
+
+      if constexpr (SELECTCONTINUUM) {
+        if (chi_bf_sum > chi_bf_sum_selectionthreshold) {
+          return i;
         }
       }
     }

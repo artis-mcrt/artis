@@ -11,7 +11,6 @@
 #endif
 #include <cmath>
 #include <cstddef>
-#include <cstdint>
 #include <span>
 #include <vector>
 
@@ -252,7 +251,9 @@ struct AllCont {
   MPI_shared_array<const int> upperlevel;
   MPI_shared_array<const int> uniquelevelindex;
   MPI_shared_array<const double> probability;
-  MPI_shared_array<const int> index_in_groundphixslist;
+  // index into the ground-level continuum estimator arrays, or -1 for continua that do not feed them
+  // (only a ground level's first photoionisation target does)
+  MPI_shared_array<const int> groundcontestimindex;
   MPI_shared_array<const int> bfestimindex;
 };
 inline AllCont allcont{};
@@ -283,8 +284,9 @@ struct CellCache {
   // not cached for this cell (either not evaluated yet, or the product would overflow), in which case
   // the factor is computed directly from nu - nu_edge (see calculate_chi_bf_gammacontr())
   std::span<double> allcont_stimfactor_edgepart;
+  // level population of each bound-free continuum's lower level, or zero for continua that this cell does
+  // not contain the species for (see keep_this_cont) and are therefore skipped by the opacity loop
   std::span<double> allcont_nnlevel;
-  std::span<std::uint8_t> allcont_keep;
   std::span<double> chi_ff_nnionpart;  // single element per cell (stored as a span to allow shared backing)
   std::span<double> allphixstargets_corrphotoioncoeff;
   // The lazy mutex-guarded macroatom/cooling rate calculation is only used when cellcache_singleslot is
@@ -301,7 +303,6 @@ struct CellCache {
     mem_usage += (allcont_modified_departureratios.size() * sizeof(double));
     mem_usage += (allcont_stimfactor_edgepart.size() * sizeof(double));
     mem_usage += (allcont_nnlevel.size() * sizeof(double));
-    mem_usage += (allcont_keep.size() * sizeof(allcont_keep[0]));
     mem_usage += (chi_ff_nnionpart.size() * sizeof(double));
     mem_usage += (allphixstargets_corrphotoioncoeff.size() * sizeof(double));
     mem_usage += (cooling_contrib_locks.size() * sizeof(PaddedMutex));
@@ -323,7 +324,6 @@ struct CellCacheBacking {
   MPI_shared_array<double> allcont_modified_departureratios;
   MPI_shared_array<double> allcont_stimfactor_edgepart;
   MPI_shared_array<double> allcont_nnlevel;
-  MPI_shared_array<std::uint8_t> allcont_keep;
   MPI_shared_array<double> chi_ff_nnionpart;
   MPI_shared_array<double> allphixstargets_corrphotoioncoeff;
 };

@@ -9,7 +9,6 @@
 #include <chrono>
 #include <cmath>
 #include <cstddef>
-#include <cstdint>
 #include <cstdlib>
 #include <limits>
 #include <optional>
@@ -428,10 +427,12 @@ void cellcacheslot_populate(globals::CellCache& cacheslot, const int nonemptymgi
   const auto nnetot = grid::get_nnetot(nonemptymgi);
   for (int i = 0; i < globals::nbfcontinua; i++) {
     const auto nnlevel = cacheslot.alllevels_pops[globals::allcont.uniquelevelindex[i]];
-    cacheslot.allcont_nnlevel[i] = nnlevel;
-    cacheslot.allcont_keep[i] =
-        static_cast<std::uint8_t>(nnlevel > 0 && keep_this_cont(globals::allcont.element[i], globals::allcont.ion[i],
-                                                                globals::allcont.level[i], nonemptymgi, nnetot));
+    // continua that this cell does not contain the species for are stored as a zero population, so that the
+    // opacity loop only has to test the population (see calculate_chi_bf_gammacontr)
+    cacheslot.allcont_nnlevel[i] = (nnlevel > 0 && keep_this_cont(globals::allcont.element[i], globals::allcont.ion[i],
+                                                                  globals::allcont.level[i], nonemptymgi, nnetot))
+                                       ? nnlevel
+                                       : 0.;
   }
 
   if constexpr (!cellcache_singleslot) {
