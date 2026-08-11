@@ -860,23 +860,36 @@ void setup_phixs_list() {
           const auto uniquelevelindex = get_uniquelevelindex(element, ion, level);
           const int nphixstargets = get_nphixstargets(uniquelevelindex);
 
+          // nlevels_ionising comes from the level energies alone, so a level below the threshold can still
+          // have no photoionisation table; get_phixs_threshold() must not be called for those (their
+          // phixstargetstart is still the -1 sentinel)
+          if (nphixstargets > 0) {
+            if constexpr (USE_LUT_PHOTOION || USE_ION_BFHEATING_ESTIMATORS) {
+              // depends only on the level, so it is found once here rather than once per target below
+              const double nu_edge_target0 = get_phixs_threshold(element, ion, level, 0) / H;
+              globals::alllevels.closestgroundlevelcont[uniquelevelindex] =
+                  search_groundphixslist(nu_edge_target0, element, ion, level);
+            }
+          }
+
           for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
             assert_always(allcontindex < std::ssize(allcont));
 
             // Only a ground level's first photoionisation target feeds the ground-level continuum
-            // estimators, so every other continuum gets -1 and the opacity loop needs only this one test
-            // (the same convention as bfestimindex).
-            int groundcontestimindex = -1;
-            if constexpr (USE_LUT_PHOTOION || USE_ION_BFHEATING_ESTIMATORS) {
-              const double nu_edge_target0 = get_phixs_threshold(element, ion, level, 0) / H;
-              const int closestgroundcont = search_groundphixslist(nu_edge_target0, element, ion, level);
-
-              globals::alllevels.closestgroundlevelcont[uniquelevelindex] = closestgroundcont;
-
-              if (level == 0 && phixstargetindex == 0) {
-                groundcontestimindex = closestgroundcont;
-              }
-            }
+            // estimators; every other continuum gets -1, so the opacity loop needs only this one test.
+            // (bfestimindex uses the same -1-means-not-applicable sentinel, but is otherwise unrelated:
+            // it is assigned after the nu_edge sort and is dense and monotonic, which is what lets
+            // calculate_chi_bf_gammacontr() bound it with a bfestimbegin/bfestimend window. This index
+            // is sparse and indexes the separately-sorted groundcont arrays, so it supports no window.)
+            // NOTE: this is the nearest-edge slot found by search_groundphixslist(), which is what
+            // ratecoeff.cc reads back via closestgroundlevelcont. It can differ from this ion's own
+            // get_groundcontindex(element, ion) — the index update_grid.cc normalises the estimator by —
+            // when two ions share a ground-state threshold. Kept as-is here to preserve results; see the
+            // review note on reconciling the two conventions.
+            const int groundcontestimindex =
+                (level == 0 && phixstargetindex == 0 && (USE_LUT_PHOTOION || USE_ION_BFHEATING_ESTIMATORS))
+                    ? globals::alllevels.closestgroundlevelcont[uniquelevelindex]
+                    : -1;
 
             allcont[allcontindex] = {
                 .nu_edge = get_phixs_threshold(element, ion, level, phixstargetindex) / H,

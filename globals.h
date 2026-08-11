@@ -284,8 +284,10 @@ struct CellCache {
   // not cached for this cell (either not evaluated yet, or the product would overflow), in which case
   // the factor is computed directly from nu - nu_edge (see calculate_chi_bf_gammacontr())
   std::span<double> allcont_stimfactor_edgepart;
-  // level population of each bound-free continuum's lower level, or zero for continua that this cell does
-  // not contain the species for (see keep_this_cont) and are therefore skipped by the opacity loop
+  // level population of each bound-free continuum's lower level, forced to zero for continua that this
+  // cell does not contain the species for (see keep_this_cont). The opacity loop skips on a zero, so a
+  // zero entry means "contributes nothing", not specifically "species absent" — a genuinely unpopulated
+  // level of a species that is present stores zero too.
   std::span<double> allcont_nnlevel;
   std::span<double> chi_ff_nnionpart;  // single element per cell (stored as a span to allow shared backing)
   std::span<double> allphixstargets_corrphotoioncoeff;

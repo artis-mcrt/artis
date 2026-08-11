@@ -729,7 +729,8 @@ auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixsli
 
   const auto T_e = grid::Te_allcells[nonemptymgi];
   const auto clumpednne = grid::get_nne(nonemptymgi) * grid::get_clumpfactor(nonemptymgi);
-  const auto nnetot = grid::get_nnetot(nonemptymgi);
+  // only the no-cellcache instantiation needs this: it is the one that applies keep_this_cont per continuum
+  const auto nnetot = USECELLHISTANDUPDATEPHIXSLIST ? 0.F : grid::get_nnetot(nonemptymgi);
   const auto& allcont_nu_edge = globals::allcont.nu_edge;
 
   const double modified_sahafact_statweightpart = SAHACONST * std::pow(T_e, -1.5);
@@ -776,31 +777,48 @@ auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixsli
   const auto& allcont_groundcontestimindex = globals::allcont.groundcontestimindex;
   const auto& allcont_probability = globals::allcont.probability;
 
-  // The cell's cache slot does not change during the loop, so resolve it once instead of on every access.
-  // These stay empty in the no-cellcache instantiation, which reads nothing from the cache: in single-slot
-  // mode get_cellcache() returns the calling rank's one shared slot, which generally holds a different cell.
-  std::span<const double> cache_nnlevel;
-  std::span<double> cache_stimfactor_edgepart;
-  std::span<double> cache_modified_departureratios;
-  if constexpr (USECELLHISTANDUPDATEPHIXSLIST) {
-    const auto& cacheslot = get_cellcache(nonemptymgi);
-    assert_testmodeonly(cacheslot.nonemptymgi == nonemptymgi);
-    cache_nnlevel = cacheslot.allcont_nnlevel;
-    cache_stimfactor_edgepart = cacheslot.allcont_stimfactor_edgepart;
-    cache_modified_departureratios = cacheslot.allcont_modified_departureratios;
-  }
+  // The per-continuum cell cache arrays this loop uses. std::span is only shallowly const, so the two
+  // lazy caches are written through below: this function mutates the cell cache and must not be treated
+  // as pure.
+  struct CellCacheContArrays {
+    std::span<const double> nnlevel{};
+    std::span<double> stimfactor_edgepart{};
+    std::span<double> modified_departureratios{};
+  };
+
+  // The cell's cache slot does not change during the loop, so resolve its arrays once instead of on every
+  // access. They stay empty in the no-cellcache instantiation, which reads nothing from the cache: in
+  // single-slot mode get_cellcache() returns the calling rank's one shared slot, which generally holds a
+  // different cell.
+  const auto cache = [&]() -> CellCacheContArrays {
+    if constexpr (USECELLHISTANDUPDATEPHIXSLIST) {
+      const auto& cacheslot = get_cellcache(nonemptymgi);
+      assert_testmodeonly(cacheslot.nonemptymgi == nonemptymgi);
+      return {
+          .nnlevel = cacheslot.allcont_nnlevel,
+          .stimfactor_edgepart = cacheslot.allcont_stimfactor_edgepart,
+          .modified_departureratios = cacheslot.allcont_modified_departureratios,
+      };
+    }
+    return {};
+  }();
 
   for (int i = allcontbegin; i < allcontend; i++) {
     double sigma_contr = 0.;
 
     // zero when the cell does not contain enough of the involved atomic species (see keep_this_cont) or the
     // level is simply unpopulated. Either way the continuum contributes nothing, so one test covers both.
+    // Returned by value on purpose: a deduced reference return would bind into the cache in one
+    // instantiation and dangle on a temporary in the other, and both would still compile.
     const double nnlevel = [&] {
       if constexpr (USECELLHISTANDUPDATEPHIXSLIST) {
-        return cache_nnlevel[i];
+        return cache.nnlevel[i];
       } else {
-        return keep_this_cont(allcont_element[i], allcont_ion[i], allcont_level[i], nonemptymgi, nnetot)
-                   ? calculate_levelpop(nonemptymgi, allcont_element[i], allcont_ion[i], allcont_level[i])
+        const int element = allcont_element[i];
+        const int ion = allcont_ion[i];
+        const int level = allcont_level[i];
+        return keep_this_cont(element, ion, level, nonemptymgi, nnetot)
+                   ? calculate_levelpop(nonemptymgi, element, ion, level)
                    : 0.;
       }
     }();
@@ -811,13 +829,19 @@ auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixsli
           photoionisation_crosssection_fromtable(get_phixs_table(allcont_uniquelevelindex[i]), nu_edge, nu);
 
       // negative means "not computed for this cell yet", which is what cellcacheslot_populate() fills the
-      // cache with.
+      // cache with, and is also what the no-cellcache instantiation always sees (it has no cache entry
+      // belonging to this cell to read).
       // These lazy caches may be filled by concurrent workers of the same cell: every writer stores
       // identical values and a stale read of a sentinel just repeats the computation, with the relaxed
       // atomic accesses (plain loads and stores in a serial build) making that well-defined. Each cached
       // value must also be usable on its own, so the slow path below never infers the validity of one
       // cached entry from the other.
-      const double stimfactor_edgepart = USECELLHISTANDUPDATEPHIXSLIST ? atomicload(cache_stimfactor_edgepart[i]) : -1.;
+      const double stimfactor_edgepart = [&] {
+        if constexpr (USECELLHISTANDUPDATEPHIXSLIST) {
+          return atomicload(cache.stimfactor_edgepart[i]);
+        }
+        return -1.;
+      }();
 
       double stimfactor{};
       if (stimfactor_edgepart >= 0. && stimfactor_split_usable) [[likely]] {
@@ -831,7 +855,7 @@ auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixsli
 
         double modified_departure_ratio = -1.;
         if constexpr (USECELLHISTANDUPDATEPHIXSLIST) {
-          modified_departure_ratio = atomicload(cache_modified_departureratios[i]);
+          modified_departure_ratio = atomicload(cache.modified_departureratios[i]);
         }
         if (modified_departure_ratio < 0) {
           const int upper = allcont_upperlevel[i];
@@ -842,7 +866,7 @@ auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixsli
                                            stat_weight(element, ion + 1, upper);
           modified_departure_ratio = nnupperionlevel / nnlevel * clumpednne * modified_sahafact;
           if constexpr (USECELLHISTANDUPDATEPHIXSLIST) {
-            atomicstore(cache_modified_departureratios[i], modified_departure_ratio);
+            atomicstore(cache.modified_departureratios[i], modified_departure_ratio);
           }
         }
 
@@ -858,7 +882,7 @@ auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixsli
           if (edge_exponent < stimfactor_edgepart_maxexponent) {
             const double edgepart = modified_departure_ratio * std::exp(edge_exponent);
             if (std::isfinite(edgepart)) {
-              atomicstore(cache_stimfactor_edgepart[i], edgepart);
+              atomicstore(cache.stimfactor_edgepart[i], edgepart);
             }
           }
         }
