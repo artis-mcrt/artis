@@ -252,7 +252,11 @@ struct AllCont {
   MPI_shared_array<const int> upperlevel;
   MPI_shared_array<const int> uniquelevelindex;
   MPI_shared_array<const double> probability;
-  MPI_shared_array<const int> index_in_groundphixslist;
+  // index into the ground-level continuum estimator arrays, or -1 for continua that do not feed them
+  // (only a ground level's first photoionisation target does). This is the nearest-nu_edge slot found by
+  // search_groundphixslist(), the same value closestgroundlevelcont holds, which is not necessarily the
+  // ion's own get_groundcontindex() slot when two ions share a ground-state threshold.
+  MPI_shared_array<const int> groundcontestimindex;
   MPI_shared_array<const int> bfestimindex;
 };
 inline AllCont allcont{};
@@ -283,7 +287,13 @@ struct CellCache {
   // not cached for this cell (either not evaluated yet, or the product would overflow), in which case
   // the factor is computed directly from nu - nu_edge (see calculate_chi_bf_gammacontr())
   std::span<double> allcont_stimfactor_edgepart;
+  // level population of each bound-free continuum's lower level
   std::span<double> allcont_nnlevel;
+  // whether each bound-free continuum contributes to this cell's opacity at all: a populated lower level
+  // of a species the cell contains (see keep_this_cont). This duplicates "allcont_nnlevel[i] > 0", but is
+  // kept as a separate byte per continuum because it is what calculate_chi_bf_gammacontr() scans over the
+  // whole window every evaluation, and reading 1 byte per skipped continuum instead of 8 measures ~1%
+  // faster on a full-size model (21936 continua).
   std::span<std::uint8_t> allcont_keep;
   std::span<double> chi_ff_nnionpart;  // single element per cell (stored as a span to allow shared backing)
   std::span<double> allphixstargets_corrphotoioncoeff;
@@ -379,7 +389,7 @@ inline void titer_average(double& value, double& saved) {
 }
 
 inline auto get_cellcache(const int nonemptymgi) -> globals::CellCache& {
-  assert_always(nonemptymgi >= 0);
+  assert_testmodeonly(nonemptymgi >= 0);
   const int cacheslotid = cellcache_singleslot ? globals::rank_in_node : nonemptymgi;
   return globals::cellcache[cacheslotid];
 }

@@ -782,12 +782,6 @@ void setup_phixs_list() {
   printlnlog("[info] setup_phixs_list: number of bfcontinua {}", globals::nbfcontinua);
   printlnlog("[info] setup_phixs_list: number of ground-level bfcontinua {}", globals::nbfcontinua_ground);
 
-  struct TempGroundPhotoion {
-    double nu_edge;
-    int element;
-    int ion;
-  };
-
   struct TempPhotoionTransitionInput {
     double nu_edge;
     int element;
@@ -797,7 +791,7 @@ void setup_phixs_list() {
     int upperlevel;
     int uniquelevelindex;
     double probability;
-    int index_in_groundphixslist;
+    int groundcontestimindex;
   };
 
   auto groundcont_nu_edge = MPI_shared_array<double>(globals::nbfcontinua_ground);
@@ -860,16 +854,30 @@ void setup_phixs_list() {
           const auto uniquelevelindex = get_uniquelevelindex(element, ion, level);
           const int nphixstargets = get_nphixstargets(uniquelevelindex);
 
+          // nlevels_ionising comes from the level energies alone, so a level below the threshold can still
+          // have no photoionisation table, and get_phixs_threshold() must not be called for those (their
+          // phixstargetstart is still the -1 sentinel)
+          if (nphixstargets == 0) {
+            continue;
+          }
+
+          if constexpr (USE_LUT_PHOTOION || USE_ION_BFHEATING_ESTIMATORS) {
+            // depends only on the level, so it is found once here rather than once per target below
+            const double nu_edge_target0 = get_phixs_threshold(element, ion, level, 0) / H;
+            globals::alllevels.closestgroundlevelcont[uniquelevelindex] =
+                search_groundphixslist(nu_edge_target0, element, ion, level);
+          }
+
           for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
             assert_always(allcontindex < std::ssize(allcont));
 
-            int index_in_groundphixslist = -1;
-            if constexpr (USE_LUT_PHOTOION || USE_ION_BFHEATING_ESTIMATORS) {
-              const double nu_edge_target0 = get_phixs_threshold(element, ion, level, 0) / H;
-              index_in_groundphixslist = search_groundphixslist(nu_edge_target0, element, ion, level);
-
-              globals::alllevels.closestgroundlevelcont[uniquelevelindex] = index_in_groundphixslist;
-            }
+            // See AllCont::groundcontestimindex. closestgroundlevelcont is left at its -1 initialiser when
+            // neither estimator is enabled, so no further guard on those options is needed here.
+            // TODO: the estimators are written at this nearest-edge slot but normalised in update_grid.cc
+            // at get_groundcontindex(element, ion); the two disagree if two ions share a ground threshold.
+            const int groundcontestimindex = (level == 0 && phixstargetindex == 0)
+                                                 ? globals::alllevels.closestgroundlevelcont[uniquelevelindex]
+                                                 : -1;
 
             allcont[allcontindex] = {
                 .nu_edge = get_phixs_threshold(element, ion, level, phixstargetindex) / H,
@@ -880,7 +888,7 @@ void setup_phixs_list() {
                 .upperlevel = get_phixsupperlevel(uniquelevelindex, phixstargetindex),
                 .uniquelevelindex = uniquelevelindex,
                 .probability = get_phixsprobability(uniquelevelindex, phixstargetindex),
-                .index_in_groundphixslist = index_in_groundphixslist,
+                .groundcontestimindex = groundcontestimindex,
             };
 
             allcontindex++;
@@ -911,7 +919,7 @@ void setup_phixs_list() {
     auto allcont_upperlevel = MPI_shared_array<int>(nbfcontinua);
     auto allcont_uniquelevelindex = MPI_shared_array<int>(nbfcontinua);
     auto allcont_probability = MPI_shared_array<double>(nbfcontinua);
-    auto allcont_index_in_groundphixslist = MPI_shared_array<int>(nbfcontinua);
+    auto allcont_groundcontestimindex = MPI_shared_array<int>(nbfcontinua);
     if (globals::rank_in_node == 0) {
       std::ranges::copy(std::views::transform(allcont, &TempPhotoionTransitionInput::nu_edge), allcont_nu_edge.begin());
       std::ranges::copy(std::views::transform(allcont, &TempPhotoionTransitionInput::element), allcont_element.begin());
@@ -925,8 +933,8 @@ void setup_phixs_list() {
                         allcont_uniquelevelindex.begin());
       std::ranges::copy(std::views::transform(allcont, &TempPhotoionTransitionInput::probability),
                         allcont_probability.begin());
-      std::ranges::copy(std::views::transform(allcont, &TempPhotoionTransitionInput::index_in_groundphixslist),
-                        allcont_index_in_groundphixslist.begin());
+      std::ranges::copy(std::views::transform(allcont, &TempPhotoionTransitionInput::groundcontestimindex),
+                        allcont_groundcontestimindex.begin());
     }
     MPI_Barrier_node();
     globals::allcont.nu_edge = std::move(allcont_nu_edge);
@@ -937,7 +945,7 @@ void setup_phixs_list() {
     globals::allcont.upperlevel = std::move(allcont_upperlevel);
     globals::allcont.uniquelevelindex = std::move(allcont_uniquelevelindex);
     globals::allcont.probability = std::move(allcont_probability);
-    globals::allcont.index_in_groundphixslist = std::move(allcont_index_in_groundphixslist);
+    globals::allcont.groundcontestimindex = std::move(allcont_groundcontestimindex);
 
     auto allcont_bfestimindex = MPI_shared_array<int>(nbfcontinua);
     std::vector<double> temp_bfestim_nu_edge;
