@@ -380,8 +380,13 @@ inline void titer_average(double& value, double& saved) {
 #endif
 }
 
+// Testmode-only bounds check rather than assert_always: this is called several times per iteration of
+// hot loops (the bound-free opacity sum, the macro-atom random walk, the k-packet cooling search), and an
+// always-on assert compiles to a branch calling an out-of-line reporting function, whose memory clobber
+// stops the compiler from hoisting the lookup out of those loops. It matches how the other index
+// preconditions in the atomic data accessors are checked (see testmodeassert_valid_level and friends).
 inline auto get_cellcache(const int nonemptymgi) -> globals::CellCache& {
-  assert_always(nonemptymgi >= 0);
+  assert_testmodeonly(nonemptymgi >= 0);
   const int cacheslotid = cellcache_singleslot ? globals::rank_in_node : nonemptymgi;
   return globals::cellcache[cacheslotid];
 }
