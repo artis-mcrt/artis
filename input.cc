@@ -782,12 +782,6 @@ void setup_phixs_list() {
   printlnlog("[info] setup_phixs_list: number of bfcontinua {}", globals::nbfcontinua);
   printlnlog("[info] setup_phixs_list: number of ground-level bfcontinua {}", globals::nbfcontinua_ground);
 
-  struct TempGroundPhotoion {
-    double nu_edge;
-    int element;
-    int ion;
-  };
-
   struct TempPhotoionTransitionInput {
     double nu_edge;
     int element;
@@ -861,35 +855,29 @@ void setup_phixs_list() {
           const int nphixstargets = get_nphixstargets(uniquelevelindex);
 
           // nlevels_ionising comes from the level energies alone, so a level below the threshold can still
-          // have no photoionisation table; get_phixs_threshold() must not be called for those (their
+          // have no photoionisation table, and get_phixs_threshold() must not be called for those (their
           // phixstargetstart is still the -1 sentinel)
-          if (nphixstargets > 0) {
-            if constexpr (USE_LUT_PHOTOION || USE_ION_BFHEATING_ESTIMATORS) {
-              // depends only on the level, so it is found once here rather than once per target below
-              const double nu_edge_target0 = get_phixs_threshold(element, ion, level, 0) / H;
-              globals::alllevels.closestgroundlevelcont[uniquelevelindex] =
-                  search_groundphixslist(nu_edge_target0, element, ion, level);
-            }
+          if (nphixstargets == 0) {
+            continue;
+          }
+
+          if constexpr (USE_LUT_PHOTOION || USE_ION_BFHEATING_ESTIMATORS) {
+            // depends only on the level, so it is found once here rather than once per target below
+            const double nu_edge_target0 = get_phixs_threshold(element, ion, level, 0) / H;
+            globals::alllevels.closestgroundlevelcont[uniquelevelindex] =
+                search_groundphixslist(nu_edge_target0, element, ion, level);
           }
 
           for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
             assert_always(allcontindex < std::ssize(allcont));
 
-            // Only a ground level's first photoionisation target feeds the ground-level continuum
-            // estimators; every other continuum gets -1, so the opacity loop needs only this one test.
-            // (bfestimindex uses the same -1-means-not-applicable sentinel, but is otherwise unrelated:
-            // it is assigned after the nu_edge sort and is dense and monotonic, which is what lets
-            // calculate_chi_bf_gammacontr() bound it with a bfestimbegin/bfestimend window. This index
-            // is sparse and indexes the separately-sorted groundcont arrays, so it supports no window.)
-            // NOTE: this is the nearest-edge slot found by search_groundphixslist(), which is what
-            // ratecoeff.cc reads back via closestgroundlevelcont. It can differ from this ion's own
-            // get_groundcontindex(element, ion) — the index update_grid.cc normalises the estimator by —
-            // when two ions share a ground-state threshold. Kept as-is here to preserve results; see the
-            // review note on reconciling the two conventions.
-            const int groundcontestimindex =
-                (level == 0 && phixstargetindex == 0 && (USE_LUT_PHOTOION || USE_ION_BFHEATING_ESTIMATORS))
-                    ? globals::alllevels.closestgroundlevelcont[uniquelevelindex]
-                    : -1;
+            // See AllCont::groundcontestimindex. closestgroundlevelcont is left at its -1 initialiser when
+            // neither estimator is enabled, so no further guard on those options is needed here.
+            // TODO: the estimators are written at this nearest-edge slot but normalised in update_grid.cc
+            // at get_groundcontindex(element, ion); the two disagree if two ions share a ground threshold.
+            const int groundcontestimindex = (level == 0 && phixstargetindex == 0)
+                                                 ? globals::alllevels.closestgroundlevelcont[uniquelevelindex]
+                                                 : -1;
 
             allcont[allcontindex] = {
                 .nu_edge = get_phixs_threshold(element, ion, level, phixstargetindex) / H,

@@ -252,7 +252,9 @@ struct AllCont {
   MPI_shared_array<const int> uniquelevelindex;
   MPI_shared_array<const double> probability;
   // index into the ground-level continuum estimator arrays, or -1 for continua that do not feed them
-  // (only a ground level's first photoionisation target does)
+  // (only a ground level's first photoionisation target does). This is the nearest-nu_edge slot found by
+  // search_groundphixslist(), the same value closestgroundlevelcont holds, which is not necessarily the
+  // ion's own get_groundcontindex() slot when two ions share a ground-state threshold.
   MPI_shared_array<const int> groundcontestimindex;
   MPI_shared_array<const int> bfestimindex;
 };
@@ -284,10 +286,9 @@ struct CellCache {
   // not cached for this cell (either not evaluated yet, or the product would overflow), in which case
   // the factor is computed directly from nu - nu_edge (see calculate_chi_bf_gammacontr())
   std::span<double> allcont_stimfactor_edgepart;
-  // level population of each bound-free continuum's lower level, forced to zero for continua that this
-  // cell does not contain the species for (see keep_this_cont). The opacity loop skips on a zero, so a
-  // zero entry means "contributes nothing", not specifically "species absent" — a genuinely unpopulated
-  // level of a species that is present stores zero too.
+  // level population of each bound-free continuum's lower level, forced to zero for continua that this cell
+  // does not contain the species for (see keep_this_cont), so that zero is the single "contributes nothing"
+  // test in calculate_chi_bf_gammacontr(). The unfiltered populations remain in alllevels_pops.
   std::span<double> allcont_nnlevel;
   std::span<double> chi_ff_nnionpart;  // single element per cell (stored as a span to allow shared backing)
   std::span<double> allphixstargets_corrphotoioncoeff;
@@ -380,11 +381,11 @@ inline void titer_average(double& value, double& saved) {
 #endif
 }
 
-// Testmode-only bounds check rather than assert_always: this is called several times per iteration of
-// hot loops (the bound-free opacity sum, the macro-atom random walk, the k-packet cooling search), and an
-// always-on assert compiles to a branch calling an out-of-line reporting function, whose memory clobber
-// stops the compiler from hoisting the lookup out of those loops. It matches how the other index
-// preconditions in the atomic data accessors are checked (see testmodeassert_valid_level and friends).
+// The index precondition is checked in testmode only, as for the atomic data accessors (see
+// testmodeassert_valid_level and friends), so that this stays a plain indexing helper rather than
+// emitting a branch and an out-of-line reporting call at every use. Note that this does not on its own
+// let callers in loops keep the slot in registers: the other calls in those loop bodies clobber memory
+// anyway, so a caller that wants the lookup hoisted still has to hold the reference itself.
 inline auto get_cellcache(const int nonemptymgi) -> globals::CellCache& {
   assert_testmodeonly(nonemptymgi >= 0);
   const int cacheslotid = cellcache_singleslot ? globals::rank_in_node : nonemptymgi;

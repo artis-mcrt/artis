@@ -729,7 +729,8 @@ auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixsli
 
   const auto T_e = grid::Te_allcells[nonemptymgi];
   const auto clumpednne = grid::get_nne(nonemptymgi) * grid::get_clumpfactor(nonemptymgi);
-  // only the no-cellcache instantiation needs this: it is the one that applies keep_this_cont per continuum
+  // only the no-cellcache instantiation applies keep_this_cont per continuum; the cellcache path reads
+  // populations that were already filtered, so it never needs this
   const auto nnetot = USECELLHISTANDUPDATEPHIXSLIST ? 0.F : grid::get_nnetot(nonemptymgi);
   const auto& allcont_nu_edge = globals::allcont.nu_edge;
 
@@ -777,9 +778,8 @@ auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixsli
   const auto& allcont_groundcontestimindex = globals::allcont.groundcontestimindex;
   const auto& allcont_probability = globals::allcont.probability;
 
-  // The per-continuum cell cache arrays this loop uses. std::span is only shallowly const, so the two
-  // lazy caches are written through below: this function mutates the cell cache and must not be treated
-  // as pure.
+  // The per-continuum cell cache arrays this loop uses. Spans are only shallowly const, so the two lazy
+  // caches below are written through.
   struct CellCacheContArrays {
     std::span<const double> nnlevel;
     std::span<double> stimfactor_edgepart;
@@ -806,10 +806,7 @@ auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixsli
   for (int i = allcontbegin; i < allcontend; i++) {
     double sigma_contr = 0.;
 
-    // zero when the cell does not contain enough of the involved atomic species (see keep_this_cont) or the
-    // level is simply unpopulated. Either way the continuum contributes nothing, so one test covers both.
-    // Returned by value on purpose: a deduced reference return would bind into the cache in one
-    // instantiation and dangle on a temporary in the other, and both would still compile.
+    // zero means the continuum contributes nothing (see CellCache::allcont_nnlevel)
     const double nnlevel = [&] {
       if constexpr (USECELLHISTANDUPDATEPHIXSLIST) {
         return cache.nnlevel[i];

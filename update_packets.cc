@@ -427,12 +427,10 @@ void cellcacheslot_populate(globals::CellCache& cacheslot, const int nonemptymgi
   const auto nnetot = grid::get_nnetot(nonemptymgi);
   for (int i = 0; i < globals::nbfcontinua; i++) {
     const auto nnlevel = cacheslot.alllevels_pops[globals::allcont.uniquelevelindex[i]];
-    // continua that this cell does not contain the species for are stored as a zero population, so that the
-    // opacity loop only has to test the population (see calculate_chi_bf_gammacontr)
-    cacheslot.allcont_nnlevel[i] = (nnlevel > 0 && keep_this_cont(globals::allcont.element[i], globals::allcont.ion[i],
-                                                                  globals::allcont.level[i], nonemptymgi, nnetot))
-                                       ? nnlevel
-                                       : 0.;
+    // an unpopulated level stores zero either way, so skip keep_this_cont's division for those
+    const bool keep = nnlevel > 0 && keep_this_cont(globals::allcont.element[i], globals::allcont.ion[i],
+                                                    globals::allcont.level[i], nonemptymgi, nnetot);
+    cacheslot.allcont_nnlevel[i] = keep ? nnlevel : 0.;
   }
 
   if constexpr (!cellcache_singleslot) {
