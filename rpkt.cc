@@ -781,9 +781,9 @@ auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixsli
   // lazy caches are written through below: this function mutates the cell cache and must not be treated
   // as pure.
   struct CellCacheContArrays {
-    std::span<const double> nnlevel{};
-    std::span<double> stimfactor_edgepart{};
-    std::span<double> modified_departureratios{};
+    std::span<const double> nnlevel;
+    std::span<double> stimfactor_edgepart;
+    std::span<double> modified_departureratios;
   };
 
   // The cell's cache slot does not change during the loop, so resolve its arrays once instead of on every
