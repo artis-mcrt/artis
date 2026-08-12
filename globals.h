@@ -381,11 +381,6 @@ inline void titer_average(double& value, double& saved) {
 #endif
 }
 
-// The index precondition is checked in testmode only, as for the atomic data accessors (see
-// testmodeassert_valid_level and friends), so that this stays a plain indexing helper rather than
-// emitting a branch and an out-of-line reporting call at every use. Note that this does not on its own
-// let callers in loops keep the slot in registers: the other calls in those loop bodies clobber memory
-// anyway, so a caller that wants the lookup hoisted still has to hold the reference itself.
 inline auto get_cellcache(const int nonemptymgi) -> globals::CellCache& {
   assert_testmodeonly(nonemptymgi >= 0);
   const int cacheslotid = cellcache_singleslot ? globals::rank_in_node : nonemptymgi;
