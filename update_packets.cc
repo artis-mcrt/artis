@@ -9,7 +9,6 @@
 #include <chrono>
 #include <cmath>
 #include <cstddef>
-#include <cstdint>
 #include <cstdlib>
 #include <limits>
 #include <optional>
@@ -425,6 +424,8 @@ void cellcacheslot_populate(globals::CellCache& cacheslot, const int nonemptymgi
   std::ranges::fill(cacheslot.allcont_modified_departureratios, -1.);
   std::ranges::fill(cacheslot.allcont_stimfactor_edgepart, -1.);
 
+  std::ranges::fill(cacheslot.allcont_keepbits, 0);
+
   const auto nnetot = grid::get_nnetot(nonemptymgi);
   for (int i = 0; i < globals::nbfcontinua; i++) {
     const auto nnlevel = cacheslot.alllevels_pops[globals::allcont.uniquelevelindex[i]];
@@ -432,7 +433,9 @@ void cellcacheslot_populate(globals::CellCache& cacheslot, const int nonemptymgi
     const bool keep = nnlevel > 0 && keep_this_cont(globals::allcont.element[i], globals::allcont.ion[i],
                                                     globals::allcont.level[i], nonemptymgi, nnetot);
     cacheslot.allcont_nnlevel[i] = nnlevel;
-    cacheslot.allcont_keep[i] = static_cast<std::uint8_t>(keep);
+    if (keep) {
+      set_allcont_keepbit(cacheslot.allcont_keepbits, i);
+    }
   }
 
   if constexpr (!cellcache_singleslot) {
