@@ -9,6 +9,7 @@
 #include <chrono>
 #include <cmath>
 #include <cstddef>
+#include <cstdint>
 #include <cstdlib>
 #include <limits>
 #include <optional>
@@ -427,10 +428,11 @@ void cellcacheslot_populate(globals::CellCache& cacheslot, const int nonemptymgi
   const auto nnetot = grid::get_nnetot(nonemptymgi);
   for (int i = 0; i < globals::nbfcontinua; i++) {
     const auto nnlevel = cacheslot.alllevels_pops[globals::allcont.uniquelevelindex[i]];
-    // an unpopulated level stores zero either way, so skip keep_this_cont's division for those
+    // an unpopulated level is skipped either way, so skip keep_this_cont's division for those
     const bool keep = nnlevel > 0 && keep_this_cont(globals::allcont.element[i], globals::allcont.ion[i],
                                                     globals::allcont.level[i], nonemptymgi, nnetot);
-    cacheslot.allcont_nnlevel[i] = keep ? nnlevel : 0.;
+    cacheslot.allcont_nnlevel[i] = nnlevel;
+    cacheslot.allcont_keep[i] = static_cast<std::uint8_t>(keep);
   }
 
   if constexpr (!cellcache_singleslot) {

@@ -11,6 +11,7 @@
 #endif
 #include <cmath>
 #include <cstddef>
+#include <cstdint>
 #include <span>
 #include <vector>
 
@@ -286,10 +287,14 @@ struct CellCache {
   // not cached for this cell (either not evaluated yet, or the product would overflow), in which case
   // the factor is computed directly from nu - nu_edge (see calculate_chi_bf_gammacontr())
   std::span<double> allcont_stimfactor_edgepart;
-  // level population of each bound-free continuum's lower level, forced to zero for continua that this cell
-  // does not contain the species for (see keep_this_cont), so that zero is the single "contributes nothing"
-  // test in calculate_chi_bf_gammacontr(). The unfiltered populations remain in alllevels_pops.
+  // level population of each bound-free continuum's lower level
   std::span<double> allcont_nnlevel;
+  // whether each bound-free continuum contributes to this cell's opacity at all: a populated lower level
+  // of a species the cell contains (see keep_this_cont). This duplicates "allcont_nnlevel[i] > 0", but is
+  // kept as a separate byte per continuum because it is what calculate_chi_bf_gammacontr() scans over the
+  // whole window every evaluation, and reading 1 byte per skipped continuum instead of 8 measures ~1%
+  // faster on a full-size model (21936 continua).
+  std::span<std::uint8_t> allcont_keep;
   std::span<double> chi_ff_nnionpart;  // single element per cell (stored as a span to allow shared backing)
   std::span<double> allphixstargets_corrphotoioncoeff;
   // The lazy mutex-guarded macroatom/cooling rate calculation is only used when cellcache_singleslot is
@@ -306,6 +311,7 @@ struct CellCache {
     mem_usage += (allcont_modified_departureratios.size() * sizeof(double));
     mem_usage += (allcont_stimfactor_edgepart.size() * sizeof(double));
     mem_usage += (allcont_nnlevel.size() * sizeof(double));
+    mem_usage += (allcont_keep.size() * sizeof(allcont_keep[0]));
     mem_usage += (chi_ff_nnionpart.size() * sizeof(double));
     mem_usage += (allphixstargets_corrphotoioncoeff.size() * sizeof(double));
     mem_usage += (cooling_contrib_locks.size() * sizeof(PaddedMutex));
@@ -327,6 +333,7 @@ struct CellCacheBacking {
   MPI_shared_array<double> allcont_modified_departureratios;
   MPI_shared_array<double> allcont_stimfactor_edgepart;
   MPI_shared_array<double> allcont_nnlevel;
+  MPI_shared_array<std::uint8_t> allcont_keep;
   MPI_shared_array<double> chi_ff_nnionpart;
   MPI_shared_array<double> allphixstargets_corrphotoioncoeff;
 };
