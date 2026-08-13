@@ -20,6 +20,7 @@
 #include <cstdlib>
 #include <functional>
 #include <ios>
+#include <map>
 #include <numeric>
 #include <ranges>
 #include <span>
@@ -1893,15 +1894,27 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const std::a
   }
 }
 
-// add the excitation terms of KF92 equation 7 to the Spencer-Fano matrix. A primary electron loses exactly
-// epsilon_trans when it excites a transition, so the rate at which primaries are carried below the row energy
-// E = engrid(i) is the first left-hand-side term of that equation: for each transition from a level with
-// population nnlevel,
+// Accumulator for the excitation terms of all transitions whose energy loss epsilon_trans spans the same
+// number of whole energy bins, nbinsfull = floor(epsilon_trans_ev / DELTA_E). Because the energy grid is
+// uniform, a transition's contribution to matrix element (i, j) is nnlevel * xs[j] * w(j - i), where the
+// quadrature weight w depends only on the diagonal offset j - i: DELTA_E for offsets below nbinsfull, the
+// remainder epsilon_trans_ev - nbinsfull * DELTA_E at offset nbinsfull, and zero beyond. Transitions with
+// equal nbinsfull therefore share one banded write pattern, so their cross sections are summed here first
+// and the band is written to the matrix once per distinct width by sfmatrix_apply_excitation().
+struct ExcitationBand {
+  std::vector<double> interior;  // sum over transitions of nnlevel * xs[j] * DELTA_E (empty when nbinsfull == 0)
+  std::vector<double> endpoint;  // sum over transitions of nnlevel * xs[j] * (epsilon_trans_ev - nbinsfull * DELTA_E)
+};
+
+// accumulate the excitation terms of KF92 equation 7 for one ion into the per-band-width sums. A primary
+// electron loses exactly epsilon_trans when it excites a transition, so the rate at which primaries are
+// carried below the row energy E = engrid(i) is the first left-hand-side term of that equation: for each
+// transition from a level with population nnlevel,
 //   nnlevel * (integral of y(E') sigma_exc(E') dE' over E' in [E, E + epsilon_trans]).
-// The integral is discretised with quadrature weight DELTA_E per column (folded into
-// vec_xs_excitation_nnlevel_deltae below); the final column, which contains the endpoint E + epsilon_trans,
-// gets only the partial weight delta_en_actual.
-void sfmatrix_add_excitation(std::span<double> sfmatrixuppertri, const int nonemptymgi, const int element,
+// The integral is discretised with quadrature weight DELTA_E per column; the final column, which contains
+// the endpoint E + epsilon_trans, gets only the partial weight epsilon_trans_ev - nbinsfull * DELTA_E.
+// (a std::map keyed by band width keeps the iteration order deterministic for reproducible builds)
+void sfmatrix_add_excitation(std::map<int, ExcitationBand>& excitationbands, const int nonemptymgi, const int element,
                              const int ion) {
   // excitation terms
 
@@ -1928,34 +1941,57 @@ void sfmatrix_add_excitation(std::span<double> sfmatrixuppertri, const int nonem
         continue;
       }
 
-      auto [vec_xs_excitation_nnlevel_deltae, xsstartindex] =
+      const auto [vec_xs_excitation, xsstartindex] =
           get_xs_excitation_vector(alltransindex, statweight_lower, epsilon_trans);
       if (xsstartindex >= 0) {
-        for (int j = xsstartindex; j < SFPTS; j++) {
-          vec_xs_excitation_nnlevel_deltae[j] = vec_xs_excitation_nnlevel_deltae[j] * DELTA_E * nnlevel;
+        const int nbinsfull = static_cast<int>(epsilon_trans_ev / DELTA_E);
+        const double delta_en_actual = epsilon_trans_ev - (nbinsfull * DELTA_E);
+
+        auto& band = excitationbands[nbinsfull];
+        if (band.endpoint.empty()) {
+          band.endpoint.resize(SFPTS, 0.);
+          if (nbinsfull > 0) {
+            band.interior.resize(SFPTS, 0.);
+          }
         }
 
-        for (int i = 0; i < SFPTS; i++) {
-          const int rowoffset = uppertriangular(i, 0);
-          const double en = engrid(i);
-          const int stopindex = get_energyindex_ev_lteq(en + epsilon_trans_ev);
-
-          const int startindex = std::max(i, xsstartindex);
-          for (int j = startindex; j < stopindex; j++) {
-            atomicadd(sfmatrixuppertri[rowoffset + j], vec_xs_excitation_nnlevel_deltae[j]);
+        const double weight_endpoint = nnlevel * delta_en_actual;
+        if (nbinsfull > 0) {
+          const double weight_interior = nnlevel * DELTA_E;
+          for (int j = xsstartindex; j < SFPTS; j++) {
+            band.interior[j] += weight_interior * vec_xs_excitation[j];
+            band.endpoint[j] += weight_endpoint * vec_xs_excitation[j];
           }
-
-          // do the last bit separately because we're not using the full delta_e interval.
-          // clamp to DELTA_E: when en + epsilon_trans_ev exceeds SF_EMAX, get_energyindex_ev_lteq()
-          // clamps stopindex to SFPTS-1, so the raw remainder can exceed DELTA_E and would over-weight
-          // the top energy point. Capping it gives that bin a full (not inflated) contribution.
-          const double delta_en_actual = std::min(en + epsilon_trans_ev - engrid(stopindex), DELTA_E);
-          atomicadd(sfmatrixuppertri[rowoffset + stopindex],
-                    vec_xs_excitation_nnlevel_deltae[stopindex] * delta_en_actual / DELTA_E);
+        } else {
+          for (int j = xsstartindex; j < SFPTS; j++) {
+            band.endpoint[j] += weight_endpoint * vec_xs_excitation[j];
+          }
         }
       }
     }
   });
+}
+
+// write the accumulated excitation sums into the Spencer-Fano matrix: for band width nbinsfull, row i
+// receives the interior sums at columns [i, i + nbinsfull) and the endpoint sum at column i + nbinsfull.
+// When the endpoint column i + nbinsfull would lie beyond the top of the energy grid, it is clamped to
+// SFPTS - 1 and given the full interior weight there instead, so that the top energy point gets a full
+// (not inflated or truncated) contribution.
+void sfmatrix_apply_excitation(std::span<double> sfmatrixuppertri,
+                               const std::map<int, ExcitationBand>& excitationbands) {
+  for (const auto& [nbinsfull, band] : excitationbands) {
+    for (int i = 0; i < SFPTS; i++) {
+      const int rowoffset = uppertriangular(i, 0);
+      const int stopindex = std::min(i + nbinsfull, SFPTS - 1);
+
+      for (int j = i; j < stopindex; j++) {
+        sfmatrixuppertri[rowoffset + j] += band.interior[j];
+      }
+
+      sfmatrixuppertri[rowoffset + stopindex] +=
+          ((i + nbinsfull) < SFPTS) ? band.endpoint[stopindex] : band.interior[stopindex];
+    }
+  }
 }
 
 // add the ionisation terms of KF92 equation 7 to the Spencer-Fano matrix. With E = engrid(i) the row energy,
@@ -2625,6 +2661,10 @@ void solve_spencerfano(const int nonemptymgi, const int timestep, const int iter
     sfmatrixuppertri[uppertriangular(i, i)] += electron_loss_rate(engrid(i) * EV, nne) / EV;
   }
 
+  // the excitation terms of all ions are first summed per band width, then applied to the matrix in one
+  // banded pass per distinct width (see ExcitationBand)
+  std::map<int, ExcitationBand> excitationbands;
+
   for (int element = 0; element < get_nelements(); element++) {
     const int Z = get_atomicnumber(element);
     const int nions = get_nions(element);
@@ -2648,7 +2688,7 @@ void solve_spencerfano(const int nonemptymgi, const int timestep, const int iter
 
       printlog("{} ", ionstage);
 
-      sfmatrix_add_excitation(sfmatrixuppertri, nonemptymgi, element, ion);
+      sfmatrix_add_excitation(excitationbands, nonemptymgi, element, ion);
 
       if ((ion < nions - 1)) {
         sfmatrix_add_ionisation(sfmatrixuppertri, Z, ionstage, nnion);
@@ -2658,6 +2698,8 @@ void solve_spencerfano(const int nonemptymgi, const int timestep, const int iter
       printlnlog("");
     }
   }
+
+  sfmatrix_apply_excitation(sfmatrixuppertri, excitationbands);
 
   const auto yfunc = sfmatrix_solve(sfmatrixuppertri);
   constexpr bool verbose = false;
