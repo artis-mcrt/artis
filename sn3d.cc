@@ -859,15 +859,15 @@ void setup_runoutputfolder() {
         std::filesystem::remove(linkname, ec);
       }
     } else {
-      // clear out diagnostic files left in the folder by a previous run, so that e.g. a rerun with fewer
+      // clear out per-rank output files left in the folder by a previous run, so that e.g. a rerun with fewer
       // ranks does not leave a mixture of new estimator files and stale ones from ranks that no longer exist
       for (const auto& entry : std::filesystem::directory_iterator(globals::runoutputfolder, ec)) {
         const auto filename = entry.path().filename().string();
-        const bool is_diagfile = (filename.starts_with("output_") && filename.ends_with(".txt")) ||
-                                 ((filename.starts_with("estimators_") || filename.starts_with("nlte_") ||
-                                   filename.starts_with("radfield_") || filename.starts_with("macroatom_")) &&
-                                  filename.ends_with(".out"));
-        if (is_diagfile) {
+        const bool is_rank_outfile = (filename.starts_with("output_") && filename.ends_with(".txt")) ||
+                                     ((filename.starts_with("estimators_") || filename.starts_with("nlte_") ||
+                                       filename.starts_with("radfield_") || filename.starts_with("macroatom_")) &&
+                                      filename.ends_with(".out"));
+        if (is_rank_outfile) {
           std::filesystem::remove(entry.path(), ec);
         }
       }
@@ -888,7 +888,7 @@ void setup_runoutputfolder() {
 void print_options_help(std::FILE* stream, const char* progname) {
   std::println(stream, "Usage: {} [-w WALLTIMELIMITHOURS] [-o OUTPUTFOLDER] [-h]", progname);
   std::println(stream, "  -w WALLTIMELIMITHOURS  finish cleanly (writing restart files) before this much wall time");
-  std::println(stream, "  -o OUTPUTFOLDER        write the per-rank diagnostic files (rank logs and estimators,");
+  std::println(stream, "  -o OUTPUTFOLDER        write the per-rank output files (rank logs and estimators,");
   std::println(stream, "                         nlte, radfield, and macroatom files) into this folder");
   std::println(stream, "  -h                     print this help and exit");
 }
@@ -1010,7 +1010,7 @@ auto main(int argc, char* argv[]) -> int {
   }
 
   if (!globals::runoutputfolder.empty()) {
-    printlnlog("command line argument specifies output folder '{}' for the per-rank diagnostic files",
+    printlnlog("command line argument specifies output folder '{}' for the per-rank output files",
                globals::runoutputfolder);
   }
 

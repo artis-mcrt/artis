@@ -121,7 +121,7 @@ A run writes the following into the simulation folder:
 - deposition.out: the radioactive energy deposition rate as a function of time.
 - gridsave_ts*.tmp and packets_*_ts*.tmp: restart files that allow a later job to continue from the end of a timestep.
 
-Run sn3d with `-o JOBFOLDER` (e.g. `./sn3d -o job0`) to write the per-job diagnostic files (the rank log files and the estimators, nlte, radfield, and macroatom files) into a subfolder. The cluster job scripts do this automatically with a folder named after the SLURM job id. The shared run-level files, including the restart files that a later job resumes from, are still written to the simulation folder, and an output_0-0.txt symlink to the current job's rank-0 log is kept there so that following the log works regardless of the output folder. For runs made without -o, scripts/movefiles.sh can move the per-job files into a subfolder afterwards.
+Run sn3d with `-o JOBFOLDER` (e.g. `./sn3d -o job0`) to write the per-job output files (the rank log files and the estimators, nlte, radfield, and macroatom files) into a subfolder. The cluster job scripts do this automatically with a folder named after the SLURM job id. The shared run-level files, including the restart files that a later job resumes from, are still written to the simulation folder, and an output_0-0.txt symlink to the current job's rank-0 log is kept there so that following the log works regardless of the output folder. For runs made without -o, scripts/movefiles.sh can move the per-job files into a subfolder afterwards.
 
 ### Post-processing with exspec
 As well as sn3d, `make` builds exspec, which combines the packets files from all ranks into spectra and light curves. Run it in the simulation folder using a single rank:
