@@ -2051,6 +2051,16 @@ void sfmatrix_add_ionisation(std::span<double> sfmatrixuppertri, const int Z, co
         int_eps_lower_tab[d] = std::atan((epsilon_lower - ionpot_ev) / J);
       }
 
+      // Both integrals run over endash >= en (skipping the zero-cross-section points below xsstartindex),
+      // but their supports are exactly complementary: for endash >= ionpot_ev, the first integral is
+      // nonzero iff its epsilon_lower = max(endash - en, ionpot_ev) is below epsilon_upper, which reduces
+      // to (j - 2i) * DELTA_E < SF_EMIN + ionpot_ev, and the second is nonzero iff
+      // epsilon_upper > en + ionpot_ev, which reduces to (j - 2i) * DELTA_E > SF_EMIN + ionpot_ev (at
+      // equality both epsilon ranges are empty). Splitting the column loop at that crossover replaces the
+      // per-element max() clamps (which only ever discarded a term that is zero) with loop bounds, and the
+      // second region needs no offset-table read at all.
+      const int kcross = static_cast<int>(std::ceil((SF_EMIN + ionpot_ev) / DELTA_E));
+
       for (int i = 0; i < SFPTS; i++) {
         // i is the matrix row index, which corresponds to an energy E at which we are solve from y(E)
         const double en = engrid(i);
@@ -2061,17 +2071,16 @@ void sfmatrix_add_ionisation(std::span<double> sfmatrixuppertri, const int Z, co
         // antiderivative atan((epsilon_lower - I) / J) reduces to atan(en / J)
         const double int_eps_lower2 = std::atan(en / J);
 
-        // both integrals run over endash >= en (skipping the zero-cross-section points below xsstartindex),
-        // but each contributes only where its epsilon_lower <= epsilon_upper, enforced by the max(x, 0.)
-        // clamps (the atan values are monotonic in epsilon): the first integral vanishes for
-        // endash > 2 * en + ionpot_ev and the second for endash < 2 * en + ionpot_ev
         const int jstart = std::max(i, xsstartindex);
-        for (int j = jstart; j < SFPTS; j++) {
-          // j is the matrix column index which corresponds to the piece of the integral at y(E') where E' >= E and E'
-          // = engrid(j)
-          const double int_eps_diff1 = std::max(int_eps_upper[j] - int_eps_lower_tab[j - i], 0.);
-          const double int_eps_diff2 = std::max(int_eps_upper[j] - int_eps_lower2, 0.);
-          sfmatrixuppertri[rowoffset + j] += prefactors[j] * (int_eps_diff1 - int_eps_diff2);
+        const int jcross = std::clamp((2 * i) + kcross, jstart, SFPTS);
+
+        // j is the matrix column index which corresponds to the piece of the integral at y(E') where
+        // E' >= E and E' = engrid(j)
+        for (int j = jstart; j < jcross; j++) {
+          sfmatrixuppertri[rowoffset + j] += prefactors[j] * (int_eps_upper[j] - int_eps_lower_tab[j - i]);
+        }
+        for (int j = jcross; j < SFPTS; j++) {
+          sfmatrixuppertri[rowoffset + j] += prefactors[j] * (int_eps_lower2 - int_eps_upper[j]);
         }
       }
 
