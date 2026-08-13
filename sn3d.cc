@@ -832,11 +832,19 @@ auto do_timestep(const int nts, const int titer, std::vector<Packet>& packets, c
 }
 
 // exactly match the generated per-rank output filenames: output_<rank>-<thread>.txt and the
-// estimators/nlte/radfield/macroatom _<rank>.out files
-[[nodiscard]] auto is_rank_outfile_name(const std::string_view filename) -> bool {
+// estimators/nlte/radfield/macroatom _<rank>.out files, possibly with a compression extension added by
+// the post-processing scripts (e.g. exspec-after.sh runs zstd)
+[[nodiscard]] auto is_rank_outfile_name(std::string_view filename) -> bool {
   const auto alldigits = [](const std::string_view str) {
     return !str.empty() && std::ranges::all_of(str, [](const char c) { return c >= '0' && c <= '9'; });
   };
+
+  for (const std::string_view compressext : {".zst", ".gz", ".xz"}) {
+    if (filename.ends_with(compressext)) {
+      filename.remove_suffix(compressext.size());
+      break;
+    }
+  }
 
   if (constexpr std::string_view logprefix = "output_"; filename.starts_with(logprefix) && filename.ends_with(".txt")) {
     const auto rank_thread = filename.substr(logprefix.size(), filename.size() - logprefix.size() - 4);
