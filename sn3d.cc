@@ -24,6 +24,7 @@
 #include <limits>
 #include <print>
 #include <string>
+#include <string_view>
 #include <system_error>
 #include <utility>
 #ifdef STDPAR_ON
@@ -830,6 +831,31 @@ auto do_timestep(const int nts, const int titer, std::vector<Packet>& packets, c
   return !do_this_full_loop;
 }
 
+// exactly match the generated per-rank output filenames: output_<rank>-<thread>.txt and the
+// estimators/nlte/radfield/macroatom _<rank>.out files
+[[nodiscard]] auto is_rank_outfile_name(const std::string_view filename) -> bool {
+  const auto alldigits = [](const std::string_view str) {
+    return !str.empty() && std::ranges::all_of(str, [](const char c) { return c >= '0' && c <= '9'; });
+  };
+
+  if (constexpr std::string_view logprefix = "output_"; filename.starts_with(logprefix) && filename.ends_with(".txt")) {
+    const auto rank_thread = filename.substr(logprefix.size(), filename.size() - logprefix.size() - 4);
+    const auto dashpos = rank_thread.find('-');
+    return dashpos != std::string_view::npos && alldigits(rank_thread.substr(0, dashpos)) &&
+           alldigits(rank_thread.substr(dashpos + 1));
+  }
+
+  if (filename.ends_with(".out")) {
+    for (const std::string_view prefix : {"estimators_", "nlte_", "radfield_", "macroatom_"}) {
+      if (filename.starts_with(prefix)) {
+        return alldigits(filename.substr(prefix.size(), filename.size() - prefix.size() - 4));
+      }
+    }
+  }
+
+  return false;
+}
+
 // Create the run output folder given with the -o option and keep an output_0-0.txt symlink in the
 // simulation folder pointing at the current job's rank-0 log, so that e.g. tail -f output_0-0.txt works
 // regardless of the output folder. Without -o, remove any symlink left by a previous -o run, since
@@ -852,26 +878,16 @@ void setup_runoutputfolder() {
       std::abort();
     }
 
-    if (std::filesystem::equivalent(globals::runoutputfolder, ".", ec)) {
-      // -o names the simulation folder itself, so the log will be at the link's path anyway and a symlink
-      // would point at itself. Just remove any symlink left by a previous run with a real output folder.
-      if (std::filesystem::is_symlink(linkname, ec)) {
-        std::filesystem::remove(linkname, ec);
+    // clear out per-rank output files (and any leftover log symlink) from a previous run of this folder, so
+    // that e.g. a rerun with fewer ranks does not leave a mixture of new estimator files and stale ones from
+    // ranks that no longer exist. Only exact matches of the generated filenames are removed.
+    for (const auto& entry : std::filesystem::directory_iterator(globals::runoutputfolder, ec)) {
+      if (is_rank_outfile_name(entry.path().filename().string())) {
+        std::filesystem::remove(entry.path(), ec);
       }
-    } else {
-      // clear out per-rank output files left in the folder by a previous run, so that e.g. a rerun with fewer
-      // ranks does not leave a mixture of new estimator files and stale ones from ranks that no longer exist
-      for (const auto& entry : std::filesystem::directory_iterator(globals::runoutputfolder, ec)) {
-        const auto filename = entry.path().filename().string();
-        const bool is_rank_outfile = (filename.starts_with("output_") && filename.ends_with(".txt")) ||
-                                     ((filename.starts_with("estimators_") || filename.starts_with("nlte_") ||
-                                       filename.starts_with("radfield_") || filename.starts_with("macroatom_")) &&
-                                      filename.ends_with(".out"));
-        if (is_rank_outfile) {
-          std::filesystem::remove(entry.path(), ec);
-        }
-      }
+    }
 
+    if (!std::filesystem::equivalent(globals::runoutputfolder, ".", ec)) {
       // not having the log symlink is no reason to stop the simulation, so just warn if it cannot be created
       const auto linktarget = get_runoutputfolder_filepath(linkname);
       std::filesystem::remove(linkname, ec);
@@ -880,6 +896,8 @@ void setup_runoutputfolder() {
         std::println(stderr, "[warning] could not create symlink '{}' to '{}': {}", linkname, linktarget, ec.message());
       }
     }
+    // when -o names the simulation folder itself, no symlink is made (it would point at itself and the log
+    // will be at the link's path anyway), and the cleanup above has already removed any leftover link
   }
   // the folder must exist before any rank opens its log file there
   MPI_Barrier_allranks();
@@ -940,7 +958,7 @@ auto main(int argc, char* argv[]) -> int {
       walltimehours_str = optarg;
     } else if (opt == 'o') {
       globals::runoutputfolder = optarg;
-      while (globals::runoutputfolder.ends_with('/')) {
+      while (globals::runoutputfolder.size() > 1 && globals::runoutputfolder.ends_with('/')) {
         globals::runoutputfolder.pop_back();
       }
       if (globals::runoutputfolder.empty()) {
