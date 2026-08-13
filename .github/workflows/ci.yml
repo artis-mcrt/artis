@@ -113,15 +113,7 @@ jobs:
               working-directory: tests/${{ matrix.testname }}_testrun/
               run: |
                   cp input-newrun.txt input.txt
-                  touch output_0-0.txt
-                  time mpirun -np 4 --oversubscribe --mca osc ^ucx --mca mpi_yield_when_idle 1 ./sn3d
-
-            - name: Move job0 files
-              if: always()
-              working-directory: tests/${{ matrix.testname }}_testrun/
-              run: |
-                  mkdir job0
-                  ../../scripts/movefiles.sh job0
+                  time mpirun -np 4 --oversubscribe --mca osc ^ucx --mca mpi_yield_when_idle 1 ./sn3d -o job0
 
             - name: cat job0 estimators
               if: always()
@@ -146,15 +138,12 @@ jobs:
               working-directory: tests/${{ matrix.testname }}_testrun/
               run: |
                   cp input-resume.txt input.txt
-                  time mpirun -np 4 --oversubscribe --mca osc ^ucx --mca mpi_yield_when_idle 1 ./sn3d
+                  time mpirun -np 4 --oversubscribe --mca osc ^ucx --mca mpi_yield_when_idle 1 ./sn3d -o job1
 
-            - name: Move job1 files
+            - name: Remove restart files
               if: always()
               working-directory: tests/${{ matrix.testname }}_testrun/
-              run: |
-                  rm *.tmp
-                  mkdir job1
-                  ../../scripts/movefiles.sh job1
+              run: rm *.tmp
 
             - name: cat job1 estimators
               if: always()
@@ -324,13 +313,12 @@ jobs:
                   OMP_NUM_THREADS: 2
               run: |
                   cp input-newrun.txt input.txt
-                  touch output_0-0.txt
-                  time mpirun -np 2 --oversubscribe --mca osc ^ucx --mca mpi_yield_when_idle 1 ./sn3d
+                  time mpirun -np 2 --oversubscribe --mca osc ^ucx --mca mpi_yield_when_idle 1 ./sn3d -o job0
 
             - name: cat output log
               if: always()
               working-directory: tests/kilonova_1d_testrun/
-              run: cat output_0-0.txt
+              run: cat job0/output_0-0.txt
 
     # Runs the same small model with C++ standard parallelism on multicore CPUs (no GPU offload), which
     # reaches the same shared-state code paths as the OpenMP job but through std::execution::par_unseq and
@@ -377,13 +365,12 @@ jobs:
               working-directory: tests/kilonova_1d_testrun/
               run: |
                   cp input-newrun.txt input.txt
-                  touch output_0-0.txt
-                  time mpirun -np 2 --oversubscribe --mca osc ^ucx --mca mpi_yield_when_idle 1 ./sn3d
+                  time mpirun -np 2 --oversubscribe --mca osc ^ucx --mca mpi_yield_when_idle 1 ./sn3d -o job0
 
             - name: cat output log
               if: always()
               working-directory: tests/kilonova_1d_testrun/
-              run: cat output_0-0.txt
+              run: cat job0/output_0-0.txt
 
     combine_checksums:
         needs: testmodels
