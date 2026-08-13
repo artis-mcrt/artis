@@ -1415,19 +1415,22 @@ auto nt_ionisation_ratecoeff_sf(const int nonemptymgi, const int element, const 
   return 0.;
 }
 
-// vector of collisional excitation cross sections in cm^2
-// epsilon_trans is in erg
-// Return the index of the first valid cross section point (en >= epsilon_trans)
-// all elements below this index are invalid and should not be used
-auto get_xs_excitation_vector(const int alltransindex, const double statweight_lower, const double epsilon_trans)
-    -> std::tuple<std::array<double, SFPTS>, int> {
-  std::array<double, SFPTS> xs_excitation_vec{};
-  if (epsilon_trans / EV > SF_EMAX) {
-    // the excitation threshold is above the top of the energy grid, so the cross section is zero at
-    // every grid point. Without this, the clamped startindex below would give a nonzero cross
-    // section at the top grid point, which is below the excitation threshold.
-    return {xs_excitation_vec, -1};
-  }
+// whether the transition has a collisional excitation cross section that xs_excitation_for_each() can
+// evaluate: the excitation threshold must not be above the top of the energy grid (the cross section
+// would be zero at every grid point, and the clamped start index would wrongly give a nonzero cross
+// section at the top grid point), and there must be either a tabulated collision strength or, for
+// permitted lines, an oscillator strength for the van Regemorter approximation
+auto has_xs_excitation(const int alltransindex, const double epsilon_trans_ev) -> bool {
+  return (epsilon_trans_ev <= SF_EMAX) &&
+         (globals::alltrans.coll_str[alltransindex] >= 0 || !globals::alltrans.forbidden[alltransindex]);
+}
+
+// call usexs(j, xs) with the collisional excitation cross section xs [cm^2] at every energy grid point
+// j at or above the transition threshold (en >= epsilon_trans), without materialising a cross section
+// vector. The caller must have checked has_xs_excitation(). epsilon_trans is in erg
+template <typename Func>
+void xs_excitation_for_each(const int alltransindex, const double statweight_lower, const double epsilon_trans,
+                            Func usexs) {
   if (globals::alltrans.coll_str[alltransindex] >= 0) {
     // collision strength is available, so use it
     // Li et al. 2012 equation 11: sigma = pi * a_0^2 * (I_H / E) * Omega / g_lower,
@@ -1437,48 +1440,40 @@ auto get_xs_excitation_vector(const int alltransindex, const double statweight_l
 
     const int en_startindex = get_energyindex_ev_gteq(epsilon_trans / EV);
 
-    std::fill_n(xs_excitation_vec.begin(), en_startindex, 0.);
-
     for (int j = en_startindex; j < SFPTS; j++) {
       const double energy = engrid(j) * EV;
-      xs_excitation_vec[j] = constantfactor / energy;
+      usexs(j, constantfactor / energy);
     }
-    return {xs_excitation_vec, en_startindex};
-  }
-  if (!globals::alltrans.forbidden[alltransindex]) {
-    const double trans_osc_strength = globals::alltrans.osc_strength[alltransindex];
-    // permitted E1 electric dipole transitions
-
-    // the A and D ln(U) terms of the Mewe (1972) equation 5 fitting formula
-    // g(U) = A + B/U + C/U^2 + D*ln(U); see the comment in xs_excitation()
-    constexpr double mewe_A = 0.15;
-    constexpr double mewe_D = 0.28;
-
-    constexpr double prefactor = 45.585750051;  // 8 * pi^2/sqrt(3)
-    const double epsilon_trans_ev = epsilon_trans / EV;
-
-    // van Regemorter (1962) approximation with the g_bar below from Mewe (1972)
-    const double constantfactor =
-        epsilon_trans_ev * prefactor * A_naught_squared * pow2(H_ionpot / epsilon_trans) * trans_osc_strength;
-
-    const int en_startindex = get_energyindex_ev_gteq(epsilon_trans_ev);
-
-    std::fill_n(xs_excitation_vec.begin(), en_startindex, 0.);
-
-    // U = en / epsilon
-    // g_bar = mewe_D * std::log(U) + mewe_A
-    // xs[j] = constantfactor * g_bar / engrid(j)
-    const double logepsilon = std::log(epsilon_trans_ev);
-    for (int j = en_startindex; j < SFPTS; j++) {
-      const double logU = logengrid[j] - logepsilon;
-      const double g_bar = (mewe_D * logU) + mewe_A;
-      xs_excitation_vec[j] = constantfactor * g_bar / engrid(j);
-    }
-
-    return {xs_excitation_vec, en_startindex};
+    return;
   }
 
-  return {xs_excitation_vec, -1};
+  assert_testmodeonly(!globals::alltrans.forbidden[alltransindex]);
+  const double trans_osc_strength = globals::alltrans.osc_strength[alltransindex];
+  // permitted E1 electric dipole transitions
+
+  // the A and D ln(U) terms of the Mewe (1972) equation 5 fitting formula
+  // g(U) = A + B/U + C/U^2 + D*ln(U); see the comment in xs_excitation()
+  constexpr double mewe_A = 0.15;
+  constexpr double mewe_D = 0.28;
+
+  constexpr double prefactor = 45.585750051;  // 8 * pi^2/sqrt(3)
+  const double epsilon_trans_ev = epsilon_trans / EV;
+
+  // van Regemorter (1962) approximation with the g_bar below from Mewe (1972)
+  const double constantfactor =
+      epsilon_trans_ev * prefactor * A_naught_squared * pow2(H_ionpot / epsilon_trans) * trans_osc_strength;
+
+  const int en_startindex = get_energyindex_ev_gteq(epsilon_trans_ev);
+
+  // U = en / epsilon
+  // g_bar = mewe_D * std::log(U) + mewe_A
+  // xs = constantfactor * g_bar / engrid(j)
+  const double logepsilon = std::log(epsilon_trans_ev);
+  for (int j = en_startindex; j < SFPTS; j++) {
+    const double logU = logengrid[j] - logepsilon;
+    const double g_bar = (mewe_D * logU) + mewe_A;
+    usexs(j, constantfactor * g_bar / engrid(j));
+  }
 }
 
 // Kozma & Fransson equation 9 divided by level population and epsilon_trans
@@ -1486,21 +1481,17 @@ auto get_xs_excitation_vector(const int alltransindex, const double statweight_l
 auto calculate_nt_excitation_ratecoeff_perdeposition(const std::array<double, SFPTS>& yvec, const int alltransindex,
                                                      const double statweight_lower, const double epsilon_trans)
     -> double {
-  const auto [xs_excitation_vec, xsstartindex] =
-      get_xs_excitation_vector(alltransindex, statweight_lower, epsilon_trans);
-
-  if (xsstartindex >= 0) {
-    double y_xs_de = 0.;
-    for (int i = xsstartindex; i < SFPTS; i++) {
-      y_xs_de += yvec[i] * xs_excitation_vec[i];
-    }
-    // multiply by DELTA_E to get the integral over the energy grid
-    y_xs_de *= DELTA_E;
-
-    return y_xs_de / E_init_ev / EV;
+  if (!has_xs_excitation(alltransindex, epsilon_trans / EV)) {
+    return 0.;
   }
 
-  return 0.;
+  double y_xs_de = 0.;
+  xs_excitation_for_each(alltransindex, statweight_lower, epsilon_trans,
+                         [&](const int j, const double xs) { y_xs_de += yvec[j] * xs; });
+  // multiply by DELTA_E to get the integral over the energy grid
+  y_xs_de *= DELTA_E;
+
+  return y_xs_de / E_init_ev / EV;
 }
 
 // Return the energy rate [erg/cm3/s] going toward non-thermal ionisation of lowerion
@@ -1943,23 +1934,24 @@ void sfmatrix_accumulate_excitation(std::map<int, ExcitationBand>& excitationban
         continue;
       }
 
-      const auto [vec_xs_excitation, xsstartindex] =
-          get_xs_excitation_vector(alltransindex, statweight_lower, epsilon_trans);
-      if (xsstartindex >= 0) {
-        const int nbinsfull = static_cast<int>(get_linearbinindex(epsilon_trans_ev, 0., DELTA_E));
-        const double delta_en_actual = epsilon_trans_ev - (nbinsfull * DELTA_E);
+      if (!has_xs_excitation(alltransindex, epsilon_trans_ev)) {
+        continue;
+      }
 
-        auto& band = excitationbands[nbinsfull];
-        const double weight_endpoint = nnlevel * delta_en_actual;
-        for (int j = xsstartindex; j < SFPTS; j++) {
-          band.endpoint[j] += weight_endpoint * vec_xs_excitation[j];
-        }
-        if (nbinsfull > 0) {
-          const double weight_interior = nnlevel * DELTA_E;
-          for (int j = xsstartindex; j < SFPTS; j++) {
-            band.interior[j] += weight_interior * vec_xs_excitation[j];
-          }
-        }
+      const int nbinsfull = static_cast<int>(get_linearbinindex(epsilon_trans_ev, 0., DELTA_E));
+      const double delta_en_actual = epsilon_trans_ev - (nbinsfull * DELTA_E);
+
+      auto& band = excitationbands[nbinsfull];
+      const double weight_endpoint = nnlevel * delta_en_actual;
+      if (nbinsfull > 0) {
+        const double weight_interior = nnlevel * DELTA_E;
+        xs_excitation_for_each(alltransindex, statweight_lower, epsilon_trans, [&](const int j, const double xs) {
+          band.interior[j] += weight_interior * xs;
+          band.endpoint[j] += weight_endpoint * xs;
+        });
+      } else {
+        xs_excitation_for_each(alltransindex, statweight_lower, epsilon_trans,
+                               [&](const int j, const double xs) { band.endpoint[j] += weight_endpoint * xs; });
       }
     }
   });
