@@ -580,8 +580,7 @@ void macroatom_open_file() {
     return;
   }
 
-  macroatom_file =
-      fstream_required(std::format("macroatom_{:04d}.out", globals::my_rank), std::ios::out | std::ios::trunc);
+  macroatom_file = open_rank_outfile("macroatom");
 
   std::println(macroatom_file,
                "timestep modelgridindex Z ionstage_in ionstage_out level_in level_out activline"

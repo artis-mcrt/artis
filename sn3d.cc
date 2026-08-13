@@ -24,6 +24,7 @@
 #include <limits>
 #include <print>
 #include <string>
+#include <system_error>
 #include <utility>
 #ifdef STDPAR_ON
 #include <ranges>
@@ -829,6 +830,48 @@ auto do_timestep(const int nts, const int titer, std::vector<Packet>& packets, c
   return !do_this_full_loop;
 }
 
+// Create the run output folder given with the -o option and keep an output_0-0.txt symlink in the
+// simulation folder pointing at the current job's rank-0 log, so that e.g. tail -f output_0-0.txt works
+// regardless of the output folder. Without -o, remove any symlink left by a previous -o run, since
+// opening the log through it would truncate that job's stored log.
+void setup_runoutputfolder() {
+  const auto* const linkname = "output_0-0.txt";
+
+  if (globals::runoutputfolder.empty()) {
+    if (std::error_code ec; globals::my_rank == 0 && std::filesystem::is_symlink(linkname, ec)) {
+      std::filesystem::remove(linkname, ec);
+    }
+    return;
+  }
+
+  if (globals::my_rank == 0) {
+    std::error_code ec;
+    std::filesystem::create_directories(globals::runoutputfolder, ec);
+    if (ec) {
+      std::println(stderr, "[error] could not create output folder '{}': {}", globals::runoutputfolder, ec.message());
+      std::abort();
+    }
+
+    // not having the log symlink is no reason to stop the simulation, so just warn if it cannot be created
+    const auto linktarget = get_runoutputfolder_filepath(linkname);
+    std::filesystem::remove(linkname, ec);
+    std::filesystem::create_symlink(linktarget, linkname, ec);
+    if (ec) {
+      std::println(stderr, "[warning] could not create symlink '{}' to '{}': {}", linkname, linktarget, ec.message());
+    }
+  }
+  // the folder must exist before any rank opens its log file there
+  MPI_Barrier_allranks();
+}
+
+void print_options_help(std::FILE* stream, const char* progname) {
+  std::println(stream, "Usage: {} [-w WALLTIMELIMITHOURS] [-o OUTPUTFOLDER] [-h]", progname);
+  std::println(stream, "  -w WALLTIMELIMITHOURS  finish cleanly (writing restart files) before this much wall time");
+  std::println(stream, "  -o OUTPUTFOLDER        write the per-rank diagnostic files (rank logs and estimators,");
+  std::println(stream, "                         nlte, radfield, and macroatom files) into this folder");
+  std::println(stream, "  -h                     print this help and exit");
+}
+
 }  // anonymous namespace
 
 auto main(int argc, char* argv[]) -> int {
@@ -848,11 +891,54 @@ auto main(int argc, char* argv[]) -> int {
 
   globals::setup_mpi_vars();
 
+#ifdef WALLTIMELIMITSECONDS
+  int walltimelimitseconds = WALLTIMELIMITSECONDS;
+#else
+  int walltimelimitseconds = -1;
+#endif
+
+  std::string walltimehours_str;
+  int opt = 0;
+  while ((opt = getopt(argc, argv, "hw:o:")) != -1) {  // NOLINT(concurrency-mt-unsafe,misc-include-cleaner)
+    if (opt == 'h') {
+      if (globals::my_rank == 0) {
+        print_options_help(stdout, argv[0]);  // NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+      }
+      MPI_Finalize();
+      std::exit(EXIT_SUCCESS);  // NOLINT(concurrency-mt-unsafe)
+    }
+    if (opt == 'w') {
+      char* parse_end = nullptr;
+      const float walltimehours = strtof(optarg, &parse_end);  // NOLINT(misc-include-cleaner)
+      if (parse_end == optarg || *parse_end != '\0' || !std::isfinite(walltimehours) || walltimehours <= 0.) {
+        // silently accepting a bad value would disable the wall time limit instead of applying it
+        std::println(stderr, "[error] invalid wall time hours '{}' given with -w option", optarg);
+        std::abort();
+      }
+      walltimelimitseconds = static_cast<int>(walltimehours * HOUR);
+      walltimehours_str = optarg;
+    } else if (opt == 'o') {
+      globals::runoutputfolder = optarg;
+      while (globals::runoutputfolder.ends_with('/')) {
+        globals::runoutputfolder.pop_back();
+      }
+      if (globals::runoutputfolder.empty()) {
+        std::println(stderr, "[error] empty output folder given with -o option");
+        std::abort();
+      }
+    } else {
+      print_options_help(stderr, argv[0]);  // NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+      std::abort();
+    }
+  }
+
   check_already_running();
+
+  setup_runoutputfolder();
 
 #ifdef STDPAR_ON
   for (int t = 1; t < get_max_threads(); t++) {
-    std::filesystem::remove(std::format("output_{}-{}.txt", globals::my_rank, t));
+    std::filesystem::remove(get_runoutputfolder_filepath(std::format("output_{}-{}.txt", globals::my_rank, t)));
   }
 #endif
 
@@ -865,7 +951,7 @@ auto main(int argc, char* argv[]) -> int {
 #endif
   {
     // initialise the thread and rank specific output file
-    set_log_file(std::format("output_{}-{}.txt", globals::my_rank, get_thread_num()));
+    set_log_file(get_runoutputfolder_filepath(std::format("output_{}-{}.txt", globals::my_rank, get_thread_num())));
 
 #ifdef _OPENMP
     printlnlog("OpenMP parallelisation is active with {} threads (max {})", omp_get_num_threads(), get_max_threads());
@@ -897,30 +983,14 @@ auto main(int argc, char* argv[]) -> int {
   printlnlog("Boost Gauss-Kronrod quadrature");
 #endif
 
-#ifdef WALLTIMELIMITSECONDS
-  int walltimelimitseconds = WALLTIMELIMITSECONDS;
-#else
-  int walltimelimitseconds = -1;
-#endif
+  if (!walltimehours_str.empty()) {
+    printlnlog("command line argument specifies wall time hours '{}', so setting walltimelimitseconds = {}",
+               walltimehours_str, walltimelimitseconds);
+  }
 
-  int opt = 0;
-  while ((opt = getopt(argc, argv, "w:")) != -1) {  // NOLINT(concurrency-mt-unsafe,misc-include-cleaner)
-    if (opt == 'w') {
-      char* parse_end = nullptr;
-      const float walltimehours = strtof(optarg, &parse_end);  // NOLINT(misc-include-cleaner)
-      if (parse_end == optarg || *parse_end != '\0' || !std::isfinite(walltimehours) || walltimehours <= 0.) {
-        // silently accepting a bad value would disable the wall time limit instead of applying it
-        std::println(stderr, "[error] invalid wall time hours '{}' given with -w option", optarg);
-        std::abort();
-      }
-      walltimelimitseconds = static_cast<int>(walltimehours * HOUR);
-      printlnlog("command line argument specifies wall time hours '{}', so setting walltimelimitseconds = {}", optarg,
-                 walltimelimitseconds);
-    } else {
-      std::println(stderr, "Usage: {} [-w WALLTIMELIMITHOURS]",
-                   argv[0]);  // NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic,)
-      std::abort();
-    }
+  if (!globals::runoutputfolder.empty()) {
+    printlnlog("command line argument specifies output folder '{}' for the per-rank diagnostic files",
+               globals::runoutputfolder);
   }
 
   std::vector<Packet> packets;
@@ -1034,8 +1104,7 @@ auto main(int argc, char* argv[]) -> int {
   macroatom_open_file();
   if (ndo > 0) {
     assert_always(!estimators_file.is_open());
-    estimators_file =
-        fstream_required(std::format("estimators_{:04d}.out", globals::my_rank), std::ios::out | std::ios::trunc);
+    estimators_file = open_rank_outfile("estimators");
 
     if (globals::total_nlte_levels > 0 && ndo_nonempty > 0) {
       nltepop_open_file();

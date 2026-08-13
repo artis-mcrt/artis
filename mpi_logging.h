@@ -54,6 +54,9 @@ inline int rank_in_node{-1};
 inline int node_count{-1};
 inline int node_id{-1};
 
+// optional folder (sn3d -o option) receiving the per-rank diagnostic files; empty means the current directory
+inline std::string runoutputfolder;
+
 inline void setup_mpi_vars() {
   MPI_Comm_rank(MPI_COMM_WORLD, &globals::my_rank);
   MPI_Comm_size(MPI_COMM_WORLD, &globals::nprocs);
@@ -499,6 +502,13 @@ inline void MPI_Reduce_safe(R&& data, MPI_Op op, const int root, MPI_Comm comm) 
   assert_always(items_processed == std::ssize(dataspan));
 }
 
+// path for a timestep-specific diagnostic file (rank logs, estimators, nlte/radfield/macroatom files), which the
+// sn3d -o option redirects into a run output folder (stored without a trailing slash)
+[[nodiscard]] inline auto get_runoutputfolder_filepath(const std::string_view filename) -> std::string {
+  return globals::runoutputfolder.empty() ? std::string(filename)
+                                          : std::format("{}/{}", globals::runoutputfolder, filename);
+}
+
 [[nodiscard]] inline auto fopen_required(const std::string& filename, std::span<const char> mode) -> FILE* {
   if (mode[0] == 'r') {
     // search data folders in order to find file to read
@@ -550,6 +560,12 @@ inline void MPI_Reduce_safe(R&& data, MPI_Op op, const int root, MPI_Comm comm) 
 
   printlnlog("[error] Could not open file '{}'", filename);
   std::abort();
+}
+
+// open a per-rank diagnostic output file such as estimators_0000.out for writing
+[[nodiscard]] inline auto open_rank_outfile(const std::string_view basename) -> std::fstream {
+  return fstream_required(get_runoutputfolder_filepath(std::format("{}_{:04d}.out", basename, globals::my_rank)),
+                          std::ios::out | std::ios::trunc);
 }
 
 // padded to a full cache line in CPU multithreaded modes so that adjacent mutexes in an array don't false share
