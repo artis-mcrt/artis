@@ -12,6 +12,7 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <limits>
 #include <span>
 #include <vector>
 
@@ -290,11 +291,14 @@ struct CellCache {
   // level population of each bound-free continuum's lower level
   std::span<double> allcont_nnlevel;
   // whether each bound-free continuum contributes to this cell's opacity at all: a populated lower level
-  // of a species the cell contains (see keep_this_cont). This duplicates "allcont_nnlevel[i] > 0", but is
-  // kept as a separate byte per continuum because it is what calculate_chi_bf_gammacontr() scans over the
-  // whole window every evaluation, and reading 1 byte per skipped continuum instead of 8 measures ~1%
-  // faster on a full-size model (21936 continua).
-  std::span<std::uint8_t> allcont_keep;
+  // of a species the cell contains (see keep_this_cont). Bit (i % keepbits_wordbits) of word
+  // (i / keepbits_wordbits), in ascending continuum order. This duplicates "allcont_nnlevel[i] > 0", but is
+  // held separately
+  // and packed because it is what calculate_chi_bf_gammacontr() scans across the whole window on every
+  // evaluation: with only ~11% of continua contributing in a typical cell (classic; the
+  // DETAILED_BF_ESTIMATORS_ON presets keep nearly all of them), packing lets that scan clear a whole word
+  // of absent species per test.
+  std::span<std::uint64_t> allcont_keepbits;
   std::span<double> chi_ff_nnionpart;  // single element per cell (stored as a span to allow shared backing)
   std::span<double> allphixstargets_corrphotoioncoeff;
   // The lazy mutex-guarded macroatom/cooling rate calculation is only used when cellcache_singleslot is
@@ -311,7 +315,7 @@ struct CellCache {
     mem_usage += (allcont_modified_departureratios.size() * sizeof(double));
     mem_usage += (allcont_stimfactor_edgepart.size() * sizeof(double));
     mem_usage += (allcont_nnlevel.size() * sizeof(double));
-    mem_usage += (allcont_keep.size() * sizeof(allcont_keep[0]));
+    mem_usage += (allcont_keepbits.size() * sizeof(allcont_keepbits[0]));
     mem_usage += (chi_ff_nnionpart.size() * sizeof(double));
     mem_usage += (allphixstargets_corrphotoioncoeff.size() * sizeof(double));
     mem_usage += (cooling_contrib_locks.size() * sizeof(PaddedMutex));
@@ -333,7 +337,7 @@ struct CellCacheBacking {
   MPI_shared_array<double> allcont_modified_departureratios;
   MPI_shared_array<double> allcont_stimfactor_edgepart;
   MPI_shared_array<double> allcont_nnlevel;
-  MPI_shared_array<std::uint8_t> allcont_keep;
+  MPI_shared_array<std::uint64_t> allcont_keepbits;
   MPI_shared_array<double> chi_ff_nnionpart;
   MPI_shared_array<double> allphixstargets_corrphotoioncoeff;
 };
@@ -386,6 +390,20 @@ inline void titer_average(double& value, double& saved) {
 #else
   return 0;
 #endif
+}
+
+// Word size of the CellCache::allcont_keepbits packing. Changing it means auditing every user of the
+// layout: the two helpers below, and calculate_chi_bf_gammacontr()'s walk in rpkt.cc, which derives the
+// word index and both window-edge masks itself so that it can keep the rest of a word in a register.
+inline constexpr auto keepbits_wordbits = std::numeric_limits<std::uint64_t>::digits;
+
+[[nodiscard]] inline auto get_allcont_keepwordcount() -> ptrdiff_t {
+  return get_chunk_count(globals::nbfcontinua, keepbits_wordbits);
+}
+
+// mark a bound-free continuum as contributing to this cell
+inline void set_allcont_keepbit(const std::span<std::uint64_t> keepbits, const int contindex) {
+  keepbits[contindex / keepbits_wordbits] |= UINT64_C(1) << static_cast<unsigned>(contindex % keepbits_wordbits);
 }
 
 inline auto get_cellcache(const int nonemptymgi) -> globals::CellCache& {

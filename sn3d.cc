@@ -108,7 +108,8 @@ void setup_cellcache() {
   backing.allcont_modified_departureratios.allocate(static_cast<ptrdiff_t>(nbfcontinua * nslots));
   backing.allcont_stimfactor_edgepart.allocate(static_cast<ptrdiff_t>(nbfcontinua * nslots));
   backing.allcont_nnlevel.allocate(static_cast<ptrdiff_t>(nbfcontinua * nslots));
-  backing.allcont_keep.allocate(static_cast<ptrdiff_t>(nbfcontinua * nslots));
+  const auto nkeepwords = static_cast<size_t>(get_allcont_keepwordcount());
+  backing.allcont_keepbits.allocate(static_cast<ptrdiff_t>(nkeepwords * nslots));
   backing.chi_ff_nnionpart.allocate(static_cast<ptrdiff_t>(nslots));
   backing.allphixstargets_corrphotoioncoeff.allocate(static_cast<ptrdiff_t>(allphixstargetcount * nslots));
 
@@ -131,7 +132,7 @@ void setup_cellcache() {
         backing.allcont_modified_departureratios.subspan(s * nbfcontinua, nbfcontinua);
     cacheslot.allcont_stimfactor_edgepart = backing.allcont_stimfactor_edgepart.subspan(s * nbfcontinua, nbfcontinua);
     cacheslot.allcont_nnlevel = backing.allcont_nnlevel.subspan(s * nbfcontinua, nbfcontinua);
-    cacheslot.allcont_keep = backing.allcont_keep.subspan(s * nbfcontinua, nbfcontinua);
+    cacheslot.allcont_keepbits = backing.allcont_keepbits.subspan(s * nkeepwords, nkeepwords);
     cacheslot.chi_ff_nnionpart = backing.chi_ff_nnionpart.subspan(s, 1);
     cacheslot.allphixstargets_corrphotoioncoeff =
         backing.allphixstargets_corrphotoioncoeff.subspan(s * allphixstargetcount, allphixstargetcount);
