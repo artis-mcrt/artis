@@ -2133,6 +2133,11 @@ void sfmatrix_add_ionisation(std::span<double> sfmatrixuppertri, const int Z, co
 auto sfmatrix_solve(const std::span<const double> sfmatrixuppertri) -> std::array<double, SFPTS> {
   // solve the matrix-vector equation sfmatrixuppertri * yvec = rhsvec for yvec
 
+  // a solution whose max absolute residual is at or below this is accepted without further refinement;
+  // residuals above it after refinement get the warning below. Typical initial back substitutions land
+  // near 1e-13, so refinement normally does not run at all
+  constexpr double acceptable_residual = 1e-10;
+
   THREADLOCALONHOST std::array<double, SFPTS> yvec_arr{};
 
   solve_upper_triangular(sfmatrixuppertri, rhsvec, yvec_arr);
@@ -2180,13 +2185,19 @@ auto sfmatrix_solve(const std::span<const double> sfmatrixuppertri) -> std::arra
     if (std::isfinite(error) && (error_best < 0. || error < error_best)) {
       std::ranges::copy(yvec_arr, yvec_best.begin());
       error_best = error;
+      if (error <= acceptable_residual) {
+        // already more than accurate enough: further refinement would only polish roundoff. Solutions
+        // that stay above the threshold keep refining for the full iteration budget (their residuals
+        // need not decrease monotonically, so a stalled pass does not mean a later one cannot improve)
+        break;
+      }
     }
   }
 
   assert_always(error_best >= 0.);
   std::ranges::copy(yvec_best, yvec_arr.begin());
 
-  if (error_best > 1e-10) {
+  if (error_best > acceptable_residual) {
     printlnlog("  SF solver iterative refinement: best solution vector has a max residual of {:g}", error_best);
   }
 
