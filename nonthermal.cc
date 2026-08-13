@@ -20,12 +20,14 @@
 #include <cstdlib>
 #include <functional>
 #include <ios>
+#include <map>
 #include <numeric>
 #include <ranges>
 #include <span>
 #include <sstream>
 #include <string>
 #include <tuple>
+#include <utility>
 #include <vector>
 
 #include "artisoptions.h"
@@ -177,7 +179,7 @@ constexpr double E_init_ev = [] {
 // row energy E = engrid(i)).
 // rhsvec[i] discretises it as a left-endpoint rectangle sum that includes point i itself. This matches
 // the convention used for the integrals over y(E') on the left-hand side, where
-// sfmatrix_add_excitation() and sfmatrix_add_ionisation() both sum from j = i with weight DELTA_E, and
+// sfmatrix_apply_excitation() and sfmatrix_add_ionisation() both sum from j = i with weight DELTA_E, and
 // the convention used for E_init_ev above.
 constexpr auto rhsvec = [] {
   std::array<double, SFPTS> _rhsvec{};
@@ -1043,7 +1045,7 @@ auto N_e(const int nonemptymgi, const double energy, const std::array<double, SF
           const double epsilon_trans = epsilon(element, ion, upper) - epsilon_lower;
           const double epsilon_trans_ev = epsilon_trans / EV;
           if (epsilon_trans_ev < SF_EMIN) {
-            // sfmatrix_add_excitation() does not include these transitions in the solution, so skip
+            // sfmatrix_accumulate_excitation() does not include these transitions in the solution, so skip
             // them here too for a consistent energy accounting
             continue;
           }
@@ -1414,19 +1416,22 @@ auto nt_ionisation_ratecoeff_sf(const int nonemptymgi, const int element, const 
   return 0.;
 }
 
-// vector of collisional excitation cross sections in cm^2
-// epsilon_trans is in erg
-// Return the index of the first valid cross section point (en >= epsilon_trans)
-// all elements below this index are invalid and should not be used
-auto get_xs_excitation_vector(const int alltransindex, const double statweight_lower, const double epsilon_trans)
-    -> std::tuple<std::array<double, SFPTS>, int> {
-  std::array<double, SFPTS> xs_excitation_vec{};
-  if (epsilon_trans / EV > SF_EMAX) {
-    // the excitation threshold is above the top of the energy grid, so the cross section is zero at
-    // every grid point. Without this, the clamped startindex below would give a nonzero cross
-    // section at the top grid point, which is below the excitation threshold.
-    return {xs_excitation_vec, -1};
-  }
+// whether the transition has a collisional excitation cross section that xs_excitation_for_each() can
+// evaluate: the excitation threshold must not be above the top of the energy grid (the cross section
+// would be zero at every grid point, and the clamped start index would wrongly give a nonzero cross
+// section at the top grid point), and there must be either a tabulated collision strength or, for
+// permitted lines, an oscillator strength for the van Regemorter approximation
+auto has_xs_excitation(const int alltransindex, const double epsilon_trans_ev) -> bool {
+  return (epsilon_trans_ev <= SF_EMAX) &&
+         (globals::alltrans.coll_str[alltransindex] >= 0 || !globals::alltrans.forbidden[alltransindex]);
+}
+
+// call usexs(j, xs) with the collisional excitation cross section xs [cm^2] at every energy grid point
+// j at or above the transition threshold (en >= epsilon_trans), without materialising a cross section
+// vector. The caller must have checked has_xs_excitation(). epsilon_trans is in erg
+template <typename Func>
+void xs_excitation_for_each(const int alltransindex, const double statweight_lower, const double epsilon_trans,
+                            Func usexs) {
   if (globals::alltrans.coll_str[alltransindex] >= 0) {
     // collision strength is available, so use it
     // Li et al. 2012 equation 11: sigma = pi * a_0^2 * (I_H / E) * Omega / g_lower,
@@ -1436,48 +1441,40 @@ auto get_xs_excitation_vector(const int alltransindex, const double statweight_l
 
     const int en_startindex = get_energyindex_ev_gteq(epsilon_trans / EV);
 
-    std::fill_n(xs_excitation_vec.begin(), en_startindex, 0.);
-
     for (int j = en_startindex; j < SFPTS; j++) {
       const double energy = engrid(j) * EV;
-      xs_excitation_vec[j] = constantfactor / energy;
+      usexs(j, constantfactor / energy);
     }
-    return {xs_excitation_vec, en_startindex};
-  }
-  if (!globals::alltrans.forbidden[alltransindex]) {
-    const double trans_osc_strength = globals::alltrans.osc_strength[alltransindex];
-    // permitted E1 electric dipole transitions
-
-    // the A and D ln(U) terms of the Mewe (1972) equation 5 fitting formula
-    // g(U) = A + B/U + C/U^2 + D*ln(U); see the comment in xs_excitation()
-    constexpr double mewe_A = 0.15;
-    constexpr double mewe_D = 0.28;
-
-    constexpr double prefactor = 45.585750051;  // 8 * pi^2/sqrt(3)
-    const double epsilon_trans_ev = epsilon_trans / EV;
-
-    // van Regemorter (1962) approximation with the g_bar below from Mewe (1972)
-    const double constantfactor =
-        epsilon_trans_ev * prefactor * A_naught_squared * pow2(H_ionpot / epsilon_trans) * trans_osc_strength;
-
-    const int en_startindex = get_energyindex_ev_gteq(epsilon_trans_ev);
-
-    std::fill_n(xs_excitation_vec.begin(), en_startindex, 0.);
-
-    // U = en / epsilon
-    // g_bar = mewe_D * std::log(U) + mewe_A
-    // xs[j] = constantfactor * g_bar / engrid(j)
-    const double logepsilon = std::log(epsilon_trans_ev);
-    for (int j = en_startindex; j < SFPTS; j++) {
-      const double logU = logengrid[j] - logepsilon;
-      const double g_bar = (mewe_D * logU) + mewe_A;
-      xs_excitation_vec[j] = constantfactor * g_bar / engrid(j);
-    }
-
-    return {xs_excitation_vec, en_startindex};
+    return;
   }
 
-  return {xs_excitation_vec, -1};
+  assert_testmodeonly(!globals::alltrans.forbidden[alltransindex]);
+  const double trans_osc_strength = globals::alltrans.osc_strength[alltransindex];
+  // permitted E1 electric dipole transitions
+
+  // the A and D ln(U) terms of the Mewe (1972) equation 5 fitting formula
+  // g(U) = A + B/U + C/U^2 + D*ln(U); see the comment in xs_excitation()
+  constexpr double mewe_A = 0.15;
+  constexpr double mewe_D = 0.28;
+
+  constexpr double prefactor = 45.585750051;  // 8 * pi^2/sqrt(3)
+  const double epsilon_trans_ev = epsilon_trans / EV;
+
+  // van Regemorter (1962) approximation with the g_bar below from Mewe (1972)
+  const double constantfactor =
+      epsilon_trans_ev * prefactor * A_naught_squared * pow2(H_ionpot / epsilon_trans) * trans_osc_strength;
+
+  const int en_startindex = get_energyindex_ev_gteq(epsilon_trans_ev);
+
+  // U = en / epsilon
+  // g_bar = mewe_D * std::log(U) + mewe_A
+  // xs = constantfactor * g_bar / engrid(j)
+  const double logepsilon = std::log(epsilon_trans_ev);
+  for (int j = en_startindex; j < SFPTS; j++) {
+    const double logU = logengrid[j] - logepsilon;
+    const double g_bar = (mewe_D * logU) + mewe_A;
+    usexs(j, constantfactor * g_bar / engrid(j));
+  }
 }
 
 // Kozma & Fransson equation 9 divided by level population and epsilon_trans
@@ -1485,21 +1482,17 @@ auto get_xs_excitation_vector(const int alltransindex, const double statweight_l
 auto calculate_nt_excitation_ratecoeff_perdeposition(const std::array<double, SFPTS>& yvec, const int alltransindex,
                                                      const double statweight_lower, const double epsilon_trans)
     -> double {
-  const auto [xs_excitation_vec, xsstartindex] =
-      get_xs_excitation_vector(alltransindex, statweight_lower, epsilon_trans);
-
-  if (xsstartindex >= 0) {
-    double y_xs_de = 0.;
-    for (int i = xsstartindex; i < SFPTS; i++) {
-      y_xs_de += yvec[i] * xs_excitation_vec[i];
-    }
-    // multiply by DELTA_E to get the integral over the energy grid
-    y_xs_de *= DELTA_E;
-
-    return y_xs_de / E_init_ev / EV;
+  if (!has_xs_excitation(alltransindex, epsilon_trans / EV)) {
+    return 0.;
   }
 
-  return 0.;
+  double y_xs_de = 0.;
+  xs_excitation_for_each(alltransindex, statweight_lower, epsilon_trans,
+                         [&](const int j, const double xs) { y_xs_de += yvec[j] * xs; });
+  // multiply by DELTA_E to get the integral over the energy grid
+  y_xs_de *= DELTA_E;
+
+  return y_xs_de / E_init_ev / EV;
 }
 
 // Return the energy rate [erg/cm3/s] going toward non-thermal ionisation of lowerion
@@ -1672,7 +1665,7 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const std::a
 
           const double epsilon_trans = epsilon(element, ion, upper) - epsilon_lower;
           if (epsilon_trans / EV < SF_EMIN) {
-            // sfmatrix_add_excitation() does not include these transitions in the solution (their
+            // sfmatrix_accumulate_excitation() does not include these transitions in the solution (their
             // energy sink is below the grid), so exclude them from the excitation fractions and the
             // stored excitation list too. Otherwise they would contribute to frac_excitation (making
             // frac_sum differ from 1.0) and receive packet excitation events and NLTE rates that the
@@ -1893,16 +1886,30 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const std::a
   }
 }
 
-// add the excitation terms of KF92 equation 7 to the Spencer-Fano matrix. A primary electron loses exactly
-// epsilon_trans when it excites a transition, so the rate at which primaries are carried below the row energy
-// E = engrid(i) is the first left-hand-side term of that equation: for each transition from a level with
-// population nnlevel,
+// Accumulator for the excitation terms of all transitions whose energy loss epsilon_trans spans the same
+// number of whole energy bins, nbinsfull = floor(epsilon_trans_ev / DELTA_E). Because the energy grid is
+// uniform, a transition's contribution to matrix element (i, j) is nnlevel * xs[j] * w(j - i), where the
+// quadrature weight w depends only on the diagonal offset j - i: DELTA_E for offsets below nbinsfull, the
+// remainder epsilon_trans_ev - nbinsfull * DELTA_E at offset nbinsfull, and zero beyond. Transitions with
+// equal nbinsfull therefore share one banded write pattern, so their cross sections are summed here first
+// and the band is written to the matrix once per distinct width by sfmatrix_apply_excitation().
+struct ExcitationBand {
+  // sum over transitions of nnlevel * xs[j] * DELTA_E
+  std::vector<double> interior = std::vector<double>(SFPTS, 0.);
+  // sum over transitions of nnlevel * xs[j] * (epsilon_trans_ev - nbinsfull * DELTA_E)
+  std::vector<double> endpoint = std::vector<double>(SFPTS, 0.);
+};
+
+// accumulate the excitation terms of KF92 equation 7 for one ion into the per-band-width sums. A primary
+// electron loses exactly epsilon_trans when it excites a transition, so the rate at which primaries are
+// carried below the row energy E = engrid(i) is the first left-hand-side term of that equation: for each
+// transition from a level with population nnlevel,
 //   nnlevel * (integral of y(E') sigma_exc(E') dE' over E' in [E, E + epsilon_trans]).
-// The integral is discretised with quadrature weight DELTA_E per column (folded into
-// vec_xs_excitation_nnlevel_deltae below); the final column, which contains the endpoint E + epsilon_trans,
-// gets only the partial weight delta_en_actual.
-void sfmatrix_add_excitation(std::span<double> sfmatrixuppertri, const int nonemptymgi, const int element,
-                             const int ion) {
+// The integral is discretised with quadrature weight DELTA_E per column; the final column, which contains
+// the endpoint E + epsilon_trans, gets only the partial weight epsilon_trans_ev - nbinsfull * DELTA_E.
+// (a std::map keyed by band width keeps the iteration order deterministic for reproducible builds)
+void sfmatrix_accumulate_excitation(std::map<int, ExcitationBand>& excitationbands, const int nonemptymgi,
+                                    const int element, const int ion) {
   // excitation terms
 
   const int nlevels_all = get_nlevels(element, ion);
@@ -1928,34 +1935,57 @@ void sfmatrix_add_excitation(std::span<double> sfmatrixuppertri, const int nonem
         continue;
       }
 
-      auto [vec_xs_excitation_nnlevel_deltae, xsstartindex] =
-          get_xs_excitation_vector(alltransindex, statweight_lower, epsilon_trans);
-      if (xsstartindex >= 0) {
-        for (int j = xsstartindex; j < SFPTS; j++) {
-          vec_xs_excitation_nnlevel_deltae[j] = vec_xs_excitation_nnlevel_deltae[j] * DELTA_E * nnlevel;
-        }
+      if (!has_xs_excitation(alltransindex, epsilon_trans_ev)) {
+        continue;
+      }
 
-        for (int i = 0; i < SFPTS; i++) {
-          const int rowoffset = uppertriangular(i, 0);
-          const double en = engrid(i);
-          const int stopindex = get_energyindex_ev_lteq(en + epsilon_trans_ev);
+      const int nbinsfull = static_cast<int>(get_linearbinindex(epsilon_trans_ev, 0., DELTA_E));
+      const double delta_en_actual = epsilon_trans_ev - (nbinsfull * DELTA_E);
 
-          const int startindex = std::max(i, xsstartindex);
-          for (int j = startindex; j < stopindex; j++) {
-            atomicadd(sfmatrixuppertri[rowoffset + j], vec_xs_excitation_nnlevel_deltae[j]);
-          }
-
-          // do the last bit separately because we're not using the full delta_e interval.
-          // clamp to DELTA_E: when en + epsilon_trans_ev exceeds SF_EMAX, get_energyindex_ev_lteq()
-          // clamps stopindex to SFPTS-1, so the raw remainder can exceed DELTA_E and would over-weight
-          // the top energy point. Capping it gives that bin a full (not inflated) contribution.
-          const double delta_en_actual = std::min(en + epsilon_trans_ev - engrid(stopindex), DELTA_E);
-          atomicadd(sfmatrixuppertri[rowoffset + stopindex],
-                    vec_xs_excitation_nnlevel_deltae[stopindex] * delta_en_actual / DELTA_E);
-        }
+      auto& band = excitationbands[nbinsfull];
+      const double weight_endpoint = nnlevel * delta_en_actual;
+      if (nbinsfull > 0) {
+        const double weight_interior = nnlevel * DELTA_E;
+        xs_excitation_for_each(alltransindex, statweight_lower, epsilon_trans, [&](const int j, const double xs) {
+          band.interior[j] += weight_interior * xs;
+          band.endpoint[j] += weight_endpoint * xs;
+        });
+      } else {
+        xs_excitation_for_each(alltransindex, statweight_lower, epsilon_trans,
+                               [&](const int j, const double xs) { band.endpoint[j] += weight_endpoint * xs; });
       }
     }
   });
+}
+
+// write the accumulated excitation sums into the Spencer-Fano matrix: for band width nbinsfull, row i
+// receives the interior sums at columns [i, i + nbinsfull) and the endpoint sum at column i + nbinsfull.
+// When the endpoint column i + nbinsfull would lie beyond the top of the energy grid, it is clamped to
+// SFPTS - 1 and given the full interior weight there instead, so that the top energy point gets a full
+// (not inflated or truncated) contribution.
+void sfmatrix_apply_excitation(std::span<double> sfmatrixuppertri,
+                               const std::map<int, ExcitationBand>& excitationbands) {
+  // one pass over the matrix rows, applying every band to a row while its cache lines are hot (the map
+  // is flattened first so the per-row inner loop does not traverse the tree)
+  std::vector<std::pair<int, const ExcitationBand*>> bands;
+  bands.reserve(excitationbands.size());
+  for (const auto& [nbinsfull, band] : excitationbands) {
+    bands.emplace_back(nbinsfull, &band);
+  }
+
+  for (int i = 0; i < SFPTS; i++) {
+    const int rowoffset = uppertriangular(i, 0);
+    for (const auto& [nbinsfull, band] : bands) {
+      const int stopindex = std::min(i + nbinsfull, SFPTS - 1);
+
+      for (int j = i; j < stopindex; j++) {
+        sfmatrixuppertri[rowoffset + j] += band->interior[j];
+      }
+
+      sfmatrixuppertri[rowoffset + stopindex] +=
+          ((i + nbinsfull) < SFPTS) ? band->endpoint[stopindex] : band->interior[stopindex];
+    }
+  }
 }
 
 // add the ionisation terms of KF92 equation 7 to the Spencer-Fano matrix. With E = engrid(i) the row energy,
@@ -2625,6 +2655,10 @@ void solve_spencerfano(const int nonemptymgi, const int timestep, const int iter
     sfmatrixuppertri[uppertriangular(i, i)] += electron_loss_rate(engrid(i) * EV, nne) / EV;
   }
 
+  // the excitation terms of all ions are first summed per band width, then applied to the matrix in one
+  // banded pass per distinct width (see ExcitationBand)
+  std::map<int, ExcitationBand> excitationbands;
+
   for (int element = 0; element < get_nelements(); element++) {
     const int Z = get_atomicnumber(element);
     const int nions = get_nions(element);
@@ -2648,7 +2682,7 @@ void solve_spencerfano(const int nonemptymgi, const int timestep, const int iter
 
       printlog("{} ", ionstage);
 
-      sfmatrix_add_excitation(sfmatrixuppertri, nonemptymgi, element, ion);
+      sfmatrix_accumulate_excitation(excitationbands, nonemptymgi, element, ion);
 
       if ((ion < nions - 1)) {
         sfmatrix_add_ionisation(sfmatrixuppertri, Z, ionstage, nnion);
@@ -2658,6 +2692,8 @@ void solve_spencerfano(const int nonemptymgi, const int timestep, const int iter
       printlnlog("");
     }
   }
+
+  sfmatrix_apply_excitation(sfmatrixuppertri, excitationbands);
 
   const auto yfunc = sfmatrix_solve(sfmatrixuppertri);
   constexpr bool verbose = false;
