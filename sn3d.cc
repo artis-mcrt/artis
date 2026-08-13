@@ -852,12 +852,20 @@ void setup_runoutputfolder() {
       std::abort();
     }
 
-    // not having the log symlink is no reason to stop the simulation, so just warn if it cannot be created
-    const auto linktarget = get_runoutputfolder_filepath(linkname);
-    std::filesystem::remove(linkname, ec);
-    std::filesystem::create_symlink(linktarget, linkname, ec);
-    if (ec) {
-      std::println(stderr, "[warning] could not create symlink '{}' to '{}': {}", linkname, linktarget, ec.message());
+    if (std::filesystem::equivalent(globals::runoutputfolder, ".", ec)) {
+      // -o names the simulation folder itself, so the log will be at the link's path anyway and a symlink
+      // would point at itself. Just remove any symlink left by a previous run with a real output folder.
+      if (std::filesystem::is_symlink(linkname, ec)) {
+        std::filesystem::remove(linkname, ec);
+      }
+    } else {
+      // not having the log symlink is no reason to stop the simulation, so just warn if it cannot be created
+      const auto linktarget = get_runoutputfolder_filepath(linkname);
+      std::filesystem::remove(linkname, ec);
+      std::filesystem::create_symlink(linktarget, linkname, ec);
+      if (ec) {
+        std::println(stderr, "[warning] could not create symlink '{}' to '{}': {}", linkname, linktarget, ec.message());
+      }
     }
   }
   // the folder must exist before any rank opens its log file there
