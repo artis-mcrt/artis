@@ -859,6 +859,19 @@ void setup_runoutputfolder() {
         std::filesystem::remove(linkname, ec);
       }
     } else {
+      // clear out diagnostic files left in the folder by a previous run, so that e.g. a rerun with fewer
+      // ranks does not leave a mixture of new estimator files and stale ones from ranks that no longer exist
+      for (const auto& entry : std::filesystem::directory_iterator(globals::runoutputfolder, ec)) {
+        const auto filename = entry.path().filename().string();
+        const bool is_diagfile = (filename.starts_with("output_") && filename.ends_with(".txt")) ||
+                                 ((filename.starts_with("estimators_") || filename.starts_with("nlte_") ||
+                                   filename.starts_with("radfield_") || filename.starts_with("macroatom_")) &&
+                                  filename.ends_with(".out"));
+        if (is_diagfile) {
+          std::filesystem::remove(entry.path(), ec);
+        }
+      }
+
       // not having the log symlink is no reason to stop the simulation, so just warn if it cannot be created
       const auto linktarget = get_runoutputfolder_filepath(linkname);
       std::filesystem::remove(linkname, ec);
