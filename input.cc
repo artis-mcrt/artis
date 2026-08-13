@@ -2085,6 +2085,9 @@ void update_parameterfile(const int nts) {
           line.resize(line.find('#'));
         }
 
+        // strip trailing whitespace so that the comment column doesn't shift on repeated rewrites
+        line.resize(line.find_last_not_of(" \t") + 1);
+
         // pad the data field out to the comment column, but never truncate it
         if (std::ssize(line) < commentstart) {
           line.resize(commentstart, ' ');
