@@ -515,6 +515,13 @@ void nltepop_matrix_add_boundbound(const int nonemptymgi, const int element, con
       const auto alltransindex = alltrans_startdown + i;
       const int lower = globals::alltrans.targetlevelindex[alltransindex];
       assert_testmodeonly(lower >= 0 && lower < nlevels);
+      const int lower_index = levelindices[lower];
+      if (lower_index == level_index) {
+        // both endpoints are folded into the same superlevel, so every rate below would be subtracted from
+        // and added back to the same matrix element and cancel. Such a transition only redistributes
+        // population within the superlevel, whose internal level ratios are held fixed by construction.
+        return;
+      }
       const auto lower_uniquelevelindex = ionuniquelevelindexstart + lower;
       const auto lower_statweight = stat_weight(lower_uniquelevelindex);
       const auto nnlevel_lower = levelpops[lower];
@@ -527,7 +534,6 @@ void nltepop_matrix_add_boundbound(const int nonemptymgi, const int element, con
           col_deexcitation_ratecoeff(T_e, clumpednne, epsilon_trans, statweight, lower_statweight, alltransindex) *
           s_renorm[level];
 
-      const int lower_index = levelindices[lower];
       const auto matrix_index_upper_upper = matrix_index_level_level;
       const auto matrix_index_lower_upper = (lower_index * nlte_dimension) + level_index;
 
@@ -545,6 +551,11 @@ void nltepop_matrix_add_boundbound(const int nonemptymgi, const int element, con
       const auto alltransindex = alltrans_startup + i;
       const int upper = globals::alltrans.targetlevelindex[alltransindex];
       assert_testmodeonly(upper >= 0 && upper < nlevels);
+      const int upper_index = levelindices[upper];
+      if (upper_index == level_index) {
+        // superlevel-internal transition: see the matching check in the de-excitation loop above
+        return;
+      }
       const auto upper_uniquelevelindex = ionuniquelevelindexstart + upper;
       const double epsilon_trans = epsilon(upper_uniquelevelindex) - epsilon_level;
       const auto upper_statweight = stat_weight(upper_uniquelevelindex);
@@ -562,7 +573,6 @@ void nltepop_matrix_add_boundbound(const int nonemptymgi, const int element, con
       const double NTC =
           nonthermal::nt_excitation_ratecoeff(nonemptymgi, level, upper, alltransindex) * s_renorm[level];
 
-      const int upper_index = levelindices[upper];
       const auto matrix_index_lower_lower = matrix_index_level_level;
       const auto matrix_index_upper_lower = (upper_index * nlte_dimension) + level_index;
 
