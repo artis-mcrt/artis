@@ -178,7 +178,7 @@ constexpr double E_init_ev = [] {
 // row energy E = engrid(i)).
 // rhsvec[i] discretises it as a left-endpoint rectangle sum that includes point i itself. This matches
 // the convention used for the integrals over y(E') on the left-hand side, where
-// sfmatrix_add_excitation() and sfmatrix_add_ionisation() both sum from j = i with weight DELTA_E, and
+// sfmatrix_apply_excitation() and sfmatrix_add_ionisation() both sum from j = i with weight DELTA_E, and
 // the convention used for E_init_ev above.
 constexpr auto rhsvec = [] {
   std::array<double, SFPTS> _rhsvec{};
@@ -1044,7 +1044,7 @@ auto N_e(const int nonemptymgi, const double energy, const std::array<double, SF
           const double epsilon_trans = epsilon(element, ion, upper) - epsilon_lower;
           const double epsilon_trans_ev = epsilon_trans / EV;
           if (epsilon_trans_ev < SF_EMIN) {
-            // sfmatrix_add_excitation() does not include these transitions in the solution, so skip
+            // sfmatrix_accumulate_excitation() does not include these transitions in the solution, so skip
             // them here too for a consistent energy accounting
             continue;
           }
@@ -1673,7 +1673,7 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const std::a
 
           const double epsilon_trans = epsilon(element, ion, upper) - epsilon_lower;
           if (epsilon_trans / EV < SF_EMIN) {
-            // sfmatrix_add_excitation() does not include these transitions in the solution (their
+            // sfmatrix_accumulate_excitation() does not include these transitions in the solution (their
             // energy sink is below the grid), so exclude them from the excitation fractions and the
             // stored excitation list too. Otherwise they would contribute to frac_excitation (making
             // frac_sum differ from 1.0) and receive packet excitation events and NLTE rates that the
@@ -1902,8 +1902,10 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const std::a
 // equal nbinsfull therefore share one banded write pattern, so their cross sections are summed here first
 // and the band is written to the matrix once per distinct width by sfmatrix_apply_excitation().
 struct ExcitationBand {
-  std::vector<double> interior;  // sum over transitions of nnlevel * xs[j] * DELTA_E (empty when nbinsfull == 0)
-  std::vector<double> endpoint;  // sum over transitions of nnlevel * xs[j] * (epsilon_trans_ev - nbinsfull * DELTA_E)
+  // sum over transitions of nnlevel * xs[j] * DELTA_E
+  std::vector<double> interior = std::vector<double>(SFPTS, 0.);
+  // sum over transitions of nnlevel * xs[j] * (epsilon_trans_ev - nbinsfull * DELTA_E)
+  std::vector<double> endpoint = std::vector<double>(SFPTS, 0.);
 };
 
 // accumulate the excitation terms of KF92 equation 7 for one ion into the per-band-width sums. A primary
@@ -1914,8 +1916,8 @@ struct ExcitationBand {
 // The integral is discretised with quadrature weight DELTA_E per column; the final column, which contains
 // the endpoint E + epsilon_trans, gets only the partial weight epsilon_trans_ev - nbinsfull * DELTA_E.
 // (a std::map keyed by band width keeps the iteration order deterministic for reproducible builds)
-void sfmatrix_add_excitation(std::map<int, ExcitationBand>& excitationbands, const int nonemptymgi, const int element,
-                             const int ion) {
+void sfmatrix_accumulate_excitation(std::map<int, ExcitationBand>& excitationbands, const int nonemptymgi,
+                                    const int element, const int ion) {
   // excitation terms
 
   const int nlevels_all = get_nlevels(element, ion);
@@ -1944,27 +1946,18 @@ void sfmatrix_add_excitation(std::map<int, ExcitationBand>& excitationbands, con
       const auto [vec_xs_excitation, xsstartindex] =
           get_xs_excitation_vector(alltransindex, statweight_lower, epsilon_trans);
       if (xsstartindex >= 0) {
-        const int nbinsfull = static_cast<int>(epsilon_trans_ev / DELTA_E);
+        const int nbinsfull = static_cast<int>(get_linearbinindex(epsilon_trans_ev, 0., DELTA_E));
         const double delta_en_actual = epsilon_trans_ev - (nbinsfull * DELTA_E);
 
         auto& band = excitationbands[nbinsfull];
-        if (band.endpoint.empty()) {
-          band.endpoint.resize(SFPTS, 0.);
-          if (nbinsfull > 0) {
-            band.interior.resize(SFPTS, 0.);
-          }
-        }
-
         const double weight_endpoint = nnlevel * delta_en_actual;
+        for (int j = xsstartindex; j < SFPTS; j++) {
+          band.endpoint[j] += weight_endpoint * vec_xs_excitation[j];
+        }
         if (nbinsfull > 0) {
           const double weight_interior = nnlevel * DELTA_E;
           for (int j = xsstartindex; j < SFPTS; j++) {
             band.interior[j] += weight_interior * vec_xs_excitation[j];
-            band.endpoint[j] += weight_endpoint * vec_xs_excitation[j];
-          }
-        } else {
-          for (int j = xsstartindex; j < SFPTS; j++) {
-            band.endpoint[j] += weight_endpoint * vec_xs_excitation[j];
           }
         }
       }
@@ -1979,17 +1972,25 @@ void sfmatrix_add_excitation(std::map<int, ExcitationBand>& excitationbands, con
 // (not inflated or truncated) contribution.
 void sfmatrix_apply_excitation(std::span<double> sfmatrixuppertri,
                                const std::map<int, ExcitationBand>& excitationbands) {
+  // one pass over the matrix rows, applying every band to a row while its cache lines are hot (the map
+  // is flattened first so the per-row inner loop does not traverse the tree)
+  std::vector<std::pair<int, const ExcitationBand*>> bands;
+  bands.reserve(excitationbands.size());
   for (const auto& [nbinsfull, band] : excitationbands) {
-    for (int i = 0; i < SFPTS; i++) {
-      const int rowoffset = uppertriangular(i, 0);
+    bands.emplace_back(nbinsfull, &band);
+  }
+
+  for (int i = 0; i < SFPTS; i++) {
+    const int rowoffset = uppertriangular(i, 0);
+    for (const auto& [nbinsfull, band] : bands) {
       const int stopindex = std::min(i + nbinsfull, SFPTS - 1);
 
       for (int j = i; j < stopindex; j++) {
-        sfmatrixuppertri[rowoffset + j] += band.interior[j];
+        sfmatrixuppertri[rowoffset + j] += band->interior[j];
       }
 
       sfmatrixuppertri[rowoffset + stopindex] +=
-          ((i + nbinsfull) < SFPTS) ? band.endpoint[stopindex] : band.interior[stopindex];
+          ((i + nbinsfull) < SFPTS) ? band->endpoint[stopindex] : band->interior[stopindex];
     }
   }
 }
@@ -2688,7 +2689,7 @@ void solve_spencerfano(const int nonemptymgi, const int timestep, const int iter
 
       printlog("{} ", ionstage);
 
-      sfmatrix_add_excitation(excitationbands, nonemptymgi, element, ion);
+      sfmatrix_accumulate_excitation(excitationbands, nonemptymgi, element, ion);
 
       if ((ion < nions - 1)) {
         sfmatrix_add_ionisation(sfmatrixuppertri, Z, ionstage, nnion);
