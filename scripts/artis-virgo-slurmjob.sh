@@ -30,7 +30,7 @@ source ./artis/scripts/exspec-before.sh
 hoursleft=$(python3 ./artis/scripts/slurmjobhoursleft.py ${SLURM_JOB_ID})
 echo "$(date): before srun sn3d. hours left: $hoursleft"
 
-time srun -- ./artis/sn3d -w $hoursleft > out.txt
+time srun -- ./artis/sn3d -w $hoursleft -o ${SLURM_JOB_ID}.slurm > out.txt
 
 hoursleftafter=$(python3 ./artis/scripts/slurmjobhoursleft.py ${SLURM_JOB_ID})
 echo "$(date): after srun sn3d finished. hours left: $hoursleftafter"
@@ -38,9 +38,6 @@ hourselapsed=$(python3 -c "print($hoursleft - $hoursleftafter)")
 echo "hours of runtime: $hourselapsed"
 cpuhrs=$(python3 -c "print($SLURM_NTASKS * $hourselapsed)")
 echo "ntasks: $SLURM_NTASKS -> CPU core hrs: $cpuhrs"
-
-mkdir ${SLURM_JOB_ID}.slurm
-source ./artis/scripts/movefiles.sh ${SLURM_JOB_ID}.slurm
 
 if grep -q "RESTART_NEEDED" "output_0-0.txt"
 then
