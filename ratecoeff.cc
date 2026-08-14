@@ -544,10 +544,9 @@ void setup_photoion_luts() {
       mem_usage_photoionluts / 1024. / 1024.);
 }
 
-DEVICE_FUNC auto select_continuum_nu(int element, const int lowerion, const int lower, const int upperionlevel,
+DEVICE_FUNC auto select_continuum_nu(int element, const int lowerion, const int lower, const int phixstargetindex,
                                      float T_e, rngstate_type& rngstate) -> double {
   const auto lower_uniquelevelindex = get_uniquelevelindex(element, lowerion, lower);
-  const int phixstargetindex = get_phixstargetindex(lower_uniquelevelindex, upperionlevel);
   const double E_threshold = get_phixs_threshold(element, lowerion, lower, phixstargetindex);
   const double nu_threshold = (1. / H) * E_threshold;
 
@@ -696,19 +695,27 @@ auto calculate_ionrecombcoeff(const int nonemptymgi, const float T_e, const int 
   const auto clumpednne = (nonemptymgi >= 0) ? grid::get_clumpfactor(nonemptymgi) * grid::get_nne(nonemptymgi) : 1.F;
   double alpha = 0.;
   const int maxrecombininglevel = get_maxrecombininglevel(element, lowerion + 1);
+  const int nlevels_ionising_lower = get_nlevels_ionising(element, lowerion);
+  const auto lowerionuniquelevelindexstart = get_ionuniquelevelindexstart(element, lowerion);
   for (int upper = 0; upper <= maxrecombininglevel; upper++) {
     const double nnupperlevel = calc_nnupperlevel(upper);
-    for (int lower = 0; lower < get_nlevels(element, lowerion); lower++) {
+    for (int lower = 0; lower < nlevels_ionising_lower; lower++) {
       if (lower_superlevel_only && (!level_isinsuperlevel(element, lowerion, lower))) {
         continue;
       }
 
-      double recomb_coeff = 0.;
+      const int phixstargetindex = find_phixstargetindex(lowerionuniquelevelindexstart + lower, upper);
+      if (phixstargetindex < 0) {
+        continue;  // recombination can only go to levels that can be photoionised to the upper level
+      }
+
+      double recomb_coeff{};
       if (collisional_not_radiative) {
-        const double epsilon_trans = epsilon(element, lowerion + 1, upper) - epsilon(element, lowerion, lower);
-        recomb_coeff += col_recombination_ratecoeff(T_e, clumpednne, element, upperion, upper, lower, epsilon_trans);
+        const double epsilon_trans = get_phixs_threshold(element, lowerion, lower, phixstargetindex);
+        recomb_coeff =
+            col_recombination_ratecoeff(T_e, clumpednne, element, upperion, lower, phixstargetindex, epsilon_trans);
       } else {
-        recomb_coeff += rad_recombination_ratecoeff(T_e, clumpednne, element, lowerion + 1, upper, lower);
+        recomb_coeff = rad_recombination_ratecoeff(T_e, clumpednne, element, upperion, lower, phixstargetindex);
       }
 
       const double alpha_level = recomb_coeff / clumpednne;

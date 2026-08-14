@@ -495,7 +495,8 @@ inline void update_includedionslevels_maxnions() {
   return globals::alllevels.nautoionuptrans[get_uniquelevelindex(element, ion, level)];
 }
 
-[[gnu::pure]] [[nodiscard]] inline auto get_phixstargetindex(const int uniquelevelindex, const int upperionlevel)
+// Index of upperionlevel in the level's photoionisation target list, or -1 if it is not a target
+[[gnu::pure]] [[nodiscard]] inline auto find_phixstargetindex(const int uniquelevelindex, const int upperionlevel)
     -> int {
   const auto nphixstargets = get_nphixstargets(uniquelevelindex);
   for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
@@ -503,21 +504,22 @@ inline void update_includedionslevels_maxnions() {
       return phixstargetindex;
     }
   }
-  assert_testmodeonly(false);
-  if constexpr (!TESTMODE) {
-    __builtin_unreachable();
-  }
   return -1;
 }
 
-// Return the emissiontype index of the continuum associated to the given level. Will be negative and ordered by
-// element/ion/level/phixstargetindex. (NOTE! this is not an index into globals::allcont, which is ordered by ascending
-// nu_edge)
-[[gnu::pure]] [[nodiscard]] inline auto get_emtype_continuum(const int element, const int ion, const int level,
-                                                             const int upperionlevel) -> int {
-  const auto uniquelevelindex = get_uniquelevelindex(element, ion, level);
-  const int phixstargetindex = get_phixstargetindex(uniquelevelindex, upperionlevel);
+// Return the emissiontype index of the continuum associated to the given level, by unique level index or by
+// (element, ion, level). Will be negative and ordered by element/ion/level/phixstargetindex. (NOTE! this is not
+// an index into globals::allcont, which is ordered by ascending nu_edge)
+[[gnu::pure]] [[nodiscard]] inline auto get_emtype_continuum(const int uniquelevelindex, const int phixstargetindex)
+    -> int {
+  assert_testmodeonly(phixstargetindex >= 0);
+  assert_testmodeonly(phixstargetindex < get_nphixstargets(uniquelevelindex));
   return -1 - globals::alllevels.bflist_start[uniquelevelindex] - phixstargetindex;
+}
+
+[[gnu::pure]] [[nodiscard]] inline auto get_emtype_continuum(const int element, const int ion, const int level,
+                                                             const int phixstargetindex) -> int {
+  return get_emtype_continuum(get_uniquelevelindex(element, ion, level), phixstargetindex);
 }
 
 // Inverse of get_emtype_continuum(): decode a (negative) bound-free continuum emission type into its index into

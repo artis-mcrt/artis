@@ -25,10 +25,11 @@ DEVICE_FUNC void calculate_cellcache_macroatom_transitionrates(int nonemptymgi, 
                                                           int alltransindex, double t_current) -> double;
 
 [[gnu::pure]] [[nodiscard]] auto rad_recombination_ratecoeff(float T_e, float clumpednne, int element, int upperion,
-                                                             int upperionlevel, int lowerionlevel) -> double;
+                                                             int lowerionlevel, int phixstargetindex) -> double;
 
 [[gnu::pure]] [[nodiscard]] auto col_recombination_ratecoeff(float T_e, float clumpednne, int element, int upperion,
-                                                             int upper, int lower, double epsilon_trans) -> double;
+                                                             int lower, int phixstargetindex, double epsilon_trans)
+    -> double;
 
 [[gnu::pure]] [[nodiscard]] auto col_ionisation_ratecoeff(float T_e, float clumpednne, int element, int ion, int lower,
                                                           int phixstargetindex, double epsilon_trans) -> double;
