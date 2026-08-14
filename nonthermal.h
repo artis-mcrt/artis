@@ -42,6 +42,8 @@ void calculate_deposition_rate_density(int nonemptymgi, HeatingCoolingRates& hea
                                        const decay::AnaEmissionPowerPerMass& emission_power_per_mass);
 // deposition rate density [erg/s/cm3] of the non-thermal leptons handled by the Spencer-Fano solver, i.e.
 // gamma + positron + electron. Alpha and spontaneous fission deposition are tracked separately.
+// This returns a stored value, so calculate_deposition_rate_density() must already have run for this cell in
+// this timestep; otherwise what comes back is the previous timestep's number.
 [[nodiscard]] DEVICE_FUNC auto get_ntlepton_deposition_rate_density(int nonemptymgi) -> double;
 [[nodiscard]] auto get_nt_frac_heating(int nonemptymgi) -> float;
 

@@ -2018,10 +2018,12 @@ void sfmatrix_add_ionisation(std::span<double> sfmatrixuppertri, const int Z, co
 
       const int xsstartindex = get_xs_ionisation_vector(vec_xs_ionisation, collionrow);
       assert_always(xsstartindex >= 0);
-      // The min and max clamps on the epsilon limits below are load-bearing, not defensive: they keep the energy
-      // transfer physical where the two raw limits would cross over, and dropping them leaves the heating,
-      // ionisation, and excitation fractions not summing to 100%. CMFGEN clamps the same way (Li, Dessart,
-      // Hillier 2012, doi:10.1111/j.1365-2966.2012.21198.x).
+      // The clamps on the epsilon limits below keep the energy transfer physical. The max on the lower limit is
+      // load-bearing rather than defensive: without it the integration range goes unphysical and the heating,
+      // ionisation, and excitation fractions stop summing to 100%. (The min on the upper limit is inert given
+      // this loop's start index, which already guarantees endash >= ionpot_ev, but it states the bound.) The
+      // same clamping is done in the CMFGEN source code; see Li, Dessart & Hillier (2012),
+      // doi:10.1111/j.1365-2966.2012.21198.x for the code's description.
       // The inner epsilon integral of P(E', epsilon - I) has the closed form
       //   [atan((epsilon - I) / J)] / atan((E' - I) / (2 J))
       // evaluated between the epsilon limits: J * atan((epsilon - I) / J) is the antiderivative of the
@@ -2215,9 +2217,12 @@ auto sfmatrix_solve(const std::span<const double> sfmatrixuppertri) -> std::arra
 // Solve U * x = b for x, where U is the compacted upper triangular matrix (indexed via uppertriangular()).
 // The loop structure here is frozen: back substitution bottom-up over row panels, each panel removing the
 // already-solved elements to its right with one in-order dot product per row, reproduces the floating-point
-// operation order of Eigen's scalar triangularView<Upper>().solve(). FP addition is not associative, so
-// regrouping these sums shifts the result at the ulp level and breaks the stored regression checksums. The
-// residual and error scoring in sfmatrix_solve() are part of the same contract.
+// operation order of the Eigen triangularView<Upper>().solve() call this replaced -- specifically its scalar
+// path, the one taken under EIGEN_DONT_VECTORIZE, which the Makefile sets for REPRODUCIBLE builds and which
+// are exactly the builds whose checksums are compared. The equivalence does not hold against Eigen's
+// vectorised path. FP addition is not associative, so regrouping these sums shifts the result at the ulp level
+// and breaks the stored checksums. The residual and error scoring in sfmatrix_solve() are part of the same
+// contract.
 void solve_upper_triangular(const std::span<const double> sfmatrixuppertri, const std::span<const double, SFPTS> bvec,
                             const std::span<double, SFPTS> xvec) {
   std::ranges::copy(bvec, xvec.begin());
@@ -2370,8 +2375,6 @@ void calculate_deposition_rate_density(const int nonemptymgi, HeatingCoolingRate
       (heatingcoolingrates.dep_gamma + heatingcoolingrates.dep_positron + heatingcoolingrates.dep_electron);
 }
 
-// A stored value: calculate_deposition_rate_density() must have been called for this cell earlier in the
-// timestep, or what is returned is the previous timestep's value.
 DEVICE_FUNC auto get_ntlepton_deposition_rate_density(const int nonemptymgi) -> double {
   assert_testmodeonly(ntlepton_deposition_rate_density_all_cells[nonemptymgi] >= 0);
   return ntlepton_deposition_rate_density_all_cells[nonemptymgi];
@@ -2534,9 +2537,11 @@ DEVICE_FUNC void do_ntlepton_deposit(Packet& pkt) {
     // zrand is initially between [0, 1), but we will subtract off each component of the deposition fractions
     // until we end and select transition_ij when zrand < dep_frac_transition_ij
 
-    // Gate on the stored fraction, not a separately normalised estimate, so the channel split below matches
-    // the partition the T_e solver assumes (see the k-packet probability note further down). Which ion is
-    // ionised is a separate, internally renormalised draw in select_nt_ionisation().
+    // Gate on the stored fraction so the channel split below matches the partition the T_e solver assumes (see
+    // the k-packet probability note further down). Do not substitute the live get_ntion_energyrate() over the
+    // deposition rate, tempting though it is given that select_nt_ionisation() just below picks the ion from
+    // those same live rates: it is a different estimator and does not sum with frac_excitation to give
+    // frac_heating. The ion choice is a separate, internally renormalised draw, so it need not agree here.
     const double frac_ionisation = get_nt_frac_ionisation(nonemptymgi);
 
     if (zrand < frac_ionisation) {

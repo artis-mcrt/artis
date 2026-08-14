@@ -15,6 +15,7 @@ namespace gammapkt {
 void init_gamma_data();
 DEVICE_FUNC void pellet_gamma_decay(Packet& pkt);
 DEVICE_FUNC void do_gamma(Packet& pkt, int nts, double t2);
+
 // Frequency [Hz] of a random gamma ray from a nuclide's decay spectrum, or -1 if it has no spectrum. Callers
 // assign the result to pkt.nu_cmf, where the negative value signals pellet_gamma_decay() to deposit the decay
 // energy locally as a k-packet instead of launching a gamma packet.

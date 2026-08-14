@@ -388,7 +388,6 @@ auto find_converged_nne(const int nonemptymgi, double nne_max, const bool force_
   return ionfractions;
 }
 
-// Calculate occupation population of a level assuming LTE excitation
 [[gnu::pure]] [[nodiscard]] auto calculate_levelpop_boltzmann(const int nonemptymgi, const int element, const int ion,
                                                               const int level) -> double {
   testmodeassert_valid_level(element, ion, level);
@@ -406,8 +405,6 @@ auto find_converged_nne(const int nonemptymgi, double nne_max, const bool force_
           exp(-E_aboveground / KB / T_exc));
 }
 
-// Return the population of a level, applying the MINPOP floor when the element is present (or 0 when it is absent),
-// unless the underlying calculation flags that the floor should be skipped.
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto calculate_levelpop(const int nonemptymgi, const int element, const int ion,
                                                                 const int level) -> double {
   const auto [nn, skipminpop] = calculate_levelpop_nominpop(nonemptymgi, element, ion, level);
@@ -471,8 +468,6 @@ void set_groundlevelpops(const int nonemptymgi, const int element, const float n
   }
 }
 
-// Determine the electron number density for a given cell using a root
-// solver and calculate the dependent level populations.
 auto calculate_ion_balance_nne(const int nonemptymgi) -> void {
   const bool force_saha = globals::lte_iteration || grid::thick_allcells[nonemptymgi] == 1;
 

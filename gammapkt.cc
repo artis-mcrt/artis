@@ -170,8 +170,13 @@ void read_decaydata() {
     }
   }
 
-  // Hard-coded mean gamma energies per decay for the only two nuclides the loop above leaves without a
-  // spectrum. Their energy is deposited as a k-packet rather than sampled, so the mean is all that is needed.
+  // Frozen legacy mean gamma energies per decay for 52Fe and 52Mn: not taken from the current decay data, and
+  // changing them shifts results and the stored regression checksums. The loop above leaves these two without
+  // a spectrum (it builds a single-line stand-in only when the tabulated gamma energy is non-zero, which
+  // theirs is not), so their energy is deposited as a k-packet rather than sampled and the mean is all that is
+  // needed. Note that other nuclides with no table and zero tabulated gamma energy also end up with an empty
+  // spectrum; they simply never reach choose_gamma_ray(), because a zero gamma energy routes the pellet down
+  // the particle-decay branch in decay.cc instead.
   // The .empty() test must stay: overwriting an existing spectrum's mean would leave choose_gamma_ray()
   // normalising by a total that does not match the lines it samples.
   if (decay::nuc_exists(26, 52) && gamma_spectra[decay::get_nucindex(26, 52)].empty()) {

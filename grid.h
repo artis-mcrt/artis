@@ -80,9 +80,9 @@ void set_element_meanweight(std::ptrdiff_t nonemptymgi, int element, float meanw
 //    density and abundances. Several propagation cells can share one model cell (get_numpropcells()).
 //  - nonemptymgi: model cells containing matter, [0, get_nonempty_npts_model()). The per-cell physics arrays
 //    are allocated over only these, so this is the index the physics modules use.
-// The two converters below return -1 for a propagation cell containing no matter, so check the result before
-// indexing a per-cell array.
+// returns -1 for a propagation cell containing no matter, so check before indexing a per-cell array
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_propcell_modelgridindex(int cellindex) -> int;
+// returns -1 for a propagation cell containing no matter, so check before indexing a per-cell array
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_propcell_nonemptymgi(int cellindex) -> int;
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_cellindex_from_pos(const Vec3d& pos, double time) -> int;
 void read_ejecta_model();

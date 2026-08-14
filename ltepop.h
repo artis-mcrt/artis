@@ -14,7 +14,9 @@
 #include "grid.h"
 #include "mpi_logging.h"
 
-// Level population [cm^-3]: NLTE where the solver provided one, else Boltzmann off the ground level.
+// Level population [cm^-3]: NLTE where the solver provided one, else Boltzmann off the ground level. Floored at
+// MINPOP when the element is present (0 when it is absent), except where the underlying calculation flags that
+// the floor should be skipped, which it does for populations that came from the NLTE solver.
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto calculate_levelpop(int nonemptymgi, int element, int ion, int level)
     -> double;
 
@@ -23,10 +25,12 @@
 [[gnu::pure]] [[nodiscard]] auto calculate_levelpop_boltzmann(int nonemptymgi, int element, int ion, int level)
     -> double;
 
-// Highest ion stage worth following in this cell, as an ion index; higher stages are treated as unpopulated.
-// nne_hi is an assumed maximum electron density: the ion list is truncated where the running product of
-// nne_hi * phi overflows. force_saha selects Saha even for elements with NLTE levels (which otherwise return
-// all ions untruncated); pass it when the populations that follow will also be LTE.
+// Highest ion stage worth following in this cell, as an ion index, or -1 if the element has no ions. Higher
+// stages are treated as unpopulated. Truncation happens twice: at the first ion the radiation field cannot
+// reach (skipped under Saha, and defeated while non-thermal energy is being deposited, since that can still
+// populate the ions above), and then where the running product of nne_hi * phi overflows, nne_hi being an
+// assumed maximum electron density. force_saha selects Saha even for elements with NLTE levels (which
+// otherwise return all ions untruncated); pass it when the populations that follow will also be LTE.
 [[nodiscard]] auto find_uppermost_ion(int nonemptymgi, int element, double nne_hi, bool force_saha) -> int;
 
 // Solve for the free electron density self-consistently (the ion balance depends on nne, which is itself the
@@ -35,15 +39,18 @@ void calculate_ion_balance_nne(int nonemptymgi);
 
 void calculate_cellpartfuncts(int nonemptymgi, int element);
 
-// Fractional ion abundances normalised to sum to one, indexed by ion index up to the cell's uppermost_ion.
-// use_phi_saha selects the Saha balance rather than the photoionisation/recombination balance.
+// Fractional ion abundances indexed by ion index, normally normalised to sum to one. use_phi_saha selects the
+// Saha balance rather than the photoionisation/recombination balance. Derive the upper bound from the returned
+// vector's own size, not from the cell's uppermost_ion: the result is empty when uppermost_ion is negative, and
+// non-finite entries are zeroed, after which it no longer sums to one.
 [[nodiscard]] auto calculate_ionfractions(int element, int nonemptymgi, double nne, bool use_phi_saha)
     -> std::vector<double>;
 
 // Set ground level populations from Saha LTE or photoionisation equilibrium. Writes every ion of the element
 // unconditionally, so callers must themselves skip elements whose populations the NLTE solver owns (or call it
-// deliberately to overwrite them). force_saha as for find_uppermost_ion(); works up to the cell's stored
-// uppermost_ion, so that must already be consistent with the balance chosen here.
+// deliberately to overwrite them). force_saha only selects the Saha phi factors here; unlike in
+// find_uppermost_ion() it does not also gate on whether the element has NLTE levels. Works up to the cell's
+// stored uppermost_ion, so that must already be consistent with the balance chosen here.
 void set_groundlevelpops(int nonemptymgi, int element, float nne, bool force_saha);
 
 // Level population [cm^-3] read from the cell cache rather than recomputed: the fast path for packet

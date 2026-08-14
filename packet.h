@@ -20,8 +20,8 @@
 //   RADIOACTIVE_PELLET --(decay to gamma rays)--> GAMMA
 //                      --(decay to a lepton/alpha)--> NONTHERMAL_PREDEPOSIT_{BETAMINUS,BETAPLUS,ALPHA}
 //                      --(spontaneous fission)--> NTALPHA_FISPROD_DEPOSITED
-//                      --(decay with no gamma line table, e.g. the 52Fe chain)--> KPKT
-//                      --(decayed before tmin)--> PRE_KPKT
+//                      --(decay with no gamma spectrum at all, e.g. the 52Fe chain)--> KPKT
+//                      --(decayed before tmin, or carrying the model's initial energy)--> PRE_KPKT
 //   GAMMA --(Compton/photoelectric/pair production)--> NTLEPTON_DEPOSITED or a PREDEPOSIT type
 //         --(leaves the grid)--> ESCAPE
 //   NONTHERMAL_PREDEPOSIT_* --(thermalises)--> NTLEPTON_DEPOSITED / NTALPHA_FISPROD_DEPOSITED
@@ -30,7 +30,8 @@
 //   NTALPHA_FISPROD_DEPOSITED --(all to heating)--> KPKT
 //   KPKT --(free-free, free-bound, or collisional emission)--> RPKT
 //   RPKT --(free-free or bound-free absorption)--> KPKT
-//        --(bound-bound activation, then collisional deactivation of the macro-atom)--> KPKT
+//        --(bound-bound absorption activates a macro-atom, which deactivates either
+//          radiatively, the usual line scattering/fluorescence, or collisionally)--> RPKT or KPKT
 //        --(leaves the grid)--> ESCAPE
 //
 // The values are written to packets*.out as type_id and escape_type_id and parsed by artistools, so they
@@ -41,10 +42,10 @@ enum packet_type : int {
   TYPE_RPKT = 11,
 
   // Normally destroyed by sampling a cooling channel, but do_kpkt() advances the packet by a small fraction of
-  // the timestep first, so a k-packet can also survive to the next timestep. In optically thick cells and
+  // the timestep first, so a k-packet can also survive to the next timestep. In optically thick cells, and
   // whenever RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY is set, that selection is skipped and
-  // do_kpkt_blackbody() re-emits immediately, from a Planck function that is weighted by the expansion opacity
-  // in the latter case.
+  // do_kpkt_blackbody() re-emits immediately: from a Planck function weighted by the expansion opacity when the
+  // option is set and the cell is not thick, and from a plain Planck function otherwise.
   TYPE_KPKT = 12,
 
   // Never stored in Packet::type: do_macroatom() runs to deactivation within one call. Used only as a
@@ -66,8 +67,10 @@ enum packet_type : int {
   TYPE_ESCAPE = 32,  // inactive; binned into spectra and light curves by escape_type and escape_time
   TYPE_RADIOACTIVE_PELLET = 100,  // decays at Packet::tdecay, moving with the homologous flow until then
 
-  // A pellet that decayed before tmin, re-emitted at tmin as a blackbody r-packet. update_pellet() scales its
-  // energy for the work done on the ejecta before tmin.
+  // Energy released at or before tmin, re-emitted at tmin as a blackbody r-packet: pellets that decayed before
+  // the simulation started (update_pellet() scales their energy for the work done on the ejecta in between),
+  // and, under INITIAL_PACKETS_ON with USE_MODEL_INITIAL_ENERGY, the model's own initial thermal energy, which
+  // enters as pellets with tdecay == tmin and so is not rescaled.
   TYPE_PRE_KPKT = 120,
 };
 
@@ -94,8 +97,10 @@ struct MacroAtomState {
   int element{-1};  // macro atom of type element (this is an element index)
   int ion{-1};  // in ionstage ion (this is an ion index)
   int level{-1};  // and level=level (this is a level index)
-  // Linelist index of the activating line for bb activated MAs, -99 else. Does not affect which transition is
-  // sampled; it feeds the resonance/up/down-scattering counters and the macroatom.out activline column.
+  // Linelist index of the activating line for bb activated MAs, -99 else. Does not affect which transition the
+  // macro-atom samples, but it is not diagnostic-only: rpkt.cc copies it into Packet::absorptiontype, which is
+  // the key for the bound-bound decomposition in absorption.out. It also feeds the resonance and
+  // up/down-scattering counters and the macroatom.out activline column.
   int activatingline{-99};
 };
 
@@ -118,12 +123,11 @@ struct Packet {
                        // its linelist index (to overcome numerical problems in propagating the rpkts).
   int nscatterings{0};  // records number of electron scatterings a r-pkt undergone since it was emitted
 
-  // exspec decomposes the spectra by these two. emissiontype is the most recent emission; trueemissiontype
-  // is carried unchanged through scatterings and macro-atom deactivations back to the last emission out of
-  // the thermal pool, attributing energy to where it was thermalised rather than where it last scattered.
-  // trueemissiontype is reset to EMTYPE_NOTSET when the packet re-enters the thermal pool; emissiontype keeps
-  // its value until the next emission overwrites it.
-  int emissiontype{EMTYPE_NOTSET};  // records how the packet was emitted if it is a r-pkt
+  // The process of the MOST RECENT emission, one of the two keys exspec decomposes the spectra by (see
+  // trueemissiontype below). Overwritten by each emission rather than cleared when the packet re-enters the
+  // thermal pool, except under RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY, where the thermal frequency
+  // redistribution resets it to EMTYPE_NOTSET.
+  int emissiontype{EMTYPE_NOTSET};
   Vec3d em_pos{NAN, NAN, NAN};  // Position of the last emission (x,y,z).
   float em_time{-1.};  // [s]
   int absorptiontype{0};  // records linelistindex of the last absorption
@@ -131,7 +135,11 @@ struct Packet {
   double absorptionfreq{};  // records nu_rf of packet at last absorption
   double stokes_q{0.};  // normalised Stokes q = Q/I
   double stokes_u{0.};  // normalised Stokes u = U/I
-  int trueemissiontype = EMTYPE_NOTSET;  // emission type coming from a kpkt to rpkt (last thermal emission)
+  // The last emission out of the THERMAL POOL. Set when a k-packet emits and then carried unchanged through
+  // subsequent scatterings and macro-atom deactivations, so it attributes escaped energy to where it was
+  // thermalised rather than to the last surface it scattered off. Reset to EMTYPE_NOTSET at every site that
+  // returns the packet to the thermal pool, so the next radiative emission starts a fresh record.
+  int trueemissiontype = EMTYPE_NOTSET;
   Vec3d trueem_pos{NAN, NAN, NAN};
   float trueem_time{-1.};  // last thermal emission time [s]
   enum packet_type type {};  // type of packet (k-, r-, etc.)

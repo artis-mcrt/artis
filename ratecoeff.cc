@@ -370,9 +370,12 @@ void read_recombrate_file() {
           }
         }
 
-        // The low-n levels are now calibrated. Reconciling with the total below prefers to scale only the
-        // superlevel, whose lumped levels the atomic dataset represents least well, but falls back to scaling
-        // all levels when the superlevel cannot supply the shortfall or when the total is already exceeded.
+        // The low-n levels are calibrated only if input_rrc_low_n was tabulated and its multiplier passed the
+        // 0.05-2.0 acceptance test above; otherwise rrc is still the raw value. Reconciling with the total
+        // below scales the superlevel alone, whose lumped levels the atomic dataset represents least well,
+        // whenever the superlevel recombines at all, and scales every level otherwise or when rrc already
+        // exceeds the total. Note the superlevel branch applies whatever multiplier is needed, with none of
+        // the range checking the low-n branch does.
 
         printlnlog("  input_rrc_total: {:10.3e} [cm^3/s]", input_rrc_total);
 

@@ -815,13 +815,13 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
   // set NLTE level pops as invalid so that Boltzmann pops will be used instead
   nltepop_reset_element(nonemptymgi, element);
   calculate_cellpartfuncts(nonemptymgi, element);
-  // set_groundlevelpops() works up to the cell's stored uppermost_ion, which for an NLTE element is simply all
-  // ions (find_uppermost_ion() does not truncate those unless force_saha is set). Recompute it with
-  // force_saha = true first, so the ion range is truncated on the same LTE phi factors as the populations.
   printlnlog("  [warning] cell {} ts {}: NLTEPOP setting element Z={} level pops to LTE", nltelog.modelgridindex,
              nltelog.timestep, get_atomicnumber(element));
   const double nne_hi = grid::get_rho(nonemptymgi) / MH;
   constexpr bool force_saha = true;
+  // set_groundlevelpops() works up to the cell's stored uppermost_ion, which for an NLTE element is simply all
+  // ions (find_uppermost_ion() does not truncate those unless force_saha is set). Recompute it first, so the
+  // ion range is truncated on the same LTE phi factors as the populations below.
   grid::set_elements_uppermost_ion(nonemptymgi, element, find_uppermost_ion(nonemptymgi, element, nne_hi, force_saha));
   set_groundlevelpops(nonemptymgi, element, grid::get_nne(nonemptymgi), force_saha);
 }

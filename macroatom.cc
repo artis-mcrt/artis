@@ -606,8 +606,7 @@ void macroatom_open_file() {
                " nu_cmf_in nu_cmf_out nu_rf_in nu_rf_out");
 }
 
-// The approximate radiative and collisional rate coefficients that follow are declared and documented in
-// macroatom.h. They follow Kromer & Sim (2009), Sections 3.5.1-3.5.2, doi:10.1111/j.1365-2966.2009.15256.x.
+// The rate coefficients that follow are documented on their declarations in macroatom.h.
 [[gnu::pure]] [[nodiscard]] auto rad_excitation_ratecoeff(const int nonemptymgi, const double upper_statweight,
                                                           const double einstein_A, const double epsilon_trans,
                                                           const double nnlevel_lower, const double nnlevel_upper,
