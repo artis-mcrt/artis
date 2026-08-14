@@ -1911,7 +1911,6 @@ void read_ejecta_model() {
     printlnlog("Detected 2D model");
     npts_model = static_cast<ptrdiff_t>(npts_0) * npts_1;
   } else {
-    // for 1D and 3D, this was the total number of model cells
     npts_model = npts_0;
   }
 
