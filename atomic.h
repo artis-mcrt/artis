@@ -507,27 +507,19 @@ inline void update_includedionslevels_maxnions() {
   return -1;
 }
 
-// As find_phixstargetindex(), for callers that know upperionlevel is one of the level's targets
-[[gnu::pure]] [[nodiscard]] inline auto get_phixstargetindex(const int uniquelevelindex, const int upperionlevel)
+// Return the emissiontype index of the continuum associated to the given level, by unique level index or by
+// (element, ion, level). Will be negative and ordered by element/ion/level/phixstargetindex. (NOTE! this is not
+// an index into globals::allcont, which is ordered by ascending nu_edge)
+[[gnu::pure]] [[nodiscard]] inline auto get_emtype_continuum(const int uniquelevelindex, const int phixstargetindex)
     -> int {
-  const int phixstargetindex = find_phixstargetindex(uniquelevelindex, upperionlevel);
   assert_testmodeonly(phixstargetindex >= 0);
-  if constexpr (!TESTMODE) {
-    if (phixstargetindex < 0) {
-      __builtin_unreachable();
-    }
-  }
-  return phixstargetindex;
+  assert_testmodeonly(phixstargetindex < get_nphixstargets(uniquelevelindex));
+  return -1 - globals::alllevels.bflist_start[uniquelevelindex] - phixstargetindex;
 }
 
-// Return the emissiontype index of the continuum associated to the given level. Will be negative and ordered by
-// element/ion/level/phixstargetindex. (NOTE! this is not an index into globals::allcont, which is ordered by ascending
-// nu_edge)
 [[gnu::pure]] [[nodiscard]] inline auto get_emtype_continuum(const int element, const int ion, const int level,
-                                                             const int upperionlevel) -> int {
-  const auto uniquelevelindex = get_uniquelevelindex(element, ion, level);
-  const int phixstargetindex = get_phixstargetindex(uniquelevelindex, upperionlevel);
-  return -1 - globals::alllevels.bflist_start[uniquelevelindex] - phixstargetindex;
+                                                             const int phixstargetindex) -> int {
+  return get_emtype_continuum(get_uniquelevelindex(element, ion, level), phixstargetindex);
 }
 
 // Inverse of get_emtype_continuum(): decode a (negative) bound-free continuum emission type into its index into

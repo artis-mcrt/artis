@@ -194,9 +194,8 @@ auto columnindex_from_emissiontype(const int et) -> int {
   const int ion = globals::bflist[bfindex].ionindex;
   const int level = globals::bflist[bfindex].levelindex;
   const int phixstargetindex = globals::bflist[bfindex].phixstargetindex;
-  const int upperionlevel = get_phixsupperlevel(element, ion, level, phixstargetindex);
 
-  assert_always(get_emtype_continuum(element, ion, level, upperionlevel) == et);
+  assert_always(get_emtype_continuum(element, ion, level, phixstargetindex) == et);
 
   return (get_nelements() * get_max_nions()) + (element * get_max_nions()) + ion;
 }

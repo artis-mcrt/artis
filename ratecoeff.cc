@@ -544,10 +544,9 @@ void setup_photoion_luts() {
       mem_usage_photoionluts / 1024. / 1024.);
 }
 
-DEVICE_FUNC auto select_continuum_nu(int element, const int lowerion, const int lower, const int upperionlevel,
+DEVICE_FUNC auto select_continuum_nu(int element, const int lowerion, const int lower, const int phixstargetindex,
                                      float T_e, rngstate_type& rngstate) -> double {
   const auto lower_uniquelevelindex = get_uniquelevelindex(element, lowerion, lower);
-  const int phixstargetindex = get_phixstargetindex(lower_uniquelevelindex, upperionlevel);
   const double E_threshold = get_phixs_threshold(element, lowerion, lower, phixstargetindex);
   const double nu_threshold = (1. / H) * E_threshold;
 
@@ -712,9 +711,9 @@ auto calculate_ionrecombcoeff(const int nonemptymgi, const float T_e, const int 
 
       double recomb_coeff{};
       if (collisional_not_radiative) {
-        const double epsilon_trans = epsilon(element, lowerion + 1, upper) - epsilon(element, lowerion, lower);
-        recomb_coeff = col_recombination_ratecoeff(T_e, clumpednne, element, upperion, upper, lower, phixstargetindex,
-                                                   epsilon_trans);
+        const double epsilon_trans = get_phixs_threshold(element, lowerion, lower, phixstargetindex);
+        recomb_coeff =
+            col_recombination_ratecoeff(T_e, clumpednne, element, upperion, lower, phixstargetindex, epsilon_trans);
       } else {
         recomb_coeff = rad_recombination_ratecoeff(T_e, clumpednne, element, upperion, lower, phixstargetindex);
       }

@@ -160,7 +160,7 @@ DEVICE_FUNC void calculate_macroatom_transitionrates(std::span<double> levelrate
 
       const double R = rad_recombination_ratecoeff(T_e, clumpednne, element, ion, lower, phixstargetindex);
       const double C =
-          col_recombination_ratecoeff(T_e, clumpednne, element, ion, level, lower, phixstargetindex, epsilon_trans);
+          col_recombination_ratecoeff(T_e, clumpednne, element, ion, lower, phixstargetindex, epsilon_trans);
 
       sum_internal_down_lower += (R + C) * epsilon_target;
 
@@ -256,6 +256,7 @@ void do_macroatom_raddeexcitation(Packet& pkt, const int ionuniquelevelindexstar
   const int nlevels = get_nlevels_ionising(element, upperion - 1);
   const auto lowerionuniquelevelindexstart = get_ionuniquelevelindexstart(element, upperion - 1);
   int lowerionlevel = -1;
+  int selected_phixstargetindex = -1;
   for (int tmp_lowerionlevel = 0; tmp_lowerionlevel < nlevels; tmp_lowerionlevel++) {
     const int phixstargetindex =
         find_phixstargetindex(lowerionuniquelevelindexstart + tmp_lowerionlevel, upperionlevel);
@@ -270,6 +271,7 @@ void do_macroatom_raddeexcitation(Packet& pkt, const int ionuniquelevelindexstar
 
     if (targetval < rate) {
       lowerionlevel = tmp_lowerionlevel;
+      selected_phixstargetindex = phixstargetindex;
       break;
     }
   }
@@ -278,7 +280,7 @@ void do_macroatom_raddeexcitation(Packet& pkt, const int ionuniquelevelindexstar
   // set the new state
   const int lowerion = upperion - 1;
 
-  pkt.nu_cmf = select_continuum_nu(element, upperion - 1, lowerionlevel, upperionlevel, T_e, get_rngstate(pkt));
+  pkt.nu_cmf = select_continuum_nu(element, lowerion, lowerionlevel, selected_phixstargetindex, T_e, get_rngstate(pkt));
 
   stats::increment(stats::Counter::MA_STAT_DEACTIVATION_FB);
 
@@ -286,7 +288,7 @@ void do_macroatom_raddeexcitation(Packet& pkt, const int ionuniquelevelindexstar
   emit_rpkt(pkt);
 
   pkt.next_trans = -1;  // continuum transition, no restrictions for further line interactions
-  pkt.emissiontype = get_emtype_continuum(element, lowerion, lowerionlevel, upperionlevel);
+  pkt.emissiontype = get_emtype_continuum(lowerionuniquelevelindexstart + lowerionlevel, selected_phixstargetindex);
   pkt.nscatterings = 0;
   return lowerionlevel;
 }
@@ -513,8 +515,8 @@ DEVICE_FUNC void do_macroatom(Packet& pkt, const MacroAtomState& pktmastate) {
           const double epsilon_target = epsilon(lowerionuniquelevelindexstart + tmp_lower);
           const double epsilon_trans = epsilon_current - epsilon_target;
           const double R = rad_recombination_ratecoeff(T_e, clumpednne, element, ion, tmp_lower, phixstargetindex);
-          const double C = col_recombination_ratecoeff(T_e, clumpednne, element, ion, level, tmp_lower,
-                                                       phixstargetindex, epsilon_trans);
+          const double C =
+              col_recombination_ratecoeff(T_e, clumpednne, element, ion, tmp_lower, phixstargetindex, epsilon_trans);
           rate += (R + C) * epsilon_target;
           if (rate > targetrate) {
             lower = tmp_lower;
@@ -642,14 +644,14 @@ void macroatom_open_file() {
   return 0.;
 }
 
-// Radiative recombination rate into the lower level from the upper-ion level selected by the lower
-// level's phixstargetindex-th photoionisation target (see find_phixstargetindex()). Multiply by the
-// upper-level population to obtain a rate per second.
+// Radiative recombination rate from the upper-ion level given by the lower level's phixstargetindex-th
+// photoionisation target. Multiply by the upper-level population to obtain a rate per second.
 [[gnu::pure]] [[nodiscard]] auto rad_recombination_ratecoeff(const float T_e, const float clumpednne, const int element,
                                                              const int upperion, const int lowerionlevel,
                                                              const int phixstargetindex) -> double {
   const auto lowerionlower_uniquelevelindex = get_uniquelevelindex(element, upperion - 1, lowerionlevel);
-  // it's faster to only check this condition in the callers than to check it for every level
+  // callers must skip levels above maxrecombininglevel, which is cheaper than testing it here for every
+  // level (backstopped in testmode)
   assert_testmodeonly(get_phixsupperlevel(lowerionlower_uniquelevelindex, phixstargetindex) <=
                       get_maxrecombininglevel(element, upperion));
   const auto R_spont = clumpednne * get_spontrecombcoeff(lowerionlower_uniquelevelindex, phixstargetindex, T_e);
@@ -658,16 +660,14 @@ void macroatom_open_file() {
   return R_spont;
 }
 
-// Collisional (three-body) recombination rate, the detailed-balance reverse of col_ionisation_ratecoeff().
+// Collisional (three-body) recombination rate from the upper-ion level given by the lower level's
+// phixstargetindex-th photoionisation target; the detailed-balance reverse of col_ionisation_ratecoeff().
 // Multiply by the upper-level population to obtain a rate per second.
-// phixstargetindex is the index of upper in the lower level's photoionisation target list
-// (see find_phixstargetindex()).
 [[gnu::pure]] [[nodiscard]] auto col_recombination_ratecoeff(const float T_e, const float clumpednne, const int element,
-                                                             const int upperion, const int upper, const int lower,
+                                                             const int upperion, const int lower,
                                                              const int phixstargetindex, const double epsilon_trans)
     -> double {
   const auto lowerionlower_uniquelevelindex = get_uniquelevelindex(element, upperion - 1, lower);
-  assert_testmodeonly(get_phixsupperlevel(lowerionlower_uniquelevelindex, phixstargetindex) == upper);
   const double statw_lower = stat_weight(lowerionlower_uniquelevelindex);
 
   // Seaton approximation: Mihalas (1978), eq.5-79, p.134
@@ -677,7 +677,8 @@ void macroatom_open_file() {
 
   const double sigma_bf = (get_phixs_table(lowerionlower_uniquelevelindex)[0] *
                            get_phixsprobability(lowerionlower_uniquelevelindex, phixstargetindex));
-  const double statw_upper = stat_weight(element, upperion, upper);
+  const double statw_upper =
+      stat_weight(element, upperion, get_phixsupperlevel(lowerionlower_uniquelevelindex, phixstargetindex));
 
   // Expanded and simplified from
   // nne * nne * sf * 1.55e13 * std::pow(T_e, -0.5) * g * sigma_bf * exp(-E/KB/T_e) / (E/KB/T_e)

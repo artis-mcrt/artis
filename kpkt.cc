@@ -42,7 +42,7 @@ enum class CoolingType : std::uint8_t { FREEFREE, FREEBOUND, COLLEXC, COLLION };
 
 MPI_shared_array<const CoolingType> coolinglist_type;
 MPI_shared_array<const int> coolinglist_level;
-MPI_shared_array<const int> coolinglist_upperlevel;
+MPI_shared_array<const int> coolinglist_phixstargetindex;
 
 // Fraction of a time step that individual k-packets live before further processing. This
 // diffusion time breaks up the chains of continuous collisional interactions that would
@@ -147,7 +147,8 @@ auto calculate_cooling_rates_ion(const int nonemptymgi, const int element, const
           assert_testmodeonly(coolinglist_type[get_coolinglistoffset(element, ion) + coolinglistindex] ==
                               CoolingType::COLLION);
           assert_testmodeonly(coolinglist_level[get_coolinglistoffset(element, ion) + coolinglistindex] == level);
-          assert_testmodeonly(coolinglist_upperlevel[get_coolinglistoffset(element, ion) + coolinglistindex] == upper);
+          assert_testmodeonly(coolinglist_phixstargetindex[get_coolinglistoffset(element, ion) + coolinglistindex] ==
+                              phixstargetindex);
 
           coolinglistindex++;
         } else {
@@ -178,8 +179,8 @@ auto calculate_cooling_rates_ion(const int nonemptymgi, const int element, const
           assert_testmodeonly(coolinglist_type[get_coolinglistoffset(element, ion) + coolinglistindex] ==
                               CoolingType::FREEBOUND);
           assert_testmodeonly(coolinglist_level[get_coolinglistoffset(element, ion) + coolinglistindex] == level);
-          assert_testmodeonly(coolinglist_upperlevel[get_coolinglistoffset(element, ion) + coolinglistindex] ==
-                              get_phixsupperlevel(uniquelevelindex, phixstargetindex));
+          assert_testmodeonly(coolinglist_phixstargetindex[get_coolinglistoffset(element, ion) + coolinglistindex] ==
+                              phixstargetindex);
 
           coolinglistindex++;
         } else {
@@ -281,7 +282,7 @@ void setup_coolinglist() {
   assert_always(ncoolingterms > 0);
   auto temp_coolinglist_type = MPI_shared_array<CoolingType>(ncoolingterms);
   auto temp_coolinglist_level = MPI_shared_array<int>(ncoolingterms);
-  auto temp_coolinglist_upperlevel = MPI_shared_array<int>(ncoolingterms);
+  auto temp_coolinglist_phixstargetindex = MPI_shared_array<int>(ncoolingterms);
   const size_t mem_usage_coolinglist = ncoolingterms * (sizeof(CoolingType) + (2 * sizeof(int)));
   printlnlog("[info] mem_usage: coolinglist occupies {:.3f} MB", mem_usage_coolinglist / 1024. / 1024.);
 
@@ -297,7 +298,7 @@ void setup_coolinglist() {
       if (ioncharge > 0) {
         temp_coolinglist_type[i] = CoolingType::FREEFREE;
         temp_coolinglist_level[i] = -99;
-        temp_coolinglist_upperlevel[i] = -99;
+        temp_coolinglist_phixstargetindex[i] = -99;
         i++;
       }
 
@@ -305,9 +306,9 @@ void setup_coolinglist() {
         if (get_nuptrans(element, ion, level) > 0) {
           temp_coolinglist_type[i] = CoolingType::COLLEXC;
           temp_coolinglist_level[i] = level;
-          // upper level is not valid because this is the contribution of all upper levels combined - have to
-          // calculate individually when selecting a random process
-          temp_coolinglist_upperlevel[i] = -1;
+          // a collisional excitation is bound-bound, so there is no photoionisation target. This entry is
+          // the contribution of all upper levels combined, chosen individually when the process is selected
+          temp_coolinglist_phixstargetindex[i] = -1;
           i++;
         }
       }
@@ -318,13 +319,11 @@ void setup_coolinglist() {
 
         // collisional ionisation to higher ionisation stage
         for (int level = 0; level < nionisinglevels; level++) {
-          const auto uniquelevelindex = get_uniquelevelindex(element, ion, level);
-          const int nphixstargets = get_nphixstargets(uniquelevelindex);
+          const int nphixstargets = get_nphixstargets(element, ion, level);
           for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
-            const int upper = get_phixsupperlevel(uniquelevelindex, phixstargetindex);
             temp_coolinglist_type[i] = CoolingType::COLLION;
             temp_coolinglist_level[i] = level;
-            temp_coolinglist_upperlevel[i] = upper;
+            temp_coolinglist_phixstargetindex[i] = phixstargetindex;
             i++;
           }
         }
@@ -333,13 +332,11 @@ void setup_coolinglist() {
         // this should probably be considered cooling of the higher ion, but for simplicity we store in the list of the
         // lower ion
         for (int level = 0; level < nionisinglevels; level++) {
-          const auto uniquelevelindex = get_uniquelevelindex(element, ion, level);
-          const int nphixstargets = get_nphixstargets(uniquelevelindex);
+          const int nphixstargets = get_nphixstargets(element, ion, level);
           for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
-            const int upper = get_phixsupperlevel(uniquelevelindex, phixstargetindex);
             temp_coolinglist_type[i] = CoolingType::FREEBOUND;
             temp_coolinglist_level[i] = level;
-            temp_coolinglist_upperlevel[i] = upper;
+            temp_coolinglist_phixstargetindex[i] = phixstargetindex;
             i++;
           }
         }
@@ -352,7 +349,7 @@ void setup_coolinglist() {
   printlnlog("[info] setup_coolinglist: number of coolingterms {}", ncoolingterms);
   coolinglist_type = std::move(temp_coolinglist_type);
   coolinglist_level = std::move(temp_coolinglist_level);
-  coolinglist_upperlevel = std::move(temp_coolinglist_upperlevel);
+  coolinglist_phixstargetindex = std::move(temp_coolinglist_phixstargetindex);
   MPI_Barrier_node();
 
   printlnlog("kpkts diffuse {:g} of a time step's length", kpktdiffusion_timestep_fraction);
@@ -490,19 +487,19 @@ DEVICE_FUNC void do_kpkt(Packet& pkt, const double t2, const int nts) {
     // The k-packet converts directly into a r-packet by free-bound emission.
     const int lowerion = ion;
     const int lowerlevel = coolinglist_level[i];
-    const int upper = coolinglist_upperlevel[i];
+    const int phixstargetindex = coolinglist_phixstargetindex[i];
 
     // Sample the comoving-frame frequency from the energy distribution of this recombination continuum
     // (paper II, Sect. 4.2.2), i.e. by inverting the CDF of the energy-weighted emissivity over the
     // continuum's frequency range.
-    pkt.nu_cmf = select_continuum_nu(element, lowerion, lowerlevel, upper, T_e, get_rngstate(pkt));
+    pkt.nu_cmf = select_continuum_nu(element, lowerion, lowerlevel, phixstargetindex, T_e, get_rngstate(pkt));
 
     // and then emit the packet randomly in the comoving frame
     emit_rpkt(pkt);
 
     pkt.next_trans = -1;  // FLAG: transition history here not important, cont. process
     stats::increment(stats::Counter::K_STAT_TO_R_FB);
-    pkt.emissiontype = get_emtype_continuum(element, lowerion, lowerlevel, upper);
+    pkt.emissiontype = get_emtype_continuum(element, lowerion, lowerlevel, phixstargetindex);
     pkt.trueemissiontype = pkt.emissiontype;
     pkt.trueem_pos = pkt.em_pos;
     pkt.trueem_time = pkt.em_time;
@@ -559,7 +556,7 @@ DEVICE_FUNC void do_kpkt(Packet& pkt, const double t2, const int nts) {
     // the k-packet activates a macro-atom due to collisional ionisation
 
     const int upperion = ion + 1;
-    const int upper = coolinglist_upperlevel[i];
+    const int upper = get_phixsupperlevel(element, ion, coolinglist_level[i], coolinglist_phixstargetindex[i]);
 
     stats::increment(stats::Counter::MA_STAT_ACTIVATION_COLLION);
     stats::increment(stats::Counter::K_STAT_TO_MA_COLLION);

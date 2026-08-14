@@ -1771,7 +1771,6 @@ void write_bflist_file() {
       for (int level = 0; level < nlevels; level++) {
         const auto nphixstargets = get_nphixstargets(element, ion, level);
         for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
-          const int upperionlevel = get_phixsupperlevel(element, ion, level, phixstargetindex);
           globals::bflist[i].elementindex = element;
           globals::bflist[i].ionindex = ion;
           globals::bflist[i].levelindex = level;
@@ -1779,7 +1778,7 @@ void write_bflist_file() {
 
           const int et = -1 - i;
 
-          assert_always(et == get_emtype_continuum(element, ion, level, upperionlevel));
+          assert_always(et == get_emtype_continuum(element, ion, level, phixstargetindex));
 
           // check the we don't overload the same packet emission type numbers
           // as the special values for free-free scattering and not set
