@@ -495,7 +495,8 @@ inline void update_includedionslevels_maxnions() {
   return globals::alllevels.nautoionuptrans[get_uniquelevelindex(element, ion, level)];
 }
 
-[[gnu::pure]] [[nodiscard]] inline auto get_phixstargetindex(const int uniquelevelindex, const int upperionlevel)
+// Index of upperionlevel in the level's photoionisation target list, or -1 if it is not a target
+[[gnu::pure]] [[nodiscard]] inline auto find_phixstargetindex(const int uniquelevelindex, const int upperionlevel)
     -> int {
   const auto nphixstargets = get_nphixstargets(uniquelevelindex);
   for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
@@ -503,11 +504,20 @@ inline void update_includedionslevels_maxnions() {
       return phixstargetindex;
     }
   }
-  assert_testmodeonly(false);
-  if constexpr (!TESTMODE) {
-    __builtin_unreachable();
-  }
   return -1;
+}
+
+// As find_phixstargetindex(), for callers that know upperionlevel is one of the level's targets
+[[gnu::pure]] [[nodiscard]] inline auto get_phixstargetindex(const int uniquelevelindex, const int upperionlevel)
+    -> int {
+  const int phixstargetindex = find_phixstargetindex(uniquelevelindex, upperionlevel);
+  assert_testmodeonly(phixstargetindex >= 0);
+  if constexpr (!TESTMODE) {
+    if (phixstargetindex < 0) {
+      __builtin_unreachable();
+    }
+  }
+  return phixstargetindex;
 }
 
 // Return the emissiontype index of the continuum associated to the given level. Will be negative and ordered by
