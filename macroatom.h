@@ -19,25 +19,38 @@ DEVICE_FUNC void do_macroatom(Packet& pkt, const MacroAtomState& pktmastate);
 // the lazy mutex-guarded calculation in do_macroatom() cannot run safely on the device.
 DEVICE_FUNC void calculate_cellcache_macroatom_transitionrates(int nonemptymgi, int uniquelevelindex, double t_mid);
 
+// Approximate radiative and collisional rates, following Kromer & Sim (2009), Sections 3.5.1-3.5.2,
+// doi:10.1111/j.1365-2966.2009.15256.x. Throughout, the clumpednne argument is the cell's free electron
+// density multiplied by its clumping factor.
+
+// Radiative excitation rate. Multiply by the lower-level population to obtain a rate per second.
 [[gnu::pure]] [[nodiscard]] auto rad_excitation_ratecoeff(int nonemptymgi, double upper_statweight, double einstein_A,
                                                           double epsilon_trans, double nnlevel_lower,
                                                           double nnlevel_upper, double statweight_lower,
                                                           int alltransindex, double t_current) -> double;
 
+// Radiative recombination rate from the upper-ion level given by the lower level's phixstargetindex-th
+// photoionisation target. Multiply by the upper-level population to obtain a rate per second.
 [[gnu::pure]] [[nodiscard]] auto rad_recombination_ratecoeff(float T_e, float clumpednne, int element, int upperion,
                                                              int lowerionlevel, int phixstargetindex) -> double;
 
+// Collisional (three-body) recombination rate from the upper-ion level given by the lower level's
+// phixstargetindex-th photoionisation target; the detailed-balance reverse of col_ionisation_ratecoeff().
+// Multiply by the upper-level population to obtain a rate per second.
 [[gnu::pure]] [[nodiscard]] auto col_recombination_ratecoeff(float T_e, float clumpednne, int element, int upperion,
                                                              int lower, int phixstargetindex, double epsilon_trans)
     -> double;
 
+// Collisional ionisation rate. Multiply by the lower-level population to obtain a rate per second.
 [[gnu::pure]] [[nodiscard]] auto col_ionisation_ratecoeff(float T_e, float clumpednne, int element, int ion, int lower,
                                                           int phixstargetindex, double epsilon_trans) -> double;
 
+// Collisional de-excitation rate. Multiply by the upper-level population to obtain a rate per second.
 [[gnu::pure]] [[nodiscard]] auto col_deexcitation_ratecoeff(float T_e, float clumpednne, double epsilon_trans,
                                                             double upperstatweight, double lowerstatweight,
                                                             int alltransindex) -> double;
 
+// Collisional excitation rate. Multiply by the lower-level population to obtain a rate per second.
 [[gnu::pure]] [[nodiscard]] auto col_excitation_ratecoeff(float T_e, float clumpednne, double upperstatweight,
                                                           int alltransindex, double epsilon_trans,
                                                           double lowerstatweight) -> double;

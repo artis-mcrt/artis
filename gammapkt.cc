@@ -57,9 +57,10 @@ constexpr int xcom_max_atomic_number = USE_XCOM_GAMMAPHOTOION ? 100 : 0;
 
 std::array<std::vector<ElementPhotoionData>, xcom_max_atomic_number> photoion_data;
 
-// Gamma-ray energies expressed as frequencies [Hz]. NB: these are very slightly inconsistent with MEV / H
-// from constants.h (which gives 2.41805e+20 for 1 MeV); the historical values are kept here so that
-// results are unchanged.
+// Reference scales and thresholds [Hz] for the photoelectric and pair-production cross-section fits below
+// (the Compton path works from H * nu_cmf / ME / CLIGHT^2 instead). NB: slightly inconsistent with MEV / H
+// from constants.h, which gives 2.41805e+20 for 1 MeV. Kept as-is because changing them would shift results
+// and the stored regression checksums.
 constexpr double nu_100kev = 2.41326e+19;
 constexpr double nu_1mev = 2.41326e+20;
 constexpr double nu_1p022mev = 2.46636e+20;  // electron-positron pair rest mass energy (pair production threshold)
@@ -169,10 +170,10 @@ void read_decaydata() {
     }
   }
 
-  // Historical mean gamma energies for the nuclides that decay straight to k-packets. Only apply
-  // these where no gamma-ray line table was found: a table sets the mean energy from its own lines,
-  // and overwriting it would leave choose_gamma_ray() normalising its cumulative distribution by a
-  // total that does not match the lines it is sampling from.
+  // Hard-coded mean gamma energies per decay for the only two nuclides the loop above leaves without a
+  // spectrum. Their energy is deposited as a k-packet rather than sampled, so the mean is all that is needed.
+  // The .empty() test must stay: overwriting an existing spectrum's mean would leave choose_gamma_ray()
+  // normalising by a total that does not match the lines it samples.
   if (decay::nuc_exists(26, 52) && gamma_spectra[decay::get_nucindex(26, 52)].empty()) {
     decay::set_nucdecayenergygamma(decay::get_nucindex(26, 52), 0.86 * MEV);  // Fe52
   }
@@ -861,11 +862,7 @@ void init_gamma_data() {
 }
 
 [[nodiscard]] auto choose_gamma_ray(const int nucindex, rngstate_type& rngstate) -> double {
-  // Get the frequency [Hz] of a random gamma ray from the decay spectrum of a given nucleus.
-  // If no gamma spectrum is known, return -1.
-
   if (gamma_spectra[nucindex].empty()) {
-    // for historical consistency, Fe52 and Mn52 decay directly to k-packets, which is signalled by a negative nu_cmf
     const auto nuc_z = decay::get_nuc_z(nucindex);
     const auto nuc_a = decay::get_nuc_a(nucindex);
     assert_always((nuc_z == 26 && nuc_a == 52) || (nuc_z == 25 && nuc_a == 52));

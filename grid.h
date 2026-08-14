@@ -66,12 +66,22 @@ void init_grid();
 void set_element_meanweight(std::ptrdiff_t nonemptymgi, int element, float meanweight);
 [[gnu::pure]] [[nodiscard]] auto get_electronfrac(int nonemptymgi) -> double;
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_numpropcells(int modelgridindex) -> int;
+// must not be called for an empty model cell
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_nonemptymgi_of_mgi(int mgi) -> int;
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_mgi_of_nonemptymgi(std::ptrdiff_t nonemptymgi) -> int;
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_modelgridtype() -> GridType;
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_npts_model() -> int;
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_nonempty_npts_model() -> int;
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_t_model() -> double;
+// Three cell index spaces are used throughout ARTIS. They are all plain integers, so mixing them up compiles
+// cleanly but silently reads the wrong cell:
+//  - cellindex: propagation grid cell, [0, ngrid). The geometry packets move through; Packet::cellindex.
+//  - modelgridindex (mgi): input model grid cell, [0, get_npts_model()). Where the ejecta model file defines
+//    density and abundances. Several propagation cells can share one model cell (get_numpropcells()).
+//  - nonemptymgi: model cells containing matter, [0, get_nonempty_npts_model()). The per-cell physics arrays
+//    are allocated over only these, so this is the index the physics modules use.
+// The two converters below return -1 for a propagation cell containing no matter, so check the result before
+// indexing a per-cell array.
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_propcell_modelgridindex(int cellindex) -> int;
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_propcell_nonemptymgi(int cellindex) -> int;
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_cellindex_from_pos(const Vec3d& pos, double time) -> int;

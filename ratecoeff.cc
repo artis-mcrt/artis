@@ -370,8 +370,9 @@ void read_recombrate_file() {
           }
         }
 
-        // hopefully the RRC now matches the low_n value well, if it was defined
-        // Next, use the superlevel recombination rates to make up the excess needed to reach the total RRC
+        // The low-n levels are now calibrated. Reconciling with the total below prefers to scale only the
+        // superlevel, whose lumped levels the atomic dataset represents least well, but falls back to scaling
+        // all levels when the superlevel cannot supply the shortfall or when the total is already exceeded.
 
         printlnlog("  input_rrc_total: {:10.3e} [cm^3/s]", input_rrc_total);
 

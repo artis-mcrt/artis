@@ -301,8 +301,6 @@ auto find_converged_nne(const int nonemptymgi, double nne_max, const bool force_
 
 }  // anonymous namespace
 
-// Determine the highest ion stage of an element that retains a non-negligible population in a cell (higher ions
-// are truncated), using either Saha or photoionisation/recombination rate balance.
 [[nodiscard]] auto find_uppermost_ion(const int nonemptymgi, const int element, const double nne_hi,
                                       const bool force_saha) -> int {
   const int nions = get_nions(element);
@@ -352,8 +350,6 @@ auto find_converged_nne(const int nonemptymgi, double nne_max, const bool force_
   return uppermost_ion;
 }
 
-// Calculate the fractions of an element's population in each ionisation stage based on Saha LTE or ionisation
-// equilibrium
 [[nodiscard]] auto calculate_ionfractions(const int element, const int nonemptymgi, const double nne,
                                           const bool use_phi_saha) -> std::vector<double> {
   assert_testmodeonly(element < get_nelements());
@@ -433,8 +429,6 @@ void calculate_cellpartfuncts(const int nonemptymgi, const int element) {
   }
 }
 
-// If not already set by the NLTE solver, set the ground level populations from either Saha LTE or
-// ionisation/recombination balance (Photoionisation Equilibrium)
 void set_groundlevelpops(const int nonemptymgi, const int element, const float nne, const bool force_saha) {
   const int nions = get_nions(element);
 

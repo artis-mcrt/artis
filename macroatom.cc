@@ -606,9 +606,8 @@ void macroatom_open_file() {
                " nu_cmf_in nu_cmf_out nu_rf_in nu_rf_out");
 }
 
-// The approximate radiative and collisional rates below follow Kromer & Sim (2009), Sections 3.5.1-3.5.2,
-// doi:10.1111/j.1365-2966.2009.15256.x.
-// Radiative excitation rate. Multiply by the lower-level population to obtain a rate per second.
+// The approximate radiative and collisional rate coefficients that follow are declared and documented in
+// macroatom.h. They follow Kromer & Sim (2009), Sections 3.5.1-3.5.2, doi:10.1111/j.1365-2966.2009.15256.x.
 [[gnu::pure]] [[nodiscard]] auto rad_excitation_ratecoeff(const int nonemptymgi, const double upper_statweight,
                                                           const double einstein_A, const double epsilon_trans,
                                                           const double nnlevel_lower, const double nnlevel_upper,
@@ -644,8 +643,6 @@ void macroatom_open_file() {
   return 0.;
 }
 
-// Radiative recombination rate from the upper-ion level given by the lower level's phixstargetindex-th
-// photoionisation target. Multiply by the upper-level population to obtain a rate per second.
 [[gnu::pure]] [[nodiscard]] auto rad_recombination_ratecoeff(const float T_e, const float clumpednne, const int element,
                                                              const int upperion, const int lowerionlevel,
                                                              const int phixstargetindex) -> double {
@@ -660,9 +657,6 @@ void macroatom_open_file() {
   return R_spont;
 }
 
-// Collisional (three-body) recombination rate from the upper-ion level given by the lower level's
-// phixstargetindex-th photoionisation target; the detailed-balance reverse of col_ionisation_ratecoeff().
-// Multiply by the upper-level population to obtain a rate per second.
 [[gnu::pure]] [[nodiscard]] auto col_recombination_ratecoeff(const float T_e, const float clumpednne, const int element,
                                                              const int upperion, const int lower,
                                                              const int phixstargetindex, const double epsilon_trans)
@@ -689,7 +683,6 @@ void macroatom_open_file() {
   return C;
 }
 
-// Collisional ionisation rate. Multiply by the lower-level population to obtain a rate per second.
 [[gnu::pure]] [[nodiscard]] auto col_ionisation_ratecoeff(const float T_e, const float clumpednne, const int element,
                                                           const int ion, const int lower, const int phixstargetindex,
                                                           const double epsilon_trans) -> double {
@@ -712,7 +705,6 @@ void macroatom_open_file() {
   return C;
 }
 
-// Collisional de-excitation rate. Multiply by the upper-level population to obtain a rate per second.
 [[gnu::pure]] [[nodiscard]] auto col_deexcitation_ratecoeff(const float T_e, const float clumpednne,
                                                             const double epsilon_trans, const double upperstatweight,
                                                             const double lowerstatweight, const int alltransindex)
@@ -756,7 +748,6 @@ void macroatom_open_file() {
   return clumpednne * 8.629e-6 * static_cast<double>(coll_strength) / upperstatweight / std::sqrt(T_e);
 }
 
-// Collisional excitation rate. Multiply by the lower-level population to obtain a rate per second.
 [[gnu::pure]] [[nodiscard]] auto col_excitation_ratecoeff(const float T_e, const float clumpednne,
                                                           const double upperstatweight, const int alltransindex,
                                                           const double epsilon_trans, const double lowerstatweight)

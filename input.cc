@@ -1304,13 +1304,14 @@ auto read_compositiondata() -> std::vector<int> {
   assert_always(compositiondata >> nelements_in);
   globals::elements.resize(nelements_in);
 
-  // temperature to determine relevant ionstages
+  // Unused fields that the compositiondata.txt format still carries: ion stages come from the per-element
+  // ranges below, and abundances from the model file.
   int T_preset = 0;
   assert_always(compositiondata >> T_preset);
-  assert_always(T_preset == 0);  // no longer in use
+  assert_always(T_preset == 0);
   int homogeneous_abundances = 0;
   assert_always(compositiondata >> homogeneous_abundances);
-  assert_always(homogeneous_abundances == 0);  // no longer in use
+  assert_always(homogeneous_abundances == 0);
 
   auto nlevelsmax_readin = std::vector<int>(get_nelements());
   auto nions_readin = std::vector<int>(get_nelements());
@@ -1320,7 +1321,8 @@ auto read_compositiondata() -> std::vector<int> {
     int atomicnumber = 0;
     int lowermost_ionstage = 0;
     int uppermost_ionstage = 0;
-    double uniformabundance{NAN};  // no longer in use mode for setting uniform abundances
+    // unused column; abundances come from the model file (still range-checked below)
+    double uniformabundance{NAN};
     double mass_amu{NAN};
     assert_always(compositiondata >> atomicnumber >> nions_readin[element] >> lowermost_ionstage >>
                   uppermost_ionstage >> nlevelsmax_readin[element] >> uniformabundance >> mass_amu);

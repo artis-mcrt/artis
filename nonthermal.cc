@@ -1191,10 +1191,15 @@ auto get_nt_frac_excitation(const int nonemptymgi) -> float {
   return frac_excitation;
 }
 
-// compute the approximate work per ion pair without using the Spencer-Fano equation
-// Makes use of EXTREMELY SIMPLE approximations - high energy limits only (can be used as an alternative to the
-// Spencer-Fano solver)
-// Luke (2026-02-20): This is so far from the Spencer-Fano eff_ionpot that I think there is a mistake in the calculation
+// Reciprocal work per ion pair, 1/W, from the analytic estimate of Axelrod (1980): high-energy cross-section
+// limits, neglecting energy lost to free electrons. Used by nt_ionisation_ratecoeff_wfapprox() as the
+// alternative to the Spencer-Fano solve, and as the fallback eff_ionpot for ions with no collisional-ionisation
+// subshell data.
+//
+// WARNING: this disagrees with the Spencer-Fano eff_ionpot by more than the approximation should explain. One
+// candidate is this function's own Aconst (note that xs_ionisation_lotz() defines a separate constant of the
+// same name and value): it takes Axelrod's 10 keV-fitted A where Lotz's, 3.4x larger, suits the low energies
+// that set the heating and ionisation fractions. Treat ions relying on this fallback as uncertain.
 auto get_oneoverw_approx_axelrod(const int element, const int ion, const int nonemptymgi) -> double {
   // Work in terms of 1/W since this is actually what we want. It is given by sigma/(Latom + Lelec).
   // We are going to start by taking all the high energy limits and ignoring Lelec, so that the
@@ -1215,7 +1220,8 @@ auto get_oneoverw_approx_axelrod(const int element, const int ion, const int non
   // Axelrod 1980 says the constant A = 1.33e-14 [cm^2 eV^2] has been determined by normalising to the average of the
   // values given by Jacobs et al (1979) and McGuire (1977) at 10 keV. However, this reduces the accuracy of the
   // approximation at lower energies, and since we are mostly interested in the low energy end of the spectrum for
-  // calculating the heating and ionisation fractions, it would be better to use Lotz value of A = 4.5e-14 [cm2 eV2].
+  // calculating the heating and ionisation fractions, it would be better to use Lotz value of A = 4.5e-14 [cm2 eV2],
+  // a factor of 3.4 larger.
   constexpr double Aconst = 1.33e-14 * EV * EV;
 
   return Aconst * binding / Zbar / (2 * PI * pow4(QE));
@@ -2012,12 +2018,10 @@ void sfmatrix_add_ionisation(std::span<double> sfmatrixuppertri, const int Z, co
 
       const int xsstartindex = get_xs_ionisation_vector(vec_xs_ionisation, collionrow);
       assert_always(xsstartindex >= 0);
-      // Luke Shingles: the use of min and max on the epsilon limits keeps energies
-      // from becoming unphysical. This insight came from reading the
-      // CMFGEN Fortran source code (Li, Dessart, Hillier 2012, doi:10.1111/j.1365-2966.2012.21198.x)
-      // I had neglected this, so the limits of integration were incorrect. The fix didn't massively affect
-      // ionisation rates or spectra, but it was a source of error that led to energy fractions not adding up to
-      // 100%
+      // The min and max clamps on the epsilon limits below are load-bearing, not defensive: they keep the energy
+      // transfer physical where the two raw limits would cross over, and dropping them leaves the heating,
+      // ionisation, and excitation fractions not summing to 100%. CMFGEN clamps the same way (Li, Dessart,
+      // Hillier 2012, doi:10.1111/j.1365-2966.2012.21198.x).
       // The inner epsilon integral of P(E', epsilon - I) has the closed form
       //   [atan((epsilon - I) / J)] / atan((E' - I) / (2 J))
       // evaluated between the epsilon limits: J * atan((epsilon - I) / J) is the antiderivative of the
@@ -2208,12 +2212,12 @@ auto sfmatrix_solve(const std::span<const double> sfmatrixuppertri) -> std::arra
 
 }  // anonymous namespace
 
-// Solve U * x = b for x, where U is the compacted upper triangular matrix (indexed via uppertriangular()). The loop
-// structure replicates the scalar (EIGEN_DONT_VECTORIZE, as set by REPRODUCIBLE builds) code path of Eigen's
-// triangularView<Upper>().solve() that was previously used here, keeping the floating-point operation order and
-// therefore the stored test checksums unchanged: back substitution proceeds bottom-up over row panels, and each panel
-// first removes the contribution of the already-solved elements to the right with one in-order dot product per row.
-// The residual and error scoring in sfmatrix_solve() are part of the same contract.
+// Solve U * x = b for x, where U is the compacted upper triangular matrix (indexed via uppertriangular()).
+// The loop structure here is frozen: back substitution bottom-up over row panels, each panel removing the
+// already-solved elements to its right with one in-order dot product per row, reproduces the floating-point
+// operation order of Eigen's scalar triangularView<Upper>().solve(). FP addition is not associative, so
+// regrouping these sums shifts the result at the ulp level and breaks the stored regression checksums. The
+// residual and error scoring in sfmatrix_solve() are part of the same contract.
 void solve_upper_triangular(const std::span<const double> sfmatrixuppertri, const std::span<const double, SFPTS> bvec,
                             const std::span<double, SFPTS> xvec) {
   std::ranges::copy(bvec, xvec.begin());
@@ -2366,8 +2370,8 @@ void calculate_deposition_rate_density(const int nonemptymgi, HeatingCoolingRate
       (heatingcoolingrates.dep_gamma + heatingcoolingrates.dep_positron + heatingcoolingrates.dep_electron);
 }
 
-// get the non-thermal lepton deposition rate density (gamma + positron + electron, excluding alpha and
-// spontaneous fission) in erg / s / cm^3, previously stored by calculate_deposition_rate_density()
+// A stored value: calculate_deposition_rate_density() must have been called for this cell earlier in the
+// timestep, or what is returned is the previous timestep's value.
 DEVICE_FUNC auto get_ntlepton_deposition_rate_density(const int nonemptymgi) -> double {
   assert_testmodeonly(ntlepton_deposition_rate_density_all_cells[nonemptymgi] >= 0);
   return ntlepton_deposition_rate_density_all_cells[nonemptymgi];
@@ -2530,13 +2534,9 @@ DEVICE_FUNC void do_ntlepton_deposit(Packet& pkt) {
     // zrand is initially between [0, 1), but we will subtract off each component of the deposition fractions
     // until we end and select transition_ij when zrand < dep_frac_transition_ij
 
-    // Gate on the stored ionisation fraction so that the k-packet probability below is exactly
-    // 1 - frac_ionisation - frac_excitation = frac_heating, the deposition partition that
-    // analyse_sf_solution() stores and the T_e solver applies. (The live get_ntion_energyrate() /
-    // deposition estimate used previously is a different estimator and does not sum with frac_excitation
-    // to give frac_heating.) The live per-ion rates still choose which ion is ionised in
-    // select_nt_ionisation(), via a separate random draw that is renormalised internally, so the gate
-    // and the ion selection do not need to share a normalisation.
+    // Gate on the stored fraction, not a separately normalised estimate, so the channel split below matches
+    // the partition the T_e solver assumes (see the k-packet probability note further down). Which ion is
+    // ionised is a separate, internally renormalised draw in select_nt_ionisation().
     const double frac_ionisation = get_nt_frac_ionisation(nonemptymgi);
 
     if (zrand < frac_ionisation) {
