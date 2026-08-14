@@ -1,9 +1,8 @@
 #!/bin/bash -l
 
-#SBATCH --ntasks 128
+#SBATCH --ntasks 32
 #SBATCH --time=48:00:00
-#SBATCH --partition=cosma8-rome
-##SBATCH --partition=cosma8-milan
+#SBATCH --partition=cosma8-serial
 #SBATCH --account=dp033
 ##SBATCH --account=dp385
 #SBATCH --exclusive
