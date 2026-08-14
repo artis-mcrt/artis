@@ -2369,7 +2369,7 @@ void calculate_deposition_rate_density(const int nonemptymgi, HeatingCoolingRate
 // get the non-thermal lepton deposition rate density (gamma + positron + electron, excluding alpha and
 // spontaneous fission) in erg / s / cm^3, previously stored by calculate_deposition_rate_density()
 DEVICE_FUNC auto get_ntlepton_deposition_rate_density(const int nonemptymgi) -> double {
-  assert_always(ntlepton_deposition_rate_density_all_cells[nonemptymgi] >= 0);
+  assert_testmodeonly(ntlepton_deposition_rate_density_all_cells[nonemptymgi] >= 0);
   return ntlepton_deposition_rate_density_all_cells[nonemptymgi];
 }
 

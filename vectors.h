@@ -170,8 +170,6 @@ DEVICE_FUNC constexpr void set_pkt_restframe_from_cmf(Packet& pkt) {
                  NPHIBINS - 1);
 
   const int na = ((costhetabin * NPHIBINS) + phibin);
-  assert_always(na >= 0);
-  assert_always(na < MABINS);
 
   return na;
 }
