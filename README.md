@@ -101,7 +101,7 @@ brew install llvm open-mpi prek compiledb
 Install the pre-commit hooks and generate a compilation database for clang tools:
 ```sh
 prek install
-make clean && compiledb -n make TESTMODE=ON
+make clean && compiledb -n --full-path make TESTMODE=ON
 ```
 For editing, the clangd language server is recommended (e.g., with the [VS Code plugin](https://marketplace.visualstudio.com/items?itemName=llvm-vs-code-extensions.vscode-clangd)).
 
@@ -112,6 +112,8 @@ mpirun -np 8 ./sn3d&
 tail -f output_0-0.txt
 ```
 Press Ctrl+C to stop following the log file.
+
+To split a long simulation across several queued jobs, run sn3d with `-w WALLTIMELIMITHOURS`. When too little wall time remains to complete another timestep, the run finishes cleanly (writing the restart files and updating input.txt) and prints RESTART_NEEDED into the log, which the bundled cluster job scripts detect to submit a continuation job. The scripts pass the remaining SLURM allocation time automatically. Run `./sn3d -h` to list all command-line options.
 
 ### Output files
 A run writes the following into the simulation folder:
@@ -143,7 +145,7 @@ source ./setup_kilonova_1d.sh   # creates tests/kilonova_1d_testrun/
 [CI](.github/workflows/ci.yml) runs all of these on every push. It builds with `REPRODUCIBLE=ON FASTMATH=OFF MAX_NODE_SIZE=2` and compares md5 checksums of the output files against reference checksums stored in the tests/*_inputfiles folders. A change that legitimately alters the numerical results therefore needs new reference checksums, which maintainers regenerate using the "Update checksums" workflow. CI also compiles every artisoptions_*.h preset with gcc and clang, and the classic and NLTE nebular presets additionally with Apple Clang, nvc++, and hipcc (including the GPU code paths).
 
 ## Bundled scripts
-- clean.sh: Remove all output files while keeping input files and resetting the simulation to the beginning.
+- clean.sh: Remove all output files while keeping input files and resetting the simulation to the beginning. Job output folders created by the sn3d -o option are not removed and must be deleted manually.
 - movefiles.sh [DIRNAME]: Move the per-job artis output files from the simulation folder into another folder, for runs made without the sn3d -o option (the job scripts now pass -o so that the files are written there directly).
 - sumcorehourslogs.py: Calculate the summed core hours of all jobs using the timing information in the last line of the output*.txt log files. This cannot include runs where the job was terminated early.
 - sumcorehoursslurm.py: Calculate the summed core hours of all jobs from the slurm job output files.
@@ -182,7 +184,7 @@ Required when virtual packets are enabled (VPKT_ON in artisoptions.h). Sets the 
 Grid parameters, cell densities and nuclear composition.
 
 ### abundances.txt
-Per-cell elemental mass fractions (in case the set of isotopic abundances in model.txt is not complete).
+Required file with the per-cell elemental mass fractions, which include elements whose isotopic abundances are not given in model.txt.
 
 ### adata.txt
 One block per ion consisting of:
