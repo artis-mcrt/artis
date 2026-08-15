@@ -1958,6 +1958,12 @@ void read_parameterfile(std::span<Packet> packets) {
   std::istringstream{line} >> globals::timestep_initial >>
       globals::timestep_finish;  // number of start and end time step
   printlnlog("input: timestep_start {} timestep_finish {}", globals::timestep_initial, globals::timestep_finish);
+  if (globals::timestep_finish < globals::ntimesteps) {
+    printlnlog(
+        "input: note that the simulation will stop after timestep {}, before the final timestep {}. Restarts advance "
+        "the start timestep but never timestep_finish, so continuing past it will require editing input.txt",
+        globals::timestep_finish - 1, globals::ntimesteps - 1);
+  }
   assert_always(globals::timestep_initial < globals::ntimesteps);
   assert_always(globals::timestep_initial <= globals::timestep_finish);
   assert_always(globals::timestep_finish <= globals::ntimesteps);

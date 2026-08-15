@@ -168,7 +168,7 @@ These files go in the simulation folder, which should always contain the ARTIS s
 Run-time configuration with:
 - the random number seed, which must be a fixed value for reproducible runs
 - number of timesteps
-- the first and last timestep of this job, so that a long simulation can be split over several resubmitted jobs
+- the first and last timestep of this job. Normally the last timestep should be set to the number of timesteps: long simulations are split over resubmitted jobs by the wall-time mechanism (sn3d -w), which advances the start timestep on each restart but never the last one. Setting an earlier last timestep makes the simulation stop there (e.g. to inspect or post-process partial results) until input.txt is edited to continue
 - the start and end time in days
 - whether the run continues from the restart files of a previous job
 - number of pure LTE timesteps

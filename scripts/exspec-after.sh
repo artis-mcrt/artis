@@ -2,7 +2,14 @@
 
 # only compress the files if we successfully ran exspec
 if [[ -f emission.out || -f emission.out.zst || -f emissionpol.out ]]; then
-  rm packets_*.tmp gridsave_*.tmp vspecpol_*.tmp vpkt_grid_*.tmp
+  # remove the restart files only when the simulation has completed all of its timesteps. After a run
+  # that deliberately stopped at an earlier timestep_finish, they are needed to continue the model
+  # (when in doubt, e.g. if the log is unavailable, keep them: they can always be deleted manually)
+  if grep -qs "No need for restart" output_0-0.txt; then
+    rm -f packets_*.tmp gridsave_*.tmp vspecpol_*.tmp vpkt_grid_*.tmp
+  else
+    echo "The simulation has not completed all of its timesteps, so keeping the restart files"
+  fi
 
   mkdir -p speclc_angle_res
   mv *_res_*.out* speclc_angle_res/ || true
