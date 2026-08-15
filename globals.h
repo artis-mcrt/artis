@@ -186,28 +186,28 @@ struct AllLevels {
   MPI_shared_array<const int> nuptrans;
 
   // Number of autoionizing transition from this level
-  MPI_shared_array<int> nautoiondowntrans;
+  MPI_shared_array<const int> nautoiondowntrans;
 
   // Number of di-el captures up from this level
-  MPI_shared_array<int> nautoionuptrans;
+  MPI_shared_array<const int> nautoionuptrans;
 
   // index into globals::allautoion for first autoion from this level
-  MPI_shared_array<int> allautoion_start;
+  MPI_shared_array<const int> allautoion_start;
 
-  MPI_shared_array<int> closestgroundlevelcont;
+  MPI_shared_array<const int> closestgroundlevelcont;
 
   // index to start of photoionisation cross-sections table in global::allphixs
-  MPI_shared_array<int> phixsstart;
+  MPI_shared_array<const int> phixsstart;
 
   // number of target levels for photoionisation
-  MPI_shared_array<int> nphixstargets;
+  MPI_shared_array<const int> nphixstargets;
 
   // index into globals::allphixstargets for the first target level
-  MPI_shared_array<int> phixstargetstart;
+  MPI_shared_array<const int> phixstargetstart;
 
   // index of the bound-free continuum (for first target) sorted by element/ion/level/phixstargetindex (not an index
   // into the nu_edge-sorted allcont list!)
-  MPI_shared_array<int> bflist_start;
+  MPI_shared_array<const int> bflist_start;
 
   // index into cellcache allmacroatomictransitions for each level. This is
   // different to the alltrans index because two types of down transitions are stored separately
