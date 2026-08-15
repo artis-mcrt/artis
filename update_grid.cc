@@ -51,7 +51,7 @@ void write_to_estimators_file(std::ostream& estimators_file, const int nonemptym
              mgi, titer, grid::TR_allcells[nonemptymgi], T_e, grid::W_allcells[nonemptymgi],
              grid::TJ_allcells[nonemptymgi]);
   std::println(estimators_file, " grey_depth {:g} thick {} nne {:g} Ye {:g} tdays {:7.2f}",
-               grid::grey_depth_allcells[nonemptymgi], grid::thick_allcells[nonemptymgi], nne, Y_e,
+               grid::grey_depth_allcells[nonemptymgi], static_cast<int>(grid::thick_allcells[nonemptymgi]), nne, Y_e,
                globals::timesteps[timestep].mid / DAY);
 
   if (globals::total_nlte_levels > 0) {
@@ -433,15 +433,15 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
 
     // W == 1 indicates that this modelgrid cell was treated grey in the
     // last timestep. Therefore it has no valid Gamma estimators and must be treated in LTE at restart.
-    if (grid::thick_allcells[nonemptymgi] != 1 && grid::W_allcells[nonemptymgi] == 1) {
+    if (grid::thick_allcells[nonemptymgi] != grid::CellThickness::THICK && grid::W_allcells[nonemptymgi] == 1) {
       printlnlog(
           "force modelgrid cell {} to grey/LTE thick = 1 for update grid since existing W == 1. (will not have gamma "
           "estimators)",
           mgi);
-      grid::thick_allcells[nonemptymgi] = 1;
+      grid::thick_allcells[nonemptymgi] = grid::CellThickness::THICK;
     }
 
-    printlnlog("mgi {} thick: {} (during grid update)", mgi, grid::thick_allcells[nonemptymgi]);
+    printlnlog("mgi {} thick: {} (during grid update)", mgi, static_cast<int>(grid::thick_allcells[nonemptymgi]));
 
     for (int element = 0; element < get_nelements(); element++) {
       calculate_cellpartfuncts(nonemptymgi, element);
@@ -468,7 +468,7 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
 #endif
 
     // lte_iteration really means either ts 0 or nts < globals::num_lte_timesteps
-    if (globals::lte_iteration || grid::thick_allcells[nonemptymgi] == 1) {
+    if (globals::lte_iteration || grid::thick_allcells[nonemptymgi] == grid::CellThickness::THICK) {
       // LTE mode or grey mode (where temperature doesn't matter but is calculated anyway)
 
       const auto T_J = radfield::get_T_J_from_J(nonemptymgi);
@@ -557,14 +557,14 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
   if ((grey_optical_depth >= globals::optical_depth_is_thick) && (nts < globals::num_grey_timesteps)) {
     printlnlog("timestep {} cell {} is treated in grey approximation (chi_grey {:g} [cm2/g], tau {:g} >= {:g})", nts,
                mgi, grid::kappagrey_allcells[nonemptymgi], grey_optical_depth, globals::optical_depth_is_thick);
-    grid::thick_allcells[nonemptymgi] = 1;
+    grid::thick_allcells[nonemptymgi] = grid::CellThickness::THICK;
   } else if (VPKT_ON && (grey_optical_depth > vpkt::optical_depth_is_thick_vpkt)) {
-    grid::thick_allcells[nonemptymgi] = 2;
+    grid::thick_allcells[nonemptymgi] = grid::CellThickness::THICK_VPKT_ONLY;
   } else {
-    grid::thick_allcells[nonemptymgi] = 0;
+    grid::thick_allcells[nonemptymgi] = grid::CellThickness::THIN;
   }
 
-  if (grid::thick_allcells[nonemptymgi] == 1) {
+  if (grid::thick_allcells[nonemptymgi] == grid::CellThickness::THICK) {
     // cooling rates calculation can be skipped for thick cells
     // flag with negative numbers to indicate that the rates are invalid
     const auto ioncooling_contribs = kpkt::get_cell_ion_cooling_contribs(nonemptymgi);
@@ -592,7 +592,7 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
 
   if constexpr (RPKT_USE_EXPANSION_OPACITIES || VPKT_USE_EXPANSION_OPACITIES ||
                 RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.has_value()) {
-    if (grid::thick_allcells[nonemptymgi] != 1) {
+    if (grid::thick_allcells[nonemptymgi] != grid::CellThickness::THICK) {
       calculate_expansion_opacities(nonemptymgi);
     }
   }

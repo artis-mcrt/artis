@@ -509,7 +509,7 @@ void allocate_nonemptymodelcells() {
   nnetot_allcells = MPI_shared_array<float>(nonempty_npts_model, -1.);
   kappagrey_allcells = MPI_shared_array<float>(nonempty_npts_model, 0.);
   grey_depth_allcells = MPI_shared_array<float>(nonempty_npts_model, 0.);
-  thick_allcells = MPI_shared_array<int>(nonempty_npts_model, 0);
+  thick_allcells = MPI_shared_array<CellThickness>(nonempty_npts_model, CellThickness::THIN);
   if constexpr (USE_MICROCLUMPING) {
     clumpfactor_allcells = MPI_shared_array<float>(nonempty_npts_model, -1.);
   }
@@ -1027,7 +1027,7 @@ void read_grid_restart_data(const int timestep) {
       Te_allcells[nonemptymgi] = T_e;
       W_allcells[nonemptymgi] = W;
       TJ_allcells[nonemptymgi] = T_J;
-      thick_allcells[nonemptymgi] = thick;
+      thick_allcells[nonemptymgi] = static_cast<CellThickness>(thick);
       nne_allcells[nonemptymgi] = nne_in;
       nnetot_allcells[nonemptymgi] = nnetot_in;
     }
@@ -1116,7 +1116,7 @@ void assign_initial_temperatures() {
     TJ_allcells[nonemptymgi] = T_initial;
     TR_allcells[nonemptymgi] = T_initial;
     W_allcells[nonemptymgi] = 1.;
-    thick_allcells[nonemptymgi] = 0;
+    thick_allcells[nonemptymgi] = CellThickness::THIN;
   }
 
   // combine the diagnostic counts over the node communicator (the ranks of each node together cover every cell

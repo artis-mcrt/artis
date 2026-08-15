@@ -296,7 +296,8 @@ void do_packet(Packet& pkt, const double t2, const int nts, ContinuumOpacity& ch
     case TYPE_KPKT: {
       const int nonemptymgi = grid::get_propcell_nonemptymgi(pkt.cellindex);
       assert_testmodeonly(nonemptymgi >= 0);  // k-packets can only exist in non-empty cells
-      if (grid::thick_allcells[nonemptymgi] == 1 || RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.has_value()) {
+      if (grid::thick_allcells[nonemptymgi] == grid::CellThickness::THICK ||
+          RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.has_value()) {
         kpkt::do_kpkt_blackbody(pkt);
       } else {
         kpkt::do_kpkt(pkt, t2, nts);
@@ -347,7 +348,7 @@ auto get_packet_cellcachegroupid(const Packet& pkt) -> std::optional<int> {
     return std::nullopt;  // for empty cell, no cell cache required
   }
   const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(mgi);
-  if (grid::thick_allcells[nonemptymgi] == 1) {
+  if (grid::thick_allcells[nonemptymgi] == grid::CellThickness::THICK) {
     return std::nullopt;  // for thick cell, no cell cache required
   }
   if (!cellcache_singleslot) {

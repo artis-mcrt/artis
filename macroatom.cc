@@ -129,7 +129,7 @@ DEVICE_FUNC void calculate_macroatom_transitionrates(std::span<double> levelrate
         nonemptymgi, upper_statweight, alltrans.einstein_A[alltransindex], epsilon_trans, nnlevel,
         get_cellcache_levelpop(nonemptymgi, upper_uniquelevelindex), statweight, alltransindex, t_mid);
     const double C =
-        col_excitation_ratecoeff(T_e, clumpednne, upper_statweight, alltransindex, epsilon_trans, statweight);
+        col_excitation_ratecoeff(T_e, clumpednne, epsilon_trans, upper_statweight, statweight, alltransindex);
     const double NT = nonthermal::nt_excitation_ratecoeff(nonemptymgi, level, upper, alltransindex);
 
     sum_internal_up_same += (R + C + NT) * epsilon_current;
@@ -366,7 +366,8 @@ DEVICE_FUNC void do_macroatom(Packet& pkt, const MacroAtomState& pktmastate) {
 
   const auto clumpednne = grid::get_clumpfactor(nonemptymgi) * grid::get_nne(nonemptymgi);
 
-  assert_testmodeonly(grid::thick_allcells[nonemptymgi] != 1);  // macroatom should not be used in thick cells
+  assert_testmodeonly(grid::thick_allcells[nonemptymgi] !=
+                      grid::CellThickness::THICK);  // macroatom should not be used in thick cells
 
   const int element = pktmastate.element;
   int ion = pktmastate.ion;
@@ -748,8 +749,8 @@ void macroatom_open_file() {
 }
 
 [[gnu::pure]] [[nodiscard]] auto col_excitation_ratecoeff(const float T_e, const float clumpednne,
-                                                          const double upperstatweight, const int alltransindex,
-                                                          const double epsilon_trans, const double lowerstatweight)
+                                                          const double epsilon_trans, const double upperstatweight,
+                                                          const double lowerstatweight, const int alltransindex)
     -> double {
   const auto coll_strength = globals::alltrans.coll_str[alltransindex];
   const double eoverkt = epsilon_trans / (KB * T_e);

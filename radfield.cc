@@ -908,7 +908,7 @@ void normalise_bf_estimators(const int nts, const int nts_prev, const int titer,
     const auto bfestimcount = std::ssize(globals::bfestim_nu_edge);
     const ptrdiff_t nonempty_npts_model = grid::get_nonempty_npts_model();
     for (auto nonemptymgi = 0Z; nonemptymgi < nonempty_npts_model; nonemptymgi++) {
-      if (grid::thick_allcells[nonemptymgi] == 1) {
+      if (grid::thick_allcells[nonemptymgi] == grid::CellThickness::THICK) {
         continue;
       }
       const auto mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);

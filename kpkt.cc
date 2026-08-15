@@ -103,7 +103,7 @@ auto calculate_cooling_rates_ion(const int nonemptymgi, const int element, const
       const auto upper_statweight = stat_weight(ionuniquelevelindexstart + upper);
       const double C =
           nnlevel *
-          col_excitation_ratecoeff(T_e, clumpednne, upper_statweight, alltransindex, epsilon_trans, statweight) *
+          col_excitation_ratecoeff(T_e, clumpednne, epsilon_trans, upper_statweight, statweight, alltransindex) *
           epsilon_trans;
       C_ion += C;
       if constexpr (!update_cellcache_contribs) {
@@ -368,7 +368,8 @@ DEVICE_FUNC void calculate_cellcache_cooling_rates_ion(const int nonemptymgi, co
 DEVICE_FUNC void do_kpkt_blackbody(Packet& pkt) {
   const auto nonemptymgi = grid::get_propcell_nonemptymgi(pkt.cellindex);
 
-  if (RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.has_value() && grid::thick_allcells[nonemptymgi] != 1) {
+  if (RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.has_value() &&
+      grid::thick_allcells[nonemptymgi] != grid::CellThickness::THICK) {
     pkt.nu_cmf = sample_planck_times_expansion_opacity(nonemptymgi, get_rngstate(pkt));
   } else {
     pkt.nu_cmf = sample_planck_montecarlo(grid::Te_allcells[nonemptymgi], get_rngstate(pkt));
@@ -533,7 +534,7 @@ DEVICE_FUNC void do_kpkt(Packet& pkt, const double t2, const int nts) {
       const auto upper_statweight = stat_weight(upperuniquelevelindex);
       const double C =
           nnlevel *
-          col_excitation_ratecoeff(T_e, clumpednne, upper_statweight, alltransindex, epsilon_trans, statweight) *
+          col_excitation_ratecoeff(T_e, clumpednne, epsilon_trans, upper_statweight, statweight, alltransindex) *
           epsilon_trans;
       contrib += C;
       // Strict comparison ensures that a zero target skips leading transitions with zero contribution.

@@ -28,9 +28,17 @@ void setup_photoion_luts();
 [[nodiscard]] auto calculate_iongamma_per_ionpop(int nonemptymgi, int element, int lowerion,
                                                  bool collisional_not_radiative, bool force_bfintegral) -> double;
 
-[[nodiscard]] auto calculate_ionrecombcoeff(int nonemptymgi, float T_e, int element, int upperion, bool assume_lte,
-                                            bool collisional_not_radiative, bool lower_superlevel_only,
-                                            bool per_groundmultipletpop) -> double;
+struct IonRecombCoeffOptions {
+  bool assume_lte = false;
+  bool collisional_not_radiative = false;
+  bool lower_superlevel_only = false;
+  bool per_groundmultipletpop = false;
+};
+
+// pass nonemptymgi = -1 (no cell) with options.assume_lte = true for the startup recombination-rate calibration,
+// which uses LTE populations at the given temperature instead of a cell's solved populations
+[[nodiscard]] auto calculate_ionrecombcoeff(int nonemptymgi, float T_e, int element, int upperion,
+                                            IonRecombCoeffOptions options) -> double;
 
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_ion_spontrecombcoeff(int uniqueionindex, float T_e) -> double;
 
