@@ -146,7 +146,7 @@ constexpr auto get_ndim(const GridType gridtype) -> int {
 void set_rho_tmin(const int modelgridindex, const float x) { modelgrid_input[modelgridindex].rhoinit = x; }
 
 void set_initelectronfrac(const int modelgridindex, const float electronfrac) {
-  if (!(electronfrac >= 0. && electronfrac <= 1.001)) {
+  if (std::isnan(electronfrac) || electronfrac < 0. || electronfrac > 1.001) {
     printlnlog("[error] input Ye {:g} for cell {} is outside the physical range [0, 1]", electronfrac, modelgridindex);
     assert_always(false);
   }
