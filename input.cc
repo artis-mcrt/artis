@@ -127,7 +127,7 @@ constexpr auto inputlinecomments = std::array{
     "17: UNUSED rfcut: wavelength at which the radiation field switches from the nebular approximation to LTE.",
     "18: num_lte_timesteps",
     "19: optical_depth_is_thick num_grey_timesteps",
-    "20: UNUSED max_bf_continua: must be -1 (all bound-free continua are included)",
+    "20: UNUSED max_bf_continua: (ignored; all bound-free continua are included)",
     "21: nprocs_exspec: extract spectra for n MPI tasks. sn3d will set this on start of new sim.",
     "22: UNUSED do_emission_res: this is always true for exspec, sometimes true during sn3d",
     "23: UNUSED kpktdiffusion_timescale n_kpktdiffusion_timesteps: now set in kpkt.cc",
@@ -2050,18 +2050,7 @@ void read_parameterfile(std::span<Packet> packets) {
       "input: cells with Thomson optical depth > {:g} are treated in grey approximation for the first {} timesteps",
       globals::optical_depth_is_thick, globals::num_grey_timesteps);
 
-  // formerly a limit on the number of bf-continua per ion. Reject any value other than the old
-  // "unlimited" setting rather than silently ignoring a limit that an old input file requests
-  assert_always(get_noncommentline(file, line));
-  int max_bf_continua = 0;
-  std::istringstream{line} >> max_bf_continua;
-  if (max_bf_continua != -1) {
-    printlnlog(
-        "[error] input.txt line 20 (max_bf_continua) has value {}, but limiting the bound-free continua is no longer "
-        "supported. Set it to -1 (all bf continua included)",
-        max_bf_continua);
-    std::abort();
-  }
+  assert_always(get_noncommentline(file, line));  // UNUSED max_bf_continua (all bf continua are always included)
 
   // for exspec: read number of MPI tasks
   assert_always(get_noncommentline(file, line));
