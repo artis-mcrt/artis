@@ -412,6 +412,14 @@ void read_recombrate_file() {
   }
 }
 
+// Tabulate each ion's total spontaneous recombination coefficient [cm^3/s]: the sum over the ion's levels of the
+// recombination coefficient into that level, per nne and per population of the level's photoionisation target
+// level(s) in the ion above (the nebular approximation then applies this to the whole upper ion population).
+// When a level has several targets they are weighted by their LTE populations at T_e. A plain sum over targets
+// would count each target as if the whole upper ion were in it: with the target probabilities proportional to
+// the target stat weights, each target's coefficient already equals that of the whole target term, so the plain
+// sum overcounts by the number of targets (a factor of 5 for Fe III->II with the 5D ground term as targets).
+// Single-target levels are unaffected by the weighting.
 void precalculate_ion_alpha_sp() {
   auto temp_ion_alpha_sp = MPI_shared_array<float>(get_includedions() * TABLESIZE, 0.);
   if (globals::rank_in_node == 0) {
@@ -421,16 +429,33 @@ void precalculate_ion_alpha_sp() {
         const int nions = get_nions(element) - 1;
         for (int ion = 0; ion < nions; ion++) {
           const auto uniqueionindex = get_uniqueionindex(element, ion);
+          const int upperion = ion + 1;
+          const double E_upperground = epsilon(element, upperion, 0);
+          const double g_upperground = stat_weight(element, upperion, 0);
           const int nionisinglevels = get_nlevels_ionising(element, ion);
           double alpha_sp = 0.;
           for (int level = 0; level < nionisinglevels; level++) {
             const auto uniquelevelindex = get_uniquelevelindex(element, ion, level);
             const auto nphixstargets = get_nphixstargets(uniquelevelindex);
+            if (nphixstargets == 1) {
+              alpha_sp += get_spontrecombcoeff(uniquelevelindex, 0, T_e);
+              continue;
+            }
+            double alpha_weighted = 0.;
+            double nnupperlevel_sum = 0.;
             for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
-              const double alpha_sp_level = get_spontrecombcoeff(uniquelevelindex, phixstargetindex, T_e);
-              alpha_sp += alpha_sp_level;
+              const int upperlevel = get_phixsupperlevel(uniquelevelindex, phixstargetindex);
+              // LTE population of the target level relative to the upper ion's ground level
+              const double nnupperlevel = stat_weight(element, upperion, upperlevel) / g_upperground *
+                                          exp(-(epsilon(element, upperion, upperlevel) - E_upperground) / KB / T_e);
+              alpha_weighted += nnupperlevel * get_spontrecombcoeff(uniquelevelindex, phixstargetindex, T_e);
+              nnupperlevel_sum += nnupperlevel;
+            }
+            if (nnupperlevel_sum > 0.) {
+              alpha_sp += alpha_weighted / nnupperlevel_sum;
             }
           }
+          assert_always(std::isfinite(alpha_sp) && alpha_sp >= 0.);
           temp_ion_alpha_sp[(uniqueionindex * TABLESIZE) + tempindex] = static_cast<float>(alpha_sp);
         }
       }
@@ -621,7 +646,9 @@ DEVICE_FUNC auto select_continuum_nu(int element, const int lowerion, const int 
   return nu_sampled;
 }
 
-// Get an ion's rate coefficient for spontaneous recombination in LTE
+// Get an ion's total rate coefficient for spontaneous recombination [cm^3/s] per nne, per population of each
+// level's photoionisation target level(s) in the upper ion (LTE-weighted when there are several targets; see
+// precalculate_ion_alpha_sp())
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_ion_spontrecombcoeff(const int uniqueionindex, const float T_e)
     -> double {
   const auto upperindex = get_temperature_gridupperindex(T_e);

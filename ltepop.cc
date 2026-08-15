@@ -95,6 +95,8 @@ THREADLOCALONHOST CellWarningMarker ionfract_zeroed_warned;
   // Convert Gamma to the photoionisation rate per ion pop
   const double Gamma_ion = Gamma_groundlevel * stat_weight(element, ion, 0) / partfunc_ion;
 
+  // total recombination coefficient per population of the photoionisation target level(s) of the upper ion,
+  // applied here to the whole upper ion population in the usual nebular approximation
   const double Alpha_sp = get_ion_spontrecombcoeff(uniqueionindex, T_e);
   constexpr bool include_collisional_recombination = false;
   const double Col_rec =
