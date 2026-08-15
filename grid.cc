@@ -1930,7 +1930,7 @@ void read_ejecta_model() {
   double t_model_days{NAN};
   assert_always(get_noncommentline(fmodel, line));
   std::istringstream{line} >> t_model_days;
-  // a failed extraction stores zero, which would silently scale all densities by (t_model / tmin)^3 = 0
+  // a failed extraction stores zero, which would zero all densities via the (t_model / tmin)^3 scaling
   if (!std::isfinite(t_model_days) || t_model_days <= 0.) {
     printlnlog("[error] model.txt: could not read a positive snapshot time in days from line '{}'", line);
     std::abort();

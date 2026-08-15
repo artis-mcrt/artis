@@ -1192,11 +1192,9 @@ auto main(int argc, char* argv[]) -> int {
   if (terminate_early) {
     printlnlog("RESTART_NEEDED to continue model");
   } else if (globals::ntimesteps > globals::timestep_finish) {
-    // The requested timestep range is complete but the model has not reached the last timestep. A restart with
-    // an unchanged input.txt could only redo the final saved timestep, because update_parameterfile() advances
-    // the start timestep but never timestep_finish. So deliberately do not print RESTART_NEEDED here: the
-    // cluster job scripts detect that marker to resubmit a continuation job, and before this case was
-    // separated from terminate_early, they resubmitted identical no-progress jobs forever
+    // the requested range is complete, and a restart with an unchanged input.txt cannot progress
+    // (update_parameterfile() never advances timestep_finish). Do not print RESTART_NEEDED, which the
+    // cluster job scripts detect to resubmit a continuation job
     printlnlog(
         "Completed the requested timestep range, but the model has only run {} of {} timesteps. To continue the "
         "model, increase timestep_finish in input.txt and resubmit",

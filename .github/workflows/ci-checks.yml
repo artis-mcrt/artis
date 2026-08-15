@@ -182,8 +182,7 @@ jobs:
 
             - name: Compile all remaining option files
               run: |
-                  # no -p here: a preserved (checkout-time) mtime would be older than the objects built in the
-                  # previous steps, so make would consider everything up to date and skip compiling the preset
+                  # no -p: a preserved (older) mtime would make the preset build look already up to date
                   for file in $(find . -name "artisoptions_*.h" ! -name "artisoptions_classic.h" ! -name "artisoptions_nltenebular.h"); do
                       cp -v "$file" artisoptions.h
                       make -j$(nproc) sn3d
@@ -266,8 +265,7 @@ jobs:
 
             - name: LLVM Clang Compile all remaining option files
               run: |
-                  # no -p here: a preserved (checkout-time) mtime would be older than the objects built in the
-                  # previous steps, so make would consider everything up to date and skip compiling the preset
+                  # no -p: a preserved (older) mtime would make the preset build look already up to date
                   for file in $(find . -name "artisoptions_*.h" ! -name "artisoptions_classic.h" ! -name "artisoptions_nltenebular.h"); do
                       cp -v "$file" artisoptions.h
                       make -j$(nproc) sn3d

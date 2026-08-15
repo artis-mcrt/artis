@@ -42,8 +42,7 @@ if grep -q "RESTART_NEEDED" "output_0-0.txt"
 then
     sbatch --job-name="$SLURM_JOB_NAME" ./artis/scripts/artis-meluxina.sh
 else
-    # only start post-processing when the simulation is finished: exspec-after.sh deletes the
-    # packets_*.tmp/gridsave_*.tmp restart files that a queued continuation job would need
+    # post-processing can remove restart files, so only queue it when no continuation job was submitted
     if [ -f packets00_0000.out ]; then
         sbatch --job-name="exspec_$SLURM_JOB_NAME" ./artis/scripts/exspec-zip-meluxina.sh
     fi

@@ -2,17 +2,14 @@
 # export MAKEFLAGS="--check-symlink-times --jobs=$(nproc --all)"
 .DEFAULT_GOAL := all
 
-# artisoptions.h is gitignored and must be supplied before building (normally a symlink to one of the
-# artisoptions_*.h presets). Check for it up front, so that a missing file gives one actionable message
-# instead of a 'no such file' error from every translation unit, interleaved across parallel jobs.
-# 'make clean' is exempt, so that a tree without artisoptions.h can still be cleaned.
+# artisoptions.h is gitignored and must be supplied (normally as a symlink to a preset). Check up front
+# to give one actionable message rather than a compiler error per translation unit. 'make clean' is exempt
 ifneq ($(strip $(filter-out clean,$(if $(MAKECMDGOALS),$(MAKECMDGOALS),all))),)
   ifeq ($(wildcard artisoptions.h),)
     $(error artisoptions.h not found. Select a compile-time option preset, e.g. 'ln -s artisoptions_classic.h artisoptions.h'. Symlinking (rather than copying) keeps it in sync when the preset changes. The options are documented in artisoptions_doc.md)
   endif
-  # Without --check-symlink-times, make compares timestamps through the symlink, so switching presets
-  # with 'ln -sf' can leave a build silently up to date with the previous preset's options. The flag is
-  # condensed into the letter 'L' in the first (dashless) word of MAKEFLAGS.
+  # without --check-symlink-times ('L' in the first dashless word of MAKEFLAGS), make compares timestamps
+  # through the symlink, so a preset switch via ln -sf may not trigger a rebuild
   ifneq ($(shell test -L artisoptions.h && echo is_symlink),)
     ifeq (,$(findstring L,$(filter-out -%,$(firstword $(MAKEFLAGS)))))
       $(warning artisoptions.h is a symlink, but make was started without --check-symlink-times: switching presets with ln -sf may not trigger a rebuild. Recommended: export MAKEFLAGS="--check-symlink-times --jobs=$$(nproc --all)")
@@ -103,10 +100,8 @@ BUILD_DIR = build/$(COMPILER_NAME)-$(COMPILER_VERSION_NUMBER)_$(CPU_ARCH)
 
 CXXFLAGS += -std=$(CXX_STD) $(ARCH_FLAGS) -Wall -Wextra -Wpedantic -Wredundant-decls -Wno-unused-parameter -Wsign-compare -Wshadow -isystem third_party
 
-# generate and use .d header dependency files, so that edits to any included header (e.g. artisoptions.h
-# through the symlink) trigger recompilation of the objects that include it. These must apply to every
-# compiler: nvc++ supports the same GCC-style dependency options, and excluding it here previously meant
-# that header edits did not rebuild anything on nvhpc builds
+# generate and use .d header dependency files, so that header edits trigger recompilation of the
+# objects that include them (every compiler, including nvc++, supports these GCC-style options)
 CXXFLAGS += -MD -MP
 
 ifneq ($(COMPILER_NAME),nvhpc)
@@ -213,8 +208,7 @@ endif
 
 ifneq ($(MAX_NODE_SIZE),)
 	CXXFLAGS += -DMAX_NODE_SIZE=$(MAX_NODE_SIZE)
-	# like every other option that changes CXXFLAGS, this must go into the build directory name, or
-	# changing it would reuse (or worse, mix with) objects compiled with a different node size
+	# must be in the build directory name like every other option that changes CXXFLAGS
 	BUILD_DIR := $(BUILD_DIR)_maxnodesize$(MAX_NODE_SIZE)
 endif
 
@@ -336,8 +330,7 @@ $(info build directory: $(BUILD_DIR))
 
 all: sn3d exspec
 
-# artisoptions.h is an explicit prerequisite (not only via the generated .d files) so that the most
-# consequential header dependency does not rely on the dependency generation of any one compiler
+# artisoptions.h is explicit so the most consequential header dependency does not rely on .d generation
 $(BUILD_DIR)/%.o: %.cc artisoptions.h Makefile
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
