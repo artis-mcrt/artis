@@ -103,8 +103,14 @@ BUILD_DIR = build/$(COMPILER_NAME)-$(COMPILER_VERSION_NUMBER)_$(CPU_ARCH)
 
 CXXFLAGS += -std=$(CXX_STD) $(ARCH_FLAGS) -Wall -Wextra -Wpedantic -Wredundant-decls -Wno-unused-parameter -Wsign-compare -Wshadow -isystem third_party
 
+# generate and use .d header dependency files, so that edits to any included header (e.g. artisoptions.h
+# through the symlink) trigger recompilation of the objects that include it. These must apply to every
+# compiler: nvc++ supports the same GCC-style dependency options, and excluding it here previously meant
+# that header edits did not rebuild anything on nvhpc builds
+CXXFLAGS += -MD -MP
+
 ifneq ($(COMPILER_NAME),nvhpc)
-	CXXFLAGS += -Wunused-macros -Werror -Wextra-semi -Wno-unknown-pragmas -Wno-error=cast-function-type -MD -MP -Wno-unused-function
+	CXXFLAGS += -Wunused-macros -Werror -Wextra-semi -Wno-unknown-pragmas -Wno-error=cast-function-type -Wno-unused-function
 endif
 
 ifeq ($(REPRODUCIBLE),ON)
@@ -330,7 +336,9 @@ $(info build directory: $(BUILD_DIR))
 
 all: sn3d exspec
 
-$(BUILD_DIR)/%.o: %.cc Makefile
+# artisoptions.h is an explicit prerequisite (not only via the generated .d files) so that the most
+# consequential header dependency does not rely on the dependency generation of any one compiler
+$(BUILD_DIR)/%.o: %.cc artisoptions.h Makefile
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 check: $(sn3d_files)
