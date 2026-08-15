@@ -2,6 +2,16 @@
 # export MAKEFLAGS="--check-symlink-times --jobs=$(nproc --all)"
 .DEFAULT_GOAL := all
 
+# artisoptions.h is gitignored and must be supplied before building (normally a symlink to one of the
+# artisoptions_*.h presets). Check for it up front, so that a missing file gives one actionable message
+# instead of a 'no such file' error from every translation unit, interleaved across parallel jobs.
+# 'make clean' is exempt, so that a tree without artisoptions.h can still be cleaned.
+ifneq ($(strip $(filter-out clean,$(if $(MAKECMDGOALS),$(MAKECMDGOALS),all))),)
+  ifeq ($(wildcard artisoptions.h),)
+    $(error artisoptions.h not found. Select a compile-time option preset, e.g. 'ln -s artisoptions_classic.h artisoptions.h'. Symlinking (rather than copying) keeps it in sync when the preset changes. The options are documented in artisoptions_doc.md)
+  endif
+endif
+
 $(info mpicxx version: $(shell mpicxx --showme:version 2> /dev/null))
 
 ifeq ($(TESTMODE),ON)
