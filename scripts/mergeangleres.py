@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import re
 from pathlib import Path
 
 
@@ -7,7 +8,18 @@ def resfilepath(basefolder: Path | str, fileprefix: str, abin: int) -> Path:
     return Path(basefolder, f"{fileprefix}_res_{abin:02d}.out")
 
 
+def get_mabins() -> int:
+    # one output file is written per direction bin (MABINS = NPHIBINS * NCOSTHETABINS in exspec.h).
+    # Parse the expected count from the source folder that this script belongs to, so that a changed
+    # bin count cannot silently break the merge. Counting the files on disk instead would treat the
+    # contiguous prefix left behind by an interrupted exspec run as a complete set
+    exspec_h = (Path(__file__).resolve().parent.parent / "exspec.h").read_text(encoding="utf-8")
+    bincounts = {name: int(value) for name, value in re.findall(r"constexpr int (NPHIBINS|NCOSTHETABINS) = (\d+);", exspec_h)}
+    return bincounts["NPHIBINS"] * bincounts["NCOSTHETABINS"]
+
+
 def main() -> None:
+    mabins = get_mabins()
     for basefolder in [Path(), Path("speclc_angle_res")]:
         if not basefolder.is_dir():
             continue
@@ -15,11 +27,8 @@ def main() -> None:
             if not resfilepath(basefolder, fileprefix, 0).is_file():
                 continue
 
-            # one file per direction bin (MABINS in exspec.h). Detect the bin count from the files on
-            # disk rather than hardcoding it, so a changed bin count cannot silently break the merge
-            files_present = sorted(basefolder.glob(f"{fileprefix}_res_*.out"))
-            input_files = [resfilepath(basefolder, fileprefix, abin) for abin in range(len(files_present))]
-            if files_present == input_files and all(input_file.stat().st_size > 0 for input_file in input_files):
+            input_files = [resfilepath(basefolder, fileprefix, abin) for abin in range(mabins)]
+            if all(input_file.is_file() and input_file.stat().st_size > 0 for input_file in input_files):
                 outfile = Path(f"{fileprefix}_res.out")
                 outfile.unlink(missing_ok=True)
                 Path(f"{fileprefix}_res.out.zst").unlink(missing_ok=True)
