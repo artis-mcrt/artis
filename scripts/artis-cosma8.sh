@@ -53,8 +53,10 @@ if grep -q "RESTART_NEEDED" "output_0-0.txt"
 then
     sbatch -J artis_$(basename $(pwd)) ./artis/scripts/artis-cosma8.sh
     # sbatch $SLURM_JOB_NAME
-fi
-
-if [ -f packets00_0000.out ]; then
-    sbatch -J exspec_$(basename $(pwd)) ./artis/scripts/exspec-zip-cosma8.sh
+else
+    # only start post-processing when the simulation is finished: exspec-after.sh deletes the
+    # packets_*.tmp/gridsave_*.tmp restart files that a queued continuation job would need
+    if [ -f packets00_0000.out ]; then
+        sbatch -J exspec_$(basename $(pwd)) ./artis/scripts/exspec-zip-cosma8.sh
+    fi
 fi

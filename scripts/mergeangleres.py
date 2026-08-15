@@ -15,8 +15,11 @@ def main() -> None:
             if not resfilepath(basefolder, fileprefix, 0).is_file():
                 continue
 
-            input_files = [resfilepath(basefolder, fileprefix, abin) for abin in range(100)]
-            if all(input_file.is_file() and input_file.stat().st_size > 0 for input_file in input_files):
+            # one file per direction bin (MABINS in exspec.h). Detect the bin count from the files on
+            # disk rather than hardcoding it, so a changed bin count cannot silently break the merge
+            files_present = sorted(basefolder.glob(f"{fileprefix}_res_*.out"))
+            input_files = [resfilepath(basefolder, fileprefix, abin) for abin in range(len(files_present))]
+            if files_present == input_files and all(input_file.stat().st_size > 0 for input_file in input_files):
                 outfile = Path(f"{fileprefix}_res.out")
                 outfile.unlink(missing_ok=True)
                 Path(f"{fileprefix}_res.out.zst").unlink(missing_ok=True)
