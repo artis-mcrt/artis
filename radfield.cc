@@ -48,6 +48,9 @@ constexpr double bins_T_R_max = 250000;
 static_assert(RADFIELDBINS_T_E_SUPERBIN_NU_MAX >= RADFIELDBINS_NU_MAX,
               "The T_e superbin upper boundary must be greater than or equal to the upper boundary of the other bins");
 
+static_assert(!DETAILED_BF_ESTIMATORS_ON || !USE_LUT_PHOTOION,
+              "USE_LUT_PHOTOION must be false when DETAILED_BF_ESTIMATORS_ON is true");
+
 std::vector<double> J_normfactor;
 
 struct RadFieldBinSolution {

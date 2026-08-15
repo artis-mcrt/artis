@@ -924,9 +924,6 @@ void print_options_help(std::FILE* stream, const char* progname) {
 auto main(int argc, char* argv[]) -> int {
   real_time_start = std::chrono::steady_clock::now();
 
-  // if DETAILED_BF_ESTIMATORS_ON is true, USE_LUT_PHOTOION must be false
-  assert_always(!DETAILED_BF_ESTIMATORS_ON || !USE_LUT_PHOTOION);
-
   if constexpr (VPKT_ON) {
     vpkt::nvpkt_created = 0;
     vpkt::nvpkt_esc_from_rpkt = 0;
@@ -938,11 +935,7 @@ auto main(int argc, char* argv[]) -> int {
 
   globals::setup_mpi_vars();
 
-#ifdef WALLTIMELIMITSECONDS
-  int walltimelimitseconds = WALLTIMELIMITSECONDS;
-#else
   int walltimelimitseconds = -1;
-#endif
 
   std::string walltimehours_str;
   int opt = 0;

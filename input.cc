@@ -119,7 +119,7 @@ constexpr auto inputlinecomments = std::array{
     "17: UNUSED rfcut: wavelength at which the radiation field switches from the nebular approximation to LTE.",
     "18: num_lte_timesteps",
     "19: optical_depth_is_thick num_grey_timesteps",
-    "20: UNUSED max_bf_continua: (>0: max bound-free continua per ion, <0 unlimited)",
+    "20: UNUSED max_bf_continua: must be -1 (all bound-free continua are included)",
     "21: nprocs_exspec: extract spectra for n MPI tasks. sn3d will set this on start of new sim.",
     "22: UNUSED do_emission_res: this is always true for exspec, sometimes true during sn3d",
     "23: UNUSED kpktdiffusion_timescale n_kpktdiffusion_timesteps: now set in kpkt.cc",
@@ -2014,11 +2014,18 @@ void read_parameterfile(std::span<Packet> packets) {
       "input: cells with Thomson optical depth > {:g} are treated in grey approximation for the first {} timesteps",
       globals::optical_depth_is_thick, globals::num_grey_timesteps);
 
-  // Limit the number of bf-continua
+  // formerly a limit on the number of bf-continua per ion. Reject any value other than the old
+  // "unlimited" setting rather than silently ignoring a limit that an old input file requests
   assert_always(get_noncommentline(file, line));
   int max_bf_continua = 0;
   std::istringstream{line} >> max_bf_continua;
-  assert_always(max_bf_continua == -1);
+  if (max_bf_continua != -1) {
+    printlnlog(
+        "[error] input.txt line 20 (max_bf_continua) has value {}, but limiting the bound-free continua is no longer "
+        "supported. Set it to -1 (all bf continua included)",
+        max_bf_continua);
+    std::abort();
+  }
 
   // for exspec: read number of MPI tasks
   assert_always(get_noncommentline(file, line));
@@ -2164,6 +2171,14 @@ void read_atomicdata() {
 
   setup_nlte_levels();
 }
+
+// the hybrid timestep schemes switch between logarithmic and fixed-width timesteps at a transition time, so
+// both of those values must be set (the pure schemes ignore them, and the presets ship them as -1.)
+static_assert(TIMESTEP_SIZE_METHOD == TimeStepSizeMethod::LOGARITHMIC ||
+                  TIMESTEP_SIZE_METHOD == TimeStepSizeMethod::CONSTANT ||
+                  (FIXED_TIMESTEP_WIDTH > 0. && TIMESTEP_TRANSITION_TIME > 0.),
+              "The hybrid TIMESTEP_SIZE_METHOD options require FIXED_TIMESTEP_WIDTH and TIMESTEP_TRANSITION_TIME "
+              "(both in days) to be set to positive values");
 
 // initialise the time steps
 void setup_timesteps() {

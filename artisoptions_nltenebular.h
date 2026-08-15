@@ -42,7 +42,7 @@ constexpr bool UNIFORM_PELLET_ENERGIES = true;
 constexpr bool DIRECT_COL_HEAT = true;
 constexpr bool INITIAL_PACKETS_ON = false;
 
-constexpr bool USE_MODEL_INITIAL_ENERGY = true;
+constexpr bool USE_MODEL_INITIAL_ENERGY = false;
 
 constexpr int TABLESIZE = 100;
 constexpr double MINTEMP = 1000.;

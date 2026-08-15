@@ -57,6 +57,10 @@ namespace grid {
 
 namespace {
 
+static_assert(!USE_MODEL_INITIAL_ENERGY || INITIAL_PACKETS_ON,
+              "USE_MODEL_INITIAL_ENERGY requires INITIAL_PACKETS_ON, because the model's initial thermal energy (the "
+              "q column of model.txt) is only injected via the initial packets");
+
 std::array<int, 3> ncoordgrid{0, 0, 0};  // propagation grid dimensions
 
 std::optional<GridType> model_type{};
@@ -142,6 +146,10 @@ constexpr auto get_ndim(const GridType gridtype) -> int {
 void set_rho_tmin(const int modelgridindex, const float x) { modelgrid_input[modelgridindex].rhoinit = x; }
 
 void set_initelectronfrac(const int modelgridindex, const float electronfrac) {
+  if (!(electronfrac >= 0. && electronfrac <= 1.001)) {
+    printlnlog("[error] input Ye {:g} for cell {} is outside the physical range [0, 1]", electronfrac, modelgridindex);
+    assert_always(false);
+  }
   modelgrid_input[modelgridindex].initelectronfrac = electronfrac;
 }
 
@@ -1905,6 +1913,10 @@ void read_ejecta_model() {
   assert_always(get_noncommentline(fmodel, line));
   auto ssline = std::istringstream{line};
   ssline >> npts_0;
+  if (npts_0 <= 0) {
+    printlnlog("[error] model.txt: could not read a positive cell count from the first line '{}'", line);
+    std::abort();
+  }
   if (ssline >> npts_1) {
     // second number on the line for 2D means the line was n_r n_z
     detected_dim = GridType::CYLINDRICAL2D;
@@ -1918,6 +1930,11 @@ void read_ejecta_model() {
   double t_model_days{NAN};
   assert_always(get_noncommentline(fmodel, line));
   std::istringstream{line} >> t_model_days;
+  // a failed extraction stores zero, which would silently scale all densities by (t_model / tmin)^3 = 0
+  if (!std::isfinite(t_model_days) || t_model_days <= 0.) {
+    printlnlog("[error] model.txt: could not read a positive snapshot time in days from line '{}'", line);
+    std::abort();
+  }
   t_model = t_model_days * DAY;
   assert_always(globals::tmin >= t_model);
 
