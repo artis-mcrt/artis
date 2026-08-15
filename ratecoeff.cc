@@ -336,12 +336,9 @@ void read_recombrate_file() {
         const double input_rrc_low_n = std::lerp(T_highestbelow.rrc_low_n, T_lowestabove.rrc_low_n, x);
         const double input_rrc_total = std::lerp(T_highestbelow.rrc_total, T_lowestabove.rrc_total, x);
 
-        constexpr bool assume_lte = true;
-        constexpr bool per_groundmultipletpop = true;
-        constexpr bool collisional_not_radiative = false;
+        constexpr auto rrc_options = IonRecombCoeffOptions{.assume_lte = true, .per_groundmultipletpop = true};
 
-        double rrc = calculate_ionrecombcoeff(-1, Te_estimate, element, ion, assume_lte, collisional_not_radiative,
-                                              false, per_groundmultipletpop);
+        double rrc = calculate_ionrecombcoeff(-1, Te_estimate, element, ion, rrc_options);
         printlnlog("    rrc (initial): {:10.3e} [cm^3/s]", rrc);
 
         if (!(rrc > 0.)) {
@@ -364,8 +361,7 @@ void read_recombrate_file() {
 
             scale_levels(0, phixs_multiplier);
 
-            rrc = calculate_ionrecombcoeff(-1, Te_estimate, element, ion, assume_lte, collisional_not_radiative, false,
-                                           per_groundmultipletpop);
+            rrc = calculate_ionrecombcoeff(-1, Te_estimate, element, ion, rrc_options);
             printlnlog("    rrc (after low-n scaling): {:10.3e} [cm^3/s]", rrc);
           }
         }
@@ -384,7 +380,8 @@ void read_recombrate_file() {
           printlnlog("    input_rrc_total is negative, so not scaling to the total recombination rate");
         } else if (rrc < input_rrc_total) {
           const double rrc_superlevel = calculate_ionrecombcoeff(
-              -1, Te_estimate, element, ion, assume_lte, collisional_not_radiative, true, per_groundmultipletpop);
+              -1, Te_estimate, element, ion,
+              {.assume_lte = true, .lower_superlevel_only = true, .per_groundmultipletpop = true});
           printlnlog("  rrc(superlevel): {:10.3e} [cm^3/s]", rrc_superlevel);
 
           if (rrc_superlevel > 0) {
@@ -408,8 +405,7 @@ void read_recombrate_file() {
           scale_levels(0, phixs_multiplier);
         }
 
-        rrc = calculate_ionrecombcoeff(-1, Te_estimate, element, ion, assume_lte, collisional_not_radiative, false,
-                                       per_groundmultipletpop);
+        rrc = calculate_ionrecombcoeff(-1, Te_estimate, element, ion, rrc_options);
         printlnlog("    rrc (final): {:10.3e} [cm^3/s]", rrc);
       }
     }
@@ -653,8 +649,8 @@ DEVICE_FUNC auto select_continuum_nu(int element, const int lowerion, const int 
 
 // multiply by upper ion population (or ground population if per_groundmultipletpop is true) and nne to get a rate
 auto calculate_ionrecombcoeff(const int nonemptymgi, const float T_e, const int element, const int upperion,
-                              const bool assume_lte, const bool collisional_not_radiative,
-                              const bool lower_superlevel_only, const bool per_groundmultipletpop) -> double {
+                              const IonRecombCoeffOptions options) -> double {
+  const auto [assume_lte, collisional_not_radiative, lower_superlevel_only, per_groundmultipletpop] = options;
   if (upperion <= 0) {
     return 0.;
   }

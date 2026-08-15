@@ -25,8 +25,15 @@ inline MPI_shared_array<float> nne_allcells;
 inline MPI_shared_array<float> nnetot_allcells;  // total electron density (free + bound).
 inline MPI_shared_array<float> kappagrey_allcells;
 inline MPI_shared_array<float> grey_depth_allcells;  // Grey optical depth to surface of the modelgridcell
-inline MPI_shared_array<int>
-    thick_allcells;  // whether the cell is optically thick (1) or not (0), or (2) thick for vpkts only
+// optical-thickness treatment of a cell. The numeric values appear in the estimators and gridsave
+// files, so they must not be renumbered
+enum class CellThickness : int {
+  THIN = 0,  // detailed opacity treatment
+  THICK = 1,  // optically thick: grey opacity treatment
+  THICK_VPKT_ONLY = 2,  // treated as optically thick for virtual packets only
+};
+
+inline MPI_shared_array<CellThickness> thick_allcells;
 inline MPI_shared_array<float> clumpfactor_allcells;
 
 inline ptrdiff_t ngrid{0};

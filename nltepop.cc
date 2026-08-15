@@ -567,7 +567,7 @@ void nltepop_matrix_add_boundbound(const int nonemptymgi, const int element, con
           s_renorm[level];
 
       const double C =
-          col_excitation_ratecoeff(T_e, clumpednne, upper_statweight, alltransindex, epsilon_trans, statweight) *
+          col_excitation_ratecoeff(T_e, clumpednne, epsilon_trans, upper_statweight, statweight, alltransindex) *
           s_renorm[level];
 
       const double NTC =
@@ -1696,7 +1696,8 @@ void nltepop_open_file() {
 
 void nltepop_write_to_file(const int nonemptymgi, const int timestep) {
   const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
-  if (globals::lte_iteration || grid::thick_allcells[nonemptymgi] == 1) {  // NLTE solver hasn't been run yet
+  if (globals::lte_iteration ||
+      grid::thick_allcells[nonemptymgi] == grid::CellThickness::THICK) {  // NLTE solver hasn't been run yet
     return;
   }
 

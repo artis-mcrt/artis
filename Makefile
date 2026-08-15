@@ -2,6 +2,24 @@
 # export MAKEFLAGS="--check-symlink-times --jobs=$(nproc --all)"
 .DEFAULT_GOAL := all
 
+# artisoptions.h is gitignored and must be supplied before building (normally a symlink to one of the
+# artisoptions_*.h presets). Check for it up front, so that a missing file gives one actionable message
+# instead of a 'no such file' error from every translation unit, interleaved across parallel jobs.
+# 'make clean' is exempt, so that a tree without artisoptions.h can still be cleaned.
+ifneq ($(strip $(filter-out clean,$(if $(MAKECMDGOALS),$(MAKECMDGOALS),all))),)
+  ifeq ($(wildcard artisoptions.h),)
+    $(error artisoptions.h not found. Select a compile-time option preset, e.g. 'ln -s artisoptions_classic.h artisoptions.h'. Symlinking (rather than copying) keeps it in sync when the preset changes. The options are documented in artisoptions_doc.md)
+  endif
+  # Without --check-symlink-times, make compares timestamps through the symlink, so switching presets
+  # with 'ln -sf' can leave a build silently up to date with the previous preset's options. The flag is
+  # condensed into the letter 'L' in the first (dashless) word of MAKEFLAGS.
+  ifneq ($(shell test -L artisoptions.h && echo is_symlink),)
+    ifeq (,$(findstring L,$(filter-out -%,$(firstword $(MAKEFLAGS)))))
+      $(warning artisoptions.h is a symlink, but make was started without --check-symlink-times: switching presets with ln -sf may not trigger a rebuild. Recommended: export MAKEFLAGS="--check-symlink-times --jobs=$$(nproc --all)")
+    endif
+  endif
+endif
+
 $(info mpicxx version: $(shell mpicxx --showme:version 2> /dev/null))
 
 ifeq ($(TESTMODE),ON)
@@ -189,6 +207,9 @@ endif
 
 ifneq ($(MAX_NODE_SIZE),)
 	CXXFLAGS += -DMAX_NODE_SIZE=$(MAX_NODE_SIZE)
+	# like every other option that changes CXXFLAGS, this must go into the build directory name, or
+	# changing it would reuse (or worse, mix with) objects compiled with a different node size
+	BUILD_DIR := $(BUILD_DIR)_maxnodesize$(MAX_NODE_SIZE)
 endif
 
 ifeq ($(TESTMODE),ON)

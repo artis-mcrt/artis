@@ -96,7 +96,7 @@ code must compile under all of those compilers (including `GPU=ON` paths).
 - clang-format (Google-based style, 120-column limit; config in `.clang-format`)
   is enforced on all C++ files.
 - clang-tidy with an extensive check list (`.clang-tidy`); run via `make check`
-  (needs `compile_commands.json`, e.g. `compiledb -n make TESTMODE=ON`).
+  (needs `compile_commands.json`, e.g. `compiledb -n --full-path make TESTMODE=ON`).
 - cppcheck runs in CI (`.github/workflows/ci-checks.yml`).
 - Pre-commit hooks (`.pre-commit-config.yaml`, managed with `prek`/pre-commit)
   run clang-format, whitespace/EOF fixers, and a `make OPTIMIZE=OFF` compile.

@@ -51,9 +51,10 @@ DEVICE_FUNC void calculate_cellcache_macroatom_transitionrates(int nonemptymgi, 
                                                             int alltransindex) -> double;
 
 // Collisional excitation rate. Multiply by the lower-level population to obtain a rate per second.
-[[gnu::pure]] [[nodiscard]] auto col_excitation_ratecoeff(float T_e, float clumpednne, double upperstatweight,
-                                                          int alltransindex, double epsilon_trans,
-                                                          double lowerstatweight) -> double;
+// (same parameter order as col_deexcitation_ratecoeff)
+[[gnu::pure]] [[nodiscard]] auto col_excitation_ratecoeff(float T_e, float clumpednne, double epsilon_trans,
+                                                          double upperstatweight, double lowerstatweight,
+                                                          int alltransindex) -> double;
 
 // Sobolev-escape radiative deexcitation rate; multiply by the upper-level population to obtain a rate per second.
 // Kromer & Sim (2009), Section 3.5.2, doi:10.1111/j.1365-2966.2009.15256.x.

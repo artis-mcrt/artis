@@ -18,7 +18,7 @@
 1e-6                     # 17: UNUSED rfcut: wavelength at which the radiation field switches from the nebular approximation to LTE.
 5                        # 18: num_lte_timesteps
 3.0 999                  # 19: optical_depth_is_thick num_grey_timesteps
--1                       # 20: UNUSED max_bf_continua: (>0: max bound-free continua per ion, <0 unlimited)
+-1                       # 20: UNUSED max_bf_continua: (ignored; all bound-free continua are included)
 4                        # 21: nprocs_exspec: extract spectra for n MPI tasks. sn3d will set this on start of new sim.
 1                        # 22: UNUSED do_emission_res: this is always true for exspec, sometimes true during sn3d
 0.001 1000               # 23: UNUSED kpktdiffusion_timescale n_kpktdiffusion_timesteps: now set in kpkt.cc

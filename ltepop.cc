@@ -74,7 +74,8 @@ THREADLOCALONHOST CellWarningMarker ionfract_zeroed_warned;
   testmodeassert_valid_ion(element, ion);
 
   assert_testmodeonly(!globals::lte_iteration);
-  assert_testmodeonly(grid::thick_allcells[nonemptymgi] != 1);  // should use use phi_lte instead
+  assert_testmodeonly(grid::thick_allcells[nonemptymgi] !=
+                      grid::CellThickness::THICK);  // should use use phi_lte instead
 
   assert_testmodeonly(!elem_has_nlte_levels(element));  // don't use this function if the NLTE solver is active
 
@@ -96,9 +97,10 @@ THREADLOCALONHOST CellWarningMarker ionfract_zeroed_warned;
 
   const double Alpha_sp = get_ion_spontrecombcoeff(uniqueionindex, T_e);
   constexpr bool include_collisional_recombination = false;
-  const double Col_rec = include_collisional_recombination
-                             ? calculate_ionrecombcoeff(nonemptymgi, T_e, element, ion + 1, false, true, false, false)
-                             : 0.;
+  const double Col_rec =
+      include_collisional_recombination
+          ? calculate_ionrecombcoeff(nonemptymgi, T_e, element, ion + 1, {.collisional_not_radiative = true})
+          : 0.;
 
   const double gamma_nt = NT_ON ? nonthermal::nt_ionisation_ratecoeff(nonemptymgi, element, ion) : 0.;
 
@@ -469,7 +471,7 @@ void set_groundlevelpops(const int nonemptymgi, const int element, const float n
 }
 
 auto calculate_ion_balance_nne(const int nonemptymgi) -> void {
-  const bool force_saha = globals::lte_iteration || grid::thick_allcells[nonemptymgi] == 1;
+  const bool force_saha = globals::lte_iteration || grid::thick_allcells[nonemptymgi] == grid::CellThickness::THICK;
 
   // upper bound on nne: at most one free electron per nucleon, i.e. fully ionised hydrogen
   const double nne_max = grid::get_rho(nonemptymgi) / MH;

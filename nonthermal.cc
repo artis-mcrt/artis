@@ -135,6 +135,13 @@ static_assert(NT_MAX_AUGER_ELECTRONS == 0 || !NT_USE_VALENCE_IONPOTENTIAL,
               "Overriding the shell potential with the valence potential is not compatible with including Auger "
               "electrons, because the shell potential is used to calculate the energy of Auger electrons.");
 
+static_assert(!NT_SOLVE_SPENCERFANO || NT_ON,
+              "NT_SOLVE_SPENCERFANO does nothing without NT_ON, because non-thermal deposition is never handled");
+
+static_assert(!NT_EXCITATION_ON || (NT_ON && NT_SOLVE_SPENCERFANO),
+              "NT_EXCITATION_ON does nothing without NT_ON and NT_SOLVE_SPENCERFANO, because non-thermal excitation "
+              "rates are only calculated from the Spencer-Fano solution");
+
 // energy grid on which solution is sampled [eV]
 constexpr auto engrid(int index) -> double { return SF_EMIN + (index * DELTA_E); }
 
@@ -1823,8 +1830,8 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const std::a
               nnlevel_upper, statweight_lower, alltransindex, t_mid);
 
           const double collexc_ratecoeff =
-              col_excitation_ratecoeff(T_e, grid::get_clumpfactor(nonemptymgi) * nne, statweight_upper, alltransindex,
-                                       epsilon_trans, statweight_lower);
+              col_excitation_ratecoeff(T_e, grid::get_clumpfactor(nonemptymgi) * nne, epsilon_trans, statweight_upper,
+                                       statweight_lower, alltransindex);
 
           const double exc_ratecoeff = radexc_ratecoeff + collexc_ratecoeff + ntcollexc_ratecoeff;
           const auto coll_str = globals::alltrans.coll_str[alltransindex];
@@ -2529,7 +2536,7 @@ DEVICE_FUNC void do_ntlepton_deposit(Packet& pkt) {
   const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
 
   // macroatom should not be activated in thick cells
-  if (NT_ON && NT_SOLVE_SPENCERFANO && grid::thick_allcells[nonemptymgi] != 1) {
+  if (NT_ON && NT_SOLVE_SPENCERFANO && grid::thick_allcells[nonemptymgi] != grid::CellThickness::THICK) {
     // here there is some probability to cause ionisation or excitation to a macroatom packet
     // instead of converting directly to k-packet (unless the heating channel is selected)
 

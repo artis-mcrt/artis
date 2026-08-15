@@ -36,8 +36,10 @@ echo "ntasks: $SLURM_NTASKS -> CPU core hrs: $cpuhrs"
 if grep -q "RESTART_NEEDED" "output_0-0.txt"
 then
     sbatch --job-name="$SLURM_JOB_NAME" ./artis/scripts/artis-juwels.sh
-fi
-
-if [ -f packets00_0000.out ]; then
-    sbatch --job-name="exspec_$SLURM_JOB_NAME" ./artis/scripts/exspec-zip-juwels.sh
+else
+    # only start post-processing when the simulation is finished: exspec-after.sh deletes the
+    # packets_*.tmp/gridsave_*.tmp restart files that a queued continuation job would need
+    if [ -f packets00_0000.out ]; then
+        sbatch --job-name="exspec_$SLURM_JOB_NAME" ./artis/scripts/exspec-zip-juwels.sh
+    fi
 fi

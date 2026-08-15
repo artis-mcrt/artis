@@ -48,6 +48,9 @@ constexpr double bins_T_R_max = 250000;
 static_assert(RADFIELDBINS_T_E_SUPERBIN_NU_MAX >= RADFIELDBINS_NU_MAX,
               "The T_e superbin upper boundary must be greater than or equal to the upper boundary of the other bins");
 
+static_assert(!DETAILED_BF_ESTIMATORS_ON || !USE_LUT_PHOTOION,
+              "USE_LUT_PHOTOION must be false when DETAILED_BF_ESTIMATORS_ON is true");
+
 std::vector<double> J_normfactor;
 
 struct RadFieldBinSolution {
@@ -908,7 +911,7 @@ void normalise_bf_estimators(const int nts, const int nts_prev, const int titer,
     const auto bfestimcount = std::ssize(globals::bfestim_nu_edge);
     const ptrdiff_t nonempty_npts_model = grid::get_nonempty_npts_model();
     for (auto nonemptymgi = 0Z; nonemptymgi < nonempty_npts_model; nonemptymgi++) {
-      if (grid::thick_allcells[nonemptymgi] == 1) {
+      if (grid::thick_allcells[nonemptymgi] == grid::CellThickness::THICK) {
         continue;
       }
       const auto mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);

@@ -44,6 +44,8 @@ namespace {
 static_assert(!VPKT_ON || POL_ON,
               "POL_ON must be true if VPKT_ON is true because vpkt needs stokes parameters to be tracked");
 
+static_assert(!VPKT_WRITE_CONTRIBS || VPKT_ON, "VPKT_WRITE_CONTRIBS does nothing without VPKT_ON");
+
 struct StokesParams {
   double I = 0.;
   double Q = 0.;
@@ -434,7 +436,7 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
         const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(mgi);
 
         // kill vpkt with pass through a thick cell
-        if (grid::thick_allcells[nonemptymgi] != 0) {
+        if (grid::thick_allcells[nonemptymgi] != grid::CellThickness::THIN) {
           return false;
         }
       }
@@ -949,7 +951,7 @@ auto trace_vpkts(const Packet& pkt, const enum packet_type type_before_rpkt) -> 
   // Cut on vpkts
   const auto nonemptymgi = grid::get_propcell_nonemptymgi(pkt.cellindex);
 
-  if (grid::thick_allcells[nonemptymgi] != 0) {
+  if (grid::thick_allcells[nonemptymgi] != grid::CellThickness::THIN) {
     return;
   }
 

@@ -33,8 +33,10 @@ if grep -q "RESTART_NEEDED" "output_0-0.txt"
 then
     sbatch ./artis/scripts/artis-kelvin2.sh
     # sbatch $SLURM_JOB_NAME
-fi
-
-if [ -f packets00_0000.out ]; then
-    sbatch ./artis/scripts/exspec-zip-kelvin2.sh
+else
+    # only start post-processing when the simulation is finished: exspec-after.sh deletes the
+    # packets_*.tmp/gridsave_*.tmp restart files that a queued continuation job would need
+    if [ -f packets00_0000.out ]; then
+        sbatch ./artis/scripts/exspec-zip-kelvin2.sh
+    fi
 fi
