@@ -239,9 +239,7 @@ constexpr double TIMESTEP_TRANSITION_TIME;
 // once a new gridsave and packets*.tmp have been written, don't delete the previous set
 constexpr bool KEEP_ALL_RESTART_FILES;
 
-// multiply the bound-free cooling coefficient of each (level, target) pair by the population of the upper-ion target
-// level instead of the whole upper ion population (which is shared among a level's targets according to their LTE
-// populations)
+// multiply bound-free cooling coefficient by upper level population instead of the upper ion target level population
 constexpr bool BFCOOLING_USELEVELPOPNOTIONPOP;
 
 // set true to calculate and use expansion opacities instead of line-by-line in non-grey mode

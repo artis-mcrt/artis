@@ -158,28 +158,9 @@ auto calculate_cooling_rates_ion(const int nonemptymgi, const int element, const
     }
 
     // fb creation of r-pkt
-    [[maybe_unused]] const double E_upperground = epsilon(element, ion + 1, 0);
-    [[maybe_unused]] const double g_upperground = stat_weight(element, ion + 1, 0);
     for (int level = 0; level < nionisinglevels; level++) {
       const auto uniquelevelindex = ionuniquelevelindexstart + level;
       const int nphixstargets = get_nphixstargets(uniquelevelindex);
-
-      // With the ion population, a level's targets share the upper ion population in proportion to their LTE
-      // populations. Giving every target the whole ion population would overcount: the target probabilities are
-      // proportional to the target stat weights, so each target's bf cooling coefficient already equals that of
-      // the whole target term and the plain sum is too large by the number of targets. Single-target levels are
-      // unaffected (weight 1).
-      [[maybe_unused]] double nnupperlevel_lte_sum = 0.;
-      if constexpr (!BFCOOLING_USELEVELPOPNOTIONPOP) {
-        if (nphixstargets > 1) {
-          for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
-            const int upperlevel = get_phixsupperlevel(uniquelevelindex, phixstargetindex);
-            nnupperlevel_lte_sum += stat_weight(element, ion + 1, upperlevel) / g_upperground *
-                                    exp(-(epsilon(element, ion + 1, upperlevel) - E_upperground) / KB / T_e);
-          }
-        }
-      }
-
       for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
         const double pop = [&] {
           if constexpr (BFCOOLING_USELEVELPOPNOTIONPOP) {
@@ -187,13 +168,7 @@ auto calculate_cooling_rates_ion(const int nonemptymgi, const int element, const
             return update_cellcache_contribs ? get_cellcache_levelpop(nonemptymgi, element, ion + 1, upperlevel)
                                              : calculate_levelpop(nonemptymgi, element, ion + 1, upperlevel);
           }
-          if (nphixstargets == 1) {
-            return nnupperion;
-          }
-          const int upperlevel = get_phixsupperlevel(uniquelevelindex, phixstargetindex);
-          const double nnupperlevel_lte = stat_weight(element, ion + 1, upperlevel) / g_upperground *
-                                          exp(-(epsilon(element, ion + 1, upperlevel) - E_upperground) / KB / T_e);
-          return nnupperion * nnupperlevel_lte / nnupperlevel_lte_sum;
+          return nnupperion;
         }();
         const double C = get_bfcoolingcoeff(element, ion, level, phixstargetindex, T_e) * pop * clumpednne;
         C_ion += C;
