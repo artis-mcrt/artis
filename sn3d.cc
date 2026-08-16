@@ -831,39 +831,6 @@ auto do_timestep(const int nts, const int titer, std::vector<Packet>& packets, c
   return !do_this_full_loop;
 }
 
-// exactly match the generated per-rank output filenames: output_<rank>-<thread>.txt and the
-// estimators/nlte/radfield/macroatom _<rank>.out files, possibly with a compression extension added by
-// the post-processing scripts (e.g. exspec-after.sh runs zstd)
-[[nodiscard]] auto is_rank_outfile_name(std::string_view filename) -> bool {
-  const auto alldigits = [](const std::string_view str) {
-    return !str.empty() && std::ranges::all_of(str, [](const char c) { return c >= '0' && c <= '9'; });
-  };
-
-  for (const std::string_view compressext : {".zst", ".gz", ".xz"}) {
-    if (filename.ends_with(compressext)) {
-      filename.remove_suffix(compressext.size());
-      break;
-    }
-  }
-
-  if (constexpr std::string_view logprefix = "output_"; filename.starts_with(logprefix) && filename.ends_with(".txt")) {
-    const auto rank_thread = filename.substr(logprefix.size(), filename.size() - logprefix.size() - 4);
-    const auto dashpos = rank_thread.find('-');
-    return dashpos != std::string_view::npos && alldigits(rank_thread.substr(0, dashpos)) &&
-           alldigits(rank_thread.substr(dashpos + 1));
-  }
-
-  if (filename.ends_with(".out")) {
-    for (const std::string_view prefix : {"estimators_", "nlte_", "radfield_", "macroatom_"}) {
-      if (filename.starts_with(prefix)) {
-        return alldigits(filename.substr(prefix.size(), filename.size() - prefix.size() - 4));
-      }
-    }
-  }
-
-  return false;
-}
-
 // Create the run output folder given with the -o option and keep an output_0-0.txt symlink in the
 // simulation folder pointing at the current job's rank-0 log, so that e.g. tail -f output_0-0.txt works
 // regardless of the output folder. Without -o, remove any symlink left by a previous -o run, since

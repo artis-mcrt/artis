@@ -137,6 +137,8 @@ It writes light_curve.out, spec.out, emission.out, emissiontrue.out, and absorpt
 To plot and analyse the output, use [artistools](https://github.com/artis-mcrt/artistools), a companion Python package for working with ARTIS light curves, spectra, and estimators.
 
 ### Testing
+Unit tests for the pure numeric and parsing helpers are built and run with `make unittests && ./unittests` (CI runs them for the classic and NLTE nebular presets).
+
 The tests folder contains ten small end-to-end test models. Each tests/setup_*.sh script downloads the atomic data it needs and assembles a folder that is ready to run:
 ```sh
 cd tests
