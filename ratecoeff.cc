@@ -102,7 +102,22 @@ auto gammacorr_integrand(const double nu, const double nu_edge, const float temp
   return sigma_bf * (1. / H) / nu * radfield::planck(nu, temperature) * (1 - exp(-HOVERKB * nu / temperature));
 }
 
-// Integrand to precalculate the bound-free cooling rate coefficient
+// Integrand to precalculate the bound-free (free-bound) cooling rate coefficient of one (level, target) continuum.
+//
+// Each spontaneous recombination removes the captured electron's kinetic energy h(nu - nu_edge) from the thermal
+// pool (the remaining h nu_edge of the emitted photon is ionisation energy that is bookkept through the level
+// energies, not the electron gas). This is therefore the spontaneous recombination integrand
+// (alpha_sp_integrand()) weighted by h(nu - nu_edge):
+//   (2 nu^2 / c^2) * sigma_bf(nu) * exp(-h(nu - nu_edge)/kT_e) * h(nu - nu_edge)
+// i.e. the Milne-relation emissivity (2 h nu^3 / c^2) sigma_bf(nu) / (h nu) per photon, the Maxwellian factor,
+// and the electron kinetic energy. As in alpha_sp_integrand(), the variable of integration is nu - nu_edge so that
+// exp(-h nu_edge/kT_e) cancels against the Saha factor that the caller multiplies in.
+//
+// The caller (precalculate_rate_coefficient_integrals()) integrates this from 0 to nu_max_phixs - nu_edge and
+// multiplies by 4 pi * (Saha factor g_lower/g_upper T_e^-3/2) * phixstargetprobability to give bfcooling_coeffs
+// [erg cm^3 s^-1]; get_bfcoolingcoeff() * n_upper * n_e is then the cooling rate density [erg s^-1 cm^-3]
+// (kpkt.cc). Depends only on T_e (and the tabulated cross section), not on the radiation field, since only
+// spontaneous recombination is included.
 auto bfcooling_integrand(const double nu_minus_nu_edge, const double nu_edge, const float T_e,
                          const std::span<const float> photoion_xs) -> double {
   const float sigma_bf = photoionisation_crosssection_fromtable(photoion_xs, nu_edge, nu_minus_nu_edge + nu_edge);
