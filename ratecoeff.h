@@ -28,15 +28,22 @@ void setup_photoion_luts();
 [[nodiscard]] auto calculate_iongamma_per_ionpop(int nonemptymgi, int element, int lowerion,
                                                  bool collisional_not_radiative, bool force_bfintegral) -> double;
 
+// Normalisation of the ion recombination coefficient returned by calculate_ionrecombcoeff() (at most one of
+// per_groundmultipletpop and per_targetlevelpop may be set):
+//   default: per total upper ion population (all upper levels)
+//   per_groundmultipletpop: per population of the upper ion's ground multiplet
+//   per_targetlevelpop: for each lower level, per summed population of that level's photoionisation target
+//     levels, i.e. the normalisation of get_ion_spontrecombcoeff() / phi_rate_balance()
 struct IonRecombCoeffOptions {
   bool assume_lte = false;
   bool collisional_not_radiative = false;
   bool lower_superlevel_only = false;
   bool per_groundmultipletpop = false;
+  bool per_targetlevelpop = false;
 };
 
 // nonemptymgi = -1 (no cell) with options.assume_lte = true is used by the startup recombination-rate
-// calibration, which takes LTE populations at the given temperature
+// calibration and ion alpha_sp table, which take LTE populations at the given temperature
 [[nodiscard]] auto calculate_ionrecombcoeff(int nonemptymgi, float T_e, int element, int upperion,
                                             IonRecombCoeffOptions options) -> double;
 
