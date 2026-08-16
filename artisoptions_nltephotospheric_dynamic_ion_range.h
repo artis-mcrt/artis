@@ -139,7 +139,7 @@ constexpr double TIMESTEP_TRANSITION_TIME = -1.;
 
 constexpr bool KEEP_ALL_RESTART_FILES = false;
 
-constexpr bool BFCOOLING_USELEVELPOPNOTIONPOP = false;
+constexpr bool BFCOOLING_USELEVELPOPNOTIONPOP = true;
 
 constexpr bool RPKT_USE_EXPANSION_OPACITIES = false;
 
