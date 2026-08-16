@@ -14,6 +14,7 @@
 #include <filesystem>
 #include <format>
 #include <ios>
+#include <limits>
 #include <span>
 #include <sstream>
 #include <string>
@@ -102,7 +103,15 @@ auto gammacorr_integrand(const double nu, const double nu_edge, const float temp
   return sigma_bf * (1. / H) / nu * radfield::planck(nu, temperature) * (1 - exp(-HOVERKB * nu / temperature));
 }
 
-// Integrand to precalculate the bound-free cooling rate coefficient
+// Integrand for the bound-free cooling rate coefficient of one (level, target) continuum: the spontaneous
+// recombination integrand (alpha_sp_integrand()) weighted by the captured electron's kinetic energy h(nu - nu_edge),
+// which is what each recombination removes from the thermal pool (the h nu_edge part is ionisation energy tracked
+// through the level energies). The variable of integration is nu - nu_edge so that exp(-h nu_edge/kT_e) cancels
+// against the Saha factor multiplied in by precalculate_rate_coefficient_integrals(), which also applies
+// 4 pi * phixstargetprobability. The resulting bfcooling_coeffs [erg cm^3 s^-1] are, like alpha_sp, normalised per
+// population of the upper ion's *target level*: cooling rate density = coeff * n_targetlevel * n_e. kpkt.cc uses
+// the target level population when BFCOOLING_USELEVELPOPNOTIONPOP is true and the whole upper ion population when
+// it is false (the latter overcounts multi-target continua; kept for backwards compatibility).
 auto bfcooling_integrand(const double nu_minus_nu_edge, const double nu_edge, const float T_e,
                          const std::span<const float> photoion_xs) -> double {
   const float sigma_bf = photoionisation_crosssection_fromtable(photoion_xs, nu_edge, nu_minus_nu_edge + nu_edge);
@@ -257,6 +266,16 @@ void scale_level_phixs(const int element, const int ion, const int level, const 
   }
 }
 
+// The normalisation that the ion balance solver handling this element applies to its recombination coefficients,
+// so that read_recombrate_file() calibrates the quantity that is actually used. The NLTE rate matrix multiplies each
+// continuum's coefficient by its target level population, which for the tabulated ground-term rate means per ground
+// multiplet population. Elements without NLTE levels go through phi_rate_balance(), whose get_ion_spontrecombcoeff()
+// is per target level population (a single-target level contributes its full coefficient). The two coincide when
+// every level's targets are the whole ground multiplet, but differ by g_ground/g_multiplet for single-target data.
+[[nodiscard]] auto get_solver_ionrecombnorm(const int element) -> IonRecombNorm {
+  return elem_has_nlte_levels(element) ? IonRecombNorm::GROUNDMULTIPLETPOP : IonRecombNorm::TARGETLEVELPOP;
+}
+
 // calibrate the recombination rates to tabulated values by scaling the photoionisation cross sections
 void read_recombrate_file() {
   if (!std::filesystem::exists("recombrates.txt")) {
@@ -336,7 +355,7 @@ void read_recombrate_file() {
         const double input_rrc_low_n = std::lerp(T_highestbelow.rrc_low_n, T_lowestabove.rrc_low_n, x);
         const double input_rrc_total = std::lerp(T_highestbelow.rrc_total, T_lowestabove.rrc_total, x);
 
-        constexpr auto rrc_options = IonRecombCoeffOptions{.assume_lte = true, .per_groundmultipletpop = true};
+        const auto rrc_options = IonRecombCoeffOptions{.assume_lte = true, .norm = get_solver_ionrecombnorm(element)};
 
         double rrc = calculate_ionrecombcoeff(-1, Te_estimate, element, ion, rrc_options);
         printlnlog("    rrc (initial): {:10.3e} [cm^3/s]", rrc);
@@ -379,9 +398,9 @@ void read_recombrate_file() {
           // negative means no tabulated total, in the same way that a negative rrc_low_n is ignored above
           printlnlog("    input_rrc_total is negative, so not scaling to the total recombination rate");
         } else if (rrc < input_rrc_total) {
-          const double rrc_superlevel = calculate_ionrecombcoeff(
-              -1, Te_estimate, element, ion,
-              {.assume_lte = true, .lower_superlevel_only = true, .per_groundmultipletpop = true});
+          auto superlevel_options = rrc_options;
+          superlevel_options.lower_superlevel_only = true;
+          const double rrc_superlevel = calculate_ionrecombcoeff(-1, Te_estimate, element, ion, superlevel_options);
           printlnlog("  rrc(superlevel): {:10.3e} [cm^3/s]", rrc_superlevel);
 
           if (rrc_superlevel > 0) {
@@ -412,25 +431,22 @@ void read_recombrate_file() {
   }
 }
 
+// Tabulate each ion's total spontaneous recombination coefficient [cm^3/s] on the temperature grid: the sum over
+// the levels of the ion below of the recombination coefficient into that level, per nne and per population of the
+// level's photoionisation target level(s) in this ion (IonRecombNorm::TARGETLEVELPOP). phi_rate_balance() applies
+// this to the whole upper ion population in the nebular approximation.
 void precalculate_ion_alpha_sp() {
   auto temp_ion_alpha_sp = MPI_shared_array<float>(get_includedions() * TABLESIZE, 0.);
   if (globals::rank_in_node == 0) {
+    constexpr auto options = IonRecombCoeffOptions{.assume_lte = true, .norm = IonRecombNorm::TARGETLEVELPOP};
     for (int tempindex = 0; tempindex < TABLESIZE; tempindex++) {
       const auto T_e = static_cast<float>(temperature_grid[tempindex]);
       for (int element = 0; element < get_nelements(); element++) {
         const int nions = get_nions(element) - 1;
         for (int ion = 0; ion < nions; ion++) {
           const auto uniqueionindex = get_uniqueionindex(element, ion);
-          const int nionisinglevels = get_nlevels_ionising(element, ion);
-          double alpha_sp = 0.;
-          for (int level = 0; level < nionisinglevels; level++) {
-            const auto uniquelevelindex = get_uniquelevelindex(element, ion, level);
-            const auto nphixstargets = get_nphixstargets(uniquelevelindex);
-            for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
-              const double alpha_sp_level = get_spontrecombcoeff(uniquelevelindex, phixstargetindex, T_e);
-              alpha_sp += alpha_sp_level;
-            }
-          }
+          const double alpha_sp = calculate_ionrecombcoeff(-1, T_e, element, ion + 1, options);
+          assert_always(std::isfinite(alpha_sp) && alpha_sp >= 0.);
           temp_ion_alpha_sp[(uniqueionindex * TABLESIZE) + tempindex] = static_cast<float>(alpha_sp);
         }
       }
@@ -621,7 +637,9 @@ DEVICE_FUNC auto select_continuum_nu(int element, const int lowerion, const int 
   return nu_sampled;
 }
 
-// Get an ion's rate coefficient for spontaneous recombination in LTE
+// Get an ion's total rate coefficient for spontaneous recombination [cm^3/s] per nne, per population of each
+// level's photoionisation target level(s) in the upper ion (LTE-weighted when there are several targets; see
+// precalculate_ion_alpha_sp())
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_ion_spontrecombcoeff(const int uniqueionindex, const float T_e)
     -> double {
   const auto upperindex = get_temperature_gridupperindex(T_e);
@@ -640,17 +658,35 @@ DEVICE_FUNC auto select_continuum_nu(int element, const int lowerion, const int 
   return ion_alpha_sp[(uniqueionindex * TABLESIZE) + (TABLESIZE - 1)];
 }
 
-// Return a level's rate coefficient for spontaneous recombination in LTE
+// Return the spontaneous recombination rate coefficient alpha_sp [cm^3 s^-1] for one (level, target) continuum:
+// recombination from the upper ion's target level (get_phixsupperlevel(uniquelevelindex, phixstargetindex)) into
+// the lower level uniquelevelindex, at electron temperature T_e (interpolated from the LUT built in
+// precalculate_rate_coefficient_integrals()).
+//
+// It is the Milne-relation partner of the partial photoionisation cross section phixstargetprobability *
+// sigma_bf(level), with the Saha factor g_lower/g_target: it therefore already contains phixstargetprobability and
+// is normalised per population of the *target level*, not per ion. The recombination rate density into the lower
+// level from that target is
+//   n_e * n_upperlevel(target) * get_spontrecombcoeff(uniquelevelindex, phixstargetindex, T_e)   [s^-1 cm^-3]
+// (see rad_recombination_ratecoeff() and the NLTE rate matrix in nltepop.cc). To get a rate per upper *ion*
+// population, sum over the targets weighted by their population fractions n_target/n_ion (as
+// calculate_ionrecombcoeff() and precalculate_ion_alpha_sp() do). Summing the coefficients over targets without
+// those weights and multiplying by n_ion overcounts: with target probabilities proportional to the target stat
+// weights, every target of a level has (nearly) the same alpha_sp, so the plain sum is too large by the number of
+// targets.
+//
+// Only spontaneous recombination is included (no stimulated term), so the coefficient depends on T_e alone.
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_spontrecombcoeff(const int uniquelevelindex,
                                                                   const int phixstargetindex, const float T_e)
     -> double {
   return lerp_or_last(std::span{spontrecombcoeffs}, uniquelevelindex, phixstargetindex, T_e);
 }
 
-// multiply by upper ion population (or ground population if per_groundmultipletpop is true) and nne to get a rate
+// Recombination coefficient of the upper ion into all levels of the ion below [cm^3/s]: multiply by nne and by the
+// population selected by options.norm (see IonRecombNorm) to get a rate
 auto calculate_ionrecombcoeff(const int nonemptymgi, const float T_e, const int element, const int upperion,
                               const IonRecombCoeffOptions options) -> double {
-  const auto [assume_lte, collisional_not_radiative, lower_superlevel_only, per_groundmultipletpop] = options;
+  const auto [assume_lte, collisional_not_radiative, lower_superlevel_only, norm] = options;
   if (upperion <= 0) {
     return 0.;
   }
@@ -658,29 +694,91 @@ auto calculate_ionrecombcoeff(const int nonemptymgi, const float T_e, const int 
   const int lowerion = upperion - 1;
   assert_always(lowerion < get_nions(element) - 1);
 
-  double nnupperion = 0;
-  int upper_nlevels = 0;
-  if (per_groundmultipletpop) {
-    // assume that photoionisation of the ion below is only to the ground multiplet levels of the current ion
-    upper_nlevels = get_nlevels_groundterm(element, lowerion + 1);
-  } else {
-    upper_nlevels = get_nlevels(element, lowerion + 1);
-  }
-
   // population of an upper-ion level: LTE (Boltzmann relative to ground) or the full NLTE level population
+  const double E_ground = epsilon(element, upperion, 0);
+  const double statw_ground = stat_weight(element, upperion, 0);
+  const double nnground = (nonemptymgi >= 0) ? get_groundlevelpop(nonemptymgi, element, upperion) : 1.;
   const auto calc_nnupperlevel = [&](const int upper) -> double {
     if (assume_lte) {
       const double T_exc = T_e;
-      const double E_level = epsilon(element, lowerion + 1, upper);
-      const double E_ground = epsilon(element, lowerion + 1, 0);
-      const double nnground = (nonemptymgi >= 0) ? get_groundlevelpop(nonemptymgi, element, lowerion + 1) : 1.;
-
-      return (nnground * stat_weight(element, lowerion + 1, upper) / stat_weight(element, lowerion + 1, 0) *
+      const double E_level = epsilon(element, upperion, upper);
+      return (nnground * stat_weight(element, upperion, upper) / statw_ground *
               exp(-(E_level - E_ground) / KB / T_exc));
     }
-    return calculate_levelpop(nonemptymgi, element, lowerion + 1, upper);
+    return calculate_levelpop(nonemptymgi, element, upperion, upper);
   };
 
+  // the rate coefficients below are divided by clumpednne again at alpha_level, so this factor cancels exactly in
+  // the radiative case. In the collisional case the rate goes as clumpednne^2, so one factor of clumpednne survives
+  // into the returned coefficient (see the clumping note in ltepop.cc's phi_rate_balance()).
+  const auto clumpednne = (nonemptymgi >= 0) ? grid::get_clumpfactor(nonemptymgi) * grid::get_nne(nonemptymgi) : 1.F;
+
+  // recombination coefficient per target level population for one (lower level, target) continuum
+  const auto calc_alpha_level = [&](const int lower, const int phixstargetindex) -> double {
+    double recomb_coeff{};
+    if (collisional_not_radiative) {
+      const double epsilon_trans = get_phixs_threshold(element, lowerion, lower, phixstargetindex);
+      recomb_coeff =
+          col_recombination_ratecoeff(T_e, clumpednne, element, upperion, lower, phixstargetindex, epsilon_trans);
+    } else {
+      recomb_coeff = rad_recombination_ratecoeff(T_e, clumpednne, element, upperion, lower, phixstargetindex);
+    }
+    return recomb_coeff / clumpednne;
+  };
+
+  const int nlevels_ionising_lower = get_nlevels_ionising(element, lowerion);
+  const auto lowerionuniquelevelindexstart = get_ionuniquelevelindexstart(element, lowerion);
+  double alpha = 0.;
+
+  if (norm == IonRecombNorm::TARGETLEVELPOP) {
+    // each lower level's targets are weighted by their populations and normalised by the summed target population.
+    // A single-target level contributes its coefficient exactly (no n * alpha / n round trip, and no 0/0 if the
+    // target population underflows), which keeps single-target datasets identical to the plain sum.
+    for (int lower = 0; lower < nlevels_ionising_lower; lower++) {
+      if (lower_superlevel_only && (!level_isinsuperlevel(element, lowerion, lower))) {
+        continue;
+      }
+      const auto loweruniquelevelindex = lowerionuniquelevelindexstart + lower;
+      const int nphixstargets = get_nphixstargets(loweruniquelevelindex);
+      if (nphixstargets == 1) {
+        alpha += calc_alpha_level(lower, 0);
+        continue;
+      }
+      // Only the relative populations of this level's targets matter, so in LTE take the Boltzmann factors relative
+      // to the lowest-energy target rather than the upper ion's ground level: the weights then cannot all underflow
+      // to zero for excited targets at the low end of the temperature grid.
+      double E_ref = std::numeric_limits<double>::max();
+      if (assume_lte) {
+        for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
+          E_ref =
+              std::min(E_ref, epsilon(element, upperion, get_phixsupperlevel(loweruniquelevelindex, phixstargetindex)));
+        }
+      }
+      const auto calc_targetweight = [&](const int upper) -> double {
+        if (assume_lte) {
+          return stat_weight(element, upperion, upper) * exp(-(epsilon(element, upperion, upper) - E_ref) / KB / T_e);
+        }
+        return calculate_levelpop(nonemptymgi, element, upperion, upper);
+      };
+      double alpha_weighted = 0.;
+      double weight_sum = 0.;
+      for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
+        const double weight = calc_targetweight(get_phixsupperlevel(loweruniquelevelindex, phixstargetindex));
+        alpha_weighted += weight * calc_alpha_level(lower, phixstargetindex);
+        weight_sum += weight;
+      }
+      if (weight_sum > 0.) {
+        alpha += alpha_weighted / weight_sum;
+      }
+    }
+    return alpha;
+  }
+
+  // per ground multiplet: assume that photoionisation of the ion below is only to the ground multiplet levels of
+  // the current ion
+  const int upper_nlevels = (norm == IonRecombNorm::GROUNDMULTIPLETPOP) ? get_nlevels_groundterm(element, upperion)
+                                                                        : get_nlevels(element, upperion);
+  double nnupperion = 0;
   for (int upper = 0; upper < upper_nlevels; upper++) {
     nnupperion += calc_nnupperlevel(upper);
   }
@@ -689,14 +787,7 @@ auto calculate_ionrecombcoeff(const int nonemptymgi, const float T_e, const int 
     return 0.;
   }
 
-  // the rate coefficients below are divided by clumpednne again at alpha_level, so this factor cancels exactly in
-  // the radiative case. In the collisional case the rate goes as clumpednne^2, so one factor of clumpednne survives
-  // into the returned coefficient (see the clumping note in ltepop.cc's phi_rate_balance()).
-  const auto clumpednne = (nonemptymgi >= 0) ? grid::get_clumpfactor(nonemptymgi) * grid::get_nne(nonemptymgi) : 1.F;
-  double alpha = 0.;
   const int maxrecombininglevel = get_maxrecombininglevel(element, lowerion + 1);
-  const int nlevels_ionising_lower = get_nlevels_ionising(element, lowerion);
-  const auto lowerionuniquelevelindexstart = get_ionuniquelevelindexstart(element, lowerion);
   for (int upper = 0; upper <= maxrecombininglevel; upper++) {
     const double nnupperlevel = calc_nnupperlevel(upper);
     for (int lower = 0; lower < nlevels_ionising_lower; lower++) {
@@ -709,16 +800,7 @@ auto calculate_ionrecombcoeff(const int nonemptymgi, const float T_e, const int 
         continue;  // recombination can only go to levels that can be photoionised to the upper level
       }
 
-      double recomb_coeff{};
-      if (collisional_not_radiative) {
-        const double epsilon_trans = get_phixs_threshold(element, lowerion, lower, phixstargetindex);
-        recomb_coeff =
-            col_recombination_ratecoeff(T_e, clumpednne, element, upperion, lower, phixstargetindex, epsilon_trans);
-      } else {
-        recomb_coeff = rad_recombination_ratecoeff(T_e, clumpednne, element, upperion, lower, phixstargetindex);
-      }
-
-      const double alpha_level = recomb_coeff / clumpednne;
+      const double alpha_level = calc_alpha_level(lower, phixstargetindex);
       const double alpha_ion_contrib = alpha_level * nnupperlevel / nnupperion;
       alpha += alpha_ion_contrib;
     }
