@@ -682,7 +682,24 @@ DEVICE_FUNC auto select_continuum_nu(int element, const int lowerion, const int 
   return ion_alpha_sp[(uniqueionindex * TABLESIZE) + (TABLESIZE - 1)];
 }
 
-// Return a level's rate coefficient for spontaneous recombination in LTE
+// Return the spontaneous recombination rate coefficient alpha_sp [cm^3 s^-1] for one (level, target) continuum:
+// recombination from the upper ion's target level (get_phixsupperlevel(uniquelevelindex, phixstargetindex)) into
+// the lower level uniquelevelindex, at electron temperature T_e (interpolated from the LUT built in
+// precalculate_rate_coefficient_integrals()).
+//
+// It is the Milne-relation partner of the partial photoionisation cross section phixstargetprobability *
+// sigma_bf(level), with the Saha factor g_lower/g_target: it therefore already contains phixstargetprobability and
+// is normalised per population of the *target level*, not per ion. The recombination rate density into the lower
+// level from that target is
+//   n_e * n_upperlevel(target) * get_spontrecombcoeff(uniquelevelindex, phixstargetindex, T_e)   [s^-1 cm^-3]
+// (see rad_recombination_ratecoeff() and the NLTE rate matrix in nltepop.cc). To get a rate per upper *ion*
+// population, sum over the targets weighted by their population fractions n_target/n_ion (as
+// calculate_ionrecombcoeff() and precalculate_ion_alpha_sp() do). Summing the coefficients over targets without
+// those weights and multiplying by n_ion overcounts: with target probabilities proportional to the target stat
+// weights, every target of a level has (nearly) the same alpha_sp, so the plain sum is too large by the number of
+// targets.
+//
+// Only spontaneous recombination is included (no stimulated term), so the coefficient depends on T_e alone.
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_spontrecombcoeff(const int uniquelevelindex,
                                                                   const int phixstargetindex, const float T_e)
     -> double {
