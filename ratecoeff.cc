@@ -14,6 +14,7 @@
 #include <filesystem>
 #include <format>
 #include <ios>
+#include <limits>
 #include <span>
 #include <sstream>
 #include <string>
@@ -743,15 +744,31 @@ auto calculate_ionrecombcoeff(const int nonemptymgi, const float T_e, const int 
         alpha += calc_alpha_level(lower, 0);
         continue;
       }
-      double alpha_weighted = 0.;
-      double nnupperlevel_sum = 0.;
-      for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
-        const double nnupperlevel = calc_nnupperlevel(get_phixsupperlevel(loweruniquelevelindex, phixstargetindex));
-        alpha_weighted += nnupperlevel * calc_alpha_level(lower, phixstargetindex);
-        nnupperlevel_sum += nnupperlevel;
+      // Only the relative populations of this level's targets matter, so in LTE take the Boltzmann factors relative
+      // to the lowest-energy target rather than the upper ion's ground level: the weights then cannot all underflow
+      // to zero for excited targets at the low end of the temperature grid.
+      double E_ref = std::numeric_limits<double>::max();
+      if (assume_lte) {
+        for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
+          E_ref =
+              std::min(E_ref, epsilon(element, upperion, get_phixsupperlevel(loweruniquelevelindex, phixstargetindex)));
+        }
       }
-      if (nnupperlevel_sum > 0.) {
-        alpha += alpha_weighted / nnupperlevel_sum;
+      const auto calc_targetweight = [&](const int upper) -> double {
+        if (assume_lte) {
+          return stat_weight(element, upperion, upper) * exp(-(epsilon(element, upperion, upper) - E_ref) / KB / T_e);
+        }
+        return calculate_levelpop(nonemptymgi, element, upperion, upper);
+      };
+      double alpha_weighted = 0.;
+      double weight_sum = 0.;
+      for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
+        const double weight = calc_targetweight(get_phixsupperlevel(loweruniquelevelindex, phixstargetindex));
+        alpha_weighted += weight * calc_alpha_level(lower, phixstargetindex);
+        weight_sum += weight;
+      }
+      if (weight_sum > 0.) {
+        alpha += alpha_weighted / weight_sum;
       }
     }
     return alpha;
