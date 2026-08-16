@@ -3,6 +3,8 @@
 #ifndef RATECOEFF_H
 #define RATECOEFF_H
 
+#include <cstdint>
+
 #include "constants.h"
 #include "random.h"
 
@@ -28,18 +30,20 @@ void setup_photoion_luts();
 [[nodiscard]] auto calculate_iongamma_per_ionpop(int nonemptymgi, int element, int lowerion,
                                                  bool collisional_not_radiative, bool force_bfintegral) -> double;
 
-// Normalisation of the ion recombination coefficient returned by calculate_ionrecombcoeff() (at most one of
-// per_groundmultipletpop and per_targetlevelpop may be set):
-//   default: per total upper ion population (all upper levels)
-//   per_groundmultipletpop: per population of the upper ion's ground multiplet
-//   per_targetlevelpop: for each lower level, per summed population of that level's photoionisation target
-//     levels, i.e. the normalisation of get_ion_spontrecombcoeff() / phi_rate_balance()
+// Population that the ion recombination coefficient returned by calculate_ionrecombcoeff() is normalised to
+// (i.e. what it must be multiplied by, along with nne, to give a rate)
+enum class IonRecombNorm : std::uint8_t {
+  IONPOP,  // the total upper ion population (all upper levels)
+  GROUNDMULTIPLETPOP,  // the population of the upper ion's ground multiplet
+  TARGETLEVELPOP,  // for each lower level, the summed population of that level's photoionisation target
+                   // levels, i.e. the normalisation of get_ion_spontrecombcoeff() / phi_rate_balance()
+};
+
 struct IonRecombCoeffOptions {
   bool assume_lte = false;
   bool collisional_not_radiative = false;
   bool lower_superlevel_only = false;
-  bool per_groundmultipletpop = false;
-  bool per_targetlevelpop = false;
+  IonRecombNorm norm = IonRecombNorm::IONPOP;
 };
 
 // nonemptymgi = -1 (no cell) with options.assume_lte = true is used by the startup recombination-rate
