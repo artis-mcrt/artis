@@ -54,8 +54,7 @@ then
     sbatch -J artis_$(basename $(pwd)) ./artis/scripts/artis-cosma8.sh
     # sbatch $SLURM_JOB_NAME
 else
-    # only start post-processing when the simulation is finished: exspec-after.sh deletes the
-    # packets_*.tmp/gridsave_*.tmp restart files that a queued continuation job would need
+    # post-processing can remove restart files, so only queue it when no continuation job was submitted
     if [ -f packets00_0000.out ]; then
         sbatch -J exspec_$(basename $(pwd)) ./artis/scripts/exspec-zip-cosma8.sh
     fi

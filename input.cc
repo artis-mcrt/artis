@@ -99,7 +99,7 @@ struct TempLineTransitionInput {
 };
 
 // mutable views of the per-level photoionisation arrays while read_phixs_data() builds them, before
-// they are published (move-assigned) into the read-only node-shared members of globals::alllevels
+// they are published into the read-only members of globals::alllevels
 struct PhixsLevelBuilders {
   std::span<int> phixsstart;
   std::span<int> nphixstargets;
@@ -809,8 +809,7 @@ void setup_phixs_list() {
   auto groundcont_element = MPI_shared_array<int>(globals::nbfcontinua_ground);
   auto groundcont_ion = MPI_shared_array<int>(globals::nbfcontinua_ground);
 
-  // node-shared mutable array filled in by the node leaders below, published (move-assigned) into the
-  // read-only member of globals::alllevels once the writes are complete
+  // filled in by the node leaders below, then published as a read-only globals::alllevels member
   auto alllevels_closestgroundlevelcont = MPI_shared_array<int>(std::ssize(globals::alllevels.epsilon), -1);
 
   if (globals::rank_in_node == 0) {
@@ -996,8 +995,8 @@ void setup_phixs_list() {
 }
 
 void read_autoion_data() {
-  // node-shared mutable arrays filled in below and then published (move-assigned) into the read-only
-  // members of globals::alllevels. When there is no autoion.txt, the initial values are published as-is
+  // filled in below and published as read-only globals::alllevels members (with no autoion.txt, the
+  // initial values are published as-is)
   const auto uniquelevelcount = std::ssize(globals::alllevels.epsilon);
   auto alllevels_allautoion_start = MPI_shared_array<int>(uniquelevelcount, -1);
   auto alllevels_nautoiondowntrans = MPI_shared_array<int>(uniquelevelcount, 0);
@@ -1180,8 +1179,7 @@ void read_phixs_data() {
   std::vector<float> tmpallphixs;
   std::vector<PhotoionTarget> tmpallphixstargets;
 
-  // node-shared mutable arrays that the (node-leader-only) file parsing below fills in, published
-  // (move-assigned) into the read-only members of globals::alllevels once the writes are complete
+  // filled in by the node-leader-only parsing below, then published as read-only globals::alllevels members
   const auto uniquelevelcount = std::ssize(globals::alllevels.epsilon);
   auto alllevels_phixsstart = MPI_shared_array<int>(uniquelevelcount, -1);
   auto alllevels_nphixstargets = MPI_shared_array<int>(uniquelevelcount, 0);
@@ -1266,7 +1264,7 @@ void read_phixs_data() {
   MPI_Bcast_safe(globals::nbfcontinua_ground, 0, globals::mpi_comm_node);
   MPI_Barrier_node();
 
-  // the node leaders have finished writing the per-level photoionisation arrays, so publish them as read-only
+  // the writes are complete, so publish as read-only
   globals::alllevels.phixsstart = std::move(alllevels_phixsstart);
   globals::alllevels.nphixstargets = std::move(alllevels_nphixstargets);
   globals::alllevels.phixstargetstart = std::move(alllevels_phixstargetstart);
@@ -1565,8 +1563,8 @@ void create_shared_levellist(std::vector<TempEnergyLevel>& temp_alllevels) {
   auto alllevels_epsilon = MPI_shared_array<double>(nlevels);
   auto alllevels_statweight = MPI_shared_array<float>(nlevels);
   auto alllevels_matransblock_start = MPI_shared_array<int>(nlevels);
-  // the remaining members of globals::alllevels (autoion, photoionisation, and bound-free list arrays)
-  // are built and published later, by read_autoion_data(), read_phixs_data(), and setup_phixs_list()
+  // the remaining alllevels members are built and published by read_autoion_data(), read_phixs_data(),
+  // and setup_phixs_list()
   if (globals::rank_in_node == 0) {
     int chtransindex = 0;
     for (auto i = 0ZU; i < temp_alllevels.size(); i++) {
@@ -2203,8 +2201,7 @@ void read_atomicdata() {
   setup_nlte_levels();
 }
 
-// the hybrid timestep schemes switch between logarithmic and fixed-width timesteps at a transition time, so
-// both of those values must be set (the pure schemes ignore them, and the presets ship them as -1.)
+// the pure timestep schemes ignore these two values, and the presets ship them as -1.
 static_assert(TIMESTEP_SIZE_METHOD == TimeStepSizeMethod::LOGARITHMIC ||
                   TIMESTEP_SIZE_METHOD == TimeStepSizeMethod::CONSTANT ||
                   (FIXED_TIMESTEP_WIDTH > 0. && TIMESTEP_TRANSITION_TIME > 0.),

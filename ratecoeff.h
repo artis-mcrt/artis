@@ -35,8 +35,8 @@ struct IonRecombCoeffOptions {
   bool per_groundmultipletpop = false;
 };
 
-// pass nonemptymgi = -1 (no cell) with options.assume_lte = true for the startup recombination-rate calibration,
-// which uses LTE populations at the given temperature instead of a cell's solved populations
+// nonemptymgi = -1 (no cell) with options.assume_lte = true is used by the startup recombination-rate
+// calibration, which takes LTE populations at the given temperature
 [[nodiscard]] auto calculate_ionrecombcoeff(int nonemptymgi, float T_e, int element, int upperion,
                                             IonRecombCoeffOptions options) -> double;
 

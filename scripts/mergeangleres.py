@@ -9,10 +9,8 @@ def resfilepath(basefolder: Path | str, fileprefix: str, abin: int) -> Path:
 
 
 def get_mabins() -> int:
-    # one output file is written per direction bin (MABINS = NPHIBINS * NCOSTHETABINS in exspec.h).
-    # Parse the expected count from the source folder that this script belongs to, so that a changed
-    # bin count cannot silently break the merge. Counting the files on disk instead would treat the
-    # contiguous prefix left behind by an interrupted exspec run as a complete set
+    # one output file per direction bin (MABINS = NPHIBINS * NCOSTHETABINS), with the expected count
+    # parsed from the exspec.h of the source folder that this script belongs to
     exspec_h = (Path(__file__).resolve().parent.parent / "exspec.h").read_text(encoding="utf-8")
     bincounts = {name: int(value) for name, value in re.findall(r"constexpr int (NPHIBINS|NCOSTHETABINS) = (\d+);", exspec_h)}
     return bincounts["NPHIBINS"] * bincounts["NCOSTHETABINS"]
