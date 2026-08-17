@@ -1027,6 +1027,13 @@ auto main(int argc, char* argv[]) -> int {
       MAX_NODE_SIZE);
 #endif
 
+  if constexpr (!BFCOOLING_USELEVELPOPNOTIONPOP) {
+    printlnlog(
+        "[warning] BFCOOLING_USELEVELPOPNOTIONPOP is false: bound-free cooling uses the whole upper ion population "
+        "for every photoionisation target level, which overcounts the cooling of multi-target continua. This mode is "
+        "incorrect and only kept to reproduce published calculations. Set BFCOOLING_USELEVELPOPNOTIONPOP = true.");
+  }
+
   // Read in parameters from input.txt
   read_parameterfile(packets);
 
