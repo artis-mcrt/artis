@@ -509,6 +509,39 @@ inline void MPI_Reduce_safe(R&& data, MPI_Op op, const int root, MPI_Comm comm) 
                                           : std::format("{}/{}", globals::runoutputfolder, filename);
 }
 
+// exactly match the generated per-rank output filenames: output_<rank>-<thread>.txt and the
+// estimators/nlte/radfield/macroatom _<rank>.out files, possibly with a compression extension added by
+// the post-processing scripts (e.g. exspec-after.sh runs zstd)
+[[nodiscard]] inline auto is_rank_outfile_name(std::string_view filename) -> bool {
+  const auto alldigits = [](const std::string_view str) {
+    return !str.empty() && std::ranges::all_of(str, [](const char c) { return c >= '0' && c <= '9'; });
+  };
+
+  for (const std::string_view compressext : {".zst", ".gz", ".xz"}) {
+    if (filename.ends_with(compressext)) {
+      filename.remove_suffix(compressext.size());
+      break;
+    }
+  }
+
+  if (constexpr std::string_view logprefix = "output_"; filename.starts_with(logprefix) && filename.ends_with(".txt")) {
+    const auto rank_thread = filename.substr(logprefix.size(), filename.size() - logprefix.size() - 4);
+    const auto dashpos = rank_thread.find('-');
+    return dashpos != std::string_view::npos && alldigits(rank_thread.substr(0, dashpos)) &&
+           alldigits(rank_thread.substr(dashpos + 1));
+  }
+
+  if (filename.ends_with(".out")) {
+    for (const std::string_view prefix : {"estimators_", "nlte_", "radfield_", "macroatom_"}) {
+      if (filename.starts_with(prefix)) {
+        return alldigits(filename.substr(prefix.size(), filename.size() - prefix.size() - 4));
+      }
+    }
+  }
+
+  return false;
+}
+
 [[nodiscard]] inline auto fopen_required(const std::string& filename, std::span<const char> mode) -> FILE* {
   if (mode[0] == 'r') {
     // search data folders in order to find file to read

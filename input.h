@@ -15,13 +15,23 @@
 #include <string>
 #include <string_view>
 #include <system_error>
+#include <vector>
 
+#include "constants.h"
+#include "globals.h"
 #include "packet.h"
 
 void read_atomicdata();
 void read_parameterfile(std::span<Packet> packets);
 void update_parameterfile(int nts);
 void setup_timesteps();
+
+// calculate the timestep grid: ntimesteps entries with start, mid, and width set, plus a zero-width
+// entry holding the end time. tmin and tmax are in seconds; the fixed width and transition time of the
+// hybrid methods are in days
+[[nodiscard]] auto calculate_timesteps(TimeStepSizeMethod method, double tmin, double tmax, int ntimesteps,
+                                       double fixed_timestep_width_days, double timestep_transition_time_days)
+    -> std::vector<globals::TimeStep>;
 
 // return true for whitespace-only lines, and lines that are exclusively whitespace up to a '#' character
 [[nodiscard]] constexpr auto lineiscommentonly(const std::string_view line) -> bool {

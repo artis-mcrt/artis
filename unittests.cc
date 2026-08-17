@@ -467,6 +467,159 @@ void test_input_helpers() {
   check(!lineiscommentonly("1 2 3 # trailing comment"), "data line with trailing comment is not comment-only");
 }
 
+void test_parse_next_token() {
+  std::println("parse_next_token...");
+  {
+    auto remainder = std::string_view{"  42\t-7 +5  "};
+    int i = 0;
+    check(parse_next_token(remainder, i) && i == 42, "int token with leading whitespace");
+    check(parse_next_token(remainder, i) && i == -7, "negative int token after tab");
+    check(parse_next_token(remainder, i) && i == 5, "leading plus sign accepted");
+    check(!parse_next_token(remainder, i) && i == 5, "trailing whitespace has no token and value is untouched");
+  }
+  {
+    auto remainder = std::string_view{""};
+    int i = -99;
+    check(!parse_next_token(remainder, i), "empty line has no token");
+  }
+  {
+    auto remainder = std::string_view{"12abc 3"};
+    int i = -99;
+    check(!parse_next_token(remainder, i) && remainder == "12abc 3",
+          "token with trailing junk is rejected and not consumed");
+  }
+  {
+    auto remainder = std::string_view{"+-0"};
+    int i = -99;
+    check(!parse_next_token(remainder, i), "+-0 is rejected");
+  }
+  {
+    auto remainder = std::string_view{"3000000000"};
+    int i = -99;
+    check(!parse_next_token(remainder, i), "int overflow is rejected");
+  }
+  {
+    auto remainder = std::string_view{"1.5e3 -2.5 +0.25"};
+    double d = 0.;
+    check(parse_next_token(remainder, d) && d == 1500., "double token in exponent notation");
+    check(parse_next_token(remainder, d) && d == -2.5, "negative double token");
+    check(parse_next_token(remainder, d) && d == 0.25, "double token with leading plus sign");
+  }
+  for (const auto token : {"nan", "inf", "-inf", "NAN"}) {
+    auto remainder = std::string_view{token};
+    double d = 0.;
+    check(!parse_next_token(remainder, d), "nan and inf spellings are rejected");
+  }
+  {
+    auto remainder = std::string_view{"1e400"};
+    double d = -99.;
+    check(!parse_next_token(remainder, d), "double overflow is rejected");
+  }
+  {
+    auto remainder = std::string_view{"1e-400"};
+    double d = -99.;
+    check(parse_next_token(remainder, d) && d == 0., "underflow below the double range reads as zero");
+  }
+  {
+    auto remainder = std::string_view{"1e39"};
+    float f = -99.;
+    check(!parse_next_token(remainder, f), "float overflow is rejected even when the value fits in a double");
+  }
+  {
+    auto remainder = std::string_view{"1e-60"};
+    float f = -99.;
+    check(parse_next_token(remainder, f) && f == 0.f, "underflow below the float range reads as zero");
+  }
+}
+
+void test_calculate_timesteps() {
+  std::println("timestep grid calculation...");
+  const double tmin = 2. * DAY;
+  const double tmax = 50. * DAY;
+  const int nts = 40;
+
+  const auto grid_is_valid = [](const std::vector<globals::TimeStep>& ts, const int ntimesteps, const double t_start,
+                                const double t_end) {
+    bool ok = std::ssize(ts) == ntimesteps + 1;
+    ok = ok && ts[0].start == t_start;
+    ok = ok && ts[ntimesteps].start == t_end && ts[ntimesteps].mid == t_end && ts[ntimesteps].width == 0.;
+    for (int n = 0; ok && n < ntimesteps; n++) {
+      ok = ok && ts[n].width > 0.;
+      ok = ok && ts[n].mid > ts[n].start && ts[n].mid < ts[n].start + ts[n].width;
+      const double ts_end = ts[n].start + ts[n].width;
+      const double next_start = (n < ntimesteps - 1) ? ts[n + 1].start : t_end;
+      ok = ok && std::abs((ts_end / next_start) - 1.) < 0.001;
+    }
+    return ok;
+  };
+
+  {
+    const auto ts = calculate_timesteps(TimeStepSizeMethod::LOGARITHMIC, tmin, tmax, nts, -1., -1.);
+    check(grid_is_valid(ts, nts, tmin, tmax), "logarithmic grid is contiguous from tmin to tmax");
+    bool constant_ratio = true;
+    for (int n = 1; n < nts; n++) {
+      constant_ratio =
+          constant_ratio && std::abs((ts[n].start / ts[n - 1].start) / (ts[1].start / ts[0].start) - 1.) < 1e-10;
+    }
+    check(constant_ratio, "logarithmic timesteps have a constant start-time ratio");
+  }
+  {
+    const auto ts = calculate_timesteps(TimeStepSizeMethod::CONSTANT, tmin, tmax, nts, -1., -1.);
+    check(grid_is_valid(ts, nts, tmin, tmax), "constant grid is contiguous from tmin to tmax");
+    bool equal_widths = true;
+    for (int n = 0; n < nts; n++) {
+      equal_widths = equal_widths && std::abs(ts[n].width / ts[0].width - 1.) < 1e-10;
+    }
+    check(equal_widths, "constant timesteps have equal widths");
+  }
+  {
+    // 2 to 30 days logarithmic, then 1-day fixed steps to 50 days
+    const auto ts = calculate_timesteps(TimeStepSizeMethod::LOGARITHMIC_THEN_CONSTANT, tmin, tmax, nts, 1., 30.);
+    check(grid_is_valid(ts, nts, tmin, tmax), "logarithmic-then-constant grid is contiguous from tmin to tmax");
+    // ceil((50 - 30) / 1) = 20 fixed steps at the end
+    bool fixed_tail = true;
+    for (int n = nts - 20; n < nts; n++) {
+      fixed_tail = fixed_tail && std::abs(ts[n].width / DAY - 1.) < 1e-10;
+    }
+    check(fixed_tail, "logarithmic-then-constant grid ends with the fixed-width steps");
+  }
+  {
+    // 1-day fixed steps from 2 to 30 days, then logarithmic to 50 days
+    const auto ts = calculate_timesteps(TimeStepSizeMethod::CONSTANT_THEN_LOGARITHMIC, tmin, tmax, nts, 1., 30.);
+    check(grid_is_valid(ts, nts, tmin, tmax), "constant-then-logarithmic grid is contiguous from tmin to tmax");
+    // ceil((30 - 2) / 1) = 28 fixed steps at the start
+    bool fixed_head = true;
+    for (int n = 0; n < 28; n++) {
+      fixed_head = fixed_head && std::abs(ts[n].width / DAY - 1.) < 1e-10;
+    }
+    check(fixed_head, "constant-then-logarithmic grid starts with the fixed-width steps");
+  }
+  {
+    const auto ts = calculate_timesteps(TimeStepSizeMethod::LOGARITHMIC, tmin, tmax, 1, -1., -1.);
+    check(grid_is_valid(ts, 1, tmin, tmax), "a single logarithmic timestep covers the whole time range");
+  }
+}
+
+void test_rank_outfile_name() {
+  std::println("per-rank output filename matching...");
+  bool match_all = true;
+  for (const auto name :
+       {"output_0-0.txt", "output_123-45.txt", "estimators_0000.out", "nlte_0003.out", "radfield_0100.out",
+        "macroatom_0000.out", "output_0-0.txt.zst", "estimators_0000.out.gz", "radfield_0000.out.xz"}) {
+    match_all = match_all && is_rank_outfile_name(name);
+  }
+  check(match_all, "generated per-rank filenames are matched, with and without compression extensions");
+
+  bool match_none = false;
+  for (const auto name :
+       {"output_0.txt", "output_a-0.txt", "output_-0.txt", "output_0-.txt", "output_0-0.log", "estimators_00x0.out",
+        "estimators_.out", "estimators_0000.dat", "nlte_0000.OUT", "spec.out", "packets00_0000.out", "deposition.out",
+        "model.txt", "input.txt", "output_0-0.txt.bz2", "estimators_0000.out.zst.zst"}) {
+    match_none = match_none || is_rank_outfile_name(name);
+  }
+  check(!match_none, "other filenames are never matched, so they cannot be deleted from an output folder");
+}
+
 void test_gth_solver() {
   std::println("GTH stationary distribution solver...");
 
@@ -715,6 +868,9 @@ auto main() -> int {
   test_phixs_table_lookup();
   test_closest_transition_randomised();
   test_input_helpers();
+  test_parse_next_token();
+  test_calculate_timesteps();
+  test_rank_outfile_name();
   test_gth_solver();
   test_nonthermal_solve_upper_triangular();
   // the solver/integrator throw std::domain_error only on precondition violations that this test does not trigger
