@@ -3,6 +3,51 @@
 Guidance for AI coding agents working on ARTIS. See [README.md](README.md) for a
 full project description.
 
+## Writing style
+
+Write all English in ASD-STE100 (Simplified Technical English). This applies to
+code comments, documentation, commit messages, pull request text, and replies to
+the maintainers. It also applies to new log, warning, and error strings in the
+code.
+
+Obey these rules:
+
+- Use the approved STE words, in the approved part of speech and the approved
+  meaning. Technical names and technical verbs are permitted, e.g. `sn3d`,
+  `MPI_shared_array`, "packet", "opacity", and "to sample".
+- Use one term for one thing. Do not change between synonyms, e.g. between
+  "cell" and "grid cell", or between "time step" and "timestep".
+- Use the active voice. Write "the Makefile writes `version.h`" and not
+  "`version.h` is written by the Makefile".
+- Use the simple tenses (present, past, and future). Do not use the -ing form
+  as a noun or as an adjective if a simple form is possible.
+- Write short sentences. Use a maximum of 20 words in an instruction and a
+  maximum of 25 words in descriptive text. Write a maximum of 6 sentences in a
+  descriptive paragraph.
+- Give one instruction in one sentence. Write the reason in a different
+  sentence.
+- Keep the articles "a", "an", and "the".
+- Use a maximum of three words in a noun cluster. Write "the checksums of the
+  output files" and not "output file checksum comparison".
+- Write positive statements. Do not write a double negative.
+- Do not use slang, idioms, or jokes. Do not use an abbreviation that the text
+  does not define.
+- Use a vertical list if the text contains more than three related items or
+  conditions.
+
+These rules do not apply to:
+
+- Identifiers in the code, e.g. the names of variables, functions, and
+  namespaces. Keep the conventions of the file that you change.
+- The format and the content of the output files. `linestat.out` and the other
+  `*.out` files must stay byte-compatible (see "Conventions and gotchas").
+- Quoted text from an external source, e.g. a compiler message or a title of a
+  publication.
+
+Keep the British spellings that this repository uses, e.g. "parallelised" and
+"normalise". STE controls the choice of words and the structure of the
+sentences. It does not control the spelling variant here.
+
 ## Project overview
 
 ARTIS is a 3D Monte Carlo radiative transfer code for supernovae and kilonovae,
