@@ -240,10 +240,8 @@ constexpr double TIMESTEP_TRANSITION_TIME;
 constexpr bool KEEP_ALL_RESTART_FILES;
 
 // multiply the bound-free cooling coefficient of each (level, target) continuum by the population of the upper-ion
-// target level (true, correct) instead of by the whole upper ion population (false). The bound-free cooling
-// coefficients are per target-level population, so the false setting counts the cooling of a level with several
-// photoionisation targets once per target. It is incorrect and only kept to reproduce published calculations; a
-// warning is written to the log when it is used.
+// target level instead of by the whole upper ion population (which is shared among a level's targets by their LTE
+// fractions)
 constexpr bool BFCOOLING_USELEVELPOPNOTIONPOP;
 
 // set true to calculate and use expansion opacities instead of line-by-line in non-grey mode

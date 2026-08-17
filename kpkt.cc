@@ -12,6 +12,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstdlib>
+#include <limits>
 #include <span>
 #include <utility>
 
@@ -161,6 +162,30 @@ auto calculate_cooling_rates_ion(const int nonemptymgi, const int element, const
     for (int level = 0; level < nionisinglevels; level++) {
       const auto uniquelevelindex = ionuniquelevelindexstart + level;
       const int nphixstargets = get_nphixstargets(uniquelevelindex);
+
+      // The bf cooling coefficient of a (level, target) continuum is per population of the target level. When the
+      // upper ion population is used instead, a level with several targets must share it among them: giving every
+      // target the whole ion population would count the term's cooling once per target (with target probabilities
+      // proportional to the target stat weights, each target's coefficient equals that of the whole target term).
+      // The share is the LTE fraction among this level's targets, with Boltzmann factors relative to the
+      // lowest-energy target so that they cannot all underflow. Single-target levels get the whole ion population.
+      [[maybe_unused]] double targetweight_sum = 0.;
+      [[maybe_unused]] double E_target_min = 0.;
+      if constexpr (!BFCOOLING_USELEVELPOPNOTIONPOP) {
+        if (nphixstargets > 1) {
+          E_target_min = std::numeric_limits<double>::max();
+          for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
+            E_target_min = std::min(E_target_min,
+                                    epsilon(element, ion + 1, get_phixsupperlevel(uniquelevelindex, phixstargetindex)));
+          }
+          for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
+            const int upperlevel = get_phixsupperlevel(uniquelevelindex, phixstargetindex);
+            targetweight_sum += stat_weight(element, ion + 1, upperlevel) *
+                                exp(-(epsilon(element, ion + 1, upperlevel) - E_target_min) / KB / T_e);
+          }
+        }
+      }
+
       for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
         const double pop = [&] {
           if constexpr (BFCOOLING_USELEVELPOPNOTIONPOP) {
@@ -168,7 +193,13 @@ auto calculate_cooling_rates_ion(const int nonemptymgi, const int element, const
             return update_cellcache_contribs ? get_cellcache_levelpop(nonemptymgi, element, ion + 1, upperlevel)
                                              : calculate_levelpop(nonemptymgi, element, ion + 1, upperlevel);
           }
-          return nnupperion;
+          if (nphixstargets == 1) {
+            return nnupperion;
+          }
+          const int upperlevel = get_phixsupperlevel(uniquelevelindex, phixstargetindex);
+          const double targetweight = stat_weight(element, ion + 1, upperlevel) *
+                                      exp(-(epsilon(element, ion + 1, upperlevel) - E_target_min) / KB / T_e);
+          return nnupperion * targetweight / targetweight_sum;
         }();
         const double C = get_bfcoolingcoeff(element, ion, level, phixstargetindex, T_e) * pop * clumpednne;
         C_ion += C;
