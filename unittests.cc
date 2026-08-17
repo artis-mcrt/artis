@@ -693,15 +693,16 @@ void test_gth_solver() {
   };
 
   // nearest-neighbour birth-death chain: rate_up[k] is the rate from state k to k + 1 and rate_down[k] the reverse
-  const auto make_chain_matrix = [&set_rate](const std::span<const double> rate_up,
+  // fill the caller's matrix (resized here) rather than returning one: gcc 16 with LTO reports a spurious
+  // maybe-uninitialized on the returned vector's storage
+  const auto make_chain_matrix = [&set_rate](std::vector<double>& matrix, const std::span<const double> rate_up,
                                              const std::span<const double> rate_down) {
     const auto n = std::ssize(rate_up) + 1;
-    std::vector<double> matrix(n * n, 0.);
+    matrix.assign(n * n, 0.);
     for (ptrdiff_t k = 0; k < n - 1; k++) {
       set_rate(matrix, n, k, k + 1, rate_up[k]);
       set_rate(matrix, n, k + 1, k, rate_down[k]);
     }
-    return matrix;
   };
 
   {
@@ -731,7 +732,8 @@ void test_gth_solver() {
     // with a normalisation row loses the small components to absolute rounding)
     constexpr std::array<double, 3> rate_up = {2e10, 3e-4, 5e2};
     constexpr std::array<double, 3> rate_down = {7e-6, 1e8, 4e-1};
-    auto matrix = make_chain_matrix(rate_up, rate_down);
+    std::vector<double> matrix;
+    make_chain_matrix(matrix, rate_up, rate_down);
     std::vector<double> vec_x(rate_up.size() + 1, 0.);
     const auto result = gth_stationary_distribution(matrix, vec_x);
     check(!result.has_value(), "GTH solves a birth-death chain");
@@ -746,7 +748,8 @@ void test_gth_solver() {
     // double range without the subtraction-free rescaling in the back-substitution
     const std::vector<double> rate_up(6, 1e30);
     const std::vector<double> rate_down(6, 1e-30);
-    auto matrix = make_chain_matrix(rate_up, rate_down);
+    std::vector<double> matrix;
+    make_chain_matrix(matrix, rate_up, rate_down);
     std::vector<double> vec_x(7, 0.);
     const auto result = gth_stationary_distribution(matrix, vec_x);
     check(!result.has_value(), "GTH survives raw weights beyond the double range");
@@ -761,7 +764,8 @@ void test_gth_solver() {
     // the dominant state finite instead of letting the weight overflow to infinity and decay into NaNs
     const std::vector<double> rate_up(1, 1e200);
     const std::vector<double> rate_down(1, 1e-200);
-    auto matrix = make_chain_matrix(rate_up, rate_down);
+    std::vector<double> matrix;
+    make_chain_matrix(matrix, rate_up, rate_down);
     std::vector<double> vec_x(2, 0.);
     const auto result = gth_stationary_distribution(matrix, vec_x);
     check(!result.has_value(), "GTH solves a two-state chain with a weight ratio beyond the double range");
