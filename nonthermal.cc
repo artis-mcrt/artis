@@ -83,9 +83,6 @@ constexpr bool SF_AUGER_CONTRIBUTION_DISTRIBUTE_EN = false;
 // minimum number fraction of the total population to include in SF solution
 constexpr double MIN_ION_OVER_NNTOT = 1.e-8;
 
-// minimum deposition rate density [eV/s/cm3] to solve SF equation
-constexpr double MINDEPRATE = 0.;
-
 // Bohr radius squared in cm^2
 constexpr double A_naught_squared = 2.800285203e-17;
 
@@ -2624,11 +2621,11 @@ void solve_spencerfano(const int nonemptymgi, const int timestep, const int iter
   if (timestep < globals::num_lte_timesteps + 1) {
     // this global condition is reported once per timestep by update_grid(), not once per cell
     skip_solution = true;
-  } else if (get_ntlepton_deposition_rate_density(nonemptymgi) / EV < MINDEPRATE) {
+  } else if (get_ntlepton_deposition_rate_density(nonemptymgi) / EV <= 0.) {
     printlnlog(
-        "Non-thermal deposition rate of {:g} [eV/s/cm^3] below MINDEPRATE {:g} [eV/s/cm^3] in cell {} at timestep {}. "
+        "Non-thermal deposition rate of {:g} [eV/s/cm^3] in cell {} at timestep {}. "
         "Skipping Spencer-Fano solution.",
-        get_ntlepton_deposition_rate_density(nonemptymgi) / EV, MINDEPRATE, modelgridindex, timestep);
+        get_ntlepton_deposition_rate_density(nonemptymgi) / EV, modelgridindex, timestep);
 
     skip_solution = true;
   }
