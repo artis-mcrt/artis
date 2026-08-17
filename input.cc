@@ -690,8 +690,8 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion,
 }
 
 auto calculate_nlevels_groundterm(const int element, const int ion) -> int {
-  const auto nlevels = static_cast<size_t>(get_nlevels(element, ion));
-  const auto levelstart = static_cast<size_t>(get_ionuniquelevelindexstart(element, ion));
+  const auto nlevels = get_nlevels(element, ion);
+  const auto levelstart = get_ionuniquelevelindexstart(element, ion);
   return count_groundterm_levels(globals::alllevels.epsilon.subspan(levelstart, nlevels),
                                  globals::alllevels.statweight.subspan(levelstart, nlevels));
 }

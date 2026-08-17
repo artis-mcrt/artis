@@ -35,71 +35,105 @@ void setup_timesteps();
     -> std::vector<globals::TimeStep>;
 
 // Count the levels of the ground term (the lowest fine-structure multiplet) of an ion from its level
-// energies and statistical weights, both listed in order of increasing energy. Within an LS-coupled term, J
-// changes by one from level to level, so the statistical weight 2J+1 changes by exactly two, in the same
-// direction throughout (normal or inverted multiplets), and a term with integer J has an odd number of
-// levels (2 min(L,S) + 1). By the Landé interval rule, the fine-structure splittings E(J) - E(J-1) are
-// proportional to J, so the ratio of two adjacent splittings within a multiplet is the ratio of the higher J
-// of each pair of levels. A splitting that exceeds this prediction by more than a tolerance factor (allowing
-// for departures from LS coupling, e.g. 1.7 times for the inverted 3P of Ti VII) marks the boundary with the
-// next term, as does a change in the statistical weight pattern.
+// energies and statistical weights, both listed in order of increasing energy.
+//
+// Within an LS-coupled term, J changes by one from level to level, so the statistical weight 2J+1 changes by
+// exactly two, in the same direction throughout (normal or inverted multiplets), and a term with integer J has
+// an odd number of levels (2 min(L,S) + 1). By the Landé interval rule the fine-structure splittings
+// E(J) - E(J-1) are proportional to J, so the ratio of two splittings within a multiplet is the ratio of the
+// higher J of each pair of levels. A splitting that exceeds that prediction by more than a tolerance factor
+// marks the boundary with the next term, as does a change in the statistical weight pattern.
+//
+// Two tolerances are needed because the reference splitting is not always a fine-structure splitting. Comparing
+// with the splitting below stays within the multiplet, where the interval rule holds to about a factor of two
+// (the largest departure in the ARTIS datasets is 4.4, for Ni I 3F4 with 3D3,2 interleaved). Comparing with the
+// splitting above happens at the lowest level, and for a single-level ground term (4S3/2, 6S5/2, 7S3) that
+// reference is the fine structure of the *next* term, which is far smaller than the term separation: those
+// boundaries need a factor of 25 or more, while the widest real multiplet needs 3.4 (the C-like 3P of Fe XXI,
+// which is deep enough into jj coupling that the interval rule barely applies).
+//
+// Known limitations, both from datasets that do not resolve a fine-structure splitting: one written as a very
+// small non-zero number rather than rounded to zero looks like a term boundary and ends the multiplet early,
+// and a pair of degenerate levels directly above the ground level reads as an unresolved next term (which is
+// what it is for N I 4S3/2 followed by 2D5/2,3/2, but not for a 3P2,1,0 whose upper two levels are degenerate).
 [[nodiscard]] constexpr auto count_groundterm_levels(const std::span<const double> energies,
                                                      const std::span<const float> statweights) -> int {
-  const int nlevels = static_cast<int>(std::min(energies.size(), statweights.size()));
+  assert_testmodeonly(energies.size() == statweights.size());
+  const auto nlevels = static_cast<int>(energies.size());
   if (nlevels <= 1) {
     return nlevels;
   }
 
-  constexpr double MAX_INTERVAL_RULE_DEPARTURE = 3.;
+  // largest factor by which a splitting may exceed the interval-rule prediction and still count as the same term
+  constexpr double MAX_DEPARTURE_WITHIN_MULTIPLET = 3.;
+  constexpr double MAX_DEPARTURE_ACROSS_TERMS = 8.;
 
-  // twice the higher J of the pair of levels (a, a + 1), from g = 2J + 1
+  // twice the higher J of the pair of levels (a, a + 1), from g = 2J + 1. Equal to 2J of the upper level of a
+  // normal multiplet and of the lower level of an inverted one, which is the J the interval rule scales with.
   const auto twoj_upper = [&statweights](const int a) -> double {
     return static_cast<double>(std::max(statweights[a], statweights[a + 1])) - 1.;
   };
 
   // true if the splitting between levels (a, a + 1) is small enough compared to the splitting between levels
-  // (b, b + 1) for the two pairs to belong to the same multiplet under the interval rule
-  const auto splittings_consistent = [&](const int a, const int b) -> bool {
+  // (b, b + 1) for the two pairs to belong to the same multiplet under the interval rule. Written as a pair of
+  // products rather than a ratio so that a zero reference splitting fails rather than dividing by zero.
+  const auto splittings_consistent = [&](const int a, const int b, const double maxdeparture) -> bool {
     const double splitting_a = energies[a + 1] - energies[a];
     const double splitting_b = energies[b + 1] - energies[b];
-    return (splitting_a * twoj_upper(b)) <= (MAX_INTERVAL_RULE_DEPARTURE * splitting_b * twoj_upper(a));
+    if (splitting_a < 0. || splitting_b < 0. || twoj_upper(b) <= 0.) {
+      return false;  // levels out of energy order, or a reference pair with no J step: no usable prediction
+    }
+    return (splitting_a * twoj_upper(b)) <= (maxdeparture * splitting_b * twoj_upper(a));
   };
 
+  const bool increasing_j = statweights[1] > statweights[0];
   int nlevels_groundterm = 1;
-  double stepdirection = 0.;  // sign of the change in statistical weight between levels of the multiplet
   for (int level = 1; level < nlevels; level++) {
     const double delta_g = statweights[level] - statweights[level - 1];
-    const double abs_delta_g = (delta_g < 0.) ? -delta_g : delta_g;
-    if (abs_delta_g < 1.6 || abs_delta_g > 2.4) {
-      break;  // J must change by exactly one (also rejects a repeated statistical weight)
+    const double abs_delta_g = (delta_g < 0.) ? -delta_g : delta_g;  // std::abs is not constexpr in libc++
+    // J must change by exactly one, in the same direction throughout. The window tolerates a statistical weight
+    // that the dataset did not write as an exact integer; it also rejects a repeated statistical weight.
+    if (abs_delta_g < 1.6 || abs_delta_g > 2.4 || ((delta_g > 0.) != increasing_j)) {
+      break;
     }
-    if (level > 1 && ((delta_g > 0.) != (stepdirection > 0.))) {
-      break;  // J must keep increasing or keep decreasing through the multiplet
-    }
-    stepdirection = delta_g;
 
-    // Compare the splitting below this level with the one before it. With no earlier splitting (level 1), or an
-    // earlier one that the dataset rounded to zero, compare with the following splitting instead: a single-level
-    // ground term (e.g. 4S3/2, 6S5/2, 7S3) sits far below the next term, whose own fine structure is small compared
-    // to the term separation, so a splitting far larger than the next one marks a term boundary as well.
-    const bool have_earlier_splitting = (level > 1) && (energies[level - 1] > energies[level - 2]);
-    if (have_earlier_splitting) {
-      if (!splittings_consistent(level - 1, level - 2)) {
+    // Prefer the nearest splitting below that the data resolves as non-zero: datasets sometimes round a
+    // fine-structure splitting to zero, and a zero carries no scale to compare against. Failing that, compare
+    // with the splitting immediately above, which for a single-level ground term is the fine structure of the
+    // next term rather than another splitting of this one, hence the looser tolerance (a zero there means the
+    // next term is unresolved, which ends this one). A level with no reference at all, the second level of the
+    // ion, is kept: there is nothing to compare it with.
+    int refpair = -1;
+    for (int b = level - 2; b >= 0; b--) {
+      if (energies[b + 1] > energies[b]) {
+        refpair = b;
         break;
       }
-    } else if (level + 1 < nlevels && !splittings_consistent(level - 1, level)) {
+    }
+    if (refpair >= 0) {
+      if (!splittings_consistent(level - 1, refpair, MAX_DEPARTURE_WITHIN_MULTIPLET)) {
+        break;
+      }
+    } else if (level + 1 < nlevels) {
+      if (!splittings_consistent(level - 1, level, MAX_DEPARTURE_ACROSS_TERMS)) {
+        break;
+      }
+    } else if (level > 1 && !splittings_consistent(level - 1, level - 2, MAX_DEPARTURE_WITHIN_MULTIPLET)) {
       break;
     }
     nlevels_groundterm = level + 1;
   }
 
-  // A term with integer J (odd statistical weights) has an odd number of levels (2 min(L,S) + 1), so an even count
-  // means the last level belongs to the next term (e.g. 7S3 followed by 5S2). This only applies when the level after
-  // the counted ones was seen to be outside the term; if the level list itself ended (an ion truncated by the level
-  // limit in compositiondata.txt) the retained levels are kept.
-  // Statistical weights of fine-structure levels are exact integers (2J+1) so the cast is exact.
-  const bool integer_j = (static_cast<int>(statweights[0]) % 2) == 1;
-  if (integer_j && (nlevels_groundterm % 2) == 0 && nlevels_groundterm < nlevels) {
+  // A term with integer J (odd statistical weights) has an odd number of levels (2 min(L,S) + 1), so an even
+  // count means the last level belongs to the next term (e.g. 7S3 followed by 5S2). This only applies when the
+  // level after the counted ones was seen to be outside the term; if the level list itself ended (an ion
+  // truncated by the level limit in compositiondata.txt) the retained levels are kept.
+  // Round rather than truncate: a statistical weight written as 6.999999 must still test as odd.
+  int g_ground = static_cast<int>(statweights[0]);
+  if ((statweights[0] - static_cast<float>(g_ground)) > 0.5F) {
+    g_ground++;
+  }
+  if (((g_ground % 2) == 1) && (nlevels_groundterm % 2) == 0 && nlevels_groundterm < nlevels) {
     nlevels_groundterm--;
   }
 
@@ -112,9 +146,10 @@ static_assert(count_groundterm_levels(std::array{0., 19.8196, 20.6158}, std::arr
               1);  // He I 1S0 then 3S1 then 1S0
 static_assert(count_groundterm_levels(std::array{0., 0.006}, std::array{1.F, 3.F}) ==
               2);  // 3P0,1 of an ion truncated to two levels: no boundary seen, so both are kept
-static_assert(count_groundterm_levels(std::array{0., 0.0079}, std::array{2.F, 4.F}) == 2);  // 2P1/2,3/2 only
 static_assert(count_groundterm_levels(std::array{0., 0., 0.1, 1.9}, std::array{1.F, 3.F, 5.F, 5.F}) ==
               3);  // 3P0,1,2 with the first splitting rounded to zero in the data
+static_assert(count_groundterm_levels(std::array{0., 0., 5.0}, std::array{1.F, 3.F, 5.F}) ==
+              1);  // a 5 eV jump after a splitting rounded to zero is still a term boundary
 static_assert(count_groundterm_levels(std::array{0., 2.38, 2.38, 3.58}, std::array{4.F, 6.F, 4.F, 2.F}) ==
               1);  // 4S3/2 then a 2D pair with zero splitting in the data
 static_assert(count_groundterm_levels(std::array{0., 0.006, 0.0162, 1.899, 4.05},
@@ -122,9 +157,9 @@ static_assert(count_groundterm_levels(std::array{0., 0.006, 0.0162, 1.899, 4.05}
 static_assert(count_groundterm_levels(std::array{0., 0.0196, 0.0281, 1.9674, 4.1897},
                                       std::array{5.F, 3.F, 1.F, 5.F, 1.F}) ==
               3);  // O I 3P2,1,0 (inverted, splitting ratio 2.3)
-static_assert(count_groundterm_levels(std::array{0., 0.5621, 0.7300, 2.9917, 6.7945},
-                                      std::array{5.F, 3.F, 1.F, 5.F, 1.F}) ==
-              3);  // Ti VII 3P2,1,0 (inverted, splitting ratio 3.35)
+static_assert(count_groundterm_levels(std::array{0., 9.1524, 14.5438, 30.3089, 46.0904},
+                                      std::array{1.F, 3.F, 5.F, 5.F, 1.F}) ==
+              3);  // Fe XXI 3P0,1,2: jj coupling shrinks the second splitting to 0.29 of the interval rule
 static_assert(count_groundterm_levels(std::array{0., 2.3835, 2.3846, 3.5756, 3.5756},
                                       std::array{4.F, 6.F, 4.F, 2.F, 4.F}) == 1);  // N I 4S3/2 then 2D5/2,3/2
 static_assert(count_groundterm_levels(std::array{0., 1.1745, 1.7762, 1.8094, 1.8326, 1.8475, 1.8548},

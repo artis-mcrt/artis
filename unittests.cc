@@ -1,5 +1,5 @@
 // Unit tests for the pure numeric helpers (geometry, special relativity, sampling, decay chains,
-// cross-sections, and binning). Build and run with:
+// cross-sections, binning, input parsing, and atomic level structure). Build and run with:
 //   make unittests && ./unittests
 // The tests only cover functions with header-visible definitions or external linkage; they use no
 // input files and no MPI communication, and a non-zero exit code means at least one check failed.
@@ -534,8 +534,8 @@ void test_parse_next_token() {
 
 void test_count_groundterm_levels() {
   std::println("ground term level count...");
-  // (energies [eV], statistical weights) of the lowest levels from real atomic datasets. The compile-time checks in
-  // input.h cover the LS coupling rules; here are cases with many levels and the span-size handling
+  // (energies [eV], statistical weights) of the lowest levels from real atomic datasets. The compile-time checks
+  // in input.h cover the LS coupling rules; here are cases with many levels
   const auto count = [](const std::vector<double>& energies, const std::vector<float>& statweights) {
     return count_groundterm_levels(energies, statweights);
   };
@@ -543,7 +543,6 @@ void test_count_groundterm_levels() {
   check(count({0.}, {1.F}) == 1, "one level");
   check(count({0., 0.1}, {2.F, 4.F}) == 2, "two-level 2P1/2,3/2 with no third level to compare with");
   check(count({0., 0.1}, {2.F, 2.F}) == 1, "two levels with the same statistical weight");
-  check(count({0., 0.1, 0.2}, {2.F, 4.F}) == 2, "the shorter span sets the number of levels");
 
   // Fe I 5D4..0 (inverted) followed by 5F5 (g = 11)
   check(count({0., 0.0516, 0.0873, 0.1101, 0.1213, 0.8590, 0.9146}, {9.F, 7.F, 5.F, 3.F, 1.F, 11.F, 9.F}) == 5,
@@ -569,6 +568,11 @@ void test_count_groundterm_levels() {
   check(count({0., 0.2981, 0.4061, 2.3347, 5.4350}, {5.F, 3.F, 1.F, 5.F, 1.F}) == 3, "Ca V 3P2,1,0");
   // Ar V 3P0,1,2 (normal) then 1D2
   check(count({0., 0.0948, 0.2517, 2.0209, 4.7007}, {1.F, 3.F, 5.F, 5.F, 1.F}) == 3, "Ar V 3P0,1,2");
+  // Fe XXI 3P0,1,2: at this charge the interval rule is badly broken (the second splitting is 0.29 of the
+  // prediction rather than 2), so the term is only held together by the looser across-terms tolerance
+  check(count({0., 9.1524, 14.5438, 30.3089, 46.0904}, {1.F, 3.F, 5.F, 5.F, 1.F}) == 3, "Fe XXI 3P0,1,2");
+  // Fe XI 3P2,1,0 (inverted, same regime: departure factor 3.85) then 1D2
+  check(count({0., 1.5700, 1.7737, 4.6776, 10.0156}, {5.F, 3.F, 1.F, 5.F, 1.F}) == 3, "Fe XI 3P2,1,0");
   // Mg IV data with 2P1/2 and 2P3/2 both listed at zero energy (defective data): both are still one term
   check(count({0., 0., 0.2762, 38.6251}, {2.F, 4.F, 2.F, 2.F}) == 2, "degenerate 2P1/2,3/2 pair");
 }
@@ -693,8 +697,9 @@ void test_gth_solver() {
   };
 
   // nearest-neighbour birth-death chain: rate_up[k] is the rate from state k to k + 1 and rate_down[k] the reverse
-  // fill the caller's matrix (resized here) rather than returning one: gcc 16 with LTO reports a spurious
-  // maybe-uninitialized on the returned vector's storage
+  // fill the caller's matrix (resized here) rather than returning one: gcc 16.0.1 with LTO reports a spurious
+  // maybe-uninitialized on the storage of a returned vector whose size is data-dependent (make_threestate_matrix
+  // below returns by value without complaint). Try restoring the return value when the CI gcc moves on.
   const auto make_chain_matrix = [&set_rate](std::vector<double>& matrix, const std::span<const double> rate_up,
                                              const std::span<const double> rate_down) {
     const auto n = std::ssize(rate_up) + 1;
@@ -762,10 +767,8 @@ void test_gth_solver() {
   {
     // a single up/down rate ratio of 1e400 exceeds the double range outright: the pre-division rescaling must keep
     // the dominant state finite instead of letting the weight overflow to infinity and decay into NaNs
-    const std::vector<double> rate_up(1, 1e200);
-    const std::vector<double> rate_down(1, 1e-200);
     std::vector<double> matrix;
-    make_chain_matrix(matrix, rate_up, rate_down);
+    make_chain_matrix(matrix, std::array{1e200}, std::array{1e-200});
     std::vector<double> vec_x(2, 0.);
     const auto result = gth_stationary_distribution(matrix, vec_x);
     check(!result.has_value(), "GTH solves a two-state chain with a weight ratio beyond the double range");
