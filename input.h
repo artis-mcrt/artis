@@ -52,10 +52,16 @@ void setup_timesteps();
 // boundaries need a factor of 25 or more, while the widest real multiplet needs 3.4 (the C-like 3P of Fe XXI,
 // which is deep enough into jj coupling that the interval rule barely applies).
 //
-// Known limitations, both from datasets that do not resolve a fine-structure splitting: one written as a very
-// small non-zero number rather than rounded to zero looks like a term boundary and ends the multiplet early,
-// and a pair of degenerate levels directly above the ground level reads as an unresolved next term (which is
-// what it is for N I 4S3/2 followed by 2D5/2,3/2, but not for a 3P2,1,0 whose upper two levels are degenerate).
+// Known limitations:
+//  - The statistical weight has to step by two from one listed level to the next, so a term whose levels are not
+//    in J order is cut short. This happens to the 3P of the Po-like sequence (Po I, At II, Rn III, Fr IV in the
+//    kilonova datasets), where jj coupling pushes 3P0 below 3P1 and the weights run 5, 1, 3: only the ground
+//    level is counted. Detecting it needs the set of weights rather than their order, and no rule tried so far
+//    separates it from Mn II 7S3 / 5S2 / 5D4, whose weights run 7, 5, 9 with a similar energy pattern.
+//  - Datasets that do not resolve a fine-structure splitting: one written as a very small non-zero number
+//    rather than rounded to zero looks like a term boundary and ends the multiplet early, and a pair of
+//    degenerate levels directly above the ground level reads as an unresolved next term (which is what it is
+//    for N I 4S3/2 followed by 2D5/2,3/2, but not for a 3P2,1,0 whose upper two levels are degenerate).
 [[nodiscard]] constexpr auto count_groundterm_levels(const std::span<const double> energies,
                                                      const std::span<const float> statweights) -> int {
   assert_testmodeonly(energies.size() == statweights.size());
