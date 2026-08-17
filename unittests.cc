@@ -1,5 +1,5 @@
 // Unit tests for the pure numeric helpers (geometry, special relativity, sampling, decay chains,
-// cross-sections, and binning). Build and run with:
+// cross-sections, binning, input parsing, and atomic level structure). Build and run with:
 //   make unittests && ./unittests
 // The tests only cover functions with header-visible definitions or external linkage; they use no
 // input files and no MPI communication, and a non-zero exit code means at least one check failed.
@@ -532,6 +532,51 @@ void test_parse_next_token() {
   }
 }
 
+void test_count_groundterm_levels() {
+  std::println("ground term level count...");
+  // The lowest levels of real ions, as (energies [eV], statistical weights). The static_asserts in input.h
+  // show the LS coupling rules. These tests add ions with more levels.
+  const auto count = [](const std::vector<double>& energies, const std::vector<float>& statweights) {
+    return count_groundterm_levels(energies, statweights);
+  };
+  check(count({}, {}) == 0, "no levels");
+  check(count({0.}, {1.F}) == 1, "one level");
+  check(count({0., 0.1}, {2.F, 4.F}) == 2, "two-level 2P1/2,3/2 with no third level to compare with");
+  check(count({0., 0.1}, {2.F, 2.F}) == 1, "two levels with the same statistical weight");
+
+  // Fe I 5D4..0 (inverted) followed by 5F5 (g = 11)
+  check(count({0., 0.0516, 0.0873, 0.1101, 0.1213, 0.8590, 0.9146}, {9.F, 7.F, 5.F, 3.F, 1.F, 11.F, 9.F}) == 5,
+        "Fe I 5D4..0");
+  // Fe III 5D4..0 (inverted) followed by 3H6 (g = 13)
+  check(count({0., 0.0541, 0.0916, 0.1156, 0.1274, 2.4059, 2.4860}, {9.F, 7.F, 5.F, 3.F, 1.F, 5.F, 13.F}) == 5,
+        "Fe III 5D4..0");
+  // Co I 4F9/2..3/2 (inverted), then 3d8 4s2 4F9/2 (g = 10) only 0.2 eV above it
+  check(count({0., 0.1012, 0.1744, 0.2243, 0.4318, 0.5136}, {10.F, 8.F, 6.F, 4.F, 10.F, 8.F}) == 4, "Co I 4F9/2..3/2");
+  // Ti II 4F3/2..9/2 (normal) followed by b4F3/2 (g = 4)
+  check(count({0., 0.0117, 0.0280, 0.0488, 0.1126, 0.1220}, {4.F, 6.F, 8.F, 10.F, 4.F, 6.F}) == 4, "Ti II 4F3/2..9/2");
+  // Ni II 2D5/2,3/2 (inverted) followed by 4F9/2 (g = 10)
+  check(count({0., 0.1868, 1.0407, 1.1568}, {6.F, 4.F, 10.F, 8.F}) == 2, "Ni II 2D5/2,3/2");
+  // Sc II 3D1,2,3 (normal) followed by 1D2 (g = 5)
+  check(count({0., 0.0084, 0.0220, 0.3150, 0.5955}, {3.F, 5.F, 7.F, 5.F, 5.F}) == 3, "Sc II 3D1,2,3");
+  // Cr I 7S3, then 5S2, then 5D0..4. The weight changes correctly from 7S3 to 5S2, but the splitting is large
+  check(count({0., 0.9414, 0.9610, 0.9684, 0.9829}, {7.F, 5.F, 1.F, 3.F, 5.F}) == 1, "Cr I 7S3");
+  // He I 1S0 then 2 3S1 (g = 3) then 2 1S0
+  check(count({0., 19.8196, 20.6158, 20.9641}, {1.F, 3.F, 1.F, 5.F}) == 1, "He I 1S0");
+  // O II 4S3/2, then 2D5/2,3/2 (almost the same energy), then 2P3/2,1/2
+  check(count({0., 3.3241, 3.3266, 5.0173, 5.0174}, {4.F, 6.F, 4.F, 4.F, 2.F}) == 1, "O II 4S3/2");
+  // Ca V 3P2,1,0 (inverted, splitting ratio 2.8) then 1D2
+  check(count({0., 0.2981, 0.4061, 2.3347, 5.4350}, {5.F, 3.F, 1.F, 5.F, 1.F}) == 3, "Ca V 3P2,1,0");
+  // Ar V 3P0,1,2 (normal) then 1D2
+  check(count({0., 0.0948, 0.2517, 2.0209, 4.7007}, {1.F, 3.F, 5.F, 5.F, 1.F}) == 3, "Ar V 3P0,1,2");
+  // Fe XXI 3P0,1,2. At this charge the interval rule is inaccurate: the second splitting is 0.29 of
+  // the prediction and not 2. Only the larger tolerance keeps this term together
+  check(count({0., 9.1524, 14.5438, 30.3089, 46.0904}, {1.F, 3.F, 5.F, 5.F, 1.F}) == 3, "Fe XXI 3P0,1,2");
+  // Fe XI 3P2,1,0 (inverted, the same condition: error factor 3.85), then 1D2
+  check(count({0., 1.5700, 1.7737, 4.6776, 10.0156}, {5.F, 3.F, 1.F, 5.F, 1.F}) == 3, "Fe XI 3P2,1,0");
+  // Mg IV data gives 2P1/2 and 2P3/2 both at zero energy. The two levels stay in one term
+  check(count({0., 0., 0.2762, 38.6251}, {2.F, 4.F, 2.F, 2.F}) == 2, "degenerate 2P1/2,3/2 pair");
+}
+
 void test_calculate_timesteps() {
   std::println("timestep grid calculation...");
   const double tmin = 2. * DAY;
@@ -651,16 +696,19 @@ void test_gth_solver() {
     }
   };
 
-  // nearest-neighbour birth-death chain: rate_up[k] is the rate from state k to k + 1 and rate_down[k] the reverse
-  const auto make_chain_matrix = [&set_rate](const std::span<const double> rate_up,
+  // A birth-death chain of adjacent states. rate_up[k] is the rate from state k to k + 1, and rate_down[k]
+  // is the rate in the opposite direction. The function fills the matrix of the caller and does not return
+  // one, because gcc 16.0.1 with LTO gives an incorrect maybe-uninitialized warning for a returned vector
+  // whose size comes from the data. make_threestate_matrix below returns a vector and gives no warning.
+  // Return a vector here again when the gcc version in CI changes.
+  const auto make_chain_matrix = [&set_rate](std::vector<double>& matrix, const std::span<const double> rate_up,
                                              const std::span<const double> rate_down) {
     const auto n = std::ssize(rate_up) + 1;
-    std::vector<double> matrix(n * n, 0.);
+    matrix.assign(n * n, 0.);
     for (ptrdiff_t k = 0; k < n - 1; k++) {
       set_rate(matrix, n, k, k + 1, rate_up[k]);
       set_rate(matrix, n, k + 1, k, rate_down[k]);
     }
-    return matrix;
   };
 
   {
@@ -690,7 +738,8 @@ void test_gth_solver() {
     // with a normalisation row loses the small components to absolute rounding)
     constexpr std::array<double, 3> rate_up = {2e10, 3e-4, 5e2};
     constexpr std::array<double, 3> rate_down = {7e-6, 1e8, 4e-1};
-    auto matrix = make_chain_matrix(rate_up, rate_down);
+    std::vector<double> matrix;
+    make_chain_matrix(matrix, rate_up, rate_down);
     std::vector<double> vec_x(rate_up.size() + 1, 0.);
     const auto result = gth_stationary_distribution(matrix, vec_x);
     check(!result.has_value(), "GTH solves a birth-death chain");
@@ -703,7 +752,10 @@ void test_gth_solver() {
   {
     // seven-state chain whose raw stationary weights span 1e360 relative to state zero, which would overflow the
     // double range without the subtraction-free rescaling in the back-substitution
-    auto matrix = make_chain_matrix(std::vector<double>(6, 1e30), std::vector<double>(6, 1e-30));
+    const std::vector<double> rate_up(6, 1e30);
+    const std::vector<double> rate_down(6, 1e-30);
+    std::vector<double> matrix;
+    make_chain_matrix(matrix, rate_up, rate_down);
     std::vector<double> vec_x(7, 0.);
     const auto result = gth_stationary_distribution(matrix, vec_x);
     check(!result.has_value(), "GTH survives raw weights beyond the double range");
@@ -716,7 +768,8 @@ void test_gth_solver() {
   {
     // a single up/down rate ratio of 1e400 exceeds the double range outright: the pre-division rescaling must keep
     // the dominant state finite instead of letting the weight overflow to infinity and decay into NaNs
-    auto matrix = make_chain_matrix(std::vector<double>(1, 1e200), std::vector<double>(1, 1e-200));
+    std::vector<double> matrix;
+    make_chain_matrix(matrix, std::array{1e200}, std::array{1e-200});
     std::vector<double> vec_x(2, 0.);
     const auto result = gth_stationary_distribution(matrix, vec_x);
     check(!result.has_value(), "GTH solves a two-state chain with a weight ratio beyond the double range");
@@ -869,6 +922,7 @@ auto main() -> int {
   test_closest_transition_randomised();
   test_input_helpers();
   test_parse_next_token();
+  test_count_groundterm_levels();
   test_calculate_timesteps();
   test_rank_outfile_name();
   test_gth_solver();

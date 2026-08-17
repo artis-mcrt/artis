@@ -690,44 +690,10 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion,
 }
 
 auto calculate_nlevels_groundterm(const int element, const int ion) -> int {
-  const int nlevels = get_nlevels(element, ion);
-  if (nlevels <= 2) {
-    return nlevels;
-  }
-
-  int nlevels_groundterm = 1;
-  // detect single-level ground term
-  const double endiff10 = epsilon(element, ion, 1) - epsilon(element, ion, 0);
-  const double endiff21 = epsilon(element, ion, 2) - epsilon(element, ion, 1);
-  if (endiff10 > 2. * endiff21) {
-    nlevels_groundterm = 1;
-  } else {
-    for (int level = 1; level < nlevels - 2; level++) {
-      const double endiff1 = epsilon(element, ion, level) - epsilon(element, ion, level - 1);
-      const double endiff2 = epsilon(element, ion, level + 1) - epsilon(element, ion, level);
-      if (endiff2 > 2. * endiff1) {
-        nlevels_groundterm = level + 1;
-        break;
-      }
-    }
-  }
-
-  // there should be no duplicate stat weights within the ground term
-  // limit the ground multiplet to nnnnlowest levels below the first duplicated stat weight
-  for (int level_a = 1; level_a < nlevels_groundterm; level_a++) {
-    const auto g_a = stat_weight(element, ion, level_a);
-
-    for (int level_b = 0; level_b < level_a; level_b++) {
-      const auto g_b = stat_weight(element, ion, level_b);
-      if (fabs(g_a - g_b) < 0.4) {
-        // level_a is outside the ground term because of duplicate stat weight
-        // highest ground level index is level_a - 1, so nlevels_groundterm == level_a
-        return level_a;
-      }
-    }
-  }
-
-  return nlevels_groundterm;
+  const auto nlevels = get_nlevels(element, ion);
+  const auto levelstart = get_ionuniquelevelindexstart(element, ion);
+  return count_groundterm_levels(globals::alllevels.epsilon.subspan(levelstart, nlevels),
+                                 globals::alllevels.statweight.subspan(levelstart, nlevels));
 }
 
 // Return the closest ground level continuum index to the given edge
