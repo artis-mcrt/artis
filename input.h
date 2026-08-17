@@ -34,34 +34,39 @@ void setup_timesteps();
                                        double fixed_timestep_width_days, double timestep_transition_time_days)
     -> std::vector<globals::TimeStep>;
 
-// Count the levels of the ground term (the lowest fine-structure multiplet) of an ion from its level
-// energies and statistical weights, both listed in order of increasing energy.
+// Count the levels in the ground term of an ion. The ground term is the multiplet with the lowest energy.
+// The caller gives the level energies and the statistical weights in the sequence of increasing energy.
 //
-// Within an LS-coupled term, J changes by one from level to level, so the statistical weight 2J+1 changes by
-// exactly two, in the same direction throughout (normal or inverted multiplets), and a term with integer J has
-// an odd number of levels (2 min(L,S) + 1). By the Landé interval rule the fine-structure splittings
-// E(J) - E(J-1) are proportional to J, so the ratio of two splittings within a multiplet is the ratio of the
-// higher J of each pair of levels. A splitting that exceeds that prediction by more than a tolerance factor
-// marks the boundary with the next term, as does a change in the statistical weight pattern.
+// In an LS-coupled term, J changes by one from each level to the next level. Thus the statistical weight
+// 2J+1 changes by two, in the same direction for the full term. A term with an integer J has an odd number
+// of levels. The Landé interval rule gives a splitting E(J) - E(J-1) that is proportional to J. Thus the
+// ratio of two splittings in a term is equal to the ratio of the higher J of each pair of levels. The term
+// ends where a splitting is more than a tolerance factor larger than this rule permits, or where the
+// sequence of statistical weights changes.
 //
-// Two tolerances are needed because the reference splitting is not always a fine-structure splitting. Comparing
-// with the splitting below stays within the multiplet, where the interval rule holds to about a factor of two
-// (the largest departure in the ARTIS datasets is 4.4, for Ni I 3F4 with 3D3,2 interleaved). Comparing with the
-// splitting above happens at the lowest level, and for a single-level ground term (4S3/2, 6S5/2, 7S3) that
-// reference is the fine structure of the *next* term, which is far smaller than the term separation: those
-// boundaries need a factor of 25 or more, while the widest real multiplet needs 3.4 (the C-like 3P of Fe XXI,
-// which is deep enough into jj coupling that the interval rule barely applies).
+// The function uses two tolerances, because the reference splitting is not always in the same term:
+//  - The splitting below the level is in the same term. The interval rule is accurate to approximately a
+//    factor of two here. The largest error in the ARTIS data is 4.4, for Ni I 3F4 with 3D3,2 between its
+//    levels.
+//  - The splitting above the level is the reference only for the second level of the ion. If the ground
+//    term has one level (for example 4S3/2, 6S5/2 or 7S3), this reference is the fine structure of the next
+//    term. The fine structure is much smaller than the distance between the two terms, thus these
+//    boundaries need a factor of 25 or more. The widest correct term needs 3.4 (the C-like 3P of Fe XXI,
+//    where jj coupling makes the interval rule inaccurate).
 //
-// Known limitations:
-//  - The statistical weight has to step by two from one listed level to the next, so a term whose levels are not
-//    in J order is cut short. This happens to the 3P of the Po-like sequence (Po I, At II, Rn III, Fr IV in the
-//    kilonova datasets), where jj coupling pushes 3P0 below 3P1 and the weights run 5, 1, 3: only the ground
-//    level is counted. Detecting it needs the set of weights rather than their order, and no rule tried so far
-//    separates it from Mn II 7S3 / 5S2 / 5D4, whose weights run 7, 5, 9 with a similar energy pattern.
-//  - Datasets that do not resolve a fine-structure splitting: one written as a very small non-zero number
-//    rather than rounded to zero looks like a term boundary and ends the multiplet early, and a pair of
-//    degenerate levels directly above the ground level reads as an unresolved next term (which is what it is
-//    for N I 4S3/2 followed by 2D5/2,3/2, but not for a 3P2,1,0 whose upper two levels are degenerate).
+// The function has these known limitations:
+//  - The statistical weight must change by two from each listed level to the next level. Thus the function
+//    stops too soon if the data does not list the levels in the sequence of J. This occurs for the 3P term
+//    of the Po-like ions (Po I, At II, Rn III and Fr IV in the kilonova data). There jj coupling puts 3P0
+//    below 3P1, the weights are 5, 1, 3, and the function counts only the ground level. To find these
+//    terms, the function must examine the set of the weights and not their sequence. No rule that was
+//    tested can separate this case from Mn II 7S3 / 5S2 / 5D4, where the weights are 7, 5, 9 and the
+//    energies are similar.
+//  - Some data does not resolve a fine-structure splitting. If the data gives a very small splitting in
+//    place of zero, the function reads it as a term boundary and stops too soon. If the data gives two
+//    levels with the same energy directly above the ground level, the function reads them as an unresolved
+//    next term. This is correct for N I 4S3/2 with 2D5/2,3/2 above it, but incorrect for a 3P2,1,0 term
+//    whose two upper levels have the same energy.
 [[nodiscard]] constexpr auto count_groundterm_levels(const std::span<const double> energies,
                                                      const std::span<const float> statweights) -> int {
   assert_testmodeonly(energies.size() == statweights.size());
@@ -70,24 +75,24 @@ void setup_timesteps();
     return nlevels;
   }
 
-  // largest factor by which a splitting may exceed the interval-rule prediction and still count as the same term
+  // the largest factor by which a splitting can be more than the interval rule permits and stay in the term
   constexpr double MAX_DEPARTURE_WITHIN_MULTIPLET = 3.;
   constexpr double MAX_DEPARTURE_ACROSS_TERMS = 8.;
 
-  // twice the higher J of the pair of levels (a, a + 1), from g = 2J + 1. Equal to 2J of the upper level of a
-  // normal multiplet and of the lower level of an inverted one, which is the J the interval rule scales with.
+  // Two times the higher J of the pair of levels (a, a + 1), from g = 2J + 1. For a normal term this is the
+  // upper level, and for an inverted term the lower level. The interval rule is proportional to this J.
   const auto twoj_upper = [&statweights](const int a) -> double {
     return static_cast<double>(std::max(statweights[a], statweights[a + 1])) - 1.;
   };
 
-  // true if the splitting between levels (a, a + 1) is small enough compared to the splitting between levels
-  // (b, b + 1) for the two pairs to belong to the same multiplet under the interval rule. Written as a pair of
-  // products rather than a ratio so that a zero reference splitting fails rather than dividing by zero.
+  // Return true if the interval rule permits the splitting of the pair (a, a + 1) and the splitting of the
+  // reference pair (b, b + 1) in the same term. The test compares two products and not a ratio. Thus a
+  // reference splitting of zero gives false and does not cause a division by zero.
   const auto splittings_consistent = [&](const int a, const int b, const double maxdeparture) -> bool {
     const double splitting_a = energies[a + 1] - energies[a];
     const double splitting_b = energies[b + 1] - energies[b];
     if (splitting_a < 0. || splitting_b < 0. || twoj_upper(b) <= 0.) {
-      return false;  // levels out of energy order, or a reference pair with no J step: no usable prediction
+      return false;  // energies not in sequence, or a reference pair with no change of J: no prediction
     }
     return (splitting_a * twoj_upper(b)) <= (maxdeparture * splitting_b * twoj_upper(a));
   };
@@ -97,18 +102,17 @@ void setup_timesteps();
   for (int level = 1; level < nlevels; level++) {
     const double delta_g = statweights[level] - statweights[level - 1];
     const double abs_delta_g = (delta_g < 0.) ? -delta_g : delta_g;  // std::abs is not constexpr in libc++
-    // J must change by exactly one, in the same direction throughout. The window tolerates a statistical weight
-    // that the dataset did not write as an exact integer; it also rejects a repeated statistical weight.
+    // J must change by one, in the same direction for the full term. The limits accept a statistical weight
+    // that the data does not give as an exact integer. They also reject a repeated statistical weight.
     if (abs_delta_g < 1.6 || abs_delta_g > 2.4 || ((delta_g > 0.) != increasing_j)) {
       break;
     }
 
-    // Prefer the nearest splitting below that the data resolves as non-zero: datasets sometimes round a
-    // fine-structure splitting to zero, and a zero carries no scale to compare against. Failing that, compare
-    // with the splitting immediately above, which for a single-level ground term is the fine structure of the
-    // next term rather than another splitting of this one, hence the looser tolerance (a zero there means the
-    // next term is unresolved, which ends this one). A level with no reference at all, the second level of the
-    // ion, is kept: there is nothing to compare it with.
+    // Use the nearest splitting below the level that the data gives as more than zero. Some data rounds a
+    // fine-structure splitting to zero, and a zero gives no scale for the comparison. If there is no such
+    // splitting, use the splitting above the level, with the larger tolerance. A zero splitting above the
+    // level shows that the next term is unresolved, which ends this term. Keep a level that has no reference
+    // (the second level of the ion), because there is nothing to compare it with.
     int refpair = -1;
     for (int b = level - 2; b >= 0; b--) {
       if (energies[b + 1] > energies[b]) {
@@ -130,11 +134,11 @@ void setup_timesteps();
     nlevels_groundterm = level + 1;
   }
 
-  // A term with integer J (odd statistical weights) has an odd number of levels (2 min(L,S) + 1), so an even
-  // count means the last level belongs to the next term (e.g. 7S3 followed by 5S2). This only applies when the
-  // level after the counted ones was seen to be outside the term; if the level list itself ended (an ion
-  // truncated by the level limit in compositiondata.txt) the retained levels are kept.
-  // Round rather than truncate: a statistical weight written as 6.999999 must still test as odd.
+  // A term with an integer J has odd statistical weights and an odd number of levels. Thus an even count
+  // shows that the last level is in the next term (for example 7S3 with 5S2 above it). Apply this rule only
+  // if the loop found a level outside the term. If the list of levels ended first, keep all of them, because
+  // the level limit in compositiondata.txt can cut an ion in the middle of its ground term.
+  // Round the weight and do not truncate it: a weight of 6.999999 must also give an odd result.
   int g_ground = static_cast<int>(statweights[0]);
   if ((statweights[0] - static_cast<float>(g_ground)) > 0.5F) {
     g_ground++;
@@ -146,7 +150,7 @@ void setup_timesteps();
   return nlevels_groundterm;
 }
 
-// energies in eV from real atomic datasets (see the runtime unit tests for more)
+// The energies are in eV and come from real atomic data. The unit tests give more examples.
 static_assert(count_groundterm_levels(std::array{0.}, std::array{5.F}) == 1);  // single level
 static_assert(count_groundterm_levels(std::array{0., 19.8196, 20.6158}, std::array{1.F, 3.F, 1.F}) ==
               1);  // He I 1S0 then 3S1 then 1S0
