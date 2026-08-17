@@ -744,7 +744,9 @@ void test_gth_solver() {
   {
     // seven-state chain whose raw stationary weights span 1e360 relative to state zero, which would overflow the
     // double range without the subtraction-free rescaling in the back-substitution
-    auto matrix = make_chain_matrix(std::vector<double>(6, 1e30), std::vector<double>(6, 1e-30));
+    const std::vector<double> rate_up(6, 1e30);
+    const std::vector<double> rate_down(6, 1e-30);
+    auto matrix = make_chain_matrix(rate_up, rate_down);
     std::vector<double> vec_x(7, 0.);
     const auto result = gth_stationary_distribution(matrix, vec_x);
     check(!result.has_value(), "GTH survives raw weights beyond the double range");
@@ -757,7 +759,9 @@ void test_gth_solver() {
   {
     // a single up/down rate ratio of 1e400 exceeds the double range outright: the pre-division rescaling must keep
     // the dominant state finite instead of letting the weight overflow to infinity and decay into NaNs
-    auto matrix = make_chain_matrix(std::vector<double>(1, 1e200), std::vector<double>(1, 1e-200));
+    const std::vector<double> rate_up(1, 1e200);
+    const std::vector<double> rate_down(1, 1e-200);
+    auto matrix = make_chain_matrix(rate_up, rate_down);
     std::vector<double> vec_x(2, 0.);
     const auto result = gth_stationary_distribution(matrix, vec_x);
     check(!result.has_value(), "GTH solves a two-state chain with a weight ratio beyond the double range");

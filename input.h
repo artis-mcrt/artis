@@ -90,10 +90,13 @@ void setup_timesteps();
     nlevels_groundterm = level + 1;
   }
 
-  // a term with integer J (odd statistical weights) has an odd number of levels (2 min(L,S) + 1).
-  // statistical weights of fine-structure levels are exact integers (2J+1) so the cast is exact
+  // A term with integer J (odd statistical weights) has an odd number of levels (2 min(L,S) + 1), so an even count
+  // means the last level belongs to the next term (e.g. 7S3 followed by 5S2). This only applies when the level after
+  // the counted ones was seen to be outside the term; if the level list itself ended (an ion truncated by the level
+  // limit in compositiondata.txt) the retained levels are kept.
+  // Statistical weights of fine-structure levels are exact integers (2J+1) so the cast is exact.
   const bool integer_j = (static_cast<int>(statweights[0]) % 2) == 1;
-  if (integer_j && (nlevels_groundterm % 2) == 0) {
+  if (integer_j && (nlevels_groundterm % 2) == 0 && nlevels_groundterm < nlevels) {
     nlevels_groundterm--;
   }
 
@@ -102,7 +105,10 @@ void setup_timesteps();
 
 // energies in eV from real atomic datasets (see the runtime unit tests for more)
 static_assert(count_groundterm_levels(std::array{0.}, std::array{5.F}) == 1);  // single level
-static_assert(count_groundterm_levels(std::array{0., 1.}, std::array{1.F, 3.F}) == 1);  // 1S0 then 3S1
+static_assert(count_groundterm_levels(std::array{0., 19.8196, 20.6158}, std::array{1.F, 3.F, 1.F}) ==
+              1);  // He I 1S0 then 3S1 then 1S0
+static_assert(count_groundterm_levels(std::array{0., 0.006}, std::array{1.F, 3.F}) ==
+              2);  // 3P0,1 of an ion truncated to two levels: no boundary seen, so both are kept
 static_assert(count_groundterm_levels(std::array{0., 0.0079}, std::array{2.F, 4.F}) == 2);  // 2P1/2,3/2 only
 static_assert(count_groundterm_levels(std::array{0., 0.006, 0.0162, 1.899, 4.05},
                                       std::array{1.F, 3.F, 5.F, 5.F, 1.F}) == 3);  // N II 3P0,1,2 (normal)
