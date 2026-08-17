@@ -211,7 +211,7 @@ jobs:
                   path: tests/${{ matrix.testname }}_inputfiles/results_md5*
 
             - name: Setup uv
-              uses: astral-sh/setup-uv@v9.0.0
+              uses: astral-sh/setup-uv@v10.0.1
               if: always() && inputs.testmode != 'ON'
               id: setup-uv
               with:

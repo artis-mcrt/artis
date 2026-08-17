@@ -26,7 +26,7 @@ jobs:
 
             - name: Setup uv
               if: always()
-              uses: astral-sh/setup-uv@v9.0.0
+              uses: astral-sh/setup-uv@v10.0.1
               id: setup-uv
               with:
                 enable-cache: "false"
