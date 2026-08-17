@@ -14,6 +14,7 @@
 #include <cstdlib>
 #include <functional>
 #include <limits>
+#include <numbers>
 #include <optional>
 #include <print>
 #include <span>
@@ -478,7 +479,7 @@ void test_parse_next_token() {
     check(!parse_next_token(remainder, i) && i == 5, "trailing whitespace has no token and value is untouched");
   }
   {
-    auto remainder = std::string_view{""};
+    auto remainder = std::string_view{};
     int i = -99;
     check(!parse_next_token(remainder, i), "empty line has no token");
   }
@@ -505,7 +506,7 @@ void test_parse_next_token() {
     check(parse_next_token(remainder, d) && d == -2.5, "negative double token");
     check(parse_next_token(remainder, d) && d == 0.25, "double token with leading plus sign");
   }
-  for (const auto token : {"nan", "inf", "-inf", "NAN"}) {
+  for (const auto* const token : {"nan", "inf", "-inf", "NAN"}) {
     auto remainder = std::string_view{token};
     double d = 0.;
     check(!parse_next_token(remainder, d), "nan and inf spellings are rejected");
@@ -528,7 +529,7 @@ void test_parse_next_token() {
   {
     auto remainder = std::string_view{"1e-60"};
     float f = -99.;
-    check(parse_next_token(remainder, f) && f == 0.f, "underflow below the float range reads as zero");
+    check(parse_next_token(remainder, f) && f == 0.F, "underflow below the float range reads as zero");
   }
 }
 
@@ -604,7 +605,7 @@ void test_calculate_timesteps() {
     bool constant_ratio = true;
     for (int n = 1; n < nts; n++) {
       constant_ratio =
-          constant_ratio && std::abs((ts[n].start / ts[n - 1].start) / (ts[1].start / ts[0].start) - 1.) < 1e-10;
+          constant_ratio && std::abs(((ts[n].start / ts[n - 1].start) / (ts[1].start / ts[0].start)) - 1.) < 1e-10;
     }
     check(constant_ratio, "logarithmic timesteps have a constant start-time ratio");
   }
@@ -613,7 +614,7 @@ void test_calculate_timesteps() {
     check(grid_is_valid(ts, nts, tmin, tmax), "constant grid is contiguous from tmin to tmax");
     bool equal_widths = true;
     for (int n = 0; n < nts; n++) {
-      equal_widths = equal_widths && std::abs(ts[n].width / ts[0].width - 1.) < 1e-10;
+      equal_widths = equal_widths && std::abs((ts[n].width / ts[0].width) - 1.) < 1e-10;
     }
     check(equal_widths, "constant timesteps have equal widths");
   }
@@ -624,7 +625,7 @@ void test_calculate_timesteps() {
     // ceil((50 - 30) / 1) = 20 fixed steps at the end
     bool fixed_tail = true;
     for (int n = nts - 20; n < nts; n++) {
-      fixed_tail = fixed_tail && std::abs(ts[n].width / DAY - 1.) < 1e-10;
+      fixed_tail = fixed_tail && std::abs((ts[n].width / DAY) - 1.) < 1e-10;
     }
     check(fixed_tail, "logarithmic-then-constant grid ends with the fixed-width steps");
   }
@@ -635,7 +636,7 @@ void test_calculate_timesteps() {
     // ceil((30 - 2) / 1) = 28 fixed steps at the start
     bool fixed_head = true;
     for (int n = 0; n < 28; n++) {
-      fixed_head = fixed_head && std::abs(ts[n].width / DAY - 1.) < 1e-10;
+      fixed_head = fixed_head && std::abs((ts[n].width / DAY) - 1.) < 1e-10;
     }
     check(fixed_head, "constant-then-logarithmic grid starts with the fixed-width steps");
   }
@@ -648,18 +649,40 @@ void test_calculate_timesteps() {
 void test_rank_outfile_name() {
   std::println("per-rank output filename matching...");
   bool match_all = true;
-  for (const auto name :
-       {"output_0-0.txt", "output_123-45.txt", "estimators_0000.out", "nlte_0003.out", "radfield_0100.out",
-        "macroatom_0000.out", "output_0-0.txt.zst", "estimators_0000.out.gz", "radfield_0000.out.xz"}) {
+  for (const auto* const name : {
+           "output_0-0.txt",
+           "output_123-45.txt",
+           "estimators_0000.out",
+           "nlte_0003.out",
+           "radfield_0100.out",
+           "macroatom_0000.out",
+           "output_0-0.txt.zst",
+           "estimators_0000.out.gz",
+           "radfield_0000.out.xz",
+       }) {
     match_all = match_all && is_rank_outfile_name(name);
   }
   check(match_all, "generated per-rank filenames are matched, with and without compression extensions");
 
   bool match_none = false;
-  for (const auto name :
-       {"output_0.txt", "output_a-0.txt", "output_-0.txt", "output_0-.txt", "output_0-0.log", "estimators_00x0.out",
-        "estimators_.out", "estimators_0000.dat", "nlte_0000.OUT", "spec.out", "packets00_0000.out", "deposition.out",
-        "model.txt", "input.txt", "output_0-0.txt.bz2", "estimators_0000.out.zst.zst"}) {
+  for (const auto* const name : {
+           "output_0.txt",
+           "output_a-0.txt",
+           "output_-0.txt",
+           "output_0-.txt",
+           "output_0-0.log",
+           "estimators_00x0.out",
+           "estimators_.out",
+           "estimators_0000.dat",
+           "nlte_0000.OUT",
+           "spec.out",
+           "packets00_0000.out",
+           "deposition.out",
+           "model.txt",
+           "input.txt",
+           "output_0-0.txt.bz2",
+           "estimators_0000.out.zst.zst",
+       }) {
     match_none = match_none || is_rank_outfile_name(name);
   }
   check(!match_none, "other filenames are never matched, so they cannot be deleted from an output folder");
@@ -842,7 +865,7 @@ void test_nonthermal_solve_upper_triangular() {
   uint64_t lcgstate = 20260808;
   const auto next_uniform = [&lcgstate] {
     lcgstate = (lcgstate * 6364136223846793005ULL) + 1442695040888963407ULL;
-    return std::ldexp(static_cast<double>(lcgstate >> 11), -53);
+    return std::ldexp(static_cast<double>(lcgstate >> 11U), -53);
   };
 
   // element (i, j) of the compacted upper triangular matrix (same layout as nonthermal.cc's uppertriangular())
@@ -894,7 +917,7 @@ void test_toms748_and_gauss_kronrod() {
 
   double abserr{NAN};
   const double integral_sin =
-      integrator([](const double x) { return std::sin(x); }, 0., 3.141592653589793, 1e-10, &abserr);
+      integrator([](const double x) { return std::sin(x); }, 0., std::numbers::pi, 1e-10, &abserr);
   check(std::fabs(integral_sin - 2.) < 1e-12, "gauss_kronrod_integrate of sin over [0, pi] is 2");
   check(abserr < 1e-10, "gauss_kronrod_integrate error estimate is small for a smooth integrand");
 
