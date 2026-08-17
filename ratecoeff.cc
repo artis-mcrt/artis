@@ -111,7 +111,7 @@ auto gammacorr_integrand(const double nu, const double nu_edge, const float temp
 // 4 pi * phixstargetprobability. The resulting bfcooling_coeffs [erg cm^3 s^-1] are, like alpha_sp, normalised per
 // population of the upper ion's *target level*: cooling rate density = coeff * n_targetlevel * n_e. kpkt.cc uses
 // the target level population when BFCOOLING_USELEVELPOPNOTIONPOP is true and the whole upper ion population when
-// it is false (the latter overcounts multi-target continua; kept for backwards compatibility).
+// it is false (shared among a level's targets by their LTE fractions when the level has more than one target).
 auto bfcooling_integrand(const double nu_minus_nu_edge, const double nu_edge, const float T_e,
                          const std::span<const float> photoion_xs) -> double {
   const float sigma_bf = photoionisation_crosssection_fromtable(photoion_xs, nu_edge, nu_minus_nu_edge + nu_edge);
