@@ -2691,7 +2691,6 @@ void solve_spencerfano(const int nonemptymgi, const int timestep, const int iter
   for (int element = 0; element < get_nelements(); element++) {
     const int Z = get_atomicnumber(element);
     const int nions = get_nions(element);
-    bool first_included_ion_of_element = true;
     for (int ion = 0; ion < nions; ion++) {
       const double nnion = get_nnion(nonemptymgi, element, ion);
 
@@ -2700,25 +2699,12 @@ void solve_spencerfano(const int nonemptymgi, const int timestep, const int iter
         continue;
       }
 
-      const int ionstage = get_ionstage(element, ion);
-      if (first_included_ion_of_element) {
-        printlog("  including Z={:2} ionstages: ", Z);
-        for (int i = 1; i < get_ionstage(element, ion); i++) {
-          printlog("  ");
-        }
-        first_included_ion_of_element = false;
-      }
-
-      printlog("{} ", ionstage);
-
       sfmatrix_accumulate_excitation(excitationbands, nonemptymgi, element, ion);
 
       if ((ion < nions - 1)) {
+        const int ionstage = get_ionstage(element, ion);
         sfmatrix_add_ionisation(sfmatrixuppertri, Z, ionstage, nnion);
       }
-    }
-    if (!first_included_ion_of_element) {
-      printlnlog("");
     }
   }
 
