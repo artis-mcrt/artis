@@ -532,6 +532,47 @@ void test_parse_next_token() {
   }
 }
 
+void test_count_groundterm_levels() {
+  std::println("ground term level count...");
+  // (energies [eV], statistical weights) of the lowest levels from real atomic datasets. The compile-time checks in
+  // input.h cover the LS coupling rules; here are cases with many levels and the span-size handling
+  const auto count = [](const std::vector<double>& energies, const std::vector<float>& statweights) {
+    return count_groundterm_levels(energies, statweights);
+  };
+  check(count({}, {}) == 0, "no levels");
+  check(count({0.}, {1.F}) == 1, "one level");
+  check(count({0., 0.1}, {2.F, 4.F}) == 2, "two-level 2P1/2,3/2 with no third level to compare with");
+  check(count({0., 0.1}, {2.F, 2.F}) == 1, "two levels with the same statistical weight");
+  check(count({0., 0.1, 0.2}, {2.F, 4.F}) == 2, "the shorter span sets the number of levels");
+
+  // Fe I 5D4..0 (inverted) followed by 5F5 (g = 11)
+  check(count({0., 0.0516, 0.0873, 0.1101, 0.1213, 0.8590, 0.9146}, {9.F, 7.F, 5.F, 3.F, 1.F, 11.F, 9.F}) == 5,
+        "Fe I 5D4..0");
+  // Fe III 5D4..0 (inverted) followed by 3H6 (g = 13)
+  check(count({0., 0.0541, 0.0916, 0.1156, 0.1274, 2.4059, 2.4860}, {9.F, 7.F, 5.F, 3.F, 1.F, 5.F, 13.F}) == 5,
+        "Fe III 5D4..0");
+  // Co I 4F9/2..3/2 (inverted) followed by 3d8 4s2 4F9/2 (g = 10) only 0.2 eV above
+  check(count({0., 0.1012, 0.1744, 0.2243, 0.4318, 0.5136}, {10.F, 8.F, 6.F, 4.F, 10.F, 8.F}) == 4, "Co I 4F9/2..3/2");
+  // Ti II 4F3/2..9/2 (normal) followed by b4F3/2 (g = 4)
+  check(count({0., 0.0117, 0.0280, 0.0488, 0.1126, 0.1220}, {4.F, 6.F, 8.F, 10.F, 4.F, 6.F}) == 4, "Ti II 4F3/2..9/2");
+  // Ni II 2D5/2,3/2 (inverted) followed by 4F9/2 (g = 10)
+  check(count({0., 0.1868, 1.0407, 1.1568}, {6.F, 4.F, 10.F, 8.F}) == 2, "Ni II 2D5/2,3/2");
+  // Sc II 3D1,2,3 (normal) followed by 1D2 (g = 5)
+  check(count({0., 0.0084, 0.0220, 0.3150, 0.5955}, {3.F, 5.F, 7.F, 5.F, 5.F}) == 3, "Sc II 3D1,2,3");
+  // Cr I 7S3 then 5S2 then 5D0..4: 7S3 -> 5S2 has the right stat weight change but a huge splitting ratio
+  check(count({0., 0.9414, 0.9610, 0.9684, 0.9829}, {7.F, 5.F, 1.F, 3.F, 5.F}) == 1, "Cr I 7S3");
+  // He I 1S0 then 2 3S1 (g = 3) then 2 1S0
+  check(count({0., 19.8196, 20.6158, 20.9641}, {1.F, 3.F, 1.F, 5.F}) == 1, "He I 1S0");
+  // O II 4S3/2 then 2D5/2,3/2 (nearly degenerate) then 2P3/2,1/2
+  check(count({0., 3.3241, 3.3266, 5.0173, 5.0174}, {4.F, 6.F, 4.F, 4.F, 2.F}) == 1, "O II 4S3/2");
+  // Ca V 3P2,1,0 (inverted, splitting ratio 2.8) then 1D2
+  check(count({0., 0.2981, 0.4061, 2.3347, 5.4350}, {5.F, 3.F, 1.F, 5.F, 1.F}) == 3, "Ca V 3P2,1,0");
+  // Ar V 3P0,1,2 (normal) then 1D2
+  check(count({0., 0.0948, 0.2517, 2.0209, 4.7007}, {1.F, 3.F, 5.F, 5.F, 1.F}) == 3, "Ar V 3P0,1,2");
+  // Mg IV data with 2P1/2 and 2P3/2 both listed at zero energy (defective data): both are still one term
+  check(count({0., 0., 0.2762, 38.6251}, {2.F, 4.F, 2.F, 2.F}) == 2, "degenerate 2P1/2,3/2 pair");
+}
+
 void test_calculate_timesteps() {
   std::println("timestep grid calculation...");
   const double tmin = 2. * DAY;
@@ -869,6 +910,7 @@ auto main() -> int {
   test_closest_transition_randomised();
   test_input_helpers();
   test_parse_next_token();
+  test_count_groundterm_levels();
   test_calculate_timesteps();
   test_rank_outfile_name();
   test_gth_solver();
