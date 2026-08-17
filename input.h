@@ -78,13 +78,16 @@ void setup_timesteps();
     }
     stepdirection = delta_g;
 
-    if (level == 1) {
-      // A single-level ground term (e.g. 4S3/2, 6S5/2, 7S3) sits far below the next term, whose own fine
-      // structure is small compared to the term separation, so the first splitting is far larger than the second.
-      if (nlevels > 2 && !splittings_consistent(0, 1)) {
+    // Compare the splitting below this level with the one before it. With no earlier splitting (level 1), or an
+    // earlier one that the dataset rounded to zero, compare with the following splitting instead: a single-level
+    // ground term (e.g. 4S3/2, 6S5/2, 7S3) sits far below the next term, whose own fine structure is small compared
+    // to the term separation, so a splitting far larger than the next one marks a term boundary as well.
+    const bool have_earlier_splitting = (level > 1) && (energies[level - 1] > energies[level - 2]);
+    if (have_earlier_splitting) {
+      if (!splittings_consistent(level - 1, level - 2)) {
         break;
       }
-    } else if (!splittings_consistent(level - 1, level - 2)) {
+    } else if (level + 1 < nlevels && !splittings_consistent(level - 1, level)) {
       break;
     }
     nlevels_groundterm = level + 1;
@@ -110,6 +113,10 @@ static_assert(count_groundterm_levels(std::array{0., 19.8196, 20.6158}, std::arr
 static_assert(count_groundterm_levels(std::array{0., 0.006}, std::array{1.F, 3.F}) ==
               2);  // 3P0,1 of an ion truncated to two levels: no boundary seen, so both are kept
 static_assert(count_groundterm_levels(std::array{0., 0.0079}, std::array{2.F, 4.F}) == 2);  // 2P1/2,3/2 only
+static_assert(count_groundterm_levels(std::array{0., 0., 0.1, 1.9}, std::array{1.F, 3.F, 5.F, 5.F}) ==
+              3);  // 3P0,1,2 with the first splitting rounded to zero in the data
+static_assert(count_groundterm_levels(std::array{0., 2.38, 2.38, 3.58}, std::array{4.F, 6.F, 4.F, 2.F}) ==
+              1);  // 4S3/2 then a 2D pair with zero splitting in the data
 static_assert(count_groundterm_levels(std::array{0., 0.006, 0.0162, 1.899, 4.05},
                                       std::array{1.F, 3.F, 5.F, 5.F, 1.F}) == 3);  // N II 3P0,1,2 (normal)
 static_assert(count_groundterm_levels(std::array{0., 0.0196, 0.0281, 1.9674, 4.1897},
