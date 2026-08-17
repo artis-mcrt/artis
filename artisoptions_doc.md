@@ -239,7 +239,11 @@ constexpr double TIMESTEP_TRANSITION_TIME;
 // once a new gridsave and packets*.tmp have been written, don't delete the previous set
 constexpr bool KEEP_ALL_RESTART_FILES;
 
-// multiply bound-free cooling coefficient by upper level population instead of the upper ion target level population
+// The bound-free cooling coefficient of each (level, target) continuum is normalised per population of the upper-ion
+// target level (like the spontaneous recombination coefficient alpha_sp). Set true to multiply it by that target
+// level's population. Set false (classic ARTIS behaviour) to multiply by the whole upper ion population instead,
+// which treats the ion as if it were entirely in the continuum's target levels: a level with several targets shares
+// the ion population among them by their LTE fractions, and a single-target level gets the whole ion population.
 constexpr bool BFCOOLING_USELEVELPOPNOTIONPOP;
 
 // set true to calculate and use expansion opacities instead of line-by-line in non-grey mode
