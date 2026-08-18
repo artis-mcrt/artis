@@ -711,8 +711,7 @@ void macroatom_open_file() {
     -> double {
   const auto coll_strength = globals::alltrans.coll_str[alltransindex];
   if (coll_strength < 0) {
-    if (!globals::alltrans.forbidden[alltransindex])  // alternative: (coll_strength > -1.5) i.e. to catch -1
-    {
+    if (!globals::alltrans.forbidden[alltransindex]) {
       // permitted E1 electric dipole transitions
       // collisional deexcitation: formula valid only for atoms!
       // (an alternative expression is Rutten script eq. 3.33, p.50:
