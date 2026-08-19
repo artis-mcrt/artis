@@ -112,7 +112,6 @@ jobs:
               if: always()
               working-directory: tests/${{ matrix.testname }}_testrun/
               run: |
-                  cp input-newrun.txt input.txt
                   time mpirun -np 4 --oversubscribe --mca osc ^ucx --mca mpi_yield_when_idle 1 ./sn3d -o job0
 
             - name: cat job0 estimators
@@ -312,7 +311,6 @@ jobs:
               env:
                   OMP_NUM_THREADS: 2
               run: |
-                  cp input-newrun.txt input.txt
                   time mpirun -np 2 --oversubscribe --mca osc ^ucx --mca mpi_yield_when_idle 1 ./sn3d -o job0
 
             - name: cat output log
@@ -364,7 +362,6 @@ jobs:
             - name: Run test job0 with stdpar threads
               working-directory: tests/kilonova_1d_testrun/
               run: |
-                  cp input-newrun.txt input.txt
                   time mpirun -np 2 --oversubscribe --mca osc ^ucx --mca mpi_yield_when_idle 1 ./sn3d -o job0
 
             - name: cat output log
