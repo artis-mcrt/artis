@@ -165,19 +165,23 @@ reference files in `tests/<testname>_inputfiles/`. Each test has two of them:
 `results_md5_job0.txt` and `results_md5_final.txt`.
 
 To repeat one test locally, do the same steps as `.github/workflows/ci.yml`.
-The setup script downloads about 15 MB of atomic data from a GitHub release, so
-this step needs the network. The script keeps the archive in `tests/`, and a
-later run of the script uses that copy.
+Use `nebular_1d_3dgrid` as the default test. It builds the nebular preset with
+the NLTE populations, the non-thermal solver, and the detailed bound-free
+estimators on a 3D grid, so it covers the physics that most changes touch. The
+`kilonova_1d` test is faster, but it uses the LTE preset. The setup script downloads
+about 15 MB of atomic data from a GitHub release, so this step needs the
+network. The script keeps the archive in `tests/`, and a later run of the
+script uses that copy.
 
 ```sh
 cd tests
-source ./setup_kilonova_1d.sh          # creates tests/kilonova_1d_testrun/
+source ./setup_nebular_1d_3dgrid.sh    # creates tests/nebular_1d_3dgrid_testrun/
 cd ..
-rm -f artisoptions.h                            # cp writes through a symlink
-cp tests/kilonova_1d_testrun/artisoptions.h .   # do not skip this step
+rm -f artisoptions.h                                  # cp writes through a symlink
+cp tests/nebular_1d_3dgrid_testrun/artisoptions.h .   # do not skip this step
 make REPRODUCIBLE=ON MAX_NODE_SIZE=2 FASTMATH=OFF -j$(nproc) sn3d exspec
-cp sn3d exspec tests/kilonova_1d_testrun/
-cd tests/kilonova_1d_testrun
+cp sn3d exspec tests/nebular_1d_3dgrid_testrun/
+cd tests/nebular_1d_3dgrid_testrun
 mpirun -np 4 --oversubscribe ./sn3d -o job0    # logs go to job0/output_0-0.txt
 md5sum -c results_md5_job0.txt
 cp input-resume.txt input.txt                  # necessary, see below
