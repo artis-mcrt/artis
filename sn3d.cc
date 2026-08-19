@@ -385,7 +385,7 @@ void write_deposition_file() {
     }
     dep_file.close();
 
-    // std::filesystem::rename replaces an existing target atomically, so no separate remove is necessary.
+    // std::filesystem::rename replaces an existing target atomically, so one call is sufficient.
     // This saves one metadata operation on a network file system.
     std::error_code ec;
     std::filesystem::rename("deposition.out.tmp", "deposition.out", ec);
