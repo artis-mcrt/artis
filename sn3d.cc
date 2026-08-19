@@ -1089,8 +1089,11 @@ auto main(int argc, char* argv[]) -> int {
   printlnlog("[info] mem_usage: packets occupy {:.3f} MB", MPKTS * sizeof(Packet) / 1024. / 1024.);
 
   if (!globals::simulation_continued_from_saved) {
-    std::error_code ec;
-    std::filesystem::remove("deposition.out", ec);
+    if (globals::my_rank == 0) {
+      // only rank 0 writes deposition.out, so only rank 0 removes the old file
+      std::error_code ec;
+      std::filesystem::remove("deposition.out", ec);
+    }
     packet_init(packets);
     zero_estimators();
   }
