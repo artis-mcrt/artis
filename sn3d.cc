@@ -390,7 +390,7 @@ void write_deposition_file() {
     std::error_code ec;
     std::filesystem::rename("deposition.out.tmp", "deposition.out", ec);
     if (ec) {
-      printlnlog("[error] Could not rename deposition.out.tmp to deposition.out: {}", ec.message());
+      printlnlog("[error] The rename of deposition.out.tmp to deposition.out failed: {}", ec.message());
       std::abort();
     }
 
