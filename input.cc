@@ -1863,7 +1863,7 @@ void read_parameterfile(std::span<Packet> packets) {
   // A new run writes a commented copy of input.txt to input-newrun.txt. If input.txt is missing, e.g. after a
   // cleanup of the run folder, restore it from that copy so that the run can start again without manual steps.
   if (globals::my_rank == 0 && !std::filesystem::exists("input.txt") && std::filesystem::exists("input-newrun.txt")) {
-    printlog("input.txt not found. Copying input-newrun.txt to input.txt...");
+    printlog("input.txt is missing. Restoring input.txt from input-newrun.txt...");
     std::error_code ec;
     std::filesystem::copy_file("input-newrun.txt", "input.txt", ec);
     if (ec) {
