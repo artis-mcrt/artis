@@ -1860,6 +1860,21 @@ void setup_nlte_levels() {
 
 // read input parameters from input.txt
 void read_parameterfile(std::span<Packet> packets) {
+  // A new run writes a commented copy of input.txt to input-newrun.txt. If input.txt is missing, for example after
+  // a cleanup of the run folder, restore it from that copy so that the run can start again without manual steps.
+  if (globals::my_rank == 0 && !std::filesystem::exists("input.txt") && std::filesystem::exists("input-newrun.txt")) {
+    printlog("input.txt is missing. Restoring input.txt from input-newrun.txt...");
+    std::error_code ec;
+    std::filesystem::copy_file("input-newrun.txt", "input.txt", ec);
+    if (ec) {
+      printlnlog("[error] failed to copy input-newrun.txt to input.txt: {}", ec.message());
+      std::abort();
+    }
+    printlnlog("done");
+  }
+  // rank 0 creates input.txt before the other ranks open it
+  MPI_Barrier_allranks();
+
   auto file = fstream_required("input.txt", std::ios::in);
 
   std::string line;

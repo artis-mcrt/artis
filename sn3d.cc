@@ -385,8 +385,14 @@ void write_deposition_file() {
     }
     dep_file.close();
 
-    std::remove("deposition.out");
-    std::rename("deposition.out.tmp", "deposition.out");
+    // std::filesystem::rename replaces an existing target atomically, so one call is sufficient.
+    // This saves one metadata operation on a network file system.
+    std::error_code ec;
+    std::filesystem::rename("deposition.out.tmp", "deposition.out", ec);
+    if (ec) {
+      printlnlog("[error] The rename of deposition.out.tmp to deposition.out failed: {}", ec.message());
+      std::abort();
+    }
 
     // energy-conservation consistency check (log only): the cumulative deposition should not exceed the
     // cumulative decay emission by more than the Monte Carlo noise of the trajectory estimators allows
@@ -1083,7 +1089,11 @@ auto main(int argc, char* argv[]) -> int {
   printlnlog("[info] mem_usage: packets occupy {:.3f} MB", MPKTS * sizeof(Packet) / 1024. / 1024.);
 
   if (!globals::simulation_continued_from_saved) {
-    std::remove("deposition.out");
+    if (globals::my_rank == 0) {
+      // only rank 0 writes deposition.out, so only rank 0 removes the old file
+      std::error_code ec;
+      std::filesystem::remove("deposition.out", ec);
+    }
     packet_init(packets);
     zero_estimators();
   }
