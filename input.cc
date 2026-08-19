@@ -1872,7 +1872,7 @@ void read_parameterfile(std::span<Packet> packets) {
     }
     printlnlog("done");
   }
-  // the other ranks must not open input.txt before rank 0 has created it
+  // rank 0 creates input.txt before the other ranks open it
   MPI_Barrier_allranks();
 
   auto file = fstream_required("input.txt", std::ios::in);

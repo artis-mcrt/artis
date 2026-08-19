@@ -200,10 +200,10 @@ from the preset alone uses different options and gives different results. The
 and `cp` writes through a symlink. Without the `rm`, the copy replaces the
 content of the tracked preset file.
 
-The new run needs no `input.txt`. If the file is absent, `sn3d` copies
-`input-newrun.txt` to `input.txt` and writes a log line. The resume run needs
-the `cp` of `input-resume.txt`, because `input.txt` then exists and holds the
-restart state that the first run wrote.
+`sn3d` restores `input.txt` for the new run. If the file is absent, `sn3d`
+copies `input-newrun.txt` to `input.txt` and writes a log line. The resume run
+needs the `cp` of `input-resume.txt`, because `input.txt` then exists and holds
+the restart state that the first run wrote.
 
 CI writes `results_md5_job0.txt` from
 `md5sum *.out job0/*.out speclc_angle_res/*.*` and `results_md5_final.txt` from
