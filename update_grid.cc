@@ -283,8 +283,10 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
         for (int ion = 0; ion < get_nions(element); ion++) {
           const double nnion = get_nnion(nonemptymgi, element, ion);
           const double nnion_before = nnion_prev[get_uniqueionindex(element, ion)];
-          if (nnion_before > 0. && std::max(nnion, nnion_before) > (1e-4 * nnelement)) {
-            fracdiff_nnion = std::max(fracdiff_nnion, fabs((nnion / nnion_before) - 1));
+          if (std::max(nnion, nnion_before) > (1e-4 * nnelement)) {
+            // a significant ion stage that appears from a zero population counts as a full change
+            const double fracdiff = (nnion_before > 0.) ? fabs((nnion / nnion_before) - 1) : 1.;
+            fracdiff_nnion = std::max(fracdiff_nnion, fracdiff);
           }
         }
       }
