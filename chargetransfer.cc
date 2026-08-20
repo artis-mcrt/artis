@@ -16,15 +16,18 @@
 //
 // The reverse (ionisation) direction of each generated reaction comes from detailed balance with the
 // ground state statistical weights. The NLTE population solver applies the rates as per-ion
-// coefficients between neighbouring ion stages (see nltepop.cc). Elements without NLTE ions keep
-// their ionisation balance without charge transfer. The heat released by a reaction (the energy
-// defect, typically ~1 eV) is not added to the thermal balance.
+// coefficients between neighbouring ion stages (see nltepop.cc). A reaction is active only when
+// both elements have NLTE levels and a free ionisation balance. With only one side in the NLTE
+// matrix, the partner element would keep its populations, and the reaction would break the charge
+// conservation. The heat released by a reaction (the energy defect, typically ~1 eV) is not added
+// to the thermal balance.
 
 #include "chargetransfer.h"
 
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <ios>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -37,7 +40,6 @@
 #include "input.h"
 #include "ltepop.h"
 #include "mpi_logging.h"
-#include "sn3d.h"
 
 namespace {
 
@@ -101,6 +103,13 @@ int reaction_count = 0;
 auto lz_vgrid_v_cms(const int i) -> double {
   const double logstep = std::log(LZ_VGRID_MAX_CMS / LZ_VGRID_MIN_CMS) / (LZ_VGRIDSIZE - 1);
   return LZ_VGRID_MIN_CMS * std::exp(i * logstep);
+}
+
+// a reaction is active only when both elements solve their ionisation balance in the NLTE matrix.
+// With only one side in the matrix, the partner element would keep its populations, and the
+// reaction would change the total ionic charge, which charge transfer must conserve.
+[[nodiscard]] auto element_has_ct_balance(const int element) -> bool {
+  return elem_has_nlte_levels(element) && !FORCE_SAHA_ION_BALANCE(get_atomicnumber(element));
 }
 
 // approximate mass of one atom of the element [g]
@@ -267,6 +276,9 @@ auto read_reaction_file() -> std::vector<std::array<int, 4>> {
     if (element_acc < 0 || element_don < 0) {
       continue;
     }
+    if (!element_has_ct_balance(element_acc) || !element_has_ct_balance(element_don)) {
+      continue;
+    }
     // the reaction needs both ion stages of both species in the loaded dataset
     const int ion_acc = ionstage_acc - get_ionstage(element_acc, 0);
     const int ion_don = ionstage_don - get_ionstage(element_don, 0);
@@ -289,13 +301,16 @@ void generate_lz_reactions(const std::vector<std::array<int, 4>>& covered) {
   int lz_channel_count = 0;
 
   for (int element_acc = 0; element_acc < get_nelements(); element_acc++) {
+    if (!element_has_ct_balance(element_acc)) {
+      continue;
+    }
     for (int ion_acc = 1; ion_acc < get_nions(element_acc); ion_acc++) {
       const int ioncharge = get_ionstage(element_acc, ion_acc) - 1;
       if (ioncharge < 2) {
         continue;
       }
       for (int element_don = 0; element_don < get_nelements(); element_don++) {
-        if (get_ionstage(element_don, 0) != 1 || get_nions(element_don) < 2) {
+        if (get_ionstage(element_don, 0) != 1 || get_nions(element_don) < 2 || !element_has_ct_balance(element_don)) {
           continue;
         }
         const int ion_don = 0;

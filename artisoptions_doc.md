@@ -272,8 +272,9 @@ constexpr std::optional<double> GAMMA_USE_KAPPA_GREY;
 // that the code generates at startup for electron capture from every neutral donor by every ion with
 // a charge of two or more (see chargetransfer.cc). The reverse rates come from detailed balance.
 // The rates enter the NLTE rate matrix as per-ion coefficients between neighbouring ion stages.
-// Elements without NLTE levels keep an ionisation balance without charge transfer, and the reaction
-// heat is not added to the thermal balance.
+// A reaction is active only when both elements have NLTE levels and a free ionisation balance, so
+// that both sides of the reaction get their transition and the total ionic charge stays constant.
+// The reaction heat is not added to the thermal balance.
 constexpr bool ENABLE_CHARGE_TRANSFER_REACTIONS;
 
 // Use microclumping, which enhances collisional (de)excitation, collisional ionisation, collisional recombination,
