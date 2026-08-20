@@ -23,6 +23,7 @@
 
 #include "artisoptions.h"
 #include "atomic.h"
+#include "chargetransfer.h"
 #include "constants.h"
 #include "decay.h"
 #include "exspec.h"
@@ -906,6 +907,43 @@ void test_nonthermal_solve_upper_triangular() {
 }
 
 // the TOMS 748 root finder and Gauss-Kronrod quadrature extracted from Boost.Math
+void test_chargetransfer_helpers() {
+  // fit form of Kingdon & Ferland (1996): k = a * (T/1e4)^b * (1 + c * exp(d * T/1e4)) * exp(-eexp/T)
+  check(chargetransfer::evaluate_ctfit(1e-9, 0., 0., 0., 0., 1e3, 1e5, 1e4) == 1e-9,
+        "evaluate_ctfit gives the coefficient a at T = 1e4 K for a flat fit");
+  check_close(chargetransfer::evaluate_ctfit(1e-9, 1., 0., 0., 0., 1e3, 1e5, 2e4), 2e-9, 1e-12,
+              "evaluate_ctfit applies the power law term");
+  check_close(chargetransfer::evaluate_ctfit(1e-9, 1., 0., 0., 0., 1e3, 1e5, 1e7), 10e-9, 1e-12,
+              "evaluate_ctfit clamps the fit temperature at tmax");
+  check_close(chargetransfer::evaluate_ctfit(1e-9, 0., 1., -1., 0., 1e3, 1e5, 1e4), 1e-9 * (1. + std::exp(-1.)), 1e-12,
+              "evaluate_ctfit applies the exponential correction term");
+  check_close(chargetransfer::evaluate_ctfit(1e-9, 0., 0., 0., 2e4, 1e3, 1e5, 1e4), 1e-9 * std::exp(-2.), 1e-12,
+              "evaluate_ctfit applies the Boltzmann factor of an endothermic fit");
+  check(chargetransfer::evaluate_ctfit(1e-9, 0., -2., 0., 0., 1e3, 1e5, 1e4) == 0.,
+        "evaluate_ctfit floors a negative fit value at zero");
+
+  // Landau-Zener cross section for capture by a doubly charged ion from a neutral donor
+  const double deltae = 2. * EV;
+  const double ip_donor = 13. * EV;
+  const double sigma_mid = chargetransfer::sigma_lz_channel(2, deltae, ip_donor, 1e7);
+  check(sigma_mid > 0., "sigma_lz_channel is positive for a favourable energy defect");
+
+  // the cross section stays below the geometric limit pi * rx^2 (the transfer probability tops out at 0.5)
+  const double rx_cm = 5.29177211e-9 * (27.211386 / 2.);
+  check(sigma_mid < PI * rx_cm * rx_cm, "sigma_lz_channel stays below the geometric limit");
+
+  // the crossing is traversed adiabatically at a very low velocity and diabatically at a high
+  // velocity, so the cross section vanishes at both ends
+  check(chargetransfer::sigma_lz_channel(2, deltae, ip_donor, 1e2) < 1e-3 * sigma_mid,
+        "sigma_lz_channel vanishes in the adiabatic low velocity limit");
+  check(chargetransfer::sigma_lz_channel(2, deltae, ip_donor, 5e8) < sigma_mid,
+        "sigma_lz_channel decreases in the diabatic high velocity limit");
+
+  // a large energy defect moves the crossing inward and suppresses the rate
+  check(chargetransfer::sigma_lz_channel(2, 15. * EV, ip_donor, 1e7) < sigma_mid,
+        "sigma_lz_channel is smaller for a large energy defect");
+}
+
 void test_toms748_and_gauss_kronrod() {
   const auto f_cosfixedpoint = [](const double x) { return std::cos(x) - x; };
   std::uintmax_t iterations = 50;
@@ -949,6 +987,7 @@ auto main() -> int {
   test_calculate_timesteps();
   test_rank_outfile_name();
   test_gth_solver();
+  test_chargetransfer_helpers();
   test_nonthermal_solve_upper_triangular();
   // the solver/integrator throw std::domain_error only on precondition violations that this test does not trigger
   // cppcheck-suppress throwInEntryPoint

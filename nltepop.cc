@@ -30,6 +30,7 @@
 
 #include "artisoptions.h"
 #include "atomic.h"
+#include "chargetransfer.h"
 #include "constants.h"
 #include "globals.h"
 #include "grid.h"
@@ -67,6 +68,7 @@ struct RateMatrices {
   std::vector<double> coll_bf;
   std::vector<double> ntcoll_bf;
   std::vector<double> autoion;
+  std::vector<double> chargetransfer;
 
   explicit RateMatrices(int max_nlte_dimension) {
     // allocation of the maximum required size is done once,
@@ -80,6 +82,7 @@ struct RateMatrices {
     coll_bf.reserve(max_dim_squared);
     ntcoll_bf.reserve(max_dim_squared);
     autoion.reserve(max_dim_squared);
+    chargetransfer.reserve(max_dim_squared);
   }
 
   void set_used_dimension(int used_nlte_dimension_in) {
@@ -102,6 +105,8 @@ struct RateMatrices {
     ntcoll_bf.resize(used_dim_squared);
     assert_always(std::cmp_less_equal(used_dim_squared, autoion.capacity()));
     autoion.resize(used_dim_squared);
+    assert_always(std::cmp_less_equal(used_dim_squared, chargetransfer.capacity()));
+    chargetransfer.resize(used_dim_squared);
 
     std::ranges::fill(rad_bb, 0.);
     std::ranges::fill(coll_bb, 0.);
@@ -110,6 +115,7 @@ struct RateMatrices {
     std::ranges::fill(coll_bf, 0.);
     std::ranges::fill(ntcoll_bf, 0.);
     std::ranges::fill(autoion, 0.);
+    std::ranges::fill(chargetransfer, 0.);
   }
 
   [[nodiscard]] auto get_summed_rate_matrix() -> std::span<double> {
@@ -121,8 +127,10 @@ struct RateMatrices {
     assert_always(summed_rates.size() == coll_bf.size());
     assert_always(summed_rates.size() == ntcoll_bf.size());
     assert_always(summed_rates.size() == autoion.size());
+    assert_always(summed_rates.size() == chargetransfer.size());
     for (auto i = 0U; i < summed_rates.size(); i++) {
-      summed_rates[i] = rad_bb[i] + coll_bb[i] + ntcoll_bb[i] + rad_bf[i] + coll_bf[i] + ntcoll_bf[i] + autoion[i];
+      summed_rates[i] = rad_bb[i] + coll_bb[i] + ntcoll_bb[i] + rad_bf[i] + coll_bf[i] + ntcoll_bf[i] + autoion[i] +
+                        chargetransfer[i];
     }
 
     return summed_rates;
@@ -287,10 +295,12 @@ void print_level_rates_summary(const int element, const int selected_ion, const 
                                                   only_levels_below, only_levels_above);
     const double autoion_total =
         get_total_rate(selected_index, rate_matrices.autoion, popvec, into_level, only_levels_below, only_levels_above);
+    const double chargetransfer_total = get_total_rate(selected_index, rate_matrices.chargetransfer, popvec, into_level,
+                                                       only_levels_below, only_levels_above);
 
-    printlnlog("{}{}{:10.2e} {:10.2e} {:10.2e} {:10.2e} {:10.2e} {:10.2e} {:10.2e}", into_level ? " from " : "   to ",
-               only_levels_below ? "below " : "above ", rad_bb_total, coll_bb_total, ntcoll_bb_total, rad_bf_total,
-               coll_bf_total, ntcoll_bf_total, autoion_total);
+    printlnlog("{}{}{:10.2e} {:10.2e} {:10.2e} {:10.2e} {:10.2e} {:10.2e} {:10.2e} {:10.2e}",
+               into_level ? " from " : "   to ", only_levels_below ? "below " : "above ", rad_bb_total, coll_bb_total,
+               ntcoll_bb_total, rad_bf_total, coll_bf_total, ntcoll_bf_total, autoion_total, chargetransfer_total);
   }
 }
 
@@ -315,7 +325,7 @@ void print_element_rates_summary(const int element, const int modelgridindex, co
             atomic_number, ionstage);
         printlnlog(
             "                         pop       rates     bb_rad     bb_col   bb_ntcol     bf_rad     bf_col   "
-            "bf_ntcol autoion");
+            "bf_ntcol autoion   chargetr");
       }
 
       print_level_rates_summary(element, ion, level, popvec, rate_matrices, first_ion_used);
@@ -350,12 +360,14 @@ void print_level_rates(const int nonemptymgi, const int timestep, const int elem
   const double rad_bf_in_total = get_total_rate_in(selected_index, rate_matrices.rad_bf, popvec);
   const double coll_bf_in_total = get_total_rate_in(selected_index, rate_matrices.coll_bf, popvec);
   const double ntcoll_bf_in_total = get_total_rate_in(selected_index, rate_matrices.ntcoll_bf, popvec);
-  const double total_rate_in =
-      rad_bb_in_total + coll_bb_in_total + ntcoll_bb_in_total + rad_bf_in_total + coll_bf_in_total + ntcoll_bf_in_total;
+  const double ct_in_total = get_total_rate_in(selected_index, rate_matrices.chargetransfer, popvec);
+  const double total_rate_in = rad_bb_in_total + coll_bb_in_total + ntcoll_bb_in_total + rad_bf_in_total +
+                               coll_bf_in_total + ntcoll_bf_in_total + ct_in_total;
   printlnlog(
       "  TOTAL rates in:             rad_bb_in  {:8.2e} coll_bb_in  {:8.2e} ntcoll_bb_in  {:8.2e} rad_bf_in  {:8.2e} "
-      "coll_bf_in  {:8.2e} ntcoll_bf_in  {:8.2e}",
-      rad_bb_in_total, coll_bb_in_total, ntcoll_bb_in_total, rad_bf_in_total, coll_bf_in_total, ntcoll_bf_in_total);
+      "coll_bf_in  {:8.2e} ntcoll_bf_in  {:8.2e} ct_in  {:8.2e}",
+      rad_bb_in_total, coll_bb_in_total, ntcoll_bb_in_total, rad_bf_in_total, coll_bf_in_total, ntcoll_bf_in_total,
+      ct_in_total);
 
   const double rad_bb_out_total = get_total_rate_out(selected_index, rate_matrices.rad_bb, popvec);
   const double coll_bb_out_total = get_total_rate_out(selected_index, rate_matrices.coll_bb, popvec);
@@ -363,13 +375,14 @@ void print_level_rates(const int nonemptymgi, const int timestep, const int elem
   const double rad_bf_out_total = get_total_rate_out(selected_index, rate_matrices.rad_bf, popvec);
   const double coll_bf_out_total = get_total_rate_out(selected_index, rate_matrices.coll_bf, popvec);
   const double ntcoll_bf_out_total = get_total_rate_out(selected_index, rate_matrices.ntcoll_bf, popvec);
+  const double ct_out_total = get_total_rate_out(selected_index, rate_matrices.chargetransfer, popvec);
   const double total_rate_out = rad_bb_out_total + coll_bb_out_total + ntcoll_bb_out_total + rad_bf_out_total +
-                                coll_bf_out_total + ntcoll_bf_out_total;
+                                coll_bf_out_total + ntcoll_bf_out_total + ct_out_total;
   printlnlog(
       "  TOTAL rates out:            rad_bb_out {:8.2e} coll_bb_out {:8.2e} ntcoll_bb_out {:8.2e} rad_bf_out {:8.2e} "
-      "coll_bf_out {:8.2e} ntcoll_bf_out {:8.2e}",
+      "coll_bf_out {:8.2e} ntcoll_bf_out {:8.2e} ct_out {:8.2e}",
       rad_bb_out_total, coll_bb_out_total, ntcoll_bb_out_total, rad_bf_out_total, coll_bf_out_total,
-      ntcoll_bf_out_total);
+      ntcoll_bf_out_total, ct_out_total);
 
   for (auto index = 0Z; index < nltedim; index++) {
     if (index == selected_index) {
@@ -393,30 +406,36 @@ void print_level_rates(const int nonemptymgi, const int timestep, const int elem
     const double coll_bf_out = rate_matrices.coll_bf[ij_index_selectedindex] * pop_selectedlevel;
     const double ntcoll_bf_in = rate_matrices.ntcoll_bf[ij_selectedindex_index] * pop;
     const double ntcoll_bf_out = rate_matrices.ntcoll_bf[ij_index_selectedindex] * pop_selectedlevel;
+    const double ct_in = rate_matrices.chargetransfer[ij_selectedindex_index] * pop;
+    const double ct_out = rate_matrices.chargetransfer[ij_index_selectedindex] * pop_selectedlevel;
 
-    const bool nonzero_rate_in = (fabs(rad_bb_in) > 0. || fabs(coll_bb_in) > 0. || fabs(ntcoll_bb_in) > 0. ||
-                                  fabs(rad_bf_in) > 0. || fabs(coll_bf_in) > 0. || fabs(ntcoll_bf_in) > 0.);
-    const bool nonzero_rate_out = (fabs(rad_bb_out) > 0. || fabs(coll_bb_out) > 0. || fabs(ntcoll_bb_out) > 0. ||
-                                   fabs(rad_bf_out) > 0. || fabs(coll_bf_out) > 0. || fabs(ntcoll_bf_out) > 0.);
+    const bool nonzero_rate_in =
+        (fabs(rad_bb_in) > 0. || fabs(coll_bb_in) > 0. || fabs(ntcoll_bb_in) > 0. || fabs(rad_bf_in) > 0. ||
+         fabs(coll_bf_in) > 0. || fabs(ntcoll_bf_in) > 0. || fabs(ct_in) > 0.);
+    const bool nonzero_rate_out =
+        (fabs(rad_bb_out) > 0. || fabs(coll_bb_out) > 0. || fabs(ntcoll_bb_out) > 0. || fabs(rad_bf_out) > 0. ||
+         fabs(coll_bf_out) > 0. || fabs(ntcoll_bf_out) > 0. || fabs(ct_out) > 0.);
     if (nonzero_rate_in || nonzero_rate_out) {
       const double epsilon_trans = fabs(epsilon(element, ion, level) - epsilon(element, selected_ion, selected_level));
       const double nu_trans = epsilon_trans / H;
       const double lambda = 1e8 * CLIGHT / nu_trans;  // [Angstroms]
-      const double level_rate_in = rad_bb_in + coll_bb_in + ntcoll_bb_in + rad_bf_in + coll_bf_in + ntcoll_bf_in;
-      const double level_rate_out = rad_bb_out + coll_bb_out + ntcoll_bb_out + rad_bf_out + coll_bf_out + ntcoll_bf_out;
+      const double level_rate_in =
+          rad_bb_in + coll_bb_in + ntcoll_bb_in + rad_bf_in + coll_bf_in + ntcoll_bf_in + ct_in;
+      const double level_rate_out =
+          rad_bb_out + coll_bb_out + ntcoll_bb_out + rad_bf_out + coll_bf_out + ntcoll_bf_out + ct_out;
       const double level_percent_in = level_rate_in / total_rate_in * 100.;
       const double level_percent_out = level_rate_out / total_rate_out * 100.;
 
       printlnlog(
           "  ionstage {} level {:4} ({:5.1f}% of in)  rad_bb_in  {:8.2e} coll_bb_in  {:8.2e} ntcoll_bb_in  {:8.2e} "
-          "rad_bf_in  {:8.2e} coll_bf_in  {:8.2e} ntcoll_bf_in  {:8.2e} lambda {:6.0f}",
+          "rad_bf_in  {:8.2e} coll_bf_in  {:8.2e} ntcoll_bf_in  {:8.2e} ct_in  {:8.2e} lambda {:6.0f}",
           ionstage, level, level_percent_in, rad_bb_in, coll_bb_in, ntcoll_bb_in, rad_bf_in, coll_bf_in, ntcoll_bf_in,
-          lambda);
+          ct_in, lambda);
       printlnlog(
           "  ionstage {} level {:4} ({:5.1f}% of out) rad_bb_out {:8.2e} coll_bb_out {:8.2e} ntcoll_bb_out {:8.2e} "
-          "rad_bf_out {:8.2e} coll_bf_out {:8.2e} ntcoll_bf_out {:8.2e} lambda {:6.0f}",
+          "rad_bf_out {:8.2e} coll_bf_out {:8.2e} ntcoll_bf_out {:8.2e} ct_out {:8.2e} lambda {:6.0f}",
           ionstage, level, level_percent_out, rad_bb_out, coll_bb_out, ntcoll_bb_out, rad_bf_out, coll_bf_out,
-          ntcoll_bf_out, lambda);
+          ntcoll_bf_out, ct_out, lambda);
     }
   }
   printlnlog("");
@@ -676,6 +695,50 @@ void nltepop_matrix_add_nt_ionisation(const int nonemptymgi, const int element, 
         atomicadd(rate_matrices.ntcoll_bf[(upper_groundstate_index * nlte_dimension) + lower_index],
                   Y_nt_thisupperion * s_renorm[level]);
       }
+    }
+  }
+}
+
+// add charge transfer with the ions of the other elements to the NLTE matrix. The rates are per-ion
+// coefficients (see chargetransfer.cc), so every level of the source ion transfers to the ground
+// state of the target ion, like the non-thermal ionisation. The partner ion populations come from
+// the previous population update, and the outer NLTE iteration loop makes the coupled elements
+// converge together.
+void nltepop_matrix_add_chargetransfer(const int nonemptymgi, const int element, const int ion,
+                                       const std::span<const double> s_renorm,
+                                       const std::span<const double> s_renorm_upperion, RateMatrices& rate_matrices,
+                                       const int first_ion_used, const int nions_used) {
+  if (!ENABLE_CHARGE_TRANSFER_REACTIONS) {
+    return;
+  }
+  assert_always((ion + 1) < (nions_used + first_ion_used));  // the top ion stage has no ionisation
+  const auto nlte_dimension = rate_matrices.used_nlte_dimension;
+
+  // charge transfer ionisation: every level of ion goes to the ground state of (ion + 1)
+  const double ct_ionisation = chargetransfer::ct_ionisation_rate(nonemptymgi, element, ion);
+  if (ct_ionisation > 0.) {
+    const int upper_groundstate_index = get_nlte_vector_index(element, ion + 1, 0, first_ion_used);
+    const int nlevels = get_nlevels(element, ion);
+    for (int level = 0; level < nlevels; level++) {
+      const int lower_index = get_nlte_vector_index(element, ion, level, first_ion_used);
+      atomicadd(rate_matrices.chargetransfer[(lower_index * nlte_dimension) + lower_index],
+                -ct_ionisation * s_renorm[level]);
+      atomicadd(rate_matrices.chargetransfer[(upper_groundstate_index * nlte_dimension) + lower_index],
+                ct_ionisation * s_renorm[level]);
+    }
+  }
+
+  // charge transfer recombination: every level of (ion + 1) goes to the ground state of ion
+  const double ct_recombination = chargetransfer::ct_recombination_rate(nonemptymgi, element, ion + 1);
+  if (ct_recombination > 0.) {
+    const int lower_groundstate_index = get_nlte_vector_index(element, ion, 0, first_ion_used);
+    const int nlevels_upper = get_nlevels(element, ion + 1);
+    for (int level = 0; level < nlevels_upper; level++) {
+      const int upper_index = get_nlte_vector_index(element, ion + 1, level, first_ion_used);
+      atomicadd(rate_matrices.chargetransfer[(upper_index * nlte_dimension) + upper_index],
+                -ct_recombination * s_renorm_upperion[level]);
+      atomicadd(rate_matrices.chargetransfer[(lower_groundstate_index * nlte_dimension) + upper_index],
+                ct_recombination * s_renorm_upperion[level]);
     }
   }
 }
@@ -1324,6 +1387,8 @@ auto nltepop_solve_matrix_with_ion_reduction(const int element, const int nonemp
                                       first_ion_used, nions_used);
         nltepop_matrix_add_nt_ionisation(nonemptymgi, element, ion, s_renorm, rate_matrices, first_ion_used,
                                          nions_used);
+        nltepop_matrix_add_chargetransfer(nonemptymgi, element, ion, s_renorm, s_renorm_allions[ion + 1], rate_matrices,
+                                          first_ion_used, nions_used);
         nltepop_matrix_add_autoionisation(nonemptymgi, element, ion, s_renorm_allions, rate_matrices, first_ion_used,
                                           nions_used);
       }

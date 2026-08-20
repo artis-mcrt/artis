@@ -1,0 +1,50 @@
+Sources of the charge transfer reaction fits in chargetransfer.txt.
+
+The script makechargetransferfile in the artisatomic repository downloads
+the sources named below and generates the file. Run it to regenerate the
+file from the current sources.
+
+The fit form for every entry is equation (7) of Kingdon & Ferland (1996):
+  k = a * 1e-9 * t4^b * (1 + c * exp(d * t4)) * exp(-eexp/T)  [cm3/s]
+with t4 = T/1e4 K clamped into [tmin, tmax]. The Boltzmann factor
+exp(-eexp/T) uses the true temperature and applies to some entries of the
+ionisation direction.
+
+1. Reactions with atomic hydrogen (recombination X^q+ + H0, and
+   ionisation X^q+ + H+):
+   Kingdon & Ferland (1996), ApJS, 106, 205, Tables 1-3, with the later
+   updates that the Cloudy code applies to individual reactions. The
+   entries come from the Cloudy master data files ctrecombdata.dat and
+   ctiondata.dat (gitlab.nublado.org, retrieved 2026-08-20). The comment
+   of each updated line names the update and keeps the original KF96
+   values. An entry with a = 1e-05 is the 1e-14 cm3/s radiative floor of
+   an endothermic reaction, and an entry with a = 0 marks an endothermic
+   reaction with no fit (KF96 Table 4).
+   Cloudy replaces a few of these fits at run time with special-case
+   polynomials outside the fitted range (e.g. the O0 + H+ rates of
+   Stancil et al. 1999). This file keeps only the clamped fits.
+
+2. Reactions with neutral helium (recombination X^q+ + He0):
+   Arnaud & Rothenflug (1985), A&AS, 60, 425, from the ASCII table ct2.dat
+   of D. Verner (pa.uky.edu/~verner/chtr.html, retrieved 2026-08-20). The
+   comments name the reactions where Cloudy replaces an AR85 fit with a
+   newer constant rate.
+
+3. Reactions of the n-capture elements Ge, Se, Br, Kr, Rb, and Xe with
+   hydrogen:
+   Sterling & Stancil (2011), A&A, 535, A117, from the machine-readable
+   tables of CDS catalogue J/A+A/535/A117. That paper publishes tabulated
+   k(T) values and no fit coefficients, so the entries here are least
+   squares fits of the form a * t4^b * exp(-eexp/T) over 1e3 to 4e4 K.
+   The comment of each entry gives the maximum fit error. Above tmax the
+   clamp underestimates some of these rates, because they keep rising
+   steeply where charge transfer is subdominant.
+
+The code generates Landau-Zener estimates at startup for the reactions
+that this file does not cover (see chargetransfer.cc). The method is that
+of Butler & Dalgarno (1980), ApJ, 241, 838, which Kingdon & Ferland
+(1996) also used for their reactions without quantal data.
+
+Known gap: KF96 give no rate for the exothermic ionisation of Ca+, Sc+,
+and Ti+ by protons (the recombination direction is endothermic, KF96
+Table 4). These reactions are absent here as well.

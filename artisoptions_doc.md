@@ -267,6 +267,15 @@ constexpr bool USE_XCOM_GAMMAPHOTOION;
 // Override frequency-dependent gamma-ray opacity with a grey opacity [cm^2/g]
 constexpr std::optional<double> GAMMA_USE_KAPPA_GREY;
 
+// Include charge transfer reactions in the NLTE population solver. The rates come from the published
+// fits in data/chargetransfer.txt (reactions with hydrogen and helium), plus Landau-Zener estimates
+// that the code generates at startup for electron capture from every neutral donor by every ion with
+// a charge of two or more (see chargetransfer.cc). The reverse rates come from detailed balance.
+// The rates enter the NLTE rate matrix as per-ion coefficients between neighbouring ion stages.
+// Elements without NLTE levels keep an ionisation balance without charge transfer, and the reaction
+// heat is not added to the thermal balance.
+constexpr bool ENABLE_CHARGE_TRANSFER_REACTIONS;
+
 // Use microclumping, which enhances collisional (de)excitation, collisional ionisation, collisional recombination,
 // radiative recombination, collisional capture, stimulated recombination, free-free heating, free-free cooling by the clumping factor
 // (including in the photoionisation-equilibrium ionisation balance for elements without NLTE levels; the Saha LTE
