@@ -40,6 +40,7 @@
 #include "input.h"
 #include "ltepop.h"
 #include "mpi_logging.h"
+#include "nltepop.h"
 
 namespace {
 
@@ -184,6 +185,11 @@ auto sum_reaction_list(const std::vector<CTReaction>& list, const int nonemptymg
   const auto T_e = grid::Te_allcells[nonemptymgi];
   double total = 0.;
   for (const auto& r : list) {
+    // after a failed matrix solve, the partner element holds LTE populations in this cell and gets
+    // no reciprocal transition, so skip the reaction to keep the total ionic charge constant
+    if (!elem_nltepops_valid(nonemptymgi, r.partner_element)) {
+      continue;
+    }
     const double nnpartner = get_nnion(nonemptymgi, r.partner_element, r.partner_ion);
     if (nnpartner > 0.) {
       total += eval_reaction_ratecoeff(r, T_e) * nnpartner;

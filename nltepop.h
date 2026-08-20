@@ -14,6 +14,7 @@
 inline MPI_shared_array<double> nltepops_allcells;
 
 void solve_nlte_pops_element(int element, int nonemptymgi, int timestep, int nlte_iter);
+[[nodiscard]] auto elem_nltepops_valid(int nonemptymgi, int element) -> bool;
 // GTH solve for the stationary distribution of the NLTE rate matrix, exposed here so that unittests.cc can test
 // it (see the definition in nltepop.cc for the full contract)
 [[nodiscard]] auto gth_stationary_distribution(std::span<double> rate_matrix, std::span<double> vec_x)

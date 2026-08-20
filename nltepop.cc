@@ -1562,6 +1562,19 @@ void nltepop_apply_solution(const int element, const int nonemptymgi, const int 
 
 }  // anonymous namespace
 
+// Report whether the cell holds a valid NLTE solution for the element. A stored population of -1
+// is the marker for the Boltzmann fallback, which set_element_pops_lte() writes after a failed
+// matrix solve, and which is also the state before the first solve of the element.
+auto elem_nltepops_valid(const int nonemptymgi, const int element) -> bool {
+  for (int ion = 0; ion < get_nions(element); ion++) {
+    if ((get_nlevels_excited_nlte(element, ion) > 0) || ion_has_superlevel(element, ion)) {
+      return nltepops_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * globals::total_nlte_levels) +
+                               get_allnltelevelsindexstart(element, ion)] >= 0.;
+    }
+  }
+  return false;
+}
+
 // Grassmann-Taksar-Heyman (GTH) state-elimination solve for the stationary distribution of the continuous-time
 // Markov chain whose generator is stored transposed in the NLTE rate matrix layout, i.e. rate_matrix[(to * n) +
 // from] with n = vec_x.size(). The off-diagonal rates must be finite (the caller checks this) and non-negative.
