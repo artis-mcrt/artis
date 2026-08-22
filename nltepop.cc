@@ -1512,7 +1512,9 @@ void nltepop_apply_solution(const int element, const int nonemptymgi, const int 
   // record the solved ion range, so that the charge transfer reactions skip the removed edge ions
   if constexpr (ENABLE_CHARGE_TRANSFER_REACTIONS) {
     nlte_solution_range_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * get_nelements()) + element] = {
-        .first_ion = first_ion_used, .nions = nions_used};
+        .first_ion = first_ion_used,
+        .nions = nions_used,
+    };
   }
 
   // set the ground level, excited level and possible superlevel populations for this element
@@ -1945,8 +1947,10 @@ void nltepop_read_restart_data(FILE* restart_file) {
         int first_ion = -1;
         int nions = 0;
         assert_always(fscanf(restart_file, "%d %d ", &first_ion, &nions) == 2);
-        nlte_solution_range_allcells[(nonemptymgi * get_nelements()) + element] = {.first_ion = first_ion,
-                                                                                   .nions = nions};
+        nlte_solution_range_allcells[(nonemptymgi * get_nelements()) + element] = {
+            .first_ion = first_ion,
+            .nions = nions,
+        };
       }
     }
   }

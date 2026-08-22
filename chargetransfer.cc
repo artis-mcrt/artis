@@ -206,10 +206,11 @@ auto sigma_lz_sorted_channels(const std::span<const LZChannel> channels, const d
     }
 
     // outbound: the same crossings in reverse order mix the entrance channel with each capture channel
-    for (std::size_t j = ncrossed; j > 0; j--) {
-      const double p = p_pass[j - 1];
-      const double p_entrance_new = (p_entrance * p) + (captured[j - 1] * (1. - p));
-      captured[j - 1] = (captured[j - 1] * p) + (p_entrance * (1. - p));
+    for (std::size_t k = 0; k < ncrossed; k++) {
+      const std::size_t j = ncrossed - 1 - k;
+      const double p = p_pass[j];
+      const double p_entrance_new = (p_entrance * p) + (captured[j] * (1. - p));
+      captured[j] = (captured[j] * p) + (p_entrance * (1. - p));
       p_entrance = p_entrance_new;
     }
 
