@@ -15,7 +15,12 @@
 //   few at best.
 //
 // The reverse (ionisation) direction of each generated reaction comes from detailed balance with the
-// ground state statistical weights. The NLTE population solver applies the rates as per-ion
+// partition functions of the four ions. The solver applies a forward rate to the whole reactant
+// ion populations, and the partition function ratio makes the forward and the reverse fluxes
+// balance in LTE. A Boltzmann level distribution inside the lower ion turns the sum over the
+// capture channels into exactly this per-ion factor, because the smaller energy defect of an
+// excited channel cancels against the Boltzmann factor of that level. The NLTE population solver
+// applies the rates as per-ion
 // coefficients between neighbouring ion stages (see nltepop.cc). A reaction is active only when
 // both elements have NLTE levels and a free ionisation balance. With only one side in the NLTE
 // matrix, the partner element would keep its populations, and the reaction would break the charge
@@ -85,10 +90,14 @@ struct CTReaction {
 
   int lz_tableindex{-1};  // >= 0 selects a tabulated Landau-Zener cross section
 
-  // detailed balance factors for a reverse (endothermic) entry
+  // detailed balance data of a reverse (endothermic) entry: the energy release of the forward
+  // reaction and the identity of its reactant ions (the acceptor captures from the donor)
   bool is_reverse{false};
-  double delta_e{0.};  // energy release of the forward reaction [erg]
-  double g_ratio{1.};  // ground state (g_reactants / g_products) of the forward reaction
+  double delta_e{0.};  // [erg]
+  int element_acc{-1};
+  int ion_acc{-1};
+  int element_don{-1};
+  int ion_don{-1};
 };
 
 // reaction lists per unique ion index of the owner ion:
@@ -170,11 +179,17 @@ auto lz_thermal_ratecoeff(const int lz_tableindex, const double T, const double 
   return std::max(k_lz, LZ_RADIATIVE_CT_FLOOR);
 }
 
-auto eval_reaction_ratecoeff(const CTReaction& r, const double T_e) -> double {
+auto eval_reaction_ratecoeff(const CTReaction& r, const int nonemptymgi, const double T_e) -> double {
   double k = (r.lz_tableindex >= 0) ? lz_thermal_ratecoeff(r.lz_tableindex, T_e, r.mu_grams)
                                     : chargetransfer::evaluate_ctfit(r.a, r.b, r.c, r.d, r.eexp, r.tmin, r.tmax, T_e);
   if (r.is_reverse) {
-    k *= r.g_ratio * std::exp(-r.delta_e / (KB * T_e));
+    // detailed balance for the per-ion rates: the partition functions of the forward reactants
+    // over those of the forward products, with the Boltzmann factor of the energy release
+    const double partfunc_ratio = (get_ion_partfunct(nonemptymgi, r.element_acc, r.ion_acc) *
+                                   get_ion_partfunct(nonemptymgi, r.element_don, r.ion_don)) /
+                                  (get_ion_partfunct(nonemptymgi, r.element_acc, r.ion_acc - 1) *
+                                   get_ion_partfunct(nonemptymgi, r.element_don, r.ion_don + 1));
+    k *= partfunc_ratio * std::exp(-r.delta_e / (KB * T_e));
   }
   return k;
 }
@@ -198,7 +213,7 @@ auto sum_reaction_list(const std::vector<CTReaction>& list, const int nonemptymg
     }
     const double nnpartner = get_nnion(nonemptymgi, r.partner_element, r.partner_ion);
     if (nnpartner > 0.) {
-      total += eval_reaction_ratecoeff(r, T_e) * nnpartner;
+      total += eval_reaction_ratecoeff(r, nonemptymgi, T_e) * nnpartner;
     }
   }
   // with microclumping, the reactions happen at the in-clump partner density
@@ -242,8 +257,10 @@ void add_reaction(const int element_acc, const int ion_acc, const int element_do
   rev.mu_grams = fwd.mu_grams;
   rev.is_reverse = true;
   rev.delta_e = delta_e;
-  rev.g_ratio = (stat_weight(element_acc, ion_acc, 0) * stat_weight(element_don, ion_don, 0)) /
-                (stat_weight(element_acc, ion_acc - 1, 0) * stat_weight(element_don, ion_don + 1, 0));
+  rev.element_acc = element_acc;
+  rev.ion_acc = ion_acc;
+  rev.element_don = element_don;
+  rev.ion_don = ion_don;
 
   rev.partner_element = element_acc;
   rev.partner_ion = ion_acc - 1;
@@ -272,6 +289,31 @@ auto read_reaction_file() -> std::vector<std::array<int, 4>> {
   assert_always(filereactioncount >= 0);
 
   int used = 0;
+  // store one reaction when the loaded dataset holds both ion stages of both species
+  auto store = [&](const int z_acc, const int ionstage_acc, const int z_don, const int ionstage_don,
+                   const CTReaction& params, const int autoreverse) {
+    covered.push_back({z_acc, ionstage_acc, z_don, ionstage_don});
+
+    const int element_acc = get_elementindex(z_acc);
+    const int element_don = get_elementindex(z_don);
+    if (element_acc < 0 || element_don < 0) {
+      return;
+    }
+    if (!element_has_ct_balance(element_acc) || !element_has_ct_balance(element_don)) {
+      return;
+    }
+    // the reaction needs both ion stages of both species in the loaded dataset
+    const int ion_acc = ionstage_acc - get_ionstage(element_acc, 0);
+    const int ion_don = ionstage_don - get_ionstage(element_don, 0);
+    if (ion_acc < 1 || ion_acc >= get_nions(element_acc) || ion_don < 0 || ion_don >= (get_nions(element_don) - 1)) {
+      return;
+    }
+
+    add_reaction(element_acc, ion_acc, element_don, ion_don, params, autoreverse != 0);
+    used++;
+  };
+
+  // the first table: each line holds a reaction with its own fit
   for (int n = 0; n < filereactioncount; n++) {
     get_noncommentline(ctfile, line);
     int z_acc{-1};
@@ -284,28 +326,33 @@ auto read_reaction_file() -> std::vector<std::array<int, 4>> {
     assert_always(std::istringstream{line} >> z_acc >> ionstage_acc >> z_don >> ionstage_don >> a_e9 >> params.b >>
                   params.c >> params.d >> params.eexp >> params.tmin >> params.tmax >> autoreverse);
     params.a = a_e9 * 1e-9;
-
-    covered.push_back({z_acc, ionstage_acc, z_don, ionstage_don});
-
-    const int element_acc = get_elementindex(z_acc);
-    const int element_don = get_elementindex(z_don);
-    if (element_acc < 0 || element_don < 0) {
-      continue;
-    }
-    if (!element_has_ct_balance(element_acc) || !element_has_ct_balance(element_don)) {
-      continue;
-    }
-    // the reaction needs both ion stages of both species in the loaded dataset
-    const int ion_acc = ionstage_acc - get_ionstage(element_acc, 0);
-    const int ion_don = ionstage_don - get_ionstage(element_don, 0);
-    if (ion_acc < 1 || ion_acc >= get_nions(element_acc) || ion_don < 0 || ion_don >= (get_nions(element_don) - 1)) {
-      continue;
-    }
-
-    add_reaction(element_acc, ion_acc, element_don, ion_don, params, autoreverse != 0);
-    used++;
+    store(z_acc, ionstage_acc, z_don, ionstage_don, params, autoreverse);
   }
-  printlnlog("Stored {} of {} charge transfer reactions from the file", used, filereactioncount);
+
+  // the second table: the estimates, which share one line of coefficients
+  get_noncommentline(ctfile, line);
+  int fileestimatecount = 0;
+  assert_always(std::istringstream{line} >> fileestimatecount);
+  assert_always(fileestimatecount >= 0);
+  CTReaction estimateparams{};
+  {
+    get_noncommentline(ctfile, line);
+    double a_e9 = 0.;
+    assert_always(std::istringstream{line} >> a_e9 >> estimateparams.b >> estimateparams.c >> estimateparams.d >>
+                  estimateparams.eexp >> estimateparams.tmin >> estimateparams.tmax);
+    estimateparams.a = a_e9 * 1e-9;
+  }
+  for (int n = 0; n < fileestimatecount; n++) {
+    get_noncommentline(ctfile, line);
+    int z_acc{-1};
+    int ionstage_acc{-1};
+    int z_don{-1};
+    int ionstage_don{-1};
+    int autoreverse{0};
+    assert_always(std::istringstream{line} >> z_acc >> ionstage_acc >> z_don >> ionstage_don >> autoreverse);
+    store(z_acc, ionstage_acc, z_don, ionstage_don, estimateparams, autoreverse);
+  }
+  printlnlog("Stored {} of {} charge transfer reactions from the file", used, filereactioncount + fileestimatecount);
 
   return covered;
 }
