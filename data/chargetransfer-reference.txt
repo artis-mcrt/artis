@@ -40,9 +40,13 @@ ionisation direction.
    clamp underestimates some of these rates, because they keep rising
    steeply where charge transfer is subdominant.
 
-The code generates Landau-Zener estimates at startup for the reactions
-that this file does not cover (see chargetransfer.cc). The method is that
-of Butler & Dalgarno (1980), ApJ, 241, 838, which Kingdon & Ferland
+The code generates estimates at startup for the reactions that this file
+does not cover (see chargetransfer.cc). An exothermic capture from a
+neutral donor by an ion with a charge of one to three, with an energy
+defect up to 4 eV, gets the flat near-resonant rate of 1e-9 cm3/s
+(Melius 1974, J. Phys. B, 7, 1692). The other captures by an ion with a
+charge of two or more get a Landau-Zener estimate. That method is the
+one of Butler & Dalgarno (1980), ApJ, 241, 838, which Kingdon & Ferland
 (1996) also used for their reactions without quantal data.
 
 Known gap: KF96 give no rate for the exothermic ionisation of Ca+, Sc+,

@@ -942,6 +942,14 @@ void test_chargetransfer_helpers() {
   // a large energy defect moves the crossing inward and suppresses the rate
   check(chargetransfer::sigma_lz_channel(2, 15. * EV, ip_donor, 1e7) < sigma_mid,
         "sigma_lz_channel is smaller for a large energy defect");
+
+  // the near-resonant estimate: an acceptor charge of one to three and an energy defect in (0, 4 eV]
+  check(chargetransfer::is_near_resonant(1, 2. * EV), "is_near_resonant accepts a singly charged ion");
+  check(chargetransfer::is_near_resonant(3, 4. * EV), "is_near_resonant accepts the upper edges of charge and defect");
+  check(!chargetransfer::is_near_resonant(4, 2. * EV), "is_near_resonant rejects a charge above three");
+  check(!chargetransfer::is_near_resonant(2, 4.5 * EV), "is_near_resonant rejects a large energy defect");
+  check(!chargetransfer::is_near_resonant(2, 0.), "is_near_resonant rejects a reaction with no energy release");
+  check(!chargetransfer::is_near_resonant(2, -1. * EV), "is_near_resonant rejects an endothermic reaction");
 }
 
 void test_toms748_and_gauss_kronrod() {

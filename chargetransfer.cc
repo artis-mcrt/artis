@@ -2,17 +2,22 @@
 // from a donor ion to an acceptor ion, e.g. A+2 + B0 -> A+1 + B+1. The reactions change the ionisation
 // balance of both elements and keep the free electron density constant.
 //
-// The rates come from two sources:
+// The rates come from three sources:
 // - Published analytic fits for reactions with hydrogen and helium, in the fit form of
 //   Kingdon & Ferland (1996, ApJS, 106, 205), hereafter KF96. The file data/chargetransfer.txt holds
 //   these fits (see data/chargetransfer-reference.txt for the sources).
-// - Landau-Zener estimates for electron capture from a neutral donor by an ion with a charge of two
-//   or more. init() generates these reactions at startup from the ionisation energies and the level
-//   energies of the loaded atomic dataset, so any composition (e.g. r-process ejecta) gets rates.
-//   The method is the Landau-Zener approach of Butler & Dalgarno (1980, ApJ, 241, 838), which KF96
-//   also used for their reactions without quantal data. The channels get an independent-crossing
-//   sum with an approach probability of one, so the estimates carry an accuracy of a factor of a
-//   few at best.
+// - Near-resonant estimates for electron capture from a neutral donor by an ion with a charge of
+//   one to three, when the reaction releases a small energy (up to NEARRES_MAX_DEFECT). A level of
+//   the products then lies close to resonance, and the rate is near the gas-kinetic value. Each of
+//   these reactions gets the flat rate of Melius (1974, J. Phys. B, 7, 1692). The estimate does not
+//   check the level list.
+// - Landau-Zener estimates for the other electron captures from a neutral donor by an ion with a
+//   charge of two or more. The method is the Landau-Zener approach of Butler & Dalgarno (1980,
+//   ApJ, 241, 838), which KF96 also used for their reactions without quantal data. The channels get
+//   an independent-crossing sum with an approach probability of one, so the estimates carry an
+//   accuracy of a factor of a few at best.
+// init() generates the estimates of both kinds at startup from the ionisation energies and the level
+// energies of the loaded atomic dataset, so any composition (e.g. r-process ejecta) gets rates.
 //
 // The reverse (ionisation) direction of each generated reaction comes from detailed balance with the
 // partition functions of the four ions. The solver applies a forward rate to the whole reactant
@@ -72,6 +77,18 @@ constexpr double LZ_RX_MAX_BOHR = 40.;
 // rate floor [cm3/s] from radiative charge transfer, which operates for every exoergic reaction
 // (Butler, Guberman & Dalgarno 1977; adopted as a floor by Sterling & Stancil 2011)
 constexpr double LZ_RADIATIVE_CT_FLOOR = 1e-14;
+
+// the near-resonant estimate: a flat rate [cm3/s] (Melius 1974) for an exothermic capture with an
+// energy defect up to NEARRES_MAX_DEFECT [erg]. A larger defect can not reach a level of the
+// products near resonance, so the reaction gets the Landau-Zener estimate instead.
+constexpr double NEARRES_RATE = 1e-9;
+constexpr double NEARRES_MAX_DEFECT = 4. * EV;
+// the acceptor charges of the near-resonant estimate; higher stages are rare in the nebular phase
+constexpr int NEARRES_MAX_CHARGE = 3;
+// the fit temperature window of a near-resonant estimate [K]. A flat rate has no temperature
+// dependence, so the clamp has no effect. The values document the nebular range only.
+constexpr double NEARRES_TMIN = 1000.;
+constexpr double NEARRES_TMAX = 40000.;
 
 struct CTReaction {
   int partner_element{-1};  // the ion that reacts with the owner ion of the list entry
@@ -289,31 +306,6 @@ auto read_reaction_file() -> std::vector<std::array<int, 4>> {
   assert_always(filereactioncount >= 0);
 
   int used = 0;
-  // store one reaction when the loaded dataset holds both ion stages of both species
-  auto store = [&](const int z_acc, const int ionstage_acc, const int z_don, const int ionstage_don,
-                   const CTReaction& params, const int autoreverse) {
-    covered.push_back({z_acc, ionstage_acc, z_don, ionstage_don});
-
-    const int element_acc = get_elementindex(z_acc);
-    const int element_don = get_elementindex(z_don);
-    if (element_acc < 0 || element_don < 0) {
-      return;
-    }
-    if (!element_has_ct_balance(element_acc) || !element_has_ct_balance(element_don)) {
-      return;
-    }
-    // the reaction needs both ion stages of both species in the loaded dataset
-    const int ion_acc = ionstage_acc - get_ionstage(element_acc, 0);
-    const int ion_don = ionstage_don - get_ionstage(element_don, 0);
-    if (ion_acc < 1 || ion_acc >= get_nions(element_acc) || ion_don < 0 || ion_don >= (get_nions(element_don) - 1)) {
-      return;
-    }
-
-    add_reaction(element_acc, ion_acc, element_don, ion_don, params, autoreverse != 0);
-    used++;
-  };
-
-  // the first table: each line holds a reaction with its own fit
   for (int n = 0; n < filereactioncount; n++) {
     get_noncommentline(ctfile, line);
     int z_acc{-1};
@@ -326,44 +318,37 @@ auto read_reaction_file() -> std::vector<std::array<int, 4>> {
     assert_always(std::istringstream{line} >> z_acc >> ionstage_acc >> z_don >> ionstage_don >> a_e9 >> params.b >>
                   params.c >> params.d >> params.eexp >> params.tmin >> params.tmax >> autoreverse);
     params.a = a_e9 * 1e-9;
-    store(z_acc, ionstage_acc, z_don, ionstage_don, params, autoreverse);
-  }
 
-  // the second table: the estimates, which share one line of coefficients. An older file ends
-  // after the first table, so a missing second table is not an error.
-  if (!get_noncommentline(ctfile, line)) {
-    printlnlog("The charge transfer file holds no second table of estimates");
-    return covered;
+    covered.push_back({z_acc, ionstage_acc, z_don, ionstage_don});
+
+    const int element_acc = get_elementindex(z_acc);
+    const int element_don = get_elementindex(z_don);
+    if (element_acc < 0 || element_don < 0) {
+      continue;
+    }
+    if (!element_has_ct_balance(element_acc) || !element_has_ct_balance(element_don)) {
+      continue;
+    }
+    // the reaction needs both ion stages of both species in the loaded dataset
+    const int ion_acc = ionstage_acc - get_ionstage(element_acc, 0);
+    const int ion_don = ionstage_don - get_ionstage(element_don, 0);
+    if (ion_acc < 1 || ion_acc >= get_nions(element_acc) || ion_don < 0 || ion_don >= (get_nions(element_don) - 1)) {
+      continue;
+    }
+
+    add_reaction(element_acc, ion_acc, element_don, ion_don, params, autoreverse != 0);
+    used++;
   }
-  int fileestimatecount = 0;
-  assert_always(std::istringstream{line} >> fileestimatecount);
-  assert_always(fileestimatecount >= 0);
-  CTReaction estimateparams{};
-  {
-    get_noncommentline(ctfile, line);
-    double a_e9 = 0.;
-    assert_always(std::istringstream{line} >> a_e9 >> estimateparams.b >> estimateparams.c >> estimateparams.d >>
-                  estimateparams.eexp >> estimateparams.tmin >> estimateparams.tmax);
-    estimateparams.a = a_e9 * 1e-9;
-  }
-  for (int n = 0; n < fileestimatecount; n++) {
-    get_noncommentline(ctfile, line);
-    int z_acc{-1};
-    int ionstage_acc{-1};
-    int z_don{-1};
-    int ionstage_don{-1};
-    int autoreverse{0};
-    assert_always(std::istringstream{line} >> z_acc >> ionstage_acc >> z_don >> ionstage_don >> autoreverse);
-    store(z_acc, ionstage_acc, z_don, ionstage_don, estimateparams, autoreverse);
-  }
-  printlnlog("Stored {} of {} charge transfer reactions from the file", used, filereactioncount + fileestimatecount);
+  printlnlog("Stored {} of {} charge transfer reactions from the file", used, filereactioncount);
 
   return covered;
 }
 
-// generate the Landau-Zener reactions: electron capture from every neutral donor by every ion with a
-// charge of two or more, for the pairs that the data file does not cover
-void generate_lz_reactions(const std::vector<std::array<int, 4>>& covered) {
+// generate the estimated reactions: electron capture from every neutral donor by every positive ion,
+// for the pairs that the data file does not cover. A small energy defect gets the near-resonant
+// rate, and the other captures by an ion with a charge of two or more get a Landau-Zener rate.
+void generate_estimated_reactions(const std::vector<std::array<int, 4>>& covered) {
+  int nearres_reaction_count = 0;
   int lz_reaction_count = 0;
   int lz_channel_count = 0;
 
@@ -373,7 +358,7 @@ void generate_lz_reactions(const std::vector<std::array<int, 4>>& covered) {
     }
     for (int ion_acc = 1; ion_acc < get_nions(element_acc); ion_acc++) {
       const int ioncharge = get_ionstage(element_acc, ion_acc) - 1;
-      if (ioncharge < 2) {
+      if (ioncharge < 1) {
         continue;
       }
       for (int element_don = 0; element_don < get_nelements(); element_don++) {
@@ -395,7 +380,24 @@ void generate_lz_reactions(const std::vector<std::array<int, 4>>& covered) {
         const double ip_final_ground = get_ionpot(element_acc, ion_acc - 1);
 
         // the reaction must release energy for a curve crossing and for the radiative floor
-        if ((ip_final_ground - ip_donor) <= 0.) {
+        const double deltae_ground = ip_final_ground - ip_donor;
+        if (deltae_ground <= 0.) {
+          continue;
+        }
+
+        if (chargetransfer::is_near_resonant(ioncharge, deltae_ground)) {
+          CTReaction params{};
+          params.a = NEARRES_RATE;
+          params.tmin = NEARRES_TMIN;
+          params.tmax = NEARRES_TMAX;
+          add_reaction(element_acc, ion_acc, element_don, ion_don, params, true);
+          nearres_reaction_count++;
+          continue;
+        }
+
+        // the Landau-Zener crossing radius scales with (charge - 1), so the method needs a charge
+        // of two or more
+        if (ioncharge < 2) {
           continue;
         }
 
@@ -431,6 +433,8 @@ void generate_lz_reactions(const std::vector<std::array<int, 4>>& covered) {
       }
     }
   }
+  printlnlog("Generated {} near-resonant charge transfer reactions with the flat rate {} cm3/s", nearres_reaction_count,
+             NEARRES_RATE);
   printlnlog("Generated {} Landau-Zener charge transfer reactions with {} capture channels", lz_reaction_count,
              lz_channel_count);
 }
@@ -438,6 +442,10 @@ void generate_lz_reactions(const std::vector<std::array<int, 4>>& covered) {
 }  // anonymous namespace
 
 namespace chargetransfer {
+
+auto is_near_resonant(const int ioncharge, const double deltae_erg) -> bool {
+  return ioncharge >= 1 && ioncharge <= NEARRES_MAX_CHARGE && deltae_erg > 0. && deltae_erg <= NEARRES_MAX_DEFECT;
+}
 
 auto evaluate_ctfit(const double a, const double b, const double c, const double d, const double eexp,
                     const double tmin, const double tmax, const double T) -> double {
@@ -503,7 +511,7 @@ void init() {
   reactions_ion_perion.resize(get_includedions());
 
   const auto covered = read_reaction_file();
-  generate_lz_reactions(covered);
+  generate_estimated_reactions(covered);
 
   printlnlog("Charge transfer setup stored {} reactions (each with a reverse where detailed balance applies)",
              reaction_count);

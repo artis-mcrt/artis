@@ -15,6 +15,11 @@ void init();
 // for the transition ion -> (ion + 1). Includes the partner densities and the clumping factor.
 [[nodiscard]] auto ct_ionisation_rate(int nonemptymgi, int element, int ion) -> double;
 
+// true when an exothermic capture by an ion of the given charge from a neutral donor gets the
+// near-resonant estimate: a charge of one to three and an energy defect deltae_erg in (0, 4 eV].
+// The unit tests call this directly.
+[[nodiscard]] auto is_near_resonant(int ioncharge, double deltae_erg) -> bool;
+
 // evaluate the Kingdon & Ferland (1996) fit form. The unit tests call this directly.
 // k = a * (T/1e4 K)^b * (1 + c * exp(d * T/1e4 K)) * exp(-eexp/T) [cm3/s], with a in [cm3/s].
 // The fit part uses T clamped into [tmin, tmax]. The Boltzmann factor exp(-eexp/T) uses the given T.
