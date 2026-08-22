@@ -267,14 +267,16 @@ constexpr bool USE_XCOM_GAMMAPHOTOION;
 // Override frequency-dependent gamma-ray opacity with a grey opacity [cm^2/g]
 constexpr std::optional<double> GAMMA_USE_KAPPA_GREY;
 
-// Include charge transfer reactions in the NLTE population solver. The rates come from the published
-// fits in data/chargetransfer.txt (reactions with hydrogen and helium), plus Landau-Zener estimates
-// that the code generates at startup for electron capture from every neutral donor by every ion with
-// a charge of two or more (see chargetransfer.cc). The reverse rates come from detailed balance.
-// The rates enter the NLTE rate matrix as per-ion coefficients between neighbouring ion stages.
-// A reaction is active only when both elements have NLTE levels and a free ionisation balance, so
-// that both sides of the reaction get their transition and the total ionic charge stays constant.
-// The reaction heat is not added to the thermal balance.
+// Include charge transfer reactions in the NLTE population solver. The published fits come from
+// data/chargetransfer.txt, which holds reactions with hydrogen and helium. The code generates
+// estimates at startup for the other electron captures from a neutral donor (see chargetransfer.cc).
+// An ion with a charge of one to three and an energy defect up to 4 eV gets the flat near-resonant
+// rate of 1e-9 cm3/s. The other captures by an ion with a charge of two or more get a Landau-Zener
+// estimate. The reverse rates come from detailed balance. The rates enter the NLTE rate matrix as
+// per-ion coefficients between neighbouring ion stages. A reaction is active only when both
+// elements have NLTE levels and a free ionisation balance, so that both sides of the reaction get
+// their transition and the total ionic charge stays constant. The solver does not add the reaction
+// heat to the thermal balance.
 constexpr bool ENABLE_CHARGE_TRANSFER_REACTIONS;
 
 // Use microclumping, which enhances collisional (de)excitation, collisional ionisation, collisional recombination,

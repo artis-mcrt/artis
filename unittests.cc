@@ -906,7 +906,6 @@ void test_nonthermal_solve_upper_triangular() {
         "exactly-zero rhs rows give exactly +0. solution values");
 }
 
-// the TOMS 748 root finder and Gauss-Kronrod quadrature extracted from Boost.Math
 void test_chargetransfer_helpers() {
   // fit form of Kingdon & Ferland (1996): k = a * (T/1e4)^b * (1 + c * exp(d * T/1e4)) * exp(-eexp/T)
   check(chargetransfer::evaluate_ctfit(1e-9, 0., 0., 0., 0., 1e3, 1e5, 1e4) == 1e-9,
@@ -952,6 +951,7 @@ void test_chargetransfer_helpers() {
   check(!chargetransfer::is_near_resonant(2, -1. * EV), "is_near_resonant rejects an endothermic reaction");
 }
 
+// the TOMS 748 root finder and Gauss-Kronrod quadrature extracted from Boost.Math
 void test_toms748_and_gauss_kronrod() {
   const auto f_cosfixedpoint = [](const double x) { return std::cos(x) - x; };
   std::uintmax_t iterations = 50;

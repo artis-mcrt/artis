@@ -5,15 +5,17 @@ namespace chargetransfer {
 
 void init();
 
-[[nodiscard]] auto get_reaction_count() -> int;
+// total charge transfer recombination rate [1/s] per ion of (element, upperion), for the transition
+// upperion -> (upperion - 1). Includes the partner densities and the clumping factor. The NLTE
+// matrix of the element under assembly covers the ions [first_ion_used, first_ion_used + nions_used).
+[[nodiscard]] auto ct_recombination_rate(int nonemptymgi, int element, int upperion, int first_ion_used, int nions_used)
+    -> double;
 
-// total charge transfer recombination rate [1/s] per ion of (element, upperion),
-// for the transition upperion -> (upperion - 1). Includes the partner densities and the clumping factor.
-[[nodiscard]] auto ct_recombination_rate(int nonemptymgi, int element, int upperion) -> double;
-
-// total charge transfer ionisation rate [1/s] per ion of (element, ion),
-// for the transition ion -> (ion + 1). Includes the partner densities and the clumping factor.
-[[nodiscard]] auto ct_ionisation_rate(int nonemptymgi, int element, int ion) -> double;
+// total charge transfer ionisation rate [1/s] per ion of (element, ion), for the transition
+// ion -> (ion + 1). Includes the partner densities and the clumping factor. The NLTE matrix of the
+// element under assembly covers the ions [first_ion_used, first_ion_used + nions_used).
+[[nodiscard]] auto ct_ionisation_rate(int nonemptymgi, int element, int ion, int first_ion_used, int nions_used)
+    -> double;
 
 // true when an exothermic capture by an ion of the given charge from a neutral donor gets the
 // near-resonant estimate: a charge of one to three and an energy defect deltae_erg in (0, 4 eV].
@@ -29,7 +31,7 @@ void init();
 // Landau-Zener cross section [cm2] for electron capture by an ion of the given charge from a neutral donor,
 // for a single final channel with energy defect deltae_erg (method of Butler & Dalgarno 1980, ApJ, 241, 838).
 // ip_donor_erg is the ionisation energy of the neutral donor, which sets the exponent of the coupling.
-// The unit tests call this directly.
+// The charge must be two or more, and deltae_erg must be positive. The unit tests call this directly.
 [[nodiscard]] auto sigma_lz_channel(int ioncharge, double deltae_erg, double ip_donor_erg, double v_cms) -> double;
 
 }  // namespace chargetransfer

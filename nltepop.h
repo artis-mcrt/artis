@@ -15,13 +15,13 @@ inline MPI_shared_array<double> nltepops_allcells;
 
 // ion range of the last NLTE matrix solution of each element in each cell, as the first ion index
 // and the number of ions. A first ion index of -1 means that the cell holds no solution for the
-// element, e.g. before the first solve or after a fallback to LTE. The restart files do not hold
-// these arrays, so a resumed run treats every element as unsolved until its first sweep.
+// element, e.g. before the first solve or after a fallback to LTE. The arrays exist only with
+// ENABLE_CHARGE_TRANSFER_REACTIONS, and the restart files then hold them.
 inline MPI_shared_array<int> nlte_solution_firstion_allcells;
 inline MPI_shared_array<int> nlte_solution_nions_allcells;
 
 void solve_nlte_pops_element(int element, int nonemptymgi, int timestep, int nlte_iter);
-[[nodiscard]] auto elem_nltepops_valid(int nonemptymgi, int element) -> bool;
+void nltepop_reset_solution_ranges(int nonemptymgi);
 [[nodiscard]] auto ion_in_nlte_solution(int nonemptymgi, int element, int ion) -> bool;
 [[nodiscard]] auto get_nlte_solution_range_key(int nonemptymgi, int element) -> int;
 // GTH solve for the stationary distribution of the NLTE rate matrix, exposed here so that unittests.cc can test

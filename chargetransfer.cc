@@ -127,8 +127,6 @@ std::vector<std::vector<CTReaction>> reactions_ion_perion;
 // tabulated cross sections sigma(v) [cm2] on the log-spaced velocity grid
 std::vector<std::array<double, LZ_VGRIDSIZE>> lz_sigma_tables;
 
-int reaction_count = 0;
-
 auto lz_vgrid_v_cms(const int i) -> double {
   const double logstep = std::log(LZ_VGRID_MAX_CMS / LZ_VGRID_MIN_CMS) / (LZ_VGRIDSIZE - 1);
   return LZ_VGRID_MIN_CMS * std::exp(i * logstep);
@@ -182,7 +180,8 @@ auto lz_thermal_ratecoeff(const int lz_tableindex, const double T, const double 
       sigma = sigmatable[LZ_VGRIDSIZE - 1];
     } else {
       const double findex = std::log(v / LZ_VGRID_MIN_CMS) / logstep_v;
-      const int ilow = static_cast<int>(findex);
+      // findex can round up to the last grid point, so keep ilow + 1 inside the table
+      const int ilow = std::min(static_cast<int>(findex), LZ_VGRIDSIZE - 2);
       const double frac = findex - ilow;
       sigma = ((1. - frac) * sigmatable[ilow]) + (frac * sigmatable[ilow + 1]);
     }
@@ -212,21 +211,27 @@ auto eval_reaction_ratecoeff(const CTReaction& r, const int nonemptymgi, const d
   return k;
 }
 
-auto sum_reaction_list(const std::vector<CTReaction>& list, const int nonemptymgi) -> double {
+// sum the rates of the list entries of an owner ion of the element, while the NLTE matrix of the
+// element covers the ion range [first_ion_used, first_ion_used + nions_used)
+auto sum_reaction_list(const std::vector<CTReaction>& list, const int nonemptymgi, const int element,
+                       const int first_ion_used, const int nions_used) -> double {
   if (list.empty()) {
     return 0.;
   }
   const auto T_e = grid::Te_allcells[nonemptymgi];
   double total = 0.;
   for (const auto& r : list) {
-    // after a failed matrix solve, the partner element holds LTE populations in this cell and gets
-    // no reciprocal transition, so skip the reaction to keep the total ionic charge constant
     // the partner ion and its product ion must both be inside the NLTE matrix solution of the
     // partner element. An edge ion that the ion range reduction removed, or an element that fell
     // back to LTE, gets no reciprocal transition, and the reaction would then change the total
-    // ionic charge.
-    if (!ion_in_nlte_solution(nonemptymgi, r.partner_element, r.partner_ion) ||
-        !ion_in_nlte_solution(nonemptymgi, r.partner_element, r.partner_product_ion)) {
+    // ionic charge. A self-reaction has the owner element as its partner. The matrix under
+    // assembly then gives the range, because the stored range belongs to the previous solve.
+    const bool partner_is_owner = (r.partner_element == element);
+    const auto ion_in_partner_solution = [&](const int ion) {
+      return partner_is_owner ? (ion >= first_ion_used && ion < (first_ion_used + nions_used))
+                              : ion_in_nlte_solution(nonemptymgi, r.partner_element, ion);
+    };
+    if (!ion_in_partner_solution(r.partner_ion) || !ion_in_partner_solution(r.partner_product_ion)) {
       continue;
     }
     const double nnpartner = get_nnion(nonemptymgi, r.partner_element, r.partner_ion);
@@ -240,9 +245,9 @@ auto sum_reaction_list(const std::vector<CTReaction>& list, const int nonemptymg
 
 // register the two forward list entries of a reaction, and the two reverse entries when autoreverse
 // is set. The acceptor ion captures the electron (ion_acc -> ion_acc - 1) and the donor ion loses it
-// (ion_don -> ion_don + 1).
-void add_reaction(const int element_acc, const int ion_acc, const int element_don, const int ion_don,
-                  const CTReaction& params, const bool autoreverse) {
+// (ion_don -> ion_don + 1). Return true when the reverse entries exist.
+auto add_reaction(const int element_acc, const int ion_acc, const int element_don, const int ion_don,
+                  const CTReaction& params, const bool autoreverse) -> bool {
   CTReaction fwd = params;
   fwd.mu_grams = reduced_mass_g(element_acc, element_don);
   fwd.is_reverse = false;
@@ -257,10 +262,8 @@ void add_reaction(const int element_acc, const int ion_acc, const int element_do
   fwd.partner_product_ion = ion_acc - 1;
   reactions_ion_perion[get_uniqueionindex(element_don, ion_don)].push_back(fwd);
 
-  reaction_count++;
-
   if (!autoreverse) {
-    return;
+    return false;
   }
 
   // energy release of the forward reaction: the captured electron binds more strongly on the
@@ -268,7 +271,7 @@ void add_reaction(const int element_acc, const int ion_acc, const int element_do
   // reverse, because its listed rate is a floor value and the balance would amplify it.
   const double delta_e = get_ionpot(element_acc, ion_acc - 1) - get_ionpot(element_don, ion_don);
   if (delta_e <= 0.) {
-    return;
+    return false;
   }
 
   CTReaction rev = params;
@@ -290,25 +293,26 @@ void add_reaction(const int element_acc, const int ion_acc, const int element_do
   rev.partner_product_ion = ion_don;
   reactions_ion_perion[get_uniqueionindex(element_acc, ion_acc - 1)].push_back(rev);
 
-  reaction_count++;
+  return true;
 }
 
 // read the published fits from data/chargetransfer.txt. Return the list of (Z, ionstage) pairs of
-// (acceptor, donor) that the file covered, so that the Landau-Zener generator can skip them.
+// (acceptor, donor) that the file covered, with the reverse pair of each reaction that got a
+// detailed balance reverse, so that the estimate generator can skip them.
 auto read_reaction_file() -> std::vector<std::array<int, 4>> {
   auto covered = std::vector<std::array<int, 4>>();
 
   printlnlog("Reading charge transfer reactions from chargetransfer.txt...");
   auto ctfile = fstream_required("chargetransfer.txt", std::ios::in);
   std::string line;
-  get_noncommentline(ctfile, line);
+  assert_always(get_noncommentline(ctfile, line));
   int filereactioncount = 0;
   assert_always(std::istringstream{line} >> filereactioncount);
   assert_always(filereactioncount >= 0);
 
   int used = 0;
   for (int n = 0; n < filereactioncount; n++) {
-    get_noncommentline(ctfile, line);
+    assert_always(get_noncommentline(ctfile, line));
     int z_acc{-1};
     int ionstage_acc{-1};
     int z_don{-1};
@@ -318,6 +322,9 @@ auto read_reaction_file() -> std::vector<std::array<int, 4>> {
     double a_e9 = 0.;
     assert_always(std::istringstream{line} >> z_acc >> ionstage_acc >> z_don >> ionstage_don >> a_e9 >> params.b >>
                   params.c >> params.d >> params.eexp >> params.tmin >> params.tmax >> autoreverse);
+    assert_always(z_acc > 0 && ionstage_acc > 1 && z_don > 0 && ionstage_don > 0);
+    assert_always(a_e9 >= 0.);
+    assert_always(params.tmin > 0. && params.tmin <= params.tmax);
     params.a = a_e9 * 1e-9;
 
     covered.push_back({z_acc, ionstage_acc, z_don, ionstage_don});
@@ -337,7 +344,9 @@ auto read_reaction_file() -> std::vector<std::array<int, 4>> {
       continue;
     }
 
-    add_reaction(element_acc, ion_acc, element_don, ion_don, params, autoreverse != 0);
+    if (add_reaction(element_acc, ion_acc, element_don, ion_don, params, autoreverse != 0)) {
+      covered.push_back({z_don, ionstage_don + 1, z_acc, ionstage_acc - 1});
+    }
     used++;
   }
   printlnlog("Stored {} of {} charge transfer reactions from the file", used, filereactioncount);
@@ -363,7 +372,7 @@ void generate_estimated_reactions(const std::vector<std::array<int, 4>>& covered
         continue;
       }
       for (int element_don = 0; element_don < get_nelements(); element_don++) {
-        if (get_ionstage(element_don, 0) != 1 || get_nions(element_don) < 2 || !element_has_ct_balance(element_don)) {
+        if (get_nions(element_don) < 2 || get_ionstage(element_don, 0) != 1 || !element_has_ct_balance(element_don)) {
           continue;
         }
         const int ion_don = 0;
@@ -376,6 +385,15 @@ void generate_estimated_reactions(const std::vector<std::array<int, 4>>& covered
         if (std::ranges::find(covered, key) != covered.end()) {
           continue;
         }
+        // the file can hold the reverse reaction as its own fit, and the estimate then gets no
+        // detailed balance reverse
+        const auto reverse_key = std::array<int, 4>{
+            get_atomicnumber(element_don),
+            2,
+            get_atomicnumber(element_acc),
+            get_ionstage(element_acc, ion_acc) - 1,
+        };
+        const bool autoreverse = (std::ranges::find(covered, reverse_key) == covered.end());
 
         const double ip_donor = get_ionpot(element_don, ion_don);
         const double ip_final_ground = get_ionpot(element_acc, ion_acc - 1);
@@ -391,7 +409,7 @@ void generate_estimated_reactions(const std::vector<std::array<int, 4>>& covered
           params.a = NEARRES_RATE;
           params.tmin = NEARRES_TMIN;
           params.tmax = NEARRES_TMAX;
-          add_reaction(element_acc, ion_acc, element_don, ion_don, params, true);
+          add_reaction(element_acc, ion_acc, element_don, ion_don, params, autoreverse);
           nearres_reaction_count++;
           continue;
         }
@@ -429,7 +447,7 @@ void generate_estimated_reactions(const std::vector<std::array<int, 4>>& covered
         params.lz_tableindex = static_cast<int>(lz_sigma_tables.size());
         lz_sigma_tables.push_back(sigmatable);
 
-        add_reaction(element_acc, ion_acc, element_don, ion_don, params, true);
+        add_reaction(element_acc, ion_acc, element_don, ion_don, params, autoreverse);
         lz_reaction_count++;
       }
     }
@@ -462,6 +480,9 @@ auto evaluate_ctfit(const double a, const double b, const double c, const double
 
 auto sigma_lz_channel(const int ioncharge, const double deltae_erg, const double ip_donor_erg, const double v_cms)
     -> double {
+  // the crossing radius scales with (charge - 1) and needs an energy release
+  assert_always(ioncharge >= 2);
+  assert_always(deltae_erg > 0.);
   // diabatic curves in atomic units: the entrance channel (ion + neutral) is taken as flat, and the
   // exit channel has the Coulomb repulsion of the two product ions plus the energy release. The
   // crossing sits where the repulsion equals the energy release, so rx = zeta / deltae with
@@ -513,25 +534,24 @@ void init() {
 
   const auto covered = read_reaction_file();
   generate_estimated_reactions(covered);
-
-  printlnlog("Charge transfer setup stored {} reactions (each with a reverse where detailed balance applies)",
-             reaction_count);
 }
 
-auto get_reaction_count() -> int { return reaction_count; }
-
-auto ct_recombination_rate(const int nonemptymgi, const int element, const int upperion) -> double {
+auto ct_recombination_rate(const int nonemptymgi, const int element, const int upperion, const int first_ion_used,
+                           const int nions_used) -> double {
   if (!ENABLE_CHARGE_TRANSFER_REACTIONS) {
     return 0.;
   }
-  return sum_reaction_list(reactions_rec_perion[get_uniqueionindex(element, upperion)], nonemptymgi);
+  return sum_reaction_list(reactions_rec_perion[get_uniqueionindex(element, upperion)], nonemptymgi, element,
+                           first_ion_used, nions_used);
 }
 
-auto ct_ionisation_rate(const int nonemptymgi, const int element, const int ion) -> double {
+auto ct_ionisation_rate(const int nonemptymgi, const int element, const int ion, const int first_ion_used,
+                        const int nions_used) -> double {
   if (!ENABLE_CHARGE_TRANSFER_REACTIONS) {
     return 0.;
   }
-  return sum_reaction_list(reactions_ion_perion[get_uniqueionindex(element, ion)], nonemptymgi);
+  return sum_reaction_list(reactions_ion_perion[get_uniqueionindex(element, ion)], nonemptymgi, element, first_ion_used,
+                           nions_used);
 }
 
 }  // namespace chargetransfer
