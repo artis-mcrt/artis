@@ -1,6 +1,7 @@
 // The full NLTE level population solver: assembles the statistical equilibrium rate matrix
 // (radiative and collisional bound-bound and bound-free rates, plus non-thermal ionisation)
-// for all levels of all ions of an element and solves for the level populations.
+// for all levels of all ions of an element and solves for the level populations. With
+// NLTE_TIME_DEPENDENT_FIRST_TIMESTEP, the ion populations get a backward Euler time term.
 //
 // The NLTE ionisation and population solver is described by Shingles et al. (2020), MNRAS, 492,
 // 2029, section 2.3, doi:10.1093/mnras/stz3412.
@@ -1357,23 +1358,65 @@ auto can_remove_ion(const int element, const int ion, const int first_ion_used, 
   return true;
 }
 
+// Add the backward Euler time terms of the ion populations (see NLTE_TIME_DEPENDENT_FIRST_TIMESTEP). In the
+// row of the ground level of each ion, every column of the ion gets -1/dt, and the balance entry becomes
+// -nnion_old/dt. The transitions inside an ion cancel in the sum of the rows of the ion, so that sum is the
+// implicit time step of the ion population. The other rows keep their statistical equilibrium form, so the
+// excitation stays in equilibrium. Row 0 is the normalisation row and gets no time term. The old ion fractions
+// are renormalised over the used ions, so the balance vector stays consistent with the normalisation row.
+void nltepop_matrix_add_time_dependence(const int nonemptymgi, const int element, const double dt,
+                                        const double nnelement, const int first_ion_used, const int nions_used,
+                                        const std::span<double> rate_matrix, const std::span<double> balance_vector) {
+  const auto nlte_dimension = static_cast<int>(balance_vector.size());
+  const int max_ion_used = first_ion_used + nions_used - 1;
+  assert_always(get_nlte_vector_index(element, first_ion_used, 0, first_ion_used) == 0);
+
+  double ionfrac_old_sum = 0.;
+  for (int ion = first_ion_used; ion <= max_ion_used; ion++) {
+    ionfrac_old_sum += nnion_prev_allcells[get_cellionindex(nonemptymgi, element, ion)];
+  }
+  if (ionfrac_old_sum <= 0.) {
+    printlnlog(
+        "  [warning] cell {} ts {}: Z={} has no previous ion populations in ionstage {} to {}. Using statistical "
+        "equilibrium for this solve",
+        nltelog.modelgridindex, nltelog.timestep, get_atomicnumber(element), get_ionstage(element, first_ion_used),
+        get_ionstage(element, max_ion_used));
+    return;
+  }
+
+  for (int ion = first_ion_used + 1; ion <= max_ion_used; ion++) {
+    const int row = get_nlte_vector_index(element, ion, 0, first_ion_used);
+    const int col_end =
+        (ion < max_ion_used) ? get_nlte_vector_index(element, ion + 1, 0, first_ion_used) : nlte_dimension;
+    for (int col = row; col < col_end; col++) {
+      rate_matrix[(row * nlte_dimension) + col] -= 1. / dt;
+    }
+    const double nnion_old =
+        nnelement * nnion_prev_allcells[get_cellionindex(nonemptymgi, element, ion)] / ionfrac_old_sum;
+    balance_vector[row] = -nnion_old / dt;
+  }
+}
+
 // Assemble and solve the NLTE rate matrix, retrying with a reduced range of ion stages when the
 // solve fails and NLTE_LIMIT_ION_STAGES_AFTER_FAILURE allows an edge ion to be removed.
 // Return whether a solution was found and the range of ions included in it.
 // Both solver paths normalise the solution so that the sum over every matrix slot equals the element number
 // density: the LU path through its replaced zeroth matrix row, the GTH path by scaling its unit-sum stationary
-// distribution.
+// distribution. A value of dt_time_dependent adds the time terms of the ion populations on the LU path.
 auto nltepop_solve_matrix_with_ion_reduction(const int element, const int nonemptymgi, const double t_mid,
                                              const double nnelement,
                                              const std::vector<std::vector<double>>& s_renorm_allions,
-                                             RateMatrices& rate_matrices, std::vector<double>& popvec)
+                                             RateMatrices& rate_matrices, std::vector<double>& popvec,
+                                             const std::optional<double> dt_time_dependent)
     -> std::tuple<bool, int, int> {
   const int atomic_number = get_atomicnumber(element);
   const int nions = get_nions(element);
   const auto max_nlte_dimension = get_max_nlte_dimension();
-  // the solver choice is fixed for the element: FORCE_SAHA_ION_BALANCE constraint rows are incompatible with the
-  // Markov-generator structure that the GTH elimination requires, so those elements always use the LU path
-  const bool use_gth_solver = NLTE_USE_GTH_SOLVER && !FORCE_SAHA_ION_BALANCE(atomic_number);
+  // the solver choice is fixed for the element: FORCE_SAHA_ION_BALANCE constraint rows and the time terms are
+  // incompatible with the Markov-generator structure that the GTH elimination requires, so those solves always
+  // use the LU path
+  const bool use_gth_solver =
+      NLTE_USE_GTH_SOLVER && !FORCE_SAHA_ION_BALANCE(atomic_number) && !dt_time_dependent.has_value();
   int nions_used = nions;
   int first_ion_used = 0;
   bool matrix_solve_success = false;
@@ -1421,8 +1464,9 @@ auto nltepop_solve_matrix_with_ion_reduction(const int element, const int nonemp
       THREADLOCALONHOST std::vector<double> balance_vector;
       balance_vector.reserve(max_nlte_dimension);
       balance_vector.resize(nlte_dimension);
-      std::ranges::fill(balance_vector, 0.0);  // statistical equilibrium means balance vector is zero
-      // except for zeroth element used to normalise the total element population
+      // statistical equilibrium means the balance vector is zero, except for the zeroth element that
+      // normalises the total element population. The time terms below can set other elements.
+      std::ranges::fill(balance_vector, 0.0);
       balance_vector[0] = nnelement;
 
       if (FORCE_SAHA_ION_BALANCE(atomic_number)) {
@@ -1443,6 +1487,11 @@ auto nltepop_solve_matrix_with_ion_reduction(const int element, const int nonemp
 
           balance_vector[index_ion_ground] = nnion;
         }
+      }
+
+      if (dt_time_dependent.has_value()) {
+        nltepop_matrix_add_time_dependence(nonemptymgi, element, *dt_time_dependent, nnelement, first_ion_used,
+                                           nions_used, rate_matrix, balance_vector);
       }
 
       // calculate the normalisation factors and apply them to the matrix columns and balance vector elements
@@ -1767,8 +1816,20 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
 
   THREADLOCALONHOST RateMatrices rate_matrices{max_nlte_dimension};
 
+  // the time terms need the ion populations of the previous grid update. The Saha constraint rows of
+  // FORCE_SAHA_ION_BALANCE replace the ground level rows, so those elements stay in equilibrium.
+  auto dt_time_dependent = get_time_dependent_dt(nonemptymgi, timestep);
+  if (FORCE_SAHA_ION_BALANCE(atomic_number)) {
+    dt_time_dependent.reset();
+  } else if (nlte_iter == 0 && timestep_is_time_dependent(timestep) && !dt_time_dependent.has_value()) {
+    printlnlog(
+        "cell {} ts {}: no previous solution for the time-dependent ionisation of Z={}. Using statistical "
+        "equilibrium for this timestep",
+        modelgridindex, timestep, atomic_number);
+  }
+
   const auto [matrix_solve_success, first_ion_used, nions_used] = nltepop_solve_matrix_with_ion_reduction(
-      element, nonemptymgi, t_mid, nnelement, s_renorm_allions, rate_matrices, popvec);
+      element, nonemptymgi, t_mid, nnelement, s_renorm_allions, rate_matrices, popvec, dt_time_dependent);
 
   if (!matrix_solve_success) {
     printlnlog(
@@ -1867,6 +1928,65 @@ void nltepop_write_to_file(const int nonemptymgi, const int timestep) {
   nlte_file.flush();
 }
 
+void nltepop_allocate_time_dependent_arrays() {
+  // the construction of a shared array is collective over the node, so every rank calls this
+  const auto nonempty_npts_model = static_cast<std::ptrdiff_t>(grid::get_nonempty_npts_model());
+  nnion_prev_allcells = MPI_shared_array<float>(nonempty_npts_model * get_includedions(), 0.);
+  x_e_prev_allcells = MPI_shared_array<float>(nonempty_npts_model, 0.);
+  Te_prev_allcells = MPI_shared_array<float>(nonempty_npts_model, 0.);
+  prev_solution_time_allcells = MPI_shared_array<double>(nonempty_npts_model, -1.);
+  solution_time_allcells = MPI_shared_array<double>(nonempty_npts_model, -1.);
+}
+
+// Keep the state of the last grid update for the time terms of the next solve. Call this before the
+// abundances and the densities change for the new timestep, so that the fractions are self-consistent.
+void nltepop_store_previous_state(const int nonemptymgi) {
+  for (int element = 0; element < get_nelements(); element++) {
+    const int nions = get_nions(element);
+    double nnelement_ionsum = 0.;
+    for (int ion = 0; ion < nions; ion++) {
+      nnelement_ionsum += get_nnion(nonemptymgi, element, ion);
+    }
+    for (int ion = 0; ion < nions; ion++) {
+      nnion_prev_allcells[get_cellionindex(nonemptymgi, element, ion)] =
+          (nnelement_ionsum > 0.) ? static_cast<float>(get_nnion(nonemptymgi, element, ion) / nnelement_ionsum) : 0.F;
+    }
+  }
+  const auto nnetot = grid::get_nnetot(nonemptymgi);
+  x_e_prev_allcells[nonemptymgi] = (nnetot > 0.) ? grid::get_nne(nonemptymgi) / nnetot : 0.F;
+  Te_prev_allcells[nonemptymgi] = grid::Te_allcells[nonemptymgi];
+  prev_solution_time_allcells[nonemptymgi] = solution_time_allcells[nonemptymgi];
+}
+
+// Record the time of the grid solution of the cell, or -1 when an NLTE element of the cell has no matrix
+// solution. The next timestep then starts that cell from the steady-state equations.
+void nltepop_update_solution_time(const int nonemptymgi, const int nts) {
+  bool all_solved = true;
+  for (int element = 0; element < get_nelements(); element++) {
+    if (elem_has_nlte_levels(element) && grid::get_elem_massfrac(nonemptymgi, element) > 0. &&
+        !elem_has_nlte_solution(nonemptymgi, element)) {
+      all_solved = false;
+    }
+  }
+  solution_time_allcells[nonemptymgi] = all_solved ? globals::timesteps[nts].mid : -1.;
+}
+
+void nltepop_clear_solution_time(const int nonemptymgi) { solution_time_allcells[nonemptymgi] = -1.; }
+
+// The time interval of the backward Euler step, or no value when the timestep or the cell uses the
+// steady-state equations
+auto get_time_dependent_dt(const int nonemptymgi, const int nts) -> std::optional<double> {
+  if (!timestep_is_time_dependent(nts)) {
+    return std::nullopt;
+  }
+  const double t_prev = prev_solution_time_allcells[nonemptymgi];
+  const double dt = globals::timesteps[nts].mid - t_prev;
+  if (t_prev <= 0. || dt <= 0.) {
+    return std::nullopt;
+  }
+  return std::make_optional(dt);
+}
+
 void nltepop_write_restart_data(FILE* restart_file) {
   printlog("populations, ");
 
@@ -1898,6 +2018,10 @@ void nltepop_write_restart_data(FILE* restart_file) {
         const int uppermost_ion = grid::get_elements_uppermost_ion(static_cast<int>(nonemptymgi), element);
         fprintf(restart_file, "%d %d ", lowermost_ion, uppermost_ion);
       }
+    }
+    if constexpr (NLTE_TIME_DEPENDENT_FIRST_TIMESTEP.has_value()) {
+      // the time of the solution, so that a resumed run continues the time-dependent equations
+      fprintf(restart_file, "\n%la\n", solution_time_allcells[nonemptymgi]);
     }
   }
 }
@@ -1948,6 +2072,9 @@ void nltepop_read_restart_data(FILE* restart_file) {
         grid::set_elements_lowermost_ion(static_cast<int>(nonemptymgi), element, lowermost_ion);
         grid::set_elements_uppermost_ion(static_cast<int>(nonemptymgi), element, uppermost_ion);
       }
+    }
+    if constexpr (NLTE_TIME_DEPENDENT_FIRST_TIMESTEP.has_value()) {
+      assert_always(fscanf(restart_file, " %la", &solution_time_allcells[nonemptymgi]) == 1);
     }
   }
 }

@@ -2312,6 +2312,20 @@ void setup_timesteps() {
   globals::timesteps = calculate_timesteps(TIMESTEP_SIZE_METHOD, globals::tmin, globals::tmax, globals::ntimesteps,
                                            FIXED_TIMESTEP_WIDTH, TIMESTEP_TRANSITION_TIME);
 
+  if constexpr (NLTE_TIME_DEPENDENT_FIRST_TIMESTEP.has_value()) {
+    // the backward Euler error of the time-dependent equations is first order in width/mid
+    for (int nts = *NLTE_TIME_DEPENDENT_FIRST_TIMESTEP; nts < globals::ntimesteps; nts++) {
+      const double width_over_mid = globals::timesteps[nts].width / globals::timesteps[nts].mid;
+      if (width_over_mid > 0.2) {
+        printlnlog(
+            "[warning] timestep {} has a width of {:.2f} times its midpoint time. The time-dependent ionisation and "
+            "thermal balance need a ratio of 0.1 or less for an accurate solution",
+            nts, width_over_mid);
+        break;
+      }
+    }
+  }
+
   const auto* const method_name = [] {
     switch (TIMESTEP_SIZE_METHOD) {
       case TimeStepSizeMethod::LOGARITHMIC:

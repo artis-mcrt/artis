@@ -174,9 +174,13 @@ void write_to_estimators_file(std::ostream& estimators_file, const int nonemptym
              "heating: ff {:11.5e} bf {:11.5e} coll {:11.5e}       dep {:11.5e} heating_dep/total_dep {:.3f}\n",
              heatingcoolingrates.heating_ff, heatingcoolingrates.heating_bf, heatingcoolingrates.heating_collisional,
              heatingcoolingrates.heating_dep, heatingcoolingrates.dep_frac_heating);
-  std::print(estimators_file, "cooling: ff {:11.5e} fb {:11.5e} coll {:11.5e} adiabatic {:11.5e}\n",
+  std::print(estimators_file, "cooling: ff {:11.5e} fb {:11.5e} coll {:11.5e} adiabatic {:11.5e}",
              heatingcoolingrates.cooling_ff, heatingcoolingrates.cooling_fb, heatingcoolingrates.cooling_collisional,
              heatingcoolingrates.cooling_adiabatic);
+  if constexpr (NLTE_TIME_DEPENDENT_FIRST_TIMESTEP.has_value()) {
+    std::print(estimators_file, " heatcapacity {:11.5e}", heatingcoolingrates.cooling_heatcapacity);
+  }
+  std::println(estimators_file);
 
   const auto write_estim_duration =
       std::chrono::duration<double>(std::chrono::steady_clock::now() - sys_time_start_write_estimators).count();
@@ -338,6 +342,10 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
           "from last iteration",
           mgi, nts, nlte_iter);
     }
+  }
+
+  if constexpr (NLTE_TIME_DEPENDENT_FIRST_TIMESTEP.has_value()) {
+    nltepop_update_solution_time(nonemptymgi, nts);
   }
 }
 
@@ -550,6 +558,10 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
       // the Saha populations replace the NLTE solution, so the charge transfer reactions must not
       // read the stored ion ranges of the last NLTE solve
       nltepop_reset_solution_ranges(nonemptymgi);
+      if constexpr (NLTE_TIME_DEPENDENT_FIRST_TIMESTEP.has_value()) {
+        // the next timestep starts from the steady-state equations
+        nltepop_clear_solution_time(nonemptymgi);
+      }
     } else {
       // not lte_iteration and not a thick cell
       // non-pure-LTE timesteps with T_e from heating/cooling
@@ -703,6 +715,16 @@ void update_grid(std::ostream& estimators_file, const int nts, const int nts_pre
   std::ranges::fill(heatingcoolingrates_thisrankcells, HeatingCoolingRates{});
 
   const auto nstart_nonempty = grid::get_nstart_nonempty(my_rank);
+
+  if constexpr (NLTE_TIME_DEPENDENT_FIRST_TIMESTEP.has_value()) {
+    if (titer == 0) {
+      // keep the state of the last grid update for the time terms, before the abundances and the
+      // densities change for this timestep
+      for (int nonemptymgi = nstart_nonempty; nonemptymgi < (nstart_nonempty + ndo_nonempty); nonemptymgi++) {
+        nltepop_store_previous_state(nonemptymgi);
+      }
+    }
+  }
 
   // the decay chain calculations depend only on the timestep midpoint, so the per-nuclide mass fraction
   // coefficients are computed once and reused for the abundance update, the analytic emission rates of the
