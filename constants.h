@@ -62,6 +62,11 @@ constexpr double HCLIGHTOVERFOURPI = H * CLIGHT / (4 * PI);
 
 constexpr double H_ionpot = 13.5979996 * EV;
 
+// atomic units
+constexpr double A_BOHR_CM = 5.29177211e-9;  // Bohr radius [cm]
+constexpr double E_HARTREE = 4.35974472e-11;  // Hartree energy [erg]
+constexpr double V_ATOMIC_CMS = 2.18769126e8;  // atomic unit of velocity [cm/s]
+
 enum class GridType {
   SPHERICAL1D,  // 1D radial shells (non-uniform dr)
   CYLINDRICAL2D,  // 2D cylindrical grid with uniform dz, drcyl

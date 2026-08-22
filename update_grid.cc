@@ -201,6 +201,12 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
 
   constexpr double nne_reltol = 0.04;
   constexpr double T_e_reltol = 0.04;
+
+  // the ion populations and the NLTE solution ranges of the previous iteration, for the charge
+  // transfer convergence test. The buffers are thread-local, so every cell reuses them.
+  THREADLOCALONHOST std::vector<double> nnion_prev;
+  THREADLOCALONHOST std::vector<NlteSolutionRange> nlte_solution_prev;
+
   for (int nlte_iter = 0; nlte_iter <= NLTEITER; nlte_iter++) {
     const auto sys_time_start_spencerfano = std::chrono::steady_clock::now();
     if (NT_ON && NT_SOLVE_SPENCERFANO) {
@@ -245,17 +251,15 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
     const double fracdiff_T_e = fabs((grid::Te_allcells[nonemptymgi] / prev_T_e) - 1);
 
     // charge transfer conserves nne, so the nne convergence test cannot see a population exchange
-    // between two elements. Keep the ion populations of this iteration and test them below.
-    std::vector<double> nnion_prev;
-    // the element solves run in sequence, so an element that falls back to LTE or loses an edge
-    // ion late in the sweep has already supplied its rates to the partners that solved before it.
-    // Keep the solution range keys to force a new iteration when one of them changes.
-    std::vector<int> nlte_solution_key_prev;
-    if (ENABLE_CHARGE_TRANSFER_REACTIONS) {
+    // between two elements. Keep the ion populations of this iteration and test them below. The
+    // element solves run in sequence, so an element that falls back to LTE or loses an edge ion
+    // late in the sweep has already supplied its rates to the partners that solved before it. Keep
+    // the solution ranges as well, to force a new iteration when one of them changes.
+    if constexpr (ENABLE_CHARGE_TRANSFER_REACTIONS) {
       nnion_prev.resize(get_includedions());
-      nlte_solution_key_prev.resize(get_nelements());
+      nlte_solution_prev.resize(get_nelements());
       for (int element = 0; element < get_nelements(); element++) {
-        nlte_solution_key_prev[element] = get_nlte_solution_range_key(nonemptymgi, element);
+        nlte_solution_prev[element] = get_nlte_solution_range(nonemptymgi, element);
         for (int ion = 0; ion < get_nions(element); ion++) {
           nnion_prev[get_uniqueionindex(element, ion)] = get_nnion(nonemptymgi, element, ion);
         }
@@ -281,12 +285,12 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
     // reactions can move while nne stays constant
     double fracdiff_nnion = 0.;
     bool nlte_solution_changed = false;
-    if (ENABLE_CHARGE_TRANSFER_REACTIONS) {
+    if constexpr (ENABLE_CHARGE_TRANSFER_REACTIONS) {
       for (int element = 0; element < get_nelements(); element++) {
         if (!elem_has_nlte_levels(element)) {
           continue;
         }
-        if (get_nlte_solution_range_key(nonemptymgi, element) != nlte_solution_key_prev[element]) {
+        if (get_nlte_solution_range(nonemptymgi, element) != nlte_solution_prev[element]) {
           nlte_solution_changed = true;
         }
         const double nnelement = grid::get_elem_numberdens(nonemptymgi, element);
@@ -314,8 +318,10 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
         "fracdiff {:g}, prev T_e {:g} new T_e {:g} fracdiff {:g}",
         mgi, nts, nlte_iter, nne_prev, grid::get_nne(nonemptymgi), fracdiff_nne, prev_T_e,
         grid::Te_allcells[nonemptymgi], fracdiff_T_e);
-    if (fracdiff_nne <= nne_reltol && fracdiff_T_e <= T_e_reltol &&
-        (!ENABLE_CHARGE_TRANSFER_REACTIONS || (fracdiff_nnion <= nne_reltol && !nlte_solution_changed))) {
+    // without the charge transfer option, the ion population test and the solution range test
+    // always pass
+    if (fracdiff_nne <= nne_reltol && fracdiff_T_e <= T_e_reltol && fracdiff_nnion <= nne_reltol &&
+        !nlte_solution_changed) {
       printlnlog(
           "NLTE (Spencer-Fano/Te/pops) solver mgi {} timestep {} iteration {}: nne converged to tolerance {:g} <= {:g} "
           "and T_e to tolerance {:g} <= {:g}",

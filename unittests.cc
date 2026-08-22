@@ -928,7 +928,7 @@ void test_chargetransfer_helpers() {
   check(sigma_mid > 0., "sigma_lz_channel is positive for a favourable energy defect");
 
   // the cross section stays below the geometric limit pi * rx^2 (the transfer probability tops out at 0.5)
-  const double rx_cm = 5.29177211e-9 * (27.211386 / 2.);
+  const double rx_cm = A_BOHR_CM * E_HARTREE / deltae;
   check(sigma_mid < PI * rx_cm * rx_cm, "sigma_lz_channel stays below the geometric limit");
 
   // the crossing is traversed adiabatically at a very low velocity and diabatically at a high
@@ -942,13 +942,33 @@ void test_chargetransfer_helpers() {
   check(chargetransfer::sigma_lz_channel(2, 15. * EV, ip_donor, 1e7) < sigma_mid,
         "sigma_lz_channel is smaller for a large energy defect");
 
-  // the near-resonant estimate: an acceptor charge of one to three and an energy defect in (0, 4 eV]
-  check(chargetransfer::is_near_resonant(1, 2. * EV), "is_near_resonant accepts a singly charged ion");
-  check(chargetransfer::is_near_resonant(3, 4. * EV), "is_near_resonant accepts the upper edges of charge and defect");
-  check(!chargetransfer::is_near_resonant(4, 2. * EV), "is_near_resonant rejects a charge above three");
-  check(!chargetransfer::is_near_resonant(2, 4.5 * EV), "is_near_resonant rejects a large energy defect");
-  check(!chargetransfer::is_near_resonant(2, 0.), "is_near_resonant rejects a reaction with no energy release");
-  check(!chargetransfer::is_near_resonant(2, -1. * EV), "is_near_resonant rejects an endothermic reaction");
+  // many capture channels: the sequential crossings keep the total transfer probability below one,
+  // so the cross section stays below the geometric limit of the outermost crossing, and the set
+  // transfers at least as much as its outermost channel alone
+  std::vector<double> deltae_list;
+  for (int i = 0; i < 200; i++) {
+    deltae_list.push_back((1. + (0.01 * i)) * EV);
+  }
+  const double ip_donor_heavy = 6. * EV;
+  const double sigma_many = chargetransfer::sigma_lz_channels(2, deltae_list, ip_donor_heavy, 3e5);
+  const double rx_outer_cm = A_BOHR_CM * E_HARTREE / (1. * EV);
+  check(sigma_many > 0., "sigma_lz_channels is positive for a dense set of channels");
+  check(sigma_many <= PI * rx_outer_cm * rx_outer_cm,
+        "sigma_lz_channels stays below the geometric limit of the outermost crossing");
+  check(sigma_many >= 0.99 * chargetransfer::sigma_lz_channel(2, 1. * EV, ip_donor_heavy, 3e5),
+        "sigma_lz_channels transfers at least as much as the outermost channel alone");
+
+  // the flat estimate for a singly charged ion: the tabulated median up to 4 eV, then the floor
+  check(chargetransfer::singly_charged_ratecoeff(2. * EV) == 1e-12,
+        "singly_charged_ratecoeff gives the flat rate for a small energy release");
+  check(chargetransfer::singly_charged_ratecoeff(4. * EV) == 1e-12,
+        "singly_charged_ratecoeff gives the flat rate at the 4 eV edge");
+  check(chargetransfer::singly_charged_ratecoeff(5. * EV) == 1e-14,
+        "singly_charged_ratecoeff gives the radiative floor for a large energy release");
+  check(chargetransfer::singly_charged_ratecoeff(0.) == 0.,
+        "singly_charged_ratecoeff gives zero for a reaction with no energy release");
+  check(chargetransfer::singly_charged_ratecoeff(-1. * EV) == 0.,
+        "singly_charged_ratecoeff gives zero for an endothermic reaction");
 }
 
 // the TOMS 748 root finder and Gauss-Kronrod quadrature extracted from Boost.Math

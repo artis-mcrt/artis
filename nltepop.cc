@@ -462,9 +462,7 @@ void print_level_rates(const int nonemptymgi, const int timestep, const int elem
 
 void nltepop_reset_element(const int nonemptymgi, const int element) {
   if constexpr (ENABLE_CHARGE_TRANSFER_REACTIONS) {
-    const auto rangeindex = (static_cast<ptrdiff_t>(nonemptymgi) * get_nelements()) + element;
-    nlte_solution_firstion_allcells[rangeindex] = -1;
-    nlte_solution_nions_allcells[rangeindex] = 0;
+    nlte_solution_range_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * get_nelements()) + element] = {};
   }
   for (int ion = 0; ion < get_nions(element); ion++) {
     const int nlte_start = get_allnltelevelsindexstart(element, ion);
@@ -688,6 +686,21 @@ void nltepop_matrix_add_ionisation(const int nonemptymgi, const int element, con
   });
 }
 
+// add a per-ion rate to the NLTE matrix: every level of the source ion goes to the ground state of
+// the target ion
+void nltepop_matrix_add_ion_to_ion_rate(const std::span<double> matrix, const int element, const int source_ion,
+                                        const int target_ion, const double rate, const std::span<const double> s_renorm,
+                                        const int first_ion_used, const int nlte_dimension) {
+  const int target_groundstate_index = get_nlte_vector_index(element, target_ion, 0, first_ion_used);
+  const int nlevels = get_nlevels(element, source_ion);
+  for (int level = 0; level < nlevels; level++) {
+    const int source_index = get_nlte_vector_index(element, source_ion, level, first_ion_used);
+
+    atomicadd(matrix[(source_index * nlte_dimension) + source_index], -rate * s_renorm[level]);
+    atomicadd(matrix[(target_groundstate_index * nlte_dimension) + source_index], rate * s_renorm[level]);
+  }
+}
+
 // add collisional ionisation by non-thermal electrons to NLTE matrix
 void nltepop_matrix_add_nt_ionisation(const int nonemptymgi, const int element, const int ion,
                                       const std::span<const double> s_renorm, RateMatrices& rate_matrices,
@@ -699,7 +712,6 @@ void nltepop_matrix_add_nt_ionisation(const int nonemptymgi, const int element, 
   assert_always(ion < max_ion_used);  // can't ionise top ion stage
   const double Y_nt = nonthermal::nt_ionisation_ratecoeff(nonemptymgi, element, ion);
 
-  const int nlevels = get_nlevels(element, ion);
   const auto nlte_dimension = rate_matrices.used_nlte_dimension;
 
   for (int upperion = ion + 1; upperion <= nonthermal::nt_ionisation_maxupperion(element, ion); upperion++) {
@@ -710,15 +722,8 @@ void nltepop_matrix_add_nt_ionisation(const int nonemptymgi, const int element, 
       // ensure if upperion here is past the upper ion used in the NLTE matrix the rates
       // to this ion are instead added to the ground state of the uppermost ion used in the NLTE matrix
       const int upperion_clamped = std::min(upperion, max_ion_used);
-      const int upper_groundstate_index = get_nlte_vector_index(element, upperion_clamped, 0, first_ion_used);
-      for (int level = 0; level < nlevels; level++) {
-        const int lower_index = get_nlte_vector_index(element, ion, level, first_ion_used);
-
-        atomicadd(rate_matrices.ntcoll_bf[(lower_index * nlte_dimension) + lower_index],
-                  -Y_nt_thisupperion * s_renorm[level]);
-        atomicadd(rate_matrices.ntcoll_bf[(upper_groundstate_index * nlte_dimension) + lower_index],
-                  Y_nt_thisupperion * s_renorm[level]);
-      }
+      nltepop_matrix_add_ion_to_ion_rate(rate_matrices.ntcoll_bf, element, ion, upperion_clamped, Y_nt_thisupperion,
+                                         s_renorm, first_ion_used, nlte_dimension);
     }
   }
 }
@@ -742,30 +747,16 @@ void nltepop_matrix_add_chargetransfer(const int nonemptymgi, const int element,
   const double ct_ionisation =
       chargetransfer::ct_ionisation_rate(nonemptymgi, element, ion, first_ion_used, nions_used);
   if (ct_ionisation > 0.) {
-    const int upper_groundstate_index = get_nlte_vector_index(element, ion + 1, 0, first_ion_used);
-    const int nlevels = get_nlevels(element, ion);
-    for (int level = 0; level < nlevels; level++) {
-      const int lower_index = get_nlte_vector_index(element, ion, level, first_ion_used);
-      atomicadd(rate_matrices.chargetransfer[(lower_index * nlte_dimension) + lower_index],
-                -ct_ionisation * s_renorm[level]);
-      atomicadd(rate_matrices.chargetransfer[(upper_groundstate_index * nlte_dimension) + lower_index],
-                ct_ionisation * s_renorm[level]);
-    }
+    nltepop_matrix_add_ion_to_ion_rate(rate_matrices.chargetransfer, element, ion, ion + 1, ct_ionisation, s_renorm,
+                                       first_ion_used, nlte_dimension);
   }
 
   // charge transfer recombination: every level of (ion + 1) goes to the ground state of ion
   const double ct_recombination =
       chargetransfer::ct_recombination_rate(nonemptymgi, element, ion + 1, first_ion_used, nions_used);
   if (ct_recombination > 0.) {
-    const int lower_groundstate_index = get_nlte_vector_index(element, ion, 0, first_ion_used);
-    const int nlevels_upper = get_nlevels(element, ion + 1);
-    for (int level = 0; level < nlevels_upper; level++) {
-      const int upper_index = get_nlte_vector_index(element, ion + 1, level, first_ion_used);
-      atomicadd(rate_matrices.chargetransfer[(upper_index * nlte_dimension) + upper_index],
-                -ct_recombination * s_renorm_upperion[level]);
-      atomicadd(rate_matrices.chargetransfer[(lower_groundstate_index * nlte_dimension) + upper_index],
-                ct_recombination * s_renorm_upperion[level]);
-    }
+    nltepop_matrix_add_ion_to_ion_rate(rate_matrices.chargetransfer, element, ion + 1, ion, ct_recombination,
+                                       s_renorm_upperion, first_ion_used, nlte_dimension);
   }
 }
 
@@ -1520,9 +1511,8 @@ void nltepop_apply_solution(const int element, const int nonemptymgi, const int 
 
   // record the solved ion range, so that the charge transfer reactions skip the removed edge ions
   if constexpr (ENABLE_CHARGE_TRANSFER_REACTIONS) {
-    const auto rangeindex = (static_cast<ptrdiff_t>(nonemptymgi) * get_nelements()) + element;
-    nlte_solution_firstion_allcells[rangeindex] = first_ion_used;
-    nlte_solution_nions_allcells[rangeindex] = nions_used;
+    nlte_solution_range_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * get_nelements()) + element] = {
+        .first_ion = first_ion_used, .nions = nions_used};
   }
 
   // set the ground level, excited level and possible superlevel populations for this element
@@ -1600,35 +1590,26 @@ void nltepop_apply_solution(const int element, const int nonemptymgi, const int 
 void nltepop_reset_solution_ranges(const int nonemptymgi) {
   if constexpr (ENABLE_CHARGE_TRANSFER_REACTIONS) {
     for (int element = 0; element < get_nelements(); element++) {
-      const auto rangeindex = (static_cast<ptrdiff_t>(nonemptymgi) * get_nelements()) + element;
-      nlte_solution_firstion_allcells[rangeindex] = -1;
-      nlte_solution_nions_allcells[rangeindex] = 0;
+      nlte_solution_range_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * get_nelements()) + element] = {};
     }
   }
 }
 
-// Report whether the ion was inside the ion range of the last NLTE matrix solution of the element.
-// The ion range reduction after a failed solve removes an edge ion, and the matrix then holds no
-// transition across that edge. The range arrays exist only with the charge transfer option.
-auto ion_in_nlte_solution(const int nonemptymgi, const int element, const int ion) -> bool {
+// Return the ion range of the last NLTE matrix solution of the element in the cell. The range array
+// exists only with the charge transfer option, and without it the range stays the default.
+auto get_nlte_solution_range(const int nonemptymgi, const int element) -> NlteSolutionRange {
   if constexpr (!ENABLE_CHARGE_TRANSFER_REACTIONS) {
-    return false;
+    return {};
   }
-  const auto rangeindex = (static_cast<ptrdiff_t>(nonemptymgi) * get_nelements()) + element;
-  const int first_ion_used = nlte_solution_firstion_allcells[rangeindex];
-  return (first_ion_used >= 0) && (ion >= first_ion_used) &&
-         (ion < (first_ion_used + nlte_solution_nions_allcells[rangeindex]));
+  return nlte_solution_range_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * get_nelements()) + element];
 }
 
-// Return one integer that changes when the solution state or the solved ion range of the element
-// changes, for the convergence test of the NLTE iteration loop.
-auto get_nlte_solution_range_key(const int nonemptymgi, const int element) -> int {
-  if constexpr (!ENABLE_CHARGE_TRANSFER_REACTIONS) {
-    return -1;
-  }
-  const auto rangeindex = (static_cast<ptrdiff_t>(nonemptymgi) * get_nelements()) + element;
-  const int first_ion_used = nlte_solution_firstion_allcells[rangeindex];
-  return (first_ion_used < 0) ? -1 : (first_ion_used * 1000) + nlte_solution_nions_allcells[rangeindex];
+// Report whether the ion was inside the ion range of the last NLTE matrix solution of the element.
+// The ion range reduction after a failed solve removes an edge ion, and the matrix then holds no
+// transition across that edge.
+auto ion_in_nlte_solution(const int nonemptymgi, const int element, const int ion) -> bool {
+  const auto range = get_nlte_solution_range(nonemptymgi, element);
+  return (range.first_ion >= 0) && (ion >= range.first_ion) && (ion < (range.first_ion + range.nions));
 }
 
 // Grassmann-Taksar-Heyman (GTH) state-elimination solve for the stationary distribution of the continuous-time
@@ -1912,9 +1893,10 @@ void nltepop_write_restart_data(FILE* restart_file) {
       // the solved ion range of each element, so that a resumed run starts with the same reactions
       fprintf(restart_file, "\n");
       for (int element = 0; element < get_nelements(); element++) {
-        const auto rangeindex = (nonemptymgi * get_nelements()) + element;
-        fprintf(restart_file, "%d %d ", nlte_solution_firstion_allcells[rangeindex],
-                nlte_solution_nions_allcells[rangeindex]);
+        const NlteSolutionRange range = nlte_solution_range_allcells[(nonemptymgi * get_nelements()) + element];
+        const int first_ion = range.first_ion;
+        const int nions = range.nions;
+        fprintf(restart_file, "%d %d ", first_ion, nions);
       }
     }
   }
@@ -1960,9 +1942,11 @@ void nltepop_read_restart_data(FILE* restart_file) {
     }
     if constexpr (ENABLE_CHARGE_TRANSFER_REACTIONS) {
       for (int element = 0; element < get_nelements(); element++) {
-        const auto rangeindex = (nonemptymgi * get_nelements()) + element;
-        assert_always(fscanf(restart_file, "%d %d ", &nlte_solution_firstion_allcells[rangeindex],
-                             &nlte_solution_nions_allcells[rangeindex]) == 2);
+        int first_ion = -1;
+        int nions = 0;
+        assert_always(fscanf(restart_file, "%d %d ", &first_ion, &nions) == 2);
+        nlte_solution_range_allcells[(nonemptymgi * get_nelements()) + element] = {.first_ion = first_ion,
+                                                                                   .nions = nions};
       }
     }
   }

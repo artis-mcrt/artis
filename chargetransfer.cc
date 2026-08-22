@@ -7,38 +7,44 @@
 //   Kingdon & Ferland (1996, ApJS, 106, 205), hereafter KF96. The file data/chargetransfer.txt holds
 //   these fits, and its header names the sources. KF96 give no rate for the exothermic ionisation
 //   of Ca+, Sc+, and Ti+ by protons, so those reactions are absent from the file as well.
-// - Near-resonant estimates for electron capture from a neutral donor by an ion with a charge of
-//   one to three, when the reaction releases a small energy (up to NEARRES_MAX_DEFECT). A level of
-//   the products then lies close to resonance, and the rate is near the gas-kinetic value. Each of
-//   these reactions gets the flat rate of Melius (1974, J. Phys. B, 7, 1692). The estimate does not
-//   check the level list.
+// - A flat estimate for the other electron captures from a neutral donor by a singly charged ion.
+//   A singly charged ion has no Coulomb curve crossing, so the energy release does not predict the
+//   rate. The tabulated rates of such reactions with an energy release up to 4 eV spread from
+//   1e-15 to 1e-9 cm3/s, with a median near 1e-12 cm3/s at 1e4 K. These reactions get that median,
+//   and a larger energy release gets the radiative floor.
 // - Landau-Zener estimates for the other electron captures from a neutral donor by an ion with a
 //   charge of two or more. The method is the Landau-Zener approach of Butler & Dalgarno (1980,
-//   ApJ, 241, 838), which KF96 also used for their reactions without quantal data. The channels get
-//   an independent-crossing sum with an approach probability of one, so the estimates carry an
-//   accuracy of a factor of a few at best.
-// init() generates the estimates of both kinds at startup from the ionisation energies and the level
-// energies of the loaded atomic dataset, so any composition (e.g. r-process ejecta) gets rates.
+//   ApJ, 241, 838), hereafter BD80, which KF96 also used for their reactions without quantal data.
+//   Each level of the lower acceptor ion is one capture channel. The trajectory crosses the
+//   channels in sequence from the outside inwards and back, with the classical two-state mixing of
+//   Landau and Zener at each crossing, so the total transfer probability stays below one. The
+//   approach probability is one. These estimates carry an accuracy of a factor of a few at best.
+// init() generates the estimates at startup from the ionisation energies and the level energies of
+// the loaded atomic dataset, so any composition (e.g. r-process ejecta) gets rates. The
+// Landau-Zener rate coefficients go into tables on the temperature grid of the rate coefficients.
 //
 // The reverse (ionisation) direction of each generated reaction comes from detailed balance with the
-// partition functions of the four ions. The solver applies a forward rate to the whole reactant
-// ion populations, and the partition function ratio makes the forward and the reverse fluxes
-// balance in LTE. A Boltzmann level distribution inside the lower ion turns the sum over the
-// capture channels into exactly this per-ion factor, because the smaller energy defect of an
-// excited channel cancels against the Boltzmann factor of that level. The NLTE population solver
-// applies the rates as per-ion
-// coefficients between neighbouring ion stages (see nltepop.cc). A reaction is active only when
-// both elements have NLTE levels and a free ionisation balance. With only one side in the NLTE
-// matrix, the partner element would keep its populations, and the reaction would break the charge
-// conservation. The heat released by a reaction (the energy defect, typically ~1 eV) is not added
-// to the thermal balance.
+// partition functions of the four ions. The solver applies a forward rate to the whole reactant ion
+// populations, and the partition function ratio makes the forward and the reverse fluxes balance in
+// LTE. A Boltzmann level distribution inside the lower ion turns the sum over the capture channels
+// into exactly this per-ion factor. The smaller energy release of an excited channel cancels against
+// the Boltzmann factor of that level.
+//
+// The NLTE population solver applies the rates as per-ion coefficients between neighbouring ion
+// stages (see nltepop.cc). A reaction is active only when both elements have NLTE levels and a free
+// ionisation balance. With only one side in the NLTE matrix, the partner element would keep its
+// populations, and the reaction would break the charge conservation. The solver does not add the
+// heat of a reaction (the energy release, typically ~1 eV) to the thermal balance.
 
 #include "chargetransfer.h"
 
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <cstddef>
+#include <functional>
 #include <ios>
+#include <span>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -55,17 +61,16 @@
 
 namespace {
 
-// atomic units
-constexpr double A_BOHR_CM = 5.29177211e-9;  // Bohr radius [cm]
-constexpr double E_HARTREE = 4.35974472e-11;  // Hartree energy [erg]
-constexpr double V_ATOMIC_CMS = 2.18769126e8;  // atomic velocity unit [cm/s]
-
-// velocity grid for the tabulated Landau-Zener cross sections
+// velocity grid of the Landau-Zener cross sections [cm/s]
 constexpr int LZ_VGRIDSIZE = 72;
 constexpr double LZ_VGRID_MIN_CMS = 1e4;
 constexpr double LZ_VGRID_MAX_CMS = 1e9;
+const double LZ_VGRID_DLOG = std::log(LZ_VGRID_MAX_CMS / LZ_VGRID_MIN_CMS) / (LZ_VGRIDSIZE - 1);
 
-// nodes for the impact parameter integral and for the thermal average integral
+// the temperature grid of the rate coefficient tables, the same grid as in ratecoeff.cc
+const double T_STEP_LOG = (std::log(MAXTEMP) - std::log(MINTEMP)) / (TABLESIZE - 1.);
+
+// nodes of the impact parameter integral and of the thermal average integral
 constexpr int LZ_BNODES = 48;
 constexpr int LZ_THERMALNODES = 48;
 
@@ -77,27 +82,18 @@ constexpr double LZ_RX_MAX_BOHR = 40.;
 
 // rate floor [cm3/s] from radiative charge transfer, which operates for every exoergic reaction
 // (Butler, Guberman & Dalgarno 1977; adopted as a floor by Sterling & Stancil 2011)
-constexpr double LZ_RADIATIVE_CT_FLOOR = 1e-14;
+constexpr double RADIATIVE_CT_FLOOR = 1e-14;
 
-// the near-resonant estimate: a flat rate [cm3/s] (Melius 1974) for an exothermic capture with an
-// energy defect up to NEARRES_MAX_DEFECT [erg]. A larger defect can not reach a level of the
-// products near resonance, so the reaction gets the Landau-Zener estimate instead.
-constexpr double NEARRES_RATE = 1e-9;
-constexpr double NEARRES_MAX_DEFECT = 4. * EV;
-// the acceptor charges of the near-resonant estimate; higher stages are rare in the nebular phase
-constexpr int NEARRES_MAX_CHARGE = 3;
-// the fit temperature window of a near-resonant estimate [K]. A flat rate has no temperature
-// dependence, so the clamp has no effect. The values document the nebular range only.
-constexpr double NEARRES_TMIN = 1000.;
-constexpr double NEARRES_TMAX = 40000.;
+// the flat estimate [cm3/s] for a capture by a singly charged ion with an energy release up to
+// SINGLY_CHARGED_MAX_DEFECT [erg]: the median of the tabulated rates of such reactions at 1e4 K
+constexpr double SINGLY_CHARGED_RATE = 1e-12;
+constexpr double SINGLY_CHARGED_MAX_DEFECT = 4. * EV;
 
 struct CTReaction {
   int partner_element{-1};  // the ion that reacts with the owner ion of the list entry
-  int partner_ion{-1};
-  int partner_product_ion{-1};  // the partner ion after the reaction
-  double mu_grams{0.};  // reduced mass of the collision pair
+  int partner_ion{-1};  // the partner ion before the reaction. The list role gives its product ion.
 
-  // KF96 fit parameters (a in cm3/s). Used when lz_tableindex is negative.
+  // KF96 fit parameters (a in cm3/s). Used when ratetable_index is negative.
   double a{0.};
   double b{0.};
   double c{0.};
@@ -106,31 +102,35 @@ struct CTReaction {
   double tmin{0.};
   double tmax{0.};
 
-  int lz_tableindex{-1};  // >= 0 selects a tabulated Landau-Zener cross section
+  int ratetable_index{-1};  // >= 0 selects a tabulated Landau-Zener rate coefficient
 
-  // detailed balance data of a reverse (endothermic) entry: the energy release of the forward
-  // reaction and the identity of its reactant ions (the acceptor captures from the donor)
+  // a reverse (endothermic) entry carries the energy release of its exothermic forward reaction [erg]
   bool is_reverse{false};
-  double delta_e{0.};  // [erg]
-  int element_acc{-1};
-  int ion_acc{-1};
-  int element_don{-1};
-  int ion_don{-1};
+  double delta_e{0.};
 };
 
 // reaction lists per unique ion index of the owner ion:
 // - recombination list: the owner ion is the electron acceptor, transition owner ion -> (ion - 1)
 // - ionisation list: the owner ion is the electron donor, transition owner ion -> (ion + 1)
+// The list role gives the step of the owner ion, -1 or +1, and the partner ion takes the opposite step.
 std::vector<std::vector<CTReaction>> reactions_rec_perion;
 std::vector<std::vector<CTReaction>> reactions_ion_perion;
+constexpr int STEP_RECOMBINATION = -1;
+constexpr int STEP_IONISATION = 1;
 
-// tabulated cross sections sigma(v) [cm2] on the log-spaced velocity grid
-std::vector<std::array<double, LZ_VGRIDSIZE>> lz_sigma_tables;
+// tabulated Landau-Zener rate coefficients [cm3/s] on the temperature grid
+std::vector<std::array<double, TABLESIZE>> lz_ratecoeff_tables;
 
-auto lz_vgrid_v_cms(const int i) -> double {
-  const double logstep = std::log(LZ_VGRID_MAX_CMS / LZ_VGRID_MIN_CMS) / (LZ_VGRIDSIZE - 1);
-  return LZ_VGRID_MIN_CMS * std::exp(i * logstep);
-}
+// one capture channel at its avoided crossing, in atomic units. The diabatic passage probability at
+// the radial velocity v_r is exp(-w / v_r).
+struct LZChannel {
+  double rx_au{0.};
+  double w_au{0.};
+};
+
+auto lz_vgrid_v_cms(const int i) -> double { return LZ_VGRID_MIN_CMS * std::exp(i * LZ_VGRID_DLOG); }
+
+auto ratetable_temperature(const int i) -> double { return MINTEMP * std::exp(i * T_STEP_LOG); }
 
 // a reaction is active only when both elements solve their ionisation balance in the NLTE matrix.
 // With only one side in the matrix, the partner element would keep its populations, and the
@@ -139,47 +139,109 @@ auto lz_vgrid_v_cms(const int i) -> double {
   return elem_has_nlte_levels(element) && !FORCE_SAHA_ION_BALANCE(get_atomicnumber(element));
 }
 
-// approximate mass of one atom of the element [g]
-auto element_mass_g(const int element) -> double {
-  const double m = globals::elements[element].initstablemeannucmass;
-  if (m > 0.) {
-    return m;
-  }
-  // the model holds no stable isotope of the element, so estimate the mass from the atomic number
-  return 2.3 * get_atomicnumber(element) * MH;
-}
-
+// reduced mass of the collision pair [g], from the mean nuclear masses of compositiondata.txt
 auto reduced_mass_g(const int element_a, const int element_b) -> double {
-  const double ma = element_mass_g(element_a);
-  const double mb = element_mass_g(element_b);
+  const double ma = globals::elements[element_a].initstablemeannucmass;
+  const double mb = globals::elements[element_b].initstablemeannucmass;
+  assert_always(ma > 0. && mb > 0.);
   return ma * mb / (ma + mb);
 }
 
+// the crossing of one capture channel (BD80): the entrance channel (ion + neutral) is flat, and the
+// exit channel has the Coulomb repulsion of the two product ions minus the energy release. The
+// crossing sits where the repulsion equals the energy release, so rx = zeta / deltae with zeta the
+// product of the product ion charges. This is the zeroth-order crossing radius of BD80, which they
+// found accurate for most cases of interest. The adiabatic splitting at the crossing is the BD80 fit
+// dU = rx^2 exp(-alpha rx) hartree, with alpha = sqrt(2 IP) from the ionisation potential of the
+// neutral donor (BD80 give alpha = 1.0 for H and 1.34 for He, and state the sqrt(2 IP) rule).
+auto make_lz_channel(const int ioncharge, const double deltae_erg, const double ip_donor_erg) -> LZChannel {
+  // the crossing radius scales with (charge - 1) and needs an energy release
+  assert_always(ioncharge >= 2);
+  assert_always(deltae_erg > 0.);
+  const double deltae_au = deltae_erg / E_HARTREE;
+  const int zeta = ioncharge - 1;
+  const double rx_au = zeta / deltae_au;
+
+  // slope difference of the two diabatic curves at the crossing (BD80 with their mu = 0)
+  const double dfdr_au = zeta / (rx_au * rx_au);
+
+  const double alpha = std::sqrt(2. * ip_donor_erg / E_HARTREE);
+  const double du_au = rx_au * rx_au * std::exp(-alpha * rx_au);
+
+  // Landau-Zener single passage survival p = exp(-w / v_radial), with w = pi^2 dU^2 / (h v F)
+  // and h = 2 pi in atomic units
+  return {.rx_au = rx_au, .w_au = PI / 2. * du_au * du_au / dfdr_au};
+}
+
+// cross section [cm2] of a set of capture channels, sorted by the crossing radius from the outside
+// inwards, at the relative velocity v. The trajectory at impact parameter b crosses every channel
+// with a radius above b on the way in and again on the way out. At each crossing the classical
+// two-state mixing moves probability between the entrance channel and that capture channel. The
+// transfer probability is the probability that the trajectory leaves the entrance channel.
+auto sigma_lz_sorted_channels(const std::span<const LZChannel> channels, const double v_cms) -> double {
+  if (channels.empty() || v_cms <= 0.) {
+    return 0.;
+  }
+  const double v_au = v_cms / V_ATOMIC_CMS;
+  const double bmax_au = channels.front().rx_au;
+  const double db_au = bmax_au / LZ_BNODES;
+
+  std::vector<double> p_pass(channels.size());
+  std::vector<double> captured(channels.size());
+
+  double integral_au2 = 0.;
+  for (int i = 0; i < LZ_BNODES; i++) {
+    const double b_au = (i + 0.5) * db_au;
+
+    // inbound: a crossing takes the fraction (1 - p) out of the entrance channel
+    double p_entrance = 1.;
+    std::size_t ncrossed = 0;
+    for (; ncrossed < channels.size() && channels[ncrossed].rx_au > b_au; ncrossed++) {
+      const auto& channel = channels[ncrossed];
+      const double t = std::sqrt(1. - (b_au * b_au) / (channel.rx_au * channel.rx_au));
+      const double p = std::exp(-channel.w_au / (v_au * t));
+      p_pass[ncrossed] = p;
+      captured[ncrossed] = p_entrance * (1. - p);
+      p_entrance *= p;
+    }
+
+    // outbound: the same crossings in reverse order mix the entrance channel with each capture channel
+    for (std::size_t j = ncrossed; j > 0; j--) {
+      const double p = p_pass[j - 1];
+      const double p_entrance_new = (p_entrance * p) + (captured[j - 1] * (1. - p));
+      captured[j - 1] = (captured[j - 1] * p) + (p_entrance * (1. - p));
+      p_entrance = p_entrance_new;
+    }
+
+    integral_au2 += (1. - p_entrance) * b_au * db_au;
+  }
+
+  return 2. * PI * integral_au2 * A_BOHR_CM * A_BOHR_CM;
+}
+
 // thermal average k(T) = <sigma * v> [cm3/s] over a Maxwell distribution of the relative velocity,
-// with sigma(v) interpolated from a tabulated cross section
-auto lz_thermal_ratecoeff(const int lz_tableindex, const double T, const double mu_grams) -> double {
-  const auto& sigmatable = lz_sigma_tables[lz_tableindex];
+// with sigma(v) interpolated from the tabulated cross section on the velocity grid
+auto lz_thermal_average(const std::array<double, LZ_VGRIDSIZE>& sigmatable, const double T, const double mu_grams)
+    -> double {
   const double kT = KB * T;
 
   // integrate sigma(v(x)) * x^2 * exp(-x) over ln x, with x = E / kT
   constexpr double XMIN = 1e-3;
   constexpr double XMAX = 40.;
   const double dlnx = std::log(XMAX / XMIN) / (LZ_THERMALNODES - 1);
-  const double logstep_v = std::log(LZ_VGRID_MAX_CMS / LZ_VGRID_MIN_CMS) / (LZ_VGRIDSIZE - 1);
 
   double integral = 0.;
   for (int i = 0; i < LZ_THERMALNODES; i++) {
     const double x = XMIN * std::exp(i * dlnx);
     const double v = std::sqrt(2. * kT * x / mu_grams);
 
-    // interpolate log sigma on the log velocity grid, with clamping at the grid ends
     double sigma = 0.;
     if (v <= LZ_VGRID_MIN_CMS) {
       sigma = sigmatable[0];
     } else if (v >= LZ_VGRID_MAX_CMS) {
       sigma = sigmatable[LZ_VGRIDSIZE - 1];
     } else {
-      const double findex = std::log(v / LZ_VGRID_MIN_CMS) / logstep_v;
+      const double findex = std::log(v / LZ_VGRID_MIN_CMS) / LZ_VGRID_DLOG;
       // findex can round up to the last grid point, so keep ilow + 1 inside the table
       const int ilow = std::min(static_cast<int>(findex), LZ_VGRIDSIZE - 2);
       const double frac = findex - ilow;
@@ -190,31 +252,61 @@ auto lz_thermal_ratecoeff(const int lz_tableindex, const double T, const double 
     integral += weight * sigma * x * x * std::exp(-x) * dlnx;
   }
 
-  const double k_lz = std::sqrt(8. * kT / (PI * mu_grams)) * integral;
-
-  // every exoergic reaction keeps at least the radiative charge transfer rate
-  return std::max(k_lz, LZ_RADIATIVE_CT_FLOOR);
+  return std::sqrt(8. * kT / (PI * mu_grams)) * integral;
 }
 
-auto eval_reaction_ratecoeff(const CTReaction& r, const int nonemptymgi, const double T_e) -> double {
-  double k = (r.lz_tableindex >= 0) ? lz_thermal_ratecoeff(r.lz_tableindex, T_e, r.mu_grams)
-                                    : chargetransfer::evaluate_ctfit(r.a, r.b, r.c, r.d, r.eexp, r.tmin, r.tmax, T_e);
+// tabulate the rate coefficient of a reaction on the temperature grid, with the radiative floor
+auto make_lz_ratecoeff_table(const std::span<const LZChannel> channels, const double mu_grams)
+    -> std::array<double, TABLESIZE> {
+  std::array<double, LZ_VGRIDSIZE> sigmatable{};
+  for (int i = 0; i < LZ_VGRIDSIZE; i++) {
+    sigmatable[i] = sigma_lz_sorted_channels(channels, lz_vgrid_v_cms(i));
+  }
+
+  std::array<double, TABLESIZE> ratetable{};
+  for (int i = 0; i < TABLESIZE; i++) {
+    ratetable[i] = std::max(lz_thermal_average(sigmatable, ratetable_temperature(i), mu_grams), RADIATIVE_CT_FLOOR);
+  }
+  return ratetable;
+}
+
+// interpolate a tabulated rate coefficient at the temperature T, with clamping at the grid ends
+auto lz_ratecoeff(const int ratetable_index, const double T) -> double {
+  const auto& ratetable = lz_ratecoeff_tables[ratetable_index];
+  if (T <= MINTEMP) {
+    return ratetable[0];
+  }
+  if (T >= MAXTEMP) {
+    return ratetable[TABLESIZE - 1];
+  }
+  const double findex = std::log(T / MINTEMP) / T_STEP_LOG;
+  const int ilow = std::min(static_cast<int>(findex), TABLESIZE - 2);
+  const double frac = findex - ilow;
+  return ((1. - frac) * ratetable[ilow]) + (frac * ratetable[ilow + 1]);
+}
+
+// the rate coefficient of a list entry of the owner ion (element, ion) with the list step
+auto eval_reaction_ratecoeff(const CTReaction& r, const int nonemptymgi, const double T_e, const int element,
+                             const int ion, const int step) -> double {
+  double k = (r.ratetable_index >= 0) ? lz_ratecoeff(r.ratetable_index, T_e)
+                                      : chargetransfer::evaluate_ctfit(r.a, r.b, r.c, r.d, r.eexp, r.tmin, r.tmax, T_e);
   if (r.is_reverse) {
-    // detailed balance for the per-ion rates: the partition functions of the forward reactants
-    // over those of the forward products, with the Boltzmann factor of the energy release
-    const double partfunc_ratio = (get_ion_partfunct(nonemptymgi, r.element_acc, r.ion_acc) *
-                                   get_ion_partfunct(nonemptymgi, r.element_don, r.ion_don)) /
-                                  (get_ion_partfunct(nonemptymgi, r.element_acc, r.ion_acc - 1) *
-                                   get_ion_partfunct(nonemptymgi, r.element_don, r.ion_don + 1));
+    // detailed balance for the per-ion rates: the products of this entry are the reactants of the
+    // exothermic forward reaction, so the partition functions of the products go over those of the
+    // reactants, with the Boltzmann factor of the energy release
+    const double partfunc_ratio = (get_ion_partfunct(nonemptymgi, element, ion + step) *
+                                   get_ion_partfunct(nonemptymgi, r.partner_element, r.partner_ion - step)) /
+                                  (get_ion_partfunct(nonemptymgi, element, ion) *
+                                   get_ion_partfunct(nonemptymgi, r.partner_element, r.partner_ion));
     k *= partfunc_ratio * std::exp(-r.delta_e / (KB * T_e));
   }
   return k;
 }
 
-// sum the rates of the list entries of an owner ion of the element, while the NLTE matrix of the
-// element covers the ion range [first_ion_used, first_ion_used + nions_used)
-auto sum_reaction_list(const std::vector<CTReaction>& list, const int nonemptymgi, const int element,
-                       const int first_ion_used, const int nions_used) -> double {
+// sum the rates of the list entries of the owner ion (element, ion) with the list step, while the
+// NLTE matrix of the element covers the ion range [first_ion_used, first_ion_used + nions_used)
+auto sum_reaction_list(const std::vector<CTReaction>& list, const int nonemptymgi, const int element, const int ion,
+                       const int step, const int first_ion_used, const int nions_used) -> double {
   if (list.empty()) {
     return 0.;
   }
@@ -227,16 +319,16 @@ auto sum_reaction_list(const std::vector<CTReaction>& list, const int nonemptymg
     // ionic charge. A self-reaction has the owner element as its partner. The matrix under
     // assembly then gives the range, because the stored range belongs to the previous solve.
     const bool partner_is_owner = (r.partner_element == element);
-    const auto ion_in_partner_solution = [&](const int ion) {
-      return partner_is_owner ? (ion >= first_ion_used && ion < (first_ion_used + nions_used))
-                              : ion_in_nlte_solution(nonemptymgi, r.partner_element, ion);
+    const auto ion_in_partner_solution = [&](const int partner_ion) {
+      return partner_is_owner ? (partner_ion >= first_ion_used && partner_ion < (first_ion_used + nions_used))
+                              : ion_in_nlte_solution(nonemptymgi, r.partner_element, partner_ion);
     };
-    if (!ion_in_partner_solution(r.partner_ion) || !ion_in_partner_solution(r.partner_product_ion)) {
+    if (!ion_in_partner_solution(r.partner_ion) || !ion_in_partner_solution(r.partner_ion - step)) {
       continue;
     }
     const double nnpartner = get_nnion(nonemptymgi, r.partner_element, r.partner_ion);
     if (nnpartner > 0.) {
-      total += eval_reaction_ratecoeff(r, nonemptymgi, T_e) * nnpartner;
+      total += eval_reaction_ratecoeff(r, nonemptymgi, T_e, element, ion, step) * nnpartner;
     }
   }
   // with microclumping, the reactions happen at the in-clump partner density
@@ -249,17 +341,14 @@ auto sum_reaction_list(const std::vector<CTReaction>& list, const int nonemptymg
 auto add_reaction(const int element_acc, const int ion_acc, const int element_don, const int ion_don,
                   const CTReaction& params, const bool autoreverse) -> bool {
   CTReaction fwd = params;
-  fwd.mu_grams = reduced_mass_g(element_acc, element_don);
   fwd.is_reverse = false;
 
   fwd.partner_element = element_don;
   fwd.partner_ion = ion_don;
-  fwd.partner_product_ion = ion_don + 1;
   reactions_rec_perion[get_uniqueionindex(element_acc, ion_acc)].push_back(fwd);
 
   fwd.partner_element = element_acc;
   fwd.partner_ion = ion_acc;
-  fwd.partner_product_ion = ion_acc - 1;
   reactions_ion_perion[get_uniqueionindex(element_don, ion_don)].push_back(fwd);
 
   if (!autoreverse) {
@@ -275,22 +364,15 @@ auto add_reaction(const int element_acc, const int ion_acc, const int element_do
   }
 
   CTReaction rev = params;
-  rev.mu_grams = fwd.mu_grams;
   rev.is_reverse = true;
   rev.delta_e = delta_e;
-  rev.element_acc = element_acc;
-  rev.ion_acc = ion_acc;
-  rev.element_don = element_don;
-  rev.ion_don = ion_don;
 
   rev.partner_element = element_acc;
   rev.partner_ion = ion_acc - 1;
-  rev.partner_product_ion = ion_acc;
   reactions_rec_perion[get_uniqueionindex(element_don, ion_don + 1)].push_back(rev);
 
   rev.partner_element = element_don;
   rev.partner_ion = ion_don + 1;
-  rev.partner_product_ion = ion_don;
   reactions_ion_perion[get_uniqueionindex(element_acc, ion_acc - 1)].push_back(rev);
 
   return true;
@@ -350,15 +432,20 @@ auto read_reaction_file() -> std::vector<std::array<int, 4>> {
     used++;
   }
   printlnlog("Stored {} of {} charge transfer reactions from the file", used, filereactioncount);
+  if (used == 0 && filereactioncount > 0) {
+    printlnlog(
+        "[warning] No charge transfer reaction of the file applies to this model. The file holds reactions with "
+        "hydrogen and helium, which need NLTE levels and a free ionisation balance.");
+  }
 
   return covered;
 }
 
-// generate the estimated reactions: electron capture from every neutral donor by every positive ion,
-// for the pairs that the data file does not cover. A small energy defect gets the near-resonant
-// rate, and the other captures by an ion with a charge of two or more get a Landau-Zener rate.
+// generate the estimated reactions: electron capture from every neutral donor by every ion, for the
+// pairs that the data file does not cover. A singly charged ion gets the flat estimate, and an ion
+// with a charge of two or more gets a Landau-Zener rate.
 void generate_estimated_reactions(const std::vector<std::array<int, 4>>& covered) {
-  int nearres_reaction_count = 0;
+  int singly_charged_count = 0;
   int lz_reaction_count = 0;
   int lz_channel_count = 0;
 
@@ -404,26 +491,17 @@ void generate_estimated_reactions(const std::vector<std::array<int, 4>>& covered
           continue;
         }
 
-        if (chargetransfer::is_near_resonant(ioncharge, deltae_ground)) {
+        if (ioncharge == 1) {
           CTReaction params{};
-          params.a = NEARRES_RATE;
-          params.tmin = NEARRES_TMIN;
-          params.tmax = NEARRES_TMAX;
+          params.a = chargetransfer::singly_charged_ratecoeff(deltae_ground);
           add_reaction(element_acc, ion_acc, element_don, ion_don, params, autoreverse);
-          nearres_reaction_count++;
+          singly_charged_count++;
           continue;
         }
 
-        // the Landau-Zener crossing radius scales with (charge - 1), so the method needs a charge
-        // of two or more
-        if (ioncharge < 2) {
-          continue;
-        }
-
-        // one crossing channel per final level of the lower acceptor ion. The channel cross
-        // sections add, which follows the independent-crossing treatment of BD80 and KF96.
-        auto sigmatable = std::array<double, LZ_VGRIDSIZE>{};
-        int nchannels = 0;
+        // one capture channel per final level of the lower acceptor ion, sorted by the crossing
+        // radius from the outside inwards
+        std::vector<LZChannel> channels;
         const int nlevels_lower = get_nlevels(element_acc, ion_acc - 1);
         for (int level = 0; level < nlevels_lower; level++) {
           const double excitation = epsilon(element_acc, ion_acc - 1, level) - epsilon(element_acc, ion_acc - 1, 0);
@@ -436,24 +514,23 @@ void generate_estimated_reactions(const std::vector<std::array<int, 4>>& covered
           if (rx_bohr < LZ_RX_MIN_BOHR || rx_bohr > LZ_RX_MAX_BOHR) {
             continue;
           }
-          nchannels++;
-          for (int i = 0; i < LZ_VGRIDSIZE; i++) {
-            sigmatable[i] += chargetransfer::sigma_lz_channel(ioncharge, deltae, ip_donor, lz_vgrid_v_cms(i));
-          }
+          channels.push_back(make_lz_channel(ioncharge, deltae, ip_donor));
         }
-        lz_channel_count += nchannels;
+        // equal radii give equal channels, so the order of the ties does not change the result
+        std::ranges::stable_sort(channels, std::ranges::greater{}, &LZChannel::rx_au);
+        lz_channel_count += static_cast<int>(channels.size());
 
         CTReaction params{};
-        params.lz_tableindex = static_cast<int>(lz_sigma_tables.size());
-        lz_sigma_tables.push_back(sigmatable);
+        params.ratetable_index = static_cast<int>(lz_ratecoeff_tables.size());
+        lz_ratecoeff_tables.push_back(make_lz_ratecoeff_table(channels, reduced_mass_g(element_acc, element_don)));
 
         add_reaction(element_acc, ion_acc, element_don, ion_don, params, autoreverse);
         lz_reaction_count++;
       }
     }
   }
-  printlnlog("Generated {} near-resonant charge transfer reactions with the flat rate {} cm3/s", nearres_reaction_count,
-             NEARRES_RATE);
+  printlnlog("Generated {} charge transfer estimates for singly charged ions (flat rate {} cm3/s up to {} eV)",
+             singly_charged_count, SINGLY_CHARGED_RATE, SINGLY_CHARGED_MAX_DEFECT / EV);
   printlnlog("Generated {} Landau-Zener charge transfer reactions with {} capture channels", lz_reaction_count,
              lz_channel_count);
 }
@@ -462,8 +539,11 @@ void generate_estimated_reactions(const std::vector<std::array<int, 4>>& covered
 
 namespace chargetransfer {
 
-auto is_near_resonant(const int ioncharge, const double deltae_erg) -> bool {
-  return ioncharge >= 1 && ioncharge <= NEARRES_MAX_CHARGE && deltae_erg > 0. && deltae_erg <= NEARRES_MAX_DEFECT;
+auto singly_charged_ratecoeff(const double deltae_erg) -> double {
+  if (deltae_erg <= 0.) {
+    return 0.;
+  }
+  return (deltae_erg <= SINGLY_CHARGED_MAX_DEFECT) ? SINGLY_CHARGED_RATE : RADIATIVE_CT_FLOOR;
 }
 
 auto evaluate_ctfit(const double a, const double b, const double c, const double d, const double eexp,
@@ -478,51 +558,21 @@ auto evaluate_ctfit(const double a, const double b, const double c, const double
   return std::max(k, 0.);
 }
 
+auto sigma_lz_channels(const int ioncharge, const std::span<const double> deltae_erg_list, const double ip_donor_erg,
+                       const double v_cms) -> double {
+  std::vector<LZChannel> channels;
+  channels.reserve(deltae_erg_list.size());
+  for (const double deltae_erg : deltae_erg_list) {
+    channels.push_back(make_lz_channel(ioncharge, deltae_erg, ip_donor_erg));
+  }
+  std::ranges::stable_sort(channels, std::ranges::greater{}, &LZChannel::rx_au);
+  return sigma_lz_sorted_channels(channels, v_cms);
+}
+
 auto sigma_lz_channel(const int ioncharge, const double deltae_erg, const double ip_donor_erg, const double v_cms)
     -> double {
-  // the crossing radius scales with (charge - 1) and needs an energy release
-  assert_always(ioncharge >= 2);
-  assert_always(deltae_erg > 0.);
-  // diabatic curves in atomic units: the entrance channel (ion + neutral) is taken as flat, and the
-  // exit channel has the Coulomb repulsion of the two product ions plus the energy release. The
-  // crossing sits where the repulsion equals the energy release, so rx = zeta / deltae with
-  // zeta the product of the product ion charges (Butler & Dalgarno 1980, hereafter BD80). This is
-  // the zeroth-order crossing radius of BD80, which they found accurate for most cases of interest.
-  const double deltae_au = deltae_erg / E_HARTREE;
-  const int zeta = ioncharge - 1;
-  const double rx_au = zeta / deltae_au;
-
-  // slope difference of the two diabatic curves at the crossing (BD80 with their mu = 0)
-  const double dfdr_au = zeta / (rx_au * rx_au);
-
-  // adiabatic splitting at the crossing: the BD80 fit dU = rx^2 exp(-alpha rx) hartree, with
-  // alpha = sqrt(2 IP) from the ionisation potential of the neutral donor (BD80 give alpha = 1.0
-  // for H and 1.34 for He, and state the sqrt(2 IP) rule for the exponent)
-  const double alpha = std::sqrt(2. * ip_donor_erg / E_HARTREE);
-  const double du_au = rx_au * rx_au * std::exp(-alpha * rx_au);
-
-  const double v_au = v_cms / V_ATOMIC_CMS;
-  if (v_au <= 0.) {
-    return 0.;
-  }
-
-  // Landau-Zener single passage survival p = exp(-w / t) at radial velocity fraction
-  // t = v_radial / v, with w = pi^2 dU^2 / (h v F) and h = 2 pi in atomic units.
-  // The net transfer probability over the inbound and the outbound crossing is 2 p (1 - p).
-  const double w = PI / 2. * du_au * du_au / (dfdr_au * v_au);
-
-  // sigma = 4 pi rx^2 * integral of p (1 - p) t dt over t from 0 to 1, which is the impact
-  // parameter average of BD80 equation (3) with their lambda = 0 and approach probability 1
-  const double dt = 1. / LZ_BNODES;
-  double integral = 0.;
-  for (int i = 0; i < LZ_BNODES; i++) {
-    const double t = (i + 0.5) * dt;
-    const double p = std::exp(-w / t);
-    integral += p * (1. - p) * t * dt;
-  }
-
-  const double rx_cm = rx_au * A_BOHR_CM;
-  return 4. * PI * rx_cm * rx_cm * integral;
+  const auto deltae_list = std::array<double, 1>{deltae_erg};
+  return sigma_lz_channels(ioncharge, deltae_list, ip_donor_erg, v_cms);
 }
 
 void init() {
@@ -541,8 +591,8 @@ auto ct_recombination_rate(const int nonemptymgi, const int element, const int u
   if (!ENABLE_CHARGE_TRANSFER_REACTIONS) {
     return 0.;
   }
-  return sum_reaction_list(reactions_rec_perion[get_uniqueionindex(element, upperion)], nonemptymgi, element,
-                           first_ion_used, nions_used);
+  return sum_reaction_list(reactions_rec_perion[get_uniqueionindex(element, upperion)], nonemptymgi, element, upperion,
+                           STEP_RECOMBINATION, first_ion_used, nions_used);
 }
 
 auto ct_ionisation_rate(const int nonemptymgi, const int element, const int ion, const int first_ion_used,
@@ -550,8 +600,8 @@ auto ct_ionisation_rate(const int nonemptymgi, const int element, const int ion,
   if (!ENABLE_CHARGE_TRANSFER_REACTIONS) {
     return 0.;
   }
-  return sum_reaction_list(reactions_ion_perion[get_uniqueionindex(element, ion)], nonemptymgi, element, first_ion_used,
-                           nions_used);
+  return sum_reaction_list(reactions_ion_perion[get_uniqueionindex(element, ion)], nonemptymgi, element, ion,
+                           STEP_IONISATION, first_ion_used, nions_used);
 }
 
 }  // namespace chargetransfer

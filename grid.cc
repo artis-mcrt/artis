@@ -427,9 +427,9 @@ void allocate_nonemptycells_composition_cooling() {
   // the charge transfer reactions read the solved NLTE ion range of each element. The construction
   // is collective over the node, and the constexpr option keeps every rank on the same path.
   if constexpr (ENABLE_CHARGE_TRANSFER_REACTIONS) {
-    // -1 indicates that the cell holds no NLTE matrix solution for the element
-    nlte_solution_firstion_allcells = MPI_shared_array<int>(nonempty_npts_model_ptrdifft * get_nelements(), -1);
-    nlte_solution_nions_allcells = MPI_shared_array<int>(nonempty_npts_model_ptrdifft * get_nelements(), 0);
+    // the default range marks a cell without an NLTE matrix solution for the element
+    nlte_solution_range_allcells =
+        MPI_shared_array<NlteSolutionRange>(nonempty_npts_model_ptrdifft * get_nelements(), NlteSolutionRange{});
   }
 }
 
