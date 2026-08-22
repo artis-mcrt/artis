@@ -1901,8 +1901,8 @@ void nltepop_write_restart_data(FILE* restart_file) {
       // the solved ion range of each element, so that a resumed run starts with the same reactions
       fprintf(restart_file, "\n");
       for (int element = 0; element < get_nelements(); element++) {
-        const int lowermost_ion = grid::get_elements_lowermost_ion(nonemptymgi, element);
-        const int uppermost_ion = grid::get_elements_uppermost_ion(nonemptymgi, element);
+        const int lowermost_ion = grid::get_elements_lowermost_ion(static_cast<int>(nonemptymgi), element);
+        const int uppermost_ion = grid::get_elements_uppermost_ion(static_cast<int>(nonemptymgi), element);
         fprintf(restart_file, "%d %d ", lowermost_ion, uppermost_ion);
       }
     }
@@ -1952,8 +1952,8 @@ void nltepop_read_restart_data(FILE* restart_file) {
         int lowermost_ion = 0;
         int uppermost_ion = 0;
         assert_always(fscanf(restart_file, "%d %d ", &lowermost_ion, &uppermost_ion) == 2);
-        grid::set_elements_lowermost_ion(nonemptymgi, element, lowermost_ion);
-        grid::set_elements_uppermost_ion(nonemptymgi, element, uppermost_ion);
+        grid::set_elements_lowermost_ion(static_cast<int>(nonemptymgi), element, lowermost_ion);
+        grid::set_elements_uppermost_ion(static_cast<int>(nonemptymgi), element, uppermost_ion);
       }
     }
   }
