@@ -1361,7 +1361,7 @@ auto can_remove_ion(const int element, const int ion, const int first_ion_used, 
 // Add the backward Euler time terms of the ion populations (see NLTE_TIME_DEPENDENT_FIRST_TIMESTEP). In the
 // row of the ground level of each ion, every column of the ion gets -1/dt, and the balance entry becomes
 // -nnion_old/dt. The transitions inside an ion cancel in the sum of the rows of the ion, so that sum is the
-// implicit time step of the ion population. The other rows keep their statistical equilibrium form, so the
+// implicit Euler step of the ion population. The other rows keep their statistical equilibrium form, so the
 // excitation stays in equilibrium. Row 0 is the normalisation row and gets no time term. The old ion fractions
 // are renormalised over the used ions, so the balance vector stays consistent with the normalisation row.
 void nltepop_matrix_add_time_dependence(const int nonemptymgi, const int element, const double dt,
@@ -1376,11 +1376,14 @@ void nltepop_matrix_add_time_dependence(const int nonemptymgi, const int element
     ionfrac_old_sum += nnion_prev_allcells[get_cellionindex(nonemptymgi, element, ion)];
   }
   if (ionfrac_old_sum <= 0.) {
-    printlnlog(
-        "  [warning] cell {} ts {}: Z={} has no previous ion populations in ionstage {} to {}. Using statistical "
-        "equilibrium for this solve",
-        nltelog.modelgridindex, nltelog.timestep, get_atomicnumber(element), get_ionstage(element, first_ion_used),
-        get_ionstage(element, max_ion_used));
+    // a normal case for a decay daughter element that was absent at the previous grid update
+    if (nltelog.nlte_iter == 0) {
+      printlnlog(
+          "cell {} ts {}: Z={} has no previous ion populations in ionstage {} to {}. Using statistical equilibrium "
+          "for this solve",
+          nltelog.modelgridindex, nltelog.timestep, get_atomicnumber(element), get_ionstage(element, first_ion_used),
+          get_ionstage(element, max_ion_used));
+    }
     return;
   }
 
@@ -1634,6 +1637,10 @@ void nltepop_apply_solution(const int element, const int nonemptymgi, const int 
 void nltepop_reset_solution_ranges(const int nonemptymgi) {
   for (int element = 0; element < get_nelements(); element++) {
     grid::set_elements_lowermost_ion(nonemptymgi, element, 0);
+  }
+  if constexpr (NLTE_TIME_DEPENDENT_FIRST_TIMESTEP.has_value()) {
+    // the cell holds no NLTE solution, so the next timestep starts from the steady-state equations
+    nltepop_clear_solution_time(nonemptymgi);
   }
 }
 

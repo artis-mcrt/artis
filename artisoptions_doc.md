@@ -150,19 +150,25 @@ constexpr double NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION;
 // solver, because the Saha constraint rows break the generator structure that GTH requires.
 constexpr bool NLTE_USE_GTH_SOLVER;
 
-// Solve the ionisation balance and the thermal balance time-dependently from this timestep on, as the
-// SUMO code does (Pognan, Jerkstrand & Grumer 2022, MNRAS, 510, 3806, eqs. 8 and 17). No value keeps the
-// statistical equilibrium and the steady-state thermal balance for the whole run. With a value, the ion
-// populations of the NLTE elements and the electron temperature of every cell get a backward Euler time
-// term from the previous grid update. The excitation inside each ion stays in statistical equilibrium.
-// The populations and the temperature are written as fractions of the element and of the total electron
-// number, so the expansion and the radioactive decay add no terms: a decay daughter atom takes the current
-// ionisation distribution of its element. A cell without a previous solution (the first NLTE timestep of
-// the cell, a LTE or thick timestep, or an element that fell back to LTE) uses the steady-state equations
-// for one timestep. The time-dependent timesteps always use the LU solver, because the time term breaks
-// the generator structure that NLTE_USE_GTH_SOLVER needs; the steady-state timesteps can still use GTH.
-// Elements with FORCE_SAHA_ION_BALANCE and the elements without NLTE levels keep their equilibrium
-// ionisation balance. The time step error is first order in width/mid. Keep width/mid at 0.1 or less.
+// Solve the ionisation balance and the thermal balance time-dependently from this timestep on. This
+// follows the SUMO code (Pognan, Jerkstrand & Grumer 2022, MNRAS, 510, 3806, eqs. 8 and 17). No value
+// keeps the statistical equilibrium and the steady-state thermal balance for the whole run. With a value,
+// the ion populations of the NLTE elements get a backward Euler time term from the previous grid update.
+// The electron temperature of every cell gets the same time term. The excitation inside each ion stays
+// in statistical equilibrium.
+//
+// The populations and the temperature are fractions of the element and of the total electron number.
+// The expansion and the radioactive decay then add no terms. A decay daughter atom takes the current
+// ionisation distribution of its element. A cell without a previous solution uses the steady-state
+// equations for one timestep. This applies to the first NLTE timestep of the cell, to a LTE or thick
+// timestep, and to an element that fell back to LTE.
+//
+// The time-dependent timesteps always use the LU solver, because the time term breaks the generator
+// structure that NLTE_USE_GTH_SOLVER needs. The steady-state timesteps can still use GTH. Elements with
+// FORCE_SAHA_ION_BALANCE and the elements without NLTE levels keep their equilibrium ionisation balance.
+// The error of the backward Euler step is first order in width/mid. Keep width/mid at 0.1 or less.
+// The k-packets do not carry the heat-capacity term. The energy that the gas stores or releases between
+// two grid updates therefore stays out of the radiation field.
 constexpr std::optional<int> NLTE_TIME_DEPENDENT_FIRST_TIMESTEP;
 
 // non-thermal ionisation

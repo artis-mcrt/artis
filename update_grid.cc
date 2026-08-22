@@ -558,10 +558,6 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
       // the Saha populations replace the NLTE solution, so the charge transfer reactions must not
       // read the stored ion ranges of the last NLTE solve
       nltepop_reset_solution_ranges(nonemptymgi);
-      if constexpr (NLTE_TIME_DEPENDENT_FIRST_TIMESTEP.has_value()) {
-        // the next timestep starts from the steady-state equations
-        nltepop_clear_solution_time(nonemptymgi);
-      }
     } else {
       // not lte_iteration and not a thick cell
       // non-pure-LTE timesteps with T_e from heating/cooling
