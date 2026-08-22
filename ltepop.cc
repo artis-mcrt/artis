@@ -485,7 +485,7 @@ auto calculate_ion_balance_nne(const int nonemptymgi) -> void {
       // of that solution, which the charge transfer reactions read. Saha and the rate balance never
       // read the uppermost ion of such an element.
       const bool keep_nlte_range = ENABLE_CHARGE_TRANSFER_REACTIONS && !force_saha && elem_has_nlte_levels(element) &&
-                                   grid::get_elements_lowermost_ion(nonemptymgi, element) >= 0;
+                                   elem_has_nlte_solution(nonemptymgi, element);
       const auto uppermost_ion = keep_nlte_range ? grid::get_elements_uppermost_ion(nonemptymgi, element)
                                                  : find_uppermost_ion(nonemptymgi, element, nne_max, force_saha);
       grid::set_elements_uppermost_ion(nonemptymgi, element, uppermost_ion);

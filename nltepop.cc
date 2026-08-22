@@ -461,7 +461,7 @@ void print_level_rates(const int nonemptymgi, const int timestep, const int elem
 }
 
 void nltepop_reset_element(const int nonemptymgi, const int element) {
-  grid::set_elements_lowermost_ion(nonemptymgi, element, -1);
+  grid::set_elements_lowermost_ion(nonemptymgi, element, 0);
   for (int ion = 0; ion < get_nions(element); ion++) {
     const int nlte_start = get_allnltelevelsindexstart(element, ion);
     std::fill_n(&nltepops_allcells[(nonemptymgi * globals::total_nlte_levels) + nlte_start],
@@ -1585,18 +1585,31 @@ void nltepop_apply_solution(const int element, const int nonemptymgi, const int 
 // the NLTE solution with Saha populations without a solve.
 void nltepop_reset_solution_ranges(const int nonemptymgi) {
   for (int element = 0; element < get_nelements(); element++) {
-    grid::set_elements_lowermost_ion(nonemptymgi, element, -1);
+    grid::set_elements_lowermost_ion(nonemptymgi, element, 0);
   }
 }
 
+// Report whether the cell holds an NLTE matrix solution for the element. nltepop_reset_element()
+// writes the -1 marker into the NLTE level populations before the first solve and after a fallback
+// to LTE.
+auto elem_has_nlte_solution(const int nonemptymgi, const int element) -> bool {
+  for (int ion = 0; ion < get_nions(element); ion++) {
+    if ((get_nlevels_excited_nlte(element, ion) > 0) || ion_has_superlevel(element, ion)) {
+      return nltepops_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * globals::total_nlte_levels) +
+                               get_allnltelevelsindexstart(element, ion)] >= 0.;
+    }
+  }
+  return false;
+}
+
 // Return the ion range of the last NLTE matrix solution of the element in the cell, as the
-// lowermost and the uppermost ion. A lowermost ion of -1 means that the cell holds no solution.
+// lowermost and the uppermost ion, or {-1, -1} when the cell holds no solution.
 auto get_nlte_solution_range(const int nonemptymgi, const int element) -> std::pair<int, int> {
-  const int lowermost_ion = grid::get_elements_lowermost_ion(nonemptymgi, element);
-  if (lowermost_ion < 0) {
+  if (!elem_has_nlte_solution(nonemptymgi, element)) {
     return {-1, -1};
   }
-  return {lowermost_ion, grid::get_elements_uppermost_ion(nonemptymgi, element)};
+  return {grid::get_elements_lowermost_ion(nonemptymgi, element),
+          grid::get_elements_uppermost_ion(nonemptymgi, element)};
 }
 
 // Report whether the ion was inside the ion range of the last NLTE matrix solution of the element.
@@ -1889,7 +1902,7 @@ void nltepop_write_restart_data(FILE* restart_file) {
       fprintf(restart_file, "\n");
       for (int element = 0; element < get_nelements(); element++) {
         const int lowermost_ion = grid::get_elements_lowermost_ion(nonemptymgi, element);
-        const int uppermost_ion = (lowermost_ion >= 0) ? grid::get_elements_uppermost_ion(nonemptymgi, element) : -1;
+        const int uppermost_ion = grid::get_elements_uppermost_ion(nonemptymgi, element);
         fprintf(restart_file, "%d %d ", lowermost_ion, uppermost_ion);
       }
     }
@@ -1936,13 +1949,11 @@ void nltepop_read_restart_data(FILE* restart_file) {
     }
     if constexpr (ENABLE_CHARGE_TRANSFER_REACTIONS) {
       for (int element = 0; element < get_nelements(); element++) {
-        int lowermost_ion = -1;
-        int uppermost_ion = -1;
+        int lowermost_ion = 0;
+        int uppermost_ion = 0;
         assert_always(fscanf(restart_file, "%d %d ", &lowermost_ion, &uppermost_ion) == 2);
         grid::set_elements_lowermost_ion(nonemptymgi, element, lowermost_ion);
-        if (lowermost_ion >= 0) {
-          grid::set_elements_uppermost_ion(nonemptymgi, element, uppermost_ion);
-        }
+        grid::set_elements_uppermost_ion(nonemptymgi, element, uppermost_ion);
       }
     }
   }

@@ -16,10 +16,11 @@ inline MPI_shared_array<double> nltepops_allcells;
 
 void solve_nlte_pops_element(int element, int nonemptymgi, int timestep, int nlte_iter);
 // the ion range of the last NLTE matrix solution of an element in a cell is the lowermost and the
-// uppermost ion of the cell (see grid.h). A lowermost ion of -1 means that the cell holds no NLTE
-// solution for the element. The charge transfer reactions read the range, and the NLTE iteration
-// loop watches it for a change.
+// uppermost ion of the cell (see grid.h). The cell holds no NLTE solution for the element before
+// the first solve and after a fallback to LTE, and the range is then {-1, -1}. The charge transfer
+// reactions read the range, and the NLTE iteration loop watches it for a change.
 void nltepop_reset_solution_ranges(int nonemptymgi);
+[[nodiscard]] auto elem_has_nlte_solution(int nonemptymgi, int element) -> bool;
 [[nodiscard]] auto get_nlte_solution_range(int nonemptymgi, int element) -> std::pair<int, int>;
 [[nodiscard]] auto ion_in_nlte_solution(int nonemptymgi, int element, int ion) -> bool;
 // GTH solve for the stationary distribution of the NLTE rate matrix, exposed here so that unittests.cc can test
