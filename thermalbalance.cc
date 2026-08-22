@@ -181,13 +181,13 @@ auto T_e_eqn_heating_minus_cooling(const double T_e, int nonemptymgi, const doub
   heatingcoolingrates.cooling_adiabatic = p * dV_on_dt / V;
 
   // Backward Euler time term of the thermal energy density U = 3/2 k_B n_tot T_e (see
-  // NLTE_TIME_DEPENDENT_FIRST_TIMESTEP): (U_new - U_old) / dt, with the old electron density scaled to the
-  // current volume through its fraction of nnetot. The ion number per comoving volume stays constant, so
+  // NLTE_TIME_DEPENDENT_FIRST_TIMESTEP): (U_new - U_old) / dt, with the old electron density from the stored
+  // ion fractions and the current element densities. The atom number per comoving volume stays constant, so
   // U_new - U_old = 3/2 k_B [n_tot (T_e - T_e_old) + T_e_old (nne - nne_old)].
   heatingcoolingrates.cooling_heatcapacity = 0.;
   if (const auto dt = get_time_dependent_dt(nonemptymgi, globals::timestep); dt.has_value()) {
     const double T_e_old = Te_prev_allcells[nonemptymgi];
-    const double nne_old = x_e_prev_allcells[nonemptymgi] * grid::get_nnetot(nonemptymgi);
+    const double nne_old = get_nne_prev(nonemptymgi);
     heatingcoolingrates.cooling_heatcapacity =
         1.5 * KB * ((nntot * (T_e - T_e_old)) + (T_e_old * (nne - nne_old))) / *dt;
   }

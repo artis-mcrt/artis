@@ -174,13 +174,9 @@ void write_to_estimators_file(std::ostream& estimators_file, const int nonemptym
              "heating: ff {:11.5e} bf {:11.5e} coll {:11.5e}       dep {:11.5e} heating_dep/total_dep {:.3f}\n",
              heatingcoolingrates.heating_ff, heatingcoolingrates.heating_bf, heatingcoolingrates.heating_collisional,
              heatingcoolingrates.heating_dep, heatingcoolingrates.dep_frac_heating);
-  std::print(estimators_file, "cooling: ff {:11.5e} fb {:11.5e} coll {:11.5e} adiabatic {:11.5e}",
+  std::print(estimators_file, "cooling: ff {:11.5e} fb {:11.5e} coll {:11.5e} adiabatic {:11.5e}\n",
              heatingcoolingrates.cooling_ff, heatingcoolingrates.cooling_fb, heatingcoolingrates.cooling_collisional,
              heatingcoolingrates.cooling_adiabatic);
-  if constexpr (NLTE_TIME_DEPENDENT_FIRST_TIMESTEP.has_value()) {
-    std::print(estimators_file, " heatcapacity {:11.5e}", heatingcoolingrates.cooling_heatcapacity);
-  }
-  std::println(estimators_file);
 
   const auto write_estim_duration =
       std::chrono::duration<double>(std::chrono::steady_clock::now() - sys_time_start_write_estimators).count();
@@ -345,6 +341,9 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
   }
 
   if constexpr (NLTE_TIME_DEPENDENT_FIRST_TIMESTEP.has_value()) {
+    // the estimators file keeps its cooling record format, so the heat-capacity term goes to the log
+    printlnlog("cell {} timestep {}: heat-capacity term of the thermal balance {:.5e} [erg/s/cm^3]", mgi, nts,
+               heatingcoolingrates.cooling_heatcapacity);
     nltepop_update_solution_time(nonemptymgi, nts);
   }
 }

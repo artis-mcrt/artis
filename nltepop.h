@@ -19,7 +19,6 @@ inline MPI_shared_array<double> nltepops_allcells;
 // NLTE_TIME_DEPENDENT_FIRST_TIMESTEP). The arrays exist only when that option has a value. Only the rank that
 // owns a cell reads and writes the entries of the cell.
 inline MPI_shared_array<float> nnion_prev_allcells;  // ion population over the sum of the ion populations
-inline MPI_shared_array<float> x_e_prev_allcells;  // nne over nnetot
 inline MPI_shared_array<float> Te_prev_allcells;
 inline MPI_shared_array<double> prev_solution_time_allcells;  // t_mid of the stored previous state, or -1 for none
 inline MPI_shared_array<double> solution_time_allcells;  // t_mid of the solution that the grid holds, or -1
@@ -36,6 +35,7 @@ void nltepop_store_previous_state(int nonemptymgi);
 void nltepop_update_solution_time(int nonemptymgi, int nts);
 void nltepop_clear_solution_time(int nonemptymgi);
 [[nodiscard]] auto get_time_dependent_dt(int nonemptymgi, int nts) -> std::optional<double>;
+[[nodiscard]] auto get_nne_prev(int nonemptymgi) -> double;
 
 void solve_nlte_pops_element(int element, int nonemptymgi, int timestep, int nlte_iter);
 // the ion range of the last NLTE matrix solution of an element in a cell is the lowermost and the

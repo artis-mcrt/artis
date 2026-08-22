@@ -1939,14 +1939,13 @@ void nltepop_allocate_time_dependent_arrays() {
   // the construction of a shared array is collective over the node, so every rank calls this
   const auto nonempty_npts_model = static_cast<std::ptrdiff_t>(grid::get_nonempty_npts_model());
   nnion_prev_allcells = MPI_shared_array<float>(nonempty_npts_model * get_includedions(), 0.);
-  x_e_prev_allcells = MPI_shared_array<float>(nonempty_npts_model, 0.);
   Te_prev_allcells = MPI_shared_array<float>(nonempty_npts_model, 0.);
   prev_solution_time_allcells = MPI_shared_array<double>(nonempty_npts_model, -1.);
   solution_time_allcells = MPI_shared_array<double>(nonempty_npts_model, -1.);
 }
 
 // Keep the state of the last grid update for the time terms of the next solve. Call this before the
-// abundances and the densities change for the new timestep, so that the fractions are self-consistent.
+// abundances change for the new timestep, so that the fractions are self-consistent.
 void nltepop_store_previous_state(const int nonemptymgi) {
   for (int element = 0; element < get_nelements(); element++) {
     const int nions = get_nions(element);
@@ -1959,8 +1958,6 @@ void nltepop_store_previous_state(const int nonemptymgi) {
           (nnelement_ionsum > 0.) ? static_cast<float>(get_nnion(nonemptymgi, element, ion) / nnelement_ionsum) : 0.F;
     }
   }
-  const auto nnetot = grid::get_nnetot(nonemptymgi);
-  x_e_prev_allcells[nonemptymgi] = (nnetot > 0.) ? grid::get_nne(nonemptymgi) / nnetot : 0.F;
   Te_prev_allcells[nonemptymgi] = grid::Te_allcells[nonemptymgi];
   prev_solution_time_allcells[nonemptymgi] = solution_time_allcells[nonemptymgi];
 }
@@ -1992,6 +1989,23 @@ auto get_time_dependent_dt(const int nonemptymgi, const int nts) -> std::optiona
     return std::nullopt;
   }
   return std::make_optional(dt);
+}
+
+// The electron density of the previous grid update, scaled to the current element densities: each element
+// keeps its stored ion fractions, so a decay daughter atom takes the ionisation distribution of its element
+auto get_nne_prev(const int nonemptymgi) -> double {
+  double nne_prev = 0.;
+  for (int element = 0; element < get_nelements(); element++) {
+    const double nnelement = grid::get_elem_numberdens(nonemptymgi, element);
+    if (nnelement <= 0.) {
+      continue;
+    }
+    for (int ion = 0; ion < get_nions(element); ion++) {
+      nne_prev += nnelement * nnion_prev_allcells[get_cellionindex(nonemptymgi, element, ion)] *
+                  (get_ionstage(element, ion) - 1);
+    }
+  }
+  return nne_prev;
 }
 
 void nltepop_write_restart_data(FILE* restart_file) {
