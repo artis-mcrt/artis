@@ -461,9 +461,7 @@ void print_level_rates(const int nonemptymgi, const int timestep, const int elem
 }
 
 void nltepop_reset_element(const int nonemptymgi, const int element) {
-  if constexpr (ENABLE_CHARGE_TRANSFER_REACTIONS) {
-    nlte_solution_range_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * get_nelements()) + element] = {};
-  }
+  grid::set_elements_lowermost_ion(nonemptymgi, element, -1);
   for (int ion = 0; ion < get_nions(element); ion++) {
     const int nlte_start = get_allnltelevelsindexstart(element, ion);
     std::fill_n(&nltepops_allcells[(nonemptymgi * globals::total_nlte_levels) + nlte_start],
@@ -1510,12 +1508,8 @@ void nltepop_apply_solution(const int element, const int nonemptymgi, const int 
   }
 
   // record the solved ion range, so that the charge transfer reactions skip the removed edge ions
-  if constexpr (ENABLE_CHARGE_TRANSFER_REACTIONS) {
-    nlte_solution_range_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * get_nelements()) + element] = {
-        .first_ion = first_ion_used,
-        .nions = nions_used,
-    };
-  }
+  grid::set_elements_lowermost_ion(nonemptymgi, element, first_ion_used);
+  grid::set_elements_uppermost_ion(nonemptymgi, element, first_ion_used + nions_used - 1);
 
   // set the ground level, excited level and possible superlevel populations for this element
   for (int ion = 0; ion < nions; ion++) {
@@ -1590,28 +1584,27 @@ void nltepop_apply_solution(const int element, const int nonemptymgi, const int 
 // Clear the stored NLTE solution ranges of every element in the cell, for the paths that replace
 // the NLTE solution with Saha populations without a solve.
 void nltepop_reset_solution_ranges(const int nonemptymgi) {
-  if constexpr (ENABLE_CHARGE_TRANSFER_REACTIONS) {
-    for (int element = 0; element < get_nelements(); element++) {
-      nlte_solution_range_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * get_nelements()) + element] = {};
-    }
+  for (int element = 0; element < get_nelements(); element++) {
+    grid::set_elements_lowermost_ion(nonemptymgi, element, -1);
   }
 }
 
-// Return the ion range of the last NLTE matrix solution of the element in the cell. The range array
-// exists only with the charge transfer option, and without it the range stays the default.
-auto get_nlte_solution_range(const int nonemptymgi, const int element) -> NlteSolutionRange {
-  if constexpr (!ENABLE_CHARGE_TRANSFER_REACTIONS) {
-    return {};
+// Return the ion range of the last NLTE matrix solution of the element in the cell, as the
+// lowermost and the uppermost ion. A lowermost ion of -1 means that the cell holds no solution.
+auto get_nlte_solution_range(const int nonemptymgi, const int element) -> std::pair<int, int> {
+  const int lowermost_ion = grid::get_elements_lowermost_ion(nonemptymgi, element);
+  if (lowermost_ion < 0) {
+    return {-1, -1};
   }
-  return nlte_solution_range_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * get_nelements()) + element];
+  return {lowermost_ion, grid::get_elements_uppermost_ion(nonemptymgi, element)};
 }
 
 // Report whether the ion was inside the ion range of the last NLTE matrix solution of the element.
 // The ion range reduction after a failed solve removes an edge ion, and the matrix then holds no
 // transition across that edge.
 auto ion_in_nlte_solution(const int nonemptymgi, const int element, const int ion) -> bool {
-  const auto range = get_nlte_solution_range(nonemptymgi, element);
-  return (range.first_ion >= 0) && (ion >= range.first_ion) && (ion < (range.first_ion + range.nions));
+  const auto [lowermost_ion, uppermost_ion] = get_nlte_solution_range(nonemptymgi, element);
+  return (lowermost_ion >= 0) && (ion >= lowermost_ion) && (ion <= uppermost_ion);
 }
 
 // Grassmann-Taksar-Heyman (GTH) state-elimination solve for the stationary distribution of the continuous-time
@@ -1895,10 +1888,9 @@ void nltepop_write_restart_data(FILE* restart_file) {
       // the solved ion range of each element, so that a resumed run starts with the same reactions
       fprintf(restart_file, "\n");
       for (int element = 0; element < get_nelements(); element++) {
-        const NlteSolutionRange range = nlte_solution_range_allcells[(nonemptymgi * get_nelements()) + element];
-        const int first_ion = range.first_ion;
-        const int nions = range.nions;
-        fprintf(restart_file, "%d %d ", first_ion, nions);
+        const int lowermost_ion = grid::get_elements_lowermost_ion(nonemptymgi, element);
+        const int uppermost_ion = (lowermost_ion >= 0) ? grid::get_elements_uppermost_ion(nonemptymgi, element) : -1;
+        fprintf(restart_file, "%d %d ", lowermost_ion, uppermost_ion);
       }
     }
   }
@@ -1944,13 +1936,13 @@ void nltepop_read_restart_data(FILE* restart_file) {
     }
     if constexpr (ENABLE_CHARGE_TRANSFER_REACTIONS) {
       for (int element = 0; element < get_nelements(); element++) {
-        int first_ion = -1;
-        int nions = 0;
-        assert_always(fscanf(restart_file, "%d %d ", &first_ion, &nions) == 2);
-        nlte_solution_range_allcells[(nonemptymgi * get_nelements()) + element] = {
-            .first_ion = first_ion,
-            .nions = nions,
-        };
+        int lowermost_ion = -1;
+        int uppermost_ion = -1;
+        assert_always(fscanf(restart_file, "%d %d ", &lowermost_ion, &uppermost_ion) == 2);
+        grid::set_elements_lowermost_ion(nonemptymgi, element, lowermost_ion);
+        if (lowermost_ion >= 0) {
+          grid::set_elements_uppermost_ion(nonemptymgi, element, uppermost_ion);
+        }
       }
     }
   }

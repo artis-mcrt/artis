@@ -7,28 +7,20 @@
 #include <cstdio>
 #include <optional>
 #include <span>
+#include <utility>
 
 #include "constants.h"
 #include "mpi_logging.h"
 
 inline MPI_shared_array<double> nltepops_allcells;
 
-// ion range of the last NLTE matrix solution of an element in a cell, as the first ion index and
-// the number of ions. A first ion index of -1 means that the cell holds no solution for the
-// element, e.g. before the first solve or after a fallback to LTE.
-struct NlteSolutionRange {
-  int first_ion{-1};
-  int nions{0};
-  [[nodiscard]] auto operator==(const NlteSolutionRange&) const -> bool = default;
-};
-
-// the solution range of each element in each cell. The array exists only with
-// ENABLE_CHARGE_TRANSFER_REACTIONS, and the restart files then hold it.
-inline MPI_shared_array<NlteSolutionRange> nlte_solution_range_allcells;
-
 void solve_nlte_pops_element(int element, int nonemptymgi, int timestep, int nlte_iter);
+// the ion range of the last NLTE matrix solution of an element in a cell is the lowermost and the
+// uppermost ion of the cell (see grid.h). A lowermost ion of -1 means that the cell holds no NLTE
+// solution for the element. The charge transfer reactions read the range, and the NLTE iteration
+// loop watches it for a change.
 void nltepop_reset_solution_ranges(int nonemptymgi);
-[[nodiscard]] auto get_nlte_solution_range(int nonemptymgi, int element) -> NlteSolutionRange;
+[[nodiscard]] auto get_nlte_solution_range(int nonemptymgi, int element) -> std::pair<int, int>;
 [[nodiscard]] auto ion_in_nlte_solution(int nonemptymgi, int element, int ion) -> bool;
 // GTH solve for the stationary distribution of the NLTE rate matrix, exposed here so that unittests.cc can test
 // it (see the definition in nltepop.cc for the full contract)

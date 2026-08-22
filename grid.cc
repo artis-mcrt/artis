@@ -95,6 +95,9 @@ std::vector<double> totmassnuclide{};  // total mass of each nuclide in the ejec
 MPI_shared_array<float> initnucmassfrac_allcells{};
 MPI_shared_array<float> initmassfracuntrackedstable_allcells{};
 MPI_shared_array<int> elements_uppermost_ion_allcells{};  // Highest ion index that has a significant population
+// Lowest ion index of the last NLTE matrix solution of the element, or -1 when the cell holds no
+// NLTE solution for the element, e.g. before the first solve or after a fallback to LTE
+MPI_shared_array<int> elements_lowermost_ion_allcells{};
 
 // indexed by global rank
 std::vector<int> ranks_nstart;
@@ -416,6 +419,7 @@ void allocate_nonemptycells_composition_cooling() {
   initmassfracuntrackedstable_allcells = MPI_shared_array<float>(nonempty_npts_model_ptrdifft * nelements, 0.);
   elem_meanweight_allcells = MPI_shared_array<float>(nonempty_npts_model_ptrdifft * nelements, 0.);
   elements_uppermost_ion_allcells = MPI_shared_array<int>(nonempty_npts_model_ptrdifft * nelements, -1);
+  elements_lowermost_ion_allcells = MPI_shared_array<int>(nonempty_npts_model_ptrdifft * nelements, -1);
   elem_massfracs_allcells = MPI_shared_array<float>(nonempty_npts_model_ptrdifft * nelements, 0.);
   ion_groundlevelpops_allcells = MPI_shared_array<float>(nonempty_npts_model_ptrdifft * get_includedions(), 0.);
   ion_partfuncts_allcells = MPI_shared_array<float>(nonempty_npts_model_ptrdifft * get_includedions(), 0.);
@@ -423,14 +427,6 @@ void allocate_nonemptycells_composition_cooling() {
 
   // -1 indicates that there is currently no information on the nlte populations
   nltepops_allcells = MPI_shared_array<double>(nonempty_npts_model_ptrdifft * globals::total_nlte_levels, -1.);
-
-  // the charge transfer reactions read the solved NLTE ion range of each element. The construction
-  // is collective over the node, and the constexpr option keeps every rank on the same path.
-  if constexpr (ENABLE_CHARGE_TRANSFER_REACTIONS) {
-    // the default range marks a cell without an NLTE matrix solution for the element
-    nlte_solution_range_allcells =
-        MPI_shared_array<NlteSolutionRange>(nonempty_npts_model_ptrdifft * get_nelements(), NlteSolutionRange{});
-  }
 }
 
 // build the mapping between model cells and propagation cells, then allocate the per-cell
@@ -1841,6 +1837,20 @@ DEVICE_FUNC auto get_initenergyq(const int modelgridindex) -> double {
 void set_elements_uppermost_ion(const int nonemptymgi, const int element, const int uppermost_ion) {
   assert_testmodeonly(uppermost_ion <= std::max(0, get_nions(element) - 1));
   elements_uppermost_ion_allcells[(nonemptymgi * get_nelements()) + element] = uppermost_ion;
+}
+
+// -1 means that the cell holds no NLTE matrix solution for the element
+[[nodiscard]] auto get_elements_lowermost_ion(const int nonemptymgi, const int element) -> int {
+  const auto lowermost_ion = elements_lowermost_ion_allcells[(nonemptymgi * get_nelements()) + element];
+  assert_testmodeonly(lowermost_ion >= -1);
+  assert_testmodeonly(lowermost_ion <= std::max(0, get_nions(element) - 1));
+  return lowermost_ion;
+}
+
+void set_elements_lowermost_ion(const int nonemptymgi, const int element, const int lowermost_ion) {
+  assert_testmodeonly(lowermost_ion >= -1);
+  assert_testmodeonly(lowermost_ion <= std::max(0, get_nions(element) - 1));
+  elements_lowermost_ion_allcells[(nonemptymgi * get_nelements()) + element] = lowermost_ion;
 }
 
 [[nodiscard]] auto calculate_cell_kappagrey(const int nonemptymgi) -> float {

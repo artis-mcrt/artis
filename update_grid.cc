@@ -13,6 +13,7 @@
 #include <ostream>
 #include <print>
 #include <span>
+#include <utility>
 #include <vector>
 
 #include "artisoptions.h"
@@ -205,7 +206,7 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
   // the ion populations and the NLTE solution ranges of the previous iteration, for the charge
   // transfer convergence test. The buffers are thread-local, so every cell reuses them.
   THREADLOCALONHOST std::vector<double> nnion_prev;
-  THREADLOCALONHOST std::vector<NlteSolutionRange> nlte_solution_prev;
+  THREADLOCALONHOST std::vector<std::pair<int, int>> nlte_solution_prev;
 
   for (int nlte_iter = 0; nlte_iter <= NLTEITER; nlte_iter++) {
     const auto sys_time_start_spencerfano = std::chrono::steady_clock::now();
