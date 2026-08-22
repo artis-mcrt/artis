@@ -419,7 +419,10 @@ void allocate_nonemptycells_composition_cooling() {
   initmassfracuntrackedstable_allcells = MPI_shared_array<float>(nonempty_npts_model_ptrdifft * nelements, 0.);
   elem_meanweight_allcells = MPI_shared_array<float>(nonempty_npts_model_ptrdifft * nelements, 0.);
   elements_uppermost_ion_allcells = MPI_shared_array<int>(nonempty_npts_model_ptrdifft * nelements, -1);
-  elements_lowermost_ion_allcells = MPI_shared_array<int>(nonempty_npts_model_ptrdifft * nelements, 0);
+  if constexpr (ENABLE_CHARGE_TRANSFER_REACTIONS) {
+    // only the charge transfer reactions read the lowermost ion of the NLTE solution
+    elements_lowermost_ion_allcells = MPI_shared_array<int>(nonempty_npts_model_ptrdifft * nelements, 0);
+  }
   elem_massfracs_allcells = MPI_shared_array<float>(nonempty_npts_model_ptrdifft * nelements, 0.);
   ion_groundlevelpops_allcells = MPI_shared_array<float>(nonempty_npts_model_ptrdifft * get_includedions(), 0.);
   ion_partfuncts_allcells = MPI_shared_array<float>(nonempty_npts_model_ptrdifft * get_includedions(), 0.);
@@ -1840,6 +1843,9 @@ void set_elements_uppermost_ion(const int nonemptymgi, const int element, const 
 }
 
 [[nodiscard]] auto get_elements_lowermost_ion(const int nonemptymgi, const int element) -> int {
+  if constexpr (!ENABLE_CHARGE_TRANSFER_REACTIONS) {
+    return 0;  // the array is not allocated without the charge transfer reactions
+  }
   const auto lowermost_ion = elements_lowermost_ion_allcells[(nonemptymgi * get_nelements()) + element];
   assert_testmodeonly(lowermost_ion >= 0);
   assert_testmodeonly(lowermost_ion <= std::max(0, get_nions(element) - 1));
@@ -1847,6 +1853,9 @@ void set_elements_uppermost_ion(const int nonemptymgi, const int element, const 
 }
 
 void set_elements_lowermost_ion(const int nonemptymgi, const int element, const int lowermost_ion) {
+  if constexpr (!ENABLE_CHARGE_TRANSFER_REACTIONS) {
+    return;  // the array is not allocated without the charge transfer reactions
+  }
   assert_testmodeonly(lowermost_ion >= 0);
   assert_testmodeonly(lowermost_ion <= std::max(0, get_nions(element) - 1));
   elements_lowermost_ion_allcells[(nonemptymgi * get_nelements()) + element] = lowermost_ion;
