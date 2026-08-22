@@ -5,7 +5,8 @@
 // The rates come from three sources:
 // - Published analytic fits for reactions with hydrogen and helium, in the fit form of
 //   Kingdon & Ferland (1996, ApJS, 106, 205), hereafter KF96. The file data/chargetransfer.txt holds
-//   these fits (see data/chargetransfer-reference.txt for the sources).
+//   these fits, and its header names the sources. KF96 give no rate for the exothermic ionisation
+//   of Ca+, Sc+, and Ti+ by protons, so those reactions are absent from the file as well.
 // - Near-resonant estimates for electron capture from a neutral donor by an ion with a charge of
 //   one to three, when the reaction releases a small energy (up to NEARRES_MAX_DEFECT). A level of
 //   the products then lies close to resonance, and the rate is near the gas-kinetic value. Each of
