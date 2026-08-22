@@ -461,6 +461,9 @@ void print_level_rates(const int nonemptymgi, const int timestep, const int elem
 }
 
 void nltepop_reset_element(const int nonemptymgi, const int element) {
+  const auto rangeindex = (static_cast<ptrdiff_t>(nonemptymgi) * get_nelements()) + element;
+  nlte_solution_firstion_allcells[rangeindex] = -1;
+  nlte_solution_nions_allcells[rangeindex] = 0;
   for (int ion = 0; ion < get_nions(element); ion++) {
     const int nlte_start = get_allnltelevelsindexstart(element, ion);
     std::fill_n(&nltepops_allcells[(nonemptymgi * globals::total_nlte_levels) + nlte_start],
@@ -1511,6 +1514,11 @@ void nltepop_apply_solution(const int element, const int nonemptymgi, const int 
     assert_always(pop >= 0.);
   }
 
+  // record the solved ion range, so that the charge transfer reactions skip the removed edge ions
+  const auto rangeindex = (static_cast<ptrdiff_t>(nonemptymgi) * get_nelements()) + element;
+  nlte_solution_firstion_allcells[rangeindex] = first_ion_used;
+  nlte_solution_nions_allcells[rangeindex] = nions_used;
+
   // set the ground level, excited level and possible superlevel populations for this element
   for (int ion = 0; ion < nions; ion++) {
     const int nlevels_excited_nlte = get_nlevels_excited_nlte(element, ion);
@@ -1581,17 +1589,29 @@ void nltepop_apply_solution(const int element, const int nonemptymgi, const int 
 
 }  // anonymous namespace
 
-// Report whether the cell holds a valid NLTE solution for the element. A stored population of -1
-// is the marker for the Boltzmann fallback, which set_element_pops_lte() writes after a failed
-// matrix solve, and which is also the state before the first solve of the element.
+// Report whether the cell holds an NLTE matrix solution for the element. set_element_pops_lte()
+// clears the solution after a failed matrix solve, and the state before the first solve of the
+// element is the same.
 auto elem_nltepops_valid(const int nonemptymgi, const int element) -> bool {
-  for (int ion = 0; ion < get_nions(element); ion++) {
-    if ((get_nlevels_excited_nlte(element, ion) > 0) || ion_has_superlevel(element, ion)) {
-      return nltepops_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * globals::total_nlte_levels) +
-                               get_allnltelevelsindexstart(element, ion)] >= 0.;
-    }
-  }
-  return false;
+  return nlte_solution_firstion_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * get_nelements()) + element] >= 0;
+}
+
+// Report whether the ion was inside the ion range of the last NLTE matrix solution of the element.
+// The ion range reduction after a failed solve removes an edge ion, and the matrix then holds no
+// transition across that edge.
+auto ion_in_nlte_solution(const int nonemptymgi, const int element, const int ion) -> bool {
+  const auto rangeindex = (static_cast<ptrdiff_t>(nonemptymgi) * get_nelements()) + element;
+  const int first_ion_used = nlte_solution_firstion_allcells[rangeindex];
+  return (first_ion_used >= 0) && (ion >= first_ion_used) &&
+         (ion < (first_ion_used + nlte_solution_nions_allcells[rangeindex]));
+}
+
+// Return one integer that changes when the solution state or the solved ion range of the element
+// changes, for the convergence test of the NLTE iteration loop.
+auto get_nlte_solution_range_key(const int nonemptymgi, const int element) -> int {
+  const auto rangeindex = (static_cast<ptrdiff_t>(nonemptymgi) * get_nelements()) + element;
+  const int first_ion_used = nlte_solution_firstion_allcells[rangeindex];
+  return (first_ion_used < 0) ? -1 : (first_ion_used * 1000) + nlte_solution_nions_allcells[rangeindex];
 }
 
 // Grassmann-Taksar-Heyman (GTH) state-elimination solve for the stationary distribution of the continuous-time

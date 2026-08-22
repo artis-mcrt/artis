@@ -247,15 +247,15 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
     // charge transfer conserves nne, so the nne convergence test cannot see a population exchange
     // between two elements. Keep the ion populations of this iteration and test them below.
     std::vector<double> nnion_prev;
-    // the element solves run in sequence, so an element that falls back to LTE late in the sweep
-    // has already supplied its rates to the partners that solved before it. Keep the validity
-    // markers to force a new iteration when one of them changes.
-    std::vector<bool> nltepops_valid_prev;
+    // the element solves run in sequence, so an element that falls back to LTE or loses an edge
+    // ion late in the sweep has already supplied its rates to the partners that solved before it.
+    // Keep the solution range keys to force a new iteration when one of them changes.
+    std::vector<int> nlte_solution_key_prev;
     if (ENABLE_CHARGE_TRANSFER_REACTIONS) {
       nnion_prev.resize(get_includedions());
-      nltepops_valid_prev.resize(get_nelements());
+      nlte_solution_key_prev.resize(get_nelements());
       for (int element = 0; element < get_nelements(); element++) {
-        nltepops_valid_prev[element] = elem_has_nlte_levels(element) && elem_nltepops_valid(nonemptymgi, element);
+        nlte_solution_key_prev[element] = get_nlte_solution_range_key(nonemptymgi, element);
         for (int ion = 0; ion < get_nions(element); ion++) {
           nnion_prev[get_uniqueionindex(element, ion)] = get_nnion(nonemptymgi, element, ion);
         }
@@ -280,14 +280,14 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
     // largest fractional change of the significant ion populations, which the charge transfer
     // reactions can move while nne stays constant
     double fracdiff_nnion = 0.;
-    bool nltepops_validity_changed = false;
+    bool nlte_solution_changed = false;
     if (ENABLE_CHARGE_TRANSFER_REACTIONS) {
       for (int element = 0; element < get_nelements(); element++) {
         if (!elem_has_nlte_levels(element)) {
           continue;
         }
-        if (elem_nltepops_valid(nonemptymgi, element) != nltepops_valid_prev[element]) {
-          nltepops_validity_changed = true;
+        if (get_nlte_solution_range_key(nonemptymgi, element) != nlte_solution_key_prev[element]) {
+          nlte_solution_changed = true;
         }
         const double nnelement = grid::get_elem_numberdens(nonemptymgi, element);
         for (int ion = 0; ion < get_nions(element); ion++) {
@@ -302,8 +302,8 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
       }
       printlnlog(
           "NLTE (Spencer-Fano/Te/pops) solver mgi {} timestep {} iteration {}: ion population fracdiff {:g}, NLTE "
-          "validity changed {} (charge transfer convergence test)",
-          mgi, nts, nlte_iter, fracdiff_nnion, nltepops_validity_changed ? 1 : 0);
+          "solution range changed {} (charge transfer convergence test)",
+          mgi, nts, nlte_iter, fracdiff_nnion, nlte_solution_changed ? 1 : 0);
     }
     printlnlog(
         "NLTE solver mgi {} timestep {} iteration {}: time spent on: Spencer-Fano {:.1f}s, T_e {:.1f}s, NLTE "
@@ -315,7 +315,7 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
         mgi, nts, nlte_iter, nne_prev, grid::get_nne(nonemptymgi), fracdiff_nne, prev_T_e,
         grid::Te_allcells[nonemptymgi], fracdiff_T_e);
     if (fracdiff_nne <= nne_reltol && fracdiff_T_e <= T_e_reltol &&
-        (!ENABLE_CHARGE_TRANSFER_REACTIONS || (fracdiff_nnion <= nne_reltol && !nltepops_validity_changed))) {
+        (!ENABLE_CHARGE_TRANSFER_REACTIONS || (fracdiff_nnion <= nne_reltol && !nlte_solution_changed))) {
       printlnlog(
           "NLTE (Spencer-Fano/Te/pops) solver mgi {} timestep {} iteration {}: nne converged to tolerance {:g} <= {:g} "
           "and T_e to tolerance {:g} <= {:g}",

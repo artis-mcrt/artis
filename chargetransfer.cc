@@ -71,6 +71,7 @@ constexpr double LZ_RADIATIVE_CT_FLOOR = 1e-14;
 struct CTReaction {
   int partner_element{-1};  // the ion that reacts with the owner ion of the list entry
   int partner_ion{-1};
+  int partner_product_ion{-1};  // the partner ion after the reaction
   double mu_grams{0.};  // reduced mass of the collision pair
 
   // KF96 fit parameters (a in cm3/s). Used when lz_tableindex is negative.
@@ -187,7 +188,12 @@ auto sum_reaction_list(const std::vector<CTReaction>& list, const int nonemptymg
   for (const auto& r : list) {
     // after a failed matrix solve, the partner element holds LTE populations in this cell and gets
     // no reciprocal transition, so skip the reaction to keep the total ionic charge constant
-    if (!elem_nltepops_valid(nonemptymgi, r.partner_element)) {
+    // the partner ion and its product ion must both be inside the NLTE matrix solution of the
+    // partner element. An edge ion that the ion range reduction removed, or an element that fell
+    // back to LTE, gets no reciprocal transition, and the reaction would then change the total
+    // ionic charge.
+    if (!ion_in_nlte_solution(nonemptymgi, r.partner_element, r.partner_ion) ||
+        !ion_in_nlte_solution(nonemptymgi, r.partner_element, r.partner_product_ion)) {
       continue;
     }
     const double nnpartner = get_nnion(nonemptymgi, r.partner_element, r.partner_ion);
@@ -210,10 +216,12 @@ void add_reaction(const int element_acc, const int ion_acc, const int element_do
 
   fwd.partner_element = element_don;
   fwd.partner_ion = ion_don;
+  fwd.partner_product_ion = ion_don + 1;
   reactions_rec_perion[get_uniqueionindex(element_acc, ion_acc)].push_back(fwd);
 
   fwd.partner_element = element_acc;
   fwd.partner_ion = ion_acc;
+  fwd.partner_product_ion = ion_acc - 1;
   reactions_ion_perion[get_uniqueionindex(element_don, ion_don)].push_back(fwd);
 
   reaction_count++;
@@ -239,10 +247,12 @@ void add_reaction(const int element_acc, const int ion_acc, const int element_do
 
   rev.partner_element = element_acc;
   rev.partner_ion = ion_acc - 1;
+  rev.partner_product_ion = ion_acc;
   reactions_rec_perion[get_uniqueionindex(element_don, ion_don + 1)].push_back(rev);
 
   rev.partner_element = element_don;
   rev.partner_ion = ion_don + 1;
+  rev.partner_product_ion = ion_don;
   reactions_ion_perion[get_uniqueionindex(element_acc, ion_acc - 1)].push_back(rev);
 
   reaction_count++;
