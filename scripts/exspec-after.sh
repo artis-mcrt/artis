@@ -27,8 +27,8 @@ if [[ -f emission.out || -f emission.out.zst || -f emissionpol.out ]]; then
   mkdir -p vpkt_grid
   mv vpkt_grid*.out* vpkt_grid/ || true
 
-  # remove empty directories
-  find . -maxdepth 1 -type d -empty -delete
+  # remove empty directories, but keep the artis folder
+  find . -maxdepth 1 -type d -empty ! -name artis -delete
 
   # 3D kilonova model.txt and abundances.txt can be huge, so compress txt files
   # do maxdepth 1 first in case job gets killed during run folder compression
@@ -37,8 +37,9 @@ if [[ -f emission.out || -f emission.out.zst || -f emissionpol.out ]]; then
 
   find packets/ -name 'packets*.out' -size +200k -print0 | sort -z | xargs -r0 -P8 zstd -T0 -13 -v --rm -f
 
-  find . -name '*.txt' ! -name "output_0-0.txt" -size +200k -print0 | sort -z | xargs -r0 -P8 zstd -T0 -13 -v --rm -f
-  find . -name '*.out' ! -name "slurm-*.out" -size +200k -print0 | sort -z | xargs -r0 -P8 zstd -T0 -13 -v --rm -f
+  # the artis folder holds the code and the data files of the code, so do not change them
+  find . -path ./artis -prune -o -name '*.txt' ! -name "output_0-0.txt" -size +200k -print0 | sort -z | xargs -r0 -P8 zstd -T0 -13 -v --rm -f
+  find . -path ./artis -prune -o -name '*.out' ! -name "slurm-*.out" -size +200k -print0 | sort -z | xargs -r0 -P8 zstd -T0 -13 -v --rm -f
 
   ./artis/scripts/tar_rm_logs.sh
 
