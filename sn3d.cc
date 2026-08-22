@@ -39,6 +39,7 @@
 
 #include "artisoptions.h"
 #include "atomic.h"
+#include "chargetransfer.h"
 #include "constants.h"
 #include "decay.h"
 #include "globals.h"
@@ -1042,6 +1043,8 @@ auto main(int argc, char* argv[]) -> int {
   }
 
   read_atomicdata();
+
+  chargetransfer::init();
 
   grid::read_ejecta_model();
 

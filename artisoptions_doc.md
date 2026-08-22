@@ -267,6 +267,19 @@ constexpr bool USE_XCOM_GAMMAPHOTOION;
 // Override frequency-dependent gamma-ray opacity with a grey opacity [cm^2/g]
 constexpr std::optional<double> GAMMA_USE_KAPPA_GREY;
 
+// Include charge transfer reactions in the NLTE population solver. The published fits come from
+// data/chargetransfer.txt, which holds reactions with hydrogen and helium. The code generates
+// estimates at startup for the other electron captures from a neutral donor (see chargetransfer.cc).
+// A singly charged ion gets a flat rate: 1e-12 cm3/s, the median of the tabulated rates, for an
+// energy release up to 4 eV, and the radiative floor of 1e-14 cm3/s above it. An ion with a charge
+// of two or more gets a multichannel Landau-Zener estimate, with the levels of the lower ion as the
+// capture channels. The reverse rates come from detailed balance. The rates enter the NLTE rate matrix as
+// per-ion coefficients between neighbouring ion stages. A reaction is active only when both
+// elements have NLTE levels and a free ionisation balance, so that both sides of the reaction get
+// their transition and the total ionic charge stays constant. The solver does not add the reaction
+// heat to the thermal balance.
+constexpr bool ENABLE_CHARGE_TRANSFER_REACTIONS;
+
 // Use microclumping, which enhances collisional (de)excitation, collisional ionisation, collisional recombination,
 // radiative recombination, collisional capture, stimulated recombination, free-free heating, free-free cooling by the clumping factor
 // (including in the photoionisation-equilibrium ionisation balance for elements without NLTE levels; the Saha LTE

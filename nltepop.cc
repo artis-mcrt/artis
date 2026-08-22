@@ -30,6 +30,7 @@
 
 #include "artisoptions.h"
 #include "atomic.h"
+#include "chargetransfer.h"
 #include "constants.h"
 #include "globals.h"
 #include "grid.h"
@@ -67,6 +68,7 @@ struct RateMatrices {
   std::vector<double> coll_bf;
   std::vector<double> ntcoll_bf;
   std::vector<double> autoion;
+  std::vector<double> chargetransfer;
 
   explicit RateMatrices(int max_nlte_dimension) {
     // allocation of the maximum required size is done once,
@@ -80,6 +82,11 @@ struct RateMatrices {
     coll_bf.reserve(max_dim_squared);
     ntcoll_bf.reserve(max_dim_squared);
     autoion.reserve(max_dim_squared);
+    // the charge transfer matrix exists only with the option on, so the default presets pay no
+    // memory or clearing cost for it
+    if constexpr (ENABLE_CHARGE_TRANSFER_REACTIONS) {
+      chargetransfer.reserve(max_dim_squared);
+    }
   }
 
   void set_used_dimension(int used_nlte_dimension_in) {
@@ -102,6 +109,10 @@ struct RateMatrices {
     ntcoll_bf.resize(used_dim_squared);
     assert_always(std::cmp_less_equal(used_dim_squared, autoion.capacity()));
     autoion.resize(used_dim_squared);
+    if constexpr (ENABLE_CHARGE_TRANSFER_REACTIONS) {
+      assert_always(std::cmp_less_equal(used_dim_squared, chargetransfer.capacity()));
+      chargetransfer.resize(used_dim_squared);
+    }
 
     std::ranges::fill(rad_bb, 0.);
     std::ranges::fill(coll_bb, 0.);
@@ -110,6 +121,9 @@ struct RateMatrices {
     std::ranges::fill(coll_bf, 0.);
     std::ranges::fill(ntcoll_bf, 0.);
     std::ranges::fill(autoion, 0.);
+    if constexpr (ENABLE_CHARGE_TRANSFER_REACTIONS) {
+      std::ranges::fill(chargetransfer, 0.);
+    }
   }
 
   [[nodiscard]] auto get_summed_rate_matrix() -> std::span<double> {
@@ -121,8 +135,14 @@ struct RateMatrices {
     assert_always(summed_rates.size() == coll_bf.size());
     assert_always(summed_rates.size() == ntcoll_bf.size());
     assert_always(summed_rates.size() == autoion.size());
+    if constexpr (ENABLE_CHARGE_TRANSFER_REACTIONS) {
+      assert_always(summed_rates.size() == chargetransfer.size());
+    }
     for (auto i = 0U; i < summed_rates.size(); i++) {
       summed_rates[i] = rad_bb[i] + coll_bb[i] + ntcoll_bb[i] + rad_bf[i] + coll_bf[i] + ntcoll_bf[i] + autoion[i];
+      if constexpr (ENABLE_CHARGE_TRANSFER_REACTIONS) {
+        summed_rates[i] += chargetransfer[i];
+      }
     }
 
     return summed_rates;
@@ -287,10 +307,14 @@ void print_level_rates_summary(const int element, const int selected_ion, const 
                                                   only_levels_below, only_levels_above);
     const double autoion_total =
         get_total_rate(selected_index, rate_matrices.autoion, popvec, into_level, only_levels_below, only_levels_above);
+    const double chargetransfer_total = ENABLE_CHARGE_TRANSFER_REACTIONS
+                                            ? get_total_rate(selected_index, rate_matrices.chargetransfer, popvec,
+                                                             into_level, only_levels_below, only_levels_above)
+                                            : 0.;
 
-    printlnlog("{}{}{:10.2e} {:10.2e} {:10.2e} {:10.2e} {:10.2e} {:10.2e} {:10.2e}", into_level ? " from " : "   to ",
-               only_levels_below ? "below " : "above ", rad_bb_total, coll_bb_total, ntcoll_bb_total, rad_bf_total,
-               coll_bf_total, ntcoll_bf_total, autoion_total);
+    printlnlog("{}{}{:10.2e} {:10.2e} {:10.2e} {:10.2e} {:10.2e} {:10.2e} {:10.2e} {:10.2e}",
+               into_level ? " from " : "   to ", only_levels_below ? "below " : "above ", rad_bb_total, coll_bb_total,
+               ntcoll_bb_total, rad_bf_total, coll_bf_total, ntcoll_bf_total, autoion_total, chargetransfer_total);
   }
 }
 
@@ -315,7 +339,7 @@ void print_element_rates_summary(const int element, const int modelgridindex, co
             atomic_number, ionstage);
         printlnlog(
             "                         pop       rates     bb_rad     bb_col   bb_ntcol     bf_rad     bf_col   "
-            "bf_ntcol autoion");
+            "bf_ntcol autoion   chargetr");
       }
 
       print_level_rates_summary(element, ion, level, popvec, rate_matrices, first_ion_used);
@@ -350,12 +374,15 @@ void print_level_rates(const int nonemptymgi, const int timestep, const int elem
   const double rad_bf_in_total = get_total_rate_in(selected_index, rate_matrices.rad_bf, popvec);
   const double coll_bf_in_total = get_total_rate_in(selected_index, rate_matrices.coll_bf, popvec);
   const double ntcoll_bf_in_total = get_total_rate_in(selected_index, rate_matrices.ntcoll_bf, popvec);
-  const double total_rate_in =
-      rad_bb_in_total + coll_bb_in_total + ntcoll_bb_in_total + rad_bf_in_total + coll_bf_in_total + ntcoll_bf_in_total;
+  const double ct_in_total =
+      ENABLE_CHARGE_TRANSFER_REACTIONS ? get_total_rate_in(selected_index, rate_matrices.chargetransfer, popvec) : 0.;
+  const double total_rate_in = rad_bb_in_total + coll_bb_in_total + ntcoll_bb_in_total + rad_bf_in_total +
+                               coll_bf_in_total + ntcoll_bf_in_total + ct_in_total;
   printlnlog(
       "  TOTAL rates in:             rad_bb_in  {:8.2e} coll_bb_in  {:8.2e} ntcoll_bb_in  {:8.2e} rad_bf_in  {:8.2e} "
-      "coll_bf_in  {:8.2e} ntcoll_bf_in  {:8.2e}",
-      rad_bb_in_total, coll_bb_in_total, ntcoll_bb_in_total, rad_bf_in_total, coll_bf_in_total, ntcoll_bf_in_total);
+      "coll_bf_in  {:8.2e} ntcoll_bf_in  {:8.2e} ct_in  {:8.2e}",
+      rad_bb_in_total, coll_bb_in_total, ntcoll_bb_in_total, rad_bf_in_total, coll_bf_in_total, ntcoll_bf_in_total,
+      ct_in_total);
 
   const double rad_bb_out_total = get_total_rate_out(selected_index, rate_matrices.rad_bb, popvec);
   const double coll_bb_out_total = get_total_rate_out(selected_index, rate_matrices.coll_bb, popvec);
@@ -363,13 +390,15 @@ void print_level_rates(const int nonemptymgi, const int timestep, const int elem
   const double rad_bf_out_total = get_total_rate_out(selected_index, rate_matrices.rad_bf, popvec);
   const double coll_bf_out_total = get_total_rate_out(selected_index, rate_matrices.coll_bf, popvec);
   const double ntcoll_bf_out_total = get_total_rate_out(selected_index, rate_matrices.ntcoll_bf, popvec);
+  const double ct_out_total =
+      ENABLE_CHARGE_TRANSFER_REACTIONS ? get_total_rate_out(selected_index, rate_matrices.chargetransfer, popvec) : 0.;
   const double total_rate_out = rad_bb_out_total + coll_bb_out_total + ntcoll_bb_out_total + rad_bf_out_total +
-                                coll_bf_out_total + ntcoll_bf_out_total;
+                                coll_bf_out_total + ntcoll_bf_out_total + ct_out_total;
   printlnlog(
       "  TOTAL rates out:            rad_bb_out {:8.2e} coll_bb_out {:8.2e} ntcoll_bb_out {:8.2e} rad_bf_out {:8.2e} "
-      "coll_bf_out {:8.2e} ntcoll_bf_out {:8.2e}",
+      "coll_bf_out {:8.2e} ntcoll_bf_out {:8.2e} ct_out {:8.2e}",
       rad_bb_out_total, coll_bb_out_total, ntcoll_bb_out_total, rad_bf_out_total, coll_bf_out_total,
-      ntcoll_bf_out_total);
+      ntcoll_bf_out_total, ct_out_total);
 
   for (auto index = 0Z; index < nltedim; index++) {
     if (index == selected_index) {
@@ -393,36 +422,46 @@ void print_level_rates(const int nonemptymgi, const int timestep, const int elem
     const double coll_bf_out = rate_matrices.coll_bf[ij_index_selectedindex] * pop_selectedlevel;
     const double ntcoll_bf_in = rate_matrices.ntcoll_bf[ij_selectedindex_index] * pop;
     const double ntcoll_bf_out = rate_matrices.ntcoll_bf[ij_index_selectedindex] * pop_selectedlevel;
+    const double ct_in =
+        ENABLE_CHARGE_TRANSFER_REACTIONS ? rate_matrices.chargetransfer[ij_selectedindex_index] * pop : 0.;
+    const double ct_out = ENABLE_CHARGE_TRANSFER_REACTIONS
+                              ? rate_matrices.chargetransfer[ij_index_selectedindex] * pop_selectedlevel
+                              : 0.;
 
-    const bool nonzero_rate_in = (fabs(rad_bb_in) > 0. || fabs(coll_bb_in) > 0. || fabs(ntcoll_bb_in) > 0. ||
-                                  fabs(rad_bf_in) > 0. || fabs(coll_bf_in) > 0. || fabs(ntcoll_bf_in) > 0.);
-    const bool nonzero_rate_out = (fabs(rad_bb_out) > 0. || fabs(coll_bb_out) > 0. || fabs(ntcoll_bb_out) > 0. ||
-                                   fabs(rad_bf_out) > 0. || fabs(coll_bf_out) > 0. || fabs(ntcoll_bf_out) > 0.);
+    const bool nonzero_rate_in =
+        (fabs(rad_bb_in) > 0. || fabs(coll_bb_in) > 0. || fabs(ntcoll_bb_in) > 0. || fabs(rad_bf_in) > 0. ||
+         fabs(coll_bf_in) > 0. || fabs(ntcoll_bf_in) > 0. || fabs(ct_in) > 0.);
+    const bool nonzero_rate_out =
+        (fabs(rad_bb_out) > 0. || fabs(coll_bb_out) > 0. || fabs(ntcoll_bb_out) > 0. || fabs(rad_bf_out) > 0. ||
+         fabs(coll_bf_out) > 0. || fabs(ntcoll_bf_out) > 0. || fabs(ct_out) > 0.);
     if (nonzero_rate_in || nonzero_rate_out) {
       const double epsilon_trans = fabs(epsilon(element, ion, level) - epsilon(element, selected_ion, selected_level));
       const double nu_trans = epsilon_trans / H;
       const double lambda = 1e8 * CLIGHT / nu_trans;  // [Angstroms]
-      const double level_rate_in = rad_bb_in + coll_bb_in + ntcoll_bb_in + rad_bf_in + coll_bf_in + ntcoll_bf_in;
-      const double level_rate_out = rad_bb_out + coll_bb_out + ntcoll_bb_out + rad_bf_out + coll_bf_out + ntcoll_bf_out;
+      const double level_rate_in =
+          rad_bb_in + coll_bb_in + ntcoll_bb_in + rad_bf_in + coll_bf_in + ntcoll_bf_in + ct_in;
+      const double level_rate_out =
+          rad_bb_out + coll_bb_out + ntcoll_bb_out + rad_bf_out + coll_bf_out + ntcoll_bf_out + ct_out;
       const double level_percent_in = level_rate_in / total_rate_in * 100.;
       const double level_percent_out = level_rate_out / total_rate_out * 100.;
 
       printlnlog(
           "  ionstage {} level {:4} ({:5.1f}% of in)  rad_bb_in  {:8.2e} coll_bb_in  {:8.2e} ntcoll_bb_in  {:8.2e} "
-          "rad_bf_in  {:8.2e} coll_bf_in  {:8.2e} ntcoll_bf_in  {:8.2e} lambda {:6.0f}",
+          "rad_bf_in  {:8.2e} coll_bf_in  {:8.2e} ntcoll_bf_in  {:8.2e} ct_in  {:8.2e} lambda {:6.0f}",
           ionstage, level, level_percent_in, rad_bb_in, coll_bb_in, ntcoll_bb_in, rad_bf_in, coll_bf_in, ntcoll_bf_in,
-          lambda);
+          ct_in, lambda);
       printlnlog(
           "  ionstage {} level {:4} ({:5.1f}% of out) rad_bb_out {:8.2e} coll_bb_out {:8.2e} ntcoll_bb_out {:8.2e} "
-          "rad_bf_out {:8.2e} coll_bf_out {:8.2e} ntcoll_bf_out {:8.2e} lambda {:6.0f}",
+          "rad_bf_out {:8.2e} coll_bf_out {:8.2e} ntcoll_bf_out {:8.2e} ct_out {:8.2e} lambda {:6.0f}",
           ionstage, level, level_percent_out, rad_bb_out, coll_bb_out, ntcoll_bb_out, rad_bf_out, coll_bf_out,
-          ntcoll_bf_out, lambda);
+          ntcoll_bf_out, ct_out, lambda);
     }
   }
   printlnlog("");
 }
 
 void nltepop_reset_element(const int nonemptymgi, const int element) {
+  grid::set_elements_lowermost_ion(nonemptymgi, element, 0);
   for (int ion = 0; ion < get_nions(element); ion++) {
     const int nlte_start = get_allnltelevelsindexstart(element, ion);
     std::fill_n(&nltepops_allcells[(nonemptymgi * globals::total_nlte_levels) + nlte_start],
@@ -645,6 +684,21 @@ void nltepop_matrix_add_ionisation(const int nonemptymgi, const int element, con
   });
 }
 
+// add a per-ion rate to the NLTE matrix: every level of the source ion goes to the ground state of
+// the target ion
+void nltepop_matrix_add_ion_to_ion_rate(const std::span<double> matrix, const int element, const int source_ion,
+                                        const int target_ion, const double rate, const std::span<const double> s_renorm,
+                                        const int first_ion_used, const int nlte_dimension) {
+  const int target_groundstate_index = get_nlte_vector_index(element, target_ion, 0, first_ion_used);
+  const int nlevels = get_nlevels(element, source_ion);
+  for (int level = 0; level < nlevels; level++) {
+    const int source_index = get_nlte_vector_index(element, source_ion, level, first_ion_used);
+
+    atomicadd(matrix[(source_index * nlte_dimension) + source_index], -rate * s_renorm[level]);
+    atomicadd(matrix[(target_groundstate_index * nlte_dimension) + source_index], rate * s_renorm[level]);
+  }
+}
+
 // add collisional ionisation by non-thermal electrons to NLTE matrix
 void nltepop_matrix_add_nt_ionisation(const int nonemptymgi, const int element, const int ion,
                                       const std::span<const double> s_renorm, RateMatrices& rate_matrices,
@@ -656,7 +710,6 @@ void nltepop_matrix_add_nt_ionisation(const int nonemptymgi, const int element, 
   assert_always(ion < max_ion_used);  // can't ionise top ion stage
   const double Y_nt = nonthermal::nt_ionisation_ratecoeff(nonemptymgi, element, ion);
 
-  const int nlevels = get_nlevels(element, ion);
   const auto nlte_dimension = rate_matrices.used_nlte_dimension;
 
   for (int upperion = ion + 1; upperion <= nonthermal::nt_ionisation_maxupperion(element, ion); upperion++) {
@@ -667,16 +720,40 @@ void nltepop_matrix_add_nt_ionisation(const int nonemptymgi, const int element, 
       // ensure if upperion here is past the upper ion used in the NLTE matrix the rates
       // to this ion are instead added to the ground state of the uppermost ion used in the NLTE matrix
       const int upperion_clamped = std::min(upperion, max_ion_used);
-      const int upper_groundstate_index = get_nlte_vector_index(element, upperion_clamped, 0, first_ion_used);
-      for (int level = 0; level < nlevels; level++) {
-        const int lower_index = get_nlte_vector_index(element, ion, level, first_ion_used);
-
-        atomicadd(rate_matrices.ntcoll_bf[(lower_index * nlte_dimension) + lower_index],
-                  -Y_nt_thisupperion * s_renorm[level]);
-        atomicadd(rate_matrices.ntcoll_bf[(upper_groundstate_index * nlte_dimension) + lower_index],
-                  Y_nt_thisupperion * s_renorm[level]);
-      }
+      nltepop_matrix_add_ion_to_ion_rate(rate_matrices.ntcoll_bf, element, ion, upperion_clamped, Y_nt_thisupperion,
+                                         s_renorm, first_ion_used, nlte_dimension);
     }
+  }
+}
+
+// add charge transfer with the ions of the other elements to the NLTE matrix. The rates are per-ion
+// coefficients (see chargetransfer.cc), so every level of the source ion transfers to the ground
+// state of the target ion, like the non-thermal ionisation. The partner ion populations come from
+// the previous population update, and the outer NLTE iteration loop makes the coupled elements
+// converge together.
+void nltepop_matrix_add_chargetransfer(const int nonemptymgi, const int element, const int ion,
+                                       const std::span<const std::vector<double>> s_renorm_allions,
+                                       RateMatrices& rate_matrices, const int first_ion_used, const int nions_used) {
+  if (!ENABLE_CHARGE_TRANSFER_REACTIONS) {
+    return;
+  }
+  assert_always((ion + 1) < (nions_used + first_ion_used));  // the top ion stage has no ionisation
+  const auto nlte_dimension = rate_matrices.used_nlte_dimension;
+
+  // charge transfer ionisation: every level of ion goes to the ground state of (ion + 1)
+  const double ct_ionisation =
+      chargetransfer::ct_ionisation_rate(nonemptymgi, element, ion, first_ion_used, nions_used);
+  if (ct_ionisation > 0.) {
+    nltepop_matrix_add_ion_to_ion_rate(rate_matrices.chargetransfer, element, ion, ion + 1, ct_ionisation,
+                                       s_renorm_allions[ion], first_ion_used, nlte_dimension);
+  }
+
+  // charge transfer recombination: every level of (ion + 1) goes to the ground state of ion
+  const double ct_recombination =
+      chargetransfer::ct_recombination_rate(nonemptymgi, element, ion + 1, first_ion_used, nions_used);
+  if (ct_recombination > 0.) {
+    nltepop_matrix_add_ion_to_ion_rate(rate_matrices.chargetransfer, element, ion + 1, ion, ct_recombination,
+                                       s_renorm_allions[ion + 1], first_ion_used, nlte_dimension);
   }
 }
 
@@ -1324,6 +1401,8 @@ auto nltepop_solve_matrix_with_ion_reduction(const int element, const int nonemp
                                       first_ion_used, nions_used);
         nltepop_matrix_add_nt_ionisation(nonemptymgi, element, ion, s_renorm, rate_matrices, first_ion_used,
                                          nions_used);
+        nltepop_matrix_add_chargetransfer(nonemptymgi, element, ion, s_renorm_allions, rate_matrices, first_ion_used,
+                                          nions_used);
         nltepop_matrix_add_autoionisation(nonemptymgi, element, ion, s_renorm_allions, rate_matrices, first_ion_used,
                                           nions_used);
       }
@@ -1427,6 +1506,10 @@ void nltepop_apply_solution(const int element, const int nonemptymgi, const int 
     assert_always(pop >= 0.);
   }
 
+  // record the solved ion range, so that the charge transfer reactions skip the removed edge ions
+  grid::set_elements_lowermost_ion(nonemptymgi, element, first_ion_used);
+  grid::set_elements_uppermost_ion(nonemptymgi, element, first_ion_used + nions_used - 1);
+
   // set the ground level, excited level and possible superlevel populations for this element
   for (int ion = 0; ion < nions; ion++) {
     const int nlevels_excited_nlte = get_nlevels_excited_nlte(element, ion);
@@ -1496,6 +1579,39 @@ void nltepop_apply_solution(const int element, const int nonemptymgi, const int 
 }
 
 }  // anonymous namespace
+
+// Clear the stored NLTE solution ranges of every element in the cell, for the paths that replace
+// the NLTE solution with Saha populations without a solve.
+void nltepop_reset_solution_ranges(const int nonemptymgi) {
+  for (int element = 0; element < get_nelements(); element++) {
+    grid::set_elements_lowermost_ion(nonemptymgi, element, 0);
+  }
+}
+
+// Report whether the cell holds an NLTE matrix solution for the element. nltepop_reset_element()
+// writes the -1 marker into the NLTE level populations before the first solve and after a fallback
+// to LTE.
+auto elem_has_nlte_solution(const int nonemptymgi, const int element) -> bool {
+  for (int ion = 0; ion < get_nions(element); ion++) {
+    if (get_nlevels_excited_nlte(element, ion) > 0) {
+      return get_nlte_levelpop_over_rho(nonemptymgi, element, ion, 1) >= 0.;
+    }
+    if (ion_has_superlevel(element, ion)) {
+      return get_nlte_superlevelpop_over_rho_over_slpartfunc(nonemptymgi, element, ion) >= 0.;
+    }
+  }
+  return false;
+}
+
+// Return the ion range of the last NLTE matrix solution of the element in the cell, as the
+// lowermost and the uppermost ion, or {-1, -1} when the cell holds no solution.
+auto get_nlte_solution_range(const int nonemptymgi, const int element) -> std::pair<int, int> {
+  if (!elem_has_nlte_solution(nonemptymgi, element)) {
+    return {-1, -1};
+  }
+  return {grid::get_elements_lowermost_ion(nonemptymgi, element),
+          grid::get_elements_uppermost_ion(nonemptymgi, element)};
+}
 
 // Grassmann-Taksar-Heyman (GTH) state-elimination solve for the stationary distribution of the continuous-time
 // Markov chain whose generator is stored transposed in the NLTE rate matrix layout, i.e. rate_matrix[(to * n) +
@@ -1774,6 +1890,15 @@ void nltepop_write_restart_data(FILE* restart_file) {
     for (int nlteindex = 0; nlteindex < globals::total_nlte_levels; nlteindex++) {
       fprintf(restart_file, "%la ", nltepops_allcells[(nonemptymgi * globals::total_nlte_levels) + nlteindex]);
     }
+    if constexpr (ENABLE_CHARGE_TRANSFER_REACTIONS) {
+      // the solved ion range of each element, so that a resumed run starts with the same reactions
+      fprintf(restart_file, "\n");
+      for (int element = 0; element < get_nelements(); element++) {
+        const int lowermost_ion = grid::get_elements_lowermost_ion(static_cast<int>(nonemptymgi), element);
+        const int uppermost_ion = grid::get_elements_uppermost_ion(static_cast<int>(nonemptymgi), element);
+        fprintf(restart_file, "%d %d ", lowermost_ion, uppermost_ion);
+      }
+    }
   }
 }
 
@@ -1814,6 +1939,15 @@ void nltepop_read_restart_data(FILE* restart_file) {
     for (int nlteindex = 0; nlteindex < globals::total_nlte_levels; nlteindex++) {
       assert_always(fscanf(restart_file, "%la ",
                            &nltepops_allcells[(nonemptymgi * globals::total_nlte_levels) + nlteindex]) == 1);
+    }
+    if constexpr (ENABLE_CHARGE_TRANSFER_REACTIONS) {
+      for (int element = 0; element < get_nelements(); element++) {
+        int lowermost_ion = 0;
+        int uppermost_ion = 0;
+        assert_always(fscanf(restart_file, "%d %d ", &lowermost_ion, &uppermost_ion) == 2);
+        grid::set_elements_lowermost_ion(static_cast<int>(nonemptymgi), element, lowermost_ion);
+        grid::set_elements_uppermost_ion(static_cast<int>(nonemptymgi), element, uppermost_ion);
+      }
     }
   }
 }
