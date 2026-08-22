@@ -10,6 +10,7 @@ void init();
 // total charge transfer recombination rate [1/s] per ion of (element, upperion), for the transition
 // upperion -> (upperion - 1). Includes the partner densities and the clumping factor. The NLTE
 // matrix of the element under assembly covers the ions [first_ion_used, first_ion_used + nions_used).
+// Call these two functions only with ENABLE_CHARGE_TRANSFER_REACTIONS, after init().
 [[nodiscard]] auto ct_recombination_rate(int nonemptymgi, int element, int upperion, int first_ion_used, int nions_used)
     -> double;
 

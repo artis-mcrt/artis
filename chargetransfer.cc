@@ -47,6 +47,7 @@
 #include <span>
 #include <sstream>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "artisoptions.h"
@@ -131,6 +132,25 @@ struct LZChannel {
 auto lz_vgrid_v_cms(const int i) -> double { return LZ_VGRID_MIN_CMS * std::exp(i * LZ_VGRID_DLOG); }
 
 auto ratetable_temperature(const int i) -> double { return MINTEMP * std::exp(i * T_STEP_LOG); }
+
+// linear interpolation in a table on a log-uniform grid x_i = xmin * exp(i * dlog), with clamping
+// at the grid ends
+auto interpolate_loggrid(const std::span<const double> table, const double xmin, const double dlog, const double x)
+    -> double {
+  const int tablesize = static_cast<int>(table.size());
+  const double xmax = xmin * std::exp((tablesize - 1) * dlog);
+  if (x <= xmin) {
+    return table[0];
+  }
+  if (x >= xmax) {
+    return table[tablesize - 1];
+  }
+  const double findex = std::log(x / xmin) / dlog;
+  // findex can round up to the last grid point, so keep ilow + 1 inside the table
+  const int ilow = std::min(static_cast<int>(findex), tablesize - 2);
+  const double frac = findex - ilow;
+  return ((1. - frac) * table[ilow]) + (frac * table[ilow + 1]);
+}
 
 // a reaction is active only when both elements solve their ionisation balance in the NLTE matrix.
 // With only one side in the matrix, the partner element would keep its populations, and the
@@ -235,19 +255,7 @@ auto lz_thermal_average(const std::array<double, LZ_VGRIDSIZE>& sigmatable, cons
   for (int i = 0; i < LZ_THERMALNODES; i++) {
     const double x = XMIN * std::exp(i * dlnx);
     const double v = std::sqrt(2. * kT * x / mu_grams);
-
-    double sigma = 0.;
-    if (v <= LZ_VGRID_MIN_CMS) {
-      sigma = sigmatable[0];
-    } else if (v >= LZ_VGRID_MAX_CMS) {
-      sigma = sigmatable[LZ_VGRIDSIZE - 1];
-    } else {
-      const double findex = std::log(v / LZ_VGRID_MIN_CMS) / LZ_VGRID_DLOG;
-      // findex can round up to the last grid point, so keep ilow + 1 inside the table
-      const int ilow = std::min(static_cast<int>(findex), LZ_VGRIDSIZE - 2);
-      const double frac = findex - ilow;
-      sigma = ((1. - frac) * sigmatable[ilow]) + (frac * sigmatable[ilow + 1]);
-    }
+    const double sigma = interpolate_loggrid(sigmatable, LZ_VGRID_MIN_CMS, LZ_VGRID_DLOG, v);
 
     const double weight = (i == 0 || i == LZ_THERMALNODES - 1) ? 0.5 : 1.;
     integral += weight * sigma * x * x * std::exp(-x) * dlnx;
@@ -271,35 +279,20 @@ auto make_lz_ratecoeff_table(const std::span<const LZChannel> channels, const do
   return ratetable;
 }
 
-// interpolate a tabulated rate coefficient at the temperature T, with clamping at the grid ends
-auto lz_ratecoeff(const int ratetable_index, const double T) -> double {
-  const auto& ratetable = lz_ratecoeff_tables[ratetable_index];
-  if (T <= MINTEMP) {
-    return ratetable[0];
-  }
-  if (T >= MAXTEMP) {
-    return ratetable[TABLESIZE - 1];
-  }
-  const double findex = std::log(T / MINTEMP) / T_STEP_LOG;
-  const int ilow = std::min(static_cast<int>(findex), TABLESIZE - 2);
-  const double frac = findex - ilow;
-  return ((1. - frac) * ratetable[ilow]) + (frac * ratetable[ilow + 1]);
-}
-
-// the rate coefficient of a list entry of the owner ion (element, ion) with the list step
-auto eval_reaction_ratecoeff(const CTReaction& r, const int nonemptymgi, const double T_e, const int element,
-                             const int ion, const int step) -> double {
-  double k = (r.ratetable_index >= 0) ? lz_ratecoeff(r.ratetable_index, T_e)
-                                      : chargetransfer::evaluate_ctfit(r.a, r.b, r.c, r.d, r.eexp, r.tmin, r.tmax, T_e);
+// the rate coefficient of a list entry of the owner ion (element, ion) with the list step.
+// owner_partfunc_ratio is U(ion + step) / U(ion) of the owner ion in the cell.
+auto eval_reaction_ratecoeff(const CTReaction& r, const int nonemptymgi, const double T_e,
+                             const double owner_partfunc_ratio, const int step) -> double {
+  double k = (r.ratetable_index >= 0)
+                 ? interpolate_loggrid(lz_ratecoeff_tables[r.ratetable_index], MINTEMP, T_STEP_LOG, T_e)
+                 : chargetransfer::evaluate_ctfit(r.a, r.b, r.c, r.d, r.eexp, r.tmin, r.tmax, T_e);
   if (r.is_reverse) {
     // detailed balance for the per-ion rates: the products of this entry are the reactants of the
     // exothermic forward reaction, so the partition functions of the products go over those of the
     // reactants, with the Boltzmann factor of the energy release
-    const double partfunc_ratio = (get_ion_partfunct(nonemptymgi, element, ion + step) *
-                                   get_ion_partfunct(nonemptymgi, r.partner_element, r.partner_ion - step)) /
-                                  (get_ion_partfunct(nonemptymgi, element, ion) *
-                                   get_ion_partfunct(nonemptymgi, r.partner_element, r.partner_ion));
-    k *= partfunc_ratio * std::exp(-r.delta_e / (KB * T_e));
+    const double partner_partfunc_ratio = get_ion_partfunct(nonemptymgi, r.partner_element, r.partner_ion - step) /
+                                          get_ion_partfunct(nonemptymgi, r.partner_element, r.partner_ion);
+    k *= owner_partfunc_ratio * partner_partfunc_ratio * std::exp(-r.delta_e / (KB * T_e));
   }
   return k;
 }
@@ -308,28 +301,28 @@ auto eval_reaction_ratecoeff(const CTReaction& r, const int nonemptymgi, const d
 // NLTE matrix of the element covers the ion range [first_ion_used, first_ion_used + nions_used)
 auto sum_reaction_list(const std::vector<CTReaction>& list, const int nonemptymgi, const int element, const int ion,
                        const int step, const int first_ion_used, const int nions_used) -> double {
-  if (list.empty()) {
-    return 0.;
-  }
   const auto T_e = grid::Te_allcells[nonemptymgi];
+  const double owner_partfunc_ratio =
+      get_ion_partfunct(nonemptymgi, element, ion + step) / get_ion_partfunct(nonemptymgi, element, ion);
+  // a self-reaction has the owner element as its partner. The matrix under assembly then gives the
+  // range, because the stored range belongs to the previous solve.
+  const auto owner_range = std::pair{first_ion_used, first_ion_used + nions_used - 1};
   double total = 0.;
   for (const auto& r : list) {
     // the partner ion and its product ion must both be inside the NLTE matrix solution of the
     // partner element. An edge ion that the ion range reduction removed, or an element that fell
     // back to LTE, gets no reciprocal transition, and the reaction would then change the total
-    // ionic charge. A self-reaction has the owner element as its partner. The matrix under
-    // assembly then gives the range, because the stored range belongs to the previous solve.
-    const bool partner_is_owner = (r.partner_element == element);
-    const auto ion_in_partner_solution = [&](const int partner_ion) {
-      return partner_is_owner ? (partner_ion >= first_ion_used && partner_ion < (first_ion_used + nions_used))
-                              : ion_in_nlte_solution(nonemptymgi, r.partner_element, partner_ion);
-    };
-    if (!ion_in_partner_solution(r.partner_ion) || !ion_in_partner_solution(r.partner_ion - step)) {
+    // ionic charge.
+    const auto [lowermost_ion, uppermost_ion] =
+        (r.partner_element == element) ? owner_range : get_nlte_solution_range(nonemptymgi, r.partner_element);
+    const int partner_product_ion = r.partner_ion - step;
+    if (lowermost_ion < 0 || std::min(r.partner_ion, partner_product_ion) < lowermost_ion ||
+        std::max(r.partner_ion, partner_product_ion) > uppermost_ion) {
       continue;
     }
     const double nnpartner = get_nnion(nonemptymgi, r.partner_element, r.partner_ion);
     if (nnpartner > 0.) {
-      total += eval_reaction_ratecoeff(r, nonemptymgi, T_e, element, ion, step) * nnpartner;
+      total += eval_reaction_ratecoeff(r, nonemptymgi, T_e, owner_partfunc_ratio, step) * nnpartner;
     }
   }
   // with microclumping, the reactions happen at the in-clump partner density
@@ -456,9 +449,7 @@ void generate_estimated_reactions(const std::vector<std::array<int, 4>>& covered
     }
     for (int ion_acc = 1; ion_acc < get_nions(element_acc); ion_acc++) {
       const int ioncharge = get_ionstage(element_acc, ion_acc) - 1;
-      if (ioncharge < 1) {
-        continue;
-      }
+      assert_always(ioncharge >= 1);
       for (int element_don = 0; element_don < get_nelements(); element_don++) {
         if (get_nions(element_don) < 2 || get_ionstage(element_don, 0) != 1 || !element_has_ct_balance(element_don)) {
           continue;
@@ -589,18 +580,12 @@ void init() {
 
 auto ct_recombination_rate(const int nonemptymgi, const int element, const int upperion, const int first_ion_used,
                            const int nions_used) -> double {
-  if (!ENABLE_CHARGE_TRANSFER_REACTIONS) {
-    return 0.;
-  }
   return sum_reaction_list(reactions_rec_perion[get_uniqueionindex(element, upperion)], nonemptymgi, element, upperion,
                            STEP_RECOMBINATION, first_ion_used, nions_used);
 }
 
 auto ct_ionisation_rate(const int nonemptymgi, const int element, const int ion, const int first_ion_used,
                         const int nions_used) -> double {
-  if (!ENABLE_CHARGE_TRANSFER_REACTIONS) {
-    return 0.;
-  }
   return sum_reaction_list(reactions_ion_perion[get_uniqueionindex(element, ion)], nonemptymgi, element, ion,
                            STEP_IONISATION, first_ion_used, nions_used);
 }

@@ -260,6 +260,9 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
       nnion_prev.resize(get_includedions());
       nlte_solution_prev.resize(get_nelements());
       for (int element = 0; element < get_nelements(); element++) {
+        if (!elem_has_nlte_levels(element)) {
+          continue;
+        }
         nlte_solution_prev[element] = get_nlte_solution_range(nonemptymgi, element);
         for (int ion = 0; ion < get_nions(element); ion++) {
           nnion_prev[get_uniqueionindex(element, ion)] = get_nnion(nonemptymgi, element, ion);

@@ -22,7 +22,6 @@ void solve_nlte_pops_element(int element, int nonemptymgi, int timestep, int nlt
 void nltepop_reset_solution_ranges(int nonemptymgi);
 [[nodiscard]] auto elem_has_nlte_solution(int nonemptymgi, int element) -> bool;
 [[nodiscard]] auto get_nlte_solution_range(int nonemptymgi, int element) -> std::pair<int, int>;
-[[nodiscard]] auto ion_in_nlte_solution(int nonemptymgi, int element, int ion) -> bool;
 // GTH solve for the stationary distribution of the NLTE rate matrix, exposed here so that unittests.cc can test
 // it (see the definition in nltepop.cc for the full contract)
 [[nodiscard]] auto gth_stationary_distribution(std::span<double> rate_matrix, std::span<double> vec_x)

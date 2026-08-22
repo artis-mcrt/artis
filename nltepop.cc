@@ -732,9 +732,8 @@ void nltepop_matrix_add_nt_ionisation(const int nonemptymgi, const int element, 
 // the previous population update, and the outer NLTE iteration loop makes the coupled elements
 // converge together.
 void nltepop_matrix_add_chargetransfer(const int nonemptymgi, const int element, const int ion,
-                                       const std::span<const double> s_renorm,
-                                       const std::span<const double> s_renorm_upperion, RateMatrices& rate_matrices,
-                                       const int first_ion_used, const int nions_used) {
+                                       const std::span<const std::vector<double>> s_renorm_allions,
+                                       RateMatrices& rate_matrices, const int first_ion_used, const int nions_used) {
   if (!ENABLE_CHARGE_TRANSFER_REACTIONS) {
     return;
   }
@@ -745,8 +744,8 @@ void nltepop_matrix_add_chargetransfer(const int nonemptymgi, const int element,
   const double ct_ionisation =
       chargetransfer::ct_ionisation_rate(nonemptymgi, element, ion, first_ion_used, nions_used);
   if (ct_ionisation > 0.) {
-    nltepop_matrix_add_ion_to_ion_rate(rate_matrices.chargetransfer, element, ion, ion + 1, ct_ionisation, s_renorm,
-                                       first_ion_used, nlte_dimension);
+    nltepop_matrix_add_ion_to_ion_rate(rate_matrices.chargetransfer, element, ion, ion + 1, ct_ionisation,
+                                       s_renorm_allions[ion], first_ion_used, nlte_dimension);
   }
 
   // charge transfer recombination: every level of (ion + 1) goes to the ground state of ion
@@ -754,7 +753,7 @@ void nltepop_matrix_add_chargetransfer(const int nonemptymgi, const int element,
       chargetransfer::ct_recombination_rate(nonemptymgi, element, ion + 1, first_ion_used, nions_used);
   if (ct_recombination > 0.) {
     nltepop_matrix_add_ion_to_ion_rate(rate_matrices.chargetransfer, element, ion + 1, ion, ct_recombination,
-                                       s_renorm_upperion, first_ion_used, nlte_dimension);
+                                       s_renorm_allions[ion + 1], first_ion_used, nlte_dimension);
   }
 }
 
@@ -1402,8 +1401,8 @@ auto nltepop_solve_matrix_with_ion_reduction(const int element, const int nonemp
                                       first_ion_used, nions_used);
         nltepop_matrix_add_nt_ionisation(nonemptymgi, element, ion, s_renorm, rate_matrices, first_ion_used,
                                          nions_used);
-        nltepop_matrix_add_chargetransfer(nonemptymgi, element, ion, s_renorm, s_renorm_allions[ion + 1], rate_matrices,
-                                          first_ion_used, nions_used);
+        nltepop_matrix_add_chargetransfer(nonemptymgi, element, ion, s_renorm_allions, rate_matrices, first_ion_used,
+                                          nions_used);
         nltepop_matrix_add_autoionisation(nonemptymgi, element, ion, s_renorm_allions, rate_matrices, first_ion_used,
                                           nions_used);
       }
@@ -1594,9 +1593,11 @@ void nltepop_reset_solution_ranges(const int nonemptymgi) {
 // to LTE.
 auto elem_has_nlte_solution(const int nonemptymgi, const int element) -> bool {
   for (int ion = 0; ion < get_nions(element); ion++) {
-    if ((get_nlevels_excited_nlte(element, ion) > 0) || ion_has_superlevel(element, ion)) {
-      return nltepops_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * globals::total_nlte_levels) +
-                               get_allnltelevelsindexstart(element, ion)] >= 0.;
+    if (get_nlevels_excited_nlte(element, ion) > 0) {
+      return get_nlte_levelpop_over_rho(nonemptymgi, element, ion, 1) >= 0.;
+    }
+    if (ion_has_superlevel(element, ion)) {
+      return get_nlte_superlevelpop_over_rho_over_slpartfunc(nonemptymgi, element, ion) >= 0.;
     }
   }
   return false;
@@ -1610,14 +1611,6 @@ auto get_nlte_solution_range(const int nonemptymgi, const int element) -> std::p
   }
   return {grid::get_elements_lowermost_ion(nonemptymgi, element),
           grid::get_elements_uppermost_ion(nonemptymgi, element)};
-}
-
-// Report whether the ion was inside the ion range of the last NLTE matrix solution of the element.
-// The ion range reduction after a failed solve removes an edge ion, and the matrix then holds no
-// transition across that edge.
-auto ion_in_nlte_solution(const int nonemptymgi, const int element, const int ion) -> bool {
-  const auto [lowermost_ion, uppermost_ion] = get_nlte_solution_range(nonemptymgi, element);
-  return (lowermost_ion >= 0) && (ion >= lowermost_ion) && (ion <= uppermost_ion);
 }
 
 // Grassmann-Taksar-Heyman (GTH) state-elimination solve for the stationary distribution of the continuous-time
