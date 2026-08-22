@@ -82,7 +82,11 @@ struct RateMatrices {
     coll_bf.reserve(max_dim_squared);
     ntcoll_bf.reserve(max_dim_squared);
     autoion.reserve(max_dim_squared);
-    chargetransfer.reserve(max_dim_squared);
+    // the charge transfer matrix exists only with the option on, so the default presets pay no
+    // memory or clearing cost for it
+    if constexpr (ENABLE_CHARGE_TRANSFER_REACTIONS) {
+      chargetransfer.reserve(max_dim_squared);
+    }
   }
 
   void set_used_dimension(int used_nlte_dimension_in) {
@@ -105,8 +109,10 @@ struct RateMatrices {
     ntcoll_bf.resize(used_dim_squared);
     assert_always(std::cmp_less_equal(used_dim_squared, autoion.capacity()));
     autoion.resize(used_dim_squared);
-    assert_always(std::cmp_less_equal(used_dim_squared, chargetransfer.capacity()));
-    chargetransfer.resize(used_dim_squared);
+    if constexpr (ENABLE_CHARGE_TRANSFER_REACTIONS) {
+      assert_always(std::cmp_less_equal(used_dim_squared, chargetransfer.capacity()));
+      chargetransfer.resize(used_dim_squared);
+    }
 
     std::ranges::fill(rad_bb, 0.);
     std::ranges::fill(coll_bb, 0.);
@@ -115,7 +121,9 @@ struct RateMatrices {
     std::ranges::fill(coll_bf, 0.);
     std::ranges::fill(ntcoll_bf, 0.);
     std::ranges::fill(autoion, 0.);
-    std::ranges::fill(chargetransfer, 0.);
+    if constexpr (ENABLE_CHARGE_TRANSFER_REACTIONS) {
+      std::ranges::fill(chargetransfer, 0.);
+    }
   }
 
   [[nodiscard]] auto get_summed_rate_matrix() -> std::span<double> {
@@ -127,10 +135,14 @@ struct RateMatrices {
     assert_always(summed_rates.size() == coll_bf.size());
     assert_always(summed_rates.size() == ntcoll_bf.size());
     assert_always(summed_rates.size() == autoion.size());
-    assert_always(summed_rates.size() == chargetransfer.size());
+    if constexpr (ENABLE_CHARGE_TRANSFER_REACTIONS) {
+      assert_always(summed_rates.size() == chargetransfer.size());
+    }
     for (auto i = 0U; i < summed_rates.size(); i++) {
-      summed_rates[i] = rad_bb[i] + coll_bb[i] + ntcoll_bb[i] + rad_bf[i] + coll_bf[i] + ntcoll_bf[i] + autoion[i] +
-                        chargetransfer[i];
+      summed_rates[i] = rad_bb[i] + coll_bb[i] + ntcoll_bb[i] + rad_bf[i] + coll_bf[i] + ntcoll_bf[i] + autoion[i];
+      if constexpr (ENABLE_CHARGE_TRANSFER_REACTIONS) {
+        summed_rates[i] += chargetransfer[i];
+      }
     }
 
     return summed_rates;
@@ -295,8 +307,10 @@ void print_level_rates_summary(const int element, const int selected_ion, const 
                                                   only_levels_below, only_levels_above);
     const double autoion_total =
         get_total_rate(selected_index, rate_matrices.autoion, popvec, into_level, only_levels_below, only_levels_above);
-    const double chargetransfer_total = get_total_rate(selected_index, rate_matrices.chargetransfer, popvec, into_level,
-                                                       only_levels_below, only_levels_above);
+    const double chargetransfer_total = ENABLE_CHARGE_TRANSFER_REACTIONS
+                                            ? get_total_rate(selected_index, rate_matrices.chargetransfer, popvec,
+                                                             into_level, only_levels_below, only_levels_above)
+                                            : 0.;
 
     printlnlog("{}{}{:10.2e} {:10.2e} {:10.2e} {:10.2e} {:10.2e} {:10.2e} {:10.2e} {:10.2e}",
                into_level ? " from " : "   to ", only_levels_below ? "below " : "above ", rad_bb_total, coll_bb_total,
@@ -360,7 +374,8 @@ void print_level_rates(const int nonemptymgi, const int timestep, const int elem
   const double rad_bf_in_total = get_total_rate_in(selected_index, rate_matrices.rad_bf, popvec);
   const double coll_bf_in_total = get_total_rate_in(selected_index, rate_matrices.coll_bf, popvec);
   const double ntcoll_bf_in_total = get_total_rate_in(selected_index, rate_matrices.ntcoll_bf, popvec);
-  const double ct_in_total = get_total_rate_in(selected_index, rate_matrices.chargetransfer, popvec);
+  const double ct_in_total =
+      ENABLE_CHARGE_TRANSFER_REACTIONS ? get_total_rate_in(selected_index, rate_matrices.chargetransfer, popvec) : 0.;
   const double total_rate_in = rad_bb_in_total + coll_bb_in_total + ntcoll_bb_in_total + rad_bf_in_total +
                                coll_bf_in_total + ntcoll_bf_in_total + ct_in_total;
   printlnlog(
@@ -375,7 +390,8 @@ void print_level_rates(const int nonemptymgi, const int timestep, const int elem
   const double rad_bf_out_total = get_total_rate_out(selected_index, rate_matrices.rad_bf, popvec);
   const double coll_bf_out_total = get_total_rate_out(selected_index, rate_matrices.coll_bf, popvec);
   const double ntcoll_bf_out_total = get_total_rate_out(selected_index, rate_matrices.ntcoll_bf, popvec);
-  const double ct_out_total = get_total_rate_out(selected_index, rate_matrices.chargetransfer, popvec);
+  const double ct_out_total =
+      ENABLE_CHARGE_TRANSFER_REACTIONS ? get_total_rate_out(selected_index, rate_matrices.chargetransfer, popvec) : 0.;
   const double total_rate_out = rad_bb_out_total + coll_bb_out_total + ntcoll_bb_out_total + rad_bf_out_total +
                                 coll_bf_out_total + ntcoll_bf_out_total + ct_out_total;
   printlnlog(
@@ -406,8 +422,11 @@ void print_level_rates(const int nonemptymgi, const int timestep, const int elem
     const double coll_bf_out = rate_matrices.coll_bf[ij_index_selectedindex] * pop_selectedlevel;
     const double ntcoll_bf_in = rate_matrices.ntcoll_bf[ij_selectedindex_index] * pop;
     const double ntcoll_bf_out = rate_matrices.ntcoll_bf[ij_index_selectedindex] * pop_selectedlevel;
-    const double ct_in = rate_matrices.chargetransfer[ij_selectedindex_index] * pop;
-    const double ct_out = rate_matrices.chargetransfer[ij_index_selectedindex] * pop_selectedlevel;
+    const double ct_in =
+        ENABLE_CHARGE_TRANSFER_REACTIONS ? rate_matrices.chargetransfer[ij_selectedindex_index] * pop : 0.;
+    const double ct_out = ENABLE_CHARGE_TRANSFER_REACTIONS
+                              ? rate_matrices.chargetransfer[ij_index_selectedindex] * pop_selectedlevel
+                              : 0.;
 
     const bool nonzero_rate_in =
         (fabs(rad_bb_in) > 0. || fabs(coll_bb_in) > 0. || fabs(ntcoll_bb_in) > 0. || fabs(rad_bf_in) > 0. ||
