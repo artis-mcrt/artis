@@ -502,6 +502,12 @@ void mpi_communicate_grid_properties() {
                        root_node_id, globals::mpi_comm_internode);
       }
 
+      if constexpr (NLTE_TIME_DEPENDENT_FIRST_TIMESTEP.has_value()) {
+        // rank 0 writes the solution times of every cell into the restart file
+        MPI_Bcast_safe(solution_time_allcells.subspan(root_nstart_nonempty, root_ndo_nonempty), root_node_id,
+                       globals::mpi_comm_internode);
+      }
+
       MPI_Bcast_safe(
           grid::elem_meanweight_allcells.subspan(root_nstart_nonempty * nelements, root_ndo_nonempty * nelements),
           root_node_id, globals::mpi_comm_internode);

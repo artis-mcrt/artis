@@ -339,6 +339,13 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
           mgi, nts, nlte_iter);
     }
   }
+
+  if constexpr (NLTE_TIME_DEPENDENT_FIRST_TIMESTEP.has_value()) {
+    // the estimators file keeps its cooling record format, so the heat-capacity term goes to the log
+    printlnlog("cell {} timestep {}: heat-capacity term of the thermal balance {:.5e} [erg/s/cm^3]", mgi, nts,
+               heatingcoolingrates.cooling_heatcapacity);
+    nltepop_update_solution_time(nonemptymgi, nts);
+  }
 }
 
 void update_gamma_corrphotoionrenorm_bfheating_estimators(const int nonemptymgi, const double estimator_normfactor) {
@@ -703,6 +710,16 @@ void update_grid(std::ostream& estimators_file, const int nts, const int nts_pre
   std::ranges::fill(heatingcoolingrates_thisrankcells, HeatingCoolingRates{});
 
   const auto nstart_nonempty = grid::get_nstart_nonempty(my_rank);
+
+  if constexpr (NLTE_TIME_DEPENDENT_FIRST_TIMESTEP.has_value()) {
+    if (titer == 0) {
+      // keep the state of the last grid update for the time terms, before the abundances and the
+      // densities change for this timestep
+      for (int nonemptymgi = nstart_nonempty; nonemptymgi < (nstart_nonempty + ndo_nonempty); nonemptymgi++) {
+        nltepop_store_previous_state(nonemptymgi);
+      }
+    }
+  }
 
   // the decay chain calculations depend only on the timestep midpoint, so the per-nuclide mass fraction
   // coefficients are computed once and reused for the abundance update, the analytic emission rates of the

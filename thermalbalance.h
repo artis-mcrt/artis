@@ -8,8 +8,8 @@
 
 // Per-cell energy budget of the free electrons. All members are erg/s/cm^3 except dep_frac_heating.
 // call_T_e_finder() solves heating_ff + heating_bf + heating_collisional + heating_dep
-//                        = cooling_ff + cooling_fb + cooling_collisional + cooling_adiabatic for T_e.
-// Only the heating_* and cooling_* members are terms in that balance. The dep_* members feed it (via
+//                        = cooling_ff + cooling_fb + cooling_collisional + cooling_adiabatic + cooling_heatcapacity
+// for T_e. Only the heating_* and cooling_* members are terms in that balance. The dep_* members feed it (via
 // heating_dep), dep_frac_heating is computed from them, and the eps_*_ana members are reported to
 // estimators.out and used to set some dep_* values, but never enter the balance directly.
 struct HeatingCoolingRates {
@@ -17,6 +17,9 @@ struct HeatingCoolingRates {
   double cooling_fb{0};
   double cooling_ff{0};
   double cooling_adiabatic{0};  // work done by the expanding ejecta, p * (dV/dt) / V
+  // the change of the thermal energy density 3/2 k_B n_tot T_e from the previous grid update over the time
+  // interval (backward Euler). Zero without NLTE_TIME_DEPENDENT_FIRST_TIMESTEP and in a steady-state timestep.
+  double cooling_heatcapacity{0};
 
   double heating_collisional{0};
   double heating_bf{0};

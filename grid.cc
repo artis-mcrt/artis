@@ -430,6 +430,10 @@ void allocate_nonemptycells_composition_cooling() {
 
   // -1 indicates that there is currently no information on the nlte populations
   nltepops_allcells = MPI_shared_array<double>(nonempty_npts_model_ptrdifft * globals::total_nlte_levels, -1.);
+
+  if constexpr (NLTE_TIME_DEPENDENT_FIRST_TIMESTEP.has_value()) {
+    nltepop_allocate_time_dependent_arrays();
+  }
 }
 
 // build the mapping between model cells and propagation cells, then allocate the per-cell

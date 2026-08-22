@@ -27,6 +27,7 @@
 #include "ltepop.h"
 #include "macroatom.h"
 #include "mpi_logging.h"
+#include "nltepop.h"
 #include "nonthermal.h"
 #include "radfield.h"
 #include "ratecoeff.h"
@@ -179,10 +180,23 @@ auto T_e_eqn_heating_minus_cooling(const double T_e, int nonemptymgi, const doub
   const double V = volumetmin * pow3(t_current / globals::tmin);
   heatingcoolingrates.cooling_adiabatic = p * dV_on_dt / V;
 
+  // Backward Euler time term of the thermal energy density U = 3/2 k_B n_tot T_e (see
+  // NLTE_TIME_DEPENDENT_FIRST_TIMESTEP): (U_new - U_old) / dt, with the old electron density from the stored
+  // ion fractions and the current element densities. The atom number per comoving volume stays constant, so
+  // U_new - U_old = 3/2 k_B [n_tot (T_e - T_e_old) + T_e_old (nne - nne_old)].
+  heatingcoolingrates.cooling_heatcapacity = 0.;
+  if (const auto dt = get_time_dependent_dt(nonemptymgi, globals::timestep); dt.has_value()) {
+    const double T_e_old = Te_prev_allcells[nonemptymgi];
+    const double nne_old = get_nne_prev(nonemptymgi);
+    heatingcoolingrates.cooling_heatcapacity =
+        1.5 * KB * ((nntot * (T_e - T_e_old)) + (T_e_old * (nne - nne_old))) / *dt;
+  }
+
   const double total_heating_rate = heatingcoolingrates.heating_ff + heatingcoolingrates.heating_bf +
                                     heatingcoolingrates.heating_collisional + heatingcoolingrates.heating_dep;
   const double total_coolingrate = heatingcoolingrates.cooling_ff + heatingcoolingrates.cooling_fb +
-                                   heatingcoolingrates.cooling_collisional + heatingcoolingrates.cooling_adiabatic;
+                                   heatingcoolingrates.cooling_collisional + heatingcoolingrates.cooling_adiabatic +
+                                   heatingcoolingrates.cooling_heatcapacity;
 
   return total_heating_rate - total_coolingrate;
 }
