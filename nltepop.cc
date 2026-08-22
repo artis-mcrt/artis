@@ -461,9 +461,11 @@ void print_level_rates(const int nonemptymgi, const int timestep, const int elem
 }
 
 void nltepop_reset_element(const int nonemptymgi, const int element) {
-  const auto rangeindex = (static_cast<ptrdiff_t>(nonemptymgi) * get_nelements()) + element;
-  nlte_solution_firstion_allcells[rangeindex] = -1;
-  nlte_solution_nions_allcells[rangeindex] = 0;
+  if constexpr (ENABLE_CHARGE_TRANSFER_REACTIONS) {
+    const auto rangeindex = (static_cast<ptrdiff_t>(nonemptymgi) * get_nelements()) + element;
+    nlte_solution_firstion_allcells[rangeindex] = -1;
+    nlte_solution_nions_allcells[rangeindex] = 0;
+  }
   for (int ion = 0; ion < get_nions(element); ion++) {
     const int nlte_start = get_allnltelevelsindexstart(element, ion);
     std::fill_n(&nltepops_allcells[(nonemptymgi * globals::total_nlte_levels) + nlte_start],
@@ -1515,9 +1517,11 @@ void nltepop_apply_solution(const int element, const int nonemptymgi, const int 
   }
 
   // record the solved ion range, so that the charge transfer reactions skip the removed edge ions
-  const auto rangeindex = (static_cast<ptrdiff_t>(nonemptymgi) * get_nelements()) + element;
-  nlte_solution_firstion_allcells[rangeindex] = first_ion_used;
-  nlte_solution_nions_allcells[rangeindex] = nions_used;
+  if constexpr (ENABLE_CHARGE_TRANSFER_REACTIONS) {
+    const auto rangeindex = (static_cast<ptrdiff_t>(nonemptymgi) * get_nelements()) + element;
+    nlte_solution_firstion_allcells[rangeindex] = first_ion_used;
+    nlte_solution_nions_allcells[rangeindex] = nions_used;
+  }
 
   // set the ground level, excited level and possible superlevel populations for this element
   for (int ion = 0; ion < nions; ion++) {

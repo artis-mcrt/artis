@@ -424,9 +424,13 @@ void allocate_nonemptycells_composition_cooling() {
   // -1 indicates that there is currently no information on the nlte populations
   nltepops_allcells = MPI_shared_array<double>(nonempty_npts_model_ptrdifft * globals::total_nlte_levels, -1.);
 
-  // -1 indicates that the cell holds no NLTE matrix solution for the element
-  nlte_solution_firstion_allcells = MPI_shared_array<int>(nonempty_npts_model_ptrdifft * get_nelements(), -1);
-  nlte_solution_nions_allcells = MPI_shared_array<int>(nonempty_npts_model_ptrdifft * get_nelements(), 0);
+  // the charge transfer reactions read the solved NLTE ion range of each element. The construction
+  // is collective over the node, and the constexpr option keeps every rank on the same path.
+  if constexpr (ENABLE_CHARGE_TRANSFER_REACTIONS) {
+    // -1 indicates that the cell holds no NLTE matrix solution for the element
+    nlte_solution_firstion_allcells = MPI_shared_array<int>(nonempty_npts_model_ptrdifft * get_nelements(), -1);
+    nlte_solution_nions_allcells = MPI_shared_array<int>(nonempty_npts_model_ptrdifft * get_nelements(), 0);
+  }
 }
 
 // build the mapping between model cells and propagation cells, then allocate the per-cell

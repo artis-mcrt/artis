@@ -329,8 +329,12 @@ auto read_reaction_file() -> std::vector<std::array<int, 4>> {
     store(z_acc, ionstage_acc, z_don, ionstage_don, params, autoreverse);
   }
 
-  // the second table: the estimates, which share one line of coefficients
-  get_noncommentline(ctfile, line);
+  // the second table: the estimates, which share one line of coefficients. An older file ends
+  // after the first table, so a missing second table is not an error.
+  if (!get_noncommentline(ctfile, line)) {
+    printlnlog("The charge transfer file holds no second table of estimates");
+    return covered;
+  }
   int fileestimatecount = 0;
   assert_always(std::istringstream{line} >> fileestimatecount);
   assert_always(fileestimatecount >= 0);
