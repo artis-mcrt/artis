@@ -198,7 +198,7 @@ auto sigma_lz_sorted_channels(const std::span<const LZChannel> channels, const d
     std::size_t ncrossed = 0;
     for (; ncrossed < channels.size() && channels[ncrossed].rx_au > b_au; ncrossed++) {
       const auto& channel = channels[ncrossed];
-      const double t = std::sqrt(1. - (b_au * b_au) / (channel.rx_au * channel.rx_au));
+      const double t = std::sqrt(1. - ((b_au * b_au) / (channel.rx_au * channel.rx_au)));
       const double p = std::exp(-channel.w_au / (v_au * t));
       p_pass[ncrossed] = p;
       captured[ncrossed] = p_entrance * (1. - p);
