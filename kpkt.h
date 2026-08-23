@@ -4,6 +4,7 @@
 #define KPKT_H
 
 #include <cstddef>
+#include <cstdio>
 #include <span>
 
 #include "atomic.h"
@@ -17,8 +18,9 @@ namespace kpkt {
 
 inline MPI_shared_array<double> ion_cooling_contribs_allcells{};
 
-// the share of the thermal energy flux of each cell that becomes radiation (see
-// NLTE_TIME_DEPENDENT_FIRST_TIMESTEP). The allocation happens only when that option has a value.
+// The share of the thermal energy flux of each cell that becomes radiation. The thermal balance spends the rest
+// on the expansion work and, with NLTE_TIME_DEPENDENT_FIRST_TIMESTEP, on the change of the thermal energy of
+// the gas. Each time a k-packet selects a cooling process, its energy gets this factor.
 inline MPI_shared_array<double> radiative_energy_factor_allcells{};
 inline int ncoolingterms{0};
 
@@ -27,6 +29,8 @@ void calculate_cooling_rates(int nonemptymgi, HeatingCoolingRates* heatingcoolin
 auto set_radiative_energy_factor(int nonemptymgi, const HeatingCoolingRates& heatingcoolingrates) -> double;
 void reset_radiative_energy_factor(int nonemptymgi);
 [[nodiscard]] DEVICE_FUNC auto get_radiative_energy_factor(int nonemptymgi) -> double;
+void write_restart_data(FILE* restart_file);
+void read_restart_data(FILE* restart_file);
 DEVICE_FUNC void do_kpkt_blackbody(Packet& pkt);
 DEVICE_FUNC void do_kpkt(Packet& pkt, double t2, int nts);
 

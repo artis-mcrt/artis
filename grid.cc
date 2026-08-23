@@ -427,6 +427,7 @@ void allocate_nonemptycells_composition_cooling() {
   ion_groundlevelpops_allcells = MPI_shared_array<float>(nonempty_npts_model_ptrdifft * get_includedions(), 0.);
   ion_partfuncts_allcells = MPI_shared_array<float>(nonempty_npts_model_ptrdifft * get_includedions(), 0.);
   kpkt::ion_cooling_contribs_allcells = MPI_shared_array<double>(nonempty_npts_model_ptrdifft * get_includedions(), 0.);
+  kpkt::radiative_energy_factor_allcells = MPI_shared_array<double>(nonempty_npts_model_ptrdifft, 1.);
 
   // -1 indicates that there is currently no information on the nlte populations
   nltepops_allcells = MPI_shared_array<double>(nonempty_npts_model_ptrdifft * globals::total_nlte_levels, -1.);
@@ -1071,6 +1072,7 @@ void read_grid_restart_data(const int timestep) {
     // all data is shared on the node
     nonthermal::read_restart_data(gridsave_file);
     nltepop_read_restart_data(gridsave_file);
+    kpkt::read_restart_data(gridsave_file);
   }
   MPI_Barrier_node();
   fclose(gridsave_file);
@@ -2252,6 +2254,7 @@ void write_grid_restart_data(const int timestep) {
   radfield::write_restart_data(gridsave_file);
   nonthermal::write_restart_data(gridsave_file);
   nltepop_write_restart_data(gridsave_file);
+  kpkt::write_restart_data(gridsave_file);
   fclose(gridsave_file);
   const auto write_restart_duration =
       std::chrono::duration<double>(std::chrono::steady_clock::now() - sys_time_start_write_restart).count();
