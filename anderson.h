@@ -1,5 +1,5 @@
 // Anderson acceleration of a fixed-point iteration x = G(x) for a small state vector (see
-// NLTE_OUTER_ANDERSON_DEPTH). The accelerator keeps the last iterates and their map outputs, and
+// NLTE_OUTER_ANDERSON_DEPTH). The accelerator keeps the last iterates and their map outputs. It
 // combines them so that the residual of the combination is minimal in the least-squares sense.
 
 #ifndef ANDERSON_H
@@ -38,8 +38,8 @@ class AndersonAccelerator {
     const std::size_t m_max = std::min(nstored_, depth_);
 
     // consecutive differences: entry j is (pair k-j) - (pair k-j-1), with pair k = (g, residual). Each
-    // difference of the residuals gets a unit norm, so the test of the solve below sees the angle between
-    // the differences and not their size
+    // difference of the residuals gets a unit norm. The test of the solve below then sees the angle
+    // between the differences and not their size.
     std::array<State, MAXDEPTH> dres_chain{};
     std::array<State, MAXDEPTH> dg_chain{};
     std::array<double, MAXDEPTH> dres_norm{};
