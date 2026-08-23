@@ -486,7 +486,11 @@ DEVICE_FUNC void do_kpkt(Packet& pkt, const double t2, const int nts) {
 
   const auto nonemptymgi = grid::get_propcell_nonemptymgi(pkt.cellindex);
 
-  // the thermal balance of the cell decides which share of the thermal energy becomes radiation
+  // The thermal balance of the cell decides which share of the thermal energy becomes radiation. The factor
+  // applies on every pass through the thermal pool, also when the macro-atom returns the packet as a
+  // k-packet. The heating rate of the balance counts that return as collisional heating, so each pass is
+  // one flux event. The error of this choice is of second order in (1 - factor) and proportional to the
+  // share of the k-packet energy that the macro-atom returns, which is small at nebular densities.
   pkt.e_cmf *= get_radiative_energy_factor(nonemptymgi);
   const std::span<const double> ion_cooling_contribs_thiscell = get_cell_ion_cooling_contribs(nonemptymgi);
   const double rndcool_ion = rng_uniform(get_rngstate(pkt)) * ion_cooling_contribs_thiscell.back();
