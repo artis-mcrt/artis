@@ -712,11 +712,16 @@ void test_anderson_accelerator() {
   const auto [iterations_plain, x_plain] = iterate(0);
   const auto [iterations_depth1, x_depth1] = iterate(1);
   const auto [iterations_depth2, x_depth2] = iterate(2);
+  const auto [iterations_depth4, x_depth4] = iterate(4);
   check(iterations_plain > 100, "plain successive substitution needs more than 100 iterations");
   check(iterations_depth1 < iterations_plain / 4, "Anderson depth 1 needs fewer than a quarter of the iterations");
   check(iterations_depth2 <= 4, "Anderson depth 2 solves a linear 2-D map in at most 4 iterations");
   check(std::abs(x_depth2[0] - 10.) < 1e-6 && std::abs(x_depth2[1] - 2.) < 1e-6,
         "Anderson depth 2 reaches the fixed point");
+  // a depth above the state dimension gives a rank deficient system, and the solve must fall back
+  // to a smaller depth instead of a round-off pivot
+  check(iterations_depth4 <= 6 && std::abs(x_depth4[0] - 10.) < 1e-6 && std::abs(x_depth4[1] - 2.) < 1e-6,
+        "Anderson depth 4 on a 2-D map reaches the fixed point with the smaller depth fallback");
 
   // a map with a 2-cycle: x -> c - x never converges by itself, and with depth 2 the two stored
   // residual differences are exact negatives. The accelerator must then use depth 1 and find the

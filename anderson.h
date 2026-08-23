@@ -96,6 +96,15 @@ class AndersonAccelerator {
   static constexpr auto solve_small_system(std::array<std::array<double, MAXDEPTH>, MAXDEPTH> a,
                                            std::array<double, MAXDEPTH> b, const std::size_t m,
                                            std::array<double, MAXDEPTH>& solution) -> bool {
+    double scale = 0.;
+    for (std::size_t row = 0; row < m; row++) {
+      for (std::size_t col = 0; col < m; col++) {
+        scale = std::max(scale, std::abs(a[row][col]));
+      }
+    }
+    if (!(scale > 0.)) {
+      return false;
+    }
     for (std::size_t col = 0; col < m; col++) {
       std::size_t pivot = col;
       for (std::size_t row = col + 1; row < m; row++) {
@@ -103,7 +112,9 @@ class AndersonAccelerator {
           pivot = row;
         }
       }
-      if (!(std::abs(a[pivot][col]) > 0.)) {
+      // a pivot at the round-off level means a rank deficient system, e.g. more residual differences
+      // than state components
+      if (!(std::abs(a[pivot][col]) > 1e-12 * scale)) {
         return false;
       }
       std::swap(a[col], a[pivot]);

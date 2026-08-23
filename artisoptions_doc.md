@@ -18,13 +18,13 @@ constexpr int NLTEITER;
 
 // Anderson acceleration of the NLTE/Te/Spencer-Fano iteration. The iteration maps the electron temperature
 // and the electron density of one pass to the values of the next pass. With a depth above zero, the
-// accelerator combines the last iterates so that the residual of the combination is minimal, and the
-// next pass starts from that combination. A depth of 2 is a good choice. Zero keeps the plain successive
-// substitution.
+// accelerator combines the last iterates so that the residual of the combination is minimal. The next
+// pass then starts from that combination. The state has two components, so the largest depth is 2, and
+// 2 is a good choice. Zero keeps the plain successive substitution.
 //
 // The accelerator forgets its history when an element falls back to LTE or changes its solved ion range,
-// because the map is then discontinuous. A step that leaves [MINTEMP, MAXTEMP] is rejected. The populations
-// of a converged cell come from a plain element solve at the final T_e and nne.
+// because the map is then discontinuous. A step that leaves [MINTEMP, MAXTEMP] is rejected. The convergence
+// test comes before the injection, so a converged cell keeps the output of a plain pass.
 constexpr int NLTE_OUTER_ANDERSON_DEPTH;
 
 // Relative tolerance of the NLTE/Te/Spencer-Fano iteration for nne and T_e. With a depth of zero the loop
