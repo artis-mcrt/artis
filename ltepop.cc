@@ -149,7 +149,8 @@ auto nne_solution_f(const double nne_assumed, const int nonemptymgi, const bool 
         nne_after += get_element_nne_contrib(nonemptymgi, element);
       } else {
         const bool use_phi_saha = force_saha || FORCE_SAHA_ION_BALANCE(get_atomicnumber(element));
-        const auto ionfractions = calculate_ionfractions(element, nonemptymgi, nne_assumed, use_phi_saha);
+        THREADLOCALONHOST std::vector<double> ionfractions;
+        calculate_ionfractions(element, nonemptymgi, nne_assumed, use_phi_saha, ionfractions);
         const int uppermost_ion = static_cast<int>(std::ssize(ionfractions) - 1);
         for (int ion = 0; ion <= uppermost_ion; ion++) {
           const double nnion = nnelement * ionfractions[ion];
@@ -354,16 +355,17 @@ auto find_converged_nne(const int nonemptymgi, double nne_max, const bool force_
   return uppermost_ion;
 }
 
-[[nodiscard]] auto calculate_ionfractions(const int element, const int nonemptymgi, const double nne,
-                                          const bool use_phi_saha) -> std::vector<double> {
+void calculate_ionfractions(const int element, const int nonemptymgi, const double nne, const bool use_phi_saha,
+                            std::vector<double>& ionfractions) {
   assert_testmodeonly(element < get_nelements());
   const int uppermost_ion = grid::get_elements_uppermost_ion(nonemptymgi, element);
 
   if (uppermost_ion < 0) {
-    return {};
+    ionfractions.clear();
+    return;
   }
 
-  std::vector<double> ionfractions(uppermost_ion + 1);
+  reserve_resize(ionfractions, static_cast<size_t>(uppermost_ion) + 1);
   ionfractions[uppermost_ion] = 1;
 
   double normfactor = 1.;
@@ -389,7 +391,6 @@ auto find_converged_nne(const int nonemptymgi, double nne_max, const bool force_
       ionfractions[ion] = 0;
     }
   }
-  return ionfractions;
 }
 
 [[gnu::pure]] [[nodiscard]] auto calculate_levelpop_boltzmann(const int nonemptymgi, const int element, const int ion,
@@ -442,8 +443,12 @@ void set_groundlevelpops(const int nonemptymgi, const int element, const float n
 
   const bool use_phi_saha = force_saha || FORCE_SAHA_ION_BALANCE(get_atomicnumber(element));
 
-  const auto ionfractions =
-      (nnelement > 0) ? calculate_ionfractions(element, nonemptymgi, nne, use_phi_saha) : std::vector<double>();
+  THREADLOCALONHOST std::vector<double> ionfractions;
+  if (nnelement > 0) {
+    calculate_ionfractions(element, nonemptymgi, nne, use_phi_saha, ionfractions);
+  } else {
+    ionfractions.clear();
+  }
 
   // -1 when the element is absent (ionfractions is empty); cast to int before subtracting to avoid
   // unsigned wraparound to a huge positive value.

@@ -470,8 +470,10 @@ void nltepop_reset_element(const int nonemptymgi, const int element) {
   }
 }
 
-auto get_element_superlevelpartfuncs(const int nonemptymgi, const int element) -> std::vector<double> {
-  std::vector<double> superlevel_partfuncs;
+// Fill the caller's buffer with the superlevel partition function of every ion of the element (-1 for an
+// ion without a superlevel). The caller keeps the buffer between calls, so there is no heap allocation.
+void get_element_superlevelpartfuncs(const int nonemptymgi, const int element,
+                                     std::vector<double>& superlevel_partfuncs) {
   reserve_resize(superlevel_partfuncs, get_nions(element));
   for (int ion = 0; ion < get_nions(element); ion++) {
     if (ion_has_superlevel(element, ion)) {
@@ -484,8 +486,6 @@ auto get_element_superlevelpartfuncs(const int nonemptymgi, const int element) -
       superlevel_partfuncs[ion] = -1.;
     }
   }
-
-  return superlevel_partfuncs;
 }
 
 [[nodiscard]] auto get_element_nlte_dimension(const int element, const int first_ion_used, const int nions_used)
@@ -531,8 +531,10 @@ void nltepop_matrix_add_boundbound(const int nonemptymgi, const int element, con
 
   // the level populations and matrix indices are constants of the fill but are needed for both
   // endpoints of every transition, so look them up once per level instead of twice per transition
-  std::vector<double> levelpops(nlevels);
-  std::vector<int> levelindices(nlevels);
+  THREADLOCALONHOST std::vector<double> levelpops;
+  THREADLOCALONHOST std::vector<int> levelindices;
+  reserve_resize(levelpops, static_cast<size_t>(nlevels));
+  reserve_resize(levelindices, static_cast<size_t>(nlevels));
   for (int level = 0; level < nlevels; level++) {
     levelpops[level] = calculate_levelpop(nonemptymgi, element, ion, level);
     levelindices[level] = get_nlte_vector_index(element, ion, level, first_ion_used);
@@ -907,7 +909,8 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
 [[nodiscard]] auto solution_pops_are_valid(const int nonemptymgi, const int element, std::span<double> popvec,
                                            const int first_ion_used, const int nions_used) -> bool {
   const size_t nlte_dimension = popvec.size();
-  const auto superlevel_partfuncs = get_element_superlevelpartfuncs(nonemptymgi, element);
+  THREADLOCALONHOST std::vector<double> superlevel_partfuncs;
+  get_element_superlevelpartfuncs(nonemptymgi, element, superlevel_partfuncs);
   for (auto index = 0ZU; index < nlte_dimension; index++) {
     const auto [ion, level] = get_ion_level_of_nlte_vector_index(index, element, first_ion_used, nions_used);
     const auto ionstage = get_ionstage(element, ion);
@@ -1473,7 +1476,8 @@ auto nltepop_solve_matrix_with_ion_reduction(const int element, const int nonemp
       balance_vector[0] = nnelement;
 
       if (FORCE_SAHA_ION_BALANCE(atomic_number)) {
-        const auto ionfractions = calculate_ionfractions(element, nonemptymgi, grid::get_nne(nonemptymgi), true);
+        THREADLOCALONHOST std::vector<double> ionfractions;
+        calculate_ionfractions(element, nonemptymgi, grid::get_nne(nonemptymgi), true, ionfractions);
         // ssize() to avoid unsigned wraparound to a huge positive value when the vector is empty
         const int uppermost_ion = static_cast<int>(std::ssize(ionfractions)) - 1;
         for (int ion = first_ion_used + 1; ion <= std::min(uppermost_ion, max_ion_used); ion++) {
@@ -1801,7 +1805,8 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
         modelgridindex, timestep, atomic_number, grid::get_elem_massfrac(nonemptymgi, element), nnelement);
   }
 
-  const auto superlevel_partfuncs = get_element_superlevelpartfuncs(nonemptymgi, element);
+  THREADLOCALONHOST std::vector<double> superlevel_partfuncs;
+  get_element_superlevelpartfuncs(nonemptymgi, element, superlevel_partfuncs);
 
   const auto max_nlte_dimension = get_max_nlte_dimension();
 
@@ -1897,7 +1902,8 @@ void nltepop_write_to_file(const int nonemptymgi, const int timestep) {
       continue;
     }
 
-    const auto superlevel_partfuncs = get_element_superlevelpartfuncs(nonemptymgi, element);
+    THREADLOCALONHOST std::vector<double> superlevel_partfuncs;
+    get_element_superlevelpartfuncs(nonemptymgi, element, superlevel_partfuncs);
 
     for (int ion = 0; ion < get_nions(element); ion++) {
       const int nlevels_excited_nlte = get_nlevels_excited_nlte(element, ion);
