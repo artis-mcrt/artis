@@ -167,8 +167,15 @@ constexpr bool NLTE_USE_GTH_SOLVER;
 // structure that NLTE_USE_GTH_SOLVER needs. The steady-state timesteps can still use GTH. Elements with
 // FORCE_SAHA_ION_BALANCE and the elements without NLTE levels keep their equilibrium ionisation balance.
 // The error of the backward Euler step is first order in width/mid. Keep width/mid at 0.1 or less.
-// The k-packets do not carry the heat-capacity term. The energy that the gas stores or releases between
-// two grid updates therefore stays out of the radiation field.
+//
+// The k-packets carry the same energy budget in the time-dependent timesteps. Each time a k-packet selects a
+// cooling process, its energy gets the factor 1 - (c_adiabatic + c_heatcapacity) / heating of its cell. The
+// expansion work and the stored thermal energy then stay out of the radiation field. A gas that cools
+// releases its stored energy into the packets, and the factor is then above 1. The code removes no k-packet.
+// The factor is limited to the range 0 to 100 with a warning.
+//
+// The adiabatic energy loss of the k-packet diffusion step stays. It stands for the radiation in the skipped
+// k-packet to r-packet cycles and not for the expansion work of the gas.
 constexpr std::optional<int> NLTE_TIME_DEPENDENT_FIRST_TIMESTEP;
 
 // non-thermal ionisation

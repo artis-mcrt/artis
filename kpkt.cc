@@ -395,9 +395,60 @@ DEVICE_FUNC void calculate_cellcache_cooling_rates_ion(const int nonemptymgi, co
   calculate_cooling_rates_ion<true>(nonemptymgi, element, ion, ion_contribs, nullptr, nullptr, nullptr, nullptr);
 }
 
+// Store and return the share of the thermal energy flux of a cell that becomes radiation (see
+// NLTE_TIME_DEPENDENT_FIRST_TIMESTEP). The k-packets carry the heating rate. The thermal balance spends a part
+// of it on the expansion work and on the change of the thermal energy of the gas, so the factor is
+// 1 - (c_adiabatic + c_heatcapacity) / heating. This holds also when the T_e solver limits T_e and the balance
+// does not close. The factor is above 1 when the gas releases stored thermal energy.
+auto set_radiative_energy_factor(const int nonemptymgi, const HeatingCoolingRates& heatingcoolingrates) -> double {
+  const double heating = heatingcoolingrates.get_total_heating();
+  const double cooling_nonradiative = heatingcoolingrates.cooling_adiabatic + heatingcoolingrates.cooling_heatcapacity;
+  double factor = 1.;
+  if (heating > 0.) {
+    // A negative factor means that the gas absorbs more than the heating, and a large factor means that the
+    // gas releases much more than the heating. The existing k-packets cannot represent these cases.
+    constexpr double max_factor = 100.;
+    factor = std::clamp(1. - (cooling_nonradiative / heating), 0., max_factor);
+    if (factor <= 0. || factor >= max_factor) {
+      printlnlog(
+          "[warning] cell {} timestep {}: k-packet energy factor limited to {:g}. heating {:g}, adiabatic cooling "
+          "{:g}, heat-capacity term {:g} [erg/s/cm^3]",
+          grid::get_mgi_of_nonemptymgi(nonemptymgi), globals::timestep, factor, heating,
+          heatingcoolingrates.cooling_adiabatic, heatingcoolingrates.cooling_heatcapacity);
+    }
+  }
+  if (heating <= 0. && cooling_nonradiative < 0.) {
+    // without heating there are no k-packets that can carry the released thermal energy
+    printlnlog(
+        "[warning] cell {} timestep {}: the gas releases thermal energy at {:g} [erg/s/cm^3] but the heating is zero, "
+        "so the energy cannot enter the radiation field",
+        grid::get_mgi_of_nonemptymgi(nonemptymgi), globals::timestep, -cooling_nonradiative);
+  }
+  radiative_energy_factor_allcells[nonemptymgi] = factor;
+  return factor;
+}
+
+// A cell without a thermal balance keeps the full energy of its k-packets
+void reset_radiative_energy_factor(const int nonemptymgi) {
+  if constexpr (NLTE_TIME_DEPENDENT_FIRST_TIMESTEP.has_value()) {
+    radiative_energy_factor_allcells[nonemptymgi] = 1.;
+  }
+}
+
+DEVICE_FUNC auto get_radiative_energy_factor(const int nonemptymgi) -> double {
+  if constexpr (NLTE_TIME_DEPENDENT_FIRST_TIMESTEP.has_value()) {
+    assert_testmodeonly(nonemptymgi >= 0);
+    assert_testmodeonly(nonemptymgi < grid::get_nonempty_npts_model());
+    return radiative_energy_factor_allcells[nonemptymgi];
+  }
+  return 1.;
+}
+
 // handle a k-packet (e.g., in a thick cell) by emitting according to the planck function
 DEVICE_FUNC void do_kpkt_blackbody(Packet& pkt) {
   const auto nonemptymgi = grid::get_propcell_nonemptymgi(pkt.cellindex);
+
+  pkt.e_cmf *= get_radiative_energy_factor(nonemptymgi);
 
   if (RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.has_value() &&
       grid::thick_allcells[nonemptymgi] != grid::CellThickness::THICK) {
@@ -428,7 +479,10 @@ DEVICE_FUNC void do_kpkt(Packet& pkt, const double t2, const int nts) {
   const double t_current = std::min(pkt.prop_time + deltat, t2);
 
   pkt.pos = vec_scale(pkt.pos, t_current / pkt.prop_time);
-  pkt.e_cmf *= pkt.prop_time / t_current;  // adjust energy for adiabatic losses
+  // The diffusion step stands for the k-packet to r-packet cycles that a full treatment would follow. The
+  // energy loss is the adiabatic loss of the radiation in those cycles (e proportional to 1/t). It is
+  // separate from the expansion work of the gas in the thermal balance.
+  pkt.e_cmf *= pkt.prop_time / t_current;
   pkt.prop_time = t_current;
 
   if (t_current >= t2) {
@@ -438,6 +492,13 @@ DEVICE_FUNC void do_kpkt(Packet& pkt, const double t2, const int nts) {
   stats::increment(stats::Counter::INTERACTIONS);
 
   const auto nonemptymgi = grid::get_propcell_nonemptymgi(pkt.cellindex);
+
+  // The thermal balance of the cell decides which share of the thermal energy becomes radiation. The factor
+  // applies on every pass through the thermal pool, also when the macro-atom returns the packet as a
+  // k-packet. The heating rate of the balance counts that return as collisional heating, so each pass is
+  // one flux event. The error of this choice is of second order in (1 - factor) and proportional to the
+  // share of the k-packet energy that the macro-atom returns, which is small at nebular densities.
+  pkt.e_cmf *= get_radiative_energy_factor(nonemptymgi);
   const std::span<const double> ion_cooling_contribs_thiscell = get_cell_ion_cooling_contribs(nonemptymgi);
   const double rndcool_ion = rng_uniform(get_rngstate(pkt)) * ion_cooling_contribs_thiscell.back();
 

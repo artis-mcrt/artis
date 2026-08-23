@@ -395,6 +395,11 @@ The code must compile with nvc++ and with hipcc, also with `STDPAR=ON GPU=ON`.
   files into a subfolder. The run-level files, e.g. the restart files, stay in
   the run folder, together with a symlink to the log of rank 0. The standard
   output stays quiet unless there is a crash.
+- The restart files (`gridsave_ts*.tmp` and the packet files) must only be
+  consistent with the binary that wrote them. A resumed run uses the same
+  `artisoptions.h` and the same source version as the run that wrote the
+  files. Do not add a format version or a fallback for a restart file of a
+  different option set or of an older binary.
 - `input.txt` is positional. Each line has its fixed meaning, and some lines
   are unused placeholders that must stay. `read_parameterfile()` reads a line
   with `get_noncommentline()` and then takes the numbers with a

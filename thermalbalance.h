@@ -46,6 +46,14 @@ struct HeatingCoolingRates {
   double eps_electron_ana{0};
   double eps_alpha_ana{0};
   double eps_spfission_ana{0};
+
+  // the two sides of the thermal balance. The order of the terms is fixed, because the results must not change.
+  [[nodiscard]] auto get_total_heating() const -> double {
+    return heating_ff + heating_bf + heating_collisional + heating_dep;
+  }
+  [[nodiscard]] auto get_total_cooling() const -> double {
+    return cooling_ff + cooling_fb + cooling_collisional + cooling_adiabatic + cooling_heatcapacity;
+  }
 };
 
 void call_T_e_finder(int nonemptymgi, double t_current, HeatingCoolingRates& heatingcoolingrates,
