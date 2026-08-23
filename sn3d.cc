@@ -502,6 +502,11 @@ void mpi_communicate_grid_properties() {
                        root_node_id, globals::mpi_comm_internode);
       }
 
+      if constexpr (grid::NLTE_TRACK_SOLUTION_RANGES) {
+        // Rank 0 writes all solution ranges to the restart file.
+        grid::do_MPI_Bcast_nlte_solution_ranges(root_nstart_nonempty, root_ndo_nonempty, root_node_id);
+      }
+
       if constexpr (NLTE_TIME_DEPENDENT_FIRST_TIMESTEP.has_value()) {
         // rank 0 writes the solution times of every cell into the restart file
         MPI_Bcast_safe(solution_time_allcells.subspan(root_nstart_nonempty, root_ndo_nonempty), root_node_id,

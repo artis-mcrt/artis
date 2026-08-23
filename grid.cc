@@ -1871,6 +1871,15 @@ void set_elements_lowermost_ion(const int nonemptymgi, const int element, const 
   elements_lowermost_ion_allcells[(nonemptymgi * get_nelements()) + element] = lowermost_ion;
 }
 
+void do_MPI_Bcast_nlte_solution_ranges(const ptrdiff_t nstart_nonempty, const ptrdiff_t ndo_nonempty,
+                                       const int root_node_id) {
+  const auto nelements = get_nelements();
+  MPI_Bcast_safe(elements_lowermost_ion_allcells.subspan(nstart_nonempty * nelements, ndo_nonempty * nelements),
+                 root_node_id, globals::mpi_comm_internode);
+  MPI_Bcast_safe(elements_uppermost_ion_allcells.subspan(nstart_nonempty * nelements, ndo_nonempty * nelements),
+                 root_node_id, globals::mpi_comm_internode);
+}
+
 [[nodiscard]] auto calculate_cell_kappagrey(const int nonemptymgi) -> float {
   const int mgi = get_mgi_of_nonemptymgi(nonemptymgi);
   if (get_rho_tmin(mgi) <= 0.) {

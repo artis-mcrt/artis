@@ -55,6 +55,8 @@ void set_elements_uppermost_ion(int nonemptymgi, int element, int uppermost_ion)
 constexpr bool NLTE_TRACK_SOLUTION_RANGES = ENABLE_CHARGE_TRANSFER_REACTIONS || NLTE_TE_NNE_USE_ANDERSON_ACCEL;
 [[nodiscard]] auto get_elements_lowermost_ion(int nonemptymgi, int element) -> int;
 void set_elements_lowermost_ion(int nonemptymgi, int element, int lowermost_ion);
+// Exchange the NLTE solution ranges between the node leaders.
+void do_MPI_Bcast_nlte_solution_ranges(ptrdiff_t nstart_nonempty, ptrdiff_t ndo_nonempty, int root_node_id);
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto propcell_width_tmin(int cellindex, int axis) -> double;
 [[gnu::pure]] [[nodiscard]] auto get_modelcell_assocvolume_tmin(int modelgridindex) -> double;
 [[gnu::pure]] [[nodiscard]] auto get_propcell_volume_tmin(int cellindex) -> double;
