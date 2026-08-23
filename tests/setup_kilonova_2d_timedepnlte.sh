@@ -16,8 +16,8 @@ rsync -av --exclude="compositiondata.txt" ../kilonova_2d_inputfiles/ ./
 
 tar -xf ../atomicdata_sryzrlace.tar.zst --directory ./
 
-# --ignore-times: the input files of this test have the same size and, after a checkout, the same
-# modification time as the files of the kilonova_2d test, so rsync would skip them
+# --ignore-times: the input files of this test have the same size as the files of the kilonova_2d
+# test, and after a checkout also the same modification time. Without the option rsync skips them.
 rsync --ignore-times -av ../kilonova_2d_timedepnlte_inputfiles/ ./
 
 ln -s ../../ artis

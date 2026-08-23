@@ -309,8 +309,8 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
         }
         if (nlte_iter == NLTEITER || map_changed) {
           // no injection and no history entry. The last pass completes the element solves at the T_e of
-          // the finder, as the plain iteration does, so the populations and nne match the final T_e. On a
-          // pass with a changed map, g mixes the old and the new map, so it is not a sample of either.
+          // the finder, as the plain iteration does. The populations and nne then match the final T_e. On
+          // a pass with a changed map, g mixes the old and the new map, so it is not a sample of either.
           x_injected = g;
         } else {
           const auto x_next = anderson.next(x_injected, g);
@@ -321,8 +321,9 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
           // gives a large step with no information.
           const double stepsq = pow2(x_next[0] - g[0]) + pow2(x_next[1] - g[1]);
           const double residualsq = pow2(g[0] - x_injected[0]) + pow2(g[1] - x_injected[1]);
+          // the electron density has the same floor as the ion balance, so the stored float stays positive
           const bool step_accepted = std::isfinite(T_e_next) && std::isfinite(nne_next) && T_e_next >= MINTEMP &&
-                                     T_e_next <= MAXTEMP && nne_next > 0. &&
+                                     T_e_next <= MAXTEMP && nne_next >= MINPOP &&
                                      nne_next <= grid::get_nnetot(nonemptymgi) && stepsq <= 4. * residualsq;
           if (step_accepted) {
             grid::Te_allcells[nonemptymgi] = static_cast<float>(T_e_next);
