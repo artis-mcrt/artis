@@ -23,8 +23,9 @@ constexpr int NLTEITER;
 // 2 is a good choice. Zero keeps the plain successive substitution.
 //
 // The accelerator forgets its history when an element falls back to LTE or changes its solved ion range,
-// because the map is then discontinuous. A step that leaves [MINTEMP, MAXTEMP] is rejected. The convergence
-// test comes before the injection, so a converged cell keeps the output of a plain pass.
+// because the map is then discontinuous. A step outside [MINTEMP, MAXTEMP], or with an electron density above
+// the total electron density of the cell, is rejected. The convergence test comes before the injection, so a
+// converged cell keeps the output of a plain pass. A cell that reaches NLTEITER also ends with a plain pass.
 constexpr int NLTE_OUTER_ANDERSON_DEPTH;
 
 // Relative tolerance of the NLTE/Te/Spencer-Fano iteration for nne and T_e. With a depth of zero the loop

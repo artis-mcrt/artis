@@ -276,8 +276,8 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
       if (nlte_iter > 0) {
         // the remaining error of a linear contraction with ratio rho is change * rho / (1 - rho). Each component
         // gets its own ratio, because the T_e finder limits the change of T_e to a factor of two per pass.
-        const std::array<double, 2> change{std::abs(std::exp(g[0] - x_injected[0]) - 1.),
-                                           std::abs(std::exp(g[1] - x_injected[1]) - 1.)};
+        const std::array<double, 2> change{std::abs(std::expm1(g[0] - x_injected[0])),
+                                           std::abs(std::expm1(g[1] - x_injected[1]))};
         std::array<double, 2> rho{};
         double error_estimate = 0.;
         for (std::size_t i = 0; i < 2; i++) {
@@ -300,30 +300,33 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
           break;
         }
         if (nlte_iter == NLTEITER) {
+          // no injection: the last pass completes the element solves at the T_e of the finder, as the
+          // plain iteration does, so the populations and nne match the final T_e
           printlnlog(
               "NLTE (Spencer-Fano/Te/pops) solver mgi {} timestep {} iteration {}: failed to converge... Keeping "
               "solution from last iteration",
               mgi, nts, nlte_iter);
-          break;
-        }
-
-        const auto x_next = anderson.next(x_injected, g);
-        const double T_e_next = std::exp(x_next[0]);
-        const double nne_next = std::exp(x_next[1]);
-        const bool step_accepted = std::isfinite(T_e_next) && std::isfinite(nne_next) && T_e_next >= MINTEMP &&
-                                   T_e_next <= MAXTEMP && nne_next > 0.;
-        if (step_accepted) {
-          grid::Te_allcells[nonemptymgi] = static_cast<float>(T_e_next);
-          grid::set_nne(nonemptymgi, static_cast<float>(nne_next));
-          x_injected = x_next;
-        } else {
           x_injected = g;
+        } else {
+          const auto x_next = anderson.next(x_injected, g);
+          const double T_e_next = std::exp(x_next[0]);
+          const double nne_next = std::exp(x_next[1]);
+          // the electron density cannot exceed the total electron density of the cell
+          const bool step_accepted = std::isfinite(T_e_next) && std::isfinite(nne_next) && T_e_next >= MINTEMP &&
+                                     T_e_next <= MAXTEMP && nne_next > 0. && nne_next <= grid::get_nnetot(nonemptymgi);
+          if (step_accepted) {
+            grid::Te_allcells[nonemptymgi] = static_cast<float>(T_e_next);
+            grid::set_nne(nonemptymgi, static_cast<float>(nne_next));
+            x_injected = x_next;
+          } else {
+            x_injected = g;
+          }
+          printlnlog(
+              "NLTE (Spencer-Fano/Te/pops) solver mgi {} timestep {} iteration {}: Anderson step {}: T_e {:g} nne {:e} "
+              "from the pass, T_e {:g} nne {:e} for the next pass",
+              mgi, nts, nlte_iter, step_accepted ? "accepted" : "rejected", std::exp(g[0]), std::exp(g[1]),
+              grid::Te_allcells[nonemptymgi], grid::get_nne(nonemptymgi));
         }
-        printlnlog(
-            "NLTE (Spencer-Fano/Te/pops) solver mgi {} timestep {} iteration {}: Anderson step {}: T_e {:g} nne {:e} "
-            "from the pass, T_e {:g} nne {:e} for the next pass",
-            mgi, nts, nlte_iter, step_accepted ? "accepted" : "rejected", std::exp(g[0]), std::exp(g[1]),
-            grid::Te_allcells[nonemptymgi], grid::get_nne(nonemptymgi));
       } else {
         x_injected = g;
       }
