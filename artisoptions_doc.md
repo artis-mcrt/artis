@@ -26,7 +26,7 @@ constexpr int NLTE_TE_NNE_MAXITER;
 // because the map is then discontinuous. A new non-thermal solution also clears the history. The loop
 // rejects four kinds of step:
 // - a step outside [MINTEMP, MAXTEMP];
-// - a step with an electron density below MIN_LEVELPOP;
+// - a step with an electron density below MINPOP;
 // - a step with an electron density above the total electron density of the cell;
 // - a step away from the map output that is larger than twice the residual.
 // The convergence test comes before the injection, so a converged cell keeps the output of a plain pass. A
@@ -92,7 +92,8 @@ constexpr bool VPKT_ON;
 // write virtual packet per-direction contributions to vpkt_contrib.out files
 constexpr bool VPKT_WRITE_CONTRIBS;
 
-constexpr double MIN_LEVELPOP;
+// the lower bound of the level populations, the ion populations, and the electron density nne [cm^-3]
+constexpr double MINPOP;
 
 constexpr double NU_MIN_R;  // lower frequency boundary for UVOIR spectra and BB sampling
 constexpr double NU_MAX_R;  // upper frequency boundary for UVOIR spectra and BB sampling
@@ -136,7 +137,7 @@ constexpr bool USE_ION_BFHEATING_ESTIMATORS;
 // with the LTE population. However this can cause numerical problems (e.g. when the ground populations is very
 // small and and the negative population is replaced with a significantly larger population ratios taken e.g.
 // when calculating partition functions can over the float limit.) This option provides additional checks
-// on the populations calculated by the NLTE solver (ground population > MIN_LEVELPOP, checks for population inversions)
+// on the populations calculated by the NLTE solver (ground population > MINPOP, checks for population inversions)
 // and now returns a solver fail for certain cases.
 constexpr bool STRICT_POPULATION_CHECKING = false;
 

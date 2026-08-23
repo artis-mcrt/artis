@@ -163,7 +163,7 @@ auto nne_solution_f(const double nne_assumed, const int nonemptymgi, const bool 
       assert_always(std::isfinite(nne_after));
     }
   }
-  nne_after = std::max(MIN_LEVELPOP, nne_after);
+  nne_after = std::max(MINPOP, nne_after);
 
   return nne_after - nne_assumed;
 }
@@ -208,7 +208,7 @@ auto calculate_partfunct(const int element, const int ion, const int nonemptymgi
   double pop_store{NAN};
 
   bool initial = false;
-  if (get_groundlevelpop(nonemptymgi, element, ion) < MIN_LEVELPOP) {
+  if (get_groundlevelpop(nonemptymgi, element, ion) < MINPOP) {
     // either there really is none of this ion or this is a first pass through
     // in either case, we won't have any real nlte_populations so the actual value of
     // of groundlevelpop for this calculation doesn't matter, so long as it's not zero!
@@ -241,18 +241,18 @@ auto calculate_partfunct(const int element, const int ion, const int nonemptymgi
 }
 
 // Set the cell's free electron density nne to the sum of every element's electron contribution (floored at
-// MIN_LEVELPOP).
+// MINPOP).
 void set_calculated_nne(const int nonemptymgi) {
   double nne = 0.;  // free electron density
   for (int element = 0; element < get_nelements(); element++) {
     nne += get_element_nne_contrib(nonemptymgi, element);
   }
 
-  grid::set_nne(nonemptymgi, static_cast<float>(std::max(MIN_LEVELPOP, nne)));
+  grid::set_nne(nonemptymgi, static_cast<float>(std::max(MINPOP, nne)));
 }
 
 // Fallback for a cell in which every element is confined to its lowest included ion stage: put each element's whole
-// population in that stage and floor the higher stages at MIN_LEVELPOP. The MIN_LEVELPOP floor leaves nne slightly
+// population in that stage and floor the higher stages at MINPOP. The MINPOP floor leaves nne slightly
 // above zero, which keeps the collisional rates in the k-packet treatment finite so that packets are not lost there.
 void set_groundlevelpops_neutral(const ptrdiff_t nonemptymgi) {
   if (neutralcell_warned.is_first_occurrence(nonemptymgi)) {
@@ -262,13 +262,13 @@ void set_groundlevelpops_neutral(const ptrdiff_t nonemptymgi) {
   for (int element = 0; element < get_nelements(); element++) {
     const auto nnelement = grid::get_elem_numberdens(nonemptymgi, element);
     const int nions = get_nions(element);
-    // Assign the species population to the neutral ion and set higher ions to MIN_LEVELPOP
+    // Assign the species population to the neutral ion and set higher ions to MINPOP
     for (int ion = 0; ion < nions; ion++) {
       double nnion{NAN};
       if (ion == 0) {
         nnion = nnelement;
       } else if (nnelement > 0.) {
-        nnion = MIN_LEVELPOP;
+        nnion = MINPOP;
       } else {
         nnion = 0.;
       }
@@ -303,7 +303,7 @@ auto find_converged_nne(const int nonemptymgi, double nne_max, const bool force_
         grid::get_mgi_of_nonemptymgi(nonemptymgi), globals::timestep, iter);
   }
 
-  return static_cast<float>(std::max(MIN_LEVELPOP, nne_solution));
+  return static_cast<float>(std::max(MINPOP, nne_solution));
 }
 
 }  // anonymous namespace
@@ -416,9 +416,9 @@ void calculate_ionfractions(const int element, const int nonemptymgi, const doub
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto calculate_levelpop(const int nonemptymgi, const int element, const int ion,
                                                                 const int level) -> double {
   const auto [nn, skipminpop] = calculate_levelpop_nominpop(nonemptymgi, element, ion, level);
-  if (!skipminpop && nn < MIN_LEVELPOP) {
+  if (!skipminpop && nn < MINPOP) {
     if (grid::get_elem_massfrac(nonemptymgi, element) > 0) {
-      return MIN_LEVELPOP;
+      return MINPOP;
     }
     return 0.;
   }
@@ -463,12 +463,12 @@ void set_groundlevelpops(const int nonemptymgi, const int element, const float n
     const int uniqueionindex = get_uniqueionindex(element, ion);
     double nnion{NAN};
     if (nnelement <= 0) {
-      // absent element: every ion has zero population (do not floor to MIN_LEVELPOP)
+      // absent element: every ion has zero population (do not floor to MINPOP)
       nnion = 0.;
     } else if (ion <= uppermost_ion) {
-      nnion = std::max(MIN_LEVELPOP, nnelement * ionfractions[ion]);
+      nnion = std::max(MINPOP, nnelement * ionfractions[ion]);
     } else {
-      nnion = MIN_LEVELPOP;
+      nnion = MINPOP;
     }
 
     const auto groundpop =

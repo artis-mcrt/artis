@@ -447,7 +447,13 @@ inline void update_includedionslevels_maxnions() {
 
 [[gnu::pure]] [[nodiscard]] inline auto ion_has_superlevel(const int element, const int ion) -> bool {
   testmodeassert_valid_ion(element, ion);
-  return (get_nlevels(element, ion) > (get_nlevels_excited_nlte(element, ion) + get_nlevels_autoion(element, ion) + 1));
+  // Only setup_nlte_levels() makes a superlevel slot, and only for an ion of an element with NLTE
+  // levels that has an excited NLTE level. level_isinsuperlevel() uses the same count test. Without
+  // these two tests the level count alone would report a superlevel that holds no level, and a read
+  // of its slot would be out of bounds. The first test does not depend on the count, because
+  // setup_nlte_levels() leaves the count of an element without NLTE levels at its initial value.
+  return elem_has_nlte_levels(element) && (get_nlevels_excited_nlte(element, ion) > 0) &&
+         (get_nlevels(element, ion) > (get_nlevels_excited_nlte(element, ion) + get_nlevels_autoion(element, ion) + 1));
 }
 
 // the number of downward bound-bound transitions from a level, by unique level index or by (element, ion, level)

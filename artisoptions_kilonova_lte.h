@@ -53,7 +53,7 @@ constexpr bool POL_ON = false;
 constexpr bool VPKT_ON = false;
 constexpr bool VPKT_WRITE_CONTRIBS = false;
 
-constexpr double MIN_LEVELPOP = 1e-40;
+constexpr double MINPOP = 1e-40;
 
 constexpr double NU_MIN_R = 1e13;
 constexpr double NU_MAX_R = 5e16;

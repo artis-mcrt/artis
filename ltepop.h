@@ -15,12 +15,12 @@
 #include "mpi_logging.h"
 
 // Level population [cm^-3]: NLTE where the solver provided one, else Boltzmann off the ground level. Floored at
-// MIN_LEVELPOP when the element is present (0 when it is absent), except where the underlying calculation flags that
+// MINPOP when the element is present (0 when it is absent), except where the underlying calculation flags that
 // the floor should be skipped, which it does for populations that came from the NLTE solver.
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto calculate_levelpop(int nonemptymgi, int element, int ion, int level)
     -> double;
 
-// Level population [cm^-3] forced to LTE, ignoring any NLTE solution. Unlike calculate_levelpop(), no MIN_LEVELPOP
+// Level population [cm^-3] forced to LTE, ignoring any NLTE solution. Unlike calculate_levelpop(), no MINPOP
 // floor is applied to excited levels, so this can return an arbitrarily small population.
 [[gnu::pure]] [[nodiscard]] auto calculate_levelpop_boltzmann(int nonemptymgi, int element, int ion, int level)
     -> double;
@@ -79,9 +79,9 @@ void set_groundlevelpops(int nonemptymgi, int element, float nne, bool force_sah
   testmodeassert_valid_ion(element, ion);
 
   const double nn = grid::ion_groundlevelpops_allcells[get_cellionindex(nonemptymgi, element, ion)];
-  if (nn < MIN_LEVELPOP) {
+  if (nn < MINPOP) {
     if (grid::get_elem_massfrac(nonemptymgi, element) > 0) {
-      return MIN_LEVELPOP;
+      return MINPOP;
     }
     return 0.;
   }
