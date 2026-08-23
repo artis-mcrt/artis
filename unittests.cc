@@ -718,6 +718,21 @@ void test_anderson_accelerator() {
   check(std::abs(x_depth2[0] - 10.) < 1e-6 && std::abs(x_depth2[1] - 2.) < 1e-6,
         "Anderson depth 2 reaches the fixed point");
 
+  // a map with a 2-cycle: x -> c - x never converges by itself, and with depth 2 the two stored
+  // residual differences are exact negatives. The accelerator must then use depth 1 and find the
+  // midpoint, which is the fixed point
+  {
+    AndersonAccelerator<2, 4> acc_cycle(2);
+    std::array<double, 2> x{0., 10.};
+    bool reached = false;
+    for (int iteration = 0; iteration < 10 && !reached; iteration++) {
+      const std::array<double, 2> g{6. - x[0], 2. - x[1]};
+      reached = std::max(std::abs(g[0] - 3.), std::abs(g[1] - 1.)) < 1e-8;
+      x = acc_cycle.next(x, g);
+    }
+    check(reached, "Anderson depth 2 solves a 2-cycle map with the depth 1 fallback");
+  }
+
   // with no history, or after a reset, the accelerator returns the plain map output
   AndersonAccelerator<2, 4> acc(2);
   const std::array<double, 2> x0{1., 1.};

@@ -30,8 +30,9 @@ class AndersonAccelerator {
     }
 
     State result = g;
-    const std::size_t m = std::min(nstored_, depth_);
-    if (m > 0) {
+    // a singular system (e.g. a 2-cycle, where two residual differences are exact negatives) makes
+    // the solve fail. A smaller depth then gets a try, down to the plain map output
+    for (std::size_t m = std::min(nstored_, depth_); m > 0; m--) {
       // consecutive differences: entry j is (pair k-j) - (pair k-j-1), with pair k = (x, g, residual)
       std::array<State, MAXDEPTH> dres_chain{};
       std::array<State, MAXDEPTH> dg_chain{};
@@ -74,6 +75,7 @@ class AndersonAccelerator {
             result[i] -= gamma[j] * dg_chain[j][i];
           }
         }
+        break;
       }
     }
 
