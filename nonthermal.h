@@ -31,7 +31,9 @@ void init();
 // ionisation, secondary electrons, and Auger electrons. Convert the electron flux into deposition fractions and
 // non-thermal rate coefficients, reusing a recent solution while the ionisation state remains sufficiently similar.
 // Shingles et al. (2020), Section 2.5, doi:10.1093/mnras/stz3412.
-void solve_spencerfano(int nonemptymgi, int timestep, int iteration);
+// Return true when the solver makes a new solution for the cell. A kept solution, and the fallback
+// values of a cell without deposition, give false.
+auto solve_spencerfano(int nonemptymgi, int timestep, int iteration) -> bool;
 [[nodiscard]] DEVICE_FUNC auto nt_ionisation_ratecoeff(int nonemptymgi, int element, int ion) -> double;
 [[nodiscard]] DEVICE_FUNC auto nt_ionisation_upperion_probability(int nonemptymgi, int element, int lowerion,
                                                                   int upperion, bool energyweighted) -> double;

@@ -42,7 +42,14 @@ void solve_nlte_pops_element(int element, int nonemptymgi, int timestep, int nlt
 // uppermost ion of the cell (see grid.h). The cell holds no NLTE solution for the element before
 // the first solve and after a fallback to LTE, and the range is then {-1, -1}. The charge transfer
 // reactions read the range, and the NLTE iteration loop watches it for a change.
-void nltepop_reset_solution_ranges(int nonemptymgi);
+// nltepop_reset_cell() clears the NLTE solution of every element of the cell. The level
+// populations get the -1 marker, and the ranges and the solution time are reset.
+void nltepop_reset_cell(int nonemptymgi);
+// An ion with a smaller fraction of the element population does not change the map of the outer
+// iteration. The ion reduction removes only an ion below the smaller limit. A reduced range
+// therefore counts as a change only when it takes a significant ion.
+constexpr double NLTE_SIGNIFICANT_ION_FRACTION = 1e-4;
+static_assert(NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION < NLTE_SIGNIFICANT_ION_FRACTION);
 [[nodiscard]] auto elem_has_nlte_solution(int nonemptymgi, int element) -> bool;
 [[nodiscard]] auto get_nlte_solution_range(int nonemptymgi, int element) -> std::pair<int, int>;
 // GTH solve for the stationary distribution of the NLTE rate matrix, exposed here so that unittests.cc can test

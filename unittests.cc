@@ -21,6 +21,7 @@
 #include <string_view>
 #include <vector>
 
+#include "anderson.h"
 #include "artisoptions.h"
 #include "atomic.h"
 #include "chargetransfer.h"
@@ -689,6 +690,60 @@ void test_rank_outfile_name() {
   check(!match_none, "other filenames are never matched, so they cannot be deleted from an output folder");
 }
 
+void test_anderson_accelerator() {
+  std::println("Anderson accelerator...");
+  // linear map with the contraction factors 0.9 and -0.7, fixed point (10, 2)
+  const auto linear_map = [](const std::array<double, 2>& x) {
+    return std::array<double, 2>{(0.9 * x[0]) + 1.0, (-0.7 * x[1]) + 3.4};
+  };
+  // iterate the map from x until g is within 1e-8 of the fixed point, and return the count and the iterate
+  const auto iterate = [](const std::size_t depth, const auto& map, std::array<double, 2> x,
+                          const std::array<double, 2>& fixedpoint) {
+    AndersonAccelerator<2> acc(depth);
+    int iterations = 0;
+    for (; iterations < 1000; iterations++) {
+      const auto g = map(x);
+      if (std::max(std::abs(g[0] - fixedpoint[0]), std::abs(g[1] - fixedpoint[1])) < 1e-8) {
+        break;
+      }
+      x = acc.next(x, g);
+    }
+    return std::pair{iterations, x};
+  };
+  const std::array<double, 2> x0{0., 0.};
+  const std::array<double, 2> linear_fixedpoint{10., 2.};
+  const auto [iterations_plain, x_plain] = iterate(0, linear_map, x0, linear_fixedpoint);
+  const auto [iterations_depth1, x_depth1] = iterate(1, linear_map, x0, linear_fixedpoint);
+  const auto [iterations_depth2, x_depth2] = iterate(2, linear_map, x0, linear_fixedpoint);
+  const auto [iterations_depth4, x_depth4] = iterate(4, linear_map, x0, linear_fixedpoint);
+  check(iterations_plain > 100, "plain successive substitution needs more than 100 iterations");
+  check(iterations_depth1 < iterations_plain / 4, "Anderson depth 1 needs fewer than a quarter of the iterations");
+  check(iterations_depth2 <= 4, "Anderson depth 2 solves a linear 2-D map in at most 4 iterations");
+  check(std::abs(x_depth2[0] - 10.) < 1e-6 && std::abs(x_depth2[1] - 2.) < 1e-6,
+        "Anderson depth 2 reaches the fixed point");
+  // the accelerator limits a depth above the state dimension to the state dimension
+  check(iterations_depth4 == iterations_depth2 && x_depth4 == x_depth2,
+        "Anderson depth 4 on a 2-D map is the same as depth 2");
+
+  // a map with a 2-cycle: x -> c - x never converges by itself, and with depth 2 the two stored
+  // residual differences are exact negatives. The accelerator must then use depth 1 and find the
+  // midpoint, which is the fixed point
+  const auto cycle_map = [](const std::array<double, 2>& x) { return std::array<double, 2>{6. - x[0], 2. - x[1]}; };
+  const auto [iterations_cycle, x_cycle] = iterate(2, cycle_map, {0., 10.}, {3., 1.});
+  check(iterations_cycle < 10, "Anderson depth 2 solves a 2-cycle map with the depth 1 fallback");
+
+  // with no history, or after a reset, the accelerator returns the plain map output
+  AndersonAccelerator<2> acc(2);
+  const std::array<double, 2> xa{1., 1.};
+  const auto ga = linear_map(xa);
+  check(acc.next(xa, ga) == ga, "the first Anderson step returns the map output");
+  const std::array<double, 2> x1{2., 3.};
+  const auto g1 = linear_map(x1);
+  check(acc.next(x1, g1) != g1, "the second Anderson step changes the iterate");
+  acc.reset();
+  check(acc.next(x1, g1) == g1, "after a reset the Anderson step returns the map output");
+}
+
 void test_gth_solver() {
   std::println("GTH stationary distribution solver...");
 
@@ -1015,6 +1070,7 @@ auto main() -> int {
   test_calculate_timesteps();
   test_rank_outfile_name();
   test_gth_solver();
+  test_anderson_accelerator();
   test_chargetransfer_helpers();
   test_nonthermal_solve_upper_triangular();
   // the solver/integrator throw std::domain_error only on precondition violations that this test does not trigger

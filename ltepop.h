@@ -40,11 +40,13 @@ void calculate_ion_balance_nne(int nonemptymgi);
 void calculate_cellpartfuncts(int nonemptymgi, int element);
 
 // Fractional ion abundances indexed by ion index, normally normalised to sum to one. use_phi_saha selects the
-// Saha balance rather than the photoionisation/recombination balance. Derive the upper bound from the returned
+// Saha balance rather than the photoionisation/recombination balance. Derive the upper bound from the
 // vector's own size, not from the cell's uppermost_ion: the result is empty when uppermost_ion is negative, and
 // non-finite entries are zeroed, after which it no longer sums to one.
-[[nodiscard]] auto calculate_ionfractions(int element, int nonemptymgi, double nne, bool use_phi_saha)
-    -> std::vector<double>;
+// The caller gives the buffer, so a loop over many evaluations does no heap allocation. The function
+// resizes it.
+void calculate_ionfractions(int element, int nonemptymgi, double nne, bool use_phi_saha,
+                            std::vector<double>& ionfractions);
 
 // Set ground level populations from Saha LTE or photoionisation equilibrium. Writes every ion of the element
 // unconditionally, so callers must themselves skip elements whose populations the NLTE solver owns (or call it

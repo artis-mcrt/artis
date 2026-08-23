@@ -2615,7 +2615,7 @@ DEVICE_FUNC void do_ntlepton_deposit(Packet& pkt) {
 // The discretised equation is the integral form of the degradation equation (KF92 equation 7; equation 2 of
 // Li et al. 2012) extended with the Auger-electron source term: equation 8 of Shingles et al. (2020),
 // section 2.5, doi:10.1093/mnras/stz3412.
-void solve_spencerfano(const int nonemptymgi, const int timestep, const int iteration) {
+auto solve_spencerfano(const int nonemptymgi, const int timestep, const int iteration) -> bool {
   const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
   bool skip_solution = false;
   if (timestep < globals::num_lte_timesteps + 1) {
@@ -2642,7 +2642,7 @@ void solve_spencerfano(const int nonemptymgi, const int timestep, const int iter
     nt_solution[nonemptymgi].frac_excitations_list_size = 0;
 
     zero_all_effionpot(nonemptymgi);
-    return;
+    return false;  // both skip conditions are constant over the passes of one cell
   }
 
   const auto nne = grid::get_nne(nonemptymgi);  // electrons per cm^3
@@ -2665,7 +2665,7 @@ void solve_spencerfano(const int nonemptymgi, const int timestep, const int iter
         timestep_last_solved, nne_per_ion_fracdiff, NT_MAX_FRACDIFF_NNEPERION_BETWEEN_SOLUTIONS, timestep,
         timestep_last_solved, SF_MAX_TIMESTEPS_BETWEEN_SOLUTIONS);
 
-    return;
+    return false;
   }
   printlnlog(
       "Setting up Spencer-Fano equation with {} energy points from {:g} [eV] to {:g} [eV] in cell {} at timestep {} "
@@ -2713,6 +2713,7 @@ void solve_spencerfano(const int nonemptymgi, const int timestep, const int iter
   const auto yfunc = sfmatrix_solve(sfmatrixuppertri);
   constexpr bool verbose = false;
   analyse_sf_solution(nonemptymgi, timestep, yfunc, verbose);
+  return true;
 }
 
 void write_restart_data(FILE* gridsave_file) {

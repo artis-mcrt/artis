@@ -470,8 +470,10 @@ void nltepop_reset_element(const int nonemptymgi, const int element) {
   }
 }
 
-auto get_element_superlevelpartfuncs(const int nonemptymgi, const int element) -> std::vector<double> {
-  std::vector<double> superlevel_partfuncs;
+// Fill the caller's buffer with the superlevel partition function of every ion of the element (-1 for an
+// ion without a superlevel). The caller keeps the buffer between calls, so there is no heap allocation.
+void get_element_superlevelpartfuncs(const int nonemptymgi, const int element,
+                                     std::vector<double>& superlevel_partfuncs) {
   reserve_resize(superlevel_partfuncs, get_nions(element));
   for (int ion = 0; ion < get_nions(element); ion++) {
     if (ion_has_superlevel(element, ion)) {
@@ -484,8 +486,6 @@ auto get_element_superlevelpartfuncs(const int nonemptymgi, const int element) -
       superlevel_partfuncs[ion] = -1.;
     }
   }
-
-  return superlevel_partfuncs;
 }
 
 [[nodiscard]] auto get_element_nlte_dimension(const int element, const int first_ion_used, const int nions_used)
@@ -531,8 +531,10 @@ void nltepop_matrix_add_boundbound(const int nonemptymgi, const int element, con
 
   // the level populations and matrix indices are constants of the fill but are needed for both
   // endpoints of every transition, so look them up once per level instead of twice per transition
-  std::vector<double> levelpops(nlevels);
-  std::vector<int> levelindices(nlevels);
+  THREADLOCALONHOST std::vector<double> levelpops;
+  THREADLOCALONHOST std::vector<int> levelindices;
+  reserve_resize(levelpops, static_cast<size_t>(nlevels));
+  reserve_resize(levelindices, static_cast<size_t>(nlevels));
   for (int level = 0; level < nlevels; level++) {
     levelpops[level] = calculate_levelpop(nonemptymgi, element, ion, level);
     levelindices[level] = get_nlte_vector_index(element, ion, level, first_ion_used);
@@ -905,9 +907,9 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
 }
 
 [[nodiscard]] auto solution_pops_are_valid(const int nonemptymgi, const int element, std::span<double> popvec,
-                                           const int first_ion_used, const int nions_used) -> bool {
+                                           const std::span<const double> superlevel_partfuncs, const int first_ion_used,
+                                           const int nions_used) -> bool {
   const size_t nlte_dimension = popvec.size();
-  const auto superlevel_partfuncs = get_element_superlevelpartfuncs(nonemptymgi, element);
   for (auto index = 0ZU; index < nlte_dimension; index++) {
     const auto [ion, level] = get_ion_level_of_nlte_vector_index(index, element, first_ion_used, nions_used);
     const auto ionstage = get_ionstage(element, ion);
@@ -1128,7 +1130,8 @@ constexpr double RELATIVE_RESIDUAL_WARN_TOLERANCE = 1e-8;
                                         const std::span<const double> rate_matrix,
                                         std::span<const double> balance_vector, std::span<double> popvec,
                                         std::span<const double> pop_normfactors, const int max_nlte_dimension,
-                                        const int first_ion_used, const int nions_used) -> bool {
+                                        const std::span<const double> superlevel_partfuncs, const int first_ion_used,
+                                        const int nions_used) -> bool {
   const size_t nlte_dimension = balance_vector.size();
   assert_always(pop_normfactors.size() == nlte_dimension);
   assert_always(rate_matrix.size() == (nlte_dimension * nlte_dimension));
@@ -1239,15 +1242,16 @@ constexpr double RELATIVE_RESIDUAL_WARN_TOLERANCE = 1e-8;
     popvec[i] = vec_x[i] * pop_normfactors[i];
   }
 
-  return solution_pops_are_valid(nonemptymgi, element, popvec, first_ion_used, nions_used);
+  return solution_pops_are_valid(nonemptymgi, element, popvec, superlevel_partfuncs, first_ion_used, nions_used);
 }
 
 // GTH counterpart of nltepop_matrix_solve: solve for the stationary populations of the assembled rate matrix
 // directly, with no normalisation row, balance vector, equilibration, or iterative refinement. popvec must be
 // zero-filled on entry and holds a solution only on success.
 [[nodiscard]] auto nltepop_matrix_solve_gth(const int element, const int nonemptymgi, RateMatrices& rate_matrices,
-                                            std::span<double> popvec, const double nnelement, const int first_ion_used,
-                                            const int nions_used) -> bool {
+                                            std::span<double> popvec, const double nnelement,
+                                            const std::span<const double> superlevel_partfuncs,
+                                            const int first_ion_used, const int nions_used) -> bool {
   const auto nlte_dimension = std::ssize(popvec);
 
   const auto rate_matrix = rate_matrices.get_summed_rate_matrix();
@@ -1287,7 +1291,7 @@ constexpr double RELATIVE_RESIDUAL_WARN_TOLERANCE = 1e-8;
         nltelog.modelgridindex, nltelog.timestep, get_atomicnumber(element), max_relative_residual);
   }
 
-  return solution_pops_are_valid(nonemptymgi, element, popvec, first_ion_used, nions_used);
+  return solution_pops_are_valid(nonemptymgi, element, popvec, superlevel_partfuncs, first_ion_used, nions_used);
 }
 
 auto can_remove_ion(const int element, const int ion, const int first_ion_used, const int nions_used,
@@ -1409,6 +1413,7 @@ void nltepop_matrix_add_time_dependence(const int nonemptymgi, const int element
 auto nltepop_solve_matrix_with_ion_reduction(const int element, const int nonemptymgi, const double t_mid,
                                              const double nnelement,
                                              const std::vector<std::vector<double>>& s_renorm_allions,
+                                             const std::span<const double> superlevel_partfuncs,
                                              RateMatrices& rate_matrices, std::vector<double>& popvec,
                                              const std::optional<double> dt_time_dependent)
     -> std::tuple<bool, int, int> {
@@ -1455,8 +1460,8 @@ auto nltepop_solve_matrix_with_ion_reduction(const int element, const int nonemp
     });
 
     if (use_gth_solver) {
-      matrix_solve_success =
-          nltepop_matrix_solve_gth(element, nonemptymgi, rate_matrices, popvec, nnelement, first_ion_used, nions_used);
+      matrix_solve_success = nltepop_matrix_solve_gth(element, nonemptymgi, rate_matrices, popvec, nnelement,
+                                                      superlevel_partfuncs, first_ion_used, nions_used);
     } else {
       // replace the zeroth row of the matrix and balance vector with the normalisation
       // constraint (sum of levelpops = total element population)
@@ -1473,7 +1478,8 @@ auto nltepop_solve_matrix_with_ion_reduction(const int element, const int nonemp
       balance_vector[0] = nnelement;
 
       if (FORCE_SAHA_ION_BALANCE(atomic_number)) {
-        const auto ionfractions = calculate_ionfractions(element, nonemptymgi, grid::get_nne(nonemptymgi), true);
+        THREADLOCALONHOST std::vector<double> ionfractions;
+        calculate_ionfractions(element, nonemptymgi, grid::get_nne(nonemptymgi), true, ionfractions);
         // ssize() to avoid unsigned wraparound to a huge positive value when the vector is empty
         const int uppermost_ion = static_cast<int>(std::ssize(ionfractions)) - 1;
         for (int ion = first_ion_used + 1; ion <= std::min(uppermost_ion, max_ion_used); ion++) {
@@ -1504,8 +1510,9 @@ auto nltepop_solve_matrix_with_ion_reduction(const int element, const int nonemp
       std::ranges::fill(pop_normfactors, 1.0);
       nltepop_matrix_normalise(rate_matrix, balance_vector, pop_normfactors);
 
-      matrix_solve_success = nltepop_matrix_solve(element, nonemptymgi, rate_matrix, balance_vector, popvec,
-                                                  pop_normfactors, max_nlte_dimension, first_ion_used, nions_used);
+      matrix_solve_success =
+          nltepop_matrix_solve(element, nonemptymgi, rate_matrix, balance_vector, popvec, pop_normfactors,
+                               max_nlte_dimension, superlevel_partfuncs, first_ion_used, nions_used);
     }
 
     matrix_solve_required = false;  // will be set to true if we need to retry with a different ion range
@@ -1632,11 +1639,18 @@ void nltepop_apply_solution(const int element, const int nonemptymgi, const int 
 
 }  // anonymous namespace
 
-// Clear the stored NLTE solution ranges of every element in the cell, for the paths that replace
-// the NLTE solution with Saha populations without a solve.
-void nltepop_reset_solution_ranges(const int nonemptymgi) {
+// Clear the NLTE solution of every element in the cell, for the paths that replace the NLTE
+// solution with Saha populations without a solve. The level populations get the -1 marker, so
+// the partition functions and the Saha balance then use the Boltzmann populations. A stale
+// excited population divided by a Saha ground population at the MINPOP floor would overflow
+// the partition function.
+void nltepop_reset_cell(const int nonemptymgi) {
   for (int element = 0; element < get_nelements(); element++) {
-    grid::set_elements_lowermost_ion(nonemptymgi, element, 0);
+    if (elem_has_nlte_levels(element)) {
+      nltepop_reset_element(nonemptymgi, element);
+    } else {
+      grid::set_elements_lowermost_ion(nonemptymgi, element, 0);
+    }
   }
   if constexpr (NLTE_TIME_DEPENDENT_FIRST_TIMESTEP.has_value()) {
     // the cell holds no NLTE solution, so the next timestep starts from the steady-state equations
@@ -1794,7 +1808,8 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
         modelgridindex, timestep, atomic_number, grid::get_elem_massfrac(nonemptymgi, element), nnelement);
   }
 
-  const auto superlevel_partfuncs = get_element_superlevelpartfuncs(nonemptymgi, element);
+  THREADLOCALONHOST std::vector<double> superlevel_partfuncs;
+  get_element_superlevelpartfuncs(nonemptymgi, element, superlevel_partfuncs);
 
   const auto max_nlte_dimension = get_max_nlte_dimension();
 
@@ -1835,8 +1850,9 @@ void solve_nlte_pops_element(const int element, const int nonemptymgi, const int
         modelgridindex, timestep, atomic_number);
   }
 
-  const auto [matrix_solve_success, first_ion_used, nions_used] = nltepop_solve_matrix_with_ion_reduction(
-      element, nonemptymgi, t_mid, nnelement, s_renorm_allions, rate_matrices, popvec, dt_time_dependent);
+  const auto [matrix_solve_success, first_ion_used, nions_used] =
+      nltepop_solve_matrix_with_ion_reduction(element, nonemptymgi, t_mid, nnelement, s_renorm_allions,
+                                              superlevel_partfuncs, rate_matrices, popvec, dt_time_dependent);
 
   if (!matrix_solve_success) {
     printlnlog(
@@ -1890,7 +1906,8 @@ void nltepop_write_to_file(const int nonemptymgi, const int timestep) {
       continue;
     }
 
-    const auto superlevel_partfuncs = get_element_superlevelpartfuncs(nonemptymgi, element);
+    THREADLOCALONHOST std::vector<double> superlevel_partfuncs;
+    get_element_superlevelpartfuncs(nonemptymgi, element, superlevel_partfuncs);
 
     for (int ion = 0; ion < get_nions(element); ion++) {
       const int nlevels_excited_nlte = get_nlevels_excited_nlte(element, ion);
@@ -2031,7 +2048,7 @@ void nltepop_write_restart_data(FILE* restart_file) {
     for (int nlteindex = 0; nlteindex < globals::total_nlte_levels; nlteindex++) {
       fprintf(restart_file, "%la ", nltepops_allcells[(nonemptymgi * globals::total_nlte_levels) + nlteindex]);
     }
-    if constexpr (ENABLE_CHARGE_TRANSFER_REACTIONS) {
+    if constexpr (grid::NLTE_TRACK_SOLUTION_RANGES) {
       // the solved ion range of each element, so that a resumed run starts with the same reactions
       fprintf(restart_file, "\n");
       for (int element = 0; element < get_nelements(); element++) {
@@ -2085,7 +2102,7 @@ void nltepop_read_restart_data(FILE* restart_file) {
       assert_always(fscanf(restart_file, "%la ",
                            &nltepops_allcells[(nonemptymgi * globals::total_nlte_levels) + nlteindex]) == 1);
     }
-    if constexpr (ENABLE_CHARGE_TRANSFER_REACTIONS) {
+    if constexpr (grid::NLTE_TRACK_SOLUTION_RANGES) {
       for (int element = 0; element < get_nelements(); element++) {
         int lowermost_ion = 0;
         int uppermost_ion = 0;

@@ -20,6 +20,10 @@ constexpr bool FORCE_SPHERICAL_ESCAPE_SURFACE = false;
 
 constexpr int NLTEITER = 30;
 
+constexpr bool NLTE_TE_NNE_USE_ANDERSON_ACCEL = false;
+
+constexpr double NLTE_OUTER_RELTOL = 0.04;
+
 constexpr int ION_NLEVELS_EXCITED_NLTE(int element_z, int ionstage) { return 0; }
 
 constexpr bool LTEPOP_EXCITATION_USE_TJ = true;

@@ -1,0 +1,24 @@
+1281360349               #  0: pre_zseed: specific random number seed if > 0 or random if negative
+8                        #  1: ntimesteps: number of timesteps
+000 005                  #  2: timestep_start timestep_finish: timestep number range start (inclusive) and stop (not inclusive)
+3.0 060                  #  3: tmin_days tmax_days: start and end times [day]
+1.33  1.330000001        #  4: UNUSED nusyn_min_mev nusyn_max_mev: lowest and highest frequency to synthesise [MeV]
+80                       #  5: UNUSED nsyn_time: number of times for synthesis
+3. 0.037                 #  6: UNUSED start and end times for synthesis
+2                        #  7: UNUSED (now autodetected) model.txt number of dimensions (1, 2, or 3)
+4                        #  8: UNUSED compute r-light curve (1: no estimators, 2: thin cells, 3: thick cells, 4: gamma-ray heating)
+1                        #  9: UNUSED n_out_it: number of iterations
+1.0                      # 10: UNUSED change speed of light by some factor. Change constants.h CLIGHT_PROP instead
+-1                       # 11: UNUSED gamma_kappagrey: if >0: use grey opacity for gammas, if <0: use detailed opacity
+0 0 1                    # 12: UNUSED syn_dir: x, y, and z components of unit vector (now always 0,0,1)
+5                        # 13: UNUSED opacity_case: opacity choice
+1.0e-10                  # 14: UNUSED rho_crit_para: free parameter for calculation of rho_crit
+-1                       # 15: UNUSED debug_packet: (>=0: activate debug output for packet id, <0: ignore)
+0                        # 16: simulation_continued_from_saved: (0: start new simulation, 1: continue from gridsave and packets files)
+1e-6                     # 17: UNUSED rfcut: wavelength at which the radiation field switches from the nebular approximation to LTE.
+2                        # 18: num_lte_timesteps
+0.0 1                    # 19: optical_depth_is_thick num_grey_timesteps
+-1                       # 20: UNUSED max_bf_continua: (ignored; all bound-free continua are included)
+4                        # 21: nprocs_exspec: extract spectra for n MPI tasks. sn3d will set this on start of new sim.
+1                        # 22: UNUSED do_emission_res: this is always true for exspec, sometimes true during sn3d
+0.001 1000               # 23: UNUSED kpktdiffusion_timescale n_kpktdiffusion_timesteps: now set in kpkt.cc
