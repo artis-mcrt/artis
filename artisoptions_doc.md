@@ -24,8 +24,9 @@ constexpr int NLTEITER;
 //
 // The accelerator forgets its history when an element falls back to LTE or changes its solved ion range,
 // because the map is then discontinuous. A new non-thermal solution also clears the history. The loop
-// rejects three kinds of step:
+// rejects four kinds of step:
 // - a step outside [MINTEMP, MAXTEMP];
+// - a step with an electron density below MINPOP;
 // - a step with an electron density above the total electron density of the cell;
 // - a step away from the map output that is larger than twice the residual.
 // The convergence test comes before the injection, so a converged cell keeps the output of a plain pass. A
@@ -34,11 +35,11 @@ constexpr bool NLTE_TE_NNE_USE_ANDERSON_ACCEL;
 
 // Relative tolerance of the NLTE/Te/Spencer-Fano iteration for nne and T_e. Without the acceleration the
 // loop stops when the change between two passes is below the tolerance. With acceleration the loop tests an
-// estimate of the error that remains instead. The estimate is the change times rho / (1 - rho), where rho is
+// estimate of the error that remains instead. The estimate is the change times rho / (1 - rho). Here rho is
 // the ratio of the last two changes, limited to the range 0.5 to 0.95. nne and T_e each get their own ratio,
 // and the larger estimate counts. The estimate is the error of a linear contraction with that ratio, so the
 // tolerance then means an error and not a change. The estimate is never below the change. With the charge
-// transfer reactions, the same value is the tolerance of the ion population test.
+// transfer reactions or the acceleration, the same value is the tolerance of the ion population test.
 constexpr double NLTE_OUTER_RELTOL;
 
 // Specify how many levels will be treated in full NLTE, not including the ground state or the superlevel.
