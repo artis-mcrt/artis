@@ -41,7 +41,7 @@ namespace {
 using OuterAnderson = AndersonAccelerator<2>;
 // the depth of the acceleration is the dimension of the state, the largest useful value
 constexpr std::size_t ANDERSON_DEPTH = NLTE_TE_NNE_USE_ANDERSON_ACCEL ? OuterAnderson::max_depth : 0;
-static_assert(NLTE_OUTER_RELTOL > 0.);
+static_assert(NLTE_TE_NNE_RELTOL > 0.);
 
 std::vector<HeatingCoolingRates> heatingcoolingrates_thisrankcells;
 
@@ -302,11 +302,11 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
 
         // the test comes before the injection, so a converged cell keeps the plain map output and the
         // heating and cooling rates of its T_e. The charge transfer tests are from the previous pass.
-        if (!map_changed && error_estimate <= NLTE_OUTER_RELTOL && fracdiff_nnion_prev <= NLTE_OUTER_RELTOL) {
+        if (!map_changed && error_estimate <= NLTE_TE_NNE_RELTOL && fracdiff_nnion_prev <= NLTE_TE_NNE_RELTOL) {
           printlnlog(
               "NLTE (Spencer-Fano/Te/pops) solver mgi {} timestep {} iteration {}: converged with an estimated error "
               "{:g} <= {:g} (T_e change {:g}, nne change {:g})",
-              mgi, nts, nlte_iter, error_estimate, NLTE_OUTER_RELTOL, change[0], change[1]);
+              mgi, nts, nlte_iter, error_estimate, NLTE_TE_NNE_RELTOL, change[0], change[1]);
           break;
         }
         if (nlte_iter == NLTEITER || map_changed) {
@@ -427,19 +427,19 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
         grid::Te_allcells[nonemptymgi], fracdiff_T_e);
     if constexpr (NLTE_TE_NNE_USE_ANDERSON_ACCEL) {
       // with acceleration, the convergence test and the estimated error are before the injection
-      // (see NLTE_OUTER_RELTOL). This pass only keeps its results for that test.
+      // (see NLTE_TE_NNE_RELTOL). This pass only keeps its results for that test.
       fracdiff_nne_prev = fracdiff_nne;
       fracdiff_nnion_prev = fracdiff_nnion;
       map_changed = nlte_solution_changed;
     } else {
       // without the charge transfer option, the ion population test and the solution range test
       // always pass
-      if (fracdiff_nne <= NLTE_OUTER_RELTOL && fracdiff_T_e <= NLTE_OUTER_RELTOL &&
-          fracdiff_nnion <= NLTE_OUTER_RELTOL && !nlte_solution_changed) {
+      if (fracdiff_nne <= NLTE_TE_NNE_RELTOL && fracdiff_T_e <= NLTE_TE_NNE_RELTOL &&
+          fracdiff_nnion <= NLTE_TE_NNE_RELTOL && !nlte_solution_changed) {
         printlnlog(
             "NLTE (Spencer-Fano/Te/pops) solver mgi {} timestep {} iteration {}: nne converged to tolerance {:g} <= "
             "{:g} and T_e to tolerance {:g} <= {:g}",
-            mgi, nts, nlte_iter, fracdiff_nne, NLTE_OUTER_RELTOL, fracdiff_T_e, NLTE_OUTER_RELTOL);
+            mgi, nts, nlte_iter, fracdiff_nne, NLTE_TE_NNE_RELTOL, fracdiff_T_e, NLTE_TE_NNE_RELTOL);
         break;
       }
     }

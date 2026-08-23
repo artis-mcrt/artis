@@ -40,7 +40,7 @@ constexpr bool NLTE_TE_NNE_USE_ANDERSON_ACCEL;
 // and the larger estimate counts. The estimate is the error of a linear contraction with that ratio, so the
 // tolerance then means an error and not a change. The estimate is never below the change. With the charge
 // transfer reactions or the acceleration, the same value is the tolerance of the ion population test.
-constexpr double NLTE_OUTER_RELTOL;
+constexpr double NLTE_TE_NNE_RELTOL;
 
 // Specify how many levels will be treated in full NLTE, not including the ground state or the superlevel.
 constexpr int ION_NLEVELS_EXCITED_NLTE(int element_z, int ionstage);

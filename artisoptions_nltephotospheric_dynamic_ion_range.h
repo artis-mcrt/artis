@@ -22,7 +22,7 @@ constexpr int NLTEITER = 30;
 
 constexpr bool NLTE_TE_NNE_USE_ANDERSON_ACCEL = false;
 
-constexpr double NLTE_OUTER_RELTOL = 0.04;
+constexpr double NLTE_TE_NNE_RELTOL = 0.04;
 
 constexpr int ION_NLEVELS_EXCITED_NLTE(int element_z, int ionstage) {
   if (element_z < 20) {
