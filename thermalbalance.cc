@@ -192,13 +192,7 @@ auto T_e_eqn_heating_minus_cooling(const double T_e, int nonemptymgi, const doub
         1.5 * KB * ((nntot * (T_e - T_e_old)) + (T_e_old * (nne - nne_old))) / *dt;
   }
 
-  const double total_heating_rate = heatingcoolingrates.heating_ff + heatingcoolingrates.heating_bf +
-                                    heatingcoolingrates.heating_collisional + heatingcoolingrates.heating_dep;
-  const double total_coolingrate = heatingcoolingrates.cooling_ff + heatingcoolingrates.cooling_fb +
-                                   heatingcoolingrates.cooling_collisional + heatingcoolingrates.cooling_adiabatic +
-                                   heatingcoolingrates.cooling_heatcapacity;
-
-  return total_heating_rate - total_coolingrate;
+  return heatingcoolingrates.get_total_heating() - heatingcoolingrates.get_total_cooling();
 }
 
 }  // anonymous namespace
