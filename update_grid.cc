@@ -229,9 +229,11 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
       // SF solution depends on the ionisation balance, and weakly on nne
       spencerfano_changed = nonthermal::solve_spencerfano(nonemptymgi, nts, nlte_iter);
     }
+    // a new non-thermal solution after the first pass changes the map. The history is then useless,
+    // and the pass must reach the element solves, so the convergence test of this pass is off.
+    const bool map_changed = spencerfano_changed && nlte_iter > 0;
     if constexpr (NLTE_OUTER_ANDERSON_DEPTH > 0) {
-      if (spencerfano_changed && nlte_iter > 0) {
-        // a new non-thermal solution changes the map, so the history is useless
+      if (map_changed) {
         anderson.reset();
         change_prev = {-1., -1.};
       }
@@ -298,7 +300,7 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
 
         // the test comes before the injection, so a converged cell keeps the plain map output and the
         // heating and cooling rates of its T_e. The charge transfer tests are from the previous pass.
-        if (error_estimate <= NLTE_OUTER_RELTOL && fracdiff_nnion_prev <= NLTE_OUTER_RELTOL &&
+        if (!map_changed && error_estimate <= NLTE_OUTER_RELTOL && fracdiff_nnion_prev <= NLTE_OUTER_RELTOL &&
             !nlte_solution_changed_prev) {
           printlnlog(
               "NLTE (Spencer-Fano/Te/pops) solver mgi {} timestep {} iteration {}: converged with an estimated error "
