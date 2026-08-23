@@ -696,23 +696,26 @@ void test_anderson_accelerator() {
   const auto linear_map = [](const std::array<double, 2>& x) {
     return std::array<double, 2>{(0.9 * x[0]) + 1.0, (-0.7 * x[1]) + 3.4};
   };
-  const auto iterate = [&](const std::size_t depth) {
+  // iterate the map from x until g is within 1e-8 of the fixed point, and return the count and the iterate
+  const auto iterate = [](const std::size_t depth, const auto& map, std::array<double, 2> x,
+                          const std::array<double, 2>& fixedpoint) {
     AndersonAccelerator<2> acc(depth);
-    std::array<double, 2> x{0., 0.};
     int iterations = 0;
     for (; iterations < 1000; iterations++) {
-      const auto g = linear_map(x);
-      if (std::max(std::abs(g[0] - 10.), std::abs(g[1] - 2.)) < 1e-8) {
+      const auto g = map(x);
+      if (std::max(std::abs(g[0] - fixedpoint[0]), std::abs(g[1] - fixedpoint[1])) < 1e-8) {
         break;
       }
       x = acc.next(x, g);
     }
     return std::pair{iterations, x};
   };
-  const auto [iterations_plain, x_plain] = iterate(0);
-  const auto [iterations_depth1, x_depth1] = iterate(1);
-  const auto [iterations_depth2, x_depth2] = iterate(2);
-  const auto [iterations_depth4, x_depth4] = iterate(4);
+  const std::array<double, 2> x0{0., 0.};
+  const std::array<double, 2> linear_fixedpoint{10., 2.};
+  const auto [iterations_plain, x_plain] = iterate(0, linear_map, x0, linear_fixedpoint);
+  const auto [iterations_depth1, x_depth1] = iterate(1, linear_map, x0, linear_fixedpoint);
+  const auto [iterations_depth2, x_depth2] = iterate(2, linear_map, x0, linear_fixedpoint);
+  const auto [iterations_depth4, x_depth4] = iterate(4, linear_map, x0, linear_fixedpoint);
   check(iterations_plain > 100, "plain successive substitution needs more than 100 iterations");
   check(iterations_depth1 < iterations_plain / 4, "Anderson depth 1 needs fewer than a quarter of the iterations");
   check(iterations_depth2 <= 4, "Anderson depth 2 solves a linear 2-D map in at most 4 iterations");
@@ -725,23 +728,15 @@ void test_anderson_accelerator() {
   // a map with a 2-cycle: x -> c - x never converges by itself, and with depth 2 the two stored
   // residual differences are exact negatives. The accelerator must then use depth 1 and find the
   // midpoint, which is the fixed point
-  {
-    AndersonAccelerator<2> acc_cycle(2);
-    std::array<double, 2> x{0., 10.};
-    bool reached = false;
-    for (int iteration = 0; iteration < 10 && !reached; iteration++) {
-      const std::array<double, 2> g{6. - x[0], 2. - x[1]};
-      reached = std::max(std::abs(g[0] - 3.), std::abs(g[1] - 1.)) < 1e-8;
-      x = acc_cycle.next(x, g);
-    }
-    check(reached, "Anderson depth 2 solves a 2-cycle map with the depth 1 fallback");
-  }
+  const auto cycle_map = [](const std::array<double, 2>& x) { return std::array<double, 2>{6. - x[0], 2. - x[1]}; };
+  const auto [iterations_cycle, x_cycle] = iterate(2, cycle_map, {0., 10.}, {3., 1.});
+  check(iterations_cycle < 10, "Anderson depth 2 solves a 2-cycle map with the depth 1 fallback");
 
   // with no history, or after a reset, the accelerator returns the plain map output
   AndersonAccelerator<2> acc(2);
-  const std::array<double, 2> x0{1., 1.};
-  const auto g0 = linear_map(x0);
-  check(acc.next(x0, g0) == g0, "the first Anderson step returns the map output");
+  const std::array<double, 2> xa{1., 1.};
+  const auto ga = linear_map(xa);
+  check(acc.next(xa, ga) == ga, "the first Anderson step returns the map output");
   const std::array<double, 2> x1{2., 3.};
   const auto g1 = linear_map(x1);
   check(acc.next(x1, g1) != g1, "the second Anderson step changes the iterate");

@@ -35,7 +35,9 @@ class AndersonAccelerator {
     }
 
     State result = g;
-    const std::size_t m_max = std::min(nstored_, depth_);
+    // a zero residual difference at index j makes every depth above j singular, so the usable depth
+    // ends at the first one
+    std::size_t m_max = std::min(nstored_, depth_);
 
     // consecutive differences: entry j is (pair k-j) - (pair k-j-1), with pair k = (g, residual). Each
     // difference of the residuals gets a unit norm. The test of the solve below then sees the angle
@@ -55,42 +57,40 @@ class AndersonAccelerator {
           sumsq += dres_chain[j][i] * dres_chain[j][i];
         }
         dres_norm[j] = std::sqrt(sumsq);
-        if (dres_norm[j] > 0.) {
-          for (std::size_t i = 0; i < N; i++) {
-            dres_chain[j][i] /= dres_norm[j];
-          }
+        if (!(dres_norm[j] > 0.)) {
+          m_max = j;
+          break;
+        }
+        for (std::size_t i = 0; i < N; i++) {
+          dres_chain[j][i] /= dres_norm[j];
         }
         r_newer = rprev;
         g_newer = gprev;
       }
     }
 
+    // normal equations for the coefficients gamma: minimise |residual - sum_j gamma_j dres_chain[j]|. The
+    // equations of a smaller depth are the leading block of these
+    std::array<std::array<double, MAXDEPTH>, MAXDEPTH> ata{};
+    std::array<double, MAXDEPTH> atb{};
+    for (std::size_t a = 0; a < m_max; a++) {
+      for (std::size_t b = 0; b < m_max; b++) {
+        double sum = 0.;
+        for (std::size_t i = 0; i < N; i++) {
+          sum += dres_chain[a][i] * dres_chain[b][i];
+        }
+        ata[a][b] = sum;
+      }
+      double sum = 0.;
+      for (std::size_t i = 0; i < N; i++) {
+        sum += dres_chain[a][i] * residual[i];
+      }
+      atb[a] = sum;
+    }
+
     // a singular system (e.g. a 2-cycle, where two residual differences are exact negatives) makes
     // the solve fail. The loop then tries each smaller depth, down to the plain map output
     for (std::size_t m = m_max; m > 0; m--) {
-      // normal equations (m x m) for the coefficients gamma: minimise |residual - sum_j gamma_j dres_chain[j]|
-      std::array<std::array<double, MAXDEPTH>, MAXDEPTH> ata{};
-      std::array<double, MAXDEPTH> atb{};
-      bool zero_difference = false;
-      for (std::size_t a = 0; a < m; a++) {
-        zero_difference = zero_difference || !(dres_norm[a] > 0.);
-        for (std::size_t b = 0; b < m; b++) {
-          double sum = 0.;
-          for (std::size_t i = 0; i < N; i++) {
-            sum += dres_chain[a][i] * dres_chain[b][i];
-          }
-          ata[a][b] = sum;
-        }
-        double sum = 0.;
-        for (std::size_t i = 0; i < N; i++) {
-          sum += dres_chain[a][i] * residual[i];
-        }
-        atb[a] = sum;
-      }
-      if (zero_difference) {
-        continue;
-      }
-
       std::array<double, MAXDEPTH> gamma{};
       if (solve_small_system(ata, atb, m, gamma)) {
         for (std::size_t j = 0; j < m; j++) {

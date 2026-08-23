@@ -10,8 +10,9 @@ mkdir -p $runfolder
 
 cd $runfolder
 
-# the model files of the kilonova_2d test. The atomic data archive supplies compositiondata.txt
-rsync -av --exclude="compositiondata.txt" --exclude="input-*.txt" --exclude="results_md5*" ../kilonova_2d_inputfiles/ ./
+# the model files of the kilonova_2d test. The atomic data archive supplies compositiondata.txt, and
+# the second rsync below supplies the input and checksum files of this test
+rsync -av --exclude="compositiondata.txt" ../kilonova_2d_inputfiles/ ./
 
 tar -xf ../atomicdata_sryzrlace.tar.zst --directory ./
 
@@ -27,7 +28,7 @@ sed -i'' -e 's/constexpr int MPKTS.*/constexpr int MPKTS = 50000;/g' artisoption
 
 sed -i'' -e 's/constexpr int TABLESIZE.*/constexpr int TABLESIZE = 40;/g' artisoptions.h
 
-# a few near-vacuum cells oscillate between two states and never converge, so limit their cost
+# a few near-vacuum cells reach NLTEITER in every timestep, so this limit keeps the run time of the test low
 sed -i'' -e 's/constexpr int NLTEITER.*/constexpr int NLTEITER = 10;/g' artisoptions.h
 
 sed -i'' -e 's/constexpr int ION_NLEVELS_EXCITED_NLTE.*/constexpr int ION_NLEVELS_EXCITED_NLTE(int element_z, int ionstage) { return 20; }/g' artisoptions.h

@@ -2048,7 +2048,7 @@ void nltepop_write_restart_data(FILE* restart_file) {
     for (int nlteindex = 0; nlteindex < globals::total_nlte_levels; nlteindex++) {
       fprintf(restart_file, "%la ", nltepops_allcells[(nonemptymgi * globals::total_nlte_levels) + nlteindex]);
     }
-    if constexpr (NLTE_TRACK_SOLUTION_RANGES) {
+    if constexpr (grid::NLTE_TRACK_SOLUTION_RANGES) {
       // the solved ion range of each element, so that a resumed run starts with the same reactions
       fprintf(restart_file, "\n");
       for (int element = 0; element < get_nelements(); element++) {
@@ -2102,7 +2102,7 @@ void nltepop_read_restart_data(FILE* restart_file) {
       assert_always(fscanf(restart_file, "%la ",
                            &nltepops_allcells[(nonemptymgi * globals::total_nlte_levels) + nlteindex]) == 1);
     }
-    if constexpr (NLTE_TRACK_SOLUTION_RANGES) {
+    if constexpr (grid::NLTE_TRACK_SOLUTION_RANGES) {
       for (int element = 0; element < get_nelements(); element++) {
         int lowermost_ion = 0;
         int uppermost_ion = 0;

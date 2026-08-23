@@ -213,9 +213,12 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
   OuterAnderson anderson(static_cast<std::size_t>(NLTE_OUTER_ANDERSON_DEPTH));
   std::array<double, 2> x_injected{};  // the state that the element solves of the previous pass used
   std::array<double, 2> change_prev{-1., -1.};  // the relative changes of the previous pass, for the error estimate
-  // the charge transfer tests of the previous pass, for the convergence test before the injection
+  // the results of the previous pass, for the convergence test before the injection
+  double fracdiff_nne_prev = 0.;
   double fracdiff_nnion_prev = 0.;
-  bool nlte_solution_changed_prev = false;
+  // the map changed, e.g. a significant ion entered or left a solved range: the history is useless,
+  // and the next pass must reach the element solves
+  bool map_changed = false;
 
   // the ion populations and the NLTE solution ranges of the previous iteration, for the charge
   // transfer convergence test. The buffers are thread-local, so every cell reuses them.
@@ -229,14 +232,11 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
       // SF solution depends on the ionisation balance, and weakly on nne
       spencerfano_changed = nonthermal::solve_spencerfano(nonemptymgi, nts, nlte_iter);
     }
-    // a new non-thermal solution after the first pass changes the map. The history is then useless,
-    // and the pass must reach the element solves, so the convergence test of this pass is off.
-    const bool map_changed = spencerfano_changed && nlte_iter > 0;
-    if constexpr (NLTE_OUTER_ANDERSON_DEPTH > 0) {
-      if (map_changed) {
-        anderson.reset();
-        change_prev = {-1., -1.};
-      }
+    // a new non-thermal solution after the first pass also changes the map
+    map_changed = map_changed || (spencerfano_changed && nlte_iter > 0);
+    if (map_changed) {
+      anderson.reset();
+      change_prev = {-1., -1.};
     }
     const auto duration_solve_spencerfano =
         std::chrono::duration<double>(std::chrono::steady_clock::now() - sys_time_start_spencerfano).count();
@@ -284,8 +284,8 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
         // component gets its own ratio, because the T_e finder limits the change of T_e to a factor of two per
         // pass. The ratio stays in [0.5, 0.95]. The estimate is then never below the change, and never above
         // 19 times the change. A small ratio can be a coincidence, e.g. after the clamp of the finder.
-        const std::array<double, 2> change{std::abs(std::expm1(g[0] - x_injected[0])),
-                                           std::abs(std::expm1(g[1] - x_injected[1]))};
+        // The grid held the injected state before this pass, so the changes are the residuals at that state.
+        const std::array<double, 2> change{fracdiff_T_e, fracdiff_nne_prev};
         std::array<double, 2> rho{};
         double error_estimate = 0.;
         for (std::size_t i = 0; i < 2; i++) {
@@ -294,14 +294,13 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
         }
         change_prev = change;
         printlnlog(
-            "NLTE (Spencer-Fano/Te/pops) solver mgi {} timestep {} iteration {}: T_e change {:g} contraction ratio "
-            "{:g}, nne change {:g} contraction ratio {:g}, estimated error {:g}",
-            mgi, nts, nlte_iter, change[0], rho[0], change[1], rho[1], error_estimate);
+            "NLTE (Spencer-Fano/Te/pops) solver mgi {} timestep {} iteration {}: contraction ratio T_e {:g} nne {:g}, "
+            "estimated error {:g}",
+            mgi, nts, nlte_iter, rho[0], rho[1], error_estimate);
 
         // the test comes before the injection, so a converged cell keeps the plain map output and the
         // heating and cooling rates of its T_e. The charge transfer tests are from the previous pass.
-        if (!map_changed && error_estimate <= NLTE_OUTER_RELTOL && fracdiff_nnion_prev <= NLTE_OUTER_RELTOL &&
-            !nlte_solution_changed_prev) {
+        if (!map_changed && error_estimate <= NLTE_OUTER_RELTOL && fracdiff_nnion_prev <= NLTE_OUTER_RELTOL) {
           printlnlog(
               "NLTE (Spencer-Fano/Te/pops) solver mgi {} timestep {} iteration {}: converged with an estimated error "
               "{:g} <= {:g} (T_e change {:g}, nne change {:g})",
@@ -319,12 +318,8 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
           // the electron density cannot exceed the total electron density of the cell. The step away
           // from the map output cannot exceed twice the residual, because a nearly singular system
           // gives a large step with no information.
-          double stepsq = 0.;
-          double residualsq = 0.;
-          for (std::size_t i = 0; i < 2; i++) {
-            stepsq += (x_next[i] - g[i]) * (x_next[i] - g[i]);
-            residualsq += (g[i] - x_injected[i]) * (g[i] - x_injected[i]);
-          }
+          const double stepsq = pow2(x_next[0] - g[0]) + pow2(x_next[1] - g[1]);
+          const double residualsq = pow2(g[0] - x_injected[0]) + pow2(g[1] - x_injected[1]);
           const bool step_accepted = std::isfinite(T_e_next) && std::isfinite(nne_next) && T_e_next >= MINTEMP &&
                                      T_e_next <= MAXTEMP && nne_next > 0. &&
                                      nne_next <= grid::get_nnetot(nonemptymgi) && stepsq <= 4. * residualsq;
@@ -352,7 +347,7 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
     // late in the sweep has already supplied its rates to the partners that solved before it. Keep
     // the solution ranges as well, to force a new iteration when a significant ion enters or leaves
     // a range. The acceleration also needs this test, because such a change changes the map.
-    if constexpr (NLTE_TRACK_SOLUTION_RANGES) {
+    if constexpr (grid::NLTE_TRACK_SOLUTION_RANGES) {
       nlte_solution_prev.resize(get_nelements());
       nnion_prev.resize(get_includedions());
       for (int element = 0; element < get_nelements(); element++) {
@@ -385,7 +380,7 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
     // reactions can move while nne stays constant
     double fracdiff_nnion = 0.;
     bool nlte_solution_changed = false;
-    if constexpr (NLTE_TRACK_SOLUTION_RANGES) {
+    if constexpr (grid::NLTE_TRACK_SOLUTION_RANGES) {
       for (int element = 0; element < get_nelements(); element++) {
         if (!elem_has_nlte_levels(element)) {
           continue;
@@ -396,7 +391,7 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
         for (int ion = 0; ion < get_nions(element); ion++) {
           const double nnion = get_nnion(nonemptymgi, element, ion);
           const double nnion_before = nnion_prev[get_uniqueionindex(element, ion)];
-          if (std::max(nnion, nnion_before) <= (1e-4 * nnelement)) {
+          if (std::max(nnion, nnion_before) <= (NLTE_SIGNIFICANT_ION_FRACTION * nnelement)) {
             continue;  // an ion without a significant population does not change the map
           }
           // a significant ion stage that appears from a zero population counts as a full change
@@ -404,9 +399,10 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
           fracdiff_nnion = std::max(fracdiff_nnion, fracdiff);
           // a significant ion that enters or leaves the solved range changes the map. An element that
           // falls back to LTE, or returns from it, has a range of {-1, -1} on one side of the change.
-          const bool in_range_before = (ion >= range_before.first && ion <= range_before.second);
-          const bool in_range_after = (ion >= range_after.first && ion <= range_after.second);
-          if (in_range_before != in_range_after) {
+          const auto in_range = [ion](const std::pair<int, int>& range) {
+            return ion >= range.first && ion <= range.second;
+          };
+          if (in_range(range_before) != in_range(range_after)) {
             nlte_solution_changed = true;
           }
         }
@@ -427,20 +423,10 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
         grid::Te_allcells[nonemptymgi], fracdiff_T_e);
     if constexpr (NLTE_OUTER_ANDERSON_DEPTH > 0) {
       // with acceleration, the convergence test and the estimated error are before the injection
-      // (see NLTE_OUTER_RELTOL). This pass only keeps the charge transfer tests for that test.
-      if (nlte_solution_changed) {
-        // the map changed, so the history and the contraction history are useless
-        anderson.reset();
-        change_prev = {-1., -1.};
-      }
+      // (see NLTE_OUTER_RELTOL). This pass only keeps its results for that test.
+      fracdiff_nne_prev = fracdiff_nne;
       fracdiff_nnion_prev = fracdiff_nnion;
-      nlte_solution_changed_prev = nlte_solution_changed;
-      if (nlte_iter == NLTEITER) {
-        printlnlog(
-            "NLTE (Spencer-Fano/Te/pops) solver mgi {} timestep {} iteration {}: failed to converge... Keeping "
-            "solution from last iteration",
-            mgi, nts, nlte_iter);
-      }
+      map_changed = nlte_solution_changed;
     } else {
       // without the charge transfer option, the ion population test and the solution range test
       // always pass
@@ -452,12 +438,12 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
             mgi, nts, nlte_iter, fracdiff_nne, NLTE_OUTER_RELTOL, fracdiff_T_e, NLTE_OUTER_RELTOL);
         break;
       }
-      if (nlte_iter == NLTEITER) {
-        printlnlog(
-            "NLTE (Spencer-Fano/Te/pops) solver mgi {} timestep {} iteration {}: failed to converge... Keeping "
-            "solution from last iteration",
-            mgi, nts, nlte_iter);
-      }
+    }
+    if (nlte_iter == NLTEITER) {
+      printlnlog(
+          "NLTE (Spencer-Fano/Te/pops) solver mgi {} timestep {} iteration {}: failed to converge... Keeping "
+          "solution from last iteration",
+          mgi, nts, nlte_iter);
     }
   }
 

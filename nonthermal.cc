@@ -2631,8 +2631,6 @@ auto solve_spencerfano(const int nonemptymgi, const int timestep, const int iter
   }
 
   if (skip_solution) {
-    // the fallback values only change the map when they replace a real solution
-    const bool had_solution = nt_solution[nonemptymgi].timestep_last_solved >= 0;
     // Axelrod values
     nt_solution[nonemptymgi].frac_heating = 0.97;
     nt_solution[nonemptymgi].frac_ionisation = 0.03;
@@ -2644,7 +2642,7 @@ auto solve_spencerfano(const int nonemptymgi, const int timestep, const int iter
     nt_solution[nonemptymgi].frac_excitations_list_size = 0;
 
     zero_all_effionpot(nonemptymgi);
-    return had_solution;
+    return false;  // both skip conditions are constant over the passes of one cell
   }
 
   const auto nne = grid::get_nne(nonemptymgi);  // electrons per cm^3

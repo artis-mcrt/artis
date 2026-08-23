@@ -70,7 +70,7 @@ jobs:
                   echo "count=$(python3 -c 'import multiprocessing; print(multiprocessing.cpu_count())')" >> $GITHUB_OUTPUT
 
             - name: Cache test atomic data
-              if: ${{ !startsWith(matrix.testname, 'classicmode') && !startsWith(matrix.testname, 'kilonova_2d_timedepnlte') }}
+              if: ${{ !startsWith(matrix.testname, 'classicmode') }}
               uses: actions/cache@v6
               id: cache-testatomicdata
               with:
@@ -265,16 +265,10 @@ jobs:
                   artistools plotspectra -t 4-6 -plotvspecpol 0 1 2 --frompackets ${{ matrix.testname }}_testrun
 
             - name: Plot spectrum kilonova
-              if: always() && inputs.testmode != 'ON' && startsWith(matrix.testname, 'kilonova') && !startsWith(matrix.testname, 'kilonova_2d_timedepnlte')
+              if: always() && inputs.testmode != 'ON' && startsWith(matrix.testname, 'kilonova')
               working-directory: tests/
               run: |
-                  artistools plotspectra --frompackets -t 1.5 ${{ matrix.testname }}_testrun
-
-            - name: Plot spectrum kilonova_2d_timedepnlte
-              if: always() && inputs.testmode != 'ON' && startsWith(matrix.testname, 'kilonova_2d_timedepnlte')
-              working-directory: tests/
-              run: |
-                  artistools plotspectra --frompackets -t 8.5 ${{ matrix.testname }}_testrun
+                  artistools plotspectra --frompackets -t ${{ startsWith(matrix.testname, 'kilonova_2d_timedepnlte') && '8.5' || '1.5' }} ${{ matrix.testname }}_testrun
 
             - name: Upload plot files
               if: always() && inputs.testmode != 'ON' && inputs.uploadoutputfiles == 'ON'

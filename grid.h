@@ -6,6 +6,7 @@
 #include <cstddef>
 #include <tuple>
 
+#include "artisoptions.h"
 #include "constants.h"
 #include "globals.h"
 #include "mpi_logging.h"
@@ -49,6 +50,9 @@ inline MPI_shared_array<float> ion_partfuncts_allcells;
 
 [[nodiscard]] auto get_elements_uppermost_ion(int nonemptymgi, int element) -> int;
 void set_elements_uppermost_ion(int nonemptymgi, int element, int uppermost_ion);
+// The charge transfer reactions and the Anderson acceleration read the NLTE solution ranges, so the
+// lowermost ion of the range then needs storage.
+constexpr bool NLTE_TRACK_SOLUTION_RANGES = ENABLE_CHARGE_TRANSFER_REACTIONS || NLTE_OUTER_ANDERSON_DEPTH > 0;
 [[nodiscard]] auto get_elements_lowermost_ion(int nonemptymgi, int element) -> int;
 void set_elements_lowermost_ion(int nonemptymgi, int element, int lowermost_ion);
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto propcell_width_tmin(int cellindex, int axis) -> double;
