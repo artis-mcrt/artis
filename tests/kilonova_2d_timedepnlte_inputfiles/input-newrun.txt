@@ -1,7 +1,7 @@
 1281360349               #  0: pre_zseed: specific random number seed if > 0 or random if negative
 8                        #  1: ntimesteps: number of timesteps
-000 004                  #  2: timestep_start timestep_finish: timestep number range start (inclusive) and stop (not inclusive)
-7.0 010                  #  3: tmin_days tmax_days: start and end times [day]
+000 005                  #  2: timestep_start timestep_finish: timestep number range start (inclusive) and stop (not inclusive)
+3.0 060                  #  3: tmin_days tmax_days: start and end times [day]
 1.33  1.330000001        #  4: UNUSED nusyn_min_mev nusyn_max_mev: lowest and highest frequency to synthesise [MeV]
 80                       #  5: UNUSED nsyn_time: number of times for synthesis
 3. 0.037                 #  6: UNUSED start and end times for synthesis
@@ -17,7 +17,7 @@
 0                        # 16: simulation_continued_from_saved: (0: start new simulation, 1: continue from gridsave and packets files)
 1e-6                     # 17: UNUSED rfcut: wavelength at which the radiation field switches from the nebular approximation to LTE.
 2                        # 18: num_lte_timesteps
-0.0 0                    # 19: optical_depth_is_thick num_grey_timesteps
+0.0 1                    # 19: optical_depth_is_thick num_grey_timesteps
 -1                       # 20: UNUSED max_bf_continua: (ignored; all bound-free continua are included)
 4                        # 21: nprocs_exspec: extract spectra for n MPI tasks. sn3d will set this on start of new sim.
 1                        # 22: UNUSED do_emission_res: this is always true for exspec, sometimes true during sn3d
