@@ -36,6 +36,7 @@ jobs:
                         kilonova_2d,
                         kilonova_2d_barnesthermalisation,
                         kilonova_2d_expansionopac,
+                        kilonova_2d_timedepnlte,
                         kilonova_2d_xcomgammaphotoion,
                         nebular_1d_3dgrid,
                         nebular_1d_3dgrid_limitbfest,
@@ -69,7 +70,7 @@ jobs:
                   echo "count=$(python3 -c 'import multiprocessing; print(multiprocessing.cpu_count())')" >> $GITHUB_OUTPUT
 
             - name: Cache test atomic data
-              if: ${{ !startsWith(matrix.testname, 'classicmode') }}
+              if: ${{ !startsWith(matrix.testname, 'classicmode') && !startsWith(matrix.testname, 'kilonova_2d_timedepnlte') }}
               uses: actions/cache@v6
               id: cache-testatomicdata
               with:
@@ -91,6 +92,14 @@ jobs:
               with:
                   path: tests/atomicdata_hefeconi_fe_i_to_vii.tar.xz
                   key: tests/atomicdata_hefeconi_fe_i_to_vii.tar.xz
+
+            - name: Cache test atomic data kilonova_2d_timedepnlte
+              if: ${{ startsWith(matrix.testname, 'kilonova_2d_timedepnlte') }}
+              uses: actions/cache@v6
+              id: cache-testatomicdata-sryzrlace
+              with:
+                  path: tests/atomicdata_sryzrlace.tar.zst
+                  key: tests/atomicdata_sryzrlace.tar.zst
 
             - name: Download/extract test data
               working-directory: tests/
@@ -256,10 +265,16 @@ jobs:
                   artistools plotspectra -t 4-6 -plotvspecpol 0 1 2 --frompackets ${{ matrix.testname }}_testrun
 
             - name: Plot spectrum kilonova
-              if: always() && inputs.testmode != 'ON' && startsWith(matrix.testname, 'kilonova')
+              if: always() && inputs.testmode != 'ON' && startsWith(matrix.testname, 'kilonova') && !startsWith(matrix.testname, 'kilonova_2d_timedepnlte')
               working-directory: tests/
               run: |
                   artistools plotspectra --frompackets -t 1.5 ${{ matrix.testname }}_testrun
+
+            - name: Plot spectrum kilonova_2d_timedepnlte
+              if: always() && inputs.testmode != 'ON' && startsWith(matrix.testname, 'kilonova_2d_timedepnlte')
+              working-directory: tests/
+              run: |
+                  artistools plotspectra --frompackets -t 8.5 ${{ matrix.testname }}_testrun
 
             - name: Upload plot files
               if: always() && inputs.testmode != 'ON' && inputs.uploadoutputfiles == 'ON'
