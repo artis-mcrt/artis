@@ -92,6 +92,8 @@ constexpr double NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION =
 
 constexpr bool NLTE_USE_GTH_SOLVER = false;
 
+constexpr std::optional<int> NLTE_TIME_DEPENDENT_FIRST_TIMESTEP = std::nullopt;
+
 constexpr bool NT_ON = false;
 
 constexpr bool NT_SOLVE_SPENCERFANO = false;
