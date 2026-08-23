@@ -20,6 +20,10 @@ constexpr bool FORCE_SPHERICAL_ESCAPE_SURFACE = false;
 
 constexpr int NLTEITER = 30;
 
+constexpr int NLTE_OUTER_ANDERSON_DEPTH = 0;
+
+constexpr double NLTE_OUTER_RELTOL = 0.04;
+
 constexpr int ION_NLEVELS_EXCITED_NLTE(int element_z, int ionstage) {
   if (element_z == 26 && ionstage == 2) {
     return 197;

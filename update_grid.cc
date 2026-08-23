@@ -5,6 +5,7 @@
 #include "update_grid.h"
 
 #include <algorithm>
+#include <array>
 #include <chrono>
 #include <cmath>
 #include <cstddef>
@@ -16,6 +17,7 @@
 #include <utility>
 #include <vector>
 
+#include "anderson.h"
 #include "artisoptions.h"
 #include "atomic.h"
 #include "constants.h"
@@ -34,6 +36,12 @@
 #include "vpkt.h"
 
 namespace {
+
+// the largest supported NLTE_OUTER_ANDERSON_DEPTH (the history arrays of the accelerator have this size)
+constexpr std::size_t MAX_ANDERSON_DEPTH = 4;
+static_assert(NLTE_OUTER_ANDERSON_DEPTH >= 0);
+static_assert(static_cast<std::size_t>(NLTE_OUTER_ANDERSON_DEPTH) <= MAX_ANDERSON_DEPTH);
+static_assert(NLTE_OUTER_RELTOL > 0.);
 
 std::vector<HeatingCoolingRates> heatingcoolingrates_thisrankcells;
 
@@ -200,8 +208,14 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
           .count();
   printlnlog("took {:.1f} seconds", bfheating_duration);
 
-  constexpr double nne_reltol = 0.04;
-  constexpr double T_e_reltol = 0.04;
+  constexpr double nne_reltol = NLTE_OUTER_RELTOL;
+  constexpr double T_e_reltol = NLTE_OUTER_RELTOL;
+
+  // Anderson acceleration of the outer iteration (see NLTE_OUTER_ANDERSON_DEPTH). The state is
+  // (log T_e, log nne) as the element solves use it. Its map output is known after the next T_e solve.
+  AndersonAccelerator<2, MAX_ANDERSON_DEPTH> anderson(static_cast<std::size_t>(NLTE_OUTER_ANDERSON_DEPTH));
+  std::array<double, 2> x_injected{};  // the state that the element solves of the previous pass used
+  std::array<double, 2> change_prev{-1., -1.};  // the relative changes of the previous pass, for the error estimate
 
   // the ion populations and the NLTE solution ranges of the previous iteration, for the charge
   // transfer convergence test. The buffers are thread-local, so every cell reuses them.
@@ -251,6 +265,31 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
 
     const double fracdiff_T_e = fabs((grid::Te_allcells[nonemptymgi] / prev_T_e) - 1);
 
+    if constexpr (NLTE_OUTER_ANDERSON_DEPTH > 0) {
+      const std::array<double, 2> g{std::log(grid::Te_allcells[nonemptymgi]), std::log(grid::get_nne(nonemptymgi))};
+      if (nlte_iter > 0) {
+        const auto x_next = anderson.next(x_injected, g);
+        const double T_e_next = std::exp(x_next[0]);
+        const double nne_next = std::exp(x_next[1]);
+        const bool step_accepted = std::isfinite(T_e_next) && std::isfinite(nne_next) && T_e_next >= MINTEMP &&
+                                   T_e_next <= MAXTEMP && nne_next > 0.;
+        if (step_accepted) {
+          grid::Te_allcells[nonemptymgi] = static_cast<float>(T_e_next);
+          grid::set_nne(nonemptymgi, static_cast<float>(nne_next));
+          x_injected = x_next;
+        } else {
+          x_injected = g;
+        }
+        printlnlog(
+            "NLTE (Spencer-Fano/Te/pops) solver mgi {} timestep {} iteration {}: Anderson step {}: T_e {:g} nne {:e} "
+            "from the pass, T_e {:g} nne {:e} for the next pass",
+            mgi, nts, nlte_iter, step_accepted ? "accepted" : "rejected", std::exp(g[0]), std::exp(g[1]),
+            grid::Te_allcells[nonemptymgi], grid::get_nne(nonemptymgi));
+      } else {
+        x_injected = g;
+      }
+    }
+
     // charge transfer conserves nne, so the nne convergence test cannot see a population exchange
     // between two elements. Keep the ion populations of this iteration and test them below. The
     // element solves run in sequence, so an element that falls back to LTE or loses an edge ion
@@ -284,6 +323,20 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
     const double nne_prev = grid::get_nne(nonemptymgi);
     calculate_ion_balance_nne(nonemptymgi);  // sets nne
     const auto fracdiff_nne = fabs((grid::get_nne(nonemptymgi) / nne_prev) - 1);
+
+    if constexpr (NLTE_OUTER_ANDERSON_DEPTH > 0) {
+      // an element without a matrix solution makes the map discontinuous, so the history is useless
+      bool element_fell_back = false;
+      for (int element = 0; element < get_nelements(); element++) {
+        if (elem_has_nlte_levels(element) && grid::get_elem_massfrac(nonemptymgi, element) > 0. &&
+            !elem_has_nlte_solution(nonemptymgi, element)) {
+          element_fell_back = true;
+        }
+      }
+      if (element_fell_back) {
+        anderson.reset();
+      }
+    }
 
     // largest fractional change of the significant ion populations, which the charge transfer
     // reactions can move while nne stays constant
@@ -322,10 +375,34 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
         "fracdiff {:g}, prev T_e {:g} new T_e {:g} fracdiff {:g}",
         mgi, nts, nlte_iter, nne_prev, grid::get_nne(nonemptymgi), fracdiff_nne, prev_T_e,
         grid::Te_allcells[nonemptymgi], fracdiff_T_e);
+    if constexpr (NLTE_OUTER_ANDERSON_DEPTH > 0) {
+      if (nlte_solution_changed) {
+        anderson.reset();
+      }
+    }
+
+    // the test of the change, or with acceleration the test of the estimated error (see NLTE_OUTER_RELTOL)
+    double error_estimate = std::max(fracdiff_nne, fracdiff_T_e);
+    if constexpr (NLTE_OUTER_ANDERSON_DEPTH > 0) {
+      // the remaining error of a linear contraction with ratio rho is change * rho / (1 - rho). Each component
+      // gets its own ratio, because the T_e finder limits the change of T_e to a factor of two per pass.
+      const std::array<double, 2> change{fracdiff_T_e, fracdiff_nne};
+      std::array<double, 2> rho{};
+      error_estimate = 0.;
+      for (std::size_t i = 0; i < 2; i++) {
+        rho[i] = (change_prev[i] > 0.) ? std::min(change[i] / change_prev[i], 0.95) : 0.95;
+        error_estimate = std::max(error_estimate, change[i] * rho[i] / (1. - rho[i]));
+      }
+      change_prev = change;
+      printlnlog(
+          "NLTE (Spencer-Fano/Te/pops) solver mgi {} timestep {} iteration {}: T_e change {:g} contraction ratio "
+          "{:g}, nne change {:g} contraction ratio {:g}, estimated error {:g}",
+          mgi, nts, nlte_iter, change[0], rho[0], change[1], rho[1], error_estimate);
+    }
+
     // without the charge transfer option, the ion population test and the solution range test
     // always pass
-    if (fracdiff_nne <= nne_reltol && fracdiff_T_e <= T_e_reltol && fracdiff_nnion <= nne_reltol &&
-        !nlte_solution_changed) {
+    if (error_estimate <= NLTE_OUTER_RELTOL && fracdiff_nnion <= nne_reltol && !nlte_solution_changed) {
       printlnlog(
           "NLTE (Spencer-Fano/Te/pops) solver mgi {} timestep {} iteration {}: nne converged to tolerance {:g} <= {:g} "
           "and T_e to tolerance {:g} <= {:g}",

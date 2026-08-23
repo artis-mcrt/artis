@@ -21,6 +21,7 @@
 #include <string_view>
 #include <vector>
 
+#include "anderson.h"
 #include "artisoptions.h"
 #include "atomic.h"
 #include "chargetransfer.h"
@@ -689,6 +690,46 @@ void test_rank_outfile_name() {
   check(!match_none, "other filenames are never matched, so they cannot be deleted from an output folder");
 }
 
+void test_anderson_accelerator() {
+  std::println("Anderson accelerator...");
+  // linear map with the contraction factors 0.9 and -0.7, fixed point (10, 2)
+  const auto linear_map = [](const std::array<double, 2>& x) {
+    return std::array<double, 2>{(0.9 * x[0]) + 1.0, (-0.7 * x[1]) + 3.4};
+  };
+  const auto iterate = [&](const std::size_t depth) {
+    AndersonAccelerator<2, 4> acc(depth);
+    std::array<double, 2> x{0., 0.};
+    int iterations = 0;
+    for (; iterations < 1000; iterations++) {
+      const auto g = linear_map(x);
+      if (std::max(std::abs(g[0] - 10.), std::abs(g[1] - 2.)) < 1e-8) {
+        break;
+      }
+      x = acc.next(x, g);
+    }
+    return std::pair{iterations, x};
+  };
+  const auto [iterations_plain, x_plain] = iterate(0);
+  const auto [iterations_depth1, x_depth1] = iterate(1);
+  const auto [iterations_depth2, x_depth2] = iterate(2);
+  check(iterations_plain > 100, "plain successive substitution needs more than 100 iterations");
+  check(iterations_depth1 < iterations_plain / 4, "Anderson depth 1 needs fewer than a quarter of the iterations");
+  check(iterations_depth2 <= 4, "Anderson depth 2 solves a linear 2-D map in at most 4 iterations");
+  check(std::abs(x_depth2[0] - 10.) < 1e-6 && std::abs(x_depth2[1] - 2.) < 1e-6,
+        "Anderson depth 2 reaches the fixed point");
+
+  // with no history, or after a reset, the accelerator returns the plain map output
+  AndersonAccelerator<2, 4> acc(2);
+  const std::array<double, 2> x0{1., 1.};
+  const auto g0 = linear_map(x0);
+  check(acc.next(x0, g0) == g0, "the first Anderson step returns the map output");
+  const std::array<double, 2> x1{2., 3.};
+  const auto g1 = linear_map(x1);
+  check(acc.next(x1, g1) != g1, "the second Anderson step changes the iterate");
+  acc.reset();
+  check(acc.next(x1, g1) == g1, "after a reset the Anderson step returns the map output");
+}
+
 void test_gth_solver() {
   std::println("GTH stationary distribution solver...");
 
@@ -1015,6 +1056,7 @@ auto main() -> int {
   test_calculate_timesteps();
   test_rank_outfile_name();
   test_gth_solver();
+  test_anderson_accelerator();
   test_chargetransfer_helpers();
   test_nonthermal_solve_upper_triangular();
   // the solver/integrator throw std::domain_error only on precondition violations that this test does not trigger
