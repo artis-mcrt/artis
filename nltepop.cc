@@ -2054,6 +2054,9 @@ void nltepop_write_restart_data(FILE* restart_file) {
       for (int element = 0; element < get_nelements(); element++) {
         const int lowermost_ion = grid::get_elements_lowermost_ion(static_cast<int>(nonemptymgi), element);
         const int uppermost_ion = grid::get_elements_uppermost_ion(static_cast<int>(nonemptymgi), element);
+        // A restart must contain the complete range for each stored NLTE solution.
+        assert_always(!elem_has_nlte_solution(static_cast<int>(nonemptymgi), element) ||
+                      (lowermost_ion >= 0 && lowermost_ion <= uppermost_ion && uppermost_ion < get_nions(element)));
         fprintf(restart_file, "%d %d ", lowermost_ion, uppermost_ion);
       }
     }
