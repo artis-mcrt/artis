@@ -287,12 +287,13 @@ void call_T_e_finder(const int nonemptymgi, const double t_current, HeatingCooli
   // a sign change over [MINTEMP, MAXTEMP] guarantees a root that the bracketing solver can find
   if (!invalid_values && f_T_min * f_T_max < 0) {
     const auto maxit = 100U;
+    constexpr double fractional_accuracy = 1e-3;
 
     // TOMS 748 (Alefeld, Potra & Shi 1995, ACM Trans. Math. Softw. 21, 327, doi:10.1145/210089.210111):
     // bracketing solver with inverse cubic interpolation, so it keeps the root bracketed like bisection
     // but converges superlinearly on the smooth part of the residual
     uintmax_t iternum = maxit;
-    auto result = toms748_solve(f_T_e, MINTEMP, MAXTEMP, f_T_min, f_T_max, ftol<TEMPERATURE_SOLVER_ACCURACY>, iternum);
+    auto result = toms748_solve(f_T_e, MINTEMP, MAXTEMP, f_T_min, f_T_max, ftol<fractional_accuracy>, iternum);
     T_e = 0.5 * (result.first + result.second);
     if (iternum >= maxit) {
       printlnlog("[warning] call_T_e_finder: T_e did not converge within {} iterations. interval [{:g}, {:g}] [K]",

@@ -246,8 +246,6 @@ constexpr int NT_MAX_AUGER_ELECTRONS;
 // add the Auger electron term to the Spencer-Fano equation
 constexpr bool SF_AUGER_CONTRIBUTION_ON;
 
-constexpr double TEMPERATURE_SOLVER_ACCURACY;
-
 constexpr bool USE_RELATIVISTIC_DOPPLER_SHIFT;
 
 // when converting mass fraction to a number density, use a mean atomic mass

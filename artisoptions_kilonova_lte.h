@@ -119,8 +119,6 @@ constexpr int NT_MAX_AUGER_ELECTRONS = 2;
 
 constexpr bool SF_AUGER_CONTRIBUTION_ON = true;
 
-constexpr double TEMPERATURE_SOLVER_ACCURACY = 1e-3;
-
 constexpr bool USE_RELATIVISTIC_DOPPLER_SHIFT = true;
 
 constexpr bool USE_CALCULATED_MEANATOMICWEIGHT = true;
