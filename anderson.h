@@ -1,5 +1,5 @@
 // Anderson acceleration of a fixed-point iteration x = G(x) for a small state vector (see
-// NLTE_OUTER_ANDERSON_DEPTH). The accelerator keeps the last iterates and their map outputs. It
+// NLTE_TE_NNE_USE_ANDERSON_ACCEL). The accelerator keeps the last iterates and their map outputs. It
 // combines them so that the residual of the combination is minimal in the least-squares sense.
 
 #ifndef ANDERSON_H

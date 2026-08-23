@@ -39,8 +39,8 @@ namespace {
 
 // the accelerator of the outer NLTE/T_e iteration works on the state (log T_e, log nne)
 using OuterAnderson = AndersonAccelerator<2>;
-static_assert(NLTE_OUTER_ANDERSON_DEPTH >= 0);
-static_assert(static_cast<std::size_t>(NLTE_OUTER_ANDERSON_DEPTH) <= OuterAnderson::max_depth);
+// the depth of the acceleration is the dimension of the state, the largest useful value
+constexpr std::size_t ANDERSON_DEPTH = NLTE_TE_NNE_USE_ANDERSON_ACCEL ? OuterAnderson::max_depth : 0;
 static_assert(NLTE_OUTER_RELTOL > 0.);
 
 std::vector<HeatingCoolingRates> heatingcoolingrates_thisrankcells;
@@ -208,9 +208,9 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
           .count();
   printlnlog("took {:.1f} seconds", bfheating_duration);
 
-  // Anderson acceleration of the outer iteration (see NLTE_OUTER_ANDERSON_DEPTH). The state is
+  // Anderson acceleration of the outer iteration (see NLTE_TE_NNE_USE_ANDERSON_ACCEL). The state is
   // (log T_e, log nne) as the element solves use it. Its map output is known after the next T_e solve.
-  OuterAnderson anderson(static_cast<std::size_t>(NLTE_OUTER_ANDERSON_DEPTH));
+  OuterAnderson anderson(ANDERSON_DEPTH);
   std::array<double, 2> x_injected{};  // the state that the element solves of the previous pass used
   std::array<double, 2> change_prev{-1., -1.};  // the relative changes of the previous pass, for the error estimate
   // the results of the previous pass, for the convergence test before the injection
@@ -275,7 +275,7 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
 
     const double fracdiff_T_e = fabs((grid::Te_allcells[nonemptymgi] / prev_T_e) - 1);
 
-    if constexpr (NLTE_OUTER_ANDERSON_DEPTH > 0) {
+    if constexpr (NLTE_TE_NNE_USE_ANDERSON_ACCEL) {
       // g is the map output for x_injected: T_e from the finder of this pass, nne from the ion
       // balance of the previous pass. Both components are residuals at the same state.
       const std::array<double, 2> g{std::log(grid::Te_allcells[nonemptymgi]), std::log(grid::get_nne(nonemptymgi))};
@@ -425,7 +425,7 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
         "fracdiff {:g}, prev T_e {:g} new T_e {:g} fracdiff {:g}",
         mgi, nts, nlte_iter, nne_prev, grid::get_nne(nonemptymgi), fracdiff_nne, prev_T_e,
         grid::Te_allcells[nonemptymgi], fracdiff_T_e);
-    if constexpr (NLTE_OUTER_ANDERSON_DEPTH > 0) {
+    if constexpr (NLTE_TE_NNE_USE_ANDERSON_ACCEL) {
       // with acceleration, the convergence test and the estimated error are before the injection
       // (see NLTE_OUTER_RELTOL). This pass only keeps its results for that test.
       fracdiff_nne_prev = fracdiff_nne;

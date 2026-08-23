@@ -25,7 +25,7 @@ constexpr bool FORCE_SPHERICAL_ESCAPE_SURFACE = false;
 
 constexpr int NLTEITER = 30;
 
-constexpr int NLTE_OUTER_ANDERSON_DEPTH = 2;
+constexpr bool NLTE_TE_NNE_USE_ANDERSON_ACCEL = true;
 
 constexpr double NLTE_OUTER_RELTOL = 0.01;
 

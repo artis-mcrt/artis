@@ -17,10 +17,10 @@ constexpr bool FORCE_SPHERICAL_ESCAPE_SURFACE;
 constexpr int NLTEITER;
 
 // Anderson acceleration of the NLTE/Te/Spencer-Fano iteration. The iteration maps the electron temperature
-// and the electron density of one pass to the values of the next pass. With a depth above zero, the
+// and the electron density of one pass to the values of the next pass. With the acceleration on, the
 // accelerator combines the last iterates so that the residual of the combination is minimal. The next
-// pass then starts from that combination. The state has two components, so the largest depth is 2, and
-// 2 is a good choice. Zero keeps the plain successive substitution.
+// pass then starts from that combination. The state has two components, so the accelerator keeps two
+// iterates, the largest useful depth. False keeps the plain successive substitution.
 //
 // The accelerator forgets its history when an element falls back to LTE or changes its solved ion range,
 // because the map is then discontinuous. A new non-thermal solution also clears the history. The loop
@@ -30,10 +30,10 @@ constexpr int NLTEITER;
 // - a step away from the map output that is larger than twice the residual.
 // The convergence test comes before the injection, so a converged cell keeps the output of a plain pass. A
 // cell that reaches NLTEITER also ends with a plain pass.
-constexpr int NLTE_OUTER_ANDERSON_DEPTH;
+constexpr bool NLTE_TE_NNE_USE_ANDERSON_ACCEL;
 
-// Relative tolerance of the NLTE/Te/Spencer-Fano iteration for nne and T_e. With a depth of zero the loop
-// stops when the change between two passes is below the tolerance. With acceleration the loop tests an
+// Relative tolerance of the NLTE/Te/Spencer-Fano iteration for nne and T_e. Without the acceleration the
+// loop stops when the change between two passes is below the tolerance. With acceleration the loop tests an
 // estimate of the error that remains instead. The estimate is the change times rho / (1 - rho), where rho is
 // the ratio of the last two changes, limited to the range 0.5 to 0.95. nne and T_e each get their own ratio,
 // and the larger estimate counts. The estimate is the error of a linear contraction with that ratio, so the
