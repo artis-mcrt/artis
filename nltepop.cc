@@ -1632,11 +1632,18 @@ void nltepop_apply_solution(const int element, const int nonemptymgi, const int 
 
 }  // anonymous namespace
 
-// Clear the stored NLTE solution ranges of every element in the cell, for the paths that replace
-// the NLTE solution with Saha populations without a solve.
-void nltepop_reset_solution_ranges(const int nonemptymgi) {
+// Clear the NLTE solution of every element in the cell, for the paths that replace the NLTE
+// solution with Saha populations without a solve. The level populations get the -1 marker, so
+// the partition functions and the Saha balance then use the Boltzmann populations. A stale
+// excited population divided by a Saha ground population at the MINPOP floor would overflow
+// the partition function.
+void nltepop_reset_cell(const int nonemptymgi) {
   for (int element = 0; element < get_nelements(); element++) {
-    grid::set_elements_lowermost_ion(nonemptymgi, element, 0);
+    if (elem_has_nlte_levels(element)) {
+      nltepop_reset_element(nonemptymgi, element);
+    } else {
+      grid::set_elements_lowermost_ion(nonemptymgi, element, 0);
+    }
   }
   if constexpr (NLTE_TIME_DEPENDENT_FIRST_TIMESTEP.has_value()) {
     // the cell holds no NLTE solution, so the next timestep starts from the steady-state equations
