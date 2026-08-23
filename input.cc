@@ -2010,7 +2010,7 @@ void read_parameterfile(std::span<Packet> packets) {
     printlnlog(
         "NT_SCHEME is NT_AXELRODAPPROX: non-thermal ionisation uses the work function approximation in this run.");
   } else {
-    printlnlog("NT_SCHEME is NT_OFF: no non-thermal ionisation is used in this run.");
+    printlnlog("NT_SCHEME is NT_OFF: this run has no non-thermal ionisation.");
   }
 
   if (USE_LUT_PHOTOION) {
