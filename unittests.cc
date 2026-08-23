@@ -697,7 +697,7 @@ void test_anderson_accelerator() {
     return std::array<double, 2>{(0.9 * x[0]) + 1.0, (-0.7 * x[1]) + 3.4};
   };
   const auto iterate = [&](const std::size_t depth) {
-    AndersonAccelerator<2, 4> acc(depth);
+    AndersonAccelerator<2> acc(depth);
     std::array<double, 2> x{0., 0.};
     int iterations = 0;
     for (; iterations < 1000; iterations++) {
@@ -718,16 +718,15 @@ void test_anderson_accelerator() {
   check(iterations_depth2 <= 4, "Anderson depth 2 solves a linear 2-D map in at most 4 iterations");
   check(std::abs(x_depth2[0] - 10.) < 1e-6 && std::abs(x_depth2[1] - 2.) < 1e-6,
         "Anderson depth 2 reaches the fixed point");
-  // a depth above the state dimension gives a rank deficient system, and the solve must fall back
-  // to a smaller depth instead of a round-off pivot
-  check(iterations_depth4 <= 6 && std::abs(x_depth4[0] - 10.) < 1e-6 && std::abs(x_depth4[1] - 2.) < 1e-6,
-        "Anderson depth 4 on a 2-D map reaches the fixed point with the smaller depth fallback");
+  // the accelerator limits a depth above the state dimension to the state dimension
+  check(iterations_depth4 == iterations_depth2 && x_depth4 == x_depth2,
+        "Anderson depth 4 on a 2-D map is the same as depth 2");
 
   // a map with a 2-cycle: x -> c - x never converges by itself, and with depth 2 the two stored
   // residual differences are exact negatives. The accelerator must then use depth 1 and find the
   // midpoint, which is the fixed point
   {
-    AndersonAccelerator<2, 4> acc_cycle(2);
+    AndersonAccelerator<2> acc_cycle(2);
     std::array<double, 2> x{0., 10.};
     bool reached = false;
     for (int iteration = 0; iteration < 10 && !reached; iteration++) {
@@ -739,7 +738,7 @@ void test_anderson_accelerator() {
   }
 
   // with no history, or after a reset, the accelerator returns the plain map output
-  AndersonAccelerator<2, 4> acc(2);
+  AndersonAccelerator<2> acc(2);
   const std::array<double, 2> x0{1., 1.};
   const auto g0 = linear_map(x0);
   check(acc.next(x0, g0) == g0, "the first Anderson step returns the map output");

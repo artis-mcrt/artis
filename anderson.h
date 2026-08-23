@@ -10,11 +10,16 @@
 #include <cmath>
 #include <cstddef>
 
-// N: dimension of the state. MAXDEPTH: the maximum number of previous residual differences.
-template <std::size_t N, std::size_t MAXDEPTH>
+// N: dimension of the state. MAXDEPTH: the maximum number of previous residual differences. At most N
+// residual differences are independent, so a larger MAXDEPTH only wastes solves.
+template <std::size_t N, std::size_t MAXDEPTH = N>
 class AndersonAccelerator {
+  static_assert(MAXDEPTH >= 1);
+  static_assert(MAXDEPTH <= N);
+
  public:
   using State = std::array<double, N>;
+  static constexpr std::size_t max_depth = MAXDEPTH;
 
   explicit constexpr AndersonAccelerator(const std::size_t depth) : depth_(std::min(depth, MAXDEPTH)) {}
 
@@ -30,30 +35,45 @@ class AndersonAccelerator {
     }
 
     State result = g;
-    // a singular system (e.g. a 2-cycle, where two residual differences are exact negatives) makes
-    // the solve fail. A smaller depth then gets a try, down to the plain map output
-    for (std::size_t m = std::min(nstored_, depth_); m > 0; m--) {
-      // consecutive differences: entry j is (pair k-j) - (pair k-j-1), with pair k = (x, g, residual)
-      std::array<State, MAXDEPTH> dres_chain{};
-      std::array<State, MAXDEPTH> dg_chain{};
-      {
-        State r_newer = residual;
-        State g_newer = g;
-        for (std::size_t j = 0; j < m; j++) {
-          const auto& [xprev, gprev, rprev] = history_[(nstored_ - 1 - j) % MAXDEPTH];
-          for (std::size_t i = 0; i < N; i++) {
-            dres_chain[j][i] = r_newer[i] - rprev[i];
-            dg_chain[j][i] = g_newer[i] - gprev[i];
-          }
-          r_newer = rprev;
-          g_newer = gprev;
-        }
-      }
+    const std::size_t m_max = std::min(nstored_, depth_);
 
+    // consecutive differences: entry j is (pair k-j) - (pair k-j-1), with pair k = (g, residual). Each
+    // difference of the residuals gets a unit norm, so the test of the solve below sees the angle between
+    // the differences and not their size
+    std::array<State, MAXDEPTH> dres_chain{};
+    std::array<State, MAXDEPTH> dg_chain{};
+    std::array<double, MAXDEPTH> dres_norm{};
+    {
+      State r_newer = residual;
+      State g_newer = g;
+      for (std::size_t j = 0; j < m_max; j++) {
+        const auto& [gprev, rprev] = history_[(nstored_ - 1 - j) % MAXDEPTH];
+        double sumsq = 0.;
+        for (std::size_t i = 0; i < N; i++) {
+          dres_chain[j][i] = r_newer[i] - rprev[i];
+          dg_chain[j][i] = g_newer[i] - gprev[i];
+          sumsq += dres_chain[j][i] * dres_chain[j][i];
+        }
+        dres_norm[j] = std::sqrt(sumsq);
+        if (dres_norm[j] > 0.) {
+          for (std::size_t i = 0; i < N; i++) {
+            dres_chain[j][i] /= dres_norm[j];
+          }
+        }
+        r_newer = rprev;
+        g_newer = gprev;
+      }
+    }
+
+    // a singular system (e.g. a 2-cycle, where two residual differences are exact negatives) makes
+    // the solve fail. The loop then tries each smaller depth, down to the plain map output
+    for (std::size_t m = m_max; m > 0; m--) {
       // normal equations (m x m) for the coefficients gamma: minimise |residual - sum_j gamma_j dres_chain[j]|
       std::array<std::array<double, MAXDEPTH>, MAXDEPTH> ata{};
       std::array<double, MAXDEPTH> atb{};
+      bool zero_difference = false;
       for (std::size_t a = 0; a < m; a++) {
+        zero_difference = zero_difference || !(dres_norm[a] > 0.);
         for (std::size_t b = 0; b < m; b++) {
           double sum = 0.;
           for (std::size_t i = 0; i < N; i++) {
@@ -67,44 +87,37 @@ class AndersonAccelerator {
         }
         atb[a] = sum;
       }
+      if (zero_difference) {
+        continue;
+      }
 
       std::array<double, MAXDEPTH> gamma{};
       if (solve_small_system(ata, atb, m, gamma)) {
         for (std::size_t j = 0; j < m; j++) {
           for (std::size_t i = 0; i < N; i++) {
-            result[i] -= gamma[j] * dg_chain[j][i];
+            result[i] -= gamma[j] / dres_norm[j] * dg_chain[j][i];
           }
         }
         break;
       }
     }
 
-    history_[nstored_ % MAXDEPTH] = {x, g, residual};
+    history_[nstored_ % MAXDEPTH] = {g, residual};
     nstored_++;
     return result;
   }
 
  private:
   struct Entry {
-    State x{};
     State g{};
     State residual{};
   };
 
-  // Gaussian elimination with partial pivoting for the m x m normal equations. Return false when the
-  // system is singular, so that the caller falls back to the plain map output.
+  // Gaussian elimination with partial pivoting for the m x m normal equations of unit vectors. Return
+  // false when the system is singular, so that the caller tries a smaller depth.
   static constexpr auto solve_small_system(std::array<std::array<double, MAXDEPTH>, MAXDEPTH> a,
                                            std::array<double, MAXDEPTH> b, const std::size_t m,
                                            std::array<double, MAXDEPTH>& solution) -> bool {
-    double scale = 0.;
-    for (std::size_t row = 0; row < m; row++) {
-      for (std::size_t col = 0; col < m; col++) {
-        scale = std::max(scale, std::abs(a[row][col]));
-      }
-    }
-    if (!(scale > 0.)) {
-      return false;
-    }
     for (std::size_t col = 0; col < m; col++) {
       std::size_t pivot = col;
       for (std::size_t row = col + 1; row < m; row++) {
@@ -112,9 +125,9 @@ class AndersonAccelerator {
           pivot = row;
         }
       }
-      // a pivot at the round-off level means a rank deficient system, e.g. more residual differences
-      // than state components
-      if (!(std::abs(a[pivot][col]) > 1e-12 * scale)) {
+      // the matrix holds the cosines of unit vectors, so a pivot at the round-off level means two
+      // parallel residual differences (e.g. a 2-cycle) or a rank deficient system
+      if (!(std::abs(a[pivot][col]) > 1e-8)) {
         return false;
       }
       std::swap(a[col], a[pivot]);

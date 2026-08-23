@@ -23,17 +23,19 @@ constexpr int NLTEITER;
 // 2 is a good choice. Zero keeps the plain successive substitution.
 //
 // The accelerator forgets its history when an element falls back to LTE or changes its solved ion range,
-// because the map is then discontinuous. A step outside [MINTEMP, MAXTEMP], or with an electron density above
-// the total electron density of the cell, is rejected. The convergence test comes before the injection, so a
-// converged cell keeps the output of a plain pass. A cell that reaches NLTEITER also ends with a plain pass.
+// because the map is then discontinuous. The loop rejects a step outside [MINTEMP, MAXTEMP], a step with an
+// electron density above the total electron density of the cell, and a step away from the map output that
+// is larger than twice the residual. The convergence test comes before the injection, so a converged cell
+// keeps the output of a plain pass. A cell that reaches NLTEITER also ends with a plain pass.
 constexpr int NLTE_OUTER_ANDERSON_DEPTH;
 
 // Relative tolerance of the NLTE/Te/Spencer-Fano iteration for nne and T_e. With a depth of zero the loop
-// stops when the change between two passes is below the tolerance, as before. With acceleration the loop
-// tests an estimate of the remaining error instead: the change times rho / (1 - rho), where rho is the
-// ratio of the last two changes (limited to 0.95). nne and T_e each get their own ratio, and the larger
-// estimate counts. The estimate is the error of a linear contraction with that ratio, so the tolerance then
-// means an error and not a change.
+// stops when the change between two passes is below the tolerance. With acceleration the loop tests an
+// estimate of the error that remains instead. The estimate is the change times rho / (1 - rho), where rho is
+// the ratio of the last two changes, limited to the range 0.5 to 0.95. nne and T_e each get their own ratio,
+// and the larger estimate counts. The estimate is the error of a linear contraction with that ratio, so the
+// tolerance then means an error and not a change. The estimate is never below the change. With the charge
+// transfer reactions, the same value is the tolerance of the ion population test.
 constexpr double NLTE_OUTER_RELTOL;
 
 // Specify how many levels will be treated in full NLTE, not including the ground state or the superlevel.

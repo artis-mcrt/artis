@@ -1,8 +1,10 @@
 // A compile-time options preset: symlink or copy one of the artisoptions_*.h files to
 // artisoptions.h to select the run configuration. Every option is described in artisoptions_doc.md.
 //
-// Kilonovae from about 2 to 100 days with NLTE populations, a non-thermal electron solver, a
-// time-dependent ionisation and thermal balance, and Anderson acceleration of the outer iteration.
+// A preset for kilonovae from about 2 to 100 days. It has:
+// - NLTE populations and a non-thermal electron solver;
+// - a time-dependent ionisation and thermal balance;
+// - Anderson acceleration of the outer iteration.
 
 #ifndef ARTISOPTIONS_H
 #define ARTISOPTIONS_H
