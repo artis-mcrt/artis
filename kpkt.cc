@@ -417,6 +417,13 @@ auto set_radiative_energy_factor(const int nonemptymgi, const HeatingCoolingRate
           heatingcoolingrates.cooling_adiabatic, heatingcoolingrates.cooling_heatcapacity);
     }
   }
+  if (heating <= 0. && cooling_nonradiative < 0.) {
+    // without heating there are no k-packets that can carry the released thermal energy
+    printlnlog(
+        "[warning] cell {} timestep {}: the gas releases thermal energy at {:g} [erg/s/cm^3] but the heating is zero, "
+        "so the energy cannot enter the radiation field",
+        grid::get_mgi_of_nonemptymgi(nonemptymgi), globals::timestep, -cooling_nonradiative);
+  }
   radiative_energy_factor_allcells[nonemptymgi] = factor;
   return factor;
 }
