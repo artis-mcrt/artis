@@ -553,13 +553,14 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
             1.);
       }
 
+      // the Saha populations replace the NLTE solution. The partition functions must not read the
+      // stale NLTE level populations, and the charge transfer reactions must not read the stored
+      // ion ranges of the last NLTE solve
+      nltepop_reset_cell(nonemptymgi);
       for (int element = 0; element < get_nelements(); element++) {
         calculate_cellpartfuncts(nonemptymgi, element);
       }
       calculate_ion_balance_nne(nonemptymgi);
-      // the Saha populations replace the NLTE solution, so the charge transfer reactions must not
-      // read the stored ion ranges of the last NLTE solve
-      nltepop_reset_solution_ranges(nonemptymgi);
       // no thermal balance: the k-packets keep their full energy
       kpkt::reset_radiative_energy_factor(nonemptymgi);
     } else {
