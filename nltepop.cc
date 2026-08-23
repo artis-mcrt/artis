@@ -1942,6 +1942,7 @@ void nltepop_allocate_time_dependent_arrays() {
   Te_prev_allcells = MPI_shared_array<float>(nonempty_npts_model, 0.);
   prev_solution_time_allcells = MPI_shared_array<double>(nonempty_npts_model, -1.);
   solution_time_allcells = MPI_shared_array<double>(nonempty_npts_model, -1.);
+  kpkt::radiative_energy_factor_allcells = MPI_shared_array<float>(nonempty_npts_model, 1.);
 }
 
 // Keep the state of the last grid update for the time terms of the next solve. Call this before the
@@ -2041,8 +2042,10 @@ void nltepop_write_restart_data(FILE* restart_file) {
       }
     }
     if constexpr (NLTE_TIME_DEPENDENT_FIRST_TIMESTEP.has_value()) {
-      // the time of the solution, so that a resumed run continues the time-dependent equations
-      fprintf(restart_file, "\n%la\n", solution_time_allcells[nonemptymgi]);
+      // the time of the solution, so that a resumed run continues the time-dependent equations, and the
+      // k-packet energy factor of the cell
+      fprintf(restart_file, "\n%la %a\n", solution_time_allcells[nonemptymgi],
+              kpkt::radiative_energy_factor_allcells[nonemptymgi]);
     }
   }
 }
@@ -2095,7 +2098,8 @@ void nltepop_read_restart_data(FILE* restart_file) {
       }
     }
     if constexpr (NLTE_TIME_DEPENDENT_FIRST_TIMESTEP.has_value()) {
-      assert_always(fscanf(restart_file, " %la", &solution_time_allcells[nonemptymgi]) == 1);
+      assert_always(fscanf(restart_file, " %la %a", &solution_time_allcells[nonemptymgi],
+                           &kpkt::radiative_energy_factor_allcells[nonemptymgi]) == 2);
     }
   }
 }

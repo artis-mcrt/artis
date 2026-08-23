@@ -16,10 +16,15 @@
 namespace kpkt {
 
 inline MPI_shared_array<double> ion_cooling_contribs_allcells{};
+
+// the share of the thermal energy flux of each cell that becomes radiation (see
+// NLTE_TIME_DEPENDENT_FIRST_TIMESTEP). The array exists only when that option has a value.
+inline MPI_shared_array<float> radiative_energy_factor_allcells{};
 inline int ncoolingterms{0};
 
 void setup_coolinglist();
 void calculate_cooling_rates(int nonemptymgi, HeatingCoolingRates* heatingcoolingrates);
+void set_radiative_energy_factor(int nonemptymgi, const HeatingCoolingRates& heatingcoolingrates);
 DEVICE_FUNC void do_kpkt_blackbody(Packet& pkt);
 DEVICE_FUNC void do_kpkt(Packet& pkt, double t2, int nts);
 

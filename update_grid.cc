@@ -345,6 +345,9 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
     printlnlog("cell {} timestep {}: heat-capacity term of the thermal balance {:.5e} [erg/s/cm^3]", mgi, nts,
                heatingcoolingrates.cooling_heatcapacity);
     nltepop_update_solution_time(nonemptymgi, nts);
+    kpkt::set_radiative_energy_factor(nonemptymgi, heatingcoolingrates);
+    printlnlog("cell {} timestep {}: k-packet energy factor {:.5f}", mgi, nts,
+               kpkt::radiative_energy_factor_allcells[nonemptymgi]);
   }
 }
 
@@ -557,6 +560,10 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
       // the Saha populations replace the NLTE solution, so the charge transfer reactions must not
       // read the stored ion ranges of the last NLTE solve
       nltepop_reset_solution_ranges(nonemptymgi);
+      if constexpr (NLTE_TIME_DEPENDENT_FIRST_TIMESTEP.has_value()) {
+        // no thermal balance: the k-packets keep their full energy
+        kpkt::radiative_energy_factor_allcells[nonemptymgi] = 1.F;
+      }
     } else {
       // not lte_iteration and not a thick cell
       // non-pure-LTE timesteps with T_e from heating/cooling
