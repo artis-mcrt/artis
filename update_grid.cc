@@ -307,9 +307,10 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
               mgi, nts, nlte_iter, error_estimate, NLTE_OUTER_RELTOL, change[0], change[1]);
           break;
         }
-        if (nlte_iter == NLTEITER) {
-          // no injection: the last pass completes the element solves at the T_e of the finder, as the
-          // plain iteration does, so the populations and nne match the final T_e
+        if (nlte_iter == NLTEITER || map_changed) {
+          // no injection and no history entry. The last pass completes the element solves at the T_e of
+          // the finder, as the plain iteration does, so the populations and nne match the final T_e. On a
+          // pass with a changed map, g mixes the old and the new map, so it is not a sample of either.
           x_injected = g;
         } else {
           const auto x_next = anderson.next(x_injected, g);
