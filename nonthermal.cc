@@ -1680,18 +1680,16 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const std::a
           const double frac_excitation_thistrans = nnlevel * epsilon_trans * ratecoeffperdeposition;
           frac_excitation_ion += frac_excitation_thistrans;
 
-          if constexpr (NT_SCHEME == NonThermalScheme::NT_SPENCERFANO) {
-            assert_always(std::isfinite(ratecoeffperdeposition));
-            // the atomic data set was limited for Fe V, which caused the ground multiplet to be massively
-            // depleted, and then almost no recombination happened!
-            if (above_minionfraction && ratecoeffperdeposition > 0 && (Z != 26 || ionstage != 5)) {
-              tmp_excitation_list.push_back({
-                  .frac_deposition = frac_excitation_thistrans,
-                  .ratecoeffperdeposition = ratecoeffperdeposition,
-                  .alltransindex = alltransindex,
-              });
-            }
-          }  // NT_SPENCERFANO
+          assert_always(std::isfinite(ratecoeffperdeposition));
+          // the atomic data set was limited for Fe V, which caused the ground multiplet to be massively
+          // depleted, and then almost no recombination happened!
+          if (above_minionfraction && ratecoeffperdeposition > 0 && (Z != 26 || ionstage != 5)) {
+            tmp_excitation_list.push_back({
+                .frac_deposition = frac_excitation_thistrans,
+                .ratecoeffperdeposition = ratecoeffperdeposition,
+                .alltransindex = alltransindex,
+            });
+          }
         }  // for t
       }  // for lower
 
@@ -1840,7 +1838,7 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const std::a
     std::ranges::SORT_OR_STABLE_SORT(get_cell_ntexcitations(nonemptymgi), std::ranges::less{},
                                      &NonThermalExcitation::alltransindex);
 
-  }  // NT_SPENCERFANO
+  }  // nt_excitations_stored > 0
 
   // calculate number density of non-thermal electrons
   const double deposition_rate_density_ev = get_ntlepton_deposition_rate_density(nonemptymgi) / EV;
@@ -1875,13 +1873,8 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const std::a
 
   // force frac_sum to be 1.0 by adjusting frac_heating. Clamp to [0, 1] so a bad solution (where
   // excitation + ionisation exceed 1) cannot feed a negative heating fraction into the T_e solver.
-  // When non-thermal excitation is not being modelled, do_ntlepton_deposit() sends the excitation
-  // share to k-packets instead, so it has to be counted as heating here for the energy that the
-  // packets carry to match the heating rate that the T_e solver is given.
-  const double frac_excitation_nonheating =
-      (NT_SCHEME == NonThermalScheme::NT_SPENCERFANO) ? frac_excitation_total : 0.;
   nt_solution[nonemptymgi].frac_heating =
-      static_cast<float>(std::clamp(1. - frac_excitation_nonheating - frac_ionisation_total, 0., 1.));
+      static_cast<float>(std::clamp(1. - frac_excitation_total - frac_ionisation_total, 0., 1.));
 
   if (!ftol<0.002>(frac_sum, 1.0)) {
     printlnlog("[warning] frac_sum is {:g}, but should be 1.0", frac_sum);
@@ -2568,8 +2561,7 @@ DEVICE_FUNC void do_ntlepton_deposit(Packet& pkt) {
     // ionisation and excitation channels becomes a k-packet (heating) below, so the k-packet
     // probability is 1 - frac_ionisation - frac_excitation, matching the frac_heating that
     // analyse_sf_solution() stores and the T_e solver applies to the deposition rate.
-    const double frac_excitation =
-        (NT_SCHEME == NonThermalScheme::NT_SPENCERFANO) ? get_nt_frac_excitation(nonemptymgi) : 0.;
+    const double frac_excitation = get_nt_frac_excitation(nonemptymgi);
     if (zrand < (frac_ionisation + frac_excitation)) {
       zrand -= frac_ionisation;
       // now zrand is between zero and frac_excitation

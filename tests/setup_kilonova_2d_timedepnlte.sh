@@ -40,7 +40,6 @@ sed -i'' -e 's/constexpr int DETAILED_BF_ESTIMATORS_USEFROMTIMESTEP.*/constexpr 
 
 sed -i'' -e 's/constexpr std::optional<int> NLTE_TIME_DEPENDENT_FIRST_TIMESTEP.*/constexpr std::optional<int> NLTE_TIME_DEPENDENT_FIRST_TIMESTEP = 3;/g' artisoptions.h
 
-
 cd -
 
 set +x

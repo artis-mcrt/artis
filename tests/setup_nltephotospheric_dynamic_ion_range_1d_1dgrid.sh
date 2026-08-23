@@ -38,7 +38,6 @@ sed -i'' -e 's/constexpr int RADFIELDBINCOUNT.*/constexpr int RADFIELDBINCOUNT =
 
 sed -i'' -e 's/constexpr int DETAILED_BF_ESTIMATORS_USEFROMTIMESTEP.*/constexpr int DETAILED_BF_ESTIMATORS_USEFROMTIMESTEP = 4;/g' artisoptions.h
 
-
 cd -
 
 set +x

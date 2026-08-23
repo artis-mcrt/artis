@@ -22,7 +22,6 @@ xz -f -d -v -T0 *.xz
 
 sed -i'' -e 's/constexpr int MPKTS.*/constexpr int MPKTS = 15000;/g' artisoptions.h
 
-
 sed -i'' -e 's/constexpr bool VPKT_ON.*/constexpr bool VPKT_ON = true;/g' artisoptions.h
 sed -i'' -e 's/constexpr bool VPKT_WRITE_CONTRIBS.*/constexpr bool VPKT_WRITE_CONTRIBS = true;/g' artisoptions.h
 sed -i'' -e 's/constexpr bool VPKT_USE_EXPANSION_OPACITIES.*/constexpr bool VPKT_USE_EXPANSION_OPACITIES = true;/g' artisoptions.h

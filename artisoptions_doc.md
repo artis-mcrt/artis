@@ -68,7 +68,7 @@ constexpr bool UNIFORM_PELLET_ENERGIES;
 constexpr bool COL_HEAT_FROM_LEVELPOPS;
 
 // INITIAL PACKETS will seed the cells on the first timestep at tmin with K-packets
-// representing decay energy from t_model to tmin, and also the snapshot
+// that carry the decay energy from t_model to tmin, and also the snapshot
 // energy at t_model (the q column of model.txt)
 constexpr bool INITIAL_PACKETS_ON;
 

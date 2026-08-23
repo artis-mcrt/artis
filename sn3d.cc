@@ -709,7 +709,7 @@ void save_grid_and_packets(const int nts, std::vector<Packet>& packets) {
     update_parameterfile(nts);
   }
 
-  // ensure new packets files have been written by all processes before we remove the old set
+  // wait until every process writes its new packets files, then delete the old set
   MPI_Barrier_allranks();
 
   if (my_rank == 0) {
