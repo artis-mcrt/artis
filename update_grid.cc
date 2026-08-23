@@ -125,7 +125,7 @@ void write_to_estimators_file(std::ostream& estimators_file, const int nonemptym
       std::println(estimators_file);
     }
 
-    if (NT_ON) {
+    if (NT_SCHEME != NonThermalScheme::NT_OFF) {
       std::print(estimators_file, "gamma_NT           Z={:2d}", get_atomicnumber(element));
       for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++) {
         std::print(estimators_file, "              ");
@@ -228,7 +228,7 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
   for (int nlte_iter = 0; nlte_iter <= NLTEITER; nlte_iter++) {
     const auto sys_time_start_spencerfano = std::chrono::steady_clock::now();
     bool spencerfano_changed = false;
-    if (NT_ON && NT_SOLVE_SPENCERFANO) {
+    if (NT_SCHEME == NonThermalScheme::NT_SPENCERFANO) {
       // SF solution depends on the ionisation balance, and weakly on nne
       spencerfano_changed = nonthermal::solve_spencerfano(nonemptymgi, nts, nlte_iter);
     }
@@ -809,7 +809,7 @@ void update_grid(std::ostream& estimators_file, const int nts, const int nts_pre
   printlnlog("lte_iteration {}", globals::lte_iteration ? 1 : 0);
   assert_always(globals::num_lte_timesteps > 0);  // The first time step must solve the ionisation balance in LTE
 
-  if (NT_ON && NT_SOLVE_SPENCERFANO && (nts < globals::num_lte_timesteps + 1)) {
+  if (NT_SCHEME == NonThermalScheme::NT_SPENCERFANO && (nts < globals::num_lte_timesteps + 1)) {
     printlnlog("timestep {}: skipping Spencer-Fano solutions for all cells (solver starts at timestep {})", nts,
                globals::num_lte_timesteps + 1);
   }

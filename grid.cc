@@ -57,10 +57,6 @@ namespace grid {
 
 namespace {
 
-static_assert(!USE_MODEL_INITIAL_ENERGY || INITIAL_PACKETS_ON,
-              "USE_MODEL_INITIAL_ENERGY requires INITIAL_PACKETS_ON, because the model's initial thermal energy (the "
-              "q column of model.txt) is only injected via the initial packets");
-
 std::array<int, 3> ncoordgrid{0, 0, 0};  // propagation grid dimensions
 
 std::optional<GridType> model_type{};
@@ -110,7 +106,7 @@ struct ModelGridCellInput {
   float ffegrp = 0.;
   float initial_radial_pos_sum = 0.;
   float initelectronfrac = 0.4;  // Ye: electrons (or protons) per nucleon
-  float initenergyq = 0.;  // q: energy in the model at tmin to use with USE_MODEL_INITIAL_ENERGY [erg/g]
+  float initenergyq = 0.;  // q: energy in the model at tmin to use with INITIAL_PACKETS_ON [erg/g]
 };
 MPI_shared_array<ModelGridCellInput> modelgrid_input{};
 
@@ -1113,7 +1109,7 @@ void assign_initial_temperatures() {
        nonemptymgi += globals::node_nprocs) {
     const int mgi = get_mgi_of_nonemptymgi(nonemptymgi);
 
-    const auto q = (INITIAL_PACKETS_ON && USE_MODEL_INITIAL_ENERGY) ? get_initenergyq(mgi) : 0.;
+    const auto q = INITIAL_PACKETS_ON ? get_initenergyq(mgi) : 0.;
     const double decayedenergy_per_mass =
         decay::get_modelcell_endecay_per_mass(nonemptymgi, endecay_per_massoftopnuc) + q;
 
@@ -1835,7 +1831,7 @@ auto get_electronfrac(const int nonemptymgi) -> double {
   return get_nnetot(nonemptymgi) / nucleondens;
 }
 
-// q: energy in the model at tmin per gram to use with USE_MODEL_INITIAL_ENERGY option [erg/g]
+// q: energy in the model at tmin per gram to use with the INITIAL_PACKETS_ON option [erg/g]
 DEVICE_FUNC auto get_initenergyq(const int modelgridindex) -> double {
   return modelgrid_input[modelgridindex].initenergyq;
 }

@@ -41,8 +41,6 @@ constexpr bool UNIFORM_PELLET_ENERGIES = true;
 constexpr bool DIRECT_COL_HEAT = true;
 constexpr bool INITIAL_PACKETS_ON = true;
 
-constexpr bool USE_MODEL_INITIAL_ENERGY = true;
-
 constexpr int TABLESIZE = 200;
 constexpr double MINTEMP = 500.;
 constexpr double MAXTEMP = 150000.;
@@ -98,9 +96,7 @@ constexpr bool NLTE_USE_GTH_SOLVER = false;
 
 constexpr std::optional<int> NLTE_TIME_DEPENDENT_FIRST_TIMESTEP = std::nullopt;
 
-constexpr bool NT_ON = false;
-
-constexpr bool NT_SOLVE_SPENCERFANO = false;
+constexpr NonThermalScheme NT_SCHEME = NonThermalScheme::NT_OFF;
 
 constexpr int SF_MAX_TIMESTEPS_BETWEEN_SOLUTIONS = 0;
 
@@ -110,8 +106,6 @@ constexpr int NTEXCITATION_MAXNLEVELS_LOWER = 5;
 constexpr int NTEXCITATION_MAXNLEVELS_UPPER = 250;
 
 constexpr int MAX_NT_EXCITATIONS_STORED = 25000;
-
-constexpr bool NT_EXCITATION_ON = false;
 
 constexpr bool NT_USE_VALENCE_IONPOTENTIAL = false;
 
@@ -123,8 +117,6 @@ constexpr bool USE_RELATIVISTIC_DOPPLER_SHIFT = true;
 
 constexpr bool USE_CALCULATED_MEANATOMICWEIGHT = true;
 
-constexpr bool WRITE_EMISSIONABSORPTION_SPEC_AT_END = false;
-
 constexpr bool KEEP_ESCAPED_GAMMAS = true;
 
 constexpr TimeStepSizeMethod TIMESTEP_SIZE_METHOD = TimeStepSizeMethod::LOGARITHMIC;
@@ -132,8 +124,6 @@ constexpr TimeStepSizeMethod TIMESTEP_SIZE_METHOD = TimeStepSizeMethod::LOGARITH
 constexpr double FIXED_TIMESTEP_WIDTH = -1.;
 
 constexpr double TIMESTEP_TRANSITION_TIME = -1.;
-
-constexpr bool KEEP_ALL_RESTART_FILES = false;
 
 constexpr bool BFCOOLING_USELEVELPOPNOTIONPOP = false;
 

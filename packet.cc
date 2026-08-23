@@ -121,8 +121,7 @@ void packet_init(std::span<Packet> packets) {
     // some grid cells are empty
     if (mgi >= 0) {
       const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(mgi);
-      const auto initial_en_per_mass =
-          (INITIAL_PACKETS_ON && USE_MODEL_INITIAL_ENERGY) ? grid::get_initenergyq(mgi) : 0.;
+      const auto initial_en_per_mass = INITIAL_PACKETS_ON ? grid::get_initenergyq(mgi) : 0.;
 
       etot_simtime += grid::get_propcell_volume_tmin(propcellindex) * grid::get_rho_tmin(mgi) *
                       (cell_endecay_per_mass[nonemptymgi] + initial_en_per_mass);

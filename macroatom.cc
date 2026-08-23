@@ -177,7 +177,7 @@ DEVICE_FUNC void calculate_macroatom_transitionrates(std::span<double> levelrate
   double sum_up_higher = 0.;
   const int ionisinglevels = get_nlevels_ionising(element, ion);
   if (ion < get_nions(element) - 1 && level < ionisinglevels) {
-    if (NT_ON) {
+    if (NT_SCHEME != NonThermalScheme::NT_OFF) {
       sum_up_highernt = nonthermal::nt_ionisation_ratecoeff(nonemptymgi, element, ion) * epsilon_current;
     }
 

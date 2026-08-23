@@ -132,13 +132,6 @@ static_assert(NT_MAX_AUGER_ELECTRONS == 0 || !NT_USE_VALENCE_IONPOTENTIAL,
               "Overriding the shell potential with the valence potential is not compatible with including Auger "
               "electrons, because the shell potential is used to calculate the energy of Auger electrons.");
 
-static_assert(!NT_SOLVE_SPENCERFANO || NT_ON,
-              "NT_SOLVE_SPENCERFANO does nothing without NT_ON, because non-thermal deposition is never handled");
-
-static_assert(!NT_EXCITATION_ON || (NT_ON && NT_SOLVE_SPENCERFANO),
-              "NT_EXCITATION_ON does nothing without NT_ON and NT_SOLVE_SPENCERFANO, because non-thermal excitation "
-              "rates are only calculated from the Spencer-Fano solution");
-
 // energy grid on which solution is sampled [eV]
 constexpr auto engrid(int index) -> double { return SF_EMIN + (index * DELTA_E); }
 
@@ -1170,10 +1163,10 @@ auto calculate_frac_heating(const int nonemptymgi, const std::array<double, SFPT
 
 // fraction of deposited energy that goes into ionisation
 auto get_nt_frac_ionisation(const int nonemptymgi) -> float {
-  if (!NT_ON) {
+  if (NT_SCHEME == NonThermalScheme::NT_OFF) {
     return 0.;
   }
-  if (!NT_SOLVE_SPENCERFANO) {
+  if (NT_SCHEME == NonThermalScheme::NT_AXELRODAPPROX) {
     return 0.03;  // Axelrod 1980 approximation
   }
 
@@ -1184,7 +1177,7 @@ auto get_nt_frac_ionisation(const int nonemptymgi) -> float {
 
 // fraction of deposited energy that goes into collisional excitation
 auto get_nt_frac_excitation(const int nonemptymgi) -> float {
-  if (!NT_ON || !NT_SOLVE_SPENCERFANO) {
+  if (NT_SCHEME != NonThermalScheme::NT_SPENCERFANO) {
     return 0.;
   }
 
@@ -1687,7 +1680,7 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const std::a
           const double frac_excitation_thistrans = nnlevel * epsilon_trans * ratecoeffperdeposition;
           frac_excitation_ion += frac_excitation_thistrans;
 
-          if constexpr (NT_EXCITATION_ON) {
+          if constexpr (NT_SCHEME == NonThermalScheme::NT_SPENCERFANO) {
             assert_always(std::isfinite(ratecoeffperdeposition));
             // the atomic data set was limited for Fe V, which caused the ground multiplet to be massively
             // depleted, and then almost no recombination happened!
@@ -1698,7 +1691,7 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const std::a
                   .alltransindex = alltransindex,
               });
             }
-          }  // NT_EXCITATION_ON
+          }  // NT_SPENCERFANO
         }  // for t
       }  // for lower
 
@@ -1847,7 +1840,7 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const std::a
     std::ranges::SORT_OR_STABLE_SORT(get_cell_ntexcitations(nonemptymgi), std::ranges::less{},
                                      &NonThermalExcitation::alltransindex);
 
-  }  // NT_EXCITATION_ON
+  }  // NT_SPENCERFANO
 
   // calculate number density of non-thermal electrons
   const double deposition_rate_density_ev = get_ntlepton_deposition_rate_density(nonemptymgi) / EV;
@@ -1885,7 +1878,8 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const std::a
   // When non-thermal excitation is not being modelled, do_ntlepton_deposit() sends the excitation
   // share to k-packets instead, so it has to be counted as heating here for the energy that the
   // packets carry to match the heating rate that the T_e solver is given.
-  const double frac_excitation_nonheating = NT_EXCITATION_ON ? frac_excitation_total : 0.;
+  const double frac_excitation_nonheating =
+      (NT_SCHEME == NonThermalScheme::NT_SPENCERFANO) ? frac_excitation_total : 0.;
   nt_solution[nonemptymgi].frac_heating =
       static_cast<float>(std::clamp(1. - frac_excitation_nonheating - frac_ionisation_total, 0., 1.));
 
@@ -2271,18 +2265,17 @@ void init() {
     std::ranges::fill(ntlepton_deposition_rate_density_all_cells, -1.);
   }
 
-  if (!NT_ON) {
+  if (NT_SCHEME == NonThermalScheme::NT_OFF) {
     return;
   }
 
   read_binding_energies();
 
-  if (!NT_SOLVE_SPENCERFANO) {
+  if (NT_SCHEME != NonThermalScheme::NT_SPENCERFANO) {
     return;
   }
 
   printlnlog("Initializing non-thermal solver with:");
-  printlnlog("  NT_EXCITATION {}", NT_EXCITATION_ON ? "on" : "off");
   printlnlog("  MAX_NT_EXCITATIONS_STORED {}", MAX_NT_EXCITATIONS_STORED);
   printlnlog("  NTEXCITATION_MAXNLEVELS_LOWER {}", NTEXCITATION_MAXNLEVELS_LOWER);
   printlnlog("  NTEXCITATION_MAXNLEVELS_UPPER {}", NTEXCITATION_MAXNLEVELS_UPPER);
@@ -2294,14 +2287,12 @@ void init() {
   printlnlog("  SF_AUGER_CONTRIBUTION {}", SF_AUGER_CONTRIBUTION_ON ? "on" : "off");
   printlnlog("  SF_AUGER_CONTRIBUTION_DISTRIBUTE_EN {}", SF_AUGER_CONTRIBUTION_DISTRIBUTE_EN ? "on" : "off");
 
-  if (NT_EXCITATION_ON) {
-    nt_excitations_stored = std::min(MAX_NT_EXCITATIONS_STORED, get_possible_nt_excitation_count());
-    printlnlog("[info] mem_usage: storing {} non-thermal excitations for non-empty cells occupies {:.3f} MB",
-               nt_excitations_stored,
-               nonempty_npts_model * sizeof(NonThermalExcitation) * nt_excitations_stored / 1024. / 1024.);
+  nt_excitations_stored = std::min(MAX_NT_EXCITATIONS_STORED, get_possible_nt_excitation_count());
+  printlnlog("[info] mem_usage: storing {} non-thermal excitations for non-empty cells occupies {:.3f} MB",
+             nt_excitations_stored,
+             nonempty_npts_model * sizeof(NonThermalExcitation) * nt_excitations_stored / 1024. / 1024.);
 
-    excitations_list_all_cells = MPI_shared_array<NonThermalExcitation>(nonempty_npts_model * nt_excitations_stored);
-  }
+  excitations_list_all_cells = MPI_shared_array<NonThermalExcitation>(nonempty_npts_model * nt_excitations_stored);
 
   ion_data_all_cells = MPI_shared_array<NonThermalSolutionIon>(nonempty_npts_model * get_includedions());
 
@@ -2385,11 +2376,11 @@ DEVICE_FUNC auto get_ntlepton_deposition_rate_density(const int nonemptymgi) -> 
 }
 
 auto get_nt_frac_heating(const int nonemptymgi) -> float {
-  if (!NT_ON) {
+  if (NT_SCHEME == NonThermalScheme::NT_OFF) {
     return 1.;
   }
-  if (!NT_SOLVE_SPENCERFANO) {
-    return 0.97;
+  if (NT_SCHEME == NonThermalScheme::NT_AXELRODAPPROX) {
+    return 0.97;  // Axelrod 1980 approximation
   }
   const float frac_heating = nt_solution[nonemptymgi].frac_heating;
   return frac_heating;
@@ -2400,7 +2391,7 @@ DEVICE_FUNC auto nt_ionisation_upperion_probability(const int nonemptymgi, const
   assert_always(upperion > lowerion);
   assert_always(upperion < get_nions(element));
   assert_always(upperion <= nt_ionisation_maxupperion(element, lowerion));
-  if (NT_SOLVE_SPENCERFANO && NT_MAX_AUGER_ELECTRONS > 0) {
+  if (NT_SCHEME == NonThermalScheme::NT_SPENCERFANO && NT_MAX_AUGER_ELECTRONS > 0) {
     const int numaugerelec = upperion - lowerion - 1;  // number of Auger electrons to go from lowerin to upper ion
     const int uniqueionindex = get_uniqueionindex(element, lowerion);
     const auto& cell_ion_data = get_cell_allions_data(nonemptymgi)[uniqueionindex];
@@ -2437,7 +2428,7 @@ DEVICE_FUNC auto nt_ionisation_maxupperion(const int element, const int lowerion
   assert_always(lowerion < nions - 1);
   int maxupper = lowerion + 1;
 
-  if (NT_SOLVE_SPENCERFANO) {
+  if (NT_SCHEME == NonThermalScheme::NT_SPENCERFANO) {
     maxupper += NT_MAX_AUGER_ELECTRONS;
   }
 
@@ -2449,7 +2440,7 @@ DEVICE_FUNC auto nt_ionisation_maxupperion(const int element, const int lowerion
 DEVICE_FUNC auto nt_random_upperion(const int nonemptymgi, const int element, const int lowerion,
                                     const bool energyweighted, rngstate_type& rngstate) -> int {
   assert_testmodeonly(lowerion < get_nions(element) - 1);
-  if (NT_SOLVE_SPENCERFANO && NT_MAX_AUGER_ELECTRONS > 0) {
+  if (NT_SCHEME == NonThermalScheme::NT_SPENCERFANO && NT_MAX_AUGER_ELECTRONS > 0) {
     const double zrand = rng_uniform(rngstate);
 
     double prob_sum = 0.;
@@ -2474,15 +2465,14 @@ DEVICE_FUNC auto nt_random_upperion(const int nonemptymgi, const int element, co
 }
 
 DEVICE_FUNC auto nt_ionisation_ratecoeff(const int nonemptymgi, const int element, const int ion) -> double {
-  assert_always(NT_ON);
+  assert_always(NT_SCHEME != NonThermalScheme::NT_OFF);
 
-  if (NT_SOLVE_SPENCERFANO) {
+  if (NT_SCHEME == NonThermalScheme::NT_SPENCERFANO) {
     const double Y_nt = nt_ionisation_ratecoeff_sf(nonemptymgi, element, ion);
     if (!std::isfinite(Y_nt)) {
       // probably because eff_ionpot = 0 because the solver hasn't been run yet, or no impact ionisation cross sections
       // exist
-      const double Y_nt_wfapprox = nt_ionisation_ratecoeff_wfapprox(nonemptymgi, element, ion);
-      return Y_nt_wfapprox;
+      return nt_ionisation_ratecoeff_wfapprox(nonemptymgi, element, ion);
     }
     assert_always(Y_nt >= 0.);
 
@@ -2493,7 +2483,7 @@ DEVICE_FUNC auto nt_ionisation_ratecoeff(const int nonemptymgi, const int elemen
 
 DEVICE_FUNC auto nt_excitation_ratecoeff(const int nonemptymgi, const int lowerlevel, const int upperlevel,
                                          const int alltransindex) -> double {
-  if constexpr (!NT_EXCITATION_ON) {
+  if constexpr (NT_SCHEME != NonThermalScheme::NT_SPENCERFANO) {
     return 0.;
   }
   if (lowerlevel >= NTEXCITATION_MAXNLEVELS_LOWER) {
@@ -2533,7 +2523,8 @@ DEVICE_FUNC void do_ntlepton_deposit(Packet& pkt) {
   const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
 
   // macroatom should not be activated in thick cells
-  if (NT_ON && NT_SOLVE_SPENCERFANO && grid::thick_allcells[nonemptymgi] != grid::CellThickness::THICK) {
+  if (NT_SCHEME == NonThermalScheme::NT_SPENCERFANO &&
+      grid::thick_allcells[nonemptymgi] != grid::CellThickness::THICK) {
     // here there is some probability to cause ionisation or excitation to a macroatom packet
     // instead of converting directly to k-packet (unless the heating channel is selected)
 
@@ -2577,7 +2568,8 @@ DEVICE_FUNC void do_ntlepton_deposit(Packet& pkt) {
     // ionisation and excitation channels becomes a k-packet (heating) below, so the k-packet
     // probability is 1 - frac_ionisation - frac_excitation, matching the frac_heating that
     // analyse_sf_solution() stores and the T_e solver applies to the deposition rate.
-    const double frac_excitation = NT_EXCITATION_ON ? get_nt_frac_excitation(nonemptymgi) : 0.;
+    const double frac_excitation =
+        (NT_SCHEME == NonThermalScheme::NT_SPENCERFANO) ? get_nt_frac_excitation(nonemptymgi) : 0.;
     if (zrand < (frac_ionisation + frac_excitation)) {
       zrand -= frac_ionisation;
       // now zrand is between zero and frac_excitation
@@ -2725,7 +2717,7 @@ void write_restart_data(FILE* gridsave_file) {
   for (int nonemptymgi = 0; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
     fprintf(gridsave_file, "%d %la ", nonemptymgi, ntlepton_deposition_rate_density_all_cells[nonemptymgi]);
 
-    if (NT_ON && NT_SOLVE_SPENCERFANO) {
+    if (NT_SCHEME == NonThermalScheme::NT_SPENCERFANO) {
       check_auger_probabilities(nonemptymgi);
 
       fprintf(gridsave_file, "%a %a %a %a\n", nt_solution[nonemptymgi].nneperion_when_solved,
@@ -2779,7 +2771,7 @@ void read_restart_data(FILE* gridsave_file) {
                          &ntlepton_deposition_rate_density_all_cells[nonemptymgi]) == 2);
     assert_always(nonemptymgi_in == nonemptymgi);
 
-    if (NT_ON && NT_SOLVE_SPENCERFANO) {
+    if (NT_SCHEME == NonThermalScheme::NT_SPENCERFANO) {
       assert_always(fscanf(gridsave_file, "%a %a %a %a\n", &nt_solution[nonemptymgi].nneperion_when_solved,
                            &nt_solution[nonemptymgi].frac_heating, &nt_solution[nonemptymgi].frac_ionisation,
                            &nt_solution[nonemptymgi].frac_excitation) == 4);
@@ -2822,7 +2814,7 @@ void nt_MPI_Bcast(const ptrdiff_t nonemptymgi, const int root_node_id) {
     MPI_Bcast_safe(ntlepton_deposition_rate_density_all_cells[nonemptymgi], root_node_id, globals::mpi_comm_internode);
   }
 
-  if (NT_ON && NT_SOLVE_SPENCERFANO) {
+  if (NT_SCHEME == NonThermalScheme::NT_SPENCERFANO) {
     if (globals::rank_in_node == 0) {
       MPI_Bcast_safe(nt_solution[nonemptymgi].nneperion_when_solved, root_node_id, globals::mpi_comm_internode);
       MPI_Bcast_safe(nt_solution[nonemptymgi].timestep_last_solved, root_node_id, globals::mpi_comm_internode);

@@ -1351,7 +1351,7 @@ void setup_radioactive_pellet(const double e_cmf_per_packet, const int nonemptym
   const auto mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
 
   // decay channels include all radioactive decay paths, and possibly also an initial cell energy channel
-  const int num_decaychannels = num_decaypaths + ((INITIAL_PACKETS_ON && USE_MODEL_INITIAL_ENERGY) ? 1 : 0);
+  const int num_decaychannels = num_decaypaths + (INITIAL_PACKETS_ON ? 1 : 0);
 
   auto cumulative_en_sum = std::vector<double>(num_decaychannels, 0.);
   double energysum = 0.;
@@ -1383,7 +1383,6 @@ void setup_radioactive_pellet(const double e_cmf_per_packet, const int nonemptym
   // initial cell energy selected
   if (decaychannelindex >= num_decaypaths) {
     assert_always(decaychannelindex == num_decaypaths);  // only one non-radioactive channel for now
-    assert_always(USE_MODEL_INITIAL_ENERGY);
     assert_always(INITIAL_PACKETS_ON);
 
     pkt.prop_time = globals::tmin;

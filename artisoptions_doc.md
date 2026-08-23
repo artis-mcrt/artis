@@ -68,13 +68,9 @@ constexpr bool UNIFORM_PELLET_ENERGIES;
 constexpr bool DIRECT_COL_HEAT;
 
 // INITIAL PACKETS will seed the cells on the first timestep at tmin with K-packets
-// representing decay energy from t_model to tmin, and,
-// if USE_MODEL_INITIAL_ENERGY is true, also the snapshot energy at t_model
+// representing decay energy from t_model to tmin, and also the snapshot
+// energy at t_model (the q column of model.txt)
 constexpr bool INITIAL_PACKETS_ON;
-
-// allows non-zero energy density at time t_model using q column in model.txt
-// INITIAL_PACKETS_ON must be true to make use of this
-constexpr bool USE_MODEL_INITIAL_ENERGY;
 
 // Rate coefficients
 constexpr int TABLESIZE;
@@ -201,11 +197,13 @@ constexpr bool NLTE_USE_GTH_SOLVER;
 // packets, and the factor is then above 1. The code removes no k-packet.
 constexpr std::optional<int> NLTE_TIME_DEPENDENT_FIRST_TIMESTEP;
 
-// non-thermal ionisation
-constexpr bool NT_ON;
-
-// use the detailed Spencer-Fano solver instead of the work function approximation (only works if NT_ON)
-constexpr bool NT_SOLVE_SPENCERFANO;
+// How the code handles the energy that the non-thermal leptons deposit.
+// NT_OFF: no non-thermal ionisation.
+// NT_SPENCERFANO: the detailed Spencer-Fano solution. It also gives the non-thermal excitation rates for
+// the NLTE population solver, the macroatom, and the NTLEPTON packets.
+// NT_AXELRODAPPROX: the work function approximation of Axelrod (1980). The energy fractions are then
+// fixed at 0.03 for the ionisation and 0.97 for the heating, and there are no excitation rates.
+constexpr NonThermalScheme NT_SCHEME;
 
 // NB: the energy grid of the Spencer-Fano solution vector is not an artisoptions.h option. SFPTS (the number of
 // energy points) and SF_EMIN / SF_EMAX (the grid limits in eV) are set at the top of nonthermal.cc and apply to
@@ -229,12 +227,6 @@ constexpr int NTEXCITATION_MAXNLEVELS_UPPER;  // maximum number of upper levels 
 // the full NT degradation spectrum and calculate the rates as needed (although CPU costs)
 constexpr int MAX_NT_EXCITATIONS_STORED;
 
-// set to true to keep a list of non-thermal excitation rates for use
-// in the NLTE pop solver, macroatom, and NTLEPTON packets.
-// Even with this off, excitations will be included in the solution
-// and their combined deposition fraction is calculated
-constexpr bool NT_EXCITATION_ON = false;
-
 // calculate eff_ionpot and ionisation rates by always dividing by the valence shell potential for the ion
 // instead of the specific shell potentials
 constexpr bool NT_USE_VALENCE_IONPOTENTIAL;
@@ -252,8 +244,6 @@ constexpr bool USE_RELATIVISTIC_DOPPLER_SHIFT;
 // calculated from the nuclear composition (plus stable component),
 // rather than just from the compositiondata.txt values
 constexpr bool USE_CALCULATED_MEANATOMICWEIGHT;
-
-constexpr bool WRITE_EMISSIONABSORPTION_SPEC_AT_END;
 
 // track escaped gamma-ray packets and write gamma_light_curve.out
 constexpr bool KEEP_ESCAPED_GAMMAS;
@@ -284,9 +274,6 @@ constexpr TimeStepSizeMethod TIMESTEP_SIZE_METHOD;
 constexpr double FIXED_TIMESTEP_WIDTH;
 
 constexpr double TIMESTEP_TRANSITION_TIME;
-
-// once a new gridsave and packets*.tmp have been written, don't delete the previous set
-constexpr bool KEEP_ALL_RESTART_FILES;
 
 // The bound-free cooling coefficient of each (level, target) continuum is normalised per population of the upper-ion
 // target level (like the spontaneous recombination coefficient alpha_sp). Set true to multiply it by that target

@@ -90,6 +90,12 @@ enum class ParticleThermalisationScheme {
 
 enum class RpktGreyType { FEGROUP_APPROX, TANAKA2020_ELECTRONFRAC, JUST2022_TEMP_LANTHANIDEFRAC };
 
+// how the code handles the energy that the non-thermal leptons deposit
+// NT_OFF: no non-thermal ionisation
+// NT_SPENCERFANO: the detailed Spencer-Fano solution, which also gives the non-thermal excitation rates
+// NT_AXELRODAPPROX: the work function approximation of Axelrod (1980), with fixed energy fractions
+enum class NonThermalScheme { NT_OFF, NT_SPENCERFANO, NT_AXELRODAPPROX };
+
 using Vec3d = std::array<double, 3>;
 constexpr Vec3d syn_dir{0., 0., 1.};  // vector defining the theta=0 direction
 
