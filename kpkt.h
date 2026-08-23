@@ -4,7 +4,6 @@
 #define KPKT_H
 
 #include <cstddef>
-#include <cstdio>
 #include <span>
 
 #include "atomic.h"
@@ -29,8 +28,6 @@ void calculate_cooling_rates(int nonemptymgi, HeatingCoolingRates* heatingcoolin
 auto set_radiative_energy_factor(int nonemptymgi, const HeatingCoolingRates& heatingcoolingrates) -> double;
 void reset_radiative_energy_factor(int nonemptymgi);
 [[nodiscard]] DEVICE_FUNC auto get_radiative_energy_factor(int nonemptymgi) -> double;
-void write_restart_data(FILE* restart_file);
-void read_restart_data(FILE* restart_file);
 DEVICE_FUNC void do_kpkt_blackbody(Packet& pkt);
 DEVICE_FUNC void do_kpkt(Packet& pkt, double t2, int nts);
 

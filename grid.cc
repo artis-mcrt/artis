@@ -427,6 +427,7 @@ void allocate_nonemptycells_composition_cooling() {
   ion_groundlevelpops_allcells = MPI_shared_array<float>(nonempty_npts_model_ptrdifft * get_includedions(), 0.);
   ion_partfuncts_allcells = MPI_shared_array<float>(nonempty_npts_model_ptrdifft * get_includedions(), 0.);
   kpkt::ion_cooling_contribs_allcells = MPI_shared_array<double>(nonempty_npts_model_ptrdifft * get_includedions(), 0.);
+  // 1 means that the k-packets keep their full energy (no thermal balance yet)
   kpkt::radiative_energy_factor_allcells = MPI_shared_array<double>(nonempty_npts_model_ptrdifft, 1.);
 
   // -1 indicates that there is currently no information on the nlte populations
@@ -1021,10 +1022,12 @@ void read_grid_restart_data(const int timestep) {
 
     float nne_in = -1.;
     float nnetot_in = -1.;
-    assert_always(fscanf(gridsave_file, "%d %a %a %a %a %d %la %la %la %la %a %a", &mgi_in, &T_R, &T_e, &W, &T_J,
+    double kpkt_energy_factor_in = 1.;
+    assert_always(fscanf(gridsave_file, "%d %a %a %a %a %d %la %la %la %la %a %a %la", &mgi_in, &T_R, &T_e, &W, &T_J,
                          &thick, &globals::dep_estimator_gamma[nonemptymgi],
                          &globals::dep_estimator_positron[nonemptymgi], &globals::dep_estimator_electron[nonemptymgi],
-                         &globals::dep_estimator_alpha[nonemptymgi], &nne_in, &nnetot_in) == 12);
+                         &globals::dep_estimator_alpha[nonemptymgi], &nne_in, &nnetot_in,
+                         &kpkt_energy_factor_in) == 13);
 
     if (mgi_in != mgi) {
       printlnlog("[error] read_grid_restart_data: cell mismatch in {}: read cellnumber {}, expected {}. aborting",
@@ -1050,6 +1053,7 @@ void read_grid_restart_data(const int timestep) {
       thick_allcells[nonemptymgi] = static_cast<CellThickness>(thick);
       nne_allcells[nonemptymgi] = nne_in;
       nnetot_allcells[nonemptymgi] = nnetot_in;
+      kpkt::radiative_energy_factor_allcells[nonemptymgi] = kpkt_energy_factor_in;
     }
 
     if constexpr (USE_LUT_PHOTOION) {
@@ -1072,7 +1076,6 @@ void read_grid_restart_data(const int timestep) {
     // all data is shared on the node
     nonthermal::read_restart_data(gridsave_file);
     nltepop_read_restart_data(gridsave_file);
-    kpkt::read_restart_data(gridsave_file);
   }
   MPI_Barrier_node();
   fclose(gridsave_file);
@@ -2234,11 +2237,12 @@ void write_grid_restart_data(const int timestep) {
     const int mgi = get_mgi_of_nonemptymgi(nonemptymgi);
 
     assert_always(globals::dep_estimator_gamma[nonemptymgi] >= 0.);
-    fprintf(gridsave_file, "%d %a %a %a %a %d %la %la %la %la %a %a", mgi, TR_allcells[nonemptymgi],
+    fprintf(gridsave_file, "%d %a %a %a %a %d %la %la %la %la %a %a %la", mgi, TR_allcells[nonemptymgi],
             Te_allcells[nonemptymgi], W_allcells[nonemptymgi], TJ_allcells[nonemptymgi],
             static_cast<int>(thick_allcells[nonemptymgi]), globals::dep_estimator_gamma[nonemptymgi],
             globals::dep_estimator_positron[nonemptymgi], globals::dep_estimator_electron[nonemptymgi],
-            globals::dep_estimator_alpha[nonemptymgi], nne_allcells[nonemptymgi], nnetot_allcells[nonemptymgi]);
+            globals::dep_estimator_alpha[nonemptymgi], nne_allcells[nonemptymgi], nnetot_allcells[nonemptymgi],
+            kpkt::radiative_energy_factor_allcells[nonemptymgi]);
 
     if constexpr (USE_LUT_PHOTOION) {
       for (int i = 0; i < globals::nbfcontinua_ground; i++) {
@@ -2254,7 +2258,6 @@ void write_grid_restart_data(const int timestep) {
   radfield::write_restart_data(gridsave_file);
   nonthermal::write_restart_data(gridsave_file);
   nltepop_write_restart_data(gridsave_file);
-  kpkt::write_restart_data(gridsave_file);
   fclose(gridsave_file);
   const auto write_restart_duration =
       std::chrono::duration<double>(std::chrono::steady_clock::now() - sys_time_start_write_restart).count();

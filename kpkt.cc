@@ -11,7 +11,6 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
-#include <cstdio>
 #include <cstdlib>
 #include <limits>
 #include <span>
@@ -436,24 +435,6 @@ DEVICE_FUNC auto get_radiative_energy_factor(const int nonemptymgi) -> double {
   assert_testmodeonly(nonemptymgi >= 0);
   assert_testmodeonly(nonemptymgi < grid::get_nonempty_npts_model());
   return radiative_energy_factor_allcells[nonemptymgi];
-}
-
-void write_restart_data(FILE* restart_file) {
-  printlog("k-packet energy factors, ");
-  fprintf(restart_file, "%d\n", 61093424);  // special number marking the beginning of the k-packet data
-  for (auto nonemptymgi = 0Z; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
-    fprintf(restart_file, "%la\n", radiative_energy_factor_allcells[nonemptymgi]);
-  }
-}
-
-void read_restart_data(FILE* restart_file) {
-  printlnlog("Reading restart data for the k-packet energy factors");
-  int code_check = 0;
-  assert_always(fscanf(restart_file, "%d\n", &code_check) == 1);
-  assert_always(code_check == 61093424);
-  for (auto nonemptymgi = 0Z; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
-    assert_always(fscanf(restart_file, "%la\n", &radiative_energy_factor_allcells[nonemptymgi]) == 1);
-  }
 }
 
 // handle a k-packet (e.g., in a thick cell) by emitting according to the planck function
