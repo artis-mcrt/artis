@@ -28,10 +28,10 @@ xz -f -d -v -T0 *.xz
 
 sed -i'' -e 's/constexpr int MPKTS.*/constexpr int MPKTS = 50000;/g' artisoptions.h
 
-sed -i'' -e 's/constexpr int TABLESIZE.*/constexpr int TABLESIZE = 40;/g' artisoptions.h
+sed -i'' -e 's/constexpr int RATECOEFF_TABLESIZE.*/constexpr int RATECOEFF_TABLESIZE = 40;/g' artisoptions.h
 
-# a few near-vacuum cells reach NLTEITER in every timestep, so this limit keeps the run time of the test low
-sed -i'' -e 's/constexpr int NLTEITER.*/constexpr int NLTEITER = 10;/g' artisoptions.h
+# a few near-vacuum cells reach NLTE_TE_NNE_MAXITER in every timestep, so this limit keeps the run time of the test low
+sed -i'' -e 's/constexpr int NLTE_TE_NNE_MAXITER.*/constexpr int NLTE_TE_NNE_MAXITER = 10;/g' artisoptions.h
 
 sed -i'' -e 's/constexpr int ION_NLEVELS_EXCITED_NLTE.*/constexpr int ION_NLEVELS_EXCITED_NLTE(int element_z, int ionstage) { return 20; }/g' artisoptions.h
 

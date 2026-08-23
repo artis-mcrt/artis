@@ -582,7 +582,7 @@ void mpi_reduce_estimators(const int nts) {
   radfield::reduce_estimators();
   MPI_Barrier_allranks();
   MPI_Allreduce_safe(globals::ffheatingestimator, MPI_SUM, MPI_COMM_WORLD);
-  if constexpr (!DIRECT_COL_HEAT) {
+  if constexpr (!COL_HEAT_FROM_LEVELPOPS) {
     MPI_Allreduce_safe(globals::colheatingestimator, MPI_SUM, MPI_COMM_WORLD);
   }
   MPI_Barrier_allranks();

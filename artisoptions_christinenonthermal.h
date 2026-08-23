@@ -18,7 +18,7 @@ constexpr int CUBOID_NCOORDGRID_Y = 100;
 constexpr int CUBOID_NCOORDGRID_Z = 100;
 constexpr bool FORCE_SPHERICAL_ESCAPE_SURFACE = false;
 
-constexpr int NLTEITER = 30;
+constexpr int NLTE_TE_NNE_MAXITER = 30;
 
 constexpr bool NLTE_TE_NNE_USE_ANDERSON_ACCEL = false;
 
@@ -37,16 +37,16 @@ constexpr bool FORCE_SAHA_ION_BALANCE(int element_z) { return false; }
 
 constexpr bool SINGLE_LEVEL_TOP_ION = false;
 
-constexpr int NLEVELS_REQUIRETRANSITIONS(int Z, int ionstage) {
-  return ((Z == 26 && ionstage == 5) && ionstage >= 1) ? 80 : 0;
+constexpr int NLEVELS_REQUIRETRANSITIONS(int element_z, int ionstage) {
+  return ((element_z == 26 && ionstage == 5) && ionstage >= 1) ? 80 : 0;
 }
 
 constexpr bool UNIFORM_PELLET_ENERGIES = true;
 
-constexpr bool DIRECT_COL_HEAT = true;
+constexpr bool COL_HEAT_FROM_LEVELPOPS = true;
 constexpr bool INITIAL_PACKETS_ON = true;
 
-constexpr int TABLESIZE = 100;
+constexpr int RATECOEFF_TABLESIZE = 100;
 constexpr double MINTEMP = 3000.;
 constexpr double MAXTEMP = 140000.;
 
@@ -58,7 +58,7 @@ constexpr bool POL_ON = false;
 constexpr bool VPKT_ON = false;
 constexpr bool VPKT_WRITE_CONTRIBS = false;
 
-constexpr double MINPOP = 1e-40;
+constexpr double MIN_LEVELPOP = 1e-40;
 
 constexpr double NU_MIN_R = 1e13;
 constexpr double NU_MAX_R = 5e16;

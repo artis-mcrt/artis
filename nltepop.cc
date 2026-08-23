@@ -930,10 +930,10 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
         if (!std::isfinite(ltepop) || ltepop <= 0.) {
           printlnlog(
               "  [warning] cell {} ts {}: Boltzmann population for Z={} ionstage {} level {} is non-finite or "
-              "non-positive ({}). Setting to MINPOP",
+              "non-positive ({}). Setting to MIN_LEVELPOP",
               nltelog.modelgridindex, nltelog.timestep, get_atomicnumber(element), get_ionstage(element, ion), level,
               ltepop);
-          ltepop = MINPOP;
+          ltepop = MIN_LEVELPOP;
         }
 
         printlnlog(
@@ -960,11 +960,11 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
         return false;
       }
 
-      // if groundpop is below MINPOP then the NLTE solution fails
+      // if groundpop is below MIN_LEVELPOP then the NLTE solution fails
       const size_t index_ion_ground = get_nlte_vector_index(element, ion, 0, first_ion_used);
-      if (index == index_ion_ground && population < MINPOP) {
+      if (index == index_ion_ground && population < MIN_LEVELPOP) {
         printlnlog(
-            "  [warning] cell {} ts {}: NLTE solver gave ground pop less than MINPOP for index {} (Z={} ionstage "
+            "  [warning] cell {} ts {}: NLTE solver gave ground pop less than MIN_LEVELPOP for index {} (Z={} ionstage "
             "{} "
             "level {}), pop = {:g}. Returning nltepop_matrix_solve failure",
             nltelog.modelgridindex, nltelog.timestep, index, get_atomicnumber(element), ionstage, level, population);
@@ -976,19 +976,19 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
             "  [warning] cell {} ts {}: NLTE solver gave negative population for index {} (Z={} ionstage {} "
             "level {}), pop = {:g}",
             nltelog.modelgridindex, nltelog.timestep, index, get_atomicnumber(element), ionstage, level, population);
-        if (population < -MINPOP) {
+        if (population < -MIN_LEVELPOP) {
           printlnlog(
-              "  [warning] negative pop = {:g} less than -MINPOP (-{:g}) unlikely a rounding error to zero so "
+              "  [warning] negative pop = {:g} less than -MIN_LEVELPOP (-{:g}) unlikely a rounding error to zero so "
               "returning nltepop_matrix_solve failure",
-              population, MINPOP);
+              population, MIN_LEVELPOP);
           return false;
         }
         printlnlog(
-            "  [warning] negative pop = {:g} greater than -MINPOP (-{:g}) likely a rounding error to zero so "
+            "  [warning] negative pop = {:g} greater than -MIN_LEVELPOP (-{:g}) likely a rounding error to zero so "
             "continue "
-            "with NLTE pops but set this level to MINPOP",
-            population, MINPOP);
-        popvec[index] = MINPOP;
+            "with NLTE pops but set this level to MIN_LEVELPOP",
+            population, MIN_LEVELPOP);
+        popvec[index] = MIN_LEVELPOP;
       }
 
       if (index != index_ion_ground) {
@@ -1644,7 +1644,7 @@ void nltepop_apply_solution(const int element, const int nonemptymgi, const int 
 // Clear the NLTE solution of every element in the cell, for the paths that replace the NLTE
 // solution with Saha populations without a solve. The level populations get the -1 marker, so
 // the partition functions and the Saha balance then use the Boltzmann populations. A stale
-// excited population divided by a Saha ground population at the MINPOP floor would overflow
+// excited population divided by a Saha ground population at the MIN_LEVELPOP floor would overflow
 // the partition function.
 void nltepop_reset_cell(const int nonemptymgi) {
   for (int element = 0; element < get_nelements(); element++) {

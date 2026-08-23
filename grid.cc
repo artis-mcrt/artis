@@ -594,14 +594,14 @@ void allocate_nonemptymodelcells() {
   reserve_resize(globals::ffheatingestimator, nonempty_npts_model);
   std::ranges::fill(globals::ffheatingestimator, 0.);
 
-  reserve_resize(globals::colheatingestimator, DIRECT_COL_HEAT ? 0 : nonempty_npts_model);
+  reserve_resize(globals::colheatingestimator, COL_HEAT_FROM_LEVELPOPS ? 0 : nonempty_npts_model);
   std::ranges::fill(globals::colheatingestimator, 0.);
 
 #ifdef DO_TITER
   reserve_resize(globals::ffheatingestimator_save, nonempty_npts_model);
   std::ranges::fill(globals::ffheatingestimator_save, 0.);
 
-  reserve_resize(globals::colheatingestimator_save, DIRECT_COL_HEAT ? 0 : nonempty_npts_model);
+  reserve_resize(globals::colheatingestimator_save, COL_HEAT_FROM_LEVELPOPS ? 0 : nonempty_npts_model);
   std::ranges::fill(globals::colheatingestimator_save, 0.);
 #endif
 

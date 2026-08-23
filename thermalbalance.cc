@@ -85,7 +85,7 @@ void calculate_heating_rates(const int nonemptymgi, const float T_e, const float
 
   for (int element = 0; element < get_nelements(); element++) {
     const int nions = get_nions(element);
-    if constexpr (DIRECT_COL_HEAT) {
+    if constexpr (COL_HEAT_FROM_LEVELPOPS) {
       for (int ion = 0; ion < nions; ion++) {
         C_deexc += get_heating_ion_coll_deexc(nonemptymgi, element, ion, T_e, clumpednne);
       }
@@ -108,11 +108,11 @@ void calculate_heating_rates(const int nonemptymgi, const float T_e, const float
   // Free-free heating (from estimators)
   ffheating = globals::ffheatingestimator[nonemptymgi];
 
-  if constexpr (DIRECT_COL_HEAT) {
+  if constexpr (COL_HEAT_FROM_LEVELPOPS) {
     heatingcoolingrates.heating_collisional = C_deexc;
   } else {
     // from Monte Carlo estimators, which accumulate collisional recombination heating as well as
-    // the collisional de-excitation heating that the DIRECT_COL_HEAT branch above sums analytically
+    // the collisional de-excitation heating that the COL_HEAT_FROM_LEVELPOPS branch above sums analytically
     heatingcoolingrates.heating_collisional = globals::colheatingestimator.at(nonemptymgi);
   }
 

@@ -225,7 +225,7 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
   THREADLOCALONHOST std::vector<double> nnion_prev;
   THREADLOCALONHOST std::vector<std::pair<int, int>> nlte_solution_prev;
 
-  for (int nlte_iter = 0; nlte_iter <= NLTEITER; nlte_iter++) {
+  for (int nlte_iter = 0; nlte_iter <= NLTE_TE_NNE_MAXITER; nlte_iter++) {
     const auto sys_time_start_spencerfano = std::chrono::steady_clock::now();
     bool spencerfano_changed = false;
     if (NT_SCHEME == NonThermalScheme::NT_SPENCERFANO) {
@@ -309,7 +309,7 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
               mgi, nts, nlte_iter, error_estimate, NLTE_TE_NNE_RELTOL, change[0], change[1]);
           break;
         }
-        if (nlte_iter == NLTEITER || map_changed) {
+        if (nlte_iter == NLTE_TE_NNE_MAXITER || map_changed) {
           // no injection and no history entry. The last pass completes the element solves at the T_e of
           // the finder, as the plain iteration does. The populations and nne then match the final T_e. On
           // a pass with a changed map, g mixes the old and the new map, so it is not a sample of either.
@@ -325,7 +325,7 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
           const double residualsq = pow2(g[0] - x_injected[0]) + pow2(g[1] - x_injected[1]);
           // the electron density has the same floor as the ion balance, so the stored float stays positive
           const bool step_accepted = std::isfinite(T_e_next) && std::isfinite(nne_next) && T_e_next >= MINTEMP &&
-                                     T_e_next <= MAXTEMP && nne_next >= MINPOP &&
+                                     T_e_next <= MAXTEMP && nne_next >= MIN_LEVELPOP &&
                                      nne_next <= grid::get_nnetot(nonemptymgi) && stepsq <= 4. * residualsq;
           if (step_accepted) {
             grid::Te_allcells[nonemptymgi] = static_cast<float>(T_e_next);
@@ -443,7 +443,7 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
         break;
       }
     }
-    if (nlte_iter == NLTEITER) {
+    if (nlte_iter == NLTE_TE_NNE_MAXITER) {
       printlnlog(
           "NLTE (Spencer-Fano/Te/pops) solver mgi {} timestep {} iteration {}: failed to converge... Keeping "
           "solution from last iteration",
@@ -569,7 +569,7 @@ void update_gamma_corrphotoionrenorm_bfheating_estimators(const int nonemptymgi,
 #ifdef DO_TITER
 static void titer_average_estimators(const int nonemptymgi) {
   titer_average(globals::ffheatingestimator[nonemptymgi], globals::ffheatingestimator_save[nonemptymgi]);
-  if constexpr (!DIRECT_COL_HEAT) {
+  if constexpr (!COL_HEAT_FROM_LEVELPOPS) {
     titer_average(globals::colheatingestimator[nonemptymgi], globals::colheatingestimator_save[nonemptymgi]);
   }
 }
@@ -681,7 +681,7 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
       radfield::normalise_nuJ(nonemptymgi, estimator_normfactor_over4pi);
 
       globals::ffheatingestimator[nonemptymgi] *= estimator_normfactor;
-      if constexpr (!DIRECT_COL_HEAT) {
+      if constexpr (!COL_HEAT_FROM_LEVELPOPS) {
         globals::colheatingestimator[nonemptymgi] *= estimator_normfactor;
       }
 

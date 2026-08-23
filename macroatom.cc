@@ -458,7 +458,7 @@ DEVICE_FUNC void do_macroatom(Packet& pkt, const MacroAtomState& pktmastate) {
         stats::increment(stats::Counter::MA_STAT_DEACTIVATION_COLLDEEXC);
         pkt.type = TYPE_KPKT;
         end_packet = true;
-        if constexpr (!DIRECT_COL_HEAT) {
+        if constexpr (!COL_HEAT_FROM_LEVELPOPS) {
           atomicadd(globals::colheatingestimator[nonemptymgi], pkt.e_cmf);
         }
         break;
@@ -492,7 +492,7 @@ DEVICE_FUNC void do_macroatom(Packet& pkt, const MacroAtomState& pktmastate) {
         stats::increment(stats::Counter::MA_STAT_DEACTIVATION_COLLRECOMB);
         pkt.type = TYPE_KPKT;
         end_packet = true;
-        if constexpr (!DIRECT_COL_HEAT) {
+        if constexpr (!COL_HEAT_FROM_LEVELPOPS) {
           atomicadd(globals::colheatingestimator[nonemptymgi], pkt.e_cmf);
         }
         break;

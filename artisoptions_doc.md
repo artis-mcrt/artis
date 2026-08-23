@@ -14,7 +14,7 @@ constexpr int CUBOID_NCOORDGRID_Z;
 constexpr bool FORCE_SPHERICAL_ESCAPE_SURFACE;
 
 // maximum number of NLTE/Te/Spencer-Fano iterations
-constexpr int NLTEITER;
+constexpr int NLTE_TE_NNE_MAXITER;
 
 // Anderson acceleration of the NLTE/Te/Spencer-Fano iteration. The iteration maps the electron temperature
 // and the electron density of one pass to the values of the next pass. With the acceleration on, the
@@ -26,11 +26,11 @@ constexpr int NLTEITER;
 // because the map is then discontinuous. A new non-thermal solution also clears the history. The loop
 // rejects four kinds of step:
 // - a step outside [MINTEMP, MAXTEMP];
-// - a step with an electron density below MINPOP;
+// - a step with an electron density below MIN_LEVELPOP;
 // - a step with an electron density above the total electron density of the cell;
 // - a step away from the map output that is larger than twice the residual.
 // The convergence test comes before the injection, so a converged cell keeps the output of a plain pass. A
-// cell that reaches NLTEITER also ends with a plain pass.
+// cell that reaches NLTE_TE_NNE_MAXITER also ends with a plain pass.
 constexpr bool NLTE_TE_NNE_USE_ANDERSON_ACCEL;
 
 // Relative tolerance of the NLTE/Te/Spencer-Fano iteration for nne and T_e. Without the acceleration the
@@ -57,15 +57,15 @@ constexpr bool SINGLE_LEVEL_TOP_ION;
 
 // Add any missing collisional transitions between the lower n levels and all other levels (or disable by returning zero)
 // This can prevent fully disconnected levels, whose NLTE populations cannot be determined
-constexpr int NLEVELS_REQUIRETRANSITIONS(int Z, int ionstage) {
-  return ((Z == 26 || Z == 28) && ionstage >= 1) ? 80 : 0;
+constexpr int NLEVELS_REQUIRETRANSITIONS(int element_z, int ionstage) {
+  return ((element_z == 26 || element_z == 28) && ionstage >= 1) ? 80 : 0;
 }
 
 // if uniform pellet energies are not used, a uniform decay time distribution is used with scaled packet energies
 constexpr bool UNIFORM_PELLET_ENERGIES;
 
 // directly calculate collisional heating from ion level populations instead of using estimators
-constexpr bool DIRECT_COL_HEAT;
+constexpr bool COL_HEAT_FROM_LEVELPOPS;
 
 // INITIAL PACKETS will seed the cells on the first timestep at tmin with K-packets
 // representing decay energy from t_model to tmin, and also the snapshot
@@ -73,7 +73,7 @@ constexpr bool DIRECT_COL_HEAT;
 constexpr bool INITIAL_PACKETS_ON;
 
 // Rate coefficients
-constexpr int TABLESIZE;
+constexpr int RATECOEFF_TABLESIZE;
 constexpr double MINTEMP;
 constexpr double MAXTEMP;
 
@@ -92,7 +92,7 @@ constexpr bool VPKT_ON;
 // write virtual packet per-direction contributions to vpkt_contrib.out files
 constexpr bool VPKT_WRITE_CONTRIBS;
 
-constexpr double MINPOP;
+constexpr double MIN_LEVELPOP;
 
 constexpr double NU_MIN_R;  // lower frequency boundary for UVOIR spectra and BB sampling
 constexpr double NU_MAX_R;  // upper frequency boundary for UVOIR spectra and BB sampling
@@ -136,7 +136,7 @@ constexpr bool USE_ION_BFHEATING_ESTIMATORS;
 // with the LTE population. However this can cause numerical problems (e.g. when the ground populations is very
 // small and and the negative population is replaced with a significantly larger population ratios taken e.g.
 // when calculating partition functions can over the float limit.) This option provides additional checks
-// on the populations calculated by the NLTE solver (ground population > MINPOP, checks for population inversions)
+// on the populations calculated by the NLTE solver (ground population > MIN_LEVELPOP, checks for population inversions)
 // and now returns a solver fail for certain cases.
 constexpr bool STRICT_POPULATION_CHECKING = false;
 

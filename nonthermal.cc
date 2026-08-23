@@ -946,7 +946,7 @@ constexpr auto xs_excitation(const int element, const int ion, const int lower, 
 constexpr auto electron_loss_rate(const double energy, const double nne) -> double {
   // with no thermal electrons there is no Coulomb energy loss. Without this guard the plasma
   // frequency is zero and the Coulomb logarithm diverges, giving 0 * inf = NaN in a fully neutral
-  // cell (nne can reach exactly zero because the MINPOP floor is a float denormal that is flushed
+  // cell (nne can reach exactly zero because the MIN_LEVELPOP floor is a float denormal that is flushed
   // to zero by the default -ffast-math build)
   if (energy <= 0. || nne <= 0.) {
     return 0;
