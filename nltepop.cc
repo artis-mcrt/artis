@@ -1664,6 +1664,10 @@ void nltepop_reset_cell(const int nonemptymgi) {
 // writes the -1 marker into the NLTE level populations before the first solve and after a fallback
 // to LTE.
 auto elem_has_nlte_solution(const int nonemptymgi, const int element) -> bool {
+  if (!elem_has_nlte_levels(element)) {
+    // the NLTE population arrays have no entries for this element, so the marker test below cannot run
+    return false;
+  }
   for (int ion = 0; ion < get_nions(element); ion++) {
     if (get_nlevels_excited_nlte(element, ion) > 0) {
       return get_nlte_levelpop_over_rho(nonemptymgi, element, ion, 1) >= 0.;
