@@ -218,9 +218,10 @@ results first. Let CI give the decision.
 
 If a change alters the numerical results for a good reason, the stored
 checksums must be regenerated. Only a maintainer can do this, with the "Update
-checksums" workflow. That workflow needs a finished CI run for the exact head
-commit. Say in the commit message and in the pull request that you expect the
-results to change.
+checksums" workflow. That workflow takes the checksums from a finished CI run.
+The run does not have to be of the head commit, if the later commits do not
+change the results. Say in the commit message and in the pull request that you
+expect the results to change.
 
 ## Continuous integration
 

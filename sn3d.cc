@@ -506,10 +506,11 @@ void mpi_communicate_grid_properties() {
         // rank 0 writes the solution times of every cell into the restart file
         MPI_Bcast_safe(solution_time_allcells.subspan(root_nstart_nonempty, root_ndo_nonempty), root_node_id,
                        globals::mpi_comm_internode);
-        // the packets of every node read the k-packet energy factor of every cell
-        MPI_Bcast_safe(kpkt::radiative_energy_factor_allcells.subspan(root_nstart_nonempty, root_ndo_nonempty),
-                       root_node_id, globals::mpi_comm_internode);
       }
+
+      // the packets of every node read the k-packet energy factor of every cell
+      MPI_Bcast_safe(kpkt::radiative_energy_factor_allcells.subspan(root_nstart_nonempty, root_ndo_nonempty),
+                     root_node_id, globals::mpi_comm_internode);
 
       MPI_Bcast_safe(
           grid::elem_meanweight_allcells.subspan(root_nstart_nonempty * nelements, root_ndo_nonempty * nelements),

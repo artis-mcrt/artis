@@ -17,8 +17,9 @@ namespace kpkt {
 
 inline MPI_shared_array<double> ion_cooling_contribs_allcells{};
 
-// the share of the thermal energy flux of each cell that becomes radiation (see
-// NLTE_TIME_DEPENDENT_FIRST_TIMESTEP). The allocation happens only when that option has a value.
+// The share of the thermal energy flux of each cell that becomes radiation. The thermal balance spends the rest
+// on the expansion work and, with NLTE_TIME_DEPENDENT_FIRST_TIMESTEP, on the change of the thermal energy of
+// the gas. Each time a k-packet selects a cooling process, its energy gets this factor.
 inline MPI_shared_array<double> radiative_energy_factor_allcells{};
 inline int ncoolingterms{0};
 

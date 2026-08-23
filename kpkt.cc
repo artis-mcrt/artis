@@ -429,19 +429,12 @@ auto set_radiative_energy_factor(const int nonemptymgi, const HeatingCoolingRate
 }
 
 // A cell without a thermal balance keeps the full energy of its k-packets
-void reset_radiative_energy_factor(const int nonemptymgi) {
-  if constexpr (NLTE_TIME_DEPENDENT_FIRST_TIMESTEP.has_value()) {
-    radiative_energy_factor_allcells[nonemptymgi] = 1.;
-  }
-}
+void reset_radiative_energy_factor(const int nonemptymgi) { radiative_energy_factor_allcells[nonemptymgi] = 1.; }
 
 DEVICE_FUNC auto get_radiative_energy_factor(const int nonemptymgi) -> double {
-  if constexpr (NLTE_TIME_DEPENDENT_FIRST_TIMESTEP.has_value()) {
-    assert_testmodeonly(nonemptymgi >= 0);
-    assert_testmodeonly(nonemptymgi < grid::get_nonempty_npts_model());
-    return radiative_energy_factor_allcells[nonemptymgi];
-  }
-  return 1.;
+  assert_testmodeonly(nonemptymgi >= 0);
+  assert_testmodeonly(nonemptymgi < grid::get_nonempty_npts_model());
+  return radiative_energy_factor_allcells[nonemptymgi];
 }
 
 // handle a k-packet (e.g., in a thick cell) by emitting according to the planck function

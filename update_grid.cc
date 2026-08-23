@@ -341,21 +341,14 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
   }
 
   if constexpr (NLTE_TIME_DEPENDENT_FIRST_TIMESTEP.has_value()) {
-    // the estimators file keeps its cooling record format, so the heat-capacity term goes to the log
     nltepop_update_solution_time(nonemptymgi, nts);
-    // the k-packets of the steady-state timesteps keep their full energy, so those timesteps give the same
-    // results as a run without the option
-    double kpkt_energy_factor = 1.;
-    if (timestep_is_time_dependent(nts)) {
-      kpkt_energy_factor = kpkt::set_radiative_energy_factor(nonemptymgi, heatingcoolingrates);
-    } else {
-      kpkt::reset_radiative_energy_factor(nonemptymgi);
-    }
-    printlnlog(
-        "cell {} timestep {}: heat-capacity term of the thermal balance {:.5e} [erg/s/cm^3], k-packet energy factor "
-        "{:.5f}",
-        mgi, nts, heatingcoolingrates.cooling_heatcapacity, kpkt_energy_factor);
   }
+  // the estimators file keeps its cooling record format, so the heat-capacity term goes to the log
+  const double kpkt_energy_factor = kpkt::set_radiative_energy_factor(nonemptymgi, heatingcoolingrates);
+  printlnlog(
+      "cell {} timestep {}: heat-capacity term of the thermal balance {:.5e} [erg/s/cm^3], k-packet energy factor "
+      "{:.5f}",
+      mgi, nts, heatingcoolingrates.cooling_heatcapacity, kpkt_energy_factor);
 }
 
 void update_gamma_corrphotoionrenorm_bfheating_estimators(const int nonemptymgi, const double estimator_normfactor) {
@@ -567,6 +560,8 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
       // the Saha populations replace the NLTE solution, so the charge transfer reactions must not
       // read the stored ion ranges of the last NLTE solve
       nltepop_reset_solution_ranges(nonemptymgi);
+      // no thermal balance: the k-packets keep their full energy
+      kpkt::reset_radiative_energy_factor(nonemptymgi);
     } else {
       // not lte_iteration and not a thick cell
       // non-pure-LTE timesteps with T_e from heating/cooling
