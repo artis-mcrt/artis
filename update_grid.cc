@@ -292,7 +292,9 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
           rho[i] = (change_prev[i] > 0.) ? std::clamp(change[i] / change_prev[i], 0.5, 0.95) : 0.5;
           error_estimate = std::max(error_estimate, change[i] * rho[i] / (1. - rho[i]));
         }
-        change_prev = change;
+        if (!map_changed) {
+          change_prev = change;  // a change across two maps is not a sample of the contraction
+        }
         printlnlog(
             "NLTE (Spencer-Fano/Te/pops) solver mgi {} timestep {} iteration {}: contraction ratio T_e {:g} nne {:g}, "
             "estimated error {:g}",
