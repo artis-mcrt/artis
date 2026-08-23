@@ -14,7 +14,7 @@ constexpr int CUBOID_NCOORDGRID_Z;
 constexpr bool FORCE_SPHERICAL_ESCAPE_SURFACE;
 
 // maximum number of NLTE/Te/Spencer-Fano iterations
-constexpr int NLTEITER;
+constexpr int NLTE_TE_NNE_MAXITER;
 
 // Anderson acceleration of the NLTE/Te/Spencer-Fano iteration. The iteration maps the electron temperature
 // and the electron density of one pass to the values of the next pass. With the acceleration on, the
@@ -30,7 +30,7 @@ constexpr int NLTEITER;
 // - a step with an electron density above the total electron density of the cell;
 // - a step away from the map output that is larger than twice the residual.
 // The convergence test comes before the injection, so a converged cell keeps the output of a plain pass. A
-// cell that reaches NLTEITER also ends with a plain pass.
+// cell that reaches NLTE_TE_NNE_MAXITER also ends with a plain pass.
 constexpr bool NLTE_TE_NNE_USE_ANDERSON_ACCEL;
 
 // Relative tolerance of the NLTE/Te/Spencer-Fano iteration for nne and T_e. Without the acceleration the
@@ -40,7 +40,7 @@ constexpr bool NLTE_TE_NNE_USE_ANDERSON_ACCEL;
 // and the larger estimate counts. The estimate is the error of a linear contraction with that ratio, so the
 // tolerance then means an error and not a change. The estimate is never below the change. With the charge
 // transfer reactions or the acceleration, the same value is the tolerance of the ion population test.
-constexpr double NLTE_OUTER_RELTOL;
+constexpr double NLTE_TE_NNE_RELTOL;
 
 // Specify how many levels will be treated in full NLTE, not including the ground state or the superlevel.
 constexpr int ION_NLEVELS_EXCITED_NLTE(int element_z, int ionstage);
@@ -57,27 +57,23 @@ constexpr bool SINGLE_LEVEL_TOP_ION;
 
 // Add any missing collisional transitions between the lower n levels and all other levels (or disable by returning zero)
 // This can prevent fully disconnected levels, whose NLTE populations cannot be determined
-constexpr int NLEVELS_REQUIRETRANSITIONS(int Z, int ionstage) {
-  return ((Z == 26 || Z == 28) && ionstage >= 1) ? 80 : 0;
+constexpr int NLEVELS_REQUIRETRANSITIONS(int element_z, int ionstage) {
+  return ((element_z == 26 || element_z == 28) && ionstage >= 1) ? 80 : 0;
 }
 
 // if uniform pellet energies are not used, a uniform decay time distribution is used with scaled packet energies
 constexpr bool UNIFORM_PELLET_ENERGIES;
 
 // directly calculate collisional heating from ion level populations instead of using estimators
-constexpr bool DIRECT_COL_HEAT;
+constexpr bool COL_HEAT_FROM_LEVELPOPS;
 
 // INITIAL PACKETS will seed the cells on the first timestep at tmin with K-packets
-// representing decay energy from t_model to tmin, and,
-// if USE_MODEL_INITIAL_ENERGY is true, also the snapshot energy at t_model
+// that carry the decay energy from t_model to tmin, and also the snapshot
+// energy at t_model (the q column of model.txt)
 constexpr bool INITIAL_PACKETS_ON;
 
-// allows non-zero energy density at time t_model using q column in model.txt
-// INITIAL_PACKETS_ON must be true to make use of this
-constexpr bool USE_MODEL_INITIAL_ENERGY;
-
 // Rate coefficients
-constexpr int TABLESIZE;
+constexpr int RATECOEFF_TABLESIZE;
 constexpr double MINTEMP;
 constexpr double MAXTEMP;
 
@@ -96,6 +92,7 @@ constexpr bool VPKT_ON;
 // write virtual packet per-direction contributions to vpkt_contrib.out files
 constexpr bool VPKT_WRITE_CONTRIBS;
 
+// the lower bound of the level populations, the ion populations, and the electron density nne [cm^-3]
 constexpr double MINPOP;
 
 constexpr double NU_MIN_R;  // lower frequency boundary for UVOIR spectra and BB sampling
@@ -201,11 +198,13 @@ constexpr bool NLTE_USE_GTH_SOLVER;
 // packets, and the factor is then above 1. The code removes no k-packet.
 constexpr std::optional<int> NLTE_TIME_DEPENDENT_FIRST_TIMESTEP;
 
-// non-thermal ionisation
-constexpr bool NT_ON;
-
-// use the detailed Spencer-Fano solver instead of the work function approximation (only works if NT_ON)
-constexpr bool NT_SOLVE_SPENCERFANO;
+// How the code handles the energy that the non-thermal leptons deposit.
+// NT_OFF: no non-thermal ionisation.
+// NT_SPENCERFANO: the detailed Spencer-Fano solution. It also gives the non-thermal excitation rates for
+// the NLTE population solver, the macroatom, and the NTLEPTON packets.
+// NT_AXELRODAPPROX: the work function approximation of Axelrod (1980). The energy fractions are then
+// fixed at 0.03 for the ionisation and 0.97 for the heating, and there are no excitation rates.
+constexpr NonThermalScheme NT_SCHEME;
 
 // NB: the energy grid of the Spencer-Fano solution vector is not an artisoptions.h option. SFPTS (the number of
 // energy points) and SF_EMIN / SF_EMAX (the grid limits in eV) are set at the top of nonthermal.cc and apply to
@@ -229,12 +228,6 @@ constexpr int NTEXCITATION_MAXNLEVELS_UPPER;  // maximum number of upper levels 
 // the full NT degradation spectrum and calculate the rates as needed (although CPU costs)
 constexpr int MAX_NT_EXCITATIONS_STORED;
 
-// set to true to keep a list of non-thermal excitation rates for use
-// in the NLTE pop solver, macroatom, and NTLEPTON packets.
-// Even with this off, excitations will be included in the solution
-// and their combined deposition fraction is calculated
-constexpr bool NT_EXCITATION_ON = false;
-
 // calculate eff_ionpot and ionisation rates by always dividing by the valence shell potential for the ion
 // instead of the specific shell potentials
 constexpr bool NT_USE_VALENCE_IONPOTENTIAL;
@@ -246,16 +239,12 @@ constexpr int NT_MAX_AUGER_ELECTRONS;
 // add the Auger electron term to the Spencer-Fano equation
 constexpr bool SF_AUGER_CONTRIBUTION_ON;
 
-constexpr double TEMPERATURE_SOLVER_ACCURACY;
-
 constexpr bool USE_RELATIVISTIC_DOPPLER_SHIFT;
 
 // when converting mass fraction to a number density, use a mean atomic mass
 // calculated from the nuclear composition (plus stable component),
 // rather than just from the compositiondata.txt values
 constexpr bool USE_CALCULATED_MEANATOMICWEIGHT;
-
-constexpr bool WRITE_EMISSIONABSORPTION_SPEC_AT_END;
 
 // track escaped gamma-ray packets and write gamma_light_curve.out
 constexpr bool KEEP_ESCAPED_GAMMAS;
@@ -286,9 +275,6 @@ constexpr TimeStepSizeMethod TIMESTEP_SIZE_METHOD;
 constexpr double FIXED_TIMESTEP_WIDTH;
 
 constexpr double TIMESTEP_TRANSITION_TIME;
-
-// once a new gridsave and packets*.tmp have been written, don't delete the previous set
-constexpr bool KEEP_ALL_RESTART_FILES;
 
 // The bound-free cooling coefficient of each (level, target) continuum is normalised per population of the upper-ion
 // target level (like the spontaneous recombination coefficient alpha_sp). Set true to multiply it by that target

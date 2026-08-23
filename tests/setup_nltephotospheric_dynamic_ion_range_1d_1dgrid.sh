@@ -24,21 +24,19 @@ sed -i'' -e 's/constexpr int MPKTS.*/constexpr int MPKTS = 400;/g' artisoptions.
 
 sed -i'' -e 's/constexpr std::optional<GridType> GRID_TYPE_OVERRIDE.*/constexpr std::optional<GridType> GRID_TYPE_OVERRIDE = GridType::SPHERICAL1D;/g' artisoptions.h
 
-sed -i'' -e 's/constexpr int NLTEITER.*/constexpr int NLTEITER = 2;/g' artisoptions.h
+sed -i'' -e 's/constexpr int NLTE_TE_NNE_MAXITER.*/constexpr int NLTE_TE_NNE_MAXITER = 2;/g' artisoptions.h
 
 perl -0777 -i -pe 's|constexpr int ION_NLEVELS_EXCITED_NLTE\(int element_z, int ionstage\) \{.*?\n\}|constexpr int ION_NLEVELS_EXCITED_NLTE(int element_z, int ionstage) {\n  if (element_z == 26 && ionstage == 2) {\n    return 100;\n  }\n  return 50;\n}\n|s' artisoptions.h
 
-sed -i'' -e 's|constexpr int NLEVELS_REQUIRETRANSITIONS(int Z, int ionstage) {.*}|constexpr int NLEVELS_REQUIRETRANSITIONS(int Z, int ionstage) { return (Z < 20) ? 20 : 40; }|g' artisoptions.h
+sed -i'' -e 's|constexpr int NLEVELS_REQUIRETRANSITIONS(int element_z, int ionstage) {.*}|constexpr int NLEVELS_REQUIRETRANSITIONS(int element_z, int ionstage) { return (element_z < 20) ? 20 : 40; }|g' artisoptions.h
 
-sed -i'' -e 's/constexpr int TABLESIZE.*/constexpr int TABLESIZE = 40;/g' artisoptions.h
+sed -i'' -e 's/constexpr int RATECOEFF_TABLESIZE.*/constexpr int RATECOEFF_TABLESIZE = 40;/g' artisoptions.h
 
 sed -i'' -e 's/constexpr int FIRST_NLTE_RADFIELD_TIMESTEP.*/constexpr int FIRST_NLTE_RADFIELD_TIMESTEP = 4;/g' artisoptions.h
 
 sed -i'' -e 's/constexpr int RADFIELDBINCOUNT.*/constexpr int RADFIELDBINCOUNT = 24;/g' artisoptions.h
 
 sed -i'' -e 's/constexpr int DETAILED_BF_ESTIMATORS_USEFROMTIMESTEP.*/constexpr int DETAILED_BF_ESTIMATORS_USEFROMTIMESTEP = 4;/g' artisoptions.h
-
-sed -i'' -e 's/constexpr bool WRITE_EMISSIONABSORPTION_SPEC_AT_END.*/constexpr bool WRITE_EMISSIONABSORPTION_SPEC_AT_END = true;/g' artisoptions.h
 
 cd -
 

@@ -18,11 +18,11 @@ constexpr int CUBOID_NCOORDGRID_Y = 100;
 constexpr int CUBOID_NCOORDGRID_Z = 100;
 constexpr bool FORCE_SPHERICAL_ESCAPE_SURFACE = false;
 
-constexpr int NLTEITER = 30;
+constexpr int NLTE_TE_NNE_MAXITER = 30;
 
 constexpr bool NLTE_TE_NNE_USE_ANDERSON_ACCEL = false;
 
-constexpr double NLTE_OUTER_RELTOL = 0.04;
+constexpr double NLTE_TE_NNE_RELTOL = 0.04;
 
 constexpr int ION_NLEVELS_EXCITED_NLTE(int element_z, int ionstage) { return 0; }
 
@@ -32,16 +32,14 @@ constexpr bool FORCE_SAHA_ION_BALANCE(int element_z) { return false; }
 
 constexpr bool SINGLE_LEVEL_TOP_ION = true;
 
-constexpr int NLEVELS_REQUIRETRANSITIONS(int Z, int ionstage) { return 0; }
+constexpr int NLEVELS_REQUIRETRANSITIONS(int element_z, int ionstage) { return 0; }
 
 constexpr bool UNIFORM_PELLET_ENERGIES = true;
 
-constexpr bool DIRECT_COL_HEAT = false;
+constexpr bool COL_HEAT_FROM_LEVELPOPS = false;
 constexpr bool INITIAL_PACKETS_ON = true;
 
-constexpr bool USE_MODEL_INITIAL_ENERGY = true;
-
-constexpr int TABLESIZE = 100;
+constexpr int RATECOEFF_TABLESIZE = 100;
 constexpr double MINTEMP = 3500.;
 constexpr double MAXTEMP = 140000.;
 
@@ -98,9 +96,7 @@ constexpr bool NLTE_USE_GTH_SOLVER = false;
 
 constexpr std::optional<int> NLTE_TIME_DEPENDENT_FIRST_TIMESTEP = std::nullopt;
 
-constexpr bool NT_ON = false;
-
-constexpr bool NT_SOLVE_SPENCERFANO = false;
+constexpr NonThermalScheme NT_SCHEME = NonThermalScheme::NT_OFF;
 
 constexpr int SF_MAX_TIMESTEPS_BETWEEN_SOLUTIONS = 0;
 
@@ -111,21 +107,15 @@ constexpr int NTEXCITATION_MAXNLEVELS_UPPER = 250;
 
 constexpr int MAX_NT_EXCITATIONS_STORED = 25000;
 
-constexpr bool NT_EXCITATION_ON = false;
-
 constexpr bool NT_USE_VALENCE_IONPOTENTIAL = false;
 
 constexpr int NT_MAX_AUGER_ELECTRONS = 2;
 
 constexpr bool SF_AUGER_CONTRIBUTION_ON = true;
 
-constexpr double TEMPERATURE_SOLVER_ACCURACY = 1e-3;
-
 constexpr bool USE_RELATIVISTIC_DOPPLER_SHIFT = false;
 
 constexpr bool USE_CALCULATED_MEANATOMICWEIGHT = false;
-
-constexpr bool WRITE_EMISSIONABSORPTION_SPEC_AT_END = false;
 
 constexpr bool KEEP_ESCAPED_GAMMAS = true;
 
@@ -134,8 +124,6 @@ constexpr TimeStepSizeMethod TIMESTEP_SIZE_METHOD = TimeStepSizeMethod::LOGARITH
 constexpr double FIXED_TIMESTEP_WIDTH = -1.;
 
 constexpr double TIMESTEP_TRANSITION_TIME = -1.;
-
-constexpr bool KEEP_ALL_RESTART_FILES = false;
 
 constexpr bool BFCOOLING_USELEVELPOPNOTIONPOP = false;
 

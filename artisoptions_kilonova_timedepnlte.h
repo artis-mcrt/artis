@@ -23,11 +23,11 @@ constexpr int CUBOID_NCOORDGRID_Y = 50;
 constexpr int CUBOID_NCOORDGRID_Z = 50;
 constexpr bool FORCE_SPHERICAL_ESCAPE_SURFACE = false;
 
-constexpr int NLTEITER = 30;
+constexpr int NLTE_TE_NNE_MAXITER = 30;
 
 constexpr bool NLTE_TE_NNE_USE_ANDERSON_ACCEL = true;
 
-constexpr double NLTE_OUTER_RELTOL = 0.01;
+constexpr double NLTE_TE_NNE_RELTOL = 0.01;
 
 constexpr int ION_NLEVELS_EXCITED_NLTE(int element_z, int ionstage) { return 80; }
 
@@ -37,19 +37,17 @@ constexpr bool FORCE_SAHA_ION_BALANCE(int element_z) { return false; }
 
 constexpr bool SINGLE_LEVEL_TOP_ION = false;
 
-constexpr int NLEVELS_REQUIRETRANSITIONS(int Z, int ionstage) { return 0; }
+constexpr int NLEVELS_REQUIRETRANSITIONS(int element_z, int ionstage) { return 0; }
 
 constexpr bool UNIFORM_PELLET_ENERGIES = true;
 
-constexpr bool DIRECT_COL_HEAT = true;
+constexpr bool COL_HEAT_FROM_LEVELPOPS = true;
 constexpr bool INITIAL_PACKETS_ON = true;
-
-constexpr bool USE_MODEL_INITIAL_ENERGY = true;
 
 // Pognan et al. (2023) find temperatures that rise with time. The temperatures go from about
 // 4000 K at 5 days to 35000 K in the outer layers of a low-Ye model at 20 days. Dense inner
 // regions can get cold.
-constexpr int TABLESIZE = 200;
+constexpr int RATECOEFF_TABLESIZE = 200;
 constexpr double MINTEMP = 500.;
 constexpr double MAXTEMP = 100000.;
 
@@ -106,9 +104,7 @@ constexpr bool NLTE_USE_GTH_SOLVER = false;
 
 constexpr std::optional<int> NLTE_TIME_DEPENDENT_FIRST_TIMESTEP = 7;
 
-constexpr bool NT_ON = true;
-
-constexpr bool NT_SOLVE_SPENCERFANO = true;
+constexpr NonThermalScheme NT_SCHEME = NonThermalScheme::NT_SPENCERFANO;
 
 constexpr int SF_MAX_TIMESTEPS_BETWEEN_SOLUTIONS = 0;
 
@@ -119,21 +115,15 @@ constexpr int NTEXCITATION_MAXNLEVELS_UPPER = 250;
 
 constexpr int MAX_NT_EXCITATIONS_STORED = 25000;
 
-constexpr bool NT_EXCITATION_ON = true;
-
 constexpr bool NT_USE_VALENCE_IONPOTENTIAL = false;
 
 constexpr int NT_MAX_AUGER_ELECTRONS = 2;
 
 constexpr bool SF_AUGER_CONTRIBUTION_ON = true;
 
-constexpr double TEMPERATURE_SOLVER_ACCURACY = 1e-3;
-
 constexpr bool USE_RELATIVISTIC_DOPPLER_SHIFT = true;
 
 constexpr bool USE_CALCULATED_MEANATOMICWEIGHT = true;
-
-constexpr bool WRITE_EMISSIONABSORPTION_SPEC_AT_END = false;
 
 constexpr bool KEEP_ESCAPED_GAMMAS = true;
 
@@ -142,8 +132,6 @@ constexpr TimeStepSizeMethod TIMESTEP_SIZE_METHOD = TimeStepSizeMethod::LOGARITH
 constexpr double FIXED_TIMESTEP_WIDTH = -1.;
 
 constexpr double TIMESTEP_TRANSITION_TIME = -1.;
-
-constexpr bool KEEP_ALL_RESTART_FILES = false;
 
 constexpr bool BFCOOLING_USELEVELPOPNOTIONPOP = false;
 

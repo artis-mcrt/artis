@@ -2004,15 +2004,13 @@ void read_parameterfile(std::span<Packet> packets) {
   std::istringstream{line} >> globals::num_lte_timesteps;
   printlnlog("input: doing the first {} timesteps in LTE", globals::num_lte_timesteps);
 
-  if (NT_ON) {
-    if (NT_SOLVE_SPENCERFANO) {
-      printlnlog("NT_ON = true: Non-thermal ionisation with a Spencer-Fano solution is switched on for this run.");
-    } else {
-      printlnlog(
-          "NT_ON = true: Non-thermal ionisation with the work function approximation is switched on for this run.");
-    }
+  if constexpr (NT_SCHEME == NonThermalScheme::NT_SPENCERFANO) {
+    printlnlog("NT_SCHEME is NT_SPENCERFANO: non-thermal ionisation uses a Spencer-Fano solution in this run.");
+  } else if constexpr (NT_SCHEME == NonThermalScheme::NT_AXELRODAPPROX) {
+    printlnlog(
+        "NT_SCHEME is NT_AXELRODAPPROX: non-thermal ionisation uses the work function approximation in this run.");
   } else {
-    printlnlog("NT_ON = false: No non-thermal ionisation is used in this run.");
+    printlnlog("NT_SCHEME is NT_OFF: this run has no non-thermal ionisation.");
   }
 
   if (USE_LUT_PHOTOION) {

@@ -41,7 +41,7 @@ namespace {
 using OuterAnderson = AndersonAccelerator<2>;
 // the depth of the acceleration is the dimension of the state, the largest useful value
 constexpr std::size_t ANDERSON_DEPTH = NLTE_TE_NNE_USE_ANDERSON_ACCEL ? OuterAnderson::max_depth : 0;
-static_assert(NLTE_OUTER_RELTOL > 0.);
+static_assert(NLTE_TE_NNE_RELTOL > 0.);
 
 std::vector<HeatingCoolingRates> heatingcoolingrates_thisrankcells;
 
@@ -125,7 +125,7 @@ void write_to_estimators_file(std::ostream& estimators_file, const int nonemptym
       std::println(estimators_file);
     }
 
-    if (NT_ON) {
+    if (NT_SCHEME != NonThermalScheme::NT_OFF) {
       std::print(estimators_file, "gamma_NT           Z={:2d}", get_atomicnumber(element));
       for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++) {
         std::print(estimators_file, "              ");
@@ -225,10 +225,10 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
   THREADLOCALONHOST std::vector<double> nnion_prev;
   THREADLOCALONHOST std::vector<std::pair<int, int>> nlte_solution_prev;
 
-  for (int nlte_iter = 0; nlte_iter <= NLTEITER; nlte_iter++) {
+  for (int nlte_iter = 0; nlte_iter <= NLTE_TE_NNE_MAXITER; nlte_iter++) {
     const auto sys_time_start_spencerfano = std::chrono::steady_clock::now();
     bool spencerfano_changed = false;
-    if (NT_ON && NT_SOLVE_SPENCERFANO) {
+    if (NT_SCHEME == NonThermalScheme::NT_SPENCERFANO) {
       // SF solution depends on the ionisation balance, and weakly on nne
       spencerfano_changed = nonthermal::solve_spencerfano(nonemptymgi, nts, nlte_iter);
     }
@@ -302,14 +302,14 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
 
         // the test comes before the injection, so a converged cell keeps the plain map output and the
         // heating and cooling rates of its T_e. The charge transfer tests are from the previous pass.
-        if (!map_changed && error_estimate <= NLTE_OUTER_RELTOL && fracdiff_nnion_prev <= NLTE_OUTER_RELTOL) {
+        if (!map_changed && error_estimate <= NLTE_TE_NNE_RELTOL && fracdiff_nnion_prev <= NLTE_TE_NNE_RELTOL) {
           printlnlog(
               "NLTE (Spencer-Fano/Te/pops) solver mgi {} timestep {} iteration {}: converged with an estimated error "
               "{:g} <= {:g} (T_e change {:g}, nne change {:g})",
-              mgi, nts, nlte_iter, error_estimate, NLTE_OUTER_RELTOL, change[0], change[1]);
+              mgi, nts, nlte_iter, error_estimate, NLTE_TE_NNE_RELTOL, change[0], change[1]);
           break;
         }
-        if (nlte_iter == NLTEITER || map_changed) {
+        if (nlte_iter == NLTE_TE_NNE_MAXITER || map_changed) {
           // no injection and no history entry. The last pass completes the element solves at the T_e of
           // the finder, as the plain iteration does. The populations and nne then match the final T_e. On
           // a pass with a changed map, g mixes the old and the new map, so it is not a sample of either.
@@ -427,23 +427,23 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
         grid::Te_allcells[nonemptymgi], fracdiff_T_e);
     if constexpr (NLTE_TE_NNE_USE_ANDERSON_ACCEL) {
       // with acceleration, the convergence test and the estimated error are before the injection
-      // (see NLTE_OUTER_RELTOL). This pass only keeps its results for that test.
+      // (see NLTE_TE_NNE_RELTOL). This pass only keeps its results for that test.
       fracdiff_nne_prev = fracdiff_nne;
       fracdiff_nnion_prev = fracdiff_nnion;
       map_changed = nlte_solution_changed;
     } else {
       // without the charge transfer option, the ion population test and the solution range test
       // always pass
-      if (fracdiff_nne <= NLTE_OUTER_RELTOL && fracdiff_T_e <= NLTE_OUTER_RELTOL &&
-          fracdiff_nnion <= NLTE_OUTER_RELTOL && !nlte_solution_changed) {
+      if (fracdiff_nne <= NLTE_TE_NNE_RELTOL && fracdiff_T_e <= NLTE_TE_NNE_RELTOL &&
+          fracdiff_nnion <= NLTE_TE_NNE_RELTOL && !nlte_solution_changed) {
         printlnlog(
             "NLTE (Spencer-Fano/Te/pops) solver mgi {} timestep {} iteration {}: nne converged to tolerance {:g} <= "
             "{:g} and T_e to tolerance {:g} <= {:g}",
-            mgi, nts, nlte_iter, fracdiff_nne, NLTE_OUTER_RELTOL, fracdiff_T_e, NLTE_OUTER_RELTOL);
+            mgi, nts, nlte_iter, fracdiff_nne, NLTE_TE_NNE_RELTOL, fracdiff_T_e, NLTE_TE_NNE_RELTOL);
         break;
       }
     }
-    if (nlte_iter == NLTEITER) {
+    if (nlte_iter == NLTE_TE_NNE_MAXITER) {
       printlnlog(
           "NLTE (Spencer-Fano/Te/pops) solver mgi {} timestep {} iteration {}: failed to converge... Keeping "
           "solution from last iteration",
@@ -569,7 +569,7 @@ void update_gamma_corrphotoionrenorm_bfheating_estimators(const int nonemptymgi,
 #ifdef DO_TITER
 static void titer_average_estimators(const int nonemptymgi) {
   titer_average(globals::ffheatingestimator[nonemptymgi], globals::ffheatingestimator_save[nonemptymgi]);
-  if constexpr (!DIRECT_COL_HEAT) {
+  if constexpr (!COL_HEAT_FROM_LEVELPOPS) {
     titer_average(globals::colheatingestimator[nonemptymgi], globals::colheatingestimator_save[nonemptymgi]);
   }
 }
@@ -681,7 +681,7 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
       radfield::normalise_nuJ(nonemptymgi, estimator_normfactor_over4pi);
 
       globals::ffheatingestimator[nonemptymgi] *= estimator_normfactor;
-      if constexpr (!DIRECT_COL_HEAT) {
+      if constexpr (!COL_HEAT_FROM_LEVELPOPS) {
         globals::colheatingestimator[nonemptymgi] *= estimator_normfactor;
       }
 
@@ -809,7 +809,7 @@ void update_grid(std::ostream& estimators_file, const int nts, const int nts_pre
   printlnlog("lte_iteration {}", globals::lte_iteration ? 1 : 0);
   assert_always(globals::num_lte_timesteps > 0);  // The first time step must solve the ionisation balance in LTE
 
-  if (NT_ON && NT_SOLVE_SPENCERFANO && (nts < globals::num_lte_timesteps + 1)) {
+  if (NT_SCHEME == NonThermalScheme::NT_SPENCERFANO && (nts < globals::num_lte_timesteps + 1)) {
     printlnlog("timestep {}: skipping Spencer-Fano solutions for all cells (solver starts at timestep {})", nts,
                globals::num_lte_timesteps + 1);
   }

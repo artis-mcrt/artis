@@ -104,7 +104,8 @@ THREADLOCALONHOST CellWarningMarker ionfract_zeroed_warned;
           ? calculate_ionrecombcoeff(nonemptymgi, T_e, element, ion + 1, {.collisional_not_radiative = true})
           : 0.;
 
-  const double gamma_nt = NT_ON ? nonthermal::nt_ionisation_ratecoeff(nonemptymgi, element, ion) : 0.;
+  const double gamma_nt =
+      (NT_SCHEME != NonThermalScheme::NT_OFF) ? nonthermal::nt_ionisation_ratecoeff(nonemptymgi, element, ion) : 0.;
 
   // gamma_nt should generally be higher than the Gamma term for nebular epoch
 
@@ -239,7 +240,8 @@ auto calculate_partfunct(const int element, const int ion, const int nonemptymgi
   return U_float;
 }
 
-// Set the cell's free electron density nne to the sum of every element's electron contribution (floored at MINPOP).
+// Set the cell's free electron density nne to the sum of every element's electron contribution (floored at
+// MINPOP).
 void set_calculated_nne(const int nonemptymgi) {
   double nne = 0.;  // free electron density
   for (int element = 0; element < get_nelements(); element++) {
@@ -250,8 +252,8 @@ void set_calculated_nne(const int nonemptymgi) {
 }
 
 // Fallback for a cell in which every element is confined to its lowest included ion stage: put each element's whole
-// population in that stage and floor the higher stages at MINPOP. The MINPOP floor leaves nne slightly above zero,
-// which keeps the collisional rates in the k-packet treatment finite so that packets are not lost there.
+// population in that stage and floor the higher stages at MINPOP. The MINPOP floor leaves nne slightly
+// above zero, which keeps the collisional rates in the k-packet treatment finite so that packets are not lost there.
 void set_groundlevelpops_neutral(const ptrdiff_t nonemptymgi) {
   if (neutralcell_warned.is_first_occurrence(nonemptymgi)) {
     printlnlog("[warning] set_groundlevelpops_neutral: only neutral ions in cell {} timestep {} (repeats suppressed)",
@@ -327,7 +329,8 @@ auto find_converged_nne(const int nonemptymgi, double nne_max, const bool force_
       // since alphas are passed to the thermal pool as k-packets. It is populated by the time it is read:
       // update_grid_cell() sets it before the ion balance, and this loop is skipped while lte_iteration holds.
       if (iongamma_is_zero(nonemptymgi, element, ion) &&
-          (!NT_ON || nonthermal::get_ntlepton_deposition_rate_density(nonemptymgi) <= 0.)) {
+          ((NT_SCHEME == NonThermalScheme::NT_OFF) ||
+           nonthermal::get_ntlepton_deposition_rate_density(nonemptymgi) <= 0.)) {
         uppermost_ion = ion;
         break;
       }

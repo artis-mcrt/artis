@@ -649,8 +649,9 @@ void write_partial_lightcurve_spectra(const int nts, std::span<const Packet> pkt
   // this is called by sn3d (not exspec) when each rank has its own set of packets in memory
   const bool simulation_complete = (nts >= globals::timestep_finish - 1);
 
-  // the emission resolved spectra are slow to generate, and require a lot of memory
-  const bool do_emission_absorption = WRITE_EMISSIONABSORPTION_SPEC_AT_END && simulation_complete;
+  // the emission resolved spectra are slow to generate, and require a lot of memory. The code
+  // therefore makes them only at the end of the simulation.
+  const bool do_emission_absorption = simulation_complete;
 
   const bool multdimensional = grid::get_modelgridtype() != GridType::SPHERICAL1D;
   const int dirbinend = (multdimensional && simulation_complete) ? MABINS : 0;

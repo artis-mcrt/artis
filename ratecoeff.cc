@@ -36,10 +36,10 @@
 namespace {
 constexpr double RATECOEFF_INTEGRAL_ACCURACY = 1e-3;
 
-const double T_step_log = (std::log(MAXTEMP) - std::log(MINTEMP)) / (TABLESIZE - 1.);
+const double T_step_log = (std::log(MAXTEMP) - std::log(MINTEMP)) / (RATECOEFF_TABLESIZE - 1.);
 
 const auto temperature_grid = []() {
-  std::array<double, TABLESIZE + 1> grid{};
+  std::array<double, RATECOEFF_TABLESIZE + 1> grid{};
   for (auto i = 0UZ; i < grid.size(); i++) {
     grid[i] = MINTEMP * std::exp(i * T_step_log);
   }
@@ -63,8 +63,8 @@ const auto temperature_grid = []() {
   return index;
 }
 
-MPI_shared_array<const float> ion_alpha_sp;  // size is nincludedions * TABLESIZE, indexed
-                                             // by (uniqueionindex * TABLESIZE) + temperatureindex
+MPI_shared_array<const float> ion_alpha_sp;  // size is nincludedions * RATECOEFF_TABLESIZE, indexed
+                                             // by (uniqueionindex * RATECOEFF_TABLESIZE) + temperatureindex
 
 // the following spans are indexed by get_bflutindex()
 MPI_shared_array<double> spontrecombcoeffs{};  // indexed by get_bflutindex()
@@ -124,9 +124,9 @@ auto bfcooling_integrand(const double nu_minus_nu_edge, const double nu_edge, co
                                                        const int phixstargetindex) -> int {
   // continuum-major layout so that the two temperature samples read by an interpolation are adjacent
   const int contindex = globals::alllevels.bflist_start[uniquelevelindex] + phixstargetindex;
-  const int bflutindex = (contindex * TABLESIZE) + temperatureindex;
+  const int bflutindex = (contindex * RATECOEFF_TABLESIZE) + temperatureindex;
   assert_testmodeonly(bflutindex >= 0);
-  assert_testmodeonly(bflutindex < TABLESIZE * globals::nbfcontinua);
+  assert_testmodeonly(bflutindex < RATECOEFF_TABLESIZE * globals::nbfcontinua);
   return bflutindex;
 }
 
@@ -180,7 +180,7 @@ void precalculate_rate_coefficient_integrals() {
           const double nu_max_phixs =
               nu_threshold * last_phixs_nuovernuedge;  // nu of the uppermost point in the phixs table
           // Loop over the temperature grid
-          for (int temperatureindex = 0; temperatureindex < TABLESIZE; temperatureindex++) {
+          for (int temperatureindex = 0; temperatureindex < RATECOEFF_TABLESIZE; temperatureindex++) {
             const int bflutindex = get_bflutindex(temperatureindex, element, ion, level, phixstargetindex);
             double error{NAN};
             const auto temperature = static_cast<float>(temperature_grid[temperatureindex]);
@@ -252,7 +252,7 @@ void scale_level_phixs(const int element, const int ion, const int level, const 
     }
 
     for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
-      for (int tempindex = 0; tempindex < TABLESIZE; tempindex++) {
+      for (int tempindex = 0; tempindex < RATECOEFF_TABLESIZE; tempindex++) {
         const auto bflutindex = get_bflutindex(tempindex, element, ion, level, phixstargetindex);
         spontrecombcoeffs[bflutindex] = spontrecombcoeffs[bflutindex] * factor;
 
@@ -436,10 +436,10 @@ void read_recombrate_file() {
 // level's photoionisation target level(s) in this ion (IonRecombNorm::TARGETLEVELPOP). phi_rate_balance() applies
 // this to the whole upper ion population in the nebular approximation.
 void precalculate_ion_alpha_sp() {
-  auto temp_ion_alpha_sp = MPI_shared_array<float>(get_includedions() * TABLESIZE, 0.);
+  auto temp_ion_alpha_sp = MPI_shared_array<float>(get_includedions() * RATECOEFF_TABLESIZE, 0.);
   if (globals::rank_in_node == 0) {
     constexpr auto options = IonRecombCoeffOptions{.assume_lte = true, .norm = IonRecombNorm::TARGETLEVELPOP};
-    for (int tempindex = 0; tempindex < TABLESIZE; tempindex++) {
+    for (int tempindex = 0; tempindex < RATECOEFF_TABLESIZE; tempindex++) {
       const auto T_e = static_cast<float>(temperature_grid[tempindex]);
       for (int element = 0; element < get_nelements(); element++) {
         const int nions = get_nions(element) - 1;
@@ -447,7 +447,7 @@ void precalculate_ion_alpha_sp() {
           const auto uniqueionindex = get_uniqueionindex(element, ion);
           const double alpha_sp = calculate_ionrecombcoeff(-1, T_e, element, ion + 1, options);
           assert_always(std::isfinite(alpha_sp) && alpha_sp >= 0.);
-          temp_ion_alpha_sp[(uniqueionindex * TABLESIZE) + tempindex] = static_cast<float>(alpha_sp);
+          temp_ion_alpha_sp[(uniqueionindex * RATECOEFF_TABLESIZE) + tempindex] = static_cast<float>(alpha_sp);
         }
       }
     }
@@ -527,7 +527,7 @@ template <typename T, typename U>
   if (upperindex == 0) {
     return table[get_bflutindex(0, uniquelevelindex, phixstargetindex)];
   }
-  if (upperindex < TABLESIZE) {
+  if (upperindex < RATECOEFF_TABLESIZE) {
     const double T_lower = temperature_grid[upperindex - 1];
     const double T_upper = temperature_grid[upperindex];
 
@@ -535,14 +535,14 @@ template <typename T, typename U>
     const double f_upper = table[get_bflutindex(upperindex, uniquelevelindex, phixstargetindex)];
     return (f_lower + ((f_upper - f_lower) / (T_upper - T_lower) * (temperature - T_lower)));
   }
-  return table[get_bflutindex(TABLESIZE - 1, uniquelevelindex, phixstargetindex)];
+  return table[get_bflutindex(RATECOEFF_TABLESIZE - 1, uniquelevelindex, phixstargetindex)];
 }
 
 }  // anonymous namespace
 
 void setup_photoion_luts() {
   assert_always(globals::nbfcontinua > 0);
-  const auto lutsize = static_cast<ptrdiff_t>(TABLESIZE) * globals::nbfcontinua;
+  const auto lutsize = static_cast<ptrdiff_t>(RATECOEFF_TABLESIZE) * globals::nbfcontinua;
   size_t mem_usage_photoionluts = 2 * lutsize * sizeof(double);
 
   spontrecombcoeffs = MPI_shared_array<double>(lutsize, 0.);
@@ -644,18 +644,18 @@ DEVICE_FUNC auto select_continuum_nu(int element, const int lowerion, const int 
     -> double {
   const auto upperindex = get_temperature_gridupperindex(T_e);
   if (upperindex == 0) {
-    return ion_alpha_sp[uniqueionindex * TABLESIZE];
+    return ion_alpha_sp[uniqueionindex * RATECOEFF_TABLESIZE];
   }
-  if (upperindex < TABLESIZE) {
+  if (upperindex < RATECOEFF_TABLESIZE) {
     const double T_lower = temperature_grid[upperindex - 1];
     const double T_upper = temperature_grid[upperindex];
 
-    const double f_lower = ion_alpha_sp[(uniqueionindex * TABLESIZE) + upperindex - 1];
-    const double f_upper = ion_alpha_sp[(uniqueionindex * TABLESIZE) + upperindex];
+    const double f_lower = ion_alpha_sp[(uniqueionindex * RATECOEFF_TABLESIZE) + upperindex - 1];
+    const double f_upper = ion_alpha_sp[(uniqueionindex * RATECOEFF_TABLESIZE) + upperindex];
 
     return f_lower + ((f_upper - f_lower) / (T_upper - T_lower) * (T_e - T_lower));
   }
-  return ion_alpha_sp[(uniqueionindex * TABLESIZE) + (TABLESIZE - 1)];
+  return ion_alpha_sp[(uniqueionindex * RATECOEFF_TABLESIZE) + (RATECOEFF_TABLESIZE - 1)];
 }
 
 // Return the spontaneous recombination rate coefficient alpha_sp [cm^3 s^-1] for one (level, target) continuum:

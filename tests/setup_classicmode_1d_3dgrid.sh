@@ -26,8 +26,6 @@ sed -i'' -e 's/constexpr int CUBOID_NCOORDGRID_X.*/constexpr int CUBOID_NCOORDGR
 sed -i'' -e 's/constexpr int CUBOID_NCOORDGRID_Y.*/constexpr int CUBOID_NCOORDGRID_Y = 100;/g' artisoptions.h
 sed -i'' -e 's/constexpr int CUBOID_NCOORDGRID_Z.*/constexpr int CUBOID_NCOORDGRID_Z = 100;/g' artisoptions.h
 
-sed -i'' -e 's/constexpr bool WRITE_EMISSIONABSORPTION_SPEC_AT_END.*/constexpr bool WRITE_EMISSIONABSORPTION_SPEC_AT_END = true;/g' artisoptions.h
-
 sed -i'' -e 's/constexpr bool VPKT_ON.*/constexpr bool VPKT_ON = true;/g' artisoptions.h
 sed -i'' -e 's/constexpr bool VPKT_WRITE_CONTRIBS.*/constexpr bool VPKT_WRITE_CONTRIBS = true;/g' artisoptions.h
 

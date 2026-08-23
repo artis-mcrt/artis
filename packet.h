@@ -69,7 +69,7 @@ enum packet_type : int {
 
   // Energy released at or before tmin, re-emitted at tmin as a blackbody r-packet: pellets that decayed before
   // the simulation started (update_pellet() scales their energy for the work done on the ejecta in between),
-  // and, under INITIAL_PACKETS_ON with USE_MODEL_INITIAL_ENERGY, the model's own initial thermal energy, which
+  // and, under INITIAL_PACKETS_ON, the model's own initial thermal energy, which
   // enters as pellets with tdecay == tmin and so is not rescaled.
   TYPE_PRE_KPKT = 120,
 };

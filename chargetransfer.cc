@@ -69,7 +69,7 @@ constexpr double LZ_VGRID_MAX_CMS = 1e9;
 const double LZ_VGRID_DLOG = std::log(LZ_VGRID_MAX_CMS / LZ_VGRID_MIN_CMS) / (LZ_VGRIDSIZE - 1);
 
 // the temperature grid of the rate coefficient tables, the same grid as in ratecoeff.cc
-const double T_STEP_LOG = (std::log(MAXTEMP) - std::log(MINTEMP)) / (TABLESIZE - 1.);
+const double T_STEP_LOG = (std::log(MAXTEMP) - std::log(MINTEMP)) / (RATECOEFF_TABLESIZE - 1.);
 
 // nodes of the impact parameter integral and of the thermal average integral
 constexpr int LZ_BNODES = 48;
@@ -120,7 +120,7 @@ constexpr int STEP_RECOMBINATION = -1;
 constexpr int STEP_IONISATION = 1;
 
 // tabulated Landau-Zener rate coefficients [cm3/s] on the temperature grid
-std::vector<std::array<double, TABLESIZE>> lz_ratecoeff_tables;
+std::vector<std::array<double, RATECOEFF_TABLESIZE>> lz_ratecoeff_tables;
 
 // one capture channel at its avoided crossing, in atomic units. The diabatic passage probability at
 // the radial velocity v_r is exp(-w / v_r).
@@ -266,14 +266,14 @@ auto lz_thermal_average(const std::array<double, LZ_VGRIDSIZE>& sigmatable, cons
 
 // tabulate the rate coefficient of a reaction on the temperature grid, with the radiative floor
 auto make_lz_ratecoeff_table(const std::span<const LZChannel> channels, const double mu_grams)
-    -> std::array<double, TABLESIZE> {
+    -> std::array<double, RATECOEFF_TABLESIZE> {
   std::array<double, LZ_VGRIDSIZE> sigmatable{};
   for (int i = 0; i < LZ_VGRIDSIZE; i++) {
     sigmatable[i] = sigma_lz_sorted_channels(channels, lz_vgrid_v_cms(i));
   }
 
-  std::array<double, TABLESIZE> ratetable{};
-  for (int i = 0; i < TABLESIZE; i++) {
+  std::array<double, RATECOEFF_TABLESIZE> ratetable{};
+  for (int i = 0; i < RATECOEFF_TABLESIZE; i++) {
     ratetable[i] = std::max(lz_thermal_average(sigmatable, ratetable_temperature(i), mu_grams), RADIATIVE_CT_FLOOR);
   }
   return ratetable;

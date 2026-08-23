@@ -177,7 +177,7 @@ DEVICE_FUNC void calculate_macroatom_transitionrates(std::span<double> levelrate
   double sum_up_higher = 0.;
   const int ionisinglevels = get_nlevels_ionising(element, ion);
   if (ion < get_nions(element) - 1 && level < ionisinglevels) {
-    if (NT_ON) {
+    if (NT_SCHEME != NonThermalScheme::NT_OFF) {
       sum_up_highernt = nonthermal::nt_ionisation_ratecoeff(nonemptymgi, element, ion) * epsilon_current;
     }
 
@@ -458,7 +458,7 @@ DEVICE_FUNC void do_macroatom(Packet& pkt, const MacroAtomState& pktmastate) {
         stats::increment(stats::Counter::MA_STAT_DEACTIVATION_COLLDEEXC);
         pkt.type = TYPE_KPKT;
         end_packet = true;
-        if constexpr (!DIRECT_COL_HEAT) {
+        if constexpr (!COL_HEAT_FROM_LEVELPOPS) {
           atomicadd(globals::colheatingestimator[nonemptymgi], pkt.e_cmf);
         }
         break;
@@ -492,7 +492,7 @@ DEVICE_FUNC void do_macroatom(Packet& pkt, const MacroAtomState& pktmastate) {
         stats::increment(stats::Counter::MA_STAT_DEACTIVATION_COLLRECOMB);
         pkt.type = TYPE_KPKT;
         end_packet = true;
-        if constexpr (!DIRECT_COL_HEAT) {
+        if constexpr (!COL_HEAT_FROM_LEVELPOPS) {
           atomicadd(globals::colheatingestimator[nonemptymgi], pkt.e_cmf);
         }
         break;

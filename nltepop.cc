@@ -706,7 +706,7 @@ void nltepop_matrix_add_ion_to_ion_rate(const std::span<double> matrix, const in
 void nltepop_matrix_add_nt_ionisation(const int nonemptymgi, const int element, const int ion,
                                       const std::span<const double> s_renorm, RateMatrices& rate_matrices,
                                       const int first_ion_used, const int nions_used) {
-  if (!NT_ON) {
+  if (NT_SCHEME == NonThermalScheme::NT_OFF) {
     return;
   }
   const int max_ion_used = first_ion_used + nions_used - 1;
@@ -964,7 +964,8 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
       const size_t index_ion_ground = get_nlte_vector_index(element, ion, 0, first_ion_used);
       if (index == index_ion_ground && population < MINPOP) {
         printlnlog(
-            "  [warning] cell {} ts {}: NLTE solver gave ground pop less than MINPOP for index {} (Z={} ionstage {} "
+            "  [warning] cell {} ts {}: NLTE solver gave ground pop less than MINPOP for index {} (Z={} ionstage "
+            "{} "
             "level {}), pop = {:g}. Returning nltepop_matrix_solve failure",
             nltelog.modelgridindex, nltelog.timestep, index, get_atomicnumber(element), ionstage, level, population);
         return false;
@@ -983,7 +984,8 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
           return false;
         }
         printlnlog(
-            "  [warning] negative pop = {:g} greater than -MINPOP (-{:g}) likely a rounding error to zero so continue "
+            "  [warning] negative pop = {:g} greater than -MINPOP (-{:g}) likely a rounding error to zero so "
+            "continue "
             "with NLTE pops but set this level to MINPOP",
             population, MINPOP);
         popvec[index] = MINPOP;
@@ -1662,6 +1664,11 @@ void nltepop_reset_cell(const int nonemptymgi) {
 // writes the -1 marker into the NLTE level populations before the first solve and after a fallback
 // to LTE.
 auto elem_has_nlte_solution(const int nonemptymgi, const int element) -> bool {
+  if (!elem_has_nlte_levels(element)) {
+    // an element without NLTE levels holds no solution. The loop below also gives false, because each
+    // of its ions has no excited NLTE level and no superlevel.
+    return false;
+  }
   for (int ion = 0; ion < get_nions(element); ion++) {
     if (get_nlevels_excited_nlte(element, ion) > 0) {
       return get_nlte_levelpop_over_rho(nonemptymgi, element, ion, 1) >= 0.;
