@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import argparse
+import hashlib
 import json
 import subprocess
 from datetime import datetime
@@ -105,26 +106,30 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    # exists() is False for a symlink to a removed log, so this filter skips a stale symlink
+    # exists() is False for a symlink to a removed log, so this filter skips a stale symlink.
+    # a compressed log next to its plain copy holds the same content, so keep only the plain file.
     sn3dlogfiles = sorted(
         logfile
         for runfolder in args.runfolders
         for logfile in runfolder.glob("**/output_0-0.txt*")
-        if logfile.name in {"output_0-0.txt", "output_0-0.txt.zst"} and logfile.exists()
+        if logfile.exists()
+        and (
+            logfile.name == "output_0-0.txt"
+            or (logfile.name == "output_0-0.txt.zst" and not logfile.with_name("output_0-0.txt").exists())
+        )
     )
     col1width = max((len(str(logfile)) for logfile in sn3dlogfiles), default=0) + 1
     verbose = not args.json
 
     jobrows: list[dict[str, str | float | int | bool | None]] = []
-    last_line = ""
+    seen_file_ids: set[tuple[int, int]] = set()
+    seen_loghashes: set[str] = set()
     total_core_hours = 0.0
     total_wallclock_hours = 0.0
     wallclock_complete = True
     ntasks_seen: set[int] = set()
     timestep_ranges: list[tuple[int, int]] = []
     for logfile in sn3dlogfiles:
-        prev_last_line = last_line
-        loglines = read_loglines(logfile)
         jobrow: dict[str, str | float | int | bool | None] = {
             "logfile": str(logfile),
             "core_hours": None,
@@ -134,19 +139,32 @@ def main() -> None:
         jobrows.append(jobrow)
         if verbose:
             print(f"{str(logfile) + ':':{col1width}s} ", end="")
-        if not loglines:
-            wallclock_complete = False
-            if verbose:
-                print("  WARNING: the log is empty or unreadable.")
-                print()
-            continue
-        last_line = loglines[-1].strip()
-        if last_line != "" and prev_last_line == last_line:
+        # the run folder has a symlink to the rank-zero log of the newest job, and a file
+        # sync can turn the symlink into a copy. The file identity finds the symlink, and
+        # the hash of the full content finds the copy. Two different jobs never have equal
+        # full logs, because their line timestamps differ, so both jobs stay counted.
+        logstat = logfile.stat()
+        file_id = (logstat.st_dev, logstat.st_ino)
+        duplicate = file_id in seen_file_ids
+        seen_file_ids.add(file_id)
+        if not duplicate:
+            loglines = read_loglines(logfile)
+            if not loglines:
+                wallclock_complete = False
+                if verbose:
+                    print("  WARNING: the log is empty or unreadable.")
+                    print()
+                continue
+            loghash = hashlib.sha256("\n".join(line.rstrip() for line in loglines).encode()).hexdigest()
+            duplicate = loghash in seen_loghashes
+            seen_loghashes.add(loghash)
+        if duplicate:
             jobrow["duplicate"] = True
             if verbose:
                 print("\n  ignored duplicate log")
                 print()
             continue
+        last_line = loglines[-1].strip()
 
         job_core_hours: float | None = None
         estimate = False
