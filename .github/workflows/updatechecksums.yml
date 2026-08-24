@@ -96,8 +96,10 @@ jobs:
                   unzip -q checksums.zip -d checksums_artifact
                   rm checksums.zip
                   # An artifact of an old commit can disagree with the current set of tests.
-                  # An artifact of a run with failed jobs can miss some tests.
-                  # The two checks below refuse such an artifact.
+                  # An artifact of a run with failed jobs can hold stale or partial checksum files,
+                  # because the checkout and the upload steps of CI run also after an error.
+                  # The checks below refuse such an artifact. The CI checksum steps write a
+                  # .complete marker only after a successful md5sum, and the markers are not in git.
                   for dir in checksums_artifact/*_inputfiles; do
                       name=$(basename "$dir")
                       if [ ! -d "tests/${name}" ]; then
@@ -110,6 +112,10 @@ jobs:
                       for f in results_md5_job0.txt results_md5_final.txt; do
                           if [ ! -s "checksums_artifact/${name}/${f}" ]; then
                               echo "::error::The artifact has no ${f} for ${name}. The CI run did not write checksums for every test."
+                              exit 1
+                          fi
+                          if [ ! -f "checksums_artifact/${name}/${f}.complete" ]; then
+                              echo "::error::The artifact has no ${f}.complete marker for ${name}. The CI checksum step did not finish for this test, so ${f} can be stale or partial."
                               exit 1
                           fi
                       done

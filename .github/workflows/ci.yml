@@ -139,7 +139,11 @@ jobs:
               continue-on-error: ${{ inputs.testmode == 'ON' }}
               working-directory: tests/${{ matrix.testname }}_testrun
               run: |
+                  # The marker file shows that md5sum wrote the full checksum file.
+                  # The "Update checksums" workflow accepts only an artifact with the markers.
+                  set -o pipefail
                   md5sum *.out job0/*.out speclc_angle_res/*.* | tee ../${{ matrix.testname }}_inputfiles/results_md5_job0.txt
+                  touch ../${{ matrix.testname }}_inputfiles/results_md5_job0.txt.complete
                   if [ -f results_md5_job0.txt ]; then md5sum -c results_md5_job0.txt; else echo "results_md5_job0.txt not found"; fi
 
             - name: Run test job1 resume
@@ -196,7 +200,11 @@ jobs:
               continue-on-error: ${{ inputs.testmode == 'ON' }}
               working-directory: tests/${{ matrix.testname }}_testrun
               run: |
+                  # The marker file shows that md5sum wrote the full checksum file.
+                  # The "Update checksums" workflow accepts only an artifact with the markers.
+                  set -o pipefail
                   md5sum *.out job1/*.out speclc_angle_res/*.* | tee ../${{ matrix.testname }}_inputfiles/results_md5_final.txt
+                  touch ../${{ matrix.testname }}_inputfiles/results_md5_final.txt.complete
                   if [ -f results_md5_final.txt ]; then md5sum -c results_md5_final.txt; else echo "results_md5_final.txt not found"; fi
 
             - name: Prepare for next steps
@@ -393,4 +401,5 @@ jobs:
               uses: actions/upload-artifact@v7
               with:
                   name: checksums
-                  path: '*_inputfiles/results_md5*.txt'
+                  # Include the .complete markers, which the "Update checksums" workflow requires.
+                  path: '*_inputfiles/results_md5*'
