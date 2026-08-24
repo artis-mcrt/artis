@@ -118,6 +118,7 @@ jobs:
                   cp exspec tests/${{ matrix.testname }}_testrun/
 
             - name: Run test job0 start
+              id: run_job0
               if: always()
               working-directory: tests/${{ matrix.testname }}_testrun/
               run: |
@@ -139,18 +140,25 @@ jobs:
               continue-on-error: ${{ inputs.testmode == 'ON' }}
               working-directory: tests/${{ matrix.testname }}_testrun
               run: |
-                  # The marker file shows that md5sum wrote the full checksum file.
-                  # The "Update checksums" workflow accepts only an artifact with the markers.
+                  # The marker file shows that the run step succeeded and that md5sum wrote the
+                  # full checksum file. The "Update checksums" workflow accepts only an artifact
+                  # with the markers. A checksum mismatch below still permits the marker, because
+                  # the mismatch is the reason to update the stored checksums.
                   # Some tests write no speclc_angle_res files, so that glob can expand to nothing.
                   set -o pipefail
                   shopt -s nullglob
                   angleresfiles=(speclc_angle_res/*.*)
                   shopt -u nullglob
                   md5sum *.out job0/*.out "${angleresfiles[@]}" | tee ../${{ matrix.testname }}_inputfiles/results_md5_job0.txt
-                  touch ../${{ matrix.testname }}_inputfiles/results_md5_job0.txt.complete
+                  if [ "${{ steps.run_job0.outcome }}" = "success" ]; then
+                      touch ../${{ matrix.testname }}_inputfiles/results_md5_job0.txt.complete
+                  else
+                      echo "The step writes no marker. The sn3d job0 step did not succeed (${{ steps.run_job0.outcome }})."
+                  fi
                   if [ -f results_md5_job0.txt ]; then md5sum -c results_md5_job0.txt; else echo "results_md5_job0.txt not found"; fi
 
             - name: Run test job1 resume
+              id: run_job1
               if: always()
               working-directory: tests/${{ matrix.testname }}_testrun/
               run: |
@@ -185,6 +193,7 @@ jobs:
                   python3 ../../scripts/sumcorehourslogs.py
 
             - name: Run exspec
+              id: run_exspec
               if: always()
               working-directory: tests/${{ matrix.testname }}_testrun/
               run: |
@@ -204,15 +213,21 @@ jobs:
               continue-on-error: ${{ inputs.testmode == 'ON' }}
               working-directory: tests/${{ matrix.testname }}_testrun
               run: |
-                  # The marker file shows that md5sum wrote the full checksum file.
-                  # The "Update checksums" workflow accepts only an artifact with the markers.
+                  # The marker file shows that the run steps succeeded and that md5sum wrote the
+                  # full checksum file. The "Update checksums" workflow accepts only an artifact
+                  # with the markers. A checksum mismatch below still permits the marker, because
+                  # the mismatch is the reason to update the stored checksums.
                   # Some tests write no speclc_angle_res files, so that glob can expand to nothing.
                   set -o pipefail
                   shopt -s nullglob
                   angleresfiles=(speclc_angle_res/*.*)
                   shopt -u nullglob
                   md5sum *.out job1/*.out "${angleresfiles[@]}" | tee ../${{ matrix.testname }}_inputfiles/results_md5_final.txt
-                  touch ../${{ matrix.testname }}_inputfiles/results_md5_final.txt.complete
+                  if [ "${{ steps.run_job0.outcome }}" = "success" ] && [ "${{ steps.run_job1.outcome }}" = "success" ] && [ "${{ steps.run_exspec.outcome }}" = "success" ]; then
+                      touch ../${{ matrix.testname }}_inputfiles/results_md5_final.txt.complete
+                  else
+                      echo "The step writes no marker. A run step did not succeed (job0: ${{ steps.run_job0.outcome }}, job1: ${{ steps.run_job1.outcome }}, exspec: ${{ steps.run_exspec.outcome }})."
+                  fi
                   if [ -f results_md5_final.txt ]; then md5sum -c results_md5_final.txt; else echo "results_md5_final.txt not found"; fi
 
             - name: Prepare for next steps
