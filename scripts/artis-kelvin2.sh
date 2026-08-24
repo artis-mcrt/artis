@@ -22,6 +22,7 @@ echo "CPU type: $(c++ -march=native -Q --help=target | grep -- '-march=  ' | cut
 hoursleft=$(python3 ./artis/scripts/slurmjobhoursleft.py ${SLURM_JOB_ID})
 echo "ntasks: ${SLURM_NTASKS}"
 echo "cpus-per-task: ${SLURM_CPUS_PER_TASK:-1}"
+echo "nodes: ${SLURM_JOB_NUM_NODES:-1}"
 echo "$(date): before srun sn3d. hours left: $hoursleft"
 time mpirun -- ./artis/sn3d -w $hoursleft -o ${SLURM_JOB_ID}.slurm > out.txt
 hoursleftafter=$(python3 ./artis/scripts/slurmjobhoursleft.py ${SLURM_JOB_ID})
