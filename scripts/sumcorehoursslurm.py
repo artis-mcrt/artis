@@ -31,20 +31,22 @@ def main() -> None:
                     # example: "[2026-08-17T21:26:39.005] error: *** JOB 12401250 ... CANCELLED ..."
                     jobdict["time_error"] = datetime.fromisoformat(line[1:].split("]", maxsplit=1)[0])
                 if line.startswith("ntasks:"):
-                    var_vals = dict(
-                        var_val.strip().split(": ", maxsplit=1) for var_val in line.split(" -> ", maxsplit=1)
-                    )
+                    var_vals.update(var_val.strip().split(": ", maxsplit=1) for var_val in line.split(" -> "))
             jobdict.update(var_vals)
 
     col1width = max((len(str(jobdict["slurmoutfile"])) for jobdict in jobs), default=6)
 
-    ntasks: str | None = None
+    ncores: int | None = None
     for jobdict in jobs:
         if "ntasks" in jobdict:
-            # make sure number of CPUs is the same for all jobs
-            assert ntasks is None or ntasks == jobdict["ntasks"]
             assert isinstance(jobdict["ntasks"], str)
-            ntasks = jobdict["ntasks"]
+            # a slurm log of an old job script has no cpus-per-task value, so use 1
+            cpus_per_task = jobdict.get("cpus-per-task", "1")
+            assert isinstance(cpus_per_task, str)
+            job_ncores = int(jobdict["ntasks"]) * int(cpus_per_task)
+            # make sure number of CPUs is the same for all jobs
+            assert ncores is None or ncores == job_ncores
+            ncores = job_ncores
 
     total_core_hours = 0.0
     for jobdict in jobs:
@@ -62,11 +64,11 @@ def main() -> None:
             if (
                 sn3d_started
                 and not sn3d_finished
-                and ntasks is not None
+                and ncores is not None
                 and isinstance(time_srun_start, datetime)
                 and isinstance(time_error, datetime)
             ):
-                job_core_hours = (time_error - time_srun_start).total_seconds() / 3600.0 * float(ntasks)
+                job_core_hours = (time_error - time_srun_start).total_seconds() / 3600.0 * ncores
                 total_core_hours += job_core_hours
                 print(
                     f"{job_core_hours:7.1f} core-h  (WARNING: sn3d did not finish. Estimated from the error time.)"
@@ -79,9 +81,9 @@ def main() -> None:
     print()
     print(f"{'Total:':{col1width}s}  {total_core_hours:7.1f} core-h")
     print()
-    if ntasks is not None:
-        print(f"{'Tasks:':15s} {int(ntasks):8d}")
-        print(f"{'Wallclock time:':15s} {total_core_hours / float(ntasks):12.3f}  hours")
+    if ncores is not None:
+        print(f"{'Tasks:':15s} {ncores:8d}")
+        print(f"{'Wallclock time:':15s} {total_core_hours / ncores:12.3f}  hours")
 
     print(f"{'CPU time:':15s} {total_core_hours:12.3f}  core-h")
     print(f"{'CPU time:':15s} {total_core_hours / 1000:12.3f}  k core-h")

@@ -28,6 +28,7 @@ echo "CPU type: $(c++ -march=native -Q --help=target | grep -- '-march=  ' | cut
 source ./artis/scripts/exspec-before.sh
 
 hoursleft=$(python3 ./artis/scripts/slurmjobhoursleft.py ${SLURM_JOB_ID})
+echo "ntasks: ${SLURM_NTASKS} -> cpus-per-task: ${SLURM_CPUS_PER_TASK:-1}"
 echo "$(date): before srun sn3d. hours left: $hoursleft"
 
 time srun -- ./artis/sn3d -w $hoursleft -o ${SLURM_JOB_ID}.slurm > out.txt
@@ -36,8 +37,8 @@ hoursleftafter=$(python3 ./artis/scripts/slurmjobhoursleft.py ${SLURM_JOB_ID})
 echo "$(date): after srun sn3d finished. hours left: $hoursleftafter"
 hourselapsed=$(python3 -c "print($hoursleft - $hoursleftafter)")
 echo "hours of runtime: $hourselapsed"
-cpuhrs=$(python3 -c "print($SLURM_NTASKS * $hourselapsed)")
-echo "ntasks: $SLURM_NTASKS -> CPU core hrs: $cpuhrs"
+cpuhrs=$(python3 -c "print($SLURM_NTASKS * ${SLURM_CPUS_PER_TASK:-1} * $hourselapsed)")
+echo "ntasks: $SLURM_NTASKS -> cpus-per-task: ${SLURM_CPUS_PER_TASK:-1} -> CPU core hrs: $cpuhrs"
 
 if grep -q "RESTART_NEEDED" "output_0-0.txt"
 then
