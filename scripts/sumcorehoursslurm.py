@@ -54,6 +54,8 @@ def main() -> None:
                         jobdict["time_run_start"] = datetime.strptime(  # noqa: DTZ007
                             " ".join(tokens[:4] + tokens[5:]), "%a %b %d %H:%M:%S %Y"
                         )
+                        # the abbreviation resolves an ambiguous time in the repeated hour
+                        jobdict["tzabbrev"] = tokens[4]
                     except ValueError:
                         # a shell trace line or a different date format gives no start time
                         pass
@@ -94,14 +96,18 @@ def main() -> None:
     # the shared core count of the sn3d jobs, as the fallback for a crashed job of an old job script
     ncores_seen: set[int] = set()
     nnodes_seen: set[int] = set()
+    nnodes_all_known = True
     for jobdict in jobs:
         if "ntasks" in jobdict and jobdict.get("sn3d_started", False):
             ncores_seen.add(int(str(jobdict["ntasks"])) * int(str(jobdict.get("cpus-per-task", "1"))))
             if "nodes" in jobdict:
                 nnodes_seen.add(int(str(jobdict["nodes"])))
+            else:
+                # an old log has no node count, so there is no shared node count
+                nnodes_all_known = False
     # with a mix of core counts, the summary has no single task count and omits the wallclock time
     ncores = next(iter(ncores_seen)) if len(ncores_seen) == 1 else None
-    nnodes = next(iter(nnodes_seen)) if len(nnodes_seen) == 1 else None
+    nnodes = next(iter(nnodes_seen)) if nnodes_all_known and len(nnodes_seen) == 1 else None
 
     verbose = not args.json
     jobrows: list[dict[str, str | float | bool | None]] = []
@@ -132,6 +138,13 @@ def main() -> None:
                     tzone = ZoneInfo(tzname)
                     if time_run_start.tzinfo is None:
                         time_run_start = time_run_start.replace(tzinfo=tzone)
+                        # a start in the repeated hour of a daylight-saving change is ambiguous.
+                        # the abbreviation from the date line selects the correct fold.
+                        tzabbrev = jobdict.get("tzabbrev")
+                        if isinstance(tzabbrev, str) and time_run_start.tzname() != tzabbrev:
+                            time_fold1 = time_run_start.replace(fold=1)
+                            if time_fold1.tzname() == tzabbrev:
+                                time_run_start = time_fold1
                     if time_error.tzinfo is None:
                         time_error = time_error.replace(tzinfo=tzone)
                 except (ZoneInfoNotFoundError, ValueError):
