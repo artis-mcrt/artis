@@ -30,7 +30,7 @@ def main() -> None:
                 if line.startswith("[") and "error:" in line:
                     # example: "[2026-08-17T21:26:39.005] error: *** JOB 12401250 ... CANCELLED ..."
                     jobdict["time_error"] = datetime.fromisoformat(line[1:].split("]", maxsplit=1)[0])
-                if line.startswith("ntasks:"):
+                if line.startswith(("ntasks:", "cpus-per-task:")):
                     var_vals.update(var_val.strip().split(": ", maxsplit=1) for var_val in line.split(" -> "))
             jobdict.update(var_vals)
 
