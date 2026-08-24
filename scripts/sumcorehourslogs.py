@@ -153,6 +153,10 @@ def main() -> None:
             job_core_hours = float(last_line.split("CPU hours")[0].split()[-1])
             # the old log format has no wallclock hours
             wallclock_complete = False
+            # the old final line has no task count, so read it from the log body
+            procs_threads = get_job_procs_threads(loglines)
+            if procs_threads is not None:
+                ntasks_seen.add(procs_threads[0] * procs_threads[1])
         elif "core hours" in last_line:
             job_core_hours = float(last_line.split("core hours")[0].split()[-1])
             if " wallclock hours" in last_line:
