@@ -35,16 +35,48 @@ jobs:
                   BRANCH: ${{ github.ref_name }}
                   HEAD_SHA: ${{ github.sha }}
               run: |
-                  artifact=$(gh api "repos/${GITHUB_REPOSITORY}/actions/artifacts?name=checksums&per_page=100" \
-                      --jq '[.artifacts[] | select(.workflow_run.head_branch == env.BRANCH and .workflow_run.head_sha == env.HEAD_SHA and .expired == false)] | sort_by(.created_at) | last')
-                  if [ -z "$artifact" ] || [ "$artifact" = "null" ]; then
-                      echo "No unexpired 'checksums' artifact found for commit ${HEAD_SHA} on branch ${BRANCH}."
-                      echo "Has the CI workflow finished for the latest commit on this branch? Otherwise this workflow could pick up a stale artifact from an earlier commit and wrongly report that the checksums are unchanged."
+                  # The artifact does not have to come from the branch head. The operator confirms
+                  # that the commits after the artifact's commit do not change the results.
+                  # Keep the newest artifact of each commit, newest commits first.
+                  candidates=$(gh api "repos/${GITHUB_REPOSITORY}/actions/artifacts?name=checksums&per_page=100" \
+                      --jq '[.artifacts[] | select(.workflow_run.head_branch == env.BRANCH and .expired == false)]
+                          | group_by(.workflow_run.head_sha) | map(max_by(.created_at)) | sort_by(.created_at) | reverse
+                          | .[] | "\(.workflow_run.id)\t\(.workflow_run.head_sha)"')
+                  best_run_id=""
+                  best_sha=""
+                  best_ahead=""
+                  while IFS=$'\t' read -r run_id sha; do
+                      if [ -z "$run_id" ]; then
+                          continue
+                      fi
+                      # The compare status is "identical" or "ahead" only if the commit is in the
+                      # history of the branch head. This rejects a commit that a force-push removed.
+                      # ahead_by counts the commits between the artifact's commit and the head.
+                      ahead=$(gh api "repos/${GITHUB_REPOSITORY}/compare/${sha}...${HEAD_SHA}" \
+                          --jq 'select(.status == "identical" or .status == "ahead") | .ahead_by' 2>/dev/null || true)
+                      if [ -z "$ahead" ]; then
+                          echo "Skip the artifact of run ${run_id}: commit ${sha} is not in the history of ${HEAD_SHA}."
+                          continue
+                      fi
+                      if [ -z "$best_ahead" ] || [ "$ahead" -lt "$best_ahead" ]; then
+                          best_run_id="$run_id"
+                          best_sha="$sha"
+                          best_ahead="$ahead"
+                      fi
+                      if [ "$ahead" -eq 0 ]; then
+                          break
+                      fi
+                  done <<< "$candidates"
+                  if [ -z "$best_run_id" ]; then
+                      echo "::error::No unexpired 'checksums' artifact found for any commit in the history of ${HEAD_SHA} on branch ${BRANCH}. Has the CI workflow finished on this branch?"
                       exit 1
                   fi
-                  echo "$artifact" | jq .
-                  echo "run_id=$(echo "$artifact" | jq -r '.workflow_run.id')" >> $GITHUB_OUTPUT
-                  echo "head_sha=$(echo "$artifact" | jq -r '.workflow_run.head_sha')" >> $GITHUB_OUTPUT
+                  if [ "$best_ahead" -gt 0 ]; then
+                      echo "::notice::The checksums come from commit ${best_sha}, which is ${best_ahead} commit(s) behind the branch head ${HEAD_SHA}. This is only correct if the later commits do not change the results."
+                  fi
+                  echo "Selected run ${best_run_id} of commit ${best_sha}."
+                  echo "run_id=${best_run_id}" >> $GITHUB_OUTPUT
+                  echo "head_sha=${best_sha}" >> $GITHUB_OUTPUT
 
             - name: Download and extract checksums artifact
               env:
