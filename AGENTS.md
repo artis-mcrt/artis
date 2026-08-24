@@ -77,8 +77,9 @@ with C++23. The Makefile builds three programs from the same sources:
 
 - `*.cc` and `*.h` in the repository root: all of the C++ source. `sn3d.cc`,
   `exspec.cc`, and `unittests.cc` contain the three `main()` functions. The
-  Makefile compiles every other `.cc` file into all three programs, so a new
-  file in the root is picked up automatically.
+  Makefile compiles every other `.cc` file into all three programs. That list
+  is the variable `common_files` in the Makefile. Add a new source file to it,
+  because the Makefile finds no file automatically.
 - `artisoptions_*.h`: the presets of the compile-time options. The build needs
   an `artisoptions.h` in the repository root. That file is gitignored and is
   normally a symlink to one preset. `artisoptions_doc.md` documents the options

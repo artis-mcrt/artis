@@ -302,8 +302,7 @@ endef
 
 # the git metadata changes at almost every git operation. version.h declares the strings and stays
 # the same, and this generated file holds the definitions. Only this small file compiles again,
-# and not sn3d.cc and exspec.cc. Write the temporary file with a leading dot, to keep it out of the
-# wildcard below. The generation must come before that wildcard, so that version.cc is in the build
+# and not sn3d.cc and exspec.cc
 $(shell echo "$(version_cc)" > .version_tmp.cc)
 $(shell test -f version.cc || touch version.cc)
 
@@ -314,9 +313,32 @@ else
   $(shell rm .version_tmp.cc)
 endif
 
-# sn3d.cc, exspec.cc, and unittests.cc have main() defined. Name version.cc explicitly, because make
-# caches the content of the directory. The wildcard does not find a version.cc that this run made
-common_files := $(filter-out sn3d.cc exspec.cc unittests.cc version.cc, $(wildcard *.cc)) version.cc
+# the sources of all three programs. sn3d.cc, exspec.cc, and unittests.cc have main() defined, so
+# they are not here. Add a new source file to this list. A wildcard is not correct here, because
+# make caches the content of the directory and does not find a version.cc that this run made
+common_files := \
+	chargetransfer.cc \
+	decay.cc \
+	gammapkt.cc \
+	grid.cc \
+	input.cc \
+	kpkt.cc \
+	ltepop.cc \
+	macroatom.cc \
+	mpi_logging.cc \
+	nltepop.cc \
+	nonthermal.cc \
+	packet.cc \
+	radfield.cc \
+	ratecoeff.cc \
+	rpkt.cc \
+	spectrum_lightcurve.cc \
+	stats.cc \
+	thermalbalance.cc \
+	update_grid.cc \
+	update_packets.cc \
+	version.cc \
+	vpkt.cc
 
 sn3d_files = $(common_files) sn3d.cc
 sn3d_objects = $(addprefix $(BUILD_DIR)/,$(sn3d_files:.cc=.o))
