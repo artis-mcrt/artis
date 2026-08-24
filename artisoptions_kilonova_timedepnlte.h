@@ -38,7 +38,7 @@ constexpr bool FORCE_SAHA_ION_BALANCE(int element_z) { return false; }
 constexpr bool SINGLE_LEVEL_TOP_ION = false;
 
 constexpr int NLEVELS_REQUIRETRANSITIONS(int element_z, int ionstage) {
-  // add 2 for the ground state and first level in the super level
+  // add 2 for the ground state and first level in the superlevel
   return ION_NLEVELS_EXCITED_NLTE(element_z, ionstage) + 2;
 }
 
