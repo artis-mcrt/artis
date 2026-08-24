@@ -28,29 +28,6 @@ def get_log_elapsed_hours(loglines: list[str]) -> float | None:
     return (time_end - time_start).total_seconds() / 3600.0
 
 
-def get_slurm_elapsed_hours(logfile: Path) -> float | None:
-    """Get the elapsed hours from the srun start to the slurm error, for the job of an sn3d log."""
-    jobid = logfile.parent.name.removesuffix(".slurm")
-    slurmoutfile = logfile.parent.parent / f"slurm-{jobid}.out"
-    if not slurmoutfile.is_file():
-        return None
-    time_start = None
-    time_error = None
-    with slurmoutfile.open("rt", encoding="utf-8") as fslurmlog:
-        for line in fslurmlog:
-            if "before srun sn3d" in line:
-                # example: "Sat Aug 15 21:28:07 CEST 2026: before srun sn3d. hours left: 47.97"
-                # drop the timezone name, because the error time below is also a local time
-                tokens = line.split(": before srun sn3d")[0].split()
-                time_start = datetime.strptime(" ".join(tokens[:4] + tokens[5:]), "%a %b %d %H:%M:%S %Y")
-            elif line.startswith("[") and "error:" in line:
-                # example: "[2026-08-17T21:26:39.005] error: *** JOB 12401250 ... CANCELLED ..."
-                time_error = datetime.fromisoformat(line[1:].split("]", maxsplit=1)[0])
-    if time_start is None or time_error is None:
-        return None
-    return (time_error - time_start).total_seconds() / 3600.0
-
-
 def main() -> None:
     sn3dlogfiles = sorted(Path().glob("**/output_0-0.txt"))
     col1width = max((len(str(logfile)) for logfile in sn3dlogfiles), default=0) + 1
@@ -82,16 +59,12 @@ def main() -> None:
                     ntasks = job_ntasks
             else:
                 job_tasks = get_job_tasks(loglines)
-                elapsed_hours = get_slurm_elapsed_hours(logfile)
-                time_source = "the error time in the slurm log"
-                if elapsed_hours is None:
-                    elapsed_hours = get_log_elapsed_hours(loglines)
-                    time_source = "the sn3d log timestamps"
+                elapsed_hours = get_log_elapsed_hours(loglines)
                 if job_tasks is not None and elapsed_hours is not None:
                     job_core_hours = elapsed_hours * job_tasks
                     total_core_hours += job_core_hours
                     print(f"{job_core_hours:8.1f} core-h")
-                    print(f"  WARNING: sn3d did not finish cleanly. The value is an estimate from {time_source}.")
+                    print("  WARNING: sn3d did not finish cleanly. The value is an estimate from the log timestamps.")
                 else:
                     print("  WARNING: sn3d didn't finish cleanly. Manually check log to get CPU time consumed.")
             print(f"  {loglines[0].strip()}")
