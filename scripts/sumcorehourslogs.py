@@ -29,8 +29,8 @@ def get_job_procs_threads(loglines: list[str]) -> tuple[int, int] | None:
 def get_log_elapsed_hours(loglines: list[str]) -> float | None:
     """Get the elapsed hours between the first and the last timestamp of an sn3d log."""
     try:
-        time_start = datetime.strptime(loglines[0].split(maxsplit=1)[0], "%Y-%m-%dT%H:%M:%SZ")
-        time_end = datetime.strptime(loglines[-1].split(maxsplit=1)[0], "%Y-%m-%dT%H:%M:%SZ")
+        time_start = datetime.strptime(loglines[0].split(maxsplit=1)[0], "%Y-%m-%dT%H:%M:%S%z")
+        time_end = datetime.strptime(loglines[-1].split(maxsplit=1)[0], "%Y-%m-%dT%H:%M:%S%z")
     except (ValueError, IndexError):
         return None
     return (time_end - time_start).total_seconds() / 3600.0

@@ -39,7 +39,7 @@ def main() -> None:
                         datepart = line.split(": before exspec")[0]
                     tokens = datepart.split()
                     try:
-                        jobdict["time_run_start"] = datetime.strptime(
+                        jobdict["time_run_start"] = datetime.strptime(  # noqa: DTZ007
                             " ".join(tokens[:4] + tokens[5:]), "%a %b %d %H:%M:%S %Y"
                         )
                     except ValueError:
@@ -141,7 +141,7 @@ def main() -> None:
 
         if verbose:
             progname = "exspec" if jobtype == "exspec" else "sn3d"
-            print(f"{str(jobdict['slurmoutfile']):{col1width}s}  ", end="")
+            print(f"{jobdict['slurmoutfile']!s:{col1width}s}  ", end="")
             if job_core_hours is not None:
                 note = "  (exspec)" if jobtype == "exspec" else ""
                 if estimate:
