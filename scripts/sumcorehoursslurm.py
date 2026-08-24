@@ -98,13 +98,15 @@ def main() -> None:
     nnodes_seen: set[int] = set()
     nnodes_all_known = True
     for jobdict in jobs:
-        if "ntasks" in jobdict and jobdict.get("sn3d_started", False):
+        if not jobdict.get("sn3d_started", False):
+            continue
+        if "ntasks" in jobdict:
             ncores_seen.add(int(str(jobdict["ntasks"])) * int(str(jobdict.get("cpus-per-task", "1"))))
-            if "nodes" in jobdict:
-                nnodes_seen.add(int(str(jobdict["nodes"])))
-            else:
-                # an old log has no node count, so there is no shared node count
-                nnodes_all_known = False
+        if "nodes" in jobdict:
+            nnodes_seen.add(int(str(jobdict["nodes"])))
+        else:
+            # an old log has no node count, so there is no shared node count
+            nnodes_all_known = False
     # with a mix of core counts, the summary has no single task count and omits the wallclock time
     ncores = next(iter(ncores_seen)) if len(ncores_seen) == 1 else None
     nnodes = next(iter(nnodes_seen)) if nnodes_all_known and len(nnodes_seen) == 1 else None
