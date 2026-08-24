@@ -26,10 +26,12 @@ def main() -> None:
                     )
             jobdict.update(var_vals)
 
+    col1width = max((len(str(jobdict["slurmoutfile"])) for jobdict in jobs), default=6)
+
     ntasks: str | None = None
     total_core_hours = 0.0
     for jobdict in jobs:
-        print(f"{str(jobdict['slurmoutfile']):20s} ", end="")
+        print(f"{str(jobdict['slurmoutfile']):{col1width}s} ", end="")
         if "ntasks" in jobdict:
             # make sure number of CPUs is the same for all jobs
             assert ntasks is None or ntasks == jobdict["ntasks"]
@@ -49,14 +51,14 @@ def main() -> None:
                 print(f"{'?.?':>7s} core-h  (Unknown because sn3d didn't start. exspec job?)")
 
     print()
-    print(f"{'Total:':20s} {total_core_hours:7.1f} core-h")
+    print(f"{'Total:':{col1width}s} {total_core_hours:7.1f} core-h")
     print()
     if ntasks is not None:
-        print(f"Tasks: {ntasks}")
-        print(f"Wallclock time: {total_core_hours / float(ntasks):.1f} hours")
+        print(f"{'Tasks:':15s} {int(ntasks):8d}")
+        print(f"{'Wallclock time:':15s} {total_core_hours / float(ntasks):12.3f}  hours")
 
-    print(f"CPU time: {total_core_hours:12.3f}  core-h")
-    print(f"CPU time: {total_core_hours / 1000:12.3f}  k core-h")
+    print(f"{'CPU time:':15s} {total_core_hours:12.3f}  core-h")
+    print(f"{'CPU time:':15s} {total_core_hours / 1000:12.3f}  k core-h")
 
 
 if __name__ == "__main__":
