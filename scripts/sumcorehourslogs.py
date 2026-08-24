@@ -45,6 +45,22 @@ def get_timestep_range(last_line: str) -> tuple[int, int] | None:
     return (int(tokens[0]), int(tokens[3]))
 
 
+def get_log_timestep_range(loglines: list[str]) -> tuple[int, int] | None:
+    """Get the first and the last propagated timestep from the lines of an sn3d log."""
+    ts_first: int | None = None
+    ts_last: int | None = None
+    for line in loglines:
+        # example: "2026-08-20T21:31:02Z timestep 21: start update_packets"
+        if ts_first is None and ": start update_packets" in line and " timestep " in line:
+            ts_first = int(line.split(" timestep ")[1].split(":")[0])
+        # example: "2026-08-22T03:26:29Z timestep 63: time after update grid on all processes (...)"
+        if ": time after update grid" in line and " timestep " in line:
+            ts_last = int(line.split(" timestep ")[1].split(":")[0])
+    if ts_first is None or ts_last is None:
+        return None
+    return (ts_first, ts_last)
+
+
 def read_loglines(logfile: Path) -> list[str]:
     """Read the lines of a log file. A file with the suffix .zst is decompressed first."""
     if logfile.suffix == ".zst":
@@ -112,14 +128,18 @@ def main() -> None:
                 # make sure number of CPUs is the same for all jobs
                 assert ntasks is None or ntasks == job_ntasks
                 ntasks = job_ntasks
-        else:
+        log_ts_range: tuple[int, int] | None = None
+        if job_core_hours is None:
             job_tasks = get_job_tasks(loglines)
             elapsed_hours = get_log_elapsed_hours(loglines)
             if job_tasks is not None and elapsed_hours is not None:
                 job_core_hours = elapsed_hours * job_tasks
                 estimate = True
+            log_ts_range = get_log_timestep_range(loglines)
 
         ts_range = get_timestep_range(last_line)
+        if ts_range is None:
+            ts_range = log_ts_range
         if ts_range is not None:
             timestep_ranges.append(ts_range)
             jobrow["timestep_first"], jobrow["timestep_last"] = ts_range
@@ -137,6 +157,8 @@ def main() -> None:
                 print("  WARNING: sn3d didn't finish cleanly. Manually check log to get CPU time consumed.")
             print(f"  {loglines[0].strip()}")
             print(f"  {last_line}")
+            if log_ts_range is not None:
+                print(f"  propagated ts {log_ts_range[0]} to ts {log_ts_range[1]}")
             print()
 
     timestep_ranges.sort()
