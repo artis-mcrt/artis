@@ -139,9 +139,9 @@ def main() -> None:
         jobrows.append(jobrow)
         if verbose:
             print(f"{str(logfile) + ':':{col1width}s} ", end="")
-        # the run folder has a symlink to the rank-zero log of the newest job, and a file
-        # sync can turn the symlink into a copy. The file identity finds the symlink, and
-        # the hash of the full content finds the copy. Two different jobs never have equal
+        # the run folder has a symlink to the rank-zero log of the newest job, and an old
+        # artis version wrote a copy instead. The file identity finds the symlink, and the
+        # hash of the full content finds the copy. Two different jobs never have equal
         # full logs, because their line timestamps differ, so both jobs stay counted.
         logstat = logfile.stat()
         file_id = (logstat.st_dev, logstat.st_ino)
