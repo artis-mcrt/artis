@@ -12,8 +12,8 @@ except ModuleNotFoundError:
     zstandard = None
 
 
-def get_job_tasks(loglines: list[str]) -> int | None:
-    """Get the process count times the thread count from the lines of an sn3d log."""
+def get_job_procs_threads(loglines: list[str]) -> tuple[int, int] | None:
+    """Get the process count and the thread count from the lines of an sn3d log."""
     nprocs: int | None = None
     nthreads = 1
     for line in loglines:
@@ -23,7 +23,7 @@ def get_job_tasks(loglines: list[str]) -> int | None:
             nthreads = int(line.split("(max ")[1].split(")")[0])
         elif "stdpar" in line and " CPU threads" in line:
             nthreads = int(line.split(" CPU threads")[0].split()[-1])
-    return None if nprocs is None else nprocs * nthreads
+    return None if nprocs is None else (nprocs, nthreads)
 
 
 def get_log_elapsed_hours(loglines: list[str]) -> float | None:
@@ -129,13 +129,21 @@ def main() -> None:
                 assert ntasks is None or ntasks == job_ntasks
                 ntasks = job_ntasks
         log_ts_range: tuple[int, int] | None = None
+        estimate_line: str | None = None
         if job_core_hours is None:
-            job_tasks = get_job_tasks(loglines)
+            procs_threads = get_job_procs_threads(loglines)
             elapsed_hours = get_log_elapsed_hours(loglines)
-            if job_tasks is not None and elapsed_hours is not None:
-                job_core_hours = elapsed_hours * job_tasks
-                estimate = True
             log_ts_range = get_log_timestep_range(loglines)
+            if procs_threads is not None and elapsed_hours is not None:
+                nprocs, nthreads = procs_threads
+                job_core_hours = elapsed_hours * nprocs * nthreads
+                estimate = True
+                if log_ts_range is not None:
+                    estimate_line = (
+                        f"estimated (job: pktprop ts {log_ts_range[0]} to ts {log_ts_range[1]} grid-preprop, "
+                        f"{elapsed_hours:.3f} wallclock hours * {nprocs} processes * {nthreads} threads "
+                        f"= {job_core_hours:.3f} core hours)"
+                    )
 
         ts_range = get_timestep_range(last_line)
         if ts_range is None:
@@ -157,8 +165,8 @@ def main() -> None:
                 print("  WARNING: sn3d didn't finish cleanly. Manually check log to get CPU time consumed.")
             print(f"  {loglines[0].strip()}")
             print(f"  {last_line}")
-            if log_ts_range is not None:
-                print(f"  pktprop ts {log_ts_range[0]} to ts {log_ts_range[1]} grid-preprop")
+            if estimate_line is not None:
+                print(f"  {estimate_line}")
             print()
 
     timestep_ranges.sort()
