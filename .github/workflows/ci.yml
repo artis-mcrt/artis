@@ -141,8 +141,12 @@ jobs:
               run: |
                   # The marker file shows that md5sum wrote the full checksum file.
                   # The "Update checksums" workflow accepts only an artifact with the markers.
+                  # Some tests write no speclc_angle_res files, so that glob can expand to nothing.
                   set -o pipefail
-                  md5sum *.out job0/*.out speclc_angle_res/*.* | tee ../${{ matrix.testname }}_inputfiles/results_md5_job0.txt
+                  shopt -s nullglob
+                  angleresfiles=(speclc_angle_res/*.*)
+                  shopt -u nullglob
+                  md5sum *.out job0/*.out "${angleresfiles[@]}" | tee ../${{ matrix.testname }}_inputfiles/results_md5_job0.txt
                   touch ../${{ matrix.testname }}_inputfiles/results_md5_job0.txt.complete
                   if [ -f results_md5_job0.txt ]; then md5sum -c results_md5_job0.txt; else echo "results_md5_job0.txt not found"; fi
 
@@ -202,8 +206,12 @@ jobs:
               run: |
                   # The marker file shows that md5sum wrote the full checksum file.
                   # The "Update checksums" workflow accepts only an artifact with the markers.
+                  # Some tests write no speclc_angle_res files, so that glob can expand to nothing.
                   set -o pipefail
-                  md5sum *.out job1/*.out speclc_angle_res/*.* | tee ../${{ matrix.testname }}_inputfiles/results_md5_final.txt
+                  shopt -s nullglob
+                  angleresfiles=(speclc_angle_res/*.*)
+                  shopt -u nullglob
+                  md5sum *.out job1/*.out "${angleresfiles[@]}" | tee ../${{ matrix.testname }}_inputfiles/results_md5_final.txt
                   touch ../${{ matrix.testname }}_inputfiles/results_md5_final.txt.complete
                   if [ -f results_md5_final.txt ]; then md5sum -c results_md5_final.txt; else echo "results_md5_final.txt not found"; fi
 
