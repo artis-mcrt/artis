@@ -77,8 +77,9 @@ with C++23. The Makefile builds three programs from the same sources:
 
 - `*.cc` and `*.h` in the repository root: all of the C++ source. `sn3d.cc`,
   `exspec.cc`, and `unittests.cc` contain the three `main()` functions. The
-  Makefile compiles every other `.cc` file into all three programs, so a new
-  file in the root is picked up automatically.
+  Makefile compiles every other `.cc` file into all three programs. That list
+  is the variable `common_files` in the Makefile. Add a new source file to it,
+  because the Makefile finds no file automatically.
 - `artisoptions_*.h`: the presets of the compile-time options. The build needs
   an `artisoptions.h` in the repository root. That file is gitignored and is
   normally a symlink to one preset. `artisoptions_doc.md` documents the options
@@ -145,8 +146,11 @@ Points that surprise a new agent:
 - `GCCTOOLCHAIN` selects the gcc toolchain of nvc++. The Makefile has fallbacks
   for some known hosts, so this option is not always necessary. CI sets it in
   the environment.
-- The Makefile writes `version.h` from the git metadata, but only when the
-  content changes. `version*.h` is gitignored.
+- The Makefile writes `version.cc` from the git metadata, but only when the
+  content changes. `version.cc` is gitignored, and `version.h` is a tracked
+  file that declares the three strings. Keep the definitions in `version.cc`.
+  The git metadata changes at almost every git operation, so a definition in
+  the header makes `sn3d.cc` and `exspec.cc` compile again each time.
 
 ## Tests
 
