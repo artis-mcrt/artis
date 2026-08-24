@@ -12,9 +12,7 @@ def main() -> None:
     assert len(sys.argv) == 2
     jobid = int(sys.argv[1])
     cmd = f"squeue -j {jobid} --noheader --Format EndTime"
-    cmdendtime = subprocess.run(
-        cmd, capture_output=True, shell=True, check=True, text=True
-    )
+    cmdendtime = subprocess.run(cmd, capture_output=True, shell=True, check=True, text=True)
     strendtime = cmdendtime.stdout.strip()
 
     endtime = datetime.datetime.fromisoformat(strendtime)

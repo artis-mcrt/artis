@@ -7,9 +7,7 @@ from pathlib import Path
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(
-        description="Sum the core hours of the slurm logs in the given run folders."
-    )
+    parser = argparse.ArgumentParser(description="Sum the core hours of the slurm logs in the given run folders.")
     parser.add_argument(
         "runfolders",
         nargs="*",
@@ -25,9 +23,7 @@ def main() -> None:
     args = parser.parse_args()
 
     slurmoutfiles = sorted(
-        slurmoutfile
-        for runfolder in args.runfolders
-        for slurmoutfile in runfolder.glob("slurm-*.out")
+        slurmoutfile for runfolder in args.runfolders for slurmoutfile in runfolder.glob("slurm-*.out")
     )
     jobs: list[dict[str, Path | str | float | int | datetime]] = [
         {
@@ -104,10 +100,7 @@ def main() -> None:
     nnodes_seen: set[int] = set()
     for jobdict in jobs:
         if "ntasks" in jobdict and jobdict.get("sn3d_started", False):
-            ncores_seen.add(
-                int(str(jobdict["ntasks"]))
-                * int(str(jobdict.get("cpus-per-task", "1")))
-            )
+            ncores_seen.add(int(str(jobdict["ntasks"])) * int(str(jobdict.get("cpus-per-task", "1"))))
             if "nodes" in jobdict:
                 nnodes_seen.add(int(str(jobdict["nodes"])))
     # with a mix of core counts, the summary has no single task count and omits the wallclock time
@@ -123,13 +116,9 @@ def main() -> None:
     for jobdict in jobs:
         sn3d_started = bool(jobdict.get("sn3d_started", False))
         exspec_started = bool(jobdict.get("exspec_started", False))
-        jobtype = (
-            "sn3d" if sn3d_started else ("exspec" if exspec_started else "unknown")
-        )
+        jobtype = "sn3d" if sn3d_started else ("exspec" if exspec_started else "unknown")
         if "ntasks" in jobdict:
-            job_ncores = int(str(jobdict["ntasks"])) * int(
-                str(jobdict.get("cpus-per-task", "1"))
-            )
+            job_ncores = int(str(jobdict["ntasks"])) * int(str(jobdict.get("cpus-per-task", "1")))
         else:
             # a slurm log of an old job script logs ntasks only after a clean finish
             job_ncores = ncores
@@ -190,25 +179,13 @@ def main() -> None:
                     note += f"  (WARNING: {progname} did not finish. Estimated from the error time.)"
                 print(f"{job_core_hours:7.1f} core-h{note}")
             elif sn3d_started or exspec_started:
-                print(
-                    f"{'?.?':>7s} core-h  (Unknown because {progname} started but did not finish. Check the log.)"
-                )
+                print(f"{'?.?':>7s} core-h  (Unknown because {progname} started but did not finish. Check the log.)")
             else:
-                print(
-                    f"{'?.?':>7s} core-h  (Unknown because sn3d did not start. exspec job?)"
-                )
+                print(f"{'?.?':>7s} core-h  (Unknown because sn3d did not start. exspec job?)")
 
     total_core_hours = total_sn3d_core_hours + total_exspec_core_hours
-    wallclock_hours = (
-        total_wallclock_hours
-        if wallclock_complete and total_sn3d_core_hours > 0.0
-        else None
-    )
-    node_hours = (
-        wallclock_hours * nnodes
-        if wallclock_hours is not None and nnodes is not None
-        else None
-    )
+    wallclock_hours = total_wallclock_hours if wallclock_complete and total_sn3d_core_hours > 0.0 else None
+    node_hours = wallclock_hours * nnodes if wallclock_hours is not None and nnodes is not None else None
 
     if args.json:
         print(
@@ -232,9 +209,7 @@ def main() -> None:
     print(f"{'Total:':{col1width}s}  {total_core_hours:7.1f} core-h")
     print()
     if len(ncores_seen) > 1:
-        print(
-            "WARNING: the sn3d jobs use different core counts. The summary omits the task count."
-        )
+        print("WARNING: the sn3d jobs use different core counts. The summary omits the task count.")
     if ncores is not None:
         print(f"{'Tasks:':15s} {ncores:8d}")
     if nnodes is not None:
