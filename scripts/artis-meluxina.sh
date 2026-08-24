@@ -36,9 +36,9 @@ time srun --hint=nomultithread -- ./artis/sn3d -w $hoursleft -o ${SLURM_JOB_ID}.
 hoursleftafter=$(python3 ./artis/scripts/slurmjobhoursleft.py ${SLURM_JOB_ID})
 echo "$(date): after srun sn3d finished. hours left: $hoursleftafter"
 hourselapsed=$(python3 -c "print($hoursleft - $hoursleftafter)")
-echo "hours of runtime: $hourselapsed"
+echo "wallclock hrs: $hourselapsed"
 cpuhrs=$(python3 -c "print($SLURM_NTASKS * ${SLURM_CPUS_PER_TASK:-1} * $hourselapsed)")
-echo "ntasks: $SLURM_NTASKS -> cpus-per-task: ${SLURM_CPUS_PER_TASK:-1} -> CPU core hrs: $cpuhrs"
+echo "CPU core hrs: $cpuhrs"
 
 if grep -q "RESTART_NEEDED" "output_0-0.txt"
 then
