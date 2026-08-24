@@ -56,12 +56,6 @@ def main() -> None:
                     except ValueError:
                         # a shell trace line or a different date format gives no start time
                         pass
-                    if "hours left: " in line:
-                        try:
-                            jobdict["hoursleft"] = float(line.split("hours left: ")[1].split()[0])
-                        except ValueError:
-                            # a line without a numeric value gives no clamp for the estimate
-                            pass
                 if "after srun sn3d" in line or "after exspec finished" in line:
                     jobdict["run_finished"] = True
                 if "error:" in line:
@@ -145,12 +139,8 @@ def main() -> None:
             and isinstance(time_error, datetime)
             and time_error > time_run_start
         ):
+            # slurm can add a grace period after the time limit, so the elapsed time has no upper clamp
             elapsed_hours = (time_error - time_run_start).total_seconds() / 3600.0
-            # the run cannot be longer than the allocation that was left at the start.
-            # this bounds the effect of a timezone difference between the two log times.
-            hoursleft = jobdict.get("hoursleft")
-            if isinstance(hoursleft, float):
-                elapsed_hours = min(elapsed_hours, hoursleft)
             job_core_hours = elapsed_hours * job_ncores
             estimate = True
 
