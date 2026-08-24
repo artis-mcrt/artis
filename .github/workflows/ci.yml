@@ -283,7 +283,7 @@ jobs:
     openmp_smoke:
         runs-on: ubuntu-26.04-arm
         timeout-minutes: ${{ inputs.testmode == 'ON' && 360 || 40 }}
-        name: kilonova_1d_openmp_norun_checksums
+        name: kilonova_1d_openmp_nochecksums
         env:
             OMPI_MCA_memory: ${{ inputs.testmode == 'ON' && '^patcher' || '' }}
         steps:
@@ -337,7 +337,7 @@ jobs:
     stdpar_smoke:
         runs-on: ubuntu-26.04-arm
         timeout-minutes: ${{ inputs.testmode == 'ON' && 360 || 40 }}
-        name: kilonova_1d_stdpar_norun_checksums
+        name: kilonova_1d_stdpar_nochecksums
         env:
             OMPI_MCA_memory: ${{ inputs.testmode == 'ON' && '^patcher' || '' }}
         steps:
