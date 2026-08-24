@@ -26,7 +26,7 @@ sed -i'' -e 's/constexpr std::optional<GridType> GRID_TYPE_OVERRIDE.*/constexpr 
 
 sed -i'' -e 's/constexpr int NLTE_TE_NNE_MAXITER.*/constexpr int NLTE_TE_NNE_MAXITER = 2;/g' artisoptions.h
 
-perl -0777 -i -pe 's|constexpr int ION_NLEVELS_EXCITED_NLTE\(int element_z, int ionstage\) \{.*?\n\}|constexpr int ION_NLEVELS_EXCITED_NLTE(int element_z, int ionstage) {\n  if (element_z == 26 && ionstage == 2) {\n    return 100;\n  }\n  return 50;\n}\n|s' artisoptions.h
+perl -0777 -i -pe 'my $n = s|^constexpr int ION_NLEVELS_EXCITED_NLTE\(int element_z, int ionstage\) \{.*?^\}$|constexpr int ION_NLEVELS_EXCITED_NLTE(int element_z, int ionstage) {\n  if (element_z == 26 && ionstage == 2) {\n    return 100;\n  }\n  return 50;\n}|ms; die "[error] the pattern for ION_NLEVELS_EXCITED_NLTE did not match once\n" unless $n == 1;' artisoptions.h
 
 sed -i'' -e 's|constexpr int NLEVELS_REQUIRETRANSITIONS(int element_z, int ionstage) {.*}|constexpr int NLEVELS_REQUIRETRANSITIONS(int element_z, int ionstage) { return (element_z < 20) ? 20 : 40; }|g' artisoptions.h
 
