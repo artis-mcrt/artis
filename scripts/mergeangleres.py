@@ -12,7 +12,9 @@ def get_mabins() -> int:
     # one output file per direction bin (MABINS = NPHIBINS * NCOSTHETABINS), with the expected count
     # parsed from the exspec.h of the source folder that this script belongs to
     exspec_h = (Path(__file__).resolve().parent.parent / "exspec.h").read_text(encoding="utf-8")
-    bincounts = {name: int(value) for name, value in re.findall(r"constexpr int (NPHIBINS|NCOSTHETABINS) = (\d+);", exspec_h)}
+    bincounts = {
+        name: int(value) for name, value in re.findall(r"constexpr int (NPHIBINS|NCOSTHETABINS) = (\d+);", exspec_h)
+    }
     return bincounts["NPHIBINS"] * bincounts["NCOSTHETABINS"]
 
 

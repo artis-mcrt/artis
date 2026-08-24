@@ -20,6 +20,12 @@ cd $SLURM_SUBMIT_DIR
 
 echo "CPU type: $(c++ -march=native -Q --help=target | grep -- '-march=  ' | cut -f3)"
 
+source ./artis/scripts/corehours-before.sh
+echo "$(date): before exspec"
+
 source ./artis/scripts/run-exspec-if-needed.sh
 
 source ./artis/scripts/exspec-after.sh
+
+echo "$(date): after exspec finished"
+source ./artis/scripts/corehours-after.sh

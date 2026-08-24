@@ -20,14 +20,12 @@ cd $SLURM_SUBMIT_DIR
 echo "CPU type: $(c++ -march=native -Q --help=target | grep -- '-march=  ' | cut -f3)"
 
 hoursleft=$(python3 ./artis/scripts/slurmjobhoursleft.py ${SLURM_JOB_ID})
+source ./artis/scripts/corehours-before.sh
 echo "$(date): before srun sn3d. hours left: $hoursleft"
 time mpirun -- ./artis/sn3d -w $hoursleft -o ${SLURM_JOB_ID}.slurm > out.txt
 hoursleftafter=$(python3 ./artis/scripts/slurmjobhoursleft.py ${SLURM_JOB_ID})
 echo "$(date): after srun sn3d finished. hours left: $hoursleftafter"
-hourselapsed=$(python3 -c "print($hoursleft - $hoursleftafter)")
-echo "hours of runtime: $hourselapsed"
-cpuhrs=$(python3 -c "print($SLURM_NTASKS * $hourselapsed)")
-echo "ntasks: $SLURM_NTASKS -> CPU core hrs: $cpuhrs"
+source ./artis/scripts/corehours-after.sh
 
 if grep -q "RESTART_NEEDED" "output_0-0.txt"
 then

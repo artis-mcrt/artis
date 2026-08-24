@@ -1,0 +1,2 @@
+# the C++ code uses 120 columns (.clang-format), so the Python scripts use the same limit
+line-length = 120

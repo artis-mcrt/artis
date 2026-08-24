@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 
 import datetime
-import sys
 import subprocess
+import sys
 
 
 def main() -> None:
@@ -16,7 +16,8 @@ def main() -> None:
     strendtime = cmdendtime.stdout.strip()
 
     endtime = datetime.datetime.fromisoformat(strendtime)
-    total_sec = (endtime - datetime.datetime.now()).total_seconds()
+    # squeue prints a local time without a timezone, so the current time must also be naive
+    total_sec = (endtime - datetime.datetime.now()).total_seconds()  # noqa: DTZ005
     print(total_sec / 3600)
 
 
