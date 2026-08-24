@@ -4,6 +4,7 @@ import sys
 from pathlib import Path
 
 import artistools as at
+from artistools.packets.packets import type_ids as packet_type_ids
 
 
 def get_type_escapetype(line: str, type_id_index: int, escape_type_id_index: int) -> tuple[str, str]:
@@ -21,8 +22,8 @@ def main() -> None:
     parser.add_argument("--rm", action="store_true", help="Remove original files after processing")
     parser.add_argument("-f", action="store_true", help="Confirm performing the filtering")
     args = parser.parse_args()
-    TYPE_ESCAPE = str(at.packets.type_ids["TYPE_ESCAPE"])
-    TYPE_RPKT = str(at.packets.type_ids["TYPE_RPKT"])
+    TYPE_ESCAPE = str(packet_type_ids["TYPE_ESCAPE"])
+    TYPE_RPKT = str(packet_type_ids["TYPE_RPKT"])
     glob_pattern = "**/packets/packets00_*.out*"
     matching_files = sorted(Path().glob(glob_pattern), key=lambda p: p.stat().st_mtime)
     if not matching_files:
@@ -77,8 +78,8 @@ def main() -> None:
                     commentrows += 1
                     continue
 
-                if type_id == str(at.packets.type_ids["TYPE_ESCAPE"]) and escape_type_id == str(
-                    at.packets.type_ids["TYPE_RPKT"]
+                if type_id == str(packet_type_ids["TYPE_ESCAPE"]) and escape_type_id == str(
+                    packet_type_ids["TYPE_RPKT"]
                 ):
                     foutrpkt.write(line)
                     kept_packets += 1
