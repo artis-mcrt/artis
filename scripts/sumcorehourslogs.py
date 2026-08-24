@@ -26,12 +26,20 @@ def get_job_procs_threads(loglines: list[str]) -> tuple[int, int] | None:
     return None if nprocs is None else (nprocs, nthreads)
 
 
+def parse_log_time(line: str) -> datetime | None:
+    """Get the timestamp of a log line, or None for a line without one."""
+    try:
+        return datetime.strptime(line.split(maxsplit=1)[0], "%Y-%m-%dT%H:%M:%S%z")
+    except (ValueError, IndexError):
+        return None
+
+
 def get_log_elapsed_hours(loglines: list[str]) -> float | None:
     """Get the elapsed hours between the first and the last timestamp of an sn3d log."""
-    try:
-        time_start = datetime.strptime(loglines[0].split(maxsplit=1)[0], "%Y-%m-%dT%H:%M:%S%z")
-        time_end = datetime.strptime(loglines[-1].split(maxsplit=1)[0], "%Y-%m-%dT%H:%M:%S%z")
-    except (ValueError, IndexError):
+    # an assertion diagnostic has no timestamp, so search for the nearest line with one
+    time_start = next((t for line in loglines if (t := parse_log_time(line)) is not None), None)
+    time_end = next((t for line in reversed(loglines) if (t := parse_log_time(line)) is not None), None)
+    if time_start is None or time_end is None:
         return None
     return (time_end - time_start).total_seconds() / 3600.0
 
@@ -126,6 +134,7 @@ def main() -> None:
         if verbose:
             print(f"{str(logfile) + ':':{col1width}s} ", end="")
         if not loglines:
+            wallclock_complete = False
             if verbose:
                 print("  WARNING: the log is empty or unreadable.")
                 print()
@@ -166,6 +175,7 @@ def main() -> None:
                 nprocs, nthreads = procs_threads
                 job_core_hours = elapsed_hours * nprocs * nthreads
                 total_wallclock_hours += elapsed_hours
+                ntasks_seen.add(nprocs * nthreads)
                 estimate = True
                 if log_ts_range is not None:
                     estimate_line = (
@@ -185,6 +195,9 @@ def main() -> None:
             total_core_hours += job_core_hours
             jobrow["core_hours"] = job_core_hours
             jobrow["estimate"] = estimate
+        else:
+            # a job without a time value makes the wallclock sum incomplete
+            wallclock_complete = False
 
         if verbose:
             if job_core_hours is not None:

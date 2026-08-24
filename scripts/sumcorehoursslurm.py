@@ -162,6 +162,9 @@ def main() -> None:
                     total_wallclock_hours += job_core_hours / job_ncores
                 else:
                     wallclock_complete = False
+        elif sn3d_started:
+            # a started sn3d job without a time value makes the wallclock sum incomplete
+            wallclock_complete = False
         jobrows.append(
             {
                 "slurmoutfile": str(jobdict["slurmoutfile"]),
