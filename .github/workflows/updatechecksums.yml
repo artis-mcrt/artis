@@ -27,6 +27,8 @@ jobs:
                   # environment variable that the gh CLI reads in the steps below. Those deliberately keep the
                   # job's own github.token, which is all the read-only API calls there need.
                   token: ${{ secrets.GH_TOKEN }}
+                  # The find step reads the full history for the ancestor checks.
+                  fetch-depth: 0
 
             - name: Find latest CI checksums artifact for this branch
               id: findartifact
@@ -35,37 +37,126 @@ jobs:
                   BRANCH: ${{ github.ref_name }}
                   HEAD_SHA: ${{ github.sha }}
               run: |
-                  artifact=$(gh api "repos/${GITHUB_REPOSITORY}/actions/artifacts?name=checksums&per_page=100" \
-                      --jq '[.artifacts[] | select(.workflow_run.head_branch == env.BRANCH and .workflow_run.head_sha == env.HEAD_SHA and .expired == false)] | sort_by(.created_at) | last')
-                  if [ -z "$artifact" ] || [ "$artifact" = "null" ]; then
-                      echo "No unexpired 'checksums' artifact found for commit ${HEAD_SHA} on branch ${BRANCH}."
-                      echo "Has the CI workflow finished for the latest commit on this branch? Otherwise this workflow could pick up a stale artifact from an earlier commit and wrongly report that the checksums are unchanged."
+                  # The artifact does not have to come from the branch head. The maintainer
+                  # confirms that the later commits do not change the results.
+                  # The API filters on the artifact name only. jq then filters the branch.
+                  # The step keeps every artifact of a commit, because a failed re-run can
+                  # add an incomplete artifact next to a valid one. The next step checks the
+                  # candidates in order and takes the first valid artifact.
+                  gh api --paginate "repos/${GITHUB_REPOSITORY}/actions/artifacts?name=checksums&per_page=100" --jq '.artifacts[]' \
+                      | jq -r -s '[.[] | select(.workflow_run.head_branch == env.BRANCH and .expired == false)]
+                          | .[] | [.id, .workflow_run.id, .workflow_run.head_sha, .created_at] | @tsv' > allartifacts.tsv
+                  if [ ! -s allartifacts.tsv ]; then
+                      echo "::error::The workflow found no 'checksums' artifact for the branch ${BRANCH}. Run the CI workflow on this branch first."
                       exit 1
                   fi
-                  echo "$artifact" | jq .
-                  echo "run_id=$(echo "$artifact" | jq -r '.workflow_run.id')" >> $GITHUB_OUTPUT
-                  echo "head_sha=$(echo "$artifact" | jq -r '.workflow_run.head_sha')" >> $GITHUB_OUTPUT
+                  : > candidates.tsv
+                  while IFS=$'\t' read -r artifact_id run_id sha created; do
+                      # A commit that a force-push removed is not in the local history.
+                      if ! git merge-base --is-ancestor "$sha" "$HEAD_SHA" 2>/dev/null; then
+                          echo "The workflow skips the artifact of run ${run_id}. Commit ${sha} is not in the history of ${HEAD_SHA}."
+                          continue
+                      fi
+                      ahead=$(git rev-list --count "${sha}..${HEAD_SHA}")
+                      printf '%s\t%s\t%s\t%s\t%s\n' "$ahead" "$created" "$artifact_id" "$run_id" "$sha" >> candidates.tsv
+                  done < allartifacts.tsv
+                  rm allartifacts.tsv
+                  if [ ! -s candidates.tsv ]; then
+                      echo "::error::The workflow found no 'checksums' artifact for a commit in the history of ${HEAD_SHA}. Run the CI workflow on this branch first."
+                      exit 1
+                  fi
+                  # Order: the nearest commit first, and the newest artifact first for one commit.
+                  sort -t "$(printf '\t')" -k1,1n -k2,2r candidates.tsv -o candidates.tsv
+                  echo "Candidates in order (ahead, created, artifact id, run id, commit):"
+                  cat candidates.tsv
 
-            - name: Download and extract checksums artifact
+            - name: Download and check the checksums artifact
+              id: getartifact
               env:
                   GH_TOKEN: ${{ github.token }}
+                  HEAD_SHA: ${{ github.sha }}
               run: |
-                  gh run download ${{ steps.findartifact.outputs.run_id }} --name checksums --dir checksums_artifact
+                  # An artifact of an old commit can disagree with the current set of tests.
+                  # An artifact of a run with failed jobs can hold stale or partial checksum files,
+                  # because the checkout and the upload steps of CI run also after an error.
+                  # The checks below refuse such an artifact and go on to the next candidate.
+                  # The CI checksum steps write a .complete marker only after successful run
+                  # steps and a successful md5sum, and the markers are not in git.
+                  selected_sha=""
+                  # Read from descriptor 3, so a command in the loop cannot eat the list.
+                  while IFS=$'\t' read -r -u 3 ahead created artifact_id run_id sha; do
+                      echo "The workflow checks the artifact of run ${run_id} for commit ${sha} (${ahead} commits before the branch head)."
+                      rm -rf checksums_artifact checksums.zip
+                      gh api "repos/${GITHUB_REPOSITORY}/actions/artifacts/${artifact_id}/zip" > checksums.zip
+                      mkdir checksums_artifact
+                      unzip -q checksums.zip -d checksums_artifact
+                      rm checksums.zip
+                      valid=1
+                      for dir in checksums_artifact/*_inputfiles; do
+                          name=$(basename "$dir")
+                          if [ ! -d "tests/${name}" ]; then
+                              echo "The artifact contains ${name}, but tests/${name} does not exist. The artifact does not match the current set of tests."
+                              valid=0
+                          fi
+                      done
+                      for dir in tests/*_inputfiles; do
+                          name=$(basename "$dir")
+                          for f in results_md5_job0.txt results_md5_final.txt; do
+                              if [ ! -s "checksums_artifact/${name}/${f}" ]; then
+                                  echo "The artifact has no ${f} for ${name}."
+                                  valid=0
+                              elif [ ! -f "checksums_artifact/${name}/${f}.complete" ]; then
+                                  echo "The artifact has no ${f}.complete marker for ${name}. The CI steps for this test did not succeed, so ${f} can be stale or partial."
+                                  valid=0
+                              fi
+                          done
+                      done
+                      if [ "$valid" -eq 1 ]; then
+                          selected_sha="$sha"
+                          selected_run_id="$run_id"
+                          selected_artifact_id="$artifact_id"
+                          selected_ahead="$ahead"
+                          break
+                      fi
+                      echo "The workflow rejects this artifact and checks the next candidate."
+                  done 3< candidates.tsv
+                  rm candidates.tsv
+                  if [ -z "$selected_sha" ]; then
+                      echo "::error::The workflow found no artifact that passes the checks. Run the CI workflow on this branch and let the test jobs complete."
+                      exit 1
+                  fi
+                  gh api "repos/${GITHUB_REPOSITORY}/actions/artifacts/${selected_artifact_id}" | jq .
+                  if [ "$selected_ahead" -gt 0 ]; then
+                      echo "::warning::The checksums come from commit ${selected_sha}. That commit is ${selected_ahead} commits before the branch head ${HEAD_SHA}. This is only correct if the later commits do not change the results."
+                  fi
+                  echo "The workflow selected the artifact of run ${selected_run_id} for commit ${selected_sha}."
                   for dir in checksums_artifact/*_inputfiles; do
                       cp -v "$dir"/results_md5*.txt "tests/$(basename "$dir")/"
                   done
                   rm -rf checksums_artifact
+                  echo "run_id=${selected_run_id}" >> $GITHUB_OUTPUT
+                  echo "source_sha=${selected_sha}" >> $GITHUB_OUTPUT
+                  echo "ahead=${selected_ahead}" >> $GITHUB_OUTPUT
 
             - name: Commit and push updated checksums
+              env:
+                  SOURCE_SHA: ${{ steps.getartifact.outputs.source_sha }}
+                  RUN_ID: ${{ steps.getartifact.outputs.run_id }}
+                  AHEAD: ${{ steps.getartifact.outputs.ahead }}
+                  HEAD_SHA: ${{ github.sha }}
               run: |
                   git add tests/*_inputfiles/results_md5*.txt
                   if git diff --cached --quiet; then
-                      echo "Expected checksums already match the latest CI results. Nothing to commit."
+                      echo "The expected checksums already match the artifact of commit ${SOURCE_SHA}. There is nothing to commit."
                       exit 0
                   fi
                   git diff --cached --stat
                   git config user.name "github-actions[bot]"
                   git config user.email "41898024+github-actions[bot]@users.noreply.github.com"
-                  git commit -m "Update expected checksums from CI run of ${{ steps.findartifact.outputs.head_sha }}" \
-                      -m "Source: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ steps.findartifact.outputs.run_id }}"
+                  commitargs=(-m "Update expected checksums from CI run of ${SOURCE_SHA}")
+                  commitargs+=(-m "Source: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${RUN_ID}")
+                  if [ "$AHEAD" -gt 0 ]; then
+                      commitargs+=(-m "The source commit is ${AHEAD} commits before the branch head ${HEAD_SHA}.")
+                  fi
+                  git commit "${commitargs[@]}"
                   git push origin HEAD:${{ github.ref_name }}
