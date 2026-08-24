@@ -30,7 +30,7 @@ def main() -> None:
             for line in fslurmlog:
                 if "before srun sn3d" in line or "before exspec" in line:
                     # example: "Sat Aug 15 21:28:07 CEST 2026: before srun sn3d. hours left: 47.97"
-                    # drop the timezone name, because the error time below is also a local time
+                    # drop the timezone name. The error time below is also a local time.
                     if "before srun sn3d" in line:
                         jobdict["sn3d_started"] = True
                         datepart = line.split(": before srun sn3d")[0]
@@ -38,33 +38,49 @@ def main() -> None:
                         jobdict["exspec_started"] = True
                         datepart = line.split(": before exspec")[0]
                     tokens = datepart.split()
-                    jobdict["time_run_start"] = datetime.strptime(
-                        " ".join(tokens[:4] + tokens[5:]), "%a %b %d %H:%M:%S %Y"
-                    )
+                    try:
+                        jobdict["time_run_start"] = datetime.strptime(
+                            " ".join(tokens[:4] + tokens[5:]), "%a %b %d %H:%M:%S %Y"
+                        )
+                    except ValueError:
+                        # a shell trace line or a different date format gives no start time
+                        pass
                 if "after srun sn3d" in line or "after exspec finished" in line:
                     jobdict["run_finished"] = True
-                if line.startswith("[") and "error:" in line:
-                    # example: "[2026-08-17T21:26:39.005] error: *** JOB 12401250 ... CANCELLED ..."
-                    jobdict["time_error"] = datetime.fromisoformat(line[1:].split("]", maxsplit=1)[0])
+                if "error:" in line:
+                    # example: "[2026-08-17T21:26:39.005] error: *** JOB 12401250 ... CANCELLED AT 2026-08-17T21:26:39 ..."
+                    # the bracketed timestamp is absent on some clusters, so also read the CANCELLED AT time
+                    timestr = None
+                    if line.startswith("["):
+                        timestr = line[1:].split("]", maxsplit=1)[0]
+                    elif " CANCELLED AT " in line:
+                        timestr = line.split(" CANCELLED AT ")[1].split()[0]
+                    if timestr is not None:
+                        try:
+                            jobdict["time_error"] = datetime.fromisoformat(timestr)
+                        except ValueError:
+                            # a bracketed line from another tool has no timestamp
+                            pass
                 if line.startswith(("ntasks:", "cpus-per-task:", "nodes:", "wallclock hrs:", "CPU core hrs:")):
-                    var_vals.update(var_val.strip().split(": ", maxsplit=1) for var_val in line.split(" -> "))
+                    for var_val in line.split(" -> "):
+                        var, _, val = var_val.strip().partition(": ")
+                        if val:
+                            var_vals[var] = val
             jobdict.update(var_vals)
 
     col1width = max((len(str(jobdict["slurmoutfile"])) for jobdict in jobs), default=6)
 
     # the shared core count of the sn3d jobs, as the fallback for a crashed job of an old job script
-    ncores: int | None = None
-    nnodes: int | None = None
+    ncores_seen: set[int] = set()
+    nnodes_seen: set[int] = set()
     for jobdict in jobs:
         if "ntasks" in jobdict and jobdict.get("sn3d_started", False):
-            job_ncores = int(str(jobdict["ntasks"])) * int(str(jobdict.get("cpus-per-task", "1")))
-            # make sure number of CPUs is the same for all sn3d jobs
-            assert ncores is None or ncores == job_ncores
-            ncores = job_ncores
+            ncores_seen.add(int(str(jobdict["ntasks"])) * int(str(jobdict.get("cpus-per-task", "1"))))
             if "nodes" in jobdict:
-                job_nnodes = int(str(jobdict["nodes"]))
-                assert nnodes is None or nnodes == job_nnodes
-                nnodes = job_nnodes
+                nnodes_seen.add(int(str(jobdict["nodes"])))
+    # with a mix of core counts, the summary has no single task count and omits the wallclock time
+    ncores = next(iter(ncores_seen)) if len(ncores_seen) == 1 else None
+    nnodes = next(iter(nnodes_seen)) if len(nnodes_seen) == 1 else None
 
     verbose = not args.json
     jobrows: list[dict[str, str | float | bool | None]] = []
@@ -86,13 +102,18 @@ def main() -> None:
         job_core_hours: float | None = None
         estimate = False
         if "CPU core hrs" in jobdict:
-            job_core_hours = float(str(jobdict["CPU core hrs"]))
-        elif (
-            (sn3d_started or exspec_started)
+            try:
+                job_core_hours = float(str(jobdict["CPU core hrs"]))
+            except ValueError:
+                job_core_hours = None
+        if (
+            job_core_hours is None
+            and (sn3d_started or exspec_started)
             and not run_finished
             and job_ncores is not None
             and isinstance(time_run_start, datetime)
             and isinstance(time_error, datetime)
+            and time_error > time_run_start
         ):
             job_core_hours = (time_error - time_run_start).total_seconds() / 3600.0 * job_ncores
             estimate = True
@@ -112,18 +133,17 @@ def main() -> None:
         )
 
         if verbose:
+            progname = "exspec" if jobtype == "exspec" else "sn3d"
             print(f"{str(jobdict['slurmoutfile']):{col1width}s}  ", end="")
             if job_core_hours is not None:
                 note = "  (exspec)" if jobtype == "exspec" else ""
                 if estimate:
-                    progname = "exspec" if jobtype == "exspec" else "sn3d"
                     note += f"  (WARNING: {progname} did not finish. Estimated from the error time.)"
                 print(f"{job_core_hours:7.1f} core-h{note}")
             elif sn3d_started or exspec_started:
-                progname = "exspec" if jobtype == "exspec" else "sn3d"
-                print(f"{'?.?':>7s} core-h  (Unknown because {progname} started but didn't finish. Check output log.)")
+                print(f"{'?.?':>7s} core-h  (Unknown because {progname} started but did not finish. Check the log.)")
             else:
-                print(f"{'?.?':>7s} core-h  (Unknown because sn3d didn't start. exspec job?)")
+                print(f"{'?.?':>7s} core-h  (Unknown because sn3d did not start. exspec job?)")
 
     total_core_hours = total_sn3d_core_hours + total_exspec_core_hours
     wallclock_hours = total_sn3d_core_hours / ncores if ncores is not None else None
@@ -150,6 +170,8 @@ def main() -> None:
     print()
     print(f"{'Total:':{col1width}s}  {total_core_hours:7.1f} core-h")
     print()
+    if len(ncores_seen) > 1:
+        print("WARNING: the sn3d jobs use different core counts. The summary omits the wallclock time.")
     if ncores is not None and wallclock_hours is not None:
         print(f"{'Tasks:':15s} {ncores:8d}")
         if nnodes is not None:

@@ -23,10 +23,7 @@ cd ..
 echo "CPU type: $(c++ -march=native -Q --help=target | grep -- '-march=  ' | cut -f3)"
 
 
-echo "ntasks: ${SLURM_NTASKS:-1}"
-echo "cpus-per-task: ${SLURM_CPUS_PER_TASK:-1}"
-echo "nodes: ${SLURM_JOB_NUM_NODES:-1}"
-starttime=$(date +%s)
+source ./artis/scripts/corehours-before.sh
 echo "$(date): before exspec"
 
 source ./artis/scripts/run-exspec-if-needed.sh
@@ -34,7 +31,4 @@ source ./artis/scripts/run-exspec-if-needed.sh
 source ./artis/scripts/exspec-after.sh
 
 echo "$(date): after exspec finished"
-hourselapsed=$(awk "BEGIN{print ($(date +%s) - $starttime) / 3600}")
-echo "wallclock hrs: $hourselapsed"
-cpuhrs=$(awk "BEGIN{print ${SLURM_NTASKS:-1} * ${SLURM_CPUS_PER_TASK:-1} * $hourselapsed}")
-echo "CPU core hrs: $cpuhrs"
+source ./artis/scripts/corehours-after.sh

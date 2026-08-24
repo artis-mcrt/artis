@@ -31,7 +31,7 @@ def get_log_elapsed_hours(loglines: list[str]) -> float | None:
     try:
         time_start = datetime.strptime(loglines[0].split(maxsplit=1)[0], "%Y-%m-%dT%H:%M:%SZ")
         time_end = datetime.strptime(loglines[-1].split(maxsplit=1)[0], "%Y-%m-%dT%H:%M:%SZ")
-    except ValueError:
+    except (ValueError, IndexError):
         return None
     return (time_end - time_start).total_seconds() / 3600.0
 
@@ -62,10 +62,13 @@ def get_log_timestep_range(loglines: list[str]) -> tuple[int, int] | None:
 
 
 def read_loglines(logfile: Path) -> list[str]:
-    """Read the lines of a log file. A file with the suffix .zst is decompressed first."""
+    """Read the lines of a log file. Decompress a file with the suffix .zst first."""
     if logfile.suffix == ".zst":
         if zstandard is None:
-            proc = subprocess.run(["zstd", "-dc", str(logfile)], check=True, capture_output=True, text=True)
+            try:
+                proc = subprocess.run(["zstd", "-dc", str(logfile)], check=True, capture_output=True, text=True)
+            except (FileNotFoundError, subprocess.CalledProcessError):
+                return []
             return proc.stdout.splitlines()
         with zstandard.open(logfile, "rt", encoding="utf-8") as flog:
             return flog.readlines()
@@ -84,8 +87,8 @@ def main() -> None:
     sn3dlogfiles = sorted(
         logfile
         for runfolder in args.runfolders
-        for pattern in ("**/output_0-0.txt", "**/output_0-0.txt.zst")
-        for logfile in runfolder.glob(pattern)
+        for logfile in runfolder.glob("**/output_0-0.txt*")
+        if logfile.name in {"output_0-0.txt", "output_0-0.txt.zst"}
     )
     col1width = max((len(str(logfile)) for logfile in sn3dlogfiles), default=0) + 1
     verbose = not args.json
@@ -93,12 +96,11 @@ def main() -> None:
     jobrows: list[dict[str, str | float | int | bool | None]] = []
     last_line = ""
     total_core_hours = 0.0
-    ntasks: int | None = None
+    ntasks_seen: set[int] = set()
     timestep_ranges: list[tuple[int, int]] = []
     for logfile in sn3dlogfiles:
         prev_last_line = last_line
         loglines = read_loglines(logfile)
-        last_line = loglines[-1].strip()
         jobrow: dict[str, str | float | int | bool | None] = {
             "logfile": str(logfile),
             "core_hours": None,
@@ -108,7 +110,13 @@ def main() -> None:
         jobrows.append(jobrow)
         if verbose:
             print(f"{str(logfile) + ':':{col1width}s} ", end="")
-        if prev_last_line == last_line:
+        if not loglines:
+            if verbose:
+                print("  WARNING: the log is empty or unreadable.")
+                print()
+            continue
+        last_line = loglines[-1].strip()
+        if last_line != "" and prev_last_line == last_line:
             jobrow["duplicate"] = True
             if verbose:
                 print("\n  ignored duplicate log")
@@ -125,9 +133,7 @@ def main() -> None:
                 job_ntasks = int(last_line.split(" processes")[0].split()[-1]) * int(
                     last_line.split(" threads")[0].split()[-1]
                 )
-                # make sure number of CPUs is the same for all jobs
-                assert ntasks is None or ntasks == job_ntasks
-                ntasks = job_ntasks
+                ntasks_seen.add(job_ntasks)
         log_ts_range: tuple[int, int] | None = None
         estimate_line: str | None = None
         if job_core_hours is None:
@@ -163,7 +169,7 @@ def main() -> None:
                 if estimate and estimate_line is None:
                     print("  WARNING: sn3d did not finish cleanly. The value is an estimate from the log timestamps.")
             else:
-                print("  WARNING: sn3d didn't finish cleanly. Manually check log to get CPU time consumed.")
+                print("  WARNING: sn3d did not finish cleanly. Check the log to get the CPU time.")
             print(f"  {loglines[0].strip()}")
             print(f"  {last_line}")
             if estimate_line is not None:
@@ -171,6 +177,8 @@ def main() -> None:
             print()
 
     timestep_ranges.sort()
+    # with a mix of task counts, the summary has no single task count and omits the wallclock time
+    ntasks = next(iter(ntasks_seen)) if len(ntasks_seen) == 1 else None
     wallclock_hours = total_core_hours / ntasks if ntasks is not None else None
 
     if args.json:
@@ -188,6 +196,8 @@ def main() -> None:
         )
         return
 
+    if len(ntasks_seen) > 1:
+        print("WARNING: the jobs use different task counts. The summary omits the wallclock time.")
     if ntasks is not None and wallclock_hours is not None:
         print(f"{'Tasks:':15s} {ntasks:8d}")
         print(f"{'Wallclock time:':15s} {wallclock_hours:12.3f}  hours")
