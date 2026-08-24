@@ -96,6 +96,8 @@ def main() -> None:
     jobrows: list[dict[str, str | float | int | bool | None]] = []
     last_line = ""
     total_core_hours = 0.0
+    total_wallclock_hours = 0.0
+    wallclock_complete = True
     ntasks_seen: set[int] = set()
     timestep_ranges: list[tuple[int, int]] = []
     for logfile in sn3dlogfiles:
@@ -127,8 +129,15 @@ def main() -> None:
         estimate = False
         if "CPU hours" in last_line:
             job_core_hours = float(last_line.split("CPU hours")[0].split()[-1])
+            # the old log format has no wallclock hours
+            wallclock_complete = False
         elif "core hours" in last_line:
             job_core_hours = float(last_line.split("core hours")[0].split()[-1])
+            if " wallclock hours" in last_line:
+                # the per-job wallclock time also works with a mix of task counts
+                total_wallclock_hours += float(last_line.split(" wallclock hours")[0].split()[-1])
+            else:
+                wallclock_complete = False
             if " processes " in last_line and " threads " in last_line:
                 job_ntasks = int(last_line.split(" processes")[0].split()[-1]) * int(
                     last_line.split(" threads")[0].split()[-1]
@@ -143,6 +152,7 @@ def main() -> None:
             if procs_threads is not None and elapsed_hours is not None:
                 nprocs, nthreads = procs_threads
                 job_core_hours = elapsed_hours * nprocs * nthreads
+                total_wallclock_hours += elapsed_hours
                 estimate = True
                 if log_ts_range is not None:
                     estimate_line = (
@@ -177,9 +187,9 @@ def main() -> None:
             print()
 
     timestep_ranges.sort()
-    # with a mix of task counts, the summary has no single task count and omits the wallclock time
+    # with a mix of task counts, the summary has no single task count
     ntasks = next(iter(ntasks_seen)) if len(ntasks_seen) == 1 else None
-    wallclock_hours = total_core_hours / ntasks if ntasks is not None else None
+    wallclock_hours = total_wallclock_hours if wallclock_complete and total_core_hours > 0.0 else None
 
     if args.json:
         print(
@@ -197,9 +207,10 @@ def main() -> None:
         return
 
     if len(ntasks_seen) > 1:
-        print("WARNING: the jobs use different task counts. The summary omits the wallclock time.")
-    if ntasks is not None and wallclock_hours is not None:
+        print("WARNING: the jobs use different task counts. The summary omits the task count.")
+    if ntasks is not None:
         print(f"{'Tasks:':15s} {ntasks:8d}")
+    if wallclock_hours is not None:
         print(f"{'Wallclock time:':15s} {wallclock_hours:12.3f}  hours")
 
     print(f"{'CPU time:':15s} {total_core_hours:12.3f}  core-h")

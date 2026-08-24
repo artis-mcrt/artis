@@ -86,6 +86,8 @@ def main() -> None:
     jobrows: list[dict[str, str | float | bool | None]] = []
     total_sn3d_core_hours = 0.0
     total_exspec_core_hours = 0.0
+    total_wallclock_hours = 0.0
+    wallclock_complete = True
     for jobdict in jobs:
         sn3d_started = bool(jobdict.get("sn3d_started", False))
         exspec_started = bool(jobdict.get("exspec_started", False))
@@ -123,6 +125,11 @@ def main() -> None:
                 total_exspec_core_hours += job_core_hours
             else:
                 total_sn3d_core_hours += job_core_hours
+                # the per-job wallclock time also works with a mix of core counts
+                if job_ncores is not None:
+                    total_wallclock_hours += job_core_hours / job_ncores
+                else:
+                    wallclock_complete = False
         jobrows.append(
             {
                 "slurmoutfile": str(jobdict["slurmoutfile"]),
@@ -146,7 +153,7 @@ def main() -> None:
                 print(f"{'?.?':>7s} core-h  (Unknown because sn3d did not start. exspec job?)")
 
     total_core_hours = total_sn3d_core_hours + total_exspec_core_hours
-    wallclock_hours = total_sn3d_core_hours / ncores if ncores is not None else None
+    wallclock_hours = total_wallclock_hours if wallclock_complete and total_sn3d_core_hours > 0.0 else None
     node_hours = wallclock_hours * nnodes if wallclock_hours is not None and nnodes is not None else None
 
     if args.json:
@@ -171,11 +178,12 @@ def main() -> None:
     print(f"{'Total:':{col1width}s}  {total_core_hours:7.1f} core-h")
     print()
     if len(ncores_seen) > 1:
-        print("WARNING: the sn3d jobs use different core counts. The summary omits the wallclock time.")
-    if ncores is not None and wallclock_hours is not None:
+        print("WARNING: the sn3d jobs use different core counts. The summary omits the task count.")
+    if ncores is not None:
         print(f"{'Tasks:':15s} {ncores:8d}")
-        if nnodes is not None:
-            print(f"{'Nodes:':15s} {nnodes:8d}")
+    if nnodes is not None:
+        print(f"{'Nodes:':15s} {nnodes:8d}")
+    if wallclock_hours is not None:
         print(f"{'Wallclock time:':15s} {wallclock_hours:12.3f}  hours")
         if node_hours is not None:
             print(f"{'Node time:':15s} {node_hours:12.3f}  node-h")
