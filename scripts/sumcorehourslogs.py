@@ -139,15 +139,7 @@ def main() -> None:
             print(f"  {last_line}")
             print()
 
-    coverage_notes: list[str] = []
     timestep_ranges.sort()
-    if timestep_ranges:
-        covered_to = timestep_ranges[0][1]
-        for ts_first, ts_last in timestep_ranges[1:]:
-            if ts_first > covered_to + 1:
-                coverage_notes.append(f"WARNING: no finished job covers ts {covered_to + 1} to ts {ts_first - 1}.")
-            covered_to = max(covered_to, ts_last)
-
     wallclock_hours = total_core_hours / ntasks if ntasks is not None else None
 
     if args.json:
@@ -164,11 +156,6 @@ def main() -> None:
             )
         )
         return
-
-    if timestep_ranges:
-        print(f"{'Timesteps:':15s} {', '.join(f'{ts_first}-{ts_last}' for ts_first, ts_last in timestep_ranges)}")
-        for note in coverage_notes:
-            print(note)
 
     if ntasks is not None and wallclock_hours is not None:
         print(f"{'Tasks:':15s} {ntasks:8d}")
