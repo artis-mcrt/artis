@@ -140,7 +140,8 @@ def main() -> None:
                 estimate = True
                 if log_ts_range is not None:
                     estimate_line = (
-                        f"estimated (job: pktprop ts {log_ts_range[0]} to ts {log_ts_range[1]} grid-preprop, "
+                        f"WARNING: sn3d did not finish. Estimated: "
+                        f"(job: pktprop ts {log_ts_range[0]} to ts {log_ts_range[1]} grid-preprop, "
                         f"{elapsed_hours:.3f} wallclock hours * {nprocs} processes * {nthreads} threads "
                         f"= {job_core_hours:.3f} core hours)"
                     )
@@ -159,7 +160,7 @@ def main() -> None:
         if verbose:
             if job_core_hours is not None:
                 print(f"{job_core_hours:8.1f} core-h")
-                if estimate:
+                if estimate and estimate_line is None:
                     print("  WARNING: sn3d did not finish cleanly. The value is an estimate from the log timestamps.")
             else:
                 print("  WARNING: sn3d didn't finish cleanly. Manually check log to get CPU time consumed.")
