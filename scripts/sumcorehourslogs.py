@@ -158,7 +158,7 @@ def main() -> None:
             print(f"  {loglines[0].strip()}")
             print(f"  {last_line}")
             if log_ts_range is not None:
-                print(f"  propagated ts {log_ts_range[0]} to ts {log_ts_range[1]}")
+                print(f"  start of update packets ts {log_ts_range[0]} to end of update grid ts {log_ts_range[1]}")
             print()
 
     timestep_ranges.sort()
