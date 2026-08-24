@@ -135,6 +135,7 @@ def main() -> None:
                     if time_error.tzinfo is None:
                         time_error = time_error.replace(tzinfo=tzone)
                 except (ZoneInfoNotFoundError, ValueError):
+                    # an unknown timezone name keeps the times naive
                     pass
             if (time_run_start.tzinfo is None) != (time_error.tzinfo is None):
                 # a naive time and an aware time have no valid difference
