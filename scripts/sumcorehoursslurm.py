@@ -60,6 +60,7 @@ def main() -> None:
                         try:
                             jobdict["hoursleft"] = float(line.split("hours left: ")[1].split()[0])
                         except ValueError:
+                            # a line without a numeric value gives no clamp for the estimate
                             pass
                 if "after srun sn3d" in line or "after exspec finished" in line:
                     jobdict["run_finished"] = True
