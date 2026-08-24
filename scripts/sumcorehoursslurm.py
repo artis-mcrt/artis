@@ -48,7 +48,7 @@ def main() -> None:
 
     total_core_hours = 0.0
     for jobdict in jobs:
-        print(f"{str(jobdict['slurmoutfile']):{col1width}s} ", end="")
+        print(f"{str(jobdict['slurmoutfile']):{col1width}s}  ", end="")
         if "CPU core hrs" in jobdict:
             assert isinstance(jobdict["CPU core hrs"], str)
             job_core_hours = float(jobdict["CPU core hrs"])
@@ -77,7 +77,7 @@ def main() -> None:
                 print(f"{'?.?':>7s} core-h  (Unknown because sn3d didn't start. exspec job?)")
 
     print()
-    print(f"{'Total:':{col1width}s} {total_core_hours:7.1f} core-h")
+    print(f"{'Total:':{col1width}s}  {total_core_hours:7.1f} core-h")
     print()
     if ntasks is not None:
         print(f"{'Tasks:':15s} {int(ntasks):8d}")
