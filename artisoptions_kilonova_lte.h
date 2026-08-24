@@ -10,7 +10,7 @@
 
 #include "constants.h"
 
-constexpr int MPKTS = 1000000;
+constexpr int MPKTS = 15000;
 
 constexpr std::optional<GridType> GRID_TYPE_OVERRIDE;
 constexpr int CUBOID_NCOORDGRID_X = 50;
@@ -43,7 +43,7 @@ constexpr bool INITIAL_PACKETS_ON = true;
 
 constexpr int RATECOEFF_TABLESIZE = 200;
 constexpr double MINTEMP = 500.;
-constexpr double MAXTEMP = 100000.;
+constexpr double MAXTEMP = 150000.;
 
 constexpr double RECOMBCALIBRATION_T_ELEC = 6000.;
 
@@ -143,7 +143,7 @@ constexpr auto GAMMA_THERMALISATION_SCHEME = GammaThermalisationScheme::FREQUENC
 
 constexpr std::optional<double> GAMMA_USE_KAPPA_GREY;
 
-constexpr bool ENABLE_CHARGE_TRANSFER_REACTIONS = true;
+constexpr bool ENABLE_CHARGE_TRANSFER_REACTIONS = false;
 
 constexpr bool USE_MICROCLUMPING = false;
 
