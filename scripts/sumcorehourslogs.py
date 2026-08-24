@@ -29,8 +29,12 @@ def get_job_procs_threads(loglines: list[str]) -> tuple[int, int] | None:
 def get_log_elapsed_hours(loglines: list[str]) -> float | None:
     """Get the elapsed hours between the first and the last timestamp of an sn3d log."""
     try:
-        time_start = datetime.strptime(loglines[0].split(maxsplit=1)[0], "%Y-%m-%dT%H:%M:%S%z")
-        time_end = datetime.strptime(loglines[-1].split(maxsplit=1)[0], "%Y-%m-%dT%H:%M:%S%z")
+        time_start = datetime.strptime(
+            loglines[0].split(maxsplit=1)[0], "%Y-%m-%dT%H:%M:%S%z"
+        )
+        time_end = datetime.strptime(
+            loglines[-1].split(maxsplit=1)[0], "%Y-%m-%dT%H:%M:%S%z"
+        )
     except (ValueError, IndexError):
         return None
     return (time_end - time_start).total_seconds() / 3600.0
@@ -51,7 +55,11 @@ def get_log_timestep_range(loglines: list[str]) -> tuple[int, int] | None:
     ts_last: int | None = None
     for line in loglines:
         # example: "2026-08-20T21:31:02Z timestep 21: start update_packets"
-        if ts_first is None and ": start update_packets" in line and " timestep " in line:
+        if (
+            ts_first is None
+            and ": start update_packets" in line
+            and " timestep " in line
+        ):
             ts_first = int(line.split(" timestep ")[1].split(":")[0])
         # example: "2026-08-22T03:26:29Z timestep 63: time after update grid on all processes (...)"
         if ": time after update grid" in line and " timestep " in line:
@@ -66,7 +74,12 @@ def read_loglines(logfile: Path) -> list[str]:
     if logfile.suffix == ".zst":
         if zstandard is None:
             try:
-                proc = subprocess.run(["zstd", "-dc", str(logfile)], check=True, capture_output=True, text=True)
+                proc = subprocess.run(
+                    ["zstd", "-dc", str(logfile)],
+                    check=True,
+                    capture_output=True,
+                    text=True,
+                )
             except (FileNotFoundError, subprocess.CalledProcessError):
                 return []
             return proc.stdout.splitlines()
@@ -77,11 +90,21 @@ def read_loglines(logfile: Path) -> list[str]:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Sum the core hours of the sn3d logs in the given run folders.")
-    parser.add_argument(
-        "runfolders", nargs="*", type=Path, default=[Path()], help="run folders to scan (default: the current folder)"
+    parser = argparse.ArgumentParser(
+        description="Sum the core hours of the sn3d logs in the given run folders."
     )
-    parser.add_argument("--json", action="store_true", help="write the results as JSON instead of a table")
+    parser.add_argument(
+        "runfolders",
+        nargs="*",
+        type=Path,
+        default=[Path()],
+        help="run folders to scan (default: the current folder)",
+    )
+    parser.add_argument(
+        "--json",
+        action="store_true",
+        help="write the results as JSON instead of a table",
+    )
     args = parser.parse_args()
 
     sn3dlogfiles = sorted(
@@ -135,7 +158,9 @@ def main() -> None:
             job_core_hours = float(last_line.split("core hours")[0].split()[-1])
             if " wallclock hours" in last_line:
                 # the per-job wallclock time also works with a mix of task counts
-                total_wallclock_hours += float(last_line.split(" wallclock hours")[0].split()[-1])
+                total_wallclock_hours += float(
+                    last_line.split(" wallclock hours")[0].split()[-1]
+                )
             else:
                 wallclock_complete = False
             if " processes " in last_line and " threads " in last_line:
@@ -177,9 +202,13 @@ def main() -> None:
             if job_core_hours is not None:
                 print(f"{job_core_hours:8.1f} core-h")
                 if estimate and estimate_line is None:
-                    print("  WARNING: sn3d did not finish cleanly. The value is an estimate from the log timestamps.")
+                    print(
+                        "  WARNING: sn3d did not finish cleanly. The value is an estimate from the log timestamps."
+                    )
             else:
-                print("  WARNING: sn3d did not finish cleanly. Check the log to get the CPU time.")
+                print(
+                    "  WARNING: sn3d did not finish cleanly. Check the log to get the CPU time."
+                )
             print(f"  {loglines[0].strip()}")
             print(f"  {last_line}")
             if estimate_line is not None:
@@ -189,7 +218,9 @@ def main() -> None:
     timestep_ranges.sort()
     # with a mix of task counts, the summary has no single task count
     ntasks = next(iter(ntasks_seen)) if len(ntasks_seen) == 1 else None
-    wallclock_hours = total_wallclock_hours if wallclock_complete and total_core_hours > 0.0 else None
+    wallclock_hours = (
+        total_wallclock_hours if wallclock_complete and total_core_hours > 0.0 else None
+    )
 
     if args.json:
         print(
@@ -207,7 +238,9 @@ def main() -> None:
         return
 
     if len(ntasks_seen) > 1:
-        print("WARNING: the jobs use different task counts. The summary omits the task count.")
+        print(
+            "WARNING: the jobs use different task counts. The summary omits the task count."
+        )
     if ntasks is not None:
         print(f"{'Tasks:':15s} {ntasks:8d}")
     if wallclock_hours is not None:

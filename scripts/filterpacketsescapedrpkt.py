@@ -7,7 +7,9 @@ import artistools as at
 from artistools.packets.packets import type_ids as packet_type_ids
 
 
-def get_type_escapetype(line: str, type_id_index: int, escape_type_id_index: int) -> tuple[str, str]:
+def get_type_escapetype(
+    line: str, type_id_index: int, escape_type_id_index: int
+) -> tuple[str, str]:
     linesplit = line.split()
     type_id = linesplit[type_id_index]
     escape_type_id = linesplit[escape_type_id_index]
@@ -18,9 +20,15 @@ def main() -> None:
     assert sys.version_info >= (3, 14), "This script requires Python 3.14 or higher."
     import compression.zstd
 
-    parser = argparse.ArgumentParser(description="Filter packets files to keep only escaped rpkts")
-    parser.add_argument("--rm", action="store_true", help="Remove original files after processing")
-    parser.add_argument("-f", action="store_true", help="Confirm performing the filtering")
+    parser = argparse.ArgumentParser(
+        description="Filter packets files to keep only escaped rpkts"
+    )
+    parser.add_argument(
+        "--rm", action="store_true", help="Remove original files after processing"
+    )
+    parser.add_argument(
+        "-f", action="store_true", help="Confirm performing the filtering"
+    )
     args = parser.parse_args()
     TYPE_ESCAPE = str(packet_type_ids["TYPE_ESCAPE"])
     TYPE_RPKT = str(packet_type_ids["TYPE_RPKT"])
@@ -43,7 +51,8 @@ def main() -> None:
             type_id_index, escape_type_id_index = 2, 15
 
         if all(
-            get_type_escapetype(line, type_id_index, escape_type_id_index) == (TYPE_ESCAPE, TYPE_RPKT)
+            get_type_escapetype(line, type_id_index, escape_type_id_index)
+            == (TYPE_ESCAPE, TYPE_RPKT)
             for line in linesin
             if not line.startswith("#")
         ):
@@ -52,12 +61,18 @@ def main() -> None:
 
         print("  contains gamma or non-escaped packets, should filter this file.")
         if not args.f:
-            print("  (not filtering. Use -f to confirm filtering and --rm to remove original files)")
+            print(
+                "  (not filtering. Use -f to confirm filtering and --rm to remove original files)"
+            )
             continue
 
         fileout_rpkt = Path(
             *filein.parts[:-1],
-            filein.parts[-1].removesuffix(".zst").removesuffix(".gz").removesuffix(".xz") + ".zst",
+            filein.parts[-1]
+            .removesuffix(".zst")
+            .removesuffix(".gz")
+            .removesuffix(".xz")
+            + ".zst",
         )
         fileout_rpkt_temp = Path(
             *fileout_rpkt.parts[:-1],
@@ -69,7 +84,9 @@ def main() -> None:
 
         with compression.zstd.open(fileout_rpkt_temp, "wt", level=12) as foutrpkt:
             for line in linesin:
-                type_id, escape_type_id = get_type_escapetype(line, type_id_index, escape_type_id_index)
+                type_id, escape_type_id = get_type_escapetype(
+                    line, type_id_index, escape_type_id_index
+                )
                 if line.startswith("#"):
                     assert type_id == "type_id"
                     assert escape_type_id == "escape_type_id"
@@ -78,9 +95,9 @@ def main() -> None:
                     commentrows += 1
                     continue
 
-                if type_id == str(packet_type_ids["TYPE_ESCAPE"]) and escape_type_id == str(
-                    packet_type_ids["TYPE_RPKT"]
-                ):
+                if type_id == str(
+                    packet_type_ids["TYPE_ESCAPE"]
+                ) and escape_type_id == str(packet_type_ids["TYPE_RPKT"]):
                     foutrpkt.write(line)
                     kept_packets += 1
         size_factor = fileout_rpkt_temp.stat().st_size / filein.stat().st_size
