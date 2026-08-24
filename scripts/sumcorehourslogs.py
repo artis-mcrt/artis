@@ -105,11 +105,12 @@ def main() -> None:
     )
     args = parser.parse_args()
 
+    # exists() is False for a symlink to a removed log, so this filter skips a stale symlink
     sn3dlogfiles = sorted(
         logfile
         for runfolder in args.runfolders
         for logfile in runfolder.glob("**/output_0-0.txt*")
-        if logfile.name in {"output_0-0.txt", "output_0-0.txt.zst"}
+        if logfile.name in {"output_0-0.txt", "output_0-0.txt.zst"} and logfile.exists()
     )
     col1width = max((len(str(logfile)) for logfile in sn3dlogfiles), default=0) + 1
     verbose = not args.json

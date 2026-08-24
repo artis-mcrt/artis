@@ -2,8 +2,9 @@
 
 import argparse
 import json
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 
 def main() -> None:
@@ -68,8 +69,7 @@ def main() -> None:
                         timestr = line.split(" CANCELLED AT ")[1].split()[0]
                     if timestr is not None:
                         try:
-                            # the run-start time is a naive local time, so drop a possible offset
-                            jobdict["time_error"] = datetime.fromisoformat(timestr).replace(tzinfo=None)
+                            jobdict["time_error"] = datetime.fromisoformat(timestr)
                         except ValueError:
                             # a bracketed line from another tool has no timestamp
                             pass
@@ -78,6 +78,7 @@ def main() -> None:
                         "ntasks:",
                         "cpus-per-task:",
                         "nodes:",
+                        "timezone:",
                         "wallclock hrs:",
                         "CPU core hrs:",
                     )
@@ -122,6 +123,26 @@ def main() -> None:
         run_finished = bool(jobdict.get("run_finished", False))
         time_run_start = jobdict.get("time_run_start")
         time_error = jobdict.get("time_error")
+        if isinstance(time_run_start, datetime) and isinstance(time_error, datetime):
+            # attach the logged timezone to a naive time.
+            # an aware pair then subtracts correctly across a daylight-saving change.
+            tzname = jobdict.get("timezone")
+            if isinstance(tzname, str):
+                try:
+                    tzone = ZoneInfo(tzname)
+                    if time_run_start.tzinfo is None:
+                        time_run_start = time_run_start.replace(tzinfo=tzone)
+                    if time_error.tzinfo is None:
+                        time_error = time_error.replace(tzinfo=tzone)
+                except (ZoneInfoNotFoundError, ValueError):
+                    pass
+            if (time_run_start.tzinfo is None) != (time_error.tzinfo is None):
+                # a naive time and an aware time have no valid difference
+                time_error = None
+            elif time_run_start.tzinfo is not None and time_error.tzinfo is not None:
+                # convert to UTC. A subtraction of two times with one shared tzinfo ignores the offsets.
+                time_run_start = time_run_start.astimezone(UTC)
+                time_error = time_error.astimezone(UTC)
 
         job_core_hours: float | None = None
         estimate = False
