@@ -1,6 +1,7 @@
 lib
 old
-version*.h
+version.cc
+.version_tmp.cc
 *.o
 *.d
 sn3d

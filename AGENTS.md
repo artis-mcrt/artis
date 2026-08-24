@@ -145,8 +145,11 @@ Points that surprise a new agent:
 - `GCCTOOLCHAIN` selects the gcc toolchain of nvc++. The Makefile has fallbacks
   for some known hosts, so this option is not always necessary. CI sets it in
   the environment.
-- The Makefile writes `version.h` from the git metadata, but only when the
-  content changes. `version*.h` is gitignored.
+- The Makefile writes `version.cc` from the git metadata, but only when the
+  content changes. `version.cc` is gitignored, and `version.h` is a tracked
+  file that declares the three strings. Keep the definitions in `version.cc`.
+  The git metadata changes at almost every git operation, so a definition in
+  the header makes `sn3d.cc` and `exspec.cc` compile again each time.
 
 ## Tests
 

@@ -42,5 +42,8 @@ repos:
             entry: make -j OPTIMIZE=OFF
             language: system
             pass_filenames: false
+            # a commit that changes no source file and no build file needs no compile.
+            # pre-commit skips a hook when no file matches, also with pass_filenames: false
+            files: '(\.(c|cc|cpp|h|hpp|cxx|hh|inc)$|^Makefile$)'
 ci:
     skip: [make]
