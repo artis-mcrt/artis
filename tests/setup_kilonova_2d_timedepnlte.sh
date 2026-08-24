@@ -36,8 +36,11 @@ sed -i'' -e 's/constexpr int NLTE_TE_NNE_MAXITER.*/constexpr int NLTE_TE_NNE_MAX
 # element_z == 58 is cerium. This test excludes cerium from the NLTE population solver.
 sed -i'' -e 's/constexpr int ION_NLEVELS_EXCITED_NLTE.*/constexpr int ION_NLEVELS_EXCITED_NLTE(int element_z, int ionstage) { return (element_z == 58) ? 0 : 20; }/g' artisoptions.h
 
-# the preset makes this option a multi-line function, so the pattern must match more than one line
-perl -0777 -i -pe 's|constexpr int NLEVELS_REQUIRETRANSITIONS\(int element_z, int ionstage\) \{.*?\n\}|constexpr int NLEVELS_REQUIRETRANSITIONS(int element_z, int ionstage) { return 10; }|s' artisoptions.h
+# The preset makes this option a multi-line function, so the pattern must match more than one line.
+# perl reads the full file with -0777. The pattern ends at a brace in the first column.
+# perl stops the script if the pattern does not match exactly once. A pattern that matches nothing
+# gives the default value of the preset and changes the results of the test without an error.
+perl -0777 -i -pe 'my $n = s|^constexpr int NLEVELS_REQUIRETRANSITIONS\(int element_z, int ionstage\) \{.*?^\}$|constexpr int NLEVELS_REQUIRETRANSITIONS(int element_z, int ionstage) { return 10; }|ms; die "[error] the pattern for NLEVELS_REQUIRETRANSITIONS did not match once\n" unless $n == 1;' artisoptions.h
 
 sed -i'' -e 's/constexpr int FIRST_NLTE_RADFIELD_TIMESTEP.*/constexpr int FIRST_NLTE_RADFIELD_TIMESTEP = 2;/g' artisoptions.h
 sed -i'' -e 's/constexpr int DETAILED_BF_ESTIMATORS_USEFROMTIMESTEP.*/constexpr int DETAILED_BF_ESTIMATORS_USEFROMTIMESTEP = 2;/g' artisoptions.h
