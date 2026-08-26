@@ -190,6 +190,25 @@ void read_phixs_data_table(std::istream& phixsfile, const int nphixspoints_input
 
         probability_sum += phixstargetprobability;
       }
+
+      // the file must give each target level only once. A repeated target level makes two continua that differ
+      // only in their probabilities. It also hides an error in the atomic data
+      for (int i = 0; i < in_nphixstargets; i++) {
+        for (int j = i + 1; j < in_nphixstargets; j++) {
+          if (tmpallphixstargets[phixstargetstart + i].levelindex ==
+              tmpallphixstargets[phixstargetstart + j].levelindex) {
+            printlnlog(
+                "[error] {}: Z={} ionstage {} level {}: the photoionisation table gives the level {} as target {} "
+                "and also as target {}. Each target level must occur only once. The two level numbers use the "
+                "numbering of the file",
+                phixsdata_filenames[phixs_file_version], get_atomicnumber(element), get_ionstage(element, lowerion),
+                lowerlevel + groundstate_index_in,
+                tmpallphixstargets[phixstargetstart + i].levelindex + groundstate_index_in, i, j);
+            assert_always(false);
+          }
+        }
+      }
+
       if (fabs(probability_sum - 1.0) > 0.01) {
         printlnlog(
             "[error] photoionisation table for Z={} ionstage {} level {} has target probabilities that sum to "
@@ -1780,7 +1799,16 @@ void write_bflist_file() {
 
           const int et = -1 - i;
 
-          assert_always(et == get_emtype_continuum(element, ion, level, phixstargetindex));
+          // the position in bflist and the emission type of the continuum must agree, because
+          // get_bflistindex_from_emtype_continuum() decodes an emission type back into a bflist index
+          const int et_oflevel = get_emtype_continuum(element, ion, level, phixstargetindex);
+          if (et != et_oflevel) {
+            printlnlog(
+                "[error] write_bflist_file: Z={} ionstage {} level {} target {} has the emission type {}, but "
+                "position {} in bflist gives the emission type {}",
+                get_atomicnumber(element), get_ionstage(element, ion), level, phixstargetindex, et_oflevel, i, et);
+            assert_always(false);
+          }
 
           // check the we don't overload the same packet emission type numbers
           // as the special values for free-free scattering and not set
