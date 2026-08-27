@@ -10,34 +10,55 @@
 #include <cmath>
 #include <cstddef>
 
-// N: dimension of the state. MAXDEPTH: the maximum number of previous residual differences. At most N
-// residual differences are independent, so a larger MAXDEPTH only wastes solves.
-template <std::size_t N, std::size_t MAXDEPTH = N>
+// MAXN: the largest dimension of the state. A caller with a dimension that it knows only at run time
+// gives that dimension to the constructor, and the accelerator then uses the leading entries of the
+// state and passes the other entries through. MAXDEPTH: the maximum number of previous residual
+// differences. At most dimension residual differences are independent, so a larger depth only wastes
+// solves, and the constructor limits the depth to the dimension.
+template <std::size_t MAXN, std::size_t MAXDEPTH = MAXN>
 class AndersonAccelerator {
   static_assert(MAXDEPTH >= 1);
-  static_assert(MAXDEPTH <= N);
+  static_assert(MAXDEPTH <= MAXN);
 
  public:
-  using State = std::array<double, N>;
+  using State = std::array<double, MAXN>;
   static constexpr std::size_t max_depth = MAXDEPTH;
+  static constexpr std::size_t max_dimension = MAXN;
 
-  explicit constexpr AndersonAccelerator(const std::size_t depth) : depth_(std::min(depth, MAXDEPTH)) {}
+  explicit constexpr AndersonAccelerator(const std::size_t depth) : AndersonAccelerator(depth, MAXN) {}
+
+  constexpr AndersonAccelerator(const std::size_t depth, const std::size_t dimension)
+      : depth_requested_(depth), depth_(std::min({depth, MAXDEPTH, dimension})), dimension_(dimension) {}
 
   // Forget the history. Call this when the map changes, e.g. when the set of solved ions changes.
   constexpr void reset() { nstored_ = 0; }
 
+  // Forget the history and use a new dimension. Call this when the state itself changes, e.g. when a
+  // different set of ions enters the state.
+  constexpr void reset(const std::size_t dimension) {
+    nstored_ = 0;
+    dimension_ = dimension;
+    depth_ = std::min({depth_requested_, MAXDEPTH, dimension});
+  }
+
+  [[nodiscard]] constexpr auto get_dimension() const -> std::size_t { return dimension_; }
+
   // Give the iterate x and its map output g = G(x). Return the next iterate. With no history, or with a
   // depth of zero, the result is g (plain successive substitution).
   [[nodiscard]] constexpr auto next(const State& x, const State& g) -> State {
+    // MAXN is the bound of every state array. The constructor and reset() already hold dimension_ at
+    // or below it, and the bound here lets the compiler see that the loops stay inside.
+    const std::size_t ndim = std::min(dimension_, MAXN);
+
     State residual{};
-    for (std::size_t i = 0; i < N; i++) {
+    for (std::size_t i = 0; i < ndim; i++) {
       residual[i] = g[i] - x[i];
     }
 
     State result = g;
     // a zero residual difference at index j makes every depth above j singular, so the usable depth
-    // ends at the first one
-    std::size_t m_max = std::min(nstored_, depth_);
+    // ends at the first one. MAXDEPTH bounds the chain arrays below in the same way as MAXN above.
+    std::size_t m_max = std::min({nstored_, depth_, MAXDEPTH});
 
     // consecutive differences: entry j is (pair k-j) - (pair k-j-1), with pair k = (g, residual). Each
     // difference of the residuals gets a unit norm. The test of the solve below then sees the angle
@@ -51,7 +72,7 @@ class AndersonAccelerator {
       for (std::size_t j = 0; j < m_max; j++) {
         const auto& [gprev, rprev] = history_[(nstored_ - 1 - j) % MAXDEPTH];
         double sumsq = 0.;
-        for (std::size_t i = 0; i < N; i++) {
+        for (std::size_t i = 0; i < ndim; i++) {
           dres_chain[j][i] = r_newer[i] - rprev[i];
           dg_chain[j][i] = g_newer[i] - gprev[i];
           sumsq += dres_chain[j][i] * dres_chain[j][i];
@@ -61,7 +82,7 @@ class AndersonAccelerator {
           m_max = j;
           break;
         }
-        for (std::size_t i = 0; i < N; i++) {
+        for (std::size_t i = 0; i < ndim; i++) {
           dres_chain[j][i] /= dres_norm[j];
         }
         r_newer = rprev;
@@ -76,13 +97,13 @@ class AndersonAccelerator {
     for (std::size_t a = 0; a < m_max; a++) {
       for (std::size_t b = 0; b < m_max; b++) {
         double sum = 0.;
-        for (std::size_t i = 0; i < N; i++) {
+        for (std::size_t i = 0; i < ndim; i++) {
           sum += dres_chain[a][i] * dres_chain[b][i];
         }
         ata[a][b] = sum;
       }
       double sum = 0.;
-      for (std::size_t i = 0; i < N; i++) {
+      for (std::size_t i = 0; i < ndim; i++) {
         sum += dres_chain[a][i] * residual[i];
       }
       atb[a] = sum;
@@ -94,7 +115,7 @@ class AndersonAccelerator {
       std::array<double, MAXDEPTH> gamma{};
       if (solve_small_system(ata, atb, m, gamma)) {
         for (std::size_t j = 0; j < m; j++) {
-          for (std::size_t i = 0; i < N; i++) {
+          for (std::size_t i = 0; i < ndim; i++) {
             result[i] -= gamma[j] / dres_norm[j] * dg_chain[j][i];
           }
         }
@@ -153,7 +174,9 @@ class AndersonAccelerator {
     return true;
   }
 
+  std::size_t depth_requested_;
   std::size_t depth_;
+  std::size_t dimension_;
   std::size_t nstored_{0};
   std::array<Entry, MAXDEPTH> history_{};
 };

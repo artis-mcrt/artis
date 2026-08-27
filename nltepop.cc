@@ -1959,6 +1959,76 @@ void nltepop_write_to_file(const int nonemptymgi, const int timestep) {
   nlte_file.flush();
 }
 
+// Scale the level populations of every ion of the element, so that each ion of ion_factors takes its
+// factor and the element keeps its abundance population. Each ion keeps its internal level
+// distribution, so the population of an ion changes by its factor and by the common factor that
+// holds the element population. An ion with a stored ground level population below MINPOP keeps its
+// population, because a scaled value would stay at the floor of get_groundlevelpop(). A result that
+// falls below that floor also stays there, so the caller reads the populations back rather than
+// assuming its factors. Return false and change nothing when the result would not be usable.
+auto nltepop_scale_ion_pops(const int nonemptymgi, const int element, const std::span<const double> ion_factors)
+    -> bool {
+  const int nions = get_nions(element);
+  assert_always(std::ssize(ion_factors) == nions);
+  const double nnelement = grid::get_elem_numberdens(nonemptymgi, element);
+  if (!(nnelement > 0.)) {
+    return false;
+  }
+  if (!elem_has_nlte_solution(nonemptymgi, element)) {
+    // the level populations hold the -1 marker of nltepop_reset_element(), which no factor may touch
+    return false;
+  }
+
+  THREADLOCALONHOST std::vector<double> nnion_old;
+  THREADLOCALONHOST std::vector<char> scalable;
+  nnion_old.resize(nions);
+  scalable.resize(nions);
+  double nnion_fixed_sum = 0.;  // the ions that keep their population
+  double nnion_scaled_sum = 0.;  // the other ions, with their factors but without the common factor
+  for (int ion = 0; ion < nions; ion++) {
+    const double factor = ion_factors[ion];
+    if (!(factor > 0.) || !std::isfinite(factor)) {
+      return false;
+    }
+    nnion_old[ion] = get_nnion(nonemptymgi, element, ion);
+    scalable[ion] =
+        static_cast<char>(grid::ion_groundlevelpops_allcells[get_cellionindex(nonemptymgi, element, ion)] >= MINPOP);
+    if (scalable[ion] != 0) {
+      nnion_scaled_sum += factor * nnion_old[ion];
+    } else {
+      nnion_fixed_sum += nnion_old[ion];
+    }
+  }
+
+  const double common_factor = (nnelement - nnion_fixed_sum) / nnion_scaled_sum;
+  if (!(common_factor > 0.) || !std::isfinite(common_factor)) {
+    return false;
+  }
+
+  for (int ion = 0; ion < nions; ion++) {
+    if (scalable[ion] == 0) {
+      continue;
+    }
+    const double factor = ion_factors[ion] * common_factor;
+    const int nlevels_excited_nlte = get_nlevels_excited_nlte(element, ion);
+    set_groundlevelpop(
+        nonemptymgi, element, ion,
+        static_cast<float>(grid::ion_groundlevelpops_allcells[get_cellionindex(nonemptymgi, element, ion)] * factor));
+    for (int level = 1; level <= nlevels_excited_nlte; level++) {
+      set_nlte_levelpop_over_rho(nonemptymgi, element, ion, level,
+                                 get_nlte_levelpop_over_rho(nonemptymgi, element, ion, level) * factor);
+    }
+    if (ion_has_superlevel(element, ion)) {
+      set_nlte_superlevelpop_over_rho_over_slpartfunc(
+          nonemptymgi, element, ion,
+          get_nlte_superlevelpop_over_rho_over_slpartfunc(nonemptymgi, element, ion) * factor);
+    }
+  }
+  calculate_cellpartfuncts(nonemptymgi, element);
+
+  return true;
+}
+
 void nltepop_allocate_time_dependent_arrays() {
   // the construction of a shared array is collective over the node, so every rank calls this
   const auto nonempty_npts_model = static_cast<std::ptrdiff_t>(grid::get_nonempty_npts_model());

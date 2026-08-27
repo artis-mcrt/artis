@@ -37,11 +37,81 @@
 
 namespace {
 
-// the accelerator of the outer NLTE/T_e iteration works on the state (log T_e, log nne)
-using OuterAnderson = AndersonAccelerator<2>;
-// the depth of the acceleration is the dimension of the state, the largest useful value
+// The accelerator of the outer NLTE/T_e iteration works on the state
+// (log T_e, log nne, log nnion of each tracked ion). The charge transfer reactions move population
+// between two elements and hold nne, so a state of (log T_e, log nne) cannot see that mode. The ion
+// populations of the state make it visible to the accelerator.
+constexpr std::size_t OUTER_ANDERSON_MAX_TRACKED_IONS = 16;
+constexpr std::size_t OUTER_ANDERSON_MAX_STATE = 2 + OUTER_ANDERSON_MAX_TRACKED_IONS;
+// the depth of a state of this size is expensive and gives little, because the slow modes are few
+constexpr std::size_t OUTER_ANDERSON_MAX_DEPTH = 6;
+using OuterAnderson = AndersonAccelerator<OUTER_ANDERSON_MAX_STATE, OUTER_ANDERSON_MAX_DEPTH>;
 constexpr std::size_t ANDERSON_DEPTH = NLTE_TE_NNE_USE_ANDERSON_ACCEL ? OuterAnderson::max_depth : 0;
 static_assert(NLTE_TE_NNE_RELTOL > 0.);
+
+// An ion of the state of the accelerator. Only an ion of an element with an NLTE solution enters,
+// because calculate_ion_balance_nne() replaces the populations of every other element at each pass.
+struct TrackedIon {
+  int element;
+  int ion;
+  auto operator==(const TrackedIon&) const -> bool = default;
+};
+
+// Collect the ions of the state, in the order of the element index and then of the ion index. An ion
+// enters when it holds a significant fraction of its element, because a smaller ion moves no other
+// population. The order is fixed, so a run gives the same state on every repeat.
+void collect_tracked_ions(const int nonemptymgi, std::vector<TrackedIon>& tracked) {
+  tracked.clear();
+  for (int element = 0; element < get_nelements(); element++) {
+    if (!elem_has_nlte_levels(element) || !elem_has_nlte_solution(nonemptymgi, element)) {
+      continue;
+    }
+    const double nnelement = grid::get_elem_numberdens(nonemptymgi, element);
+    if (!(nnelement > 0.)) {
+      continue;
+    }
+    for (int ion = 0; ion < get_nions(element); ion++) {
+      if (tracked.size() >= OUTER_ANDERSON_MAX_TRACKED_IONS) {
+        return;
+      }
+      if (get_nnion(nonemptymgi, element, ion) > NLTE_SIGNIFICANT_ION_FRACTION * nnelement) {
+        tracked.push_back(TrackedIon{.element = element, .ion = ion});
+      }
+    }
+  }
+}
+
+// Read the state of the accelerator out of the cell. The entries above the tracked ions stay zero.
+auto get_outer_state(const int nonemptymgi, const std::vector<TrackedIon>& tracked) -> OuterAnderson::State {
+  OuterAnderson::State state{};
+  state[0] = std::log(grid::Te_allcells[nonemptymgi]);
+  state[1] = std::log(grid::get_nne(nonemptymgi));
+  for (std::size_t i = 0; i < tracked.size(); i++) {
+    state[i + 2] = std::log(get_nnion(nonemptymgi, tracked[i].element, tracked[i].ion));
+  }
+  return state;
+}
+
+// Write the ion populations of the state into the cell, one element at a time. An ion outside the
+// state keeps its population, except for the common factor that holds the element population.
+void apply_outer_state_ion_pops(const int nonemptymgi, const std::vector<TrackedIon>& tracked,
+                                const OuterAnderson::State& state) {
+  THREADLOCALONHOST std::vector<double> ion_factors;
+  for (std::size_t i = 0; i < tracked.size();) {
+    const int element = tracked[i].element;
+    ion_factors.assign(get_nions(element), 1.);
+    std::size_t i_end = i;
+    while (i_end < tracked.size() && tracked[i_end].element == element) {
+      const double nnion_now = get_nnion(nonemptymgi, element, tracked[i_end].ion);
+      ion_factors[tracked[i_end].ion] = std::exp(state[i_end + 2]) / nnion_now;
+      i_end++;
+    }
+    // a failure leaves the element as it was, and the read-back of the caller then holds the
+    // populations that the cell really has
+    static_cast<void>(nltepop_scale_ion_pops(nonemptymgi, element, ion_factors));
+    i = i_end;
+  }
+}
 
 std::vector<HeatingCoolingRates> heatingcoolingrates_thisrankcells;
 
@@ -209,9 +279,17 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
   printlnlog("took {:.1f} seconds", bfheating_duration);
 
   // Anderson acceleration of the outer iteration (see NLTE_TE_NNE_USE_ANDERSON_ACCEL). The state is
-  // (log T_e, log nne) as the element solves use it. Its map output is known after the next T_e solve.
-  OuterAnderson anderson(ANDERSON_DEPTH);
-  std::array<double, 2> x_injected{};  // the state that the element solves of the previous pass used
+  // (log T_e, log nne, log nnion of each tracked ion) as the element solves use it. Its map output is
+  // known after the next T_e solve. The cell holds no NLTE solution before the first pass, so the
+  // state starts with T_e and nne alone and takes the ions of the first solution.
+  OuterAnderson anderson(ANDERSON_DEPTH, 2);
+  // the buffers are thread-local, so every cell reuses them. The previous set starts empty, which is
+  // the set of the state above.
+  THREADLOCALONHOST std::vector<TrackedIon> tracked_ions;
+  THREADLOCALONHOST std::vector<TrackedIon> tracked_ions_prev;
+  tracked_ions.clear();
+  tracked_ions_prev.clear();
+  OuterAnderson::State x_injected{};  // the state that the element solves of the previous pass used
   std::array<double, 2> change_prev{-1., -1.};  // the relative changes of the previous pass, for the error estimate
   // the results of the previous pass, for the convergence test before the injection
   double fracdiff_nne_prev = 0.;
@@ -276,9 +354,17 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
     const double fracdiff_T_e = fabs((grid::Te_allcells[nonemptymgi] / prev_T_e) - 1);
 
     if constexpr (NLTE_TE_NNE_USE_ANDERSON_ACCEL) {
-      // g is the map output for x_injected: T_e from the finder of this pass, nne from the ion
-      // balance of the previous pass. Both components are residuals at the same state.
-      const std::array<double, 2> g{std::log(grid::Te_allcells[nonemptymgi]), std::log(grid::get_nne(nonemptymgi))};
+      // g is the map output for x_injected: T_e from the finder of this pass, nne and the ion
+      // populations from the element solves of the previous pass. Every component is a residual at the
+      // same state. A different set of tracked ions is a different state, so the history goes.
+      collect_tracked_ions(nonemptymgi, tracked_ions);
+      if (tracked_ions != tracked_ions_prev) {
+        anderson.reset(tracked_ions.size() + 2);
+        tracked_ions_prev = tracked_ions;
+        // the previous iterate belongs to the previous state, so this pass takes no step from it
+        map_changed = map_changed || (nlte_iter > 0);
+      }
+      const auto g = get_outer_state(nonemptymgi, tracked_ions);
       if (nlte_iter > 0) {
         // the error that remains after a linear contraction with ratio rho is change * rho / (1 - rho). Each
         // component gets its own ratio, because the T_e finder limits the change of T_e to a factor of two per
@@ -302,11 +388,19 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
 
         // the test comes before the injection, so a converged cell keeps the plain map output and the
         // heating and cooling rates of its T_e. The charge transfer tests are from the previous pass.
-        if (!map_changed && error_estimate <= NLTE_TE_NNE_RELTOL && fracdiff_nnion_prev <= NLTE_TE_NNE_RELTOL) {
+        // A change of the map makes the estimate of the remaining error useless, because the two
+        // contraction ratios then compare two different maps. The changes that this pass measured stay
+        // valid, so a pass with a changed map converges on those changes alone. Without this, a cell
+        // where the set of solved ions oscillates but the populations stay constant always reaches
+        // NLTE_TE_NNE_MAXITER. A ratio of at least 0.5 keeps the error estimate at or above every
+        // change, so the test below is the previous test when the map is the same.
+        const bool changes_converged = change[0] <= NLTE_TE_NNE_RELTOL && change[1] <= NLTE_TE_NNE_RELTOL &&
+                                       fracdiff_nnion_prev <= NLTE_TE_NNE_RELTOL;
+        if (changes_converged && (map_changed || error_estimate <= NLTE_TE_NNE_RELTOL)) {
           printlnlog(
               "NLTE (Spencer-Fano/Te/pops) solver mgi {} timestep {} iteration {}: converged with an estimated error "
-              "{:g} <= {:g} (T_e change {:g}, nne change {:g})",
-              mgi, nts, nlte_iter, error_estimate, NLTE_TE_NNE_RELTOL, change[0], change[1]);
+              "{:g} <= {:g} (T_e change {:g}, nne change {:g}, map changed {})",
+              mgi, nts, nlte_iter, error_estimate, NLTE_TE_NNE_RELTOL, change[0], change[1], map_changed ? 1 : 0);
           break;
         }
         if (nlte_iter == NLTE_TE_NNE_MAXITER || map_changed) {
@@ -321,24 +415,40 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
           // the electron density cannot exceed the total electron density of the cell. The step away
           // from the map output cannot exceed twice the residual, because a nearly singular system
           // gives a large step with no information.
-          const double stepsq = pow2(x_next[0] - g[0]) + pow2(x_next[1] - g[1]);
-          const double residualsq = pow2(g[0] - x_injected[0]) + pow2(g[1] - x_injected[1]);
+          double stepsq = 0.;
+          double residualsq = 0.;
+          for (std::size_t i = 0; i < tracked_ions.size() + 2; i++) {
+            stepsq += pow2(x_next[i] - g[i]);
+            residualsq += pow2(g[i] - x_injected[i]);
+          }
+          // an ion population of the state cannot exceed the population of its element
+          bool ion_pops_usable = true;
+          for (std::size_t i = 0; i < tracked_ions.size(); i++) {
+            const double nnion_next = std::exp(x_next[i + 2]);
+            const double nnelement = grid::get_elem_numberdens(nonemptymgi, tracked_ions[i].element);
+            ion_pops_usable =
+                ion_pops_usable && std::isfinite(nnion_next) && nnion_next >= MINPOP && nnion_next <= nnelement;
+          }
           // the electron density has the same floor as the ion balance, so the stored float stays positive
           const bool step_accepted = std::isfinite(T_e_next) && std::isfinite(nne_next) && T_e_next >= MINTEMP &&
                                      T_e_next <= MAXTEMP && nne_next >= MINPOP &&
-                                     nne_next <= grid::get_nnetot(nonemptymgi) && stepsq <= 4. * residualsq;
+                                     nne_next <= grid::get_nnetot(nonemptymgi) && ion_pops_usable &&
+                                     stepsq <= 4. * residualsq;
           if (step_accepted) {
             grid::Te_allcells[nonemptymgi] = static_cast<float>(T_e_next);
             grid::set_nne(nonemptymgi, static_cast<float>(nne_next));
-            x_injected = x_next;
+            apply_outer_state_ion_pops(nonemptymgi, tracked_ions, x_next);
+            // the common factor of an element and a failed scaling both move the applied state away
+            // from x_next, so the next residual uses the state that the cell really holds
+            x_injected = get_outer_state(nonemptymgi, tracked_ions);
           } else {
             x_injected = g;
           }
           printlnlog(
-              "NLTE (Spencer-Fano/Te/pops) solver mgi {} timestep {} iteration {}: Anderson step {}: T_e {:g} nne {:e} "
-              "from the pass, T_e {:g} nne {:e} for the next pass",
-              mgi, nts, nlte_iter, step_accepted ? "accepted" : "rejected", std::exp(g[0]), std::exp(g[1]),
-              grid::Te_allcells[nonemptymgi], grid::get_nne(nonemptymgi));
+              "NLTE (Spencer-Fano/Te/pops) solver mgi {} timestep {} iteration {}: Anderson step {} with {} tracked "
+              "ions: T_e {:g} nne {:e} from the pass, T_e {:g} nne {:e} for the next pass",
+              mgi, nts, nlte_iter, step_accepted ? "accepted" : "rejected", tracked_ions.size(), std::exp(g[0]),
+              std::exp(g[1]), grid::Te_allcells[nonemptymgi], grid::get_nne(nonemptymgi));
         }
       } else {
         x_injected = g;
@@ -432,10 +542,11 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
       fracdiff_nnion_prev = fracdiff_nnion;
       map_changed = nlte_solution_changed;
     } else {
-      // without the charge transfer option, the ion population test and the solution range test
-      // always pass
+      // without the charge transfer option, the ion population test always passes. A change of the
+      // solved ion range is not a test of its own: a change that moves no population is a change of
+      // the equations only, and the ion population test measures every change that it makes.
       if (fracdiff_nne <= NLTE_TE_NNE_RELTOL && fracdiff_T_e <= NLTE_TE_NNE_RELTOL &&
-          fracdiff_nnion <= NLTE_TE_NNE_RELTOL && !nlte_solution_changed) {
+          fracdiff_nnion <= NLTE_TE_NNE_RELTOL) {
         printlnlog(
             "NLTE (Spencer-Fano/Te/pops) solver mgi {} timestep {} iteration {}: nne converged to tolerance {:g} <= "
             "{:g} and T_e to tolerance {:g} <= {:g}",
