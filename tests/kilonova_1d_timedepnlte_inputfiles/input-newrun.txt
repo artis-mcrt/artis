@@ -1,7 +1,7 @@
 1281360349               #  0: pre_zseed: specific random number seed if > 0 or random if negative
-8                        #  1: ntimesteps: number of timesteps
-000 005                  #  2: timestep_start timestep_finish: timestep number range start (inclusive) and stop (not inclusive)
-3.0 060                  #  3: tmin_days tmax_days: start and end times [day]
+20                       #  1: ntimesteps: number of timesteps
+000 009                  #  2: timestep_start timestep_finish: timestep number range start (inclusive) and stop (not inclusive)
+0.4 010                  #  3: tmin_days tmax_days: start and end times [day]
 1.33  1.330000001        #  4: UNUSED nusyn_min_mev nusyn_max_mev: lowest and highest frequency to synthesise [MeV]
 80                       #  5: UNUSED nsyn_time: number of times for synthesis
 3. 0.037                 #  6: UNUSED start and end times for synthesis

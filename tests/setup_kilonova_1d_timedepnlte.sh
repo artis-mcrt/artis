@@ -2,7 +2,7 @@
 
 set -x
 
-runfolder=kilonova_2d_timedepnlte_testrun
+runfolder=kilonova_1d_timedepnlte_testrun
 
 if [ ! -f atomicdata_sryzrlace.tar.zst ]; then curl -O -L https://github.com/artis-mcrt/artis/releases/download/v2026.5.15/atomicdata_sryzrlace.tar.zst; fi
 
@@ -10,15 +10,15 @@ mkdir -p $runfolder
 
 cd $runfolder
 
-# the model files of the kilonova_2d test. The atomic data archive supplies compositiondata.txt, and
+# the model files of the kilonova_1d test. The atomic data archive supplies compositiondata.txt, and
 # the second rsync below supplies the input and checksum files of this test
-rsync -av --exclude="compositiondata.txt" ../kilonova_2d_inputfiles/ ./
+rsync -av --exclude="compositiondata.txt" ../kilonova_1d_inputfiles/ ./
 
 tar -xf ../atomicdata_sryzrlace.tar.zst --directory ./
 
-# --ignore-times: the input files of this test have the same size as the files of the kilonova_2d
+# --ignore-times: the input files of this test have the same size as the files of the kilonova_1d
 # test. After a checkout they also have the same modification time. Without the option rsync skips them.
-rsync --ignore-times -av ../kilonova_2d_timedepnlte_inputfiles/ ./
+rsync --ignore-times -av ../kilonova_1d_timedepnlte_inputfiles/ ./
 
 ln -s ../../ artis
 
