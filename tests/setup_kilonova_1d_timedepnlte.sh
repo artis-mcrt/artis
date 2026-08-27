@@ -26,7 +26,17 @@ cp artis/artisoptions_kilonova_timedepnlte.h artisoptions.h
 
 xz -f -d -v -T0 *.xz
 
-sed -i.bak -e 's/constexpr int MPKTS.*/constexpr int MPKTS = 50000;/g' artisoptions.h
+# Scale the model to a typical kilonova: ten times the mass and one third of the velocity of the
+# kilonova_1d model, which gives 0.044 Msun below 0.16 c. The shape of the density profile does not
+# change. The thin fast model of the kilonova_1d test is about 300 times less dense than a typical
+# kilonova at the same time. The thermal balance of such a model has no solution, so nearly every
+# cell reaches MAXTEMP and the time-dependent terms then change nothing.
+awk 'BEGIN{n=0; logscale=log(27*10)/log(10)} /^#/{print; next} {n++; if(n<=2){print; next} if(NF>4){$2=sprintf("%.6f",$2/3); $3=sprintf("%.8f",$3+logscale)}; print}' model.txt > model_scaled.txt
+mv model_scaled.txt model.txt
+
+# the 1D model has 25 cells and the 2D model had 128, so fewer packets give the same number of
+# packets for each cell
+sed -i.bak -e 's/constexpr int MPKTS.*/constexpr int MPKTS = 20000;/g' artisoptions.h
 
 sed -i.bak -e 's/constexpr int RATECOEFF_TABLESIZE.*/constexpr int RATECOEFF_TABLESIZE = 40;/g' artisoptions.h
 
