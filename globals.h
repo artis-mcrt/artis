@@ -254,9 +254,10 @@ struct AllCont {
   MPI_shared_array<const int> uniquelevelindex;
   MPI_shared_array<const double> probability;
   // index into the ground-level continuum estimator arrays, or -1 for continua that do not feed them
-  // (only a ground level's first photoionisation target does). This is the nearest-nu_edge slot found by
-  // search_groundphixslist(), the same value closestgroundlevelcont holds, which is not necessarily the
-  // ion's own get_groundcontindex() slot when two ions share a ground-state threshold.
+  // (only a ground level's first photoionisation target does). This is the ion's own
+  // get_groundcontindex() slot, the same slot where update_grid.cc normalises and applies the
+  // estimators. setup_phixs_list() checks that the nearest-nu_edge search agrees for every ground
+  // level, so a dataset with two identical ground thresholds stops at startup.
   MPI_shared_array<const int> groundcontestimindex;
   MPI_shared_array<const int> bfestimindex;
 };
