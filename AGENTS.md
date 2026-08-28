@@ -101,7 +101,9 @@ a pull request or an issue.
 
 The build needs gcc 14 or later, clang, nvc++, or hipcc, and an MPI library
 that supplies `mpicxx`. With Open MPI, select the compiler with
-`export OMPI_CXX=g++`.
+`export OMPI_CXX=g++`. The build needs no other program. Each build also writes
+`compile_commands.json` with python3, but an absent python3 gives a message and
+no error (see "Linting and formatting").
 
 ```sh
 export MAKEFLAGS="--check-symlink-times --jobs=$(nproc --all)"
@@ -259,18 +261,32 @@ test (see "Input and output files").
 - clang-format uses a Google-based style with a limit of 120 columns
   (`.clang-format`). It applies to all C++ files except `third_party/`.
 - clang-tidy has a long list of checks (`.clang-tidy`) and makes almost every
-  diagnostic an error. Make the compile database with
-  `compiledb -n --full-path make -B TESTMODE=ON`. The `-B` is necessary,
-  because a dry run of a finished build prints no compile commands. `mpicxx` is
-  a wrapper and hides the MPI include path, so give the path to clang-tidy
-  yourself:
+  diagnostic an error. Make the compile database with the Makefile:
 
   ```sh
-  run-clang-tidy $(for d in $(mpicxx --showme:incdirs); do echo -extra-arg=-isystem$d; done) grid.cc
+  make TESTMODE=ON compile_commands.json
+  run-clang-tidy grid.cc
   ```
 
-  Name the files that you changed. `make check` runs all of the sources of
-  `sn3d` and takes many minutes, and it does not cover `exspec.cc`.
+  Each build of `sn3d`, `exspec`, or `unittests` also writes the database, and
+  the `make` pre-commit hook does the same. The recipe replaces the file only
+  when the content changes. It needs python3. A host without python3 gives a
+  message and builds the programs, because the build itself needs no python3.
+  `make check` stops with an error if the database is absent. The database always has the flags of `TESTMODE=ON`,
+  also when the build does not, so that clangd and clang-tidy examine the body
+  of each `assert_testmodeonly()` macro. `TESTMODE_CXXFLAGS` in the Makefile
+  holds those flags.
+
+  Name the files that you changed. `make TESTMODE=ON check` runs the same check
+  as CI, over `sn3d`, `exspec`, and `unittests`, and takes many minutes.
+
+  Do not make the database with `compiledb`. `compiledb` does not recognise
+  `mpicxx` as a compiler, so it removes the compiler and the first flags from
+  each command. clang-tidy then takes a flag as the name of the compiler, finds
+  no resource directory, and finds no standard header. Each parse error gives
+  many false diagnostics, e.g. `cppcoreguidelines-pro-type-member-init` on a
+  structure that has initialisers. Never apply `run-clang-tidy -fix` to such a
+  database, because the corrections make the code invalid.
 - cppcheck runs in CI and stops the job on an error. Read the command in
   `ci-checks.yml`: it excludes `third_party`, and it suppresses five message
   types that the code does not correct. Write a suppression as an inline

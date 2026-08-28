@@ -1170,9 +1170,11 @@ void read_phixs_data() {
   auto alllevels_nphixstargets = MPI_shared_array<int>(uniquelevelcount, 0);
   auto alllevels_phixstargetstart = MPI_shared_array<int>(uniquelevelcount, -1);
   auto alllevels_bflist_start = MPI_shared_array<int>(uniquelevelcount, -1);
-  const auto levelbuilders = PhixsLevelBuilders{.phixsstart = alllevels_phixsstart.span(),
-                                                .nphixstargets = alllevels_nphixstargets.span(),
-                                                .phixstargetstart = alllevels_phixstargetstart.span()};
+  const auto levelbuilders = PhixsLevelBuilders{
+      .phixsstart = alllevels_phixsstart.span(),
+      .nphixstargets = alllevels_nphixstargets.span(),
+      .phixstargetstart = alllevels_phixstargetstart.span(),
+  };
 
   // read in photoionisation cross sections
   phixs_file_version_exists[0] = false;

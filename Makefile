@@ -212,19 +212,23 @@ ifneq ($(MAX_NODE_SIZE),)
 	BUILD_DIR := $(BUILD_DIR)_maxnodesize$(MAX_NODE_SIZE)
 endif
 
+# The flags of TESTMODE=ON. compile_commands.json always uses them, also when the build does
+# not, so that clangd and clang-tidy examine the body of each assert_testmodeonly() macro.
+TESTMODE_CXXFLAGS := -DTESTMODE=true
+
+TESTMODE_CXXFLAGS += -fno-omit-frame-pointer -g
+
+TESTMODE_CXXFLAGS += -D_GLIBCXX_ASSERTIONS
+# TESTMODE_CXXFLAGS += -D_GLIBCXX_DEBUG
+# TESTMODE_CXXFLAGS += -D_GLIBCXX_DEBUG_BACKTRACE
+
+# TESTMODE_CXXFLAGS += -D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_FAST
+TESTMODE_CXXFLAGS += -D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_EXTENSIVE -DEIGEN_MAX_ALIGN_BYTES=0
+
+TESTMODE_CXXFLAGS += -fsanitize=undefined,address
+
 ifeq ($(TESTMODE),ON)
-	CXXFLAGS += -DTESTMODE=true
-
-	CXXFLAGS += -fno-omit-frame-pointer -g
-
-	CXXFLAGS += -D_GLIBCXX_ASSERTIONS
-	# CXXFLAGS += -D_GLIBCXX_DEBUG
-	# CXXFLAGS += -D_GLIBCXX_DEBUG_BACKTRACE
-
-	# CXXFLAGS += -D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_FAST
-	CXXFLAGS += -D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_EXTENSIVE -DEIGEN_MAX_ALIGN_BYTES=0
-
-	CXXFLAGS += -fsanitize=undefined,address
+	CXXFLAGS += $(TESTMODE_CXXFLAGS)
 
 	BUILD_DIR := $(BUILD_DIR)_testmode
 endif
@@ -361,38 +365,71 @@ all: sn3d exspec
 $(BUILD_DIR)/%.o: %.cc artisoptions.h Makefile
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-check: $(sn3d_files)
-	run-clang-tidy $(sn3d_files)
+# runs the same check as CI, over sn3d, exspec, and unittests
+check: compile_commands.json
+	@test -f compile_commands.json || { echo 'error: no compile_commands.json. python3 makes it'; exit 1; }
+	run-clang-tidy
+
+# clangd and clang-tidy read compile_commands.json. Each entry must name the compiler that
+# $(CXX) calls, because clang-tidy finds its resource directory from that name. See
+# "Linting and formatting" in AGENTS.md. Open MPI and MPICH both print the full command
+# with -show. Every build reads these variables, so ':=' keeps the probe to one call.
+CDB_PYTHON := $(shell command -v python3)
+CDB_SHOW := $(shell $(CXX) -show 2>/dev/null)
+CDB_CXX := $(shell command -v $(firstword $(CDB_SHOW)))
+CDB_INCFLAGS := $(patsubst -I%,-isystem%,$(filter -I%,$(CDB_SHOW)))
+CDB_SRC = $(sort $(sn3d_files) $(exspec_files) $(unittests_files))
+# the database always uses TESTMODE=ON, so add those flags when the build does not have them
+CDB_CXXFLAGS = $(CXXFLAGS) $(if $(filter ON,$(TESTMODE)),,$(TESTMODE_CXXFLAGS))
+
+# Each build writes the database. The content comes from the make options and not from a file
+# that make can examine, so the target is .PHONY. The recipe replaces the file only when the
+# content changes.
+# clangd therefore reads the files again only after a real change.
+# make clean keeps the database, because clangd reads it and compiles nothing.
+# The build needs only a compiler and MPI, so an absent python3 gives a message and no error.
+# The clang tools need python3, and the check target stops if the database is absent.
+.PHONY: compile_commands.json
+compile_commands.json:
+ifeq ($(CDB_PYTHON),)
+	@echo '$@: python3 is absent, so make writes no compilation database'
+else ifeq ($(CDB_CXX),)
+	@echo '$@: "$(CXX) -show" does not name the compiler, so make writes no compilation database'
+else
+	@CDB_CXX='$(CDB_CXX)' CDB_FLAGS='$(CDB_INCFLAGS) $(CDB_CXXFLAGS)' CDB_SRC='$(CDB_SRC)' \
+		$(CDB_PYTHON) -c 'import json,os,shlex,sys; args=[os.environ["CDB_CXX"],*shlex.split(os.environ["CDB_FLAGS"])]; json.dump([{"directory":os.getcwd(),"arguments":[*args,"-c",src],"file":src} for src in os.environ["CDB_SRC"].split()],sys.stdout,indent=1)' > $@.tmp
+	@if cmp -s $@.tmp $@; then rm -f $@.tmp; else mv $@.tmp $@; echo '$@: $(words $(CDB_SRC)) entries for $(CDB_CXX)'; fi
+endif
 
 $(BUILD_DIR)/sn3d: $(sn3d_objects)
 	$(CXX) $(CXXFLAGS) $(sn3d_objects) $(LDFLAGS) -o $(BUILD_DIR)/sn3d
 -include $(sn3d_dep)
 
-sn3d: $(BUILD_DIR)/sn3d
+sn3d: $(BUILD_DIR)/sn3d compile_commands.json
 	ln -sf $(BUILD_DIR)/sn3d sn3d
 
 $(BUILD_DIR)/sn3dwhole: $(sn3d_files) version.h artisoptions.h Makefile
 	$(CXX) $(CXXFLAGS) $(sn3d_files) $(LDFLAGS) -o $(BUILD_DIR)/sn3dwhole
 -include $(sn3d_dep)
 
-sn3dwhole: $(BUILD_DIR)/sn3dwhole
+sn3dwhole: $(BUILD_DIR)/sn3dwhole compile_commands.json
 	ln -sf $(BUILD_DIR)/sn3dwhole sn3d
 
 $(BUILD_DIR)/exspec: $(exspec_objects)
 	$(CXX) $(CXXFLAGS) $(exspec_objects) $(LDFLAGS) -o $(BUILD_DIR)/exspec
 -include $(exspec_dep)
 
-exspec: $(BUILD_DIR)/exspec
+exspec: $(BUILD_DIR)/exspec compile_commands.json
 	ln -sf $(BUILD_DIR)/exspec exspec
 
 $(BUILD_DIR)/unittests: $(unittests_objects)
 	$(CXX) $(CXXFLAGS) $(unittests_objects) $(LDFLAGS) -o $(BUILD_DIR)/unittests
 -include $(unittests_dep)
 
-unittests: $(BUILD_DIR)/unittests
+unittests: $(BUILD_DIR)/unittests compile_commands.json
 	ln -sf $(BUILD_DIR)/unittests unittests
 
-.PHONY: clean sn3d sn3dwhole exspec unittests
+.PHONY: clean sn3d sn3dwhole exspec unittests check
 
 clean:
 	rm -rf sn3d exspec unittests build *.o *.d
