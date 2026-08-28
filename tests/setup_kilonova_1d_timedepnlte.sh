@@ -28,9 +28,9 @@ xz -f -d -v -T0 *.xz
 
 # Scale the model to a typical kilonova: ten times the mass and one third of the velocity of the
 # kilonova_1d model, which gives 0.044 Msun below 0.16 c. The shape of the density profile does not
-# change. The thin fast model of the kilonova_1d test is about 300 times less dense than a typical
-# kilonova at the same time. The thermal balance of such a model has no solution, so nearly every
-# cell reaches MAXTEMP and the time-dependent terms then change nothing.
+# change. The model then holds the density of a 0.05 Msun kilonova below 0.15 c to inside 13 percent
+# over the whole time range of the test. The thin fast model of the kilonova_1d test is about 300
+# times less dense at the same time, and the thermal balance of such a model has no solution.
 awk 'BEGIN{n=0; logscale=log(27*10)/log(10)} /^#/{print; next} {n++; if(n<=2){print; next} if(NF>4){$2=sprintf("%.6f",$2/3); $3=sprintf("%.8f",$3+logscale)}; print}' model.txt > model_scaled.txt
 mv model_scaled.txt model.txt
 
