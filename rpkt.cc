@@ -916,7 +916,11 @@ auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixsli
       chi_bf_sum += nnlevel * sigma_contr;
 
       if constexpr (SELECTCONTINUUM) {
-        lastcontindex = i;
+        // the stimulated recombination correction can zero sigma_contr for a populated level, and
+        // the fallback below must not select a continuum with a zero absorption probability
+        if (nnlevel * sigma_contr > 0.) {
+          lastcontindex = i;
+        }
         if (chi_bf_sum > chi_bf_sum_selectionthreshold) {
           return i;
         }
@@ -926,9 +930,9 @@ auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixsli
 
   if constexpr (SELECTCONTINUUM) {
     // the running sum never exceeded the threshold, which the roundoff of redoing the summation can
-    // cause even though the threshold is below the previously-computed total: select the last summed
-    // continuum. The last continuum of the window can have its keep bit clear or a zero level
-    // population, and a bound-free absorption into an unpopulated level must not happen.
+    // cause even though the threshold is below the previously-computed total: select the last
+    // positive contribution. The last continuum of the window can have its keep bit clear, a zero
+    // level population, or a zero corrfactor, and each of those has a zero absorption probability.
     assert_always(lastcontindex >= 0);
     return lastcontindex;
   } else {
