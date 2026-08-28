@@ -267,7 +267,9 @@ test (see "Input and output files").
   ```
 
   Name the files that you changed. `make TESTMODE=ON check` runs the same check
-  as CI, over `sn3d`, `exspec`, and `unittests`, and takes many minutes.
+  as CI, over `sn3d`, `exspec`, and `unittests`, and takes many minutes. The
+  target writes the database each time, because the content comes from the make
+  options and not from a file that make can examine.
 
   Do not make the database with `compiledb`. `compiledb` does not recognise
   `mpicxx` as a compiler, so it removes the compiler and the first flags from

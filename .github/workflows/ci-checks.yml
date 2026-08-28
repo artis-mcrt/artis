@@ -39,7 +39,6 @@ jobs:
             - name: Generate compile database
               if: always()
               run: |
-                  make clean
                   make TESTMODE=ON compile_commands.json
 
             - name: Run clang-tidy

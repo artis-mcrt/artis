@@ -365,16 +365,24 @@ $(BUILD_DIR)/%.o: %.cc artisoptions.h Makefile
 check: compile_commands.json
 	run-clang-tidy
 
-# clangd and clang-tidy read compile_commands.json. mpicxx is a wrapper, so each entry must
-# name the compiler that mpicxx calls and must add the MPI include directories. An entry that
-# starts with a flag makes clang-tidy find no standard header and give many false diagnostics.
-# Use TESTMODE=ON, because the checks of CI use that configuration.
-CDB_CXX = $(shell command -v "$$($(CXX) --showme:command 2>/dev/null)" 2>/dev/null || command -v $(CXX))
-CDB_INCFLAGS = $(foreach dir,$(shell $(CXX) --showme:incdirs 2>/dev/null),-isystem$(dir))
+# clangd and clang-tidy read compile_commands.json. Each entry must name the compiler that
+# $(CXX) calls, because clang-tidy finds its resource directory from that name. See
+# "Linting and formatting" in AGENTS.md. Open MPI and MPICH both print the full command
+# with -show. The recursive '=' is deliberate: it keeps these probes out of a normal build.
+CDB_SHOW = $(shell $(CXX) -show 2>/dev/null)
+CDB_CXX = $(shell command -v $(firstword $(CDB_SHOW)))
+CDB_INCFLAGS = $(patsubst -I%,-isystem%,$(filter -I%,$(CDB_SHOW)))
+CDB_SRC = $(sort $(sn3d_files) $(exspec_files) $(unittests_files))
 
-compile_commands.json: Makefile artisoptions.h
-	@CDB_CXX='$(CDB_CXX)' CDB_FLAGS='$(CDB_INCFLAGS) $(CXXFLAGS)' \
-		python3 scripts/writecompiledb.py $@ $(sn3d_files) $(exspec_files) $(unittests_files)
+# The content comes from the make options, e.g. TESTMODE, and not from a file that make can
+# examine. The target is therefore .PHONY, and it writes the database each time.
+# make clean keeps the database, because clangd reads it and compiles nothing.
+.PHONY: compile_commands.json
+compile_commands.json:
+	@test -n '$(CDB_CXX)' || { echo 'error: "$(CXX) -show" does not name the compiler'; exit 1; }
+	@CDB_CXX='$(CDB_CXX)' CDB_FLAGS='$(CDB_INCFLAGS) $(CXXFLAGS)' CDB_SRC='$(CDB_SRC)' \
+		python3 -c 'import json,os,shlex; args=[os.environ["CDB_CXX"],*shlex.split(os.environ["CDB_FLAGS"])]; json.dump([{"directory":os.getcwd(),"arguments":[*args,"-c",src],"file":src} for src in os.environ["CDB_SRC"].split()],open("$@","w"),indent=1)'
+	@echo '$@: $(words $(CDB_SRC)) entries for $(CDB_CXX)'
 
 $(BUILD_DIR)/sn3d: $(sn3d_objects)
 	$(CXX) $(CXXFLAGS) $(sn3d_objects) $(LDFLAGS) -o $(BUILD_DIR)/sn3d
