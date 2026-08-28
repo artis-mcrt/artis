@@ -72,6 +72,11 @@ CheckOptions:
       value: <cmath>
     - key: hicpp-signed-bitwise.IgnorePositiveIntegerLiterals
       value: 'true'
+    # MPICH declares the MPI functions in mpi_proto.h, which mpi.h includes. Open MPI
+    # declares them in mpi.h. Ignore the inner header, so that a build with MPICH gives
+    # the same result as CI, which uses Open MPI.
+    - key: misc-include-cleaner.IgnoreHeaders
+      value: '.*mpi_proto\.h'
     - key: modernize-deprecated-headers.CheckHeaderFile
       value: 'true'
     - key: modernize-use-std-print.PrintfLikeFunctions
