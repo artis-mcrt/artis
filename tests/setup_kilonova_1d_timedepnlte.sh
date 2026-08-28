@@ -43,7 +43,11 @@ sed -i.bak -e 's/constexpr int RATECOEFF_TABLESIZE.*/constexpr int RATECOEFF_TAB
 # a few near-vacuum cells reach NLTE_TE_NNE_MAXITER in every timestep, so this limit keeps the run time of the test low
 sed -i.bak -e 's/constexpr int NLTE_TE_NNE_MAXITER.*/constexpr int NLTE_TE_NNE_MAXITER = 10;/g' artisoptions.h
 
-# element_z == 58 is cerium. This test excludes cerium from the NLTE population solver.
+# element_z == 58 is cerium. This test gives cerium no NLTE level, so that it tests the hybrid mode:
+# the NLTE solver holds Sr, Y, Zr, and La, and calculate_ion_balance_nne() holds cerium with the
+# photoionisation balance. The mode covers the ion balance of both kinds of element in one cell, the
+# sum of the electron contributions, and the rule of chargetransfer.cc that a reaction needs NLTE
+# levels on both sides. Keep at least one element at zero, or the test loses the hybrid mode.
 sed -i.bak -e 's/constexpr int ION_NLEVELS_EXCITED_NLTE.*/constexpr int ION_NLEVELS_EXCITED_NLTE(int element_z, int ionstage) { return (element_z == 58) ? 0 : 20; }/g' artisoptions.h
 
 perl -0777 -i -pe 'my $n = s|^constexpr int NLEVELS_REQUIRETRANSITIONS\(int element_z, int ionstage\) \{.*?^\}$|constexpr int NLEVELS_REQUIRETRANSITIONS(int element_z, int ionstage) { return 10; }|ms; die "[error] the pattern for NLEVELS_REQUIRETRANSITIONS did not match once\n" unless $n == 1;' artisoptions.h
