@@ -88,8 +88,8 @@ std::vector<int> mgi_of_nonemptymgi;
 
 std::vector<double> totmassnuclide{};  // total mass of each nuclide in the ejecta
 // the grid-mapped mass of each nuclide in the propagation cells that FORCE_SPHERICAL_ESCAPE_SURFACE
-// blanks. The nuclide-mass rescale in init_grid() adds this to the mapped total, so that the rescale
-// corrects only the discretisation error and the blanked mass stays removed.
+// blanks. The nuclide-mass rescale in init_grid() adds this to the mapped total. The rescale then
+// corrects only the discretisation error, and the blanked mass stays removed.
 std::vector<double> totmassnuclide_blanked{};
 
 MPI_shared_array<float> initnucmassfrac_allcells{};
@@ -451,10 +451,10 @@ void allocate_nonemptymodelcells() {
   }
   MPI_Barrier_node();
 
-  // Record the grid-mapped volume that the spherical escape surface blanks per model cell. The
-  // per-nuclide blanked mass must be taken here, because the loop below this one zeroes the density
-  // and the mass fractions of a model cell that loses all of its propagation cells. Only the
-  // model-to-grid mapping case needs it, because only that case rescales the nuclide masses.
+  // Record the grid-mapped volume that the spherical escape surface blanks per model cell. This
+  // function must record the per-nuclide blanked mass itself. The loop below zeroes the density and
+  // the mass fractions of a fully blanked model cell. Only the model-to-grid mapping case needs the
+  // record, because only that case rescales the nuclide masses.
   const bool track_blanked_mass = FORCE_SPHERICAL_ESCAPE_SURFACE && (get_modelgridtype() != get_propgridtype());
   std::vector<double> blanked_assocvolume(track_blanked_mass ? get_npts_model() : 0, 0.);
   reserve_resize(totmassnuclide_blanked, decay::get_num_nuclides());
@@ -2409,9 +2409,9 @@ void init_grid() {
   // logged below shows the size of the discrepancy for any model.
   //
   // The mapped total includes the mass in the propagation cells that FORCE_SPHERICAL_ESCAPE_SURFACE
-  // blanked (totmassnuclide_blanked, taken in allocate_nonemptymodelcells()). The option removes that
-  // mass on purpose, so the ratio must not put it back into the surviving cells. A directly mapped
-  // model under the same option also drops the blanked mass, so the two cases then agree.
+  // blanked. allocate_nonemptymodelcells() records that mass in totmassnuclide_blanked. The option
+  // removes that mass on purpose, so the ratio must not put it back into the surviving cells. A
+  // directly mapped model under the same option also drops the blanked mass, so the two cases agree.
   const bool mapping_loses_nuclide_mass = (get_modelgridtype() != prop_gridtype);
   if (mapping_loses_nuclide_mass && globals::rank_in_node == 0) {
     for (int nucindex = 0; nucindex < decay::get_num_nuclides(); nucindex++) {
