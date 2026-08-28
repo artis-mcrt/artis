@@ -170,8 +170,34 @@ auto read_text_packets(const std::string& filename) -> std::vector<Packet> {
   std::getline(packets_file, line);  // read header line to make sure it matches
   assert_always(line == get_packets_text_header());
 
+  // the column count of the header line, for the completeness check of each row
+  const int ncolumns = [] {
+    std::istringstream ssheader{get_packets_text_header()};
+    std::string token;
+    int n = 0;
+    while (ssheader >> token) {
+      n++;
+    }
+    return n;
+  }();
+
+  std::string token;
   packets.reserve(MPKTS);
   while (get_noncommentline(packets_file, line)) {
+    // A complete row has exactly the column count of the header. The count check finds a truncated
+    // row even in the trailing fields that can legitimately hold "nan", where the stream state
+    // check below cannot.
+    ssline.clear();
+    ssline.str(line);
+    int ntokens = 0;
+    while (ssline >> token) {
+      ntokens++;
+    }
+    if (ntokens != ncolumns) {
+      printlnlog("[error] read_text_packets: the row has {} of {} columns: '{}'", ntokens, ncolumns, line);
+      std::abort();
+    }
+
     ssline.clear();
     ssline.str(line);
 
@@ -192,6 +218,15 @@ auto read_text_packets(const std::string& filename) -> std::vector<Packet> {
     pkt.escape_type = static_cast<enum packet_type>(escape_type);
 
     ssline >> pkt.emissiontype >> pkt.trueemissiontype;
+
+    // Every field up to this point is never NAN, so a failed stream here is a truncated or corrupt
+    // row, e.g. from a partial write on a full file system. A silently accepted truncated row would
+    // drop the packet from the spectra (escape_type stays 0) with no diagnostic.
+    if (ssline.fail()) {
+      printlnlog("[error] read_text_packets: could not parse the packet row '{}'", line);
+      std::abort();
+    }
+
     ssline >> pkt.em_pos[0] >> pkt.em_pos[1] >> pkt.em_pos[2];
     ssline >> pkt.absorptiontype >> pkt.absorptionfreq >> pkt.nscatterings;
     ssline >> pkt.em_time;
