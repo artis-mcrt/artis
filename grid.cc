@@ -1109,7 +1109,11 @@ void assign_initial_temperatures() {
        nonemptymgi += globals::node_nprocs) {
     const int mgi = get_mgi_of_nonemptymgi(nonemptymgi);
 
-    const auto q = INITIAL_PACKETS_ON ? get_initenergyq(mgi) : 0.;
+    // q holds the trapped radiation energy per mass at tmin, and the radiation energy of a comoving
+    // mass element falls as 1/t in the homologous expansion. The decay term carries the matching
+    // t_decay / tstart factor inside calc_energy_per_massoftopnuc_decaypath_withexpansion(), so the
+    // q term needs tmin / tstart to refer both terms to tstart.
+    const auto q = INITIAL_PACKETS_ON ? (get_initenergyq(mgi) * globals::tmin / tstart) : 0.;
     const double decayedenergy_per_mass =
         decay::get_modelcell_endecay_per_mass(nonemptymgi, endecay_per_massoftopnuc) + q;
 
