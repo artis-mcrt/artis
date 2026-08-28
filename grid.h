@@ -66,7 +66,7 @@ void do_MPI_Bcast_nlte_solution_ranges(ptrdiff_t nstart_nonempty, ptrdiff_t ndo_
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_nnetot(int nonemptymgi) -> float;
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_ffegrp(int modelgridindex) -> float;
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_modelcell_mean_radial_pos_tmin(int modelgridindex) -> double;
-[[gnu::pure]] [[nodiscard]] auto get_modelcell_mean_radial_pos_sq_tmin(int modelgridindex) -> double;
+[[gnu::pure]] [[nodiscard]] auto get_modelcell_mean_radial_pos_squared_tmin(int modelgridindex) -> double;
 void set_elem_massfrac(std::ptrdiff_t nonemptymgi, int element, float newmassfrac);
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_elem_numberdens(std::ptrdiff_t nonemptymgi, int element) -> double;
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_initenergyq(int modelgridindex) -> double;
@@ -152,9 +152,9 @@ inline auto get_ejecta_kinetic_energy() {
     for (int nonemptymgi = 0; nonemptymgi < get_nonempty_npts_model(); nonemptymgi++) {
       const int mgi = get_mgi_of_nonemptymgi(nonemptymgi);
       const double M_cell = get_rho_tmin(mgi) * grid::get_modelcell_assocvolume_tmin(mgi);
-      // the volume averaged mean of r^2 gives the exact kinetic energy of a homologous cell with a
-      // uniform density, which the square of the mean radius underestimates
-      e_kin += 0.5 * M_cell * get_modelcell_mean_radial_pos_sq_tmin(mgi) / pow2(globals::tmin);
+      // the volume averaged mean of r^2 gives the exact kinetic energy of a uniform-density cell.
+      // The square of the mean radius underestimates it.
+      e_kin += 0.5 * M_cell * get_modelcell_mean_radial_pos_squared_tmin(mgi) / pow2(globals::tmin);
     }
     return e_kin;
   }();

@@ -106,7 +106,7 @@ struct ModelGridCellInput {
   float ffegrp = 0.;
   // doubles, because these sums run over up to millions of propagation cells with radii of ~1e15 cm
   double initial_radial_pos_sum = 0.;
-  double initial_radial_pos_sq_sum = 0.;  // sum of the volume averaged r^2, for the kinetic energy
+  double initial_radial_pos_squared_sum = 0.;  // sum of the volume averaged r^2, for the kinetic energy
   float initelectronfrac = 0.4;  // Ye: electrons (or protons) per nucleon
   float initenergyq = 0.;  // q: energy in the model at tmin to use with INITIAL_PACKETS_ON [erg/g]
 };
@@ -411,7 +411,7 @@ auto get_cellradialposmid(const int cellindex) -> double {
 
 // volume averaged mean of the squared radius of a propagation cell. The kinetic energy sum needs the
 // mean of r^2, which is larger than the square of the mean radius that get_cellradialposmid() gives.
-auto get_cellradialposmeansq(const int cellindex) -> double {
+auto get_cellradialposmeansquared(const int cellindex) -> double {
   const auto prop_gridtype = get_propgridtype();
   if (prop_gridtype == GridType::SPHERICAL1D) {
     const double r_inner = get_cellcoordmin(cellindex, 0);
@@ -473,7 +473,7 @@ void allocate_nonemptymodelcells() {
   if (globals::rank_in_node == 0) {
     for (int mgi = 0; mgi < get_npts_model(); mgi++) {
       modelgrid_input[mgi].initial_radial_pos_sum = 0.;
-      modelgrid_input[mgi].initial_radial_pos_sq_sum = 0.;
+      modelgrid_input[mgi].initial_radial_pos_squared_sum = 0.;
     }
   }
   MPI_Barrier_node();
@@ -492,7 +492,7 @@ void allocate_nonemptymodelcells() {
       modelgrid_numpropcells[mgi] += 1;
       if (globals::rank_in_node == 0) {
         modelgrid_input[mgi].initial_radial_pos_sum += radial_pos_mid;
-        modelgrid_input[mgi].initial_radial_pos_sq_sum += get_cellradialposmeansq(cellindex);
+        modelgrid_input[mgi].initial_radial_pos_squared_sum += get_cellradialposmeansquared(cellindex);
       }
       assert_always(get_rho_tmin(mgi) > 0);
       // with direct mapping, there must be exactly one propagation cell per non-empty model cell
@@ -1715,9 +1715,9 @@ auto get_rho_tmin(const int modelgridindex) -> float { return modelgrid_input[mo
 }
 
 // volume averaged mean of the squared radius [cm^2] of a model cell at tmin
-[[gnu::pure]] [[nodiscard]] auto get_modelcell_mean_radial_pos_sq_tmin(const int modelgridindex) -> double {
+[[gnu::pure]] [[nodiscard]] auto get_modelcell_mean_radial_pos_squared_tmin(const int modelgridindex) -> double {
   const int assoc_cells = get_numpropcells(modelgridindex);
-  return modelgrid_input[modelgridindex].initial_radial_pos_sq_sum / assoc_cells;
+  return modelgrid_input[modelgridindex].initial_radial_pos_squared_sum / assoc_cells;
 }
 
 // mass fraction of an element (all isotopes combined)
