@@ -266,10 +266,14 @@ test (see "Input and output files").
   run-clang-tidy grid.cc
   ```
 
+  Each build of `sn3d`, `exspec`, or `unittests` also writes the database, so it
+  always agrees with the options of that build. The recipe replaces the file
+  only when the content changes. A build with different options therefore
+  changes the database, e.g. the `make` pre-commit hook, which uses
+  `OPTIMIZE=OFF`. Make the database again with the options that you want.
+
   Name the files that you changed. `make TESTMODE=ON check` runs the same check
-  as CI, over `sn3d`, `exspec`, and `unittests`, and takes many minutes. The
-  target writes the database each time, because the content comes from the make
-  options and not from a file that make can examine.
+  as CI, over `sn3d`, `exspec`, and `unittests`, and takes many minutes.
 
   Do not make the database with `compiledb`. `compiledb` does not recognise
   `mpicxx` as a compiler, so it removes the compiler and the first flags from

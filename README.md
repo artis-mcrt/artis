@@ -103,6 +103,7 @@ Install the pre-commit hooks and generate a compilation database for clang tools
 prek install
 make TESTMODE=ON compile_commands.json
 ```
+Every build writes the database again with the options of that build, so it stays current.
 For editing, the clangd language server is recommended (e.g., with the [VS Code plugin](https://marketplace.visualstudio.com/items?itemName=llvm-vs-code-extensions.vscode-clangd)).
 
 ### Running

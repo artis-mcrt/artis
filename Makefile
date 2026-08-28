@@ -368,48 +368,50 @@ check: compile_commands.json
 # clangd and clang-tidy read compile_commands.json. Each entry must name the compiler that
 # $(CXX) calls, because clang-tidy finds its resource directory from that name. See
 # "Linting and formatting" in AGENTS.md. Open MPI and MPICH both print the full command
-# with -show. The recursive '=' is deliberate: it keeps these probes out of a normal build.
-CDB_SHOW = $(shell $(CXX) -show 2>/dev/null)
-CDB_CXX = $(shell command -v $(firstword $(CDB_SHOW)))
-CDB_INCFLAGS = $(patsubst -I%,-isystem%,$(filter -I%,$(CDB_SHOW)))
+# with -show. Every build reads these variables, so ':=' keeps the probe to one call.
+CDB_SHOW := $(shell $(CXX) -show 2>/dev/null)
+CDB_CXX := $(shell command -v $(firstword $(CDB_SHOW)))
+CDB_INCFLAGS := $(patsubst -I%,-isystem%,$(filter -I%,$(CDB_SHOW)))
 CDB_SRC = $(sort $(sn3d_files) $(exspec_files) $(unittests_files))
 
-# The content comes from the make options, e.g. TESTMODE, and not from a file that make can
-# examine. The target is therefore .PHONY, and it writes the database each time.
+# Each build writes the database, so it always agrees with the options of that build, e.g.
+# TESTMODE. The content comes from those options and not from a file that make can examine,
+# so the target is .PHONY. The recipe replaces the file only when the content changes.
+# clangd therefore reads the files again only after a real change.
 # make clean keeps the database, because clangd reads it and compiles nothing.
 .PHONY: compile_commands.json
 compile_commands.json:
 	@test -n '$(CDB_CXX)' || { echo 'error: "$(CXX) -show" does not name the compiler'; exit 1; }
 	@CDB_CXX='$(CDB_CXX)' CDB_FLAGS='$(CDB_INCFLAGS) $(CXXFLAGS)' CDB_SRC='$(CDB_SRC)' \
-		python3 -c 'import json,os,shlex; args=[os.environ["CDB_CXX"],*shlex.split(os.environ["CDB_FLAGS"])]; json.dump([{"directory":os.getcwd(),"arguments":[*args,"-c",src],"file":src} for src in os.environ["CDB_SRC"].split()],open("$@","w"),indent=1)'
-	@echo '$@: $(words $(CDB_SRC)) entries for $(CDB_CXX)'
+		python3 -c 'import json,os,shlex,sys; args=[os.environ["CDB_CXX"],*shlex.split(os.environ["CDB_FLAGS"])]; json.dump([{"directory":os.getcwd(),"arguments":[*args,"-c",src],"file":src} for src in os.environ["CDB_SRC"].split()],sys.stdout,indent=1)' > $@.tmp
+	@if cmp -s $@.tmp $@; then rm -f $@.tmp; else mv $@.tmp $@; echo '$@: $(words $(CDB_SRC)) entries for $(CDB_CXX)'; fi
 
 $(BUILD_DIR)/sn3d: $(sn3d_objects)
 	$(CXX) $(CXXFLAGS) $(sn3d_objects) $(LDFLAGS) -o $(BUILD_DIR)/sn3d
 -include $(sn3d_dep)
 
-sn3d: $(BUILD_DIR)/sn3d
+sn3d: $(BUILD_DIR)/sn3d compile_commands.json
 	ln -sf $(BUILD_DIR)/sn3d sn3d
 
 $(BUILD_DIR)/sn3dwhole: $(sn3d_files) version.h artisoptions.h Makefile
 	$(CXX) $(CXXFLAGS) $(sn3d_files) $(LDFLAGS) -o $(BUILD_DIR)/sn3dwhole
 -include $(sn3d_dep)
 
-sn3dwhole: $(BUILD_DIR)/sn3dwhole
+sn3dwhole: $(BUILD_DIR)/sn3dwhole compile_commands.json
 	ln -sf $(BUILD_DIR)/sn3dwhole sn3d
 
 $(BUILD_DIR)/exspec: $(exspec_objects)
 	$(CXX) $(CXXFLAGS) $(exspec_objects) $(LDFLAGS) -o $(BUILD_DIR)/exspec
 -include $(exspec_dep)
 
-exspec: $(BUILD_DIR)/exspec
+exspec: $(BUILD_DIR)/exspec compile_commands.json
 	ln -sf $(BUILD_DIR)/exspec exspec
 
 $(BUILD_DIR)/unittests: $(unittests_objects)
 	$(CXX) $(CXXFLAGS) $(unittests_objects) $(LDFLAGS) -o $(BUILD_DIR)/unittests
 -include $(unittests_dep)
 
-unittests: $(BUILD_DIR)/unittests
+unittests: $(BUILD_DIR)/unittests compile_commands.json
 	ln -sf $(BUILD_DIR)/unittests unittests
 
 .PHONY: clean sn3d sn3dwhole exspec unittests check
