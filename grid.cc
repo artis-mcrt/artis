@@ -165,25 +165,40 @@ void read_possible_yefile() {
     int nlines_in = 0;
     assert_always(fscanf(filein.get(), "%d", &nlines_in) == 1);
 
+    const int last_input_cellid = get_npts_model() - 1 + first_input_cellid;
     int cells_set = 0;
+    int minid = std::numeric_limits<int>::max();
+    int maxid = std::numeric_limits<int>::min();
     for (int n = 0; n < nlines_in; n++) {
       int cellnumberin = -1;
       float initelecfrac = 0.;
       assert_always(fscanf(filein.get(), "%d %g", &cellnumberin, &initelecfrac) == 2);
-      // Ye.txt uses the same cell numbering as model.txt. read_ejecta_model() detects the number of
-      // the first cell (0 or 1) and stores it in first_input_cellid before this function runs.
+      // Ye.txt uses the same cell ids as model.txt. read_ejecta_model() detects the id of the first
+      // cell (0 or 1) and stores it in first_input_cellid before this function runs.
       const int mgi = cellnumberin - first_input_cellid;
       if (mgi < 0 || mgi >= get_npts_model()) {
-        // an out-of-range id is a sign of a numbering mismatch with model.txt, and a silently
-        // shifted electron fraction would give wrong grey opacities in every cell
+        // An out-of-range id is a sign of a cell id mismatch with model.txt. A silently shifted
+        // electron fraction would give wrong grey opacities in every cell.
         printlnlog("[error] Ye.txt: cell id {} is outside the model.txt id range [{}..{}]", cellnumberin,
-                   first_input_cellid, get_npts_model() - 1 + first_input_cellid);
+                   first_input_cellid, last_input_cellid);
         std::abort();
       }
+      minid = std::min(minid, cellnumberin);
+      maxid = std::max(maxid, cellnumberin);
       set_initelectronfrac(mgi, initelecfrac);
       cells_set++;
     }
-    printlnlog("Ye.txt: set the initial electron fraction for {} of {} model cells", cells_set, get_npts_model());
+    if (cells_set > 0 && minid != first_input_cellid && maxid != last_input_cellid) {
+      // A file with either boundary id would hit the out-of-range stop above under the other id
+      // convention. A sparse file with neither boundary id gives no such confirmation, e.g. a
+      // 1-based file for a 0-based model would read with a one-cell shift.
+      printlnlog(
+          "[warning] Ye.txt holds neither the first cell id {} nor the last cell id {}, so the file cannot confirm "
+          "that its ids follow model.txt",
+          first_input_cellid, last_input_cellid);
+    }
+    printlnlog("Ye.txt: set the initial electron fraction for {} of {} model cells (ids follow model.txt, first id {})",
+               cells_set, get_npts_model(), first_input_cellid);
   }
   MPI_Barrier_allranks();
 }
