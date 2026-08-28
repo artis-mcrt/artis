@@ -52,6 +52,10 @@ constexpr double NLTE_SIGNIFICANT_ION_FRACTION = 1e-4;
 static_assert(NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION < NLTE_SIGNIFICANT_ION_FRACTION);
 [[nodiscard]] auto elem_has_nlte_solution(int nonemptymgi, int element) -> bool;
 [[nodiscard]] auto get_nlte_solution_range(int nonemptymgi, int element) -> std::pair<int, int>;
+// Give each ion of the element the factor of ion_factors, and hold the element population at its
+// abundance value with a common factor. The outer iteration uses this to inject the ion populations
+// that its accelerator gives (see the definition in nltepop.cc for the full contract).
+[[nodiscard]] auto nltepop_scale_ion_pops(int nonemptymgi, int element, std::span<const double> ion_factors) -> bool;
 // GTH solve for the stationary distribution of the NLTE rate matrix, exposed here so that unittests.cc can test
 // it (see the definition in nltepop.cc for the full contract)
 [[nodiscard]] auto gth_stationary_distribution(std::span<double> rate_matrix, std::span<double> vec_x)

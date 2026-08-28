@@ -5,6 +5,7 @@ Checks: [
         -abseil-*,
         -android-*,
         -altera-*,
+        -bugprone-casting-through-void,  # for MPI calls
         -bugprone-easily-swappable-parameters,
         -bugprone-exception-escape,
         -bugprone-implicit-widening-of-multiplication-result,

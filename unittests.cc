@@ -743,6 +743,42 @@ void test_anderson_accelerator() {
   check(acc.next(x1, g1) != g1, "the second Anderson step changes the iterate");
   acc.reset();
   check(acc.next(x1, g1) == g1, "after a reset the Anderson step returns the map output");
+
+  // a state of a dimension that the caller knows only at run time: the accelerator uses the leading
+  // entries and passes the other entries through, so a map of two active entries in a state of four
+  // gives the same iterates as the state of two
+  AndersonAccelerator<4, 2> acc_dyn(2, 2);
+  check(acc_dyn.get_dimension() == 2, "the accelerator keeps the dimension of the constructor");
+  const auto embed = [](const std::array<double, 2>& v, const double pad0, const double pad1) {
+    return std::array<double, 4>{v[0], v[1], pad0, pad1};
+  };
+  std::array<double, 4> x_dyn{0., 0., 7., -3.};
+  AndersonAccelerator<2> acc_ref(2);
+  std::array<double, 2> x_ref{0., 0.};
+  // The two accelerators do the same arithmetic on the leading entries, but the sums run over arrays
+  // of a different size. A build with fast math can group the two sizes differently, and the
+  // least-squares solve near the fixed point makes such a difference larger. Compare these entries
+  // with a tolerance. The entries above the dimension are copies, so they must agree exactly.
+  const auto close = [](const double a, const double b) { return std::abs(a - b) <= 1e-9 * std::max(1., std::abs(b)); };
+  bool embedded_matches = true;
+  for (int i = 0; i < 6; i++) {
+    const auto g_ref = linear_map(x_ref);
+    const auto g_dyn = embed(g_ref, 7., -3.);
+    x_ref = acc_ref.next(x_ref, g_ref);
+    x_dyn = acc_dyn.next(x_dyn, g_dyn);
+    embedded_matches =
+        embedded_matches && close(x_dyn[0], x_ref[0]) && close(x_dyn[1], x_ref[1]) && x_dyn[2] == 7. && x_dyn[3] == -3.;
+  }
+  check(embedded_matches, "a map of two active entries in a state of four gives the iterates of a state of two");
+  check(std::abs(x_dyn[0] - 10.) < 1e-6 && std::abs(x_dyn[1] - 2.) < 1e-6,
+        "the accelerator of a run-time dimension reaches the fixed point");
+
+  // a new dimension forgets the history, so the next step is the plain map output again
+  acc_dyn.reset(4);
+  check(acc_dyn.get_dimension() == 4, "a reset with a dimension changes the dimension");
+  const std::array<double, 4> x4{1., 2., 3., 4.};
+  const std::array<double, 4> g4{1.5, 2.5, 3.5, 4.5};
+  check(acc_dyn.next(x4, g4) == g4, "after a reset with a new dimension the step returns the map output");
 }
 
 void test_gth_solver() {
