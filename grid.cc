@@ -166,21 +166,24 @@ void read_possible_yefile() {
     assert_always(fscanf(filein.get(), "%d", &nlines_in) == 1);
 
     int cells_set = 0;
-    int entries_ignored = 0;
     for (int n = 0; n < nlines_in; n++) {
-      int mgiplusone = -1;
+      int cellnumberin = -1;
       float initelecfrac = 0.;
-      assert_always(fscanf(filein.get(), "%d %g", &mgiplusone, &initelecfrac) == 2);
-      const int mgi = mgiplusone - 1;
-      if (mgi >= 0 && mgi < get_npts_model()) {
-        set_initelectronfrac(mgi, initelecfrac);
-        cells_set++;
-      } else {
-        entries_ignored++;
+      assert_always(fscanf(filein.get(), "%d %g", &cellnumberin, &initelecfrac) == 2);
+      // Ye.txt uses the same cell numbering as model.txt. read_ejecta_model() detects the number of
+      // the first cell (0 or 1) and stores it in first_input_cellid before this function runs.
+      const int mgi = cellnumberin - first_input_cellid;
+      if (mgi < 0 || mgi >= get_npts_model()) {
+        // an out-of-range id is a sign of a numbering mismatch with model.txt, and a silently
+        // shifted electron fraction would give wrong grey opacities in every cell
+        printlnlog("[error] Ye.txt: cell id {} is outside the model.txt id range [{}..{}]", cellnumberin,
+                   first_input_cellid, get_npts_model() - 1 + first_input_cellid);
+        std::abort();
       }
+      set_initelectronfrac(mgi, initelecfrac);
+      cells_set++;
     }
-    printlnlog("Ye.txt: set the initial electron fraction for {} of {} model cells ({} out-of-range entries ignored)",
-               cells_set, get_npts_model(), entries_ignored);
+    printlnlog("Ye.txt: set the initial electron fraction for {} of {} model cells", cells_set, get_npts_model());
   }
   MPI_Barrier_allranks();
 }
