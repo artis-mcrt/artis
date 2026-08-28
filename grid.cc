@@ -87,6 +87,10 @@ std::vector<int> nonemptymgi_of_mgi;
 std::vector<int> mgi_of_nonemptymgi;
 
 std::vector<double> totmassnuclide{};  // total mass of each nuclide in the ejecta
+// the grid-mapped mass of each nuclide in the propagation cells that FORCE_SPHERICAL_ESCAPE_SURFACE
+// blanks. The nuclide-mass rescale in init_grid() adds this to the mapped total, so that the rescale
+// corrects only the discretisation error and the blanked mass stays removed.
+std::vector<double> totmassnuclide_blanked{};
 
 MPI_shared_array<float> initnucmassfrac_allcells{};
 MPI_shared_array<float> initmassfracuntrackedstable_allcells{};
@@ -447,12 +451,24 @@ void allocate_nonemptymodelcells() {
   }
   MPI_Barrier_node();
 
+  // Record the grid-mapped volume that the spherical escape surface blanks per model cell. The
+  // per-nuclide blanked mass must be taken here, because the loop below this one zeroes the density
+  // and the mass fractions of a model cell that loses all of its propagation cells. Only the
+  // model-to-grid mapping case needs it, because only that case rescales the nuclide masses.
+  const bool track_blanked_mass = FORCE_SPHERICAL_ESCAPE_SURFACE && (get_modelgridtype() != get_propgridtype());
+  std::vector<double> blanked_assocvolume(track_blanked_mass ? get_npts_model() : 0, 0.);
+  reserve_resize(totmassnuclide_blanked, decay::get_num_nuclides());
+  std::ranges::fill(totmassnuclide_blanked, 0.);
+
   for (int cellindex = 0; cellindex < ngrid; cellindex++) {
     const auto radial_pos_mid = get_cellradialposmid(cellindex);
 
     if (FORCE_SPHERICAL_ESCAPE_SURFACE && radial_pos_mid > globals::vmax * globals::tmin) {
       // for 1D models, the final shell outer v should already be at vmax
       assert_always(model_type != GridType::SPHERICAL1D || propcell_mgi[cellindex] < 0);
+      if (const int mgi_blanked = get_propcell_modelgridindex(cellindex); track_blanked_mass && mgi_blanked >= 0) {
+        blanked_assocvolume[mgi_blanked] += get_propcell_volume_tmin(cellindex);
+      }
       set_propcell_modelgridindex(cellindex, -1);
     }
 
@@ -466,6 +482,18 @@ void allocate_nonemptymodelcells() {
       assert_always(get_rho_tmin(mgi) > 0);
       // with direct mapping, there must be exactly one propagation cell per non-empty model cell
       assert_always(get_modelgridtype() != get_propgridtype() || modelgrid_numpropcells[mgi] == 1);
+    }
+  }
+
+  if (track_blanked_mass) {
+    // every rank computes the same values from the same node-shared inputs, so no communication is needed
+    for (int mgi = 0; mgi < get_npts_model(); mgi++) {
+      if (blanked_assocvolume[mgi] > 0.) {
+        const double mass_blanked = get_rho_tmin(mgi) * blanked_assocvolume[mgi];
+        for (int nucindex = 0; nucindex < decay::get_num_nuclides(); nucindex++) {
+          totmassnuclide_blanked[nucindex] += mass_blanked * get_modelinitnucmassfrac(mgi, nucindex);
+        }
+      }
     }
   }
 
@@ -2379,6 +2407,11 @@ void init_grid() {
   // own geometry and map_modeltogrid_direct() gives each model cell exactly its own volume, so there is no
   // discretisation error to correct and the ratio would be one throughout. The "Total grid-mapped mass" line
   // logged below shows the size of the discrepancy for any model.
+  //
+  // The mapped total includes the mass in the propagation cells that FORCE_SPHERICAL_ESCAPE_SURFACE
+  // blanked (totmassnuclide_blanked, taken in allocate_nonemptymodelcells()). The option removes that
+  // mass on purpose, so the ratio must not put it back into the surviving cells. A directly mapped
+  // model under the same option also drops the blanked mass, so the two cases then agree.
   const bool mapping_loses_nuclide_mass = (get_modelgridtype() != prop_gridtype);
   if (mapping_loses_nuclide_mass && globals::rank_in_node == 0) {
     for (int nucindex = 0; nucindex < decay::get_num_nuclides(); nucindex++) {
@@ -2386,7 +2419,7 @@ void init_grid() {
         continue;
       }
 
-      double totmassnuclide_actual = 0.;
+      double totmassnuclide_actual = totmassnuclide_blanked[nucindex];
       for (int nonemptymgi = 0; nonemptymgi < get_nonempty_npts_model(); nonemptymgi++) {
         const int mgi = get_mgi_of_nonemptymgi(nonemptymgi);
         totmassnuclide_actual +=
