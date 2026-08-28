@@ -696,8 +696,10 @@ void read_elem_abundances() {
       assert_always(parse_next_token(remainder, cellnumberinput));
       assert_always(cellnumberinput == mgi + first_input_cellid);
 
-      // the abundances.txt file specifies the elemental mass fractions for each model cell
-      // (or proportional to mass frac, e.g. element densities, because they will be normalised anyway)
+      // the abundances.txt file specifies the elemental mass fractions for each model cell.
+      // A 1D or 2D file may hold values proportional to the mass fractions, e.g. element densities,
+      // because those get normalised below. A 3D file must hold true mass fractions, because the 3D
+      // path applies no normalisation.
       // The abundances begin with hydrogen, helium, etc, going as far up the atomic numbers as required
       double normfactor = 0.;
       std::array<float, 150> elem_massfracs_in{};
@@ -718,8 +720,25 @@ void read_elem_abundances() {
         normfactor += elem_massfracs_in[elem_z_index];
       }
 
+      // parse_next_token() gives false at the end of the row and also for a token that is not a
+      // number, e.g. "nan". The loop above stops on both, so a bad token would silently zero every
+      // later element. Only whitespace may remain here.
+      remainder.remove_prefix(std::min(remainder.find_first_not_of(" \t\r"), remainder.size()));
+      if (!remainder.empty()) {
+        printlnlog("[error] read_elem_abundances: cell {} has an unreadable token at '{}'", cellnumberinput, remainder);
+        std::abort();
+      }
+
       if (get_numpropcells(mgi) > 0) {
         if (threedimensional || normfactor <= 0.) {
+          // a 3D file holds true mass fractions and gets no normalisation, so a sum far from one is
+          // a sign of a file that holds proportional values, e.g. densities
+          if (threedimensional && normfactor > 0. && std::abs(normfactor - 1.) > 0.02) {
+            printlnlog(
+                "[warning] read_elem_abundances: 3D cell {} has element mass fractions that sum to {:g}. The values "
+                "are used without normalisation.",
+                cellnumberinput, normfactor);
+          }
           normfactor = 1.;
         }
         const int nonemptymgi = get_nonemptymgi_of_mgi(mgi);
