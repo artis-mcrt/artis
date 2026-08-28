@@ -301,6 +301,10 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
   // the map changed, e.g. a significant ion entered or left a solved range: the history is useless,
   // and the next pass must reach the element solves
   bool map_changed = false;
+  // a solved ion range of the previous pass changed. This is the part of map_changed that the charge
+  // transfer rates of the other elements read, so it gets its own flag (see the convergence test).
+  bool range_changed_prev = false;
+  bool extra_range_sweep_used = false;
 
   // the ion populations and the NLTE solution ranges of the previous iteration, for the charge
   // transfer convergence test. The buffers are thread-local, so every cell reuses them.
@@ -401,7 +405,22 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
         // change, so the test below is the previous test when the map is the same.
         const bool changes_converged = change[0] <= NLTE_TE_NNE_RELTOL && change[1] <= NLTE_TE_NNE_RELTOL &&
                                        fracdiff_nnion_prev <= NLTE_TE_NNE_RELTOL;
-        if (changes_converged && (map_changed || error_estimate <= NLTE_TE_NNE_RELTOL)) {
+        // The charge transfer rates of an element read the solved ion range of a partner element from
+        // the last solve of that partner (see sum_reaction_list() in chargetransfer.cc). The elements
+        // solve in order, so a pass that changed the range of a later element gave the earlier elements
+        // the previous range. One more sweep gives those elements the new range. Only the first such
+        // pass of the cell holds the convergence, because a range that oscillates would otherwise use
+        // every pass of NLTE_TE_NNE_MAXITER.
+        const bool hold_for_range_sweep =
+            ENABLE_CHARGE_TRANSFER_REACTIONS && changes_converged && range_changed_prev && !extra_range_sweep_used;
+        if (hold_for_range_sweep) {
+          extra_range_sweep_used = true;
+          printlnlog(
+              "NLTE (Spencer-Fano/Te/pops) solver mgi {} timestep {} iteration {}: the changes converged, but a "
+              "solution range changed. The solver makes one more sweep for the charge transfer rates.",
+              mgi, nts, nlte_iter);
+        }
+        if (!hold_for_range_sweep && changes_converged && (map_changed || error_estimate <= NLTE_TE_NNE_RELTOL)) {
           printlnlog(
               "NLTE (Spencer-Fano/Te/pops) solver mgi {} timestep {} iteration {}: converged with an estimated error "
               "{:g} <= {:g} (T_e change {:g}, nne change {:g}, map changed {})",
@@ -549,6 +568,7 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
       fracdiff_nne_prev = fracdiff_nne;
       fracdiff_nnion_prev = fracdiff_nnion;
       map_changed = nlte_solution_changed;
+      range_changed_prev = nlte_solution_changed;
     } else {
       // without the charge transfer option, the ion population test always passes. A change of the
       // solved ion range is not a test of its own: a change that moves no population is a change of
