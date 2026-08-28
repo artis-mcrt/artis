@@ -795,6 +795,7 @@ auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixsli
   assert_testmodeonly(!USECELLHISTANDUPDATEPHIXSLIST || cacheslot.nonemptymgi == nonemptymgi);
 
   // the last continuum that contributed to the sum, for the roundoff fallback below
+  // NOLINTNEXTLINE(misc-const-correctness): written only in the SELECTCONTINUUM instantiation
   [[maybe_unused]] int lastcontindex = -1;
 
   // Walk the window a word of the keep bitmap at a time, visiting only the continua whose bit is set and
