@@ -101,7 +101,9 @@ a pull request or an issue.
 
 The build needs gcc 14 or later, clang, nvc++, or hipcc, and an MPI library
 that supplies `mpicxx`. With Open MPI, select the compiler with
-`export OMPI_CXX=g++`.
+`export OMPI_CXX=g++`. The build needs no other program. Each build also writes
+`compile_commands.json` with python3, but an absent python3 gives a message and
+no error (see "Linting and formatting").
 
 ```sh
 export MAKEFLAGS="--check-symlink-times --jobs=$(nproc --all)"
@@ -268,7 +270,9 @@ test (see "Input and output files").
 
   Each build of `sn3d`, `exspec`, or `unittests` also writes the database, and
   the `make` pre-commit hook does the same. The recipe replaces the file only
-  when the content changes. The database always has the flags of `TESTMODE=ON`,
+  when the content changes. It needs python3. A host without python3 gives a
+  message and builds the programs, because the build itself needs no python3.
+  `make check` stops with an error if the database is absent. The database always has the flags of `TESTMODE=ON`,
   also when the build does not, so that clangd and clang-tidy examine the body
   of each `assert_testmodeonly()` macro. `TESTMODE_CXXFLAGS` in the Makefile
   holds those flags.

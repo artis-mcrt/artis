@@ -367,12 +367,14 @@ $(BUILD_DIR)/%.o: %.cc artisoptions.h Makefile
 
 # runs the same check as CI, over sn3d, exspec, and unittests
 check: compile_commands.json
+	@test -f compile_commands.json || { echo 'error: no compile_commands.json. python3 makes it'; exit 1; }
 	run-clang-tidy
 
 # clangd and clang-tidy read compile_commands.json. Each entry must name the compiler that
 # $(CXX) calls, because clang-tidy finds its resource directory from that name. See
 # "Linting and formatting" in AGENTS.md. Open MPI and MPICH both print the full command
 # with -show. Every build reads these variables, so ':=' keeps the probe to one call.
+CDB_PYTHON := $(shell command -v python3)
 CDB_SHOW := $(shell $(CXX) -show 2>/dev/null)
 CDB_CXX := $(shell command -v $(firstword $(CDB_SHOW)))
 CDB_INCFLAGS := $(patsubst -I%,-isystem%,$(filter -I%,$(CDB_SHOW)))
@@ -385,12 +387,19 @@ CDB_CXXFLAGS = $(CXXFLAGS) $(if $(filter ON,$(TESTMODE)),,$(TESTMODE_CXXFLAGS))
 # content changes.
 # clangd therefore reads the files again only after a real change.
 # make clean keeps the database, because clangd reads it and compiles nothing.
+# The build needs only a compiler and MPI, so an absent python3 gives a message and no error.
+# The clang tools need python3, and the check target stops if the database is absent.
 .PHONY: compile_commands.json
 compile_commands.json:
-	@test -n '$(CDB_CXX)' || { echo 'error: "$(CXX) -show" does not name the compiler'; exit 1; }
+ifeq ($(CDB_PYTHON),)
+	@echo '$@: python3 is absent, so make writes no compilation database'
+else ifeq ($(CDB_CXX),)
+	@echo '$@: "$(CXX) -show" does not name the compiler, so make writes no compilation database'
+else
 	@CDB_CXX='$(CDB_CXX)' CDB_FLAGS='$(CDB_INCFLAGS) $(CDB_CXXFLAGS)' CDB_SRC='$(CDB_SRC)' \
-		python3 -c 'import json,os,shlex,sys; args=[os.environ["CDB_CXX"],*shlex.split(os.environ["CDB_FLAGS"])]; json.dump([{"directory":os.getcwd(),"arguments":[*args,"-c",src],"file":src} for src in os.environ["CDB_SRC"].split()],sys.stdout,indent=1)' > $@.tmp
+		$(CDB_PYTHON) -c 'import json,os,shlex,sys; args=[os.environ["CDB_CXX"],*shlex.split(os.environ["CDB_FLAGS"])]; json.dump([{"directory":os.getcwd(),"arguments":[*args,"-c",src],"file":src} for src in os.environ["CDB_SRC"].split()],sys.stdout,indent=1)' > $@.tmp
 	@if cmp -s $@.tmp $@; then rm -f $@.tmp; else mv $@.tmp $@; echo '$@: $(words $(CDB_SRC)) entries for $(CDB_CXX)'; fi
+endif
 
 $(BUILD_DIR)/sn3d: $(sn3d_objects)
 	$(CXX) $(CXXFLAGS) $(sn3d_objects) $(LDFLAGS) -o $(BUILD_DIR)/sn3d
