@@ -687,6 +687,11 @@ void read_elem_abundances() {
     auto abundance_file = fstream_required("abundances.txt", std::ios::in);
     std::string line;
 
+    // Every log line gets a timestamp and a flush, so a large 3D model must not warn per cell.
+    // The count gives one summary line after the loop instead.
+    int ncells_abund_unnormalised = 0;
+    constexpr int max_unnormalised_warnings = 10;
+
     // loop over propagation cells for 3D models, or modelgrid cells
     for (int mgi = 0; mgi < get_npts_model(); mgi++) {
       assert_always(get_noncommentline(abundance_file, line));
@@ -734,10 +739,13 @@ void read_elem_abundances() {
           // a 3D file holds true mass fractions and gets no normalisation, so a sum far from one is
           // a sign of a file that holds proportional values, e.g. densities
           if (threedimensional && normfactor > 0. && std::abs(normfactor - 1.) > 0.02) {
-            printlnlog(
-                "[warning] read_elem_abundances: 3D cell {} has element mass fractions that sum to {:g}. The values "
-                "are used without normalisation.",
-                cellnumberinput, normfactor);
+            ncells_abund_unnormalised++;
+            if (ncells_abund_unnormalised <= max_unnormalised_warnings) {
+              printlnlog(
+                  "[warning] read_elem_abundances: 3D cell {} has element mass fractions that sum to {:g}. The values "
+                  "are used without normalisation.",
+                  cellnumberinput, normfactor);
+            }
           }
           normfactor = 1.;
         }
@@ -760,6 +768,13 @@ void read_elem_abundances() {
           set_elem_massfrac(nonemptymgi, element, elemmassfrac);
         }
       }
+    }
+
+    if (ncells_abund_unnormalised > max_unnormalised_warnings) {
+      printlnlog(
+          "[warning] read_elem_abundances: {} cells in total have element mass fractions that do not sum to one. The "
+          "first {} are listed above.",
+          ncells_abund_unnormalised, max_unnormalised_warnings);
     }
   }
 
