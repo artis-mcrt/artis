@@ -19,6 +19,7 @@
 #include <print>
 #include <span>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 #include "anderson.h"
@@ -1001,6 +1002,7 @@ void test_chargetransfer_helpers() {
   // so the cross section stays below the geometric limit of the outermost crossing, and the set
   // transfers at least as much as its outermost channel alone
   std::vector<double> deltae_list;
+  deltae_list.reserve(200);
   for (int i = 0; i < 200; i++) {
     deltae_list.push_back((1. + (0.01 * i)) * EV);
   }
