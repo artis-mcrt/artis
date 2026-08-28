@@ -300,6 +300,28 @@ test (see "Input and output files").
 
 ## Code conventions
 
+### Names
+
+The readers of this code are scientists, not only programmers. Give each
+function, variable, and type a name that says which physical quantity it holds.
+Do not name a thing after its role in an abstract algorithm.
+
+- Name the quantity, not the position in a procedure. Write
+  `get_log_te_nne_ionpops()` and not `get_outer_state()`. The first name says
+  that the result holds the logarithms of T_e, of nne, and of the ion
+  populations. The second name says only that some state belongs to some outer
+  loop, which a reader cannot check against the physics.
+- Use the symbol of the quantity if the code already uses it, e.g. `T_e`, `nne`,
+  `nnion`, `phi`, and `Gamma`. Keep the case of the existing symbol.
+- A single letter is permitted only for a mathematical object that has no
+  physical value, e.g. the index `i` of a loop. Do not give a single letter to a
+  vector of physical quantities.
+- Give an index variable the name of its index space (see "Cell indices").
+- Expand an abbreviation that this repository does not already use. `mgi`,
+  `nne`, and `bf` are established here. A new short form is not.
+- The name must stay correct for a reader who does not know the algorithm. A
+  comment that explains the name is a sign that the name is wrong.
+
 ### Cell indices
 
 ARTIS uses three different index spaces for the cells, and all three are plain
