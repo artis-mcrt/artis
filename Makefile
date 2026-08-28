@@ -212,19 +212,23 @@ ifneq ($(MAX_NODE_SIZE),)
 	BUILD_DIR := $(BUILD_DIR)_maxnodesize$(MAX_NODE_SIZE)
 endif
 
+# The flags of TESTMODE=ON. compile_commands.json always uses them, also when the build does
+# not, so that clangd and clang-tidy examine the body of each assert_testmodeonly() macro.
+TESTMODE_CXXFLAGS := -DTESTMODE=true
+
+TESTMODE_CXXFLAGS += -fno-omit-frame-pointer -g
+
+TESTMODE_CXXFLAGS += -D_GLIBCXX_ASSERTIONS
+# TESTMODE_CXXFLAGS += -D_GLIBCXX_DEBUG
+# TESTMODE_CXXFLAGS += -D_GLIBCXX_DEBUG_BACKTRACE
+
+# TESTMODE_CXXFLAGS += -D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_FAST
+TESTMODE_CXXFLAGS += -D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_EXTENSIVE -DEIGEN_MAX_ALIGN_BYTES=0
+
+TESTMODE_CXXFLAGS += -fsanitize=undefined,address
+
 ifeq ($(TESTMODE),ON)
-	CXXFLAGS += -DTESTMODE=true
-
-	CXXFLAGS += -fno-omit-frame-pointer -g
-
-	CXXFLAGS += -D_GLIBCXX_ASSERTIONS
-	# CXXFLAGS += -D_GLIBCXX_DEBUG
-	# CXXFLAGS += -D_GLIBCXX_DEBUG_BACKTRACE
-
-	# CXXFLAGS += -D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_FAST
-	CXXFLAGS += -D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_EXTENSIVE -DEIGEN_MAX_ALIGN_BYTES=0
-
-	CXXFLAGS += -fsanitize=undefined,address
+	CXXFLAGS += $(TESTMODE_CXXFLAGS)
 
 	BUILD_DIR := $(BUILD_DIR)_testmode
 endif
@@ -373,16 +377,18 @@ CDB_SHOW := $(shell $(CXX) -show 2>/dev/null)
 CDB_CXX := $(shell command -v $(firstword $(CDB_SHOW)))
 CDB_INCFLAGS := $(patsubst -I%,-isystem%,$(filter -I%,$(CDB_SHOW)))
 CDB_SRC = $(sort $(sn3d_files) $(exspec_files) $(unittests_files))
+# the database always uses TESTMODE=ON, so add those flags when the build does not have them
+CDB_CXXFLAGS = $(CXXFLAGS) $(if $(filter ON,$(TESTMODE)),,$(TESTMODE_CXXFLAGS))
 
-# Each build writes the database, so it always agrees with the options of that build, e.g.
-# TESTMODE. The content comes from those options and not from a file that make can examine,
-# so the target is .PHONY. The recipe replaces the file only when the content changes.
+# Each build writes the database. The content comes from the make options and not from a file
+# that make can examine, so the target is .PHONY. The recipe replaces the file only when the
+# content changes.
 # clangd therefore reads the files again only after a real change.
 # make clean keeps the database, because clangd reads it and compiles nothing.
 .PHONY: compile_commands.json
 compile_commands.json:
 	@test -n '$(CDB_CXX)' || { echo 'error: "$(CXX) -show" does not name the compiler'; exit 1; }
-	@CDB_CXX='$(CDB_CXX)' CDB_FLAGS='$(CDB_INCFLAGS) $(CXXFLAGS)' CDB_SRC='$(CDB_SRC)' \
+	@CDB_CXX='$(CDB_CXX)' CDB_FLAGS='$(CDB_INCFLAGS) $(CDB_CXXFLAGS)' CDB_SRC='$(CDB_SRC)' \
 		python3 -c 'import json,os,shlex,sys; args=[os.environ["CDB_CXX"],*shlex.split(os.environ["CDB_FLAGS"])]; json.dump([{"directory":os.getcwd(),"arguments":[*args,"-c",src],"file":src} for src in os.environ["CDB_SRC"].split()],sys.stdout,indent=1)' > $@.tmp
 	@if cmp -s $@.tmp $@; then rm -f $@.tmp; else mv $@.tmp $@; echo '$@: $(words $(CDB_SRC)) entries for $(CDB_CXX)'; fi
 

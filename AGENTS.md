@@ -266,11 +266,12 @@ test (see "Input and output files").
   run-clang-tidy grid.cc
   ```
 
-  Each build of `sn3d`, `exspec`, or `unittests` also writes the database, so it
-  always agrees with the options of that build. The recipe replaces the file
-  only when the content changes. A build with different options therefore
-  changes the database, e.g. the `make` pre-commit hook, which uses
-  `OPTIMIZE=OFF`. Make the database again with the options that you want.
+  Each build of `sn3d`, `exspec`, or `unittests` also writes the database, and
+  the `make` pre-commit hook does the same. The recipe replaces the file only
+  when the content changes. The database always has the flags of `TESTMODE=ON`,
+  also when the build does not, so that clangd and clang-tidy examine the body
+  of each `assert_testmodeonly()` macro. `TESTMODE_CXXFLAGS` in the Makefile
+  holds those flags.
 
   Name the files that you changed. `make TESTMODE=ON check` runs the same check
   as CI, over `sn3d`, `exspec`, and `unittests`, and takes many minutes.
