@@ -4,7 +4,7 @@ CompileFlags:
     CompilationDatabase: compile_commands.json
     # the database carries the flags of the build, so add only what it cannot give:
     # the language of a header, and a warning that the build permits
-    Add: [-xc++, -Wno-unused-const-variable, -std=c++26, -DTESTMODE=true, -Wall, -Wextra, -Wpedantic, -Wredundant-decls, -Wno-unneeded-internal-declaration, -Wno-unused-parameter, -Wno-unused-const-variable, -Wsign-compare, -Wshadow, -isystem, third_party/]
+    Add: [-xc++, -Wno-unused-const-variable]
 
 Diagnostics:
     ClangTidy:
@@ -27,3 +27,16 @@ InlayHints:
 
 Hover:
   ShowAKA: Yes
+
+---
+# compile_commands.json holds an entry for each .cc file and none for a header. clangd gives a
+# header the fallback command when it matches the header to no entry, and the header then has no
+# include path, no macro, and the default language standard. This fragment gives a header the flags
+# that the database gives to a .cc file.
+# The flags stay here and not in the list above, because that list wins over the database. hipcc and
+# nvc++ build the code as C++23, and a -std of that list would then override the standard of a .cc
+# file.
+If:
+    PathMatch: .*\.h
+CompileFlags:
+    Add: [-std=c++26, -DTESTMODE=true, -Wall, -Wextra, -Wpedantic, -Wredundant-decls, -Wno-unneeded-internal-declaration, -Wno-unused-parameter, -Wsign-compare, -Wshadow, -isystem, third_party/]
