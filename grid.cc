@@ -104,9 +104,12 @@ std::vector<int> ranks_ndo_nonempty;
 struct ModelGridCellInput {
   float rhoinit = -1.;
   float ffegrp = 0.;
-  // doubles, because these sums run over up to millions of propagation cells with radii of ~1e15 cm
-  double initial_radial_pos_sum = 0.;
-  double initial_radial_pos_squared_sum = 0.;  // sum of the volume averaged r^2, for the kinetic energy
+  // a float, so that the stored mean radial position stays bit-identical to the earlier results
+  float initial_radial_pos_sum = 0.;
+  // sum of the volume averaged r^2 per propagation cell, for the kinetic energy of the BARNES
+  // thermalisation scheme. A double, because the sum runs over up to millions of propagation cells
+  // with radii of ~1e15 cm.
+  double initial_radial_pos_squared_sum = 0.;
   float initelectronfrac = 0.4;  // Ye: electrons (or protons) per nucleon
   float initenergyq = 0.;  // q: energy in the model at tmin to use with INITIAL_PACKETS_ON [erg/g]
 };
@@ -491,7 +494,8 @@ void allocate_nonemptymodelcells() {
     if (mgi >= 0) {
       modelgrid_numpropcells[mgi] += 1;
       if (globals::rank_in_node == 0) {
-        modelgrid_input[mgi].initial_radial_pos_sum += radial_pos_mid;
+        modelgrid_input[mgi].initial_radial_pos_sum =
+            static_cast<float>(modelgrid_input[mgi].initial_radial_pos_sum + radial_pos_mid);
         modelgrid_input[mgi].initial_radial_pos_squared_sum += get_cellradialposmeansquared(cellindex);
       }
       assert_always(get_rho_tmin(mgi) > 0);
