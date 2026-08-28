@@ -441,9 +441,22 @@ auto find_decaypaths(const std::span<const int> custom_zlist, const std::span<co
 }
 
 // remove nuclides that are not a standard or custom input-specified nuclide, or connected to these by decays
+// true if any decay path takes an alpha decay step. The alpha decay steps produce He4 outside of the
+// decay paths (see decay_daughters_z_a_prob), so the network then needs the He4 nuclide.
+[[nodiscard]] auto decaypaths_produce_he4() -> bool {
+  return std::ranges::any_of(decaypaths, [](const auto& decaypath) {
+    return std::ranges::contains(decaypath.decaytypes, DecayType::DECAYTYPE_ALPHA);
+  });
+}
+
 void filter_unused_nuclides(const std::span<const int> custom_zlist, const std::span<const int> custom_alist,
                             const std::vector<Nuclide>& standard_nuclides) {
+  const bool keep_he4 = decaypaths_produce_he4();
   std::erase_if(nuclides, [&](const auto& nuc) {
+    // keep He4 if the decay paths produce it, because it is in no decay path itself
+    if (keep_he4 && nuc.z == 2 && nuc.a == 4) {
+      return false;
+    }
     // keep nucleus if it is in the standard list
     if (std::ranges::any_of(standard_nuclides,
                             [&](const auto& stdnuc) { return (stdnuc.z == nuc.z) && (stdnuc.a == nuc.a); })) {
@@ -1001,6 +1014,9 @@ void init_nuclides(const std::span<const int> custom_zlist, const std::span<cons
   std::ranges::transform(decaypaths, decaypath_endnucindex.begin(),
                          [](const auto& decaypath) { return decaypath.nucindex.back(); });
   he4_nucindex = get_nucindex_or_neg_one(2, 4);
+  // filter_unused_nuclides() keeps He4 when any decay path takes an alpha decay step, so a negative
+  // he4_nucindex here would silently drop the radiogenic He4 from update_abundances()
+  assert_always(he4_nucindex >= 0 || !decaypaths_produce_he4());
   isotopes_of_z.assign(1 + std::ranges::max(nuclides | std::views::transform(&Nuclide::z)), {});
   for (int nucindex = 0; nucindex < std::ssize(nuclides); nucindex++) {
     if (nuclides[nucindex].z >= 0) {
