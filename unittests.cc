@@ -755,6 +755,11 @@ void test_anderson_accelerator() {
   std::array<double, 4> x_dyn{0., 0., 7., -3.};
   AndersonAccelerator<2> acc_ref(2);
   std::array<double, 2> x_ref{0., 0.};
+  // The two accelerators do the same arithmetic on the leading entries, but the sums run over arrays
+  // of a different size. A build with fast math can group the two sizes differently, and the
+  // least-squares solve near the fixed point makes such a difference larger. Compare these entries
+  // with a tolerance. The entries above the dimension are copies, so they must agree exactly.
+  const auto close = [](const double a, const double b) { return std::abs(a - b) <= 1e-9 * std::max(1., std::abs(b)); };
   bool embedded_matches = true;
   for (int i = 0; i < 6; i++) {
     const auto g_ref = linear_map(x_ref);
@@ -762,7 +767,7 @@ void test_anderson_accelerator() {
     x_ref = acc_ref.next(x_ref, g_ref);
     x_dyn = acc_dyn.next(x_dyn, g_dyn);
     embedded_matches =
-        embedded_matches && x_dyn[0] == x_ref[0] && x_dyn[1] == x_ref[1] && x_dyn[2] == 7. && x_dyn[3] == -3.;
+        embedded_matches && close(x_dyn[0], x_ref[0]) && close(x_dyn[1], x_ref[1]) && x_dyn[2] == 7. && x_dyn[3] == -3.;
   }
   check(embedded_matches, "a map of two active entries in a state of four gives the iterates of a state of two");
   check(std::abs(x_dyn[0] - 10.) < 1e-6 && std::abs(x_dyn[1] - 2.) < 1e-6,
