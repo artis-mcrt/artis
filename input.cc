@@ -868,17 +868,25 @@ void setup_phixs_list() {
             if (level == 0) {
               // update_grid.cc normalises and applies the ground continuum estimators at the
               // groundcontindex slot, and the writes below use the same slot. The nearest-edge search
-              // gives another ion's slot only when two ions have an identical ground threshold, which
-              // would silently mix the estimators of the two ions.
-              assert_always(alllevels_closestgroundlevelcont[uniquelevelindex] == groundcontindex);
+              // gives another ion's slot only when two ions have an identical ground threshold. That
+              // case would silently mix the estimators of the two ions.
+              if (const int foundslot = alllevels_closestgroundlevelcont[uniquelevelindex];
+                  foundslot != groundcontindex) {
+                printlnlog(
+                    "[error] element {} ion {} has the ground continuum slot {}, but the nearest-edge search "
+                    "found the slot {} of element {} ion {}. Two ions have an identical ground threshold {:g}.",
+                    element, ion, groundcontindex, foundslot, globals::groundcont_element[foundslot],
+                    globals::groundcont_ion[foundslot], nu_edge_target0);
+                std::abort();
+              }
             }
           }
 
           for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
             assert_always(allcontindex < std::ssize(allcont));
 
-            // See AllCont::groundcontestimindex. The value stays -1 when neither estimator is
-            // enabled, because the estimator arrays then do not exist.
+            // See AllCont::groundcontestimindex. The value stays -1 when no option enables an
+            // estimator, because the estimator arrays then do not exist.
             const int groundcontestimindex =
                 (level == 0 && phixstargetindex == 0 && (USE_LUT_PHOTOION || USE_ION_BFHEATING_ESTIMATORS))
                     ? groundcontindex
