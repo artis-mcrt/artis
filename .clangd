@@ -4,7 +4,7 @@ CompileFlags:
     CompilationDatabase: compile_commands.json
     # the database carries the flags of the build, so add only what it cannot give:
     # the language of a header, and a warning that the build permits
-    Add: [-xc++, -Wno-unused-const-variable]
+    Add: [-xc++, -Wno-unused-const-variable, -std=c++26, -DTESTMODE=true, -Wall, -Wextra, -Wpedantic, -Wredundant-decls, -Wno-unneeded-internal-declaration, -Wno-unused-parameter, -Wno-unused-const-variable, -Wsign-compare, -Wshadow, -isystem, third_party/]
 
 Diagnostics:
     ClangTidy:
