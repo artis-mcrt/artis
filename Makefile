@@ -361,8 +361,20 @@ all: sn3d exspec
 $(BUILD_DIR)/%.o: %.cc artisoptions.h Makefile
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
-check: $(sn3d_files)
-	run-clang-tidy $(sn3d_files)
+# runs the same check as CI, over sn3d, exspec, and unittests
+check: compile_commands.json
+	run-clang-tidy
+
+# clangd and clang-tidy read compile_commands.json. mpicxx is a wrapper, so each entry must
+# name the compiler that mpicxx calls and must add the MPI include directories. An entry that
+# starts with a flag makes clang-tidy find no standard header and give many false diagnostics.
+# Use TESTMODE=ON, because the checks of CI use that configuration.
+CDB_CXX = $(shell command -v "$$($(CXX) --showme:command 2>/dev/null)" 2>/dev/null || command -v $(CXX))
+CDB_INCFLAGS = $(foreach dir,$(shell $(CXX) --showme:incdirs 2>/dev/null),-isystem$(dir))
+
+compile_commands.json: Makefile artisoptions.h
+	@CDB_CXX='$(CDB_CXX)' CDB_FLAGS='$(CDB_INCFLAGS) $(CXXFLAGS)' \
+		python3 scripts/writecompiledb.py $@ $(sn3d_files) $(exspec_files) $(unittests_files)
 
 $(BUILD_DIR)/sn3d: $(sn3d_objects)
 	$(CXX) $(CXXFLAGS) $(sn3d_objects) $(LDFLAGS) -o $(BUILD_DIR)/sn3d
@@ -392,7 +404,7 @@ $(BUILD_DIR)/unittests: $(unittests_objects)
 unittests: $(BUILD_DIR)/unittests
 	ln -sf $(BUILD_DIR)/unittests unittests
 
-.PHONY: clean sn3d sn3dwhole exspec unittests
+.PHONY: clean sn3d sn3dwhole exspec unittests check
 
 clean:
 	rm -rf sn3d exspec unittests build *.o *.d

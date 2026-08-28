@@ -24,13 +24,6 @@ jobs:
               with:
                 extra-args: '--all-files --skip make'
 
-            - name: Setup uv
-              if: always()
-              uses: astral-sh/setup-uv@v10.0.1
-              id: setup-uv
-              with:
-                enable-cache: "false"
-
             - name: Install dependencies
               if: always()
               run: |
@@ -47,17 +40,15 @@ jobs:
               if: always()
               run: |
                   make clean
-                  uvx compiledb -n --full-path make TESTMODE=ON
+                  make TESTMODE=ON compile_commands.json
 
             - name: Run clang-tidy
               if: always()
               run: |
                   clang-tidy --version
-                  # mpicxx is a wrapper, so the compile DB carries no MPI include path;
-                  # feed clang-tidy the same dirs mpicxx would add, or <mpi.h> isn't found.
-                  mpiargs=""
-                  for d in $(mpicxx --showme:incdirs); do mpiargs="$mpiargs -extra-arg=-isystem$d"; done
-                  run-clang-tidy -extra-arg=-nostdinc++ -extra-arg=-isystem"$LIBCXX" $mpiargs
+                  # The compile database names the compiler that mpicxx calls and the MPI
+                  # include directories, so clang-tidy needs only the libc++ header path.
+                  run-clang-tidy -extra-arg=-nostdinc++ -extra-arg=-isystem"$LIBCXX"
 
     cppcheck:
         name: Lint with cppcheck

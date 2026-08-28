@@ -1,6 +1,8 @@
 CompileFlags:
-    # to make the compilation database, pip install compiledb, then run:
-    # make clean && compiledb -n --full-path make TESTMODE=ON
+    # to make the compilation database, run:
+    # make TESTMODE=ON compile_commands.json
+    # Do not use compiledb. It removes the compiler from each command, which makes
+    # clang-tidy find no standard header and give many false diagnostics.
     CompilationDatabase: compile_commands.json
     Add: [-xc++, -std=c++26, -DTESTMODE=true, -Wall, -Wextra, -Wpedantic, -Wredundant-decls, -Wno-unneeded-internal-declaration, -Wno-unused-parameter, -Wno-unused-const-variable, -Wsign-compare, -Wshadow, -isystem, third_party/]
 
