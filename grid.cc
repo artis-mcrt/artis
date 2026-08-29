@@ -2919,8 +2919,17 @@ DEVICE_FUNC void snap_pos_to_cell(Vec3d& pos, const double time, const int celli
 
       // Truncation must act on whole cells to keep the volumes and the packet statistics valid.
       // The trapped packet never leaves this cell. The arrival time is constant along a free ray,
-      // so a mid-cell escape is valid only for a cell with no matter.
-      assert_always(get_propcell_modelgridindex(cellindex) < 0);
+      // so a mid-cell escape is valid only for a cell with no matter. A matter cell can trap
+      // packets only when the cell diagonal spans from below vmax to above CLIGHT, so a finer
+      // grid removes this stop.
+      if (get_propcell_modelgridindex(cellindex) >= 0) {
+        printlnlog(
+            "[error] a packet cannot reach any boundary of matter cell {}, because every boundary recedes faster "
+            "than light. The cell reaches from inside the escape surface to beyond the light speed, so the grid is "
+            "too coarse. Use more grid cells per axis.",
+            cellindex);
+        assert_always(false);
+      }
 
       const double r_surface = globals::rmax * tstart / globals::tmin;
       if (dot(pos, pos) >= pow2(r_surface)) {
