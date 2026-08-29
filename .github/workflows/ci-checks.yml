@@ -262,10 +262,11 @@ jobs:
                   done
 
     amd-rocm-hipcc:
-        runs-on: ubuntu-24.04
+        runs-on: ubuntu-26.04
         name: AMD ROCm hipcc
+        # The container runs as root, so the steps need no sudo.
         container:
-            image: rocm/dev-ubuntu-24.04:7.2.3-complete
+            image: rocm/dev-ubuntu-26.04:10.0.0-full
         steps:
             - uses: actions/checkout@v7
               with:
@@ -273,14 +274,12 @@ jobs:
 
             - name: Install gcc
               run: |
-                  sudo apt-get update
-                  sudo apt-get install -y --no-install-recommends software-properties-common
-                  sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
-                  sudo apt-get update
-                  sudo apt-get install -y --no-install-recommends gcc-14 g++-14
-                  sudo update-alternatives \
-                       --install /usr/bin/gcc gcc /usr/bin/gcc-14 100 \
-                       --slave /usr/bin/g++ g++ /usr/bin/g++-14
+                  # Ubuntu 26.04 supplies gcc-15, so this step needs no toolchain PPA
+                  apt-get update
+                  apt-get install -y --no-install-recommends gcc-15 g++-15
+                  update-alternatives \
+                       --install /usr/bin/gcc gcc /usr/bin/gcc-15 100 \
+                       --slave /usr/bin/g++ g++ /usr/bin/g++-15
 
             - name: Set MPI compiler to hipcc
               run: |
@@ -292,8 +291,8 @@ jobs:
 
             - name: Install Open MPI and git
               run: |
-                  sudo apt-get update
-                  sudo apt-get install -y --no-install-recommends libopenmpi-dev openmpi-bin git
+                  apt-get update
+                  apt-get install -y --no-install-recommends libopenmpi-dev openmpi-bin git
                   git config --global --add safe.directory /__w/artis/artis
 
             - name: Compile classic mode STDPAR=ON GPU=ON
