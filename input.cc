@@ -2320,7 +2320,9 @@ auto calculate_timesteps(const TimeStepSizeMethod method, const double tmin, con
           const double prev_start = n > 0 ? (timesteps[n - 1].start + timesteps[n - 1].width) : tmin;
           timesteps[n].start = prev_start;
           timesteps[n].width = (t_transition * exp((n - nts_fixed + 1) * dlogt)) - timesteps[n].start;
-          timesteps[n].mid = timesteps[n].start + (0.5 * timesteps[n].width);
+          // the geometric mid, so that the logarithmic part of this method matches the mid of the
+          // fully logarithmic methods
+          timesteps[n].mid = t_transition * exp((n - nts_fixed + 0.5) * dlogt);
         }
       }
       break;

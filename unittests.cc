@@ -196,6 +196,20 @@ void test_escapedirectionbin() {
   const auto [mincount, maxcount] = std::ranges::minmax(bincounts);
   check(std::abs(mincount - expected_count) < sixsigma && std::abs(maxcount - expected_count) < sixsigma,
         "isotropic directions fill all equal-solid-angle bins to within 6 sigma");
+
+  // Pin the azimuthal ordering that artistools depends on (see the comment in get_escapedirectionbin):
+  // the bins NPHIBINS/2..(NPHIBINS - 1) cover phi = 0..pi in increasing order, and the bins
+  // 0..(NPHIBINS/2 - 1) cover phi = 2 pi..pi in decreasing order. The directions lie in the
+  // costheta = 0 plane, which falls in costhetabin NCOSTHETABINS / 2.
+  bool phibin_mapping_ok = true;
+  for (int k = 0; k < NPHIBINS; k++) {
+    const double phi = (k + 0.5) * 2. * PI / NPHIBINS;
+    const auto dir = Vec3d{std::cos(phi), std::sin(phi), 0.};
+    const int expectedphibin = (phi < PI) ? (NPHIBINS / 2) + k : NPHIBINS - 1 - k;
+    const int expectedbin = ((NCOSTHETABINS / 2) * NPHIBINS) + expectedphibin;
+    phibin_mapping_ok = phibin_mapping_ok && (get_escapedirectionbin(dir) == expectedbin);
+  }
+  check(phibin_mapping_ok, "escape direction phi bins keep the documented phi-to-bin mapping");
 }
 
 void test_frame_transform() {

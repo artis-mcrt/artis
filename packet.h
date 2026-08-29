@@ -89,6 +89,9 @@ enum absorption_type : int {
   ABSTYPE_PELLET_NOGAMMASPEC = -6,  // pellet decay with no known gamma spectrum (e.g. 52Fe chain)
   ABSTYPE_PELLET_BEFORESIMSTART = -7,  // pellet decayed before the onset of the simulation
   ABSTYPE_PELLET_PARTICLEDECAY = -10,  // pellet decay to non-thermal particle (beta+/-, alpha, fission fragment)
+  // bound-bound absorption in a binned expansion opacity (RPKT_USE_EXPANSION_OPACITIES with
+  // RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY), so no single line index is known
+  ABSTYPE_BOUNDBOUND_EXPANSIONOPACITY = -11,
 };
 
 // The state a macro-atom is activated in. Local to a do_macroatom() call, not part of the packet's

@@ -163,8 +163,12 @@ DEVICE_FUNC constexpr void set_pkt_restframe_from_cmf(Packet& pkt) {
   constexpr auto vec3 = cross_prod(vec2, syn_dir);
   const double testphi = dot(vec1, vec3);
 
-  // with phi defined according to y = cos(theta) * sin(phi), the
-  // phibins are in decreasing phi order (i.e. the upper side of bin zero 0 is 2pi)
+  // With syn_dir = z and phi defined by dir = (sin(theta) cos(phi), sin(theta) sin(phi), cos(theta)),
+  // the mapped angle is phi + pi for phi in (0, pi) and 2 pi - phi for phi in (pi, 2 pi).
+  // The bins 0..(NPHIBINS/2 - 1) therefore cover phi from 2 pi down to pi in decreasing order, and
+  // the bins NPHIBINS/2..(NPHIBINS - 1) cover phi from 0 up to pi in increasing order.
+  // artistools contains the same mapping, so a change here breaks the analysis of the output files.
+  // test_escapedirectionbin() in unittests.cc pins this mapping.
   const int phibin =
       std::clamp(static_cast<int>((testphi > 0 ? std::acos(cosphi) : std::acos(cosphi) + PI) / 2. / PI * NPHIBINS), 0,
                  NPHIBINS - 1);

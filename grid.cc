@@ -1171,7 +1171,7 @@ void assign_initial_temperatures() {
 
   printlog("Assigning initial temperatures...");
 
-  const double tstart = globals::timesteps[0].mid;
+  const double ts0_tmid = globals::timesteps[0].mid;
   int cells_below_mintemp = 0;
   int cells_above_maxtemp = 0;
   int cells_nonfinite_temp = 0;
@@ -1181,7 +1181,7 @@ void assign_initial_temperatures() {
 
   // the Bateman factors depend only on the decay path and time, so compute them once and apply them to every
   // cell's initial abundances
-  const auto endecay_per_massoftopnuc = decay::calc_energy_per_massoftopnuc_decaypath_withexpansion(tstart);
+  const auto endecay_per_massoftopnuc = decay::calc_energy_per_massoftopnuc_decaypath_withexpansion(ts0_tmid);
 
   // the decayed energy calculation is expensive and the temperature arrays are in node-shared memory, so stripe
   // the cells across the ranks of each node, with each rank writing its own disjoint subset of the shared arrays
@@ -1189,12 +1189,16 @@ void assign_initial_temperatures() {
        nonemptymgi += globals::node_nprocs) {
     const int mgi = get_mgi_of_nonemptymgi(nonemptymgi);
 
-    const auto q = INITIAL_PACKETS_ON ? get_initenergyq(mgi) : 0.;
+    // q holds the trapped radiation energy per mass at tmin, and the radiation energy of a comoving
+    // mass element falls as 1/t in the homologous expansion. The decay term carries the matching
+    // t_decay / ts0_tmid factor inside calc_energy_per_massoftopnuc_decaypath_withexpansion(), so the
+    // q term needs tmin / ts0_tmid to refer both terms to ts0_tmid.
+    const auto q = INITIAL_PACKETS_ON ? (get_initenergyq(mgi) * globals::tmin / ts0_tmid) : 0.;
     const double decayedenergy_per_mass =
         decay::get_modelcell_endecay_per_mass(nonemptymgi, endecay_per_massoftopnuc) + q;
 
     auto T_initial = static_cast<float>(std::pow(
-        CLIGHT / 4 / STEBO * pow3(globals::tmin / tstart) * get_rho_tmin(mgi) * decayedenergy_per_mass, 1. / 4.));
+        CLIGHT / 4 / STEBO * pow3(globals::tmin / ts0_tmid) * get_rho_tmin(mgi) * decayedenergy_per_mass, 1. / 4.));
 
     if (!std::isfinite(T_initial)) {
       // check this first: a NaN would fall through every comparison below and be stored unclamped
