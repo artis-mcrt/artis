@@ -2910,6 +2910,11 @@ DEVICE_FUNC void snap_pos_to_cell(Vec3d& pos, const double time, const int celli
       }
       assert_always(cornerspeed_squared > pow2(CLIGHT_PROP));
 
+      // Truncation must act on whole cells to keep the volumes and the packet statistics valid.
+      // The trapped packet never leaves this cell. The arrival time is constant along a free ray,
+      // so a mid-cell escape is valid only for a cell with no matter.
+      assert_always(get_propcell_modelgridindex(cellindex) < 0);
+
       const double r_surface = globals::rmax * tstart / globals::tmin;
       if (dot(pos, pos) >= pow2(r_surface)) {
         // A cell that straddles the sphere keeps positions outside the surface. The intersection
