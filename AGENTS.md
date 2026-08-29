@@ -322,6 +322,12 @@ Do not name a thing after its role in an abstract algorithm.
 - The name must stay correct for a reader who does not know the algorithm. A
   comment that explains the name is a sign that the name is wrong.
 
+### Comments
+
+- Comments should explain non-obvious code, not repeat it. Prefer a comment that explains the physics (such as a journal article citation), the algorithm, or the reason for a choice.
+- Prefer well-named self-explanatory code to a comment that explains it. If renameing a variable or function makes the code clearer, do that instead of adding a comment.
+- Comments should not reference the history of the code. Use the version control system for that. Comments should only describe the current state of the code and its intended behavior.
+
 ### Cell indices
 
 ARTIS uses three different index spaces for the cells, and all three are plain
