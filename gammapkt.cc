@@ -560,6 +560,10 @@ static_assert((get_sigma_pair_prod_factor(nu_1p5mev) - get_sigma_pair_prod_facto
   const double xx = H * nu_cmf / ME / CLIGHT / CLIGHT;
   const auto chi_pair_prod_cmf = get_chi_pair_prod_cmf(nonemptymgi, ffegrp, nu_cmf);
 
+  // Below THOMSON_LIMIT the discrete transport scatters with no energy loss (see compton_scatter()),
+  // while meanf_sigma() still credits the mean Klein-Nishina energy transfer here. The photoelectric
+  // coefficient exceeds the Compton one by orders of magnitude in that regime, so the mismatch is
+  // negligible.
   return ((meanf_sigma(xx) * grid::get_nnetot(nonemptymgi)) + chi_photo_electric_cmf +
           (chi_pair_prod_cmf * (1. - (nu_1p022mev / nu_cmf))));
 }

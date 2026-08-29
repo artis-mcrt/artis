@@ -305,6 +305,9 @@ auto read_shell_configs() {
     }
     zminusone++;
   }
+  // a truncated file would leave the remaining elements with zero occupancies, and a zero-occupancy
+  // element silently gets a zero non-thermal ionisation rate
+  assert_always(zminusone == std::ssize(elements_shells_q));
   return elements_shells_q;
 }
 
@@ -755,6 +758,24 @@ void zero_all_effionpot(const ptrdiff_t nonemptymgi) {
   return std::clamp(index, 0, SFPTS - 1);
 }
 
+// The exclusive row limit of the Auger electron source term of a shell: the rows [0, limit) lie
+// below the mean Auger electron energy and receive the source. The limit is 0 for a shell that
+// injects nothing, and SFPTS when the Auger energy is above the top of the grid, because every row
+// is then below it. analyse_sf_solution() subtracts the recycled Auger energy from the ionisation
+// fraction only when this limit is positive, so the two sites must use this same function.
+[[nodiscard]] constexpr auto get_auger_rowstopindex(const ShellParams& collionrow) -> int {
+  if (!SF_AUGER_CONTRIBUTION_ON || collionrow.en_auger_ev <= 0.) {
+    return 0;
+  }
+  double en_inject_ev = collionrow.en_auger_ev;
+  if constexpr (SF_AUGER_CONTRIBUTION_DISTRIBUTE_EN) {
+    // en_auger_ev is averaged to include some probability of zero Auger electrons, so a boost gives
+    // the mean energy on the condition that one or more Auger electrons exist
+    en_inject_ev /= (1. - collionrow.prob_num_auger[0]);
+  }
+  return (en_inject_ev > SF_EMAX) ? SFPTS : get_energyindex_ev_gteq(en_inject_ev);
+}
+
 // interpolate the y flux values to get the value at a given energy
 // y has units of particles / cm2 / s / eV
 [[nodiscard]] constexpr auto get_y(const std::array<double, SFPTS>& yfunc, const double energy_ev) -> double {
@@ -858,7 +879,9 @@ auto get_xs_ionisation_vector(std::array<double, SFPTS>& xs_vec, const ShellPara
     const double xs_ioniz =
         1e-14 * ((A * (1 - (1 / u))) + (B * pow2(1 - (1 / u))) + (C * std::log(u)) + (D * std::log(u) / u)) /
         (u * pow2(ionpot_ev));
-    xs_vec[i] = xs_ioniz;
+    // a fit with A + C + D < 0 dips below zero just above the threshold, and a negative cross
+    // section must not enter the matrix (the Lotz path has the same guard)
+    xs_vec[i] = std::max(xs_ioniz, 0.);
   }
 
   return startindex;
@@ -994,8 +1017,10 @@ constexpr auto xs_impactionisation(const double energy_ev, const ShellParams& co
   const double C = colliondata_ion.C;
   const double D = colliondata_ion.D;
 
-  return 1e-14 * ((A * (1 - (1 / u))) + (B * pow2((1 - (1 / u)))) + (C * std::log(u)) + (D * std::log(u) / u)) /
-         (u * pow2(ionpot_ev));
+  // the maximum keeps a fit that dips below zero just above the threshold out of the rates
+  return std::max(
+      0., 1e-14 * ((A * (1 - (1 / u))) + (B * pow2((1 - (1 / u)))) + (C * std::log(u)) + (D * std::log(u) / u)) /
+              (u * pow2(ionpot_ev)));
 }
 
 // N(E) of KF92 equation 11: the rate at which electrons appear at an energy E below the solved grid.
@@ -1606,9 +1631,13 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const std::a
             calculate_nt_frac_ionisation_shell(nonemptymgi, element, ion, collionrow, yfunc);
         // with SF_AUGER_CONTRIBUTION_ON, the mean Auger energy per ionisation is re-injected into the
         // electron pool and gets counted in the heating/excitation fractions, so only the net energy
-        // removed per ionisation (shell potential minus Auger energy) counts as ionisation here
+        // removed per ionisation (shell potential minus Auger energy) counts as ionisation here.
+        // The subtraction only applies when the matrix really injected the source, which
+        // get_auger_rowstopindex() decides for both sites.
         const double frac_auger_recycled =
-            SF_AUGER_CONTRIBUTION_ON ? frac_ionisation_ion_shell * collionrow.en_auger_ev / collionrow.ionpot_ev : 0.;
+            (get_auger_rowstopindex(collionrow) > 0)
+                ? frac_ionisation_ion_shell * collionrow.en_auger_ev / collionrow.ionpot_ev
+                : 0.;
         frac_ionisation_ion += frac_ionisation_ion_shell - frac_auger_recycled;
         matching_subshell_count++;
 
@@ -2085,18 +2114,8 @@ void sfmatrix_add_ionisation(std::span<double> sfmatrixuppertri, const int Z, co
       // mean Auger electron energy as a delta function (or spread below it, see below).
       // shells with no Auger data have en_auger_ev == 0 (and prob_num_auger[0] == 1, which would make the
       // energy boost factor below infinite) and inject no Auger electrons
-      if (SF_AUGER_CONTRIBUTION_ON && en_auger_ev > 0.) {
-        int augerstopindex = 0;
-        if constexpr (SF_AUGER_CONTRIBUTION_DISTRIBUTE_EN) {
-          // en_auger_ev is (if LJS understands it correctly) averaged to include some probability of zero Auger
-          // electrons so we need a boost to get the average energy of Auger electrons given that there are one or more
-          const double en_boost = 1 / (1. - collionrow.prob_num_auger[0]);
-
-          augerstopindex = get_energyindex_ev_gteq(en_auger_ev * en_boost);
-        } else {
-          augerstopindex = get_energyindex_ev_gteq(en_auger_ev);
-        }
-
+      const int augerstopindex = get_auger_rowstopindex(collionrow);
+      if (augerstopindex > 0) {
         for (int i = 0; i < augerstopindex; i++) {
           const int rowoffset = uppertriangular(i, 0);
           const double en = engrid(i);

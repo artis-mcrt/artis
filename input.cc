@@ -865,17 +865,32 @@ void setup_phixs_list() {
             const double nu_edge_target0 = get_phixs_threshold(element, ion, level, 0) / H;
             alllevels_closestgroundlevelcont[uniquelevelindex] =
                 search_groundphixslist(nu_edge_target0, element, ion, level);
+            if (level == 0) {
+              // update_grid.cc normalises and applies the ground continuum estimators at the
+              // groundcontindex slot, and the writes below use the same slot. The nearest-edge search
+              // gives another ion's slot only when two ions have an identical ground threshold. That
+              // case would silently mix the estimators of the two ions.
+              if (const int foundslot = alllevels_closestgroundlevelcont[uniquelevelindex];
+                  foundslot != groundcontindex) {
+                printlnlog(
+                    "[error] element {} ion {} has the ground continuum slot {}, but the nearest-edge search "
+                    "found the slot {} of element {} ion {}. Two ions have an identical ground threshold {:g}.",
+                    element, ion, groundcontindex, foundslot, globals::groundcont_element[foundslot],
+                    globals::groundcont_ion[foundslot], nu_edge_target0);
+                std::abort();
+              }
+            }
           }
 
           for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
             assert_always(allcontindex < std::ssize(allcont));
 
-            // See AllCont::groundcontestimindex. closestgroundlevelcont is left at its -1 initialiser when
-            // neither estimator is enabled, so no further guard on those options is needed here.
-            // TODO: the estimators are written at this nearest-edge slot but normalised in update_grid.cc
-            // at get_groundcontindex(element, ion); the two disagree if two ions share a ground threshold.
+            // See AllCont::groundcontestimindex. The value stays -1 when no option enables an
+            // estimator, because the estimator arrays then do not exist.
             const int groundcontestimindex =
-                (level == 0 && phixstargetindex == 0) ? alllevels_closestgroundlevelcont[uniquelevelindex] : -1;
+                (level == 0 && phixstargetindex == 0 && (USE_LUT_PHOTOION || USE_ION_BFHEATING_ESTIMATORS))
+                    ? groundcontindex
+                    : -1;
 
             allcont[allcontindex] = {
                 .nu_edge = get_phixs_threshold(element, ion, level, phixstargetindex) / H,
@@ -2305,7 +2320,9 @@ auto calculate_timesteps(const TimeStepSizeMethod method, const double tmin, con
           const double prev_start = n > 0 ? (timesteps[n - 1].start + timesteps[n - 1].width) : tmin;
           timesteps[n].start = prev_start;
           timesteps[n].width = (t_transition * exp((n - nts_fixed + 1) * dlogt)) - timesteps[n].start;
-          timesteps[n].mid = timesteps[n].start + (0.5 * timesteps[n].width);
+          // the geometric mid, so that the logarithmic part of this method matches the mid of the
+          // fully logarithmic methods
+          timesteps[n].mid = t_transition * exp((n - nts_fixed + 0.5) * dlogt);
         }
       }
       break;

@@ -631,7 +631,10 @@ auto do_rpkt_step(Packet& pkt, const double t2, ContinuumOpacity& chi_rpkt_cont)
           rng_uniform(get_rngstate(pkt)) < RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.value()) {
         // Thermal redistribution of frequency
 
-        pkt.absorptiontype = pktmastate.activatingline;
+        // with expansion opacities, the event comes from a binned opacity and pktmastate holds no
+        // activating line, so the absorption type gets the sentinel for a binned absorption
+        pkt.absorptiontype =
+            RPKT_USE_EXPANSION_OPACITIES ? ABSTYPE_BOUNDBOUND_EXPANSIONOPACITY : pktmastate.activatingline;
         pkt.absorptionfreq = pkt.nu_rf;
         pkt.nu_cmf = sample_planck_times_expansion_opacity(nonemptymgi, get_rngstate(pkt));
         pkt.next_trans = -1;
@@ -791,6 +794,10 @@ auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixsli
   const auto& cacheslot = get_cellcache(nonemptymgi);
   assert_testmodeonly(!USECELLHISTANDUPDATEPHIXSLIST || cacheslot.nonemptymgi == nonemptymgi);
 
+  // the last continuum that contributed to the sum, for the roundoff fallback below
+  // NOLINTNEXTLINE(misc-const-correctness): written only in the SELECTCONTINUUM instantiation
+  [[maybe_unused]] int lastcontindex = -1;
+
   // Walk the window a word of the keep bitmap at a time, visiting only the continua whose bit is set and
   // holding the rest of the word in a register meanwhile. The no-cellcache instantiation has no bitmap, so
   // it walks an all-ones word and applies keep_this_cont() per continuum instead.
@@ -909,6 +916,11 @@ auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixsli
       chi_bf_sum += nnlevel * sigma_contr;
 
       if constexpr (SELECTCONTINUUM) {
+        // the stimulated recombination correction can zero sigma_contr for a populated level, and
+        // the fallback below must not select a continuum with a zero absorption probability
+        if (nnlevel * sigma_contr > 0.) {
+          lastcontindex = i;
+        }
         if (chi_bf_sum > chi_bf_sum_selectionthreshold) {
           return i;
         }
@@ -918,8 +930,11 @@ auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixsli
 
   if constexpr (SELECTCONTINUUM) {
     // the running sum never exceeded the threshold, which the roundoff of redoing the summation can
-    // cause even though the threshold is below the previously-computed total: select the last continuum
-    return allcontend - 1;
+    // cause even though the threshold is below the previously-computed total: select the last
+    // positive contribution. The last continuum of the window can have its keep bit clear, a zero
+    // level population, or a zero corrfactor, and each of those has a zero absorption probability.
+    assert_always(lastcontindex >= 0);
+    return lastcontindex;
   } else {
     assert_always(std::isfinite(chi_bf_sum));
 

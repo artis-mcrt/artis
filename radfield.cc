@@ -678,13 +678,18 @@ void initialise_prev_titer_photoionestimators() {
     for (int element = 0; element < get_nelements(); element++) {
       const int nions = get_nions(element);
       for (int ion = 0; ion < nions - 1; ion++) {
+        const int groundcontindex = get_groundcontindex(element, ion);
+        if (groundcontindex < 0) {
+          // an ion without a ground photoionisation table has no estimator slot
+          continue;
+        }
         if constexpr (USE_LUT_PHOTOION) {
           globals::gammaestimator_save[(static_cast<ptrdiff_t>(nonemptymgi) * globals::nbfcontinua_ground) +
-                                       get_groundcontindex(element, ion)] = -1.;
+                                       groundcontindex] = -1.;
         }
         if constexpr (USE_ION_BFHEATING_ESTIMATORS) {
           globals::bfheatingestimator_save[(static_cast<ptrdiff_t>(nonemptymgi) * globals::nbfcontinua_ground) +
-                                           get_groundcontindex(element, ion)] = -1.;
+                                           groundcontindex] = -1.;
         }
       }
     }

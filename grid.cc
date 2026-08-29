@@ -87,6 +87,10 @@ std::vector<int> nonemptymgi_of_mgi;
 std::vector<int> mgi_of_nonemptymgi;
 
 std::vector<double> totmassnuclide{};  // total mass of each nuclide in the ejecta
+// the grid-mapped mass of each nuclide in the propagation cells that FORCE_SPHERICAL_ESCAPE_SURFACE
+// blanks. The nuclide-mass rescale in init_grid() adds this to the mapped total. The rescale then
+// corrects only the discretisation error, and the blanked mass stays removed.
+std::vector<double> totmassnuclide_blanked{};
 
 MPI_shared_array<float> initnucmassfrac_allcells{};
 MPI_shared_array<float> initmassfracuntrackedstable_allcells{};
@@ -170,22 +174,40 @@ void read_possible_yefile() {
     int nlines_in = 0;
     assert_always(fscanf(filein.get(), "%d", &nlines_in) == 1);
 
+    const int last_input_cellid = get_npts_model() - 1 + first_input_cellid;
     int cells_set = 0;
-    int entries_ignored = 0;
+    int minid = std::numeric_limits<int>::max();
+    int maxid = std::numeric_limits<int>::min();
     for (int n = 0; n < nlines_in; n++) {
-      int mgiplusone = -1;
+      int cellnumberin = -1;
       float initelecfrac = 0.;
-      assert_always(fscanf(filein.get(), "%d %g", &mgiplusone, &initelecfrac) == 2);
-      const int mgi = mgiplusone - 1;
-      if (mgi >= 0 && mgi < get_npts_model()) {
-        set_initelectronfrac(mgi, initelecfrac);
-        cells_set++;
-      } else {
-        entries_ignored++;
+      assert_always(fscanf(filein.get(), "%d %g", &cellnumberin, &initelecfrac) == 2);
+      // Ye.txt uses the same cell ids as model.txt. read_ejecta_model() detects the id of the first
+      // cell (0 or 1) and stores it in first_input_cellid before this function runs.
+      const int mgi = cellnumberin - first_input_cellid;
+      if (mgi < 0 || mgi >= get_npts_model()) {
+        // An out-of-range id is a sign of a cell id mismatch with model.txt. A silently shifted
+        // electron fraction would give wrong grey opacities in every cell.
+        printlnlog("[error] Ye.txt: cell id {} is outside the model.txt id range [{}..{}]", cellnumberin,
+                   first_input_cellid, last_input_cellid);
+        std::abort();
       }
+      minid = std::min(minid, cellnumberin);
+      maxid = std::max(maxid, cellnumberin);
+      set_initelectronfrac(mgi, initelecfrac);
+      cells_set++;
     }
-    printlnlog("Ye.txt: set the initial electron fraction for {} of {} model cells ({} out-of-range entries ignored)",
-               cells_set, get_npts_model(), entries_ignored);
+    if (cells_set > 0 && minid != first_input_cellid && maxid != last_input_cellid) {
+      // A file with either boundary id would hit the out-of-range stop above under the other id
+      // convention. A sparse file with neither boundary id gives no such confirmation, e.g. a
+      // 1-based file for a 0-based model would read with a one-cell shift.
+      printlnlog(
+          "[warning] Ye.txt holds neither the first cell id {} nor the last cell id {}, so the file cannot confirm "
+          "that its ids follow model.txt",
+          first_input_cellid, last_input_cellid);
+    }
+    printlnlog("Ye.txt: set the initial electron fraction for {} of {} model cells (ids follow model.txt, first id {})",
+               cells_set, get_npts_model(), first_input_cellid);
   }
   MPI_Barrier_allranks();
 }
@@ -481,12 +503,24 @@ void allocate_nonemptymodelcells() {
   }
   MPI_Barrier_node();
 
+  // Record the grid-mapped volume that the spherical escape surface blanks per model cell. This
+  // function must record the per-nuclide blanked mass itself. The loop below zeroes the density and
+  // the mass fractions of a fully blanked model cell. Only the model-to-grid mapping case needs the
+  // record, because only that case rescales the nuclide masses.
+  const bool track_blanked_mass = FORCE_SPHERICAL_ESCAPE_SURFACE && (get_modelgridtype() != get_propgridtype());
+  std::vector<double> blanked_assocvolume(track_blanked_mass ? get_npts_model() : 0, 0.);
+  reserve_resize(totmassnuclide_blanked, decay::get_num_nuclides());
+  std::ranges::fill(totmassnuclide_blanked, 0.);
+
   for (int cellindex = 0; cellindex < ngrid; cellindex++) {
     const auto radial_pos_mid = get_cellradialposmid(cellindex);
 
     if (FORCE_SPHERICAL_ESCAPE_SURFACE && radial_pos_mid > globals::vmax * globals::tmin) {
       // for 1D models, the final shell outer v should already be at vmax
       assert_always(model_type != GridType::SPHERICAL1D || propcell_mgi[cellindex] < 0);
+      if (const int mgi_blanked = get_propcell_modelgridindex(cellindex); track_blanked_mass && mgi_blanked >= 0) {
+        blanked_assocvolume[mgi_blanked] += get_propcell_volume_tmin(cellindex);
+      }
       set_propcell_modelgridindex(cellindex, -1);
     }
 
@@ -501,6 +535,18 @@ void allocate_nonemptymodelcells() {
       assert_always(get_rho_tmin(mgi) > 0);
       // with direct mapping, there must be exactly one propagation cell per non-empty model cell
       assert_always(get_modelgridtype() != get_propgridtype() || modelgrid_numpropcells[mgi] == 1);
+    }
+  }
+
+  if (track_blanked_mass) {
+    // every rank computes the same values from the same node-shared inputs, so no communication is needed
+    for (int mgi = 0; mgi < get_npts_model(); mgi++) {
+      if (blanked_assocvolume[mgi] > 0.) {
+        const double mass_blanked = get_rho_tmin(mgi) * blanked_assocvolume[mgi];
+        for (int nucindex = 0; nucindex < decay::get_num_nuclides(); nucindex++) {
+          totmassnuclide_blanked[nucindex] += mass_blanked * get_modelinitnucmassfrac(mgi, nucindex);
+        }
+      }
     }
   }
 
@@ -722,6 +768,11 @@ void read_elem_abundances() {
     auto abundance_file = fstream_required("abundances.txt", std::ios::in);
     std::string line;
 
+    // Every log line gets a timestamp and a flush, so a large 3D model must not warn per cell.
+    // The count gives one summary line after the loop instead.
+    int ncells_abund_unnormalised = 0;
+    constexpr int max_unnormalised_warnings = 10;
+
     // loop over propagation cells for 3D models, or modelgrid cells
     for (int mgi = 0; mgi < get_npts_model(); mgi++) {
       assert_always(get_noncommentline(abundance_file, line));
@@ -731,8 +782,10 @@ void read_elem_abundances() {
       assert_always(parse_next_token(remainder, cellnumberinput));
       assert_always(cellnumberinput == mgi + first_input_cellid);
 
-      // the abundances.txt file specifies the elemental mass fractions for each model cell
-      // (or proportional to mass frac, e.g. element densities, because they will be normalised anyway)
+      // the abundances.txt file specifies the elemental mass fractions for each model cell.
+      // A 1D or 2D file may hold values proportional to the mass fractions, e.g. element densities,
+      // because those get normalised below. A 3D file must hold true mass fractions, because the 3D
+      // path applies no normalisation.
       // The abundances begin with hydrogen, helium, etc, going as far up the atomic numbers as required
       double normfactor = 0.;
       std::array<float, 150> elem_massfracs_in{};
@@ -753,8 +806,28 @@ void read_elem_abundances() {
         normfactor += elem_massfracs_in[elem_z_index];
       }
 
+      // parse_next_token() gives false at the end of the row and also for a token that is not a
+      // number, e.g. "nan". The loop above stops on both, so a bad token would silently zero every
+      // later element. Only whitespace may remain here.
+      remainder.remove_prefix(std::min(remainder.find_first_not_of(" \t\r"), remainder.size()));
+      if (!remainder.empty()) {
+        printlnlog("[error] read_elem_abundances: cell {} has an unreadable token at '{}'", cellnumberinput, remainder);
+        std::abort();
+      }
+
       if (get_numpropcells(mgi) > 0) {
         if (threedimensional || normfactor <= 0.) {
+          // a 3D file holds true mass fractions and gets no normalisation, so a sum far from one is
+          // a sign of a file that holds proportional values, e.g. densities
+          if (threedimensional && normfactor > 0. && std::abs(normfactor - 1.) > 0.02) {
+            ncells_abund_unnormalised++;
+            if (ncells_abund_unnormalised <= max_unnormalised_warnings) {
+              printlnlog(
+                  "[warning] read_elem_abundances: 3D cell {} has element mass fractions that sum to {:g}. The values "
+                  "are used without normalisation.",
+                  cellnumberinput, normfactor);
+            }
+          }
           normfactor = 1.;
         }
         const int nonemptymgi = get_nonemptymgi_of_mgi(mgi);
@@ -776,6 +849,13 @@ void read_elem_abundances() {
           set_elem_massfrac(nonemptymgi, element, elemmassfrac);
         }
       }
+    }
+
+    if (ncells_abund_unnormalised > max_unnormalised_warnings) {
+      printlnlog(
+          "[warning] read_elem_abundances: {} cells in total have element mass fractions that do not sum to one. The "
+          "first {} are listed above.",
+          ncells_abund_unnormalised, max_unnormalised_warnings);
     }
   }
 
@@ -1126,7 +1206,7 @@ void assign_initial_temperatures() {
 
   printlog("Assigning initial temperatures...");
 
-  const double tstart = globals::timesteps[0].mid;
+  const double ts0_tmid = globals::timesteps[0].mid;
   int cells_below_mintemp = 0;
   int cells_above_maxtemp = 0;
   int cells_nonfinite_temp = 0;
@@ -1136,7 +1216,7 @@ void assign_initial_temperatures() {
 
   // the Bateman factors depend only on the decay path and time, so compute them once and apply them to every
   // cell's initial abundances
-  const auto endecay_per_massoftopnuc = decay::calc_energy_per_massoftopnuc_decaypath_withexpansion(tstart);
+  const auto endecay_per_massoftopnuc = decay::calc_energy_per_massoftopnuc_decaypath_withexpansion(ts0_tmid);
 
   // the decayed energy calculation is expensive and the temperature arrays are in node-shared memory, so stripe
   // the cells across the ranks of each node, with each rank writing its own disjoint subset of the shared arrays
@@ -1144,12 +1224,16 @@ void assign_initial_temperatures() {
        nonemptymgi += globals::node_nprocs) {
     const int mgi = get_mgi_of_nonemptymgi(nonemptymgi);
 
-    const auto q = INITIAL_PACKETS_ON ? get_initenergyq(mgi) : 0.;
+    // q holds the trapped radiation energy per mass at tmin, and the radiation energy of a comoving
+    // mass element falls as 1/t in the homologous expansion. The decay term carries the matching
+    // t_decay / ts0_tmid factor inside calc_energy_per_massoftopnuc_decaypath_withexpansion(), so the
+    // q term needs tmin / ts0_tmid to refer both terms to ts0_tmid.
+    const auto q = INITIAL_PACKETS_ON ? (get_initenergyq(mgi) * globals::tmin / ts0_tmid) : 0.;
     const double decayedenergy_per_mass =
         decay::get_modelcell_endecay_per_mass(nonemptymgi, endecay_per_massoftopnuc) + q;
 
     auto T_initial = static_cast<float>(std::pow(
-        CLIGHT / 4 / STEBO * pow3(globals::tmin / tstart) * get_rho_tmin(mgi) * decayedenergy_per_mass, 1. / 4.));
+        CLIGHT / 4 / STEBO * pow3(globals::tmin / ts0_tmid) * get_rho_tmin(mgi) * decayedenergy_per_mass, 1. / 4.));
 
     if (!std::isfinite(T_initial)) {
       // check this first: a NaN would fall through every comparison below and be stored unclamped
@@ -2420,6 +2504,11 @@ void init_grid() {
   // own geometry and map_modeltogrid_direct() gives each model cell exactly its own volume, so there is no
   // discretisation error to correct and the ratio would be one throughout. The "Total grid-mapped mass" line
   // logged below shows the size of the discrepancy for any model.
+  //
+  // The mapped total includes the mass in the propagation cells that FORCE_SPHERICAL_ESCAPE_SURFACE
+  // blanked. allocate_nonemptymodelcells() records that mass in totmassnuclide_blanked. The option
+  // removes that mass on purpose, so the ratio must not put it back into the surviving cells. A
+  // directly mapped model under the same option also drops the blanked mass, so the two cases agree.
   const bool mapping_loses_nuclide_mass = (get_modelgridtype() != prop_gridtype);
   if (mapping_loses_nuclide_mass && globals::rank_in_node == 0) {
     for (int nucindex = 0; nucindex < decay::get_num_nuclides(); nucindex++) {
@@ -2427,7 +2516,7 @@ void init_grid() {
         continue;
       }
 
-      double totmassnuclide_actual = 0.;
+      double totmassnuclide_actual = totmassnuclide_blanked[nucindex];
       for (int nonemptymgi = 0; nonemptymgi < get_nonempty_npts_model(); nonemptymgi++) {
         const int mgi = get_mgi_of_nonemptymgi(nonemptymgi);
         totmassnuclide_actual +=

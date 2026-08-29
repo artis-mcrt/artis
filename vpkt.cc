@@ -112,6 +112,16 @@ constexpr auto all_taus_past_taumax(std::vector<double>& tau, const double tau_m
   return std::ranges::all_of(tau, [tau_max](const double tau_i) { return tau_i > tau_max; });
 }
 
+// true if the rest frame frequency is inside one of the configured spectrum wavelength ranges
+[[nodiscard]] auto nu_rf_is_in_spectrum_range(const double nu_rf) -> bool {
+  for (int i = 0; i < nwavelengthranges; i++) {
+    if (nu_rf > vspec_numin_input[i] && nu_rf < vspec_numax_input[i]) {
+      return true;
+    }
+  }
+  return false;
+}
+
 // Add an escaping virtual packet's Stokes I, Q and U contributions to the observer's time/frequency spectrum
 void add_to_vspecpol(const double nu_rf, const double e_rf, const double prob, const double q_rf, const double u_rf,
                      const int obsdirindex, const int opachoiceindex, const double t_arrive) {
@@ -145,11 +155,16 @@ void add_to_vpkt_grid(const double nu_rf, const double e_rf, const double prob, 
 
   // Packet velocity
 
-  if (obsdir[0] == 1) {
+  // The rotation formula below divides by (1 + obsdir[0]), so an observer within this angle of the
+  // -x axis takes the exact -x basis. The formula is well conditioned outside this cone, and inside
+  // it the basis orientation differs from the formula by less than ~1e-4 radians. The +x case only
+  // avoids the needless work of a rotation by ~0.
+  constexpr double pole_alignment_tol = 1e-8;
+  if (obsdir[0] > (1. - pole_alignment_tol)) {
     // if obsdir = +x , vref1 = vy and vref2 = vz
     vref1 = vel[1];
     vref2 = vel[2];
-  } else if (obsdir[0] == -1) {
+  } else if (obsdir[0] < (-1. + pole_alignment_tol)) {
     // if obsdir = -x , vref1 = -vy and vref2 = -vz
     vref1 = -vel[1];
     vref2 = -vel[2];
@@ -460,12 +475,20 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
     std::format_to(std::back_inserter(vpkt_contrib_row), " {:g} {:g}", t_arrive / DAY, nu_rf);
   }
 
+  // A vpkt can also be traced because the real packet's absorption frequency is inside a wavelength
+  // range while nu_rf is not (see the selection in trace_vpkts()). Such a vpkt exists for
+  // the vpackets.out row only. Its flux must stay out of the spectrum, because the bins outside the
+  // ranges would receive only this correlated subset of the packets.
+  const bool in_spectrum_range = nu_rf_is_in_spectrum_range(nu_rf);
+
   for (int opacchoiceindex = 0; opacchoiceindex < nspectraperobsdir; opacchoiceindex++) {
     const double prob = pn * std::exp(-tau_vpkt[opacchoiceindex]);
 
     assert_always(std::isfinite(prob));
 
-    add_to_vspecpol(nu_rf, e_rf, prob, q_rf, u_rf, obsdirindex, opacchoiceindex, t_arrive);
+    if (in_spectrum_range) {
+      add_to_vspecpol(nu_rf, e_rf, prob, q_rf, u_rf, obsdirindex, opacchoiceindex, t_arrive);
+    }
 
     if constexpr (VPKT_WRITE_CONTRIBS) {
       std::format_to(std::back_inserter(vpkt_contrib_row), " {:g}", e_rf * prob);
@@ -519,9 +542,19 @@ void init_vspecpol() {
   }
 }
 
-void write_vspecpol(const std::string& filename) {
+// full_precision selects the round-trip exact format for the restart files. A restart reads the
+// accumulated fluxes back with read_vspecpol(), and the default 6 significant digits would make the
+// result depend on how the wall time limits divided the run into jobs.
+void write_vspecpol(const std::string& filename, const bool full_precision) {
   printlnlog("Writing {}", filename);
   auto vspecpol_file = fstream_required(filename, std::ios::out | std::ios::trunc);
+  const auto print_flux = [&vspecpol_file, full_precision](const double flux) {
+    if (full_precision) {
+      std::print(vspecpol_file, " {:.17g}", flux);
+    } else {
+      std::print(vspecpol_file, " {:g}", flux);
+    }
+  };
   for (int ind_comb = 0; ind_comb < (nobsdirections * nspectraperobsdir); ind_comb++) {
     std::print(vspecpol_file, "{:g}", 0.);
 
@@ -539,17 +572,17 @@ void write_vspecpol(const std::string& filename) {
 
       // Stokes I
       for (int p = 0; p < VSPEC_TIMEBINS; p++) {
-        std::print(vspecpol_file, " {:g}", vspecpol[p][ind_comb].flux[m].I);
+        print_flux(vspecpol[p][ind_comb].flux[m].I);
       }
 
       // Stokes Q
       for (int p = 0; p < VSPEC_TIMEBINS; p++) {
-        std::print(vspecpol_file, " {:g}", vspecpol[p][ind_comb].flux[m].Q);
+        print_flux(vspecpol[p][ind_comb].flux[m].Q);
       }
 
       // Stokes U
       for (int p = 0; p < VSPEC_TIMEBINS; p++) {
-        std::print(vspecpol_file, " {:g}", vspecpol[p][ind_comb].flux[m].U);
+        print_flux(vspecpol[p][ind_comb].flux[m].U);
       }
 
       std::println(vspecpol_file, "");
@@ -615,16 +648,22 @@ void init_vpkt_grid() {
   }
 }
 
-void write_vpkt_grid(const std::string& filename) {
+// full_precision selects the round-trip exact format for the restart files (see write_vspecpol)
+void write_vpkt_grid(const std::string& filename, const bool full_precision) {
   auto vpkt_grid_file = fstream_required(filename, std::ios::out | std::ios::trunc);
 
   for (int obsdirindex = 0; obsdirindex < nobsdirections; obsdirindex++) {
     for (int wlbin = 0; wlbin < grid_nwavelengthranges; wlbin++) {
       for (int n = 0; n < VGRID_NY; n++) {
         for (int m = 0; m < VGRID_NZ; m++) {
-          std::println(vpkt_grid_file, "{:g} {:g} {:g} {:g} {:g}", vgrid[n][m].yvel, vgrid[n][m].zvel,
-                       vgrid[n][m].flux[wlbin][obsdirindex].I, vgrid[n][m].flux[wlbin][obsdirindex].Q,
-                       vgrid[n][m].flux[wlbin][obsdirindex].U);
+          const auto& flux = vgrid[n][m].flux[wlbin][obsdirindex];
+          if (full_precision) {
+            std::println(vpkt_grid_file, "{:.17g} {:.17g} {:.17g} {:.17g} {:.17g}", vgrid[n][m].yvel, vgrid[n][m].zvel,
+                         flux.I, flux.Q, flux.U);
+          } else {
+            std::println(vpkt_grid_file, "{:g} {:g} {:g} {:g} {:g}", vgrid[n][m].yvel, vgrid[n][m].zvel, flux.I, flux.Q,
+                         flux.U);
+          }
         }
       }
     }
@@ -872,13 +911,13 @@ void write_timestep(const int nts, const bool is_final) {
   // write specpol of the virtual packets
   const auto filename_vspecpol =
       is_final ? std::format("vspecpol_{:04d}.out", my_rank) : std::format("vspecpol_{:04d}_ts{}.tmp", my_rank, nts);
-  write_vspecpol(filename_vspecpol);
+  write_vspecpol(filename_vspecpol, !is_final);
 
   if (vgrid_on) {
     const auto filename_vpktgrid = is_final ? std::format("vpkt_grid_{:04d}.out", my_rank)
                                             : std::format("vpkt_grid_{:04d}_ts{}.tmp", my_rank, nts);
     printlnlog("Writing vpkt grid file {}", filename_vpktgrid);
-    write_vpkt_grid(filename_vpktgrid);
+    write_vpkt_grid(filename_vpktgrid, !is_final);
   }
 
   if constexpr (VPKT_WRITE_CONTRIBS) {

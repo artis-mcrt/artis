@@ -372,6 +372,9 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
         significant_ions_prev = significant_ions;
         // the previous iterate belongs to the previous state, so this pass takes no step from it
         map_changed = map_changed || (nlte_iter > 0);
+        // the changes of the previous pass also belong to the previous state, so the contraction
+        // ratio of this pass and of the next pass must not compare across the two maps
+        change_prev = {-1., -1.};
       }
       const auto log_state_solved = get_log_te_nne_ionpops(nonemptymgi, significant_ions);
       if (nlte_iter > 0) {
@@ -471,8 +474,7 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
           }
           printlnlog(
               "NLTE (Spencer-Fano/Te/pops) solver mgi {} timestep {} iteration {}: Anderson step {} with {} "
-              "significant_ions "
-              "ions: T_e {:g} nne {:e} from the pass, T_e {:g} nne {:e} for the next pass",
+              "significant ions: T_e {:g} nne {:e} from the pass, T_e {:g} nne {:e} for the next pass",
               mgi, nts, nlte_iter, step_accepted ? "accepted" : "rejected", significant_ions.size(),
               std::exp(log_state_solved[0]), std::exp(log_state_solved[1]), grid::Te_allcells[nonemptymgi],
               grid::get_nne(nonemptymgi));
@@ -575,11 +577,27 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
       // the equations only, and the ion population test measures every change that it makes.
       if (fracdiff_nne <= NLTE_TE_NNE_RELTOL && fracdiff_T_e <= NLTE_TE_NNE_RELTOL &&
           fracdiff_nnion <= NLTE_TE_NNE_RELTOL) {
-        printlnlog(
-            "NLTE (Spencer-Fano/Te/pops) solver mgi {} timestep {} iteration {}: nne converged to tolerance {:g} <= "
-            "{:g} and T_e to tolerance {:g} <= {:g}",
-            mgi, nts, nlte_iter, fracdiff_nne, NLTE_TE_NNE_RELTOL, fracdiff_T_e, NLTE_TE_NNE_RELTOL);
-        break;
+        // The charge transfer rates of an element read the solved ion range of a partner element
+        // from the last solve of that partner (see sum_reaction_list() in chargetransfer.cc). The
+        // elements solve in order, so a pass that changed the range of a later element gave the
+        // earlier elements the previous range. One more sweep gives those elements the new range,
+        // as the accelerated branch does. Only the first such pass of the cell holds the
+        // convergence, because a range that oscillates would otherwise use every pass.
+        const bool hold_for_range_sweep =
+            ENABLE_CHARGE_TRANSFER_REACTIONS && nlte_solution_changed && !extra_range_sweep_used;
+        if (hold_for_range_sweep) {
+          extra_range_sweep_used = true;
+          printlnlog(
+              "NLTE (Spencer-Fano/Te/pops) solver mgi {} timestep {} iteration {}: the changes converged, but a "
+              "solution range changed. The solver makes one more sweep for the charge transfer rates.",
+              mgi, nts, nlte_iter);
+        } else {
+          printlnlog(
+              "NLTE (Spencer-Fano/Te/pops) solver mgi {} timestep {} iteration {}: nne converged to tolerance {:g} <= "
+              "{:g} and T_e to tolerance {:g} <= {:g}",
+              mgi, nts, nlte_iter, fracdiff_nne, NLTE_TE_NNE_RELTOL, fracdiff_T_e, NLTE_TE_NNE_RELTOL);
+          break;
+        }
       }
     }
     if (nlte_iter == NLTE_TE_NNE_MAXITER) {
