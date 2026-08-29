@@ -108,7 +108,12 @@ std::vector<int> ranks_ndo_nonempty;
 struct ModelGridCellInput {
   float rhoinit = -1.;
   float ffegrp = 0.;
+  // a float, so that the stored mean radial position stays bit-identical to the earlier results
   float initial_radial_pos_sum = 0.;
+  // sum of the volume averaged r^2 per propagation cell, for the kinetic energy of the BARNES
+  // thermalisation scheme. A double, because the sum runs over up to millions of propagation cells
+  // with radii of ~1e15 cm.
+  double initial_radial_pos_squared_sum = 0.;
   float initelectronfrac = 0.4;  // Ye: electrons (or protons) per nucleon
   float initenergyq = 0.;  // q: energy in the model at tmin to use with INITIAL_PACKETS_ON [erg/g]
 };
@@ -429,6 +434,34 @@ auto get_cellradialposmid(const int cellindex) -> double {
   return std::sqrt(lensquared);
 }
 
+// volume averaged mean of the squared radius of a propagation cell. The kinetic energy sum needs the
+// mean of r^2, which is larger than the square of the mean radius that get_cellradialposmid() gives.
+auto get_cellradialposmeansquared(const int cellindex) -> double {
+  const auto prop_gridtype = get_propgridtype();
+  if (prop_gridtype == GridType::SPHERICAL1D) {
+    const double r_inner = get_cellcoordmin(cellindex, 0);
+    const double r_outer = get_cellcoordmax(cellindex, 0);
+    return 3. / 5. * (pow5(r_outer) - pow5(r_inner)) / (pow3(r_outer) - pow3(r_inner));
+  }
+
+  if (prop_gridtype == GridType::CYLINDRICAL2D) {
+    const double rcyl_inner = get_cellcoordmin(cellindex, 0);
+    const double rcyl_outer = get_cellcoordmax(cellindex, 0);
+    const double z_low = get_cellcoordmin(cellindex, 1);
+    const double z_high = get_cellcoordmax(cellindex, 1);
+    return ((pow2(rcyl_outer) + pow2(rcyl_inner)) / 2.) + ((pow2(z_low) + (z_low * z_high) + pow2(z_high)) / 3.);
+  }
+
+  // cubic cell: the mean of x^2 + y^2 + z^2 separates into a sum of the per-axis means
+  double meansq = 0.;
+  for (int axis = 0; axis < 3; axis++) {
+    const double low = get_cellcoordmin(cellindex, axis);
+    const double high = get_cellcoordmax(cellindex, axis);
+    meansq += (pow2(low) + (low * high) + pow2(high)) / 3.;
+  }
+  return meansq;
+}
+
 void allocate_nonemptycells_composition_cooling() {
   // Initialise composition dependent cell data for the given cell
   const ptrdiff_t nonempty_npts_model_ptrdifft = get_nonempty_npts_model();
@@ -465,6 +498,7 @@ void allocate_nonemptymodelcells() {
   if (globals::rank_in_node == 0) {
     for (int mgi = 0; mgi < get_npts_model(); mgi++) {
       modelgrid_input[mgi].initial_radial_pos_sum = 0.;
+      modelgrid_input[mgi].initial_radial_pos_squared_sum = 0.;
     }
   }
   MPI_Barrier_node();
@@ -496,6 +530,7 @@ void allocate_nonemptymodelcells() {
       if (globals::rank_in_node == 0) {
         modelgrid_input[mgi].initial_radial_pos_sum =
             static_cast<float>(modelgrid_input[mgi].initial_radial_pos_sum + radial_pos_mid);
+        modelgrid_input[mgi].initial_radial_pos_squared_sum += get_cellradialposmeansquared(cellindex);
       }
       assert_always(get_rho_tmin(mgi) > 0);
       // with direct mapping, there must be exactly one propagation cell per non-empty model cell
@@ -1765,6 +1800,12 @@ auto get_rho_tmin(const int modelgridindex) -> float { return modelgrid_input[mo
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_modelcell_mean_radial_pos_tmin(const int modelgridindex) -> double {
   const int assoc_cells = get_numpropcells(modelgridindex);
   return modelgrid_input[modelgridindex].initial_radial_pos_sum / assoc_cells;
+}
+
+// volume averaged mean of the squared radius [cm^2] of a model cell at tmin
+[[gnu::pure]] [[nodiscard]] auto get_modelcell_mean_radial_pos_squared_tmin(const int modelgridindex) -> double {
+  const int assoc_cells = get_numpropcells(modelgridindex);
+  return modelgrid_input[modelgridindex].initial_radial_pos_squared_sum / assoc_cells;
 }
 
 // mass fraction of an element (all isotopes combined)
