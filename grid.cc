@@ -1377,13 +1377,22 @@ void setup_nstart_ndo() {
 }
 
 // set up a uniform cuboidal grid.
+// Stop the run when the grid corners expand faster than light and nothing removes them. The
+// propagation cannot treat a superluminal boundary, so the setup must either cut the corners with
+// FORCE_SPHERICAL_ESCAPE_SURFACE or use a smaller vmax.
+void require_subluminal_corners(const double vmax_corner) {
+  printlnlog("corner vmax {:g} [cm/s] ({:.2f}c)", vmax_corner, vmax_corner / CLIGHT);
+  if (!FORCE_SPHERICAL_ESCAPE_SURFACE && vmax_corner >= CLIGHT) {
+    printlnlog(
+        "[error] the grid corners expand faster than light. Enable FORCE_SPHERICAL_ESCAPE_SURFACE in "
+        "artisoptions.h to remove the superluminal corners, or reduce vmax.");
+    std::abort();
+  }
+}
+
 void setup_grid_cartesian_3d() {
   // vmax is per coordinate, but the simulation volume corners will have a higher expansion velocity than the sides
-  const double vmax_corner = sqrt(3 * pow2(globals::vmax));
-  printlnlog("corner vmax {:g} [cm/s] ({:.2f}c)", vmax_corner, vmax_corner / CLIGHT);
-  if (!FORCE_SPHERICAL_ESCAPE_SURFACE) {
-    assert_always(vmax_corner < CLIGHT);
-  }
+  require_subluminal_corners(sqrt(3 * pow2(globals::vmax)));
 
   // Set grid size for uniform xyz grid
   if (get_modelgridtype() == GridType::CARTESIAN3D) {
@@ -1428,9 +1437,7 @@ void setup_grid_spherical_1d() {
 }
 
 void setup_grid_cylindrical_2d() {
-  const double vmax_corner = sqrt(2 * pow2(globals::vmax));
-  printlnlog("corner vmax {:g} [cm/s] ({:.2f}c)", vmax_corner, vmax_corner / CLIGHT);
-  assert_always(vmax_corner < CLIGHT);
+  require_subluminal_corners(sqrt(2 * pow2(globals::vmax)));
 
   assert_always(get_modelgridtype() == GridType::CYLINDRICAL2D);
 
