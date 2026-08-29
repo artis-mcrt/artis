@@ -785,10 +785,11 @@ void barnes_thermalisation(Packet& pkt) {
 
   // determine average initial density via kinetic energy
   const double E_kin = grid::get_ejecta_kinetic_energy();
-  const double v_ej = sqrt(E_kin * 2 / grid::mtot_input);
+  const double m_ej = grid::get_ejecta_mass();
+  const double v_ej = sqrt(E_kin * 2 / m_ej);
 
   // t_ineff = sqrt(rho_0 * R_0 * t_0^2 * mean_gamma_opac), expressed via the paper's scaling relation.
-  const double t_ineff = 1.4 * DAY * sqrt(grid::mtot_input / (5.e-3 * MSUN)) * ((0.2 * CLIGHT) / v_ej);
+  const double t_ineff = 1.4 * DAY * sqrt(m_ej / (5.e-3 * MSUN)) * ((0.2 * CLIGHT) / v_ej);
   const double tau = pow2(t_ineff / pkt.prop_time);
   const double f_gamma = 1. - exp(-tau);
 

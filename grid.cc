@@ -82,6 +82,11 @@ std::array<std::vector<double>, 3> coord_pos_min_tmin{};
 std::vector<int> propcell_mgi;
 std::vector<int> propcell_nonemptymgi;
 
+// with FORCE_SPHERICAL_ESCAPE_SURFACE: 1 for a propagation cell whose inner corner lies outside the
+// spherical escape surface. boundary_distance() runs for every packet step, so
+// allocate_nonemptymodelcells() precomputes the per-cell radius comparison.
+std::vector<uint8_t> propcell_outside_escape_surface;
+
 std::vector<int> modelgrid_numpropcells;
 std::vector<int> nonemptymgi_of_mgi;
 std::vector<int> mgi_of_nonemptymgi;
@@ -512,8 +517,17 @@ void allocate_nonemptymodelcells() {
   reserve_resize(totmassnuclide_blanked, decay::get_num_nuclides());
   std::ranges::fill(totmassnuclide_blanked, 0.);
 
+  if constexpr (FORCE_SPHERICAL_ESCAPE_SURFACE) {
+    reserve_resize(propcell_outside_escape_surface, ngrid);
+  }
+
   for (int cellindex = 0; cellindex < ngrid; cellindex++) {
     const auto radial_pos_mid = get_cellradialposmid(cellindex);
+
+    if constexpr (FORCE_SPHERICAL_ESCAPE_SURFACE) {
+      propcell_outside_escape_surface[cellindex] =
+          (get_cell_r_inner(cellindex, get_propgridtype()) > globals::rmax) ? 1 : 0;
+    }
 
     if (FORCE_SPHERICAL_ESCAPE_SURFACE && radial_pos_mid > globals::vmax * globals::tmin) {
       // for 1D models, the final shell outer v should already be at vmax
@@ -1363,13 +1377,22 @@ void setup_nstart_ndo() {
 }
 
 // set up a uniform cuboidal grid.
+// Stop the run when the grid corners expand faster than light and nothing removes them. The
+// propagation cannot treat a superluminal boundary, so the setup must either cut the corners with
+// FORCE_SPHERICAL_ESCAPE_SURFACE or use a smaller vmax.
+void require_subluminal_corners(const double vmax_corner) {
+  printlnlog("corner vmax {:g} [cm/s] ({:.2f}c)", vmax_corner, vmax_corner / CLIGHT);
+  if (!FORCE_SPHERICAL_ESCAPE_SURFACE && vmax_corner >= CLIGHT) {
+    printlnlog(
+        "[error] the grid corners expand faster than light. Enable FORCE_SPHERICAL_ESCAPE_SURFACE in "
+        "artisoptions.h to remove the superluminal corners, or reduce vmax.");
+    std::abort();
+  }
+}
+
 void setup_grid_cartesian_3d() {
   // vmax is per coordinate, but the simulation volume corners will have a higher expansion velocity than the sides
-  const double vmax_corner = sqrt(3 * pow2(globals::vmax));
-  printlnlog("corner vmax {:g} [cm/s] ({:.2f}c)", vmax_corner, vmax_corner / CLIGHT);
-  if (!FORCE_SPHERICAL_ESCAPE_SURFACE) {
-    assert_always(vmax_corner < CLIGHT);
-  }
+  require_subluminal_corners(sqrt(3 * pow2(globals::vmax)));
 
   // Set grid size for uniform xyz grid
   if (get_modelgridtype() == GridType::CARTESIAN3D) {
@@ -1414,9 +1437,7 @@ void setup_grid_spherical_1d() {
 }
 
 void setup_grid_cylindrical_2d() {
-  const double vmax_corner = sqrt(2 * pow2(globals::vmax));
-  printlnlog("corner vmax {:g} [cm/s] ({:.2f}c)", vmax_corner, vmax_corner / CLIGHT);
-  assert_always(vmax_corner < CLIGHT);
+  require_subluminal_corners(sqrt(2 * pow2(globals::vmax)));
 
   assert_always(get_modelgridtype() == GridType::CYLINDRICAL2D);
 
@@ -2552,10 +2573,8 @@ void init_grid() {
     assign_initial_temperatures();
   }
 
-  double mtot_mapped = 0.;
-  for (int mgi = 0; mgi < get_npts_model(); mgi++) {
-    mtot_mapped += get_rho_tmin(mgi) * get_modelcell_assocvolume_tmin(mgi);
-  }
+  // this call also fills the cached value before the packet propagation threads read it
+  const double mtot_mapped = get_ejecta_mass();
   printlnlog("Total grid-mapped mass: {:9.3e} [Msun] ({:.1f}% of input mass)", mtot_mapped / MSUN,
              mtot_mapped / mtot_input * 100.);
 
@@ -2627,7 +2646,9 @@ DEVICE_FUNC void snap_pos_to_cell(Vec3d& pos, const double time, const int celli
                                                  const int cellindex) -> std::tuple<double, int> {
   const auto prop_gridtype = get_propgridtype();
   if constexpr (FORCE_SPHERICAL_ESCAPE_SURFACE) {
-    if (get_cell_r_inner(cellindex, prop_gridtype) > globals::rmax) {
+    // allocate_nonemptymodelcells() precomputed the radius comparison per cell, because this
+    // function runs for every packet step
+    if (propcell_outside_escape_surface[cellindex] != 0) {
       return {0., -99};
     }
   }
@@ -2881,6 +2902,48 @@ DEVICE_FUNC void snap_pos_to_cell(Vec3d& pos, const double time, const int celli
     }
   } else {
     assert_always(false);
+  }
+
+  if constexpr (FORCE_SPHERICAL_ESCAPE_SURFACE) {
+    if (next_cellindex == -1) {
+      // No receding cell boundary lies ahead of the packet, so it escapes through the slower
+      // spherical escape surface. The comoving coordinates of a packet converge to a point with
+      // speed CLIGHT. Only a cell whose fastest corner is above CLIGHT can hold this state. A
+      // slower cell here is a sign of a defective boundary intersection, and the run then stops
+      // as it did before this escape path existed.
+      double cornerspeed_squared = 0.;
+      for (int d = 0; d < get_ndim(prop_gridtype); d++) {
+        cornerspeed_squared += pow2(std::max(std::abs(cellcoordmin[d]), std::abs(cellcoordmax[d])) / globals::tmin);
+      }
+      assert_always(cornerspeed_squared > pow2(CLIGHT_PROP));
+
+      // Truncation must act on whole cells to keep the volumes and the packet statistics valid.
+      // The trapped packet never leaves this cell. The arrival time is constant along a free ray,
+      // so a mid-cell escape is valid only for a cell with no matter. A matter cell can trap
+      // packets only when the cell diagonal spans from below vmax to above CLIGHT, so a finer
+      // grid removes this stop.
+      if (get_propcell_modelgridindex(cellindex) >= 0) {
+        printlnlog(
+            "[error] a packet cannot reach any boundary of matter cell {}, because every boundary recedes faster "
+            "than light. The cell reaches from inside the escape surface to beyond the light speed, so the grid is "
+            "too coarse. Use more grid cells per axis.",
+            cellindex);
+        assert_always(false);
+      }
+
+      const double r_surface = globals::rmax * tstart / globals::tmin;
+      if (dot(pos, pos) >= pow2(r_surface)) {
+        // A cell that straddles the sphere keeps positions outside the surface. The intersection
+        // then lies behind the packet, so it escapes at its current position.
+        distance = 0.;
+      } else {
+        const double speed = vec_len(dir) * CLIGHT_PROP;  // just in case dir is not normalised
+        // A ray that grazes the surface within rounding has no valid forward intersection and
+        // gives -1. The packet is then at the surface itself, so the distance clamps to zero.
+        distance = std::max(expanding_shell_intersection<BoundaryType::UPPER>(pos, dir, speed, r_surface, tstart), 0.);
+      }
+      next_cellindex = -99;
+    }
   }
 
   assert_always((next_cellindex == -99) || ((next_cellindex >= 0) && (next_cellindex < ngrid)));
