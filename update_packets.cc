@@ -68,8 +68,6 @@ void do_nonthermal_predeposit(Packet& pkt, const int nts, const double ts_end) {
     pkt.type = deposit_type;
   } else if constexpr (PARTICLE_THERMALISATION_SCHEME == ParticleThermalisationScheme::BARNES) {
     const double E_kin = grid::get_ejecta_kinetic_energy();
-    // the grid-mapped mass matches the cells that the kinetic energy sums, which mtot_input does
-    // not after the mapping or the spherical escape surface removes mass
     const double m_ej = grid::get_ejecta_mass();
     const double v_ej = std::sqrt(E_kin * 2 / m_ej);
 

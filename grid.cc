@@ -83,8 +83,8 @@ std::vector<int> propcell_mgi;
 std::vector<int> propcell_nonemptymgi;
 
 // with FORCE_SPHERICAL_ESCAPE_SURFACE: 1 for a propagation cell whose inner corner lies outside the
-// spherical escape surface. boundary_distance() runs for every packet step, so the per-cell radius
-// comparison is precomputed here instead of repeated there.
+// spherical escape surface. boundary_distance() runs for every packet step, so
+// allocate_nonemptymodelcells() precomputes the per-cell radius comparison.
 std::vector<uint8_t> propcell_outside_escape_surface;
 
 std::vector<int> modelgrid_numpropcells;
@@ -2566,10 +2566,8 @@ void init_grid() {
     assign_initial_temperatures();
   }
 
-  double mtot_mapped = 0.;
-  for (int mgi = 0; mgi < get_npts_model(); mgi++) {
-    mtot_mapped += get_rho_tmin(mgi) * get_modelcell_assocvolume_tmin(mgi);
-  }
+  // this call also fills the cached value before the packet propagation threads read it
+  const double mtot_mapped = get_ejecta_mass();
   printlnlog("Total grid-mapped mass: {:9.3e} [Msun] ({:.1f}% of input mass)", mtot_mapped / MSUN,
              mtot_mapped / mtot_input * 100.);
 
@@ -2901,19 +2899,28 @@ DEVICE_FUNC void snap_pos_to_cell(Vec3d& pos, const double time, const int celli
 
   if constexpr (FORCE_SPHERICAL_ESCAPE_SURFACE) {
     if (next_cellindex == -1) {
-      // No cell boundary lies ahead of the packet: every velocity component of the packet is inside
-      // the range of the receding boundary velocities of its cell. Only a corner-region cell of a
-      // grid with vmax > CLIGHT / sqrt(3) has such a range. The packet still overtakes the slower
-      // spherical escape surface, because that surface expands at vmax < CLIGHT. The packet
-      // therefore escapes where its ray meets the expanding sphere.
-      const double r_surface = globals::rmax * tstart / globals::tmin;
-      if (vec_len(pos) >= r_surface) {
-        // A cell that straddles the sphere keeps positions outside the surface, so the packet can
-        // already be outside it. The intersection then lies behind the packet, so escape here.
-        return {0., -99};
+      // No receding cell boundary lies ahead of the packet, so it escapes through the slower
+      // spherical escape surface. The comoving coordinates of a packet converge to a point with
+      // speed CLIGHT. Only a cell whose fastest corner is above CLIGHT can hold this state. A
+      // slower cell here is a sign of a defective boundary intersection, and the run then stops
+      // as it did before this escape path existed.
+      double cornerspeed_squared = 0.;
+      for (int d = 0; d < get_ndim(prop_gridtype); d++) {
+        cornerspeed_squared += pow2(std::max(std::abs(cellcoordmin[d]), std::abs(cellcoordmax[d])) / globals::tmin);
       }
-      distance = expanding_shell_intersection<BoundaryType::UPPER>(pos, dir, CLIGHT_PROP, r_surface, tstart);
-      assert_always(distance >= 0.);
+      assert_always(cornerspeed_squared > pow2(CLIGHT_PROP));
+
+      const double r_surface = globals::rmax * tstart / globals::tmin;
+      if (dot(pos, pos) >= pow2(r_surface)) {
+        // A cell that straddles the sphere keeps positions outside the surface. The intersection
+        // then lies behind the packet, so it escapes at its current position.
+        distance = 0.;
+      } else {
+        const double speed = vec_len(dir) * CLIGHT_PROP;  // just in case dir is not normalised
+        // A ray that grazes the surface within rounding has no valid forward intersection and
+        // gives -1. The packet is then at the surface itself, so the distance clamps to zero.
+        distance = std::max(expanding_shell_intersection<BoundaryType::UPPER>(pos, dir, speed, r_surface, tstart), 0.);
+      }
       next_cellindex = -99;
     }
   }
