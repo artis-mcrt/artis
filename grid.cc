@@ -82,6 +82,11 @@ std::array<std::vector<double>, 3> coord_pos_min_tmin{};
 std::vector<int> propcell_mgi;
 std::vector<int> propcell_nonemptymgi;
 
+// with FORCE_SPHERICAL_ESCAPE_SURFACE: 1 for a propagation cell whose inner corner lies outside the
+// spherical escape surface. boundary_distance() runs for every packet step, so the per-cell radius
+// comparison is precomputed here instead of repeated there.
+std::vector<uint8_t> propcell_outside_escape_surface;
+
 std::vector<int> modelgrid_numpropcells;
 std::vector<int> nonemptymgi_of_mgi;
 std::vector<int> mgi_of_nonemptymgi;
@@ -512,8 +517,17 @@ void allocate_nonemptymodelcells() {
   reserve_resize(totmassnuclide_blanked, decay::get_num_nuclides());
   std::ranges::fill(totmassnuclide_blanked, 0.);
 
+  if constexpr (FORCE_SPHERICAL_ESCAPE_SURFACE) {
+    reserve_resize(propcell_outside_escape_surface, ngrid);
+  }
+
   for (int cellindex = 0; cellindex < ngrid; cellindex++) {
     const auto radial_pos_mid = get_cellradialposmid(cellindex);
+
+    if constexpr (FORCE_SPHERICAL_ESCAPE_SURFACE) {
+      propcell_outside_escape_surface[cellindex] =
+          (get_cell_r_inner(cellindex, get_propgridtype()) > globals::rmax) ? 1 : 0;
+    }
 
     if (FORCE_SPHERICAL_ESCAPE_SURFACE && radial_pos_mid > globals::vmax * globals::tmin) {
       // for 1D models, the final shell outer v should already be at vmax
@@ -2627,7 +2641,9 @@ DEVICE_FUNC void snap_pos_to_cell(Vec3d& pos, const double time, const int celli
                                                  const int cellindex) -> std::tuple<double, int> {
   const auto prop_gridtype = get_propgridtype();
   if constexpr (FORCE_SPHERICAL_ESCAPE_SURFACE) {
-    if (get_cell_r_inner(cellindex, prop_gridtype) > globals::rmax) {
+    // allocate_nonemptymodelcells() precomputed the radius comparison per cell, because this
+    // function runs for every packet step
+    if (propcell_outside_escape_surface[cellindex] != 0) {
       return {0., -99};
     }
   }

@@ -68,11 +68,14 @@ void do_nonthermal_predeposit(Packet& pkt, const int nts, const double ts_end) {
     pkt.type = deposit_type;
   } else if constexpr (PARTICLE_THERMALISATION_SCHEME == ParticleThermalisationScheme::BARNES) {
     const double E_kin = grid::get_ejecta_kinetic_energy();
-    const double v_ej = std::sqrt(E_kin * 2 / grid::mtot_input);
+    // the grid-mapped mass matches the cells that the kinetic energy sums, which mtot_input does
+    // not after the mapping or the spherical escape surface removes mass
+    const double m_ej = grid::get_ejecta_mass();
+    const double v_ej = std::sqrt(E_kin * 2 / m_ej);
 
     const double prefactor = (pkt.type == TYPE_NONTHERMAL_PREDEPOSIT_ALPHA) ? 7.74 : 7.4;
     const double tau_ineff =
-        prefactor * DAY * std::sqrt(grid::mtot_input / (5.e-3 * MSUN)) * std::pow((0.2 * CLIGHT) / v_ej, 3. / 2.);
+        prefactor * DAY * std::sqrt(m_ej / (5.e-3 * MSUN)) * std::pow((0.2 * CLIGHT) / v_ej, 3. / 2.);
     const double f_p = std::log1p(2. * ts * ts / tau_ineff / tau_ineff) / (2. * ts * ts / tau_ineff / tau_ineff);
     deposit_or_escape(f_p);
   } else if constexpr (PARTICLE_THERMALISATION_SCHEME == ParticleThermalisationScheme::WOLLAEGER) {

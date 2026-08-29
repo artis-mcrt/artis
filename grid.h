@@ -162,6 +162,22 @@ inline auto get_ejecta_kinetic_energy() {
   return E_kin;
 }
 
+// The grid-mapped mass [g] of the ejecta: the sum over the nonempty cells, consistent with
+// get_ejecta_kinetic_energy(). The staircase mapping and the FORCE_SPHERICAL_ESCAPE_SURFACE
+// blanking make this differ from mtot_input, the analytic mass of the input model.
+inline auto get_ejecta_mass() {
+  static const double M_ejecta = [] {
+    double mtot = 0.;
+    for (int nonemptymgi = 0; nonemptymgi < get_nonempty_npts_model(); nonemptymgi++) {
+      const int mgi = get_mgi_of_nonemptymgi(nonemptymgi);
+      mtot += get_rho_tmin(mgi) * grid::get_modelcell_assocvolume_tmin(mgi);
+    }
+    return mtot;
+  }();
+
+  return M_ejecta;
+}
+
 }  // namespace grid
 
 #endif  // GRID_H
