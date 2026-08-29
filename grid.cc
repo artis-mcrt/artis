@@ -2890,8 +2890,13 @@ DEVICE_FUNC void snap_pos_to_cell(Vec3d& pos, const double time, const int celli
       // grid with vmax > CLIGHT / sqrt(3) has such a range. The packet still overtakes the slower
       // spherical escape surface, because that surface expands at vmax < CLIGHT. The packet
       // therefore escapes where its ray meets the expanding sphere.
-      distance = expanding_shell_intersection<BoundaryType::UPPER>(pos, dir, CLIGHT_PROP,
-                                                                   globals::rmax * tstart / globals::tmin, tstart);
+      const double r_surface = globals::rmax * tstart / globals::tmin;
+      if (vec_len(pos) >= r_surface) {
+        // A cell that straddles the sphere keeps positions outside the surface, so the packet can
+        // already be outside it. The intersection then lies behind the packet, so escape here.
+        return {0., -99};
+      }
+      distance = expanding_shell_intersection<BoundaryType::UPPER>(pos, dir, CLIGHT_PROP, r_surface, tstart);
       assert_always(distance >= 0.);
       next_cellindex = -99;
     }
