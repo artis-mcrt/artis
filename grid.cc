@@ -2883,6 +2883,20 @@ DEVICE_FUNC void snap_pos_to_cell(Vec3d& pos, const double time, const int celli
     assert_always(false);
   }
 
+  if constexpr (FORCE_SPHERICAL_ESCAPE_SURFACE) {
+    if (next_cellindex == -1) {
+      // No cell boundary lies ahead of the packet: every velocity component of the packet is inside
+      // the range of the receding boundary velocities of its cell. Only a corner-region cell of a
+      // grid with vmax > CLIGHT / sqrt(3) has such a range. The packet still overtakes the slower
+      // spherical escape surface, because that surface expands at vmax < CLIGHT. The packet
+      // therefore escapes where its ray meets the expanding sphere.
+      distance = expanding_shell_intersection<BoundaryType::UPPER>(pos, dir, CLIGHT_PROP,
+                                                                   globals::rmax * tstart / globals::tmin, tstart);
+      assert_always(distance >= 0.);
+      next_cellindex = -99;
+    }
+  }
+
   assert_always((next_cellindex == -99) || ((next_cellindex >= 0) && (next_cellindex < ngrid)));
 
   const double maxboundarydist =
