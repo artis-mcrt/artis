@@ -137,7 +137,7 @@ constexpr RpktGreyType RPKT_GREY_TYPE = RpktGreyType::TANAKA2020_ELECTRONFRAC;
 
 constexpr bool USE_XCOM_GAMMAPHOTOION = false;
 
-constexpr auto PARTICLE_THERMALISATION_SCHEME = ParticleThermalisationScheme::TIMEDEPENDENT;
+constexpr auto PARTICLE_THERMALISATION_SCHEME = ParticleThermalisationScheme::TIMEDEPENDENT_WITH_ADIABATIC_LOSS;
 
 constexpr auto GAMMA_THERMALISATION_SCHEME = GammaThermalisationScheme::FREQUENCYDEPENDENT;
 
