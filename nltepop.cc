@@ -12,8 +12,10 @@
 #include <cstddef>
 #include <cstdio>
 #include <cstdlib>
+#include <filesystem>
 #include <format>
 #include <fstream>
+#include <iostream>
 #include <numeric>
 #include <optional>
 #include <print>
@@ -70,6 +72,41 @@ struct RateMatrices {
   std::vector<double> ntcoll_bf;
   std::vector<double> autoion;
   std::vector<double> chargetransfer;
+
+  void write_out_rate_matrices(const int atomic_number, const int mgi) {
+    printlnlog("before lambda");
+    auto output_rate_matrix = [&](std::string base_path, std::string name, std::vector<double> mat) {
+      std::fstream output_file =
+          fstream_required(std::format("{}-{}.out", base_path, name), std::ios::binary | std::ios::out);
+      output_file.write(reinterpret_cast<const char*>(mat.data()), sizeof(double) * mat.size());
+      output_file.close();
+    };
+    printlnlog("after lambda");
+
+    const std::string dir = std::format("./nlte-outputs/matrices/{}/{}/", globals::timestep, mgi);
+    if (!std::filesystem::exists(dir)) {
+      printlnlog("creating directory");
+      std::filesystem::create_directories(dir);
+    } else {
+      if (!std::filesystem::is_directory(dir)) {
+        printlnlog("oh dear");
+        std::abort();
+      }
+    }
+
+    printlnlog("making base path");
+    const std::string base_path = std::format("{}/{}-{}", dir, atomic_number, used_nlte_dimension);
+
+    printlnlog("writing matrices");
+    output_rate_matrix(base_path, "rad_bb", rad_bb);
+    output_rate_matrix(base_path, "coll_bb", coll_bb);
+    output_rate_matrix(base_path, "ntcoll_bb", ntcoll_bb);
+    output_rate_matrix(base_path, "rad_bf", rad_bf);
+    output_rate_matrix(base_path, "coll_bf", coll_bf);
+    output_rate_matrix(base_path, "ntcoll_bf", ntcoll_bf);
+    output_rate_matrix(base_path, "autoion", autoion);
+    output_rate_matrix(base_path, "chargetransfer", chargetransfer);
+  }
 
   explicit RateMatrices(int max_nlte_dimension) {
     // allocation of the maximum required size is done once,
@@ -1515,6 +1552,13 @@ auto nltepop_solve_matrix_with_ion_reduction(const int element, const int nonemp
       matrix_solve_success =
           nltepop_matrix_solve(element, nonemptymgi, rate_matrix, balance_vector, popvec, pop_normfactors,
                                max_nlte_dimension, superlevel_partfuncs, first_ion_used, nions_used);
+    }
+
+    // Save matrices for every atomic number
+    if (/* atomic_number == 26 && */ globals::timestep == 39 && (nonemptymgi == 39 || nonemptymgi == 100)) {
+      printlnlog("Writing rate matrices for Z={}, at timestep {} and nonemptymgi {}", atomic_number, globals::timestep,
+                 nonemptymgi);
+      rate_matrices.write_out_rate_matrices(atomic_number, nonemptymgi);
     }
 
     matrix_solve_required = false;  // will be set to true if we need to retry with a different ion range
