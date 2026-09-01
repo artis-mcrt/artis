@@ -92,6 +92,16 @@ $(warning Unknown compiler)
 	COMPILER_NAME := unknown
 endif
 
+# -Werror must not make these two warnings an error: ARTIS controls neither the gcc installations
+# on the host nor a libstdc++ pragma that the optimizer cannot apply. The probe drops an option
+# that the compiler does not know, and is simply expanded because CXXFLAGS is recursive.
+CLANG_NOERROR_OPTIONS := -Wno-error=gcc-install-dir-libstdcxx -Wno-error=pass-failed
+ifneq (,$(filter $(COMPILER_NAME),hipcc clang))
+	CLANG_NOERROR_ACCEPTED := $(strip $(foreach opt,$(CLANG_NOERROR_OPTIONS),\
+		$(if $(shell $(CXX) $(opt) -Werror=unknown-warning-option -fsyntax-only -x c++ /dev/null > /dev/null 2>&1 && echo accepted),$(opt))))
+	CXXFLAGS += $(CLANG_NOERROR_ACCEPTED)
+endif
+
 $(info detected compiler is $(COMPILER_NAME) $(COMPILER_VERSION_NUMBER))
 $(info detected CPU is $(CPU_ARCH))
 
