@@ -348,6 +348,31 @@ jobs:
                   apt-get install -y --no-install-recommends openmpi-bin libopenmpi-dev git
                   git config --global --add safe.directory /__w/artis/artis
 
+            # nvc++ 26.5 stops with "operator= has already been declared in the current scope" in its
+            # own stdexec header. __any_ptr and __any_cptr have a using declaration for the operator=
+            # of the base class, and then declare their own operator=. The C++ rules say that the
+            # second declaration hides the first one, but the frontend takes it as a repetition.
+            # Neither --diag_suppress nor a diag_suppress pragma removes this error, so this step
+            # deletes the two using declarations. Remove this step when the SDK compiles again.
+            - name: Correct the stdexec header of the SDK
+              run: |
+                  pattern='using __any_ptr_base<_Interface>::operator=;'
+                  # the SDK gives more than one path to this file, e.g. a directory for the year and
+                  # a directory for the version, so resolve each path and correct each file one time
+                  for path in /opt/nvidia/hpc_sdk/Linux_x86_64/*/compilers/include-stdexec/stdexec/__detail/__any.hpp; do
+                      readlink -f "$path"
+                  done | sort -u | while read -r header; do
+                      [ -f "$header" ] || continue
+                      # grep gives exit status 1 for no match, which stops a step that runs with sh -e
+                      count=$(grep -c "$pattern" "$header" || true)
+                      echo "$header has ${count:-0} of these using declarations"
+                      if [ "${count:-0}" -eq 0 ]; then
+                          echo "the SDK needs no correction. Remove this step."
+                      else
+                          sed -i "/$pattern/d" "$header"
+                      fi
+                  done
+
             - name: Compile classic mode STDPAR=ON GPU=ON
               run: |
                   cp -v -p artisoptions_classic.h artisoptions.h
