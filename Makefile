@@ -92,15 +92,20 @@ $(warning Unknown compiler)
 	COMPILER_NAME := unknown
 endif
 
-# A host can have more than one gcc installation, and the newest one can have no libstdc++ headers.
-# The clang family then gives -Wgcc-install-dir-libstdcxx, because a future release will select a
-# different installation. The ROCm container is such a host. The build cannot correct the host, so
-# the warning stays visible, but -Werror must not make it an error. An older compiler does not know
-# the option, and gives -Wunknown-warning-option, so first ask the compiler for that message.
+# The clang family gives two warnings about the host that ARTIS cannot correct. The warnings stay
+# visible, but -Werror must not make them an error:
+#
+# - -Wgcc-install-dir-libstdcxx: the host has more than one gcc installation, and a future release
+#   selects a different one, because the newest installation has no libstdc++ headers.
+# - -Wpass-failed: the optimizer cannot apply a transformation that a pragma requests. The
+#   compilation for the device gives this message for a pragma in the libstdc++ headers.
+#
+# An older compiler does not know an option and gives -Wunknown-warning-option, which -Werror also
+# makes an error. Ask the compiler for that message first, and keep only the options that it accepts.
+CLANG_NOERROR_OPTIONS := -Wno-error=gcc-install-dir-libstdcxx -Wno-error=pass-failed
 ifneq (,$(filter $(COMPILER_NAME),hipcc clang))
-	ifeq (,$(shell $(CXX) -Wno-error=gcc-install-dir-libstdcxx -fsyntax-only -x c++ /dev/null 2>&1 | grep -m1 'unknown warning option'))
-		CXXFLAGS += -Wno-error=gcc-install-dir-libstdcxx
-	endif
+	CXXFLAGS += $(foreach opt,$(CLANG_NOERROR_OPTIONS),\
+		$(if $(shell $(CXX) $(opt) -fsyntax-only -x c++ /dev/null 2>&1 | grep -m1 'unknown warning option'),,$(opt)))
 endif
 
 $(info detected compiler is $(COMPILER_NAME) $(COMPILER_VERSION_NUMBER))
