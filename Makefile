@@ -104,8 +104,11 @@ endif
 # makes an error. Ask the compiler for that message first, and keep only the options that it accepts.
 CLANG_NOERROR_OPTIONS := -Wno-error=gcc-install-dir-libstdcxx -Wno-error=pass-failed
 ifneq (,$(filter $(COMPILER_NAME),hipcc clang))
-	CXXFLAGS += $(foreach opt,$(CLANG_NOERROR_OPTIONS),\
+	# a simply expanded variable, because CXXFLAGS is recursive and would start each probe again
+	# at every expansion
+	CLANG_NOERROR_ACCEPTED := $(foreach opt,$(CLANG_NOERROR_OPTIONS),\
 		$(if $(shell $(CXX) $(opt) -fsyntax-only -x c++ /dev/null 2>&1 | grep -m1 'unknown warning option'),,$(opt)))
+	CXXFLAGS += $(CLANG_NOERROR_ACCEPTED)
 endif
 
 $(info detected compiler is $(COMPILER_NAME) $(COMPILER_VERSION_NUMBER))
