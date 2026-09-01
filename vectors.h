@@ -216,8 +216,12 @@ DEVICE_FUNC constexpr void set_pkt_restframe_from_cmf(Packet& pkt) {
   // for ref_1 use (from triple product rule)
   const double n_xylen = std::sqrt(pow2(dir[0]) + pow2(dir[1]));
   if (n_xylen == 0.) {
-    // if n is along z axis, we can just use x and y as the meridian frame axes
-    return {Vec3d{1., 0., 0.}, Vec3d{0., 1., 0.}};
+    // if n is along z axis, we can just use x and y as the meridian frame axes. nvc++ 26.5 writes an
+    // invalid constant into the device code if these two vectors go directly into the return value
+    // ("parse integer constant must have integer type"), so give each vector a name first.
+    const Vec3d ref1_zaxis{1., 0., 0.};
+    const Vec3d ref2_zaxis{0., 1., 0.};
+    return {ref1_zaxis, ref2_zaxis};
   }
   const auto ref1 = Vec3d{-dir[0] * dir[2] / n_xylen, -dir[1] * dir[2] / n_xylen, (1 - pow2(dir[2])) / n_xylen};
 
