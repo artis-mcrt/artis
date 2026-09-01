@@ -42,15 +42,29 @@ def main() -> None:
         else:
             type_id_index, escape_type_id_index = 2, 15
 
-        if all(
-            get_type_escapetype(line, type_id_index, escape_type_id_index) == (TYPE_ESCAPE, TYPE_RPKT)
-            for line in linesin
-            if not line.startswith("#")
-        ):
+        packets_in = 0
+        kept_packets = 0
+        bytes_in = 0
+        bytes_kept = 0
+        for line in linesin:
+            if line.startswith("#"):
+                continue
+            packets_in += 1
+            bytes_in += len(line)
+            if get_type_escapetype(line, type_id_index, escape_type_id_index) == (TYPE_ESCAPE, TYPE_RPKT):
+                kept_packets += 1
+                bytes_kept += len(line)
+
+        if kept_packets == packets_in:
             print("  contains only escaped rpkts, skipping...")
             continue
 
-        print("  contains gamma or non-escaped packets, should filter this file.")
+        removed_packets = packets_in - kept_packets
+        data_reduction = (1 - bytes_kept / bytes_in) * 100
+        print(
+            f"  the filter removes {removed_packets} of {packets_in} packets "
+            f"({removed_packets / packets_in * 100:.2f}%). Approximate data reduction: {data_reduction:.2f}%."
+        )
         if not args.f:
             print("  (not filtering. Use -f to confirm filtering and --rm to remove original files)")
             continue
@@ -64,8 +78,6 @@ def main() -> None:
             f"{fileout_rpkt.parts[-1]}.partial.tmp.nosync",
         )
         print("  filtering rpkts...", end="", flush=True)
-        commentrows = 0
-        kept_packets = 0
 
         with compression.zstd.open(fileout_rpkt_temp, "wt", level=12) as foutrpkt:
             for line in linesin:
@@ -75,18 +87,14 @@ def main() -> None:
                     assert escape_type_id == "escape_type_id"
 
                     foutrpkt.write(line)
-                    commentrows += 1
                     continue
 
-                if type_id == str(packet_type_ids["TYPE_ESCAPE"]) and escape_type_id == str(
-                    packet_type_ids["TYPE_RPKT"]
-                ):
+                if (type_id, escape_type_id) == (TYPE_ESCAPE, TYPE_RPKT):
                     foutrpkt.write(line)
-                    kept_packets += 1
         size_factor = fileout_rpkt_temp.stat().st_size / filein.stat().st_size
-        packets_in = len(linesin) - commentrows
         print(
-            f" kept {kept_packets} of {packets_in} packets ({kept_packets / packets_in * 100:.2f}%) new/old size {size_factor * 100:.2f}%"
+            f" kept {kept_packets} of {packets_in} packets ({kept_packets / packets_in * 100:.2f}%)"
+            f" new/old size {size_factor * 100:.2f}%"
         )
         if args.rm:
             filein.unlink()
