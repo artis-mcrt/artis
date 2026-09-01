@@ -377,13 +377,13 @@ jobs:
               run: |
                   cp -v -p artisoptions_classic.h artisoptions.h
                   make clean
-                  make STDPAR=ON GPU=ON -j$(nproc) sn3d exspec
+                  make STDPAR=ON GPU=ON GPUARCH=80 -j$(nproc) sn3d exspec
 
             - name: Compile nebular mode STDPAR=ON GPU=ON
               run: |
                   cp -v -p artisoptions_nltenebular.h artisoptions.h
                   make clean
-                  make STDPAR=ON GPU=ON -j$(nproc) sn3d exspec
+                  make STDPAR=ON GPU=ON GPUARCH=80 -j$(nproc) sn3d exspec
 
             - name: Compile nebular mode STDPAR=ON
               run: |
