@@ -318,11 +318,8 @@ jobs:
         # NVIDIA's container registry serves the SDK preinstalled, avoiding the apt repository on
         # developer.download.nvidia.com, which (as of 2026-07) returns 404 for the SDK debs when
         # fetched from GitHub's runner network (same approach as the AMD ROCm job above).
-        # 26.1 is the previously-validated SDK version: 26.5's bundled stdexec headers fail to
-        # compile with its own frontend in -stdpar=gpu mode ("operator= has already been declared"
-        # in include-stdexec/stdexec/__detail/__any.hpp)
         container:
-            image: nvcr.io/nvidia/nvhpc:26.1-devel-cuda13.1-ubuntu24.04
+            image: nvcr.io/nvidia/nvhpc:26.5-devel-cuda13.2-ubuntu24.04
         steps:
             - uses: actions/checkout@v7
               with:
@@ -330,11 +327,9 @@ jobs:
 
             - name: Install gcc
               run: |
-                  apt-get update
-                  apt-get install -y --no-install-recommends software-properties-common
-                  add-apt-repository -y ppa:ubuntu-toolchain-r/test
-                  apt-get update
+                  # Ubuntu 24.04 supplies gcc-14, so this step needs no toolchain PPA.
                   # gfortran-14 completes the toolchain that nvc++ validates when passed --gcc-toolchain
+                  apt-get update
                   apt-get install -y --no-install-recommends gcc-14 g++-14 gfortran-14
                   update-alternatives \
                        --install /usr/bin/gcc gcc /usr/bin/gcc-14 100 \
@@ -353,17 +348,44 @@ jobs:
                   apt-get install -y --no-install-recommends openmpi-bin libopenmpi-dev git
                   git config --global --add safe.directory /__w/artis/artis
 
+            # nvc++ 26.5 stops with "operator= has already been declared in the current scope" in its
+            # own stdexec header. __any_ptr and __any_cptr have a using declaration for the operator=
+            # of the base class, and then declare their own operator=. The C++ rules say that the
+            # second declaration hides the first one, but the frontend takes it as a repetition.
+            # --diag_suppress and a diag_suppress pragma do not remove this error.
+            # This step deletes the two using declarations.
+            # Remove this step when the SDK compiles again.
+            - name: Correct the stdexec header of the SDK
+              run: |
+                  pattern='using __any_ptr_base<_Interface>::operator=;'
+                  # the SDK gives more than one path to this file.
+                  # One directory has the year. One directory has the version.
+                  # Resolve each path. Correct each file one time.
+                  for path in /opt/nvidia/hpc_sdk/Linux_x86_64/*/compilers/include-stdexec/stdexec/__detail/__any.hpp; do
+                      readlink -f "$path"
+                  done | sort -u | while read -r header; do
+                      [ -f "$header" ] || continue
+                      # grep gives exit status 1 for no match, which stops a step that runs with sh -e
+                      count=$(grep -c "$pattern" "$header" || true)
+                      echo "$header has ${count:-0} of these using declarations"
+                      if [ "${count:-0}" -eq 0 ]; then
+                          echo "the SDK needs no correction. Remove this step."
+                      else
+                          sed -i "/$pattern/d" "$header"
+                      fi
+                  done
+
             - name: Compile classic mode STDPAR=ON GPU=ON
               run: |
                   cp -v -p artisoptions_classic.h artisoptions.h
                   make clean
-                  make STDPAR=ON GPU=ON -j$(nproc) sn3d exspec
+                  make STDPAR=ON GPU=ON GPUARCH=80 -j$(nproc) sn3d exspec
 
             - name: Compile nebular mode STDPAR=ON GPU=ON
               run: |
                   cp -v -p artisoptions_nltenebular.h artisoptions.h
                   make clean
-                  make STDPAR=ON GPU=ON -j$(nproc) sn3d exspec
+                  make STDPAR=ON GPU=ON GPUARCH=80 -j$(nproc) sn3d exspec
 
             - name: Compile nebular mode STDPAR=ON
               run: |

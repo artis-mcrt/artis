@@ -197,7 +197,15 @@ endif
 
 ifeq ($(COMPILER_NAME),nvhpc)
 	ifeq ($(GPU),ON)
-			CXXFLAGS += -gpu=mem:unified -gpu=ccnative
+			# ccnative selects the compute capability of the GPU of the host. A host that has no GPU
+			# gives a warning and the default value, which changes with the SDK. GPUARCH selects a
+			# compute capability, e.g. GPUARCH=80, and makes the result independent of the host.
+			ifeq ($(GPUARCH),)
+				CXXFLAGS += -gpu=mem:unified -gpu=ccnative
+			else
+				CXXFLAGS += -gpu=mem:unified -gpu=cc$(GPUARCH)
+				BUILD_DIR := $(BUILD_DIR)_cc$(GPUARCH)
+			endif
 			CXXFLAGS += -Minfo=stdpar,accel
 # 			CXXFLAGS += -gpu=debug -g
 # 			CXXFLAGS += -gpu=maxregcount:64

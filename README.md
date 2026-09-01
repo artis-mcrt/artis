@@ -161,6 +161,8 @@ source ./setup_kilonova_1d.sh   # creates tests/kilonova_1d_testrun/
 - GPU=ON: Required to compile for GPUs. Works around incompatible function calls and uses a Simpson-rule integrator in place of Gauss-Kronrod.
 - OPENMP=ON: Parallelise with OpenMP threads within each MPI rank. Cannot be combined with STDPAR.
 - STDPAR=ON: Parallelise with C++ standard library parallel algorithms, either on multicore CPUs or, together with GPU=ON, on GPUs.
+
+- GPUARCH=N: With nvc++ and GPU=ON, compile for compute capability N (e.g. GPUARCH=80) in place of the GPU of the host. A host that has no GPU needs this option to get a defined target.
 - OPTIMIZE=OFF: Compile without optimisation. This is the quickest way to check that everything still compiles.
 - PGO=GENERATE and PGO=USE: Profile-guided optimisation with gcc or clang. Build with GENERATE, run a representative simulation to collect profile data, then rebuild with USE.
 
