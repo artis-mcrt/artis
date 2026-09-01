@@ -92,20 +92,11 @@ $(warning Unknown compiler)
 	COMPILER_NAME := unknown
 endif
 
-# The clang family gives two warnings about the host that ARTIS cannot correct. The warnings stay
-# visible, but -Werror must not make them an error:
-#
-# - -Wgcc-install-dir-libstdcxx: the host has more than one gcc installation, and a future release
-#   selects a different one, because the newest installation has no libstdc++ headers.
-# - -Wpass-failed: the optimizer cannot apply a transformation that a pragma requests. The
-#   compilation for the device gives this message for a pragma in the libstdc++ headers.
-#
-# An older compiler does not know an option and gives -Wunknown-warning-option, which -Werror also
-# makes an error. Ask the compiler for that message first, and keep only the options that it accepts.
+# warnings about the host that ARTIS cannot correct, so -Werror must not make them an error. An
+# older compiler gives -Wunknown-warning-option for an option that it does not know, so keep only
+# the options that it accepts. The result is simply expanded, because CXXFLAGS is recursive.
 CLANG_NOERROR_OPTIONS := -Wno-error=gcc-install-dir-libstdcxx -Wno-error=pass-failed
 ifneq (,$(filter $(COMPILER_NAME),hipcc clang))
-	# a simply expanded variable, because CXXFLAGS is recursive and would start each probe again
-	# at every expansion
 	CLANG_NOERROR_ACCEPTED := $(foreach opt,$(CLANG_NOERROR_OPTIONS),\
 		$(if $(shell $(CXX) $(opt) -fsyntax-only -x c++ /dev/null 2>&1 | grep -m1 'unknown warning option'),,$(opt)))
 	CXXFLAGS += $(CLANG_NOERROR_ACCEPTED)
