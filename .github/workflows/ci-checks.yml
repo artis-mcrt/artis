@@ -272,14 +272,13 @@ jobs:
               with:
                     fetch-depth: 0
 
-            - name: Install gcc
+            - name: Install libstdc++
               run: |
-                  # Ubuntu 26.04 supplies gcc-15, so this step needs no toolchain PPA
+                  # The Open MPI packages install gcc-16 in the container, but no libstdc++ for it.
+                  # clang selects the newest gcc installation, so the compilation for the device
+                  # finds no standard header, e.g. cstdlib. This package supplies those headers.
                   apt-get update
-                  apt-get install -y --no-install-recommends gcc-15 g++-15
-                  update-alternatives \
-                       --install /usr/bin/gcc gcc /usr/bin/gcc-15 100 \
-                       --slave /usr/bin/g++ g++ /usr/bin/g++-15
+                  apt-get install -y --no-install-recommends libstdc++-16-dev
 
             - name: Set MPI compiler to hipcc
               run: |
