@@ -352,13 +352,15 @@ jobs:
             # own stdexec header. __any_ptr and __any_cptr have a using declaration for the operator=
             # of the base class, and then declare their own operator=. The C++ rules say that the
             # second declaration hides the first one, but the frontend takes it as a repetition.
-            # Neither --diag_suppress nor a diag_suppress pragma removes this error, so this step
-            # deletes the two using declarations. Remove this step when the SDK compiles again.
+            # --diag_suppress and a diag_suppress pragma do not remove this error.
+            # This step deletes the two using declarations.
+            # Remove this step when the SDK compiles again.
             - name: Correct the stdexec header of the SDK
               run: |
                   pattern='using __any_ptr_base<_Interface>::operator=;'
-                  # the SDK gives more than one path to this file, e.g. a directory for the year and
-                  # a directory for the version, so resolve each path and correct each file one time
+                  # the SDK gives more than one path to this file.
+                  # One directory has the year and one directory has the version.
+                  # Resolve each path, and then correct each file one time.
                   for path in /opt/nvidia/hpc_sdk/Linux_x86_64/*/compilers/include-stdexec/stdexec/__detail/__any.hpp; do
                       readlink -f "$path"
                   done | sort -u | while read -r header; do
