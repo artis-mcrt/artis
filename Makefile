@@ -92,6 +92,17 @@ $(warning Unknown compiler)
 	COMPILER_NAME := unknown
 endif
 
+# A host can have more than one gcc installation, and the newest one can have no libstdc++ headers.
+# The clang family then gives -Wgcc-install-dir-libstdcxx, because a future release will select a
+# different installation. The ROCm container is such a host. The build cannot correct the host, so
+# the warning stays visible, but -Werror must not make it an error. An older compiler does not know
+# the option, and gives -Wunknown-warning-option, so first ask the compiler for that message.
+ifneq (,$(filter $(COMPILER_NAME),hipcc clang))
+	ifeq (,$(shell $(CXX) -Wno-error=gcc-install-dir-libstdcxx -fsyntax-only -x c++ /dev/null 2>&1 | grep -m1 'unknown warning option'))
+		CXXFLAGS += -Wno-error=gcc-install-dir-libstdcxx
+	endif
+endif
+
 $(info detected compiler is $(COMPILER_NAME) $(COMPILER_VERSION_NUMBER))
 $(info detected CPU is $(CPU_ARCH))
 
