@@ -359,8 +359,8 @@ jobs:
               run: |
                   pattern='using __any_ptr_base<_Interface>::operator=;'
                   # the SDK gives more than one path to this file.
-                  # One directory has the year and one directory has the version.
-                  # Resolve each path, and then correct each file one time.
+                  # One directory has the year. One directory has the version.
+                  # Resolve each path. Correct each file one time.
                   for path in /opt/nvidia/hpc_sdk/Linux_x86_64/*/compilers/include-stdexec/stdexec/__detail/__any.hpp; do
                       readlink -f "$path"
                   done | sort -u | while read -r header; do
