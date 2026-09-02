@@ -63,8 +63,8 @@ sentences. It does not control the spelling variant here.
 ARTIS is a 3D Monte Carlo radiative transfer code for supernovae and kilonovae.
 The code uses modern C++ and the Message Passing Interface (MPI). You can also
 add OpenMP threads or C++ standard parallelism. gcc and clang compile the code
-as C++26. nvc++ and hipcc compile it as C++23, so the code must stay compatible
-with C++23. The Makefile builds three programs from the same sources:
+as C++26, and so does nvc++. hipcc compiles it as C++23, so the code must stay
+compatible with C++23. The Makefile builds three programs from the same sources:
 
 - `sn3d`: the main simulation. It does the radiative transfer over a sequence
   of timesteps.
