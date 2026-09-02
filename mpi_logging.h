@@ -146,12 +146,13 @@ inline auto printlnlog(const std::format_string<Args...> fmt, Args&&... args) no
   MY_IF_HOST(log_write(std::format(fmt, std::forward<Args>(args)...), true););
 }
 
+// Stop the run with a message. The host formats the message. Device code has no std::format, so the device path
+// reports the format string without the values, together with the same rank, file, line, and function.
 template <typename... Args>
 [[noreturn]] DEVICE_FUNC inline auto fatal_crash_at(const char* file, const int line, const char* func,
-                                                    const std::format_string<Args...> fmt, Args&&... args) noexcept
-    -> void {
-  MY_IF_DEVICE(const auto str = std::vformat(fmt.get(), std::make_format_args(args...));
-               report_fatal_error_and_abort(file, line, func, str.c_str()););
+                                                    const std::format_string<Args...> fmt,
+                                                    [[maybe_unused]] Args&&... args) noexcept -> void {
+  MY_IF_DEVICE(report_fatal_error_and_abort(file, line, func, fmt.get().data()););
   MY_IF_HOST(report_fatal_error_and_abort(file, line, func, std::format(fmt, std::forward<Args>(args)...).c_str()););
 }
 
