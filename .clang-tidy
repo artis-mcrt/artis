@@ -77,7 +77,7 @@ CheckOptions:
     - key: modernize-deprecated-headers.CheckHeaderFile
       value: 'true'
     - key: modernize-use-std-print.PrintfLikeFunctions
-      value: printf; absl::PrintF; printout
+      value: printf; absl::PrintF
     - key: modernize-use-std-print.FprintfLikeFunctions
       value: fprintf; absl::FPrintF
     - key: readability-identifier-naming.NamespaceCase
