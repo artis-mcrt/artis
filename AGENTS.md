@@ -210,8 +210,8 @@ finished CI run. The run does not have to be of the head commit, if the later
 commits do not change the results. Say in the commit message and in the pull
 request that you expect the results to change.
 
-A new end-to-end test must run in CI in about ten minutes or less, because
-every push runs the full matrix.
+A new end-to-end test must run in CI in about ten minutes or less. Every push
+runs the full matrix.
 
 ## Continuous integration
 
@@ -352,9 +352,9 @@ are the only defence.
   do not delete it.
 - A fatal error is an `assert_always()` on the condition. Write an optional
   `printlnlog("[error] ...")` with the values before it. Do not call
-  `std::abort()` directly. A direct abort is very hard to debug, because the
-  assertion reporter adds the file, the line, the expression, and the function,
-  and it does this on the host and on the device.
+  `std::abort()` directly. A direct abort is very hard to debug. The assertion
+  reporter adds the file, the line, the expression, and the function. It does
+  this on the host and on the device.
 - An invalid input stops the run. Do not give a warning for it.
 - Two numeric helpers are an exception: `toms748.h` and `gausskronrod.h` throw
   `std::domain_error` on the host, inside a guard that returns a NaN for a GPU
@@ -379,8 +379,8 @@ are the only defence.
 - In the grid update, each rank changes only the cells of its own range. See
   `update_grid.cc` and the assignment of the ranks in `grid.cc`. After the grid
   update, `sn3d.cc` broadcasts the per-cell state to the other nodes. A new
-  per-cell array that the packets read must join that broadcast, or the other
-  nodes propagate with stale values and give no error.
+  per-cell array that the packets read must join that broadcast. Without it,
+  the other nodes propagate with stale values and give no error.
 - The propagation of the packets is different. Each rank adds to the estimators
   of every cell that its packets enter. A new estimator therefore needs a sum
   over the ranks with `MPI_Allreduce_safe()`, as `radfield.cc` does. Without
