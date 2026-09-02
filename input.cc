@@ -473,8 +473,8 @@ void read_ion_levels(std::istream& adata, const int element, const int ion, cons
             "[error] adata.txt: Z={} ionstage {}: level {} has energy {:g} eV, below the previous level energy {:g} "
             "eV. The count of ionising levels needs energies that increase with the level index",
             get_atomicnumber(element), get_ionstage(element, ion), levelindex_in, levelenergy_ev, prev_levelenergy_ev);
-        std::abort();
       }
+      assert_always(levelenergy_ev >= prev_levelenergy_ev);
       prev_levelenergy_ev = levelenergy_ev;
     }
   }
