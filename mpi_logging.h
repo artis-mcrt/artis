@@ -215,8 +215,11 @@ template <typename... Args>
                                                     const std::format_string<Args...> fmt, Args&&... args) noexcept
     -> void {
   MY_IF_DEVICE(printf("\n[rank %d] [error] %s:%d in %s: ", globals::my_rank, file, line, func);
-               device_printf_format(fmt.get(), args...); printf("\n"); assert(false); __builtin_trap(););
+               device_printf_format(fmt.get(), args...); printf("\n"););
   MY_IF_HOST(report_fatal_error_and_abort(file, line, func, std::format(fmt, std::forward<Args>(args)...).c_str()););
+  // the host reporter above does not return. The trap stops a device thread, and it also shows every compiler
+  // that this function does not return, because the target split above hides that from nvc++.
+  __builtin_trap();
 }
 
 #define fatal_crash(...) fatal_crash_at(__FILE__, __LINE__, __PRETTY_FUNCTION__, __VA_ARGS__)
