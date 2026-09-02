@@ -365,8 +365,12 @@ are the only defence.
   becomes nothing unless `TESTMODE=ON`, so its expression must have no side
   effect. A parameter that only an `assert_testmodeonly()` uses needs
   `[[maybe_unused]]`.
-- A fatal error writes `printlnlog("[error] ...")` and then calls
-  `std::abort()`. Use this pattern for a new error.
+- A fatal error is an `assert_always()` on the condition. Write an optional
+  `printlnlog("[error] ...")` with the values before it. Do not call
+  `std::abort()` directly. A direct abort is very hard to debug, because the
+  assertion reporter adds the file, the line, the expression, and the function,
+  and it does this on the host and on the device.
+- An invalid input stops the run. Do not give a warning for it.
 - Two numeric helpers are an exception: `toms748.h` and `gausskronrod.h` throw
   `std::domain_error` on the host, inside a guard that returns a NaN for a GPU
   build. No code catches these exceptions. Keep the guards, because device code
