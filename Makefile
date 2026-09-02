@@ -42,7 +42,6 @@ COMPILER_NAME := unknown
 CPU_ARCH := unknown
 ifneq '' '$(findstring HIP version,$(COMPILER_VERSION))'
 	COMPILER_NAME := hipcc
-	CXX_STD := c++23
 	CXXFLAGS += -Wno-macro-redefined -Wno-unused-command-line-argument
 else ifneq '' '$(findstring clang,$(COMPILER_VERSION))'
 	COMPILER_NAME := clang
@@ -74,7 +73,6 @@ $(warning WARNING: Detected GCC version $(COMPILER_VERSION_NUMBER) but minimum s
 
 else ifneq '' '$(findstring nvc++,$(COMPILER_VERSION))'
 	COMPILER_NAME := nvhpc
-	CXX_STD := c++23
 	# to use the pixi installed libstdc++
 	CXXFLAGS += -Minfo=accel
 # 	CXXFLAGS += --gcc-toolchain=$(PWD)/.pixi/envs/default -Wl,-rpath,$(PWD)/.pixi/envs/default/lib
@@ -108,7 +106,7 @@ $(info detected CPU is $(CPU_ARCH))
 # Use a custom build directory for each combination of compiler, CPU architecture, and options to avoid conflicts and ensure that the correct binaries are used
 BUILD_DIR = build/$(COMPILER_NAME)-$(COMPILER_VERSION_NUMBER)_$(CPU_ARCH)
 
-CXXFLAGS += -std=$(CXX_STD) $(ARCH_FLAGS) -Wall -Wextra -Wpedantic -Wredundant-decls -Wno-unused-parameter -Wsign-compare -Wshadow -isystem third_party
+CXXFLAGS += -std=c++26 $(ARCH_FLAGS) -Wall -Wextra -Wpedantic -Wredundant-decls -Wno-unused-parameter -Wsign-compare -Wshadow -isystem third_party
 
 # generate and use .d header dependency files, so that header edits trigger recompilation of the
 # objects that include them (every compiler, including nvc++, supports these GCC-style options)
