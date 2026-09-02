@@ -55,7 +55,7 @@ DEVICE_FUNC void do_ntalpha_fisprod_deposit(Packet& pkt);
 DEVICE_FUNC void do_ntlepton_deposit(Packet& pkt);
 void write_restart_data(FILE* gridsave_file);
 void read_restart_data(FILE* gridsave_file);
-void nt_MPI_Bcast(ptrdiff_t nonemptymgi, int root_node_id);
+void nt_MPI_Bcast(ptrdiff_t nstart_nonempty, ptrdiff_t ndo_nonempty, int root_node_id);
 void reset_stats();
 void print_stats(double modelvolume, double deltat);
 }  // namespace nonthermal

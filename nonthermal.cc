@@ -2768,13 +2768,14 @@ void read_restart_data(FILE* gridsave_file) {
   double SF_EMAX_in{NAN};
   assert_always(fscanf(gridsave_file, "%d %la %la\n", &sfpts_in, &SF_EMIN_in, &SF_EMAX_in) == 3);
 
-  if (sfpts_in != SFPTS || SF_EMIN_in != SF_EMIN || SF_EMAX_in != SF_EMAX) {
+  const bool sf_grid_matches = sfpts_in == SFPTS && SF_EMIN_in == SF_EMIN && SF_EMAX_in == SF_EMAX;
+  if (!sf_grid_matches) {
     printlnlog("[error] gridsave file specifies {} Spencer-Fano samples, SF_EMIN {:g} SF_EMAX {:g}", sfpts_in,
                SF_EMIN_in, SF_EMAX_in);
     printlnlog("[error] This simulation has {} Spencer-Fano samples, SF_EMIN {:g} SF_EMAX {:g}", SFPTS, SF_EMIN,
                SF_EMAX);
-    std::abort();
   }
+  assert_always(sf_grid_matches);
 
   for (int nonemptymgi = 0; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
     int nonemptymgi_in = 0;
@@ -2818,31 +2819,35 @@ void read_restart_data(FILE* gridsave_file) {
   }
 }
 
-void nt_MPI_Bcast(const ptrdiff_t nonemptymgi, const int root_node_id) {
+// broadcast the non-thermal solution of the cells that belong to the root rank to all ranks
+void nt_MPI_Bcast(const ptrdiff_t nstart_nonempty, const ptrdiff_t ndo_nonempty, const int root_node_id) {
   if (globals::rank_in_node == 0) {
     // node-shared memory, so only node leaders participate in the internode broadcast
     // (root_node_id is only a valid root rank within the rank_in_node == 0 communicator)
-    MPI_Bcast_safe(ntlepton_deposition_rate_density_all_cells[nonemptymgi], root_node_id, globals::mpi_comm_internode);
+    MPI_Bcast_safe(ntlepton_deposition_rate_density_all_cells.subspan(nstart_nonempty, ndo_nonempty), root_node_id,
+                   globals::mpi_comm_internode);
   }
 
   if (NT_SCHEME == NonThermalScheme::NT_SPENCERFANO) {
     if (globals::rank_in_node == 0) {
-      MPI_Bcast_safe(nt_solution[nonemptymgi].nneperion_when_solved, root_node_id, globals::mpi_comm_internode);
-      MPI_Bcast_safe(nt_solution[nonemptymgi].timestep_last_solved, root_node_id, globals::mpi_comm_internode);
-      MPI_Bcast_safe(nt_solution[nonemptymgi].frac_heating, root_node_id, globals::mpi_comm_internode);
-      MPI_Bcast_safe(nt_solution[nonemptymgi].frac_ionisation, root_node_id, globals::mpi_comm_internode);
-      MPI_Bcast_safe(nt_solution[nonemptymgi].frac_excitation, root_node_id, globals::mpi_comm_internode);
+      MPI_Bcast_safe(nt_solution.subspan(nstart_nonempty, ndo_nonempty), root_node_id, globals::mpi_comm_internode);
 
-      MPI_Bcast_safe(nt_solution[nonemptymgi].frac_excitations_list_size, root_node_id, globals::mpi_comm_internode);
+      MPI_Bcast_safe(
+          ion_data_all_cells.subspan(nstart_nonempty * get_includedions(), ndo_nonempty * get_includedions()),
+          root_node_id, globals::mpi_comm_internode);
 
-      MPI_Bcast_safe(get_cell_ntexcitations(nonemptymgi), root_node_id, globals::mpi_comm_internode);
-
-      MPI_Bcast_safe(get_cell_allions_data(nonemptymgi), root_node_id, globals::mpi_comm_internode);
+      // the excitation list of a cell has its own length, which the broadcast of nt_solution above has set
+      for (auto nonemptymgi = nstart_nonempty; nonemptymgi < (nstart_nonempty + ndo_nonempty); nonemptymgi++) {
+        MPI_Bcast_safe(get_cell_ntexcitations(nonemptymgi), root_node_id, globals::mpi_comm_internode);
+      }
     }
 
+    // the other ranks on a node read the shared arrays only after the node leader has received them
     MPI_Barrier_allranks();
 
-    check_auger_probabilities(nonemptymgi);
+    for (auto nonemptymgi = nstart_nonempty; nonemptymgi < (nstart_nonempty + ndo_nonempty); nonemptymgi++) {
+      check_auger_probabilities(nonemptymgi);
+    }
   }
 }
 

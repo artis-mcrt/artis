@@ -304,8 +304,8 @@ void abort_if_decaypath_has_duplicate_lambdas() {
               "degeneracy.",
               lambdas[i]);
           printout_decaypath(decaypathindex);
-          std::abort();
         }
+        assert_always(lambdas[i] <= 0. || lambdas[i] != lambdas[j]);
       }
     }
   }
@@ -336,8 +336,8 @@ void extend_lastdecaypath(std::vector<DecayPath>& localdecaypaths) {
             printlog("(Z={},A={}) -> ", chain_z, chain_a);
           }
           printlnlog("(Z={},A={}) already occurred. aborting", daughter.z, daughter.a);
-          std::abort();
         }
+        assert_always(z != daughter.z || a != daughter.a);
       }
       const auto daughter_nucindex = get_nucindex(daughter.z, daughter.a);
       auto newdecaypath = initial_last_decaypath;

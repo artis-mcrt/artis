@@ -48,13 +48,15 @@ inline void check_already_running() {
       std::istringstream{line} >> artispid_in;
       std::getline(pidfile, line);
       pidfile.close();
-      if (is_pid_running(artispid_in) && std::filesystem::current_path().generic_string() == line) {
+      const bool other_run_active =
+          is_pid_running(artispid_in) && std::filesystem::current_path().generic_string() == line;
+      if (other_run_active) {
         std::println(stderr,
                      "\n[error] artis or exspec is already running in this folder with existing pid {}. Refusing to "
                      "start. (delete artis.pid if you are sure this is incorrect)",
                      artispid_in);
-        std::abort();
       }
+      assert_always(!other_run_active);
     }
 
     auto pidfile = std::fstream("artis.pid", std::ofstream::out | std::ofstream::trunc);

@@ -392,8 +392,8 @@ void write_deposition_file() {
     std::filesystem::rename("deposition.out.tmp", "deposition.out", ec);
     if (ec) {
       printlnlog("[error] The rename of deposition.out.tmp to deposition.out failed: {}", ec.message());
-      std::abort();
     }
+    assert_always(!ec);
 
     // energy-conservation consistency check (log only): the cumulative deposition should not exceed the
     // cumulative decay emission by more than the Monte Carlo noise of the trajectory estimators allows
@@ -453,14 +453,11 @@ void mpi_communicate_grid_properties() {
                      root, MPI_COMM_WORLD);
     }
 
-    for (auto nonemptymgi = root_nstart_nonempty; nonemptymgi < (root_nstart_nonempty + root_ndo_nonempty);
-         nonemptymgi++) {
-      radfield::do_MPI_Bcast(nonemptymgi, root, root_node_id);
+    radfield::do_MPI_Bcast(root_nstart_nonempty, root_ndo_nonempty, root, root_node_id);
 
-      nonthermal::nt_MPI_Bcast(nonemptymgi, root_node_id);
+    nonthermal::nt_MPI_Bcast(root_nstart_nonempty, root_ndo_nonempty, root_node_id);
 
-      MPI_Bcast_binned_opacities(nonemptymgi, root_node_id);
-    }
+    MPI_Bcast_binned_opacities(root_nstart_nonempty, root_ndo_nonempty, root_node_id);
 
     MPI_Barrier_allranks();
     if (globals::rank_in_node == 0) {
@@ -870,8 +867,8 @@ void setup_runoutputfolder() {
     std::filesystem::create_directories(globals::runoutputfolder, ec);
     if (ec) {
       std::println(stderr, "[error] could not create output folder '{}': {}", globals::runoutputfolder, ec.message());
-      std::abort();
     }
+    assert_always(!ec);
 
     // clear out per-rank output files (and any leftover log symlink) from a previous run of this folder, so
     // that e.g. a rerun with fewer ranks does not leave a mixture of new estimator files and stale ones from
@@ -937,11 +934,13 @@ auto main(int argc, char* argv[]) -> int {
     if (opt == 'w') {
       char* parse_end = nullptr;
       const float walltimehours = strtof(optarg, &parse_end);  // NOLINT(misc-include-cleaner)
-      if (parse_end == optarg || *parse_end != '\0' || !std::isfinite(walltimehours) || walltimehours <= 0.) {
+      const bool walltimehours_valid =
+          parse_end != optarg && *parse_end == '\0' && std::isfinite(walltimehours) && walltimehours > 0.;
+      if (!walltimehours_valid) {
         // silently accepting a bad value would disable the wall time limit instead of applying it
         std::println(stderr, "[error] invalid wall time hours '{}' given with -w option", optarg);
-        std::abort();
       }
+      assert_always(walltimehours_valid);
       walltimelimitseconds = static_cast<int>(walltimehours * HOUR);
       walltimehours_str = optarg;
     } else if (opt == 'o') {
@@ -951,11 +950,11 @@ auto main(int argc, char* argv[]) -> int {
       }
       if (globals::runoutputfolder.empty()) {
         std::println(stderr, "[error] empty output folder given with -o option");
-        std::abort();
       }
+      assert_always(!globals::runoutputfolder.empty());
     } else {
       print_options_help(stderr, argv[0]);  // NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic)
-      std::abort();
+      assert_always(opt == 'w' || opt == 'o');
     }
   }
 

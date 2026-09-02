@@ -221,7 +221,7 @@ void update_pellet(Packet& pkt, const int nts, const double t2) {
         printlnlog(
             "[error] pellet marked as particle emission is for decaytype {} != any of (alpha, beta+, beta-, spfission)",
             pkt.pellet_decaytype);
-        std::abort();
+        assert_always(false);
       } else {
         __builtin_unreachable();
       }

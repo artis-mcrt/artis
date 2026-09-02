@@ -543,24 +543,25 @@ inline void MPI_Reduce_safe(R&& data, MPI_Op op, const int root, MPI_Comm comm) 
 }
 
 [[nodiscard]] inline auto fopen_required(const std::string& filename, std::span<const char> mode) -> FILE* {
+  FILE* file = nullptr;
   if (mode[0] == 'r') {
     // search data folders in order to find file to read
     for (const auto& datadir : datafolders) {
       const auto datafolderfilename = std::format("{}{}", datadir, filename);
-      auto* file = std::fopen(datafolderfilename.c_str(), mode.data());
+      file = std::fopen(datafolderfilename.c_str(), mode.data());
       if (file != nullptr) {
-        return file;
+        break;
       }
     }
   } else {
-    auto* file = std::fopen(filename.c_str(), mode.data());
-    if (file != nullptr) {
-      return file;
-    }
+    file = std::fopen(filename.c_str(), mode.data());
   }
 
-  printlnlog("[error] Could not open file '{}' for mode '{}'.", filename, mode.data());
-  std::abort();
+  if (file == nullptr) {
+    printlnlog("[error] Could not open file '{}' for mode '{}'.", filename, mode.data());
+  }
+  assert_always(file != nullptr);
+  return file;
 }
 
 [[nodiscard]] inline auto fopen_required_uniqueptr(const std::string& filename, std::span<const char> mode) {
@@ -571,28 +572,29 @@ inline void MPI_Reduce_safe(R&& data, MPI_Op op, const int root, MPI_Comm comm) 
 [[nodiscard]] inline auto fstream_required(const std::string_view filename, std::ios::openmode mode) -> std::fstream {
   if (filename.empty()) {
     printlnlog("[error] Cannot open file with empty filename.");
-    std::abort();
   }
+  assert_always(!filename.empty());
 
+  auto file = std::fstream{};
   if ((mode & std::ios::in) != 0U) {
     // search data folders in order to find file to read
     for (const auto& datadir : datafolders) {
       const auto datafolderfilename = std::format("{}{}", datadir, filename);
-      auto file = std::fstream(datafolderfilename, mode);
+      file.open(datafolderfilename, mode);
       if (file.is_open()) {
-        return file;
+        break;
       }
     }
   } else {
     // don't prepend data folders when writing
-    auto file = std::fstream(std::string(filename), mode);
-    if (file.is_open()) {
-      return file;
-    }
+    file.open(std::string(filename), mode);
   }
 
-  printlnlog("[error] Could not open file '{}'", filename);
-  std::abort();
+  if (!file.is_open()) {
+    printlnlog("[error] Could not open file '{}'", filename);
+  }
+  assert_always(file.is_open());
+  return file;
 }
 
 // open a per-rank output file such as estimators_0000.out for writing
