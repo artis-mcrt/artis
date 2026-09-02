@@ -1034,27 +1034,31 @@ void reduce_estimators() {
   MPI_Barrier_allranks();
 }
 
-// broadcast computed radfield results including parameters from the cells belonging to root process to all processes
-void do_MPI_Bcast(const ptrdiff_t nonemptymgi, const int root, const int root_node_id) {
-  MPI_Bcast_safe(J_normfactor[nonemptymgi], root, MPI_COMM_WORLD);
+// broadcast the radiation field parameters of the cells that belong to the root rank to all ranks. The caller
+// puts a barrier after this call, so that the other ranks on a node read the shared arrays after the broadcast.
+void do_MPI_Bcast(const ptrdiff_t nstart_nonempty, const ptrdiff_t ndo_nonempty, const int root,
+                  const int root_node_id) {
+  MPI_Bcast_safe(std::span{J_normfactor}.subspan(nstart_nonempty, ndo_nonempty), root, MPI_COMM_WORLD);
 
   if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
     if (globals::rank_in_node == 0) {
-      MPI_Bcast_safe(radfieldbin_solutions_W.subspan(nonemptymgi * RADFIELDBINCOUNT, RADFIELDBINCOUNT), root_node_id,
-                     globals::mpi_comm_internode);
-      MPI_Bcast_safe(radfieldbin_solutions_T_R.subspan(nonemptymgi * RADFIELDBINCOUNT, RADFIELDBINCOUNT), root_node_id,
-                     globals::mpi_comm_internode);
+      MPI_Bcast_safe(
+          radfieldbin_solutions_W.subspan(nstart_nonempty * RADFIELDBINCOUNT, ndo_nonempty * RADFIELDBINCOUNT),
+          root_node_id, globals::mpi_comm_internode);
+      MPI_Bcast_safe(
+          radfieldbin_solutions_T_R.subspan(nstart_nonempty * RADFIELDBINCOUNT, ndo_nonempty * RADFIELDBINCOUNT),
+          root_node_id, globals::mpi_comm_internode);
     }
   }
 
   if constexpr (DETAILED_LINE_ESTIMATORS_ON) {
-    for (int jblueindex = 0; jblueindex < detailed_linecount; jblueindex++) {
-      MPI_Bcast_safe(prev_Jb_lu_normed[nonemptymgi][jblueindex].value, root, MPI_COMM_WORLD);
-      MPI_Bcast_safe(prev_Jb_lu_normed[nonemptymgi][jblueindex].contribcount, root, MPI_COMM_WORLD);
+    for (auto nonemptymgi = nstart_nonempty; nonemptymgi < (nstart_nonempty + ndo_nonempty); nonemptymgi++) {
+      for (int jblueindex = 0; jblueindex < detailed_linecount; jblueindex++) {
+        MPI_Bcast_safe(prev_Jb_lu_normed[nonemptymgi][jblueindex].value, root, MPI_COMM_WORLD);
+        MPI_Bcast_safe(prev_Jb_lu_normed[nonemptymgi][jblueindex].contribcount, root, MPI_COMM_WORLD);
+      }
     }
   }
-
-  MPI_Barrier_allranks();
 }
 
 void write_restart_data(FILE* gridsave_file) {
@@ -1146,9 +1150,8 @@ void read_restart_data(FILE* gridsave_file) {
         nu_lower_first_ratio < 0.999 || nu_upper_last_ratio < 0.999) {
       printlnlog("[error] gridsave file specifies {} bins, nu_min {} nu_max {} T_R_min {} T_R_max {}", bincount_in,
                  nu_min_in, nu_max_in, T_R_min_in, T_R_max_in);
-      printlnlog("require {} bins, RADFIELDBINS_NU_MIN {:g} RADFIELDBINS_NU_MAX {:g} T_R_min {:g} T_R_max {:g}",
-                 RADFIELDBINCOUNT, RADFIELDBINS_NU_MIN, RADFIELDBINS_NU_MAX, bins_T_R_min, bins_T_R_max);
-      std::abort();
+      fatal_crash("require {} bins, RADFIELDBINS_NU_MIN {:g} RADFIELDBINS_NU_MAX {:g} T_R_min {:g} T_R_max {:g}",
+                  RADFIELDBINCOUNT, RADFIELDBINS_NU_MIN, RADFIELDBINS_NU_MAX, bins_T_R_min, bins_T_R_max);
     }
 
     for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++) {
@@ -1190,9 +1193,8 @@ void read_restart_data(FILE* gridsave_file) {
     assert_always(fscanf(gridsave_file, "%d\n", &detailed_linecount_in) == 1);
 
     if (detailed_linecount_in != detailed_linecount) {
-      printlnlog("[error] gridsave file specifies {} detailed lines but this simulation has {}.", detailed_linecount_in,
-                 detailed_linecount);
-      std::abort();
+      fatal_crash("gridsave file specifies {} detailed lines but this simulation has {}.", detailed_linecount_in,
+                  detailed_linecount);
     }
 
     for (int jblueindex = 0; jblueindex < detailed_linecount; jblueindex++) {

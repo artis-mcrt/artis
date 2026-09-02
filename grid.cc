@@ -193,9 +193,8 @@ void read_possible_yefile() {
       if (mgi < 0 || mgi >= get_npts_model()) {
         // An out-of-range id is a sign of a cell id mismatch with model.txt. A silently shifted
         // electron fraction would give wrong grey opacities in every cell.
-        printlnlog("[error] Ye.txt: cell id {} is outside the model.txt id range [{}..{}]", cellnumberin,
-                   first_input_cellid, last_input_cellid);
-        std::abort();
+        fatal_crash("Ye.txt: cell id {} is outside the model.txt id range [{}..{}]", cellnumberin, first_input_cellid,
+                    last_input_cellid);
       }
       minid = std::min(minid, cellnumberin);
       maxid = std::max(maxid, cellnumberin);
@@ -825,8 +824,7 @@ void read_elem_abundances() {
       // later element. Only whitespace may remain here.
       remainder.remove_prefix(std::min(remainder.find_first_not_of(" \t\r"), remainder.size()));
       if (!remainder.empty()) {
-        printlnlog("[error] read_elem_abundances: cell {} has an unreadable token at '{}'", cellnumberinput, remainder);
-        std::abort();
+        fatal_crash("read_elem_abundances: cell {} has an unreadable token at '{}'", cellnumberinput, remainder);
       }
 
       if (get_numpropcells(mgi) > 0) {
@@ -1117,6 +1115,15 @@ void read_grid_restart_data(const int timestep) {
   assert_always(fscanf(gridsave_file, "%d ", &nprocs_in) == 1);
   assert_always(nprocs_in == globals::nprocs);
 
+  // the saved per-timestep energies belong to the time grid of the run that wrote the file
+  double tmin_in = -1.;
+  double tmax_in = -1.;
+  assert_always(fscanf(gridsave_file, "%la %la ", &tmin_in, &tmax_in) == 2);
+  if (tmin_in != globals::tmin || tmax_in != globals::tmax) {
+    fatal_crash("{} was written with tmin {:g} tmax {:g} but input.txt gives tmin {:g} tmax {:g}", filename, tmin_in,
+                tmax_in, globals::tmin, globals::tmax);
+  }
+
   for (int nts = 0; nts < globals::ntimesteps; nts++) {
     assert_always(
         fscanf(gridsave_file, "%la %la %la %la %la %la %la %la %la %la %la %la %la %la %la %la %la %la %la %la %la %d ",
@@ -1383,10 +1390,9 @@ void setup_nstart_ndo() {
 void require_subluminal_corners(const double vmax_corner) {
   printlnlog("corner vmax {:g} [cm/s] ({:.2f}c)", vmax_corner, vmax_corner / CLIGHT);
   if (!FORCE_SPHERICAL_ESCAPE_SURFACE && vmax_corner >= CLIGHT) {
-    printlnlog(
-        "[error] the grid corners expand faster than light. Enable FORCE_SPHERICAL_ESCAPE_SURFACE in "
+    fatal_crash(
+        "the grid corners expand faster than light. Enable FORCE_SPHERICAL_ESCAPE_SURFACE in "
         "artisoptions.h to remove the superluminal corners, or reduce vmax.");
-    std::abort();
   }
 }
 
@@ -2101,8 +2107,7 @@ void read_ejecta_model() {
   auto ssline = std::istringstream{line};
   ssline >> npts_0;
   if (npts_0 <= 0) {
-    printlnlog("[error] model.txt: could not read a positive cell count from the first line '{}'", line);
-    std::abort();
+    fatal_crash("model.txt: could not read a positive cell count from the first line '{}'", line);
   }
   if (ssline >> npts_1) {
     // second number on the line for 2D means the line was n_r n_z
@@ -2119,8 +2124,7 @@ void read_ejecta_model() {
   std::istringstream{line} >> t_model_days;
   // a failed extraction stores zero, which would zero all densities via the (t_model / tmin)^3 scaling
   if (!std::isfinite(t_model_days) || t_model_days <= 0.) {
-    printlnlog("[error] model.txt: could not read a positive snapshot time in days from line '{}'", line);
-    std::abort();
+    fatal_crash("model.txt: could not read a positive snapshot time in days from line '{}'", line);
   }
   t_model = t_model_days * DAY;
   assert_always(globals::tmin >= t_model);
@@ -2271,9 +2275,8 @@ void read_ejecta_model() {
       assert_always(cellnumberin == mgi + first_input_cellid);
 
       if (rho_tmodel < 0) {
-        printlnlog("[error] model.txt cell {} (inputcellid {}) has negative density {:g} [g/cm3] at t_model. aborting",
-                   mgi, cellnumberin, rho_tmodel);
-        std::abort();
+        fatal_crash("model.txt cell {} (inputcellid {}) has negative density {:g} [g/cm3] at t_model", mgi,
+                    cellnumberin, rho_tmodel);
       }
 
       const bool keepcell = (rho_tmodel > 0);
@@ -2285,8 +2288,7 @@ void read_ejecta_model() {
     }
 
     if (mgi != get_npts_model()) {
-      printlnlog("[error] model.txt: found only {} cells instead of {} expected.", mgi, get_npts_model());
-      std::abort();
+      fatal_crash("model.txt: found only {} cells instead of {} expected.", mgi, get_npts_model());
     }
 
     if (get_modelgridtype() == GridType::SPHERICAL1D) {
@@ -2367,6 +2369,7 @@ void write_grid_restart_data(const int timestep) {
 
   fprintf(gridsave_file, "%d ", globals::ntimesteps);
   fprintf(gridsave_file, "%d ", globals::nprocs);
+  fprintf(gridsave_file, "%la %la ", globals::tmin, globals::tmax);
 
   for (int nts = 0; nts < globals::ntimesteps; nts++) {
     fprintf(gridsave_file, "%la %la %la %la %la %la %la %la %la %la %la %la %la %la %la %la %la %la %la %la %la %d ",

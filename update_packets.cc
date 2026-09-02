@@ -218,10 +218,8 @@ void update_pellet(Packet& pkt, const int nts, const double t2) {
         atomicadd(globals::timesteps[nts].spfission_dep_discrete, pkt.e_cmf);
         pkt.type = TYPE_NTALPHA_FISPROD_DEPOSITED;
       } else if constexpr (TESTMODE) {
-        printlnlog(
-            "[error] pellet marked as particle emission is for decaytype {} != any of (alpha, beta+, beta-, spfission)",
-            pkt.pellet_decaytype);
-        std::abort();
+        fatal_crash("pellet marked as particle emission is for decaytype {} != any of (alpha, beta+, beta-, spfission)",
+                    pkt.pellet_decaytype);
       } else {
         __builtin_unreachable();
       }

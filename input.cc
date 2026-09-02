@@ -164,6 +164,8 @@ void read_phixs_data_table(std::istream& phixsfile, const int nphixspoints_input
       // top ion has only one level, so send it to that level
       upperlevel = 0;
     }
+    // a target level above the levels kept from compositiondata.txt would index the level block of the next ion
+    assert_always(upperlevel < get_nlevels(element, upperion));
 
     tmpallphixstargets.push_back({.probability = 1., .levelindex = upperlevel});
   } else {  // upperlevel < 0, indicating that a table of upper levels and their probabilities will follow
@@ -184,7 +186,7 @@ void read_phixs_data_table(std::istream& phixsfile, const int nphixspoints_input
         assert_always(get_noncommentline(phixsfile, phixsline));
         assert_always(std::stringstream(phixsline) >> upperlevel_in >> phixstargetprobability);
         const int upperlevel = upperlevel_in - groundstate_index_in;
-        assert_always(upperlevel >= 0);
+        assert_always(upperlevel >= 0 && upperlevel < get_nlevels(element, upperion));
         assert_always(phixstargetprobability > 0);
         tmpallphixstargets.push_back({.probability = phixstargetprobability, .levelindex = upperlevel});
 
@@ -681,7 +683,6 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion,
             (temp_linelist[prev_lineindex].ionindex != ion) ||
             (temp_linelist[prev_lineindex].upperlevelindex != level) ||
             (temp_linelist[prev_lineindex].lowerlevelindex != lowerlevel)) {
-          printlnlog("[error] Failure to identify level pair for duplicate bb-transition ... going to abort now");
           printlnlog("   element {} ion {} targetlevel {} level {}", element, ion, lowerlevel, level);
           printlnlog("   duplicate of lineindex {}", prev_lineindex);
           printlnlog("   A_ul {:g}, coll_str {:g}", transition.A, transition.coll_str);
@@ -690,7 +691,7 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion,
               "globals::linelist[lineindex].upperlevelindex {}, globals::linelist[lineindex].lowerlevelindex {}",
               temp_linelist[prev_lineindex].elementindex, temp_linelist[prev_lineindex].ionindex,
               temp_linelist[prev_lineindex].upperlevelindex, temp_linelist[prev_lineindex].lowerlevelindex);
-          std::abort();
+          fatal_crash("Failure to identify level pair for duplicate bb-transition");
         }
 
         const auto g_ratio = static_cast<double>(ion_levels[level].stat_weight) / ion_levels[lowerlevel].stat_weight;
@@ -883,12 +884,11 @@ void setup_phixs_list() {
               // case would silently mix the estimators of the two ions.
               if (const int foundslot = alllevels_closestgroundlevelcont[uniquelevelindex];
                   foundslot != groundcontindex) {
-                printlnlog(
-                    "[error] element {} ion {} has the ground continuum slot {}, but the nearest-edge search "
+                fatal_crash(
+                    "element {} ion {} has the ground continuum slot {}, but the nearest-edge search "
                     "found the slot {} of element {} ion {}. Two ions have an identical ground threshold {:g}.",
                     element, ion, groundcontindex, foundslot, globals::groundcont_element[foundslot],
                     globals::groundcont_ion[foundslot], nu_edge_target0);
-                std::abort();
               }
             }
           }
@@ -1923,8 +1923,7 @@ void read_parameterfile(std::span<Packet> packets) {
     std::error_code ec;
     std::filesystem::copy_file("input-newrun.txt", "input.txt", ec);
     if (ec) {
-      printlnlog("[error] failed to copy input-newrun.txt to input.txt: {}", ec.message());
-      std::abort();
+      fatal_crash("failed to copy input-newrun.txt to input.txt: {}", ec.message());
     }
     printlnlog("done");
   }
@@ -1943,11 +1942,10 @@ void read_parameterfile(std::span<Packet> packets) {
     printlnlog("input.txt specified random number seed is {}", pre_zseed);
   } else {
 #if defined REPRODUCIBLE && REPRODUCIBLE
-    printlnlog(
-        "[error] REPRODUCIBLE mode requires a positive random number seed on the first non-comment line of input.txt "
+    fatal_crash(
+        "REPRODUCIBLE mode requires a positive random number seed on the first non-comment line of input.txt "
         "(found {})",
         pre_zseed);
-    std::abort();
 #endif
     pre_zseed = get_rng_random_seed();
     // broadcast randomly-generated seed from rank 0 to all ranks

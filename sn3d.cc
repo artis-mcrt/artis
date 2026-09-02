@@ -391,8 +391,7 @@ void write_deposition_file() {
     std::error_code ec;
     std::filesystem::rename("deposition.out.tmp", "deposition.out", ec);
     if (ec) {
-      printlnlog("[error] The rename of deposition.out.tmp to deposition.out failed: {}", ec.message());
-      std::abort();
+      fatal_crash("The rename of deposition.out.tmp to deposition.out failed: {}", ec.message());
     }
 
     // energy-conservation consistency check (log only): the cumulative deposition should not exceed the
@@ -453,14 +452,11 @@ void mpi_communicate_grid_properties() {
                      root, MPI_COMM_WORLD);
     }
 
-    for (auto nonemptymgi = root_nstart_nonempty; nonemptymgi < (root_nstart_nonempty + root_ndo_nonempty);
-         nonemptymgi++) {
-      radfield::do_MPI_Bcast(nonemptymgi, root, root_node_id);
+    radfield::do_MPI_Bcast(root_nstart_nonempty, root_ndo_nonempty, root, root_node_id);
 
-      nonthermal::nt_MPI_Bcast(nonemptymgi, root_node_id);
+    nonthermal::nt_MPI_Bcast(root_nstart_nonempty, root_ndo_nonempty, root_node_id);
 
-      MPI_Bcast_binned_opacities(nonemptymgi, root_node_id);
-    }
+    MPI_Bcast_binned_opacities(root_nstart_nonempty, root_ndo_nonempty, root_node_id);
 
     MPI_Barrier_allranks();
     if (globals::rank_in_node == 0) {
@@ -869,8 +865,7 @@ void setup_runoutputfolder() {
     std::error_code ec;
     std::filesystem::create_directories(globals::runoutputfolder, ec);
     if (ec) {
-      std::println(stderr, "[error] could not create output folder '{}': {}", globals::runoutputfolder, ec.message());
-      std::abort();
+      fatal_crash("could not create output folder '{}': {}", globals::runoutputfolder, ec.message());
     }
 
     // clear out per-rank output files (and any leftover log symlink) from a previous run of this folder, so
@@ -939,8 +934,7 @@ auto main(int argc, char* argv[]) -> int {
       const float walltimehours = strtof(optarg, &parse_end);  // NOLINT(misc-include-cleaner)
       if (parse_end == optarg || *parse_end != '\0' || !std::isfinite(walltimehours) || walltimehours <= 0.) {
         // silently accepting a bad value would disable the wall time limit instead of applying it
-        std::println(stderr, "[error] invalid wall time hours '{}' given with -w option", optarg);
-        std::abort();
+        fatal_crash("invalid wall time hours '{}' given with -w option", optarg);
       }
       walltimelimitseconds = static_cast<int>(walltimehours * HOUR);
       walltimehours_str = optarg;
@@ -950,12 +944,11 @@ auto main(int argc, char* argv[]) -> int {
         globals::runoutputfolder.pop_back();
       }
       if (globals::runoutputfolder.empty()) {
-        std::println(stderr, "[error] empty output folder given with -o option");
-        std::abort();
+        fatal_crash("empty output folder given with -o option");
       }
     } else {
       print_options_help(stderr, argv[0]);  // NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic)
-      std::abort();
+      fatal_crash("unknown command line option");
     }
   }
 

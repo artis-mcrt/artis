@@ -111,7 +111,7 @@ void allocate_expansionopacities();
 // construct the Planck-weighted cumulative distribution used to sample thermal re-emission frequencies.
 // Eastman & Pinto (1993), doi:10.1086/172957; Karp et al. (1977), doi:10.1086/155241.
 void calculate_expansion_opacities(int nonemptymgi);
-void MPI_Bcast_binned_opacities(ptrdiff_t nonemptymgi, int root_node_id);
+void MPI_Bcast_binned_opacities(ptrdiff_t nstart_nonempty, ptrdiff_t ndo_nonempty, int root_node_id);
 auto calculate_chi_ffheat_nnionpart(int nonemptymgi) -> double;
 
 [[nodiscard]] constexpr auto get_linedistance(const double prop_time, const double nu_cmf, const double nu_trans,

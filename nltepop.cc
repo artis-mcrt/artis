@@ -2154,9 +2154,8 @@ void nltepop_read_restart_data(FILE* restart_file) {
   int total_nlte_levels_in = 0;
   assert_always(fscanf(restart_file, "%d\n", &total_nlte_levels_in) == 1);
   if (total_nlte_levels_in != globals::total_nlte_levels) {
-    printlnlog("[error] Expected {} NLTE levels but found {} in restart file", globals::total_nlte_levels,
-               total_nlte_levels_in);
-    std::abort();
+    fatal_crash("Expected {} NLTE levels but found {} in restart file", globals::total_nlte_levels,
+                total_nlte_levels_in);
   }
   const auto nincludedions = get_includedions();
 

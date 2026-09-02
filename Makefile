@@ -42,6 +42,7 @@ COMPILER_NAME := unknown
 CPU_ARCH := unknown
 ifneq '' '$(findstring HIP version,$(COMPILER_VERSION))'
 	COMPILER_NAME := hipcc
+	# the C++26 operator delete declarations of libstdc++ conflict with the HIP device overloads in cuda_wrappers/new
 	CXX_STD := c++23
 	CXXFLAGS += -Wno-macro-redefined -Wno-unused-command-line-argument
 else ifneq '' '$(findstring clang,$(COMPILER_VERSION))'
@@ -74,7 +75,6 @@ $(warning WARNING: Detected GCC version $(COMPILER_VERSION_NUMBER) but minimum s
 
 else ifneq '' '$(findstring nvc++,$(COMPILER_VERSION))'
 	COMPILER_NAME := nvhpc
-	CXX_STD := c++23
 	# to use the pixi installed libstdc++
 	CXXFLAGS += -Minfo=accel
 # 	CXXFLAGS += --gcc-toolchain=$(PWD)/.pixi/envs/default -Wl,-rpath,$(PWD)/.pixi/envs/default/lib
