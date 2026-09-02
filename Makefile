@@ -42,6 +42,8 @@ COMPILER_NAME := unknown
 CPU_ARCH := unknown
 ifneq '' '$(findstring HIP version,$(COMPILER_VERSION))'
 	COMPILER_NAME := hipcc
+	# the C++26 operator delete declarations of libstdc++ conflict with the HIP device overloads in cuda_wrappers/new
+	CXX_STD := c++23
 	CXXFLAGS += -Wno-macro-redefined -Wno-unused-command-line-argument
 else ifneq '' '$(findstring clang,$(COMPILER_VERSION))'
 	COMPILER_NAME := clang
@@ -106,7 +108,7 @@ $(info detected CPU is $(CPU_ARCH))
 # Use a custom build directory for each combination of compiler, CPU architecture, and options to avoid conflicts and ensure that the correct binaries are used
 BUILD_DIR = build/$(COMPILER_NAME)-$(COMPILER_VERSION_NUMBER)_$(CPU_ARCH)
 
-CXXFLAGS += -std=c++26 $(ARCH_FLAGS) -Wall -Wextra -Wpedantic -Wredundant-decls -Wno-unused-parameter -Wsign-compare -Wshadow -isystem third_party
+CXXFLAGS += -std=$(CXX_STD) $(ARCH_FLAGS) -Wall -Wextra -Wpedantic -Wredundant-decls -Wno-unused-parameter -Wsign-compare -Wshadow -isystem third_party
 
 # generate and use .d header dependency files, so that header edits trigger recompilation of the
 # objects that include them (every compiler, including nvc++, supports these GCC-style options)
