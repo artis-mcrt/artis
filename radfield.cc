@@ -642,7 +642,8 @@ void init() {
     const auto bfestimcount = std::ssize(globals::bfestim_nu_edge);
     prev_bfrate_normed = MPI_shared_array<float>(nonempty_npts_model * bfestimcount);
     if (globals::rank_in_node == 0) {
-      std::ranges::fill(prev_bfrate_normed, 0.);
+      // -1 marks a cell without a valid estimator. get_corrphotoioncoeff() then uses the LUT or the integral.
+      std::ranges::fill(prev_bfrate_normed, -1.);
     }
     MPI_Barrier_node();
     printlnlog("[info] mem_usage: detailed bf estimators for non-empty cells occupy {:.3f} MB (node shared memory)",
@@ -917,6 +918,11 @@ void normalise_bf_estimators(const int nts, const int nts_prev, const int titer,
     const ptrdiff_t nonempty_npts_model = grid::get_nonempty_npts_model();
     for (auto nonemptymgi = 0Z; nonemptymgi < nonempty_npts_model; nonemptymgi++) {
       if (grid::thick_allcells[nonemptymgi] == grid::CellThickness::THICK) {
+        // a thick cell collected no estimators in the last timestep. The cell can become thin in the coming grid
+        // update. The packets must then not read the values of an older timestep, so mark them as invalid.
+        for (int i = 0; i < bfestimcount; i++) {
+          prev_bfrate_normed[(nonemptymgi * bfestimcount) + i] = -1.;
+        }
         continue;
       }
       const auto mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);

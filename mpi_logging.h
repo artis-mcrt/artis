@@ -219,6 +219,7 @@ template <typename... Args>
   MY_IF_HOST(report_fatal_error_and_abort(file, line, func, std::format(fmt, std::forward<Args>(args)...).c_str()););
   // the host reporter above does not return. The trap stops a device thread, and it also shows every compiler
   // that this function does not return, because the target split above hides that from nvc++.
+  // cppcheck-suppress unreachableCode
   __builtin_trap();
 }
 
