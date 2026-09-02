@@ -422,8 +422,8 @@ auto calculate_chi_bf_gammacontr(int nonemptymgi, double nu, Phixslist& phixslis
 // proportion to its share of the total continuum opacity: electron scattering (coherent in the comoving
 // frame; see electron_scatter_rpkt()), free-free absorption (packet becomes a k-packet), or bound-free absorption
 // (packet activates a macro-atom in the upper ion with probability nu_edge / nu, the ionisation energy fraction,
-// and otherwise becomes a k-packet carrying the freed electron's kinetic energy). Here nu is chi_rpkt_cont.nu, the
-// frequency of the last opacity calculation, which also selects the continuum.
+// and otherwise becomes a k-packet carrying the freed electron's kinetic energy). Here nu is the frequency of the
+// packet at the absorption, and the probability is at most one.
 void rpkt_event_continuum(Packet& pkt, ContinuumOpacity& chi_rpkt_cont) {
   // the Doppler factor of the comoving-frame opacity is the same for every process, so the branch probabilities
   // do not need it
@@ -480,12 +480,14 @@ void rpkt_event_continuum(Packet& pkt, ContinuumOpacity& chi_rpkt_cont) {
     const int level = globals::allcont.level[allcontindex];
     const int phixstargetindex = globals::allcont.phixstargetindex[allcontindex];
 
-    // decide whether we go to ionisation energy or to the thermal pool. The split uses the frequency of the
-    // last opacity calculation, because the selection above uses that frequency too. The selection admits only
-    // continua with nu_edge <= chi_rpkt_cont.nu, so the ratio is at most one. The packet has a lower frequency
-    // after the move, and that frequency can lie below the edge of the selected continuum.
+    // decide whether we go to ionisation energy or to the thermal pool. The ionisation energy fraction belongs
+    // to the photon that the continuum absorbs, so the split uses the frequency of the packet at the absorption,
+    // the same as the bound-free heating estimator in update_estimators(). The selection above admits only continua
+    // with nu_edge <= chi_rpkt_cont.nu, but the packet has a lower frequency after the move, and that frequency can
+    // lie below the edge of the selected continuum. The ratio then exceeds one, and the whole energy goes to the
+    // ionisation, which is the limit of a photon at the edge.
     assert_testmodeonly(nu_edge <= chi_rpkt_cont.nu);
-    if (rng_uniform(get_rngstate(pkt)) < nu_edge / chi_rpkt_cont.nu) {
+    if (rng_uniform(get_rngstate(pkt)) < std::min(1., nu_edge / pkt.nu_cmf)) {
       stats::increment(stats::Counter::MA_STAT_ACTIVATION_BF);
 
       do_macroatom(pkt, {
