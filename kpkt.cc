@@ -541,17 +541,18 @@ DEVICE_FUNC void do_kpkt(Packet& pkt, const double t2, const int nts) {
   if (ionoffset >= ncoolingterms_ion) [[unlikely]] {
     // The ion array of the cell gave this ion a positive cooling rate, so the cumulative sum of the cell cache
     // must end above the target. A total of zero, a negative total, or a NaN means that the two arrays came
-    // from different cell states or from a negative cooling term.
-    const double ion_cooling_from_ionarray =
-        ion_cooling_contribs_thiscell[uniqueionindex] -
-        ((uniqueionindex > 0) ? ion_cooling_contribs_thiscell[uniqueionindex - 1] : 0.);
-    printlnlog(
-        "[error] do_kpkt: cell {} timestep {}: no cooling process found for Z={} ionstage {}. Cell cache total {:g}, "
-        "target {:g}, ion array cooling rate {:g}, {} cooling terms",
-        grid::get_mgi_of_nonemptymgi(nonemptymgi), nts, get_atomicnumber(element), get_ionstage(element, ion),
-        C_ion_procsum, rndcool_ion_process, ion_cooling_from_ionarray, ncoolingterms_ion);
-    std::abort();
+    // from different cell states or from a negative cooling term. Device code has no log file, so only the host
+    // writes the details. The assertion below reports the failure on both paths.
+    MY_IF_HOST(const double ion_cooling_from_ionarray =
+                   ion_cooling_contribs_thiscell[uniqueionindex] -
+                   ((uniqueionindex > 0) ? ion_cooling_contribs_thiscell[uniqueionindex - 1] : 0.);
+               printlnlog("[error] do_kpkt: cell {} timestep {}: no cooling process found for Z={} ionstage {}. Cell "
+                          "cache total {:g}, target {:g}, ion array cooling rate {:g}, {} cooling terms",
+                          grid::get_mgi_of_nonemptymgi(nonemptymgi), nts, get_atomicnumber(element),
+                          get_ionstage(element, ion), C_ion_procsum, rndcool_ion_process, ion_cooling_from_ionarray,
+                          ncoolingterms_ion););
   }
+  assert_always(ionoffset < ncoolingterms_ion);
   const auto i = ionstart + ionoffset;
 
   const auto rndcoolingtype = coolinglist_type[i];
