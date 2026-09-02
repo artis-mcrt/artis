@@ -431,6 +431,10 @@ void read_ion_levels(std::istream& adata, const int element, const int ion, cons
                      std::vector<TempEnergyLevel>& temp_alllevels) {
   std::string line;
   static std::istringstream ssline;
+  // The count nlevels_ionising covers the first levels of the ion, so it is only correct when the level energies
+  // increase with the level index. A level that is out of order is reported once per ion.
+  double prev_levelenergy_ev = -std::numeric_limits<double>::infinity();
+  int nlevels_outoforder = 0;
   for (int level = 0; level < nlevels; level++) {
     int levelindex_in = 0;
     double levelenergy_ev{NAN};
@@ -465,7 +469,17 @@ void read_ion_levels(std::istream& adata, const int element, const int ion, cons
       if (levelenergy_ev < ionpot_ev && ion < nions - 1) {
         globals::elements[element].ions[ion].nlevels_ionising++;
       }
+      if (levelenergy_ev < prev_levelenergy_ev) {
+        nlevels_outoforder++;
+      }
+      prev_levelenergy_ev = levelenergy_ev;
     }
+  }
+  if (nlevels_outoforder > 0) {
+    printlnlog(
+        "[warning] adata.txt: Z={} ionstage {}: {} levels have a lower energy than the previous level. The count of "
+        "ionising levels assumes that the energies increase with the level index",
+        get_atomicnumber(element), get_ionstage(element, ion), nlevels_outoforder);
   }
 }
 
