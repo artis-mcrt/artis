@@ -120,10 +120,10 @@ void log_write(std::string_view message, bool add_newline) noexcept;
 [[gnu::cold]] DEVICE_FUNC void report_assert_failure(const char* file, int line, const char* expr,
                                                      const char* func) noexcept;
 
-// Write the message with the rank, the file, the line, and the function to the rank log (or to stdout on a
-// device) and to stderr, then stop the run. Call it through the macro fatal_crash(fmt, args...).
-[[noreturn]] [[gnu::cold]] DEVICE_FUNC void report_fatal_error_and_abort(const char* file, int line, const char* func,
-                                                                         const char* message) noexcept;
+// Write the message with the rank, the file, the line, and the function to the rank log and to stderr, then stop
+// the run. Host only. Call it through the macro fatal_crash(fmt, args...), which also has a device path.
+[[noreturn]] [[gnu::cold]] void report_fatal_error_and_abort(const char* file, int line, const char* func,
+                                                             const char* message) noexcept;
 
 #define __artis_assert(e)                                                 \
   {                                                                       \
@@ -146,13 +146,76 @@ inline auto printlnlog(const std::format_string<Args...> fmt, Args&&... args) no
   MY_IF_HOST(log_write(std::format(fmt, std::forward<Args>(args)...), true););
 }
 
-// Stop the run with a message. The host formats the message. Device code has no std::format, so the device path
-// reports the format string without the values, together with the same rank, file, line, and function.
+// Device code has no std::format, so these helpers print a std::format string with the device printf. Each {...}
+// takes the next argument and the spec inside the braces is ignored. {{ and }} print one brace.
+template <typename T>
+DEVICE_FUNC inline auto device_printf_arg(const T& value) -> void {
+  if constexpr (std::is_same_v<T, bool>) {
+    printf("%s", value ? "true" : "false");
+  } else if constexpr (std::is_integral_v<T> && std::is_signed_v<T>) {
+    printf("%lld", static_cast<long long>(value));
+  } else if constexpr (std::is_integral_v<T>) {
+    printf("%llu", static_cast<unsigned long long>(value));
+  } else if constexpr (std::is_floating_point_v<T>) {
+    printf("%g", static_cast<double>(value));
+  } else if constexpr (std::is_convertible_v<T, const char*>) {
+    printf("%s", static_cast<const char*>(value));
+  } else if constexpr (requires { value.c_str(); }) {
+    printf("%s", value.c_str());
+  } else if constexpr (requires {
+                         value.data();
+                         value.size();
+                       }) {
+    printf("%.*s", static_cast<int>(value.size()), value.data());
+  } else {
+    static_assert(false, "device_printf_arg: no printf conversion for this argument type");
+  }
+}
+
+// Print the part [start, end) of the format string
+DEVICE_FUNC inline auto device_printf_literal(const std::string_view fmt, const size_t start, const size_t end)
+    -> void {
+  const auto part = fmt.substr(start, end - start);
+  printf("%.*s", static_cast<int>(part.size()), part.data());
+}
+
+// Print the literal text up to and including the next {...} placeholder. Give back the position after it.
+DEVICE_FUNC inline auto device_printf_until_placeholder(const std::string_view fmt, size_t pos) -> size_t {
+  size_t literal_start = pos;
+  while (pos < fmt.size()) {
+    const char c = fmt[pos];
+    const char next = (pos + 1 < fmt.size()) ? fmt[pos + 1] : '\0';
+    if ((c == '{' && next == '{') || (c == '}' && next == '}')) {
+      device_printf_literal(fmt, literal_start, pos + 1);
+      pos += 2;
+      literal_start = pos;
+    } else if (c == '{') {
+      device_printf_literal(fmt, literal_start, pos);
+      const auto close = fmt.find('}', pos);
+      return (close == std::string_view::npos) ? fmt.size() : close + 1;
+    } else {
+      pos++;
+    }
+  }
+  device_printf_literal(fmt, literal_start, fmt.size());
+  return pos;
+}
+
+template <typename... Args>
+DEVICE_FUNC inline auto device_printf_format(const std::string_view fmt, const Args&... args) -> void {
+  size_t pos = 0;
+  ((pos = device_printf_until_placeholder(fmt, pos), device_printf_arg(args)), ...);
+  device_printf_until_placeholder(fmt, pos);
+}
+
+// Stop the run with a message. The host formats the message with std::format and writes it with the rank, the
+// file, the line, and the function to the rank log and to stderr. A device prints the same line with printf.
 template <typename... Args>
 [[noreturn]] DEVICE_FUNC inline auto fatal_crash_at(const char* file, const int line, const char* func,
-                                                    const std::format_string<Args...> fmt,
-                                                    [[maybe_unused]] Args&&... args) noexcept -> void {
-  MY_IF_DEVICE(report_fatal_error_and_abort(file, line, func, fmt.get().data()););
+                                                    const std::format_string<Args...> fmt, Args&&... args) noexcept
+    -> void {
+  MY_IF_DEVICE(printf("\n[rank %d] [error] %s:%d in %s: ", globals::my_rank, file, line, func);
+               device_printf_format(fmt.get(), args...); printf("\n"); assert(false); __builtin_trap(););
   MY_IF_HOST(report_fatal_error_and_abort(file, line, func, std::format(fmt, std::forward<Args>(args)...).c_str()););
 }
 

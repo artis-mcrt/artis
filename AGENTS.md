@@ -356,8 +356,8 @@ are the only defence.
   writes the message with the rank, the file, the line, and the function to
   the rank log and to stderr. Do not call `std::abort()` directly. A direct
   abort is very hard to debug. Both reporters work on the host and on the
-  device. On a device, `fatal_crash()` shows the format string without the
-  values.
+  device. On a device, `fatal_crash()` prints the values with `printf` and
+  ignores the spec inside a `{}` placeholder.
 - An invalid input stops the run. Do not give a warning for it.
 - Two numeric helpers are an exception: `toms748.h` and `gausskronrod.h` throw
   `std::domain_error` on the host, inside a guard that returns a NaN for a GPU
