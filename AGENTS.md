@@ -30,7 +30,7 @@ Obey these rules:
 - Use the simple tenses (present, past, and future). Do not use the -ing form
   as a noun or as an adjective if a simple form is possible.
 - Write short sentences. Use a maximum of 20 words in an instruction and a
-  maximum of 25 words in descriptive text. Write a maximum of 6 sentences in a
+  maximum of 32 words in descriptive text. Write a maximum of 6 sentences in a
   descriptive paragraph.
 - Give one instruction in one sentence. Write the reason in a different
   sentence.
