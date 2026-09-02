@@ -421,14 +421,16 @@ auto calculate_chi_bf_gammacontr(int nonemptymgi, double nu, Phixslist& phixslis
 // Handle a continuum interaction of an r-packet by sampling which continuum process occurs, in
 // proportion to its share of the total continuum opacity: electron scattering (coherent in the comoving
 // frame; see electron_scatter_rpkt()), free-free absorption (packet becomes a k-packet), or bound-free absorption
-// (packet activates a macro-atom in the upper ion with probability nu_edge/nu, the ionisation energy fraction, and
-// otherwise becomes a k-packet carrying the freed electron's kinetic energy).
+// (packet activates a macro-atom in the upper ion with probability nu_edge / nu, the ionisation energy fraction,
+// and otherwise becomes a k-packet carrying the freed electron's kinetic energy). Here nu is chi_rpkt_cont.nu, the
+// frequency of the last opacity calculation, which also selects the continuum.
 void rpkt_event_continuum(Packet& pkt, ContinuumOpacity& chi_rpkt_cont) {
-  const double dopplerfactor = calculate_doppler_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
-  const double chi_cont = chi_rpkt_cont.total() * dopplerfactor;
-  const double chi_escatter = chi_rpkt_cont.chi_escatter * dopplerfactor;
-  const double chi_ff = chi_rpkt_cont.chi_freefree_heat * dopplerfactor;
-  const double chi_bf = chi_rpkt_cont.chi_boundfree * dopplerfactor;
+  // the Doppler factor of the comoving-frame opacity is the same for every process, so the branch probabilities
+  // do not need it
+  const double chi_cont = chi_rpkt_cont.total();
+  const double chi_escatter = chi_rpkt_cont.chi_escatter;
+  const double chi_ff = chi_rpkt_cont.chi_freefree_heat;
+  const double chi_bf = chi_rpkt_cont.chi_boundfree;
 
   // continuum process happens. select due to its probabilities sigma/chi_cont, chi_ff/chi_cont, chi_bf/chi_cont
 
@@ -478,10 +480,11 @@ void rpkt_event_continuum(Packet& pkt, ContinuumOpacity& chi_rpkt_cont) {
     const int level = globals::allcont.level[allcontindex];
     const int phixstargetindex = globals::allcont.phixstargetindex[allcontindex];
 
-    // decide whether we go to ionisation energy or to the thermal pool. The continuum was selected at the
-    // frequency of the last opacity calculation, so the same frequency gives the split. The packet has moved
-    // since then, and its current frequency can already lie below the edge of the selected continuum.
-    // The ratio then exceeds one, and the packet can never go to the thermal pool from that continuum.
+    // decide whether we go to ionisation energy or to the thermal pool. The split uses the frequency of the
+    // last opacity calculation, because the selection above uses that frequency too. The selection admits only
+    // continua with nu_edge <= chi_rpkt_cont.nu, so the ratio is at most one. The packet has a lower frequency
+    // after the move, and that frequency can lie below the edge of the selected continuum.
+    assert_testmodeonly(nu_edge <= chi_rpkt_cont.nu);
     if (rng_uniform(get_rngstate(pkt)) < nu_edge / chi_rpkt_cont.nu) {
       stats::increment(stats::Counter::MA_STAT_ACTIVATION_BF);
 
