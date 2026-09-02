@@ -918,8 +918,8 @@ void normalise_bf_estimators(const int nts, const int nts_prev, const int titer,
     const ptrdiff_t nonempty_npts_model = grid::get_nonempty_npts_model();
     for (auto nonemptymgi = 0Z; nonemptymgi < nonempty_npts_model; nonemptymgi++) {
       if (grid::thick_allcells[nonemptymgi] == grid::CellThickness::THICK) {
-        // a thick cell collected no estimators in the last timestep. If the cell becomes thin in the coming grid
-        // update, the packets must not read the values of an older timestep, so mark them as invalid
+        // a thick cell collected no estimators in the last timestep. The cell can become thin in the coming grid
+        // update. The packets must then not read the values of an older timestep, so mark them as invalid.
         for (int i = 0; i < bfestimcount; i++) {
           prev_bfrate_normed[(nonemptymgi * bfestimcount) + i] = -1.;
         }
