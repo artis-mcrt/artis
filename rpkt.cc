@@ -272,8 +272,12 @@ auto get_possible_event_expansion_opacity(const int nonemptymgi, Packet& pkt, co
       pkt_bin_start.nu_cmf = nu_cmf;
       pkt_bin_start.e_rf = e_rf;
       pkt_bin_start.e_cmf = e_cmf;
-      // expansion opacity was calculated at t_mid, so match it
-      pkt_bin_start.prop_time = globals::timesteps[globals::timestep].mid;
+      // The retrace runs at the time of the packet, the same as the bin walk above. The bin opacity holds the
+      // Sobolev optical depths at t_mid over a path length of c t_mid. The bin walk multiplies it by the path
+      // length at the packet time, so the bin optical depth scales with t / t_mid. The line-by-line Sobolev
+      // optical depths scale in the same way with the packet time. A retrace at t_mid would instead give each
+      // line distance and each move inside the bin a scale of t_mid / t.
+      pkt_bin_start.prop_time = prop_time;
       pkt_bin_start.next_trans = -1;
       double edist_after_bin = 0.;
       bool event_is_boundbound = false;
