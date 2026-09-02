@@ -481,11 +481,11 @@ void rpkt_event_continuum(Packet& pkt, ContinuumOpacity& chi_rpkt_cont) {
     const int phixstargetindex = globals::allcont.phixstargetindex[allcontindex];
 
     // decide whether we go to ionisation energy or to the thermal pool. The ionisation energy fraction belongs
-    // to the photon that the continuum absorbs, so the split uses the frequency of the packet at the absorption,
-    // the same as the bound-free heating estimator in update_estimators(). The selection above admits only continua
-    // with nu_edge <= chi_rpkt_cont.nu, but the packet has a lower frequency after the move, and that frequency can
-    // lie below the edge of the selected continuum. The ratio then exceeds one, and the whole energy goes to the
-    // ionisation, which is the limit of a photon at the edge.
+    // to the photon that the continuum absorbs, so the split uses the frequency of the packet at the absorption.
+    // The bound-free heating estimator in update_estimators() uses the same frequency. The selection above admits
+    // only continua with nu_edge <= chi_rpkt_cont.nu. The packet has a lower frequency after the move, and that
+    // frequency can lie below the edge of the selected continuum. The ratio then exceeds one, and the whole energy
+    // goes to the ionisation, which is the limit of a photon at the edge.
     assert_testmodeonly(nu_edge <= chi_rpkt_cont.nu);
     if (rng_uniform(get_rngstate(pkt)) < std::min(1., nu_edge / pkt.nu_cmf)) {
       stats::increment(stats::Counter::MA_STAT_ACTIVATION_BF);
