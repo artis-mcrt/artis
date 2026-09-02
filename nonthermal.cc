@@ -2768,14 +2768,11 @@ void read_restart_data(FILE* gridsave_file) {
   double SF_EMAX_in{NAN};
   assert_always(fscanf(gridsave_file, "%d %la %la\n", &sfpts_in, &SF_EMIN_in, &SF_EMAX_in) == 3);
 
-  const bool sf_grid_matches = sfpts_in == SFPTS && SF_EMIN_in == SF_EMIN && SF_EMAX_in == SF_EMAX;
-  if (!sf_grid_matches) {
+  if (sfpts_in != SFPTS || SF_EMIN_in != SF_EMIN || SF_EMAX_in != SF_EMAX) {
     printlnlog("[error] gridsave file specifies {} Spencer-Fano samples, SF_EMIN {:g} SF_EMAX {:g}", sfpts_in,
                SF_EMIN_in, SF_EMAX_in);
-    printlnlog("[error] This simulation has {} Spencer-Fano samples, SF_EMIN {:g} SF_EMAX {:g}", SFPTS, SF_EMIN,
-               SF_EMAX);
+    fatal_crash("This simulation has {} Spencer-Fano samples, SF_EMIN {:g} SF_EMAX {:g}", SFPTS, SF_EMIN, SF_EMAX);
   }
-  assert_always(sf_grid_matches);
 
   for (int nonemptymgi = 0; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
     int nonemptymgi_in = 0;

@@ -120,6 +120,11 @@ void log_write(std::string_view message, bool add_newline) noexcept;
 [[gnu::cold]] DEVICE_FUNC void report_assert_failure(const char* file, int line, const char* expr,
                                                      const char* func) noexcept;
 
+// Write the message with the rank, the file, the line, and the function to the rank log (or to stdout on a
+// device) and to stderr, then stop the run. Call it through the macro fatal_crash(fmt, args...).
+[[noreturn]] [[gnu::cold]] DEVICE_FUNC void report_fatal_error_and_abort(const char* file, int line, const char* func,
+                                                                         const char* message) noexcept;
+
 #define __artis_assert(e)                                                 \
   {                                                                       \
     const bool assertpass = static_cast<bool>(e);                         \
@@ -140,6 +145,17 @@ inline auto printlnlog(const std::format_string<Args...> fmt, Args&&... args) no
   MY_IF_DEVICE(const auto str = std::vformat(fmt.get(), std::make_format_args(args...)); printf("%s\n", str.c_str()););
   MY_IF_HOST(log_write(std::format(fmt, std::forward<Args>(args)...), true););
 }
+
+template <typename... Args>
+[[noreturn]] DEVICE_FUNC inline auto fatal_crash_at(const char* file, const int line, const char* func,
+                                                    const std::format_string<Args...> fmt, Args&&... args) noexcept
+    -> void {
+  MY_IF_DEVICE(const auto str = std::vformat(fmt.get(), std::make_format_args(args...));
+               report_fatal_error_and_abort(file, line, func, str.c_str()););
+  MY_IF_HOST(report_fatal_error_and_abort(file, line, func, std::format(fmt, std::forward<Args>(args)...).c_str()););
+}
+
+#define fatal_crash(...) fatal_crash_at(__FILE__, __LINE__, __PRETTY_FUNCTION__, __VA_ARGS__)
 
 #define assert_always(e) __artis_assert(e)
 
@@ -543,25 +559,23 @@ inline void MPI_Reduce_safe(R&& data, MPI_Op op, const int root, MPI_Comm comm) 
 }
 
 [[nodiscard]] inline auto fopen_required(const std::string& filename, std::span<const char> mode) -> FILE* {
-  FILE* file = nullptr;
   if (mode[0] == 'r') {
     // search data folders in order to find file to read
     for (const auto& datadir : datafolders) {
       const auto datafolderfilename = std::format("{}{}", datadir, filename);
-      file = std::fopen(datafolderfilename.c_str(), mode.data());
+      auto* file = std::fopen(datafolderfilename.c_str(), mode.data());
       if (file != nullptr) {
-        break;
+        return file;
       }
     }
   } else {
-    file = std::fopen(filename.c_str(), mode.data());
+    auto* file = std::fopen(filename.c_str(), mode.data());
+    if (file != nullptr) {
+      return file;
+    }
   }
 
-  if (file == nullptr) {
-    printlnlog("[error] Could not open file '{}' for mode '{}'.", filename, mode.data());
-  }
-  assert_always(file != nullptr);
-  return file;
+  fatal_crash("Could not open file '{}' for mode '{}'.", filename, mode.data());
 }
 
 [[nodiscard]] inline auto fopen_required_uniqueptr(const std::string& filename, std::span<const char> mode) {
@@ -571,30 +585,27 @@ inline void MPI_Reduce_safe(R&& data, MPI_Op op, const int root, MPI_Comm comm) 
 
 [[nodiscard]] inline auto fstream_required(const std::string_view filename, std::ios::openmode mode) -> std::fstream {
   if (filename.empty()) {
-    printlnlog("[error] Cannot open file with empty filename.");
+    fatal_crash("Cannot open file with empty filename.");
   }
-  assert_always(!filename.empty());
 
-  auto file = std::fstream{};
   if ((mode & std::ios::in) != 0U) {
     // search data folders in order to find file to read
     for (const auto& datadir : datafolders) {
       const auto datafolderfilename = std::format("{}{}", datadir, filename);
-      file.open(datafolderfilename, mode);
+      auto file = std::fstream(datafolderfilename, mode);
       if (file.is_open()) {
-        break;
+        return file;
       }
     }
   } else {
     // don't prepend data folders when writing
-    file.open(std::string(filename), mode);
+    auto file = std::fstream(std::string(filename), mode);
+    if (file.is_open()) {
+      return file;
+    }
   }
 
-  if (!file.is_open()) {
-    printlnlog("[error] Could not open file '{}'", filename);
-  }
-  assert_always(file.is_open());
-  return file;
+  fatal_crash("Could not open file '{}'", filename);
 }
 
 // open a per-rank output file such as estimators_0000.out for writing

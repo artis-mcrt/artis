@@ -193,10 +193,9 @@ void read_possible_yefile() {
       if (mgi < 0 || mgi >= get_npts_model()) {
         // An out-of-range id is a sign of a cell id mismatch with model.txt. A silently shifted
         // electron fraction would give wrong grey opacities in every cell.
-        printlnlog("[error] Ye.txt: cell id {} is outside the model.txt id range [{}..{}]", cellnumberin,
-                   first_input_cellid, last_input_cellid);
+        fatal_crash("Ye.txt: cell id {} is outside the model.txt id range [{}..{}]", cellnumberin, first_input_cellid,
+                    last_input_cellid);
       }
-      assert_always(mgi >= 0 && mgi < get_npts_model());
       minid = std::min(minid, cellnumberin);
       maxid = std::max(maxid, cellnumberin);
       set_initelectronfrac(mgi, initelecfrac);
@@ -825,9 +824,8 @@ void read_elem_abundances() {
       // later element. Only whitespace may remain here.
       remainder.remove_prefix(std::min(remainder.find_first_not_of(" \t\r"), remainder.size()));
       if (!remainder.empty()) {
-        printlnlog("[error] read_elem_abundances: cell {} has an unreadable token at '{}'", cellnumberinput, remainder);
+        fatal_crash("read_elem_abundances: cell {} has an unreadable token at '{}'", cellnumberinput, remainder);
       }
-      assert_always(remainder.empty());
 
       if (get_numpropcells(mgi) > 0) {
         if (threedimensional || normfactor <= 0.) {
@@ -1122,11 +1120,9 @@ void read_grid_restart_data(const int timestep) {
   double tmax_in = -1.;
   assert_always(fscanf(gridsave_file, "%la %la ", &tmin_in, &tmax_in) == 2);
   if (tmin_in != globals::tmin || tmax_in != globals::tmax) {
-    printlnlog("[error] {} was written with tmin {:g} tmax {:g} but input.txt gives tmin {:g} tmax {:g}", filename,
-               tmin_in, tmax_in, globals::tmin, globals::tmax);
+    fatal_crash("{} was written with tmin {:g} tmax {:g} but input.txt gives tmin {:g} tmax {:g}", filename, tmin_in,
+                tmax_in, globals::tmin, globals::tmax);
   }
-  assert_always(tmin_in == globals::tmin);
-  assert_always(tmax_in == globals::tmax);
 
   for (int nts = 0; nts < globals::ntimesteps; nts++) {
     assert_always(
@@ -1394,11 +1390,10 @@ void setup_nstart_ndo() {
 void require_subluminal_corners(const double vmax_corner) {
   printlnlog("corner vmax {:g} [cm/s] ({:.2f}c)", vmax_corner, vmax_corner / CLIGHT);
   if (!FORCE_SPHERICAL_ESCAPE_SURFACE && vmax_corner >= CLIGHT) {
-    printlnlog(
-        "[error] the grid corners expand faster than light. Enable FORCE_SPHERICAL_ESCAPE_SURFACE in "
+    fatal_crash(
+        "the grid corners expand faster than light. Enable FORCE_SPHERICAL_ESCAPE_SURFACE in "
         "artisoptions.h to remove the superluminal corners, or reduce vmax.");
   }
-  assert_always(FORCE_SPHERICAL_ESCAPE_SURFACE || vmax_corner < CLIGHT);
 }
 
 void setup_grid_cartesian_3d() {
@@ -2112,9 +2107,8 @@ void read_ejecta_model() {
   auto ssline = std::istringstream{line};
   ssline >> npts_0;
   if (npts_0 <= 0) {
-    printlnlog("[error] model.txt: could not read a positive cell count from the first line '{}'", line);
+    fatal_crash("model.txt: could not read a positive cell count from the first line '{}'", line);
   }
-  assert_always(npts_0 > 0);
   if (ssline >> npts_1) {
     // second number on the line for 2D means the line was n_r n_z
     detected_dim = GridType::CYLINDRICAL2D;
@@ -2130,9 +2124,8 @@ void read_ejecta_model() {
   std::istringstream{line} >> t_model_days;
   // a failed extraction stores zero, which would zero all densities via the (t_model / tmin)^3 scaling
   if (!std::isfinite(t_model_days) || t_model_days <= 0.) {
-    printlnlog("[error] model.txt: could not read a positive snapshot time in days from line '{}'", line);
+    fatal_crash("model.txt: could not read a positive snapshot time in days from line '{}'", line);
   }
-  assert_always(std::isfinite(t_model_days) && t_model_days > 0.);
   t_model = t_model_days * DAY;
   assert_always(globals::tmin >= t_model);
 
@@ -2282,10 +2275,9 @@ void read_ejecta_model() {
       assert_always(cellnumberin == mgi + first_input_cellid);
 
       if (rho_tmodel < 0) {
-        printlnlog("[error] model.txt cell {} (inputcellid {}) has negative density {:g} [g/cm3] at t_model. aborting",
-                   mgi, cellnumberin, rho_tmodel);
+        fatal_crash("model.txt cell {} (inputcellid {}) has negative density {:g} [g/cm3] at t_model", mgi,
+                    cellnumberin, rho_tmodel);
       }
-      assert_always(rho_tmodel >= 0);
 
       const bool keepcell = (rho_tmodel > 0);
       set_rho_tmin(mgi, static_cast<float>(rho_tmodel * pow3(t_model / globals::tmin)));
@@ -2296,9 +2288,8 @@ void read_ejecta_model() {
     }
 
     if (mgi != get_npts_model()) {
-      printlnlog("[error] model.txt: found only {} cells instead of {} expected.", mgi, get_npts_model());
+      fatal_crash("model.txt: found only {} cells instead of {} expected.", mgi, get_npts_model());
     }
-    assert_always(mgi == get_npts_model());
 
     if (get_modelgridtype() == GridType::SPHERICAL1D) {
       // for 1D models, vmax is the outer velocity of the last cell

@@ -298,14 +298,13 @@ void abort_if_decaypath_has_duplicate_lambdas() {
     for (auto i = 0Z; i < std::ssize(lambdas); i++) {
       for (auto j = i + 1; j < std::ssize(lambdas); j++) {
         if (lambdas[i] > 0. && lambdas[i] == lambdas[j]) {
-          printlnlog(
-              "[error] decay path contains two nuclides with identical decay constants {:g} [1/s], which makes the "
+          printout_decaypath(decaypathindex);
+          fatal_crash(
+              "decay path contains two nuclides with identical decay constants {:g} [1/s], which makes the "
               "Bateman solution singular. Slightly perturb one of the mean lifetimes in the decay data to break the "
               "degeneracy.",
               lambdas[i]);
-          printout_decaypath(decaypathindex);
         }
-        assert_always(lambdas[i] <= 0. || lambdas[i] != lambdas[j]);
       }
     }
   }
@@ -331,13 +330,12 @@ void extend_lastdecaypath(std::vector<DecayPath>& localdecaypaths) {
       // check for nuclide in existing path, which would indicate a loop
       for (const auto [z, a] : std::views::zip(initial_last_decaypath.z, initial_last_decaypath.a)) {
         if (z == daughter.z && a == daughter.a) {
-          printlog("[error] loop in nuclear decay chain: ");
+          std::string chain;
           for (const auto [chain_z, chain_a] : std::views::zip(initial_last_decaypath.z, initial_last_decaypath.a)) {
-            printlog("(Z={},A={}) -> ", chain_z, chain_a);
+            chain += std::format("(Z={},A={}) -> ", chain_z, chain_a);
           }
-          printlnlog("(Z={},A={}) already occurred. aborting", daughter.z, daughter.a);
+          fatal_crash("loop in nuclear decay chain: {}(Z={},A={}) already occurred", chain, daughter.z, daughter.a);
         }
-        assert_always(z != daughter.z || a != daughter.a);
       }
       const auto daughter_nucindex = get_nucindex(daughter.z, daughter.a);
       auto newdecaypath = initial_last_decaypath;

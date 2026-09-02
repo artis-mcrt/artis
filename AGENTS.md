@@ -350,11 +350,13 @@ are the only defence.
 - Many `assert_always()` calls hold a call with a side effect, e.g. a read
   from a file. Do not change such an assertion to `assert_testmodeonly()` and
   do not delete it.
-- A fatal error is an `assert_always()` on the condition. Write an optional
-  `printlnlog("[error] ...")` with the values before it. Do not call
-  `std::abort()` directly. A direct abort is very hard to debug. The assertion
-  reporter adds the file, the line, the expression, and the function. It does
-  this on the host and on the device.
+- A fatal error is an `assert_always()` on the condition, or a
+  `fatal_crash("...", values)` when the message must show the values. Both
+  come from `mpi_logging.h`. `fatal_crash()` takes a `std::format` string and
+  writes the message with the rank, the file, the line, and the function to
+  the rank log and to stderr. Do not call `std::abort()` directly. A direct
+  abort is very hard to debug. Both reporters work on the host and on the
+  device.
 - An invalid input stops the run. Do not give a warning for it.
 - Two numeric helpers are an exception: `toms748.h` and `gausskronrod.h` throw
   `std::domain_error` on the host, inside a guard that returns a NaN for a GPU

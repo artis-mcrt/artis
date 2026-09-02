@@ -391,9 +391,8 @@ void write_deposition_file() {
     std::error_code ec;
     std::filesystem::rename("deposition.out.tmp", "deposition.out", ec);
     if (ec) {
-      printlnlog("[error] The rename of deposition.out.tmp to deposition.out failed: {}", ec.message());
+      fatal_crash("The rename of deposition.out.tmp to deposition.out failed: {}", ec.message());
     }
-    assert_always(!ec);
 
     // energy-conservation consistency check (log only): the cumulative deposition should not exceed the
     // cumulative decay emission by more than the Monte Carlo noise of the trajectory estimators allows
@@ -866,9 +865,8 @@ void setup_runoutputfolder() {
     std::error_code ec;
     std::filesystem::create_directories(globals::runoutputfolder, ec);
     if (ec) {
-      std::println(stderr, "[error] could not create output folder '{}': {}", globals::runoutputfolder, ec.message());
+      fatal_crash("could not create output folder '{}': {}", globals::runoutputfolder, ec.message());
     }
-    assert_always(!ec);
 
     // clear out per-rank output files (and any leftover log symlink) from a previous run of this folder, so
     // that e.g. a rerun with fewer ranks does not leave a mixture of new estimator files and stale ones from
@@ -934,13 +932,10 @@ auto main(int argc, char* argv[]) -> int {
     if (opt == 'w') {
       char* parse_end = nullptr;
       const float walltimehours = strtof(optarg, &parse_end);  // NOLINT(misc-include-cleaner)
-      const bool walltimehours_valid =
-          parse_end != optarg && *parse_end == '\0' && std::isfinite(walltimehours) && walltimehours > 0.;
-      if (!walltimehours_valid) {
+      if (parse_end == optarg || *parse_end != '\0' || !std::isfinite(walltimehours) || walltimehours <= 0.) {
         // silently accepting a bad value would disable the wall time limit instead of applying it
-        std::println(stderr, "[error] invalid wall time hours '{}' given with -w option", optarg);
+        fatal_crash("invalid wall time hours '{}' given with -w option", optarg);
       }
-      assert_always(walltimehours_valid);
       walltimelimitseconds = static_cast<int>(walltimehours * HOUR);
       walltimehours_str = optarg;
     } else if (opt == 'o') {
@@ -949,12 +944,11 @@ auto main(int argc, char* argv[]) -> int {
         globals::runoutputfolder.pop_back();
       }
       if (globals::runoutputfolder.empty()) {
-        std::println(stderr, "[error] empty output folder given with -o option");
+        fatal_crash("empty output folder given with -o option");
       }
-      assert_always(!globals::runoutputfolder.empty());
     } else {
       print_options_help(stderr, argv[0]);  // NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic)
-      assert_always(opt == 'w' || opt == 'o');
+      fatal_crash("unknown command line option");
     }
   }
 

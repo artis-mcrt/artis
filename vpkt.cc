@@ -722,10 +722,8 @@ void read_vpktparameterfile() {
     assert_always(fscanf(input_file, "%lg", &obsdirs_costheta[i]) == 1);
 
     if (fabs(obsdirs_costheta[i]) > 1) {
-      printlnlog("[error] vpkt.txt observer direction {} has costheta {:g}, which is outside [-1, 1]. aborting", i,
-                 obsdirs_costheta[i]);
+      fatal_crash("vpkt.txt observer direction {} has costheta {:g}, which is outside [-1, 1]", i, obsdirs_costheta[i]);
     }
-    assert_always(fabs(obsdirs_costheta[i]) <= 1);
     if (obsdirs_costheta[i] == 1) {
       obsdirs_costheta[i] = 0.9999;
     } else if (obsdirs_costheta[i] == -1) {

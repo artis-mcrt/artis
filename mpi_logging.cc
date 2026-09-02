@@ -4,6 +4,7 @@
 
 #include <chrono>
 #include <cstdarg>
+#include <cstdlib>
 #include <cstring>
 #include <fstream>
 #include <iostream>
@@ -59,4 +60,15 @@ DEVICE_FUNC void report_assert_failure(const char* file, const int line, const c
     output_file.flush();
   } std::println(std::cerr, "\n[rank {}] {}:{}: failed assertion `{}` in function {}", globals::my_rank, file, line,
                  expr, func););
+}
+
+DEVICE_FUNC void report_fatal_error_and_abort(const char* file, const int line, const char* func,
+                                              const char* message) noexcept {
+  MY_IF_DEVICE(printf("\n[rank %d] [error] %s:%d in %s: %s\n", globals::my_rank, file, line, func, message);
+               assert(false); __builtin_trap(););
+  MY_IF_HOST(if (output_file) {
+    std::println(output_file, "\n[rank {}] [error] {}:{} in {}: {}", globals::my_rank, file, line, func, message);
+    output_file.flush();
+  } std::println(std::cerr, "\n[rank {}] [error] {}:{} in {}: {}", globals::my_rank, file, line, func, message);
+             std::abort(););
 }

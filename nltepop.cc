@@ -2154,10 +2154,9 @@ void nltepop_read_restart_data(FILE* restart_file) {
   int total_nlte_levels_in = 0;
   assert_always(fscanf(restart_file, "%d\n", &total_nlte_levels_in) == 1);
   if (total_nlte_levels_in != globals::total_nlte_levels) {
-    printlnlog("[error] Expected {} NLTE levels but found {} in restart file", globals::total_nlte_levels,
-               total_nlte_levels_in);
+    fatal_crash("Expected {} NLTE levels but found {} in restart file", globals::total_nlte_levels,
+                total_nlte_levels_in);
   }
-  assert_always(total_nlte_levels_in == globals::total_nlte_levels);
   const auto nincludedions = get_includedions();
 
   for (auto nonemptymgi = 0Z; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {

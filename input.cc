@@ -679,12 +679,10 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion,
         // combine it into the existing line. The duplicate immediately follows the first occurrence
         // (the table is sorted), so the transition entries filled most recently are the ones to update.
 
-        const bool prev_line_matches = (temp_linelist[prev_lineindex].elementindex == element) &&
-                                       (temp_linelist[prev_lineindex].ionindex == ion) &&
-                                       (temp_linelist[prev_lineindex].upperlevelindex == level) &&
-                                       (temp_linelist[prev_lineindex].lowerlevelindex == lowerlevel);
-        if (!prev_line_matches) {
-          printlnlog("[error] Failure to identify level pair for duplicate bb-transition ... going to abort now");
+        if ((temp_linelist[prev_lineindex].elementindex != element) ||
+            (temp_linelist[prev_lineindex].ionindex != ion) ||
+            (temp_linelist[prev_lineindex].upperlevelindex != level) ||
+            (temp_linelist[prev_lineindex].lowerlevelindex != lowerlevel)) {
           printlnlog("   element {} ion {} targetlevel {} level {}", element, ion, lowerlevel, level);
           printlnlog("   duplicate of lineindex {}", prev_lineindex);
           printlnlog("   A_ul {:g}, coll_str {:g}", transition.A, transition.coll_str);
@@ -693,8 +691,8 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion,
               "globals::linelist[lineindex].upperlevelindex {}, globals::linelist[lineindex].lowerlevelindex {}",
               temp_linelist[prev_lineindex].elementindex, temp_linelist[prev_lineindex].ionindex,
               temp_linelist[prev_lineindex].upperlevelindex, temp_linelist[prev_lineindex].lowerlevelindex);
+          fatal_crash("Failure to identify level pair for duplicate bb-transition");
         }
-        assert_always(prev_line_matches);
 
         const auto g_ratio = static_cast<double>(ion_levels[level].stat_weight) / ion_levels[lowerlevel].stat_weight;
         const auto f_lu =
@@ -884,15 +882,14 @@ void setup_phixs_list() {
               // groundcontindex slot, and the writes below use the same slot. The nearest-edge search
               // gives another ion's slot only when two ions have an identical ground threshold. That
               // case would silently mix the estimators of the two ions.
-              const int foundslot = alllevels_closestgroundlevelcont[uniquelevelindex];
-              if (foundslot != groundcontindex) {
-                printlnlog(
-                    "[error] element {} ion {} has the ground continuum slot {}, but the nearest-edge search "
+              if (const int foundslot = alllevels_closestgroundlevelcont[uniquelevelindex];
+                  foundslot != groundcontindex) {
+                fatal_crash(
+                    "element {} ion {} has the ground continuum slot {}, but the nearest-edge search "
                     "found the slot {} of element {} ion {}. Two ions have an identical ground threshold {:g}.",
                     element, ion, groundcontindex, foundslot, globals::groundcont_element[foundslot],
                     globals::groundcont_ion[foundslot], nu_edge_target0);
               }
-              assert_always(foundslot == groundcontindex);
             }
           }
 
@@ -1926,9 +1923,8 @@ void read_parameterfile(std::span<Packet> packets) {
     std::error_code ec;
     std::filesystem::copy_file("input-newrun.txt", "input.txt", ec);
     if (ec) {
-      printlnlog("[error] failed to copy input-newrun.txt to input.txt: {}", ec.message());
+      fatal_crash("failed to copy input-newrun.txt to input.txt: {}", ec.message());
     }
-    assert_always(!ec);
     printlnlog("done");
   }
   // rank 0 creates input.txt before the other ranks open it
@@ -1946,11 +1942,10 @@ void read_parameterfile(std::span<Packet> packets) {
     printlnlog("input.txt specified random number seed is {}", pre_zseed);
   } else {
 #if defined REPRODUCIBLE && REPRODUCIBLE
-    printlnlog(
-        "[error] REPRODUCIBLE mode requires a positive random number seed on the first non-comment line of input.txt "
+    fatal_crash(
+        "REPRODUCIBLE mode requires a positive random number seed on the first non-comment line of input.txt "
         "(found {})",
         pre_zseed);
-    assert_always(pre_zseed > 0);
 #endif
     pre_zseed = get_rng_random_seed();
     // broadcast randomly-generated seed from rank 0 to all ranks

@@ -194,9 +194,8 @@ auto read_text_packets(const std::string& filename) -> std::vector<Packet> {
       ntokens++;
     }
     if (ntokens != ncolumns) {
-      printlnlog("[error] read_text_packets: the row has {} of {} columns: '{}'", ntokens, ncolumns, line);
+      fatal_crash("read_text_packets: the row has {} of {} columns: '{}'", ntokens, ncolumns, line);
     }
-    assert_always(ntokens == ncolumns);
 
     ssline.clear();
     ssline.str(line);
@@ -223,9 +222,8 @@ auto read_text_packets(const std::string& filename) -> std::vector<Packet> {
     // row, e.g. from a partial write on a full file system. A silently accepted truncated row would
     // drop the packet from the spectra (escape_type stays 0) with no diagnostic.
     if (ssline.fail()) {
-      printlnlog("[error] read_text_packets: could not parse the packet row '{}'", line);
+      fatal_crash("read_text_packets: could not parse the packet row '{}'", line);
     }
-    assert_always(!ssline.fail());
 
     ssline >> pkt.em_pos[0] >> pkt.em_pos[1] >> pkt.em_pos[2];
     ssline >> pkt.absorptiontype >> pkt.absorptionfreq >> pkt.nscatterings;
@@ -308,9 +306,8 @@ void write_temp_packetsfile(const int timestep, const int my_rank, const std::sp
   bool write_success = false;
   while (!write_success) {
     if (tries > 10) {
-      printlnlog("[error] Failed to write {} after {} tries. Aborting.", filename, tries);
+      fatal_crash("Failed to write {} after {} tries. Aborting.", filename, tries);
     }
-    assert_always(tries <= 10);
     if (tries > 0) {
       // give transient filesystem problems (e.g. contention on a cluster parallel filesystem) a
       // chance to clear instead of burning through all of the retries within milliseconds
