@@ -424,8 +424,6 @@ auto calculate_chi_bf_gammacontr(int nonemptymgi, double nu, Phixslist& phixslis
 // (packet activates a macro-atom in the upper ion with probability nu_edge/nu, the ionisation energy fraction, and
 // otherwise becomes a k-packet carrying the freed electron's kinetic energy).
 void rpkt_event_continuum(Packet& pkt, ContinuumOpacity& chi_rpkt_cont) {
-  const double nu = pkt.nu_cmf;
-
   const double dopplerfactor = calculate_doppler_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
   const double chi_cont = chi_rpkt_cont.total() * dopplerfactor;
   const double chi_escatter = chi_rpkt_cont.chi_escatter * dopplerfactor;
@@ -480,8 +478,11 @@ void rpkt_event_continuum(Packet& pkt, ContinuumOpacity& chi_rpkt_cont) {
     const int level = globals::allcont.level[allcontindex];
     const int phixstargetindex = globals::allcont.phixstargetindex[allcontindex];
 
-    // decide whether we go to ionisation energy or to the thermal pool
-    if (rng_uniform(get_rngstate(pkt)) < nu_edge / nu) {
+    // decide whether we go to ionisation energy or to the thermal pool. The continuum was selected at the
+    // frequency of the last opacity calculation, so the same frequency gives the split. The packet has moved
+    // since then, and its current frequency can already lie below the edge of the selected continuum.
+    // The ratio then exceeds one, and the packet can never go to the thermal pool from that continuum.
+    if (rng_uniform(get_rngstate(pkt)) < nu_edge / chi_rpkt_cont.nu) {
       stats::increment(stats::Counter::MA_STAT_ACTIVATION_BF);
 
       do_macroatom(pkt, {
