@@ -58,6 +58,12 @@ Keep the British spellings that this repository uses, e.g. "parallelised" and
 "normalise". STE controls the choice of words and the structure of the
 sentences. It does not control the spelling variant here.
 
+## References
+
+When mentioning a scientific paper, always give the full reference:
+authors, year, title, journal, volume, page range, and DOI or arXiv ID.
+Do not use a bare author-year citation.
+
 ## Project overview
 
 ARTIS is a 3D Monte Carlo radiative transfer code for supernovae and kilonovae.
