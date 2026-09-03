@@ -601,7 +601,12 @@ auto do_rpkt_step(Packet& pkt, const double t2, ContinuumOpacity& chi_rpkt_cont)
     const auto dnu_on_dl = (nu_cmf_abort - pkt.nu_cmf) / abort_dist;
     const auto doppler = calculate_doppler_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
 
-    if constexpr (RPKT_USE_EXPANSION_OPACITIES) {
+    // The comoving frequency decreases strictly along the path. A gradient that is not negative and finite
+    // comes from rounding, when abort_dist is zero or too short to change the frequency. Such a gradient
+    // makes each event distance infinite or NaN, so the packet moves to the abort distance with no event.
+    if (!std::isfinite(dnu_on_dl) || (dnu_on_dl >= 0.)) [[unlikely]] {
+      edist = std::numeric_limits<double>::max();
+    } else if constexpr (RPKT_USE_EXPANSION_OPACITIES) {
       std::tie(edist, event_is_boundbound) = get_possible_event_expansion_opacity(
           nonemptymgi, pkt, chi_rpkt_cont, pktmastate, tau_rnd, nu_cmf_abort, dnu_on_dl, doppler);
     } else {
