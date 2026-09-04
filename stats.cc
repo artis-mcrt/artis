@@ -54,11 +54,10 @@ void pkt_action_counters_printout(const int nts) {
     modelvolume += grid::get_modelcell_assocvolume_tmin(mgi) * pow3(globals::timesteps[nts].mid / globals::tmin);
   }
 
-  printlnlog("timestep {}: ma_stat_activation: collexc {} collion {} ntcollexc {} ntcollion {} bb {} bf {} fb {}", nts,
+  printlnlog("timestep {}: ma_stat_activation: collexc {} collion {} ntcollexc {} ntcollion {} bb {} bf {}", nts,
              get_counter(Counter::MA_STAT_ACTIVATION_COLLEXC), get_counter(Counter::MA_STAT_ACTIVATION_COLLION),
              get_counter(Counter::MA_STAT_ACTIVATION_NTCOLLEXC), get_counter(Counter::MA_STAT_ACTIVATION_NTCOLLION),
-             get_counter(Counter::MA_STAT_ACTIVATION_BB), get_counter(Counter::MA_STAT_ACTIVATION_BF),
-             get_counter(Counter::MA_STAT_ACTIVATION_FB));
+             get_counter(Counter::MA_STAT_ACTIVATION_BB), get_counter(Counter::MA_STAT_ACTIVATION_BF));
   printlnlog("timestep {}: ma_stat_deactivation: colldeexc {} collrecomb {} bb {} fb {}", nts,
              get_counter(Counter::MA_STAT_DEACTIVATION_COLLDEEXC),
              get_counter(Counter::MA_STAT_DEACTIVATION_COLLRECOMB), get_counter(Counter::MA_STAT_DEACTIVATION_BB),
