@@ -73,6 +73,7 @@ DEVICE_FUNC void calculate_macroatom_transitionrates(std::span<double> levelrate
 
   const auto T_e = grid::Te_allcells[nonemptymgi];
   const auto clumpednne = grid::get_clumpfactor(nonemptymgi) * grid::get_nne(nonemptymgi);
+  const auto t_cmf = grid::get_t_cmf(nonemptymgi, t_mid);
   const double epsilon_current = epsilon(uniquelevelindex);
   const double statweight = stat_weight(uniquelevelindex);
   const auto nnlevel = get_cellcache_levelpop(nonemptymgi, uniquelevelindex);
@@ -97,8 +98,7 @@ DEVICE_FUNC void calculate_macroatom_transitionrates(std::span<double> levelrate
     const auto lower_statweight = stat_weight(lower_uniquelevelindex);
 
     const double R = rad_deexcitation_ratecoeff(epsilon_trans, A_ul, statweight, lower_statweight, nnlevel,
-                                                get_cellcache_levelpop(nonemptymgi, lower_uniquelevelindex),
-                                                grid::get_t_cmf(nonemptymgi, t_mid));
+                                                get_cellcache_levelpop(nonemptymgi, lower_uniquelevelindex), t_cmf);
     const double C =
         col_deexcitation_ratecoeff(T_e, clumpednne, epsilon_trans, statweight, lower_statweight, alltransindex);
 
@@ -128,7 +128,7 @@ DEVICE_FUNC void calculate_macroatom_transitionrates(std::span<double> levelrate
 
     const double R = rad_excitation_ratecoeff(
         nonemptymgi, upper_statweight, alltrans.einstein_A[alltransindex], epsilon_trans, nnlevel,
-        get_cellcache_levelpop(nonemptymgi, upper_uniquelevelindex), statweight, alltransindex, t_mid);
+        get_cellcache_levelpop(nonemptymgi, upper_uniquelevelindex), statweight, alltransindex, t_cmf);
     const double C =
         col_excitation_ratecoeff(T_e, clumpednne, epsilon_trans, upper_statweight, statweight, alltransindex);
     const double NT = nonthermal::nt_excitation_ratecoeff(nonemptymgi, level, upper, alltransindex);
@@ -613,13 +613,12 @@ void macroatom_open_file() {
                                                           const double einstein_A, const double epsilon_trans,
                                                           const double nnlevel_lower, const double nnlevel_upper,
                                                           const double statweight_lower, const int alltransindex,
-                                                          const double t_current) -> double {
+                                                          const double t_cmf) -> double {
   const double nu_trans = epsilon_trans / H;
   const double B_ul = CLIGHTSQUAREDOVERTWOH / pow3(nu_trans) * einstein_A;
   const double B_lu = upper_statweight / statweight_lower * B_ul;
 
-  const double tau_sobolev =
-      ((B_lu * nnlevel_lower) - (B_ul * nnlevel_upper)) * HCLIGHTOVERFOURPI * grid::get_t_cmf(nonemptymgi, t_current);
+  const double tau_sobolev = ((B_lu * nnlevel_lower) - (B_ul * nnlevel_upper)) * HCLIGHTOVERFOURPI * t_cmf;
 
   if (tau_sobolev > 1e-100) {
     const double beta = 1.0 / tau_sobolev * (-std::expm1(-tau_sobolev));

@@ -216,9 +216,9 @@ void update_bfestimators(const ptrdiff_t nonemptymgi, const double distance_e_cm
                          const Phixslist& phixslist) {
   assert_testmodeonly(DETAILED_BF_ESTIMATORS_ON);
 
-  // No doppler factor here: like J, the photoionisation rate coefficient is a comoving-frame volume estimator, and
-  // the caller puts the frame conversion into distance_e_cmf (see FRAME_TRANSFORM_ESTIMATOR_PATH_LENGTHS) and evaluates
-  // sigma_bf at nu_cmf (consistent with the LUT gammaestimator in rpkt.cc)
+  // No doppler factor here. Like J, the photoionisation rate coefficient is a comoving-frame volume
+  // estimator. FRAME_TRANSFORM_ESTIMATOR_PATH_LENGTHS selects the frame of distance_e_cmf, and the caller
+  // evaluates sigma_bf at nu_cmf. The look-up table gammaestimator in rpkt.cc does the same.
   const double distance_e_cmf_over_nu = distance_e_cmf / nu_cmf;
 
   // The packet has propagated since the phixslist was built, so nu_cmf has drifted (downwards) from the value the

@@ -1833,6 +1833,7 @@ auto get_rho_tmin(const int modelgridindex) -> float { return modelgrid_input[mo
 // time, so this factor is a constant of the cell.
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_modelcell_lorentzfactor(const int modelgridindex) -> double {
   const double betasq = pow2(get_modelcell_mean_radial_pos_tmin(modelgridindex) / globals::tmin / CLIGHT);
+  assert_always(betasq < 1.);
 
   return 1. / std::sqrt(1. - betasq);
 }

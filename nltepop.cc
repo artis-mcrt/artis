@@ -525,6 +525,7 @@ void nltepop_matrix_add_boundbound(const int nonemptymgi, const int element, con
                                    const int first_ion_used) {
   const auto T_e = grid::Te_allcells[nonemptymgi];
   const auto clumpednne = grid::get_clumpfactor(nonemptymgi) * grid::get_nne(nonemptymgi);
+  const auto t_cmf = grid::get_t_cmf(nonemptymgi, t_mid);
   const int nlevels = get_nlevels(element, ion);
   const auto ionuniquelevelindexstart = get_ionuniquelevelindexstart(element, ion);
   const auto nlte_dimension = rate_matrices.used_nlte_dimension;
@@ -569,10 +570,9 @@ void nltepop_matrix_add_boundbound(const int nonemptymgi, const int element, con
       const auto nnlevel_lower = levelpops[lower];
 
       const double epsilon_trans = epsilon_level - epsilon(lower_uniquelevelindex);
-      const double R =
-          rad_deexcitation_ratecoeff(epsilon_trans, globals::alltrans.einstein_A[alltransindex], statweight,
-                                     lower_statweight, nnlevel, nnlevel_lower, grid::get_t_cmf(nonemptymgi, t_mid)) *
-          s_renorm[level];
+      const double R = rad_deexcitation_ratecoeff(epsilon_trans, globals::alltrans.einstein_A[alltransindex],
+                                                  statweight, lower_statweight, nnlevel, nnlevel_lower, t_cmf) *
+                       s_renorm[level];
       const double C =
           col_deexcitation_ratecoeff(T_e, clumpednne, epsilon_trans, statweight, lower_statweight, alltransindex) *
           s_renorm[level];
@@ -606,7 +606,7 @@ void nltepop_matrix_add_boundbound(const int nonemptymgi, const int element, con
 
       const double R =
           rad_excitation_ratecoeff(nonemptymgi, upper_statweight, globals::alltrans.einstein_A[alltransindex],
-                                   epsilon_trans, nnlevel, nnlevel_upper, statweight, alltransindex, t_mid) *
+                                   epsilon_trans, nnlevel, nnlevel_upper, statweight, alltransindex, t_cmf) *
           s_renorm[level];
 
       const double C =

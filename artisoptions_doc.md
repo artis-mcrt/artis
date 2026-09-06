@@ -247,8 +247,13 @@ constexpr bool USE_RELATIVISTIC_DOPPLER_SHIFT;
 // - the photoionisation estimator and the bound-free heating estimator;
 // - the detailed bound-free rate estimator.
 // With false, they use the rest-frame path length and differ by one Doppler factor. The gamma-ray
-// deposition estimator always uses the comoving-frame path length. The Sobolev line estimator needs no
-// such factor. This option changes the results.
+// deposition estimator always uses the comoving-frame path length.
+// The option also selects the comoving-frame time t / gamma for the Sobolev length c * t / nu, which
+// needs USE_RELATIVISTIC_DOPPLER_SHIFT as well. That length gives the line optical depth of an r-packet
+// and of a virtual packet, the expansion opacity table, the Sobolev line estimator, and the escape
+// probability in the macroatom and NLTE rate coefficients.
+// The adiabatic cooling rate, the time-dependent solvers and the particle deposition keep the
+// rest-frame time in both states of the option. This option changes the results.
 constexpr bool FRAME_TRANSFORM_ESTIMATOR_PATH_LENGTHS;
 
 // when converting mass fraction to a number density, use a mean atomic mass

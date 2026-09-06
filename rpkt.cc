@@ -68,8 +68,8 @@ auto get_nu_cmf_abort(const Vec3d& pos, const Vec3d& dir, const double prop_time
 }
 
 // Get the Sobolev optical depth of a line at the current propagation time, from the stimulated-emission
-// corrected level populations: (B_lu n_l - B_ul n_u) h c / (4 pi) times the Sobolev time for homologous
-// expansion. Negative values (population inversion) are clamped to zero.
+// corrected level populations: (B_lu n_l - B_ul n_u) h c / (4 pi) times the comoving-frame time for
+// homologous expansion. Negative values (population inversion) are clamped to zero.
 // With USECELLCACHE the level populations come from the cell cache rather than being recalculated.
 template <bool USECELLCACHE>
 [[nodiscard]] auto get_tau_sobolev(const int nonemptymgi, const int lineindex, const double t_current) -> double {
@@ -520,8 +520,8 @@ void update_estimators(const Packet& pkt, const double doppler, const double dis
   const double nu_cmf = pkt.nu_cmf;
 
   // The comoving-frame estimator needs the comoving-frame path ds_cmf = doppler * ds_rf. The cell keeps
-  // its four-volume in both frames. The Sobolev line estimator needs no such factor, because its
-  // c * t / nu_cmf is already a comoving-frame path.
+  // its four-volume in both frames. The Sobolev estimators take the comoving-frame time instead, through
+  // grid::get_t_cmf().
   const double distance_e_cmf = distance * pkt.e_cmf * (FRAME_TRANSFORM_ESTIMATOR_PATH_LENGTHS ? doppler : 1.);
 
   radfield::update_estimators(nonemptymgi, distance_e_cmf, nu_cmf, chi_rpkt_cont.phixslist, thickcell);
