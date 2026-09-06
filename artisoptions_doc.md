@@ -241,6 +241,14 @@ constexpr bool SF_AUGER_CONTRIBUTION_ON;
 
 constexpr bool USE_RELATIVISTIC_DOPPLER_SHIFT;
 
+// use the comoving-frame path length ds_rf * doppler in the radiation estimators: J, nuJ, the
+// radiation field bins, the bound-free rate estimator, the free-free heating estimator, the
+// photoionisation estimator and the bound-free heating estimator. With false, they keep the historic
+// rest-frame path length and are larger by one Doppler factor. The gamma-ray deposition estimator
+// always uses the comoving-frame path length, and the Sobolev line estimator needs no such factor.
+// This option changes the results.
+constexpr bool FRAME_TRANSFORM_PATH_LENGTHS;
+
 // when converting mass fraction to a number density, use a mean atomic mass
 // calculated from the nuclear composition (plus stable component),
 // rather than just from the compositiondata.txt values

@@ -509,11 +509,21 @@ void rpkt_event_continuum(Packet& pkt, ContinuumOpacity& chi_rpkt_cont) {
 // Update the volume estimators J and nuJ
 // This is done in another routine than move, as we sometimes move dummy
 // packets which do not contribute to the radiation field.
-void update_estimators(const double e_cmf, const double nu_cmf, const double distance, const int nonemptymgi,
+// The caller moves the packet to the middle of the path increment, so pkt gives the values there.
+void update_estimators(const Packet& pkt, const double distance, const int nonemptymgi,
                        const ContinuumOpacity& chi_rpkt_cont, const bool thickcell) {
   // Update only non-empty cells
   assert_testmodeonly(nonemptymgi >= 0);
-  const double distance_e_cmf = distance * e_cmf;
+  const double nu_cmf = pkt.nu_cmf;
+
+  // The comoving-frame estimator needs the comoving-frame path ds_cmf = doppler * ds_rf. The cell keeps
+  // its four-volume in both frames. The Sobolev line estimator needs no such factor, because its
+  // c * t / nu_cmf is already a comoving-frame path.
+  double pathlength = distance;
+  if constexpr (FRAME_TRANSFORM_PATH_LENGTHS) {
+    pathlength *= calculate_doppler_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
+  }
+  const double distance_e_cmf = pathlength * pkt.e_cmf;
 
   radfield::update_estimators(nonemptymgi, distance_e_cmf, nu_cmf, chi_rpkt_cont.phixslist, thickcell);
 
@@ -620,7 +630,7 @@ auto do_rpkt_step(Packet& pkt, const double t2, ContinuumOpacity& chi_rpkt_cont)
   if ((edist < boundarydist) && (edist <= tdist)) [[likely]] {
     // bound-bound or continuum event occurs before cell crossing or end of timestep
     move_pkt_withtime(pkt, edist / 2.);
-    update_estimators(pkt.e_cmf, pkt.nu_cmf, edist, nonemptymgi, chi_rpkt_cont, thickcell);
+    update_estimators(pkt, edist, nonemptymgi, chi_rpkt_cont, thickcell);
     move_pkt_withtime(pkt, edist / 2.);
 
     // The previously selected event occurs
@@ -676,7 +686,7 @@ auto do_rpkt_step(Packet& pkt, const double t2, ContinuumOpacity& chi_rpkt_cont)
     // cell crossing event occurs before interaction or end of timestep
     move_pkt_withtime(pkt, boundarydist / 2.);
     if (nonemptymgi >= 0) {
-      update_estimators(pkt.e_cmf, pkt.nu_cmf, boundarydist, nonemptymgi, chi_rpkt_cont, thickcell);
+      update_estimators(pkt, boundarydist, nonemptymgi, chi_rpkt_cont, thickcell);
     }
     move_pkt_withtime(pkt, boundarydist / 2.);
 
@@ -698,7 +708,7 @@ auto do_rpkt_step(Packet& pkt, const double t2, ContinuumOpacity& chi_rpkt_cont)
     // reaches end of timestep before cell boundary or interaction
     move_pkt_withtime(pkt, tdist / 2.);
     if (nonemptymgi >= 0) {
-      update_estimators(pkt.e_cmf, pkt.nu_cmf, tdist, nonemptymgi, chi_rpkt_cont, thickcell);
+      update_estimators(pkt, tdist, nonemptymgi, chi_rpkt_cont, thickcell);
     }
     move_pkt_withtime(pkt, tdist / 2.);
     pkt.prop_time = t2;
