@@ -113,8 +113,9 @@ template <size_t VECDIM>
 }
 
 // Move a packet along a straight line (specified by current dir vector). The distance moved is in the rest frame.
-constexpr void move_pkt_withtime(Vec3d& pos_rf, const Vec3d& dir_rf, double& prop_time, const double nu_rf,
-                                 double& nu_cmf, const double e_rf, double& e_cmf, const double distance) {
+// Return the Doppler factor at the new position.
+constexpr auto move_pkt_withtime(Vec3d& pos_rf, const Vec3d& dir_rf, double& prop_time, const double nu_rf,
+                                 double& nu_cmf, const double e_rf, double& e_cmf, const double distance) -> double {
   assert_always(distance >= 0);
 
   const double nu_cmf_old = nu_cmf;
@@ -130,10 +131,12 @@ constexpr void move_pkt_withtime(Vec3d& pos_rf, const Vec3d& dir_rf, double& pro
   nu_cmf = std::min(nu_rf * dopplerfactor, nu_cmf_old);
 
   e_cmf = e_rf * dopplerfactor;
+
+  return dopplerfactor;
 }
 
-constexpr void move_pkt_withtime(Packet& pkt, const double distance) {
-  move_pkt_withtime(pkt.pos, pkt.dir, pkt.prop_time, pkt.nu_rf, pkt.nu_cmf, pkt.e_rf, pkt.e_cmf, distance);
+constexpr auto move_pkt_withtime(Packet& pkt, const double distance) -> double {
+  return move_pkt_withtime(pkt.pos, pkt.dir, pkt.prop_time, pkt.nu_rf, pkt.nu_cmf, pkt.e_rf, pkt.e_cmf, distance);
 }
 
 // Set the packet's rest-frame frequency and energy from its co-moving frame values using the

@@ -123,6 +123,8 @@ constexpr bool SF_AUGER_CONTRIBUTION_ON = true;
 
 constexpr bool USE_RELATIVISTIC_DOPPLER_SHIFT = false;
 
+constexpr bool FRAME_TRANSFORM_ESTIMATOR_PATH_LENGTHS = false;
+
 constexpr bool USE_CALCULATED_MEANATOMICWEIGHT = false;
 
 constexpr bool KEEP_ESCAPED_GAMMAS = true;
