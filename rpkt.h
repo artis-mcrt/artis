@@ -134,9 +134,28 @@ auto calculate_chi_ffheat_nnionpart(int nonemptymgi) -> double;
   return CLIGHT * prop_time * delta_nu / nu_trans;
 }
 
+// Get the correction of a binned expansion opacity for the path that sweeps the bin. The packet crosses
+// each line of the bin once, so the bin optical depth must equal the sum of (1 - exp(-tau_sobolev)).
+// calculate_expansion_opacities() assumes the path c * t * dnu / nu, which is the path that
+// get_linedistance() gives with the first-order Doppler shift. The factor is the ratio of that path to the
+// relativistic one, which is the Doppler factor times the Lorentz factor. Give the time at the bin edge
+// where the packet enters the bin.
+[[nodiscard]] constexpr auto get_expopac_pathfactor(const double prop_time, const double bin_edge_nu,
+                                                    const double dnu_on_dl) -> double {
+  if constexpr (FRAME_TRANSFORM_EXPANSION_OPACITIES_BINEDGEDIST && USE_RELATIVISTIC_DOPPLER_SHIFT) {
+    return -CLIGHT * prop_time * dnu_on_dl / bin_edge_nu;
+  }
+
+  return 1.;
+}
+
 static_assert(get_linedistance(100., 1., 2., -0.5) == 0.);  // overshot the line resonance
 static_assert(USE_RELATIVISTIC_DOPPLER_SHIFT || get_linedistance(2., 4., 2., -1.) == (CLIGHT * 2. * 2. / 2.));
 static_assert(!USE_RELATIVISTIC_DOPPLER_SHIFT || get_linedistance(2., 4., 2., -1.) == 2.);
+
+static_assert(get_expopac_pathfactor(2., 4., -1.) ==
+              ((FRAME_TRANSFORM_EXPANSION_OPACITIES_BINEDGEDIST && USE_RELATIVISTIC_DOPPLER_SHIFT) ? (CLIGHT * 2. / 4.)
+                                                                                                   : 1.));
 
 // find the next transition lineindex redder than nu_cmf
 // for the propagation through non empty cells

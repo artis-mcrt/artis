@@ -401,7 +401,9 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
               // terms above. Saturated lines keep (1 - exp(-tau_sobolev)) ~ 1 and so fall off only as 1/t, but
               // their individual tau_sobolev cannot be recovered from the binned kappa, so the thin limit is
               // used for all bins.
-              const double chi_bb_expansionopac = kappa * grid::get_rho(nonemptymgi) * densityscalefactor;
+              const double chi_bb_expansionopac =
+                  kappa * grid::get_rho(nonemptymgi) * densityscalefactor *
+                  get_expopac_pathfactor(t_future + (dist / CLIGHT_PROP), next_bin_edge_nu, dnu_on_dl);
 
               const double tau_bin = chi_bb_expansionopac * (std::min(binedgedist, boundarydist) - dist);
               dist = std::min(binedgedist, boundarydist);
