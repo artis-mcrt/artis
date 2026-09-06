@@ -246,7 +246,8 @@ constexpr bool USE_RELATIVISTIC_DOPPLER_SHIFT;
 // photoionisation estimator and the bound-free heating estimator. With false, they keep the historic
 // rest-frame path length and are larger by one Doppler factor. The gamma-ray deposition estimator
 // always uses the comoving-frame path length, and the Sobolev line estimator needs no such factor.
-// This option changes the results.
+// The option also corrects the path that sweeps a bin of the expansion opacity, which is too long
+// with USE_RELATIVISTIC_DOPPLER_SHIFT. This option changes the results.
 constexpr bool FRAME_TRANSFORM_PATH_LENGTHS;
 
 // when converting mass fraction to a number density, use a mean atomic mass
