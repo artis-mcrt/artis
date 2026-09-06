@@ -569,9 +569,10 @@ void nltepop_matrix_add_boundbound(const int nonemptymgi, const int element, con
       const auto nnlevel_lower = levelpops[lower];
 
       const double epsilon_trans = epsilon_level - epsilon(lower_uniquelevelindex);
-      const double R = rad_deexcitation_ratecoeff(epsilon_trans, globals::alltrans.einstein_A[alltransindex],
-                                                  statweight, lower_statweight, nnlevel, nnlevel_lower, t_mid) *
-                       s_renorm[level];
+      const double R =
+          rad_deexcitation_ratecoeff(epsilon_trans, globals::alltrans.einstein_A[alltransindex], statweight,
+                                     lower_statweight, nnlevel, nnlevel_lower, grid::get_t_cmf(nonemptymgi, t_mid)) *
+          s_renorm[level];
       const double C =
           col_deexcitation_ratecoeff(T_e, clumpednne, epsilon_trans, statweight, lower_statweight, alltransindex) *
           s_renorm[level];

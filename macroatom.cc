@@ -97,7 +97,8 @@ DEVICE_FUNC void calculate_macroatom_transitionrates(std::span<double> levelrate
     const auto lower_statweight = stat_weight(lower_uniquelevelindex);
 
     const double R = rad_deexcitation_ratecoeff(epsilon_trans, A_ul, statweight, lower_statweight, nnlevel,
-                                                get_cellcache_levelpop(nonemptymgi, lower_uniquelevelindex), t_mid);
+                                                get_cellcache_levelpop(nonemptymgi, lower_uniquelevelindex),
+                                                grid::get_t_cmf(nonemptymgi, t_mid));
     const double C =
         col_deexcitation_ratecoeff(T_e, clumpednne, epsilon_trans, statweight, lower_statweight, alltransindex);
 
@@ -617,7 +618,8 @@ void macroatom_open_file() {
   const double B_ul = CLIGHTSQUAREDOVERTWOH / pow3(nu_trans) * einstein_A;
   const double B_lu = upper_statweight / statweight_lower * B_ul;
 
-  const double tau_sobolev = ((B_lu * nnlevel_lower) - (B_ul * nnlevel_upper)) * HCLIGHTOVERFOURPI * t_current;
+  const double tau_sobolev =
+      ((B_lu * nnlevel_lower) - (B_ul * nnlevel_upper)) * HCLIGHTOVERFOURPI * grid::get_t_cmf(nonemptymgi, t_current);
 
   if (tau_sobolev > 1e-100) {
     const double beta = 1.0 / tau_sobolev * (-std::expm1(-tau_sobolev));

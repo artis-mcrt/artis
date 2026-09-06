@@ -1829,6 +1829,14 @@ auto get_rho_tmin(const int modelgridindex) -> float { return modelgrid_input[mo
   return modelgrid_input[modelgridindex].initial_radial_pos_sum / assoc_cells;
 }
 
+// Lorentz factor of the homologous flow in a model cell. The velocity of a cell does not change with
+// time, so this factor is a constant of the cell.
+[[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_modelcell_lorentzfactor(const int modelgridindex) -> double {
+  const double betasq = pow2(get_modelcell_mean_radial_pos_tmin(modelgridindex) / globals::tmin / CLIGHT);
+
+  return 1. / std::sqrt(1. - betasq);
+}
+
 // volume averaged mean of the squared radius [cm^2] of a model cell at tmin
 [[gnu::pure]] [[nodiscard]] auto get_modelcell_mean_radial_pos_squared_tmin(const int modelgridindex) -> double {
   const int assoc_cells = get_numpropcells(modelgridindex);

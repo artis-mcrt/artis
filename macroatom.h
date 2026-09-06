@@ -57,16 +57,17 @@ DEVICE_FUNC void calculate_cellcache_macroatom_transitionrates(int nonemptymgi, 
                                                           int alltransindex) -> double;
 
 // Sobolev-escape radiative deexcitation rate; multiply by the upper-level population to obtain a rate per second.
-// Kromer & Sim (2009), Section 3.5.2, doi:10.1111/j.1365-2966.2009.15256.x.
+// Give grid::get_t_cmf() as t_cmf, so that the escape probability uses the same optical depth as
+// the transport. Kromer & Sim (2009), Section 3.5.2, doi:10.1111/j.1365-2966.2009.15256.x.
 [[gnu::const]] [[nodiscard]] constexpr auto rad_deexcitation_ratecoeff(
     const double epsilon_trans, const float A_ul, const double upperstatweight, const double lowerstatweight,
-    const double nnlevelupper, const double nnlevellower, const double t_current) -> double {
+    const double nnlevelupper, const double nnlevellower, const double t_cmf) -> double {
   const double nu_trans = epsilon_trans / H;
 
   const double B_ul = CLIGHTSQUAREDOVERTWOH / pow3(nu_trans) * A_ul;
   const double B_lu = upperstatweight / lowerstatweight * B_ul;
 
-  const double tau_sobolev = ((B_lu * nnlevellower) - (B_ul * nnlevelupper)) * HCLIGHTOVERFOURPI * t_current;
+  const double tau_sobolev = ((B_lu * nnlevellower) - (B_ul * nnlevelupper)) * HCLIGHTOVERFOURPI * t_cmf;
 
   if (tau_sobolev > 1e-100) {
     const double beta = 1.0 / tau_sobolev * (-std::expm1(-tau_sobolev));

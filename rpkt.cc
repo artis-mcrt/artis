@@ -68,7 +68,7 @@ auto get_nu_cmf_abort(const Vec3d& pos, const Vec3d& dir, const double prop_time
 }
 
 // Get the Sobolev optical depth of a line at the current propagation time, from the stimulated-emission
-// corrected level populations: (B_lu n_l - B_ul n_u) h c / (4 pi) times t_current for homologous
+// corrected level populations: (B_lu n_l - B_ul n_u) h c / (4 pi) times the Sobolev time for homologous
 // expansion. Negative values (population inversion) are clamped to zero.
 // With USECELLCACHE the level populations come from the cell cache rather than being recalculated.
 template <bool USECELLCACHE>
@@ -96,7 +96,7 @@ template <bool USECELLCACHE>
   const double B_ul = globals::linelist.B_ul[lineindex];
   const double B_lu = globals::linelist.B_lu[lineindex];
 
-  return std::max(((B_lu * n_l) - (B_ul * n_u)) * HCLIGHTOVERFOURPI * t_current, 0.);
+  return std::max(((B_lu * n_l) - (B_ul * n_u)) * HCLIGHTOVERFOURPI * grid::get_t_cmf(nonemptymgi, t_current), 0.);
 }
 
 // find any line or continuum interaction occurring before frequency decreases to nu_cmf_abort at distance abort_dist
@@ -172,7 +172,8 @@ auto get_possible_event(const int nonemptymgi, const Packet& pkt, const Continuu
 
         if constexpr (DETAILED_LINE_ESTIMATORS_ON) {
           move_pkt_withtime(pos, pkt.dir, prop_time, pkt.nu_rf, nu_cmf, pkt.e_rf, e_cmf, ldist);
-          radfield::update_lineestimator(nonemptymgi, lineindex, prop_time * CLIGHT * e_cmf / nu_cmf);
+          radfield::update_lineestimator(nonemptymgi, lineindex,
+                                         grid::get_t_cmf(nonemptymgi, prop_time) * CLIGHT * e_cmf / nu_cmf);
         }
 
         // the line and its parameters were already selected by closest_transition!
@@ -204,7 +205,8 @@ auto get_possible_event(const int nonemptymgi, const Packet& pkt, const Continuu
       }
 
       if constexpr (DETAILED_LINE_ESTIMATORS_ON) {
-        radfield::update_lineestimator(nonemptymgi, lineindex, prop_time * CLIGHT * e_cmf / nu_cmf);
+        radfield::update_lineestimator(nonemptymgi, lineindex,
+                                       grid::get_t_cmf(nonemptymgi, prop_time) * CLIGHT * e_cmf / nu_cmf);
       }
 
     } else {

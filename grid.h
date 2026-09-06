@@ -67,6 +67,7 @@ void do_MPI_Bcast_nlte_solution_ranges(ptrdiff_t nstart_nonempty, ptrdiff_t ndo_
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_ffegrp(int modelgridindex) -> float;
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_modelcell_mean_radial_pos_tmin(int modelgridindex) -> double;
 [[gnu::pure]] [[nodiscard]] auto get_modelcell_mean_radial_pos_squared_tmin(int modelgridindex) -> double;
+[[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_modelcell_lorentzfactor(int modelgridindex) -> double;
 void set_elem_massfrac(std::ptrdiff_t nonemptymgi, int element, float newmassfrac);
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_elem_numberdens(std::ptrdiff_t nonemptymgi, int element) -> double;
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_initenergyq(int modelgridindex) -> double;
@@ -84,6 +85,18 @@ void set_element_meanweight(std::ptrdiff_t nonemptymgi, int element, float meanw
 // must not be called for an empty model cell
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_nonemptymgi_of_mgi(int mgi) -> int;
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_mgi_of_nonemptymgi(std::ptrdiff_t nonemptymgi) -> int;
+
+// Get the time that an observer comoving with a cell measures, for the rest-frame time t_rf. Homologous
+// expansion keeps the velocity of a cell constant, so t_cmf = t_rf / gamma. The Sobolev length c * t / nu
+// is a comoving-frame path per unit comoving frequency, so it takes this time. The first-order Doppler
+// shift makes the two times equal to first order in v/c, so only the relativistic one needs the division.
+[[nodiscard]] DEVICE_FUNC inline auto get_t_cmf(const int nonemptymgi, const double t_rf) -> double {
+  if constexpr (FRAME_TRANSFORM_ESTIMATOR_PATH_LENGTHS && USE_RELATIVISTIC_DOPPLER_SHIFT) {
+    return t_rf / get_modelcell_lorentzfactor(get_mgi_of_nonemptymgi(nonemptymgi));
+  }
+
+  return t_rf;
+}
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_modelgridtype() -> GridType;
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_npts_model() -> int;
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_nonempty_npts_model() -> int;
