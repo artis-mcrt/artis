@@ -708,7 +708,8 @@ void add_to_lc_res(const Packet& pkt, const int dirbin, std::span<double> light_
 
   if (t_escape_cmf > globals::tmin && t_escape_cmf < globals::tmax) {
     const int nts = get_timestep(t_escape_cmf);
-    atomicadd_always(light_curve_lumcmf[nts], pkt.e_cmf / globals::timesteps[nts].width * solidanglefactor /
-                                                  globals::nprocs_exspec / inverse_gamma);
+    // The selected bin already spans comoving time, so its width needs no further frame conversion.
+    atomicadd_always(light_curve_lumcmf[nts],
+                     pkt.e_cmf / globals::timesteps[nts].width * solidanglefactor / globals::nprocs_exspec);
   }
 }

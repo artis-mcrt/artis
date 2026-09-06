@@ -37,10 +37,12 @@
 #include "mpi_logging.h"
 #include "nltepop.h"
 #include "nonthermal.h"
+#include "packet.h"
 #include "radfield.h"
 #include "random.h"
 #include "rpkt.h"
 #include "sn3d.h"
+#include "spectrum_lightcurve.h"
 #include "toms748.h"
 #include "vectors.h"
 
@@ -1078,6 +1080,51 @@ void test_chargetransfer_helpers() {
         "singly_charged_ratecoeff gives zero for an endothermic reaction");
 }
 
+void test_comoving_lightcurve_energy() {
+  const auto old_timesteps = globals::timesteps;
+  const auto old_tmin = globals::tmin;
+  const auto old_tmax = globals::tmax;
+  const auto old_ntimesteps = globals::ntimesteps;
+  const auto old_nprocs_exspec = globals::nprocs_exspec;
+  const auto old_vmax = globals::vmax;
+  globals::tmin = 1. * DAY;
+  globals::tmax = 4. * DAY;
+  globals::ntimesteps = 2;
+  globals::nprocs_exspec = 2;
+  globals::timesteps.resize(2);
+  globals::timesteps[0].start = DAY;
+  globals::timesteps[0].width = DAY;
+  globals::timesteps[1].start = 2. * DAY;
+  globals::timesteps[1].width = 2. * DAY;
+
+  for (const double beta : {0., 0.3, 0.6}) {
+    globals::vmax = beta * CLIGHT;
+    const double inverse_gamma = std::sqrt(1. - (beta * beta));
+    std::array<double, 2> luminosity{};
+    std::array<double, 2> luminosity_cmf{};
+    for (int nts = 0; nts < 2; nts++) {
+      Packet pkt;
+      pkt.dir = {1., 0., 0.};
+      pkt.e_cmf = 10. * (nts + 1);
+      pkt.e_rf = pkt.e_cmf * inverse_gamma / (1. - beta);
+      const double t_cmf = globals::timesteps[nts].start + (0.5 * globals::timesteps[nts].width);
+      pkt.escape_time = static_cast<float>(t_cmf / inverse_gamma);
+      pkt.pos = {globals::vmax * pkt.escape_time, 0., 0.};
+      add_to_lc_res(pkt, -1, luminosity, luminosity_cmf);
+    }
+    for (int nts = 0; nts < 2; nts++) {
+      check_close(luminosity_cmf[nts] * globals::timesteps[nts].width * globals::nprocs_exspec, 10. * (nts + 1), 1e-12,
+                  "comoving light curve conserves packet energy in each time bin");
+    }
+  }
+  globals::timesteps = old_timesteps;
+  globals::tmin = old_tmin;
+  globals::tmax = old_tmax;
+  globals::ntimesteps = old_ntimesteps;
+  globals::nprocs_exspec = old_nprocs_exspec;
+  globals::vmax = old_vmax;
+}
+
 // the TOMS 748 root finder and Gauss-Kronrod quadrature extracted from Boost.Math
 void test_toms748_and_gauss_kronrod() {
   const auto f_cosfixedpoint = [](const double x) { return std::cos(x) - x; };
@@ -1120,6 +1167,7 @@ auto main() -> int {
   test_parse_next_token();
   test_count_groundterm_levels();
   test_calculate_timesteps();
+  test_comoving_lightcurve_energy();
   test_rank_outfile_name();
   test_gth_solver();
   test_anderson_accelerator();
