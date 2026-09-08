@@ -252,8 +252,9 @@ constexpr bool USE_RELATIVISTIC_DOPPLER_SHIFT;
 // needs USE_RELATIVISTIC_DOPPLER_SHIFT as well. That length gives the line optical depth of an r-packet
 // and of a virtual packet, the expansion opacity table, the Sobolev line estimator, and the escape
 // probability in the macroatom and NLTE rate coefficients.
-// The adiabatic cooling rate, the time-dependent solvers and the particle deposition keep the
-// rest-frame time in both states of the option. This option changes the results.
+// The option also selects the comoving-frame time for the rates that a cell integrates over time: the
+// adiabatic cooling rate, the time step of the time-dependent solvers, and the stopping power of a
+// non-thermal particle. This option changes the results.
 constexpr bool FRAME_TRANSFORM_ESTIMATOR_PATH_LENGTHS;
 
 // when converting mass fraction to a number density, use a mean atomic mass

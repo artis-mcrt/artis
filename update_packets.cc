@@ -94,9 +94,13 @@ void do_nonthermal_predeposit(Packet& pkt, const int nts, const double ts_end) {
     const double particle_en = H * pkt.nu_cmf;  // energy of the particles in the packet
 
     // the positive energy loss rate per particle [erg/s] from Barnes et al. (2016). see their figure 6.
+    // The stopping power is a rate per comoving-frame second, and the times below are rest-frame times.
     const double endot_collisional =
-        (pkt.type == TYPE_NONTHERMAL_PREDEPOSIT_ALPHA) ? 5.e11 * MEV * rho : 4.e10 * MEV * rho;
-    // positive energy loss rate from adiabatic expansion in [erg/s], assuming homologous expansion
+        ((pkt.type == TYPE_NONTHERMAL_PREDEPOSIT_ALPHA) ? 5.e11 * MEV * rho : 4.e10 * MEV * rho) *
+        grid::get_t_cmf_on_t_rf(nonemptymgi);
+    // positive energy loss rate from adiabatic expansion in [erg/s], assuming homologous expansion. This
+    // rate needs no conversion: the comoving energy falls as 1 / t_cmf, and dt_cmf / dt_rf cancels the
+    // Lorentz factor, which leaves particle_en / ts with the rest-frame time.
     const double endot_adiabatic =
         (PARTICLE_THERMALISATION_SCHEME == ParticleThermalisationScheme::TIMEDEPENDENT_WITH_ADIABATIC_LOSS)
             ? particle_en / ts

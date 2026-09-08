@@ -2083,7 +2083,10 @@ auto get_time_dependent_dt(const int nonemptymgi, const int nts) -> std::optiona
   if (t_prev <= 0. || dt <= 0.) {
     return std::nullopt;
   }
-  return std::make_optional(dt);
+
+  // The rate coefficients and the heating and cooling rates are per comoving-frame second, so the callers
+  // need the interval that an observer comoving with the cell measures.
+  return std::make_optional(grid::get_t_cmf(nonemptymgi, dt));
 }
 
 // The electron density of the previous grid update, scaled to the current element densities: each element
