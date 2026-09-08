@@ -12,6 +12,7 @@
 #include <cctype>
 #include <cmath>
 #include <cstddef>
+#include <cstdint>
 #include <cstdlib>
 #include <cstring>
 #include <format>
@@ -41,6 +42,7 @@
 #include "packet.h"
 #include "random.h"
 #include "sn3d.h"
+#include "toms748.h"
 
 namespace decay {
 
@@ -107,6 +109,10 @@ std::vector<Nuclide> nuclides;
 std::vector<DecayPath> decaypaths;
 std::vector<int> decaypath_topnucindex;  // the chain-top nuclide index of each decaypath (flat copy for fast access)
 std::vector<int> decaypath_endnucindex;  // the chain-end nuclide index of each decaypath (flat copy for fast access)
+// the fraction of the chain-top nuclei of each decaypath that decayed past the end of the chain, at the first
+// and at the last time at which a packet can decay. calc_energy_per_massoftopnuc_decaypath() fills both.
+std::vector<double> decaypath_fdecayed_tmin;
+std::vector<double> decaypath_fdecayed_tmax;
 int he4_nucindex = -1;  // the nuclide index of He4 (or -1 if not in the network), the alpha-decay byproduct
 
 struct ZIsotope {
@@ -490,8 +496,49 @@ void filter_unused_nuclides(const std::span<const int> custom_zlist, const std::
   }
 }
 
+// the chain-end abundance per unit chain-top initial abundance for one decaypath at the given time, with the
+// chain end treated as stable (so it counts the fraction of chain-top nuclei that decayed past the chain end)
+auto calc_decaypath_unitfactor(const int decaypathindex, const double time, const bool useexpansionfactor) -> double {
+  auto lambdas = decaypaths[decaypathindex].lambdas;
+  lambdas[lambdas.size() - 1] = 0.;
+  return calculate_decaychain(1., lambdas, time - grid::get_t_model(), useexpansionfactor);
+}
+
+// the first time at which a packet can decay. Initial packets can decay from the model snapshot time.
+[[nodiscard]] auto get_tdecaymin() -> double { return INITIAL_PACKETS_ON ? grid::get_t_model() : globals::tmin; }
+
 auto sample_decaytime(const int decaypathindex, const double tdecaymin, const double tdecaymax, rngstate_type& rngstate)
     -> double {
+  // the two times are the same for every packet, so the decayed fractions come from the cache
+  assert_always(!decaypath_fdecayed_tmin.empty());
+  assert_testmodeonly(tdecaymin == get_tdecaymin());
+  assert_testmodeonly(tdecaymax == globals::tmax);
+  const double fdecayed_tmin = decaypath_fdecayed_tmin[decaypathindex];
+  const double fdecayed_tmax = decaypath_fdecayed_tmax[decaypathindex];
+  // the fraction that decays inside the time range. calc_energy_per_massoftopnuc_decaypath() uses the same
+  // fraction for the decay energy that this decaypath releases.
+  const double fdecayed_inrange = fdecayed_tmax - fdecayed_tmin;
+
+  // The rejection method below accepts this fraction of its draws, so it needs 1 / fdecayed_inrange draws on
+  // average. A chain with a mean lifetime much longer than the time range therefore needs too many draws.
+  // The float random generator also has a shortest possible lifetime of 6e-8 mean lifetimes, which is 140000
+  // days for U238. The rejection method then accepts no draw at all and does not stop.
+  constexpr double max_mean_rejection_draws = 1e6;
+  if ((fdecayed_inrange * max_mean_rejection_draws) < 1.) {
+    // Invert the cumulative probability of the chain lifetime. This gives the same distribution as the
+    // rejection method, but it costs a root find, so the rejection method stays for the usual case.
+    const double fdecayed_sampled = std::lerp(fdecayed_tmin, fdecayed_tmax, static_cast<double>(rng_uniform(rngstate)));
+    auto num_iterations = static_cast<std::uintmax_t>(50);
+    const auto [tdecay_lower, tdecay_upper] = toms748_solve(
+        [decaypathindex, fdecayed_sampled](const double time) {
+          return calc_decaypath_unitfactor(decaypathindex, time, false) - fdecayed_sampled;
+        },
+        tdecaymin, tdecaymax, fdecayed_tmin - fdecayed_sampled, fdecayed_tmax - fdecayed_sampled, ftol<1e-12>,
+        num_iterations);
+    return std::clamp(0.5 * (tdecay_lower + tdecay_upper), std::nextafter(tdecaymin, tdecaymax),
+                      std::nextafter(tdecaymax, tdecaymin));
+  }
+
   double tdecay = -1;
   const double t_model = grid::get_t_model();
   // rejection method. draw random times with the right distribution until they are within the correct range.
@@ -504,14 +551,6 @@ auto sample_decaytime(const int decaypathindex, const double tdecaymin, const do
     }
   }
   return tdecay;
-}
-
-// the chain-end abundance per unit chain-top initial abundance for one decaypath at the given time, with the
-// chain end treated as stable (so it counts the fraction of chain-top nuclei that decayed past the chain end)
-auto calc_decaypath_unitfactor(const int decaypathindex, const double time, const bool useexpansionfactor) -> double {
-  auto lambdas = decaypaths[decaypathindex].lambdas;
-  lambdas[lambdas.size() - 1] = 0.;
-  return calculate_decaychain(1., lambdas, time - grid::get_t_model(), useexpansionfactor);
 }
 
 // Get the total decay power per mass [erg/s/g] for a given decaypath
@@ -1079,14 +1118,19 @@ auto get_modelcell_endecay_per_mass(const int nonemptymgi,
 // during the simulation time [(tmodel if initial packets else tmin) to tmax]. Multiplying by a cell's initial
 // mass fraction of the chain-top nuclide gives the decay energy per unit ejecta mass
 auto calc_energy_per_massoftopnuc_decaypath() -> std::vector<double> {
-  const auto time_min_decay = INITIAL_PACKETS_ON ? grid::get_t_model() : globals::tmin;
   const auto num_decaypaths = get_num_decaypaths();
+  // The Bateman sum is expensive, and sample_decaytime() needs the same two values for every packet. Fill the
+  // cache here, because this function runs once and immediately before packet_init() places the pellets.
+  decaypath_fdecayed_tmin.resize(num_decaypaths);
+  decaypath_fdecayed_tmax.resize(num_decaypaths);
   std::vector<double> energy_per_massoftopnuc(num_decaypaths);
   for (int decaypathindex = 0; decaypathindex < num_decaypaths; decaypathindex++) {
     const auto& decaypath = decaypaths[decaypathindex];
+    decaypath_fdecayed_tmin[decaypathindex] = calc_decaypath_unitfactor(decaypathindex, get_tdecaymin(), false);
+    decaypath_fdecayed_tmax[decaypathindex] = calc_decaypath_unitfactor(decaypathindex, globals::tmax, false);
     // fraction of chain-top nuclei that decay past the end of the chain between the two times
-    const double fdecayed = std::max(0., calc_decaypath_unitfactor(decaypathindex, globals::tmax, false) -
-                                             calc_decaypath_unitfactor(decaypathindex, time_min_decay, false));
+    const double fdecayed =
+        std::max(0., decaypath_fdecayed_tmax[decaypathindex] - decaypath_fdecayed_tmin[decaypathindex]);
     energy_per_massoftopnuc[decaypathindex] =
         decaypath.branchproduct * fdecayed * get_decaypath_lastdecayenergy(decaypath) / nucmass(decaypath.nucindex[0]);
     assert_always(std::isfinite(energy_per_massoftopnuc[decaypathindex]));
@@ -1412,7 +1456,7 @@ void setup_radioactive_pellet(const double e_cmf_per_packet, const int nonemptym
   const int decaypathindex = decaychannelindex;
 
   // possibly allow decays before the first timestep
-  const double tdecaymin = !INITIAL_PACKETS_ON ? globals::tmin : grid::get_t_model();
+  const double tdecaymin = get_tdecaymin();
 
   if constexpr (UNIFORM_PELLET_ENERGIES) {
     pkt.tdecay = sample_decaytime(decaypathindex, tdecaymin, globals::tmax, get_rngstate(pkt));
