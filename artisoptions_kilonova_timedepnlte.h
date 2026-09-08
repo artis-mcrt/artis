@@ -142,6 +142,8 @@ constexpr bool RPKT_USE_EXPANSION_OPACITIES = false;
 
 constexpr bool VPKT_USE_EXPANSION_OPACITIES = false;
 
+constexpr bool FRAME_TRANSFORM_EXPANSION_OPACITIES_BINEDGEDIST = false;
+
 constexpr std::optional<float> RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY;
 
 constexpr RpktGreyType RPKT_GREY_TYPE = RpktGreyType::TANAKA2020_ELECTRONFRAC;
