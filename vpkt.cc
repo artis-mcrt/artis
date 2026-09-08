@@ -940,6 +940,9 @@ void write_timestep(const int nts, const bool is_final) {
 
     if (!is_final) {
       vpkt_contrib_file = std::ofstream(filename_dest, std::ios::app);
+      if (vpkt_contrib_file.fail()) {
+        fatal_crash("Could not open {}.", filename_dest);
+      }
     }
   }
 }
@@ -975,11 +978,17 @@ void init(const int nts, const bool continued_from_saved) {
       }
 
       std::println(vpkt_contrib_file, "");
-      vpkt_contrib_file.flush();
       vpkt_contrib_file.close();
+      if (vpkt_contrib_file.fail()) {
+        fatal_crash("Could not write or close {}.", filename);
+      }
     }
 
+    // A failed open gives a stream that discards every contribution without an error.
     vpkt_contrib_file = std::ofstream(filename, std::ios::app);
+    if (vpkt_contrib_file.fail()) {
+      fatal_crash("Could not open {}.", filename);
+    }
   }
 
   if (continued_from_saved) {
