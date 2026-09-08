@@ -3,6 +3,7 @@
 #ifndef GRID_H
 #define GRID_H
 
+#include <cmath>
 #include <cstddef>
 #include <tuple>
 
@@ -67,7 +68,6 @@ void do_MPI_Bcast_nlte_solution_ranges(ptrdiff_t nstart_nonempty, ptrdiff_t ndo_
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_ffegrp(int modelgridindex) -> float;
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_modelcell_mean_radial_pos_tmin(int modelgridindex) -> double;
 [[gnu::pure]] [[nodiscard]] auto get_modelcell_mean_radial_pos_squared_tmin(int modelgridindex) -> double;
-[[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_modelcell_lorentzfactor(int modelgridindex) -> double;
 void set_elem_massfrac(std::ptrdiff_t nonemptymgi, int element, float newmassfrac);
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_elem_numberdens(std::ptrdiff_t nonemptymgi, int element) -> double;
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_initenergyq(int modelgridindex) -> double;
@@ -93,7 +93,11 @@ void set_element_meanweight(std::ptrdiff_t nonemptymgi, int element, float meanw
 // equal to first order in v/c, so only the relativistic one needs the conversion.
 [[nodiscard]] DEVICE_FUNC inline auto get_t_cmf_on_t_rf(const int nonemptymgi) -> double {
   if constexpr (FRAME_TRANSFORM_ESTIMATOR_PATH_LENGTHS && USE_RELATIVISTIC_DOPPLER_SHIFT) {
-    return 1. / get_modelcell_lorentzfactor(get_mgi_of_nonemptymgi(nonemptymgi));
+    const double betasq =
+        pow2(get_modelcell_mean_radial_pos_tmin(get_mgi_of_nonemptymgi(nonemptymgi)) / globals::tmin / CLIGHT);
+    assert_always(betasq < 1.);
+
+    return std::sqrt(1. - betasq);
   }
 
   return 1.;
