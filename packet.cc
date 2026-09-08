@@ -185,7 +185,7 @@ auto read_text_packets(const std::string& filename) -> std::vector<Packet> {
 
     // Take the three columns of a position of the last emission. A packet that did not yet emit carries NAN
     // in em_pos, and a packet that returned to the thermal pool carries NAN in trueem_pos. These are the only
-    // columns of the file that hold the "nan" spelling.
+    // columns of the file that hold the "nan" spelling. An inf stays an error here, as in every other column.
     const auto parse_emission_position = [&remainder, &rowisvalid](Vec3d& position) {
       for (auto& component : position) {
         rowisvalid = rowisvalid && parse_next_token<true>(remainder, component);
@@ -244,7 +244,7 @@ auto read_text_packets(const std::string& filename) -> std::vector<Packet> {
     if (!rowisvalid) {
       fatal_crash("read_text_packets: could not parse the packet row '{}'", line);
     }
-    if (remainder.find_first_not_of(" \t\r") != std::string_view::npos) {
+    if (remainder.find_first_not_of(token_whitespace) != std::string_view::npos) {
       fatal_crash("read_text_packets: the packet row has more columns than the header: '{}'", line);
     }
   }

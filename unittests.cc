@@ -531,22 +531,27 @@ void test_parse_next_token() {
     check(!parse_next_token(remainder, d), "nan and inf spellings are rejected");
   }
   {
-    // packets*.out holds "nan" in the fields of a packet that never emitted, and the fields after it must
-    // still be read. Stream extraction failed on such a token and then skipped the rest of the row.
-    const auto row = std::format("{:g} {:g} {:g} {} {}", NAN, -NAN, INFINITY, 12, 3);
+    // packets*.out holds "nan" in the emission positions of a packet that never emitted, and the fields
+    // after it must still be read. Stream extraction failed on such a token and then skipped the rest of
+    // the row.
+    const auto row = std::format("{:g} {:g} {} {}", NAN, -NAN, 12, 3);
     auto remainder = std::string_view{row};
     double d = 0.;
     check(parse_next_token<true>(remainder, d) && std::isnan(d), "nan token is a value");
     check(parse_next_token<true>(remainder, d) && std::isnan(d), "negative nan token is a value");
-    check(parse_next_token<true>(remainder, d) && std::isinf(d), "inf token is a value");
     int i = -99;
-    check(parse_next_token<true>(remainder, i) && i == 12, "the field after a non-finite field is read");
+    check(parse_next_token<true>(remainder, i) && i == 12, "the field after a nan field is read");
     check(parse_next_token<true>(remainder, i) && i == 3, "the last field of the row is read");
+  }
+  for (const auto* const token : {"inf", "-inf", "INF"}) {
+    auto remainder = std::string_view{token};
+    double d = -99.;
+    check(!parse_next_token<true>(remainder, d), "an inf spelling is rejected even where a nan is a value");
   }
   {
     auto remainder = std::string_view{"nanx"};
     double d = -99.;
-    check(!parse_next_token<true>(remainder, d), "a non-finite token with trailing junk is still rejected");
+    check(!parse_next_token<true>(remainder, d), "a nan token with trailing junk is still rejected");
   }
   {
     auto remainder = std::string_view{"1e400"};

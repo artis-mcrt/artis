@@ -214,20 +214,24 @@ inline auto get_noncommentline(std::istream& input, std::string& line) -> bool {
   }
 }
 
+// the characters that separate two tokens of a line. A reader that tests for a token of its own must use this
+// set, so that it agrees with parse_next_token about where a line ends.
+constexpr std::string_view token_whitespace = " \t\r";
+
 // parse the next whitespace-delimited token of the line as a number and advance past it.
 // Return false if there is no token left or the token is not fully numeric.
 // Accepts the same number spellings as stream extraction: leading plus signs are allowed, magnitudes below the
 // range of T (or of double) read as zero, and out-of-range magnitudes are rejected.
-// ALLOW_NONFINITE selects whether the nan and inf spellings are a value or an error. Only packets*.out holds
-// such a value, in the fields of a packet that never emitted.
-template <bool ALLOW_NONFINITE = false, typename T>
+// ALLOW_NAN selects whether the nan spelling is a value or an error. Only packets*.out holds a nan, in the
+// emission positions of a packet that never emitted. No file of this code holds an inf, so an inf token is
+// always an error.
+template <bool ALLOW_NAN = false, typename T>
 [[nodiscard]] inline auto parse_next_token(std::string_view& remainder, T& value) -> bool {
-  constexpr std::string_view whitespace = " \t\r";
-  const auto tokenstart = remainder.find_first_not_of(whitespace);
+  const auto tokenstart = remainder.find_first_not_of(token_whitespace);
   if (tokenstart == std::string_view::npos) {
     return false;
   }
-  const auto tokenend = std::min(remainder.find_first_of(whitespace, tokenstart), remainder.size());
+  const auto tokenend = std::min(remainder.find_first_of(token_whitespace, tokenstart), remainder.size());
   auto token = remainder.substr(tokenstart, tokenend - tokenstart);
   // stream extraction accepted a leading plus sign, but from_chars does not. Only remove the plus if it is not
   // followed by another sign, so that malformed tokens like "+-0" stay rejected
@@ -243,7 +247,10 @@ template <bool ALLOW_NONFINITE = false, typename T>
   if constexpr (std::floating_point<T>) {
     if (ec == std::errc{} && !std::isfinite(value)) {
       // from_chars accepts the nan and inf spellings, but stream extraction did not
-      if constexpr (!ALLOW_NONFINITE) {
+      if constexpr (!ALLOW_NAN) {
+        return false;
+      }
+      if (!std::isnan(value)) {
         return false;
       }
     }
