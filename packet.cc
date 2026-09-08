@@ -15,8 +15,8 @@
 #include <print>
 #include <ranges>
 #include <span>
-#include <sstream>
 #include <string>
+#include <string_view>
 #include <thread>
 #include <utility>
 #include <vector>
@@ -164,88 +164,84 @@ auto read_text_packets(const std::string& filename) -> std::vector<Packet> {
   printlnlog("Reading {}", filename);
   auto packets_file = fstream_required(filename, std::ios::in);
 
-  std::istringstream ssline;
   std::string line;
   std::vector<Packet> packets;
   std::getline(packets_file, line);  // read header line to make sure it matches
   assert_always(line == get_packets_text_header());
 
-  // the column count of the header line, for the completeness check of each row
-  const int ncolumns = [] {
-    std::istringstream ssheader{get_packets_text_header()};
-    std::string token;
-    int n = 0;
-    while (ssheader >> token) {
-      n++;
-    }
-    return n;
-  }();
-
-  std::string token;
   packets.reserve(MPKTS);
   while (get_noncommentline(packets_file, line)) {
-    // A complete row has exactly the column count of the header. The count check finds a truncated
-    // row even in the trailing fields that can legitimately hold "nan", where the stream state
-    // check below cannot.
-    ssline.clear();
-    ssline.str(line);
-    int ntokens = 0;
-    while (ssline >> token) {
-      ntokens++;
-    }
-    if (ntokens != ncolumns) {
-      fatal_crash("read_text_packets: the row has {} of {} columns: '{}'", ntokens, ncolumns, line);
-    }
-
-    ssline.clear();
-    ssline.str(line);
-
     packets.emplace_back();
     Packet& pkt = packets.back();
 
+    auto remainder = std::string_view{line};
+    bool rowisvalid = true;
+
+    // Take the next column of the row. A packet that never emitted carries NAN in em_pos, trueem_pos,
+    // absorptionfreq and the emission times, so the parser must accept the "nan" spelling as a value.
+    const auto parse_column = [&remainder, &rowisvalid](auto& value) {
+      rowisvalid = rowisvalid && parse_next_token<true>(remainder, value);
+    };
+
     int pkt_type_in = 0;
-    ssline >> pkt.number >> pkt.cellindex >> pkt_type_in;
+    parse_column(pkt.number);
+    parse_column(pkt.cellindex);
+    parse_column(pkt_type_in);
     pkt.type = static_cast<enum packet_type>(pkt_type_in);
 
-    ssline >> pkt.pos[0] >> pkt.pos[1] >> pkt.pos[2];
-    ssline >> pkt.dir[0] >> pkt.dir[1] >> pkt.dir[2];
-    ssline >> pkt.tdecay;
-    ssline >> pkt.e_cmf >> pkt.e_rf >> pkt.nu_cmf >> pkt.nu_rf;
+    parse_column(pkt.pos[0]);
+    parse_column(pkt.pos[1]);
+    parse_column(pkt.pos[2]);
+    parse_column(pkt.dir[0]);
+    parse_column(pkt.dir[1]);
+    parse_column(pkt.dir[2]);
+    parse_column(pkt.tdecay);
+    parse_column(pkt.e_cmf);
+    parse_column(pkt.e_rf);
+    parse_column(pkt.nu_cmf);
+    parse_column(pkt.nu_rf);
 
     int escape_type = 0;
-    ssline >> escape_type >> pkt.escape_time;
+    parse_column(escape_type);
+    parse_column(pkt.escape_time);
     pkt.escape_type = static_cast<enum packet_type>(escape_type);
 
-    ssline >> pkt.emissiontype >> pkt.trueemissiontype;
+    parse_column(pkt.emissiontype);
+    parse_column(pkt.trueemissiontype);
 
-    // Every field up to this point is never NAN, so a failed stream here is a truncated or corrupt
-    // row, e.g. from a partial write on a full file system. A silently accepted truncated row would
-    // drop the packet from the spectra (escape_type stays 0) with no diagnostic.
-    if (ssline.fail()) {
-      fatal_crash("read_text_packets: could not parse the packet row '{}'", line);
-    }
-
-    ssline >> pkt.em_pos[0] >> pkt.em_pos[1] >> pkt.em_pos[2];
-    ssline >> pkt.absorptiontype >> pkt.absorptionfreq >> pkt.nscatterings;
-    ssline >> pkt.em_time;
+    parse_column(pkt.em_pos[0]);
+    parse_column(pkt.em_pos[1]);
+    parse_column(pkt.em_pos[2]);
+    parse_column(pkt.absorptiontype);
+    parse_column(pkt.absorptionfreq);
+    parse_column(pkt.nscatterings);
+    parse_column(pkt.em_time);
 
     if constexpr (POL_ON) {
-      ssline >> pkt.stokes_q >> pkt.stokes_u;
+      parse_column(pkt.stokes_q);
+      parse_column(pkt.stokes_u);
     }
 
     int int_originated_from_particlenotgamma = 0;
-    ssline >> int_originated_from_particlenotgamma;
+    parse_column(int_originated_from_particlenotgamma);
     pkt.originated_from_particlenotgamma = (int_originated_from_particlenotgamma != 0);
 
-    ssline >> pkt.trueem_pos[0] >> pkt.trueem_pos[1] >> pkt.trueem_pos[2];
-    ssline >> pkt.trueem_time;
-    ssline >> pkt.pellet_nucindex;
-    ssline >> pkt.pellet_decaytype;
+    parse_column(pkt.trueem_pos[0]);
+    parse_column(pkt.trueem_pos[1]);
+    parse_column(pkt.trueem_pos[2]);
+    parse_column(pkt.trueem_time);
+    parse_column(pkt.pellet_nucindex);
+    parse_column(pkt.pellet_decaytype);
 
-    // Deliberately no check on the stream state here. Packets that never emitted carry NAN in
-    // em_pos, trueem_pos and absorptionfreq, and extracting "nan" into a floating point type sets
-    // failbit in libstdc++, so a failed stream is an ordinary outcome for a valid row rather than a
-    // sign of a malformed one. Rejecting it stops exspec from reading its own packets files.
+    // A row must hold every column of the header and no more. A short or corrupt row, e.g. from a partial
+    // write on a full file system, otherwise leaves the remaining fields at their defaults. That would drop
+    // the packet from the spectra (escape_type stays 0) with no diagnostic.
+    if (!rowisvalid) {
+      fatal_crash("read_text_packets: could not parse the packet row '{}'", line);
+    }
+    if (remainder.find_first_not_of(" \t\r") != std::string_view::npos) {
+      fatal_crash("read_text_packets: the packet row has more columns than the header: '{}'", line);
+    }
   }
 
   printlnlog("  read {} packets from {} (MPKTS {})", std::ssize(packets), filename, MPKTS);
