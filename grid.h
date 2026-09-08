@@ -89,8 +89,8 @@ void set_element_meanweight(std::ptrdiff_t nonemptymgi, int element, float meanw
 // Get the ratio of a comoving-frame time to a rest-frame time for a cell, which is one over the Lorentz
 // factor. Homologous expansion keeps the velocity of a cell constant, so the ratio also converts a time
 // interval and a rate. The Sobolev length c * t / nu takes the comoving-frame time, because it is a
-// comoving-frame path per unit comoving frequency. The first-order Doppler shift makes the two frames equal to first
-// order in v/c, so only the relativistic one needs the conversion.
+// comoving-frame path per unit comoving frequency. The first-order Doppler shift makes the two frames
+// equal to first order in v/c, so only the relativistic one needs the conversion.
 [[nodiscard]] DEVICE_FUNC inline auto get_t_cmf_on_t_rf(const int nonemptymgi) -> double {
   if constexpr (FRAME_TRANSFORM_ESTIMATOR_PATH_LENGTHS && USE_RELATIVISTIC_DOPPLER_SHIFT) {
     return 1. / get_modelcell_lorentzfactor(get_mgi_of_nonemptymgi(nonemptymgi));
