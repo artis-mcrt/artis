@@ -523,7 +523,7 @@ void update_estimators(const Packet& pkt, const double doppler, const double dis
   // The comoving-frame estimator needs the comoving-frame path ds_cmf = doppler * ds_rf. The cell keeps
   // its four-volume in both frames. The Sobolev estimators take the comoving-frame time instead, through
   // grid::get_t_cmf_on_t_rf().
-  const double distance_e_cmf = distance * pkt.e_cmf * (FRAME_TRANSFORM_ESTIMATOR_PATH_LENGTHS ? doppler : 1.);
+  const double distance_e_cmf = distance * pkt.e_cmf * (FRAME_TRANSFORM_PATH_LENGTHS_AND_TIMES ? doppler : 1.);
 
   radfield::update_estimators(nonemptymgi, distance_e_cmf, nu_cmf, chi_rpkt_cont.phixslist, thickcell);
 

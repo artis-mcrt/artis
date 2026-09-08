@@ -241,7 +241,8 @@ constexpr bool SF_AUGER_CONTRIBUTION_ON;
 
 constexpr bool USE_RELATIVISTIC_DOPPLER_SHIFT;
 
-// use the comoving-frame path length ds_rf * doppler in these estimators:
+// transform the rest-frame path lengths and times of a cell into the comoving frame.
+// The comoving-frame path length ds_rf * doppler goes into these estimators:
 // - J, nuJ and the radiation field bins;
 // - the free-free heating estimator;
 // - the photoionisation estimator and the bound-free heating estimator;
@@ -255,7 +256,7 @@ constexpr bool USE_RELATIVISTIC_DOPPLER_SHIFT;
 // The option also selects the comoving-frame time for the rates that a cell integrates over time: the
 // adiabatic cooling rate, the time step of the time-dependent solvers, and the stopping power of a
 // non-thermal particle. This option changes the results.
-constexpr bool FRAME_TRANSFORM_ESTIMATOR_PATH_LENGTHS;
+constexpr bool FRAME_TRANSFORM_PATH_LENGTHS_AND_TIMES;
 
 // when converting mass fraction to a number density, use a mean atomic mass
 // calculated from the nuclear composition (plus stable component),

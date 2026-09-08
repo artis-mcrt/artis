@@ -92,7 +92,7 @@ void set_element_meanweight(std::ptrdiff_t nonemptymgi, int element, float meanw
 // comoving-frame path per unit comoving frequency. The first-order Doppler shift makes the two frames
 // equal to first order in v/c, so only the relativistic one needs the conversion.
 [[nodiscard]] DEVICE_FUNC inline auto get_t_cmf_on_t_rf(const int nonemptymgi) -> double {
-  if constexpr (FRAME_TRANSFORM_ESTIMATOR_PATH_LENGTHS && USE_RELATIVISTIC_DOPPLER_SHIFT) {
+  if constexpr (FRAME_TRANSFORM_PATH_LENGTHS_AND_TIMES && USE_RELATIVISTIC_DOPPLER_SHIFT) {
     const double betasq =
         pow2(get_modelcell_mean_radial_pos_tmin(get_mgi_of_nonemptymgi(nonemptymgi)) / globals::tmin / CLIGHT);
     assert_always(betasq < 1.);
