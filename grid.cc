@@ -2413,7 +2413,12 @@ void write_grid_restart_data(const int timestep) {
   radfield::write_restart_data(gridsave_file);
   nonthermal::write_restart_data(gridsave_file);
   nltepop_write_restart_data(gridsave_file);
-  fclose(gridsave_file);
+  // Check earlier writes and the final flush before the caller replaces the previous checkpoint.
+  const bool write_failed = (ferror(gridsave_file) != 0);
+  const bool close_failed = (fclose(gridsave_file) != 0);
+  if (write_failed || close_failed) {
+    fatal_crash("Could not write or close {}.", filename);
+  }
   const auto write_restart_duration =
       std::chrono::duration<double>(std::chrono::steady_clock::now() - sys_time_start_write_restart).count();
   printlnlog("done in {:.1f} seconds.", write_restart_duration);

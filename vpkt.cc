@@ -588,6 +588,10 @@ void write_vspecpol(const std::string& filename, const bool full_precision) {
       std::println(vspecpol_file, "");
     }
   }
+  vspecpol_file.close();
+  if (vspecpol_file.fail()) {
+    fatal_crash("Could not write or close {}.", filename);
+  }
 }
 
 void read_vspecpol(const int my_rank, const int nts) {
@@ -667,6 +671,10 @@ void write_vpkt_grid(const std::string& filename, const bool full_precision) {
         }
       }
     }
+  }
+  vpkt_grid_file.close();
+  if (vpkt_grid_file.fail()) {
+    fatal_crash("Could not write or close {}.", filename);
   }
 }
 
@@ -921,6 +929,9 @@ void write_timestep(const int nts, const bool is_final) {
   if constexpr (VPKT_WRITE_CONTRIBS) {
     vpkt_contrib_file.close();
     const auto filename_source = std::format("vpackets_{:04d}_ts{}.tmp", my_rank, is_final ? nts + 1 : nts);
+    if (vpkt_contrib_file.fail()) {
+      fatal_crash("Could not write or close {}.", filename_source);
+    }
     const auto filename_dest = is_final ? std::format("vpackets_{:04d}.out", my_rank)
                                         : std::format("vpackets_{:04d}_ts{}.tmp", my_rank, nts + 1);
 
