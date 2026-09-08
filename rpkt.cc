@@ -248,7 +248,8 @@ auto get_possible_event_expansion_opacity(const int nonemptymgi, Packet& pkt, co
       // opacity in units of [cm^2/g]
       const auto kappa = expansionopacities[(nonemptymgi * expopac_nbins) + binindex];
       // absorption coefficient in units of [1/cm]
-      chi_bb_expansionopac = kappa * grid::get_rho(nonemptymgi);
+      chi_bb_expansionopac =
+          kappa * grid::get_rho(nonemptymgi) * get_expopac_pathfactor(prop_time, next_bin_edge_nu, dnu_on_dl);
     }
 
     const double chi_tot = chi_cont + chi_bb_expansionopac;
