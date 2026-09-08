@@ -309,6 +309,14 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
           nu_cmf);
 
       const double dnu_on_dl = (nu_cmf_boundary - nu_cmf) / boundarydist;
+
+      // The comoving frequency decreases strictly along the path. A gradient that is not negative and finite
+      // comes from rounding, when boundarydist is too short to change the frequency. The packet then reaches
+      // no line resonance in this cell, and it takes only the continuum opacity above. Without this test
+      // get_linedistance() gives an infinite distance, and the loops below add every remaining line.
+      // do_rpkt_step() has the same test.
+      const bool nu_cmf_decreases = std::isfinite(dnu_on_dl) && (dnu_on_dl < 0.);
+
       // Trace individual lines from nu_cmf until dist_limit. Returns false when all vpkt opacity setups exceed tau_max.
       const auto trace_lines_to_dist = [&](const double dist_limit) -> bool {
         while (true) {
@@ -373,7 +381,7 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
         const auto binindex_start =
             std::max(get_linearbinindex(1e8 * CLIGHT / nu_cmf, expopac_lambdamin, expopac_deltalambda), -1Z);
 
-        if (binindex_start < expopac_nbins) {
+        if (nu_cmf_decreases && binindex_start < expopac_nbins) {
           // trace line-by-line from nu_cmf to the next bin edge, because the expansion opacity bin at nu_cmf includes
           // lines with nu > nu_cmf
           const auto first_bin_edge_nu =
@@ -428,7 +436,7 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
           }
         }  // if (binindex_start < expopac_nbins)
       } else {
-        if (!trace_lines_to_dist(boundarydist)) {
+        if (nu_cmf_decreases && !trace_lines_to_dist(boundarydist)) {
           return false;
         }
       }
