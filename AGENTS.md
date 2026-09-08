@@ -278,10 +278,12 @@ test (see "Input and output files").
   `// cppcheck-suppress <id>` comment. That comment works because the command
   has `--inline-suppr`.
 - The pre-commit hooks (`.pre-commit-config.yaml`, run with `prek`) apply
-  clang-format, about a dozen whitespace and file checks, and a
-  `make OPTIMIZE=OFF` compile. `prek run --all-files` runs all of them. CI runs
-  the same hooks but skips the compile. One check finds a destroyed symlink,
-  which is important here: `CLAUDE.md` is a symlink to `AGENTS.md`.
+  clang-format, ruff for the Python scripts in `scripts/`, about a dozen
+  whitespace and file checks, and a `make OPTIMIZE=OFF` compile.
+  `scripts/ruff.toml` sets the limit of 120 columns for those scripts.
+  `prek run --all-files` runs all of them. CI runs the same hooks but skips
+  the compile. One check finds a destroyed symlink, which is important here:
+  `CLAUDE.md` is a symlink to `AGENTS.md`.
 
 ## Code conventions
 
@@ -442,7 +444,7 @@ The code must compile with nvc++ and with hipcc, also with `STDPAR=ON GPU=ON`.
   `packet_type`, `absorption_type`, and the `EMTYPE_*` constants in `packet.h`.
   Do not renumber them.
 - `sn3d` writes one log file for each rank and thread
-  (`output_<rank>-<thread>.txt`). The option `-o JOBFOLDER` moves the per-job
+  (`output_<rank>-<thread>.txt`). The option `-o OUTPUTFOLDER` moves the per-job
   files into a subfolder. The run-level files, e.g. the restart files, stay in
   the run folder, together with a symlink to the log of rank 0. The standard
   output stays quiet unless there is a crash.
