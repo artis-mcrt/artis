@@ -358,7 +358,7 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
           // t_line in the Sobolev optical depth this gives the expected tau_sobolev ∝ t^-2.
           const double popscalefactor = pow3(t_gridstate / t_line);
           const double tau_line = std::max(0., ((B_lu * n_l) - (B_ul * n_u)) * popscalefactor * HCLIGHTOVERFOURPI *
-                                                   grid::get_t_cmf(nonemptymgi, t_line));
+                                                   t_line * grid::get_t_cmf_on_t_rf(nonemptymgi));
 
           // Check on the element to exclude (or -1 for no line opacity)
           const int Z = get_atomicnumber(element);

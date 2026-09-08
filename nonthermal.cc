@@ -1844,7 +1844,7 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const std::a
           const double t_mid = globals::timesteps[timestep].mid;
           const double radexc_ratecoeff = rad_excitation_ratecoeff(
               nonemptymgi, statweight_upper, globals::alltrans.einstein_A[alltransindex], epsilon_trans, nnlevel_lower,
-              nnlevel_upper, statweight_lower, alltransindex, grid::get_t_cmf(nonemptymgi, t_mid));
+              nnlevel_upper, statweight_lower, alltransindex, t_mid * grid::get_t_cmf_on_t_rf(nonemptymgi));
 
           const double collexc_ratecoeff =
               col_excitation_ratecoeff(T_e, grid::get_clumpfactor(nonemptymgi) * nne, epsilon_trans, statweight_upper,

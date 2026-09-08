@@ -96,7 +96,8 @@ template <bool USECELLCACHE>
   const double B_ul = globals::linelist.B_ul[lineindex];
   const double B_lu = globals::linelist.B_lu[lineindex];
 
-  return std::max(((B_lu * n_l) - (B_ul * n_u)) * HCLIGHTOVERFOURPI * grid::get_t_cmf(nonemptymgi, t_current), 0.);
+  return std::max(((B_lu * n_l) - (B_ul * n_u)) * HCLIGHTOVERFOURPI * t_current * grid::get_t_cmf_on_t_rf(nonemptymgi),
+                  0.);
 }
 
 // find any line or continuum interaction occurring before frequency decreases to nu_cmf_abort at distance abort_dist
@@ -173,7 +174,7 @@ auto get_possible_event(const int nonemptymgi, const Packet& pkt, const Continuu
         if constexpr (DETAILED_LINE_ESTIMATORS_ON) {
           move_pkt_withtime(pos, pkt.dir, prop_time, pkt.nu_rf, nu_cmf, pkt.e_rf, e_cmf, ldist);
           radfield::update_lineestimator(nonemptymgi, lineindex,
-                                         grid::get_t_cmf(nonemptymgi, prop_time) * CLIGHT * e_cmf / nu_cmf);
+                                         prop_time * grid::get_t_cmf_on_t_rf(nonemptymgi) * CLIGHT * e_cmf / nu_cmf);
         }
 
         // the line and its parameters were already selected by closest_transition!
@@ -206,7 +207,7 @@ auto get_possible_event(const int nonemptymgi, const Packet& pkt, const Continuu
 
       if constexpr (DETAILED_LINE_ESTIMATORS_ON) {
         radfield::update_lineestimator(nonemptymgi, lineindex,
-                                       grid::get_t_cmf(nonemptymgi, prop_time) * CLIGHT * e_cmf / nu_cmf);
+                                       prop_time * grid::get_t_cmf_on_t_rf(nonemptymgi) * CLIGHT * e_cmf / nu_cmf);
       }
 
     } else {
@@ -521,7 +522,7 @@ void update_estimators(const Packet& pkt, const double doppler, const double dis
 
   // The comoving-frame estimator needs the comoving-frame path ds_cmf = doppler * ds_rf. The cell keeps
   // its four-volume in both frames. The Sobolev estimators take the comoving-frame time instead, through
-  // grid::get_t_cmf().
+  // grid::get_t_cmf_on_t_rf().
   const double distance_e_cmf = distance * pkt.e_cmf * (FRAME_TRANSFORM_ESTIMATOR_PATH_LENGTHS ? doppler : 1.);
 
   radfield::update_estimators(nonemptymgi, distance_e_cmf, nu_cmf, chi_rpkt_cont.phixslist, thickcell);

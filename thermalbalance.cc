@@ -178,7 +178,7 @@ auto T_e_eqn_heating_minus_cooling(const double T_e, int nonemptymgi, const doub
   const double p = nntot * KB * T_e;  // ideal gas pressure in [erg/cm^3]
   const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
   const double volumetmin = grid::get_modelcell_assocvolume_tmin(modelgridindex);
-  const auto t_cmf = grid::get_t_cmf(nonemptymgi, t_current);
+  const auto t_cmf = t_current * grid::get_t_cmf_on_t_rf(nonemptymgi);
   const double dV_on_dt = 3 * volumetmin / pow3(globals::tmin) * pow2(t_cmf);
   const double V = volumetmin * pow3(t_cmf / globals::tmin);
   heatingcoolingrates.cooling_adiabatic = p * dV_on_dt / V;

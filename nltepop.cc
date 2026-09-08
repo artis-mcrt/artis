@@ -525,7 +525,7 @@ void nltepop_matrix_add_boundbound(const int nonemptymgi, const int element, con
                                    const int first_ion_used) {
   const auto T_e = grid::Te_allcells[nonemptymgi];
   const auto clumpednne = grid::get_clumpfactor(nonemptymgi) * grid::get_nne(nonemptymgi);
-  const auto t_cmf = grid::get_t_cmf(nonemptymgi, t_mid);
+  const auto t_cmf = t_mid * grid::get_t_cmf_on_t_rf(nonemptymgi);
   const int nlevels = get_nlevels(element, ion);
   const auto ionuniquelevelindexstart = get_ionuniquelevelindexstart(element, ion);
   const auto nlte_dimension = rate_matrices.used_nlte_dimension;
@@ -2086,7 +2086,7 @@ auto get_time_dependent_dt(const int nonemptymgi, const int nts) -> std::optiona
 
   // The rate coefficients and the heating and cooling rates are per comoving-frame second, so the callers
   // need the interval that an observer comoving with the cell measures.
-  return std::make_optional(grid::get_t_cmf(nonemptymgi, dt));
+  return std::make_optional(dt * grid::get_t_cmf_on_t_rf(nonemptymgi));
 }
 
 // The electron density of the previous grid update, scaled to the current element densities: each element

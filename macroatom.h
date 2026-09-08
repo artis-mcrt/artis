@@ -24,7 +24,7 @@ DEVICE_FUNC void calculate_cellcache_macroatom_transitionrates(int nonemptymgi, 
 // multiplied by its clumping factor; the startup recombination-rate calibration in ratecoeff.cc deliberately
 // passes 1 instead, so that the factor cancels out of the coefficient it is deriving.
 // Radiative excitation rate. Multiply by the lower-level population to obtain a rate per second.
-// Give grid::get_t_cmf() as t_cmf, as rad_deexcitation_ratecoeff() also needs.
+// Give the comoving-frame time as t_cmf, as rad_deexcitation_ratecoeff() also needs.
 [[gnu::pure]] [[nodiscard]] auto rad_excitation_ratecoeff(int nonemptymgi, double upper_statweight, double einstein_A,
                                                           double epsilon_trans, double nnlevel_lower,
                                                           double nnlevel_upper, double statweight_lower,
@@ -58,7 +58,7 @@ DEVICE_FUNC void calculate_cellcache_macroatom_transitionrates(int nonemptymgi, 
                                                           int alltransindex) -> double;
 
 // Sobolev-escape radiative deexcitation rate; multiply by the upper-level population to obtain a rate per second.
-// Give grid::get_t_cmf() as t_cmf. The escape probability then uses the same optical depth as the
+// Give the comoving-frame time as t_cmf. The escape probability then uses the same optical depth as the
 // transport. Kromer & Sim (2009), Section 3.5.2, doi:10.1111/j.1365-2966.2009.15256.x.
 [[gnu::const]] [[nodiscard]] constexpr auto rad_deexcitation_ratecoeff(
     const double epsilon_trans, const float A_ul, const double upperstatweight, const double lowerstatweight,

@@ -73,7 +73,7 @@ DEVICE_FUNC void calculate_macroatom_transitionrates(std::span<double> levelrate
 
   const auto T_e = grid::Te_allcells[nonemptymgi];
   const auto clumpednne = grid::get_clumpfactor(nonemptymgi) * grid::get_nne(nonemptymgi);
-  const auto t_cmf = grid::get_t_cmf(nonemptymgi, t_mid);
+  const auto t_cmf = t_mid * grid::get_t_cmf_on_t_rf(nonemptymgi);
   const double epsilon_current = epsilon(uniquelevelindex);
   const double statweight = stat_weight(uniquelevelindex);
   const auto nnlevel = get_cellcache_levelpop(nonemptymgi, uniquelevelindex);
