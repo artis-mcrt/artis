@@ -2171,7 +2171,13 @@ void update_parameterfile(const int nts) {
     std::println(fileout, "{}", line);
   }
 
+  if (file.bad() || !file.eof()) {
+    fatal_crash("Could not read input.txt for the parameter file update.");
+  }
   fileout.close();
+  if (fileout.fail()) {
+    fatal_crash("Could not write or close input.txt.tmp.");
+  }
   file.close();
 
   std::error_code rename_error;
@@ -2182,8 +2188,8 @@ void update_parameterfile(const int nts) {
     std::filesystem::rename("input.txt.tmp", "input.txt", rename_error);
   }
   if (rename_error) {
-    printlnlog("[error] failed to move input.txt.tmp to {}: {}", (nts < 0) ? "input-newrun.txt" : "input.txt",
-               rename_error.message());
+    fatal_crash("Could not move input.txt.tmp to {}: {}", (nts < 0) ? "input-newrun.txt" : "input.txt",
+                rename_error.message());
   }
 
   printlnlog("done");

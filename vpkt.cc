@@ -588,6 +588,10 @@ void write_vspecpol(const std::string& filename, const bool full_precision) {
       std::println(vspecpol_file, "");
     }
   }
+  vspecpol_file.close();
+  if (vspecpol_file.fail()) {
+    fatal_crash("Could not write or close {}.", filename);
+  }
 }
 
 void read_vspecpol(const int my_rank, const int nts) {
@@ -667,6 +671,10 @@ void write_vpkt_grid(const std::string& filename, const bool full_precision) {
         }
       }
     }
+  }
+  vpkt_grid_file.close();
+  if (vpkt_grid_file.fail()) {
+    fatal_crash("Could not write or close {}.", filename);
   }
 }
 
@@ -921,6 +929,9 @@ void write_timestep(const int nts, const bool is_final) {
   if constexpr (VPKT_WRITE_CONTRIBS) {
     vpkt_contrib_file.close();
     const auto filename_source = std::format("vpackets_{:04d}_ts{}.tmp", my_rank, is_final ? nts + 1 : nts);
+    if (vpkt_contrib_file.fail()) {
+      fatal_crash("Could not write or close {}.", filename_source);
+    }
     const auto filename_dest = is_final ? std::format("vpackets_{:04d}.out", my_rank)
                                         : std::format("vpackets_{:04d}_ts{}.tmp", my_rank, nts + 1);
 
@@ -929,6 +940,9 @@ void write_timestep(const int nts, const bool is_final) {
 
     if (!is_final) {
       vpkt_contrib_file = std::ofstream(filename_dest, std::ios::app);
+      if (vpkt_contrib_file.fail()) {
+        fatal_crash("Could not open {}.", filename_dest);
+      }
     }
   }
 }
@@ -964,11 +978,17 @@ void init(const int nts, const bool continued_from_saved) {
       }
 
       std::println(vpkt_contrib_file, "");
-      vpkt_contrib_file.flush();
       vpkt_contrib_file.close();
+      if (vpkt_contrib_file.fail()) {
+        fatal_crash("Could not write or close {}.", filename);
+      }
     }
 
+    // A failed open gives a stream that discards every contribution without an error.
     vpkt_contrib_file = std::ofstream(filename, std::ios::app);
+    if (vpkt_contrib_file.fail()) {
+      fatal_crash("Could not open {}.", filename);
+    }
   }
 
   if (continued_from_saved) {
