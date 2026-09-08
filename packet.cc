@@ -177,10 +177,19 @@ auto read_text_packets(const std::string& filename) -> std::vector<Packet> {
     auto remainder = std::string_view{line};
     bool rowisvalid = true;
 
-    // Take the next column of the row. A packet that never emitted carries NAN in em_pos, trueem_pos,
-    // absorptionfreq and the emission times, so the parser must accept the "nan" spelling as a value.
+    // Take the next column of the row. Every column except the two emission positions below is finite, so a
+    // "nan" there is a corrupt row and the strict parser rejects it.
     const auto parse_column = [&remainder, &rowisvalid](auto& value) {
-      rowisvalid = rowisvalid && parse_next_token<true>(remainder, value);
+      rowisvalid = rowisvalid && parse_next_token(remainder, value);
+    };
+
+    // Take the three columns of a position of the last emission. A packet that did not yet emit carries NAN
+    // in em_pos, and a packet that returned to the thermal pool carries NAN in trueem_pos. These are the only
+    // columns of the file that hold the "nan" spelling.
+    const auto parse_emission_position = [&remainder, &rowisvalid](Vec3d& position) {
+      for (auto& component : position) {
+        rowisvalid = rowisvalid && parse_next_token<true>(remainder, component);
+      }
     };
 
     int pkt_type_in = 0;
@@ -209,9 +218,7 @@ auto read_text_packets(const std::string& filename) -> std::vector<Packet> {
     parse_column(pkt.emissiontype);
     parse_column(pkt.trueemissiontype);
 
-    parse_column(pkt.em_pos[0]);
-    parse_column(pkt.em_pos[1]);
-    parse_column(pkt.em_pos[2]);
+    parse_emission_position(pkt.em_pos);
     parse_column(pkt.absorptiontype);
     parse_column(pkt.absorptionfreq);
     parse_column(pkt.nscatterings);
@@ -226,9 +233,7 @@ auto read_text_packets(const std::string& filename) -> std::vector<Packet> {
     parse_column(int_originated_from_particlenotgamma);
     pkt.originated_from_particlenotgamma = (int_originated_from_particlenotgamma != 0);
 
-    parse_column(pkt.trueem_pos[0]);
-    parse_column(pkt.trueem_pos[1]);
-    parse_column(pkt.trueem_pos[2]);
+    parse_emission_position(pkt.trueem_pos);
     parse_column(pkt.trueem_time);
     parse_column(pkt.pellet_nucindex);
     parse_column(pkt.pellet_decaytype);
