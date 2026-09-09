@@ -219,6 +219,74 @@ auto calculate_bfheatingcoeff(const int element, const int ion, const int level,
   return bfheating;
 }
 
+// Split the heating and the cooling rate of a cell into the contribution of each ion. The thermal balance
+// solver needs only the totals, so this runs once for each cell after the solution, with the T_e and the
+// populations that the solver ended with. WRITE_ION_HEATING_COOLING_RATES writes the result to the
+// estimators file.
+void calculate_ion_heating_cooling_rates(const int nonemptymgi, HeatingCoolingRates& heatingcoolingrates,
+                                         const std::span<const double> bfheatingcoeffs) {
+  if constexpr (!WRITE_ION_HEATING_COOLING_RATES) {
+    return;
+  }
+
+  const auto nincludedions = get_includedions();
+  const auto T_e = grid::Te_allcells[nonemptymgi];
+  const auto clumpednne = grid::get_clumpfactor(nonemptymgi) * grid::get_nne(nonemptymgi);
+
+  heatingcoolingrates.heating_bf_ion.assign(nincludedions, 0.);
+  heatingcoolingrates.heating_ff_ion.assign(nincludedions, 0.);
+  heatingcoolingrates.cooling_ff_ion.assign(nincludedions, 0.);
+  heatingcoolingrates.cooling_fb_ion.assign(nincludedions, 0.);
+  heatingcoolingrates.cooling_coll_ion.assign(nincludedions, 0.);
+  if constexpr (COL_HEAT_FROM_LEVELPOPS) {
+    heatingcoolingrates.heating_coll_ion.assign(nincludedions, 0.);
+  }
+
+  // The free-free heating rate comes from a Monte Carlo estimator that holds no per-ion information.
+  // Each ion therefore gets the share that it has in the free-free opacity, which is proportional to
+  // nnion * ioncharge^2 at the T_e of the cell (see calculate_chi_ffheat_nnionpart() in rpkt.cc).
+  // heating_ff_ion holds these weights until the loop ends.
+  double ffweight_sum = 0.;
+
+  for (int uniqueionindex = 0; uniqueionindex < nincludedions; uniqueionindex++) {
+    const auto [element, ion] = get_ionfromuniqueionindex(uniqueionindex);
+
+    // Bound-free heating. The continuum belongs to the lower ion of the pair, as in
+    // calculate_heating_rates(), so the top ion of each element gets no contribution.
+    if (ion < (get_nions(element) - 1)) {
+      const int nbflevels = get_nlevels_ionising(element, ion);
+      const auto ionuniquelevelindexstart = get_ionuniquelevelindexstart(element, ion);
+      double bfheating_ion = 0.;
+      for (int level = 0; level < nbflevels; level++) {
+        bfheating_ion +=
+            calculate_levelpop(nonemptymgi, element, ion, level) * bfheatingcoeffs[ionuniquelevelindexstart + level];
+      }
+      heatingcoolingrates.heating_bf_ion[uniqueionindex] = bfheating_ion;
+    }
+
+    if constexpr (COL_HEAT_FROM_LEVELPOPS) {
+      heatingcoolingrates.heating_coll_ion[uniqueionindex] =
+          get_heating_ion_coll_deexc(nonemptymgi, element, ion, T_e, clumpednne);
+    }
+
+    const auto ioncooling = kpkt::calculate_ion_cooling_rates(nonemptymgi, element, ion);
+    heatingcoolingrates.cooling_ff_ion[uniqueionindex] = ioncooling.ff;
+    heatingcoolingrates.cooling_fb_ion[uniqueionindex] = ioncooling.fb;
+    heatingcoolingrates.cooling_coll_ion[uniqueionindex] = ioncooling.collisional;
+
+    const int ioncharge = get_ionstage(element, ion) - 1;
+    const double ffweight = (ioncharge > 0) ? pow2(ioncharge) * get_nnion(nonemptymgi, element, ion) : 0.;
+    heatingcoolingrates.heating_ff_ion[uniqueionindex] = ffweight;
+    ffweight_sum += ffweight;
+  }
+
+  // give each ion its share of the free-free heating rate
+  const double ffheating_per_weight = (ffweight_sum > 0.) ? (heatingcoolingrates.heating_ff / ffweight_sum) : 0.;
+  for (auto& ffheating_ion : heatingcoolingrates.heating_ff_ion) {
+    ffheating_ion *= ffheating_per_weight;
+  }
+}
+
 // Calculate the bound-free heating coefficient of every level in a cell. These depend only on the radiation
 // field, not on T_e or the populations, so they are computed once per cell and reused at every T_e that the
 // temperature solver tries.

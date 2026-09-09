@@ -90,6 +90,8 @@ constexpr bool USE_LUT_PHOTOION = false;
 
 constexpr bool USE_ION_BFHEATING_ESTIMATORS = false;
 
+constexpr bool WRITE_ION_HEATING_COOLING_RATES = false;
+
 constexpr bool STRICT_POPULATION_CHECKING = true;
 
 constexpr bool NLTE_LIMIT_ION_STAGES_AFTER_FAILURE = true;

@@ -34,6 +34,8 @@ sed -i.bak -e 's/constexpr int FIRST_NLTE_RADFIELD_TIMESTEP.*/constexpr int FIRS
 
 sed -i.bak -e 's/constexpr int DETAILED_BF_ESTIMATORS_USEFROMTIMESTEP.*/constexpr int DETAILED_BF_ESTIMATORS_USEFROMTIMESTEP = 7;/g' artisoptions.h
 
+sed -i.bak -e 's/constexpr bool WRITE_ION_HEATING_COOLING_RATES.*/constexpr bool WRITE_ION_HEATING_COOLING_RATES = true;/g' artisoptions.h
+
 rm -f artisoptions.h.bak
 
 cd -

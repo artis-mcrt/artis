@@ -133,6 +133,12 @@ constexpr bool USE_LUT_PHOTOION;
 // enable per-ion bound-free heating estimators and associated renormalisation
 constexpr bool USE_ION_BFHEATING_ESTIMATORS;
 
+// write the heating and the cooling rate of each ion to the estimators file, in addition to the totals.
+// A bound-free term belongs to the lower ion of the continuum, and a collisional term belongs to the ion
+// that holds the level. The free-free heating estimator holds no per-ion information, so each ion gets
+// the share that it has in the free-free opacity.
+constexpr bool WRITE_ION_HEATING_COOLING_RATES;
+
 // Previously the NLTE solver only checked if level populations were negative and replaced these populations
 // with the LTE population. However this can cause numerical problems (e.g. when the ground populations is very
 // small and and the negative population is replaced with a significantly larger population ratios taken e.g.
