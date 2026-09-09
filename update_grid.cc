@@ -14,6 +14,7 @@
 #include <ostream>
 #include <print>
 #include <span>
+#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -140,6 +141,24 @@ void write_to_estimators_file(std::ostream& estimators_file, const int nonemptym
     nltepop_write_to_file(nonemptymgi, timestep);
   }
 
+  // Write one line of per-ion values in the format of the gamma_R line, e.g.
+  // "cooling_ff         Z=26  1: 3.242e-03  2: 1.171e-01". values_allions holds one value for every ion of
+  // every element, and nions_towrite selects how many of this element's ions the line reports.
+  const auto print_perion_line = [&estimators_file](const std::string_view label, const int element,
+                                                    const int nions_towrite,
+                                                    const std::span<const double> values_allions) {
+    std::print(estimators_file, "{:<18} Z={:2d}", label, get_atomicnumber(element));
+    // add spaces for missing lowest ion stages to match other elements
+    for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++) {
+      std::print(estimators_file, "              ");
+    }
+    for (int ion = 0; ion < nions_towrite; ion++) {
+      std::print(estimators_file, "  {}: {:9.3e}", get_ionstage(element, ion),
+                 values_allions[get_uniqueionindex(element, ion)]);
+    }
+    std::println(estimators_file);
+  };
+
   // thread_local lets us reuse this allocation for every cell on each CPU thread
   THREADLOCALONHOST auto nuc_massfracs = std::vector<double>(decay::get_num_nuclides());
   decay::calc_cell_nuc_massfracs(nonemptymgi, nuc_massfrac_coeffs, nuc_massfracs);
@@ -208,6 +227,19 @@ void write_to_estimators_file(std::ostream& estimators_file, const int nonemptym
         std::print(estimators_file, "  {}: {:9.3e}", get_ionstage(element, ion), Y_nt);
       }
       std::println(estimators_file);
+    }
+
+    // a cell that gets no thermal balance solution, e.g. a grey cell, has no per-ion rates to report
+    if (WRITE_ION_HEATING_COOLING_RATES && !heatingcoolingrates.cooling_ff_ion.empty()) {
+      // the bound-free terms belong to the lower ion of each continuum, so the top ion has none
+      print_perion_line("heating_bf", element, nions - 1, heatingcoolingrates.heating_bf_ion);
+      if constexpr (COL_HEAT_FROM_LEVELPOPS) {
+        print_perion_line("heating_coll", element, nions, heatingcoolingrates.heating_coll_ion);
+      }
+      print_perion_line("heating_ff", element, nions, heatingcoolingrates.heating_ff_ion);
+      print_perion_line("cooling_ff", element, nions, heatingcoolingrates.cooling_ff_ion);
+      print_perion_line("cooling_fb", element, nions - 1, heatingcoolingrates.cooling_fb_ion);
+      print_perion_line("cooling_coll", element, nions, heatingcoolingrates.cooling_coll_ion);
     }
 
     if (USE_LUT_PHOTOION && globals::nbfcontinua_ground > 0) {
@@ -344,6 +376,12 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
 
     const auto duration_solve_T_e =
         std::chrono::duration<double>(std::chrono::steady_clock::now() - sys_time_start_Te).count();
+
+    // The solver leaves the cell in the state of the T_e that it selected, so the totals above and the
+    // per-ion rates below belong to the same populations. The element solves that follow change the
+    // populations, so a later split would disagree with the totals. Each iteration overwrites the result
+    // of the previous one, and the estimators file reports the last.
+    calculate_ion_heating_cooling_rates(nonemptymgi, heatingcoolingrates, bfheatingcoeffs);
 
     if (globals::total_nlte_levels == 0) {
       const auto sys_time_start_pops = std::chrono::steady_clock::now();

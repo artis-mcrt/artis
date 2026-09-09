@@ -276,6 +276,19 @@ auto sample_planck_montecarlo(const double T, rngstate_type& rngstate) -> double
 }
 }  // anonymous namespace
 
+// Compute the cooling rate of a single ion, split into the free-free, the free-bound, and the collisional
+// contributions. calculate_cooling_rates() sums the same terms over all of the ions of the cell.
+auto calculate_ion_cooling_rates(const int nonemptymgi, const int element, const int ion) -> IonCoolingRates {
+  double C_ff = 0.;
+  double C_fb = 0.;
+  double C_exc = 0.;
+  double C_ionisation = 0.;
+  // the return value is the sum of the four terms below, so this function drops it
+  calculate_cooling_rates_ion<false>(nonemptymgi, element, ion, {}, &C_ff, &C_fb, &C_exc, &C_ionisation);
+
+  return IonCoolingRates{.ff = C_ff, .fb = C_fb, .collisional = C_exc + C_ionisation};
+}
+
 // Calculate the cooling rates for a given cell and store them for each ion
 // optionally store components (ff, bf, collisional) in heatingcoolingrates struct
 void calculate_cooling_rates(const int nonemptymgi, HeatingCoolingRates* heatingcoolingrates) {
