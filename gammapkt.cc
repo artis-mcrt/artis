@@ -15,6 +15,7 @@
 #include <fstream>
 #include <ios>
 #include <limits>
+#include <numeric>
 #include <print>
 #include <span>
 #include <sstream>
@@ -22,6 +23,7 @@
 #include <string_view>
 #include <system_error>
 #include <tuple>
+#include <unordered_set>
 #include <vector>
 
 #include "artisoptions.h"
@@ -101,7 +103,22 @@ void set_trivial_gamma_spectrum(const int nucindex) {
   gamma_spectra[nucindex][0].probability = 1.;
 }
 
-void read_decaydata() {
+// Get the names of the files of each data folder with one scan of each folder. A parallel
+// file system answers a request for metadata slowly. A test of each name for each nuclide
+// gives many thousand requests for each rank, and one scan of the folder replaces them.
+auto get_datafolder_filenames() -> std::array<std::unordered_set<std::string>, datafolders.size()> {
+  std::array<std::unordered_set<std::string>, datafolders.size()> folderfiles;
+  for (size_t folderindex = 0; folderindex < datafolders.size(); folderindex++) {
+    // an absent folder gives no entry and no error, which is correct here
+    std::error_code direrror;
+    for (const auto& entry : std::filesystem::directory_iterator(datafolders[folderindex], direrror)) {
+      folderfiles[folderindex].insert(entry.path().filename().string());
+    }
+  }
+  return folderfiles;
+}
+
+void read_gamma_tables() {
   // migrate from old filenames that didn't specify the nuclide mass number
   if (!std::filesystem::exists("gamma_ni56.txt") && std::filesystem::exists("ni_lines.txt")) {
     std::error_code rename_error;
@@ -123,7 +140,7 @@ void read_decaydata() {
     }
   }
 
-  gamma_spectra.resize(decay::get_num_nuclides(), {});
+  const auto folderfiles = get_datafolder_filenames();
   int tables_found = 0;
   int nuclides_without_table = 0;
   for (int nucindex = 0; nucindex < decay::get_num_nuclides(); nucindex++) {
@@ -142,14 +159,14 @@ void read_decaydata() {
     // look in the current folder first, then in the data/ subfolder
     const std::array filenames = {std::format("gamma_{}.txt", striso), std::format("{}_lines.txt", striso)};
 
+    // keep the order of the search: the folder decides first, then the name of the file
     bool tablefound = false;
-    for (const auto& datadir : datafolders) {
+    for (size_t folderindex = 0; folderindex < datafolders.size(); folderindex++) {
       for (const auto& filename : filenames) {
-        const auto filepath = std::format("{}{}", datadir, filename);
-        if (std::filesystem::exists(filepath)) {
+        if (folderfiles[folderindex].contains(filename)) {
           tablefound = true;
           tables_found++;
-          read_gamma_spectrum(nucindex, filepath);
+          read_gamma_spectrum(nucindex, std::format("{}{}", datafolders[folderindex], filename));
           break;
         }
       }
@@ -193,6 +210,54 @@ void read_decaydata() {
         "carrying the mean gamma energy per decay is used for each",
         nuclides_without_table);
   }
+}
+
+// Send the gamma-ray line tables from the first rank of the node to the other ranks of the
+// node. Only that rank reads the files, because every rank needs the same small tables and
+// the file system answers slowly.
+void broadcast_gamma_tables() {
+  const auto num_nuclides = decay::get_num_nuclides();
+  std::vector<int> linecounts(num_nuclides, 0);
+  std::vector<double> energygamma(num_nuclides, 0.);
+
+  if (globals::rank_in_node == 0) {
+    for (int nucindex = 0; nucindex < num_nuclides; nucindex++) {
+      linecounts[nucindex] = static_cast<int>(std::ssize(gamma_spectra[nucindex]));
+      energygamma[nucindex] = decay::nucdecayenergygamma(nucindex);
+    }
+  }
+  MPI_Bcast_safe(linecounts, 0, globals::mpi_comm_node);
+  MPI_Bcast_safe(energygamma, 0, globals::mpi_comm_node);
+
+  const auto totallines = std::reduce(linecounts.cbegin(), linecounts.cend(), ptrdiff_t{0});
+  std::vector<GammaLine> alllines(totallines);
+  if (globals::rank_in_node == 0) {
+    auto nextline = alllines.begin();
+    for (int nucindex = 0; nucindex < num_nuclides; nucindex++) {
+      nextline = std::ranges::copy(gamma_spectra[nucindex], nextline).out;
+    }
+  }
+  MPI_Bcast_safe(alllines, 0, globals::mpi_comm_node);
+
+  if (globals::rank_in_node > 0) {
+    ptrdiff_t offset = 0;
+    for (int nucindex = 0; nucindex < num_nuclides; nucindex++) {
+      gamma_spectra[nucindex].assign(alllines.cbegin() + offset, alllines.cbegin() + offset + linecounts[nucindex]);
+      offset += linecounts[nucindex];
+      // the reader changed some of these values, so take the value of the reader
+      decay::set_nucdecayenergygamma(nucindex, energygamma[nucindex]);
+    }
+  }
+}
+
+void read_decaydata() {
+  gamma_spectra.resize(decay::get_num_nuclides(), {});
+
+  if (globals::rank_in_node == 0) {
+    read_gamma_tables();
+  }
+
+  broadcast_gamma_tables();
 }
 
 // construct an energy ordered gamma ray line list.
