@@ -8,7 +8,7 @@
 #SBATCH --qos=normal
 #SBATCH --account=EUHPC_R07_209
 #SBATCH --mail-type=ALL
-##SBATCH --mail-user=luke.shingles@gmail.com
+# exspec-zip-leonardo-submit.sh gives --mail-user from the EMAIL variable
 
 export PATH="/leonardo_work/EUHPC_R07_209/bin:$PATH"
 export PIXI_HOME="/leonardo_work/EUHPC_R07_209/.pixi"

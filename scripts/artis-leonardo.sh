@@ -8,7 +8,7 @@
 #SBATCH --qos=normal
 #SBATCH --account=EUHPC_R07_209
 #SBATCH --mail-type=ALL
-##SBATCH --mail-user=luke.shingles@gmail.com
+# artis-leonardo-submit.sh gives --mail-user from the EMAIL variable
 
 export PATH="/leonardo_work/EUHPC_R07_209/bin:$PATH"
 export PIXI_HOME="/leonardo_work/EUHPC_R07_209/.pixi"
@@ -60,10 +60,11 @@ source ./artis/scripts/corehours-after.sh
 
 if grep -q "RESTART_NEEDED" "output_0-0.txt"
 then
-    sbatch --job-name="$SLURM_JOB_NAME" ./artis/scripts/artis-leonardo.sh
+    # the submit script sets the job name and the address of the next job
+    source ./artis/scripts/artis-leonardo-submit.sh
 else
     # post-processing can remove restart files, so only queue it when no continuation job was submitted
     if [ -f packets00_0000.out ]; then
-        sbatch --job-name="exspec_$SLURM_JOB_NAME" ./artis/scripts/exspec-zip-leonardo.sh
+        source ./artis/scripts/exspec-zip-leonardo-submit.sh
     fi
 fi
