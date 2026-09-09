@@ -15,9 +15,9 @@ f96bd2c0753003e105eaaa7c0a015a50  packets00_0002.out
 2bfbe9ea65f415b909bfbc77d0d5a5d2  packets00_0003.out
 b11110e42560a2482ff2405e96d863a4  spec.out
 8e7163982f1aa938dc1505478b8c60d1  timesteps.out
-cc52d609ecd628a96a05f3c574da126b  job0/estimators_0000.out
-bc161f52ac25088281e2c627327c68b9  job0/estimators_0001.out
-390d9ce34f2a73ce10377a32d64f0c50  job0/estimators_0002.out
+b66b3cc2a15847677797a8bbd8b71531  job0/estimators_0000.out
+45fafe99ded8bc9404d2928f953a0b48  job0/estimators_0001.out
+2c9dace369bcfbbc416994d199db3817  job0/estimators_0002.out
 fbd341a20f6bb5ed2f0b37be47f27e5a  job0/nlte_0000.out
 25fa0d4e9e1256d0a5a686082001122b  job0/nlte_0001.out
 4f01489b34f601b17185a1642e1f2573  job0/nlte_0002.out
