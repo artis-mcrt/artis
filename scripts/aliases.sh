@@ -4,8 +4,10 @@ export MAKEFLAGS="--check-symlink-times -j$(nproc --all)"
 alias squeueu="squeue --user=$USER --format=\"%.9i %.10P %.8T %.12M %22N %5D %4C %j\""
 alias qstatu="squeueu"
 
+export EMAIL="my.address@gmail.com"
+
 # enqueue with a job name set to the current directory name
-alias qsub='sbatch --job-name="${PWD##*/}"'
+alias qsub='sbatch --job-name="${PWD##*/}" ${EMAIL:+--mail-user="$EMAIL"}'
 
 alias qdel="scancel"
 alias qstat="squeue"
