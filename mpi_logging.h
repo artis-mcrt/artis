@@ -283,7 +283,11 @@ template <typename T>
   // only rank_in_node 0 on each node allocates memory, but all ranks will get a pointer to it
   const auto num_thisnoderank = (globals::rank_in_node == 0) ? num_allranks : 0;
 
-  auto size = static_cast<MPI_Aint>(num_thisnoderank * sizeof(T));
+  // The MPI library does not always obey the alignment hint. Rank 0 asks for 128 more bytes, and every rank then
+  // rounds the shared base pointer up to the next 128-byte boundary. All ranks query the same base pointer from
+  // rank 0, so they all get the same aligned pointer.
+  constexpr std::size_t alignment_bytes = 128;
+  auto size = static_cast<MPI_Aint>((num_thisnoderank * sizeof(T)) + ((num_thisnoderank > 0) ? alignment_bytes : 0));
   int disp_unit = sizeof(T);
   MPI_Win mpiwin{MPI_WIN_NULL};
   T* ptr{};
@@ -297,6 +301,10 @@ template <typename T>
   assert_always(MPI_Info_free(&info) == MPI_SUCCESS);
   assert_always(MPI_Win_shared_query(mpiwin, 0, &size, &disp_unit, static_cast<void*>(&ptr)) == MPI_SUCCESS);
   assert_always(ptr != nullptr);
+  void* alignedptr = static_cast<void*>(ptr);
+  auto space = static_cast<std::size_t>(size);
+  assert_always(std::align(alignment_bytes, num_allranks * sizeof(T), alignedptr, space) != nullptr);
+  ptr = static_cast<T*>(alignedptr);
 #ifdef __cpp_lib_is_sufficiently_aligned
   assert_always(std::is_sufficiently_aligned<128>(ptr));
 #endif
