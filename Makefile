@@ -425,29 +425,32 @@ $(BUILD_DIR)/sn3d: $(sn3d_objects)
 	$(CXX) $(CXXFLAGS) $(sn3d_objects) $(LDFLAGS) -o $(BUILD_DIR)/sn3d
 -include $(sn3d_dep)
 
+# Each program gets a symlink in the repository root. The command removes the
+# name first. On an NFS home folder, "ln -sf" gives "Invalid cross-device
+# link" when the name already exists.
 sn3d: $(BUILD_DIR)/sn3d compile_commands.json
-	ln -sf $(BUILD_DIR)/sn3d sn3d
+	rm -f sn3d && ln -s $(BUILD_DIR)/sn3d sn3d
 
 $(BUILD_DIR)/sn3dwhole: $(sn3d_files) version.h artisoptions.h Makefile
 	$(CXX) $(CXXFLAGS) $(sn3d_files) $(LDFLAGS) -o $(BUILD_DIR)/sn3dwhole
 -include $(sn3d_dep)
 
 sn3dwhole: $(BUILD_DIR)/sn3dwhole compile_commands.json
-	ln -sf $(BUILD_DIR)/sn3dwhole sn3d
+	rm -f sn3d && ln -s $(BUILD_DIR)/sn3dwhole sn3d
 
 $(BUILD_DIR)/exspec: $(exspec_objects)
 	$(CXX) $(CXXFLAGS) $(exspec_objects) $(LDFLAGS) -o $(BUILD_DIR)/exspec
 -include $(exspec_dep)
 
 exspec: $(BUILD_DIR)/exspec compile_commands.json
-	ln -sf $(BUILD_DIR)/exspec exspec
+	rm -f exspec && ln -s $(BUILD_DIR)/exspec exspec
 
 $(BUILD_DIR)/unittests: $(unittests_objects)
 	$(CXX) $(CXXFLAGS) $(unittests_objects) $(LDFLAGS) -o $(BUILD_DIR)/unittests
 -include $(unittests_dep)
 
 unittests: $(BUILD_DIR)/unittests compile_commands.json
-	ln -sf $(BUILD_DIR)/unittests unittests
+	rm -f unittests && ln -s $(BUILD_DIR)/unittests unittests
 
 .PHONY: clean sn3d sn3dwhole exspec unittests check
 
