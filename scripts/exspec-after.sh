@@ -52,7 +52,7 @@ if [[ -f emission.out || -f emission.out.zst || -f emissionpol.out ]]; then
     python3 -m ensurepip --upgrade
     python3 -m pip install --upgrade uv --target "$(pwd)/../uv"
   fi
-  uv tool install -U --no-cache artistools@latest
+  uv tool install -U artistools@latest
 
   # convert packets to parquet for fast reading
   uvx artistools lc --frompackets || true
