@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <array>
 #include <atomic>
+#include <bit>
 #include <cassert>
 #include <cstdarg>
 #include <cstddef>
@@ -283,9 +284,10 @@ template <typename T>
   // only rank_in_node 0 on each node allocates memory, but all ranks will get a pointer to it
   const auto num_thisnoderank = (globals::rank_in_node == 0) ? num_allranks : 0;
 
-  // The MPI library does not always obey the alignment hint. Rank 0 asks for 128 more bytes, and every rank then
-  // rounds the shared base pointer up to the next 128-byte boundary. All ranks query the same base pointer from
-  // rank 0, so they all get the same aligned pointer.
+  // The MPI library does not always obey the alignment hint. Rank 0 asks for 128 more bytes and computes the byte
+  // offset that rounds its base pointer up to the next 128-byte boundary. Every rank then applies that one offset.
+  // Each process maps the segment at its own virtual address, so the offset must come from a single rank, or the
+  // spans of the ranks would refer to different parts of the segment.
   constexpr std::size_t alignment_bytes = 128;
   auto size = static_cast<MPI_Aint>((num_thisnoderank * sizeof(T)) + ((num_thisnoderank > 0) ? alignment_bytes : 0));
   int disp_unit = sizeof(T);
@@ -295,16 +297,20 @@ template <typename T>
   assert_always(MPI_Info_create(&info) == MPI_SUCCESS);
   // Request alignment (AVX-512 requires 64b, and 128b is Apple Silicon cache line size).
   assert_always(MPI_Info_set(info, "mpi_minimum_memory_alignment", "128") == MPI_SUCCESS);
-  assert_always(MPI_Info_set(info, "alloc_shared_noncontig", "true") == MPI_SUCCESS);
   assert_always(MPI_Win_allocate_shared(size, disp_unit, info, globals::mpi_comm_node, static_cast<void*>(&ptr),
                                         &mpiwin) == MPI_SUCCESS);
   assert_always(MPI_Info_free(&info) == MPI_SUCCESS);
   assert_always(MPI_Win_shared_query(mpiwin, 0, &size, &disp_unit, static_cast<void*>(&ptr)) == MPI_SUCCESS);
   assert_always(ptr != nullptr);
-  void* alignedptr = static_cast<void*>(ptr);
-  auto space = static_cast<std::size_t>(size);
-  assert_always(std::align(alignment_bytes, num_allranks * sizeof(T), alignedptr, space) != nullptr);
-  ptr = static_cast<T*>(alignedptr);
+  std::uint64_t alignment_offset_bytes = 0;
+  if (globals::rank_in_node == 0) {
+    const auto baseaddress = std::bit_cast<std::uintptr_t>(ptr);
+    alignment_offset_bytes = (alignment_bytes - (baseaddress % alignment_bytes)) % alignment_bytes;
+  }
+  assert_always(MPI_Bcast(&alignment_offset_bytes, 1, MPI_UINT64_T, 0, globals::mpi_comm_node) == MPI_SUCCESS);
+  assert_always(alignment_offset_bytes < alignment_bytes);
+  assert_always(static_cast<std::size_t>(size) >= alignment_offset_bytes + (num_allranks * sizeof(T)));
+  ptr = std::bit_cast<T*>(std::bit_cast<std::uintptr_t>(ptr) + alignment_offset_bytes);
 #ifdef __cpp_lib_is_sufficiently_aligned
   assert_always(std::is_sufficiently_aligned<128>(ptr));
 #endif
