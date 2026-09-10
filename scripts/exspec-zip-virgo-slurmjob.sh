@@ -5,14 +5,42 @@ export APPTAINER_NAME="vae26-user_container"
 export APPTAINER_SHARENS=true
 export APPTAINER_CONFIGDIR=/tmp/$USER
 
-eval `spack load --first --sh openmpi%gcc`
-# GSL is no longer used by artis, but is still loaded so that these scripts work with older versions too
-eval `spack load --first --sh gsl%gcc`
-eval `spack load --first --sh gcc%gcc`
+export LUSTRE_HOME="/lustre/theory/$USER"
+export PIXI_HOME="$LUSTRE_HOME/.pixi"
+export PIXI_BIN_DIR="$PIXI_HOME/bin"
+export PIXI_CACHE_DIR="$LUSTRE_HOME/.cache/rattler"
+export UV_INSTALL_DIR="$LUSTRE_HOME/.local/bin"
+export UV_CACHE_DIR="$LUSTRE_HOME/.cache/uv"
+export UV_PYTHON_DIR="$LUSTRE_HOME/.local/share/uv/python"
+export UV_PYTHON_BIN_DIR="$LUSTRE_HOME/.local/bin"
+export UV_TOOL_DIR="$LUSTRE_HOME/.local/share/uv/tools"
+export UV_TOOL_BIN_DIR="$LUSTRE_HOME/.local/bin"
+export PATH="$PIXI_BIN_DIR:$UV_INSTALL_DIR:$UV_TOOL_BIN_DIR:$PATH"
 
-export LD_LIBRARY_PATH=$(gsl-config --prefix)/lib/:$LD_LIBRARY_PATH
+if [ ! -x "$PIXI_BIN_DIR/pixi" ]; then
+    curl -fsSL https://pixi.sh/install.sh | bash
+fi
+
+if [ ! -x "$PIXI_HOME/envs/gxx/bin/g++" ]; then
+    "$PIXI_BIN_DIR/pixi" global install "gxx==16.2"
+fi
+
+if ! command -v uv >/dev/null 2>&1; then
+    "$PIXI_BIN_DIR/pixi" global install uv
+fi
+
+eval `spack load --first --sh openmpi%gcc`
+# ARTIS no longer uses GSL. An older version needs both of these lines.
+#eval `spack load --first --sh gsl%gcc`
+#export LD_LIBRARY_PATH=$(gsl-config --prefix)/lib/:$LD_LIBRARY_PATH
+
 export MAKEFLAGS="--check-symlink-times --jobs=$(nproc --all)"
-export OMPI_CXX=g++
+export OMPI_CXX="$PIXI_HOME/envs/gxx/bin/g++"
+
+# The conda linker of pixi ignores the DT_RPATH of libmpi.so. The option -rpath
+# finds the libstdc++ of pixi at run time.
+mpi_rpath=$(readelf -d "$(mpicxx --showme:libdirs)/libmpi.so" | awk -F'[][]' '/RPATH|RUNPATH/{print $2}')
+export LDFLAGS="-Wl,-rpath-link,$mpi_rpath -Wl,-rpath,$PIXI_HOME/envs/gxx/lib"
 
 cd $SLURM_SUBMIT_DIR
 
@@ -20,7 +48,7 @@ cd artis
 make exspec
 cd ..
 
-echo "CPU type: $(c++ -march=native -Q --help=target | grep -- '-march=  ' | cut -f3)"
+echo "CPU type: $("$OMPI_CXX" -march=native -Q --help=target | grep -- '-march=  ' | cut -f3)"
 
 
 source ./artis/scripts/corehours-before.sh
