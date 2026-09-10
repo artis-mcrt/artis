@@ -51,7 +51,9 @@ else ifneq '' '$(findstring clang,$(COMPILER_VERSION))'
 	LDFLAGS += -Wno-unused-command-line-argument
 
 	ifeq '' '$(findstring Apple,$(COMPILER_VERSION))'
-		ifeq ($(if $(shell command -v lld),'true','false'), 'true')
+		# Use lld only when it can link a trivial program. An older lld does not know every target that a
+		# new macOS SDK lists in its TAPI files, and the link then fails with "unknown target".
+		ifeq ($(shell echo 'int main(){}' | mpicxx -fuse-ld=lld -x c++ - -o /dev/null >/dev/null 2>&1 && echo true), true)
 			LDFLAGS += -fuse-ld=lld
 		endif
 	endif
