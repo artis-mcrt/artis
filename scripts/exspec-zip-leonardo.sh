@@ -8,17 +8,18 @@
 #SBATCH --qos=normal
 #SBATCH --account=EUHPC_R07_209
 #SBATCH --mail-type=ALL
-# exspec-zip-leonardo-submit.sh gives --mail-user from the EMAIL variable
 
-export PATH="/leonardo_work/EUHPC_R07_209/bin:$PATH"
-export PIXI_HOME="/leonardo_work/EUHPC_R07_209/.pixi"
-export PIXI_BIN_DIR="/leonardo_work/EUHPC_R07_209/.pixi/bin"
-export PIXI_CACHE_DIR="/leonardo_work/EUHPC_R07_209/.cache/rattler"
-export UV_CACHE_DIR="/leonardo_work/EUHPC_R07_209/.cache/uv"
-export UV_PYTHON_DIR="/leonardo_work/EUHPC_R07_209/.local/share/uv/python"
-export UV_PYTHON_BIN_DIR="/leonardo_work/EUHPC_R07_209/.local/bin"
-export UV_TOOL_DIR="/leonardo_work/EUHPC_R07_209/.local/share/uv/tools"
-export UV_TOOL_BIN_DIR="/leonardo_work/EUHPC_R07_209/.local/bin"
+projectfolder="/leonardo_work/EUHPC_R07_209"
+
+export PATH="$projectfolder/bin:$PATH"
+export PIXI_HOME="$projectfolder/.pixi"
+export PIXI_BIN_DIR="$projectfolder/.pixi/bin"
+export PIXI_CACHE_DIR="$projectfolder/.cache/rattler"
+export UV_CACHE_DIR="$projectfolder/.cache/uv"
+export UV_PYTHON_DIR="$projectfolder/.local/share/uv/python"
+export UV_PYTHON_BIN_DIR="$projectfolder/.local/bin"
+export UV_TOOL_DIR="$projectfolder/.local/share/uv/tools"
+export UV_TOOL_BIN_DIR="$projectfolder/.local/bin"
 export PATH="$PIXI_BIN_DIR:$UV_TOOL_BIN_DIR:$PATH"
 
 # See artis-leonardo.sh for the reason of the module and of the two exports.
