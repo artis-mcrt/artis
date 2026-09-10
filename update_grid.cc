@@ -205,7 +205,7 @@ void write_to_estimators_file(std::ostream& estimators_file, const int nonemptym
 
     // if we have bound-free estimators, we might want to compare how gamma_R would be if we used the radiation field
     // model instead
-    if (DETAILED_BF_ESTIMATORS_ON) {
+    if constexpr (DETAILED_BF_ESTIMATORS_ON) {
       std::print(estimators_file, "gamma_R_integral   Z={:2d}", get_atomicnumber(element));
       for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++) {
         std::print(estimators_file, "              ");

@@ -157,7 +157,7 @@ void test_vector_geometry() {
   const double prop_time = 10. * DAY;
   const auto vel_rf = get_velocity(pos_rf, prop_time);
   double doppler_expected = 1. - (dot(dir_rf, vel_rf) / CLIGHT);
-  if (USE_RELATIVISTIC_DOPPLER_SHIFT) {
+  if constexpr (USE_RELATIVISTIC_DOPPLER_SHIFT) {
     doppler_expected /= std::sqrt(1 - (dot(vel_rf, vel_rf) / CLIGHTSQUARED));
   }
   check_close(calculate_doppler_nucmf_on_nurf(pos_rf, dir_rf, prop_time), doppler_expected, 1e-14,

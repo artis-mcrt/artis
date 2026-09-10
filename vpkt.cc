@@ -480,7 +480,7 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
 
   // Final Stokes vector
 
-  if (VPKT_WRITE_CONTRIBS) {
+  if constexpr (VPKT_WRITE_CONTRIBS) {
     std::format_to(std::back_inserter(vpkt_contrib_row), " {:g} {:g}", t_arrive / DAY, nu_rf);
   }
 

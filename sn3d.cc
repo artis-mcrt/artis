@@ -818,7 +818,7 @@ auto do_timestep(const int nts, const int titer, std::vector<Packet>& packets, c
                globals::my_rank, globals::timesteps[nts].pellet_decays, stats::get_counter(stats::Counter::PKTESCAPES),
                globals::timesteps[nts].mid / DAY);
 
-    if (VPKT_ON) {
+    if constexpr (VPKT_ON) {
       printlnlog("During timestep {} on MPI process {}, {} virtual packets were generated and {} escaped.", nts,
                  globals::my_rank, vpkt::nvpkt_created,
                  vpkt::nvpkt_esc_from_rpkt + vpkt::nvpkt_esc_from_kpkt + vpkt::nvpkt_esc_from_macroatom);

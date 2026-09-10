@@ -568,7 +568,7 @@ auto sigma_lz_channel(const int ioncharge, const double deltae_erg, const double
 }
 
 void init() {
-  if (!ENABLE_CHARGE_TRANSFER_REACTIONS) {
+  if constexpr (!ENABLE_CHARGE_TRANSFER_REACTIONS) {
     return;
   }
   reactions_rec_perion.resize(get_includedions());

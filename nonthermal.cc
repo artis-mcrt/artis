@@ -699,7 +699,7 @@ void read_collion_data() {
     }
   }
 
-  if (NT_MAX_AUGER_ELECTRONS > 0) {
+  if constexpr (NT_MAX_AUGER_ELECTRONS > 0) {
     read_auger_data();
   }
 }
@@ -1650,7 +1650,7 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const std::a
           }
           printlog(" I {:5.1f} [eV]: frac_ionisation {:10.4e}", collionrow.ionpot_ev, frac_ionisation_ion_shell);
 
-          if (NT_MAX_AUGER_ELECTRONS > 0) {
+          if constexpr (NT_MAX_AUGER_ELECTRONS > 0) {
             printlog("  prob(n Auger elec):");
             for (int a = 0; a <= NT_MAX_AUGER_ELECTRONS; a++) {
               printlog(" {}: {:.2f}", a, collionrow.prob_num_auger[a]);
@@ -2361,7 +2361,7 @@ void calculate_deposition_rate_density(const int nonemptymgi, HeatingCoolingRate
   heatingcoolingrates.eps_spfission_ana =
       rho * decay::get_modelcell_decaypower_per_mass(nonemptymgi, emission_power_per_mass.spfission);
 
-  if (PARTICLE_THERMALISATION_SCHEME == ParticleThermalisationScheme::INSTANTFULLDEPOSITION) {
+  if constexpr (PARTICLE_THERMALISATION_SCHEME == ParticleThermalisationScheme::INSTANTFULLDEPOSITION) {
     // for instant full deposition, the deposition rate is the same as the emission rate, which we know analytically
     // without Monte Carlo noise (although strictly, it should be an integral from the timestep start to the end divided
     // by timestep duration instead of the instantaneous rate at tmid)
