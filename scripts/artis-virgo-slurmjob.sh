@@ -36,7 +36,7 @@ eval `spack load --first --sh openmpi%gcc`
 #eval `spack load --first --sh gsl%gcc`
 #export LD_LIBRARY_PATH=$(gsl-config --prefix)/lib/:$LD_LIBRARY_PATH
 
-export MAKEFLAGS="--check-symlink-times --jobs=$(nproc --all)"
+export MAKEFLAGS="--check-symlink-times --jobs=${SLURM_CPUS_PER_TASK:-$(nproc)}"
 export OMPI_CXX="$PIXI_HOME/envs/gxx/bin/g++"
 
 # The conda linker of pixi ignores the DT_RPATH of libmpi.so. The option -rpath
@@ -44,10 +44,10 @@ export OMPI_CXX="$PIXI_HOME/envs/gxx/bin/g++"
 mpi_rpath=$(readelf -d "$(mpicxx --showme:libdirs)/libmpi.so" | awk -F'[][]' '/RPATH|RUNPATH/{print $2}')
 export LDFLAGS="-Wl,-rpath-link,$mpi_rpath -Wl,-rpath,$PIXI_HOME/envs/gxx/lib"
 
-cd $SLURM_SUBMIT_DIR
+cd "${SLURM_SUBMIT_DIR:?}"
 
 cd artis
-make sn3d
+make sn3d || exit 1
 cd ..
 
 echo "CPU type: $("$OMPI_CXX" -march=native -Q --help=target | grep -- '-march=  ' | cut -f3)"
