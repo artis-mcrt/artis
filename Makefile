@@ -425,9 +425,7 @@ $(BUILD_DIR)/sn3d: $(sn3d_objects)
 	$(CXX) $(CXXFLAGS) $(sn3d_objects) $(LDFLAGS) -o $(BUILD_DIR)/sn3d
 -include $(sn3d_dep)
 
-# Each program gets a symlink in the repository root. The command removes the
-# name first. On an NFS home folder, "ln -sf" gives "Invalid cross-device
-# link" when the name already exists.
+# "ln -sf" gives "Invalid cross-device link" on an NFS folder, so remove first.
 sn3d: $(BUILD_DIR)/sn3d compile_commands.json
 	rm -f sn3d && ln -s $(BUILD_DIR)/sn3d sn3d
 
