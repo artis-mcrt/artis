@@ -25,10 +25,6 @@ if [ ! -x "$PIXI_HOME/envs/gxx/bin/g++" ]; then
     "$PIXI_BIN_DIR/pixi" global install "gxx==16.2"
 fi
 
-if ! command -v uv >/dev/null 2>&1; then
-    "$PIXI_BIN_DIR/pixi" global install uv
-fi
-
 eval `spack load --first --sh openmpi%gcc`
 # ARTIS no longer uses GSL. An older version needs both of these lines.
 #eval `spack load --first --sh gsl%gcc`

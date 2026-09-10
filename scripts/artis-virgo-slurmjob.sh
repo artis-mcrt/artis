@@ -27,16 +27,12 @@ if [ ! -x "$PIXI_HOME/envs/gxx/bin/g++" ]; then
     "$PIXI_BIN_DIR/pixi" global install "gxx==16.2"
 fi
 
-if ! command -v uv >/dev/null 2>&1; then
-    "$PIXI_BIN_DIR/pixi" global install uv
-fi
-
 eval `spack load --first --sh openmpi%gcc`
 # ARTIS no longer uses GSL. An older version needs both of these lines.
 #eval `spack load --first --sh gsl%gcc`
 #export LD_LIBRARY_PATH=$(gsl-config --prefix)/lib/:$LD_LIBRARY_PATH
 
-export MAKEFLAGS="--check-symlink-times --jobs=${SLURM_CPUS_PER_TASK:-$(nproc)}"
+export MAKEFLAGS="--check-symlink-times --jobs=$(nproc --all)"
 export OMPI_CXX="$PIXI_HOME/envs/gxx/bin/g++"
 
 # The conda linker of pixi ignores the DT_RPATH of libmpi.so. The option -rpath
