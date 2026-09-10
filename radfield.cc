@@ -583,13 +583,13 @@ void init() {
   }
 
   printlog("DETAILED_BF_ESTIMATORS {}", DETAILED_BF_ESTIMATORS_ON ? "ON" : "OFF");
-  if (DETAILED_BF_ESTIMATORS_ON) {
+  if constexpr (DETAILED_BF_ESTIMATORS_ON) {
     printlnlog(" from timestep {}", DETAILED_BF_ESTIMATORS_USEFROMTIMESTEP);
   } else {
     printlnlog("");
   }
 
-  if (MULTIBIN_RADFIELD_MODEL_ON) {
+  if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
     printlnlog("The multibin radiation field is being used from timestep {} onwards.", FIRST_NLTE_RADFIELD_TIMESTEP);
 
     printlnlog(

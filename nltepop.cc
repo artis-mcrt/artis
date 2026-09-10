@@ -737,7 +737,7 @@ void nltepop_matrix_add_nt_ionisation(const int nonemptymgi, const int element, 
 void nltepop_matrix_add_chargetransfer(const int nonemptymgi, const int element, const int ion,
                                        const std::span<const std::vector<double>> s_renorm_allions,
                                        RateMatrices& rate_matrices, const int first_ion_used, const int nions_used) {
-  if (!ENABLE_CHARGE_TRANSFER_REACTIONS) {
+  if constexpr (!ENABLE_CHARGE_TRANSFER_REACTIONS) {
     return;
   }
   assert_always((ion + 1) < (nions_used + first_ion_used));  // the top ion stage has no ionisation
@@ -1524,7 +1524,7 @@ auto nltepop_solve_matrix_with_ion_reduction(const int element, const int nonemp
             "successfully solved NLTE matrix when reducing ions used for element to Z={} ionstage={} to ionstage={}",
             atomic_number, get_ionstage(element, first_ion_used), get_ionstage(element, max_ion_used));
       }
-    } else if (NLTE_LIMIT_ION_STAGES_AFTER_FAILURE) {
+    } else if constexpr (NLTE_LIMIT_ION_STAGES_AFTER_FAILURE) {
       printlnlog("  [warning] cell {} ts {}: NLTE matrix solution failed for element Z={} using ionstage {} to {}",
                  nltelog.modelgridindex, nltelog.timestep, atomic_number, get_ionstage(element, first_ion_used),
                  get_ionstage(element, max_ion_used));

@@ -99,7 +99,7 @@ template <size_t VECDIM>
   const double ndotv = dot(dir_rf, vel_rf);
   double dopplerfactor = 1. - (ndotv / CLIGHT);
 
-  if (USE_RELATIVISTIC_DOPPLER_SHIFT) {
+  if constexpr (USE_RELATIVISTIC_DOPPLER_SHIFT) {
     const double betasq = dot(vel_rf, vel_rf) / CLIGHTSQUARED;
     assert_testmodeonly(betasq >= 0.);  // v < c
     assert_testmodeonly(betasq < 1.);  // v < c

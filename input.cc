@@ -2066,14 +2066,14 @@ void read_parameterfile(std::span<Packet> packets) {
     printlnlog("NT_SCHEME is NT_OFF: this run has no non-thermal ionisation.");
   }
 
-  if (USE_LUT_PHOTOION) {
+  if constexpr (USE_LUT_PHOTOION) {
     printlnlog("Corrphotoioncoeff is calculated from LTE values and corrphotoionrenorm estimator.");
   } else {
     printlnlog(
         "Corrphotoioncoeff is calculated from the radiation field at each timestep in each modelgrid cell (no LUT).");
   }
 
-  if (USE_ION_BFHEATING_ESTIMATORS) {
+  if constexpr (USE_ION_BFHEATING_ESTIMATORS) {
     printlnlog("bfheating coefficients are calculated from LTE values and bfheatingestimator.");
   } else {
     printlnlog("bfheating coefficients are calculated directly from the radiation field without bfheatingestimator.");
