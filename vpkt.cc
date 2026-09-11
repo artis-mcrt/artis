@@ -330,7 +330,7 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
 
           next_trans = lineindex + 1;
 
-          const auto ldist = get_linedistance(t_future, nu_rf, nu_cmf, nutrans, dnu_on_dl);
+          const auto ldist = get_linedistance(t_future, nu_cmf, nutrans, dnu_on_dl);
 
           if (ldist > dist_limit) {
             next_trans--;
@@ -386,7 +386,7 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
           // lines with nu > nu_cmf
           const auto first_bin_edge_nu =
               (binindex_start < 0) ? get_expopac_bin_nu_upper(0) : get_expopac_bin_nu_lower(binindex_start);
-          const auto first_bin_edge_dist = get_linedistance(t_future, nu_rf, nu_cmf, first_bin_edge_nu, dnu_on_dl);
+          const auto first_bin_edge_dist = get_linedistance(t_future, nu_cmf, first_bin_edge_nu, dnu_on_dl);
           const double line_by_line_limit = std::min(first_bin_edge_dist, boundarydist);
           next_trans = -1;  // trigger binary search from nu_cmf
           if (!trace_lines_to_dist(line_by_line_limit)) {
@@ -399,7 +399,7 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
             // continue with expansion opacities for subsequent full bins
             for (auto binindex = binindex_start + 1; binindex < expopac_nbins; binindex++) {
               const auto next_bin_edge_nu = get_expopac_bin_nu_lower(binindex);
-              const auto binedgedist = get_linedistance(t_future, nu_rf, nu_cmf, next_bin_edge_nu, dnu_on_dl);
+              const auto binedgedist = get_linedistance(t_future, nu_cmf, next_bin_edge_nu, dnu_on_dl);
 
               const auto kappa = expansionopacities[(nonemptymgi * expopac_nbins) + binindex];
               // kappa_exp * rho = (1 / (c t)) * sum_lines (lambda_line / delta_lambda) * (1 - exp(-tau_sobolev))
