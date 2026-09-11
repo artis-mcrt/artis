@@ -67,15 +67,6 @@ auto get_nu_cmf_abort(const Vec3d& pos, const Vec3d& dir, const double prop_time
   return nu_cmf_abort;
 }
 
-// Get the Sobolev optical depth of a line at the time of the resonance. A population inversion gives zero.
-[[nodiscard]] auto get_tau_sobolev(const globals::TransitionLines& linelist, const int lineindex, const double n_l,
-                                   const double n_u, const double t_resonance) -> double {
-  const double B_ul = linelist.B_ul[lineindex];
-  const double B_lu = linelist.B_lu[lineindex];
-
-  return std::max(((B_lu * n_l) - (B_ul * n_u)) * HCLIGHTOVERFOURPI * t_resonance, 0.);
-}
-
 // Find the first line or continuum event before nu_cmf_abort or abort_dist. Return the distance to the event, the
 // value for pkt.next_trans, and true for a line event. The line distances assume that CLIGHT_PROP equals CLIGHT.
 auto get_possible_event(const int nonemptymgi, const Packet& pkt, const ContinuumOpacity& chi_rpkt_cont,
@@ -125,8 +116,11 @@ auto get_possible_event(const int nonemptymgi, const Packet& pkt, const Continuu
     // the time of the resonance
     const double t_line = pkt.prop_time + (dist_line / CLIGHT_PROP);
     const int uniquelevelindex_upper = linelist.uniquelevelindex_upper[lineindex];
-    const double tau_line = get_tau_sobolev(linelist, lineindex, levelpops[linelist.uniquelevelindex_lower[lineindex]],
-                                            levelpops[uniquelevelindex_upper], t_line);
+    const double n_l = levelpops[linelist.uniquelevelindex_lower[lineindex]];
+    const double n_u = levelpops[uniquelevelindex_upper];
+    // the Sobolev optical depth. A population inversion gives zero.
+    const double tau_line = std::max(
+        ((linelist.B_lu[lineindex] * n_l) - (linelist.B_ul[lineindex] * n_u)) * HCLIGHTOVERFOURPI * t_line, 0.);
 
     if constexpr (DETAILED_LINE_ESTIMATORS_ON) {
       // e_cmf / nu_cmf does not change along the path
@@ -1064,9 +1058,13 @@ void calculate_expansion_opacities(const int nonemptymgi) {
     const auto nu_lower = get_expopac_bin_nu_lower(binindex);
 
     while (lineindex < globals::nlines && globals::linelist.nu[lineindex] >= nu_lower) {
+      const double n_l = levelpops[globals::linelist.uniquelevelindex_lower[lineindex]];
+      const double n_u = levelpops[globals::linelist.uniquelevelindex_upper[lineindex]];
+      // the Sobolev optical depth. A population inversion gives zero.
       const auto tau_line =
-          get_tau_sobolev(globals::linelist, lineindex, levelpops[globals::linelist.uniquelevelindex_lower[lineindex]],
-                          levelpops[globals::linelist.uniquelevelindex_upper[lineindex]], t_mid);
+          std::max(((globals::linelist.B_lu[lineindex] * n_l) - (globals::linelist.B_ul[lineindex] * n_u)) *
+                       HCLIGHTOVERFOURPI * t_mid,
+                   0.);
       const auto linelambda = 1e8 * CLIGHT / globals::linelist.nu[lineindex];
       bin_linesum += (linelambda / expopac_deltalambda) * -std::expm1(-tau_line);
       lineindex++;
