@@ -103,11 +103,6 @@ auto get_possible_event(const int nonemptymgi, const Packet& pkt, const Continuu
   double tau_lines = 0.;  // sum of the Sobolev optical depths of the lines that the packet passed
   double dist = 0.;  // distance to the last line that the packet passed
 
-  // The distance to a continuum event. Rounding in tau_lines must not put the event before the last line that the
-  // packet passed. std::max() returns its first argument if that argument is a NaN, so a NaN optical depth gives a
-  // NaN distance, which stops the run in do_rpkt_step().
-  const auto get_continuum_event_dist = [&] { return std::max((tau_rnd - tau_lines) / chi_cont, dist); };
-
   while (true) {
     // closest_transition() returns a negative index when no line remains at or below the frequency of the packet,
     // or when an earlier step marked the packet as past all lines.
@@ -120,7 +115,10 @@ auto get_possible_event(const int nonemptymgi, const Packet& pkt, const Continuu
         return {std::numeric_limits<double>::max(), next_trans, false};
       }
 
-      return {get_continuum_event_dist(), globals::nlines + 1, false};
+      // Rounding in tau_lines must not put a continuum event before the last line that the packet passed.
+      // std::max() returns its first argument if that argument is a NaN, so a NaN optical depth gives a NaN
+      // distance, which stops the run in do_rpkt_step().
+      return {std::max((tau_rnd - tau_lines) / chi_cont, dist), globals::nlines + 1, false};
     }
 
     const double nu_trans = linelist.nu[lineindex];
@@ -129,8 +127,8 @@ auto get_possible_event(const int nonemptymgi, const Packet& pkt, const Continuu
 
     // A NaN optical depth also takes this branch, and its NaN distance stops the run in do_rpkt_step().
     if (!(tau_rnd - tau_lines > chi_cont * dist_line)) {
-      // continuum process occurs before the line
-      return {get_continuum_event_dist(), lineindex, false};
+      // continuum process occurs before the line, with the same limit on the distance as above
+      return {std::max((tau_rnd - tau_lines) / chi_cont, dist), lineindex, false};
     }
 
     if (nu_trans < nu_cmf_abort) [[unlikely]] {
