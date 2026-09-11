@@ -372,7 +372,7 @@ class MPI_shared_array {
   // an MPI_shared_array<const T> that took over the memory can still release it.
   std::remove_const_t<T>* _allocation{nullptr};
 
-  // The array with the alignment of its first element made known to the compiler. Both allocation
+  // aligned_span() gives the array and tells the compiler the alignment of its first element. Both allocation
   // paths align the first element to shared_array_alignment_bytes, and a null pointer of an empty array
   // is also a multiple of it. With this information, a vectorised loop from the start of the array needs
   // no loop to reach the alignment. An offset into the array can break the alignment, so subspan() and
