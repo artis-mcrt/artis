@@ -68,13 +68,15 @@ auto get_nu_cmf_abort(const Vec3d& pos, const Vec3d& dir, const double prop_time
 }
 
 // Find the first line or continuum event before nu_cmf_abort or abort_dist. Return the distance to the event, the
-// value for pkt.next_trans, and true for a line event. The line distances assume that CLIGHT_PROP equals CLIGHT.
+// value for pkt.next_trans, and true for a line event.
 auto get_possible_event(const int nonemptymgi, const Packet& pkt, const ContinuumOpacity& chi_rpkt_cont,
                         MacroAtomState& mastate,
                         const double tau_rnd,  // random optical depth until which the packet travels
                         const double abort_dist,  // maximal travel distance before packet leaves cell or time step ends
                         const double nu_cmf_abort, const double dnu_on_dl, const double doppler,
                         const globals::TransitionLines& linelist) -> std::tuple<double, int, bool> {
+  static_assert(USE_RELATIVISTIC_DOPPLER_SHIFT || CLIGHT_PROP == CLIGHT,
+                "the line distances from the start of the path need CLIGHT_PROP == CLIGHT");
   const double chi_cont = chi_rpkt_cont.total() * doppler;
   const auto& cacheslot = get_cellcache(nonemptymgi);
   assert_testmodeonly(cacheslot.nonemptymgi == nonemptymgi);
