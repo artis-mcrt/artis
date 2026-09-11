@@ -372,6 +372,17 @@ class MPI_shared_array {
   // an MPI_shared_array<const T> that took over the memory can still release it.
   std::remove_const_t<T>* _allocation{nullptr};
 
+  // The array with the alignment of its first element made known to the compiler. Both allocation
+  // paths align the first element to shared_array_alignment_bytes, and a null pointer of an empty array
+  // is also a multiple of it. With this information, a vectorised loop from the start of the array needs
+  // no loop to reach the alignment. An offset into the array can break the alignment, so subspan() and
+  // operator[] use _span directly.
+  [[nodiscard]] auto aligned_span() const -> std::span<T> {
+#pragma clang unsafe_buffer_usage begin
+    return {std::assume_aligned<shared_array_alignment_bytes>(_span.data()), _span.size()};
+#pragma clang unsafe_buffer_usage end
+  }
+
  public:
   MPI_shared_array() = default;
 
@@ -467,27 +478,27 @@ class MPI_shared_array {
   }
 
   // Conversion to a const span is allowed on const objects.
-  explicit operator std::span<const T>() const { return _span; }
+  explicit operator std::span<const T>() const { return aligned_span(); }
 
   // mutable span if T is not const
   template <typename U = T>
     requires(!std::is_const_v<U>)
   explicit operator std::span<U>() {
-    return _span;
+    return aligned_span();
   }
   // Mutable span accessor.
-  [[nodiscard]] auto span() -> std::span<T> { return _span; }  // cppcheck-suppress functionConst
+  [[nodiscard]] auto span() -> std::span<T> { return aligned_span(); }  // cppcheck-suppress functionConst
   // Read-only span accessor.
-  [[nodiscard]] auto span() const -> std::span<const T> { return std::span<const T>{_span}; }
+  [[nodiscard]] auto span() const -> std::span<const T> { return aligned_span(); }
   // Mutable data pointer.
-  [[nodiscard]] auto data() -> T* { return _span.data(); }
+  [[nodiscard]] auto data() -> T* { return aligned_span().data(); }
   // Read-only data pointer.
-  [[nodiscard]] auto data() const -> const T* { return _span.data(); }
+  [[nodiscard]] auto data() const -> const T* { return aligned_span().data(); }
   // Iterators for mutable access.
-  [[nodiscard]] auto begin() { return _span.begin(); }
+  [[nodiscard]] auto begin() { return aligned_span().begin(); }  // cppcheck-suppress functionConst
   [[nodiscard]] auto end() { return _span.end(); }
   // Iterators for read-only access.
-  [[nodiscard]] auto begin() const { return std::span<const T>{_span}.begin(); }
+  [[nodiscard]] auto begin() const { return std::span<const T>{aligned_span()}.begin(); }
   [[nodiscard]] auto end() const { return std::span<const T>{_span}.end(); }
   [[nodiscard]] auto empty() const -> bool { return _span.empty(); }
   // Mutable subspan accessor.
@@ -498,9 +509,11 @@ class MPI_shared_array {
   [[nodiscard]] auto subspan(const size_t offset, const size_t count) const -> std::span<const T> {
     return std::span<const T>{_span}.subspan(offset, count);
   }
-  [[nodiscard]] auto first(const size_t count) -> std::span<T> { return _span.first(count); }
+  [[nodiscard]] auto first(const size_t count) -> std::span<T> {  // cppcheck-suppress functionConst
+    return aligned_span().first(count);
+  }
   [[nodiscard]] auto first(const size_t count) const -> std::span<const T> {
-    return std::span<const T>{_span}.first(count);
+    return std::span<const T>{aligned_span()}.first(count);
   }
   [[nodiscard]] auto size() const -> size_t { return _span.size(); }
   // (std::span has no ssize() member, so compute the signed size from size())
