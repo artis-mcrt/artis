@@ -62,7 +62,7 @@ void place_pellet(const double e_cmf_per_packet, const std::span<const double> e
   assert_always(cellindex < grid::ngrid);
 
   pkt.cellindex = cellindex;
-  pkt.number = pktnumber;  // record the packets number for debugging
+  pkt.number = pktnumber;  // the index of the packet on this rank. The packet sort in update_packets() uses it.
   pkt.prop_time = globals::tmin;
 
   pkt.pos = grid::get_propcell_random_xyz_position_tmin(cellindex, get_rngstate(pkt));
