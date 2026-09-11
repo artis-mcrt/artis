@@ -133,12 +133,14 @@ auto get_possible_event(const int nonemptymgi, const Packet& pkt, const Continuu
       return {std::numeric_limits<double>::max(), next_trans - 1, false};
     }
 
-    const double t_line = pkt.prop_time + (dist_line / CLIGHT_PROP);
-    const double tau_line = get_tau_sobolev(lineindex, levelpops[linelist.uniquelevelindex_lower[lineindex]],
-                                            levelpops[linelist.uniquelevelindex_upper[lineindex]], t_line);
+    // the Sobolev optical depth uses the time at the last line that the packet passed, or at the start of the path
+    const double tau_line =
+        get_tau_sobolev(lineindex, levelpops[linelist.uniquelevelindex_lower[lineindex]],
+                        levelpops[linelist.uniquelevelindex_upper[lineindex]], pkt.prop_time + (dist / CLIGHT_PROP));
 
     if constexpr (DETAILED_LINE_ESTIMATORS_ON) {
-      // e_cmf / nu_cmf = e_rf / nu_rf does not change along the path
+      // the estimator uses the time at the line. e_cmf / nu_cmf = e_rf / nu_rf does not change along the path.
+      const double t_line = pkt.prop_time + (dist_line / CLIGHT_PROP);
       radfield::update_lineestimator(nonemptymgi, lineindex, t_line * CLIGHT * pkt.e_cmf / pkt.nu_cmf);
     }
 
