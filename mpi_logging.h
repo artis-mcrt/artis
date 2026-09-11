@@ -20,6 +20,7 @@
 #include <ios>
 #include <limits>
 #include <memory>
+#include <new>
 #include <ranges>
 #include <span>
 #include <string>
@@ -272,6 +273,11 @@ static_assert(get_chunk_count(1, 3) == 1);
 static_assert(get_chunk_count(3, 3) == 1);
 static_assert(get_chunk_count(4, 3) == 2);
 
+// Alignment in bytes of the memory of an MPI_shared_array. AVX-512 needs 64 bytes, and 128 bytes is the
+// cache line size of Apple Silicon. Both allocation paths apply this value, so that a run with one rank on
+// the node gets the same alignment as a run with more ranks.
+constexpr std::size_t shared_array_alignment_bytes = 128;
+
 template <typename T>
   requires(!std::is_const_v<T>)
 [[nodiscard]] auto MPI_shared_malloc_span_keepwin(const ptrdiff_t num_allranks, const T& initval = {})
@@ -284,19 +290,20 @@ template <typename T>
   // only rank_in_node 0 on each node allocates memory, but all ranks will get a pointer to it
   const auto num_thisnoderank = (globals::rank_in_node == 0) ? num_allranks : 0;
 
-  // The MPI library does not always obey the alignment hint. Rank 0 asks for 128 more bytes and computes the byte
-  // offset that rounds its base pointer up to the next 128-byte boundary. Every rank then applies that one offset.
+  // The MPI library does not always obey the alignment hint. Rank 0 asks for shared_array_alignment_bytes more
+  // bytes and computes the byte offset that rounds its base pointer up to the next boundary of that alignment.
+  // Every rank then applies that one offset.
   // Each process maps the segment at its own virtual address, so the offset must come from a single rank, or the
   // spans of the ranks would refer to different parts of the segment.
-  constexpr std::size_t alignment_bytes = 128;
-  auto size = static_cast<MPI_Aint>((num_thisnoderank * sizeof(T)) + ((num_thisnoderank > 0) ? alignment_bytes : 0));
+  auto size = static_cast<MPI_Aint>((num_thisnoderank * sizeof(T)) +
+                                    ((num_thisnoderank > 0) ? shared_array_alignment_bytes : 0));
   int disp_unit = sizeof(T);
   MPI_Win mpiwin{MPI_WIN_NULL};
   T* ptr{};
   MPI_Info info{};
   assert_always(MPI_Info_create(&info) == MPI_SUCCESS);
-  // Request alignment (AVX-512 requires 64b, and 128b is Apple Silicon cache line size).
-  assert_always(MPI_Info_set(info, "mpi_minimum_memory_alignment", "128") == MPI_SUCCESS);
+  const auto alignment_string = std::to_string(shared_array_alignment_bytes);
+  assert_always(MPI_Info_set(info, "mpi_minimum_memory_alignment", alignment_string.c_str()) == MPI_SUCCESS);
   // Only rank 0 has a non-zero segment, so the segments are contiguous in any case. The hint lets the library
   // page-align the segment, which usually gives a zero alignment offset below.
   assert_always(MPI_Info_set(info, "alloc_shared_noncontig", "true") == MPI_SUCCESS);
@@ -308,14 +315,15 @@ template <typename T>
   std::uint64_t alignment_offset_bytes = 0;
   if (globals::rank_in_node == 0) {
     const auto baseaddress = std::bit_cast<std::uintptr_t>(ptr);
-    alignment_offset_bytes = (alignment_bytes - (baseaddress % alignment_bytes)) % alignment_bytes;
+    alignment_offset_bytes =
+        (shared_array_alignment_bytes - (baseaddress % shared_array_alignment_bytes)) % shared_array_alignment_bytes;
   }
   assert_always(MPI_Bcast(&alignment_offset_bytes, 1, MPI_UINT64_T, 0, globals::mpi_comm_node) == MPI_SUCCESS);
-  assert_always(alignment_offset_bytes < alignment_bytes);
+  assert_always(alignment_offset_bytes < shared_array_alignment_bytes);
   assert_always(static_cast<std::size_t>(size) >= alignment_offset_bytes + (num_allranks * sizeof(T)));
   ptr = std::bit_cast<T*>(std::bit_cast<std::uintptr_t>(ptr) + alignment_offset_bytes);
 #ifdef __cpp_lib_is_sufficiently_aligned
-  assert_always(std::is_sufficiently_aligned<128>(ptr));
+  assert_always(std::is_sufficiently_aligned<shared_array_alignment_bytes>(ptr));
 #endif
 #pragma clang unsafe_buffer_usage begin
   const auto newspan = std::span<T>(ptr, num_allranks);
@@ -360,6 +368,20 @@ class MPI_shared_array {
  private:
   MPI_Win _win{MPI_WIN_NULL};
   std::span<T> _span{};
+  // the pointer that the single-rank path below allocated, or nullptr. It is never const, so that
+  // an MPI_shared_array<const T> that took over the memory can still release it.
+  std::remove_const_t<T>* _allocation{nullptr};
+
+  // aligned_span() gives the array and tells the compiler the alignment of its first element. Both allocation
+  // paths align the first element to shared_array_alignment_bytes, and a null pointer of an empty array
+  // is also a multiple of it. With this information, a vectorised loop from the start of the array needs
+  // no loop to reach the alignment. An offset into the array can break the alignment, so subspan() and
+  // operator[] use _span directly.
+  [[nodiscard]] auto aligned_span() const -> std::span<T> {
+#pragma clang unsafe_buffer_usage begin
+    return {std::assume_aligned<shared_array_alignment_bytes>(_span.data()), _span.size()};
+#pragma clang unsafe_buffer_usage end
+  }
 
  public:
   MPI_shared_array() = default;
@@ -368,17 +390,21 @@ class MPI_shared_array {
 
   // copy constructor is deleted to avoid multiple owners of the same MPI window, but move constructor is allowed
   MPI_shared_array(const MPI_shared_array&) = delete;
-  MPI_shared_array(MPI_shared_array&& other) noexcept : _win(other._win), _span(other._span) {
-    // prevent the other object from freeing the window in its destructor
+  MPI_shared_array(MPI_shared_array&& other) noexcept
+      : _win(other._win), _span(other._span), _allocation(other._allocation) {
+    // prevent the other object from freeing the window or the memory in its destructor
     other._win = MPI_WIN_NULL;
     other._span = {};
+    other._allocation = nullptr;
   }
 
   template <typename U>
     requires(std::is_same_v<T, const U> && !std::is_const_v<U>)
   // NOLINTNEXTLINE(cppcoreguidelines-rvalue-reference-param-not-moved,*-explicit-constructor,hicpp-explicit-conversions)
   MPI_shared_array(MPI_shared_array<U>&& other) noexcept  // cppcheck-suppress noExplicitConstructor
-      : _win(std::exchange(other._win, MPI_WIN_NULL)), _span(std::exchange(other._span, {})) {}
+      : _win(std::exchange(other._win, MPI_WIN_NULL)),
+        _span(std::exchange(other._span, {})),
+        _allocation(std::exchange(other._allocation, nullptr)) {}
 
   auto operator=(const MPI_shared_array<T>&) -> MPI_shared_array& = delete;
 
@@ -386,9 +412,10 @@ class MPI_shared_array {
     if (this->_span.data() == other._span.data()) {
       return *this;
     }
-    assert_always(_span.empty() && (_win == MPI_WIN_NULL));
+    assert_always(_span.empty() && (_win == MPI_WIN_NULL) && (_allocation == nullptr));
     _span = std::exchange(other._span, {});
     _win = std::exchange(other._win, MPI_WIN_NULL);
+    _allocation = std::exchange(other._allocation, nullptr);
     return *this;
   }
 
@@ -398,25 +425,33 @@ class MPI_shared_array {
     if (this->_span.data() == other_._span.data()) {
       return *this;
     }
-    assert_always(_span.empty() && (_win == MPI_WIN_NULL));
+    assert_always(_span.empty() && (_win == MPI_WIN_NULL) && (_allocation == nullptr));
     auto other = std::move(other_);
     _span = static_cast<std::span<T>>(std::exchange(other._span, {}));
     _win = std::exchange(other._win, MPI_WIN_NULL);
+    _allocation = std::exchange(other._allocation, nullptr);
     return *this;
   }
 
   ~MPI_shared_array() { reset(); }
 
   auto allocate(const ptrdiff_t num_allranks, const T& initval = {}) {
-    assert_always(_span.empty() && (_win == MPI_WIN_NULL));  // should not be allocating if we already own a window
+    // should not be allocating if we already own a window or memory
+    assert_always(_span.empty() && (_win == MPI_WIN_NULL) && (_allocation == nullptr));
     if (globals::node_nprocs > 1) {
       int initialized = 0;
       MPI_Initialized(&initialized);
       assert_always(initialized != 0);  // MPI must be initialized before constructing an MPI_shared_array
       std::tie(_span, _win) = MPI_shared_malloc_span_keepwin<T>(num_allranks, initval);
     } else {
+      // The shared window above aligns its memory to shared_array_alignment_bytes. Align this memory in the
+      // same way. A run with one rank on the node then vectorises like a run with more ranks.
+      _allocation = new (std::align_val_t{shared_array_alignment_bytes}) T[num_allranks];
+#ifdef __cpp_lib_is_sufficiently_aligned
+      assert_always(std::is_sufficiently_aligned<shared_array_alignment_bytes>(_allocation));
+#endif
 #pragma clang unsafe_buffer_usage begin
-      _span = std::span<T>(new T[num_allranks], num_allranks);
+      _span = std::span<T>(_allocation, num_allranks);
 #pragma clang unsafe_buffer_usage end
       std::ranges::fill(_span, initval);
     }
@@ -435,33 +470,35 @@ class MPI_shared_array {
       }
       _win = MPI_WIN_NULL;
     } else {
-      delete[] _span.data();
+      // the aligned form of the delete, to match the aligned new in allocate()
+      ::operator delete[](_allocation, std::align_val_t{shared_array_alignment_bytes});
     }
+    _allocation = nullptr;
     _span = {};
   }
 
   // Conversion to a const span is allowed on const objects.
-  explicit operator std::span<const T>() const { return _span; }
+  explicit operator std::span<const T>() const { return aligned_span(); }
 
   // mutable span if T is not const
   template <typename U = T>
     requires(!std::is_const_v<U>)
   explicit operator std::span<U>() {
-    return _span;
+    return aligned_span();
   }
   // Mutable span accessor.
-  [[nodiscard]] auto span() -> std::span<T> { return _span; }  // cppcheck-suppress functionConst
+  [[nodiscard]] auto span() -> std::span<T> { return aligned_span(); }  // cppcheck-suppress functionConst
   // Read-only span accessor.
-  [[nodiscard]] auto span() const -> std::span<const T> { return std::span<const T>{_span}; }
+  [[nodiscard]] auto span() const -> std::span<const T> { return aligned_span(); }
   // Mutable data pointer.
-  [[nodiscard]] auto data() -> T* { return _span.data(); }
+  [[nodiscard]] auto data() -> T* { return aligned_span().data(); }
   // Read-only data pointer.
-  [[nodiscard]] auto data() const -> const T* { return _span.data(); }
+  [[nodiscard]] auto data() const -> const T* { return aligned_span().data(); }
   // Iterators for mutable access.
-  [[nodiscard]] auto begin() { return _span.begin(); }
+  [[nodiscard]] auto begin() { return aligned_span().begin(); }  // cppcheck-suppress functionConst
   [[nodiscard]] auto end() { return _span.end(); }
   // Iterators for read-only access.
-  [[nodiscard]] auto begin() const { return std::span<const T>{_span}.begin(); }
+  [[nodiscard]] auto begin() const { return std::span<const T>{aligned_span()}.begin(); }
   [[nodiscard]] auto end() const { return std::span<const T>{_span}.end(); }
   [[nodiscard]] auto empty() const -> bool { return _span.empty(); }
   // Mutable subspan accessor.
@@ -472,9 +509,11 @@ class MPI_shared_array {
   [[nodiscard]] auto subspan(const size_t offset, const size_t count) const -> std::span<const T> {
     return std::span<const T>{_span}.subspan(offset, count);
   }
-  [[nodiscard]] auto first(const size_t count) -> std::span<T> { return _span.first(count); }
+  [[nodiscard]] auto first(const size_t count) -> std::span<T> {  // cppcheck-suppress functionConst
+    return aligned_span().first(count);
+  }
   [[nodiscard]] auto first(const size_t count) const -> std::span<const T> {
-    return std::span<const T>{_span}.first(count);
+    return std::span<const T>{aligned_span()}.first(count);
   }
   [[nodiscard]] auto size() const -> size_t { return _span.size(); }
   // (std::span has no ssize() member, so compute the signed size from size())
