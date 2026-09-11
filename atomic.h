@@ -199,9 +199,11 @@ DEVICE_FUNC inline auto get_nphixstargets(const int element, const int ion, cons
 }
 
 // Calculate the photoionisation cross-section at frequency nu out of the atomic data.
-[[gnu::pure]] [[nodiscard]] inline auto photoionisation_crosssection_fromtable(std::span<const float> photoion_xs,
-                                                                               const double nu_edge, const double nu)
-    -> float {
+// nphixsnuincrement must equal globals::NPHIXSNUINCREMENT. A hot loop can give a local copy.
+[[gnu::pure]] [[nodiscard]] inline auto photoionisation_crosssection_fromtable(
+    std::span<const float> photoion_xs, const double nu_edge, const double nu,
+    const double nphixsnuincrement = globals::NPHIXSNUINCREMENT) -> float {
+  assert_testmodeonly(nphixsnuincrement == globals::NPHIXSNUINCREMENT);
   float sigma_bf = 0.;
 
   if constexpr (PHIXS_CLASSIC_NO_INTERPOLATION) {
@@ -211,24 +213,24 @@ DEVICE_FUNC inline auto get_nphixstargets(const int element, const int ion, cons
       sigma_bf = 0.;
     } else if (nu == nu_edge) {
       sigma_bf = photoion_xs[0];
-    } else if (nu < nu_edge * (1 + (globals::NPHIXSNUINCREMENT * globals::NPHIXSPOINTS))) {
+    } else if (nu < nu_edge * (1 + (nphixsnuincrement * globals::NPHIXSPOINTS))) {
       // the range guard above and the index below are computed with different floating-point
       // expressions, so for nu just under the bound the division can round up to exactly
       // NPHIXSPOINTS. Clamp so that the read stays inside this level's table
-      const int i = std::min(static_cast<int>((nu - nu_edge) / (globals::NPHIXSNUINCREMENT * nu_edge)),
-                             globals::NPHIXSPOINTS - 1);
+      const int i =
+          std::min(static_cast<int>((nu - nu_edge) / (nphixsnuincrement * nu_edge)), globals::NPHIXSPOINTS - 1);
       sigma_bf = photoion_xs[i];
     } else {
       // above the top of the table, extrapolate with the Kramers (1923) nu^-3 scaling. It is anchored to the
       // highest tabulated point rather than to the threshold value so that the cross-section stays continuous
       // across the end of the table.
       sigma_bf = static_cast<float>(photoion_xs[globals::NPHIXSPOINTS - 1] *
-                                    pow(nu_edge * (1 + (globals::NPHIXSNUINCREMENT * globals::NPHIXSPOINTS)) / nu, 3));
+                                    pow(nu_edge * (1 + (nphixsnuincrement * globals::NPHIXSPOINTS)) / nu, 3));
     }
     return sigma_bf;
   }
 
-  const double ireal = ((nu / nu_edge) - 1.0) / globals::NPHIXSNUINCREMENT;
+  const double ireal = ((nu / nu_edge) - 1.0) / nphixsnuincrement;
   // floor() so that nu < nu_edge always gives i < 0 (zero cross-section below the threshold);
   // truncation toward zero would map ireal in (-1, 0) to the first table point instead
   const int i = static_cast<int>(std::floor(ireal));
