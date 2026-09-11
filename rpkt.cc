@@ -752,6 +752,10 @@ auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixsli
   // Only the cellcache instantiation reads the slot: in single-slot mode get_cellcache() returns the
   // calling rank's one shared slot, which generally holds a different cell.
   const auto& cacheslot = get_cellcache(nonemptymgi);
+
+  // the loop below stores double values, so it reads the global through this local copy (see
+  // photoionisation_crosssection_fromtable())
+  const double nphixsnuincrement = globals::NPHIXSNUINCREMENT;
   assert_testmodeonly(!USECELLHISTANDUPDATEPHIXSLIST || cacheslot.nonemptymgi == nonemptymgi);
 
   // the last continuum that contributed to the sum, for the roundoff fallback below
@@ -793,8 +797,8 @@ auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixsli
       }
 
       const double nu_edge = allcont_nu_edge[i];
-      const double sigma_bf =
-          photoionisation_crosssection_fromtable(get_phixs_table(allcont_uniquelevelindex[i]), nu_edge, nu);
+      const double sigma_bf = photoionisation_crosssection_fromtable(get_phixs_table(allcont_uniquelevelindex[i]),
+                                                                     nu_edge, nu, nphixsnuincrement);
 
       // negative means "not computed for this cell yet", which is what cellcacheslot_populate() fills the
       // cache with, and is also what the no-cellcache instantiation always sees (it has no cache entry
