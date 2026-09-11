@@ -75,8 +75,6 @@ auto get_possible_event(const int nonemptymgi, const Packet& pkt, const Continuu
                         const double abort_dist,  // maximal travel distance before packet leaves cell or time step ends
                         const double nu_cmf_abort, const double dnu_on_dl, const double doppler,
                         const globals::TransitionLines& linelist) -> std::tuple<double, int, bool> {
-  static_assert(USE_RELATIVISTIC_DOPPLER_SHIFT || CLIGHT_PROP == CLIGHT,
-                "the line distances from the start of the path need CLIGHT_PROP == CLIGHT");
   const double chi_cont = chi_rpkt_cont.total() * doppler;
   const auto& cacheslot = get_cellcache(nonemptymgi);
   assert_testmodeonly(cacheslot.nonemptymgi == nonemptymgi);
@@ -101,7 +99,7 @@ auto get_possible_event(const int nonemptymgi, const Packet& pkt, const Continuu
     }
 
     const double nu_trans = linelist.nu[lineindex];
-    const double dist_line = get_linedistance(pkt.prop_time, pkt.nu_cmf, nu_trans, dnu_on_dl);
+    const double dist_line = get_linedistance(pkt.prop_time, pkt.nu_rf, pkt.nu_cmf, nu_trans, dnu_on_dl);
     assert_testmodeonly(dist_line >= dist);
 
     // a NaN also takes this branch
@@ -171,7 +169,7 @@ auto get_possible_event_expansion_opacity(const int nonemptymgi, Packet& pkt, co
   for (auto binindex = binindex_start; binindex < expopac_nbins; binindex++) {
     // binindex could be -1, in which case we have only the continuum opacity and no expansion opacity
     const auto next_bin_edge_nu = (binindex < 0) ? get_expopac_bin_nu_upper(0) : get_expopac_bin_nu_lower(binindex);
-    const auto binedgedist = get_linedistance(prop_time, nu_cmf, next_bin_edge_nu, dnu_on_dl);
+    const auto binedgedist = get_linedistance(prop_time, nu_rf, nu_cmf, next_bin_edge_nu, dnu_on_dl);
 
     const double chi_cont = chi_rpkt_cont.total() * doppler;
     double chi_bb_expansionopac = 0.;

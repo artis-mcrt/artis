@@ -8,6 +8,7 @@
 #include <array>
 #include <cstddef>
 #include <functional>
+#include <limits>
 #include <memory>
 #include <span>
 
@@ -114,10 +115,9 @@ void calculate_expansion_opacities(int nonemptymgi);
 void MPI_Bcast_binned_opacities(ptrdiff_t nstart_nonempty, ptrdiff_t ndo_nonempty, int root_node_id);
 auto calculate_chi_ffheat_nnionpart(int nonemptymgi) -> double;
 
-[[nodiscard]] constexpr auto get_linedistance(const double prop_time, const double nu_cmf, const double nu_trans,
-                                              const double dnu_on_dl) -> double {
-  // distance from packet position to redshifting into line at frequency nu_trans
-
+// Distance from the packet to the resonance of the line at nu_trans, or infinity if the packet never reaches it
+[[nodiscard]] constexpr auto get_linedistance(const double prop_time, const double nu_rf, const double nu_cmf,
+                                              const double nu_trans, const double dnu_on_dl) -> double {
   if (nu_cmf <= nu_trans) {
     return 0.;  // photon was propagated too far, make sure that we don't miss a line
   }
@@ -131,7 +131,12 @@ auto calculate_chi_ffheat_nnionpart(int nonemptymgi) -> double;
     return -delta_nu / dnu_on_dl;  // dnu_on_dl is negative, so this is a positive distance
   }
 
-  return CLIGHT * prop_time * delta_nu / nu_trans;
+  constexpr double c_over_cprop = CLIGHT / CLIGHT_PROP;
+  const double denominator = (c_over_cprop * nu_trans) - ((c_over_cprop - 1.) * nu_rf);
+  if (denominator <= 0.) {
+    return std::numeric_limits<double>::infinity();
+  }
+  return CLIGHT * prop_time * delta_nu / denominator;
 }
 
 // Get the correction of a binned expansion opacity for the path that sweeps the bin. The packet crosses
@@ -149,13 +154,13 @@ auto calculate_chi_ffheat_nnionpart(int nonemptymgi) -> double;
   return 1.;
 }
 
-static_assert(get_linedistance(100., 1., 2., -0.5) == 0.);  // overshot the line resonance
-static_assert(USE_RELATIVISTIC_DOPPLER_SHIFT || get_linedistance(2., 4., 2., -1.) == (CLIGHT * 2. * 2. / 2.));
-static_assert(!USE_RELATIVISTIC_DOPPLER_SHIFT || get_linedistance(2., 4., 2., -1.) == 2.);
+static_assert(get_linedistance(100., 1., 1., 2., -0.5) == 0.);  // overshot the line resonance
+static_assert(USE_RELATIVISTIC_DOPPLER_SHIFT || get_linedistance(2., 2., 4., 2., -1.) == (CLIGHT * 2. * 2. / 2.));
+static_assert(!USE_RELATIVISTIC_DOPPLER_SHIFT || get_linedistance(2., 2., 4., 2., -1.) == 2.);
 
 // the corrected path of a bin is the path that calculate_expansion_opacities() assumes
 static_assert(!FRAME_TRANSFORM_EXPANSION_OPACITIES_BINEDGEDIST ||
-              (get_linedistance(2., 4., 2., -1.) * get_expopac_pathfactor(2., 2., -1.)) == (CLIGHT * 2. * 2. / 2.));
+              (get_linedistance(2., 2., 4., 2., -1.) * get_expopac_pathfactor(2., 2., -1.)) == (CLIGHT * 2. * 2. / 2.));
 
 // find the next transition lineindex redder than nu_cmf
 // for the propagation through non empty cells
