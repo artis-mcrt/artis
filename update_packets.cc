@@ -17,7 +17,6 @@
 #endif
 #include <span>
 #include <tuple>
-#include <utility>
 #include <vector>
 
 #include "artisoptions.h"
@@ -357,19 +356,10 @@ auto get_packet_cellcachegroupid(const Packet& pkt) -> std::optional<int> {
   return nonemptymgi;
 }
 
-// The part of the packet order that comes from the cell of the packet. update_packets() finds it once for each
-// packet before the sort, because the sort compares each packet many times and each find reads several cell arrays.
-struct CellOrderKey {
-  int cellcache_groupid{-1};  // -1 if the packet does not use the cell cache
-  float rho{0.};  // density of the cell of the cell cache group, or zero if there is no group
-};
-
 // Strict-weak ordering used to sort packets before propagation: packets still needing updates come first, then
 // they are grouped by cell-cache group and ordered by descending cell density and descending nu_cmf so that
 // packets sharing a cell (and cache state) are processed consecutively for cache efficiency.
-// The index of cellorderkeys is the number of the packet, because the sort moves the packets.
-auto compare_packet_order(const Packet& p1, const Packet& p2, const double ts_end,
-                          const std::span<const CellOrderKey> cellorderkeys) -> bool {
+auto compare_packet_order(const Packet& p1, const Packet& p2, const double ts_end) -> bool {
   // return true if packet p1 goes before p2
 
   // first order by whether the packet has reached the end of the timestep or escaped (both of which mean it won't be
@@ -390,14 +380,16 @@ auto compare_packet_order(const Packet& p1, const Packet& p2, const double ts_en
   }
 
   // all packets in empty or thick cells can be grouped together since they don't use the cell cache
-  const auto& key1 = cellorderkeys[p1.number];
-  const auto& key2 = cellorderkeys[p2.number];
+  const int cellcachenonemptymgi1 = get_packet_cellcachegroupid(p1).value_or(-1);
+  const int cellcachenonemptymgi2 = get_packet_cellcachegroupid(p2).value_or(-1);
+  const auto rho1 = cellcachenonemptymgi1 >= 0 ? grid::get_rho(cellcachenonemptymgi1) : 0.0;
+  const auto rho2 = cellcachenonemptymgi2 >= 0 ? grid::get_rho(cellcachenonemptymgi2) : 0.0;
 
   // rho1 and rho2 are swapped here so that higher density cells are first (descending order of density)
   // nu_cmf 1 and 2 are also swapped so that higher energy packets are first (descending order of nu_cmf)
   // other fields are ascending order
-  return std::tie(key2.rho, key1.cellcache_groupid, p1.type, p2.nu_cmf) <
-         std::tie(key1.rho, key2.cellcache_groupid, p2.type, p1.nu_cmf);
+  return std::tie(rho2, cellcachenonemptymgi1, p1.type, p2.nu_cmf) <
+         std::tie(rho1, cellcachenonemptymgi2, p2.type, p1.nu_cmf);
 }
 
 // fill the cellcache with values for the current cell
@@ -574,23 +566,9 @@ void update_packets(const int nts, std::span<Packet> packets) {
   while (true) {
     const auto sys_time_start_pass = std::chrono::steady_clock::now();
 
-    static std::vector<CellOrderKey> cellorderkeys;
-    cellorderkeys.resize(packets.size());
-    std::for_each(EXEC_PAR_UNSEQ packets.begin(), packets.end(),
-                  [cellorderkeys = std::span{cellorderkeys}](const Packet& pkt) {
-                    assert_always(pkt.number >= 0 && std::cmp_less(pkt.number, cellorderkeys.size()));
-                    const int cellcache_groupid = get_packet_cellcachegroupid(pkt).value_or(-1);
-                    cellorderkeys[pkt.number] = {
-                        .cellcache_groupid = cellcache_groupid,
-                        .rho = cellcache_groupid >= 0 ? grid::get_rho(cellcache_groupid) : 0.F,
-                    };
-                  });
-
     std::SORT_OR_STABLE_SORT(
         EXEC_PAR_UNSEQ packets.begin(), packets.end(),
-        [ts_end, cellorderkeys = std::span<const CellOrderKey>{cellorderkeys}](const Packet& p1, const Packet& p2) {
-          return compare_packet_order(p1, p2, ts_end, cellorderkeys);
-        });
+        [ts_end](const Packet& p1, const Packet& p2) { return compare_packet_order(p1, p2, ts_end); });
 
     static std::vector<std::tuple<int, std::span<Packet>>> packet_groups;
     packet_groups.clear();
