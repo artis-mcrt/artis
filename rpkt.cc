@@ -67,24 +67,26 @@ auto get_nu_cmf_abort(const Vec3d& pos, const Vec3d& dir, const double prop_time
   return nu_cmf_abort;
 }
 
-// Get the Sobolev optical depth of a line at the current propagation time, from the stimulated-emission
-// corrected populations n_l and n_u of its lower and upper levels: (B_lu n_l - B_ul n_u) h c / (4 pi) times
-// t_current for homologous expansion. Negative values (population inversion) are clamped to zero.
-[[nodiscard]] auto get_tau_sobolev(const int lineindex, const double n_l, const double n_u, const double t_current)
-    -> double {
-  const double B_ul = globals::linelist.B_ul[lineindex];
-  const double B_lu = globals::linelist.B_lu[lineindex];
+// Get the Sobolev optical depth of a line for homologous expansion from the populations n_l and n_u of its lower
+// and upper levels: (B_lu n_l - B_ul n_u) h c / (4 pi) times t_resonance, the time of the resonance. A population
+// inversion gives zero.
+[[nodiscard]] auto get_tau_sobolev(const globals::TransitionLines& linelist, const int lineindex, const double n_l,
+                                   const double n_u, const double t_resonance) -> double {
+  const double B_ul = linelist.B_ul[lineindex];
+  const double B_lu = linelist.B_lu[lineindex];
 
-  return std::max(((B_lu * n_l) - (B_ul * n_u)) * HCLIGHTOVERFOURPI * t_current, 0.);
+  return std::max(((B_lu * n_l) - (B_ul * n_u)) * HCLIGHTOVERFOURPI * t_resonance, 0.);
 }
 
-// find any line or continuum interaction occurring before frequency decreases to nu_cmf_abort at distance abort_dist
-// Return a tuple of (distance to event, next transition index for pkt.next_trans, bool for whether line event)
-// the next transition index is lineindex + 1 for a line event, may remain the current next_trans if no event occurs,
-// and is globals::nlines + 1 for a continuum event
-// get_linedistance() with the time and the frequency at the start of the path gives the distance to each line
-// directly, so the distances do not accumulate from line to line. The linelist has descending frequencies, so the
-// distance does not decrease from one line to the next.
+// The function finds the first line or continuum event before the frequency falls to nu_cmf_abort or the distance
+// reaches abort_dist. It returns the distance to the event, the value for pkt.next_trans, and true for a line event.
+// The value for pkt.next_trans is lineindex + 1 for a line event. For a continuum event or an abort, it is the first
+// line that the packet does not reach. When no line remains, it is globals::nlines + 1 for a continuum event, and
+// pkt.next_trans with no event.
+//
+// get_linedistance() with the time and the frequency at the start of the path gives the distance to each line. For
+// the first-order Doppler shift, this distance is exact if CLIGHT_PROP equals CLIGHT. The frequencies in the linelist
+// decrease, so the distance does not decrease from one line to the next.
 auto get_possible_event(const int nonemptymgi, const Packet& pkt, const ContinuumOpacity& chi_rpkt_cont,
                         MacroAtomState& mastate,
                         const double tau_rnd,  // random optical depth until which the packet travels
@@ -94,14 +96,21 @@ auto get_possible_event(const int nonemptymgi, const Packet& pkt, const Continuu
   const double chi_cont = chi_rpkt_cont.total() * doppler;
   // The level populations come from the cell cache. The span is outside the loop, so that the compiler does not
   // find the cache slot again for each line.
-  assert_testmodeonly(get_cellcache(nonemptymgi).nonemptymgi == nonemptymgi);
-  const auto levelpops = std::span<const double>{get_cellcache(nonemptymgi).alllevels_pops};
+  const auto& cacheslot = get_cellcache(nonemptymgi);
+  assert_testmodeonly(cacheslot.nonemptymgi == nonemptymgi);
+  const auto levelpops = std::span<const double>{cacheslot.alllevels_pops};
   auto next_trans = pkt.next_trans;
   double tau_lines = 0.;  // sum of the Sobolev optical depths of the lines that the packet passed
   double dist = 0.;  // distance to the last line that the packet passed
+
+  // The distance to a continuum event. Rounding in tau_lines must not put the event before the last line that the
+  // packet passed. std::max() returns its first argument if that argument is a NaN, so a NaN optical depth gives a
+  // NaN distance, which stops the run in do_rpkt_step().
+  const auto get_continuum_event_dist = [&] { return std::max((tau_rnd - tau_lines) / chi_cont, dist); };
+
   while (true) {
-    // closest_transition() returns a negative index once no line remains at or below the frequency of the packet,
-    // or when the packet has already been tagged as having no further line interactions.
+    // closest_transition() returns a negative index when no line remains at or below the frequency of the packet,
+    // or when an earlier step marked the packet as past all lines.
     const int lineindex = closest_transition(pkt.nu_cmf, next_trans, linelist.nu);
 
     if (lineindex < 0) [[unlikely]] {
@@ -111,32 +120,29 @@ auto get_possible_event(const int nonemptymgi, const Packet& pkt, const Continuu
         return {std::numeric_limits<double>::max(), next_trans, false};
       }
 
-      // continuum process occurs at edist
-      return {(tau_rnd - tau_lines) / chi_cont, globals::nlines + 1, false};
+      return {get_continuum_event_dist(), globals::nlines + 1, false};
     }
 
     const double nu_trans = linelist.nu[lineindex];
+    const double dist_line = get_linedistance(pkt.prop_time, pkt.nu_cmf, nu_trans, dnu_on_dl);
+    assert_testmodeonly(dist_line >= dist);
 
-    // advance past this line so that any further event this step is found at a lower frequency. Without this the
-    // packet could scatter repeatedly in the same line when rounding leaves nu_cmf marginally above nu_trans.
-    next_trans = lineindex + 1;
-
-    const double dist_line = std::max(dist, get_linedistance(pkt.prop_time, pkt.nu_cmf, nu_trans, dnu_on_dl));
-
-    if (tau_rnd - tau_lines <= chi_cont * dist_line) {
-      // continuum process occurs before reaching the line
-      return {(tau_rnd - tau_lines) / chi_cont, next_trans - 1, false};
+    // A NaN optical depth also takes this branch, and its NaN distance stops the run in do_rpkt_step().
+    if (!(tau_rnd - tau_lines > chi_cont * dist_line)) {
+      // continuum process occurs before the line
+      return {get_continuum_event_dist(), lineindex, false};
     }
 
     if (nu_trans < nu_cmf_abort) [[unlikely]] {
-      // back up one line, because we didn't reach it before the boundary/timelimit
-      return {std::numeric_limits<double>::max(), next_trans - 1, false};
+      // the packet does not reach the line before the cell boundary or the end of the timestep
+      return {std::numeric_limits<double>::max(), lineindex, false};
     }
 
     // the time at which the packet reaches the line. The Sobolev optical depth uses the time of the resonance.
     const double t_line = pkt.prop_time + (dist_line / CLIGHT_PROP);
-    const double tau_line = get_tau_sobolev(lineindex, levelpops[linelist.uniquelevelindex_lower[lineindex]],
-                                            levelpops[linelist.uniquelevelindex_upper[lineindex]], t_line);
+    const int uniquelevelindex_upper = linelist.uniquelevelindex_upper[lineindex];
+    const double tau_line = get_tau_sobolev(linelist, lineindex, levelpops[linelist.uniquelevelindex_lower[lineindex]],
+                                            levelpops[uniquelevelindex_upper], t_line);
 
     if constexpr (DETAILED_LINE_ESTIMATORS_ON) {
       // e_cmf / nu_cmf = e_rf / nu_rf does not change along the path
@@ -144,25 +150,26 @@ auto get_possible_event(const int nonemptymgi, const Packet& pkt, const Continuu
     }
 
     if (tau_rnd - tau_lines <= (chi_cont * dist_line) + tau_line) {
-      // bound-bound process occurs
+      // bound-bound process occurs. closest_transition() already selected the line.
       const auto element = linelist.elementindex[lineindex];
       const auto ion = linelist.ionindex[lineindex];
-      const auto ionuniquelevelindexstart = get_ionuniquelevelindexstart(element, ion);
-      const auto upper = globals::linelist.uniquelevelindex_upper[lineindex] - ionuniquelevelindexstart;
+      const auto upper = uniquelevelindex_upper - get_ionuniquelevelindexstart(element, ion);
 
       mastate = {.element = element, .ion = ion, .level = upper, .activatingline = lineindex};
 
-      // the line and its parameters were already selected by closest_transition!
-
-      return {dist_line, next_trans, true};
+      // The next step starts at the next line. Otherwise, rounding can leave nu_cmf a little above nu_trans, and the
+      // packet can scatter in the same line again.
+      return {dist_line, lineindex + 1, true};
     }
 
-    // total optical depth still below tau_rnd: continue past the line
+    // total optical depth still below tau_rnd: continue past the line to the next line
     tau_lines += tau_line;
     dist = dist_line;
+    next_trans = lineindex + 1;
   }
 }
 
+// NOLINTNEXTLINE(misc-const-correctness): the GPU build of get_rngstate() needs a Packet that is not const
 auto get_possible_event_expansion_opacity(const int nonemptymgi, Packet& pkt, const ContinuumOpacity& chi_rpkt_cont,
                                           MacroAtomState& mastate, const double tau_rnd, const double nu_cmf_abort,
                                           const double dnu_on_dl, const double doppler) -> std::tuple<double, bool> {
@@ -213,16 +220,13 @@ auto get_possible_event_expansion_opacity(const int nonemptymgi, Packet& pkt, co
 
       // re-trace this bin line-by-line
       auto pkt_bin_start = pkt;
-      pkt_bin_start.pos = pos;
-      pkt_bin_start.nu_rf = nu_rf;
       pkt_bin_start.nu_cmf = nu_cmf;
-      pkt_bin_start.e_rf = e_rf;
       pkt_bin_start.e_cmf = e_cmf;
       // The retrace runs at the time of the packet, the same as the bin walk above. The bin opacity holds the
       // Sobolev optical depths at t_mid over a path length of c t_mid. The bin walk multiplies it by the path
       // length at the packet time, so the bin optical depth scales with t / t_mid. The line-by-line Sobolev
       // optical depths scale in the same way with the packet time. A retrace at t_mid would instead give each
-      // line distance and each move inside the bin a scale of t_mid / t.
+      // line distance a scale of t_mid / t.
       pkt_bin_start.prop_time = prop_time;
       pkt_bin_start.next_trans = -1;
       double edist_after_bin = 0.;
@@ -243,11 +247,7 @@ auto get_possible_event_expansion_opacity(const int nonemptymgi, Packet& pkt, co
       move_pkt_withtime(pos, pkt.dir, prop_time, nu_rf, nu_cmf, e_rf, e_cmf, binedgedist);
     } else {
       // avoid move_pkt_withtime() to skip the standard Doppler shift calculation
-      // and use the linear approx instead
-
-      pos[0] += (pkt.dir[0] * binedgedist);
-      pos[1] += (pkt.dir[1] * binedgedist);
-      pos[2] += (pkt.dir[2] * binedgedist);
+      // and use the linear approx instead. The retrace does not use the position.
       prop_time += binedgedist / CLIGHT_PROP;
       nu_cmf = pkt.nu_cmf + (dnu_on_dl * dist);  // should equal nu_trans;
       assert_testmodeonly(nu_cmf <= pkt.nu_cmf);
@@ -749,14 +749,13 @@ auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixsli
   const auto& allcont_uniquelevelindex = globals::allcont.uniquelevelindex;
   const auto& allcont_groundcontestimindex = globals::allcont.groundcontestimindex;
   const auto& allcont_probability = globals::allcont.probability;
+  // a copy of a double global, because the loop below stores double values (see
+  // photoionisation_crosssection_fromtable())
+  const double nphixsnuincrement = globals::NPHIXSNUINCREMENT;
 
   // Only the cellcache instantiation reads the slot: in single-slot mode get_cellcache() returns the
   // calling rank's one shared slot, which generally holds a different cell.
   const auto& cacheslot = get_cellcache(nonemptymgi);
-
-  // the loop below stores double values, so it reads the global through this local copy (see
-  // photoionisation_crosssection_fromtable())
-  const double nphixsnuincrement = globals::NPHIXSNUINCREMENT;
   assert_testmodeonly(!USECELLHISTANDUPDATEPHIXSLIST || cacheslot.nonemptymgi == nonemptymgi);
 
   // the last continuum that contributed to the sum, for the roundoff fallback below
@@ -1065,6 +1064,17 @@ void calculate_expansion_opacities(const int nonemptymgi) {
       std::ranges::lower_bound(globals::linelist.nu, get_expopac_bin_nu_upper(0), std::ranges::greater{}) -
       globals::linelist.nu.begin());
 
+  // Many lines share a level, so the loop below reads the level populations from one array for the cell
+  std::vector<double> levelpops(get_includedlevels());
+  for (int element = 0; element < get_nelements(); element++) {
+    for (int ion = 0; ion < get_nions(element); ion++) {
+      const auto uniquelevelindexstart = get_ionuniquelevelindexstart(element, ion);
+      for (int level = 0; level < get_nlevels(element, ion); level++) {
+        levelpops[uniquelevelindexstart + level] = calculate_levelpop(nonemptymgi, element, ion, level);
+      }
+    }
+  }
+
   double kappa_planck_cumulative = 0.;
 
   for (auto binindex = 0Z; binindex < expopac_nbins; binindex++) {
@@ -1072,13 +1082,9 @@ void calculate_expansion_opacities(const int nonemptymgi) {
     const auto nu_lower = get_expopac_bin_nu_lower(binindex);
 
     while (lineindex < globals::nlines && globals::linelist.nu[lineindex] >= nu_lower) {
-      const auto element = globals::linelist.elementindex[lineindex];
-      const auto ion = globals::linelist.ionindex[lineindex];
-      const auto ionuniquelevelindexstart = get_ionuniquelevelindexstart(element, ion);
-      const int lower = globals::linelist.uniquelevelindex_lower[lineindex] - ionuniquelevelindexstart;
-      const int upper = globals::linelist.uniquelevelindex_upper[lineindex] - ionuniquelevelindexstart;
-      const auto tau_line = get_tau_sobolev(lineindex, calculate_levelpop(nonemptymgi, element, ion, lower),
-                                            calculate_levelpop(nonemptymgi, element, ion, upper), t_mid);
+      const auto tau_line =
+          get_tau_sobolev(globals::linelist, lineindex, levelpops[globals::linelist.uniquelevelindex_lower[lineindex]],
+                          levelpops[globals::linelist.uniquelevelindex_upper[lineindex]], t_mid);
       const auto linelambda = 1e8 * CLIGHT / globals::linelist.nu[lineindex];
       bin_linesum += (linelambda / expopac_deltalambda) * -std::expm1(-tau_line);
       lineindex++;

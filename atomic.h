@@ -199,12 +199,14 @@ DEVICE_FUNC inline auto get_nphixstargets(const int element, const int ion, cons
 }
 
 // Calculate the photoionisation cross-section at frequency nu out of the atomic data.
-// nphixsnuincrement is the frequency increment between the table points as a fraction of nu_edge. A loop
-// that also stores double values gives a local copy of globals::NPHIXSNUINCREMENT here. The compiler cannot
-// prove that the stores leave the global unchanged, so it would otherwise read the global for each call.
+// nphixsnuincrement is the frequency increment between the table points as a fraction of nu_edge, and it must
+// equal globals::NPHIXSNUINCREMENT. A loop that also stores double values gives a local copy of the global here.
+// The compiler cannot prove that the stores leave the global unchanged. Without the copy, it reads the global for
+// each call.
 [[gnu::pure]] [[nodiscard]] inline auto photoionisation_crosssection_fromtable(
     std::span<const float> photoion_xs, const double nu_edge, const double nu,
     const double nphixsnuincrement = globals::NPHIXSNUINCREMENT) -> float {
+  assert_testmodeonly(nphixsnuincrement == globals::NPHIXSNUINCREMENT);
   float sigma_bf = 0.;
 
   if constexpr (PHIXS_CLASSIC_NO_INTERPOLATION) {
