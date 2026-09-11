@@ -30,19 +30,33 @@ if [[ -f emission.out || -f emission.out.zst || -f emissionpol.out ]]; then
   # remove empty directories, but keep the artis folder
   find . -maxdepth 1 -type d -empty ! -name artis -delete
 
+  # One zstd process compresses its files one after the other. At level 13, -T0 divides a file
+  # into jobs of 16 MiB, so a packet file of 44 MiB uses a maximum of three cores. xargs therefore
+  # starts one zstd for each file, and runs one zstd on each CPU of the job. Without -n1, xargs
+  # gives all the file names to one zstd. -T1 keeps the memory of each zstd small and gives the
+  # same output as -T0.
+  ncpus=$(nproc)
+
   # 3D kilonova model.txt and abundances.txt can be huge, so compress txt files
   # do maxdepth 1 first in case job gets killed during run folder compression
-  find . -maxdepth 1 -name '*.txt' ! -name "output_0-0.txt" -size +200k -print0 | sort -z | xargs -r0 -P8 zstd -T0 -13 -v --rm -f
-  find . -maxdepth 1 -name '*.out' ! -name "slurm-*.out" -size +200k -print0 | sort -z | xargs -r0 -P8 zstd -T0 -13 -v --rm -f
+  echo "$(date): zstd compresses the .txt files of the run folder"
+  find . -maxdepth 1 -name '*.txt' ! -name "output_0-0.txt" -size +200k -print0 | sort -z | xargs -r0 -n1 -P"$ncpus" zstd -T1 -13 -v --rm -f
+  echo "$(date): zstd compresses the .out files of the run folder"
+  find . -maxdepth 1 -name '*.out' ! -name "slurm-*.out" -size +200k -print0 | sort -z | xargs -r0 -n1 -P"$ncpus" zstd -T1 -13 -v --rm -f
 
-  find packets/ -name 'packets*.out' -size +200k -print0 | sort -z | xargs -r0 -P8 zstd -T0 -13 -v --rm -f
+  echo "$(date): zstd compresses the packet files"
+  find packets/ -name 'packets*.out' -size +200k -print0 | sort -z | xargs -r0 -n1 -P"$ncpus" zstd -T1 -13 -v --rm -f
 
   # the artis folder holds the code and the data files of the code, so do not change them
-  find . -path ./artis -prune -o -name '*.txt' ! -name "output_0-0.txt" -size +200k -print0 | sort -z | xargs -r0 -P8 zstd -T0 -13 -v --rm -f
-  find . -path ./artis -prune -o -name '*.out' ! -name "slurm-*.out" -size +200k -print0 | sort -z | xargs -r0 -P8 zstd -T0 -13 -v --rm -f
+  echo "$(date): zstd compresses the .txt files of the subfolders"
+  find . -path ./artis -prune -o -name '*.txt' ! -name "output_0-0.txt" -size +200k -print0 | sort -z | xargs -r0 -n1 -P"$ncpus" zstd -T1 -13 -v --rm -f
+  echo "$(date): zstd compresses the .out files of the subfolders"
+  find . -path ./artis -prune -o -name '*.out' ! -name "slurm-*.out" -size +200k -print0 | sort -z | xargs -r0 -n1 -P"$ncpus" zstd -T1 -13 -v --rm -f
 
+  echo "$(date): tar_rm_logs.sh archives the log files"
   ./artis/scripts/tar_rm_logs.sh
 
+  echo "$(date): artistools converts the output files to parquet"
   export PATH="$(pwd)/../uv/bin:$PATH"
   export PATH="$HOME/.local/bin/:$PATH"
   if ! command -v uv >/dev/null 2>&1
