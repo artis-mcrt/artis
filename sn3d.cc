@@ -812,7 +812,7 @@ auto do_timestep(const int nts, const int titer, std::vector<Packet>& packets, c
 
     write_deposition_file();
 
-    write_partial_lightcurve_spectra(nts, packets);
+    write_light_curves_and_spectra(nts, packets);
 
     printlnlog("During timestep {} on MPI process {}, {} pellets decayed and {} packets escaped. (t={:g} [d])", nts,
                globals::my_rank, globals::timesteps[nts].pellet_decays, stats::get_counter(stats::Counter::PKTESCAPES),

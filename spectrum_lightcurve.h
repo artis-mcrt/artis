@@ -7,6 +7,6 @@
 
 #include "packet.h"
 
-void write_partial_lightcurve_spectra(int nts, std::span<const Packet> pkts);
+void write_light_curves_and_spectra(int nts, std::span<const Packet> packets);
 
 #endif  // SPECTRUM_H

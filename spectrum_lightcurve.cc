@@ -131,9 +131,9 @@ auto columnindex_from_emissiontype(const int et) -> int {
 }
 
 // Only one rank writes each file. Different file numbers go to different ranks on different nodes, if available.
-auto this_rank_writes_file(const int filenum) -> bool {
-  return (filenum % globals::node_count == globals::node_id) &&
-         (filenum % globals::node_nprocs == globals::rank_in_node);
+auto this_rank_writes_file(const int file_number) -> bool {
+  return (file_number % globals::node_count == globals::node_id) &&
+         (file_number % globals::node_nprocs == globals::rank_in_node);
 }
 
 void write_spectrum_file(const std::string& spec_filename, const Spectra& spectra, const int numtimesteps) {
@@ -229,18 +229,18 @@ void write_specpol(const std::string& specpol_filename, const std::string& emiss
     printlnlog("Writing {}", specpol_filename);
     auto specpol_file = fstream_required(specpol_filename, std::ios::out | std::ios::trunc);
     std::print(specpol_file, "{:g}", 0.0);
-    for (int l = 0; l < 3; l++) {
-      for (int p = 0; p < numtimesteps; p++) {
-        std::print(specpol_file, " {:g}", globals::timesteps[p].mid / DAY);
+    for (size_t stokes_index = 0; stokes_index < stokes_spectra.size(); stokes_index++) {
+      for (int nts = 0; nts < numtimesteps; nts++) {
+        std::print(specpol_file, " {:g}", globals::timesteps[nts].mid / DAY);
       }
     }
     std::println(specpol_file, "");
 
     for (auto nnu = 0Z; nnu < MNUBINS; nnu++) {
       std::print(specpol_file, "{:g}", (spectra_I.lower_freq[nnu] + (spectra_I.delta_freq[nnu] / 2)));
-      for (const auto* spec : stokes_spectra) {
+      for (const auto* stokes_spectrum : stokes_spectra) {
         for (auto nts = 0Z; nts < numtimesteps; nts++) {
-          std::print(specpol_file, " {:g}", spec->fluxalltimesteps[(nnu * ntimesteps_all) + nts]);
+          std::print(specpol_file, " {:g}", stokes_spectrum->fluxalltimesteps[(nnu * ntimesteps_all) + nts]);
         }
       }
       std::println(specpol_file, "");
@@ -256,14 +256,14 @@ void write_specpol(const std::string& specpol_filename, const std::string& emiss
     auto emissionpol_file = fstream_required(emission_filename, std::ios::out | std::ios::trunc);
     const auto proccount = static_cast<ptrdiff_t>(get_proccount());
     for (auto nnu = 0Z; nnu < MNUBINS; nnu++) {
-      for (const auto* spec : stokes_spectra) {
+      for (const auto* stokes_spectrum : stokes_spectra) {
         for (auto nts = 0Z; nts < numtimesteps; nts++) {
           for (auto nproc = 0Z; nproc < proccount; nproc++) {
             const auto emindex = (nnu * ntimesteps_all * proccount) + (nts * proccount) + nproc;
             if (nproc > 0) {
               std::print(emissionpol_file, " ");
             }
-            std::print(emissionpol_file, "{:g}", spec->emissionalltimesteps[emindex]);
+            std::print(emissionpol_file, "{:g}", stokes_spectrum->emissionalltimesteps[emindex]);
           }
           std::println(emissionpol_file, "");
         }
@@ -276,14 +276,14 @@ void write_specpol(const std::string& specpol_filename, const std::string& emiss
     auto absorptionpol_file = fstream_required(absorption_filename, std::ios::out | std::ios::trunc);
     const int ioncount = get_nelements() * get_max_nions();  // may be higher than the true included ion count
     for (auto nnu = 0Z; nnu < MNUBINS; nnu++) {
-      for (const auto* spec : stokes_spectra) {
+      for (const auto* stokes_spectrum : stokes_spectra) {
         for (auto nts = 0Z; nts < numtimesteps; nts++) {
           for (int i = 0; i < ioncount; i++) {
             if (i > 0) {
               std::print(absorptionpol_file, " ");
             }
             std::print(absorptionpol_file, "{:g}",
-                       spec->absorptionalltimesteps[get_absorption_spectrum_index(nts, nnu) + i]);
+                       stokes_spectrum->absorptionalltimesteps[get_absorption_spectrum_index(nts, nnu) + i]);
           }
           std::println(absorptionpol_file, "");
         }
@@ -350,7 +350,8 @@ void init_spectra(Spectra& spectra, const double nu_min, const double nu_max, co
 }
 
 // Add a packet to the outgoing spectrum.
-void add_to_spec_res(const Packet& pkt, const int dirbin, Spectra& spectra_I, Spectra* spectra_Q, Spectra* spectra_U) {
+void add_packet_to_spectra(const Packet& pkt, const int dirbin, Spectra& spectra_I, Spectra* spectra_Q,
+                           Spectra* spectra_U) {
   if (dirbin != -1 && get_escapedirectionbin(pkt.dir) != dirbin) {
     return;  // do not add to the spectrum if the direction bin does not match
   }
@@ -447,8 +448,8 @@ void write_light_curve(const std::string& lc_filename, const std::span<const dou
 }
 
 // add a packet to the outgoing light-curve.
-void add_to_lc_res(const Packet& pkt, const int dirbin, std::span<double> light_curve_lum,
-                   std::span<double> light_curve_lumcmf) {
+void add_packet_to_light_curve(const Packet& pkt, const int dirbin, std::span<double> light_curve_lum,
+                               std::span<double> light_curve_lumcmf) {
   if (dirbin >= 0 && get_escapedirectionbin(pkt.dir) != dirbin) {
     return;
   }
@@ -486,25 +487,25 @@ void check_spectrum_lightcurve_consistency(const Spectra& spectra_I, const std::
   }
   const auto ntimesteps_all = static_cast<ptrdiff_t>(globals::ntimesteps);
   for (int nts = 0; nts < numtimesteps; nts++) {
-    double lum_from_spec = 0.;
+    double luminosity_from_spectrum = 0.;
     for (auto nnu = 0Z; nnu < MNUBINS; nnu++) {
-      lum_from_spec += spectra_I.fluxalltimesteps[(nnu * ntimesteps_all) + nts] * spectra_I.delta_freq[nnu];
+      luminosity_from_spectrum += spectra_I.fluxalltimesteps[(nnu * ntimesteps_all) + nts] * spectra_I.delta_freq[nnu];
     }
-    // undo the flux normalisation of add_to_spec_res() to get back to a luminosity
-    lum_from_spec *= 4.e12 * PI * PARSEC * PARSEC;
-    const double lum_lightcurve = light_curve_lum[nts];
-    if (lum_lightcurve > 0. && lum_from_spec > (lum_lightcurve * 1.001)) {
+    // undo the flux normalisation of add_packet_to_spectra() to get back to a luminosity
+    luminosity_from_spectrum *= 4.e12 * PI * PARSEC * PARSEC;
+    const double luminosity_from_light_curve = light_curve_lum[nts];
+    if (luminosity_from_light_curve > 0. && luminosity_from_spectrum > (luminosity_from_light_curve * 1.001)) {
       printlnlog(
           "[warning] consistency check failed for timestep {}: frequency-integrated spec.out luminosity {:g} "
           "[erg/s] exceeds the light_curve.out luminosity {:g} [erg/s], but the spectrum's packets should be a "
           "subset of the light curve's packets",
-          nts, lum_from_spec, lum_lightcurve);
+          nts, luminosity_from_spectrum, luminosity_from_light_curve);
     }
   }
 }
 
 // Sum the spectra of the nodes. The arrays are node-shared memory, so only one rank of each node takes part.
-void mpi_allreduce_spectra(Spectra& spectra) {
+void sum_spectra_over_nodes(Spectra& spectra) {
   assert_always(globals::rank_in_node == 0);
   MPI_Allreduce_safe(spectra.fluxalltimesteps, MPI_SUM, globals::mpi_comm_internode);
   if (spectra.do_emission_absorption) {
@@ -514,8 +515,8 @@ void mpi_allreduce_spectra(Spectra& spectra) {
   }
 }
 
-void write_partial_lightcurve_spectra_dirbin(const int nts, std::span<const Packet> packets,
-                                             const bool do_emission_absorption, const int dirbin) {
+void write_light_curves_and_spectra_for_dirbin(const int nts, std::span<const Packet> packets,
+                                               const bool do_emission_absorption, const int dirbin) {
   THREADLOCALONHOST std::vector<double> rpkt_light_curve_lum;
   THREADLOCALONHOST std::vector<double> rpkt_light_curve_lumcmf;
   THREADLOCALONHOST std::vector<double> gamma_light_curve_lum;
@@ -556,12 +557,12 @@ void write_partial_lightcurve_spectra_dirbin(const int nts, std::span<const Pack
       for (const auto& pkt : packets) {
         if (pkt.type == TYPE_ESCAPE) {
           if (pkt.escape_type == TYPE_RPKT) {
-            add_to_lc_res(pkt, dirbin, rpkt_light_curve_lum, rpkt_light_curve_lumcmf);
-            add_to_spec_res(pkt, dirbin, rpkt_spectra_I, POL_ON ? &rpkt_spectra_Q : nullptr,
-                            POL_ON ? &rpkt_spectra_U : nullptr);
+            add_packet_to_light_curve(pkt, dirbin, rpkt_light_curve_lum, rpkt_light_curve_lumcmf);
+            add_packet_to_spectra(pkt, dirbin, rpkt_spectra_I, POL_ON ? &rpkt_spectra_Q : nullptr,
+                                  POL_ON ? &rpkt_spectra_U : nullptr);
           } else if (do_gamma_spectrum && pkt.escape_type == TYPE_GAMMA) {
-            add_to_lc_res(pkt, dirbin, gamma_light_curve_lum, gamma_light_curve_lumcmf);
-            add_to_spec_res(pkt, dirbin, gamma_spectra, nullptr, nullptr);
+            add_packet_to_light_curve(pkt, dirbin, gamma_light_curve_lum, gamma_light_curve_lumcmf);
+            add_packet_to_spectra(pkt, dirbin, gamma_spectra, nullptr, nullptr);
           }
         }
       }
@@ -574,13 +575,13 @@ void write_partial_lightcurve_spectra_dirbin(const int nts, std::span<const Pack
 
   MPI_Barrier_allranks();
   if (globals::rank_in_node == 0) {
-    mpi_allreduce_spectra(rpkt_spectra_I);
+    sum_spectra_over_nodes(rpkt_spectra_I);
     if constexpr (POL_ON) {
-      mpi_allreduce_spectra(rpkt_spectra_Q);
-      mpi_allreduce_spectra(rpkt_spectra_U);
+      sum_spectra_over_nodes(rpkt_spectra_Q);
+      sum_spectra_over_nodes(rpkt_spectra_U);
     }
     if (do_gamma_spectrum) {
-      mpi_allreduce_spectra(gamma_spectra);
+      sum_spectra_over_nodes(gamma_spectra);
     }
   }
   MPI_Allreduce_safe(rpkt_light_curve_lum, MPI_SUM, MPI_COMM_WORLD);
@@ -630,28 +631,28 @@ void write_partial_lightcurve_spectra_dirbin(const int nts, std::span<const Pack
 
 }  // anonymous namespace
 
-void write_partial_lightcurve_spectra(const int nts, std::span<const Packet> pkts) {
+void write_light_curves_and_spectra(const int nts, std::span<const Packet> packets) {
   // sn3d calls this with the packets of its rank, and exspec calls it with the packets of all ranks
-  const bool simulation_complete = (nts >= globals::timestep_finish - 1);
+  const bool is_last_requested_timestep = (nts >= globals::timestep_finish - 1);
 
   // the emission resolved spectra are slow to generate, and require a lot of memory. The code
-  // therefore makes them only at the end of the simulation.
-  const bool do_emission_absorption = simulation_complete;
+  // therefore makes them only at the last requested timestep.
+  const bool do_emission_absorption = is_last_requested_timestep;
 
-  const bool multdimensional = grid::get_modelgridtype() != GridType::SPHERICAL1D;
-  const int dirbinend = (multdimensional && simulation_complete) ? MABINS : 0;
+  const bool is_multidimensional = grid::get_modelgridtype() != GridType::SPHERICAL1D;
+  const int ndirbins = (is_multidimensional && is_last_requested_timestep) ? MABINS : 0;
 
-  const auto time_func_start = std::chrono::steady_clock::now();
+  const auto write_start_time = std::chrono::steady_clock::now();
 
-  for (int dirbin = -1; dirbin < dirbinend; dirbin++) {
-    write_partial_lightcurve_spectra_dirbin(nts, pkts, do_emission_absorption, dirbin);
+  for (int dirbin = -1; dirbin < ndirbins; dirbin++) {
+    write_light_curves_and_spectra_for_dirbin(nts, packets, do_emission_absorption, dirbin);
     if (dirbin >= 0 && globals::my_rank == 0) {
-      printlnlog("timestep {}: wrote the files of direction bin {} (the last bin is {})", nts, dirbin, dirbinend - 1);
+      printlnlog("timestep {}: wrote the files of direction bin {} (the last bin is {})", nts, dirbin, ndirbins - 1);
     }
   }
 
-  const auto duration_write_spectra =
-      std::chrono::duration<double>(std::chrono::steady_clock::now() - time_func_start).count();
+  const auto write_duration_seconds =
+      std::chrono::duration<double>(std::chrono::steady_clock::now() - write_start_time).count();
   printlnlog("timestep {}: Saving light curves and {}spectra took {:.1f}s", nts,
-             do_emission_absorption ? "emission/absorption " : "", duration_write_spectra);
+             do_emission_absorption ? "emission/absorption " : "", write_duration_seconds);
 }

@@ -82,18 +82,19 @@ auto main(int argc, char* argv[]) -> int {
   // the packets of all ranks in the order of the rank files, so that the sums are reproducible
   std::vector<Packet> packets;
   packets.reserve(static_cast<size_t>(globals::nprocs_exspec) * MPKTS);
-  for (int p = 0; p < globals::nprocs_exspec; p++) {
-    const auto packets_thisrank = read_text_packets(std::format("packets{:02d}_{:04d}.out", 0, p));
-    const auto nesc_rpkt = std::ranges::count_if(
-        packets_thisrank, [](const Packet& pkt) { return pkt.type == TYPE_ESCAPE && pkt.escape_type == TYPE_RPKT; });
-    const auto nesc_gamma = std::ranges::count_if(
-        packets_thisrank, [](const Packet& pkt) { return pkt.type == TYPE_ESCAPE && pkt.escape_type == TYPE_GAMMA; });
-    printlnlog("  rank {}: {} escaped r-packets and {} escaped gamma-pkts", p, nesc_rpkt, nesc_gamma);
-    packets.insert(packets.end(), packets_thisrank.begin(), packets_thisrank.end());
+  for (int rank = 0; rank < globals::nprocs_exspec; rank++) {
+    const auto packets_of_rank = read_text_packets(std::format("packets{:02d}_{:04d}.out", 0, rank));
+    const auto escaped_rpkt_count = std::ranges::count_if(
+        packets_of_rank, [](const Packet& pkt) { return pkt.type == TYPE_ESCAPE && pkt.escape_type == TYPE_RPKT; });
+    const auto escaped_gamma_count = std::ranges::count_if(
+        packets_of_rank, [](const Packet& pkt) { return pkt.type == TYPE_ESCAPE && pkt.escape_type == TYPE_GAMMA; });
+    printlnlog("  rank {}: {} escaped r-packets and {} escaped gamma-pkts", rank, escaped_rpkt_count,
+               escaped_gamma_count);
+    packets.insert(packets.end(), packets_of_rank.begin(), packets_of_rank.end());
   }
 
   // the index of the last timestep also selects the emission, absorption, and direction bin files
-  write_partial_lightcurve_spectra(globals::ntimesteps - 1, packets);
+  write_light_curves_and_spectra(globals::ntimesteps - 1, packets);
 
   const auto exspec_duration = std::chrono::duration<double>(std::chrono::steady_clock::now() - sys_time_start).count();
   printlnlog("exspec finished (took {:.1f} seconds)", exspec_duration);
