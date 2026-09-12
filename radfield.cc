@@ -976,7 +976,8 @@ void normalise_nuJ(const int nonemptymgi, const double estimator_normfactor_over
 // and the result is clamped to [MINTEMP, MAXTEMP].
 auto get_T_J_from_J(const int nonemptymgi) -> float {
   const auto T_J = static_cast<float>(pow(J[nonemptymgi] * PI / STEBO, 1. / 4.));
-  if (!std::isfinite(T_J)) {
+  // a cell with no packet has J = 0, and set_params_fullspec() also keeps the old value then
+  if (!std::isfinite(T_J) || J[nonemptymgi] <= 0.) {
     // keep old value of T_J
     const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
     printlnlog("[warning] get_T_J_from_J: T_J estimator infinite in cell {}, use value of last timestep",
