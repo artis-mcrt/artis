@@ -1,9 +1,12 @@
 57f8bbb1984b215f77fb4eb55146b8ba  absorption.out
+16de3e35867bdbc7f575776ad26075ee  absorptionpol.out
 c0604236aa7df99cda43e5c7bbe7b6f4  bflist.out
 f69363a8aeaf264367ad4ce82ab52b13  deposition.out
 eaf0e744aee02ba2a2483357b3b5789c  emission.out
+95a171ca9961d57a3cea7ede7cf4c852  emissionpol.out
 27551cb6f21086548e07e77b689a51d8  emissiontrue.out
 e8f07f0c942b050c1643d615661052c0  gamma_light_curve.out
+d78d5949bc6b1bae67589a571c4d220c  gamma_spec.out
 20dadbc26e8f98511b3a587798c9e190  gammalinelist.out
 20bddb22b6f084a7abc105c210366bfd  grid.out
 33dcb6dff81f1f139ecbf463b9043185  light_curve.out
@@ -15,6 +18,7 @@ b56f3b5a651e67256163e59bd53b59c7  packets00_0000.out
 51bdb23d46ea988b38050e74aa9a7b1c  packets00_0002.out
 a82600a3467d48ee0265b223f8c81fe8  packets00_0003.out
 facc3f419b7ab4d2b51f2f63908c3153  spec.out
+19c137ebfd5706db249b8e7da40dbe0c  specpol.out
 bc01f046eab9bf3802149e0ff63d5069  timesteps.out
 65fb2c1285b5d2dcd44e165404ff1547  vpackets_0000.out
 0ba5760bd6655fa09019bedfcdf10a07  vpackets_0001.out
