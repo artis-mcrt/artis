@@ -388,7 +388,7 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
               (binindex_start < 0) ? get_expopac_bin_nu_upper(0) : get_expopac_bin_nu_lower(binindex_start);
           const auto first_bin_edge_dist = get_linedistance(t_future, nu_cmf, first_bin_edge_nu, dnu_on_dl);
           const double line_by_line_limit = std::min(first_bin_edge_dist, boundarydist);
-          next_trans = -1;  // trigger binary search from nu_cmf
+          // next_trans still holds the line position of the r-packet, so the line that emitted it is excluded
           if (!trace_lines_to_dist(line_by_line_limit)) {
             return false;
           }
@@ -433,6 +433,8 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
                 break;
               }
             }
+            // the bin walk passes lines without a line position, so the next segment searches from nu_cmf
+            next_trans = -1;
           }
         }  // if (binindex_start < expopac_nbins)
       } else {
