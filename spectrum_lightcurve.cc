@@ -10,7 +10,6 @@
 #include <cstddef>
 #include <filesystem>
 #include <format>
-#include <fstream>
 #include <ios>
 #include <iterator>
 #include <print>
@@ -107,6 +106,34 @@ auto columnindex_from_emissiontype(const int et) -> int {
   return -1;
 }
 
+// The packets of the spectrum are a subset of the packets of the light curve, because the spectrum has a
+// limited frequency range. The frequency-integrated spectrum must therefore stay below the light curve. This
+// writes a warning to the log and changes no output file.
+void check_spectrum_lightcurve_consistency(const Spectra& spectra_I, const std::span<const double> light_curve_lum,
+                                           const int numtimesteps) {
+  assert_always(numtimesteps <= globals::ntimesteps);
+  if (globals::my_rank != 0) {
+    return;
+  }
+  const auto ntimesteps_all = static_cast<ptrdiff_t>(globals::ntimesteps);
+  for (int nts = 0; nts < numtimesteps; nts++) {
+    double lum_from_spec = 0.;
+    for (auto nnu = 0Z; nnu < MNUBINS; nnu++) {
+      lum_from_spec += spectra_I.fluxalltimesteps[(nnu * ntimesteps_all) + nts] * spectra_I.delta_freq[nnu];
+    }
+    // undo the flux normalisation of add_to_spec_res() to get back to a luminosity
+    lum_from_spec *= 4.e12 * PI * PARSEC * PARSEC;
+    const double lum_lightcurve = light_curve_lum[nts];
+    if (lum_lightcurve > 0. && lum_from_spec > (lum_lightcurve * 1.001)) {
+      printlnlog(
+          "[warning] consistency check failed for timestep {}: frequency-integrated spec.out luminosity {:g} "
+          "[erg/s] exceeds the light_curve.out luminosity {:g} [erg/s], but the spectrum's packets should be a "
+          "subset of the light curve's packets",
+          nts, lum_from_spec, lum_lightcurve);
+    }
+  }
+}
+
 // Sum the spectra of the nodes. The arrays are node-shared memory, so only one rank of each node takes part.
 void mpi_allreduce_spectra(Spectra& spectra) {
   assert_always(globals::rank_in_node == 0);
@@ -140,7 +167,7 @@ void write_partial_lightcurve_spectra_dirbin(const int nts, std::span<const Pack
     init_spectra(rpkt_spectra_Q, NU_MIN_R, NU_MAX_R, do_emission_absorption);
     init_spectra(rpkt_spectra_U, NU_MIN_R, NU_MAX_R, do_emission_absorption);
   }
-  // the gamma packets have no direction bins, so only the angle-averaged spectrum gets them
+  // the gamma packets go only into the angle-averaged spectrum and light curve
   const bool do_gamma_spectrum = KEEP_ESCAPED_GAMMAS && (dirbin == -1);
   if (do_gamma_spectrum) {
     init_spectra(gamma_spectra, NU_MIN_GAMMA, NU_MAX_GAMMA, false);
@@ -206,7 +233,9 @@ void write_partial_lightcurve_spectra_dirbin(const int nts, std::span<const Pack
       write_specpol("specpol.out", "emissionpol.out", "absorptionpol.out", rpkt_spectra_I, rpkt_spectra_Q,
                     rpkt_spectra_U, numtimesteps);
     }
-    check_spectrum_lightcurve_consistency(rpkt_spectra_I, rpkt_light_curve_lum, numtimesteps);
+    if (do_emission_absorption) {
+      check_spectrum_lightcurve_consistency(rpkt_spectra_I, rpkt_light_curve_lum, numtimesteps);
+    }
   } else {
     if (globals::my_rank == 0 && !std::filesystem::exists(outdir_resfiles)) {
       std::filesystem::create_directory(outdir_resfiles);
@@ -228,6 +257,12 @@ void write_partial_lightcurve_spectra_dirbin(const int nts, std::span<const Pack
     }
   }
   MPI_Barrier_allranks();
+}
+
+// Only one rank writes each file. Different file numbers go to different ranks on different nodes, if available.
+auto this_rank_writes_file(const int filenum) -> bool {
+  return (filenum % globals::node_count == globals::node_id) &&
+         (filenum % globals::node_nprocs == globals::rank_in_node);
 }
 
 void write_spectrum_file(const std::string& spec_filename, const Spectra& spectra, const int numtimesteps) {
@@ -293,12 +328,6 @@ void write_spectra(const std::string& spec_filename, const std::string& emission
                    const Spectra& spectra, const int numtimesteps) {
   assert_always(numtimesteps <= globals::ntimesteps);
 
-  // only one rank should write each file. Try to choose different ranks on different nodes, if available
-  const auto this_rank_writes_file = [](const int filenum) {
-    return (filenum % globals::node_count == globals::node_id) &&
-           (filenum % globals::node_nprocs == globals::rank_in_node);
-  };
-
   if (this_rank_writes_file(1)) {
     write_spectrum_file(spec_filename, spectra, numtimesteps);
   }
@@ -322,48 +351,45 @@ void write_specpol(const std::string& specpol_filename, const std::string& emiss
                    const std::string& absorption_filename, const Spectra& spectra_I, const Spectra& spectra_Q,
                    const Spectra& spectra_U, const int numtimesteps) {
   assert_always(numtimesteps <= globals::ntimesteps);
-  if (globals::my_rank != 0) {
-    return;
-  }
-  auto specpol_file = fstream_required(specpol_filename, std::ios::out | std::ios::trunc);
-  std::fstream emissionpol_file{};
-  std::fstream absorptionpol_file{};
-
-  const bool do_emission_absorption = spectra_I.do_emission_absorption;
-
-  if (do_emission_absorption) {
-    emissionpol_file = fstream_required(emission_filename, std::ios::out | std::ios::trunc);
-    absorptionpol_file = fstream_required(absorption_filename, std::ios::out | std::ios::trunc);
-    printlnlog("Writing {}, {}, and {}", specpol_filename, emission_filename, absorption_filename);
-  } else {
-    printlnlog("Writing {}", specpol_filename);
-  }
-
-  const int proccount = get_proccount();
-  const int ioncount = get_nelements() * get_max_nions();  // may be higher than the true included ion count
+  assert_always(std::ssize(spectra_I.delta_freq) == MNUBINS);
+  assert_always(std::ssize(spectra_I.lower_freq) == MNUBINS);
+  const auto stokes_spectra = {&spectra_I, &spectra_Q, &spectra_U};
   const auto ntimesteps_all = static_cast<ptrdiff_t>(globals::ntimesteps);
 
-  std::print(specpol_file, "{:g}", 0.0);
+  if (this_rank_writes_file(5)) {
+    printlnlog("Writing {}", specpol_filename);
+    auto specpol_file = fstream_required(specpol_filename, std::ios::out | std::ios::trunc);
+    std::print(specpol_file, "{:g}", 0.0);
+    for (int l = 0; l < 3; l++) {
+      for (int p = 0; p < numtimesteps; p++) {
+        std::print(specpol_file, " {:g}", globals::timesteps[p].mid / DAY);
+      }
+    }
+    std::println(specpol_file, "");
 
-  for (int l = 0; l < 3; l++) {
-    for (int p = 0; p < numtimesteps; p++) {
-      std::print(specpol_file, " {:g}", globals::timesteps[p].mid / DAY);
+    for (auto nnu = 0Z; nnu < MNUBINS; nnu++) {
+      std::print(specpol_file, "{:g}", (spectra_I.lower_freq[nnu] + (spectra_I.delta_freq[nnu] / 2)));
+      for (const auto* spec : stokes_spectra) {
+        for (auto nts = 0Z; nts < numtimesteps; nts++) {
+          std::print(specpol_file, " {:g}", spec->fluxalltimesteps[(nnu * ntimesteps_all) + nts]);
+        }
+      }
+      std::println(specpol_file, "");
     }
   }
 
-  std::println(specpol_file, "");
+  if (!spectra_I.do_emission_absorption) {
+    return;
+  }
 
-  assert_always(std::ssize(spectra_I.delta_freq) == MNUBINS);
-  assert_always(std::ssize(spectra_I.lower_freq) == MNUBINS);
-  for (int nnu = 0; nnu < std::ssize(spectra_I.lower_freq); nnu++) {
-    std::print(specpol_file, "{:g}", (spectra_I.lower_freq[nnu] + (spectra_I.delta_freq[nnu] / 2)));
-
-    for (const auto* spec : {&spectra_I, &spectra_Q, &spectra_U}) {
-      for (auto nts = 0Z; nts < numtimesteps; nts++) {
-        std::print(specpol_file, " {:g}", spec->fluxalltimesteps[(nnu * ntimesteps_all) + nts]);
-
-        if (do_emission_absorption) {
-          for (int nproc = 0; nproc < proccount; nproc++) {
+  if (this_rank_writes_file(6)) {
+    printlnlog("Writing {}", emission_filename);
+    auto emissionpol_file = fstream_required(emission_filename, std::ios::out | std::ios::trunc);
+    const auto proccount = static_cast<ptrdiff_t>(get_proccount());
+    for (auto nnu = 0Z; nnu < MNUBINS; nnu++) {
+      for (const auto* spec : stokes_spectra) {
+        for (auto nts = 0Z; nts < numtimesteps; nts++) {
+          for (auto nproc = 0Z; nproc < proccount; nproc++) {
             const auto emindex = (nnu * ntimesteps_all * proccount) + (nts * proccount) + nproc;
             if (nproc > 0) {
               std::print(emissionpol_file, " ");
@@ -371,7 +397,18 @@ void write_specpol(const std::string& specpol_filename, const std::string& emiss
             std::print(emissionpol_file, "{:g}", spec->emissionalltimesteps[emindex]);
           }
           std::println(emissionpol_file, "");
+        }
+      }
+    }
+  }
 
+  if (this_rank_writes_file(7)) {
+    printlnlog("Writing {}", absorption_filename);
+    auto absorptionpol_file = fstream_required(absorption_filename, std::ios::out | std::ios::trunc);
+    const int ioncount = get_nelements() * get_max_nions();  // may be higher than the true included ion count
+    for (auto nnu = 0Z; nnu < MNUBINS; nnu++) {
+      for (const auto* spec : stokes_spectra) {
+        for (auto nts = 0Z; nts < numtimesteps; nts++) {
           for (int i = 0; i < ioncount; i++) {
             if (i > 0) {
               std::print(absorptionpol_file, " ");
@@ -382,36 +419,6 @@ void write_specpol(const std::string& specpol_filename, const std::string& emiss
           std::println(absorptionpol_file, "");
         }
       }
-    }
-
-    std::println(specpol_file, "");
-  }
-}
-
-// The packets of the spectrum are a subset of the packets of the light curve, because the spectrum has a
-// limited frequency range. The frequency-integrated spectrum must therefore stay below the light curve. This
-// writes a warning to the log and changes no output file.
-void check_spectrum_lightcurve_consistency(const Spectra& spectra_I, const std::span<const double> light_curve_lum,
-                                           const int numtimesteps) {
-  assert_always(numtimesteps <= globals::ntimesteps);
-  if (globals::my_rank != 0) {
-    return;
-  }
-  const auto ntimesteps_all = static_cast<ptrdiff_t>(globals::ntimesteps);
-  for (int nts = 0; nts < numtimesteps; nts++) {
-    double lum_from_spec = 0.;
-    for (auto nnu = 0Z; nnu < MNUBINS; nnu++) {
-      lum_from_spec += spectra_I.fluxalltimesteps[(nnu * ntimesteps_all) + nts] * spectra_I.delta_freq[nnu];
-    }
-    // undo the flux normalisation of add_to_spec_res() to get back to a luminosity
-    lum_from_spec *= 4.e12 * PI * PARSEC * PARSEC;
-    const double lum_lightcurve = light_curve_lum[nts];
-    if (lum_lightcurve > 0. && lum_from_spec > (lum_lightcurve * 1.001)) {
-      printlnlog(
-          "[warning] consistency check failed for timestep {}: frequency-integrated spec.out luminosity {:g} "
-          "[erg/s] exceeds the light_curve.out luminosity {:g} [erg/s], but the spectrum's packets should be a "
-          "subset of the light curve's packets",
-          nts, lum_from_spec, lum_lightcurve);
     }
   }
 }
@@ -555,7 +562,7 @@ void add_to_spec_res(const Packet& pkt, const int dirbin, Spectra& spectra_I, Sp
 }
 
 void write_partial_lightcurve_spectra(const int nts, std::span<const Packet> pkts) {
-  // this is called by sn3d (not exspec) when each rank has its own set of packets in memory
+  // sn3d calls this with the packets of its rank, and exspec calls it with the packets of all ranks
   const bool simulation_complete = (nts >= globals::timestep_finish - 1);
 
   // the emission resolved spectra are slow to generate, and require a lot of memory. The code
@@ -569,6 +576,9 @@ void write_partial_lightcurve_spectra(const int nts, std::span<const Packet> pkt
 
   for (int dirbin = -1; dirbin < dirbinend; dirbin++) {
     write_partial_lightcurve_spectra_dirbin(nts, pkts, do_emission_absorption, dirbin);
+    if (dirbin >= 0 && globals::my_rank == 0) {
+      printlnlog("timestep {}: wrote the files of direction bin {} (the last bin is {})", nts, dirbin, dirbinend - 1);
+    }
   }
 
   const auto duration_write_spectra =
