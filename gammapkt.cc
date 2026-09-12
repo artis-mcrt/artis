@@ -966,6 +966,11 @@ DEVICE_FUNC void pellet_gamma_decay(Packet& pkt) {
 
   // if no gamma spectra is known, then convert straight to kpkts (e.g., Fe52, Mn52)
   if (pkt.nu_cmf < 0) {
+    // the energy deposits at once, so the estimators must count it like an absorbed gamma ray
+    const int nonemptymgi = grid::get_propcell_nonemptymgi(pkt.cellindex);
+    assert_always(nonemptymgi >= 0);
+    atomicadd(globals::dep_estimator_gamma[nonemptymgi], pkt.e_cmf);
+    atomicadd(globals::timesteps[globals::timestep].gamma_dep_discrete, pkt.e_cmf);
     pkt.type = TYPE_KPKT;
     pkt.absorptiontype = ABSTYPE_PELLET_NOGAMMASPEC;
     return;

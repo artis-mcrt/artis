@@ -1,6 +1,6 @@
 22ae7a6978f59b744a6dd153ca0d1d35  absorption.out
 f9bb214eb7f1ac22791a13c8025c4887  bflist.out
-68b51dcaa79bb881160e33bfe2909a73  deposition.out
+043bc1f9ebf62034d92d397816ea0e12  deposition.out
 17783cdf6e9a1b7a5b2418d3524a3a42  emission.out
 b3e85506021a2f67dca4afd60a72cb7a  emissiontrue.out
 f4602f50a93b4ca795d9d7f6bca8346b  gamma_light_curve.out
@@ -18,6 +18,6 @@ f03513b8ae1dff41ee72be044fe8c7e5  packets00_0002.out
 28c2318550fe64c1c24706dc58c9b9a5  spec.out
 a351f1711fecd60c023d0ba7332092db  timesteps.out
 4bae7cb354fb9594166912fc71a6e4bc  job1/estimators_0000.out
-8f98aa21515c39bb94f071e204e6affb  job1/estimators_0001.out
-7ba4e940b6e49717bdd144256055bdc1  job1/estimators_0002.out
+6bc9f8d6911c1bbc611c26d9f6208e1a  job1/estimators_0001.out
+6afb6bbeadb611122b62e05cd90edb91  job1/estimators_0002.out
 ab0234460e63e78c96186dd843f4b470  job1/estimators_0003.out
