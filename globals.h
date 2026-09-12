@@ -157,9 +157,6 @@ inline AllTransitions alltrans;
 
 struct LevelAutoion {
   float autoion_A;  // Autoionisation A-value
-  int elementindex;  // index (not atomic number) for the element involved
-  int lowerionindex;
-  int lowerlevelindex;  // this will be for a level index of the lower ion
   int upperionindex;
   int upperlevelindex;  // this will be for a level index of the upper ion.
                         // Note: level of the lower ion should also be at higher energy than of the higher ion
@@ -256,8 +253,8 @@ struct AllCont {
   // index into the ground-level continuum estimator arrays, or -1 for continua that do not feed them
   // (only a ground level's first photoionisation target does). This is the ion's own
   // get_groundcontindex() slot, the same slot where update_grid.cc normalises and applies the
-  // estimators. setup_phixs_list() checks that the nearest-edge search agrees for every ground
-  // level, so a dataset with two identical ground thresholds stops at startup.
+  // estimators. Two ions can have an identical ground threshold, so the ground level does not use
+  // the nearest-edge search.
   MPI_shared_array<const int> groundcontestimindex;
   MPI_shared_array<const int> bfestimindex;
 };

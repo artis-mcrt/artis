@@ -464,9 +464,11 @@ void print_level_rates(const int nonemptymgi, const int timestep, const int elem
 void nltepop_reset_element(const int nonemptymgi, const int element) {
   grid::set_elements_lowermost_ion(nonemptymgi, element, 0);
   for (int ion = 0; ion < get_nions(element); ion++) {
-    const int nlte_start = get_allnltelevelsindexstart(element, ion);
-    std::fill_n(&nltepops_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * globals::total_nlte_levels) + nlte_start],
-                get_nlevels_excited_nlte(element, ion) + (ion_has_superlevel(element, ion) ? 1 : 0), -1.);
+    const auto nlte_start = get_allnltelevelsindexstart(element, ion);
+    const auto nlte_count = get_nlevels_excited_nlte(element, ion) + (ion_has_superlevel(element, ion) ? 1 : 0);
+    std::ranges::fill(nltepops_allcells.span().subspan(
+                          (static_cast<ptrdiff_t>(nonemptymgi) * globals::total_nlte_levels) + nlte_start, nlte_count),
+                      -1.);
   }
 }
 
@@ -1909,7 +1911,8 @@ void nltepop_write_to_file(const int nonemptymgi, const int timestep) {
   }
 
   for (int element = 0; element < get_nelements(); element++) {
-    if (!elem_has_nlte_levels(element)) {
+    // an element with no mass in the cell has no NLTE solution
+    if (!elem_has_nlte_levels(element) || grid::get_elem_massfrac(nonemptymgi, element) <= 0.) {
       continue;
     }
 
@@ -2129,8 +2132,8 @@ void nltepop_write_restart_data(FILE* restart_file) {
       // the solved ion range of each element, so that a resumed run starts with the same reactions
       fprintf(restart_file, "\n");
       for (int element = 0; element < get_nelements(); element++) {
-        const int lowermost_ion = grid::get_elements_lowermost_ion(static_cast<int>(nonemptymgi), element);
-        const int uppermost_ion = grid::get_elements_uppermost_ion(static_cast<int>(nonemptymgi), element);
+        const int lowermost_ion = grid::get_elements_lowermost_ion(nonemptymgi, element);
+        const int uppermost_ion = grid::get_elements_uppermost_ion(nonemptymgi, element);
         // A restart must contain the complete range for each stored NLTE solution.
         assert_always(!elem_has_nlte_solution(static_cast<int>(nonemptymgi), element) ||
                       (lowermost_ion >= 0 && lowermost_ion <= uppermost_ion && uppermost_ion < get_nions(element)));
@@ -2186,8 +2189,8 @@ void nltepop_read_restart_data(FILE* restart_file) {
         int lowermost_ion = 0;
         int uppermost_ion = 0;
         assert_always(fscanf(restart_file, "%d %d ", &lowermost_ion, &uppermost_ion) == 2);
-        grid::set_elements_lowermost_ion(static_cast<int>(nonemptymgi), element, lowermost_ion);
-        grid::set_elements_uppermost_ion(static_cast<int>(nonemptymgi), element, uppermost_ion);
+        grid::set_elements_lowermost_ion(nonemptymgi, element, lowermost_ion);
+        grid::set_elements_uppermost_ion(nonemptymgi, element, uppermost_ion);
       }
     }
     if constexpr (NLTE_TIME_DEPENDENT_FIRST_TIMESTEP.has_value()) {

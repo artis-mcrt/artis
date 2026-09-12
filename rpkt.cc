@@ -207,7 +207,8 @@ auto get_possible_event_expansion_opacity(const int nonemptymgi, Packet& pkt, co
       // optical depths scale in the same way with the packet time. A retrace at t_mid would instead give each
       // line distance a scale of t_mid / t.
       pkt_bin_start.prop_time = prop_time;
-      pkt_bin_start.next_trans = -1;
+      // at the start of the path the packet keeps its line position, so the line that emitted it is excluded
+      pkt_bin_start.next_trans = (dist == 0.) ? pkt.next_trans : -1;
       double edist_after_bin = 0.;
       bool event_is_boundbound = false;
       auto next_trans = -1;
