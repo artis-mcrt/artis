@@ -535,6 +535,8 @@ auto do_rpkt_step(Packet& pkt, const double t2, ContinuumOpacity& chi_rpkt_cont)
     } else if constexpr (RPKT_USE_EXPANSION_OPACITIES) {
       std::tie(edist, event_is_boundbound) = get_possible_event_expansion_opacity(
           nonemptymgi, pkt, chi_rpkt_cont, pktmastate, tau_rnd, nu_cmf_abort, dnu_on_dl, doppler);
+      // the bin walk passes lines without a line position, so the next step searches from nu_cmf
+      pkt.next_trans = -1;
     } else {
       std::tie(edist, pkt.next_trans, event_is_boundbound) =
           get_possible_event(nonemptymgi, pkt, chi_rpkt_cont, pktmastate, tau_rnd, abort_dist, nu_cmf_abort, dnu_on_dl,
