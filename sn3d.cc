@@ -64,8 +64,7 @@
 namespace {
 
 std::chrono::steady_clock::time_point real_time_start;
-std::chrono::steady_clock::time_point
-    time_timestep_start;  // this will be set after the first update of the grid and before packet prop
+std::chrono::steady_clock::time_point packet_propagation_start_time;
 std::fstream estimators_file;
 
 void setup_cellcache() {
@@ -641,35 +640,44 @@ void mpi_reduce_estimators(const int nts) {
   normalise_deposition_estimators(nts);
 }
 
-auto walltime_sufficient_to_continue(const int nts, const int nts_prev, const int walltimelimitseconds) -> bool {
+auto walltime_sufficient_for_timestep(const int nts, const int nts_prev, const int walltime_limit_seconds) -> bool {
   MPI_Barrier_allranks();
   // time is measured from just before packet propagation from one timestep to the next
-  const auto estimated_time_per_timestep =
-      std::chrono::duration<double>(std::chrono::steady_clock::now() - time_timestep_start).count();
+  const auto walltime_propagation_and_grid_update_seconds =
+      std::chrono::duration<double>(std::chrono::steady_clock::now() - packet_propagation_start_time).count();
   printlnlog("TIME: time between timesteps is {:.1f} seconds (measured packet prop of ts {} and update grid of ts {})",
-             estimated_time_per_timestep, nts_prev, nts);
+             walltime_propagation_and_grid_update_seconds, nts_prev, nts);
 
-  bool do_this_full_loop = true;
-  if (walltimelimitseconds > 0 && nts < globals::timestep_finish) {
-    const auto wallclock_used_seconds =
+  bool enough_walltime_for_timestep = true;
+  if (walltime_limit_seconds > 0 && nts < globals::timestep_finish) {
+    const auto walltime_used_seconds =
         std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - real_time_start).count();
-    const auto wallclock_remaining_seconds = walltimelimitseconds - wallclock_used_seconds;
-    printlnlog("TIMED_RESTARTS: Used {} of {} seconds of wall time.", wallclock_used_seconds, walltimelimitseconds);
+    const auto walltime_remaining_seconds = walltime_limit_seconds - walltime_used_seconds;
+    printlnlog("TIMED_RESTARTS: Used {} of {} seconds of wall time.", walltime_used_seconds, walltime_limit_seconds);
 
-    // This flag being false will make it update_grid, and then exit
-    do_this_full_loop = (wallclock_remaining_seconds >= (1.5 * estimated_time_per_timestep));
+    // the wall time to stop cleanly after the next timestep. The last requested timestep also writes the
+    // emission, absorption, and direction bin files and the packet files.
+    const bool is_last_requested_timestep = (nts == globals::timestep_finish - 1);
+    const double shutdown_offset_seconds = is_last_requested_timestep ? 900. : 120.;
+
+    enough_walltime_for_timestep = (walltime_remaining_seconds >=
+                                    ((1.5 * walltime_propagation_and_grid_update_seconds) + shutdown_offset_seconds));
 
     // communicate whatever decision the rank 0 process decided, just in case they differ
-    MPI_Bcast_safe(do_this_full_loop, 0, MPI_COMM_WORLD);
-    if (do_this_full_loop) {
-      printlnlog("TIMED_RESTARTS: Going to continue since remaining time {} s >= 1.5 * time_per_timestep",
-                 wallclock_remaining_seconds);
+    MPI_Bcast_safe(enough_walltime_for_timestep, 0, MPI_COMM_WORLD);
+    if (enough_walltime_for_timestep) {
+      printlnlog(
+          "TIMED_RESTARTS: sn3d continues. The remaining time {} s is at least 1.5 times the time {:.1f} s of "
+          "the last packet propagation and grid update, plus the shutdown offset {:.0f} s.",
+          walltime_remaining_seconds, walltime_propagation_and_grid_update_seconds, shutdown_offset_seconds);
     } else {
-      printlnlog("TIMED_RESTARTS: Going to terminate since remaining time {} s < 1.5 * time_per_timestep",
-                 wallclock_remaining_seconds);
+      printlnlog(
+          "TIMED_RESTARTS: sn3d stops. The remaining time {} s is less than 1.5 times the time {:.1f} s of the "
+          "last packet propagation and grid update, plus the shutdown offset {:.0f} s.",
+          walltime_remaining_seconds, walltime_propagation_and_grid_update_seconds, shutdown_offset_seconds);
     }
   }
-  return do_this_full_loop;
+  return enough_walltime_for_timestep;
 }
 
 void save_grid_and_packets(const int nts, std::vector<Packet>& packets) {
@@ -750,8 +758,9 @@ void zero_estimators() {
   MPI_Barrier_allranks();
 }
 
-auto do_timestep(const int nts, const int titer, std::vector<Packet>& packets, const int walltimelimitseconds) -> bool {
-  bool do_this_full_loop = true;
+auto do_timestep(const int nts, const int titer, std::vector<Packet>& packets, const int walltime_limit_seconds)
+    -> bool {
+  bool enough_walltime_for_timestep = true;
   const int nts_prev = (titer != 0 || nts == 0) ? nts : nts - 1;
   if ((titer > 0) || (globals::simulation_continued_from_saved && (nts == globals::timestep_initial))) {
     // Read the packets file to reset before each additional iteration on the timestep
@@ -779,13 +788,13 @@ auto do_timestep(const int nts, const int titer, std::vector<Packet>& packets, c
   printlnlog("timestep {}: time after grid properties have been communicated (took {:.1f} seconds)", nts,
              communicate_grid_duration);
 
-  // If this is not the 0th time step of the current job step,
+  // If this is not the first timestep of this sn3d run,
   // write out a snapshot of the grid properties for further restarts and update input.txt accordingly
   if (((nts - globals::timestep_initial) != 0)) {
     save_grid_and_packets(nts, packets);
-    do_this_full_loop = walltime_sufficient_to_continue(nts, nts_prev, walltimelimitseconds);
+    enough_walltime_for_timestep = walltime_sufficient_for_timestep(nts, nts_prev, walltime_limit_seconds);
   }
-  time_timestep_start = std::chrono::steady_clock::now();
+  packet_propagation_start_time = std::chrono::steady_clock::now();
 
   // set all the estimators to zero before moving packets. This is done after update_grid() so that the
   // gamma-ray heating estimator, and the photoionisation and stimulated recombination estimators, are still
@@ -793,7 +802,7 @@ auto do_timestep(const int nts, const int titer, std::vector<Packet>& packets, c
   zero_estimators();
 
   MPI_Barrier_allranks();
-  if ((nts < globals::timestep_finish) && do_this_full_loop) {
+  if ((nts < globals::timestep_finish) && enough_walltime_for_timestep) {
     // Now process the packets.
 
     update_packets(nts, packets);
@@ -812,7 +821,7 @@ auto do_timestep(const int nts, const int titer, std::vector<Packet>& packets, c
 
     write_deposition_file();
 
-    write_partial_lightcurve_spectra(nts, packets);
+    write_light_curves_and_spectra(nts, packets);
 
     printlnlog("During timestep {} on MPI process {}, {} pellets decayed and {} packets escaped. (t={:g} [d])", nts,
                globals::my_rank, globals::timesteps[nts].pellet_decays, stats::get_counter(stats::Counter::PKTESCAPES),
@@ -844,7 +853,7 @@ auto do_timestep(const int nts, const int titer, std::vector<Packet>& packets, c
       printlnlog("time after write final packets file (tstart + {:.1f} seconds)", after_final_packets_write);
     }
   }
-  return !do_this_full_loop;
+  return !enough_walltime_for_timestep;
 }
 
 // Create the run output folder given with the -o option and keep an output_0-0.txt symlink in the
@@ -917,9 +926,9 @@ auto main(int argc, char* argv[]) -> int {
 
   globals::setup_mpi_vars();
 
-  int walltimelimitseconds = -1;
+  int walltime_limit_seconds = -1;
 
-  std::string walltimehours_str;
+  std::string walltime_limit_hours_str;
   int opt = 0;
   while ((opt = getopt(argc, argv, "hw:o:")) != -1) {  // NOLINT(concurrency-mt-unsafe,misc-include-cleaner)
     if (opt == 'h') {
@@ -931,13 +940,14 @@ auto main(int argc, char* argv[]) -> int {
     }
     if (opt == 'w') {
       char* parse_end = nullptr;
-      const float walltimehours = strtof(optarg, &parse_end);  // NOLINT(misc-include-cleaner)
-      if (parse_end == optarg || *parse_end != '\0' || !std::isfinite(walltimehours) || walltimehours <= 0.) {
+      const float walltime_limit_hours = strtof(optarg, &parse_end);  // NOLINT(misc-include-cleaner)
+      if (parse_end == optarg || *parse_end != '\0' || !std::isfinite(walltime_limit_hours) ||
+          walltime_limit_hours <= 0.) {
         // silently accepting a bad value would disable the wall time limit instead of applying it
         fatal_crash("invalid wall time hours '{}' given with -w option", optarg);
       }
-      walltimelimitseconds = static_cast<int>(walltimehours * HOUR);
-      walltimehours_str = optarg;
+      walltime_limit_seconds = static_cast<int>(walltime_limit_hours * HOUR);
+      walltime_limit_hours_str = optarg;
     } else if (opt == 'o') {
       globals::runoutputfolder = optarg;
       while (globals::runoutputfolder.size() > 1 && globals::runoutputfolder.ends_with('/')) {
@@ -1003,9 +1013,9 @@ auto main(int argc, char* argv[]) -> int {
   printlnlog("Boost Gauss-Kronrod quadrature");
 #endif
 
-  if (!walltimehours_str.empty()) {
-    printlnlog("command line argument specifies wall time hours '{}', so setting walltimelimitseconds = {}",
-               walltimehours_str, walltimelimitseconds);
+  if (!walltime_limit_hours_str.empty()) {
+    printlnlog("command line argument specifies wall time hours '{}', so setting walltime_limit_seconds = {}",
+               walltime_limit_hours_str, walltime_limit_seconds);
   }
 
   if (!globals::runoutputfolder.empty()) {
@@ -1159,7 +1169,7 @@ auto main(int argc, char* argv[]) -> int {
     }
 
     for (int titer = 0; titer < globals::n_titer; titer++) {
-      terminate_early = do_timestep(globals::timestep, titer, packets, walltimelimitseconds);
+      terminate_early = do_timestep(globals::timestep, titer, packets, walltime_limit_seconds);
 #ifdef DO_TITER
       // No iterations over the zeroth timestep, set titer > n_titer
       if (globals::timestep == 0) titer = globals::n_titer + 1;
@@ -1171,7 +1181,7 @@ auto main(int argc, char* argv[]) -> int {
 
   // The main calculation is now over. The packets now have all stored the time, place and direction
   // at which they left the grid. Also their rest frame energies and frequencies.
-  // Spectra and light curves are now extracted using exspec which is another make target of this code.
+  // sn3d has written the spectra and light curves. exspec can make them again from the packet files.
 
   MPI_Barrier_allranks();
 

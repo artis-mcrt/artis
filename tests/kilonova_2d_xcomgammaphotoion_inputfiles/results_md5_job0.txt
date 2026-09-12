@@ -4,6 +4,7 @@
 1b91096f9847897cc70ba824c5f8e24d  emission.out
 d01ab62b9b0669e9863835182d4b1c45  emissiontrue.out
 94b157e1ede431d90955e7cad8f0deb6  gamma_light_curve.out
+9aa0eb1fca98d4a40d8a00bea3309263  gamma_spec.out
 4568aa57624c88a1b325965216a11dca  gammalinelist.out
 29ac1cb06f3139df7cbca0bbdb426e1c  grid.out
 28a4e47bc915355b3148c840a6c9944a  light_curve.out
