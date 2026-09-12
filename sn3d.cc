@@ -655,16 +655,24 @@ auto walltime_sufficient_for_timestep(const int nts, const int nts_prev, const i
     const auto walltime_remaining_seconds = walltime_limit_seconds - walltime_used_seconds;
     printlnlog("TIMED_RESTARTS: Used {} of {} seconds of wall time.", walltime_used_seconds, walltime_limit_seconds);
 
-    enough_walltime_for_timestep = (walltime_remaining_seconds >= (1.5 * walltime_propagation_and_grid_update_seconds));
+    // the wall time to stop cleanly after the restart files of the next timestep
+    constexpr double shutdown_offset_seconds = 120.;
+
+    enough_walltime_for_timestep = (walltime_remaining_seconds >=
+                                    ((1.5 * walltime_propagation_and_grid_update_seconds) + shutdown_offset_seconds));
 
     // communicate whatever decision the rank 0 process decided, just in case they differ
     MPI_Bcast_safe(enough_walltime_for_timestep, 0, MPI_COMM_WORLD);
     if (enough_walltime_for_timestep) {
-      printlnlog("TIMED_RESTARTS: Going to continue since remaining time {} s >= 1.5 * time_per_timestep",
-                 walltime_remaining_seconds);
+      printlnlog(
+          "TIMED_RESTARTS: sn3d continues. The remaining time {} s is at least 1.5 times the time {:.1f} s of "
+          "the last packet propagation and grid update, plus the shutdown offset {:.0f} s.",
+          walltime_remaining_seconds, walltime_propagation_and_grid_update_seconds, shutdown_offset_seconds);
     } else {
-      printlnlog("TIMED_RESTARTS: Going to terminate since remaining time {} s < 1.5 * time_per_timestep",
-                 walltime_remaining_seconds);
+      printlnlog(
+          "TIMED_RESTARTS: sn3d stops. The remaining time {} s is less than 1.5 times the time {:.1f} s of the "
+          "last packet propagation and grid update, plus the shutdown offset {:.0f} s.",
+          walltime_remaining_seconds, walltime_propagation_and_grid_update_seconds, shutdown_offset_seconds);
     }
   }
   return enough_walltime_for_timestep;
