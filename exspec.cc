@@ -1,6 +1,10 @@
 // Main program of the exspec post-processing tool: reads the packet files written by an sn3d
 // run and bins the escaped packets into spectra and light curves for each observer direction
 // bin, optionally with per-process emission and absorption contributions.
+//
+// sn3d writes the same files at its last requested timestep. exspec makes them again from the packet files,
+// e.g. after a change of MNUBINS or of the frequency range. exspec also sums the packets in a
+// single rank, so its result does not depend on the number of ranks of the simulation.
 
 #include "exspec.h"
 
