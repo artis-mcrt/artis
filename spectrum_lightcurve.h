@@ -41,7 +41,10 @@ void write_spectra(const std::string& spec_filename, const std::string& emission
 
 void write_specpol(const std::string& specpol_filename, const std::string& emission_filename,
                    const std::string& absorption_filename, const Spectra& spectra_I, const Spectra& spectra_Q,
-                   const Spectra& spectra_U);
+                   const Spectra& spectra_U, int numtimesteps);
+
+void check_spectrum_lightcurve_consistency(const Spectra& spectra_I, std::span<const double> light_curve_lum,
+                                           int numtimesteps);
 
 void add_to_spec_res(const Packet& pkt, int dirbin, Spectra& spectra_I, Spectra* spectra_Q, Spectra* spectra_U);
 

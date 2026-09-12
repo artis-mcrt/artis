@@ -1171,7 +1171,7 @@ auto main(int argc, char* argv[]) -> int {
 
   // The main calculation is now over. The packets now have all stored the time, place and direction
   // at which they left the grid. Also their rest frame energies and frequencies.
-  // Spectra and light curves are now extracted using exspec which is another make target of this code.
+  // sn3d has written the spectra and light curves. exspec can make them again from the packet files.
 
   MPI_Barrier_allranks();
 

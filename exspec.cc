@@ -8,7 +8,6 @@
 
 #include <algorithm>
 #include <chrono>
-#include <cstddef>
 #include <cstdlib>
 #include <filesystem>
 #include <format>
@@ -58,10 +57,8 @@ void do_direction_bin(const int dirbin, const std::vector<std::vector<Packet>>& 
     init_spectra(rpkt_spectra_U, NU_MIN_R, NU_MAX_R, true);
   }
 
-  constexpr double nu_min_gamma = 0.05 * MEV / H;
-  constexpr double nu_max_gamma = 4. * MEV / H;
   THREADLOCALONHOST Spectra gamma_spectra;
-  init_spectra(gamma_spectra, nu_min_gamma, nu_max_gamma, false);
+  init_spectra(gamma_spectra, NU_MIN_GAMMA, NU_MAX_GAMMA, false);
   assert_always(globals::nprocs_exspec > 0);
   for (int p = 0; p < globals::nprocs_exspec; p++) {
     const auto& pkts_thisrank = packets_by_rank[p];
@@ -99,7 +96,7 @@ void do_direction_bin(const int dirbin, const std::vector<std::vector<Packet>>& 
 
     if constexpr (POL_ON) {
       write_specpol("specpol.out", "emissionpol.out", "absorptionpol.out", rpkt_spectra_I, rpkt_spectra_Q,
-                    rpkt_spectra_U);
+                    rpkt_spectra_U, globals::ntimesteps);
     }
 
     if constexpr (KEEP_ESCAPED_GAMMAS) {
@@ -107,25 +104,7 @@ void do_direction_bin(const int dirbin, const std::vector<std::vector<Packet>>& 
       write_spectra("gamma_spec.out", "", "", "", gamma_spectra, globals::ntimesteps);
     }
 
-    // consistency check (log only): the frequency-integrated spectrum must reproduce the light curve, minus
-    // the packets whose frequencies fall outside the spectrum's frequency range
-    for (int nts = 0; nts < globals::ntimesteps; nts++) {
-      double lum_from_spec = 0.;
-      for (ptrdiff_t nnu = 0; nnu < MNUBINS; nnu++) {
-        lum_from_spec += rpkt_spectra_I.fluxalltimesteps[(nnu * static_cast<ptrdiff_t>(globals::ntimesteps)) + nts] *
-                         rpkt_spectra_I.delta_freq[nnu];
-      }
-      // undo the flux normalisation applied in add_to_spec_res() to get back to a luminosity
-      lum_from_spec *= 4.e12 * PI * PARSEC * PARSEC;
-      const double lum_lightcurve = rpkt_light_curve_lum[nts];
-      if (lum_lightcurve > 0. && lum_from_spec > (lum_lightcurve * 1.001)) {
-        printlnlog(
-            "[warning] consistency check failed for timestep {}: frequency-integrated spec.out luminosity {:g} "
-            "[erg/s] exceeds the light_curve.out luminosity {:g} [erg/s], but the spectrum's packets should be a "
-            "subset of the light curve's packets",
-            nts, lum_from_spec, lum_lightcurve);
-      }
-    }
+    check_spectrum_lightcurve_consistency(rpkt_spectra_I, rpkt_light_curve_lum, globals::ntimesteps);
 
     printlnlog("wrote the angle-averaged light curves and spectra");
   } else {
@@ -147,7 +126,7 @@ void do_direction_bin(const int dirbin, const std::vector<std::vector<Packet>>& 
       write_specpol(std::format("{}specpol_res_{:02d}.out", outdir_resfiles, dirbin),
                     std::format("{}emissionpol_res_{:02d}.out", outdir_resfiles, dirbin),
                     std::format("{}absorptionpol_res_{:02d}.out", outdir_resfiles, dirbin), rpkt_spectra_I,
-                    rpkt_spectra_Q, rpkt_spectra_U);
+                    rpkt_spectra_Q, rpkt_spectra_U, globals::ntimesteps);
     }
 
     printlnlog("finished direction bin {} (highest bin is {})", dirbin, MABINS - 1);

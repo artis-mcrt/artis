@@ -63,6 +63,9 @@ double traceemission_totalenergy = 0.;
 double traceabsorption_totalenergy = 0.;
 
 Spectra rpkt_spectra_I;
+Spectra rpkt_spectra_Q;
+Spectra rpkt_spectra_U;
+Spectra gamma_spectra;
 
 // the other "atomicadd" function is atomic only for multithreaded modes (STDPAR or OpenMP), but here we need it to be
 // atomic for node-shared memory between processes even in single-threaded mode
@@ -220,6 +223,17 @@ auto columnindex_from_emissiontype(const int et) -> int {
   return -1;
 }
 
+// Sum the spectra of the nodes. The arrays are node-shared memory, so only one rank of each node takes part.
+void mpi_allreduce_spectra(Spectra& spectra) {
+  assert_always(globals::rank_in_node == 0);
+  MPI_Allreduce_safe(spectra.fluxalltimesteps, MPI_SUM, globals::mpi_comm_internode);
+  if (spectra.do_emission_absorption) {
+    MPI_Allreduce_safe(spectra.absorptionalltimesteps, MPI_SUM, globals::mpi_comm_internode);
+    MPI_Allreduce_safe(spectra.emissionalltimesteps, MPI_SUM, globals::mpi_comm_internode);
+    MPI_Allreduce_safe(spectra.trueemissionalltimesteps, MPI_SUM, globals::mpi_comm_internode);
+  }
+}
+
 void write_partial_lightcurve_spectra_dirbin(const int nts, std::span<const Packet> packets,
                                              const bool do_emission_absorption, const int dirbin) {
   THREADLOCALONHOST std::vector<double> rpkt_light_curve_lum;
@@ -238,6 +252,15 @@ void write_partial_lightcurve_spectra_dirbin(const int nts, std::span<const Pack
   }
 
   init_spectra(rpkt_spectra_I, NU_MIN_R, NU_MAX_R, do_emission_absorption);
+  if constexpr (POL_ON) {
+    init_spectra(rpkt_spectra_Q, NU_MIN_R, NU_MAX_R, do_emission_absorption);
+    init_spectra(rpkt_spectra_U, NU_MIN_R, NU_MAX_R, do_emission_absorption);
+  }
+  // the gamma packets have no direction bins, so only the angle-averaged spectrum gets them
+  const bool do_gamma_spectrum = KEEP_ESCAPED_GAMMAS && (dirbin == -1);
+  if (do_gamma_spectrum) {
+    init_spectra(gamma_spectra, NU_MIN_GAMMA, NU_MAX_GAMMA, false);
+  }
 
   MPI_Barrier_node();
 #if defined REPRODUCIBLE && REPRODUCIBLE
@@ -254,9 +277,11 @@ void write_partial_lightcurve_spectra_dirbin(const int nts, std::span<const Pack
         if (pkt.type == TYPE_ESCAPE) {
           if (pkt.escape_type == TYPE_RPKT) {
             add_to_lc_res(pkt, dirbin, rpkt_light_curve_lum, rpkt_light_curve_lumcmf);
-            add_to_spec_res(pkt, dirbin, rpkt_spectra_I, nullptr, nullptr);
-          } else if (KEEP_ESCAPED_GAMMAS && dirbin == -1 && pkt.escape_type == TYPE_GAMMA) {
+            add_to_spec_res(pkt, dirbin, rpkt_spectra_I, POL_ON ? &rpkt_spectra_Q : nullptr,
+                            POL_ON ? &rpkt_spectra_U : nullptr);
+          } else if (do_gamma_spectrum && pkt.escape_type == TYPE_GAMMA) {
             add_to_lc_res(pkt, dirbin, gamma_light_curve_lum, gamma_light_curve_lumcmf);
+            add_to_spec_res(pkt, dirbin, gamma_spectra, nullptr, nullptr);
           }
         }
       }
@@ -269,11 +294,13 @@ void write_partial_lightcurve_spectra_dirbin(const int nts, std::span<const Pack
 
   MPI_Barrier_allranks();
   if (globals::rank_in_node == 0) {
-    MPI_Allreduce_safe(rpkt_spectra_I.fluxalltimesteps, MPI_SUM, globals::mpi_comm_internode);
-    if (rpkt_spectra_I.do_emission_absorption) {
-      MPI_Allreduce_safe(rpkt_spectra_I.absorptionalltimesteps, MPI_SUM, globals::mpi_comm_internode);
-      MPI_Allreduce_safe(rpkt_spectra_I.emissionalltimesteps, MPI_SUM, globals::mpi_comm_internode);
-      MPI_Allreduce_safe(rpkt_spectra_I.trueemissionalltimesteps, MPI_SUM, globals::mpi_comm_internode);
+    mpi_allreduce_spectra(rpkt_spectra_I);
+    if constexpr (POL_ON) {
+      mpi_allreduce_spectra(rpkt_spectra_Q);
+      mpi_allreduce_spectra(rpkt_spectra_U);
+    }
+    if (do_gamma_spectrum) {
+      mpi_allreduce_spectra(gamma_spectra);
     }
   }
   MPI_Allreduce_safe(rpkt_light_curve_lum, MPI_SUM, MPI_COMM_WORLD);
@@ -288,8 +315,14 @@ void write_partial_lightcurve_spectra_dirbin(const int nts, std::span<const Pack
     write_light_curve("light_curve.out", rpkt_light_curve_lum, rpkt_light_curve_lumcmf, numtimesteps);
     if constexpr (KEEP_ESCAPED_GAMMAS) {
       write_light_curve("gamma_light_curve.out", gamma_light_curve_lum, gamma_light_curve_lumcmf, numtimesteps);
+      write_spectra("gamma_spec.out", "", "", "", gamma_spectra, numtimesteps);
     }
     write_spectra("spec.out", "emission.out", "emissiontrue.out", "absorption.out", rpkt_spectra_I, numtimesteps);
+    if constexpr (POL_ON) {
+      write_specpol("specpol.out", "emissionpol.out", "absorptionpol.out", rpkt_spectra_I, rpkt_spectra_Q,
+                    rpkt_spectra_U, numtimesteps);
+    }
+    check_spectrum_lightcurve_consistency(rpkt_spectra_I, rpkt_light_curve_lum, numtimesteps);
   } else {
     if (globals::my_rank == 0 && !std::filesystem::exists(outdir_resfiles)) {
       std::filesystem::create_directory(outdir_resfiles);
@@ -302,6 +335,13 @@ void write_partial_lightcurve_spectra_dirbin(const int nts, std::span<const Pack
                   std::format("{}emission_res_{:02d}.out", outdir_resfiles, dirbin),
                   std::format("{}emissiontrue_res_{:02d}.out", outdir_resfiles, dirbin),
                   std::format("{}absorption_res_{:02d}.out", outdir_resfiles, dirbin), rpkt_spectra_I, numtimesteps);
+
+    if constexpr (POL_ON) {
+      write_specpol(std::format("{}specpol_res_{:02d}.out", outdir_resfiles, dirbin),
+                    std::format("{}emissionpol_res_{:02d}.out", outdir_resfiles, dirbin),
+                    std::format("{}absorptionpol_res_{:02d}.out", outdir_resfiles, dirbin), rpkt_spectra_I,
+                    rpkt_spectra_Q, rpkt_spectra_U, numtimesteps);
+    }
   }
   MPI_Barrier_allranks();
 }
@@ -401,7 +441,8 @@ void write_spectra(const std::string& spec_filename, const std::string& emission
 
 void write_specpol(const std::string& specpol_filename, const std::string& emission_filename,
                    const std::string& absorption_filename, const Spectra& spectra_I, const Spectra& spectra_Q,
-                   const Spectra& spectra_U) {
+                   const Spectra& spectra_U, const int numtimesteps) {
+  assert_always(numtimesteps <= globals::ntimesteps);
   if (globals::my_rank != 0) {
     return;
   }
@@ -421,12 +462,12 @@ void write_specpol(const std::string& specpol_filename, const std::string& emiss
 
   const int proccount = get_proccount();
   const int ioncount = get_nelements() * get_max_nions();  // may be higher than the true included ion count
-  const auto ntimesteps = static_cast<ptrdiff_t>(globals::ntimesteps);
+  const auto ntimesteps_all = static_cast<ptrdiff_t>(globals::ntimesteps);
 
   std::print(specpol_file, "{:g}", 0.0);
 
   for (int l = 0; l < 3; l++) {
-    for (int p = 0; p < globals::ntimesteps; p++) {
+    for (int p = 0; p < numtimesteps; p++) {
       std::print(specpol_file, " {:g}", globals::timesteps[p].mid / DAY);
     }
   }
@@ -439,12 +480,12 @@ void write_specpol(const std::string& specpol_filename, const std::string& emiss
     std::print(specpol_file, "{:g}", (spectra_I.lower_freq[nnu] + (spectra_I.delta_freq[nnu] / 2)));
 
     for (const auto* spec : {&spectra_I, &spectra_Q, &spectra_U}) {
-      for (auto nts = 0Z; nts < ntimesteps; nts++) {
-        std::print(specpol_file, " {:g}", spec->fluxalltimesteps[(nnu * ntimesteps) + nts]);
+      for (auto nts = 0Z; nts < numtimesteps; nts++) {
+        std::print(specpol_file, " {:g}", spec->fluxalltimesteps[(nnu * ntimesteps_all) + nts]);
 
         if (do_emission_absorption) {
           for (int nproc = 0; nproc < proccount; nproc++) {
-            const auto emindex = (nnu * ntimesteps * proccount) + (nts * proccount) + nproc;
+            const auto emindex = (nnu * ntimesteps_all * proccount) + (nts * proccount) + nproc;
             if (nproc > 0) {
               std::print(emissionpol_file, " ");
             }
@@ -465,6 +506,34 @@ void write_specpol(const std::string& specpol_filename, const std::string& emiss
     }
 
     std::println(specpol_file, "");
+  }
+}
+
+// The packets of the spectrum are a subset of the packets of the light curve, because the spectrum has a
+// limited frequency range. The frequency-integrated spectrum must therefore stay below the light curve. This
+// writes a warning to the log and changes no output file.
+void check_spectrum_lightcurve_consistency(const Spectra& spectra_I, const std::span<const double> light_curve_lum,
+                                           const int numtimesteps) {
+  assert_always(numtimesteps <= globals::ntimesteps);
+  if (globals::my_rank != 0) {
+    return;
+  }
+  const auto ntimesteps_all = static_cast<ptrdiff_t>(globals::ntimesteps);
+  for (int nts = 0; nts < numtimesteps; nts++) {
+    double lum_from_spec = 0.;
+    for (auto nnu = 0Z; nnu < MNUBINS; nnu++) {
+      lum_from_spec += spectra_I.fluxalltimesteps[(nnu * ntimesteps_all) + nts] * spectra_I.delta_freq[nnu];
+    }
+    // undo the flux normalisation of add_to_spec_res() to get back to a luminosity
+    lum_from_spec *= 4.e12 * PI * PARSEC * PARSEC;
+    const double lum_lightcurve = light_curve_lum[nts];
+    if (lum_lightcurve > 0. && lum_from_spec > (lum_lightcurve * 1.001)) {
+      printlnlog(
+          "[warning] consistency check failed for timestep {}: frequency-integrated spec.out luminosity {:g} "
+          "[erg/s] exceeds the light_curve.out luminosity {:g} [erg/s], but the spectrum's packets should be a "
+          "subset of the light curve's packets",
+          nts, lum_from_spec, lum_lightcurve);
+    }
   }
 }
 
