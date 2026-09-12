@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 
-if [[ -f emission.out || -f emission.out.zst ]] && [[ -f exspec.txt ]]; then
-  echo 'Not running exspec because emission.out[.zst] and exspec.txt were found'
+# sn3d writes emission.out at its last requested timestep
+if [[ -f emission.out || -f emission.out.zst ]]; then
+  echo 'Not running exspec because emission.out[.zst] was found'
 else
   source ./artis/scripts/exspec-before.sh
   ./artis/exspec
