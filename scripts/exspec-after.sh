@@ -1,16 +1,10 @@
 #!/usr/bin/env bash
 
-# only compress the files if we successfully ran exspec
-if [[ -f emission.out || -f emission.out.zst || -f emissionpol.out ]]; then
-  # keep the restart files unless the simulation has completed all of its timesteps: a run stopped
-  # at an earlier timestep_finish needs them to continue
-  if grep -qs "No need for restart" output_0-0.txt; then
-    rm -f packets_*.tmp gridsave_*.tmp vspecpol_*.tmp vpkt_grid_*.tmp
-  else
-    echo "The simulation has not completed all of its timesteps, so keeping the restart files"
-  fi
+# only change the run folder if sn3d finished cleanly after the last timestep of the model. A run that
+# stopped at an earlier timestep_finish needs its restart files to continue.
+if grep -qs "No need for restart" output_0-0.txt && grep -qs "sn3d finished" output_0-0.txt; then
+  rm -f packets_*.tmp gridsave_*.tmp vspecpol_*.tmp vpkt_grid_*.tmp
 
-  # sn3d and exspec write the direction bin files into speclc_angle_res/ themselves
   # join 3D direction files, if they exist
   python3 ./artis/scripts/mergeangleres.py
 
@@ -78,4 +72,6 @@ if [[ -f emission.out || -f emission.out.zst || -f emissionpol.out ]]; then
   # convert estimators to parquet. On JUWELS, you might need to limit the number of processes to 16 in artistools/artistools/configuration.py
   uvx --from artistools -- python3 -c 'import artistools as at; at.estimators.scan_estimators()' || true
 
+else
+  echo "sn3d did not finish cleanly after the last timestep of the model, so exspec-after.sh changes no file"
 fi
