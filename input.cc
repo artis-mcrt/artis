@@ -826,8 +826,8 @@ void setup_phixs_list() {
       }
     }
     assert_always(nextgroundcontindex == globals::nbfcontinua_ground);
-    std::ranges::sort(std::views::zip(groundcont_nu_edge, groundcont_element, groundcont_ion),
-                      [](const auto& lhs, const auto& rhs) { return std::get<0>(lhs) < std::get<0>(rhs); });
+    // the element and the ion make the key unique when two ions have an equal threshold
+    std::ranges::sort(std::views::zip(groundcont_nu_edge, groundcont_element, groundcont_ion));
   }
   MPI_Barrier_node();
   globals::groundcont_nu_edge = std::move(groundcont_nu_edge);

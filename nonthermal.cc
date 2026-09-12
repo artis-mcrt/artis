@@ -451,9 +451,12 @@ void read_auger_data() {
       int epsilon_e3 = -1;
 
       // fixed-width columns, because a five-digit ionisation potential touches the shell number
-      assert_always(sscanf(strline.substr(linepos).c_str(), "%2d%7g%7g%4d%n", &shellnum, &ionpot_ev,
-                           &en_auger_ev_total_nocorrection, &epsilon_e3, &offset) == 4);
-      assert_always(offset == 20);
+      const auto fields = strline.substr(linepos, 20);
+      assert_always(fields.size() == 20);
+      assert_always(sscanf(fields.substr(0, 2).c_str(), "%d", &shellnum) == 1);
+      assert_always(sscanf(fields.substr(2, 7).c_str(), "%g", &ionpot_ev) == 1);
+      assert_always(sscanf(fields.substr(9, 7).c_str(), "%g", &en_auger_ev_total_nocorrection) == 1);
+      assert_always(sscanf(fields.substr(16, 4).c_str(), "%d", &epsilon_e3) == 1);
 
       float n_auger_elec_avg = 0;
       std::array<double, (NT_MAX_AUGER_ELECTRONS + 1)> prob_num_auger{};
