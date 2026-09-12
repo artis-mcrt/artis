@@ -401,23 +401,20 @@ auto find_bin_T_R(const int nonemptymgi, const int binindex) -> float {
 
 void set_params_fullspec(const int nonemptymgi, const int timestep) {
   const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
+  // J = 0 is a cell with no radiation, so T_J is MINTEMP and the clamp reports it
+  const auto T_J = get_T_J_from_J(nonemptymgi);
+  grid::TJ_allcells[nonemptymgi] = T_J;
+
   const double nubar = nuJ[nonemptymgi] / J[nonemptymgi];
-  if (!std::isfinite(nubar) || nubar == 0.) {
-    printlnlog("[warning] T_R estimator infinite in cell {}, keep T_R, T_J, W of last timestep. J = {:g}. nuJ = {:g}",
+  if (J[nonemptymgi] <= 0.) {
+    // no radiation in the cell
+    printlnlog("[warning] cell {} has J = 0, so T_R = MINTEMP and W = 0", modelgridindex);
+    grid::TR_allcells[nonemptymgi] = MINTEMP;
+    grid::W_allcells[nonemptymgi] = 0.;
+  } else if (!std::isfinite(nubar) || nubar == 0.) {
+    printlnlog("[warning] T_R estimator not finite in cell {}, keep T_R and W of last timestep. J = {:g}. nuJ = {:g}",
                modelgridindex, J[nonemptymgi], nuJ[nonemptymgi]);
   } else {
-    auto T_J = static_cast<float>(pow(J[nonemptymgi] * PI / STEBO, 1 / 4.));
-    if (T_J > MAXTEMP) {
-      printlnlog("[warning] temperature estimator T_J = {:g} exceeds T_max {:g} in cell {}. Setting T_J = T_max!", T_J,
-                 MAXTEMP, modelgridindex);
-      T_J = MAXTEMP;
-    } else if (T_J < MINTEMP) {
-      printlnlog("[warning] temperature estimator T_J = {:g} below T_min {:g} in cell {}. Setting T_J = T_min!", T_J,
-                 MINTEMP, modelgridindex);
-      T_J = MINTEMP;
-    }
-    grid::TJ_allcells[nonemptymgi] = T_J;
-
     auto T_R = static_cast<float>(H * nubar / KB / 3.832229494);
     if (T_R > MAXTEMP) {
       printlnlog("[warning] temperature estimator T_R = {:g} exceeds T_max {:g} in cell {}. Setting T_R = T_max!", T_R,
@@ -793,13 +790,14 @@ DEVICE_FUNC auto radfield(const double nu, const int nonemptymgi) -> double {
   if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
     if (globals::timestep >= FIRST_NLTE_RADFIELD_TIMESTEP) {
       const int binindex = select_bin(nu);
-      if (binindex >= 0) {
-        const auto W = get_bin_W(nonemptymgi, binindex);
-        if (W >= 0.) {
-          return W * planck(nu, get_bin_T_R(nonemptymgi, binindex));
-        }
+      if (binindex < 0) {
+        return 0.;
       }
-      return 0.;
+      const auto W = get_bin_W(nonemptymgi, binindex);
+      // a negative W marks a bin with no fit, for example in a cell that was thick in the last timestep
+      if (W >= 0.) {
+        return W * planck(nu, get_bin_T_R(nonemptymgi, binindex));
+      }
     }
   }
   // full spectrum fit to a single dilute blackbody
@@ -895,6 +893,15 @@ void fit_parameters(const int nonemptymgi, const int timestep) {
 }
 
 void set_J_normfactor(const int nonemptymgi, const double normfactor) { J_normfactor[nonemptymgi] = normfactor; }
+
+// A cell without a bin fit in this timestep must not keep the fit of an older timestep
+void invalidate_bin_fits(const int nonemptymgi) {
+  if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
+    std::ranges::fill(radfieldbin_solutions_W.span().subspan(static_cast<ptrdiff_t>(nonemptymgi) * RADFIELDBINCOUNT,
+                                                             RADFIELDBINCOUNT),
+                      -1.);
+  }
+}
 
 void normalise_J(const int nonemptymgi, const double estimator_normfactor_over4pi) {
   assert_always(std::isfinite(J[nonemptymgi]));
