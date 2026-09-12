@@ -874,22 +874,9 @@ void setup_phixs_list() {
           if constexpr (USE_LUT_PHOTOION || USE_ION_BFHEATING_ESTIMATORS) {
             // depends only on the level, so it is found once here rather than once per target below
             const double nu_edge_target0 = get_phixs_threshold(element, ion, level, 0) / H;
+            // the ground level uses the ion's own slot, because two ions can have an identical ground threshold
             alllevels_closestgroundlevelcont[uniquelevelindex] =
-                search_groundphixslist(nu_edge_target0, element, ion, level);
-            if (level == 0) {
-              // update_grid.cc normalises and applies the ground continuum estimators at the
-              // groundcontindex slot, and the writes below use the same slot. The nearest-edge search
-              // gives another ion's slot only when two ions have an identical ground threshold. That
-              // case would silently mix the estimators of the two ions.
-              if (const int foundslot = alllevels_closestgroundlevelcont[uniquelevelindex];
-                  foundslot != groundcontindex) {
-                fatal_crash(
-                    "element {} ion {} has the ground continuum slot {}, but the nearest-edge search "
-                    "found the slot {} of element {} ion {}. Two ions have an identical ground threshold {:g}.",
-                    element, ion, groundcontindex, foundslot, globals::groundcont_element[foundslot],
-                    globals::groundcont_ion[foundslot], nu_edge_target0);
-              }
-            }
+                (level == 0) ? groundcontindex : search_groundphixslist(nu_edge_target0, element, ion, level);
           }
 
           for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
