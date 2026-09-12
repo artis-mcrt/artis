@@ -897,6 +897,15 @@ void fit_parameters(const int nonemptymgi, const int timestep) {
 
 void set_J_normfactor(const int nonemptymgi, const double normfactor) { J_normfactor[nonemptymgi] = normfactor; }
 
+// A cell without a bin fit in this timestep must not keep the fit of an older timestep
+void invalidate_bin_fits(const int nonemptymgi) {
+  if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
+    std::ranges::fill(radfieldbin_solutions_W.span().subspan(static_cast<ptrdiff_t>(nonemptymgi) * RADFIELDBINCOUNT,
+                                                             RADFIELDBINCOUNT),
+                      -1.);
+  }
+}
+
 void normalise_J(const int nonemptymgi, const double estimator_normfactor_over4pi) {
   assert_always(std::isfinite(J[nonemptymgi]));
   J[nonemptymgi] *= estimator_normfactor_over4pi;
