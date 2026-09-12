@@ -851,6 +851,7 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
       grid::Te_allcells[nonemptymgi] = T_J;
       grid::TJ_allcells[nonemptymgi] = T_J;
       grid::W_allcells[nonemptymgi] = 1;
+      radfield::invalidate_bin_fits(nonemptymgi);
 
       if constexpr (USE_LUT_PHOTOION) {
         std::ranges::fill(

@@ -793,13 +793,14 @@ DEVICE_FUNC auto radfield(const double nu, const int nonemptymgi) -> double {
   if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
     if (globals::timestep >= FIRST_NLTE_RADFIELD_TIMESTEP) {
       const int binindex = select_bin(nu);
-      if (binindex >= 0) {
-        const auto W = get_bin_W(nonemptymgi, binindex);
-        if (W >= 0.) {
-          return W * planck(nu, get_bin_T_R(nonemptymgi, binindex));
-        }
+      if (binindex < 0) {
+        return 0.;
       }
-      return 0.;
+      const auto W = get_bin_W(nonemptymgi, binindex);
+      // a negative W marks a bin with no fit, for example in a cell that was thick in the last timestep
+      if (W >= 0.) {
+        return W * planck(nu, get_bin_T_R(nonemptymgi, binindex));
+      }
     }
   }
   // full spectrum fit to a single dilute blackbody
@@ -895,6 +896,15 @@ void fit_parameters(const int nonemptymgi, const int timestep) {
 }
 
 void set_J_normfactor(const int nonemptymgi, const double normfactor) { J_normfactor[nonemptymgi] = normfactor; }
+
+// A cell without a bin fit in this timestep must not keep the fit of an older timestep
+void invalidate_bin_fits(const int nonemptymgi) {
+  if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
+    std::ranges::fill(radfieldbin_solutions_W.span().subspan(static_cast<ptrdiff_t>(nonemptymgi) * RADFIELDBINCOUNT,
+                                                             RADFIELDBINCOUNT),
+                      -1.);
+  }
+}
 
 void normalise_J(const int nonemptymgi, const double estimator_normfactor_over4pi) {
   assert_always(std::isfinite(J[nonemptymgi]));
