@@ -51,11 +51,11 @@ echo "CPU type: $(c++ -march=native -Q --help=target | grep -- '-march=  ' | cut
 
 # decompress any zipped input files
 source ./artis/scripts/exspec-before.sh
-hoursleft=$(python3.14 ./artis/scripts/slurmjobhoursleft.py ${SLURM_JOB_ID})
+hoursleft=$(python ./artis/scripts/slurmjobhoursleft.py ${SLURM_JOB_ID})
 source ./artis/scripts/corehours-before.sh
 echo "$(date): before srun sn3d. hours left: $hoursleft"
 time srun --hint=nomultithread -- ./artis/sn3d -w $hoursleft -o ${SLURM_JOB_ID}.slurm > out.txt
-hoursleftafter=$(python3.14 ./artis/scripts/slurmjobhoursleft.py ${SLURM_JOB_ID})
+hoursleftafter=$(python ./artis/scripts/slurmjobhoursleft.py ${SLURM_JOB_ID})
 echo "$(date): after srun sn3d finished. hours left: $hoursleftafter"
 source ./artis/scripts/corehours-after.sh
 
