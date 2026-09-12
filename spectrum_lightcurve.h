@@ -49,7 +49,6 @@ void check_spectrum_lightcurve_consistency(const Spectra& spectra_I, std::span<c
 void add_to_spec_res(const Packet& pkt, int dirbin, Spectra& spectra_I, Spectra* spectra_Q, Spectra* spectra_U);
 
 void init_spectra(Spectra& spectra, double nu_min, double nu_max, bool do_emission_absorption);
-void init_spectrum_trace();
 void write_partial_lightcurve_spectra(int nts, std::span<const Packet> pkts);
 
 void add_to_lc_res(const Packet& pkt, int dirbin, std::span<double> light_curve_lum,

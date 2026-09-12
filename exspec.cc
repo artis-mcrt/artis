@@ -183,8 +183,6 @@ auto main(int argc, char* argv[]) -> int {
 
   setup_timesteps();
 
-  init_spectrum_trace();  // needed for TRACE_EMISSION_ABSORPTION_REGION_ON
-
   // nprocs_exspec is the number of rank output files to process with exspec
   // (not the number of ranks used to run exspec, which is always 1 for now)
 

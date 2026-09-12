@@ -10,8 +10,7 @@ if [[ -f emission.out || -f emission.out.zst || -f emissionpol.out ]]; then
     echo "The simulation has not completed all of its timesteps, so keeping the restart files"
   fi
 
-  mkdir -p speclc_angle_res
-  mv *_res_*.out* speclc_angle_res/ || true
+  # sn3d and exspec write the direction bin files into speclc_angle_res/ themselves
   # join 3D direction files, if they exist
   python3 ./artis/scripts/mergeangleres.py
 

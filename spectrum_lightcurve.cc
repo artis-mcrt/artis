@@ -11,7 +11,6 @@
 #include <filesystem>
 #include <format>
 #include <fstream>
-#include <functional>
 #include <ios>
 #include <iterator>
 #include <print>
@@ -38,30 +37,6 @@
 
 namespace {
 
-// Set to true to print the strongest line emission/absorption contributions in a fixed wavelength and time
-// window (see the traceemissabs_* limits below). This only works in exspec, which is the only caller of
-// init_spectrum_trace(), i.e. the only place where the traceemissionabsorption list is allocated.
-constexpr bool TRACE_EMISSION_ABSORPTION_REGION_ON = false;
-
-constexpr double traceemissabs_lambdamin = 1000.;  // in Angstroms
-constexpr double traceemissabs_lambdamax = 25000.;
-constexpr double traceemissabs_nulower = (1.e8 * CLIGHT / traceemissabs_lambdamax);
-constexpr double traceemissabs_nuupper = (1.e8 * CLIGHT / traceemissabs_lambdamin);
-constexpr double traceemissabs_timemin = (320. * DAY);
-constexpr double traceemissabs_timemax = (340. * DAY);
-
-struct EmissionAbsorptionContrib {
-  double energyemitted;
-  double emission_weightedvelocity_sum;
-  double energyabsorbed;
-  double absorption_weightedvelocity_sum;
-  int lineindex;  // this will be important when the list gets sorted
-};
-
-std::vector<EmissionAbsorptionContrib> traceemissionabsorption;
-double traceemission_totalenergy = 0.;
-double traceabsorption_totalenergy = 0.;
-
 Spectra rpkt_spectra_I;
 Spectra rpkt_spectra_Q;
 Spectra rpkt_spectra_U;
@@ -72,97 +47,6 @@ Spectra gamma_spectra;
 template <typename T, typename U>
 constexpr void atomicadd_always(T& var, U&& val) {
   std::atomic_ref<T>(var).fetch_add(std::forward<U>(val), std::memory_order_relaxed);
-}
-
-void printout_tracemission_stats() {
-  const auto maxlinesprinted = 500Z;
-
-  // mode is 0 for emission and 1 for absorption
-  for (int mode = 0; mode < 2; mode++) {
-    if (mode == 0) {
-      std::ranges::SORT_OR_STABLE_SORT(traceemissionabsorption,
-                                       [](const auto& a, const auto& b) { return a.energyemitted > b.energyemitted; });
-      printlnlog("lambda [{:5.1f}, {:5.1f}] [Angstrom] nu [{:g}, {:g}] [Hz]", traceemissabs_lambdamin,
-                 traceemissabs_lambdamax, traceemissabs_nulower, traceemissabs_nuupper);
-
-      printlnlog(
-          "Top line emission contributions in the range lambda [{:5.1f}, {:5.1f}] [Angstrom] time [{:5.1f}, {:5.1f}] "
-          "[d] ({:g} [erg])",
-          traceemissabs_lambdamin, traceemissabs_lambdamax, traceemissabs_timemin / DAY, traceemissabs_timemax / DAY,
-          traceemission_totalenergy);
-    } else {
-      std::ranges::SORT_OR_STABLE_SORT(traceemissionabsorption, std::ranges::greater{},
-                                       &EmissionAbsorptionContrib::energyabsorbed);
-      printlnlog(
-          "Top line absorption contributions in the range lambda [{:5.1f}, {:5.1f}] [Angstrom] time [{:5.1f}, {:5.1f}] "
-          "[d] ({:g} [erg])",
-          traceemissabs_lambdamin, traceemissabs_lambdamax, traceemissabs_timemin / DAY, traceemissabs_timemax / DAY,
-          traceabsorption_totalenergy);
-    }
-
-    printlnlog("{:>17} {:>4} {:>9} {:>5} {:>5} {:>8} {:>5} {:>7} {:>7} {:>7} {:>7}", "energy (frac)", "Z", "ionstage",
-               "upper", "lower", "coll_str", "forb", "lambda", "<v_rad>", "B_lu", "B_ul");
-
-    // display the top entries of the sorted list
-    const auto nlines_limited = std::min(std::ssize(globals::linelist.nu), maxlinesprinted);
-    for (auto i = 0Z; i < nlines_limited; i++) {
-      double encontrib{NAN};
-      double totalenergy{NAN};
-      if (mode == 0) {
-        encontrib = traceemissionabsorption[i].energyemitted;
-        totalenergy = traceemission_totalenergy;
-      } else {
-        encontrib = traceemissionabsorption[i].energyabsorbed;
-        totalenergy = traceabsorption_totalenergy;
-      }
-      if (encontrib > 0.)  // lines that emit/absorb some energy
-      {
-        const int lineindex = traceemissionabsorption[i].lineindex;
-        const int element = globals::linelist.elementindex[lineindex];
-        const int ion = globals::linelist.ionindex[lineindex];
-        const double linelambda = 1e8 * CLIGHT / globals::linelist.nu[lineindex];
-        // flux-weighted average radial velocity of emission in km/s
-        double v_rad{NAN};
-        if (mode == 0) {
-          v_rad =
-              traceemissionabsorption[i].emission_weightedvelocity_sum / traceemissionabsorption[i].energyemitted / 1e5;
-        } else {
-          v_rad = traceemissionabsorption[i].absorption_weightedvelocity_sum /
-                  traceemissionabsorption[i].energyabsorbed / 1e5;
-        }
-
-        const auto ionuniquelevelindexstart = get_ionuniquelevelindexstart(element, ion);
-        const auto lower_uniquelevelindex = globals::linelist.uniquelevelindex_lower[lineindex];
-        const auto upper_uniquelevelindex = globals::linelist.uniquelevelindex_upper[lineindex];
-        const int lower = lower_uniquelevelindex - ionuniquelevelindexstart;
-        const int upper = upper_uniquelevelindex - ionuniquelevelindexstart;
-
-        const double B_ul = globals::linelist.B_ul[lineindex];
-        const double B_lu = globals::linelist.B_lu[lineindex];
-
-        const auto alltrans_startdown = get_alltrans_startdown(upper_uniquelevelindex);
-        const auto ndowntrans = get_ndowntrans(upper_uniquelevelindex);
-        int downtransid = -1;
-        for (int alltransindex = alltrans_startdown; alltransindex < alltrans_startdown + ndowntrans; alltransindex++) {
-          if (globals::alltrans.targetlevelindex[alltransindex] == lower) {
-            downtransid = alltransindex;
-            break;
-          }
-        }
-        assert_always(downtransid != -1);
-
-        printlnlog("{:7.2e} ({:5.1f}%) {:4} {:9} {:5} {:5} {:8.1f} {:5} {:7.1f} {:7.1f} {:7.1e} {:7.1e}", encontrib,
-                   100 * encontrib / totalenergy, get_atomicnumber(element), get_ionstage(element, ion), upper, lower,
-                   globals::alltrans.coll_str[downtransid], static_cast<int>(globals::alltrans.forbidden[downtransid]),
-                   linelambda, v_rad, B_lu, B_ul);
-      } else {
-        break;
-      }
-    }
-    printlnlog("");
-  }
-
-  traceemissionabsorption.clear();
 }
 
 // number of different emission processes (bf and bb for each ion, and free-free)
@@ -409,11 +293,6 @@ void write_spectra(const std::string& spec_filename, const std::string& emission
                    const Spectra& spectra, const int numtimesteps) {
   assert_always(numtimesteps <= globals::ntimesteps);
 
-  if (TRACE_EMISSION_ABSORPTION_REGION_ON && spectra.do_emission_absorption && !traceemissionabsorption.empty() &&
-      globals::my_rank == 0) {
-    printout_tracemission_stats();
-  }
-
   // only one rank should write each file. Try to choose different ranks on different nodes, if available
   const auto this_rank_writes_file = [](const int filenum) {
     return (filenum % globals::node_count == globals::node_id) &&
@@ -537,21 +416,6 @@ void check_spectrum_lightcurve_consistency(const Spectra& spectra_I, const std::
   }
 }
 
-void init_spectrum_trace() {
-  if (TRACE_EMISSION_ABSORPTION_REGION_ON) {
-    traceemission_totalenergy = 0.;
-    reserve_resize(traceemissionabsorption, globals::nlines);
-    traceabsorption_totalenergy = 0.;
-    for (int i = 0; i < globals::nlines; i++) {
-      traceemissionabsorption[i].energyemitted = 0.;
-      traceemissionabsorption[i].emission_weightedvelocity_sum = 0.;
-      traceemissionabsorption[i].energyabsorbed = 0.;
-      traceemissionabsorption[i].absorption_weightedvelocity_sum = 0.;
-      traceemissionabsorption[i].lineindex = i;  // this will be important when the list gets sorted
-    }
-  }
-}
-
 // resize and initialize the spectra object
 void init_spectra(Spectra& spectra, const double nu_min, const double nu_max, const bool do_emission_absorption) {
   // setup the time and frequency bins using a logarithmic spacing in both t and nu
@@ -666,21 +530,6 @@ void add_to_spec_res(const Packet& pkt, const int dirbin, Spectra& spectra_I, Sp
         }
       }
 
-      // traceemissionabsorption is only allocated by init_spectrum_trace(), which sn3d never calls, so
-      // check that it has been set up before indexing into it
-      if (TRACE_EMISSION_ABSORPTION_REGION_ON && (dirbin == -1) && !traceemissionabsorption.empty()) {
-        const int et = pkt.trueemissiontype;
-        if ((et >= 0) && (t_arrive >= traceemissabs_timemin && t_arrive <= traceemissabs_timemax) &&
-            (pkt.nu_rf >= traceemissabs_nulower && pkt.nu_rf <= traceemissabs_nuupper))
-
-        {
-          traceemissionabsorption[et].energyemitted += deltaE;
-          traceemissionabsorption[et].emission_weightedvelocity_sum +=
-              vec_len(pkt.trueem_pos) / pkt.trueem_time * deltaE;
-          traceemission_totalenergy += deltaE;
-        }
-      }
-
       if (pkt.absorptionfreq > nu_min && pkt.absorptionfreq < nu_max) {
         const auto nnu_abs = get_logbinindex(pkt.absorptionfreq, nu_min, dlognu, MNUBINS);
         const double deltaE_absorption = pkt.e_rf / globals::timesteps[nts].width / spectra_I.delta_freq[nnu_abs] /
@@ -698,15 +547,6 @@ void add_to_spec_res(const Packet& pkt, const int dirbin, Spectra& spectra_I, Sp
           }
           if (spectra_U != nullptr && spectra_U->do_emission_absorption) {
             atomicadd_always(spectra_U->absorptionalltimesteps[absindex], pkt.stokes_u * deltaE_absorption);
-          }
-
-          if ((TRACE_EMISSION_ABSORPTION_REGION_ON && !traceemissionabsorption.empty() &&
-               t_arrive >= traceemissabs_timemin && t_arrive <= traceemissabs_timemax) &&
-              ((dirbin == -1) && (pkt.nu_rf >= traceemissabs_nulower) && (pkt.nu_rf <= traceemissabs_nuupper))) {
-            traceemissionabsorption[at].energyabsorbed += deltaE_absorption;
-            const auto vel_vec = get_velocity(pkt.em_pos, pkt.em_time);
-            traceemissionabsorption[at].absorption_weightedvelocity_sum += vec_len(vel_vec) * deltaE_absorption;
-            traceabsorption_totalenergy += deltaE_absorption;
           }
         }
       }
