@@ -123,7 +123,7 @@ endif
 ifeq ($(REPRODUCIBLE),ON)
 	CXXFLAGS += -DREPRODUCIBLE=true -ffp-contract=off -DEIGEN_DONT_VECTORIZE
 	BUILD_DIR := $(BUILD_DIR)_reproducible
-	FASTMATH := OFF
+	override FASTMATH := OFF
 else ifeq ($(REPRODUCIBLE),OFF)
 else ifeq ($(REPRODUCIBLE),)
 else
@@ -251,6 +251,13 @@ ifeq ($(TESTMODE),ON)
 	CXXFLAGS += $(TESTMODE_CXXFLAGS)
 
 	BUILD_DIR := $(BUILD_DIR)_testmode
+endif
+
+ifneq ($(filter-out ON OFF,$(FASTMATH)),)
+  $(error bad value for FASTMATH option. Should be ON or OFF)
+endif
+ifneq ($(filter-out ON OFF,$(OPTIMIZE)),)
+  $(error bad value for OPTIMIZE option. Should be ON or OFF)
 endif
 
 ifeq ($(OPTIMIZE),OFF)
@@ -429,7 +436,7 @@ $(BUILD_DIR)/sn3d: $(sn3d_objects)
 sn3d: $(BUILD_DIR)/sn3d compile_commands.json
 	rm -f sn3d && ln -s $(BUILD_DIR)/sn3d sn3d
 
-$(BUILD_DIR)/sn3dwhole: $(sn3d_files) version.h artisoptions.h Makefile
+$(BUILD_DIR)/sn3dwhole: $(sn3d_files) $(wildcard *.h) Makefile
 	$(CXX) $(CXXFLAGS) $(sn3d_files) $(LDFLAGS) -o $(BUILD_DIR)/sn3dwhole
 -include $(sn3d_dep)
 

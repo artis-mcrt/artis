@@ -404,7 +404,10 @@ void cellcacheslot_populate(globals::CellCache& cacheslot, const int nonemptymgi
   for (int element = 0; element < nelements; element++) {
     const int nions = get_nions(element);
     for (int ion = 0; ion < nions; ion++) {
-      cacheslot.cooling_contrib[kpkt::get_coolinglistoffset(element, ion)] = -99.;
+      // an ion with no cooling term has the offset of the next ion, which can be one past the end
+      if (kpkt::get_ncoolingterms_ion(element, ion) > 0) {
+        cacheslot.cooling_contrib[kpkt::get_coolinglistoffset(element, ion)] = -99.;
+      }
     }
 
     for (int ion = 0; ion < nions; ion++) {

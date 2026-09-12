@@ -458,9 +458,6 @@ class MPI_shared_array {
   }
 
   auto reset() {
-    if constexpr (TESTMODE) {
-      printlnlog("freeing MPI_shared_array of size {}", _span.size());
-    }
     if (_win != MPI_WIN_NULL) {
       int finalized = 0;
       MPI_Finalized(&finalized);

@@ -48,13 +48,13 @@ inline MPI_shared_array<float> elem_massfracs_allcells;
 inline MPI_shared_array<float> ion_groundlevelpops_allcells;
 inline MPI_shared_array<float> ion_partfuncts_allcells;
 
-[[nodiscard]] auto get_elements_uppermost_ion(int nonemptymgi, int element) -> int;
-void set_elements_uppermost_ion(int nonemptymgi, int element, int uppermost_ion);
+[[nodiscard]] auto get_elements_uppermost_ion(std::ptrdiff_t nonemptymgi, int element) -> int;
+void set_elements_uppermost_ion(std::ptrdiff_t nonemptymgi, int element, int uppermost_ion);
 // The charge transfer reactions and the Anderson acceleration read the NLTE solution ranges, so the
 // lowermost ion of the range then needs storage.
 constexpr bool NLTE_TRACK_SOLUTION_RANGES = ENABLE_CHARGE_TRANSFER_REACTIONS || NLTE_TE_NNE_USE_ANDERSON_ACCEL;
-[[nodiscard]] auto get_elements_lowermost_ion(int nonemptymgi, int element) -> int;
-void set_elements_lowermost_ion(int nonemptymgi, int element, int lowermost_ion);
+[[nodiscard]] auto get_elements_lowermost_ion(std::ptrdiff_t nonemptymgi, int element) -> int;
+void set_elements_lowermost_ion(std::ptrdiff_t nonemptymgi, int element, int lowermost_ion);
 // Exchange the NLTE solution ranges between the node leaders.
 void do_MPI_Bcast_nlte_solution_ranges(ptrdiff_t nstart_nonempty, ptrdiff_t ndo_nonempty, int root_node_id);
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto propcell_width_tmin(int cellindex, int axis) -> double;
@@ -102,10 +102,11 @@ void set_element_meanweight(std::ptrdiff_t nonemptymgi, int element, float meanw
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_cellindex_from_pos(const Vec3d& pos, double time) -> int;
 void read_ejecta_model();
 void write_grid_restart_data(int timestep);
-[[gnu::pure]] [[nodiscard]] auto get_nstart(int rank) -> int;
-[[gnu::pure]] [[nodiscard]] auto get_nstart_nonempty(int rank) -> int;
-[[gnu::pure]] [[nodiscard]] auto get_ndo(int rank) -> int;
-[[gnu::pure]] [[nodiscard]] auto get_ndo_nonempty(int rank) -> int;
+// the first call sets up the rank ranges, so these functions are not pure
+[[nodiscard]] auto get_nstart(int rank) -> int;
+[[nodiscard]] auto get_nstart_nonempty(int rank) -> int;
+[[nodiscard]] auto get_ndo(int rank) -> int;
+[[nodiscard]] auto get_ndo_nonempty(int rank) -> int;
 [[gnu::pure]] [[nodiscard]] auto get_totmassnuclide_tmodel(int z, int a) -> double;
 [[nodiscard]] auto get_propcell_random_xyz_position_tmin(int cellindex, rngstate_type& rngstate) -> Vec3d;
 [[nodiscard]] DEVICE_FUNC auto boundary_distance(const Vec3d& dir, const Vec3d& pos, double tstart, int cellindex)

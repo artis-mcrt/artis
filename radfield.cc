@@ -1088,8 +1088,8 @@ void write_restart_data(FILE* gridsave_file) {
     const int bfestimcount = static_cast<int>(globals::bfestim_nu_edge.size());
     fprintf(gridsave_file, "%d\n", bfestimcount);
 
-    for (int nonemptymgi = 0; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
-      fprintf(gridsave_file, "%d\n", nonemptymgi);
+    for (ptrdiff_t nonemptymgi = 0; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
+      fprintf(gridsave_file, "%td\n", nonemptymgi);
       for (int i = 0; i < bfestimcount; i++) {
         fprintf(gridsave_file, "%a ", prev_bfrate_normed[(nonemptymgi * bfestimcount) + i]);
       }

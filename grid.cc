@@ -119,7 +119,7 @@ struct ModelGridCellInput {
   // thermalisation scheme. A double, because the sum runs over up to millions of propagation cells
   // with radii of ~1e15 cm.
   double initial_radial_pos_squared_sum = 0.;
-  float initelectronfrac = 0.4;  // Ye: electrons (or protons) per nucleon
+  float initelectronfrac = -1.;  // Ye: electrons (or protons) per nucleon. Negative until the input sets it
   float initenergyq = 0.;  // q: energy in the model at tmin to use with INITIAL_PACKETS_ON [erg/g]
 };
 MPI_shared_array<ModelGridCellInput> modelgrid_input{};
@@ -168,7 +168,7 @@ void set_initelectronfrac(const int modelgridindex, const float electronfrac) {
 
 void read_possible_yefile() {
   if (!std::filesystem::exists("Ye.txt")) {
-    printlnlog("Ye.txt not present, so no initial electron fractions will be applied from it");
+    printlnlog("Ye.txt is not present, so the model keeps the electron fractions of model.txt");
     return;
   }
 
@@ -1449,7 +1449,7 @@ void setup_grid_cylindrical_2d() {
 
   ncoordgrid = ncoord_model;
 
-  ngrid = ncoordgrid[0] * ncoordgrid[1];
+  ngrid = static_cast<ptrdiff_t>(ncoordgrid[0]) * ncoordgrid[1];
   assert_always(ngrid == get_npts_model());
 
   reserve_resize(coord_pos_min_tmin[0], ncoordgrid[0]);
@@ -1988,19 +1988,19 @@ DEVICE_FUNC auto get_initenergyq(const int modelgridindex) -> double {
   return modelgrid_input[modelgridindex].initenergyq;
 }
 
-[[nodiscard]] auto get_elements_uppermost_ion(const int nonemptymgi, const int element) -> int {
+[[nodiscard]] auto get_elements_uppermost_ion(const std::ptrdiff_t nonemptymgi, const int element) -> int {
   const auto uppermost_ion = elements_uppermost_ion_allcells[(nonemptymgi * get_nelements()) + element];
   assert_testmodeonly(uppermost_ion >= -1);  // -1 before the first ion balance of the element in the cell
   assert_testmodeonly(uppermost_ion <= std::max(0, get_nions(element) - 1));
   return uppermost_ion;
 }
 
-void set_elements_uppermost_ion(const int nonemptymgi, const int element, const int uppermost_ion) {
+void set_elements_uppermost_ion(const std::ptrdiff_t nonemptymgi, const int element, const int uppermost_ion) {
   assert_testmodeonly(uppermost_ion <= std::max(0, get_nions(element) - 1));
   elements_uppermost_ion_allcells[(nonemptymgi * get_nelements()) + element] = uppermost_ion;
 }
 
-[[nodiscard]] auto get_elements_lowermost_ion(const int nonemptymgi, const int element) -> int {
+[[nodiscard]] auto get_elements_lowermost_ion(const std::ptrdiff_t nonemptymgi, const int element) -> int {
   if constexpr (!NLTE_TRACK_SOLUTION_RANGES) {
     return 0;  // the array is not allocated when no code reads the solution ranges
   }
@@ -2010,7 +2010,7 @@ void set_elements_uppermost_ion(const int nonemptymgi, const int element, const 
   return lowermost_ion;
 }
 
-void set_elements_lowermost_ion(const int nonemptymgi, const int element, const int lowermost_ion) {
+void set_elements_lowermost_ion(const std::ptrdiff_t nonemptymgi, const int element, const int lowermost_ion) {
   if constexpr (!NLTE_TRACK_SOLUTION_RANGES) {
     return;  // the array is not allocated when no code reads the solution ranges
   }
@@ -2045,7 +2045,12 @@ void do_MPI_Bcast_nlte_solution_ranges(const ptrdiff_t nstart_nonempty, const pt
     case RpktGreyType::TANAKA2020_ELECTRONFRAC: {
       // electron-fraction-dependent opacities from Tanaka et al. (2020) table 1.
       const auto Ye = modelgrid_input[mgi].initelectronfrac;
-      assert_always(Ye > 0.);
+      if (Ye <= 0.) {
+        fatal_crash(
+            "model cell {} has no electron fraction. TANAKA2020_ELECTRONFRAC needs a Ye column in model.txt or "
+            "a Ye.txt",
+            mgi);
+      }
 
       // pairs of (upper Ye limit, kappa [cm^2/g])
       constexpr auto kappa_table = std::to_array<std::pair<double, double>>(
@@ -2707,33 +2712,29 @@ DEVICE_FUNC void snap_pos_to_cell(Vec3d& pos, const double time, const int celli
         }
 
         if (isoutside_error) {
-#ifndef GPU_ON
-          printlnlog(
-              "[error] timestep {}: packet outside coord {} {}{} boundary of cell {} by delta {:g}. vel {:g} initpos "
-              "{:g} cellcoordmin {:g} cellcoordmax {:g} dir [{:g}, {:g}, {:g}] tmin {:g} s tstart {:g} s",
-              globals::timestep, d, pos_component_vel_relative_to_flow ? '+' : '-', get_coordlabel(prop_gridtype, d),
-              cellindex, delta, pktvelgridcoord[d], pktposgridcoord[d], cellcoordmin[d] / globals::tmin * tstart,
-              cellcoordmax[d] / globals::tmin * tstart, dir[0], dir[1], dir[2], globals::tmin, tstart);
-#endif
+          MY_IF_HOST(
+              printlnlog("[error] timestep {}: packet outside coord {} {}{} boundary of cell {} by delta {:g}. vel "
+                         "{:g} initpos "
+                         "{:g} cellcoordmin {:g} cellcoordmax {:g} dir [{:g}, {:g}, {:g}] tmin {:g} s tstart {:g} s",
+                         globals::timestep, d, pos_component_vel_relative_to_flow ? '+' : '-',
+                         get_coordlabel(prop_gridtype, d), cellindex, delta, pktvelgridcoord[d], pktposgridcoord[d],
+                         cellcoordmin[d] / globals::tmin * tstart, cellcoordmax[d] / globals::tmin * tstart, dir[0],
+                         dir[1], dir[2], globals::tmin, tstart););
 
-          // this should not happen! Leave the check until late 2026 and if it never triggers on any runs, we can remove
-          // the check and correction code
           assert_always(!isoutside_error);
 
           const auto next_cellindex = get_cellindex_from_pos(pos, tstart);
           if ((cellcoordidx[d] == (ncoordgrid[d] - 1) && pos_component_vel_relative_to_flow) ||
               (cellcoordidx[d] == 0 && !pos_component_vel_relative_to_flow) || (next_cellindex < 0)) {
-#ifndef GPU_ON
-            printlnlog("[warning] treating out-of-boundary packet in cell {} as escaping the grid", cellindex);
-#endif
+            MY_IF_HOST(
+                printlnlog("[warning] treating out-of-boundary packet in cell {} as escaping the grid", cellindex););
             return {0., -99};
           }
-#ifndef GPU_ON
-          printlnlog(
-              "[warning] swapping packet cellindex from {} to {}, which has cellcoordmin {:g}, cellcoordmax {:g}",
-              cellindex, next_cellindex, get_cellcoordmin(next_cellindex, d) / globals::tmin * tstart,
-              get_cellcoordmax(next_cellindex, d) / globals::tmin * tstart);
-#endif
+          MY_IF_HOST(
+              printlnlog(
+                  "[warning] swapping packet cellindex from {} to {}, which has cellcoordmin {:g}, cellcoordmax {:g}",
+                  cellindex, next_cellindex, get_cellcoordmin(next_cellindex, d) / globals::tmin * tstart,
+                  get_cellcoordmax(next_cellindex, d) / globals::tmin * tstart););
           return {0., next_cellindex};
         }
       }
@@ -2917,8 +2918,7 @@ DEVICE_FUNC void snap_pos_to_cell(Vec3d& pos, const double time, const int celli
       // No receding cell boundary lies ahead of the packet, so it escapes through the slower
       // spherical escape surface. The comoving coordinates of a packet converge to a point with
       // speed CLIGHT. Only a cell whose fastest corner is above CLIGHT can hold this state. A
-      // slower cell here is a sign of a defective boundary intersection, and the run then stops
-      // as it did before this escape path existed.
+      // slower cell here is a sign of a defective boundary intersection, and the run then stops.
       double cornerspeed_squared = 0.;
       for (int d = 0; d < get_ndim(prop_gridtype); d++) {
         cornerspeed_squared += pow2(std::max(std::abs(cellcoordmin[d]), std::abs(cellcoordmax[d])) / globals::tmin);
@@ -2931,11 +2931,12 @@ DEVICE_FUNC void snap_pos_to_cell(Vec3d& pos, const double time, const int celli
       // packets only when the cell diagonal spans from below vmax to above CLIGHT, so a finer
       // grid removes this stop.
       if (get_propcell_modelgridindex(cellindex) >= 0) {
-        printlnlog(
-            "[error] a packet cannot reach any boundary of matter cell {}, because every boundary recedes faster "
-            "than light. The cell reaches from inside the escape surface to beyond the light speed, so the grid is "
-            "too coarse. Use more grid cells per axis.",
-            cellindex);
+        MY_IF_HOST(
+            printlnlog(
+                "[error] a packet cannot reach any boundary of matter cell {}, because every boundary recedes faster "
+                "than light. The cell reaches from inside the escape surface to beyond the light speed, so the grid is "
+                "too coarse. Use more grid cells per axis.",
+                cellindex););
         assert_always(false);
       }
 

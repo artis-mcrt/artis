@@ -307,7 +307,7 @@ void write_temp_packetsfile(const int timestep, const int my_rank, const std::sp
   bool write_success = false;
   while (!write_success) {
     if (tries > 10) {
-      fatal_crash("Failed to write {} after {} tries. Aborting.", filename, tries);
+      fatal_crash("The write of {} failed after {} tries", filename, tries);
     }
     if (tries > 0) {
       // give transient filesystem problems (e.g. contention on a cluster parallel filesystem) a
