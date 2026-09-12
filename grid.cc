@@ -2707,14 +2707,14 @@ DEVICE_FUNC void snap_pos_to_cell(Vec3d& pos, const double time, const int celli
         }
 
         if (isoutside_error) {
-#ifndef GPU_ON
-          printlnlog(
-              "[error] timestep {}: packet outside coord {} {}{} boundary of cell {} by delta {:g}. vel {:g} initpos "
-              "{:g} cellcoordmin {:g} cellcoordmax {:g} dir [{:g}, {:g}, {:g}] tmin {:g} s tstart {:g} s",
-              globals::timestep, d, pos_component_vel_relative_to_flow ? '+' : '-', get_coordlabel(prop_gridtype, d),
-              cellindex, delta, pktvelgridcoord[d], pktposgridcoord[d], cellcoordmin[d] / globals::tmin * tstart,
-              cellcoordmax[d] / globals::tmin * tstart, dir[0], dir[1], dir[2], globals::tmin, tstart);
-#endif
+          MY_IF_HOST(
+              printlnlog("[error] timestep {}: packet outside coord {} {}{} boundary of cell {} by delta {:g}. vel "
+                         "{:g} initpos "
+                         "{:g} cellcoordmin {:g} cellcoordmax {:g} dir [{:g}, {:g}, {:g}] tmin {:g} s tstart {:g} s",
+                         globals::timestep, d, pos_component_vel_relative_to_flow ? '+' : '-',
+                         get_coordlabel(prop_gridtype, d), cellindex, delta, pktvelgridcoord[d], pktposgridcoord[d],
+                         cellcoordmin[d] / globals::tmin * tstart, cellcoordmax[d] / globals::tmin * tstart, dir[0],
+                         dir[1], dir[2], globals::tmin, tstart););
 
           // this should not happen! Leave the check until late 2026 and if it never triggers on any runs, we can remove
           // the check and correction code
@@ -2723,17 +2723,15 @@ DEVICE_FUNC void snap_pos_to_cell(Vec3d& pos, const double time, const int celli
           const auto next_cellindex = get_cellindex_from_pos(pos, tstart);
           if ((cellcoordidx[d] == (ncoordgrid[d] - 1) && pos_component_vel_relative_to_flow) ||
               (cellcoordidx[d] == 0 && !pos_component_vel_relative_to_flow) || (next_cellindex < 0)) {
-#ifndef GPU_ON
-            printlnlog("[warning] treating out-of-boundary packet in cell {} as escaping the grid", cellindex);
-#endif
+            MY_IF_HOST(
+                printlnlog("[warning] treating out-of-boundary packet in cell {} as escaping the grid", cellindex););
             return {0., -99};
           }
-#ifndef GPU_ON
-          printlnlog(
-              "[warning] swapping packet cellindex from {} to {}, which has cellcoordmin {:g}, cellcoordmax {:g}",
-              cellindex, next_cellindex, get_cellcoordmin(next_cellindex, d) / globals::tmin * tstart,
-              get_cellcoordmax(next_cellindex, d) / globals::tmin * tstart);
-#endif
+          MY_IF_HOST(
+              printlnlog(
+                  "[warning] swapping packet cellindex from {} to {}, which has cellcoordmin {:g}, cellcoordmax {:g}",
+                  cellindex, next_cellindex, get_cellcoordmin(next_cellindex, d) / globals::tmin * tstart,
+                  get_cellcoordmax(next_cellindex, d) / globals::tmin * tstart););
           return {0., next_cellindex};
         }
       }
@@ -2931,11 +2929,12 @@ DEVICE_FUNC void snap_pos_to_cell(Vec3d& pos, const double time, const int celli
       // packets only when the cell diagonal spans from below vmax to above CLIGHT, so a finer
       // grid removes this stop.
       if (get_propcell_modelgridindex(cellindex) >= 0) {
-        printlnlog(
-            "[error] a packet cannot reach any boundary of matter cell {}, because every boundary recedes faster "
-            "than light. The cell reaches from inside the escape surface to beyond the light speed, so the grid is "
-            "too coarse. Use more grid cells per axis.",
-            cellindex);
+        MY_IF_HOST(
+            printlnlog(
+                "[error] a packet cannot reach any boundary of matter cell {}, because every boundary recedes faster "
+                "than light. The cell reaches from inside the escape surface to beyond the light speed, so the grid is "
+                "too coarse. Use more grid cells per axis.",
+                cellindex););
         assert_always(false);
       }
 
