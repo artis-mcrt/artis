@@ -368,6 +368,8 @@ void read_phixs_file(const int phixs_file_version, std::vector<float>& tmpallphi
     assert_always(Z > 0);
     assert_always(upperionstage >= 2);
     assert_always(lowerionstage >= 1);
+    // the continuum is stored for the lower ion, and its upper ion is always the next ion
+    assert_always(upperionstage == lowerionstage + 1);
 
     const int element = get_elementindex(Z);
 
@@ -625,6 +627,11 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion,
       // Make sure that we don't allow duplicate. In that case take only the lines first occurrence
       const bool is_duplicate = (lowerlevel == prev_lower && level == prev_upper);
 
+      // absorption oscillator strength f_lu from A_ul via f_lu = (g_u/g_l) * m_e c^3 / (8 pi^2 e^2 nu^2) * A_ul
+      const auto g_ratio = static_cast<double>(ion_levels[level].stat_weight) / ion_levels[lowerlevel].stat_weight;
+      const auto f_lu = static_cast<float>(g_ratio * ME * pow3(CLIGHT) / (8 * pow2(QE * nu_trans * PI)) * transition.A);
+      assert_always(std::isfinite(f_lu));
+
       if (!is_duplicate) {
         prev_lower = lowerlevel;
         prev_upper = level;
@@ -639,12 +646,6 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion,
         ion_updowntranscount += 2;
 
         if (pass == 1) {
-          // absorption oscillator strength f_lu from A_ul via f_lu = (g_u/g_l) * m_e c^3 / (8 pi^2 e^2 nu^2) * A_ul
-          const auto g_ratio = static_cast<double>(ion_levels[level].stat_weight) / ion_levels[lowerlevel].stat_weight;
-          const auto f_lu =
-              static_cast<float>(g_ratio * ME * pow3(CLIGHT) / (8 * pow2(QE * nu_trans * PI)) * transition.A);
-          assert_always(std::isfinite(f_lu));
-
           temp_linelist.push_back({
               .nu = nu_trans,
               .einstein_A = transition.A,
@@ -692,10 +693,6 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion,
               temp_linelist[prev_lineindex].upperlevelindex, temp_linelist[prev_lineindex].lowerlevelindex);
           fatal_crash("Failure to identify level pair for duplicate bb-transition");
         }
-
-        const auto g_ratio = static_cast<double>(ion_levels[level].stat_weight) / ion_levels[lowerlevel].stat_weight;
-        const auto f_lu =
-            static_cast<float>(g_ratio * ME * pow3(CLIGHT) / (8 * pow2(QE * nu_trans * PI)) * transition.A);
 
         auto& downtransition =
             temp_alltranslist[ion_levels[level].alltrans_startdown + ion_levels[level].ndowntrans - 1];
@@ -1083,9 +1080,6 @@ void read_autoion_data() {
 
           temp_allautoion.push_back({
               .autoion_A = static_cast<float>(autoion_A),
-              .elementindex = element,
-              .lowerionindex = lowerion,
-              .lowerlevelindex = lowerlevel,
               .upperionindex = upperion,
               .upperlevelindex = upperlevel,
           });
@@ -1875,6 +1869,12 @@ void setup_nlte_levels() {
           }
         }
         globals::elements[element].ions[ion].nlevels_excited_nlte = nlevels_excited_nlte;
+        if (nlevels_excited_nlte == 0 && nlevels > 1) {
+          fatal_crash(
+              "Z={} ionstage {} has {} levels but ION_NLEVELS_EXCITED_NLTE gives 0. An ion of an element with NLTE "
+              "levels needs at least one excited NLTE level.",
+              get_atomicnumber(element), get_ionstage(element, ion), nlevels);
+        }
 
         // use the same definition as ion_has_superlevel(): autoionising levels get their own
         // NLTE-solver slots, so they must not count towards needing a superlevel
@@ -1970,12 +1970,12 @@ void read_parameterfile(std::span<Packet> packets) {
   }
 
   assert_always(get_noncommentline(file, line));
-  std::istringstream{line} >> globals::ntimesteps;  // number of time steps
+  assert_always(std::istringstream{line} >> globals::ntimesteps);  // number of time steps
   assert_always(globals::ntimesteps > 0);
 
   assert_always(get_noncommentline(file, line));
-  std::istringstream{line} >> globals::timestep_initial >>
-      globals::timestep_finish;  // number of start and end time step
+  assert_always(std::istringstream{line} >> globals::timestep_initial >> globals::timestep_finish);
+  assert_always(globals::timestep_initial >= 0);
   printlnlog("input: timestep_start {} timestep_finish {}", globals::timestep_initial, globals::timestep_finish);
   if (globals::timestep_finish < globals::ntimesteps) {
     printlnlog(
@@ -2041,7 +2041,11 @@ void read_parameterfile(std::span<Packet> packets) {
 
   // Sets the number of initial LTE timesteps for NLTE runs
   assert_always(get_noncommentline(file, line));
-  std::istringstream{line} >> globals::num_lte_timesteps;
+  assert_always(std::istringstream{line} >> globals::num_lte_timesteps);
+  if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
+    // the bins are fitted only after the LTE timesteps, and radfield() reads them from this timestep
+    assert_always(globals::num_lte_timesteps <= FIRST_NLTE_RADFIELD_TIMESTEP);
+  }
   printlnlog("input: doing the first {} timesteps in LTE", globals::num_lte_timesteps);
 
   if constexpr (NT_SCHEME == NonThermalScheme::NT_SPENCERFANO) {
@@ -2068,7 +2072,7 @@ void read_parameterfile(std::span<Packet> packets) {
 
   // Set up initial grey approximation?
   assert_always(get_noncommentline(file, line));
-  std::istringstream{line} >> globals::optical_depth_is_thick >> globals::num_grey_timesteps;
+  assert_always(std::istringstream{line} >> globals::optical_depth_is_thick >> globals::num_grey_timesteps);
   printlnlog(
       "input: cells with Thomson optical depth > {:g} are treated in grey approximation for the first {} timesteps",
       globals::optical_depth_is_thick, globals::num_grey_timesteps);
@@ -2077,7 +2081,7 @@ void read_parameterfile(std::span<Packet> packets) {
 
   // for exspec: read number of MPI tasks
   assert_always(get_noncommentline(file, line));
-  std::istringstream{line} >> globals::nprocs_exspec;
+  assert_always(std::istringstream{line} >> globals::nprocs_exspec);
 
   // UNUSED: Extract line-of-sight dependent information of last emission for spectrum_res
   assert_always(get_noncommentline(file, line));

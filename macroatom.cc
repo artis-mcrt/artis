@@ -40,6 +40,7 @@ namespace {
 constexpr bool LOG_MACROATOM = false;
 
 std::fstream macroatom_file;
+PaddedMutex macroatom_file_mutex;
 
 [[nodiscard]] auto get_sum_internal_down_same_exceptlast(const std::span<double> allmacroatomictransitions,
                                                          const int uniquelevelindex) -> std::span<const double> {
@@ -443,6 +444,7 @@ DEVICE_FUNC void do_macroatom(Packet& pkt, const MacroAtomState& pktmastate) {
                                      levelrates[MA_ACTION_RADDEEXC], nonemptymgi);
 
         if constexpr (LOG_MACROATOM) {
+          [[maybe_unused]] const ScopedMutex lock{macroatom_file_mutex};
           std::println(macroatom_file, "{:d} {:d} {:d} {:d} {:d} {:d} {:d} {:d} {:.5e} {:.5e} {:.5e} {:.5e}",
                        globals::timestep, grid::get_mgi_of_nonemptymgi(nonemptymgi), get_atomicnumber(element),
                        get_ionstage(element, ion_in), get_ionstage(element, ion), level_in, level, activatingline,

@@ -157,9 +157,6 @@ inline AllTransitions alltrans;
 
 struct LevelAutoion {
   float autoion_A;  // Autoionisation A-value
-  int elementindex;  // index (not atomic number) for the element involved
-  int lowerionindex;
-  int lowerlevelindex;  // this will be for a level index of the lower ion
   int upperionindex;
   int upperlevelindex;  // this will be for a level index of the upper ion.
                         // Note: level of the lower ion should also be at higher energy than of the higher ion

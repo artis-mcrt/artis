@@ -450,7 +450,8 @@ void read_auger_data() {
       float en_auger_ev_total_nocorrection = -1;
       int epsilon_e3 = -1;
 
-      assert_always(sscanf(strline.substr(linepos).c_str(), "%d %g %g %d%n", &shellnum, &ionpot_ev,
+      // fixed-width columns, because a five-digit ionisation potential touches the shell number
+      assert_always(sscanf(strline.substr(linepos).c_str(), "%2d%7g%7g%4d%n", &shellnum, &ionpot_ev,
                            &en_auger_ev_total_nocorrection, &epsilon_e3, &offset) == 4);
       assert_always(offset == 20);
 

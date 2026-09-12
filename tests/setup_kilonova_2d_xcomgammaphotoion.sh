@@ -4,7 +4,7 @@ set -x
 
 runfolder=kilonova_2d_xcomgammaphotoion_testrun
 
-if [ ! -f atomicdata_feconi.tar.xz ]; then curl -O -L https://github.com/artis-mcrt/artis/releases/download/v2026.5.15/atomicdata_feconi.tar.xz; fi
+if [ ! -f atomicdata_feconi.tar.xz ]; then curl -fL --retry 3 -O https://github.com/artis-mcrt/artis/releases/download/v2026.5.15/atomicdata_feconi.tar.xz; fi
 
 mkdir -p $runfolder
 

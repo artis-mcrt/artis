@@ -72,17 +72,17 @@ void read_gamma_spectrum(const int nucindex, const std::string& filename) {
   // read the gamma ray lines and store the average energy in gamma rays per nuclear decay
   auto gammafile = fstream_required(filename, std::ios::in);
   std::string line;
-  get_noncommentline(gammafile, line);
+  assert_always(get_noncommentline(gammafile, line));
   std::istringstream ssline(line);
   int nlines = 0;
-  ssline >> nlines;
+  assert_always(ssline >> nlines);
 
   gamma_spectra[nucindex].reserve(nlines);
   gamma_spectra[nucindex].clear();
 
   double E_gamma_avg = 0.;
   for (int n = 0; n < nlines; n++) {
-    get_noncommentline(gammafile, line);
+    assert_always(get_noncommentline(gammafile, line));
     double en_mev = 0.;
     double prob = 0.;
     ssline.clear();
@@ -992,7 +992,9 @@ DEVICE_FUNC void do_gamma(Packet& pkt, const int nts, const double t2) {
   }
 
   if (pkt.type != TYPE_GAMMA && pkt.type != TYPE_ESCAPE) {
-    if constexpr (PARTICLE_THERMALISATION_SCHEME != ParticleThermalisationScheme::TIMEDEPENDENTWITHGAMMAPRODUCTS) {
+    // with gamma products and the frequency-dependent scheme, do_nonthermal_predeposit() adds the deposition
+    if constexpr (PARTICLE_THERMALISATION_SCHEME != ParticleThermalisationScheme::TIMEDEPENDENTWITHGAMMAPRODUCTS ||
+                  GAMMA_THERMALISATION_SCHEME != GammaThermalisationScheme::FREQUENCYDEPENDENT) {
       atomicadd(globals::timesteps[nts].gamma_dep_discrete, pkt.e_cmf);
     }
 

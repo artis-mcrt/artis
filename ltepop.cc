@@ -383,7 +383,7 @@ void calculate_ionfractions(const int element, const int nonemptymgi, const doub
   for (int ion = 0; ion <= uppermost_ion; ion++) {
     ionfractions[ion] = ionfractions[ion] / normfactor;
 
-    if (normfactor == 0. || !std::isfinite(ionfractions[ion])) {
+    if (!std::isfinite(normfactor) || !std::isfinite(ionfractions[ion])) {
       if (ionfract_zeroed_warned.is_first_occurrence(nonemptymgi)) {
         printlnlog(
             "[warning] calculate_ionfractions: cell {} timestep {}: non-finite ionfract set to zero for Z={} "
