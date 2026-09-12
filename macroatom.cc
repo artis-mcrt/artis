@@ -377,10 +377,11 @@ DEVICE_FUNC void do_macroatom(Packet& pkt, const MacroAtomState& pktmastate) {
   const int activatingline = pktmastate.activatingline;
   assert_testmodeonly(pkt.absorptiontype < 0 || activatingline < 0 || activatingline == pkt.absorptiontype);
 
-  const int ion_in = ion;
-  const int level_in = level;
-  const double nu_cmf_in = pkt.nu_cmf;
-  const double nu_rf_in = pkt.nu_rf;
+  // the entry state of the packet, for the log of LOG_MACROATOM
+  [[maybe_unused]] const int ion_in = ion;
+  [[maybe_unused]] const int level_in = level;
+  [[maybe_unused]] const double nu_cmf_in = pkt.nu_cmf;
+  [[maybe_unused]] const double nu_rf_in = pkt.nu_rf;
 
   bool end_packet = false;
   while (!end_packet) {
