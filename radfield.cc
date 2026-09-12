@@ -406,7 +406,12 @@ void set_params_fullspec(const int nonemptymgi, const int timestep) {
   grid::TJ_allcells[nonemptymgi] = T_J;
 
   const double nubar = nuJ[nonemptymgi] / J[nonemptymgi];
-  if (!std::isfinite(nubar) || nubar == 0.) {
+  if (J[nonemptymgi] <= 0.) {
+    // no radiation in the cell
+    printlnlog("[warning] cell {} has J = 0, so T_R = MINTEMP and W = 0", modelgridindex);
+    grid::TR_allcells[nonemptymgi] = MINTEMP;
+    grid::W_allcells[nonemptymgi] = 0.;
+  } else if (!std::isfinite(nubar) || nubar == 0.) {
     printlnlog("[warning] T_R estimator not finite in cell {}, keep T_R and W of last timestep. J = {:g}. nuJ = {:g}",
                modelgridindex, J[nonemptymgi], nuJ[nonemptymgi]);
   } else {
