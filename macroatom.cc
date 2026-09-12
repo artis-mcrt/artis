@@ -40,7 +40,7 @@ namespace {
 constexpr bool LOG_MACROATOM = false;
 
 std::fstream macroatom_file;
-PaddedMutex macroatom_file_mutex;
+[[maybe_unused]] PaddedMutex macroatom_file_mutex;  // used on the host only
 
 [[nodiscard]] auto get_sum_internal_down_same_exceptlast(const std::span<double> allmacroatomictransitions,
                                                          const int uniquelevelindex) -> std::span<const double> {
