@@ -655,8 +655,10 @@ auto walltime_sufficient_for_timestep(const int nts, const int nts_prev, const i
     const auto walltime_remaining_seconds = walltime_limit_seconds - walltime_used_seconds;
     printlnlog("TIMED_RESTARTS: Used {} of {} seconds of wall time.", walltime_used_seconds, walltime_limit_seconds);
 
-    // the wall time to stop cleanly after the restart files of the next timestep
-    constexpr double shutdown_offset_seconds = 120.;
+    // the wall time to stop cleanly after the next timestep. The last requested timestep also writes the
+    // emission, absorption, and direction bin files and the packet files.
+    const bool is_last_requested_timestep = (nts == globals::timestep_finish - 1);
+    const double shutdown_offset_seconds = is_last_requested_timestep ? 900. : 120.;
 
     enough_walltime_for_timestep = (walltime_remaining_seconds >=
                                     ((1.5 * walltime_propagation_and_grid_update_seconds) + shutdown_offset_seconds));
