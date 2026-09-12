@@ -433,6 +433,8 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
                 break;
               }
             }
+            // the bin walk passes lines without a line position, so the next segment searches from nu_cmf
+            next_trans = -1;
           }
         }  // if (binindex_start < expopac_nbins)
       } else {
