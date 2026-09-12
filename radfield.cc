@@ -797,7 +797,7 @@ DEVICE_FUNC auto radfield(const double nu, const int nonemptymgi) -> double {
         return 0.;
       }
       const auto W = get_bin_W(nonemptymgi, binindex);
-      // a negative W marks a bin with no fit, e.g. in a cell that was thick in the last timestep
+      // a negative W marks a bin with no fit, for example in a cell that was thick in the last timestep
       if (W >= 0.) {
         return W * planck(nu, get_bin_T_R(nonemptymgi, binindex));
       }
