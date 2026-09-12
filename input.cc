@@ -699,6 +699,8 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion,
 
         assert_always(downtransition.targetlevelindex == lowerlevel);
 
+        // the line opacity and the level transition rates must see the same total A
+        temp_linelist[prev_lineindex].einstein_A += transition.A;
         downtransition.einstein_A += transition.A;
         downtransition.osc_strength += f_lu;
         downtransition.coll_str = std::max(downtransition.coll_str, transition.coll_str);
