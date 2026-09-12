@@ -401,23 +401,15 @@ auto find_bin_T_R(const int nonemptymgi, const int binindex) -> float {
 
 void set_params_fullspec(const int nonemptymgi, const int timestep) {
   const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
+  // J = 0 is a cell with no radiation, so T_J is MINTEMP and the clamp reports it
+  const auto T_J = get_T_J_from_J(nonemptymgi);
+  grid::TJ_allcells[nonemptymgi] = T_J;
+
   const double nubar = nuJ[nonemptymgi] / J[nonemptymgi];
   if (!std::isfinite(nubar) || nubar == 0.) {
-    printlnlog("[warning] T_R estimator infinite in cell {}, keep T_R, T_J, W of last timestep. J = {:g}. nuJ = {:g}",
+    printlnlog("[warning] T_R estimator not finite in cell {}, keep T_R and W of last timestep. J = {:g}. nuJ = {:g}",
                modelgridindex, J[nonemptymgi], nuJ[nonemptymgi]);
   } else {
-    auto T_J = static_cast<float>(pow(J[nonemptymgi] * PI / STEBO, 1 / 4.));
-    if (T_J > MAXTEMP) {
-      printlnlog("[warning] temperature estimator T_J = {:g} exceeds T_max {:g} in cell {}. Setting T_J = T_max!", T_J,
-                 MAXTEMP, modelgridindex);
-      T_J = MAXTEMP;
-    } else if (T_J < MINTEMP) {
-      printlnlog("[warning] temperature estimator T_J = {:g} below T_min {:g} in cell {}. Setting T_J = T_min!", T_J,
-                 MINTEMP, modelgridindex);
-      T_J = MINTEMP;
-    }
-    grid::TJ_allcells[nonemptymgi] = T_J;
-
     auto T_R = static_cast<float>(H * nubar / KB / 3.832229494);
     if (T_R > MAXTEMP) {
       printlnlog("[warning] temperature estimator T_R = {:g} exceeds T_max {:g} in cell {}. Setting T_R = T_max!", T_R,
@@ -976,12 +968,11 @@ void normalise_nuJ(const int nonemptymgi, const double estimator_normfactor_over
 // and the result is clamped to [MINTEMP, MAXTEMP].
 auto get_T_J_from_J(const int nonemptymgi) -> float {
   const auto T_J = static_cast<float>(pow(J[nonemptymgi] * PI / STEBO, 1. / 4.));
-  // a cell with no packet has J = 0, and set_params_fullspec() also keeps the old value then
-  if (!std::isfinite(T_J) || J[nonemptymgi] <= 0.) {
+  if (!std::isfinite(T_J)) {
     // keep old value of T_J
     const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
-    printlnlog("[warning] get_T_J_from_J: J estimator {:g} in cell {} gives no T_J, use value of last timestep",
-               J[nonemptymgi], modelgridindex);
+    printlnlog("[warning] get_T_J_from_J: T_J estimator infinite in cell {}, use value of last timestep",
+               modelgridindex);
     return grid::TJ_allcells[nonemptymgi];
   }
   // Make sure that T is in the allowed temperature range.
