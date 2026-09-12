@@ -83,14 +83,15 @@ auto main(int argc, char* argv[]) -> int {
   std::vector<Packet> packets;
   packets.reserve(static_cast<size_t>(globals::nprocs_exspec) * MPKTS);
   for (int rank = 0; rank < globals::nprocs_exspec; rank++) {
-    const auto packets_of_rank = read_text_packets(std::format("packets{:02d}_{:04d}.out", 0, rank));
+    const auto first_packet_of_rank = packets.size();
+    read_text_packets(std::format("packets{:02d}_{:04d}.out", 0, rank), packets);
+    const auto packets_of_rank = std::span<const Packet>(packets).subspan(first_packet_of_rank);
     const auto escaped_rpkt_count = std::ranges::count_if(
         packets_of_rank, [](const Packet& pkt) { return pkt.type == TYPE_ESCAPE && pkt.escape_type == TYPE_RPKT; });
     const auto escaped_gamma_count = std::ranges::count_if(
         packets_of_rank, [](const Packet& pkt) { return pkt.type == TYPE_ESCAPE && pkt.escape_type == TYPE_GAMMA; });
     printlnlog("  rank {}: {} escaped r-packets and {} escaped gamma-pkts", rank, escaped_rpkt_count,
                escaped_gamma_count);
-    packets.insert(packets.end(), packets_of_rank.begin(), packets_of_rank.end());
   }
 
   // the index of the last timestep also selects the emission, absorption, and direction bin files

@@ -174,7 +174,7 @@ inline auto get_rngstate([[maybe_unused]] const Packet& packet) -> rngstate_type
 #endif
 
 void packet_init(std::span<Packet> packets);
-auto read_text_packets(const std::string& filename) -> std::vector<Packet>;
+void read_text_packets(const std::string& filename, std::vector<Packet>& packets);
 void write_text_packets(const std::string& filename, std::span<const Packet> packets);
 void read_temp_packetsfile(int timestep, int my_rank, std::vector<Packet>& packets);
 void write_temp_packetsfile(int timestep, int my_rank, std::span<const Packet> packets);

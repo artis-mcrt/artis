@@ -159,17 +159,16 @@ void packet_init(std::span<Packet> packets) {
   printlnlog("total energy that will be freed during simulation time: {:g} [erg]", e_cmf_total);
 }
 
-// read packets*.out text format file
-auto read_text_packets(const std::string& filename) -> std::vector<Packet> {
+// Read a packets*.out text file and append its packets to packets.
+void read_text_packets(const std::string& filename, std::vector<Packet>& packets) {
   printlnlog("Reading {}", filename);
   auto packets_file = fstream_required(filename, std::ios::in);
 
   std::string line;
-  std::vector<Packet> packets;
   std::getline(packets_file, line);  // read header line to make sure it matches
   assert_always(line == get_packets_text_header());
 
-  packets.reserve(MPKTS);
+  const auto packet_count_before_file = std::ssize(packets);
   while (get_noncommentline(packets_file, line)) {
     packets.emplace_back();
     Packet& pkt = packets.back();
@@ -249,9 +248,7 @@ auto read_text_packets(const std::string& filename) -> std::vector<Packet> {
     }
   }
 
-  printlnlog("  read {} packets from {} (MPKTS {})", std::ssize(packets), filename, MPKTS);
-  packets.shrink_to_fit();
-  return packets;
+  printlnlog("  read {} packets from {} (MPKTS {})", std::ssize(packets) - packet_count_before_file, filename, MPKTS);
 }
 
 // Write all packets to a packets*.out text file (columns matching get_packets_text_header), skipping escaped
