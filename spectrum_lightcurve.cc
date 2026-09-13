@@ -294,7 +294,10 @@ void write_specpol(const std::string& specpol_filename, const std::string& emiss
 }
 
 // resize and initialize the spectra object
-void init_spectra(Spectra& spectra, const double nu_min, const double nu_max, const bool do_emission_absorption) {
+// do_true_emission adds the true emission arrays to the emission and absorption arrays. write_specpol() needs no
+// true emission for the Stokes Q and U spectra.
+void init_spectra(Spectra& spectra, const double nu_min, const double nu_max, const bool do_emission_absorption,
+                  const bool do_true_emission) {
   // setup the time and frequency bins using a logarithmic spacing in both t and nu
 
   assert_always(MNUBINS > 0);
@@ -335,11 +338,13 @@ void init_spectra(Spectra& spectra, const double nu_min, const double nu_max, co
     assert_always(std::ssize(spectra.emissionalltimesteps) == globals::ntimesteps * MNUBINS * get_proccount());
     std::ranges::fill(spectra.emissionalltimesteps, 0.0);
 
-    if (spectra.trueemissionalltimesteps.empty()) {
-      spectra.trueemissionalltimesteps = MPI_shared_array<double>(globals::ntimesteps * MNUBINS * get_proccount());
+    if (do_true_emission) {
+      if (spectra.trueemissionalltimesteps.empty()) {
+        spectra.trueemissionalltimesteps = MPI_shared_array<double>(globals::ntimesteps * MNUBINS * get_proccount());
+      }
+      assert_always(std::ssize(spectra.trueemissionalltimesteps) == globals::ntimesteps * MNUBINS * get_proccount());
+      std::ranges::fill(spectra.trueemissionalltimesteps, 0.0);
     }
-    assert_always(std::ssize(spectra.trueemissionalltimesteps) == globals::ntimesteps * MNUBINS * get_proccount());
-    std::ranges::fill(spectra.trueemissionalltimesteps, 0.0);
   }
   MPI_Barrier_allranks();
 
@@ -512,6 +517,7 @@ void sum_spectra_over_nodes(Spectra& spectra) {
   if (spectra.do_emission_absorption) {
     MPI_Allreduce_safe(spectra.absorptionalltimesteps, MPI_SUM, globals::mpi_comm_internode);
     MPI_Allreduce_safe(spectra.emissionalltimesteps, MPI_SUM, globals::mpi_comm_internode);
+    // does nothing for the Stokes Q and U spectra, which have no true emission arrays
     MPI_Allreduce_safe(spectra.trueemissionalltimesteps, MPI_SUM, globals::mpi_comm_internode);
   }
 }
@@ -533,15 +539,15 @@ void write_light_curves_and_spectra_for_dirbin(const int nts, std::span<const st
     std::ranges::fill(gamma_light_curve_lumcmf, 0.);
   }
 
-  init_spectra(rpkt_spectra_I, NU_MIN_R, NU_MAX_R, do_emission_absorption);
+  init_spectra(rpkt_spectra_I, NU_MIN_R, NU_MAX_R, do_emission_absorption, true);
   if constexpr (POL_ON) {
-    init_spectra(rpkt_spectra_Q, NU_MIN_R, NU_MAX_R, do_emission_absorption);
-    init_spectra(rpkt_spectra_U, NU_MIN_R, NU_MAX_R, do_emission_absorption);
+    init_spectra(rpkt_spectra_Q, NU_MIN_R, NU_MAX_R, do_emission_absorption, false);
+    init_spectra(rpkt_spectra_U, NU_MIN_R, NU_MAX_R, do_emission_absorption, false);
   }
   // the gamma packets go only into the angle-averaged spectrum and light curve
   const bool do_gamma_spectrum = KEEP_ESCAPED_GAMMAS && (dirbin == -1);
   if (do_gamma_spectrum) {
-    init_spectra(gamma_spectra, NU_MIN_GAMMA, NU_MAX_GAMMA, false);
+    init_spectra(gamma_spectra, NU_MIN_GAMMA, NU_MAX_GAMMA, false, false);
   }
 
   MPI_Barrier_node();
