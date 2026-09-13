@@ -38,8 +38,6 @@ inline MPI_shared_array<float> clumpfactor_allcells;
 
 inline ptrdiff_t ngrid{0};
 
-inline double mtot_input{0.};
-
 inline MPI_shared_array<float> elem_meanweight_allcells;
 
 // mass fractions of elements in each cell for the current timestep

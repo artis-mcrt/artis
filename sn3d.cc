@@ -14,6 +14,7 @@
 #include <chrono>
 #include <cmath>
 #include <cstddef>
+#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <filesystem>
@@ -68,6 +69,20 @@ std::chrono::steady_clock::time_point real_time_start;
 std::chrono::steady_clock::time_point packet_propagation_start_time;
 std::fstream estimators_file;
 
+struct CellCacheBacking {
+  MPI_shared_array<double> cooling_contrib;
+  MPI_shared_array<double> alllevels_pops;
+  MPI_shared_array<double> alllevels_maprocessrates;
+  MPI_shared_array<double> allmacroatomictransitions;
+  MPI_shared_array<double> allcont_modified_departureratios;
+  MPI_shared_array<double> allcont_stimfactor_edgepart;
+  MPI_shared_array<double> allcont_nnlevel;
+  MPI_shared_array<std::uint64_t> allcont_keepbits;
+  MPI_shared_array<double> chi_ff_nnionpart;
+  MPI_shared_array<double> allphixstargets_corrphotoioncoeff;
+};
+CellCacheBacking cellcache_backing{};
+
 void setup_cellcache() {
   // When cellcache_singleslot is false, every non-empty cell gets its own persistent cache slot, shared by
   // all MPI ranks on the node. When it is true, each node rank gets a single reusable slot
@@ -103,7 +118,7 @@ void setup_cellcache() {
   const auto maprocess_percell = nincludedlevels * MA_ACTION_COUNT;
 
   // one shared allocation per array, with a sub-range for each slot
-  auto& backing = globals::cellcache_backing;
+  auto& backing = cellcache_backing;
   backing.cooling_contrib.allocate(static_cast<ptrdiff_t>(ncoolingterms * nslots));
   backing.alllevels_pops.allocate(static_cast<ptrdiff_t>(nincludedlevels * nslots));
   backing.alllevels_maprocessrates.allocate(static_cast<ptrdiff_t>(maprocess_percell * nslots));
@@ -1159,23 +1174,23 @@ auto main(int argc, char* argv[]) -> int {
     MPI_Barrier_allranks();
 
     // titer example: Do 3 iterations on timestep 0-6
-    // globals::n_titer = (globals::timestep < 6) ? 3 : 1;
-    globals::n_titer = 1;
+    // const int n_titer = (globals::timestep < 6) ? 3 : 1;
+    const int n_titer = 1;
 
 #ifdef DO_TITER
-    assert_always(globals::n_titer > 0);
+    assert_always(n_titer > 0);
 #else
-    assert_always(globals::n_titer == 1);
+    assert_always(n_titer == 1);
 #endif
-    if (globals::n_titer > 1) {
-      printlnlog("Doing {} iterations on timestep {}", globals::n_titer, globals::timestep);
+    if (n_titer > 1) {
+      printlnlog("Doing {} iterations on timestep {}", n_titer, globals::timestep);
     }
 
-    for (int titer = 0; titer < globals::n_titer; titer++) {
+    for (int titer = 0; titer < n_titer; titer++) {
       terminate_early = do_timestep(globals::timestep, titer, packets, walltime_limit_seconds);
 #ifdef DO_TITER
       // No iterations over the zeroth timestep, set titer > n_titer
-      if (globals::timestep == 0) titer = globals::n_titer + 1;
+      if (globals::timestep == 0) titer = n_titer + 1;
 #endif
     }
 

@@ -29,11 +29,6 @@ inline int includedlevels = 0;
 // last photoion cross section point as a factor of nu_edge = last_phixs_nuovernuedge
 inline double last_phixs_nuovernuedge;
 
-// first value in this array is not used but exists so the indexes match those of the phixsdata_filenames array
-inline std::array<bool, 3> phixs_file_version_exists;
-
-inline const std::array phixsdata_filenames{"IGNORE", "phixsdata.txt", "phixsdata_v2.txt"};
-
 // return the number of levels of all elements combined
 [[gnu::pure]] inline auto get_includedlevels() -> int { return includedlevels; }
 

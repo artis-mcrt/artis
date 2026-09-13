@@ -52,6 +52,18 @@ namespace {
 // level index of the ground state in the input files (0 or 1), autodetected from the first level in adata.txt
 int groundstate_index_in = -1;
 
+// first value in this array is not used but exists so the indexes match those of the phixsdata_filenames array
+std::array<bool, 3> phixs_file_version_exists;
+
+const std::array phixsdata_filenames{"IGNORE", "phixsdata.txt", "phixsdata_v2.txt"};
+
+// the memory of the ion spans of globals::elements
+MPI_shared_array<Ion> allions;
+
+// Used when USE_LUT_PHOTOION or USE_ION_BFHEATING_ESTIMATORS is enabled
+MPI_shared_array<const int> groundcont_element{};
+MPI_shared_array<const int> groundcont_ion{};
+
 struct TempEnergyLevel {
   double epsilon{-1};  // Excitation energy of this level relative to the neutral ground level.
   int alltrans_startdown{};  // index into globals::alltrans for first down transition from this level
@@ -750,8 +762,8 @@ auto search_groundphixslist(const double nu_edge, const int element_in, const in
   }
 
   if (i == globals::nbfcontinua_ground) {
-    const int element = globals::groundcont_element[i - 1];
-    const int ion = globals::groundcont_ion[i - 1];
+    const int element = groundcont_element[i - 1];
+    const int ion = groundcont_ion[i - 1];
     if (element == element_in && ion == ion_in && level_in == 0) {
       return i - 1;
     }
@@ -801,8 +813,8 @@ void setup_phixs_list() {
   };
 
   auto groundcont_nu_edge = MPI_shared_array<double>(globals::nbfcontinua_ground);
-  auto groundcont_element = MPI_shared_array<int>(globals::nbfcontinua_ground);
-  auto groundcont_ion = MPI_shared_array<int>(globals::nbfcontinua_ground);
+  auto new_groundcont_element = MPI_shared_array<int>(globals::nbfcontinua_ground);
+  auto new_groundcont_ion = MPI_shared_array<int>(globals::nbfcontinua_ground);
 
   // filled in by the node leaders below, then published as a read-only globals::alllevels member
   auto alllevels_closestgroundlevelcont = MPI_shared_array<int>(std::ssize(globals::alllevels.epsilon), -1);
@@ -822,19 +834,19 @@ void setup_phixs_list() {
 
         assert_testmodeonly(nextgroundcontindex < globals::nbfcontinua_ground);
         groundcont_nu_edge[nextgroundcontindex] = nu_edge;
-        groundcont_element[nextgroundcontindex] = element;
-        groundcont_ion[nextgroundcontindex] = ion;
+        new_groundcont_element[nextgroundcontindex] = element;
+        new_groundcont_ion[nextgroundcontindex] = ion;
         nextgroundcontindex++;
       }
     }
     assert_always(nextgroundcontindex == globals::nbfcontinua_ground);
     // the element and the ion make the key unique when two ions have an equal threshold
-    std::ranges::sort(std::views::zip(groundcont_nu_edge, groundcont_element, groundcont_ion));
+    std::ranges::sort(std::views::zip(groundcont_nu_edge, new_groundcont_element, new_groundcont_ion));
   }
   MPI_Barrier_node();
   globals::groundcont_nu_edge = std::move(groundcont_nu_edge);
-  globals::groundcont_element = std::move(groundcont_element);
-  globals::groundcont_ion = std::move(groundcont_ion);
+  groundcont_element = std::move(new_groundcont_element);
+  groundcont_ion = std::move(new_groundcont_ion);
 
   auto allcont = MPI_shared_array<TempPhotoionTransitionInput>(globals::nbfcontinua);
   printlnlog("[info] mem_usage: photoionisation list occupies {:.3f} MB",
@@ -847,13 +859,12 @@ void setup_phixs_list() {
     for (int element = 0; element < get_nelements(); element++) {
       const int nions = get_nions(element);
       for (int ion = 0; ion < nions - 1; ion++) {
-        int groundcontindex =
-            static_cast<int>(std::ranges::find_if(groundcontindices,
-                                                  [=](const auto& i) {
-                                                    return (globals::groundcont_element[i] == element) &&
-                                                           (globals::groundcont_ion[i] == ion);
-                                                  }) -
-                             groundcontindices.begin());
+        int groundcontindex = static_cast<int>(std::ranges::find_if(groundcontindices,
+                                                                    [=](const auto& i) {
+                                                                      return (groundcont_element[i] == element) &&
+                                                                             (groundcont_ion[i] == ion);
+                                                                    }) -
+                                               groundcontindices.begin());
         if (groundcontindex >= globals::nbfcontinua_ground) {
           groundcontindex = -1;
         }
@@ -1380,11 +1391,11 @@ auto read_compositiondata() -> std::vector<int> {
     uniqueionindex += nions_readin[element];
   }
 
-  globals::allions = MPI_shared_array<Ion>(uniqueionindex);
+  allions = MPI_shared_array<Ion>(uniqueionindex);
 
   for (int element = 0; element < get_nelements(); element++) {
     globals::elements[element].ions =
-        std::span{globals::allions}.subspan(globals::elements[element].uniqueionindexstart, nions_readin[element]);
+        std::span{allions}.subspan(globals::elements[element].uniqueionindexstart, nions_readin[element]);
   }
 
   return nlevelsmax_readin;

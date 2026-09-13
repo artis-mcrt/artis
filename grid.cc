@@ -70,6 +70,7 @@ std::array<int, 3> ncoord_model{};  // the model.txt input grid dimensions
 
 double min_den{-1.};  // minimum model density
 
+double mtot_input{0.};  // Total mass of the input model
 double mfegroup{0.};  // Total mass of Fe group elements in ejecta
 
 int first_input_cellid{-1};  // auto-determine first cell index in model.txt (usually 1 or 0)
