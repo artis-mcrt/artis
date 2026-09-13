@@ -7,6 +7,10 @@
 
 #include "packet.h"
 
+constexpr int NPHIBINS = 10;
+constexpr int NCOSTHETABINS = 10;
+constexpr int MABINS = NPHIBINS * NCOSTHETABINS;
+
 // packets_by_rank holds the packets of each rank. sn3d gives the packets of its own rank only.
 void write_light_curves_and_spectra(int nts, std::span<const std::span<const Packet>> packets_by_rank);
 

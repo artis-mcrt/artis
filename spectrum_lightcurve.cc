@@ -28,7 +28,6 @@
 #include "artisoptions.h"
 #include "atomic.h"
 #include "constants.h"
-#include "exspec.h"
 #include "globals.h"
 #include "grid.h"
 #include "mpi_logging.h"
@@ -37,6 +36,8 @@
 #include "vectors.h"
 
 namespace {
+
+constexpr ptrdiff_t MNUBINS = 1000;
 
 // frequency range of the spectrum of the escaped gamma packets
 constexpr double NU_MIN_GAMMA = 0.05 * MEV / H;

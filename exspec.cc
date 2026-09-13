@@ -5,8 +5,6 @@
 // sn3d writes the same files at its last requested timestep. exspec makes them again from the packet files,
 // e.g. after a change of MNUBINS or of the frequency range.
 
-#include "exspec.h"
-
 #include <unistd.h>
 
 #include <algorithm>
