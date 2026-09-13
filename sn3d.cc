@@ -976,7 +976,7 @@ auto main(int argc, char* argv[]) -> int {
 #endif
 
 #if defined(_OPENMP) && !defined(GPU_ON)
-  // Explicitly turn off dynamic threads. The per-thread log file handles in mpi_logging.h are threadprivate,
+  // Explicitly turn off dynamic threads. The per-thread log file handles in mpi_logging.cc are threadprivate,
   // and OpenMP only guarantees that threadprivate data persists between parallel regions while the team size
   // stays fixed, which dynamic adjustment would break.
   omp_set_dynamic(0);
