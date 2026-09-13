@@ -15,7 +15,9 @@
 
 namespace {
 
-std::fstream output_file;
+// GCC counts the definition of a variable with a constructor as a use, so the threadprivate pragma must come
+// between this declaration and the definition below.
+extern std::fstream output_file;
 bool outputstartofline = true;
 
 #ifdef _OPENMP
@@ -23,6 +25,8 @@ bool outputstartofline = true;
 #pragma omp threadprivate(output_file, outputstartofline)
 #endif
 #endif
+
+std::fstream output_file;
 
 // Prepend an ISO-8601 timestamp when starting a new output line.
 void print_line_start() noexcept {
