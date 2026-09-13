@@ -792,6 +792,7 @@ auto do_timestep(const int nts, const int titer, std::vector<Packet>& packets, c
   // write out a snapshot of the grid properties for further restarts and update input.txt accordingly
   if (((nts - globals::timestep_initial) != 0)) {
     save_grid_and_packets(nts, packets);
+    // a run always attempts its first timestep without a wall time check
     enough_walltime_for_timestep = walltime_sufficient_for_timestep(nts, nts_prev, walltime_limit_seconds);
   }
   packet_propagation_start_time = std::chrono::steady_clock::now();
