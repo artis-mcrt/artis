@@ -178,11 +178,9 @@ void write_emission_spectrum_file(const std::string& emission_filename,
   for (auto nubin = 0Z; nubin < MNUBINS; nubin++) {
     for (auto nts = 0Z; nts < numtimesteps; nts++) {
       const auto emindex_nts_nubin = get_emission_spectrum_index(nts, nubin);
-      for (int nproc = 0; nproc < proccount; nproc++) {
-        if (nproc > 0) {
-          std::print(emission_file, " ");
-        }
-        std::print(emission_file, "{:g}", emission_alltimesteps[emindex_nts_nubin + nproc]);
+      std::print(emission_file, "{:g}", emission_alltimesteps[emindex_nts_nubin]);
+      for (int nproc = 1; nproc < proccount; nproc++) {
+        std::print(emission_file, " {:g}", emission_alltimesteps[emindex_nts_nubin + nproc]);
       }
       std::println(emission_file, "");
     }
@@ -197,12 +195,10 @@ void write_absorption_spectrum_file(const std::string& absorption_filename, cons
   const int ioncount = get_nelements() * get_max_nions();  // may be higher than the true included ion count
   for (auto nubin = 0Z; nubin < MNUBINS; nubin++) {
     for (auto nts = 0Z; nts < numtimesteps; nts++) {
-      for (int i = 0; i < ioncount; i++) {
-        if (i > 0) {
-          std::print(absorption_file, " ");
-        }
-        std::print(absorption_file, "{:g}",
-                   spectra.absorptionalltimesteps[get_absorption_spectrum_index(nts, nubin) + i]);
+      const auto absindex_nts_nubin = get_absorption_spectrum_index(nts, nubin);
+      std::print(absorption_file, "{:g}", spectra.absorptionalltimesteps[absindex_nts_nubin]);
+      for (int i = 1; i < ioncount; i++) {
+        std::print(absorption_file, " {:g}", spectra.absorptionalltimesteps[absindex_nts_nubin + i]);
       }
       std::println(absorption_file, "");
     }
