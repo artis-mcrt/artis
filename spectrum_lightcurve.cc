@@ -150,18 +150,18 @@ auto this_rank_writes_file(const int file_number) -> bool {
 
 void write_spectrum_file(const std::string& spec_filename, const Spectra& spectra, const int numtimesteps) {
   auto spec_file = fstream_required(spec_filename, std::ios::out | std::ios::trunc);
-  std::print(spec_file, "0 ");
+  std::print(spec_file, "0");
   for (int p = 0; p < numtimesteps; p++) {
-    std::print(spec_file, "{:g} ", globals::timesteps[p].mid / DAY);
+    std::print(spec_file, " {:g}", globals::timesteps[p].mid / DAY);
   }
   std::println(spec_file, "");
 
   const auto ntimesteps_all = static_cast<ptrdiff_t>(globals::ntimesteps);
   for (auto nubin = 0Z; nubin < MNUBINS; nubin++) {
-    std::print(spec_file, "{:g} ", (spectra.lower_freq[nubin] + (spectra.delta_freq[nubin] / 2)));
+    std::print(spec_file, "{:g}", (spectra.lower_freq[nubin] + (spectra.delta_freq[nubin] / 2)));
 
     for (auto nts = 0Z; nts < numtimesteps; nts++) {
-      std::print(spec_file, "{:g} ", spectra.fluxalltimesteps[(nubin * ntimesteps_all) + nts]);
+      std::print(spec_file, " {:g}", spectra.fluxalltimesteps[(nubin * ntimesteps_all) + nts]);
     }
     std::println(spec_file, "");
   }
@@ -179,7 +179,10 @@ void write_emission_spectrum_file(const std::string& emission_filename,
     for (auto nts = 0Z; nts < numtimesteps; nts++) {
       const auto emindex_nts_nubin = get_emission_spectrum_index(nts, nubin);
       for (int nproc = 0; nproc < proccount; nproc++) {
-        std::print(emission_file, "{:g} ", emission_alltimesteps[emindex_nts_nubin + nproc]);
+        if (nproc > 0) {
+          std::print(emission_file, " ");
+        }
+        std::print(emission_file, "{:g}", emission_alltimesteps[emindex_nts_nubin + nproc]);
       }
       std::println(emission_file, "");
     }
@@ -195,7 +198,10 @@ void write_absorption_spectrum_file(const std::string& absorption_filename, cons
   for (auto nubin = 0Z; nubin < MNUBINS; nubin++) {
     for (auto nts = 0Z; nts < numtimesteps; nts++) {
       for (int i = 0; i < ioncount; i++) {
-        std::print(absorption_file, "{:g} ",
+        if (i > 0) {
+          std::print(absorption_file, " ");
+        }
+        std::print(absorption_file, "{:g}",
                    spectra.absorptionalltimesteps[get_absorption_spectrum_index(nts, nubin) + i]);
       }
       std::println(absorption_file, "");
