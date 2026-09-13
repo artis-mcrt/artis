@@ -103,21 +103,13 @@ inline void setup_mpi_vars() {
 
 inline void MPI_Barrier_node() { MPI_Barrier(globals::mpi_comm_node); }
 
-extern std::fstream output_file;
-
-#ifdef _OPENMP
-#ifndef GPU_ON
-#pragma omp threadprivate(output_file)
-#endif
-#endif
-
 void set_log_file(std::string_view filename) noexcept;
 
-// Write an already-formatted message to output_file, prepending a timestamp at the start of each line. When
+// Write an already-formatted message to the log file, prepending a timestamp at the start of each line. When
 // add_newline is set, a trailing newline is appended and the next write starts a new line.
 void log_write(std::string_view message, bool add_newline) noexcept;
 
-// Report a failed assertion to output_file (if open) and stderr. Defined out-of-line in mpi_logging.cc so that the
+// Report a failed assertion to the log file (if open) and stderr. Defined out-of-line in mpi_logging.cc so that the
 // heavyweight <iostream> dependency does not propagate into every translation unit that includes this header.
 [[gnu::cold]] DEVICE_FUNC void report_assert_failure(const char* file, int line, const char* expr,
                                                      const char* func) noexcept;

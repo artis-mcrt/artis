@@ -15,13 +15,18 @@
 
 namespace {
 
+// GCC counts the definition of a variable with a constructor as a use, so the threadprivate pragma must come
+// between this declaration and the definition below.
+extern std::fstream output_file;
 bool outputstartofline = true;
 
 #ifdef _OPENMP
 #ifndef GPU_ON
-#pragma omp threadprivate(outputstartofline)
+#pragma omp threadprivate(output_file, outputstartofline)
 #endif
 #endif
+
+std::fstream output_file;
 
 // Prepend an ISO-8601 timestamp when starting a new output line.
 void print_line_start() noexcept {
@@ -30,8 +35,6 @@ void print_line_start() noexcept {
   }
 }
 }  // anonymous namespace
-
-std::fstream output_file;
 
 void set_log_file(const std::string_view filename) noexcept {
   output_file = fstream_required(filename, std::ios::out | std::ios::trunc);

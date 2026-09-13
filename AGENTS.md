@@ -194,8 +194,9 @@ Three steps differ from a plain build and are easy to miss:
 - Copy `input-resume.txt` to `input.txt` before the resume run. `sn3d` restores
   an absent `input.txt` from `input-newrun.txt`, but the resume run needs the
   restart state that the first run wrote.
-- Remove the `*.tmp` files before `exspec`, and the `*_res_*.out` files after
-  `mergeangleres.py`, as the workflow does.
+- Remove the `*.tmp` files before `exspec`, as the workflow does. `exspec`
+  writes the direction bin files into `speclc_angle_res/`, so nothing moves
+  them.
 
 CI writes `results_md5_job0.txt` from
 `md5sum *.out job0/*.out speclc_angle_res/*.*` and `results_md5_final.txt` from

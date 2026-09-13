@@ -30,7 +30,6 @@
 #include "chargetransfer.h"
 #include "constants.h"
 #include "decay.h"
-#include "exspec.h"
 #include "gammapkt.h"
 #include "globals.h"
 #include "input.h"
@@ -43,6 +42,7 @@
 #include "random.h"
 #include "rpkt.h"
 #include "sn3d.h"
+#include "spectrum_lightcurve.h"
 #include "toms748.h"
 #include "vectors.h"
 
