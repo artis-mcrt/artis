@@ -77,7 +77,7 @@ vim artis/scripts/artis-cosma8.sh
 sbatch artis/scripts/artis-cosma8.sh
 ```
 
-The job scripts resubmit themselves until the simulation is finished and then queue a post-processing job (scripts/exspec-zip-*.sh) that runs exspec and compresses the output files. The post-processing job also converts the packets and estimator files to parquet format with [artistools](https://github.com/artis-mcrt/artistools), which it installs automatically using uv. See [Post-processing with exspec](#post-processing-with-exspec) below for what exspec does.
+The job scripts resubmit themselves until the simulation is finished and then queue a post-processing job (scripts/exspec-zip-*.sh) that merges and compresses the output files. sn3d writes the spectra and light curves itself, so this job runs exspec only if emission.out is absent. The post-processing job also converts the packets and estimator files to parquet format with [artistools](https://github.com/artis-mcrt/artistools), which it installs automatically using uv. See [Post-processing with exspec](#post-processing-with-exspec) below for what exspec does.
 
 ## Setting up for development
 > [!IMPORTANT]
@@ -119,7 +119,8 @@ To split a long simulation across several queued jobs, run sn3d with `-w WALLTIM
 ### Output files
 A run writes the following into the simulation folder:
 - output_n-0.txt: a log file for each MPI rank n.
-- packets00_nnnn.out: the Monte Carlo packets from each rank, which exspec turns into spectra and light curves.
+- packets00_nnnn.out: the Monte Carlo packets from each rank, which exspec can turn into spectra and light curves again.
+- light_curve.out, spec.out, and the other spectrum files that [Post-processing with exspec](#post-processing-with-exspec) lists: sn3d writes the light curves and spectra at each timestep, and the emission, absorption, and direction-resolved files at the last requested timestep.
 - estimators_nnnn.out: the plasma conditions of each cell (temperatures, ionisation, heating and cooling rates) at each timestep.
 - deposition.out: the radioactive energy deposition rate as a function of time.
 - gridsave_ts*.tmp and packets_*_ts*.tmp: restart files that allow a later job to continue from the end of a timestep.
@@ -127,13 +128,13 @@ A run writes the following into the simulation folder:
 Run sn3d with `-o JOBFOLDER` (e.g. `./sn3d -o job0`) to write the per-job output files (the rank log files and the estimators, nlte, radfield, and macroatom files) into a subfolder. The cluster job scripts do this automatically with a folder named after the SLURM job id. The shared run-level files, including the restart files that a later job resumes from, are still written to the simulation folder, and an output_0-0.txt symlink to the current job's rank-0 log is kept there so that following the log works regardless of the output folder. For runs made without -o, scripts/movefiles.sh can move the per-job files into a subfolder afterwards.
 
 ### Post-processing with exspec
-As well as sn3d, `make` builds exspec, which combines the packets files from all ranks into spectra and light curves. Run it in the simulation folder using a single rank:
+As well as sn3d, `make` builds exspec, which combines the packets files from all ranks into spectra and light curves. sn3d writes the same files itself, so exspec is necessary only to make them again from the packets files, e.g. after a change of MNUBINS or of the frequency range. Run it in the simulation folder using a single rank:
 ```bash
 mpirun -np 1 ./exspec
 ```
 exspec reads the same input.txt, model, and atomic data files as sn3d, so it must be run in the same folder. The nprocs_exspec line of input.txt sets how many ranks' packets files it reads.
 
-It writes light_curve.out, spec.out, emission.out, emissiontrue.out, and absorption.out, plus gamma_light_curve.out and gamma_spec.out when KEEP_ESCAPED_GAMMAS is set, and specpol.out, emissionpol.out and absorptionpol.out when POL_ON is set. Direction-resolved versions of these go in the speclc_angle_res folder, alongside a log file exspec.txt.
+It writes light_curve.out, spec.out, emission.out, emissiontrue.out, and absorption.out, plus gamma_light_curve.out and gamma_spec.out when KEEP_ESCAPED_GAMMAS is set, and specpol.out, emissionpol.out and absorptionpol.out when POL_ON is set. Direction-resolved versions of these go in the speclc_angle_res folder. exspec writes its log to exspec.txt.
 
 To plot and analyse the output, use [artistools](https://github.com/artis-mcrt/artistools), a companion Python package for working with ARTIS light curves, spectra, and estimators.
 
