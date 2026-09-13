@@ -10,6 +10,7 @@
 #include <unistd.h>
 
 #include <algorithm>
+#include <array>
 #include <chrono>
 #include <cmath>
 #include <cstddef>
@@ -822,7 +823,8 @@ auto do_timestep(const int nts, const int titer, std::vector<Packet>& packets, c
 
     write_deposition_file();
 
-    write_light_curves_and_spectra(nts, packets);
+    const std::array packets_of_this_rank{std::span<const Packet>{packets}};
+    write_light_curves_and_spectra(nts, packets_of_this_rank);
 
     printlnlog("During timestep {} on MPI process {}, {} pellets decayed and {} packets escaped. (t={:g} [d])", nts,
                globals::my_rank, globals::timesteps[nts].pellet_decays, stats::get_counter(stats::Counter::PKTESCAPES),

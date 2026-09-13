@@ -14,6 +14,7 @@
 #include <ios>
 #include <iterator>
 #include <print>
+#include <ranges>
 #include <span>
 #include <string>
 #include <string_view>
@@ -515,7 +516,7 @@ void sum_spectra_over_nodes(Spectra& spectra) {
   }
 }
 
-void write_light_curves_and_spectra_for_dirbin(const int nts, std::span<const Packet> packets,
+void write_light_curves_and_spectra_for_dirbin(const int nts, std::span<const std::span<const Packet>> packets_by_rank,
                                                const bool do_emission_absorption, const int dirbin) {
   THREADLOCALONHOST std::vector<double> rpkt_light_curve_lum;
   THREADLOCALONHOST std::vector<double> rpkt_light_curve_lumcmf;
@@ -554,7 +555,7 @@ void write_light_curves_and_spectra_for_dirbin(const int nts, std::span<const Pa
     const int node_rank = globals::rank_in_node;
 #endif
     if (node_rank == globals::rank_in_node) {
-      for (const auto& pkt : packets) {
+      for (const auto& pkt : packets_by_rank | std::views::join) {
         if (pkt.type == TYPE_ESCAPE) {
           if (pkt.escape_type == TYPE_RPKT) {
             add_packet_to_light_curve(pkt, dirbin, rpkt_light_curve_lum, rpkt_light_curve_lumcmf);
@@ -631,8 +632,7 @@ void write_light_curves_and_spectra_for_dirbin(const int nts, std::span<const Pa
 
 }  // anonymous namespace
 
-void write_light_curves_and_spectra(const int nts, std::span<const Packet> packets) {
-  // sn3d calls this with the packets of its rank, and exspec calls it with the packets of all ranks
+void write_light_curves_and_spectra(const int nts, std::span<const std::span<const Packet>> packets_by_rank) {
   const bool is_last_requested_timestep = (nts >= globals::timestep_finish - 1);
 
   // the emission resolved spectra are slow to generate, and require a lot of memory. The code
@@ -645,7 +645,7 @@ void write_light_curves_and_spectra(const int nts, std::span<const Packet> packe
   const auto write_start_time = std::chrono::steady_clock::now();
 
   for (int dirbin = -1; dirbin < ndirbins; dirbin++) {
-    write_light_curves_and_spectra_for_dirbin(nts, packets, do_emission_absorption, dirbin);
+    write_light_curves_and_spectra_for_dirbin(nts, packets_by_rank, do_emission_absorption, dirbin);
     if (dirbin >= 0 && globals::my_rank == 0) {
       printlnlog("timestep {}: wrote the files of direction bin {} (the last bin is {})", nts, dirbin, ndirbins - 1);
     }

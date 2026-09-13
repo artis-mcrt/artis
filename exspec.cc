@@ -21,7 +21,6 @@
 #include <mpi.h>
 #pragma clang unsafe_buffer_usage end
 
-#include "artisoptions.h"
 #include "globals.h"
 #include "grid.h"
 #include "input.h"
@@ -79,23 +78,24 @@ auto main(int argc, char* argv[]) -> int {
   // (not the number of ranks used to run exspec, which is always 1 for now)
   assert_always(globals::nprocs_exspec > 0);
 
-  // the packets of all ranks in the order of the rank files, so that the sums are reproducible
-  std::vector<Packet> packets;
-  packets.reserve(static_cast<size_t>(globals::nprocs_exspec) * MPKTS);
+  // one vector for each rank file. A file holds far fewer than MPKTS packets when KEEP_ESCAPED_GAMMAS is false.
+  std::vector<std::vector<Packet>> packets_by_rank;
+  reserve_resize(packets_by_rank, globals::nprocs_exspec);
   for (int rank = 0; rank < globals::nprocs_exspec; rank++) {
-    const auto first_packet_of_rank = packets.size();
-    read_text_packets(std::format("packets{:02d}_{:04d}.out", 0, rank), packets);
-    const auto packets_of_rank = std::span<const Packet>(packets).subspan(first_packet_of_rank);
-    const auto escaped_rpkt_count = std::ranges::count_if(
-        packets_of_rank, [](const Packet& pkt) { return pkt.type == TYPE_ESCAPE && pkt.escape_type == TYPE_RPKT; });
-    const auto escaped_gamma_count = std::ranges::count_if(
-        packets_of_rank, [](const Packet& pkt) { return pkt.type == TYPE_ESCAPE && pkt.escape_type == TYPE_GAMMA; });
+    packets_by_rank[rank] = read_text_packets(std::format("packets{:02d}_{:04d}.out", 0, rank));
+    const auto escaped_rpkt_count = std::ranges::count_if(packets_by_rank[rank], [](const Packet& pkt) {
+      return pkt.type == TYPE_ESCAPE && pkt.escape_type == TYPE_RPKT;
+    });
+    const auto escaped_gamma_count = std::ranges::count_if(packets_by_rank[rank], [](const Packet& pkt) {
+      return pkt.type == TYPE_ESCAPE && pkt.escape_type == TYPE_GAMMA;
+    });
     printlnlog("  rank {}: {} escaped r-packets and {} escaped gamma-pkts", rank, escaped_rpkt_count,
                escaped_gamma_count);
   }
 
   // the index of the last timestep also selects the emission, absorption, and direction bin files
-  write_light_curves_and_spectra(globals::ntimesteps - 1, packets);
+  const std::vector<std::span<const Packet>> packet_spans_by_rank(packets_by_rank.begin(), packets_by_rank.end());
+  write_light_curves_and_spectra(globals::ntimesteps - 1, packet_spans_by_rank);
 
   const auto exspec_duration = std::chrono::duration<double>(std::chrono::steady_clock::now() - sys_time_start).count();
   printlnlog("exspec finished (took {:.1f} seconds)", exspec_duration);
