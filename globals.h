@@ -57,7 +57,7 @@ struct Ion {
 };
 
 struct Element {
-  std::span<Ion> ions;  // subspan of the allions array for this element
+  std::span<Ion> ions;  // subspan of the allions array of input.cc
   int anumber{-1};  // Atomic number
   int lowest_ionstage{-1};  // ionisation stage (charge + 1) of ion 0 for this element
   int uniqueionindexstart{-1};  // uniqueionindex of the lowest ionisation stage of this element
@@ -215,7 +215,6 @@ struct AllLevels {
 inline AllLevels alllevels{};
 
 inline std::vector<Element> elements;
-inline MPI_shared_array<Ion> allions;
 
 struct TransitionLines {
   MPI_shared_array<const double> nu;  // Frequency of the line transition
@@ -262,8 +261,6 @@ inline AllCont allcont{};
 
 // Used when USE_LUT_PHOTOION or USE_ION_BFHEATING_ESTIMATORS is enabled
 inline MPI_shared_array<const double> groundcont_nu_edge{};
-inline MPI_shared_array<const int> groundcont_element{};
-inline MPI_shared_array<const int> groundcont_ion{};
 
 inline int nbfcontinua{-1};  // number of bf-continua
 inline int nbfcontinua_ground{-1};  // number of bf-continua from ground levels
@@ -272,8 +269,8 @@ inline int NPHIXSPOINTS{-1};  // number of photoionisation cross-section points 
 inline double NPHIXSNUINCREMENT{-1};  // frequency increment between points as a fraction of nu_edge
 
 // A cell cache slot holds pre-calculated quantities for a single model grid cell. The large per-cell
-// arrays are non-owning views (spans) into shared-memory backing storage held in
-// globals::cellcache_backing, with each slot viewing its own sub-range.
+// arrays are non-owning views (spans) into shared-memory backing storage that sn3d.cc owns
+// (cellcache_backing), with each slot viewing its own sub-range.
 struct CellCache {
   int nonemptymgi{-1};  // non-empty model grid index for this cache slot
   std::span<double> cooling_contrib;  // Cooling contributions by the different processes.
@@ -327,20 +324,6 @@ inline std::vector<CellCache> cellcache{};
 // is false, each array spans every non-empty cell and cellcache[nonemptymgi] views the relevant sub-range,
 // shared by all MPI ranks on the node. When it is true, each array holds one reusable slot per node rank
 // and each rank uses only its own cellcache[rank_in_node] view.
-struct CellCacheBacking {
-  MPI_shared_array<double> cooling_contrib;
-  MPI_shared_array<double> alllevels_pops;
-  MPI_shared_array<double> alllevels_maprocessrates;
-  MPI_shared_array<double> allmacroatomictransitions;
-  MPI_shared_array<double> allcont_modified_departureratios;
-  MPI_shared_array<double> allcont_stimfactor_edgepart;
-  MPI_shared_array<double> allcont_nnlevel;
-  MPI_shared_array<std::uint64_t> allcont_keepbits;
-  MPI_shared_array<double> chi_ff_nnionpart;
-  MPI_shared_array<double> allphixstargets_corrphotoioncoeff;
-};
-inline CellCacheBacking cellcache_backing{};
-
 inline double vmax{NAN};
 inline double rmax{NAN};
 inline double tmax{-1};
@@ -357,7 +340,6 @@ inline bool simulation_continued_from_saved{false};
 inline int num_lte_timesteps{-1};
 inline double optical_depth_is_thick{NAN};
 inline int num_grey_timesteps{-1};
-inline int n_titer{1};
 inline bool lte_iteration{false};
 
 }  // namespace globals

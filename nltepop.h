@@ -18,9 +18,7 @@ inline MPI_shared_array<double> nltepops_allcells;
 // The state of the previous grid update for the time-dependent ionisation and thermal balance (see
 // NLTE_TIME_DEPENDENT_FIRST_TIMESTEP). The arrays exist only when that option has a value. Only the rank that
 // owns a cell reads and writes the entries of the cell.
-inline MPI_shared_array<float> nnion_prev_allcells;  // ion population over the sum of the ion populations
 inline MPI_shared_array<float> Te_prev_allcells;
-inline MPI_shared_array<double> prev_solution_time_allcells;  // t_mid of the stored previous state, or -1 for none
 inline MPI_shared_array<double> solution_time_allcells;  // t_mid of the solution that the grid holds, or -1
 
 static_assert(!NLTE_TIME_DEPENDENT_FIRST_TIMESTEP.has_value() || *NLTE_TIME_DEPENDENT_FIRST_TIMESTEP >= 0);

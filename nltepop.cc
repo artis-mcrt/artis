@@ -50,6 +50,11 @@ static_assert(STRICT_POPULATION_CHECKING_INVERSION_FACTOR_PRINTOUT_WARNING <
 namespace {
 std::fstream nlte_file;
 
+// The state of the previous grid update for the time-dependent ionisation (see nltepop.h). Only nltepop.cc
+// reads and writes these two arrays.
+MPI_shared_array<float> nnion_prev_allcells;  // ion population over the sum of the ion populations
+MPI_shared_array<double> prev_solution_time_allcells;  // t_mid of the stored previous state, or -1 for none
+
 // context so that log messages from the NLTE solver helpers can identify the cell, timestep, and
 // iteration of the solve they were emitted from (set by solve_nlte_pops_element)
 struct NLTELogContext {

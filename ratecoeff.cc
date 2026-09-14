@@ -18,7 +18,6 @@
 #include <span>
 #include <sstream>
 #include <string>
-#include <utility>
 
 #include "artisoptions.h"
 #include "atomic.h"
@@ -63,8 +62,8 @@ const auto temperature_grid = []() {
   return index;
 }
 
-MPI_shared_array<const float> ion_alpha_sp;  // size is nincludedions * RATECOEFF_TABLESIZE, indexed
-                                             // by (uniqueionindex * RATECOEFF_TABLESIZE) + temperatureindex
+MPI_shared_array<float> ion_alpha_sp;  // size is nincludedions * RATECOEFF_TABLESIZE, indexed
+                                       // by (uniqueionindex * RATECOEFF_TABLESIZE) + temperatureindex
 
 // the following spans are indexed by get_bflutindex()
 MPI_shared_array<double> spontrecombcoeffs{};  // indexed by get_bflutindex()
@@ -436,7 +435,8 @@ void read_recombrate_file() {
 // level's photoionisation target level(s) in this ion (IonRecombNorm::TARGETLEVELPOP). phi_rate_balance() applies
 // this to the whole upper ion population in the nebular approximation.
 void precalculate_ion_alpha_sp() {
-  auto temp_ion_alpha_sp = MPI_shared_array<float>(get_includedions() * RATECOEFF_TABLESIZE, 0.);
+  assert_always(ion_alpha_sp.empty());
+  ion_alpha_sp = MPI_shared_array<float>(get_includedions() * RATECOEFF_TABLESIZE, 0.);
   if (globals::rank_in_node == 0) {
     constexpr auto options = IonRecombCoeffOptions{.assume_lte = true, .norm = IonRecombNorm::TARGETLEVELPOP};
     for (int tempindex = 0; tempindex < RATECOEFF_TABLESIZE; tempindex++) {
@@ -447,13 +447,11 @@ void precalculate_ion_alpha_sp() {
           const auto uniqueionindex = get_uniqueionindex(element, ion);
           const double alpha_sp = calculate_ionrecombcoeff(-1, T_e, element, ion + 1, options);
           assert_always(std::isfinite(alpha_sp) && alpha_sp >= 0.);
-          temp_ion_alpha_sp[(uniqueionindex * RATECOEFF_TABLESIZE) + tempindex] = static_cast<float>(alpha_sp);
+          ion_alpha_sp[(uniqueionindex * RATECOEFF_TABLESIZE) + tempindex] = static_cast<float>(alpha_sp);
         }
       }
     }
   }
-  assert_always(ion_alpha_sp.empty());
-  ion_alpha_sp = std::move(temp_ion_alpha_sp);
   MPI_Barrier_node();
 }
 
