@@ -624,16 +624,15 @@ void init() {
     if (globals::nbfcontinua > 0) {
       // build the O(1) lookup used by get_allcontindex(): for each continuum in the nu_edge-sorted
       // allcont list, record its position under the allphixstargets (element/ion/level/target) ordering
-      auto temp_allcontindex = MPI_shared_array<int>(globals::nbfcontinua, -1);
+      allcontindex_of_allphixstargetindex = MPI_shared_array<int>(globals::nbfcontinua, -1);
       if (globals::rank_in_node == 0) {
         for (int allcontindex = 0; allcontindex < globals::nbfcontinua; allcontindex++) {
           const auto allphixstargetindex = get_allphixstargetindex(globals::allcont.uniquelevelindex[allcontindex],
                                                                    globals::allcont.phixstargetindex[allcontindex]);
-          temp_allcontindex[allphixstargetindex] = allcontindex;
+          allcontindex_of_allphixstargetindex[allphixstargetindex] = allcontindex;
         }
       }
       MPI_Barrier_node();
-      allcontindex_of_allphixstargetindex = std::move(temp_allcontindex);
     }
 
     const auto bfestimcount = std::ssize(globals::bfestim_nu_edge);

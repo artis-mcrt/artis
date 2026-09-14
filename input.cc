@@ -61,8 +61,8 @@ const std::array phixsdata_filenames{"IGNORE", "phixsdata.txt", "phixsdata_v2.tx
 MPI_shared_array<Ion> allions;
 
 // Used when USE_LUT_PHOTOION or USE_ION_BFHEATING_ESTIMATORS is enabled
-MPI_shared_array<const int> groundcont_element{};
-MPI_shared_array<const int> groundcont_ion{};
+MPI_shared_array<int> groundcont_element{};
+MPI_shared_array<int> groundcont_ion{};
 
 struct TempEnergyLevel {
   double epsilon{-1};  // Excitation energy of this level relative to the neutral ground level.
@@ -813,8 +813,8 @@ void setup_phixs_list() {
   };
 
   auto groundcont_nu_edge = MPI_shared_array<double>(globals::nbfcontinua_ground);
-  auto new_groundcont_element = MPI_shared_array<int>(globals::nbfcontinua_ground);
-  auto new_groundcont_ion = MPI_shared_array<int>(globals::nbfcontinua_ground);
+  groundcont_element = MPI_shared_array<int>(globals::nbfcontinua_ground);
+  groundcont_ion = MPI_shared_array<int>(globals::nbfcontinua_ground);
 
   // filled in by the node leaders below, then published as a read-only globals::alllevels member
   auto alllevels_closestgroundlevelcont = MPI_shared_array<int>(std::ssize(globals::alllevels.epsilon), -1);
@@ -834,19 +834,17 @@ void setup_phixs_list() {
 
         assert_testmodeonly(nextgroundcontindex < globals::nbfcontinua_ground);
         groundcont_nu_edge[nextgroundcontindex] = nu_edge;
-        new_groundcont_element[nextgroundcontindex] = element;
-        new_groundcont_ion[nextgroundcontindex] = ion;
+        groundcont_element[nextgroundcontindex] = element;
+        groundcont_ion[nextgroundcontindex] = ion;
         nextgroundcontindex++;
       }
     }
     assert_always(nextgroundcontindex == globals::nbfcontinua_ground);
     // the element and the ion make the key unique when two ions have an equal threshold
-    std::ranges::sort(std::views::zip(groundcont_nu_edge, new_groundcont_element, new_groundcont_ion));
+    std::ranges::sort(std::views::zip(groundcont_nu_edge, groundcont_element, groundcont_ion));
   }
   MPI_Barrier_node();
   globals::groundcont_nu_edge = std::move(groundcont_nu_edge);
-  groundcont_element = std::move(new_groundcont_element);
-  groundcont_ion = std::move(new_groundcont_ion);
 
   auto allcont = MPI_shared_array<TempPhotoionTransitionInput>(globals::nbfcontinua);
   printlnlog("[info] mem_usage: photoionisation list occupies {:.3f} MB",

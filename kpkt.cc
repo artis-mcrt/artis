@@ -14,7 +14,6 @@
 #include <cstdlib>
 #include <limits>
 #include <span>
-#include <utility>
 
 #include "artisoptions.h"
 #include "atomic.h"
@@ -41,9 +40,9 @@ namespace {
 
 enum class CoolingType : std::uint8_t { FREEFREE, FREEBOUND, COLLEXC, COLLION };
 
-MPI_shared_array<const CoolingType> coolinglist_type;
-MPI_shared_array<const int> coolinglist_level;
-MPI_shared_array<const int> coolinglist_phixstargetindex;
+MPI_shared_array<CoolingType> coolinglist_type;
+MPI_shared_array<int> coolinglist_level;
+MPI_shared_array<int> coolinglist_phixstargetindex;
 
 // Fraction of a time step that individual k-packets live before further processing. This
 // diffusion time breaks up the chains of continuous collisional interactions that would
@@ -324,9 +323,9 @@ void calculate_cooling_rates(const int nonemptymgi, HeatingCoolingRates* heating
 void setup_coolinglist() {
   set_ncoolingterms();
   assert_always(ncoolingterms > 0);
-  auto temp_coolinglist_type = MPI_shared_array<CoolingType>(ncoolingterms);
-  auto temp_coolinglist_level = MPI_shared_array<int>(ncoolingterms);
-  auto temp_coolinglist_phixstargetindex = MPI_shared_array<int>(ncoolingterms);
+  coolinglist_type = MPI_shared_array<CoolingType>(ncoolingterms);
+  coolinglist_level = MPI_shared_array<int>(ncoolingterms);
+  coolinglist_phixstargetindex = MPI_shared_array<int>(ncoolingterms);
   const size_t mem_usage_coolinglist = ncoolingterms * (sizeof(CoolingType) + (2 * sizeof(int)));
   printlnlog("[info] mem_usage: coolinglist occupies {:.3f} MB", mem_usage_coolinglist / 1024. / 1024.);
 
@@ -340,19 +339,19 @@ void setup_coolinglist() {
       // ff creation of rpkt
       const int ioncharge = get_ionstage(element, ion) - 1;
       if (ioncharge > 0) {
-        temp_coolinglist_type[i] = CoolingType::FREEFREE;
-        temp_coolinglist_level[i] = -99;
-        temp_coolinglist_phixstargetindex[i] = -99;
+        coolinglist_type[i] = CoolingType::FREEFREE;
+        coolinglist_level[i] = -99;
+        coolinglist_phixstargetindex[i] = -99;
         i++;
       }
 
       for (int level = 0; level < nlevels_currention; level++) {
         if (get_nuptrans(element, ion, level) > 0) {
-          temp_coolinglist_type[i] = CoolingType::COLLEXC;
-          temp_coolinglist_level[i] = level;
+          coolinglist_type[i] = CoolingType::COLLEXC;
+          coolinglist_level[i] = level;
           // a collisional excitation is bound-bound, so there is no photoionisation target. This entry is
           // the contribution of all upper levels combined, chosen individually when the process is selected
-          temp_coolinglist_phixstargetindex[i] = -1;
+          coolinglist_phixstargetindex[i] = -1;
           i++;
         }
       }
@@ -365,9 +364,9 @@ void setup_coolinglist() {
         for (int level = 0; level < nionisinglevels; level++) {
           const int nphixstargets = get_nphixstargets(element, ion, level);
           for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
-            temp_coolinglist_type[i] = CoolingType::COLLION;
-            temp_coolinglist_level[i] = level;
-            temp_coolinglist_phixstargetindex[i] = phixstargetindex;
+            coolinglist_type[i] = CoolingType::COLLION;
+            coolinglist_level[i] = level;
+            coolinglist_phixstargetindex[i] = phixstargetindex;
             i++;
           }
         }
@@ -378,9 +377,9 @@ void setup_coolinglist() {
         for (int level = 0; level < nionisinglevels; level++) {
           const int nphixstargets = get_nphixstargets(element, ion, level);
           for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
-            temp_coolinglist_type[i] = CoolingType::FREEBOUND;
-            temp_coolinglist_level[i] = level;
-            temp_coolinglist_phixstargetindex[i] = phixstargetindex;
+            coolinglist_type[i] = CoolingType::FREEBOUND;
+            coolinglist_level[i] = level;
+            coolinglist_phixstargetindex[i] = phixstargetindex;
             i++;
           }
         }
@@ -391,9 +390,6 @@ void setup_coolinglist() {
 
   assert_always(ncoolingterms == i);  // if this doesn't match, we miscalculated the number of cooling terms
   printlnlog("[info] setup_coolinglist: number of coolingterms {}", ncoolingterms);
-  coolinglist_type = std::move(temp_coolinglist_type);
-  coolinglist_level = std::move(temp_coolinglist_level);
-  coolinglist_phixstargetindex = std::move(temp_coolinglist_phixstargetindex);
   MPI_Barrier_node();
 
   printlnlog("kpkts diffuse {:g} of a time step's length", kpktdiffusion_timestep_fraction);
