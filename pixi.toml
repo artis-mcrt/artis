@@ -5,7 +5,7 @@ platforms = ["linux-64", "osx-arm64"]
 version = "0.1.0"
 
 [tasks.make]
-cmd = "make --check-symlink-times --jobs=$(nproc --all)"
+cmd = "make --check-symlink-times --jobs=$(nproc)"
 
 [dependencies]
 openmpi = ">=5.0.8"
