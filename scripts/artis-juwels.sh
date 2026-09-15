@@ -16,7 +16,7 @@ module load UCX-settings/plain
 
 module list
 
-cd $SLURM_SUBMIT_DIR
+cd "${SLURM_SUBMIT_DIR:?}" || exit 1
 
 echo "CPU type: $(c++ -march=native -Q --help=target | grep -- '-march=  ' | cut -f3)"
 

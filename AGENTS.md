@@ -110,7 +110,7 @@ that supplies `mpicxx`. With Open MPI, select the compiler with
 `export OMPI_CXX=g++`. The build needs no other program.
 
 ```sh
-export MAKEFLAGS="--check-symlink-times --jobs=$(nproc --all)"
+export MAKEFLAGS="--check-symlink-times --jobs=$(nproc)"
 ln -s artisoptions_classic.h artisoptions.h   # required, gitignored
 make                                          # builds sn3d and exspec
 ```

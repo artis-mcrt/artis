@@ -8,12 +8,8 @@
 
 # Leonardo mails <user>@leonardo.local when the address is absent, and that
 # address reaches nobody. So give no --mail-user when EMAIL is empty.
-mailargs=()
-if [ -n "$EMAIL" ]; then
-    mailargs=(--mail-user="$EMAIL")
-fi
-
-sbatch -J "$(basename "$(pwd)")" "${mailargs[@]}" -- artis/scripts/artis-leonardo.sh
 
 # Add a line like this to your .bashrc to get the notifications:
 # export EMAIL=your_email_address
+
+sbatch -J "${PWD##*/}" ${EMAIL:+--mail-user="$EMAIL"} -- artis/scripts/artis-leonardo.sh

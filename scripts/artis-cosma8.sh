@@ -28,7 +28,7 @@ module list
 
 export PATH=/cosma/local/intel/oneAPI_2021.3.0/intelpython/python3.7/pkgs/zstd-1.4.5-h2daa505_0/bin:$PATH
 
-cd $SLURM_SUBMIT_DIR
+cd "${SLURM_SUBMIT_DIR:?}" || exit 1
 
 cd artis
 make sn3d
@@ -49,11 +49,11 @@ source ./artis/scripts/corehours-after.sh
 
 if grep -q "RESTART_NEEDED" "output_0-0.txt"
 then
-    sbatch -J artis_$(basename $(pwd)) ./artis/scripts/artis-cosma8.sh
+    sbatch -J "artis_${PWD##*/}" ./artis/scripts/artis-cosma8.sh
     # sbatch $SLURM_JOB_NAME
 else
     # post-processing can remove restart files, so only queue it when no continuation job was submitted
     if [ -f packets00_0000.out ]; then
-        sbatch -J exspec_$(basename $(pwd)) ./artis/scripts/exspec-zip-cosma8.sh
+        sbatch -J "exspec_${PWD##*/}" ./artis/scripts/exspec-zip-cosma8.sh
     fi
 fi

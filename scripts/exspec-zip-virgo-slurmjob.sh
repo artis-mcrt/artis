@@ -38,7 +38,7 @@ export OMPI_CXX="$PIXI_HOME/envs/gxx/bin/g++"
 mpi_rpath=$(readelf -d "$(mpicxx --showme:libdirs)/libmpi.so" | awk -F'[][]' '/RPATH|RUNPATH/{print $2}')
 export LDFLAGS="-Wl,-rpath-link,$mpi_rpath -Wl,-rpath,$PIXI_HOME/envs/gxx/lib"
 
-cd "${SLURM_SUBMIT_DIR:?}"
+cd "${SLURM_SUBMIT_DIR:?}" || exit 1
 
 cd artis
 make exspec || exit 1
