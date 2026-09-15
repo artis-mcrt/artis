@@ -116,7 +116,8 @@ constexpr bool VPKT_ON;
 // and the energy of the contribution to each direction. This needs VPKT_ON.
 constexpr bool VPKT_WRITE_CONTRIBS;
 
-// The lower bound of the level populations, the ion populations, and the electron density nne [cm^-3]
+// The lower bound of the level populations, the ion populations, and the electron density nne [cm^-3]. A level
+// population from the NLTE solver has no lower bound, and an absent element has zero population.
 constexpr double MINPOP;
 
 // The frequency limits of the UVOIR spectra and of the blackbody sampling of a k-packet [Hz]
@@ -185,9 +186,10 @@ constexpr bool WRITE_ION_HEATING_COOLING_RATES;
 // population can be much larger, and a partition function can then overflow.
 constexpr bool STRICT_POPULATION_CHECKING;
 
-// After a failed NLTE solution of an element, remove the highest ion, then the lowest ion, while the removed
-// ion has a small population (see NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION), and solve
-// again. Without this option, or when no ion can go, the whole element falls back to LTE.
+// After a failed NLTE solution of an element, remove the highest ion, or the lowest ion when the highest ion
+// cannot go, and solve again. An ion can go only when its population is small (see
+// NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION). Without this option, or when no ion can go,
+// the whole element falls back to LTE.
 constexpr bool NLTE_LIMIT_ION_STAGES_AFTER_FAILURE;
 
 // The population of a level per statistical weight, relative to the same ratio of the ground level, above
@@ -254,8 +256,8 @@ constexpr NonThermalScheme NT_SCHEME;
 // every timestep.
 constexpr int SF_MAX_TIMESTEPS_BETWEEN_SOLUTIONS;
 
-// A change of nne per ion (nne divided by the total ion density) since the last solution above this fraction,
-// e.g. 0.5 for 50 percent, also triggers a solution.
+// A change of nne per ion (nne divided by the total ion density) since the last solution at or above this
+// fraction, e.g. 0.5 for 50 percent, also triggers a solution.
 constexpr double NT_MAX_FRACDIFF_NNEPERION_BETWEEN_SOLUTIONS;
 
 // Include non-thermal excitation only from the lowest NTEXCITATION_MAXNLEVELS_LOWER levels of an ion and to
@@ -343,8 +345,9 @@ constexpr bool FRAME_TRANSFORM_EXPANSION_OPACITIES_BINEDGEDIST;
 
 // Replace the macroatom with a thermalisation probability P for each bound-bound absorption, and a scattering
 // with probability 1 - P. Every k-packet in a cell that is not thick then emits a blackbody spectrum weighted
-// with the expansion opacity, so the code computes the expansion opacity bins also without
-// RPKT_USE_EXPANSION_OPACITIES. A thick cell samples a plain Planck function. No value keeps the macroatom.
+// with the sum of the expansion opacity and the free-free opacity, so the code computes the expansion opacity
+// bins also without RPKT_USE_EXPANSION_OPACITIES. A thick cell samples a plain Planck function. No value keeps
+// the macroatom.
 constexpr std::optional<float> RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY;
 
 // The grey opacity of a thick cell:
