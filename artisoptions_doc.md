@@ -317,7 +317,8 @@ constexpr GammaThermalisationScheme GAMMA_THERMALISATION_SCHEME;
 // timesteps must be below the total number of timesteps, or the run stops.
 constexpr TimeStepSizeMethod TIMESTEP_SIZE_METHOD;
 
-// The width of a constant timestep [days], for the hybrid schemes
+// The maximum width of a constant timestep [days], for the hybrid schemes. The code divides the constant
+// interval into equal timesteps of at most this width.
 constexpr double FIXED_TIMESTEP_WIDTH;
 
 // The time of the change between the two schemes [days], for the hybrid schemes
@@ -345,9 +346,9 @@ constexpr bool FRAME_TRANSFORM_EXPANSION_OPACITIES_BINEDGEDIST;
 
 // Replace the macroatom with a thermalisation probability P for each bound-bound absorption, and a scattering
 // with probability 1 - P. Every k-packet in a cell that is not thick then emits a blackbody spectrum weighted
-// with the sum of the expansion opacity and the free-free opacity, so the code computes the expansion opacity
-// bins also without RPKT_USE_EXPANSION_OPACITIES. A thick cell samples a plain Planck function. No value keeps
-// the macroatom.
+// with the sum of the expansion opacity and the free-free opacity. The code therefore computes the expansion
+// opacity bins also without RPKT_USE_EXPANSION_OPACITIES. A thick cell samples a plain Planck function. No
+// value keeps the macroatom.
 constexpr std::optional<float> RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY;
 
 // The grey opacity of a thick cell:
