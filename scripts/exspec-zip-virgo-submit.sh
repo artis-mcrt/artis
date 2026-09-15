@@ -1,2 +1,2 @@
 #!/bin/bash -x
-sbatch -J "exspec_${PWD##*/}" --ntasks=1 --cpus-per-task 64 --mem-per-cpu=4000MB --partition=long --time=48:00:00 --constraint="[9654|9555]" --mail-type=ALL ${EMAIL:+--mail-user="$EMAIL"} -- artis/scripts/exspec-zip-virgo-slurmjob.sh
+sbatch -J "exspec_${PWD##*/}" --ntasks=1 --cpus-per-task 64 --mem-per-cpu=4000MB --partition=long --time=48:00:00 --constraint="[9654|9555]" --mail-type=ALL --mail-user="${EMAIL:-${USER}@gsi.de}" -- artis/scripts/exspec-zip-virgo-slurmjob.sh
