@@ -1,6 +1,6 @@
 #!/bin/bash -l
 #SBATCH --time=24:00:00
-#SBATCH --ntasks=1008
+#SBATCH --ntasks=2016
 #SBATCH --ntasks-per-node=112
 #SBATCH --exclusive
 #SBATCH --cpus-per-task=1
@@ -39,11 +39,11 @@ export OMPI_CXX=g++
 # linker of conda-forge does not search that folder, so name it here.
 export LDFLAGS="-Wl,-rpath-link,/usr/lib64"
 
-cd $SLURM_SUBMIT_DIR
+cd "${SLURM_SUBMIT_DIR:?}" || exit 1
 
-export MAKEFLAGS="--check-symlink-times --jobs=$(nproc --all)"
+export MAKEFLAGS="--check-symlink-times --jobs=$(nproc)"
 cd artis
-make
+make sn3d || exit 1
 cd ..
 
 mpicxx --version
@@ -55,17 +55,21 @@ hoursleft=$(python ./artis/scripts/slurmjobhoursleft.py ${SLURM_JOB_ID})
 source ./artis/scripts/corehours-before.sh
 echo "$(date): before srun sn3d. hours left: $hoursleft"
 time srun --hint=nomultithread -- ./artis/sn3d -w $hoursleft -o ${SLURM_JOB_ID}.slurm > out.txt
+srun_status=$?
+
 hoursleftafter=$(python ./artis/scripts/slurmjobhoursleft.py ${SLURM_JOB_ID})
 echo "$(date): after srun sn3d finished. hours left: $hoursleftafter"
 source ./artis/scripts/corehours-after.sh
 
-if grep -q "RESTART_NEEDED" "output_0-0.txt"
-then
+# sn3d gives 0 also when it writes RESTART_NEEDED, so a non-zero status is a crash.
+if [ $srun_status -ne 0 ]; then
+    echo "$(date): srun sn3d gave status $srun_status, so this job submits nothing"
+    exit $srun_status
+fi
+
+if grep -qs "RESTART_NEEDED" output_0-0.txt; then
     # the submit script sets the job name and the address of the next job
     source ./artis/scripts/artis-leonardo-submit.sh
-else
-    # post-processing can remove restart files, so only queue it when no continuation job was submitted
-    if [ -f packets00_0000.out ]; then
-        source ./artis/scripts/exspec-zip-leonardo-submit.sh
-    fi
+elif [ -f packets00_0000.out ]; then
+    source ./artis/scripts/exspec-zip-leonardo-submit.sh
 fi

@@ -15,12 +15,12 @@ module load env/release/2025.1 gompi/2025a zstd GSL git Python
 
 module list
 
-cd $SLURM_SUBMIT_DIR
+cd "${SLURM_SUBMIT_DIR:?}" || exit 1
 
-export MAKEFLAGS="--check-symlink-times --jobs=$(nproc --all)"
+export MAKEFLAGS="--check-symlink-times --jobs=$(nproc)"
 export OMPI_CXX=g++
 cd artis
-make
+make || exit 1
 cd ..
 
 mpicxx --version

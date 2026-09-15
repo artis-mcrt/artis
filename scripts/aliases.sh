@@ -1,5 +1,5 @@
 # check mtime of symlinks and compile in parallel
-export MAKEFLAGS="--check-symlink-times -j$(nproc --all)"
+export MAKEFLAGS="--check-symlink-times --jobs=$(nproc)"
 
 alias squeueu="squeue --user=$USER --format=\"%.9i %.10P %.8T %.12M %22N %5D %4C %j\""
 alias qstatu="squeueu"

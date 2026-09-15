@@ -1,5 +1,5 @@
 # it's recommended that you add the following to your startup script:
-# export MAKEFLAGS="--check-symlink-times --jobs=$(nproc --all)"
+# export MAKEFLAGS="--check-symlink-times --jobs=$(nproc)"
 .DEFAULT_GOAL := all
 
 # artisoptions.h is gitignored and must be supplied (normally as a symlink to a preset). Check up front
@@ -12,7 +12,7 @@ ifneq ($(strip $(filter-out clean,$(if $(MAKECMDGOALS),$(MAKECMDGOALS),all))),)
   # through the symlink, so a preset switch via ln -sf may not trigger a rebuild
   ifneq ($(shell test -L artisoptions.h && echo is_symlink),)
     ifeq (,$(findstring L,$(filter-out -%,$(firstword $(MAKEFLAGS)))))
-      $(warning artisoptions.h is a symlink, but make was started without --check-symlink-times: switching presets with ln -sf may not trigger a rebuild. Recommended: export MAKEFLAGS="--check-symlink-times --jobs=$$(nproc --all)")
+      $(warning artisoptions.h is a symlink, but make was started without --check-symlink-times: switching presets with ln -sf may not trigger a rebuild. Recommended: export MAKEFLAGS="--check-symlink-times --jobs=$$(nproc)")
     endif
   endif
 endif
