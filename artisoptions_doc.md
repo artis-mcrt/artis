@@ -91,8 +91,9 @@ constexpr bool INITIAL_PACKETS_ON;
 // The number of temperature points of the rate coefficient tables, spaced in log T between MINTEMP and MAXTEMP.
 constexpr int RATECOEFF_TABLESIZE;
 
-// The limits of every temperature in the code [K]. The code clamps T_e, T_R, T_J, and the initial temperature
+// The limits [K] of T_e, T_J, the initial temperature, and the T_R of the whole spectrum. The code clamps them
 // into this range. The rate coefficient tables cover this range, and the accelerator rejects a step outside it.
+// The bins of the radiation field have their own T_R limits in radfield.cc.
 constexpr double MINTEMP;
 constexpr double MAXTEMP;
 
@@ -110,8 +111,9 @@ constexpr bool POL_ON;
 // Enable the virtual packets that vpkt.txt sets up. This needs POL_ON.
 constexpr bool VPKT_ON;
 
-// Write a line for each emission of a real packet to a vpackets_<rank>.out file, with the arrival time, the
-// frequency, and the energy of the contribution to each observer direction of vpkt.txt. This needs VPKT_ON.
+// Write a line to a vpackets_<rank>.out file for each emission of a real packet in a thin cell whose virtual
+// packets escape in at least one observer direction of vpkt.txt. The line holds the arrival time, the frequency,
+// and the energy of the contribution to each direction. This needs VPKT_ON.
 constexpr bool VPKT_WRITE_CONTRIBS;
 
 // The lower bound of the level populations, the ion populations, and the electron density nne [cm^-3]
