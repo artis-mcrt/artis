@@ -61,8 +61,8 @@ sentences. It does not control the spelling variant here.
 ## References
 
 When mentioning a scientific paper, always give the full reference:
-authors, year, title, journal, volume, page range, and DOI or arXiv ID.
-Do not use a bare author-year citation.
+authors, year, journal, volume, page range, and DOI or arXiv ID. The
+title is optional. Do not use a bare author-year citation.
 
 ## Project overview
 
