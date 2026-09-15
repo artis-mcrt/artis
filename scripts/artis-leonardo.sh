@@ -43,7 +43,7 @@ cd "${SLURM_SUBMIT_DIR:?}" || exit 1
 
 export MAKEFLAGS="--check-symlink-times --jobs=$(nproc)"
 cd artis
-make sn3d exspec || exit 1
+make sn3d || exit 1
 cd ..
 
 mpicxx --version
@@ -55,12 +55,19 @@ hoursleft=$(python ./artis/scripts/slurmjobhoursleft.py ${SLURM_JOB_ID})
 source ./artis/scripts/corehours-before.sh
 echo "$(date): before srun sn3d. hours left: $hoursleft"
 time srun --hint=nomultithread -- ./artis/sn3d -w $hoursleft -o ${SLURM_JOB_ID}.slurm > out.txt
+srun_status=$?
+
 hoursleftafter=$(python ./artis/scripts/slurmjobhoursleft.py ${SLURM_JOB_ID})
 echo "$(date): after srun sn3d finished. hours left: $hoursleftafter"
 source ./artis/scripts/corehours-after.sh
 
-if grep -q "RESTART_NEEDED" "output_0-0.txt"
-then
+# sn3d gives 0 also when it writes RESTART_NEEDED, so a non-zero status is a crash.
+if [ $srun_status -ne 0 ]; then
+    echo "$(date): srun sn3d gave status $srun_status, so this job submits nothing"
+    exit $srun_status
+fi
+
+if grep -qs "RESTART_NEEDED" output_0-0.txt; then
     # the submit script sets the job name and the address of the next job
     source ./artis/scripts/artis-leonardo-submit.sh
 elif [ -f packets00_0000.out ]; then

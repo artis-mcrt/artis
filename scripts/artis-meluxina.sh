@@ -20,7 +20,7 @@ cd "${SLURM_SUBMIT_DIR:?}" || exit 1
 export MAKEFLAGS="--check-symlink-times --jobs=$(nproc)"
 export OMPI_CXX=g++
 cd artis
-make
+make || exit 1
 cd ..
 
 mpicxx --version
