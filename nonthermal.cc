@@ -309,7 +309,7 @@ auto read_shell_configs() {
 }
 
 void read_binding_energies() {
-  int nshells = 0;  // number of shells in the shell occupancy file
+  int nshells = 0;  // number of shells in the binding energy file
   int n_z_binding = 0;  // number of elements in binding energy file
 
   constexpr auto filename = "binding_energies_lotz1970.txt";
@@ -484,7 +484,8 @@ void read_auger_data() {
         }
       }
 
-      // use the epsilon correction factor as in equation 7 of Kaastra & Mewe (1993), A&AS, 97, 443-482
+      // use the epsilon correction factor as in equation 7 of Kaastra & Mewe (1993), A&AS, 97, 443-482, bibcode
+      // 1993A&AS...97..443K
       auto en_auger_ev = static_cast<float>(en_auger_ev_total_nocorrection - (epsilon_e3 / 1000. * ionpot_ev));
 
       assert_always(shellnum > 0);
@@ -946,10 +947,9 @@ constexpr auto xs_excitation(const int element, const int ion, const int lower, 
     // permitted E1 electric dipole transitions
     const double U = energy / epsilon_trans;
 
-    // Mewe (1972), A&A, 20, 215-221, equation 5 fits g(U) = A + B/U + C/U^2 + D*ln(U); keep the A and D ln(U)
-    // terms,
-    // with the D = sqrt(3)/(2 pi) that Mewe recommends for all optically allowed transitions rounded
-    // to 0.28 (S20, section 2.5, where this pair is described as the formula's
+    // Mewe (1972), A&A, 20, 215-221, bibcode 1972A&A....20..215M, equation 5 fits g(U) = A + B/U + C/U^2 +
+    // D*ln(U); keep the A and D ln(U) terms, with the D = sqrt(3)/(2 pi) that Mewe recommends for all optically
+    // allowed transitions rounded to 0.28 (S20, section 2.5, where this pair is described as the formula's
     // "first two terms")
     constexpr double mewe_A = 0.15;
     constexpr double mewe_D = 0.28;
@@ -957,7 +957,7 @@ constexpr auto xs_excitation(const int element, const int ion, const int lower, 
 
     constexpr double prefactor = 45.585750051;  // 8 * pi^2/sqrt(3)
     // van Regemorter (1962), ApJ, 136, 906-915, doi:10.1086/147445, approximation with the g_bar above from
-    // Mewe (1972), A&A, 20, 215-221
+    // Mewe (1972), A&A, 20, 215-221, bibcode 1972A&A....20..215M
     return prefactor * A_naught_squared * pow2(H_ionpot / epsilon_trans) *
            globals::alltrans.osc_strength[alltransindex] * g_bar / U;
   }
@@ -1470,7 +1470,8 @@ void xs_excitation_for_each(const int alltransindex, const double statweight_low
   const double trans_osc_strength = globals::alltrans.osc_strength[alltransindex];
   // permitted E1 electric dipole transitions
 
-  // the A and D ln(U) terms of the Mewe (1972), A&A, 20, 215-221, equation 5 fitting formula
+  // the A and D ln(U) terms of the Mewe (1972), A&A, 20, 215-221, bibcode 1972A&A....20..215M, equation 5
+  // fitting formula
   // g(U) = A + B/U + C/U^2 + D*ln(U); see the comment in xs_excitation()
   constexpr double mewe_A = 0.15;
   constexpr double mewe_D = 0.28;
@@ -1479,7 +1480,7 @@ void xs_excitation_for_each(const int alltransindex, const double statweight_low
   const double epsilon_trans_ev = epsilon_trans / EV;
 
   // van Regemorter (1962), ApJ, 136, 906-915, doi:10.1086/147445, approximation with the g_bar below from
-  // Mewe (1972), A&A, 20, 215-221
+  // Mewe (1972), A&A, 20, 215-221, bibcode 1972A&A....20..215M
   const double constantfactor =
       epsilon_trans_ev * prefactor * A_naught_squared * pow2(H_ionpot / epsilon_trans) * trans_osc_strength;
 

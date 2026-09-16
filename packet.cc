@@ -93,7 +93,7 @@ void packet_init(std::span<Packet> packets) {
 
   printlnlog("INITIAL_PACKETS_ON is {}", INITIAL_PACKETS_ON ? "true" : "false");
 
-  // MPKTS pellets share the total decay energy etot_tmodel_tinf.
+  // the total decay energy from t_model to t_inf, for the log only. The pellets share etot_simtime below.
   const double etot_tmodel_tinf = decay::get_global_etot_tmodel_tinf();
 
   printlnlog("etot {:g} [erg] (t_model to t_inf)", etot_tmodel_tinf);
