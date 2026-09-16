@@ -140,7 +140,7 @@ constexpr auto inputlinecomments = std::array{
     "18: num_lte_timesteps",
     "19: optical_depth_is_thick num_grey_timesteps",
     "20: UNUSED max_bf_continua: (ignored; all bound-free continua are included)",
-    "21: nprocs_exspec: extract spectra for n MPI tasks. sn3d will set this on start of new sim.",
+    "21: nprocs_exspec: the number of packet files, one for each sn3d rank. sn3d sets this at the start of a new run.",
     "22: UNUSED do_emission_res: this is always true for exspec, sometimes true during sn3d",
     "23: UNUSED kpktdiffusion_timescale n_kpktdiffusion_timesteps: now set in kpkt.cc",
 };

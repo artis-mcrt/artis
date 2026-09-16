@@ -9,10 +9,12 @@
 
 #include <algorithm>
 #include <chrono>
+#include <cstddef>
 #include <cstdlib>
 #include <filesystem>
 #include <format>
 #include <span>
+#include <string>
 #include <vector>
 
 #pragma clang unsafe_buffer_usage begin
@@ -37,9 +39,8 @@ auto main(int argc, char* argv[]) -> int {
 
   check_already_running();
 
-  if (globals::my_rank == 0) {
-    set_log_file("exspec.txt");
-  }
+  // rank 0 keeps the name exspec.txt, which the scripts and the workflows read
+  set_log_file(globals::my_rank == 0 ? std::string("exspec.txt") : std::format("exspec_{}.txt", globals::my_rank));
 
   printlnlog("git branch: {}", GIT_BRANCH);
 
@@ -59,10 +60,6 @@ auto main(int argc, char* argv[]) -> int {
   printlnlog("  rank_in_node {} of [0..{}] in node {} of [0..{}]", globals::rank_in_node, globals::node_nprocs - 1,
              globals::node_id, globals::node_count - 1);
 
-  // single rank only for now
-  assert_always(globals::my_rank == 0);
-  assert_always(globals::nprocs == 1);
-
   // Read in parameters from input.txt
   read_parameterfile({});
 
@@ -72,21 +69,29 @@ auto main(int argc, char* argv[]) -> int {
 
   setup_timesteps();
 
-  // nprocs_exspec is the number of rank output files to process with exspec
-  // (not the number of ranks used to run exspec, which is always 1 for now)
+  // nprocs_exspec is the number of packet files, one for each sn3d rank
   assert_always(globals::nprocs_exspec > 0);
+  if (globals::nprocs > globals::nprocs_exspec) {
+    fatal_crash("exspec runs with {} ranks but there are only {} packet files. Use at most {} ranks.", globals::nprocs,
+                globals::nprocs_exspec, globals::nprocs_exspec);
+  }
 
-  // one vector for each rank file. A file holds far fewer than MPKTS packets when KEEP_ESCAPED_GAMMAS is false.
+  // Each exspec rank reads a contiguous block of the packet files. With one node, the blocks keep the order of
+  // the packets equal to a run with a single rank.
+  const auto [firstfile, nfiles] = get_range_chunk(globals::nprocs_exspec, globals::nprocs, globals::my_rank);
+  printlnlog("this rank reads {} of the {} packet files, from packets{:02d}_{:04d}.out", nfiles, globals::nprocs_exspec,
+             0, firstfile);
+
+  // one vector for each packet file. A file holds far fewer than MPKTS packets when KEEP_ESCAPED_GAMMAS is false.
   std::vector<std::vector<Packet>> packets_by_rank;
-  reserve_resize(packets_by_rank, globals::nprocs_exspec);
-  for (int rank = 0; rank < globals::nprocs_exspec; rank++) {
-    packets_by_rank[rank] = read_text_packets(std::format("packets{:02d}_{:04d}.out", 0, rank));
-    const auto escaped_rpkt_count = std::ranges::count_if(packets_by_rank[rank], [](const Packet& pkt) {
-      return pkt.type == TYPE_ESCAPE && pkt.escape_type == TYPE_RPKT;
-    });
-    const auto escaped_gamma_count = std::ranges::count_if(packets_by_rank[rank], [](const Packet& pkt) {
-      return pkt.type == TYPE_ESCAPE && pkt.escape_type == TYPE_GAMMA;
-    });
+  reserve_resize(packets_by_rank, nfiles);
+  for (ptrdiff_t i = 0; i < nfiles; i++) {
+    const auto rank = firstfile + i;
+    packets_by_rank[i] = read_text_packets(std::format("packets{:02d}_{:04d}.out", 0, rank));
+    const auto escaped_rpkt_count = std::ranges::count_if(
+        packets_by_rank[i], [](const Packet& pkt) { return pkt.type == TYPE_ESCAPE && pkt.escape_type == TYPE_RPKT; });
+    const auto escaped_gamma_count = std::ranges::count_if(
+        packets_by_rank[i], [](const Packet& pkt) { return pkt.type == TYPE_ESCAPE && pkt.escape_type == TYPE_GAMMA; });
     printlnlog("  rank {}: {} escaped r-packets and {} escaped gamma-pkts", rank, escaped_rpkt_count,
                escaped_gamma_count);
   }
@@ -100,7 +105,9 @@ auto main(int argc, char* argv[]) -> int {
 
   MPI_Finalize();
 
-  std::filesystem::remove("artis.pid");
+  if (globals::my_rank == 0) {
+    std::filesystem::remove("artis.pid");
+  }
 
   return 0;
 }
