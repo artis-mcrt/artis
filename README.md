@@ -128,11 +128,11 @@ A run writes the following into the simulation folder:
 Run sn3d with `-o JOBFOLDER` (e.g. `./sn3d -o job0`) to write the per-job output files (the rank log files and the estimators, nlte, radfield, and macroatom files) into a subfolder. The cluster job scripts do this automatically with a folder named after the SLURM job id. The shared run-level files, including the restart files that a later job resumes from, are still written to the simulation folder, and an output_0-0.txt symlink to the current job's rank-0 log is kept there so that following the log works regardless of the output folder. For runs made without -o, scripts/movefiles.sh can move the per-job files into a subfolder afterwards.
 
 ### Post-processing with exspec
-As well as sn3d, `make` builds exspec, which combines the packets files from all ranks into spectra and light curves. sn3d writes the same files itself, so exspec is necessary only to make them again from the packets files, e.g. after a change of MNUBINS or of the frequency range. Run it in the simulation folder with any number of ranks from one up to the number of packets files:
+As well as sn3d, `make` builds exspec, which combines the packet files from all ranks into spectra and light curves. sn3d writes the same files itself, so exspec is necessary only to make them again from the packet files, e.g. after a change of MNUBINS or of the frequency range. Run it in the simulation folder with any number of ranks from one up to the number of packet files:
 ```bash
 mpirun -np 8 ./exspec
 ```
-exspec reads the same input.txt, model, and atomic data files as sn3d, so it must be run in the same folder. The nprocs_exspec line of input.txt gives the number of packets files, which is the number of sn3d ranks and not the number of exspec ranks. Each exspec rank reads a block of the packets files, and the ranks of one node share the spectra arrays. Rank 0 writes its log to exspec.txt, and each other rank writes exspec_RANK.txt.
+exspec reads the same input.txt, model, and atomic data files as sn3d, so it must be run in the same folder. The nprocs_exspec line of input.txt gives the number of packet files, which is the number of sn3d ranks and not the number of exspec ranks. Each exspec rank reads a block of the packet files, and the ranks of one node share the spectra arrays. Rank 0 writes its log to exspec.txt, and each other rank writes exspec_RANK.txt.
 
 It writes light_curve.out, spec.out, emission.out, emissiontrue.out, and absorption.out, plus gamma_light_curve.out and gamma_spec.out when KEEP_ESCAPED_GAMMAS is set, and specpol.out, emissionpol.out and absorptionpol.out when POL_ON is set. Direction-resolved versions of these go in the speclc_angle_res folder.
 
@@ -179,7 +179,7 @@ Run-time configuration with:
 - whether the run continues from the restart files of a previous job
 - number of pure LTE timesteps
 - optically-thick condition that switches cells to a grey opacity treatment
-- nprocs_exspec: the number of packets files that exspec will read, one for each sn3d rank
+- nprocs_exspec: the number of packet files that exspec will read, one for each sn3d rank
 
 The format is positional, so every line must be present and in order, including those that are no longer used. See [tests/classicmode_3d_inputfiles/input-newrun.txt](tests/classicmode_3d_inputfiles/input-newrun.txt) for a complete example with a comment on every line.
 

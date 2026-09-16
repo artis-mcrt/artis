@@ -9,12 +9,10 @@
 
 #include <algorithm>
 #include <chrono>
-#include <cstddef>
 #include <cstdlib>
 #include <filesystem>
 #include <format>
 #include <span>
-#include <string>
 #include <vector>
 
 #pragma clang unsafe_buffer_usage begin
@@ -39,8 +37,11 @@ auto main(int argc, char* argv[]) -> int {
 
   check_already_running();
 
-  // rank 0 keeps the name exspec.txt, which the scripts and the workflows read
-  set_log_file(globals::my_rank == 0 ? std::string("exspec.txt") : std::format("exspec_{}.txt", globals::my_rank));
+  if (globals::my_rank == 0) {
+    set_log_file("exspec.txt");
+  } else {
+    set_log_file(std::format("exspec_{}.txt", globals::my_rank));
+  }
 
   printlnlog("git branch: {}", GIT_BRANCH);
 
@@ -63,51 +64,50 @@ auto main(int argc, char* argv[]) -> int {
   // Read in parameters from input.txt
   read_parameterfile({});
 
+  // nprocs_exspec is the number of packet files, one for each sn3d rank
+  assert_always(globals::nprocs_exspec > 0);
+  if (globals::nprocs > globals::nprocs_exspec) {
+    fatal_crash("exspec runs with {} ranks but there are only {} packet files", globals::nprocs,
+                globals::nprocs_exspec);
+  }
+
   read_atomicdata();
 
   grid::read_ejecta_model();
 
   setup_timesteps();
 
-  // nprocs_exspec is the number of packet files, one for each sn3d rank
-  assert_always(globals::nprocs_exspec > 0);
-  if (globals::nprocs > globals::nprocs_exspec) {
-    fatal_crash("exspec runs with {} ranks but there are only {} packet files. Use at most {} ranks.", globals::nprocs,
-                globals::nprocs_exspec, globals::nprocs_exspec);
-  }
-
-  // Each exspec rank reads a contiguous block of the packet files. With one node, the blocks keep the order of
-  // the packets equal to a run with a single rank.
+  // Each exspec rank reads a contiguous block of the packet files. Under REPRODUCIBLE, the ranks of a node then add
+  // their packets to the shared spectra one rank at a time, so the spectra of one node keep the order of a run with
+  // a single rank. The light curves are private to each rank and MPI sums them, so their order differs.
   const auto [firstfile, nfiles] = get_range_chunk(globals::nprocs_exspec, globals::nprocs, globals::my_rank);
-  printlnlog("this rank reads {} of the {} packet files, from packets{:02d}_{:04d}.out", nfiles, globals::nprocs_exspec,
-             0, firstfile);
+  printlnlog("this rank reads {} of the {} packet files, from the file of sn3d rank {}", nfiles, globals::nprocs_exspec,
+             firstfile);
 
   // one vector for each packet file. A file holds far fewer than MPKTS packets when KEEP_ESCAPED_GAMMAS is false.
-  std::vector<std::vector<Packet>> packets_by_rank;
-  reserve_resize(packets_by_rank, nfiles);
-  for (ptrdiff_t i = 0; i < nfiles; i++) {
-    const auto rank = firstfile + i;
-    packets_by_rank[i] = read_text_packets(std::format("packets{:02d}_{:04d}.out", 0, rank));
+  std::vector<std::vector<Packet>> packets_by_file;
+  packets_by_file.reserve(nfiles);
+  for (auto sn3d_rank = firstfile; sn3d_rank < firstfile + nfiles; sn3d_rank++) {
+    packets_by_file.push_back(read_text_packets(std::format("packets{:02d}_{:04d}.out", 0, sn3d_rank)));
+    const auto& packets = packets_by_file.back();
     const auto escaped_rpkt_count = std::ranges::count_if(
-        packets_by_rank[i], [](const Packet& pkt) { return pkt.type == TYPE_ESCAPE && pkt.escape_type == TYPE_RPKT; });
+        packets, [](const Packet& pkt) { return pkt.type == TYPE_ESCAPE && pkt.escape_type == TYPE_RPKT; });
     const auto escaped_gamma_count = std::ranges::count_if(
-        packets_by_rank[i], [](const Packet& pkt) { return pkt.type == TYPE_ESCAPE && pkt.escape_type == TYPE_GAMMA; });
-    printlnlog("  rank {}: {} escaped r-packets and {} escaped gamma-pkts", rank, escaped_rpkt_count,
+        packets, [](const Packet& pkt) { return pkt.type == TYPE_ESCAPE && pkt.escape_type == TYPE_GAMMA; });
+    printlnlog("  sn3d rank {}: {} escaped r-packets and {} escaped gamma-pkts", sn3d_rank, escaped_rpkt_count,
                escaped_gamma_count);
   }
 
   // the index of the last timestep also selects the emission, absorption, and direction bin files
-  const std::vector<std::span<const Packet>> packet_spans_by_rank(packets_by_rank.begin(), packets_by_rank.end());
-  write_light_curves_and_spectra(globals::ntimesteps - 1, packet_spans_by_rank);
+  const std::vector<std::span<const Packet>> packet_spans_by_file(packets_by_file.begin(), packets_by_file.end());
+  write_light_curves_and_spectra(globals::ntimesteps - 1, packet_spans_by_file);
 
   const auto exspec_duration = std::chrono::duration<double>(std::chrono::steady_clock::now() - sys_time_start).count();
   printlnlog("exspec finished (took {:.1f} seconds)", exspec_duration);
 
   MPI_Finalize();
 
-  if (globals::my_rank == 0) {
-    std::filesystem::remove("artis.pid");
-  }
+  std::filesystem::remove("artis.pid");
 
   return 0;
 }
