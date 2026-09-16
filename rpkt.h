@@ -151,8 +151,7 @@ auto calculate_chi_ffheat_nnionpart(int nonemptymgi) -> double;
 }
 
 static_assert(get_linedistance(100., 1., 2., -0.5) == 0.);  // overshot the line resonance
-static_assert(USE_RELATIVISTIC_DOPPLER_SHIFT || get_linedistance(2., 4., 2., -1.) == (CLIGHT * 2. * 2. / 2.));
-static_assert(!USE_RELATIVISTIC_DOPPLER_SHIFT || get_linedistance(2., 4., 2., -1.) == 2.);
+static_assert(get_linedistance(2., 4., 2., -1.) == (USE_RELATIVISTIC_DOPPLER_SHIFT ? 2. : CLIGHT * 2. * 2. / 2.));
 
 // the corrected path of a bin is the path that calculate_expansion_opacities() assumes
 static_assert((get_linedistance(2., 4., 2., -1.) * get_expopac_pathfactor(2., 2., -1.)) == (CLIGHT * 2. * 2. / 2.));
