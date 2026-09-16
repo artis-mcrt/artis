@@ -30,7 +30,7 @@ void init();
 // Assemble and solve the cell's discretised Spencer-Fano degradation balance, including Coulomb heating, excitation,
 // ionisation, secondary electrons, and Auger electrons. Convert the electron flux into deposition fractions and
 // non-thermal rate coefficients, reusing a recent solution while the ionisation state remains sufficiently similar.
-// Shingles et al. (2020), Section 2.5, doi:10.1093/mnras/stz3412.
+// Shingles et al. (2020), MNRAS, 492, 2029-2043, Section 2.5, doi:10.1093/mnras/stz3412.
 // Return true when the solver makes a new solution for the cell. A kept solution, and the fallback
 // values of a cell without deposition, give false.
 auto solve_spencerfano(int nonemptymgi, int timestep, int iteration) -> bool;

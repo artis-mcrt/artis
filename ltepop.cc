@@ -1,7 +1,7 @@
 // Level populations and ionisation balance in LTE and approximate NLTE: partition functions,
 // Boltzmann/Saha level and ion populations, and the solver for a self-consistent free electron density (nne).
 //
-// The Boltzmann and Saha relations are standard; see e.g. Mihalas (1978), Stellar Atmospheres.
+// The Boltzmann and Saha relations are standard; see e.g. Mihalas (1978), Stellar Atmospheres, 2nd ed., W. H. Freeman.
 
 #include "ltepop.h"
 
@@ -75,7 +75,7 @@ THREADLOCALONHOST CellWarningMarker ionfract_zeroed_warned;
 
   assert_testmodeonly(!globals::lte_iteration);
   assert_testmodeonly(grid::thick_allcells[nonemptymgi] !=
-                      grid::CellThickness::THICK);  // should use use phi_lte instead
+                      grid::CellThickness::THICK);  // a thick cell must use phi_saha()
 
   assert_testmodeonly(!elem_has_nlte_levels(element));  // don't use this function if the NLTE solver is active
 
@@ -106,8 +106,6 @@ THREADLOCALONHOST CellWarningMarker ionfract_zeroed_warned;
 
   const double gamma_nt =
       (NT_SCHEME != NonThermalScheme::NT_OFF) ? nonthermal::nt_ionisation_ratecoeff(nonemptymgi, element, ion) : 0.;
-
-  // gamma_nt should generally be higher than the Gamma term for nebular epoch
 
   assert_always((Gamma_ion + gamma_nt) > 0);
   // numerator: recombination rate coefficient, i.e. rate per upper ion pop per nne [cm^3/s]
@@ -202,7 +200,7 @@ auto calculate_levelpop_nominpop(const int nonemptymgi, const int element, const
   return {calculate_levelpop_boltzmann(nonemptymgi, element, ion, level), false};
 }
 
-// Calculate the partition function for ion=ion of element=element in a cell modelgridindex
+// Calculate the partition function of an ion in the cell nonemptymgi
 auto calculate_partfunct(const int element, const int ion, const int nonemptymgi) -> float {
   testmodeassert_valid_ion(element, ion);
   double pop_store{NAN};
@@ -233,7 +231,7 @@ auto calculate_partfunct(const int element, const int ion, const int nonemptymgi
   assert_always(std::isfinite(U_float));
 
   if (initial) {
-    // put back the zero, just in case it matters for something
+    // restore the stored ground level population
     set_groundlevelpop(nonemptymgi, element, ion, static_cast<float>(pop_store));
   }
 

@@ -78,8 +78,8 @@ int first_input_cellid{-1};  // auto-determine first cell index in model.txt (us
 // Initial co-ordinates of inner most corner of cell.
 std::array<std::vector<double>, 3> coord_pos_min_tmin{};
 
-// associate each propagation cell with a model grid cell, or not, if the cell is empty (or doesn't get mapped to
-// anything such as 1D/2D to 3D)
+// the model cell of each propagation cell, or -1 for a propagation cell with no matter, e.g. a corner cell outside
+// the outermost shell of a 1D or 2D model
 std::vector<int> propcell_mgi;
 std::vector<int> propcell_nonemptymgi;
 
@@ -114,7 +114,7 @@ std::vector<int> ranks_ndo_nonempty;
 struct ModelGridCellInput {
   float rhoinit = -1.;
   float ffegrp = 0.;
-  // a float, so that the stored mean radial position stays bit-identical to the earlier results
+  // a float. A double sum changes the mean radial position at rounding level and thus the results.
   float initial_radial_pos_sum = 0.;
   // sum of the volume averaged r^2 per propagation cell, for the kinetic energy of the BARNES
   // thermalisation scheme. A double, because the sum runs over up to millions of propagation cells
@@ -233,7 +233,7 @@ void read_possible_yefile() {
   return stride;
 }
 
-// convert a cell index number into an integer (x,y,z or r) coordinate index from 0 to ncoordgrid[axis]
+// convert a cell index into the integer coordinate index (x, y, z, or r) in [0, ncoordgrid[axis])
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_cellcoordindex(const int cellindex, const int axis) -> int {
   return (cellindex / get_coordcellindexstride(axis)) % ncoordgrid[axis];
 }
@@ -468,7 +468,7 @@ auto get_cellradialposmeansquared(const int cellindex) -> double {
 }
 
 void allocate_nonemptycells_composition_cooling() {
-  // Initialise composition dependent cell data for the given cell
+  // allocate the composition, cooling, and NLTE population arrays of the nonempty cells
   const ptrdiff_t nonempty_npts_model_ptrdifft = get_nonempty_npts_model();
   const auto nelements = get_nelements();
 
@@ -700,7 +700,6 @@ void allocate_nonemptymodelcells() {
   std::ranges::fill(globals::colheatingestimator_save, 0.);
 #endif
 
-  // barrier to make sure node master has set abundance values to node shared memory
   MPI_Barrier_allranks();
 
   printlnlog(
@@ -770,11 +769,9 @@ void read_elem_abundances() {
   printlnlog("reading abundances.txt...");
   const bool threedimensional = (get_modelgridtype() == GridType::CARTESIAN3D);
 
-  // Process through the grid to read in the abundances per cell.
-  // The abundance file should only contain information for non-empty
-  // cells. Its format must be cellnumber (integer), abundance for
-  // element Z=1 (float) up to abundance for element Z=30 (float)
-  // i.e. in total one integer and 30 floats.
+  // abundances.txt holds one line for each model cell, also for an empty cell. Each line gives the cell number and
+  // then the mass fraction of each element from Z=1 upwards. The line can end after the last element that the
+  // model needs.
 
   // the mass fraction arrays are in node-shared memory, so only the node leader of each node parses the file and
   // writes the values (synchronised by the barrier below). The other ranks would just discard everything they read
@@ -846,13 +843,12 @@ void read_elem_abundances() {
         const int nonemptymgi = get_nonemptymgi_of_mgi(mgi);
 
         for (int element = 0; element < get_nelements(); element++) {
-          // now set the abundances (by mass) of included elements, i.e.
-          // read out the abundances specified in the atomic data file
+          // set the mass fraction of each element that the atomic data includes
           const int atomic_number = get_atomicnumber(element);
           const auto elemmassfrac = static_cast<float>(elem_massfracs_in[atomic_number - 1] / normfactor);
           assert_always(elemmassfrac >= 0.);
 
-          // radioactive nuclide abundances should have already been set by read_??_model. Check here, while
+          // read_ejecta_model() has already set the nuclide mass fractions. Check here, while
           // the mass fractions are still exactly as the input files gave them, that abundances.txt gives the
           // element at least as much mass as model.txt gives its tracked isotopes. Any later mapping rescale
           // changes the nuclide mass fractions but not the elemental ones, so this cannot be tested afterwards.
@@ -953,7 +949,7 @@ void read_model_radioabundances(std::istream& fmodel, std::string_view& remainde
 
   for (auto i = 0Z; i < std::ssize(colnames); i++) {
     double valuein = 0.;
-    assert_always(parse_next_token(remainder, valuein));  // usually a mass fraction, but now can be anything
+    assert_always(parse_next_token(remainder, valuein));  // a mass fraction or another column value, e.g. Ye or q
 
     if (nucindexlist[i] >= 0) {
       assert_testmodeonly(valuein <= 1.);
@@ -1223,7 +1219,7 @@ void assign_initial_temperatures() {
   // We assume that for early times the material is so optically thick, that
   // all the radiation is trapped in the cell it originates from. This
   // means furthermore LTE, so that both temperatures can be evaluated
-  // according to the local energy density resulting from the 56Ni decay.
+  // according to the local energy density from all radioactive decays and the initial energy q.
   // The dilution factor is W=1 in LTE.
 
   printlog("Assigning initial temperatures...");
@@ -1384,7 +1380,6 @@ void setup_nstart_ndo() {
   }
 }
 
-// set up a uniform cuboidal grid.
 // Stop the run when the grid corners expand faster than light and nothing removes them. The
 // propagation cannot treat a superluminal boundary, so the setup must either cut the corners with
 // FORCE_SPHERICAL_ESCAPE_SURFACE or use a smaller vmax.
@@ -1649,8 +1644,7 @@ template <BoundaryType boundarytype, size_t S1>
       return dist2;
     }
     return std::min(dist1, dist2);
-
-  }  // exactly one intersection
+  }
 
   // one intersection
   // ignore this and don't change which cell the packet is in
@@ -2044,7 +2038,8 @@ void do_MPI_Bcast_nlte_solution_ranges(const ptrdiff_t nstart_nonempty, const pt
     }
 
     case RpktGreyType::TANAKA2020_ELECTRONFRAC: {
-      // electron-fraction-dependent opacities from Tanaka et al. (2020) table 1.
+      // electron-fraction-dependent opacities from table 1 of Tanaka, Kato, Gaigalas & Kawaguchi (2020), MNRAS,
+      // 496, 1369-1392, doi:10.1093/mnras/staa1576
       const auto Ye = modelgrid_input[mgi].initelectronfrac;
       if (Ye <= 0.) {
         fatal_crash(
@@ -2522,8 +2517,8 @@ void init_grid() {
 
   read_elem_abundances();
 
-  // when mapping a 1D spherical model onto a cubic grid, rescale the nuclide abundances so that each nuclide's
-  // total mass matches the input model again. Every propagation cell takes the model shell that its centre falls
+  // when the model grid and the propagation grid differ, rescale the nuclide mass fractions so that the total mass
+  // of each nuclide matches the input model again. Every propagation cell takes the model shell that its centre falls
   // in, so the volume associated with a shell is a staircase approximation of the true shell volume and the
   // mapped mass of each nuclide differs from the input.
   //
@@ -2666,8 +2661,6 @@ DEVICE_FUNC void snap_pos_to_cell(Vec3d& pos, const double time, const int celli
       return {0., -99};
     }
   }
-
-  // d is used to loop over the coordinate indices 0,1,2 for x,y,z
 
   // the following vector are in grid coordinates, so either x,y,z (3D) or r (1D), or r_xy, z (2D)
 
@@ -2881,8 +2874,6 @@ DEVICE_FUNC void snap_pos_to_cell(Vec3d& pos, const double time, const int celli
     // so the crossing occurs when
     // t - tstart = (x0 - x+/-(tmin)/tmin * tstart) / (x+/-(tmin)/tmin - (dir.x)*c)
     // distance = c * (t - tstart)
-
-    // Modified so that it also returns the distance to the closest cell boundary, regardless of direction.
 
     for (int d = 0; d < 3; d++) {
       if (pktvelgridcoord[d] > (cellcoordmax[d] / globals::tmin)) {

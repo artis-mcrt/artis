@@ -402,8 +402,8 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
     if constexpr (NLTE_TE_NNE_USE_ANDERSON_ACCEL) {
       // log_state_solved holds T_e from the finder of this pass, and nne and the ion populations from
       // the element solves of the previous pass. It is the output of the map that log_state_applied
-      // went into, so every component is a residual at the same state. A different set of significant_ions
-      // ions is a different state, so the history goes.
+      // went into, so every component is a residual at the same state. A different set of significant ions
+      // is a different state, so the history is cleared.
       collect_significant_ions(nonemptymgi, significant_ions);
       if (significant_ions != significant_ions_prev) {
         anderson.reset(significant_ions.size() + 2);
@@ -543,7 +543,6 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
     }
 
     const auto sys_time_start_nltepops = std::chrono::steady_clock::now();
-    // fractional difference between previous and current iteration's (nne or max(ground state population change))
     for (int element = 0; element < get_nelements(); element++) {
       if (get_nions(element) > 0 && elem_has_nlte_levels(element)) {
         solve_nlte_pops_element(element, nonemptymgi, nts, nlte_iter);
@@ -702,10 +701,8 @@ void update_gamma_corrphotoionrenorm_bfheating_estimators(const int nonemptymgi,
         }
       }
 
-      // 2012-01-11. These loops should terminate here to precalculate *ALL* corrphotoionrenorm
-      // values so that the values are known when required by the call to get_corrphotoioncoeff in
-      // the following loops. Otherwise get_corrphotoioncoeff tries to renormalize by the closest
-      // corrphotoionrenorm in frequency space which can lead to zero contributions to the total photoionisation rate!
+      // the loop over all ions completes here, because get_corrphotoioncoeff() in the next loop reads the
+      // corrphotoionrenorm of the closest ground-level continuum of any ion
     }
   }
   for (int element = 0; element < get_nelements(); element++) {
@@ -842,7 +839,7 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
     radfield::titer_J(nonemptymgi);
 #endif
 
-    // lte_iteration really means either ts 0 or nts < globals::num_lte_timesteps
+    // lte_iteration is true for nts < globals::num_lte_timesteps
     if (globals::lte_iteration || grid::thick_allcells[nonemptymgi] == grid::CellThickness::THICK) {
       // LTE mode or grey mode (where temperature doesn't matter but is calculated anyway)
 

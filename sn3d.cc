@@ -813,9 +813,8 @@ auto do_timestep(const int nts, const int titer, std::vector<Packet>& packets, c
   }
   packet_propagation_start_time = std::chrono::steady_clock::now();
 
-  // set all the estimators to zero before moving packets. This is done after update_grid() so that the
-  // gamma-ray heating estimator, and the photoionisation and stimulated recombination estimators, are still
-  // available to it from the previous timestep.
+  // set all the estimators to zero before the packets move. This runs after update_grid(), because
+  // update_grid() reads the estimators of the previous timestep.
   zero_estimators();
 
   MPI_Barrier_allranks();
@@ -1135,10 +1134,7 @@ auto main(int argc, char* argv[]) -> int {
     zero_estimators();
   }
 
-  // For the parallelisation of update_grid, the process needs to be told which cells belong to it.
-  // The next loop is over all grid cells. For parallelisation, we want to split this loop between
-  // processes. This is done by assigning each MPI process nblock cells. The residual n_leftover
-  // cells are sent to processes 0 ... process n_leftover -1.
+  // log the range of model cells that setup_nstart_ndo() in grid.cc assigned to this rank for update_grid()
   const int nstart = grid::get_nstart(globals::my_rank);
   const int ndo = grid::get_ndo(globals::my_rank);
   const int ndo_nonempty = grid::get_ndo_nonempty(globals::my_rank);
@@ -1173,8 +1169,6 @@ auto main(int argc, char* argv[]) -> int {
   while (globals::timestep < globals::timestep_finish && !terminate_early) {
     MPI_Barrier_allranks();
 
-    // titer example: Do 3 iterations on timestep 0-6
-    // const int n_titer = (globals::timestep < 6) ? 3 : 1;
     const int n_titer = 1;
 
 #ifdef DO_TITER

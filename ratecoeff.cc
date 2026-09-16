@@ -66,7 +66,7 @@ MPI_shared_array<float> ion_alpha_sp;  // size is nincludedions * RATECOEFF_TABL
                                        // by (uniqueionindex * RATECOEFF_TABLESIZE) + temperatureindex
 
 // the following spans are indexed by get_bflutindex()
-MPI_shared_array<double> spontrecombcoeffs{};  // indexed by get_bflutindex()
+MPI_shared_array<double> spontrecombcoeffs{};
 MPI_shared_array<double> corrphotoioncoeffs{};  // for USE_LUT_PHOTOION = true
 MPI_shared_array<double> bfcooling_coeffs{};
 
@@ -189,7 +189,6 @@ void precalculate_rate_coefficient_integrals() {
             assert_always(std::isfinite(modified_sahafact));
 
             assert_always(!get_phixs_table(element, ion, level).empty());
-            // the threshold of the first target gives nu of the first phixstable point
             const auto photoion_xs = get_phixs_table(element, ion, level);
 
             // Spontaneous recombination and bf-cooling coefficient don't depend on the radiation field
@@ -772,8 +771,8 @@ auto calculate_ionrecombcoeff(const int nonemptymgi, const float T_e, const int 
     return alpha;
   }
 
-  // per ground multiplet: assume that photoionisation of the ion below is only to the ground multiplet levels of
-  // the current ion
+  // per ground multiplet or per ion population: the summed population of the first upper_nlevels levels gives the
+  // normalisation
   const int upper_nlevels = (norm == IonRecombNorm::GROUNDMULTIPLETPOP) ? get_nlevels_groundterm(element, upperion)
                                                                         : get_nlevels(element, upperion);
   double nnupperion = 0;
@@ -807,11 +806,8 @@ auto calculate_ionrecombcoeff(const int nonemptymgi, const float T_e, const int 
   return alpha;
 }
 
-// Precalculates the rate coefficients for stimulated and spontaneous
-// recombination and photoionisation on a given temperature grid using integration.
-// NB: with the nebular approximation they only depend on T_e, T_R and W.
-// W is easily factored out. For stimulated recombination we must assume
-// T_e = T_R for this precalculation.
+// Tabulate the rate coefficient integrals, calibrate the recombination rates from recombrates.txt, and tabulate
+// the ion recombination coefficients.
 void ratecoefficients_init() {
   precalculate_rate_coefficient_integrals();
 
@@ -958,8 +954,7 @@ auto calculate_iongamma_per_gspop(const int nonemptymgi, const int element, cons
   return ionisation_rate / groundlevelpop;
 }
 
-// ionisation rate coefficient. multiply by the lower ion pop to get a rate.
-// Currently only used for the estimator output file, not the simulation
+// ionisation rate coefficient. Multiply by the lower ion population to get a rate. Only the estimators file uses it.
 auto calculate_iongamma_per_ionpop(const int nonemptymgi, const int element, const int lowerion,
                                    const bool collisional_not_radiative, const bool force_bfintegral) -> double {
   assert_always(lowerion < get_nions(element) - 1);

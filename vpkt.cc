@@ -3,7 +3,7 @@
 // energies are accumulated into viewing-angle-dependent (and optionally polarised) spectra.
 //
 // The virtual-packet scheme and the polarised radiative transfer it feeds are described by
-// Bulla et al. (2015), MNRAS, 450, 967, doi:10.1093/mnras/stv657.
+// Bulla, Sim & Kromer (2015), MNRAS, 450, 967-981, doi:10.1093/mnras/stv657.
 
 #include "vpkt.h"
 
@@ -151,10 +151,6 @@ void add_to_vpkt_grid(const double nu_rf, const double e_rf, const double prob, 
   double vref1{NAN};
   double vref2{NAN};
 
-  // obs is the observer orientation
-
-  // Packet velocity
-
   // The rotation formula below divides by (1 + obsdir[0]), so an observer within this angle of the
   // -x axis takes the exact -x basis. The formula is well conditioned outside this cone, and inside
   // it the basis orientation differs from the formula by less than ~1e-4 radians. The +x case only
@@ -169,7 +165,7 @@ void add_to_vpkt_grid(const double nu_rf, const double e_rf, const double prob, 
     vref1 = -vel[1];
     vref2 = -vel[2];
   } else {
-    // Rotate velocity into projected area seen by the observer (see notes)
+    // rotate the velocity into the plane that the observer sees
     // Rotate velocity from (x,y,z) to (obsdir,vref1,vref2) so that x corresponds to obsdir
     const double crossterm = obsdir[1] * obsdir[2] / (1 + obsdir[0]);
     vref1 = (-obsdir[1] * vel[0]) + ((obsdir[0] + (pow2(obsdir[2]) / (1 + obsdir[0]))) * vel[1]) - (crossterm * vel[2]);
@@ -519,7 +515,7 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
       }
     }
   }
-  return true;  // true if we added columns to vpkt_contrib_row
+  return true;  // the virtual packet escaped in this direction
 }
 
 void init_vspecpol() {
@@ -535,9 +531,7 @@ void init_vspecpol() {
     delta_freq_vspec[m] = static_cast<float>(get_loggrid_edge(VSPEC_NUMIN, dlognu_vspec, m + 1) - lower_freq_vspec[m]);
   }
 
-  // start by setting up the time and frequency bins.
-  // it is all done interms of a logarithmic spacing in both t and nu - get the
-  // step sizes first.
+  // the time bins have a logarithmic spacing, as the frequency bins above
   for (int n = 0; n < VSPEC_TIMEBINS; n++) {
     for (int ind_comb = 0; ind_comb < indexmax; ind_comb++) {
       vspecpol[n][ind_comb].lower_time = static_cast<float>(get_loggrid_edge(VSPEC_TIMEMIN, dlogt_vspec, n));
@@ -735,7 +729,7 @@ void read_vpktparameterfile() {
 
   printlnlog("vpkt.txt: nobsdirections {}", nobsdirections);
 
-  // nz_obs_vpkt. Cos(theta) to the observer. A list in the case of many observers
+  // cos(theta) of each observer direction
   obsdirs_costheta.resize(nobsdirections);
   for (int i = 0; i < nobsdirections; i++) {
     assert_always(fscanf(input_file, "%lg", &obsdirs_costheta[i]) == 1);
@@ -1003,7 +997,7 @@ void init(const int nts, const bool continued_from_saved) {
   }
 
   if (continued_from_saved) {
-    // Continue simulation: read into temporary files
+    // a resumed run reads the accumulated spectra from the temporary files
 
     read_vspecpol(globals::my_rank, nts);
 

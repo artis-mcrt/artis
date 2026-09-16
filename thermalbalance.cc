@@ -91,8 +91,6 @@ void calculate_heating_rates(const int nonemptymgi, const float T_e, const float
       }
     }
 
-    // Collisional heating: recombination to lower ionisation stage (not included)
-
     // Bound-free heating (renormalised analytical calculation)
     for (int ion = 0; ion < nions - 1; ion++) {
       const int nbflevels = get_nlevels_ionising(element, ion);
@@ -352,7 +350,7 @@ void call_T_e_finder(const int nonemptymgi, const double t_current, HeatingCooli
     const auto maxit = 100U;
     constexpr double fractional_accuracy = 1e-3;
 
-    // TOMS 748 (Alefeld, Potra & Shi 1995, ACM Trans. Math. Softw. 21, 327, doi:10.1145/210089.210111):
+    // TOMS 748 (Alefeld, Potra & Shi 1995, ACM Trans. Math. Softw., 21, 327-344, doi:10.1145/210089.210111):
     // bracketing solver with inverse cubic interpolation, so it keeps the root bracketed like bisection
     // but converges superlinearly on the smooth part of the residual
     uintmax_t iternum = maxit;

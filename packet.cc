@@ -56,7 +56,6 @@ void place_pellet(const double e_cmf_per_packet, const std::span<const double> e
   const auto etot_simtime = en_cumulative.back();
   const double targetval = rng_uniform(get_rngstate(pkt)) * etot_simtime;
 
-  // First choose a position for the pellet. In the cell.
   // first i such that en_cumulative[i] > targetval
   const int cellindex = int_index_upperbound(en_cumulative, targetval);
   assert_always(cellindex < grid::ngrid);
@@ -94,8 +93,7 @@ void packet_init(std::span<Packet> packets) {
 
   printlnlog("INITIAL_PACKETS_ON is {}", INITIAL_PACKETS_ON ? "true" : "false");
 
-  // The total number of pellets that we want to start with is just
-  // npkts. The total energy of the pellets is given by etot.
+  // MPKTS pellets share the total decay energy etot_tmodel_tinf.
   const double etot_tmodel_tinf = decay::get_global_etot_tmodel_tinf();
 
   printlnlog("etot {:g} [erg] (t_model to t_inf)", etot_tmodel_tinf);
@@ -112,7 +110,7 @@ void packet_init(std::span<Packet> packets) {
         decay::get_modelcell_endecay_per_mass(nonemptymgi, energy_per_massoftopnuc_decaypath);
   }
 
-  // Need to get a normalisation factor
+  // the cumulative energy of the propagation cells, for the sampling of the pellet cell
   auto en_cumulative = std::vector<double>(grid::ngrid);
 
   double etot_simtime = 0.;

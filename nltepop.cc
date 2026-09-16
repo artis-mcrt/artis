@@ -4,7 +4,7 @@
 // NLTE_TIME_DEPENDENT_FIRST_TIMESTEP, the ion populations get a backward Euler time term.
 //
 // The NLTE ionisation and population solver is described by Shingles et al. (2020), MNRAS, 492,
-// 2029, section 2.3, doi:10.1093/mnras/stz3412.
+// 2029-2043, section 2.3, doi:10.1093/mnras/stz3412.
 
 #include <algorithm>
 #include <chrono>
@@ -767,7 +767,7 @@ void nltepop_matrix_add_chargetransfer(const int nonemptymgi, const int element,
   }
 }
 
-// Add autoionisation and inverse (i.e. collisional capture part of di-el)
+// Add autoionisation and its inverse, the dielectronic capture
 void nltepop_matrix_add_autoionisation(const int nonemptymgi, const int element, const int ion,
                                        const std::span<const std::vector<double>> s_renorm_allions,
                                        RateMatrices& rate_matrices, const int first_ion_used, const int nions_used) {
@@ -951,11 +951,10 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
         popvec[index] = ltepop;
       }
     } else {
-      // A non-finite population (reachable via the popvec[i] = vec_x[i] * pop_normfactors[i] denormalisation
-      // product overflowing - the solver itself rejects a non-finite solution vector through the residual score)
-      // fails every comparison in the triage below, so without this rejection it would pass through unhandled and
-      // trip the assert_always(std::isfinite(pop)) in nltepop_apply_solution, aborting the run instead of letting
-      // the caller drop an ion stage and retry.
+      // A non-finite population fails every comparison in the triage below. It comes from an overflow of the
+      // denormalisation product popvec[i] = vec_x[i] * pop_normfactors[i] on the LU path, or from the GTH
+      // back-substitution. Without this test it would trip assert_always(std::isfinite(pop)) in
+      // nltepop_apply_solution() and abort the run, instead of a retry with a smaller ion range.
       if (!std::isfinite(population)) {
         printlnlog(
             "  [warning] cell {} ts {}: NLTE solver gave non-finite population for index {} (Z={} ionstage {} level "
@@ -1219,9 +1218,9 @@ constexpr double RELATIVE_RESIDUAL_WARN_TOLERANCE = 1e-8;
       iteration_best = iteration + 1;
     }
 
-    // deliberately not converted into a usable relative tolerance, which would truncate the best-of-ten selection
-    // above and change the solution. As an absolute threshold on residual rows that carry arbitrary equilibration
-    // factors, it is unreachable in any realistic solve, so every solve runs all of the refinement passes.
+    // This absolute threshold is unreachable in a realistic solve, because the residual rows carry arbitrary
+    // equilibration factors. Every solve therefore runs all refinement passes. A relative tolerance would cut the
+    // best-of-ten selection above and change the results.
     if (error < 1e-40) {
       break;
     }
@@ -1234,9 +1233,8 @@ constexpr double RELATIVE_RESIDUAL_WARN_TOLERANCE = 1e-8;
   }
   std::ranges::copy(vec_x_best, vec_x.begin());
 
-  // error_best carries arbitrary per-row equilibration factors, so convergence is judged by the componentwise
-  // relative backward error rather than by comparison against a fixed absolute constant, which either fired on
-  // every healthy solve or never fired at all depending only on the element number density.
+  // error_best carries arbitrary per-row equilibration factors, so the convergence test uses the componentwise
+  // relative backward error.
   const double max_relative_residual = get_max_relative_residual(rate_matrix, balance_vector, vec_x);
   if (max_relative_residual > RELATIVE_RESIDUAL_WARN_TOLERANCE) {
     printlnlog(
@@ -1574,7 +1572,8 @@ void nltepop_apply_solution(const int element, const int nonemptymgi, const int 
     assert_always(pop >= 0.);
   }
 
-  // record the solved ion range, so that the charge transfer reactions skip the removed edge ions
+  // record the solved ion range. The charge transfer reactions skip the removed edge ions, and the outer
+  // iteration watches the range for a change.
   grid::set_elements_lowermost_ion(nonemptymgi, element, first_ion_used);
   grid::set_elements_uppermost_ion(nonemptymgi, element, first_ion_used + nions_used - 1);
 
@@ -1705,10 +1704,9 @@ auto get_nlte_solution_range(const int nonemptymgi, const int element) -> std::p
 // column sums cannot affect the result. Small negative autoionisation off-diagonals (warned about during
 // assembly) only weaken that guarantee locally; any resulting invalid populations are policed by the caller.
 // rate_matrix is overwritten. On success, returns std::nullopt and fills vec_x with the stationary distribution
-// normalised to a sum of one. On failure, returns the index of a state with no departure rate into the remaining
-// chain (a reducible/disconnected matrix) and leaves vec_x untouched. An off-diagonal that grows to infinity
-// during the elimination is not a failure here: it is passed through as a non-finite distribution for the
-// caller's population validity check to handle, rather than being rescued (see the back-substitution below).
+// normalised to a sum of one. On failure, returns the index of a state whose departure rate into the remaining
+// chain is zero (a reducible matrix) or not finite, and leaves vec_x untouched. An infinite rate that reaches an
+// inflow sum in the back-substitution gives a non-finite population, which the caller's validity check rejects.
 // Defined with external linkage (declared in nltepop.h) so that unittests.cc can exercise it.
 auto gth_stationary_distribution(std::span<double> rate_matrix, std::span<double> vec_x)
     -> std::optional<std::ptrdiff_t> {
@@ -1760,8 +1758,8 @@ auto gth_stationary_distribution(std::span<double> rate_matrix, std::span<double
     //
     // The number of passes is capped because rescaling cannot rescue every non-finite inflow. Once a weight has
     // underflowed to zero, an infinite rate out of that state gives inflow = 0 * inf = NaN, which survives any
-    // number of further passes, so an uncapped loop would spin here forever. Three passes already span the whole
-    // dynamic range of a double, so the cap never cuts a rescue that would have succeeded. Giving up leaves a
+    // number of further passes, so an uncapped loop would spin here forever. Three passes of 1e-200 span the whole
+    // dynamic range of a double, so the cap of eight never cuts a rescue that can succeed. Giving up leaves a
     // non-finite population for solution_pops_are_valid() to reject or replace, as for any other unusable solve.
     constexpr int max_rescale_passes = 8;
     for (int pass = 0; pass < max_rescale_passes && (!std::isfinite(inflow) || inflow > departure_sum * 1e250);

@@ -142,7 +142,6 @@ DEVICE_FUNC void calculate_macroatom_transitionrates(std::span<double> levelrate
 
   // Downward transitions to lower ionisation stages:
   // radiative/collisional recombination and internal downward jumps
-  // checks only if there is a lower ion, doesn't make sure that Z(ion)=Z(ion-1)+1
   double sum_internal_down_lower = 0.;
   double sum_radrecomb = 0.;
   double sum_colrecomb = 0.;
@@ -285,7 +284,7 @@ void do_macroatom_raddeexcitation(Packet& pkt, const int ionuniquelevelindexstar
 
   stats::increment(stats::Counter::MA_STAT_DEACTIVATION_FB);
 
-  // Finally emit the packet into a randomly chosen direction, update the continuum opacity and set some flags
+  // emit the packet in a random direction and set the emission flags
   emit_rpkt(pkt);
 
   pkt.next_trans = -1;  // continuum transition, no restrictions for further line interactions
@@ -356,8 +355,8 @@ DEVICE_FUNC void calculate_cellcache_macroatom_transitionrates(const int nonempt
 // Repeatedly sample the next macro-atom transition from the rates of the internal upward and downward
 // transitions against the radiative and collisional deactivation channels, until the packet leaves as
 // a line or continuum r-packet or is converted to thermal energy as a k-packet. This is the
-// transition-probability scheme of Lucy (2002), doi:10.1051/0004-6361:20011756; Lucy (2003),
-// arXiv:astro-ph/0303202.
+// transition-probability scheme of Lucy (2002), A&A, 384, 725-735, doi:10.1051/0004-6361:20011756; Lucy (2003),
+// A&A, 403, 261-275, doi:10.1051/0004-6361:20030357.
 DEVICE_FUNC void do_macroatom(Packet& pkt, const MacroAtomState& pktmastate) {
   const auto nonemptymgi = grid::get_propcell_nonemptymgi(pkt.cellindex);
   assert_testmodeonly(nonemptymgi >= 0);
@@ -385,11 +384,6 @@ DEVICE_FUNC void do_macroatom(Packet& pkt, const MacroAtomState& pktmastate) {
 
   bool end_packet = false;
   while (!end_packet) {
-    // Set this here to 1 to overcome problems in cells which have zero population
-    // in some ionisation stage. This is possible because the dependence on the
-    // originating levels population cancels out in the macroatom transition probabilities
-    // which are based on detailed balance.
-
     testmodeassert_valid_ion(element, ion);
     const auto ionuniquelevelindexstart = get_ionuniquelevelindexstart(element, ion);
     const int uniquelevelindex = ionuniquelevelindexstart + level;
@@ -668,7 +662,7 @@ void macroatom_open_file() {
   const auto lowerionlower_uniquelevelindex = get_uniquelevelindex(element, upperion - 1, lower);
   const double statw_lower = stat_weight(lowerionlower_uniquelevelindex);
 
-  // Seaton approximation: Mihalas (1978), eq.5-79, p.134
+  // Seaton approximation: Mihalas (1978), Stellar Atmospheres, 2nd ed., W. H. Freeman, eq. 5-79, p. 134
 
   // select gaunt factor according to ionic charge
   const double g = gaunt_factor(get_ionstage(element, upperion - 1));
@@ -693,7 +687,7 @@ void macroatom_open_file() {
   assert_testmodeonly(phixstargetindex >= 0);
   assert_testmodeonly(phixstargetindex < get_nphixstargets(element, ion, lower));
 
-  // Seaton approximation: Mihalas (1978), eq.5-79, p.134
+  // Seaton approximation: Mihalas (1978), Stellar Atmospheres, 2nd ed., W. H. Freeman, eq. 5-79, p. 134
 
   const double g = gaunt_factor(get_ionstage(element, ion));
 
@@ -723,7 +717,7 @@ void macroatom_open_file() {
       const double trans_osc_strength = globals::alltrans.osc_strength[alltransindex];
 
       const double eoverkt = epsilon_trans / (KB * T_e);
-      // Van-Regemorter formula, Mihalas (1978), eq.5-75, p.133
+      // Van-Regemorter formula, Mihalas (1978), Stellar Atmospheres, 2nd ed., W. H. Freeman, eq. 5-75, p. 133
       constexpr double g_bar = 0.2;  // this should be read in from transitions data: it is 0.2 for transitions nl ->
                                      // n'l' and 0.7 for transitions nl -> nl'
       // gauntfac = max(g_bar, 0.276 * exp(eoverkt) * E1(eoverkt)), a crude approximation to the already
@@ -747,7 +741,8 @@ void macroatom_open_file() {
 
   // a positive coll_str in the atomic data is the effective collision strength Omega, giving the
   // de-excitation rate coefficient 8.629e-6 * Omega / (g_upper * sqrt(T_e)) [cm^3/s]
-  // (Osterbrock & Ferland 2006, Astrophysics of Gaseous Nebulae and AGN, 2nd ed., eq. 3.20, p. 51)
+  // (Osterbrock & Ferland 2006, Astrophysics of Gaseous Nebulae and Active Galactic Nuclei, 2nd ed., University
+  // Science Books, eq. 3.20, p. 51)
   return clumpednne * 8.629e-6 * static_cast<double>(coll_strength) / upperstatweight / std::sqrt(T_e);
 }
 
@@ -767,7 +762,7 @@ void macroatom_open_file() {
       // (an alternative expression is Rutten script eq. 3.32, p.50:
       //  C = n_l * 2.16 * pow(eoverkt, -1.68) * pow(T_e, -1.5) * exp(-eoverkt) * nne * f)
 
-      // Van-Regemorter formula, Mihalas (1978), eq.5-75, p.133
+      // Van-Regemorter formula, Mihalas (1978), Stellar Atmospheres, 2nd ed., W. H. Freeman, eq. 5-75, p. 133
       constexpr double g_bar = 0.2;  // this should be read in from transitions data: it is 0.2 for transitions nl ->
                                      // n'l' and 0.7 for transitions nl -> nl'
       // Gamma = max(g_bar, 0.276 * exp(eoverkt) * E1(eoverkt)), a crude approximation to the already
@@ -790,7 +785,8 @@ void macroatom_open_file() {
 
   // a positive coll_str in the atomic data is the effective collision strength Omega, giving the
   // excitation rate coefficient 8.629e-6 * Omega * exp(-dE/kT) / (g_lower * sqrt(T_e)) [cm^3/s]
-  // (Osterbrock & Ferland 2006, Astrophysics of Gaseous Nebulae and AGN, 2nd ed., eq. 3.20, p. 51)
+  // (Osterbrock & Ferland 2006, Astrophysics of Gaseous Nebulae and Active Galactic Nuclei, 2nd ed., University
+  // Science Books, eq. 3.20, p. 51)
   return clumpednne * 8.629e-6 * static_cast<double>(coll_strength) * std::exp(-eoverkt) / lowerstatweight /
          std::sqrt(T_e);
 }

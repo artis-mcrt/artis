@@ -4,9 +4,10 @@
 //
 // The rates come from three sources:
 // - Published analytic fits for reactions with hydrogen and helium, in the fit form of
-//   Kingdon & Ferland (1996, ApJS, 106, 205), hereafter KF96. The file data/chargetransfer.txt holds
-//   these fits, and its header names the sources. KF96 give no rate for the exothermic ionisation
-//   of Ca+, Sc+, and Ti+ by protons, so those reactions are absent from the file as well.
+//   Kingdon & Ferland (1996, ApJS, 106, 205-211, doi:10.1086/192335), hereafter KF96. The file
+//   data/chargetransfer.txt holds these fits, and its header names the sources. KF96 give no rate for
+//   the exothermic ionisation of Ca+, Sc+, and Ti+ by protons, so those reactions are absent from the
+//   file as well.
 // - A flat estimate for the other electron captures from a neutral donor by a singly charged ion.
 //   A singly charged ion has no Coulomb curve crossing, so the energy release does not predict the
 //   rate. The tabulated rates of such reactions with an energy release up to 4 eV spread from
@@ -14,11 +15,11 @@
 //   and a larger energy release gets the radiative floor.
 // - Landau-Zener estimates for the other electron captures from a neutral donor by an ion with a
 //   charge of two or more. The method is the Landau-Zener approach of Butler & Dalgarno (1980,
-//   ApJ, 241, 838), hereafter BD80, which KF96 also used for their reactions without quantal data.
-//   Each level of the lower acceptor ion is one capture channel. The trajectory crosses the
-//   channels in sequence from the outside inwards and back, with the classical two-state mixing of
-//   Landau and Zener at each crossing, so the total transfer probability stays below one. The
-//   approach probability is one. These estimates carry an accuracy of a factor of a few at best.
+//   ApJ, 241, 838-843, doi:10.1086/158395), hereafter BD80, which KF96 also used for their reactions
+//   without quantal data. Each level of the lower acceptor ion is one capture channel. The trajectory
+//   crosses the channels in sequence from the outside inwards and back, with the classical two-state
+//   mixing of Landau and Zener at each crossing, so the total transfer probability stays below one.
+//   The approach probability is one. These estimates carry an accuracy of a factor of a few at best.
 // init() generates the estimates at startup from the ionisation energies and the level energies of
 // the loaded atomic dataset, so any composition (e.g. r-process ejecta) gets rates. The
 // Landau-Zener rate coefficients go into tables on the temperature grid of the rate coefficients.
@@ -76,13 +77,15 @@ constexpr int LZ_BNODES = 48;
 constexpr int LZ_THERMALNODES = 48;
 
 // keep only the crossing channels inside this radius window [Bohr radii]. Outside the window the
-// coupling makes the channel contribution negligible (Sterling & Stancil 2011 name the range
-// 5 to 15-20 Bohr radii as the favourable window).
+// coupling makes the channel contribution negligible. Sterling & Stancil (2011), A&A, 535, A117,
+// doi:10.1051/0004-6361/201117584, hereafter SS11, name the range 5 to 15-20 Bohr radii as the
+// favourable window.
 constexpr double LZ_RX_MIN_BOHR = 0.5;
 constexpr double LZ_RX_MAX_BOHR = 40.;
 
 // rate floor [cm3/s] from radiative charge transfer, which operates for every exoergic reaction
-// (Butler, Guberman & Dalgarno 1977; adopted as a floor by Sterling & Stancil 2011)
+// (Butler, Guberman & Dalgarno 1977, Phys. Rev. A, 16, 500-502, doi:10.1103/PhysRevA.16.500; adopted as a floor
+// by SS11)
 constexpr double RADIATIVE_CT_FLOOR = 1e-14;
 
 // the flat estimate [cm3/s] for a capture by a singly charged ion with an energy release up to

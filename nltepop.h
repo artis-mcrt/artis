@@ -36,10 +36,6 @@ void nltepop_clear_solution_time(int nonemptymgi);
 [[nodiscard]] auto get_nne_prev(int nonemptymgi) -> double;
 
 void solve_nlte_pops_element(int element, int nonemptymgi, int timestep, int nlte_iter);
-// the ion range of the last NLTE matrix solution of an element in a cell is the lowermost and the
-// uppermost ion of the cell (see grid.h). The cell holds no NLTE solution for the element before
-// the first solve and after a fallback to LTE, and the range is then {-1, -1}. The charge transfer
-// reactions read the range, and the NLTE iteration loop watches it for a change.
 // nltepop_reset_cell() clears the NLTE solution of every element of the cell. The level
 // populations get the -1 marker, and the ranges and the solution time are reset.
 void nltepop_reset_cell(int nonemptymgi);
@@ -49,6 +45,10 @@ void nltepop_reset_cell(int nonemptymgi);
 constexpr double NLTE_SIGNIFICANT_ION_FRACTION = 1e-4;
 static_assert(NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION < NLTE_SIGNIFICANT_ION_FRACTION);
 [[nodiscard]] auto elem_has_nlte_solution(int nonemptymgi, int element) -> bool;
+// The ion range of the last NLTE matrix solution of the element in the cell, as the lowermost and the
+// uppermost solved ion (see grid.h). The range is {-1, -1} before the first solve and after a fallback
+// to LTE. The charge transfer reactions read the range, and the NLTE iteration loop watches it for a
+// change.
 [[nodiscard]] auto get_nlte_solution_range(int nonemptymgi, int element) -> std::pair<int, int>;
 // Give each ion of the element the factor of ion_factors, and hold the element population at its
 // abundance value with a common factor. The outer iteration uses this to inject the ion populations

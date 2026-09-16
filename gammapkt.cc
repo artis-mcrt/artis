@@ -156,7 +156,7 @@ void read_gamma_tables() {
 
     const auto striso = std::format("{}{}", strelname, a);
 
-    // look in the current folder first, then in the data/ subfolder
+    // search the folders of datafolders in order
     const std::array filenames = {std::format("gamma_{}.txt", striso), std::format("{}_lines.txt", striso)};
 
     // keep the order of the search: the folder decides first, then the name of the file
@@ -487,7 +487,8 @@ void compton_scatter(Packet& pkt) {
   }
 
   if constexpr (!USE_XCOM_GAMMAPHOTOION) {
-    // Cross sections from Equation 2 of Ambwani & Sutherland (1988), attributed to Veigele (1973)
+    // Cross sections from equation 2 of Ambwani & Sutherland (1988), ApJ, 325, 820-827, doi:10.1086/166052, after
+    // Veigele (1973), Atomic Data and Nuclear Data Tables, 5, 51-111, doi:10.1016/S0092-640X(73)80015-4
 
     const double hnu_over_100kev = nu_cmf / nu_100kev;
 
@@ -560,9 +561,10 @@ void compton_scatter(Packet& pkt) {
   return chi_cmf;
 }
 
-// energy-dependent factor of the pair-production cross section, from Equation 2 of Ambwani &
-// Sutherland (1988), attributed to Hubbell (1969). Multiply by Z^2 * 1e-27 for a cross section in
-// cm^2. Only valid above the 1.022 MeV threshold.
+// energy-dependent factor of the pair-production cross section, from equation 2 of Ambwani & Sutherland (1988),
+// ApJ, 325, 820-827, doi:10.1086/166052, after Hubbell (1969), NSRDS-NBS 29, National Bureau of Standards,
+// doi:10.6028/NBS.NSRDS.29. Multiply by Z^2 * 1e-27 for a cross section in cm^2. Only valid above the 1.022 MeV
+// threshold.
 [[nodiscard]] constexpr auto get_sigma_pair_prod_factor(const double nu_cmf) -> double {
   const double hnu_over_1MeV = nu_cmf / nu_1mev;
   if (nu_cmf > nu_1p5mev) {
@@ -657,11 +659,7 @@ void update_gamma_dep(const Packet& pkt, const int nonemptymgi, const double dis
   // assumes that a fraction (1. - (1.022 MeV / nu)) of the gamma's energy is thermalised.
   // The remaining 1.022 MeV is made into gamma rays
 
-  // For normalisation this needs to be
-  //  1) divided by volume
-  //  2) divided by the length of the time step
-  //  3) divided by 4 pi sr
-  //  This will all be done later
+  // sn3d.cc normalises the estimator by the cell volume, the timestep width, and the rank count
   assert_testmodeonly(heating_cont >= 0.);
   assert_testmodeonly(std::isfinite(heating_cont));
   atomicadd(globals::dep_estimator_gamma[nonemptymgi], heating_cont);
@@ -730,9 +728,8 @@ void transport_gamma(Packet& pkt, const double t2) {
 
   const auto [boundarydist, next_cellindex] = grid::boundary_distance(pkt.dir, pkt.pos, pkt.prop_time, pkt.cellindex);
 
-  // Now consider the scattering/destruction processes.
-  // Compton scattering - need to determine the scattering co-efficient.
-  // Routine returns the value in the rest frame.
+  // The opacity functions give comoving-frame coefficients. Multiply by the Doppler factor to get rest-frame
+  // coefficients.
   const int mgi = grid::get_propcell_modelgridindex(pkt.cellindex);
   const auto nonemptymgi = (mgi >= 0) ? grid::get_nonemptymgi_of_mgi(mgi) : -1;
 
@@ -877,10 +874,7 @@ void wollaeger_thermalisation(Packet& pkt) {
         grid::boundary_distance(pkt_copy.dir, pkt_copy.pos, pkt_copy.prop_time, pkt_copy.cellindex);
     const int mgi = grid::get_propcell_modelgridindex(pkt_copy.cellindex);
     if (mgi >= 0) {
-      // the density is evaluated at the time that the ray reaches each cell, as in
-      // guttman_thermalisation(). Scaling grid::get_rho() by the packet's own decay time instead
-      // left every contribution wrong by a factor of (t_decay / t_mid)^3, since the grid state is
-      // held at the middle of the current timestep rather than at the time of the decay.
+      // the density is evaluated at the time that the ray reaches each cell, as in guttman_thermalisation()
       const double rho = grid::get_rho_tmin(mgi) * pow3(globals::tmin / pkt_copy.prop_time);
       tau += mean_gamma_opac * rho * boundarydist;  // contribution to the integral
     }
@@ -896,7 +890,7 @@ void wollaeger_thermalisation(Packet& pkt) {
 }
 
 void guttman_thermalisation(Packet& pkt) {
-  // Guttman et al. (2024), doi:10.1093/mnras/stae1795.
+  // Guttman, Shenhar, Sarkar & Waxman (2024), MNRAS, 533, 994-1011, doi:10.1093/mnras/stae1795.
   // Extension of the Wollaeger scheme that averages the deposition probability over random emission directions.
 
   // Mean gamma opacity from section 3.2, using the lower value for nearly symmetric matter at late times.
@@ -962,8 +956,6 @@ void init_gamma_data() {
 
 // convert a pellet to a gamma ray (or kpkt if no gamma spec loaded)
 DEVICE_FUNC void pellet_gamma_decay(Packet& pkt) {
-  // Start by getting the position of the pellet at the point of decay. Pellet is moving with the matter.
-
   // if no gamma spectra is known, then convert straight to kpkts (e.g., Fe52, Mn52)
   if (pkt.nu_cmf < 0) {
     // the energy deposits at once, so the estimators must count it like an absorbed gamma ray

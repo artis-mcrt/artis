@@ -46,7 +46,7 @@ struct NucMassFracCoeffs {
 // calculate final number abundance from multiple decays, e.g., Ni56 -> Co56 -> Fe56 (nuc[0] -> nuc[1] -> nuc[2])
 // the top nuclide initial abundance is set and the chain-end abundance is returned (all intermediates nuclides
 // are assumed to start with zero abundance)
-// note: first and last can be nuclide can be the same if num_nuclides==1, reducing to simple decay formula
+// with num_nuclides == 1 the result is the simple decay formula
 //
 // timediff:           time elapsed for decays [seconds]
 // lambdas:            array of 1/(mean lifetime) for nuc[0]..nuc[num_nuclides-1]  [seconds^-1]
@@ -89,13 +89,13 @@ constexpr auto calculate_decaychain(const double firstinitabund, const std::span
     } else {
       // (1 + 1/x) * exp(-x) - 1/x, rearranged as exp(-x) + expm1(-x)/x. Written the first way it
       // subtracts two numbers of size 1/x to leave a result of size x/2, so the relative error
-      // grows as epsilon/x^2 and it underflows to exactly zero below x of about 1e-8. 237-Np at
-      // 1e5 s has x = 1e-9, so every long-lived nuclide was contributing nothing at all here.
+      // grows as epsilon/x^2 and it underflows to exactly zero below x of about 1e-8, e.g. 237-Np at
+      // 1e5 s has x = 1e-9.
       //
       // x is zero for a stable nuclide, and also if timediff is zero, which would need the first
       // timestep midpoint to fall exactly on the model snapshot time. Either way the term is zero:
       // expm1(-x)/x tends to -1 as x tends to zero, so the bracket tends to zero. Both forms divide
-      // by x, so leaving it unguarded would give 0/0 here and inf - inf in the original.
+      // by x, so the guard prevents 0/0.
       const double x = lambda_j * timediff;
       if (x > 0.) {
         sumterm = (exp(-x) + (std::expm1(-x) / x)) / denominator;
@@ -112,7 +112,7 @@ constexpr auto calculate_decaychain(const double firstinitabund, const std::span
   // Neither quantity returned here can be negative. An abundance is a number of nuclei, and the
   // expansion-factor result is the decay energy still available after adiabatic losses, which cannot
   // remove more than the decay released. So a negative only ever means the Bateman sum has lost its
-  // significance, which happens readily now that the actinide chains are connected: the terms
+  // significance, which happens readily in the long actinide chains: the terms
   // alternate in sign with magnitudes scaling as the spread of the decay constants, and a chain from
   // 238-U to 206-Pb spans twenty-one orders of magnitude. Evaluated in 60-digit precision the 237-Np
   // chain at 1e5 s gives +3.5e-54 where double precision gives -5.8e-23.
@@ -174,7 +174,7 @@ void output_isotopic_densities(std::ostream& estimators_file, int nonemptymgi, i
                                std::span<const double> nuc_massfracs);
 // Construct an indivisible radioactive pellet by energy-weighted sampling a decay path or the optional initial-energy
 // channel, then sample its release time and record the emitting nuclide and decay type.
-// Lucy (2005), doi:10.1051/0004-6361:20041656.
+// Lucy (2005), A&A, 429, 19-30, doi:10.1051/0004-6361:20041656.
 void setup_radioactive_pellet(double e_cmf_per_packet, int nonemptymgi, Packet& pkt,
                               std::span<const double> energy_per_massoftopnuc_decaypath);
 

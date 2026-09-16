@@ -139,7 +139,7 @@ DEVICE_FUNC inline auto get_nphixstargets(const int element, const int ion, cons
   return nphixstargets;
 }
 
-// Return the index into the allphixstargets arrays for a target state for photoionisation of (element,ion,level).
+// Return the index into the allphixstargets arrays of a photoionisation target of a level, by unique level index.
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC inline auto get_allphixstargetindex(const int uniquelevelindex,
                                                                             const int phixstargetindex) -> int {
   assert_testmodeonly(phixstargetindex >= 0);
@@ -216,9 +216,9 @@ DEVICE_FUNC inline auto get_nphixstargets(const int element, const int ion, cons
           std::min(static_cast<int>((nu - nu_edge) / (nphixsnuincrement * nu_edge)), globals::NPHIXSPOINTS - 1);
       sigma_bf = photoion_xs[i];
     } else {
-      // above the top of the table, extrapolate with the Kramers (1923) nu^-3 scaling. It is anchored to the
-      // highest tabulated point rather than to the threshold value so that the cross-section stays continuous
-      // across the end of the table.
+      // above the top of the table, extrapolate with the nu^-3 scaling of Kramers (1923), Phil. Mag., 46,
+      // 836-871, doi:10.1080/14786442308565244. It is anchored to the highest tabulated point rather than to
+      // the threshold value so that the cross-section stays continuous across the end of the table.
       sigma_bf = static_cast<float>(photoion_xs[globals::NPHIXSPOINTS - 1] *
                                     pow(nu_edge * (1 + (nphixsnuincrement * globals::NPHIXSPOINTS)) / nu, 3));
     }
@@ -238,9 +238,9 @@ DEVICE_FUNC inline auto get_nphixstargets(const int element, const int ion, cons
     const double factor_b = ireal - i;
     sigma_bf = static_cast<float>(((1. - factor_b) * sigma_bf_a) + (factor_b * sigma_bf_b));
   } else {
-    // above the top of the table, extrapolate with the Kramers (1923) nu^-3 scaling. It is anchored to the
-    // highest tabulated point rather than to the threshold value so that the cross-section stays continuous
-    // across the end of the table.
+    // above the top of the table, extrapolate with the nu^-3 scaling of Kramers (1923), Phil. Mag., 46,
+    // 836-871, doi:10.1080/14786442308565244. It is anchored to the highest tabulated point rather than to
+    // the threshold value so that the cross-section stays continuous across the end of the table.
     const double nu_max_phixs = nu_edge * last_phixs_nuovernuedge;  // nu of the uppermost point in the phixs table
     sigma_bf = static_cast<float>(photoion_xs[globals::NPHIXSPOINTS - 1] * pow3(nu_max_phixs / nu));
   }
@@ -279,7 +279,7 @@ DEVICE_FUNC inline auto get_nphixstargets(const int element, const int ion, cons
   return stat_weight(get_uniquelevelindex(element, ion, level));
 }
 
-// Return the energy of (element,ion,level).
+// Return the energy [erg] of a level, by unique level index or by (element, ion, level).
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC inline auto epsilon(const int uniquelevelindex) -> double {
   return globals::alllevels.epsilon[uniquelevelindex];
 }

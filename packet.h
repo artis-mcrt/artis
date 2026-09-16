@@ -12,7 +12,8 @@
 
 #include "constants.h"
 
-// Packet state in the indivisible energy packet scheme of Lucy (2002), doi:10.1051/0004-6361:20011756.
+// Packet state in the indivisible energy packet scheme of Lucy (2002), A&A, 384, 725-735,
+// doi:10.1051/0004-6361:20011756.
 // do_packet() dispatches on this. Every packet starts as TYPE_RADIOACTIVE_PELLET; those that reach the grid
 // surface end as TYPE_ESCAPE, while packets still in flight when the run ends keep whatever type they held,
 // which is why exspec filters on TYPE_ESCAPE:
@@ -152,7 +153,7 @@ struct Packet {
   double tdecay{-1.};  // Time at which pellet decays
   int number{-1};  // A unique number to identify the packet
   bool originated_from_particlenotgamma{false};  // first packet type after pellet decay
-  int pellet_decaytype{-1};  // index into decay::decaytypes
+  int pellet_decaytype{-1};  // decay::DecayType value of the pellet decay, or -1 for the initial-energy channel
   int pellet_nucindex{-1};  // nuclide index of the decaying species
 
   auto operator<=>(const Packet& rhs) const = default;

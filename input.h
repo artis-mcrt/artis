@@ -46,8 +46,8 @@ void setup_timesteps();
 //
 // The function uses two tolerances, because the reference splitting is not always in the same term:
 //  - The splitting below the level is in the same term. The interval rule is accurate to approximately a
-//    factor of two here. The largest error in the ARTIS data is 4.4, for Ni I 3F4 with 3D3,2 between its
-//    levels.
+//    factor of two here. The smallest departure at a term boundary in the ARTIS data is 4.4, for Ni I 3F4 with
+//    3D3,2 between its levels, so the tolerance must stay below that.
 //  - The splitting above the level is the reference only for the second level of the ion. If the ground
 //    term has one level (for example 4S3/2, 6S5/2 or 7S3), this reference is the fine structure of the next
 //    term. The fine structure is much smaller than the distance between the two terms, thus these

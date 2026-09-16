@@ -12,7 +12,7 @@ void read_vpktparameterfile();
 void init(int nts, bool continued_from_saved);
 // At a physical emission or scattering event, launch an event-based virtual packet toward each configured observer,
 // propagate it through the ejecta, and accumulate its escape-probability-weighted Stokes contribution to the spectrum.
-// Bulla, Sim & Kromer (2015), doi:10.1093/mnras/stv657.
+// Bulla, Sim & Kromer (2015), MNRAS, 450, 967-981, doi:10.1093/mnras/stv657.
 void trace_vpkts(const Packet& pkt, enum packet_type type_before_rpkt);
 void write_timestep(int nts, bool is_final);
 
@@ -31,7 +31,6 @@ constexpr double VSPEC_TIMEMIN = 3 * DAY;
 constexpr double VSPEC_TIMEMAX = 8 * DAY;
 constexpr int VSPEC_TIMEBINS = 5;
 
-// number of virtual packets in a given timestep
 // separately cache-line aligned because they are incremented by all threads
 // per-rank counts of virtual packets created and escaped in the current timestep
 ALIGNAS_AVOID_FALSE_SHARING inline int nvpkt_created{0};

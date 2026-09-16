@@ -230,9 +230,8 @@ template <typename... Args>
 // Chunk a range of integers into (approximately) equal contiguous pieces for getting around the MPI 32-bit limit
 // on counts.
 //
-// This won't be necessary after Open MPI 6.0, which supports MPI-4's 64-bit MPI_Count functions (e.g.,
-// MPI_Bcast_c instead of MPI_Bcast). For now we need this to be able to use more than ~2 billion items in a single
-// array.
+// The wrappers below call the MPI functions with an int count, so an array with more than about 2 billion items
+// needs chunks. A change to the MPI-4 large-count functions, e.g. MPI_Bcast_c, would remove this need.
 constexpr auto get_range_chunk(const ptrdiff_t size, const ptrdiff_t nchunks, const ptrdiff_t nchunk)
     -> std::tuple<ptrdiff_t, ptrdiff_t> {
   assert_always(size >= 0);
