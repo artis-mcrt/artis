@@ -559,7 +559,9 @@ void write_light_curves_and_spectra_for_dirbin(const int nts, std::span<const st
   MPI_Barrier_node();
 #if defined REPRODUCIBLE && REPRODUCIBLE
   for (int node_rank = 0; node_rank < globals::node_nprocs; node_rank++) {
-    // do one rank at a time to keep the results reproducible (instead of simultaneous atomic adds to shared memory)
+    // do one rank at a time to keep the results reproducible (instead of simultaneous atomic adds to shared memory).
+    // The spectra of a node then have the sum order of a single rank that holds the same packets in the same
+    // sequence. The light curves are private to each rank, and the MPI sum below groups them by rank.
 #else
   {
     // all ranks on the node simultaneously contribute to the light curves and spectra in shared memory using

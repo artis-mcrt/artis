@@ -247,7 +247,6 @@ auto read_text_packets(const std::string& filename) -> std::vector<Packet> {
     }
   }
 
-  printlnlog("  read {} packets from {} (MPKTS {})", std::ssize(packets), filename, MPKTS);
   packets.shrink_to_fit();
   return packets;
 }
