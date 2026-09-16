@@ -143,9 +143,8 @@ inline void change_cell_or_escape(Packet& pkt, const int next_cellindex, const b
 }
 
 inline auto get_ejecta_kinetic_energy() {
-  // Fixed by the tmin-frame cell masses and velocities, so compute once and cache. It is queried once per
-  // packet by the Barnes / time-dependent particle thermalisation schemes; callers only run during packet
-  // propagation, after the grid is fully set up.
+  // Fixed by the cell masses and velocities at tmin, so compute once and cache. The Barnes thermalisation of
+  // the particles and of the gamma packets reads it once per packet, after the grid setup.
   static const double E_kin = [] {
     double e_kin = 0.;
     for (int nonemptymgi = 0; nonemptymgi < get_nonempty_npts_model(); nonemptymgi++) {

@@ -448,7 +448,7 @@ void read_ion_levels(std::istream& adata, const int element, const int ion, cons
   std::string line;
   static std::istringstream ssline;
   // The count nlevels_ionising covers the first levels of the ion, so it is only correct when the level energies
-  // increase with the level index. A level with a lower energy than the previous level stops the run.
+  // increase with the level index. A level with a lower energy than the previous level gives a warning.
   double prev_levelenergy_ev = -std::numeric_limits<double>::infinity();
   for (int level = 0; level < nlevels; level++) {
     int levelindex_in = 0;
@@ -794,8 +794,7 @@ auto search_groundphixslist(const double nu_edge, const int element_in, const in
   return (left_diff <= right_diff) ? i - 1 : i;
 }
 
-// set up the photoionisation transition lists
-// and temporary gamma/kappa lists for each thread
+// set up the photoionisation continuum list, sorted by edge frequency, and the ground level continuum lists
 void setup_phixs_list() {
   printlnlog("[info] setup_phixs_list: number of bfcontinua {}", globals::nbfcontinua);
   printlnlog("[info] setup_phixs_list: number of ground-level bfcontinua {}", globals::nbfcontinua_ground);
@@ -1139,11 +1138,9 @@ void read_autoion_data() {
   globals::alllevels.nautoiondowntrans = std::move(alllevels_nautoiondowntrans);
   globals::alllevels.nautoionuptrans = std::move(alllevels_nautoionuptrans);
 
-  // Plan is that autoionizing levels will be explicitly included in the NLTE population solver, but that their level
-  // populations do not need to be accurately known - so if the ion has a superlevel already, then we will try to attach
-  // the autoionizing level populations to that for all purposes outside the NLTE solver. For this, the ions need to
-  // know how many autoionizing levels they have. So count those up now (only the node leaders, since the counts are
-  // written to the node-shared ion data).
+  // Count the autoionising levels of each ion. The NLTE solver gives each of them a slot, and
+  // level_isautoionising() uses the count. Only the node leaders write the counts, because the ion data is
+  // node-shared.
 
   if (have_autoion_file && globals::rank_in_node == 0) {
     int nlevels_autoion_sum = 0;
@@ -1458,7 +1455,7 @@ void read_levels_and_transitions(std::vector<TempEnergyLevel>& temp_alllevels,
       assert_always(nlevelskept > 0);
 
       // read the data for the levels and set up the list of possible transitions for each level
-      // store the ions data to memory and set up the ions zeta and levellist
+      // store the ion data and then read its levels
       globals::elements[element].ions[ion] = {
           .nlevels = nlevelskept,
           .allnltelevelsindexstart = -1,
@@ -1768,7 +1765,7 @@ void read_atomicdata_files() {
   }
   MPI_Barrier_node();
 
-  // only the node leaders read adata.txt, but all ranks parse level indices in autoion.txt and the phixs files
+  // only the node leaders read adata.txt, so the other ranks get the detected ground state index by broadcast
   MPI_Bcast_safe(groundstate_index_in, 0, globals::mpi_comm_node);
   assert_always(groundstate_index_in == 0 || groundstate_index_in == 1);
 
@@ -2126,7 +2123,7 @@ void update_parameterfile(const int nts) {
   int noncomment_linenum = -1;
   while (std::getline(file, line)) {
     if (!lineiscommentonly(line)) {
-      noncomment_linenum++;  // line number starting from 0, ignoring comment and blank lines (that start with '#')
+      noncomment_linenum++;  // index of the line among the lines that are not blank and not comments, from 0
 
       // overwrite particular lines to enable restarting from the current timestep
       if (nts >= 0) {
@@ -2258,7 +2255,7 @@ auto calculate_timesteps(const TimeStepSizeMethod method, const double tmin, con
 
   switch (method) {
     case TimeStepSizeMethod::LOGARITHMIC: {
-      for (int n = 0; n < ntimesteps; n++) {  // For logarithmic steps, the logarithmic interval will be
+      for (int n = 0; n < ntimesteps; n++) {
         const double dlogt = (log(tmax) - log(tmin)) / ntimesteps;
         timesteps[n].start = tmin * exp(n * dlogt);
         timesteps[n].mid = tmin * exp((n + 0.5) * dlogt);
@@ -2294,7 +2291,6 @@ auto calculate_timesteps(const TimeStepSizeMethod method, const double tmin, con
       assert_always((nts_log + nts_fixed) == ntimesteps);
       for (int n = 0; n < ntimesteps; n++) {
         if (n < nts_log) {
-          // For logarithmic steps, the logarithmic interval will be
           const double dlogt = (log(t_transition) - log(tmin)) / nts_log;
           timesteps[n].start = tmin * exp(n * dlogt);
           timesteps[n].mid = tmin * exp((n + 0.5) * dlogt);
@@ -2331,7 +2327,6 @@ auto calculate_timesteps(const TimeStepSizeMethod method, const double tmin, con
           timesteps[n].width = fixed_tsdelta;
           timesteps[n].mid = timesteps[n].start + (0.5 * timesteps[n].width);
         } else {
-          // For logarithmic time steps, the logarithmic interval will be
           const double dlogt = (log(tmax) - log(t_transition)) / nts_log;
           const double prev_start = n > 0 ? (timesteps[n - 1].start + timesteps[n - 1].width) : tmin;
           timesteps[n].start = prev_start;

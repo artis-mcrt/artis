@@ -77,7 +77,7 @@ compatible with C++23. The Makefile builds three programs from the same sources:
 - `exspec`: it combines the packet files into spectra and light curves.
 - `unittests`: the unit tests. They cover the numeric and the parsing helpers,
   and also some physics functions, e.g. the Compton cross-section and the
-  Spencer-Fano solver.
+  triangular solve of the Spencer-Fano matrix.
 
 ## Repository layout
 
@@ -241,7 +241,8 @@ The workflows in `.github/workflows/`:
 - `updatechecksums.yml` writes the reference checksums (see "Tests").
 - `depapprove.yml` enables auto-merge for the pull requests of Dependabot and
   of pre-commit-ci.
-- `copilot-setup-steps.yml` runs only when you change that file.
+- `copilot-setup-steps.yml` runs when you change that file, or when you start
+  it by hand.
 
 The first three run on each push, except on a `classic*` branch. Your code
 must therefore compile with each of these compilers, and also on the paths for
@@ -368,10 +369,11 @@ are the only defence.
   device. On a device, `fatal_crash()` prints the values with `printf` and
   ignores the spec inside a `{}` placeholder.
 - An invalid input stops the run. Do not give a warning for it.
-- Two numeric helpers are an exception: `toms748.h` and `gausskronrod.h` throw
-  `std::domain_error` on the host, inside a guard that returns a NaN for a GPU
-  build. No code catches these exceptions. Keep the guards, because device code
-  permits no exception. Both files are bit-exact extractions of Boost.Math. Do
+- Two numeric helpers are an exception. `toms748.h` throws `std::domain_error`
+  on the host, inside a guard that returns a NaN for a GPU build.
+  `gausskronrod.h` throws without a guard, because a GPU build uses the Simpson
+  integrator and does not compile it. No code catches these exceptions. Keep
+  the guards, because device code permits no exception. Both files are bit-exact extractions of Boost.Math. Do
   not change their floating-point expressions or their table literals.
 
 ### Global and shared state
@@ -476,7 +478,7 @@ The code must compile with nvc++ and with hipcc, also with `STDPAR=ON GPU=ON`.
 - Write a trailing return type: `auto f(...) -> T`. clang-tidy requires it.
 - Give each `.cc` file an anonymous namespace for its internal helpers. Close
   it with the comment `}  // anonymous namespace`. Every tracked `.cc` file
-  does this.
+  with internal helpers does this.
 - Some modules put their interface in a namespace, e.g. `grid::` and `decay::`.
   Other modules declare their functions at global scope. Follow the header of
   the module that you change.

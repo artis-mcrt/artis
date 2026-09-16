@@ -44,7 +44,7 @@ static_assert(!RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.has_value() ||
 static_assert(!RPKT_USE_EXPANSION_OPACITIES || !VPKT_ON, "VPKT cannot be used with r-packet expansion opacities");
 
 namespace {
-// kappa times Planck function for each bin of each non-empty cell
+// cumulative integral over the bins of (line plus free-free kappa) times the Planck function, per non-empty cell
 MPI_shared_array<double> expansionopacity_planck_cumulative{};
 
 // get the comoving-frame frequency that the packet will have redshifted to at the abort distance (the cell
@@ -229,7 +229,7 @@ auto get_possible_event_expansion_opacity(const int nonemptymgi, Packet& pkt, co
       // avoid move_pkt_withtime() to skip the standard Doppler shift calculation
       // and use the linear approx instead
       prop_time += binedgedist / CLIGHT_PROP;
-      nu_cmf = pkt.nu_cmf + (dnu_on_dl * dist);  // should equal nu_trans;
+      nu_cmf = pkt.nu_cmf + (dnu_on_dl * dist);  // equals next_bin_edge_nu up to rounding
       assert_testmodeonly(nu_cmf <= pkt.nu_cmf);
       if constexpr (DETAILED_LINE_ESTIMATORS_ON) {
         // keep e_cmf consistent with the linearly-approximated nu_cmf, since it seeds the packet copy
@@ -269,15 +269,15 @@ void electron_scatter_rpkt(Packet& pkt) {
   const auto [old_dir_cmf, q_i_cmf, u_i_cmf] = (POL_ON ? frame_transform(pkt.dir, pkt.stokes_q, pkt.stokes_u, vel_vec)
                                                        : std::make_tuple(angle_ab(pkt.dir, vel_vec), 0., 0.));
 
-  // Outcoming direction. Compute the new cmf direction from the old direction and the scattering angles (see Kalos &
-  // Whitlock 2008)
+  // Outcoming direction. Compute the new cmf direction from the old direction and the scattering angles (see
+  // Kalos & Whitlock 2008, Monte Carlo Methods, 2nd ed., Wiley-VCH, doi:10.1002/9783527626212)
   double M = 0.;
   double phisc = 0.;
 
   if constexpr (DIPOLE) {
     // Assume dipole function: sample the scattering direction cosine M and azimuth angle phisc by
-    // rejection (see Code & Whitney 1995). p is the phase function value for the trial angles and
-    // x is a uniform draw from [0, 2] (an upper bound on p); the trial is accepted when x <= p.
+    // rejection (see Code & Whitney 1995, ApJ, 441, 400-407, doi:10.1086/175363). p is the phase function value for
+    // the trial angles and x is a uniform draw from [0, 2] (an upper bound on p); the trial is accepted when x <= p.
     double p = 0.;
     double x = 1.;
     while (x > p) {
@@ -334,7 +334,7 @@ void electron_scatter_rpkt(Packet& pkt) {
   // Check unit vector
   assert_testmodeonly(fabs(vec_len(pkt.dir) - 1.) < 1.e-6);
 
-  // Finally we want to put in the rest frame energy and frequency. And record that it's now a r-pkt.
+  // set the rest-frame energy and frequency
 
   set_pkt_restframe_from_cmf(pkt);
 }
@@ -432,9 +432,8 @@ void rpkt_event_continuum(Packet& pkt, ContinuumOpacity& chi_rpkt_cont) {
   }
 }
 
-// Update the volume estimators J and nuJ
-// This is done in another routine than move, as we sometimes move dummy
-// packets which do not contribute to the radiation field.
+// Add the path contribution to the radiation field, free-free heating, photoionisation, and bound-free heating
+// estimators of the cell. The move functions do not do this, because some moved packets do not contribute.
 void update_estimators(const double e_cmf, const double nu_cmf, const double distance, const int nonemptymgi,
                        const ContinuumOpacity& chi_rpkt_cont, const bool thickcell) {
   // Update only non-empty cells
@@ -693,8 +692,7 @@ auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixsli
   // computing the factor directly
   constexpr double stimfactor_edgepart_maxexponent = 690.;
 
-  // The phixslist is sorted by nu_edge in ascending order, so if nu < allcont[i].nu_edge then no absorption in any of
-  // the remaining continua is possible. so set their kappas to zero and break
+  // allcont is sorted by nu_edge in ascending order, so the continua with nu_edge > nu end the window
   const int allcontend = static_cast<int>(std::ranges::upper_bound(allcont_nu_edge, nu) - allcont_nu_edge.begin());
 
   // require that nu <= nu_edge * last_phixs_nuovernuedge, which can exclude some low-nu edges
@@ -963,7 +961,7 @@ DEVICE_FUNC void emit_rpkt(Packet& pkt) {
 
   pkt.dir = angle_ab(dir_cmf, vel_vec);
 
-  // Finally we want to put in the rest frame energy and frequency. And record that it's now a r-pkt.
+  // set the rest-frame energy and frequency
 
   set_pkt_restframe_from_cmf(pkt);
 

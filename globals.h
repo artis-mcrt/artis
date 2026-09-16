@@ -73,7 +73,8 @@ namespace globals {
 struct TimeStep {
   double start{0.};  // time at start of this timestep. [s]
   double width{0.};  // Width of timestep. [s]
-  double mid{0.};  // Mid time in step - computed logarithmically. [s]
+  double mid{0.};  // mid time of the timestep [s]: the geometric mid of a logarithmic step, the arithmetic mid of a
+                   // constant step
   double gamma_dep{0.};  // cmf gamma ray energy deposition from packet trajectories [erg]
   ALIGNAS_AVOID_FALSE_SHARING double gamma_dep_discrete{
       0.,
@@ -320,10 +321,6 @@ struct CellCache {
 };
 inline std::vector<CellCache> cellcache{};
 
-// Backing storage for the cell cache arrays, allocated in node-shared memory. When cellcache_singleslot
-// is false, each array spans every non-empty cell and cellcache[nonemptymgi] views the relevant sub-range,
-// shared by all MPI ranks on the node. When it is true, each array holds one reusable slot per node rank
-// and each rank uses only its own cellcache[rank_in_node] view.
 inline double vmax{NAN};
 inline double rmax{NAN};
 inline double tmax{-1};

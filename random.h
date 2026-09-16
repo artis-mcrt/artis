@@ -91,7 +91,7 @@ class SplitMix32 {
 
 // Implementation of Xoshiro128++ suggested by David Blackman and Sebastiano Vigna,
 // see https://prng.di.unimi.it/
-//     https://prng.di.unimi.it/xoshiro256plusplus.c
+//     https://prng.di.unimi.it/xoshiro128plusplus.c
 //
 // Performance: Good
 // Quality:     4/5

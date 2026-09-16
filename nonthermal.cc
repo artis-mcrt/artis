@@ -3,12 +3,15 @@
 // deposited energy going into heating, ionisation, and excitation, and the resulting non-thermal
 // ionisation and excitation rates.
 //
-// The degradation equation is that of Spencer & Fano (1954, Phys. Rev., 93, 1172); this
-// implementation follows the supernova application of Kozma & Fransson (1992, ApJ, 390, 602),
-// hereafter KF92, whose equation numbers are cited throughout this file. The integral form of the
-// degradation equation (KF92 equation 7), extended with an Auger-electron source term as equation 8
-// of Shingles et al. (2020), is discretised on a uniform energy grid as an upper triangular matrix
-// equation and solved by back-substitution in solve_spencerfano().
+// The degradation equation is that of Spencer & Fano (1954), Phys. Rev., 93, 1172-1181,
+// doi:10.1103/PhysRev.93.1172. This implementation follows the supernova application of Kozma & Fransson
+// (1992), ApJ, 390, 602-621, doi:10.1086/171311, hereafter KF92, whose equation numbers are cited throughout
+// this file. The integral form of the degradation equation (KF92 equation 7), extended with an Auger-electron
+// source term as equation 8 of Shingles et al. (2020), MNRAS, 492, 2029-2043, doi:10.1093/mnras/stz3412,
+// hereafter S20, is discretised on a uniform energy grid as an upper triangular matrix equation and solved
+// by back-substitution in solve_spencerfano(). This file also cites Li, Hillier & Dessart (2012), MNRAS, 426,
+// 1671-1686, doi:10.1111/j.1365-2966.2012.21198.x, hereafter LHD12, and Axelrod (1980), PhD thesis, University
+// of California, Santa Cruz, hereafter A80.
 
 #include "nonthermal.h"
 
@@ -66,14 +69,9 @@ constexpr int NPTS_EPSILON_SUBGRID = 64;
 // KF92 equation 8. This is a property of that integral alone, not of the solution energy grid. Each node
 // costs a full N_e() over every ion and shell, so it dominates the cost of calculate_frac_heating().
 //
-// Nine is far more than the term needs. Measured on nebular_1d_3dgrid by recomputing this integral at node
-// counts from 3 to 513 on one unchanged yfunc, so that only the quadrature varied: frac_heating moved by at
-// most 6e-9 relative even at three nodes, against the 1.2e-7 relative precision of the float it is stored
-// in, so every count in that range gives a bit-identical result. The term carries only about 2e-5 of
-// frac_heating, because the source is injected near SF_EMAX while this integral covers [0, 0.1 eV], so even
-// a wildly wrong value could not move the total. Raising the count does not help in any case: the error is
-// not monotonic in the node count (17 measured worse than 5, and 129 worse than 65), because N_e(E) steps
-// discontinuously wherever 2E + I crosses a solution grid point.
+// The node count has no measurable effect on the stored float frac_heating. The term carries only about
+// 2e-5 of frac_heating, because the source is injected near SF_EMAX while this integral covers [0, SF_EMIN].
+// A larger count does not reduce the error, because N_e(E) steps wherever 2E + I crosses a grid point.
 constexpr int NPTS_SUB_E0_INTEGRAL = 9;
 static_assert(NPTS_SUB_E0_INTEGRAL > 1);
 
@@ -127,7 +125,6 @@ static_assert(SF_EMIN > 0.);
 static_assert(SF_EMAX > SF_EMIN);
 constexpr double DELTA_E = (SF_EMAX - SF_EMIN) / (SFPTS - 1);
 
-// if this is greater than zero, make sure NT_USE_VALENCE_IONPOTENTIAL is false!
 static_assert(NT_MAX_AUGER_ELECTRONS == 0 || !NT_USE_VALENCE_IONPOTENTIAL,
               "Overriding the shell potential with the valence potential is not compatible with including Auger "
               "electrons, because the shell potential is used to calculate the energy of Auger electrons.");
@@ -162,7 +159,7 @@ constexpr auto sourcevec(const int index) {
 }
 
 // the energy injection rate density (integral of E * S(e) dE) in eV/s/cm3 that the Spencer-Fano equation is solved for.
-// This is arbitrary and and the solution will be scaled to match the actual energy deposition rate density.
+// This is arbitrary and the solution will be scaled to match the actual energy deposition rate density.
 constexpr double E_init_ev = [] {
   double integral = 0.;
   for (int s = 0; s < SFPTS; s++) {
@@ -198,7 +195,7 @@ struct NonThermalExcitation {
   int alltransindex;
 };
 
-// pointer to either local or node-shared memory excitation list of all cells
+// node-shared excitation list of all cells
 MPI_shared_array<NonThermalExcitation> excitations_list_all_cells{};
 
 // the minimum of MAX_NT_EXCITATIONS_STORED and the number of included excitation transitions in the atomic dataset
@@ -225,7 +222,7 @@ struct NonThermalCellSolution {
   int frac_excitations_list_size = 0;
 
   int timestep_last_solved = -1;  // the quantities above were calculated for this timestep
-  float nneperion_when_solved{NAN};  // the nne when the solver was last run
+  float nneperion_when_solved{NAN};  // nne divided by the total ion density at the last solution
 };
 
 MPI_shared_array<NonThermalCellSolution> nt_solution;
@@ -275,7 +272,7 @@ auto calculate_ion_shell_occupancies(const int atomic_number, const int nbound,
 auto read_shell_configs() {
   auto shells_file = fstream_required("electron_shell_occupancy.txt", std::ios::in);
 
-  int nshells = 0;  // number of shell in binding energy file
+  int nshells = 0;  // number of shells in the shell occupancy file
   int n_z_binding = 0;  // number of elements in file
 
   std::string line;
@@ -312,7 +309,7 @@ auto read_shell_configs() {
 }
 
 void read_binding_energies() {
-  int nshells = 0;  // number of shell in binding energy file
+  int nshells = 0;  // number of shells in the binding energy file
   int n_z_binding = 0;  // number of elements in binding energy file
 
   constexpr auto filename = "binding_energies_lotz1970.txt";
@@ -328,7 +325,7 @@ void read_binding_energies() {
   for (int zminusone = 0; zminusone < n_z_binding; zminusone++) {
     assert_always(get_noncommentline(binding_energies_file, line));
     std::istringstream ssline(line);
-    // new file as an atomic number column
+    // the first column is the atomic number
     int z_element{-1};
     ssline >> z_element;
     assert_always(z_element == (zminusone + 1));
@@ -487,7 +484,8 @@ void read_auger_data() {
         }
       }
 
-      // use the epsilon correction factor as in equation 7 of Kaastra & Mewe (1993)
+      // use the epsilon correction factor as in equation 7 of Kaastra & Mewe (1993), A&AS, 97, 443-482, bibcode
+      // 1993A&AS...97..443K
       auto en_auger_ev = static_cast<float>(en_auger_ev_total_nocorrection - (epsilon_e3 / 1000. * ionpot_ev));
 
       assert_always(shellnum > 0);
@@ -558,7 +556,7 @@ auto get_sum_q_over_binding_energy(const int element, const int ion) -> double {
     return 0.;
   }
 
-  // get the approximate shell occupancy if we don't have the data file
+  // shell occupancies of this ion from electron_shell_occupancy.txt
   const auto& shells_q = allions_shell_occupancies[get_uniqueionindex(element, ion)];
   const auto& binding_energies = elements_electron_binding.at(get_atomicnumber(element) - 1);
 
@@ -635,7 +633,7 @@ void read_collion_data() {
             "No collisional ionisation data for Z={} ionstage {}. Using Lotz approximation with ionpot = {:g} [eV]", Z,
             ionstage, ionpot_ev);
 
-        // get the approximate shell occupancy if we don't have the data file
+        // shell occupancies of this ion from electron_shell_occupancy.txt
         const auto& shells_q = allions_shell_occupancies[get_uniqueionindex(element, ion)];
         int electron_count = 0;
         const auto num_shells = std::ssize(shells_q);
@@ -709,8 +707,8 @@ void read_collion_data() {
 }
 
 // Count the excitation transitions that pass the NTEXCITATION_MAXNLEVELS_LOWER and
-// NTEXCITATION_MAXNLEVELS_UPPER conditions. This count might be higher than the number of stored
-// power_per_source_mass due to the MAX_NT_EXCITATIONS_STORED limit.
+// NTEXCITATION_MAXNLEVELS_UPPER conditions. This count can be higher than nt_excitations_stored because of
+// the MAX_NT_EXCITATIONS_STORED limit.
 auto get_possible_nt_excitation_count() -> int {
   int ntexcitationcount = 0;
   for (int element = 0; element < get_nelements(); element++) {
@@ -818,10 +816,9 @@ constexpr auto xs_ionisation_lotz(const double en_erg, const ShellParams& collio
     return 0.;
   }
 
-  // Equation 3.38 of Axelrod (1980) attributed to Lotz (1967)
-  // WARNING: The Axelrod equation uses both ln() and log10(), but the log10() term is likely a typo and has been
-  // corrected to ln(). Fortunately, at our typical 16 keV value of EMAX, 511 keV electrons are only mildly
-  // relativistic and the log(1 - beta^2) term is small anyway.
+  // Equation 3.38 of A80, after Lotz (1967, Z. Phys., 206, 205-211, doi:10.1007/BF01325928). A80 writes one of
+  // the two logarithms as log10(), which is probably a typo, so this code uses ln() for both. Electrons below
+  // SF_EMAX are only mildly relativistic, so the log(1 - beta^2) term is small.
   const double part_sigma_shell =
       (electronsinshell / ionpot *
        (std::log(betasq * ME * pow2(CLIGHT) / 2.0 / ionpot) - std::log(1 - betasq) - betasq));
@@ -892,8 +889,9 @@ auto get_xs_ionisation_vector(std::array<double, SFPTS>& xs_vec, const ShellPara
 }
 
 // distribution of secondary electron energies for primary electron with energy e_p: KF92 equation 4,
-// their analytically integrable Lorentzian adaptation of the shape Opal, Peterson, & Beaty (1971)
-// fitted to their measurements (whose published exponent is 2.1 rather than 2). KF92 equation 5 uses
+// their analytically integrable Lorentzian adaptation of the shape that Opal, Peterson & Beaty (1971),
+// J. Chem. Phys., 55, 4100-4106, doi:10.1063/1.1676707, fitted to their measurements (whose published
+// exponent is 2.1 rather than 2). KF92 equation 5 uses
 // it to factorise the differential ionisation cross section into this distribution times the total
 // cross section.
 [[nodiscard]] constexpr auto Psecondary(const double e_p, const double en_epsilon, const double I, const double J)
@@ -912,7 +910,8 @@ auto get_xs_ionisation_vector(std::array<double, SFPTS>& xs_vec, const ShellPara
 
 [[nodiscard]] constexpr auto get_J(const int Z, const int ionstage, const double ionpot_ev) -> double {
   // returns an energy in eV
-  // values from Opal et al. 1971 as applied by Kozma & Fransson 1992
+  // values from Opal, Peterson & Beaty (1971), J. Chem. Phys., 55, 4100-4106, doi:10.1063/1.1676707, as applied
+  // by KF92
   if (ionstage == 1) {
     if (Z == 2) {  // He I
       return 15.8;
@@ -940,7 +939,7 @@ constexpr auto xs_excitation(const int element, const int ion, const int lower, 
   const auto alltransindex = alltrans_startup + uptransindex;
   if (globals::alltrans.coll_str[alltransindex] >= 0) {
     // collision strength is available, so use it
-    // Li et al. 2012 equation 11: sigma = pi * a_0^2 * (I_H / E) * Omega / g_lower,
+    // LHD12 equation 11: sigma = pi * a_0^2 * (I_H / E) * Omega / g_lower,
     // with k_i^2 = E / I_H in units of the inverse Bohr radius squared
     return (H_ionpot / energy) / lowerstatweight * globals::alltrans.coll_str[alltransindex] * PI * A_naught_squared;
   }
@@ -948,16 +947,17 @@ constexpr auto xs_excitation(const int element, const int ion, const int lower, 
     // permitted E1 electric dipole transitions
     const double U = energy / epsilon_trans;
 
-    // Mewe (1972) equation 5 fits g(U) = A + B/U + C/U^2 + D*ln(U); keep the A and D ln(U) terms,
-    // with the D = sqrt(3)/(2 pi) that Mewe recommends for all optically allowed transitions rounded
-    // to 0.28 (Shingles et al. 2020, section 2.5, where this pair is described as the formula's
+    // Mewe (1972), A&A, 20, 215-221, bibcode 1972A&A....20..215M, equation 5 fits g(U) = A + B/U + C/U^2 +
+    // D*ln(U); keep the A and D ln(U) terms, with the D = sqrt(3)/(2 pi) that Mewe recommends for all optically
+    // allowed transitions rounded to 0.28 (S20, section 2.5, where this pair is described as the formula's
     // "first two terms")
     constexpr double mewe_A = 0.15;
     constexpr double mewe_D = 0.28;
     const double g_bar = (mewe_D * std::log(U)) + mewe_A;
 
     constexpr double prefactor = 45.585750051;  // 8 * pi^2/sqrt(3)
-    // van Regemorter (1962) approximation with the g_bar above from Mewe (1972)
+    // van Regemorter (1962), ApJ, 136, 906-915, doi:10.1086/147445, approximation with the g_bar above from
+    // Mewe (1972), A&A, 20, 215-221, bibcode 1972A&A....20..215M
     return prefactor * A_naught_squared * pow2(H_ionpot / epsilon_trans) *
            globals::alltrans.osc_strength[alltransindex] * g_bar / U;
   }
@@ -979,7 +979,7 @@ constexpr auto electron_loss_rate(const double energy, const double nne) -> doub
     return 0;
   }
 
-  // normally 1.0, but the heatboost4/heatboost8 models of Shingles et al. (2022), MNRAS, 512, 6150,
+  // normally 1.0, but the heatboost4/heatboost8 models of Shingles et al. (2022), MNRAS, 512, 6150-6163,
   // doi:10.1093/mnras/stac902, boosted this loss rate by factors of four and eight to test the
   // sensitivity of nebular Type Ia ionisation to the non-thermal heating fraction
   constexpr double boostfactor = 1.;
@@ -990,15 +990,16 @@ constexpr auto electron_loss_rate(const double energy, const double nne) -> doub
     return boostfactor * nne * 2 * PI * pow4(QE) / energy * std::log(2 * energy / zetae);
   }
   const double v = std::sqrt(2 * energy / ME);
-  // Kozma & Fransson (1992) eq. 2 describes the gamma in this Coulomb logarithm as "Euler's constant
-  // (Schunk & Hays 1971)", but Schunk & Hays (1971, p. 114) define it by "ln gamma is Euler's
-  // constant", i.e. gamma = exp(0.5772) = 1.781 rather than 0.5772 itself.
+  // KF92 eq. 2 describes the gamma in this Coulomb logarithm as "Euler's constant (Schunk & Hays 1971)", but
+  // Schunk & Hays (1971), Planet. Space Sci., 19, 113-117, doi:10.1016/0032-0633(71)90071-7, p. 114, define it
+  // by "ln gamma is Euler's constant", i.e. gamma = exp(0.5772) = 1.781 rather than 0.5772 itself.
   return boostfactor * nne * 2 * PI * pow4(QE) / energy * std::log(ME * pow3(v) / (EXP_EULERGAMMA * pow2(QE) * omegap));
 }
 
 // impact ionisation cross section in cm^2
 // energy and ionisation_potential should be in eV
-// fitting formula of Younger 1981
+// fitting formula of Younger (1981), J. Quant. Spectrosc. Radiat. Transfer, 26, 329-337,
+// doi:10.1016/0022-4073(81)90127-8
 // this is the total ionisation cross section that KF92 write as sigma_ic (their equations 5, 10 and 11,
 // and the ionisation term of equation 7)
 constexpr auto xs_impactionisation(const double energy_ev, const ShellParams& colliondata_ion) -> double {
@@ -1091,17 +1092,10 @@ auto N_e(const int nonemptymgi, const double energy, const std::array<double, SF
             const double J = get_J(Z, ionstage, ionpot_ev);
             const double lambda = std::min(SF_EMAX - energy_ev, energy_ev + ionpot_ev);
 
-            // integral from ionpot up to lambda, over its own sub-grid. This is an integral over the
-            // secondary energy epsilon, not over the solution grid variable (y is sampled at energy_ev +
-            // endash by interpolation), so the left-endpoint rectangle convention used elsewhere in this
-            // module does not apply to it. The domain is only (lambda - ionpot_ev) <= energy_ev < SF_EMIN
-            // wide, some forty times narrower than one cell of the solution grid, so sampling it on that
-            // grid was wrong twice over: it gave a full DELTA_E of weight to the whole domain, and it
-            // snapped both limits down onto the grid point at or below ionpot_ev, where Psecondary() sees a
-            // negative secondary energy and returns zero. The term was therefore dropped entirely for the
-            // great majority of shells, and the few whose threshold happens to have a grid point just above
-            // it contributed instead with that oversized weight, too large by DELTA_E / energy_ev. Midpoint
-            // sampling keeps every node strictly inside the domain and away from both limits.
+            // integral over the secondary energy epsilon from ionpot_ev to lambda, on a sub-grid of its own.
+            // y is sampled at energy_ev + endash by interpolation, so the left-endpoint rectangle convention
+            // of rhsvec does not apply here. The domain is at most SF_EMIN wide, much narrower than one cell
+            // of the solution grid. The midpoint nodes stay inside the domain and away from both limits.
             if (lambda > ionpot_ev) {
               const double delta_epsilon = (lambda - ionpot_ev) / NPTS_EPSILON_SUBGRID;
               for (int i = 0; i < NPTS_EPSILON_SUBGRID; i++) {
@@ -1112,15 +1106,11 @@ auto N_e(const int nonemptymgi, const double energy, const std::array<double, SF
               }
             }
 
-            // integral from 2E + I up to E_max. Unlike the epsilon integral above this one runs over the
-            // solution grid variable and reads yfunc[i] directly, so it keeps the left-endpoint rectangle
-            // convention described at the top of this file, which the matrix that yfunc was solved from
-            // uses. Sub-cell refinement here would leave calculate_frac_heating() discretised differently
-            // from that matrix, and frac_sum only tests energy conservation to the extent that the two
-            // share a discretisation. Honouring the lower limit therefore means starting at the first grid
-            // point at or above it, as get_xs_ionisation_vector() does for its own threshold, rather than
-            // adding a partial cell. Starting at the point at or below it instead put a node below the
-            // limit, contributing a whole DELTA_E of weight from outside the integration range.
+            // integral from 2E + I to SF_EMAX over the solution grid. It reads yfunc[i] directly and keeps
+            // the left-endpoint rectangle convention of rhsvec, which the matrix uses. A different
+            // discretisation here would break the energy conservation test of frac_sum. The sum starts at
+            // the first grid point at or above the lower limit, as get_xs_ionisation_vector() does for its
+            // threshold.
             const double integral2_min = (2 * energy_ev) + ionpot_ev;
             if (integral2_min < SF_EMAX) {
               const int integral2startindex = get_energyindex_ev_gteq(integral2_min);
@@ -1166,11 +1156,9 @@ auto calculate_frac_heating(const int nonemptymgi, const std::array<double, SFPT
   frac_heating_Einit += SF_EMIN * get_y(yfunc, SF_EMIN) * (electron_loss_rate(SF_EMIN * EV, nne) / EV);
 
   double N_e_contrib_Einit = 0.;
-  // third term (integral from zero to SF_EMIN), on a sub-grid of its own. Sizing the node count from
-  // DELTA_E tied it to the solution energy grid, which this integral has nothing to do with, and left only
-  // nine interior nodes. Integrating by trapezoid rather than by summing interior nodes also recovers the
-  // half node that was dropped at the SF_EMIN end; the zero end costs nothing, since the integrand carries
-  // a factor of endash and so vanishes there.
+  // third term, the integral from zero to SF_EMIN by the trapezoid rule on a sub-grid of
+  // NPTS_SUB_E0_INTEGRAL nodes. The integrand has a factor endash and is zero at the lower end, so that
+  // node is omitted.
   constexpr double delta_endash = SF_EMIN / (NPTS_SUB_E0_INTEGRAL - 1);
   for (int j = 1; j < NPTS_SUB_E0_INTEGRAL; j++) {
     const double endash = delta_endash * j;
@@ -1196,7 +1184,7 @@ auto get_nt_frac_ionisation(const int nonemptymgi) -> float {
     return 0.;
   }
   if (NT_SCHEME == NonThermalScheme::NT_AXELRODAPPROX) {
-    return 0.03;  // Axelrod 1980 approximation
+    return 0.03;  // A80 approximation
   }
 
   assert_always(nt_solution[nonemptymgi].frac_ionisation >= 0.);
@@ -1217,7 +1205,7 @@ auto get_nt_frac_excitation(const int nonemptymgi) -> float {
   return frac_excitation;
 }
 
-// Reciprocal work per ion pair, 1/W, from the analytic estimate of Axelrod (1980): high-energy cross-section
+// Reciprocal work per ion pair, 1/W, from the analytic estimate of A80: high-energy cross-section
 // limits, neglecting energy lost to free electrons. Used by nt_ionisation_ratecoeff_wfapprox() as the
 // alternative to the Spencer-Fano solve, and as the fallback eff_ionpot for ions with no collisional-ionisation
 // subshell data.
@@ -1243,11 +1231,11 @@ auto get_oneoverw_approx_axelrod(const int element, const int ion, const int non
   }
 
   const double binding = get_sum_q_over_binding_energy(element, ion);
-  // Axelrod 1980 says the constant A = 1.33e-14 [cm^2 eV^2] has been determined by normalising to the average of the
-  // values given by Jacobs et al (1979) and McGuire (1977) at 10 keV. However, this reduces the accuracy of the
-  // approximation at lower energies, and since we are mostly interested in the low energy end of the spectrum for
-  // calculating the heating and ionisation fractions, it would be better to use Lotz value of A = 4.5e-14 [cm2 eV2],
-  // a factor of 3.4 larger.
+  // A80 normalised the constant A = 1.33e-14 [cm^2 eV^2] at 10 keV to the mean of two cross section tabulations,
+  // one of them McGuire (1977), Phys. Rev. A, 16, 62-72, doi:10.1103/PhysRevA.16.62. This reduces the accuracy of
+  // the approximation at lower energies, which set the heating and ionisation fractions. The value of Lotz
+  // (1967), Z. Phys., 206, 205-211, doi:10.1007/BF01325928, A = 4.5e-14 [cm^2 eV^2], is a factor of 3.4 larger
+  // and suits those energies better.
   constexpr double Aconst = 1.33e-14 * EV * EV;
 
   return Aconst * binding / Zbar / (2 * PI * pow4(QE));
@@ -1272,16 +1260,14 @@ auto calculate_nt_frac_ionisation_shell(const int nonemptymgi, const int element
 // non-thermal ionisation rate coefficient (multiply by population to get rate)
 auto nt_ionisation_ratecoeff_wfapprox(const int nonemptymgi, const int element, const int ion) -> double {
   const double deposition_rate_density = get_ntlepton_deposition_rate_density(nonemptymgi);
-  // to get the non-thermal ionisation rate we need to divide the energy deposited
-  // per unit volume per unit time in the grid cell (sum of terms above)
-  // by the total ion number density and the "work per ion pair"
+  // the rate coefficient is the deposition rate density divided by the total ion density and by the work per
+  // ion pair
   return deposition_rate_density / get_nnion_tot(nonemptymgi) * get_oneoverw_approx_axelrod(element, ion, nonemptymgi);
 }
 
-// Integrate the ionisation cross section over the electron degradation function to get the ionisation rate
-// coefficient i.e. multiply this by ion population to get a rate of ionisations per second Do not call during packet
-// propagation, as the y vector may not be in memory! IMPORTANT: we are dividing by the shell potential, not the
-// valence potential here! To change this set assumeshellpotentialisvalence to true
+// Integrate the ionisation cross sections of all shells over the electron degradation function. Return the
+// ionisation rate coefficient [1/s], which multiplied by the ion population gives the ionisation rate. With
+// assumeshellpotentialisvalence, the cross section of each shell is scaled by ionpot_shell / ionpot_valence.
 auto calculate_nt_ionisation_ratecoeff(const int nonemptymgi, const int element, const int ion,
                                        const bool assumeshellpotentialisvalence, const std::array<double, SFPTS>& yfunc)
     -> double {
@@ -1326,8 +1312,8 @@ auto calculate_nt_ionisation_ratecoeff(const int nonemptymgi, const int element,
   return yscalefactor * y_xs_de;
 }
 
-// Kozma & Fransson 1992 equation 12, except modified to be a sum over all shells of an ion (the
-// per-shell ionisation fractions are equation 11 of Shingles et al. 2020).
+// KF92 equation 12, except modified to be a sum over all shells of an ion (the per-shell ionisation
+// fractions are equation 11 of S20).
 // the result is in [erg]
 void calculate_eff_ionpot_auger_rates(const int nonemptymgi, const int element, const int ion,
                                       const std::array<double, SFPTS>& yfunc) {
@@ -1437,7 +1423,7 @@ auto get_eff_ionpot(const int nonemptymgi, const int element, const int ion) {
 }
 
 // KF92 equation 13, with the non-thermal deposition rate density per ion in place of their gamma-ray
-// energy absorption rate 4 pi J_gamma sigma_gamma (equivalent to equation 12 of Shingles et al. 2020)
+// energy absorption rate 4 pi J_gamma sigma_gamma (equivalent to equation 12 of S20)
 // Return the rate coefficient in s^-1
 auto nt_ionisation_ratecoeff_sf(const int nonemptymgi, const int element, const int ion) -> double {
   const double deposition_rate_density = get_ntlepton_deposition_rate_density(nonemptymgi);
@@ -1466,7 +1452,7 @@ void xs_excitation_for_each(const int alltransindex, const double statweight_low
                             Func usexs) {
   if (globals::alltrans.coll_str[alltransindex] >= 0) {
     // collision strength is available, so use it
-    // Li et al. 2012 equation 11: sigma = pi * a_0^2 * (I_H / E) * Omega / g_lower,
+    // LHD12 equation 11: sigma = pi * a_0^2 * (I_H / E) * Omega / g_lower,
     // with k_i^2 = E / I_H in units of the inverse Bohr radius squared
     const double constantfactor =
         H_ionpot / statweight_lower * globals::alltrans.coll_str[alltransindex] * PI * A_naught_squared;
@@ -1484,7 +1470,8 @@ void xs_excitation_for_each(const int alltransindex, const double statweight_low
   const double trans_osc_strength = globals::alltrans.osc_strength[alltransindex];
   // permitted E1 electric dipole transitions
 
-  // the A and D ln(U) terms of the Mewe (1972) equation 5 fitting formula
+  // the A and D ln(U) terms of the Mewe (1972), A&A, 20, 215-221, bibcode 1972A&A....20..215M, equation 5
+  // fitting formula
   // g(U) = A + B/U + C/U^2 + D*ln(U); see the comment in xs_excitation()
   constexpr double mewe_A = 0.15;
   constexpr double mewe_D = 0.28;
@@ -1492,7 +1479,8 @@ void xs_excitation_for_each(const int alltransindex, const double statweight_low
   constexpr double prefactor = 45.585750051;  // 8 * pi^2/sqrt(3)
   const double epsilon_trans_ev = epsilon_trans / EV;
 
-  // van Regemorter (1962) approximation with the g_bar below from Mewe (1972)
+  // van Regemorter (1962), ApJ, 136, 906-915, doi:10.1086/147445, approximation with the g_bar below from
+  // Mewe (1972), A&A, 20, 215-221, bibcode 1972A&A....20..215M
   const double constantfactor =
       epsilon_trans_ev * prefactor * A_naught_squared * pow2(H_ionpot / epsilon_trans) * trans_osc_strength;
 
@@ -1542,7 +1530,7 @@ auto ion_ntion_energyrate(const int nonemptymgi, const int element, const int lo
   return gamma_nt * enrate;
 }
 
-// Return the energy rate [erg/s] going toward non-thermal ionisation in a modelgrid cell
+// Return the energy rate density [erg/cm3/s] going toward non-thermal ionisation in a cell
 auto get_ntion_energyrate(const int nonemptymgi) -> double {
   double ratetotal = 0.;
   for (int ielement = 0; ielement < get_nelements(); ielement++) {
@@ -1714,8 +1702,8 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const std::a
           frac_excitation_ion += frac_excitation_thistrans;
 
           assert_always(std::isfinite(ratecoeffperdeposition));
-          // the atomic data set was limited for Fe V, which caused the ground multiplet to be massively
-          // depleted, and then almost no recombination happened!
+          // Fe V is excluded. Its small atomic data set depletes the ground multiplet and stops the
+          // recombination.
           if (above_minionfraction && ratecoeffperdeposition > 0 && (Z != 26 || ionstage != 5)) {
             tmp_excitation_list.push_back({
                 .frac_deposition = frac_excitation_thistrans,
@@ -1805,7 +1793,6 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const std::a
     std::ranges::SORT_OR_STABLE_SORT(tmp_excitation_list, std::ranges::greater{},
                                      &NonThermalExcitation::frac_deposition);
 
-    // the excitation list is now sorted by frac_deposition descending
     const double deposition_rate_density = get_ntlepton_deposition_rate_density(nonemptymgi);
 
     if (std::ssize(tmp_excitation_list) > nt_excitations_stored) {
@@ -2046,8 +2033,7 @@ void sfmatrix_add_ionisation(std::span<double> sfmatrixuppertri, const int Z, co
       // load-bearing rather than defensive: without it the integration range goes unphysical and the heating,
       // ionisation, and excitation fractions stop summing to 100%. (The min on the upper limit is inert given
       // this loop's start index, which already guarantees endash >= ionpot_ev, but it states the bound.) The
-      // same clamping is done in the CMFGEN source code; see Li, Dessart & Hillier (2012),
-      // doi:10.1111/j.1365-2966.2012.21198.x for the code's description.
+      // same clamping is done in the CMFGEN source code; see LHD12 for the code's description.
       // The inner epsilon integral of P(E', epsilon - I) has the closed form
       //   [atan((epsilon - I) / J)] / atan((E' - I) / (2 J))
       // evaluated between the epsilon limits: J * atan((epsilon - I) / J) is the antiderivative of the
@@ -2086,13 +2072,12 @@ void sfmatrix_add_ionisation(std::span<double> sfmatrixuppertri, const int Z, co
       // nonzero iff its epsilon_lower = max(endash - en, ionpot_ev) is below epsilon_upper, which reduces
       // to (j - 2i) * DELTA_E < SF_EMIN + ionpot_ev, and the second is nonzero iff
       // epsilon_upper > en + ionpot_ev, which reduces to (j - 2i) * DELTA_E > SF_EMIN + ionpot_ev (at
-      // equality both epsilon ranges are empty). Splitting the column loop at that crossover replaces the
-      // per-element max() clamps (which only ever discarded a term that is zero) with loop bounds, and the
-      // second region needs no offset-table read at all.
+      // equality both epsilon ranges are empty). The column loop splits at that crossover, so no clamp is
+      // needed, and the second region reads no offset table.
       const int kcross = static_cast<int>(std::ceil((SF_EMIN + ionpot_ev) / DELTA_E));
 
       for (int i = 0; i < SFPTS; i++) {
-        // i is the matrix row index, which corresponds to an energy E at which we are solve from y(E)
+        // i is the matrix row index. The row energy is E = engrid(i).
         const double en = engrid(i);
         const int rowoffset = uppertriangular(i, 0);
 
@@ -2114,7 +2099,7 @@ void sfmatrix_add_ionisation(std::span<double> sfmatrixuppertri, const int Z, co
         }
       }
 
-      // the Auger-electron source term of Shingles et al. (2020) equation 8, which injects the shell's
+      // the Auger-electron source term of S20 equation 8, which injects the shell's
       // mean Auger electron energy as a delta function (or spread below it, see below).
       // shells with no Auger data have en_auger_ev == 0 (and prob_num_auger[0] == 1, which would make the
       // energy boost factor below infinite) and inject no Auger electrons
@@ -2229,14 +2214,12 @@ auto sfmatrix_solve(const std::span<const double> sfmatrixuppertri) -> std::arra
 }  // anonymous namespace
 
 // Solve U * x = b for x, where U is the compacted upper triangular matrix (indexed via uppertriangular()).
-// The loop structure here is frozen: back substitution bottom-up over row panels, each panel removing the
-// already-solved elements to its right with one in-order dot product per row, reproduces the floating-point
-// operation order of the Eigen triangularView<Upper>().solve() call this replaced -- specifically its scalar
-// path, the one taken under EIGEN_DONT_VECTORIZE, which the Makefile sets for REPRODUCIBLE builds and which
-// are exactly the builds whose checksums are compared. The equivalence does not hold against Eigen's
-// vectorised path. FP addition is not associative, so regrouping these sums shifts the result at the ulp level
-// and breaks the stored checksums. The residual and error scoring in sfmatrix_solve() are part of the same
-// contract.
+// The loop structure is frozen. Back substitution bottom-up over row panels, with one in-order dot product per
+// row, gives the floating-point operation order of the scalar path of Eigen's triangularView<Upper>().solve().
+// That is the path under EIGEN_DONT_VECTORIZE, which the Makefile sets for REPRODUCIBLE builds, and the
+// checksums of CI compare those builds. FP addition is not associative, so a regrouped sum changes the result
+// at the ulp level and breaks the stored checksums. The residual and error scoring in sfmatrix_solve() are
+// part of the same contract.
 void solve_upper_triangular(const std::span<const double> sfmatrixuppertri, const std::span<const double, SFPTS> bvec,
                             const std::span<double, SFPTS> xvec) {
   std::ranges::copy(bvec, xvec.begin());
@@ -2316,7 +2299,7 @@ void init() {
 
   if (globals::rank_in_node == 0) {
     for (auto nonemptymgi = 0Z; nonemptymgi < nonempty_npts_model; nonemptymgi++) {
-      // should make these negative?
+      // the Axelrod values apply until the first solution
       nt_solution[nonemptymgi].frac_heating = 0.97;
       nt_solution[nonemptymgi].frac_ionisation = 0.03;
       nt_solution[nonemptymgi].frac_excitation = 0.;
@@ -2342,8 +2325,9 @@ void init() {
   printlnlog("Finished initializing non-thermal solver");
 }
 
-// set total non-thermal deposition rate from individual gamma/positron/electron/alpha rates. This should be called
-// after packet propagation is finished for this timestep and normalise_deposition_estimators() has been done
+// Set the dep_* and eps_*_ana rates of the cell, and store the lepton deposition rate density (gamma, positron,
+// and electron). Call this after the packet propagation of the timestep and after
+// normalise_deposition_estimators().
 void calculate_deposition_rate_density(const int nonemptymgi, HeatingCoolingRates& heatingcoolingrates,
                                        const decay::AnaEmissionPowerPerMass& emission_power_per_mass) {
   heatingcoolingrates.dep_gamma = globals::dep_estimator_gamma[nonemptymgi];
@@ -2396,7 +2380,7 @@ auto get_nt_frac_heating(const int nonemptymgi) -> float {
     return 1.;
   }
   if (NT_SCHEME == NonThermalScheme::NT_AXELRODAPPROX) {
-    return 0.97;  // Axelrod 1980 approximation
+    return 0.97;  // A80 approximation
   }
   const float frac_heating = nt_solution[nonemptymgi].frac_heating;
   return frac_heating;
@@ -2486,8 +2470,7 @@ DEVICE_FUNC auto nt_ionisation_ratecoeff(const int nonemptymgi, const int elemen
   if (NT_SCHEME == NonThermalScheme::NT_SPENCERFANO) {
     const double Y_nt = nt_ionisation_ratecoeff_sf(nonemptymgi, element, ion);
     if (!std::isfinite(Y_nt)) {
-      // probably because eff_ionpot = 0 because the solver hasn't been run yet, or no impact ionisation cross sections
-      // exist
+      // eff_ionpot is 0 before the first solution, or when the cross sections are zero on the whole energy grid
       return nt_ionisation_ratecoeff_wfapprox(nonemptymgi, element, ion);
     }
     assert_always(Y_nt >= 0.);
@@ -2620,8 +2603,7 @@ DEVICE_FUNC void do_ntlepton_deposit(Packet& pkt) {
 }
 
 // The discretised equation is the integral form of the degradation equation (KF92 equation 7; equation 2 of
-// Li et al. 2012) extended with the Auger-electron source term: equation 8 of Shingles et al. (2020),
-// section 2.5, doi:10.1093/mnras/stz3412.
+// LHD12) extended with the Auger-electron source term: equation 8 of S20, section 2.5.
 auto solve_spencerfano(const int nonemptymgi, const int timestep, const int iteration) -> bool {
   const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
   bool skip_solution = false;

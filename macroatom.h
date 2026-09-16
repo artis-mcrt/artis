@@ -12,18 +12,20 @@ void macroatom_open_file();
 
 // Follow an activated macro-atom through stochastic internal energy-flow transitions until it deactivates as an
 // r-packet or k-packet. Actions are selected in proportion to the local radiative, collisional, and non-thermal rates.
-// Lucy (2002), doi:10.1051/0004-6361:20011756; Lucy (2003), arXiv:astro-ph/0303202.
+// Lucy (2002), A&A, 384, 725-735, doi:10.1051/0004-6361:20011756; Lucy (2003), A&A, 403, 261-275,
+// doi:10.1051/0004-6361:20030357.
 DEVICE_FUNC void do_macroatom(Packet& pkt, const MacroAtomState& pktmastate);
 
-// prepopulate one unique level's macroatom transition rates into the cellcache. Used in GPU mode, where
-// the lazy mutex-guarded calculation in do_macroatom() cannot run safely on the device.
+// prepopulate the macro-atom transition rates of one level into the cellcache. cellcacheslot_populate() calls
+// this in multi-slot mode (GPU_ON), where the slot is shared between the ranks of a node and no lazy fill under a
+// mutex is possible.
 DEVICE_FUNC void calculate_cellcache_macroatom_transitionrates(int nonemptymgi, int uniquelevelindex, double t_mid);
 
-// Approximate radiative and collisional rates, following Kromer & Sim (2009), Sections 3.5.1-3.5.2,
-// doi:10.1111/j.1365-2966.2009.15256.x. The clumpednne argument is normally the cell's free electron density
-// multiplied by its clumping factor; the startup recombination-rate calibration in ratecoeff.cc deliberately
-// passes 1 instead, so that the factor cancels out of the coefficient it is deriving.
-// Radiative excitation rate. Multiply by the lower-level population to obtain a rate per second.
+// Approximate radiative and collisional rates, following Kromer & Sim (2009), MNRAS, 398, 1809-1826,
+// doi:10.1111/j.1365-2966.2009.15256.x, Sections 3.5.1-3.5.2. The clumpednne argument is normally the cell's free
+// electron density multiplied by its clumping factor; the startup recombination-rate calibration in ratecoeff.cc
+// deliberately passes 1 instead, so that the factor cancels out of the coefficient it is deriving. Radiative excitation
+// rate. Multiply by the lower-level population to obtain a rate per second.
 [[gnu::pure]] [[nodiscard]] auto rad_excitation_ratecoeff(int nonemptymgi, double upper_statweight, double einstein_A,
                                                           double epsilon_trans, double nnlevel_lower,
                                                           double nnlevel_upper, double statweight_lower,
@@ -57,7 +59,7 @@ DEVICE_FUNC void calculate_cellcache_macroatom_transitionrates(int nonemptymgi, 
                                                           int alltransindex) -> double;
 
 // Sobolev-escape radiative deexcitation rate; multiply by the upper-level population to obtain a rate per second.
-// Kromer & Sim (2009), Section 3.5.2, doi:10.1111/j.1365-2966.2009.15256.x.
+// Kromer & Sim (2009), MNRAS, 398, 1809-1826, doi:10.1111/j.1365-2966.2009.15256.x, Section 3.5.2.
 [[gnu::const]] [[nodiscard]] constexpr auto rad_deexcitation_ratecoeff(
     const double epsilon_trans, const float A_ul, const double upperstatweight, const double lowerstatweight,
     const double nnlevelupper, const double nnlevellower, const double t_current) -> double {

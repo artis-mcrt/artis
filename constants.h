@@ -44,10 +44,10 @@ constexpr double SAHACONST = 2.0706659e-16;  // Saha constant
 
 constexpr double EULERGAMMA = std::numbers::egamma;
 
-// exp(EULERGAMMA) = 1.781072... This is the gamma of the Coulomb logarithm
-// ln[m v^3 / (gamma e^2 omega_p)] in Schunk & Hays (1971) eq. 4 and Kozma & Fransson (1992) eq. 2.
-// Schunk & Hays (p. 114) define it by "ln gamma is Euler's constant", i.e. gamma = exp(EULERGAMMA),
-// not EULERGAMMA itself.
+// exp(EULERGAMMA) = 1.781072... This is the gamma of the Coulomb logarithm ln[m v^3 / (gamma e^2 omega_p)]
+// in eq. 4 of Schunk & Hays (1971), Planet. Space Sci., 19, 113-117, doi:10.1016/0032-0633(71)90071-7, and
+// eq. 2 of Kozma & Fransson (1992), ApJ, 390, 602-621, doi:10.1086/171311. Schunk & Hays (p. 114) define it
+// by "ln gamma is Euler's constant", i.e. gamma = exp(EULERGAMMA), not EULERGAMMA itself.
 // Not calculated with std::exp() because that is not constexpr in libc++.
 constexpr double EXP_EULERGAMMA = 1.7810724179901979852;
 
@@ -93,7 +93,8 @@ enum class RpktGreyType { FEGROUP_APPROX, TANAKA2020_ELECTRONFRAC, JUST2022_TEMP
 // how the code handles the energy that the non-thermal leptons deposit
 // NT_OFF: no non-thermal ionisation
 // NT_SPENCERFANO: the detailed Spencer-Fano solution, which also gives the non-thermal excitation rates
-// NT_AXELRODAPPROX: the work function approximation of Axelrod (1980), with fixed energy fractions
+// NT_AXELRODAPPROX: the work function approximation of Axelrod (1980), PhD thesis, University of California,
+// Santa Cruz, with fixed energy fractions
 enum class NonThermalScheme { NT_OFF, NT_SPENCERFANO, NT_AXELRODAPPROX };
 
 using Vec3d = std::array<double, 3>;

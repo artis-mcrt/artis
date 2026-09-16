@@ -41,8 +41,9 @@ void reset_radiative_energy_factor(int nonemptymgi);
 DEVICE_FUNC void do_kpkt_blackbody(Packet& pkt);
 DEVICE_FUNC void do_kpkt(Packet& pkt, double t2, int nts);
 
-// prepopulate one ion's cooling-rate contributions into the cellcache. Used in GPU mode, where the lazy
-// mutex-guarded calculation in do_kpkt() cannot run safely on the device.
+// prepopulate the cooling-rate contributions of one ion into the cellcache. cellcacheslot_populate() calls this
+// in multi-slot mode (GPU_ON), where the slot is shared between the ranks of a node and no lazy fill under a mutex
+// is possible.
 DEVICE_FUNC void calculate_cellcache_cooling_rates_ion(int nonemptymgi, int uniqueionindex);
 
 [[nodiscard]] inline auto get_coolinglistoffset(int element, int ion) -> int {

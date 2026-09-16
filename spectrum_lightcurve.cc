@@ -310,7 +310,7 @@ void write_specpol(const std::string& specpol_filename, const std::string& emiss
 // true emission for the Stokes Q and U spectra.
 void init_spectra(Spectra& spectra, const double nu_min, const double nu_max, const bool do_emission_absorption,
                   const bool do_true_emission) {
-  // setup the time and frequency bins using a logarithmic spacing in both t and nu
+  // set up the frequency bins with a logarithmic spacing. The time bins are the timesteps.
 
   assert_always(MNUBINS > 0);
   const double dlognu = (log(nu_max) - log(nu_min)) / MNUBINS;
@@ -389,7 +389,6 @@ void add_packet_to_spectra(const Packet& pkt, const int dirbin, Spectra& spectra
   if (t_arrive > globals::tmin && t_arrive < globals::tmax && pkt.nu_rf > nu_min && pkt.nu_rf < nu_max) {
     const auto nts = get_timestep(t_arrive);
 
-    // a binary search into freq_lower would probably be faster than this double logarithm
     const auto nnu = get_logbinindex(pkt.nu_rf, nu_min, dlognu, MNUBINS);
 
     const double solidanglefactor = (dirbin >= 0) ? MABINS : 1.;
@@ -463,7 +462,6 @@ void write_light_curve(const std::string& lc_filename, const std::span<const dou
 
   auto lc_file = fstream_required(lc_filename, std::ios::out | std::ios::trunc);
 
-  // UVOIR bolometric light curve
   for (int nts = 0; nts < numtimesteps; nts++) {
     std::println(lc_file, "{:g} {:g} {:g}", globals::timesteps[nts].mid / DAY, light_curve_lum[nts] / LSUN,
                  light_curve_lumcmf[nts] / LSUN);
@@ -585,7 +583,7 @@ void write_light_curves_and_spectra_for_dirbin(const int nts, std::span<const st
     MPI_Barrier_node();
   }
 
-  const int numtimesteps = nts + 1;  // only produce spectra and light curves up to one past nts
+  const int numtimesteps = nts + 1;  // write the timesteps up to and including nts
   assert_always(numtimesteps <= globals::ntimesteps);
 
   MPI_Barrier_allranks();

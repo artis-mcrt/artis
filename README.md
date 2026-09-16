@@ -6,7 +6,7 @@
 
 <img src="data/artislogo.png" alt="ARTIS logo" width="280" />
 
-ARTIS is a 3D radiative transfer code that uses Monte Carlo methods with indivisible energy packets ([Lucy 2002](https://ui.adsabs.harvard.edu/abs/2002A%26A...384..725L/abstract)) for ejecta in homologous (ballistic) expansion such as supernovae and kilonovae. The code is designed for high performance on modern HPC clusters, with a focus on physics fidelity and multi-dimensional geometry.
+ARTIS is a 3D radiative transfer code that uses Monte Carlo methods with indivisible energy packets ([Lucy 2002, A&A, 384, 725-735, doi:10.1051/0004-6361:20011756](https://ui.adsabs.harvard.edu/abs/2002A%26A...384..725L/abstract)) for ejecta in homologous (ballistic) expansion such as supernovae and kilonovae. The code is designed for high performance on modern HPC clusters, with a focus on physics fidelity and multi-dimensional geometry.
 
 ## Key features
 
@@ -17,7 +17,7 @@ ARTIS simulates ejecta in 1D spherical, 2D cylindrical, and 3D Cartesian coordin
 - **Line-by-line opacities**: In the default mode, ARTIS uses individual line opacities (Sobolev), with optional support for binned expansion opacities.
 - **Macroatom radiative transfer**: the Lucy macroatom scheme self-consistently propagates packets through absorption, fluorescence, and multi-level de-excitation, capturing line-to-line energy redistribution without simplification. This can also be disabled in favour of simplified thermalisation/scattering ratio treatment.
 - **Non-LTE level populations**: statistical-equilibrium non-LTE populations are solved alongside a multibin radiation field model and trajectory-based photoionisation estimators for accurate ionisation and excitation.
-- **Non-thermal physics**: a detailed [Spencer-Fano](https://ui.adsabs.harvard.edu/abs/1954PhRv...93.1172S/abstract) solver, following [Kozma & Fransson (1992)](https://ui.adsabs.harvard.edu/abs/1992ApJ...390..602K/abstract), tracks the thermalization of fast electrons from radioactive decays and their contributions to ionisation and excitation rates.
+- **Non-thermal physics**: a detailed Spencer-Fano solver ([Spencer & Fano 1954, Phys. Rev., 93, 1172-1181, doi:10.1103/PhysRev.93.1172](https://ui.adsabs.harvard.edu/abs/1954PhRv...93.1172S/abstract)), following [Kozma & Fransson (1992), ApJ, 390, 602-621, doi:10.1086/171311](https://ui.adsabs.harvard.edu/abs/1992ApJ...390..602K/abstract), tracks the thermalization of fast electrons from radioactive decays and their contributions to ionisation and excitation rates.
 - **Nuclear decay network**: alpha, beta, and fission decays are handled natively, including time-dependent Monte Carlo particle thermalisation, making ARTIS well suited for kilonova and r-process transient modelling.
 - **Polarisation**: full Stokes-parameter polarised radiative transfer via both real and virtual packets enables direct comparison with spectropolarimetric observations of asymmetric ejecta.
 - **Full-phase coverage**: a single simulation framework spans both the photospheric and nebular phases of a transient, eliminating the need to switch between specialised codes.
@@ -38,10 +38,10 @@ We maintain a list of [papers that use ARTIS](https://ui.adsabs.harvard.edu/user
 
 If you use ARTIS, please cite it using the [DOI from Zenodo](https://zenodo.org/records/18670358).
 
-An early version of the code is described in [Sim (2007)](https://ui.adsabs.harvard.edu/abs/2007MNRAS.375..154S/abstract) and [Kromer & Sim (2009)](https://ui.adsabs.harvard.edu/abs/2009MNRAS.398.1809K/abstract). Some specific features are described in:
-- Polarisation and virtual packets: [Bulla et al. (2015)](https://ui.adsabs.harvard.edu/abs/2015MNRAS.450..967B/abstract)
-- Non-LTE level populations, multibin radiation field model, trajectory-based photoionisation estimators, and non-thermal ionisation/excitation: [Shingles et al. (2020)](https://ui.adsabs.harvard.edu/abs/2020MNRAS.492.2029S/abstract)
-- Alpha, beta, and fission decay, and time-dependent particle thermalisation for kilonovae: [Shingles et al. (2023)](https://ui.adsabs.harvard.edu/abs/2023ApJ...954L..41S/abstract)
+An early version of the code is described in [Sim (2007), MNRAS, 375, 154-162, doi:10.1111/j.1365-2966.2006.11271.x](https://ui.adsabs.harvard.edu/abs/2007MNRAS.375..154S/abstract) and [Kromer & Sim (2009), MNRAS, 398, 1809-1826, doi:10.1111/j.1365-2966.2009.15256.x](https://ui.adsabs.harvard.edu/abs/2009MNRAS.398.1809K/abstract). Some specific features are described in:
+- Polarisation and virtual packets: [Bulla, Sim & Kromer (2015), MNRAS, 450, 967-981, doi:10.1093/mnras/stv657](https://ui.adsabs.harvard.edu/abs/2015MNRAS.450..967B/abstract)
+- Non-LTE level populations, multibin radiation field model, trajectory-based photoionisation estimators, and non-thermal ionisation/excitation: [Shingles et al. (2020), MNRAS, 492, 2029-2043, doi:10.1093/mnras/stz3412](https://ui.adsabs.harvard.edu/abs/2020MNRAS.492.2029S/abstract)
+- Alpha, beta, and fission decay, and time-dependent particle thermalisation for kilonovae: [Shingles et al. (2023), ApJL, 954, L41, doi:10.3847/2041-8213/acf29a](https://ui.adsabs.harvard.edu/abs/2023ApJ...954L..41S/abstract)
 - Expansion opacities and parameterised scattering/thermalisation ratio (instead of default line-by-line opacity and macroatom): Shingles et al. (in prep)
 
 ## Source code availability and license
@@ -141,7 +141,7 @@ To plot and analyse the output, use [artistools](https://github.com/artis-mcrt/a
 ### Testing
 Unit tests for the pure numeric and parsing helpers are built and run with `make unittests && ./unittests` (CI runs them for the classic and NLTE nebular presets).
 
-The tests folder contains ten small end-to-end test models. Each tests/setup_*.sh script downloads the atomic data it needs and assembles a folder that is ready to run:
+The tests folder contains eleven small end-to-end test models. Each tests/setup_*.sh script downloads the atomic data it needs and assembles a folder that is ready to run:
 ```sh
 cd tests
 source ./setup_kilonova_1d.sh   # creates tests/kilonova_1d_testrun/
@@ -149,9 +149,9 @@ source ./setup_kilonova_1d.sh   # creates tests/kilonova_1d_testrun/
 [CI](.github/workflows/ci.yml) runs all of these on every push. It builds with `REPRODUCIBLE=ON FASTMATH=OFF MAX_NODE_SIZE=2` and compares md5 checksums of the output files against reference checksums stored in the tests/*_inputfiles folders. A change that legitimately alters the numerical results therefore needs new reference checksums, which maintainers regenerate using the "Update checksums" workflow. CI also compiles every artisoptions_*.h preset with gcc and clang, and the classic and NLTE nebular presets additionally with Apple Clang, nvc++, and hipcc (including the GPU code paths).
 
 ## Bundled scripts
-- clean.sh: Remove all output files while keeping input files and resetting the simulation to the beginning. Job output folders created by the sn3d -o option are not removed and must be deleted manually.
-- movefiles.sh [DIRNAME]: Move the per-job artis output files from the simulation folder into another folder, for runs made without the sn3d -o option (the job scripts now pass -o so that the files are written there directly).
-- sumcorehourslogs.py: Calculate the summed core hours of all jobs using the timing information in the last line of the output*.txt log files. This cannot include runs where the job was terminated early.
+- clean.sh: Remove all output files while keeping input files and resetting the simulation to the beginning. The script also removes the *.slurm job folders that the job scripts make with the sn3d -o option. A job folder with another name stays. Delete it yourself.
+- movefiles.sh [DIRNAME]: Move the per-job artis output files from the simulation folder into another folder, for runs made without the sn3d -o option. The job scripts pass -o, so their files go into the job folder directly.
+- sumcorehourslogs.py: Sum the core hours of all jobs from the output_0-0.txt log of each job. The script reads the summary in the last line of the log. For a job that stopped early, it estimates the core hours from the first and the last timestamp of the log.
 - sumcorehoursslurm.py: Calculate the summed core hours of all jobs from the slurm job output files.
 
 ## Make options

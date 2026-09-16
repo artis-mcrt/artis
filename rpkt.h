@@ -94,7 +94,7 @@ struct ContinuumOpacity {
   // default constructor allocates phixslist
   constexpr ContinuumOpacity() : ContinuumOpacity(true) {}
 
-  // total continuum absorption coefficient at nu [cm^-1]
+  // total continuum extinction coefficient at nu [cm^-1]
   [[nodiscard]] constexpr auto total() const { return chi_escatter + chi_boundfree + chi_freefree_heat; }
 };
 
@@ -109,7 +109,8 @@ extern template void calculate_chi_rpkt_cont<false>(double nu_cmf, ContinuumOpac
 void allocate_expansionopacities();
 // Convert Sobolev line optical depths in each wavelength bin into an expansion mass opacity. When requested, also
 // construct the Planck-weighted cumulative distribution used to sample thermal re-emission frequencies.
-// Eastman & Pinto (1993), doi:10.1086/172957; Karp et al. (1977), doi:10.1086/155241.
+// Eastman & Pinto (1993), ApJ, 412, 731-751, doi:10.1086/172957; Karp, Lasher, Chan & Salpeter (1977), ApJ, 214,
+// 161-178, doi:10.1086/155241.
 void calculate_expansion_opacities(int nonemptymgi);
 void MPI_Bcast_binned_opacities(ptrdiff_t nstart_nonempty, ptrdiff_t ndo_nonempty, int root_node_id);
 auto calculate_chi_ffheat_nnionpart(int nonemptymgi) -> double;
@@ -174,8 +175,8 @@ static_assert(!FRAME_TRANSFORM_EXPANSION_OPACITIES_BINEDGEDIST ||
   }
 
   if (next_trans > 0) [[likely]] {
-    // if next_trans > 0 we know the next line we should interact with, independent of the packets
-    // current nu_cmf which might be smaller than globals::linelist[left].nu due to propagation errors
+    // next_trans > 0 gives the next line to interact with. The packet nu_cmf can be below
+    // linelistnu[next_trans] because of propagation errors.
     return next_trans;
   }
   if (nu_cmf >= linelistnu[0]) {

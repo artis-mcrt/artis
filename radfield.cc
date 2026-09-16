@@ -3,7 +3,7 @@
 // blackbodies (W, T_R) per cell and per frequency bin for use in the photoionisation and heating rates.
 //
 // The multibin radiation field model and the photoionisation, bound-bound, and heating estimators
-// are described by Shingles et al. (2020), MNRAS, 492, 2029, section 2.2, doi:10.1093/mnras/stz3412.
+// are described by Shingles et al. (2020), MNRAS, 492, 2029-2043, section 2.2, doi:10.1093/mnras/stz3412.
 
 #include "radfield.h"
 
@@ -86,7 +86,7 @@ struct Jb_lu_estimator {
 
 int detailed_linecount = 0;
 
-// array of indices into the linelist[] array for selected lines
+// the lineindex of each line with a detailed Jb_lu estimator
 std::vector<int> detailed_lineindices;
 
 std::vector<std::vector<Jb_lu_estimator>> prev_Jb_lu_normed{};  // value from the previous timestep
@@ -173,7 +173,7 @@ void add_detailed_line(const int lineindex) {
     prev_Jb_lu_normed[nonemptymgi].push_back({.value = 0, .contribcount = 0});
     assert_always(detailed_linecount == std::ssize(prev_Jb_lu_normed[nonemptymgi]));
 
-    // zero_estimators should do the next part anyway, but just to be sure:
+    // zero_estimators() only clears the entries, so the slot must exist first
     Jb_lu_raw[nonemptymgi].push_back({.value = 0, .contribcount = 0});
     assert_always(detailed_linecount == std::ssize(Jb_lu_raw[nonemptymgi]));
   }
@@ -542,8 +542,6 @@ void init() {
   reserve_resize(J_normfactor, nonempty_npts_model + 1);
   reserve_resize(J, nonempty_npts_model + 1);
 
-  // J and nuJ are accumulated and then normalised in-place
-  // i.e. be sure the normalisation has been applied (exactly once) before using the values here!
   reserve_resize(nuJ, nonempty_npts_model + 1);
 
 #ifdef DO_TITER
@@ -726,7 +724,7 @@ auto get_Jb_lu(const int nonemptymgi, const int jblueindex) -> double {
   return prev_Jb_lu_normed[nonemptymgi][jblueindex].value;
 }
 
-// set up the new bins and clear the estimators in preparation for a timestep
+// clear the estimators before a timestep
 void zero_estimators() {
   std::ranges::fill(J_normfactor, -1.0);
   std::ranges::fill(J, 0.0);

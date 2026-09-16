@@ -1,5 +1,4 @@
-// Unit tests for the pure numeric helpers (geometry, special relativity, sampling, decay chains,
-// cross-sections, binning, input parsing, and atomic level structure). Build and run with:
+// Unit tests for the numeric helpers and for some physics functions. main() lists the tests. Build and run with:
 //   make unittests && ./unittests
 // The tests only cover functions with header-visible definitions or external linkage; they use no
 // input files and no MPI communication, and a non-zero exit code means at least one check failed.
@@ -324,10 +323,8 @@ void test_bateman() {
   }
 
   // Below x of about 1e-3 the closed form is itself a difference of two quantities near one and
-  // loses accuracy as epsilon/x, so compare against its series x/2 - x^2/3 instead. What matters
-  // here is that the value is there at all: the (1 + 1/x) exp(-x) - 1/x form this replaced was 0.6%
-  // wrong at x = 1e-7 and underflowed to exactly zero below about 1e-8, which silently cost every
-  // long-lived nuclide its contribution to the initial temperature.
+  // loses accuracy as epsilon/x, so compare against its series x/2 - x^2/3 instead. The value must
+  // stay above zero, so that a long-lived nuclide keeps its contribution to the initial temperature.
   for (const double x : {1e-9, 1e-7, 1e-5}) {
     check_close(decay::calculate_decaychain(initabund, std::array{lambda_a, 0.}, x / lambda_a, true),
                 initabund * ((x / 2.) - (x * x / 3.)), 1e-5, "expansion factor at small lambda*timediff");
@@ -418,8 +415,8 @@ void test_phixs_table_lookup() {
           "classic mode cross section at the threshold is the first table point");
     check(photoionisation_crosssection_fromtable(photoion_xs, nu_edge, nu_edge * (1. + 0.25)) == photoion_xs[2],
           "classic mode truncates to the nearest lower table point");
-    // regression test for the former out-of-bounds read: scan frequencies approaching the upper limit of
-    // the tabulated range from below (the last few representable values fall in the final table cell)
+    // scan the frequencies just below the upper limit of the tabulated range. The last few representable
+    // values fall in the final table cell, and each read must stay inside the table.
     bool tail_reads_in_table = true;
     const double nu_out_bound = nu_edge * (1 + (globals::NPHIXSNUINCREMENT * globals::NPHIXSPOINTS));
     double nu = nu_out_bound * (1. - 1e-13);
@@ -532,8 +529,7 @@ void test_parse_next_token() {
   }
   {
     // packets*.out holds "nan" in the emission positions of a packet that never emitted, and the fields
-    // after it must still be read. Stream extraction failed on such a token and then skipped the rest of
-    // the row.
+    // after it must still be read.
     const auto row = std::format("{:g} {:g} {} {}", NAN, -NAN, 12, 3);
     auto remainder = std::string_view{row};
     double d = 0.;
@@ -1038,7 +1034,8 @@ void test_nonthermal_solve_upper_triangular() {
 }
 
 void test_chargetransfer_helpers() {
-  // fit form of Kingdon & Ferland (1996): k = a * (T/1e4)^b * (1 + c * exp(d * T/1e4)) * exp(-eexp/T)
+  // fit form of Kingdon & Ferland (1996), ApJS, 106, 205-211, doi:10.1086/192335:
+  // k = a * (T/1e4)^b * (1 + c * exp(d * T/1e4)) * exp(-eexp/T)
   check(chargetransfer::evaluate_ctfit(1e-9, 0., 0., 0., 0., 1e3, 1e5, 1e4) == 1e-9,
         "evaluate_ctfit gives the coefficient a at T = 1e4 K for a flat fit");
   check_close(chargetransfer::evaluate_ctfit(1e-9, 1., 0., 0., 0., 1e3, 1e5, 2e4), 2e-9, 1e-12,

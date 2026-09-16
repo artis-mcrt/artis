@@ -24,18 +24,19 @@ void init();
 // from the energy release deltae_erg. The unit tests call this directly.
 [[nodiscard]] auto singly_charged_ratecoeff(double deltae_erg) -> double;
 
-// evaluate the Kingdon & Ferland (1996) fit form. The unit tests call this directly.
+// evaluate the fit form of Kingdon & Ferland (1996), ApJS, 106, 205-211, doi:10.1086/192335. The unit tests call
+// this directly.
 // k = a * (T/1e4 K)^b * (1 + c * exp(d * T/1e4 K)) * exp(-eexp/T) [cm3/s], with a in [cm3/s].
 // The fit part uses T clamped into [tmin, tmax]. The Boltzmann factor exp(-eexp/T) uses the given T.
 [[nodiscard]] auto evaluate_ctfit(double a, double b, double c, double d, double eexp, double tmin, double tmax,
                                   double T) -> double;
 
 // Landau-Zener cross section [cm2] for electron capture by an ion of the given charge from a neutral donor
-// (method of Butler & Dalgarno 1980, ApJ, 241, 838), for the capture channels with the energy releases
-// in deltae_erg_list. The trajectory crosses the channels in sequence, so the total transfer probability
-// stays below one. ip_donor_erg is the ionisation energy of the neutral donor, which sets the exponent of
-// the coupling. The charge must be two or more, and every energy release must be positive.
-// The unit tests call this directly.
+// (method of Butler & Dalgarno 1980, ApJ, 241, 838-843, doi:10.1086/158395), for the capture channels with
+// the energy releases in deltae_erg_list. The trajectory crosses the channels in sequence, so the total
+// transfer probability stays below one. ip_donor_erg is the ionisation energy of the neutral donor, which
+// sets the exponent of the coupling. The charge must be two or more, and every energy release must be
+// positive. The unit tests call this directly.
 [[nodiscard]] auto sigma_lz_channels(int ioncharge, std::span<const double> deltae_erg_list, double ip_donor_erg,
                                      double v_cms) -> double;
 
