@@ -338,12 +338,6 @@ constexpr bool RPKT_USE_EXPANSION_OPACITIES;
 // Use expansion opacities instead of line-by-line opacities for the virtual packets.
 constexpr bool VPKT_USE_EXPANSION_OPACITIES;
 
-// Correct the path that sweeps a bin of the expansion opacity. calculate_expansion_opacities() normalises the
-// opacity with the path c * t * dnu / nu, but USE_RELATIVISTIC_DOPPLER_SHIFT gives a different path. The bin
-// optical depth is then wrong by the Doppler factor times the Lorentz factor. The option has no effect with
-// the first-order Doppler shift. This option changes the results.
-constexpr bool FRAME_TRANSFORM_EXPANSION_OPACITIES_BINEDGEDIST;
-
 // Replace the macroatom with a thermalisation probability P for each bound-bound absorption, and a scattering
 // with probability 1 - P. Every k-packet in a cell that is not thick then emits a blackbody spectrum weighted
 // with the sum of the expansion opacity and the free-free opacity. The code therefore computes the expansion
