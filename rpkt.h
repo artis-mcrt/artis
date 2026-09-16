@@ -143,7 +143,7 @@ auto calculate_chi_ffheat_nnionpart(int nonemptymgi) -> double;
 // caller gives to get_linedistance() for the same bin.
 [[nodiscard]] constexpr auto get_expopac_pathfactor(const double prop_time, const double bin_edge_nu,
                                                     const double dnu_on_dl) -> double {
-  if constexpr (FRAME_TRANSFORM_EXPANSION_OPACITIES_BINEDGEDIST && USE_RELATIVISTIC_DOPPLER_SHIFT) {
+  if constexpr (USE_RELATIVISTIC_DOPPLER_SHIFT) {
     return -CLIGHT * prop_time * dnu_on_dl / bin_edge_nu;
   }
 
@@ -155,8 +155,7 @@ static_assert(USE_RELATIVISTIC_DOPPLER_SHIFT || get_linedistance(2., 4., 2., -1.
 static_assert(!USE_RELATIVISTIC_DOPPLER_SHIFT || get_linedistance(2., 4., 2., -1.) == 2.);
 
 // the corrected path of a bin is the path that calculate_expansion_opacities() assumes
-static_assert(!FRAME_TRANSFORM_EXPANSION_OPACITIES_BINEDGEDIST ||
-              (get_linedistance(2., 4., 2., -1.) * get_expopac_pathfactor(2., 2., -1.)) == (CLIGHT * 2. * 2. / 2.));
+static_assert((get_linedistance(2., 4., 2., -1.) * get_expopac_pathfactor(2., 2., -1.)) == (CLIGHT * 2. * 2. / 2.));
 
 // find the next transition lineindex redder than nu_cmf
 // for the propagation through non empty cells
