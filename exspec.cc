@@ -37,10 +37,9 @@ auto main(int argc, char* argv[]) -> int {
 
   check_already_running();
 
+  // only rank 0 writes a log file. The log lines of the other ranks go nowhere.
   if (globals::my_rank == 0) {
     set_log_file("exspec.txt");
-  } else {
-    set_log_file(std::format("exspec_{}.txt", globals::my_rank));
   }
 
   printlnlog("git branch: {}", GIT_BRANCH);

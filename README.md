@@ -132,7 +132,7 @@ As well as sn3d, `make` builds exspec, which combines the packet files from all 
 ```bash
 mpirun -np 8 ./exspec
 ```
-exspec reads the same input.txt, model, and atomic data files as sn3d, so it must be run in the same folder. The nprocs_exspec line of input.txt gives the number of packet files, which is the number of sn3d ranks and not the number of exspec ranks. Each exspec rank reads a block of the packet files, and the ranks of one node share the spectra arrays. Rank 0 writes its log to exspec.txt, and each other rank writes exspec_RANK.txt.
+exspec reads the same input.txt, model, and atomic data files as sn3d, so it must be run in the same folder. The nprocs_exspec line of input.txt gives the number of packet files, which is the number of sn3d ranks and not the number of exspec ranks. Each exspec rank reads a block of the packet files, and the ranks of one node share the spectra arrays. Only rank 0 writes a log, to exspec.txt.
 
 It writes light_curve.out, spec.out, emission.out, emissiontrue.out, and absorption.out, plus gamma_light_curve.out and gamma_spec.out when KEEP_ESCAPED_GAMMAS is set, and specpol.out, emissionpol.out and absorptionpol.out when POL_ON is set. Direction-resolved versions of these go in the speclc_angle_res folder.
 
