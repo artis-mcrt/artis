@@ -140,7 +140,7 @@ constexpr auto inputlinecomments = std::array{
     "18: num_lte_timesteps",
     "19: optical_depth_is_thick num_grey_timesteps",
     "20: UNUSED max_bf_continua: (ignored; all bound-free continua are included)",
-    "21: nprocs_exspec: extract spectra for n MPI tasks. sn3d will set this on start of new sim.",
+    "21: nprocs_exspec: the number of packet files, one for each sn3d rank. sn3d sets this at the start of a new run.",
     "22: UNUSED do_emission_res: this is always true for exspec, sometimes true during sn3d",
     "23: UNUSED kpktdiffusion_timescale n_kpktdiffusion_timesteps: now set in kpkt.cc",
 };
@@ -2137,8 +2137,8 @@ void update_parameterfile(const int nts) {
       }
 
       // only rewrite this line when updating input.txt for a restart (sn3d), where nprocs is the
-      // number of packet files being written. The nts == -1 backup path may be run by exspec
-      // (nprocs == 1), which must not clobber the nprocs_exspec value it just read
+      // number of packet files that sn3d writes. exspec runs the nts == -1 backup path with its own
+      // rank count, which must not replace the nprocs_exspec value it just read
       if (nts >= 0 && noncomment_linenum == inputline_nprocs_exspec) {
         // by default, exspec should use all available packet files
         globals::nprocs_exspec = globals::nprocs;

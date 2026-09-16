@@ -9,9 +9,11 @@
 
 #include <algorithm>
 #include <chrono>
+#include <cstdint>
 #include <cstdlib>
 #include <filesystem>
 #include <format>
+#include <functional>
 #include <span>
 #include <vector>
 
@@ -19,6 +21,7 @@
 #include <mpi.h>
 #pragma clang unsafe_buffer_usage end
 
+#include "artisoptions.h"
 #include "globals.h"
 #include "grid.h"
 #include "input.h"
@@ -37,6 +40,7 @@ auto main(int argc, char* argv[]) -> int {
 
   check_already_running();
 
+  // the log lines of the other ranks go nowhere
   if (globals::my_rank == 0) {
     set_log_file("exspec.txt");
   }
@@ -59,12 +63,15 @@ auto main(int argc, char* argv[]) -> int {
   printlnlog("  rank_in_node {} of [0..{}] in node {} of [0..{}]", globals::rank_in_node, globals::node_nprocs - 1,
              globals::node_id, globals::node_count - 1);
 
-  // single rank only for now
-  assert_always(globals::my_rank == 0);
-  assert_always(globals::nprocs == 1);
-
   // Read in parameters from input.txt
   read_parameterfile({});
+
+  // nprocs_exspec is the number of packet files, one for each sn3d rank
+  assert_always(globals::nprocs_exspec > 0);
+  if (globals::nprocs > globals::nprocs_exspec) {
+    fatal_crash("exspec runs with {} ranks but there are only {} packet files", globals::nprocs,
+                globals::nprocs_exspec);
+  }
 
   read_atomicdata();
 
@@ -72,28 +79,42 @@ auto main(int argc, char* argv[]) -> int {
 
   setup_timesteps();
 
-  // nprocs_exspec is the number of rank output files to process with exspec
-  // (not the number of ranks used to run exspec, which is always 1 for now)
-  assert_always(globals::nprocs_exspec > 0);
+  // each exspec rank reads a contiguous block of the packet files
+  const auto [firstfile, nfiles] = get_range_chunk(globals::nprocs_exspec, globals::nprocs, globals::my_rank);
+  printlnlog("{} packet files of up to MPKTS {} packets, read by {} exspec ranks", globals::nprocs_exspec, MPKTS,
+             globals::nprocs);
 
-  // one vector for each rank file. A file holds far fewer than MPKTS packets when KEEP_ESCAPED_GAMMAS is false.
-  std::vector<std::vector<Packet>> packets_by_rank;
-  reserve_resize(packets_by_rank, globals::nprocs_exspec);
-  for (int rank = 0; rank < globals::nprocs_exspec; rank++) {
-    packets_by_rank[rank] = read_text_packets(std::format("packets{:02d}_{:04d}.out", 0, rank));
-    const auto escaped_rpkt_count = std::ranges::count_if(packets_by_rank[rank], [](const Packet& pkt) {
-      return pkt.type == TYPE_ESCAPE && pkt.escape_type == TYPE_RPKT;
-    });
-    const auto escaped_gamma_count = std::ranges::count_if(packets_by_rank[rank], [](const Packet& pkt) {
-      return pkt.type == TYPE_ESCAPE && pkt.escape_type == TYPE_GAMMA;
-    });
-    printlnlog("  rank {}: {} escaped r-packets and {} escaped gamma-pkts", rank, escaped_rpkt_count,
-               escaped_gamma_count);
+  // one vector for each packet file. A file holds far fewer than MPKTS packets when KEEP_ESCAPED_GAMMAS is false.
+  std::vector<std::vector<Packet>> packets_by_file;
+  packets_by_file.reserve(nfiles);
+  // the counts of each packet file, summed over the exspec ranks so that rank 0 can log every file
+  std::vector<std::int64_t> packet_count(globals::nprocs_exspec);
+  std::vector<std::int64_t> escaped_rpkt_count(globals::nprocs_exspec);
+  std::vector<std::int64_t> escaped_gamma_count(globals::nprocs_exspec);
+  for (auto sn3d_rank = firstfile; sn3d_rank < firstfile + nfiles; sn3d_rank++) {
+    packets_by_file.push_back(read_text_packets(std::format("packets{:02d}_{:04d}.out", 0, sn3d_rank)));
+    const auto& packets = packets_by_file.back();
+    packet_count[sn3d_rank] = std::ssize(packets);
+    escaped_rpkt_count[sn3d_rank] = std::ranges::count_if(
+        packets, [](const Packet& pkt) { return pkt.type == TYPE_ESCAPE && pkt.escape_type == TYPE_RPKT; });
+    escaped_gamma_count[sn3d_rank] = std::ranges::count_if(
+        packets, [](const Packet& pkt) { return pkt.type == TYPE_ESCAPE && pkt.escape_type == TYPE_GAMMA; });
   }
+  MPI_Allreduce_safe(packet_count, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce_safe(escaped_rpkt_count, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce_safe(escaped_gamma_count, MPI_SUM, MPI_COMM_WORLD);
+  for (auto sn3d_rank = 0Z; sn3d_rank < globals::nprocs_exspec; sn3d_rank++) {
+    printlnlog("  packets{:02d}_{:04d}.out: {} packets, {} escaped r-packets and {} escaped gamma-pkts", 0, sn3d_rank,
+               packet_count[sn3d_rank], escaped_rpkt_count[sn3d_rank], escaped_gamma_count[sn3d_rank]);
+  }
+  printlnlog("total: {} packets, {} escaped r-packets and {} escaped gamma-pkts",
+             std::ranges::fold_left(packet_count, 0Z, std::plus{}),
+             std::ranges::fold_left(escaped_rpkt_count, 0Z, std::plus{}),
+             std::ranges::fold_left(escaped_gamma_count, 0Z, std::plus{}));
 
   // the index of the last timestep also selects the emission, absorption, and direction bin files
-  const std::vector<std::span<const Packet>> packet_spans_by_rank(packets_by_rank.begin(), packets_by_rank.end());
-  write_light_curves_and_spectra(globals::ntimesteps - 1, packet_spans_by_rank);
+  const std::vector<std::span<const Packet>> packet_spans_by_file(packets_by_file.begin(), packets_by_file.end());
+  write_light_curves_and_spectra(globals::ntimesteps - 1, packet_spans_by_file);
 
   const auto exspec_duration = std::chrono::duration<double>(std::chrono::steady_clock::now() - sys_time_start).count();
   printlnlog("exspec finished (took {:.1f} seconds)", exspec_duration);

@@ -197,7 +197,7 @@ jobs:
               if: always()
               working-directory: tests/${{ matrix.testname }}_testrun/
               run: |
-                  time mpirun -np 1 --mca osc ^ucx ./exspec
+                  time mpirun -np 2 --oversubscribe --mca osc ^ucx ./exspec
                   python3 ../../scripts/mergeangleres.py
 
             - name: cat exspec log
