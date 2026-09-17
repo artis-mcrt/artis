@@ -25,6 +25,7 @@
 #include <iterator>
 #include <limits>
 #include <print>
+#include <regex>
 #include <string>
 #include <string_view>
 #include <system_error>
@@ -873,6 +874,27 @@ auto do_timestep(const int nts, const int titer, std::vector<Packet>& packets, c
   return !enough_walltime_for_timestep;
 }
 
+// A new simulation removes the output files, the restart files, and the job folders of the previous simulation.
+// The patterns are those of scripts/clean.sh, without the files that the job script of the current job writes
+// (out.txt, slurm-*.out, machine.file.*, and core.*).
+void remove_previous_simulation_files() {
+  const std::regex generated_name{
+      R"((gridsave|packets|vspecpol|vpackets).*\.tmp|.*\.out(\..*)?|output_[0-9]+-[0-9]+\.txt(\.zst|\.gz|\.xz)?|)"
+      R"(exspec.*\.txt.*|.*\.slurm|[0-9]+\.job|packets|vspecpol|vpackets|speclc_angle_res|)"
+      R"(bflist\.dat|ratecoeff\.dat|line_list\.txt|logfiles\.tar.*)"};
+  std::vector<std::filesystem::path> paths_to_remove;
+  std::error_code ec;
+  for (const auto& entry : std::filesystem::directory_iterator(".", ec)) {
+    const auto name = entry.path().filename().string();
+    if (std::regex_match(name, generated_name) && !name.starts_with("slurm-")) {
+      paths_to_remove.push_back(entry.path());
+    }
+  }
+  for (const auto& path : paths_to_remove) {
+    std::filesystem::remove_all(path, ec);
+  }
+}
+
 // Create the run output folder and keep an output_0-0.txt symlink in the simulation folder pointing at the
 // current job's rank-0 log, so that e.g. tail -f output_0-0.txt works regardless of the output folder.
 // Without the -o option, the folder gets its name from the job index.
@@ -885,15 +907,7 @@ void setup_runoutputfolder() {
   }
 
   if (globals::my_rank == 0 && globals::job_index == 0) {
-    // a new simulation removes the job folders of the previous simulation
-    std::error_code ec;
-    for (const auto& entry : std::filesystem::directory_iterator(".", ec)) {
-      const auto foldername = entry.path().filename().string();
-      if (entry.is_directory(ec) && foldername.size() == 12 && foldername.ends_with(".job") &&
-          std::ranges::all_of(foldername.substr(0, 8), [](const char c) { return c >= '0' && c <= '9'; })) {
-        std::filesystem::remove_all(entry.path(), ec);
-      }
-    }
+    remove_previous_simulation_files();
   }
 
   if (globals::my_rank == 0) {
@@ -1133,11 +1147,6 @@ auto main(int argc, char* argv[]) -> int {
   printlnlog("[info] mem_usage: packets occupy {:.3f} MB", MPKTS * sizeof(Packet) / 1024. / 1024.);
 
   if (!globals::simulation_continued_from_saved) {
-    if (globals::my_rank == 0) {
-      // only rank 0 writes deposition.out, so only rank 0 removes the old file
-      std::error_code ec;
-      std::filesystem::remove("deposition.out", ec);
-    }
     packet_init(packets);
     zero_estimators();
   }
