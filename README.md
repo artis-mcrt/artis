@@ -125,7 +125,7 @@ A run writes the following into the simulation folder:
 - deposition.out: the radioactive energy deposition rate as a function of time.
 - gridsave_ts*.tmp and packets_*_ts*.tmp: restart files that allow a later job to continue from the end of a timestep.
 
-Run sn3d with `-o JOBFOLDER` (e.g. `./sn3d -o job0`) to write the per-job output files (the rank log files and the estimators, nlte, radfield, and macroatom files) into a subfolder. The cluster job scripts do this automatically with a folder named after the SLURM job id. The shared run-level files, including the restart files that a later job resumes from, are still written to the simulation folder, and an output_0-0.txt symlink to the current job's rank-0 log is kept there so that following the log works regardless of the output folder. For runs made without -o, scripts/movefiles.sh can move the per-job files into a subfolder afterwards.
+Run sn3d with `-o JOBFOLDER` (e.g. `./sn3d -o job0`) to write the per-job output files (the rank log files and the estimators, nlte, radfield, and macroatom files) into a subfolder. The cluster job scripts do this automatically with a folder named after the SLURM job id. The shared run-level files, including the restart files that a later job resumes from, are still written to the simulation folder, and an output_0-0.txt symlink to the current job's rank-0 log is kept there so that following the log works regardless of the output folder.
 
 ### Post-processing with exspec
 As well as sn3d, `make` builds exspec, which combines the packet files from all ranks into spectra and light curves. sn3d writes the same files itself, so exspec is necessary only to make them again from the packet files, e.g. after a change of MNUBINS or of the frequency range. Run it in the simulation folder with any number of ranks from one up to the number of packet files:
@@ -150,7 +150,6 @@ source ./setup_kilonova_1d.sh   # creates tests/kilonova_1d_testrun/
 
 ## Bundled scripts
 - clean.sh: Remove all output files while keeping input files and resetting the simulation to the beginning. The script also removes the *.slurm job folders that the job scripts make with the sn3d -o option. A job folder with another name stays. Delete it yourself.
-- movefiles.sh [DIRNAME]: Move the per-job artis output files from the simulation folder into another folder, for runs made without the sn3d -o option. The job scripts pass -o, so their files go into the job folder directly.
 - sumcorehourslogs.py: Sum the core hours of all jobs from the output_0-0.txt log of each job. The script reads the summary in the last line of the log. For a job that stopped early, it estimates the core hours from the first and the last timestamp of the log.
 - sumcorehoursslurm.py: Calculate the summed core hours of all jobs from the slurm job output files.
 
