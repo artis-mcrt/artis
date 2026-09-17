@@ -879,8 +879,8 @@ auto do_timestep(const int nts, const int titer, std::vector<Packet>& packets, c
 // (slurm-*.out, machine.file.*, and core.*).
 void remove_previous_simulation_files() {
   const std::regex generated_name{
-      R"((gridsave|packets|vspecpol|vpackets).*\.tmp|.*\.out(\..*)?|output_[0-9]+-[0-9]+\.txt(\.zst|\.gz|\.xz)?|)"
-      R"(exspec.*\.txt.*|.*\.slurm|job_from_ts[0-9]+|packets|vspecpol|vpackets|speclc_angle_res|)"
+      R"((gridsave|packets|vspecpol|vpackets|vpkt_grid).*\.tmp|.*\.out(\..*)?|output_[0-9]+-[0-9]+\.txt(\.zst|\.gz|\.xz)?|)"
+      R"(exspec.*\.txt.*|.*\.slurm|job_from_ts[0-9]+|packets|vspecpol|vpackets|vpkt_grid|speclc_angle_res|)"
       R"(bflist\.dat|ratecoeff\.dat|line_list\.txt|logfiles\.tar.*|out\.txt)"};
   std::vector<std::filesystem::path> paths_to_remove;
   std::error_code ec;

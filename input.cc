@@ -1923,6 +1923,7 @@ auto read_start_timestep_and_continue_flag() -> std::pair<int, bool> {
         assert_always(std::istringstream{line} >> timestep_initial);
       } else if (noncomment_linenum == inputline_continue_from_saved) {
         assert_always(std::istringstream{line} >> continue_flag);
+        assert_always(continue_flag == 0 || continue_flag == 1);
       }
     }
   }
