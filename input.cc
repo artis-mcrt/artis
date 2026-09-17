@@ -143,6 +143,7 @@ constexpr auto inputlinecomments = std::array{
     "21: nprocs_exspec: the number of packet files, one for each sn3d rank. sn3d sets this at the start of a new run.",
     "22: UNUSED do_emission_res: this is always true for exspec, sometimes true during sn3d",
     "23: UNUSED kpktdiffusion_timescale n_kpktdiffusion_timesteps: now set in kpkt.cc",
+    "24: job_index: the index of the next sn3d job. sn3d sets this. A new simulation starts at 0.",
 };
 
 // indices of the noncomment lines of input.txt that update_parameterfile() rewrites for a restart
@@ -150,9 +151,11 @@ constexpr auto inputlinecomments = std::array{
 constexpr int inputline_timestep_range = 2;
 constexpr int inputline_continue_from_saved = 16;
 constexpr int inputline_nprocs_exspec = 21;
+constexpr int inputline_job_index = 24;
 static_assert(std::string_view{inputlinecomments[inputline_timestep_range]}.starts_with(" 2:"));
 static_assert(std::string_view{inputlinecomments[inputline_continue_from_saved]}.starts_with("16:"));
 static_assert(std::string_view{inputlinecomments[inputline_nprocs_exspec]}.starts_with("21:"));
+static_assert(std::string_view{inputlinecomments[inputline_job_index]}.starts_with("24:"));
 
 void read_phixs_data_table(std::istream& phixsfile, const int nphixspoints_inputtable, const int element,
                            const int lowerion, const int lowerlevel, const int upperion, int upperlevel_in,
@@ -1909,8 +1912,7 @@ void setup_nlte_levels() {
 }  // anonymous namespace
 
 // read input parameters from input.txt
-// Get the index of this job before the log files open. A new simulation gives 0. A continued simulation gives the
-// index in the gridsave file plus one.
+// Get the index of this job from input.txt before the log files open. A new simulation has the index 0.
 auto read_job_index() -> int {
   int job_index = 0;
   // without input.txt, read_parameterfile() restores the input of a new simulation
@@ -1918,21 +1920,19 @@ auto read_job_index() -> int {
     std::string line;
     int timestep_initial = 0;
     int continue_flag = 0;
-    for (int noncomment_linenum = 0; noncomment_linenum <= inputline_continue_from_saved; noncomment_linenum++) {
-      assert_always(get_noncommentline(file, line));
+    int job_index_in = 0;
+    for (int noncomment_linenum = 0; get_noncommentline(file, line); noncomment_linenum++) {
       if (noncomment_linenum == inputline_timestep_range) {
         assert_always(std::istringstream{line} >> timestep_initial);
       } else if (noncomment_linenum == inputline_continue_from_saved) {
         std::istringstream{line} >> continue_flag;
+      } else if (noncomment_linenum == inputline_job_index) {
+        assert_always(std::istringstream{line} >> job_index_in);
+        assert_always(job_index_in >= 0);
       }
     }
     if (continue_flag == 1 && timestep_initial > 0) {
-      FILE* gridsave_file = fopen_required(std::format("gridsave_ts{}.tmp", timestep_initial), "r");
-      int job_index_in = -1;
-      assert_always(fscanf(gridsave_file, "%d ", &job_index_in) == 1);
-      fclose(gridsave_file);
-      assert_always(job_index_in >= 0);
-      job_index = job_index_in + 1;
+      job_index = job_index_in;
     }
   }
   MPI_Bcast_safe(job_index, 0, MPI_COMM_WORLD);
@@ -2129,9 +2129,16 @@ void read_parameterfile(std::span<Packet> packets) {
 
   file.close();
 
+  // every rank has closed input.txt before rank 0 replaces it
+  MPI_Barrier_allranks();
+
   if (globals::my_rank == 0 && !globals::simulation_continued_from_saved) {
     // back up original input file, adding comments to each line
     update_parameterfile(-1);
+    if (!packets.empty()) {
+      // only sn3d has packets. It starts a new simulation here, so input.txt gets the job index 0
+      std::filesystem::copy_file("input-newrun.txt", "input.txt", std::filesystem::copy_options::overwrite_existing);
+    }
   }
 }
 
@@ -2150,10 +2157,17 @@ void update_parameterfile(const int nts) {
 
   std::string line;
 
+  // a restart file set is for the next job, and input-newrun.txt is for a new simulation
+  const int job_index_out = (nts >= 0) ? globals::job_index + 1 : 0;
+
   int noncomment_linenum = -1;
   while (std::getline(file, line)) {
     if (!lineiscommentonly(line)) {
       noncomment_linenum++;  // index of the line among the lines that are not blank and not comments, from 0
+
+      if (noncomment_linenum == inputline_job_index) {
+        line = std::format("{}", job_index_out);
+      }
 
       // overwrite particular lines to enable restarting from the current timestep
       if (nts >= 0) {
@@ -2202,6 +2216,11 @@ void update_parameterfile(const int nts) {
 
   if (file.bad() || !file.eof()) {
     fatal_crash("Could not read input.txt for the parameter file update.");
+  }
+  if (noncomment_linenum < inputline_job_index) {
+    // an input.txt from before the job index has no such line
+    assert_always(noncomment_linenum == inputline_job_index - 1);
+    std::println(fileout, "{:<24} # {}", job_index_out, inputlinecomments[inputline_job_index]);
   }
   fileout.close();
   if (fileout.fail()) {
