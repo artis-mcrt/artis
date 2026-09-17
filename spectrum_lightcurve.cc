@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <array>
 #include <atomic>
+#include <charconv>
 #include <chrono>
 #include <cmath>
 #include <cstddef>
@@ -14,11 +15,13 @@
 #include <fstream>
 #include <ios>
 #include <iterator>
+#include <memory>
 #include <print>
 #include <ranges>
 #include <span>
 #include <string>
 #include <string_view>
+#include <system_error>
 #include <utility>
 #include <vector>
 
@@ -168,7 +171,8 @@ void write_spectrum_file(const std::string& spec_filename, const Spectra& spectr
   }
 }
 
-// Text output of many values is much faster through a large buffer than with a std::print call for each value.
+// Text output of many values is much faster through std::to_chars and a large buffer than with a std::print call for
+// each value.
 class BufferedTextFile {
  public:
   explicit BufferedTextFile(const std::string& filename)
@@ -186,7 +190,12 @@ class BufferedTextFile {
     if (value == 0. && !std::signbit(value)) {
       buffer += '0';  // most values of the emission and absorption arrays are zero
     } else {
-      std::format_to(std::back_inserter(buffer), "{:g}", value);
+      // std::to_chars has no fixed cost for each call, which std::format has
+      std::array<char, 32> text{};
+      const auto [textend, ec] =
+          std::to_chars(text.data(), std::to_address(text.end()), value, std::chars_format::general, 6);
+      assert_always(ec == std::errc{});
+      buffer.append(text.data(), textend);
     }
     if (buffer.size() >= flushsize) {
       file.write(buffer.data(), static_cast<std::streamsize>(buffer.size()));
