@@ -199,8 +199,8 @@ Three steps differ from a plain build and are easy to miss:
   them.
 
 CI writes `results_md5_job0.txt` from
-`md5sum *.out job0/*.out speclc_angle_res/*.*` and `results_md5_final.txt` from
-the same command with `job1/`. The log files stay outside both sets, because
+`md5sum *.out 00000000.job/*.out speclc_angle_res/*.*` and `results_md5_final.txt` from
+the same command with `00000001.job/`. The log files stay outside both sets, because
 their names do not match.
 
 CI makes the reference checksums on an arm64 runner with g++-15. Local x86-64
@@ -447,8 +447,8 @@ The code must compile with nvc++ and with hipcc, also with `STDPAR=ON GPU=ON`.
   `packet_type`, `absorption_type`, and the `EMTYPE_*` constants in `packet.h`.
   Do not renumber them.
 - `sn3d` writes one log file for each rank and thread
-  (`output_<rank>-<thread>.txt`). The option `-o OUTPUTFOLDER` moves the per-job
-  files into a subfolder. The run-level files, e.g. the restart files, stay in
+  (`output_<rank>-<thread>.txt`). The per-job files go into the job
+  folder `<job index>.job`, and `input.txt` stores the job index. The run-level files, e.g. the restart files, stay in
   the run folder, together with a symlink to the log of rank 0. Rank 0 writes
   one line with the job index and the job folder to the standard output. The
   standard output is otherwise quiet unless there is a crash.

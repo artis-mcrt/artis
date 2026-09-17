@@ -22,7 +22,7 @@ echo "CPU type: $(c++ -march=native -Q --help=target | grep -- '-march=  ' | cut
 hoursleft=$(python3 ./artis/scripts/slurmjobhoursleft.py ${SLURM_JOB_ID})
 source ./artis/scripts/corehours-before.sh
 echo "$(date): before srun sn3d. hours left: $hoursleft"
-time mpirun -- ./artis/sn3d -w $hoursleft -o ${SLURM_JOB_ID}.slurm
+time mpirun -- ./artis/sn3d -w $hoursleft
 hoursleftafter=$(python3 ./artis/scripts/slurmjobhoursleft.py ${SLURM_JOB_ID})
 echo "$(date): after srun sn3d finished. hours left: $hoursleftafter"
 source ./artis/scripts/corehours-after.sh

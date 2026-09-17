@@ -895,15 +895,12 @@ void remove_previous_simulation_files() {
   }
 }
 
-// Create the run output folder and keep an output_0-0.txt symlink in the simulation folder pointing at the
-// current job's rank-0 log, so that e.g. tail -f output_0-0.txt works regardless of the output folder.
-// Without the -o option, the folder gets its name from the job index.
+// Create the run output folder, which gets its name from the job index. Keep an output_0-0.txt symlink in the
+// simulation folder pointing at the current job's rank-0 log, so that e.g. tail -f output_0-0.txt works.
 void setup_runoutputfolder() {
   const auto* const linkname = "output_0-0.txt";
 
-  if (globals::runoutputfolder.empty()) {
-    globals::runoutputfolder = std::format("{:08d}.job", globals::job_index);
-  }
+  globals::runoutputfolder = std::format("{:08d}.job", globals::job_index);
 
   if (globals::my_rank == 0 && globals::job_index == 0) {
     remove_previous_simulation_files();
@@ -925,28 +922,21 @@ void setup_runoutputfolder() {
       }
     }
 
-    if (!std::filesystem::equivalent(globals::runoutputfolder, ".", ec)) {
-      // not having the log symlink is no reason to stop the simulation, so just warn if it cannot be created
-      const auto linktarget = get_runoutputfolder_filepath(linkname);
-      std::filesystem::remove(linkname, ec);
-      std::filesystem::create_symlink(linktarget, linkname, ec);
-      if (ec) {
-        std::println(stderr, "[warning] could not create symlink '{}' to '{}': {}", linkname, linktarget, ec.message());
-      }
+    // not having the log symlink is no reason to stop the simulation, so just warn if it cannot be created
+    const auto linktarget = get_runoutputfolder_filepath(linkname);
+    std::filesystem::remove(linkname, ec);
+    std::filesystem::create_symlink(linktarget, linkname, ec);
+    if (ec) {
+      std::println(stderr, "[warning] could not create symlink '{}' to '{}': {}", linkname, linktarget, ec.message());
     }
-    // when -o names the simulation folder itself, no symlink is made (it would point at itself and the log
-    // will be at the link's path anyway), and the cleanup above has already removed any leftover link
   }
   // the folder must exist before any rank opens its log file there
   MPI_Barrier_allranks();
 }
 
 void print_options_help(std::FILE* stream, const char* progname) {
-  std::println(stream, "Usage: {} [-w WALLTIMELIMITHOURS] [-o OUTPUTFOLDER] [-h]", progname);
+  std::println(stream, "Usage: {} [-w WALLTIMELIMITHOURS] [-h]", progname);
   std::println(stream, "  -w WALLTIMELIMITHOURS  finish cleanly (writing restart files) before this much wall time");
-  std::println(stream, "  -o OUTPUTFOLDER        write the per-rank output files (rank logs and estimators,");
-  std::println(stream, "                         nlte, radfield, and macroatom files) into this folder");
-  std::println(stream, "                         (default: 00000000.job, 00000001.job, ... for each job in sequence)");
   std::println(stream, "  -h                     print this help and exit");
 }
 
@@ -972,7 +962,7 @@ auto main(int argc, char* argv[]) -> int {
 
   std::string walltime_limit_hours_str;
   int opt = 0;
-  while ((opt = getopt(argc, argv, "hw:o:")) != -1) {  // NOLINT(concurrency-mt-unsafe,misc-include-cleaner)
+  while ((opt = getopt(argc, argv, "hw:")) != -1) {  // NOLINT(concurrency-mt-unsafe,misc-include-cleaner)
     if (opt == 'h') {
       if (globals::my_rank == 0) {
         print_options_help(stdout, argv[0]);  // NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic)
@@ -990,14 +980,6 @@ auto main(int argc, char* argv[]) -> int {
       }
       walltime_limit_seconds = static_cast<int>(walltime_limit_hours * HOUR);
       walltime_limit_hours_str = optarg;
-    } else if (opt == 'o') {
-      globals::runoutputfolder = optarg;
-      while (globals::runoutputfolder.size() > 1 && globals::runoutputfolder.ends_with('/')) {
-        globals::runoutputfolder.pop_back();
-      }
-      if (globals::runoutputfolder.empty()) {
-        fatal_crash("empty output folder given with -o option");
-      }
     } else {
       print_options_help(stderr, argv[0]);  // NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic)
       fatal_crash("unknown command line option");

@@ -56,7 +56,7 @@ inline int rank_in_node{-1};
 inline int node_count{-1};
 inline int node_id{-1};
 
-// optional folder (sn3d -o option) receiving the per-rank output files; empty means the current directory
+// the job folder of sn3d, which receives the per-rank output files; empty means the current directory
 inline std::string runoutputfolder;
 
 inline void setup_mpi_vars() {
@@ -631,8 +631,8 @@ inline void MPI_Reduce_safe(R&& data, MPI_Op op, const int root, MPI_Comm comm) 
   assert_always(items_processed == std::ssize(dataspan));
 }
 
-// path for a per-rank output file (rank logs, estimators, nlte/radfield/macroatom files), which the
-// sn3d -o option redirects into a run output folder (stored without a trailing slash)
+// path for a per-rank output file (rank logs, estimators, nlte/radfield/macroatom files), which sn3d
+// writes into the job folder (stored without a trailing slash)
 [[nodiscard]] inline auto get_runoutputfolder_filepath(const std::string_view filename) -> std::string {
   return globals::runoutputfolder.empty() ? std::string(filename)
                                           : std::format("{}/{}", globals::runoutputfolder, filename);

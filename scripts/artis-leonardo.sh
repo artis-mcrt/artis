@@ -54,7 +54,7 @@ source ./artis/scripts/exspec-before.sh
 hoursleft=$(python ./artis/scripts/slurmjobhoursleft.py ${SLURM_JOB_ID})
 source ./artis/scripts/corehours-before.sh
 echo "$(date): before srun sn3d. hours left: $hoursleft"
-time srun --hint=nomultithread -- ./artis/sn3d -w $hoursleft -o ${SLURM_JOB_ID}.slurm
+time srun --hint=nomultithread -- ./artis/sn3d -w $hoursleft
 srun_status=$?
 
 hoursleftafter=$(python ./artis/scripts/slurmjobhoursleft.py ${SLURM_JOB_ID})

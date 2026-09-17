@@ -12,4 +12,4 @@ alias qsub='sbatch --job-name="${PWD##*/}" ${EMAIL:+--mail-user="$EMAIL"}'
 alias qdel="scancel"
 alias qstat="squeue"
 alias jobinfo="scontrol show jobid"
-alias rsyncnooutput="rsync -av --exclude='speclc_angle_res' --exclude='exspec*.txt' --exclude='*.pdf' --exclude='out*.txt' --exclude='*.slurm' --exclude='*.out*' --exclude='packets*' --exclude='logfiles*' --exclude='*.tmp'"
+alias rsyncnooutput="rsync -av --exclude='speclc_angle_res' --exclude='exspec*.txt' --exclude='*.pdf' --exclude='out*.txt' --exclude='*.slurm' --exclude='*.job' --exclude='*.out*' --exclude='packets*' --exclude='logfiles*' --exclude='*.tmp'"
