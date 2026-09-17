@@ -19,10 +19,6 @@ d80043ce6bedca56511b9fd3f7c0a49f  modelgridrankassignments.out
 63347159d05e5845d9dcfc0bc48d1739  spec.out
 8dc6f8fa3ad54bec3f286e735e14bf2d  spec_res.out
 a351f1711fecd60c023d0ba7332092db  timesteps.out
-cafca428cbfbf68d9cdde948fbb3b86b  job_from_ts0000/estimators_0000.out
-445fd98cf66479f2cf353e91992105db  job_from_ts0000/estimators_0001.out
-accc35f0e97a80d62fa8447ebc8857c0  job_from_ts0000/estimators_0002.out
-4c9450c47b9b57346116960147567fb0  job_from_ts0000/estimators_0003.out
 1d53d122b3bfba3e2b6e61e827f3f301  job_from_ts0008/estimators_0000.out
 4652c187a293a07109fb9ff3e84b4bed  job_from_ts0008/estimators_0001.out
 acae8a7b663a1253aed13bfd55db9ff9  job_from_ts0008/estimators_0002.out

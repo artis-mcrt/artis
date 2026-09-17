@@ -17,10 +17,6 @@ f03513b8ae1dff41ee72be044fe8c7e5  packets00_0002.out
 2e8748345688afb5896a8dbcdb845ae3  packets00_0003.out
 5376d5a191f684bbffd146a5bbe66c1f  spec.out
 a351f1711fecd60c023d0ba7332092db  timesteps.out
-be7625d6a1a92e5c19b33eb8c4a7a99a  job_from_ts0000/estimators_0000.out
-cef1eae14d94afd9b4cfae239256ad70  job_from_ts0000/estimators_0001.out
-ec45676c542a13a16f4d6d14fd5d1205  job_from_ts0000/estimators_0002.out
-e75298b22768cd07d41c1e13d1e31149  job_from_ts0000/estimators_0003.out
 4bae7cb354fb9594166912fc71a6e4bc  job_from_ts0008/estimators_0000.out
 6bc9f8d6911c1bbc611c26d9f6208e1a  job_from_ts0008/estimators_0001.out
 6afb6bbeadb611122b62e05cd90edb91  job_from_ts0008/estimators_0002.out

@@ -198,10 +198,10 @@ Three steps differ from a plain build and are easy to miss:
   writes the direction bin files into `speclc_angle_res/`, so nothing moves
   them.
 
-CI writes `results_md5_job0.txt` and `results_md5_final.txt` from
-`md5sum *.out job_from_ts*/*.out speclc_angle_res/*.*`. The first file has only
-the job folder of the first run, and the second file has both job folders. The
-log files stay outside both sets, because their names do not match.
+CI writes `results_md5_job0.txt` from
+`md5sum *.out job_from_ts0000/*.out speclc_angle_res/*.*` and
+`results_md5_final.txt` from the same command with the job folder of the resume
+run. The log files stay outside both sets, because their names do not match.
 
 CI makes the reference checksums on an arm64 runner with g++-15. Local x86-64
 builds with gcc 14 reproduced all of them for `kilonova_1d`, on two different

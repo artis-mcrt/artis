@@ -149,7 +149,7 @@ jobs:
                   shopt -s nullglob
                   angleresfiles=(speclc_angle_res/*.*)
                   shopt -u nullglob
-                  md5sum *.out job_from_ts*/*.out "${angleresfiles[@]}" | tee ../${{ matrix.testname }}_inputfiles/results_md5_job0.txt
+                  md5sum *.out job_from_ts0000/*.out "${angleresfiles[@]}" | tee ../${{ matrix.testname }}_inputfiles/results_md5_job0.txt
                   if [ "${{ steps.run_job0.outcome }}" = "success" ]; then
                       touch ../${{ matrix.testname }}_inputfiles/results_md5_job0.txt.complete
                   else
@@ -221,7 +221,7 @@ jobs:
                   shopt -s nullglob
                   angleresfiles=(speclc_angle_res/*.*)
                   shopt -u nullglob
-                  md5sum *.out job_from_ts*/*.out "${angleresfiles[@]}" | tee ../${{ matrix.testname }}_inputfiles/results_md5_final.txt
+                  md5sum *.out "$(ls -d job_from_ts* | grep -v ts0000 | tail -n 1)"/*.out "${angleresfiles[@]}" | tee ../${{ matrix.testname }}_inputfiles/results_md5_final.txt
                   if [ "${{ steps.run_job0.outcome }}" = "success" ] && [ "${{ steps.run_job1.outcome }}" = "success" ] && [ "${{ steps.run_exspec.outcome }}" = "success" ]; then
                       touch ../${{ matrix.testname }}_inputfiles/results_md5_final.txt.complete
                   else
