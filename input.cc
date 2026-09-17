@@ -1920,7 +1920,8 @@ auto read_job_index() -> int {
     std::string line;
     int timestep_initial = 0;
     int continue_flag = 0;
-    int job_index_in = 0;
+    // a continued simulation is not the first job, also when an old input.txt has no job index
+    int job_index_in = 1;
     for (int noncomment_linenum = 0; get_noncommentline(file, line); noncomment_linenum++) {
       if (noncomment_linenum == inputline_timestep_range) {
         assert_always(std::istringstream{line} >> timestep_initial);
@@ -1928,7 +1929,7 @@ auto read_job_index() -> int {
         std::istringstream{line} >> continue_flag;
       } else if (noncomment_linenum == inputline_job_index) {
         assert_always(std::istringstream{line} >> job_index_in);
-        assert_always(job_index_in >= 0);
+        assert_always(job_index_in >= 1);
       }
     }
     if (continue_flag == 1 && timestep_initial > 0) {

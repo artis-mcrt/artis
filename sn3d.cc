@@ -901,7 +901,6 @@ void remove_previous_simulation_files() {
 void setup_runoutputfolder() {
   const auto* const linkname = "output_0-0.txt";
 
-  globals::job_index = read_job_index();
   if (globals::runoutputfolder.empty()) {
     globals::runoutputfolder = std::format("{:08d}.job", globals::job_index);
   }
@@ -966,6 +965,8 @@ auto main(int argc, char* argv[]) -> int {
   MPI_Init(&argc, &argv);
 
   globals::setup_mpi_vars();
+
+  globals::job_index = read_job_index();
 
   int walltime_limit_seconds = -1;
 
