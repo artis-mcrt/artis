@@ -107,7 +107,7 @@ Every build writes the database again, so it stays current. It always uses the `
 For editing, the clangd language server is recommended (e.g., with the [VS Code plugin](https://marketplace.visualstudio.com/items?itemName=llvm-vs-code-extensions.vscode-clangd)).
 
 ### Running
-sn3d will not write to the standard output (unless a crash occurs) but each MPI rank n will produce a log file called output_n-0.txt. A local run might look something like this:
+sn3d writes one line with the name of the job folder to the standard output, and then nothing more unless a crash occurs. Each MPI rank n writes a log file called output_n-0.txt into the job folder (see [Output files](#output-files)). sn3d keeps a symlink output_0-0.txt in the simulation folder that points to the log of rank 0. A local run might look something like this:
 ```bash
 mpirun -np 8 ./sn3d&
 tail -f output_0-0.txt
@@ -117,15 +117,17 @@ Press Ctrl+C to stop following the log file.
 To split a long simulation across several queued jobs, run sn3d with `-w WALLTIMELIMITHOURS`. When too little wall time remains to complete another timestep, the run finishes cleanly (writing the restart files and updating input.txt) and prints RESTART_NEEDED into the log, which the bundled cluster job scripts detect to submit a continuation job. The scripts pass the remaining SLURM allocation time automatically. Run `./sn3d -h` to list all command-line options.
 
 ### Output files
-A run writes the following into the simulation folder:
+Each job writes the following into its job folder, e.g. `job_from_ts0000`:
 - output_n-0.txt: a log file for each MPI rank n.
+- estimators_nnnn.out: the plasma conditions of each cell (temperatures, ionisation, heating and cooling rates) at each timestep.
+
+A run writes the following into the simulation folder:
 - packets00_nnnn.out: the Monte Carlo packets from each rank, which exspec can turn into spectra and light curves again.
 - light_curve.out, spec.out, and the other spectrum files that [Post-processing with exspec](#post-processing-with-exspec) lists: sn3d writes the light curves and spectra at each timestep, and the emission, absorption, and direction-resolved files at the last requested timestep.
-- estimators_nnnn.out: the plasma conditions of each cell (temperatures, ionisation, heating and cooling rates) at each timestep.
 - deposition.out: the radioactive energy deposition rate as a function of time.
 - gridsave_ts*.tmp and packets_*_ts*.tmp: restart files that allow a later job to continue from the end of a timestep.
 
-Run sn3d with `-o JOBFOLDER` (e.g. `./sn3d -o job0`) to write the per-job output files (the rank log files and the estimators, nlte, radfield, and macroatom files) into a subfolder. The cluster job scripts do this automatically with a folder named after the SLURM job id. The shared run-level files, including the restart files that a later job resumes from, are still written to the simulation folder, and an output_0-0.txt symlink to the current job's rank-0 log is kept there so that following the log works regardless of the output folder. For runs made without -o, scripts/movefiles.sh can move the per-job files into a subfolder afterwards.
+sn3d writes the per-job output files (the rank log files and the estimators, nlte, radfield, and macroatom files) into a job folder. sn3d names the folder from the start timestep of the job, e.g. `job_from_ts0000` for a new simulation and `job_from_ts0008` for a job that resumes at timestep 8. Rank 0 writes the name of the job folder to the standard output, so the log of a Slurm job names its folder. A new simulation first removes the files of the previous simulation: the output files, the restart files, and the `job_from_ts*` and `*.slurm` folders. It removes the same files as `scripts/clean.sh`, except `slurm-*.out`, `machine.file.*`, and `core.*`, which can belong to the current job. sn3d writes the shared run-level files, including the restart files, to the simulation folder. It also keeps an `output_0-0.txt` symlink there that points to the rank-0 log of the current job.
 
 ### Post-processing with exspec
 As well as sn3d, `make` builds exspec, which combines the packet files from all ranks into spectra and light curves. sn3d writes the same files itself, so exspec is necessary only to make them again from the packet files, e.g. after a change of MNUBINS or of the frequency range. Run it in the simulation folder with any number of ranks from one up to the number of packet files:
@@ -149,8 +151,7 @@ source ./setup_kilonova_1d.sh   # creates tests/kilonova_1d_testrun/
 [CI](.github/workflows/ci.yml) runs all of these on every push. It builds with `REPRODUCIBLE=ON FASTMATH=OFF MAX_NODE_SIZE=2` and compares md5 checksums of the output files against reference checksums stored in the tests/*_inputfiles folders. A change that legitimately alters the numerical results therefore needs new reference checksums, which maintainers regenerate using the "Update checksums" workflow. CI also compiles every artisoptions_*.h preset with gcc and clang, and the classic and NLTE nebular presets additionally with Apple Clang, nvc++, and hipcc (including the GPU code paths).
 
 ## Bundled scripts
-- clean.sh: Remove all output files while keeping input files and resetting the simulation to the beginning. The script also removes the *.slurm job folders that the job scripts make with the sn3d -o option. A job folder with another name stays. Delete it yourself.
-- movefiles.sh [DIRNAME]: Move the per-job artis output files from the simulation folder into another folder, for runs made without the sn3d -o option. The job scripts pass -o, so their files go into the job folder directly.
+- clean.sh: Remove all output files while keeping input files and resetting the simulation to the beginning. The script also removes the job_from_ts* folders of sn3d and the *.slurm folders of older versions.
 - sumcorehourslogs.py: Sum the core hours of all jobs from the output_0-0.txt log of each job. The script reads the summary in the last line of the log. For a job that stopped early, it estimates the core hours from the first and the last timestamp of the log.
 - sumcorehoursslurm.py: Calculate the summed core hours of all jobs from the slurm job output files.
 

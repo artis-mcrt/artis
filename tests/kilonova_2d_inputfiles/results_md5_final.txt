@@ -19,10 +19,10 @@ eaaa7348e98839d863bc3c273b609be3  packets00_0002.out
 5e2ef57cd4a9e467280c12e9934123d7  spec.out
 4ba5c98f44980d635cea5249f50d0527  spec_res.out
 a351f1711fecd60c023d0ba7332092db  timesteps.out
-1cb238f73ba3490920c53bf70040ba5c  job1/estimators_0000.out
-f65e0aaec96a1b17575a3781dc1f30da  job1/estimators_0001.out
-cc94cc37f542a13f1cc6a908e0f9532a  job1/estimators_0002.out
-00ff192c72f0be1625e2027664c5af8c  job1/estimators_0003.out
+1cb238f73ba3490920c53bf70040ba5c  job_from_ts0008/estimators_0000.out
+f65e0aaec96a1b17575a3781dc1f30da  job_from_ts0008/estimators_0001.out
+cc94cc37f542a13f1cc6a908e0f9532a  job_from_ts0008/estimators_0002.out
+00ff192c72f0be1625e2027664c5af8c  job_from_ts0008/estimators_0003.out
 57d15bbbdd838caee7ff9a345346f85e  speclc_angle_res/absorption_res_00.out
 f76b26c5a4fad5b990f6802b13db3f85  speclc_angle_res/absorption_res_01.out
 b997474fe6c705f7366b28a4f887fe3a  speclc_angle_res/absorption_res_02.out

@@ -16,6 +16,7 @@
 #include <string>
 #include <string_view>
 #include <system_error>
+#include <utility>
 #include <vector>
 
 #include "constants.h"
@@ -23,6 +24,7 @@
 #include "packet.h"
 
 void read_atomicdata();
+[[nodiscard]] auto read_start_timestep_and_continue_flag() -> std::pair<int, bool>;
 void read_parameterfile(std::span<Packet> packets);
 void update_parameterfile(int nts);
 void setup_timesteps();

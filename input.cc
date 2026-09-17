@@ -147,9 +147,11 @@ constexpr auto inputlinecomments = std::array{
 
 // indices of the noncomment lines of input.txt that update_parameterfile() rewrites for a restart
 // (the static_asserts tie each index to its description in inputlinecomments)
+constexpr int inputline_ntimesteps = 1;
 constexpr int inputline_timestep_range = 2;
 constexpr int inputline_continue_from_saved = 16;
 constexpr int inputline_nprocs_exspec = 21;
+static_assert(std::string_view{inputlinecomments[inputline_ntimesteps]}.starts_with(" 1:"));
 static_assert(std::string_view{inputlinecomments[inputline_timestep_range]}.starts_with(" 2:"));
 static_assert(std::string_view{inputlinecomments[inputline_continue_from_saved]}.starts_with("16:"));
 static_assert(std::string_view{inputlinecomments[inputline_nprocs_exspec]}.starts_with("21:"));
@@ -1907,6 +1909,38 @@ void setup_nlte_levels() {
 }
 
 }  // anonymous namespace
+
+// Get the start timestep of this job and the continue flag before the log files open, because the start timestep
+// gives the name of the job folder.
+auto read_start_timestep_and_continue_flag() -> std::pair<int, bool> {
+  int timestep_initial = 0;
+  int continue_flag = 0;
+  if (globals::my_rank == 0) {
+    int ntimesteps = 0;
+    int timestep_finish = 0;
+    // read_parameterfile() restores input.txt from input-newrun.txt under the same condition
+    const bool use_newrun_copy = !std::filesystem::exists("input.txt") && std::filesystem::exists("input-newrun.txt");
+    auto file = fstream_required(use_newrun_copy ? "input-newrun.txt" : "input.txt", std::ios::in);
+    std::string line;
+    for (int noncomment_linenum = 0; noncomment_linenum <= inputline_continue_from_saved; noncomment_linenum++) {
+      assert_always(get_noncommentline(file, line));
+      if (noncomment_linenum == inputline_ntimesteps) {
+        assert_always(std::istringstream{line} >> ntimesteps);
+      } else if (noncomment_linenum == inputline_timestep_range) {
+        // an invalid range must stop the run before a new simulation removes files
+        assert_always(std::istringstream{line} >> timestep_initial >> timestep_finish);
+        assert_always(timestep_initial >= 0 && timestep_initial < ntimesteps);
+        assert_always(timestep_initial <= timestep_finish && timestep_finish <= ntimesteps);
+      } else if (noncomment_linenum == inputline_continue_from_saved) {
+        assert_always(std::istringstream{line} >> continue_flag);
+        assert_always(continue_flag == 0 || continue_flag == 1);
+      }
+    }
+  }
+  MPI_Bcast_safe(timestep_initial, 0, MPI_COMM_WORLD);
+  MPI_Bcast_safe(continue_flag, 0, MPI_COMM_WORLD);
+  return {timestep_initial, continue_flag == 1 && timestep_initial > 0};
+}
 
 // read input parameters from input.txt
 void read_parameterfile(std::span<Packet> packets) {

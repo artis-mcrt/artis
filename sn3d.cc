@@ -25,6 +25,7 @@
 #include <iterator>
 #include <limits>
 #include <print>
+#include <regex>
 #include <string>
 #include <string_view>
 #include <system_error>
@@ -873,57 +874,70 @@ auto do_timestep(const int nts, const int titer, std::vector<Packet>& packets, c
   return !enough_walltime_for_timestep;
 }
 
-// Create the run output folder given with the -o option and keep an output_0-0.txt symlink in the
-// simulation folder pointing at the current job's rank-0 log, so that e.g. tail -f output_0-0.txt works
-// regardless of the output folder. Without -o, remove any symlink left by a previous -o run, since
-// opening the log through it would truncate that job's stored log.
-void setup_runoutputfolder() {
+// A new simulation removes the output files, the restart files, and the job folders of the previous simulation.
+// The patterns are those of scripts/clean.sh, without the files that can belong to the current job
+// (slurm-*.out, machine.file.*, and core.*).
+void remove_previous_simulation_files() {
+  const std::regex generated_name{
+      R"((gridsave|packets|vspecpol|vpackets|vpkt_grid).*\.tmp|.*\.out(\..*)?|output_[0-9]+-[0-9]+\.txt(\.zst|\.gz|\.xz)?|)"
+      R"(exspec.*\.txt.*|.*\.slurm|job_from_ts[0-9]+|packets|vspecpol|vpackets|vpkt_grid|speclc_angle_res|)"
+      R"(bflist\.dat|ratecoeff\.dat|line_list\.txt|logfiles\.tar.*|out\.txt)"};
+  std::vector<std::filesystem::path> paths_to_remove;
+  std::error_code ec;
+  for (const auto& entry : std::filesystem::directory_iterator(".", ec)) {
+    const auto name = entry.path().filename().string();
+    if (std::regex_match(name, generated_name) && !(name.starts_with("slurm-") && name.ends_with(".out"))) {
+      paths_to_remove.push_back(entry.path());
+    }
+  }
+  for (const auto& path : paths_to_remove) {
+    std::filesystem::remove_all(path, ec);
+  }
+}
+
+// Create the job folder, which gets its name from the start timestep of the job. Make an output_0-0.txt symlink in
+// the simulation folder that points to the rank-0 log of the current job. Then tail -f output_0-0.txt works.
+void setup_jobfolder() {
   const auto* const linkname = "output_0-0.txt";
 
-  if (globals::runoutputfolder.empty()) {
-    if (std::error_code ec; globals::my_rank == 0 && std::filesystem::is_symlink(linkname, ec)) {
-      std::filesystem::remove(linkname, ec);
-    }
-    return;
+  const auto [timestep_initial, simulation_continued_from_saved] = read_start_timestep_and_continue_flag();
+  globals::jobfolder = std::format("job_from_ts{:04d}", timestep_initial);
+
+  if (globals::my_rank == 0 && !simulation_continued_from_saved) {
+    remove_previous_simulation_files();
   }
 
   if (globals::my_rank == 0) {
     std::error_code ec;
-    std::filesystem::create_directories(globals::runoutputfolder, ec);
+    std::filesystem::create_directories(globals::jobfolder, ec);
     if (ec) {
-      fatal_crash("could not create output folder '{}': {}", globals::runoutputfolder, ec.message());
+      fatal_crash("could not create the job folder '{}': {}", globals::jobfolder, ec.message());
     }
 
     // clear out per-rank output files (and any leftover log symlink) from a previous run of this folder, so
     // that e.g. a rerun with fewer ranks does not leave a mixture of new estimator files and stale ones from
     // ranks that no longer exist. Only exact matches of the generated filenames are removed.
-    for (const auto& entry : std::filesystem::directory_iterator(globals::runoutputfolder, ec)) {
+    for (const auto& entry : std::filesystem::directory_iterator(globals::jobfolder, ec)) {
       if (is_rank_outfile_name(entry.path().filename().string())) {
         std::filesystem::remove(entry.path(), ec);
       }
     }
 
-    if (!std::filesystem::equivalent(globals::runoutputfolder, ".", ec)) {
-      // not having the log symlink is no reason to stop the simulation, so just warn if it cannot be created
-      const auto linktarget = get_runoutputfolder_filepath(linkname);
-      std::filesystem::remove(linkname, ec);
-      std::filesystem::create_symlink(linktarget, linkname, ec);
-      if (ec) {
-        std::println(stderr, "[warning] could not create symlink '{}' to '{}': {}", linkname, linktarget, ec.message());
-      }
+    // not having the log symlink is no reason to stop the simulation, so just warn if it cannot be created
+    const auto linktarget = get_jobfolder_filepath(linkname);
+    std::filesystem::remove(linkname, ec);
+    std::filesystem::create_symlink(linktarget, linkname, ec);
+    if (ec) {
+      std::println(stderr, "[warning] could not create symlink '{}' to '{}': {}", linkname, linktarget, ec.message());
     }
-    // when -o names the simulation folder itself, no symlink is made (it would point at itself and the log
-    // will be at the link's path anyway), and the cleanup above has already removed any leftover link
   }
   // the folder must exist before any rank opens its log file there
   MPI_Barrier_allranks();
 }
 
 void print_options_help(std::FILE* stream, const char* progname) {
-  std::println(stream, "Usage: {} [-w WALLTIMELIMITHOURS] [-o OUTPUTFOLDER] [-h]", progname);
+  std::println(stream, "Usage: {} [-w WALLTIMELIMITHOURS] [-h]", progname);
   std::println(stream, "  -w WALLTIMELIMITHOURS  finish cleanly (writing restart files) before this much wall time");
-  std::println(stream, "  -o OUTPUTFOLDER        write the per-rank output files (rank logs and estimators,");
-  std::println(stream, "                         nlte, radfield, and macroatom files) into this folder");
   std::println(stream, "  -h                     print this help and exit");
 }
 
@@ -947,7 +961,7 @@ auto main(int argc, char* argv[]) -> int {
 
   std::string walltime_limit_hours_str;
   int opt = 0;
-  while ((opt = getopt(argc, argv, "hw:o:")) != -1) {  // NOLINT(concurrency-mt-unsafe,misc-include-cleaner)
+  while ((opt = getopt(argc, argv, "hw:")) != -1) {  // NOLINT(concurrency-mt-unsafe,misc-include-cleaner)
     if (opt == 'h') {
       if (globals::my_rank == 0) {
         print_options_help(stdout, argv[0]);  // NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic)
@@ -965,14 +979,6 @@ auto main(int argc, char* argv[]) -> int {
       }
       walltime_limit_seconds = static_cast<int>(walltime_limit_hours * HOUR);
       walltime_limit_hours_str = optarg;
-    } else if (opt == 'o') {
-      globals::runoutputfolder = optarg;
-      while (globals::runoutputfolder.size() > 1 && globals::runoutputfolder.ends_with('/')) {
-        globals::runoutputfolder.pop_back();
-      }
-      if (globals::runoutputfolder.empty()) {
-        fatal_crash("empty output folder given with -o option");
-      }
     } else {
       print_options_help(stderr, argv[0]);  // NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic)
       fatal_crash("unknown command line option");
@@ -981,13 +987,13 @@ auto main(int argc, char* argv[]) -> int {
 
   check_already_running();
 
-  setup_runoutputfolder();
+  setup_jobfolder();
 
-#ifdef STDPAR_ON
-  for (int t = 1; t < get_max_threads(); t++) {
-    std::filesystem::remove(get_runoutputfolder_filepath(std::format("output_{}-{}.txt", globals::my_rank, t)));
+  if (globals::my_rank == 0) {
+    // the standard output goes to the log of the Slurm job, which then names the job folder
+    std::println("job folder: {}", globals::jobfolder);
+    std::fflush(stdout);
   }
-#endif
 
 #if defined(_OPENMP) && !defined(GPU_ON)
   // Explicitly turn off dynamic threads. The per-thread log file handles in mpi_logging.cc are threadprivate,
@@ -998,7 +1004,7 @@ auto main(int argc, char* argv[]) -> int {
 #endif
   {
     // initialise the thread and rank specific output file
-    set_log_file(get_runoutputfolder_filepath(std::format("output_{}-{}.txt", globals::my_rank, get_thread_num())));
+    set_log_file(get_jobfolder_filepath(std::format("output_{}-{}.txt", globals::my_rank, get_thread_num())));
 
 #ifdef _OPENMP
     printlnlog("OpenMP parallelisation is active with {} threads (max {})", omp_get_num_threads(), get_max_threads());
@@ -1035,10 +1041,7 @@ auto main(int argc, char* argv[]) -> int {
                walltime_limit_hours_str, walltime_limit_seconds);
   }
 
-  if (!globals::runoutputfolder.empty()) {
-    printlnlog("command line argument specifies output folder '{}' for the per-rank output files",
-               globals::runoutputfolder);
-  }
+  printlnlog("The per-rank output files go into the job folder '{}'", globals::jobfolder);
 
   std::vector<Packet> packets;
   reserve_resize(packets, MPKTS);
@@ -1125,11 +1128,6 @@ auto main(int argc, char* argv[]) -> int {
   printlnlog("[info] mem_usage: packets occupy {:.3f} MB", MPKTS * sizeof(Packet) / 1024. / 1024.);
 
   if (!globals::simulation_continued_from_saved) {
-    if (globals::my_rank == 0) {
-      // only rank 0 writes deposition.out, so only rank 0 removes the old file
-      std::error_code ec;
-      std::filesystem::remove("deposition.out", ec);
-    }
     packet_init(packets);
     zero_estimators();
   }
