@@ -881,7 +881,7 @@ void setup_runoutputfolder() {
 
   globals::job_index = read_job_index();
   if (globals::runoutputfolder.empty()) {
-    globals::runoutputfolder = std::format("job{:08d}", globals::job_index);
+    globals::runoutputfolder = std::format("{:08d}.job", globals::job_index);
   }
 
   if (globals::my_rank == 0 && globals::job_index == 0) {
@@ -889,8 +889,8 @@ void setup_runoutputfolder() {
     std::error_code ec;
     for (const auto& entry : std::filesystem::directory_iterator(".", ec)) {
       const auto foldername = entry.path().filename().string();
-      if (entry.is_directory(ec) && foldername.size() == 11 && foldername.starts_with("job") &&
-          std::ranges::all_of(foldername.substr(3), [](const char c) { return c >= '0' && c <= '9'; })) {
+      if (entry.is_directory(ec) && foldername.size() == 12 && foldername.ends_with(".job") &&
+          std::ranges::all_of(foldername.substr(0, 8), [](const char c) { return c >= '0' && c <= '9'; })) {
         std::filesystem::remove_all(entry.path(), ec);
       }
     }
@@ -933,7 +933,7 @@ void print_options_help(std::FILE* stream, const char* progname) {
   std::println(stream, "  -w WALLTIMELIMITHOURS  finish cleanly (writing restart files) before this much wall time");
   std::println(stream, "  -o OUTPUTFOLDER        write the per-rank output files (rank logs and estimators,");
   std::println(stream, "                         nlte, radfield, and macroatom files) into this folder");
-  std::println(stream, "                         (default: job00000000, job00000001, ... for each job in sequence)");
+  std::println(stream, "                         (default: 00000000.job, 00000001.job, ... for each job in sequence)");
   std::println(stream, "  -h                     print this help and exit");
 }
 
