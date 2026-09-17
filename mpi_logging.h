@@ -57,7 +57,7 @@ inline int node_count{-1};
 inline int node_id{-1};
 
 // the job folder of sn3d, which receives the per-rank output files; empty means the current directory
-inline std::string runoutputfolder;
+inline std::string jobfolder;
 
 inline void setup_mpi_vars() {
   MPI_Comm_rank(MPI_COMM_WORLD, &globals::my_rank);
@@ -633,9 +633,8 @@ inline void MPI_Reduce_safe(R&& data, MPI_Op op, const int root, MPI_Comm comm) 
 
 // path for a per-rank output file (rank logs, estimators, nlte/radfield/macroatom files), which sn3d
 // writes into the job folder (stored without a trailing slash)
-[[nodiscard]] inline auto get_runoutputfolder_filepath(const std::string_view filename) -> std::string {
-  return globals::runoutputfolder.empty() ? std::string(filename)
-                                          : std::format("{}/{}", globals::runoutputfolder, filename);
+[[nodiscard]] inline auto get_jobfolder_filepath(const std::string_view filename) -> std::string {
+  return globals::jobfolder.empty() ? std::string(filename) : std::format("{}/{}", globals::jobfolder, filename);
 }
 
 // exactly match the generated per-rank output filenames: output_<rank>-<thread>.txt and the
@@ -723,7 +722,7 @@ inline void MPI_Reduce_safe(R&& data, MPI_Op op, const int root, MPI_Comm comm) 
 
 // open a per-rank output file such as estimators_0000.out for writing
 [[nodiscard]] inline auto open_rank_outfile(const std::string_view basename) -> std::fstream {
-  return fstream_required(get_runoutputfolder_filepath(std::format("{}_{:04d}.out", basename, globals::my_rank)),
+  return fstream_required(get_jobfolder_filepath(std::format("{}_{:04d}.out", basename, globals::my_rank)),
                           std::ios::out | std::ios::trunc);
 }
 

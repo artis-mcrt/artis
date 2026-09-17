@@ -723,7 +723,7 @@ void test_rank_outfile_name() {
        }) {
     match_none = match_none || is_rank_outfile_name(name);
   }
-  check(!match_none, "other filenames are never matched, so they cannot be deleted from an output folder");
+  check(!match_none, "other filenames are never matched, so they cannot be deleted from a job folder");
 }
 
 void test_anderson_accelerator() {

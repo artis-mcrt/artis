@@ -897,11 +897,11 @@ void remove_previous_simulation_files() {
 
 // Create the job folder, which gets its name from the start timestep of the job. Make an output_0-0.txt symlink in
 // the simulation folder that points to the rank-0 log of the current job. Then tail -f output_0-0.txt works.
-void setup_runoutputfolder() {
+void setup_jobfolder() {
   const auto* const linkname = "output_0-0.txt";
 
   const auto [timestep_initial, simulation_continued_from_saved] = read_start_timestep_and_continue_flag();
-  globals::runoutputfolder = std::format("job_from_ts{:04d}", timestep_initial);
+  globals::jobfolder = std::format("job_from_ts{:04d}", timestep_initial);
 
   if (globals::my_rank == 0 && !simulation_continued_from_saved) {
     remove_previous_simulation_files();
@@ -909,22 +909,22 @@ void setup_runoutputfolder() {
 
   if (globals::my_rank == 0) {
     std::error_code ec;
-    std::filesystem::create_directories(globals::runoutputfolder, ec);
+    std::filesystem::create_directories(globals::jobfolder, ec);
     if (ec) {
-      fatal_crash("could not create output folder '{}': {}", globals::runoutputfolder, ec.message());
+      fatal_crash("could not create the job folder '{}': {}", globals::jobfolder, ec.message());
     }
 
     // clear out per-rank output files (and any leftover log symlink) from a previous run of this folder, so
     // that e.g. a rerun with fewer ranks does not leave a mixture of new estimator files and stale ones from
     // ranks that no longer exist. Only exact matches of the generated filenames are removed.
-    for (const auto& entry : std::filesystem::directory_iterator(globals::runoutputfolder, ec)) {
+    for (const auto& entry : std::filesystem::directory_iterator(globals::jobfolder, ec)) {
       if (is_rank_outfile_name(entry.path().filename().string())) {
         std::filesystem::remove(entry.path(), ec);
       }
     }
 
     // not having the log symlink is no reason to stop the simulation, so just warn if it cannot be created
-    const auto linktarget = get_runoutputfolder_filepath(linkname);
+    const auto linktarget = get_jobfolder_filepath(linkname);
     std::filesystem::remove(linkname, ec);
     std::filesystem::create_symlink(linktarget, linkname, ec);
     if (ec) {
@@ -987,11 +987,11 @@ auto main(int argc, char* argv[]) -> int {
 
   check_already_running();
 
-  setup_runoutputfolder();
+  setup_jobfolder();
 
   if (globals::my_rank == 0) {
     // the standard output goes to the log of the Slurm job, which then names the job folder
-    std::println("job folder: {}", globals::runoutputfolder);
+    std::println("job folder: {}", globals::jobfolder);
     std::fflush(stdout);
   }
 
@@ -1004,7 +1004,7 @@ auto main(int argc, char* argv[]) -> int {
 #endif
   {
     // initialise the thread and rank specific output file
-    set_log_file(get_runoutputfolder_filepath(std::format("output_{}-{}.txt", globals::my_rank, get_thread_num())));
+    set_log_file(get_jobfolder_filepath(std::format("output_{}-{}.txt", globals::my_rank, get_thread_num())));
 
 #ifdef _OPENMP
     printlnlog("OpenMP parallelisation is active with {} threads (max {})", omp_get_num_threads(), get_max_threads());
@@ -1041,7 +1041,7 @@ auto main(int argc, char* argv[]) -> int {
                walltime_limit_hours_str, walltime_limit_seconds);
   }
 
-  printlnlog("The per-rank output files go into the job folder '{}'", globals::runoutputfolder);
+  printlnlog("The per-rank output files go into the job folder '{}'", globals::jobfolder);
 
   std::vector<Packet> packets;
   reserve_resize(packets, MPKTS);
