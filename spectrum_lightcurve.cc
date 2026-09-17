@@ -239,7 +239,6 @@ void write_specpol(const std::string& specpol_filename, const std::string& emiss
   const auto ntimesteps_all = static_cast<ptrdiff_t>(globals::ntimesteps);
 
   if (this_rank_writes_file(5)) {
-    printlnlog("Writing {}", specpol_filename);
     auto specpol_file = fstream_required(specpol_filename, std::ios::out | std::ios::trunc);
     std::print(specpol_file, "{:g}", 0.0);
     for (size_t stokes_index = 0; stokes_index < stokes_spectra.size(); stokes_index++) {
@@ -265,7 +264,6 @@ void write_specpol(const std::string& specpol_filename, const std::string& emiss
   }
 
   if (this_rank_writes_file(6)) {
-    printlnlog("Writing {}", emission_filename);
     auto emissionpol_file = fstream_required(emission_filename, std::ios::out | std::ios::trunc);
     const auto proccount = static_cast<ptrdiff_t>(get_proccount());
     for (auto nnu = 0Z; nnu < MNUBINS; nnu++) {
@@ -285,7 +283,6 @@ void write_specpol(const std::string& specpol_filename, const std::string& emiss
   }
 
   if (this_rank_writes_file(7)) {
-    printlnlog("Writing {}", absorption_filename);
     auto absorptionpol_file = fstream_required(absorption_filename, std::ios::out | std::ios::trunc);
     const int ioncount = get_nelements() * get_max_nions();  // may be higher than the true included ion count
     for (auto nnu = 0Z; nnu < MNUBINS; nnu++) {
