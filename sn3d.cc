@@ -895,8 +895,8 @@ void remove_previous_simulation_files() {
   }
 }
 
-// Create the run output folder, which gets its name from the start timestep of the job. Keep an output_0-0.txt symlink
-// in the simulation folder pointing at the current job's rank-0 log, so that e.g. tail -f output_0-0.txt works.
+// Create the job folder, which gets its name from the start timestep of the job. Make an output_0-0.txt symlink in
+// the simulation folder that points to the rank-0 log of the current job. Then tail -f output_0-0.txt works.
 void setup_runoutputfolder() {
   const auto* const linkname = "output_0-0.txt";
 
@@ -994,12 +994,6 @@ auto main(int argc, char* argv[]) -> int {
     std::println("sn3d job folder: {}", globals::runoutputfolder);
     std::fflush(stdout);
   }
-
-#ifdef STDPAR_ON
-  for (int t = 1; t < get_max_threads(); t++) {
-    std::filesystem::remove(get_runoutputfolder_filepath(std::format("output_{}-{}.txt", globals::my_rank, t)));
-  }
-#endif
 
 #if defined(_OPENMP) && !defined(GPU_ON)
   // Explicitly turn off dynamic threads. The per-thread log file handles in mpi_logging.cc are threadprivate,

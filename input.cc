@@ -1908,7 +1908,6 @@ void setup_nlte_levels() {
 
 }  // anonymous namespace
 
-// read input parameters from input.txt
 // Get the start timestep of this job and the continue flag before the log files open, because the start timestep
 // gives the name of the job folder.
 auto read_start_timestep_and_continue_flag() -> std::pair<int, bool> {
@@ -1923,7 +1922,7 @@ auto read_start_timestep_and_continue_flag() -> std::pair<int, bool> {
       if (noncomment_linenum == inputline_timestep_range) {
         assert_always(std::istringstream{line} >> timestep_initial);
       } else if (noncomment_linenum == inputline_continue_from_saved) {
-        std::istringstream{line} >> continue_flag;
+        assert_always(std::istringstream{line} >> continue_flag);
       }
     }
   }
@@ -1932,6 +1931,7 @@ auto read_start_timestep_and_continue_flag() -> std::pair<int, bool> {
   return {timestep_initial, continue_flag == 1 && timestep_initial > 0};
 }
 
+// read input parameters from input.txt
 void read_parameterfile(std::span<Packet> packets) {
   // A new run writes a commented copy of input.txt to input-newrun.txt. If input.txt is missing, for example after
   // a cleanup of the run folder, restore it from that copy so that the run can start again without manual steps.
