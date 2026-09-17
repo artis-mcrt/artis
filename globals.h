@@ -334,9 +334,6 @@ inline int timestep{-1};  // Current time step during the simulation
 inline int total_nlte_levels{0};
 
 inline bool simulation_continued_from_saved{false};
-
-// the number of sn3d jobs of this simulation that started before this one
-inline int job_index{0};
 inline int num_lte_timesteps{-1};
 inline double optical_depth_is_thick{NAN};
 inline int num_grey_timesteps{-1};

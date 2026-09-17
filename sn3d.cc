@@ -880,7 +880,7 @@ auto do_timestep(const int nts, const int titer, std::vector<Packet>& packets, c
 void remove_previous_simulation_files() {
   const std::regex generated_name{
       R"((gridsave|packets|vspecpol|vpackets).*\.tmp|.*\.out(\..*)?|output_[0-9]+-[0-9]+\.txt(\.zst|\.gz|\.xz)?|)"
-      R"(exspec.*\.txt.*|.*\.slurm|[0-9]+\.job|packets|vspecpol|vpackets|speclc_angle_res|)"
+      R"(exspec.*\.txt.*|.*\.slurm|job_fromtimestep_[0-9]+|packets|vspecpol|vpackets|speclc_angle_res|)"
       R"(bflist\.dat|ratecoeff\.dat|line_list\.txt|logfiles\.tar.*|out\.txt)"};
   std::vector<std::filesystem::path> paths_to_remove;
   std::error_code ec;
@@ -895,14 +895,15 @@ void remove_previous_simulation_files() {
   }
 }
 
-// Create the run output folder, which gets its name from the job index. Keep an output_0-0.txt symlink in the
-// simulation folder pointing at the current job's rank-0 log, so that e.g. tail -f output_0-0.txt works.
+// Create the run output folder, which gets its name from the start timestep of the job. Keep an output_0-0.txt symlink
+// in the simulation folder pointing at the current job's rank-0 log, so that e.g. tail -f output_0-0.txt works.
 void setup_runoutputfolder() {
   const auto* const linkname = "output_0-0.txt";
 
-  globals::runoutputfolder = std::format("{:08d}.job", globals::job_index);
+  const auto [timestep_initial, simulation_continued_from_saved] = read_start_timestep_and_continue_flag();
+  globals::runoutputfolder = std::format("job_fromtimestep_{:04d}", timestep_initial);
 
-  if (globals::my_rank == 0 && globals::job_index == 0) {
+  if (globals::my_rank == 0 && !simulation_continued_from_saved) {
     remove_previous_simulation_files();
   }
 
@@ -956,8 +957,6 @@ auto main(int argc, char* argv[]) -> int {
 
   globals::setup_mpi_vars();
 
-  globals::job_index = read_job_index();
-
   int walltime_limit_seconds = -1;
 
   std::string walltime_limit_hours_str;
@@ -992,7 +991,7 @@ auto main(int argc, char* argv[]) -> int {
 
   if (globals::my_rank == 0) {
     // the standard output goes to the log of the Slurm job, which then names the job folder
-    std::println("sn3d job index {}. The job folder is '{}'", globals::job_index, globals::runoutputfolder);
+    std::println("sn3d job folder: {}", globals::runoutputfolder);
     std::fflush(stdout);
   }
 
@@ -1048,8 +1047,7 @@ auto main(int argc, char* argv[]) -> int {
                walltime_limit_hours_str, walltime_limit_seconds);
   }
 
-  printlnlog("job index {}. The per-rank output files go into the folder '{}'", globals::job_index,
-             globals::runoutputfolder);
+  printlnlog("The per-rank output files go into the job folder '{}'", globals::runoutputfolder);
 
   std::vector<Packet> packets;
   reserve_resize(packets, MPKTS);
