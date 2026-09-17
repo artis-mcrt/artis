@@ -875,13 +875,13 @@ auto do_timestep(const int nts, const int titer, std::vector<Packet>& packets, c
 }
 
 // A new simulation removes the output files, the restart files, and the job folders of the previous simulation.
-// The patterns are those of scripts/clean.sh, without the files that the job script of the current job writes
-// (out.txt, slurm-*.out, machine.file.*, and core.*).
+// The patterns are those of scripts/clean.sh, without the files that can belong to the current job
+// (slurm-*.out, machine.file.*, and core.*).
 void remove_previous_simulation_files() {
   const std::regex generated_name{
       R"((gridsave|packets|vspecpol|vpackets).*\.tmp|.*\.out(\..*)?|output_[0-9]+-[0-9]+\.txt(\.zst|\.gz|\.xz)?|)"
       R"(exspec.*\.txt.*|.*\.slurm|[0-9]+\.job|packets|vspecpol|vpackets|speclc_angle_res|)"
-      R"(bflist\.dat|ratecoeff\.dat|line_list\.txt|logfiles\.tar.*)"};
+      R"(bflist\.dat|ratecoeff\.dat|line_list\.txt|logfiles\.tar.*|out\.txt)"};
   std::vector<std::filesystem::path> paths_to_remove;
   std::error_code ec;
   for (const auto& entry : std::filesystem::directory_iterator(".", ec)) {
@@ -1006,6 +1006,12 @@ auto main(int argc, char* argv[]) -> int {
   check_already_running();
 
   setup_runoutputfolder();
+
+  if (globals::my_rank == 0) {
+    // the standard output goes to the log of the Slurm job, which then names the job folder
+    std::println("sn3d job index {}. The job folder is '{}'", globals::job_index, globals::runoutputfolder);
+    std::fflush(stdout);
+  }
 
 #ifdef STDPAR_ON
   for (int t = 1; t < get_max_threads(); t++) {

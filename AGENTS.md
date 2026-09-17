@@ -449,8 +449,9 @@ The code must compile with nvc++ and with hipcc, also with `STDPAR=ON GPU=ON`.
 - `sn3d` writes one log file for each rank and thread
   (`output_<rank>-<thread>.txt`). The option `-o OUTPUTFOLDER` moves the per-job
   files into a subfolder. The run-level files, e.g. the restart files, stay in
-  the run folder, together with a symlink to the log of rank 0. The standard
-  output stays quiet unless there is a crash.
+  the run folder, together with a symlink to the log of rank 0. Rank 0 writes
+  one line with the job index and the job folder to the standard output. The
+  standard output is otherwise quiet unless there is a crash.
 - The restart files (`gridsave_ts*.tmp` and the packet files) must only be
   consistent with the binary that wrote them. A resumed run uses the same
   `artisoptions.h` and the same source version as the run that wrote the
