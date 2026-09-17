@@ -128,12 +128,12 @@ jobs:
             - name: cat job0 estimators
               if: always()
               working-directory: tests/${{ matrix.testname }}_testrun/
-              run: cat job_fromtimestep_0000/estimators*.out
+              run: cat job_from_ts0000/estimators*.out
 
             - name: cat job0 output log
               if: always()
               working-directory: tests/${{ matrix.testname }}_testrun/
-              run: cat job_fromtimestep_0000/output_0-0.txt
+              run: cat job_from_ts0000/output_0-0.txt
 
             - name: Checksum job0 output files
               if: always()
@@ -149,7 +149,7 @@ jobs:
                   shopt -s nullglob
                   angleresfiles=(speclc_angle_res/*.*)
                   shopt -u nullglob
-                  md5sum *.out job_fromtimestep_0000/*.out "${angleresfiles[@]}" | tee ../${{ matrix.testname }}_inputfiles/results_md5_job0.txt
+                  md5sum *.out job_from_ts0000/*.out "${angleresfiles[@]}" | tee ../${{ matrix.testname }}_inputfiles/results_md5_job0.txt
                   if [ "${{ steps.run_job0.outcome }}" = "success" ]; then
                       touch ../${{ matrix.testname }}_inputfiles/results_md5_job0.txt.complete
                   else
@@ -173,12 +173,12 @@ jobs:
             - name: cat job1 estimators
               if: always()
               working-directory: tests/${{ matrix.testname }}_testrun/
-              run: cat "$(ls -d job_fromtimestep_* | grep -v _0000 | tail -n 1)"/estimators*.out
+              run: cat "$(ls -d job_from_ts* | grep -v ts0000 | tail -n 1)"/estimators*.out
 
             - name: cat job1 output log
               if: always()
               working-directory: tests/${{ matrix.testname }}_testrun/
-              run: cat "$(ls -d job_fromtimestep_* | grep -v _0000 | tail -n 1)"/output_0-0.txt
+              run: cat "$(ls -d job_from_ts* | grep -v ts0000 | tail -n 1)"/output_0-0.txt
 
             - name: show deposition.out
               if: always() && inputs.testmode != 'ON'
@@ -221,7 +221,7 @@ jobs:
                   shopt -s nullglob
                   angleresfiles=(speclc_angle_res/*.*)
                   shopt -u nullglob
-                  md5sum *.out "$(ls -d job_fromtimestep_* | grep -v _0000 | tail -n 1)"/*.out "${angleresfiles[@]}" | tee ../${{ matrix.testname }}_inputfiles/results_md5_final.txt
+                  md5sum *.out "$(ls -d job_from_ts* | grep -v ts0000 | tail -n 1)"/*.out "${angleresfiles[@]}" | tee ../${{ matrix.testname }}_inputfiles/results_md5_final.txt
                   if [ "${{ steps.run_job0.outcome }}" = "success" ] && [ "${{ steps.run_job1.outcome }}" = "success" ] && [ "${{ steps.run_exspec.outcome }}" = "success" ]; then
                       touch ../${{ matrix.testname }}_inputfiles/results_md5_final.txt.complete
                   else
@@ -357,7 +357,7 @@ jobs:
             - name: cat output log
               if: always()
               working-directory: tests/kilonova_1d_testrun/
-              run: cat job_fromtimestep_0000/output_0-0.txt
+              run: cat job_from_ts0000/output_0-0.txt
 
     # Runs the same small model with C++ standard parallelism on multicore CPUs (no GPU offload), which
     # reaches the same shared-state code paths as the OpenMP job but through std::execution::par_unseq and
@@ -409,7 +409,7 @@ jobs:
             - name: cat output log
               if: always()
               working-directory: tests/kilonova_1d_testrun/
-              run: cat job_fromtimestep_0000/output_0-0.txt
+              run: cat job_from_ts0000/output_0-0.txt
 
     combine_checksums:
         needs: testmodels

@@ -13,7 +13,7 @@ function trap_ctrlc() {
 
 trap "trap_ctrlc" 2
 
-find . -type d \( -name "*.slurm" -o -name "job_fromtimestep_*" \) -print0 | while IFS= read -r -d '' dir; do
+find . -type d \( -name "*.slurm" -o -name "job_from_ts*" \) -print0 | while IFS= read -r -d '' dir; do
     if [[ -d "$dir" ]]; then
         echo "runfolder: $dir"
         cd "$dir"

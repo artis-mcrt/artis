@@ -199,7 +199,7 @@ Three steps differ from a plain build and are easy to miss:
   them.
 
 CI writes `results_md5_job0.txt` from
-`md5sum *.out job_fromtimestep_0000/*.out speclc_angle_res/*.*` and
+`md5sum *.out job_from_ts0000/*.out speclc_angle_res/*.*` and
 `results_md5_final.txt` from the same command with the job folder of the resume
 run. The log files stay outside both sets, because their names do not match.
 
@@ -448,7 +448,7 @@ The code must compile with nvc++ and with hipcc, also with `STDPAR=ON GPU=ON`.
   Do not renumber them.
 - `sn3d` writes one log file for each rank and thread
   (`output_<rank>-<thread>.txt`). The per-job files go into the job folder
-  `job_fromtimestep_<start timestep>`. The run-level files, e.g. the restart
+  `job_from_ts<start timestep>`. The run-level files, e.g. the restart
   files, stay in the run folder, together with a symlink to the log of rank 0.
   Rank 0 writes one line with the job folder to the standard output. The
   standard output is otherwise quiet unless there is a crash.

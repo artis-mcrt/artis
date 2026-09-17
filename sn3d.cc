@@ -880,7 +880,7 @@ auto do_timestep(const int nts, const int titer, std::vector<Packet>& packets, c
 void remove_previous_simulation_files() {
   const std::regex generated_name{
       R"((gridsave|packets|vspecpol|vpackets).*\.tmp|.*\.out(\..*)?|output_[0-9]+-[0-9]+\.txt(\.zst|\.gz|\.xz)?|)"
-      R"(exspec.*\.txt.*|.*\.slurm|job_fromtimestep_[0-9]+|packets|vspecpol|vpackets|speclc_angle_res|)"
+      R"(exspec.*\.txt.*|.*\.slurm|job_from_ts[0-9]+|packets|vspecpol|vpackets|speclc_angle_res|)"
       R"(bflist\.dat|ratecoeff\.dat|line_list\.txt|logfiles\.tar.*|out\.txt)"};
   std::vector<std::filesystem::path> paths_to_remove;
   std::error_code ec;
@@ -901,7 +901,7 @@ void setup_runoutputfolder() {
   const auto* const linkname = "output_0-0.txt";
 
   const auto [timestep_initial, simulation_continued_from_saved] = read_start_timestep_and_continue_flag();
-  globals::runoutputfolder = std::format("job_fromtimestep_{:04d}", timestep_initial);
+  globals::runoutputfolder = std::format("job_from_ts{:04d}", timestep_initial);
 
   if (globals::my_rank == 0 && !simulation_continued_from_saved) {
     remove_previous_simulation_files();
