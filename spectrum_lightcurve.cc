@@ -11,6 +11,7 @@
 #include <cstddef>
 #include <filesystem>
 #include <format>
+#include <fstream>
 #include <ios>
 #include <iterator>
 #include <print>
@@ -167,22 +168,56 @@ void write_spectrum_file(const std::string& spec_filename, const Spectra& spectr
   }
 }
 
+// Text output of many values is much faster through a large buffer than with a std::print call for each value.
+class BufferedTextFile {
+ public:
+  explicit BufferedTextFile(const std::string& filename)
+      : file(fstream_required(filename, std::ios::out | std::ios::trunc)) {
+    buffer.reserve(flushsize + 64);
+  }
+  ~BufferedTextFile() { file.write(buffer.data(), static_cast<std::streamsize>(buffer.size())); }
+  BufferedTextFile(const BufferedTextFile&) = delete;
+  auto operator=(const BufferedTextFile&) -> BufferedTextFile& = delete;
+  BufferedTextFile(BufferedTextFile&&) = delete;
+  auto operator=(BufferedTextFile&&) -> BufferedTextFile& = delete;
+
+  // append the value in the format {:g}
+  void append(const double value) {
+    if (value == 0. && !std::signbit(value)) {
+      buffer += '0';  // most values of the emission and absorption arrays are zero
+    } else {
+      std::format_to(std::back_inserter(buffer), "{:g}", value);
+    }
+    if (buffer.size() >= flushsize) {
+      file.write(buffer.data(), static_cast<std::streamsize>(buffer.size()));
+      buffer.clear();
+    }
+  }
+  void append(const char c) { buffer += c; }
+
+ private:
+  static constexpr auto flushsize = 1UZ << 22U;
+  std::fstream file;
+  std::string buffer;
+};
+
 // Write an emission-type spectrum (emission or true emission) with a line for each frequency bin of
 // each timestep, holding one column per emission process (see get_proccount).
 void write_emission_spectrum_file(const std::string& emission_filename,
                                   const std::span<const double> emission_alltimesteps, const int numtimesteps) {
   assert_always(numtimesteps <= globals::ntimesteps);
   assert_always(!emission_filename.empty());
-  auto emission_file = fstream_required(emission_filename, std::ios::out | std::ios::trunc);
+  BufferedTextFile emission_file(emission_filename);
   const auto proccount = static_cast<ptrdiff_t>(get_proccount());
   for (auto nubin = 0Z; nubin < MNUBINS; nubin++) {
     for (auto nts = 0Z; nts < numtimesteps; nts++) {
       const auto emindex_nts_nubin = get_emission_spectrum_index(nts, nubin);
-      std::print(emission_file, "{:g}", emission_alltimesteps[emindex_nts_nubin]);
+      emission_file.append(emission_alltimesteps[emindex_nts_nubin]);
       for (int nproc = 1; nproc < proccount; nproc++) {
-        std::print(emission_file, " {:g}", emission_alltimesteps[emindex_nts_nubin + nproc]);
+        emission_file.append(' ');
+        emission_file.append(emission_alltimesteps[emindex_nts_nubin + nproc]);
       }
-      std::println(emission_file, "");
+      emission_file.append('\n');
     }
   }
 }
@@ -191,16 +226,17 @@ void write_absorption_spectrum_file(const std::string& absorption_filename, cons
                                     const int numtimesteps) {
   assert_always(numtimesteps <= globals::ntimesteps);
   assert_always(!absorption_filename.empty());
-  auto absorption_file = fstream_required(absorption_filename, std::ios::out | std::ios::trunc);
+  BufferedTextFile absorption_file(absorption_filename);
   const int ioncount = get_nelements() * get_max_nions();  // may be higher than the true included ion count
   for (auto nubin = 0Z; nubin < MNUBINS; nubin++) {
     for (auto nts = 0Z; nts < numtimesteps; nts++) {
       const auto absindex_nts_nubin = get_absorption_spectrum_index(nts, nubin);
-      std::print(absorption_file, "{:g}", spectra.absorptionalltimesteps[absindex_nts_nubin]);
+      absorption_file.append(spectra.absorptionalltimesteps[absindex_nts_nubin]);
       for (int i = 1; i < ioncount; i++) {
-        std::print(absorption_file, " {:g}", spectra.absorptionalltimesteps[absindex_nts_nubin + i]);
+        absorption_file.append(' ');
+        absorption_file.append(spectra.absorptionalltimesteps[absindex_nts_nubin + i]);
       }
-      std::println(absorption_file, "");
+      absorption_file.append('\n');
     }
   }
 }
