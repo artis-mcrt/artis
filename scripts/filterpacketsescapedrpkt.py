@@ -4,10 +4,10 @@ import sys
 from pathlib import Path
 
 import artistools as at
-from artistools.packets.packets import type_ids as packet_type_ids
 
-TYPE_ESCAPE = str(packet_type_ids["TYPE_ESCAPE"])
-TYPE_RPKT = str(packet_type_ids["TYPE_RPKT"])
+# must match the values of enum packet_type in packet.h
+TYPE_ESCAPE = "32"
+TYPE_RPKT = "11"
 
 GLOB_PATTERN = "**/packets/packets00_*.out*"
 
