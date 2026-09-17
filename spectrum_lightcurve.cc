@@ -305,8 +305,8 @@ void write_specpol(const std::string& specpol_filename, const std::string& emiss
 // resize and initialize the spectra object
 // do_true_emission adds the true emission arrays to the emission and absorption arrays. write_specpol() needs no
 // true emission for the Stokes Q and U spectra.
-void init_spectra(Spectra& spectra, const double nu_min, const double nu_max, const bool do_emission_absorption,
-                  const bool do_true_emission) {
+void init_spectra(Spectra& spectra, const std::string_view label, const double nu_min, const double nu_max,
+                  const bool do_emission_absorption, const bool do_true_emission) {
   // set up the frequency bins with a logarithmic spacing. The time bins are the timesteps.
 
   assert_always(MNUBINS > 0);
@@ -363,7 +363,7 @@ void init_spectra(Spectra& spectra, const double nu_min, const double nu_max, co
   MPI_Barrier_allranks();
 
   if (print_memusage) {
-    printlnlog("[info] mem_usage: set of spectra{} occupy {:.3f} MB (node shared memory)",
+    printlnlog("[info] mem_usage: {}{} occupy {:.3f} MB (node shared memory)", label,
                do_emission_absorption ? " (with emission/absorption tracing)" : "",
                spectra.mem_usage_bytes() / 1024. / 1024.);
   }
@@ -544,13 +544,14 @@ void write_light_curves_and_spectra_for_dirbin(const int nts, std::span<const st
   std::vector<double> gamma_light_curve_lum(do_gamma_spectrum ? globals::ntimesteps : 0);
   std::vector<double> gamma_light_curve_lumcmf(do_gamma_spectrum ? globals::ntimesteps : 0);
 
-  init_spectra(rpkt_spectra_I, NU_MIN_R, NU_MAX_R, do_emission_absorption, true);
+  init_spectra(rpkt_spectra_I, POL_ON ? "r-packet Stokes I spectra" : "r-packet spectra", NU_MIN_R, NU_MAX_R,
+               do_emission_absorption, true);
   if constexpr (POL_ON) {
-    init_spectra(rpkt_spectra_Q, NU_MIN_R, NU_MAX_R, do_emission_absorption, false);
-    init_spectra(rpkt_spectra_U, NU_MIN_R, NU_MAX_R, do_emission_absorption, false);
+    init_spectra(rpkt_spectra_Q, "r-packet Stokes Q spectra", NU_MIN_R, NU_MAX_R, do_emission_absorption, false);
+    init_spectra(rpkt_spectra_U, "r-packet Stokes U spectra", NU_MIN_R, NU_MAX_R, do_emission_absorption, false);
   }
   if (do_gamma_spectrum) {
-    init_spectra(gamma_spectra, NU_MIN_GAMMA, NU_MAX_GAMMA, false, false);
+    init_spectra(gamma_spectra, "gamma-ray spectra", NU_MIN_GAMMA, NU_MAX_GAMMA, false, false);
   }
 
   MPI_Barrier_node();
