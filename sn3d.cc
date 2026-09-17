@@ -886,7 +886,7 @@ void remove_previous_simulation_files() {
   std::error_code ec;
   for (const auto& entry : std::filesystem::directory_iterator(".", ec)) {
     const auto name = entry.path().filename().string();
-    if (std::regex_match(name, generated_name) && !name.starts_with("slurm-")) {
+    if (std::regex_match(name, generated_name) && !(name.starts_with("slurm-") && name.ends_with(".out"))) {
       paths_to_remove.push_back(entry.path());
     }
   }

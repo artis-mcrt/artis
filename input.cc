@@ -147,9 +147,11 @@ constexpr auto inputlinecomments = std::array{
 
 // indices of the noncomment lines of input.txt that update_parameterfile() rewrites for a restart
 // (the static_asserts tie each index to its description in inputlinecomments)
+constexpr int inputline_ntimesteps = 1;
 constexpr int inputline_timestep_range = 2;
 constexpr int inputline_continue_from_saved = 16;
 constexpr int inputline_nprocs_exspec = 21;
+static_assert(std::string_view{inputlinecomments[inputline_ntimesteps]}.starts_with(" 1:"));
 static_assert(std::string_view{inputlinecomments[inputline_timestep_range]}.starts_with(" 2:"));
 static_assert(std::string_view{inputlinecomments[inputline_continue_from_saved]}.starts_with("16:"));
 static_assert(std::string_view{inputlinecomments[inputline_nprocs_exspec]}.starts_with("21:"));
@@ -1914,13 +1916,20 @@ auto read_start_timestep_and_continue_flag() -> std::pair<int, bool> {
   int timestep_initial = 0;
   int continue_flag = 0;
   if (globals::my_rank == 0) {
+    int ntimesteps = 0;
+    int timestep_finish = 0;
     // without input.txt, read_parameterfile() restores it from input-newrun.txt
     auto file = fstream_required(std::filesystem::exists("input.txt") ? "input.txt" : "input-newrun.txt", std::ios::in);
     std::string line;
     for (int noncomment_linenum = 0; noncomment_linenum <= inputline_continue_from_saved; noncomment_linenum++) {
       assert_always(get_noncommentline(file, line));
-      if (noncomment_linenum == inputline_timestep_range) {
-        assert_always(std::istringstream{line} >> timestep_initial);
+      if (noncomment_linenum == inputline_ntimesteps) {
+        assert_always(std::istringstream{line} >> ntimesteps);
+      } else if (noncomment_linenum == inputline_timestep_range) {
+        // an invalid range must stop the run before a new simulation removes files
+        assert_always(std::istringstream{line} >> timestep_initial >> timestep_finish);
+        assert_always(timestep_initial >= 0 && timestep_initial < ntimesteps);
+        assert_always(timestep_initial <= timestep_finish && timestep_finish <= ntimesteps);
       } else if (noncomment_linenum == inputline_continue_from_saved) {
         assert_always(std::istringstream{line} >> continue_flag);
         assert_always(continue_flag == 0 || continue_flag == 1);

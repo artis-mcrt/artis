@@ -107,7 +107,7 @@ Every build writes the database again, so it stays current. It always uses the `
 For editing, the clangd language server is recommended (e.g., with the [VS Code plugin](https://marketplace.visualstudio.com/items?itemName=llvm-vs-code-extensions.vscode-clangd)).
 
 ### Running
-sn3d will not write to the standard output (unless a crash occurs) but each MPI rank n will produce a log file called output_n-0.txt. A local run might look something like this:
+sn3d writes one line with the name of the job folder to the standard output, and then nothing more unless a crash occurs. Each MPI rank n writes a log file called output_n-0.txt into the job folder (see [Output files](#output-files)). sn3d keeps a symlink output_0-0.txt in the simulation folder that points to the log of rank 0. A local run might look something like this:
 ```bash
 mpirun -np 8 ./sn3d&
 tail -f output_0-0.txt
@@ -117,11 +117,13 @@ Press Ctrl+C to stop following the log file.
 To split a long simulation across several queued jobs, run sn3d with `-w WALLTIMELIMITHOURS`. When too little wall time remains to complete another timestep, the run finishes cleanly (writing the restart files and updating input.txt) and prints RESTART_NEEDED into the log, which the bundled cluster job scripts detect to submit a continuation job. The scripts pass the remaining SLURM allocation time automatically. Run `./sn3d -h` to list all command-line options.
 
 ### Output files
-A run writes the following into the simulation folder:
+Each job writes the following into its job folder, e.g. `job_from_ts0000`:
 - output_n-0.txt: a log file for each MPI rank n.
+- estimators_nnnn.out: the plasma conditions of each cell (temperatures, ionisation, heating and cooling rates) at each timestep.
+
+A run writes the following into the simulation folder:
 - packets00_nnnn.out: the Monte Carlo packets from each rank, which exspec can turn into spectra and light curves again.
 - light_curve.out, spec.out, and the other spectrum files that [Post-processing with exspec](#post-processing-with-exspec) lists: sn3d writes the light curves and spectra at each timestep, and the emission, absorption, and direction-resolved files at the last requested timestep.
-- estimators_nnnn.out: the plasma conditions of each cell (temperatures, ionisation, heating and cooling rates) at each timestep.
 - deposition.out: the radioactive energy deposition rate as a function of time.
 - gridsave_ts*.tmp and packets_*_ts*.tmp: restart files that allow a later job to continue from the end of a timestep.
 
