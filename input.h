@@ -23,6 +23,7 @@
 #include "packet.h"
 
 void read_atomicdata();
+[[nodiscard]] auto read_job_index() -> int;
 void read_parameterfile(std::span<Packet> packets);
 void update_parameterfile(int nts);
 void setup_timesteps();

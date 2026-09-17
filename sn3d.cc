@@ -873,18 +873,27 @@ auto do_timestep(const int nts, const int titer, std::vector<Packet>& packets, c
   return !enough_walltime_for_timestep;
 }
 
-// Create the run output folder given with the -o option and keep an output_0-0.txt symlink in the
-// simulation folder pointing at the current job's rank-0 log, so that e.g. tail -f output_0-0.txt works
-// regardless of the output folder. Without -o, remove any symlink left by a previous -o run, since
-// opening the log through it would truncate that job's stored log.
+// Create the run output folder and keep an output_0-0.txt symlink in the simulation folder pointing at the
+// current job's rank-0 log, so that e.g. tail -f output_0-0.txt works regardless of the output folder.
+// Without the -o option, the folder gets its name from the job index.
 void setup_runoutputfolder() {
   const auto* const linkname = "output_0-0.txt";
 
+  globals::job_index = read_job_index();
   if (globals::runoutputfolder.empty()) {
-    if (std::error_code ec; globals::my_rank == 0 && std::filesystem::is_symlink(linkname, ec)) {
-      std::filesystem::remove(linkname, ec);
+    globals::runoutputfolder = std::format("job{:08d}", globals::job_index);
+  }
+
+  if (globals::my_rank == 0 && globals::job_index == 0) {
+    // a new simulation removes the job folders of the previous simulation
+    std::error_code ec;
+    for (const auto& entry : std::filesystem::directory_iterator(".", ec)) {
+      const auto foldername = entry.path().filename().string();
+      if (entry.is_directory(ec) && foldername.size() == 11 && foldername.starts_with("job") &&
+          std::ranges::all_of(foldername.substr(3), [](const char c) { return c >= '0' && c <= '9'; })) {
+        std::filesystem::remove_all(entry.path(), ec);
+      }
     }
-    return;
   }
 
   if (globals::my_rank == 0) {
@@ -924,6 +933,7 @@ void print_options_help(std::FILE* stream, const char* progname) {
   std::println(stream, "  -w WALLTIMELIMITHOURS  finish cleanly (writing restart files) before this much wall time");
   std::println(stream, "  -o OUTPUTFOLDER        write the per-rank output files (rank logs and estimators,");
   std::println(stream, "                         nlte, radfield, and macroatom files) into this folder");
+  std::println(stream, "                         (default: job00000000, job00000001, ... for each job in sequence)");
   std::println(stream, "  -h                     print this help and exit");
 }
 
@@ -1035,10 +1045,8 @@ auto main(int argc, char* argv[]) -> int {
                walltime_limit_hours_str, walltime_limit_seconds);
   }
 
-  if (!globals::runoutputfolder.empty()) {
-    printlnlog("command line argument specifies output folder '{}' for the per-rank output files",
-               globals::runoutputfolder);
-  }
+  printlnlog("job index {}. The per-rank output files go into the folder '{}'", globals::job_index,
+             globals::runoutputfolder);
 
   std::vector<Packet> packets;
   reserve_resize(packets, MPKTS);

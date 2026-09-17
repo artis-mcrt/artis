@@ -1909,6 +1909,36 @@ void setup_nlte_levels() {
 }  // anonymous namespace
 
 // read input parameters from input.txt
+// Get the index of this job before the log files open. A new simulation gives 0. A continued simulation gives the
+// index in the gridsave file plus one.
+auto read_job_index() -> int {
+  int job_index = 0;
+  // without input.txt, read_parameterfile() restores the input of a new simulation
+  if (std::ifstream file; globals::my_rank == 0 && (file.open("input.txt"), file)) {
+    std::string line;
+    int timestep_initial = 0;
+    int continue_flag = 0;
+    for (int noncomment_linenum = 0; noncomment_linenum <= inputline_continue_from_saved; noncomment_linenum++) {
+      assert_always(get_noncommentline(file, line));
+      if (noncomment_linenum == inputline_timestep_range) {
+        assert_always(std::istringstream{line} >> timestep_initial);
+      } else if (noncomment_linenum == inputline_continue_from_saved) {
+        std::istringstream{line} >> continue_flag;
+      }
+    }
+    if (continue_flag == 1 && timestep_initial > 0) {
+      FILE* gridsave_file = fopen_required(std::format("gridsave_ts{}.tmp", timestep_initial), "r");
+      int job_index_in = -1;
+      assert_always(fscanf(gridsave_file, "%d ", &job_index_in) == 1);
+      fclose(gridsave_file);
+      assert_always(job_index_in >= 0);
+      job_index = job_index_in + 1;
+    }
+  }
+  MPI_Bcast_safe(job_index, 0, MPI_COMM_WORLD);
+  return job_index;
+}
+
 void read_parameterfile(std::span<Packet> packets) {
   // A new run writes a commented copy of input.txt to input-newrun.txt. If input.txt is missing, for example after
   // a cleanup of the run folder, restore it from that copy so that the run can start again without manual steps.

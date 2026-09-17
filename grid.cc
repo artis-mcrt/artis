@@ -1104,6 +1104,10 @@ void read_grid_restart_data(const int timestep) {
   printlnlog("reading grid restart snapshot from {}", filename);
   FILE* gridsave_file = fopen_required(filename, "r");
 
+  int job_index_in = -1;
+  assert_always(fscanf(gridsave_file, "%d ", &job_index_in) == 1);
+  assert_always(job_index_in + 1 == globals::job_index);
+
   int ntimesteps_in = -1;
   assert_always(fscanf(gridsave_file, "%d ", &ntimesteps_in) == 1);
   assert_always(ntimesteps_in == globals::ntimesteps);
@@ -2368,6 +2372,7 @@ void write_grid_restart_data(const int timestep) {
 
   FILE* gridsave_file = fopen_required(filename, "w");
 
+  fprintf(gridsave_file, "%d ", globals::job_index);
   fprintf(gridsave_file, "%d ", globals::ntimesteps);
   fprintf(gridsave_file, "%d ", globals::nprocs);
   fprintf(gridsave_file, "%la %la ", globals::tmin, globals::tmax);
