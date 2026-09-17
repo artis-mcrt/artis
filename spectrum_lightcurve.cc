@@ -309,7 +309,7 @@ void write_specpol(const std::string& specpol_filename, const std::string& emiss
   }
 
   if (this_rank_writes_file(6)) {
-    auto emissionpol_file = fstream_required(emission_filename, std::ios::out | std::ios::trunc);
+    BufferedTextFile emissionpol_file(emission_filename);
     const auto proccount = static_cast<ptrdiff_t>(get_proccount());
     for (auto nnu = 0Z; nnu < MNUBINS; nnu++) {
       for (const auto* stokes_spectrum : stokes_spectra) {
@@ -317,30 +317,30 @@ void write_specpol(const std::string& specpol_filename, const std::string& emiss
           for (auto nproc = 0Z; nproc < proccount; nproc++) {
             const auto emindex = get_emission_spectrum_index(nts, nnu) + nproc;
             if (nproc > 0) {
-              std::print(emissionpol_file, " ");
+              emissionpol_file.append(' ');
             }
-            std::print(emissionpol_file, "{:g}", stokes_spectrum->emissionalltimesteps[emindex]);
+            emissionpol_file.append(stokes_spectrum->emissionalltimesteps[emindex]);
           }
-          std::println(emissionpol_file, "");
+          emissionpol_file.append('\n');
         }
       }
     }
   }
 
   if (this_rank_writes_file(7)) {
-    auto absorptionpol_file = fstream_required(absorption_filename, std::ios::out | std::ios::trunc);
+    BufferedTextFile absorptionpol_file(absorption_filename);
     const int ioncount = get_nelements() * get_max_nions();  // may be higher than the true included ion count
     for (auto nnu = 0Z; nnu < MNUBINS; nnu++) {
       for (const auto* stokes_spectrum : stokes_spectra) {
         for (auto nts = 0Z; nts < numtimesteps; nts++) {
           for (int i = 0; i < ioncount; i++) {
             if (i > 0) {
-              std::print(absorptionpol_file, " ");
+              absorptionpol_file.append(' ');
             }
-            std::print(absorptionpol_file, "{:g}",
-                       stokes_spectrum->absorptionalltimesteps[get_absorption_spectrum_index(nts, nnu) + i]);
+            absorptionpol_file.append(
+                stokes_spectrum->absorptionalltimesteps[get_absorption_spectrum_index(nts, nnu) + i]);
           }
-          std::println(absorptionpol_file, "");
+          absorptionpol_file.append('\n');
         }
       }
     }
