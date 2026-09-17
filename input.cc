@@ -1918,8 +1918,9 @@ auto read_start_timestep_and_continue_flag() -> std::pair<int, bool> {
   if (globals::my_rank == 0) {
     int ntimesteps = 0;
     int timestep_finish = 0;
-    // without input.txt, read_parameterfile() restores it from input-newrun.txt
-    auto file = fstream_required(std::filesystem::exists("input.txt") ? "input.txt" : "input-newrun.txt", std::ios::in);
+    // read_parameterfile() restores input.txt from input-newrun.txt under the same condition
+    const bool use_newrun_copy = !std::filesystem::exists("input.txt") && std::filesystem::exists("input-newrun.txt");
+    auto file = fstream_required(use_newrun_copy ? "input-newrun.txt" : "input.txt", std::ios::in);
     std::string line;
     for (int noncomment_linenum = 0; noncomment_linenum <= inputline_continue_from_saved; noncomment_linenum++) {
       assert_always(get_noncommentline(file, line));
