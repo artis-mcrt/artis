@@ -210,14 +210,11 @@ void write_spectra(const std::string& spec_filename, const std::string& emission
                    const Spectra& spectra, const int numtimesteps) {
   assert_always(numtimesteps <= globals::ntimesteps);
 
-  // each rank logs the names, because a different rank writes each file
-  printlnlog("Writing {}", spec_filename);
   if (this_rank_writes_file(1)) {
     write_spectrum_file(spec_filename, spectra, numtimesteps);
   }
 
   if (spectra.do_emission_absorption) {
-    printlnlog("Writing {}, {}, and {}", emission_filename, trueemission_filename, absorption_filename);
     if (this_rank_writes_file(2)) {
       write_emission_spectrum_file(emission_filename, spectra.emissionalltimesteps.span(), numtimesteps);
     }
@@ -241,8 +238,8 @@ void write_specpol(const std::string& specpol_filename, const std::string& emiss
   const auto stokes_spectra = {&spectra_I, &spectra_Q, &spectra_U};
   const auto ntimesteps_all = static_cast<ptrdiff_t>(globals::ntimesteps);
 
-  printlnlog("Writing {}", specpol_filename);
   if (this_rank_writes_file(5)) {
+    printlnlog("Writing {}", specpol_filename);
     auto specpol_file = fstream_required(specpol_filename, std::ios::out | std::ios::trunc);
     std::print(specpol_file, "{:g}", 0.0);
     for (size_t stokes_index = 0; stokes_index < stokes_spectra.size(); stokes_index++) {
@@ -267,8 +264,8 @@ void write_specpol(const std::string& specpol_filename, const std::string& emiss
     return;
   }
 
-  printlnlog("Writing {} and {}", emission_filename, absorption_filename);
   if (this_rank_writes_file(6)) {
+    printlnlog("Writing {}", emission_filename);
     auto emissionpol_file = fstream_required(emission_filename, std::ios::out | std::ios::trunc);
     const auto proccount = static_cast<ptrdiff_t>(get_proccount());
     for (auto nnu = 0Z; nnu < MNUBINS; nnu++) {
@@ -288,6 +285,7 @@ void write_specpol(const std::string& specpol_filename, const std::string& emiss
   }
 
   if (this_rank_writes_file(7)) {
+    printlnlog("Writing {}", absorption_filename);
     auto absorptionpol_file = fstream_required(absorption_filename, std::ios::out | std::ios::trunc);
     const int ioncount = get_nelements() * get_max_nions();  // may be higher than the true included ion count
     for (auto nnu = 0Z; nnu < MNUBINS; nnu++) {
@@ -457,7 +455,6 @@ void add_packet_to_spectra(const Packet& pkt, const int dirbin, Spectra& spectra
 
 void write_light_curve(const std::string& lc_filename, const std::span<const double> light_curve_lum,
                        const std::span<const double> light_curve_lumcmf, const int numtimesteps) {
-  printlnlog("Writing {}", lc_filename);
   if (!this_rank_writes_file(0)) {
     return;
   }
@@ -665,6 +662,9 @@ void write_light_curves_and_spectra(const int nts, std::span<const std::span<con
 
   for (int dirbin = -1; dirbin < ndirbins; dirbin++) {
     write_light_curves_and_spectra_for_dirbin(nts, packets_by_rank, do_emission_absorption, dirbin);
+    if (dirbin >= 0 && globals::my_rank == 0) {
+      printlnlog("timestep {}: wrote the files of direction bin {} (the last bin is {})", nts, dirbin, ndirbins - 1);
+    }
   }
 
   const auto write_duration_seconds =
