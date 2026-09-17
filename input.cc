@@ -2133,9 +2133,14 @@ void read_parameterfile(std::span<Packet> packets) {
 
   file.close();
 
-  if (globals::my_rank == 0 && !globals::simulation_continued_from_saved) {
+  // exspec gives no packets, and it changes no input file
+  if (globals::my_rank == 0 && !globals::simulation_continued_from_saved && !packets.empty()) {
     // back up original input file, adding comments to each line
     update_parameterfile(-1);
+    // input.txt also gets the number of packet files now, because a run that finishes in one job writes no restart
+    // files. The rename is atomic, so a rank that still reads the old input.txt is safe.
+    std::filesystem::copy_file("input-newrun.txt", "input.txt.tmp", std::filesystem::copy_options::overwrite_existing);
+    std::filesystem::rename("input.txt.tmp", "input.txt");
   }
 }
 
@@ -2170,11 +2175,8 @@ void update_parameterfile(const int nts) {
         }
       }
 
-      // only rewrite this line when updating input.txt for a restart (sn3d), where nprocs is the
-      // number of packet files that sn3d writes. exspec runs the nts == -1 backup path with its own
-      // rank count, which must not replace the nprocs_exspec value it just read
-      if (nts >= 0 && noncomment_linenum == inputline_nprocs_exspec) {
-        // by default, exspec should use all available packet files
+      // sn3d writes one packet file for each rank, and only sn3d calls this function
+      if (noncomment_linenum == inputline_nprocs_exspec) {
         globals::nprocs_exspec = globals::nprocs;
         line = std::format("{}", globals::nprocs_exspec);
       }
