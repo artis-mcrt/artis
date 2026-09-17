@@ -991,7 +991,7 @@ auto main(int argc, char* argv[]) -> int {
 
   if (globals::my_rank == 0) {
     // the standard output goes to the log of the Slurm job, which then names the job folder
-    std::println("sn3d job folder: {}", globals::runoutputfolder);
+    std::println("job folder: {}", globals::runoutputfolder);
     std::fflush(stdout);
   }
 
