@@ -176,7 +176,7 @@ class BufferedTextFile {
  public:
   explicit BufferedTextFile(const std::string& filename)
       : file(fstream_required(filename, std::ios::out | std::ios::trunc)) {
-    buffer.reserve(flushsize + 64);
+    buffer.reserve(2 * flushsize);
   }
   ~BufferedTextFile() {
     file.write(buffer.data(), static_cast<std::streamsize>(buffer.size()));

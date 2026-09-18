@@ -460,9 +460,11 @@ The code must compile with nvc++ and with hipcc, also with `STDPAR=ON GPU=ON`.
 - `input.txt` is positional. Each line has its fixed meaning, and some lines
   are unused placeholders that must stay. `read_parameterfile()` reads a line
   with `get_noncommentline()` and then takes the numbers with a
-  `std::istringstream`. Follow that pattern for a new line. A new run writes
-  a commented copy of `input.txt` to `input-newrun.txt`. If `input.txt` is
-  absent at the start of a run, rank 0 restores it from that copy.
+  `std::istringstream`. Follow that pattern for a new line. At the start of a
+  new simulation, `sn3d` writes `input.txt` again with the standard comments
+  and with its rank count in the `nprocs_exspec` line, and it writes the same
+  content to `input-newrun.txt`. If `input.txt` is absent at the start of a
+  run, rank 0 restores it from that copy. `exspec` changes no input file.
 - The model files use a different helper. `model.txt`, `abundances.txt`, and
   `transitiondata.txt` take each number with `parse_next_token()`, which
   advances a `std::string_view`.

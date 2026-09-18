@@ -2134,13 +2134,14 @@ void read_parameterfile(std::span<Packet> packets) {
   file.close();
 }
 
-// write out an updated input.txt to restart the simulation
+// Write input.txt again with the standard comments and the number of packet files. For nts >= 0, input.txt makes the
+// next job continue at timestep nts. For nts < 0, a new simulation also writes the copy input-newrun.txt.
 void update_parameterfile(const int nts) {
   assert_always(globals::my_rank == 0);
   if (nts >= 0) {
     printlog("Update input.txt for restart at timestep {}...", nts);
   } else {
-    printlog("Copying input.txt to input-newrun.txt...");
+    printlog("Write input.txt again with comments, and copy it to input-newrun.txt...");
   }
 
   auto file = fstream_required("input.txt", std::ios::in);
