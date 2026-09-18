@@ -6,18 +6,22 @@
 #include <algorithm>
 #include <array>
 #include <atomic>
+#include <charconv>
 #include <chrono>
 #include <cmath>
 #include <cstddef>
 #include <filesystem>
 #include <format>
+#include <fstream>
 #include <ios>
 #include <iterator>
+#include <memory>
 #include <print>
 #include <ranges>
 #include <span>
 #include <string>
 #include <string_view>
+#include <system_error>
 #include <utility>
 #include <vector>
 
@@ -167,22 +171,63 @@ void write_spectrum_file(const std::string& spec_filename, const Spectra& spectr
   }
 }
 
+// a text file with a write buffer for rows of numbers
+class BufferedTextFile {
+ public:
+  explicit BufferedTextFile(const std::string& filename)
+      : file(fstream_required(filename, std::ios::out | std::ios::trunc)) {
+    buffer.reserve(2 * flushsize);
+  }
+  ~BufferedTextFile() {
+    file.write(buffer.data(), static_cast<std::streamsize>(buffer.size()));
+    file.close();
+    assert_always(!file.fail());  // e.g. a full disk
+  }
+  BufferedTextFile(const BufferedTextFile&) = delete;
+  auto operator=(const BufferedTextFile&) -> BufferedTextFile& = delete;
+  BufferedTextFile(BufferedTextFile&&) = delete;
+  auto operator=(BufferedTextFile&&) -> BufferedTextFile& = delete;
+
+  // append a line with the values in the format {:g} and a space between them
+  void append_row(const std::span<const double> values) {
+    for (auto i = 0Z; i < std::ssize(values); i++) {
+      if (i > 0) {
+        buffer += ' ';
+      }
+      if (values[i] == 0. && !std::signbit(values[i])) {
+        buffer += '0';  // the arrays can be mostly zero, and this path is much faster
+      } else {
+        std::array<char, 32> text{};
+        const auto [textend, ec] =
+            std::to_chars(text.data(), std::to_address(text.end()), values[i], std::chars_format::general, 6);
+        assert_always(ec == std::errc{});
+        buffer.append(text.data(), textend);
+      }
+    }
+    buffer += '\n';
+    if (buffer.size() >= flushsize) {
+      file.write(buffer.data(), static_cast<std::streamsize>(buffer.size()));
+      buffer.clear();
+    }
+  }
+
+ private:
+  static constexpr auto flushsize = 1UZ << 22U;
+  std::fstream file;
+  std::string buffer;
+};
+
 // Write an emission-type spectrum (emission or true emission) with a line for each frequency bin of
 // each timestep, holding one column per emission process (see get_proccount).
 void write_emission_spectrum_file(const std::string& emission_filename,
                                   const std::span<const double> emission_alltimesteps, const int numtimesteps) {
   assert_always(numtimesteps <= globals::ntimesteps);
   assert_always(!emission_filename.empty());
-  auto emission_file = fstream_required(emission_filename, std::ios::out | std::ios::trunc);
+  BufferedTextFile emission_file(emission_filename);
   const auto proccount = static_cast<ptrdiff_t>(get_proccount());
   for (auto nubin = 0Z; nubin < MNUBINS; nubin++) {
     for (auto nts = 0Z; nts < numtimesteps; nts++) {
-      const auto emindex_nts_nubin = get_emission_spectrum_index(nts, nubin);
-      std::print(emission_file, "{:g}", emission_alltimesteps[emindex_nts_nubin]);
-      for (int nproc = 1; nproc < proccount; nproc++) {
-        std::print(emission_file, " {:g}", emission_alltimesteps[emindex_nts_nubin + nproc]);
-      }
-      std::println(emission_file, "");
+      emission_file.append_row(emission_alltimesteps.subspan(get_emission_spectrum_index(nts, nubin), proccount));
     }
   }
 }
@@ -191,16 +236,12 @@ void write_absorption_spectrum_file(const std::string& absorption_filename, cons
                                     const int numtimesteps) {
   assert_always(numtimesteps <= globals::ntimesteps);
   assert_always(!absorption_filename.empty());
-  auto absorption_file = fstream_required(absorption_filename, std::ios::out | std::ios::trunc);
+  BufferedTextFile absorption_file(absorption_filename);
   const int ioncount = get_nelements() * get_max_nions();  // may be higher than the true included ion count
   for (auto nubin = 0Z; nubin < MNUBINS; nubin++) {
     for (auto nts = 0Z; nts < numtimesteps; nts++) {
-      const auto absindex_nts_nubin = get_absorption_spectrum_index(nts, nubin);
-      std::print(absorption_file, "{:g}", spectra.absorptionalltimesteps[absindex_nts_nubin]);
-      for (int i = 1; i < ioncount; i++) {
-        std::print(absorption_file, " {:g}", spectra.absorptionalltimesteps[absindex_nts_nubin + i]);
-      }
-      std::println(absorption_file, "");
+      absorption_file.append_row(
+          spectra.absorptionalltimesteps.span().subspan(get_absorption_spectrum_index(nts, nubin), ioncount));
     }
   }
 }
@@ -264,38 +305,26 @@ void write_specpol(const std::string& specpol_filename, const std::string& emiss
   }
 
   if (this_rank_writes_file(6)) {
-    auto emissionpol_file = fstream_required(emission_filename, std::ios::out | std::ios::trunc);
+    BufferedTextFile emissionpol_file(emission_filename);
     const auto proccount = static_cast<ptrdiff_t>(get_proccount());
     for (auto nnu = 0Z; nnu < MNUBINS; nnu++) {
       for (const auto* stokes_spectrum : stokes_spectra) {
         for (auto nts = 0Z; nts < numtimesteps; nts++) {
-          for (auto nproc = 0Z; nproc < proccount; nproc++) {
-            const auto emindex = get_emission_spectrum_index(nts, nnu) + nproc;
-            if (nproc > 0) {
-              std::print(emissionpol_file, " ");
-            }
-            std::print(emissionpol_file, "{:g}", stokes_spectrum->emissionalltimesteps[emindex]);
-          }
-          std::println(emissionpol_file, "");
+          emissionpol_file.append_row(
+              stokes_spectrum->emissionalltimesteps.span().subspan(get_emission_spectrum_index(nts, nnu), proccount));
         }
       }
     }
   }
 
   if (this_rank_writes_file(7)) {
-    auto absorptionpol_file = fstream_required(absorption_filename, std::ios::out | std::ios::trunc);
+    BufferedTextFile absorptionpol_file(absorption_filename);
     const int ioncount = get_nelements() * get_max_nions();  // may be higher than the true included ion count
     for (auto nnu = 0Z; nnu < MNUBINS; nnu++) {
       for (const auto* stokes_spectrum : stokes_spectra) {
         for (auto nts = 0Z; nts < numtimesteps; nts++) {
-          for (int i = 0; i < ioncount; i++) {
-            if (i > 0) {
-              std::print(absorptionpol_file, " ");
-            }
-            std::print(absorptionpol_file, "{:g}",
-                       stokes_spectrum->absorptionalltimesteps[get_absorption_spectrum_index(nts, nnu) + i]);
-          }
-          std::println(absorptionpol_file, "");
+          absorptionpol_file.append_row(stokes_spectrum->absorptionalltimesteps.span().subspan(
+              get_absorption_spectrum_index(nts, nnu), ioncount));
         }
       }
     }

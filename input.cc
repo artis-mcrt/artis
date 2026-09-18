@@ -2132,20 +2132,16 @@ void read_parameterfile(std::span<Packet> packets) {
   assert_always(get_noncommentline(file, line));
 
   file.close();
-
-  if (globals::my_rank == 0 && !globals::simulation_continued_from_saved) {
-    // back up original input file, adding comments to each line
-    update_parameterfile(-1);
-  }
 }
 
-// write out an updated input.txt to restart the simulation
+// Write input.txt again with the standard comments and the number of packet files. For nts >= 0, input.txt makes the
+// next job continue at timestep nts. For nts < 0, a new simulation also writes the copy input-newrun.txt.
 void update_parameterfile(const int nts) {
   assert_always(globals::my_rank == 0);
   if (nts >= 0) {
     printlog("Update input.txt for restart at timestep {}...", nts);
   } else {
-    printlog("Copying input.txt to input-newrun.txt...");
+    printlog("Write input.txt again with comments, and copy it to input-newrun.txt...");
   }
 
   auto file = fstream_required("input.txt", std::ios::in);
@@ -2170,12 +2166,7 @@ void update_parameterfile(const int nts) {
         }
       }
 
-      // only rewrite this line when updating input.txt for a restart (sn3d), where nprocs is the
-      // number of packet files that sn3d writes. exspec runs the nts == -1 backup path with its own
-      // rank count, which must not replace the nprocs_exspec value it just read
-      if (nts >= 0 && noncomment_linenum == inputline_nprocs_exspec) {
-        // by default, exspec should use all available packet files
-        globals::nprocs_exspec = globals::nprocs;
+      if (noncomment_linenum == inputline_nprocs_exspec) {
         line = std::format("{}", globals::nprocs_exspec);
       }
 
@@ -2213,16 +2204,22 @@ void update_parameterfile(const int nts) {
   }
   file.close();
 
-  std::error_code rename_error;
+  // each rename is atomic, so a crash leaves no partial file, and a rank that still reads the old input.txt is safe
+  std::error_code ec;
   if (nts < 0) {
-    // back up the original for starting a new simulation
-    std::filesystem::rename("input.txt.tmp", "input-newrun.txt", rename_error);
-  } else {
-    std::filesystem::rename("input.txt.tmp", "input.txt", rename_error);
+    // keep a copy for the start of a new simulation
+    std::filesystem::copy_file("input.txt.tmp", "input-newrun.txt.tmp",
+                               std::filesystem::copy_options::overwrite_existing, ec);
+    if (!ec) {
+      std::filesystem::rename("input-newrun.txt.tmp", "input-newrun.txt", ec);
+    }
+    if (ec) {
+      fatal_crash("Could not write input-newrun.txt: {}", ec.message());
+    }
   }
-  if (rename_error) {
-    fatal_crash("Could not move input.txt.tmp to {}: {}", (nts < 0) ? "input-newrun.txt" : "input.txt",
-                rename_error.message());
+  std::filesystem::rename("input.txt.tmp", "input.txt", ec);
+  if (ec) {
+    fatal_crash("Could not move input.txt.tmp to input.txt: {}", ec.message());
   }
 
   printlnlog("done");
