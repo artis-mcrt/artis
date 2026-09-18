@@ -1073,6 +1073,16 @@ auto main(int argc, char* argv[]) -> int {
   // Read in parameters from input.txt
   read_parameterfile(packets);
 
+  if (globals::simulation_continued_from_saved) {
+    assert_always(globals::nprocs_exspec == globals::nprocs);
+  } else {
+    // sn3d writes one packet file for each rank
+    globals::nprocs_exspec = globals::nprocs;
+    if (globals::my_rank == 0) {
+      update_parameterfile(-1);
+    }
+  }
+
   // Read in parameters from vpkt.txt
   if constexpr (VPKT_ON) {
     vpkt::read_vpktparameterfile();
@@ -1083,12 +1093,6 @@ auto main(int argc, char* argv[]) -> int {
   chargetransfer::init();
 
   grid::read_ejecta_model();
-
-  if (globals::simulation_continued_from_saved) {
-    assert_always(globals::nprocs_exspec == globals::nprocs);
-  } else {
-    globals::nprocs_exspec = globals::nprocs;
-  }
 
   if (globals::my_rank == 0) {
     initialise_linestat_file();

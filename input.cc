@@ -2132,16 +2132,6 @@ void read_parameterfile(std::span<Packet> packets) {
   assert_always(get_noncommentline(file, line));
 
   file.close();
-
-  // exspec gives no packets, and it changes no input file
-  if (globals::my_rank == 0 && !globals::simulation_continued_from_saved && !packets.empty()) {
-    // back up original input file, adding comments to each line
-    update_parameterfile(-1);
-    // input.txt also gets the number of packet files now, because a run that finishes in one job writes no restart
-    // files. The rename is atomic, so a rank that still reads the old input.txt is safe.
-    std::filesystem::copy_file("input-newrun.txt", "input.txt.tmp", std::filesystem::copy_options::overwrite_existing);
-    std::filesystem::rename("input.txt.tmp", "input.txt");
-  }
 }
 
 // write out an updated input.txt to restart the simulation
@@ -2175,9 +2165,7 @@ void update_parameterfile(const int nts) {
         }
       }
 
-      // sn3d writes one packet file for each rank, and only sn3d calls this function
       if (noncomment_linenum == inputline_nprocs_exspec) {
-        globals::nprocs_exspec = globals::nprocs;
         line = std::format("{}", globals::nprocs_exspec);
       }
 
@@ -2215,16 +2203,18 @@ void update_parameterfile(const int nts) {
   }
   file.close();
 
-  std::error_code rename_error;
+  std::error_code ec;
   if (nts < 0) {
-    // back up the original for starting a new simulation
-    std::filesystem::rename("input.txt.tmp", "input-newrun.txt", rename_error);
-  } else {
-    std::filesystem::rename("input.txt.tmp", "input.txt", rename_error);
+    // keep a copy for the start of a new simulation
+    std::filesystem::copy_file("input.txt.tmp", "input-newrun.txt", std::filesystem::copy_options::overwrite_existing,
+                               ec);
   }
-  if (rename_error) {
-    fatal_crash("Could not move input.txt.tmp to {}: {}", (nts < 0) ? "input-newrun.txt" : "input.txt",
-                rename_error.message());
+  if (!ec) {
+    // the rename is atomic, so a rank that still reads the old input.txt is safe
+    std::filesystem::rename("input.txt.tmp", "input.txt", ec);
+  }
+  if (ec) {
+    fatal_crash("Could not write input.txt from input.txt.tmp: {}", ec.message());
   }
 
   printlnlog("done");
