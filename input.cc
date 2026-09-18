@@ -2203,18 +2203,22 @@ void update_parameterfile(const int nts) {
   }
   file.close();
 
+  // each rename is atomic, so a crash leaves no partial file, and a rank that still reads the old input.txt is safe
   std::error_code ec;
   if (nts < 0) {
     // keep a copy for the start of a new simulation
-    std::filesystem::copy_file("input.txt.tmp", "input-newrun.txt", std::filesystem::copy_options::overwrite_existing,
-                               ec);
+    std::filesystem::copy_file("input.txt.tmp", "input-newrun.txt.tmp",
+                               std::filesystem::copy_options::overwrite_existing, ec);
+    if (!ec) {
+      std::filesystem::rename("input-newrun.txt.tmp", "input-newrun.txt", ec);
+    }
+    if (ec) {
+      fatal_crash("Could not write input-newrun.txt: {}", ec.message());
+    }
   }
-  if (!ec) {
-    // the rename is atomic, so a rank that still reads the old input.txt is safe
-    std::filesystem::rename("input.txt.tmp", "input.txt", ec);
-  }
+  std::filesystem::rename("input.txt.tmp", "input.txt", ec);
   if (ec) {
-    fatal_crash("Could not write input.txt from input.txt.tmp: {}", ec.message());
+    fatal_crash("Could not move input.txt.tmp to input.txt: {}", ec.message());
   }
 
   printlnlog("done");

@@ -178,7 +178,11 @@ class BufferedTextFile {
       : file(fstream_required(filename, std::ios::out | std::ios::trunc)) {
     buffer.reserve(flushsize + 64);
   }
-  ~BufferedTextFile() { file.write(buffer.data(), static_cast<std::streamsize>(buffer.size())); }
+  ~BufferedTextFile() {
+    file.write(buffer.data(), static_cast<std::streamsize>(buffer.size()));
+    file.close();
+    assert_always(!file.fail());  // e.g. a full disk
+  }
   BufferedTextFile(const BufferedTextFile&) = delete;
   auto operator=(const BufferedTextFile&) -> BufferedTextFile& = delete;
   BufferedTextFile(BufferedTextFile&&) = delete;
