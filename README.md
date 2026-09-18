@@ -180,7 +180,7 @@ Run-time configuration with:
 - whether the run continues from the restart files of a previous job
 - number of pure LTE timesteps
 - optically-thick condition that switches cells to a grey opacity treatment
-- nprocs_exspec: the number of packet files that exspec will read, one for each sn3d rank
+- nprocs_exspec: the number of packet files that exspec will read, one for each sn3d rank. sn3d sets this line itself. At the start of a new simulation, sn3d writes input.txt again with a comment on each line and with this value, and it keeps the same content in input-newrun.txt.
 
 The format is positional, so every line must be present and in order, including those that are no longer used. See [tests/classicmode_3d_inputfiles/input-newrun.txt](tests/classicmode_3d_inputfiles/input-newrun.txt) for a complete example with a comment on every line.
 
