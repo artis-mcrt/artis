@@ -24,7 +24,7 @@ cp artis/artisoptions_kilonova_lte.h artisoptions.h
 
 xz -f -d -v -T0 *.xz
 
-sed -i.bak -e 's/constexpr std::int64_t NUM_PACKETS.*/constexpr std::int64_t NUM_PACKETS = 320000;/g' artisoptions.h
+sed -i.bak -e "s/constexpr std::int64_t NUM_PACKETS.*/constexpr std::int64_t NUM_PACKETS = 320'000;/g" artisoptions.h
 
 sed -i.bak -e 's/constexpr int RATECOEFF_TABLESIZE.*/constexpr int RATECOEFF_TABLESIZE = 20;/g' artisoptions.h
 sed -i.bak -e 's/constexpr double MINTEMP.*/constexpr double MINTEMP = 1000.;/g' artisoptions.h

@@ -1990,7 +1990,11 @@ void read_parameterfile(std::span<Packet> packets) {
     // follow identical histories because the grid state that they see is rank-invariant.
     // Xoshiro128PP is seeded from a 32 bit value, so distinct seeds only exist for as many packets
     // as fit in that space and the whole run has to stay within it.
-    assert_always((static_cast<std::int64_t>(globals::nprocs) * std::ssize(packets)) <= (1LL << 32));
+    if (globals::MPKTS * globals::nprocs > (1LL << 32)) {
+      fatal_crash(
+          "A GPU build has 2^32 packet seeds, but {} ranks with MPKTS {} have {} packets. Decrease NUM_PACKETS {}",
+          globals::nprocs, globals::MPKTS, globals::MPKTS * globals::nprocs, NUM_PACKETS);
+    }
     const auto rank_seed_base =
         static_cast<std::uint32_t>(pre_zseed + (static_cast<std::int64_t>(globals::my_rank) * std::ssize(packets)));
     for (auto packetnumber = 0ZU; packetnumber < std::size(packets); packetnumber++) {
