@@ -9,7 +9,6 @@
 #include <cstdlib>
 #include <utility>
 
-#include "artisoptions.h"
 #include "constants.h"
 #include "globals.h"
 #include "grid.h"
@@ -44,8 +43,8 @@ auto get_counter(const Counter i) -> ptrdiff_t { return eventstats[std::to_under
 
 // Log all packet-interaction statistics (macroatom/kpkt/non-thermal transitions, scatterings, cell crossings, ...)
 // accumulated over timestep nts.
-void pkt_action_counters_printout(const int nts) {
-  const double meaninteractions = static_cast<double>(get_counter(Counter::INTERACTIONS)) / MPKTS;
+void pkt_action_counters_printout(const int nts, const ptrdiff_t npkts_thisrank) {
+  const double meaninteractions = static_cast<double>(get_counter(Counter::INTERACTIONS)) / npkts_thisrank;
   printlnlog("timestep {}: mean number of interactions per packet = {:g}", nts, meaninteractions);
 
   const double deltat = globals::timesteps[nts].width;

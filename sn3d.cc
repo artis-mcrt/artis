@@ -29,6 +29,7 @@
 #include <string>
 #include <string_view>
 #include <system_error>
+#include <tuple>
 #include <utility>
 #ifdef STDPAR_ON
 #include <ranges>
@@ -1044,8 +1045,11 @@ auto main(int argc, char* argv[]) -> int {
 
   printlnlog("The per-rank output files go into the job folder '{}'", globals::jobfolder);
 
+  // the ranks share NUM_PACKETS, and the first ranks take the remainder
+  const auto npkts_thisrank = std::get<1>(get_range_chunk(NUM_PACKETS, globals::nprocs, globals::my_rank));
+  assert_always(npkts_thisrank > 0);
   std::vector<Packet> packets;
-  reserve_resize(packets, MPKTS);
+  reserve_resize(packets, npkts_thisrank);
 
   printlnlog("git branch: {}", GIT_BRANCH);
 
@@ -1127,10 +1131,10 @@ auto main(int argc, char* argv[]) -> int {
 
   grid::init_grid();
 
-  printlnlog("Simulation propagates {:g} packets per process (total {:g} with nprocs {})", 1. * MPKTS,
-             1. * MPKTS * globals::nprocs, globals::nprocs);
+  printlnlog("Simulation propagates {} packets on this rank (total NUM_PACKETS {} with nprocs {})", npkts_thisrank,
+             NUM_PACKETS, globals::nprocs);
 
-  printlnlog("[info] mem_usage: packets occupy {:.3f} MB", MPKTS * sizeof(Packet) / 1024. / 1024.);
+  printlnlog("[info] mem_usage: packets occupy {:.3f} MB", npkts_thisrank * sizeof(Packet) / 1024. / 1024.);
 
   if (!globals::simulation_continued_from_saved) {
     packet_init(packets);

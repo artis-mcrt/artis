@@ -1983,16 +1983,16 @@ void read_parameterfile(std::span<Packet> packets) {
 
   if (!packets.empty()) {
 #ifdef GPU_ON
-    // Give every packet its own independently-seeded generator. The ranks are spaced by the number
-    // of packets that they own, so that their seed ranges do not overlap. get_max_threads() is one
+    // Give every packet its own independently-seeded generator. Each rank starts at the index of its
+    // first packet in the NUM_PACKETS of all ranks, so that the seed ranges do not overlap. get_max_threads() is one
     // for a GPU build, so spacing the ranks by 13 as the host generator below does would leave
     // neighbouring ranks sharing all but 13 of their seeds, and two packets given the same seed
     // follow identical histories because the grid state that they see is rank-invariant.
     // Xoshiro128PP is seeded from a 32 bit value, so distinct seeds only exist for as many packets
     // as fit in that space and the whole run has to stay within it.
-    assert_always((static_cast<std::int64_t>(globals::nprocs) * std::ssize(packets)) <= (1LL << 32));
-    const auto rank_seed_base =
-        static_cast<std::uint32_t>(pre_zseed + (static_cast<std::int64_t>(globals::my_rank) * std::ssize(packets)));
+    static_assert(NUM_PACKETS <= (1LL << 32));
+    const auto firstpktindex_thisrank = std::get<0>(get_range_chunk(NUM_PACKETS, globals::nprocs, globals::my_rank));
+    const auto rank_seed_base = static_cast<std::uint32_t>(pre_zseed + firstpktindex_thisrank);
     for (auto packetnumber = 0ZU; packetnumber < std::size(packets); packetnumber++) {
       get_rngstate(packets[packetnumber]).seed(rank_seed_base + static_cast<std::uint32_t>(packetnumber));
     }

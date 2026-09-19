@@ -626,7 +626,7 @@ void update_packets(const int nts, std::span<Packet> packets) {
     passnumber++;
   }
 
-  stats::pkt_action_counters_printout(nts);
+  stats::pkt_action_counters_printout(nts, std::ssize(packets));
 
   const auto time_update_packets_end_thisrank = std::chrono::steady_clock::now();
   const auto rank_process_time =
