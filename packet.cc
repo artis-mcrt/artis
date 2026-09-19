@@ -167,7 +167,6 @@ auto read_text_packets(const std::string& filename) -> std::vector<Packet> {
   std::getline(packets_file, line);  // read header line to make sure it matches
   assert_always(line == get_packets_text_header());
 
-  packets.reserve((NUM_PACKETS / globals::nprocs_exspec) + 1);
   while (get_noncommentline(packets_file, line)) {
     packets.emplace_back();
     Packet& pkt = packets.back();

@@ -508,11 +508,11 @@ Do the text edits first. They can make a finished compile out of date.
 
 1. Add a new compile-time option to every `artisoptions_*.h` preset and to
    `artisoptions_doc.md`.
-2. Search `tests/setup_*.sh` for the name of an option that you renamed or
-   reformatted. Those scripts change option lines with `sed` and an exact text
-   match. The pattern also contains the type, e.g. `constexpr int`. A pattern
-   that matches nothing gives no error, so the test then runs with the default
-   value of the preset and the checksums drift.
+2. Search `tests/setup_*.sh` and `.github/workflows/ci.yml` for the name of an
+   option that you renamed or reformatted. Those files change option lines with
+   `sed` and an exact text match. The pattern also contains the type, e.g.
+   `constexpr int`. A pattern that matches nothing gives no error, so the test
+   then runs with the default value of the preset and the checksums drift.
 3. Run `prek run --all-files` and correct every message.
 4. Run `make OPTIMIZE=OFF unittests && ./unittests` if `unittests.cc` calls a
    function that you changed.

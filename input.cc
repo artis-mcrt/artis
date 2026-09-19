@@ -1991,7 +1991,9 @@ void read_parameterfile(std::span<Packet> packets) {
     // Xoshiro128PP is seeded from a 32 bit value, so distinct seeds only exist for as many packets
     // as fit in that space and the whole run has to stay within it.
     static_assert(NUM_PACKETS <= (1LL << 32), "A GPU build has 2^32 packet seeds. Decrease NUM_PACKETS.");
-    const auto firstpktindex_thisrank = std::get<0>(get_range_chunk(NUM_PACKETS, globals::nprocs, globals::my_rank));
+    const auto [firstpktindex_thisrank, npkts_thisrank] =
+        get_range_chunk(NUM_PACKETS, globals::nprocs, globals::my_rank);
+    assert_always(std::ssize(packets) == npkts_thisrank);
     const auto rank_seed_base = static_cast<std::uint32_t>(pre_zseed + firstpktindex_thisrank);
     for (auto packetnumber = 0ZU; packetnumber < std::size(packets); packetnumber++) {
       get_rngstate(packets[packetnumber]).seed(rank_seed_base + static_cast<std::uint32_t>(packetnumber));

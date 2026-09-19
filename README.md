@@ -63,7 +63,7 @@ Next, select an options preset. For example:
 ln -s artisoptions_classic.h artisoptions.h
 ```
 
-You will likely want to change the number of packets of all ranks together (NUM_PACKETS) using a text editor, e.g. `vim artisoptions.h`. The options are explained in [artisoptions_doc.md](https://github.com/artis-mcrt/artis/blob/main/artisoptions_doc.md).
+You will likely want to change the number of packets of all ranks together (NUM_PACKETS) using a text editor, e.g. `vim artisoptions.h`. The values in the presets are for production runs with approximately 1000 ranks. Each rank keeps its share of the packets in memory, so decrease NUM_PACKETS for a run with fewer ranks. The options are explained in [artisoptions_doc.md](https://github.com/artis-mcrt/artis/blob/main/artisoptions_doc.md).
 
 Next, compile with `make` and go up a level to the model folder:
 ```sh

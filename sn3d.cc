@@ -29,7 +29,6 @@
 #include <string>
 #include <string_view>
 #include <system_error>
-#include <tuple>
 #include <utility>
 #ifdef STDPAR_ON
 #include <ranges>
@@ -1045,12 +1044,6 @@ auto main(int argc, char* argv[]) -> int {
 
   printlnlog("The per-rank output files go into the job folder '{}'", globals::jobfolder);
 
-  // the ranks share NUM_PACKETS, and the first ranks take the remainder
-  const auto npkts_thisrank = std::get<1>(get_range_chunk(NUM_PACKETS, globals::nprocs, globals::my_rank));
-  assert_always(npkts_thisrank > 0);
-  std::vector<Packet> packets;
-  reserve_resize(packets, npkts_thisrank);
-
   printlnlog("git branch: {}", GIT_BRANCH);
 
   printlnlog("git version: {}", GIT_VERSION);
@@ -1074,6 +1067,21 @@ auto main(int argc, char* argv[]) -> int {
       "present",
       MAX_NODE_SIZE);
 #endif
+
+  // every rank needs a packet
+  assert_always(NUM_PACKETS >= globals::nprocs);
+  // the ranks share NUM_PACKETS equally, and the first ranks get one packet each of the remainder
+  const auto [firstpktindex_thisrank, npkts_thisrank] = get_range_chunk(NUM_PACKETS, globals::nprocs, globals::my_rank);
+  // packet_init() and Packet::number hold the packet index of a rank in an int
+  assert_always(npkts_thisrank <= std::numeric_limits<int>::max());
+
+  printlnlog("Simulation propagates {} packets on this rank (total NUM_PACKETS {} with nprocs {})", npkts_thisrank,
+             NUM_PACKETS, globals::nprocs);
+
+  printlnlog("[info] mem_usage: packets occupy {:.3f} MB", npkts_thisrank * sizeof(Packet) / 1024. / 1024.);
+
+  std::vector<Packet> packets;
+  reserve_resize(packets, npkts_thisrank);
 
   // Read in parameters from input.txt
   read_parameterfile(packets);
@@ -1130,11 +1138,6 @@ auto main(int argc, char* argv[]) -> int {
   }
 
   grid::init_grid();
-
-  printlnlog("Simulation propagates {} packets on this rank (total NUM_PACKETS {} with nprocs {})", npkts_thisrank,
-             NUM_PACKETS, globals::nprocs);
-
-  printlnlog("[info] mem_usage: packets occupy {:.3f} MB", npkts_thisrank * sizeof(Packet) / 1024. / 1024.);
 
   if (!globals::simulation_continued_from_saved) {
     packet_init(packets);
