@@ -6,6 +6,8 @@
 #SBATCH --cpus-per-task=1
 #SBATCH --partition=dcgp_usr_prod
 #SBATCH --qos=normal
+##for nodes >= 17, ntasks >= 1904
+##SBATCH --qos=dcgp_qos_bprod
 #SBATCH --account=EUHPC_R07_209
 #SBATCH --mail-type=ALL
 
