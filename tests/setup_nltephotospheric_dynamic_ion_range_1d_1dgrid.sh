@@ -20,7 +20,7 @@ ln -s ../../ artis
 
 cp artis/artisoptions_nltephotospheric_dynamic_ion_range.h artisoptions.h
 
-sed -i.bak -e 's/constexpr std::int64_t NUM_PACKETS.*/constexpr std::int64_t NUM_PACKETS = 1600;/g' artisoptions.h
+sed -i.bak -e 's/constexpr int NUM_PACKETS.*/constexpr int NUM_PACKETS = 1600;/g' artisoptions.h
 
 sed -i.bak -e 's/constexpr std::optional<GridType> GRID_TYPE_OVERRIDE.*/constexpr std::optional<GridType> GRID_TYPE_OVERRIDE = GridType::SPHERICAL1D;/g' artisoptions.h
 

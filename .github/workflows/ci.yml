@@ -340,7 +340,7 @@ jobs:
               run: |
                   source ./setup_kilonova_1d.sh
                   # this job has 2 ranks and the checksum jobs have 4, so this keeps the packets of each rank
-                  sed -i -e 's/constexpr std::int64_t NUM_PACKETS.*/constexpr std::int64_t NUM_PACKETS = 160000;/g' kilonova_1d_testrun/artisoptions.h
+                  sed -i -e 's/constexpr int NUM_PACKETS.*/constexpr int NUM_PACKETS = 160000;/g' kilonova_1d_testrun/artisoptions.h
 
             - name: Compile
               run: |
@@ -396,7 +396,7 @@ jobs:
               run: |
                   source ./setup_kilonova_1d.sh
                   # this job has 2 ranks and the checksum jobs have 4, so this keeps the packets of each rank
-                  sed -i -e 's/constexpr std::int64_t NUM_PACKETS.*/constexpr std::int64_t NUM_PACKETS = 160000;/g' kilonova_1d_testrun/artisoptions.h
+                  sed -i -e 's/constexpr int NUM_PACKETS.*/constexpr int NUM_PACKETS = 160000;/g' kilonova_1d_testrun/artisoptions.h
 
             - name: Compile
               run: |

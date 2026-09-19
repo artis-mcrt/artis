@@ -1990,7 +1990,6 @@ void read_parameterfile(std::span<Packet> packets) {
     // follow identical histories because the grid state that they see is rank-invariant.
     // Xoshiro128PP is seeded from a 32 bit value, so distinct seeds only exist for as many packets
     // as fit in that space and the whole run has to stay within it.
-    static_assert(NUM_PACKETS <= (1LL << 32));
     const auto firstpktindex_thisrank = std::get<0>(get_range_chunk(NUM_PACKETS, globals::nprocs, globals::my_rank));
     const auto rank_seed_base = static_cast<std::uint32_t>(pre_zseed + firstpktindex_thisrank);
     for (auto packetnumber = 0ZU; packetnumber < std::size(packets); packetnumber++) {

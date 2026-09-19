@@ -20,7 +20,7 @@ ln -s ../../ artis
 
 cp artis/artisoptions_nltenebular.h artisoptions.h
 
-sed -i.bak -e 's/constexpr std::int64_t NUM_PACKETS.*/constexpr std::int64_t NUM_PACKETS = 4000000;/g' artisoptions.h
+sed -i.bak -e 's/constexpr int NUM_PACKETS.*/constexpr int NUM_PACKETS = 4000000;/g' artisoptions.h
 
 sed -i.bak -e 's/constexpr std::optional<GridType> GRID_TYPE_OVERRIDE.*/constexpr std::optional<GridType> GRID_TYPE_OVERRIDE = GridType::CARTESIAN3D;/g' artisoptions.h
 
