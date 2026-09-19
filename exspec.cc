@@ -21,7 +21,6 @@
 #include <mpi.h>
 #pragma clang unsafe_buffer_usage end
 
-#include "artisoptions.h"
 #include "globals.h"
 #include "grid.h"
 #include "input.h"
@@ -81,10 +80,9 @@ auto main(int argc, char* argv[]) -> int {
 
   // each exspec rank reads a contiguous block of the packet files
   const auto [firstfile, nfiles] = get_range_chunk(globals::nprocs_exspec, globals::nprocs, globals::my_rank);
-  printlnlog("{} packet files of up to MPKTS {} packets, read by {} exspec ranks", globals::nprocs_exspec, MPKTS,
-             globals::nprocs);
+  printlnlog("{} packet files, read by {} exspec ranks", globals::nprocs_exspec, globals::nprocs);
 
-  // one vector for each packet file. A file holds far fewer than MPKTS packets when KEEP_ESCAPED_GAMMAS is false.
+  // one vector for each packet file
   std::vector<std::vector<Packet>> packets_by_file;
   packets_by_file.reserve(nfiles);
   // the counts of each packet file, summed over the exspec ranks so that rank 0 can log every file
