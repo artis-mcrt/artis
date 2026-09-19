@@ -98,7 +98,7 @@ void packet_init(std::span<Packet> packets) {
 
   printlnlog("etot {:g} [erg] (t_model to t_inf)", etot_tmodel_tinf);
 
-  printlnlog("e_cmf per packet (t_model to t_inf) {:g} [erg]", etot_tmodel_tinf / std::ssize(packets));
+  printlnlog("e_cmf per packet (t_model to t_inf) {:g} [erg]", etot_tmodel_tinf / globals::MPKTS);
 
   const auto energy_per_massoftopnuc_decaypath = decay::calc_energy_per_massoftopnuc_decaypath();
 
@@ -132,7 +132,7 @@ void packet_init(std::span<Packet> packets) {
   printlnlog("etot ({} to tmax) {:g} [erg]", strtimelow, etot_simtime);
 
   // So energy per pellet is:
-  const double e_cmf_per_packet = etot_simtime / std::ssize(packets);
+  const double e_cmf_per_packet = etot_simtime / globals::MPKTS;
   printlnlog("e_cmf per packet ({} to tmax) {:g} [erg]", strtimelow, e_cmf_per_packet);
 
   // Now place the pellets in the ejecta and decide at what time they will decay.
@@ -167,7 +167,7 @@ auto read_text_packets(const std::string& filename) -> std::vector<Packet> {
   std::getline(packets_file, line);  // read header line to make sure it matches
   assert_always(line == get_packets_text_header());
 
-  packets.reserve((NUM_PACKETS / globals::nprocs_exspec) + 1);
+  packets.reserve(globals::MPKTS);
   while (get_noncommentline(packets_file, line)) {
     packets.emplace_back();
     Packet& pkt = packets.back();
@@ -288,7 +288,7 @@ void read_temp_packetsfile(const int timestep, const int my_rank, std::vector<Pa
   const auto packets_file = fopen_required_uniqueptr(filename, "rb");
   std::int64_t packet_count_in_file = 0;
   assert_always(std::fread(&packet_count_in_file, sizeof(std::int64_t), 1, packets_file.get()) == 1);
-  assert_always(packet_count_in_file == std::ssize(packets));
+  assert_always(packet_count_in_file == globals::MPKTS);
   assert_always(std::fread(packets.data(), sizeof(Packet), packet_count_in_file, packets_file.get()) ==
                 static_cast<size_t>(packet_count_in_file));
   printlnlog("read {} packets from {}", packet_count_in_file, filename);

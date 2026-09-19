@@ -140,6 +140,9 @@ inline std::vector<double> colheatingestimator_save{};
 
 inline int nprocs_exspec{1};
 
+// the number of packets of each sn3d rank: NUM_PACKETS divided by the number of sn3d ranks, rounded up
+inline int MPKTS{-1};
+
 inline double max_path_step{NAN};  // set at the end of update_grid(); NaN disables the cap until then
 
 // ATOMIC DATA
