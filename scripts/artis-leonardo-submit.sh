@@ -12,4 +12,4 @@
 # Add a line like this to your .bashrc to get the notifications:
 # export EMAIL=your_email_address
 
-sbatch -J "${PWD##*/}" ${EMAIL:+--mail-user="$EMAIL"} -- artis/scripts/artis-leonardo.sh
+sbatch -J "${PWD##*/}" ${EMAIL:+--mail-user="$EMAIL"} -- artis/scripts/artis-leonardo-slurmjob.sh
