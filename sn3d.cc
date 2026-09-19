@@ -699,7 +699,6 @@ auto walltime_sufficient_for_timestep(const int nts, const int nts_prev, const i
 
 void save_grid_and_packets(const int nts, std::vector<Packet>& packets) {
   MPI_Barrier_allranks();
-  const auto my_rank = globals::my_rank;
 
   const auto time_write_packets_file_start = std::chrono::steady_clock::now();
 
@@ -708,7 +707,7 @@ void save_grid_and_packets(const int nts, std::vector<Packet>& packets) {
   }
 
   // save packet state at start of current timestep (before propagation)
-  write_temp_packetsfile(nts, globals::my_rank, packets);
+  write_temp_packetsfile(nts, packets);
 
   vpkt::write_timestep(nts, false);
 
@@ -725,7 +724,7 @@ void save_grid_and_packets(const int nts, std::vector<Packet>& packets) {
   printlnlog("timestep {}: finished writing temporary packets file (took {:.1f}s, waited {:.1f}s, total {:.1f}s)", nts,
              packets_write_time, packets_wait_time, packets_total_time);
 
-  if (my_rank == 0) {
+  if (globals::my_rank == 0) {
     grid::write_grid_restart_data(nts);
     update_parameterfile(nts);
   }
@@ -733,7 +732,7 @@ void save_grid_and_packets(const int nts, std::vector<Packet>& packets) {
   // wait until every process writes its new packets files, then delete the old set
   MPI_Barrier_allranks();
 
-  if (my_rank == 0) {
+  if (globals::my_rank == 0) {
     const auto filename_prev_gridsave = std::format("gridsave_ts{}.tmp", nts - 1);
     if (std::filesystem::remove(filename_prev_gridsave)) {
       printlnlog("deleted {}", filename_prev_gridsave);
@@ -741,12 +740,12 @@ void save_grid_and_packets(const int nts, std::vector<Packet>& packets) {
   }
 
   // delete temp packets files from previous timestep now that all restart data for the new timestep is available
-  const auto filename_prev_packetstmp = std::format("packets_{:04d}_ts{:d}.tmp", my_rank, nts - 1);
+  const auto filename_prev_packetstmp = std::format("packets_{:04d}_ts{:d}.tmp", globals::my_rank, nts - 1);
   if (std::filesystem::remove(filename_prev_packetstmp)) {
     printlnlog("deleted {}", filename_prev_packetstmp);
   }
 
-  vpkt::remove_temp_vpkt_file(nts - 1, my_rank);
+  vpkt::remove_temp_vpkt_file(nts - 1, globals::my_rank);
 }
 
 void zero_estimators() {
@@ -781,7 +780,7 @@ auto do_timestep(const int nts, const int titer, std::vector<Packet>& packets, c
   const int nts_prev = (titer != 0 || nts == 0) ? nts : nts - 1;
   if ((titer > 0) || (globals::simulation_continued_from_saved && (nts == globals::timestep_initial))) {
     // Read the packets file to reset before each additional iteration on the timestep
-    read_temp_packetsfile(nts, globals::my_rank, packets);
+    read_temp_packetsfile(nts, packets);
   }
 
   // Some counters on pkt-actions need to be reset to do statistics

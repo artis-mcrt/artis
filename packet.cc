@@ -280,9 +280,9 @@ void write_text_packets(const std::string& filename, const std::span<const Packe
   }
 }
 
-void read_temp_packetsfile(const int timestep, const int my_rank, std::vector<Packet>& packets) {
+void read_temp_packetsfile(const int timestep, std::vector<Packet>& packets) {
   // read binary packets file
-  const auto filename = std::format("packets_{:04d}_ts{:d}.tmp", my_rank, timestep);
+  const auto filename = std::format("packets_{:04d}_ts{:d}.tmp", globals::my_rank, timestep);
 
   printlnlog("Reading {}", filename);
   const auto packets_file = fopen_required_uniqueptr(filename, "rb");
@@ -296,9 +296,9 @@ void read_temp_packetsfile(const int timestep, const int my_rank, std::vector<Pa
   printlnlog("read {} packets from {}", packet_count_in_file, filename);
 }
 
-void write_temp_packetsfile(const int timestep, const int my_rank, const std::span<const Packet> packets) {
+void write_temp_packetsfile(const int timestep, const std::span<const Packet> packets) {
   // write packets binary file (and retry if the write fails)
-  const auto filename = std::format("packets_{:04d}_ts{:d}.tmp", my_rank, timestep);
+  const auto filename = std::format("packets_{:04d}_ts{:d}.tmp", globals::my_rank, timestep);
 
   int tries = 0;
   bool write_success = false;
