@@ -288,7 +288,9 @@ void read_temp_packetsfile(const int timestep, const int my_rank, std::vector<Pa
   const auto packets_file = fopen_required_uniqueptr(filename, "rb");
   std::int64_t packet_count_in_file = 0;
   assert_always(std::fread(&packet_count_in_file, sizeof(std::int64_t), 1, packets_file.get()) == 1);
-  assert_always(packet_count_in_file == globals::MPKTS);
+  assert_always(packet_count_in_file > 0);
+  assert_always(packet_count_in_file <= globals::MPKTS);
+  reserve_resize(packets, packet_count_in_file);
   assert_always(std::fread(packets.data(), sizeof(Packet), packet_count_in_file, packets_file.get()) ==
                 static_cast<size_t>(packet_count_in_file));
   printlnlog("read {} packets from {}", packet_count_in_file, filename);
