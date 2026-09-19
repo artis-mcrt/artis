@@ -1130,7 +1130,7 @@ auto main(int argc, char* argv[]) -> int {
   grid::init_grid();
 
   printlnlog("Simulation propagates MPKTS {} packets per rank (NUM_PACKETS {}, total {} with nprocs {})",
-             globals::MPKTS, NUM_PACKETS, static_cast<std::int64_t>(globals::MPKTS) * globals::nprocs, globals::nprocs);
+             globals::MPKTS, NUM_PACKETS, globals::MPKTS * globals::nprocs, globals::nprocs);
 
   printlnlog("[info] mem_usage: packets occupy {:.3f} MB", globals::MPKTS * sizeof(Packet) / 1024. / 1024.);
 

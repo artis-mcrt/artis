@@ -5,12 +5,13 @@
 #define ARTISOPTIONS_H
 // NOLINTBEGIN(modernize-use-trailing-return-type,misc-unused-parameters)
 
+#include <cstdint>
 #include <cstdlib>
 #include <optional>
 
 #include "constants.h"
 
-constexpr int NUM_PACKETS = 100000000;
+constexpr std::int64_t NUM_PACKETS = 100000000;
 
 constexpr std::optional<GridType> GRID_TYPE_OVERRIDE;
 constexpr int CUBOID_NCOORDGRID_X = 50;
