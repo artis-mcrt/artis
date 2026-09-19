@@ -1,2 +1,6 @@
-* @lukeshingles
+*       @lukeshingles
+# version files are not owned to allow auto-approval of version updates
+.github/workflows/**
+**/pyproject.toml
+**/*.lock
 .pre-commit-config.yaml
