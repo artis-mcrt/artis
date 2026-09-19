@@ -55,7 +55,7 @@ void pkt_action_counters_reset();
 
 [[nodiscard]] auto get_counter(Counter i) -> ptrdiff_t;
 
-void pkt_action_counters_printout(int nts);
+void pkt_action_counters_printout(int nts, ptrdiff_t npkts_thisrank);
 
 }  // namespace stats
 

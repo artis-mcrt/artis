@@ -1,7 +1,6 @@
 ```c++
-// The number of energy packets of all MPI ranks together. Each rank gets NUM_PACKETS divided by the number of ranks,
-// rounded up, so that all ranks have the same number of packets. The OpenMP threads of a rank share the packets of
-// that rank.
+// The number of energy packets of all MPI ranks together. Each rank gets an equal share, and the first ranks also
+// get one packet each of the remainder. The OpenMP threads of a rank share the packets of that rank.
 constexpr std::int64_t NUM_PACKETS;
 
 // Set GridType::CARTESIAN3D to map a 1D or a 2D model onto a 3D Cartesian grid. No value keeps the grid type of
