@@ -73,7 +73,7 @@ jobs:
                   echo "CXX=g++-15" >> $GITHUB_ENV
                   echo "OMPI_CXX=g++-15" >> $GITHUB_ENV
                   sudo apt-get update
-                  sudo apt-get install -y openmpi-bin libopenmpi-dev
+                  sudo apt-get install -y --no-install-recommends openmpi-bin libopenmpi-dev
 
             - name: Show CPU type and core count
               id: cpu-count
@@ -359,7 +359,7 @@ jobs:
                   echo "CXX=g++-15" >> $GITHUB_ENV
                   echo "OMPI_CXX=g++-15" >> $GITHUB_ENV
                   sudo apt-get update
-                  sudo apt-get install -y openmpi-bin libopenmpi-dev
+                  sudo apt-get install -y --no-install-recommends openmpi-bin libopenmpi-dev
 
             - name: Cache test atomic data
               uses: actions/cache@v6
@@ -417,7 +417,7 @@ jobs:
                   echo "CXX=g++-15" >> $GITHUB_ENV
                   echo "OMPI_CXX=g++-15" >> $GITHUB_ENV
                   sudo apt-get update
-                  sudo apt-get install -y openmpi-bin libopenmpi-dev libtbb-dev
+                  sudo apt-get install -y --no-install-recommends openmpi-bin libopenmpi-dev libtbb-dev
 
             - name: Cache test atomic data
               uses: actions/cache@v6
