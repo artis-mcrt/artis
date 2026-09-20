@@ -1171,6 +1171,8 @@ constexpr double RELATIVE_RESIDUAL_WARN_TOLERANCE = 1e-8;
   // vector makes at least one element of the residual below non-finite, wherever it lands, and the residual reduction
   // reports that as a non-finite error. It then leaves error_best negative, which is reported and returned as a
   // solver failure.
+  // eigen_vec_x is a map, so the assignment writes the solution into vec_x
+  // cppcheck-suppress redundantInitialization
   eigen_vec_x = eigen_rate_matrix_lu.solve(eigen_balance_vector);
 
   // population solution vector with lowest error
