@@ -10,6 +10,19 @@ on:
     schedule:
         - cron: 0 13 * * 1
     workflow_dispatch:
+        inputs:
+            testmode:
+                description: Enable the sanitizers and the additional assertions
+                required: false
+                default: 'OFF'
+                type: choice
+                options: ['OFF', 'ON']
+            uploadoutputfiles:
+                description: Upload the output files and the plots as artifacts
+                required: false
+                default: 'OFF'
+                type: choice
+                options: ['OFF', 'ON']
     workflow_call: # for triggering the full test mode
         inputs:
             # test mode enables the santizers and additional assertions
@@ -178,7 +191,7 @@ jobs:
             - name: Remove restart files
               if: always()
               working-directory: tests/${{ matrix.testname }}_testrun/
-              run: rm *.tmp
+              run: rm -f ./*.tmp
 
             - name: cat job1 estimators
               if: always()
@@ -213,9 +226,7 @@ jobs:
             - name: cat exspec log
               if: always()
               working-directory: tests/${{ matrix.testname }}_testrun/
-              run: |
-                  mkdir output
-                  cat exspec.txt
+              run: cat exspec.txt
 
             - name: Checksum job1 output files
               if: always()
@@ -252,6 +263,8 @@ jobs:
               working-directory: tests/${{ matrix.testname }}_testrun
               run: |
                   find . -name "*_res_*.out" -exec zstd -v -T0 --rm -f {} \;
+                  # the artifact upload must not follow the symlink to the repository root
+                  rm -f artis
 
             - name: Upload output files
               uses: actions/upload-artifact@v7
@@ -259,6 +272,7 @@ jobs:
               with:
                   name: test-${{ matrix.testname }}-output
                   path: tests/${{ matrix.testname }}_testrun
+                  retention-days: 7
 
             - name: Upload checksum files
               uses: actions/upload-artifact@v7
@@ -324,6 +338,7 @@ jobs:
               with:
                   name: test-${{ matrix.testname }}-output-pdf
                   path: tests/*.pdf
+                  retention-days: 7
 
     # Runs one small model with OpenMP threading to exercise the mutex/atomic code paths that the
     # single-threaded checksum tests never enter. No checksum comparison: multithreaded runs are not

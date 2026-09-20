@@ -154,9 +154,9 @@ jobs:
                   git config user.name "github-actions[bot]"
                   git config user.email "41898024+github-actions[bot]@users.noreply.github.com"
                   commitargs=(-m "Update expected checksums from CI run of ${SOURCE_SHA}")
-                  commitargs+=(-m "Source: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${RUN_ID}")
+                  commitargs+=(-m "Source: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}")
                   if [ "$AHEAD" -gt 0 ]; then
                       commitargs+=(-m "The source commit is ${AHEAD} commits before the branch head ${HEAD_SHA}.")
                   fi
                   git commit "${commitargs[@]}"
-                  git push origin HEAD:${{ github.ref_name }}
+                  git push origin "HEAD:refs/heads/${GITHUB_REF_NAME}"
