@@ -10,6 +10,19 @@ on:
     schedule:
         - cron: 0 13 * * 1
     workflow_dispatch:
+        inputs:
+            testmode:
+                description: Enable the sanitizers and the additional assertions
+                required: false
+                default: 'OFF'
+                type: choice
+                options: ['OFF', 'ON']
+            uploadoutputfiles:
+                description: Upload the output files and the plots as artifacts
+                required: false
+                default: 'OFF'
+                type: choice
+                options: ['OFF', 'ON']
     workflow_call: # for triggering the full test mode
         inputs:
             # test mode enables the santizers and additional assertions
@@ -60,7 +73,7 @@ jobs:
                   echo "CXX=g++-15" >> $GITHUB_ENV
                   echo "OMPI_CXX=g++-15" >> $GITHUB_ENV
                   sudo apt-get update
-                  sudo apt-get install -y openmpi-bin libopenmpi-dev
+                  sudo apt-get install -y --no-install-recommends openmpi-bin libopenmpi-dev
 
             - name: Show CPU type and core count
               id: cpu-count
@@ -70,12 +83,14 @@ jobs:
                   echo "count=$(python3 -c 'import multiprocessing; print(multiprocessing.cpu_count())')" >> $GITHUB_OUTPUT
 
             - name: Cache test atomic data
-              if: ${{ !startsWith(matrix.testname, 'classicmode') }}
+              if: ${{ !startsWith(matrix.testname, 'classicmode') && !startsWith(matrix.testname, 'nltephotospheric') && matrix.testname != 'kilonova_1d_timedepnlte' }}
               uses: actions/cache@v6
               id: cache-testatomicdata
               with:
                   path: tests/atomicdata_feconi.tar.xz
-                  key: tests/atomicdata_feconi.tar.xz
+                  # setupfuncs.sh names the release of the archives, so a new release gives a new cache.
+                  # The setup script downloads nothing when the folder holds an archive.
+                  key: atomicdata_feconi-${{ hashFiles('tests/setupfuncs.sh') }}
 
             - name: Cache test atomic data classic
               if: ${{ startsWith(matrix.testname, 'classicmode') }}
@@ -83,7 +98,7 @@ jobs:
               id: cache-testatomicdata-classic
               with:
                   path: tests/atomicdata_classic.tar.xz
-                  key: tests/atomicdata_classic.tar.xz
+                  key: atomicdata_classic-${{ hashFiles('tests/setupfuncs.sh') }}
 
             - name: Cache test atomic data nltephotospheric
               if: ${{ startsWith(matrix.testname, 'nltephotospheric') }}
@@ -91,7 +106,7 @@ jobs:
               id: cache-testatomicdata-nltephotospheric
               with:
                   path: tests/atomicdata_hefeconi_fe_i_to_vii.tar.xz
-                  key: tests/atomicdata_hefeconi_fe_i_to_vii.tar.xz
+                  key: atomicdata_hefeconi_fe_i_to_vii-${{ hashFiles('tests/setupfuncs.sh') }}
 
             - name: Cache test atomic data kilonova_1d_timedepnlte
               if: ${{ startsWith(matrix.testname, 'kilonova_1d_timedepnlte') }}
@@ -99,7 +114,7 @@ jobs:
               id: cache-testatomicdata-sryzrlace
               with:
                   path: tests/atomicdata_sryzrlace.tar.zst
-                  key: tests/atomicdata_sryzrlace.tar.zst
+                  key: atomicdata_sryzrlace-${{ hashFiles('tests/setupfuncs.sh') }}
 
             - name: Download/extract test data
               working-directory: tests/
@@ -149,13 +164,21 @@ jobs:
                   shopt -s nullglob
                   angleresfiles=(speclc_angle_res/*.*)
                   shopt -u nullglob
-                  md5sum *.out job_from_ts0000/*.out "${angleresfiles[@]}" | tee ../${{ matrix.testname }}_inputfiles/results_md5_job0.txt
+                  reffile=../${{ matrix.testname }}_inputfiles/results_md5_job0.txt
+                  if [ -s "$reffile" ]; then cp "$reffile" "$RUNNER_TEMP/ref_md5_job0.txt"; fi
+                  md5sum *.out job_from_ts0000/*.out "${angleresfiles[@]}" | tee "$RUNNER_TEMP/new_md5_job0.txt"
+                  cp "$RUNNER_TEMP/new_md5_job0.txt" "$reffile"
                   if [ "${{ steps.run_job0.outcome }}" = "success" ]; then
-                      touch ../${{ matrix.testname }}_inputfiles/results_md5_job0.txt.complete
+                      touch "$reffile.complete"
                   else
                       echo "The step writes no marker. The sn3d job0 step did not succeed (${{ steps.run_job0.outcome }})."
                   fi
-                  if [ -f results_md5_job0.txt ]; then md5sum -c results_md5_job0.txt; else echo "results_md5_job0.txt not found"; fi
+                  # The comparison uses the stored file of the repository, and not the copy in the run folder.
+                  if [ -s "$RUNNER_TEMP/ref_md5_job0.txt" ]; then
+                      md5sum -c "$RUNNER_TEMP/ref_md5_job0.txt"
+                  else
+                      echo "::warning::The repository has no results_md5_job0.txt for ${{ matrix.testname }}. The step compares nothing."
+                  fi
 
             - name: Run test job1 resume
               id: run_job1
@@ -168,7 +191,7 @@ jobs:
             - name: Remove restart files
               if: always()
               working-directory: tests/${{ matrix.testname }}_testrun/
-              run: rm *.tmp
+              run: rm -f ./*.tmp
 
             - name: cat job1 estimators
               if: always()
@@ -203,9 +226,7 @@ jobs:
             - name: cat exspec log
               if: always()
               working-directory: tests/${{ matrix.testname }}_testrun/
-              run: |
-                  mkdir output
-                  cat exspec.txt
+              run: cat exspec.txt
 
             - name: Checksum job1 output files
               if: always()
@@ -221,19 +242,29 @@ jobs:
                   shopt -s nullglob
                   angleresfiles=(speclc_angle_res/*.*)
                   shopt -u nullglob
-                  md5sum *.out "$(ls -d job_from_ts* | grep -v ts0000 | tail -n 1)"/*.out "${angleresfiles[@]}" | tee ../${{ matrix.testname }}_inputfiles/results_md5_final.txt
+                  reffile=../${{ matrix.testname }}_inputfiles/results_md5_final.txt
+                  if [ -s "$reffile" ]; then cp "$reffile" "$RUNNER_TEMP/ref_md5_final.txt"; fi
+                  md5sum *.out "$(ls -d job_from_ts* | grep -v ts0000 | tail -n 1)"/*.out "${angleresfiles[@]}" | tee "$RUNNER_TEMP/new_md5_final.txt"
+                  cp "$RUNNER_TEMP/new_md5_final.txt" "$reffile"
                   if [ "${{ steps.run_job0.outcome }}" = "success" ] && [ "${{ steps.run_job1.outcome }}" = "success" ] && [ "${{ steps.run_exspec.outcome }}" = "success" ]; then
-                      touch ../${{ matrix.testname }}_inputfiles/results_md5_final.txt.complete
+                      touch "$reffile.complete"
                   else
                       echo "The step writes no marker. A run step did not succeed (job0: ${{ steps.run_job0.outcome }}, job1: ${{ steps.run_job1.outcome }}, exspec: ${{ steps.run_exspec.outcome }})."
                   fi
-                  if [ -f results_md5_final.txt ]; then md5sum -c results_md5_final.txt; else echo "results_md5_final.txt not found"; fi
+                  # The comparison uses the stored file of the repository, and not the copy in the run folder.
+                  if [ -s "$RUNNER_TEMP/ref_md5_final.txt" ]; then
+                      md5sum -c "$RUNNER_TEMP/ref_md5_final.txt"
+                  else
+                      echo "::warning::The repository has no results_md5_final.txt for ${{ matrix.testname }}. The step compares nothing."
+                  fi
 
             - name: Prepare for next steps
               if: always()
               working-directory: tests/${{ matrix.testname }}_testrun
               run: |
                   find . -name "*_res_*.out" -exec zstd -v -T0 --rm -f {} \;
+                  # the artifact upload must not follow the symlink to the repository root
+                  rm -f artis
 
             - name: Upload output files
               uses: actions/upload-artifact@v7
@@ -241,6 +272,7 @@ jobs:
               with:
                   name: test-${{ matrix.testname }}-output
                   path: tests/${{ matrix.testname }}_testrun
+                  retention-days: 7
 
             - name: Upload checksum files
               uses: actions/upload-artifact@v7
@@ -306,6 +338,7 @@ jobs:
               with:
                   name: test-${{ matrix.testname }}-output-pdf
                   path: tests/*.pdf
+                  retention-days: 7
 
     # Runs one small model with OpenMP threading to exercise the mutex/atomic code paths that the
     # single-threaded checksum tests never enter. No checksum comparison: multithreaded runs are not
@@ -326,21 +359,23 @@ jobs:
                   echo "CXX=g++-15" >> $GITHUB_ENV
                   echo "OMPI_CXX=g++-15" >> $GITHUB_ENV
                   sudo apt-get update
-                  sudo apt-get install -y openmpi-bin libopenmpi-dev
+                  sudo apt-get install -y --no-install-recommends openmpi-bin libopenmpi-dev
 
             - name: Cache test atomic data
               uses: actions/cache@v6
               id: cache-testatomicdata
               with:
                   path: tests/atomicdata_feconi.tar.xz
-                  key: tests/atomicdata_feconi.tar.xz
+                  key: atomicdata_feconi-${{ hashFiles('tests/setupfuncs.sh') }}
 
             - name: Download/extract test data
               working-directory: tests/
               run: |
                   source ./setup_kilonova_1d.sh
                   # this job has 2 ranks and the checksum jobs have 4, so this keeps the packets of each rank
-                  sed -i -e "s/constexpr std::int64_t NUM_PACKETS.*/constexpr std::int64_t NUM_PACKETS = 160'000;/g" kilonova_1d_testrun/artisoptions.h
+                  cd kilonova_1d_testrun
+                  sedopt "constexpr std::int64_t NUM_PACKETS.*" "constexpr std::int64_t NUM_PACKETS = 160'000;"
+                  rm -f artisoptions.h.bak
 
             - name: Compile
               run: |
@@ -382,21 +417,23 @@ jobs:
                   echo "CXX=g++-15" >> $GITHUB_ENV
                   echo "OMPI_CXX=g++-15" >> $GITHUB_ENV
                   sudo apt-get update
-                  sudo apt-get install -y openmpi-bin libopenmpi-dev libtbb-dev
+                  sudo apt-get install -y --no-install-recommends openmpi-bin libopenmpi-dev libtbb-dev
 
             - name: Cache test atomic data
               uses: actions/cache@v6
               id: cache-testatomicdata
               with:
                   path: tests/atomicdata_feconi.tar.xz
-                  key: tests/atomicdata_feconi.tar.xz
+                  key: atomicdata_feconi-${{ hashFiles('tests/setupfuncs.sh') }}
 
             - name: Download/extract test data
               working-directory: tests/
               run: |
                   source ./setup_kilonova_1d.sh
                   # this job has 2 ranks and the checksum jobs have 4, so this keeps the packets of each rank
-                  sed -i -e "s/constexpr std::int64_t NUM_PACKETS.*/constexpr std::int64_t NUM_PACKETS = 160'000;/g" kilonova_1d_testrun/artisoptions.h
+                  cd kilonova_1d_testrun
+                  sedopt "constexpr std::int64_t NUM_PACKETS.*" "constexpr std::int64_t NUM_PACKETS = 160'000;"
+                  rm -f artisoptions.h.bak
 
             - name: Compile
               run: |

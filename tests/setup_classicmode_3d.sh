@@ -2,9 +2,11 @@
 
 set -x
 
+source ./setupfuncs.sh
+
 runfolder=classicmode_3d_testrun
 
-if [ ! -f atomicdata_classic.tar.xz ]; then curl -fL --retry 3 -O https://github.com/artis-mcrt/artis/releases/download/v2026.5.15/atomicdata_classic.tar.xz; fi
+getatomicdata atomicdata_classic.tar.xz
 
 mkdir -p $runfolder
 
@@ -20,11 +22,11 @@ cp artis/artisoptions_classic.h artisoptions.h
 
 xz -f -d -v -T0 *.xz
 
-sed -i.bak -e "s/constexpr std::int64_t NUM_PACKETS.*/constexpr std::int64_t NUM_PACKETS = 60'000;/g" artisoptions.h
+sedopt "constexpr std::int64_t NUM_PACKETS.*" "constexpr std::int64_t NUM_PACKETS = 60'000;"
 
-sed -i.bak -e 's/constexpr bool VPKT_ON.*/constexpr bool VPKT_ON = true;/g' artisoptions.h
-sed -i.bak -e 's/constexpr bool VPKT_WRITE_CONTRIBS.*/constexpr bool VPKT_WRITE_CONTRIBS = true;/g' artisoptions.h
-sed -i.bak -e 's/constexpr bool VPKT_USE_EXPANSION_OPACITIES.*/constexpr bool VPKT_USE_EXPANSION_OPACITIES = true;/g' artisoptions.h
+sedopt 'constexpr bool VPKT_ON.*' 'constexpr bool VPKT_ON = true;'
+sedopt 'constexpr bool VPKT_WRITE_CONTRIBS.*' 'constexpr bool VPKT_WRITE_CONTRIBS = true;'
+sedopt 'constexpr bool VPKT_USE_EXPANSION_OPACITIES.*' 'constexpr bool VPKT_USE_EXPANSION_OPACITIES = true;'
 
 rm -f artisoptions.h.bak
 

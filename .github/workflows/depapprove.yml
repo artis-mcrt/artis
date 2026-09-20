@@ -1,11 +1,12 @@
 ---
 name: Dependabot auto-merge
 on: pull_request_target
-permissions:
-    contents: write
-    pull-requests: write
+permissions: {}
 jobs:
     dependabot:
+        permissions:
+            contents: write
+            pull-requests: write
         timeout-minutes: 10
         runs-on: ubuntu-latest
         if: github.event.pull_request.user.login == 'dependabot[bot]' || github.event.pull_request.user.login == 'pre-commit-ci[bot]'
