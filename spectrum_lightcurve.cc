@@ -689,8 +689,9 @@ void write_light_curves_and_spectra(const int nts, std::span<const std::span<con
 
   for (int dirbin = -1; dirbin < ndirbins; dirbin++) {
     write_light_curves_and_spectra_for_dirbin(nts, packets_by_rank, do_emission_absorption, dirbin);
-    if (dirbin >= 0 && globals::my_rank == 0) {
-      printlnlog("timestep {}: wrote the files of direction bin {} (the last bin is {})", nts, dirbin, ndirbins - 1);
+    if (dirbin >= 0 && globals::my_rank == 0 && (dirbin + 1) % NPHIBINS == 0) {
+      printlnlog("timestep {}: wrote the files of direction bins {} to {} (the last bin is {})", nts,
+                 dirbin - NPHIBINS + 1, dirbin, ndirbins - 1);
     }
   }
 
