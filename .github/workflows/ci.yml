@@ -68,12 +68,12 @@ jobs:
               with:
                   fetch-depth: 0
 
-            - name: Install Open MPI and set compiler to g++-15
+            - name: Install Open MPI and set compiler to g++-16
               run: |
-                  echo "CXX=g++-15" >> $GITHUB_ENV
-                  echo "OMPI_CXX=g++-15" >> $GITHUB_ENV
+                  echo "CXX=g++-16" >> $GITHUB_ENV
+                  echo "OMPI_CXX=g++-16" >> $GITHUB_ENV
                   sudo apt-get update
-                  sudo apt-get install -y --no-install-recommends openmpi-bin libopenmpi-dev
+                  sudo apt-get install -y --no-install-recommends g++-16 openmpi-bin libopenmpi-dev
 
             - name: Show CPU type and core count
               id: cpu-count
@@ -354,12 +354,12 @@ jobs:
               with:
                   fetch-depth: 0
 
-            - name: Install Open MPI and set compiler to g++-15
+            - name: Install Open MPI and set compiler to g++-16
               run: |
-                  echo "CXX=g++-15" >> $GITHUB_ENV
-                  echo "OMPI_CXX=g++-15" >> $GITHUB_ENV
+                  echo "CXX=g++-16" >> $GITHUB_ENV
+                  echo "OMPI_CXX=g++-16" >> $GITHUB_ENV
                   sudo apt-get update
-                  sudo apt-get install -y --no-install-recommends openmpi-bin libopenmpi-dev
+                  sudo apt-get install -y --no-install-recommends g++-16 openmpi-bin libopenmpi-dev
 
             - name: Cache test atomic data
               uses: actions/cache@v6
@@ -412,12 +412,12 @@ jobs:
               with:
                   fetch-depth: 0
 
-            - name: Install Open MPI and TBB and set compiler to g++-15
+            - name: Install Open MPI and TBB and set compiler to g++-16
               run: |
-                  echo "CXX=g++-15" >> $GITHUB_ENV
-                  echo "OMPI_CXX=g++-15" >> $GITHUB_ENV
+                  echo "CXX=g++-16" >> $GITHUB_ENV
+                  echo "OMPI_CXX=g++-16" >> $GITHUB_ENV
                   sudo apt-get update
-                  sudo apt-get install -y --no-install-recommends openmpi-bin libopenmpi-dev libtbb-dev
+                  sudo apt-get install -y --no-install-recommends g++-16 openmpi-bin libopenmpi-dev libtbb-dev
 
             - name: Cache test atomic data
               uses: actions/cache@v6

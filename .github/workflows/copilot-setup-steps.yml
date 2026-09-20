@@ -20,15 +20,15 @@ jobs:
             - name: Checkout code
               uses: actions/checkout@v7
 
-            - name: Set g++-15 as default compiler
+            - name: Set g++-16 as default compiler
               run: |
-                  echo "CXX=g++-15" >> $GITHUB_ENV
-                  echo "OMPI_CXX=g++-15" >> $GITHUB_ENV
+                  echo "CXX=g++-16" >> $GITHUB_ENV
+                  echo "OMPI_CXX=g++-16" >> $GITHUB_ENV
 
-            - name: Install Open MPI and TBB
+            - name: Install g++-16, Open MPI and TBB
               run: |
                   sudo apt-get update
-                  sudo apt-get install -y --no-install-recommends openmpi-bin libopenmpi-dev libtbb-dev
+                  sudo apt-get install -y --no-install-recommends g++-16 openmpi-bin libopenmpi-dev libtbb-dev
 
             - name: Set artisoptions to nltenebular
               run: |
