@@ -2,9 +2,11 @@
 
 set -x
 
+source ./setupfuncs.sh
+
 runfolder=kilonova_1d_timedepnlte_testrun
 
-if [ ! -f atomicdata_sryzrlace.tar.zst ]; then curl -fL --retry 3 -O https://github.com/artis-mcrt/artis/releases/download/v2026.5.15/atomicdata_sryzrlace.tar.zst; fi
+getatomicdata atomicdata_sryzrlace.tar.zst
 
 mkdir -p $runfolder
 
@@ -36,26 +38,26 @@ mv model_scaled.txt model.txt
 
 # the 1D model has 25 cells and the 2D model had 128, so fewer packets give the same number of
 # packets for each cell
-sed -i.bak -e "s/constexpr std::int64_t NUM_PACKETS.*/constexpr std::int64_t NUM_PACKETS = 80'000;/g" artisoptions.h
+sedopt "constexpr std::int64_t NUM_PACKETS.*" "constexpr std::int64_t NUM_PACKETS = 80'000;"
 
-sed -i.bak -e 's/constexpr int RATECOEFF_TABLESIZE.*/constexpr int RATECOEFF_TABLESIZE = 40;/g' artisoptions.h
+sedopt 'constexpr int RATECOEFF_TABLESIZE.*' 'constexpr int RATECOEFF_TABLESIZE = 40;'
 
 # a few near-vacuum cells reach NLTE_TE_NNE_MAXITER in every timestep, so this limit keeps the run time of the test low
-sed -i.bak -e 's/constexpr int NLTE_TE_NNE_MAXITER.*/constexpr int NLTE_TE_NNE_MAXITER = 10;/g' artisoptions.h
+sedopt 'constexpr int NLTE_TE_NNE_MAXITER.*' 'constexpr int NLTE_TE_NNE_MAXITER = 10;'
 
 # element_z == 58 is cerium. This test gives cerium no NLTE level, so that it tests the hybrid mode:
 # the NLTE solver holds Sr, Y, Zr, and La, and calculate_ion_balance_nne() holds cerium with the
 # photoionisation balance. The mode covers the ion balance of both kinds of element in one cell, the
 # sum of the electron contributions, and the rule of chargetransfer.cc that a reaction needs NLTE
 # levels on both sides. Keep at least one element at zero, or the test loses the hybrid mode.
-sed -i.bak -e 's/constexpr int ION_NLEVELS_EXCITED_NLTE.*/constexpr int ION_NLEVELS_EXCITED_NLTE(int element_z, int ionstage) { return (element_z == 58) ? 0 : 20; }/g' artisoptions.h
+sedopt 'constexpr int ION_NLEVELS_EXCITED_NLTE.*' 'constexpr int ION_NLEVELS_EXCITED_NLTE(int element_z, int ionstage) { return (element_z == 58) ? 0 : 20; }'
 
 perl -0777 -i -pe 'my $n = s|^constexpr int NLEVELS_REQUIRETRANSITIONS\(int element_z, int ionstage\) \{.*?^\}$|constexpr int NLEVELS_REQUIRETRANSITIONS(int element_z, int ionstage) { return 10; }|ms; die "[error] the pattern for NLEVELS_REQUIRETRANSITIONS did not match once\n" unless $n == 1;' artisoptions.h
 
-sed -i.bak -e 's/constexpr int FIRST_NLTE_RADFIELD_TIMESTEP.*/constexpr int FIRST_NLTE_RADFIELD_TIMESTEP = 2;/g' artisoptions.h
-sed -i.bak -e 's/constexpr int DETAILED_BF_ESTIMATORS_USEFROMTIMESTEP.*/constexpr int DETAILED_BF_ESTIMATORS_USEFROMTIMESTEP = 2;/g' artisoptions.h
+sedopt 'constexpr int FIRST_NLTE_RADFIELD_TIMESTEP.*' 'constexpr int FIRST_NLTE_RADFIELD_TIMESTEP = 2;'
+sedopt 'constexpr int DETAILED_BF_ESTIMATORS_USEFROMTIMESTEP.*' 'constexpr int DETAILED_BF_ESTIMATORS_USEFROMTIMESTEP = 2;'
 
-sed -i.bak -e 's/constexpr std::optional<int> NLTE_TIME_DEPENDENT_FIRST_TIMESTEP.*/constexpr std::optional<int> NLTE_TIME_DEPENDENT_FIRST_TIMESTEP = 3;/g' artisoptions.h
+sedopt 'constexpr std::optional<int> NLTE_TIME_DEPENDENT_FIRST_TIMESTEP.*' 'constexpr std::optional<int> NLTE_TIME_DEPENDENT_FIRST_TIMESTEP = 3;'
 
 rm -f artisoptions.h.bak
 

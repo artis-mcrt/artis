@@ -2,9 +2,11 @@
 
 set -x
 
+source ./setupfuncs.sh
+
 runfolder=nebular_1d_3dgrid_limitbfest_testrun
 
-if [ ! -f atomicdata_feconi.tar.xz ]; then curl -fL --retry 3 -O https://github.com/artis-mcrt/artis/releases/download/v2026.5.15/atomicdata_feconi.tar.xz; fi
+getatomicdata atomicdata_feconi.tar.xz
 
 mkdir -p $runfolder
 
@@ -20,25 +22,25 @@ ln -s ../../ artis
 
 cp artis/artisoptions_nltenebular.h artisoptions.h
 
-sed -i.bak -e "s/constexpr std::int64_t NUM_PACKETS.*/constexpr std::int64_t NUM_PACKETS = 4'000'000;/g" artisoptions.h
+sedopt "constexpr std::int64_t NUM_PACKETS.*" "constexpr std::int64_t NUM_PACKETS = 4'000'000;"
 
-sed -i.bak -e 's/constexpr std::optional<GridType> GRID_TYPE_OVERRIDE.*/constexpr std::optional<GridType> GRID_TYPE_OVERRIDE = GridType::CARTESIAN3D;/g' artisoptions.h
+sedopt 'constexpr std::optional<GridType> GRID_TYPE_OVERRIDE.*' 'constexpr std::optional<GridType> GRID_TYPE_OVERRIDE = GridType::CARTESIAN3D;'
 
-sed -i.bak -e 's/constexpr int CUBOID_NCOORDGRID_X.*/constexpr int CUBOID_NCOORDGRID_X = 50;/g' artisoptions.h
-sed -i.bak -e 's/constexpr int CUBOID_NCOORDGRID_Y.*/constexpr int CUBOID_NCOORDGRID_Y = 50;/g' artisoptions.h
-sed -i.bak -e 's/constexpr int CUBOID_NCOORDGRID_Z.*/constexpr int CUBOID_NCOORDGRID_Z = 50;/g' artisoptions.h
+sedopt 'constexpr int CUBOID_NCOORDGRID_X.*' 'constexpr int CUBOID_NCOORDGRID_X = 50;'
+sedopt 'constexpr int CUBOID_NCOORDGRID_Y.*' 'constexpr int CUBOID_NCOORDGRID_Y = 50;'
+sedopt 'constexpr int CUBOID_NCOORDGRID_Z.*' 'constexpr int CUBOID_NCOORDGRID_Z = 50;'
 
-sed -i.bak -e 's/constexpr int RATECOEFF_TABLESIZE.*/constexpr int RATECOEFF_TABLESIZE = 20;/g' artisoptions.h
-sed -i.bak -e 's/constexpr double MINTEMP.*/constexpr double MINTEMP = 2000.;/g' artisoptions.h
-sed -i.bak -e 's/constexpr double MAXTEMP.*/constexpr double MAXTEMP = 10000.;/g' artisoptions.h
+sedopt 'constexpr int RATECOEFF_TABLESIZE.*' 'constexpr int RATECOEFF_TABLESIZE = 20;'
+sedopt 'constexpr double MINTEMP.*' 'constexpr double MINTEMP = 2000.;'
+sedopt 'constexpr double MAXTEMP.*' 'constexpr double MAXTEMP = 10000.;'
 
-sed -i.bak -e 's/constexpr int FIRST_NLTE_RADFIELD_TIMESTEP.*/constexpr int FIRST_NLTE_RADFIELD_TIMESTEP = 7;/g' artisoptions.h
+sedopt 'constexpr int FIRST_NLTE_RADFIELD_TIMESTEP.*' 'constexpr int FIRST_NLTE_RADFIELD_TIMESTEP = 7;'
 
-sed -i.bak -e 's/constexpr int DETAILED_BF_ESTIMATORS_USEFROMTIMESTEP.*/constexpr int DETAILED_BF_ESTIMATORS_USEFROMTIMESTEP = 7;/g' artisoptions.h
+sedopt 'constexpr int DETAILED_BF_ESTIMATORS_USEFROMTIMESTEP.*' 'constexpr int DETAILED_BF_ESTIMATORS_USEFROMTIMESTEP = 7;'
 
-sed -i.bak -e 's/constexpr bool SF_AUGER_CONTRIBUTION_ON.*/constexpr bool SF_AUGER_CONTRIBUTION_ON = false;/g' artisoptions.h
+sedopt 'constexpr bool SF_AUGER_CONTRIBUTION_ON.*' 'constexpr bool SF_AUGER_CONTRIBUTION_ON = false;'
 
-sed -i.bak -e 's/constexpr bool LEVEL_HAS_BFEST.*/constexpr bool LEVEL_HAS_BFEST(int element_z, int ionstage, int level) { return level <= ION_NLEVELS_EXCITED_NLTE(element_z, ionstage); }/g' artisoptions.h
+sedopt 'constexpr bool LEVEL_HAS_BFEST.*' 'constexpr bool LEVEL_HAS_BFEST(int element_z, int ionstage, int level) { return level <= ION_NLEVELS_EXCITED_NLTE(element_z, ionstage); }'
 
 rm -f artisoptions.h.bak
 

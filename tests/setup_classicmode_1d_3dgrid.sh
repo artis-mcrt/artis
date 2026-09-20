@@ -2,9 +2,11 @@
 
 set -x
 
+source ./setupfuncs.sh
+
 runfolder=classicmode_1d_3dgrid_testrun
 
-if [ ! -f atomicdata_classic.tar.xz ]; then curl -fL --retry 3 -O https://github.com/artis-mcrt/artis/releases/download/v2026.5.15/atomicdata_classic.tar.xz; fi
+getatomicdata atomicdata_classic.tar.xz
 
 mkdir -p $runfolder
 
@@ -18,16 +20,16 @@ ln -s ../../ artis
 
 cp artis/artisoptions_classic.h artisoptions.h
 
-sed -i.bak -e "s/constexpr std::int64_t NUM_PACKETS.*/constexpr std::int64_t NUM_PACKETS = 60'000;/g" artisoptions.h
+sedopt "constexpr std::int64_t NUM_PACKETS.*" "constexpr std::int64_t NUM_PACKETS = 60'000;"
 
-sed -i.bak -e 's/constexpr std::optional<GridType> GRID_TYPE_OVERRIDE.*/constexpr std::optional<GridType> GRID_TYPE_OVERRIDE = GridType::CARTESIAN3D;/g' artisoptions.h
+sedopt 'constexpr std::optional<GridType> GRID_TYPE_OVERRIDE.*' 'constexpr std::optional<GridType> GRID_TYPE_OVERRIDE = GridType::CARTESIAN3D;'
 
-sed -i.bak -e 's/constexpr int CUBOID_NCOORDGRID_X.*/constexpr int CUBOID_NCOORDGRID_X = 100;/g' artisoptions.h
-sed -i.bak -e 's/constexpr int CUBOID_NCOORDGRID_Y.*/constexpr int CUBOID_NCOORDGRID_Y = 100;/g' artisoptions.h
-sed -i.bak -e 's/constexpr int CUBOID_NCOORDGRID_Z.*/constexpr int CUBOID_NCOORDGRID_Z = 100;/g' artisoptions.h
+sedopt 'constexpr int CUBOID_NCOORDGRID_X.*' 'constexpr int CUBOID_NCOORDGRID_X = 100;'
+sedopt 'constexpr int CUBOID_NCOORDGRID_Y.*' 'constexpr int CUBOID_NCOORDGRID_Y = 100;'
+sedopt 'constexpr int CUBOID_NCOORDGRID_Z.*' 'constexpr int CUBOID_NCOORDGRID_Z = 100;'
 
-sed -i.bak -e 's/constexpr bool VPKT_ON.*/constexpr bool VPKT_ON = true;/g' artisoptions.h
-sed -i.bak -e 's/constexpr bool VPKT_WRITE_CONTRIBS.*/constexpr bool VPKT_WRITE_CONTRIBS = true;/g' artisoptions.h
+sedopt 'constexpr bool VPKT_ON.*' 'constexpr bool VPKT_ON = true;'
+sedopt 'constexpr bool VPKT_WRITE_CONTRIBS.*' 'constexpr bool VPKT_WRITE_CONTRIBS = true;'
 
 rm -f artisoptions.h.bak
 

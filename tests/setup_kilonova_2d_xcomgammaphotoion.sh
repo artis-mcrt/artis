@@ -2,9 +2,11 @@
 
 set -x
 
+source ./setupfuncs.sh
+
 runfolder=kilonova_2d_xcomgammaphotoion_testrun
 
-if [ ! -f atomicdata_feconi.tar.xz ]; then curl -fL --retry 3 -O https://github.com/artis-mcrt/artis/releases/download/v2026.5.15/atomicdata_feconi.tar.xz; fi
+getatomicdata atomicdata_feconi.tar.xz
 
 mkdir -p $runfolder
 
@@ -15,7 +17,7 @@ tar -xf ../atomicdata_feconi.tar.xz --directory ./
 # same input files as the other test run
 rsync -av ../kilonova_2d_inputfiles/ ./
 
-# for the checksum files
+# the phixsdata_v2.txt of this test, and the checksum files
 rsync -av --ignore-times ../kilonova_2d_xcomgammaphotoion_inputfiles/ ./
 
 ln -s ../../ artis
@@ -24,13 +26,13 @@ cp artis/artisoptions_kilonova_lte.h artisoptions.h
 
 xz -f -d -v -T0 *.xz
 
-sed -i.bak -e "s/constexpr std::int64_t NUM_PACKETS.*/constexpr std::int64_t NUM_PACKETS = 320'000;/g" artisoptions.h
+sedopt "constexpr std::int64_t NUM_PACKETS.*" "constexpr std::int64_t NUM_PACKETS = 320'000;"
 
-sed -i.bak -e 's/constexpr int RATECOEFF_TABLESIZE.*/constexpr int RATECOEFF_TABLESIZE = 20;/g' artisoptions.h
-sed -i.bak -e 's/constexpr double MINTEMP.*/constexpr double MINTEMP = 1000.;/g' artisoptions.h
-sed -i.bak -e 's/constexpr double MAXTEMP.*/constexpr double MAXTEMP = 20000.;/g' artisoptions.h
+sedopt 'constexpr int RATECOEFF_TABLESIZE.*' 'constexpr int RATECOEFF_TABLESIZE = 20;'
+sedopt 'constexpr double MINTEMP.*' 'constexpr double MINTEMP = 1000.;'
+sedopt 'constexpr double MAXTEMP.*' 'constexpr double MAXTEMP = 20000.;'
 
-sed -i.bak -e 's/constexpr bool USE_XCOM_GAMMAPHOTOION.*/constexpr bool USE_XCOM_GAMMAPHOTOION = true;/g' artisoptions.h
+sedopt 'constexpr bool USE_XCOM_GAMMAPHOTOION.*' 'constexpr bool USE_XCOM_GAMMAPHOTOION = true;'
 
 rm -f artisoptions.h.bak
 
