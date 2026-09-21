@@ -203,7 +203,7 @@ CI writes `results_md5_job0.txt` from
 `results_md5_final.txt` from the same command with the job folder of the resume
 run. The log files stay outside both sets, because their names do not match.
 
-CI makes the reference checksums on an arm64 runner with g++-15. Local x86-64
+CI makes the reference checksums on an arm64 runner with g++-16. Local x86-64
 builds with gcc 14 reproduced all of them for `kilonova_1d`, on two different
 CPU types. `REPRODUCIBLE=ON` therefore gives portable results, but only these
 combinations have a test. Examine a local mismatch as a real change of the
