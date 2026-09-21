@@ -216,7 +216,7 @@ In case the collision strength is not available, it will be -1.0 for permitted a
 A legacy four-column format (`[transition index] [lower level index] [upper level index] [A value]`, with no collision strength or forbidden columns) is also accepted. The format is detected from the column count of the first row of each block.
 
 ### compositiondata.txt
-Sets a filter on the elements, ion stages, and energy levels that are read in from atomic data files.
+Sets a filter on the elements, ion stages, and energy levels that are read in from atomic data files. The code ignores the text to the right of a `#` character.
 
 ### phixsdata.txt or phixsdata_v2.txt
 Photoionisation cross sections in v1 format (arbitrary energy tables) or v2 format (regularly spaced energy grid).
