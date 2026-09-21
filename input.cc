@@ -1341,7 +1341,14 @@ void read_phixs_data() {
 }
 
 auto read_compositiondata() -> std::vector<int> {
-  auto compositiondata = fstream_required("compositiondata.txt", std::ios::in);
+  auto compositionfile = fstream_required("compositiondata.txt", std::ios::in);
+
+  // keep only the text to the left of a # character
+  std::stringstream compositiondata;
+  std::string line;
+  while (get_noncommentline(compositionfile, line)) {
+    compositiondata << line.substr(0, line.find('#')) << '\n';
+  }
 
   int nelements_in = 0;
   assert_always(compositiondata >> nelements_in);
