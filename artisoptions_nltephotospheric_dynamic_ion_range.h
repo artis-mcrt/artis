@@ -142,7 +142,7 @@ constexpr bool RPKT_USE_EXPANSION_OPACITIES = false;
 
 constexpr bool VPKT_USE_EXPANSION_OPACITIES = false;
 
-constexpr bool EXPANSION_OPACITY_USE_LINE_BINNED_APPROX = false;
+constexpr ExpansionOpacityMethod EXPANSION_OPACITY_METHOD = ExpansionOpacityMethod::EXPANSION;
 
 constexpr std::optional<float> RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY;
 
