@@ -91,9 +91,6 @@ enum absorption_type : int {
   ABSTYPE_PELLET_NOGAMMASPEC = -6,  // pellet decay with no known gamma spectrum (e.g. 52Fe chain)
   ABSTYPE_PELLET_BEFORESIMSTART = -7,  // pellet decayed before the onset of the simulation
   ABSTYPE_PELLET_PARTICLEDECAY = -10,  // pellet decay to non-thermal particle (beta+/-, alpha, fission fragment)
-  // bound-bound absorption in a binned expansion opacity (RPKT_USE_EXPANSION_OPACITIES with
-  // RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY), so no single line index is known
-  ABSTYPE_BOUNDBOUND_EXPANSIONOPACITY = -11,
 };
 
 // The state a macro-atom is activated in. Local to a do_macroatom() call, not part of the packet's
@@ -130,8 +127,8 @@ struct Packet {
 
   // The process of the MOST RECENT emission, one of the two keys exspec decomposes the spectra by (see
   // trueemissiontype below). Overwritten by each emission rather than cleared when the packet re-enters the
-  // thermal pool, except under RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY, where the thermal frequency
-  // redistribution resets it to EMTYPE_NOTSET.
+  // thermal pool. With RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY, a thermal emission samples it by Kirchhoff's
+  // law: free-free or a line of the frequency bin of the emission.
   int emissiontype{EMTYPE_NOTSET};
   Vec3d em_pos{NAN, NAN, NAN};  // Position of the last emission (x,y,z).
   float em_time{-1.};  // [s]
@@ -140,7 +137,8 @@ struct Packet {
   double absorptionfreq{};  // records nu_rf of packet at last absorption
   double stokes_q{0.};  // normalised Stokes q = Q/I
   double stokes_u{0.};  // normalised Stokes u = U/I
-  // The last emission out of the THERMAL POOL. Set when a k-packet emits and then carried unchanged through
+  // The last emission out of the THERMAL POOL. Set when a k-packet emits or, with
+  // RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY, a line absorption thermalises, and then carried unchanged through
   // subsequent scatterings and macro-atom deactivations, so it attributes escaped energy to where it was
   // thermalised rather than to the last surface it scattered off. Reset to EMTYPE_NOTSET at every site that
   // returns the packet to the thermal pool, so the next radiative emission starts a fresh record.

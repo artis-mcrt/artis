@@ -47,6 +47,65 @@ namespace {
 // cumulative integral over the bins of (line plus free-free kappa) times the Planck function, per non-empty cell
 MPI_shared_array<double> expansionopacity_planck_cumulative{};
 
+// Select a line of an expansion opacity bin with its share of the bin opacity as the probability. The shares are the
+// terms of the line sum in calculate_expansion_opacities().
+DEVICE_FUNC auto sample_expansion_opacity_line(const int nonemptymgi, const ptrdiff_t binindex, rngstate_type& rngstate)
+    -> int {
+  const auto& linelist = globals::linelist;
+  const auto t_mid = globals::timesteps[globals::timestep].mid;
+  // kappa = linesum / (c t_mid rho)
+  const double bin_linesum =
+      expansionopacities[(nonemptymgi * expopac_nbins) + binindex] * CLIGHT * t_mid * grid::get_rho(nonemptymgi);
+  assert_always(bin_linesum > 0.);
+  const double linesum_target = rng_uniform(rngstate) * bin_linesum;
+
+  // a pre-k-packet does not use the cell cache, so the cache slot can hold another cell
+  const auto& cacheslot = get_cellcache(nonemptymgi);
+  const bool cacheslot_has_cell = cacheslot.nonemptymgi == nonemptymgi;
+
+  // calculate_expansion_opacities() puts a line at a bin edge into the bin of higher frequency
+  const auto nu_upper = get_expopac_bin_nu_upper(binindex);
+  const auto nu_lower = get_expopac_bin_nu_lower(binindex);
+  auto lineindex =
+      static_cast<int>(((binindex == 0) ? std::ranges::lower_bound(linelist.nu, nu_upper, std::ranges::greater{})
+                                        : std::ranges::upper_bound(linelist.nu, nu_upper, std::ranges::greater{})) -
+                       linelist.nu.begin());
+
+  double linesum = 0.;
+  int lineindex_lastabsorbing = -1;
+  for (; lineindex < globals::nlines && linelist.nu[lineindex] >= nu_lower; lineindex++) {
+    const int uniquelevelindex_lower = linelist.uniquelevelindex_lower[lineindex];
+    const int uniquelevelindex_upper = linelist.uniquelevelindex_upper[lineindex];
+    double n_l = 0.;
+    double n_u = 0.;
+    if (cacheslot_has_cell) {
+      n_l = cacheslot.alllevels_pops[uniquelevelindex_lower];
+      n_u = cacheslot.alllevels_pops[uniquelevelindex_upper];
+    } else {
+      const int element = linelist.elementindex[lineindex];
+      const int ion = linelist.ionindex[lineindex];
+      const int ionuniquelevelindexstart = get_ionuniquelevelindexstart(element, ion);
+      n_l = calculate_levelpop(nonemptymgi, element, ion, uniquelevelindex_lower - ionuniquelevelindexstart);
+      n_u = calculate_levelpop(nonemptymgi, element, ion, uniquelevelindex_upper - ionuniquelevelindexstart);
+    }
+    // the Sobolev optical depth. A population inversion gives zero.
+    const auto tau_line =
+        std::max(((linelist.B_lu[lineindex] * n_l) - (linelist.B_ul[lineindex] * n_u)) * HCLIGHTOVERFOURPI * t_mid, 0.);
+    if (tau_line > 0.) {
+      const auto linelambda = 1e8 * CLIGHT / linelist.nu[lineindex];
+      linesum += (linelambda / expopac_deltalambda) * -std::expm1(-tau_line);
+      lineindex_lastabsorbing = lineindex;
+      if (linesum > linesum_target) {
+        return lineindex;
+      }
+    }
+  }
+
+  // the rounding of the float bin opacity can put the target above the line sum
+  assert_always(lineindex_lastabsorbing >= 0);
+  return lineindex_lastabsorbing;
+}
+
 // get the comoving-frame frequency that the packet will have redshifted to at the abort distance (the cell
 // boundary or the end of the timestep, whichever is nearer). The caller turns this into a frequency change
 // per unit distance for the linear interpolation along the path.
@@ -159,8 +218,6 @@ auto get_possible_event_expansion_opacity(const int nonemptymgi, Packet& pkt, co
   auto e_cmf = pkt.e_cmf;
   auto prop_time = pkt.prop_time;
 
-  // with thermalisation or pure scattering, we don't keep track of line interactions
-
   assert_always(get_cellcache(nonemptymgi).nonemptymgi == nonemptymgi);
   double dist = 0.;
   double tau = 0.;
@@ -194,6 +251,9 @@ auto get_possible_event_expansion_opacity(const int nonemptymgi, Packet& pkt, co
         // wavelength bin with no line opacity could take the thermalisation branch, and in a cell
         // with no line opacity at all the Planck sampling that follows has nothing to sample from.
         const bool event_is_boundbound = rng_uniform(get_rngstate(pkt)) < chi_bb_expansionopac / chi_tot;
+        if (event_is_boundbound) {
+          mastate.activatingline = sample_expansion_opacity_line(nonemptymgi, binindex, get_rngstate(pkt));
+        }
         return {edist, event_is_boundbound};
       }
 
@@ -552,45 +612,39 @@ auto do_rpkt_step(Packet& pkt, const double t2, ContinuumOpacity& chi_rpkt_cont)
       // Electron scattering does not modify the last emission flag but it updates the last emission position
     } else if (!event_is_boundbound) {
       rpkt_event_continuum(pkt, chi_rpkt_cont);
-    } else if constexpr (!RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.has_value()) {
-      stats::increment(stats::Counter::MA_STAT_ACTIVATION_BB);
-
+    } else {
       pkt.absorptiontype = pktmastate.activatingline;
       pkt.absorptionfreq = pkt.nu_rf;
 
-      do_macroatom(pkt, pktmastate);
-    } else {
-      // with expansion opacities, the event comes from a binned opacity and pktmastate holds no
-      // activating line, so the absorption type gets the sentinel for a binned absorption
-      pkt.absorptiontype =
-          RPKT_USE_EXPANSION_OPACITIES ? ABSTYPE_BOUNDBOUND_EXPANSIONOPACITY : pktmastate.activatingline;
-      pkt.absorptionfreq = pkt.nu_rf;
-
-      // Probability based thermalisation (i.e. redistribution of the packet frequency) or scattering
-      const bool thermalise = RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.value() >= 1. ||
-                              rng_uniform(get_rngstate(pkt)) < RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.value();
-      if (thermalise) {
-        // Thermal redistribution of frequency
-        pkt.nu_cmf = sample_planck_times_expansion_opacity(nonemptymgi, get_rngstate(pkt));
-        pkt.next_trans = -1;
-        // a thermal re-emission at a new frequency, so the packet no longer traces back to the previous emission
-        pkt.emissiontype = EMTYPE_NOTSET;
-        pkt.trueemissiontype = EMTYPE_NOTSET;
-        pkt.trueem_pos = {NAN, NAN, NAN};
-        pkt.trueem_time = -1.;
-
-        // re-emit rather than scatter, so that this event is not counted as an electron scattering
-        pkt.nscatterings = 0;
+      if constexpr (!RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.has_value()) {
+        stats::increment(stats::Counter::MA_STAT_ACTIVATION_BB);
+        do_macroatom(pkt, pktmastate);
       } else {
-        // pure scattering, so the packet keeps its co-moving frequency and direction is changed
-        pkt.nscatterings++;
-        stats::increment(stats::Counter::ELECTRON_SCATTERINGS);
-      }
-      emit_rpkt(pkt);
+        // Probability based thermalisation (i.e. redistribution of the packet frequency) or scattering
+        const bool thermalise = RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.value() >= 1. ||
+                                rng_uniform(get_rngstate(pkt)) < RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.value();
+        if (thermalise) {
+          std::tie(pkt.nu_cmf, pkt.emissiontype) =
+              sample_planck_times_expansion_opacity(nonemptymgi, get_rngstate(pkt));
+          pkt.next_trans = -1;
+          emit_rpkt(pkt);
+          // a thermal emission, so record it as the packet's last thermal ("true") emission
+          pkt.trueemissiontype = pkt.emissiontype;
+          pkt.trueem_pos = pkt.em_pos;
+          pkt.trueem_time = pkt.em_time;
+        } else {
+          // pure scattering in the absorbing line: the packet keeps its co-moving frequency in a new direction
+          stats::increment(stats::Counter::RESONANCESCATTERINGS);
+          pkt.emissiontype = pktmastate.activatingline;
+          emit_rpkt(pkt);
+        }
+        // both events emit the packet again, as a macro-atom does
+        pkt.nscatterings = 0;
 
-      // the thermal re-emission and the line scattering are isotropic in the comoving frame, not a dipole
-      if constexpr (VPKT_ON) {
-        vpkt::trace_vpkts(pkt, thermalise ? TYPE_KPKT : TYPE_MA);
+        // the thermal re-emission and the line scattering are isotropic in the comoving frame, not a dipole
+        if constexpr (VPKT_ON) {
+          vpkt::trace_vpkts(pkt, thermalise ? TYPE_KPKT : TYPE_MA);
+        }
       }
     }
 
@@ -906,9 +960,7 @@ void allocate_expansionopacities() {
   const auto nonempty_npts_model = grid::get_nonempty_npts_model();
 
   assert_always(expansionopacities.empty());
-  if constexpr (RPKT_USE_EXPANSION_OPACITIES || VPKT_USE_EXPANSION_OPACITIES) {
-    expansionopacities = MPI_shared_array<float>(nonempty_npts_model * expopac_nbins);
-  }
+  expansionopacities = MPI_shared_array<float>(nonempty_npts_model * expopac_nbins);
 
   assert_always(expansionopacity_planck_cumulative.empty());
   if constexpr (RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.has_value()) {
@@ -916,8 +968,10 @@ void allocate_expansionopacities() {
   }
 }
 
-// return a randomly chosen frequency with a distribution of Planck function times the expansion opacity
-DEVICE_FUNC auto sample_planck_times_expansion_opacity(const int nonemptymgi, rngstate_type& rngstate) -> double {
+// Return a random frequency with a distribution of the Planck function times the expansion opacity, and the emission
+// type. By Kirchhoff's law, the emitter is free-free or a line of the frequency bin, in proportion to their opacities.
+DEVICE_FUNC auto sample_planck_times_expansion_opacity(const int nonemptymgi, rngstate_type& rngstate)
+    -> std::tuple<double, int> {
   assert_testmodeonly(RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.has_value());
 
   const std::span<const double> kappa_planck_bins =
@@ -930,10 +984,19 @@ DEVICE_FUNC auto sample_planck_times_expansion_opacity(const int nonemptymgi, rn
 
   // use a linear interpolation for the frequency within the bin
   const auto bin_nu_lower = get_expopac_bin_nu_lower(binindex);
-  const auto delta_nu = get_expopac_bin_nu_upper(binindex) - bin_nu_lower;
+  const auto bin_nu_upper = get_expopac_bin_nu_upper(binindex);
+  const auto delta_nu = bin_nu_upper - bin_nu_lower;
   const double nuoffset = rng_uniform(rngstate) * delta_nu;
   const double nu = bin_nu_lower + nuoffset;
-  return nu;
+
+  // the same bin opacities as in calculate_expansion_opacities()
+  const double kappa_bb = expansionopacities[(nonemptymgi * expopac_nbins) + binindex];
+  const double kappa_ff =
+      calculate_chi_ffheating(nonemptymgi, (bin_nu_upper + bin_nu_lower) / 2., false) / grid::get_rho(nonemptymgi);
+  const int emissiontype = (rng_uniform(rngstate) * (kappa_bb + kappa_ff) < kappa_ff)
+                               ? EMTYPE_FREEFREE
+                               : sample_expansion_opacity_line(nonemptymgi, binindex, rngstate);
+  return {nu, emissiontype};
 }
 
 DEVICE_FUNC void do_rpkt(Packet& pkt, const double t2, ContinuumOpacity& chi_rpkt_cont) {
@@ -1009,7 +1072,8 @@ template void calculate_chi_rpkt_cont<false>(const double nu_cmf, ContinuumOpaci
 void MPI_Bcast_binned_opacities(const ptrdiff_t nstart_nonempty, const ptrdiff_t ndo_nonempty, const int root_node_id) {
   if (globals::rank_in_node == 0) {
     assert_always(nstart_nonempty >= 0);
-    if constexpr (RPKT_USE_EXPANSION_OPACITIES || VPKT_USE_EXPANSION_OPACITIES) {
+    if constexpr (RPKT_USE_EXPANSION_OPACITIES || VPKT_USE_EXPANSION_OPACITIES ||
+                  RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.has_value()) {
       MPI_Bcast_safe(expansionopacities.subspan(nstart_nonempty * expopac_nbins, ndo_nonempty * expopac_nbins),
                      root_node_id, globals::mpi_comm_internode);
     }
@@ -1074,9 +1138,7 @@ void calculate_expansion_opacities(const int nonemptymgi) {
     const auto bin_kappa_bb = static_cast<float>(1. / (CLIGHT * t_mid * rho) * bin_linesum);
     assert_always(std::isfinite(bin_kappa_bb));
 
-    if constexpr (RPKT_USE_EXPANSION_OPACITIES || VPKT_USE_EXPANSION_OPACITIES) {
-      expansionopacities[(nonemptymgi * expopac_nbins) + binindex] = bin_kappa_bb;
-    }
+    expansionopacities[(nonemptymgi * expopac_nbins) + binindex] = bin_kappa_bb;
 
     if constexpr (RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.has_value()) {
       const auto nu_upper = get_expopac_bin_nu_upper(binindex);

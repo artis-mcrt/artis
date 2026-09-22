@@ -10,6 +10,7 @@
 #include <functional>
 #include <memory>
 #include <span>
+#include <tuple>
 
 #include "artisoptions.h"
 #include "constants.h"
@@ -105,7 +106,7 @@ void calculate_chi_rpkt_cont(double nu_cmf, ContinuumOpacity& chi_rpkt_cont, int
 extern template void calculate_chi_rpkt_cont<true>(double nu_cmf, ContinuumOpacity& chi_rpkt_cont, int nonemptymgi);
 extern template void calculate_chi_rpkt_cont<false>(double nu_cmf, ContinuumOpacity& chi_rpkt_cont, int nonemptymgi);
 [[nodiscard]] DEVICE_FUNC auto sample_planck_times_expansion_opacity(int nonemptymgi, rngstate_type& rngstate)
-    -> double;
+    -> std::tuple<double, int>;
 void allocate_expansionopacities();
 // Convert Sobolev line optical depths in each wavelength bin into an expansion mass opacity. When requested, also
 // construct the Planck-weighted cumulative distribution used to sample thermal re-emission frequencies.

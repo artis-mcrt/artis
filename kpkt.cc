@@ -15,6 +15,7 @@
 #include <cstdlib>
 #include <limits>
 #include <span>
+#include <tuple>
 
 #include "artisoptions.h"
 #include "atomic.h"
@@ -454,9 +455,10 @@ DEVICE_FUNC void do_kpkt_blackbody(Packet& pkt) {
 
   if (RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.has_value() &&
       grid::thick_allcells[nonemptymgi] != grid::CellThickness::THICK) {
-    pkt.nu_cmf = sample_planck_times_expansion_opacity(nonemptymgi, get_rngstate(pkt));
+    std::tie(pkt.nu_cmf, pkt.emissiontype) = sample_planck_times_expansion_opacity(nonemptymgi, get_rngstate(pkt));
   } else {
     pkt.nu_cmf = sample_planck_montecarlo(grid::Te_allcells[nonemptymgi], get_rngstate(pkt));
+    pkt.emissiontype = EMTYPE_FREEFREE;
   }
 
   assert_always(std::isfinite(pkt.nu_cmf));
@@ -465,7 +467,6 @@ DEVICE_FUNC void do_kpkt_blackbody(Packet& pkt) {
   pkt.next_trans = -1;  // FLAG: transition history here not important, cont. process
   stats::increment(stats::Counter::K_STAT_TO_R_BB);
   stats::increment(stats::Counter::INTERACTIONS);
-  pkt.emissiontype = EMTYPE_FREEFREE;
   // this is a thermal emission, so record it as the packet's last thermal ("true") emission
   // (emit_rpkt has just set em_pos/em_time to the current position and time)
   pkt.trueemissiontype = pkt.emissiontype;

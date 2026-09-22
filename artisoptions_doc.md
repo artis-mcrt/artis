@@ -340,10 +340,11 @@ constexpr bool RPKT_USE_EXPANSION_OPACITIES;
 constexpr bool VPKT_USE_EXPANSION_OPACITIES;
 
 // Replace the macroatom with a thermalisation probability P for each bound-bound absorption, and a scattering
-// with probability 1 - P. Every k-packet in a cell that is not thick then emits a blackbody spectrum weighted
-// with the sum of the expansion opacity and the free-free opacity. The code therefore computes the expansion
-// opacity bins also without RPKT_USE_EXPANSION_OPACITIES. A thick cell samples a plain Planck function. No
-// value keeps the macroatom.
+// in the absorbing line with probability 1 - P. Every k-packet in a cell that is not thick then emits a blackbody
+// spectrum weighted with the sum of the expansion opacity and the free-free opacity. By Kirchhoff's law, the
+// emission type is free-free or a line of the frequency bin, in proportion to their opacities. The code therefore
+// computes the expansion opacity bins also without RPKT_USE_EXPANSION_OPACITIES. A thick cell samples a plain
+// Planck function. No value keeps the macroatom.
 constexpr std::optional<float> RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY;
 
 // The grey opacity of a thick cell:
