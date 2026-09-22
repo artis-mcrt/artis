@@ -2821,7 +2821,8 @@ DEVICE_FUNC void snap_pos_to_cell(Vec3d& pos, const double time, const int celli
       }
     } else {
       // The packet is moving exactly along the z axis (reachable when the comoving emission direction
-      // is sampled at exactly costheta = +/-1 and the local velocity is parallel to z), so the
+      // is sampled at exactly costheta = +/-1 and the local velocity is parallel to z, or for a virtual
+      // packet to an observer at costheta = +/-1), so the
       // general-direction code above would divide by zero. The packet's cylindrical radius stays
       // constant while the grid expands: the receding outer r_cyl boundary can never be crossed, and
       // the expanding inner boundary catches up to the packet at t_cross = rcyl / (rcyl_inner_tmin / tmin)

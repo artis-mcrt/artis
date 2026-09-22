@@ -66,7 +66,7 @@ std::array<float, VSPEC_NUBINS> delta_freq_vspec;
 int nobsdirections = 0;  // Number of observer directions
 int nspectraperobsdir = 0;  // Number of virtual packet spectra per observer direction (total + elements switched off)
 std::vector<Vec3d> obsdirs;
-std::vector<std::tuple<Vec3d, Vec3d>> obsdirs_meridian;  // exact Stokes frame of each observer
+std::vector<std::tuple<Vec3d, Vec3d>> obsdirs_meridian;  // the exact meridian frame of each observer
 double vspec_timemin_input;
 double vspec_timemax_input;
 int nwavelengthranges = 0;  // Number of wavelength ranges
@@ -192,8 +192,9 @@ void add_to_vpkt_grid(const double nu_rf, const double e_rf, const double prob, 
 }
 
 auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const double nu_rf, const double e_rf,
-                          const double rpkt_doppler, const int obsdirindex, const Vec3d& obsdir,
-                          const enum packet_type type_before_rpkt, std::string& vpkt_contrib_row) -> bool {
+                          const double rpkt_doppler, const int obsdirindex, const enum packet_type type_before_rpkt,
+                          std::string& vpkt_contrib_row) -> bool {
+  const auto& obsdir = obsdirs[obsdirindex];
   int mgi = 0;
 
   auto cellindex = rpkt.cellindex;
@@ -236,8 +237,8 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
     // Need to rotate Stokes Parameters in the scattering plane
 
     const auto obs_cmf = angle_ab(obsdir, vel_vec);
-    // The RF direction after the round trip through the CMF has rounding errors. At a pole, meridian() of that
-    // direction has a random orientation, so use the exact frame of the observer.
+    // At a pole, meridian() of the direction after the round trip through the comoving frame has a random
+    // orientation. The meridian frame of the observer is exact.
     std::tie(std::ignore, q_rf, u_rf, pn) =
         scatter_polarisation_to_rf(old_dir_cmf, obs_cmf, q_i_cmf, u_i_cmf, vel_vec, obsdirs_meridian[obsdirindex]);
 
@@ -737,7 +738,7 @@ void read_vpktparameterfile() {
   for (int i = 0; i < nobsdirections; i++) {
     assert_always(fscanf(input_file, "%lg", &obsdirs_costheta[i]) == 1);
 
-    if (fabs(obsdirs_costheta[i]) > 1) {
+    if (!(fabs(obsdirs_costheta[i]) <= 1)) {
       fatal_crash("vpkt.txt observer direction {} has costheta {:g}, which is outside [-1, 1]", i, obsdirs_costheta[i]);
     }
   }
@@ -749,6 +750,9 @@ void read_vpktparameterfile() {
     double phi_degrees = 0.;
     assert_always(fscanf(input_file, "%lg", &phi_degrees) == 1);
     const double phi = phi_degrees * PI / 180.;
+    if (!std::isfinite(phi)) {
+      fatal_crash("vpkt.txt observer direction {} has phi {:g} degrees, which is not a finite number", i, phi_degrees);
+    }
     const auto [obsdir, ref1, ref2] = dir_and_meridian_of_theta_phi(obsdirs_costheta[i], phi);
     obsdirs[i] = obsdir;
     obsdirs_meridian[i] = {ref1, ref2};
@@ -1044,7 +1048,7 @@ auto trace_vpkts(const Packet& pkt, const enum packet_type type_before_rpkt) -> 
         if ((nu_rf > vspec_numin_input[i] && nu_rf < vspec_numax_input[i]) ||
             (pkt.absorptionfreq > vspec_numin_input[i] && pkt.absorptionfreq < vspec_numax_input[i])) {
           // frequency selection
-          dir_escaped = dir_escaped || trace_vpkt_direction(pkt, t_arrive, nu_rf, e_rf, doppler, obsdirindex, obsdir,
+          dir_escaped = dir_escaped || trace_vpkt_direction(pkt, t_arrive, nu_rf, e_rf, doppler, obsdirindex,
                                                             type_before_rpkt, vpkt_contrib_row);
           break;  // we only need to match one frequency interval to trace the vpkt
         }

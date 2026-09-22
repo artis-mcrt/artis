@@ -20,6 +20,7 @@
 #include <span>
 #include <string>
 #include <string_view>
+#include <tuple>
 #include <utility>
 #include <vector>
 
@@ -242,7 +243,7 @@ void test_frame_transform() {
 void test_meridian() {
   std::println("meridian frames...");
   rngstate_type rngstate{99002};
-  const auto vec_diff = [](const Vec3d& vec_a, const Vec3d& vec_b) {
+  const auto vec_dist = [](const Vec3d& vec_a, const Vec3d& vec_b) {
     return vec_len(Vec3d{vec_a[0] - vec_b[0], vec_a[1] - vec_b[1], vec_a[2] - vec_b[2]});
   };
 
@@ -250,9 +251,20 @@ void test_meridian() {
   for (const double cos_theta : {-1., 1.}) {
     const auto dir = Vec3d{0., 0., cos_theta};
     const auto [ref1, ref2] = meridian(dir);
-    pole_orientation_ok = pole_orientation_ok && (vec_diff(ref2, cross_prod(ref1, dir)) < 1e-15);
+    pole_orientation_ok = pole_orientation_ok && (vec_dist(ref2, cross_prod(ref1, dir)) < 1e-15);
   }
   check(pole_orientation_ok, "meridian gives ref2 = ref1 x dir at both poles");
+
+  bool near_pole_orthogonal = true;
+  for (const double pole : {-1., 1.}) {
+    for (const double sin_polar : {1e-5, 1e-8, 1e-12}) {
+      const auto dir = vec_norm(Vec3d{sin_polar, 0., pole});
+      const auto [ref1, ref2] = meridian(dir);
+      near_pole_orthogonal = near_pole_orthogonal && (std::abs(dot(ref1, dir)) < 1e-15) &&
+                             (std::abs(vec_len(ref1) - 1.) < 1e-15) && (std::abs(dot(ref2, dir)) < 1e-15);
+    }
+  }
+  check(near_pole_orthogonal, "meridian gives unit axes perpendicular to dir near both poles");
 
   bool theta_phi_matches = true;
   for (int trial = 0; trial < 100; trial++) {
@@ -261,7 +273,7 @@ void test_meridian() {
     const auto [dir, ref1_angles, ref2_angles] = dir_and_meridian_of_theta_phi(cos_theta, phi);
     const auto [ref1, ref2] = meridian(dir);
     theta_phi_matches =
-        theta_phi_matches && (vec_diff(ref1, ref1_angles) < 1e-12) && (vec_diff(ref2, ref2_angles) < 1e-12);
+        theta_phi_matches && (vec_dist(ref1, ref1_angles) < 1e-12) && (vec_dist(ref2, ref2_angles) < 1e-12);
   }
   check(theta_phi_matches, "dir_and_meridian_of_theta_phi agrees with meridian away from the poles");
 
@@ -272,10 +284,40 @@ void test_meridian() {
           meridian(std::get<0>(dir_and_meridian_of_theta_phi(pole * std::cos(1e-7), phi)));
       [[maybe_unused]] const auto [dir_pole, ref1_pole, ref2_pole] = dir_and_meridian_of_theta_phi(pole, phi);
       pole_limit_ok =
-          pole_limit_ok && (vec_diff(ref1_near, ref1_pole) < 1e-6) && (vec_diff(ref2_near, ref2_pole) < 1e-6);
+          pole_limit_ok && (vec_dist(ref1_near, ref1_pole) < 1e-6) && (vec_dist(ref2_near, ref2_pole) < 1e-6);
     }
   }
   check(pole_limit_ok, "dir_and_meridian_of_theta_phi at a pole is the limit of meridian at the same phi");
+
+  // With the observer frame, scatter_polarisation_to_rf gives the same q and u as meridian() away from a pole, and
+  // at a pole it gives the limit at the same phi.
+  const auto vel = Vec3d{0.1 * CLIGHT, -0.05 * CLIGHT, 0.07 * CLIGHT};
+  const auto old_dir_cmf = vec_norm(Vec3d{0.3, -0.5, 0.8});
+  const auto get_q_u = [&](const double cos_theta, const double phi, const bool use_observer_frame) {
+    const auto [obsdir, ref1, ref2] = dir_and_meridian_of_theta_phi(cos_theta, phi);
+    const auto meridian_rf = use_observer_frame ? std::optional<std::tuple<Vec3d, Vec3d>>{{ref1, ref2}} : std::nullopt;
+    const auto [dir_rf, q_rf, u_rf, pn] =
+        scatter_polarisation_to_rf(old_dir_cmf, angle_ab(obsdir, vel), 0.3, -0.2, vel, meridian_rf);
+    return std::array<double, 2>{q_rf, u_rf};
+  };
+  bool observer_frame_ok = true;
+  for (int trial = 0; trial < 100; trial++) {
+    const double cos_theta = (1.98 * rng_uniform(rngstate)) - 0.99;
+    const double phi = rng_uniform(rngstate) * 2. * PI;
+    const auto q_u_default = get_q_u(cos_theta, phi, false);
+    const auto q_u_observer = get_q_u(cos_theta, phi, true);
+    observer_frame_ok = observer_frame_ok && (std::abs(q_u_default[0] - q_u_observer[0]) < 1e-10) &&
+                        (std::abs(q_u_default[1] - q_u_observer[1]) < 1e-10);
+  }
+  for (const double pole : {-1., 1.}) {
+    for (const double phi : {0., 1., 4.}) {
+      const auto q_u_pole = get_q_u(pole, phi, true);
+      const auto q_u_near = get_q_u(pole * std::cos(1e-7), phi, true);
+      observer_frame_ok = observer_frame_ok && (std::abs(q_u_pole[0] - q_u_near[0]) < 1e-5) &&
+                          (std::abs(q_u_pole[1] - q_u_near[1]) < 1e-5);
+    }
+  }
+  check(observer_frame_ok, "scatter_polarisation_to_rf with the observer frame agrees with meridian and at a pole");
 }
 
 void test_random_sampling() {

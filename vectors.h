@@ -214,19 +214,13 @@ DEVICE_FUNC constexpr void set_pkt_restframe_from_cmf(Packet& pkt) {
 
 // Compute the meridian frame axes ref1 and ref2
 [[gnu::pure]] [[nodiscard]] constexpr auto meridian(const Vec3d& dir) -> std::tuple<Vec3d, Vec3d> {
-  // for ref_1 use (from triple product rule)
+  // ref1 is perpendicular to dir, in the plane of dir and the z axis, and points to +z. On the z axis, ref1 is the
+  // x axis. For a unit vector dir, 1 - dir[2]^2 = n_xylen^2, and n_xylen keeps its precision near a pole.
+  // Each axis has a name before the return. nvc++ 26.5 writes an invalid constant for a vector literal in the return
+  // value.
   const double n_xylen = std::sqrt(pow2(dir[0]) + pow2(dir[1]));
-  if (n_xylen == 0.) {
-    // if n is along z axis, we can just use x and y as the meridian frame axes.
-    // Each vector has a name here. nvc++ 26.5 writes an invalid constant for a vector that goes
-    // directly into the return value. The device compiler then stops.
-    const Vec3d ref1_zaxis{1., 0., 0.};
-    const auto ref2_zaxis = cross_prod(ref1_zaxis, dir);
-    return {ref1_zaxis, ref2_zaxis};
-  }
-  const auto ref1 = Vec3d{-dir[0] * dir[2] / n_xylen, -dir[1] * dir[2] / n_xylen, (1 - pow2(dir[2])) / n_xylen};
-
-  // for ref_2 use vector product of n_cmf with ref1
+  const auto ref1 =
+      (n_xylen == 0.) ? Vec3d{1., 0., 0.} : Vec3d{-dir[0] * dir[2] / n_xylen, -dir[1] * dir[2] / n_xylen, n_xylen};
   const auto ref2 = cross_prod(ref1, dir);
   return {ref1, ref2};
 }
@@ -275,7 +269,8 @@ DEVICE_FUNC constexpr void set_pkt_restframe_from_cmf(Packet& pkt) {
 }
 
 // Transform a direction and Stokes Parameters from RF to CMF.
-// meridian_cmf is the exact output Stokes frame, if the caller knows it. The default is meridian(n_cmf).
+// meridian_cmf is the exact meridian frame of the output direction, if the caller knows it. The default is
+// meridian(n_cmf).
 constexpr auto frame_transform(const Vec3d& n_rf, const double q0, const double u0, const Vec3d& v,
                                const std::optional<std::tuple<Vec3d, Vec3d>>& meridian_cmf = std::nullopt)
     -> std::tuple<Vec3d, double, double> {
@@ -330,8 +325,8 @@ constexpr auto frame_transform(const Vec3d& n_rf, const double q0, const double 
 
 // Compute the new Stokes Parameters after scattering and transform them back to the RF.
 // Return a tuple of the new direction in the RF, the new q and u in the RF and the scattering phase-function
-// probability pn
-// meridian_rf gives the RF Stokes frame when the caller knows it exactly.
+// probability pn.
+// meridian_rf is the exact meridian frame of the RF direction, if the caller knows it.
 constexpr auto scatter_polarisation_to_rf(const Vec3d& old_dir_cmf, const Vec3d& new_dir_cmf, const double q_i_cmf,
                                           const double u_i_cmf, const Vec3d& vel_vec,
                                           const std::optional<std::tuple<Vec3d, Vec3d>>& meridian_rf = std::nullopt)
@@ -372,7 +367,7 @@ constexpr auto scatter_polarisation_to_rf(const Vec3d& old_dir_cmf, const Vec3d&
   const double u_cmf = (-q_new * sin2i2) + (u_new * cos2i2);
 
   const auto [new_dir_rf, q_rf, u_rf] =
-      frame_transform(new_dir_cmf, q_cmf, u_cmf, Vec3d{-vel_vec[0], -vel_vec[1], -vel_vec[2]}, meridian_rf);
+      frame_transform(new_dir_cmf, q_cmf, u_cmf, vec_scale(vel_vec, -1.), meridian_rf);
 
   const double pn = 3. / (16. * PI) * (1. + musquared + ((musquared - 1.) * q_old));
   return {new_dir_rf, q_rf, u_rf, pn};
