@@ -239,6 +239,48 @@ void test_frame_transform() {
   check(roundtrip_ok, "frame_transform with -v inverts frame_transform with +v");
 }
 
+void test_meridian() {
+  std::println("meridian frames...");
+  rngstate_type rngstate{99002};
+  const auto vec_diff = [](const Vec3d& vec_a, const Vec3d& vec_b) {
+    return vec_len(Vec3d{vec_a[0] - vec_b[0], vec_a[1] - vec_b[1], vec_a[2] - vec_b[2]});
+  };
+
+  bool pole_orientation_ok = true;
+  for (const double cos_theta : {-1., 1.}) {
+    const auto dir = Vec3d{0., 0., cos_theta};
+    const auto [ref1, ref2] = meridian(dir);
+    pole_orientation_ok = pole_orientation_ok && (vec_diff(ref2, cross_prod(ref1, dir)) < 1e-15);
+  }
+  check(pole_orientation_ok, "meridian gives ref2 = ref1 x dir at both poles");
+
+  bool theta_phi_matches = true;
+  for (int trial = 0; trial < 100; trial++) {
+    const double cos_theta = (2. * rng_uniform(rngstate)) - 1.;
+    const double phi = rng_uniform(rngstate) * 2. * PI;
+    const double sin_theta = std::sqrt(1. - pow2(cos_theta));
+    const auto [ref1, ref2] = meridian(Vec3d{sin_theta * std::cos(phi), sin_theta * std::sin(phi), cos_theta});
+    const auto [ref1_angles, ref2_angles] = meridian_of_theta_phi(cos_theta, phi);
+    theta_phi_matches =
+        theta_phi_matches && (vec_diff(ref1, ref1_angles) < 1e-12) && (vec_diff(ref2, ref2_angles) < 1e-12);
+  }
+  check(theta_phi_matches, "meridian_of_theta_phi agrees with meridian away from the poles");
+
+  bool pole_limit_ok = true;
+  for (const double pole : {-1., 1.}) {
+    for (const double phi : {0., 1., 4.}) {
+      const double cos_theta_near = pole * std::cos(1e-7);
+      const double sin_theta_near = std::sin(1e-7);
+      const auto [ref1_near, ref2_near] =
+          meridian(Vec3d{sin_theta_near * std::cos(phi), sin_theta_near * std::sin(phi), cos_theta_near});
+      const auto [ref1_pole, ref2_pole] = meridian_of_theta_phi(pole, phi);
+      pole_limit_ok =
+          pole_limit_ok && (vec_diff(ref1_near, ref1_pole) < 1e-6) && (vec_diff(ref2_near, ref2_pole) < 1e-6);
+    }
+  }
+  check(pole_limit_ok, "meridian_of_theta_phi at a pole is the limit of meridian at the same phi");
+}
+
 void test_random_sampling() {
   std::println("random sampling...");
   rngstate_type rngstate{31415};
@@ -1131,6 +1173,7 @@ auto main() -> int {
   test_vector_geometry();
   test_escapedirectionbin();
   test_frame_transform();
+  test_meridian();
   test_random_sampling();
   test_planck();
   test_bateman();

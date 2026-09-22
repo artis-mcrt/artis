@@ -8,6 +8,7 @@
 #include <array>
 #include <cmath>
 #include <cstddef>
+#include <optional>
 #include <tuple>
 
 #include "artisoptions.h"
@@ -220,12 +221,23 @@ DEVICE_FUNC constexpr void set_pkt_restframe_from_cmf(Packet& pkt) {
     // Each vector has a name here. nvc++ 26.5 writes an invalid constant for a vector that goes
     // directly into the return value. The device compiler then stops.
     const Vec3d ref1_zaxis{1., 0., 0.};
-    const Vec3d ref2_zaxis{0., 1., 0.};
+    const auto ref2_zaxis = cross_prod(ref1_zaxis, dir);
     return {ref1_zaxis, ref2_zaxis};
   }
   const auto ref1 = Vec3d{-dir[0] * dir[2] / n_xylen, -dir[1] * dir[2] / n_xylen, (1 - pow2(dir[2])) / n_xylen};
 
   // for ref_2 use vector product of n_cmf with ref1
+  const auto ref2 = cross_prod(ref1, dir);
+  return {ref1, ref2};
+}
+
+// Meridian frame axes of the direction (sin(theta) cos(phi), sin(theta) sin(phi), cos(theta)).
+// At a pole, the axes are the limit of meridian() at this phi.
+[[gnu::pure]] [[nodiscard]] constexpr auto meridian_of_theta_phi(const double cos_theta, const double phi)
+    -> std::tuple<Vec3d, Vec3d> {
+  const double sin_theta = std::sqrt(1. - pow2(cos_theta));
+  const auto dir = Vec3d{sin_theta * std::cos(phi), sin_theta * std::sin(phi), cos_theta};
+  const auto ref1 = Vec3d{-cos_theta * std::cos(phi), -cos_theta * std::sin(phi), sin_theta};
   const auto ref2 = cross_prod(ref1, dir);
   return {ref1, ref2};
 }
@@ -262,8 +274,11 @@ DEVICE_FUNC constexpr void set_pkt_restframe_from_cmf(Packet& pkt) {
   return elec_cmf;
 }
 
-// Transform a direction and Stokes Parameters from RF to CMF
-constexpr auto frame_transform(const Vec3d& n_rf, const double q0, const double u0, const Vec3d& v)
+// Transform a direction and Stokes Parameters from RF to CMF.
+// meridian_cmf gives the output Stokes frame when the caller knows it exactly. Otherwise meridian() of the output
+// direction gives it.
+constexpr auto frame_transform(const Vec3d& n_rf, const double q0, const double u0, const Vec3d& v,
+                               const std::optional<std::tuple<Vec3d, Vec3d>>& meridian_cmf = std::nullopt)
     -> std::tuple<Vec3d, double, double> {
   // Meridian frame in the RF
   const auto [ref1_rf, ref2_rf] = meridian(n_rf);
@@ -296,7 +311,7 @@ constexpr auto frame_transform(const Vec3d& n_rf, const double q0, const double 
   const auto elec_cmf = lorentz(elec_rf, n_rf, v);
 
   // Meridian frame in the CMF
-  const auto [ref1_cmf, ref2_cmf] = meridian(n_cmf);
+  const auto [ref1_cmf, ref2_cmf] = meridian_cmf.has_value() ? *meridian_cmf : meridian(n_cmf);
 
   // Projection of E onto ref1 and ref2
   const double cosine_elec_ref1 = dot(elec_cmf, ref1_cmf);
@@ -317,8 +332,10 @@ constexpr auto frame_transform(const Vec3d& n_rf, const double q0, const double 
 // Compute the new Stokes Parameters after scattering and transform them back to the RF.
 // Return a tuple of the new direction in the RF, the new q and u in the RF and the scattering phase-function
 // probability pn
+// meridian_rf gives the RF Stokes frame when the caller knows it exactly.
 constexpr auto scatter_polarisation_to_rf(const Vec3d& old_dir_cmf, const Vec3d& new_dir_cmf, const double q_i_cmf,
-                                          const double u_i_cmf, const Vec3d& vel_vec)
+                                          const double u_i_cmf, const Vec3d& vel_vec,
+                                          const std::optional<std::tuple<Vec3d, Vec3d>>& meridian_rf = std::nullopt)
     -> std::tuple<Vec3d, double, double, double> {
   const auto [ref1_olddir, ref2_olddir] = meridian(old_dir_cmf);
 
@@ -356,7 +373,7 @@ constexpr auto scatter_polarisation_to_rf(const Vec3d& old_dir_cmf, const Vec3d&
   const double u_cmf = (-q_new * sin2i2) + (u_new * cos2i2);
 
   const auto [new_dir_rf, q_rf, u_rf] =
-      frame_transform(new_dir_cmf, q_cmf, u_cmf, Vec3d{-vel_vec[0], -vel_vec[1], -vel_vec[2]});
+      frame_transform(new_dir_cmf, q_cmf, u_cmf, Vec3d{-vel_vec[0], -vel_vec[1], -vel_vec[2]}, meridian_rf);
 
   const double pn = 3. / (16. * PI) * (1. + musquared + ((musquared - 1.) * q_old));
   return {new_dir_rf, q_rf, u_rf, pn};

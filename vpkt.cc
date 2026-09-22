@@ -236,7 +236,11 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
     // Need to rotate Stokes Parameters in the scattering plane
 
     const auto obs_cmf = angle_ab(obsdir, vel_vec);
-    std::tie(std::ignore, q_rf, u_rf, pn) = scatter_polarisation_to_rf(old_dir_cmf, obs_cmf, q_i_cmf, u_i_cmf, vel_vec);
+    // The RF direction after the round trip through the CMF has rounding errors. At a pole, meridian() of that
+    // direction has a random orientation, so use the exact frame of the observer.
+    std::tie(std::ignore, q_rf, u_rf, pn) =
+        scatter_polarisation_to_rf(old_dir_cmf, obs_cmf, q_i_cmf, u_i_cmf, vel_vec,
+                                   meridian_of_theta_phi(obsdirs_costheta[obsdirindex], obsdirs_phi[obsdirindex]));
 
   } else {
     assert_testmodeonly(type_before_rpkt == TYPE_KPKT || type_before_rpkt == TYPE_MA);
@@ -736,11 +740,6 @@ void read_vpktparameterfile() {
 
     if (fabs(obsdirs_costheta[i]) > 1) {
       fatal_crash("vpkt.txt observer direction {} has costheta {:g}, which is outside [-1, 1]", i, obsdirs_costheta[i]);
-    }
-    if (obsdirs_costheta[i] == 1) {
-      obsdirs_costheta[i] = 0.9999;
-    } else if (obsdirs_costheta[i] == -1) {
-      obsdirs_costheta[i] = -0.9999;
     }
   }
 
