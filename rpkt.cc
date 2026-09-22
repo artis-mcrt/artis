@@ -47,6 +47,16 @@ namespace {
 // cumulative integral over the bins of (line plus free-free kappa) times the Planck function, per non-empty cell
 MPI_shared_array<double> expansionopacity_planck_cumulative{};
 
+// The weight of a line with the Sobolev optical depth tau_line in the opacity of its wavelength bin,
+// kappa = sum of (lambda / delta_lambda) * weight / (c t rho). The expansion opacity uses 1 - exp(-tau)
+// (Eastman & Pinto 1993, ApJ, 412, 731-751, doi:10.1086/172957), and the line-binned opacity uses min(1, tau).
+[[nodiscard]] DEVICE_FUNC auto get_binned_opacity_line_weight(const double tau_line) -> double {
+  if constexpr (USE_LINE_BINNED_OPACITY) {
+    return std::min(1., tau_line);
+  }
+  return -std::expm1(-tau_line);
+}
+
 // Select a line of an expansion opacity bin with its share of the bin opacity as the probability. The shares are the
 // terms of the line sum in calculate_expansion_opacities().
 DEVICE_FUNC auto sample_expansion_opacity_line(const int nonemptymgi, const ptrdiff_t binindex, rngstate_type& rngstate)
@@ -93,7 +103,7 @@ DEVICE_FUNC auto sample_expansion_opacity_line(const int nonemptymgi, const ptrd
         std::max(((linelist.B_lu[lineindex] * n_l) - (linelist.B_ul[lineindex] * n_u)) * HCLIGHTOVERFOURPI * t_mid, 0.);
     if (tau_line > 0.) {
       const auto linelambda = 1e8 * CLIGHT / linelist.nu[lineindex];
-      linesum += (linelambda / expopac_deltalambda) * -std::expm1(-tau_line);
+      linesum += (linelambda / expopac_deltalambda) * get_binned_opacity_line_weight(tau_line);
       lineindex_lastabsorbing = lineindex;
       if (linesum > linesum_target) {
         return lineindex;
@@ -1131,7 +1141,7 @@ void calculate_expansion_opacities(const int nonemptymgi) {
                        HCLIGHTOVERFOURPI * t_mid,
                    0.);
       const auto linelambda = 1e8 * CLIGHT / globals::linelist.nu[lineindex];
-      bin_linesum += (linelambda / expopac_deltalambda) * -std::expm1(-tau_line);
+      bin_linesum += (linelambda / expopac_deltalambda) * get_binned_opacity_line_weight(tau_line);
       lineindex++;
     }
     // opacity in units of [cm^2/g]

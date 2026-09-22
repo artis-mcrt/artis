@@ -339,6 +339,11 @@ constexpr bool RPKT_USE_EXPANSION_OPACITIES;
 // Use expansion opacities instead of line-by-line opacities for the virtual packets.
 constexpr bool VPKT_USE_EXPANSION_OPACITIES;
 
+// Use the line-binned opacity in place of the expansion opacity in the wavelength bins of
+// RPKT_USE_EXPANSION_OPACITIES, VPKT_USE_EXPANSION_OPACITIES, and RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY. A line
+// with the Sobolev optical depth tau then adds min(1, tau) to the sum of its bin, in place of 1 - exp(-tau).
+constexpr bool USE_LINE_BINNED_OPACITY;
+
 // Replace the macroatom with a thermalisation probability P for each bound-bound absorption, and a scattering
 // in the absorbing line with probability 1 - P. Every k-packet in a cell that is not thick then emits a blackbody
 // spectrum weighted with the sum of the expansion opacity and the free-free opacity. By Kirchhoff's law, the
