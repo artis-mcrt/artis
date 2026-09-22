@@ -358,55 +358,6 @@ auto thomson_angle(rngstate_type& rngstate) -> double {
   return mu;
 }
 
-// scattering a direction through angle theta.
-[[nodiscard]] auto scatter_dir(const Vec3d& dir_in, const double cos_theta, rngstate_type& rngstate) -> Vec3d {
-  // begin with setting the direction in coordinates where original direction is parallel to z-hat.
-
-  assert_testmodeonly(std::fabs(vec_len(dir_in) - 1.) < 1e-10);  // dir_in must be a unit vector
-
-  const double phi = rng_uniform(rngstate) * 2 * PI;
-
-  const double sin_theta_sq = 1. - pow2(cos_theta);
-  const double sin_theta = std::sqrt(sin_theta_sq);
-  const double zprime = cos_theta;
-  const double xprime = sin_theta * cos(phi);
-  const double yprime = sin_theta * sin(phi);
-
-  // When dir_in is (anti)parallel to the z-axis the rotation below is singular (norm1 -> inf, giving
-  // 0*inf = NaN). Handle it directly: the scattering frame's z-axis is dir_in, so just (anti)align the
-  // result along z (matching the pole handling in electron_scatter_rpkt).
-  if (std::fabs(dir_in[2]) > 0.999999999) {
-    const auto dir_out = Vec3d{xprime, yprime, (dir_in[2] > 0) ? zprime : -zprime};
-    assert_testmodeonly(std::fabs(vec_len(dir_out) - 1.) < 1e-10);
-    return dir_out;
-  }
-
-  // Now need to derotate the coordinates back to real x,y,z. Rotation matrix is determined by dir_in.
-
-  const double norm1 = 1. / std::sqrt(pow2(dir_in[0]) + pow2(dir_in[1]));
-  const double norm2 = 1. / vec_len(dir_in);
-
-  const double r11 = dir_in[1] * norm1;
-  const double r12 = -dir_in[0] * norm1;
-  const double r13 = 0.;
-  const double r21 = dir_in[0] * dir_in[2] * norm1 * norm2;
-  const double r22 = dir_in[1] * dir_in[2] * norm1 * norm2;
-  const double r23 = -norm2 / norm1;
-  const double r31 = dir_in[0] * norm2;
-  const double r32 = dir_in[1] * norm2;
-  const double r33 = dir_in[2] * norm2;
-
-  const auto dir_out = Vec3d{
-      (r11 * xprime) + (r21 * yprime) + (r31 * zprime),
-      (r12 * xprime) + (r22 * yprime) + (r32 * zprime),
-      (r13 * xprime) + (r23 * yprime) + (r33 * zprime),
-  };
-
-  assert_testmodeonly(std::fabs(vec_len(dir_out) - 1.) < 1e-10);
-
-  return dir_out;
-}
-
 // handle physical Compton scattering event
 void compton_scatter(Packet& pkt) {
   const double xx = H * pkt.nu_cmf / ME / CLIGHT / CLIGHT;
@@ -922,6 +873,59 @@ void guttman_thermalisation(Packet& pkt) {
 }
 
 }  // anonymous namespace
+
+// Rotate the incoming direction through the selected angle.
+[[nodiscard]] auto scatter_dir(const Vec3d& dir_in, const double cos_theta, rngstate_type& rngstate) -> Vec3d {
+  // begin with setting the direction in coordinates where original direction is parallel to z-hat.
+
+  assert_testmodeonly(std::fabs(vec_len(dir_in) - 1.) < 1e-10);  // dir_in must be a unit vector
+
+  const double phi = rng_uniform(rngstate) * 2 * PI;
+
+  const double sin_theta_sq = 1. - pow2(cos_theta);
+  const double sin_theta = std::sqrt(sin_theta_sq);
+  const double zprime = cos_theta;
+  const double xprime = sin_theta * cos(phi);
+  const double yprime = sin_theta * sin(phi);
+
+  // Near a pole, use a transverse axis with a finite norm. Keep the actual incoming direction.
+  if (std::fabs(dir_in[2]) > 0.999999999) {
+    const auto axis_x = vec_scale(Vec3d{dir_in[2], 0., -dir_in[0]}, 1. / std::hypot(dir_in[0], dir_in[2]));
+    const auto axis_y = cross_prod(dir_in, axis_x);
+    const auto dir_out = Vec3d{
+        (axis_x[0] * xprime) + (axis_y[0] * yprime) + (dir_in[0] * zprime),
+        (axis_x[1] * xprime) + (axis_y[1] * yprime) + (dir_in[1] * zprime),
+        (axis_x[2] * xprime) + (axis_y[2] * yprime) + (dir_in[2] * zprime),
+    };
+    assert_testmodeonly(std::fabs(vec_len(dir_out) - 1.) < 1e-10);
+    return dir_out;
+  }
+
+  // Now need to derotate the coordinates back to real x,y,z. Rotation matrix is determined by dir_in.
+
+  const double norm1 = 1. / std::sqrt(pow2(dir_in[0]) + pow2(dir_in[1]));
+  const double norm2 = 1. / vec_len(dir_in);
+
+  const double r11 = dir_in[1] * norm1;
+  const double r12 = -dir_in[0] * norm1;
+  const double r13 = 0.;
+  const double r21 = dir_in[0] * dir_in[2] * norm1 * norm2;
+  const double r22 = dir_in[1] * dir_in[2] * norm1 * norm2;
+  const double r23 = -norm2 / norm1;
+  const double r31 = dir_in[0] * norm2;
+  const double r32 = dir_in[1] * norm2;
+  const double r33 = dir_in[2] * norm2;
+
+  const auto dir_out = Vec3d{
+      (r11 * xprime) + (r21 * yprime) + (r31 * zprime),
+      (r12 * xprime) + (r22 * yprime) + (r32 * zprime),
+      (r13 * xprime) + (r23 * yprime) + (r33 * zprime),
+  };
+
+  assert_testmodeonly(std::fabs(vec_len(dir_out) - 1.) < 1e-10);
+
+  return dir_out;
+}
 
 void init_gamma_data() {
   init_gamma_linelist();
