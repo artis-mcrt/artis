@@ -500,6 +500,10 @@ void get_element_superlevelpartfuncs(const int nonemptymgi, const int element,
   assert_testmodeonly(nions_used >= 0);
   assert_testmodeonly(nions_used <= get_nions(element));
   assert_testmodeonly(first_ion_used >= 0);
+  if (nions_used == 0) {
+    assert_testmodeonly(first_ion_used <= get_nions(element));
+    return 0;
+  }
   assert_testmodeonly(first_ion_used < get_nions(element));
   assert_testmodeonly((first_ion_used + nions_used - 1) < get_nions(element));
   int nlte_dimension = 0;

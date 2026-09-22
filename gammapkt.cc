@@ -358,7 +358,7 @@ auto thomson_angle(rngstate_type& rngstate) -> double {
   return mu;
 }
 
-// scattering a direction through angle theta.
+// Rotate the incoming direction through the selected angle.
 [[nodiscard]] auto scatter_dir(const Vec3d& dir_in, const double cos_theta, rngstate_type& rngstate) -> Vec3d {
   // begin with setting the direction in coordinates where original direction is parallel to z-hat.
 
@@ -372,10 +372,10 @@ auto thomson_angle(rngstate_type& rngstate) -> double {
   const double xprime = sin_theta * cos(phi);
   const double yprime = sin_theta * sin(phi);
 
-  // When dir_in is (anti)parallel to the z-axis the rotation below is singular (norm1 -> inf, giving
-  // 0*inf = NaN). Handle it directly: the scattering frame's z-axis is dir_in, so just (anti)align the
-  // result along z (matching the pole handling in electron_scatter_rpkt).
-  if (std::fabs(dir_in[2]) > 0.999999999) {
+  const double dir_in_xylen = std::sqrt(pow2(dir_in[0]) + pow2(dir_in[1]));
+
+  // On the z axis, the scattering frame is already aligned
+  if (dir_in_xylen == 0.) {
     const auto dir_out = Vec3d{xprime, yprime, (dir_in[2] > 0) ? zprime : -zprime};
     assert_testmodeonly(std::fabs(vec_len(dir_out) - 1.) < 1e-10);
     return dir_out;
@@ -383,7 +383,7 @@ auto thomson_angle(rngstate_type& rngstate) -> double {
 
   // Now need to derotate the coordinates back to real x,y,z. Rotation matrix is determined by dir_in.
 
-  const double norm1 = 1. / std::sqrt(pow2(dir_in[0]) + pow2(dir_in[1]));
+  const double norm1 = 1. / dir_in_xylen;
   const double norm2 = 1. / vec_len(dir_in);
 
   const double r11 = dir_in[1] * norm1;
