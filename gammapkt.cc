@@ -372,22 +372,18 @@ auto thomson_angle(rngstate_type& rngstate) -> double {
   const double xprime = sin_theta * cos(phi);
   const double yprime = sin_theta * sin(phi);
 
-  // Near a pole, use a transverse axis with a finite norm. Keep the actual incoming direction.
-  if (std::fabs(dir_in[2]) > 0.999999999) {
-    const auto axis_x = vec_scale(Vec3d{dir_in[2], 0., -dir_in[0]}, 1. / std::hypot(dir_in[0], dir_in[2]));
-    const auto axis_y = cross_prod(dir_in, axis_x);
-    const auto dir_out = Vec3d{
-        (axis_x[0] * xprime) + (axis_y[0] * yprime) + (dir_in[0] * zprime),
-        (axis_x[1] * xprime) + (axis_y[1] * yprime) + (dir_in[1] * zprime),
-        (axis_x[2] * xprime) + (axis_y[2] * yprime) + (dir_in[2] * zprime),
-    };
+  const double dir_in_xylen = std::sqrt(pow2(dir_in[0]) + pow2(dir_in[1]));
+
+  // On the z axis, the scattering frame is already aligned
+  if (dir_in_xylen == 0.) {
+    const auto dir_out = Vec3d{xprime, yprime, (dir_in[2] > 0) ? zprime : -zprime};
     assert_testmodeonly(std::fabs(vec_len(dir_out) - 1.) < 1e-10);
     return dir_out;
   }
 
   // Now need to derotate the coordinates back to real x,y,z. Rotation matrix is determined by dir_in.
 
-  const double norm1 = 1. / std::sqrt(pow2(dir_in[0]) + pow2(dir_in[1]));
+  const double norm1 = 1. / dir_in_xylen;
   const double norm2 = 1. / vec_len(dir_in);
 
   const double r11 = dir_in[1] * norm1;
