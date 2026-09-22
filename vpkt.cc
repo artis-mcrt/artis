@@ -65,8 +65,8 @@ std::array<float, VSPEC_NUBINS> delta_freq_vspec;
 
 int nobsdirections = 0;  // Number of observer directions
 int nspectraperobsdir = 0;  // Number of virtual packet spectra per observer direction (total + elements switched off)
-std::vector<double> obsdirs_costheta;
-std::vector<double> obsdirs_phi;
+std::vector<Vec3d> obsdirs;
+std::vector<std::tuple<Vec3d, Vec3d>> obsdirs_meridian;  // exact Stokes frame of each observer
 double vspec_timemin_input;
 double vspec_timemax_input;
 int nwavelengthranges = 0;  // Number of wavelength ranges
@@ -239,8 +239,7 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
     // The RF direction after the round trip through the CMF has rounding errors. At a pole, meridian() of that
     // direction has a random orientation, so use the exact frame of the observer.
     std::tie(std::ignore, q_rf, u_rf, pn) =
-        scatter_polarisation_to_rf(old_dir_cmf, obs_cmf, q_i_cmf, u_i_cmf, vel_vec,
-                                   meridian_of_theta_phi(obsdirs_costheta[obsdirindex], obsdirs_phi[obsdirindex]));
+        scatter_polarisation_to_rf(old_dir_cmf, obs_cmf, q_i_cmf, u_i_cmf, vel_vec, obsdirs_meridian[obsdirindex]);
 
   } else {
     assert_testmodeonly(type_before_rpkt == TYPE_KPKT || type_before_rpkt == TYPE_MA);
@@ -734,7 +733,7 @@ void read_vpktparameterfile() {
   printlnlog("vpkt.txt: nobsdirections {}", nobsdirections);
 
   // cos(theta) of each observer direction
-  obsdirs_costheta.resize(nobsdirections);
+  std::vector<double> obsdirs_costheta(nobsdirections);
   for (int i = 0; i < nobsdirections; i++) {
     assert_always(fscanf(input_file, "%lg", &obsdirs_costheta[i]) == 1);
 
@@ -744,16 +743,20 @@ void read_vpktparameterfile() {
   }
 
   // phi to the observer (degrees). A list in the case of many observers
-  obsdirs_phi.resize(nobsdirections);
+  obsdirs.resize(nobsdirections);
+  obsdirs_meridian.resize(nobsdirections);
   for (int i = 0; i < nobsdirections; i++) {
     double phi_degrees = 0.;
     assert_always(fscanf(input_file, "%lg", &phi_degrees) == 1);
-    obsdirs_phi[i] = phi_degrees * PI / 180.;
+    const double phi = phi_degrees * PI / 180.;
+    const double sin_theta = std::sqrt(1 - pow2(obsdirs_costheta[i]));
+    obsdirs[i] = Vec3d{sin_theta * std::cos(phi), sin_theta * std::sin(phi), obsdirs_costheta[i]};
+    obsdirs_meridian[i] = meridian_of_theta_phi(obsdirs_costheta[i], phi);
     const double theta_degrees = std::acos(obsdirs_costheta[i]) / PI * 180.;
 
     printlnlog(
         "vpkt.txt:   direction {}: theta {:.1f} [degrees] (costheta {:g}), phi {:.1f} [degrees] ({:g} [radians])", i,
-        theta_degrees, obsdirs_costheta[i], phi_degrees, obsdirs_phi[i]);
+        theta_degrees, obsdirs_costheta[i], phi_degrees, phi);
   }
 
   // Nspectra opacity choices (i.e. Nspectra spectra for each observer)
@@ -1023,11 +1026,7 @@ auto trace_vpkts(const Packet& pkt, const enum packet_type type_before_rpkt) -> 
   for (int obsdirindex = 0; obsdirindex < nobsdirections; obsdirindex++) {
     // loop over different observer directions
 
-    const auto obsdir = Vec3d{
-        sqrt(1 - (obsdirs_costheta[obsdirindex] * obsdirs_costheta[obsdirindex])) * cos(obsdirs_phi[obsdirindex]),
-        sqrt(1 - (obsdirs_costheta[obsdirindex] * obsdirs_costheta[obsdirindex])) * sin(obsdirs_phi[obsdirindex]),
-        obsdirs_costheta[obsdirindex],
-    };
+    const auto& obsdir = obsdirs[obsdirindex];
 
     const double t_arrive = pkt.prop_time - (dot(pkt.pos, obsdir) / CLIGHT_PROP);
 
