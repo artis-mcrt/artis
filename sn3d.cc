@@ -849,8 +849,8 @@ auto do_timestep(const int nts, const int titer, std::vector<Packet>& packets, c
                  globals::my_rank, vpkt::nvpkt_created,
                  vpkt::nvpkt_esc_from_rpkt + vpkt::nvpkt_esc_from_kpkt + vpkt::nvpkt_esc_from_macroatom);
       printlnlog(
-          "{} virtual packets came from an electron scattering event, {} from a kpkt deactivation and {} from a "
-          "macroatom deactivation.",
+          "{} virtual packets came from an electron scattering event, {} from a thermal emission and {} from a "
+          "macro-atom deactivation or a line scattering.",
           vpkt::nvpkt_esc_from_rpkt, vpkt::nvpkt_esc_from_kpkt, vpkt::nvpkt_esc_from_macroatom);
 
       vpkt::nvpkt_created = 0;

@@ -221,9 +221,9 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
 
   const auto vel_vec = get_velocity(rpkt.pos, t_start);
 
-  // Scattering event: dipole function
+  // Electron scattering event: dipole function
 
-  // MACROATOM and KPKT: isotropic emission
+  // MACROATOM, KPKT, and line scattering: isotropic in the comoving frame
   double pn{1 / (4 * PI)};
   // normalised Stokes parameters in the rest frame (RF)
   double q_rf{0.};

@@ -588,7 +588,7 @@ auto do_rpkt_step(Packet& pkt, const double t2, ContinuumOpacity& chi_rpkt_cont)
       }
       emit_rpkt(pkt);
 
-      // both emissions are isotropic in the comoving frame
+      // the thermal re-emission and the line scattering are isotropic in the comoving frame, not a dipole
       if constexpr (VPKT_ON) {
         vpkt::trace_vpkts(pkt, thermalise ? TYPE_KPKT : TYPE_MA);
       }
