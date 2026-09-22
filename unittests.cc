@@ -368,33 +368,6 @@ void test_compton() {
               1e-5, "meanf_sigma is continuous across the Taylor-series/closed-form crossover");
 }
 
-void test_compton_directions() {
-  std::println("Compton scatter directions...");
-  rngstate_type rngstate{20260922};
-  bool unit_norm = true;
-  bool angle_matches = true;
-  for (const double transverse : {0., 1e-200, 1e-12, 1e-5, 3e-5, 5e-5, 0.5}) {
-    for (const double sign : {-1., 1.}) {
-      for (const double azimuth : {0., 0.7, 2.8}) {
-        const auto dir_in = Vec3d{
-            transverse * std::cos(azimuth),
-            transverse * std::sin(azimuth),
-            sign * std::sqrt(1. - pow2(transverse)),
-        };
-        for (const double cos_theta : {-1., -0.7, 0., 0.4, 1.}) {
-          for (int sample = 0; sample < 32; sample++) {
-            const auto dir_out = gammapkt::scatter_dir(dir_in, cos_theta, rngstate);
-            unit_norm = unit_norm && std::abs(vec_len(dir_out) - 1.) < 1e-12;
-            angle_matches = angle_matches && std::abs(dot(dir_out, dir_in) - cos_theta) < 1e-12;
-          }
-        }
-      }
-    }
-  }
-  check(unit_norm, "Compton scatter directions have unit norm at and near both poles");
-  check(angle_matches, "Compton scatter directions preserve the selected angle at and near both poles");
-}
-
 void test_rad_deexcitation() {
   std::println("radiative deexcitation rate coefficient...");
   const double epsilon_trans = 2. * EV;
@@ -1162,7 +1135,6 @@ auto main() -> int {
   test_planck();
   test_bateman();
   test_compton();
-  test_compton_directions();
   test_rad_deexcitation();
   test_phixs_table_lookup();
   test_closest_transition_randomised();

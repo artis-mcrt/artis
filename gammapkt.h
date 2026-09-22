@@ -10,11 +10,9 @@
 #include "mpi_logging.h"
 #include "packet.h"
 #include "random.h"
-#include "vectors.h"
 
 namespace gammapkt {
 void init_gamma_data();
-[[nodiscard]] auto scatter_dir(const Vec3d& dir_in, double cos_theta, rngstate_type& rngstate) -> Vec3d;
 DEVICE_FUNC void pellet_gamma_decay(Packet& pkt);
 DEVICE_FUNC void do_gamma(Packet& pkt, int nts, double t2);
 
