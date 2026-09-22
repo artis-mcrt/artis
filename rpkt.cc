@@ -49,9 +49,11 @@ MPI_shared_array<double> expansionopacity_planck_cumulative{};
 
 // The weight of a line with the Sobolev optical depth tau_line in the opacity of its wavelength bin,
 // kappa = sum of (lambda / delta_lambda) * weight / (c t rho). The expansion opacity uses 1 - exp(-tau)
-// (Eastman & Pinto 1993, ApJ, 412, 731-751, doi:10.1086/172957), and the line-binned opacity uses min(1, tau).
+// (Eastman & Pinto 1993, ApJ, 412, 731-751, doi:10.1086/172957), and the line-binned approximation uses min(1, tau).
+// The line-binned opacity of Fontes, Fryer, Hungerford, Wollaeger & Korobkin (2020), MNRAS, 493, 4143-4171,
+// doi:10.1093/mnras/staa485, sums tau with no limit.
 [[nodiscard]] DEVICE_FUNC auto get_binned_opacity_line_weight(const double tau_line) -> double {
-  if constexpr (USE_LINE_BINNED_OPACITY) {
+  if constexpr (EXPANSION_OPACITY_USE_LINE_BINNED_APPROX) {
     return std::min(1., tau_line);
   }
   return -std::expm1(-tau_line);
