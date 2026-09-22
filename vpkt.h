@@ -35,8 +35,8 @@ constexpr int VSPEC_TIMEBINS = 5;
 // per-rank counts of virtual packets created and escaped in the current timestep
 ALIGNAS_AVOID_FALSE_SHARING inline int nvpkt_created{0};
 ALIGNAS_AVOID_FALSE_SHARING inline int nvpkt_esc_from_rpkt{0};  // electron scattering event
-ALIGNAS_AVOID_FALSE_SHARING inline int nvpkt_esc_from_kpkt{0};  // kpkt deactivation
-ALIGNAS_AVOID_FALSE_SHARING inline int nvpkt_esc_from_macroatom{0};  // macroatom deactivation
+ALIGNAS_AVOID_FALSE_SHARING inline int nvpkt_esc_from_kpkt{0};  // thermal emission
+ALIGNAS_AVOID_FALSE_SHARING inline int nvpkt_esc_from_macroatom{0};  // macro-atom deactivation or line scattering
 
 inline double optical_depth_is_thick_vpkt;
 }  // namespace vpkt

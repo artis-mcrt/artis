@@ -560,16 +560,17 @@ auto do_rpkt_step(Packet& pkt, const double t2, ContinuumOpacity& chi_rpkt_cont)
 
       do_macroatom(pkt, pktmastate);
     } else {
-      // Probability based thermalisation (i.e. redistribution of the packet frequency) or scattering
-      if (RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.value() >= 1. ||
-          rng_uniform(get_rngstate(pkt)) < RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.value()) {
-        // Thermal redistribution of frequency
+      // with expansion opacities, the event comes from a binned opacity and pktmastate holds no
+      // activating line, so the absorption type gets the sentinel for a binned absorption
+      pkt.absorptiontype =
+          RPKT_USE_EXPANSION_OPACITIES ? ABSTYPE_BOUNDBOUND_EXPANSIONOPACITY : pktmastate.activatingline;
+      pkt.absorptionfreq = pkt.nu_rf;
 
-        // with expansion opacities, the event comes from a binned opacity and pktmastate holds no
-        // activating line, so the absorption type gets the sentinel for a binned absorption
-        pkt.absorptiontype =
-            RPKT_USE_EXPANSION_OPACITIES ? ABSTYPE_BOUNDBOUND_EXPANSIONOPACITY : pktmastate.activatingline;
-        pkt.absorptionfreq = pkt.nu_rf;
+      // Probability based thermalisation (i.e. redistribution of the packet frequency) or scattering
+      const bool thermalise = RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.value() >= 1. ||
+                              rng_uniform(get_rngstate(pkt)) < RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.value();
+      if (thermalise) {
+        // Thermal redistribution of frequency
         pkt.nu_cmf = sample_planck_times_expansion_opacity(nonemptymgi, get_rngstate(pkt));
         pkt.next_trans = -1;
         // a thermal re-emission at a new frequency, so the packet no longer traces back to the previous emission
@@ -586,6 +587,11 @@ auto do_rpkt_step(Packet& pkt, const double t2, ContinuumOpacity& chi_rpkt_cont)
         stats::increment(stats::Counter::ELECTRON_SCATTERINGS);
       }
       emit_rpkt(pkt);
+
+      // the thermal re-emission and the line scattering are isotropic in the comoving frame, not a dipole
+      if constexpr (VPKT_ON) {
+        vpkt::trace_vpkts(pkt, thermalise ? TYPE_KPKT : TYPE_MA);
+      }
     }
 
     return (pkt.type == TYPE_RPKT);

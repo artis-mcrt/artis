@@ -50,7 +50,8 @@ enum packet_type : int {
   TYPE_KPKT = 12,
 
   // Never stored in Packet::type: do_macroatom() runs to deactivation within one call. Used only as a
-  // provenance tag to vpkt::trace_vpkts(), marking an emission as a macro-atom deactivation.
+  // provenance tag to vpkt::trace_vpkts(), marking an emission as a macro-atom deactivation or, with
+  // RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY, as a line scattering.
   TYPE_MA = 13,
 
   TYPE_NTLEPTON_DEPOSITED = 20,  // awaiting partition into heating/ionisation/excitation by nonthermal.cc
