@@ -1074,8 +1074,8 @@ auto main(int argc, char* argv[]) -> int {
   // packet_init() and Packet::number hold the packet index of a rank in an int
   assert_always(npkts_thisrank <= std::numeric_limits<int>::max());
 
-  printlnlog("Simulation propagates {} packets on this rank (total NUM_PACKETS {} with nprocs {})", npkts_thisrank,
-             NUM_PACKETS, globals::nprocs);
+  printlnlog("Simulation propagates {} packets on this rank (total {:g} with nprocs {})", npkts_thisrank,
+             static_cast<double>(NUM_PACKETS), globals::nprocs);
 
   printlnlog("[info] mem_usage: packets occupy {:.3f} MB", npkts_thisrank * sizeof(Packet) / 1024. / 1024.);
 
