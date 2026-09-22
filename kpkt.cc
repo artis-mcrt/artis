@@ -472,6 +472,10 @@ DEVICE_FUNC void do_kpkt_blackbody(Packet& pkt) {
   pkt.trueem_pos = pkt.em_pos;
   pkt.trueem_time = pkt.em_time;
   pkt.nscatterings = 0;
+
+  if constexpr (VPKT_ON) {
+    vpkt::trace_vpkts(pkt, TYPE_KPKT);
+  }
 }
 
 // handle a k-packet (kinetic energy of the free electrons)

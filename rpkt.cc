@@ -561,8 +561,9 @@ auto do_rpkt_step(Packet& pkt, const double t2, ContinuumOpacity& chi_rpkt_cont)
       do_macroatom(pkt, pktmastate);
     } else {
       // Probability based thermalisation (i.e. redistribution of the packet frequency) or scattering
-      if (RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.value() >= 1. ||
-          rng_uniform(get_rngstate(pkt)) < RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.value()) {
+      const bool thermalise = RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.value() >= 1. ||
+                              rng_uniform(get_rngstate(pkt)) < RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.value();
+      if (thermalise) {
         // Thermal redistribution of frequency
 
         // with expansion opacities, the event comes from a binned opacity and pktmastate holds no
@@ -586,6 +587,11 @@ auto do_rpkt_step(Packet& pkt, const double t2, ContinuumOpacity& chi_rpkt_cont)
         stats::increment(stats::Counter::ELECTRON_SCATTERINGS);
       }
       emit_rpkt(pkt);
+
+      // both emissions are isotropic in the comoving frame
+      if constexpr (VPKT_ON) {
+        vpkt::trace_vpkts(pkt, thermalise ? TYPE_KPKT : TYPE_MA);
+      }
     }
 
     return (pkt.type == TYPE_RPKT);
