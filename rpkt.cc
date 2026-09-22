@@ -302,27 +302,18 @@ void electron_scatter_rpkt(Packet& pkt) {
     phisc = 2 * PI * rng_uniform(get_rngstate(pkt));
   }
 
-  Vec3d new_dir_cmf{};
-
   const double cos_tsc = M;  // M is cos(tsc) by construction
   const double sin_tsc = std::sqrt(1. - pow2(M));
 
-  // phisc starts at the meridian axis ref1 of the Stokes parameters, with the same pole test as meridian().
-  const double sin_polar = std::sqrt(pow2(old_dir_cmf[0]) + pow2(old_dir_cmf[1]));
-  if (sin_polar > 0.) {
-    const double common_factor = sin_tsc / sin_polar;
-    const double cos_phisc = cos(phisc);
-    const double sin_phisc = sin(phisc);
-    new_dir_cmf = {
-        (common_factor * ((old_dir_cmf[1] * sin_phisc) - (old_dir_cmf[0] * old_dir_cmf[2] * cos_phisc))) +
-            (old_dir_cmf[0] * cos_tsc),
-        (common_factor * ((-old_dir_cmf[0] * sin_phisc) - (old_dir_cmf[1] * old_dir_cmf[2] * cos_phisc))) +
-            (old_dir_cmf[1] * cos_tsc),
-        (sin_tsc * cos_phisc * sin_polar) + (old_dir_cmf[2] * cos_tsc),
-    };
-  } else {
-    new_dir_cmf = {sin_tsc * cos(phisc), sin_tsc * sin(phisc), (old_dir_cmf[2] > 0) ? cos_tsc : -cos_tsc};
-  }
+  // phisc starts at the meridian axis ref1 of the Stokes parameters
+  const auto [ref1, ref2] = meridian(old_dir_cmf);
+  const double cos_phisc = cos(phisc);
+  const double sin_phisc = sin(phisc);
+  const auto new_dir_cmf = Vec3d{
+      (cos_tsc * old_dir_cmf[0]) + (sin_tsc * ((cos_phisc * ref1[0]) - (sin_phisc * ref2[0]))),
+      (cos_tsc * old_dir_cmf[1]) + (sin_tsc * ((cos_phisc * ref1[1]) - (sin_phisc * ref2[1]))),
+      (cos_tsc * old_dir_cmf[2]) + (sin_tsc * ((cos_phisc * ref1[2]) - (sin_phisc * ref2[2]))),
+  };
 
   if constexpr (POL_ON) {
     // Need to rotate Stokes Parameters in the scattering plane
