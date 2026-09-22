@@ -321,7 +321,9 @@ void electron_scatter_rpkt(Packet& pkt) {
         (sin_tsc * cos_phisc * sin_polar) + (old_dir_cmf[2] * cos_tsc),
     };
   } else {
-    new_dir_cmf = {sin_tsc * cos(phisc), sin_tsc * sin(phisc), (old_dir_cmf[2] > 0) ? cos_tsc : -cos_tsc};
+    // meridian() gives ref1 = x-hat and ref2 = ref1 x dir = -pole_sign y-hat on the z axis
+    const double pole_sign = (old_dir_cmf[2] > 0) ? 1. : -1.;
+    new_dir_cmf = {sin_tsc * cos(phisc), pole_sign * sin_tsc * sin(phisc), pole_sign * cos_tsc};
   }
 
   if constexpr (POL_ON) {
