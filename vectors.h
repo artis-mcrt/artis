@@ -275,8 +275,7 @@ DEVICE_FUNC constexpr void set_pkt_restframe_from_cmf(Packet& pkt) {
 }
 
 // Transform a direction and Stokes Parameters from RF to CMF.
-// meridian_cmf gives the output Stokes frame when the caller knows it exactly. Otherwise meridian() of the output
-// direction gives it.
+// meridian_cmf is the exact output Stokes frame, if the caller knows it. The default is meridian(n_cmf).
 constexpr auto frame_transform(const Vec3d& n_rf, const double q0, const double u0, const Vec3d& v,
                                const std::optional<std::tuple<Vec3d, Vec3d>>& meridian_cmf = std::nullopt)
     -> std::tuple<Vec3d, double, double> {

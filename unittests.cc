@@ -270,9 +270,9 @@ void test_meridian() {
     for (const double phi : {0., 1., 4.}) {
       const auto [ref1_near, ref2_near] =
           meridian(std::get<0>(dir_and_meridian_of_theta_phi(pole * std::cos(1e-7), phi)));
-      const auto pole_frame = dir_and_meridian_of_theta_phi(pole, phi);
-      pole_limit_ok = pole_limit_ok && (vec_diff(ref1_near, std::get<1>(pole_frame)) < 1e-6) &&
-                      (vec_diff(ref2_near, std::get<2>(pole_frame)) < 1e-6);
+      [[maybe_unused]] const auto [dir_pole, ref1_pole, ref2_pole] = dir_and_meridian_of_theta_phi(pole, phi);
+      pole_limit_ok =
+          pole_limit_ok && (vec_diff(ref1_near, ref1_pole) < 1e-6) && (vec_diff(ref2_near, ref2_pole) < 1e-6);
     }
   }
   check(pole_limit_ok, "dir_and_meridian_of_theta_phi at a pole is the limit of meridian at the same phi");
