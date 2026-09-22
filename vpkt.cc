@@ -749,9 +749,9 @@ void read_vpktparameterfile() {
     double phi_degrees = 0.;
     assert_always(fscanf(input_file, "%lg", &phi_degrees) == 1);
     const double phi = phi_degrees * PI / 180.;
-    const double sin_theta = std::sqrt(1 - pow2(obsdirs_costheta[i]));
-    obsdirs[i] = Vec3d{sin_theta * std::cos(phi), sin_theta * std::sin(phi), obsdirs_costheta[i]};
-    obsdirs_meridian[i] = meridian_of_theta_phi(obsdirs_costheta[i], phi);
+    const auto [obsdir, ref1, ref2] = dir_and_meridian_of_theta_phi(obsdirs_costheta[i], phi);
+    obsdirs[i] = obsdir;
+    obsdirs_meridian[i] = {ref1, ref2};
     const double theta_degrees = std::acos(obsdirs_costheta[i]) / PI * 180.;
 
     printlnlog(

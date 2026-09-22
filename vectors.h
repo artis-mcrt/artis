@@ -231,15 +231,15 @@ DEVICE_FUNC constexpr void set_pkt_restframe_from_cmf(Packet& pkt) {
   return {ref1, ref2};
 }
 
-// Meridian frame axes of the direction (sin(theta) cos(phi), sin(theta) sin(phi), cos(theta)).
+// The direction (sin(theta) cos(phi), sin(theta) sin(phi), cos(theta)) and its meridian frame axes.
 // At a pole, the axes are the limit of meridian() at this phi.
-[[gnu::pure]] [[nodiscard]] constexpr auto meridian_of_theta_phi(const double cos_theta, const double phi)
-    -> std::tuple<Vec3d, Vec3d> {
+[[gnu::pure]] [[nodiscard]] constexpr auto dir_and_meridian_of_theta_phi(const double cos_theta, const double phi)
+    -> std::tuple<Vec3d, Vec3d, Vec3d> {
   const double sin_theta = std::sqrt(1. - pow2(cos_theta));
   const auto dir = Vec3d{sin_theta * std::cos(phi), sin_theta * std::sin(phi), cos_theta};
   const auto ref1 = Vec3d{-cos_theta * std::cos(phi), -cos_theta * std::sin(phi), sin_theta};
   const auto ref2 = cross_prod(ref1, dir);
-  return {ref1, ref2};
+  return {dir, ref1, ref2};
 }
 
 [[gnu::pure]] [[nodiscard]] constexpr auto lorentz(const Vec3d& elec_rf, const Vec3d& n_rf, const Vec3d& v) -> Vec3d {

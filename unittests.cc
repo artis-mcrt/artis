@@ -258,27 +258,24 @@ void test_meridian() {
   for (int trial = 0; trial < 100; trial++) {
     const double cos_theta = (2. * rng_uniform(rngstate)) - 1.;
     const double phi = rng_uniform(rngstate) * 2. * PI;
-    const double sin_theta = std::sqrt(1. - pow2(cos_theta));
-    const auto [ref1, ref2] = meridian(Vec3d{sin_theta * std::cos(phi), sin_theta * std::sin(phi), cos_theta});
-    const auto [ref1_angles, ref2_angles] = meridian_of_theta_phi(cos_theta, phi);
+    const auto [dir, ref1_angles, ref2_angles] = dir_and_meridian_of_theta_phi(cos_theta, phi);
+    const auto [ref1, ref2] = meridian(dir);
     theta_phi_matches =
         theta_phi_matches && (vec_diff(ref1, ref1_angles) < 1e-12) && (vec_diff(ref2, ref2_angles) < 1e-12);
   }
-  check(theta_phi_matches, "meridian_of_theta_phi agrees with meridian away from the poles");
+  check(theta_phi_matches, "dir_and_meridian_of_theta_phi agrees with meridian away from the poles");
 
   bool pole_limit_ok = true;
   for (const double pole : {-1., 1.}) {
     for (const double phi : {0., 1., 4.}) {
-      const double cos_theta_near = pole * std::cos(1e-7);
-      const double sin_theta_near = std::sin(1e-7);
       const auto [ref1_near, ref2_near] =
-          meridian(Vec3d{sin_theta_near * std::cos(phi), sin_theta_near * std::sin(phi), cos_theta_near});
-      const auto [ref1_pole, ref2_pole] = meridian_of_theta_phi(pole, phi);
-      pole_limit_ok =
-          pole_limit_ok && (vec_diff(ref1_near, ref1_pole) < 1e-6) && (vec_diff(ref2_near, ref2_pole) < 1e-6);
+          meridian(std::get<0>(dir_and_meridian_of_theta_phi(pole * std::cos(1e-7), phi)));
+      const auto pole_frame = dir_and_meridian_of_theta_phi(pole, phi);
+      pole_limit_ok = pole_limit_ok && (vec_diff(ref1_near, std::get<1>(pole_frame)) < 1e-6) &&
+                      (vec_diff(ref2_near, std::get<2>(pole_frame)) < 1e-6);
     }
   }
-  check(pole_limit_ok, "meridian_of_theta_phi at a pole is the limit of meridian at the same phi");
+  check(pole_limit_ok, "dir_and_meridian_of_theta_phi at a pole is the limit of meridian at the same phi");
 }
 
 void test_random_sampling() {
