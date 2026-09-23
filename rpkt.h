@@ -43,6 +43,11 @@ static_assert(get_expopac_bin_nu_lower(0) == get_expopac_bin_nu_upper(1));  // b
 static_assert(get_expopac_bin_nu_lower(0) < get_expopac_bin_nu_upper(0));
 static_assert(get_expopac_bin_nu_upper(expopac_nbins - 1) > get_expopac_bin_nu_lower(expopac_nbins - 1));
 
+// the options that need the binned line opacities of each cell. The thermalisation option stores only the Planck
+// cumulative of the bins; the expansionopacities array exists only with the two expansion opacity options.
+constexpr bool expopac_bins_on = RPKT_USE_EXPANSION_OPACITIES || VPKT_USE_EXPANSION_OPACITIES ||
+                                 RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.has_value();
+
 // kappa in cm^2/g for each bin of each non-empty cell
 inline MPI_shared_array<float> expansionopacities{};
 
@@ -136,7 +141,8 @@ auto calculate_chi_ffheat_nnionpart(int nonemptymgi) -> double;
 }
 
 // Get the correction of a binned expansion opacity for the path that sweeps the bin. The packet crosses
-// each line of the bin once, so the bin optical depth must equal the sum of (1 - exp(-tau_sobolev)).
+// each line of the bin once, so the bin optical depth must equal the sum of the line weights of
+// EXPANSION_OPACITY_METHOD.
 // calculate_expansion_opacities() assumes the path c * t * dnu / nu, which is the path that
 // get_linedistance() gives with the first-order Doppler shift. The factor is the ratio of that path to the
 // relativistic one, which is the Doppler factor times the Lorentz factor. Give the same time that the

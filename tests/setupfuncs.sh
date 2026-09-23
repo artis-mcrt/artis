@@ -7,7 +7,7 @@ ATOMICDATA_RELEASE=v2026.5.15
 
 getatomicdata() {
     if [ ! -f "$1" ]; then
-        curl -fL --retry 3 -O "https://github.com/artis-mcrt/artis/releases/download/${ATOMICDATA_RELEASE}/$1"
+        curl -fL --retry 3 -o "$1.part" "https://github.com/artis-mcrt/artis/releases/download/${ATOMICDATA_RELEASE}/$1" && mv "$1.part" "$1"
     fi
 }
 

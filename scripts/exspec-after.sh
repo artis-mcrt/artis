@@ -3,7 +3,7 @@
 # only change the run folder if sn3d finished cleanly after the last timestep of the model. A run that
 # stopped at an earlier timestep_finish needs its restart files to continue.
 if grep -qs "No need for restart" output_0-0.txt && grep -qs "sn3d finished" output_0-0.txt; then
-  rm -f packets_*.tmp gridsave_*.tmp vspecpol_*.tmp vpkt_grid_*.tmp
+  rm -f packets_*.tmp gridsave_*.tmp vspecpol_*.tmp vpkt_grid_*.tmp vpackets_*.tmp
 
   # join 3D direction files, if they exist
   python3 ./artis/scripts/mergeangleres.py

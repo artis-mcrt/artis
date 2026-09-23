@@ -165,9 +165,10 @@ auto get_nlte_vector_index(const int element, const int ion, const int level, co
   // the difference is that nlte vectors apply to a single element and include ground and autoionising states
   int offset_autoion = 0;
   for (int dion = first_ion_used; dion < ion; dion++) {
-    if (ion_has_superlevel(element, dion)) {
-      offset_autoion += get_nlevels_autoion(element, dion);
-    }
+    // the slots of each lower ion that allnltelevelsindexstart does not count (see get_element_nlte_dimension)
+    offset_autoion += ion_has_superlevel(element, dion)
+                          ? get_nlevels_autoion(element, dion)
+                          : get_nlevels(element, dion) - 1 - get_nlevels_excited_nlte(element, dion);
   }
   assert_testmodeonly(first_ion_used >= 0);
   assert_testmodeonly(first_ion_used < get_nions(element));

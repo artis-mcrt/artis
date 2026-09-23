@@ -652,6 +652,25 @@ void test_parse_next_token() {
   }
 }
 
+// seed64() gives a distinct generator state to each of the consecutive packet seeds of a GPU build
+void test_seed64_distinct_states() {
+  std::println("seed64 of consecutive seeds...");
+  constexpr std::uint64_t nseeds = 1U << 16U;
+  constexpr std::uint64_t firstseed = 1ULL << 40U;  // a seed above the 32-bit range
+  std::vector<std::uint64_t> first_outputs;
+  first_outputs.reserve(nseeds);
+  for (std::uint64_t seed = firstseed; seed < firstseed + nseeds; seed++) {
+    rngstate_type rngstate{};
+    rngstate.seed64(seed);
+    const auto out1 = static_cast<std::uint64_t>(rngstate());
+    const auto out2 = static_cast<std::uint64_t>(rngstate());
+    first_outputs.push_back((out1 << 32U) | out2);
+  }
+  std::ranges::sort(first_outputs);
+  check(std::ranges::adjacent_find(first_outputs) == first_outputs.end(),
+        "seed64 gives distinct states to consecutive seeds");
+}
+
 void test_count_groundterm_levels() {
   std::println("ground term level count...");
   // The lowest levels of real ions, as (energies [eV], statistical weights). The static_asserts in input.h
@@ -1222,6 +1241,7 @@ auto main() -> int {
   test_closest_transition_randomised();
   test_input_helpers();
   test_parse_next_token();
+  test_seed64_distinct_states();
   test_count_groundterm_levels();
   test_calculate_timesteps();
   test_rank_outfile_name();

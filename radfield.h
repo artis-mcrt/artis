@@ -14,7 +14,6 @@ namespace radfield {
 
 void zero_estimators();
 void init();
-void initialise_prev_titer_photoionestimators();
 DEVICE_FUNC void update_estimators(ptrdiff_t nonemptymgi, double distance_e_cmf, double nu_cmf,
                                    const Phixslist& phixslist, bool thickcell);
 DEVICE_FUNC void update_lineestimator(int nonemptymgi, int lineindex, double increment);
@@ -31,13 +30,11 @@ void normalise_nuJ(int nonemptymgi, double estimator_normfactor_over4pi);
 [[nodiscard]] auto get_T_J_from_J(int nonemptymgi) -> float;
 [[nodiscard]] auto get_Jblueindex(int lineindex) -> int;
 [[nodiscard]] auto get_Jb_lu(int nonemptymgi, int jblueindex) -> double;
-void titer_J(int nonemptymgi);
-void titer_nuJ(int nonemptymgi);
 void reduce_estimators();
 void do_MPI_Bcast(ptrdiff_t nstart_nonempty, ptrdiff_t ndo_nonempty, int root, int root_node_id);
 void write_restart_data(FILE* gridsave_file);
 void read_restart_data(FILE* gridsave_file);
-void normalise_bf_estimators(int nts, int nts_prev, int titer, double deltat);
+void normalise_bf_estimators(int nts, int nts_prev, double deltat);
 [[nodiscard]] DEVICE_FUNC auto get_bfrate_estimator(int element, int lowerion, int lower, int phixstargetindex,
                                                     int nonemptymgi) -> double;
 

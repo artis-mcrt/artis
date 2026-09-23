@@ -161,8 +161,7 @@ void set_rho_tmin(const int modelgridindex, const float x) { modelgrid_input[mod
 
 void set_initelectronfrac(const int modelgridindex, const float electronfrac) {
   if (std::isnan(electronfrac) || electronfrac < 0. || electronfrac > 1.001) {
-    printlnlog("[error] input Ye {:g} for cell {} is outside the physical range [0, 1]", electronfrac, modelgridindex);
-    assert_always(false);
+    fatal_crash("input Ye {:g} for cell {} is outside the physical range [0, 1]", electronfrac, modelgridindex);
   }
   modelgrid_input[modelgridindex].initelectronfrac = electronfrac;
 }
@@ -635,8 +634,7 @@ void allocate_nonemptymodelcells() {
 
   allocate_nonemptycells_composition_cooling();
 
-  if constexpr (RPKT_USE_EXPANSION_OPACITIES || VPKT_USE_EXPANSION_OPACITIES ||
-                RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.has_value()) {
+  if constexpr (expopac_bins_on) {
     allocate_expansionopacities();
   }
 
@@ -660,30 +658,16 @@ void allocate_nonemptymodelcells() {
 
     reserve_resize(globals::gammaestimator, ionestimcount);
     std::ranges::fill(globals::gammaestimator, 0.);
-#ifdef DO_TITER
-    reserve_resize(globals::gammaestimator_save, ionestimcount);
-    std::ranges::fill(globals::gammaestimator_save, 0.);
-#endif
   } else {
     globals::corrphotoionrenorm.reset();
     globals::gammaestimator.clear();
-#ifdef DO_TITER
-    globals::gammaestimator_save.clear();
-#endif
   }
 
   if (USE_ION_BFHEATING_ESTIMATORS && ionestimsize > 0) {
     reserve_resize(globals::bfheatingestimator, ionestimcount);
     std::ranges::fill(globals::bfheatingestimator, 0.);
-#ifdef DO_TITER
-    reserve_resize(globals::bfheatingestimator_save, ionestimcount);
-    std::ranges::fill(globals::bfheatingestimator_save, 0.);
-#endif
   } else {
     globals::bfheatingestimator.clear();
-#ifdef DO_TITER
-    globals::bfheatingestimator_save.clear();
-#endif
   }
 
   reserve_resize(globals::ffheatingestimator, nonempty_npts_model);
@@ -691,14 +675,6 @@ void allocate_nonemptymodelcells() {
 
   reserve_resize(globals::colheatingestimator, COL_HEAT_FROM_LEVELPOPS ? 0 : nonempty_npts_model);
   std::ranges::fill(globals::colheatingestimator, 0.);
-
-#ifdef DO_TITER
-  reserve_resize(globals::ffheatingestimator_save, nonempty_npts_model);
-  std::ranges::fill(globals::ffheatingestimator_save, 0.);
-
-  reserve_resize(globals::colheatingestimator_save, COL_HEAT_FROM_LEVELPOPS ? 0 : nonempty_npts_model);
-  std::ranges::fill(globals::colheatingestimator_save, 0.);
-#endif
 
   MPI_Barrier_allranks();
 
@@ -826,10 +802,14 @@ void read_elem_abundances() {
       }
 
       if (get_numpropcells(mgi) > 0) {
-        if (threedimensional || normfactor <= 0.) {
+        if (normfactor <= 0.) {
+          fatal_crash("read_elem_abundances: cell {} has a density above zero and no element mass fractions",
+                      cellnumberinput);
+        }
+        if (threedimensional) {
           // a 3D file holds true mass fractions and gets no normalisation, so a sum far from one is
           // a sign of a file that holds proportional values, e.g. densities
-          if (threedimensional && normfactor > 0. && std::abs(normfactor - 1.) > 0.02) {
+          if (std::abs(normfactor - 1.) > 0.02) {
             ncells_abund_unnormalised++;
             if (ncells_abund_unnormalised <= max_unnormalised_warnings) {
               printlnlog(
@@ -1160,9 +1140,8 @@ void read_grid_restart_data(const int timestep) {
                          &kpkt_energy_factor_in) == 13);
 
     if (mgi_in != mgi) {
-      printlnlog("[error] read_grid_restart_data: cell mismatch in {}: read cellnumber {}, expected {}. aborting",
-                 filename, mgi_in, mgi);
-      assert_always(mgi_in == mgi);
+      fatal_crash("read_grid_restart_data: cell mismatch in {}: read cellnumber {}, expected {}", filename, mgi_in,
+                  mgi);
     }
 
     assert_always(T_R >= 0.);
@@ -2208,11 +2187,10 @@ void read_ejecta_model() {
         double log_rho{NAN};
         if (!(parse_next_token(remainder, cellnumberin) && parse_next_token(remainder, vout_kmps) &&
               parse_next_token(remainder, log_rho))) {
-          printlnlog(
-              "[error] model.txt cell {}: expected at least 3 values (inputcellid vel_r_max_kmps log10rho) but could "
+          fatal_crash(
+              "model.txt cell {}: expected at least 3 values (inputcellid vel_r_max_kmps log10rho) but could "
               "not parse line: {}",
               mgi, line);
-          assert_always(false);
         }
         vout_model[mgi] = vout_kmps * 1.e5;
         // the velocity grid is binary searched by int_index_lowerbound(), so it has to increase
@@ -2557,9 +2535,16 @@ void init_grid() {
         const double ratio = totmassnuclide[nucindex] / totmassnuclide_actual;
         for (int nonemptymgi = 0; nonemptymgi < get_nonempty_npts_model(); nonemptymgi++) {
           const int mgi = get_mgi_of_nonemptymgi(nonemptymgi);
-          const double prev_massfrac = get_modelinitnucmassfrac(mgi, nucindex);
-          const auto new_massfrac = static_cast<float>(prev_massfrac * ratio);
-          set_modelinitnucmassfrac(mgi, nucindex, new_massfrac);
+          const double new_massfrac = get_modelinitnucmassfrac(mgi, nucindex) * ratio;
+          // a mass fraction above one cannot keep the input mass of the nuclide, so the grid is too coarse. An
+          // excess at the rounding level of a float is clamped.
+          if (new_massfrac > 1. + 1e-6) {
+            fatal_crash(
+                "init_grid: the mapping to the propagation grid needs a mass fraction of {:g} for Z={} A={} in cell "
+                "{} to keep the input mass of the nuclide. Use a finer grid.",
+                new_massfrac, decay::get_nuc_z(nucindex), decay::get_nuc_a(nucindex), mgi);
+          }
+          set_modelinitnucmassfrac(mgi, nucindex, static_cast<float>(std::min(new_massfrac, 1.)));
         }
       }
     }
@@ -2716,20 +2701,6 @@ DEVICE_FUNC void snap_pos_to_cell(Vec3d& pos, const double time, const int celli
                          dir[1], dir[2], globals::tmin, tstart););
 
           assert_always(!isoutside_error);
-
-          const auto next_cellindex = get_cellindex_from_pos(pos, tstart);
-          if ((cellcoordidx[d] == (ncoordgrid[d] - 1) && pos_component_vel_relative_to_flow) ||
-              (cellcoordidx[d] == 0 && !pos_component_vel_relative_to_flow) || (next_cellindex < 0)) {
-            MY_IF_HOST(
-                printlnlog("[warning] treating out-of-boundary packet in cell {} as escaping the grid", cellindex););
-            return {0., -99};
-          }
-          MY_IF_HOST(
-              printlnlog(
-                  "[warning] swapping packet cellindex from {} to {}, which has cellcoordmin {:g}, cellcoordmax {:g}",
-                  cellindex, next_cellindex, get_cellcoordmin(next_cellindex, d) / globals::tmin * tstart,
-                  get_cellcoordmax(next_cellindex, d) / globals::tmin * tstart););
-          return {0., next_cellindex};
         }
       }
     }

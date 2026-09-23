@@ -46,6 +46,11 @@ static_assert(!VPKT_ON || POL_ON,
 
 static_assert(!VPKT_WRITE_CONTRIBS || VPKT_ON, "VPKT_WRITE_CONTRIBS does nothing without VPKT_ON");
 
+#ifdef GPU_ON
+// the vpkt code keeps thread-local buffers and writes files from the packet loop
+static_assert(!VPKT_ON, "VPKT_ON is not supported in a GPU build");
+#endif
+
 struct StokesParams {
   double I = 0.;
   double Q = 0.;
@@ -152,18 +157,18 @@ void add_to_vpkt_grid(const double nu_rf, const double e_rf, const double prob, 
   double vref2{NAN};
 
   // The rotation formula below divides by (1 + obsdir[0]), so an observer within this angle of the
-  // -x axis takes the exact -x basis. The formula is well conditioned outside this cone, and inside
-  // it the basis orientation differs from the formula by less than ~1e-4 radians. The +x case only
-  // avoids the needless work of a rotation by ~0.
+  // -x axis takes the fixed basis (-y, +z). That is the limit of the formula along the equator. The
+  // formula has no single limit at -x, because the basis turns with the azimuth of the approach. The +x
+  // case only avoids the needless work of a rotation by ~0.
   constexpr double pole_alignment_tol = 1e-8;
   if (obsdir[0] > (1. - pole_alignment_tol)) {
     // if obsdir = +x , vref1 = vy and vref2 = vz
     vref1 = vel[1];
     vref2 = vel[2];
   } else if (obsdir[0] < (-1. + pole_alignment_tol)) {
-    // if obsdir = -x , vref1 = -vy and vref2 = -vz
+    // if obsdir = -x , vref1 = -vy and vref2 = vz (a right-handed basis with obsdir)
     vref1 = -vel[1];
-    vref2 = -vel[2];
+    vref2 = vel[2];
   } else {
     // rotate the velocity into the plane that the observer sees
     // Rotate velocity from (x,y,z) to (obsdir,vref1,vref2) so that x corresponds to obsdir
@@ -402,13 +407,11 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
               const auto binedgedist = get_linedistance(t_future, nu_cmf, next_bin_edge_nu, dnu_on_dl);
 
               const auto kappa = expansionopacities[(nonemptymgi * expopac_nbins) + binindex];
-              // kappa_exp * rho = (1 / (c t)) * sum_lines (lambda_line / delta_lambda) * (1 - exp(-tau_sobolev))
-              // and was tabulated at t_gridstate, so scale it to the packet's time. In the optically thin limit
-              // (1 - exp(-tau_sobolev)) -> tau_sobolev ∝ t^-2, which together with the explicit 1/(c t)
-              // prefactor gives kappa_exp * rho ∝ t^-3, i.e. the same density scaling as the linear continuum
-              // terms above. Saturated lines keep (1 - exp(-tau_sobolev)) ~ 1 and so fall off only as 1/t, but
-              // their individual tau_sobolev cannot be recovered from the binned kappa, so the thin limit is
-              // used for all bins.
+              // kappa_exp * rho = (1 / (c t)) * sum_lines (lambda_line / delta_lambda) * weight(tau_sobolev),
+              // tabulated at t_gridstate (see EXPANSION_OPACITY_METHOD). The scaling to the packet time uses the
+              // optically thin limit, where the weight is tau_sobolev and tau_sobolev ∝ t^-2, so kappa_exp * rho
+              // ∝ t^-3. A saturated line changes more slowly, but the bins do not keep the tau_sobolev of each
+              // line.
               const double chi_bb_expansionopac = kappa * grid::get_rho(nonemptymgi) * densityscalefactor *
                                                   get_expopac_pathfactor(t_future, next_bin_edge_nu, dnu_on_dl);
 
@@ -1083,22 +1086,16 @@ auto trace_vpkts(const Packet& pkt, const enum packet_type type_before_rpkt) -> 
       const double nu_rf = pkt.nu_cmf / doppler;
       const double e_rf = pkt.e_cmf / doppler;
 
-      // Loop over frequency intervals for this observer and check if the vpkt frequency falls in any of them. If it
-      // does, trace the vpkt to see if it escapes in this direction.
-      for (int i = 0; i < nwavelengthranges; i++) {
-        if ((nu_rf > vspec_numin_input[i] && nu_rf < vspec_numax_input[i]) ||
-            (pkt.absorptionfreq > vspec_numin_input[i] && pkt.absorptionfreq < vspec_numax_input[i])) {
-          // frequency selection
-          dir_escaped = dir_escaped || trace_vpkt_direction(pkt, t_arrive, nu_rf, e_rf, doppler, obsdirindex,
-                                                            type_before_rpkt, vpkt_contrib_row);
-          break;  // we only need to match one frequency interval to trace the vpkt
-        }
+      // trace the vpkt if its frequency or its absorption frequency is in a spectrum range of this observer
+      if (nu_rf_is_in_spectrum_range(nu_rf) || nu_rf_is_in_spectrum_range(pkt.absorptionfreq)) {
+        dir_escaped =
+            trace_vpkt_direction(pkt, t_arrive, nu_rf, e_rf, doppler, obsdirindex, type_before_rpkt, vpkt_contrib_row);
       }
     }
 
     if (dir_escaped) {
       any_dir_escaped = true;
-    } else {
+    } else if constexpr (VPKT_WRITE_CONTRIBS) {
       vpkt_contrib_row += " -1. -1.";  // t_arrive_d nu_rf
       for (int opacchoiceindex = 0; opacchoiceindex < nspectraperobsdir; opacchoiceindex++) {
         vpkt_contrib_row += " 0.";  // e_rf_diri_j

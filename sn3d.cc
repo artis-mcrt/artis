@@ -241,6 +241,8 @@ void initialise_linestat_file() {
   buffer += '\n';
 
   linestat_file.write(buffer.data(), static_cast<std::streamsize>(buffer.size()));
+  linestat_file.close();
+  assert_always(!linestat_file.fail());  // e.g. a full disk
 }
 
 void write_deposition_file() {
@@ -774,25 +776,19 @@ void zero_estimators() {
   MPI_Barrier_allranks();
 }
 
-auto do_timestep(const int nts, const int titer, std::vector<Packet>& packets, const int walltime_limit_seconds)
-    -> bool {
+auto do_timestep(const int nts, std::vector<Packet>& packets, const int walltime_limit_seconds) -> bool {
   bool enough_walltime_for_timestep = true;
-  const int nts_prev = (titer != 0 || nts == 0) ? nts : nts - 1;
-  if ((titer > 0) || (globals::simulation_continued_from_saved && (nts == globals::timestep_initial))) {
-    // Read the packets file to reset before each additional iteration on the timestep
+  const int nts_prev = (nts == 0) ? nts : nts - 1;
+  if (globals::simulation_continued_from_saved && (nts == globals::timestep_initial)) {
     read_temp_packetsfile(nts, packets);
   }
 
   // Some counters on pkt-actions need to be reset to do statistics
   stats::pkt_action_counters_reset();
 
-  if (nts == 0) {
-    radfield::initialise_prev_titer_photoionestimators();
-  }
-
   // Update the matter quantities in the grid for the new timestep.
 
-  update_grid(estimators_file, nts, nts_prev, titer, real_time_start);
+  update_grid(estimators_file, nts, nts_prev, real_time_start);
 
   const auto sys_time_start_communicate_grid = std::chrono::steady_clock::now();
 
@@ -923,7 +919,7 @@ void setup_jobfolder() {
       }
     }
 
-    // not having the log symlink is no reason to stop the simulation, so just warn if it cannot be created
+    // the simulation continues without the log symlink, so a failure gives only a warning
     const auto linktarget = get_jobfolder_filepath(linkname);
     std::filesystem::remove(linkname, ec);
     std::filesystem::create_symlink(linktarget, linkname, ec);
@@ -1178,24 +1174,7 @@ auto main(int argc, char* argv[]) -> int {
   while (globals::timestep < globals::timestep_finish && !terminate_early) {
     MPI_Barrier_allranks();
 
-    const int n_titer = 1;
-
-#ifdef DO_TITER
-    assert_always(n_titer > 0);
-#else
-    assert_always(n_titer == 1);
-#endif
-    if (n_titer > 1) {
-      printlnlog("Doing {} iterations on timestep {}", n_titer, globals::timestep);
-    }
-
-    for (int titer = 0; titer < n_titer; titer++) {
-      terminate_early = do_timestep(globals::timestep, titer, packets, walltime_limit_seconds);
-#ifdef DO_TITER
-      // No iterations over the zeroth timestep, set titer > n_titer
-      if (globals::timestep == 0) titer = n_titer + 1;
-#endif
-    }
+    terminate_early = do_timestep(globals::timestep, packets, walltime_limit_seconds);
 
     globals::timestep++;
   }

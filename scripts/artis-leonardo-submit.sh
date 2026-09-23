@@ -3,7 +3,7 @@
 
 # sbatch expands no variable in a #SBATCH line, and Slurm supplies no
 # SBATCH_MAIL_USER variable. The address must therefore come from the command
-# line. The job script artis-leonardo.sh keeps all of the resource options,
+# line. The job script artis-leonardo-slurmjob.sh keeps all of the resource options,
 # because a #SBATCH line works correctly on this system.
 
 # Leonardo mails <user>@leonardo.local when the address is absent, and that

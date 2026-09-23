@@ -6,10 +6,10 @@
 // The degradation equation is that of Spencer & Fano (1954), Phys. Rev., 93, 1172-1181,
 // doi:10.1103/PhysRev.93.1172. This implementation follows the supernova application of Kozma & Fransson
 // (1992), ApJ, 390, 602-621, doi:10.1086/171311, hereafter KF92, whose equation numbers are cited throughout
-// this file. The integral form of the degradation equation (KF92 equation 7), extended with an Auger-electron
-// source term as equation 8 of Shingles et al. (2020), MNRAS, 492, 2029-2043, doi:10.1093/mnras/stz3412,
-// hereafter S20, is discretised on a uniform energy grid as an upper triangular matrix equation and solved
-// by back-substitution in solve_spencerfano(). This file also cites Li, Hillier & Dessart (2012), MNRAS, 426,
+// this file. KF92 equation 7 gives the integral form of the degradation equation. Equation 8 of Shingles et al.
+// (2020), MNRAS, 492, 2029-2043, doi:10.1093/mnras/stz3412, hereafter S20, adds a source term for the Auger
+// electrons. solve_spencerfano() writes this equation on a uniform energy grid as an upper triangular matrix
+// equation and solves it by back-substitution. This file also cites Li, Hillier & Dessart (2012), MNRAS, 426,
 // 1671-1686, doi:10.1111/j.1365-2966.2012.21198.x, hereafter LHD12, and Axelrod (1980), PhD thesis, University
 // of California, Santa Cruz, hereafter A80.
 
@@ -84,11 +84,6 @@ constexpr double MIN_ION_OVER_NNTOT = 1.e-8;
 // Bohr radius squared in cm^2
 constexpr double A_naught_squared = 2.800285203e-17;
 
-constexpr std::array shellnames{
-    "K ", "L1", "L2", "L3", "M1", "M2", "M3", "M4", "M5", "N1", "N2", "N3", "N4", "N5",
-    "N6", "N7", "O1", "O2", "O3", "O4", "O5", "O6", "O7", "P1", "P2", "P3", "P4", "Q1",
-};
-
 std::vector<std::vector<double>> elements_electron_binding;
 std::vector<std::vector<int>> allions_shell_occupancies;
 
@@ -111,7 +106,6 @@ struct ShellParams {
 
   // the average kinetic energy released in Auger electrons after making a hole in this shell
   float en_auger_ev{NAN};
-  float n_auger_elec_avg{NAN};
 
   ShellParams() {
     std::ranges::fill(prob_num_auger, 0.);
@@ -203,7 +197,6 @@ int nt_excitations_stored = 0;
 
 struct NonThermalSolutionIon {
   float eff_ionpot{0.};  // these are used to calculate the non-thermal ionisation rate
-  double fracdep_ionisation_ion{0.};  // the fraction of the non-thermal deposition energy going to ionizing each ion
 
   // probability that one ionisation of this ion will produce n Auger electrons.
   // items sum to 1.0 for a given ion
@@ -525,8 +518,6 @@ void read_auger_data() {
 
           // update the statistical-weight averaged values
           collionrow.en_auger_ev = static_cast<float>((oldweight * collionrow.en_auger_ev) + (newweight * en_auger_ev));
-          collionrow.n_auger_elec_avg =
-              static_cast<float>((oldweight * collionrow.n_auger_elec_avg) + (newweight * n_auger_elec_avg));
 
           for (int a = 0; a <= NT_MAX_AUGER_ELECTRONS; a++) {
             collionrow.prob_num_auger[a] = (oldweight * collionrow.prob_num_auger[a]) + (newweight * prob_num_auger[a]);
@@ -610,7 +601,6 @@ void read_collion_data() {
     }
 
     collionrow.en_auger_ev = 0.;
-    collionrow.n_auger_elec_avg = 0.;
 
     colliondata.push_back(collionrow);
   }
@@ -665,7 +655,6 @@ void read_collion_data() {
           collionrow.C = -1.;
           collionrow.D = -1.;
           collionrow.en_auger_ev = 0.;
-          collionrow.n_auger_elec_avg = 0.;
 
           colliondata.push_back(collionrow);
           if (electron_count >= nbound) {
@@ -763,8 +752,8 @@ void zero_all_effionpot(const ptrdiff_t nonemptymgi) {
 // The exclusive row limit of the Auger electron source term of a shell: the rows [0, limit) lie
 // below the mean Auger electron energy and receive the source. The limit is 0 for a shell that
 // injects nothing, and SFPTS when the Auger energy is above the top of the grid, because every row
-// is then below it. analyse_sf_solution() subtracts the recycled Auger energy from the ionisation
-// fraction only when this limit is positive, so the two sites must use this same function.
+// is then below it. calculate_eff_ionpot_auger_rates() subtracts the recycled Auger energy from the
+// ionisation fraction only when this limit is positive, so the two sites must use this same function.
 [[nodiscard]] constexpr auto get_auger_rowstopindex(const ShellParams& collionrow) -> int {
   if (!SF_AUGER_CONTRIBUTION_ON || collionrow.en_auger_ev <= 0.) {
     return 0;
@@ -1313,10 +1302,10 @@ auto calculate_nt_ionisation_ratecoeff(const int nonemptymgi, const int element,
 }
 
 // KF92 equation 12, except modified to be a sum over all shells of an ion (the per-shell ionisation
-// fractions are equation 11 of S20).
-// the result is in [erg]
-void calculate_eff_ionpot_auger_rates(const int nonemptymgi, const int element, const int ion,
-                                      const std::array<double, SFPTS>& yfunc) {
+// fractions are equation 11 of S20). Return the fraction of the deposition energy that ionises the ion, without
+// the recycled Auger energy.
+auto calculate_eff_ionpot_auger_rates(const int nonemptymgi, const int element, const int ion,
+                                      const std::array<double, SFPTS>& yfunc) -> double {
   const int Z = get_atomicnumber(element);
   const int ionstage = get_ionstage(element, ion);
   const int uniqueionindex = get_uniqueionindex(element, ion);
@@ -1338,6 +1327,7 @@ void calculate_eff_ionpot_auger_rates(const int nonemptymgi, const int element, 
 
   double eta_over_ionpot_sum = 0.;
   double eta_sum = 0.;
+  double frac_ionisation_ion = 0.;
   double ionpot_valence = -1;
   int matching_nlsubshell_count = 0;
   for (const auto& collionrow : colliondata) {
@@ -1346,6 +1336,15 @@ void calculate_eff_ionpot_auger_rates(const int nonemptymgi, const int element, 
       const double frac_ionisation_shell =
           calculate_nt_frac_ionisation_shell(nonemptymgi, element, ion, collionrow, yfunc);
       eta_sum += frac_ionisation_shell;
+      // with SF_AUGER_CONTRIBUTION_ON, the mean Auger energy per ionisation is re-injected into the
+      // electron pool and gets counted in the heating/excitation fractions, so only the net energy
+      // removed per ionisation (shell potential minus Auger energy) counts as ionisation here.
+      // The subtraction only applies when the matrix really injected the source, which
+      // get_auger_rowstopindex() decides for both sites.
+      const double frac_auger_recycled = (get_auger_rowstopindex(collionrow) > 0)
+                                             ? frac_ionisation_shell * collionrow.en_auger_ev / collionrow.ionpot_ev
+                                             : 0.;
+      frac_ionisation_ion += frac_ionisation_shell - frac_auger_recycled;
       const double ionpot_shell = collionrow.ionpot_ev * EV;
 
       if (ionpot_valence < 0) {
@@ -1414,6 +1413,7 @@ void calculate_eff_ionpot_auger_rates(const int nonemptymgi, const int element, 
     // the absence of matching subshell data is reported once at startup by read_collion_data()
     celliondata.eff_ionpot = static_cast<float>(1. / get_oneoverw_approx_axelrod(element, ion, nonemptymgi));
   }
+  return frac_ionisation_ion;
 }
 
 // get the effective ion potential from the stored value
@@ -1591,8 +1591,6 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const std::a
     const int Z = get_atomicnumber(element);
     const int nions = get_nions(element);
     for (int ion = 0; ion < nions; ion++) {
-      const int uniqueionindex = get_uniqueionindex(element, ion);
-
       const int ionstage = get_ionstage(element, ion);
       const int ioncharge = ionstage - 1;
       const int nbound = Z - ioncharge;  // number of bound electrons
@@ -1605,63 +1603,20 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const std::a
         continue;
       }
 
-      double frac_ionisation_ion = 0.;
       double frac_excitation_ion = 0.;
       if (verbose) {
         printlnlog("  Z={} ionstage {}:", Z, ionstage);
         printlnlog("    nnion/nntot: {:g}", nnion / nntot);
       }
 
-      calculate_eff_ionpot_auger_rates(nonemptymgi, element, ion, yfunc);
-
-      int matching_subshell_count = 0;
-      for (const auto& collionrow : colliondata) {
-        if (collionrow.Z != Z || collionrow.ionstage != ionstage) {
-          continue;
-        }
-        const double frac_ionisation_ion_shell =
-            calculate_nt_frac_ionisation_shell(nonemptymgi, element, ion, collionrow, yfunc);
-        // with SF_AUGER_CONTRIBUTION_ON, the mean Auger energy per ionisation is re-injected into the
-        // electron pool and gets counted in the heating/excitation fractions, so only the net energy
-        // removed per ionisation (shell potential minus Auger energy) counts as ionisation here.
-        // The subtraction only applies when the matrix really injected the source, which
-        // get_auger_rowstopindex() decides for both sites.
-        const double frac_auger_recycled =
-            (get_auger_rowstopindex(collionrow) > 0)
-                ? frac_ionisation_ion_shell * collionrow.en_auger_ev / collionrow.ionpot_ev
-                : 0.;
-        frac_ionisation_ion += frac_ionisation_ion_shell - frac_auger_recycled;
-        matching_subshell_count++;
-
-        if (verbose) {
-          printlog("      shell ");
-          if (collionrow.n >= 0) {
-            printlog("n {}, l {}", collionrow.n, collionrow.l);
-          } else {
-            printlog("{} (Lotz)", shellnames.at(-collionrow.l));
-          }
-          printlog(" I {:5.1f} [eV]: frac_ionisation {:10.4e}", collionrow.ionpot_ev, frac_ionisation_ion_shell);
-
-          if constexpr (NT_MAX_AUGER_ELECTRONS > 0) {
-            printlog("  prob(n Auger elec):");
-            for (int a = 0; a <= NT_MAX_AUGER_ELECTRONS; a++) {
-              printlog(" {}: {:.2f}", a, collionrow.prob_num_auger[a]);
-            }
-          }
-          printlnlog("");
-        }
-      }
+      const double frac_ionisation_ion = calculate_eff_ionpot_auger_rates(nonemptymgi, element, ion, yfunc);
 
       // do not ionise the top ion
       if (ion < nions - 1) {
-        get_cell_allions_data(nonemptymgi)[uniqueionindex].fracdep_ionisation_ion = frac_ionisation_ion;
-
         frac_ionisation_total += frac_ionisation_ion;
-      } else {
-        get_cell_allions_data(nonemptymgi)[uniqueionindex].fracdep_ionisation_ion = 0.;
       }
       if (verbose) {
-        printlnlog("    frac_ionisation: {:g} ({} subshells)", frac_ionisation_ion, matching_subshell_count);
+        printlnlog("    frac_ionisation: {:g}", frac_ionisation_ion);
       }
 
       // excitation from all levels is expensive, so we limit it to a maximum number of levels
@@ -2723,7 +2678,6 @@ void write_restart_data(FILE* gridsave_file) {
 
       for (int uniqueionindex = 0; uniqueionindex < get_includedions(); uniqueionindex++) {
         const auto& celliondata = get_cell_allions_data(nonemptymgi)[uniqueionindex];
-        fprintf(gridsave_file, "%la ", celliondata.fracdep_ionisation_ion);
         fprintf(gridsave_file, "%a ", celliondata.eff_ionpot);
 
         for (int a = 0; a <= NT_MAX_AUGER_ELECTRONS; a++) {
@@ -2755,9 +2709,10 @@ void read_restart_data(FILE* gridsave_file) {
   assert_always(fscanf(gridsave_file, "%d %la %la\n", &sfpts_in, &SF_EMIN_in, &SF_EMAX_in) == 3);
 
   if (sfpts_in != SFPTS || SF_EMIN_in != SF_EMIN || SF_EMAX_in != SF_EMAX) {
-    printlnlog("[error] gridsave file specifies {} Spencer-Fano samples, SF_EMIN {:g} SF_EMAX {:g}", sfpts_in,
-               SF_EMIN_in, SF_EMAX_in);
-    fatal_crash("This simulation has {} Spencer-Fano samples, SF_EMIN {:g} SF_EMAX {:g}", SFPTS, SF_EMIN, SF_EMAX);
+    fatal_crash(
+        "gridsave file specifies {} Spencer-Fano samples, SF_EMIN {:g} SF_EMAX {:g}, but this simulation has {} "
+        "samples, SF_EMIN {:g} SF_EMAX {:g}",
+        sfpts_in, SF_EMIN_in, SF_EMAX_in, SFPTS, SF_EMIN, SF_EMAX);
   }
 
   for (int nonemptymgi = 0; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
@@ -2773,7 +2728,6 @@ void read_restart_data(FILE* gridsave_file) {
 
       for (int uniqueionindex = 0; uniqueionindex < get_includedions(); uniqueionindex++) {
         auto& celliondata = get_cell_allions_data(nonemptymgi)[uniqueionindex];
-        assert_always(fscanf(gridsave_file, "%la ", &celliondata.fracdep_ionisation_ion) == 1);
         assert_always(fscanf(gridsave_file, "%a ", &celliondata.eff_ionpot) == 1);
 
         for (int a = 0; a <= NT_MAX_AUGER_ELECTRONS; a++) {
