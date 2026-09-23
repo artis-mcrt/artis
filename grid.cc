@@ -2535,10 +2535,16 @@ void init_grid() {
         const double ratio = totmassnuclide[nucindex] / totmassnuclide_actual;
         for (int nonemptymgi = 0; nonemptymgi < get_nonempty_npts_model(); nonemptymgi++) {
           const int mgi = get_mgi_of_nonemptymgi(nonemptymgi);
-          const double prev_massfrac = get_modelinitnucmassfrac(mgi, nucindex);
-          // a ratio above one can push a mass fraction near one above one
-          const auto new_massfrac = static_cast<float>(std::min(prev_massfrac * ratio, 1.));
-          set_modelinitnucmassfrac(mgi, nucindex, new_massfrac);
+          const double new_massfrac = get_modelinitnucmassfrac(mgi, nucindex) * ratio;
+          // a mass fraction above one cannot keep the input mass of the nuclide, so the grid is too coarse. An
+          // excess at the rounding level of a float is clamped.
+          if (new_massfrac > 1. + 1e-6) {
+            fatal_crash(
+                "init_grid: the mapping to the propagation grid needs a mass fraction of {:g} for Z={} A={} in cell "
+                "{} to keep the input mass of the nuclide. Use a finer grid.",
+                new_massfrac, decay::get_nuc_z(nucindex), decay::get_nuc_a(nucindex), mgi);
+          }
+          set_modelinitnucmassfrac(mgi, nucindex, static_cast<float>(std::min(new_massfrac, 1.)));
         }
       }
     }
