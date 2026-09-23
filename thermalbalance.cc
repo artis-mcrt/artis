@@ -297,21 +297,19 @@ void calculate_bfheatingcoeffs(int nonemptymgi, std::span<double> bfheatingcoeff
       const auto levels = std::ranges::iota_view{0, nlevels};
       std::for_each(EXEC_PAR levels.begin(), levels.end(), [&](const int level) {
         double bfheatingcoeff = 0.;
-        {
-          const auto nphixstargets = get_nphixstargets(element, ion, level);
-          for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
-            bfheatingcoeff += calculate_bfheatingcoeff(element, ion, level, phixstargetindex, nonemptymgi);
-          }
-          assert_always(std::isfinite(bfheatingcoeff));
+        const auto nphixstargets = get_nphixstargets(element, ion, level);
+        for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
+          bfheatingcoeff += calculate_bfheatingcoeff(element, ion, level, phixstargetindex, nonemptymgi);
+        }
+        assert_always(std::isfinite(bfheatingcoeff));
 
-          if constexpr (USE_ION_BFHEATING_ESTIMATORS) {
-            const auto uniquelevelindex = get_uniquelevelindex(element, ion, level);
-            const int index_in_groundlevelcontestimator = globals::alllevels.closestgroundlevelcont[uniquelevelindex];
-            if (index_in_groundlevelcontestimator >= 0) {
-              bfheatingcoeff *=
-                  globals::bfheatingestimator[(static_cast<ptrdiff_t>(nonemptymgi) * globals::nbfcontinua_ground) +
-                                              index_in_groundlevelcontestimator];
-            }
+        if constexpr (USE_ION_BFHEATING_ESTIMATORS) {
+          const auto uniquelevelindex = get_uniquelevelindex(element, ion, level);
+          const int index_in_groundlevelcontestimator = globals::alllevels.closestgroundlevelcont[uniquelevelindex];
+          if (index_in_groundlevelcontestimator >= 0) {
+            bfheatingcoeff *=
+                globals::bfheatingestimator[(static_cast<ptrdiff_t>(nonemptymgi) * globals::nbfcontinua_ground) +
+                                            index_in_groundlevelcontestimator];
           }
         }
         bfheatingcoeffs[get_uniquelevelindex(element, ion, level)] = bfheatingcoeff;
@@ -320,10 +318,10 @@ void calculate_bfheatingcoeffs(int nonemptymgi, std::span<double> bfheatingcoeff
   }
 }
 
-// Solve the thermal-balance equation (heating = cooling) for the electron temperature T_e in a cell by
-// root-finding between MINTEMP and MAXTEMP, then store the resulting T_e in the grid. If the equation has no
-// sign change over that range, T_e is pinned to whichever bound the residual points towards. The change from
-// the previous timestep's T_e is then damped to at most a factor of two in either direction.
+// Solve the thermal balance (heating = cooling) for the electron temperature T_e of a cell between MINTEMP and
+// MAXTEMP, and store the result in the grid. If the residual has no sign change in that range, T_e gets the
+// bound that the residual points to. The function then limits the change from the T_e before this call to a
+// factor of two in each direction. solve_Te_nltepops() calls it once in each pass.
 void call_T_e_finder(const int nonemptymgi, const double t_current, HeatingCoolingRates& heatingcoolingrates,
                      const std::span<const double> bfheatingcoeffs) {
   const int modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);

@@ -869,51 +869,24 @@ DEVICE_FUNC auto get_corrphotoioncoeff(const int element, const int ion, const i
 }
 
 // Return true if the ionisation rate out of an ion is zero, so that callers can skip the ion without
-// evaluating the full rate. The top ion of an element is always treated as having zero rate. For an
-// element without NLTE levels this tests the ground-state ionisation rate estimator, which holds either
-// the Monte Carlo photoionisation estimator or the radiative-plus-collisional rate from
-// calculate_iongamma_per_gspop(); otherwise it tests both the photoionisation and the thermal
-// collisional ionisation rate of every populated level.
+// evaluating the full rate. The top ion of an element is always treated as having zero rate. The
+// ground-state ionisation rate estimator holds either the Monte Carlo photoionisation estimator or the
+// radiative-plus-collisional rate from calculate_iongamma_per_gspop(). The only caller uses this
+// function for an element without NLTE levels.
 auto iongamma_is_zero(const int nonemptymgi, const int element, const int ion) -> bool {
+  assert_testmodeonly(!elem_has_nlte_levels(element));
   const int nions = get_nions(element);
   if (ion >= nions - 1) {
     return true;
   }
 
-  if (!elem_has_nlte_levels(element)) {
-    const auto groundcontindex = get_groundcontindex(element, ion);
-    if (groundcontindex < 0) {
-      return true;
-    }
-    return (globals::gammaestimator[(static_cast<ptrdiff_t>(nonemptymgi) * globals::nbfcontinua_ground) +
-                                    groundcontindex] == 0);
+  const auto groundcontindex = get_groundcontindex(element, ion);
+  if (groundcontindex < 0) {
+    return true;
   }
-
-  const auto T_e = grid::Te_allcells[nonemptymgi];
-  const auto clumpednne = grid::get_clumpfactor(nonemptymgi) * grid::get_nne(nonemptymgi);
-
-  for (int level = 0; level < get_nlevels(element, ion); level++) {
-    const double nnlevel = calculate_levelpop(nonemptymgi, element, ion, level);
-    if (nnlevel == 0.) {
-      continue;
-    }
-    const int nphixstargets = get_nphixstargets(element, ion, level);
-    for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
-      const int upperlevel = get_phixsupperlevel(element, ion, level, phixstargetindex);
-
-      if (nnlevel * get_corrphotoioncoeff(element, ion, level, phixstargetindex, nonemptymgi, false) > 0.) {
-        return false;
-      }
-
-      const double epsilon_trans = epsilon(element, ion + 1, upperlevel) - epsilon(element, ion, level);
-
-      if (nnlevel * col_ionisation_ratecoeff(T_e, clumpednne, element, ion, level, phixstargetindex, epsilon_trans) >
-          0) {
-        return false;
-      }
-    }
-  }
-  return true;
+  return (
+      globals::gammaestimator[(static_cast<ptrdiff_t>(nonemptymgi) * globals::nbfcontinua_ground) + groundcontindex] ==
+      0);
 }
 
 // ionisation rate coefficient. multiply by get_groundlevelpop to get a rate [s^-1]

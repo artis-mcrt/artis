@@ -104,14 +104,8 @@ MPI_shared_array<int> allcontindex_of_allphixstargetindex{};
 // i.e. be sure the normalisation has been applied (exactly once) before using the values here!
 
 std::vector<double> J;  // after normalisation: [ergs/s/sr/cm2/Hz]
-#ifdef DO_TITER
-std::vector<double> J_reduced_save;
-#endif
 
 std::vector<double> nuJ;  // after normalisation: [ergs/s/sr/cm2]
-#ifdef DO_TITER
-std::vector<double> nuJ_reduced_save;
-#endif
 
 std::fstream radfieldfile;
 
@@ -544,11 +538,6 @@ void init() {
 
   reserve_resize(nuJ, nonempty_npts_model + 1);
 
-#ifdef DO_TITER
-  reserve_resize(J_reduced_save, nonempty_npts_model + 1);
-  reserve_resize(nuJ_reduced_save, nonempty_npts_model + 1);
-#endif
-
   reserve_resize(prev_Jb_lu_normed, nonempty_npts_model);
   reserve_resize(Jb_lu_raw, nonempty_npts_model);
 
@@ -660,37 +649,6 @@ void init() {
     }
     MPI_Barrier_node();
   }
-}
-
-// Initialise estimator arrays which hold the last time steps values (used to damp out
-// fluctuations over timestep iterations if DO_TITER is defined) to -1.
-void initialise_prev_titer_photoionestimators() {
-#ifdef DO_TITER
-  std::ranges::fill(globals::ffheatingestimator_save, -1.);
-  std::ranges::fill(globals::colheatingestimator_save, -1.);
-  std::ranges::fill(J_reduced_save, -1.);
-  std::ranges::fill(nuJ_reduced_save, -1.);
-  for (int nonemptymgi = 0; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
-    for (int element = 0; element < get_nelements(); element++) {
-      const int nions = get_nions(element);
-      for (int ion = 0; ion < nions - 1; ion++) {
-        const int groundcontindex = get_groundcontindex(element, ion);
-        if (groundcontindex < 0) {
-          // an ion without a ground photoionisation table has no estimator slot
-          continue;
-        }
-        if constexpr (USE_LUT_PHOTOION) {
-          globals::gammaestimator_save[(static_cast<ptrdiff_t>(nonemptymgi) * globals::nbfcontinua_ground) +
-                                       groundcontindex] = -1.;
-        }
-        if constexpr (USE_ION_BFHEATING_ESTIMATORS) {
-          globals::bfheatingestimator_save[(static_cast<ptrdiff_t>(nonemptymgi) * globals::nbfcontinua_ground) +
-                                           groundcontindex] = -1.;
-        }
-      }
-    }
-  }
-#endif
 }
 
 auto get_Jblueindex(const int lineindex) -> int {
@@ -910,12 +868,12 @@ void normalise_J(const int nonemptymgi, const double estimator_normfactor_over4p
   }
 }
 
-void normalise_bf_estimators(const int nts, const int nts_prev, const int titer, const double deltat) {
+void normalise_bf_estimators(const int nts, const int nts_prev, const double deltat) {
   // these conditions are the same on every rank, so all node ranks reach the barrier below together
   if (globals::lte_iteration) {
     return;
   }
-  if (nts == globals::timestep_initial && titer == 0) {
+  if (nts == globals::timestep_initial) {
     return;
   }
   if (globals::rank_in_node == 0) {
@@ -993,12 +951,6 @@ auto get_T_J_from_J(const int nonemptymgi) -> float {
   }
   return T_J;
 }
-
-#ifdef DO_TITER
-void titer_J(const int nonemptymgi) { titer_average(J[nonemptymgi], J_reduced_save[nonemptymgi]); }
-
-void titer_nuJ(const int nonemptymgi) { titer_average(nuJ[nonemptymgi], nuJ_reduced_save[nonemptymgi]); }
-#endif
 
 // reduce and broadcast (allreduce) the estimators for J and nuJ in all bins
 void reduce_estimators() {

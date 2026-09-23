@@ -23,6 +23,7 @@
 #include "constants.h"
 #include "globals.h"
 #include "grid.h"
+#include "kpkt.h"
 #include "ltepop.h"
 #include "macroatom.h"
 #include "mpi_logging.h"
@@ -591,6 +592,8 @@ auto do_rpkt_step(Packet& pkt, const double t2, ContinuumOpacity& chi_rpkt_cont)
       const bool thermalise = RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.value() >= 1. ||
                               rng_uniform(get_rngstate(pkt)) < RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.value();
       if (thermalise) {
+        // the packet passes through the thermal pool, so it gets the radiative share of the cell as a k-packet does
+        pkt.e_cmf *= kpkt::get_radiative_energy_factor(nonemptymgi);
         // Thermal redistribution of frequency
         pkt.nu_cmf = sample_planck_times_expansion_opacity(nonemptymgi, get_rngstate(pkt));
         pkt.next_trans = -1;
@@ -603,7 +606,7 @@ auto do_rpkt_step(Packet& pkt, const double t2, ContinuumOpacity& chi_rpkt_cont)
         // re-emit rather than scatter, so that this event is not counted as an electron scattering
         pkt.nscatterings = 0;
       } else {
-        // pure scattering, so the packet keeps its co-moving frequency and direction is changed
+        // pure scattering, so the packet keeps its comoving frequency in a new direction
         pkt.nscatterings++;
         stats::increment(stats::Counter::ELECTRON_SCATTERINGS);
       }
@@ -1105,7 +1108,9 @@ void calculate_expansion_opacities(const int nonemptymgi) {
       const auto bin_kappa_cont = calculate_chi_ffheating(nonemptymgi, nu_mid, false) / rho;
 
       const auto planck_val = radfield::planck(nu_mid, temperature);
-      const auto kappa_planck = (bin_kappa_bb + bin_kappa_cont) * planck_val;
+      // only the thermalised fraction of the line absorption is a true absorption
+      const auto kappa_planck =
+          ((RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.value() * bin_kappa_bb) + bin_kappa_cont) * planck_val;
 
       const auto delta_nu = nu_upper - nu_lower;
       kappa_planck_cumulative += kappa_planck * delta_nu;

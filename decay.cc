@@ -625,9 +625,7 @@ auto write_nuclides_list() {
   if (nucindex >= 0) {
     return nucindex;
   }
-  printlnlog("[error] nuclide Z={} A={} not found in nuclide list", z, a);
-  assert_always(false);  // nuclide not found
-  return -1;
+  fatal_crash("nuclide Z={} A={} not found in nuclide list", z, a);
 }
 
 // check if nuclide exists in the simulation
@@ -1252,7 +1250,8 @@ auto get_global_etot_tmodel_tinf() -> double {
                   get_decaypath_lastdecayenergy(decaypath));
   }
   assert_always(std::isfinite(etot_tinf));
-  assert_always(etot_tinf > 0.);
+  // a model with only initial thermal energy has no decay energy
+  assert_always(etot_tinf >= 0.);
   return etot_tinf;
 }
 

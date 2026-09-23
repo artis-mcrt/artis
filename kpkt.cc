@@ -275,6 +275,21 @@ auto sample_planck_montecarlo(const double T, rngstate_type& rngstate) -> double
     }
   }
 }
+
+// Emit the k-packet as an r-packet at pkt.nu_cmf. A thermal emission starts a new true emission record.
+DEVICE_FUNC void emit_thermal_rpkt(Packet& pkt, const int emissiontype) {
+  assert_always(std::isfinite(pkt.nu_cmf));
+  emit_rpkt(pkt);
+  pkt.next_trans = -1;
+  pkt.emissiontype = emissiontype;
+  pkt.trueemissiontype = emissiontype;
+  pkt.trueem_pos = pkt.em_pos;
+  pkt.trueem_time = pkt.em_time;
+  pkt.nscatterings = 0;
+  if constexpr (VPKT_ON) {
+    vpkt::trace_vpkts(pkt, TYPE_KPKT);
+  }
+}
 }  // anonymous namespace
 
 // Compute the cooling rate of a single ion, split into the free-free, the free-bound, and the collisional
@@ -459,23 +474,9 @@ DEVICE_FUNC void do_kpkt_blackbody(Packet& pkt) {
     pkt.nu_cmf = sample_planck_montecarlo(grid::Te_allcells[nonemptymgi], get_rngstate(pkt));
   }
 
-  assert_always(std::isfinite(pkt.nu_cmf));
-  // and then emit the packet randomly in the comoving frame
-  emit_rpkt(pkt);
-  pkt.next_trans = -1;  // FLAG: transition history here not important, cont. process
   stats::increment(stats::Counter::K_STAT_TO_R_BB);
   stats::increment(stats::Counter::INTERACTIONS);
-  pkt.emissiontype = EMTYPE_FREEFREE;
-  // this is a thermal emission, so record it as the packet's last thermal ("true") emission
-  // (emit_rpkt has just set em_pos/em_time to the current position and time)
-  pkt.trueemissiontype = pkt.emissiontype;
-  pkt.trueem_pos = pkt.em_pos;
-  pkt.trueem_time = pkt.em_time;
-  pkt.nscatterings = 0;
-
-  if constexpr (VPKT_ON) {
-    vpkt::trace_vpkts(pkt, TYPE_KPKT);
-  }
+  emit_thermal_rpkt(pkt, EMTYPE_FREEFREE);
 }
 
 // handle a k-packet (kinetic energy of the free electrons)
@@ -578,24 +579,8 @@ DEVICE_FUNC void do_kpkt(Packet& pkt, const double t2, const int nts) {
     // exponentially distributed with mean k T_e / h and can be drawn by inverting the CDF.
     pkt.nu_cmf = -KB * T_e / H * std::log(static_cast<double>(rng_uniform_pos(get_rngstate(pkt))));
 
-    assert_always(std::isfinite(pkt.nu_cmf));
-
-    // and then emit the packet randomly in the comoving frame
-    emit_rpkt(pkt);
-    pkt.next_trans = -1;  // FLAG: transition history here not important, cont. process
     stats::increment(stats::Counter::K_STAT_TO_R_FF);
-
-    pkt.emissiontype = EMTYPE_FREEFREE;
-    // this is a thermal emission, so record it as the packet's last thermal ("true") emission
-    // (emit_rpkt has just set em_pos/em_time to the current position and time)
-    pkt.trueemissiontype = pkt.emissiontype;
-    pkt.trueem_pos = pkt.em_pos;
-    pkt.trueem_time = pkt.em_time;
-    pkt.nscatterings = 0;
-    if constexpr (VPKT_ON) {
-      vpkt::trace_vpkts(pkt, TYPE_KPKT);
-    }
-
+    emit_thermal_rpkt(pkt, EMTYPE_FREEFREE);
   } else if (rndcoolingtype == CoolingType::FREEBOUND) {
     // The k-packet converts directly into a r-packet by free-bound emission.
     const int lowerion = ion;
@@ -607,20 +592,8 @@ DEVICE_FUNC void do_kpkt(Packet& pkt, const double t2, const int nts) {
     // continuum's frequency range.
     pkt.nu_cmf = select_continuum_nu(element, lowerion, lowerlevel, phixstargetindex, T_e, get_rngstate(pkt));
 
-    // and then emit the packet randomly in the comoving frame
-    emit_rpkt(pkt);
-
-    pkt.next_trans = -1;  // FLAG: transition history here not important, cont. process
     stats::increment(stats::Counter::K_STAT_TO_R_FB);
-    pkt.emissiontype = get_emtype_continuum(element, lowerion, lowerlevel, phixstargetindex);
-    pkt.trueemissiontype = pkt.emissiontype;
-    pkt.trueem_pos = pkt.em_pos;
-    pkt.trueem_time = pkt.em_time;
-    pkt.nscatterings = 0;
-
-    if constexpr (VPKT_ON) {
-      vpkt::trace_vpkts(pkt, TYPE_KPKT);
-    }
+    emit_thermal_rpkt(pkt, get_emtype_continuum(element, lowerion, lowerlevel, phixstargetindex));
   } else if (rndcoolingtype == CoolingType::COLLEXC) {
     // the k-packet activates a macro-atom due to collisional excitation
     const float clumpednne = grid::get_clumpfactor(nonemptymgi) * grid::get_nne(nonemptymgi);

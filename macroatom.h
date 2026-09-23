@@ -22,10 +22,11 @@ DEVICE_FUNC void do_macroatom(Packet& pkt, const MacroAtomState& pktmastate);
 DEVICE_FUNC void calculate_cellcache_macroatom_transitionrates(int nonemptymgi, int uniquelevelindex, double t_mid);
 
 // Approximate radiative and collisional rates, following Kromer & Sim (2009), MNRAS, 398, 1809-1826,
-// doi:10.1111/j.1365-2966.2009.15256.x, Sections 3.5.1-3.5.2. The clumpednne argument is normally the cell's free
-// electron density multiplied by its clumping factor; the startup recombination-rate calibration in ratecoeff.cc
-// deliberately passes 1 instead, so that the factor cancels out of the coefficient it is deriving. Radiative excitation
-// rate. Multiply by the lower-level population to obtain a rate per second.
+// doi:10.1111/j.1365-2966.2009.15256.x, Sections 3.5.1-3.5.2. The clumpednne argument is normally the free
+// electron density of the cell times its clumping factor. The startup calibration of the recombination rates in
+// ratecoeff.cc gives 1, so that the factor cancels out of the coefficient that it calculates.
+
+// Radiative excitation rate coefficient. Multiply it by the population of the lower level to get a rate [s^-1].
 [[gnu::pure]] [[nodiscard]] auto rad_excitation_ratecoeff(int nonemptymgi, double upper_statweight, double einstein_A,
                                                           double epsilon_trans, double nnlevel_lower,
                                                           double nnlevel_upper, double statweight_lower,

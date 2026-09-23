@@ -122,6 +122,18 @@ class Xoshiro128PP {
     this->s[3] = splitmix();
   }
 
+  // Two SplitMix64 outputs fill the state, so distinct 64-bit seeds give distinct states
+  constexpr void seed64(const std::uint64_t seedvalue) noexcept {
+    const std::uint64_t z0 = _mix_seed(seedvalue);
+    const std::uint64_t z1 = _mix_seed(seedvalue + 0x9E3779B97F4A7C15);
+    this->s = {
+        static_cast<result_type>(z0),
+        static_cast<result_type>(z0 >> 32U),
+        static_cast<result_type>(z1),
+        static_cast<result_type>(z1 >> 32U),
+    };
+  }
+
   constexpr auto operator()() noexcept -> result_type {
     const result_type result = std::rotl(this->s[0] + this->s[3], 7U) + this->s[0];
     const result_type t = s[1] << 9U;

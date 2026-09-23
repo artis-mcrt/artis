@@ -19,12 +19,10 @@ endif
 
 $(info mpicxx version: $(shell mpicxx --showme:version 2> /dev/null))
 
-ifeq ($(TESTMODE),ON)
-else ifeq ($(TESTMODE),OFF)
-else ifeq ($(TESTMODE),)
-else
-  $(error bad value for TESTMODE option. Should be ON or OFF)
-endif
+# each option is exactly ON, OFF, or empty
+$(foreach option,TESTMODE REPRODUCIBLE GPU OPENMP STDPAR FASTMATH OPTIMIZE,\
+  $(if $(or $(filter-out ON OFF,$($(option))),$(filter-out 0 1,$(words $($(option))))),\
+    $(error bad value for $(option) option. Should be ON or OFF)))
 
 CXX := mpicxx
 COMPILER_VERSION := $(shell $(CXX) --version)
@@ -110,7 +108,8 @@ $(info detected CPU is $(CPU_ARCH))
 # Use a custom build directory for each combination of compiler, CPU architecture, and options to avoid conflicts and ensure that the correct binaries are used
 BUILD_DIR = build/$(COMPILER_NAME)-$(COMPILER_VERSION_NUMBER)_$(CPU_ARCH)
 
-CXXFLAGS += -std=$(CXX_STD) $(ARCH_FLAGS) -Wall -Wextra -Wpedantic -Wredundant-decls -Wno-unused-parameter -Wsign-compare -Wshadow -isystem third_party
+# -UNDEBUG keeps assert_always() active when the environment CXXFLAGS holds -DNDEBUG
+CXXFLAGS += -std=$(CXX_STD) -UNDEBUG $(ARCH_FLAGS) -Wall -Wextra -Wpedantic -Wredundant-decls -Wno-unused-parameter -Wsign-compare -Wshadow -isystem third_party
 
 # generate and use .d header dependency files, so that header edits trigger recompilation of the
 # objects that include them (every compiler, including nvc++, supports these GCC-style options)
@@ -124,10 +123,6 @@ ifeq ($(REPRODUCIBLE),ON)
 	CXXFLAGS += -DREPRODUCIBLE=true -ffp-contract=off -DEIGEN_DONT_VECTORIZE
 	BUILD_DIR := $(BUILD_DIR)_reproducible
 	override FASTMATH := OFF
-else ifeq ($(REPRODUCIBLE),OFF)
-else ifeq ($(REPRODUCIBLE),)
-else
-  $(error bad value for REPRODUCIBLE option. Should be ON or OFF)
 endif
 
 # CXXFLAGS += -DUSE_SIMPSON_INTEGRATOR
@@ -135,10 +130,6 @@ endif
 ifeq ($(GPU),ON)
 	CXXFLAGS += -DGPU_ON -DUSE_SIMPSON_INTEGRATOR -U_GLIBCXX_ASSERTIONS
 	BUILD_DIR := $(BUILD_DIR)_gpu
-else ifeq ($(GPU),OFF)
-else ifeq ($(GPU),)
-else
-    $(error bad value for GPU option. Should be ON or OFF)
 endif
 
 ifeq ($(OPENMP),ON)
@@ -159,11 +150,6 @@ ifeq ($(OPENMP),ON)
 	else ifeq ($(COMPILER_NAME),gcc)
 		CXXFLAGS += -fopenmp
 	endif
-
-else ifeq ($(OPENMP),OFF)
-else ifeq ($(OPENMP),)
-else
-    $(error bad value for OPENMP option. Should be ON or OFF)
 endif
 
 ifeq ($(STDPAR),ON)
@@ -190,11 +176,6 @@ ifeq ($(STDPAR),ON)
 	else ifeq ($(COMPILER_NAME),gcc)
 		LDFLAGS += -ltbb
 	endif
-
-else ifeq ($(STDPAR),OFF)
-else ifeq ($(STDPAR),)
-else
-  $(error bad value for STDPAR option. Should be ON or OFF)
 endif
 
 ifeq ($(COMPILER_NAME),nvhpc)
@@ -251,13 +232,6 @@ ifeq ($(TESTMODE),ON)
 	CXXFLAGS += $(TESTMODE_CXXFLAGS)
 
 	BUILD_DIR := $(BUILD_DIR)_testmode
-endif
-
-ifneq ($(filter-out ON OFF,$(FASTMATH)),)
-  $(error bad value for FASTMATH option. Should be ON or OFF)
-endif
-ifneq ($(filter-out ON OFF,$(OPTIMIZE)),)
-  $(error bad value for OPTIMIZE option. Should be ON or OFF)
 endif
 
 ifeq ($(OPTIMIZE),OFF)
@@ -325,10 +299,12 @@ ifneq ($(PGO),)
 endif
 
 .ONESHELL:
+# the shell command and the C++ string literal must not see a quote, a backslash, a dollar, or a backtick
+GIT_STATUS_TEXT := $(subst ",,$(subst \,,$(subst `,,$(subst $$,,$(shell git status --short)))))
 define version_cc
 extern const char* const GIT_VERSION = \"$(shell git describe --dirty --always --tags)\";
 extern const char* const GIT_BRANCH = \"$(shell git symbolic-ref --short HEAD 2>/dev/null || git rev-parse --short HEAD )\";
-extern const char* const GIT_STATUS = \"$(shell git status --short)\";
+extern const char* const GIT_STATUS = \"$(GIT_STATUS_TEXT)\";
 endef
 
 # the git metadata changes at almost every git operation. version.h declares the strings and stays
@@ -424,7 +400,7 @@ else ifeq ($(CDB_CXX),)
 	@echo '$@: "$(CXX) -show" does not name the compiler, so make writes no compilation database'
 else
 	@CDB_CXX='$(CDB_CXX)' CDB_FLAGS='$(CDB_INCFLAGS) $(CDB_CXXFLAGS)' CDB_SRC='$(CDB_SRC)' \
-		$(CDB_PYTHON) -c 'import json,os,shlex,sys; args=[os.environ["CDB_CXX"],*shlex.split(os.environ["CDB_FLAGS"])]; json.dump([{"directory":os.getcwd(),"arguments":[*args,"-c",src],"file":src} for src in os.environ["CDB_SRC"].split()],sys.stdout,indent=1)' > $@.tmp
+		$(CDB_PYTHON) -c 'import json,os,shlex,sys; args=[os.environ["CDB_CXX"],*shlex.split(os.environ["CDB_FLAGS"])]; json.dump([{"directory":os.getcwd(),"arguments":[*args,"-c",src],"file":src} for src in os.environ["CDB_SRC"].split()],sys.stdout,indent=1)' > $@.tmp || exit 1
 	@if cmp -s $@.tmp $@; then rm -f $@.tmp; else mv $@.tmp $@; echo '$@: $(words $(CDB_SRC)) entries for $(CDB_CXX)'; fi
 endif
 

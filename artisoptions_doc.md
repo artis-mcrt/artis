@@ -149,7 +149,8 @@ constexpr double RADFIELDBINS_NU_MAX;
 // is the electron temperature of the cell. Only its dilution factor comes from the fit.
 constexpr double RADFIELDBINS_T_E_SUPERBIN_NU_MAX;
 
-// Store the Jb_lu estimators of the lines that radfield::init() selects.
+// Store the Jb_lu estimators of the lines that radfield::init() selects. This needs RPKT_USE_EXPANSION_OPACITIES
+// false.
 constexpr bool DETAILED_LINE_ESTIMATORS_ON;
 
 // Store the detailed bound-free rate estimators. This needs USE_LUT_PHOTOION false.

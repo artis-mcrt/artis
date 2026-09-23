@@ -232,7 +232,7 @@ void update_pellet(Packet& pkt, const int nts, const double t2) {
       atomicadd(globals::timesteps[nts].gamma_emission, pkt.e_cmf);
       gammapkt::pellet_gamma_decay(pkt);
     }
-  } else if ((tdecay > 0) && (nts == 0)) {
+  } else if ((tdecay > 0) && (nts == globals::timestep_initial)) {
     // These are pellets whose decay times were before the first time step. They become pre-k-packets, which
     // do_packet() immediately re-emits as r-packets with a blackbody frequency. The energy is reduced by
     // tdecay / tmin to account for the work done on the ejecta by the trapped radiation between the decay and
@@ -562,7 +562,10 @@ void update_packets(const int nts, std::span<Packet> packets) {
     const auto [nonemptymgi_start, nonemptymgi_count] =
         get_range_chunk(nonempty_npts_model, globals::node_nprocs, globals::rank_in_node);
     for (auto nonemptymgi = nonemptymgi_start; nonemptymgi < (nonemptymgi_start + nonemptymgi_count); nonemptymgi++) {
-      cellcacheslot_populate(globals::cellcache.at(nonemptymgi), static_cast<int>(nonemptymgi));
+      // no packet reads the cell cache of a thick cell
+      if (grid::thick_allcells[nonemptymgi] != grid::CellThickness::THICK) {
+        cellcacheslot_populate(globals::cellcache.at(nonemptymgi), static_cast<int>(nonemptymgi));
+      }
     }
     MPI_Barrier_node();
     printlnlog("timestep {}: all {} cellcaches set (took {:.1f} s)", nts, nonempty_npts_model,
@@ -609,6 +612,8 @@ void update_packets(const int nts, std::span<Packet> packets) {
       // if no packets needed updating, then this timestep is complete
       break;
     }
+    // the packets from pktindex stay inactive for the rest of this timestep, so the next pass sorts only the prefix
+    packets = packets.first(pktindex);
 
     // process the packets grouped by their required cell cache, which should minimise the number of times we need to
     // change the cell cache during the packet updates

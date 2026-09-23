@@ -175,15 +175,18 @@ void read_gamma_tables() {
       }
     }
 
-    if (!tablefound && decay::nucdecayenergygamma(nucindex) > 0.) {
+    if (!tablefound) {
+      // the gamma energy of these nuclides comes only from the table, so a missing table gives zero
       assert_always(z != 28 || a != 56);  // Ni-56 must have a gamma spectrum
       assert_always(z != 27 || a != 56);  // Co-56 must have a gamma spectrum
       assert_always(z != 23 || a != 48);  // V-48 must have a gamma spectrum
       assert_always(z != 24 || a != 48);  // Cr-48 must have a gamma spectrum
       assert_always(z != 28 || a != 57);  // Ni-57 must have a gamma spectrum if present in list of nuclides
       assert_always(z != 27 || a != 57);  // Co-57 must have a gamma spectrum if present in list of nuclides
-      set_trivial_gamma_spectrum(nucindex);
-      nuclides_without_table++;
+      if (decay::nucdecayenergygamma(nucindex) > 0.) {
+        set_trivial_gamma_spectrum(nucindex);
+        nuclides_without_table++;
+      }
     }
   }
 
@@ -318,7 +321,7 @@ void init_xcom_photoion_data() {
     int Z = 0;
     double E = 0;
     double sigma = 0;
-    std::stringstream(line_str) >> Z >> E >> sigma;
+    assert_always(std::stringstream(line_str) >> Z >> E >> sigma);
     assert_always(Z > 0);
     assert_always(Z <= xcom_max_atomic_number);
     // convert XCOM data to cgs units already here
@@ -858,32 +861,32 @@ void barnes_thermalisation(Packet& pkt) {
   absorb_or_escape_gamma(pkt, f_gamma);
 }
 
-void wollaeger_thermalisation(Packet& pkt) {
-  // corresponds to a local version of the Barnes scheme, i.e. it takes into account the local mass
-  // density rather than a value averaged over the ejecta
-  constexpr double mean_gamma_opac = 0.1;
-  // integration: requires distances within single cells in radial direction and the corresponding densities
-  // need to create a packet copy which is moved during the integration
+// The optical depth of a grey gamma-ray opacity kappa [cm^2/g] along a ray from the packet position to the edge of
+// the grid. The density is evaluated at the time that the ray reaches each cell.
+auto get_grey_tau_to_escape(const Packet& pkt, const Vec3d& dir, const double kappa) -> double {
   Packet pkt_copy = pkt;
-  pkt_copy.dir = vec_norm(pkt_copy.pos);  // integrate the optical depth radially outwards
+  pkt_copy.dir = dir;
   double tau = 0.;
-  bool end_packet = false;
-  while (!end_packet) {
-    // distance to the next cell
+  while (pkt_copy.type != TYPE_ESCAPE) {
     const auto [boundarydist, next_cellindex] =
         grid::boundary_distance(pkt_copy.dir, pkt_copy.pos, pkt_copy.prop_time, pkt_copy.cellindex);
     const int mgi = grid::get_propcell_modelgridindex(pkt_copy.cellindex);
     if (mgi >= 0) {
-      // the density is evaluated at the time that the ray reaches each cell, as in guttman_thermalisation()
       const double rho = grid::get_rho_tmin(mgi) * pow3(globals::tmin / pkt_copy.prop_time);
-      tau += mean_gamma_opac * rho * boundarydist;  // contribution to the integral
+      tau += kappa * rho * boundarydist;
     }
-    // move packet copy now
     move_pkt_withtime(pkt_copy, boundarydist);
-
     grid::change_cell_or_escape(pkt_copy, next_cellindex, false);
-    end_packet = (pkt_copy.type == TYPE_ESCAPE);
   }
+  return tau;
+}
+
+void wollaeger_thermalisation(Packet& pkt) {
+  // corresponds to a local version of the Barnes scheme, i.e. it takes into account the local mass
+  // density rather than a value averaged over the ejecta
+  constexpr double mean_gamma_opac = 0.1;
+  // integrate the optical depth radially outwards
+  const double tau = get_grey_tau_to_escape(pkt, vec_norm(pkt.pos), mean_gamma_opac);
   const double f_gamma = 1. - std::exp(-tau);
 
   absorb_or_escape_gamma(pkt, f_gamma);
@@ -899,22 +902,7 @@ void guttman_thermalisation(Packet& pkt) {
   constexpr int num_directions = 100;
   double deposition_probability_sum = 0.;
   for (int i = 0; i < num_directions; i++) {
-    Packet pkt_copy = pkt;
-    pkt_copy.dir = get_rand_isotropic_unitvec(get_rngstate(pkt));
-
-    double tau = 0.;
-    while (pkt_copy.type != TYPE_ESCAPE) {
-      const auto [boundarydist, next_cellindex] =
-          grid::boundary_distance(pkt_copy.dir, pkt_copy.pos, pkt_copy.prop_time, pkt_copy.cellindex);
-      const int mgi = grid::get_propcell_modelgridindex(pkt_copy.cellindex);
-      if (mgi >= 0) {
-        const double rho = grid::get_rho_tmin(mgi) * pow3(globals::tmin / pkt_copy.prop_time);
-        tau += mean_gamma_opac * rho * boundarydist;
-      }
-      move_pkt_withtime(pkt_copy, boundarydist);
-      grid::change_cell_or_escape(pkt_copy, next_cellindex, false);
-    }
-
+    const double tau = get_grey_tau_to_escape(pkt, get_rand_isotropic_unitvec(get_rngstate(pkt)), mean_gamma_opac);
     deposition_probability_sum -= std::expm1(-tau);
   }
 

@@ -106,10 +106,10 @@ struct TimeStep {
       // write_deposition_file() uses this same member in both the total deposition and the total emission sums.
   double eps_spfission_ana_power{0.};  // cmf spontaneous fission energy generation rate analytical [erg/s]
   ALIGNAS_AVOID_FALSE_SHARING double gamma_emission{0.};  // gamma decay energy generation in this timestep [erg]
-  double qdot_betaminus{0.};  // energy generation from beta-minus decays (including neutrinos) [erg/s/g]
-  double qdot_alpha{0.};  // energy generation from alpha decays (including neutrinos) [erg/s/g]
-  double qdot_spfission{0.};  // energy generation from spontaneous fission decays (including neutrinos) [erg/s/g]
-  double qdot_total{0.};  // energy generation from all decays (including neutrinos) [erg/s/g]
+  double qdot_betaminus{0.};  // energy generation rate of the beta-minus decays (with neutrinos) [erg/s]
+  double qdot_alpha{0.};  // energy generation rate of the alpha decays (with neutrinos) [erg/s]
+  double qdot_spfission{0.};  // energy generation rate of the spontaneous fission decays (with neutrinos) [erg/s]
+  double qdot_total{0.};  // energy generation rate of all decays (with neutrinos) [erg/s]
   ALIGNAS_AVOID_FALSE_SHARING int pellet_decays{0};  // Number of pellets that decay in this time step.
 };
 inline std::vector<TimeStep> timesteps;
@@ -131,12 +131,6 @@ inline std::vector<double> bfheatingestimator{};
 
 inline std::vector<double> ffheatingestimator{};
 inline std::vector<double> colheatingestimator{};
-#ifdef DO_TITER
-inline std::vector<double> gammaestimator_save{};
-inline std::vector<double> bfheatingestimator_save{};
-inline std::vector<double> ffheatingestimator_save{};
-inline std::vector<double> colheatingestimator_save{};
-#endif
 
 inline int nprocs_exspec{1};
 
@@ -185,9 +179,6 @@ struct AllLevels {
 
   // Number of autoionizing transition from this level
   MPI_shared_array<const int> nautoiondowntrans;
-
-  // Number of di-el captures up from this level
-  MPI_shared_array<const int> nautoionuptrans;
 
   // index into globals::allautoion for first autoion from this level
   MPI_shared_array<const int> allautoion_start;
@@ -340,15 +331,6 @@ inline int num_grey_timesteps{-1};
 inline bool lte_iteration{false};
 
 }  // namespace globals
-
-// DO_TITER mode: average an estimator with its saved value from the previous timestep iteration
-// (if one exists) and store the result as the new saved value.
-inline void titer_average(double& value, double& saved) {
-  if (saved >= 0) {
-    value = (value + saved) / 2;
-  }
-  saved = value;
-}
 
 [[nodiscard]] inline auto get_max_threads() -> int {
 #ifdef _OPENMP

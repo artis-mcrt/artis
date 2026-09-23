@@ -488,16 +488,6 @@ inline void update_includedionslevels_maxnions() {
   return get_nuptrans(get_uniquelevelindex(element, ion, level));
 }
 
-// the number of upward autoionisation transitions from the specified level
-[[gnu::pure]] [[nodiscard]] inline auto get_nautoionuptrans(const int uniquelevelindex) -> int {
-  return globals::alllevels.nautoionuptrans[uniquelevelindex];
-}
-
-[[gnu::pure]] [[nodiscard]] inline auto get_nautoionuptrans(const int element, const int ion, const int level) -> int {
-  testmodeassert_valid_level(element, ion, level);
-  return globals::alllevels.nautoionuptrans[get_uniquelevelindex(element, ion, level)];
-}
-
 // Index of upperionlevel in the level's photoionisation target list, or -1 if it is not a target
 [[gnu::pure]] [[nodiscard]] inline auto find_phixstargetindex(const int uniquelevelindex, const int upperionlevel)
     -> int {
