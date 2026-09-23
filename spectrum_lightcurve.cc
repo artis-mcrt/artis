@@ -219,15 +219,22 @@ class BufferedTextFile {
 
 // Write an emission-type spectrum (emission or true emission) with a line for each frequency bin of
 // each timestep, holding one column per emission process (see get_proccount).
+// The emission and absorption files have no time column, so their readers take the number of time blocks from
+// timesteps.out. The writers therefore always write every timestep of the model. The timesteps after numtimesteps
+// get rows of zeros, because their arrays hold only the packets that escaped early with a late arrival time.
 void write_emission_spectrum_file(const std::string& emission_filename,
                                   const std::span<const double> emission_alltimesteps, const int numtimesteps) {
   assert_always(numtimesteps <= globals::ntimesteps);
   assert_always(!emission_filename.empty());
   BufferedTextFile emission_file(emission_filename);
   const auto proccount = static_cast<ptrdiff_t>(get_proccount());
+  const std::vector<double> zerorow(proccount, 0.);
   for (auto nubin = 0Z; nubin < MNUBINS; nubin++) {
     for (auto nts = 0Z; nts < numtimesteps; nts++) {
       emission_file.append_row(emission_alltimesteps.subspan(get_emission_spectrum_index(nts, nubin), proccount));
+    }
+    for (auto nts = static_cast<ptrdiff_t>(numtimesteps); nts < globals::ntimesteps; nts++) {
+      emission_file.append_row(zerorow);
     }
   }
 }
@@ -238,10 +245,14 @@ void write_absorption_spectrum_file(const std::string& absorption_filename, cons
   assert_always(!absorption_filename.empty());
   BufferedTextFile absorption_file(absorption_filename);
   const int ioncount = get_nelements() * get_max_nions();  // may be higher than the true included ion count
+  const std::vector<double> zerorow(ioncount, 0.);
   for (auto nubin = 0Z; nubin < MNUBINS; nubin++) {
     for (auto nts = 0Z; nts < numtimesteps; nts++) {
       absorption_file.append_row(
           spectra.absorptionalltimesteps.span().subspan(get_absorption_spectrum_index(nts, nubin), ioncount));
+    }
+    for (auto nts = static_cast<ptrdiff_t>(numtimesteps); nts < globals::ntimesteps; nts++) {
+      absorption_file.append_row(zerorow);
     }
   }
 }
@@ -307,11 +318,15 @@ void write_specpol(const std::string& specpol_filename, const std::string& emiss
   if (this_rank_writes_file(6)) {
     BufferedTextFile emissionpol_file(emission_filename);
     const auto proccount = static_cast<ptrdiff_t>(get_proccount());
+    const std::vector<double> zerorow(proccount, 0.);
     for (auto nnu = 0Z; nnu < MNUBINS; nnu++) {
       for (const auto* stokes_spectrum : stokes_spectra) {
         for (auto nts = 0Z; nts < numtimesteps; nts++) {
           emissionpol_file.append_row(
               stokes_spectrum->emissionalltimesteps.span().subspan(get_emission_spectrum_index(nts, nnu), proccount));
+        }
+        for (auto nts = static_cast<ptrdiff_t>(numtimesteps); nts < ntimesteps_all; nts++) {
+          emissionpol_file.append_row(zerorow);
         }
       }
     }
@@ -320,11 +335,15 @@ void write_specpol(const std::string& specpol_filename, const std::string& emiss
   if (this_rank_writes_file(7)) {
     BufferedTextFile absorptionpol_file(absorption_filename);
     const int ioncount = get_nelements() * get_max_nions();  // may be higher than the true included ion count
+    const std::vector<double> zerorow(ioncount, 0.);
     for (auto nnu = 0Z; nnu < MNUBINS; nnu++) {
       for (const auto* stokes_spectrum : stokes_spectra) {
         for (auto nts = 0Z; nts < numtimesteps; nts++) {
           absorptionpol_file.append_row(stokes_spectrum->absorptionalltimesteps.span().subspan(
               get_absorption_spectrum_index(nts, nnu), ioncount));
+        }
+        for (auto nts = static_cast<ptrdiff_t>(numtimesteps); nts < ntimesteps_all; nts++) {
+          absorptionpol_file.append_row(zerorow);
         }
       }
     }
