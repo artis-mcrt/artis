@@ -339,11 +339,10 @@ constexpr bool RPKT_USE_EXPANSION_OPACITIES;
 // Use expansion opacities instead of line-by-line opacities for the virtual packets.
 constexpr bool VPKT_USE_EXPANSION_OPACITIES;
 
-// The line weight in the opacity of each wavelength bin of RPKT_USE_EXPANSION_OPACITIES,
+// The line weight in the expansion opacity of each wavelength bin of RPKT_USE_EXPANSION_OPACITIES,
 // VPKT_USE_EXPANSION_OPACITIES, and RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY. A line with the Sobolev optical
 // depth tau adds (lambda / delta_lambda) * weight to the sum of its bin:
-// - EXPANSION: 1 - exp(-tau), the expansion opacity (Eastman & Pinto 1993, ApJ, 412, 731-751,
-//   doi:10.1086/172957).
+// - EXPANSION: 1 - exp(-tau) (Eastman & Pinto 1993, ApJ, 412, 731-751, doi:10.1086/172957).
 // - LINEBINNEDCAPPED: min(1, tau), the line-binned opacity with a limit of 1 for each line.
 // - LINEBINNED: tau, the line-binned opacity (Fontes, Fryer, Hungerford, Wollaeger & Korobkin 2020, MNRAS, 493,
 //   4143-4171, doi:10.1093/mnras/staa485).
@@ -352,8 +351,8 @@ constexpr ExpansionOpacityMethod EXPANSION_OPACITY_METHOD;
 // Replace the macroatom with a thermalisation probability P for each bound-bound absorption, and a scattering
 // in the absorbing line with probability 1 - P. Every k-packet in a cell that is not thick then emits a blackbody
 // spectrum weighted with the sum of the expansion opacity and the free-free opacity. By Kirchhoff's law, the
-// emission type is free-free or a line of the frequency bin, in proportion to their opacities. The code therefore
-// computes the expansion opacity bins also without RPKT_USE_EXPANSION_OPACITIES. A thick cell samples a plain
+// emission type is free-free or a line of the wavelength bin, in proportion to their opacities. The code therefore
+// computes the expansion opacities also without RPKT_USE_EXPANSION_OPACITIES. A thick cell samples a plain
 // Planck function. No value keeps the macroatom.
 constexpr std::optional<float> RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY;
 

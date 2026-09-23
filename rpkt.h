@@ -44,6 +44,10 @@ static_assert(get_expopac_bin_nu_lower(0) == get_expopac_bin_nu_upper(1));  // b
 static_assert(get_expopac_bin_nu_lower(0) < get_expopac_bin_nu_upper(0));
 static_assert(get_expopac_bin_nu_upper(expopac_nbins - 1) > get_expopac_bin_nu_lower(expopac_nbins - 1));
 
+// the options that use the expansion opacities
+constexpr bool CALCULATE_EXPANSION_OPACITIES = RPKT_USE_EXPANSION_OPACITIES || VPKT_USE_EXPANSION_OPACITIES ||
+                                               RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.has_value();
+
 // kappa in cm^2/g for each bin of each non-empty cell
 inline MPI_shared_array<float> expansionopacities{};
 
@@ -108,10 +112,10 @@ extern template void calculate_chi_rpkt_cont<false>(double nu_cmf, ContinuumOpac
 [[nodiscard]] DEVICE_FUNC auto sample_planck_times_expansion_opacity(int nonemptymgi, rngstate_type& rngstate)
     -> std::tuple<double, int>;
 void allocate_expansionopacities();
-// Convert Sobolev line optical depths in each wavelength bin into an expansion mass opacity. When requested, also
-// construct the Planck-weighted cumulative distribution used to sample thermal re-emission frequencies.
-// Eastman & Pinto (1993), ApJ, 412, 731-751, doi:10.1086/172957; Karp, Lasher, Chan & Salpeter (1977), ApJ, 214,
-// 161-178, doi:10.1086/155241.
+// Convert Sobolev line optical depths in each wavelength bin into an expansion mass opacity with the line weight of
+// EXPANSION_OPACITY_METHOD. When requested, also construct the Planck-weighted cumulative distribution used to sample
+// thermal re-emission frequencies. For the EXPANSION weight: Eastman & Pinto (1993), ApJ, 412, 731-751,
+// doi:10.1086/172957; Karp, Lasher, Chan & Salpeter (1977), ApJ, 214, 161-178, doi:10.1086/155241.
 void calculate_expansion_opacities(int nonemptymgi);
 void MPI_Bcast_binned_opacities(ptrdiff_t nstart_nonempty, ptrdiff_t ndo_nonempty, int root_node_id);
 auto calculate_chi_ffheat_nnionpart(int nonemptymgi) -> double;
@@ -137,7 +141,8 @@ auto calculate_chi_ffheat_nnionpart(int nonemptymgi) -> double;
 }
 
 // Get the correction of a binned expansion opacity for the path that sweeps the bin. The packet crosses
-// each line of the bin once, so the bin optical depth must equal the sum of (1 - exp(-tau_sobolev)).
+// each line of the bin once, so the bin optical depth must equal the sum of the line weights of
+// EXPANSION_OPACITY_METHOD, e.g. 1 - exp(-tau_sobolev) for EXPANSION.
 // calculate_expansion_opacities() assumes the path c * t * dnu / nu, which is the path that
 // get_linedistance() gives with the first-order Doppler shift. The factor is the ratio of that path to the
 // relativistic one, which is the Doppler factor times the Lorentz factor. Give the same time that the

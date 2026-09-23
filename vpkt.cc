@@ -402,13 +402,13 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
               const auto binedgedist = get_linedistance(t_future, nu_cmf, next_bin_edge_nu, dnu_on_dl);
 
               const auto kappa = expansionopacities[(nonemptymgi * expopac_nbins) + binindex];
-              // kappa_exp * rho = (1 / (c t)) * sum_lines (lambda_line / delta_lambda) * (1 - exp(-tau_sobolev))
-              // and was tabulated at t_gridstate, so scale it to the packet's time. In the optically thin limit
-              // (1 - exp(-tau_sobolev)) -> tau_sobolev ∝ t^-2, which together with the explicit 1/(c t)
-              // prefactor gives kappa_exp * rho ∝ t^-3, i.e. the same density scaling as the linear continuum
-              // terms above. Saturated lines keep (1 - exp(-tau_sobolev)) ~ 1 and so fall off only as 1/t, but
-              // their individual tau_sobolev cannot be recovered from the binned kappa, so the thin limit is
-              // used for all bins.
+              // kappa_exp * rho = (1 / (c t)) * sum_lines (lambda_line / delta_lambda) * weight, with the line
+              // weight of EXPANSION_OPACITY_METHOD, and was tabulated at t_gridstate, so scale it to the packet's
+              // time. A weight of tau_sobolev ∝ t^-2, together with the explicit 1/(c t) prefactor, gives
+              // kappa_exp * rho ∝ t^-3, i.e. the same density scaling as the linear continuum terms above. This is
+              // exact for LINEBINNED and holds for the thin lines of the other methods. Saturated or capped lines
+              // fall off only as 1/t, but their individual tau_sobolev cannot be recovered from the binned kappa,
+              // so the thin limit is used for all bins.
               const double chi_bb_expansionopac = kappa * grid::get_rho(nonemptymgi) * densityscalefactor *
                                                   get_expopac_pathfactor(t_future, next_bin_edge_nu, dnu_on_dl);
 

@@ -128,7 +128,7 @@ struct Packet {
   // The process of the MOST RECENT emission, one of the two keys exspec decomposes the spectra by (see
   // trueemissiontype below). Overwritten by each emission rather than cleared when the packet re-enters the
   // thermal pool. With RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY, a thermal emission samples it by Kirchhoff's
-  // law: free-free or a line of the frequency bin of the emission.
+  // law: free-free or a line of the wavelength bin of the emission.
   int emissiontype{EMTYPE_NOTSET};
   Vec3d em_pos{NAN, NAN, NAN};  // Position of the last emission (x,y,z).
   float em_time{-1.};  // [s]
@@ -137,11 +137,11 @@ struct Packet {
   double absorptionfreq{};  // records nu_rf of packet at last absorption
   double stokes_q{0.};  // normalised Stokes q = Q/I
   double stokes_u{0.};  // normalised Stokes u = U/I
-  // The last emission out of the THERMAL POOL. Set when a k-packet emits or, with
-  // RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY, a line absorption thermalises, and then carried unchanged through
-  // subsequent scatterings and macro-atom deactivations, so it attributes escaped energy to where it was
-  // thermalised rather than to the last surface it scattered off. Reset to EMTYPE_NOTSET at every site that
-  // returns the packet to the thermal pool, so the next radiative emission starts a fresh record.
+  // The last emission out of the THERMAL POOL. A k-packet emission sets it. With
+  // RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY, a line absorption that thermalises the packet also sets it. Later
+  // scatterings and macro-atom deactivations keep it unchanged, so it assigns escaped energy to the place of
+  // thermalisation, not to the last scattering surface. Every site that returns the packet to the thermal pool
+  // resets it to EMTYPE_NOTSET, so the next radiative emission starts a new record.
   int trueemissiontype = EMTYPE_NOTSET;
   Vec3d trueem_pos{NAN, NAN, NAN};
   float trueem_time{-1.};  // last thermal emission time [s]

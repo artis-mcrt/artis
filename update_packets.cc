@@ -328,7 +328,8 @@ constexpr auto packetprop_update_required(const Packet& pkt, const double ts_end
 }
 
 // Return the id of the cell cache group that this packet belongs to, or an empty std::optional if the
-// packet does not use the cell cache at all (the types in nocache_packettypes, empty cells, thick cells).
+// packet does not use the cell cache at all (the types in nocache_packettypes, pre-k-packets without
+// RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY, empty cells, thick cells).
 // In single-slot mode the group id is the nonemptymgi, because packets of a given cell must be processed
 // together while that cell occupies the rank's one cache slot. In multi-slot mode every cell has its own
 // persistent slot, so no partitioning is needed and all cache-using packets share group 0.
@@ -336,7 +337,6 @@ auto get_packet_cellcachegroupid(const Packet& pkt) -> std::optional<int> {
   constexpr auto nocache_packettypes = std::array{
       TYPE_RADIOACTIVE_PELLET,
       TYPE_GAMMA,
-      TYPE_PRE_KPKT,
       TYPE_NONTHERMAL_PREDEPOSIT_BETAMINUS,
       TYPE_NONTHERMAL_PREDEPOSIT_BETAPLUS,
       TYPE_NONTHERMAL_PREDEPOSIT_ALPHA,
@@ -344,6 +344,10 @@ auto get_packet_cellcachegroupid(const Packet& pkt) -> std::optional<int> {
   };
   if (std::ranges::find(nocache_packettypes, pkt.type) != nocache_packettypes.end()) {
     return std::nullopt;  // these types do not use the cell cache
+  }
+  // with RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY, the emission of a pre-k-packet reads the level populations
+  if (!RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.has_value() && pkt.type == TYPE_PRE_KPKT) {
+    return std::nullopt;
   }
   const auto mgi = grid::get_propcell_modelgridindex(pkt.cellindex);
   if (mgi < 0) {

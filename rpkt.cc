@@ -47,65 +47,60 @@ namespace {
 // cumulative integral over the bins of (line plus free-free kappa) times the Planck function, per non-empty cell
 MPI_shared_array<double> expansionopacity_planck_cumulative{};
 
-// The weight of a line with the Sobolev optical depth tau_line in the opacity of its wavelength bin,
-// kappa = sum of (lambda / delta_lambda) * weight / (c t rho). EXPANSION_OPACITY_METHOD selects the weight.
-[[nodiscard]] DEVICE_FUNC auto get_binned_opacity_line_weight(const double tau_line) -> double {
-  if constexpr (EXPANSION_OPACITY_METHOD == ExpansionOpacityMethod::EXPANSION) {
-    return -std::expm1(-tau_line);
-  } else if constexpr (EXPANSION_OPACITY_METHOD == ExpansionOpacityMethod::LINEBINNEDCAPPED) {
-    return std::min(1., tau_line);
-  } else {
-    return tau_line;
+// The term (lambda / delta_lambda) * weight of a line in the sum of its wavelength bin, where the expansion opacity of
+// the bin is kappa = sum / (c t_mid rho). EXPANSION_OPACITY_METHOD selects the weight of the Sobolev optical depth.
+[[nodiscard]] DEVICE_FUNC auto get_expansion_opacity_line_term(const int lineindex, const double n_l, const double n_u,
+                                                               const double t_mid) -> double {
+  const auto& linelist = globals::linelist;
+  // A population inversion gives zero.
+  const auto tau_line =
+      std::max(((linelist.B_lu[lineindex] * n_l) - (linelist.B_ul[lineindex] * n_u)) * HCLIGHTOVERFOURPI * t_mid, 0.);
+  if (tau_line == 0.) {
+    return 0.;
   }
+
+  double weight{};
+  if constexpr (EXPANSION_OPACITY_METHOD == ExpansionOpacityMethod::EXPANSION) {
+    weight = -std::expm1(-tau_line);
+  } else if constexpr (EXPANSION_OPACITY_METHOD == ExpansionOpacityMethod::LINEBINNEDCAPPED) {
+    // this argument order keeps a NaN
+    weight = std::min(tau_line, 1.);
+  } else {
+    weight = tau_line;
+  }
+  const auto linelambda = 1e8 * CLIGHT / linelist.nu[lineindex];
+  return (linelambda / expopac_deltalambda) * weight;
 }
 
-// Select a line of an expansion opacity bin with its share of the bin opacity as the probability. The shares are the
-// terms of the line sum in calculate_expansion_opacities().
+// Select a line of a wavelength bin with its share of the expansion opacity of the bin as the probability
 DEVICE_FUNC auto sample_expansion_opacity_line(const int nonemptymgi, const ptrdiff_t binindex, rngstate_type& rngstate)
     -> int {
   const auto& linelist = globals::linelist;
   const auto t_mid = globals::timesteps[globals::timestep].mid;
-  // kappa = linesum / (c t_mid rho)
+  // kappa = sum / (c t_mid rho)
   const double bin_linesum =
       expansionopacities[(nonemptymgi * expopac_nbins) + binindex] * CLIGHT * t_mid * grid::get_rho(nonemptymgi);
   assert_always(bin_linesum > 0.);
   const double linesum_target = rng_uniform(rngstate) * bin_linesum;
 
-  // a pre-k-packet does not use the cell cache, so the cache slot can hold another cell
   const auto& cacheslot = get_cellcache(nonemptymgi);
-  const bool cacheslot_has_cell = cacheslot.nonemptymgi == nonemptymgi;
+  assert_testmodeonly(cacheslot.nonemptymgi == nonemptymgi);
+  const auto levelpops = std::span<const double>{cacheslot.alllevels_pops};
 
   // calculate_expansion_opacities() puts a line at a bin edge into the bin of higher frequency
-  const auto nu_upper = get_expopac_bin_nu_upper(binindex);
   const auto nu_lower = get_expopac_bin_nu_lower(binindex);
-  auto lineindex =
-      static_cast<int>(((binindex == 0) ? std::ranges::lower_bound(linelist.nu, nu_upper, std::ranges::greater{})
-                                        : std::ranges::upper_bound(linelist.nu, nu_upper, std::ranges::greater{})) -
-                       linelist.nu.begin());
+  auto lineindex = static_cast<int>(
+      std::ranges::upper_bound(linelist.nu, get_expopac_bin_nu_upper(binindex), std::ranges::greater{}) -
+      linelist.nu.begin());
 
   double linesum = 0.;
   int lineindex_lastabsorbing = -1;
   for (; lineindex < globals::nlines && linelist.nu[lineindex] >= nu_lower; lineindex++) {
-    const int uniquelevelindex_lower = linelist.uniquelevelindex_lower[lineindex];
-    const int uniquelevelindex_upper = linelist.uniquelevelindex_upper[lineindex];
-    double n_l = 0.;
-    double n_u = 0.;
-    if (cacheslot_has_cell) {
-      n_l = cacheslot.alllevels_pops[uniquelevelindex_lower];
-      n_u = cacheslot.alllevels_pops[uniquelevelindex_upper];
-    } else {
-      const int element = linelist.elementindex[lineindex];
-      const int ion = linelist.ionindex[lineindex];
-      const int ionuniquelevelindexstart = get_ionuniquelevelindexstart(element, ion);
-      n_l = calculate_levelpop(nonemptymgi, element, ion, uniquelevelindex_lower - ionuniquelevelindexstart);
-      n_u = calculate_levelpop(nonemptymgi, element, ion, uniquelevelindex_upper - ionuniquelevelindexstart);
-    }
-    // the Sobolev optical depth. A population inversion gives zero.
-    const auto tau_line =
-        std::max(((linelist.B_lu[lineindex] * n_l) - (linelist.B_ul[lineindex] * n_u)) * HCLIGHTOVERFOURPI * t_mid, 0.);
-    if (tau_line > 0.) {
-      const auto linelambda = 1e8 * CLIGHT / linelist.nu[lineindex];
-      linesum += (linelambda / expopac_deltalambda) * get_binned_opacity_line_weight(tau_line);
+    const double line_term =
+        get_expansion_opacity_line_term(lineindex, levelpops[linelist.uniquelevelindex_lower[lineindex]],
+                                        levelpops[linelist.uniquelevelindex_upper[lineindex]], t_mid);
+    if (line_term > 0.) {
+      linesum += line_term;
       lineindex_lastabsorbing = lineindex;
       if (linesum > linesum_target) {
         return lineindex;
@@ -113,7 +108,7 @@ DEVICE_FUNC auto sample_expansion_opacity_line(const int nonemptymgi, const ptrd
     }
   }
 
-  // the rounding of the float bin opacity can put the target above the line sum
+  // the rounding of the float expansion opacity can put the target above the line sum
   assert_always(lineindex_lastabsorbing >= 0);
   return lineindex_lastabsorbing;
 }
@@ -221,8 +216,9 @@ auto get_possible_event(const int nonemptymgi, const Packet& pkt, const Continuu
 
 // NOLINTNEXTLINE(misc-const-correctness): get_rngstate() needs a Packet that is not const on the GPU
 auto get_possible_event_expansion_opacity(const int nonemptymgi, Packet& pkt, const ContinuumOpacity& chi_rpkt_cont,
-                                          MacroAtomState& mastate, const double tau_rnd, const double nu_cmf_abort,
-                                          const double dnu_on_dl, const double doppler) -> std::tuple<double, bool> {
+                                          MacroAtomState& mastate, const double tau_rnd, const double abort_dist,
+                                          const double nu_cmf_abort, const double dnu_on_dl, const double doppler)
+    -> std::tuple<double, bool> {
   auto pos = pkt.pos;
   const auto nu_rf = pkt.nu_rf;
   auto nu_cmf = pkt.nu_cmf;
@@ -258,6 +254,10 @@ auto get_possible_event_expansion_opacity(const int nonemptymgi, Packet& pkt, co
       // interaction occurs
       if constexpr (RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.has_value()) {
         const auto edist = std::max(dist + ((tau_rnd - tau) / chi_tot), 0.);
+        if (edist > abort_dist) {
+          // no event before the cell boundary or the end of the timestep
+          return {std::numeric_limits<double>::max(), false};
+        }
         // strict comparison, so that a draw of exactly zero cannot select the bound-bound channel
         // when its opacity is zero (rng_uniform() rejects one but can return zero). Otherwise a
         // wavelength bin with no line opacity could take the thermalisation branch, and in a cell
@@ -597,7 +597,7 @@ auto do_rpkt_step(Packet& pkt, const double t2, ContinuumOpacity& chi_rpkt_cont)
       edist = std::numeric_limits<double>::max();
     } else if constexpr (RPKT_USE_EXPANSION_OPACITIES) {
       std::tie(edist, event_is_boundbound) = get_possible_event_expansion_opacity(
-          nonemptymgi, pkt, chi_rpkt_cont, pktmastate, tau_rnd, nu_cmf_abort, dnu_on_dl, doppler);
+          nonemptymgi, pkt, chi_rpkt_cont, pktmastate, tau_rnd, abort_dist, nu_cmf_abort, dnu_on_dl, doppler);
       // the bin walk passes lines without a line position, so the next step searches from nu_cmf
       pkt.next_trans = -1;
     } else {
@@ -981,7 +981,7 @@ void allocate_expansionopacities() {
 }
 
 // Return a random frequency with a distribution of the Planck function times the expansion opacity, and the emission
-// type. By Kirchhoff's law, the emitter is free-free or a line of the frequency bin, in proportion to their opacities.
+// type. By Kirchhoff's law, the emitter is free-free or a line of the wavelength bin, in proportion to their opacities.
 DEVICE_FUNC auto sample_planck_times_expansion_opacity(const int nonemptymgi, rngstate_type& rngstate)
     -> std::tuple<double, int> {
   assert_testmodeonly(RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.has_value());
@@ -1004,7 +1004,7 @@ DEVICE_FUNC auto sample_planck_times_expansion_opacity(const int nonemptymgi, rn
   // the same bin opacities as in calculate_expansion_opacities()
   const double kappa_bb = expansionopacities[(nonemptymgi * expopac_nbins) + binindex];
   const double kappa_ff =
-      calculate_chi_ffheating(nonemptymgi, (bin_nu_upper + bin_nu_lower) / 2., false) / grid::get_rho(nonemptymgi);
+      calculate_chi_ffheating(nonemptymgi, (bin_nu_upper + bin_nu_lower) / 2., true) / grid::get_rho(nonemptymgi);
   const int emissiontype = (rng_uniform(rngstate) * (kappa_bb + kappa_ff) < kappa_ff)
                                ? EMTYPE_FREEFREE
                                : sample_expansion_opacity_line(nonemptymgi, binindex, rngstate);
@@ -1084,8 +1084,7 @@ template void calculate_chi_rpkt_cont<false>(const double nu_cmf, ContinuumOpaci
 void MPI_Bcast_binned_opacities(const ptrdiff_t nstart_nonempty, const ptrdiff_t ndo_nonempty, const int root_node_id) {
   if (globals::rank_in_node == 0) {
     assert_always(nstart_nonempty >= 0);
-    if constexpr (RPKT_USE_EXPANSION_OPACITIES || VPKT_USE_EXPANSION_OPACITIES ||
-                  RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.has_value()) {
+    if constexpr (CALCULATE_EXPANSION_OPACITIES) {
       MPI_Bcast_safe(expansionopacities.subspan(nstart_nonempty * expopac_nbins, ndo_nonempty * expopac_nbins),
                      root_node_id, globals::mpi_comm_internode);
     }
@@ -1098,10 +1097,8 @@ void MPI_Bcast_binned_opacities(const ptrdiff_t nstart_nonempty, const ptrdiff_t
   }
 }
 
-// Calculate the binned expansion opacities of one cell: within each frequency bin, the Sobolev optical
-// depths of all lines are combined into a single effective opacity for the bin. Called when
-// RPKT_USE_EXPANSION_OPACITIES or VPKT_USE_EXPANSION_OPACITIES replaces the line-by-line opacity for
-// r-packets or virtual packets, and also when RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY is set.
+// Calculate the expansion opacities of one cell: within each wavelength bin, the Sobolev optical
+// depths of all lines are combined into a single effective opacity for the bin (see CALCULATE_EXPANSION_OPACITIES).
 void calculate_expansion_opacities(const int nonemptymgi) {
   const auto rho = grid::get_rho(nonemptymgi);
 
@@ -1114,7 +1111,7 @@ void calculate_expansion_opacities(const int nonemptymgi) {
 
   // find the first line with nu below the upper limit of the first bin
   int lineindex = static_cast<int>(
-      std::ranges::lower_bound(globals::linelist.nu, get_expopac_bin_nu_upper(0), std::ranges::greater{}) -
+      std::ranges::upper_bound(globals::linelist.nu, get_expopac_bin_nu_upper(0), std::ranges::greater{}) -
       globals::linelist.nu.begin());
 
   // the populations of all levels in the cell
@@ -1135,15 +1132,9 @@ void calculate_expansion_opacities(const int nonemptymgi) {
     const auto nu_lower = get_expopac_bin_nu_lower(binindex);
 
     while (lineindex < globals::nlines && globals::linelist.nu[lineindex] >= nu_lower) {
-      const double n_l = levelpops[globals::linelist.uniquelevelindex_lower[lineindex]];
-      const double n_u = levelpops[globals::linelist.uniquelevelindex_upper[lineindex]];
-      // the Sobolev optical depth. A population inversion gives zero.
-      const auto tau_line =
-          std::max(((globals::linelist.B_lu[lineindex] * n_l) - (globals::linelist.B_ul[lineindex] * n_u)) *
-                       HCLIGHTOVERFOURPI * t_mid,
-                   0.);
-      const auto linelambda = 1e8 * CLIGHT / globals::linelist.nu[lineindex];
-      bin_linesum += (linelambda / expopac_deltalambda) * get_binned_opacity_line_weight(tau_line);
+      bin_linesum +=
+          get_expansion_opacity_line_term(lineindex, levelpops[globals::linelist.uniquelevelindex_lower[lineindex]],
+                                          levelpops[globals::linelist.uniquelevelindex_upper[lineindex]], t_mid);
       lineindex++;
     }
     // opacity in units of [cm^2/g]
