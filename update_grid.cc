@@ -672,6 +672,14 @@ void update_gamma_corrphotoionrenorm_bfheating_estimators(const int nonemptymgi,
 
         globals::gammaestimator[ionestimindex] *= estimator_normfactor / H;
 
+        // The packets skip the continua of an element that the cell does not contain, so its estimator holds no
+        // contribution. Keep the factor 1 there. A factor of zero would also cancel the photoionisation of the
+        // levels of other ions that use this slot as their closest ground-level continuum.
+        if (grid::get_elem_massfrac(nonemptymgi, element) <= 0.) {
+          globals::corrphotoionrenorm[ionestimindex] = 1.;
+          continue;
+        }
+
         // renormalisation factor of the MC photoionisation rate estimate over the analytic rate for the cell's
         // dilute-blackbody radiation field. In cold and/or dilute cells the analytic rate can underflow to zero
         // for high-threshold continua (and the ratio can overflow for subnormal denominators). Fall back to
@@ -721,6 +729,11 @@ void update_gamma_corrphotoionrenorm_bfheating_estimators(const int nonemptymgi,
 
       if constexpr (USE_ION_BFHEATING_ESTIMATORS) {
         globals::bfheatingestimator[ionestimindex] *= estimator_normfactor;
+        // An element that the cell does not contain gives no contribution, as for corrphotoionrenorm above.
+        if (grid::get_elem_massfrac(nonemptymgi, element) <= 0.) {
+          globals::bfheatingestimator[ionestimindex] = 1.;
+          continue;
+        }
         // Now convert bfheatingestimator into the bfheating renormalisation coefficient used in
         // for the remaining part of update_grid. At the start of the next update_packets, it will be reset
 
