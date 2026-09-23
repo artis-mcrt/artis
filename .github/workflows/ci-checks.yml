@@ -311,11 +311,16 @@ jobs:
     nvidia-nvhpc:
         name: NVIDIA NVHPC nvc++
         runs-on: ubuntu-26.04
-        # NVIDIA's container registry serves the SDK preinstalled, avoiding the apt repository on
-        # developer.download.nvidia.com, which (as of 2026-07) returns 404 for the SDK debs when
-        # fetched from GitHub's runner network (same approach as the AMD ROCm job above).
+        # NVIDIA's container registry has no image for SDK 26.9 (as of 2026-09).
+        # This job therefore installs the SDK from the NVIDIA apt repository.
+        # In 2026-07, that repository gave 404 for the SDK packages on the GitHub runners.
+        # Change back to an nvcr.io/nvidia/nvhpc image when one is available for this version.
+        # The container runs as root, so the steps need no sudo.
         container:
-            image: nvcr.io/nvidia/nvhpc:26.5-devel-cuda13.2-ubuntu24.04
+            image: ubuntu:24.04
+        env:
+            DEBIAN_FRONTEND: noninteractive
+            NVHPC_VERSION: "26.9"
         steps:
             - uses: actions/checkout@v7
               with:
@@ -331,12 +336,27 @@ jobs:
                        --install /usr/bin/gcc gcc /usr/bin/gcc-14 100 \
                        --slave /usr/bin/g++ g++ /usr/bin/g++-14
 
+            - name: Install the NVIDIA HPC SDK
+              run: |
+                  apt-get install -y --no-install-recommends ca-certificates curl gpg
+                  curl -fsSL https://developer.download.nvidia.com/hpc-sdk/ubuntu/DEB-GPG-KEY-NVIDIA-HPC-SDK \
+                      | gpg --dearmor -o /usr/share/keyrings/nvidia-hpcsdk-archive-keyring.gpg
+                  echo 'deb [signed-by=/usr/share/keyrings/nvidia-hpcsdk-archive-keyring.gpg] https://developer.download.nvidia.com/hpc-sdk/ubuntu/amd64 /' \
+                      > /etc/apt/sources.list.d/nvhpc.list
+                  apt-get update
+                  # the package name has hyphens in place of the dots of the version, e.g. nvhpc-26-9
+                  apt-get install -y --no-install-recommends "nvhpc-$(echo "$NVHPC_VERSION" | tr . -)"
+                  # the downloaded package is approximately 5 GB. Remove it to keep disk space for the build.
+                  apt-get clean
+                  df -h /
+                  echo "/opt/nvidia/hpc_sdk/Linux_x86_64/$NVHPC_VERSION/compilers/bin" >> $GITHUB_PATH
+
             - name: Set nvc++ as compiler
               run: |
                   nvc++ --version
                   echo "CXX=nvc++" >> $GITHUB_ENV
                   echo "OMPI_CXX=nvc++" >> $GITHUB_ENV
-                  # make nvc++ use the gcc-14 toolchain (the image's preconfigured system gcc is older)
+                  # make nvc++ use the gcc-14 toolchain (the default gcc of Ubuntu 24.04 is older)
                   echo "GCCTOOLCHAIN=$(which g++-14)" >> $GITHUB_ENV
 
             - name: Install Open MPI and git
@@ -344,7 +364,7 @@ jobs:
                   apt-get install -y --no-install-recommends openmpi-bin libopenmpi-dev git
                   git config --global --add safe.directory /__w/artis/artis
 
-            # nvc++ 26.5 stops with "operator= has already been declared in the current scope" in its
+            # nvc++ 26.5 stopped with "operator= has already been declared in the current scope" in its
             # own stdexec header. __any_ptr and __any_cptr have a using declaration for the operator=
             # of the base class, and then declare their own operator=. The C++ rules say that the
             # second declaration hides the first one, but the frontend takes it as a repetition.
