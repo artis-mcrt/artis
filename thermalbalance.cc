@@ -123,8 +123,8 @@ void calculate_heating_rates(const int nonemptymgi, const float T_e, const float
 // ionisation balance, populations and nne at that temperature, so the cell is left in the state belonging
 // to the last T_e passed in. call_T_e_finder() relies on this and re-evaluates at the final T_e.
 // The residual heating minus cooling at the trial temperature T_e. With LTEPOP_EXCITATION_USE_TJ false, the
-// ionisation rates of the elements without NLTE levels depend on T_e, and the function calculates them again when
-// T_e moves by more than 10 percent from the stored value, or when force_gamma_update is set.
+// ionisation rates of the elements without NLTE levels depend on T_e. The function calculates them again when
+// T_e moves by more than 10 percent from the stored value. It also calculates them when force_gamma_update is set.
 auto T_e_eqn_heating_minus_cooling(const double T_e, int nonemptymgi, const double t_current,
                                    HeatingCoolingRates& heatingcoolingrates,
                                    const std::span<const double> bfheatingcoeffs, const bool force_gamma_update)
