@@ -43,9 +43,30 @@ static_assert(!RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.has_value() ||
 
 static_assert(!RPKT_USE_EXPANSION_OPACITIES || !VPKT_ON, "VPKT cannot be used with r-packet expansion opacities");
 
+// a line-by-line absorption has the weight 1 - exp(-tau), so a different weight must also apply to the absorption
+static_assert(EXPANSION_OPACITY_METHOD == ExpansionOpacityMethod::EXPANSION || RPKT_USE_EXPANSION_OPACITIES,
+              "LINEBINNEDCAPPED and LINEBINNED need RPKT_USE_EXPANSION_OPACITIES");
+
+// the bin walk of RPKT_USE_EXPANSION_OPACITIES passes lines without the line estimators
+static_assert(!DETAILED_LINE_ESTIMATORS_ON || !RPKT_USE_EXPANSION_OPACITIES,
+              "DETAILED_LINE_ESTIMATORS_ON needs line-by-line r-packets");
+
 namespace {
 // cumulative integral over the bins of (line plus free-free kappa) times the Planck function, per non-empty cell
 MPI_shared_array<double> expansionopacity_planck_cumulative{};
+
+// The weight of a line with the Sobolev optical depth tau_line in the expansion opacity of its wavelength bin,
+// kappa = sum of (lambda / delta_lambda) * weight / (c t rho). EXPANSION_OPACITY_METHOD selects the weight.
+[[nodiscard]] DEVICE_FUNC auto get_binned_opacity_line_weight(const double tau_line) -> double {
+  if constexpr (EXPANSION_OPACITY_METHOD == ExpansionOpacityMethod::EXPANSION) {
+    return -std::expm1(-tau_line);
+  } else if constexpr (EXPANSION_OPACITY_METHOD == ExpansionOpacityMethod::LINEBINNEDCAPPED) {
+    // this argument order keeps a NaN
+    return std::min(tau_line, 1.);
+  } else {
+    return tau_line;
+  }
+}
 
 // get the comoving-frame frequency that the packet will have redshifted to at the abort distance (the cell
 // boundary or the end of the timestep, whichever is nearer). The caller turns this into a frequency change
@@ -1067,7 +1088,7 @@ void calculate_expansion_opacities(const int nonemptymgi) {
                        HCLIGHTOVERFOURPI * t_mid,
                    0.);
       const auto linelambda = 1e8 * CLIGHT / globals::linelist.nu[lineindex];
-      bin_linesum += (linelambda / expopac_deltalambda) * -std::expm1(-tau_line);
+      bin_linesum += (linelambda / expopac_deltalambda) * get_binned_opacity_line_weight(tau_line);
       lineindex++;
     }
     // opacity in units of [cm^2/g]
