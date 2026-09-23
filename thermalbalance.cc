@@ -122,13 +122,17 @@ void calculate_heating_rates(const int nonemptymgi, const float T_e, const float
 // NB: this is not a pure function of T_e. Evaluating it stores T_e in the grid and re-solves the cell's
 // ionisation balance, populations and nne at that temperature, so the cell is left in the state belonging
 // to the last T_e passed in. call_T_e_finder() relies on this and re-evaluates at the final T_e.
+// The residual heating minus cooling at the trial temperature T_e. With LTEPOP_EXCITATION_USE_TJ false, the
+// ionisation rates of the elements without NLTE levels depend on T_e. The function calculates them again when
+// T_e moves by more than 10 percent from the stored value. It also calculates them when force_gamma_update is set.
 auto T_e_eqn_heating_minus_cooling(const double T_e, int nonemptymgi, const double t_current,
                                    HeatingCoolingRates& heatingcoolingrates,
-                                   const std::span<const double> bfheatingcoeffs) -> double {
+                                   const std::span<const double> bfheatingcoeffs, const bool force_gamma_update)
+    -> double {
   const auto fT_e = static_cast<float>(T_e);
 
   if constexpr (!LTEPOP_EXCITATION_USE_TJ) {
-    if (std::abs((T_e / grid::Te_allcells[nonemptymgi]) - 1.) > 0.1) {
+    if (force_gamma_update || std::abs((T_e / grid::Te_allcells[nonemptymgi]) - 1.) > 0.1) {
       grid::Te_allcells[nonemptymgi] = fT_e;
       for (int element = 0; element < get_nelements(); element++) {
         if (!elem_has_nlte_levels(element)) {
@@ -329,7 +333,7 @@ void call_T_e_finder(const int nonemptymgi, const double t_current, HeatingCooli
   printlog("Finding T_e in cell {} at timestep {}...", modelgridindex, globals::timestep);
 
   const auto f_T_e = [&](double T_e) -> double {
-    return T_e_eqn_heating_minus_cooling(T_e, nonemptymgi, t_current, heatingcoolingrates, bfheatingcoeffs);
+    return T_e_eqn_heating_minus_cooling(T_e, nonemptymgi, t_current, heatingcoolingrates, bfheatingcoeffs, false);
   };
 
   const double f_T_min = f_T_e(MINTEMP);
@@ -393,9 +397,8 @@ void call_T_e_finder(const int nonemptymgi, const double t_current, HeatingCooli
         modelgridindex, globals::timestep, T_e_solved, T_e_old, T_e);
   }
 
-  grid::Te_allcells[nonemptymgi] = static_cast<float>(T_e);
-
-  // this call will make sure heating/cooling rates and populations are updated for the final T_e
-  // in case T_e got modified after the T_e solver finished
-  f_T_e(T_e);
+  // The final call stores T_e and sets the populations and the heating and cooling rates for it. The last trial
+  // temperature can differ from the final T_e, so the ionisation rates are calculated again without the 10 percent
+  // test.
+  T_e_eqn_heating_minus_cooling(T_e, nonemptymgi, t_current, heatingcoolingrates, bfheatingcoeffs, true);
 }
