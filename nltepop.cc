@@ -1915,14 +1915,15 @@ void nltepop_open_file() {
 
 void nltepop_write_to_file(const int nonemptymgi, const int timestep) {
   const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
-  if (globals::lte_iteration ||
-      grid::thick_allcells[nonemptymgi] == grid::CellThickness::THICK) {  // NLTE solver hasn't been run yet
+  if (globals::lte_iteration) {
     return;
   }
 
   for (int element = 0; element < get_nelements(); element++) {
-    // an element with no mass in the cell has no NLTE solution
-    if (!elem_has_nlte_levels(element) || grid::get_elem_massfrac(nonemptymgi, element) <= 0.) {
+    // An element without an NLTE solution holds the -1 markers, not populations. That is an element with no mass
+    // in the cell, an element that fell back to LTE, or every element of a cell that took the thick path of this
+    // grid update. The thick flag of the cell already holds the value for the next timestep, so it is no test.
+    if (!elem_has_nlte_solution(nonemptymgi, element)) {
       continue;
     }
 
