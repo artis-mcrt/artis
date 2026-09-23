@@ -19,8 +19,10 @@ endif
 
 $(info mpicxx version: $(shell mpicxx --showme:version 2> /dev/null))
 
-# each option is exactly ON, OFF, or empty
+# each option is exactly ON, OFF, or empty. The strip removes the spaces around a value, because the ifeq tests
+# below compare the exact text.
 $(foreach option,TESTMODE REPRODUCIBLE GPU OPENMP STDPAR FASTMATH OPTIMIZE,\
+  $(eval override $(option) := $(strip $($(option))))\
   $(if $(or $(filter-out ON OFF,$($(option))),$(filter-out 0 1,$(words $($(option))))),\
     $(error bad value for $(option) option. Should be ON or OFF)))
 

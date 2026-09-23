@@ -43,7 +43,8 @@ static_assert(get_expopac_bin_nu_lower(0) == get_expopac_bin_nu_upper(1));  // b
 static_assert(get_expopac_bin_nu_lower(0) < get_expopac_bin_nu_upper(0));
 static_assert(get_expopac_bin_nu_upper(expopac_nbins - 1) > get_expopac_bin_nu_lower(expopac_nbins - 1));
 
-// the options that need the binned line opacities of each cell
+// the options that need the binned line opacities of each cell. The thermalisation option stores only the Planck
+// cumulative of the bins; the expansionopacities array exists only with the two expansion opacity options.
 constexpr bool expopac_bins_on = RPKT_USE_EXPANSION_OPACITIES || VPKT_USE_EXPANSION_OPACITIES ||
                                  RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.has_value();
 
