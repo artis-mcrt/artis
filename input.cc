@@ -563,8 +563,11 @@ void read_ion_transitions(std::istream& ftransitiondata, const int ion_transitio
         atomicnumber, ionstage, groundstate_index_in);
   }
 
+  // The key (lower, upper) is not unique. add_transitions_to_unsorted_linelist() sums the A-values of the duplicate
+  // rows in table order and keeps the forbidden flag of the first row, so the order of equal keys must not depend
+  // on the sort implementation.
   const auto proj_lowerupper = [](const IonTransitionsInput& t) { return std::tie(t.lower, t.upper); };
-  std::ranges::sort(iontransitiontable, std::less<>{}, proj_lowerupper);
+  std::ranges::SORT_OR_STABLE_SORT(iontransitiontable, std::less<>{}, proj_lowerupper);
 
   assert_always(nlevels_requiretransitions <= nlevelskept);
 
@@ -583,7 +586,7 @@ void read_ion_transitions(std::istream& ftransitiondata, const int ion_transitio
   const auto added_transitions = std::ssize(iontransitiontable) - old_transitioncount;
   if (added_transitions > 0) {
     printlnlog("[info] added {} missing transitions with A=0 to iontransitiontable", added_transitions);
-    std::ranges::sort(iontransitiontable, std::less<>{}, proj_lowerupper);
+    std::ranges::SORT_OR_STABLE_SORT(iontransitiontable, std::less<>{}, proj_lowerupper);
   }
 }
 
