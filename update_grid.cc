@@ -729,7 +729,7 @@ void update_gamma_corrphotoionrenorm_bfheating_estimators(const int nonemptymgi,
 
       if constexpr (USE_ION_BFHEATING_ESTIMATORS) {
         globals::bfheatingestimator[ionestimindex] *= estimator_normfactor;
-        // no contribution for an element that the cell does not contain, as for corrphotoionrenorm above
+        // An element that the cell does not contain gives no contribution, as for corrphotoionrenorm above.
         if (grid::get_elem_massfrac(nonemptymgi, element) <= 0.) {
           globals::bfheatingestimator[ionestimindex] = 1.;
           continue;
