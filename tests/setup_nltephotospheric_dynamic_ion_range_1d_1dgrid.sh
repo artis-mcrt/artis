@@ -40,6 +40,8 @@ sedopt 'constexpr int RADFIELDBINCOUNT.*' 'constexpr int RADFIELDBINCOUNT = 24;'
 
 sedopt 'constexpr int DETAILED_BF_ESTIMATORS_USEFROMTIMESTEP.*' 'constexpr int DETAILED_BF_ESTIMATORS_USEFROMTIMESTEP = 4;'
 
+sedopt 'constexpr bool KEEP_ESCAPED_GAMMAS.*' 'constexpr bool KEEP_ESCAPED_GAMMAS = true;'
+
 rm -f artisoptions.h.bak
 
 cd -

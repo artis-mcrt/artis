@@ -37,6 +37,8 @@ sedopt 'constexpr auto PARTICLE_THERMALISATION_SCHEME.*' 'constexpr auto PARTICL
 
 sedopt 'constexpr auto GAMMA_THERMALISATION_SCHEME.*' 'constexpr auto GAMMA_THERMALISATION_SCHEME = GammaThermalisationScheme::BARNES;'
 
+sedopt 'constexpr bool KEEP_ESCAPED_GAMMAS.*' 'constexpr bool KEEP_ESCAPED_GAMMAS = true;'
+
 rm -f artisoptions.h.bak
 
 cd -
