@@ -849,6 +849,11 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
             globals::corrphotoionrenorm.subspan(static_cast<ptrdiff_t>(nonemptymgi) * globals::nbfcontinua_ground,
                                                 globals::nbfcontinua_ground),
             1.);
+        // the Saha populations do not use these estimators, but the estimators file and the restart file do
+        for (auto& gammaestimator : std::span{globals::gammaestimator}.subspan(
+                 static_cast<ptrdiff_t>(nonemptymgi) * globals::nbfcontinua_ground, globals::nbfcontinua_ground)) {
+          gammaestimator *= estimator_normfactor / H;
+        }
       }
 
       // the Saha populations replace the NLTE solution. The partition functions must not read the
