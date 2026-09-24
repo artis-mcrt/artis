@@ -31,6 +31,8 @@ sedopt 'constexpr int CUBOID_NCOORDGRID_Z.*' 'constexpr int CUBOID_NCOORDGRID_Z 
 sedopt 'constexpr bool VPKT_ON.*' 'constexpr bool VPKT_ON = true;'
 sedopt 'constexpr bool VPKT_WRITE_CONTRIBS.*' 'constexpr bool VPKT_WRITE_CONTRIBS = true;'
 
+sedopt 'constexpr bool KEEP_ESCAPED_GAMMAS.*' 'constexpr bool KEEP_ESCAPED_GAMMAS = true;'
+
 rm -f artisoptions.h.bak
 
 cd -

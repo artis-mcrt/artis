@@ -20,7 +20,7 @@ tar -xf ../atomicdata_hefeconi_fe_i_to_vii.tar.xz --directory .
 
 ln -s ../../ artis
 
-cp artis/artisoptions_nltephotospheric_dynamic_ion_range.h artisoptions.h
+cp artis/artisoptions_nltephotospheric.h artisoptions.h
 
 sedopt "constexpr std::int64_t NUM_PACKETS.*" "constexpr std::int64_t NUM_PACKETS = 1600;"
 
@@ -39,6 +39,8 @@ sedopt 'constexpr int FIRST_NLTE_RADFIELD_TIMESTEP.*' 'constexpr int FIRST_NLTE_
 sedopt 'constexpr int RADFIELDBINCOUNT.*' 'constexpr int RADFIELDBINCOUNT = 24;'
 
 sedopt 'constexpr int DETAILED_BF_ESTIMATORS_USEFROMTIMESTEP.*' 'constexpr int DETAILED_BF_ESTIMATORS_USEFROMTIMESTEP = 4;'
+
+sedopt 'constexpr bool KEEP_ESCAPED_GAMMAS.*' 'constexpr bool KEEP_ESCAPED_GAMMAS = true;'
 
 rm -f artisoptions.h.bak
 
