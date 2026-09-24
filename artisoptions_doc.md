@@ -86,7 +86,8 @@ constexpr bool UNIFORM_PELLET_ENERGIES;
 constexpr bool COL_HEAT_FROM_LEVELPOPS;
 
 // Seed the cells at tmin with k-packets that carry the decay energy from t_model to tmin and the snapshot
-// energy at t_model (the q column of model.txt). The expansion from the decay time to tmin reduces each energy.
+// energy at t_model (the q column of model.txt [erg/g]). The q value already includes the adiabatic losses
+// before t_model. The expansion from the decay time to tmin, and from t_model to tmin for q, reduces each energy.
 constexpr bool INITIAL_PACKETS_ON;
 
 // The number of temperature points of the rate coefficient tables, spaced in log T between MINTEMP and MAXTEMP.
