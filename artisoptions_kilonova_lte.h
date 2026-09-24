@@ -84,9 +84,9 @@ constexpr bool LEVEL_HAS_BFEST(int element_z, int ionstage, int level) { return 
 
 constexpr int DETAILED_BF_ESTIMATORS_USEFROMTIMESTEP = 6;
 
-constexpr bool USE_LUT_PHOTOION = true;
+constexpr bool USE_LUT_PHOTOION = false;
 
-constexpr bool USE_ION_BFHEATING_ESTIMATORS = true;
+constexpr bool USE_ION_BFHEATING_ESTIMATORS = false;
 
 constexpr bool WRITE_ION_HEATING_COOLING_RATES = false;
 

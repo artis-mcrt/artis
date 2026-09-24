@@ -30,6 +30,8 @@ sedopt 'constexpr double MAXTEMP.*' 'constexpr double MAXTEMP = 20000.;'
 
 sedopt 'constexpr bool KEEP_ESCAPED_GAMMAS.*' 'constexpr bool KEEP_ESCAPED_GAMMAS = true;'
 
+sedopt 'constexpr bool USE_LUT_PHOTOION.*' 'constexpr bool USE_LUT_PHOTOION = true;'
+
 rm -f artisoptions.h.bak
 
 cd -
