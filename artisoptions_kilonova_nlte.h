@@ -61,7 +61,7 @@ constexpr bool INITIAL_PACKETS_ON = true;
 
 // Pognan, Grumer, Jerkstrand & Wanajo (2023), MNRAS, 526, 5220-5248, doi:10.1093/mnras/stad3106, find
 // temperatures that rise with time. The temperatures go from about 4000 K at 5 days to 35000 K in the
-// outer layers of a low-Ye model at 20 days. Dense inner regions can get cold.
+// outer layers of a low-Ye model at 20 days.
 constexpr int RATECOEFF_TABLESIZE = 200;
 constexpr double MINTEMP = 3000.;
 constexpr double MAXTEMP = 150000.;
