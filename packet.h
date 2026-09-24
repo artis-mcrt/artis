@@ -142,8 +142,8 @@ struct Packet {
   double stokes_u{0.};  // normalised Stokes u = U/I
   // The last emission out of the THERMAL POOL. A k-packet emission sets it. Scatterings and macro-atom
   // deactivations keep it, so it gives the escaped energy to the place of thermalisation, not to the last
-  // scattering. Each site that returns the packet to the thermal pool sets it to EMTYPE_NOTSET, so the next
-  // radiative emission starts a fresh record.
+  // scattering. Each site that hands the packet from the thermal pool to a macro-atom sets it to EMTYPE_NOTSET,
+  // so the next radiative emission starts a fresh record.
   int trueemissiontype = EMTYPE_NOTSET;
   Vec3d trueem_pos{NAN, NAN, NAN};
   float trueem_time{-1.};  // last thermal emission time [s]

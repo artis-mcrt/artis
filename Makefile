@@ -68,7 +68,7 @@ endef
 else ifneq (,$(or $(findstring g++,$(COMPILER_VERSION)),$(findstring gcc,$(COMPILER_VERSION))))
 	COMPILER_NAME := gcc
 	MIN_GCC_VERSION := 14
-	ifeq ($(shell expr $(COMPILER_VERSION_NUMBER) \< $(MIN_GCC_VERSION)),1)
+	ifeq ($(shell expr $(firstword $(subst ., ,$(COMPILER_VERSION_NUMBER))) \< $(MIN_GCC_VERSION)),1)
 $(warning WARNING: Detected GCC version $(COMPILER_VERSION_NUMBER) but minimum supported version is $(MIN_GCC_VERSION))
 	endif
 	CXXFLAGS += -Wno-psabi -Wno-interference-size

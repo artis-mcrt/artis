@@ -372,6 +372,7 @@ void read_phixs_file(const int phixs_file_version, std::vector<float>& tmpallphi
     if (phixs_file_version == 1) {
       assert_always(ssline >> Z >> upperionstage >> upperlevel_in >> lowerionstage >> lowerlevel_in >>
                     nphixspoints_inputtable);
+      assert_always(nphixspoints_inputtable > 0);
     } else {
       assert_always(ssline >> Z >> upperionstage >> upperlevel_in >> lowerionstage >> lowerlevel_in >>
                     phixs_threshold_ev);
@@ -992,10 +993,8 @@ void read_autoion_data() {
   ptrdiff_t nautoion_stored = 0;  // for the collective node-shared allocation below
 
   if (have_autoion_file && globals::rank_in_node == 0) {
-    reserve_resize(temp_nautoiondowntrans, uniquelevelcount);
-    std::ranges::fill(temp_nautoiondowntrans, 0);
-    reserve_resize(temp_allautoion_start, uniquelevelcount);
-    std::ranges::fill(temp_allautoion_start, -1);
+    temp_nautoiondowntrans.assign(uniquelevelcount, 0);
+    temp_allautoion_start.assign(uniquelevelcount, -1);
 
     printlnlog("Reading autoion.txt for autoionisation data.");
     auto autoionfile = fstream_required("autoion.txt", std::ios::in);
@@ -1040,8 +1039,14 @@ void read_autoion_data() {
 
           assert_always(upperion >= 0 && upperion < get_nions(element));
           assert_always(lowerion >= 0 && lowerion < get_nions(element));
-          assert_always(lowerlevel >= 0 && lowerlevel < get_nlevels(element, lowerion));
-          assert_always(upperlevel >= 0 && upperlevel < get_nlevels(element, upperion));
+          if (lowerlevel < 0 || lowerlevel >= get_nlevels(element, lowerion) || upperlevel < 0 ||
+              upperlevel >= get_nlevels(element, upperion)) {
+            fatal_crash(
+                "autoion.txt: Z={} ionstage {} level {} to ionstage {} level {} is outside the model atom, which "
+                "has {} and {} levels in these ions",
+                Z, lowerionstage, lowerlevel_in, upperionstage, upperlevel_in, get_nlevels(element, lowerion),
+                get_nlevels(element, upperion));
+          }
           assert_always(upperion > lowerion);
           const bool level_is_nlte = is_nlte(element, lowerion, lowerlevel);
           allautoion_levels_are_not_nlte = allautoion_levels_are_not_nlte && !level_is_nlte;
@@ -1345,7 +1350,7 @@ auto read_compositiondata() -> std::vector<int> {
     assert_always(nions_readin[element] == 0 ||
                   (nions_readin[element] == (uppermost_ionstage - lowermost_ionstage + 1)));
     assert_always(uniformabundance >= 0);
-    assert_always(mass_amu >= 0);
+    assert_always(mass_amu > 0);
 
     globals::elements[element] = {
         .ions = {},  // this will be set later after the total number of ions is known for the block allocation
@@ -1952,7 +1957,9 @@ void read_parameterfile(std::span<Packet> packets) {
     // thread_local generators on first use (see get_rngstate()), so multi-threaded runs are not
     // reproducible (they also accumulate to shared memory in a non-deterministic order)
     const auto rngseed = pre_zseed + static_cast<std::int64_t>(13 * globals::my_rank * get_max_threads());
-    get_rngstate().seed(rngseed);
+    // the generator takes a 32-bit seed, so a larger seed stops the run instead of a silent truncation
+    assert_always(std::in_range<std::uint32_t>(rngseed));
+    get_rngstate().seed(static_cast<std::uint32_t>(rngseed));
     for (int n = 0; n < 100; n++) {
       rng_uniform(get_rngstate());
     }
@@ -1961,7 +1968,7 @@ void read_parameterfile(std::span<Packet> packets) {
   }
 
   assert_always(get_noncommentline(file, line));
-  assert_always(std::istringstream{line} >> globals::ntimesteps);  // number of time steps
+  assert_always(std::istringstream{line} >> globals::ntimesteps);  // number of timesteps
   assert_always(globals::ntimesteps > 0);
 
   assert_always(get_noncommentline(file, line));
@@ -2104,7 +2111,7 @@ void update_parameterfile(const int nts) {
       // overwrite particular lines to enable restarting from the current timestep
       if (nts >= 0) {
         if (noncomment_linenum == inputline_timestep_range) {
-          // Number of start and end time step
+          // Number of start and end timestep
           line = std::format("{:03d} {:03d}", nts, globals::timestep_finish);
         } else if (noncomment_linenum == inputline_continue_from_saved) {
           // resume from gridsave file
@@ -2213,6 +2220,27 @@ void read_atomicdata() {
   write_bflist_file();
 
   setup_nlte_levels();
+
+  if constexpr (NT_SCHEME != NonThermalScheme::NT_OFF) {
+    // An element without NLTE levels uses the photoionisation balance. With non-thermal ionisation, the balance
+    // does not truncate the ion list, so each ion below the top ion needs a photoionisation table on some level.
+    for (int element = 0; element < get_nelements(); element++) {
+      if (elem_has_nlte_levels(element)) {
+        continue;
+      }
+      for (int ion = 0; ion < get_nions(element) - 1; ion++) {
+        const bool ion_has_phixs =
+            std::ranges::any_of(std::views::iota(0, get_nlevels(element, ion)),
+                                [element, ion](const int level) { return get_nphixstargets(element, ion, level) > 0; });
+        if (!ion_has_phixs) {
+          fatal_crash(
+              "Z={} ionstage {} has no photoionisation table on any level, but it is below the top ion of an "
+              "element without NLTE levels and non-thermal ionisation is on",
+              get_atomicnumber(element), get_ionstage(element, ion));
+        }
+      }
+    }
+  }
 }
 
 // the pure timestep schemes ignore these two values, and the presets ship them as -1.
@@ -2230,89 +2258,66 @@ auto calculate_timesteps(const TimeStepSizeMethod method, const double tmin, con
     -> std::vector<globals::TimeStep> {
   auto timesteps = std::vector<globals::TimeStep>(ntimesteps + 1);
 
+  // fill nts_count timesteps from index nts_first with logarithmic spacing from t_start to t_end
+  const auto fill_logarithmic = [&timesteps](const int nts_first, const int nts_count, const double t_start,
+                                             const double t_end) {
+    const double dlogt = (log(t_end) - log(t_start)) / nts_count;
+    for (int n = 0; n < nts_count; n++) {
+      auto& ts = timesteps[nts_first + n];
+      ts.start = t_start * exp(n * dlogt);
+      ts.mid = t_start * exp((n + 0.5) * dlogt);
+      ts.width = (t_start * exp((n + 1) * dlogt)) - ts.start;
+    }
+  };
+
+  // fill nts_count timesteps from index nts_first with the constant width dt from t_start
+  const auto fill_constant = [&timesteps](const int nts_first, const int nts_count, const double t_start,
+                                          const double dt) {
+    for (int n = 0; n < nts_count; n++) {
+      auto& ts = timesteps[nts_first + n];
+      ts.start = t_start + (n * dt);
+      ts.width = dt;
+      ts.mid = ts.start + (0.5 * ts.width);
+    }
+  };
+
   switch (method) {
     case TimeStepSizeMethod::LOGARITHMIC: {
-      for (int n = 0; n < ntimesteps; n++) {
-        const double dlogt = (log(tmax) - log(tmin)) / ntimesteps;
-        timesteps[n].start = tmin * exp(n * dlogt);
-        timesteps[n].mid = tmin * exp((n + 0.5) * dlogt);
-        timesteps[n].width = (tmin * exp((n + 1) * dlogt)) - timesteps[n].start;
-      }
+      fill_logarithmic(0, ntimesteps, tmin, tmax);
       break;
     }
 
     case TimeStepSizeMethod::CONSTANT: {
-      for (int n = 0; n < ntimesteps; n++) {
-        // for constant timesteps
-        const double dt = (tmax - tmin) / ntimesteps;
-        timesteps[n].start = tmin + (n * dt);
-        timesteps[n].width = dt;
-        timesteps[n].mid = timesteps[n].start + (0.5 * timesteps[n].width);
-      }
+      fill_constant(0, ntimesteps, tmin, (tmax - tmin) / ntimesteps);
       break;
     }
 
     case TimeStepSizeMethod::LOGARITHMIC_THEN_CONSTANT: {
-      // First part log, second part fixed timesteps
-      const double t_transition = timestep_transition_time_days * DAY;  // transition from log to fixed timesteps
-      const double maxtsdelta = fixed_timestep_width_days * DAY;  // maximum timestep width in fixed part
+      const double t_transition = timestep_transition_time_days * DAY;
       assert_always(t_transition > tmin);
       assert_always(t_transition < tmax);
-      const int nts_fixed = ceil((tmax - t_transition) / maxtsdelta);
-      const double fixed_tsdelta = (tmax - t_transition) / nts_fixed;
+      const int nts_fixed = ceil((tmax - t_transition) / (fixed_timestep_width_days * DAY));
       assert_always(nts_fixed > 0);
       assert_always(nts_fixed < ntimesteps);
       const int nts_log = ntimesteps - nts_fixed;
-      assert_always(nts_log > 0);
-      assert_always(nts_log < ntimesteps);
-      assert_always((nts_log + nts_fixed) == ntimesteps);
-      for (int n = 0; n < ntimesteps; n++) {
-        if (n < nts_log) {
-          const double dlogt = (log(t_transition) - log(tmin)) / nts_log;
-          timesteps[n].start = tmin * exp(n * dlogt);
-          timesteps[n].mid = tmin * exp((n + 0.5) * dlogt);
-          timesteps[n].width = (tmin * exp((n + 1) * dlogt)) - timesteps[n].start;
-        } else {
-          // for constant timesteps
-          const double prev_start = n > 0 ? (timesteps[n - 1].start + timesteps[n - 1].width) : tmin;
-          timesteps[n].start = prev_start;
-          timesteps[n].width = fixed_tsdelta;
-          timesteps[n].mid = timesteps[n].start + (0.5 * timesteps[n].width);
-        }
-      }
+      // NOLINTBEGIN(readability-suspicious-call-argument)
+      fill_logarithmic(0, nts_log, tmin, t_transition);
+      fill_constant(nts_log, nts_fixed, t_transition, (tmax - t_transition) / nts_fixed);
+      // NOLINTEND(readability-suspicious-call-argument)
       break;
     }
 
     case TimeStepSizeMethod::CONSTANT_THEN_LOGARITHMIC: {
-      // First part fixed timesteps, second part log timesteps
-      const double t_transition = timestep_transition_time_days * DAY;  // transition from fixed to log timesteps
-      const double maxtsdelta = fixed_timestep_width_days * DAY;  // timestep width of fixed timesteps
+      const double t_transition = timestep_transition_time_days * DAY;
       assert_always(t_transition > tmin);
       assert_always(t_transition < tmax);
-      const int nts_fixed = ceil((t_transition - tmin) / maxtsdelta);
-      const double fixed_tsdelta = (t_transition - tmin) / nts_fixed;
+      const int nts_fixed = ceil((t_transition - tmin) / (fixed_timestep_width_days * DAY));
       assert_always(nts_fixed > 0);
       assert_always(nts_fixed < ntimesteps);
-      const int nts_log = ntimesteps - nts_fixed;
-      assert_always(nts_log > 0);
-      assert_always(nts_log < ntimesteps);
-      assert_always((nts_log + nts_fixed) == ntimesteps);
-      for (int n = 0; n < ntimesteps; n++) {
-        if (n < nts_fixed) {
-          // for constant timesteps
-          timesteps[n].start = tmin + (n * fixed_tsdelta);
-          timesteps[n].width = fixed_tsdelta;
-          timesteps[n].mid = timesteps[n].start + (0.5 * timesteps[n].width);
-        } else {
-          const double dlogt = (log(tmax) - log(t_transition)) / nts_log;
-          const double prev_start = n > 0 ? (timesteps[n - 1].start + timesteps[n - 1].width) : tmin;
-          timesteps[n].start = prev_start;
-          timesteps[n].width = (t_transition * exp((n - nts_fixed + 1) * dlogt)) - timesteps[n].start;
-          // the geometric mid, so that the logarithmic part of this method matches the mid of the
-          // fully logarithmic methods
-          timesteps[n].mid = t_transition * exp((n - nts_fixed + 0.5) * dlogt);
-        }
-      }
+      // NOLINTBEGIN(readability-suspicious-call-argument)
+      fill_constant(0, nts_fixed, tmin, (t_transition - tmin) / nts_fixed);
+      fill_logarithmic(nts_fixed, ntimesteps - nts_fixed, t_transition, tmax);
+      // NOLINTEND(readability-suspicious-call-argument)
       break;
     }
 
@@ -2337,10 +2342,10 @@ auto calculate_timesteps(const TimeStepSizeMethod method, const double tmin, con
   return timesteps;
 }
 
-// initialise the time steps
+// initialise the timesteps
 void setup_timesteps() {
   // t=globals::tmin is the start of the calculation. t=globals::tmax is the end of the calculation.
-  // globals::ntimesteps is the number of time steps
+  // globals::ntimesteps is the number of timesteps
 
   globals::timesteps = calculate_timesteps(TIMESTEP_SIZE_METHOD, globals::tmin, globals::tmax, globals::ntimesteps,
                                            FIXED_TIMESTEP_WIDTH, TIMESTEP_TRANSITION_TIME);

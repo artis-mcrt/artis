@@ -1210,6 +1210,8 @@ void test_toms748_and_gauss_kronrod() {
   check(std::fabs(root - 0.7390851332151607) < 1e-10, "toms748_solve finds the fixed point of cos(x)");
   check(iterations < 50, "toms748_solve converges in fewer than the maximum iterations");
 
+#ifndef USE_SIMPSON_INTEGRATOR
+  // the Simpson integrator of a GPU build gives no error estimate and uses only three sample points here
   double abserr{NAN};
   const double integral_sin =
       integrator([](const double x) { return std::sin(x); }, 0., std::numbers::pi, 1e-10, &abserr);
@@ -1221,6 +1223,7 @@ void test_toms748_and_gauss_kronrod() {
       integrator<31>([](const double x) { return std::exp(-100. * (x - 0.3) * (x - 0.3)); }, 0., 12., 1e-10, &abserr);
   check(std::fabs(integral_bump - 0.17724342737116647) < 1e-9,
         "31-point adaptive gauss_kronrod_integrate resolves a narrow Gaussian bump");
+#endif
 }
 
 }  // anonymous namespace

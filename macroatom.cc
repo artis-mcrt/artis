@@ -317,8 +317,8 @@ void do_macroatom_raddeexcitation(Packet& pkt, const int ionuniquelevelindexstar
     }
   }
 
-  assert_always(false);
-  return -1;
+  fatal_crash("do_macroatom_ionisation: no target selected for element {} ion {} level {}: rate {} targetrate {}",
+              element, ion, level, rate, targetrate);
 }
 
 // Get the Gaunt factor used by the Seaton approximation in col_ionisation_ratecoeff() and

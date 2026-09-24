@@ -97,7 +97,7 @@ struct RateMatrices {
 
   void set_used_dimension(int used_nlte_dimension_in) {
     used_nlte_dimension = used_nlte_dimension_in;
-    const auto used_dim_squared = used_nlte_dimension * used_nlte_dimension;
+    const auto used_dim_squared = static_cast<std::ptrdiff_t>(used_nlte_dimension) * used_nlte_dimension;
 
     assert_always(std::cmp_less_equal(used_dim_squared, summed_rates.capacity()));
     summed_rates.resize(used_dim_squared);
@@ -204,8 +204,8 @@ auto get_nlte_vector_index(const int element, const int ion, const int level, co
       }
     }
   }
-  assert_always(false);
-  return {-1, -1};
+  fatal_crash("NLTE vector index {} is not in element {} ions {} to {}", index, element, first_ion_used,
+              first_ion_used + nions_used - 1);
 }
 
 // log " ionstage {} level {}" or " ionstage {} superlevel" (no newline) identifying an NLTE vector index in a message
@@ -2122,18 +2122,15 @@ void nltepop_write_restart_data(FILE* restart_file) {
   fprintf(restart_file, "%d\n", 75618527);  // special number marking the beginning of nlte data
 
   fprintf(restart_file, "%d\n", globals::total_nlte_levels);
-  const auto nincludedions = get_includedions();
 
   for (auto nonemptymgi = 0Z; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
     const int modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
     fprintf(restart_file, "%d\n", modelgridindex);
     for (int element = 0; element < get_nelements(); element++) {
       for (int ion = 0; ion < get_nions(element); ion++) {
-        const int uniqueionindex = get_uniqueionindex(element, ion);
-        fprintf(restart_file, "%d %a %a %la\n", ion,
-                grid::ion_groundlevelpops_allcells[(nonemptymgi * nincludedions) + uniqueionindex],
-                grid::ion_partfuncts_allcells[(nonemptymgi * nincludedions) + uniqueionindex],
-                kpkt::ion_cooling_contribs_allcells[(nonemptymgi * nincludedions) + uniqueionindex]);
+        const auto cellionindex = get_cellionindex(nonemptymgi, element, ion);
+        fprintf(restart_file, "%d %a %a %la\n", ion, grid::ion_groundlevelpops_allcells[cellionindex],
+                grid::ion_partfuncts_allcells[cellionindex], kpkt::ion_cooling_contribs_allcells[cellionindex]);
       }
     }
     for (int nlteindex = 0; nlteindex < globals::total_nlte_levels; nlteindex++) {
@@ -2171,7 +2168,6 @@ void nltepop_read_restart_data(FILE* restart_file) {
     fatal_crash("Expected {} NLTE levels but found {} in restart file", globals::total_nlte_levels,
                 total_nlte_levels_in);
   }
-  const auto nincludedions = get_includedions();
 
   for (auto nonemptymgi = 0Z; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
     int mgi_in = 0;
@@ -2182,12 +2178,10 @@ void nltepop_read_restart_data(FILE* restart_file) {
       const int nions = get_nions(element);
       for (int ion = 0; ion < nions; ion++) {
         int ion_in = 0;
-        const int uniqueionindex = get_uniqueionindex(element, ion);
-        assert_always(fscanf(restart_file, "%d %a %a %la\n", &ion_in,
-                             &grid::ion_groundlevelpops_allcells[(nonemptymgi * nincludedions) + uniqueionindex],
-                             &grid::ion_partfuncts_allcells[(nonemptymgi * nincludedions) + uniqueionindex],
-                             &kpkt::ion_cooling_contribs_allcells[(nonemptymgi * nincludedions) + uniqueionindex]) ==
-                      4);
+        const auto cellionindex = get_cellionindex(nonemptymgi, element, ion);
+        assert_always(fscanf(restart_file, "%d %a %a %la\n", &ion_in, &grid::ion_groundlevelpops_allcells[cellionindex],
+                             &grid::ion_partfuncts_allcells[cellionindex],
+                             &kpkt::ion_cooling_contribs_allcells[cellionindex]) == 4);
         assert_always(ion_in == ion);
       }
     }

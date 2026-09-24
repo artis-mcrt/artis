@@ -19,6 +19,7 @@
 #include <cstring>
 #include <filesystem>
 #include <fstream>
+#include <ios>
 #include <iostream>
 #include <iterator>
 #include <print>
@@ -56,7 +57,7 @@ inline void check_already_running() {
       }
     }
 
-    auto pidfile = std::fstream("artis.pid", std::ofstream::out | std::ofstream::trunc);
+    auto pidfile = fstream_required("artis.pid", std::ios::out | std::ios::trunc);
     std::println(pidfile, "{}", artispid);
     std::println(pidfile, "{}", std::filesystem::current_path().generic_string());
   }

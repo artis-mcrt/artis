@@ -265,8 +265,7 @@ DEVICE_FUNC inline auto get_nphixstargets(const int element, const int ion, cons
       }
     }
   }
-  assert_always(false);  // uniquelevelindex too high to be valid
-  return {-1, -1, -1};
+  fatal_crash("Unique level index {} is above the highest level index", uniquelevelindex);
 }
 // Return the statistical weight of a level, by unique level index or by (element, ion, level).
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC inline auto stat_weight(const int uniquelevelindex) -> double {
@@ -438,8 +437,7 @@ inline void update_includedionslevels_maxnions() {
       return {element, ion};
     }
   }
-  assert_always(false);  // uniqueionindex too high to be valid
-  return {-1, -1};
+  fatal_crash("Unique ion index {} is above the highest ion index", uniqueionindex);
 }
 
 [[gnu::pure]] [[nodiscard]] inline auto ion_has_superlevel(const int element, const int ion) -> bool {

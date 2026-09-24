@@ -45,7 +45,7 @@ MPI_shared_array<CoolingType> coolinglist_type;
 MPI_shared_array<int> coolinglist_level;
 MPI_shared_array<int> coolinglist_phixstargetindex;
 
-// Fraction of a time step that individual k-packets live before further processing. This
+// Fraction of a timestep that individual k-packets live before further processing. This
 // diffusion time breaks up the chains of continuous collisional interactions that would
 // otherwise dominate the work imbalance between MPI ranks.
 constexpr float kpktdiffusion_timestep_fraction{0.001};
@@ -317,8 +317,11 @@ void calculate_cooling_rates(const int nonemptymgi, HeatingCoolingRates* heating
   double cumulative_cooling = 0.;
   for (int uniqueionindex = 0; uniqueionindex < nincludedions; uniqueionindex++) {
     const auto [element, ion] = get_ionfromuniqueionindex(uniqueionindex);
-    cumulative_cooling += calculate_cooling_rates_ion<false>(nonemptymgi, element, ion, {}, &C_ff_all, &C_fb_all,
-                                                             &C_exc_all, &C_ionisation_all);
+    // every cooling term of an absent element is zero
+    if (grid::get_elem_numberdens(nonemptymgi, element) > 0.) {
+      cumulative_cooling += calculate_cooling_rates_ion<false>(nonemptymgi, element, ion, {}, &C_ff_all, &C_fb_all,
+                                                               &C_exc_all, &C_ionisation_all);
+    }
     cellioncontribs[uniqueionindex] = cumulative_cooling;
   }
 
@@ -407,7 +410,7 @@ void setup_coolinglist() {
   printlnlog("[info] setup_coolinglist: number of coolingterms {}", ncoolingterms);
   MPI_Barrier_node();
 
-  printlnlog("kpkts diffuse {:g} of a time step's length", kpktdiffusion_timestep_fraction);
+  printlnlog("kpkts diffuse {:g} of a timestep's length", kpktdiffusion_timestep_fraction);
 }
 
 // prepopulate one ion's cooling-rate contributions into the cellcache (see header)

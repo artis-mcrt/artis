@@ -405,9 +405,6 @@ void set_params_fullspec(const int nonemptymgi, const int timestep) {
     printlnlog("[warning] cell {} has J = 0, so T_R = MINTEMP and W = 0", modelgridindex);
     grid::TR_allcells[nonemptymgi] = MINTEMP;
     grid::W_allcells[nonemptymgi] = 0.;
-  } else if (!std::isfinite(nubar) || nubar == 0.) {
-    printlnlog("[warning] T_R estimator not finite in cell {}, keep T_R and W of last timestep. J = {:g}. nuJ = {:g}",
-               modelgridindex, J[nonemptymgi], nuJ[nonemptymgi]);
   } else {
     auto T_R = static_cast<float>(H * nubar / KB / 3.832229494);
     if (T_R > MAXTEMP) {
@@ -832,7 +829,7 @@ void fit_parameters(const int nonemptymgi, const int timestep) {
         W_bin = 0.;
       }
 
-      const auto mgibinindex = (nonemptymgi * RADFIELDBINCOUNT) + binindex;
+      const auto mgibinindex = (static_cast<ptrdiff_t>(nonemptymgi) * RADFIELDBINCOUNT) + binindex;
       radfieldbin_solutions_T_R[mgibinindex] = T_R_bin;
       radfieldbin_solutions_W[mgibinindex] = W_bin;
     }
@@ -925,17 +922,10 @@ void normalise_nuJ(const int nonemptymgi, const double estimator_normfactor_over
 }
 
 // Get the radiation temperature of a cell from the mean intensity alone, by equating J to the
-// Stefan-Boltzmann law (T_J = (pi J / sigma)^1/4). Non-finite values keep the previous timestep's value,
-// and the result is clamped to [MINTEMP, MAXTEMP].
+// Stefan-Boltzmann law (T_J = (pi J / sigma)^1/4). The result is clamped to [MINTEMP, MAXTEMP].
 auto get_T_J_from_J(const int nonemptymgi) -> float {
   const auto T_J = static_cast<float>(pow(J[nonemptymgi] * PI / STEBO, 1. / 4.));
-  if (!std::isfinite(T_J)) {
-    // keep old value of T_J
-    const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
-    printlnlog("[warning] get_T_J_from_J: T_J estimator infinite in cell {}, use value of last timestep",
-               modelgridindex);
-    return grid::TJ_allcells[nonemptymgi];
-  }
+  assert_always(std::isfinite(T_J));
   // Make sure that T is in the allowed temperature range.
   if (T_J > MAXTEMP) {
     printlnlog(
@@ -994,7 +984,6 @@ void reduce_estimators() {
         std::chrono::duration<double>(std::chrono::steady_clock::now() - sys_time_start_reduction).count();
     printlnlog(" (took {:.1f} s)", duration_reduction);
   }
-  MPI_Barrier_allranks();
 }
 
 // broadcast the radiation field parameters of the cells that belong to the root rank to all ranks. The caller
@@ -1061,9 +1050,8 @@ void write_restart_data(FILE* gridsave_file) {
     }
   }
 
-  for (int nonemptymgi = 0; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
-    assert_testmodeonly(nonemptymgi >= 0);
-    fprintf(gridsave_file, "%d %la\n", nonemptymgi, J_normfactor[nonemptymgi]);
+  for (ptrdiff_t nonemptymgi = 0; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
+    fprintf(gridsave_file, "%td %la\n", nonemptymgi, J_normfactor[nonemptymgi]);
 
     if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
       for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++) {

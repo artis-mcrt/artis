@@ -74,8 +74,7 @@ MPI_shared_array<double> bfcooling_coeffs{};
 auto alpha_sp_integrand(const double nu_minus_nu_edge, const double nu_edge, const float T_e,
                         const std::span<const float> photoion_xs) -> double {
   const auto sigma_bf = photoionisation_crosssection_fromtable(photoion_xs, nu_edge, nu_minus_nu_edge + nu_edge);
-  // the variable of integration has been changed from nu to nu_minus_nu_edge = nu - nu_edge
-  // to get a cancellation with part of the saha factor
+  // the variable of integration is nu_minus_nu_edge = nu - nu_edge, which cancels a part of the Saha factor
   return (2 / CLIGHTSQUARED) * sigma_bf * pow2(nu_edge + nu_minus_nu_edge) * exp(-HOVERKB * nu_minus_nu_edge / T_e);
 }
 
@@ -120,17 +119,17 @@ auto bfcooling_integrand(const double nu_minus_nu_edge, const double nu_edge, co
 }
 
 [[gnu::pure]] [[nodiscard]] inline auto get_bflutindex(const int temperatureindex, const int uniquelevelindex,
-                                                       const int phixstargetindex) -> int {
+                                                       const int phixstargetindex) -> ptrdiff_t {
   // continuum-major layout so that the two temperature samples read by an interpolation are adjacent
-  const int contindex = globals::alllevels.bflist_start[uniquelevelindex] + phixstargetindex;
-  const int bflutindex = (contindex * RATECOEFF_TABLESIZE) + temperatureindex;
+  const ptrdiff_t contindex = globals::alllevels.bflist_start[uniquelevelindex] + phixstargetindex;
+  const ptrdiff_t bflutindex = (contindex * RATECOEFF_TABLESIZE) + temperatureindex;
   assert_testmodeonly(bflutindex >= 0);
-  assert_testmodeonly(bflutindex < RATECOEFF_TABLESIZE * globals::nbfcontinua);
+  assert_testmodeonly(bflutindex < static_cast<ptrdiff_t>(RATECOEFF_TABLESIZE) * globals::nbfcontinua);
   return bflutindex;
 }
 
 [[gnu::pure]] [[nodiscard]] inline auto get_bflutindex(const int temperatureindex, const int element, const int ion,
-                                                       const int level, const int phixstargetindex) -> int {
+                                                       const int level, const int phixstargetindex) -> ptrdiff_t {
   return get_bflutindex(temperatureindex, get_uniquelevelindex(element, ion, level), phixstargetindex);
 }
 
@@ -180,7 +179,7 @@ void precalculate_rate_coefficient_integrals() {
               nu_threshold * last_phixs_nuovernuedge;  // nu of the uppermost point in the phixs table
           // Loop over the temperature grid
           for (int temperatureindex = 0; temperatureindex < RATECOEFF_TABLESIZE; temperatureindex++) {
-            const int bflutindex = get_bflutindex(temperatureindex, element, ion, level, phixstargetindex);
+            const auto bflutindex = get_bflutindex(temperatureindex, element, ion, level, phixstargetindex);
             double error{NAN};
             const auto temperature = static_cast<float>(temperature_grid[temperatureindex]);
 
@@ -835,6 +834,7 @@ DEVICE_FUNC auto get_corrphotoioncoeff(const int element, const int ion, const i
                                        const int nonemptymgi, const bool use_cellcache) -> double {
   const auto uniquelevelindex = get_uniquelevelindex(element, ion, level);
   const auto allphixstargetindex = get_allphixstargetindex(uniquelevelindex, phixstargetindex);
+  // the per-level lock in do_macroatom() orders the reads and the writes of this cache entry
   double gammacorr =
       use_cellcache ? get_cellcache(nonemptymgi).allphixstargets_corrphotoioncoeff[allphixstargetindex] : -1;
 

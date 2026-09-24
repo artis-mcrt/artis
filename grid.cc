@@ -137,8 +137,7 @@ constexpr auto get_ndim(const GridType gridtype) -> int {
     case GridType::CARTESIAN3D:
       return 3;
     default:
-      assert_always(false);
-      return -1;
+      fatal_crash("Unknown grid type {}", static_cast<int>(gridtype));
   }
 }
 
@@ -146,14 +145,13 @@ constexpr auto get_ndim(const GridType gridtype) -> int {
   assert_always(axis >= 0 && axis < get_ndim(gridtype));
   switch (gridtype) {
     case GridType::CARTESIAN3D:
-      return std::array<char, 3>{'x', 'y', 'z'}.at(axis);
+      return std::array<char, 3>{'x', 'y', 'z'}[axis];
     case GridType::CYLINDRICAL2D:
-      return std::array<char, 2>{'r', 'z'}.at(axis);
+      return std::array<char, 2>{'r', 'z'}[axis];
     case GridType::SPHERICAL1D:
       return 'r';
     default:
-      assert_always(false);
-      return '?';
+      fatal_crash("Unknown grid type {}", static_cast<int>(gridtype));
   }
 }
 
@@ -275,8 +273,7 @@ auto get_cell_r_inner(const int cellindex, const GridType prop_gridtype) -> doub
     return std::sqrt(pow2(x_inner) + pow2(y_inner) + pow2(z_inner));
   }
 
-  assert_always(false);
-  return NAN;
+  fatal_crash("Unknown propagation grid type {}", static_cast<int>(prop_gridtype));
 }
 
 // Negative input mass fractions (within roundoff of zero) are counted as they are clamped during
@@ -513,8 +510,7 @@ void allocate_nonemptymodelcells() {
   // record, because only that case rescales the nuclide masses.
   const bool track_blanked_mass = FORCE_SPHERICAL_ESCAPE_SURFACE && (get_modelgridtype() != get_propgridtype());
   std::vector<double> blanked_assocvolume(track_blanked_mass ? get_npts_model() : 0, 0.);
-  reserve_resize(totmassnuclide_blanked, decay::get_num_nuclides());
-  std::ranges::fill(totmassnuclide_blanked, 0.);
+  totmassnuclide_blanked.assign(decay::get_num_nuclides(), 0.);
 
   if constexpr (FORCE_SPHERICAL_ESCAPE_SURFACE) {
     reserve_resize(propcell_outside_escape_surface, ngrid);
@@ -575,11 +571,9 @@ void allocate_nonemptymodelcells() {
   printlnlog("There are {} modelgrid cells with associated propagation cells (nonempty_npts_model)",
              nonempty_npts_model);
 
-  reserve_resize(mgi_of_nonemptymgi, nonempty_npts_model);
-  std::ranges::fill(mgi_of_nonemptymgi, -2);
+  mgi_of_nonemptymgi.assign(nonempty_npts_model, -2);
 
-  reserve_resize(propcell_nonemptymgi, ngrid);
-  std::ranges::fill(propcell_nonemptymgi, -1);
+  propcell_nonemptymgi.assign(ngrid, -1);
 
   int nonemptymgi = 0;  // index within list of non-empty modelgrid cells
 
@@ -638,17 +632,13 @@ void allocate_nonemptymodelcells() {
     allocate_expansionopacities();
   }
 
-  reserve_resize(globals::dep_estimator_gamma, nonempty_npts_model);
-  std::ranges::fill(globals::dep_estimator_gamma, 0.);
+  globals::dep_estimator_gamma.assign(nonempty_npts_model, 0.);
 
-  reserve_resize(globals::dep_estimator_positron, nonempty_npts_model);
-  std::ranges::fill(globals::dep_estimator_positron, 0.);
+  globals::dep_estimator_positron.assign(nonempty_npts_model, 0.);
 
-  reserve_resize(globals::dep_estimator_electron, nonempty_npts_model);
-  std::ranges::fill(globals::dep_estimator_electron, 0.);
+  globals::dep_estimator_electron.assign(nonempty_npts_model, 0.);
 
-  reserve_resize(globals::dep_estimator_alpha, nonempty_npts_model);
-  std::ranges::fill(globals::dep_estimator_alpha, 0.);
+  globals::dep_estimator_alpha.assign(nonempty_npts_model, 0.);
 
   const auto ionestimcount = nonempty_npts_model * globals::nbfcontinua_ground;
   const auto ionestimsize = ionestimcount * sizeof(double);
@@ -656,25 +646,21 @@ void allocate_nonemptymodelcells() {
   if (ionestimsize > 0) {
     globals::corrphotoionrenorm = MPI_shared_array<double>(ionestimcount, 1.);
 
-    reserve_resize(globals::gammaestimator, ionestimcount);
-    std::ranges::fill(globals::gammaestimator, 0.);
+    globals::gammaestimator.assign(ionestimcount, 0.);
   } else {
     globals::corrphotoionrenorm.reset();
     globals::gammaestimator.clear();
   }
 
   if (USE_ION_BFHEATING_ESTIMATORS && ionestimsize > 0) {
-    reserve_resize(globals::bfheatingestimator, ionestimcount);
-    std::ranges::fill(globals::bfheatingestimator, 0.);
+    globals::bfheatingestimator.assign(ionestimcount, 0.);
   } else {
     globals::bfheatingestimator.clear();
   }
 
-  reserve_resize(globals::ffheatingestimator, nonempty_npts_model);
-  std::ranges::fill(globals::ffheatingestimator, 0.);
+  globals::ffheatingestimator.assign(nonempty_npts_model, 0.);
 
-  reserve_resize(globals::colheatingestimator, COL_HEAT_FROM_LEVELPOPS ? 0 : nonempty_npts_model);
-  std::ranges::fill(globals::colheatingestimator, 0.);
+  globals::colheatingestimator.assign(COL_HEAT_FROM_LEVELPOPS ? 0 : nonempty_npts_model, 0.);
 
   MPI_Barrier_allranks();
 
@@ -939,6 +925,7 @@ void read_model_radioabundances(std::istream& fmodel, std::string_view& remainde
     } else if (colnames[i] == "cellYe" || colnames[i] == "Ye") {
       set_initelectronfrac(mgi, static_cast<float>(valuein));
     } else if (colnames[i] == "q") {
+      assert_always(valuein >= 0.);
       // use value for t_model and adjust to tmin with expansion factor
       set_initenergyq(mgi, static_cast<float>(valuein * t_model / globals::tmin));
     } else if (colnames[i] == "tracercount") {
@@ -1053,16 +1040,14 @@ auto get_inputcellvolume(const int mgi) -> double {
     }
   }
 
-  assert_always(false);
-  return NAN;
+  fatal_crash("Unknown model grid type {}", static_cast<int>(get_modelgridtype()));
 }
 
 void calc_modelinit_totmassnuclides() {
   mtot_input = 0.;
   mfegroup = 0.;
 
-  reserve_resize(totmassnuclide, decay::get_num_nuclides());
-  std::ranges::fill(totmassnuclide, 0.);
+  totmassnuclide.assign(decay::get_num_nuclides(), 0.);
 
   for (int mgi = 0; mgi < get_npts_model(); mgi++) {
     const double mass_in_shell = get_rho_tmin(mgi) * get_inputcellvolume(mgi);
@@ -1206,10 +1191,6 @@ void assign_initial_temperatures() {
   const double ts0_tmid = globals::timesteps[0].mid;
   int cells_below_mintemp = 0;
   int cells_above_maxtemp = 0;
-  int cells_nonfinite_temp = 0;
-  int first_nonfinite_nonemptymgi = std::numeric_limits<int>::max();
-  double first_nonfinite_rho_tmin = 0.;
-  double first_nonfinite_endecay = 0.;
 
   // the Bateman factors depend only on the decay path and time, so compute them once and apply them to every
   // cell's initial abundances
@@ -1232,16 +1213,8 @@ void assign_initial_temperatures() {
     auto T_initial = static_cast<float>(std::pow(
         CLIGHT / 4 / STEBO * pow3(globals::tmin / ts0_tmid) * get_rho_tmin(mgi) * decayedenergy_per_mass, 1. / 4.));
 
-    if (!std::isfinite(T_initial)) {
-      // check this first: a NaN would fall through every comparison below and be stored unclamped
-      cells_nonfinite_temp++;
-      if (first_nonfinite_nonemptymgi == std::numeric_limits<int>::max()) {
-        first_nonfinite_nonemptymgi = nonemptymgi;
-        first_nonfinite_rho_tmin = get_rho_tmin(mgi);
-        first_nonfinite_endecay = decayedenergy_per_mass;
-      }
-      T_initial = MINTEMP;
-    } else if (T_initial < MINTEMP) {
+    assert_always(std::isfinite(T_initial));
+    if (T_initial < MINTEMP) {
       T_initial = MINTEMP;
       cells_below_mintemp++;
     } else if (T_initial > MAXTEMP) {
@@ -1260,22 +1233,9 @@ void assign_initial_temperatures() {
   // exactly once)
   MPI_Allreduce_safe(cells_below_mintemp, MPI_SUM, globals::mpi_comm_node);
   MPI_Allreduce_safe(cells_above_maxtemp, MPI_SUM, globals::mpi_comm_node);
-  MPI_Allreduce_safe(cells_nonfinite_temp, MPI_SUM, globals::mpi_comm_node);
 
   printlnlog("  cells below MINTEMP {:g} [K]: {}. Above MAXTEMP {:g} [K]: {}", MINTEMP, cells_below_mintemp, MAXTEMP,
              cells_above_maxtemp);
-  if (cells_nonfinite_temp > 0) {
-    MPI_Allreduce_safe(first_nonfinite_nonemptymgi, MPI_MIN, globals::mpi_comm_node);
-    // get the details of the earliest example from the rank that computed that cell
-    const int ownerrank = first_nonfinite_nonemptymgi % globals::node_nprocs;
-    MPI_Bcast_safe(first_nonfinite_rho_tmin, ownerrank, globals::mpi_comm_node);
-    MPI_Bcast_safe(first_nonfinite_endecay, ownerrank, globals::mpi_comm_node);
-    printlnlog(
-        "[warning] {} cells had a non-finite initial temperature and were set to MINTEMP (first was mgi {} with "
-        "rho_tmin {:g} [g/cm3] and decayed energy {:g} [erg/g])",
-        cells_nonfinite_temp, get_mgi_of_nonemptymgi(first_nonfinite_nonemptymgi), first_nonfinite_rho_tmin,
-        first_nonfinite_endecay);
-  }
   MPI_Barrier_allranks();
 }
 
@@ -1491,8 +1451,7 @@ auto get_poscoordpointnum(const double pos, const double time, const int axis) -
     }
   }
 
-  assert_always(false);
-  return -1;
+  fatal_crash("Position {:g} on axis {} at time {:g} has no cell index", pos, axis, time);
 }
 
 // Convert a position vector from Cartesian xyz to the grid coordinate system
@@ -1505,8 +1464,7 @@ auto get_poscoordpointnum(const double pos, const double time, const int axis) -
     case GridType::SPHERICAL1D:
       return {vec_len(pos_xyz), NAN, NAN};
   }
-  assert_always(false);
-  return {NAN, NAN, NAN};
+  fatal_crash("Unknown grid type {}", static_cast<int>(gridtype));
 }
 
 // get the velocity in the grid coordinate system from the xyz position and direction
@@ -1528,8 +1486,7 @@ auto get_poscoordpointnum(const double pos, const double time, const int axis) -
       return {v_radial, NAN, NAN};
     }
   }
-  assert_always(false);
-  return {NAN, NAN, NAN};
+  fatal_crash("Unknown grid type {}", static_cast<int>(gridtype));
 }
 
 // Find the closest forward distance to the intersection of a ray with an expanding spherical shell (pos and dir are
@@ -1722,8 +1679,7 @@ template <BoundaryType boundarytype>
       return 4. / 3. * PI * (pow3(get_cellcoordmax(cellindex, 0)) - pow3(get_cellcoordmin(cellindex, 0)));
     }
   }
-  assert_always(false);
-  return NAN;
+  fatal_crash("Unknown propagation grid type {}", static_cast<int>(get_propgridtype()));
 }
 
 [[nodiscard]] auto get_propcell_random_xyz_position_tmin(int cellindex, rngstate_type& rngstate) -> Vec3d {
@@ -1758,8 +1714,7 @@ template <BoundaryType boundarytype>
       return pos;
     }
   }
-  assert_always(false);
-  return {NAN, NAN, NAN};
+  fatal_crash("Unknown propagation grid type {}", static_cast<int>(get_propgridtype()));
 }
 
 auto get_rho_tmin(const int modelgridindex) -> float { return modelgrid_input[modelgridindex].rhoinit; }
@@ -2622,12 +2577,8 @@ DEVICE_FUNC void snap_pos_to_cell(Vec3d& pos, const double time, const int celli
     return;
   }
   for (int d = 0; d < 3; d++) {
-    const int idx = get_cellcoordindex(cellindex, d);
-    const double cellposmin = coord_pos_min_tmin[d][idx] / globals::tmin * time;
-    // exactly match the boundary used by boundary_distance(): the upper boundary is the
-    // lower edge of the neighbouring cell, except at the grid edge
-    const double cellposmax = (idx < (ncoordgrid[d] - 1)) ? coord_pos_min_tmin[d][idx + 1] / globals::tmin * time
-                                                          : get_cellcoordmax(cellindex, d) / globals::tmin * time;
+    const double cellposmin = get_cellcoordmin(cellindex, d) / globals::tmin * time;
+    const double cellposmax = get_cellcoordmax(cellindex, d) / globals::tmin * time;
     const double newpos_d = std::clamp(pos[d], cellposmin, cellposmax);
     // corrections should only ever be at the floating-point rounding error level
     assert_testmodeonly(std::abs(newpos_d - pos[d]) <= cellbound_tolerance(pos[d]));

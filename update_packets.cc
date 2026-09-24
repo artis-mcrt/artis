@@ -108,7 +108,7 @@ void do_nonthermal_predeposit(Packet& pkt, const int nts, const double ts_end) {
     const double endot = endot_collisional + endot_adiabatic;
 
     // time of deposition is the smaller out of (a) the time until which the particle loses all its energy according to
-    // the loss rates above and (b) the time remaining until the end of the current time step
+    // the loss rates above and (b) the time remaining until the end of the current timestep
     // Only collisional losses count as energy deposited into the gas (not adiabatic losses)
     e_cmf_deposited = pkt.e_cmf * endot_collisional * std::min(ts_end - ts, particle_en / endot) / particle_en;
 
@@ -183,8 +183,8 @@ void do_nonthermal_predeposit(Packet& pkt, const int nts, const double ts_end) {
 }
 
 // Handle inactive pellets. Need to do two things (a) check if it
-// decays in this time step and if it does handle that. (b) if it doesn't decay in
-// this time step then just move the packet along with the matter for the start of the next time step.
+// decays in this timestep and if it does handle that. (b) if it doesn't decay in
+// this timestep then just move the packet along with the matter for the start of the next timestep.
 void update_pellet(Packet& pkt, const int nts, const double t2) {
   assert_always(pkt.prop_time < t2);
   const double ts = pkt.prop_time;
@@ -233,7 +233,7 @@ void update_pellet(Packet& pkt, const int nts, const double t2) {
       gammapkt::pellet_gamma_decay(pkt);
     }
   } else if ((tdecay > 0) && (nts == globals::timestep_initial)) {
-    // These are pellets whose decay times were before the first time step. They become pre-k-packets, which
+    // These are pellets whose decay times were before the first timestep. They become pre-k-packets, which
     // do_packet() immediately re-emits as r-packets with a blackbody frequency. The energy is reduced by
     // tdecay / tmin to account for the work done on the ejecta by the trapped radiation between the decay and
     // the start of the simulation (equation 18 of Lucy 2005, A&A, 429, 19-30, doi:10.1051/0004-6361:20041656, as

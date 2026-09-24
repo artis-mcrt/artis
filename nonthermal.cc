@@ -669,27 +669,6 @@ void read_collion_data() {
     return std::tie(a.Z, a.ionstage, a.ionpot_ev, a.n, a.l) < std::tie(b.Z, b.ionstage, b.ionpot_ev, b.n, b.l);
   });
 
-  // this condition is checked here once per ion (it does not depend on the cell), so that
-  // calculate_eff_ionpot_auger_rates does not have to report it for every cell
-  for (int element = 0; element < get_nelements(); element++) {
-    const int Z = get_atomicnumber(element);
-    for (int ion = 0; ion < get_nions(element); ion++) {
-      const int ionstage = get_ionstage(element, ion);
-      if ((Z - (ionstage - 1)) <= 0) {
-        continue;  // no bound electrons, so no NT impact ionisation
-      }
-      const bool any_subshells = std::ranges::any_of(colliondata, [Z, ionstage](const ShellParams& collionrow) {
-        return collionrow.Z == Z && collionrow.ionstage == ionstage;
-      });
-      if (!any_subshells) {
-        printlnlog(
-            "[warning] no NT impact ionisation subshell data for Z={} ionstage {}: the Spencer-Fano solver will "
-            "default to the work function approximation and not account for the ionisation energy",
-            Z, ionstage);
-      }
-    }
-  }
-
   if constexpr (NT_MAX_AUGER_ELECTRONS > 0) {
     read_auger_data();
   }
@@ -718,7 +697,18 @@ auto get_possible_nt_excitation_count() -> int {
   return ntexcitationcount;
 }
 
-void zero_all_effionpot(const ptrdiff_t nonemptymgi) {
+// Set the cell to the Axelrod fractions and to no effective ion potentials. These values apply until the
+// first Spencer-Fano solution of the cell.
+void set_axelrod_solution(const ptrdiff_t nonemptymgi) {
+  nt_solution[nonemptymgi].frac_heating = 0.97;
+  nt_solution[nonemptymgi].frac_ionisation = 0.03;
+  nt_solution[nonemptymgi].frac_excitation = 0.;
+
+  nt_solution[nonemptymgi].nneperion_when_solved = -1.;
+  nt_solution[nonemptymgi].timestep_last_solved = -1;
+
+  nt_solution[nonemptymgi].frac_excitations_list_size = 0;
+
   for (int uniqueionindex = 0; uniqueionindex < get_includedions(); uniqueionindex++) {
     auto& celliondata = get_cell_allions_data(nonemptymgi)[uniqueionindex];
     celliondata.eff_ionpot = 0.;
@@ -961,9 +951,7 @@ constexpr auto xs_excitation(const int element, const int ion, const int lower, 
 // return value has units of erg/cm
 constexpr auto electron_loss_rate(const double energy, const double nne) -> double {
   // with no thermal electrons there is no Coulomb energy loss. Without this guard the plasma
-  // frequency is zero and the Coulomb logarithm diverges, giving 0 * inf = NaN in a fully neutral
-  // cell (nne can reach exactly zero because the MINPOP floor is a float denormal that is flushed
-  // to zero by the default -ffast-math build)
+  // frequency is zero and the Coulomb logarithm diverges, giving 0 * inf = NaN
   if (energy <= 0. || nne <= 0.) {
     return 0;
   }
@@ -1196,13 +1184,12 @@ auto get_nt_frac_excitation(const int nonemptymgi) -> float {
 
 // Reciprocal work per ion pair, 1/W, from the analytic estimate of A80: high-energy cross-section
 // limits, neglecting energy lost to free electrons. Used by nt_ionisation_ratecoeff_wfapprox() as the
-// alternative to the Spencer-Fano solve, and as the fallback eff_ionpot for ions with no collisional-ionisation
-// subshell data.
+// alternative to the Spencer-Fano solve.
 //
 // WARNING: this disagrees with the Spencer-Fano eff_ionpot by more than the approximation should explain. One
 // candidate is this function's own Aconst (note that xs_ionisation_lotz() defines a separate constant of the
 // same name and value): it takes Axelrod's 10 keV-fitted A where Lotz's, 3.4x larger, suits the low energies
-// that set the heating and ionisation fractions. Treat ions relying on this fallback as uncertain.
+// that set the heating and ionisation fractions. Treat the ions that use this estimate as uncertain.
 auto get_oneoverw_approx_axelrod(const int element, const int ion, const int nonemptymgi) -> double {
   // Work in terms of 1/W since this is actually what we want. It is given by sigma/(Latom + Lelec).
   // We are going to start by taking all the high energy limits and ignoring Lelec, so that the
@@ -1393,7 +1380,7 @@ auto calculate_eff_ionpot_auger_rates(const int nonemptymgi, const int element, 
       }
     } else {
       // the top ion cannot be ionised further; keep the documented invariant that the
-      // probabilities sum to one (matching zero_all_effionpot())
+      // probabilities sum to one (matching set_axelrod_solution())
       celliondata.prob_num_auger[0] = 1.;
       celliondata.ionenfrac_num_auger[0] = 1.;
     }
@@ -1403,16 +1390,13 @@ auto calculate_eff_ionpot_auger_rates(const int nonemptymgi, const int element, 
     celliondata.ionenfrac_num_auger[a] = 1.;
   }
 
-  if (matching_nlsubshell_count > 0) {
-    double eff_ionpot = X_ion / eta_over_ionpot_sum;
-    if (!std::isfinite(eff_ionpot)) {
-      eff_ionpot = 0.;
-    }
-    celliondata.eff_ionpot = static_cast<float>(eff_ionpot);
-  } else {
-    // the absence of matching subshell data is reported once at startup by read_collion_data()
-    celliondata.eff_ionpot = static_cast<float>(1. / get_oneoverw_approx_axelrod(element, ion, nonemptymgi));
+  // read_collion_data() gives every ion with a bound electron at least one shell row
+  assert_always(matching_nlsubshell_count > 0);
+  double eff_ionpot = X_ion / eta_over_ionpot_sum;
+  if (!std::isfinite(eff_ionpot)) {
+    eff_ionpot = 0.;
   }
+  celliondata.eff_ionpot = static_cast<float>(eff_ionpot);
   return frac_ionisation_ion;
 }
 
@@ -1569,8 +1553,8 @@ auto select_nt_ionisation(const int nonemptymgi, rngstate_type& rngstate) -> std
       }
     }
   }
-  assert_always(false);
-  return {-1, -1};
+  fatal_crash("select_nt_ionisation: no ion selected in cell {}: ratesum {} zrand {} ratetotal {}", nonemptymgi,
+              ratesum, zrand, ratetotal);
 }
 
 void analyse_sf_solution(const int nonemptymgi, const int timestep, const std::array<double, SFPTS>& yfunc,
@@ -2254,17 +2238,7 @@ void init() {
 
   if (globals::rank_in_node == 0) {
     for (auto nonemptymgi = 0Z; nonemptymgi < nonempty_npts_model; nonemptymgi++) {
-      // the Axelrod values apply until the first solution
-      nt_solution[nonemptymgi].frac_heating = 0.97;
-      nt_solution[nonemptymgi].frac_ionisation = 0.03;
-      nt_solution[nonemptymgi].frac_excitation = 0.;
-
-      nt_solution[nonemptymgi].nneperion_when_solved = -1.;
-      nt_solution[nonemptymgi].timestep_last_solved = -1;
-
-      zero_all_effionpot(nonemptymgi);
-
-      nt_solution[nonemptymgi].frac_excitations_list_size = 0;
+      set_axelrod_solution(nonemptymgi);
     }
   }
   MPI_Barrier_node();
@@ -2473,8 +2447,8 @@ DEVICE_FUNC void do_ntalpha_fisprod_deposit(Packet& pkt) {
 DEVICE_FUNC void do_ntlepton_deposit(Packet& pkt) {
   atomicadd(nt_energy_deposited, pkt.e_cmf);
 
-  const int modelgridindex = grid::get_propcell_modelgridindex(pkt.cellindex);
-  const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(modelgridindex);
+  const auto nonemptymgi = grid::get_propcell_nonemptymgi(pkt.cellindex);
+  assert_testmodeonly(nonemptymgi >= 0);
 
   // macroatom should not be activated in thick cells
   if (NT_SCHEME == NonThermalScheme::NT_SPENCERFANO &&
@@ -2575,17 +2549,7 @@ auto solve_spencerfano(const int nonemptymgi, const int timestep, const int iter
   }
 
   if (skip_solution) {
-    // Axelrod values
-    nt_solution[nonemptymgi].frac_heating = 0.97;
-    nt_solution[nonemptymgi].frac_ionisation = 0.03;
-    nt_solution[nonemptymgi].frac_excitation = 0.;
-
-    nt_solution[nonemptymgi].nneperion_when_solved = -1.;
-    nt_solution[nonemptymgi].timestep_last_solved = -1;
-
-    nt_solution[nonemptymgi].frac_excitations_list_size = 0;
-
-    zero_all_effionpot(nonemptymgi);
+    set_axelrod_solution(nonemptymgi);
     return false;  // both skip conditions are constant over the passes of one cell
   }
 

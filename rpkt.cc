@@ -94,7 +94,7 @@ auto get_nu_cmf_abort(const Vec3d& pos, const Vec3d& dir, const double prop_time
 auto get_possible_event(const int nonemptymgi, const Packet& pkt, const ContinuumOpacity& chi_rpkt_cont,
                         MacroAtomState& mastate,
                         const double tau_rnd,  // random optical depth until which the packet travels
-                        const double abort_dist,  // maximal travel distance before packet leaves cell or time step ends
+                        const double abort_dist,  // maximal travel distance before packet leaves cell or timestep ends
                         const double nu_cmf_abort, const double dnu_on_dl, const double doppler,
                         const globals::TransitionLines& linelist) -> std::tuple<double, int, bool> {
   static_assert(USE_RELATIVISTIC_DOPPLER_SHIFT || CLIGHT_PROP == CLIGHT,
@@ -222,7 +222,6 @@ auto get_possible_event_expansion_opacity(const int nonemptymgi, Packet& pkt, co
       // re-trace this bin line-by-line
       auto pkt_bin_start = pkt;
       pkt_bin_start.nu_cmf = nu_cmf;
-      pkt_bin_start.e_cmf = e_cmf;
       // The retrace runs at the time of the packet, the same as the bin walk above. The bin opacity holds the
       // Sobolev optical depths at t_mid over a path length of c t_mid. The bin walk multiplies it by the path
       // length at the packet time, so the bin optical depth scales with t / t_mid. The line-by-line Sobolev
@@ -253,11 +252,6 @@ auto get_possible_event_expansion_opacity(const int nonemptymgi, Packet& pkt, co
       prop_time += binedgedist / CLIGHT_PROP;
       nu_cmf = pkt.nu_cmf + (dnu_on_dl * dist);  // equals next_bin_edge_nu up to rounding
       assert_testmodeonly(nu_cmf <= pkt.nu_cmf);
-      if constexpr (DETAILED_LINE_ESTIMATORS_ON) {
-        // keep e_cmf consistent with the linearly-approximated nu_cmf, since it seeds the packet copy
-        // used for the line-by-line retrace (whose line estimator updates divide e_cmf by nu_cmf)
-        e_cmf = nu_cmf * e_rf / nu_rf;
-      }
     }
 
     if (nu_cmf <= nu_cmf_abort) {
@@ -655,8 +649,7 @@ auto do_rpkt_step(Packet& pkt, const double t2, ContinuumOpacity& chi_rpkt_cont)
     return false;
   }
 
-  assert_always(false);
-  return false;
+  fatal_crash("do_rpkt_step: no event selected: edist {} boundarydist {} tdist {}", edist, boundarydist, tdist);
 }
 
 // calculate the free-free absorption (to kpkt heating) coefficient [cm^-1]

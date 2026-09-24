@@ -221,8 +221,7 @@ void printout_nuclidemeanlife(const int z, const int a) {
       return 0.;
     }
     default: {
-      assert_always(false);
-      return 0.;
+      fatal_crash("Unknown decay type {}", static_cast<int>(decaytype));
     }
   }
 }
@@ -644,15 +643,14 @@ void set_nucdecayenergygamma(const int nucindex, const double value) { nuclides[
 // convert something like Ni56 to integer 28
 auto get_nucstring_z(const std::string& strnuc) -> int {
   std::string elcode = strnuc;
-  std::erase_if(elcode, &isdigit);
+  std::erase_if(elcode, [](const unsigned char c) { return std::isdigit(c) != 0; });
 
   for (int z = 0; z <= Z_MAX; z++) {
     if (elcode == get_elname(z)) {
       return z;
     }
   }
-  assert_always(false);  // could not match to an element
-  return -1;
+  fatal_crash("Could not match the nuclide string '{}' to an element", strnuc);
 }
 
 // convert something like Ni56 to integer 56
@@ -660,7 +658,7 @@ auto get_nucstring_a(const std::string& strnuc) -> int {
   // find first digit character
   auto i = 0ZU;
   for (; i < strnuc.length(); i++) {
-    if (isdigit(strnuc[i]) != 0) {
+    if (std::isdigit(static_cast<unsigned char>(strnuc[i])) != 0) {
       break;
     }
   }
