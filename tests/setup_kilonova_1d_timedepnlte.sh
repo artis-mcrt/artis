@@ -63,6 +63,8 @@ sedopt 'constexpr std::optional<int> NLTE_TIME_DEPENDENT_FIRST_TIMESTEP.*' 'cons
 
 sedopt 'constexpr bool ENABLE_CHARGE_TRANSFER_REACTIONS.*' 'constexpr bool ENABLE_CHARGE_TRANSFER_REACTIONS = true;'
 
+sedopt 'constexpr bool KEEP_ESCAPED_GAMMAS.*' 'constexpr bool KEEP_ESCAPED_GAMMAS = true;'
+
 rm -f artisoptions.h.bak
 
 cd -

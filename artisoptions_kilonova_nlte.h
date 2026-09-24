@@ -131,7 +131,7 @@ constexpr bool USE_RELATIVISTIC_DOPPLER_SHIFT = true;
 
 constexpr bool USE_CALCULATED_MEANATOMICWEIGHT = true;
 
-constexpr bool KEEP_ESCAPED_GAMMAS = true;
+constexpr bool KEEP_ESCAPED_GAMMAS = false;
 
 constexpr TimeStepSizeMethod TIMESTEP_SIZE_METHOD = TimeStepSizeMethod::LOGARITHMIC;
 
