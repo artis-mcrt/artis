@@ -20,7 +20,7 @@ tar -xf ../atomicdata_hefeconi_fe_i_to_vii.tar.xz --directory .
 
 ln -s ../../ artis
 
-cp artis/artisoptions_nltephotospheric_dynamic_ion_range.h artisoptions.h
+cp artis/artisoptions_nltephotospheric.h artisoptions.h
 
 sedopt "constexpr std::int64_t NUM_PACKETS.*" "constexpr std::int64_t NUM_PACKETS = 1600;"
 
