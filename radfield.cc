@@ -1050,7 +1050,7 @@ void write_restart_data(FILE* gridsave_file) {
     }
   }
 
-  for (auto nonemptymgi = 0Z; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
+  for (ptrdiff_t nonemptymgi = 0; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
     fprintf(gridsave_file, "%td %la\n", nonemptymgi, J_normfactor[nonemptymgi]);
 
     if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
