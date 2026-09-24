@@ -1135,8 +1135,9 @@ auto calc_energy_per_massoftopnuc_decaypath() -> std::vector<double> {
 }
 
 // decay energy per unit mass of the chain-top nuclide [erg/(g of chain-top nuclide)] released by each decaypath
-// from time t_model to tstart, weighted for the photon energy loss due to expansion between the time of decay and
-// tstart (equation 18 of Lucy 2005, A&A, 429, 19-30, doi:10.1051/0004-6361:20041656)
+// between t_model and tstart, weighted for the adiabatic loss of the photon energy between the decay and tstart.
+// A decay at t_decay has the weight (t_decay - t_model) / (tstart - t_model), see calculate_decaychain(). The
+// snapshot energy q of the model file is not part of this: it already includes the losses before t_model.
 auto calc_energy_per_massoftopnuc_decaypath_withexpansion(const double tstart) -> std::vector<double> {
   const auto num_decaypaths = get_num_decaypaths();
   std::vector<double> energy_per_massoftopnuc(num_decaypaths);

@@ -50,9 +50,11 @@ struct NucMassFracCoeffs {
 //
 // timediff:           time elapsed for decays [seconds]
 // lambdas:            array of 1/(mean lifetime) for nuc[0]..nuc[num_nuclides-1]  [seconds^-1]
-// useexpansionfactor: if true, return a modified 'abundance' at the end of the chain, with a weighting factor
-//                          accounting for adiabatic loss from expansion since the decays occurred
-//                          (This is needed to get the initial temperature)
+// useexpansionfactor: if true, weight each decay by the adiabatic loss of its energy between the decay and the end
+//                          of the interval. A decay at the time t_decay after the start of the interval counts
+//                          as t_decay / timediff (Lucy 2005, A&A, 429, 19-30, doi:10.1051/0004-6361:20041656,
+//                          equation 18, with the time counted from the model snapshot). The initial temperature
+//                          uses this result.
 constexpr auto calculate_decaychain(const double firstinitabund, const std::span<const double> lambdas,
                                     const double timediff, const bool useexpansionfactor) -> double {
   const int num_nuclides = static_cast<int>(lambdas.size());

@@ -188,7 +188,7 @@ The format is positional, so every line must be present and in order, including 
 Required when virtual packets are enabled (VPKT_ON in artisoptions.h). Sets the observer directions, the number of spectra per observer, and the time and wavelength ranges to record. See [tests/classicmode_3d_inputfiles/vpkt.txt](tests/classicmode_3d_inputfiles/vpkt.txt) for an example.
 
 ### model.txt
-Grid parameters, cell densities and nuclear composition.
+Grid parameters, cell densities and nuclear composition. The optional column `q` holds the trapped radiation energy per mass [erg/g] at the snapshot time of the model. The value must already include the adiabatic losses before the snapshot time. `INITIAL_PACKETS_ON` uses it for the initial temperature and for the initial packets.
 
 ### abundances.txt
 Required file with the per-cell elemental mass fractions, which include elements whose isotopic abundances are not given in model.txt.
