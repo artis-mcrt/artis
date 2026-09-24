@@ -24,7 +24,7 @@ rsync --ignore-times -av ../kilonova_1d_timedepnlte_inputfiles/ ./
 
 ln -s ../../ artis
 
-cp artis/artisoptions_kilonova_timedepnlte.h artisoptions.h
+cp artis/artisoptions_kilonova_nlte.h artisoptions.h
 
 xz -f -d -v -T0 *.xz
 
@@ -50,14 +50,29 @@ sedopt 'constexpr int NLTE_TE_NNE_MAXITER.*' 'constexpr int NLTE_TE_NNE_MAXITER 
 # photoionisation balance. The mode covers the ion balance of both kinds of element in one cell, the
 # sum of the electron contributions, and the rule of chargetransfer.cc that a reaction needs NLTE
 # levels on both sides. Keep at least one element at zero, or the test loses the hybrid mode.
-sedopt 'constexpr int ION_NLEVELS_EXCITED_NLTE.*' 'constexpr int ION_NLEVELS_EXCITED_NLTE(int element_z, int ionstage) { return (element_z == 58) ? 0 : 20; }'
+perl -0777 -i -pe 'my $n = s|^constexpr int ION_NLEVELS_EXCITED_NLTE\(int element_z, int ionstage\) \{.*?^\}$|constexpr int ION_NLEVELS_EXCITED_NLTE(int element_z, int ionstage) { return (element_z == 58) ? 0 : 20; }|ms; die "[error] the pattern for ION_NLEVELS_EXCITED_NLTE did not match once\n" unless $n == 1;' artisoptions.h
+
+perl -0777 -i -pe 'my $n = s|^constexpr bool FORCE_SAHA_ION_BALANCE\(int element_z\) \{.*?^\}$|constexpr bool FORCE_SAHA_ION_BALANCE(int element_z) { return false; }|ms; die "[error] the pattern for FORCE_SAHA_ION_BALANCE did not match once\n" unless $n == 1;' artisoptions.h
 
 perl -0777 -i -pe 'my $n = s|^constexpr int NLEVELS_REQUIRETRANSITIONS\(int element_z, int ionstage\) \{.*?^\}$|constexpr int NLEVELS_REQUIRETRANSITIONS(int element_z, int ionstage) { return 10; }|ms; die "[error] the pattern for NLEVELS_REQUIRETRANSITIONS did not match once\n" unless $n == 1;' artisoptions.h
+
+sedopt 'constexpr bool COL_HEAT_FROM_LEVELPOPS.*' 'constexpr bool COL_HEAT_FROM_LEVELPOPS = true;'
+sedopt 'constexpr double MINTEMP.*' 'constexpr double MINTEMP = 500.;'
+sedopt 'constexpr double MAXTEMP.*' 'constexpr double MAXTEMP = 100000.;'
+sedopt 'constexpr bool MULTIBIN_RADFIELD_MODEL_ON.*' 'constexpr bool MULTIBIN_RADFIELD_MODEL_ON = true;'
+sedopt 'constexpr bool DETAILED_BF_ESTIMATORS_ON.*' 'constexpr bool DETAILED_BF_ESTIMATORS_ON = true;'
+sedopt 'constexpr bool LEVEL_HAS_BFEST.*' 'constexpr bool LEVEL_HAS_BFEST(int element_z, int ionstage, int level) { return true; }'
 
 sedopt 'constexpr int FIRST_NLTE_RADFIELD_TIMESTEP.*' 'constexpr int FIRST_NLTE_RADFIELD_TIMESTEP = 2;'
 sedopt 'constexpr int DETAILED_BF_ESTIMATORS_USEFROMTIMESTEP.*' 'constexpr int DETAILED_BF_ESTIMATORS_USEFROMTIMESTEP = 2;'
 
+sedopt 'constexpr bool NLTE_USE_GTH_SOLVER.*' 'constexpr bool NLTE_USE_GTH_SOLVER = false;'
+
 sedopt 'constexpr std::optional<int> NLTE_TIME_DEPENDENT_FIRST_TIMESTEP.*' 'constexpr std::optional<int> NLTE_TIME_DEPENDENT_FIRST_TIMESTEP = 3;'
+
+sedopt 'constexpr bool ENABLE_CHARGE_TRANSFER_REACTIONS.*' 'constexpr bool ENABLE_CHARGE_TRANSFER_REACTIONS = true;'
+
+sedopt 'constexpr bool KEEP_ESCAPED_GAMMAS.*' 'constexpr bool KEEP_ESCAPED_GAMMAS = true;'
 
 rm -f artisoptions.h.bak
 

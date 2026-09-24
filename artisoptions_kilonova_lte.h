@@ -27,9 +27,14 @@ constexpr double NLTE_TE_NNE_RELTOL = 0.01;
 
 constexpr int ION_NLEVELS_EXCITED_NLTE(int element_z, int ionstage) { return 0; }
 
-constexpr bool LTEPOP_EXCITATION_USE_TJ = true;
+constexpr bool LTEPOP_EXCITATION_USE_TJ = false;
 
-constexpr bool FORCE_SAHA_ION_BALANCE(int element_z) { return true; }
+constexpr bool FORCE_SAHA_ION_BALANCE(int element_z) {
+  if (element_z == 38 || element_z == 39 || element_z == 40) {
+    return false;
+  }
+  return true;
+}
 
 constexpr bool SINGLE_LEVEL_TOP_ION = false;
 
@@ -75,13 +80,13 @@ constexpr bool DETAILED_LINE_ESTIMATORS_ON = false;
 
 constexpr bool DETAILED_BF_ESTIMATORS_ON = false;
 
-constexpr bool LEVEL_HAS_BFEST(int element_z, int ionstage, int level) { return true; }
+constexpr bool LEVEL_HAS_BFEST(int element_z, int ionstage, int level) { return false; }
 
 constexpr int DETAILED_BF_ESTIMATORS_USEFROMTIMESTEP = 6;
 
-constexpr bool USE_LUT_PHOTOION = true;
+constexpr bool USE_LUT_PHOTOION = false;
 
-constexpr bool USE_ION_BFHEATING_ESTIMATORS = true;
+constexpr bool USE_ION_BFHEATING_ESTIMATORS = false;
 
 constexpr bool WRITE_ION_HEATING_COOLING_RATES = false;
 
@@ -95,7 +100,7 @@ constexpr float STRICT_POPULATION_CHECKING_INVERSION_FACTOR_PRINTOUT_WARNING = 2
 
 constexpr double NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION = 1e-9;
 
-constexpr bool NLTE_USE_GTH_SOLVER = false;
+constexpr bool NLTE_USE_GTH_SOLVER = true;
 
 constexpr std::optional<int> NLTE_TIME_DEPENDENT_FIRST_TIMESTEP = std::nullopt;
 
@@ -120,7 +125,7 @@ constexpr bool USE_RELATIVISTIC_DOPPLER_SHIFT = true;
 
 constexpr bool USE_CALCULATED_MEANATOMICWEIGHT = true;
 
-constexpr bool KEEP_ESCAPED_GAMMAS = true;
+constexpr bool KEEP_ESCAPED_GAMMAS = false;
 
 constexpr TimeStepSizeMethod TIMESTEP_SIZE_METHOD = TimeStepSizeMethod::LOGARITHMIC;
 

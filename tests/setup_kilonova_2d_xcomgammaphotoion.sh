@@ -34,6 +34,8 @@ sedopt 'constexpr double MAXTEMP.*' 'constexpr double MAXTEMP = 20000.;'
 
 sedopt 'constexpr bool USE_XCOM_GAMMAPHOTOION.*' 'constexpr bool USE_XCOM_GAMMAPHOTOION = true;'
 
+sedopt 'constexpr bool KEEP_ESCAPED_GAMMAS.*' 'constexpr bool KEEP_ESCAPED_GAMMAS = true;'
+
 rm -f artisoptions.h.bak
 
 cd -
