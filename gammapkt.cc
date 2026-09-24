@@ -24,6 +24,7 @@
 #include <system_error>
 #include <tuple>
 #include <unordered_set>
+#include <utility>
 #include <vector>
 
 #include "artisoptions.h"
@@ -119,27 +120,6 @@ auto get_datafolder_filenames() -> std::array<std::unordered_set<std::string>, d
 }
 
 void read_gamma_tables() {
-  // migrate from old filenames that didn't specify the nuclide mass number
-  if (!std::filesystem::exists("gamma_ni56.txt") && std::filesystem::exists("ni_lines.txt")) {
-    std::error_code rename_error;
-    std::filesystem::rename("ni_lines.txt", "gamma_ni56.txt", rename_error);
-    if (rename_error) {
-      printlnlog("[error] failed to move ni_lines.txt to gamma_ni56.txt: {}", rename_error.message());
-    } else {
-      printlnlog("Moved ni_lines.txt to gamma_ni56.txt");
-    }
-  }
-
-  if (!std::filesystem::exists("gamma_co56.txt") && std::filesystem::exists("co_lines.txt")) {
-    std::error_code rename_error;
-    std::filesystem::rename("co_lines.txt", "gamma_co56.txt", rename_error);
-    if (rename_error) {
-      printlnlog("[error] failed to move co_lines.txt to gamma_co56.txt: {}", rename_error.message());
-    } else {
-      printlnlog("Moved co_lines.txt to gamma_co56.txt");
-    }
-  }
-
   const auto folderfiles = get_datafolder_filenames();
   int tables_found = 0;
   int nuclides_without_table = 0;
@@ -190,15 +170,9 @@ void read_gamma_tables() {
     }
   }
 
-  // Frozen legacy mean gamma energies per decay for 52Fe and 52Mn: not taken from the current decay data, and
-  // changing them shifts results and the stored regression checksums. The loop above leaves these two without
-  // a spectrum (it builds a single-line stand-in only when the tabulated gamma energy is non-zero, which
-  // theirs is not), so their energy is deposited as a k-packet rather than sampled and the mean is all that is
-  // needed. Note that other nuclides with no table and zero tabulated gamma energy also end up with an empty
-  // spectrum; they simply never reach choose_gamma_ray(), because a zero gamma energy routes the pellet down
-  // the particle-decay branch in decay.cc instead.
-  // The .empty() test must stay: overwriting an existing spectrum's mean would leave choose_gamma_ray()
-  // normalising by a total that does not match the lines it samples.
+  // 52Fe and 52Mn have no gamma-ray table, so their gamma energy deposits as a k-packet with these mean
+  // energies per decay. The .empty() test keeps the mean of an existing spectrum, because choose_gamma_ray()
+  // normalises the lines by that mean.
   if (decay::nuc_exists(26, 52) && gamma_spectra[decay::get_nucindex(26, 52)].empty()) {
     decay::set_nucdecayenergygamma(decay::get_nucindex(26, 52), 0.86 * MEV);  // Fe52
   }
@@ -255,6 +229,24 @@ void broadcast_gamma_tables() {
 
 void read_decaydata() {
   gamma_spectra.resize(decay::get_num_nuclides(), {});
+
+  if (globals::my_rank == 0) {
+    // rename the files of the old naming scheme, which had no mass number
+    for (const auto& [oldname, newname] :
+         std::array{std::pair{"ni_lines.txt", "gamma_ni56.txt"}, std::pair{"co_lines.txt", "gamma_co56.txt"}}) {
+      if (!std::filesystem::exists(newname) && std::filesystem::exists(oldname)) {
+        std::error_code rename_error;
+        std::filesystem::rename(oldname, newname, rename_error);
+        if (rename_error) {
+          printlnlog("[error] failed to move {} to {}: {}", oldname, newname, rename_error.message());
+        } else {
+          printlnlog("Moved {} to {}", oldname, newname);
+        }
+      }
+    }
+  }
+  // the node leaders scan the folder only after the rename
+  MPI_Barrier_allranks();
 
   if (globals::rank_in_node == 0) {
     read_gamma_tables();

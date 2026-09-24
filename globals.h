@@ -110,7 +110,7 @@ struct TimeStep {
   double qdot_alpha{0.};  // energy generation rate of the alpha decays (with neutrinos) [erg/s]
   double qdot_spfission{0.};  // energy generation rate of the spontaneous fission decays (with neutrinos) [erg/s]
   double qdot_total{0.};  // energy generation rate of all decays (with neutrinos) [erg/s]
-  ALIGNAS_AVOID_FALSE_SHARING int pellet_decays{0};  // Number of pellets that decay in this time step.
+  ALIGNAS_AVOID_FALSE_SHARING int pellet_decays{0};  // Number of pellets that decay in this timestep.
 };
 inline std::vector<TimeStep> timesteps;
 
@@ -320,7 +320,7 @@ inline double tmin{-1};
 inline int ntimesteps{-1};
 inline int timestep_initial{-1};
 inline int timestep_finish{-1};
-inline int timestep{-1};  // Current time step during the simulation
+inline int timestep{-1};  // Current timestep during the simulation
 
 inline int total_nlte_levels{0};
 

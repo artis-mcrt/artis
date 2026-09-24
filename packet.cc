@@ -288,7 +288,7 @@ void read_temp_packetsfile(const int timestep, std::vector<Packet>& packets) {
   const auto packets_file = fopen_required_uniqueptr(filename, "rb");
   std::int64_t packet_count_in_file = 0;
   assert_always(std::fread(&packet_count_in_file, sizeof(std::int64_t), 1, packets_file.get()) == 1);
-  assert_always(packet_count_in_file > 0);
+  assert_always(packet_count_in_file >= 0);
   assert_always(packet_count_in_file <= std::ssize(packets));
   reserve_resize(packets, packet_count_in_file);
   assert_always(std::fread(packets.data(), sizeof(Packet), packet_count_in_file, packets_file.get()) ==

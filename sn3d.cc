@@ -159,10 +159,8 @@ void setup_cellcache() {
     if (cellcache_singleslot && cellcachenum == globals::rank_in_node) {
       // the lazy mutex-guarded rate calculation is only used in single-slot mode, and each rank only
       // ever accesses its own slot
-      reserve_resize(cacheslot.cooling_contrib_locks, static_cast<size_t>(get_includedions()));
-      std::ranges::fill(cacheslot.cooling_contrib_locks, 0);
-      reserve_resize(cacheslot.allmacroatomictransitions_locks, nincludedlevels);
-      std::ranges::fill(cacheslot.allmacroatomictransitions_locks, 0);
+      cacheslot.cooling_contrib_locks.assign(static_cast<size_t>(get_includedions()), PaddedMutex{});
+      cacheslot.allmacroatomictransitions_locks.assign(nincludedlevels, PaddedMutex{});
 
       for (size_t uniquelevelindex = 0; uniquelevelindex < nincludedlevels; uniquelevelindex++) {
         cacheslot.alllevels_maprocessrates[uniquelevelindex * MA_ACTION_COUNT] = -99.;
@@ -403,6 +401,7 @@ void write_deposition_file() {
       std::println(dep_file, "");
     }
     dep_file.close();
+    assert_always(!dep_file.fail());  // e.g. a full disk
 
     // std::filesystem::rename replaces an existing target atomically, so one call is sufficient.
     // This saves one metadata operation on a network file system.
@@ -444,6 +443,8 @@ void write_timestep_file() {
     std::println(timestepfile, "{} {:g} {:g} {:g}", n, globals::timesteps[n].start / DAY,
                  globals::timesteps[n].mid / DAY, globals::timesteps[n].width / DAY);
   }
+  timestepfile.close();
+  assert_always(!timestepfile.fail());  // e.g. a full disk
 }
 
 void mpi_communicate_grid_properties() {
@@ -594,21 +595,17 @@ void normalise_deposition_estimators(int nts) {
 void mpi_reduce_estimators(const int nts) {
   const int nonempty_npts_model = grid::get_nonempty_npts_model();
   radfield::reduce_estimators();
-  MPI_Barrier_allranks();
   MPI_Allreduce_safe(globals::ffheatingestimator, MPI_SUM, MPI_COMM_WORLD);
   if constexpr (!COL_HEAT_FROM_LEVELPOPS) {
     MPI_Allreduce_safe(globals::colheatingestimator, MPI_SUM, MPI_COMM_WORLD);
   }
-  MPI_Barrier_allranks();
 
   if (globals::nbfcontinua_ground > 0) {
     if constexpr (USE_LUT_PHOTOION) {
-      MPI_Barrier_allranks();
       MPI_Allreduce_safe(globals::gammaestimator, MPI_SUM, MPI_COMM_WORLD);
     }
 
     if constexpr (USE_ION_BFHEATING_ESTIMATORS) {
-      MPI_Barrier_allranks();
       MPI_Allreduce_safe(globals::bfheatingestimator, MPI_SUM, MPI_COMM_WORLD);
     }
   }
@@ -621,8 +618,6 @@ void mpi_reduce_estimators(const int nts) {
   MPI_Allreduce_safe(globals::dep_estimator_electron, MPI_SUM, MPI_COMM_WORLD);
   assert_always(std::ssize(globals::dep_estimator_alpha) == nonempty_npts_model);
   MPI_Allreduce_safe(globals::dep_estimator_alpha, MPI_SUM, MPI_COMM_WORLD);
-
-  MPI_Barrier_allranks();
 
   MPI_Allreduce_safe(globals::timesteps[nts].gamma_dep_discrete, MPI_SUM, MPI_COMM_WORLD);
   globals::timesteps[nts].gamma_dep_discrete /= globals::nprocs;
@@ -650,8 +645,6 @@ void mpi_reduce_estimators(const int nts) {
 
   MPI_Allreduce_safe(globals::timesteps[nts].gamma_emission, MPI_SUM, MPI_COMM_WORLD);
   globals::timesteps[nts].gamma_emission /= globals::nprocs;
-
-  MPI_Barrier_allranks();
 
   // The estimators have been summed across all processes and distributed.
   // They will now be normalised independently on all processes.
@@ -751,7 +744,6 @@ void save_grid_and_packets(const int nts, std::vector<Packet>& packets) {
 }
 
 void zero_estimators() {
-  MPI_Barrier_allranks();
   radfield::zero_estimators();
 
   std::ranges::fill(globals::ffheatingestimator, 0.);
@@ -772,8 +764,6 @@ void zero_estimators() {
       std::ranges::fill(globals::bfheatingestimator, 0.);
     }
   }
-
-  MPI_Barrier_allranks();
 }
 
 auto do_timestep(const int nts, std::vector<Packet>& packets, const int walltime_limit_seconds) -> bool {
@@ -813,14 +803,13 @@ auto do_timestep(const int nts, std::vector<Packet>& packets, const int walltime
   // update_grid() reads the estimators of the previous timestep.
   zero_estimators();
 
-  MPI_Barrier_allranks();
   if ((nts < globals::timestep_finish) && enough_walltime_for_timestep) {
     // Now process the packets.
 
     update_packets(nts, packets);
 
-    // All the processes have their own versions of the estimators for this time step now.
-    // Since these are going to be needed in the next time step, we will gather all the
+    // All the processes have their own versions of the estimators for this timestep now.
+    // Since these are going to be needed in the next timestep, we will gather all the
     // estimators together now, sum them, and distribute the results
 
     const auto time_communicate_estimators_start = std::chrono::steady_clock::now();
@@ -973,7 +962,13 @@ auto main(int argc, char* argv[]) -> int {
         // silently accepting a bad value would disable the wall time limit instead of applying it
         fatal_crash("invalid wall time hours '{}' given with -w option", optarg);
       }
-      walltime_limit_seconds = static_cast<int>(walltime_limit_hours * HOUR);
+      const double walltime_limit_seconds_exact = walltime_limit_hours * HOUR;
+      if (!std::isfinite(walltime_limit_seconds_exact) || walltime_limit_seconds_exact < 1. ||
+          walltime_limit_seconds_exact > std::numeric_limits<int>::max()) {
+        fatal_crash("wall time limit of {} hours is outside the range of 1 second to {} seconds", optarg,
+                    std::numeric_limits<int>::max());
+      }
+      walltime_limit_seconds = static_cast<int>(walltime_limit_seconds_exact);
       walltime_limit_hours_str = optarg;
     } else {
       print_options_help(stderr, argv[0]);  // NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic)

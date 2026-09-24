@@ -84,6 +84,10 @@ void calculate_heating_rates(const int nonemptymgi, const float T_e, const float
   double ffheating = 0.;
 
   for (int element = 0; element < get_nelements(); element++) {
+    // every heating term of an absent element is zero
+    if (grid::get_elem_numberdens(nonemptymgi, element) <= 0.) {
+      continue;
+    }
     const int nions = get_nions(element);
     if constexpr (COL_HEAT_FROM_LEVELPOPS) {
       for (int ion = 0; ion < nions; ion++) {
@@ -340,15 +344,15 @@ void call_T_e_finder(const int nonemptymgi, const double t_current, HeatingCooli
   const double f_T_max = f_T_e(MAXTEMP);
 
   const bool invalid_values = (!std::isfinite(f_T_min) || !std::isfinite(f_T_max));
+
+  double T_e{NAN};
   if (invalid_values) {
+    T_e = MINTEMP;
     printlnlog(
         "[warning] call_T_e_finder: non-finite results in modelcell {} (T_R={:g}, W={:g}). T_e forced to be MINTEMP",
         modelgridindex, grid::TR_allcells[nonemptymgi], grid::W_allcells[nonemptymgi]);
-  }
-
-  double T_e{NAN};
-  // a sign change over [MINTEMP, MAXTEMP] guarantees a root that the bracketing solver can find
-  if (!invalid_values && f_T_min * f_T_max < 0) {
+  } else if (f_T_min * f_T_max < 0) {
+    // a sign change over [MINTEMP, MAXTEMP] guarantees a root that the bracketing solver can find
     const auto maxit = 100U;
     constexpr double fractional_accuracy = 1e-3;
 
@@ -365,7 +369,7 @@ void call_T_e_finder(const int nonemptymgi, const double t_current, HeatingCooli
       printlnlog("after {} iterations, T_e = {:g} [K], interval [{:g}, {:g}] [K]", iternum, T_e, result.first,
                  result.second);
     }
-  } else if (invalid_values || f_T_max < 0) {
+  } else if (f_T_max < 0) {
     // Thermal balance equation always negative ===> T_e = T_min
     T_e = MINTEMP;
     printlnlog(

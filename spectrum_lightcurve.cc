@@ -10,6 +10,7 @@
 #include <chrono>
 #include <cmath>
 #include <cstddef>
+#include <cstdint>
 #include <filesystem>
 #include <format>
 #include <fstream>
@@ -135,15 +136,9 @@ auto columnindex_from_emissiontype(const int et) -> int {
 [[nodiscard]] inline auto get_timestep(const double time) -> int {
   assert_always(time >= globals::tmin);
   assert_always(time < globals::tmax);
-  for (int nts = 0; nts < globals::ntimesteps; nts++) {
-    const double tsend = (nts < (globals::ntimesteps - 1)) ? globals::timesteps[nts + 1].start : globals::tmax;
-    if (time >= globals::timesteps[nts].start && time < tsend) {
-      return nts;
-    }
-  }
-  assert_always(false);  // could not find matching timestep
-
-  return -1;
+  // the last entry of the table starts at tmax, so the search also finds the last timestep
+  const auto nts_next = std::ranges::upper_bound(globals::timesteps, time, {}, &globals::TimeStep::start);
+  return static_cast<int>(nts_next - globals::timesteps.begin()) - 1;
 }
 
 // Only one rank writes each file. Different file numbers go to different ranks on different nodes, if available.
@@ -152,23 +147,33 @@ auto this_rank_writes_file(const int file_number) -> bool {
          (file_number % globals::node_nprocs == globals::rank_in_node);
 }
 
-void write_spectrum_file(const std::string& spec_filename, const Spectra& spectra, const int numtimesteps) {
+// The file holds the timestep columns of each spectrum of the list in sequence, e.g. the Stokes I, Q, and U spectra.
+// The frequency column comes from the first spectrum.
+void write_spectrum_file(const std::string& spec_filename, const std::span<const Spectra* const> spectra_list,
+                         const int numtimesteps) {
   auto spec_file = fstream_required(spec_filename, std::ios::out | std::ios::trunc);
   std::print(spec_file, "0");
-  for (int p = 0; p < numtimesteps; p++) {
-    std::print(spec_file, " {:g}", globals::timesteps[p].mid / DAY);
+  for (auto spectrumindex = 0Z; spectrumindex < std::ssize(spectra_list); spectrumindex++) {
+    for (int p = 0; p < numtimesteps; p++) {
+      std::print(spec_file, " {:g}", globals::timesteps[p].mid / DAY);
+    }
   }
   std::println(spec_file, "");
 
   const auto ntimesteps_all = static_cast<ptrdiff_t>(globals::ntimesteps);
+  const auto& spectra_first = *spectra_list.front();
   for (auto nubin = 0Z; nubin < MNUBINS; nubin++) {
-    std::print(spec_file, "{:g}", (spectra.lower_freq[nubin] + (spectra.delta_freq[nubin] / 2)));
+    std::print(spec_file, "{:g}", (spectra_first.lower_freq[nubin] + (spectra_first.delta_freq[nubin] / 2)));
 
-    for (auto nts = 0Z; nts < numtimesteps; nts++) {
-      std::print(spec_file, " {:g}", spectra.fluxalltimesteps[(nubin * ntimesteps_all) + nts]);
+    for (const auto* spectra : spectra_list) {
+      for (auto nts = 0Z; nts < numtimesteps; nts++) {
+        std::print(spec_file, " {:g}", spectra->fluxalltimesteps[(nubin * ntimesteps_all) + nts]);
+      }
     }
     std::println(spec_file, "");
   }
+  spec_file.close();
+  assert_always(!spec_file.fail());  // e.g. a full disk
 }
 
 // a text file with a write buffer for rows of numbers
@@ -217,42 +222,48 @@ class BufferedTextFile {
   std::string buffer;
 };
 
-// Write an emission-type spectrum (emission or true emission) with a line for each frequency bin of
+// Write emission-type spectra (emission or true emission) with a line for each frequency bin of
 // each timestep, holding one column per emission process (see get_proccount).
 // The emission and absorption files have no time column, so their readers take the number of time blocks from
 // timesteps.out. The writers therefore always write every timestep of the model. The timesteps after numtimesteps
 // get rows of zeros, because their arrays hold only the packets that escaped early with a late arrival time.
+// The rows of each array of the list follow the rows of the previous array within each frequency bin.
 void write_emission_spectrum_file(const std::string& emission_filename,
-                                  const std::span<const double> emission_alltimesteps, const int numtimesteps) {
+                                  const std::span<const std::span<const double>> emission_alltimesteps_list,
+                                  const int numtimesteps) {
   assert_always(numtimesteps <= globals::ntimesteps);
   assert_always(!emission_filename.empty());
   BufferedTextFile emission_file(emission_filename);
   const auto proccount = static_cast<ptrdiff_t>(get_proccount());
   const std::vector<double> zerorow(proccount, 0.);
   for (auto nubin = 0Z; nubin < MNUBINS; nubin++) {
-    for (auto nts = 0Z; nts < numtimesteps; nts++) {
-      emission_file.append_row(emission_alltimesteps.subspan(get_emission_spectrum_index(nts, nubin), proccount));
-    }
-    for (auto nts = static_cast<ptrdiff_t>(numtimesteps); nts < globals::ntimesteps; nts++) {
-      emission_file.append_row(zerorow);
+    for (const auto emission_alltimesteps : emission_alltimesteps_list) {
+      for (auto nts = 0Z; nts < numtimesteps; nts++) {
+        emission_file.append_row(emission_alltimesteps.subspan(get_emission_spectrum_index(nts, nubin), proccount));
+      }
+      for (auto nts = static_cast<ptrdiff_t>(numtimesteps); nts < globals::ntimesteps; nts++) {
+        emission_file.append_row(zerorow);
+      }
     }
   }
 }
 
-void write_absorption_spectrum_file(const std::string& absorption_filename, const Spectra& spectra,
-                                    const int numtimesteps) {
+void write_absorption_spectrum_file(const std::string& absorption_filename,
+                                    const std::span<const Spectra* const> spectra_list, const int numtimesteps) {
   assert_always(numtimesteps <= globals::ntimesteps);
   assert_always(!absorption_filename.empty());
   BufferedTextFile absorption_file(absorption_filename);
   const int ioncount = get_nelements() * get_max_nions();  // may be higher than the true included ion count
   const std::vector<double> zerorow(ioncount, 0.);
   for (auto nubin = 0Z; nubin < MNUBINS; nubin++) {
-    for (auto nts = 0Z; nts < numtimesteps; nts++) {
-      absorption_file.append_row(
-          spectra.absorptionalltimesteps.span().subspan(get_absorption_spectrum_index(nts, nubin), ioncount));
-    }
-    for (auto nts = static_cast<ptrdiff_t>(numtimesteps); nts < globals::ntimesteps; nts++) {
-      absorption_file.append_row(zerorow);
+    for (const auto* spectra : spectra_list) {
+      for (auto nts = 0Z; nts < numtimesteps; nts++) {
+        absorption_file.append_row(
+            spectra->absorptionalltimesteps.span().subspan(get_absorption_spectrum_index(nts, nubin), ioncount));
+      }
+      for (auto nts = static_cast<ptrdiff_t>(numtimesteps); nts < globals::ntimesteps; nts++) {
+        absorption_file.append_row(zerorow);
+      }
     }
   }
 }
@@ -263,20 +274,21 @@ void write_spectra(const std::string& spec_filename, const std::string& emission
   assert_always(numtimesteps <= globals::ntimesteps);
 
   if (this_rank_writes_file(1)) {
-    write_spectrum_file(spec_filename, spectra, numtimesteps);
+    write_spectrum_file(spec_filename, std::array{&spectra}, numtimesteps);
   }
 
   if (spectra.do_emission_absorption) {
     if (this_rank_writes_file(2)) {
-      write_emission_spectrum_file(emission_filename, spectra.emissionalltimesteps.span(), numtimesteps);
+      write_emission_spectrum_file(emission_filename, std::array{spectra.emissionalltimesteps.span()}, numtimesteps);
     }
 
     if (this_rank_writes_file(3)) {
-      write_emission_spectrum_file(trueemission_filename, spectra.trueemissionalltimesteps.span(), numtimesteps);
+      write_emission_spectrum_file(trueemission_filename, std::array{spectra.trueemissionalltimesteps.span()},
+                                   numtimesteps);
     }
 
     if (this_rank_writes_file(4)) {
-      write_absorption_spectrum_file(absorption_filename, spectra, numtimesteps);
+      write_absorption_spectrum_file(absorption_filename, std::array{&spectra}, numtimesteps);
     }
   }
 }
@@ -285,30 +297,10 @@ void write_specpol(const std::string& specpol_filename, const std::string& emiss
                    const std::string& absorption_filename, const Spectra& spectra_I, const Spectra& spectra_Q,
                    const Spectra& spectra_U, const int numtimesteps) {
   assert_always(numtimesteps <= globals::ntimesteps);
-  assert_always(std::ssize(spectra_I.delta_freq) == MNUBINS);
-  assert_always(std::ssize(spectra_I.lower_freq) == MNUBINS);
-  const auto stokes_spectra = {&spectra_I, &spectra_Q, &spectra_U};
-  const auto ntimesteps_all = static_cast<ptrdiff_t>(globals::ntimesteps);
+  const auto stokes_spectra = std::array{&spectra_I, &spectra_Q, &spectra_U};
 
   if (this_rank_writes_file(5)) {
-    auto specpol_file = fstream_required(specpol_filename, std::ios::out | std::ios::trunc);
-    std::print(specpol_file, "{:g}", 0.0);
-    for (size_t stokes_index = 0; stokes_index < stokes_spectra.size(); stokes_index++) {
-      for (int nts = 0; nts < numtimesteps; nts++) {
-        std::print(specpol_file, " {:g}", globals::timesteps[nts].mid / DAY);
-      }
-    }
-    std::println(specpol_file, "");
-
-    for (auto nnu = 0Z; nnu < MNUBINS; nnu++) {
-      std::print(specpol_file, "{:g}", (spectra_I.lower_freq[nnu] + (spectra_I.delta_freq[nnu] / 2)));
-      for (const auto* stokes_spectrum : stokes_spectra) {
-        for (auto nts = 0Z; nts < numtimesteps; nts++) {
-          std::print(specpol_file, " {:g}", stokes_spectrum->fluxalltimesteps[(nnu * ntimesteps_all) + nts]);
-        }
-      }
-      std::println(specpol_file, "");
-    }
+    write_spectrum_file(specpol_filename, stokes_spectra, numtimesteps);
   }
 
   if (!spectra_I.do_emission_absorption) {
@@ -316,37 +308,17 @@ void write_specpol(const std::string& specpol_filename, const std::string& emiss
   }
 
   if (this_rank_writes_file(6)) {
-    BufferedTextFile emissionpol_file(emission_filename);
-    const auto proccount = static_cast<ptrdiff_t>(get_proccount());
-    const std::vector<double> zerorow(proccount, 0.);
-    for (auto nnu = 0Z; nnu < MNUBINS; nnu++) {
-      for (const auto* stokes_spectrum : stokes_spectra) {
-        for (auto nts = 0Z; nts < numtimesteps; nts++) {
-          emissionpol_file.append_row(
-              stokes_spectrum->emissionalltimesteps.span().subspan(get_emission_spectrum_index(nts, nnu), proccount));
-        }
-        for (auto nts = static_cast<ptrdiff_t>(numtimesteps); nts < ntimesteps_all; nts++) {
-          emissionpol_file.append_row(zerorow);
-        }
-      }
-    }
+    write_emission_spectrum_file(emission_filename,
+                                 std::array{
+                                     spectra_I.emissionalltimesteps.span(),
+                                     spectra_Q.emissionalltimesteps.span(),
+                                     spectra_U.emissionalltimesteps.span(),
+                                 },
+                                 numtimesteps);
   }
 
   if (this_rank_writes_file(7)) {
-    BufferedTextFile absorptionpol_file(absorption_filename);
-    const int ioncount = get_nelements() * get_max_nions();  // may be higher than the true included ion count
-    const std::vector<double> zerorow(ioncount, 0.);
-    for (auto nnu = 0Z; nnu < MNUBINS; nnu++) {
-      for (const auto* stokes_spectrum : stokes_spectra) {
-        for (auto nts = 0Z; nts < numtimesteps; nts++) {
-          absorptionpol_file.append_row(stokes_spectrum->absorptionalltimesteps.span().subspan(
-              get_absorption_spectrum_index(nts, nnu), ioncount));
-        }
-        for (auto nts = static_cast<ptrdiff_t>(numtimesteps); nts < ntimesteps_all; nts++) {
-          absorptionpol_file.append_row(zerorow);
-        }
-      }
-    }
+    write_absorption_spectrum_file(absorption_filename, stokes_spectra, numtimesteps);
   }
 }
 
@@ -420,10 +392,6 @@ void init_spectra(Spectra& spectra, const std::string_view label, const double n
 // Add a packet to the outgoing spectrum.
 void add_packet_to_spectra(const Packet& pkt, const int dirbin, Spectra& spectra_I, Spectra* spectra_Q,
                            Spectra* spectra_U) {
-  if (dirbin != -1 && get_escapedirectionbin(pkt.dir) != dirbin) {
-    return;  // do not add to the spectrum if the direction bin does not match
-  }
-
   // Need to (1) decide which time bin to put it in and (2) which frequency bin.
 
   // specific angle bins contain fewer packets than the full sphere, so must be normalised to match
@@ -511,14 +479,13 @@ void write_light_curve(const std::string& lc_filename, const std::span<const dou
     std::println(lc_file, "{:g} {:g} {:g}", globals::timesteps[nts].mid / DAY, light_curve_lum[nts] / LSUN,
                  light_curve_lumcmf[nts] / LSUN);
   }
+  lc_file.close();
+  assert_always(!lc_file.fail());  // e.g. a full disk
 }
 
 // add a packet to the outgoing light-curve.
 void add_packet_to_light_curve(const Packet& pkt, const int dirbin, std::span<double> light_curve_lum,
                                std::span<double> light_curve_lumcmf) {
-  if (dirbin >= 0 && get_escapedirectionbin(pkt.dir) != dirbin) {
-    return;
-  }
   const double solidanglefactor = (dirbin >= 0) ? MABINS : 1.;
   // dirbin -1 means all full 4π angle average (no angle filtering)
 
@@ -582,7 +549,9 @@ void sum_spectra_over_nodes(Spectra& spectra) {
   }
 }
 
+// pktdirbins holds the escape direction bin of each packet of the joined packet range (unused for dirbin -1)
 void write_light_curves_and_spectra_for_dirbin(const int nts, std::span<const std::span<const Packet>> packets_by_rank,
+                                               const std::span<const std::int8_t> pktdirbins,
                                                const bool do_emission_absorption, const int dirbin) {
   // the gamma packets go only into the angle-averaged spectrum and light curve
   const bool do_gamma_spectrum = KEEP_ESCAPED_GAMMAS && (dirbin == -1);
@@ -615,8 +584,11 @@ void write_light_curves_and_spectra_for_dirbin(const int nts, std::span<const st
     const int node_rank = globals::rank_in_node;
 #endif
     if (node_rank == globals::rank_in_node) {
+      auto pktindex = 0Z;
       for (const auto& pkt : packets_by_rank | std::views::join) {
-        if (pkt.type == TYPE_ESCAPE) {
+        const bool in_dirbin = (dirbin < 0) || (pktdirbins[pktindex] == dirbin);
+        pktindex++;
+        if (in_dirbin && pkt.type == TYPE_ESCAPE) {
           if (pkt.escape_type == TYPE_RPKT) {
             add_packet_to_light_curve(pkt, dirbin, rpkt_light_curve_lum, rpkt_light_curve_lumcmf);
             add_packet_to_spectra(pkt, dirbin, rpkt_spectra_I, POL_ON ? &rpkt_spectra_Q : nullptr,
@@ -706,8 +678,23 @@ void write_light_curves_and_spectra(const int nts, std::span<const std::span<con
     MPI_Barrier_allranks();
   }
 
+  // the direction bin of each escaped r-packet, found once instead of once per direction bin
+  static_assert(MABINS < 128);  // the bin must fit in an int8
+  std::vector<std::int8_t> pktdirbins;
+  if (ndirbins > 0) {
+    auto npackets = 0Z;
+    for (const auto packets : packets_by_rank) {
+      npackets += std::ssize(packets);
+    }
+    pktdirbins.reserve(npackets);
+    for (const auto& pkt : packets_by_rank | std::views::join) {
+      const bool is_escaped_rpkt = (pkt.type == TYPE_ESCAPE && pkt.escape_type == TYPE_RPKT);
+      pktdirbins.push_back(static_cast<std::int8_t>(is_escaped_rpkt ? get_escapedirectionbin(pkt.dir) : -1));
+    }
+  }
+
   for (int dirbin = -1; dirbin < ndirbins; dirbin++) {
-    write_light_curves_and_spectra_for_dirbin(nts, packets_by_rank, do_emission_absorption, dirbin);
+    write_light_curves_and_spectra_for_dirbin(nts, packets_by_rank, pktdirbins, do_emission_absorption, dirbin);
     if (dirbin >= 0 && globals::my_rank == 0 && (dirbin + 1) % NPHIBINS == 0) {
       printlnlog("timestep {}: wrote the files of direction bins {} to {} (the last bin is {})", nts,
                  dirbin - NPHIBINS + 1, dirbin, ndirbins - 1);

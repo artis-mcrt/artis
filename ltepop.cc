@@ -10,6 +10,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstdlib>
+#include <limits>
 #include <tuple>
 #include <vector>
 
@@ -29,6 +30,9 @@
 #include "sn3d.h"
 
 namespace {
+
+// Floor of nne. The stored nne is a float, and a fast-math build flushes a denormal float to zero.
+constexpr double MINNNE = std::max(MINPOP, static_cast<double>(std::numeric_limits<float>::min()));
 
 // The conditions behind the warnings below can persist across the many evaluations that the nne and
 // T_e root solvers make for a single cell, so each one is reported only on its first occurrence for
@@ -161,7 +165,7 @@ auto nne_solution_f(const double nne_assumed, const int nonemptymgi, const bool 
       assert_always(std::isfinite(nne_after));
     }
   }
-  nne_after = std::max(MINPOP, nne_after);
+  nne_after = std::max(MINNNE, nne_after);
 
   return nne_after - nne_assumed;
 }
@@ -239,19 +243,19 @@ auto calculate_partfunct(const int element, const int ion, const int nonemptymgi
 }
 
 // Set the cell's free electron density nne to the sum of every element's electron contribution (floored at
-// MINPOP).
+// MINNNE).
 void set_calculated_nne(const int nonemptymgi) {
   double nne = 0.;  // free electron density
   for (int element = 0; element < get_nelements(); element++) {
     nne += get_element_nne_contrib(nonemptymgi, element);
   }
 
-  grid::set_nne(nonemptymgi, static_cast<float>(std::max(MINPOP, nne)));
+  grid::set_nne(nonemptymgi, static_cast<float>(std::max(MINNNE, nne)));
 }
 
 // Fallback for a cell in which every element is confined to its lowest included ion stage: put each element's whole
-// population in that stage and floor the higher stages at MINPOP. The MINPOP floor leaves nne slightly
-// above zero, which keeps the collisional rates in the k-packet treatment finite so that packets are not lost there.
+// population in that stage and floor the higher stages at MINPOP. set_calculated_nne() then floors nne at MINNNE,
+// which keeps the collisional rates in the k-packet treatment finite so that packets are not lost there.
 void set_groundlevelpops_neutral(const ptrdiff_t nonemptymgi) {
   if (neutralcell_warned.is_first_occurrence(nonemptymgi)) {
     printlnlog("[warning] set_groundlevelpops_neutral: only neutral ions in cell {} timestep {} (repeats suppressed)",
@@ -301,7 +305,7 @@ auto find_converged_nne(const int nonemptymgi, double nne_max, const bool force_
         grid::get_mgi_of_nonemptymgi(nonemptymgi), globals::timestep, iter);
   }
 
-  return static_cast<float>(std::max(MINPOP, nne_solution));
+  return static_cast<float>(std::max(MINNNE, nne_solution));
 }
 
 }  // anonymous namespace
@@ -454,11 +458,9 @@ void set_groundlevelpops(const int nonemptymgi, const int element, const float n
   // -1 when the element is absent (ionfractions is empty); cast to int before subtracting to avoid
   // unsigned wraparound to a huge positive value.
   const int uppermost_ion = static_cast<int>(ionfractions.size()) - 1;
-  const ptrdiff_t nincludedions = get_includedions();
 
   // Use ion fractions to calculate the groundlevel populations
   for (int ion = 0; ion < nions; ion++) {
-    const int uniqueionindex = get_uniqueionindex(element, ion);
     double nnion{NAN};
     if (nnelement <= 0) {
       // absent element: every ion has zero population (do not floor to MINPOP)
@@ -470,11 +472,10 @@ void set_groundlevelpops(const int nonemptymgi, const int element, const float n
     }
 
     const auto groundpop =
-        static_cast<float>(nnion * stat_weight(element, ion, 0) /
-                           grid::ion_partfuncts_allcells[(nonemptymgi * nincludedions) + uniqueionindex]);
+        static_cast<float>(nnion * stat_weight(element, ion, 0) / get_ion_partfunct(nonemptymgi, element, ion));
     assert_always(groundpop >= 0.);
 
-    grid::ion_groundlevelpops_allcells[(nonemptymgi * nincludedions) + uniqueionindex] = groundpop;
+    set_groundlevelpop(nonemptymgi, element, ion, groundpop);
   }
 }
 

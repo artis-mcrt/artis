@@ -939,12 +939,10 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
     // flag with negative numbers to indicate that the rates are invalid
     const auto ioncooling_contribs = kpkt::get_cell_ion_cooling_contribs(nonemptymgi);
     std::ranges::fill(ioncooling_contribs, -1.);
-  } else if (globals::simulation_continued_from_saved && nts == globals::timestep_initial) {
-    // cooling rates were read from the gridsave file for this timestep
-    // make sure they are valid
-    const auto ioncooling_contribs = kpkt::get_cell_ion_cooling_contribs(nonemptymgi);
-    assert_always(ioncooling_contribs[0] >= 0.);
-    assert_always(ioncooling_contribs.back() >= 0.);
+  } else if (globals::simulation_continued_from_saved && nts == globals::timestep_initial &&
+             kpkt::get_cell_ion_cooling_contribs(nonemptymgi)[0] >= 0.) {
+    // the gridsave file holds valid cooling rates for this timestep
+    assert_always(kpkt::get_cell_ion_cooling_contribs(nonemptymgi).back() >= 0.);
   } else {
     // Cooling rates depend only on cell properties, precalculate total cooling
     // and ion contributions inside update grid and communicate between MPI tasks
@@ -988,7 +986,7 @@ void update_grid(std::ostream& estimators_file, const int nts, const int nts_pre
 
   globals::lte_iteration = (nts < globals::num_lte_timesteps);
   printlnlog("lte_iteration {}", globals::lte_iteration ? 1 : 0);
-  assert_always(globals::num_lte_timesteps > 0);  // The first time step must solve the ionisation balance in LTE
+  assert_always(globals::num_lte_timesteps > 0);  // The first timestep must solve the ionisation balance in LTE
 
   if (NT_SCHEME == NonThermalScheme::NT_SPENCERFANO && (nts < globals::num_lte_timesteps + 1)) {
     printlnlog("timestep {}: skipping Spencer-Fano solutions for all cells (solver starts at timestep {})", nts,

@@ -176,6 +176,8 @@ jobs:
                   # The comparison uses the stored file of the repository, and not the copy in the run folder.
                   if [ -s "$RUNNER_TEMP/ref_md5_job0.txt" ]; then
                       md5sum -c "$RUNNER_TEMP/ref_md5_job0.txt"
+                      # md5sum -c checks only the listed files, so the file name lists must also match
+                      diff <(cut -c35- "$RUNNER_TEMP/ref_md5_job0.txt") <(cut -c35- "$RUNNER_TEMP/new_md5_job0.txt")
                   else
                       echo "::warning::The repository has no results_md5_job0.txt for ${{ matrix.testname }}. The step compares nothing."
                   fi
@@ -254,6 +256,8 @@ jobs:
                   # The comparison uses the stored file of the repository, and not the copy in the run folder.
                   if [ -s "$RUNNER_TEMP/ref_md5_final.txt" ]; then
                       md5sum -c "$RUNNER_TEMP/ref_md5_final.txt"
+                      # md5sum -c checks only the listed files, so the file name lists must also match
+                      diff <(cut -c35- "$RUNNER_TEMP/ref_md5_final.txt") <(cut -c35- "$RUNNER_TEMP/new_md5_final.txt")
                   else
                       echo "::warning::The repository has no results_md5_final.txt for ${{ matrix.testname }}. The step compares nothing."
                   fi

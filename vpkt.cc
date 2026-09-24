@@ -657,8 +657,7 @@ void init_vpkt_grid() {
       reserve_resize(vgrid[n][m].flux, grid_nwavelengthranges);
 
       for (int wlbin = 0; wlbin < grid_nwavelengthranges; wlbin++) {
-        reserve_resize(vgrid[n][m].flux[wlbin], nobsdirections);
-        std::ranges::fill(vgrid[n][m].flux[wlbin], StokesParams{.I = 0., .Q = 0., .U = 0.});
+        vgrid[n][m].flux[wlbin].assign(nobsdirections, StokesParams{.I = 0., .Q = 0., .U = 0.});
       }
     }
   }
@@ -1086,8 +1085,10 @@ auto trace_vpkts(const Packet& pkt, const enum packet_type type_before_rpkt) -> 
       const double nu_rf = pkt.nu_cmf / doppler;
       const double e_rf = pkt.e_cmf / doppler;
 
-      // trace the vpkt if its frequency or its absorption frequency is in a spectrum range of this observer
-      if (nu_rf_is_in_spectrum_range(nu_rf) || nu_rf_is_in_spectrum_range(pkt.absorptionfreq)) {
+      // trace the vpkt if its frequency is in a spectrum range of this observer. The absorption frequency also
+      // counts when the contribution file needs it (VPKT_WRITE_CONTRIBS).
+      if (nu_rf_is_in_spectrum_range(nu_rf) ||
+          (VPKT_WRITE_CONTRIBS && nu_rf_is_in_spectrum_range(pkt.absorptionfreq))) {
         dir_escaped =
             trace_vpkt_direction(pkt, t_arrive, nu_rf, e_rf, doppler, obsdirindex, type_before_rpkt, vpkt_contrib_row);
       }
