@@ -2064,6 +2064,9 @@ void read_ejecta_model() {
     fatal_crash("model.txt: could not read a positive snapshot time in days from line '{}'", line);
   }
   t_model = t_model_days * DAY;
+  if (t_model > globals::tmin) {
+    fatal_crash("The model snapshot time {} d is after tmin {} d", t_model_days, globals::tmin / DAY);
+  }
   assert_always(globals::tmin >= t_model);
 
   const auto pos_after_t_model = fmodel.tellg();
