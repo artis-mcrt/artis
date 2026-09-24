@@ -24,7 +24,7 @@ rsync --ignore-times -av ../kilonova_1d_timedepnlte_inputfiles/ ./
 
 ln -s ../../ artis
 
-cp artis/artisoptions_kilonova_timedepnlte.h artisoptions.h
+cp artis/artisoptions_kilonova_nlte.h artisoptions.h
 
 xz -f -d -v -T0 *.xz
 
@@ -57,7 +57,11 @@ perl -0777 -i -pe 'my $n = s|^constexpr int NLEVELS_REQUIRETRANSITIONS\(int elem
 sedopt 'constexpr int FIRST_NLTE_RADFIELD_TIMESTEP.*' 'constexpr int FIRST_NLTE_RADFIELD_TIMESTEP = 2;'
 sedopt 'constexpr int DETAILED_BF_ESTIMATORS_USEFROMTIMESTEP.*' 'constexpr int DETAILED_BF_ESTIMATORS_USEFROMTIMESTEP = 2;'
 
+sedopt 'constexpr bool NLTE_USE_GTH_SOLVER.*' 'constexpr bool NLTE_USE_GTH_SOLVER = false;'
+
 sedopt 'constexpr std::optional<int> NLTE_TIME_DEPENDENT_FIRST_TIMESTEP.*' 'constexpr std::optional<int> NLTE_TIME_DEPENDENT_FIRST_TIMESTEP = 3;'
+
+sedopt 'constexpr bool ENABLE_CHARGE_TRANSFER_REACTIONS.*' 'constexpr bool ENABLE_CHARGE_TRANSFER_REACTIONS = true;'
 
 rm -f artisoptions.h.bak
 

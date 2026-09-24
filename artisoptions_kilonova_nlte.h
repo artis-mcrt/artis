@@ -3,7 +3,7 @@
 //
 // A preset for kilonovae from about 2 to 100 days. It has:
 // - NLTE populations and a non-thermal electron solver;
-// - a time-dependent ionisation and thermal balance;
+// - the Grassmann-Taksar-Heyman (GTH) solver for the NLTE rate matrix;
 // - Anderson acceleration of the outer iteration.
 
 #ifndef ARTISOPTIONS_H
@@ -106,9 +106,9 @@ constexpr float STRICT_POPULATION_CHECKING_INVERSION_FACTOR_PRINTOUT_WARNING = 2
 
 constexpr double NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION = 1e-9;
 
-constexpr bool NLTE_USE_GTH_SOLVER = false;
+constexpr bool NLTE_USE_GTH_SOLVER = true;
 
-constexpr std::optional<int> NLTE_TIME_DEPENDENT_FIRST_TIMESTEP = 7;
+constexpr std::optional<int> NLTE_TIME_DEPENDENT_FIRST_TIMESTEP = std::nullopt;
 
 constexpr NonThermalScheme NT_SCHEME = NonThermalScheme::NT_SPENCERFANO;
 
@@ -159,7 +159,7 @@ constexpr auto GAMMA_THERMALISATION_SCHEME = GammaThermalisationScheme::FREQUENC
 
 constexpr std::optional<double> GAMMA_USE_KAPPA_GREY;
 
-constexpr bool ENABLE_CHARGE_TRANSFER_REACTIONS = true;
+constexpr bool ENABLE_CHARGE_TRANSFER_REACTIONS = false;
 
 constexpr bool USE_MICROCLUMPING = false;
 
