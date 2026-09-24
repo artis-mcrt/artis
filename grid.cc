@@ -1206,8 +1206,8 @@ void assign_initial_temperatures() {
 
     // Both energies refer to ts0_tmid. The model file gives q at t_model with the adiabatic losses before t_model
     // already applied, and the reader scaled it to tmin. The 1/t law of a comoving mass element takes it from
-    // tmin to ts0_tmid. The decay term counts the decays between t_model and ts0_tmid with the expansion weight
-    // of calc_energy_per_massoftopnuc_decaypath_withexpansion().
+    // tmin to ts0_tmid. The decay term counts the decays between t_model and ts0_tmid, and a decay at t_decay
+    // keeps t_decay / ts0_tmid of its energy under the same law.
     const auto q = INITIAL_PACKETS_ON ? (get_initenergyq(mgi) * globals::tmin / ts0_tmid) : 0.;
     const double decayedenergy_per_mass =
         decay::get_modelcell_endecay_per_mass(nonemptymgi, endecay_per_massoftopnuc) + q;

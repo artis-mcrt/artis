@@ -1136,15 +1136,22 @@ auto calc_energy_per_massoftopnuc_decaypath() -> std::vector<double> {
 
 // decay energy per unit mass of the chain-top nuclide [erg/(g of chain-top nuclide)] released by each decaypath
 // between t_model and tstart, weighted for the adiabatic loss of the photon energy between the decay and tstart.
-// A decay at t_decay has the weight (t_decay - t_model) / (tstart - t_model), see calculate_decaychain(). The
-// snapshot energy q of the model file is not part of this: it already includes the losses before t_model.
+// A decay at t_decay keeps t_decay / tstart of its energy (equation 18 of Lucy 2005, A&A, 429, 19-30,
+// doi:10.1051/0004-6361:20041656), the same law as update_pellet() applies to a pellet that decays before tmin.
+// The snapshot energy q of the model file is not part of this: it already includes the losses before t_model.
 auto calc_energy_per_massoftopnuc_decaypath_withexpansion(const double tstart) -> std::vector<double> {
+  const double t_model = grid::get_t_model();
+  assert_always(tstart > t_model);
   const auto num_decaypaths = get_num_decaypaths();
   std::vector<double> energy_per_massoftopnuc(num_decaypaths);
   for (int decaypathindex = 0; decaypathindex < num_decaypaths; decaypathindex++) {
     const auto& decaypath = decaypaths[decaypathindex];
-    energy_per_massoftopnuc[decaypathindex] = decaypath.branchproduct *
-                                              calc_decaypath_unitfactor(decaypathindex, tstart, true) *
+    // calculate_decaychain() weights a decay with (t_decay - t_model) / (tstart - t_model). The sum with the
+    // decayed fraction gives the weight (t_model + (t_decay - t_model)) / tstart = t_decay / tstart.
+    const double fdecayed_weighted = ((t_model * calc_decaypath_unitfactor(decaypathindex, tstart, false)) +
+                                      ((tstart - t_model) * calc_decaypath_unitfactor(decaypathindex, tstart, true))) /
+                                     tstart;
+    energy_per_massoftopnuc[decaypathindex] = decaypath.branchproduct * fdecayed_weighted *
                                               get_decaypath_lastdecayenergy(decaypath) / nucmass(decaypath.nucindex[0]);
     assert_always(std::isfinite(energy_per_massoftopnuc[decaypathindex]));
   }
