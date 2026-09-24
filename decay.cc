@@ -496,11 +496,22 @@ void filter_unused_nuclides(const std::span<const int> custom_zlist, const std::
 }
 
 // the chain-end abundance per unit chain-top initial abundance for one decaypath at the given time, with the
-// chain end treated as stable (so it counts the fraction of chain-top nuclei that decayed past the chain end)
+// chain end treated as stable (so it counts the fraction of chain-top nuclei that decayed past the chain end).
+// With useexpansionfactor each decay at t_decay counts as t_decay / time, the adiabatic loss of its photon energy
+// from the decay to the given time (equation 18 of Lucy 2005, A&A, 429, 19-30, doi:10.1051/0004-6361:20041656).
 auto calc_decaypath_unitfactor(const int decaypathindex, const double time, const bool useexpansionfactor) -> double {
   auto lambdas = decaypaths[decaypathindex].lambdas;
   lambdas[lambdas.size() - 1] = 0.;
-  return calculate_decaychain(1., lambdas, time - grid::get_t_model(), useexpansionfactor);
+  const double t_model = grid::get_t_model();
+  if (!useexpansionfactor) {
+    return calculate_decaychain(1., lambdas, time - t_model, false);
+  }
+  // calculate_decaychain() weights a decay with (t_decay - t_model) / (time - t_model). The sum with the decayed
+  // fraction gives (t_model + (t_decay - t_model)) / time = t_decay / time.
+  assert_always(time > t_model);
+  return ((t_model * calculate_decaychain(1., lambdas, time - t_model, false)) +
+          ((time - t_model) * calculate_decaychain(1., lambdas, time - t_model, true))) /
+         time;
 }
 
 // the first time at which a packet can decay. Initial packets can decay from the model snapshot time.
@@ -1135,8 +1146,10 @@ auto calc_energy_per_massoftopnuc_decaypath() -> std::vector<double> {
 }
 
 // decay energy per unit mass of the chain-top nuclide [erg/(g of chain-top nuclide)] released by each decaypath
-// from time t_model to tstart, weighted for the photon energy loss due to expansion between the time of decay and
-// tstart (equation 18 of Lucy 2005, A&A, 429, 19-30, doi:10.1051/0004-6361:20041656)
+// between t_model and tstart, weighted for the adiabatic loss of the photon energy between the decay and tstart.
+// A decay at t_decay keeps t_decay / tstart of its energy, the same law as update_pellet() applies to a pellet
+// that decays before tmin. The snapshot energy q of the model file is not part of this: it already includes the
+// losses before t_model.
 auto calc_energy_per_massoftopnuc_decaypath_withexpansion(const double tstart) -> std::vector<double> {
   const auto num_decaypaths = get_num_decaypaths();
   std::vector<double> energy_per_massoftopnuc(num_decaypaths);

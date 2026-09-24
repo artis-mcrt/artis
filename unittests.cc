@@ -403,6 +403,27 @@ void test_bateman() {
                 "expansion factor is the energy-weighted decay count of a chain into a stable sink");
   }
 
+  // The initial temperature counts the time from the explosion: a decay at t_decay keeps t_decay / t of its
+  // energy. calc_decaypath_unitfactor() builds that weight from the decayed fraction and the interval-relative
+  // factor above. Check the combination against a numeric integral of lambda exp(-lambda t') (t_model + t') / t
+  // over the interval from t_model to t.
+  {
+    const double t_model = 0.7 / lambda_a;
+    const double timediff = 3.4 / lambda_a;
+    const double t_end = t_model + timediff;
+    const double combined = ((t_model * decay::calculate_decaychain(1., std::array{lambda_a, 0.}, timediff, false)) +
+                             (timediff * decay::calculate_decaychain(1., std::array{lambda_a, 0.}, timediff, true))) /
+                            t_end;
+    constexpr int nsteps = 200000;
+    const double dt = timediff / nsteps;
+    double integral = 0.;
+    for (int i = 0; i < nsteps; i++) {
+      const double t_decay = (i + 0.5) * dt;
+      integral += lambda_a * std::exp(-lambda_a * t_decay) * (t_model + t_decay) / t_end * dt;
+    }
+    check_close(combined, integral, 1e-9, "the combined expansion factor is the 1/t weight from the explosion");
+  }
+
   // Below x of about 1e-3 the closed form is itself a difference of two quantities near one and
   // loses accuracy as epsilon/x, so compare against its series x/2 - x^2/3 instead. The value must
   // stay above zero, so that a long-lived nuclide keeps its contribution to the initial temperature.

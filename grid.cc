@@ -121,7 +121,8 @@ struct ModelGridCellInput {
   // with radii of ~1e15 cm.
   double initial_radial_pos_squared_sum = 0.;
   float initelectronfrac = -1.;  // Ye: electrons (or protons) per nucleon. Negative until the input sets it
-  float initenergyq = 0.;  // q: energy in the model at tmin to use with INITIAL_PACKETS_ON [erg/g]
+  // q: the trapped radiation energy per mass [erg/g], scaled from t_model to tmin (INITIAL_PACKETS_ON)
+  float initenergyq = 0.;
 };
 MPI_shared_array<ModelGridCellInput> modelgrid_input{};
 
@@ -925,8 +926,9 @@ void read_model_radioabundances(std::istream& fmodel, std::string_view& remainde
     } else if (colnames[i] == "cellYe" || colnames[i] == "Ye") {
       set_initelectronfrac(mgi, static_cast<float>(valuein));
     } else if (colnames[i] == "q") {
+      // The q column holds the trapped radiation energy per mass at t_model. It already includes the adiabatic
+      // losses before t_model. The energy of a comoving mass element falls as 1/t, so the value is scaled to tmin.
       assert_always(valuein >= 0.);
-      // use value for t_model and adjust to tmin with expansion factor
       set_initenergyq(mgi, static_cast<float>(valuein * t_model / globals::tmin));
     } else if (colnames[i] == "tracercount") {
       ;
@@ -1202,10 +1204,10 @@ void assign_initial_temperatures() {
        nonemptymgi += globals::node_nprocs) {
     const int mgi = get_mgi_of_nonemptymgi(nonemptymgi);
 
-    // q holds the trapped radiation energy per mass at tmin, and the radiation energy of a comoving
-    // mass element falls as 1/t in the homologous expansion. The decay term carries the matching
-    // t_decay / ts0_tmid factor inside calc_energy_per_massoftopnuc_decaypath_withexpansion(), so the
-    // q term needs tmin / ts0_tmid to refer both terms to ts0_tmid.
+    // Both energies refer to ts0_tmid. The model file gives q at t_model with the adiabatic losses before t_model
+    // already applied, and the reader scaled it to tmin. The 1/t law of a comoving mass element takes it from
+    // tmin to ts0_tmid. The decay term counts the decays between t_model and ts0_tmid, and a decay at t_decay
+    // keeps t_decay / ts0_tmid of its energy under the same law.
     const auto q = INITIAL_PACKETS_ON ? (get_initenergyq(mgi) * globals::tmin / ts0_tmid) : 0.;
     const double decayedenergy_per_mass =
         decay::get_modelcell_endecay_per_mass(nonemptymgi, endecay_per_massoftopnuc) + q;
@@ -2062,6 +2064,9 @@ void read_ejecta_model() {
     fatal_crash("model.txt: could not read a positive snapshot time in days from line '{}'", line);
   }
   t_model = t_model_days * DAY;
+  if (t_model > globals::tmin) {
+    fatal_crash("The model snapshot time {} d is after tmin {} d", t_model_days, globals::tmin / DAY);
+  }
   assert_always(globals::tmin >= t_model);
 
   const auto pos_after_t_model = fmodel.tellg();
