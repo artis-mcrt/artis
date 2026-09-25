@@ -211,11 +211,10 @@ run. The log files stay outside both sets, because their names do not match.
 CI also compares the lists of file names, so a missing or an extra output file
 is an error.
 
-CI makes the reference checksums on an arm64 runner with g++-16. Local x86-64
-builds with gcc 14 reproduced all of them for `kilonova_1d`, on two different
-CPU types. `REPRODUCIBLE=ON` therefore gives portable results, but only these
-combinations have a test. Examine a local mismatch as a real change of the
-results first. Let CI give the decision.
+CI makes the reference checksums on an arm64 runner with g++-16. A local build
+with `REPRODUCIBLE=ON` can give the same checksums on a different CPU type and
+with a different gcc version, but no test covers that. Examine a local mismatch
+as a real change of the results first. Let CI give the decision.
 
 A change that must not alter the results must give identical checksums in CI.
 If a change alters the numerical results for a good reason, the stored
@@ -354,8 +353,9 @@ are the only defence.
 ### Logs and assertions
 
 - Write log lines with `printlog()` and `printlnlog()` from `mpi_logging.h`.
-  They take a `std::format` string. Do not use `printf`, `std::cout`, or
-  `std::cerr`.
+  They take a `std::format` string and write to the log file of the rank. Do
+  not use `printf`, `std::cout`, or `std::cerr`. Their text does not go into
+  the log files, and the standard output stays quiet unless there is a crash.
 - Every log line gets a timestamp and a flush, so a log line in a hot loop is
   expensive.
 - Do not call the loggers in a `DEVICE_FUNC`. Their device branch does not
