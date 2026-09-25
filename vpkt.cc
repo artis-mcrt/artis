@@ -971,12 +971,12 @@ void write_timestep(const int nts, const bool is_final) {
   }
   const int my_rank = globals::my_rank;
   // write specpol of the virtual packets
-  const auto filename_vspecpol =
-      is_final ? std::format("vspecpol_{:04d}.out", my_rank) : std::format("vspecpol_{:04d}_ts{}.tmp", my_rank, nts);
+  const auto filename_vspecpol = is_final ? std::format("vspecpol/vspecpol_{:04d}.out", my_rank)
+                                          : std::format("vspecpol_{:04d}_ts{}.tmp", my_rank, nts);
   write_vspecpol(filename_vspecpol, !is_final);
 
   if (vgrid_on) {
-    const auto filename_vpktgrid = is_final ? std::format("vpkt_grid_{:04d}.out", my_rank)
+    const auto filename_vpktgrid = is_final ? std::format("vpkt_grid/vpkt_grid_{:04d}.out", my_rank)
                                             : std::format("vpkt_grid_{:04d}_ts{}.tmp", my_rank, nts);
     printlnlog("Writing vpkt grid file {}", filename_vpktgrid);
     write_vpkt_grid(filename_vpktgrid, !is_final);
@@ -1015,6 +1015,20 @@ void init(const int nts, const bool continued_from_saved) {
   if constexpr (!VPKT_ON) {
     return;
   }
+
+  // the final files of each job go into vspecpol/ and vpkt_grid/
+  if (globals::my_rank == 0) {
+    std::error_code ec;
+    std::filesystem::create_directories("vspecpol", ec);
+    if (!ec && vgrid_on) {
+      std::filesystem::create_directories("vpkt_grid", ec);
+    }
+    if (ec) {
+      fatal_crash("could not create the vspecpol or the vpkt_grid folder: {}", ec.message());
+    }
+  }
+  // the folders must exist before any rank writes a final file
+  MPI_Barrier_allranks();
 
   init_vspecpol();
   if (vgrid_on) {

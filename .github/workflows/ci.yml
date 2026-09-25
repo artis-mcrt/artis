@@ -189,7 +189,7 @@ jobs:
                   cd "$plaindir"
                   shopt -s nullglob
                   angleresfiles=(speclc_angle_res/*.*)
-                  vpacketsfiles=(vpackets/*.out)
+                  vpacketsfiles=(vpackets/*.out vspecpol/*.out vpkt_grid/*.out)
                   shopt -u nullglob
                   md5sum *.out job_from_ts0000/*.out packets/*.out "${vpacketsfiles[@]}" "${angleresfiles[@]}" | tee "$RUNNER_TEMP/new_md5_job0.txt"
                   cp "$RUNNER_TEMP/new_md5_job0.txt" "$reffile"
@@ -279,7 +279,7 @@ jobs:
                   cd "$plaindir"
                   shopt -s nullglob
                   angleresfiles=(speclc_angle_res/*.*)
-                  vpacketsfiles=(vpackets/*.out)
+                  vpacketsfiles=(vpackets/*.out vspecpol/*.out vpkt_grid/*.out)
                   shopt -u nullglob
                   md5sum *.out "$(ls -d job_from_ts* | grep -v ts0000 | tail -n 1)"/*.out packets/*.out "${vpacketsfiles[@]}" "${angleresfiles[@]}" | tee "$RUNNER_TEMP/new_md5_final.txt"
                   cp "$RUNNER_TEMP/new_md5_final.txt" "$reffile"
