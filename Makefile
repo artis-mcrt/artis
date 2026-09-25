@@ -214,13 +214,14 @@ endif
 # when the probe finds it. pkg-config gives the flags of a library outside the default paths, e.g.
 # from Homebrew, and a plain -lzstd is the fallback. The probe compiles and links a small program.
 # The octal escape \043 is the # of the include line, because make reads a # as a comment.
+# The probe takes LDFLAGS, because some hosts need e.g. -rpath-link for the MPI library.
 ifneq ($(ZSTD),OFF)
 	ZSTD_CXXFLAGS := $(patsubst -I%,-isystem%,$(shell pkg-config --cflags libzstd 2>/dev/null))
 	ZSTD_LDFLAGS := $(shell pkg-config --libs libzstd 2>/dev/null)
 	ifeq ($(ZSTD_LDFLAGS),)
 		ZSTD_LDFLAGS := -lzstd
 	endif
-	ZSTD_FOUND := $(shell printf '\043include <zstd.h>\nint main() { return ZSTD_versionNumber() == 0; }\n' | $(CXX) $(ZSTD_CXXFLAGS) -x c++ - $(ZSTD_LDFLAGS) -o /dev/null > /dev/null 2>&1 && echo true)
+	ZSTD_FOUND := $(shell printf '\043include <zstd.h>\nint main() { return ZSTD_versionNumber() == 0; }\n' | $(CXX) $(ZSTD_CXXFLAGS) -x c++ - $(LDFLAGS) $(ZSTD_LDFLAGS) -o /dev/null > /dev/null 2>&1 && echo true)
 	ifeq ($(ZSTD_FOUND),true)
 		CXXFLAGS += -DUSE_ZSTD $(ZSTD_CXXFLAGS)
 		LDFLAGS += $(ZSTD_LDFLAGS)
