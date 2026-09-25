@@ -19,6 +19,7 @@
 #include <ios>
 #include <iterator>
 #include <limits>
+#include <memory>
 #include <numbers>
 #include <optional>
 #include <print>
