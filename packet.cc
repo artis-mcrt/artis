@@ -27,6 +27,7 @@
 #include "globals.h"
 #include "grid.h"
 #include "input.h"
+#include "inputfilestream.h"
 #include "mpi_logging.h"
 #include "random.h"
 #include "sn3d.h"
@@ -160,7 +161,7 @@ void packet_init(std::span<Packet> packets) {
 // read packets*.out text format file
 auto read_text_packets(const std::string& filename) -> std::vector<Packet> {
   printlnlog("Reading {}", filename);
-  auto packets_file = fstream_required(filename, std::ios::in);
+  auto packets_file = istream_required(filename);
 
   std::string line;
   std::vector<Packet> packets;

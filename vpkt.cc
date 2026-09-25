@@ -31,6 +31,7 @@
 #include "globals.h"
 #include "grid.h"
 #include "input.h"
+#include "inputfilestream.h"
 #include "ltepop.h"
 #include "mpi_logging.h"
 #include "packet.h"
@@ -610,7 +611,7 @@ void read_vspecpol(const int my_rank, const int nts) {
   const auto filename = std::format("vspecpol_{:04d}_ts{}.tmp", my_rank, nts);
   printlnlog("Reading {}", filename);
 
-  auto vspecpol_file = fstream_required(filename, std::ios::in);
+  auto vspecpol_file = istream_required(filename);
   std::string line;
 
   for (int ind_comb = 0; ind_comb < (nobsdirections * nspectraperobsdir); ind_comb++) {
@@ -692,7 +693,7 @@ void write_vpkt_grid(const std::string& filename, const bool full_precision) {
 void read_vpkt_grid(const int my_rank, const int nts) {
   const std::string filename = std::format("vpkt_grid_{:04d}_ts{}.tmp", my_rank, nts);
   printlnlog("Reading {}", filename);
-  auto vpkt_grid_file = fstream_required(filename, std::ios::in);
+  auto vpkt_grid_file = istream_required(filename);
 
   for (int obsdirindex = 0; obsdirindex < nobsdirections; obsdirindex++) {
     for (int wlbin = 0; wlbin < grid_nwavelengthranges; wlbin++) {

@@ -21,7 +21,7 @@ $(info mpicxx version: $(shell mpicxx --showme:version 2> /dev/null))
 
 # each option is exactly ON, OFF, or empty. The strip removes the spaces around a value, because the ifeq tests
 # below compare the exact text.
-$(foreach option,TESTMODE REPRODUCIBLE GPU OPENMP STDPAR FASTMATH OPTIMIZE,\
+$(foreach option,TESTMODE REPRODUCIBLE GPU OPENMP STDPAR FASTMATH OPTIMIZE ZSTD,\
   $(eval override $(option) := $(strip $($(option))))\
   $(if $(or $(filter-out ON OFF,$($(option))),$(filter-out 0 1,$(words $($(option))))),\
     $(error bad value for $(option) option. Should be ON or OFF)))
@@ -207,6 +207,30 @@ ifeq ($(shell uname -s),Darwin)
 	# CXXFLAGS += -Rpass=loop-vectorize
 	# CXXFLAGS += -Rpass-missed=loop-vectorize
 	# CXXFLAGS += -Rpass-analysis=loop-vectorize
+endif
+
+# libzstd is optional. With it, the programs read a compressed input file, e.g. model.txt.zst, when the
+# plain file is absent. ZSTD=OFF ignores the library, ZSTD=ON needs it, and an empty value uses it
+# when the probe finds it. pkg-config gives the flags of a library outside the default paths, e.g.
+# from Homebrew, and a plain -lzstd is the fallback. The probe compiles and links a small program.
+# The octal escape \043 is the # of the include line, because make reads a # as a comment.
+ifneq ($(ZSTD),OFF)
+	ZSTD_CXXFLAGS := $(patsubst -I%,-isystem%,$(shell pkg-config --cflags libzstd 2>/dev/null))
+	ZSTD_LDFLAGS := $(shell pkg-config --libs libzstd 2>/dev/null)
+	ifeq ($(ZSTD_LDFLAGS),)
+		ZSTD_LDFLAGS := -lzstd
+	endif
+	ZSTD_FOUND := $(shell printf '\043include <zstd.h>\nint main() { return ZSTD_versionNumber() == 0; }\n' | $(CXX) $(ZSTD_CXXFLAGS) -x c++ - $(ZSTD_LDFLAGS) -o /dev/null > /dev/null 2>&1 && echo true)
+	ifeq ($(ZSTD_FOUND),true)
+		CXXFLAGS += -DUSE_ZSTD $(ZSTD_CXXFLAGS)
+		LDFLAGS += $(ZSTD_LDFLAGS)
+		BUILD_DIR := $(BUILD_DIR)_zstd
+$(info libzstd found: the programs can read .zst input files)
+	else ifeq ($(ZSTD),ON)
+		$(error ZSTD=ON, but the probe does not find libzstd. Install the development package of zstd, or set PKG_CONFIG_PATH)
+	else
+$(info libzstd not found: the programs cannot read .zst input files. Set ZSTD=OFF to skip the probe)
+	endif
 endif
 
 ifneq ($(MAX_NODE_SIZE),)

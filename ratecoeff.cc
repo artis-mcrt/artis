@@ -11,9 +11,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <filesystem>
 #include <format>
-#include <ios>
 #include <limits>
 #include <span>
 #include <sstream>
@@ -25,6 +23,7 @@
 #include "globals.h"
 #include "grid.h"
 #include "input.h"
+#include "inputfilestream.h"
 #include "integrator.h"
 #include "ltepop.h"
 #include "macroatom.h"
@@ -275,13 +274,13 @@ void scale_level_phixs(const int element, const int ion, const int level, const 
 
 // calibrate the recombination rates to tabulated values by scaling the photoionisation cross sections
 void read_recombrate_file() {
-  if (!std::filesystem::exists("recombrates.txt")) {
+  if (!inputfile_exists("recombrates.txt")) {
     printlnlog("No recombrates.txt file found. Skipping recombination rate scaling...");
     return;
   }
 
   printlnlog("Reading recombination rate file (recombrates.txt)...");
-  auto recombrate_file = fstream_required("recombrates.txt", std::ios::in);
+  auto recombrate_file = istream_required("recombrates.txt");
 
   const float Te_estimate = RECOMBCALIBRATION_T_ELEC;
   const double log_Te_estimate = log10(RECOMBCALIBRATION_T_ELEC);

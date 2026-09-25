@@ -16,7 +16,6 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <filesystem>
 #include <format>
 #include <fstream>
 #include <iostream>
@@ -43,6 +42,7 @@
 #include "decay.h"
 #include "globals.h"
 #include "input.h"
+#include "inputfilestream.h"
 #include "kpkt.h"
 #include "mpi_logging.h"
 #include "nltepop.h"
@@ -166,7 +166,7 @@ void set_initelectronfrac(const int modelgridindex, const float electronfrac) {
 }
 
 void read_possible_yefile() {
-  if (!std::filesystem::exists("Ye.txt")) {
+  if (!inputfile_exists("Ye.txt")) {
     printlnlog("Ye.txt is not present, so the model keeps the electron fractions of model.txt");
     return;
   }
@@ -174,9 +174,9 @@ void read_possible_yefile() {
   // the electron fractions are written to node-shared memory, so only the node leaders read the file
   // (synchronised by the barrier below)
   if (globals::rank_in_node == 0) {
-    const auto filein = fopen_required_uniqueptr("Ye.txt", "r");
+    auto filein = istream_required("Ye.txt");
     int nlines_in = 0;
-    assert_always(fscanf(filein.get(), "%d", &nlines_in) == 1);
+    assert_always(static_cast<bool>(filein >> nlines_in));
 
     const int last_input_cellid = get_npts_model() - 1 + first_input_cellid;
     int cells_set = 0;
@@ -185,7 +185,7 @@ void read_possible_yefile() {
     for (int n = 0; n < nlines_in; n++) {
       int cellnumberin = -1;
       float initelecfrac = 0.;
-      assert_always(fscanf(filein.get(), "%d %g", &cellnumberin, &initelecfrac) == 2);
+      assert_always(static_cast<bool>(filein >> cellnumberin >> initelecfrac));
       // Ye.txt uses the same cell ids as model.txt. read_ejecta_model() detects the id of the first
       // cell (0 or 1) and stores it in first_input_cellid before this function runs.
       const int mgi = cellnumberin - first_input_cellid;
@@ -739,7 +739,7 @@ void read_elem_abundances() {
   // the mass fraction arrays are in node-shared memory, so only the node leader of each node parses the file and
   // writes the values (synchronised by the barrier below). The other ranks would just discard everything they read
   if (globals::rank_in_node == 0) {
-    auto abundance_file = fstream_required("abundances.txt", std::ios::in);
+    auto abundance_file = istream_required("abundances.txt");
     std::string line;
 
     // Every log line gets a timestamp and a flush, so a large 3D model must not warn per cell.
@@ -2033,7 +2033,7 @@ void do_MPI_Bcast_nlte_solution_ranges(const ptrdiff_t nstart_nonempty, const pt
 // 2D cylindrical, or 3D Cartesian) and reading the per-cell densities, abundances, and any
 // optional extra columns into the model grid
 void read_ejecta_model() {
-  auto fmodel = fstream_required("model.txt", std::ios::in);
+  auto fmodel = istream_required("model.txt");
   std::string line;
   std::optional<GridType> detected_dim{};
 

@@ -145,6 +145,10 @@ Points that surprise a new agent:
 - The Makefile decides how the options interact, e.g. `REPRODUCIBLE=ON` with
   `FASTMATH`, and `OPENMP=ON` with `STDPAR=ON`. Read the Makefile for the rule.
 - The build uses `-Werror` for all compilers except nvc++.
+- The Makefile probes for libzstd with pkg-config and a link test, and adds
+  `-DUSE_ZSTD` and the `_zstd` suffix of the build folder when it finds the
+  library. `ZSTD=OFF` skips the probe. Code that needs `<zstd.h>` goes inside
+  `#ifdef USE_ZSTD`.
 - clang adds `-Wunsafe-buffer-usage`, which gcc does not have. A build that is
   clean with gcc can still fail with clang.
 - `TESTMODE=ON` adds the sanitizers, the extra assertions, and the hardened
@@ -468,9 +472,13 @@ The code must compile with nvc++ and with hipcc, also with `STDPAR=ON GPU=ON`.
 - The model files use a different helper. `model.txt`, `abundances.txt`, and
   `transitiondata.txt` take each number with `parse_next_token()`, which
   advances a `std::string_view`.
-- Open a file with `fopen_required()` or `fstream_required()`. For a read they
-  look in `./`, `data/`, and `artis/data/`. For a write they use the name that
-  you give.
+- Open a text input file with `istream_required()` from `inputfilestream.h`.
+  It looks in `./`, `data/`, and `artis/data/`, and in each folder it opens the
+  plain file or, in a build with libzstd, the `.zst` file of the same name.
+  Test for an optional input file with `inputfile_exists()`, which also finds
+  the `.zst` file. Open an output file with `fstream_required()`, which uses
+  the name that you give. `fopen_required()` remains for the restart files
+  and for `vpkt.txt`.
 
 ### C++ style
 

@@ -38,6 +38,7 @@
 #include "globals.h"
 #include "grid.h"
 #include "input.h"
+#include "inputfilestream.h"
 #include "mpi_logging.h"
 #include "packet.h"
 #include "random.h"
@@ -742,7 +743,7 @@ void add_standard_nuclides() {
 
 // add the nuclides with beta-minus decay data from betaminusdecays.txt
 void read_betaminus_decaydata() {
-  auto fbetaminus = fstream_required("betaminusdecays.txt", std::ios::in);
+  auto fbetaminus = istream_required("betaminusdecays.txt");
   std::string line;
   while (get_noncommentline(fbetaminus, line)) {
     // energies are averages per decay of the parent nuclide, summed over its decay branches, as
@@ -779,7 +780,7 @@ void read_betaminus_decaydata() {
 // add or update the nuclides with alpha decay data from alphadecays.txt (also ensures that He4
 // exists as a decay product)
 void read_alpha_decaydata() {
-  auto falpha = fstream_required("alphadecays.txt", std::ios::in);
+  auto falpha = istream_required("alphadecays.txt");
   std::string line;
   if (!nuc_exists(2, 4)) {
     nuclides.push_back({.z = 2, .a = 4, .meanlife = -1});
@@ -852,7 +853,7 @@ void read_alpha_decaydata() {
 
 // add the nuclides with spontaneous fission decay data from fissiondecays.txt
 void read_spontfission_decaydata() {
-  auto ffission = fstream_required("fissiondecays.txt", std::ios::in);
+  auto ffission = istream_required("fissiondecays.txt");
   std::string line;
   while (get_noncommentline(ffission, line)) {
     int z_in = -1;
@@ -883,7 +884,7 @@ void read_spontfission_decaydata() {
 // read the fission product tables from fissionproducts_GEF_100keV.txt for the spontaneous
 // fission nuclides that are in use
 void read_fissionproduct_data() {
-  auto ffission_products = fstream_required("fissionproducts_GEF_100keV.txt", std::ios::in);
+  auto ffission_products = istream_required("fissionproducts_GEF_100keV.txt");
   std::string line;
   while (get_noncommentline(ffission_products, line)) {
     int z_parent = -1;

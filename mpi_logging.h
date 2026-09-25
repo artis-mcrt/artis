@@ -695,26 +695,16 @@ inline void MPI_Reduce_safe(R&& data, MPI_Op op, const int root, MPI_Comm comm) 
                                                [](FILE* fp) -> int { return std::fclose(fp); });
 }
 
+// open a file for writing. istream_required() in inputfilestream.h opens a file for reading.
 [[nodiscard]] inline auto fstream_required(const std::string_view filename, std::ios::openmode mode) -> std::fstream {
   if (filename.empty()) {
     fatal_crash("Cannot open file with empty filename.");
   }
+  assert_always((mode & std::ios::in) == 0U);
 
-  if ((mode & std::ios::in) != 0U) {
-    // search data folders in order to find file to read
-    for (const auto& datadir : datafolders) {
-      const auto datafolderfilename = std::format("{}{}", datadir, filename);
-      auto file = std::fstream(datafolderfilename, mode);
-      if (file.is_open()) {
-        return file;
-      }
-    }
-  } else {
-    // don't prepend data folders when writing
-    auto file = std::fstream(std::string(filename), mode);
-    if (file.is_open()) {
-      return file;
-    }
+  auto file = std::fstream(std::string(filename), mode);
+  if (file.is_open()) {
+    return file;
   }
 
   fatal_crash("Could not open file '{}'", filename);

@@ -73,7 +73,7 @@ jobs:
                   echo "CXX=g++-16" >> $GITHUB_ENV
                   echo "OMPI_CXX=g++-16" >> $GITHUB_ENV
                   sudo apt-get update
-                  sudo apt-get install -y --no-install-recommends g++-16 openmpi-bin libopenmpi-dev
+                  sudo apt-get install -y --no-install-recommends g++-16 openmpi-bin libopenmpi-dev libzstd-dev zstd
 
             - name: Show CPU type and core count
               id: cpu-count
@@ -121,6 +121,16 @@ jobs:
               run: |
                   source ./setup_${{ matrix.testname }}.sh
 
+            - name: Compress input files with zstd
+              working-directory: tests/${{ matrix.testname }}_testrun/
+              run: |
+                  # sn3d and exspec read the compressed files directly. Each rank reads the files
+                  # itself, so a large model or atomic dataset needs no separate decompression step.
+                  for inputfile in model.txt abundances.txt adata.txt transitiondata.txt phixsdata_v2.txt; do
+                      if [ -f "$inputfile" ]; then zstd -q --rm -T0 "$inputfile"; fi
+                  done
+                  ls -l
+
             - name: cat artisoptions.h
               run: |
                   cp tests/${{ matrix.testname }}_testrun/artisoptions.h .
@@ -128,7 +138,7 @@ jobs:
 
             - name: Compile
               run: |
-                  make REPRODUCIBLE=ON TESTMODE=${{ inputs.testmode }} MAX_NODE_SIZE=2 FASTMATH=OFF -j${{ steps.cpu-count.outputs.count }} sn3d exspec
+                  make REPRODUCIBLE=ON ZSTD=ON TESTMODE=${{ inputs.testmode }} MAX_NODE_SIZE=2 FASTMATH=OFF -j${{ steps.cpu-count.outputs.count }} sn3d exspec
                   cp sn3d tests/${{ matrix.testname }}_testrun/
                   cp exspec tests/${{ matrix.testname }}_testrun/
 
@@ -222,8 +232,13 @@ jobs:
               if: always()
               working-directory: tests/${{ matrix.testname }}_testrun/
               run: |
+                  # exspec reads the compressed packet files directly. The checksum step and the
+                  # plots need the plain files, so the step decompresses them again after exspec.
+                  find . -maxdepth 1 -name 'packets*.out' -exec zstd -q --rm -T0 {} \;
+                  ls -l packets*.out.zst
                   time mpirun -np 2 --oversubscribe --mca osc ^ucx ./exspec
                   python3 ../../scripts/mergeangleres.py
+                  find . -maxdepth 1 -name 'packets*.out.zst' -exec zstd -d -q --rm -T0 {} \;
 
             - name: cat exspec log
               if: always()
@@ -363,7 +378,7 @@ jobs:
                   echo "CXX=g++-16" >> $GITHUB_ENV
                   echo "OMPI_CXX=g++-16" >> $GITHUB_ENV
                   sudo apt-get update
-                  sudo apt-get install -y --no-install-recommends g++-16 openmpi-bin libopenmpi-dev
+                  sudo apt-get install -y --no-install-recommends g++-16 openmpi-bin libopenmpi-dev libzstd-dev zstd
 
             - name: Cache test atomic data
               uses: actions/cache@v6
