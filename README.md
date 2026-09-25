@@ -166,13 +166,15 @@ source ./setup_kilonova_1d.sh   # creates tests/kilonova_1d_testrun/
 
 - GPUARCH=N: With nvc++ and GPU=ON, compile for compute capability N (e.g. GPUARCH=80) in place of the GPU of the host. A host that has no GPU needs this option to get a defined target.
 - OPTIMIZE=OFF: Compile without optimisation. This is the quickest way to check that everything still compiles.
-- ZSTD=OFF: Build without libzstd. The Makefile finds libzstd with pkg-config or with a link of -lzstd, and a build with the library reads a zstd compressed input file, e.g. model.txt.zst, when the plain file is absent. ZSTD=ON stops the build if the library is absent.
+- ZSTD=OFF: Build without libzstd. The Makefile finds libzstd with pkg-config or with a link of -lzstd. A build with the library reads a zstd compressed input file, e.g. model.txt.zst, when the plain file is absent, and it can write compressed output files (see COMPRESS_OUTPUT_FILES in artisoptions_doc.md). ZSTD=ON stops the build if the library is absent.
 - PGO=GENERATE and PGO=USE: Profile-guided optimisation with gcc or clang. Build with GENERATE, run a representative simulation to collect profile data, then rebuild with USE.
 
 ## Input files
 These files go in the simulation folder, which should always contain the ARTIS source folder (or a symlink to it) named artis. The physics data bundled with the code (nuclear decay data, gamma-ray spectra, and the collisional ionisation and binding energy tables) is then found automatically in artis/data and does not need to be copied.
 
 A build with libzstd (see "Make options") also reads a zstd compressed text input file, e.g. model.txt.zst, transitiondata.txt.zst, or packets00_0000.out.zst for exspec. The plain file has priority when both exist. The exceptions are input.txt, which sn3d writes again at the start of a new simulation, and the restart files.
+
+sn3d writes the final packet files of a job into the folder packets/, and the virtual packet contributions into vpackets/. exspec reads the packet files there. exspec also finds the packet files of an older run in the simulation folder. With COMPRESS_OUTPUT_FILES, the programs write each output file zstd compressed, e.g. packets/packets00_0000.out.zst and spec.out.zst, so that no separate compression step is necessary. artistools reads both forms.
 
 ### input.txt
 Run-time configuration with:

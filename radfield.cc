@@ -14,12 +14,13 @@
 #include <cstdio>
 #include <cstdlib>
 #include <format>
-#include <fstream>
 #include <iterator>
 #include <print>
 #include <span>
 #include <utility>
 #include <vector>
+
+#include "outputfilestream.h"
 
 #pragma clang unsafe_buffer_usage begin
 #include <mpi.h>
@@ -107,7 +108,7 @@ std::vector<double> J;  // after normalisation: [ergs/s/sr/cm2/Hz]
 
 std::vector<double> nuJ;  // after normalisation: [ergs/s/sr/cm2]
 
-std::fstream radfieldfile;
+OutputFileStream radfieldfile;
 
 constexpr auto get_bin_nu_upper(const int binindex) -> double {
   assert_testmodeonly(binindex >= 0);

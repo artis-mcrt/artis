@@ -48,8 +48,6 @@ cd ..
 
 echo "CPU type: $("$OMPI_CXX" -march=native -Q --help=target | grep -- '-march=  ' | cut -f3)"
 
-# decompress any zipped input files
-source ./artis/scripts/exspec-before.sh
 
 hoursleft=$(python3 ./artis/scripts/slurmjobhoursleft.py ${SLURM_JOB_ID})
 source ./artis/scripts/corehours-before.sh
@@ -70,6 +68,6 @@ fi
 
 if grep -qs "RESTART_NEEDED" output_0-0.txt; then
     source ./artis/scripts/artis-virgo-submit.sh
-elif [ -f packets00_0000.out ]; then
+elif ls packets/packets00_0000.out* > /dev/null 2>&1; then
     source ./artis/scripts/exspec-zip-virgo-submit.sh
 fi

@@ -19,7 +19,6 @@
 #include <cstdlib>
 #include <filesystem>
 #include <format>
-#include <fstream>
 #include <functional>
 #include <ios>
 #include <iterator>
@@ -30,6 +29,8 @@
 #include <string_view>
 #include <system_error>
 #include <utility>
+
+#include "outputfilestream.h"
 #ifdef STDPAR_ON
 #include <ranges>
 #endif
@@ -68,7 +69,7 @@ namespace {
 
 std::chrono::steady_clock::time_point real_time_start;
 std::chrono::steady_clock::time_point packet_propagation_start_time;
-std::fstream estimators_file;
+OutputFileStream estimators_file;
 
 struct CellCacheBacking {
   MPI_shared_array<double> cooling_contrib;
@@ -187,7 +188,7 @@ void initialise_linestat_file() {
     return;
   }
 
-  auto linestat_file = fstream_required("linestat.out", std::ios::out | std::ios::trunc);
+  auto linestat_file = open_output_file("linestat.out");
 
   // with tens of millions of lines, per-value std::print calls to the stream are slow (each one re-checks whether
   // the stream is a terminal), so format into a buffer and write it out in large chunks
@@ -377,7 +378,7 @@ void write_deposition_file() {
         },
     };
 
-    auto dep_file = fstream_required("deposition.out.tmp", std::ios::out | std::ios::trunc);
+    auto dep_file = open_output_file("deposition.out.tmp");
     std::print(dep_file, "#ts");
     for (const auto& column : columns) {
       if (column.enabled) {
@@ -406,9 +407,11 @@ void write_deposition_file() {
     // std::filesystem::rename replaces an existing target atomically, so one call is sufficient.
     // This saves one metadata operation on a network file system.
     std::error_code ec;
-    std::filesystem::rename("deposition.out.tmp", "deposition.out", ec);
+    const auto tmppath = output_filepath("deposition.out.tmp");
+    const auto finalpath = output_filepath("deposition.out");
+    std::filesystem::rename(tmppath, finalpath, ec);
     if (ec) {
-      fatal_crash("The rename of deposition.out.tmp to deposition.out failed: {}", ec.message());
+      fatal_crash("The rename of {} to {} failed: {}", tmppath, finalpath, ec.message());
     }
 
     // energy-conservation consistency check (log only): the cumulative deposition should not exceed the
@@ -437,7 +440,7 @@ void write_deposition_file() {
 }
 
 void write_timestep_file() {
-  auto timestepfile = fstream_required("timesteps.out", std::ofstream::out | std::ofstream::trunc);
+  auto timestepfile = open_output_file("timesteps.out");
   std::print(timestepfile, "#timestep tstart_days tmid_days twidth_days\n");
   for (int n = 0; n < globals::ntimesteps; n++) {
     std::println(timestepfile, "{} {:g} {:g} {:g}", n, globals::timesteps[n].start / DAY,
@@ -845,7 +848,7 @@ auto do_timestep(const int nts, std::vector<Packet>& packets, const int walltime
     }
 
     if (nts == (globals::timestep_finish - 1)) {
-      const auto filename = std::format("packets{:02d}_{:04d}.out", 0, globals::my_rank);
+      const auto filename = std::format("packets/packets{:02d}_{:04d}.out", 0, globals::my_rank);
       write_text_packets(filename, packets);
 
       vpkt::write_timestep(nts, true);
@@ -897,6 +900,17 @@ void setup_jobfolder() {
     std::filesystem::create_directories(globals::jobfolder, ec);
     if (ec) {
       fatal_crash("could not create the job folder '{}': {}", globals::jobfolder, ec.message());
+    }
+    // the final packet files of each job go into packets/, and the virtual packet contributions into vpackets/
+    std::filesystem::create_directories("packets", ec);
+    if (ec) {
+      fatal_crash("could not create the packets folder: {}", ec.message());
+    }
+    if constexpr (VPKT_ON && VPKT_WRITE_CONTRIBS) {
+      std::filesystem::create_directories("vpackets", ec);
+      if (ec) {
+        fatal_crash("could not create the vpackets folder: {}", ec.message());
+      }
     }
 
     // clear out per-rank output files (and any leftover log symlink) from a previous run of this folder, so
@@ -995,7 +1009,9 @@ auto main(int argc, char* argv[]) -> int {
 #endif
   {
     // initialise the thread and rank specific output file
-    set_log_file(get_jobfolder_filepath(std::format("output_{}-{}.txt", globals::my_rank, get_thread_num())));
+    // the log of rank 0 stays plain, because output_0-0.txt in the run folder links to it for tail -f
+    set_log_file(get_jobfolder_filepath(std::format("output_{}-{}.txt", globals::my_rank, get_thread_num())),
+                 COMPRESS_OUTPUT_FILES && (globals::my_rank != 0 || get_thread_num() != 0));
 
 #ifdef _OPENMP
     printlnlog("OpenMP parallelisation is active with {} threads (max {})", omp_get_num_threads(), get_max_threads());
@@ -1114,7 +1130,7 @@ auto main(int argc, char* argv[]) -> int {
 
   // Record the chosen syn_dir (only one rank writes it, since every rank would write the same file)
   if (globals::my_rank == 0) {
-    auto syn_file = fstream_required("syn_dir.txt", std::ios::out | std::ios::trunc);
+    auto syn_file = open_uncompressed_output_file("syn_dir.txt");
     std::print(syn_file, "{} {} {}", syn_dir[0], syn_dir[1], syn_dir[2]);
     syn_file.close();
   }

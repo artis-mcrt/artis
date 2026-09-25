@@ -14,9 +14,7 @@
 #include <cstring>
 #include <filesystem>
 #include <format>
-#include <fstream>
 #include <functional>
-#include <ios>
 #include <istream>
 #include <iterator>
 #include <limits>
@@ -30,6 +28,8 @@
 #include <tuple>
 #include <utility>
 #include <vector>
+
+#include "outputfilestream.h"
 
 #pragma clang unsafe_buffer_usage begin
 #include <mpi.h>
@@ -1796,7 +1796,7 @@ void write_bflist_file() {
   assert_always(i == globals::nbfcontinua);
 
   if (globals::my_rank == 0) {
-    auto bflist_file = fstream_required("bflist.out", std::ios::out | std::ios::trunc);
+    auto bflist_file = open_output_file("bflist.out");
     std::println(bflist_file, "{}", globals::nbfcontinua);
     for (i = 0; i < globals::nbfcontinua; i++) {
       const int element = globals::bflist[i].elementindex;
@@ -2098,7 +2098,7 @@ void update_parameterfile(const int nts) {
 
   auto file = istream_required("input.txt");
 
-  auto fileout = fstream_required("input.txt.tmp", std::ios::out | std::ios::trunc);
+  auto fileout = open_uncompressed_output_file("input.txt.tmp");
 
   std::string line;
 

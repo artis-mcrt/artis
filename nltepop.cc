@@ -13,7 +13,6 @@
 #include <cstdio>
 #include <cstdlib>
 #include <format>
-#include <fstream>
 #include <numeric>
 #include <optional>
 #include <print>
@@ -41,6 +40,7 @@
 #include "mpi_logging.h"
 #include "nltepop.h"
 #include "nonthermal.h"
+#include "outputfilestream.h"
 #include "ratecoeff.h"
 #include "sn3d.h"
 
@@ -48,7 +48,7 @@ static_assert(STRICT_POPULATION_CHECKING_INVERSION_FACTOR_PRINTOUT_WARNING >= 1)
 static_assert(STRICT_POPULATION_CHECKING_INVERSION_FACTOR_PRINTOUT_WARNING <
               STRICT_POPULATION_CHECKING_INVERSION_FACTOR_SOLVER_FAIL);
 namespace {
-std::fstream nlte_file;
+OutputFileStream nlte_file;
 
 // The state of the previous grid update for the time-dependent ionisation (see nltepop.h). Only nltepop.cc
 // reads and writes these two arrays.

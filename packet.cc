@@ -11,7 +11,6 @@
 #include <cstdio>
 #include <cstdlib>
 #include <format>
-#include <iostream>
 #include <print>
 #include <ranges>
 #include <span>
@@ -29,6 +28,7 @@
 #include "input.h"
 #include "inputfilestream.h"
 #include "mpi_logging.h"
+#include "outputfilestream.h"
 #include "random.h"
 #include "sn3d.h"
 #include "vectors.h"
@@ -255,7 +255,7 @@ auto read_text_packets(const std::string& filename) -> std::vector<Packet> {
 // Write all packets to a packets*.out text file (columns matching get_packets_text_header), skipping escaped
 // gamma packets when KEEP_ESCAPED_GAMMAS is false.
 void write_text_packets(const std::string& filename, const std::span<const Packet> packets) {
-  auto packets_file = fstream_required(filename, std::ios::out | std::ios::trunc);
+  auto packets_file = open_output_file(filename);
   std::println(packets_file, "{}", get_packets_text_header());
 
   for (const auto& pkt : packets) {

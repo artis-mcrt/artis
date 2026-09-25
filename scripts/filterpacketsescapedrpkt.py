@@ -120,7 +120,7 @@ def main() -> None:
 
         fileout_rpkt = Path(
             *filein.parts[:-1],
-            filein.parts[-1].removesuffix(".zst").removesuffix(".gz").removesuffix(".xz") + ".zst",
+            filein.parts[-1].removesuffix(".zst") + ".zst",
         )
         fileout_rpkt_temp = Path(
             *fileout_rpkt.parts[:-1],

@@ -203,7 +203,7 @@ Three steps differ from a plain build and are easy to miss:
   them.
 
 CI writes `results_md5_job0.txt` from
-`md5sum *.out job_from_ts0000/*.out speclc_angle_res/*.*` and
+`md5sum *.out job_from_ts0000/*.out packets/*.out vpackets/*.out speclc_angle_res/*.*` and
 `results_md5_final.txt` from the same command with the job folder of the resume
 run. The log files stay outside both sets, because their names do not match.
 
@@ -476,9 +476,18 @@ The code must compile with nvc++ and with hipcc, also with `STDPAR=ON GPU=ON`.
   It looks in `./`, `data/`, and `artis/data/`, and in each folder it opens the
   plain file or, in a build with libzstd, the `.zst` file of the same name.
   Test for an optional input file with `inputfile_exists()`, which also finds
-  the `.zst` file. Open an output file with `fstream_required()`, which uses
-  the name that you give. `fopen_required()` remains for the restart files
-  and for `vpkt.txt`.
+  the `.zst` file.
+- Open an output file with `open_output_file()` from `outputfilestream.h`.
+  With the option `COMPRESS_OUTPUT_FILES`, it writes the file zstd compressed
+  under the name with `.zst`. `output_filepath()` gives that name, e.g. for a
+  rename. A file that stays open over the timesteps gets the lower zstd level,
+  see `open_rank_outfile()`. `open_uncompressed_output_file()` is for the
+  files that must stay plain: `input.txt`, `artis.pid`, `syn_dir.txt`, and the
+  restart files. `fopen_required()` remains for the binary restart files and
+  for `vpkt.txt`.
+- `sn3d` writes the final packet files into `packets/` and the virtual packet
+  contributions into `vpackets/`. `exspec` reads the packet files there, with
+  the simulation folder as the fallback for an older run.
 
 ### C++ style
 

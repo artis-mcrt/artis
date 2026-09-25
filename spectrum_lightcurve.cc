@@ -13,7 +13,6 @@
 #include <cstdint>
 #include <filesystem>
 #include <format>
-#include <fstream>
 #include <ios>
 #include <iterator>
 #include <memory>
@@ -25,6 +24,8 @@
 #include <system_error>
 #include <utility>
 #include <vector>
+
+#include "outputfilestream.h"
 
 #pragma clang unsafe_buffer_usage begin
 #include <mpi.h>
@@ -151,7 +152,7 @@ auto this_rank_writes_file(const int file_number) -> bool {
 // The frequency column comes from the first spectrum.
 void write_spectrum_file(const std::string& spec_filename, const std::span<const Spectra* const> spectra_list,
                          const int numtimesteps) {
-  auto spec_file = fstream_required(spec_filename, std::ios::out | std::ios::trunc);
+  auto spec_file = open_output_file(spec_filename);
   std::print(spec_file, "0");
   for (auto spectrumindex = 0Z; spectrumindex < std::ssize(spectra_list); spectrumindex++) {
     for (int p = 0; p < numtimesteps; p++) {
@@ -179,8 +180,7 @@ void write_spectrum_file(const std::string& spec_filename, const std::span<const
 // a text file with a write buffer for rows of numbers
 class BufferedTextFile {
  public:
-  explicit BufferedTextFile(const std::string& filename)
-      : file(fstream_required(filename, std::ios::out | std::ios::trunc)) {
+  explicit BufferedTextFile(const std::string& filename) : file(open_output_file(filename)) {
     buffer.reserve(2 * flushsize);
   }
   ~BufferedTextFile() {
@@ -218,7 +218,7 @@ class BufferedTextFile {
 
  private:
   static constexpr auto flushsize = 1UZ << 22U;
-  std::fstream file;
+  OutputFileStream file;
   std::string buffer;
 };
 
@@ -473,7 +473,7 @@ void write_light_curve(const std::string& lc_filename, const std::span<const dou
   }
   assert_always(numtimesteps <= globals::ntimesteps);
 
-  auto lc_file = fstream_required(lc_filename, std::ios::out | std::ios::trunc);
+  auto lc_file = open_output_file(lc_filename);
 
   for (int nts = 0; nts < numtimesteps; nts++) {
     std::println(lc_file, "{:g} {:g} {:g}", globals::timesteps[nts].mid / DAY, light_curve_lum[nts] / LSUN,

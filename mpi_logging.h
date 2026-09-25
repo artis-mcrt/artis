@@ -16,8 +16,6 @@
 #include <cstdlib>
 #include <cstring>
 #include <format>
-#include <fstream>
-#include <ios>
 #include <limits>
 #include <memory>
 #include <new>
@@ -103,7 +101,7 @@ inline void setup_mpi_vars() {
 
 inline void MPI_Barrier_node() { MPI_Barrier(globals::mpi_comm_node); }
 
-void set_log_file(std::string_view filename) noexcept;
+void set_log_file(std::string_view filename, bool compress) noexcept;
 
 // Write an already-formatted message to the log file, prepending a timestamp at the start of each line. When
 // add_newline is set, a trailing newline is appended and the next write starts a new line.
@@ -693,27 +691,6 @@ inline void MPI_Reduce_safe(R&& data, MPI_Op op, const int root, MPI_Comm comm) 
 [[nodiscard]] inline auto fopen_required_uniqueptr(const std::string& filename, std::span<const char> mode) {
   return std::unique_ptr<FILE, int (*)(FILE*)>(fopen_required(filename, mode),
                                                [](FILE* fp) -> int { return std::fclose(fp); });
-}
-
-// open a file for writing. istream_required() in inputfilestream.h opens a file for reading.
-[[nodiscard]] inline auto fstream_required(const std::string_view filename, std::ios::openmode mode) -> std::fstream {
-  if (filename.empty()) {
-    fatal_crash("Cannot open file with empty filename.");
-  }
-  assert_always((mode & std::ios::in) == 0U);
-
-  auto file = std::fstream(std::string(filename), mode);
-  if (file.is_open()) {
-    return file;
-  }
-
-  fatal_crash("Could not open file '{}'", filename);
-}
-
-// open a per-rank output file such as estimators_0000.out for writing
-[[nodiscard]] inline auto open_rank_outfile(const std::string_view basename) -> std::fstream {
-  return fstream_required(get_jobfolder_filepath(std::format("{}_{:04d}.out", basename, globals::my_rank)),
-                          std::ios::out | std::ios::trunc);
 }
 
 // padded to a full cache line in CPU multithreaded modes so that adjacent mutexes in an array don't false share

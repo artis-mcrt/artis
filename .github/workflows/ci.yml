@@ -121,7 +121,7 @@ jobs:
               run: |
                   source ./setup_${{ matrix.testname }}.sh
 
-            - name: Compress input files with zstd
+            - name: Compress the input files and select the compressed output files
               working-directory: tests/${{ matrix.testname }}_testrun/
               run: |
                   # sn3d and exspec read the compressed files directly. Each rank reads the files
@@ -129,6 +129,11 @@ jobs:
                   for inputfile in model.txt abundances.txt adata.txt transitiondata.txt phixsdata_v2.txt; do
                       if [ -f "$inputfile" ]; then zstd -q --rm -T0 "$inputfile"; fi
                   done
+                  # sn3d and exspec write .zst output files. The checksum steps decompress copies of them.
+                  # The OpenMP and the STDPAR jobs keep the plain output files.
+                  source ../setupfuncs.sh
+                  sedopt 'constexpr bool COMPRESS_OUTPUT_FILES.*' 'constexpr bool COMPRESS_OUTPUT_FILES = true;'
+                  rm -f artisoptions.h.bak
                   ls -l
 
             - name: cat artisoptions.h
@@ -153,7 +158,7 @@ jobs:
             - name: cat job0 estimators
               if: always()
               working-directory: tests/${{ matrix.testname }}_testrun/
-              run: cat job_from_ts0000/estimators*.out
+              run: zstdcat job_from_ts0000/estimators*.out.zst
 
             - name: cat job0 output log
               if: always()
@@ -170,13 +175,23 @@ jobs:
                   # with the markers. A checksum mismatch below still permits the marker, because
                   # the mismatch is the reason to update the stored checksums.
                   # Some tests write no speclc_angle_res files, so that glob can expand to nothing.
-                  set -o pipefail
+                  # sn3d writes .zst files, and the reference checksums are of the plain content. The step
+                  # decompresses a copy of each file into a temporary folder and takes the checksums there.
+                  set -eo pipefail
+                  reffile=$GITHUB_WORKSPACE/tests/${{ matrix.testname }}_inputfiles/results_md5_job0.txt
+                  if [ -s "$reffile" ]; then cp "$reffile" "$RUNNER_TEMP/ref_md5_job0.txt"; fi
+                  plaindir=$RUNNER_TEMP/plain_job0
+                  rm -rf "$plaindir"
+                  find . -name '*.out.zst' -print0 | while IFS= read -r -d '' zstfile; do
+                      mkdir -p "$plaindir/$(dirname "$zstfile")"
+                      zstd -d -q "$zstfile" -o "$plaindir/${zstfile%.zst}" || exit 1
+                  done
+                  cd "$plaindir"
                   shopt -s nullglob
                   angleresfiles=(speclc_angle_res/*.*)
+                  vpacketsfiles=(vpackets/*.out)
                   shopt -u nullglob
-                  reffile=../${{ matrix.testname }}_inputfiles/results_md5_job0.txt
-                  if [ -s "$reffile" ]; then cp "$reffile" "$RUNNER_TEMP/ref_md5_job0.txt"; fi
-                  md5sum *.out job_from_ts0000/*.out "${angleresfiles[@]}" | tee "$RUNNER_TEMP/new_md5_job0.txt"
+                  md5sum *.out job_from_ts0000/*.out packets/*.out "${vpacketsfiles[@]}" "${angleresfiles[@]}" | tee "$RUNNER_TEMP/new_md5_job0.txt"
                   cp "$RUNNER_TEMP/new_md5_job0.txt" "$reffile"
                   if [ "${{ steps.run_job0.outcome }}" = "success" ]; then
                       touch "$reffile.complete"
@@ -208,7 +223,7 @@ jobs:
             - name: cat job1 estimators
               if: always()
               working-directory: tests/${{ matrix.testname }}_testrun/
-              run: cat "$(ls -d job_from_ts* | grep -v ts0000 | tail -n 1)"/estimators*.out
+              run: zstdcat "$(ls -d job_from_ts* | grep -v ts0000 | tail -n 1)"/estimators*.out.zst
 
             - name: cat job1 output log
               if: always()
@@ -219,7 +234,7 @@ jobs:
               if: always() && inputs.testmode != 'ON'
               working-directory: tests/${{ matrix.testname }}_testrun/
               run: |
-                  cat deposition.out
+                  zstdcat deposition.out.zst
 
             - name: Show CPU core time
               if: always()
@@ -232,13 +247,9 @@ jobs:
               if: always()
               working-directory: tests/${{ matrix.testname }}_testrun/
               run: |
-                  # exspec reads the compressed packet files directly. The checksum step and the
-                  # plots need the plain files, so the step decompresses them again after exspec.
-                  find . -maxdepth 1 -name 'packets*.out' -exec zstd -q --rm -T0 {} \;
-                  ls -l packets*.out.zst
+                  ls -l packets/
                   time mpirun -np 2 --oversubscribe --mca osc ^ucx ./exspec
                   python3 ../../scripts/mergeangleres.py
-                  find . -maxdepth 1 -name 'packets*.out.zst' -exec zstd -d -q --rm -T0 {} \;
 
             - name: cat exspec log
               if: always()
@@ -255,13 +266,22 @@ jobs:
                   # with the markers. A checksum mismatch below still permits the marker, because
                   # the mismatch is the reason to update the stored checksums.
                   # Some tests write no speclc_angle_res files, so that glob can expand to nothing.
-                  set -o pipefail
+                  # The step decompresses copies of the .zst files, as the job0 checksum step does.
+                  set -eo pipefail
+                  reffile=$GITHUB_WORKSPACE/tests/${{ matrix.testname }}_inputfiles/results_md5_final.txt
+                  if [ -s "$reffile" ]; then cp "$reffile" "$RUNNER_TEMP/ref_md5_final.txt"; fi
+                  plaindir=$RUNNER_TEMP/plain_final
+                  rm -rf "$plaindir"
+                  find . -name '*.out.zst' -print0 | while IFS= read -r -d '' zstfile; do
+                      mkdir -p "$plaindir/$(dirname "$zstfile")"
+                      zstd -d -q "$zstfile" -o "$plaindir/${zstfile%.zst}" || exit 1
+                  done
+                  cd "$plaindir"
                   shopt -s nullglob
                   angleresfiles=(speclc_angle_res/*.*)
+                  vpacketsfiles=(vpackets/*.out)
                   shopt -u nullglob
-                  reffile=../${{ matrix.testname }}_inputfiles/results_md5_final.txt
-                  if [ -s "$reffile" ]; then cp "$reffile" "$RUNNER_TEMP/ref_md5_final.txt"; fi
-                  md5sum *.out "$(ls -d job_from_ts* | grep -v ts0000 | tail -n 1)"/*.out "${angleresfiles[@]}" | tee "$RUNNER_TEMP/new_md5_final.txt"
+                  md5sum *.out "$(ls -d job_from_ts* | grep -v ts0000 | tail -n 1)"/*.out packets/*.out "${vpacketsfiles[@]}" "${angleresfiles[@]}" | tee "$RUNNER_TEMP/new_md5_final.txt"
                   cp "$RUNNER_TEMP/new_md5_final.txt" "$reffile"
                   if [ "${{ steps.run_job0.outcome }}" = "success" ] && [ "${{ steps.run_job1.outcome }}" = "success" ] && [ "${{ steps.run_exspec.outcome }}" = "success" ]; then
                       touch "$reffile.complete"
@@ -281,7 +301,6 @@ jobs:
               if: always()
               working-directory: tests/${{ matrix.testname }}_testrun
               run: |
-                  find . -name "*_res_*.out" -exec zstd -v -T0 --rm -f {} \;
                   # the artifact upload must not follow the symlink to the repository root
                   rm -f artis
 

@@ -34,6 +34,7 @@
 #include "inputfilestream.h"
 #include "ltepop.h"
 #include "mpi_logging.h"
+#include "outputfilestream.h"
 #include "packet.h"
 #include "rpkt.h"
 #include "sn3d.h"
@@ -560,7 +561,7 @@ void init_vspecpol() {
 // result depend on how the wall time limits divided the run into jobs.
 void write_vspecpol(const std::string& filename, const bool full_precision) {
   printlnlog("Writing {}", filename);
-  auto vspecpol_file = fstream_required(filename, std::ios::out | std::ios::trunc);
+  auto vspecpol_file = full_precision ? open_uncompressed_output_file(filename) : open_output_file(filename);
   const auto print_flux = [&vspecpol_file, full_precision](const double flux) {
     if (full_precision) {
       std::print(vspecpol_file, " {:.17g}", flux);
@@ -666,7 +667,7 @@ void init_vpkt_grid() {
 
 // full_precision selects the round-trip exact format for the restart files (see write_vspecpol)
 void write_vpkt_grid(const std::string& filename, const bool full_precision) {
-  auto vpkt_grid_file = fstream_required(filename, std::ios::out | std::ios::trunc);
+  auto vpkt_grid_file = full_precision ? open_uncompressed_output_file(filename) : open_output_file(filename);
 
   for (int obsdirindex = 0; obsdirindex < nobsdirections; obsdirindex++) {
     for (int wlbin = 0; wlbin < grid_nwavelengthranges; wlbin++) {
@@ -987,13 +988,21 @@ void write_timestep(const int nts, const bool is_final) {
     if (vpkt_contrib_file.fail()) {
       fatal_crash("Could not write or close {}.", filename_source);
     }
-    const auto filename_dest = is_final ? std::format("vpackets_{:04d}.out", my_rank)
+    const auto filename_dest = is_final ? std::format("vpackets/vpackets_{:04d}.out", my_rank)
                                         : std::format("vpackets_{:04d}_ts{}.tmp", my_rank, nts + 1);
 
-    std::filesystem::copy_file(filename_source, filename_dest, std::filesystem::copy_options::overwrite_existing);
     printlnlog("Copying {} to {}", filename_source, filename_dest);
-
-    if (!is_final) {
+    if (is_final) {
+      // the final file follows COMPRESS_OUTPUT_FILES, so copy the content through the streams
+      const auto contribs_in = istream_required(filename_source);
+      auto contribs_out = open_output_file(filename_dest);
+      contribs_out << contribs_in.rdbuf();
+      contribs_out.close();
+      if (contribs_out.fail()) {
+        fatal_crash("Could not write or close {}.", output_filepath(filename_dest));
+      }
+    } else {
+      std::filesystem::copy_file(filename_source, filename_dest, std::filesystem::copy_options::overwrite_existing);
       vpkt_contrib_file = std::ofstream(filename_dest, std::ios::app);
       if (vpkt_contrib_file.fail()) {
         fatal_crash("Could not open {}.", filename_dest);

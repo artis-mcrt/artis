@@ -12,7 +12,6 @@
 #include <cstdlib>
 #include <filesystem>
 #include <format>
-#include <fstream>
 #include <limits>
 #include <numeric>
 #include <print>
@@ -35,6 +34,7 @@
 #include "input.h"
 #include "inputfilestream.h"
 #include "mpi_logging.h"
+#include "outputfilestream.h"
 #include "packet.h"
 #include "random.h"
 #include "stats.h"
@@ -291,7 +291,7 @@ void init_gamma_linelist() {
       return std::tie(g1.energy, g1.nucindex, g1.nucgammaindex) < std::tie(g2.energy, g2.nucindex, g2.nucgammaindex);
     });
 
-    auto gammalinelist = fstream_required("gammalinelist.out", std::ofstream::out | std::ofstream::trunc);
+    auto gammalinelist = open_output_file("gammalinelist.out");
     std::println(gammalinelist, "#index nucindex Z A nucgammmaindex en_gamma_mev gammaline_probability");
 
     for (auto i = 0Z; i < total_lines; i++) {

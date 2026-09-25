@@ -50,6 +50,7 @@
 #include "mpi_logging.h"
 #include "nltepop.h"
 #include "nonthermal.h"
+#include "outputfilestream.h"
 #include "radfield.h"
 #include "random.h"
 #include "rpkt.h"
@@ -1317,6 +1318,35 @@ void test_zstd_input_stream() {
   std::filesystem::remove(zstfilename);
   check(!inputfile_exists(filename), "inputfile_exists gives false after the removal");
 }
+
+// OutputFileStream writes a zstd file with flushes between the lines, as the estimator files and the
+// logs do. The file must read back as the same text.
+void test_zstd_output_stream() {
+  std::println("zstd compressed output file...");
+  const std::string filename = "unittests_zstd_output.txt";
+  const auto zstfilename = filename + ".zst";
+  std::string text;
+  {
+    auto outfile = OutputFileStream(std::make_unique<ZstdOutputBuffer>(zstfilename, ZSTD_LEVEL_FILE_OPEN_DURING_RUN));
+    check(outfile.is_open(), "the compressed output file opens");
+    for (int linenum = 0; linenum < 300000; linenum++) {
+      const auto line =
+          std::format("timestep {} cell {} value {:.6e}\n", linenum / 1000, linenum % 1000, linenum * 0.5);
+      text += line;
+      outfile << line;
+      if (linenum % 1000 == 999) {
+        outfile.flush();
+      }
+    }
+    outfile.close();
+    check(!outfile.fail(), "the compressed output file closes without an error");
+  }
+
+  auto infile = istream_required(filename);
+  const auto readback = std::string(std::istreambuf_iterator<char>(infile), std::istreambuf_iterator<char>());
+  check(readback == text, "the compressed output file reads back as the written text");
+  std::filesystem::remove(zstfilename);
+}
 #endif
 
 }  // anonymous namespace
@@ -1350,6 +1380,7 @@ auto main() -> int {
   test_toms748_and_gauss_kronrod();
 #ifdef USE_ZSTD
   test_zstd_input_stream();
+  test_zstd_output_stream();
 #endif
 
   std::println("unit tests: {} of {} checks passed", checks_total - checks_failed, checks_total);

@@ -17,7 +17,6 @@
 #include <cstdlib>
 #include <cstring>
 #include <format>
-#include <fstream>
 #include <iostream>
 #include <limits>
 #include <numbers>
@@ -31,6 +30,8 @@
 #include <tuple>
 #include <utility>
 #include <vector>
+
+#include "outputfilestream.h"
 
 #pragma clang unsafe_buffer_usage begin
 #include <mpi.h>
@@ -1311,8 +1312,7 @@ void setup_nstart_ndo() {
   assert_always(nonempty_npts_model_assigned == get_nonempty_npts_model());
 
   if (globals::my_rank == 0) {
-    auto fileout = std::ofstream("modelgridrankassignments.out");
-    assert_always(fileout.is_open());
+    auto fileout = open_output_file("modelgridrankassignments.out");
     fileout << "#rank nstart ndo ndo_nonempty\n";
     for (int r = 0; r < nprocesses; r++) {
       assert_always(ranks_ndo_nonempty[r] <= ranks_ndo[r]);
@@ -2442,7 +2442,7 @@ void init_grid() {
   }
 
   if (globals::my_rank == 0) {
-    auto grid_file = fstream_required("grid.out", std::ios::out | std::ios::trunc);
+    auto grid_file = open_output_file("grid.out");
     for (int cellindex = 0; cellindex < ngrid; cellindex++) {
       const int mgi = get_propcell_modelgridindex(cellindex);
       if (mgi >= 0) {

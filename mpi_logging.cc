@@ -6,18 +6,18 @@
 #include <cstdarg>
 #include <cstdlib>
 #include <cstring>
-#include <fstream>
 #include <iostream>
 #include <print>
 #include <string_view>
 
 #include "constants.h"
+#include "outputfilestream.h"
 
 namespace {
 
 // GCC counts the definition of a variable with a constructor as a use, so the threadprivate pragma must come
 // between this declaration and the definition below.
-extern std::fstream output_file;
+extern OutputFileStream output_file;
 bool outputstartofline = true;
 
 #ifdef _OPENMP
@@ -26,7 +26,7 @@ bool outputstartofline = true;
 #endif
 #endif
 
-std::fstream output_file;
+OutputFileStream output_file;
 
 // Prepend an ISO-8601 timestamp when starting a new output line.
 void print_line_start() noexcept {
@@ -36,8 +36,9 @@ void print_line_start() noexcept {
 }
 }  // anonymous namespace
 
-void set_log_file(const std::string_view filename) noexcept {
-  output_file = fstream_required(filename, std::ios::out | std::ios::trunc);
+void set_log_file(const std::string_view filename, const bool compress) noexcept {
+  output_file =
+      compress ? open_output_file(filename, ZSTD_LEVEL_FILE_OPEN_DURING_RUN) : open_uncompressed_output_file(filename);
 }
 
 void log_write(const std::string_view message, const bool add_newline) noexcept {

@@ -16,7 +16,6 @@
 #include <cstdlib>
 #include <cstring>
 #include <format>
-#include <fstream>
 #include <functional>
 #include <iostream>
 #include <iterator>
@@ -40,6 +39,7 @@
 #include "input.h"
 #include "inputfilestream.h"
 #include "mpi_logging.h"
+#include "outputfilestream.h"
 #include "packet.h"
 #include "random.h"
 #include "sn3d.h"
@@ -602,7 +602,7 @@ auto sample_decaytime(const int decaypathindex, const double tdecaymin, const do
 }
 
 auto write_nuclides_list() {
-  auto nuclides_file = fstream_required("nuclides.out", std::ofstream::out | std::ofstream::trunc);
+  auto nuclides_file = open_output_file("nuclides.out");
   std::println(nuclides_file, "#nucindex Z A");
   for (int nucindex = 0; nucindex < std::ssize(nuclides); nucindex++) {
     std::println(nuclides_file, "{} {} {}", nucindex, get_nuc_z(nucindex), get_nuc_a(nucindex));
