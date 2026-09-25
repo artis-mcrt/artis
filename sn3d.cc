@@ -1010,9 +1010,9 @@ auto main(int argc, char* argv[]) -> int {
   {
     // initialise the thread and rank specific output file
     // the log of rank 0 stays plain, because output_0-0.txt in the run folder links to it for tail -f
-    // cppcheck-suppress knownArgument
+    const bool compress_log = COMPRESS_OUTPUT_FILES && (globals::my_rank != 0 || get_thread_num() != 0);
     set_log_file(get_jobfolder_filepath(std::format("output_{}-{}.txt", globals::my_rank, get_thread_num())),
-                 COMPRESS_OUTPUT_FILES && (globals::my_rank != 0 || get_thread_num() != 0));
+                 compress_log);
 
 #ifdef _OPENMP
     printlnlog("OpenMP parallelisation is active with {} threads (max {})", omp_get_num_threads(), get_max_threads());
