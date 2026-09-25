@@ -185,23 +185,31 @@ preset. The setup script downloads about 15 MB of atomic data from a GitHub
 release, so this step needs the network. The script keeps the archive in
 `tests/`, and a later run of the script uses that copy.
 
-Three steps differ from a plain build and are easy to miss:
+These steps differ from a plain build and are easy to miss:
 
 - Build from the `artisoptions.h` of the run folder, not from the preset. Each
   setup script copies a preset and then changes some option values with `sedopt`.
   Remove your `artisoptions.h` before the copy, because `cp` writes through a
   symlink and replaces the content of the tracked preset.
-- Copy `input-resume.txt` to `input.txt` before the resume run. `sn3d` restores
-  an absent `input.txt` from `input-newrun.txt`, but the resume run needs the
-  restart state that the first run wrote.
-- Remove the `*.tmp` files before `exspec`, as the workflow does. `exspec`
-  writes the direction bin files into `speclc_angle_res/`, so nothing moves
-  them.
+- Remove `input.txt` before the first run, as the workflow does. `sn3d` then
+  restores it from `input-newrun.txt`. After a run, `input.txt` holds the
+  values that continue that run.
+- Copy `input-resume.txt` to `input.txt` before the resume run. That file tells
+  `sn3d` to read the restart files of the first run, and it sets a different
+  range of timesteps.
+- Remove the `*.tmp` files before `exspec`, as the workflow does.
+- Run `python3 ../../scripts/mergeangleres.py` in the run folder after
+  `exspec`. The script merges the direction bin files into
+  `light_curve_res.out`, `spec_res.out`, and `specpol_res.out`. The tests with
+  a 2D or a 3D model, e.g. `kilonova_2d`, have these files in
+  `results_md5_final.txt`.
 
 CI writes `results_md5_job0.txt` from
 `md5sum *.out job_from_ts0000/*.out speclc_angle_res/*.*` and
 `results_md5_final.txt` from the same command with the job folder of the resume
 run. The log files stay outside both sets, because their names do not match.
+CI also compares the lists of file names, so a missing or an extra output file
+is an error.
 
 CI makes the reference checksums on an arm64 runner with g++-16. Local x86-64
 builds with gcc 14 reproduced all of them for `kilonova_1d`, on two different
@@ -280,7 +288,7 @@ test (see "Input and output files").
   `// cppcheck-suppress <id>` comment. That comment works because the command
   has `--inline-suppr`.
 - The pre-commit hooks (`.pre-commit-config.yaml`, run with `prek`) apply
-  clang-format, ruff for the Python scripts in `scripts/`, about a dozen
+  clang-format, ruff for the Python scripts in `scripts/`, more than a dozen
   whitespace and file checks, and a `make OPTIMIZE=OFF` compile.
   `scripts/ruff.toml` sets the limit of 120 columns for those scripts.
   `prek run --all-files` runs all of them. CI runs the same hooks but skips
