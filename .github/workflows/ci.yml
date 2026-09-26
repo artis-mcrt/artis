@@ -240,11 +240,14 @@ jobs:
               if: always()
               working-directory: tests/${{ matrix.testname }}_testrun/
               run: |
-                  # the job0 checksum step decompressed the packet files of job0, and a plain file has priority
-                  # over the .zst file of the same name. So decompress the files of job1 before exspec.
-                  find . -name '*.out.zst' -exec zstd -d -q --rm -f {} \;
+                  # A plain file has priority over the .zst file of the same name, and the job0 checksum step
+                  # decompressed the files of job0. Remove those packet files, so that exspec reads the .zst
+                  # packet files of job1. Then decompress the files of exspec before the merge of the direction
+                  # bin files, so that the merge reads no file of job0.
+                  rm -f packets/*.out
                   ls -l packets/
                   time mpirun -np 2 --oversubscribe --mca osc ^ucx ./exspec
+                  find . -name '*.out.zst' -exec zstd -d -q --rm -f {} \;
                   python3 ../../scripts/mergeangleres.py
 
             - name: cat exspec log

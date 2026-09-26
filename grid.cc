@@ -997,12 +997,16 @@ auto read_model_columns(ModelFileReader& fmodel) -> std::tuple<std::vector<std::
 
   printlnlog("model.txt has {} line per cell format", one_line_per_cell ? "one" : "two");
 
+  std::string secondline;
+  if (!one_line_per_cell) {  // add columns from the second line
+    fmodel.getline(secondline);
+    colcount += get_token_count(secondline);
+  }
+
   // the cell reader takes the lines of the first cell again
   fmodel.lines_read_ahead.push_back(line);
-  if (!one_line_per_cell) {  // add columns from the second line
-    fmodel.getline(line);
-    colcount += get_token_count(line);
-    fmodel.lines_read_ahead.push_back(line);
+  if (!one_line_per_cell) {
+    fmodel.lines_read_ahead.push_back(secondline);
   }
 
   if (!header_specified && colcount > get_token_count(headerline)) {
