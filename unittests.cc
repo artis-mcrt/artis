@@ -1264,7 +1264,7 @@ void test_toms748_and_gauss_kronrod() {
 #ifdef USE_ZSTD
 // istream_required() opens the compressed file when the plain file is absent. The test writes the
 // file in two zstd frames, so the stream must continue over a frame boundary. The text is larger
-// than the decompression buffer, so a seek back to the header starts the decompression again.
+// than the decompression buffer.
 void test_zstd_input_stream() {
   std::println("zstd compressed input file...");
   std::string text;
@@ -1293,8 +1293,6 @@ void test_zstd_input_stream() {
   std::string line;
   check(static_cast<bool>(std::getline(infile, line)) && line == "line 0 value 0.000000e+00",
         "istream_required reads the first line of the compressed file");
-  const auto pos_line1 = infile.tellg();
-  check(static_cast<std::streamoff>(pos_line1) == std::ssize(line) + 1, "tellg gives the decompressed position");
 
   int lines_read = 1;
   std::string lastline;
@@ -1305,14 +1303,8 @@ void test_zstd_input_stream() {
   check(lines_read == 60000, "the compressed file gives every line");
   check(lastline == "line 59999 value 2.999950e+04", "the last line of the compressed file is complete");
 
-  infile.clear();
-  infile.seekg(pos_line1);
-  check(static_cast<bool>(std::getline(infile, line)) && line == "line 1 value 5.000000e-01",
-        "seekg to an earlier position starts the decompression again");
-
-  infile.clear();
-  infile.seekg(0);
-  const auto alltext = std::string(std::istreambuf_iterator<char>(infile), std::istreambuf_iterator<char>());
+  auto infile_again = istream_required(filename);
+  const auto alltext = std::string(std::istreambuf_iterator<char>(infile_again), std::istreambuf_iterator<char>());
   check(alltext == text, "the decompressed text matches the input text");
 
   check(inputfile_exists(filename), "inputfile_exists finds the compressed file");

@@ -24,7 +24,6 @@
 #include "globals.h"
 #include "grid.h"
 #include "input.h"
-#include "inputfilestream.h"
 #include "mpi_logging.h"
 #include "packet.h"
 #include "sn3d.h"
@@ -91,10 +90,7 @@ auto main(int argc, char* argv[]) -> int {
   std::vector<std::int64_t> escaped_rpkt_count(globals::nprocs_exspec);
   std::vector<std::int64_t> escaped_gamma_count(globals::nprocs_exspec);
   for (auto sn3d_rank = firstfile; sn3d_rank < firstfile + nfiles; sn3d_rank++) {
-    // sn3d writes the packet files into packets/. An older run has them in the run folder.
-    const auto packetsfilename = std::format("packets{:02d}_{:04d}.out", 0, sn3d_rank);
-    const auto packetsfilepath = std::format("packets/{}", packetsfilename);
-    packets_by_file.push_back(read_text_packets(inputfile_exists(packetsfilepath) ? packetsfilepath : packetsfilename));
+    packets_by_file.push_back(read_text_packets(std::format("packets/packets{:02d}_{:04d}.out", 0, sn3d_rank)));
     const auto& packets = packets_by_file.back();
     packet_count[sn3d_rank] = std::ssize(packets);
     escaped_rpkt_count[sn3d_rank] = std::ranges::count_if(

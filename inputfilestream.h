@@ -29,9 +29,8 @@
 #include "mpi_logging.h"
 
 #ifdef USE_ZSTD
-// A stream buffer that decompresses a zstd file while it reads. A seek to an earlier position
-// starts the decompression again from the start of the file. The readers seek back only over the
-// header lines of a file, so the repeated work is small.
+// A stream buffer that decompresses a zstd file while it reads. It supports no seek, so a reader
+// that must look ahead keeps the lines that it read, as the model reader does.
 class ZstdInputBuffer final : public std::streambuf {
  public:
   explicit ZstdInputBuffer(std::string filename_in)
@@ -57,8 +56,6 @@ class ZstdInputBuffer final : public std::streambuf {
     if (gptr() < egptr()) {
       return traits_type::to_int_type(*gptr());
     }
-
-    decompressedpos_bufstart += std::distance(eback(), egptr());
 
     ZSTD_outBuffer output{.dst = decompressedbuf.data(), .size = decompressedbuf.size(), .pos = 0};
     while (output.pos == 0) {
@@ -88,49 +85,6 @@ class ZstdInputBuffer final : public std::streambuf {
     return traits_type::to_int_type(*gptr());
   }
 
-  auto seekoff(const off_type off, const std::ios_base::seekdir dir, const std::ios_base::openmode which)
-      -> pos_type override {
-    if (dir == std::ios_base::cur) {
-      return seekpos(decompressedpos_bufstart + std::distance(eback(), gptr()) + off, which);
-    }
-    if (dir == std::ios_base::beg) {
-      return seekpos(off, which);
-    }
-    // the decompressed size is unknown, so a seek from the end is not possible
-    return {static_cast<off_type>(-1)};
-  }
-
-  auto seekpos(const pos_type pos, const std::ios_base::openmode which) -> pos_type override {
-    const off_type target = pos;
-    if ((which & std::ios_base::in) == 0 || target < 0) {
-      return {static_cast<off_type>(-1)};
-    }
-
-    if (target < decompressedpos_bufstart) {
-      // start again from the start of the file
-      ZSTD_DCtx_reset(dctx, ZSTD_reset_session_only);
-      compressedfile.clear();
-      compressedfile.seekg(0);
-      compressedinput = {};
-      decompressedpos_bufstart = 0;
-      frame_incomplete = false;
-      setg(nullptr, nullptr, nullptr);
-    }
-
-    while (true) {
-      const auto buflen = std::distance(eback(), egptr());
-      if (target <= decompressedpos_bufstart + buflen) {
-        setg(eback(), std::next(eback(), static_cast<std::ptrdiff_t>(target - decompressedpos_bufstart)), egptr());
-        return {target};
-      }
-      // use up the buffer, so that underflow() decompresses the next part
-      gbump(static_cast<int>(buflen - std::distance(eback(), gptr())));
-      if (traits_type::eq_int_type(underflow(), traits_type::eof())) {
-        return {static_cast<off_type>(-1)};
-      }
-    }
-  }
-
  private:
   std::string filename;
   std::ifstream compressedfile;
@@ -138,7 +92,6 @@ class ZstdInputBuffer final : public std::streambuf {
   std::vector<char> compressedbuf;
   std::vector<char> decompressedbuf;
   ZSTD_inBuffer compressedinput{};
-  std::streamoff decompressedpos_bufstart = 0;  // decompressed byte offset of eback()
   bool frame_incomplete = false;
 };
 #endif

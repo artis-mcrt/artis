@@ -175,18 +175,11 @@ jobs:
                   # with the markers. A checksum mismatch below still permits the marker, because
                   # the mismatch is the reason to update the stored checksums.
                   # Some tests write no speclc_angle_res files, so that glob can expand to nothing.
-                  # sn3d writes .zst files, and the reference checksums are of the plain content. The step
-                  # decompresses a copy of each file into a temporary folder and takes the checksums there.
-                  set -eo pipefail
-                  reffile=$GITHUB_WORKSPACE/tests/${{ matrix.testname }}_inputfiles/results_md5_job0.txt
+                  # sn3d writes .zst files, and the reference checksums are of the plain content.
+                  set -o pipefail
+                  find . -name '*.out.zst' -exec zstd -d -q --rm -f {} \;
+                  reffile=../${{ matrix.testname }}_inputfiles/results_md5_job0.txt
                   if [ -s "$reffile" ]; then cp "$reffile" "$RUNNER_TEMP/ref_md5_job0.txt"; fi
-                  plaindir=$RUNNER_TEMP/plain_job0
-                  rm -rf "$plaindir"
-                  find . -name '*.out.zst' -print0 | while IFS= read -r -d '' zstfile; do
-                      mkdir -p "$plaindir/$(dirname "$zstfile")"
-                      zstd -d -q "$zstfile" -o "$plaindir/${zstfile%.zst}" || exit 1
-                  done
-                  cd "$plaindir"
                   shopt -s nullglob
                   angleresfiles=(speclc_angle_res/*.*)
                   vpacketsfiles=(vpackets/*.out vspecpol/*.out vpkt_grid/*.out)
@@ -247,6 +240,9 @@ jobs:
               if: always()
               working-directory: tests/${{ matrix.testname }}_testrun/
               run: |
+                  # the job0 checksum step decompressed the packet files of job0, and a plain file has priority
+                  # over the .zst file of the same name. So decompress the files of job1 before exspec.
+                  find . -name '*.out.zst' -exec zstd -d -q --rm -f {} \;
                   ls -l packets/
                   time mpirun -np 2 --oversubscribe --mca osc ^ucx ./exspec
                   python3 ../../scripts/mergeangleres.py
@@ -266,17 +262,10 @@ jobs:
                   # with the markers. A checksum mismatch below still permits the marker, because
                   # the mismatch is the reason to update the stored checksums.
                   # Some tests write no speclc_angle_res files, so that glob can expand to nothing.
-                  # The step decompresses copies of the .zst files, as the job0 checksum step does.
-                  set -eo pipefail
-                  reffile=$GITHUB_WORKSPACE/tests/${{ matrix.testname }}_inputfiles/results_md5_final.txt
+                  set -o pipefail
+                  find . -name '*.out.zst' -exec zstd -d -q --rm -f {} \;
+                  reffile=../${{ matrix.testname }}_inputfiles/results_md5_final.txt
                   if [ -s "$reffile" ]; then cp "$reffile" "$RUNNER_TEMP/ref_md5_final.txt"; fi
-                  plaindir=$RUNNER_TEMP/plain_final
-                  rm -rf "$plaindir"
-                  find . -name '*.out.zst' -print0 | while IFS= read -r -d '' zstfile; do
-                      mkdir -p "$plaindir/$(dirname "$zstfile")"
-                      zstd -d -q "$zstfile" -o "$plaindir/${zstfile%.zst}" || exit 1
-                  done
-                  cd "$plaindir"
                   shopt -s nullglob
                   angleresfiles=(speclc_angle_res/*.*)
                   vpacketsfiles=(vpackets/*.out vspecpol/*.out vpkt_grid/*.out)
