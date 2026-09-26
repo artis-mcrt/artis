@@ -7,6 +7,10 @@ version.cc
 sn3d
 exspec
 unittests
+# duplicates of the build symlinks that a cloud sync makes
+sn3d ?
+exspec ?
+unittests ?
 tags
 browse.VC.db
 *.optrpt
