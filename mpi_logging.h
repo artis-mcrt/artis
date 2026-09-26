@@ -636,8 +636,8 @@ inline void MPI_Reduce_safe(R&& data, MPI_Op op, const int root, MPI_Comm comm) 
 }
 
 // exactly match the generated per-rank output filenames: output_<rank>-<thread>.txt and the
-// estimators/nlte/radfield/macroatom _<rank>.out files, possibly with a compression extension added by
-// the post-processing scripts (e.g. exspec-after.sh runs zstd)
+// estimators/nlte/radfield/macroatom _<rank>.out files, with or without a compression extension. sn3d
+// writes the .out files as .zst, and exspec-after.sh compresses the logs.
 [[nodiscard]] inline auto is_rank_outfile_name(std::string_view filename) -> bool {
   const auto alldigits = [](const std::string_view str) {
     return !str.empty() && std::ranges::all_of(str, [](const char c) { return c >= '0' && c <= '9'; });

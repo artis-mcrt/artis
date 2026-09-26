@@ -1,8 +1,8 @@
 // Unit tests for the numeric helpers and for some physics functions. main() lists the tests. Build and run with:
 //   make unittests && ./unittests
 // The tests only cover functions with header-visible definitions or external linkage; they use no
-// MPI communication, and a non-zero exit code means at least one check failed. The zstd test writes
-// its own input file and removes it.
+// MPI communication, and a non-zero exit code means at least one check failed. The zstd tests write
+// their own files and remove them.
 // (Compile-time checks of the constexpr helpers live in static_asserts next to their definitions.)
 
 #include <algorithm>
@@ -1312,15 +1312,15 @@ void test_zstd_input_stream() {
   check(!inputfile_exists(filename), "inputfile_exists gives false after the removal");
 }
 
-// OutputFileStream writes a zstd file with flushes between the lines, as the estimator files and the
-// logs do. The file must read back as the same text.
+// open_output_file() writes a zstd file, and each flush ends a frame, as the estimator files do. The
+// file must read back as the same text.
 void test_zstd_output_stream() {
   std::println("zstd compressed output file...");
   const std::string filename = "unittests_zstd_output.txt";
-  const auto zstfilename = filename + ".zst";
+  const auto zstfilename = output_filepath(filename);
   std::string text;
   {
-    auto outfile = OutputFileStream(std::make_unique<ZstdOutputBuffer>(zstfilename, ZSTD_LEVEL_FILE_OPEN_DURING_RUN));
+    auto outfile = open_output_file(filename, ZSTD_LEVEL_FAST);
     check(outfile.is_open(), "the compressed output file opens");
     for (int linenum = 0; linenum < 300000; linenum++) {
       const auto line =

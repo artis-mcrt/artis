@@ -287,20 +287,20 @@ jobs:
             - name: Install Open MPI and git
               run: |
                   apt-get update
-                  apt-get install -y --no-install-recommends libopenmpi-dev openmpi-bin git
+                  apt-get install -y --no-install-recommends libopenmpi-dev openmpi-bin git libzstd-dev
                   git config --global --add safe.directory /__w/artis/artis
 
             - name: Compile classic mode STDPAR=ON GPU=ON
               run: |
                   cp -v -p artisoptions_classic.h artisoptions.h
                   make clean
-                  make STDPAR=ON GPU=ON -j$(nproc) sn3d exspec
+                  make STDPAR=ON GPU=ON ZSTD=ON -j$(nproc) sn3d exspec
 
             - name: Compile nebular mode STDPAR=ON GPU=ON
               run: |
                   cp -v -p artisoptions_nltenebular.h artisoptions.h
                   make clean
-                  make STDPAR=ON GPU=ON -j$(nproc) sn3d exspec
+                  make STDPAR=ON GPU=ON ZSTD=ON -j$(nproc) sn3d exspec
 
             - name: Compile nebular mode
               run: |
@@ -341,7 +341,7 @@ jobs:
 
             - name: Install Open MPI and git
               run: |
-                  apt-get install -y --no-install-recommends openmpi-bin libopenmpi-dev git
+                  apt-get install -y --no-install-recommends openmpi-bin libopenmpi-dev git libzstd-dev
                   git config --global --add safe.directory /__w/artis/artis
 
             # nvc++ 26.5 stops with "operator= has already been declared in the current scope" in its
@@ -375,13 +375,13 @@ jobs:
               run: |
                   cp -v -p artisoptions_classic.h artisoptions.h
                   make clean
-                  make STDPAR=ON GPU=ON GPUARCH=80 -j$(nproc) sn3d exspec
+                  make STDPAR=ON GPU=ON GPUARCH=80 ZSTD=ON -j$(nproc) sn3d exspec
 
             - name: Compile nebular mode STDPAR=ON GPU=ON
               run: |
                   cp -v -p artisoptions_nltenebular.h artisoptions.h
                   make clean
-                  make STDPAR=ON GPU=ON GPUARCH=80 -j$(nproc) sn3d exspec
+                  make STDPAR=ON GPU=ON GPUARCH=80 ZSTD=ON -j$(nproc) sn3d exspec
 
             - name: Compile nebular mode STDPAR=ON
               run: |

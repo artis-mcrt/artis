@@ -1,9 +1,10 @@
 // Output file streams. A build with libzstd writes each output file zstd compressed with the extension
-// .zst, e.g. estimators_0000.out.zst, and a build without libzstd writes plain text files.
+// .zst, e.g. estimators_0000.out.zst. A build without libzstd writes plain text files.
 
 #ifndef OUTPUTFILESTREAM_H
 #define OUTPUTFILESTREAM_H
 
+#include <filesystem>
 #include <format>
 #include <fstream>
 #include <ios>
@@ -12,6 +13,7 @@
 #include <streambuf>
 #include <string>
 #include <string_view>
+#include <system_error>
 #include <utility>
 
 #ifdef USE_ZSTD
@@ -26,18 +28,19 @@
 
 #include "mpi_logging.h"
 
-// The level of a file that the program writes at once and then closes, e.g. a packet file. Level 13 is
-// the level of exspec-after.sh, and one open stream at this level needs about 50 MB of memory.
-constexpr int ZSTD_LEVEL_FILE_WRITTEN_ONCE = 13;
+// The zstd level of a file that the program writes at once and then closes, e.g. a packet file. Level 9
+// gives files that are 2 to 3 percent larger than level 13, at 6 times the speed. One open stream at
+// this level needs about 16 MB of memory.
+constexpr int ZSTD_LEVEL_DEFAULT = 9;
 
-// The level of a file that stays open over the timesteps, e.g. an estimator file. Each rank
-// keeps several of them open, and one open stream at this level needs about 4 MB of memory.
-constexpr int ZSTD_LEVEL_FILE_OPEN_DURING_RUN = 3;
+// The zstd level of a file that stays open over the timesteps, e.g. an estimator file, and of a very
+// large file, e.g. linestat.out. One open stream at this level needs about 4 MB of memory.
+constexpr int ZSTD_LEVEL_FAST = 3;
 
 #ifdef USE_ZSTD
-// A stream buffer that compresses with zstd while it writes. A flush of the stream ends a zstd block, so
-// the file on disk is readable up to the last flush, also when the program stops without an end of the
-// frame. zstd -d then reports a premature end, but gives the content.
+// A stream buffer that compresses with zstd while it writes. A flush of the stream ends a zstd frame,
+// so every reader gets the content up to the last flush, also when the program stops without a close.
+// Each frame carries a checksum of its content.
 class ZstdOutputBuffer final : public std::streambuf {
  public:
   ZstdOutputBuffer(const std::string& filename, const int compression_level)
@@ -47,6 +50,7 @@ class ZstdOutputBuffer final : public std::streambuf {
         outbuf(ZSTD_CStreamOutSize()) {
     assert_always(cctx != nullptr);
     assert_always(ZSTD_isError(ZSTD_CCtx_setParameter(cctx, ZSTD_c_compressionLevel, compression_level)) == 0U);
+    assert_always(ZSTD_isError(ZSTD_CCtx_setParameter(cctx, ZSTD_c_checksumFlag, 1)) == 0U);
     setp(inbuf.data(), std::next(inbuf.data(), static_cast<std::ptrdiff_t>(inbuf.size())));
   }
 
@@ -67,7 +71,7 @@ class ZstdOutputBuffer final : public std::streambuf {
     if (!compressedfile.is_open()) {
       return false;
     }
-    const bool write_ok = compress_pending(ZSTD_e_end);
+    const bool write_ok = end_frame();
     compressedfile.close();
     return write_ok && !compressedfile.fail();
   }
@@ -85,7 +89,7 @@ class ZstdOutputBuffer final : public std::streambuf {
   }
 
   auto sync() -> int override {
-    if (!compress_pending(ZSTD_e_flush)) {
+    if (!end_frame()) {
       return -1;
     }
     compressedfile.flush();
@@ -93,6 +97,14 @@ class ZstdOutputBuffer final : public std::streambuf {
   }
 
  private:
+  // end the current frame, if the stream got content since the last frame end
+  auto end_frame() -> bool {
+    if (!frame_open && pptr() == pbase()) {
+      return true;
+    }
+    return compress_pending(ZSTD_e_end);
+  }
+
   // compress the content of the put area and write it to the file
   auto compress_pending(const ZSTD_EndDirective mode) -> bool {
     ZSTD_inBuffer input{.src = pbase(), .size = static_cast<size_t>(std::distance(pbase(), pptr())), .pos = 0};
@@ -106,6 +118,7 @@ class ZstdOutputBuffer final : public std::streambuf {
       compressedfile.write(outbuf.data(), static_cast<std::streamsize>(output.pos));
       finished = (mode == ZSTD_e_continue) ? (input.pos == input.size) : (remaining == 0);
     }
+    frame_open = (mode != ZSTD_e_end);
     setp(inbuf.data(), std::next(inbuf.data(), static_cast<std::ptrdiff_t>(inbuf.size())));
     return !compressedfile.fail();
   }
@@ -114,6 +127,7 @@ class ZstdOutputBuffer final : public std::streambuf {
   ZSTD_CCtx* cctx;
   std::vector<char> inbuf;
   std::vector<char> outbuf;
+  bool frame_open = false;
 };
 #endif
 
@@ -133,12 +147,28 @@ class OutputFileStream : public std::ostream {
 
   OutputFileStream(const OutputFileStream&) = delete;
   auto operator=(const OutputFileStream&) -> OutputFileStream& = delete;
+  OutputFileStream(OutputFileStream&&) = delete;
 
-  // std::ostream::swap exchanges the stream state but not the buffer pointer
-  OutputFileStream(OutputFileStream&& other) noexcept : std::ostream(nullptr) { take_buffers(other); }
-
+  // std::ostream::swap exchanges the stream state but not the buffer pointer. The moved-from stream
+  // has no buffer, so it gets the bad state.
   auto operator=(OutputFileStream&& other) noexcept -> OutputFileStream& {
-    take_buffers(other);
+    if (this == &other) {
+      return *this;
+    }
+    std::ostream::swap(other);
+    filebuf = std::move(other.filebuf);
+#ifdef USE_ZSTD
+    zstdbuf = std::move(other.zstdbuf);
+    if (zstdbuf != nullptr) {
+      set_rdbuf(zstdbuf.get());
+    } else {
+      set_rdbuf(filebuf.get());
+    }
+#else
+    set_rdbuf(filebuf.get());
+#endif
+    other.set_rdbuf(nullptr);
+    other.setstate(std::ios::badbit);
     return *this;
   }
 
@@ -169,22 +199,6 @@ class OutputFileStream : public std::ostream {
   }
 
  private:
-  void take_buffers(OutputFileStream& other) {
-    std::ostream::swap(other);
-    filebuf = std::move(other.filebuf);
-#ifdef USE_ZSTD
-    zstdbuf = std::move(other.zstdbuf);
-    if (zstdbuf != nullptr) {
-      set_rdbuf(zstdbuf.get());
-    } else {
-      set_rdbuf(filebuf.get());
-    }
-#else
-    set_rdbuf(filebuf.get());
-#endif
-    other.set_rdbuf(nullptr);
-  }
-
   std::unique_ptr<std::filebuf> filebuf;
 #ifdef USE_ZSTD
   std::unique_ptr<ZstdOutputBuffer> zstdbuf;
@@ -200,6 +214,18 @@ class OutputFileStream : public std::ostream {
 #endif
 }
 
+// Remove the file of the other form, plain or compressed. A reader opens the plain name first, so a
+// stale file of an earlier build with the other form must not stay next to the new file.
+inline void remove_other_output_form(const std::string_view filename) {
+#ifdef USE_ZSTD
+  const auto otherpath = std::filesystem::path(filename);
+#else
+  const auto otherpath = std::filesystem::path(std::format("{}.zst", filename));
+#endif
+  std::error_code ec;
+  std::filesystem::remove(otherpath, ec);
+}
+
 // open an output file that stays plain in every build, e.g. input.txt, a log, or a restart file
 [[nodiscard]] inline auto open_uncompressed_output_file(const std::string_view filename) -> OutputFileStream {
   if (filename.empty()) {
@@ -208,21 +234,25 @@ class OutputFileStream : public std::ostream {
 
   auto filebuf = std::make_unique<std::filebuf>();
   if (filebuf->open(std::string(filename), std::ios::out | std::ios::trunc) == nullptr) {
-    fatal_crash("Could not open file '{}' for writing", filename);
+    fatal_crash("Could not open the output file '{}'", filename);
   }
   return OutputFileStream(std::move(filebuf));
 }
 
-// open an output file for writing. In a build with libzstd, the file gets the extension .zst and the zstd
+// Open an output file. In a build with libzstd, the file gets the extension .zst and the zstd
 // compression at the given level.
 [[nodiscard]] inline auto open_output_file(const std::string_view filename,
-                                           [[maybe_unused]] const int compression_level = ZSTD_LEVEL_FILE_WRITTEN_ONCE)
+                                           [[maybe_unused]] const int compression_level = ZSTD_LEVEL_DEFAULT)
     -> OutputFileStream {
+  if (filename.empty()) {
+    fatal_crash("Cannot open file with empty filename.");
+  }
+  remove_other_output_form(filename);
 #ifdef USE_ZSTD
   const auto zstfilename = output_filepath(filename);
   auto zstdbuf = std::make_unique<ZstdOutputBuffer>(zstfilename, compression_level);
   if (!zstdbuf->is_open()) {
-    fatal_crash("Could not open file '{}' for writing", zstfilename);
+    fatal_crash("Could not open the output file '{}'", zstfilename);
   }
   return OutputFileStream(std::move(zstdbuf));
 #else
@@ -234,7 +264,7 @@ class OutputFileStream : public std::ostream {
 // the timesteps.
 [[nodiscard]] inline auto open_rank_outfile(const std::string_view basename) -> OutputFileStream {
   return open_output_file(get_jobfolder_filepath(std::format("{}_{:04d}.out", basename, globals::my_rank)),
-                          ZSTD_LEVEL_FILE_OPEN_DURING_RUN);
+                          ZSTD_LEVEL_FAST);
 }
 
 #endif  // OUTPUTFILESTREAM_H

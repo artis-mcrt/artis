@@ -20,8 +20,6 @@
 #include <utility>
 #include <vector>
 
-#include "outputfilestream.h"
-
 #pragma clang unsafe_buffer_usage begin
 #include <mpi.h>
 
@@ -36,6 +34,7 @@
 #include "globals.h"
 #include "grid.h"
 #include "mpi_logging.h"
+#include "outputfilestream.h"
 #include "rpkt.h"
 #include "sn3d.h"
 
@@ -488,7 +487,6 @@ void write_to_file(const int nonemptymgi, const int timestep) {
       std::println(radfieldfile, "{:d} {:d} {:d} {:.5e} {:.5e} {:.3e} {:.3e} {:.3e} {:.1f} {:.5e}", timestep,
                    modelgridindex, binindex, nu_lower, nu_upper, nuJ_out, J_out, J_nu_bar, T_R, W);
     }
-    radfieldfile.flush();
 #ifdef _OPENMP
   }
 #endif
@@ -757,6 +755,8 @@ DEVICE_FUNC auto radfield(const double nu, const int nonemptymgi) -> double {
   // full spectrum fit to a single dilute blackbody
   return grid::W_allcells[nonemptymgi] * planck(nu, grid::TR_allcells[nonemptymgi]);
 }
+
+void flush_file() { radfieldfile.flush(); }
 
 // Fit the radiation field parameters of one cell to the estimators accumulated over the last timestep:
 // the full-spectrum diluted blackbody (W, T_R), and with MULTIBIN_RADFIELD_MODEL_ON a separate (W, T_R)

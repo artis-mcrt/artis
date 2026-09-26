@@ -202,12 +202,11 @@ Three steps differ from a plain build and are easy to miss:
   writes the direction bin files into `speclc_angle_res/`, so nothing moves
   them.
 
-CI builds with libzstd, so the output files are `.zst`. It writes `results_md5_job0.txt`
-with the md5 sums of the decompressed content of
-`*.out.zst job_from_ts0000/*.out.zst packets/*.out.zst vpackets/*.out.zst vspecpol/*.out.zst vpkt_grid/*.out.zst speclc_angle_res/*.zst`,
-under the plain names, and
-`results_md5_final.txt` from the same command with the job folder of the resume
-run. The log files stay outside both sets, because their names do not match.
+CI builds with libzstd, so the output files are `.zst`. The checksum steps of
+`ci.yml` pipe each output file through `zstdcat` and `md5sum` and write the
+checksum under the plain name. `results_md5_job0.txt` holds the files of the
+first job, and `results_md5_final.txt` the files of the resume run and of
+`exspec`. The log files stay outside both sets, because their names do not match.
 
 CI makes the reference checksums on an arm64 runner with g++-16. Local x86-64
 builds with gcc 14 reproduced all of them for `kilonova_1d`, on two different
@@ -481,12 +480,17 @@ The code must compile with nvc++ and with hipcc, also with `STDPAR=ON GPU=ON`.
   the `.zst` file.
 - Open an output file with `open_output_file()` from `outputfilestream.h`.
   In a build with libzstd, it writes the file zstd compressed under the name
-  with `.zst`. `output_filepath()` gives that name, e.g. for a
-  rename. A file that stays open over the timesteps gets the lower zstd level,
-  see `open_rank_outfile()`. `open_uncompressed_output_file()` is for the
-  files that must stay plain: `input.txt`, `artis.pid`, `syn_dir.txt`, and the
-  restart files. The logs stay plain too. `fopen_required()` remains for the
-  binary restart files and for `vpkt.txt`.
+  with `.zst`, and it removes a stale file of the other form. `output_filepath()`
+  gives that name, e.g. for a rename. A file that stays open over the
+  timesteps gets the level `ZSTD_LEVEL_FAST`, see `open_rank_outfile()`.
+  `open_uncompressed_output_file()` is for the files that stay plain in every
+  build:
+  - `input.txt`;
+  - `artis.pid`;
+  - `syn_dir.txt`;
+  - the logs;
+  - the restart files.
+  `fopen_required()` remains for the binary restart files and for `vpkt.txt`.
 - `sn3d` writes the final packet files into `packets/` and the virtual packet
   files into `vpackets/`, `vspecpol/`, and `vpkt_grid/`. `exspec` reads the
   packet files there.

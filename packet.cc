@@ -279,6 +279,8 @@ void write_text_packets(const std::string& filename, const std::span<const Packe
     std::print(packets_file, " {:g} {} {}", pkt.trueem_time, pkt.pellet_nucindex, pkt.pellet_decaytype);
     std::println(packets_file, "");
   }
+  packets_file.close();
+  assert_always(!packets_file.fail());  // e.g. a full disk
 }
 
 void read_temp_packetsfile(const int timestep, std::vector<Packet>& packets) {

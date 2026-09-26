@@ -1969,9 +1969,9 @@ void nltepop_write_to_file(const int nonemptymgi, const int timestep) {
       }
     }
   }
-
-  nlte_file.flush();
 }
+
+void nltepop_flush_file() { nlte_file.flush(); }
 
 // Scale the level populations of every ion of the element, so that each ion of ion_factors takes its
 // factor and the element keeps its abundance population. Each ion keeps its internal level

@@ -29,8 +29,6 @@
 #include <utility>
 #include <vector>
 
-#include "outputfilestream.h"
-
 #pragma clang unsafe_buffer_usage begin
 #include <mpi.h>
 #pragma clang unsafe_buffer_usage end
@@ -43,6 +41,7 @@
 #include "inputfilestream.h"
 #include "kpkt.h"
 #include "mpi_logging.h"
+#include "outputfilestream.h"
 #include "packet.h"
 #include "random.h"
 #include "ratecoeff.h"

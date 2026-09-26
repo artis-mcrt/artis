@@ -30,7 +30,6 @@
 #include <system_error>
 #include <utility>
 
-#include "outputfilestream.h"
 #ifdef STDPAR_ON
 #include <ranges>
 #endif
@@ -54,6 +53,7 @@
 #include "mpi_logging.h"
 #include "nltepop.h"
 #include "nonthermal.h"
+#include "outputfilestream.h"
 #include "packet.h"
 #include "radfield.h"
 #include "ratecoeff.h"
@@ -188,7 +188,7 @@ void initialise_linestat_file() {
     return;
   }
 
-  auto linestat_file = open_output_file("linestat.out");
+  auto linestat_file = open_output_file("linestat.out", ZSTD_LEVEL_FAST);
 
   // with tens of millions of lines, per-value std::print calls to the stream are slow (each one re-checks whether
   // the stream is a terminal), so format into a buffer and write it out in large chunks
@@ -409,6 +409,7 @@ void write_deposition_file() {
     std::error_code ec;
     const auto tmppath = output_filepath("deposition.out.tmp");
     const auto finalpath = output_filepath("deposition.out");
+    remove_other_output_form("deposition.out");
     std::filesystem::rename(tmppath, finalpath, ec);
     if (ec) {
       fatal_crash("The rename of {} to {} failed: {}", tmppath, finalpath, ec.message());
@@ -901,15 +902,14 @@ void setup_jobfolder() {
     if (ec) {
       fatal_crash("could not create the job folder '{}': {}", globals::jobfolder, ec.message());
     }
-    // the final packet files of each job go into packets/, and the virtual packet contributions into vpackets/
-    std::filesystem::create_directories("packets", ec);
-    if (ec) {
-      fatal_crash("could not create the packets folder: {}", ec.message());
-    }
-    if constexpr (VPKT_ON && VPKT_WRITE_CONTRIBS) {
-      std::filesystem::create_directories("vpackets", ec);
+    // the final packet files of each job go into these folders
+    for (const auto* const foldername : {"packets", "vpackets", "vspecpol", "vpkt_grid"}) {
+      if (!VPKT_ON && std::string_view(foldername) != "packets") {
+        continue;
+      }
+      std::filesystem::create_directories(foldername, ec);
       if (ec) {
-        fatal_crash("could not create the vpackets folder: {}", ec.message());
+        fatal_crash("could not create the folder '{}': {}", foldername, ec.message());
       }
     }
 

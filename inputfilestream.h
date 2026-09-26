@@ -1,5 +1,5 @@
-// Input file streams that read a plain text file or, when libzstd is linked, a zstd compressed
-// file with the same name and the extension .zst, e.g. model.txt.zst
+// Input file streams. They read a plain text file or, in a build with libzstd, a zstd compressed file
+// with the same name and the extension .zst, e.g. model.txt.zst
 
 #ifndef INPUTFILESTREAM_H
 #define INPUTFILESTREAM_H
@@ -33,9 +33,9 @@
 // that must look ahead keeps the lines that it read, as the model reader does.
 class ZstdInputBuffer final : public std::streambuf {
  public:
-  explicit ZstdInputBuffer(std::string filename_in)
+  ZstdInputBuffer(std::string filename_in, std::ifstream compressedfile_in)
       : filename(std::move(filename_in)),
-        compressedfile(filename, std::ios::in | std::ios::binary),
+        compressedfile(std::move(compressedfile_in)),
         dctx(ZSTD_createDCtx()),
         compressedbuf(ZSTD_DStreamInSize()),
         decompressedbuf(ZSTD_DStreamOutSize()) {
@@ -48,8 +48,6 @@ class ZstdInputBuffer final : public std::streambuf {
   auto operator=(ZstdInputBuffer&&) -> ZstdInputBuffer& = delete;
 
   ~ZstdInputBuffer() override { ZSTD_freeDCtx(dctx); }
-
-  [[nodiscard]] auto is_open() const -> bool { return compressedfile.is_open(); }
 
  protected:
   auto underflow() -> int_type override {
@@ -64,7 +62,7 @@ class ZstdInputBuffer final : public std::streambuf {
         const auto bytesread = compressedfile.gcount();
         if (bytesread <= 0) {
           if (frame_incomplete) {
-            fatal_crash("{} ends inside a zstd frame. The file is truncated.", filename);
+            fatal_crash("{} ends inside a zstd frame, so the file is not complete.", filename);
           }
           setg(nullptr, nullptr, nullptr);
           return traits_type::eof();
@@ -74,7 +72,10 @@ class ZstdInputBuffer final : public std::streambuf {
 
       const size_t decompress_result = ZSTD_decompressStream(dctx, &output, &compressedinput);
       if (ZSTD_isError(decompress_result) != 0U) {
-        fatal_crash("{}: zstd cannot decompress the file: {}", filename, ZSTD_getErrorName(decompress_result));
+        fatal_crash(
+            "{}: zstd cannot decompress the file: {}. The decoder accepts a window of 128 MB at most, so compress "
+            "the file without --long.",
+            filename, ZSTD_getErrorName(decompress_result));
       }
       // a result of zero means that a frame ended. The next call starts the next frame, if there is one.
       frame_incomplete = (decompress_result != 0);
@@ -105,21 +106,8 @@ class InputFileStream : public std::istream {
 
   InputFileStream(const InputFileStream&) = delete;
   auto operator=(const InputFileStream&) -> InputFileStream& = delete;
-
-  // std::istream::swap exchanges the stream state but not the buffer pointer
-  InputFileStream(InputFileStream&& other) noexcept : std::istream(nullptr), buffer(std::move(other.buffer)) {
-    std::istream::swap(other);
-    set_rdbuf(buffer.get());
-    other.set_rdbuf(nullptr);
-  }
-
-  auto operator=(InputFileStream&& other) noexcept -> InputFileStream& {
-    std::istream::swap(other);
-    buffer = std::move(other.buffer);
-    set_rdbuf(buffer.get());
-    other.set_rdbuf(nullptr);
-    return *this;
-  }
+  InputFileStream(InputFileStream&&) = delete;
+  auto operator=(InputFileStream&&) -> InputFileStream& = delete;
 
   ~InputFileStream() override = default;
 
@@ -127,8 +115,8 @@ class InputFileStream : public std::istream {
   std::unique_ptr<std::streambuf> buffer;
 };
 
-// Open an input file for reading. The search covers the folders of datafolders in order. In each
-// folder, the plain name comes before the compressed name, e.g. model.txt before model.txt.zst.
+// Open an input file. The search covers the folders of datafolders in order. In each folder, the
+// plain name comes before the compressed name, e.g. model.txt before model.txt.zst.
 [[nodiscard]] inline auto istream_required(const std::string_view filename) -> InputFileStream {
   if (filename.empty()) {
     fatal_crash("Cannot open file with empty filename.");
@@ -143,9 +131,9 @@ class InputFileStream : public std::istream {
 
     const auto zstfilename = std::format("{}.zst", datafolderfilename);
 #ifdef USE_ZSTD
-    auto zstdbuf = std::make_unique<ZstdInputBuffer>(zstfilename);
-    if (zstdbuf->is_open()) {
-      return InputFileStream(std::move(zstdbuf));
+    auto compressedfile = std::ifstream(zstfilename, std::ios::in | std::ios::binary);
+    if (compressedfile.is_open()) {
+      return InputFileStream(std::make_unique<ZstdInputBuffer>(zstfilename, std::move(compressedfile)));
     }
 #else
     if (std::filesystem::exists(zstfilename)) {

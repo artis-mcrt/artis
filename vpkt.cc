@@ -993,7 +993,7 @@ void write_timestep(const int nts, const bool is_final) {
 
     printlnlog("Copying {} to {}", filename_source, filename_dest);
     if (is_final) {
-      // the final file is compressed in a build with libzstd, so copy the content through the streams
+      // copy the content through the streams, because a build with libzstd compresses the final file
       const auto contribs_in = istream_required(filename_source);
       auto contribs_out = open_output_file(filename_dest);
       contribs_out << contribs_in.rdbuf();
@@ -1015,20 +1015,6 @@ void init(const int nts, const bool continued_from_saved) {
   if constexpr (!VPKT_ON) {
     return;
   }
-
-  // the final files of each job go into vspecpol/ and vpkt_grid/
-  if (globals::my_rank == 0) {
-    std::error_code ec;
-    std::filesystem::create_directories("vspecpol", ec);
-    if (!ec && vgrid_on) {
-      std::filesystem::create_directories("vpkt_grid", ec);
-    }
-    if (ec) {
-      fatal_crash("could not create the vspecpol or the vpkt_grid folder: {}", ec.message());
-    }
-  }
-  // the folders must exist before any rank writes a final file
-  MPI_Barrier_allranks();
 
   init_vspecpol();
   if (vgrid_on) {

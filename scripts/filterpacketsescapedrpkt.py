@@ -44,10 +44,7 @@ def get_column_indices(firstline: str) -> tuple[int, int]:
 def find_packets_files(paths: list[Path]) -> list[Path]:
     """Find the packets files under each of the paths, most recent last."""
     found = {
-        file: None
-        for path in paths
-        for file in path.glob(GLOB_PATTERN)
-        if "parquet" not in file.name and ".tmp" not in file.name
+        file: None for path in paths for file in path.glob(GLOB_PATTERN) if file.name.endswith((".out", ".out.zst"))
     }
     return sorted(found, key=lambda p: p.stat().st_mtime)
 

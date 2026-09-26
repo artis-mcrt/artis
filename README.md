@@ -122,7 +122,7 @@ Each job writes the following into its job folder, e.g. `job_from_ts0000`:
 - estimators_nnnn.out: the plasma conditions of each cell (temperatures, ionisation, heating and cooling rates) at each timestep.
 
 A run writes the following into the simulation folder:
-- packets00_nnnn.out: the Monte Carlo packets from each rank, which exspec can turn into spectra and light curves again.
+- packets/packets00_nnnn.out: the Monte Carlo packets from each rank, which exspec can turn into spectra and light curves again.
 - light_curve.out, spec.out, and the other spectrum files that [Post-processing with exspec](#post-processing-with-exspec) lists: sn3d writes the light curves and spectra at each timestep, and the emission, absorption, and direction-resolved files at the last requested timestep.
 - deposition.out: the radioactive energy deposition rate as a function of time.
 - gridsave_ts*.tmp and packets_*_ts*.tmp: restart files that allow a later job to continue from the end of a timestep.
@@ -172,9 +172,9 @@ source ./setup_kilonova_1d.sh   # creates tests/kilonova_1d_testrun/
 ## Input files
 These files go in the simulation folder, which should always contain the ARTIS source folder (or a symlink to it) named artis. The physics data bundled with the code (nuclear decay data, gamma-ray spectra, and the collisional ionisation and binding energy tables) is then found automatically in artis/data and does not need to be copied.
 
-A build with libzstd (see "Make options") also reads a zstd compressed text input file, e.g. model.txt.zst, transitiondata.txt.zst, or packets00_0000.out.zst for exspec. The plain file has priority when both exist. The exceptions are input.txt, which sn3d writes again at the start of a new simulation, and the restart files.
+A build with libzstd (see "Make options") also reads a text input file in zstd compressed form, e.g. model.txt.zst, transitiondata.txt.zst, or packets/packets00_0000.out.zst for exspec. The plain file has priority when both exist.
 
-sn3d writes the final packet files of a job into the folder packets/, and the virtual packet files into vpackets/, vspecpol/, and vpkt_grid/. exspec reads the packet files there. A build with libzstd writes each .out file zstd compressed, e.g. packets/packets00_0000.out.zst and spec.out.zst, so that no separate compression step is necessary. The logs, input.txt, and the restart files stay plain. A file that the program writes at once gets zstd level 13, and a file that stays open over the timesteps, e.g. an estimator file, gets level 3 to keep the memory of the stream small. artistools reads both forms.
+sn3d writes the final packet files of a job into the folder packets/, and the virtual packet files into vpackets/, vspecpol/, and vpkt_grid/. exspec reads the packet files there. A build with libzstd writes each .out file zstd compressed, e.g. packets/packets00_0000.out.zst and spec.out.zst, so that no separate compression step is necessary. The logs, input.txt, and the restart files stay plain. A file that the program writes at once gets zstd level 9. A file that stays open over the timesteps, e.g. an estimator file, gets level 3, which keeps the memory of the stream small. artistools reads both forms.
 
 ### input.txt
 Run-time configuration with:

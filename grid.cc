@@ -32,8 +32,6 @@
 #include <utility>
 #include <vector>
 
-#include "outputfilestream.h"
-
 #pragma clang unsafe_buffer_usage begin
 #include <mpi.h>
 #pragma clang unsafe_buffer_usage end
@@ -49,6 +47,7 @@
 #include "mpi_logging.h"
 #include "nltepop.h"
 #include "nonthermal.h"
+#include "outputfilestream.h"
 #include "radfield.h"
 #include "random.h"
 #include "rpkt.h"

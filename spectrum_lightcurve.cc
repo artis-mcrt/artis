@@ -25,8 +25,6 @@
 #include <utility>
 #include <vector>
 
-#include "outputfilestream.h"
-
 #pragma clang unsafe_buffer_usage begin
 #include <mpi.h>
 #pragma clang unsafe_buffer_usage end
@@ -37,6 +35,7 @@
 #include "globals.h"
 #include "grid.h"
 #include "mpi_logging.h"
+#include "outputfilestream.h"
 #include "packet.h"
 #include "sn3d.h"
 #include "vectors.h"
