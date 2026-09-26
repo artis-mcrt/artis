@@ -202,7 +202,7 @@ Three steps differ from a plain build and are easy to miss:
   writes the direction bin files into `speclc_angle_res/`, so nothing moves
   them.
 
-CI runs the tests with `COMPRESS_OUTPUT_FILES`. It writes `results_md5_job0.txt`
+CI builds with libzstd, so the output files are `.zst`. It writes `results_md5_job0.txt`
 with the md5 sums of the decompressed content of
 `*.out.zst job_from_ts0000/*.out.zst packets/*.out.zst vpackets/*.out.zst vspecpol/*.out.zst vpkt_grid/*.out.zst speclc_angle_res/*.zst`,
 under the plain names, and
@@ -480,8 +480,8 @@ The code must compile with nvc++ and with hipcc, also with `STDPAR=ON GPU=ON`.
   Test for an optional input file with `inputfile_exists()`, which also finds
   the `.zst` file.
 - Open an output file with `open_output_file()` from `outputfilestream.h`.
-  With the option `COMPRESS_OUTPUT_FILES`, it writes the file zstd compressed
-  under the name with `.zst`. `output_filepath()` gives that name, e.g. for a
+  In a build with libzstd, it writes the file zstd compressed under the name
+  with `.zst`. `output_filepath()` gives that name, e.g. for a
   rename. A file that stays open over the timesteps gets the lower zstd level,
   see `open_rank_outfile()`. `open_uncompressed_output_file()` is for the
   files that must stay plain: `input.txt`, `artis.pid`, `syn_dir.txt`, and the

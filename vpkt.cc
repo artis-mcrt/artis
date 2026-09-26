@@ -993,7 +993,7 @@ void write_timestep(const int nts, const bool is_final) {
 
     printlnlog("Copying {} to {}", filename_source, filename_dest);
     if (is_final) {
-      // the final file follows COMPRESS_OUTPUT_FILES, so copy the content through the streams
+      // the final file is compressed in a build with libzstd, so copy the content through the streams
       const auto contribs_in = istream_required(filename_source);
       auto contribs_out = open_output_file(filename_dest);
       contribs_out << contribs_in.rdbuf();

@@ -121,7 +121,7 @@ jobs:
               run: |
                   source ./setup_${{ matrix.testname }}.sh
 
-            - name: Compress the input files and select the compressed output files
+            - name: Compress the input files
               working-directory: tests/${{ matrix.testname }}_testrun/
               run: |
                   # sn3d and exspec read the compressed files directly. Each rank reads the files
@@ -129,11 +129,6 @@ jobs:
                   for inputfile in model.txt abundances.txt adata.txt transitiondata.txt phixsdata_v2.txt; do
                       if [ -f "$inputfile" ]; then zstd -q --rm -T0 "$inputfile"; fi
                   done
-                  # sn3d and exspec write .zst output files. The checksum steps decompress copies of them.
-                  # The OpenMP and the STDPAR jobs keep the plain output files.
-                  source ../setupfuncs.sh
-                  sedopt 'constexpr bool COMPRESS_OUTPUT_FILES.*' 'constexpr bool COMPRESS_OUTPUT_FILES = true;'
-                  rm -f artisoptions.h.bak
                   ls -l
 
             - name: cat artisoptions.h

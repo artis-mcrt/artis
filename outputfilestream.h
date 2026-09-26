@@ -1,5 +1,5 @@
-// Output file streams that write a plain text file or, with COMPRESS_OUTPUT_FILES, a zstd compressed
-// file with the extension .zst, e.g. estimators_0000.out.zst
+// Output file streams. A build with libzstd writes each output file zstd compressed with the extension
+// .zst, e.g. estimators_0000.out.zst, and a build without libzstd writes plain text files.
 
 #ifndef OUTPUTFILESTREAM_H
 #define OUTPUTFILESTREAM_H
@@ -24,12 +24,7 @@
 #pragma clang unsafe_buffer_usage end
 #endif
 
-#include "artisoptions.h"
 #include "mpi_logging.h"
-
-#ifndef USE_ZSTD
-static_assert(!COMPRESS_OUTPUT_FILES, "COMPRESS_OUTPUT_FILES needs a build with libzstd. See the Makefile.");
-#endif
 
 // The level of a file that the program writes at once and then closes, e.g. a packet file. Level 13 is
 // the level of exspec-after.sh, and one open stream at this level needs about 50 MB of memory.
@@ -196,12 +191,16 @@ class OutputFileStream : public std::ostream {
 #endif
 };
 
-// the path of an output file: the given name, or the name with .zst when COMPRESS_OUTPUT_FILES is set
+// the path of an output file: the name with .zst in a build with libzstd, else the given name
 [[nodiscard]] inline auto output_filepath(const std::string_view filename) -> std::string {
-  return COMPRESS_OUTPUT_FILES ? std::format("{}.zst", filename) : std::string(filename);
+#ifdef USE_ZSTD
+  return std::format("{}.zst", filename);
+#else
+  return std::string(filename);
+#endif
 }
 
-// open an output file that COMPRESS_OUTPUT_FILES does not apply to, e.g. input.txt or a restart file
+// open an output file that stays plain in every build, e.g. input.txt, a log, or a restart file
 [[nodiscard]] inline auto open_uncompressed_output_file(const std::string_view filename) -> OutputFileStream {
   if (filename.empty()) {
     fatal_crash("Cannot open file with empty filename.");
@@ -214,22 +213,21 @@ class OutputFileStream : public std::ostream {
   return OutputFileStream(std::move(filebuf));
 }
 
-// open an output file for writing. With COMPRESS_OUTPUT_FILES, the file gets the extension .zst and the
-// zstd compression at the given level.
+// open an output file for writing. In a build with libzstd, the file gets the extension .zst and the zstd
+// compression at the given level.
 [[nodiscard]] inline auto open_output_file(const std::string_view filename,
                                            [[maybe_unused]] const int compression_level = ZSTD_LEVEL_FILE_WRITTEN_ONCE)
     -> OutputFileStream {
 #ifdef USE_ZSTD
-  if constexpr (COMPRESS_OUTPUT_FILES) {
-    const auto zstfilename = output_filepath(filename);
-    auto zstdbuf = std::make_unique<ZstdOutputBuffer>(zstfilename, compression_level);
-    if (!zstdbuf->is_open()) {
-      fatal_crash("Could not open file '{}' for writing", zstfilename);
-    }
-    return OutputFileStream(std::move(zstdbuf));
+  const auto zstfilename = output_filepath(filename);
+  auto zstdbuf = std::make_unique<ZstdOutputBuffer>(zstfilename, compression_level);
+  if (!zstdbuf->is_open()) {
+    fatal_crash("Could not open file '{}' for writing", zstfilename);
   }
-#endif
+  return OutputFileStream(std::move(zstdbuf));
+#else
   return open_uncompressed_output_file(filename);
+#endif
 }
 
 // open a per-rank output file such as estimators_0000.out in the job folder. The file stays open over

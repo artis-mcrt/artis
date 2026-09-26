@@ -296,12 +296,6 @@ constexpr bool USE_CALCULATED_MEANATOMICWEIGHT;
 // Keep the escaped gamma-ray packets in the packet files, and write gamma_light_curve.out and gamma_spec.out.
 constexpr bool KEEP_ESCAPED_GAMMAS;
 
-// Write each output file zstd compressed, with the extension .zst, e.g. estimators_0000.out.zst. The build needs
-// libzstd (see the Makefile). The logs, input.txt, artis.pid, syn_dir.txt, and the restart files stay plain.
-// A file that the program writes at once, e.g. a packet file, gets zstd level 13. A file that stays open over
-// the timesteps, e.g. an estimator file, gets level 3 to keep the memory of the stream small.
-constexpr bool COMPRESS_OUTPUT_FILES;
-
 // The thermalisation of the non-thermal particles (positrons, electrons, and alpha particles):
 // - INSTANTFULLDEPOSITION deposits the particle energy at once;
 // - TIMEDEPENDENT transports the particles with the Monte Carlo method;
