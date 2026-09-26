@@ -75,7 +75,8 @@ class ZstdOutputBuffer final : public std::streambuf {
     if (!compressedfile.is_open()) {
       return false;
     }
-    const bool write_ok = end_frame();
+    // a file with no content gets one empty frame, so that every reader accepts it
+    const bool write_ok = end_frame(!wrote_frame);
     compressedfile.close();
     return write_ok && !compressedfile.fail();
   }
@@ -93,7 +94,7 @@ class ZstdOutputBuffer final : public std::streambuf {
   }
 
   auto sync() -> int override {
-    if (!end_frame()) {
+    if (!end_frame(false)) {
       return -1;
     }
     compressedfile.flush();
@@ -101,9 +102,10 @@ class ZstdOutputBuffer final : public std::streambuf {
   }
 
  private:
-  // end the current frame, if the stream got content since the last frame end
-  auto end_frame() -> bool {
-    if (!frame_open && pptr() == pbase()) {
+  // end the current frame, if the stream got content since the last frame end or if the caller asks
+  // for an empty frame
+  auto end_frame(const bool also_when_empty) -> bool {
+    if (!also_when_empty && !frame_open && pptr() == pbase()) {
       return true;
     }
     return compress_pending(ZSTD_e_end);
@@ -123,6 +125,7 @@ class ZstdOutputBuffer final : public std::streambuf {
       finished = (mode == ZSTD_e_continue) ? (input.pos == input.size) : (remaining == 0);
     }
     frame_open = (mode != ZSTD_e_end);
+    wrote_frame = wrote_frame || (mode == ZSTD_e_end);
     setp(inbuf.data(), std::next(inbuf.data(), static_cast<std::ptrdiff_t>(inbuf.size())));
     return !compressedfile.fail();
   }
@@ -132,6 +135,7 @@ class ZstdOutputBuffer final : public std::streambuf {
   std::vector<char> inbuf;
   std::vector<char> outbuf;
   bool frame_open = false;
+  bool wrote_frame = false;
 };
 #endif
 
