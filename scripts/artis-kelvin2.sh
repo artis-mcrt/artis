@@ -19,8 +19,6 @@ cd "${SLURM_SUBMIT_DIR:?}" || exit 1
 
 echo "CPU type: $(c++ -march=native -Q --help=target | grep -- '-march=  ' | cut -f3)"
 
-# decompress any zipped input files
-source ./artis/scripts/exspec-before.sh
 
 hoursleft=$(python3 ./artis/scripts/slurmjobhoursleft.py ${SLURM_JOB_ID})
 source ./artis/scripts/corehours-before.sh
@@ -43,7 +41,7 @@ then
     # sbatch $SLURM_JOB_NAME
 else
     # post-processing can remove restart files, so only queue it when no continuation job was submitted
-    if [ -f packets00_0000.out ]; then
+    if ls packets/packets00_0000.out* > /dev/null 2>&1; then
         sbatch ./artis/scripts/exspec-zip-kelvin2.sh
     fi
 fi

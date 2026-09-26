@@ -11,7 +11,6 @@
 #include <cstdio>
 #include <cstdlib>
 #include <format>
-#include <iostream>
 #include <print>
 #include <ranges>
 #include <span>
@@ -27,7 +26,9 @@
 #include "globals.h"
 #include "grid.h"
 #include "input.h"
+#include "inputfilestream.h"
 #include "mpi_logging.h"
+#include "outputfilestream.h"
 #include "random.h"
 #include "sn3d.h"
 #include "vectors.h"
@@ -160,7 +161,7 @@ void packet_init(std::span<Packet> packets) {
 // read packets*.out text format file
 auto read_text_packets(const std::string& filename) -> std::vector<Packet> {
   printlnlog("Reading {}", filename);
-  auto packets_file = fstream_required(filename, std::ios::in);
+  auto packets_file = istream_required(filename);
 
   std::string line;
   std::vector<Packet> packets;
@@ -254,7 +255,7 @@ auto read_text_packets(const std::string& filename) -> std::vector<Packet> {
 // Write all packets to a packets*.out text file (columns matching get_packets_text_header), skipping escaped
 // gamma packets when KEEP_ESCAPED_GAMMAS is false.
 void write_text_packets(const std::string& filename, const std::span<const Packet> packets) {
-  auto packets_file = fstream_required(filename, std::ios::out | std::ios::trunc);
+  auto packets_file = open_output_file(filename);
   std::println(packets_file, "{}", get_packets_text_header());
 
   for (const auto& pkt : packets) {
@@ -278,6 +279,8 @@ void write_text_packets(const std::string& filename, const std::span<const Packe
     std::print(packets_file, " {:g} {} {}", pkt.trueem_time, pkt.pellet_nucindex, pkt.pellet_decaytype);
     std::println(packets_file, "");
   }
+  packets_file.close();
+  assert_always(!packets_file.fail());  // e.g. a full disk
 }
 
 void read_temp_packetsfile(const int timestep, std::vector<Packet>& packets) {

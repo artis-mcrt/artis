@@ -90,7 +90,7 @@ auto main(int argc, char* argv[]) -> int {
   std::vector<std::int64_t> escaped_rpkt_count(globals::nprocs_exspec);
   std::vector<std::int64_t> escaped_gamma_count(globals::nprocs_exspec);
   for (auto sn3d_rank = firstfile; sn3d_rank < firstfile + nfiles; sn3d_rank++) {
-    packets_by_file.push_back(read_text_packets(std::format("packets{:02d}_{:04d}.out", 0, sn3d_rank)));
+    packets_by_file.push_back(read_text_packets(std::format("packets/packets{:02d}_{:04d}.out", 0, sn3d_rank)));
     const auto& packets = packets_by_file.back();
     packet_count[sn3d_rank] = std::ssize(packets);
     escaped_rpkt_count[sn3d_rank] = std::ranges::count_if(

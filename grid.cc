@@ -16,9 +16,8 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <filesystem>
+#include <deque>
 #include <format>
-#include <fstream>
 #include <iostream>
 #include <limits>
 #include <numbers>
@@ -43,10 +42,12 @@
 #include "decay.h"
 #include "globals.h"
 #include "input.h"
+#include "inputfilestream.h"
 #include "kpkt.h"
 #include "mpi_logging.h"
 #include "nltepop.h"
 #include "nonthermal.h"
+#include "outputfilestream.h"
 #include "radfield.h"
 #include "random.h"
 #include "rpkt.h"
@@ -166,7 +167,7 @@ void set_initelectronfrac(const int modelgridindex, const float electronfrac) {
 }
 
 void read_possible_yefile() {
-  if (!std::filesystem::exists("Ye.txt")) {
+  if (!inputfile_exists("Ye.txt")) {
     printlnlog("Ye.txt is not present, so the model keeps the electron fractions of model.txt");
     return;
   }
@@ -174,9 +175,9 @@ void read_possible_yefile() {
   // the electron fractions are written to node-shared memory, so only the node leaders read the file
   // (synchronised by the barrier below)
   if (globals::rank_in_node == 0) {
-    const auto filein = fopen_required_uniqueptr("Ye.txt", "r");
+    auto filein = istream_required("Ye.txt");
     int nlines_in = 0;
-    assert_always(fscanf(filein.get(), "%d", &nlines_in) == 1);
+    assert_always(static_cast<bool>(filein >> nlines_in));
 
     const int last_input_cellid = get_npts_model() - 1 + first_input_cellid;
     int cells_set = 0;
@@ -185,7 +186,7 @@ void read_possible_yefile() {
     for (int n = 0; n < nlines_in; n++) {
       int cellnumberin = -1;
       float initelecfrac = 0.;
-      assert_always(fscanf(filein.get(), "%d %g", &cellnumberin, &initelecfrac) == 2);
+      assert_always(static_cast<bool>(filein >> cellnumberin >> initelecfrac));
       // Ye.txt uses the same cell ids as model.txt. read_ejecta_model() detects the id of the first
       // cell (0 or 1) and stores it in first_input_cellid before this function runs.
       const int mgi = cellnumberin - first_input_cellid;
@@ -739,7 +740,7 @@ void read_elem_abundances() {
   // the mass fraction arrays are in node-shared memory, so only the node leader of each node parses the file and
   // writes the values (synchronised by the barrier below). The other ranks would just discard everything they read
   if (globals::rank_in_node == 0) {
-    auto abundance_file = fstream_required("abundances.txt", std::ios::in);
+    auto abundance_file = istream_required("abundances.txt");
     std::string line;
 
     // Every log line gets a timestamp and a flush, so a large 3D model must not warn per cell.
@@ -901,12 +902,28 @@ auto get_token_count(std::string const& line) -> int {
   return abundcolcount;
 }
 
-void read_model_radioabundances(std::istream& fmodel, std::string_view& remainder, const int mgi, const bool keepcell,
-                                const std::vector<std::string>& colnames, const std::vector<int>& nucindexlist,
-                                const bool one_line_per_cell) {
+// The header probes of model.txt read ahead into the data lines. The cell reader takes those lines
+// first, so no reader seeks in the file, which a compressed file does not support.
+struct ModelFileReader {
+  InputFileStream file;
+  std::deque<std::string> lines_read_ahead;
+
+  auto getline(std::string& line) -> bool {
+    if (!lines_read_ahead.empty()) {
+      line = std::move(lines_read_ahead.front());
+      lines_read_ahead.pop_front();
+      return true;
+    }
+    return static_cast<bool>(std::getline(file, line));
+  }
+};
+
+void read_model_radioabundances(ModelFileReader& fmodel, std::string_view& remainder, const int mgi,
+                                const bool keepcell, const std::vector<std::string>& colnames,
+                                const std::vector<int>& nucindexlist, const bool one_line_per_cell) {
   if (!one_line_per_cell) {
     static std::string line;
-    assert_always(std::getline(fmodel, line));
+    assert_always(fmodel.getline(line));
     remainder = std::string_view{line};
   }
 
@@ -941,15 +958,13 @@ void read_model_radioabundances(std::istream& fmodel, std::string_view& remainde
   assert_always(!parse_next_token(remainder, valuein));  // should be no tokens left!
 }
 
-auto read_model_columns(std::istream& fmodel) -> std::tuple<std::vector<std::string>, std::vector<int>, bool> {
-  auto pos_data_start = fmodel.tellg();  // get position in case we need to undo getline
-
+auto read_model_columns(ModelFileReader& fmodel) -> std::tuple<std::vector<std::string>, std::vector<int>, bool> {
   std::vector<int> zlist;
   std::vector<int> alist;
   std::vector<std::string> colnames;
 
   std::string line;
-  std::getline(fmodel, line);
+  fmodel.getline(line);
 
   std::string headerline;
 
@@ -958,8 +973,7 @@ auto read_model_columns(std::istream& fmodel) -> std::tuple<std::vector<std::str
   if (header_specified) {
     // line is the header
     headerline = line;
-    pos_data_start = fmodel.tellg();
-    std::getline(fmodel, line);
+    fmodel.getline(line);
   } else {
     // line is not a comment, so it must be the first line of data
     // add a default header for unlabelled columns
@@ -982,9 +996,16 @@ auto read_model_columns(std::istream& fmodel) -> std::tuple<std::vector<std::str
 
   printlnlog("model.txt has {} line per cell format", one_line_per_cell ? "one" : "two");
 
+  std::string secondline;
   if (!one_line_per_cell) {  // add columns from the second line
-    std::getline(fmodel, line);
-    colcount += get_token_count(line);
+    fmodel.getline(secondline);
+    colcount += get_token_count(secondline);
+  }
+
+  // the cell reader takes the lines of the first cell again
+  fmodel.lines_read_ahead.push_back(line);
+  if (!one_line_per_cell) {
+    fmodel.lines_read_ahead.push_back(secondline);
   }
 
   if (!header_specified && colcount > get_token_count(headerline)) {
@@ -992,8 +1013,6 @@ auto read_model_columns(std::istream& fmodel) -> std::tuple<std::vector<std::str
   }
 
   assert_always(colcount == get_token_count(headerline));
-
-  fmodel.seekg(pos_data_start);  // get back to start of data
 
   if (header_specified) {
     printlnlog("model.txt has a header line.");
@@ -1311,8 +1330,7 @@ void setup_nstart_ndo() {
   assert_always(nonempty_npts_model_assigned == get_nonempty_npts_model());
 
   if (globals::my_rank == 0) {
-    auto fileout = std::ofstream("modelgridrankassignments.out");
-    assert_always(fileout.is_open());
+    auto fileout = open_output_file("modelgridrankassignments.out");
     fileout << "#rank nstart ndo ndo_nonempty\n";
     for (int r = 0; r < nprocesses; r++) {
       assert_always(ranks_ndo_nonempty[r] <= ranks_ndo[r]);
@@ -2033,14 +2051,14 @@ void do_MPI_Bcast_nlte_solution_ranges(const ptrdiff_t nstart_nonempty, const pt
 // 2D cylindrical, or 3D Cartesian) and reading the per-cell densities, abundances, and any
 // optional extra columns into the model grid
 void read_ejecta_model() {
-  auto fmodel = fstream_required("model.txt", std::ios::in);
+  auto fmodel = ModelFileReader{.file = istream_required("model.txt"), .lines_read_ahead = {}};
   std::string line;
   std::optional<GridType> detected_dim{};
 
   // two integers on the first line of the model file
   int npts_0 = 0;  // total model points for 1D/3D, and number of points in r for 2D
   int npts_1 = 0;  // number of points in z for 2D
-  assert_always(get_noncommentline(fmodel, line));
+  assert_always(get_noncommentline(fmodel.file, line));
   auto ssline = std::istringstream{line};
   ssline >> npts_0;
   if (npts_0 <= 0) {
@@ -2057,7 +2075,7 @@ void read_ejecta_model() {
 
   // Now read the time (in days) at which the model is specified.
   double t_model_days{NAN};
-  assert_always(get_noncommentline(fmodel, line));
+  assert_always(get_noncommentline(fmodel.file, line));
   std::istringstream{line} >> t_model_days;
   // a failed extraction stores zero, which would zero all densities via the (t_model / tmin)^3 scaling
   if (!std::isfinite(t_model_days) || t_model_days <= 0.) {
@@ -2069,10 +2087,9 @@ void read_ejecta_model() {
   }
   assert_always(globals::tmin >= t_model);
 
-  const auto pos_after_t_model = fmodel.tellg();
   // if the next line is a single float, it is the vmax (so 2D or 3D)
   // otherwise, it is the first line of the model or a header comment (so 1D)
-  std::getline(fmodel, line);
+  fmodel.getline(line);
   if (!line.starts_with('#')) {
     double num_after_vmax{NAN};
     auto sslinevmax = std::istringstream{line};
@@ -2090,7 +2107,7 @@ void read_ejecta_model() {
     assert_always(!detected_dim.has_value());
     detected_dim = GridType::SPHERICAL1D;
     printlnlog("Detected 1D model");
-    fmodel.seekg(pos_after_t_model);
+    fmodel.lines_read_ahead.push_back(line);
   }
 
   assert_always(detected_dim.has_value());
@@ -2134,7 +2151,7 @@ void read_ejecta_model() {
     bool posmatch_zyx = true;
 
     int mgi = 0;
-    while (mgi < get_npts_model() && std::getline(fmodel, line)) {
+    while (mgi < get_npts_model() && fmodel.getline(line)) {
       auto remainder = std::string_view{line};
       int cellnumberin = 0;
       double rho_tmodel{NAN};  // the cell density [g/cm3] at the model snapshot time t_model
@@ -2442,7 +2459,7 @@ void init_grid() {
   }
 
   if (globals::my_rank == 0) {
-    auto grid_file = fstream_required("grid.out", std::ios::out | std::ios::trunc);
+    auto grid_file = open_output_file("grid.out");
     for (int cellindex = 0; cellindex < ngrid; cellindex++) {
       const int mgi = get_propcell_modelgridindex(cellindex);
       if (mgi >= 0) {

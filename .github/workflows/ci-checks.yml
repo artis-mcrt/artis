@@ -30,7 +30,7 @@ jobs:
                   wget https://apt.llvm.org/llvm.sh
                   chmod +x llvm.sh
                   sudo ./llvm.sh 23
-                  sudo apt-get install -y clang-tidy-23 libc++-23-dev libc++abi-23-dev openmpi-bin libopenmpi-dev
+                  sudo apt-get install -y clang-tidy-23 libc++-23-dev libc++abi-23-dev openmpi-bin libopenmpi-dev libzstd-dev
                   echo "/usr/lib/llvm-23/bin" >> $GITHUB_PATH
                   echo "OMPI_CXX=/usr/lib/llvm-23/bin/clang++" >> $GITHUB_ENV
                   echo "LIBCXX=/usr/lib/llvm-23/include/c++/v1" >> $GITHUB_ENV
@@ -111,10 +111,10 @@ jobs:
                   echo "OMPI_CXX=clang++-${{ matrix.compiler.ver }}" >> $GITHUB_ENV
                   echo "LDFLAGS=-L/usr/lib/llvm-${{ matrix.compiler.ver }}/lib" >> $GITHUB_ENV
 
-            - name: Install Open MPI
+            - name: Install Open MPI and libzstd
               run: |
                   sudo apt-get update
-                  sudo apt-get install -y --no-install-recommends openmpi-bin libopenmpi-dev
+                  sudo apt-get install -y --no-install-recommends openmpi-bin libopenmpi-dev libzstd-dev
 
             - name: Install TBB
               if: matrix.compiler.name == 'gcc'
@@ -187,7 +187,7 @@ jobs:
             - name: Install Open MPI and OpenMP
               run: |
                   brew update
-                  brew install coreutils openmpi libomp
+                  brew install coreutils openmpi libomp zstd
                   brew link --force libomp
 
                   echo "LDFLAGS=-L/opt/homebrew/opt/libomp/lib $LDFLAGS" >> $GITHUB_ENV
@@ -287,20 +287,20 @@ jobs:
             - name: Install Open MPI and git
               run: |
                   apt-get update
-                  apt-get install -y --no-install-recommends libopenmpi-dev openmpi-bin git
+                  apt-get install -y --no-install-recommends libopenmpi-dev openmpi-bin git libzstd-dev
                   git config --global --add safe.directory /__w/artis/artis
 
             - name: Compile classic mode STDPAR=ON GPU=ON
               run: |
                   cp -v -p artisoptions_classic.h artisoptions.h
                   make clean
-                  make STDPAR=ON GPU=ON -j$(nproc) sn3d exspec
+                  make STDPAR=ON GPU=ON ZSTD=ON -j$(nproc) sn3d exspec
 
             - name: Compile nebular mode STDPAR=ON GPU=ON
               run: |
                   cp -v -p artisoptions_nltenebular.h artisoptions.h
                   make clean
-                  make STDPAR=ON GPU=ON -j$(nproc) sn3d exspec
+                  make STDPAR=ON GPU=ON ZSTD=ON -j$(nproc) sn3d exspec
 
             - name: Compile nebular mode
               run: |
@@ -341,7 +341,7 @@ jobs:
 
             - name: Install Open MPI and git
               run: |
-                  apt-get install -y --no-install-recommends openmpi-bin libopenmpi-dev git
+                  apt-get install -y --no-install-recommends openmpi-bin libopenmpi-dev git libzstd-dev
                   git config --global --add safe.directory /__w/artis/artis
 
             # nvc++ 26.5 stops with "operator= has already been declared in the current scope" in its
@@ -375,13 +375,13 @@ jobs:
               run: |
                   cp -v -p artisoptions_classic.h artisoptions.h
                   make clean
-                  make STDPAR=ON GPU=ON GPUARCH=80 -j$(nproc) sn3d exspec
+                  make STDPAR=ON GPU=ON GPUARCH=80 ZSTD=ON -j$(nproc) sn3d exspec
 
             - name: Compile nebular mode STDPAR=ON GPU=ON
               run: |
                   cp -v -p artisoptions_nltenebular.h artisoptions.h
                   make clean
-                  make STDPAR=ON GPU=ON GPUARCH=80 -j$(nproc) sn3d exspec
+                  make STDPAR=ON GPU=ON GPUARCH=80 ZSTD=ON -j$(nproc) sn3d exspec
 
             - name: Compile nebular mode STDPAR=ON
               run: |

@@ -12,10 +12,6 @@ de2aff30d30f4db1203d679b577ac8a8  gamma_light_curve.out
 e1498af74c00d694787bc84ea107c326  linestat.out
 d80043ce6bedca56511b9fd3f7c0a49f  modelgridrankassignments.out
 73398b8db13457769924aeff171833e2  nuclides.out
-2973b10222276fecf102c158d6aeb2b1  packets00_0000.out
-b33742bf7ba84db2fb00e914efb44bf9  packets00_0001.out
-a495d1d41ae088452aec990224cc2cab  packets00_0002.out
-7e3e7039a2e007bc6586f4dbb88aa025  packets00_0003.out
 fe4114662c7e3abd3dd84f3aa2c67d42  spec.out
 21971b3cf8364623d9160acb04940c89  spec_res.out
 a351f1711fecd60c023d0ba7332092db  timesteps.out
@@ -23,6 +19,10 @@ ab4eaf9a14137d5ac03f4a0887008f5e  job_from_ts0008/estimators_0000.out
 e68a62e5ec070b40686c4d23e6719427  job_from_ts0008/estimators_0001.out
 bd31b6ac42fea93c0bf0ea887d6c4daf  job_from_ts0008/estimators_0002.out
 81b957dd1956e759b2efe18f862f500b  job_from_ts0008/estimators_0003.out
+2973b10222276fecf102c158d6aeb2b1  packets/packets00_0000.out
+b33742bf7ba84db2fb00e914efb44bf9  packets/packets00_0001.out
+a495d1d41ae088452aec990224cc2cab  packets/packets00_0002.out
+7e3e7039a2e007bc6586f4dbb88aa025  packets/packets00_0003.out
 c99290f3cf25375b30e0ddba7161d350  speclc_angle_res/absorption_res_00.out
 46bf1dc12d904136e9d85db099717018  speclc_angle_res/absorption_res_01.out
 9429af70f2bffd0132026d18499248ec  speclc_angle_res/absorption_res_02.out

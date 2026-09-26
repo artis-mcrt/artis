@@ -14,7 +14,6 @@
 #include <cstdio>
 #include <cstdlib>
 #include <format>
-#include <fstream>
 #include <iterator>
 #include <print>
 #include <span>
@@ -35,6 +34,7 @@
 #include "globals.h"
 #include "grid.h"
 #include "mpi_logging.h"
+#include "outputfilestream.h"
 #include "rpkt.h"
 #include "sn3d.h"
 
@@ -107,7 +107,7 @@ std::vector<double> J;  // after normalisation: [ergs/s/sr/cm2/Hz]
 
 std::vector<double> nuJ;  // after normalisation: [ergs/s/sr/cm2]
 
-std::fstream radfieldfile;
+OutputFileStream radfieldfile;
 
 constexpr auto get_bin_nu_upper(const int binindex) -> double {
   assert_testmodeonly(binindex >= 0);
@@ -487,7 +487,6 @@ void write_to_file(const int nonemptymgi, const int timestep) {
       std::println(radfieldfile, "{:d} {:d} {:d} {:.5e} {:.5e} {:.3e} {:.3e} {:.3e} {:.1f} {:.5e}", timestep,
                    modelgridindex, binindex, nu_lower, nu_upper, nuJ_out, J_out, J_nu_bar, T_R, W);
     }
-    radfieldfile.flush();
 #ifdef _OPENMP
   }
 #endif
@@ -756,6 +755,8 @@ DEVICE_FUNC auto radfield(const double nu, const int nonemptymgi) -> double {
   // full spectrum fit to a single dilute blackbody
   return grid::W_allcells[nonemptymgi] * planck(nu, grid::TR_allcells[nonemptymgi]);
 }
+
+void flush_file() { radfieldfile.flush(); }
 
 // Fit the radiation field parameters of one cell to the estimators accumulated over the last timestep:
 // the full-spectrum diluted blackbody (W, T_R), and with MULTIBIN_RADFIELD_MODEL_ON a separate (W, T_R)

@@ -22,7 +22,6 @@
 #include <cstdio>
 #include <cstdlib>
 #include <functional>
-#include <ios>
 #include <map>
 #include <numeric>
 #include <ranges>
@@ -40,6 +39,7 @@
 #include "globals.h"
 #include "grid.h"
 #include "input.h"
+#include "inputfilestream.h"
 #include "ltepop.h"
 #include "macroatom.h"
 #include "mpi_logging.h"
@@ -263,7 +263,7 @@ auto calculate_ion_shell_occupancies(const int atomic_number, const int nbound,
 }
 
 auto read_shell_configs() {
-  auto shells_file = fstream_required("electron_shell_occupancy.txt", std::ios::in);
+  auto shells_file = istream_required("electron_shell_occupancy.txt");
 
   int nshells = 0;  // number of shells in the shell occupancy file
   int n_z_binding = 0;  // number of elements in file
@@ -306,7 +306,7 @@ void read_binding_energies() {
   int n_z_binding = 0;  // number of elements in binding energy file
 
   constexpr auto filename = "binding_energies_lotz1970.txt";
-  auto binding_energies_file = fstream_required(filename, std::ios::in);
+  auto binding_energies_file = istream_required(filename);
 
   std::string line;
   assert_always(get_noncommentline(binding_energies_file, line));
@@ -412,7 +412,7 @@ void check_auger_probabilities(const ptrdiff_t nonemptymgi) {
 
 void read_auger_data() {
   printlnlog("Reading Auger effect data...");
-  auto augerfile = fstream_required("auger-km1993-table2.txt", std::ios::in);
+  auto augerfile = istream_required("auger-km1993-table2.txt");
 
   // map x-ray notation shells K L1 L2 L3 M1 M2 M3 to quantum numbers n and l
   constexpr std::array xrayn{1, 2, 2, 2, 3, 3, 3};
@@ -575,7 +575,7 @@ auto get_sum_q_over_binding_energy(const int element, const int ion) -> double {
 void read_collion_data() {
   printlnlog("Reading collisional ionisation data from collion.txt...");
 
-  auto cifile = fstream_required("collion.txt", std::ios::in);
+  auto cifile = istream_required("collion.txt");
   std::string line;
   get_noncommentline(cifile, line);
   std::istringstream ssline(line);

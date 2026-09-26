@@ -73,7 +73,7 @@ jobs:
                   echo "CXX=g++-16" >> $GITHUB_ENV
                   echo "OMPI_CXX=g++-16" >> $GITHUB_ENV
                   sudo apt-get update
-                  sudo apt-get install -y --no-install-recommends g++-16 openmpi-bin libopenmpi-dev
+                  sudo apt-get install -y --no-install-recommends g++-16 openmpi-bin libopenmpi-dev libzstd-dev zstd
 
             - name: Show CPU type and core count
               id: cpu-count
@@ -121,6 +121,16 @@ jobs:
               run: |
                   source ./setup_${{ matrix.testname }}.sh
 
+            - name: Compress the input files
+              working-directory: tests/${{ matrix.testname }}_testrun/
+              run: |
+                  # sn3d and exspec read the compressed files directly. Each rank reads the files
+                  # itself, so a large model or atomic dataset needs no separate decompression step.
+                  for inputfile in model.txt abundances.txt adata.txt transitiondata.txt phixsdata_v2.txt; do
+                      if [ -f "$inputfile" ]; then zstd -q --rm -T0 "$inputfile"; fi
+                  done
+                  ls -l
+
             - name: cat artisoptions.h
               run: |
                   cp tests/${{ matrix.testname }}_testrun/artisoptions.h .
@@ -128,7 +138,7 @@ jobs:
 
             - name: Compile
               run: |
-                  make REPRODUCIBLE=ON TESTMODE=${{ inputs.testmode }} MAX_NODE_SIZE=2 FASTMATH=OFF -j${{ steps.cpu-count.outputs.count }} sn3d exspec
+                  make REPRODUCIBLE=ON ZSTD=ON TESTMODE=${{ inputs.testmode }} MAX_NODE_SIZE=2 FASTMATH=OFF -j${{ steps.cpu-count.outputs.count }} sn3d exspec
                   cp sn3d tests/${{ matrix.testname }}_testrun/
                   cp exspec tests/${{ matrix.testname }}_testrun/
 
@@ -143,7 +153,7 @@ jobs:
             - name: cat job0 estimators
               if: always()
               working-directory: tests/${{ matrix.testname }}_testrun/
-              run: cat job_from_ts0000/estimators*.out
+              run: zstdcat job_from_ts0000/estimators*.out.zst
 
             - name: cat job0 output log
               if: always()
@@ -160,13 +170,17 @@ jobs:
                   # with the markers. A checksum mismatch below still permits the marker, because
                   # the mismatch is the reason to update the stored checksums.
                   # Some tests write no speclc_angle_res files, so that glob can expand to nothing.
-                  set -o pipefail
-                  shopt -s nullglob
-                  angleresfiles=(speclc_angle_res/*.*)
-                  shopt -u nullglob
+                  # The output files stay compressed. The checksums are of the decompressed content under the
+                  # plain name, in the output format of md5sum, so that the reference files keep their form.
+                  # set -e stops the step when zstdcat fails on a file that is not complete.
+                  set -eo pipefail
                   reffile=../${{ matrix.testname }}_inputfiles/results_md5_job0.txt
                   if [ -s "$reffile" ]; then cp "$reffile" "$RUNNER_TEMP/ref_md5_job0.txt"; fi
-                  md5sum *.out job_from_ts0000/*.out "${angleresfiles[@]}" | tee "$RUNNER_TEMP/new_md5_job0.txt"
+                  shopt -s nullglob
+                  for zstfile in *.out.zst job_from_ts0000/*.out.zst packets/*.out.zst vpackets/*.out.zst vspecpol/*.out.zst vpkt_grid/*.out.zst speclc_angle_res/*.zst; do
+                      zstdcat "$zstfile" | md5sum | sed "s|  -$|  ${zstfile%.zst}|"
+                  done | tee "$RUNNER_TEMP/new_md5_job0.txt"
+                  shopt -u nullglob
                   cp "$RUNNER_TEMP/new_md5_job0.txt" "$reffile"
                   if [ "${{ steps.run_job0.outcome }}" = "success" ]; then
                       touch "$reffile.complete"
@@ -175,9 +189,7 @@ jobs:
                   fi
                   # The comparison uses the stored file of the repository, and not the copy in the run folder.
                   if [ -s "$RUNNER_TEMP/ref_md5_job0.txt" ]; then
-                      md5sum -c "$RUNNER_TEMP/ref_md5_job0.txt"
-                      # md5sum -c checks only the listed files, so the file name lists must also match
-                      diff <(cut -c35- "$RUNNER_TEMP/ref_md5_job0.txt") <(cut -c35- "$RUNNER_TEMP/new_md5_job0.txt")
+                      diff "$RUNNER_TEMP/ref_md5_job0.txt" "$RUNNER_TEMP/new_md5_job0.txt"
                   else
                       echo "::warning::The repository has no results_md5_job0.txt for ${{ matrix.testname }}. The step compares nothing."
                   fi
@@ -198,7 +210,7 @@ jobs:
             - name: cat job1 estimators
               if: always()
               working-directory: tests/${{ matrix.testname }}_testrun/
-              run: cat "$(ls -d job_from_ts* | grep -v ts0000 | tail -n 1)"/estimators*.out
+              run: zstdcat "$(ls -d job_from_ts* | grep -v ts0000 | tail -n 1)"/estimators*.out.zst
 
             - name: cat job1 output log
               if: always()
@@ -209,7 +221,7 @@ jobs:
               if: always() && inputs.testmode != 'ON'
               working-directory: tests/${{ matrix.testname }}_testrun/
               run: |
-                  cat deposition.out
+                  zstdcat deposition.out.zst
 
             - name: Show CPU core time
               if: always()
@@ -222,6 +234,7 @@ jobs:
               if: always()
               working-directory: tests/${{ matrix.testname }}_testrun/
               run: |
+                  ls -l packets/
                   time mpirun -np 2 --oversubscribe --mca osc ^ucx ./exspec
                   python3 ../../scripts/mergeangleres.py
 
@@ -240,13 +253,15 @@ jobs:
                   # with the markers. A checksum mismatch below still permits the marker, because
                   # the mismatch is the reason to update the stored checksums.
                   # Some tests write no speclc_angle_res files, so that glob can expand to nothing.
-                  set -o pipefail
-                  shopt -s nullglob
-                  angleresfiles=(speclc_angle_res/*.*)
-                  shopt -u nullglob
+                  set -eo pipefail
                   reffile=../${{ matrix.testname }}_inputfiles/results_md5_final.txt
                   if [ -s "$reffile" ]; then cp "$reffile" "$RUNNER_TEMP/ref_md5_final.txt"; fi
-                  md5sum *.out "$(ls -d job_from_ts* | grep -v ts0000 | tail -n 1)"/*.out "${angleresfiles[@]}" | tee "$RUNNER_TEMP/new_md5_final.txt"
+                  lastjobfolder=$(ls -d job_from_ts* | grep -v ts0000 | tail -n 1)
+                  shopt -s nullglob
+                  for zstfile in *.out.zst "$lastjobfolder"/*.out.zst packets/*.out.zst vpackets/*.out.zst vspecpol/*.out.zst vpkt_grid/*.out.zst speclc_angle_res/*.zst; do
+                      zstdcat "$zstfile" | md5sum | sed "s|  -$|  ${zstfile%.zst}|"
+                  done | tee "$RUNNER_TEMP/new_md5_final.txt"
+                  shopt -u nullglob
                   cp "$RUNNER_TEMP/new_md5_final.txt" "$reffile"
                   if [ "${{ steps.run_job0.outcome }}" = "success" ] && [ "${{ steps.run_job1.outcome }}" = "success" ] && [ "${{ steps.run_exspec.outcome }}" = "success" ]; then
                       touch "$reffile.complete"
@@ -255,9 +270,7 @@ jobs:
                   fi
                   # The comparison uses the stored file of the repository, and not the copy in the run folder.
                   if [ -s "$RUNNER_TEMP/ref_md5_final.txt" ]; then
-                      md5sum -c "$RUNNER_TEMP/ref_md5_final.txt"
-                      # md5sum -c checks only the listed files, so the file name lists must also match
-                      diff <(cut -c35- "$RUNNER_TEMP/ref_md5_final.txt") <(cut -c35- "$RUNNER_TEMP/new_md5_final.txt")
+                      diff "$RUNNER_TEMP/ref_md5_final.txt" "$RUNNER_TEMP/new_md5_final.txt"
                   else
                       echo "::warning::The repository has no results_md5_final.txt for ${{ matrix.testname }}. The step compares nothing."
                   fi
@@ -266,7 +279,6 @@ jobs:
               if: always()
               working-directory: tests/${{ matrix.testname }}_testrun
               run: |
-                  find . -name "*_res_*.out" -exec zstd -v -T0 --rm -f {} \;
                   # the artifact upload must not follow the symlink to the repository root
                   rm -f artis
 
@@ -363,7 +375,7 @@ jobs:
                   echo "CXX=g++-16" >> $GITHUB_ENV
                   echo "OMPI_CXX=g++-16" >> $GITHUB_ENV
                   sudo apt-get update
-                  sudo apt-get install -y --no-install-recommends g++-16 openmpi-bin libopenmpi-dev
+                  sudo apt-get install -y --no-install-recommends g++-16 openmpi-bin libopenmpi-dev libzstd-dev zstd
 
             - name: Cache test atomic data
               uses: actions/cache@v6

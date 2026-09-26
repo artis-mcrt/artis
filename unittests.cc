@@ -1,7 +1,8 @@
 // Unit tests for the numeric helpers and for some physics functions. main() lists the tests. Build and run with:
 //   make unittests && ./unittests
 // The tests only cover functions with header-visible definitions or external linkage; they use no
-// input files and no MPI communication, and a non-zero exit code means at least one check failed.
+// MPI communication, and a non-zero exit code means at least one check failed. The zstd tests write
+// their own files and remove them.
 // (Compile-time checks of the constexpr helpers live in static_asserts next to their definitions.)
 
 #include <algorithm>
@@ -11,8 +12,12 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstdlib>
+#include <filesystem>
 #include <format>
+#include <fstream>
 #include <functional>
+#include <ios>
+#include <iterator>
 #include <limits>
 #include <numbers>
 #include <optional>
@@ -24,6 +29,12 @@
 #include <utility>
 #include <vector>
 
+#ifdef USE_ZSTD
+#pragma clang unsafe_buffer_usage begin
+#include <zstd.h>
+#pragma clang unsafe_buffer_usage end
+#endif
+
 #include "anderson.h"
 #include "artisoptions.h"
 #include "atomic.h"
@@ -33,11 +44,13 @@
 #include "gammapkt.h"
 #include "globals.h"
 #include "input.h"
+#include "inputfilestream.h"
 #include "integrator.h"
 #include "macroatom.h"
 #include "mpi_logging.h"
 #include "nltepop.h"
 #include "nonthermal.h"
+#include "outputfilestream.h"
 #include "radfield.h"
 #include "random.h"
 #include "rpkt.h"
@@ -1247,6 +1260,87 @@ void test_toms748_and_gauss_kronrod() {
 #endif
 }
 
+#ifdef USE_ZSTD
+// istream_required() opens the compressed file when the plain file is absent. The test writes the
+// file in two zstd frames, so the stream must continue over a frame boundary. The text is larger
+// than the decompression buffer.
+void test_zstd_input_stream() {
+  std::println("zstd compressed input file...");
+  std::string text;
+  for (int linenum = 0; linenum < 60000; linenum++) {
+    text += std::format("line {} value {:.6e}\n", linenum, linenum * 0.5);
+  }
+  const auto textview = std::string_view(text);
+  const auto half = text.size() / 2;
+
+  std::string compressed;
+  for (const auto part : {textview.substr(0, half), textview.substr(half)}) {
+    std::string frame(ZSTD_compressBound(part.size()), '\0');
+    const size_t framesize = ZSTD_compress(frame.data(), frame.size(), part.data(), part.size(), 3);
+    check(ZSTD_isError(framesize) == 0U, "ZSTD_compress makes a frame");
+    compressed.append(frame, 0, framesize);
+  }
+
+  const std::string filename = "unittests_zstd_input.txt";
+  const auto zstfilename = filename + ".zst";
+  {
+    auto outfile = std::ofstream(zstfilename, std::ios::binary);
+    outfile.write(compressed.data(), std::ssize(compressed));
+  }
+
+  auto infile = istream_required(filename);
+  std::string line;
+  check(static_cast<bool>(std::getline(infile, line)) && line == "line 0 value 0.000000e+00",
+        "istream_required reads the first line of the compressed file");
+
+  int lines_read = 1;
+  std::string lastline;
+  while (std::getline(infile, line)) {
+    lines_read++;
+    lastline = line;
+  }
+  check(lines_read == 60000, "the compressed file gives every line");
+  check(lastline == "line 59999 value 2.999950e+04", "the last line of the compressed file is complete");
+
+  auto infile_again = istream_required(filename);
+  const auto alltext = std::string(std::istreambuf_iterator<char>(infile_again), std::istreambuf_iterator<char>());
+  check(alltext == text, "the decompressed text matches the input text");
+
+  check(inputfile_exists(filename), "inputfile_exists finds the compressed file");
+  std::filesystem::remove(zstfilename);
+  check(!inputfile_exists(filename), "inputfile_exists gives false after the removal");
+}
+
+// open_output_file() writes a zstd file, and each flush ends a frame, as the estimator files do. The
+// file must read back as the same text.
+void test_zstd_output_stream() {
+  std::println("zstd compressed output file...");
+  const std::string filename = "unittests_zstd_output.txt";
+  const auto zstfilename = output_filepath(filename);
+  std::string text;
+  {
+    auto outfile = open_output_file(filename, ZSTD_LEVEL_FAST);
+    check(outfile.is_open(), "the compressed output file opens");
+    for (int linenum = 0; linenum < 300000; linenum++) {
+      const auto line =
+          std::format("timestep {} cell {} value {:.6e}\n", linenum / 1000, linenum % 1000, linenum * 0.5);
+      text += line;
+      outfile << line;
+      if (linenum % 1000 == 999) {
+        outfile.flush();
+      }
+    }
+    outfile.close();
+    check(!outfile.fail(), "the compressed output file closes without an error");
+  }
+
+  auto infile = istream_required(filename);
+  const auto readback = std::string(std::istreambuf_iterator<char>(infile), std::istreambuf_iterator<char>());
+  check(readback == text, "the compressed output file reads back as the written text");
+  std::filesystem::remove(zstfilename);
+}
+#endif
+
 }  // anonymous namespace
 
 auto main() -> int {
@@ -1276,6 +1370,10 @@ auto main() -> int {
   // the solver/integrator throw std::domain_error only on precondition violations that this test does not trigger
   // cppcheck-suppress throwInEntryPoint
   test_toms748_and_gauss_kronrod();
+#ifdef USE_ZSTD
+  test_zstd_input_stream();
+  test_zstd_output_stream();
+#endif
 
   std::println("unit tests: {} of {} checks passed", checks_total - checks_failed, checks_total);
 

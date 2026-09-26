@@ -11,7 +11,6 @@
 #include <cstddef>
 #include <cstdlib>
 #include <format>
-#include <fstream>
 #include <functional>
 #include <numeric>
 #include <print>
@@ -25,6 +24,7 @@
 #include "ltepop.h"
 #include "mpi_logging.h"
 #include "nonthermal.h"
+#include "outputfilestream.h"
 #include "packet.h"
 #include "radfield.h"
 #include "random.h"
@@ -39,7 +39,7 @@ namespace {
 // save to the macroatom_*.out file
 constexpr bool LOG_MACROATOM = false;
 
-std::fstream macroatom_file;
+OutputFileStream macroatom_file;
 [[maybe_unused]] PaddedMutex macroatom_file_mutex;  // used on the host only
 
 [[nodiscard]] auto get_sum_internal_down_same_exceptlast(const std::span<double> allmacroatomictransitions,

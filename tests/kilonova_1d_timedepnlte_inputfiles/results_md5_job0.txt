@@ -11,10 +11,6 @@ dd9873bd690d9306f59152af00144d4a  gamma_spec.out
 d2a6f222cb01e5700572b57f92e25fbd  linestat.out
 bc40edd64676f86b6ac2df0934e2ce9a  modelgridrankassignments.out
 5338f1a4d50ab0399542d9b08585af21  nuclides.out
-55833b48c80d432310d71cac1f298ea8  packets00_0000.out
-0a326d643eac4bb73051aa71a05578af  packets00_0001.out
-f8f040396bd285140b123274761bde39  packets00_0002.out
-d5b8f364faab858b8d3999c2dfe5e11f  packets00_0003.out
 b7ada07b0bca1c160460aaf3bb020dc8  spec.out
 f6e19eebdc65085543f095a221bb8e0a  timesteps.out
 e7e45c976cd0eea033feac59ddde9fc2  job_from_ts0000/estimators_0000.out
@@ -29,3 +25,7 @@ d828ac03ee16f747a5ad3671ea1d829f  job_from_ts0000/nlte_0003.out
 c47af5040b7008d76b2f5759bd6b8243  job_from_ts0000/radfield_0001.out
 8b2cf9eb0dc939733440ec37bc63ee20  job_from_ts0000/radfield_0002.out
 3e2ea29402daaa3a50395921418f7ffd  job_from_ts0000/radfield_0003.out
+55833b48c80d432310d71cac1f298ea8  packets/packets00_0000.out
+0a326d643eac4bb73051aa71a05578af  packets/packets00_0001.out
+f8f040396bd285140b123274761bde39  packets/packets00_0002.out
+d5b8f364faab858b8d3999c2dfe5e11f  packets/packets00_0003.out
