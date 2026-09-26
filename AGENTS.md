@@ -189,30 +189,37 @@ preset. The setup script downloads about 15 MB of atomic data from a GitHub
 release, so this step needs the network. The script keeps the archive in
 `tests/`, and a later run of the script uses that copy.
 
-Three steps differ from a plain build and are easy to miss:
+These steps differ from a plain build and are easy to miss:
 
 - Build from the `artisoptions.h` of the run folder, not from the preset. Each
   setup script copies a preset and then changes some option values with `sedopt`.
   Remove your `artisoptions.h` before the copy, because `cp` writes through a
   symlink and replaces the content of the tracked preset.
-- Copy `input-resume.txt` to `input.txt` before the resume run. `sn3d` restores
-  an absent `input.txt` from `input-newrun.txt`, but the resume run needs the
-  restart state that the first run wrote.
-- Remove the `*.tmp` files before `exspec`, as the workflow does. `exspec`
-  writes the direction bin files into `speclc_angle_res/`, so nothing moves
-  them.
+- Remove `input.txt` before the first run, as the workflow does. `sn3d` then
+  restores it from `input-newrun.txt`. After a run, `input.txt` holds the
+  values that continue that run.
+- Copy `input-resume.txt` to `input.txt` before the resume run. That file tells
+  `sn3d` to read the restart files of the first run, and it sets a different
+  range of timesteps.
+- Remove the `*.tmp` files before `exspec`, as the workflow does.
+- Run `python3 ../../scripts/mergeangleres.py` in the run folder after
+  `exspec`. The script merges the direction bin files into
+  `light_curve_res.out`, `spec_res.out`, and `specpol_res.out`. The tests with
+  a 2D or a 3D model, e.g. `kilonova_2d`, have these files in
+  `results_md5_final.txt`.
 
 CI builds with libzstd, so the output files are `.zst`. The checksum steps of
 `ci.yml` pipe each output file through `zstdcat` and `md5sum` and write the
 checksum under the plain name. `results_md5_job0.txt` holds the files of the
 first job, and `results_md5_final.txt` the files of the resume run and of
 `exspec`. The log files stay outside both sets, because their names do not match.
+CI also compares the lists of file names, so a missing or an extra output file
+is an error.
 
-CI makes the reference checksums on an arm64 runner with g++-16. Local x86-64
-builds with gcc 14 reproduced all of them for `kilonova_1d`, on two different
-CPU types. `REPRODUCIBLE=ON` therefore gives portable results, but only these
-combinations have a test. Examine a local mismatch as a real change of the
-results first. Let CI give the decision.
+CI makes the reference checksums on an arm64 runner with g++-16. A local build
+with `REPRODUCIBLE=ON` can give the same checksums on a different CPU type and
+with a different gcc version, but no test covers that. Examine a local mismatch
+as a real change of the results first. Let CI give the decision.
 
 A change that must not alter the results must give identical checksums in CI.
 If a change alters the numerical results for a good reason, the stored
@@ -285,7 +292,7 @@ test (see "Input and output files").
   `// cppcheck-suppress <id>` comment. That comment works because the command
   has `--inline-suppr`.
 - The pre-commit hooks (`.pre-commit-config.yaml`, run with `prek`) apply
-  clang-format, ruff for the Python scripts in `scripts/`, about a dozen
+  clang-format, ruff for the Python scripts in `scripts/`, more than a dozen
   whitespace and file checks, and a `make OPTIMIZE=OFF` compile.
   `scripts/ruff.toml` sets the limit of 120 columns for those scripts.
   `prek run --all-files` runs all of them. CI runs the same hooks but skips
@@ -351,8 +358,9 @@ are the only defence.
 ### Logs and assertions
 
 - Write log lines with `printlog()` and `printlnlog()` from `mpi_logging.h`.
-  They take a `std::format` string. Do not use `printf`, `std::cout`, or
-  `std::cerr`.
+  They take a `std::format` string and write to the log file of the rank. Do
+  not use `printf`, `std::cout`, or `std::cerr`. Their text does not go into
+  the log files, and the standard output stays quiet unless there is a crash.
 - Every log line gets a timestamp and a flush, so a log line in a hot loop is
   expensive.
 - Do not call the loggers in a `DEVICE_FUNC`. Their device branch does not
