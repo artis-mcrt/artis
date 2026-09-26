@@ -294,6 +294,8 @@ jobs:
               run: |
                   cp -v -p artisoptions_classic.h artisoptions.h
                   make clean
+                  # ZSTD=ON stops the build if the probe does not find libzstd, so the job compiles the
+                  # zstd code with this compiler
                   make STDPAR=ON GPU=ON ZSTD=ON -j$(nproc) sn3d exspec
 
             - name: Compile nebular mode STDPAR=ON GPU=ON
@@ -375,6 +377,8 @@ jobs:
               run: |
                   cp -v -p artisoptions_classic.h artisoptions.h
                   make clean
+                  # ZSTD=ON stops the build if the probe does not find libzstd, so the job compiles the
+                  # zstd code with this compiler
                   make STDPAR=ON GPU=ON GPUARCH=80 ZSTD=ON -j$(nproc) sn3d exspec
 
             - name: Compile nebular mode STDPAR=ON GPU=ON

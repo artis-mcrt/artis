@@ -126,6 +126,8 @@ jobs:
               run: |
                   # sn3d and exspec read the compressed files directly. Each rank reads the files
                   # itself, so a large model or atomic dataset needs no separate decompression step.
+                  # --rm removes the plain file after the compression, so the programs must read the .zst
+                  # file. -T0 uses all CPUs. Not every test has every file, so -f tests for the file first.
                   for inputfile in model.txt abundances.txt adata.txt transitiondata.txt phixsdata_v2.txt; do
                       if [ -f "$inputfile" ]; then zstd -q --rm -T0 "$inputfile"; fi
                   done
@@ -153,6 +155,7 @@ jobs:
             - name: cat job0 estimators
               if: always()
               working-directory: tests/${{ matrix.testname }}_testrun/
+              # zstdcat decompresses to the standard output
               run: zstdcat job_from_ts0000/estimators*.out.zst
 
             - name: cat job0 output log
@@ -169,15 +172,20 @@ jobs:
                   # full checksum file. The "Update checksums" workflow accepts only an artifact
                   # with the markers. A checksum mismatch below still permits the marker, because
                   # the mismatch is the reason to update the stored checksums.
-                  # Some tests write no speclc_angle_res files, so that glob can expand to nothing.
                   # The output files stay compressed. The checksums are of the decompressed content under the
                   # plain name, in the output format of md5sum, so that the reference files keep their form.
-                  # set -e stops the step when zstdcat fails on a file that is not complete.
+                  # set -e stops the step when zstdcat fails on a file that is not complete, and pipefail
+                  # gives a pipeline the status of the command that failed, not of the last one.
                   set -eo pipefail
                   reffile=../${{ matrix.testname }}_inputfiles/results_md5_job0.txt
+                  # -s tests that the file exists and is not empty
                   if [ -s "$reffile" ]; then cp "$reffile" "$RUNNER_TEMP/ref_md5_job0.txt"; fi
+                  # nullglob makes a pattern that matches nothing expand to nothing, e.g. for a test that
+                  # writes no virtual packet files or no direction bin files
                   shopt -s nullglob
                   for zstfile in *.out.zst job_from_ts0000/*.out.zst packets/*.out.zst vpackets/*.out.zst vspecpol/*.out.zst vpkt_grid/*.out.zst speclc_angle_res/*.zst; do
+                      # md5sum names its input "-" when it reads a pipe. sed puts the plain name, i.e. the
+                      # name without the .zst extension, in its place
                       zstdcat "$zstfile" | md5sum | sed "s|  -$|  ${zstfile%.zst}|"
                   done | tee "$RUNNER_TEMP/new_md5_job0.txt"
                   shopt -u nullglob
@@ -210,6 +218,7 @@ jobs:
             - name: cat job1 estimators
               if: always()
               working-directory: tests/${{ matrix.testname }}_testrun/
+              # the job folder with the highest start timestep is the one of the resume run
               run: zstdcat "$(ls -d job_from_ts* | grep -v ts0000 | tail -n 1)"/estimators*.out.zst
 
             - name: cat job1 output log
@@ -252,10 +261,11 @@ jobs:
                   # full checksum file. The "Update checksums" workflow accepts only an artifact
                   # with the markers. A checksum mismatch below still permits the marker, because
                   # the mismatch is the reason to update the stored checksums.
-                  # Some tests write no speclc_angle_res files, so that glob can expand to nothing.
+                  # The commands are those of the job0 checksum step, with the job folder of the resume run.
                   set -eo pipefail
                   reffile=../${{ matrix.testname }}_inputfiles/results_md5_final.txt
                   if [ -s "$reffile" ]; then cp "$reffile" "$RUNNER_TEMP/ref_md5_final.txt"; fi
+                  # the job folder with the highest start timestep is the one of the resume run
                   lastjobfolder=$(ls -d job_from_ts* | grep -v ts0000 | tail -n 1)
                   shopt -s nullglob
                   for zstfile in *.out.zst "$lastjobfolder"/*.out.zst packets/*.out.zst vpackets/*.out.zst vspecpol/*.out.zst vpkt_grid/*.out.zst speclc_angle_res/*.zst; do
