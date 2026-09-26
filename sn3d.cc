@@ -11,6 +11,7 @@
 
 #include <algorithm>
 #include <array>
+#include <charconv>
 #include <chrono>
 #include <cmath>
 #include <cstddef>
@@ -23,11 +24,13 @@
 #include <ios>
 #include <iterator>
 #include <limits>
+#include <memory>
 #include <print>
 #include <regex>
 #include <string>
 #include <string_view>
 #include <system_error>
+#include <type_traits>
 #include <utility>
 
 #ifdef STDPAR_ON
@@ -188,14 +191,27 @@ void initialise_linestat_file() {
     return;
   }
 
-  auto linestat_file = open_output_file("linestat.out", ZSTD_LEVEL_FAST);
+  const auto time_start = std::chrono::steady_clock::now();
+  // the file has tens of millions of values in each row, so zstd gets worker threads
+  auto linestat_file = open_output_file("linestat.out", ZSTD_LEVEL_DEFAULT, 4);
 
   // with tens of millions of lines, per-value std::print calls to the stream are slow (each one re-checks whether
-  // the stream is a terminal), so format into a buffer and write it out in large chunks
+  // the stream is a terminal), so format each value with std::to_chars into a buffer and write large chunks
   std::string buffer;
   constexpr auto flushsize = 1UZ << 22U;
   buffer.reserve(flushsize + 64);
-  const auto flush_if_full = [&linestat_file, &buffer]() {
+  const auto append_value = [&linestat_file, &buffer](const auto value) {
+    std::array<char, 32> text{};
+    const auto [textend, ec] = [&]() {
+      if constexpr (std::is_floating_point_v<decltype(value)>) {
+        return std::to_chars(text.data(), std::to_address(text.end()), value, std::chars_format::general, 6);
+      } else {
+        return std::to_chars(text.data(), std::to_address(text.end()), value);
+      }
+    }();
+    assert_always(ec == std::errc{});
+    buffer.append(text.data(), textend);
+    buffer += ' ';
     if (buffer.size() >= flushsize) {
       linestat_file.write(buffer.data(), static_cast<std::streamsize>(buffer.size()));
       buffer.clear();
@@ -203,45 +219,39 @@ void initialise_linestat_file() {
   };
 
   for (int i = 0; i < globals::nlines; i++) {
-    std::format_to(std::back_inserter(buffer), "{:g} ", CLIGHT / globals::linelist.nu[i]);  // wavelength in cm
-    flush_if_full();
+    append_value(CLIGHT / globals::linelist.nu[i]);  // wavelength in cm
   }
   buffer += '\n';
 
   for (int i = 0; i < globals::nlines; i++) {
-    std::format_to(std::back_inserter(buffer), "{} ", get_atomicnumber(globals::linelist.elementindex[i]));
-    flush_if_full();
+    append_value(get_atomicnumber(globals::linelist.elementindex[i]));
   }
   buffer += '\n';
 
   for (int i = 0; i < globals::nlines; i++) {
-    std::format_to(std::back_inserter(buffer), "{} ",
-                   get_ionstage(globals::linelist.elementindex[i], globals::linelist.ionindex[i]));
-    flush_if_full();
-  }
-  buffer += '\n';
-
-  for (int i = 0; i < globals::nlines; i++) {
-    const auto ionuniquelevelindexstart =
-        get_ionuniquelevelindexstart(globals::linelist.elementindex[i], globals::linelist.ionindex[i]);
-    const auto upper = globals::linelist.uniquelevelindex_upper[i] - ionuniquelevelindexstart;
-    std::format_to(std::back_inserter(buffer), "{} ", (upper + 1));
-    flush_if_full();
+    append_value(get_ionstage(globals::linelist.elementindex[i], globals::linelist.ionindex[i]));
   }
   buffer += '\n';
 
   for (int i = 0; i < globals::nlines; i++) {
     const auto ionuniquelevelindexstart =
         get_ionuniquelevelindexstart(globals::linelist.elementindex[i], globals::linelist.ionindex[i]);
-    const auto lower = globals::linelist.uniquelevelindex_lower[i] - ionuniquelevelindexstart;
-    std::format_to(std::back_inserter(buffer), "{} ", (lower + 1));
-    flush_if_full();
+    append_value(globals::linelist.uniquelevelindex_upper[i] - ionuniquelevelindexstart + 1);
+  }
+  buffer += '\n';
+
+  for (int i = 0; i < globals::nlines; i++) {
+    const auto ionuniquelevelindexstart =
+        get_ionuniquelevelindexstart(globals::linelist.elementindex[i], globals::linelist.ionindex[i]);
+    append_value(globals::linelist.uniquelevelindex_lower[i] - ionuniquelevelindexstart + 1);
   }
   buffer += '\n';
 
   linestat_file.write(buffer.data(), static_cast<std::streamsize>(buffer.size()));
   linestat_file.close();
   assert_always(!linestat_file.fail());  // e.g. a full disk
+  printlnlog("wrote linestat.out with {} lines (took {:.1f} seconds)", globals::nlines,
+             std::chrono::duration<double>(std::chrono::steady_clock::now() - time_start).count());
 }
 
 void write_deposition_file() {

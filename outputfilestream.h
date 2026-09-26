@@ -40,10 +40,11 @@ constexpr int ZSTD_LEVEL_FAST = 3;
 #ifdef USE_ZSTD
 // A stream buffer that compresses with zstd while it writes. A flush of the stream ends a zstd frame,
 // so every reader gets the content up to the last flush, also when the program stops without a close.
-// Each frame carries a checksum of its content.
+// Each frame carries a checksum of its content. With worker threads, zstd compresses the blocks of a
+// large file in parallel. A libzstd without thread support ignores the request.
 class ZstdOutputBuffer final : public std::streambuf {
  public:
-  ZstdOutputBuffer(const std::string& filename, const int compression_level)
+  ZstdOutputBuffer(const std::string& filename, const int compression_level, const int worker_threads)
       : compressedfile(filename, std::ios::out | std::ios::trunc | std::ios::binary),
         cctx(ZSTD_createCCtx()),
         inbuf(ZSTD_CStreamInSize()),
@@ -51,6 +52,9 @@ class ZstdOutputBuffer final : public std::streambuf {
     assert_always(cctx != nullptr);
     assert_always(ZSTD_isError(ZSTD_CCtx_setParameter(cctx, ZSTD_c_compressionLevel, compression_level)) == 0U);
     assert_always(ZSTD_isError(ZSTD_CCtx_setParameter(cctx, ZSTD_c_checksumFlag, 1)) == 0U);
+    if (worker_threads > 0) {
+      ZSTD_CCtx_setParameter(cctx, ZSTD_c_nbWorkers, worker_threads);
+    }
     setp(inbuf.data(), std::next(inbuf.data(), static_cast<std::ptrdiff_t>(inbuf.size())));
   }
 
@@ -240,17 +244,17 @@ inline void remove_other_output_form(const std::string_view filename) {
 }
 
 // Open an output file. In a build with libzstd, the file gets the extension .zst and the zstd
-// compression at the given level.
+// compression at the given level, with the given number of worker threads.
 [[nodiscard]] inline auto open_output_file(const std::string_view filename,
-                                           [[maybe_unused]] const int compression_level = ZSTD_LEVEL_DEFAULT)
-    -> OutputFileStream {
+                                           [[maybe_unused]] const int compression_level = ZSTD_LEVEL_DEFAULT,
+                                           [[maybe_unused]] const int worker_threads = 0) -> OutputFileStream {
   if (filename.empty()) {
     fatal_crash("Cannot open file with empty filename.");
   }
   remove_other_output_form(filename);
 #ifdef USE_ZSTD
   const auto zstfilename = output_filepath(filename);
-  auto zstdbuf = std::make_unique<ZstdOutputBuffer>(zstfilename, compression_level);
+  auto zstdbuf = std::make_unique<ZstdOutputBuffer>(zstfilename, compression_level, worker_threads);
   if (!zstdbuf->is_open()) {
     fatal_crash("Could not open the output file '{}'", zstfilename);
   }
