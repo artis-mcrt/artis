@@ -35,7 +35,7 @@ static_assert(!COMPRESS_OUTPUT_FILES, "COMPRESS_OUTPUT_FILES needs a build with 
 // the level of exspec-after.sh, and one open stream at this level needs about 50 MB of memory.
 constexpr int ZSTD_LEVEL_FILE_WRITTEN_ONCE = 13;
 
-// The level of a file that stays open over the timesteps, e.g. an estimator file or a log. Each rank
+// The level of a file that stays open over the timesteps, e.g. an estimator file. Each rank
 // keeps several of them open, and one open stream at this level needs about 4 MB of memory.
 constexpr int ZSTD_LEVEL_FILE_OPEN_DURING_RUN = 3;
 

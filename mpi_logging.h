@@ -101,7 +101,7 @@ inline void setup_mpi_vars() {
 
 inline void MPI_Barrier_node() { MPI_Barrier(globals::mpi_comm_node); }
 
-void set_log_file(std::string_view filename, bool compress) noexcept;
+void set_log_file(std::string_view filename) noexcept;
 
 // Write an already-formatted message to the log file, prepending a timestamp at the start of each line. When
 // add_newline is set, a trailing newline is appended and the next write starts a new line.

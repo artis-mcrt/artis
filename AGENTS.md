@@ -485,8 +485,8 @@ The code must compile with nvc++ and with hipcc, also with `STDPAR=ON GPU=ON`.
   rename. A file that stays open over the timesteps gets the lower zstd level,
   see `open_rank_outfile()`. `open_uncompressed_output_file()` is for the
   files that must stay plain: `input.txt`, `artis.pid`, `syn_dir.txt`, and the
-  restart files. `fopen_required()` remains for the binary restart files and
-  for `vpkt.txt`.
+  restart files. The logs stay plain too. `fopen_required()` remains for the
+  binary restart files and for `vpkt.txt`.
 - `sn3d` writes the final packet files into `packets/` and the virtual packet
   files into `vpackets/`, `vspecpol/`, and `vpkt_grid/`. `exspec` reads the
   packet files there.

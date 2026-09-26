@@ -41,7 +41,7 @@ auto main(int argc, char* argv[]) -> int {
 
   // the log lines of the other ranks go nowhere
   if (globals::my_rank == 0) {
-    set_log_file("exspec.txt", false);
+    set_log_file("exspec.txt");
   }
 
   printlnlog("git branch: {}", GIT_BRANCH);

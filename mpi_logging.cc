@@ -36,10 +36,8 @@ void print_line_start() noexcept {
 }
 }  // anonymous namespace
 
-void set_log_file(const std::string_view filename, const bool compress) noexcept {
-  output_file =
-      compress ? open_output_file(filename, ZSTD_LEVEL_FILE_OPEN_DURING_RUN) : open_uncompressed_output_file(filename);
-}
+// the logs stay plain, so tail -f and the job scripts read them. exspec-after.sh compresses them later.
+void set_log_file(const std::string_view filename) noexcept { output_file = open_uncompressed_output_file(filename); }
 
 void log_write(const std::string_view message, const bool add_newline) noexcept {
   print_line_start();
