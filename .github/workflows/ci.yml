@@ -175,16 +175,21 @@ jobs:
                   # with the markers. A checksum mismatch below still permits the marker, because
                   # the mismatch is the reason to update the stored checksums.
                   # Some tests write no speclc_angle_res files, so that glob can expand to nothing.
-                  # sn3d writes .zst files, and the reference checksums are of the plain content.
                   set -o pipefail
-                  find . -name '*.out.zst' -exec zstd -d -q --rm -f {} \;
+                  # The output files stay compressed. The checksums are of the decompressed content under the
+                  # plain name, in the output format of md5sum, so that the reference files keep their form.
+                  md5sum_decompressed() {
+                      for zstfile in "$@"; do
+                          echo "$(zstdcat "$zstfile" | md5sum | cut -c1-32)  ${zstfile%.zst}"
+                      done
+                  }
                   reffile=../${{ matrix.testname }}_inputfiles/results_md5_job0.txt
                   if [ -s "$reffile" ]; then cp "$reffile" "$RUNNER_TEMP/ref_md5_job0.txt"; fi
                   shopt -s nullglob
-                  angleresfiles=(speclc_angle_res/*.*)
-                  vpacketsfiles=(vpackets/*.out vspecpol/*.out vpkt_grid/*.out)
+                  angleresfiles=(speclc_angle_res/*.zst)
+                  vpacketsfiles=(vpackets/*.out.zst vspecpol/*.out.zst vpkt_grid/*.out.zst)
                   shopt -u nullglob
-                  md5sum *.out job_from_ts0000/*.out packets/*.out "${vpacketsfiles[@]}" "${angleresfiles[@]}" | tee "$RUNNER_TEMP/new_md5_job0.txt"
+                  md5sum_decompressed *.out.zst job_from_ts0000/*.out.zst packets/*.out.zst "${vpacketsfiles[@]}" "${angleresfiles[@]}" | tee "$RUNNER_TEMP/new_md5_job0.txt"
                   cp "$RUNNER_TEMP/new_md5_job0.txt" "$reffile"
                   if [ "${{ steps.run_job0.outcome }}" = "success" ]; then
                       touch "$reffile.complete"
@@ -193,9 +198,7 @@ jobs:
                   fi
                   # The comparison uses the stored file of the repository, and not the copy in the run folder.
                   if [ -s "$RUNNER_TEMP/ref_md5_job0.txt" ]; then
-                      md5sum -c "$RUNNER_TEMP/ref_md5_job0.txt"
-                      # md5sum -c checks only the listed files, so the file name lists must also match
-                      diff <(cut -c35- "$RUNNER_TEMP/ref_md5_job0.txt") <(cut -c35- "$RUNNER_TEMP/new_md5_job0.txt")
+                      diff "$RUNNER_TEMP/ref_md5_job0.txt" "$RUNNER_TEMP/new_md5_job0.txt"
                   else
                       echo "::warning::The repository has no results_md5_job0.txt for ${{ matrix.testname }}. The step compares nothing."
                   fi
@@ -240,14 +243,8 @@ jobs:
               if: always()
               working-directory: tests/${{ matrix.testname }}_testrun/
               run: |
-                  # A plain file has priority over the .zst file of the same name, and the job0 checksum step
-                  # decompressed the files of job0. Remove those packet files, so that exspec reads the .zst
-                  # packet files of job1. Then decompress the files of exspec before the merge of the direction
-                  # bin files, so that the merge reads no file of job0.
-                  rm -f packets/*.out
                   ls -l packets/
                   time mpirun -np 2 --oversubscribe --mca osc ^ucx ./exspec
-                  find . -name '*.out.zst' -exec zstd -d -q --rm -f {} \;
                   python3 ../../scripts/mergeangleres.py
 
             - name: cat exspec log
@@ -266,14 +263,20 @@ jobs:
                   # the mismatch is the reason to update the stored checksums.
                   # Some tests write no speclc_angle_res files, so that glob can expand to nothing.
                   set -o pipefail
-                  find . -name '*.out.zst' -exec zstd -d -q --rm -f {} \;
+                  # The output files stay compressed. The checksums are of the decompressed content under the
+                  # plain name, in the output format of md5sum, so that the reference files keep their form.
+                  md5sum_decompressed() {
+                      for zstfile in "$@"; do
+                          echo "$(zstdcat "$zstfile" | md5sum | cut -c1-32)  ${zstfile%.zst}"
+                      done
+                  }
                   reffile=../${{ matrix.testname }}_inputfiles/results_md5_final.txt
                   if [ -s "$reffile" ]; then cp "$reffile" "$RUNNER_TEMP/ref_md5_final.txt"; fi
                   shopt -s nullglob
-                  angleresfiles=(speclc_angle_res/*.*)
-                  vpacketsfiles=(vpackets/*.out vspecpol/*.out vpkt_grid/*.out)
+                  angleresfiles=(speclc_angle_res/*.zst)
+                  vpacketsfiles=(vpackets/*.out.zst vspecpol/*.out.zst vpkt_grid/*.out.zst)
                   shopt -u nullglob
-                  md5sum *.out "$(ls -d job_from_ts* | grep -v ts0000 | tail -n 1)"/*.out packets/*.out "${vpacketsfiles[@]}" "${angleresfiles[@]}" | tee "$RUNNER_TEMP/new_md5_final.txt"
+                  md5sum_decompressed *.out.zst "$(ls -d job_from_ts* | grep -v ts0000 | tail -n 1)"/*.out.zst packets/*.out.zst "${vpacketsfiles[@]}" "${angleresfiles[@]}" | tee "$RUNNER_TEMP/new_md5_final.txt"
                   cp "$RUNNER_TEMP/new_md5_final.txt" "$reffile"
                   if [ "${{ steps.run_job0.outcome }}" = "success" ] && [ "${{ steps.run_job1.outcome }}" = "success" ] && [ "${{ steps.run_exspec.outcome }}" = "success" ]; then
                       touch "$reffile.complete"
@@ -282,9 +285,7 @@ jobs:
                   fi
                   # The comparison uses the stored file of the repository, and not the copy in the run folder.
                   if [ -s "$RUNNER_TEMP/ref_md5_final.txt" ]; then
-                      md5sum -c "$RUNNER_TEMP/ref_md5_final.txt"
-                      # md5sum -c checks only the listed files, so the file name lists must also match
-                      diff <(cut -c35- "$RUNNER_TEMP/ref_md5_final.txt") <(cut -c35- "$RUNNER_TEMP/new_md5_final.txt")
+                      diff "$RUNNER_TEMP/ref_md5_final.txt" "$RUNNER_TEMP/new_md5_final.txt"
                   else
                       echo "::warning::The repository has no results_md5_final.txt for ${{ matrix.testname }}. The step compares nothing."
                   fi

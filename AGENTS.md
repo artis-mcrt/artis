@@ -202,8 +202,10 @@ Three steps differ from a plain build and are easy to miss:
   writes the direction bin files into `speclc_angle_res/`, so nothing moves
   them.
 
-CI writes `results_md5_job0.txt` from
-`md5sum *.out job_from_ts0000/*.out packets/*.out vpackets/*.out vspecpol/*.out vpkt_grid/*.out speclc_angle_res/*.*` and
+CI runs the tests with `COMPRESS_OUTPUT_FILES`. It writes `results_md5_job0.txt`
+with the md5 sums of the decompressed content of
+`*.out.zst job_from_ts0000/*.out.zst packets/*.out.zst vpackets/*.out.zst vspecpol/*.out.zst vpkt_grid/*.out.zst speclc_angle_res/*.zst`,
+under the plain names, and
 `results_md5_final.txt` from the same command with the job folder of the resume
 run. The log files stay outside both sets, because their names do not match.
 
