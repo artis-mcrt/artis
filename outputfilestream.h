@@ -28,14 +28,10 @@
 
 #include "mpi_logging.h"
 
-// The zstd level of a file that the program writes at once and then closes, e.g. a packet file. Level 9
-// gives files that are 2 to 3 percent larger than level 13, at 6 times the speed. One open stream at
-// this level needs about 16 MB of memory.
+// The zstd level of the output files. Level 9 gives files that are 2 to 3 percent larger than level 13,
+// at 6 times the speed. One open stream at this level needs about 16 MB of memory, and a rank keeps up
+// to four streams open over the timesteps: the estimator, nlte, radfield, and macroatom files.
 constexpr int ZSTD_LEVEL_DEFAULT = 9;
-
-// The zstd level of a file that stays open over the timesteps, e.g. an estimator file, and of a very
-// large file, e.g. linestat.out. One open stream at this level needs about 4 MB of memory.
-constexpr int ZSTD_LEVEL_FAST = 3;
 
 #ifdef USE_ZSTD
 // A stream buffer that compresses with zstd while it writes. A flush of the stream ends a zstd frame,
@@ -262,8 +258,7 @@ inline void remove_other_output_form(const std::string_view filename) {
 // open a per-rank output file such as estimators_0000.out in the job folder. The file stays open over
 // the timesteps.
 [[nodiscard]] inline auto open_rank_outfile(const std::string_view basename) -> OutputFileStream {
-  return open_output_file(get_jobfolder_filepath(std::format("{}_{:04d}.out", basename, globals::my_rank)),
-                          ZSTD_LEVEL_FAST);
+  return open_output_file(get_jobfolder_filepath(std::format("{}_{:04d}.out", basename, globals::my_rank)));
 }
 
 #endif  // OUTPUTFILESTREAM_H

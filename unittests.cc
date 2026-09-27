@@ -1319,7 +1319,7 @@ void test_zstd_output_stream() {
   const auto zstfilename = output_filepath(filename);
   std::string text;
   {
-    auto outfile = open_output_file(filename, ZSTD_LEVEL_FAST);
+    auto outfile = open_output_file(filename);
     check(outfile.good(), "the compressed output file opens");
     for (int linenum = 0; linenum < 300000; linenum++) {
       const auto line =

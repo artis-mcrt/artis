@@ -174,7 +174,7 @@ These files go in the simulation folder, which should always contain the ARTIS s
 
 A build with libzstd (see "Make options") also reads a text input file in zstd compressed form, e.g. model.txt.zst, transitiondata.txt.zst, or packets/packets00_0000.out.zst for exspec. The plain file has priority when both exist.
 
-sn3d writes the final packet files of a job into the folder packets/, and the virtual packet files into vpackets/, vspecpol/, and vpkt_grid/. exspec reads the packet files there. A build with libzstd writes each .out file zstd compressed, e.g. packets/packets00_0000.out.zst and spec.out.zst, so that no separate compression step is necessary. The logs, input.txt, and the restart files stay plain. A file that the program writes at once gets zstd level 9. A file that stays open over the timesteps, e.g. an estimator file, gets level 3, which keeps the memory of the stream small. artistools reads both forms.
+sn3d writes the final packet files of a job into the folder packets/, and the virtual packet files into vpackets/, vspecpol/, and vpkt_grid/. exspec reads the packet files there. A build with libzstd writes each .out file zstd compressed, e.g. packets/packets00_0000.out.zst and spec.out.zst, so that no separate compression step is necessary. The logs, input.txt, and the restart files stay plain. Every file gets zstd level 9. artistools reads both forms.
 
 ### input.txt
 Run-time configuration with:

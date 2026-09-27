@@ -489,8 +489,8 @@ The code must compile with nvc++ and with hipcc, also with `STDPAR=ON GPU=ON`.
 - Open an output file with `open_output_file()` from `outputfilestream.h`.
   In a build with libzstd, it writes the file zstd compressed under the name
   with `.zst`, and it removes a stale file of the other form. `output_filepath()`
-  gives that name, e.g. for a rename. A file that stays open over the
-  timesteps gets the level `ZSTD_LEVEL_FAST`, see `open_rank_outfile()`.
+  gives that name, e.g. for a rename. Every file gets the level
+  `ZSTD_LEVEL_DEFAULT`.
   `open_uncompressed_output_file()` is for the files that stay plain in every
   build:
   - `input.txt`;
