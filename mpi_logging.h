@@ -717,7 +717,9 @@ inline void write_restart_array(FILE* file, const std::span<T> values) {
 template <typename T>
   requires(std::is_trivially_copyable_v<T> && !std::is_const_v<T>)
 inline void read_restart_array(FILE* file, const std::span<T> values) {
-  assert_always(std::fread(values.data(), sizeof(T), values.size(), file) == values.size());
+  const bool read_success = (std::fread(values.data(), sizeof(T), values.size(), file) == values.size()) &&
+                            (std::ferror(file) == 0) && (std::feof(file) == 0);
+  assert_always(read_success);
 }
 
 // The first rank of a node reads the node copy, and the other ranks skip the values.
