@@ -2627,36 +2627,20 @@ auto solve_spencerfano(const int nonemptymgi, const int timestep, const int iter
 void write_restart_data(FILE* gridsave_file) {
   printlog("non-thermal solver, ");
 
-  fprintf(gridsave_file, "%d\n", 24724518);  // special number marking the beginning of NT data
-  fprintf(gridsave_file, "%d %la %la\n", SFPTS, SF_EMIN, SF_EMAX);
+  write_restart_values(gridsave_file, 24724518);  // special number marking the beginning of NT data
+  write_restart_values(gridsave_file, SFPTS, SF_EMIN, SF_EMAX);
 
+  write_restart_array(gridsave_file, ntlepton_deposition_rate_density_all_cells);
+
+  if (NT_SCHEME != NonThermalScheme::NT_SPENCERFANO) {
+    return;
+  }
+
+  write_restart_array(gridsave_file, nt_solution);
+  write_restart_array(gridsave_file, ion_data_all_cells);
   for (int nonemptymgi = 0; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
-    fprintf(gridsave_file, "%d %la ", nonemptymgi, ntlepton_deposition_rate_density_all_cells[nonemptymgi]);
-
-    if (NT_SCHEME == NonThermalScheme::NT_SPENCERFANO) {
-      check_auger_probabilities(nonemptymgi);
-
-      fprintf(gridsave_file, "%a %a %a %a\n", nt_solution[nonemptymgi].nneperion_when_solved,
-              nt_solution[nonemptymgi].frac_heating, nt_solution[nonemptymgi].frac_ionisation,
-              nt_solution[nonemptymgi].frac_excitation);
-
-      for (int uniqueionindex = 0; uniqueionindex < get_includedions(); uniqueionindex++) {
-        const auto& celliondata = get_cell_allions_data(nonemptymgi)[uniqueionindex];
-        fprintf(gridsave_file, "%a ", celliondata.eff_ionpot);
-
-        for (int a = 0; a <= NT_MAX_AUGER_ELECTRONS; a++) {
-          fprintf(gridsave_file, "%a %a ", celliondata.prob_num_auger[a], celliondata.ionenfrac_num_auger[a]);
-        }
-      }
-
-      // write NT excitations
-      fprintf(gridsave_file, "%d\n", nt_solution[nonemptymgi].frac_excitations_list_size);
-
-      for (const auto& excitation : get_cell_ntexcitations(nonemptymgi)) {
-        fprintf(gridsave_file, "%la %la %d\n", excitation.frac_deposition, excitation.ratecoeffperdeposition,
-                excitation.alltransindex);
-      }
-    }
+    check_auger_probabilities(nonemptymgi);
+    write_restart_array(gridsave_file, get_cell_ntexcitations(nonemptymgi));
   }
 }
 
@@ -2664,13 +2648,13 @@ void read_restart_data(FILE* gridsave_file) {
   printlnlog("Reading restart data for non-thermal solver");
 
   int code_check = 0;
-  assert_always(fscanf(gridsave_file, "%d\n", &code_check) == 1);
+  read_restart_values(gridsave_file, code_check);
   assert_always(code_check == 24724518);  // special number marking the beginning of NT data
 
   int sfpts_in = 0;
   double SF_EMIN_in{NAN};
   double SF_EMAX_in{NAN};
-  assert_always(fscanf(gridsave_file, "%d %la %la\n", &sfpts_in, &SF_EMIN_in, &SF_EMAX_in) == 3);
+  read_restart_values(gridsave_file, sfpts_in, SF_EMIN_in, SF_EMAX_in);
 
   if (sfpts_in != SFPTS || SF_EMIN_in != SF_EMIN || SF_EMAX_in != SF_EMAX) {
     fatal_crash(
@@ -2679,44 +2663,21 @@ void read_restart_data(FILE* gridsave_file) {
         sfpts_in, SF_EMIN_in, SF_EMAX_in, SFPTS, SF_EMIN, SF_EMAX);
   }
 
+  read_restart_array(gridsave_file, ntlepton_deposition_rate_density_all_cells);
+
+  if (NT_SCHEME != NonThermalScheme::NT_SPENCERFANO) {
+    return;
+  }
+
+  read_restart_array(gridsave_file, nt_solution);
+  read_restart_array(gridsave_file, ion_data_all_cells);
   for (int nonemptymgi = 0; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
-    int nonemptymgi_in = 0;
-    assert_always(fscanf(gridsave_file, "%d %la ", &nonemptymgi_in,
-                         &ntlepton_deposition_rate_density_all_cells[nonemptymgi]) == 2);
-    assert_always(nonemptymgi_in == nonemptymgi);
+    check_auger_probabilities(nonemptymgi);
 
-    if (NT_SCHEME == NonThermalScheme::NT_SPENCERFANO) {
-      assert_always(fscanf(gridsave_file, "%a %a %a %a\n", &nt_solution[nonemptymgi].nneperion_when_solved,
-                           &nt_solution[nonemptymgi].frac_heating, &nt_solution[nonemptymgi].frac_ionisation,
-                           &nt_solution[nonemptymgi].frac_excitation) == 4);
-
-      for (int uniqueionindex = 0; uniqueionindex < get_includedions(); uniqueionindex++) {
-        auto& celliondata = get_cell_allions_data(nonemptymgi)[uniqueionindex];
-        assert_always(fscanf(gridsave_file, "%a ", &celliondata.eff_ionpot) == 1);
-
-        for (int a = 0; a <= NT_MAX_AUGER_ELECTRONS; a++) {
-          assert_always(fscanf(gridsave_file, "%a %a ", &celliondata.prob_num_auger[a],
-                               &celliondata.ionenfrac_num_auger[a]) == 2);
-        }
-      }
-
-      check_auger_probabilities(nonemptymgi);
-
-      // read NT excitations
-      int frac_excitations_list_size_in = 0;
-      assert_always(fscanf(gridsave_file, "%d\n", &frac_excitations_list_size_in) == 1);
-
-      // gridsave file must not have been written with a larger per-cell excitation list capacity
-      assert_always(frac_excitations_list_size_in >= 0);
-      assert_always(frac_excitations_list_size_in <= nt_excitations_stored);
-
-      nt_solution[nonemptymgi].frac_excitations_list_size = frac_excitations_list_size_in;
-
-      for (auto& excitation : get_cell_ntexcitations(nonemptymgi)) {
-        assert_always(fscanf(gridsave_file, "%la %la %d\n", &excitation.frac_deposition,
-                             &excitation.ratecoeffperdeposition, &excitation.alltransindex) == 3);
-      }
-    }
+    // gridsave file must not have been written with a larger per-cell excitation list capacity
+    assert_always(nt_solution[nonemptymgi].frac_excitations_list_size >= 0);
+    assert_always(nt_solution[nonemptymgi].frac_excitations_list_size <= nt_excitations_stored);
+    read_restart_array(gridsave_file, get_cell_ntexcitations(nonemptymgi));
   }
 }
 
