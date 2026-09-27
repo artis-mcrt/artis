@@ -723,7 +723,8 @@ void update_gamma_corrphotoionrenorm_bfheating_estimators(const int nonemptymgi,
       const ptrdiff_t ionestimindex =
           (static_cast<ptrdiff_t>(nonemptymgi) * globals::nbfcontinua_ground) + groundcontindex;
 
-      if (!elem_has_nlte_levels(element)) {
+      // with LTEPOP_EXCITATION_USE_TJ false, the T_e finder calculates these rates during the solve
+      if (LTEPOP_EXCITATION_USE_TJ && !elem_has_nlte_levels(element)) {
         globals::gammaestimator[ionestimindex] = calculate_iongamma_per_gspop(nonemptymgi, element, ion);
       }
 
