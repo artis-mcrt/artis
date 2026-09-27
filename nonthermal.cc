@@ -2636,16 +2636,10 @@ void write_restart_data(FILE* gridsave_file) {
     return;
   }
 
+  write_restart_array(gridsave_file, nt_solution.span());
+  write_restart_array(gridsave_file, ion_data_all_cells.span());
   for (int nonemptymgi = 0; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
     check_auger_probabilities(nonemptymgi);
-
-    write_restart_values(gridsave_file, nt_solution[nonemptymgi].nneperion_when_solved,
-                         nt_solution[nonemptymgi].frac_heating, nt_solution[nonemptymgi].frac_ionisation,
-                         nt_solution[nonemptymgi].frac_excitation);
-
-    write_restart_array(gridsave_file, get_cell_allions_data(nonemptymgi));
-
-    write_restart_values(gridsave_file, nt_solution[nonemptymgi].frac_excitations_list_size);
     write_restart_array(gridsave_file, get_cell_ntexcitations(nonemptymgi));
   }
 }
@@ -2675,23 +2669,14 @@ void read_restart_data(FILE* gridsave_file) {
     return;
   }
 
+  read_restart_array(gridsave_file, nt_solution.span());
+  read_restart_array(gridsave_file, ion_data_all_cells.span());
   for (int nonemptymgi = 0; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
-    read_restart_values(gridsave_file, nt_solution[nonemptymgi].nneperion_when_solved,
-                        nt_solution[nonemptymgi].frac_heating, nt_solution[nonemptymgi].frac_ionisation,
-                        nt_solution[nonemptymgi].frac_excitation);
-
-    read_restart_array(gridsave_file, get_cell_allions_data(nonemptymgi));
-
     check_auger_probabilities(nonemptymgi);
 
-    int frac_excitations_list_size_in = 0;
-    read_restart_values(gridsave_file, frac_excitations_list_size_in);
-
     // gridsave file must not have been written with a larger per-cell excitation list capacity
-    assert_always(frac_excitations_list_size_in >= 0);
-    assert_always(frac_excitations_list_size_in <= nt_excitations_stored);
-
-    nt_solution[nonemptymgi].frac_excitations_list_size = frac_excitations_list_size_in;
+    assert_always(nt_solution[nonemptymgi].frac_excitations_list_size >= 0);
+    assert_always(nt_solution[nonemptymgi].frac_excitations_list_size <= nt_excitations_stored);
     read_restart_array(gridsave_file, get_cell_ntexcitations(nonemptymgi));
   }
 }
