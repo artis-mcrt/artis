@@ -693,6 +693,43 @@ inline void MPI_Reduce_safe(R&& data, MPI_Op op, const int root, MPI_Comm comm) 
                                                [](FILE* fp) -> int { return std::fclose(fp); });
 }
 
+// Write the bytes of each value to a binary restart file. The reader must give the same types in the same order.
+template <typename... T>
+  requires(std::is_trivially_copyable_v<T> && ...)
+inline void write_restart_values(FILE* file, const T&... values) {
+  const bool write_success = ((std::fwrite(&values, sizeof(T), 1, file) == 1) && ...);
+  assert_always(write_success);
+}
+
+template <typename... T>
+  requires(std::is_trivially_copyable_v<T> && ...)
+inline void read_restart_values(FILE* file, T&... values) {
+  const bool read_success = ((std::fread(&values, sizeof(T), 1, file) == 1) && ...);
+  assert_always(read_success);
+}
+
+template <typename T>
+  requires std::is_trivially_copyable_v<T>
+inline void write_restart_array(FILE* file, const std::span<T> values) {
+  assert_always(std::fwrite(values.data(), sizeof(T), values.size(), file) == values.size());
+}
+
+template <typename T>
+  requires(std::is_trivially_copyable_v<T> && !std::is_const_v<T>)
+inline void read_restart_array(FILE* file, const std::span<T> values) {
+  assert_always(std::fread(values.data(), sizeof(T), values.size(), file) == values.size());
+}
+
+// The first rank of a node reads the node copy, and the other ranks skip the values.
+template <typename T>
+inline void read_restart_shared_array(FILE* file, MPI_shared_array<T>& values) {
+  if (globals::rank_in_node == 0) {
+    read_restart_array(file, values.span());
+  } else {
+    assert_always(std::fseek(file, static_cast<long>(values.span().size_bytes()), SEEK_CUR) == 0);
+  }
+}
+
 // padded to a full cache line in CPU multithreaded modes so that adjacent mutexes in an array don't false share
 class ALIGNAS_AVOID_FALSE_SHARING PaddedMutex {
  private:

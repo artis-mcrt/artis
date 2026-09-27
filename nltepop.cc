@@ -2119,39 +2119,31 @@ auto get_nne_prev(const int nonemptymgi) -> double {
 void nltepop_write_restart_data(FILE* restart_file) {
   printlog("populations, ");
 
-  fprintf(restart_file, "%d\n", 75618527);  // special number marking the beginning of nlte data
+  write_restart_values(restart_file, 75618527);  // special number marking the beginning of nlte data
+  write_restart_values(restart_file, globals::total_nlte_levels, get_includedions());
 
-  fprintf(restart_file, "%d\n", globals::total_nlte_levels);
+  write_restart_array(restart_file, grid::ion_groundlevelpops_allcells.span());
+  write_restart_array(restart_file, grid::ion_partfuncts_allcells.span());
+  write_restart_array(restart_file, kpkt::ion_cooling_contribs_allcells.span());
+  write_restart_array(restart_file, nltepops_allcells.span());
 
-  for (auto nonemptymgi = 0Z; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
-    const int modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
-    fprintf(restart_file, "%d\n", modelgridindex);
-    for (int element = 0; element < get_nelements(); element++) {
-      for (int ion = 0; ion < get_nions(element); ion++) {
-        const auto cellionindex = get_cellionindex(nonemptymgi, element, ion);
-        fprintf(restart_file, "%d %a %a %la\n", ion, grid::ion_groundlevelpops_allcells[cellionindex],
-                grid::ion_partfuncts_allcells[cellionindex], kpkt::ion_cooling_contribs_allcells[cellionindex]);
-      }
-    }
-    for (int nlteindex = 0; nlteindex < globals::total_nlte_levels; nlteindex++) {
-      fprintf(restart_file, "%la ", nltepops_allcells[(nonemptymgi * globals::total_nlte_levels) + nlteindex]);
-    }
-    if constexpr (grid::NLTE_TRACK_SOLUTION_RANGES) {
-      // the solved ion range of each element, so that a resumed run starts with the same reactions
-      fprintf(restart_file, "\n");
+  if constexpr (grid::NLTE_TRACK_SOLUTION_RANGES) {
+    // the solved ion range of each element, so that a resumed run starts with the same reactions
+    for (auto nonemptymgi = 0Z; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
       for (int element = 0; element < get_nelements(); element++) {
         const int lowermost_ion = grid::get_elements_lowermost_ion(nonemptymgi, element);
         const int uppermost_ion = grid::get_elements_uppermost_ion(nonemptymgi, element);
         // A restart must contain the complete range for each stored NLTE solution.
         assert_always(!elem_has_nlte_solution(static_cast<int>(nonemptymgi), element) ||
                       (lowermost_ion >= 0 && lowermost_ion <= uppermost_ion && uppermost_ion < get_nions(element)));
-        fprintf(restart_file, "%d %d ", lowermost_ion, uppermost_ion);
+        write_restart_values(restart_file, lowermost_ion, uppermost_ion);
       }
     }
-    if constexpr (NLTE_TIME_DEPENDENT_FIRST_TIMESTEP.has_value()) {
-      // the time of the solution, so that a resumed run continues the time-dependent equations
-      fprintf(restart_file, "\n%la\n", solution_time_allcells[nonemptymgi]);
-    }
+  }
+
+  if constexpr (NLTE_TIME_DEPENDENT_FIRST_TIMESTEP.has_value()) {
+    // the time of the solution, so that a resumed run continues the time-dependent equations
+    write_restart_array(restart_file, solution_time_allcells.span());
   }
 }
 
@@ -2159,48 +2151,36 @@ void nltepop_read_restart_data(FILE* restart_file) {
   printlnlog("Reading restart data for populations");
 
   int code_check = 0;
-  assert_always(fscanf(restart_file, "%d\n", &code_check) == 1);
+  read_restart_values(restart_file, code_check);
   assert_always(code_check == 75618527);
 
   int total_nlte_levels_in = 0;
-  assert_always(fscanf(restart_file, "%d\n", &total_nlte_levels_in) == 1);
-  if (total_nlte_levels_in != globals::total_nlte_levels) {
-    fatal_crash("Expected {} NLTE levels but found {} in restart file", globals::total_nlte_levels,
-                total_nlte_levels_in);
+  int includedions_in = 0;
+  read_restart_values(restart_file, total_nlte_levels_in, includedions_in);
+  if (total_nlte_levels_in != globals::total_nlte_levels || includedions_in != get_includedions()) {
+    fatal_crash("Expected {} NLTE levels and {} ions but found {} and {} in restart file", globals::total_nlte_levels,
+                get_includedions(), total_nlte_levels_in, includedions_in);
   }
 
-  for (auto nonemptymgi = 0Z; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
-    int mgi_in = 0;
-    assert_always(fscanf(restart_file, "%d\n", &mgi_in) == 1);
-    assert_always(mgi_in == grid::get_mgi_of_nonemptymgi(nonemptymgi));
+  read_restart_array(restart_file, grid::ion_groundlevelpops_allcells.span());
+  read_restart_array(restart_file, grid::ion_partfuncts_allcells.span());
+  read_restart_array(restart_file, kpkt::ion_cooling_contribs_allcells.span());
+  read_restart_array(restart_file, nltepops_allcells.span());
 
-    for (int element = 0; element < get_nelements(); element++) {
-      const int nions = get_nions(element);
-      for (int ion = 0; ion < nions; ion++) {
-        int ion_in = 0;
-        const auto cellionindex = get_cellionindex(nonemptymgi, element, ion);
-        assert_always(fscanf(restart_file, "%d %a %a %la\n", &ion_in, &grid::ion_groundlevelpops_allcells[cellionindex],
-                             &grid::ion_partfuncts_allcells[cellionindex],
-                             &kpkt::ion_cooling_contribs_allcells[cellionindex]) == 4);
-        assert_always(ion_in == ion);
-      }
-    }
-    for (int nlteindex = 0; nlteindex < globals::total_nlte_levels; nlteindex++) {
-      assert_always(fscanf(restart_file, "%la ",
-                           &nltepops_allcells[(nonemptymgi * globals::total_nlte_levels) + nlteindex]) == 1);
-    }
-    if constexpr (grid::NLTE_TRACK_SOLUTION_RANGES) {
+  if constexpr (grid::NLTE_TRACK_SOLUTION_RANGES) {
+    for (auto nonemptymgi = 0Z; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
       for (int element = 0; element < get_nelements(); element++) {
         int lowermost_ion = 0;
         int uppermost_ion = 0;
-        assert_always(fscanf(restart_file, "%d %d ", &lowermost_ion, &uppermost_ion) == 2);
+        read_restart_values(restart_file, lowermost_ion, uppermost_ion);
         grid::set_elements_lowermost_ion(nonemptymgi, element, lowermost_ion);
         grid::set_elements_uppermost_ion(nonemptymgi, element, uppermost_ion);
       }
     }
-    if constexpr (NLTE_TIME_DEPENDENT_FIRST_TIMESTEP.has_value()) {
-      assert_always(fscanf(restart_file, " %la", &solution_time_allcells[nonemptymgi]) == 1);
-    }
+  }
+
+  if constexpr (NLTE_TIME_DEPENDENT_FIRST_TIMESTEP.has_value()) {
+    read_restart_array(restart_file, solution_time_allcells.span());
   }
 }
 
