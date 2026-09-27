@@ -813,10 +813,11 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
 
     printlnlog("mgi {} thick: {} (during grid update)", mgi, static_cast<int>(grid::thick_allcells[nonemptymgi]));
 
-    for (int element = 0; element < get_nelements(); element++) {
-      calculate_cellpartfuncts(nonemptymgi, element);
-    }
+    // a resumed run keeps the partition functions and populations of the restart file
     if (!globals::simulation_continued_from_saved) {
+      for (int element = 0; element < get_nelements(); element++) {
+        calculate_cellpartfuncts(nonemptymgi, element);
+      }
       calculate_ion_balance_nne(nonemptymgi);
     }
   } else {

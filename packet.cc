@@ -296,6 +296,10 @@ void read_temp_packetsfile(const int timestep, std::vector<Packet>& packets) {
   reserve_resize(packets, packet_count_in_file);
   assert_always(std::fread(packets.data(), sizeof(Packet), packet_count_in_file, packets_file.get()) ==
                 static_cast<size_t>(packet_count_in_file));
+#ifndef GPU_ON
+  // the random number stream continues from the state of the run that wrote the file
+  read_restart_values(packets_file.get(), get_rngstate());
+#endif
   printlnlog("read {} packets from {}", packet_count_in_file, filename);
 }
 
@@ -325,6 +329,9 @@ void write_temp_packetsfile(const int timestep, const std::span<const Packet> pa
       write_success = (std::fwrite(&packet_count, sizeof(std::int64_t), 1, packets_file) == 1);
       write_success = write_success &&
                       (std::fwrite(packets.data(), sizeof(Packet), packets.size(), packets_file) == packets.size());
+#ifndef GPU_ON
+      write_success = write_success && (std::fwrite(&get_rngstate(), sizeof(rngstate_type), 1, packets_file) == 1);
+#endif
       if (!write_success) {
         printlnlog("[warning] fwrite to {} failed on attempt {} of 10. will retry...", filename, tries + 1);
       }
