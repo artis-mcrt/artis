@@ -716,7 +716,7 @@ void save_grid_and_packets(const int nts, std::vector<Packet>& packets) {
   }
 
   // save packet state at start of current timestep (before propagation)
-  write_temp_packetsfile(nts, packets);
+  write_packet_restart_file(nts, packets);
 
   vpkt::write_timestep(nts, false);
 
@@ -730,7 +730,7 @@ void save_grid_and_packets(const int nts, std::vector<Packet>& packets) {
   const auto packets_wait_time = std::chrono::duration<double>(timenow - time_write_packets_finished_thisrank).count();
   const auto packets_total_time = std::chrono::duration<double>(timenow - time_write_packets_file_start).count();
 
-  printlnlog("timestep {}: finished writing temporary packets file (took {:.1f}s, waited {:.1f}s, total {:.1f}s)", nts,
+  printlnlog("timestep {}: finished writing the packet restart file (took {:.1f}s, waited {:.1f}s, total {:.1f}s)", nts,
              packets_write_time, packets_wait_time, packets_total_time);
 
   if (globals::my_rank == 0) {
@@ -784,7 +784,7 @@ auto do_timestep(const int nts, std::vector<Packet>& packets, const int walltime
   bool enough_walltime_for_timestep = true;
   const int nts_prev = (nts == 0) ? nts : nts - 1;
   if (globals::simulation_continued_from_saved && (nts == globals::timestep_initial)) {
-    read_temp_packetsfile(nts, packets);
+    read_packet_restart_file(nts, packets);
   }
 
   // Some counters on pkt-actions need to be reset to do statistics

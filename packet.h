@@ -167,7 +167,7 @@ inline auto get_rngstate() -> rngstate_type& {
   // Every thread lazily seeds its own generator from a random source, so that OpenMP/stdpar worker
   // threads (which never run the seeding code in read_parameterfile) do not all share the identical
   // default-seeded sequence. The main thread is re-seeded deterministically in read_parameterfile(), and a
-  // resumed job restores its state in read_temp_packetsfile(), to keep single-threaded runs reproducible.
+  // resumed job restores its state in read_packet_restart_file(), to keep single-threaded runs reproducible.
   thread_local rngstate_type rng{static_cast<std::uint32_t>(get_rng_random_seed())};
   return rng;
 }
@@ -178,7 +178,7 @@ inline auto get_rngstate([[maybe_unused]] const Packet& packet) -> rngstate_type
 void packet_init(std::span<Packet> packets);
 auto read_text_packets(const std::string& filename) -> std::vector<Packet>;
 void write_text_packets(const std::string& filename, std::span<const Packet> packets);
-void read_temp_packetsfile(int timestep, std::vector<Packet>& packets);
-void write_temp_packetsfile(int timestep, std::span<const Packet> packets);
+void read_packet_restart_file(int timestep, std::vector<Packet>& packets);
+void write_packet_restart_file(int timestep, std::span<const Packet> packets);
 
 #endif  // PACKET_H
