@@ -157,6 +157,15 @@ auto T_e_eqn_heating_minus_cooling(const double T_e, int nonemptymgi, const doub
   // Set new T_e guess for the current cell and update populations
   grid::Te_allcells[nonemptymgi] = fT_e;
 
+  if constexpr (!LTEPOP_EXCITATION_USE_TJ) {
+    // the partition functions of the elements without NLTE levels depend on T_e
+    for (int element = 0; element < get_nelements(); element++) {
+      if (!elem_has_nlte_levels(element)) {
+        calculate_cellpartfuncts(nonemptymgi, element);
+      }
+    }
+  }
+
   calculate_ion_balance_nne(nonemptymgi);
   const auto nne = grid::get_nne(nonemptymgi);
   const float clumpfactor = grid::get_clumpfactor(nonemptymgi);
