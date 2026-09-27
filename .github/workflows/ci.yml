@@ -121,18 +121,6 @@ jobs:
               run: |
                   source ./setup_${{ matrix.testname }}.sh
 
-            - name: Compress the input files
-              working-directory: tests/${{ matrix.testname }}_testrun/
-              run: |
-                  # sn3d and exspec read the compressed files directly. Each rank reads the files
-                  # itself, so a large model or atomic dataset needs no separate decompression step.
-                  # --rm removes the plain file after the compression, so the programs must read the .zst
-                  # file. -T0 uses all CPUs. Not every test has every file, so -f tests for the file first.
-                  for inputfile in model.txt abundances.txt adata.txt transitiondata.txt phixsdata_v2.txt; do
-                      if [ -f "$inputfile" ]; then zstd -q --rm -T0 "$inputfile"; fi
-                  done
-                  ls -l
-
             - name: cat artisoptions.h
               run: |
                   cp tests/${{ matrix.testname }}_testrun/artisoptions.h .

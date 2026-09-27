@@ -26,7 +26,6 @@ ln -s ../../ artis
 
 cp artis/artisoptions_kilonova_nlte.h artisoptions.h
 
-xz -f -d -v -T0 *.xz
 
 # Scale the model to a typical kilonova: ten times the mass and one third of the velocity of the
 # kilonova_1d model, which gives 0.044 Msun below 0.16 c. The shape of the density profile does not
