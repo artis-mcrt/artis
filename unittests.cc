@@ -1320,7 +1320,7 @@ void test_zstd_output_stream() {
   std::string text;
   {
     auto outfile = open_output_file(filename, ZSTD_LEVEL_FAST);
-    check(outfile.is_open(), "the compressed output file opens");
+    check(outfile.good(), "the compressed output file opens");
     for (int linenum = 0; linenum < 300000; linenum++) {
       const auto line =
           std::format("timestep {} cell {} value {:.6e}\n", linenum / 1000, linenum % 1000, linenum * 0.5);

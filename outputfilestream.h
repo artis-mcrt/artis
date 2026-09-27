@@ -182,15 +182,6 @@ class OutputFileStream : public std::ostream {
 
   ~OutputFileStream() override = default;
 
-  [[nodiscard]] auto is_open() const -> bool {
-#ifdef USE_ZSTD
-    if (zstdbuf != nullptr) {
-      return zstdbuf->is_open();
-    }
-#endif
-    return filebuf != nullptr && filebuf->is_open();
-  }
-
   // like std::ofstream::close(), a failed write or close sets the fail state
   void close() {
 #ifdef USE_ZSTD

@@ -579,7 +579,7 @@ void init() {
         H * RADFIELDBINS_NU_MAX / EV, 1e8 * CLIGHT / RADFIELDBINS_NU_MAX, H * RADFIELDBINS_T_E_SUPERBIN_NU_MAX / EV,
         1e8 * CLIGHT / RADFIELDBINS_T_E_SUPERBIN_NU_MAX);
     if (grid::get_ndo_nonempty(globals::my_rank) > 0) {
-      assert_always(!radfieldfile.is_open());
+      assert_always(radfieldfile.rdbuf() == nullptr);
       radfieldfile = open_rank_outfile("radfield");
       std::println(radfieldfile, "timestep modelgridindex bin_num nu_lower nu_upper nuJ J J_nu_avg T_R W");
       radfieldfile.flush();

@@ -1177,7 +1177,7 @@ auto main(int argc, char* argv[]) -> int {
 
   macroatom_open_file();
   if (ndo > 0) {
-    assert_always(!estimators_file.is_open());
+    assert_always(estimators_file.rdbuf() == nullptr);
     estimators_file = open_rank_outfile("estimators");
 
     if (globals::total_nlte_levels > 0 && ndo_nonempty > 0) {

@@ -498,7 +498,7 @@ The code must compile with nvc++ and with hipcc, also with `STDPAR=ON GPU=ON`.
   - `syn_dir.txt`;
   - the logs;
   - the restart files.
-  `fopen_required()` remains for the binary restart files and for `vpkt.txt`.
+  `fopen_required()` remains for the binary restart files.
 - `sn3d` writes the final packet files into `packets/` and the virtual packet
   files into `vpackets/`, `vspecpol/`, and `vpkt_grid/`. `exspec` reads the
   packet files there.
