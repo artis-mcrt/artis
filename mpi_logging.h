@@ -693,43 +693,47 @@ inline void MPI_Reduce_safe(R&& data, MPI_Op op, const int root, MPI_Comm comm) 
                                                [](FILE* fp) -> int { return std::fclose(fp); });
 }
 
-// Write the bytes of each value to a binary restart file. The reader must give the same types in the same order.
-template <typename... T>
-  requires(std::is_trivially_copyable_v<T> && ...)
-inline void write_restart_values(FILE* file, const T&... values) {
-  const bool write_success = ((std::fwrite(&values, sizeof(T), 1, file) == 1) && ...);
-  assert_always(write_success);
+// Write the bytes of an array to a binary restart file. The reader must give the same types in the same order.
+template <typename R>
+  requires(std::ranges::contiguous_range<R> && std::ranges::sized_range<R> &&
+           std::is_trivially_copyable_v<std::ranges::range_value_t<R>>)
+inline void write_restart_array(FILE* file, R&& values) {
+  const auto valuespan = std::span{std::forward<R>(values)};
+  assert_always(std::fwrite(valuespan.data(), sizeof(valuespan[0]), valuespan.size(), file) == valuespan.size());
 }
 
-template <typename... T>
-  requires(std::is_trivially_copyable_v<T> && ...)
-inline void read_restart_values(FILE* file, T&... values) {
-  const bool read_success = ((std::fread(&values, sizeof(T), 1, file) == 1) && ...);
-  assert_always(read_success);
-}
-
-template <typename T>
-  requires std::is_trivially_copyable_v<T>
-inline void write_restart_array(FILE* file, const std::span<T> values) {
-  assert_always(std::fwrite(values.data(), sizeof(T), values.size(), file) == values.size());
-}
-
-template <typename T>
-  requires(std::is_trivially_copyable_v<T> && !std::is_const_v<T>)
-inline void read_restart_array(FILE* file, const std::span<T> values) {
-  const bool read_success = (std::fread(values.data(), sizeof(T), values.size(), file) == values.size()) &&
-                            (std::ferror(file) == 0) && (std::feof(file) == 0);
+template <typename R>
+  requires(std::ranges::contiguous_range<R> && std::ranges::sized_range<R> &&
+           std::is_trivially_copyable_v<std::ranges::range_value_t<R>> &&
+           !std::is_const_v<std::remove_reference_t<std::ranges::range_reference_t<R>>>)
+inline void read_restart_array(FILE* file, R&& values) {
+  const auto valuespan = std::span{std::forward<R>(values)};
+  const bool read_success =
+      (std::fread(valuespan.data(), sizeof(valuespan[0]), valuespan.size(), file) == valuespan.size()) &&
+      (std::ferror(file) == 0) && (std::feof(file) == 0);
   assert_always(read_success);
 }
 
 // The first rank of a node reads the node copy, and the other ranks skip the values.
 template <typename T>
-inline void read_restart_shared_array(FILE* file, MPI_shared_array<T>& values) {
+inline void read_restart_array(FILE* file, MPI_shared_array<T>& values) {
   if (globals::rank_in_node == 0) {
     read_restart_array(file, values.span());
   } else {
     assert_always(std::fseek(file, static_cast<long>(values.span().size_bytes()), SEEK_CUR) == 0);
   }
+}
+
+template <typename... T>
+  requires(std::is_trivially_copyable_v<T> && ...)
+inline void write_restart_values(FILE* file, const T&... values) {
+  (write_restart_array(file, std::span{&values, 1}), ...);
+}
+
+template <typename... T>
+  requires(std::is_trivially_copyable_v<T> && ...)
+inline void read_restart_values(FILE* file, T&... values) {
+  (read_restart_array(file, std::span{&values, 1}), ...);
 }
 
 // padded to a full cache line in CPU multithreaded modes so that adjacent mutexes in an array don't false share

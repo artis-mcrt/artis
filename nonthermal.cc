@@ -2630,14 +2630,14 @@ void write_restart_data(FILE* gridsave_file) {
   write_restart_values(gridsave_file, 24724518);  // special number marking the beginning of NT data
   write_restart_values(gridsave_file, SFPTS, SF_EMIN, SF_EMAX);
 
-  write_restart_array(gridsave_file, ntlepton_deposition_rate_density_all_cells.span());
+  write_restart_array(gridsave_file, ntlepton_deposition_rate_density_all_cells);
 
   if (NT_SCHEME != NonThermalScheme::NT_SPENCERFANO) {
     return;
   }
 
-  write_restart_array(gridsave_file, nt_solution.span());
-  write_restart_array(gridsave_file, ion_data_all_cells.span());
+  write_restart_array(gridsave_file, nt_solution);
+  write_restart_array(gridsave_file, ion_data_all_cells);
   for (int nonemptymgi = 0; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
     check_auger_probabilities(nonemptymgi);
     write_restart_array(gridsave_file, get_cell_ntexcitations(nonemptymgi));
@@ -2663,14 +2663,14 @@ void read_restart_data(FILE* gridsave_file) {
         sfpts_in, SF_EMIN_in, SF_EMAX_in, SFPTS, SF_EMIN, SF_EMAX);
   }
 
-  read_restart_array(gridsave_file, ntlepton_deposition_rate_density_all_cells.span());
+  read_restart_array(gridsave_file, ntlepton_deposition_rate_density_all_cells);
 
   if (NT_SCHEME != NonThermalScheme::NT_SPENCERFANO) {
     return;
   }
 
-  read_restart_array(gridsave_file, nt_solution.span());
-  read_restart_array(gridsave_file, ion_data_all_cells.span());
+  read_restart_array(gridsave_file, nt_solution);
+  read_restart_array(gridsave_file, ion_data_all_cells);
   for (int nonemptymgi = 0; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
     check_auger_probabilities(nonemptymgi);
 

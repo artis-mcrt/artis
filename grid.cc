@@ -1091,53 +1091,66 @@ void read_grid_restart_data(const int timestep) {
   FILE* gridsave_file = fopen_required(filename, "rb");
 
   int ntimesteps_in = -1;
-  read_restart_values(gridsave_file, ntimesteps_in);
-  assert_always(ntimesteps_in == globals::ntimesteps);
-
   int nprocs_in = -1;
-  read_restart_values(gridsave_file, nprocs_in);
-  assert_always(nprocs_in == globals::nprocs);
-
-  // the saved per-timestep energies belong to the time grid of the run that wrote the file
   double tmin_in = -1.;
   double tmax_in = -1.;
-  read_restart_values(gridsave_file, tmin_in, tmax_in);
+  int timestep_in = -1;
+  int nonempty_npts_model_in = -1;
+  int nelements_in = -1;
+  int includedions_in = -1;
+  int nbfcontinua_ground_in = -1;
+  read_restart_values(gridsave_file, ntimesteps_in, nprocs_in, tmin_in, tmax_in, timestep_in, nonempty_npts_model_in,
+                      nelements_in, includedions_in, nbfcontinua_ground_in);
+  assert_always(ntimesteps_in == globals::ntimesteps);
+  assert_always(nprocs_in == globals::nprocs);
+  // the saved per-timestep energies belong to the time grid of the run that wrote the file
   if (tmin_in != globals::tmin || tmax_in != globals::tmax) {
     fatal_crash("{} was written with tmin {:g} tmax {:g} but input.txt gives tmin {:g} tmax {:g}", filename, tmin_in,
                 tmax_in, globals::tmin, globals::tmax);
   }
-
-  for (int nts = 0; nts < globals::ntimesteps; nts++) {
-    auto& ts = globals::timesteps[nts];
-    read_restart_values(gridsave_file, ts.gamma_dep, ts.gamma_dep_discrete, ts.positron_dep, ts.positron_dep_discrete,
-                        ts.positron_emission, ts.eps_positron_ana_power, ts.electron_dep, ts.electron_dep_discrete,
-                        ts.electron_emission, ts.eps_electron_ana_power, ts.alpha_dep, ts.alpha_dep_discrete,
-                        ts.alpha_emission, ts.eps_alpha_ana_power, ts.spfission_dep_discrete,
-                        ts.eps_spfission_ana_power, ts.qdot_betaminus, ts.qdot_alpha, ts.qdot_spfission, ts.qdot_total,
-                        ts.gamma_emission, ts.pellet_decays);
+  assert_always(timestep_in == timestep);
+  if (nonempty_npts_model_in != get_nonempty_npts_model() || nelements_in != get_nelements() ||
+      includedions_in != get_includedions() || nbfcontinua_ground_in != globals::nbfcontinua_ground) {
+    fatal_crash(
+        "{} has {} non-empty cells, {} elements, {} ions and {} ground-level bf continua, but this simulation has {}, "
+        "{}, {} and {}",
+        filename, nonempty_npts_model_in, nelements_in, includedions_in, nbfcontinua_ground_in,
+        get_nonempty_npts_model(), get_nelements(), get_includedions(), globals::nbfcontinua_ground);
   }
 
-  int timestep_in = 0;
-  int nonempty_npts_model_in = 0;
-  read_restart_values(gridsave_file, timestep_in, nonempty_npts_model_in);
-  assert_always(timestep_in == timestep);
-  assert_always(nonempty_npts_model_in == get_nonempty_npts_model());
+  std::vector<int> mgi_of_nonemptymgi_in(mgi_of_nonemptymgi.size());
+  read_restart_array(gridsave_file, mgi_of_nonemptymgi_in);
+  if (mgi_of_nonemptymgi_in != mgi_of_nonemptymgi) {
+    fatal_crash("{} belongs to a model with a different set of non-empty cells", filename);
+  }
 
-  read_restart_shared_array(gridsave_file, TR_allcells);
-  read_restart_shared_array(gridsave_file, Te_allcells);
-  read_restart_shared_array(gridsave_file, W_allcells);
-  read_restart_shared_array(gridsave_file, TJ_allcells);
-  read_restart_shared_array(gridsave_file, thick_allcells);
-  read_restart_shared_array(gridsave_file, nne_allcells);
-  read_restart_shared_array(gridsave_file, nnetot_allcells);
-  read_restart_shared_array(gridsave_file, kpkt::radiative_energy_factor_allcells);
-  read_restart_array(gridsave_file, std::span{globals::dep_estimator_gamma});
-  read_restart_array(gridsave_file, std::span{globals::dep_estimator_positron});
-  read_restart_array(gridsave_file, std::span{globals::dep_estimator_electron});
-  read_restart_array(gridsave_file, std::span{globals::dep_estimator_alpha});
+  for (int element = 0; element < get_nelements(); element++) {
+    int atomic_number_in = -1;
+    int nions_in = -1;
+    read_restart_values(gridsave_file, atomic_number_in, nions_in);
+    if (atomic_number_in != get_atomicnumber(element) || nions_in != get_nions(element)) {
+      fatal_crash("{} has Z={} with {} ions as element {}, but this simulation has Z={} with {} ions", filename,
+                  atomic_number_in, nions_in, element, get_atomicnumber(element), get_nions(element));
+    }
+  }
+
+  read_restart_array(gridsave_file, globals::timesteps);
+
+  read_restart_array(gridsave_file, TR_allcells);
+  read_restart_array(gridsave_file, Te_allcells);
+  read_restart_array(gridsave_file, W_allcells);
+  read_restart_array(gridsave_file, TJ_allcells);
+  read_restart_array(gridsave_file, thick_allcells);
+  read_restart_array(gridsave_file, nne_allcells);
+  read_restart_array(gridsave_file, nnetot_allcells);
+  read_restart_array(gridsave_file, kpkt::radiative_energy_factor_allcells);
+  read_restart_array(gridsave_file, globals::dep_estimator_gamma);
+  read_restart_array(gridsave_file, globals::dep_estimator_positron);
+  read_restart_array(gridsave_file, globals::dep_estimator_electron);
+  read_restart_array(gridsave_file, globals::dep_estimator_alpha);
   if constexpr (USE_LUT_PHOTOION) {
-    read_restart_shared_array(gridsave_file, globals::corrphotoionrenorm);
-    read_restart_array(gridsave_file, std::span{globals::gammaestimator});
+    read_restart_array(gridsave_file, globals::corrphotoionrenorm);
+    read_restart_array(gridsave_file, globals::gammaestimator);
   }
 
   // the order of these calls is very important!
@@ -1146,6 +1159,12 @@ void read_grid_restart_data(const int timestep) {
     // all data is shared on the node
     nonthermal::read_restart_data(gridsave_file);
     nltepop_read_restart_data(gridsave_file);
+    if constexpr (NLTE_TRACK_SOLUTION_RANGES) {
+      read_restart_array(gridsave_file, elements_lowermost_ion_allcells);
+      read_restart_array(gridsave_file, elements_uppermost_ion_allcells);
+    }
+    // the file must hold no data after the last section
+    assert_always(std::fgetc(gridsave_file) == EOF && std::feof(gridsave_file) != 0);
   }
   MPI_Barrier_node();
   fclose(gridsave_file);
@@ -2278,41 +2297,43 @@ void write_grid_restart_data(const int timestep) {
 
   FILE* gridsave_file = fopen_required(filename, "wb");
 
-  write_restart_values(gridsave_file, globals::ntimesteps, globals::nprocs, globals::tmin, globals::tmax);
-
-  for (int nts = 0; nts < globals::ntimesteps; nts++) {
-    const auto& ts = globals::timesteps[nts];
-    write_restart_values(gridsave_file, ts.gamma_dep, ts.gamma_dep_discrete, ts.positron_dep, ts.positron_dep_discrete,
-                         ts.positron_emission, ts.eps_positron_ana_power, ts.electron_dep, ts.electron_dep_discrete,
-                         ts.electron_emission, ts.eps_electron_ana_power, ts.alpha_dep, ts.alpha_dep_discrete,
-                         ts.alpha_emission, ts.eps_alpha_ana_power, ts.spfission_dep_discrete,
-                         ts.eps_spfission_ana_power, ts.qdot_betaminus, ts.qdot_alpha, ts.qdot_spfission, ts.qdot_total,
-                         ts.gamma_emission, ts.pellet_decays);
+  write_restart_values(gridsave_file, globals::ntimesteps, globals::nprocs, globals::tmin, globals::tmax, timestep,
+                       get_nonempty_npts_model(), get_nelements(), get_includedions(), globals::nbfcontinua_ground);
+  write_restart_array(gridsave_file, mgi_of_nonemptymgi);
+  for (int element = 0; element < get_nelements(); element++) {
+    write_restart_values(gridsave_file, get_atomicnumber(element), get_nions(element));
   }
 
-  write_restart_values(gridsave_file, timestep, get_nonempty_npts_model());
+  write_restart_array(gridsave_file, globals::timesteps);
 
-  write_restart_array(gridsave_file, TR_allcells.span());
-  write_restart_array(gridsave_file, Te_allcells.span());
-  write_restart_array(gridsave_file, W_allcells.span());
-  write_restart_array(gridsave_file, TJ_allcells.span());
-  write_restart_array(gridsave_file, thick_allcells.span());
-  write_restart_array(gridsave_file, nne_allcells.span());
-  write_restart_array(gridsave_file, nnetot_allcells.span());
-  write_restart_array(gridsave_file, kpkt::radiative_energy_factor_allcells.span());
-  write_restart_array(gridsave_file, std::span{globals::dep_estimator_gamma});
-  write_restart_array(gridsave_file, std::span{globals::dep_estimator_positron});
-  write_restart_array(gridsave_file, std::span{globals::dep_estimator_electron});
-  write_restart_array(gridsave_file, std::span{globals::dep_estimator_alpha});
+  // a negative or NaN deposition estimator stops the run before a restart can keep it
+  assert_always(std::ranges::all_of(globals::dep_estimator_gamma, [](const double dep) { return dep >= 0.; }));
+  write_restart_array(gridsave_file, TR_allcells);
+  write_restart_array(gridsave_file, Te_allcells);
+  write_restart_array(gridsave_file, W_allcells);
+  write_restart_array(gridsave_file, TJ_allcells);
+  write_restart_array(gridsave_file, thick_allcells);
+  write_restart_array(gridsave_file, nne_allcells);
+  write_restart_array(gridsave_file, nnetot_allcells);
+  write_restart_array(gridsave_file, kpkt::radiative_energy_factor_allcells);
+  write_restart_array(gridsave_file, globals::dep_estimator_gamma);
+  write_restart_array(gridsave_file, globals::dep_estimator_positron);
+  write_restart_array(gridsave_file, globals::dep_estimator_electron);
+  write_restart_array(gridsave_file, globals::dep_estimator_alpha);
   if constexpr (USE_LUT_PHOTOION) {
-    write_restart_array(gridsave_file, globals::corrphotoionrenorm.span());
-    write_restart_array(gridsave_file, std::span{globals::gammaestimator});
+    write_restart_array(gridsave_file, globals::corrphotoionrenorm);
+    write_restart_array(gridsave_file, globals::gammaestimator);
   }
 
   // the order of these calls is very important!
   radfield::write_restart_data(gridsave_file);
   nonthermal::write_restart_data(gridsave_file);
   nltepop_write_restart_data(gridsave_file);
+  if constexpr (NLTE_TRACK_SOLUTION_RANGES) {
+    // the solved ion range of each element, so that a resumed run starts with the same reactions
+    write_restart_array(gridsave_file, elements_lowermost_ion_allcells);
+    write_restart_array(gridsave_file, elements_uppermost_ion_allcells);
+  }
   // Check earlier writes and the final flush before the caller replaces the previous checkpoint.
   const bool write_failed = (ferror(gridsave_file) != 0);
   const bool close_failed = (fclose(gridsave_file) != 0);

@@ -1022,35 +1022,20 @@ void write_restart_data(FILE* gridsave_file) {
   if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
     write_restart_values(gridsave_file, RADFIELDBINCOUNT, RADFIELDBINS_NU_MIN, RADFIELDBINS_NU_MAX, bins_T_R_min,
                          bins_T_R_max);
-
-    for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++) {
-      write_restart_values(gridsave_file, binindex, get_bin_nu_upper(binindex));
-    }
+    write_restart_array(gridsave_file, radfieldbin_solutions_W);
+    write_restart_array(gridsave_file, radfieldbin_solutions_T_R);
   }
 
   if constexpr (DETAILED_BF_ESTIMATORS_ON) {
-    const auto bfestimcount = std::ssize(globals::bfestim_nu_edge);
-    write_restart_values(gridsave_file, globals::nbfcontinua, static_cast<int>(bfestimcount));
-    write_restart_array(gridsave_file, prev_bfrate_normed.span());
+    write_restart_values(gridsave_file, globals::nbfcontinua, static_cast<int>(std::ssize(globals::bfestim_nu_edge)));
+    write_restart_array(gridsave_file, prev_bfrate_normed);
   }
 
   if constexpr (DETAILED_LINE_ESTIMATORS_ON) {
     write_restart_values(gridsave_file, detailed_linecount);
-    write_restart_array(gridsave_file, std::span{detailed_lineindices});
-  }
-
-  write_restart_array(gridsave_file, std::span{J_normfactor}.first(grid::get_nonempty_npts_model()));
-
-  if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
-    write_restart_array(gridsave_file, std::span{radfieldbins.J_raw});
-    write_restart_array(gridsave_file, std::span{radfieldbins.nuJ_raw});
-    write_restart_array(gridsave_file, radfieldbin_solutions_W.span());
-    write_restart_array(gridsave_file, radfieldbin_solutions_T_R.span());
-  }
-
-  if constexpr (DETAILED_LINE_ESTIMATORS_ON) {
+    write_restart_array(gridsave_file, detailed_lineindices);
     for (ptrdiff_t nonemptymgi = 0; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
-      write_restart_array(gridsave_file, std::span{Jb_lu_raw[nonemptymgi]});
+      write_restart_array(gridsave_file, prev_Jb_lu_normed[nonemptymgi]);
     }
   }
   write_restart_values(gridsave_file, 42809403);  // special number marking the end of radfield data
@@ -1064,84 +1049,47 @@ void read_restart_data(FILE* gridsave_file) {
   assert_always(code_check == 30490824);
 
   if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
-    double T_R_min_in{NAN};
-    double T_R_max_in{NAN};
+    int bincount_in = 0;
     double nu_min_in{NAN};
     double nu_max_in{NAN};
-    int bincount_in = 0;
+    double T_R_min_in{NAN};
+    double T_R_max_in{NAN};
     read_restart_values(gridsave_file, bincount_in, nu_min_in, nu_max_in, T_R_min_in, T_R_max_in);
-
-    double nu_lower_first_ratio = nu_min_in / RADFIELDBINS_NU_MIN;
-    if (nu_lower_first_ratio > 1.0) {
-      nu_lower_first_ratio = 1 / nu_lower_first_ratio;
+    if (bincount_in != RADFIELDBINCOUNT || nu_min_in != RADFIELDBINS_NU_MIN || nu_max_in != RADFIELDBINS_NU_MAX ||
+        T_R_min_in != bins_T_R_min || T_R_max_in != bins_T_R_max) {
+      fatal_crash(
+          "gridsave file specifies {} bins, nu_min {:g} nu_max {:g} T_R_min {:g} T_R_max {:g}, but this simulation has "
+          "{} bins, nu_min {:g} nu_max {:g} T_R_min {:g} T_R_max {:g}",
+          bincount_in, nu_min_in, nu_max_in, T_R_min_in, T_R_max_in, RADFIELDBINCOUNT, RADFIELDBINS_NU_MIN,
+          RADFIELDBINS_NU_MAX, bins_T_R_min, bins_T_R_max);
     }
-
-    double nu_upper_last_ratio = nu_max_in / RADFIELDBINS_NU_MAX;
-    if (nu_upper_last_ratio > 1.0) {
-      nu_upper_last_ratio = 1 / nu_upper_last_ratio;
-    }
-
-    if (bincount_in != RADFIELDBINCOUNT || T_R_min_in != bins_T_R_min || T_R_max_in != bins_T_R_max ||
-        nu_lower_first_ratio < 0.999 || nu_upper_last_ratio < 0.999) {
-      printlnlog("[error] gridsave file specifies {} bins, nu_min {} nu_max {} T_R_min {} T_R_max {}", bincount_in,
-                 nu_min_in, nu_max_in, T_R_min_in, T_R_max_in);
-      fatal_crash("require {} bins, RADFIELDBINS_NU_MIN {:g} RADFIELDBINS_NU_MAX {:g} T_R_min {:g} T_R_max {:g}",
-                  RADFIELDBINCOUNT, RADFIELDBINS_NU_MIN, RADFIELDBINS_NU_MAX, bins_T_R_min, bins_T_R_max);
-    }
-
-    for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++) {
-      int binindex_in = 0;
-      double nu_upper_in = NAN;
-      read_restart_values(gridsave_file, binindex_in, nu_upper_in);
-      assert_always(binindex_in == binindex);
-      assert_always(nu_upper_in == get_bin_nu_upper(binindex));
-    }
+    read_restart_array(gridsave_file, radfieldbin_solutions_W);
+    read_restart_array(gridsave_file, radfieldbin_solutions_T_R);
   }
 
   if constexpr (DETAILED_BF_ESTIMATORS_ON) {
-    const auto bfestimcount = std::ssize(globals::bfestim_nu_edge);
-    int gridsave_nbf_in = 0;
-    int gridsave_nbfestim_in = 0;
-    read_restart_values(gridsave_file, gridsave_nbf_in, gridsave_nbfestim_in);
-    assert_always(gridsave_nbf_in == globals::nbfcontinua);
-    assert_always(gridsave_nbfestim_in == bfestimcount);
-
-    read_restart_shared_array(gridsave_file, prev_bfrate_normed);
+    int nbfcontinua_in = 0;
+    int bfestimcount_in = 0;
+    read_restart_values(gridsave_file, nbfcontinua_in, bfestimcount_in);
+    assert_always(nbfcontinua_in == globals::nbfcontinua);
+    assert_always(bfestimcount_in == std::ssize(globals::bfestim_nu_edge));
+    read_restart_array(gridsave_file, prev_bfrate_normed);
   }
 
   if constexpr (DETAILED_LINE_ESTIMATORS_ON) {
     int detailed_linecount_in = 0;
     read_restart_values(gridsave_file, detailed_linecount_in);
-
     if (detailed_linecount_in != detailed_linecount) {
       fatal_crash("gridsave file specifies {} detailed lines but this simulation has {}.", detailed_linecount_in,
                   detailed_linecount);
     }
-
-    read_restart_array(gridsave_file, std::span{detailed_lineindices});
-  }
-
-  read_restart_array(gridsave_file, std::span{J_normfactor}.first(grid::get_nonempty_npts_model()));
-
-  if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
-    read_restart_array(gridsave_file, std::span{radfieldbins.J_raw});
-    read_restart_array(gridsave_file, std::span{radfieldbins.nuJ_raw});
-    read_restart_shared_array(gridsave_file, radfieldbin_solutions_W);
-    read_restart_shared_array(gridsave_file, radfieldbin_solutions_T_R);
-  }
-
-  if constexpr (DETAILED_LINE_ESTIMATORS_ON) {
+    std::vector<int> detailed_lineindices_in(detailed_lineindices.size());
+    read_restart_array(gridsave_file, detailed_lineindices_in);
+    if (detailed_lineindices_in != detailed_lineindices) {
+      fatal_crash("gridsave file specifies a different set of detailed lines than this simulation.");
+    }
     for (auto nonemptymgi = 0Z; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
-      read_restart_array(gridsave_file, std::span{Jb_lu_raw[nonemptymgi]});
-      for (int jblueindex = 0; jblueindex < detailed_linecount; jblueindex++) {
-        // normalise_J() is skipped on the timestep that a run resumes from, so the normalised values
-        // that the macro atom reads have to be rebuilt here. Otherwise every detailed line estimator
-        // would be zero for the first timestep after each restart. J_normfactor holds exactly the
-        // factor that normalise_J() applies.
-        prev_Jb_lu_normed[nonemptymgi][jblueindex].value =
-            Jb_lu_raw[nonemptymgi][jblueindex].value * J_normfactor[nonemptymgi];
-        prev_Jb_lu_normed[nonemptymgi][jblueindex].contribcount = Jb_lu_raw[nonemptymgi][jblueindex].contribcount;
-      }
+      read_restart_array(gridsave_file, prev_Jb_lu_normed[nonemptymgi]);
     }
   }
   read_restart_values(gridsave_file, code_check);
