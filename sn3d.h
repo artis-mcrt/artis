@@ -28,6 +28,7 @@
 #include <vector>
 
 #include "mpi_logging.h"
+#include "outputfilestream.h"
 
 [[nodiscard]] inline auto is_pid_running(pid_t pid) -> bool {
   while (waitpid(-1, nullptr, WNOHANG) > 0) {
@@ -57,7 +58,7 @@ inline void check_already_running() {
       }
     }
 
-    auto pidfile = fstream_required("artis.pid", std::ios::out | std::ios::trunc);
+    auto pidfile = open_uncompressed_output_file("artis.pid");
     std::println(pidfile, "{}", artispid);
     std::println(pidfile, "{}", std::filesystem::current_path().generic_string());
   }

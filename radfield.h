@@ -23,6 +23,7 @@ DEVICE_FUNC void update_lineestimator(int nonemptymgi, int lineindex, double inc
 // superbin uses T_e.
 // Shingles et al. (2020), MNRAS, 492, 2029-2043, Section 2.2.2, doi:10.1093/mnras/stz3412.
 void fit_parameters(int nonemptymgi, int timestep);
+void flush_file();
 void set_J_normfactor(int nonemptymgi, double normfactor);
 void invalidate_bin_fits(int nonemptymgi);
 void normalise_J(int nonemptymgi, double estimator_normfactor_over4pi);

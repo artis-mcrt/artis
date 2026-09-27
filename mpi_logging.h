@@ -16,8 +16,6 @@
 #include <cstdlib>
 #include <cstring>
 #include <format>
-#include <fstream>
-#include <ios>
 #include <limits>
 #include <memory>
 #include <new>
@@ -638,8 +636,8 @@ inline void MPI_Reduce_safe(R&& data, MPI_Op op, const int root, MPI_Comm comm) 
 }
 
 // exactly match the generated per-rank output filenames: output_<rank>-<thread>.txt and the
-// estimators/nlte/radfield/macroatom _<rank>.out files, possibly with a compression extension added by
-// the post-processing scripts (e.g. exspec-after.sh runs zstd)
+// estimators/nlte/radfield/macroatom _<rank>.out files, with or without a compression extension. sn3d
+// writes the .out files as .zst, and exspec-after.sh compresses the logs.
 [[nodiscard]] inline auto is_rank_outfile_name(std::string_view filename) -> bool {
   const auto alldigits = [](const std::string_view str) {
     return !str.empty() && std::ranges::all_of(str, [](const char c) { return c >= '0' && c <= '9'; });
@@ -693,37 +691,6 @@ inline void MPI_Reduce_safe(R&& data, MPI_Op op, const int root, MPI_Comm comm) 
 [[nodiscard]] inline auto fopen_required_uniqueptr(const std::string& filename, std::span<const char> mode) {
   return std::unique_ptr<FILE, int (*)(FILE*)>(fopen_required(filename, mode),
                                                [](FILE* fp) -> int { return std::fclose(fp); });
-}
-
-[[nodiscard]] inline auto fstream_required(const std::string_view filename, std::ios::openmode mode) -> std::fstream {
-  if (filename.empty()) {
-    fatal_crash("Cannot open file with empty filename.");
-  }
-
-  if ((mode & std::ios::in) != 0U) {
-    // search data folders in order to find file to read
-    for (const auto& datadir : datafolders) {
-      const auto datafolderfilename = std::format("{}{}", datadir, filename);
-      auto file = std::fstream(datafolderfilename, mode);
-      if (file.is_open()) {
-        return file;
-      }
-    }
-  } else {
-    // don't prepend data folders when writing
-    auto file = std::fstream(std::string(filename), mode);
-    if (file.is_open()) {
-      return file;
-    }
-  }
-
-  fatal_crash("Could not open file '{}'", filename);
-}
-
-// open a per-rank output file such as estimators_0000.out for writing
-[[nodiscard]] inline auto open_rank_outfile(const std::string_view basename) -> std::fstream {
-  return fstream_required(get_jobfolder_filepath(std::format("{}_{:04d}.out", basename, globals::my_rank)),
-                          std::ios::out | std::ios::trunc);
 }
 
 // padded to a full cache line in CPU multithreaded modes so that adjacent mutexes in an array don't false share

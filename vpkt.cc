@@ -11,7 +11,6 @@
 #include <array>
 #include <cmath>
 #include <cstddef>
-#include <cstdio>
 #include <cstdlib>
 #include <filesystem>
 #include <format>
@@ -31,8 +30,10 @@
 #include "globals.h"
 #include "grid.h"
 #include "input.h"
+#include "inputfilestream.h"
 #include "ltepop.h"
 #include "mpi_logging.h"
+#include "outputfilestream.h"
 #include "packet.h"
 #include "rpkt.h"
 #include "sn3d.h"
@@ -559,7 +560,7 @@ void init_vspecpol() {
 // result depend on how the wall time limits divided the run into jobs.
 void write_vspecpol(const std::string& filename, const bool full_precision) {
   printlnlog("Writing {}", filename);
-  auto vspecpol_file = fstream_required(filename, std::ios::out | std::ios::trunc);
+  auto vspecpol_file = full_precision ? open_uncompressed_output_file(filename) : open_output_file(filename);
   const auto print_flux = [&vspecpol_file, full_precision](const double flux) {
     if (full_precision) {
       std::print(vspecpol_file, " {:.17g}", flux);
@@ -610,7 +611,7 @@ void read_vspecpol(const int my_rank, const int nts) {
   const auto filename = std::format("vspecpol_{:04d}_ts{}.tmp", my_rank, nts);
   printlnlog("Reading {}", filename);
 
-  auto vspecpol_file = fstream_required(filename, std::ios::in);
+  auto vspecpol_file = istream_required(filename);
   std::string line;
 
   for (int ind_comb = 0; ind_comb < (nobsdirections * nspectraperobsdir); ind_comb++) {
@@ -665,7 +666,7 @@ void init_vpkt_grid() {
 
 // full_precision selects the round-trip exact format for the restart files (see write_vspecpol)
 void write_vpkt_grid(const std::string& filename, const bool full_precision) {
-  auto vpkt_grid_file = fstream_required(filename, std::ios::out | std::ios::trunc);
+  auto vpkt_grid_file = full_precision ? open_uncompressed_output_file(filename) : open_output_file(filename);
 
   for (int obsdirindex = 0; obsdirindex < nobsdirections; obsdirindex++) {
     for (int wlbin = 0; wlbin < grid_nwavelengthranges; wlbin++) {
@@ -692,7 +693,7 @@ void write_vpkt_grid(const std::string& filename, const bool full_precision) {
 void read_vpkt_grid(const int my_rank, const int nts) {
   const std::string filename = std::format("vpkt_grid_{:04d}_ts{}.tmp", my_rank, nts);
   printlnlog("Reading {}", filename);
-  auto vpkt_grid_file = fstream_required(filename, std::ios::in);
+  auto vpkt_grid_file = istream_required(filename);
 
   for (int obsdirindex = 0; obsdirindex < nobsdirections; obsdirindex++) {
     for (int wlbin = 0; wlbin < grid_nwavelengthranges; wlbin++) {
@@ -729,9 +730,9 @@ void remove_temp_vpkt_file(const int nts, const int my_rank) {
 // read the virtual packet configuration from vpkt.txt: the observer directions, wavelength
 // ranges, emission-time window, and the optical-depth and cell-selection limits
 void read_vpktparameterfile() {
-  FILE* input_file = fopen_required("vpkt.txt", "r");
+  auto input_file = istream_required("vpkt.txt");
 
-  assert_always(fscanf(input_file, "%d", &nobsdirections) == 1);
+  assert_always(static_cast<bool>(input_file >> nobsdirections));
   if (nobsdirections < 1) {
     fatal_crash("vpkt.txt has {} observer directions, but it must have at least one", nobsdirections);
   }
@@ -741,7 +742,7 @@ void read_vpktparameterfile() {
   // cos(theta) of each observer direction
   std::vector<double> obsdirs_costheta(nobsdirections);
   for (int i = 0; i < nobsdirections; i++) {
-    assert_always(fscanf(input_file, "%lg", &obsdirs_costheta[i]) == 1);
+    assert_always(static_cast<bool>(input_file >> obsdirs_costheta[i]));
 
     if (!(fabs(obsdirs_costheta[i]) <= 1)) {
       fatal_crash("vpkt.txt observer direction {} has costheta {:g}, which is outside [-1, 1]", i, obsdirs_costheta[i]);
@@ -753,7 +754,7 @@ void read_vpktparameterfile() {
   obsdirs_meridian.resize(nobsdirections);
   for (int i = 0; i < nobsdirections; i++) {
     double phi_degrees = 0.;
-    assert_always(fscanf(input_file, "%lg", &phi_degrees) == 1);
+    assert_always(static_cast<bool>(input_file >> phi_degrees));
     const double phi = phi_degrees * PI / 180.;
     if (!std::isfinite(phi)) {
       fatal_crash("vpkt.txt observer direction {} has phi {:g} degrees, which is not a finite number", i, phi_degrees);
@@ -770,7 +771,7 @@ void read_vpktparameterfile() {
 
   // Nspectra opacity choices (i.e. Nspectra spectra for each observer)
   int nspectra_customlist_flag = 0;
-  assert_always(fscanf(input_file, "%d ", &nspectra_customlist_flag) == 1);
+  assert_always(static_cast<bool>(input_file >> nspectra_customlist_flag));
 
   if (nspectra_customlist_flag != 1) {
     nspectraperobsdir = 1;
@@ -778,14 +779,14 @@ void read_vpktparameterfile() {
 
     opacityexclusions[0] = 0;
   } else {
-    assert_always(fscanf(input_file, "%d ", &nspectraperobsdir) == 1);
+    assert_always(static_cast<bool>(input_file >> nspectraperobsdir));
     if (nspectraperobsdir < 1) {
       fatal_crash("vpkt.txt has {} spectra per observer, but it must have at least one", nspectraperobsdir);
     }
     opacityexclusions.resize(nspectraperobsdir, 0);
 
     for (int opacchoiceindex = 0; opacchoiceindex < nspectraperobsdir; opacchoiceindex++) {
-      assert_always(fscanf(input_file, "%d ", &opacityexclusions[opacchoiceindex]) == 1);
+      assert_always(static_cast<bool>(input_file >> opacityexclusions[opacchoiceindex]));
       if (opacityexclusions[opacchoiceindex] < -4) {
         fatal_crash("vpkt.txt spectrum {} has the opacity exclusion {}, but the value must be -4 or more",
                     opacchoiceindex, opacityexclusions[opacchoiceindex]);
@@ -806,7 +807,7 @@ void read_vpktparameterfile() {
   int override_tminmax = 0;
   double vspec_tmin_in_days = 0.;
   double vspec_tmax_in_days = 0.;
-  assert_always(fscanf(input_file, "%d %lg %lg", &override_tminmax, &vspec_tmin_in_days, &vspec_tmax_in_days) == 3);
+  assert_always(static_cast<bool>(input_file >> override_tminmax >> vspec_tmin_in_days >> vspec_tmax_in_days));
 
   printlnlog("vpkt: compiled with VSPEC_TIMEMIN {:.1f} [d] VSPEC_TIMEMAX {:.1f} [d] VSPEC_TIMEBINS {}",
              VSPEC_TIMEMIN / DAY, VSPEC_TIMEMAX / DAY, VSPEC_TIMEBINS);
@@ -837,7 +838,7 @@ void read_vpktparameterfile() {
   // many (lambda_min, lambda_max) pairs in Angstroms. Otherwise a single range spanning the compile-time
   // VSPEC_NUMIN to VSPEC_NUMAX is used.
   int flag_custom_freq_ranges = 0;
-  assert_always(fscanf(input_file, "%d ", &flag_custom_freq_ranges) == 1);
+  assert_always(static_cast<bool>(input_file >> flag_custom_freq_ranges));
 
   printlnlog("vpkt: compiled with VSPEC_NUBINS {}", VSPEC_NUBINS);
   assert_always(VSPEC_NUMAX > VSPEC_NUMIN);
@@ -847,7 +848,7 @@ void read_vpktparameterfile() {
              1e8 * CLIGHT / VSPEC_NUMIN);
 
   if (flag_custom_freq_ranges == 1) {
-    assert_always(fscanf(input_file, "%d ", &nwavelengthranges) == 1);
+    assert_always(static_cast<bool>(input_file >> nwavelengthranges));
     if (nwavelengthranges < 1) {
       fatal_crash("vpkt.txt has {} wavelength ranges, but it must have at least one", nwavelengthranges);
     }
@@ -859,7 +860,7 @@ void read_vpktparameterfile() {
     for (int i = 0; i < nwavelengthranges; i++) {
       double lmin_vspec_input = 0.;
       double lmax_vspec_input = 0.;
-      assert_always(fscanf(input_file, "%lg %lg", &lmin_vspec_input, &lmax_vspec_input) == 2);
+      assert_always(static_cast<bool>(input_file >> lmin_vspec_input >> lmax_vspec_input));
       const bool is_valid_range = 0. < lmin_vspec_input && lmin_vspec_input < lmax_vspec_input;
       if (!is_valid_range) {
         fatal_crash("vpkt.txt wavelength range {} [{:g}, {:g}] [Angstroms] must have 0 < lambda_min < lambda_max", i,
@@ -889,7 +890,7 @@ void read_vpktparameterfile() {
   // Thick-cell threshold: a leading 1 overrides optical_depth_is_thick_vpkt with the value that follows,
   // otherwise the global optical_depth_is_thick is inherited. vpkts are not created in cells above it.
   int override_thickcell_tau = 0;
-  assert_always(fscanf(input_file, "%d %lg", &override_thickcell_tau, &optical_depth_is_thick_vpkt) == 2);
+  assert_always(static_cast<bool>(input_file >> override_thickcell_tau >> optical_depth_is_thick_vpkt));
 
   if (override_thickcell_tau == 1) {
     if (!(optical_depth_is_thick_vpkt > 0.)) {
@@ -903,7 +904,7 @@ void read_vpktparameterfile() {
   }
 
   // Maximum optical depth: a vpkt is discarded once it exceeds tau_max_vpkt in every opacity setup
-  assert_always(fscanf(input_file, "%lg", &tau_max_vpkt) == 1);
+  assert_always(static_cast<bool>(input_file >> tau_max_vpkt));
   if (!(tau_max_vpkt > 0.)) {
     fatal_crash("vpkt.txt tau_max_vpkt {:g} must be more than zero", tau_max_vpkt);
   }
@@ -911,7 +912,7 @@ void read_vpktparameterfile() {
 
   // Produce velocity grid map if =1
   int in_vgrid_on = 0;
-  assert_always(fscanf(input_file, "%d", &in_vgrid_on) == 1);
+  assert_always(static_cast<bool>(input_file >> in_vgrid_on));
   vgrid_on = in_vgrid_on != 0;
   printlnlog("vpkt.txt: velocity grid map {}", vgrid_on ? "ENABLED" : "DISABLED");
 
@@ -919,7 +920,7 @@ void read_vpktparameterfile() {
     double tmin_grid_in_days{NAN};
     double tmax_grid_in_days{NAN};
     // Specify time range for velocity grid map
-    assert_always(fscanf(input_file, "%lg %lg", &tmin_grid_in_days, &tmax_grid_in_days) == 2);
+    assert_always(static_cast<bool>(input_file >> tmin_grid_in_days >> tmax_grid_in_days));
     tmin_grid = tmin_grid_in_days * DAY;
     tmax_grid = tmax_grid_in_days * DAY;
     if (!(tmin_grid < tmax_grid)) {
@@ -931,7 +932,7 @@ void read_vpktparameterfile() {
 
     // Velocity grid map wavelength ranges: the number of intervals, then that many
     // (lambda_min, lambda_max) pairs in Angstroms
-    assert_always(fscanf(input_file, "%d ", &grid_nwavelengthranges) == 1);
+    assert_always(static_cast<bool>(input_file >> grid_nwavelengthranges));
     if (grid_nwavelengthranges < 1) {
       fatal_crash("vpkt.txt has {} velocity grid wavelength ranges, but it must have at least one",
                   grid_nwavelengthranges);
@@ -944,7 +945,7 @@ void read_vpktparameterfile() {
     for (int i = 0; i < grid_nwavelengthranges; i++) {
       double range_lambda_min = 0.;
       double range_lambda_max = 0.;
-      assert_always(fscanf(input_file, "%lg %lg", &range_lambda_min, &range_lambda_max) == 2);
+      assert_always(static_cast<bool>(input_file >> range_lambda_min >> range_lambda_max));
       const bool is_valid_range = 0. < range_lambda_min && range_lambda_min < range_lambda_max;
       if (!is_valid_range) {
         fatal_crash(
@@ -959,8 +960,6 @@ void read_vpktparameterfile() {
                  1e8 * CLIGHT / nu_grid_min[i]);
     }
   }
-
-  fclose(input_file);
 }
 
 void write_timestep(const int nts, const bool is_final) {
@@ -969,12 +968,12 @@ void write_timestep(const int nts, const bool is_final) {
   }
   const int my_rank = globals::my_rank;
   // write specpol of the virtual packets
-  const auto filename_vspecpol =
-      is_final ? std::format("vspecpol_{:04d}.out", my_rank) : std::format("vspecpol_{:04d}_ts{}.tmp", my_rank, nts);
+  const auto filename_vspecpol = is_final ? std::format("vspecpol/vspecpol_{:04d}.out", my_rank)
+                                          : std::format("vspecpol_{:04d}_ts{}.tmp", my_rank, nts);
   write_vspecpol(filename_vspecpol, !is_final);
 
   if (vgrid_on) {
-    const auto filename_vpktgrid = is_final ? std::format("vpkt_grid_{:04d}.out", my_rank)
+    const auto filename_vpktgrid = is_final ? std::format("vpkt_grid/vpkt_grid_{:04d}.out", my_rank)
                                             : std::format("vpkt_grid_{:04d}_ts{}.tmp", my_rank, nts);
     printlnlog("Writing vpkt grid file {}", filename_vpktgrid);
     write_vpkt_grid(filename_vpktgrid, !is_final);
@@ -986,13 +985,21 @@ void write_timestep(const int nts, const bool is_final) {
     if (vpkt_contrib_file.fail()) {
       fatal_crash("Could not write or close {}.", filename_source);
     }
-    const auto filename_dest = is_final ? std::format("vpackets_{:04d}.out", my_rank)
+    const auto filename_dest = is_final ? std::format("vpackets/vpackets_{:04d}.out", my_rank)
                                         : std::format("vpackets_{:04d}_ts{}.tmp", my_rank, nts + 1);
 
-    std::filesystem::copy_file(filename_source, filename_dest, std::filesystem::copy_options::overwrite_existing);
     printlnlog("Copying {} to {}", filename_source, filename_dest);
-
-    if (!is_final) {
+    if (is_final) {
+      // copy the content through the streams, because a build with libzstd compresses the final file
+      const auto contribs_in = istream_required(filename_source);
+      auto contribs_out = open_output_file(filename_dest);
+      contribs_out << contribs_in.rdbuf();
+      contribs_out.close();
+      if (contribs_out.fail()) {
+        fatal_crash("Could not write or close {}.", output_filepath(filename_dest));
+      }
+    } else {
+      std::filesystem::copy_file(filename_source, filename_dest, std::filesystem::copy_options::overwrite_existing);
       vpkt_contrib_file = std::ofstream(filename_dest, std::ios::app);
       if (vpkt_contrib_file.fail()) {
         fatal_crash("Could not open {}.", filename_dest);

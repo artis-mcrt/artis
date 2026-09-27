@@ -12,8 +12,6 @@
 #include <cstdlib>
 #include <filesystem>
 #include <format>
-#include <fstream>
-#include <ios>
 #include <limits>
 #include <numeric>
 #include <print>
@@ -34,7 +32,9 @@
 #include "globals.h"
 #include "grid.h"
 #include "input.h"
+#include "inputfilestream.h"
 #include "mpi_logging.h"
+#include "outputfilestream.h"
 #include "packet.h"
 #include "random.h"
 #include "stats.h"
@@ -71,7 +71,7 @@ constexpr double nu_1p5mev = 3.61990e+20;
 
 void read_gamma_spectrum(const int nucindex, const std::string& filename) {
   // read the gamma ray lines and store the average energy in gamma rays per nuclear decay
-  auto gammafile = fstream_required(filename, std::ios::in);
+  auto gammafile = istream_required(filename);
   std::string line;
   assert_always(get_noncommentline(gammafile, line));
   std::istringstream ssline(line);
@@ -113,7 +113,12 @@ auto get_datafolder_filenames() -> std::array<std::unordered_set<std::string>, d
     // an absent folder gives no entry and no error, which is correct here
     std::error_code direrror;
     for (const auto& entry : std::filesystem::directory_iterator(datafolders[folderindex], direrror)) {
-      folderfiles[folderindex].insert(entry.path().filename().string());
+      auto filename = entry.path().filename().string();
+      // istream_required() opens the compressed file under the plain name
+      if (filename.ends_with(".zst")) {
+        filename.resize(filename.size() - 4);
+      }
+      folderfiles[folderindex].insert(std::move(filename));
     }
   }
   return folderfiles;
@@ -286,7 +291,7 @@ void init_gamma_linelist() {
       return std::tie(g1.energy, g1.nucindex, g1.nucgammaindex) < std::tie(g2.energy, g2.nucindex, g2.nucgammaindex);
     });
 
-    auto gammalinelist = fstream_required("gammalinelist.out", std::ofstream::out | std::ofstream::trunc);
+    auto gammalinelist = open_output_file("gammalinelist.out");
     std::println(gammalinelist, "#index nucindex Z A nucgammmaindex en_gamma_mev gammaline_probability");
 
     for (auto i = 0Z; i < total_lines; i++) {
@@ -307,7 +312,7 @@ void init_xcom_photoion_data() {
     photoion_data[Z].reserve(100);
   }
 
-  auto data_fs = fstream_required("xcom_photoion_data.txt", std::ios::in);
+  auto data_fs = istream_required("xcom_photoion_data.txt");
   std::string line_str;
   while (get_noncommentline(data_fs, line_str)) {
     int Z = 0;

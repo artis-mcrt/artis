@@ -44,7 +44,6 @@
 #include <cmath>
 #include <cstddef>
 #include <functional>
-#include <ios>
 #include <span>
 #include <sstream>
 #include <string>
@@ -57,6 +56,7 @@
 #include "globals.h"
 #include "grid.h"
 #include "input.h"
+#include "inputfilestream.h"
 #include "ltepop.h"
 #include "mpi_logging.h"
 #include "nltepop.h"
@@ -382,7 +382,7 @@ auto read_reaction_file() -> std::vector<std::array<int, 4>> {
   auto covered = std::vector<std::array<int, 4>>();
 
   printlnlog("Reading charge transfer reactions from chargetransfer.txt...");
-  auto ctfile = fstream_required("chargetransfer.txt", std::ios::in);
+  auto ctfile = istream_required("chargetransfer.txt");
   std::string line;
   assert_always(get_noncommentline(ctfile, line));
   int filereactioncount = 0;

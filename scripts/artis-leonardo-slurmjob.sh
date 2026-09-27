@@ -27,7 +27,7 @@ export PATH="$PIXI_BIN_DIR:$UV_TOOL_BIN_DIR:$PATH"
 # Load the Open MPI of the system. It has the UCX transport of the InfiniBand
 # network. A conda-forge Open MPI has no UCX. It falls back to TCP and the run
 # then stops with "received unexpected process identifier". The module also
-# gives zstd and xz for the compressed files. Load the module after the exports
+# gives zstd for the compressed files. Load the module after the exports
 # above, because the module must put its own mpicxx first in the PATH.
 module load openmpi/4.1.6--gcc--12.2.0-cuda-12.2
 module list
@@ -51,8 +51,6 @@ cd ..
 mpicxx --version
 echo "CPU type: $(c++ -march=native -Q --help=target | grep -- '-march=  ' | cut -f3)"
 
-# decompress any zipped input files
-source ./artis/scripts/exspec-before.sh
 hoursleft=$(python ./artis/scripts/slurmjobhoursleft.py ${SLURM_JOB_ID})
 source ./artis/scripts/corehours-before.sh
 echo "$(date): before srun sn3d. hours left: $hoursleft"
@@ -72,6 +70,6 @@ fi
 if grep -qs "RESTART_NEEDED" output_0-0.txt; then
     # the submit script sets the job name and the address of the next job
     source ./artis/scripts/artis-leonardo-submit.sh
-elif [ -f packets00_0000.out ]; then
+elif ls packets/packets00_0000.out* > /dev/null 2>&1; then
     source ./artis/scripts/exspec-zip-leonardo-submit.sh
 fi

@@ -8,18 +8,6 @@ if grep -qs "No need for restart" output_0-0.txt && grep -qs "sn3d finished" out
   # join 3D direction files, if they exist
   python3 ./artis/scripts/mergeangleres.py
 
-  mkdir -p packets
-  mv packets*.out* packets/ || true
-
-  mkdir -p vpackets
-  mv vpackets*.out* vpackets/ || true
-
-  mkdir -p vspecpol
-  mv vspecpol*.out* vspecpol/ || true
-
-  mkdir -p vpkt_grid
-  mv vpkt_grid*.out* vpkt_grid/ || true
-
   # remove empty directories, but keep the artis folder
   find . -maxdepth 1 -type d -empty ! -name artis -delete
 

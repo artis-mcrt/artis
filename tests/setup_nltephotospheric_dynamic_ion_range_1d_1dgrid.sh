@@ -12,7 +12,7 @@ mkdir -p $runfolder
 
 cd $runfolder
 
-rsync -av --exclude="recombrates.txt" ../nebular_1d_3dgrid_inputfiles/ ./
+rsync -av --exclude="recombrates.txt.zst" ../nebular_1d_3dgrid_inputfiles/ ./
 
 rsync --ignore-times -av ../nltephotospheric_dynamic_ion_range_1d_1dgrid_inputfiles/ ./
 

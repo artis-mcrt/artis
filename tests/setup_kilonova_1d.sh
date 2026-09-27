@@ -20,7 +20,6 @@ ln -s ../../ artis
 
 cp artis/artisoptions_kilonova_lte.h artisoptions.h
 
-xz -f -d -v -T0 *.xz
 
 sedopt "constexpr std::int64_t NUM_PACKETS.*" "constexpr std::int64_t NUM_PACKETS = 320'000;"
 

@@ -14,9 +14,7 @@
 #include <cstring>
 #include <filesystem>
 #include <format>
-#include <fstream>
 #include <functional>
-#include <ios>
 #include <istream>
 #include <iterator>
 #include <limits>
@@ -40,8 +38,10 @@
 #include "constants.h"
 #include "decay.h"
 #include "globals.h"
+#include "inputfilestream.h"
 #include "kpkt.h"
 #include "mpi_logging.h"
+#include "outputfilestream.h"
 #include "packet.h"
 #include "random.h"
 #include "ratecoeff.h"
@@ -331,7 +331,7 @@ void read_phixs_file(const int phixs_file_version, std::vector<float>& tmpallphi
                      const PhixsLevelBuilders& levelbuilders) {
   printlnlog("reading phixs data from {}", phixsdata_filenames[phixs_file_version]);
 
-  auto phixsfile = fstream_required(phixsdata_filenames[phixs_file_version], std::ios::in);
+  auto phixsfile = istream_required(phixsdata_filenames[phixs_file_version]);
   std::string phixsline;
   std::istringstream ssline;
   auto mem_usage_phixs = 0ZU;
@@ -982,7 +982,7 @@ void read_autoion_data() {
   auto alllevels_nautoiondowntrans = MPI_shared_array<int>(uniquelevelcount, 0);
 
   // read in autoionisation rate data
-  const bool have_autoion_file = std::filesystem::exists("autoion.txt");
+  const bool have_autoion_file = inputfile_exists("autoion.txt");
 
   std::vector<globals::LevelAutoion> temp_allautoion;
 
@@ -997,7 +997,7 @@ void read_autoion_data() {
     temp_allautoion_start.assign(uniquelevelcount, -1);
 
     printlnlog("Reading autoion.txt for autoionisation data.");
-    auto autoionfile = fstream_required("autoion.txt", std::ios::in);
+    auto autoionfile = istream_required("autoion.txt");
     std::string autoionline;
     int Z = -1;
     int upperionstage = -1;
@@ -1162,8 +1162,8 @@ void read_phixs_data() {
 
   // read in photoionisation cross sections
   phixs_file_version_exists[0] = false;
-  phixs_file_version_exists[1] = std::filesystem::exists(phixsdata_filenames[1]);
-  phixs_file_version_exists[2] = std::filesystem::exists(phixsdata_filenames[2]);
+  phixs_file_version_exists[1] = inputfile_exists(phixsdata_filenames[1]);
+  phixs_file_version_exists[2] = inputfile_exists(phixsdata_filenames[2]);
 
   // just in case the file system was faulty and the ranks disagree on the existence of the files
   MPI_Allreduce_safe(phixs_file_version_exists, MPI_LOR, MPI_COMM_WORLD);
@@ -1308,7 +1308,7 @@ void read_phixs_data() {
 }
 
 auto read_compositiondata() -> std::vector<int> {
-  auto compositionfile = fstream_required("compositiondata.txt", std::ios::in);
+  auto compositionfile = istream_required("compositiondata.txt");
 
   // keep only the text to the left of a # character
   std::stringstream compositiondata;
@@ -1380,8 +1380,8 @@ void read_levels_and_transitions(std::vector<TempEnergyLevel>& temp_alllevels,
   std::istringstream ssline;
   globals::nlines = 0;
   std::vector<IonTransitionsInput> iontransitiontable;
-  auto adata = fstream_required("adata.txt", std::ios::in);
-  auto ftransitiondata = fstream_required("transitiondata.txt", std::ios::in);
+  auto adata = istream_required("adata.txt");
+  auto ftransitiondata = istream_required("transitiondata.txt");
   int uniquelevelindex = 0;  // index into list of all levels of all ions of all elements
   for (int element = 0; element < get_nelements(); element++) {
     // now read in data for all ions of the current element. before doing so initialize
@@ -1795,7 +1795,7 @@ void write_bflist_file() {
   assert_always(i == globals::nbfcontinua);
 
   if (globals::my_rank == 0) {
-    auto bflist_file = fstream_required("bflist.out", std::ios::out | std::ios::trunc);
+    auto bflist_file = open_output_file("bflist.out");
     std::println(bflist_file, "{}", globals::nbfcontinua);
     for (i = 0; i < globals::nbfcontinua; i++) {
       const int element = globals::bflist[i].elementindex;
@@ -1875,7 +1875,7 @@ auto read_start_timestep_and_continue_flag() -> std::pair<int, bool> {
     int timestep_finish = 0;
     // read_parameterfile() restores input.txt from input-newrun.txt under the same condition
     const bool use_newrun_copy = !std::filesystem::exists("input.txt") && std::filesystem::exists("input-newrun.txt");
-    auto file = fstream_required(use_newrun_copy ? "input-newrun.txt" : "input.txt", std::ios::in);
+    auto file = istream_required(use_newrun_copy ? "input-newrun.txt" : "input.txt");
     std::string line;
     for (int noncomment_linenum = 0; noncomment_linenum <= inputline_continue_from_saved; noncomment_linenum++) {
       assert_always(get_noncommentline(file, line));
@@ -1913,7 +1913,7 @@ void read_parameterfile(std::span<Packet> packets) {
   // rank 0 creates input.txt before the other ranks open it
   MPI_Barrier_allranks();
 
-  auto file = fstream_required("input.txt", std::ios::in);
+  auto file = istream_required("input.txt");
 
   std::string line;
   assert_always(get_noncommentline(file, line));
@@ -2083,8 +2083,6 @@ void read_parameterfile(std::span<Packet> packets) {
 
   // UNUSED: kpkt diffusion parameters: now set in kpkt.cc
   assert_always(get_noncommentline(file, line));
-
-  file.close();
 }
 
 // Write input.txt again with the standard comments and the number of packet files. For nts >= 0, input.txt makes the
@@ -2097,9 +2095,9 @@ void update_parameterfile(const int nts) {
     printlog("Write input.txt again with comments, and copy it to input-newrun.txt...");
   }
 
-  auto file = fstream_required("input.txt", std::ios::in);
+  auto file = istream_required("input.txt");
 
-  auto fileout = fstream_required("input.txt.tmp", std::ios::out | std::ios::trunc);
+  auto fileout = open_uncompressed_output_file("input.txt.tmp");
 
   std::string line;
 
@@ -2155,7 +2153,6 @@ void update_parameterfile(const int nts) {
   if (fileout.fail()) {
     fatal_crash("Could not write or close input.txt.tmp.");
   }
-  file.close();
 
   // each rename is atomic, so a crash leaves no partial file, and a rank that still reads the old input.txt is safe
   std::error_code ec;
