@@ -793,12 +793,13 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
     // For the initial timestep, temperatures have already been assigned
     // either by trapped energy release calculation, or reading from gridsave file
 
-    for (int element = 0; element < get_nelements(); element++) {
-      calculate_cellpartfuncts(nonemptymgi, element);
-    }
+    // a resumed job keeps the partition functions and populations of the gridsave file
     if (!globals::simulation_continued_from_saved) {
       // a new run has no estimators of the photoionisation rates, so the first ion balance uses the Saha equation
       grid::thick_allcells[nonemptymgi] = grid::CellThickness::THICK;
+      for (int element = 0; element < get_nelements(); element++) {
+        calculate_cellpartfuncts(nonemptymgi, element);
+      }
       calculate_ion_balance_nne(nonemptymgi);
     }
   } else {

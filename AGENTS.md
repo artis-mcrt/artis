@@ -237,9 +237,10 @@ runs the full matrix.
 The workflows in `.github/workflows/`:
 
 - `ci.yml` runs each model of its `testname` matrix on arm64, and compares the
-  checksums. Two more jobs run one model with `OPENMP=ON` and with
-  `STDPAR=ON`. These two jobs compare no checksums (see "Reproducible
-  results").
+  checksums. For `nebular_1d_3dgrid`, it also runs all the timesteps in one
+  job and compares the outputs with the outputs of the two jobs. Two more jobs
+  run one model with `OPENMP=ON` and with `STDPAR=ON`. These two jobs compare
+  no checksums (see "Reproducible results").
 - `cislowtestmode.yml` calls `ci.yml` again with `TESTMODE=ON`. The sanitizers
   and the extra assertions make this run slow, so `ci.yml` gives it a longer
   timeout. This workflow does not enforce the checksums, because both checksum

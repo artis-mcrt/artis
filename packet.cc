@@ -283,33 +283,37 @@ void write_text_packets(const std::string& filename, const std::span<const Packe
   assert_always(!packets_file.fail());  // e.g. a full disk
 }
 
-void read_temp_packetsfile(const int timestep, std::vector<Packet>& packets) {
-  // read binary packets file
+void read_packet_restart_file(const int timestep, std::vector<Packet>& packets) {
   const auto filename = std::format("packets_{:04d}_ts{:d}.tmp", globals::my_rank, timestep);
 
   printlnlog("Reading {}", filename);
   const auto packets_file = fopen_required_uniqueptr(filename, "rb");
   std::int64_t packet_count_in_file = 0;
-  assert_always(std::fread(&packet_count_in_file, sizeof(std::int64_t), 1, packets_file.get()) == 1);
+  read_restart_values(packets_file.get(), packet_count_in_file);
   assert_always(packet_count_in_file >= 0);
   assert_always(packet_count_in_file <= std::ssize(packets));
   reserve_resize(packets, packet_count_in_file);
-  assert_always(std::fread(packets.data(), sizeof(Packet), packet_count_in_file, packets_file.get()) ==
-                static_cast<size_t>(packet_count_in_file));
-  printlnlog("read {} packets from {}", packet_count_in_file, filename);
+  read_restart_array(packets_file.get(), packets);
+#ifndef GPU_ON
+  // the random number stream of the main thread continues from the state of the job that wrote the file
+  read_restart_values(packets_file.get(), get_rngstate());
+#endif
+  // the file must hold no data after the last value
+  assert_always(std::fgetc(packets_file.get()) == EOF && std::feof(packets_file.get()) != 0);
+  printlnlog("read {} packets and the random number state from {}", packet_count_in_file, filename);
 }
 
-void write_temp_packetsfile(const int timestep, const std::span<const Packet> packets) {
-  // write packets binary file (and retry if the write fails)
+void write_packet_restart_file(const int timestep, const std::span<const Packet> packets) {
   const auto filename = std::format("packets_{:04d}_ts{:d}.tmp", globals::my_rank, timestep);
 
-  int tries = 0;
+  constexpr int max_write_attempts = 10;
+  int attempts = 0;
   bool write_success = false;
   while (!write_success) {
-    if (tries > 10) {
-      fatal_crash("The write of {} failed after {} tries", filename, tries);
+    if (attempts >= max_write_attempts) {
+      fatal_crash("The write of {} failed after {} attempts", filename, attempts);
     }
-    if (tries > 0) {
+    if (attempts > 0) {
       // give transient filesystem problems (e.g. contention on a cluster parallel filesystem) a
       // chance to clear instead of burning through all of the retries within milliseconds
       std::this_thread::sleep_for(std::chrono::seconds(5));
@@ -318,26 +322,30 @@ void write_temp_packetsfile(const int timestep, const std::span<const Packet> pa
     FILE* packets_file = fopen(filename.c_str(), "wb");
     if (packets_file == nullptr) {
       printlnlog("[error] Could not open file '{}' for mode 'wb'.", filename);
-      write_success = false;
     } else {
       auto packet_count = static_cast<std::int64_t>(std::ssize(packets));
       // write number of packets as header
       write_success = (std::fwrite(&packet_count, sizeof(std::int64_t), 1, packets_file) == 1);
       write_success = write_success &&
                       (std::fwrite(packets.data(), sizeof(Packet), packets.size(), packets_file) == packets.size());
+#ifndef GPU_ON
+      write_success = write_success && (std::fwrite(&get_rngstate(), sizeof(rngstate_type), 1, packets_file) == 1);
+#endif
       if (!write_success) {
-        printlnlog("[warning] fwrite to {} failed on attempt {} of 10. will retry...", filename, tries + 1);
+        printlnlog("[warning] fwrite to {} failed on attempt {} of {}. will retry...", filename, attempts + 1,
+                   max_write_attempts);
       }
 
       // a buffered write can fail at the flush that fclose() performs, so without checking it here a
       // truncated restart file would be reported as having been written successfully
       const bool closed_ok = (fclose(packets_file) == 0);
       if (write_success && !closed_ok) {
-        printlnlog("[warning] fclose of {} failed on attempt {} of 10. will retry...", filename, tries + 1);
+        printlnlog("[warning] fclose of {} failed on attempt {} of {}. will retry...", filename, attempts + 1,
+                   max_write_attempts);
       }
       write_success = write_success && closed_ok;
     }
-    tries++;
+    attempts++;
   }
   printlnlog("done");
 }
