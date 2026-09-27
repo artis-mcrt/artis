@@ -132,6 +132,11 @@ jobs:
                   cp sn3d tests/${{ matrix.testname }}_testrun/
                   cp exspec tests/${{ matrix.testname }}_testrun/
 
+            - name: Copy the run folder for a simulation in one job
+              if: matrix.testname == 'nebular_1d_3dgrid' && inputs.testmode != 'ON'
+              working-directory: tests/
+              run: cp -a ${{ matrix.testname }}_testrun ${{ matrix.testname }}_onejob
+
             - name: Run test job0 start
               id: run_job0
               if: always()
@@ -272,6 +277,28 @@ jobs:
                   else
                       echo "::warning::The repository has no results_md5_final.txt for ${{ matrix.testname }}. The step compares nothing."
                   fi
+
+            - name: Compare the two jobs with a simulation in one job
+              if: always() && matrix.testname == 'nebular_1d_3dgrid' && inputs.testmode != 'ON'
+              working-directory: tests/${{ matrix.testname }}_onejob
+              run: |
+                  # A resumed job must give the same results as a simulation in one job. The comparison has no
+                  # stored checksums, so it also finds a defect that the stored checksums of the resumed job hold.
+                  # The one job runs to the last timestep of input-resume.txt.
+                  set -eo pipefail
+                  finish=$(awk 'NR == 3 {print $2}' input-resume.txt)
+                  sed -E "3s/^([0-9]+) +[0-9]+/\1 ${finish}/" input-newrun.txt > input.txt
+                  time mpirun -np 4 --oversubscribe --mca osc ^ucx --mca mpi_yield_when_idle 1 ./sn3d
+                  rm -f ./*.tmp
+                  mpirun -np 2 --oversubscribe --mca osc ^ucx ./exspec
+                  python3 ../../scripts/mergeangleres.py
+                  shopt -s nullglob
+                  for folder in ${{ matrix.testname }}_testrun ${{ matrix.testname }}_onejob; do
+                      (cd "../${folder}" && for zstfile in *.out.zst packets/*.out.zst vpackets/*.out.zst vspecpol/*.out.zst vpkt_grid/*.out.zst speclc_angle_res/*.zst; do
+                          zstdcat "$zstfile" | md5sum | sed "s|  -$|  ${zstfile%.zst}|"
+                      done) > "$RUNNER_TEMP/md5_${folder}.txt"
+                  done
+                  diff "$RUNNER_TEMP/md5_${{ matrix.testname }}_testrun.txt" "$RUNNER_TEMP/md5_${{ matrix.testname }}_onejob.txt"
 
             - name: Prepare for next steps
               if: always()

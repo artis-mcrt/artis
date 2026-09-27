@@ -166,8 +166,8 @@ constexpr DEVICE_FUNC auto get_rngstate([[maybe_unused]] Packet& packet) -> rngs
 inline auto get_rngstate() -> rngstate_type& {
   // Every thread lazily seeds its own generator from a random source, so that OpenMP/stdpar worker
   // threads (which never run the seeding code in read_parameterfile) do not all share the identical
-  // default-seeded sequence. The main thread is re-seeded deterministically in read_parameterfile()
-  // to keep single-threaded runs reproducible.
+  // default-seeded sequence. The main thread is re-seeded deterministically in read_parameterfile(), and a
+  // resumed job restores its state in read_temp_packetsfile(), to keep single-threaded runs reproducible.
   thread_local rngstate_type rng{static_cast<std::uint32_t>(get_rng_random_seed())};
   return rng;
 }

@@ -284,33 +284,31 @@ void write_text_packets(const std::string& filename, const std::span<const Packe
 }
 
 void read_temp_packetsfile(const int timestep, std::vector<Packet>& packets) {
-  // read binary packets file
   const auto filename = std::format("packets_{:04d}_ts{:d}.tmp", globals::my_rank, timestep);
 
   printlnlog("Reading {}", filename);
   const auto packets_file = fopen_required_uniqueptr(filename, "rb");
   std::int64_t packet_count_in_file = 0;
-  assert_always(std::fread(&packet_count_in_file, sizeof(std::int64_t), 1, packets_file.get()) == 1);
+  read_restart_values(packets_file.get(), packet_count_in_file);
   assert_always(packet_count_in_file >= 0);
   assert_always(packet_count_in_file <= std::ssize(packets));
   reserve_resize(packets, packet_count_in_file);
-  assert_always(std::fread(packets.data(), sizeof(Packet), packet_count_in_file, packets_file.get()) ==
-                static_cast<size_t>(packet_count_in_file));
+  read_restart_array(packets_file.get(), packets);
 #ifndef GPU_ON
-  // the random number stream continues from the state of the run that wrote the file
+  // the random number stream of the main thread continues from the state of the job that wrote the file
   read_restart_values(packets_file.get(), get_rngstate());
 #endif
-  printlnlog("read {} packets from {}", packet_count_in_file, filename);
+  assert_always(std::fgetc(packets_file.get()) == EOF && std::feof(packets_file.get()) != 0);
+  printlnlog("read {} packets and the random number state from {}", packet_count_in_file, filename);
 }
 
 void write_temp_packetsfile(const int timestep, const std::span<const Packet> packets) {
-  // write packets binary file (and retry if the write fails)
   const auto filename = std::format("packets_{:04d}_ts{:d}.tmp", globals::my_rank, timestep);
 
   int tries = 0;
   bool write_success = false;
   while (!write_success) {
-    if (tries > 10) {
+    if (tries >= 10) {
       fatal_crash("The write of {} failed after {} tries", filename, tries);
     }
     if (tries > 0) {
@@ -322,7 +320,6 @@ void write_temp_packetsfile(const int timestep, const std::span<const Packet> pa
     FILE* packets_file = fopen(filename.c_str(), "wb");
     if (packets_file == nullptr) {
       printlnlog("[error] Could not open file '{}' for mode 'wb'.", filename);
-      write_success = false;
     } else {
       auto packet_count = static_cast<std::int64_t>(std::ssize(packets));
       // write number of packets as header
