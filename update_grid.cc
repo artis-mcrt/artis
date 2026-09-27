@@ -793,10 +793,28 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
     // For the initial timestep, temperatures have already been assigned
     // either by trapped energy release calculation, or reading from gridsave file
 
+    if (USE_LUT_PHOTOION && !globals::simulation_continued_from_saved) {
+      // Determine renormalisation factor for corrected photoionisation cross-sections
+      std::ranges::fill(
+          globals::corrphotoionrenorm.subspan(static_cast<ptrdiff_t>(nonemptymgi) * globals::nbfcontinua_ground,
+                                              globals::nbfcontinua_ground),
+          1.);
+    }
+
+    // W == 1 indicates that this modelgrid cell was treated grey in the
+    // last timestep. Therefore it has no valid Gamma estimators and must be treated in LTE at restart.
+    if (grid::thick_allcells[nonemptymgi] != grid::CellThickness::THICK && grid::W_allcells[nonemptymgi] == 1) {
+      printlnlog(
+          "force modelgrid cell {} to grey/LTE thick = 1 for update grid since existing W == 1. (will not have gamma "
+          "estimators)",
+          mgi);
+      grid::thick_allcells[nonemptymgi] = grid::CellThickness::THICK;
+    }
+
+    printlnlog("mgi {} thick: {} (during grid update)", mgi, static_cast<int>(grid::thick_allcells[nonemptymgi]));
+
     // a resumed job keeps the partition functions and populations of the gridsave file
     if (!globals::simulation_continued_from_saved) {
-      // a new run has no estimators of the photoionisation rates, so the first ion balance uses the Saha equation
-      grid::thick_allcells[nonemptymgi] = grid::CellThickness::THICK;
       for (int element = 0; element < get_nelements(); element++) {
         calculate_cellpartfuncts(nonemptymgi, element);
       }
