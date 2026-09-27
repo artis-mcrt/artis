@@ -136,7 +136,7 @@ auto T_e_eqn_heating_minus_cooling(const double T_e, int nonemptymgi, const doub
                                    const std::span<const double> bfheatingcoeffs, double& T_e_last_gamma_update,
                                    const bool force_gamma_update) -> double {
   const auto fT_e = static_cast<float>(T_e);
-  const bool update_gamma = force_gamma_update || std::abs((T_e / T_e_last_gamma_update) - 1.) > 0.1;
+  const bool update_gamma = force_gamma_update || std::abs(T_e - T_e_last_gamma_update) > 0.1 * T_e_last_gamma_update;
   if (update_gamma) {
     T_e_last_gamma_update = T_e;
   }
@@ -340,7 +340,7 @@ void call_T_e_finder(const int nonemptymgi, const double t_current, HeatingCooli
                      const std::span<const double> bfheatingcoeffs) {
   const int modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
   const double T_e_old = grid::Te_allcells[nonemptymgi];
-  double T_e_last_gamma_update = T_e_old;
+  double T_e_last_gamma_update = 0.;  // zero, so that the first trial calculates the ionisation rates
   printlog("Finding T_e in cell {} at timestep {}...", modelgridindex, globals::timestep);
 
   const auto f_T_e = [&](double T_e) -> double {
