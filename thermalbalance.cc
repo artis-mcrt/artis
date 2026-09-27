@@ -126,11 +126,10 @@ void calculate_heating_rates(const int nonemptymgi, const float T_e, const float
 // NB: this is not a pure function of T_e. Evaluating it stores T_e in the grid and re-solves the cell's
 // ionisation balance, populations and nne at that temperature, so the cell is left in the state belonging
 // to the last T_e passed in. call_T_e_finder() relies on this and re-evaluates at the final T_e.
-// The residual heating minus cooling at the trial temperature T_e. With LTEPOP_EXCITATION_USE_TJ false, the
-// ionisation rates of the elements without NLTE levels depend on T_e. The function calculates them again when
-// T_e moves by more than 10 percent from T_e_last_gamma_update, the T_e of their last calculation. It also calculates
-// them when force_gamma_update is set.
-// It calculates the partition functions of these elements at every T_e.
+// With LTEPOP_EXCITATION_USE_TJ false, the ionisation rates of the elements without NLTE levels depend on T_e. The
+// function calculates them again when T_e moves by more than 10 percent from T_e_last_gamma_update, the T_e of their
+// last calculation. It also calculates them when force_gamma_update is set. It calculates the partition functions of
+// these elements at every T_e.
 auto T_e_eqn_heating_minus_cooling(const double T_e, int nonemptymgi, const double t_current,
                                    HeatingCoolingRates& heatingcoolingrates,
                                    const std::span<const double> bfheatingcoeffs, double& T_e_last_gamma_update,
@@ -148,7 +147,7 @@ auto T_e_eqn_heating_minus_cooling(const double T_e, int nonemptymgi, const doub
     for (int element = 0; element < get_nelements(); element++) {
       if (!elem_has_nlte_levels(element)) {
         if (update_gamma) {
-          // recalculate the Gammas using the current level populations
+          // the ionisation rates from the current level populations
           const int nions = get_nions(element);
           for (int ion = 0; ion < nions - 1; ion++) {
             const auto groundcontindex = get_groundcontindex(element, ion);
