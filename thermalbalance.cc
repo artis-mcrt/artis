@@ -129,17 +129,21 @@ void calculate_heating_rates(const int nonemptymgi, const float T_e, const float
 // The residual heating minus cooling at the trial temperature T_e. With LTEPOP_EXCITATION_USE_TJ false, the
 // ionisation rates of the elements without NLTE levels depend on T_e. The function calculates them again when
 // T_e moves by more than 10 percent from the stored value. It also calculates them when force_gamma_update is set.
+// It calculates the partition functions of these elements at every T_e.
 auto T_e_eqn_heating_minus_cooling(const double T_e, int nonemptymgi, const double t_current,
                                    HeatingCoolingRates& heatingcoolingrates,
                                    const std::span<const double> bfheatingcoeffs, const bool force_gamma_update)
     -> double {
   const auto fT_e = static_cast<float>(T_e);
+  const bool update_gamma = force_gamma_update || std::abs((T_e / grid::Te_allcells[nonemptymgi]) - 1.) > 0.1;
+
+  // Set new T_e guess for the current cell and update populations
+  grid::Te_allcells[nonemptymgi] = fT_e;
 
   if constexpr (!LTEPOP_EXCITATION_USE_TJ) {
-    if (force_gamma_update || std::abs((T_e / grid::Te_allcells[nonemptymgi]) - 1.) > 0.1) {
-      grid::Te_allcells[nonemptymgi] = fT_e;
-      for (int element = 0; element < get_nelements(); element++) {
-        if (!elem_has_nlte_levels(element)) {
+    for (int element = 0; element < get_nelements(); element++) {
+      if (!elem_has_nlte_levels(element)) {
+        if (update_gamma) {
           // recalculate the Gammas using the current level populations
           const int nions = get_nions(element);
           for (int ion = 0; ion < nions - 1; ion++) {
@@ -150,17 +154,6 @@ auto T_e_eqn_heating_minus_cooling(const double T_e, int nonemptymgi, const doub
             }
           }
         }
-      }
-    }
-  }
-
-  // Set new T_e guess for the current cell and update populations
-  grid::Te_allcells[nonemptymgi] = fT_e;
-
-  if constexpr (!LTEPOP_EXCITATION_USE_TJ) {
-    // the partition functions of the elements without NLTE levels depend on T_e
-    for (int element = 0; element < get_nelements(); element++) {
-      if (!elem_has_nlte_levels(element)) {
         calculate_cellpartfuncts(nonemptymgi, element);
       }
     }
