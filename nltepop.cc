@@ -82,10 +82,10 @@ struct RateMatrices {
   void write_out_rate_matrices(const int atomic_number, const int mgi) {
     printlnlog("before lambda");
     auto output_rate_matrix = [&](std::string base_path, std::string name, std::vector<double> mat) {
-      std::fstream output_file =
-          fstream_required(std::format("{}-{}.out", base_path, name), std::ios::binary | std::ios::out);
-      output_file.write(reinterpret_cast<const char*>(mat.data()), sizeof(double) * mat.size());
-      output_file.close();
+      FILE *output_file =
+          fopen_required(std::format("{}-{}.out", base_path, name), "wb");
+      std::fwrite(mat.data(), sizeof(double), mat.size(), output_file);
+      std::fclose(output_file);
     };
     printlnlog("after lambda");
 
