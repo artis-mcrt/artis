@@ -117,7 +117,7 @@ jobs:
                   sudo apt-get install -y --no-install-recommends openmpi-bin libopenmpi-dev libzstd-dev
 
             - name: Install TBB
-              if: matrix.compiler.name == 'gcc'
+              if: matrix.compiler.name == 'gcc' && matrix.compiler.ver != 15
               run: |
                   sudo apt-get install -y --no-install-recommends libtbb-dev
 
@@ -132,16 +132,21 @@ jobs:
                   make -j$(nproc) unittests
                   ./unittests
 
+            # The OpenMP and STDPAR builds use OPTIMIZE=OFF, because the plain builds of each compiler check
+            # the warnings of the optimiser and the link with LTO. gcc 14 and gcc 16 do the OpenMP, STDPAR,
+            # and preset builds of gcc, so gcc 15 skips them.
             - name: Compile classic mode OPENMP=ON
+              if: ${{ !(matrix.compiler.name == 'gcc' && matrix.compiler.ver == 15) }}
               run: |
                   make clean
-                  make OPENMP=ON -j$(nproc) sn3d exspec
+                  make OPENMP=ON OPTIMIZE=OFF -j$(nproc) sn3d exspec
 
             - name: Compile classic mode STDPAR=ON
+              if: ${{ !(matrix.compiler.name == 'gcc' && matrix.compiler.ver == 15) }}
               run: |
                   cp -v -p artisoptions_classic.h artisoptions.h
                   make clean
-                  make STDPAR=ON -j$(nproc) sn3d exspec
+                  make STDPAR=ON OPTIMIZE=OFF -j$(nproc) sn3d exspec
 
             - name: Compile nebular mode
               run: |
@@ -155,23 +160,29 @@ jobs:
                   ./unittests
 
             - name: Compile nebular mode OPENMP=ON
+              if: ${{ !(matrix.compiler.name == 'gcc' && matrix.compiler.ver == 15) }}
               run: |
                   cp -v -p artisoptions_nltenebular.h artisoptions.h
                   make clean
-                  make OPENMP=ON -j$(nproc) sn3d exspec
+                  make OPENMP=ON OPTIMIZE=OFF -j$(nproc) sn3d exspec
 
             - name: Compile nebular mode STDPAR=ON
+              if: ${{ !(matrix.compiler.name == 'gcc' && matrix.compiler.ver == 15) }}
               run: |
                   cp -v -p artisoptions_nltenebular.h artisoptions.h
                   make clean
-                  make STDPAR=ON -j$(nproc) sn3d exspec
+                  make STDPAR=ON OPTIMIZE=OFF -j$(nproc) sn3d exspec
 
             - name: Compile all remaining option files
+              if: ${{ !(matrix.compiler.name == 'gcc' && matrix.compiler.ver == 15) }}
               run: |
+                  # The CI tests build every preset with g++-16 and the optimiser, so gcc 16 uses OPTIMIZE=OFF here.
+                  # The other compilers keep the optimiser, because a preset changes its warnings.
+                  optimize=${{ (matrix.compiler.name == 'gcc' && matrix.compiler.ver == 16) && 'OFF' || 'ON' }}
                   # no -p: a preserved (older) mtime would make the preset build look already up to date
                   for file in $(find . -name "artisoptions_*.h" ! -name "artisoptions_classic.h" ! -name "artisoptions_nltenebular.h"); do
                       cp -v "$file" artisoptions.h
-                      make -j$(nproc) sn3d
+                      make OPTIMIZE=$optimize -j$(nproc) sn3d
                   done
 
     mac-clang:
@@ -219,17 +230,18 @@ jobs:
                   make clean
                   make -j$(nproc) sn3d exspec
 
+            # OPTIMIZE=OFF, because the plain builds check the optimiser and the link with LTO
             - name: LLVM Clang Compile classic mode OPENMP=ON
               run: |
                   make clean
-                  make OPENMP=ON -j$(nproc) sn3d exspec
+                  make OPENMP=ON OPTIMIZE=OFF -j$(nproc) sn3d exspec
 
             - name: LLVM Clang Compile classic mode STDPAR=ON
               run: |
                   clang++ -v
                   cp -v -p artisoptions_classic.h artisoptions.h
                   make clean
-                  make STDPAR=ON -j$(nproc) sn3d exspec
+                  make STDPAR=ON OPTIMIZE=OFF -j$(nproc) sn3d exspec
 
             - name: LLVM Clang Compile nebular mode
               run: |
@@ -241,13 +253,13 @@ jobs:
               run: |
                   cp -v -p artisoptions_nltenebular.h artisoptions.h
                   make clean
-                  make OPENMP=ON -j$(nproc) sn3d exspec
+                  make OPENMP=ON OPTIMIZE=OFF -j$(nproc) sn3d exspec
 
             - name: LLVM Clang Compile nebular mode STDPAR=ON
               run: |
                   cp -v -p artisoptions_nltenebular.h artisoptions.h
                   make clean
-                  make STDPAR=ON -j$(nproc) sn3d exspec
+                  make STDPAR=ON OPTIMIZE=OFF -j$(nproc) sn3d exspec
 
             - name: LLVM Clang Compile all remaining option files
               run: |
