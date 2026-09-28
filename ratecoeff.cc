@@ -11,14 +11,11 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <filesystem>
 #include <format>
-#include <ios>
 #include <limits>
 #include <span>
 #include <sstream>
 #include <string>
-#include <utility>
 
 #include "artisoptions.h"
 #include "atomic.h"
@@ -26,6 +23,7 @@
 #include "globals.h"
 #include "grid.h"
 #include "input.h"
+#include "inputfilestream.h"
 #include "integrator.h"
 #include "ltepop.h"
 #include "macroatom.h"
@@ -63,11 +61,11 @@ const auto temperature_grid = []() {
   return index;
 }
 
-MPI_shared_array<const float> ion_alpha_sp;  // size is nincludedions * RATECOEFF_TABLESIZE, indexed
-                                             // by (uniqueionindex * RATECOEFF_TABLESIZE) + temperatureindex
+MPI_shared_array<float> ion_alpha_sp;  // size is nincludedions * RATECOEFF_TABLESIZE, indexed
+                                       // by (uniqueionindex * RATECOEFF_TABLESIZE) + temperatureindex
 
 // the following spans are indexed by get_bflutindex()
-MPI_shared_array<double> spontrecombcoeffs{};  // indexed by get_bflutindex()
+MPI_shared_array<double> spontrecombcoeffs{};
 MPI_shared_array<double> corrphotoioncoeffs{};  // for USE_LUT_PHOTOION = true
 MPI_shared_array<double> bfcooling_coeffs{};
 
@@ -75,8 +73,7 @@ MPI_shared_array<double> bfcooling_coeffs{};
 auto alpha_sp_integrand(const double nu_minus_nu_edge, const double nu_edge, const float T_e,
                         const std::span<const float> photoion_xs) -> double {
   const auto sigma_bf = photoionisation_crosssection_fromtable(photoion_xs, nu_edge, nu_minus_nu_edge + nu_edge);
-  // the variable of integration has been changed from nu to nu_minus_nu_edge = nu - nu_edge
-  // to get a cancellation with part of the saha factor
+  // the variable of integration is nu_minus_nu_edge = nu - nu_edge, which cancels a part of the Saha factor
   return (2 / CLIGHTSQUARED) * sigma_bf * pow2(nu_edge + nu_minus_nu_edge) * exp(-HOVERKB * nu_minus_nu_edge / T_e);
 }
 
@@ -121,17 +118,17 @@ auto bfcooling_integrand(const double nu_minus_nu_edge, const double nu_edge, co
 }
 
 [[gnu::pure]] [[nodiscard]] inline auto get_bflutindex(const int temperatureindex, const int uniquelevelindex,
-                                                       const int phixstargetindex) -> int {
+                                                       const int phixstargetindex) -> ptrdiff_t {
   // continuum-major layout so that the two temperature samples read by an interpolation are adjacent
-  const int contindex = globals::alllevels.bflist_start[uniquelevelindex] + phixstargetindex;
-  const int bflutindex = (contindex * RATECOEFF_TABLESIZE) + temperatureindex;
+  const ptrdiff_t contindex = globals::alllevels.bflist_start[uniquelevelindex] + phixstargetindex;
+  const ptrdiff_t bflutindex = (contindex * RATECOEFF_TABLESIZE) + temperatureindex;
   assert_testmodeonly(bflutindex >= 0);
-  assert_testmodeonly(bflutindex < RATECOEFF_TABLESIZE * globals::nbfcontinua);
+  assert_testmodeonly(bflutindex < static_cast<ptrdiff_t>(RATECOEFF_TABLESIZE) * globals::nbfcontinua);
   return bflutindex;
 }
 
 [[gnu::pure]] [[nodiscard]] inline auto get_bflutindex(const int temperatureindex, const int element, const int ion,
-                                                       const int level, const int phixstargetindex) -> int {
+                                                       const int level, const int phixstargetindex) -> ptrdiff_t {
   return get_bflutindex(temperatureindex, get_uniquelevelindex(element, ion, level), phixstargetindex);
 }
 
@@ -181,7 +178,7 @@ void precalculate_rate_coefficient_integrals() {
               nu_threshold * last_phixs_nuovernuedge;  // nu of the uppermost point in the phixs table
           // Loop over the temperature grid
           for (int temperatureindex = 0; temperatureindex < RATECOEFF_TABLESIZE; temperatureindex++) {
-            const int bflutindex = get_bflutindex(temperatureindex, element, ion, level, phixstargetindex);
+            const auto bflutindex = get_bflutindex(temperatureindex, element, ion, level, phixstargetindex);
             double error{NAN};
             const auto temperature = static_cast<float>(temperature_grid[temperatureindex]);
 
@@ -190,7 +187,6 @@ void precalculate_rate_coefficient_integrals() {
             assert_always(std::isfinite(modified_sahafact));
 
             assert_always(!get_phixs_table(element, ion, level).empty());
-            // the threshold of the first target gives nu of the first phixstable point
             const auto photoion_xs = get_phixs_table(element, ion, level);
 
             // Spontaneous recombination and bf-cooling coefficient don't depend on the radiation field
@@ -278,13 +274,13 @@ void scale_level_phixs(const int element, const int ion, const int level, const 
 
 // calibrate the recombination rates to tabulated values by scaling the photoionisation cross sections
 void read_recombrate_file() {
-  if (!std::filesystem::exists("recombrates.txt")) {
+  if (!inputfile_exists("recombrates.txt")) {
     printlnlog("No recombrates.txt file found. Skipping recombination rate scaling...");
     return;
   }
 
   printlnlog("Reading recombination rate file (recombrates.txt)...");
-  auto recombrate_file = fstream_required("recombrates.txt", std::ios::in);
+  auto recombrate_file = istream_required("recombrates.txt");
 
   const float Te_estimate = RECOMBCALIBRATION_T_ELEC;
   const double log_Te_estimate = log10(RECOMBCALIBRATION_T_ELEC);
@@ -436,7 +432,8 @@ void read_recombrate_file() {
 // level's photoionisation target level(s) in this ion (IonRecombNorm::TARGETLEVELPOP). phi_rate_balance() applies
 // this to the whole upper ion population in the nebular approximation.
 void precalculate_ion_alpha_sp() {
-  auto temp_ion_alpha_sp = MPI_shared_array<float>(get_includedions() * RATECOEFF_TABLESIZE, 0.);
+  assert_always(ion_alpha_sp.empty());
+  ion_alpha_sp = MPI_shared_array<float>(get_includedions() * RATECOEFF_TABLESIZE, 0.);
   if (globals::rank_in_node == 0) {
     constexpr auto options = IonRecombCoeffOptions{.assume_lte = true, .norm = IonRecombNorm::TARGETLEVELPOP};
     for (int tempindex = 0; tempindex < RATECOEFF_TABLESIZE; tempindex++) {
@@ -447,13 +444,11 @@ void precalculate_ion_alpha_sp() {
           const auto uniqueionindex = get_uniqueionindex(element, ion);
           const double alpha_sp = calculate_ionrecombcoeff(-1, T_e, element, ion + 1, options);
           assert_always(std::isfinite(alpha_sp) && alpha_sp >= 0.);
-          temp_ion_alpha_sp[(uniqueionindex * RATECOEFF_TABLESIZE) + tempindex] = static_cast<float>(alpha_sp);
+          ion_alpha_sp[(uniqueionindex * RATECOEFF_TABLESIZE) + tempindex] = static_cast<float>(alpha_sp);
         }
       }
     }
   }
-  assert_always(ion_alpha_sp.empty());
-  ion_alpha_sp = std::move(temp_ion_alpha_sp);
   MPI_Barrier_node();
 }
 
@@ -774,8 +769,8 @@ auto calculate_ionrecombcoeff(const int nonemptymgi, const float T_e, const int 
     return alpha;
   }
 
-  // per ground multiplet: assume that photoionisation of the ion below is only to the ground multiplet levels of
-  // the current ion
+  // per ground multiplet or per ion population: the summed population of the first upper_nlevels levels gives the
+  // normalisation
   const int upper_nlevels = (norm == IonRecombNorm::GROUNDMULTIPLETPOP) ? get_nlevels_groundterm(element, upperion)
                                                                         : get_nlevels(element, upperion);
   double nnupperion = 0;
@@ -809,11 +804,8 @@ auto calculate_ionrecombcoeff(const int nonemptymgi, const float T_e, const int 
   return alpha;
 }
 
-// Precalculates the rate coefficients for stimulated and spontaneous
-// recombination and photoionisation on a given temperature grid using integration.
-// NB: with the nebular approximation they only depend on T_e, T_R and W.
-// W is easily factored out. For stimulated recombination we must assume
-// T_e = T_R for this precalculation.
+// Tabulate the rate coefficient integrals, calibrate the recombination rates from recombrates.txt, and tabulate
+// the ion recombination coefficients.
 void ratecoefficients_init() {
   precalculate_rate_coefficient_integrals();
 
@@ -841,6 +833,7 @@ DEVICE_FUNC auto get_corrphotoioncoeff(const int element, const int ion, const i
                                        const int nonemptymgi, const bool use_cellcache) -> double {
   const auto uniquelevelindex = get_uniquelevelindex(element, ion, level);
   const auto allphixstargetindex = get_allphixstargetindex(uniquelevelindex, phixstargetindex);
+  // the per-level lock in do_macroatom() orders the reads and the writes of this cache entry
   double gammacorr =
       use_cellcache ? get_cellcache(nonemptymgi).allphixstargets_corrphotoioncoeff[allphixstargetindex] : -1;
 
@@ -875,51 +868,24 @@ DEVICE_FUNC auto get_corrphotoioncoeff(const int element, const int ion, const i
 }
 
 // Return true if the ionisation rate out of an ion is zero, so that callers can skip the ion without
-// evaluating the full rate. The top ion of an element is always treated as having zero rate. For an
-// element without NLTE levels this tests the ground-state ionisation rate estimator, which holds either
-// the Monte Carlo photoionisation estimator or the radiative-plus-collisional rate from
-// calculate_iongamma_per_gspop(); otherwise it tests both the photoionisation and the thermal
-// collisional ionisation rate of every populated level.
+// evaluating the full rate. The top ion of an element is always treated as having zero rate. The
+// ground-state ionisation rate estimator holds either the Monte Carlo photoionisation estimator or the
+// radiative-plus-collisional rate from calculate_iongamma_per_gspop(). The only caller uses this
+// function for an element without NLTE levels.
 auto iongamma_is_zero(const int nonemptymgi, const int element, const int ion) -> bool {
+  assert_testmodeonly(!elem_has_nlte_levels(element));
   const int nions = get_nions(element);
   if (ion >= nions - 1) {
     return true;
   }
 
-  if (!elem_has_nlte_levels(element)) {
-    const auto groundcontindex = get_groundcontindex(element, ion);
-    if (groundcontindex < 0) {
-      return true;
-    }
-    return (globals::gammaestimator[(static_cast<ptrdiff_t>(nonemptymgi) * globals::nbfcontinua_ground) +
-                                    groundcontindex] == 0);
+  const auto groundcontindex = get_groundcontindex(element, ion);
+  if (groundcontindex < 0) {
+    return true;
   }
-
-  const auto T_e = grid::Te_allcells[nonemptymgi];
-  const auto clumpednne = grid::get_clumpfactor(nonemptymgi) * grid::get_nne(nonemptymgi);
-
-  for (int level = 0; level < get_nlevels(element, ion); level++) {
-    const double nnlevel = calculate_levelpop(nonemptymgi, element, ion, level);
-    if (nnlevel == 0.) {
-      continue;
-    }
-    const int nphixstargets = get_nphixstargets(element, ion, level);
-    for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
-      const int upperlevel = get_phixsupperlevel(element, ion, level, phixstargetindex);
-
-      if (nnlevel * get_corrphotoioncoeff(element, ion, level, phixstargetindex, nonemptymgi, false) > 0.) {
-        return false;
-      }
-
-      const double epsilon_trans = epsilon(element, ion + 1, upperlevel) - epsilon(element, ion, level);
-
-      if (nnlevel * col_ionisation_ratecoeff(T_e, clumpednne, element, ion, level, phixstargetindex, epsilon_trans) >
-          0) {
-        return false;
-      }
-    }
-  }
-  return true;
+  return (
+      globals::gammaestimator[(static_cast<ptrdiff_t>(nonemptymgi) * globals::nbfcontinua_ground) + groundcontindex] ==
+      0);
 }
 
 // ionisation rate coefficient. multiply by get_groundlevelpop to get a rate [s^-1]
@@ -960,8 +926,7 @@ auto calculate_iongamma_per_gspop(const int nonemptymgi, const int element, cons
   return ionisation_rate / groundlevelpop;
 }
 
-// ionisation rate coefficient. multiply by the lower ion pop to get a rate.
-// Currently only used for the estimator output file, not the simulation
+// ionisation rate coefficient. Multiply by the lower ion population to get a rate. Only the estimators file uses it.
 auto calculate_iongamma_per_ionpop(const int nonemptymgi, const int element, const int lowerion,
                                    const bool collisional_not_radiative, const bool force_bfintegral) -> double {
   assert_always(lowerion < get_nions(element) - 1);

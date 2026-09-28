@@ -19,10 +19,9 @@ constexpr auto simpson_integrator(const F& func_integrand, const double a, const
 
   double integral = 0.;
   for (int i = 0; i < samplecount; i++) {
-    // Simpson's rule integral (will later be divided by 3)
-    // n must be odd
-    // integral = (xn - x0) / 3 * {f(x_0) + 4 * f(x_1) + 2 * f(x_2) + ... + 4 * f(x_1) + f(x_n-1)}
-    // weights e.g., 1,4,2,4,2,4,1
+    // composite Simpson rule with an odd sample count n:
+    // integral = deltax / 3 * (f(x_0) + 4 f(x_1) + 2 f(x_2) + ... + 4 f(x_{n-2}) + f(x_{n-1}))
+    // The weights are 1, 4, 2, ..., 2, 4, 1. The division by 3 comes after the loop.
     double weight{1.};
     if (i == 0 || i == (samplecount - 1)) {
       weight = 1.;

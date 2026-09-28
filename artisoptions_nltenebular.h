@@ -5,12 +5,13 @@
 #define ARTISOPTIONS_H
 // NOLINTBEGIN(modernize-use-trailing-return-type,misc-unused-parameters)
 
+#include <cstdint>
 #include <cstdlib>
 #include <optional>
 
 #include "constants.h"
 
-constexpr int MPKTS = 1000000;
+constexpr std::int64_t NUM_PACKETS = 1'000'000'000;
 
 constexpr std::optional<GridType> GRID_TYPE_OVERRIDE;
 constexpr int CUBOID_NCOORDGRID_X = 50;
@@ -89,6 +90,8 @@ constexpr bool USE_LUT_PHOTOION = false;
 
 constexpr bool USE_ION_BFHEATING_ESTIMATORS = false;
 
+constexpr bool WRITE_ION_HEATING_COOLING_RATES = false;
+
 constexpr bool STRICT_POPULATION_CHECKING = true;
 
 constexpr bool NLTE_LIMIT_ION_STAGES_AFTER_FAILURE = true;
@@ -137,6 +140,8 @@ constexpr bool BFCOOLING_USELEVELPOPNOTIONPOP = false;
 constexpr bool RPKT_USE_EXPANSION_OPACITIES = false;
 
 constexpr bool VPKT_USE_EXPANSION_OPACITIES = false;
+
+constexpr ExpansionOpacityMethod EXPANSION_OPACITY_METHOD = ExpansionOpacityMethod::EXPANSION;
 
 constexpr std::optional<float> RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY;
 

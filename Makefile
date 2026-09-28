@@ -1,5 +1,5 @@
 # it's recommended that you add the following to your startup script:
-# export MAKEFLAGS="--check-symlink-times --jobs=$(nproc --all)"
+# export MAKEFLAGS="--check-symlink-times --jobs=$(nproc)"
 .DEFAULT_GOAL := all
 
 # artisoptions.h is gitignored and must be supplied (normally as a symlink to a preset). Check up front
@@ -12,19 +12,19 @@ ifneq ($(strip $(filter-out clean,$(if $(MAKECMDGOALS),$(MAKECMDGOALS),all))),)
   # through the symlink, so a preset switch via ln -sf may not trigger a rebuild
   ifneq ($(shell test -L artisoptions.h && echo is_symlink),)
     ifeq (,$(findstring L,$(filter-out -%,$(firstword $(MAKEFLAGS)))))
-      $(warning artisoptions.h is a symlink, but make was started without --check-symlink-times: switching presets with ln -sf may not trigger a rebuild. Recommended: export MAKEFLAGS="--check-symlink-times --jobs=$$(nproc --all)")
+      $(warning artisoptions.h is a symlink, but make was started without --check-symlink-times: switching presets with ln -sf may not trigger a rebuild. Recommended: export MAKEFLAGS="--check-symlink-times --jobs=$$(nproc)")
     endif
   endif
 endif
 
 $(info mpicxx version: $(shell mpicxx --showme:version 2> /dev/null))
 
-ifeq ($(TESTMODE),ON)
-else ifeq ($(TESTMODE),OFF)
-else ifeq ($(TESTMODE),)
-else
-  $(error bad value for TESTMODE option. Should be ON or OFF)
-endif
+# each option is exactly ON, OFF, or empty. The strip removes the spaces around a value, because the ifeq tests
+# below compare the exact text.
+$(foreach option,TESTMODE REPRODUCIBLE GPU OPENMP STDPAR FASTMATH OPTIMIZE ZSTD,\
+  $(eval override $(option) := $(strip $($(option))))\
+  $(if $(or $(filter-out ON OFF,$($(option))),$(filter-out 0 1,$(words $($(option))))),\
+    $(error bad value for $(option) option. Should be ON or OFF)))
 
 CXX := mpicxx
 COMPILER_VERSION := $(shell $(CXX) --version)
@@ -42,6 +42,7 @@ COMPILER_NAME := unknown
 CPU_ARCH := unknown
 ifneq '' '$(findstring HIP version,$(COMPILER_VERSION))'
 	COMPILER_NAME := hipcc
+	# the C++26 operator delete declarations of libstdc++ conflict with the HIP device overloads in cuda_wrappers/new
 	CXX_STD := c++23
 	CXXFLAGS += -Wno-macro-redefined -Wno-unused-command-line-argument
 else ifneq '' '$(findstring clang,$(COMPILER_VERSION))'
@@ -50,7 +51,9 @@ else ifneq '' '$(findstring clang,$(COMPILER_VERSION))'
 	LDFLAGS += -Wno-unused-command-line-argument
 
 	ifeq '' '$(findstring Apple,$(COMPILER_VERSION))'
-		ifeq ($(if $(shell command -v lld),'true','false'), 'true')
+		# Use lld only when it can link a trivial program. An older lld does not know every target that a
+		# new macOS SDK lists in its TAPI files, and the link then fails with "unknown target".
+		ifeq ($(shell echo 'int main(){}' | mpicxx -fuse-ld=lld -x c++ - -o /dev/null >/dev/null 2>&1 && echo true), true)
 			LDFLAGS += -fuse-ld=lld
 		endif
 	endif
@@ -65,7 +68,7 @@ endef
 else ifneq (,$(or $(findstring g++,$(COMPILER_VERSION)),$(findstring gcc,$(COMPILER_VERSION))))
 	COMPILER_NAME := gcc
 	MIN_GCC_VERSION := 14
-	ifeq ($(shell expr $(COMPILER_VERSION_NUMBER) \< $(MIN_GCC_VERSION)),1)
+	ifeq ($(shell expr $(firstword $(subst ., ,$(COMPILER_VERSION_NUMBER))) \< $(MIN_GCC_VERSION)),1)
 $(warning WARNING: Detected GCC version $(COMPILER_VERSION_NUMBER) but minimum supported version is $(MIN_GCC_VERSION))
 	endif
 	CXXFLAGS += -Wno-psabi -Wno-interference-size
@@ -74,7 +77,6 @@ $(warning WARNING: Detected GCC version $(COMPILER_VERSION_NUMBER) but minimum s
 
 else ifneq '' '$(findstring nvc++,$(COMPILER_VERSION))'
 	COMPILER_NAME := nvhpc
-	CXX_STD := c++23
 	# to use the pixi installed libstdc++
 	CXXFLAGS += -Minfo=accel
 # 	CXXFLAGS += --gcc-toolchain=$(PWD)/.pixi/envs/default -Wl,-rpath,$(PWD)/.pixi/envs/default/lib
@@ -92,13 +94,24 @@ $(warning Unknown compiler)
 	COMPILER_NAME := unknown
 endif
 
+# -Werror must not make these two warnings an error: ARTIS controls neither the gcc installations
+# on the host nor a libstdc++ pragma that the optimizer cannot apply. The probe drops an option
+# that the compiler does not know, and is simply expanded because CXXFLAGS is recursive.
+CLANG_NOERROR_OPTIONS := -Wno-error=gcc-install-dir-libstdcxx -Wno-error=pass-failed
+ifneq (,$(filter $(COMPILER_NAME),hipcc clang))
+	CLANG_NOERROR_ACCEPTED := $(strip $(foreach opt,$(CLANG_NOERROR_OPTIONS),\
+		$(if $(shell $(CXX) $(opt) -Werror=unknown-warning-option -fsyntax-only -x c++ /dev/null > /dev/null 2>&1 && echo accepted),$(opt))))
+	CXXFLAGS += $(CLANG_NOERROR_ACCEPTED)
+endif
+
 $(info detected compiler is $(COMPILER_NAME) $(COMPILER_VERSION_NUMBER))
 $(info detected CPU is $(CPU_ARCH))
 
 # Use a custom build directory for each combination of compiler, CPU architecture, and options to avoid conflicts and ensure that the correct binaries are used
 BUILD_DIR = build/$(COMPILER_NAME)-$(COMPILER_VERSION_NUMBER)_$(CPU_ARCH)
 
-CXXFLAGS += -std=$(CXX_STD) $(ARCH_FLAGS) -Wall -Wextra -Wpedantic -Wredundant-decls -Wno-unused-parameter -Wsign-compare -Wshadow -isystem third_party
+# -UNDEBUG keeps assert_always() active when the environment CXXFLAGS holds -DNDEBUG
+CXXFLAGS += -std=$(CXX_STD) -UNDEBUG $(ARCH_FLAGS) -Wall -Wextra -Wpedantic -Wredundant-decls -Wno-unused-parameter -Wsign-compare -Wshadow -isystem third_party
 
 # generate and use .d header dependency files, so that header edits trigger recompilation of the
 # objects that include them (every compiler, including nvc++, supports these GCC-style options)
@@ -111,11 +124,7 @@ endif
 ifeq ($(REPRODUCIBLE),ON)
 	CXXFLAGS += -DREPRODUCIBLE=true -ffp-contract=off -DEIGEN_DONT_VECTORIZE
 	BUILD_DIR := $(BUILD_DIR)_reproducible
-	FASTMATH := OFF
-else ifeq ($(REPRODUCIBLE),OFF)
-else ifeq ($(REPRODUCIBLE),)
-else
-  $(error bad value for REPRODUCIBLE option. Should be ON or OFF)
+	override FASTMATH := OFF
 endif
 
 # CXXFLAGS += -DUSE_SIMPSON_INTEGRATOR
@@ -123,10 +132,6 @@ endif
 ifeq ($(GPU),ON)
 	CXXFLAGS += -DGPU_ON -DUSE_SIMPSON_INTEGRATOR -U_GLIBCXX_ASSERTIONS
 	BUILD_DIR := $(BUILD_DIR)_gpu
-else ifeq ($(GPU),OFF)
-else ifeq ($(GPU),)
-else
-    $(error bad value for GPU option. Should be ON or OFF)
 endif
 
 ifeq ($(OPENMP),ON)
@@ -147,11 +152,6 @@ ifeq ($(OPENMP),ON)
 	else ifeq ($(COMPILER_NAME),gcc)
 		CXXFLAGS += -fopenmp
 	endif
-
-else ifeq ($(OPENMP),OFF)
-else ifeq ($(OPENMP),)
-else
-    $(error bad value for OPENMP option. Should be ON or OFF)
 endif
 
 ifeq ($(STDPAR),ON)
@@ -178,16 +178,19 @@ ifeq ($(STDPAR),ON)
 	else ifeq ($(COMPILER_NAME),gcc)
 		LDFLAGS += -ltbb
 	endif
-
-else ifeq ($(STDPAR),OFF)
-else ifeq ($(STDPAR),)
-else
-  $(error bad value for STDPAR option. Should be ON or OFF)
 endif
 
 ifeq ($(COMPILER_NAME),nvhpc)
 	ifeq ($(GPU),ON)
-			CXXFLAGS += -gpu=mem:unified -gpu=ccnative
+			# ccnative selects the compute capability of the GPU of the host. A host that has no GPU
+			# gives a warning and the default value, which changes with the SDK. GPUARCH selects a
+			# compute capability, e.g. GPUARCH=80, and makes the result independent of the host.
+			ifeq ($(GPUARCH),)
+				CXXFLAGS += -gpu=mem:unified -gpu=ccnative
+			else
+				CXXFLAGS += -gpu=mem:unified -gpu=cc$(GPUARCH)
+				BUILD_DIR := $(BUILD_DIR)_cc$(GPUARCH)
+			endif
 			CXXFLAGS += -Minfo=stdpar,accel
 # 			CXXFLAGS += -gpu=debug -g
 # 			CXXFLAGS += -gpu=maxregcount:64
@@ -204,6 +207,35 @@ ifeq ($(shell uname -s),Darwin)
 	# CXXFLAGS += -Rpass=loop-vectorize
 	# CXXFLAGS += -Rpass-missed=loop-vectorize
 	# CXXFLAGS += -Rpass-analysis=loop-vectorize
+endif
+
+# libzstd is optional. With it, the programs read a compressed input file, e.g. model.txt.zst, when the
+# plain file is absent, and write the .out files compressed. ZSTD=OFF ignores the library, ZSTD=ON
+# needs it, and an empty value uses it when the probe finds it. pkg-config gives the flags of a
+# library outside the default paths, e.g. from Homebrew, and a plain -lzstd is the fallback. The probe
+# compiles and links a small program that calls the API of zstd 1.4.0, which the code needs. The
+# octal escape \043 is the # of the include line, because make reads a # as a comment. The probe
+# takes LDFLAGS, because some hosts need e.g. -rpath-link for the MPI library.
+ifneq ($(ZSTD),OFF)
+	ZSTD_CXXFLAGS := $(patsubst -I%,-isystem%,$(shell pkg-config --cflags libzstd 2>/dev/null))
+	ZSTD_LDFLAGS := $(shell pkg-config --libs libzstd 2>/dev/null)
+	ifeq ($(ZSTD_LDFLAGS),)
+		ZSTD_LDFLAGS := -lzstd
+	endif
+	ZSTD_PROBE_SRC := $(BUILD_DIR)/zstdprobe.cc
+$(shell mkdir -p $(BUILD_DIR))
+$(shell printf '\043include <zstd.h>\nint main() { ZSTD_CCtx* cctx = ZSTD_createCCtx(); ZSTD_CCtx_setParameter(cctx, ZSTD_c_compressionLevel, 3); ZSTD_inBuffer in = {nullptr, 0, 0}; ZSTD_outBuffer out = {nullptr, 0, 0}; return ZSTD_compressStream2(cctx, &out, &in, ZSTD_e_end) == 0; }\n' > $(ZSTD_PROBE_SRC))
+	ZSTD_FOUND := $(shell $(CXX) $(CPPFLAGS) $(ZSTD_CXXFLAGS) $(ZSTD_PROBE_SRC) $(LDFLAGS) $(ZSTD_LDFLAGS) -o $(ZSTD_PROBE_SRC).out > /dev/null 2>&1 && echo true)
+	ifeq ($(ZSTD_FOUND),true)
+		CXXFLAGS += -DUSE_ZSTD $(ZSTD_CXXFLAGS)
+		LDFLAGS += $(ZSTD_LDFLAGS)
+		BUILD_DIR := $(BUILD_DIR)_zstd
+$(info libzstd found: the programs read .zst input files and write .zst output files)
+	else ifeq ($(ZSTD),ON)
+		$(error ZSTD=ON, but the probe does not find libzstd 1.4.0 or later. Install the development package of zstd, or set PKG_CONFIG_PATH)
+	else
+$(info libzstd not found: the programs read and write plain files only. Set ZSTD=OFF to skip the probe)
+	endif
 endif
 
 ifneq ($(MAX_NODE_SIZE),)
@@ -298,10 +330,12 @@ ifneq ($(PGO),)
 endif
 
 .ONESHELL:
+# the shell command and the C++ string literal must not see a quote, a backslash, a dollar, or a backtick
+GIT_STATUS_TEXT := $(subst ",,$(subst \,,$(subst `,,$(subst $$,,$(shell git status --short)))))
 define version_cc
 extern const char* const GIT_VERSION = \"$(shell git describe --dirty --always --tags)\";
 extern const char* const GIT_BRANCH = \"$(shell git symbolic-ref --short HEAD 2>/dev/null || git rev-parse --short HEAD )\";
-extern const char* const GIT_STATUS = \"$(shell git status --short)\";
+extern const char* const GIT_STATUS = \"$(GIT_STATUS_TEXT)\";
 endef
 
 # the git metadata changes at almost every git operation. version.h declares the strings and stays
@@ -397,7 +431,7 @@ else ifeq ($(CDB_CXX),)
 	@echo '$@: "$(CXX) -show" does not name the compiler, so make writes no compilation database'
 else
 	@CDB_CXX='$(CDB_CXX)' CDB_FLAGS='$(CDB_INCFLAGS) $(CDB_CXXFLAGS)' CDB_SRC='$(CDB_SRC)' \
-		$(CDB_PYTHON) -c 'import json,os,shlex,sys; args=[os.environ["CDB_CXX"],*shlex.split(os.environ["CDB_FLAGS"])]; json.dump([{"directory":os.getcwd(),"arguments":[*args,"-c",src],"file":src} for src in os.environ["CDB_SRC"].split()],sys.stdout,indent=1)' > $@.tmp
+		$(CDB_PYTHON) -c 'import json,os,shlex,sys; args=[os.environ["CDB_CXX"],*shlex.split(os.environ["CDB_FLAGS"])]; json.dump([{"directory":os.getcwd(),"arguments":[*args,"-c",src],"file":src} for src in os.environ["CDB_SRC"].split()],sys.stdout,indent=1)' > $@.tmp || exit 1
 	@if cmp -s $@.tmp $@; then rm -f $@.tmp; else mv $@.tmp $@; echo '$@: $(words $(CDB_SRC)) entries for $(CDB_CXX)'; fi
 endif
 
@@ -405,29 +439,30 @@ $(BUILD_DIR)/sn3d: $(sn3d_objects)
 	$(CXX) $(CXXFLAGS) $(sn3d_objects) $(LDFLAGS) -o $(BUILD_DIR)/sn3d
 -include $(sn3d_dep)
 
+# "ln -sf" gives "Invalid cross-device link" on an NFS folder, so remove first.
 sn3d: $(BUILD_DIR)/sn3d compile_commands.json
-	ln -sf $(BUILD_DIR)/sn3d sn3d
+	rm -f sn3d && ln -s $(BUILD_DIR)/sn3d sn3d
 
-$(BUILD_DIR)/sn3dwhole: $(sn3d_files) version.h artisoptions.h Makefile
+$(BUILD_DIR)/sn3dwhole: $(sn3d_files) $(wildcard *.h) Makefile
 	$(CXX) $(CXXFLAGS) $(sn3d_files) $(LDFLAGS) -o $(BUILD_DIR)/sn3dwhole
 -include $(sn3d_dep)
 
 sn3dwhole: $(BUILD_DIR)/sn3dwhole compile_commands.json
-	ln -sf $(BUILD_DIR)/sn3dwhole sn3d
+	rm -f sn3d && ln -s $(BUILD_DIR)/sn3dwhole sn3d
 
 $(BUILD_DIR)/exspec: $(exspec_objects)
 	$(CXX) $(CXXFLAGS) $(exspec_objects) $(LDFLAGS) -o $(BUILD_DIR)/exspec
 -include $(exspec_dep)
 
 exspec: $(BUILD_DIR)/exspec compile_commands.json
-	ln -sf $(BUILD_DIR)/exspec exspec
+	rm -f exspec && ln -s $(BUILD_DIR)/exspec exspec
 
 $(BUILD_DIR)/unittests: $(unittests_objects)
 	$(CXX) $(CXXFLAGS) $(unittests_objects) $(LDFLAGS) -o $(BUILD_DIR)/unittests
 -include $(unittests_dep)
 
 unittests: $(BUILD_DIR)/unittests compile_commands.json
-	ln -sf $(BUILD_DIR)/unittests unittests
+	rm -f unittests && ln -s $(BUILD_DIR)/unittests unittests
 
 .PHONY: clean sn3d sn3dwhole exspec unittests check
 

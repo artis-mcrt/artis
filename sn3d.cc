@@ -10,23 +10,29 @@
 #include <unistd.h>
 
 #include <algorithm>
+#include <array>
+#include <charconv>
 #include <chrono>
 #include <cmath>
 #include <cstddef>
+#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <filesystem>
 #include <format>
-#include <fstream>
 #include <functional>
 #include <ios>
 #include <iterator>
 #include <limits>
+#include <memory>
 #include <print>
+#include <regex>
 #include <string>
 #include <string_view>
 #include <system_error>
+#include <type_traits>
 #include <utility>
+
 #ifdef STDPAR_ON
 #include <ranges>
 #endif
@@ -50,6 +56,7 @@
 #include "mpi_logging.h"
 #include "nltepop.h"
 #include "nonthermal.h"
+#include "outputfilestream.h"
 #include "packet.h"
 #include "radfield.h"
 #include "ratecoeff.h"
@@ -64,9 +71,22 @@
 namespace {
 
 std::chrono::steady_clock::time_point real_time_start;
-std::chrono::steady_clock::time_point
-    time_timestep_start;  // this will be set after the first update of the grid and before packet prop
-std::fstream estimators_file;
+std::chrono::steady_clock::time_point packet_propagation_start_time;
+OutputFileStream estimators_file;
+
+struct CellCacheBacking {
+  MPI_shared_array<double> cooling_contrib;
+  MPI_shared_array<double> alllevels_pops;
+  MPI_shared_array<double> alllevels_maprocessrates;
+  MPI_shared_array<double> allmacroatomictransitions;
+  MPI_shared_array<double> allcont_modified_departureratios;
+  MPI_shared_array<double> allcont_stimfactor_edgepart;
+  MPI_shared_array<double> allcont_nnlevel;
+  MPI_shared_array<std::uint64_t> allcont_keepbits;
+  MPI_shared_array<double> chi_ff_nnionpart;
+  MPI_shared_array<double> allphixstargets_corrphotoioncoeff;
+};
+CellCacheBacking cellcache_backing{};
 
 void setup_cellcache() {
   // When cellcache_singleslot is false, every non-empty cell gets its own persistent cache slot, shared by
@@ -103,7 +123,7 @@ void setup_cellcache() {
   const auto maprocess_percell = nincludedlevels * MA_ACTION_COUNT;
 
   // one shared allocation per array, with a sub-range for each slot
-  auto& backing = globals::cellcache_backing;
+  auto& backing = cellcache_backing;
   backing.cooling_contrib.allocate(static_cast<ptrdiff_t>(ncoolingterms * nslots));
   backing.alllevels_pops.allocate(static_cast<ptrdiff_t>(nincludedlevels * nslots));
   backing.alllevels_maprocessrates.allocate(static_cast<ptrdiff_t>(maprocess_percell * nslots));
@@ -143,10 +163,8 @@ void setup_cellcache() {
     if (cellcache_singleslot && cellcachenum == globals::rank_in_node) {
       // the lazy mutex-guarded rate calculation is only used in single-slot mode, and each rank only
       // ever accesses its own slot
-      reserve_resize(cacheslot.cooling_contrib_locks, static_cast<size_t>(get_includedions()));
-      std::ranges::fill(cacheslot.cooling_contrib_locks, 0);
-      reserve_resize(cacheslot.allmacroatomictransitions_locks, nincludedlevels);
-      std::ranges::fill(cacheslot.allmacroatomictransitions_locks, 0);
+      cacheslot.cooling_contrib_locks.assign(static_cast<size_t>(get_includedions()), PaddedMutex{});
+      cacheslot.allmacroatomictransitions_locks.assign(nincludedlevels, PaddedMutex{});
 
       for (size_t uniquelevelindex = 0; uniquelevelindex < nincludedlevels; uniquelevelindex++) {
         cacheslot.alllevels_maprocessrates[uniquelevelindex * MA_ACTION_COUNT] = -99.;
@@ -173,14 +191,27 @@ void initialise_linestat_file() {
     return;
   }
 
-  auto linestat_file = fstream_required("linestat.out", std::ios::out | std::ios::trunc);
+  const auto time_start = std::chrono::steady_clock::now();
+  // the file has tens of millions of values in each row, so zstd gets worker threads
+  auto linestat_file = open_output_file("linestat.out", ZSTD_LEVEL_DEFAULT, 4);
 
   // with tens of millions of lines, per-value std::print calls to the stream are slow (each one re-checks whether
-  // the stream is a terminal), so format into a buffer and write it out in large chunks
+  // the stream is a terminal), so format each value with std::to_chars into a buffer and write large chunks
   std::string buffer;
   constexpr auto flushsize = 1UZ << 22U;
   buffer.reserve(flushsize + 64);
-  const auto flush_if_full = [&linestat_file, &buffer]() {
+  const auto append_value = [&linestat_file, &buffer](const auto value) {
+    std::array<char, 32> text{};
+    const auto [textend, ec] = [&]() {
+      if constexpr (std::is_floating_point_v<decltype(value)>) {
+        return std::to_chars(text.data(), std::to_address(text.end()), value, std::chars_format::general, 6);
+      } else {
+        return std::to_chars(text.data(), std::to_address(text.end()), value);
+      }
+    }();
+    assert_always(ec == std::errc{});
+    buffer.append(text.data(), textend);
+    buffer += ' ';
     if (buffer.size() >= flushsize) {
       linestat_file.write(buffer.data(), static_cast<std::streamsize>(buffer.size()));
       buffer.clear();
@@ -188,43 +219,39 @@ void initialise_linestat_file() {
   };
 
   for (int i = 0; i < globals::nlines; i++) {
-    std::format_to(std::back_inserter(buffer), "{:g} ", CLIGHT / globals::linelist.nu[i]);  // wavelength in cm
-    flush_if_full();
+    append_value(CLIGHT / globals::linelist.nu[i]);  // wavelength in cm
   }
   buffer += '\n';
 
   for (int i = 0; i < globals::nlines; i++) {
-    std::format_to(std::back_inserter(buffer), "{} ", get_atomicnumber(globals::linelist.elementindex[i]));
-    flush_if_full();
+    append_value(get_atomicnumber(globals::linelist.elementindex[i]));
   }
   buffer += '\n';
 
   for (int i = 0; i < globals::nlines; i++) {
-    std::format_to(std::back_inserter(buffer), "{} ",
-                   get_ionstage(globals::linelist.elementindex[i], globals::linelist.ionindex[i]));
-    flush_if_full();
-  }
-  buffer += '\n';
-
-  for (int i = 0; i < globals::nlines; i++) {
-    const auto ionuniquelevelindexstart =
-        get_ionuniquelevelindexstart(globals::linelist.elementindex[i], globals::linelist.ionindex[i]);
-    const auto upper = globals::linelist.uniquelevelindex_upper[i] - ionuniquelevelindexstart;
-    std::format_to(std::back_inserter(buffer), "{} ", (upper + 1));
-    flush_if_full();
+    append_value(get_ionstage(globals::linelist.elementindex[i], globals::linelist.ionindex[i]));
   }
   buffer += '\n';
 
   for (int i = 0; i < globals::nlines; i++) {
     const auto ionuniquelevelindexstart =
         get_ionuniquelevelindexstart(globals::linelist.elementindex[i], globals::linelist.ionindex[i]);
-    const auto lower = globals::linelist.uniquelevelindex_lower[i] - ionuniquelevelindexstart;
-    std::format_to(std::back_inserter(buffer), "{} ", (lower + 1));
-    flush_if_full();
+    append_value(globals::linelist.uniquelevelindex_upper[i] - ionuniquelevelindexstart + 1);
+  }
+  buffer += '\n';
+
+  for (int i = 0; i < globals::nlines; i++) {
+    const auto ionuniquelevelindexstart =
+        get_ionuniquelevelindexstart(globals::linelist.elementindex[i], globals::linelist.ionindex[i]);
+    append_value(globals::linelist.uniquelevelindex_lower[i] - ionuniquelevelindexstart + 1);
   }
   buffer += '\n';
 
   linestat_file.write(buffer.data(), static_cast<std::streamsize>(buffer.size()));
+  linestat_file.close();
+  assert_always(!linestat_file.fail());  // e.g. a full disk
+  printlnlog("wrote linestat.out with {} lines (took {:.1f} seconds)", globals::nlines,
+             std::chrono::duration<double>(std::chrono::steady_clock::now() - time_start).count());
 }
 
 void write_deposition_file() {
@@ -361,7 +388,7 @@ void write_deposition_file() {
         },
     };
 
-    auto dep_file = fstream_required("deposition.out.tmp", std::ios::out | std::ios::trunc);
+    auto dep_file = open_output_file("deposition.out.tmp");
     std::print(dep_file, "#ts");
     for (const auto& column : columns) {
       if (column.enabled) {
@@ -385,14 +412,17 @@ void write_deposition_file() {
       std::println(dep_file, "");
     }
     dep_file.close();
+    assert_always(!dep_file.fail());  // e.g. a full disk
 
     // std::filesystem::rename replaces an existing target atomically, so one call is sufficient.
     // This saves one metadata operation on a network file system.
     std::error_code ec;
-    std::filesystem::rename("deposition.out.tmp", "deposition.out", ec);
+    const auto tmppath = output_filepath("deposition.out.tmp");
+    const auto finalpath = output_filepath("deposition.out");
+    remove_other_output_form("deposition.out");
+    std::filesystem::rename(tmppath, finalpath, ec);
     if (ec) {
-      printlnlog("[error] The rename of deposition.out.tmp to deposition.out failed: {}", ec.message());
-      std::abort();
+      fatal_crash("The rename of {} to {} failed: {}", tmppath, finalpath, ec.message());
     }
 
     // energy-conservation consistency check (log only): the cumulative deposition should not exceed the
@@ -421,12 +451,14 @@ void write_deposition_file() {
 }
 
 void write_timestep_file() {
-  auto timestepfile = fstream_required("timesteps.out", std::ofstream::out | std::ofstream::trunc);
+  auto timestepfile = open_output_file("timesteps.out");
   std::print(timestepfile, "#timestep tstart_days tmid_days twidth_days\n");
   for (int n = 0; n < globals::ntimesteps; n++) {
     std::println(timestepfile, "{} {:g} {:g} {:g}", n, globals::timesteps[n].start / DAY,
                  globals::timesteps[n].mid / DAY, globals::timesteps[n].width / DAY);
   }
+  timestepfile.close();
+  assert_always(!timestepfile.fail());  // e.g. a full disk
 }
 
 void mpi_communicate_grid_properties() {
@@ -453,14 +485,11 @@ void mpi_communicate_grid_properties() {
                      root, MPI_COMM_WORLD);
     }
 
-    for (auto nonemptymgi = root_nstart_nonempty; nonemptymgi < (root_nstart_nonempty + root_ndo_nonempty);
-         nonemptymgi++) {
-      radfield::do_MPI_Bcast(nonemptymgi, root, root_node_id);
+    radfield::do_MPI_Bcast(root_nstart_nonempty, root_ndo_nonempty, root, root_node_id);
 
-      nonthermal::nt_MPI_Bcast(nonemptymgi, root_node_id);
+    nonthermal::nt_MPI_Bcast(root_nstart_nonempty, root_ndo_nonempty, root_node_id);
 
-      MPI_Bcast_binned_opacities(nonemptymgi, root_node_id);
-    }
+    MPI_Bcast_binned_opacities(root_nstart_nonempty, root_ndo_nonempty, root_node_id);
 
     MPI_Barrier_allranks();
     if (globals::rank_in_node == 0) {
@@ -580,21 +609,17 @@ void normalise_deposition_estimators(int nts) {
 void mpi_reduce_estimators(const int nts) {
   const int nonempty_npts_model = grid::get_nonempty_npts_model();
   radfield::reduce_estimators();
-  MPI_Barrier_allranks();
   MPI_Allreduce_safe(globals::ffheatingestimator, MPI_SUM, MPI_COMM_WORLD);
   if constexpr (!COL_HEAT_FROM_LEVELPOPS) {
     MPI_Allreduce_safe(globals::colheatingestimator, MPI_SUM, MPI_COMM_WORLD);
   }
-  MPI_Barrier_allranks();
 
   if (globals::nbfcontinua_ground > 0) {
     if constexpr (USE_LUT_PHOTOION) {
-      MPI_Barrier_allranks();
       MPI_Allreduce_safe(globals::gammaestimator, MPI_SUM, MPI_COMM_WORLD);
     }
 
     if constexpr (USE_ION_BFHEATING_ESTIMATORS) {
-      MPI_Barrier_allranks();
       MPI_Allreduce_safe(globals::bfheatingestimator, MPI_SUM, MPI_COMM_WORLD);
     }
   }
@@ -607,8 +632,6 @@ void mpi_reduce_estimators(const int nts) {
   MPI_Allreduce_safe(globals::dep_estimator_electron, MPI_SUM, MPI_COMM_WORLD);
   assert_always(std::ssize(globals::dep_estimator_alpha) == nonempty_npts_model);
   MPI_Allreduce_safe(globals::dep_estimator_alpha, MPI_SUM, MPI_COMM_WORLD);
-
-  MPI_Barrier_allranks();
 
   MPI_Allreduce_safe(globals::timesteps[nts].gamma_dep_discrete, MPI_SUM, MPI_COMM_WORLD);
   globals::timesteps[nts].gamma_dep_discrete /= globals::nprocs;
@@ -637,48 +660,54 @@ void mpi_reduce_estimators(const int nts) {
   MPI_Allreduce_safe(globals::timesteps[nts].gamma_emission, MPI_SUM, MPI_COMM_WORLD);
   globals::timesteps[nts].gamma_emission /= globals::nprocs;
 
-  MPI_Barrier_allranks();
-
   // The estimators have been summed across all processes and distributed.
   // They will now be normalised independently on all processes.
 
   normalise_deposition_estimators(nts);
 }
 
-auto walltime_sufficient_to_continue(const int nts, const int nts_prev, const int walltimelimitseconds) -> bool {
+auto walltime_sufficient_for_timestep(const int nts, const int nts_prev, const int walltime_limit_seconds) -> bool {
   MPI_Barrier_allranks();
   // time is measured from just before packet propagation from one timestep to the next
-  const auto estimated_time_per_timestep =
-      std::chrono::duration<double>(std::chrono::steady_clock::now() - time_timestep_start).count();
+  const auto walltime_propagation_and_grid_update_seconds =
+      std::chrono::duration<double>(std::chrono::steady_clock::now() - packet_propagation_start_time).count();
   printlnlog("TIME: time between timesteps is {:.1f} seconds (measured packet prop of ts {} and update grid of ts {})",
-             estimated_time_per_timestep, nts_prev, nts);
+             walltime_propagation_and_grid_update_seconds, nts_prev, nts);
 
-  bool do_this_full_loop = true;
-  if (walltimelimitseconds > 0 && nts < globals::timestep_finish) {
-    const auto wallclock_used_seconds =
+  bool enough_walltime_for_timestep = true;
+  if (walltime_limit_seconds > 0 && nts < globals::timestep_finish) {
+    const auto walltime_used_seconds =
         std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - real_time_start).count();
-    const auto wallclock_remaining_seconds = walltimelimitseconds - wallclock_used_seconds;
-    printlnlog("TIMED_RESTARTS: Used {} of {} seconds of wall time.", wallclock_used_seconds, walltimelimitseconds);
+    const auto walltime_remaining_seconds = walltime_limit_seconds - walltime_used_seconds;
+    printlnlog("TIMED_RESTARTS: Used {} of {} seconds of wall time.", walltime_used_seconds, walltime_limit_seconds);
 
-    // This flag being false will make it update_grid, and then exit
-    do_this_full_loop = (wallclock_remaining_seconds >= (1.5 * estimated_time_per_timestep));
+    // the wall time to stop cleanly after the next timestep. The last requested timestep also writes the
+    // emission, absorption, and direction bin files and the packet files.
+    const bool is_last_requested_timestep = (nts == globals::timestep_finish - 1);
+    const double shutdown_offset_seconds = is_last_requested_timestep ? 900. : 120.;
+
+    enough_walltime_for_timestep = (walltime_remaining_seconds >=
+                                    ((1.5 * walltime_propagation_and_grid_update_seconds) + shutdown_offset_seconds));
 
     // communicate whatever decision the rank 0 process decided, just in case they differ
-    MPI_Bcast_safe(do_this_full_loop, 0, MPI_COMM_WORLD);
-    if (do_this_full_loop) {
-      printlnlog("TIMED_RESTARTS: Going to continue since remaining time {} s >= 1.5 * time_per_timestep",
-                 wallclock_remaining_seconds);
+    MPI_Bcast_safe(enough_walltime_for_timestep, 0, MPI_COMM_WORLD);
+    if (enough_walltime_for_timestep) {
+      printlnlog(
+          "TIMED_RESTARTS: sn3d continues. The remaining time {} s is at least 1.5 times the time {:.1f} s of "
+          "the last packet propagation and grid update, plus the shutdown offset {:.0f} s.",
+          walltime_remaining_seconds, walltime_propagation_and_grid_update_seconds, shutdown_offset_seconds);
     } else {
-      printlnlog("TIMED_RESTARTS: Going to terminate since remaining time {} s < 1.5 * time_per_timestep",
-                 wallclock_remaining_seconds);
+      printlnlog(
+          "TIMED_RESTARTS: sn3d stops. The remaining time {} s is less than 1.5 times the time {:.1f} s of the "
+          "last packet propagation and grid update, plus the shutdown offset {:.0f} s.",
+          walltime_remaining_seconds, walltime_propagation_and_grid_update_seconds, shutdown_offset_seconds);
     }
   }
-  return do_this_full_loop;
+  return enough_walltime_for_timestep;
 }
 
 void save_grid_and_packets(const int nts, std::vector<Packet>& packets) {
   MPI_Barrier_allranks();
-  const auto my_rank = globals::my_rank;
 
   const auto time_write_packets_file_start = std::chrono::steady_clock::now();
 
@@ -687,7 +716,7 @@ void save_grid_and_packets(const int nts, std::vector<Packet>& packets) {
   }
 
   // save packet state at start of current timestep (before propagation)
-  write_temp_packetsfile(nts, globals::my_rank, packets);
+  write_packet_restart_file(nts, packets);
 
   vpkt::write_timestep(nts, false);
 
@@ -701,10 +730,10 @@ void save_grid_and_packets(const int nts, std::vector<Packet>& packets) {
   const auto packets_wait_time = std::chrono::duration<double>(timenow - time_write_packets_finished_thisrank).count();
   const auto packets_total_time = std::chrono::duration<double>(timenow - time_write_packets_file_start).count();
 
-  printlnlog("timestep {}: finished writing temporary packets file (took {:.1f}s, waited {:.1f}s, total {:.1f}s)", nts,
+  printlnlog("timestep {}: finished writing the packet restart file (took {:.1f}s, waited {:.1f}s, total {:.1f}s)", nts,
              packets_write_time, packets_wait_time, packets_total_time);
 
-  if (my_rank == 0) {
+  if (globals::my_rank == 0) {
     grid::write_grid_restart_data(nts);
     update_parameterfile(nts);
   }
@@ -712,7 +741,7 @@ void save_grid_and_packets(const int nts, std::vector<Packet>& packets) {
   // wait until every process writes its new packets files, then delete the old set
   MPI_Barrier_allranks();
 
-  if (my_rank == 0) {
+  if (globals::my_rank == 0) {
     const auto filename_prev_gridsave = std::format("gridsave_ts{}.tmp", nts - 1);
     if (std::filesystem::remove(filename_prev_gridsave)) {
       printlnlog("deleted {}", filename_prev_gridsave);
@@ -720,16 +749,15 @@ void save_grid_and_packets(const int nts, std::vector<Packet>& packets) {
   }
 
   // delete temp packets files from previous timestep now that all restart data for the new timestep is available
-  const auto filename_prev_packetstmp = std::format("packets_{:04d}_ts{:d}.tmp", my_rank, nts - 1);
+  const auto filename_prev_packetstmp = std::format("packets_{:04d}_ts{:d}.tmp", globals::my_rank, nts - 1);
   if (std::filesystem::remove(filename_prev_packetstmp)) {
     printlnlog("deleted {}", filename_prev_packetstmp);
   }
 
-  vpkt::remove_temp_vpkt_file(nts - 1, my_rank);
+  vpkt::remove_temp_vpkt_file(nts - 1, globals::my_rank);
 }
 
 void zero_estimators() {
-  MPI_Barrier_allranks();
   radfield::zero_estimators();
 
   std::ranges::fill(globals::ffheatingestimator, 0.);
@@ -750,28 +778,21 @@ void zero_estimators() {
       std::ranges::fill(globals::bfheatingestimator, 0.);
     }
   }
-
-  MPI_Barrier_allranks();
 }
 
-auto do_timestep(const int nts, const int titer, std::vector<Packet>& packets, const int walltimelimitseconds) -> bool {
-  bool do_this_full_loop = true;
-  const int nts_prev = (titer != 0 || nts == 0) ? nts : nts - 1;
-  if ((titer > 0) || (globals::simulation_continued_from_saved && (nts == globals::timestep_initial))) {
-    // Read the packets file to reset before each additional iteration on the timestep
-    read_temp_packetsfile(nts, globals::my_rank, packets);
+auto do_timestep(const int nts, std::vector<Packet>& packets, const int walltime_limit_seconds) -> bool {
+  bool enough_walltime_for_timestep = true;
+  const int nts_prev = (nts == 0) ? nts : nts - 1;
+  if (globals::simulation_continued_from_saved && (nts == globals::timestep_initial)) {
+    read_packet_restart_file(nts, packets);
   }
 
   // Some counters on pkt-actions need to be reset to do statistics
   stats::pkt_action_counters_reset();
 
-  if (nts == 0) {
-    radfield::initialise_prev_titer_photoionestimators();
-  }
-
   // Update the matter quantities in the grid for the new timestep.
 
-  update_grid(estimators_file, nts, nts_prev, titer, real_time_start);
+  update_grid(estimators_file, nts, nts_prev, real_time_start);
 
   const auto sys_time_start_communicate_grid = std::chrono::steady_clock::now();
 
@@ -783,27 +804,26 @@ auto do_timestep(const int nts, const int titer, std::vector<Packet>& packets, c
   printlnlog("timestep {}: time after grid properties have been communicated (took {:.1f} seconds)", nts,
              communicate_grid_duration);
 
-  // If this is not the 0th time step of the current job step,
+  // If this is not the first timestep of this sn3d run,
   // write out a snapshot of the grid properties for further restarts and update input.txt accordingly
   if (((nts - globals::timestep_initial) != 0)) {
     save_grid_and_packets(nts, packets);
-    do_this_full_loop = walltime_sufficient_to_continue(nts, nts_prev, walltimelimitseconds);
+    // a run always attempts its first timestep without a wall time check
+    enough_walltime_for_timestep = walltime_sufficient_for_timestep(nts, nts_prev, walltime_limit_seconds);
   }
-  time_timestep_start = std::chrono::steady_clock::now();
+  packet_propagation_start_time = std::chrono::steady_clock::now();
 
-  // set all the estimators to zero before moving packets. This is done after update_grid() so that the
-  // gamma-ray heating estimator, and the photoionisation and stimulated recombination estimators, are still
-  // available to it from the previous timestep.
+  // set all the estimators to zero before the packets move. This runs after update_grid(), because
+  // update_grid() reads the estimators of the previous timestep.
   zero_estimators();
 
-  MPI_Barrier_allranks();
-  if ((nts < globals::timestep_finish) && do_this_full_loop) {
+  if ((nts < globals::timestep_finish) && enough_walltime_for_timestep) {
     // Now process the packets.
 
     update_packets(nts, packets);
 
-    // All the processes have their own versions of the estimators for this time step now.
-    // Since these are going to be needed in the next time step, we will gather all the
+    // All the processes have their own versions of the estimators for this timestep now.
+    // Since these are going to be needed in the next timestep, we will gather all the
     // estimators together now, sum them, and distribute the results
 
     const auto time_communicate_estimators_start = std::chrono::steady_clock::now();
@@ -816,19 +836,20 @@ auto do_timestep(const int nts, const int titer, std::vector<Packet>& packets, c
 
     write_deposition_file();
 
-    write_partial_lightcurve_spectra(nts, packets);
+    const std::array packets_of_this_rank{std::span<const Packet>{packets}};
+    write_light_curves_and_spectra(nts, packets_of_this_rank);
 
     printlnlog("During timestep {} on MPI process {}, {} pellets decayed and {} packets escaped. (t={:g} [d])", nts,
                globals::my_rank, globals::timesteps[nts].pellet_decays, stats::get_counter(stats::Counter::PKTESCAPES),
                globals::timesteps[nts].mid / DAY);
 
-    if (VPKT_ON) {
+    if constexpr (VPKT_ON) {
       printlnlog("During timestep {} on MPI process {}, {} virtual packets were generated and {} escaped.", nts,
                  globals::my_rank, vpkt::nvpkt_created,
                  vpkt::nvpkt_esc_from_rpkt + vpkt::nvpkt_esc_from_kpkt + vpkt::nvpkt_esc_from_macroatom);
       printlnlog(
-          "{} virtual packets came from an electron scattering event, {} from a kpkt deactivation and {} from a "
-          "macroatom deactivation.",
+          "{} virtual packets came from an electron scattering event, {} from a thermal emission and {} from a "
+          "macro-atom deactivation or a line scattering.",
           vpkt::nvpkt_esc_from_rpkt, vpkt::nvpkt_esc_from_kpkt, vpkt::nvpkt_esc_from_macroatom);
 
       vpkt::nvpkt_created = 0;
@@ -838,7 +859,7 @@ auto do_timestep(const int nts, const int titer, std::vector<Packet>& packets, c
     }
 
     if (nts == (globals::timestep_finish - 1)) {
-      const auto filename = std::format("packets{:02d}_{:04d}.out", 0, globals::my_rank);
+      const auto filename = std::format("packets/packets{:02d}_{:04d}.out", 0, globals::my_rank);
       write_text_packets(filename, packets);
 
       vpkt::write_timestep(nts, true);
@@ -848,61 +869,84 @@ auto do_timestep(const int nts, const int titer, std::vector<Packet>& packets, c
       printlnlog("time after write final packets file (tstart + {:.1f} seconds)", after_final_packets_write);
     }
   }
-  return !do_this_full_loop;
+  return !enough_walltime_for_timestep;
 }
 
-// Create the run output folder given with the -o option and keep an output_0-0.txt symlink in the
-// simulation folder pointing at the current job's rank-0 log, so that e.g. tail -f output_0-0.txt works
-// regardless of the output folder. Without -o, remove any symlink left by a previous -o run, since
-// opening the log through it would truncate that job's stored log.
-void setup_runoutputfolder() {
+// A new simulation removes the output files, the restart files, and the job folders of the previous simulation.
+// The patterns are those of scripts/clean.sh, without the files that can belong to the current job
+// (slurm-*.out, machine.file.*, and core.*).
+void remove_previous_simulation_files() {
+  const std::regex generated_name{
+      R"((gridsave|packets|vspecpol|vpackets|vpkt_grid).*\.tmp|input(-newrun)?\.txt\.tmp|.*\.out(\..*)?|)"
+      R"(output_[0-9]+-[0-9]+\.txt(\.zst|\.gz|\.xz)?|)"
+      R"(exspec.*\.txt.*|.*\.slurm|job_from_ts[0-9]+|packets|vspecpol|vpackets|vpkt_grid|speclc_angle_res|)"
+      R"(bflist\.dat|ratecoeff\.dat|line_list\.txt|logfiles\.tar.*|out\.txt)"};
+  std::vector<std::filesystem::path> paths_to_remove;
+  std::error_code ec;
+  for (const auto& entry : std::filesystem::directory_iterator(".", ec)) {
+    const auto name = entry.path().filename().string();
+    if (std::regex_match(name, generated_name) && !(name.starts_with("slurm-") && name.ends_with(".out"))) {
+      paths_to_remove.push_back(entry.path());
+    }
+  }
+  for (const auto& path : paths_to_remove) {
+    std::filesystem::remove_all(path, ec);
+  }
+}
+
+// Create the job folder, which gets its name from the start timestep of the job. Make an output_0-0.txt symlink in
+// the simulation folder that points to the rank-0 log of the current job. Then tail -f output_0-0.txt works.
+void setup_jobfolder() {
   const auto* const linkname = "output_0-0.txt";
 
-  if (globals::runoutputfolder.empty()) {
-    if (std::error_code ec; globals::my_rank == 0 && std::filesystem::is_symlink(linkname, ec)) {
-      std::filesystem::remove(linkname, ec);
-    }
-    return;
+  const auto [timestep_initial, simulation_continued_from_saved] = read_start_timestep_and_continue_flag();
+  globals::jobfolder = std::format("job_from_ts{:04d}", timestep_initial);
+
+  if (globals::my_rank == 0 && !simulation_continued_from_saved) {
+    remove_previous_simulation_files();
   }
 
   if (globals::my_rank == 0) {
     std::error_code ec;
-    std::filesystem::create_directories(globals::runoutputfolder, ec);
+    std::filesystem::create_directories(globals::jobfolder, ec);
     if (ec) {
-      std::println(stderr, "[error] could not create output folder '{}': {}", globals::runoutputfolder, ec.message());
-      std::abort();
+      fatal_crash("could not create the job folder '{}': {}", globals::jobfolder, ec.message());
+    }
+    // the final packet files of each job go into these folders
+    for (const auto* const foldername : {"packets", "vpackets", "vspecpol", "vpkt_grid"}) {
+      if (!VPKT_ON && std::string_view(foldername) != "packets") {
+        continue;
+      }
+      std::filesystem::create_directories(foldername, ec);
+      if (ec) {
+        fatal_crash("could not create the folder '{}': {}", foldername, ec.message());
+      }
     }
 
     // clear out per-rank output files (and any leftover log symlink) from a previous run of this folder, so
     // that e.g. a rerun with fewer ranks does not leave a mixture of new estimator files and stale ones from
     // ranks that no longer exist. Only exact matches of the generated filenames are removed.
-    for (const auto& entry : std::filesystem::directory_iterator(globals::runoutputfolder, ec)) {
+    for (const auto& entry : std::filesystem::directory_iterator(globals::jobfolder, ec)) {
       if (is_rank_outfile_name(entry.path().filename().string())) {
         std::filesystem::remove(entry.path(), ec);
       }
     }
 
-    if (!std::filesystem::equivalent(globals::runoutputfolder, ".", ec)) {
-      // not having the log symlink is no reason to stop the simulation, so just warn if it cannot be created
-      const auto linktarget = get_runoutputfolder_filepath(linkname);
-      std::filesystem::remove(linkname, ec);
-      std::filesystem::create_symlink(linktarget, linkname, ec);
-      if (ec) {
-        std::println(stderr, "[warning] could not create symlink '{}' to '{}': {}", linkname, linktarget, ec.message());
-      }
+    // the simulation continues without the log symlink, so a failure gives only a warning
+    const auto linktarget = get_jobfolder_filepath(linkname);
+    std::filesystem::remove(linkname, ec);
+    std::filesystem::create_symlink(linktarget, linkname, ec);
+    if (ec) {
+      std::println(stderr, "[warning] could not create symlink '{}' to '{}': {}", linkname, linktarget, ec.message());
     }
-    // when -o names the simulation folder itself, no symlink is made (it would point at itself and the log
-    // will be at the link's path anyway), and the cleanup above has already removed any leftover link
   }
   // the folder must exist before any rank opens its log file there
   MPI_Barrier_allranks();
 }
 
 void print_options_help(std::FILE* stream, const char* progname) {
-  std::println(stream, "Usage: {} [-w WALLTIMELIMITHOURS] [-o OUTPUTFOLDER] [-h]", progname);
+  std::println(stream, "Usage: {} [-w WALLTIMELIMITHOURS] [-h]", progname);
   std::println(stream, "  -w WALLTIMELIMITHOURS  finish cleanly (writing restart files) before this much wall time");
-  std::println(stream, "  -o OUTPUTFOLDER        write the per-rank output files (rank logs and estimators,");
-  std::println(stream, "                         nlte, radfield, and macroatom files) into this folder");
   std::println(stream, "  -h                     print this help and exit");
 }
 
@@ -922,11 +966,11 @@ auto main(int argc, char* argv[]) -> int {
 
   globals::setup_mpi_vars();
 
-  int walltimelimitseconds = -1;
+  int walltime_limit_seconds = -1;
 
-  std::string walltimehours_str;
+  std::string walltime_limit_hours_str;
   int opt = 0;
-  while ((opt = getopt(argc, argv, "hw:o:")) != -1) {  // NOLINT(concurrency-mt-unsafe,misc-include-cleaner)
+  while ((opt = getopt(argc, argv, "hw:")) != -1) {  // NOLINT(concurrency-mt-unsafe,misc-include-cleaner)
     if (opt == 'h') {
       if (globals::my_rank == 0) {
         print_options_help(stdout, argv[0]);  // NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic)
@@ -936,41 +980,38 @@ auto main(int argc, char* argv[]) -> int {
     }
     if (opt == 'w') {
       char* parse_end = nullptr;
-      const float walltimehours = strtof(optarg, &parse_end);  // NOLINT(misc-include-cleaner)
-      if (parse_end == optarg || *parse_end != '\0' || !std::isfinite(walltimehours) || walltimehours <= 0.) {
+      const float walltime_limit_hours = strtof(optarg, &parse_end);  // NOLINT(misc-include-cleaner)
+      if (parse_end == optarg || *parse_end != '\0' || !std::isfinite(walltime_limit_hours) ||
+          walltime_limit_hours <= 0.) {
         // silently accepting a bad value would disable the wall time limit instead of applying it
-        std::println(stderr, "[error] invalid wall time hours '{}' given with -w option", optarg);
-        std::abort();
+        fatal_crash("invalid wall time hours '{}' given with -w option", optarg);
       }
-      walltimelimitseconds = static_cast<int>(walltimehours * HOUR);
-      walltimehours_str = optarg;
-    } else if (opt == 'o') {
-      globals::runoutputfolder = optarg;
-      while (globals::runoutputfolder.size() > 1 && globals::runoutputfolder.ends_with('/')) {
-        globals::runoutputfolder.pop_back();
+      const double walltime_limit_seconds_exact = walltime_limit_hours * HOUR;
+      if (!std::isfinite(walltime_limit_seconds_exact) || walltime_limit_seconds_exact < 1. ||
+          walltime_limit_seconds_exact > std::numeric_limits<int>::max()) {
+        fatal_crash("wall time limit of {} hours is outside the range of 1 second to {} seconds", optarg,
+                    std::numeric_limits<int>::max());
       }
-      if (globals::runoutputfolder.empty()) {
-        std::println(stderr, "[error] empty output folder given with -o option");
-        std::abort();
-      }
+      walltime_limit_seconds = static_cast<int>(walltime_limit_seconds_exact);
+      walltime_limit_hours_str = optarg;
     } else {
       print_options_help(stderr, argv[0]);  // NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic)
-      std::abort();
+      fatal_crash("unknown command line option");
     }
   }
 
   check_already_running();
 
-  setup_runoutputfolder();
+  setup_jobfolder();
 
-#ifdef STDPAR_ON
-  for (int t = 1; t < get_max_threads(); t++) {
-    std::filesystem::remove(get_runoutputfolder_filepath(std::format("output_{}-{}.txt", globals::my_rank, t)));
+  if (globals::my_rank == 0) {
+    // the standard output goes to the log of the Slurm job, which then names the job folder
+    std::println("job folder: {}", globals::jobfolder);
+    std::fflush(stdout);
   }
-#endif
 
 #if defined(_OPENMP) && !defined(GPU_ON)
-  // Explicitly turn off dynamic threads. The per-thread log file handles in mpi_logging.h are threadprivate,
+  // Explicitly turn off dynamic threads. The per-thread log file handles in mpi_logging.cc are threadprivate,
   // and OpenMP only guarantees that threadprivate data persists between parallel regions while the team size
   // stays fixed, which dynamic adjustment would break.
   omp_set_dynamic(0);
@@ -978,7 +1019,7 @@ auto main(int argc, char* argv[]) -> int {
 #endif
   {
     // initialise the thread and rank specific output file
-    set_log_file(get_runoutputfolder_filepath(std::format("output_{}-{}.txt", globals::my_rank, get_thread_num())));
+    set_log_file(get_jobfolder_filepath(std::format("output_{}-{}.txt", globals::my_rank, get_thread_num())));
 
 #ifdef _OPENMP
     printlnlog("OpenMP parallelisation is active with {} threads (max {})", omp_get_num_threads(), get_max_threads());
@@ -1010,18 +1051,12 @@ auto main(int argc, char* argv[]) -> int {
   printlnlog("Boost Gauss-Kronrod quadrature");
 #endif
 
-  if (!walltimehours_str.empty()) {
-    printlnlog("command line argument specifies wall time hours '{}', so setting walltimelimitseconds = {}",
-               walltimehours_str, walltimelimitseconds);
+  if (!walltime_limit_hours_str.empty()) {
+    printlnlog("command line argument specifies wall time hours '{}', so setting walltime_limit_seconds = {}",
+               walltime_limit_hours_str, walltime_limit_seconds);
   }
 
-  if (!globals::runoutputfolder.empty()) {
-    printlnlog("command line argument specifies output folder '{}' for the per-rank output files",
-               globals::runoutputfolder);
-  }
-
-  std::vector<Packet> packets;
-  reserve_resize(packets, MPKTS);
+  printlnlog("The per-rank output files go into the job folder '{}'", globals::jobfolder);
 
   printlnlog("git branch: {}", GIT_BRANCH);
 
@@ -1047,8 +1082,33 @@ auto main(int argc, char* argv[]) -> int {
       MAX_NODE_SIZE);
 #endif
 
+  // every rank needs a packet
+  assert_always(NUM_PACKETS >= globals::nprocs);
+  // the ranks share NUM_PACKETS equally, and the first ranks get one packet each of the remainder
+  const auto [firstpktindex_thisrank, npkts_thisrank] = get_range_chunk(NUM_PACKETS, globals::nprocs, globals::my_rank);
+  // packet_init() and Packet::number hold the packet index of a rank in an int
+  assert_always(npkts_thisrank <= std::numeric_limits<int>::max());
+
+  printlnlog("Simulation propagates {} packets on this rank (total {:g} with nprocs {})", npkts_thisrank,
+             static_cast<double>(NUM_PACKETS), globals::nprocs);
+
+  printlnlog("[info] mem_usage: packets occupy {:.3f} MB", npkts_thisrank * sizeof(Packet) / 1024. / 1024.);
+
+  std::vector<Packet> packets;
+  reserve_resize(packets, npkts_thisrank);
+
   // Read in parameters from input.txt
   read_parameterfile(packets);
+
+  if (globals::simulation_continued_from_saved) {
+    assert_always(globals::nprocs_exspec == globals::nprocs);
+  } else {
+    // sn3d writes one packet file for each rank
+    globals::nprocs_exspec = globals::nprocs;
+    if (globals::my_rank == 0) {
+      update_parameterfile(-1);
+    }
+  }
 
   // Read in parameters from vpkt.txt
   if constexpr (VPKT_ON) {
@@ -1060,12 +1120,6 @@ auto main(int argc, char* argv[]) -> int {
   chargetransfer::init();
 
   grid::read_ejecta_model();
-
-  if (globals::simulation_continued_from_saved) {
-    assert_always(globals::nprocs_exspec == globals::nprocs);
-  } else {
-    globals::nprocs_exspec = globals::nprocs;
-  }
 
   if (globals::my_rank == 0) {
     initialise_linestat_file();
@@ -1084,7 +1138,7 @@ auto main(int argc, char* argv[]) -> int {
 
   // Record the chosen syn_dir (only one rank writes it, since every rank would write the same file)
   if (globals::my_rank == 0) {
-    auto syn_file = fstream_required("syn_dir.txt", std::ios::out | std::ios::trunc);
+    auto syn_file = open_uncompressed_output_file("syn_dir.txt");
     std::print(syn_file, "{} {} {}", syn_dir[0], syn_dir[1], syn_dir[2]);
     syn_file.close();
   }
@@ -1099,25 +1153,12 @@ auto main(int argc, char* argv[]) -> int {
 
   grid::init_grid();
 
-  printlnlog("Simulation propagates {:g} packets per process (total {:g} with nprocs {})", 1. * MPKTS,
-             1. * MPKTS * globals::nprocs, globals::nprocs);
-
-  printlnlog("[info] mem_usage: packets occupy {:.3f} MB", MPKTS * sizeof(Packet) / 1024. / 1024.);
-
   if (!globals::simulation_continued_from_saved) {
-    if (globals::my_rank == 0) {
-      // only rank 0 writes deposition.out, so only rank 0 removes the old file
-      std::error_code ec;
-      std::filesystem::remove("deposition.out", ec);
-    }
     packet_init(packets);
     zero_estimators();
   }
 
-  // For the parallelisation of update_grid, the process needs to be told which cells belong to it.
-  // The next loop is over all grid cells. For parallelisation, we want to split this loop between
-  // processes. This is done by assigning each MPI process nblock cells. The residual n_leftover
-  // cells are sent to processes 0 ... process n_leftover -1.
+  // log the range of model cells that setup_nstart_ndo() in grid.cc assigned to this rank for update_grid()
   const int nstart = grid::get_nstart(globals::my_rank);
   const int ndo = grid::get_ndo(globals::my_rank);
   const int ndo_nonempty = grid::get_ndo_nonempty(globals::my_rank);
@@ -1136,7 +1177,7 @@ auto main(int argc, char* argv[]) -> int {
 
   macroatom_open_file();
   if (ndo > 0) {
-    assert_always(!estimators_file.is_open());
+    assert_always(estimators_file.rdbuf() == nullptr);
     estimators_file = open_rank_outfile("estimators");
 
     if (globals::total_nlte_levels > 0 && ndo_nonempty > 0) {
@@ -1152,33 +1193,14 @@ auto main(int argc, char* argv[]) -> int {
   while (globals::timestep < globals::timestep_finish && !terminate_early) {
     MPI_Barrier_allranks();
 
-    // titer example: Do 3 iterations on timestep 0-6
-    // globals::n_titer = (globals::timestep < 6) ? 3 : 1;
-    globals::n_titer = 1;
-
-#ifdef DO_TITER
-    assert_always(globals::n_titer > 0);
-#else
-    assert_always(globals::n_titer == 1);
-#endif
-    if (globals::n_titer > 1) {
-      printlnlog("Doing {} iterations on timestep {}", globals::n_titer, globals::timestep);
-    }
-
-    for (int titer = 0; titer < globals::n_titer; titer++) {
-      terminate_early = do_timestep(globals::timestep, titer, packets, walltimelimitseconds);
-#ifdef DO_TITER
-      // No iterations over the zeroth timestep, set titer > n_titer
-      if (globals::timestep == 0) titer = globals::n_titer + 1;
-#endif
-    }
+    terminate_early = do_timestep(globals::timestep, packets, walltime_limit_seconds);
 
     globals::timestep++;
   }
 
   // The main calculation is now over. The packets now have all stored the time, place and direction
   // at which they left the grid. Also their rest frame energies and frequencies.
-  // Spectra and light curves are now extracted using exspec which is another make target of this code.
+  // sn3d has written the spectra and light curves. exspec can make them again from the packet files.
 
   MPI_Barrier_allranks();
 

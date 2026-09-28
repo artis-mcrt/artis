@@ -13,7 +13,7 @@ function trap_ctrlc() {
 
 trap "trap_ctrlc" 2
 
-find . -type d -name "*.slurm" -print0 | while IFS= read -r -d '' dir; do
+find . -type d \( -name "*.slurm" -o -name "job_from_ts*" \) -print0 | while IFS= read -r -d '' dir; do
     if [[ -d "$dir" ]]; then
         echo "runfolder: $dir"
         cd "$dir"
@@ -21,7 +21,7 @@ find . -type d -name "*.slurm" -print0 | while IFS= read -r -d '' dir; do
             echo "  estimators_allranks.tar*  exists already!"
             ls -lh estimators_allranks.tar*
         else
-            if [ -e estimbatch00_*.parquet* -a -e estimators_0001.out* ]; then
+            if compgen -G 'estimbatch00_*.parquet*' > /dev/null && compgen -G 'estimators_0001.out*' > /dev/null; then
                 find . -mindepth 0 -name "estimators_*.out*" -print | sort > $tmpdir/estimatorfilelist.txt
                 echo "  Creating tarball of estimators_allranks.tar"
                 tar -cf $tmpdir/estimators_allranks.tar --files-from $tmpdir/estimatorfilelist.txt && mv -v $tmpdir/estimators_allranks.tar . && rm -f $tmpdir/* && find . -mindepth 0 -name "estimators_*.out*" -delete

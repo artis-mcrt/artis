@@ -1,7 +1,8 @@
 CompileFlags:
     # to make the compilation database, run:
     # make TESTMODE=ON compile_commands.json
-    CompilationDatabase: compile_commands.json
+    # the value is the folder that holds compile_commands.json, not the file
+    CompilationDatabase: .
     # the database carries the flags of the build, so add only what it cannot give:
     # the language of a header, and a warning that the build permits
     Add: [-xc++, -Wno-unused-const-variable]
@@ -36,7 +37,8 @@ Hover:
 # The flags stay here and not in the list above, because that list wins over the database. hipcc and
 # nvc++ build the code as C++23, and a -std of that list would then override the standard of a .cc
 # file.
+# The -Wno flag comes after -Wall, because -Wall enables the warning again.
 If:
     PathMatch: .*\.h
 CompileFlags:
-    Add: [-std=c++26, -DTESTMODE=true, -Wall, -Wextra, -Wpedantic, -Wredundant-decls, -Wno-unneeded-internal-declaration, -Wno-unused-parameter, -Wsign-compare, -Wshadow, -isystem, third_party/]
+    Add: [-std=c++26, -DTESTMODE=true, -Wall, -Wextra, -Wpedantic, -Wredundant-decls, -Wno-unneeded-internal-declaration, -Wno-unused-parameter, -Wsign-compare, -Wshadow, -isystem, third_party/, -Wno-unused-const-variable]

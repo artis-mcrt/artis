@@ -4,7 +4,7 @@
 // NLTE_TIME_DEPENDENT_FIRST_TIMESTEP, the ion populations get a backward Euler time term.
 //
 // The NLTE ionisation and population solver is described by Shingles et al. (2020), MNRAS, 492,
-// 2029, section 2.3, doi:10.1093/mnras/stz3412.
+// 2029-2043, section 2.3, doi:10.1093/mnras/stz3412.
 
 #include <algorithm>
 #include <chrono>
@@ -43,6 +43,7 @@
 #include "mpi_logging.h"
 #include "nltepop.h"
 #include "nonthermal.h"
+#include "outputfilestream.h"
 #include "ratecoeff.h"
 #include "sn3d.h"
 
@@ -50,7 +51,12 @@ static_assert(STRICT_POPULATION_CHECKING_INVERSION_FACTOR_PRINTOUT_WARNING >= 1)
 static_assert(STRICT_POPULATION_CHECKING_INVERSION_FACTOR_PRINTOUT_WARNING <
               STRICT_POPULATION_CHECKING_INVERSION_FACTOR_SOLVER_FAIL);
 namespace {
-std::fstream nlte_file;
+OutputFileStream nlte_file;
+
+// The state of the previous grid update for the time-dependent ionisation (see nltepop.h). Only nltepop.cc
+// reads and writes these two arrays.
+MPI_shared_array<float> nnion_prev_allcells;  // ion population over the sum of the ion populations
+MPI_shared_array<double> prev_solution_time_allcells;  // t_mid of the stored previous state, or -1 for none
 
 // context so that log messages from the NLTE solver helpers can identify the cell, timestep, and
 // iteration of the solve they were emitted from (set by solve_nlte_pops_element)
@@ -129,7 +135,7 @@ struct RateMatrices {
 
   void set_used_dimension(int used_nlte_dimension_in) {
     used_nlte_dimension = used_nlte_dimension_in;
-    const auto used_dim_squared = used_nlte_dimension * used_nlte_dimension;
+    const auto used_dim_squared = static_cast<std::ptrdiff_t>(used_nlte_dimension) * used_nlte_dimension;
 
     assert_always(std::cmp_less_equal(used_dim_squared, summed_rates.capacity()));
     summed_rates.resize(used_dim_squared);
@@ -197,9 +203,10 @@ auto get_nlte_vector_index(const int element, const int ion, const int level, co
   // the difference is that nlte vectors apply to a single element and include ground and autoionising states
   int offset_autoion = 0;
   for (int dion = first_ion_used; dion < ion; dion++) {
-    if (ion_has_superlevel(element, dion)) {
-      offset_autoion += get_nlevels_autoion(element, dion);
-    }
+    // the slots of each lower ion that allnltelevelsindexstart does not count (see get_element_nlte_dimension)
+    offset_autoion += ion_has_superlevel(element, dion)
+                          ? get_nlevels_autoion(element, dion)
+                          : get_nlevels(element, dion) - 1 - get_nlevels_excited_nlte(element, dion);
   }
   assert_testmodeonly(first_ion_used >= 0);
   assert_testmodeonly(first_ion_used < get_nions(element));
@@ -235,8 +242,8 @@ auto get_nlte_vector_index(const int element, const int ion, const int level, co
       }
     }
   }
-  assert_always(false);
-  return {-1, -1};
+  fatal_crash("NLTE vector index {} is not in element {} ions {} to {}", index, element, first_ion_used,
+              first_ion_used + nions_used - 1);
 }
 
 // log " ionstage {} level {}" or " ionstage {} superlevel" (no newline) identifying an NLTE vector index in a message
@@ -501,9 +508,11 @@ void print_level_rates(const int nonemptymgi, const int timestep, const int elem
 void nltepop_reset_element(const int nonemptymgi, const int element) {
   grid::set_elements_lowermost_ion(nonemptymgi, element, 0);
   for (int ion = 0; ion < get_nions(element); ion++) {
-    const int nlte_start = get_allnltelevelsindexstart(element, ion);
-    std::fill_n(&nltepops_allcells[(static_cast<ptrdiff_t>(nonemptymgi) * globals::total_nlte_levels) + nlte_start],
-                get_nlevels_excited_nlte(element, ion) + (ion_has_superlevel(element, ion) ? 1 : 0), -1.);
+    const auto nlte_start = get_allnltelevelsindexstart(element, ion);
+    const auto nlte_count = get_nlevels_excited_nlte(element, ion) + (ion_has_superlevel(element, ion) ? 1 : 0);
+    std::ranges::fill(nltepops_allcells.span().subspan(
+                          (static_cast<ptrdiff_t>(nonemptymgi) * globals::total_nlte_levels) + nlte_start, nlte_count),
+                      -1.);
   }
 }
 
@@ -530,6 +539,10 @@ void get_element_superlevelpartfuncs(const int nonemptymgi, const int element,
   assert_testmodeonly(nions_used >= 0);
   assert_testmodeonly(nions_used <= get_nions(element));
   assert_testmodeonly(first_ion_used >= 0);
+  if (nions_used == 0) {
+    assert_testmodeonly(first_ion_used <= get_nions(element));
+    return 0;
+  }
   assert_testmodeonly(first_ion_used < get_nions(element));
   assert_testmodeonly((first_ion_used + nions_used - 1) < get_nions(element));
   int nlte_dimension = 0;
@@ -774,7 +787,7 @@ void nltepop_matrix_add_nt_ionisation(const int nonemptymgi, const int element, 
 void nltepop_matrix_add_chargetransfer(const int nonemptymgi, const int element, const int ion,
                                        const std::span<const std::vector<double>> s_renorm_allions,
                                        RateMatrices& rate_matrices, const int first_ion_used, const int nions_used) {
-  if (!ENABLE_CHARGE_TRANSFER_REACTIONS) {
+  if constexpr (!ENABLE_CHARGE_TRANSFER_REACTIONS) {
     return;
   }
   assert_always((ion + 1) < (nions_used + first_ion_used));  // the top ion stage has no ionisation
@@ -797,7 +810,7 @@ void nltepop_matrix_add_chargetransfer(const int nonemptymgi, const int element,
   }
 }
 
-// Add autoionisation and inverse (i.e. collisional capture part of di-el)
+// Add autoionisation and its inverse, the dielectronic capture
 void nltepop_matrix_add_autoionisation(const int nonemptymgi, const int element, const int ion,
                                        const std::span<const std::vector<double>> s_renorm_allions,
                                        RateMatrices& rate_matrices, const int first_ion_used, const int nions_used) {
@@ -981,11 +994,10 @@ void set_element_pops_lte(const int nonemptymgi, const int element) {
         popvec[index] = ltepop;
       }
     } else {
-      // A non-finite population (reachable via the popvec[i] = vec_x[i] * pop_normfactors[i] denormalisation
-      // product overflowing - the solver itself rejects a non-finite solution vector through the residual score)
-      // fails every comparison in the triage below, so without this rejection it would pass through unhandled and
-      // trip the assert_always(std::isfinite(pop)) in nltepop_apply_solution, aborting the run instead of letting
-      // the caller drop an ion stage and retry.
+      // A non-finite population fails every comparison in the triage below. It comes from an overflow of the
+      // denormalisation product popvec[i] = vec_x[i] * pop_normfactors[i] on the LU path, or from the GTH
+      // back-substitution. Without this test it would trip assert_always(std::isfinite(pop)) in
+      // nltepop_apply_solution() and abort the run, instead of a retry with a smaller ion range.
       if (!std::isfinite(population)) {
         printlnlog(
             "  [warning] cell {} ts {}: NLTE solver gave non-finite population for index {} (Z={} ionstage {} level "
@@ -1202,6 +1214,8 @@ constexpr double RELATIVE_RESIDUAL_WARN_TOLERANCE = 1e-8;
   // vector makes at least one element of the residual below non-finite, wherever it lands, and the residual reduction
   // reports that as a non-finite error. It then leaves error_best negative, which is reported and returned as a
   // solver failure.
+  // eigen_vec_x is a map, so the assignment writes the solution into vec_x
+  // cppcheck-suppress redundantInitialization
   eigen_vec_x = eigen_rate_matrix_lu.solve(eigen_balance_vector);
 
   // population solution vector with lowest error
@@ -1249,9 +1263,9 @@ constexpr double RELATIVE_RESIDUAL_WARN_TOLERANCE = 1e-8;
       iteration_best = iteration + 1;
     }
 
-    // deliberately not converted into a usable relative tolerance, which would truncate the best-of-ten selection
-    // above and change the solution. As an absolute threshold on residual rows that carry arbitrary equilibration
-    // factors, it is unreachable in any realistic solve, so every solve runs all of the refinement passes.
+    // This absolute threshold is unreachable in a realistic solve, because the residual rows carry arbitrary
+    // equilibration factors. Every solve therefore runs all refinement passes. A relative tolerance would cut the
+    // best-of-ten selection above and change the results.
     if (error < 1e-40) {
       break;
     }
@@ -1264,9 +1278,8 @@ constexpr double RELATIVE_RESIDUAL_WARN_TOLERANCE = 1e-8;
   }
   std::ranges::copy(vec_x_best, vec_x.begin());
 
-  // error_best carries arbitrary per-row equilibration factors, so convergence is judged by the componentwise
-  // relative backward error rather than by comparison against a fixed absolute constant, which either fired on
-  // every healthy solve or never fired at all depending only on the element number density.
+  // error_best carries arbitrary per-row equilibration factors, so the convergence test uses the componentwise
+  // relative backward error.
   const double max_relative_residual = get_max_relative_residual(rate_matrix, balance_vector, vec_x);
   if (max_relative_residual > RELATIVE_RESIDUAL_WARN_TOLERANCE) {
     printlnlog(
@@ -1568,7 +1581,7 @@ auto nltepop_solve_matrix_with_ion_reduction(const int element, const int nonemp
             "successfully solved NLTE matrix when reducing ions used for element to Z={} ionstage={} to ionstage={}",
             atomic_number, get_ionstage(element, first_ion_used), get_ionstage(element, max_ion_used));
       }
-    } else if (NLTE_LIMIT_ION_STAGES_AFTER_FAILURE) {
+    } else if constexpr (NLTE_LIMIT_ION_STAGES_AFTER_FAILURE) {
       printlnlog("  [warning] cell {} ts {}: NLTE matrix solution failed for element Z={} using ionstage {} to {}",
                  nltelog.modelgridindex, nltelog.timestep, atomic_number, get_ionstage(element, first_ion_used),
                  get_ionstage(element, max_ion_used));
@@ -1611,7 +1624,8 @@ void nltepop_apply_solution(const int element, const int nonemptymgi, const int 
     assert_always(pop >= 0.);
   }
 
-  // record the solved ion range, so that the charge transfer reactions skip the removed edge ions
+  // record the solved ion range. The charge transfer reactions skip the removed edge ions, and the outer
+  // iteration watches the range for a change.
   grid::set_elements_lowermost_ion(nonemptymgi, element, first_ion_used);
   grid::set_elements_uppermost_ion(nonemptymgi, element, first_ion_used + nions_used - 1);
 
@@ -1742,10 +1756,9 @@ auto get_nlte_solution_range(const int nonemptymgi, const int element) -> std::p
 // column sums cannot affect the result. Small negative autoionisation off-diagonals (warned about during
 // assembly) only weaken that guarantee locally; any resulting invalid populations are policed by the caller.
 // rate_matrix is overwritten. On success, returns std::nullopt and fills vec_x with the stationary distribution
-// normalised to a sum of one. On failure, returns the index of a state with no departure rate into the remaining
-// chain (a reducible/disconnected matrix) and leaves vec_x untouched. An off-diagonal that grows to infinity
-// during the elimination is not a failure here: it is passed through as a non-finite distribution for the
-// caller's population validity check to handle, rather than being rescued (see the back-substitution below).
+// normalised to a sum of one. On failure, returns the index of a state whose departure rate into the remaining
+// chain is zero (a reducible matrix) or not finite, and leaves vec_x untouched. An infinite rate that reaches an
+// inflow sum in the back-substitution gives a non-finite population, which the caller's validity check rejects.
 // Defined with external linkage (declared in nltepop.h) so that unittests.cc can exercise it.
 auto gth_stationary_distribution(std::span<double> rate_matrix, std::span<double> vec_x)
     -> std::optional<std::ptrdiff_t> {
@@ -1797,8 +1810,8 @@ auto gth_stationary_distribution(std::span<double> rate_matrix, std::span<double
     //
     // The number of passes is capped because rescaling cannot rescue every non-finite inflow. Once a weight has
     // underflowed to zero, an infinite rate out of that state gives inflow = 0 * inf = NaN, which survives any
-    // number of further passes, so an uncapped loop would spin here forever. Three passes already span the whole
-    // dynamic range of a double, so the cap never cuts a rescue that would have succeeded. Giving up leaves a
+    // number of further passes, so an uncapped loop would spin here forever. Three passes of 1e-200 span the whole
+    // dynamic range of a double, so the cap of eight never cuts a rescue that can succeed. Giving up leaves a
     // non-finite population for solution_pops_are_valid() to reject or replace, as for any other unusable solve.
     constexpr int max_rescale_passes = 8;
     for (int pass = 0; pass < max_rescale_passes && (!std::isfinite(inflow) || inflow > departure_sum * 1e250);
@@ -1947,13 +1960,15 @@ void nltepop_open_file() {
 
 void nltepop_write_to_file(const int nonemptymgi, const int timestep) {
   const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
-  if (globals::lte_iteration ||
-      grid::thick_allcells[nonemptymgi] == grid::CellThickness::THICK) {  // NLTE solver hasn't been run yet
+  if (globals::lte_iteration) {
     return;
   }
 
   for (int element = 0; element < get_nelements(); element++) {
-    if (!elem_has_nlte_levels(element)) {
+    // An element without an NLTE solution holds the -1 markers, not populations. That is an element with no mass
+    // in the cell, an element that fell back to LTE, or every element of a cell that took the thick path of this
+    // grid update. The thick flag of the cell already holds the value for the next timestep, so it is no test.
+    if (!elem_has_nlte_solution(nonemptymgi, element)) {
       continue;
     }
 
@@ -1999,9 +2014,9 @@ void nltepop_write_to_file(const int nonemptymgi, const int timestep) {
       }
     }
   }
-
-  nlte_file.flush();
 }
+
+void nltepop_flush_file() { nlte_file.flush(); }
 
 // Scale the level populations of every ion of the element, so that each ion of ion_factors takes its
 // factor and the element keeps its abundance population. Each ion keeps its internal level
@@ -2149,42 +2164,29 @@ auto get_nne_prev(const int nonemptymgi) -> double {
 void nltepop_write_restart_data(FILE* restart_file) {
   printlog("populations, ");
 
-  fprintf(restart_file, "%d\n", 75618527);  // special number marking the beginning of nlte data
+  write_restart_values(restart_file, 75618527);  // special number marking the beginning of nlte data
+  write_restart_values(restart_file, globals::total_nlte_levels);
 
-  fprintf(restart_file, "%d\n", globals::total_nlte_levels);
-  const auto nincludedions = get_includedions();
+  write_restart_array(restart_file, grid::ion_groundlevelpops_allcells);
+  write_restart_array(restart_file, grid::ion_partfuncts_allcells);
+  write_restart_array(restart_file, kpkt::ion_cooling_contribs_allcells);
+  write_restart_array(restart_file, nltepops_allcells);
 
-  for (auto nonemptymgi = 0Z; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
-    const int modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
-    fprintf(restart_file, "%d\n", modelgridindex);
-    for (int element = 0; element < get_nelements(); element++) {
-      for (int ion = 0; ion < get_nions(element); ion++) {
-        const int uniqueionindex = get_uniqueionindex(element, ion);
-        fprintf(restart_file, "%d %a %a %la\n", ion,
-                grid::ion_groundlevelpops_allcells[(nonemptymgi * nincludedions) + uniqueionindex],
-                grid::ion_partfuncts_allcells[(nonemptymgi * nincludedions) + uniqueionindex],
-                kpkt::ion_cooling_contribs_allcells[(nonemptymgi * nincludedions) + uniqueionindex]);
-      }
-    }
-    for (int nlteindex = 0; nlteindex < globals::total_nlte_levels; nlteindex++) {
-      fprintf(restart_file, "%la ", nltepops_allcells[(nonemptymgi * globals::total_nlte_levels) + nlteindex]);
-    }
-    if constexpr (grid::NLTE_TRACK_SOLUTION_RANGES) {
-      // the solved ion range of each element, so that a resumed run starts with the same reactions
-      fprintf(restart_file, "\n");
+  if constexpr (grid::NLTE_TRACK_SOLUTION_RANGES) {
+    // A restart must contain the complete range for each stored NLTE solution.
+    for (auto nonemptymgi = 0Z; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
       for (int element = 0; element < get_nelements(); element++) {
-        const int lowermost_ion = grid::get_elements_lowermost_ion(static_cast<int>(nonemptymgi), element);
-        const int uppermost_ion = grid::get_elements_uppermost_ion(static_cast<int>(nonemptymgi), element);
-        // A restart must contain the complete range for each stored NLTE solution.
+        const int lowermost_ion = grid::get_elements_lowermost_ion(nonemptymgi, element);
+        const int uppermost_ion = grid::get_elements_uppermost_ion(nonemptymgi, element);
         assert_always(!elem_has_nlte_solution(static_cast<int>(nonemptymgi), element) ||
                       (lowermost_ion >= 0 && lowermost_ion <= uppermost_ion && uppermost_ion < get_nions(element)));
-        fprintf(restart_file, "%d %d ", lowermost_ion, uppermost_ion);
       }
     }
-    if constexpr (NLTE_TIME_DEPENDENT_FIRST_TIMESTEP.has_value()) {
-      // the time of the solution, so that a resumed run continues the time-dependent equations
-      fprintf(restart_file, "\n%la\n", solution_time_allcells[nonemptymgi]);
-    }
+  }
+
+  if constexpr (NLTE_TIME_DEPENDENT_FIRST_TIMESTEP.has_value()) {
+    // the time of the solution, so that a resumed run continues the time-dependent equations
+    write_restart_array(restart_file, solution_time_allcells);
   }
 }
 
@@ -2192,52 +2194,23 @@ void nltepop_read_restart_data(FILE* restart_file) {
   printlnlog("Reading restart data for populations");
 
   int code_check = 0;
-  assert_always(fscanf(restart_file, "%d\n", &code_check) == 1);
+  read_restart_values(restart_file, code_check);
   assert_always(code_check == 75618527);
 
   int total_nlte_levels_in = 0;
-  assert_always(fscanf(restart_file, "%d\n", &total_nlte_levels_in) == 1);
+  read_restart_values(restart_file, total_nlte_levels_in);
   if (total_nlte_levels_in != globals::total_nlte_levels) {
-    printlnlog("[error] Expected {} NLTE levels but found {} in restart file", globals::total_nlte_levels,
-               total_nlte_levels_in);
-    std::abort();
+    fatal_crash("Expected {} NLTE levels but found {} in the restart file", globals::total_nlte_levels,
+                total_nlte_levels_in);
   }
-  const auto nincludedions = get_includedions();
 
-  for (auto nonemptymgi = 0Z; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
-    int mgi_in = 0;
-    assert_always(fscanf(restart_file, "%d\n", &mgi_in) == 1);
-    assert_always(mgi_in == grid::get_mgi_of_nonemptymgi(nonemptymgi));
+  read_restart_array(restart_file, grid::ion_groundlevelpops_allcells);
+  read_restart_array(restart_file, grid::ion_partfuncts_allcells);
+  read_restart_array(restart_file, kpkt::ion_cooling_contribs_allcells);
+  read_restart_array(restart_file, nltepops_allcells);
 
-    for (int element = 0; element < get_nelements(); element++) {
-      const int nions = get_nions(element);
-      for (int ion = 0; ion < nions; ion++) {
-        int ion_in = 0;
-        const int uniqueionindex = get_uniqueionindex(element, ion);
-        assert_always(fscanf(restart_file, "%d %a %a %la\n", &ion_in,
-                             &grid::ion_groundlevelpops_allcells[(nonemptymgi * nincludedions) + uniqueionindex],
-                             &grid::ion_partfuncts_allcells[(nonemptymgi * nincludedions) + uniqueionindex],
-                             &kpkt::ion_cooling_contribs_allcells[(nonemptymgi * nincludedions) + uniqueionindex]) ==
-                      4);
-        assert_always(ion_in == ion);
-      }
-    }
-    for (int nlteindex = 0; nlteindex < globals::total_nlte_levels; nlteindex++) {
-      assert_always(fscanf(restart_file, "%la ",
-                           &nltepops_allcells[(nonemptymgi * globals::total_nlte_levels) + nlteindex]) == 1);
-    }
-    if constexpr (grid::NLTE_TRACK_SOLUTION_RANGES) {
-      for (int element = 0; element < get_nelements(); element++) {
-        int lowermost_ion = 0;
-        int uppermost_ion = 0;
-        assert_always(fscanf(restart_file, "%d %d ", &lowermost_ion, &uppermost_ion) == 2);
-        grid::set_elements_lowermost_ion(static_cast<int>(nonemptymgi), element, lowermost_ion);
-        grid::set_elements_uppermost_ion(static_cast<int>(nonemptymgi), element, uppermost_ion);
-      }
-    }
-    if constexpr (NLTE_TIME_DEPENDENT_FIRST_TIMESTEP.has_value()) {
-      assert_always(fscanf(restart_file, " %la", &solution_time_allcells[nonemptymgi]) == 1);
-    }
+  if constexpr (NLTE_TIME_DEPENDENT_FIRST_TIMESTEP.has_value()) {
+    read_restart_array(restart_file, solution_time_allcells);
   }
 }
 

@@ -1,8 +1,8 @@
-// Unit tests for the pure numeric helpers (geometry, special relativity, sampling, decay chains,
-// cross-sections, binning, input parsing, and atomic level structure). Build and run with:
+// Unit tests for the numeric helpers and for some physics functions. main() lists the tests. Build and run with:
 //   make unittests && ./unittests
 // The tests only cover functions with header-visible definitions or external linkage; they use no
-// input files and no MPI communication, and a non-zero exit code means at least one check failed.
+// MPI communication, and a non-zero exit code means at least one check failed. The zstd tests write
+// their own files and remove them.
 // (Compile-time checks of the constexpr helpers live in static_asserts next to their definitions.)
 
 #include <algorithm>
@@ -12,15 +12,28 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstdlib>
+#include <filesystem>
+#include <format>
+#include <fstream>
 #include <functional>
+#include <ios>
+#include <iterator>
 #include <limits>
 #include <numbers>
 #include <optional>
 #include <print>
 #include <span>
+#include <string>
 #include <string_view>
+#include <tuple>
 #include <utility>
 #include <vector>
+
+#ifdef USE_ZSTD
+#pragma clang unsafe_buffer_usage begin
+#include <zstd.h>
+#pragma clang unsafe_buffer_usage end
+#endif
 
 #include "anderson.h"
 #include "artisoptions.h"
@@ -28,19 +41,21 @@
 #include "chargetransfer.h"
 #include "constants.h"
 #include "decay.h"
-#include "exspec.h"
 #include "gammapkt.h"
 #include "globals.h"
 #include "input.h"
+#include "inputfilestream.h"
 #include "integrator.h"
 #include "macroatom.h"
 #include "mpi_logging.h"
 #include "nltepop.h"
 #include "nonthermal.h"
+#include "outputfilestream.h"
 #include "radfield.h"
 #include "random.h"
 #include "rpkt.h"
 #include "sn3d.h"
+#include "spectrum_lightcurve.h"
 #include "toms748.h"
 #include "vectors.h"
 
@@ -155,7 +170,7 @@ void test_vector_geometry() {
   const double prop_time = 10. * DAY;
   const auto vel_rf = get_velocity(pos_rf, prop_time);
   double doppler_expected = 1. - (dot(dir_rf, vel_rf) / CLIGHT);
-  if (USE_RELATIVISTIC_DOPPLER_SHIFT) {
+  if constexpr (USE_RELATIVISTIC_DOPPLER_SHIFT) {
     doppler_expected /= std::sqrt(1 - (dot(vel_rf, vel_rf) / CLIGHTSQUARED));
   }
   check_close(calculate_doppler_nucmf_on_nurf(pos_rf, dir_rf, prop_time), doppler_expected, 1e-14,
@@ -236,6 +251,86 @@ void test_frame_transform() {
   }
   check(polarisation_invariant, "frame_transform preserves the polarisation degree");
   check(roundtrip_ok, "frame_transform with -v inverts frame_transform with +v");
+}
+
+void test_meridian() {
+  std::println("meridian frames...");
+  rngstate_type rngstate{99002};
+  const auto vec_dist = [](const Vec3d& vec_a, const Vec3d& vec_b) {
+    return vec_len(Vec3d{vec_a[0] - vec_b[0], vec_a[1] - vec_b[1], vec_a[2] - vec_b[2]});
+  };
+
+  bool pole_orientation_ok = true;
+  for (const double cos_theta : {-1., 1.}) {
+    const auto dir = Vec3d{0., 0., cos_theta};
+    const auto [ref1, ref2] = meridian(dir);
+    pole_orientation_ok = pole_orientation_ok && (vec_dist(ref2, cross_prod(ref1, dir)) < 1e-15);
+  }
+  check(pole_orientation_ok, "meridian gives ref2 = ref1 x dir at both poles");
+
+  bool near_pole_orthogonal = true;
+  for (const double pole : {-1., 1.}) {
+    for (const double sin_polar : {1e-5, 1e-8, 1e-12}) {
+      const auto dir = vec_norm(Vec3d{sin_polar, 0., pole});
+      const auto [ref1, ref2] = meridian(dir);
+      near_pole_orthogonal = near_pole_orthogonal && (std::abs(dot(ref1, dir)) < 1e-15) &&
+                             (std::abs(vec_len(ref1) - 1.) < 1e-15) && (std::abs(dot(ref2, dir)) < 1e-15);
+    }
+  }
+  check(near_pole_orthogonal, "meridian gives unit axes perpendicular to dir near both poles");
+
+  bool theta_phi_matches = true;
+  for (int trial = 0; trial < 100; trial++) {
+    const double cos_theta = (2. * rng_uniform(rngstate)) - 1.;
+    const double phi = rng_uniform(rngstate) * 2. * PI;
+    const auto [dir, ref1_angles, ref2_angles] = dir_and_meridian_of_theta_phi(cos_theta, phi);
+    const auto [ref1, ref2] = meridian(dir);
+    theta_phi_matches =
+        theta_phi_matches && (vec_dist(ref1, ref1_angles) < 1e-12) && (vec_dist(ref2, ref2_angles) < 1e-12);
+  }
+  check(theta_phi_matches, "dir_and_meridian_of_theta_phi agrees with meridian away from the poles");
+
+  bool pole_limit_ok = true;
+  for (const double pole : {-1., 1.}) {
+    for (const double phi : {0., 1., 4.}) {
+      const auto [ref1_near, ref2_near] =
+          meridian(std::get<0>(dir_and_meridian_of_theta_phi(pole * std::cos(1e-7), phi)));
+      [[maybe_unused]] const auto [dir_pole, ref1_pole, ref2_pole] = dir_and_meridian_of_theta_phi(pole, phi);
+      pole_limit_ok =
+          pole_limit_ok && (vec_dist(ref1_near, ref1_pole) < 1e-6) && (vec_dist(ref2_near, ref2_pole) < 1e-6);
+    }
+  }
+  check(pole_limit_ok, "dir_and_meridian_of_theta_phi at a pole is the limit of meridian at the same phi");
+
+  // With the observer frame, scatter_polarisation_to_rf gives the same q and u as meridian() away from a pole, and
+  // at a pole it gives the limit at the same phi.
+  const auto vel = Vec3d{0.1 * CLIGHT, -0.05 * CLIGHT, 0.07 * CLIGHT};
+  const auto old_dir_cmf = vec_norm(Vec3d{0.3, -0.5, 0.8});
+  const auto get_q_u = [&](const double cos_theta, const double phi, const bool use_observer_frame) {
+    const auto [obsdir, ref1, ref2] = dir_and_meridian_of_theta_phi(cos_theta, phi);
+    const auto meridian_rf = use_observer_frame ? std::optional<std::tuple<Vec3d, Vec3d>>{{ref1, ref2}} : std::nullopt;
+    const auto [dir_rf, q_rf, u_rf, pn] =
+        scatter_polarisation_to_rf(old_dir_cmf, angle_ab(obsdir, vel), 0.3, -0.2, vel, meridian_rf);
+    return std::array<double, 2>{q_rf, u_rf};
+  };
+  bool observer_frame_ok = true;
+  for (int trial = 0; trial < 100; trial++) {
+    const double cos_theta = (1.98 * rng_uniform(rngstate)) - 0.99;
+    const double phi = rng_uniform(rngstate) * 2. * PI;
+    const auto q_u_default = get_q_u(cos_theta, phi, false);
+    const auto q_u_observer = get_q_u(cos_theta, phi, true);
+    observer_frame_ok = observer_frame_ok && (std::abs(q_u_default[0] - q_u_observer[0]) < 1e-10) &&
+                        (std::abs(q_u_default[1] - q_u_observer[1]) < 1e-10);
+  }
+  for (const double pole : {-1., 1.}) {
+    for (const double phi : {0., 1., 4.}) {
+      const auto q_u_pole = get_q_u(pole, phi, true);
+      const auto q_u_near = get_q_u(pole * std::cos(1e-7), phi, true);
+      observer_frame_ok = observer_frame_ok && (std::abs(q_u_pole[0] - q_u_near[0]) < 1e-5) &&
+                          (std::abs(q_u_pole[1] - q_u_near[1]) < 1e-5);
+    }
+  }
+  check(observer_frame_ok, "scatter_polarisation_to_rf with the observer frame agrees with meridian and at a pole");
 }
 
 void test_random_sampling() {
@@ -321,11 +416,30 @@ void test_bateman() {
                 "expansion factor is the energy-weighted decay count of a chain into a stable sink");
   }
 
+  // The initial temperature counts the time from the explosion: a decay at t_decay keeps t_decay / t of its
+  // energy. calc_decaypath_unitfactor() builds that weight from the decayed fraction and the interval-relative
+  // factor above. Check the combination against a numeric integral of lambda exp(-lambda t') (t_model + t') / t
+  // over the interval from t_model to t.
+  {
+    const double t_model = 0.7 / lambda_a;
+    const double timediff = 3.4 / lambda_a;
+    const double t_end = t_model + timediff;
+    const double combined = ((t_model * decay::calculate_decaychain(1., std::array{lambda_a, 0.}, timediff, false)) +
+                             (timediff * decay::calculate_decaychain(1., std::array{lambda_a, 0.}, timediff, true))) /
+                            t_end;
+    constexpr int nsteps = 200000;
+    const double dt = timediff / nsteps;
+    double integral = 0.;
+    for (int i = 0; i < nsteps; i++) {
+      const double t_decay = (i + 0.5) * dt;
+      integral += lambda_a * std::exp(-lambda_a * t_decay) * (t_model + t_decay) / t_end * dt;
+    }
+    check_close(combined, integral, 1e-9, "the combined expansion factor is the 1/t weight from the explosion");
+  }
+
   // Below x of about 1e-3 the closed form is itself a difference of two quantities near one and
-  // loses accuracy as epsilon/x, so compare against its series x/2 - x^2/3 instead. What matters
-  // here is that the value is there at all: the (1 + 1/x) exp(-x) - 1/x form this replaced was 0.6%
-  // wrong at x = 1e-7 and underflowed to exactly zero below about 1e-8, which silently cost every
-  // long-lived nuclide its contribution to the initial temperature.
+  // loses accuracy as epsilon/x, so compare against its series x/2 - x^2/3 instead. The value must
+  // stay above zero, so that a long-lived nuclide keeps its contribution to the initial temperature.
   for (const double x : {1e-9, 1e-7, 1e-5}) {
     check_close(decay::calculate_decaychain(initabund, std::array{lambda_a, 0.}, x / lambda_a, true),
                 initabund * ((x / 2.) - (x * x / 3.)), 1e-5, "expansion factor at small lambda*timediff");
@@ -416,8 +530,8 @@ void test_phixs_table_lookup() {
           "classic mode cross section at the threshold is the first table point");
     check(photoionisation_crosssection_fromtable(photoion_xs, nu_edge, nu_edge * (1. + 0.25)) == photoion_xs[2],
           "classic mode truncates to the nearest lower table point");
-    // regression test for the former out-of-bounds read: scan frequencies approaching the upper limit of
-    // the tabulated range from below (the last few representable values fall in the final table cell)
+    // scan the frequencies just below the upper limit of the tabulated range. The last few representable
+    // values fall in the final table cell, and each read must stay inside the table.
     bool tail_reads_in_table = true;
     const double nu_out_bound = nu_edge * (1 + (globals::NPHIXSNUINCREMENT * globals::NPHIXSPOINTS));
     double nu = nu_out_bound * (1. - 1e-13);
@@ -529,6 +643,28 @@ void test_parse_next_token() {
     check(!parse_next_token(remainder, d), "nan and inf spellings are rejected");
   }
   {
+    // packets*.out holds "nan" in the emission positions of a packet that never emitted, and the fields
+    // after it must still be read.
+    const auto row = std::format("{:g} {:g} {} {}", NAN, -NAN, 12, 3);
+    auto remainder = std::string_view{row};
+    double d = 0.;
+    check(parse_next_token<true>(remainder, d) && std::isnan(d), "nan token is a value");
+    check(parse_next_token<true>(remainder, d) && std::isnan(d), "negative nan token is a value");
+    int i = -99;
+    check(parse_next_token<true>(remainder, i) && i == 12, "the field after a nan field is read");
+    check(parse_next_token<true>(remainder, i) && i == 3, "the last field of the row is read");
+  }
+  for (const auto* const token : {"inf", "-inf", "INF"}) {
+    auto remainder = std::string_view{token};
+    double d = -99.;
+    check(!parse_next_token<true>(remainder, d), "an inf spelling is rejected even where a nan is a value");
+  }
+  {
+    auto remainder = std::string_view{"nanx"};
+    double d = -99.;
+    check(!parse_next_token<true>(remainder, d), "a nan token with trailing junk is still rejected");
+  }
+  {
     auto remainder = std::string_view{"1e400"};
     double d = -99.;
     check(!parse_next_token(remainder, d), "double overflow is rejected");
@@ -548,6 +684,25 @@ void test_parse_next_token() {
     float f = -99.;
     check(parse_next_token(remainder, f) && f == 0.F, "underflow below the float range reads as zero");
   }
+}
+
+// seed64() gives a distinct generator state to each of the consecutive packet seeds of a GPU build
+void test_seed64_distinct_states() {
+  std::println("seed64 of consecutive seeds...");
+  constexpr std::uint64_t nseeds = 1U << 16U;
+  constexpr std::uint64_t firstseed = 1ULL << 40U;  // a seed above the 32-bit range
+  std::vector<std::uint64_t> first_outputs;
+  first_outputs.reserve(nseeds);
+  for (std::uint64_t seed = firstseed; seed < firstseed + nseeds; seed++) {
+    rngstate_type rngstate{};
+    rngstate.seed64(seed);
+    const auto out1 = static_cast<std::uint64_t>(rngstate());
+    const auto out2 = static_cast<std::uint64_t>(rngstate());
+    first_outputs.push_back((out1 << 32U) | out2);
+  }
+  std::ranges::sort(first_outputs);
+  check(std::ranges::adjacent_find(first_outputs) == first_outputs.end(),
+        "seed64 gives distinct states to consecutive seeds");
 }
 
 void test_count_groundterm_levels() {
@@ -702,7 +857,7 @@ void test_rank_outfile_name() {
        }) {
     match_none = match_none || is_rank_outfile_name(name);
   }
-  check(!match_none, "other filenames are never matched, so they cannot be deleted from an output folder");
+  check(!match_none, "other filenames are never matched, so they cannot be deleted from a job folder");
 }
 
 void test_anderson_accelerator() {
@@ -1013,7 +1168,8 @@ void test_nonthermal_solve_upper_triangular() {
 }
 
 void test_chargetransfer_helpers() {
-  // fit form of Kingdon & Ferland (1996): k = a * (T/1e4)^b * (1 + c * exp(d * T/1e4)) * exp(-eexp/T)
+  // fit form of Kingdon & Ferland (1996), ApJS, 106, 205-211, doi:10.1086/192335:
+  // k = a * (T/1e4)^b * (1 + c * exp(d * T/1e4)) * exp(-eexp/T)
   check(chargetransfer::evaluate_ctfit(1e-9, 0., 0., 0., 0., 1e3, 1e5, 1e4) == 1e-9,
         "evaluate_ctfit gives the coefficient a at T = 1e4 K for a flat fit");
   check_close(chargetransfer::evaluate_ctfit(1e-9, 1., 0., 0., 0., 1e3, 1e5, 2e4), 2e-9, 1e-12,
@@ -1088,6 +1244,8 @@ void test_toms748_and_gauss_kronrod() {
   check(std::fabs(root - 0.7390851332151607) < 1e-10, "toms748_solve finds the fixed point of cos(x)");
   check(iterations < 50, "toms748_solve converges in fewer than the maximum iterations");
 
+#ifndef USE_SIMPSON_INTEGRATOR
+  // the Simpson integrator of a GPU build gives no error estimate and uses only three sample points here
   double abserr{NAN};
   const double integral_sin =
       integrator([](const double x) { return std::sin(x); }, 0., std::numbers::pi, 1e-10, &abserr);
@@ -1099,7 +1257,89 @@ void test_toms748_and_gauss_kronrod() {
       integrator<31>([](const double x) { return std::exp(-100. * (x - 0.3) * (x - 0.3)); }, 0., 12., 1e-10, &abserr);
   check(std::fabs(integral_bump - 0.17724342737116647) < 1e-9,
         "31-point adaptive gauss_kronrod_integrate resolves a narrow Gaussian bump");
+#endif
 }
+
+#ifdef USE_ZSTD
+// istream_required() opens the compressed file when the plain file is absent. The test writes the
+// file in two zstd frames, so the stream must continue over a frame boundary. The text is larger
+// than the decompression buffer.
+void test_zstd_input_stream() {
+  std::println("zstd compressed input file...");
+  std::string text;
+  for (int linenum = 0; linenum < 60000; linenum++) {
+    text += std::format("line {} value {:.6e}\n", linenum, linenum * 0.5);
+  }
+  const auto textview = std::string_view(text);
+  const auto half = text.size() / 2;
+
+  std::string compressed;
+  for (const auto part : {textview.substr(0, half), textview.substr(half)}) {
+    std::string frame(ZSTD_compressBound(part.size()), '\0');
+    const size_t framesize = ZSTD_compress(frame.data(), frame.size(), part.data(), part.size(), 3);
+    check(ZSTD_isError(framesize) == 0U, "ZSTD_compress makes a frame");
+    compressed.append(frame, 0, framesize);
+  }
+
+  const std::string filename = "unittests_zstd_input.txt";
+  const auto zstfilename = filename + ".zst";
+  {
+    auto outfile = std::ofstream(zstfilename, std::ios::binary);
+    outfile.write(compressed.data(), std::ssize(compressed));
+  }
+
+  auto infile = istream_required(filename);
+  std::string line;
+  check(static_cast<bool>(std::getline(infile, line)) && line == "line 0 value 0.000000e+00",
+        "istream_required reads the first line of the compressed file");
+
+  int lines_read = 1;
+  std::string lastline;
+  while (std::getline(infile, line)) {
+    lines_read++;
+    lastline = line;
+  }
+  check(lines_read == 60000, "the compressed file gives every line");
+  check(lastline == "line 59999 value 2.999950e+04", "the last line of the compressed file is complete");
+
+  auto infile_again = istream_required(filename);
+  const auto alltext = std::string(std::istreambuf_iterator<char>(infile_again), std::istreambuf_iterator<char>());
+  check(alltext == text, "the decompressed text matches the input text");
+
+  check(inputfile_exists(filename), "inputfile_exists finds the compressed file");
+  std::filesystem::remove(zstfilename);
+  check(!inputfile_exists(filename), "inputfile_exists gives false after the removal");
+}
+
+// open_output_file() writes a zstd file, and each flush ends a frame, as the estimator files do. The
+// file must read back as the same text.
+void test_zstd_output_stream() {
+  std::println("zstd compressed output file...");
+  const std::string filename = "unittests_zstd_output.txt";
+  const auto zstfilename = output_filepath(filename);
+  std::string text;
+  {
+    auto outfile = open_output_file(filename);
+    check(outfile.good(), "the compressed output file opens");
+    for (int linenum = 0; linenum < 300000; linenum++) {
+      const auto line =
+          std::format("timestep {} cell {} value {:.6e}\n", linenum / 1000, linenum % 1000, linenum * 0.5);
+      text += line;
+      outfile << line;
+      if (linenum % 1000 == 999) {
+        outfile.flush();
+      }
+    }
+    outfile.close();
+    check(!outfile.fail(), "the compressed output file closes without an error");
+  }
+
+  auto infile = istream_required(filename);
+  const auto readback = std::string(std::istreambuf_iterator<char>(infile), std::istreambuf_iterator<char>());
+  check(readback == text, "the compressed output file reads back as the written text");
+  std::filesystem::remove(zstfilename);
+}
+#endif
 
 }  // anonymous namespace
 
@@ -1109,6 +1349,7 @@ auto main() -> int {
   test_vector_geometry();
   test_escapedirectionbin();
   test_frame_transform();
+  test_meridian();
   test_random_sampling();
   test_planck();
   test_bateman();
@@ -1118,6 +1359,7 @@ auto main() -> int {
   test_closest_transition_randomised();
   test_input_helpers();
   test_parse_next_token();
+  test_seed64_distinct_states();
   test_count_groundterm_levels();
   test_calculate_timesteps();
   test_rank_outfile_name();
@@ -1128,6 +1370,10 @@ auto main() -> int {
   // the solver/integrator throw std::domain_error only on precondition violations that this test does not trigger
   // cppcheck-suppress throwInEntryPoint
   test_toms748_and_gauss_kronrod();
+#ifdef USE_ZSTD
+  test_zstd_input_stream();
+  test_zstd_output_stream();
+#endif
 
   std::println("unit tests: {} of {} checks passed", checks_total - checks_failed, checks_total);
 

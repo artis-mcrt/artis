@@ -29,11 +29,6 @@ inline int includedlevels = 0;
 // last photoion cross section point as a factor of nu_edge = last_phixs_nuovernuedge
 inline double last_phixs_nuovernuedge;
 
-// first value in this array is not used but exists so the indexes match those of the phixsdata_filenames array
-inline std::array<bool, 3> phixs_file_version_exists;
-
-inline const std::array phixsdata_filenames{"IGNORE", "phixsdata.txt", "phixsdata_v2.txt"};
-
 // return the number of levels of all elements combined
 [[gnu::pure]] inline auto get_includedlevels() -> int { return includedlevels; }
 
@@ -144,7 +139,7 @@ DEVICE_FUNC inline auto get_nphixstargets(const int element, const int ion, cons
   return nphixstargets;
 }
 
-// Return the index into the allphixstargets arrays for a target state for photoionisation of (element,ion,level).
+// Return the index into the allphixstargets arrays of a photoionisation target of a level, by unique level index.
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC inline auto get_allphixstargetindex(const int uniquelevelindex,
                                                                             const int phixstargetindex) -> int {
   assert_testmodeonly(phixstargetindex >= 0);
@@ -199,9 +194,11 @@ DEVICE_FUNC inline auto get_nphixstargets(const int element, const int ion, cons
 }
 
 // Calculate the photoionisation cross-section at frequency nu out of the atomic data.
-[[gnu::pure]] [[nodiscard]] inline auto photoionisation_crosssection_fromtable(std::span<const float> photoion_xs,
-                                                                               const double nu_edge, const double nu)
-    -> float {
+// nphixsnuincrement must equal globals::NPHIXSNUINCREMENT. A hot loop can give a local copy.
+[[gnu::pure]] [[nodiscard]] inline auto photoionisation_crosssection_fromtable(
+    std::span<const float> photoion_xs, const double nu_edge, const double nu,
+    const double nphixsnuincrement = globals::NPHIXSNUINCREMENT) -> float {
+  assert_testmodeonly(nphixsnuincrement == globals::NPHIXSNUINCREMENT);
   float sigma_bf = 0.;
 
   if constexpr (PHIXS_CLASSIC_NO_INTERPOLATION) {
@@ -211,24 +208,24 @@ DEVICE_FUNC inline auto get_nphixstargets(const int element, const int ion, cons
       sigma_bf = 0.;
     } else if (nu == nu_edge) {
       sigma_bf = photoion_xs[0];
-    } else if (nu < nu_edge * (1 + (globals::NPHIXSNUINCREMENT * globals::NPHIXSPOINTS))) {
+    } else if (nu < nu_edge * (1 + (nphixsnuincrement * globals::NPHIXSPOINTS))) {
       // the range guard above and the index below are computed with different floating-point
       // expressions, so for nu just under the bound the division can round up to exactly
       // NPHIXSPOINTS. Clamp so that the read stays inside this level's table
-      const int i = std::min(static_cast<int>((nu - nu_edge) / (globals::NPHIXSNUINCREMENT * nu_edge)),
-                             globals::NPHIXSPOINTS - 1);
+      const int i =
+          std::min(static_cast<int>((nu - nu_edge) / (nphixsnuincrement * nu_edge)), globals::NPHIXSPOINTS - 1);
       sigma_bf = photoion_xs[i];
     } else {
-      // above the top of the table, extrapolate with the Kramers (1923) nu^-3 scaling. It is anchored to the
-      // highest tabulated point rather than to the threshold value so that the cross-section stays continuous
-      // across the end of the table.
+      // above the top of the table, extrapolate with the nu^-3 scaling of Kramers (1923), Phil. Mag., 46,
+      // 836-871, doi:10.1080/14786442308565244. It is anchored to the highest tabulated point rather than to
+      // the threshold value so that the cross-section stays continuous across the end of the table.
       sigma_bf = static_cast<float>(photoion_xs[globals::NPHIXSPOINTS - 1] *
-                                    pow(nu_edge * (1 + (globals::NPHIXSNUINCREMENT * globals::NPHIXSPOINTS)) / nu, 3));
+                                    pow(nu_edge * (1 + (nphixsnuincrement * globals::NPHIXSPOINTS)) / nu, 3));
     }
     return sigma_bf;
   }
 
-  const double ireal = ((nu / nu_edge) - 1.0) / globals::NPHIXSNUINCREMENT;
+  const double ireal = ((nu / nu_edge) - 1.0) / nphixsnuincrement;
   // floor() so that nu < nu_edge always gives i < 0 (zero cross-section below the threshold);
   // truncation toward zero would map ireal in (-1, 0) to the first table point instead
   const int i = static_cast<int>(std::floor(ireal));
@@ -241,9 +238,9 @@ DEVICE_FUNC inline auto get_nphixstargets(const int element, const int ion, cons
     const double factor_b = ireal - i;
     sigma_bf = static_cast<float>(((1. - factor_b) * sigma_bf_a) + (factor_b * sigma_bf_b));
   } else {
-    // above the top of the table, extrapolate with the Kramers (1923) nu^-3 scaling. It is anchored to the
-    // highest tabulated point rather than to the threshold value so that the cross-section stays continuous
-    // across the end of the table.
+    // above the top of the table, extrapolate with the nu^-3 scaling of Kramers (1923), Phil. Mag., 46,
+    // 836-871, doi:10.1080/14786442308565244. It is anchored to the highest tabulated point rather than to
+    // the threshold value so that the cross-section stays continuous across the end of the table.
     const double nu_max_phixs = nu_edge * last_phixs_nuovernuedge;  // nu of the uppermost point in the phixs table
     sigma_bf = static_cast<float>(photoion_xs[globals::NPHIXSPOINTS - 1] * pow3(nu_max_phixs / nu));
   }
@@ -268,8 +265,7 @@ DEVICE_FUNC inline auto get_nphixstargets(const int element, const int ion, cons
       }
     }
   }
-  assert_always(false);  // uniquelevelindex too high to be valid
-  return {-1, -1, -1};
+  fatal_crash("Unique level index {} is above the highest level index", uniquelevelindex);
 }
 // Return the statistical weight of a level, by unique level index or by (element, ion, level).
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC inline auto stat_weight(const int uniquelevelindex) -> double {
@@ -282,7 +278,7 @@ DEVICE_FUNC inline auto get_nphixstargets(const int element, const int ion, cons
   return stat_weight(get_uniquelevelindex(element, ion, level));
 }
 
-// Return the energy of (element,ion,level).
+// Return the energy [erg] of a level, by unique level index or by (element, ion, level).
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC inline auto epsilon(const int uniquelevelindex) -> double {
   return globals::alllevels.epsilon[uniquelevelindex];
 }
@@ -441,8 +437,7 @@ inline void update_includedionslevels_maxnions() {
       return {element, ion};
     }
   }
-  assert_always(false);  // uniqueionindex too high to be valid
-  return {-1, -1};
+  fatal_crash("Unique ion index {} is above the highest ion index", uniqueionindex);
 }
 
 [[gnu::pure]] [[nodiscard]] inline auto ion_has_superlevel(const int element, const int ion) -> bool {
@@ -489,16 +484,6 @@ inline void update_includedionslevels_maxnions() {
 [[gnu::pure]] [[nodiscard]] inline auto get_nuptrans(const int element, const int ion, const int level) -> int {
   testmodeassert_valid_level(element, ion, level);
   return get_nuptrans(get_uniquelevelindex(element, ion, level));
-}
-
-// the number of upward autoionisation transitions from the specified level
-[[gnu::pure]] [[nodiscard]] inline auto get_nautoionuptrans(const int uniquelevelindex) -> int {
-  return globals::alllevels.nautoionuptrans[uniquelevelindex];
-}
-
-[[gnu::pure]] [[nodiscard]] inline auto get_nautoionuptrans(const int element, const int ion, const int level) -> int {
-  testmodeassert_valid_level(element, ion, level);
-  return globals::alllevels.nautoionuptrans[get_uniquelevelindex(element, ion, level)];
 }
 
 // Index of upperionlevel in the level's photoionisation target list, or -1 if it is not a target

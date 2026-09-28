@@ -72,8 +72,7 @@ void set_groundlevelpops(int nonemptymgi, int element, float nne, bool force_sah
   return get_cellcache_levelpop(nonemptymgi, get_uniquelevelindex(element, ion, level));
 }
 
-// Return the given ions groundlevel population for modelgridindex which was precalculated
-// during update_grid and stored to the grid.
+// Return the ground level population of an ion in the cell nonemptymgi, which the grid update stored.
 [[gnu::pure]] [[nodiscard]] inline DEVICE_FUNC auto get_groundlevelpop(const int nonemptymgi, const int element,
                                                                        const int ion) -> double {
   testmodeassert_valid_ion(element, ion);

@@ -21,7 +21,8 @@ DEVICE_FUNC void do_gamma(Packet& pkt, int nts, double t2);
 // energy locally as a k-packet instead of launching a gamma packet.
 auto choose_gamma_ray(int nucindex, rngstate_type& rngstate) -> double;
 
-// The Klein-Nishina (1929) Compton cross section, integrated over the energy loss factor from 1 up to f_max.
+// The Compton cross section of Klein & Nishina (1929), Z. Phys., 52, 853-868, doi:10.1007/BF01366453, integrated
+// over the energy loss factor from 1 up to f_max.
 // Passing f_max = 1 + 2x (the maximum possible loss, i.e. backscattering) gives the total cross section.
 // - x: the photon energy in units of the electron rest mass
 // - f_max: the energy loss factor (nu_before / nu_after) up to which we integrate

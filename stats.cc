@@ -45,7 +45,9 @@ auto get_counter(const Counter i) -> ptrdiff_t { return eventstats[std::to_under
 // Log all packet-interaction statistics (macroatom/kpkt/non-thermal transitions, scatterings, cell crossings, ...)
 // accumulated over timestep nts.
 void pkt_action_counters_printout(const int nts) {
-  const double meaninteractions = static_cast<double>(get_counter(Counter::INTERACTIONS)) / MPKTS;
+  // the packets of this rank at the start of the simulation
+  const auto [firstpktindex_thisrank, npkts_thisrank] = get_range_chunk(NUM_PACKETS, globals::nprocs, globals::my_rank);
+  const double meaninteractions = static_cast<double>(get_counter(Counter::INTERACTIONS)) / npkts_thisrank;
   printlnlog("timestep {}: mean number of interactions per packet = {:g}", nts, meaninteractions);
 
   const double deltat = globals::timesteps[nts].width;
@@ -54,11 +56,10 @@ void pkt_action_counters_printout(const int nts) {
     modelvolume += grid::get_modelcell_assocvolume_tmin(mgi) * pow3(globals::timesteps[nts].mid / globals::tmin);
   }
 
-  printlnlog("timestep {}: ma_stat_activation: collexc {} collion {} ntcollexc {} ntcollion {} bb {} bf {} fb {}", nts,
+  printlnlog("timestep {}: ma_stat_activation: collexc {} collion {} ntcollexc {} ntcollion {} bb {} bf {}", nts,
              get_counter(Counter::MA_STAT_ACTIVATION_COLLEXC), get_counter(Counter::MA_STAT_ACTIVATION_COLLION),
              get_counter(Counter::MA_STAT_ACTIVATION_NTCOLLEXC), get_counter(Counter::MA_STAT_ACTIVATION_NTCOLLION),
-             get_counter(Counter::MA_STAT_ACTIVATION_BB), get_counter(Counter::MA_STAT_ACTIVATION_BF),
-             get_counter(Counter::MA_STAT_ACTIVATION_FB));
+             get_counter(Counter::MA_STAT_ACTIVATION_BB), get_counter(Counter::MA_STAT_ACTIVATION_BF));
   printlnlog("timestep {}: ma_stat_deactivation: colldeexc {} collrecomb {} bb {} fb {}", nts,
              get_counter(Counter::MA_STAT_DEACTIVATION_COLLDEEXC),
              get_counter(Counter::MA_STAT_DEACTIVATION_COLLRECOMB), get_counter(Counter::MA_STAT_DEACTIVATION_BB),

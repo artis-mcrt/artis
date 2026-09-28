@@ -3,7 +3,7 @@
 // energies are accumulated into viewing-angle-dependent (and optionally polarised) spectra.
 //
 // The virtual-packet scheme and the polarised radiative transfer it feeds are described by
-// Bulla et al. (2015), MNRAS, 450, 967, doi:10.1093/mnras/stv657.
+// Bulla, Sim & Kromer (2015), MNRAS, 450, 967-981, doi:10.1093/mnras/stv657.
 
 #include "vpkt.h"
 
@@ -11,7 +11,6 @@
 #include <array>
 #include <cmath>
 #include <cstddef>
-#include <cstdio>
 #include <cstdlib>
 #include <filesystem>
 #include <format>
@@ -31,8 +30,10 @@
 #include "globals.h"
 #include "grid.h"
 #include "input.h"
+#include "inputfilestream.h"
 #include "ltepop.h"
 #include "mpi_logging.h"
+#include "outputfilestream.h"
 #include "packet.h"
 #include "rpkt.h"
 #include "sn3d.h"
@@ -45,6 +46,11 @@ static_assert(!VPKT_ON || POL_ON,
               "POL_ON must be true if VPKT_ON is true because vpkt needs stokes parameters to be tracked");
 
 static_assert(!VPKT_WRITE_CONTRIBS || VPKT_ON, "VPKT_WRITE_CONTRIBS does nothing without VPKT_ON");
+
+#ifdef GPU_ON
+// the vpkt code keeps thread-local buffers and writes files from the packet loop
+static_assert(!VPKT_ON, "VPKT_ON is not supported in a GPU build");
+#endif
 
 struct StokesParams {
   double I = 0.;
@@ -65,8 +71,8 @@ std::array<float, VSPEC_NUBINS> delta_freq_vspec;
 
 int nobsdirections = 0;  // Number of observer directions
 int nspectraperobsdir = 0;  // Number of virtual packet spectra per observer direction (total + elements switched off)
-std::vector<double> obsdirs_costheta;
-std::vector<double> obsdirs_phi;
+std::vector<Vec3d> obsdirs;
+std::vector<std::tuple<Vec3d, Vec3d>> obsdirs_meridian;  // the exact meridian frame of each observer
 double vspec_timemin_input;
 double vspec_timemax_input;
 int nwavelengthranges = 0;  // Number of wavelength ranges
@@ -151,25 +157,21 @@ void add_to_vpkt_grid(const double nu_rf, const double e_rf, const double prob, 
   double vref1{NAN};
   double vref2{NAN};
 
-  // obs is the observer orientation
-
-  // Packet velocity
-
   // The rotation formula below divides by (1 + obsdir[0]), so an observer within this angle of the
-  // -x axis takes the exact -x basis. The formula is well conditioned outside this cone, and inside
-  // it the basis orientation differs from the formula by less than ~1e-4 radians. The +x case only
-  // avoids the needless work of a rotation by ~0.
+  // -x axis takes the fixed basis (-y, +z). That is the limit of the formula along the equator. The
+  // formula has no single limit at -x, because the basis turns with the azimuth of the approach. The +x
+  // case only avoids the needless work of a rotation by ~0.
   constexpr double pole_alignment_tol = 1e-8;
   if (obsdir[0] > (1. - pole_alignment_tol)) {
     // if obsdir = +x , vref1 = vy and vref2 = vz
     vref1 = vel[1];
     vref2 = vel[2];
   } else if (obsdir[0] < (-1. + pole_alignment_tol)) {
-    // if obsdir = -x , vref1 = -vy and vref2 = -vz
+    // if obsdir = -x , vref1 = -vy and vref2 = vz (a right-handed basis with obsdir)
     vref1 = -vel[1];
-    vref2 = -vel[2];
+    vref2 = vel[2];
   } else {
-    // Rotate velocity into projected area seen by the observer (see notes)
+    // rotate the velocity into the plane that the observer sees
     // Rotate velocity from (x,y,z) to (obsdir,vref1,vref2) so that x corresponds to obsdir
     const double crossterm = obsdir[1] * obsdir[2] / (1 + obsdir[0]);
     vref1 = (-obsdir[1] * vel[0]) + ((obsdir[0] + (pow2(obsdir[2]) / (1 + obsdir[0]))) * vel[1]) - (crossterm * vel[2]);
@@ -196,8 +198,9 @@ void add_to_vpkt_grid(const double nu_rf, const double e_rf, const double prob, 
 }
 
 auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const double nu_rf, const double e_rf,
-                          const double rpkt_doppler, const int obsdirindex, const Vec3d& obsdir,
-                          const enum packet_type type_before_rpkt, std::string& vpkt_contrib_row) -> bool {
+                          const double rpkt_doppler, const int obsdirindex, const enum packet_type type_before_rpkt,
+                          std::string& vpkt_contrib_row) -> bool {
+  const auto& obsdir = obsdirs[obsdirindex];
   int mgi = 0;
 
   auto cellindex = rpkt.cellindex;
@@ -224,9 +227,9 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
 
   const auto vel_vec = get_velocity(rpkt.pos, t_start);
 
-  // Scattering event: dipole function
+  // Electron scattering event: dipole function
 
-  // MACROATOM and KPKT: isotropic emission
+  // MACROATOM, KPKT, and line scattering: isotropic in the comoving frame
   double pn{1 / (4 * PI)};
   // normalised Stokes parameters in the rest frame (RF)
   double q_rf{0.};
@@ -240,7 +243,10 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
     // Need to rotate Stokes Parameters in the scattering plane
 
     const auto obs_cmf = angle_ab(obsdir, vel_vec);
-    std::tie(std::ignore, q_rf, u_rf, pn) = scatter_polarisation_to_rf(old_dir_cmf, obs_cmf, q_i_cmf, u_i_cmf, vel_vec);
+    // At a pole, meridian() of the direction after the round trip through the comoving frame has a random
+    // orientation. The meridian frame of the observer is exact.
+    std::tie(std::ignore, q_rf, u_rf, pn) =
+        scatter_polarisation_to_rf(old_dir_cmf, obs_cmf, q_i_cmf, u_i_cmf, vel_vec, obsdirs_meridian[obsdirindex]);
 
   } else {
     assert_testmodeonly(type_before_rpkt == TYPE_KPKT || type_before_rpkt == TYPE_MA);
@@ -309,6 +315,14 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
           nu_cmf);
 
       const double dnu_on_dl = (nu_cmf_boundary - nu_cmf) / boundarydist;
+
+      // The comoving frequency decreases strictly along the path. A gradient that is not negative and finite
+      // comes from rounding, when boundarydist is too short to change the frequency. The packet then reaches
+      // no line resonance in this cell, and it takes only the continuum opacity above. Without this test
+      // get_linedistance() gives an infinite distance, and the loops below add every remaining line.
+      // do_rpkt_step() has the same test.
+      const bool nu_cmf_decreases = std::isfinite(dnu_on_dl) && (dnu_on_dl < 0.);
+
       // Trace individual lines from nu_cmf until dist_limit. Returns false when all vpkt opacity setups exceed tau_max.
       const auto trace_lines_to_dist = [&](const double dist_limit) -> bool {
         while (true) {
@@ -373,14 +387,14 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
         const auto binindex_start =
             std::max(get_linearbinindex(1e8 * CLIGHT / nu_cmf, expopac_lambdamin, expopac_deltalambda), -1Z);
 
-        if (binindex_start < expopac_nbins) {
+        if (nu_cmf_decreases && binindex_start < expopac_nbins) {
           // trace line-by-line from nu_cmf to the next bin edge, because the expansion opacity bin at nu_cmf includes
           // lines with nu > nu_cmf
           const auto first_bin_edge_nu =
               (binindex_start < 0) ? get_expopac_bin_nu_upper(0) : get_expopac_bin_nu_lower(binindex_start);
           const auto first_bin_edge_dist = get_linedistance(t_future, nu_cmf, first_bin_edge_nu, dnu_on_dl);
           const double line_by_line_limit = std::min(first_bin_edge_dist, boundarydist);
-          next_trans = -1;  // trigger binary search from nu_cmf
+          // next_trans still holds the line position of the r-packet, so the line that emitted it is excluded
           if (!trace_lines_to_dist(line_by_line_limit)) {
             return false;
           }
@@ -394,14 +408,13 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
               const auto binedgedist = get_linedistance(t_future, nu_cmf, next_bin_edge_nu, dnu_on_dl);
 
               const auto kappa = expansionopacities[(nonemptymgi * expopac_nbins) + binindex];
-              // kappa_exp * rho = (1 / (c t)) * sum_lines (lambda_line / delta_lambda) * (1 - exp(-tau_sobolev))
-              // and was tabulated at t_gridstate, so scale it to the packet's time. In the optically thin limit
-              // (1 - exp(-tau_sobolev)) -> tau_sobolev ∝ t^-2, which together with the explicit 1/(c t)
-              // prefactor gives kappa_exp * rho ∝ t^-3, i.e. the same density scaling as the linear continuum
-              // terms above. Saturated lines keep (1 - exp(-tau_sobolev)) ~ 1 and so fall off only as 1/t, but
-              // their individual tau_sobolev cannot be recovered from the binned kappa, so the thin limit is
-              // used for all bins.
-              const double chi_bb_expansionopac = kappa * grid::get_rho(nonemptymgi) * densityscalefactor;
+              // kappa_exp * rho = (1 / (c t)) * sum_lines (lambda_line / delta_lambda) * weight(tau_sobolev),
+              // tabulated at t_gridstate (see EXPANSION_OPACITY_METHOD). The scaling to the packet time uses the
+              // optically thin limit, where the weight is tau_sobolev and tau_sobolev ∝ t^-2, so kappa_exp * rho
+              // ∝ t^-3. A saturated line changes more slowly, but the bins do not keep the tau_sobolev of each
+              // line.
+              const double chi_bb_expansionopac = kappa * grid::get_rho(nonemptymgi) * densityscalefactor *
+                                                  get_expopac_pathfactor(t_future, next_bin_edge_nu, dnu_on_dl);
 
               const double tau_bin = chi_bb_expansionopac * (std::min(binedgedist, boundarydist) - dist);
               dist = std::min(binedgedist, boundarydist);
@@ -424,10 +437,12 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
                 break;
               }
             }
+            // the bin walk passes lines without a line position, so the next segment searches from nu_cmf
+            next_trans = -1;
           }
         }  // if (binindex_start < expopac_nbins)
       } else {
-        if (!trace_lines_to_dist(boundarydist)) {
+        if (nu_cmf_decreases && !trace_lines_to_dist(boundarydist)) {
           return false;
         }
       }
@@ -471,7 +486,7 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
 
   // Final Stokes vector
 
-  if (VPKT_WRITE_CONTRIBS) {
+  if constexpr (VPKT_WRITE_CONTRIBS) {
     std::format_to(std::back_inserter(vpkt_contrib_row), " {:g} {:g}", t_arrive / DAY, nu_rf);
   }
 
@@ -508,7 +523,7 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
       }
     }
   }
-  return true;  // true if we added columns to vpkt_contrib_row
+  return true;  // the virtual packet escaped in this direction
 }
 
 void init_vspecpol() {
@@ -524,9 +539,7 @@ void init_vspecpol() {
     delta_freq_vspec[m] = static_cast<float>(get_loggrid_edge(VSPEC_NUMIN, dlognu_vspec, m + 1) - lower_freq_vspec[m]);
   }
 
-  // start by setting up the time and frequency bins.
-  // it is all done interms of a logarithmic spacing in both t and nu - get the
-  // step sizes first.
+  // the time bins have a logarithmic spacing, as the frequency bins above
   for (int n = 0; n < VSPEC_TIMEBINS; n++) {
     for (int ind_comb = 0; ind_comb < indexmax; ind_comb++) {
       vspecpol[n][ind_comb].lower_time = static_cast<float>(get_loggrid_edge(VSPEC_TIMEMIN, dlogt_vspec, n));
@@ -547,7 +560,7 @@ void init_vspecpol() {
 // result depend on how the wall time limits divided the run into jobs.
 void write_vspecpol(const std::string& filename, const bool full_precision) {
   printlnlog("Writing {}", filename);
-  auto vspecpol_file = fstream_required(filename, std::ios::out | std::ios::trunc);
+  auto vspecpol_file = full_precision ? open_uncompressed_output_file(filename) : open_output_file(filename);
   const auto print_flux = [&vspecpol_file, full_precision](const double flux) {
     if (full_precision) {
       std::print(vspecpol_file, " {:.17g}", flux);
@@ -588,13 +601,17 @@ void write_vspecpol(const std::string& filename, const bool full_precision) {
       std::println(vspecpol_file, "");
     }
   }
+  vspecpol_file.close();
+  if (vspecpol_file.fail()) {
+    fatal_crash("Could not write or close {}.", filename);
+  }
 }
 
 void read_vspecpol(const int my_rank, const int nts) {
   const auto filename = std::format("vspecpol_{:04d}_ts{}.tmp", my_rank, nts);
   printlnlog("Reading {}", filename);
 
-  auto vspecpol_file = fstream_required(filename, std::ios::in);
+  auto vspecpol_file = istream_required(filename);
   std::string line;
 
   for (int ind_comb = 0; ind_comb < (nobsdirections * nspectraperobsdir); ind_comb++) {
@@ -641,8 +658,7 @@ void init_vpkt_grid() {
       reserve_resize(vgrid[n][m].flux, grid_nwavelengthranges);
 
       for (int wlbin = 0; wlbin < grid_nwavelengthranges; wlbin++) {
-        reserve_resize(vgrid[n][m].flux[wlbin], nobsdirections);
-        std::ranges::fill(vgrid[n][m].flux[wlbin], StokesParams{.I = 0., .Q = 0., .U = 0.});
+        vgrid[n][m].flux[wlbin].assign(nobsdirections, StokesParams{.I = 0., .Q = 0., .U = 0.});
       }
     }
   }
@@ -650,7 +666,7 @@ void init_vpkt_grid() {
 
 // full_precision selects the round-trip exact format for the restart files (see write_vspecpol)
 void write_vpkt_grid(const std::string& filename, const bool full_precision) {
-  auto vpkt_grid_file = fstream_required(filename, std::ios::out | std::ios::trunc);
+  auto vpkt_grid_file = full_precision ? open_uncompressed_output_file(filename) : open_output_file(filename);
 
   for (int obsdirindex = 0; obsdirindex < nobsdirections; obsdirindex++) {
     for (int wlbin = 0; wlbin < grid_nwavelengthranges; wlbin++) {
@@ -668,12 +684,16 @@ void write_vpkt_grid(const std::string& filename, const bool full_precision) {
       }
     }
   }
+  vpkt_grid_file.close();
+  if (vpkt_grid_file.fail()) {
+    fatal_crash("Could not write or close {}.", filename);
+  }
 }
 
 void read_vpkt_grid(const int my_rank, const int nts) {
   const std::string filename = std::format("vpkt_grid_{:04d}_ts{}.tmp", my_rank, nts);
   printlnlog("Reading {}", filename);
-  auto vpkt_grid_file = fstream_required(filename, std::ios::in);
+  auto vpkt_grid_file = istream_required(filename);
 
   for (int obsdirindex = 0; obsdirindex < nobsdirections; obsdirindex++) {
     for (int wlbin = 0; wlbin < grid_nwavelengthranges; wlbin++) {
@@ -710,45 +730,48 @@ void remove_temp_vpkt_file(const int nts, const int my_rank) {
 // read the virtual packet configuration from vpkt.txt: the observer directions, wavelength
 // ranges, emission-time window, and the optical-depth and cell-selection limits
 void read_vpktparameterfile() {
-  FILE* input_file = fopen_required("vpkt.txt", "r");
+  auto input_file = istream_required("vpkt.txt");
 
-  assert_always(fscanf(input_file, "%d", &nobsdirections) == 1);
+  assert_always(static_cast<bool>(input_file >> nobsdirections));
+  if (nobsdirections < 1) {
+    fatal_crash("vpkt.txt has {} observer directions, but it must have at least one", nobsdirections);
+  }
 
   printlnlog("vpkt.txt: nobsdirections {}", nobsdirections);
 
-  // nz_obs_vpkt. Cos(theta) to the observer. A list in the case of many observers
-  obsdirs_costheta.resize(nobsdirections);
+  // cos(theta) of each observer direction
+  std::vector<double> obsdirs_costheta(nobsdirections);
   for (int i = 0; i < nobsdirections; i++) {
-    assert_always(fscanf(input_file, "%lg", &obsdirs_costheta[i]) == 1);
+    assert_always(static_cast<bool>(input_file >> obsdirs_costheta[i]));
 
-    if (fabs(obsdirs_costheta[i]) > 1) {
-      printlnlog("[error] vpkt.txt observer direction {} has costheta {:g}, which is outside [-1, 1]. aborting", i,
-                 obsdirs_costheta[i]);
-      std::abort();
-    }
-    if (obsdirs_costheta[i] == 1) {
-      obsdirs_costheta[i] = 0.9999;
-    } else if (obsdirs_costheta[i] == -1) {
-      obsdirs_costheta[i] = -0.9999;
+    if (!(fabs(obsdirs_costheta[i]) <= 1)) {
+      fatal_crash("vpkt.txt observer direction {} has costheta {:g}, which is outside [-1, 1]", i, obsdirs_costheta[i]);
     }
   }
 
   // phi to the observer (degrees). A list in the case of many observers
-  obsdirs_phi.resize(nobsdirections);
+  obsdirs.resize(nobsdirections);
+  obsdirs_meridian.resize(nobsdirections);
   for (int i = 0; i < nobsdirections; i++) {
     double phi_degrees = 0.;
-    assert_always(fscanf(input_file, "%lg", &phi_degrees) == 1);
-    obsdirs_phi[i] = phi_degrees * PI / 180.;
+    assert_always(static_cast<bool>(input_file >> phi_degrees));
+    const double phi = phi_degrees * PI / 180.;
+    if (!std::isfinite(phi)) {
+      fatal_crash("vpkt.txt observer direction {} has phi {:g} degrees, which is not a finite number", i, phi_degrees);
+    }
+    const auto [obsdir, ref1, ref2] = dir_and_meridian_of_theta_phi(obsdirs_costheta[i], phi);
+    obsdirs[i] = obsdir;
+    obsdirs_meridian[i] = {ref1, ref2};
     const double theta_degrees = std::acos(obsdirs_costheta[i]) / PI * 180.;
 
     printlnlog(
         "vpkt.txt:   direction {}: theta {:.1f} [degrees] (costheta {:g}), phi {:.1f} [degrees] ({:g} [radians])", i,
-        theta_degrees, obsdirs_costheta[i], phi_degrees, obsdirs_phi[i]);
+        theta_degrees, obsdirs_costheta[i], phi_degrees, phi);
   }
 
   // Nspectra opacity choices (i.e. Nspectra spectra for each observer)
   int nspectra_customlist_flag = 0;
-  assert_always(fscanf(input_file, "%d ", &nspectra_customlist_flag) == 1);
+  assert_always(static_cast<bool>(input_file >> nspectra_customlist_flag));
 
   if (nspectra_customlist_flag != 1) {
     nspectraperobsdir = 1;
@@ -756,11 +779,18 @@ void read_vpktparameterfile() {
 
     opacityexclusions[0] = 0;
   } else {
-    assert_always(fscanf(input_file, "%d ", &nspectraperobsdir) == 1);
+    assert_always(static_cast<bool>(input_file >> nspectraperobsdir));
+    if (nspectraperobsdir < 1) {
+      fatal_crash("vpkt.txt has {} spectra per observer, but it must have at least one", nspectraperobsdir);
+    }
     opacityexclusions.resize(nspectraperobsdir, 0);
 
     for (int opacchoiceindex = 0; opacchoiceindex < nspectraperobsdir; opacchoiceindex++) {
-      assert_always(fscanf(input_file, "%d ", &opacityexclusions[opacchoiceindex]) == 1);
+      assert_always(static_cast<bool>(input_file >> opacityexclusions[opacchoiceindex]));
+      if (opacityexclusions[opacchoiceindex] < -4) {
+        fatal_crash("vpkt.txt spectrum {} has the opacity exclusion {}, but the value must be -4 or more",
+                    opacchoiceindex, opacityexclusions[opacchoiceindex]);
+      }
 
       // The first number should be equal to zero!
       assert_always(opacityexclusions[0] == 0);  // The first spectrum should allow for all opacities (exclude[i]=0)
@@ -777,7 +807,7 @@ void read_vpktparameterfile() {
   int override_tminmax = 0;
   double vspec_tmin_in_days = 0.;
   double vspec_tmax_in_days = 0.;
-  assert_always(fscanf(input_file, "%d %lg %lg", &override_tminmax, &vspec_tmin_in_days, &vspec_tmax_in_days) == 3);
+  assert_always(static_cast<bool>(input_file >> override_tminmax >> vspec_tmin_in_days >> vspec_tmax_in_days));
 
   printlnlog("vpkt: compiled with VSPEC_TIMEMIN {:.1f} [d] VSPEC_TIMEMAX {:.1f} [d] VSPEC_TIMEBINS {}",
              VSPEC_TIMEMIN / DAY, VSPEC_TIMEMAX / DAY, VSPEC_TIMEBINS);
@@ -795,6 +825,10 @@ void read_vpktparameterfile() {
         vspec_timemin_input / DAY, vspec_timemax_input / DAY);
   }
 
+  if (!(vspec_timemin_input < vspec_timemax_input)) {
+    fatal_crash("vpkt.txt emission time window [{:g}, {:g}] [d] is empty", vspec_timemin_input / DAY,
+                vspec_timemax_input / DAY);
+  }
   assert_always(vspec_timemin_input >= VSPEC_TIMEMIN);
   assert_always(vspec_timemax_input <= VSPEC_TIMEMAX);
   assert_always(vspec_timemin_input >= globals::tmin);
@@ -804,7 +838,7 @@ void read_vpktparameterfile() {
   // many (lambda_min, lambda_max) pairs in Angstroms. Otherwise a single range spanning the compile-time
   // VSPEC_NUMIN to VSPEC_NUMAX is used.
   int flag_custom_freq_ranges = 0;
-  assert_always(fscanf(input_file, "%d ", &flag_custom_freq_ranges) == 1);
+  assert_always(static_cast<bool>(input_file >> flag_custom_freq_ranges));
 
   printlnlog("vpkt: compiled with VSPEC_NUBINS {}", VSPEC_NUBINS);
   assert_always(VSPEC_NUMAX > VSPEC_NUMIN);
@@ -814,7 +848,10 @@ void read_vpktparameterfile() {
              1e8 * CLIGHT / VSPEC_NUMIN);
 
   if (flag_custom_freq_ranges == 1) {
-    assert_always(fscanf(input_file, "%d ", &nwavelengthranges) == 1);
+    assert_always(static_cast<bool>(input_file >> nwavelengthranges));
+    if (nwavelengthranges < 1) {
+      fatal_crash("vpkt.txt has {} wavelength ranges, but it must have at least one", nwavelengthranges);
+    }
     vspec_numin_input.resize(nwavelengthranges, 0.);
     vspec_numax_input.resize(nwavelengthranges, 0.);
 
@@ -823,7 +860,12 @@ void read_vpktparameterfile() {
     for (int i = 0; i < nwavelengthranges; i++) {
       double lmin_vspec_input = 0.;
       double lmax_vspec_input = 0.;
-      assert_always(fscanf(input_file, "%lg %lg", &lmin_vspec_input, &lmax_vspec_input) == 2);
+      assert_always(static_cast<bool>(input_file >> lmin_vspec_input >> lmax_vspec_input));
+      const bool is_valid_range = 0. < lmin_vspec_input && lmin_vspec_input < lmax_vspec_input;
+      if (!is_valid_range) {
+        fatal_crash("vpkt.txt wavelength range {} [{:g}, {:g}] [Angstroms] must have 0 < lambda_min < lambda_max", i,
+                    lmin_vspec_input, lmax_vspec_input);
+      }
 
       vspec_numin_input[i] = CLIGHT / (lmax_vspec_input * 1e-8);
       vspec_numax_input[i] = CLIGHT / (lmin_vspec_input * 1e-8);
@@ -848,9 +890,12 @@ void read_vpktparameterfile() {
   // Thick-cell threshold: a leading 1 overrides optical_depth_is_thick_vpkt with the value that follows,
   // otherwise the global optical_depth_is_thick is inherited. vpkts are not created in cells above it.
   int override_thickcell_tau = 0;
-  assert_always(fscanf(input_file, "%d %lg", &override_thickcell_tau, &optical_depth_is_thick_vpkt) == 2);
+  assert_always(static_cast<bool>(input_file >> override_thickcell_tau >> optical_depth_is_thick_vpkt));
 
   if (override_thickcell_tau == 1) {
+    if (!(optical_depth_is_thick_vpkt > 0.)) {
+      fatal_crash("vpkt.txt optical_depth_is_thick_vpkt {:g} must be more than zero", optical_depth_is_thick_vpkt);
+    }
     printlnlog("vpkt.txt: optical_depth_is_thick_vpkt {:g}", optical_depth_is_thick_vpkt);
   } else {
     optical_depth_is_thick_vpkt = globals::optical_depth_is_thick;
@@ -859,12 +904,15 @@ void read_vpktparameterfile() {
   }
 
   // Maximum optical depth: a vpkt is discarded once it exceeds tau_max_vpkt in every opacity setup
-  assert_always(fscanf(input_file, "%lg", &tau_max_vpkt) == 1);
+  assert_always(static_cast<bool>(input_file >> tau_max_vpkt));
+  if (!(tau_max_vpkt > 0.)) {
+    fatal_crash("vpkt.txt tau_max_vpkt {:g} must be more than zero", tau_max_vpkt);
+  }
   printlnlog("vpkt.txt: tau_max_vpkt {:g}", tau_max_vpkt);
 
   // Produce velocity grid map if =1
   int in_vgrid_on = 0;
-  assert_always(fscanf(input_file, "%d", &in_vgrid_on) == 1);
+  assert_always(static_cast<bool>(input_file >> in_vgrid_on));
   vgrid_on = in_vgrid_on != 0;
   printlnlog("vpkt.txt: velocity grid map {}", vgrid_on ? "ENABLED" : "DISABLED");
 
@@ -872,16 +920,23 @@ void read_vpktparameterfile() {
     double tmin_grid_in_days{NAN};
     double tmax_grid_in_days{NAN};
     // Specify time range for velocity grid map
-    assert_always(fscanf(input_file, "%lg %lg", &tmin_grid_in_days, &tmax_grid_in_days) == 2);
+    assert_always(static_cast<bool>(input_file >> tmin_grid_in_days >> tmax_grid_in_days));
     tmin_grid = tmin_grid_in_days * DAY;
     tmax_grid = tmax_grid_in_days * DAY;
+    if (!(tmin_grid < tmax_grid)) {
+      fatal_crash("vpkt.txt velocity grid time range [{:g}, {:g}] [d] is empty", tmin_grid_in_days, tmax_grid_in_days);
+    }
 
     printlnlog("vpkt.txt: velocity grid time range tmin_grid {:g} [d] tmax_grid {:g} [d]", tmin_grid / DAY,
                tmax_grid / DAY);
 
     // Velocity grid map wavelength ranges: the number of intervals, then that many
     // (lambda_min, lambda_max) pairs in Angstroms
-    assert_always(fscanf(input_file, "%d ", &grid_nwavelengthranges) == 1);
+    assert_always(static_cast<bool>(input_file >> grid_nwavelengthranges));
+    if (grid_nwavelengthranges < 1) {
+      fatal_crash("vpkt.txt has {} velocity grid wavelength ranges, but it must have at least one",
+                  grid_nwavelengthranges);
+    }
 
     printlnlog("vpkt.txt: velocity grid frequency intervals {}", grid_nwavelengthranges);
 
@@ -890,7 +945,13 @@ void read_vpktparameterfile() {
     for (int i = 0; i < grid_nwavelengthranges; i++) {
       double range_lambda_min = 0.;
       double range_lambda_max = 0.;
-      assert_always(fscanf(input_file, "%lg %lg", &range_lambda_min, &range_lambda_max) == 2);
+      assert_always(static_cast<bool>(input_file >> range_lambda_min >> range_lambda_max));
+      const bool is_valid_range = 0. < range_lambda_min && range_lambda_min < range_lambda_max;
+      if (!is_valid_range) {
+        fatal_crash(
+            "vpkt.txt velocity grid wavelength range {} [{:g}, {:g}] [Angstroms] must have 0 < lambda_min < lambda_max",
+            i, range_lambda_min, range_lambda_max);
+      }
 
       nu_grid_max[i] = CLIGHT / (range_lambda_min * 1e-8);
       nu_grid_min[i] = CLIGHT / (range_lambda_max * 1e-8);
@@ -899,8 +960,6 @@ void read_vpktparameterfile() {
                  1e8 * CLIGHT / nu_grid_min[i]);
     }
   }
-
-  fclose(input_file);
 }
 
 void write_timestep(const int nts, const bool is_final) {
@@ -909,12 +968,12 @@ void write_timestep(const int nts, const bool is_final) {
   }
   const int my_rank = globals::my_rank;
   // write specpol of the virtual packets
-  const auto filename_vspecpol =
-      is_final ? std::format("vspecpol_{:04d}.out", my_rank) : std::format("vspecpol_{:04d}_ts{}.tmp", my_rank, nts);
+  const auto filename_vspecpol = is_final ? std::format("vspecpol/vspecpol_{:04d}.out", my_rank)
+                                          : std::format("vspecpol_{:04d}_ts{}.tmp", my_rank, nts);
   write_vspecpol(filename_vspecpol, !is_final);
 
   if (vgrid_on) {
-    const auto filename_vpktgrid = is_final ? std::format("vpkt_grid_{:04d}.out", my_rank)
+    const auto filename_vpktgrid = is_final ? std::format("vpkt_grid/vpkt_grid_{:04d}.out", my_rank)
                                             : std::format("vpkt_grid_{:04d}_ts{}.tmp", my_rank, nts);
     printlnlog("Writing vpkt grid file {}", filename_vpktgrid);
     write_vpkt_grid(filename_vpktgrid, !is_final);
@@ -923,14 +982,28 @@ void write_timestep(const int nts, const bool is_final) {
   if constexpr (VPKT_WRITE_CONTRIBS) {
     vpkt_contrib_file.close();
     const auto filename_source = std::format("vpackets_{:04d}_ts{}.tmp", my_rank, is_final ? nts + 1 : nts);
-    const auto filename_dest = is_final ? std::format("vpackets_{:04d}.out", my_rank)
+    if (vpkt_contrib_file.fail()) {
+      fatal_crash("Could not write or close {}.", filename_source);
+    }
+    const auto filename_dest = is_final ? std::format("vpackets/vpackets_{:04d}.out", my_rank)
                                         : std::format("vpackets_{:04d}_ts{}.tmp", my_rank, nts + 1);
 
-    std::filesystem::copy_file(filename_source, filename_dest, std::filesystem::copy_options::overwrite_existing);
     printlnlog("Copying {} to {}", filename_source, filename_dest);
-
-    if (!is_final) {
+    if (is_final) {
+      // copy the content through the streams, because a build with libzstd compresses the final file
+      const auto contribs_in = istream_required(filename_source);
+      auto contribs_out = open_output_file(filename_dest);
+      contribs_out << contribs_in.rdbuf();
+      contribs_out.close();
+      if (contribs_out.fail()) {
+        fatal_crash("Could not write or close {}.", output_filepath(filename_dest));
+      }
+    } else {
+      std::filesystem::copy_file(filename_source, filename_dest, std::filesystem::copy_options::overwrite_existing);
       vpkt_contrib_file = std::ofstream(filename_dest, std::ios::app);
+      if (vpkt_contrib_file.fail()) {
+        fatal_crash("Could not open {}.", filename_dest);
+      }
     }
   }
 }
@@ -966,15 +1039,21 @@ void init(const int nts, const bool continued_from_saved) {
       }
 
       std::println(vpkt_contrib_file, "");
-      vpkt_contrib_file.flush();
       vpkt_contrib_file.close();
+      if (vpkt_contrib_file.fail()) {
+        fatal_crash("Could not write or close {}.", filename);
+      }
     }
 
+    // A failed open gives a stream that discards every contribution without an error.
     vpkt_contrib_file = std::ofstream(filename, std::ios::app);
+    if (vpkt_contrib_file.fail()) {
+      fatal_crash("Could not open {}.", filename);
+    }
   }
 
   if (continued_from_saved) {
-    // Continue simulation: read into temporary files
+    // a resumed run reads the accumulated spectra from the temporary files
 
     read_vspecpol(globals::my_rank, nts);
 
@@ -1001,11 +1080,7 @@ auto trace_vpkts(const Packet& pkt, const enum packet_type type_before_rpkt) -> 
   for (int obsdirindex = 0; obsdirindex < nobsdirections; obsdirindex++) {
     // loop over different observer directions
 
-    const auto obsdir = Vec3d{
-        sqrt(1 - (obsdirs_costheta[obsdirindex] * obsdirs_costheta[obsdirindex])) * cos(obsdirs_phi[obsdirindex]),
-        sqrt(1 - (obsdirs_costheta[obsdirindex] * obsdirs_costheta[obsdirindex])) * sin(obsdirs_phi[obsdirindex]),
-        obsdirs_costheta[obsdirindex],
-    };
+    const auto& obsdir = obsdirs[obsdirindex];
 
     const double t_arrive = pkt.prop_time - (dot(pkt.pos, obsdir) / CLIGHT_PROP);
 
@@ -1017,22 +1092,18 @@ auto trace_vpkts(const Packet& pkt, const enum packet_type type_before_rpkt) -> 
       const double nu_rf = pkt.nu_cmf / doppler;
       const double e_rf = pkt.e_cmf / doppler;
 
-      // Loop over frequency intervals for this observer and check if the vpkt frequency falls in any of them. If it
-      // does, trace the vpkt to see if it escapes in this direction.
-      for (int i = 0; i < nwavelengthranges; i++) {
-        if ((nu_rf > vspec_numin_input[i] && nu_rf < vspec_numax_input[i]) ||
-            (pkt.absorptionfreq > vspec_numin_input[i] && pkt.absorptionfreq < vspec_numax_input[i])) {
-          // frequency selection
-          dir_escaped = dir_escaped || trace_vpkt_direction(pkt, t_arrive, nu_rf, e_rf, doppler, obsdirindex, obsdir,
-                                                            type_before_rpkt, vpkt_contrib_row);
-          break;  // we only need to match one frequency interval to trace the vpkt
-        }
+      // trace the vpkt if its frequency is in a spectrum range of this observer. The absorption frequency also
+      // counts when the contribution file needs it (VPKT_WRITE_CONTRIBS).
+      if (nu_rf_is_in_spectrum_range(nu_rf) ||
+          (VPKT_WRITE_CONTRIBS && nu_rf_is_in_spectrum_range(pkt.absorptionfreq))) {
+        dir_escaped =
+            trace_vpkt_direction(pkt, t_arrive, nu_rf, e_rf, doppler, obsdirindex, type_before_rpkt, vpkt_contrib_row);
       }
     }
 
     if (dir_escaped) {
       any_dir_escaped = true;
-    } else {
+    } else if constexpr (VPKT_WRITE_CONTRIBS) {
       vpkt_contrib_row += " -1. -1.";  // t_arrive_d nu_rf
       for (int opacchoiceindex = 0; opacchoiceindex < nspectraperobsdir; opacchoiceindex++) {
         vpkt_contrib_row += " 0.";  // e_rf_diri_j

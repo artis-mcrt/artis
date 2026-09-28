@@ -19,6 +19,7 @@
 #include <cstring>
 #include <filesystem>
 #include <fstream>
+#include <ios>
 #include <iostream>
 #include <iterator>
 #include <print>
@@ -27,6 +28,7 @@
 #include <vector>
 
 #include "mpi_logging.h"
+#include "outputfilestream.h"
 
 [[nodiscard]] inline auto is_pid_running(pid_t pid) -> bool {
   while (waitpid(-1, nullptr, WNOHANG) > 0) {
@@ -49,15 +51,14 @@ inline void check_already_running() {
       std::getline(pidfile, line);
       pidfile.close();
       if (is_pid_running(artispid_in) && std::filesystem::current_path().generic_string() == line) {
-        std::println(stderr,
-                     "\n[error] artis or exspec is already running in this folder with existing pid {}. Refusing to "
-                     "start. (delete artis.pid if you are sure this is incorrect)",
-                     artispid_in);
-        std::abort();
+        fatal_crash(
+            "artis or exspec is already running in this folder with existing pid {}. Refusing to "
+            "start. (delete artis.pid if you are sure this is incorrect)",
+            artispid_in);
       }
     }
 
-    auto pidfile = std::fstream("artis.pid", std::ofstream::out | std::ofstream::trunc);
+    auto pidfile = open_uncompressed_output_file("artis.pid");
     std::println(pidfile, "{}", artispid);
     std::println(pidfile, "{}", std::filesystem::current_path().generic_string());
   }

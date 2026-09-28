@@ -14,6 +14,7 @@
 #include <ostream>
 #include <print>
 #include <span>
+#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -118,7 +119,7 @@ void set_ionpops_from_log_state(const int nonemptymgi, const std::vector<Signifi
 
 std::vector<HeatingCoolingRates> heatingcoolingrates_thisrankcells;
 
-void write_to_estimators_file(std::ostream& estimators_file, const int nonemptymgi, const int timestep, const int titer,
+void write_to_estimators_file(std::ostream& estimators_file, const int nonemptymgi, const int timestep,
                               const HeatingCoolingRates& heatingcoolingrates,
                               const decay::NucMassFracCoeffs& nuc_massfrac_coeffs) {
   const int mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
@@ -129,9 +130,9 @@ void write_to_estimators_file(std::ostream& estimators_file, const int nonemptym
   const auto nne = grid::get_nne(nonemptymgi);
   const auto Y_e = grid::get_electronfrac(nonemptymgi);
 
-  std::print(estimators_file, "timestep {} modelgridindex {} titeration {} TR {:g} Te {:g} W {:g} TJ {:g}", timestep,
-             mgi, titer, grid::TR_allcells[nonemptymgi], T_e, grid::W_allcells[nonemptymgi],
-             grid::TJ_allcells[nonemptymgi]);
+  // the titeration column is always 0 and stays for the readers of the file
+  std::print(estimators_file, "timestep {} modelgridindex {} titeration 0 TR {:g} Te {:g} W {:g} TJ {:g}", timestep,
+             mgi, grid::TR_allcells[nonemptymgi], T_e, grid::W_allcells[nonemptymgi], grid::TJ_allcells[nonemptymgi]);
   std::println(estimators_file, " grey_depth {:g} thick {} nne {:g} Ye {:g} tdays {:7.2f}",
                grid::grey_depth_allcells[nonemptymgi], static_cast<int>(grid::thick_allcells[nonemptymgi]), nne, Y_e,
                globals::timesteps[timestep].mid / DAY);
@@ -139,6 +140,24 @@ void write_to_estimators_file(std::ostream& estimators_file, const int nonemptym
   if (globals::total_nlte_levels > 0) {
     nltepop_write_to_file(nonemptymgi, timestep);
   }
+
+  // Write one line of per-ion values in the format of the gamma_R line, e.g.
+  // "cooling_ff         Z=26  1: 3.242e-03  2: 1.171e-01". values_allions holds one value for every ion of
+  // every element, and nions_towrite selects how many of this element's ions the line reports.
+  const auto print_perion_line = [&estimators_file](const std::string_view label, const int element,
+                                                    const int nions_towrite,
+                                                    const std::span<const double> values_allions) {
+    std::print(estimators_file, "{:<18} Z={:2d}", label, get_atomicnumber(element));
+    // add spaces for missing lowest ion stages to match other elements
+    for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++) {
+      std::print(estimators_file, "              ");
+    }
+    for (int ion = 0; ion < nions_towrite; ion++) {
+      std::print(estimators_file, "  {}: {:9.3e}", get_ionstage(element, ion),
+                 values_allions[get_uniqueionindex(element, ion)]);
+    }
+    std::println(estimators_file);
+  };
 
   // thread_local lets us reuse this allocation for every cell on each CPU thread
   THREADLOCALONHOST auto nuc_massfracs = std::vector<double>(decay::get_num_nuclides());
@@ -186,7 +205,7 @@ void write_to_estimators_file(std::ostream& estimators_file, const int nonemptym
 
     // if we have bound-free estimators, we might want to compare how gamma_R would be if we used the radiation field
     // model instead
-    if (DETAILED_BF_ESTIMATORS_ON) {
+    if constexpr (DETAILED_BF_ESTIMATORS_ON) {
       std::print(estimators_file, "gamma_R_integral   Z={:2d}", get_atomicnumber(element));
       for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++) {
         std::print(estimators_file, "              ");
@@ -208,6 +227,19 @@ void write_to_estimators_file(std::ostream& estimators_file, const int nonemptym
         std::print(estimators_file, "  {}: {:9.3e}", get_ionstage(element, ion), Y_nt);
       }
       std::println(estimators_file);
+    }
+
+    // a cell that gets no thermal balance solution, e.g. a grey cell, has no per-ion rates to report
+    if (WRITE_ION_HEATING_COOLING_RATES && !heatingcoolingrates.cooling_ff_ion.empty()) {
+      // the bound-free terms belong to the lower ion of each continuum, so the top ion has none
+      print_perion_line("heating_bf", element, nions - 1, heatingcoolingrates.heating_bf_ion);
+      if constexpr (COL_HEAT_FROM_LEVELPOPS) {
+        print_perion_line("heating_coll", element, nions, heatingcoolingrates.heating_coll_ion);
+      }
+      print_perion_line("heating_ff", element, nions, heatingcoolingrates.heating_ff_ion);
+      print_perion_line("cooling_ff", element, nions, heatingcoolingrates.cooling_ff_ion);
+      print_perion_line("cooling_fb", element, nions - 1, heatingcoolingrates.cooling_fb_ion);
+      print_perion_line("cooling_coll", element, nions, heatingcoolingrates.cooling_coll_ion);
     }
 
     if (USE_LUT_PHOTOION && globals::nbfcontinua_ground > 0) {
@@ -328,9 +360,12 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
         std::chrono::duration<double>(std::chrono::steady_clock::now() - sys_time_start_spencerfano).count();
 
     const auto sys_time_start_partfuncs_or_gamma = std::chrono::steady_clock::now();
-    for (int element = 0; element < get_nelements(); element++) {
-      if (!elem_has_nlte_levels(element)) {
-        calculate_cellpartfuncts(nonemptymgi, element);
+    // with LTEPOP_EXCITATION_USE_TJ false, the T_e finder calculates these partition functions at each trial T_e
+    if constexpr (LTEPOP_EXCITATION_USE_TJ) {
+      for (int element = 0; element < get_nelements(); element++) {
+        if (!elem_has_nlte_levels(element)) {
+          calculate_cellpartfuncts(nonemptymgi, element);
+        }
       }
     }
     const auto duration_solve_partfuncs_or_gamma =
@@ -344,6 +379,12 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
 
     const auto duration_solve_T_e =
         std::chrono::duration<double>(std::chrono::steady_clock::now() - sys_time_start_Te).count();
+
+    // The solver leaves the cell in the state of the T_e that it selected, so the totals above and the
+    // per-ion rates below belong to the same populations. The element solves that follow change the
+    // populations, so a later split would disagree with the totals. Each iteration overwrites the result
+    // of the previous one, and the estimators file reports the last.
+    calculate_ion_heating_cooling_rates(nonemptymgi, heatingcoolingrates, bfheatingcoeffs);
 
     if (globals::total_nlte_levels == 0) {
       const auto sys_time_start_pops = std::chrono::steady_clock::now();
@@ -364,8 +405,8 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
     if constexpr (NLTE_TE_NNE_USE_ANDERSON_ACCEL) {
       // log_state_solved holds T_e from the finder of this pass, and nne and the ion populations from
       // the element solves of the previous pass. It is the output of the map that log_state_applied
-      // went into, so every component is a residual at the same state. A different set of significant_ions
-      // ions is a different state, so the history goes.
+      // went into, so every component is a residual at the same state. A different set of significant ions
+      // is a different state, so the history is cleared.
       collect_significant_ions(nonemptymgi, significant_ions);
       if (significant_ions != significant_ions_prev) {
         anderson.reset(significant_ions.size() + 2);
@@ -505,7 +546,6 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
     }
 
     const auto sys_time_start_nltepops = std::chrono::steady_clock::now();
-    // fractional difference between previous and current iteration's (nne or max(ground state population change))
     for (int element = 0; element < get_nelements(); element++) {
       if (get_nions(element) > 0 && elem_has_nlte_levels(element)) {
         solve_nlte_pops_element(element, nonemptymgi, nts, nlte_iter);
@@ -634,9 +674,14 @@ void update_gamma_corrphotoionrenorm_bfheating_estimators(const int nonemptymgi,
             (static_cast<ptrdiff_t>(nonemptymgi) * globals::nbfcontinua_ground) + groundcontindex;
 
         globals::gammaestimator[ionestimindex] *= estimator_normfactor / H;
-#ifdef DO_TITER
-        titer_average(globals::gammaestimator[ionestimindex], globals::gammaestimator_save[ionestimindex]);
-#endif
+
+        // The packets skip the continua of an element that the cell does not contain, so its estimator holds no
+        // contribution. Keep the factor 1 there. A factor of zero would also cancel the photoionisation of the
+        // levels of other ions that use this slot as their closest ground-level continuum.
+        if (grid::get_elem_massfrac(nonemptymgi, element) <= 0.) {
+          globals::corrphotoionrenorm[ionestimindex] = 1.;
+          continue;
+        }
 
         // renormalisation factor of the MC photoionisation rate estimate over the analytic rate for the cell's
         // dilute-blackbody radiation field. In cold and/or dilute cells the analytic rate can underflow to zero
@@ -664,10 +709,8 @@ void update_gamma_corrphotoionrenorm_bfheating_estimators(const int nonemptymgi,
         }
       }
 
-      // 2012-01-11. These loops should terminate here to precalculate *ALL* corrphotoionrenorm
-      // values so that the values are known when required by the call to get_corrphotoioncoeff in
-      // the following loops. Otherwise get_corrphotoioncoeff tries to renormalize by the closest
-      // corrphotoionrenorm in frequency space which can lead to zero contributions to the total photoionisation rate!
+      // the loop over all ions completes here, because get_corrphotoioncoeff() in the next loop reads the
+      // corrphotoionrenorm of the closest ground-level continuum of any ion
     }
   }
   for (int element = 0; element < get_nelements(); element++) {
@@ -683,15 +726,18 @@ void update_gamma_corrphotoionrenorm_bfheating_estimators(const int nonemptymgi,
       const ptrdiff_t ionestimindex =
           (static_cast<ptrdiff_t>(nonemptymgi) * globals::nbfcontinua_ground) + groundcontindex;
 
-      if (!elem_has_nlte_levels(element)) {
+      // with LTEPOP_EXCITATION_USE_TJ false, the T_e finder calculates these rates during the solve
+      if (LTEPOP_EXCITATION_USE_TJ && !elem_has_nlte_levels(element)) {
         globals::gammaestimator[ionestimindex] = calculate_iongamma_per_gspop(nonemptymgi, element, ion);
       }
 
       if constexpr (USE_ION_BFHEATING_ESTIMATORS) {
         globals::bfheatingestimator[ionestimindex] *= estimator_normfactor;
-#ifdef DO_TITER
-        titer_average(globals::bfheatingestimator[ionestimindex], globals::bfheatingestimator_save[ionestimindex]);
-#endif
+        // An element that the cell does not contain gives no contribution, as for corrphotoionrenorm above.
+        if (grid::get_elem_massfrac(nonemptymgi, element) <= 0.) {
+          globals::bfheatingestimator[ionestimindex] = 1.;
+          continue;
+        }
         // Now convert bfheatingestimator into the bfheating renormalisation coefficient used in
         // for the remaining part of update_grid. At the start of the next update_packets, it will be reset
 
@@ -723,16 +769,7 @@ void update_gamma_corrphotoionrenorm_bfheating_estimators(const int nonemptymgi,
   }
 }
 
-#ifdef DO_TITER
-static void titer_average_estimators(const int nonemptymgi) {
-  titer_average(globals::ffheatingestimator[nonemptymgi], globals::ffheatingestimator_save[nonemptymgi]);
-  if constexpr (!COL_HEAT_FROM_LEVELPOPS) {
-    titer_average(globals::colheatingestimator[nonemptymgi], globals::colheatingestimator_save[nonemptymgi]);
-  }
-}
-#endif
-
-void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, const int titer, const double tratmid,
+void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, const double tratmid,
                       const double deltat, HeatingCoolingRates& heatingcoolingrates,
                       const decay::AnaEmissionPowerPerMass& emission_power_per_mass) {
   const int mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
@@ -756,34 +793,17 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
   const double estimator_normfactor = 1 / deltaV / deltat / globals::nprocs;
   const double estimator_normfactor_over4pi = (1. / (4 * PI)) * estimator_normfactor;
 
-  if (nts == globals::timestep_initial && titer == 0) {
+  if (nts == globals::timestep_initial) {
     // For the initial timestep, temperatures have already been assigned
     // either by trapped energy release calculation, or reading from gridsave file
 
-    if (USE_LUT_PHOTOION && !globals::simulation_continued_from_saved) {
-      // Determine renormalisation factor for corrected photoionisation cross-sections
-      std::ranges::fill(
-          globals::corrphotoionrenorm.subspan(static_cast<ptrdiff_t>(nonemptymgi) * globals::nbfcontinua_ground,
-                                              globals::nbfcontinua_ground),
-          1.);
-    }
-
-    // W == 1 indicates that this modelgrid cell was treated grey in the
-    // last timestep. Therefore it has no valid Gamma estimators and must be treated in LTE at restart.
-    if (grid::thick_allcells[nonemptymgi] != grid::CellThickness::THICK && grid::W_allcells[nonemptymgi] == 1) {
-      printlnlog(
-          "force modelgrid cell {} to grey/LTE thick = 1 for update grid since existing W == 1. (will not have gamma "
-          "estimators)",
-          mgi);
-      grid::thick_allcells[nonemptymgi] = grid::CellThickness::THICK;
-    }
-
-    printlnlog("mgi {} thick: {} (during grid update)", mgi, static_cast<int>(grid::thick_allcells[nonemptymgi]));
-
-    for (int element = 0; element < get_nelements(); element++) {
-      calculate_cellpartfuncts(nonemptymgi, element);
-    }
+    // a resumed job keeps the partition functions and populations of the gridsave file
     if (!globals::simulation_continued_from_saved) {
+      // a new run has no estimators of the photoionisation rates, so the first ion balance uses the Saha equation
+      grid::thick_allcells[nonemptymgi] = grid::CellThickness::THICK;
+      for (int element = 0; element < get_nelements(); element++) {
+        calculate_cellpartfuncts(nonemptymgi, element);
+      }
       calculate_ion_balance_nne(nonemptymgi);
     }
   } else {
@@ -800,11 +820,7 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
     // this stores the factor that will be applied later for the J bins but not fullspec J
     radfield::set_J_normfactor(nonemptymgi, estimator_normfactor_over4pi);
 
-#ifdef DO_TITER
-    radfield::titer_J(nonemptymgi);
-#endif
-
-    // lte_iteration really means either ts 0 or nts < globals::num_lte_timesteps
+    // lte_iteration is true for nts < globals::num_lte_timesteps
     if (globals::lte_iteration || grid::thick_allcells[nonemptymgi] == grid::CellThickness::THICK) {
       // LTE mode or grey mode (where temperature doesn't matter but is calculated anyway)
 
@@ -813,12 +829,18 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
       grid::Te_allcells[nonemptymgi] = T_J;
       grid::TJ_allcells[nonemptymgi] = T_J;
       grid::W_allcells[nonemptymgi] = 1;
+      radfield::invalidate_bin_fits(nonemptymgi);
 
       if constexpr (USE_LUT_PHOTOION) {
         std::ranges::fill(
             globals::corrphotoionrenorm.subspan(static_cast<ptrdiff_t>(nonemptymgi) * globals::nbfcontinua_ground,
                                                 globals::nbfcontinua_ground),
             1.);
+        // the Saha populations do not use these estimators, but the estimators file and the restart file do
+        for (auto& gammaestimator : std::span{globals::gammaestimator}.subspan(
+                 static_cast<ptrdiff_t>(nonemptymgi) * globals::nbfcontinua_ground, globals::nbfcontinua_ground)) {
+          gammaestimator *= estimator_normfactor / H;
+        }
       }
 
       // the Saha populations replace the NLTE solution. The partition functions must not read the
@@ -841,11 +863,6 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
       if constexpr (!COL_HEAT_FROM_LEVELPOPS) {
         globals::colheatingestimator[nonemptymgi] *= estimator_normfactor;
       }
-
-#ifdef DO_TITER
-      radfield::titer_nuJ(nonemptymgi);
-      titer_average_estimators(nonemptymgi);
-#endif
 
       update_gamma_corrphotoionrenorm_bfheating_estimators(nonemptymgi, estimator_normfactor);
 
@@ -914,12 +931,10 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
     // flag with negative numbers to indicate that the rates are invalid
     const auto ioncooling_contribs = kpkt::get_cell_ion_cooling_contribs(nonemptymgi);
     std::ranges::fill(ioncooling_contribs, -1.);
-  } else if (globals::simulation_continued_from_saved && nts == globals::timestep_initial) {
-    // cooling rates were read from the gridsave file for this timestep
-    // make sure they are valid
-    const auto ioncooling_contribs = kpkt::get_cell_ion_cooling_contribs(nonemptymgi);
-    assert_always(ioncooling_contribs[0] >= 0.);
-    assert_always(ioncooling_contribs.back() >= 0.);
+  } else if (globals::simulation_continued_from_saved && nts == globals::timestep_initial &&
+             kpkt::get_cell_ion_cooling_contribs(nonemptymgi)[0] >= 0.) {
+    // the gridsave file holds valid cooling rates for this timestep
+    assert_always(kpkt::get_cell_ion_cooling_contribs(nonemptymgi).back() >= 0.);
   } else {
     // Cooling rates depend only on cell properties, precalculate total cooling
     // and ion contributions inside update grid and communicate between MPI tasks
@@ -935,8 +950,7 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
     printlnlog("took {:.1f} seconds", calc_kpkt_rates_duration);
   }
 
-  if constexpr (RPKT_USE_EXPANSION_OPACITIES || VPKT_USE_EXPANSION_OPACITIES ||
-                RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.has_value()) {
+  if constexpr (expopac_bins_on) {
     if (grid::thick_allcells[nonemptymgi] != grid::CellThickness::THICK) {
       calculate_expansion_opacities(nonemptymgi);
     }
@@ -952,7 +966,7 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
 }  // anonymous namespace
 
 //  update the matter quantities in the grid cells at the start of the new timestep.
-void update_grid(std::ostream& estimators_file, const int nts, const int nts_prev, const int titer,
+void update_grid(std::ostream& estimators_file, const int nts, const int nts_prev,
                  const std::chrono::steady_clock::time_point real_time_start) {
   const auto my_rank = globals::my_rank;
   const auto sys_time_start_update_grid = std::chrono::steady_clock::now();
@@ -964,7 +978,7 @@ void update_grid(std::ostream& estimators_file, const int nts, const int nts_pre
 
   globals::lte_iteration = (nts < globals::num_lte_timesteps);
   printlnlog("lte_iteration {}", globals::lte_iteration ? 1 : 0);
-  assert_always(globals::num_lte_timesteps > 0);  // The first time step must solve the ionisation balance in LTE
+  assert_always(globals::num_lte_timesteps > 0);  // The first timestep must solve the ionisation balance in LTE
 
   if (NT_SCHEME == NonThermalScheme::NT_SPENCERFANO && (nts < globals::num_lte_timesteps + 1)) {
     printlnlog("timestep {}: skipping Spencer-Fano solutions for all cells (solver starts at timestep {})", nts,
@@ -978,7 +992,7 @@ void update_grid(std::ostream& estimators_file, const int nts, const int nts_pre
   const double deltat = globals::timesteps[nts_prev].width;
 
   if constexpr (DETAILED_BF_ESTIMATORS_ON) {
-    radfield::normalise_bf_estimators(nts, nts_prev, titer, deltat);
+    radfield::normalise_bf_estimators(nts, nts_prev, deltat);
   }
 
   const auto ndo_nonempty = grid::get_ndo_nonempty(my_rank);
@@ -988,12 +1002,10 @@ void update_grid(std::ostream& estimators_file, const int nts, const int nts_pre
   const auto nstart_nonempty = grid::get_nstart_nonempty(my_rank);
 
   if constexpr (NLTE_TIME_DEPENDENT_FIRST_TIMESTEP.has_value()) {
-    if (titer == 0) {
-      // keep the state of the last grid update for the time terms, before the abundances and the
-      // densities change for this timestep
-      for (int nonemptymgi = nstart_nonempty; nonemptymgi < (nstart_nonempty + ndo_nonempty); nonemptymgi++) {
-        nltepop_store_previous_state(nonemptymgi);
-      }
+    // keep the state of the last grid update for the time terms, before the abundances and the
+    // densities change for this timestep
+    for (int nonemptymgi = nstart_nonempty; nonemptymgi < (nstart_nonempty + ndo_nonempty); nonemptymgi++) {
+      nltepop_store_previous_state(nonemptymgi);
     }
   }
 
@@ -1016,7 +1028,7 @@ void update_grid(std::ostream& estimators_file, const int nts, const int nts_pre
 #pragma omp parallel for schedule(dynamic)
 #endif
   for (int nonemptymgi = nstart_nonempty; nonemptymgi < (nstart_nonempty + ndo_nonempty); nonemptymgi++) {
-    update_grid_cell(nonemptymgi, nts, nts_prev, titer, tratmid, deltat,
+    update_grid_cell(nonemptymgi, nts, nts_prev, tratmid, deltat,
                      heatingcoolingrates_thisrankcells.at(nonemptymgi - nstart_nonempty), emission_power_per_mass);
   }
 
@@ -1030,7 +1042,7 @@ void update_grid(std::ostream& estimators_file, const int nts, const int nts_pre
       if (nonemptymgi >= 0) {
         assert_always(nonemptymgi >= nstart_nonempty);
         assert_always(nonemptymgi < (nstart_nonempty + ndo_nonempty));
-        write_to_estimators_file(estimators_file, nonemptymgi, nts, titer,
+        write_to_estimators_file(estimators_file, nonemptymgi, nts,
                                  heatingcoolingrates_thisrankcells.at(nonemptymgi - nstart_nonempty),
                                  nuc_massfrac_coeffs);
       } else {
@@ -1039,8 +1051,11 @@ void update_grid(std::ostream& estimators_file, const int nts, const int nts_pre
       }
 
       std::println(estimators_file);
-      estimators_file.flush();
     }
+    // one flush per timestep, so each compressed file ends a frame that a reader can decode
+    estimators_file.flush();
+    nltepop_flush_file();
+    radfield::flush_file();
   }
 
   globals::max_path_step = std::min(1.e35, globals::vmax * tmid / 10.);

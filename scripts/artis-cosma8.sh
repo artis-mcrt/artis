@@ -28,32 +28,37 @@ module list
 
 export PATH=/cosma/local/intel/oneAPI_2021.3.0/intelpython/python3.7/pkgs/zstd-1.4.5-h2daa505_0/bin:$PATH
 
-cd $SLURM_SUBMIT_DIR
+cd "${SLURM_SUBMIT_DIR:?}" || exit 1
 
 cd artis
-make sn3d
+make sn3d || exit 1
 cd ..
 
 echo "CPU type: $(c++ -march=native -Q --help=target | grep -- '-march=  ' | cut -f3)"
 
-# decompress any zipped input files
-source ./artis/scripts/exspec-before.sh
 
 hoursleft=$(python3 ./artis/scripts/slurmjobhoursleft.py ${SLURM_JOB_ID})
 source ./artis/scripts/corehours-before.sh
 echo "$(date): before srun sn3d. hours left: $hoursleft"
-time mpirun -- ./artis/sn3d -w $hoursleft -o ${SLURM_JOB_ID}.slurm > out.txt
+time mpirun -- ./artis/sn3d -w $hoursleft
+mpirun_status=$?
 hoursleftafter=$(python3 ./artis/scripts/slurmjobhoursleft.py ${SLURM_JOB_ID})
 echo "$(date): after srun sn3d finished. hours left: $hoursleftafter"
 source ./artis/scripts/corehours-after.sh
 
+# sn3d gives 0 also when it writes RESTART_NEEDED, so a non-zero status is a crash.
+if [ $mpirun_status -ne 0 ]; then
+    echo "$(date): mpirun sn3d gave status $mpirun_status, so this job submits nothing"
+    exit $mpirun_status
+fi
+
 if grep -q "RESTART_NEEDED" "output_0-0.txt"
 then
-    sbatch -J artis_$(basename $(pwd)) ./artis/scripts/artis-cosma8.sh
+    sbatch -J "artis_${PWD##*/}" ./artis/scripts/artis-cosma8.sh
     # sbatch $SLURM_JOB_NAME
 else
     # post-processing can remove restart files, so only queue it when no continuation job was submitted
-    if [ -f packets00_0000.out ]; then
-        sbatch -J exspec_$(basename $(pwd)) ./artis/scripts/exspec-zip-cosma8.sh
+    if ls packets/packets00_0000.out* > /dev/null 2>&1; then
+        sbatch -J "exspec_${PWD##*/}" ./artis/scripts/exspec-zip-cosma8.sh
     fi
 fi

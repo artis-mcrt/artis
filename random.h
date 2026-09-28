@@ -91,7 +91,7 @@ class SplitMix32 {
 
 // Implementation of Xoshiro128++ suggested by David Blackman and Sebastiano Vigna,
 // see https://prng.di.unimi.it/
-//     https://prng.di.unimi.it/xoshiro256plusplus.c
+//     https://prng.di.unimi.it/xoshiro128plusplus.c
 //
 // Performance: Good
 // Quality:     4/5
@@ -120,6 +120,18 @@ class Xoshiro128PP {
     this->s[1] = splitmix();  // splitmix to initialize its state
     this->s[2] = splitmix();
     this->s[3] = splitmix();
+  }
+
+  // Two SplitMix64 outputs fill the state, so distinct 64-bit seeds give distinct states
+  constexpr void seed64(const std::uint64_t seedvalue) noexcept {
+    const std::uint64_t z0 = _mix_seed(seedvalue);
+    const std::uint64_t z1 = _mix_seed(seedvalue + 0x9E3779B97F4A7C15);
+    this->s = {
+        static_cast<result_type>(z0),
+        static_cast<result_type>(z0 >> 32U),
+        static_cast<result_type>(z1),
+        static_cast<result_type>(z1 >> 32U),
+    };
   }
 
   constexpr auto operator()() noexcept -> result_type {

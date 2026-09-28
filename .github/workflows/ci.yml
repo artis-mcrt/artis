@@ -10,6 +10,19 @@ on:
     schedule:
         - cron: 0 13 * * 1
     workflow_dispatch:
+        inputs:
+            testmode:
+                description: Enable the sanitizers and the additional assertions
+                required: false
+                default: 'OFF'
+                type: choice
+                options: ['OFF', 'ON']
+            uploadoutputfiles:
+                description: Upload the output files and the plots as artifacts
+                required: false
+                default: 'OFF'
+                type: choice
+                options: ['OFF', 'ON']
     workflow_call: # for triggering the full test mode
         inputs:
             # test mode enables the santizers and additional assertions
@@ -33,10 +46,10 @@ jobs:
                         classicmode_1d_3dgrid,
                         classicmode_3d,
                         kilonova_1d,
+                        kilonova_1d_timedepnlte,
                         kilonova_2d,
                         kilonova_2d_barnesthermalisation,
                         kilonova_2d_expansionopac,
-                        kilonova_1d_timedepnlte,
                         kilonova_2d_xcomgammaphotoion,
                         nebular_1d_3dgrid,
                         nebular_1d_3dgrid_limitbfest,
@@ -55,12 +68,12 @@ jobs:
               with:
                   fetch-depth: 0
 
-            - name: Install Open MPI and set compiler to g++-15
+            - name: Install Open MPI and set compiler to g++-16
               run: |
-                  echo "CXX=g++-15" >> $GITHUB_ENV
-                  echo "OMPI_CXX=g++-15" >> $GITHUB_ENV
+                  echo "CXX=g++-16" >> $GITHUB_ENV
+                  echo "OMPI_CXX=g++-16" >> $GITHUB_ENV
                   sudo apt-get update
-                  sudo apt-get install -y openmpi-bin libopenmpi-dev
+                  sudo apt-get install -y --no-install-recommends g++-16 openmpi-bin libopenmpi-dev libzstd-dev zstd
 
             - name: Show CPU type and core count
               id: cpu-count
@@ -70,12 +83,14 @@ jobs:
                   echo "count=$(python3 -c 'import multiprocessing; print(multiprocessing.cpu_count())')" >> $GITHUB_OUTPUT
 
             - name: Cache test atomic data
-              if: ${{ !startsWith(matrix.testname, 'classicmode') }}
+              if: ${{ !startsWith(matrix.testname, 'classicmode') && !startsWith(matrix.testname, 'nltephotospheric') && matrix.testname != 'kilonova_1d_timedepnlte' }}
               uses: actions/cache@v6
               id: cache-testatomicdata
               with:
                   path: tests/atomicdata_feconi.tar.xz
-                  key: tests/atomicdata_feconi.tar.xz
+                  # setupfuncs.sh names the release of the archives, so a new release gives a new cache.
+                  # The setup script downloads nothing when the folder holds an archive.
+                  key: atomicdata_feconi-${{ hashFiles('tests/setupfuncs.sh') }}
 
             - name: Cache test atomic data classic
               if: ${{ startsWith(matrix.testname, 'classicmode') }}
@@ -83,7 +98,7 @@ jobs:
               id: cache-testatomicdata-classic
               with:
                   path: tests/atomicdata_classic.tar.xz
-                  key: tests/atomicdata_classic.tar.xz
+                  key: atomicdata_classic-${{ hashFiles('tests/setupfuncs.sh') }}
 
             - name: Cache test atomic data nltephotospheric
               if: ${{ startsWith(matrix.testname, 'nltephotospheric') }}
@@ -91,7 +106,7 @@ jobs:
               id: cache-testatomicdata-nltephotospheric
               with:
                   path: tests/atomicdata_hefeconi_fe_i_to_vii.tar.xz
-                  key: tests/atomicdata_hefeconi_fe_i_to_vii.tar.xz
+                  key: atomicdata_hefeconi_fe_i_to_vii-${{ hashFiles('tests/setupfuncs.sh') }}
 
             - name: Cache test atomic data kilonova_1d_timedepnlte
               if: ${{ startsWith(matrix.testname, 'kilonova_1d_timedepnlte') }}
@@ -99,7 +114,7 @@ jobs:
               id: cache-testatomicdata-sryzrlace
               with:
                   path: tests/atomicdata_sryzrlace.tar.zst
-                  key: tests/atomicdata_sryzrlace.tar.zst
+                  key: atomicdata_sryzrlace-${{ hashFiles('tests/setupfuncs.sh') }}
 
             - name: Download/extract test data
               working-directory: tests/
@@ -113,9 +128,14 @@ jobs:
 
             - name: Compile
               run: |
-                  make REPRODUCIBLE=ON TESTMODE=${{ inputs.testmode }} MAX_NODE_SIZE=2 FASTMATH=OFF -j${{ steps.cpu-count.outputs.count }} sn3d exspec
+                  make REPRODUCIBLE=ON ZSTD=ON TESTMODE=${{ inputs.testmode }} MAX_NODE_SIZE=2 FASTMATH=OFF -j${{ steps.cpu-count.outputs.count }} sn3d exspec
                   cp sn3d tests/${{ matrix.testname }}_testrun/
                   cp exspec tests/${{ matrix.testname }}_testrun/
+
+            - name: Copy the run folder for a simulation in one job
+              if: matrix.testname == 'nebular_1d_3dgrid' && inputs.testmode != 'ON'
+              working-directory: tests/
+              run: cp -a ${{ matrix.testname }}_testrun ${{ matrix.testname }}_onejob
 
             - name: Run test job0 start
               id: run_job0
@@ -123,17 +143,18 @@ jobs:
               working-directory: tests/${{ matrix.testname }}_testrun/
               run: |
                   rm -f input.txt
-                  time mpirun -np 4 --oversubscribe --mca osc ^ucx --mca mpi_yield_when_idle 1 ./sn3d -o job0
+                  time mpirun -np 4 --oversubscribe --mca osc ^ucx --mca mpi_yield_when_idle 1 ./sn3d
 
             - name: cat job0 estimators
               if: always()
               working-directory: tests/${{ matrix.testname }}_testrun/
-              run: cat job0/estimators*.out
+              # zstdcat decompresses to the standard output
+              run: zstdcat job_from_ts0000/estimators*.out.zst
 
             - name: cat job0 output log
               if: always()
               working-directory: tests/${{ matrix.testname }}_testrun/
-              run: cat job0/output_0-0.txt
+              run: cat job_from_ts0000/output_0-0.txt
 
             - name: Checksum job0 output files
               if: always()
@@ -144,18 +165,35 @@ jobs:
                   # full checksum file. The "Update checksums" workflow accepts only an artifact
                   # with the markers. A checksum mismatch below still permits the marker, because
                   # the mismatch is the reason to update the stored checksums.
-                  # Some tests write no speclc_angle_res files, so that glob can expand to nothing.
-                  set -o pipefail
+                  # The output files stay compressed. The checksums are of the decompressed content under the
+                  # plain name, in the output format of md5sum, so that the reference files keep their form.
+                  # set -e stops the step when zstdcat fails on a file that is not complete, and pipefail
+                  # gives a pipeline the status of the command that failed, not of the last one.
+                  set -eo pipefail
+                  reffile=../${{ matrix.testname }}_inputfiles/results_md5_job0.txt
+                  # -s tests that the file exists and is not empty
+                  if [ -s "$reffile" ]; then cp "$reffile" "$RUNNER_TEMP/ref_md5_job0.txt"; fi
+                  # nullglob makes a pattern that matches nothing expand to nothing, e.g. for a test that
+                  # writes no virtual packet files or no direction bin files
                   shopt -s nullglob
-                  angleresfiles=(speclc_angle_res/*.*)
+                  for zstfile in *.out.zst job_from_ts0000/*.out.zst packets/*.out.zst vpackets/*.out.zst vspecpol/*.out.zst vpkt_grid/*.out.zst speclc_angle_res/*.zst; do
+                      # md5sum names its input "-" when it reads a pipe. sed puts the plain name, i.e. the
+                      # name without the .zst extension, in its place
+                      zstdcat "$zstfile" | md5sum | sed "s|  -$|  ${zstfile%.zst}|"
+                  done | tee "$RUNNER_TEMP/new_md5_job0.txt"
                   shopt -u nullglob
-                  md5sum *.out job0/*.out "${angleresfiles[@]}" | tee ../${{ matrix.testname }}_inputfiles/results_md5_job0.txt
+                  cp "$RUNNER_TEMP/new_md5_job0.txt" "$reffile"
                   if [ "${{ steps.run_job0.outcome }}" = "success" ]; then
-                      touch ../${{ matrix.testname }}_inputfiles/results_md5_job0.txt.complete
+                      touch "$reffile.complete"
                   else
                       echo "The step writes no marker. The sn3d job0 step did not succeed (${{ steps.run_job0.outcome }})."
                   fi
-                  if [ -f results_md5_job0.txt ]; then md5sum -c results_md5_job0.txt; else echo "results_md5_job0.txt not found"; fi
+                  # The comparison uses the stored file of the repository, and not the copy in the run folder.
+                  if [ -s "$RUNNER_TEMP/ref_md5_job0.txt" ]; then
+                      diff "$RUNNER_TEMP/ref_md5_job0.txt" "$RUNNER_TEMP/new_md5_job0.txt"
+                  else
+                      echo "::warning::The repository has no results_md5_job0.txt for ${{ matrix.testname }}. The step compares nothing."
+                  fi
 
             - name: Run test job1 resume
               id: run_job1
@@ -163,28 +201,29 @@ jobs:
               working-directory: tests/${{ matrix.testname }}_testrun/
               run: |
                   cp input-resume.txt input.txt
-                  time mpirun -np 4 --oversubscribe --mca osc ^ucx --mca mpi_yield_when_idle 1 ./sn3d -o job1
+                  time mpirun -np 4 --oversubscribe --mca osc ^ucx --mca mpi_yield_when_idle 1 ./sn3d
 
             - name: Remove restart files
               if: always()
               working-directory: tests/${{ matrix.testname }}_testrun/
-              run: rm *.tmp
+              run: rm -f ./*.tmp
 
             - name: cat job1 estimators
               if: always()
               working-directory: tests/${{ matrix.testname }}_testrun/
-              run: cat job1/estimators*.out
+              # the job folder with the highest start timestep is the one of the resume run
+              run: zstdcat "$(ls -d job_from_ts* | grep -v ts0000 | tail -n 1)"/estimators*.out.zst
 
             - name: cat job1 output log
               if: always()
               working-directory: tests/${{ matrix.testname }}_testrun/
-              run: cat job1/output_0-0.txt
+              run: cat "$(ls -d job_from_ts* | grep -v ts0000 | tail -n 1)"/output_0-0.txt
 
             - name: show deposition.out
               if: always() && inputs.testmode != 'ON'
               working-directory: tests/${{ matrix.testname }}_testrun/
               run: |
-                  cat deposition.out
+                  zstdcat deposition.out.zst
 
             - name: Show CPU core time
               if: always()
@@ -197,16 +236,14 @@ jobs:
               if: always()
               working-directory: tests/${{ matrix.testname }}_testrun/
               run: |
-                  time mpirun -np 1 --mca osc ^ucx ./exspec
+                  ls -l packets/
+                  time mpirun -np 2 --oversubscribe --mca osc ^ucx ./exspec
                   python3 ../../scripts/mergeangleres.py
-                  rm -f light_curve_res_*.out spec_res_*.out specpol_res_*.out
 
             - name: cat exspec log
               if: always()
               working-directory: tests/${{ matrix.testname }}_testrun/
-              run: |
-                  mkdir output
-                  cat exspec.txt
+              run: cat exspec.txt
 
             - name: Checksum job1 output files
               if: always()
@@ -217,24 +254,58 @@ jobs:
                   # full checksum file. The "Update checksums" workflow accepts only an artifact
                   # with the markers. A checksum mismatch below still permits the marker, because
                   # the mismatch is the reason to update the stored checksums.
-                  # Some tests write no speclc_angle_res files, so that glob can expand to nothing.
-                  set -o pipefail
+                  # The commands are those of the job0 checksum step, with the job folder of the resume run.
+                  set -eo pipefail
+                  reffile=../${{ matrix.testname }}_inputfiles/results_md5_final.txt
+                  if [ -s "$reffile" ]; then cp "$reffile" "$RUNNER_TEMP/ref_md5_final.txt"; fi
+                  # the job folder with the highest start timestep is the one of the resume run
+                  lastjobfolder=$(ls -d job_from_ts* | grep -v ts0000 | tail -n 1)
                   shopt -s nullglob
-                  angleresfiles=(speclc_angle_res/*.*)
+                  for zstfile in *.out.zst "$lastjobfolder"/*.out.zst packets/*.out.zst vpackets/*.out.zst vspecpol/*.out.zst vpkt_grid/*.out.zst speclc_angle_res/*.zst; do
+                      zstdcat "$zstfile" | md5sum | sed "s|  -$|  ${zstfile%.zst}|"
+                  done | tee "$RUNNER_TEMP/new_md5_final.txt"
                   shopt -u nullglob
-                  md5sum *.out job1/*.out "${angleresfiles[@]}" | tee ../${{ matrix.testname }}_inputfiles/results_md5_final.txt
+                  cp "$RUNNER_TEMP/new_md5_final.txt" "$reffile"
                   if [ "${{ steps.run_job0.outcome }}" = "success" ] && [ "${{ steps.run_job1.outcome }}" = "success" ] && [ "${{ steps.run_exspec.outcome }}" = "success" ]; then
-                      touch ../${{ matrix.testname }}_inputfiles/results_md5_final.txt.complete
+                      touch "$reffile.complete"
                   else
                       echo "The step writes no marker. A run step did not succeed (job0: ${{ steps.run_job0.outcome }}, job1: ${{ steps.run_job1.outcome }}, exspec: ${{ steps.run_exspec.outcome }})."
                   fi
-                  if [ -f results_md5_final.txt ]; then md5sum -c results_md5_final.txt; else echo "results_md5_final.txt not found"; fi
+                  # The comparison uses the stored file of the repository, and not the copy in the run folder.
+                  if [ -s "$RUNNER_TEMP/ref_md5_final.txt" ]; then
+                      diff "$RUNNER_TEMP/ref_md5_final.txt" "$RUNNER_TEMP/new_md5_final.txt"
+                  else
+                      echo "::warning::The repository has no results_md5_final.txt for ${{ matrix.testname }}. The step compares nothing."
+                  fi
+
+            - name: Compare the two jobs with a simulation in one job
+              if: always() && matrix.testname == 'nebular_1d_3dgrid' && inputs.testmode != 'ON'
+              working-directory: tests/${{ matrix.testname }}_onejob
+              run: |
+                  # A resumed job must give the same results as a simulation in one job. The comparison has no
+                  # stored checksums, so it also finds a defect that the stored checksums of the resumed job hold.
+                  # The one job runs to the last timestep of input-resume.txt.
+                  set -eo pipefail
+                  finish=$(awk 'NR == 3 {print $2}' input-resume.txt)
+                  sed -E "3s/^([0-9]+) +[0-9]+/\1 ${finish}/" input-newrun.txt > input.txt
+                  time mpirun -np 4 --oversubscribe --mca osc ^ucx --mca mpi_yield_when_idle 1 ./sn3d
+                  rm -f ./*.tmp
+                  mpirun -np 2 --oversubscribe --mca osc ^ucx ./exspec
+                  python3 ../../scripts/mergeangleres.py
+                  shopt -s nullglob
+                  for folder in ${{ matrix.testname }}_testrun ${{ matrix.testname }}_onejob; do
+                      (cd "../${folder}" && for zstfile in *.out.zst packets/*.out.zst vpackets/*.out.zst vspecpol/*.out.zst vpkt_grid/*.out.zst speclc_angle_res/*.zst; do
+                          zstdcat "$zstfile" | md5sum | sed "s|  -$|  ${zstfile%.zst}|"
+                      done) > "$RUNNER_TEMP/md5_${folder}.txt"
+                  done
+                  diff "$RUNNER_TEMP/md5_${{ matrix.testname }}_testrun.txt" "$RUNNER_TEMP/md5_${{ matrix.testname }}_onejob.txt"
 
             - name: Prepare for next steps
               if: always()
               working-directory: tests/${{ matrix.testname }}_testrun
               run: |
-                  find . -name "*_res_*.out" -exec zstd -v -T0 --rm -f {} \;
+                  # the artifact upload must not follow the symlink to the repository root
+                  rm -f artis
 
             - name: Upload output files
               uses: actions/upload-artifact@v7
@@ -242,6 +313,7 @@ jobs:
               with:
                   name: test-${{ matrix.testname }}-output
                   path: tests/${{ matrix.testname }}_testrun
+                  retention-days: 7
 
             - name: Upload checksum files
               uses: actions/upload-artifact@v7
@@ -251,7 +323,7 @@ jobs:
                   path: tests/${{ matrix.testname }}_inputfiles/results_md5*
 
             - name: Setup uv
-              uses: astral-sh/setup-uv@v10.0.1
+              uses: astral-sh/setup-uv@v10.2.0
               if: always() && inputs.testmode != 'ON'
               id: setup-uv
               with:
@@ -307,6 +379,7 @@ jobs:
               with:
                   name: test-${{ matrix.testname }}-output-pdf
                   path: tests/*.pdf
+                  retention-days: 7
 
     # Runs one small model with OpenMP threading to exercise the mutex/atomic code paths that the
     # single-threaded checksum tests never enter. No checksum comparison: multithreaded runs are not
@@ -322,24 +395,28 @@ jobs:
               with:
                   fetch-depth: 0
 
-            - name: Install Open MPI and set compiler to g++-15
+            - name: Install Open MPI and set compiler to g++-16
               run: |
-                  echo "CXX=g++-15" >> $GITHUB_ENV
-                  echo "OMPI_CXX=g++-15" >> $GITHUB_ENV
+                  echo "CXX=g++-16" >> $GITHUB_ENV
+                  echo "OMPI_CXX=g++-16" >> $GITHUB_ENV
                   sudo apt-get update
-                  sudo apt-get install -y openmpi-bin libopenmpi-dev
+                  sudo apt-get install -y --no-install-recommends g++-16 openmpi-bin libopenmpi-dev libzstd-dev zstd
 
             - name: Cache test atomic data
               uses: actions/cache@v6
               id: cache-testatomicdata
               with:
                   path: tests/atomicdata_feconi.tar.xz
-                  key: tests/atomicdata_feconi.tar.xz
+                  key: atomicdata_feconi-${{ hashFiles('tests/setupfuncs.sh') }}
 
             - name: Download/extract test data
               working-directory: tests/
               run: |
                   source ./setup_kilonova_1d.sh
+                  # this job has 2 ranks and the checksum jobs have 4, so this keeps the packets of each rank
+                  cd kilonova_1d_testrun
+                  sedopt "constexpr std::int64_t NUM_PACKETS.*" "constexpr std::int64_t NUM_PACKETS = 160'000;"
+                  rm -f artisoptions.h.bak
 
             - name: Compile
               run: |
@@ -353,12 +430,12 @@ jobs:
                   OMP_NUM_THREADS: 2
               run: |
                   rm -f input.txt
-                  time mpirun -np 2 --oversubscribe --mca osc ^ucx --mca mpi_yield_when_idle 1 ./sn3d -o job0
+                  time mpirun -np 2 --oversubscribe --mca osc ^ucx --mca mpi_yield_when_idle 1 ./sn3d
 
             - name: cat output log
               if: always()
               working-directory: tests/kilonova_1d_testrun/
-              run: cat job0/output_0-0.txt
+              run: cat job_from_ts0000/output_0-0.txt
 
     # Runs the same small model with C++ standard parallelism on multicore CPUs (no GPU offload), which
     # reaches the same shared-state code paths as the OpenMP job but through std::execution::par_unseq and
@@ -376,24 +453,28 @@ jobs:
               with:
                   fetch-depth: 0
 
-            - name: Install Open MPI and TBB and set compiler to g++-15
+            - name: Install Open MPI and TBB and set compiler to g++-16
               run: |
-                  echo "CXX=g++-15" >> $GITHUB_ENV
-                  echo "OMPI_CXX=g++-15" >> $GITHUB_ENV
+                  echo "CXX=g++-16" >> $GITHUB_ENV
+                  echo "OMPI_CXX=g++-16" >> $GITHUB_ENV
                   sudo apt-get update
-                  sudo apt-get install -y openmpi-bin libopenmpi-dev libtbb-dev
+                  sudo apt-get install -y --no-install-recommends g++-16 openmpi-bin libopenmpi-dev libtbb-dev
 
             - name: Cache test atomic data
               uses: actions/cache@v6
               id: cache-testatomicdata
               with:
                   path: tests/atomicdata_feconi.tar.xz
-                  key: tests/atomicdata_feconi.tar.xz
+                  key: atomicdata_feconi-${{ hashFiles('tests/setupfuncs.sh') }}
 
             - name: Download/extract test data
               working-directory: tests/
               run: |
                   source ./setup_kilonova_1d.sh
+                  # this job has 2 ranks and the checksum jobs have 4, so this keeps the packets of each rank
+                  cd kilonova_1d_testrun
+                  sedopt "constexpr std::int64_t NUM_PACKETS.*" "constexpr std::int64_t NUM_PACKETS = 160'000;"
+                  rm -f artisoptions.h.bak
 
             - name: Compile
               run: |
@@ -405,12 +486,12 @@ jobs:
               working-directory: tests/kilonova_1d_testrun/
               run: |
                   rm -f input.txt
-                  time mpirun -np 2 --oversubscribe --mca osc ^ucx --mca mpi_yield_when_idle 1 ./sn3d -o job0
+                  time mpirun -np 2 --oversubscribe --mca osc ^ucx --mca mpi_yield_when_idle 1 ./sn3d
 
             - name: cat output log
               if: always()
               working-directory: tests/kilonova_1d_testrun/
-              run: cat job0/output_0-0.txt
+              run: cat job_from_ts0000/output_0-0.txt
 
     combine_checksums:
         needs: testmodels

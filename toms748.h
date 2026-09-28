@@ -1,4 +1,4 @@
-// TOMS Algorithm 748 bracketing root finder (Alefeld, Potra & Shi 1995, ACM Trans. Math. Softw. 21, 327,
+// TOMS Algorithm 748 bracketing root finder (Alefeld, Potra & Shi 1995, ACM Trans. Math. Softw., 21, 327-344,
 // doi:10.1145/210089.210111), extracted from Boost.Math (boost/math/tools/toms748_solve.hpp) so that ARTIS does not
 // depend on the full library. The floating-point operation sequence is copied exactly, so results are bit-identical
 // to boost::math::tools::toms748_solve<double>.

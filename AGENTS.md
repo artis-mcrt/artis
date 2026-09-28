@@ -30,7 +30,7 @@ Obey these rules:
 - Use the simple tenses (present, past, and future). Do not use the -ing form
   as a noun or as an adjective if a simple form is possible.
 - Write short sentences. Use a maximum of 20 words in an instruction and a
-  maximum of 25 words in descriptive text. Write a maximum of 6 sentences in a
+  maximum of 32 words in descriptive text. Write a maximum of 6 sentences in a
   descriptive paragraph.
 - Give one instruction in one sentence. Write the reason in a different
   sentence.
@@ -58,20 +58,26 @@ Keep the British spellings that this repository uses, e.g. "parallelised" and
 "normalise". STE controls the choice of words and the structure of the
 sentences. It does not control the spelling variant here.
 
+## References
+
+When mentioning a scientific paper, always give the full reference:
+authors, year, journal, volume, page range, and DOI or arXiv ID. The
+title is optional. Do not use a bare author-year citation.
+
 ## Project overview
 
 ARTIS is a 3D Monte Carlo radiative transfer code for supernovae and kilonovae.
 The code uses modern C++ and the Message Passing Interface (MPI). You can also
 add OpenMP threads or C++ standard parallelism. gcc and clang compile the code
-as C++26. nvc++ and hipcc compile it as C++23, so the code must stay compatible
-with C++23. The Makefile builds three programs from the same sources:
+as C++26, and so does nvc++. hipcc compiles it as C++23, so the code must stay
+compatible with C++23. The Makefile builds three programs from the same sources:
 
 - `sn3d`: the main simulation. It does the radiative transfer over a sequence
   of timesteps.
 - `exspec`: it combines the packet files into spectra and light curves.
 - `unittests`: the unit tests. They cover the numeric and the parsing helpers,
   and also some physics functions, e.g. the Compton cross-section and the
-  Spencer-Fano solver.
+  triangular solve of the Spencer-Fano matrix.
 
 ## Repository layout
 
@@ -101,12 +107,10 @@ a pull request or an issue.
 
 The build needs gcc 14 or later, clang, nvc++, or hipcc, and an MPI library
 that supplies `mpicxx`. With Open MPI, select the compiler with
-`export OMPI_CXX=g++`. The build needs no other program. Each build also writes
-`compile_commands.json` with python3, but an absent python3 gives a message and
-no error (see "Linting and formatting").
+`export OMPI_CXX=g++`. The build needs no other program.
 
 ```sh
-export MAKEFLAGS="--check-symlink-times --jobs=$(nproc --all)"
+export MAKEFLAGS="--check-symlink-times --jobs=$(nproc)"
 ln -s artisoptions_classic.h artisoptions.h   # required, gitignored
 make                                          # builds sn3d and exspec
 ```
@@ -124,7 +128,11 @@ are `unittests`, `check` (clang-tidy), `sn3dwhole`, and `clean`.
 `make` puts the objects in `build/<configuration>/` and makes `sn3d`, `exspec`,
 and `unittests` in the repository root symlinks to that folder. Each symlink
 points to the most recent build of any configuration. Look at the symlink
-before you copy a binary or start a run.
+before you copy a binary or start a run. Copy a binary with `cp -L` from the
+repository root. A stale build folder of an older compiler otherwise gives a
+benchmark that does not measure your change.
+
+Each build also writes `compile_commands.json` (see "Linting and formatting").
 
 Points that surprise a new agent:
 
@@ -134,11 +142,13 @@ Points that surprise a new agent:
 - The name of the build folder does not contain the preset. A change of preset
   therefore needs `make clean`, and CI does this before nearly every preset
   compile.
-- `REPRODUCIBLE=ON` sets `FASTMATH=OFF` when the command line does not set
-  `FASTMATH`. A command-line value wins, so `make REPRODUCIBLE=ON FASTMATH=ON`
-  keeps fast math.
-- `OPENMP=ON` and `STDPAR=ON` together are an error.
+- The Makefile decides how the options interact, e.g. `REPRODUCIBLE=ON` with
+  `FASTMATH`, and `OPENMP=ON` with `STDPAR=ON`. Read the Makefile for the rule.
 - The build uses `-Werror` for all compilers except nvc++.
+- The Makefile probes for libzstd with pkg-config and a link test, and adds
+  `-DUSE_ZSTD` and the `_zstd` suffix of the build folder when it finds the
+  library. `ZSTD=OFF` skips the probe. Code that needs `<zstd.h>` goes inside
+  `#ifdef USE_ZSTD`.
 - clang adds `-Wunsafe-buffer-usage`, which gcc does not have. A build that is
   clean with gcc can still fail with clang.
 - `TESTMODE=ON` adds the sanitizers, the extra assertions, and the hardened
@@ -159,85 +169,78 @@ Points that surprise a new agent:
 `make OPTIMIZE=OFF unittests && ./unittests` builds and runs `unittests.cc`.
 The `OPTIMIZE=OFF` build folder already holds the objects of the compile test,
 so only `unittests.cc` compiles again. The harness is hand-written, so there is
-no gtest and no catch. The tests cover the numeric and the parsing helpers, and
-also some physics functions. Read `unittests.cc` to see if it calls a function
-that you changed. The `constexpr` helpers also have `static_assert` checks next
-to their definitions.
+no gtest and no catch. Read `unittests.cc` to see if it calls a function that
+you changed. The `constexpr` helpers also have `static_assert` checks next to
+their definitions.
 
 The main coverage is the end-to-end tests in `tests/`. Each test does a new run
 and then a resume run, and then post-processes the packets with `exspec`.
 Continuous integration (CI) compares md5 checksums of the output files with the
 reference files in `tests/<testname>_inputfiles/`. Each test has two of them:
-`results_md5_job0.txt` and `results_md5_final.txt`.
+`results_md5_job0.txt` and `results_md5_final.txt`. CI is the test bed. Commit
+and push early, and let CI run the full matrix.
 
-To repeat one test locally, do the same steps as `.github/workflows/ci.yml`.
-Use `nebular_1d_3dgrid` as the default test. It builds the nebular preset with
-the NLTE populations, the non-thermal solver, and the detailed bound-free
-estimators on a 3D grid, so it covers the physics that most changes touch. The
-`kilonova_1d` test is faster, but it uses the LTE preset. The setup script downloads
-about 15 MB of atomic data from a GitHub release, so this step needs the
-network. The script keeps the archive in `tests/`, and a later run of the
-script uses that copy.
+To repeat one test locally, do the steps of the test job in
+`.github/workflows/ci.yml`. Use `nebular_1d_3dgrid` as the default test. It
+builds the nebular preset with the NLTE populations, the non-thermal solver,
+and the detailed bound-free estimators on a 3D grid, so it covers the physics
+that most changes touch. The `kilonova_1d` test is faster, but it uses the LTE
+preset. The setup script downloads about 15 MB of atomic data from a GitHub
+release, so this step needs the network. The script keeps the archive in
+`tests/`, and a later run of the script uses that copy.
 
-```sh
-cd tests
-source ./setup_nebular_1d_3dgrid.sh    # creates tests/nebular_1d_3dgrid_testrun/
-cd ..
-rm -f artisoptions.h                                  # cp writes through a symlink
-cp tests/nebular_1d_3dgrid_testrun/artisoptions.h .   # do not skip this step
-make REPRODUCIBLE=ON MAX_NODE_SIZE=2 FASTMATH=OFF -j$(nproc) sn3d exspec
-cp sn3d exspec tests/nebular_1d_3dgrid_testrun/
-cd tests/nebular_1d_3dgrid_testrun
-mpirun -np 4 --oversubscribe ./sn3d -o job0    # logs go to job0/output_0-0.txt
-md5sum -c results_md5_job0.txt
-cp input-resume.txt input.txt                  # necessary, see below
-mpirun -np 4 --oversubscribe ./sn3d -o job1
-rm *.tmp
-mpirun -np 1 ./exspec
-python3 ../../scripts/mergeangleres.py
-rm -f light_curve_res_*.out spec_res_*.out specpol_res_*.out
-md5sum -c results_md5_final.txt
-```
+These steps differ from a plain build and are easy to miss:
 
-The copy of `artisoptions.h` is necessary. Each setup script copies a preset
-into the run folder and then changes some option values with `sed`. A build
-from the preset alone uses different options and gives different results. The
-`rm` is also necessary. Your `artisoptions.h` is usually a symlink to a preset,
-and `cp` writes through a symlink. Without the `rm`, the copy replaces the
-content of the tracked preset file.
+- Build from the `artisoptions.h` of the run folder, not from the preset. Each
+  setup script copies a preset and then changes some option values with `sedopt`.
+  Remove your `artisoptions.h` before the copy, because `cp` writes through a
+  symlink and replaces the content of the tracked preset.
+- Remove `input.txt` before the first run, as the workflow does. `sn3d` then
+  restores it from `input-newrun.txt`. After a run, `input.txt` holds the
+  values that continue that run.
+- Copy `input-resume.txt` to `input.txt` before the resume run. That file tells
+  `sn3d` to read the restart files of the first run, and it sets a different
+  range of timesteps.
+- Remove the `*.tmp` files before `exspec`, as the workflow does.
+- Run `python3 ../../scripts/mergeangleres.py` in the run folder after
+  `exspec`. The script merges the direction bin files into
+  `light_curve_res.out`, `spec_res.out`, and `specpol_res.out`. The tests with
+  a 2D or a 3D model, e.g. `kilonova_2d`, have these files in
+  `results_md5_final.txt`.
 
-`sn3d` restores `input.txt` for the new run. If the file is absent, `sn3d`
-copies `input-newrun.txt` to `input.txt` and writes a log line. The resume run
-needs the `cp` of `input-resume.txt`, because `input.txt` then exists and holds
-the restart state that the first run wrote.
+CI builds with libzstd, so the output files are `.zst`. The checksum steps of
+`ci.yml` pipe each output file through `zstdcat` and `md5sum` and write the
+checksum under the plain name. `results_md5_job0.txt` holds the files of the
+first job, and `results_md5_final.txt` the files of the resume run and of
+`exspec`. The log files stay outside both sets, because their names do not match.
+CI also compares the lists of file names, so a missing or an extra output file
+is an error.
 
-CI writes `results_md5_job0.txt` from
-`md5sum *.out job0/*.out speclc_angle_res/*.*` and `results_md5_final.txt` from
-the same command with `job1/`. The log files stay outside both sets, because
-their names do not match.
+CI makes the reference checksums on an arm64 runner with g++-16. A local build
+with `REPRODUCIBLE=ON` can give the same checksums on a different CPU type and
+with a different gcc version, but no test covers that. Examine a local mismatch
+as a real change of the results first. Let CI give the decision.
 
-CI makes the reference checksums on an arm64 runner with g++-15. Local x86-64
-builds with gcc 14 reproduced all of them for `kilonova_1d`, on two different
-CPU types. `REPRODUCIBLE=ON` therefore gives portable results, but only these
-combinations have a test. Examine a local mismatch as a real change of the
-results first. Let CI give the decision.
-
+A change that must not alter the results must give identical checksums in CI.
 If a change alters the numerical results for a good reason, the stored
-checksums must be regenerated. Only a maintainer can do this, with the "Update
-checksums" workflow. That workflow takes the checksums from a finished CI run.
-The run does not have to be of the head commit, if the later commits do not
-change the results. Say in the commit message and in the pull request that you
-expect the results to change.
+checksums must be regenerated. Only a maintainer can do this, with the
+`updatechecksums.yml` workflow. That workflow takes the checksums from a
+finished CI run. The run does not have to be of the head commit, if the later
+commits do not change the results. Say in the commit message and in the pull
+request that you expect the results to change.
+
+A new end-to-end test must run in CI in about ten minutes or less. Every push
+runs the full matrix.
 
 ## Continuous integration
 
-Three workflows run on each push, except on a `classic*` branch. A fourth
-workflow, `copilot-setup-steps.yml`, runs only when you change that file.
+The workflows in `.github/workflows/`:
 
 - `ci.yml` runs each model of its `testname` matrix on arm64, and compares the
-  checksums. Two more jobs run one model with `OPENMP=ON` and with
-  `STDPAR=ON`. These two jobs compare no checksums (see "Reproducible
-  results").
+  checksums. For `nebular_1d_3dgrid`, it also runs all the timesteps in one
+  job and compares the outputs with the outputs of the two jobs. Two more jobs
+  run one model with `OPENMP=ON` and with `STDPAR=ON`. These two jobs compare
+  no checksums (see "Reproducible results").
 - `cislowtestmode.yml` calls `ci.yml` again with `TESTMODE=ON`. The sanitizers
   and the extra assertions make this run slow, so `ci.yml` gives it a longer
   timeout. This workflow does not enforce the checksums, because both checksum
@@ -248,10 +251,16 @@ workflow, `copilot-setup-steps.yml`, runs only when you change that file.
   presets with `STDPAR=ON GPU=ON`. The gcc, the clang, and the macOS jobs
   compile every remaining preset. The gcc and the clang jobs also build and run
   the unit tests, for the classic and for the nebular preset.
+- `updatechecksums.yml` writes the reference checksums (see "Tests").
+- `depapprove.yml` enables auto-merge for the pull requests of Dependabot and
+  of pre-commit-ci.
+- `copilot-setup-steps.yml` runs when you change that file, or when you start
+  it by hand.
 
-Your code must therefore compile with each of these compilers, and also on the
-paths for `GPU=ON`. A new compile-time option must go into every
-`artisoptions_*.h` preset, because CI finds the presets with a glob.
+The first three run on each push, except on a `classic*` branch. Your code
+must therefore compile with each of these compilers, and also on the paths for
+`GPU=ON`. A new compile-time option must go into every `artisoptions_*.h`
+preset, because CI finds the presets with a glob.
 
 CI also installs the artistools Python package and plots the output of each
 test (see "Input and output files").
@@ -261,42 +270,35 @@ test (see "Input and output files").
 - clang-format uses a Google-based style with a limit of 120 columns
   (`.clang-format`). It applies to all C++ files except `third_party/`.
 - clang-tidy has a long list of checks (`.clang-tidy`) and makes almost every
-  diagnostic an error. Make the compile database with the Makefile:
+  diagnostic an error. Make the compile database with the Makefile, then name
+  the files that you changed:
 
   ```sh
   make TESTMODE=ON compile_commands.json
   run-clang-tidy grid.cc
   ```
 
-  Each build of `sn3d`, `exspec`, or `unittests` also writes the database, and
-  the `make` pre-commit hook does the same. The recipe replaces the file only
-  when the content changes. It needs python3. A host without python3 gives a
-  message and builds the programs, because the build itself needs no python3.
-  `make check` stops with an error if the database is absent. The database always has the flags of `TESTMODE=ON`,
-  also when the build does not, so that clangd and clang-tidy examine the body
-  of each `assert_testmodeonly()` macro. `TESTMODE_CXXFLAGS` in the Makefile
-  holds those flags.
-
-  Name the files that you changed. `make TESTMODE=ON check` runs the same check
-  as CI, over `sn3d`, `exspec`, and `unittests`, and takes many minutes.
-
-  Do not make the database with `compiledb`. `compiledb` does not recognise
-  `mpicxx` as a compiler, so it removes the compiler and the first flags from
-  each command. clang-tidy then takes a flag as the name of the compiler, finds
-  no resource directory, and finds no standard header. Each parse error gives
-  many false diagnostics, e.g. `cppcoreguidelines-pro-type-member-init` on a
-  structure that has initialisers. Never apply `run-clang-tidy -fix` to such a
-  database, because the corrections make the code invalid.
+  Each build of a program and the `make` pre-commit hook also write the
+  database. The recipe needs python3 and replaces the file only when the
+  content changes. A host without python3 gets a message and a normal build.
+  The database always has the flags of `TESTMODE=ON`, also when the build does
+  not, so that clangd and clang-tidy examine the body of each
+  `assert_testmodeonly()`. `make TESTMODE=ON check` runs the same check as CI
+  over all three programs and takes many minutes. Never make the database with
+  `compiledb`, because it drops `mpicxx` from each command and every diagnostic
+  is then false.
 - cppcheck runs in CI and stops the job on an error. Read the command in
-  `ci-checks.yml`: it excludes `third_party`, and it suppresses five message
+  `ci-checks.yml`: it excludes `third_party`, and it suppresses some message
   types that the code does not correct. Write a suppression as an inline
   `// cppcheck-suppress <id>` comment. That comment works because the command
   has `--inline-suppr`.
 - The pre-commit hooks (`.pre-commit-config.yaml`, run with `prek`) apply
-  clang-format, about a dozen whitespace and file checks, and a
-  `make OPTIMIZE=OFF` compile. `prek run --all-files` runs all of them. CI runs
-  the same hooks but skips the compile. One check finds a destroyed symlink,
-  which is important here: `CLAUDE.md` is a symlink to `AGENTS.md`.
+  clang-format, ruff for the Python scripts in `scripts/`, more than a dozen
+  whitespace and file checks, and a `make OPTIMIZE=OFF` compile.
+  `scripts/ruff.toml` sets the limit of 120 columns for those scripts.
+  `prek run --all-files` runs all of them. CI runs the same hooks but skips
+  the compile. One check finds a destroyed symlink, which is important here:
+  `CLAUDE.md` is a symlink to `AGENTS.md`.
 
 ## Code conventions
 
@@ -324,9 +326,11 @@ Do not name a thing after its role in an abstract algorithm.
 
 ### Comments
 
-- Comments should explain non-obvious code, not repeat it. Prefer a comment that explains the physics (such as a journal article citation), the algorithm, or the reason for a choice.
-- Prefer well-named self-explanatory code to a comment that explains it. If renameing a variable or function makes the code clearer, do that instead of adding a comment.
-- Comments should not reference the history of the code. Use the version control system for that. Comments should only describe the current state of the code and its intended behavior.
+- A comment explains the physics, the algorithm, or the reason for a choice.
+  Cite the journal article where one exists. Do not repeat the code.
+- A better name is better than a comment. Rename the variable or the function
+  instead.
+- Describe the current code only. The version control system holds the history.
 
 ### Cell indices
 
@@ -355,22 +359,36 @@ are the only defence.
 ### Logs and assertions
 
 - Write log lines with `printlog()` and `printlnlog()` from `mpi_logging.h`.
-  They take a `std::format` string. Do not use `printf`, `std::cout`, or
-  `std::cerr`. The function `printout()` of the older code does not exist any
-  more, although `.clang-tidy` still names it.
-- On the host, every log line gets a timestamp and a flush, so a log line in a
-  hot loop is expensive. Device code has no host log file, so `printlnlog()`
-  uses `printf` there.
-- `assert_always()` stays active in an optimised build. `assert_testmodeonly()`
-  becomes nothing unless `TESTMODE=ON`, so its expression must have no side
-  effect. A parameter that only an `assert_testmodeonly()` uses needs
-  `[[maybe_unused]]`.
-- A fatal error writes `printlnlog("[error] ...")` and then calls
-  `std::abort()`. Use this pattern for a new error.
-- Two numeric helpers are an exception: `toms748.h` and `gausskronrod.h` throw
-  `std::domain_error` on the host, inside a guard that returns a NaN for a GPU
-  build. No code catches these exceptions. Keep the guards, because device code
-  permits no exception.
+  They take a `std::format` string and write to the log file of the rank. Do
+  not use `printf`, `std::cout`, or `std::cerr`. Their text does not go into
+  the log files, and the standard output stays quiet unless there is a crash.
+- Every log line gets a timestamp and a flush, so a log line in a hot loop is
+  expensive.
+- Do not call the loggers in a `DEVICE_FUNC`. Their device branch does not
+  compile with nvc++ or hipcc, and a local gcc or clang build does not find
+  this. Put a diagnostic of a device function inside `MY_IF_HOST()`.
+- `assert_always()` stays active in an optimised build, and its reporter works
+  on the host and on the device. `assert_testmodeonly()` becomes nothing unless
+  `TESTMODE=ON`, so its expression must have no side effect. A parameter that
+  only an `assert_testmodeonly()` uses needs `[[maybe_unused]]`.
+- Many `assert_always()` calls hold a call with a side effect, e.g. a read
+  from a file. Do not change such an assertion to `assert_testmodeonly()` and
+  do not delete it.
+- A fatal error is an `assert_always()` on the condition, or a
+  `fatal_crash("...", values)` when the message must show the values. Both
+  come from `mpi_logging.h`. `fatal_crash()` takes a `std::format` string and
+  writes the message with the rank, the file, the line, and the function to
+  the rank log and to stderr. Do not call `std::abort()` directly. A direct
+  abort is very hard to debug. Both reporters work on the host and on the
+  device. On a device, `fatal_crash()` prints the values with `printf` and
+  ignores the spec inside a `{}` placeholder.
+- An invalid input stops the run. Do not give a warning for it.
+- Two numeric helpers are an exception. `toms748.h` throws `std::domain_error`
+  on the host, inside a guard that returns a NaN for a GPU build.
+  `gausskronrod.h` throws without a guard, because a GPU build uses the Simpson
+  integrator and does not compile it. No code catches these exceptions. Keep
+  the guards, because device code permits no exception. Both files are bit-exact extractions of Boost.Math. Do
+  not change their floating-point expressions or their table literals.
 
 ### Global and shared state
 
@@ -387,7 +405,10 @@ are the only defence.
   system puts the pages near that rank. The constructor ends with a barrier
   over the node, so you do not add one.
 - In the grid update, each rank changes only the cells of its own range. See
-  `update_grid.cc` and the assignment of the ranks in `grid.cc`.
+  `update_grid.cc` and the assignment of the ranks in `grid.cc`. After the grid
+  update, `sn3d.cc` broadcasts the per-cell state to the other nodes. A new
+  per-cell array that the packets read must join that broadcast. Without it,
+  the other nodes propagate with stale values and give no error.
 - The propagation of the packets is different. Each rank adds to the estimators
   of every cell that its packets enter. A new estimator therefore needs a sum
   over the ranks with `MPI_Allreduce_safe()`, as `radfield.cc` does. Without
@@ -440,10 +461,11 @@ The code must compile with nvc++ and with hipcc, also with `STDPAR=ON GPU=ON`.
   `packet_type`, `absorption_type`, and the `EMTYPE_*` constants in `packet.h`.
   Do not renumber them.
 - `sn3d` writes one log file for each rank and thread
-  (`output_<rank>-<thread>.txt`). The option `-o JOBFOLDER` moves the per-job
-  files into a subfolder. The run-level files, e.g. the restart files, stay in
-  the run folder, together with a symlink to the log of rank 0. The standard
-  output stays quiet unless there is a crash.
+  (`output_<rank>-<thread>.txt`). The per-job files go into the job folder
+  `job_from_ts<start timestep>`. The run-level files, e.g. the restart
+  files, stay in the run folder, together with a symlink to the log of rank 0.
+  Rank 0 writes one line with the job folder to the standard output. The
+  standard output is otherwise quiet unless there is a crash.
 - The restart files (`gridsave_ts*.tmp` and the packet files) must only be
   consistent with the binary that wrote them. A resumed run uses the same
   `artisoptions.h` and the same source version as the run that wrote the
@@ -452,24 +474,46 @@ The code must compile with nvc++ and with hipcc, also with `STDPAR=ON GPU=ON`.
 - `input.txt` is positional. Each line has its fixed meaning, and some lines
   are unused placeholders that must stay. `read_parameterfile()` reads a line
   with `get_noncommentline()` and then takes the numbers with a
-  `std::istringstream`. Follow that pattern for a new line. A new run writes
-  a commented copy of `input.txt` to `input-newrun.txt`. If `input.txt` is
-  absent at the start of a run, rank 0 restores it from that copy.
+  `std::istringstream`. Follow that pattern for a new line. At the start of a
+  new simulation, `sn3d` writes `input.txt` again with the standard comments
+  and with its rank count in the `nprocs_exspec` line, and it writes the same
+  content to `input-newrun.txt`. If `input.txt` is absent at the start of a
+  run, rank 0 restores it from that copy. `exspec` changes no input file.
 - The model files use a different helper. `model.txt`, `abundances.txt`, and
   `transitiondata.txt` take each number with `parse_next_token()`, which
   advances a `std::string_view`.
-- Open a file with `fopen_required()` or `fstream_required()`. For a read they
-  look in `./`, `data/`, and `artis/data/`. For a write they use the name that
-  you give.
+- Open a text input file with `istream_required()` from `inputfilestream.h`.
+  It looks in `./`, `data/`, and `artis/data/`, and in each folder it opens the
+  plain file or, in a build with libzstd, the `.zst` file of the same name.
+  Test for an optional input file with `inputfile_exists()`, which also finds
+  the `.zst` file.
+- Open an output file with `open_output_file()` from `outputfilestream.h`.
+  In a build with libzstd, it writes the file zstd compressed under the name
+  with `.zst`, and it removes a stale file of the other form. `output_filepath()`
+  gives that name, e.g. for a rename. Every file gets the level
+  `ZSTD_LEVEL_DEFAULT`.
+  `open_uncompressed_output_file()` is for the files that stay plain in every
+  build:
+  - `input.txt`;
+  - `artis.pid`;
+  - `syn_dir.txt`;
+  - the logs;
+  - the restart files.
+  `fopen_required()` remains for the binary restart files.
+- `sn3d` writes the final packet files into `packets/` and the virtual packet
+  files into `vpackets/`, `vspecpol/`, and `vpkt_grid/`. `exspec` reads the
+  packet files there.
 
 ### C++ style
 
 - Prefer modern C++: `constexpr`, `std::ranges`, `std::span`, and structured
   bindings. Put a compile-time option into `artisoptions.h` as a `constexpr`
-  value, not into a runtime flag.
+  value, not into a runtime flag. Prefer a boolean option when only one other
+  value is useful.
 - Write a trailing return type: `auto f(...) -> T`. clang-tidy requires it.
 - Give each `.cc` file an anonymous namespace for its internal helpers. Close
-  it with the comment `}  // anonymous namespace`. Every `.cc` file does this.
+  it with the comment `}  // anonymous namespace`. Every tracked `.cc` file
+  with internal helpers does this.
 - Some modules put their interface in a namespace, e.g. `grid::` and `decay::`.
   Other modules declare their functions at global scope. Follow the header of
   the module that you change.
@@ -481,24 +525,31 @@ The code must compile with nvc++ and with hipcc, also with `STDPAR=ON GPU=ON`.
   the construction in `#pragma clang unsafe_buffer_usage begin` and `end`. Most
   of the existing pragmas enclose an `#include`.
 
+## Pull requests
+
+- Make one pull request for one work item. Do not combine an unrelated fix
+  with a feature.
+- Commit and push early. CI is the test bed for the compilers and the
+  checksums that a local build does not cover.
+- Say in the commit message and in the pull request when you expect the
+  numerical results to change. Otherwise the checksums must stay identical.
+
 ## Before you commit
 
 Do the text edits first. They can make a finished compile out of date.
 
 1. Add a new compile-time option to every `artisoptions_*.h` preset and to
    `artisoptions_doc.md`.
-2. Search `tests/setup_*.sh` for the name of an option that you renamed or
-   reformatted. Those scripts change option lines with `sed` and an exact text
-   match. The pattern also contains the type, e.g. `constexpr int`. A pattern
-   that matches nothing gives no error, so the test then runs with the default
-   value of the preset and the checksums drift.
-3. Run `prek run --all-files`. This applies clang-format, the whitespace and
-   file checks, and a `make OPTIMIZE=OFF` compile. Correct every message. CI
-   runs the same hooks and skips only the compile.
+2. Search `tests/setup_*.sh` and `.github/workflows/ci.yml` for the name of an
+   option that you renamed or reformatted. Those files change option lines with
+   `sedopt` from `tests/setupfuncs.sh` and an exact text match. The pattern also
+   contains the type, e.g. `constexpr int`. `sedopt` stops the setup script if
+   the pattern matches nothing, and the test then fails in CI.
+3. Run `prek run --all-files` and correct every message.
 4. Run `make OPTIMIZE=OFF unittests && ./unittests` if `unittests.cc` calls a
    function that you changed.
-5. Run clang-tidy on the files that you changed (see "Linting and
-   formatting"). CI stops on any diagnostic, and a gcc build does not find it.
-6. Say in the commit message when you expect the numerical results to change.
+5. Run clang-tidy on the files that you changed. CI stops on any diagnostic,
+   and a gcc build does not find it.
+6. Check that no `DEVICE_FUNC` calls a logger (see "Logs and assertions").
 
 The default branch is `main`, and `release` is the production branch.

@@ -3,7 +3,7 @@
 // set up the radioactive energy pellets.
 //
 // The alpha, beta, and fission decay treatment for kilonovae is described by Shingles et al.
-// (2023), ApJ, 954, L41.
+// (2023), ApJL, 954, L41, doi:10.3847/2041-8213/acf29a.
 
 #include "decay.h"
 
@@ -12,10 +12,10 @@
 #include <cctype>
 #include <cmath>
 #include <cstddef>
+#include <cstdint>
 #include <cstdlib>
 #include <cstring>
 #include <format>
-#include <fstream>
 #include <functional>
 #include <iostream>
 #include <iterator>
@@ -37,10 +37,13 @@
 #include "globals.h"
 #include "grid.h"
 #include "input.h"
+#include "inputfilestream.h"
 #include "mpi_logging.h"
+#include "outputfilestream.h"
 #include "packet.h"
 #include "random.h"
 #include "sn3d.h"
+#include "toms748.h"
 
 namespace decay {
 
@@ -89,8 +92,8 @@ struct Nuclide {
   double decay_daughters_probsum{1.};
 };
 
-// a decay path follows the contribution from an initial nuclear abundance
-// to another (daughter of last nuclide in decaypath) via decays
+// a decay path follows the contribution of an initial nuclide abundance to the last nuclide of the path via
+// decays. The last nuclide is the daughter of the last decay.
 // every different path within the network is considered, e.g. 56Ni -> 56Co -> 56Fe is separate to 56Ni -> 56Co
 struct DecayPath {
   std::vector<int> z;  // atomic number
@@ -107,6 +110,10 @@ std::vector<Nuclide> nuclides;
 std::vector<DecayPath> decaypaths;
 std::vector<int> decaypath_topnucindex;  // the chain-top nuclide index of each decaypath (flat copy for fast access)
 std::vector<int> decaypath_endnucindex;  // the chain-end nuclide index of each decaypath (flat copy for fast access)
+// the fraction of the chain-top nuclei of each decaypath that decayed past the end of the chain, at the first
+// and at the last time at which a packet can decay. calc_energy_per_massoftopnuc_decaypath() fills both.
+std::vector<double> decaypath_fdecayed_tmin;
+std::vector<double> decaypath_fdecayed_tmax;
 int he4_nucindex = -1;  // the nuclide index of He4 (or -1 if not in the network), the alpha-decay byproduct
 
 struct ZIsotope {
@@ -215,13 +222,12 @@ void printout_nuclidemeanlife(const int z, const int a) {
       return 0.;
     }
     default: {
-      assert_always(false);
-      return 0.;
+      fatal_crash("Unknown decay type {}", static_cast<int>(decaytype));
     }
   }
 }
 
-// contributed energy release per decay [erg] for decaytype (e.g. decaytypes::DECAYTYPE_BETAPLUS) (excludes neutrinos!)
+// energy release per decay [erg] of the given decay type, e.g. DecayType::DECAYTYPE_BETAPLUS (excludes neutrinos)
 [[nodiscard]] auto nucdecayenergy(const int nucindex, const DecayType decaytype) -> double {
   const double endecay = nuclides[nucindex].endecay_gamma + nucdecayenergyparticle(nucindex, decaytype);
 
@@ -234,7 +240,7 @@ void printout_nuclidemeanlife(const int z, const int a) {
 
 [[nodiscard]] auto get_num_decaypaths() -> int { return static_cast<int>(decaypaths.size()); }
 
-// a decaypath's energy is the decay energy of the last nuclide and decaytype in the chain
+// the energy of a decaypath is the decay energy of the last decaying nuclide, the second-last nuclide of the chain
 [[nodiscard]] auto get_decaypath_lastdecayenergy(const DecayPath& decaypath) -> double {
   const auto secondlastindex = decaypath.nucindex.size() - 2;
   assert_testmodeonly(decaypath.decaytypes[secondlastindex] != DecayType::DECAYTYPE_NONE);
@@ -298,13 +304,12 @@ void abort_if_decaypath_has_duplicate_lambdas() {
     for (auto i = 0Z; i < std::ssize(lambdas); i++) {
       for (auto j = i + 1; j < std::ssize(lambdas); j++) {
         if (lambdas[i] > 0. && lambdas[i] == lambdas[j]) {
-          printlnlog(
-              "[error] decay path contains two nuclides with identical decay constants {:g} [1/s], which makes the "
+          printout_decaypath(decaypathindex);
+          fatal_crash(
+              "decay path contains two nuclides with identical decay constants {:g} [1/s], which makes the "
               "Bateman solution singular. Slightly perturb one of the mean lifetimes in the decay data to break the "
               "degeneracy.",
               lambdas[i]);
-          printout_decaypath(decaypathindex);
-          std::abort();
         }
       }
     }
@@ -331,12 +336,11 @@ void extend_lastdecaypath(std::vector<DecayPath>& localdecaypaths) {
       // check for nuclide in existing path, which would indicate a loop
       for (const auto [z, a] : std::views::zip(initial_last_decaypath.z, initial_last_decaypath.a)) {
         if (z == daughter.z && a == daughter.a) {
-          printlog("[error] loop in nuclear decay chain: ");
+          std::string chain;
           for (const auto [chain_z, chain_a] : std::views::zip(initial_last_decaypath.z, initial_last_decaypath.a)) {
-            printlog("(Z={},A={}) -> ", chain_z, chain_a);
+            chain += std::format("(Z={},A={}) -> ", chain_z, chain_a);
           }
-          printlnlog("(Z={},A={}) already occurred. aborting", daughter.z, daughter.a);
-          std::abort();
+          fatal_crash("loop in nuclear decay chain: {}(Z={},A={}) already occurred", chain, daughter.z, daughter.a);
         }
       }
       const auto daughter_nucindex = get_nucindex(daughter.z, daughter.a);
@@ -403,7 +407,7 @@ auto find_decaypaths(const std::span<const int> custom_zlist, const std::span<co
     // chains are sorted by mass number, then atomic number, then length
     const auto d1_length = std::ssize(d1.z);
     const auto d2_length = std::ssize(d2.z);
-    // -1 to ignore last item, which keeps bit-identical results as before when final daughter nuclide was not included
+    // the sort key excludes the last nuclide of each path, which is the daughter of the last decay
     // TODO: it would probably be better to sort by all items in reverse order
     const auto smallestpathlength = std::min(d1_length, d2_length) - 1;
     for (auto i = 0Z; i < smallestpathlength; i++) {
@@ -440,7 +444,6 @@ auto find_decaypaths(const std::span<const int> custom_zlist, const std::span<co
   return localdecaypaths;
 }
 
-// remove nuclides that are not a standard or custom input-specified nuclide, or connected to these by decays
 // true if any decay path takes an alpha decay step. The alpha decay steps produce He4 outside of the
 // decay paths (see decay_daughters_z_a_prob), so the network then needs the He4 nuclide.
 [[nodiscard]] auto decaypaths_produce_he4() -> bool {
@@ -449,6 +452,7 @@ auto find_decaypaths(const std::span<const int> custom_zlist, const std::span<co
   });
 }
 
+// remove nuclides that are not a standard or custom input-specified nuclide, or connected to these by decays
 void filter_unused_nuclides(const std::span<const int> custom_zlist, const std::span<const int> custom_alist,
                             const std::vector<Nuclide>& standard_nuclides) {
   const bool keep_he4 = decaypaths_produce_he4();
@@ -492,8 +496,60 @@ void filter_unused_nuclides(const std::span<const int> custom_zlist, const std::
   }
 }
 
+// the chain-end abundance per unit chain-top initial abundance for one decaypath at the given time, with the
+// chain end treated as stable (so it counts the fraction of chain-top nuclei that decayed past the chain end).
+// With useexpansionfactor each decay at t_decay counts as t_decay / time, the adiabatic loss of its photon energy
+// from the decay to the given time (equation 18 of Lucy 2005, A&A, 429, 19-30, doi:10.1051/0004-6361:20041656).
+auto calc_decaypath_unitfactor(const int decaypathindex, const double time, const bool useexpansionfactor) -> double {
+  auto lambdas = decaypaths[decaypathindex].lambdas;
+  lambdas[lambdas.size() - 1] = 0.;
+  const double t_model = grid::get_t_model();
+  if (!useexpansionfactor) {
+    return calculate_decaychain(1., lambdas, time - t_model, false);
+  }
+  // calculate_decaychain() weights a decay with (t_decay - t_model) / (time - t_model). The sum with the decayed
+  // fraction gives (t_model + (t_decay - t_model)) / time = t_decay / time.
+  assert_always(time > t_model);
+  return ((t_model * calculate_decaychain(1., lambdas, time - t_model, false)) +
+          ((time - t_model) * calculate_decaychain(1., lambdas, time - t_model, true))) /
+         time;
+}
+
+// the first time at which a packet can decay. Initial packets can decay from the model snapshot time.
+[[nodiscard]] auto get_tdecaymin() -> double { return INITIAL_PACKETS_ON ? grid::get_t_model() : globals::tmin; }
+
 auto sample_decaytime(const int decaypathindex, const double tdecaymin, const double tdecaymax, rngstate_type& rngstate)
     -> double {
+  // the two times are the same for every packet, so the decayed fractions come from the cache
+  assert_always(!decaypath_fdecayed_tmin.empty());
+  assert_testmodeonly(tdecaymin == get_tdecaymin());
+  assert_testmodeonly(tdecaymax == globals::tmax);
+  const double fdecayed_tmin = decaypath_fdecayed_tmin[decaypathindex];
+  const double fdecayed_tmax = decaypath_fdecayed_tmax[decaypathindex];
+  // the fraction that decays inside the time range. calc_energy_per_massoftopnuc_decaypath() uses the same
+  // fraction for the decay energy that this decaypath releases.
+  const double fdecayed_inrange = fdecayed_tmax - fdecayed_tmin;
+
+  // The rejection method below accepts this fraction of its draws, so it needs 1 / fdecayed_inrange draws on
+  // average. A chain with a mean lifetime much longer than the time range therefore needs too many draws.
+  // The float random generator also has a shortest possible lifetime of 6e-8 mean lifetimes, which is 140000
+  // days for U238. The rejection method then accepts no draw at all and does not stop.
+  constexpr double max_mean_rejection_draws = 1e6;
+  if ((fdecayed_inrange * max_mean_rejection_draws) < 1.) {
+    // Invert the cumulative probability of the chain lifetime. This gives the same distribution as the
+    // rejection method, but it costs a root find, so the rejection method stays for the usual case.
+    const double fdecayed_sampled = std::lerp(fdecayed_tmin, fdecayed_tmax, static_cast<double>(rng_uniform(rngstate)));
+    auto num_iterations = static_cast<std::uintmax_t>(50);
+    const auto [tdecay_lower, tdecay_upper] = toms748_solve(
+        [decaypathindex, fdecayed_sampled](const double time) {
+          return calc_decaypath_unitfactor(decaypathindex, time, false) - fdecayed_sampled;
+        },
+        tdecaymin, tdecaymax, fdecayed_tmin - fdecayed_sampled, fdecayed_tmax - fdecayed_sampled, ftol<1e-12>,
+        num_iterations);
+    return std::clamp(0.5 * (tdecay_lower + tdecay_upper), std::nextafter(tdecaymin, tdecaymax),
+                      std::nextafter(tdecaymax, tdecaymin));
+  }
+
   double tdecay = -1;
   const double t_model = grid::get_t_model();
   // rejection method. draw random times with the right distribution until they are within the correct range.
@@ -508,21 +564,13 @@ auto sample_decaytime(const int decaypathindex, const double tdecaymin, const do
   return tdecay;
 }
 
-// the chain-end abundance per unit chain-top initial abundance for one decaypath at the given time, with the
-// chain end treated as stable (so it counts the fraction of chain-top nuclei that decayed past the chain end)
-auto calc_decaypath_unitfactor(const int decaypathindex, const double time, const bool useexpansionfactor) -> double {
-  auto lambdas = decaypaths[decaypathindex].lambdas;
-  lambdas[lambdas.size() - 1] = 0.;
-  return calculate_decaychain(1., lambdas, time - grid::get_t_model(), useexpansionfactor);
-}
-
 // Get the total decay power per mass [erg/s/g] for a given decaypath
 // We only count the power from the last decay in the chain to avoid double counting of decay energy (all sub paths are
 // handled separately)
 [[nodiscard]] auto get_decaypath_power_per_ejectamass(const int decaypathindex, const int nonemptymgi,
                                                       const double time) -> double {
-  // only decays at the end of the chain contributed from the initial abundance of the top of the chain are counted
-  // (these can be can be same for a chain of length one)
+  // only the decays of the last decaying nuclide, fed by the initial abundance of the chain-top nuclide, are
+  // counted. For a path with one decay, both are the same nuclide.
 
   const auto& decaypath = decaypaths[decaypathindex];
   const int nucindex_top = decaypath.nucindex[0];
@@ -554,7 +602,7 @@ auto calc_decaypath_unitfactor(const int decaypathindex, const double time, cons
 }
 
 auto write_nuclides_list() {
-  auto nuclides_file = fstream_required("nuclides.out", std::ofstream::out | std::ofstream::trunc);
+  auto nuclides_file = open_output_file("nuclides.out");
   std::println(nuclides_file, "#nucindex Z A");
   for (int nucindex = 0; nucindex < std::ssize(nuclides); nucindex++) {
     std::println(nuclides_file, "{} {} {}", nucindex, get_nuc_z(nucindex), get_nuc_a(nucindex));
@@ -588,9 +636,7 @@ auto write_nuclides_list() {
   if (nucindex >= 0) {
     return nucindex;
   }
-  printlnlog("[error] nuclide Z={} A={} not found in nuclide list", z, a);
-  assert_always(false);  // nuclide not found
-  return -1;
+  fatal_crash("nuclide Z={} A={} not found in nuclide list", z, a);
 }
 
 // check if nuclide exists in the simulation
@@ -609,15 +655,14 @@ void set_nucdecayenergygamma(const int nucindex, const double value) { nuclides[
 // convert something like Ni56 to integer 28
 auto get_nucstring_z(const std::string& strnuc) -> int {
   std::string elcode = strnuc;
-  std::erase_if(elcode, &isdigit);
+  std::erase_if(elcode, [](const unsigned char c) { return std::isdigit(c) != 0; });
 
   for (int z = 0; z <= Z_MAX; z++) {
     if (elcode == get_elname(z)) {
       return z;
     }
   }
-  assert_always(false);  // could not match to an element
-  return -1;
+  fatal_crash("Could not match the nuclide string '{}' to an element", strnuc);
 }
 
 // convert something like Ni56 to integer 56
@@ -625,7 +670,7 @@ auto get_nucstring_a(const std::string& strnuc) -> int {
   // find first digit character
   auto i = 0ZU;
   for (; i < strnuc.length(); i++) {
-    if (isdigit(strnuc[i]) != 0) {
+    if (std::isdigit(static_cast<unsigned char>(strnuc[i])) != 0) {
       break;
     }
   }
@@ -698,7 +743,7 @@ void add_standard_nuclides() {
 
 // add the nuclides with beta-minus decay data from betaminusdecays.txt
 void read_betaminus_decaydata() {
-  auto fbetaminus = fstream_required("betaminusdecays.txt", std::ios::in);
+  auto fbetaminus = istream_required("betaminusdecays.txt");
   std::string line;
   while (get_noncommentline(fbetaminus, line)) {
     // energies are averages per decay of the parent nuclide, summed over its decay branches, as
@@ -735,7 +780,7 @@ void read_betaminus_decaydata() {
 // add or update the nuclides with alpha decay data from alphadecays.txt (also ensures that He4
 // exists as a decay product)
 void read_alpha_decaydata() {
-  auto falpha = fstream_required("alphadecays.txt", std::ios::in);
+  auto falpha = istream_required("alphadecays.txt");
   std::string line;
   if (!nuc_exists(2, 4)) {
     nuclides.push_back({.z = 2, .a = 4, .meanlife = -1});
@@ -808,7 +853,7 @@ void read_alpha_decaydata() {
 
 // add the nuclides with spontaneous fission decay data from fissiondecays.txt
 void read_spontfission_decaydata() {
-  auto ffission = fstream_required("fissiondecays.txt", std::ios::in);
+  auto ffission = istream_required("fissiondecays.txt");
   std::string line;
   while (get_noncommentline(ffission, line)) {
     int z_in = -1;
@@ -839,7 +884,7 @@ void read_spontfission_decaydata() {
 // read the fission product tables from fissionproducts_GEF_100keV.txt for the spontaneous
 // fission nuclides that are in use
 void read_fissionproduct_data() {
-  auto ffission_products = fstream_required("fissionproducts_GEF_100keV.txt", std::ios::in);
+  auto ffission_products = istream_required("fissionproducts_GEF_100keV.txt");
   std::string line;
   while (get_noncommentline(ffission_products, line)) {
     int z_parent = -1;
@@ -1081,14 +1126,19 @@ auto get_modelcell_endecay_per_mass(const int nonemptymgi,
 // during the simulation time [(tmodel if initial packets else tmin) to tmax]. Multiplying by a cell's initial
 // mass fraction of the chain-top nuclide gives the decay energy per unit ejecta mass
 auto calc_energy_per_massoftopnuc_decaypath() -> std::vector<double> {
-  const auto time_min_decay = INITIAL_PACKETS_ON ? grid::get_t_model() : globals::tmin;
   const auto num_decaypaths = get_num_decaypaths();
+  // The Bateman sum is expensive, and sample_decaytime() needs the same two values for every packet. Fill the
+  // cache here, because this function runs once and immediately before packet_init() places the pellets.
+  decaypath_fdecayed_tmin.resize(num_decaypaths);
+  decaypath_fdecayed_tmax.resize(num_decaypaths);
   std::vector<double> energy_per_massoftopnuc(num_decaypaths);
   for (int decaypathindex = 0; decaypathindex < num_decaypaths; decaypathindex++) {
     const auto& decaypath = decaypaths[decaypathindex];
+    decaypath_fdecayed_tmin[decaypathindex] = calc_decaypath_unitfactor(decaypathindex, get_tdecaymin(), false);
+    decaypath_fdecayed_tmax[decaypathindex] = calc_decaypath_unitfactor(decaypathindex, globals::tmax, false);
     // fraction of chain-top nuclei that decay past the end of the chain between the two times
-    const double fdecayed = std::max(0., calc_decaypath_unitfactor(decaypathindex, globals::tmax, false) -
-                                             calc_decaypath_unitfactor(decaypathindex, time_min_decay, false));
+    const double fdecayed =
+        std::max(0., decaypath_fdecayed_tmax[decaypathindex] - decaypath_fdecayed_tmin[decaypathindex]);
     energy_per_massoftopnuc[decaypathindex] =
         decaypath.branchproduct * fdecayed * get_decaypath_lastdecayenergy(decaypath) / nucmass(decaypath.nucindex[0]);
     assert_always(std::isfinite(energy_per_massoftopnuc[decaypathindex]));
@@ -1097,8 +1147,10 @@ auto calc_energy_per_massoftopnuc_decaypath() -> std::vector<double> {
 }
 
 // decay energy per unit mass of the chain-top nuclide [erg/(g of chain-top nuclide)] released by each decaypath
-// from time t_model to tstart, weighted for the photon energy loss due to expansion between the time of decay and
-// tstart (equation 18 of Lucy 2005)
+// between t_model and tstart, weighted for the adiabatic loss of the photon energy between the decay and tstart.
+// A decay at t_decay keeps t_decay / tstart of its energy, the same law as update_pellet() applies to a pellet
+// that decays before tmin. The snapshot energy q of the model file is not part of this: it already includes the
+// losses before t_model.
 auto calc_energy_per_massoftopnuc_decaypath_withexpansion(const double tstart) -> std::vector<double> {
   const auto num_decaypaths = get_num_decaypaths();
   std::vector<double> energy_per_massoftopnuc(num_decaypaths);
@@ -1210,7 +1262,8 @@ auto get_global_etot_tmodel_tinf() -> double {
                   get_decaypath_lastdecayenergy(decaypath));
   }
   assert_always(std::isfinite(etot_tinf));
-  assert_always(etot_tinf > 0.);
+  // a model with only initial thermal energy has no decay energy
+  assert_always(etot_tinf >= 0.);
   return etot_tinf;
 }
 
@@ -1352,7 +1405,6 @@ void output_isotopic_densities(std::ostream& estimators_file, const int nonempty
 
   const double otherstablemassfrac = grid::get_elem_untrackedstable_initmassfrac(nonemptymgi, element);
   if (otherstablemassfrac > 0) {
-    // factor to convert convert mass fraction to number density
     const double meannucmass = globals::elements[element].initstablemeannucmass;
     const double otherstable_numberdens = otherstablemassfrac / meannucmass * grid::get_rho(nonemptymgi);
     std::print(estimators_file, "  {}_otherstable: {:9.3e}", get_elname(atomic_number), otherstable_numberdens);
@@ -1414,7 +1466,7 @@ void setup_radioactive_pellet(const double e_cmf_per_packet, const int nonemptym
   const int decaypathindex = decaychannelindex;
 
   // possibly allow decays before the first timestep
-  const double tdecaymin = !INITIAL_PACKETS_ON ? globals::tmin : grid::get_t_model();
+  const double tdecaymin = get_tdecaymin();
 
   if constexpr (UNIFORM_PELLET_ENERGIES) {
     pkt.tdecay = sample_decaytime(decaypathindex, tdecaymin, globals::tmax, get_rngstate(pkt));
@@ -1428,9 +1480,8 @@ void setup_radioactive_pellet(const double e_cmf_per_packet, const int nonemptym
     // each random number maps to, and hence every result.
     pkt.tdecay = std::lerp(globals::tmax, tdecaymin, rng_uniform(get_rngstate(pkt)));
 
-    // we need to scale the packet energy up or down according to decay rate at the randomly selected time.
-    // e_cmf_average is the average energy per packet for this cell and decaypath, so we scale this up or down
-    // according to: decay power at this time relative to the average decay power
+    // scale the packet energy by the decay power at the sampled time relative to avgpower, the mean decay power
+    // of this cell and decaypath over the time range
     const double avgpower = grid::get_modelinitnucmassfrac(mgi, decaypath_topnucindex[decaypathindex]) *
                             energy_per_massoftopnuc_decaypath[decaypathindex] / (globals::tmax - tdecaymin);
     assert_always(avgpower > 0.);
@@ -1451,7 +1502,7 @@ void setup_radioactive_pellet(const double e_cmf_per_packet, const int nonemptym
 
   pkt.originated_from_particlenotgamma = (rng_uniform(get_rngstate(pkt)) >= engamma / (engamma + enparticle));
   if (pkt.originated_from_particlenotgamma) {
-    // particle (positron, electron, or alpha) emitted
+    // particle emitted (positron, electron, alpha particle, or fission fragments)
     pkt.nu_cmf = enparticle / H;
   } else {
     // gamma ray emitted

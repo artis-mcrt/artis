@@ -16,6 +16,7 @@
 #include <string>
 #include <string_view>
 #include <system_error>
+#include <utility>
 #include <vector>
 
 #include "constants.h"
@@ -23,6 +24,7 @@
 #include "packet.h"
 
 void read_atomicdata();
+[[nodiscard]] auto read_start_timestep_and_continue_flag() -> std::pair<int, bool>;
 void read_parameterfile(std::span<Packet> packets);
 void update_parameterfile(int nts);
 void setup_timesteps();
@@ -46,8 +48,8 @@ void setup_timesteps();
 //
 // The function uses two tolerances, because the reference splitting is not always in the same term:
 //  - The splitting below the level is in the same term. The interval rule is accurate to approximately a
-//    factor of two here. The largest error in the ARTIS data is 4.4, for Ni I 3F4 with 3D3,2 between its
-//    levels.
+//    factor of two here. The smallest departure at a term boundary in the ARTIS data is 4.4, for Ni I 3F4 with
+//    3D3,2 between its levels, so the tolerance must stay below that.
 //  - The splitting above the level is the reference only for the second level of the ion. If the ground
 //    term has one level (for example 4S3/2, 6S5/2 or 7S3), this reference is the fine structure of the next
 //    term. The fine structure is much smaller than the distance between the two terms, thus these
@@ -214,18 +216,24 @@ inline auto get_noncommentline(std::istream& input, std::string& line) -> bool {
   }
 }
 
+// the characters that separate two tokens of a line. A reader that tests for a token of its own must use this
+// set, so that it agrees with parse_next_token about where a line ends.
+constexpr std::string_view token_whitespace = " \t\r";
+
 // parse the next whitespace-delimited token of the line as a number and advance past it.
 // Return false if there is no token left or the token is not fully numeric.
 // Accepts the same number spellings as stream extraction: leading plus signs are allowed, magnitudes below the
-// range of T (or of double) read as zero, and out-of-range magnitudes and nan/inf spellings are rejected
-template <typename T>
+// range of T (or of double) read as zero, and out-of-range magnitudes are rejected.
+// ALLOW_NAN selects whether the nan spelling is a value or an error. Only packets*.out holds a nan, in the
+// emission positions of a packet that never emitted. No file of this code holds an inf, so an inf token is
+// always an error.
+template <bool ALLOW_NAN = false, typename T>
 [[nodiscard]] inline auto parse_next_token(std::string_view& remainder, T& value) -> bool {
-  constexpr std::string_view whitespace = " \t\r";
-  const auto tokenstart = remainder.find_first_not_of(whitespace);
+  const auto tokenstart = remainder.find_first_not_of(token_whitespace);
   if (tokenstart == std::string_view::npos) {
     return false;
   }
-  const auto tokenend = std::min(remainder.find_first_of(whitespace, tokenstart), remainder.size());
+  const auto tokenend = std::min(remainder.find_first_of(token_whitespace, tokenstart), remainder.size());
   auto token = remainder.substr(tokenstart, tokenend - tokenstart);
   // stream extraction accepted a leading plus sign, but from_chars does not. Only remove the plus if it is not
   // followed by another sign, so that malformed tokens like "+-0" stay rejected
@@ -240,8 +248,13 @@ template <typename T>
   }
   if constexpr (std::floating_point<T>) {
     if (ec == std::errc{} && !std::isfinite(value)) {
-      // reject nan and inf spellings, which from_chars accepts but stream extraction did not
-      return false;
+      // from_chars accepts the nan and inf spellings, but stream extraction did not
+      if constexpr (!ALLOW_NAN) {
+        return false;
+      }
+      if (!std::isnan(value)) {
+        return false;
+      }
     }
     if (ec == std::errc::result_out_of_range) {
       // a syntactically valid number outside the range of T. Stream extraction stored zero for underflow (even

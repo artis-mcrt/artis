@@ -57,7 +57,7 @@ struct Ion {
 };
 
 struct Element {
-  std::span<Ion> ions;  // subspan of the allions array for this element
+  std::span<Ion> ions;  // subspan of the allions array of input.cc
   int anumber{-1};  // Atomic number
   int lowest_ionstage{-1};  // ionisation stage (charge + 1) of ion 0 for this element
   int uniqueionindexstart{-1};  // uniqueionindex of the lowest ionisation stage of this element
@@ -73,7 +73,8 @@ namespace globals {
 struct TimeStep {
   double start{0.};  // time at start of this timestep. [s]
   double width{0.};  // Width of timestep. [s]
-  double mid{0.};  // Mid time in step - computed logarithmically. [s]
+  double mid{0.};  // mid time of the timestep [s]: the geometric mid of a logarithmic step, the arithmetic mid of a
+                   // constant step
   double gamma_dep{0.};  // cmf gamma ray energy deposition from packet trajectories [erg]
   ALIGNAS_AVOID_FALSE_SHARING double gamma_dep_discrete{
       0.,
@@ -105,11 +106,11 @@ struct TimeStep {
       // write_deposition_file() uses this same member in both the total deposition and the total emission sums.
   double eps_spfission_ana_power{0.};  // cmf spontaneous fission energy generation rate analytical [erg/s]
   ALIGNAS_AVOID_FALSE_SHARING double gamma_emission{0.};  // gamma decay energy generation in this timestep [erg]
-  double qdot_betaminus{0.};  // energy generation from beta-minus decays (including neutrinos) [erg/s/g]
-  double qdot_alpha{0.};  // energy generation from alpha decays (including neutrinos) [erg/s/g]
-  double qdot_spfission{0.};  // energy generation from spontaneous fission decays (including neutrinos) [erg/s/g]
-  double qdot_total{0.};  // energy generation from all decays (including neutrinos) [erg/s/g]
-  ALIGNAS_AVOID_FALSE_SHARING int pellet_decays{0};  // Number of pellets that decay in this time step.
+  double qdot_betaminus{0.};  // energy generation rate of the beta-minus decays (with neutrinos) [erg/s]
+  double qdot_alpha{0.};  // energy generation rate of the alpha decays (with neutrinos) [erg/s]
+  double qdot_spfission{0.};  // energy generation rate of the spontaneous fission decays (with neutrinos) [erg/s]
+  double qdot_total{0.};  // energy generation rate of all decays (with neutrinos) [erg/s]
+  ALIGNAS_AVOID_FALSE_SHARING int pellet_decays{0};  // Number of pellets that decay in this timestep.
 };
 inline std::vector<TimeStep> timesteps;
 
@@ -130,12 +131,6 @@ inline std::vector<double> bfheatingestimator{};
 
 inline std::vector<double> ffheatingestimator{};
 inline std::vector<double> colheatingestimator{};
-#ifdef DO_TITER
-inline std::vector<double> gammaestimator_save{};
-inline std::vector<double> bfheatingestimator_save{};
-inline std::vector<double> ffheatingestimator_save{};
-inline std::vector<double> colheatingestimator_save{};
-#endif
 
 inline int nprocs_exspec{1};
 
@@ -157,9 +152,6 @@ inline AllTransitions alltrans;
 
 struct LevelAutoion {
   float autoion_A;  // Autoionisation A-value
-  int elementindex;  // index (not atomic number) for the element involved
-  int lowerionindex;
-  int lowerlevelindex;  // this will be for a level index of the lower ion
   int upperionindex;
   int upperlevelindex;  // this will be for a level index of the upper ion.
                         // Note: level of the lower ion should also be at higher energy than of the higher ion
@@ -188,9 +180,6 @@ struct AllLevels {
   // Number of autoionizing transition from this level
   MPI_shared_array<const int> nautoiondowntrans;
 
-  // Number of di-el captures up from this level
-  MPI_shared_array<const int> nautoionuptrans;
-
   // index into globals::allautoion for first autoion from this level
   MPI_shared_array<const int> allautoion_start;
 
@@ -218,7 +207,6 @@ struct AllLevels {
 inline AllLevels alllevels{};
 
 inline std::vector<Element> elements;
-inline MPI_shared_array<Ion> allions;
 
 struct TransitionLines {
   MPI_shared_array<const double> nu;  // Frequency of the line transition
@@ -256,8 +244,8 @@ struct AllCont {
   // index into the ground-level continuum estimator arrays, or -1 for continua that do not feed them
   // (only a ground level's first photoionisation target does). This is the ion's own
   // get_groundcontindex() slot, the same slot where update_grid.cc normalises and applies the
-  // estimators. setup_phixs_list() checks that the nearest-edge search agrees for every ground
-  // level, so a dataset with two identical ground thresholds stops at startup.
+  // estimators. Two ions can have an identical ground threshold, so the ground level does not use
+  // the nearest-edge search.
   MPI_shared_array<const int> groundcontestimindex;
   MPI_shared_array<const int> bfestimindex;
 };
@@ -265,8 +253,6 @@ inline AllCont allcont{};
 
 // Used when USE_LUT_PHOTOION or USE_ION_BFHEATING_ESTIMATORS is enabled
 inline MPI_shared_array<const double> groundcont_nu_edge{};
-inline MPI_shared_array<const int> groundcont_element{};
-inline MPI_shared_array<const int> groundcont_ion{};
 
 inline int nbfcontinua{-1};  // number of bf-continua
 inline int nbfcontinua_ground{-1};  // number of bf-continua from ground levels
@@ -275,8 +261,8 @@ inline int NPHIXSPOINTS{-1};  // number of photoionisation cross-section points 
 inline double NPHIXSNUINCREMENT{-1};  // frequency increment between points as a fraction of nu_edge
 
 // A cell cache slot holds pre-calculated quantities for a single model grid cell. The large per-cell
-// arrays are non-owning views (spans) into shared-memory backing storage held in
-// globals::cellcache_backing, with each slot viewing its own sub-range.
+// arrays are non-owning views (spans) into shared-memory backing storage that sn3d.cc owns
+// (cellcache_backing), with each slot viewing its own sub-range.
 struct CellCache {
   int nonemptymgi{-1};  // non-empty model grid index for this cache slot
   std::span<double> cooling_contrib;  // Cooling contributions by the different processes.
@@ -326,24 +312,6 @@ struct CellCache {
 };
 inline std::vector<CellCache> cellcache{};
 
-// Backing storage for the cell cache arrays, allocated in node-shared memory. When cellcache_singleslot
-// is false, each array spans every non-empty cell and cellcache[nonemptymgi] views the relevant sub-range,
-// shared by all MPI ranks on the node. When it is true, each array holds one reusable slot per node rank
-// and each rank uses only its own cellcache[rank_in_node] view.
-struct CellCacheBacking {
-  MPI_shared_array<double> cooling_contrib;
-  MPI_shared_array<double> alllevels_pops;
-  MPI_shared_array<double> alllevels_maprocessrates;
-  MPI_shared_array<double> allmacroatomictransitions;
-  MPI_shared_array<double> allcont_modified_departureratios;
-  MPI_shared_array<double> allcont_stimfactor_edgepart;
-  MPI_shared_array<double> allcont_nnlevel;
-  MPI_shared_array<std::uint64_t> allcont_keepbits;
-  MPI_shared_array<double> chi_ff_nnionpart;
-  MPI_shared_array<double> allphixstargets_corrphotoioncoeff;
-};
-inline CellCacheBacking cellcache_backing{};
-
 inline double vmax{NAN};
 inline double rmax{NAN};
 inline double tmax{-1};
@@ -352,7 +320,7 @@ inline double tmin{-1};
 inline int ntimesteps{-1};
 inline int timestep_initial{-1};
 inline int timestep_finish{-1};
-inline int timestep{-1};  // Current time step during the simulation
+inline int timestep{-1};  // Current timestep during the simulation
 
 inline int total_nlte_levels{0};
 
@@ -360,19 +328,9 @@ inline bool simulation_continued_from_saved{false};
 inline int num_lte_timesteps{-1};
 inline double optical_depth_is_thick{NAN};
 inline int num_grey_timesteps{-1};
-inline int n_titer{1};
 inline bool lte_iteration{false};
 
 }  // namespace globals
-
-// DO_TITER mode: average an estimator with its saved value from the previous timestep iteration
-// (if one exists) and store the result as the new saved value.
-inline void titer_average(double& value, double& saved) {
-  if (saved >= 0) {
-    value = (value + saved) / 2;
-  }
-  saved = value;
-}
 
 [[nodiscard]] inline auto get_max_threads() -> int {
 #ifdef _OPENMP

@@ -5,11 +5,13 @@ platforms = ["linux-64", "osx-arm64"]
 version = "0.1.0"
 
 [tasks.make]
-cmd = "make --check-symlink-times --jobs=$(nproc --all)"
+cmd = "make --check-symlink-times --jobs=$(nproc)"
 
 [dependencies]
 openmpi = ">=5.0.8"
 gxx = ">=15.1.0"
+# optional: the programs then read zstd compressed input files
+zstd = ">=1.5"
 # clangxx = ">=22.1.0"
 # lld = ">=22.1.0"
 

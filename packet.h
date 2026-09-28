@@ -12,7 +12,8 @@
 
 #include "constants.h"
 
-// Packet state in the indivisible energy packet scheme of Lucy (2002), doi:10.1051/0004-6361:20011756.
+// Packet state in the indivisible energy packet scheme of Lucy (2002), A&A, 384, 725-735,
+// doi:10.1051/0004-6361:20011756.
 // do_packet() dispatches on this. Every packet starts as TYPE_RADIOACTIVE_PELLET; those that reach the grid
 // surface end as TYPE_ESCAPE, while packets still in flight when the run ends keep whatever type they held,
 // which is why exspec filters on TYPE_ESCAPE:
@@ -49,7 +50,8 @@ enum packet_type : int {
   TYPE_KPKT = 12,
 
   // Never stored in Packet::type: do_macroatom() runs to deactivation within one call. Used only as a
-  // provenance tag to vpkt::trace_vpkts(), marking an emission as a macro-atom deactivation.
+  // provenance tag to vpkt::trace_vpkts(), marking an emission as a macro-atom deactivation or, with
+  // RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY, as a line scattering.
   TYPE_MA = 13,
 
   TYPE_NTLEPTON_DEPOSITED = 20,  // awaiting partition into heating/ionisation/excitation by nonthermal.cc
@@ -131,17 +133,19 @@ struct Packet {
   // thermal pool, except under RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY, where the thermal frequency
   // redistribution resets it to EMTYPE_NOTSET.
   int emissiontype{EMTYPE_NOTSET};
-  Vec3d em_pos{NAN, NAN, NAN};  // Position of the last emission (x,y,z).
+  // Position of the last emission (x,y,z). A scattering also sets it: electron scattering of an r-packet, and
+  // Compton scattering of a gamma packet.
+  Vec3d em_pos{NAN, NAN, NAN};
   float em_time{-1.};  // [s]
   int absorptiontype{0};  // records linelistindex of the last absorption
                           // or a negative absorption_type enum value
   double absorptionfreq{};  // records nu_rf of packet at last absorption
   double stokes_q{0.};  // normalised Stokes q = Q/I
   double stokes_u{0.};  // normalised Stokes u = U/I
-  // The last emission out of the THERMAL POOL. Set when a k-packet emits and then carried unchanged through
-  // subsequent scatterings and macro-atom deactivations, so it attributes escaped energy to where it was
-  // thermalised rather than to the last surface it scattered off. Reset to EMTYPE_NOTSET at every site that
-  // returns the packet to the thermal pool, so the next radiative emission starts a fresh record.
+  // The last emission out of the THERMAL POOL. A k-packet emission sets it. Scatterings and macro-atom
+  // deactivations keep it, so it gives the escaped energy to the place of thermalisation, not to the last
+  // scattering. Each site that hands the packet from the thermal pool to a macro-atom sets it to EMTYPE_NOTSET,
+  // so the next radiative emission starts a fresh record.
   int trueemissiontype = EMTYPE_NOTSET;
   Vec3d trueem_pos{NAN, NAN, NAN};
   float trueem_time{-1.};  // last thermal emission time [s]
@@ -152,7 +156,7 @@ struct Packet {
   double tdecay{-1.};  // Time at which pellet decays
   int number{-1};  // A unique number to identify the packet
   bool originated_from_particlenotgamma{false};  // first packet type after pellet decay
-  int pellet_decaytype{-1};  // index into decay::decaytypes
+  int pellet_decaytype{-1};  // decay::DecayType value of the pellet decay, or -1 for the initial-energy channel
   int pellet_nucindex{-1};  // nuclide index of the decaying species
 
   auto operator<=>(const Packet& rhs) const = default;
@@ -164,8 +168,8 @@ constexpr DEVICE_FUNC auto get_rngstate([[maybe_unused]] Packet& packet) -> rngs
 inline auto get_rngstate() -> rngstate_type& {
   // Every thread lazily seeds its own generator from a random source, so that OpenMP/stdpar worker
   // threads (which never run the seeding code in read_parameterfile) do not all share the identical
-  // default-seeded sequence. The main thread is re-seeded deterministically in read_parameterfile()
-  // to keep single-threaded runs reproducible.
+  // default-seeded sequence. The main thread is re-seeded deterministically in read_parameterfile(), and a
+  // resumed job restores its state in read_packet_restart_file(), to keep single-threaded runs reproducible.
   thread_local rngstate_type rng{static_cast<std::uint32_t>(get_rng_random_seed())};
   return rng;
 }
@@ -176,7 +180,7 @@ inline auto get_rngstate([[maybe_unused]] const Packet& packet) -> rngstate_type
 void packet_init(std::span<Packet> packets);
 auto read_text_packets(const std::string& filename) -> std::vector<Packet>;
 void write_text_packets(const std::string& filename, std::span<const Packet> packets);
-void read_temp_packetsfile(int timestep, int my_rank, std::vector<Packet>& packets);
-void write_temp_packetsfile(int timestep, int my_rank, std::span<const Packet> packets);
+void read_packet_restart_file(int timestep, std::vector<Packet>& packets);
+void write_packet_restart_file(int timestep, std::span<const Packet> packets);
 
 #endif  // PACKET_H

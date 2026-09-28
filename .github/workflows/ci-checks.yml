@@ -30,7 +30,7 @@ jobs:
                   wget https://apt.llvm.org/llvm.sh
                   chmod +x llvm.sh
                   sudo ./llvm.sh 23
-                  sudo apt-get install -y clang-tidy-23 libc++-23-dev libc++abi-23-dev openmpi-bin libopenmpi-dev
+                  sudo apt-get install -y clang-tidy-23 libc++-23-dev libc++abi-23-dev openmpi-bin libopenmpi-dev libzstd-dev
                   echo "/usr/lib/llvm-23/bin" >> $GITHUB_PATH
                   echo "OMPI_CXX=/usr/lib/llvm-23/bin/clang++" >> $GITHUB_ENV
                   echo "LIBCXX=/usr/lib/llvm-23/include/c++/v1" >> $GITHUB_ENV
@@ -62,12 +62,11 @@ jobs:
                   brew install cppcheck
                   echo "$(brew --prefix cppcheck)/bin" >> $GITHUB_PATH
                   cp artisoptions_nltenebular.h artisoptions.h
-                  make clean
 
             - name: Run cppcheck
               run: |
                   cppcheck --version
-                  cppcheck --force --error-exitcode=1 --language=c++ -i third_party --enable=all --inconclusive --inline-suppr --suppress=knownConditionTrueFalse --suppress=redundantAssignment --suppress=missingIncludeSystem --suppress=unusedFunction --suppress=useStlAlgorithm --check-level=exhaustive  -U__NVCOMPILER .
+                  cppcheck -j$(nproc) --force --error-exitcode=1 --language=c++ -i third_party --enable=all --inconclusive --inline-suppr --suppress=knownConditionTrueFalse --suppress=missingIncludeSystem --suppress=unusedFunction --suppress=useStlAlgorithm --check-level=exhaustive  -U__NVCOMPILER .
 
     compile:
         strategy:
@@ -89,9 +88,6 @@ jobs:
             - name: Install gcc
               if: matrix.compiler.name == 'gcc' && matrix.compiler.ver >= 16
               run: |
-                  sudo apt-get update
-                  sudo apt-get install -y --no-install-recommends software-properties-common
-                  sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
                   sudo apt-get update
                   sudo apt-get install -y --no-install-recommends gcc-${{ matrix.compiler.ver }} g++-${{ matrix.compiler.ver }}
                   sudo update-alternatives \
@@ -115,10 +111,10 @@ jobs:
                   echo "OMPI_CXX=clang++-${{ matrix.compiler.ver }}" >> $GITHUB_ENV
                   echo "LDFLAGS=-L/usr/lib/llvm-${{ matrix.compiler.ver }}/lib" >> $GITHUB_ENV
 
-            - name: Install Open MPI
+            - name: Install Open MPI and libzstd
               run: |
                   sudo apt-get update
-                  sudo apt-get install -y --no-install-recommends openmpi-bin libopenmpi-dev
+                  sudo apt-get install -y --no-install-recommends openmpi-bin libopenmpi-dev libzstd-dev
 
             - name: Install TBB
               if: matrix.compiler.name == 'gcc'
@@ -191,7 +187,7 @@ jobs:
             - name: Install Open MPI and OpenMP
               run: |
                   brew update
-                  brew install coreutils openmpi libomp
+                  brew install coreutils openmpi libomp zstd
                   brew link --force libomp
 
                   echo "LDFLAGS=-L/opt/homebrew/opt/libomp/lib $LDFLAGS" >> $GITHUB_ENV
@@ -272,14 +268,13 @@ jobs:
               with:
                     fetch-depth: 0
 
-            - name: Install gcc
+            - name: Install libstdc++
               run: |
-                  # Ubuntu 26.04 supplies gcc-15, so this step needs no toolchain PPA
+                  # The Open MPI packages install gcc-16 in the container, but no libstdc++ for it.
+                  # clang selects the newest gcc installation, so the compilation for the device
+                  # finds no standard header, e.g. cstdlib. This package supplies those headers.
                   apt-get update
-                  apt-get install -y --no-install-recommends gcc-15 g++-15
-                  update-alternatives \
-                       --install /usr/bin/gcc gcc /usr/bin/gcc-15 100 \
-                       --slave /usr/bin/g++ g++ /usr/bin/g++-15
+                  apt-get install -y --no-install-recommends libstdc++-16-dev
 
             - name: Set MPI compiler to hipcc
               run: |
@@ -292,20 +287,22 @@ jobs:
             - name: Install Open MPI and git
               run: |
                   apt-get update
-                  apt-get install -y --no-install-recommends libopenmpi-dev openmpi-bin git
+                  apt-get install -y --no-install-recommends libopenmpi-dev openmpi-bin git libzstd-dev
                   git config --global --add safe.directory /__w/artis/artis
 
             - name: Compile classic mode STDPAR=ON GPU=ON
               run: |
                   cp -v -p artisoptions_classic.h artisoptions.h
                   make clean
-                  make STDPAR=ON GPU=ON -j$(nproc) sn3d exspec
+                  # ZSTD=ON stops the build if the probe does not find libzstd, so the job compiles the
+                  # zstd code with this compiler
+                  make STDPAR=ON GPU=ON ZSTD=ON -j$(nproc) sn3d exspec
 
             - name: Compile nebular mode STDPAR=ON GPU=ON
               run: |
                   cp -v -p artisoptions_nltenebular.h artisoptions.h
                   make clean
-                  make STDPAR=ON GPU=ON -j$(nproc) sn3d exspec
+                  make STDPAR=ON GPU=ON ZSTD=ON -j$(nproc) sn3d exspec
 
             - name: Compile nebular mode
               run: |
@@ -319,11 +316,8 @@ jobs:
         # NVIDIA's container registry serves the SDK preinstalled, avoiding the apt repository on
         # developer.download.nvidia.com, which (as of 2026-07) returns 404 for the SDK debs when
         # fetched from GitHub's runner network (same approach as the AMD ROCm job above).
-        # 26.1 is the previously-validated SDK version: 26.5's bundled stdexec headers fail to
-        # compile with its own frontend in -stdpar=gpu mode ("operator= has already been declared"
-        # in include-stdexec/stdexec/__detail/__any.hpp)
         container:
-            image: nvcr.io/nvidia/nvhpc:26.1-devel-cuda13.1-ubuntu24.04
+            image: nvcr.io/nvidia/nvhpc:26.5-devel-cuda13.2-ubuntu24.04
         steps:
             - uses: actions/checkout@v7
               with:
@@ -331,11 +325,9 @@ jobs:
 
             - name: Install gcc
               run: |
-                  apt-get update
-                  apt-get install -y --no-install-recommends software-properties-common
-                  add-apt-repository -y ppa:ubuntu-toolchain-r/test
-                  apt-get update
+                  # Ubuntu 24.04 supplies gcc-14, so this step needs no toolchain PPA.
                   # gfortran-14 completes the toolchain that nvc++ validates when passed --gcc-toolchain
+                  apt-get update
                   apt-get install -y --no-install-recommends gcc-14 g++-14 gfortran-14
                   update-alternatives \
                        --install /usr/bin/gcc gcc /usr/bin/gcc-14 100 \
@@ -351,20 +343,49 @@ jobs:
 
             - name: Install Open MPI and git
               run: |
-                  apt-get install -y --no-install-recommends openmpi-bin libopenmpi-dev git
+                  apt-get install -y --no-install-recommends openmpi-bin libopenmpi-dev git libzstd-dev
                   git config --global --add safe.directory /__w/artis/artis
+
+            # nvc++ 26.5 stops with "operator= has already been declared in the current scope" in its
+            # own stdexec header. __any_ptr and __any_cptr have a using declaration for the operator=
+            # of the base class, and then declare their own operator=. The C++ rules say that the
+            # second declaration hides the first one, but the frontend takes it as a repetition.
+            # --diag_suppress and a diag_suppress pragma do not remove this error.
+            # This step deletes the two using declarations.
+            # Remove this step when the SDK compiles again.
+            - name: Correct the stdexec header of the SDK
+              run: |
+                  pattern='using __any_ptr_base<_Interface>::operator=;'
+                  # the SDK gives more than one path to this file.
+                  # One directory has the year. One directory has the version.
+                  # Resolve each path. Correct each file one time.
+                  for path in /opt/nvidia/hpc_sdk/Linux_x86_64/*/compilers/include-stdexec/stdexec/__detail/__any.hpp; do
+                      readlink -f "$path"
+                  done | sort -u | while read -r header; do
+                      [ -f "$header" ] || continue
+                      # grep gives exit status 1 for no match, which stops a step that runs with sh -e
+                      count=$(grep -c "$pattern" "$header" || true)
+                      echo "$header has ${count:-0} of these using declarations"
+                      if [ "${count:-0}" -eq 0 ]; then
+                          echo "the SDK needs no correction. Remove this step."
+                      else
+                          sed -i "/$pattern/d" "$header"
+                      fi
+                  done
 
             - name: Compile classic mode STDPAR=ON GPU=ON
               run: |
                   cp -v -p artisoptions_classic.h artisoptions.h
                   make clean
-                  make STDPAR=ON GPU=ON -j$(nproc) sn3d exspec
+                  # ZSTD=ON stops the build if the probe does not find libzstd, so the job compiles the
+                  # zstd code with this compiler
+                  make STDPAR=ON GPU=ON GPUARCH=80 ZSTD=ON -j$(nproc) sn3d exspec
 
             - name: Compile nebular mode STDPAR=ON GPU=ON
               run: |
                   cp -v -p artisoptions_nltenebular.h artisoptions.h
                   make clean
-                  make STDPAR=ON GPU=ON -j$(nproc) sn3d exspec
+                  make STDPAR=ON GPU=ON GPUARCH=80 ZSTD=ON -j$(nproc) sn3d exspec
 
             - name: Compile nebular mode STDPAR=ON
               run: |

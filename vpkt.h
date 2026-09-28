@@ -3,6 +3,8 @@
 #ifndef VPKT_H
 #define VPKT_H
 
+#include <cstddef>
+
 #include "constants.h"
 #include "packet.h"
 
@@ -12,7 +14,7 @@ void read_vpktparameterfile();
 void init(int nts, bool continued_from_saved);
 // At a physical emission or scattering event, launch an event-based virtual packet toward each configured observer,
 // propagate it through the ejecta, and accumulate its escape-probability-weighted Stokes contribution to the spectrum.
-// Bulla, Sim & Kromer (2015), doi:10.1093/mnras/stv657.
+// Bulla, Sim & Kromer (2015), MNRAS, 450, 967-981, doi:10.1093/mnras/stv657.
 void trace_vpkts(const Packet& pkt, enum packet_type type_before_rpkt);
 void write_timestep(int nts, bool is_final);
 
@@ -31,13 +33,12 @@ constexpr double VSPEC_TIMEMIN = 3 * DAY;
 constexpr double VSPEC_TIMEMAX = 8 * DAY;
 constexpr int VSPEC_TIMEBINS = 5;
 
-// number of virtual packets in a given timestep
 // separately cache-line aligned because they are incremented by all threads
 // per-rank counts of virtual packets created and escaped in the current timestep
-ALIGNAS_AVOID_FALSE_SHARING inline int nvpkt_created{0};
-ALIGNAS_AVOID_FALSE_SHARING inline int nvpkt_esc_from_rpkt{0};  // electron scattering event
-ALIGNAS_AVOID_FALSE_SHARING inline int nvpkt_esc_from_kpkt{0};  // kpkt deactivation
-ALIGNAS_AVOID_FALSE_SHARING inline int nvpkt_esc_from_macroatom{0};  // macroatom deactivation
+ALIGNAS_AVOID_FALSE_SHARING inline ptrdiff_t nvpkt_created{0};
+ALIGNAS_AVOID_FALSE_SHARING inline ptrdiff_t nvpkt_esc_from_rpkt{0};  // electron scattering event
+ALIGNAS_AVOID_FALSE_SHARING inline ptrdiff_t nvpkt_esc_from_kpkt{0};  // thermal emission
+ALIGNAS_AVOID_FALSE_SHARING inline ptrdiff_t nvpkt_esc_from_macroatom{0};  // macro-atom deactivation or line scattering
 
 inline double optical_depth_is_thick_vpkt;
 }  // namespace vpkt

@@ -1,17 +1,19 @@
 // Main program of the exspec post-processing tool: reads the packet files written by an sn3d
 // run and bins the escaped packets into spectra and light curves for each observer direction
 // bin, optionally with per-process emission and absorption contributions.
-
-#include "exspec.h"
+//
+// sn3d writes the same files at its last requested timestep. exspec makes them again from the packet files,
+// e.g. after a change of MNUBINS or of the frequency range.
 
 #include <unistd.h>
 
 #include <algorithm>
 #include <chrono>
-#include <cstddef>
+#include <cstdint>
 #include <cstdlib>
 #include <filesystem>
 #include <format>
+#include <functional>
 #include <span>
 #include <vector>
 
@@ -19,8 +21,6 @@
 #include <mpi.h>
 #pragma clang unsafe_buffer_usage end
 
-#include "artisoptions.h"
-#include "constants.h"
 #include "globals.h"
 #include "grid.h"
 #include "input.h"
@@ -29,132 +29,6 @@
 #include "sn3d.h"
 #include "spectrum_lightcurve.h"
 #include "version.h"
-
-namespace {
-
-void do_direction_bin(const int dirbin, const std::vector<std::vector<Packet>>& packets_by_rank) {
-  THREADLOCALONHOST std::vector<double> rpkt_light_curve_lum;
-  reserve_resize(rpkt_light_curve_lum, globals::ntimesteps);
-  std::ranges::fill(rpkt_light_curve_lum, 0.);
-  THREADLOCALONHOST std::vector<double> rpkt_light_curve_lumcmf;
-  reserve_resize(rpkt_light_curve_lumcmf, globals::ntimesteps);
-  std::ranges::fill(rpkt_light_curve_lumcmf, 0.);
-  THREADLOCALONHOST std::vector<double> gamma_light_curve_lum;
-  reserve_resize(gamma_light_curve_lum, globals::ntimesteps);
-  std::ranges::fill(gamma_light_curve_lum, 0.);
-  THREADLOCALONHOST std::vector<double> gamma_light_curve_lumcmf;
-  reserve_resize(gamma_light_curve_lumcmf, globals::ntimesteps);
-  std::ranges::fill(gamma_light_curve_lumcmf, 0.);
-
-  THREADLOCALONHOST Spectra rpkt_spectra_I;
-  // Set up the spectrum grid and initialise the bins to zero.
-  init_spectra(rpkt_spectra_I, NU_MIN_R, NU_MAX_R, true);
-
-  THREADLOCALONHOST Spectra rpkt_spectra_Q;
-  THREADLOCALONHOST Spectra rpkt_spectra_U;
-
-  if constexpr (POL_ON) {
-    init_spectra(rpkt_spectra_Q, NU_MIN_R, NU_MAX_R, true);
-    init_spectra(rpkt_spectra_U, NU_MIN_R, NU_MAX_R, true);
-  }
-
-  constexpr double nu_min_gamma = 0.05 * MEV / H;
-  constexpr double nu_max_gamma = 4. * MEV / H;
-  THREADLOCALONHOST Spectra gamma_spectra;
-  init_spectra(gamma_spectra, nu_min_gamma, nu_max_gamma, false);
-  assert_always(globals::nprocs_exspec > 0);
-  for (int p = 0; p < globals::nprocs_exspec; p++) {
-    const auto& pkts_thisrank = packets_by_rank[p];
-
-    int nesc_gamma = 0;
-    int nesc_rpkt = 0;
-    for (const auto& pkt : pkts_thisrank) {
-      if (pkt.type != TYPE_ESCAPE) {
-        continue;
-      }
-
-      if (pkt.escape_type == TYPE_RPKT) {
-        nesc_rpkt++;
-        add_to_lc_res(pkt, dirbin, rpkt_light_curve_lum, rpkt_light_curve_lumcmf);
-        add_to_spec_res(pkt, dirbin, rpkt_spectra_I, POL_ON ? &rpkt_spectra_Q : nullptr,
-                        POL_ON ? &rpkt_spectra_U : nullptr);
-      } else if (pkt.escape_type == TYPE_GAMMA) {
-        nesc_gamma++;
-        if (dirbin == -1) {
-          add_to_lc_res(pkt, dirbin, gamma_light_curve_lum, gamma_light_curve_lumcmf);
-          add_to_spec_res(pkt, dirbin, gamma_spectra, nullptr, nullptr);
-        }
-      }
-    }
-    if (dirbin == -1) {
-      printlnlog("  rank {}: {} escaped r-packets and {} escaped gamma-pkts", p, nesc_rpkt, nesc_gamma);
-    }
-  }
-
-  if (dirbin == -1) {
-    // all directions integrated spectra and light curves
-    write_light_curve("light_curve.out", rpkt_light_curve_lum, rpkt_light_curve_lumcmf, globals::ntimesteps);
-    write_spectra("spec.out", "emission.out", "emissiontrue.out", "absorption.out", rpkt_spectra_I,
-                  globals::ntimesteps);
-
-    if constexpr (POL_ON) {
-      write_specpol("specpol.out", "emissionpol.out", "absorptionpol.out", rpkt_spectra_I, rpkt_spectra_Q,
-                    rpkt_spectra_U);
-    }
-
-    if constexpr (KEEP_ESCAPED_GAMMAS) {
-      write_light_curve("gamma_light_curve.out", gamma_light_curve_lum, gamma_light_curve_lumcmf, globals::ntimesteps);
-      write_spectra("gamma_spec.out", "", "", "", gamma_spectra, globals::ntimesteps);
-    }
-
-    // consistency check (log only): the frequency-integrated spectrum must reproduce the light curve, minus
-    // the packets whose frequencies fall outside the spectrum's frequency range
-    for (int nts = 0; nts < globals::ntimesteps; nts++) {
-      double lum_from_spec = 0.;
-      for (ptrdiff_t nnu = 0; nnu < MNUBINS; nnu++) {
-        lum_from_spec += rpkt_spectra_I.fluxalltimesteps[(nnu * static_cast<ptrdiff_t>(globals::ntimesteps)) + nts] *
-                         rpkt_spectra_I.delta_freq[nnu];
-      }
-      // undo the flux normalisation applied in add_to_spec_res() to get back to a luminosity
-      lum_from_spec *= 4.e12 * PI * PARSEC * PARSEC;
-      const double lum_lightcurve = rpkt_light_curve_lum[nts];
-      if (lum_lightcurve > 0. && lum_from_spec > (lum_lightcurve * 1.001)) {
-        printlnlog(
-            "[warning] consistency check failed for timestep {}: frequency-integrated spec.out luminosity {:g} "
-            "[erg/s] exceeds the light_curve.out luminosity {:g} [erg/s], but the spectrum's packets should be a "
-            "subset of the light curve's packets",
-            nts, lum_from_spec, lum_lightcurve);
-      }
-    }
-
-    printlnlog("wrote the angle-averaged light curves and spectra");
-  } else {
-    // direction bin a
-    // line-of-sight dependent spectra and light curves
-
-    if (!std::filesystem::exists(outdir_resfiles)) {
-      std::filesystem::create_directory(outdir_resfiles);
-    }
-    write_light_curve(std::format("{}light_curve_res_{:02d}.out", outdir_resfiles, dirbin), rpkt_light_curve_lum,
-                      rpkt_light_curve_lumcmf, globals::ntimesteps);
-    write_spectra(std::format("{}spec_res_{:02d}.out", outdir_resfiles, dirbin),
-                  std::format("{}emission_res_{:02d}.out", outdir_resfiles, dirbin),
-                  std::format("{}emissiontrue_res_{:02d}.out", outdir_resfiles, dirbin),
-                  std::format("{}absorption_res_{:02d}.out", outdir_resfiles, dirbin), rpkt_spectra_I,
-                  globals::ntimesteps);
-
-    if constexpr (POL_ON) {
-      write_specpol(std::format("{}specpol_res_{:02d}.out", outdir_resfiles, dirbin),
-                    std::format("{}emissionpol_res_{:02d}.out", outdir_resfiles, dirbin),
-                    std::format("{}absorptionpol_res_{:02d}.out", outdir_resfiles, dirbin), rpkt_spectra_I,
-                    rpkt_spectra_Q, rpkt_spectra_U);
-    }
-
-    printlnlog("finished direction bin {} (highest bin is {})", dirbin, MABINS - 1);
-  }
-}
-
-}  // anonymous namespace
 
 auto main(int argc, char* argv[]) -> int {
   const auto sys_time_start = std::chrono::steady_clock::now();
@@ -165,6 +39,7 @@ auto main(int argc, char* argv[]) -> int {
 
   check_already_running();
 
+  // the log lines of the other ranks go nowhere
   if (globals::my_rank == 0) {
     set_log_file("exspec.txt");
   }
@@ -187,12 +62,15 @@ auto main(int argc, char* argv[]) -> int {
   printlnlog("  rank_in_node {} of [0..{}] in node {} of [0..{}]", globals::rank_in_node, globals::node_nprocs - 1,
              globals::node_id, globals::node_count - 1);
 
-  // single rank only for now
-  assert_always(globals::my_rank == 0);
-  assert_always(globals::nprocs == 1);
-
   // Read in parameters from input.txt
   read_parameterfile({});
+
+  // nprocs_exspec is the number of packet files, one for each sn3d rank
+  assert_always(globals::nprocs_exspec > 0);
+  if (globals::nprocs > globals::nprocs_exspec) {
+    fatal_crash("exspec runs with {} ranks but there are only {} packet files", globals::nprocs,
+                globals::nprocs_exspec);
+  }
 
   read_atomicdata();
 
@@ -200,23 +78,41 @@ auto main(int argc, char* argv[]) -> int {
 
   setup_timesteps();
 
-  init_spectrum_trace();  // needed for TRACE_EMISSION_ABSORPTION_REGION_ON
+  // each exspec rank reads a contiguous block of the packet files
+  const auto [firstfile, nfiles] = get_range_chunk(globals::nprocs_exspec, globals::nprocs, globals::my_rank);
+  printlnlog("{} packet files, read by {} exspec ranks", globals::nprocs_exspec, globals::nprocs);
 
-  // nprocs_exspec is the number of rank output files to process with exspec
-  // (not the number of ranks used to run exspec, which is always 1 for now)
-
-  std::vector<std::vector<Packet>> packets_by_rank;
-  reserve_resize(packets_by_rank, globals::nprocs_exspec);
-
-  for (int p = 0; p < globals::nprocs_exspec; p++) {
-    packets_by_rank[p] = read_text_packets(std::format("packets{:02d}_{:04d}.out", 0, p));
+  // one vector for each packet file
+  std::vector<std::vector<Packet>> packets_by_file;
+  packets_by_file.reserve(nfiles);
+  // the counts of each packet file, summed over the exspec ranks so that rank 0 can log every file
+  std::vector<std::int64_t> packet_count(globals::nprocs_exspec);
+  std::vector<std::int64_t> escaped_rpkt_count(globals::nprocs_exspec);
+  std::vector<std::int64_t> escaped_gamma_count(globals::nprocs_exspec);
+  for (auto sn3d_rank = firstfile; sn3d_rank < firstfile + nfiles; sn3d_rank++) {
+    packets_by_file.push_back(read_text_packets(std::format("packets/packets{:02d}_{:04d}.out", 0, sn3d_rank)));
+    const auto& packets = packets_by_file.back();
+    packet_count[sn3d_rank] = std::ssize(packets);
+    escaped_rpkt_count[sn3d_rank] = std::ranges::count_if(
+        packets, [](const Packet& pkt) { return pkt.type == TYPE_ESCAPE && pkt.escape_type == TYPE_RPKT; });
+    escaped_gamma_count[sn3d_rank] = std::ranges::count_if(
+        packets, [](const Packet& pkt) { return pkt.type == TYPE_ESCAPE && pkt.escape_type == TYPE_GAMMA; });
   }
-
-  const int dirbinend = (grid::get_modelgridtype() == GridType::SPHERICAL1D) ? 0 : MABINS;
-  // a is the escape direction angle bin
-  for (int dirbin = -1; dirbin < dirbinend; dirbin++) {
-    do_direction_bin(dirbin, packets_by_rank);
+  MPI_Allreduce_safe(packet_count, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce_safe(escaped_rpkt_count, MPI_SUM, MPI_COMM_WORLD);
+  MPI_Allreduce_safe(escaped_gamma_count, MPI_SUM, MPI_COMM_WORLD);
+  for (auto sn3d_rank = 0Z; sn3d_rank < globals::nprocs_exspec; sn3d_rank++) {
+    printlnlog("  packets{:02d}_{:04d}.out: {} packets, {} escaped r-packets and {} escaped gamma-pkts", 0, sn3d_rank,
+               packet_count[sn3d_rank], escaped_rpkt_count[sn3d_rank], escaped_gamma_count[sn3d_rank]);
   }
+  printlnlog("total: {} packets, {} escaped r-packets and {} escaped gamma-pkts",
+             std::ranges::fold_left(packet_count, 0Z, std::plus{}),
+             std::ranges::fold_left(escaped_rpkt_count, 0Z, std::plus{}),
+             std::ranges::fold_left(escaped_gamma_count, 0Z, std::plus{}));
+
+  // the index of the last timestep also selects the emission, absorption, and direction bin files
+  const std::vector<std::span<const Packet>> packet_spans_by_file(packets_by_file.begin(), packets_by_file.end());
+  write_light_curves_and_spectra(globals::ntimesteps - 1, packet_spans_by_file);
 
   const auto exspec_duration = std::chrono::duration<double>(std::chrono::steady_clock::now() - sys_time_start).count();
   printlnlog("exspec finished (took {:.1f} seconds)", exspec_duration);

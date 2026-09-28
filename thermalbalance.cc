@@ -84,14 +84,16 @@ void calculate_heating_rates(const int nonemptymgi, const float T_e, const float
   double ffheating = 0.;
 
   for (int element = 0; element < get_nelements(); element++) {
+    // every heating term of an absent element is zero
+    if (grid::get_elem_numberdens(nonemptymgi, element) <= 0.) {
+      continue;
+    }
     const int nions = get_nions(element);
     if constexpr (COL_HEAT_FROM_LEVELPOPS) {
       for (int ion = 0; ion < nions; ion++) {
         C_deexc += get_heating_ion_coll_deexc(nonemptymgi, element, ion, T_e, clumpednne);
       }
     }
-
-    // Collisional heating: recombination to lower ionisation stage (not included)
 
     // Bound-free heating (renormalised analytical calculation)
     for (int ion = 0; ion < nions - 1; ion++) {
@@ -124,17 +126,28 @@ void calculate_heating_rates(const int nonemptymgi, const float T_e, const float
 // NB: this is not a pure function of T_e. Evaluating it stores T_e in the grid and re-solves the cell's
 // ionisation balance, populations and nne at that temperature, so the cell is left in the state belonging
 // to the last T_e passed in. call_T_e_finder() relies on this and re-evaluates at the final T_e.
+// With LTEPOP_EXCITATION_USE_TJ false, the ionisation rates of the elements without NLTE levels depend on T_e. The
+// function calculates them again when T_e moves by more than 10 percent from T_e_last_gamma_update, the T_e of their
+// last calculation. It also calculates them when force_gamma_update is set. It calculates the partition functions of
+// these elements at every T_e.
 auto T_e_eqn_heating_minus_cooling(const double T_e, int nonemptymgi, const double t_current,
                                    HeatingCoolingRates& heatingcoolingrates,
-                                   const std::span<const double> bfheatingcoeffs) -> double {
+                                   const std::span<const double> bfheatingcoeffs, double& T_e_last_gamma_update,
+                                   const bool force_gamma_update) -> double {
   const auto fT_e = static_cast<float>(T_e);
+  const bool update_gamma = force_gamma_update || std::abs(T_e - T_e_last_gamma_update) > 0.1 * T_e_last_gamma_update;
+  if (update_gamma) {
+    T_e_last_gamma_update = T_e;
+  }
+
+  // Set new T_e guess for the current cell and update populations
+  grid::Te_allcells[nonemptymgi] = fT_e;
 
   if constexpr (!LTEPOP_EXCITATION_USE_TJ) {
-    if (std::abs((T_e / grid::Te_allcells[nonemptymgi]) - 1.) > 0.1) {
-      grid::Te_allcells[nonemptymgi] = fT_e;
-      for (int element = 0; element < get_nelements(); element++) {
-        if (!elem_has_nlte_levels(element)) {
-          // recalculate the Gammas using the current level populations
+    for (int element = 0; element < get_nelements(); element++) {
+      if (!elem_has_nlte_levels(element)) {
+        if (update_gamma) {
+          // the ionisation rates from the current level populations
           const int nions = get_nions(element);
           for (int ion = 0; ion < nions - 1; ion++) {
             const auto groundcontindex = get_groundcontindex(element, ion);
@@ -144,12 +157,10 @@ auto T_e_eqn_heating_minus_cooling(const double T_e, int nonemptymgi, const doub
             }
           }
         }
+        calculate_cellpartfuncts(nonemptymgi, element);
       }
     }
   }
-
-  // Set new T_e guess for the current cell and update populations
-  grid::Te_allcells[nonemptymgi] = fT_e;
 
   calculate_ion_balance_nne(nonemptymgi);
   const auto nne = grid::get_nne(nonemptymgi);
@@ -219,38 +230,99 @@ auto calculate_bfheatingcoeff(const int element, const int ion, const int level,
   return bfheating;
 }
 
+// Split the heating and the cooling rate of a cell into the contribution of each ion. The thermal balance
+// solver needs only the totals, so this runs once for each cell after the solution, with the T_e and the
+// populations that the solver ended with. WRITE_ION_HEATING_COOLING_RATES writes the result to the
+// estimators file.
+void calculate_ion_heating_cooling_rates(const int nonemptymgi, HeatingCoolingRates& heatingcoolingrates,
+                                         const std::span<const double> bfheatingcoeffs) {
+  if constexpr (!WRITE_ION_HEATING_COOLING_RATES) {
+    return;
+  }
+
+  const auto nincludedions = get_includedions();
+  const auto T_e = grid::Te_allcells[nonemptymgi];
+  const auto clumpednne = grid::get_clumpfactor(nonemptymgi) * grid::get_nne(nonemptymgi);
+
+  heatingcoolingrates.heating_bf_ion.assign(nincludedions, 0.);
+  heatingcoolingrates.heating_ff_ion.assign(nincludedions, 0.);
+  heatingcoolingrates.cooling_ff_ion.assign(nincludedions, 0.);
+  heatingcoolingrates.cooling_fb_ion.assign(nincludedions, 0.);
+  heatingcoolingrates.cooling_coll_ion.assign(nincludedions, 0.);
+  if constexpr (COL_HEAT_FROM_LEVELPOPS) {
+    heatingcoolingrates.heating_coll_ion.assign(nincludedions, 0.);
+  }
+
+  // The free-free heating rate comes from a Monte Carlo estimator that holds no per-ion information.
+  // Each ion therefore gets the share that it has in the free-free opacity, which is proportional to
+  // nnion * ioncharge^2 at the T_e of the cell (see calculate_chi_ffheat_nnionpart() in rpkt.cc).
+  // heating_ff_ion holds these weights until the loop ends.
+  double ffweight_sum = 0.;
+
+  for (int uniqueionindex = 0; uniqueionindex < nincludedions; uniqueionindex++) {
+    const auto [element, ion] = get_ionfromuniqueionindex(uniqueionindex);
+
+    // Bound-free heating. The continuum belongs to the lower ion of the pair, as in
+    // calculate_heating_rates(), so the top ion of each element gets no contribution.
+    if (ion < (get_nions(element) - 1)) {
+      const int nbflevels = get_nlevels_ionising(element, ion);
+      const auto ionuniquelevelindexstart = get_ionuniquelevelindexstart(element, ion);
+      double bfheating_ion = 0.;
+      for (int level = 0; level < nbflevels; level++) {
+        bfheating_ion +=
+            calculate_levelpop(nonemptymgi, element, ion, level) * bfheatingcoeffs[ionuniquelevelindexstart + level];
+      }
+      heatingcoolingrates.heating_bf_ion[uniqueionindex] = bfheating_ion;
+    }
+
+    if constexpr (COL_HEAT_FROM_LEVELPOPS) {
+      heatingcoolingrates.heating_coll_ion[uniqueionindex] =
+          get_heating_ion_coll_deexc(nonemptymgi, element, ion, T_e, clumpednne);
+    }
+
+    const auto ioncooling = kpkt::calculate_ion_cooling_rates(nonemptymgi, element, ion);
+    heatingcoolingrates.cooling_ff_ion[uniqueionindex] = ioncooling.ff;
+    heatingcoolingrates.cooling_fb_ion[uniqueionindex] = ioncooling.fb;
+    heatingcoolingrates.cooling_coll_ion[uniqueionindex] = ioncooling.collisional;
+
+    const int ioncharge = get_ionstage(element, ion) - 1;
+    const double ffweight = (ioncharge > 0) ? pow2(ioncharge) * get_nnion(nonemptymgi, element, ion) : 0.;
+    heatingcoolingrates.heating_ff_ion[uniqueionindex] = ffweight;
+    ffweight_sum += ffweight;
+  }
+
+  // give each ion its share of the free-free heating rate
+  const double ffheating_per_weight = (ffweight_sum > 0.) ? (heatingcoolingrates.heating_ff / ffweight_sum) : 0.;
+  for (auto& ffheating_ion : heatingcoolingrates.heating_ff_ion) {
+    ffheating_ion *= ffheating_per_weight;
+  }
+}
+
 // Calculate the bound-free heating coefficient of every level in a cell. These depend only on the radiation
 // field, not on T_e or the populations, so they are computed once per cell and reused at every T_e that the
 // temperature solver tries.
 void calculate_bfheatingcoeffs(int nonemptymgi, std::span<double> bfheatingcoeffs) {
   assert_always(std::ssize(bfheatingcoeffs) == get_includedlevels());
-  const double minelfrac = 0.01;
   for (int element = 0; element < get_nelements(); element++) {
-    if (grid::get_elem_massfrac(nonemptymgi, element) <= minelfrac && !USE_ION_BFHEATING_ESTIMATORS) {
-      printlog("skipping Z={} X={:g}, ", get_atomicnumber(element), grid::get_elem_massfrac(nonemptymgi, element));
-    }
-
     const int nions = get_nions(element);
     for (int ion = 0; ion < nions; ion++) {
       const int nlevels = get_nlevels(element, ion);
       const auto levels = std::ranges::iota_view{0, nlevels};
       std::for_each(EXEC_PAR levels.begin(), levels.end(), [&](const int level) {
         double bfheatingcoeff = 0.;
-        if (grid::get_elem_massfrac(nonemptymgi, element) > minelfrac || USE_ION_BFHEATING_ESTIMATORS) {
-          const auto nphixstargets = get_nphixstargets(element, ion, level);
-          for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
-            bfheatingcoeff += calculate_bfheatingcoeff(element, ion, level, phixstargetindex, nonemptymgi);
-          }
-          assert_always(std::isfinite(bfheatingcoeff));
+        const auto nphixstargets = get_nphixstargets(element, ion, level);
+        for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
+          bfheatingcoeff += calculate_bfheatingcoeff(element, ion, level, phixstargetindex, nonemptymgi);
+        }
+        assert_always(std::isfinite(bfheatingcoeff));
 
-          if constexpr (USE_ION_BFHEATING_ESTIMATORS) {
-            const auto uniquelevelindex = get_uniquelevelindex(element, ion, level);
-            const int index_in_groundlevelcontestimator = globals::alllevels.closestgroundlevelcont[uniquelevelindex];
-            if (index_in_groundlevelcontestimator >= 0) {
-              bfheatingcoeff *=
-                  globals::bfheatingestimator[(static_cast<ptrdiff_t>(nonemptymgi) * globals::nbfcontinua_ground) +
-                                              index_in_groundlevelcontestimator];
-            }
+        if constexpr (USE_ION_BFHEATING_ESTIMATORS) {
+          const auto uniquelevelindex = get_uniquelevelindex(element, ion, level);
+          const int index_in_groundlevelcontestimator = globals::alllevels.closestgroundlevelcont[uniquelevelindex];
+          if (index_in_groundlevelcontestimator >= 0) {
+            bfheatingcoeff *=
+                globals::bfheatingestimator[(static_cast<ptrdiff_t>(nonemptymgi) * globals::nbfcontinua_ground) +
+                                            index_in_groundlevelcontestimator];
           }
         }
         bfheatingcoeffs[get_uniquelevelindex(element, ion, level)] = bfheatingcoeff;
@@ -259,37 +331,39 @@ void calculate_bfheatingcoeffs(int nonemptymgi, std::span<double> bfheatingcoeff
   }
 }
 
-// Solve the thermal-balance equation (heating = cooling) for the electron temperature T_e in a cell by
-// root-finding between MINTEMP and MAXTEMP, then store the resulting T_e in the grid. If the equation has no
-// sign change over that range, T_e is pinned to whichever bound the residual points towards. The change from
-// the previous timestep's T_e is then damped to at most a factor of two in either direction.
+// Solve the thermal balance (heating = cooling) for the electron temperature T_e of a cell between MINTEMP and
+// MAXTEMP, and store the result in the grid. If the residual has no sign change in that range, T_e gets the
+// bound that the residual points to. The function then limits the change from the T_e before this call to a
+// factor of two in each direction. solve_Te_nltepops() calls it once in each pass.
 void call_T_e_finder(const int nonemptymgi, const double t_current, HeatingCoolingRates& heatingcoolingrates,
                      const std::span<const double> bfheatingcoeffs) {
   const int modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
   const double T_e_old = grid::Te_allcells[nonemptymgi];
+  double T_e_last_gamma_update = 0.;  // zero, so that the first trial calculates the ionisation rates
   printlog("Finding T_e in cell {} at timestep {}...", modelgridindex, globals::timestep);
 
   const auto f_T_e = [&](double T_e) -> double {
-    return T_e_eqn_heating_minus_cooling(T_e, nonemptymgi, t_current, heatingcoolingrates, bfheatingcoeffs);
+    return T_e_eqn_heating_minus_cooling(T_e, nonemptymgi, t_current, heatingcoolingrates, bfheatingcoeffs,
+                                         T_e_last_gamma_update, false);
   };
 
   const double f_T_min = f_T_e(MINTEMP);
   const double f_T_max = f_T_e(MAXTEMP);
 
   const bool invalid_values = (!std::isfinite(f_T_min) || !std::isfinite(f_T_max));
+
+  double T_e{NAN};
   if (invalid_values) {
+    T_e = MINTEMP;
     printlnlog(
         "[warning] call_T_e_finder: non-finite results in modelcell {} (T_R={:g}, W={:g}). T_e forced to be MINTEMP",
         modelgridindex, grid::TR_allcells[nonemptymgi], grid::W_allcells[nonemptymgi]);
-  }
-
-  double T_e{NAN};
-  // a sign change over [MINTEMP, MAXTEMP] guarantees a root that the bracketing solver can find
-  if (!invalid_values && f_T_min * f_T_max < 0) {
+  } else if (f_T_min * f_T_max < 0) {
+    // a sign change over [MINTEMP, MAXTEMP] guarantees a root that the bracketing solver can find
     const auto maxit = 100U;
     constexpr double fractional_accuracy = 1e-3;
 
-    // TOMS 748 (Alefeld, Potra & Shi 1995, ACM Trans. Math. Softw. 21, 327, doi:10.1145/210089.210111):
+    // TOMS 748 (Alefeld, Potra & Shi 1995, ACM Trans. Math. Softw., 21, 327-344, doi:10.1145/210089.210111):
     // bracketing solver with inverse cubic interpolation, so it keeps the root bracketed like bisection
     // but converges superlinearly on the smooth part of the residual
     uintmax_t iternum = maxit;
@@ -302,7 +376,7 @@ void call_T_e_finder(const int nonemptymgi, const double t_current, HeatingCooli
       printlnlog("after {} iterations, T_e = {:g} [K], interval [{:g}, {:g}] [K]", iternum, T_e, result.first,
                  result.second);
     }
-  } else if (invalid_values || f_T_max < 0) {
+  } else if (f_T_max < 0) {
     // Thermal balance equation always negative ===> T_e = T_min
     T_e = MINTEMP;
     printlnlog(
@@ -334,9 +408,9 @@ void call_T_e_finder(const int nonemptymgi, const double t_current, HeatingCooli
         modelgridindex, globals::timestep, T_e_solved, T_e_old, T_e);
   }
 
-  grid::Te_allcells[nonemptymgi] = static_cast<float>(T_e);
-
-  // this call will make sure heating/cooling rates and populations are updated for the final T_e
-  // in case T_e got modified after the T_e solver finished
-  f_T_e(T_e);
+  // The final call stores T_e and sets the populations and the heating and cooling rates for it. The last trial
+  // temperature can differ from the final T_e, so the ionisation rates are calculated again without the 10 percent
+  // test.
+  T_e_eqn_heating_minus_cooling(T_e, nonemptymgi, t_current, heatingcoolingrates, bfheatingcoeffs,
+                                T_e_last_gamma_update, true);
 }

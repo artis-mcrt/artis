@@ -11,12 +11,11 @@
 #include <cstdio>
 #include <cstdlib>
 #include <format>
-#include <iostream>
 #include <print>
 #include <ranges>
 #include <span>
-#include <sstream>
 #include <string>
+#include <string_view>
 #include <thread>
 #include <utility>
 #include <vector>
@@ -27,7 +26,9 @@
 #include "globals.h"
 #include "grid.h"
 #include "input.h"
+#include "inputfilestream.h"
 #include "mpi_logging.h"
+#include "outputfilestream.h"
 #include "random.h"
 #include "sn3d.h"
 #include "vectors.h"
@@ -56,7 +57,6 @@ void place_pellet(const double e_cmf_per_packet, const std::span<const double> e
   const auto etot_simtime = en_cumulative.back();
   const double targetval = rng_uniform(get_rngstate(pkt)) * etot_simtime;
 
-  // First choose a position for the pellet. In the cell.
   // first i such that en_cumulative[i] > targetval
   const int cellindex = int_index_upperbound(en_cumulative, targetval);
   assert_always(cellindex < grid::ngrid);
@@ -94,13 +94,12 @@ void packet_init(std::span<Packet> packets) {
 
   printlnlog("INITIAL_PACKETS_ON is {}", INITIAL_PACKETS_ON ? "true" : "false");
 
-  // The total number of pellets that we want to start with is just
-  // npkts. The total energy of the pellets is given by etot.
+  // the total decay energy from t_model to t_inf, for the log only. The pellets share etot_simtime below.
   const double etot_tmodel_tinf = decay::get_global_etot_tmodel_tinf();
 
   printlnlog("etot {:g} [erg] (t_model to t_inf)", etot_tmodel_tinf);
 
-  printlnlog("e_cmf per packet (t_model to t_inf) {:g} [erg]", etot_tmodel_tinf / MPKTS);
+  printlnlog("e_cmf per packet (t_model to t_inf) {:g} [erg]", etot_tmodel_tinf / std::ssize(packets));
 
   const auto energy_per_massoftopnuc_decaypath = decay::calc_energy_per_massoftopnuc_decaypath();
 
@@ -112,7 +111,7 @@ void packet_init(std::span<Packet> packets) {
         decay::get_modelcell_endecay_per_mass(nonemptymgi, energy_per_massoftopnuc_decaypath);
   }
 
-  // Need to get a normalisation factor
+  // the cumulative energy of the propagation cells, for the sampling of the pellet cell
   auto en_cumulative = std::vector<double>(grid::ngrid);
 
   double etot_simtime = 0.;
@@ -134,7 +133,7 @@ void packet_init(std::span<Packet> packets) {
   printlnlog("etot ({} to tmax) {:g} [erg]", strtimelow, etot_simtime);
 
   // So energy per pellet is:
-  const double e_cmf_per_packet = etot_simtime / MPKTS;
+  const double e_cmf_per_packet = etot_simtime / std::ssize(packets);
   printlnlog("e_cmf per packet ({} to tmax) {:g} [erg]", strtimelow, e_cmf_per_packet);
 
   // Now place the pellets in the ejecta and decide at what time they will decay.
@@ -162,95 +161,93 @@ void packet_init(std::span<Packet> packets) {
 // read packets*.out text format file
 auto read_text_packets(const std::string& filename) -> std::vector<Packet> {
   printlnlog("Reading {}", filename);
-  auto packets_file = fstream_required(filename, std::ios::in);
+  auto packets_file = istream_required(filename);
 
-  std::istringstream ssline;
   std::string line;
   std::vector<Packet> packets;
   std::getline(packets_file, line);  // read header line to make sure it matches
   assert_always(line == get_packets_text_header());
 
-  // the column count of the header line, for the completeness check of each row
-  const int ncolumns = [] {
-    std::istringstream ssheader{get_packets_text_header()};
-    std::string token;
-    int n = 0;
-    while (ssheader >> token) {
-      n++;
-    }
-    return n;
-  }();
-
-  std::string token;
-  packets.reserve(MPKTS);
+  packets.reserve((NUM_PACKETS / globals::nprocs_exspec) + 1);
   while (get_noncommentline(packets_file, line)) {
-    // A complete row has exactly the column count of the header. The count check finds a truncated
-    // row even in the trailing fields that can legitimately hold "nan", where the stream state
-    // check below cannot.
-    ssline.clear();
-    ssline.str(line);
-    int ntokens = 0;
-    while (ssline >> token) {
-      ntokens++;
-    }
-    if (ntokens != ncolumns) {
-      printlnlog("[error] read_text_packets: the row has {} of {} columns: '{}'", ntokens, ncolumns, line);
-      std::abort();
-    }
-
-    ssline.clear();
-    ssline.str(line);
-
     packets.emplace_back();
     Packet& pkt = packets.back();
 
+    auto remainder = std::string_view{line};
+    bool rowisvalid = true;
+
+    // Take the next column of the row. Every column except the two emission positions below is finite, so a
+    // "nan" there is a corrupt row and the strict parser rejects it.
+    const auto parse_column = [&remainder, &rowisvalid](auto& value) {
+      rowisvalid = rowisvalid && parse_next_token(remainder, value);
+    };
+
+    // Take the three columns of a position of the last emission. A packet that did not yet emit carries NAN
+    // in em_pos, and a packet that returned to the thermal pool carries NAN in trueem_pos. These are the only
+    // columns of the file that hold the "nan" spelling. An inf stays an error here, as in every other column.
+    const auto parse_emission_position = [&remainder, &rowisvalid](Vec3d& position) {
+      for (auto& component : position) {
+        rowisvalid = rowisvalid && parse_next_token<true>(remainder, component);
+      }
+    };
+
     int pkt_type_in = 0;
-    ssline >> pkt.number >> pkt.cellindex >> pkt_type_in;
+    parse_column(pkt.number);
+    parse_column(pkt.cellindex);
+    parse_column(pkt_type_in);
     pkt.type = static_cast<enum packet_type>(pkt_type_in);
 
-    ssline >> pkt.pos[0] >> pkt.pos[1] >> pkt.pos[2];
-    ssline >> pkt.dir[0] >> pkt.dir[1] >> pkt.dir[2];
-    ssline >> pkt.tdecay;
-    ssline >> pkt.e_cmf >> pkt.e_rf >> pkt.nu_cmf >> pkt.nu_rf;
+    parse_column(pkt.pos[0]);
+    parse_column(pkt.pos[1]);
+    parse_column(pkt.pos[2]);
+    parse_column(pkt.dir[0]);
+    parse_column(pkt.dir[1]);
+    parse_column(pkt.dir[2]);
+    parse_column(pkt.tdecay);
+    parse_column(pkt.e_cmf);
+    parse_column(pkt.e_rf);
+    parse_column(pkt.nu_cmf);
+    parse_column(pkt.nu_rf);
 
     int escape_type = 0;
-    ssline >> escape_type >> pkt.escape_time;
+    parse_column(escape_type);
+    parse_column(pkt.escape_time);
     pkt.escape_type = static_cast<enum packet_type>(escape_type);
 
-    ssline >> pkt.emissiontype >> pkt.trueemissiontype;
+    parse_column(pkt.emissiontype);
+    parse_column(pkt.trueemissiontype);
 
-    // Every field up to this point is never NAN, so a failed stream here is a truncated or corrupt
-    // row, e.g. from a partial write on a full file system. A silently accepted truncated row would
-    // drop the packet from the spectra (escape_type stays 0) with no diagnostic.
-    if (ssline.fail()) {
-      printlnlog("[error] read_text_packets: could not parse the packet row '{}'", line);
-      std::abort();
-    }
-
-    ssline >> pkt.em_pos[0] >> pkt.em_pos[1] >> pkt.em_pos[2];
-    ssline >> pkt.absorptiontype >> pkt.absorptionfreq >> pkt.nscatterings;
-    ssline >> pkt.em_time;
+    parse_emission_position(pkt.em_pos);
+    parse_column(pkt.absorptiontype);
+    parse_column(pkt.absorptionfreq);
+    parse_column(pkt.nscatterings);
+    parse_column(pkt.em_time);
 
     if constexpr (POL_ON) {
-      ssline >> pkt.stokes_q >> pkt.stokes_u;
+      parse_column(pkt.stokes_q);
+      parse_column(pkt.stokes_u);
     }
 
     int int_originated_from_particlenotgamma = 0;
-    ssline >> int_originated_from_particlenotgamma;
+    parse_column(int_originated_from_particlenotgamma);
     pkt.originated_from_particlenotgamma = (int_originated_from_particlenotgamma != 0);
 
-    ssline >> pkt.trueem_pos[0] >> pkt.trueem_pos[1] >> pkt.trueem_pos[2];
-    ssline >> pkt.trueem_time;
-    ssline >> pkt.pellet_nucindex;
-    ssline >> pkt.pellet_decaytype;
+    parse_emission_position(pkt.trueem_pos);
+    parse_column(pkt.trueem_time);
+    parse_column(pkt.pellet_nucindex);
+    parse_column(pkt.pellet_decaytype);
 
-    // Deliberately no check on the stream state here. Packets that never emitted carry NAN in
-    // em_pos, trueem_pos and absorptionfreq, and extracting "nan" into a floating point type sets
-    // failbit in libstdc++, so a failed stream is an ordinary outcome for a valid row rather than a
-    // sign of a malformed one. Rejecting it stops exspec from reading its own packets files.
+    // A row must hold every column of the header and no more. A short or corrupt row, e.g. from a partial
+    // write on a full file system, otherwise leaves the remaining fields at their defaults. That would drop
+    // the packet from the spectra (escape_type stays 0) with no diagnostic.
+    if (!rowisvalid) {
+      fatal_crash("read_text_packets: could not parse the packet row '{}'", line);
+    }
+    if (remainder.find_first_not_of(token_whitespace) != std::string_view::npos) {
+      fatal_crash("read_text_packets: the packet row has more columns than the header: '{}'", line);
+    }
   }
 
-  printlnlog("  read {} packets from {} (MPKTS {})", std::ssize(packets), filename, MPKTS);
   packets.shrink_to_fit();
   return packets;
 }
@@ -258,7 +255,7 @@ auto read_text_packets(const std::string& filename) -> std::vector<Packet> {
 // Write all packets to a packets*.out text file (columns matching get_packets_text_header), skipping escaped
 // gamma packets when KEEP_ESCAPED_GAMMAS is false.
 void write_text_packets(const std::string& filename, const std::span<const Packet> packets) {
-  auto packets_file = fstream_required(filename, std::ios::out | std::ios::trunc);
+  auto packets_file = open_output_file(filename);
   std::println(packets_file, "{}", get_packets_text_header());
 
   for (const auto& pkt : packets) {
@@ -282,36 +279,41 @@ void write_text_packets(const std::string& filename, const std::span<const Packe
     std::print(packets_file, " {:g} {} {}", pkt.trueem_time, pkt.pellet_nucindex, pkt.pellet_decaytype);
     std::println(packets_file, "");
   }
+  packets_file.close();
+  assert_always(!packets_file.fail());  // e.g. a full disk
 }
 
-void read_temp_packetsfile(const int timestep, const int my_rank, std::vector<Packet>& packets) {
-  // read binary packets file
-  const auto filename = std::format("packets_{:04d}_ts{:d}.tmp", my_rank, timestep);
+void read_packet_restart_file(const int timestep, std::vector<Packet>& packets) {
+  const auto filename = std::format("packets_{:04d}_ts{:d}.tmp", globals::my_rank, timestep);
 
   printlnlog("Reading {}", filename);
   const auto packets_file = fopen_required_uniqueptr(filename, "rb");
   std::int64_t packet_count_in_file = 0;
-  assert_always(std::fread(&packet_count_in_file, sizeof(std::int64_t), 1, packets_file.get()) == 1);
-  assert_always(packet_count_in_file > 0);
-  assert_always(packet_count_in_file <= MPKTS);
+  read_restart_values(packets_file.get(), packet_count_in_file);
+  assert_always(packet_count_in_file >= 0);
+  assert_always(packet_count_in_file <= std::ssize(packets));
   reserve_resize(packets, packet_count_in_file);
-  assert_always(std::fread(packets.data(), sizeof(Packet), packet_count_in_file, packets_file.get()) ==
-                static_cast<size_t>(packet_count_in_file));
-  printlnlog("read {} packets from {}", packet_count_in_file, filename);
+  read_restart_array(packets_file.get(), packets);
+#ifndef GPU_ON
+  // the random number stream of the main thread continues from the state of the job that wrote the file
+  read_restart_values(packets_file.get(), get_rngstate());
+#endif
+  // the file must hold no data after the last value
+  assert_always(std::fgetc(packets_file.get()) == EOF && std::feof(packets_file.get()) != 0);
+  printlnlog("read {} packets and the random number state from {}", packet_count_in_file, filename);
 }
 
-void write_temp_packetsfile(const int timestep, const int my_rank, const std::span<const Packet> packets) {
-  // write packets binary file (and retry if the write fails)
-  const auto filename = std::format("packets_{:04d}_ts{:d}.tmp", my_rank, timestep);
+void write_packet_restart_file(const int timestep, const std::span<const Packet> packets) {
+  const auto filename = std::format("packets_{:04d}_ts{:d}.tmp", globals::my_rank, timestep);
 
-  int tries = 0;
+  constexpr int max_write_attempts = 10;
+  int attempts = 0;
   bool write_success = false;
   while (!write_success) {
-    if (tries > 10) {
-      printlnlog("[error] Failed to write {} after {} tries. Aborting.", filename, tries);
-      std::abort();
+    if (attempts >= max_write_attempts) {
+      fatal_crash("The write of {} failed after {} attempts", filename, attempts);
     }
-    if (tries > 0) {
+    if (attempts > 0) {
       // give transient filesystem problems (e.g. contention on a cluster parallel filesystem) a
       // chance to clear instead of burning through all of the retries within milliseconds
       std::this_thread::sleep_for(std::chrono::seconds(5));
@@ -320,26 +322,30 @@ void write_temp_packetsfile(const int timestep, const int my_rank, const std::sp
     FILE* packets_file = fopen(filename.c_str(), "wb");
     if (packets_file == nullptr) {
       printlnlog("[error] Could not open file '{}' for mode 'wb'.", filename);
-      write_success = false;
     } else {
       auto packet_count = static_cast<std::int64_t>(std::ssize(packets));
       // write number of packets as header
       write_success = (std::fwrite(&packet_count, sizeof(std::int64_t), 1, packets_file) == 1);
       write_success = write_success &&
                       (std::fwrite(packets.data(), sizeof(Packet), packets.size(), packets_file) == packets.size());
+#ifndef GPU_ON
+      write_success = write_success && (std::fwrite(&get_rngstate(), sizeof(rngstate_type), 1, packets_file) == 1);
+#endif
       if (!write_success) {
-        printlnlog("[warning] fwrite to {} failed on attempt {} of 10. will retry...", filename, tries + 1);
+        printlnlog("[warning] fwrite to {} failed on attempt {} of {}. will retry...", filename, attempts + 1,
+                   max_write_attempts);
       }
 
       // a buffered write can fail at the flush that fclose() performs, so without checking it here a
       // truncated restart file would be reported as having been written successfully
       const bool closed_ok = (fclose(packets_file) == 0);
       if (write_success && !closed_ok) {
-        printlnlog("[warning] fclose of {} failed on attempt {} of 10. will retry...", filename, tries + 1);
+        printlnlog("[warning] fclose of {} failed on attempt {} of {}. will retry...", filename, attempts + 1,
+                   max_write_attempts);
       }
       write_success = write_success && closed_ok;
     }
-    tries++;
+    attempts++;
   }
   printlnlog("done");
 }

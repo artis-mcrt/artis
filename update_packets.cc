@@ -77,23 +77,27 @@ void do_nonthermal_predeposit(Packet& pkt, const int nts, const double ts_end) {
     const double f_p = std::log1p(2. * ts * ts / tau_ineff / tau_ineff) / (2. * ts * ts / tau_ineff / tau_ineff);
     deposit_or_escape(f_p);
   } else if constexpr (PARTICLE_THERMALISATION_SCHEME == ParticleThermalisationScheme::WOLLAEGER) {
-    // particle thermalisation from Wollaeger+2018, similar to Barnes but using a slightly different expression
+    // particle thermalisation efficiency of Wollaeger et al. (2018), MNRAS, 478, 3298-3334, doi:10.1093/mnras/sty1018,
+    // which differs slightly from the expression of Barnes et al. (2016), ApJ, 829, 110,
+    // doi:10.3847/0004-637X/829/2/110
     const double A = (pkt.type == TYPE_NONTHERMAL_PREDEPOSIT_ALPHA) ? 1.2 * 1.e-11 : 1.3 * 1.e-11;
     const double aux_term = 2 * A / (ts * grid::get_rho(nonemptymgi));
-    // In Bulla 2023 (arXiv:2211.14348), the following line contains (<-> eq. 7) contains a typo. The way implemented
-    // here is the original from Wollaeger paper without the typo
+    // Equation 7 of Bulla (2023), MNRAS, 520, 2558-2570, doi:10.1093/mnras/stad232, has a typo. This line uses the
+    // original Wollaeger expression.
     const double f_p = std::log1p(aux_term) / aux_term;
     deposit_or_escape(f_p);
   } else if constexpr (PARTICLE_THERMALISATION_SCHEME == ParticleThermalisationScheme::TIMEDEPENDENT ||
                        PARTICLE_THERMALISATION_SCHEME ==
                            ParticleThermalisationScheme::TIMEDEPENDENT_WITH_ADIABATIC_LOSS ||
                        PARTICLE_THERMALISATION_SCHEME == ParticleThermalisationScheme::TIMEDEPENDENTWITHGAMMAPRODUCTS) {
-    // local time-dependent absorption described by Shingles et al. (2023)
+    // local time-dependent absorption described by Shingles et al. (2023), ApJL, 954, L41,
+    // doi:10.3847/2041-8213/acf29a
     const double rho = grid::get_rho(nonemptymgi);
 
     const double particle_en = H * pkt.nu_cmf;  // energy of the particles in the packet
 
-    // the positive energy loss rate per particle [erg/s] from Barnes et al. (2016). see their figure 6.
+    // the positive energy loss rate per particle [erg/s] from figure 6 of Barnes et al. (2016), ApJ, 829, 110,
+    // doi:10.3847/0004-637X/829/2/110
     const double endot_collisional =
         (pkt.type == TYPE_NONTHERMAL_PREDEPOSIT_ALPHA) ? 5.e11 * MEV * rho : 4.e10 * MEV * rho;
     // positive energy loss rate from adiabatic expansion in [erg/s], assuming homologous expansion
@@ -104,7 +108,7 @@ void do_nonthermal_predeposit(Packet& pkt, const int nts, const double ts_end) {
     const double endot = endot_collisional + endot_adiabatic;
 
     // time of deposition is the smaller out of (a) the time until which the particle loses all its energy according to
-    // the loss rates above and (b) the time remaining until the end of the current time step
+    // the loss rates above and (b) the time remaining until the end of the current timestep
     // Only collisional losses count as energy deposited into the gas (not adiabatic losses)
     e_cmf_deposited = pkt.e_cmf * endot_collisional * std::min(ts_end - ts, particle_en / endot) / particle_en;
 
@@ -139,10 +143,8 @@ void do_nonthermal_predeposit(Packet& pkt, const int nts, const double ts_end) {
         // (endot_collisional / E_start) times the integral of e_cmf over time. The energy that the
         // particles really surrender to the gas is endot_collisional * (t_end - t_start) each, so
         // the two agree only while e_cmf is held constant. The adiabatic loss is already carried by
-        // that survival weighting, because it shortens the particle's life; degrading e_cmf as well
-        // counted it a second time and made the deposition low by a factor
-        // t_start * ln(t_end / t_start) / (t_end - t_start), which falls to 0.42 once the adiabatic
-        // losses dominate.
+        // that survival weighting, because it shortens the particle's life. A second degradation of
+        // e_cmf would count it twice.
         pkt.e_cmf *= endot_collisional / endot;
       }
     }
@@ -181,8 +183,8 @@ void do_nonthermal_predeposit(Packet& pkt, const int nts, const double ts_end) {
 }
 
 // Handle inactive pellets. Need to do two things (a) check if it
-// decays in this time step and if it does handle that. (b) if it doesn't decay in
-// this time step then just move the packet along with the matter for the start of the next time step.
+// decays in this timestep and if it does handle that. (b) if it doesn't decay in
+// this timestep then just move the packet along with the matter for the start of the next timestep.
 void update_pellet(Packet& pkt, const int nts, const double t2) {
   assert_always(pkt.prop_time < t2);
   const double ts = pkt.prop_time;
@@ -218,10 +220,8 @@ void update_pellet(Packet& pkt, const int nts, const double t2) {
         atomicadd(globals::timesteps[nts].spfission_dep_discrete, pkt.e_cmf);
         pkt.type = TYPE_NTALPHA_FISPROD_DEPOSITED;
       } else if constexpr (TESTMODE) {
-        printlnlog(
-            "[error] pellet marked as particle emission is for decaytype {} != any of (alpha, beta+, beta-, spfission)",
-            pkt.pellet_decaytype);
-        std::abort();
+        fatal_crash("pellet marked as particle emission is for decaytype {} != any of (alpha, beta+, beta-, spfission)",
+                    pkt.pellet_decaytype);
       } else {
         __builtin_unreachable();
       }
@@ -232,11 +232,12 @@ void update_pellet(Packet& pkt, const int nts, const double t2) {
       atomicadd(globals::timesteps[nts].gamma_emission, pkt.e_cmf);
       gammapkt::pellet_gamma_decay(pkt);
     }
-  } else if ((tdecay > 0) && (nts == 0)) {
-    // These are pellets whose decay times were before the first time step. They become pre-k-packets, which
+  } else if ((tdecay > 0) && (nts == globals::timestep_initial)) {
+    // These are pellets whose decay times were before the first timestep. They become pre-k-packets, which
     // do_packet() immediately re-emits as r-packets with a blackbody frequency. The energy is reduced by
     // tdecay / tmin to account for the work done on the ejecta by the trapped radiation between the decay and
-    // the start of the simulation (equation 18 of Lucy 2005, as also applied in decay.cc).
+    // the start of the simulation (equation 18 of Lucy 2005, A&A, 429, 19-30, doi:10.1051/0004-6361:20041656, as
+    // also applied in decay.cc).
     // The position is already set at globals::tmin so don't need to move it. Assume
     // that it is fixed in place from decay to globals::tmin - i.e. short mfp.
 
@@ -327,7 +328,7 @@ constexpr auto packetprop_update_required(const Packet& pkt, const double ts_end
 }
 
 // Return the id of the cell cache group that this packet belongs to, or an empty std::optional if the
-// packet does not use the cell cache at all (pellet/gamma/predeposit types, empty cells, thick cells).
+// packet does not use the cell cache at all (the types in nocache_packettypes, empty cells, thick cells).
 // In single-slot mode the group id is the nonemptymgi, because packets of a given cell must be processed
 // together while that cell occupies the rank's one cache slot. In multi-slot mode every cell has its own
 // persistent slot, so no partitioning is needed and all cache-using packets share group 0.
@@ -406,7 +407,10 @@ void cellcacheslot_populate(globals::CellCache& cacheslot, const int nonemptymgi
   for (int element = 0; element < nelements; element++) {
     const int nions = get_nions(element);
     for (int ion = 0; ion < nions; ion++) {
-      cacheslot.cooling_contrib[kpkt::get_coolinglistoffset(element, ion)] = -99.;
+      // an ion with no cooling term has the offset of the next ion, which can be one past the end
+      if (kpkt::get_ncoolingterms_ion(element, ion) > 0) {
+        cacheslot.cooling_contrib[kpkt::get_coolinglistoffset(element, ion)] = -99.;
+      }
     }
 
     for (int ion = 0; ion < nions; ion++) {
@@ -469,7 +473,7 @@ void cellcacheslot_populate(globals::CellCache& cacheslot, const int nonemptymgi
 void update_packet_cellcache_group(const int cellcache_groupid, std::span<Packet> packetgroup, const int nts,
                                    const double ts_end) {
   if (cellcache_singleslot) {
-    // in this case, a positive groupid is a nonemptymgi, and -1 is the no-cache-required group
+    // a group id of 0 or more is a nonemptymgi, and -1 is the group that needs no cache
     auto& cacheslot = globals::cellcache[globals::rank_in_node];
     if (cellcache_groupid >= 0 && cacheslot.nonemptymgi != cellcache_groupid) {
       cellcacheslot_populate(cacheslot, cellcache_groupid);
@@ -531,14 +535,15 @@ void update_packet_cellcache_group(const int cellcache_groupid, std::span<Packet
 void update_packets(const int nts, std::span<Packet> packets) {
   // At the start, the packets have all either just been initialised or have already been
   // processed for one or more timesteps. Those that are pellets will just be sitting in the
-  // matter. Those that are photons (or one sort or another) will already have a position and a direction.
+  // matter. Those that are photons of any type already have a position and a direction.
   const double ts = globals::timesteps[nts].start;
   const double tw = globals::timesteps[nts].width;
   const double ts_end = ts + tw;
 
 #ifdef GPU_ON
   // to avoid failed allocation of chi_rpkt_cont_vec on GPU
-  // ~1e6 allocation was 155GB for classic model, so limit to 1e5 packets per group for now, which is ~15GB on GPU
+  // each packet of a group holds a continuum opacity on the GPU, so a group of 1e5 packets needs about 15 GB
+  // for the classic model
   constexpr auto MAX_PACKETGROUP_SIZE = 100'000Z;
 #else
   constexpr auto MAX_PACKETGROUP_SIZE = static_cast<ptrdiff_t>(std::numeric_limits<int>::max());
@@ -557,7 +562,10 @@ void update_packets(const int nts, std::span<Packet> packets) {
     const auto [nonemptymgi_start, nonemptymgi_count] =
         get_range_chunk(nonempty_npts_model, globals::node_nprocs, globals::rank_in_node);
     for (auto nonemptymgi = nonemptymgi_start; nonemptymgi < (nonemptymgi_start + nonemptymgi_count); nonemptymgi++) {
-      cellcacheslot_populate(globals::cellcache.at(nonemptymgi), static_cast<int>(nonemptymgi));
+      // no packet reads the cell cache of a thick cell
+      if (grid::thick_allcells[nonemptymgi] != grid::CellThickness::THICK) {
+        cellcacheslot_populate(globals::cellcache.at(nonemptymgi), static_cast<int>(nonemptymgi));
+      }
     }
     MPI_Barrier_node();
     printlnlog("timestep {}: all {} cellcaches set (took {:.1f} s)", nts, nonempty_npts_model,
@@ -604,6 +612,8 @@ void update_packets(const int nts, std::span<Packet> packets) {
       // if no packets needed updating, then this timestep is complete
       break;
     }
+    // the packets from pktindex stay inactive for the rest of this timestep, so the next pass sorts only the prefix
+    packets = packets.first(pktindex);
 
     // process the packets grouped by their required cell cache, which should minimise the number of times we need to
     // change the cell cache during the packet updates

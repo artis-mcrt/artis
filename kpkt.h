@@ -25,14 +25,25 @@ inline int ncoolingterms{0};
 
 void setup_coolinglist();
 void calculate_cooling_rates(int nonemptymgi, HeatingCoolingRates* heatingcoolingrates);
+
+// The cooling rate of one ion, split into the processes that the estimators file reports.
+struct IonCoolingRates {
+  double ff{0};  // free-free emission
+  double fb{0};  // free-bound emission
+  double collisional{0};  // collisional excitation and collisional ionisation
+};
+
+[[nodiscard]] auto calculate_ion_cooling_rates(int nonemptymgi, int element, int ion) -> IonCoolingRates;
+
 auto set_radiative_energy_factor(int nonemptymgi, const HeatingCoolingRates& heatingcoolingrates) -> double;
 void reset_radiative_energy_factor(int nonemptymgi);
 [[nodiscard]] DEVICE_FUNC auto get_radiative_energy_factor(int nonemptymgi) -> double;
 DEVICE_FUNC void do_kpkt_blackbody(Packet& pkt);
 DEVICE_FUNC void do_kpkt(Packet& pkt, double t2, int nts);
 
-// prepopulate one ion's cooling-rate contributions into the cellcache. Used in GPU mode, where the lazy
-// mutex-guarded calculation in do_kpkt() cannot run safely on the device.
+// prepopulate the cooling-rate contributions of one ion into the cellcache. cellcacheslot_populate() calls this
+// in multi-slot mode (GPU_ON), where the slot is shared between the ranks of a node and no lazy fill under a mutex
+// is possible.
 DEVICE_FUNC void calculate_cellcache_cooling_rates_ion(int nonemptymgi, int uniqueionindex);
 
 [[nodiscard]] inline auto get_coolinglistoffset(int element, int ion) -> int {

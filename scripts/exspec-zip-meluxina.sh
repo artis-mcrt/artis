@@ -13,7 +13,7 @@
 module load env/release/2025.1 gompi/2025a zstd GSL git Python
 module list
 
-cd $SLURM_SUBMIT_DIR
+cd "${SLURM_SUBMIT_DIR:?}" || exit 1
 
 echo "CPU type: $(c++ -march=native -Q --help=target | grep -- '-march=  ' | cut -f3)"
 

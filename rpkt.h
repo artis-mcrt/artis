@@ -43,6 +43,11 @@ static_assert(get_expopac_bin_nu_lower(0) == get_expopac_bin_nu_upper(1));  // b
 static_assert(get_expopac_bin_nu_lower(0) < get_expopac_bin_nu_upper(0));
 static_assert(get_expopac_bin_nu_upper(expopac_nbins - 1) > get_expopac_bin_nu_lower(expopac_nbins - 1));
 
+// the options that need the binned line opacities of each cell. The thermalisation option stores only the Planck
+// cumulative of the bins; the expansionopacities array exists only with the two expansion opacity options.
+constexpr bool expopac_bins_on = RPKT_USE_EXPANSION_OPACITIES || VPKT_USE_EXPANSION_OPACITIES ||
+                                 RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.has_value();
+
 // kappa in cm^2/g for each bin of each non-empty cell
 inline MPI_shared_array<float> expansionopacities{};
 
@@ -94,7 +99,7 @@ struct ContinuumOpacity {
   // default constructor allocates phixslist
   constexpr ContinuumOpacity() : ContinuumOpacity(true) {}
 
-  // total continuum absorption coefficient at nu [cm^-1]
+  // total continuum extinction coefficient at nu [cm^-1]
   [[nodiscard]] constexpr auto total() const { return chi_escatter + chi_boundfree + chi_freefree_heat; }
 };
 
@@ -109,9 +114,10 @@ extern template void calculate_chi_rpkt_cont<false>(double nu_cmf, ContinuumOpac
 void allocate_expansionopacities();
 // Convert Sobolev line optical depths in each wavelength bin into an expansion mass opacity. When requested, also
 // construct the Planck-weighted cumulative distribution used to sample thermal re-emission frequencies.
-// Eastman & Pinto (1993), doi:10.1086/172957; Karp et al. (1977), doi:10.1086/155241.
+// Eastman & Pinto (1993), ApJ, 412, 731-751, doi:10.1086/172957; Karp, Lasher, Chan & Salpeter (1977), ApJ, 214,
+// 161-178, doi:10.1086/155241.
 void calculate_expansion_opacities(int nonemptymgi);
-void MPI_Bcast_binned_opacities(ptrdiff_t nonemptymgi, int root_node_id);
+void MPI_Bcast_binned_opacities(ptrdiff_t nstart_nonempty, ptrdiff_t ndo_nonempty, int root_node_id);
 auto calculate_chi_ffheat_nnionpart(int nonemptymgi) -> double;
 
 [[nodiscard]] constexpr auto get_linedistance(const double prop_time, const double nu_cmf, const double nu_trans,
@@ -134,9 +140,27 @@ auto calculate_chi_ffheat_nnionpart(int nonemptymgi) -> double;
   return CLIGHT * prop_time * delta_nu / nu_trans;
 }
 
+// Get the correction of a binned expansion opacity for the path that sweeps the bin. The packet crosses
+// each line of the bin once, so the bin optical depth must equal the sum of the line weights of
+// EXPANSION_OPACITY_METHOD.
+// calculate_expansion_opacities() assumes the path c * t * dnu / nu, which is the path that
+// get_linedistance() gives with the first-order Doppler shift. The factor is the ratio of that path to the
+// relativistic one, which is the Doppler factor times the Lorentz factor. Give the same time that the
+// caller gives to get_linedistance() for the same bin.
+[[nodiscard]] constexpr auto get_expopac_pathfactor(const double prop_time, const double bin_edge_nu,
+                                                    const double dnu_on_dl) -> double {
+  if constexpr (USE_RELATIVISTIC_DOPPLER_SHIFT) {
+    return -CLIGHT * prop_time * dnu_on_dl / bin_edge_nu;
+  }
+
+  return 1.;
+}
+
 static_assert(get_linedistance(100., 1., 2., -0.5) == 0.);  // overshot the line resonance
-static_assert(USE_RELATIVISTIC_DOPPLER_SHIFT || get_linedistance(2., 4., 2., -1.) == (CLIGHT * 2. * 2. / 2.));
-static_assert(!USE_RELATIVISTIC_DOPPLER_SHIFT || get_linedistance(2., 4., 2., -1.) == 2.);
+static_assert(get_linedistance(2., 4., 2., -1.) == (USE_RELATIVISTIC_DOPPLER_SHIFT ? 2. : CLIGHT * 2. * 2. / 2.));
+
+// the corrected path of a bin is the path that calculate_expansion_opacities() assumes
+static_assert((get_linedistance(2., 4., 2., -1.) * get_expopac_pathfactor(2., 2., -1.)) == (CLIGHT * 2. * 2. / 2.));
 
 // find the next transition lineindex redder than nu_cmf
 // for the propagation through non empty cells
@@ -155,8 +179,8 @@ static_assert(!USE_RELATIVISTIC_DOPPLER_SHIFT || get_linedistance(2., 4., 2., -1
   }
 
   if (next_trans > 0) [[likely]] {
-    // if next_trans > 0 we know the next line we should interact with, independent of the packets
-    // current nu_cmf which might be smaller than globals::linelist[left].nu due to propagation errors
+    // next_trans > 0 gives the next line to interact with. The packet nu_cmf can be below
+    // linelistnu[next_trans] because of propagation errors.
     return next_trans;
   }
   if (nu_cmf >= linelistnu[0]) {

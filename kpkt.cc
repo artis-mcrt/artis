@@ -2,8 +2,9 @@
 // (free-free, free-bound, collisional excitation and ionisation) and samples a cooling channel
 // to convert a k-packet into radiation or a macro-atom excitation.
 //
-// k-packets are the thermal-pool state of the indivisible energy packet scheme of Lucy (2002),
-// doi:10.1051/0004-6361:20011756; Lucy (2003), arXiv:astro-ph/0303202, which macroatom.cc implements.
+// k-packets are the thermal-pool state of the indivisible energy packet scheme of Lucy (2002), A&A, 384,
+// 725-735, doi:10.1051/0004-6361:20011756, and Lucy (2003), A&A, 403, 261-275, doi:10.1051/0004-6361:20030357,
+// hereafter paper II, which macroatom.cc implements.
 
 #include "kpkt.h"
 
@@ -14,7 +15,6 @@
 #include <cstdlib>
 #include <limits>
 #include <span>
-#include <utility>
 
 #include "artisoptions.h"
 #include "atomic.h"
@@ -41,18 +41,19 @@ namespace {
 
 enum class CoolingType : std::uint8_t { FREEFREE, FREEBOUND, COLLEXC, COLLION };
 
-MPI_shared_array<const CoolingType> coolinglist_type;
-MPI_shared_array<const int> coolinglist_level;
-MPI_shared_array<const int> coolinglist_phixstargetindex;
+MPI_shared_array<CoolingType> coolinglist_type;
+MPI_shared_array<int> coolinglist_level;
+MPI_shared_array<int> coolinglist_phixstargetindex;
 
-// Fraction of a time step that individual k-packets live before further processing. This
+// Fraction of a timestep that individual k-packets live before further processing. This
 // diffusion time breaks up the chains of continuous collisional interactions that would
 // otherwise dominate the work imbalance between MPI ranks.
 constexpr float kpktdiffusion_timestep_fraction{0.001};
 
-// Compute the collisional cooling rate of a single ion, summing the free-free, free-bound, collisional-excitation
-// and collisional-ionisation contributions. Accumulates the per-process totals (C_ff/C_fb/C_exc/C_ionisation),
-// records each individual term in ion_contribs, and returns the ion's total cooling rate.
+// Compute the total cooling rate of one ion from free-free, free-bound, collisional excitation, and collisional
+// ionisation. With update_cellcache_contribs the function writes the cumulative sum of the terms into ion_contribs.
+// Otherwise it adds each process to its total (C_ff, C_fb, C_exc, C_ionisation). Returns the total cooling rate of
+// the ion.
 template <bool update_cellcache_contribs>
 auto calculate_cooling_rates_ion(const int nonemptymgi, const int element, const int ion,
                                  std::span<double> ion_contribs, double* const C_ff, double* const C_fb,
@@ -242,8 +243,8 @@ void set_ncoolingterms() {
       if (get_ionstage(element, ion) > 1) {
         ionterms++;
       }
-      // Ionisinglevels below the closure ion add to bf and col ionisation
-      // All the levels add number of col excitations
+      // each photoionisation target of a level of an ion below the top ion adds one free-bound and one
+      // collisional ionisation term. Each level with an upward transition adds one collisional excitation term.
       const int nlevels = get_nlevels(element, ion);
       for (int level = 0; level < nlevels; level++) {
         if (ion < nions - 1) {
@@ -274,7 +275,35 @@ auto sample_planck_montecarlo(const double T, rngstate_type& rngstate) -> double
     }
   }
 }
+
+// Emit the k-packet as an r-packet at pkt.nu_cmf. A thermal emission starts a new true emission record.
+DEVICE_FUNC void emit_thermal_rpkt(Packet& pkt, const int emissiontype) {
+  assert_always(std::isfinite(pkt.nu_cmf));
+  emit_rpkt(pkt);
+  pkt.next_trans = -1;
+  pkt.emissiontype = emissiontype;
+  pkt.trueemissiontype = emissiontype;
+  pkt.trueem_pos = pkt.em_pos;
+  pkt.trueem_time = pkt.em_time;
+  pkt.nscatterings = 0;
+  if constexpr (VPKT_ON) {
+    vpkt::trace_vpkts(pkt, TYPE_KPKT);
+  }
+}
 }  // anonymous namespace
+
+// Compute the cooling rate of a single ion, split into the free-free, the free-bound, and the collisional
+// contributions. calculate_cooling_rates() sums the same terms over all of the ions of the cell.
+auto calculate_ion_cooling_rates(const int nonemptymgi, const int element, const int ion) -> IonCoolingRates {
+  double C_ff = 0.;
+  double C_fb = 0.;
+  double C_exc = 0.;
+  double C_ionisation = 0.;
+  // the return value is the sum of the four terms below, so this function drops it
+  calculate_cooling_rates_ion<false>(nonemptymgi, element, ion, {}, &C_ff, &C_fb, &C_exc, &C_ionisation);
+
+  return IonCoolingRates{.ff = C_ff, .fb = C_fb, .collisional = C_exc + C_ionisation};
+}
 
 // Calculate the cooling rates for a given cell and store them for each ion
 // optionally store components (ff, bf, collisional) in heatingcoolingrates struct
@@ -288,8 +317,11 @@ void calculate_cooling_rates(const int nonemptymgi, HeatingCoolingRates* heating
   double cumulative_cooling = 0.;
   for (int uniqueionindex = 0; uniqueionindex < nincludedions; uniqueionindex++) {
     const auto [element, ion] = get_ionfromuniqueionindex(uniqueionindex);
-    cumulative_cooling += calculate_cooling_rates_ion<false>(nonemptymgi, element, ion, {}, &C_ff_all, &C_fb_all,
-                                                             &C_exc_all, &C_ionisation_all);
+    // every cooling term of an absent element is zero
+    if (grid::get_elem_numberdens(nonemptymgi, element) > 0.) {
+      cumulative_cooling += calculate_cooling_rates_ion<false>(nonemptymgi, element, ion, {}, &C_ff_all, &C_fb_all,
+                                                               &C_exc_all, &C_ionisation_all);
+    }
     cellioncontribs[uniqueionindex] = cumulative_cooling;
   }
 
@@ -303,17 +335,15 @@ void calculate_cooling_rates(const int nonemptymgi, HeatingCoolingRates* heating
 
 // Build the list of cooling processes that a k-packet can convert through.
 //
-// The number of processes is given by the collisional excitations (so far determined from the oscillator
-// strengths by the van Regemorter formula, therefore totaluptrans), the number of free-bound emissions and
-// collisional ionisations (as long as we only deal with ionisation to the ground level this means for both
-// of these \sum_{elements,ions}get_nlevels(element,ion)) and free-free, which is
-// \sum_{elements} get_nions(element)-1.
+// The list holds one free-free term per ion with a charge, one collisional excitation term per level with an
+// upward transition, and one collisional ionisation and one free-bound term per (ionising level, photoionisation
+// target). set_ncoolingterms() counts them.
 void setup_coolinglist() {
   set_ncoolingterms();
   assert_always(ncoolingterms > 0);
-  auto temp_coolinglist_type = MPI_shared_array<CoolingType>(ncoolingterms);
-  auto temp_coolinglist_level = MPI_shared_array<int>(ncoolingterms);
-  auto temp_coolinglist_phixstargetindex = MPI_shared_array<int>(ncoolingterms);
+  coolinglist_type = MPI_shared_array<CoolingType>(ncoolingterms);
+  coolinglist_level = MPI_shared_array<int>(ncoolingterms);
+  coolinglist_phixstargetindex = MPI_shared_array<int>(ncoolingterms);
   const size_t mem_usage_coolinglist = ncoolingterms * (sizeof(CoolingType) + (2 * sizeof(int)));
   printlnlog("[info] mem_usage: coolinglist occupies {:.3f} MB", mem_usage_coolinglist / 1024. / 1024.);
 
@@ -327,19 +357,19 @@ void setup_coolinglist() {
       // ff creation of rpkt
       const int ioncharge = get_ionstage(element, ion) - 1;
       if (ioncharge > 0) {
-        temp_coolinglist_type[i] = CoolingType::FREEFREE;
-        temp_coolinglist_level[i] = -99;
-        temp_coolinglist_phixstargetindex[i] = -99;
+        coolinglist_type[i] = CoolingType::FREEFREE;
+        coolinglist_level[i] = -99;
+        coolinglist_phixstargetindex[i] = -99;
         i++;
       }
 
       for (int level = 0; level < nlevels_currention; level++) {
         if (get_nuptrans(element, ion, level) > 0) {
-          temp_coolinglist_type[i] = CoolingType::COLLEXC;
-          temp_coolinglist_level[i] = level;
+          coolinglist_type[i] = CoolingType::COLLEXC;
+          coolinglist_level[i] = level;
           // a collisional excitation is bound-bound, so there is no photoionisation target. This entry is
           // the contribution of all upper levels combined, chosen individually when the process is selected
-          temp_coolinglist_phixstargetindex[i] = -1;
+          coolinglist_phixstargetindex[i] = -1;
           i++;
         }
       }
@@ -352,9 +382,9 @@ void setup_coolinglist() {
         for (int level = 0; level < nionisinglevels; level++) {
           const int nphixstargets = get_nphixstargets(element, ion, level);
           for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
-            temp_coolinglist_type[i] = CoolingType::COLLION;
-            temp_coolinglist_level[i] = level;
-            temp_coolinglist_phixstargetindex[i] = phixstargetindex;
+            coolinglist_type[i] = CoolingType::COLLION;
+            coolinglist_level[i] = level;
+            coolinglist_phixstargetindex[i] = phixstargetindex;
             i++;
           }
         }
@@ -365,9 +395,9 @@ void setup_coolinglist() {
         for (int level = 0; level < nionisinglevels; level++) {
           const int nphixstargets = get_nphixstargets(element, ion, level);
           for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
-            temp_coolinglist_type[i] = CoolingType::FREEBOUND;
-            temp_coolinglist_level[i] = level;
-            temp_coolinglist_phixstargetindex[i] = phixstargetindex;
+            coolinglist_type[i] = CoolingType::FREEBOUND;
+            coolinglist_level[i] = level;
+            coolinglist_phixstargetindex[i] = phixstargetindex;
             i++;
           }
         }
@@ -378,12 +408,9 @@ void setup_coolinglist() {
 
   assert_always(ncoolingterms == i);  // if this doesn't match, we miscalculated the number of cooling terms
   printlnlog("[info] setup_coolinglist: number of coolingterms {}", ncoolingterms);
-  coolinglist_type = std::move(temp_coolinglist_type);
-  coolinglist_level = std::move(temp_coolinglist_level);
-  coolinglist_phixstargetindex = std::move(temp_coolinglist_phixstargetindex);
   MPI_Barrier_node();
 
-  printlnlog("kpkts diffuse {:g} of a time step's length", kpktdiffusion_timestep_fraction);
+  printlnlog("kpkts diffuse {:g} of a timestep's length", kpktdiffusion_timestep_fraction);
 }
 
 // prepopulate one ion's cooling-rate contributions into the cellcache (see header)
@@ -450,19 +477,9 @@ DEVICE_FUNC void do_kpkt_blackbody(Packet& pkt) {
     pkt.nu_cmf = sample_planck_montecarlo(grid::Te_allcells[nonemptymgi], get_rngstate(pkt));
   }
 
-  assert_always(std::isfinite(pkt.nu_cmf));
-  // and then emit the packet randomly in the comoving frame
-  emit_rpkt(pkt);
-  pkt.next_trans = -1;  // FLAG: transition history here not important, cont. process
   stats::increment(stats::Counter::K_STAT_TO_R_BB);
   stats::increment(stats::Counter::INTERACTIONS);
-  pkt.emissiontype = EMTYPE_FREEFREE;
-  // this is a thermal emission, so record it as the packet's last thermal ("true") emission
-  // (emit_rpkt has just set em_pos/em_time to the current position and time)
-  pkt.trueemissiontype = pkt.emissiontype;
-  pkt.trueem_pos = pkt.em_pos;
-  pkt.trueem_time = pkt.em_time;
-  pkt.nscatterings = 0;
+  emit_thermal_rpkt(pkt, EMTYPE_FREEFREE);
 }
 
 // handle a k-packet (kinetic energy of the free electrons)
@@ -529,7 +546,7 @@ DEVICE_FUNC void do_kpkt(Packet& pkt, const double t2, const int nts) {
     }
   }
 
-  // subspan for this ion's region of the cumulative sum of cooling contributions
+  // the total cooling rate of the ion is the last entry of the cumulative sum
   const double C_ion_procsum = ion_contribs.back();
   assert_testmodeonly(C_ion_procsum > 0.);
 
@@ -538,6 +555,20 @@ DEVICE_FUNC void do_kpkt(Packet& pkt, const double t2, const int nts) {
   const double rndcool_ion_process = rng_uniform(get_rngstate(pkt)) * C_ion_procsum;
 
   const auto ionoffset = index_upperbound(ion_contribs, rndcool_ion_process);
+  if (ionoffset >= ncoolingterms_ion) [[unlikely]] {
+    // The ion array of the cell gave this ion a positive cooling rate, so the cumulative sum of the cell cache
+    // must end above the target. A total of zero, a negative total, or a NaN means that the two arrays came
+    // from different cell states or from a negative cooling term. Device code has no log file, so only the host
+    // writes the details. The assertion below reports the failure on both paths.
+    MY_IF_HOST(const double ion_cooling_from_ionarray =
+                   ion_cooling_contribs_thiscell[uniqueionindex] -
+                   ((uniqueionindex > 0) ? ion_cooling_contribs_thiscell[uniqueionindex - 1] : 0.);
+               printlnlog("[error] do_kpkt: cell {} timestep {}: no cooling process found for Z={} ionstage {}. Cell "
+                          "cache total {:g}, target {:g}, ion array cooling rate {:g}, {} cooling terms",
+                          grid::get_mgi_of_nonemptymgi(nonemptymgi), nts, get_atomicnumber(element),
+                          get_ionstage(element, ion), C_ion_procsum, rndcool_ion_process, ion_cooling_from_ionarray,
+                          ncoolingterms_ion););
+  }
   assert_always(ionoffset < ncoolingterms_ion);
   const auto i = ionstart + ionoffset;
 
@@ -551,24 +582,8 @@ DEVICE_FUNC void do_kpkt(Packet& pkt, const double t2, const int nts) {
     // exponentially distributed with mean k T_e / h and can be drawn by inverting the CDF.
     pkt.nu_cmf = -KB * T_e / H * std::log(static_cast<double>(rng_uniform_pos(get_rngstate(pkt))));
 
-    assert_always(std::isfinite(pkt.nu_cmf));
-
-    // and then emit the packet randomly in the comoving frame
-    emit_rpkt(pkt);
-    pkt.next_trans = -1;  // FLAG: transition history here not important, cont. process
     stats::increment(stats::Counter::K_STAT_TO_R_FF);
-
-    pkt.emissiontype = EMTYPE_FREEFREE;
-    // this is a thermal emission, so record it as the packet's last thermal ("true") emission
-    // (emit_rpkt has just set em_pos/em_time to the current position and time)
-    pkt.trueemissiontype = pkt.emissiontype;
-    pkt.trueem_pos = pkt.em_pos;
-    pkt.trueem_time = pkt.em_time;
-    pkt.nscatterings = 0;
-    if constexpr (VPKT_ON) {
-      vpkt::trace_vpkts(pkt, TYPE_KPKT);
-    }
-
+    emit_thermal_rpkt(pkt, EMTYPE_FREEFREE);
   } else if (rndcoolingtype == CoolingType::FREEBOUND) {
     // The k-packet converts directly into a r-packet by free-bound emission.
     const int lowerion = ion;
@@ -580,20 +595,8 @@ DEVICE_FUNC void do_kpkt(Packet& pkt, const double t2, const int nts) {
     // continuum's frequency range.
     pkt.nu_cmf = select_continuum_nu(element, lowerion, lowerlevel, phixstargetindex, T_e, get_rngstate(pkt));
 
-    // and then emit the packet randomly in the comoving frame
-    emit_rpkt(pkt);
-
-    pkt.next_trans = -1;  // FLAG: transition history here not important, cont. process
     stats::increment(stats::Counter::K_STAT_TO_R_FB);
-    pkt.emissiontype = get_emtype_continuum(element, lowerion, lowerlevel, phixstargetindex);
-    pkt.trueemissiontype = pkt.emissiontype;
-    pkt.trueem_pos = pkt.em_pos;
-    pkt.trueem_time = pkt.em_time;
-    pkt.nscatterings = 0;
-
-    if constexpr (VPKT_ON) {
-      vpkt::trace_vpkts(pkt, TYPE_KPKT);
-    }
+    emit_thermal_rpkt(pkt, get_emtype_continuum(element, lowerion, lowerlevel, phixstargetindex));
   } else if (rndcoolingtype == CoolingType::COLLEXC) {
     // the k-packet activates a macro-atom due to collisional excitation
     const float clumpednne = grid::get_clumpfactor(nonemptymgi) * grid::get_nne(nonemptymgi);

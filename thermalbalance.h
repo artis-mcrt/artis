@@ -5,6 +5,7 @@
 #define THERMALBALANCE_H
 
 #include <span>
+#include <vector>
 
 // Per-cell energy budget of the free electrons. All members are erg/s/cm^3 except dep_frac_heating.
 // call_T_e_finder() solves heating_ff + heating_bf + heating_collisional + heating_dep
@@ -47,6 +48,18 @@ struct HeatingCoolingRates {
   double eps_alpha_ana{0};
   double eps_spfission_ana{0};
 
+  // The per-ion breakdown of the rates above, indexed by uniqueionindex. WRITE_ION_HEATING_COOLING_RATES
+  // fills them once for each cell after the thermal balance solution, and the estimators file reports them.
+  // They stay empty without that option and for a cell that gets no solution, e.g. a grey cell.
+  // heating_coll_ion also stays empty without COL_HEAT_FROM_LEVELPOPS, because the estimator that then gives
+  // heating_collisional holds no per-ion information.
+  std::vector<double> heating_bf_ion;
+  std::vector<double> heating_coll_ion;
+  std::vector<double> heating_ff_ion;
+  std::vector<double> cooling_ff_ion;
+  std::vector<double> cooling_fb_ion;
+  std::vector<double> cooling_coll_ion;  // collisional excitation and collisional ionisation
+
   // the two sides of the thermal balance. The order of the terms is fixed, because the results must not change.
   [[nodiscard]] auto get_total_heating() const -> double {
     return heating_ff + heating_bf + heating_collisional + heating_dep;
@@ -58,6 +71,8 @@ struct HeatingCoolingRates {
 
 void call_T_e_finder(int nonemptymgi, double t_current, HeatingCoolingRates& heatingcoolingrates,
                      std::span<const double> bfheatingcoeffs);
+void calculate_ion_heating_cooling_rates(int nonemptymgi, HeatingCoolingRates& heatingcoolingrates,
+                                         std::span<const double> bfheatingcoeffs);
 auto calculate_bfheatingcoeff(int element, int ion, int level, int phixstargetindex, int nonemptymgi) -> double;
 void calculate_bfheatingcoeffs(int nonemptymgi, std::span<double> bfheatingcoeffs);
 

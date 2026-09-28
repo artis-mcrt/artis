@@ -2,9 +2,11 @@
 
 set -x
 
+source ./setupfuncs.sh
+
 runfolder=kilonova_2d_testrun
 
-if [ ! -f atomicdata_feconi.tar.xz ]; then curl -O -L https://github.com/artis-mcrt/artis/releases/download/v2026.5.15/atomicdata_feconi.tar.xz; fi
+getatomicdata atomicdata_feconi.tar.xz
 
 mkdir -p $runfolder
 
@@ -18,13 +20,16 @@ ln -s ../../ artis
 
 cp artis/artisoptions_kilonova_lte.h artisoptions.h
 
-xz -f -d -v -T0 *.xz
 
-sed -i.bak -e 's/constexpr int MPKTS.*/constexpr int MPKTS = 80000;/g' artisoptions.h
+sedopt "constexpr std::int64_t NUM_PACKETS.*" "constexpr std::int64_t NUM_PACKETS = 320'000;"
 
-sed -i.bak -e 's/constexpr int RATECOEFF_TABLESIZE.*/constexpr int RATECOEFF_TABLESIZE = 20;/g' artisoptions.h
-sed -i.bak -e 's/constexpr double MINTEMP.*/constexpr double MINTEMP = 1000.;/g' artisoptions.h
-sed -i.bak -e 's/constexpr double MAXTEMP.*/constexpr double MAXTEMP = 20000.;/g' artisoptions.h
+sedopt 'constexpr int RATECOEFF_TABLESIZE.*' 'constexpr int RATECOEFF_TABLESIZE = 20;'
+sedopt 'constexpr double MINTEMP.*' 'constexpr double MINTEMP = 1000.;'
+sedopt 'constexpr double MAXTEMP.*' 'constexpr double MAXTEMP = 20000.;'
+
+sedopt 'constexpr bool KEEP_ESCAPED_GAMMAS.*' 'constexpr bool KEEP_ESCAPED_GAMMAS = true;'
+
+sedopt 'constexpr bool USE_LUT_PHOTOION.*' 'constexpr bool USE_LUT_PHOTOION = true;'
 
 rm -f artisoptions.h.bak
 

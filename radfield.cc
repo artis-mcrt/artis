@@ -3,7 +3,7 @@
 // blackbodies (W, T_R) per cell and per frequency bin for use in the photoionisation and heating rates.
 //
 // The multibin radiation field model and the photoionisation, bound-bound, and heating estimators
-// are described by Shingles et al. (2020), MNRAS, 492, 2029, section 2.2, doi:10.1093/mnras/stz3412.
+// are described by Shingles et al. (2020), MNRAS, 492, 2029-2043, section 2.2, doi:10.1093/mnras/stz3412.
 
 #include "radfield.h"
 
@@ -14,7 +14,6 @@
 #include <cstdio>
 #include <cstdlib>
 #include <format>
-#include <fstream>
 #include <iterator>
 #include <print>
 #include <span>
@@ -35,6 +34,7 @@
 #include "globals.h"
 #include "grid.h"
 #include "mpi_logging.h"
+#include "outputfilestream.h"
 #include "rpkt.h"
 #include "sn3d.h"
 
@@ -86,7 +86,7 @@ struct Jb_lu_estimator {
 
 int detailed_linecount = 0;
 
-// array of indices into the linelist[] array for selected lines
+// the lineindex of each line with a detailed Jb_lu estimator
 std::vector<int> detailed_lineindices;
 
 std::vector<std::vector<Jb_lu_estimator>> prev_Jb_lu_normed{};  // value from the previous timestep
@@ -104,16 +104,10 @@ MPI_shared_array<int> allcontindex_of_allphixstargetindex{};
 // i.e. be sure the normalisation has been applied (exactly once) before using the values here!
 
 std::vector<double> J;  // after normalisation: [ergs/s/sr/cm2/Hz]
-#ifdef DO_TITER
-std::vector<double> J_reduced_save;
-#endif
 
 std::vector<double> nuJ;  // after normalisation: [ergs/s/sr/cm2]
-#ifdef DO_TITER
-std::vector<double> nuJ_reduced_save;
-#endif
 
-std::fstream radfieldfile;
+OutputFileStream radfieldfile;
 
 constexpr auto get_bin_nu_upper(const int binindex) -> double {
   assert_testmodeonly(binindex >= 0);
@@ -173,7 +167,7 @@ void add_detailed_line(const int lineindex) {
     prev_Jb_lu_normed[nonemptymgi].push_back({.value = 0, .contribcount = 0});
     assert_always(detailed_linecount == std::ssize(prev_Jb_lu_normed[nonemptymgi]));
 
-    // zero_estimators should do the next part anyway, but just to be sure:
+    // zero_estimators() only clears the entries, so the slot must exist first
     Jb_lu_raw[nonemptymgi].push_back({.value = 0, .contribcount = 0});
     assert_always(detailed_linecount == std::ssize(Jb_lu_raw[nonemptymgi]));
   }
@@ -401,23 +395,17 @@ auto find_bin_T_R(const int nonemptymgi, const int binindex) -> float {
 
 void set_params_fullspec(const int nonemptymgi, const int timestep) {
   const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
-  const double nubar = nuJ[nonemptymgi] / J[nonemptymgi];
-  if (!std::isfinite(nubar) || nubar == 0.) {
-    printlnlog("[warning] T_R estimator infinite in cell {}, keep T_R, T_J, W of last timestep. J = {:g}. nuJ = {:g}",
-               modelgridindex, J[nonemptymgi], nuJ[nonemptymgi]);
-  } else {
-    auto T_J = static_cast<float>(pow(J[nonemptymgi] * PI / STEBO, 1 / 4.));
-    if (T_J > MAXTEMP) {
-      printlnlog("[warning] temperature estimator T_J = {:g} exceeds T_max {:g} in cell {}. Setting T_J = T_max!", T_J,
-                 MAXTEMP, modelgridindex);
-      T_J = MAXTEMP;
-    } else if (T_J < MINTEMP) {
-      printlnlog("[warning] temperature estimator T_J = {:g} below T_min {:g} in cell {}. Setting T_J = T_min!", T_J,
-                 MINTEMP, modelgridindex);
-      T_J = MINTEMP;
-    }
-    grid::TJ_allcells[nonemptymgi] = T_J;
+  // J = 0 is a cell with no radiation, so T_J is MINTEMP and the clamp reports it
+  const auto T_J = get_T_J_from_J(nonemptymgi);
+  grid::TJ_allcells[nonemptymgi] = T_J;
 
+  const double nubar = nuJ[nonemptymgi] / J[nonemptymgi];
+  if (J[nonemptymgi] <= 0.) {
+    // no radiation in the cell
+    printlnlog("[warning] cell {} has J = 0, so T_R = MINTEMP and W = 0", modelgridindex);
+    grid::TR_allcells[nonemptymgi] = MINTEMP;
+    grid::W_allcells[nonemptymgi] = 0.;
+  } else {
     auto T_R = static_cast<float>(H * nubar / KB / 3.832229494);
     if (T_R > MAXTEMP) {
       printlnlog("[warning] temperature estimator T_R = {:g} exceeds T_max {:g} in cell {}. Setting T_R = T_max!", T_R,
@@ -499,7 +487,6 @@ void write_to_file(const int nonemptymgi, const int timestep) {
       std::println(radfieldfile, "{:d} {:d} {:d} {:.5e} {:.5e} {:.3e} {:.3e} {:.3e} {:.1f} {:.5e}", timestep,
                    modelgridindex, binindex, nu_lower, nu_upper, nuJ_out, J_out, J_nu_bar, T_R, W);
     }
-    radfieldfile.flush();
 #ifdef _OPENMP
   }
 #endif
@@ -545,14 +532,7 @@ void init() {
   reserve_resize(J_normfactor, nonempty_npts_model + 1);
   reserve_resize(J, nonempty_npts_model + 1);
 
-  // J and nuJ are accumulated and then normalised in-place
-  // i.e. be sure the normalisation has been applied (exactly once) before using the values here!
   reserve_resize(nuJ, nonempty_npts_model + 1);
-
-#ifdef DO_TITER
-  reserve_resize(J_reduced_save, nonempty_npts_model + 1);
-  reserve_resize(nuJ_reduced_save, nonempty_npts_model + 1);
-#endif
 
   reserve_resize(prev_Jb_lu_normed, nonempty_npts_model);
   reserve_resize(Jb_lu_raw, nonempty_npts_model);
@@ -583,13 +563,13 @@ void init() {
   }
 
   printlog("DETAILED_BF_ESTIMATORS {}", DETAILED_BF_ESTIMATORS_ON ? "ON" : "OFF");
-  if (DETAILED_BF_ESTIMATORS_ON) {
+  if constexpr (DETAILED_BF_ESTIMATORS_ON) {
     printlnlog(" from timestep {}", DETAILED_BF_ESTIMATORS_USEFROMTIMESTEP);
   } else {
     printlnlog("");
   }
 
-  if (MULTIBIN_RADFIELD_MODEL_ON) {
+  if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
     printlnlog("The multibin radiation field is being used from timestep {} onwards.", FIRST_NLTE_RADFIELD_TIMESTEP);
 
     printlnlog(
@@ -599,7 +579,7 @@ void init() {
         H * RADFIELDBINS_NU_MAX / EV, 1e8 * CLIGHT / RADFIELDBINS_NU_MAX, H * RADFIELDBINS_T_E_SUPERBIN_NU_MAX / EV,
         1e8 * CLIGHT / RADFIELDBINS_T_E_SUPERBIN_NU_MAX);
     if (grid::get_ndo_nonempty(globals::my_rank) > 0) {
-      assert_always(!radfieldfile.is_open());
+      assert_always(radfieldfile.rdbuf() == nullptr);
       radfieldfile = open_rank_outfile("radfield");
       std::println(radfieldfile, "timestep modelgridindex bin_num nu_lower nu_upper nuJ J J_nu_avg T_R W");
       radfieldfile.flush();
@@ -642,7 +622,8 @@ void init() {
     const auto bfestimcount = std::ssize(globals::bfestim_nu_edge);
     prev_bfrate_normed = MPI_shared_array<float>(nonempty_npts_model * bfestimcount);
     if (globals::rank_in_node == 0) {
-      std::ranges::fill(prev_bfrate_normed, 0.);
+      // -1 marks a cell without a valid estimator. get_corrphotoioncoeff() then uses the LUT or the integral.
+      std::ranges::fill(prev_bfrate_normed, -1.);
     }
     MPI_Barrier_node();
     printlnlog("[info] mem_usage: detailed bf estimators for non-empty cells occupy {:.3f} MB (node shared memory)",
@@ -664,37 +645,6 @@ void init() {
     }
     MPI_Barrier_node();
   }
-}
-
-// Initialise estimator arrays which hold the last time steps values (used to damp out
-// fluctuations over timestep iterations if DO_TITER is defined) to -1.
-void initialise_prev_titer_photoionestimators() {
-#ifdef DO_TITER
-  std::ranges::fill(globals::ffheatingestimator_save, -1.);
-  std::ranges::fill(globals::colheatingestimator_save, -1.);
-  std::ranges::fill(J_reduced_save, -1.);
-  std::ranges::fill(nuJ_reduced_save, -1.);
-  for (int nonemptymgi = 0; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
-    for (int element = 0; element < get_nelements(); element++) {
-      const int nions = get_nions(element);
-      for (int ion = 0; ion < nions - 1; ion++) {
-        const int groundcontindex = get_groundcontindex(element, ion);
-        if (groundcontindex < 0) {
-          // an ion without a ground photoionisation table has no estimator slot
-          continue;
-        }
-        if constexpr (USE_LUT_PHOTOION) {
-          globals::gammaestimator_save[(static_cast<ptrdiff_t>(nonemptymgi) * globals::nbfcontinua_ground) +
-                                       groundcontindex] = -1.;
-        }
-        if constexpr (USE_ION_BFHEATING_ESTIMATORS) {
-          globals::bfheatingestimator_save[(static_cast<ptrdiff_t>(nonemptymgi) * globals::nbfcontinua_ground) +
-                                           groundcontindex] = -1.;
-        }
-      }
-    }
-  }
-#endif
 }
 
 auto get_Jblueindex(const int lineindex) -> int {
@@ -728,7 +678,7 @@ auto get_Jb_lu(const int nonemptymgi, const int jblueindex) -> double {
   return prev_Jb_lu_normed[nonemptymgi][jblueindex].value;
 }
 
-// set up the new bins and clear the estimators in preparation for a timestep
+// clear the estimators before a timestep
 void zero_estimators() {
   std::ranges::fill(J_normfactor, -1.0);
   std::ranges::fill(J, 0.0);
@@ -792,18 +742,21 @@ DEVICE_FUNC auto radfield(const double nu, const int nonemptymgi) -> double {
   if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
     if (globals::timestep >= FIRST_NLTE_RADFIELD_TIMESTEP) {
       const int binindex = select_bin(nu);
-      if (binindex >= 0) {
-        const auto W = get_bin_W(nonemptymgi, binindex);
-        if (W >= 0.) {
-          return W * planck(nu, get_bin_T_R(nonemptymgi, binindex));
-        }
+      if (binindex < 0) {
+        return 0.;
       }
-      return 0.;
+      const auto W = get_bin_W(nonemptymgi, binindex);
+      // a negative W marks a bin with no fit, for example in a cell that was thick in the last timestep
+      if (W >= 0.) {
+        return W * planck(nu, get_bin_T_R(nonemptymgi, binindex));
+      }
     }
   }
   // full spectrum fit to a single dilute blackbody
   return grid::W_allcells[nonemptymgi] * planck(nu, grid::TR_allcells[nonemptymgi]);
 }
+
+void flush_file() { radfieldfile.flush(); }
 
 // Fit the radiation field parameters of one cell to the estimators accumulated over the last timestep:
 // the full-spectrum diluted blackbody (W, T_R), and with MULTIBIN_RADFIELD_MODEL_ON a separate (W, T_R)
@@ -877,7 +830,7 @@ void fit_parameters(const int nonemptymgi, const int timestep) {
         W_bin = 0.;
       }
 
-      const auto mgibinindex = (nonemptymgi * RADFIELDBINCOUNT) + binindex;
+      const auto mgibinindex = (static_cast<ptrdiff_t>(nonemptymgi) * RADFIELDBINCOUNT) + binindex;
       radfieldbin_solutions_T_R[mgibinindex] = T_R_bin;
       radfieldbin_solutions_W[mgibinindex] = W_bin;
     }
@@ -895,6 +848,15 @@ void fit_parameters(const int nonemptymgi, const int timestep) {
 
 void set_J_normfactor(const int nonemptymgi, const double normfactor) { J_normfactor[nonemptymgi] = normfactor; }
 
+// A cell without a bin fit in this timestep must not keep the fit of an older timestep
+void invalidate_bin_fits(const int nonemptymgi) {
+  if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
+    std::ranges::fill(radfieldbin_solutions_W.span().subspan(static_cast<ptrdiff_t>(nonemptymgi) * RADFIELDBINCOUNT,
+                                                             RADFIELDBINCOUNT),
+                      -1.);
+  }
+}
+
 void normalise_J(const int nonemptymgi, const double estimator_normfactor_over4pi) {
   assert_always(std::isfinite(J[nonemptymgi]));
   J[nonemptymgi] *= estimator_normfactor_over4pi;
@@ -904,12 +866,12 @@ void normalise_J(const int nonemptymgi, const double estimator_normfactor_over4p
   }
 }
 
-void normalise_bf_estimators(const int nts, const int nts_prev, const int titer, const double deltat) {
+void normalise_bf_estimators(const int nts, const int nts_prev, const double deltat) {
   // these conditions are the same on every rank, so all node ranks reach the barrier below together
   if (globals::lte_iteration) {
     return;
   }
-  if (nts == globals::timestep_initial && titer == 0) {
+  if (nts == globals::timestep_initial) {
     return;
   }
   if (globals::rank_in_node == 0) {
@@ -917,6 +879,11 @@ void normalise_bf_estimators(const int nts, const int nts_prev, const int titer,
     const ptrdiff_t nonempty_npts_model = grid::get_nonempty_npts_model();
     for (auto nonemptymgi = 0Z; nonemptymgi < nonempty_npts_model; nonemptymgi++) {
       if (grid::thick_allcells[nonemptymgi] == grid::CellThickness::THICK) {
+        // a thick cell collected no estimators in the last timestep. The cell can become thin in the coming grid
+        // update. The packets must then not read the values of an older timestep, so mark them as invalid.
+        for (int i = 0; i < bfestimcount; i++) {
+          prev_bfrate_normed[(nonemptymgi * bfestimcount) + i] = -1.;
+        }
         continue;
       }
       const auto mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
@@ -956,17 +923,10 @@ void normalise_nuJ(const int nonemptymgi, const double estimator_normfactor_over
 }
 
 // Get the radiation temperature of a cell from the mean intensity alone, by equating J to the
-// Stefan-Boltzmann law (T_J = (pi J / sigma)^1/4). Non-finite values keep the previous timestep's value,
-// and the result is clamped to [MINTEMP, MAXTEMP].
+// Stefan-Boltzmann law (T_J = (pi J / sigma)^1/4). The result is clamped to [MINTEMP, MAXTEMP].
 auto get_T_J_from_J(const int nonemptymgi) -> float {
   const auto T_J = static_cast<float>(pow(J[nonemptymgi] * PI / STEBO, 1. / 4.));
-  if (!std::isfinite(T_J)) {
-    // keep old value of T_J
-    const auto modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
-    printlnlog("[warning] get_T_J_from_J: T_J estimator infinite in cell {}, use value of last timestep",
-               modelgridindex);
-    return grid::TJ_allcells[nonemptymgi];
-  }
+  assert_always(std::isfinite(T_J));
   // Make sure that T is in the allowed temperature range.
   if (T_J > MAXTEMP) {
     printlnlog(
@@ -982,12 +942,6 @@ auto get_T_J_from_J(const int nonemptymgi) -> float {
   }
   return T_J;
 }
-
-#ifdef DO_TITER
-void titer_J(const int nonemptymgi) { titer_average(J[nonemptymgi], J_reduced_save[nonemptymgi]); }
-
-void titer_nuJ(const int nonemptymgi) { titer_average(nuJ[nonemptymgi], nuJ_reduced_save[nonemptymgi]); }
-#endif
 
 // reduce and broadcast (allreduce) the estimators for J and nuJ in all bins
 void reduce_estimators() {
@@ -1031,209 +985,114 @@ void reduce_estimators() {
         std::chrono::duration<double>(std::chrono::steady_clock::now() - sys_time_start_reduction).count();
     printlnlog(" (took {:.1f} s)", duration_reduction);
   }
-  MPI_Barrier_allranks();
 }
 
-// broadcast computed radfield results including parameters from the cells belonging to root process to all processes
-void do_MPI_Bcast(const ptrdiff_t nonemptymgi, const int root, const int root_node_id) {
-  MPI_Bcast_safe(J_normfactor[nonemptymgi], root, MPI_COMM_WORLD);
+// broadcast the radiation field parameters of the cells that belong to the root rank to all ranks. The caller
+// puts a barrier after this call, so that the other ranks on a node read the shared arrays after the broadcast.
+void do_MPI_Bcast(const ptrdiff_t nstart_nonempty, const ptrdiff_t ndo_nonempty, const int root,
+                  const int root_node_id) {
+  MPI_Bcast_safe(std::span{J_normfactor}.subspan(nstart_nonempty, ndo_nonempty), root, MPI_COMM_WORLD);
 
   if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
     if (globals::rank_in_node == 0) {
-      MPI_Bcast_safe(radfieldbin_solutions_W.subspan(nonemptymgi * RADFIELDBINCOUNT, RADFIELDBINCOUNT), root_node_id,
-                     globals::mpi_comm_internode);
-      MPI_Bcast_safe(radfieldbin_solutions_T_R.subspan(nonemptymgi * RADFIELDBINCOUNT, RADFIELDBINCOUNT), root_node_id,
-                     globals::mpi_comm_internode);
+      MPI_Bcast_safe(
+          radfieldbin_solutions_W.subspan(nstart_nonempty * RADFIELDBINCOUNT, ndo_nonempty * RADFIELDBINCOUNT),
+          root_node_id, globals::mpi_comm_internode);
+      MPI_Bcast_safe(
+          radfieldbin_solutions_T_R.subspan(nstart_nonempty * RADFIELDBINCOUNT, ndo_nonempty * RADFIELDBINCOUNT),
+          root_node_id, globals::mpi_comm_internode);
     }
   }
 
   if constexpr (DETAILED_LINE_ESTIMATORS_ON) {
-    for (int jblueindex = 0; jblueindex < detailed_linecount; jblueindex++) {
-      MPI_Bcast_safe(prev_Jb_lu_normed[nonemptymgi][jblueindex].value, root, MPI_COMM_WORLD);
-      MPI_Bcast_safe(prev_Jb_lu_normed[nonemptymgi][jblueindex].contribcount, root, MPI_COMM_WORLD);
+    for (auto nonemptymgi = nstart_nonempty; nonemptymgi < (nstart_nonempty + ndo_nonempty); nonemptymgi++) {
+      for (int jblueindex = 0; jblueindex < detailed_linecount; jblueindex++) {
+        MPI_Bcast_safe(prev_Jb_lu_normed[nonemptymgi][jblueindex].value, root, MPI_COMM_WORLD);
+        MPI_Bcast_safe(prev_Jb_lu_normed[nonemptymgi][jblueindex].contribcount, root, MPI_COMM_WORLD);
+      }
     }
   }
-
-  MPI_Barrier_allranks();
 }
 
 void write_restart_data(FILE* gridsave_file) {
   printlog("binned radiation field and detailed lines, ");
 
-  fprintf(gridsave_file, "%d\n", 30490824);  // special number marking the beginning of radfield data
+  write_restart_values(gridsave_file, 30490824);  // special number marking the beginning of radfield data
 
   if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
-    fprintf(gridsave_file, "%d %la %la %la %la\n", RADFIELDBINCOUNT, RADFIELDBINS_NU_MIN, RADFIELDBINS_NU_MAX,
-            bins_T_R_min, bins_T_R_max);
-
-    for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++) {
-      fprintf(gridsave_file, "%d %la\n", binindex, get_bin_nu_upper(binindex));
-    }
+    write_restart_values(gridsave_file, RADFIELDBINCOUNT, RADFIELDBINS_NU_MIN, RADFIELDBINS_NU_MAX, bins_T_R_min,
+                         bins_T_R_max);
+    write_restart_array(gridsave_file, radfieldbin_solutions_W);
+    write_restart_array(gridsave_file, radfieldbin_solutions_T_R);
   }
 
   if constexpr (DETAILED_BF_ESTIMATORS_ON) {
-    const int nbfcontinua = globals::nbfcontinua;
-    fprintf(gridsave_file, "%d\n", nbfcontinua);
-
-    const int bfestimcount = static_cast<int>(globals::bfestim_nu_edge.size());
-    fprintf(gridsave_file, "%d\n", bfestimcount);
-
-    for (int nonemptymgi = 0; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
-      fprintf(gridsave_file, "%d\n", nonemptymgi);
-      for (int i = 0; i < bfestimcount; i++) {
-        fprintf(gridsave_file, "%a ", prev_bfrate_normed[(nonemptymgi * bfestimcount) + i]);
-      }
-    }
+    write_restart_values(gridsave_file, globals::nbfcontinua, static_cast<int>(std::ssize(globals::bfestim_nu_edge)));
+    write_restart_array(gridsave_file, prev_bfrate_normed);
   }
 
   if constexpr (DETAILED_LINE_ESTIMATORS_ON) {
-    fprintf(gridsave_file, "%d\n", detailed_linecount);
-
-    for (int jblueindex = 0; jblueindex < detailed_linecount; jblueindex++) {
-      fprintf(gridsave_file, "%d ", detailed_lineindices[jblueindex]);
+    write_restart_values(gridsave_file, detailed_linecount);
+    write_restart_array(gridsave_file, detailed_lineindices);
+    for (ptrdiff_t nonemptymgi = 0; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
+      write_restart_array(gridsave_file, prev_Jb_lu_normed[nonemptymgi]);
     }
   }
-
-  for (int nonemptymgi = 0; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
-    assert_testmodeonly(nonemptymgi >= 0);
-    fprintf(gridsave_file, "%d %la\n", nonemptymgi, J_normfactor[nonemptymgi]);
-
-    if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
-      for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++) {
-        const auto mgibinindex = (nonemptymgi * RADFIELDBINCOUNT) + binindex;
-        fprintf(gridsave_file, "%la %la %a %a\n", radfieldbins.J_raw[mgibinindex], radfieldbins.nuJ_raw[mgibinindex],
-                radfieldbin_solutions_W[mgibinindex], radfieldbin_solutions_T_R[mgibinindex]);
-      }
-    }
-
-    if constexpr (DETAILED_LINE_ESTIMATORS_ON) {
-      for (int jblueindex = 0; jblueindex < detailed_linecount; jblueindex++) {
-        fprintf(gridsave_file, "%la %d\n", Jb_lu_raw[nonemptymgi][jblueindex].value,
-                Jb_lu_raw[nonemptymgi][jblueindex].contribcount);
-      }
-    }
-  }
-  fprintf(gridsave_file, "%d\n", 42809403);  // special number marking the end of radfield data
+  write_restart_values(gridsave_file, 42809403);  // special number marking the end of radfield data
 }
 
 void read_restart_data(FILE* gridsave_file) {
   printlnlog("Reading restart data for radiation field");
 
   int code_check = 0;
-  assert_always(fscanf(gridsave_file, "%d\n", &code_check) == 1);
+  read_restart_values(gridsave_file, code_check);
   assert_always(code_check == 30490824);
 
   if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
-    double T_R_min_in{NAN};
-    double T_R_max_in{NAN};
+    int bincount_in = 0;
     double nu_min_in{NAN};
     double nu_max_in{NAN};
-    int bincount_in = 0;
-    assert_always(fscanf(gridsave_file, "%d %la %la %la %la\n", &bincount_in, &nu_min_in, &nu_max_in, &T_R_min_in,
-                         &T_R_max_in) == 5);
-
-    double nu_lower_first_ratio = nu_min_in / RADFIELDBINS_NU_MIN;
-    if (nu_lower_first_ratio > 1.0) {
-      nu_lower_first_ratio = 1 / nu_lower_first_ratio;
+    double T_R_min_in{NAN};
+    double T_R_max_in{NAN};
+    read_restart_values(gridsave_file, bincount_in, nu_min_in, nu_max_in, T_R_min_in, T_R_max_in);
+    if (bincount_in != RADFIELDBINCOUNT || nu_min_in != RADFIELDBINS_NU_MIN || nu_max_in != RADFIELDBINS_NU_MAX ||
+        T_R_min_in != bins_T_R_min || T_R_max_in != bins_T_R_max) {
+      fatal_crash(
+          "gridsave file specifies {} bins, nu_min {:g} nu_max {:g} T_R_min {:g} T_R_max {:g}, but this simulation has "
+          "{} bins, nu_min {:g} nu_max {:g} T_R_min {:g} T_R_max {:g}",
+          bincount_in, nu_min_in, nu_max_in, T_R_min_in, T_R_max_in, RADFIELDBINCOUNT, RADFIELDBINS_NU_MIN,
+          RADFIELDBINS_NU_MAX, bins_T_R_min, bins_T_R_max);
     }
-
-    double nu_upper_last_ratio = nu_max_in / RADFIELDBINS_NU_MAX;
-    if (nu_upper_last_ratio > 1.0) {
-      nu_upper_last_ratio = 1 / nu_upper_last_ratio;
-    }
-
-    if (bincount_in != RADFIELDBINCOUNT || T_R_min_in != bins_T_R_min || T_R_max_in != bins_T_R_max ||
-        nu_lower_first_ratio < 0.999 || nu_upper_last_ratio < 0.999) {
-      printlnlog("[error] gridsave file specifies {} bins, nu_min {} nu_max {} T_R_min {} T_R_max {}", bincount_in,
-                 nu_min_in, nu_max_in, T_R_min_in, T_R_max_in);
-      printlnlog("require {} bins, RADFIELDBINS_NU_MIN {:g} RADFIELDBINS_NU_MAX {:g} T_R_min {:g} T_R_max {:g}",
-                 RADFIELDBINCOUNT, RADFIELDBINS_NU_MIN, RADFIELDBINS_NU_MAX, bins_T_R_min, bins_T_R_max);
-      std::abort();
-    }
-
-    for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++) {
-      int binindex_in = 0;
-      double nu_upper_in = NAN;
-      assert_always(fscanf(gridsave_file, "%d %la\n", &binindex_in, &nu_upper_in) == 2);
-      assert_always(binindex_in == binindex);
-      assert_always(nu_upper_in == get_bin_nu_upper(binindex));
-    }
+    read_restart_array(gridsave_file, radfieldbin_solutions_W);
+    read_restart_array(gridsave_file, radfieldbin_solutions_T_R);
   }
 
   if constexpr (DETAILED_BF_ESTIMATORS_ON) {
-    int gridsave_nbf_in = 0;
-    assert_always(fscanf(gridsave_file, "%d\n", &gridsave_nbf_in) == 1);
-    assert_always(gridsave_nbf_in == globals::nbfcontinua);
-
-    const auto bfestimcount = std::ssize(globals::bfestim_nu_edge);
-    int gridsave_nbfestim_in = 0;
-    assert_always(fscanf(gridsave_file, "%d\n", &gridsave_nbfestim_in) == 1);
-    assert_always(gridsave_nbfestim_in == bfestimcount);
-
-    for (auto nonemptymgi = 0Z; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
-      int nonemptymgi_in = 0;
-      assert_always(fscanf(gridsave_file, "%d\n", &nonemptymgi_in) == 1);
-      assert_always(nonemptymgi_in == nonemptymgi);
-      for (int i = 0; i < bfestimcount; i++) {
-        float bfrate_normed = 0;
-        assert_always(fscanf(gridsave_file, "%a ", &bfrate_normed) == 1);
-
-        if (globals::rank_in_node == 0) {
-          prev_bfrate_normed[(nonemptymgi * bfestimcount) + i] = bfrate_normed;
-        }
-      }
-    }
+    int nbfcontinua_in = 0;
+    int bfestimcount_in = 0;
+    read_restart_values(gridsave_file, nbfcontinua_in, bfestimcount_in);
+    assert_always(nbfcontinua_in == globals::nbfcontinua);
+    assert_always(bfestimcount_in == std::ssize(globals::bfestim_nu_edge));
+    read_restart_array(gridsave_file, prev_bfrate_normed);
   }
 
   if constexpr (DETAILED_LINE_ESTIMATORS_ON) {
     int detailed_linecount_in = 0;
-    assert_always(fscanf(gridsave_file, "%d\n", &detailed_linecount_in) == 1);
-
+    read_restart_values(gridsave_file, detailed_linecount_in);
     if (detailed_linecount_in != detailed_linecount) {
-      printlnlog("[error] gridsave file specifies {} detailed lines but this simulation has {}.", detailed_linecount_in,
-                 detailed_linecount);
-      std::abort();
+      fatal_crash("gridsave file specifies {} detailed lines but this simulation has {}.", detailed_linecount_in,
+                  detailed_linecount);
     }
-
-    for (int jblueindex = 0; jblueindex < detailed_linecount; jblueindex++) {
-      assert_always(fscanf(gridsave_file, "%d ", &detailed_lineindices[jblueindex]) == 1);
+    std::vector<int> detailed_lineindices_in(detailed_lineindices.size());
+    read_restart_array(gridsave_file, detailed_lineindices_in);
+    if (detailed_lineindices_in != detailed_lineindices) {
+      fatal_crash("gridsave file specifies a different set of detailed lines than this simulation.");
     }
-  }
-
-  for (auto nonemptymgi = 0Z; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
-    int nonemptymgi_in = 0;
-    assert_always(fscanf(gridsave_file, "%d %la\n", &nonemptymgi_in, &J_normfactor[nonemptymgi]) == 2);
-    assert_always(nonemptymgi_in == nonemptymgi);
-
-    if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
-      for (int binindex = 0; binindex < RADFIELDBINCOUNT; binindex++) {
-        const auto mgibinindex = (nonemptymgi * RADFIELDBINCOUNT) + binindex;
-        float W = 0;
-        float T_R = 0;
-        assert_always(fscanf(gridsave_file, "%la %la %a %a\n", &radfieldbins.J_raw[mgibinindex],
-                             &radfieldbins.nuJ_raw[mgibinindex], &W, &T_R) == 4);
-        if (globals::rank_in_node == 0) {
-          radfieldbin_solutions_W[mgibinindex] = W;
-          radfieldbin_solutions_T_R[mgibinindex] = T_R;
-        }
-      }
-    }
-
-    if constexpr (DETAILED_LINE_ESTIMATORS_ON) {
-      for (int jblueindex = 0; jblueindex < detailed_linecount; jblueindex++) {
-        assert_always(fscanf(gridsave_file, "%la %d\n", &Jb_lu_raw[nonemptymgi][jblueindex].value,
-                             &Jb_lu_raw[nonemptymgi][jblueindex].contribcount) == 2);
-        // normalise_J() is skipped on the timestep that a run resumes from, so the normalised values
-        // that the macro atom reads have to be rebuilt here. Otherwise every detailed line estimator
-        // would be zero for the first timestep after each restart. J_normfactor holds exactly the
-        // factor that normalise_J() applies.
-        prev_Jb_lu_normed[nonemptymgi][jblueindex].value =
-            Jb_lu_raw[nonemptymgi][jblueindex].value * J_normfactor[nonemptymgi];
-        prev_Jb_lu_normed[nonemptymgi][jblueindex].contribcount = Jb_lu_raw[nonemptymgi][jblueindex].contribcount;
-      }
+    for (auto nonemptymgi = 0Z; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
+      read_restart_array(gridsave_file, prev_Jb_lu_normed[nonemptymgi]);
     }
   }
-  assert_always(fscanf(gridsave_file, "%d\n", &code_check) == 1);
+  read_restart_values(gridsave_file, code_check);
   assert_always(code_check == 42809403);
 }
 

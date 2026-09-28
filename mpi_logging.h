@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <array>
 #include <atomic>
+#include <bit>
 #include <cassert>
 #include <cstdarg>
 #include <cstddef>
@@ -15,10 +16,9 @@
 #include <cstdlib>
 #include <cstring>
 #include <format>
-#include <fstream>
-#include <ios>
 #include <limits>
 #include <memory>
+#include <new>
 #include <ranges>
 #include <span>
 #include <string>
@@ -54,8 +54,8 @@ inline int rank_in_node{-1};
 inline int node_count{-1};
 inline int node_id{-1};
 
-// optional folder (sn3d -o option) receiving the per-rank output files; empty means the current directory
-inline std::string runoutputfolder;
+// the job folder of sn3d, which receives the per-rank output files; empty means the current directory
+inline std::string jobfolder;
 
 inline void setup_mpi_vars() {
   MPI_Comm_rank(MPI_COMM_WORLD, &globals::my_rank);
@@ -101,24 +101,21 @@ inline void setup_mpi_vars() {
 
 inline void MPI_Barrier_node() { MPI_Barrier(globals::mpi_comm_node); }
 
-extern std::fstream output_file;
-
-#ifdef _OPENMP
-#ifndef GPU_ON
-#pragma omp threadprivate(output_file)
-#endif
-#endif
-
 void set_log_file(std::string_view filename) noexcept;
 
-// Write an already-formatted message to output_file, prepending a timestamp at the start of each line. When
+// Write an already-formatted message to the log file, prepending a timestamp at the start of each line. When
 // add_newline is set, a trailing newline is appended and the next write starts a new line.
 void log_write(std::string_view message, bool add_newline) noexcept;
 
-// Report a failed assertion to output_file (if open) and stderr. Defined out-of-line in mpi_logging.cc so that the
+// Report a failed assertion to the log file (if open) and stderr. Defined out-of-line in mpi_logging.cc so that the
 // heavyweight <iostream> dependency does not propagate into every translation unit that includes this header.
 [[gnu::cold]] DEVICE_FUNC void report_assert_failure(const char* file, int line, const char* expr,
                                                      const char* func) noexcept;
+
+// Write the message with the rank, the file, the line, and the function to the rank log and to stderr, then stop
+// the run. Host only. Call it through the macro fatal_crash(fmt, args...), which also has a device path.
+[[noreturn]] [[gnu::cold]] void report_fatal_error_and_abort(const char* file, int line, const char* func,
+                                                             const char* message) noexcept;
 
 #define __artis_assert(e)                                                 \
   {                                                                       \
@@ -141,6 +138,85 @@ inline auto printlnlog(const std::format_string<Args...> fmt, Args&&... args) no
   MY_IF_HOST(log_write(std::format(fmt, std::forward<Args>(args)...), true););
 }
 
+// Device code has no std::format, so these helpers print a std::format string with the device printf. Each {...}
+// takes the next argument and the spec inside the braces is ignored. {{ and }} print one brace.
+template <typename T>
+DEVICE_FUNC inline auto device_printf_arg(const T& value) -> void {
+  if constexpr (std::is_same_v<T, bool>) {
+    printf("%s", value ? "true" : "false");
+  } else if constexpr (std::is_integral_v<T> && std::is_signed_v<T>) {
+    printf("%lld", static_cast<long long>(value));
+  } else if constexpr (std::is_integral_v<T>) {
+    printf("%llu", static_cast<unsigned long long>(value));
+  } else if constexpr (std::is_floating_point_v<T>) {
+    printf("%g", static_cast<double>(value));
+  } else if constexpr (std::is_convertible_v<T, const char*>) {
+    printf("%s", static_cast<const char*>(value));
+  } else if constexpr (requires { value.c_str(); }) {
+    printf("%s", value.c_str());
+  } else if constexpr (requires {
+                         value.data();
+                         value.size();
+                       }) {
+    printf("%.*s", static_cast<int>(value.size()), value.data());
+  } else {
+    static_assert(false, "device_printf_arg: no printf conversion for this argument type");
+  }
+}
+
+// Print the part [start, end) of the format string
+DEVICE_FUNC inline auto device_printf_literal(const std::string_view fmt, const size_t start, const size_t end)
+    -> void {
+  const auto part = fmt.substr(start, end - start);
+  printf("%.*s", static_cast<int>(part.size()), part.data());
+}
+
+// Print the literal text up to and including the next {...} placeholder. Give back the position after it.
+DEVICE_FUNC inline auto device_printf_until_placeholder(const std::string_view fmt, size_t pos) -> size_t {
+  size_t literal_start = pos;
+  while (pos < fmt.size()) {
+    const char c = fmt[pos];
+    const char next = (pos + 1 < fmt.size()) ? fmt[pos + 1] : '\0';
+    if ((c == '{' && next == '{') || (c == '}' && next == '}')) {
+      device_printf_literal(fmt, literal_start, pos + 1);
+      pos += 2;
+      literal_start = pos;
+    } else if (c == '{') {
+      device_printf_literal(fmt, literal_start, pos);
+      const auto close = fmt.find('}', pos);
+      return (close == std::string_view::npos) ? fmt.size() : close + 1;
+    } else {
+      pos++;
+    }
+  }
+  device_printf_literal(fmt, literal_start, fmt.size());
+  return pos;
+}
+
+template <typename... Args>
+DEVICE_FUNC inline auto device_printf_format(const std::string_view fmt, const Args&... args) -> void {
+  size_t pos = 0;
+  ((pos = device_printf_until_placeholder(fmt, pos), device_printf_arg(args)), ...);
+  device_printf_until_placeholder(fmt, pos);
+}
+
+// Stop the run with a message. The host formats the message with std::format and writes it with the rank, the
+// file, the line, and the function to the rank log and to stderr. A device prints the same line with printf.
+template <typename... Args>
+[[noreturn]] DEVICE_FUNC inline auto fatal_crash_at(const char* file, const int line, const char* func,
+                                                    const std::format_string<Args...> fmt, Args&&... args) noexcept
+    -> void {
+  MY_IF_DEVICE(printf("\n[rank %d] [error] %s:%d in %s: ", globals::my_rank, file, line, func);
+               device_printf_format(fmt.get(), args...); printf("\n"););
+  MY_IF_HOST(report_fatal_error_and_abort(file, line, func, std::format(fmt, std::forward<Args>(args)...).c_str()););
+  // the host reporter above does not return. The trap stops a device thread, and it also shows every compiler
+  // that this function does not return, because the target split above hides that from nvc++.
+  // cppcheck-suppress unreachableCode
+  __builtin_trap();
+}
+
+#define fatal_crash(...) fatal_crash_at(__FILE__, __LINE__, __PRETTY_FUNCTION__, __VA_ARGS__)
+
 #define assert_always(e) __artis_assert(e)
 
 #if defined TESTMODE && TESTMODE
@@ -152,9 +228,8 @@ inline auto printlnlog(const std::format_string<Args...> fmt, Args&&... args) no
 // Chunk a range of integers into (approximately) equal contiguous pieces for getting around the MPI 32-bit limit
 // on counts.
 //
-// This won't be necessary after Open MPI 6.0, which supports MPI-4's 64-bit MPI_Count functions (e.g.,
-// MPI_Bcast_c instead of MPI_Bcast). For now we need this to be able to use more than ~2 billion items in a single
-// array.
+// The wrappers below call the MPI functions with an int count, so an array with more than about 2 billion items
+// needs chunks. A change to the MPI-4 large-count functions, e.g. MPI_Bcast_c, would remove this need.
 constexpr auto get_range_chunk(const ptrdiff_t size, const ptrdiff_t nchunks, const ptrdiff_t nchunk)
     -> std::tuple<ptrdiff_t, ptrdiff_t> {
   assert_always(size >= 0);
@@ -187,6 +262,11 @@ static_assert(get_chunk_count(1, 3) == 1);
 static_assert(get_chunk_count(3, 3) == 1);
 static_assert(get_chunk_count(4, 3) == 2);
 
+// Alignment in bytes of the memory of an MPI_shared_array. AVX-512 needs 64 bytes, and 128 bytes is the
+// cache line size of Apple Silicon. Both allocation paths apply this value, so that a run with one rank on
+// the node gets the same alignment as a run with more ranks.
+constexpr std::size_t shared_array_alignment_bytes = 128;
+
 template <typename T>
   requires(!std::is_const_v<T>)
 [[nodiscard]] auto MPI_shared_malloc_span_keepwin(const ptrdiff_t num_allranks, const T& initval = {})
@@ -199,21 +279,40 @@ template <typename T>
   // only rank_in_node 0 on each node allocates memory, but all ranks will get a pointer to it
   const auto num_thisnoderank = (globals::rank_in_node == 0) ? num_allranks : 0;
 
-  auto size = static_cast<MPI_Aint>(num_thisnoderank * sizeof(T));
+  // The MPI library does not always obey the alignment hint. Rank 0 asks for shared_array_alignment_bytes more
+  // bytes and computes the byte offset that rounds its base pointer up to the next boundary of that alignment.
+  // Every rank then applies that one offset.
+  // Each process maps the segment at its own virtual address, so the offset must come from a single rank, or the
+  // spans of the ranks would refer to different parts of the segment.
+  auto size = static_cast<MPI_Aint>((num_thisnoderank * sizeof(T)) +
+                                    ((num_thisnoderank > 0) ? shared_array_alignment_bytes : 0));
   int disp_unit = sizeof(T);
   MPI_Win mpiwin{MPI_WIN_NULL};
   T* ptr{};
   MPI_Info info{};
   assert_always(MPI_Info_create(&info) == MPI_SUCCESS);
-  // Request alignment (AVX-512 requires 64b, and 128b is Apple Silicon cache line size).
-  assert_always(MPI_Info_set(info, "mpi_minimum_memory_alignment", "128") == MPI_SUCCESS);
+  const auto alignment_string = std::to_string(shared_array_alignment_bytes);
+  assert_always(MPI_Info_set(info, "mpi_minimum_memory_alignment", alignment_string.c_str()) == MPI_SUCCESS);
+  // Only rank 0 has a non-zero segment, so the segments are contiguous in any case. The hint lets the library
+  // page-align the segment, which usually gives a zero alignment offset below.
+  assert_always(MPI_Info_set(info, "alloc_shared_noncontig", "true") == MPI_SUCCESS);
   assert_always(MPI_Win_allocate_shared(size, disp_unit, info, globals::mpi_comm_node, static_cast<void*>(&ptr),
                                         &mpiwin) == MPI_SUCCESS);
   assert_always(MPI_Info_free(&info) == MPI_SUCCESS);
   assert_always(MPI_Win_shared_query(mpiwin, 0, &size, &disp_unit, static_cast<void*>(&ptr)) == MPI_SUCCESS);
   assert_always(ptr != nullptr);
+  std::uint64_t alignment_offset_bytes = 0;
+  if (globals::rank_in_node == 0) {
+    const auto baseaddress = std::bit_cast<std::uintptr_t>(ptr);
+    alignment_offset_bytes =
+        (shared_array_alignment_bytes - (baseaddress % shared_array_alignment_bytes)) % shared_array_alignment_bytes;
+  }
+  assert_always(MPI_Bcast(&alignment_offset_bytes, 1, MPI_UINT64_T, 0, globals::mpi_comm_node) == MPI_SUCCESS);
+  assert_always(alignment_offset_bytes < shared_array_alignment_bytes);
+  assert_always(static_cast<std::size_t>(size) >= alignment_offset_bytes + (num_allranks * sizeof(T)));
+  ptr = std::bit_cast<T*>(std::bit_cast<std::uintptr_t>(ptr) + alignment_offset_bytes);
 #ifdef __cpp_lib_is_sufficiently_aligned
-  assert_always(std::is_sufficiently_aligned<128>(ptr));
+  assert_always(std::is_sufficiently_aligned<shared_array_alignment_bytes>(ptr));
 #endif
 #pragma clang unsafe_buffer_usage begin
   const auto newspan = std::span<T>(ptr, num_allranks);
@@ -258,6 +357,20 @@ class MPI_shared_array {
  private:
   MPI_Win _win{MPI_WIN_NULL};
   std::span<T> _span{};
+  // the pointer that the single-rank path below allocated, or nullptr. It is never const, so that
+  // an MPI_shared_array<const T> that took over the memory can still release it.
+  std::remove_const_t<T>* _allocation{nullptr};
+
+  // aligned_span() gives the array and tells the compiler the alignment of its first element. Both allocation
+  // paths align the first element to shared_array_alignment_bytes, and a null pointer of an empty array
+  // is also a multiple of it. With this information, a vectorised loop from the start of the array needs
+  // no loop to reach the alignment. An offset into the array can break the alignment, so subspan() and
+  // operator[] use _span directly.
+  [[nodiscard]] auto aligned_span() const -> std::span<T> {
+#pragma clang unsafe_buffer_usage begin
+    return {std::assume_aligned<shared_array_alignment_bytes>(_span.data()), _span.size()};
+#pragma clang unsafe_buffer_usage end
+  }
 
  public:
   MPI_shared_array() = default;
@@ -266,17 +379,21 @@ class MPI_shared_array {
 
   // copy constructor is deleted to avoid multiple owners of the same MPI window, but move constructor is allowed
   MPI_shared_array(const MPI_shared_array&) = delete;
-  MPI_shared_array(MPI_shared_array&& other) noexcept : _win(other._win), _span(other._span) {
-    // prevent the other object from freeing the window in its destructor
+  MPI_shared_array(MPI_shared_array&& other) noexcept
+      : _win(other._win), _span(other._span), _allocation(other._allocation) {
+    // prevent the other object from freeing the window or the memory in its destructor
     other._win = MPI_WIN_NULL;
     other._span = {};
+    other._allocation = nullptr;
   }
 
   template <typename U>
     requires(std::is_same_v<T, const U> && !std::is_const_v<U>)
   // NOLINTNEXTLINE(cppcoreguidelines-rvalue-reference-param-not-moved,*-explicit-constructor,hicpp-explicit-conversions)
   MPI_shared_array(MPI_shared_array<U>&& other) noexcept  // cppcheck-suppress noExplicitConstructor
-      : _win(std::exchange(other._win, MPI_WIN_NULL)), _span(std::exchange(other._span, {})) {}
+      : _win(std::exchange(other._win, MPI_WIN_NULL)),
+        _span(std::exchange(other._span, {})),
+        _allocation(std::exchange(other._allocation, nullptr)) {}
 
   auto operator=(const MPI_shared_array<T>&) -> MPI_shared_array& = delete;
 
@@ -284,9 +401,10 @@ class MPI_shared_array {
     if (this->_span.data() == other._span.data()) {
       return *this;
     }
-    assert_always(_span.empty() && (_win == MPI_WIN_NULL));
+    assert_always(_span.empty() && (_win == MPI_WIN_NULL) && (_allocation == nullptr));
     _span = std::exchange(other._span, {});
     _win = std::exchange(other._win, MPI_WIN_NULL);
+    _allocation = std::exchange(other._allocation, nullptr);
     return *this;
   }
 
@@ -296,34 +414,39 @@ class MPI_shared_array {
     if (this->_span.data() == other_._span.data()) {
       return *this;
     }
-    assert_always(_span.empty() && (_win == MPI_WIN_NULL));
+    assert_always(_span.empty() && (_win == MPI_WIN_NULL) && (_allocation == nullptr));
     auto other = std::move(other_);
     _span = static_cast<std::span<T>>(std::exchange(other._span, {}));
     _win = std::exchange(other._win, MPI_WIN_NULL);
+    _allocation = std::exchange(other._allocation, nullptr);
     return *this;
   }
 
   ~MPI_shared_array() { reset(); }
 
   auto allocate(const ptrdiff_t num_allranks, const T& initval = {}) {
-    assert_always(_span.empty() && (_win == MPI_WIN_NULL));  // should not be allocating if we already own a window
+    // should not be allocating if we already own a window or memory
+    assert_always(_span.empty() && (_win == MPI_WIN_NULL) && (_allocation == nullptr));
     if (globals::node_nprocs > 1) {
       int initialized = 0;
       MPI_Initialized(&initialized);
       assert_always(initialized != 0);  // MPI must be initialized before constructing an MPI_shared_array
       std::tie(_span, _win) = MPI_shared_malloc_span_keepwin<T>(num_allranks, initval);
     } else {
+      // The shared window above aligns its memory to shared_array_alignment_bytes. Align this memory in the
+      // same way. A run with one rank on the node then vectorises like a run with more ranks.
+      _allocation = new (std::align_val_t{shared_array_alignment_bytes}) T[num_allranks];
+#ifdef __cpp_lib_is_sufficiently_aligned
+      assert_always(std::is_sufficiently_aligned<shared_array_alignment_bytes>(_allocation));
+#endif
 #pragma clang unsafe_buffer_usage begin
-      _span = std::span<T>(new T[num_allranks], num_allranks);
+      _span = std::span<T>(_allocation, num_allranks);
 #pragma clang unsafe_buffer_usage end
       std::ranges::fill(_span, initval);
     }
   }
 
   auto reset() {
-    if constexpr (TESTMODE) {
-      printlnlog("freeing MPI_shared_array of size {}", _span.size());
-    }
     if (_win != MPI_WIN_NULL) {
       int finalized = 0;
       MPI_Finalized(&finalized);
@@ -333,33 +456,35 @@ class MPI_shared_array {
       }
       _win = MPI_WIN_NULL;
     } else {
-      delete[] _span.data();
+      // the aligned form of the delete, to match the aligned new in allocate()
+      ::operator delete[](_allocation, std::align_val_t{shared_array_alignment_bytes});
     }
+    _allocation = nullptr;
     _span = {};
   }
 
   // Conversion to a const span is allowed on const objects.
-  explicit operator std::span<const T>() const { return _span; }
+  explicit operator std::span<const T>() const { return aligned_span(); }
 
   // mutable span if T is not const
   template <typename U = T>
     requires(!std::is_const_v<U>)
   explicit operator std::span<U>() {
-    return _span;
+    return aligned_span();
   }
   // Mutable span accessor.
-  [[nodiscard]] auto span() -> std::span<T> { return _span; }  // cppcheck-suppress functionConst
+  [[nodiscard]] auto span() -> std::span<T> { return aligned_span(); }  // cppcheck-suppress functionConst
   // Read-only span accessor.
-  [[nodiscard]] auto span() const -> std::span<const T> { return std::span<const T>{_span}; }
+  [[nodiscard]] auto span() const -> std::span<const T> { return aligned_span(); }
   // Mutable data pointer.
-  [[nodiscard]] auto data() -> T* { return _span.data(); }
+  [[nodiscard]] auto data() -> T* { return aligned_span().data(); }
   // Read-only data pointer.
-  [[nodiscard]] auto data() const -> const T* { return _span.data(); }
+  [[nodiscard]] auto data() const -> const T* { return aligned_span().data(); }
   // Iterators for mutable access.
-  [[nodiscard]] auto begin() { return _span.begin(); }
+  [[nodiscard]] auto begin() { return aligned_span().begin(); }  // cppcheck-suppress functionConst
   [[nodiscard]] auto end() { return _span.end(); }
   // Iterators for read-only access.
-  [[nodiscard]] auto begin() const { return std::span<const T>{_span}.begin(); }
+  [[nodiscard]] auto begin() const { return std::span<const T>{aligned_span()}.begin(); }
   [[nodiscard]] auto end() const { return std::span<const T>{_span}.end(); }
   [[nodiscard]] auto empty() const -> bool { return _span.empty(); }
   // Mutable subspan accessor.
@@ -370,9 +495,11 @@ class MPI_shared_array {
   [[nodiscard]] auto subspan(const size_t offset, const size_t count) const -> std::span<const T> {
     return std::span<const T>{_span}.subspan(offset, count);
   }
-  [[nodiscard]] auto first(const size_t count) -> std::span<T> { return _span.first(count); }
+  [[nodiscard]] auto first(const size_t count) -> std::span<T> {  // cppcheck-suppress functionConst
+    return aligned_span().first(count);
+  }
   [[nodiscard]] auto first(const size_t count) const -> std::span<const T> {
-    return std::span<const T>{_span}.first(count);
+    return std::span<const T>{aligned_span()}.first(count);
   }
   [[nodiscard]] auto size() const -> size_t { return _span.size(); }
   // (std::span has no ssize() member, so compute the signed size from size())
@@ -502,16 +629,15 @@ inline void MPI_Reduce_safe(R&& data, MPI_Op op, const int root, MPI_Comm comm) 
   assert_always(items_processed == std::ssize(dataspan));
 }
 
-// path for a per-rank output file (rank logs, estimators, nlte/radfield/macroatom files), which the
-// sn3d -o option redirects into a run output folder (stored without a trailing slash)
-[[nodiscard]] inline auto get_runoutputfolder_filepath(const std::string_view filename) -> std::string {
-  return globals::runoutputfolder.empty() ? std::string(filename)
-                                          : std::format("{}/{}", globals::runoutputfolder, filename);
+// path for a per-rank output file (rank logs, estimators, nlte/radfield/macroatom files), which sn3d
+// writes into the job folder (stored without a trailing slash)
+[[nodiscard]] inline auto get_jobfolder_filepath(const std::string_view filename) -> std::string {
+  return globals::jobfolder.empty() ? std::string(filename) : std::format("{}/{}", globals::jobfolder, filename);
 }
 
 // exactly match the generated per-rank output filenames: output_<rank>-<thread>.txt and the
-// estimators/nlte/radfield/macroatom _<rank>.out files, possibly with a compression extension added by
-// the post-processing scripts (e.g. exspec-after.sh runs zstd)
+// estimators/nlte/radfield/macroatom _<rank>.out files, with or without a compression extension. sn3d
+// writes the .out files as .zst, and exspec-after.sh compresses the logs.
 [[nodiscard]] inline auto is_rank_outfile_name(std::string_view filename) -> bool {
   const auto alldigits = [](const std::string_view str) {
     return !str.empty() && std::ranges::all_of(str, [](const char c) { return c >= '0' && c <= '9'; });
@@ -559,8 +685,7 @@ inline void MPI_Reduce_safe(R&& data, MPI_Op op, const int root, MPI_Comm comm) 
     }
   }
 
-  printlnlog("[error] Could not open file '{}' for mode '{}'.", filename, mode.data());
-  std::abort();
+  fatal_crash("Could not open file '{}' for mode '{}'.", filename, mode.data());
 }
 
 [[nodiscard]] inline auto fopen_required_uniqueptr(const std::string& filename, std::span<const char> mode) {
@@ -568,37 +693,47 @@ inline void MPI_Reduce_safe(R&& data, MPI_Op op, const int root, MPI_Comm comm) 
                                                [](FILE* fp) -> int { return std::fclose(fp); });
 }
 
-[[nodiscard]] inline auto fstream_required(const std::string_view filename, std::ios::openmode mode) -> std::fstream {
-  if (filename.empty()) {
-    printlnlog("[error] Cannot open file with empty filename.");
-    std::abort();
-  }
-
-  if ((mode & std::ios::in) != 0U) {
-    // search data folders in order to find file to read
-    for (const auto& datadir : datafolders) {
-      const auto datafolderfilename = std::format("{}{}", datadir, filename);
-      auto file = std::fstream(datafolderfilename, mode);
-      if (file.is_open()) {
-        return file;
-      }
-    }
-  } else {
-    // don't prepend data folders when writing
-    auto file = std::fstream(std::string(filename), mode);
-    if (file.is_open()) {
-      return file;
-    }
-  }
-
-  printlnlog("[error] Could not open file '{}'", filename);
-  std::abort();
+// Write the bytes of an array to a binary restart file. The reader must give the same types in the same order.
+template <typename R>
+  requires(std::ranges::contiguous_range<R> && std::ranges::sized_range<R> &&
+           std::is_trivially_copyable_v<std::ranges::range_value_t<R>>)
+inline void write_restart_array(FILE* file, R&& values) {
+  const auto valuespan = std::span{std::forward<R>(values)};
+  assert_always(std::fwrite(valuespan.data(), sizeof(valuespan[0]), valuespan.size(), file) == valuespan.size());
 }
 
-// open a per-rank output file such as estimators_0000.out for writing
-[[nodiscard]] inline auto open_rank_outfile(const std::string_view basename) -> std::fstream {
-  return fstream_required(get_runoutputfolder_filepath(std::format("{}_{:04d}.out", basename, globals::my_rank)),
-                          std::ios::out | std::ios::trunc);
+template <typename R>
+  requires(std::ranges::contiguous_range<R> && std::ranges::sized_range<R> &&
+           std::is_trivially_copyable_v<std::ranges::range_value_t<R>> &&
+           !std::is_const_v<std::remove_reference_t<std::ranges::range_reference_t<R>>>)
+inline void read_restart_array(FILE* file, R&& values) {
+  const auto valuespan = std::span{std::forward<R>(values)};
+  const bool read_success =
+      (std::fread(valuespan.data(), sizeof(valuespan[0]), valuespan.size(), file) == valuespan.size()) &&
+      (std::ferror(file) == 0) && (std::feof(file) == 0);
+  assert_always(read_success);
+}
+
+// The first rank of a node reads the node copy, and the other ranks skip the values.
+template <typename T>
+inline void read_restart_array(FILE* file, MPI_shared_array<T>& values) {
+  if (globals::rank_in_node == 0) {
+    read_restart_array(file, values.span());
+  } else {
+    assert_always(std::fseek(file, static_cast<long>(values.span().size_bytes()), SEEK_CUR) == 0);
+  }
+}
+
+template <typename... T>
+  requires(std::is_trivially_copyable_v<T> && ...)
+inline void write_restart_values(FILE* file, const T&... values) {
+  (write_restart_array(file, std::span{&values, 1}), ...);
+}
+
+template <typename... T>
+  requires(std::is_trivially_copyable_v<T> && ...)
+inline void read_restart_values(FILE* file, T&... values) {
+  (read_restart_array(file, std::span{&values, 1}), ...);
 }
 
 // padded to a full cache line in CPU multithreaded modes so that adjacent mutexes in an array don't false share

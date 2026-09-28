@@ -12,9 +12,8 @@
 #include <cstdlib>
 #include <filesystem>
 #include <format>
-#include <fstream>
-#include <ios>
 #include <limits>
+#include <numeric>
 #include <print>
 #include <span>
 #include <sstream>
@@ -22,6 +21,8 @@
 #include <string_view>
 #include <system_error>
 #include <tuple>
+#include <unordered_set>
+#include <utility>
 #include <vector>
 
 #include "artisoptions.h"
@@ -31,7 +32,9 @@
 #include "globals.h"
 #include "grid.h"
 #include "input.h"
+#include "inputfilestream.h"
 #include "mpi_logging.h"
+#include "outputfilestream.h"
 #include "packet.h"
 #include "random.h"
 #include "stats.h"
@@ -68,19 +71,19 @@ constexpr double nu_1p5mev = 3.61990e+20;
 
 void read_gamma_spectrum(const int nucindex, const std::string& filename) {
   // read the gamma ray lines and store the average energy in gamma rays per nuclear decay
-  auto gammafile = fstream_required(filename, std::ios::in);
+  auto gammafile = istream_required(filename);
   std::string line;
-  get_noncommentline(gammafile, line);
+  assert_always(get_noncommentline(gammafile, line));
   std::istringstream ssline(line);
   int nlines = 0;
-  ssline >> nlines;
+  assert_always(ssline >> nlines);
 
   gamma_spectra[nucindex].reserve(nlines);
   gamma_spectra[nucindex].clear();
 
   double E_gamma_avg = 0.;
   for (int n = 0; n < nlines; n++) {
-    get_noncommentline(gammafile, line);
+    assert_always(get_noncommentline(gammafile, line));
     double en_mev = 0.;
     double prob = 0.;
     ssline.clear();
@@ -101,29 +104,28 @@ void set_trivial_gamma_spectrum(const int nucindex) {
   gamma_spectra[nucindex][0].probability = 1.;
 }
 
-void read_decaydata() {
-  // migrate from old filenames that didn't specify the nuclide mass number
-  if (!std::filesystem::exists("gamma_ni56.txt") && std::filesystem::exists("ni_lines.txt")) {
-    std::error_code rename_error;
-    std::filesystem::rename("ni_lines.txt", "gamma_ni56.txt", rename_error);
-    if (rename_error) {
-      printlnlog("[error] failed to move ni_lines.txt to gamma_ni56.txt: {}", rename_error.message());
-    } else {
-      printlnlog("Moved ni_lines.txt to gamma_ni56.txt");
+// Get the names of the files of each data folder with one scan of each folder. A parallel
+// file system answers a request for metadata slowly. A test of each name for each nuclide
+// gives many thousand requests for each rank, and one scan of the folder replaces them.
+auto get_datafolder_filenames() -> std::array<std::unordered_set<std::string>, datafolders.size()> {
+  std::array<std::unordered_set<std::string>, datafolders.size()> folderfiles;
+  for (size_t folderindex = 0; folderindex < datafolders.size(); folderindex++) {
+    // an absent folder gives no entry and no error, which is correct here
+    std::error_code direrror;
+    for (const auto& entry : std::filesystem::directory_iterator(datafolders[folderindex], direrror)) {
+      auto filename = entry.path().filename().string();
+      // istream_required() opens the compressed file under the plain name
+      if (filename.ends_with(".zst")) {
+        filename.resize(filename.size() - 4);
+      }
+      folderfiles[folderindex].insert(std::move(filename));
     }
   }
+  return folderfiles;
+}
 
-  if (!std::filesystem::exists("gamma_co56.txt") && std::filesystem::exists("co_lines.txt")) {
-    std::error_code rename_error;
-    std::filesystem::rename("co_lines.txt", "gamma_co56.txt", rename_error);
-    if (rename_error) {
-      printlnlog("[error] failed to move co_lines.txt to gamma_co56.txt: {}", rename_error.message());
-    } else {
-      printlnlog("Moved co_lines.txt to gamma_co56.txt");
-    }
-  }
-
-  gamma_spectra.resize(decay::get_num_nuclides(), {});
+void read_gamma_tables() {
+  const auto folderfiles = get_datafolder_filenames();
   int tables_found = 0;
   int nuclides_without_table = 0;
   for (int nucindex = 0; nucindex < decay::get_num_nuclides(); nucindex++) {
@@ -139,17 +141,17 @@ void read_decaydata() {
 
     const auto striso = std::format("{}{}", strelname, a);
 
-    // look in the current folder first, then in the data/ subfolder
+    // search the folders of datafolders in order
     const std::array filenames = {std::format("gamma_{}.txt", striso), std::format("{}_lines.txt", striso)};
 
+    // keep the order of the search: the folder decides first, then the name of the file
     bool tablefound = false;
-    for (const auto& datadir : datafolders) {
+    for (size_t folderindex = 0; folderindex < datafolders.size(); folderindex++) {
       for (const auto& filename : filenames) {
-        const auto filepath = std::format("{}{}", datadir, filename);
-        if (std::filesystem::exists(filepath)) {
+        if (folderfiles[folderindex].contains(filename)) {
           tablefound = true;
           tables_found++;
-          read_gamma_spectrum(nucindex, filepath);
+          read_gamma_spectrum(nucindex, std::format("{}{}", datafolders[folderindex], filename));
           break;
         }
       }
@@ -158,27 +160,24 @@ void read_decaydata() {
       }
     }
 
-    if (!tablefound && decay::nucdecayenergygamma(nucindex) > 0.) {
+    if (!tablefound) {
+      // the gamma energy of these nuclides comes only from the table, so a missing table gives zero
       assert_always(z != 28 || a != 56);  // Ni-56 must have a gamma spectrum
       assert_always(z != 27 || a != 56);  // Co-56 must have a gamma spectrum
       assert_always(z != 23 || a != 48);  // V-48 must have a gamma spectrum
       assert_always(z != 24 || a != 48);  // Cr-48 must have a gamma spectrum
       assert_always(z != 28 || a != 57);  // Ni-57 must have a gamma spectrum if present in list of nuclides
       assert_always(z != 27 || a != 57);  // Co-57 must have a gamma spectrum if present in list of nuclides
-      set_trivial_gamma_spectrum(nucindex);
-      nuclides_without_table++;
+      if (decay::nucdecayenergygamma(nucindex) > 0.) {
+        set_trivial_gamma_spectrum(nucindex);
+        nuclides_without_table++;
+      }
     }
   }
 
-  // Frozen legacy mean gamma energies per decay for 52Fe and 52Mn: not taken from the current decay data, and
-  // changing them shifts results and the stored regression checksums. The loop above leaves these two without
-  // a spectrum (it builds a single-line stand-in only when the tabulated gamma energy is non-zero, which
-  // theirs is not), so their energy is deposited as a k-packet rather than sampled and the mean is all that is
-  // needed. Note that other nuclides with no table and zero tabulated gamma energy also end up with an empty
-  // spectrum; they simply never reach choose_gamma_ray(), because a zero gamma energy routes the pellet down
-  // the particle-decay branch in decay.cc instead.
-  // The .empty() test must stay: overwriting an existing spectrum's mean would leave choose_gamma_ray()
-  // normalising by a total that does not match the lines it samples.
+  // 52Fe and 52Mn have no gamma-ray table, so their gamma energy deposits as a k-packet with these mean
+  // energies per decay. The .empty() test keeps the mean of an existing spectrum, because choose_gamma_ray()
+  // normalises the lines by that mean.
   if (decay::nuc_exists(26, 52) && gamma_spectra[decay::get_nucindex(26, 52)].empty()) {
     decay::set_nucdecayenergygamma(decay::get_nucindex(26, 52), 0.86 * MEV);  // Fe52
   }
@@ -193,6 +192,72 @@ void read_decaydata() {
         "carrying the mean gamma energy per decay is used for each",
         nuclides_without_table);
   }
+}
+
+// Send the gamma-ray line tables from the first rank of the node to the other ranks of the
+// node. Only that rank reads the files, because every rank needs the same small tables and
+// the file system answers slowly.
+void broadcast_gamma_tables() {
+  const auto num_nuclides = decay::get_num_nuclides();
+  std::vector<int> linecounts(num_nuclides, 0);
+  std::vector<double> energygamma(num_nuclides, 0.);
+
+  if (globals::rank_in_node == 0) {
+    for (int nucindex = 0; nucindex < num_nuclides; nucindex++) {
+      linecounts[nucindex] = static_cast<int>(std::ssize(gamma_spectra[nucindex]));
+      energygamma[nucindex] = decay::nucdecayenergygamma(nucindex);
+    }
+  }
+  MPI_Bcast_safe(linecounts, 0, globals::mpi_comm_node);
+  MPI_Bcast_safe(energygamma, 0, globals::mpi_comm_node);
+
+  const auto totallines = std::reduce(linecounts.cbegin(), linecounts.cend(), ptrdiff_t{0});
+  std::vector<GammaLine> alllines(totallines);
+  if (globals::rank_in_node == 0) {
+    auto nextline = alllines.begin();
+    for (int nucindex = 0; nucindex < num_nuclides; nucindex++) {
+      nextline = std::ranges::copy(gamma_spectra[nucindex], nextline).out;
+    }
+  }
+  MPI_Bcast_safe(alllines, 0, globals::mpi_comm_node);
+
+  if (globals::rank_in_node > 0) {
+    ptrdiff_t offset = 0;
+    for (int nucindex = 0; nucindex < num_nuclides; nucindex++) {
+      gamma_spectra[nucindex].assign(alllines.cbegin() + offset, alllines.cbegin() + offset + linecounts[nucindex]);
+      offset += linecounts[nucindex];
+      // the reader changed some of these values, so take the value of the reader
+      decay::set_nucdecayenergygamma(nucindex, energygamma[nucindex]);
+    }
+  }
+}
+
+void read_decaydata() {
+  gamma_spectra.resize(decay::get_num_nuclides(), {});
+
+  if (globals::my_rank == 0) {
+    // rename the files of the old naming scheme, which had no mass number
+    for (const auto& [oldname, newname] :
+         std::array{std::pair{"ni_lines.txt", "gamma_ni56.txt"}, std::pair{"co_lines.txt", "gamma_co56.txt"}}) {
+      if (!std::filesystem::exists(newname) && std::filesystem::exists(oldname)) {
+        std::error_code rename_error;
+        std::filesystem::rename(oldname, newname, rename_error);
+        if (rename_error) {
+          printlnlog("[error] failed to move {} to {}: {}", oldname, newname, rename_error.message());
+        } else {
+          printlnlog("Moved {} to {}", oldname, newname);
+        }
+      }
+    }
+  }
+  // the node leaders scan the folder only after the rename
+  MPI_Barrier_allranks();
+
+  if (globals::rank_in_node == 0) {
+    read_gamma_tables();
+  }
+
+  broadcast_gamma_tables();
 }
 
 // construct an energy ordered gamma ray line list.
@@ -226,7 +291,7 @@ void init_gamma_linelist() {
       return std::tie(g1.energy, g1.nucindex, g1.nucgammaindex) < std::tie(g2.energy, g2.nucindex, g2.nucgammaindex);
     });
 
-    auto gammalinelist = fstream_required("gammalinelist.out", std::ofstream::out | std::ofstream::trunc);
+    auto gammalinelist = open_output_file("gammalinelist.out");
     std::println(gammalinelist, "#index nucindex Z A nucgammmaindex en_gamma_mev gammaline_probability");
 
     for (auto i = 0Z; i < total_lines; i++) {
@@ -247,13 +312,13 @@ void init_xcom_photoion_data() {
     photoion_data[Z].reserve(100);
   }
 
-  auto data_fs = fstream_required("xcom_photoion_data.txt", std::ios::in);
+  auto data_fs = istream_required("xcom_photoion_data.txt");
   std::string line_str;
   while (get_noncommentline(data_fs, line_str)) {
     int Z = 0;
     double E = 0;
     double sigma = 0;
-    std::stringstream(line_str) >> Z >> E >> sigma;
+    assert_always(std::stringstream(line_str) >> Z >> E >> sigma);
     assert_always(Z > 0);
     assert_always(Z <= xcom_max_atomic_number);
     // convert XCOM data to cgs units already here
@@ -293,7 +358,7 @@ auto thomson_angle(rngstate_type& rngstate) -> double {
   return mu;
 }
 
-// scattering a direction through angle theta.
+// Rotate the incoming direction through the selected angle.
 [[nodiscard]] auto scatter_dir(const Vec3d& dir_in, const double cos_theta, rngstate_type& rngstate) -> Vec3d {
   // begin with setting the direction in coordinates where original direction is parallel to z-hat.
 
@@ -307,10 +372,10 @@ auto thomson_angle(rngstate_type& rngstate) -> double {
   const double xprime = sin_theta * cos(phi);
   const double yprime = sin_theta * sin(phi);
 
-  // When dir_in is (anti)parallel to the z-axis the rotation below is singular (norm1 -> inf, giving
-  // 0*inf = NaN). Handle it directly: the scattering frame's z-axis is dir_in, so just (anti)align the
-  // result along z (matching the pole handling in electron_scatter_rpkt).
-  if (std::fabs(dir_in[2]) > 0.999999999) {
+  const double dir_in_xylen = std::sqrt(pow2(dir_in[0]) + pow2(dir_in[1]));
+
+  // On the z axis, the scattering frame is already aligned
+  if (dir_in_xylen == 0.) {
     const auto dir_out = Vec3d{xprime, yprime, (dir_in[2] > 0) ? zprime : -zprime};
     assert_testmodeonly(std::fabs(vec_len(dir_out) - 1.) < 1e-10);
     return dir_out;
@@ -318,7 +383,7 @@ auto thomson_angle(rngstate_type& rngstate) -> double {
 
   // Now need to derotate the coordinates back to real x,y,z. Rotation matrix is determined by dir_in.
 
-  const double norm1 = 1. / std::sqrt(pow2(dir_in[0]) + pow2(dir_in[1]));
+  const double norm1 = 1. / dir_in_xylen;
   const double norm2 = 1. / vec_len(dir_in);
 
   const double r11 = dir_in[1] * norm1;
@@ -399,6 +464,10 @@ void compton_scatter(Packet& pkt) {
 
     // It now has a rest frame direction and a co-moving frequency. Just need to set the rest frame energy.
     set_pkt_restframe_from_cmf(pkt);
+
+    // as for the electron scattering of an r-packet, the last emission position is the last scattering
+    pkt.em_pos = pkt.pos;
+    pkt.em_time = static_cast<float>(pkt.prop_time);
   } else {
     // energy loss of the gamma becomes energy of the electron (needed to calculate time-dependent thermalisation rate)
     if constexpr (PARTICLE_THERMALISATION_SCHEME == ParticleThermalisationScheme::TIMEDEPENDENTWITHGAMMAPRODUCTS) {
@@ -422,7 +491,8 @@ void compton_scatter(Packet& pkt) {
   }
 
   if constexpr (!USE_XCOM_GAMMAPHOTOION) {
-    // Cross sections from Equation 2 of Ambwani & Sutherland (1988), attributed to Veigele (1973)
+    // Cross sections from equation 2 of Ambwani & Sutherland (1988), ApJ, 325, 820-827, doi:10.1086/166052, after
+    // Veigele (1973), Atomic Data and Nuclear Data Tables, 5, 51-111, doi:10.1016/S0092-640X(73)80015-4
 
     const double hnu_over_100kev = nu_cmf / nu_100kev;
 
@@ -495,9 +565,10 @@ void compton_scatter(Packet& pkt) {
   return chi_cmf;
 }
 
-// energy-dependent factor of the pair-production cross section, from Equation 2 of Ambwani &
-// Sutherland (1988), attributed to Hubbell (1969). Multiply by Z^2 * 1e-27 for a cross section in
-// cm^2. Only valid above the 1.022 MeV threshold.
+// energy-dependent factor of the pair-production cross section, from equation 2 of Ambwani & Sutherland (1988),
+// ApJ, 325, 820-827, doi:10.1086/166052, after Hubbell (1969), NSRDS-NBS 29, National Bureau of Standards,
+// doi:10.6028/NBS.NSRDS.29. Multiply by Z^2 * 1e-27 for a cross section in cm^2. Only valid above the 1.022 MeV
+// threshold.
 [[nodiscard]] constexpr auto get_sigma_pair_prod_factor(const double nu_cmf) -> double {
   const double hnu_over_1MeV = nu_cmf / nu_1mev;
   if (nu_cmf > nu_1p5mev) {
@@ -592,11 +663,7 @@ void update_gamma_dep(const Packet& pkt, const int nonemptymgi, const double dis
   // assumes that a fraction (1. - (1.022 MeV / nu)) of the gamma's energy is thermalised.
   // The remaining 1.022 MeV is made into gamma rays
 
-  // For normalisation this needs to be
-  //  1) divided by volume
-  //  2) divided by the length of the time step
-  //  3) divided by 4 pi sr
-  //  This will all be done later
+  // sn3d.cc normalises the estimator by the cell volume, the timestep width, and the rank count
   assert_testmodeonly(heating_cont >= 0.);
   assert_testmodeonly(std::isfinite(heating_cont));
   atomicadd(globals::dep_estimator_gamma[nonemptymgi], heating_cont);
@@ -616,6 +683,10 @@ DEVICE_FUNC void emit_gamma_isotropic(Packet& pkt) {
   set_pkt_restframe_from_cmf(pkt);
 
   pkt.type = TYPE_GAMMA;
+
+  // the packet files then give the position and the time of the decay or of the pair annihilation
+  pkt.em_pos = pkt.pos;
+  pkt.em_time = static_cast<float>(pkt.prop_time);
 }
 
 // handle gamma to electron-positron pair production event
@@ -665,9 +736,8 @@ void transport_gamma(Packet& pkt, const double t2) {
 
   const auto [boundarydist, next_cellindex] = grid::boundary_distance(pkt.dir, pkt.pos, pkt.prop_time, pkt.cellindex);
 
-  // Now consider the scattering/destruction processes.
-  // Compton scattering - need to determine the scattering co-efficient.
-  // Routine returns the value in the rest frame.
+  // The opacity functions give comoving-frame coefficients. Multiply by the Doppler factor to get rest-frame
+  // coefficients.
   const int mgi = grid::get_propcell_modelgridindex(pkt.cellindex);
   const auto nonemptymgi = (mgi >= 0) ? grid::get_nonemptymgi_of_mgi(mgi) : -1;
 
@@ -796,42 +866,39 @@ void barnes_thermalisation(Packet& pkt) {
   absorb_or_escape_gamma(pkt, f_gamma);
 }
 
-void wollaeger_thermalisation(Packet& pkt) {
-  // corresponds to a local version of the Barnes scheme, i.e. it takes into account the local mass
-  // density rather than a value averaged over the ejecta
-  constexpr double mean_gamma_opac = 0.1;
-  // integration: requires distances within single cells in radial direction and the corresponding densities
-  // need to create a packet copy which is moved during the integration
+// The optical depth of a grey gamma-ray opacity kappa [cm^2/g] along a ray from the packet position to the edge of
+// the grid. The density is evaluated at the time that the ray reaches each cell.
+auto get_grey_tau_to_escape(const Packet& pkt, const Vec3d& dir, const double kappa) -> double {
   Packet pkt_copy = pkt;
-  pkt_copy.dir = vec_norm(pkt_copy.pos);  // integrate the optical depth radially outwards
+  pkt_copy.dir = dir;
   double tau = 0.;
-  bool end_packet = false;
-  while (!end_packet) {
-    // distance to the next cell
+  while (pkt_copy.type != TYPE_ESCAPE) {
     const auto [boundarydist, next_cellindex] =
         grid::boundary_distance(pkt_copy.dir, pkt_copy.pos, pkt_copy.prop_time, pkt_copy.cellindex);
     const int mgi = grid::get_propcell_modelgridindex(pkt_copy.cellindex);
     if (mgi >= 0) {
-      // the density is evaluated at the time that the ray reaches each cell, as in
-      // guttman_thermalisation(). Scaling grid::get_rho() by the packet's own decay time instead
-      // left every contribution wrong by a factor of (t_decay / t_mid)^3, since the grid state is
-      // held at the middle of the current timestep rather than at the time of the decay.
       const double rho = grid::get_rho_tmin(mgi) * pow3(globals::tmin / pkt_copy.prop_time);
-      tau += mean_gamma_opac * rho * boundarydist;  // contribution to the integral
+      tau += kappa * rho * boundarydist;
     }
-    // move packet copy now
     move_pkt_withtime(pkt_copy, boundarydist);
-
     grid::change_cell_or_escape(pkt_copy, next_cellindex, false);
-    end_packet = (pkt_copy.type == TYPE_ESCAPE);
   }
+  return tau;
+}
+
+void wollaeger_thermalisation(Packet& pkt) {
+  // corresponds to a local version of the Barnes scheme, i.e. it takes into account the local mass
+  // density rather than a value averaged over the ejecta
+  constexpr double mean_gamma_opac = 0.1;
+  // integrate the optical depth radially outwards
+  const double tau = get_grey_tau_to_escape(pkt, vec_norm(pkt.pos), mean_gamma_opac);
   const double f_gamma = 1. - std::exp(-tau);
 
   absorb_or_escape_gamma(pkt, f_gamma);
 }
 
 void guttman_thermalisation(Packet& pkt) {
-  // Guttman et al. (2024), doi:10.1093/mnras/stae1795.
+  // Guttman, Shenhar, Sarkar & Waxman (2024), MNRAS, 533, 994-1011, doi:10.1093/mnras/stae1795.
   // Extension of the Wollaeger scheme that averages the deposition probability over random emission directions.
 
   // Mean gamma opacity from section 3.2, using the lower value for nearly symmetric matter at late times.
@@ -840,22 +907,7 @@ void guttman_thermalisation(Packet& pkt) {
   constexpr int num_directions = 100;
   double deposition_probability_sum = 0.;
   for (int i = 0; i < num_directions; i++) {
-    Packet pkt_copy = pkt;
-    pkt_copy.dir = get_rand_isotropic_unitvec(get_rngstate(pkt));
-
-    double tau = 0.;
-    while (pkt_copy.type != TYPE_ESCAPE) {
-      const auto [boundarydist, next_cellindex] =
-          grid::boundary_distance(pkt_copy.dir, pkt_copy.pos, pkt_copy.prop_time, pkt_copy.cellindex);
-      const int mgi = grid::get_propcell_modelgridindex(pkt_copy.cellindex);
-      if (mgi >= 0) {
-        const double rho = grid::get_rho_tmin(mgi) * pow3(globals::tmin / pkt_copy.prop_time);
-        tau += mean_gamma_opac * rho * boundarydist;
-      }
-      move_pkt_withtime(pkt_copy, boundarydist);
-      grid::change_cell_or_escape(pkt_copy, next_cellindex, false);
-    }
-
+    const double tau = get_grey_tau_to_escape(pkt, get_rand_isotropic_unitvec(get_rngstate(pkt)), mean_gamma_opac);
     deposition_probability_sum -= std::expm1(-tau);
   }
 
@@ -897,10 +949,13 @@ void init_gamma_data() {
 
 // convert a pellet to a gamma ray (or kpkt if no gamma spec loaded)
 DEVICE_FUNC void pellet_gamma_decay(Packet& pkt) {
-  // Start by getting the position of the pellet at the point of decay. Pellet is moving with the matter.
-
   // if no gamma spectra is known, then convert straight to kpkts (e.g., Fe52, Mn52)
   if (pkt.nu_cmf < 0) {
+    // the energy deposits at once, so the estimators must count it like an absorbed gamma ray
+    const int nonemptymgi = grid::get_propcell_nonemptymgi(pkt.cellindex);
+    assert_always(nonemptymgi >= 0);
+    atomicadd(globals::dep_estimator_gamma[nonemptymgi], pkt.e_cmf);
+    atomicadd(globals::timesteps[globals::timestep].gamma_dep_discrete, pkt.e_cmf);
     pkt.type = TYPE_KPKT;
     pkt.absorptiontype = ABSTYPE_PELLET_NOGAMMASPEC;
     return;
@@ -927,7 +982,9 @@ DEVICE_FUNC void do_gamma(Packet& pkt, const int nts, const double t2) {
   }
 
   if (pkt.type != TYPE_GAMMA && pkt.type != TYPE_ESCAPE) {
-    if constexpr (PARTICLE_THERMALISATION_SCHEME != ParticleThermalisationScheme::TIMEDEPENDENTWITHGAMMAPRODUCTS) {
+    // with gamma products and the frequency-dependent scheme, do_nonthermal_predeposit() adds the deposition
+    if constexpr (PARTICLE_THERMALISATION_SCHEME != ParticleThermalisationScheme::TIMEDEPENDENTWITHGAMMAPRODUCTS ||
+                  GAMMA_THERMALISATION_SCHEME != GammaThermalisationScheme::FREQUENCYDEPENDENT) {
       atomicadd(globals::timesteps[nts].gamma_dep_discrete, pkt.e_cmf);
     }
 

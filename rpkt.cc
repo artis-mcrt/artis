@@ -23,6 +23,7 @@
 #include "constants.h"
 #include "globals.h"
 #include "grid.h"
+#include "kpkt.h"
 #include "ltepop.h"
 #include "macroatom.h"
 #include "mpi_logging.h"
@@ -43,9 +44,30 @@ static_assert(!RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.has_value() ||
 
 static_assert(!RPKT_USE_EXPANSION_OPACITIES || !VPKT_ON, "VPKT cannot be used with r-packet expansion opacities");
 
+// a line-by-line absorption has the weight 1 - exp(-tau), so a different weight must also apply to the absorption
+static_assert(EXPANSION_OPACITY_METHOD == ExpansionOpacityMethod::EXPANSION || RPKT_USE_EXPANSION_OPACITIES,
+              "LINEBINNEDCAPPED and LINEBINNED need RPKT_USE_EXPANSION_OPACITIES");
+
+// the bin walk of RPKT_USE_EXPANSION_OPACITIES passes lines without the line estimators
+static_assert(!DETAILED_LINE_ESTIMATORS_ON || !RPKT_USE_EXPANSION_OPACITIES,
+              "DETAILED_LINE_ESTIMATORS_ON needs line-by-line r-packets");
+
 namespace {
-// kappa times Planck function for each bin of each non-empty cell
+// cumulative integral over the bins of (line plus free-free kappa) times the Planck function, per non-empty cell
 MPI_shared_array<double> expansionopacity_planck_cumulative{};
+
+// The weight of a line with the Sobolev optical depth tau_line in the expansion opacity of its wavelength bin,
+// kappa = sum of (lambda / delta_lambda) * weight / (c t rho). EXPANSION_OPACITY_METHOD selects the weight.
+[[nodiscard]] DEVICE_FUNC auto get_binned_opacity_line_weight(const double tau_line) -> double {
+  if constexpr (EXPANSION_OPACITY_METHOD == ExpansionOpacityMethod::EXPANSION) {
+    return -std::expm1(-tau_line);
+  } else if constexpr (EXPANSION_OPACITY_METHOD == ExpansionOpacityMethod::LINEBINNEDCAPPED) {
+    // this argument order keeps a NaN
+    return std::min(tau_line, 1.);
+  } else {
+    return tau_line;
+  }
+}
 
 // get the comoving-frame frequency that the packet will have redshifted to at the abort distance (the cell
 // boundary or the end of the timestep, whichever is nearer). The caller turns this into a frequency change
@@ -67,157 +89,88 @@ auto get_nu_cmf_abort(const Vec3d& pos, const Vec3d& dir, const double prop_time
   return nu_cmf_abort;
 }
 
-// Get the Sobolev optical depth of a line at the current propagation time, from the stimulated-emission
-// corrected level populations: (B_lu n_l - B_ul n_u) h c / (4 pi) times t_current for homologous
-// expansion. Negative values (population inversion) are clamped to zero.
-// With USECELLCACHE the level populations come from the cell cache rather than being recalculated.
-template <bool USECELLCACHE>
-[[nodiscard]] auto get_tau_sobolev(const int nonemptymgi, const int lineindex, const double t_current) -> double {
-  const int uniquelevelindex_lower = globals::linelist.uniquelevelindex_lower[lineindex];
-  const int uniquelevelindex_upper = globals::linelist.uniquelevelindex_upper[lineindex];
-
-  double n_l{NAN};
-  double n_u{NAN};
-  if constexpr (USECELLCACHE) {
-    n_l = get_cellcache_levelpop(nonemptymgi, uniquelevelindex_lower);
-    n_u = get_cellcache_levelpop(nonemptymgi, uniquelevelindex_upper);
-  } else {
-    const auto element = globals::linelist.elementindex[lineindex];
-    const auto ion = globals::linelist.ionindex[lineindex];
-    const auto ionuniquelevelindexstart = get_ionuniquelevelindexstart(element, ion);
-    const auto lower_uniquelevelindex = globals::linelist.uniquelevelindex_lower[lineindex];
-    const auto upper_uniquelevelindex = globals::linelist.uniquelevelindex_upper[lineindex];
-    const int lower = lower_uniquelevelindex - ionuniquelevelindexstart;
-    const int upper = upper_uniquelevelindex - ionuniquelevelindexstart;
-    n_l = calculate_levelpop(nonemptymgi, element, ion, lower);
-    n_u = calculate_levelpop(nonemptymgi, element, ion, upper);
-  }
-
-  const double B_ul = globals::linelist.B_ul[lineindex];
-  const double B_lu = globals::linelist.B_lu[lineindex];
-
-  return std::max(((B_lu * n_l) - (B_ul * n_u)) * HCLIGHTOVERFOURPI * t_current, 0.);
-}
-
-// find any line or continuum interaction occurring before frequency decreases to nu_cmf_abort at distance abort_dist
-// Return a tuple of (distance to event, next transition index for pkt.next_trans, bool for whether line event)
-// the next transition index is lineindex + 1 for a line event, may remain the current next_trans if no event occurs,
-// and is globals::nlines + 1 for a continuum event
+// Find the first line or continuum event before nu_cmf_abort or abort_dist. Return the distance to the event, the
+// value for pkt.next_trans, and true for a line event.
 auto get_possible_event(const int nonemptymgi, const Packet& pkt, const ContinuumOpacity& chi_rpkt_cont,
                         MacroAtomState& mastate,
                         const double tau_rnd,  // random optical depth until which the packet travels
-                        const double abort_dist,  // maximal travel distance before packet leaves cell or time step ends
+                        const double abort_dist,  // maximal travel distance before packet leaves cell or timestep ends
                         const double nu_cmf_abort, const double dnu_on_dl, const double doppler,
                         const globals::TransitionLines& linelist) -> std::tuple<double, int, bool> {
-  auto pos = pkt.pos;
-  auto nu_cmf = pkt.nu_cmf;
-  auto e_cmf = pkt.e_cmf;
-  auto prop_time = pkt.prop_time;
-  auto next_trans = pkt.next_trans;
-
+  static_assert(USE_RELATIVISTIC_DOPPLER_SHIFT || CLIGHT_PROP == CLIGHT,
+                "the line distances from the start of the path need CLIGHT_PROP == CLIGHT");
   const double chi_cont = chi_rpkt_cont.total() * doppler;
-  double tau = 0.;  // optical depth along path
-  double dist = 0.;  // position on path
+  const auto& cacheslot = get_cellcache(nonemptymgi);
+  assert_testmodeonly(cacheslot.nonemptymgi == nonemptymgi);
+  const auto levelpops = std::span<const double>{cacheslot.alllevels_pops};
+  auto next_trans = pkt.next_trans;
+  double tau_lines = 0.;  // the sum of the Sobolev optical depths of the passed lines
+  double dist = 0.;  // the distance to the last passed line
+
   while (true) {
-    // step to the next line the packet will redshift onto, accumulating the continuum optical depth over the
-    // distance to it. closest_transition() returns a negative index once no line remains at or below nu_cmf, or
-    // when the packet has already been tagged as having no further line interactions.
-    const int lineindex = closest_transition(nu_cmf, next_trans, linelist.nu);
+    // a negative index if no line remains
+    const int lineindex = closest_transition(pkt.nu_cmf, next_trans, linelist.nu);
 
     if (lineindex < 0) [[unlikely]] {
       // no line interaction possible - check whether continuum process occurs in cell
-
-      const double tau_cont = chi_cont * (abort_dist - dist);
-
-      if (tau_rnd - tau > tau_cont) {
+      if (tau_rnd - tau_lines > chi_cont * abort_dist) {
         // no continuum event before abort_dist
         return {std::numeric_limits<double>::max(), next_trans, false};
       }
 
-      // continuum process occurs at edist
-      return {dist + ((tau_rnd - tau) / chi_cont), globals::nlines + 1, false};
+      // not before the last passed line. A NaN stays a NaN, so that do_rpkt_step() stops.
+      return {std::max((tau_rnd - tau_lines) / chi_cont, dist), globals::nlines + 1, false};
     }
-
-    // a line interaction is possible, i.e. the packet redshifts onto this line before nu_cmf_abort
 
     const double nu_trans = linelist.nu[lineindex];
+    const double dist_line = get_linedistance(pkt.prop_time, pkt.nu_cmf, nu_trans, dnu_on_dl);
+    assert_testmodeonly(dist_line >= dist);
 
-    // advance past this line so that any further event this step is found at a lower frequency. Without this the
-    // packet could scatter repeatedly in the same line when rounding leaves nu_cmf marginally above nu_trans.
-    next_trans = lineindex + 1;
-
-    const double ldist = get_linedistance(prop_time, nu_cmf, nu_trans, dnu_on_dl);
-
-    const double tau_cont = chi_cont * ldist;
-
-    if (tau_rnd - tau > tau_cont) {
-      // got past the continuum optical depth so propagate to the line, and check interaction
-
-      if (nu_trans < nu_cmf_abort) [[unlikely]] {
-        // back up one line, because we didn't reach it before the boundary/timelimit
-
-        return {std::numeric_limits<double>::max(), next_trans - 1, false};
-      }
-
-      const double tau_line = get_tau_sobolev<true>(nonemptymgi, lineindex, prop_time);
-
-      if ((tau_rnd - tau) <= (tau_cont + tau_line)) {
-        // bound-bound process occurs
-        const auto element = linelist.elementindex[lineindex];
-        const auto ion = linelist.ionindex[lineindex];
-        const auto ionuniquelevelindexstart = get_ionuniquelevelindexstart(element, ion);
-        const auto upper = globals::linelist.uniquelevelindex_upper[lineindex] - ionuniquelevelindexstart;
-
-        mastate = {.element = element, .ion = ion, .level = upper, .activatingline = lineindex};
-
-        if constexpr (DETAILED_LINE_ESTIMATORS_ON) {
-          move_pkt_withtime(pos, pkt.dir, prop_time, pkt.nu_rf, nu_cmf, pkt.e_rf, e_cmf, ldist);
-          radfield::update_lineestimator(nonemptymgi, lineindex, prop_time * CLIGHT * e_cmf / nu_cmf);
-        }
-
-        // the line and its parameters were already selected by closest_transition!
-
-        return {dist + ldist, next_trans, true};
-      }
-
-      // total optical depth still below tau_rnd: propagate to the line and continue
-
-      dist += ldist;
-      tau += tau_cont + tau_line;
-
-      if constexpr (!USE_RELATIVISTIC_DOPPLER_SHIFT) {
-        move_pkt_withtime(pos, pkt.dir, prop_time, pkt.nu_rf, nu_cmf, pkt.e_rf, e_cmf, ldist);
-      } else {
-        // avoid move_pkt_withtime() to skip the standard Doppler shift calculation
-        // and use the linear approx instead
-        pos[0] += (pkt.dir[0] * ldist);
-        pos[1] += (pkt.dir[1] * ldist);
-        pos[2] += (pkt.dir[2] * ldist);
-        prop_time += ldist / CLIGHT_PROP;
-        nu_cmf = pkt.nu_cmf + (dnu_on_dl * dist);  // should equal nu_trans;
-        assert_testmodeonly(nu_cmf <= pkt.nu_cmf);
-        if constexpr (DETAILED_LINE_ESTIMATORS_ON) {
-          // keep e_cmf consistent with the linearly-approximated nu_cmf for the line estimator below
-          // (e_cmf / nu_cmf = e_rf / nu_rf is invariant along a free path)
-          e_cmf = nu_cmf * pkt.e_rf / pkt.nu_rf;
-        }
-      }
-
-      if constexpr (DETAILED_LINE_ESTIMATORS_ON) {
-        radfield::update_lineestimator(nonemptymgi, lineindex, prop_time * CLIGHT * e_cmf / nu_cmf);
-      }
-
-    } else {
-      // continuum process occurs before reaching the line
-
-      return {dist + ((tau_rnd - tau) / chi_cont), next_trans - 1, false};
+    // a NaN also takes this branch
+    if (!(tau_rnd - tau_lines > chi_cont * dist_line)) {
+      // continuum process occurs before the line
+      return {std::max((tau_rnd - tau_lines) / chi_cont, dist), lineindex, false};
     }
-  }
 
-  // should have already returned somewhere!
-  assert_always(false);
+    if (nu_trans < nu_cmf_abort) [[unlikely]] {
+      // the packet does not reach the line
+      return {std::numeric_limits<double>::max(), lineindex, false};
+    }
+
+    // the time of the resonance
+    const double t_line = pkt.prop_time + (dist_line / CLIGHT_PROP);
+    const int uniquelevelindex_upper = linelist.uniquelevelindex_upper[lineindex];
+    const double n_l = levelpops[linelist.uniquelevelindex_lower[lineindex]];
+    const double n_u = levelpops[uniquelevelindex_upper];
+    // the Sobolev optical depth. A population inversion gives zero.
+    const double tau_line = std::max(
+        ((linelist.B_lu[lineindex] * n_l) - (linelist.B_ul[lineindex] * n_u)) * HCLIGHTOVERFOURPI * t_line, 0.);
+
+    if constexpr (DETAILED_LINE_ESTIMATORS_ON) {
+      // e_cmf / nu_cmf does not change along the path
+      radfield::update_lineestimator(nonemptymgi, lineindex, t_line * CLIGHT * pkt.e_cmf / pkt.nu_cmf);
+    }
+
+    if (tau_rnd - tau_lines <= (chi_cont * dist_line) + tau_line) {
+      // bound-bound process occurs
+      const auto element = linelist.elementindex[lineindex];
+      const auto ion = linelist.ionindex[lineindex];
+      const auto upper = uniquelevelindex_upper - get_ionuniquelevelindexstart(element, ion);
+
+      mastate = {.element = element, .ion = ion, .level = upper, .activatingline = lineindex};
+
+      // the next step starts after this line, so that the packet cannot scatter in it again
+      return {dist_line, lineindex + 1, true};
+    }
+
+    // continue past the line
+    tau_lines += tau_line;
+    dist = dist_line;
+    next_trans = lineindex + 1;
+  }
 }
 
+// NOLINTNEXTLINE(misc-const-correctness): get_rngstate() needs a Packet that is not const on the GPU
 auto get_possible_event_expansion_opacity(const int nonemptymgi, Packet& pkt, const ContinuumOpacity& chi_rpkt_cont,
                                           MacroAtomState& mastate, const double tau_rnd, const double nu_cmf_abort,
                                           const double dnu_on_dl, const double doppler) -> std::tuple<double, bool> {
@@ -248,7 +201,8 @@ auto get_possible_event_expansion_opacity(const int nonemptymgi, Packet& pkt, co
       // opacity in units of [cm^2/g]
       const auto kappa = expansionopacities[(nonemptymgi * expopac_nbins) + binindex];
       // absorption coefficient in units of [1/cm]
-      chi_bb_expansionopac = kappa * grid::get_rho(nonemptymgi);
+      chi_bb_expansionopac =
+          kappa * grid::get_rho(nonemptymgi) * get_expopac_pathfactor(prop_time, next_bin_edge_nu, dnu_on_dl);
     }
 
     const double chi_tot = chi_cont + chi_bb_expansionopac;
@@ -267,14 +221,15 @@ auto get_possible_event_expansion_opacity(const int nonemptymgi, Packet& pkt, co
 
       // re-trace this bin line-by-line
       auto pkt_bin_start = pkt;
-      pkt_bin_start.pos = pos;
-      pkt_bin_start.nu_rf = nu_rf;
       pkt_bin_start.nu_cmf = nu_cmf;
-      pkt_bin_start.e_rf = e_rf;
-      pkt_bin_start.e_cmf = e_cmf;
-      // expansion opacity was calculated at t_mid, so match it
-      pkt_bin_start.prop_time = globals::timesteps[globals::timestep].mid;
-      pkt_bin_start.next_trans = -1;
+      // The retrace runs at the time of the packet, the same as the bin walk above. The bin opacity holds the
+      // Sobolev optical depths at t_mid over a path length of c t_mid. The bin walk multiplies it by the path
+      // length at the packet time, so the bin optical depth scales with t / t_mid. The line-by-line Sobolev
+      // optical depths scale in the same way with the packet time. A retrace at t_mid would instead give each
+      // line distance a scale of t_mid / t.
+      pkt_bin_start.prop_time = prop_time;
+      // at the start of the path the packet keeps its line position, so the line that emitted it is excluded
+      pkt_bin_start.next_trans = (dist == 0.) ? pkt.next_trans : -1;
       double edist_after_bin = 0.;
       bool event_is_boundbound = false;
       auto next_trans = -1;
@@ -294,18 +249,9 @@ auto get_possible_event_expansion_opacity(const int nonemptymgi, Packet& pkt, co
     } else {
       // avoid move_pkt_withtime() to skip the standard Doppler shift calculation
       // and use the linear approx instead
-
-      pos[0] += (pkt.dir[0] * binedgedist);
-      pos[1] += (pkt.dir[1] * binedgedist);
-      pos[2] += (pkt.dir[2] * binedgedist);
       prop_time += binedgedist / CLIGHT_PROP;
-      nu_cmf = pkt.nu_cmf + (dnu_on_dl * dist);  // should equal nu_trans;
+      nu_cmf = pkt.nu_cmf + (dnu_on_dl * dist);  // equals next_bin_edge_nu up to rounding
       assert_testmodeonly(nu_cmf <= pkt.nu_cmf);
-      if constexpr (DETAILED_LINE_ESTIMATORS_ON) {
-        // keep e_cmf consistent with the linearly-approximated nu_cmf, since it seeds the packet copy
-        // used for the line-by-line retrace (whose line estimator updates divide e_cmf by nu_cmf)
-        e_cmf = nu_cmf * e_rf / nu_rf;
-      }
     }
 
     if (nu_cmf <= nu_cmf_abort) {
@@ -339,15 +285,15 @@ void electron_scatter_rpkt(Packet& pkt) {
   const auto [old_dir_cmf, q_i_cmf, u_i_cmf] = (POL_ON ? frame_transform(pkt.dir, pkt.stokes_q, pkt.stokes_u, vel_vec)
                                                        : std::make_tuple(angle_ab(pkt.dir, vel_vec), 0., 0.));
 
-  // Outcoming direction. Compute the new cmf direction from the old direction and the scattering angles (see Kalos &
-  // Whitlock 2008)
+  // Outcoming direction. Compute the new cmf direction from the old direction and the scattering angles (see
+  // Kalos & Whitlock 2008, Monte Carlo Methods, 2nd ed., Wiley-VCH, doi:10.1002/9783527626212)
   double M = 0.;
   double phisc = 0.;
 
   if constexpr (DIPOLE) {
     // Assume dipole function: sample the scattering direction cosine M and azimuth angle phisc by
-    // rejection (see Code & Whitney 1995). p is the phase function value for the trial angles and
-    // x is a uniform draw from [0, 2] (an upper bound on p); the trial is accepted when x <= p.
+    // rejection (see Code & Whitney 1995, ApJ, 441, 400-407, doi:10.1086/175363). p is the phase function value for
+    // the trial angles and x is a uniform draw from [0, 2] (an upper bound on p); the trial is accepted when x <= p.
     double p = 0.;
     double x = 1.;
     while (x > p) {
@@ -372,26 +318,18 @@ void electron_scatter_rpkt(Packet& pkt) {
     phisc = 2 * PI * rng_uniform(get_rngstate(pkt));
   }
 
-  Vec3d new_dir_cmf{};
-
   const double cos_tsc = M;  // M is cos(tsc) by construction
   const double sin_tsc = std::sqrt(1. - pow2(M));
 
-  if (fabs(old_dir_cmf[2]) < 0.99999) {
-    const double sin_polar = std::sqrt(1. - pow2(old_dir_cmf[2]));
-    const double common_factor = sin_tsc / sin_polar;
-    const double cos_phisc = cos(phisc);
-    const double sin_phisc = sin(phisc);
-    new_dir_cmf = {
-        (common_factor * ((old_dir_cmf[1] * sin_phisc) - (old_dir_cmf[0] * old_dir_cmf[2] * cos_phisc))) +
-            (old_dir_cmf[0] * cos_tsc),
-        (common_factor * ((-old_dir_cmf[0] * sin_phisc) - (old_dir_cmf[1] * old_dir_cmf[2] * cos_phisc))) +
-            (old_dir_cmf[1] * cos_tsc),
-        (sin_tsc * cos_phisc * sin_polar) + (old_dir_cmf[2] * cos_tsc),
-    };
-  } else {
-    new_dir_cmf = {sin_tsc * cos(phisc), sin_tsc * sin(phisc), (old_dir_cmf[2] > 0) ? cos_tsc : -cos_tsc};
-  }
+  // phisc starts at the meridian axis ref1 of the Stokes parameters
+  const auto [ref1, ref2] = meridian(old_dir_cmf);
+  const double cos_phisc = cos(phisc);
+  const double sin_phisc = sin(phisc);
+  const auto new_dir_cmf = Vec3d{
+      (cos_tsc * old_dir_cmf[0]) + (sin_tsc * ((cos_phisc * ref1[0]) - (sin_phisc * ref2[0]))),
+      (cos_tsc * old_dir_cmf[1]) + (sin_tsc * ((cos_phisc * ref1[1]) - (sin_phisc * ref2[1]))),
+      (cos_tsc * old_dir_cmf[2]) + (sin_tsc * ((cos_phisc * ref1[2]) - (sin_phisc * ref2[2]))),
+  };
 
   if constexpr (POL_ON) {
     // Need to rotate Stokes Parameters in the scattering plane
@@ -404,7 +342,7 @@ void electron_scatter_rpkt(Packet& pkt) {
   // Check unit vector
   assert_testmodeonly(fabs(vec_len(pkt.dir) - 1.) < 1.e-6);
 
-  // Finally we want to put in the rest frame energy and frequency. And record that it's now a r-pkt.
+  // set the rest-frame energy and frequency
 
   set_pkt_restframe_from_cmf(pkt);
 }
@@ -417,16 +355,16 @@ auto calculate_chi_bf_gammacontr(int nonemptymgi, double nu, Phixslist& phixslis
 // Handle a continuum interaction of an r-packet by sampling which continuum process occurs, in
 // proportion to its share of the total continuum opacity: electron scattering (coherent in the comoving
 // frame; see electron_scatter_rpkt()), free-free absorption (packet becomes a k-packet), or bound-free absorption
-// (packet activates a macro-atom in the upper ion with probability nu_edge/nu, the ionisation energy fraction, and
-// otherwise becomes a k-packet carrying the freed electron's kinetic energy).
+// (packet activates a macro-atom in the upper ion with probability nu_edge / nu, the ionisation energy fraction,
+// and otherwise becomes a k-packet carrying the freed electron's kinetic energy). Here nu is the frequency of the
+// packet at the absorption, and the probability is at most one.
 void rpkt_event_continuum(Packet& pkt, ContinuumOpacity& chi_rpkt_cont) {
-  const double nu = pkt.nu_cmf;
-
-  const double dopplerfactor = calculate_doppler_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
-  const double chi_cont = chi_rpkt_cont.total() * dopplerfactor;
-  const double chi_escatter = chi_rpkt_cont.chi_escatter * dopplerfactor;
-  const double chi_ff = chi_rpkt_cont.chi_freefree_heat * dopplerfactor;
-  const double chi_bf = chi_rpkt_cont.chi_boundfree * dopplerfactor;
+  // the Doppler factor of the comoving-frame opacity is the same for every process, so the branch probabilities
+  // do not need it
+  const double chi_cont = chi_rpkt_cont.total();
+  const double chi_escatter = chi_rpkt_cont.chi_escatter;
+  const double chi_ff = chi_rpkt_cont.chi_freefree_heat;
+  const double chi_bf = chi_rpkt_cont.chi_boundfree;
 
   // continuum process happens. select due to its probabilities sigma/chi_cont, chi_ff/chi_cont, chi_bf/chi_cont
 
@@ -476,8 +414,14 @@ void rpkt_event_continuum(Packet& pkt, ContinuumOpacity& chi_rpkt_cont) {
     const int level = globals::allcont.level[allcontindex];
     const int phixstargetindex = globals::allcont.phixstargetindex[allcontindex];
 
-    // decide whether we go to ionisation energy or to the thermal pool
-    if (rng_uniform(get_rngstate(pkt)) < nu_edge / nu) {
+    // decide whether we go to ionisation energy or to the thermal pool. The ionisation energy fraction belongs
+    // to the photon that the continuum absorbs, so the split uses the frequency of the packet at the absorption.
+    // The bound-free heating estimator in update_estimators() uses the same frequency. The selection above admits
+    // only continua with nu_edge <= chi_rpkt_cont.nu. The packet has a lower frequency after the move, and that
+    // frequency can lie below the edge of the selected continuum. The ratio then exceeds one, and the whole energy
+    // goes to the ionisation, which is the limit of a photon at the edge.
+    assert_testmodeonly(nu_edge <= chi_rpkt_cont.nu);
+    if (rng_uniform(get_rngstate(pkt)) < std::min(1., nu_edge / pkt.nu_cmf)) {
       stats::increment(stats::Counter::MA_STAT_ACTIVATION_BF);
 
       do_macroatom(pkt, {
@@ -496,9 +440,8 @@ void rpkt_event_continuum(Packet& pkt, ContinuumOpacity& chi_rpkt_cont) {
   }
 }
 
-// Update the volume estimators J and nuJ
-// This is done in another routine than move, as we sometimes move dummy
-// packets which do not contribute to the radiation field.
+// Add the path contribution to the radiation field, free-free heating, photoionisation, and bound-free heating
+// estimators of the cell. The move functions do not do this, because some moved packets do not contribute.
 void update_estimators(const double e_cmf, const double nu_cmf, const double distance, const int nonemptymgi,
                        const ContinuumOpacity& chi_rpkt_cont, const bool thickcell) {
   // Update only non-empty cells
@@ -591,9 +534,16 @@ auto do_rpkt_step(Packet& pkt, const double t2, ContinuumOpacity& chi_rpkt_cont)
     const auto dnu_on_dl = (nu_cmf_abort - pkt.nu_cmf) / abort_dist;
     const auto doppler = calculate_doppler_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
 
-    if constexpr (RPKT_USE_EXPANSION_OPACITIES) {
+    // The comoving frequency decreases strictly along the path. A gradient that is not negative and finite
+    // comes from rounding, when abort_dist is zero or too short to change the frequency. Such a gradient
+    // makes each event distance infinite or NaN, so the packet moves to the abort distance with no event.
+    if (!std::isfinite(dnu_on_dl) || (dnu_on_dl >= 0.)) [[unlikely]] {
+      edist = std::numeric_limits<double>::max();
+    } else if constexpr (RPKT_USE_EXPANSION_OPACITIES) {
       std::tie(edist, event_is_boundbound) = get_possible_event_expansion_opacity(
           nonemptymgi, pkt, chi_rpkt_cont, pktmastate, tau_rnd, nu_cmf_abort, dnu_on_dl, doppler);
+      // the bin walk passes lines without a line position, so the next step searches from nu_cmf
+      pkt.next_trans = -1;
     } else {
       std::tie(edist, pkt.next_trans, event_is_boundbound) =
           get_possible_event(nonemptymgi, pkt, chi_rpkt_cont, pktmastate, tau_rnd, abort_dist, nu_cmf_abort, dnu_on_dl,
@@ -626,16 +576,19 @@ auto do_rpkt_step(Packet& pkt, const double t2, ContinuumOpacity& chi_rpkt_cont)
 
       do_macroatom(pkt, pktmastate);
     } else {
-      // Probability based thermalisation (i.e. redistribution of the packet frequency) or scattering
-      if (RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.value() >= 1. ||
-          rng_uniform(get_rngstate(pkt)) < RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.value()) {
-        // Thermal redistribution of frequency
+      // with expansion opacities, the event comes from a binned opacity and pktmastate holds no
+      // activating line, so the absorption type gets the sentinel for a binned absorption
+      pkt.absorptiontype =
+          RPKT_USE_EXPANSION_OPACITIES ? ABSTYPE_BOUNDBOUND_EXPANSIONOPACITY : pktmastate.activatingline;
+      pkt.absorptionfreq = pkt.nu_rf;
 
-        // with expansion opacities, the event comes from a binned opacity and pktmastate holds no
-        // activating line, so the absorption type gets the sentinel for a binned absorption
-        pkt.absorptiontype =
-            RPKT_USE_EXPANSION_OPACITIES ? ABSTYPE_BOUNDBOUND_EXPANSIONOPACITY : pktmastate.activatingline;
-        pkt.absorptionfreq = pkt.nu_rf;
+      // Probability based thermalisation (i.e. redistribution of the packet frequency) or scattering
+      const bool thermalise = RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.value() >= 1. ||
+                              rng_uniform(get_rngstate(pkt)) < RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.value();
+      if (thermalise) {
+        // the packet passes through the thermal pool, so it gets the radiative share of the cell as a k-packet does
+        pkt.e_cmf *= kpkt::get_radiative_energy_factor(nonemptymgi);
+        // Thermal redistribution of frequency
         pkt.nu_cmf = sample_planck_times_expansion_opacity(nonemptymgi, get_rngstate(pkt));
         pkt.next_trans = -1;
         // a thermal re-emission at a new frequency, so the packet no longer traces back to the previous emission
@@ -647,11 +600,16 @@ auto do_rpkt_step(Packet& pkt, const double t2, ContinuumOpacity& chi_rpkt_cont)
         // re-emit rather than scatter, so that this event is not counted as an electron scattering
         pkt.nscatterings = 0;
       } else {
-        // pure scattering, so the packet keeps its co-moving frequency and direction is changed
+        // pure scattering, so the packet keeps its comoving frequency in a new direction
         pkt.nscatterings++;
         stats::increment(stats::Counter::ELECTRON_SCATTERINGS);
       }
       emit_rpkt(pkt);
+
+      // the thermal re-emission and the line scattering are isotropic in the comoving frame, not a dipole
+      if constexpr (VPKT_ON) {
+        vpkt::trace_vpkts(pkt, thermalise ? TYPE_KPKT : TYPE_MA);
+      }
     }
 
     return (pkt.type == TYPE_RPKT);
@@ -691,8 +649,7 @@ auto do_rpkt_step(Packet& pkt, const double t2, ContinuumOpacity& chi_rpkt_cont)
     return false;
   }
 
-  assert_always(false);
-  return false;
+  fatal_crash("do_rpkt_step: no event selected: edist {} boundarydist {} tdist {}", edist, boundarydist, tdist);
 }
 
 // calculate the free-free absorption (to kpkt heating) coefficient [cm^-1]
@@ -750,8 +707,7 @@ auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixsli
   // computing the factor directly
   constexpr double stimfactor_edgepart_maxexponent = 690.;
 
-  // The phixslist is sorted by nu_edge in ascending order, so if nu < allcont[i].nu_edge then no absorption in any of
-  // the remaining continua is possible. so set their kappas to zero and break
+  // allcont is sorted by nu_edge in ascending order, so the continua with nu_edge > nu end the window
   const int allcontend = static_cast<int>(std::ranges::upper_bound(allcont_nu_edge, nu) - allcont_nu_edge.begin());
 
   // require that nu <= nu_edge * last_phixs_nuovernuedge, which can exclude some low-nu edges
@@ -788,6 +744,8 @@ auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixsli
   const auto& allcont_uniquelevelindex = globals::allcont.uniquelevelindex;
   const auto& allcont_groundcontestimindex = globals::allcont.groundcontestimindex;
   const auto& allcont_probability = globals::allcont.probability;
+  // a local copy, because the loop below stores double values
+  const double nphixsnuincrement = globals::NPHIXSNUINCREMENT;
 
   // Only the cellcache instantiation reads the slot: in single-slot mode get_cellcache() returns the
   // calling rank's one shared slot, which generally holds a different cell.
@@ -833,8 +791,8 @@ auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixsli
       }
 
       const double nu_edge = allcont_nu_edge[i];
-      const double sigma_bf =
-          photoionisation_crosssection_fromtable(get_phixs_table(allcont_uniquelevelindex[i]), nu_edge, nu);
+      const double sigma_bf = photoionisation_crosssection_fromtable(get_phixs_table(allcont_uniquelevelindex[i]),
+                                                                     nu_edge, nu, nphixsnuincrement);
 
       // negative means "not computed for this cell yet", which is what cellcacheslot_populate() fills the
       // cache with, and is also what the no-cellcache instantiation always sees (it has no cache entry
@@ -1018,7 +976,7 @@ DEVICE_FUNC void emit_rpkt(Packet& pkt) {
 
   pkt.dir = angle_ab(dir_cmf, vel_vec);
 
-  // Finally we want to put in the rest frame energy and frequency. And record that it's now a r-pkt.
+  // set the rest-frame energy and frequency
 
   set_pkt_restframe_from_cmf(pkt);
 
@@ -1064,17 +1022,19 @@ template void calculate_chi_rpkt_cont<true>(const double nu_cmf, ContinuumOpacit
 template void calculate_chi_rpkt_cont<false>(const double nu_cmf, ContinuumOpacity& chi_rpkt_cont,
                                              const int nonemptymgi);
 
-void MPI_Bcast_binned_opacities(const ptrdiff_t nonemptymgi, const int root_node_id) {
+// broadcast the binned expansion opacities of the cells that belong to the root rank to all node leaders
+void MPI_Bcast_binned_opacities(const ptrdiff_t nstart_nonempty, const ptrdiff_t ndo_nonempty, const int root_node_id) {
   if (globals::rank_in_node == 0) {
-    assert_always(nonemptymgi >= 0);
+    assert_always(nstart_nonempty >= 0);
     if constexpr (RPKT_USE_EXPANSION_OPACITIES || VPKT_USE_EXPANSION_OPACITIES) {
-      MPI_Bcast_safe(expansionopacities.subspan(nonemptymgi * expopac_nbins, expopac_nbins), root_node_id,
-                     globals::mpi_comm_internode);
+      MPI_Bcast_safe(expansionopacities.subspan(nstart_nonempty * expopac_nbins, ndo_nonempty * expopac_nbins),
+                     root_node_id, globals::mpi_comm_internode);
     }
 
     if constexpr (RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.has_value()) {
-      MPI_Bcast_safe(expansionopacity_planck_cumulative.subspan(nonemptymgi * expopac_nbins, expopac_nbins),
-                     root_node_id, globals::mpi_comm_internode);
+      MPI_Bcast_safe(
+          expansionopacity_planck_cumulative.subspan(nstart_nonempty * expopac_nbins, ndo_nonempty * expopac_nbins),
+          root_node_id, globals::mpi_comm_internode);
     }
   }
 }
@@ -1098,6 +1058,17 @@ void calculate_expansion_opacities(const int nonemptymgi) {
       std::ranges::lower_bound(globals::linelist.nu, get_expopac_bin_nu_upper(0), std::ranges::greater{}) -
       globals::linelist.nu.begin());
 
+  // the populations of all levels in the cell
+  std::vector<double> levelpops(get_includedlevels());
+  for (int element = 0; element < get_nelements(); element++) {
+    for (int ion = 0; ion < get_nions(element); ion++) {
+      const auto uniquelevelindexstart = get_ionuniquelevelindexstart(element, ion);
+      for (int level = 0; level < get_nlevels(element, ion); level++) {
+        levelpops[uniquelevelindexstart + level] = calculate_levelpop(nonemptymgi, element, ion, level);
+      }
+    }
+  }
+
   double kappa_planck_cumulative = 0.;
 
   for (auto binindex = 0Z; binindex < expopac_nbins; binindex++) {
@@ -1105,9 +1076,15 @@ void calculate_expansion_opacities(const int nonemptymgi) {
     const auto nu_lower = get_expopac_bin_nu_lower(binindex);
 
     while (lineindex < globals::nlines && globals::linelist.nu[lineindex] >= nu_lower) {
-      const auto tau_line = get_tau_sobolev<false>(nonemptymgi, lineindex, t_mid);
+      const double n_l = levelpops[globals::linelist.uniquelevelindex_lower[lineindex]];
+      const double n_u = levelpops[globals::linelist.uniquelevelindex_upper[lineindex]];
+      // the Sobolev optical depth. A population inversion gives zero.
+      const auto tau_line =
+          std::max(((globals::linelist.B_lu[lineindex] * n_l) - (globals::linelist.B_ul[lineindex] * n_u)) *
+                       HCLIGHTOVERFOURPI * t_mid,
+                   0.);
       const auto linelambda = 1e8 * CLIGHT / globals::linelist.nu[lineindex];
-      bin_linesum += (linelambda / expopac_deltalambda) * -std::expm1(-tau_line);
+      bin_linesum += (linelambda / expopac_deltalambda) * get_binned_opacity_line_weight(tau_line);
       lineindex++;
     }
     // opacity in units of [cm^2/g]
@@ -1124,7 +1101,9 @@ void calculate_expansion_opacities(const int nonemptymgi) {
       const auto bin_kappa_cont = calculate_chi_ffheating(nonemptymgi, nu_mid, false) / rho;
 
       const auto planck_val = radfield::planck(nu_mid, temperature);
-      const auto kappa_planck = (bin_kappa_bb + bin_kappa_cont) * planck_val;
+      // only the thermalised fraction of the line absorption is a true absorption
+      const auto kappa_planck =
+          ((RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.value() * bin_kappa_bb) + bin_kappa_cont) * planck_val;
 
       const auto delta_nu = nu_upper - nu_lower;
       kappa_planck_cumulative += kappa_planck * delta_nu;
