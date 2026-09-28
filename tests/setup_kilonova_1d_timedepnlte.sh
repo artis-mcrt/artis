@@ -35,11 +35,8 @@ cp artis/artisoptions_kilonova_nlte.h artisoptions.h
 awk 'BEGIN{n=0; logscale=log(27*10)/log(10)} /^#/{print; next} {n++; if(n<=2){print; next} if(NF>4){$2=sprintf("%.6f",$2/3); $3=sprintf("%.8f",$3+logscale)}; print}' <(zstdcat model.txt.zst) | zstd -q -o model_scaled.txt.zst
 mv model_scaled.txt.zst model.txt.zst
 
-# Keep the lowest 300 levels of each ion (column 5 of compositiondata.txt). The collisional cooling over
-# all 2.6 million transitions otherwise takes most of the run time. The limit stays above
-# NTEXCITATION_MAXNLEVELS_UPPER, so that the test covers that limit of the non-thermal solver.
-awk 'NR == 1 {nelements = $1} NR > 3 && NF == 7 {$5 = 300; n++} {print} END {if (n != nelements) exit 1}' compositiondata.txt > compositiondata_new.txt || exit 1
-mv compositiondata_new.txt compositiondata.txt
+# The collisional cooling over all 2.6 million transitions otherwise takes most of the run time
+setnlevelsmax 150
 
 # the 1D model has 25 cells and the 2D model had 128, so fewer packets give the same number of
 # packets for each cell
