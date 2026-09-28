@@ -133,7 +133,9 @@ struct Packet {
   // thermal pool, except under RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY, where the thermal frequency
   // redistribution resets it to EMTYPE_NOTSET.
   int emissiontype{EMTYPE_NOTSET};
-  Vec3d em_pos{NAN, NAN, NAN};  // Position of the last emission (x,y,z).
+  // Position of the last emission (x,y,z). A scattering also sets it: electron scattering of an r-packet, and
+  // Compton scattering of a gamma packet.
+  Vec3d em_pos{NAN, NAN, NAN};
   float em_time{-1.};  // [s]
   int absorptiontype{0};  // records linelistindex of the last absorption
                           // or a negative absorption_type enum value
