@@ -464,6 +464,10 @@ void compton_scatter(Packet& pkt) {
 
     // It now has a rest frame direction and a co-moving frequency. Just need to set the rest frame energy.
     set_pkt_restframe_from_cmf(pkt);
+
+    // as for the electron scattering of an r-packet, the last emission position is the last scattering
+    pkt.em_pos = pkt.pos;
+    pkt.em_time = static_cast<float>(pkt.prop_time);
   } else {
     // energy loss of the gamma becomes energy of the electron (needed to calculate time-dependent thermalisation rate)
     if constexpr (PARTICLE_THERMALISATION_SCHEME == ParticleThermalisationScheme::TIMEDEPENDENTWITHGAMMAPRODUCTS) {
@@ -679,6 +683,10 @@ DEVICE_FUNC void emit_gamma_isotropic(Packet& pkt) {
   set_pkt_restframe_from_cmf(pkt);
 
   pkt.type = TYPE_GAMMA;
+
+  // the packet files then give the position and the time of the decay or of the pair annihilation
+  pkt.em_pos = pkt.pos;
+  pkt.em_time = static_cast<float>(pkt.prop_time);
 }
 
 // handle gamma to electron-positron pair production event
