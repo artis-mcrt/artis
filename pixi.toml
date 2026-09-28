@@ -1,19 +1,18 @@
 [workspace]
 channels = ["conda-forge"]
 name = "artis"
-platforms = ["linux-64", "osx-arm64"]
+platforms = ["linux-64"]
 version = "0.1.0"
 
 [tasks.make]
 cmd = "make --check-symlink-times --jobs=$(nproc)"
 
 [dependencies]
-openmpi = ">=5.0.8"
-gxx = ">=15.1.0"
-# optional: the programs then read zstd compressed input files
-zstd = ">=1.5"
-# clangxx = ">=22.1.0"
-# lld = ">=22.1.0"
+# usually better to use whatever MPI library is available on the HPC cluster
+# openmpi = ">=5.0.8"
+gxx = ">=16.1.0"
+# Usually already installed on HPC clusters, but can be installed via conda-forge if needed
+# zstd = ">=1.5"
 
 [activation.env]
 OMPI_CXX = "g++"

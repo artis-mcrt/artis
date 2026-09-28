@@ -18,6 +18,10 @@ rsync --ignore-times -av ../nltephotospheric_dynamic_ion_range_1d_1dgrid_inputfi
 
 tar -xf ../atomicdata_hefeconi_fe_i_to_vii.tar.xz --directory .
 
+# The line walk of the r-packets over 3.7 million lines otherwise takes most of the run time. The NLTE
+# solver holds 101 levels of Fe II, so the limit also leaves a superlevel.
+setnlevelsmax 150
+
 ln -s ../../ artis
 
 cp artis/artisoptions_nltephotospheric.h artisoptions.h
