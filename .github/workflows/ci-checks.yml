@@ -219,43 +219,8 @@ jobs:
                   make clean
                   make -j$(nproc) sn3d exspec
 
-            - name: LLVM Clang Compile nebular mode
-              run: |
-                  cp -v -p artisoptions_nltenebular.h artisoptions.h
-                  make clean
-                  make -j$(nproc) sn3d exspec
-
-    # The builds of the job above and of this job run in parallel
-    mac-llvm-clang-options:
-        runs-on: macos-26
-        name: LLVM Clang OpenMP, STDPAR, and presets
-        steps:
-            - uses: actions/checkout@v7
-
-            - uses: maxim-lobanov/setup-xcode@v1
-              with:
-                  xcode-version: 'latest-stable'
-
-            - name: Install Open MPI and OpenMP
-              run: |
-                  brew update
-                  brew install coreutils openmpi libomp zstd
-                  brew link --force libomp
-
-                  echo "LDFLAGS=-L/opt/homebrew/opt/libomp/lib $LDFLAGS" >> $GITHUB_ENV
-                  echo "CXXFLAGS=-I/opt/homebrew/opt/libomp/include $CXXFLAGS" >> $GITHUB_ENV
-
-            - name: Install LLVM
-              run: |
-                  brew install llvm lld
-                  echo "/opt/homebrew/opt/llvm/bin" >> $GITHUB_PATH
-                  echo "LDFLAGS=-L/opt/homebrew/opt/llvm/lib -L/opt/homebrew/opt/llvm/lib/c++ -L/opt/homebrew/opt/llvm/lib/unwind -lunwind" >> $GITHUB_ENV
-                  echo "CPPFLAGS=-I/opt/homebrew/opt/llvm/include" >> $GITHUB_ENV
-                  echo "CXX=clang++" >> $GITHUB_ENV
-
             - name: LLVM Clang Compile classic mode OPENMP=ON
               run: |
-                  cp -v -p artisoptions_classic.h artisoptions.h
                   make clean
                   make OPENMP=ON -j$(nproc) sn3d exspec
 
@@ -265,6 +230,12 @@ jobs:
                   cp -v -p artisoptions_classic.h artisoptions.h
                   make clean
                   make STDPAR=ON -j$(nproc) sn3d exspec
+
+            - name: LLVM Clang Compile nebular mode
+              run: |
+                  cp -v -p artisoptions_nltenebular.h artisoptions.h
+                  make clean
+                  make -j$(nproc) sn3d exspec
 
             - name: LLVM Clang Compile nebular mode OPENMP=ON
               run: |
@@ -287,18 +258,8 @@ jobs:
                   done
 
     amd-rocm-hipcc:
-        # Each build is a separate job, so that the builds run in parallel.
-        strategy:
-            matrix:
-                build:
-                    [
-                        {preset: classic, options: 'STDPAR=ON GPU=ON ZSTD=ON'},
-                        {preset: nltenebular, options: 'STDPAR=ON GPU=ON ZSTD=ON'},
-                        {preset: nltenebular, options: ''},
-                    ]
-            fail-fast: false
         runs-on: ubuntu-26.04
-        name: AMD ROCm hipcc ${{ matrix.build.preset }} ${{ matrix.build.options }}
+        name: AMD ROCm hipcc
         # The container runs as root, so the steps need no sudo.
         container:
             image: rocm/dev-ubuntu-26.04:10.0.0-full
@@ -329,26 +290,28 @@ jobs:
                   apt-get install -y --no-install-recommends libopenmpi-dev openmpi-bin git libzstd-dev
                   git config --global --add safe.directory /__w/artis/artis
 
-            # ZSTD=ON stops the build if the probe does not find libzstd, so the GPU builds compile the
-            # zstd code with this compiler
-            - name: Compile ${{ matrix.build.preset }} ${{ matrix.build.options }}
+            - name: Compile classic mode STDPAR=ON GPU=ON
               run: |
-                  cp -v artisoptions_${{ matrix.build.preset }}.h artisoptions.h
-                  make ${{ matrix.build.options }} -j$(nproc) sn3d exspec
+                  cp -v -p artisoptions_classic.h artisoptions.h
+                  make clean
+                  # ZSTD=ON stops the build if the probe does not find libzstd, so the job compiles the
+                  # zstd code with this compiler
+                  make STDPAR=ON GPU=ON ZSTD=ON -j$(nproc) sn3d exspec
+
+            - name: Compile nebular mode STDPAR=ON GPU=ON
+              run: |
+                  cp -v -p artisoptions_nltenebular.h artisoptions.h
+                  make clean
+                  make STDPAR=ON GPU=ON ZSTD=ON -j$(nproc) sn3d exspec
+
+            - name: Compile nebular mode
+              run: |
+                  cp -v -p artisoptions_nltenebular.h artisoptions.h
+                  make clean
+                  make -j$(nproc) sn3d exspec
 
     nvidia-nvhpc:
-        # Each build is a separate job, so that the builds run in parallel.
-        strategy:
-            matrix:
-                build:
-                    [
-                        {preset: classic, options: 'STDPAR=ON GPU=ON GPUARCH=80 ZSTD=ON'},
-                        {preset: nltenebular, options: 'STDPAR=ON GPU=ON GPUARCH=80 ZSTD=ON'},
-                        {preset: nltenebular, options: 'STDPAR=ON'},
-                        {preset: nltenebular, options: ''},
-                    ]
-            fail-fast: false
-        name: NVIDIA NVHPC nvc++ ${{ matrix.build.preset }} ${{ matrix.build.options }}
+        name: NVIDIA NVHPC nvc++
         runs-on: ubuntu-26.04
         # NVIDIA's container registry serves the SDK preinstalled, avoiding the apt repository on
         # developer.download.nvidia.com, which (as of 2026-07) returns 404 for the SDK debs when
@@ -410,9 +373,22 @@ jobs:
                       fi
                   done
 
-            # ZSTD=ON stops the build if the probe does not find libzstd, so the GPU builds compile the
-            # zstd code with this compiler
-            - name: Compile ${{ matrix.build.preset }} ${{ matrix.build.options }}
+            - name: Compile classic mode STDPAR=ON GPU=ON
               run: |
-                  cp -v artisoptions_${{ matrix.build.preset }}.h artisoptions.h
-                  make ${{ matrix.build.options }} -j$(nproc) sn3d exspec
+                  cp -v -p artisoptions_classic.h artisoptions.h
+                  make clean
+                  # ZSTD=ON stops the build if the probe does not find libzstd, so the job compiles the
+                  # zstd code with this compiler
+                  make STDPAR=ON GPU=ON GPUARCH=80 ZSTD=ON -j$(nproc) sn3d exspec
+
+            - name: Compile nebular mode STDPAR=ON GPU=ON
+              run: |
+                  cp -v -p artisoptions_nltenebular.h artisoptions.h
+                  make clean
+                  make STDPAR=ON GPU=ON GPUARCH=80 ZSTD=ON -j$(nproc) sn3d exspec
+
+            - name: Compile nebular mode STDPAR=ON
+              run: |
+                  cp -v -p artisoptions_nltenebular.h artisoptions.h
+                  make clean
+                  make STDPAR=ON -j$(nproc) sn3d exspec
