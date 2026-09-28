@@ -1,11 +1,12 @@
 #!/bin/bash -l
 
-#SBATCH --ntasks 32
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=32
+#SBATCH --mem=64G
 #SBATCH --time=48:00:00
 #SBATCH --partition=cosma8-serial
 #SBATCH --account=dp033
 ##SBATCH --account=dp385
-#SBATCH --exclusive
 #SBATCH -o slurm-%J.out
 #SBATCH -e slurm-%J.out
 #SBATCH --mail-type=ALL

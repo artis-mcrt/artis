@@ -1,10 +1,9 @@
 #!/bin/bash -l
-#SBATCH --time=24:00:00
+#SBATCH --time=04:00:00
 #SBATCH --ntasks=1
-#SBATCH --ntasks-per-node=1
-#SBATCH --cpus-per-task=112
-#SBATCH --exclusive
-#SBATCH --partition=dcgp_usr_prod
+#SBATCH --cpus-per-task=4
+#SBATCH --mem=30800M
+#SBATCH --partition=lrd_all_serial
 #SBATCH --qos=normal
 #SBATCH --account=EUHPC_R07_209
 #SBATCH --mail-type=ALL
