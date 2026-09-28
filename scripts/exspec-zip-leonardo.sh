@@ -2,7 +2,8 @@
 #SBATCH --time=04:00:00
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=8
-#SBATCH --mem=30800M
+# the QOS permits 30800 MB for 8 CPUs, which is less than the node share of 4015 MB for each CPU
+#SBATCH --mem-per-cpu=3850M
 #SBATCH --partition=lrd_all_serial
 #SBATCH --qos=normal
 #SBATCH --account=EUHPC_R07_209

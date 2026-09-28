@@ -2,7 +2,8 @@
 
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=32
-#SBATCH --mem=64G
+# the memory of a node (1030000 MB) divided by its 128 CPUs
+#SBATCH --mem-per-cpu=8046M
 #SBATCH --time=48:00:00
 #SBATCH --partition=cosma8-serial
 #SBATCH --account=dp033
