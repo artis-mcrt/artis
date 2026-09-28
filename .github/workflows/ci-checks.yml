@@ -258,8 +258,18 @@ jobs:
                   done
 
     amd-rocm-hipcc:
+        # Each build is a separate job, so that the builds run in parallel.
+        strategy:
+            matrix:
+                build:
+                    [
+                        {preset: classic, options: 'STDPAR=ON GPU=ON ZSTD=ON'},
+                        {preset: nltenebular, options: 'STDPAR=ON GPU=ON ZSTD=ON'},
+                        {preset: nltenebular, options: ''},
+                    ]
+            fail-fast: false
         runs-on: ubuntu-26.04
-        name: AMD ROCm hipcc
+        name: AMD ROCm hipcc ${{ matrix.build.preset }} ${{ matrix.build.options }}
         # The container runs as root, so the steps need no sudo.
         container:
             image: rocm/dev-ubuntu-26.04:10.0.0-full
@@ -290,28 +300,26 @@ jobs:
                   apt-get install -y --no-install-recommends libopenmpi-dev openmpi-bin git libzstd-dev
                   git config --global --add safe.directory /__w/artis/artis
 
-            - name: Compile classic mode STDPAR=ON GPU=ON
+            # ZSTD=ON stops the build if the probe does not find libzstd, so the GPU builds compile the
+            # zstd code with this compiler
+            - name: Compile ${{ matrix.build.preset }} ${{ matrix.build.options }}
               run: |
-                  cp -v -p artisoptions_classic.h artisoptions.h
-                  make clean
-                  # ZSTD=ON stops the build if the probe does not find libzstd, so the job compiles the
-                  # zstd code with this compiler
-                  make STDPAR=ON GPU=ON ZSTD=ON -j$(nproc) sn3d exspec
-
-            - name: Compile nebular mode STDPAR=ON GPU=ON
-              run: |
-                  cp -v -p artisoptions_nltenebular.h artisoptions.h
-                  make clean
-                  make STDPAR=ON GPU=ON ZSTD=ON -j$(nproc) sn3d exspec
-
-            - name: Compile nebular mode
-              run: |
-                  cp -v -p artisoptions_nltenebular.h artisoptions.h
-                  make clean
-                  make -j$(nproc) sn3d exspec
+                  cp -v artisoptions_${{ matrix.build.preset }}.h artisoptions.h
+                  make ${{ matrix.build.options }} -j$(nproc) sn3d exspec
 
     nvidia-nvhpc:
-        name: NVIDIA NVHPC nvc++
+        # Each build is a separate job, so that the builds run in parallel.
+        strategy:
+            matrix:
+                build:
+                    [
+                        {preset: classic, options: 'STDPAR=ON GPU=ON GPUARCH=80 ZSTD=ON'},
+                        {preset: nltenebular, options: 'STDPAR=ON GPU=ON GPUARCH=80 ZSTD=ON'},
+                        {preset: nltenebular, options: 'STDPAR=ON'},
+                        {preset: nltenebular, options: ''},
+                    ]
+            fail-fast: false
+        name: NVIDIA NVHPC nvc++ ${{ matrix.build.preset }} ${{ matrix.build.options }}
         runs-on: ubuntu-26.04
         # NVIDIA's container registry serves the SDK preinstalled, avoiding the apt repository on
         # developer.download.nvidia.com, which (as of 2026-07) returns 404 for the SDK debs when
@@ -373,28 +381,9 @@ jobs:
                       fi
                   done
 
-            - name: Compile classic mode STDPAR=ON GPU=ON
+            # ZSTD=ON stops the build if the probe does not find libzstd, so the GPU builds compile the
+            # zstd code with this compiler
+            - name: Compile ${{ matrix.build.preset }} ${{ matrix.build.options }}
               run: |
-                  cp -v -p artisoptions_classic.h artisoptions.h
-                  make clean
-                  # ZSTD=ON stops the build if the probe does not find libzstd, so the job compiles the
-                  # zstd code with this compiler
-                  make STDPAR=ON GPU=ON GPUARCH=80 ZSTD=ON -j$(nproc) sn3d exspec
-
-            - name: Compile nebular mode STDPAR=ON GPU=ON
-              run: |
-                  cp -v -p artisoptions_nltenebular.h artisoptions.h
-                  make clean
-                  make STDPAR=ON GPU=ON GPUARCH=80 ZSTD=ON -j$(nproc) sn3d exspec
-
-            - name: Compile nebular mode STDPAR=ON
-              run: |
-                  cp -v -p artisoptions_nltenebular.h artisoptions.h
-                  make clean
-                  make STDPAR=ON -j$(nproc) sn3d exspec
-
-            - name: Compile nebular mode
-              run: |
-                  cp -v -p artisoptions_nltenebular.h artisoptions.h
-                  make clean
-                  make -j$(nproc) sn3d exspec
+                  cp -v artisoptions_${{ matrix.build.preset }}.h artisoptions.h
+                  make ${{ matrix.build.options }} -j$(nproc) sn3d exspec
