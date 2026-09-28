@@ -360,9 +360,12 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
         std::chrono::duration<double>(std::chrono::steady_clock::now() - sys_time_start_spencerfano).count();
 
     const auto sys_time_start_partfuncs_or_gamma = std::chrono::steady_clock::now();
-    for (int element = 0; element < get_nelements(); element++) {
-      if (!elem_has_nlte_levels(element)) {
-        calculate_cellpartfuncts(nonemptymgi, element);
+    // with LTEPOP_EXCITATION_USE_TJ false, the T_e finder calculates these partition functions at each trial T_e
+    if constexpr (LTEPOP_EXCITATION_USE_TJ) {
+      for (int element = 0; element < get_nelements(); element++) {
+        if (!elem_has_nlte_levels(element)) {
+          calculate_cellpartfuncts(nonemptymgi, element);
+        }
       }
     }
     const auto duration_solve_partfuncs_or_gamma =
