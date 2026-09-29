@@ -146,8 +146,8 @@ jobs:
             - name: Compile sn3d with the estimator file of all ranks for the run in one job
               if: matrix.testname == 'nebular_1d_3dgrid' && inputs.testmode != 'ON'
               run: |
-                  # The simulation in one job writes estimators.out. The comparison step below compares it with the
-                  # files of the ranks of the two jobs. The other output files must not change.
+                  # The simulation in one job writes estimators_allranks.out. The comparison step below compares it with
+                  # the files of the ranks of the two jobs. The other output files must not change.
                   (cd tests/${{ matrix.testname }}_onejob && source ../setupfuncs.sh && sedopt 'constexpr bool WRITE_ESTIMATORS_ALLRANKS_FILE.*' 'constexpr bool WRITE_ESTIMATORS_ALLRANKS_FILE = true;' && rm -f artisoptions.h.bak)
                   cp tests/${{ matrix.testname }}_onejob/artisoptions.h .
                   make REPRODUCIBLE=ON ZSTD=ON TESTMODE=${{ inputs.testmode }} MAX_NODE_SIZE=2 FASTMATH=OFF -j${{ steps.cpu-count.outputs.count }} sn3d
@@ -330,9 +330,9 @@ jobs:
                       cp -a "../${{ matrix.testname }}_testrun/${jobfolder}" "$RUNNER_TEMP/"
                   done
                   uv run ../../scripts/combine_estimator_files.py "$RUNNER_TEMP/job_from_ts0000" "$RUNNER_TEMP/${lastjobfolder}"
-                  (zstdcat "$RUNNER_TEMP/job_from_ts0000/estimators.out.zst"
-                   zstdcat "$RUNNER_TEMP/${lastjobfolder}/estimators.out.zst" | awk -v ts="$restarttimestep" '/^timestep /{keep = ($2 > ts)} keep') > "$RUNNER_TEMP/estimators_twojobs.txt"
-                  zstdcat job_from_ts0000/estimators.out.zst > "$RUNNER_TEMP/estimators_onejob.txt"
+                  (zstdcat "$RUNNER_TEMP/job_from_ts0000/estimators_allranks.out.zst"
+                   zstdcat "$RUNNER_TEMP/${lastjobfolder}/estimators_allranks.out.zst" | awk -v ts="$restarttimestep" '/^timestep /{keep = ($2 > ts)} keep') > "$RUNNER_TEMP/estimators_twojobs.txt"
+                  zstdcat job_from_ts0000/estimators_allranks.out.zst > "$RUNNER_TEMP/estimators_onejob.txt"
                   cmp "$RUNNER_TEMP/estimators_twojobs.txt" "$RUNNER_TEMP/estimators_onejob.txt"
 
             - name: Prepare for next steps

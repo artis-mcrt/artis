@@ -21,12 +21,13 @@ find . -type d \( -name "*.slurm" -o -name "job_from_ts*" \) -print0 | while IFS
             echo "  estimators_allranks.tar*  exists already!"
             ls -lh estimators_allranks.tar*
         else
-            if compgen -G 'estimbatch00_*.parquet*' > /dev/null && compgen -G 'estimators_0001.out*' > /dev/null; then
-                find . -mindepth 0 -name "estimators_*.out*" -print | sort > $tmpdir/estimatorfilelist.txt
+            # artistools writes the cache estimators_allranks.out.parquet, and an earlier version wrote estimbatch*.parquet*
+            if (compgen -G 'estimators_allranks.out.parquet*' > /dev/null || compgen -G 'estimbatch00_*.parquet*' > /dev/null) && compgen -G 'estimators_0001.out*' > /dev/null; then
+                find . -mindepth 0 -name "estimators_[0-9]*.out*" -print | sort > $tmpdir/estimatorfilelist.txt
                 echo "  Creating tarball of estimators_allranks.tar"
-                tar -cf $tmpdir/estimators_allranks.tar --files-from $tmpdir/estimatorfilelist.txt && mv -v $tmpdir/estimators_allranks.tar . && rm -f $tmpdir/* && find . -mindepth 0 -name "estimators_*.out*" -delete
+                tar -cf $tmpdir/estimators_allranks.tar --files-from $tmpdir/estimatorfilelist.txt && mv -v $tmpdir/estimators_allranks.tar . && rm -f $tmpdir/* && find . -mindepth 0 -name "estimators_[0-9]*.out*" -delete
             else
-                echo "  no parquet batches or estimators_0001.out* file found, skipping tar creation"
+                echo "  no parquet cache or estimators_0001.out* file found, skipping tar creation"
             fi
         fi
         cd - > /dev/null

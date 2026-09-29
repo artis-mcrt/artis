@@ -75,7 +75,7 @@ std::chrono::steady_clock::time_point packet_propagation_start_time;
 OutputFileStream estimators_file;
 // the estimator file of all ranks in the job folder, with WRITE_ESTIMATORS_ALLRANKS_FILE
 AllRanksOutputFile estimators_allranks_file;
-constexpr std::string_view ESTIMATORS_ALLRANKS_FILENAME = "estimators.out";
+constexpr std::string_view ESTIMATORS_ALLRANKS_FILENAME = "estimators_allranks.out";
 
 struct CellCacheBacking {
   MPI_shared_array<double> cooling_contrib;
@@ -937,11 +937,14 @@ void setup_jobfolder() {
     // clear out per-rank output files (and any leftover log symlink) from a previous run of this folder, so
     // that e.g. a rerun with fewer ranks does not leave a mixture of new estimator files and stale ones from
     // ranks that no longer exist. Only exact matches of the generated filenames are removed.
-    // The loop also removes the estimator file of all ranks, plain or compressed.
+    // The loop also removes the estimator file of all ranks, plain or compressed. It also removes the parquet caches
+    // of the estimators that artistools writes, e.g. estimators_allranks.out.parquet.tmp. A stale cache must not stay
+    // beside the new estimator files.
     for (const auto& entry : std::filesystem::directory_iterator(globals::jobfolder, ec)) {
       const auto filename = entry.path().filename().string();
+      const bool is_estimator_parquet_cache = filename.starts_with("estimators") && filename.contains(".parquet");
       if (is_rank_outfile_name(filename) || filename == ESTIMATORS_ALLRANKS_FILENAME ||
-          filename == std::format("{}.zst", ESTIMATORS_ALLRANKS_FILENAME)) {
+          filename == std::format("{}.zst", ESTIMATORS_ALLRANKS_FILENAME) || is_estimator_parquet_cache) {
         std::filesystem::remove(entry.path(), ec);
       }
     }

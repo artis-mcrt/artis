@@ -2,11 +2,13 @@
 # /// script
 # requires-python = ">=3.14"
 # ///
-"""Combine the estimator files of the ranks in each job folder into one file, estimators.out.zst.
+"""Combine the estimator files of the ranks in each job folder into one file, estimators_allranks.out.zst.
 
 sn3d writes the same text with WRITE_ESTIMATORS_ALLRANKS_FILE. The file holds the timesteps in their order, and in
 each timestep it holds the text of the ranks in their order. Each text of one rank and one timestep is one zstd
 frame, as sn3d writes it. The script keeps the files of the ranks.
+
+Do not combine the folder of a job that still runs. The combined file then holds only the timesteps up to that time.
 
 Run the script in the run folder, e.g. "uv run artis/scripts/combine_estimator_files.py". It then combines the files
 of each job_from_ts* folder. The arguments can also name the folders. The module compression.zstd needs Python 3.14
@@ -28,7 +30,7 @@ from compression import zstd
 ZSTD_LEVEL = 9
 ZSTD_OPTIONS = {zstd.CompressionParameter.compression_level: ZSTD_LEVEL, zstd.CompressionParameter.checksum_flag: 1}
 
-ALLRANKS_FILENAME = "estimators.out"
+ALLRANKS_FILENAME = "estimators_allranks.out"
 
 # the order of the extensions that the readers use, e.g. find_estimator_file() of artistools
 RANKFILE_EXTENSIONS = ("", ".zst", ".gz", ".xz")
