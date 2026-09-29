@@ -128,18 +128,17 @@ def get_timestep_texts(path: Path) -> Iterator[tuple[int, str]]:
 
 def combine_folder(folder: Path) -> None:
     """Write the combined estimator file of one folder."""
-    if (folder / ALLRANKS_FILENAME).exists():
-        print(f"{folder}: {ALLRANKS_FILENAME} exists already. The script does not change it.")
-        return
-
     rankfiles = get_rank_files(folder)
     outpath = folder / f"{ALLRANKS_FILENAME}.zst"
-    if outpath.exists():
-        if all(rankfile.stat().st_mtime < outpath.stat().st_mtime for rankfile in rankfiles.values()):
-            print(f"{folder}: {outpath.name} exists already. The script does not change it.")
+    # the readers take the plain file before the .zst file, thus a plain file is the combined file that they read
+    plainpath = folder / ALLRANKS_FILENAME
+    existingpath = plainpath if plainpath.exists() else outpath if outpath.exists() else None
+    if existingpath is not None:
+        if all(rankfile.stat().st_mtime < existingpath.stat().st_mtime for rankfile in rankfiles.values()):
+            print(f"{folder}: {existingpath.name} exists already. The script does not change it.")
             return
         # e.g. the script ran while the job still ran, and the job then wrote more timesteps
-        print(f"{folder}: a file of a rank is newer than {outpath.name}. The script combines the files again.")
+        print(f"{folder}: a file of a rank is newer than {existingpath.name}. The script combines the files again.")
 
     if not rankfiles:
         print(f"{folder}: the folder has no estimator files of ranks.")
@@ -200,6 +199,11 @@ def combine_folder(folder: Path) -> None:
                     shutil.copyfileobj(timestep_file, outfile, 1 << 24)
         # the rename puts a complete file at the name in one step
         partialpath.replace(outpath)
+
+    # a stale plain file would hide the new .zst file from the readers
+    if existingpath == plainpath:
+        plainpath.unlink()
+        print(f"{folder}: removed the stale {plainpath.name}.")
 
     print(f"{folder}: wrote {outpath.name} with {len(timesteps)} timesteps.")
 
