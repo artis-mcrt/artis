@@ -1339,6 +1339,35 @@ void test_zstd_output_stream() {
   check(readback == text, "the compressed output file reads back as the written text");
   std::filesystem::remove(zstfilename);
 }
+
+// The estimator file of all ranks holds one zstd frame from each rank, one frame after the other. The file must
+// read back as the texts of the frames in their order. A rank with no text writes no frame.
+void test_zstd_frame_sequence() {
+  std::println("zstd frame sequence...");
+  const std::string filename = "unittests_zstd_frames.txt";
+  const auto zstfilename = output_filepath(filename);
+  std::string text;
+  {
+    std::ofstream outfile(zstfilename, std::ios::out | std::ios::trunc | std::ios::binary);
+    for (int rank = 0; rank < 5; rank++) {
+      std::string ranktext;
+      for (int cell = 0; cell < (rank == 2 ? 0 : 1000); cell++) {
+        ranktext += std::format("timestep 3 modelgridindex {} Te {:.6e}\n\n", (rank * 1000) + cell, cell * 0.5);
+      }
+      text += ranktext;
+      if (!ranktext.empty()) {
+        const auto frame = compress_to_zstd_frame(ranktext, ZSTD_LEVEL_DEFAULT);
+        outfile.write(frame.data(), static_cast<std::streamsize>(frame.size()));
+      }
+    }
+    check(outfile.good(), "the frames go into the file without an error");
+  }
+
+  auto infile = istream_required(filename);
+  const auto readback = std::string(std::istreambuf_iterator<char>(infile), std::istreambuf_iterator<char>());
+  check(readback == text, "the sequence of frames reads back as the texts in their order");
+  std::filesystem::remove(zstfilename);
+}
 #endif
 
 }  // anonymous namespace
@@ -1373,6 +1402,7 @@ auto main() -> int {
 #ifdef USE_ZSTD
   test_zstd_input_stream();
   test_zstd_output_stream();
+  test_zstd_frame_sequence();
 #endif
 
   std::println("unit tests: {} of {} checks passed", checks_total - checks_failed, checks_total);

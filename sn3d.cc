@@ -73,6 +73,9 @@ namespace {
 std::chrono::steady_clock::time_point real_time_start;
 std::chrono::steady_clock::time_point packet_propagation_start_time;
 OutputFileStream estimators_file;
+// the estimator file of all ranks in the job folder, with WRITE_ESTIMATORS_ALLRANKS_FILE
+AllRanksOutputFile estimators_allranks_file;
+constexpr std::string_view ESTIMATORS_ALLRANKS_FILENAME = "estimators.out";
 
 struct CellCacheBacking {
   MPI_shared_array<double> cooling_contrib;
@@ -792,7 +795,15 @@ auto do_timestep(const int nts, std::vector<Packet>& packets, const int walltime
 
   // Update the matter quantities in the grid for the new timestep.
 
-  update_grid(estimators_file, nts, nts_prev, real_time_start);
+  if constexpr (WRITE_ESTIMATORS_ALLRANKS_FILE) {
+    update_grid(estimators_allranks_file.rank_text(), nts, nts_prev, real_time_start);
+    const auto time_write_estimators_start = std::chrono::steady_clock::now();
+    estimators_allranks_file.write_all_ranks();
+    printlnlog("timestep {}: time after rank 0 wrote the estimators of all ranks (took {:.1f} seconds)", nts,
+               std::chrono::duration<double>(std::chrono::steady_clock::now() - time_write_estimators_start).count());
+  } else {
+    update_grid(estimators_file, nts, nts_prev, real_time_start);
+  }
 
   const auto sys_time_start_communicate_grid = std::chrono::steady_clock::now();
 
@@ -926,8 +937,11 @@ void setup_jobfolder() {
     // clear out per-rank output files (and any leftover log symlink) from a previous run of this folder, so
     // that e.g. a rerun with fewer ranks does not leave a mixture of new estimator files and stale ones from
     // ranks that no longer exist. Only exact matches of the generated filenames are removed.
+    // The loop also removes the estimator file of all ranks, plain or compressed.
     for (const auto& entry : std::filesystem::directory_iterator(globals::jobfolder, ec)) {
-      if (is_rank_outfile_name(entry.path().filename().string())) {
+      const auto filename = entry.path().filename().string();
+      if (is_rank_outfile_name(filename) || filename == ESTIMATORS_ALLRANKS_FILENAME ||
+          filename == std::format("{}.zst", ESTIMATORS_ALLRANKS_FILENAME)) {
         std::filesystem::remove(entry.path(), ec);
       }
     }
@@ -1176,9 +1190,14 @@ auto main(int argc, char* argv[]) -> int {
   globals::timestep = globals::timestep_initial;
 
   macroatom_open_file();
+  if constexpr (WRITE_ESTIMATORS_ALLRANKS_FILE) {
+    estimators_allranks_file.open(get_jobfolder_filepath(ESTIMATORS_ALLRANKS_FILENAME));
+  }
   if (ndo > 0) {
-    assert_always(estimators_file.rdbuf() == nullptr);
-    estimators_file = open_rank_outfile("estimators");
+    if constexpr (!WRITE_ESTIMATORS_ALLRANKS_FILE) {
+      assert_always(estimators_file.rdbuf() == nullptr);
+      estimators_file = open_rank_outfile("estimators");
+    }
 
     if (globals::total_nlte_levels > 0 && ndo_nonempty > 0) {
       nltepop_open_file();
