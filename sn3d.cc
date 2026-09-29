@@ -75,7 +75,6 @@ std::chrono::steady_clock::time_point packet_propagation_start_time;
 OutputFileStream estimators_file;
 // the estimator file of all ranks in the job folder, with WRITE_ESTIMATORS_ALLRANKS_FILE
 AllRanksOutputFile estimators_allranks_file;
-constexpr std::string_view ESTIMATORS_ALLRANKS_FILENAME = "estimators_allranks.out";
 
 struct CellCacheBacking {
   MPI_shared_array<double> cooling_contrib;
@@ -799,8 +798,11 @@ auto do_timestep(const int nts, std::vector<Packet>& packets, const int walltime
     update_grid(estimators_allranks_file.rank_text(), nts, nts_prev, real_time_start);
     const auto time_write_estimators_start = std::chrono::steady_clock::now();
     estimators_allranks_file.write_all_ranks();
-    printlnlog("timestep {}: time after rank 0 wrote the estimators of all ranks (took {:.1f} seconds)", nts,
-               std::chrono::duration<double>(std::chrono::steady_clock::now() - time_write_estimators_start).count());
+    // the other ranks return after their own send, before rank 0 writes the file
+    printlnlog(
+        "timestep {}: time after {} (took {:.1f} seconds)", nts,
+        globals::my_rank == 0 ? "rank 0 wrote the estimators of all ranks" : "this rank sent its estimators to rank 0",
+        std::chrono::duration<double>(std::chrono::steady_clock::now() - time_write_estimators_start).count());
   } else {
     update_grid(estimators_file, nts, nts_prev, real_time_start);
   }
@@ -936,17 +938,12 @@ void setup_jobfolder() {
 
     // clear out per-rank output files (and any leftover log symlink) from a previous run of this folder, so
     // that e.g. a rerun with fewer ranks does not leave a mixture of new estimator files and stale ones from
-    // ranks that no longer exist. Only exact matches of the generated filenames are removed.
-    // The loop also removes the estimator file of all ranks, plain or compressed. It also removes the parquet caches
-    // of the estimators that artistools writes: estimators_allranks.out.parquet, and the batch caches
-    // estimbatch*.parquet* of an earlier artistools version. A stale cache must not stay beside the new estimator
-    // files.
+    // ranks that no longer exist. The loop also removes the estimator file of all ranks and the parquet caches that
+    // artistools makes from the estimator files, so that no stale copy stays beside the new estimator files. The loop
+    // removes only exact matches of these filenames.
     for (const auto& entry : std::filesystem::directory_iterator(globals::jobfolder, ec)) {
       const auto filename = entry.path().filename().string();
-      const bool is_estimator_parquet_cache =
-          (filename.starts_with("estimators") || filename.starts_with("estimbatch")) && filename.contains(".parquet");
-      if (is_rank_outfile_name(filename) || filename == ESTIMATORS_ALLRANKS_FILENAME ||
-          filename == std::format("{}.zst", ESTIMATORS_ALLRANKS_FILENAME) || is_estimator_parquet_cache) {
+      if (is_rank_outfile_name(filename) || is_estimator_allranks_or_cache_name(filename)) {
         std::filesystem::remove(entry.path(), ec);
       }
     }

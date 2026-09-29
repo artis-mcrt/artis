@@ -860,6 +860,41 @@ void test_rank_outfile_name() {
   check(!match_none, "other filenames are never matched, so they cannot be deleted from a job folder");
 }
 
+void test_estimator_allranks_or_cache_name() {
+  std::println("names of the estimator file of all ranks and of the estimator caches...");
+  bool match_all = true;
+  for (const auto* const name : {
+           "estimators_allranks.out",
+           "estimators_allranks.out.zst",
+           "estimators_allranks.out.gz",
+           "estimators_allranks.out.xz",
+           "estimators_allranks.out.parquet",
+           "estimbatch00_0000_0099.out.parquet.tmp",
+           "estimbatch01_0100_0199.out.parquet",
+       }) {
+    match_all = match_all && is_estimator_allranks_or_cache_name(name);
+  }
+  check(match_all, "the function matches the estimator file of all ranks and the estimator caches of artistools");
+
+  bool match_none = false;
+  for (const auto* const name : {
+           "estimators_allranks.out.bak",
+           "estimators_allranks.out.zst.zst",
+           "estimators_allranks.txt",
+           "estimators_selection.parquet",
+           "estimators_0000.out",
+           "estimators_0000.out.parquet",
+           "estimbatch_notes.parquet",
+           "estimbatch00_0000.out.parquet.tmp",
+           "estimbatch00_0000_0099.out.parquet.bak",
+           "estimbatch00_00x0_0099.out.parquet.tmp",
+           ".estimators_allranks.out.parquet.replace-lock",
+       }) {
+    match_none = match_none || is_estimator_allranks_or_cache_name(name);
+  }
+  check(!match_none, "the function matches none of the other filenames");
+}
+
 void test_anderson_accelerator() {
   std::println("Anderson accelerator...");
   // linear map with the contraction factors 0.9 and -0.7, fixed point (10, 2)
@@ -1340,8 +1375,8 @@ void test_zstd_output_stream() {
   std::filesystem::remove(zstfilename);
 }
 
-// The estimator file of all ranks holds one zstd frame from each rank, one frame after the other. The file must
-// read back as the texts of the frames in their order. A rank with no text writes no frame.
+// The estimator file of all ranks starts with one empty zstd frame, and then holds one frame from each rank with
+// text, one frame after the other. The file must read back as the texts of the frames in their order.
 void test_zstd_frame_sequence() {
   std::println("zstd frame sequence...");
   const std::string filename = "unittests_zstd_frames.txt";
@@ -1349,16 +1384,16 @@ void test_zstd_frame_sequence() {
   std::string text;
   {
     std::ofstream outfile(zstfilename, std::ios::out | std::ios::trunc | std::ios::binary);
+    const auto emptyframe = compress_to_zstd_frame({}, ZSTD_LEVEL_DEFAULT);
+    outfile.write(emptyframe.data(), static_cast<std::streamsize>(emptyframe.size()));
     for (int rank = 0; rank < 5; rank++) {
       std::string ranktext;
-      for (int cell = 0; cell < (rank == 2 ? 0 : 1000); cell++) {
+      for (int cell = 0; cell < 1000; cell++) {
         ranktext += std::format("timestep 3 modelgridindex {} Te {:.6e}\n\n", (rank * 1000) + cell, cell * 0.5);
       }
       text += ranktext;
-      if (!ranktext.empty()) {
-        const auto frame = compress_to_zstd_frame(ranktext, ZSTD_LEVEL_DEFAULT);
-        outfile.write(frame.data(), static_cast<std::streamsize>(frame.size()));
-      }
+      const auto frame = compress_to_zstd_frame(ranktext, ZSTD_LEVEL_DEFAULT);
+      outfile.write(frame.data(), static_cast<std::streamsize>(frame.size()));
     }
     check(outfile.good(), "the frames go into the file without an error");
   }
@@ -1392,6 +1427,7 @@ auto main() -> int {
   test_count_groundterm_levels();
   test_calculate_timesteps();
   test_rank_outfile_name();
+  test_estimator_allranks_or_cache_name();
   test_gth_solver();
   test_anderson_accelerator();
   test_chargetransfer_helpers();

@@ -279,6 +279,8 @@ inline void remove_other_output_form(const std::string_view filename) {
     fatal_crash("zstd cannot compress the output: {}", ZSTD_getErrorName(framesize));
   }
   frame.resize(framesize);
+  // the bound of the compressed size can be much larger than the frame, which the caller keeps until its transfer ends
+  frame.shrink_to_fit();
   return frame;
 }
 #endif
@@ -300,12 +302,27 @@ class AllRanksOutputFile {
     if (!outfile.is_open()) {
       fatal_crash("Could not open the output file '{}'", filepath);
     }
+#ifdef USE_ZSTD
+    // The file starts with one empty frame. ZstdOutputBuffer::close() also writes one empty frame to a file with no
+    // content. A job that stops before its first write thus leaves a file that every zstd reader accepts.
+    const auto emptyframe = compress_to_zstd_frame({}, ZSTD_LEVEL_DEFAULT);
+    outfile.write(emptyframe.data(), static_cast<std::streamsize>(emptyframe.size()));
+    outfile.flush();
+    if (outfile.fail()) {
+      fatal_crash("Could not write to the output file '{}'", filepath);
+    }
+#endif
   }
 
   [[nodiscard]] auto rank_text() -> std::ostream& { return ranktext; }
 
   // Write the text of all ranks to the file and clear the buffer of each rank. Every rank must call this function.
   void write_all_ranks() {
+    // std::print does not throw, e.g. when the buffer cannot grow. It sets the bad state, and the text is then not
+    // complete.
+    if (ranktext.fail()) {
+      fatal_crash("A write to the text buffer of rank {} failed", globals::my_rank);
+    }
 #ifdef USE_ZSTD
     auto rankbytes =
         ranktext.view().empty() ? std::string{} : compress_to_zstd_frame(ranktext.view(), ZSTD_LEVEL_DEFAULT);
@@ -317,7 +334,9 @@ class AllRanksOutputFile {
 
     const auto rankbytecount = static_cast<std::int64_t>(rankbytes.size());
     std::vector<std::int64_t> bytecount_of_rank(globals::my_rank == 0 ? globals::nprocs : 0);
-    assert_always(MPI_Gather(&rankbytecount, 1, MPI_INT64_T, bytecount_of_rank.data(), 1, MPI_INT64_T, 0,
+    // with libstdc++, data() gives long* and not std::int64_t*, and the clang-tidy check of the MPI types then fails
+    std::int64_t* const bytecount_of_rank_data = bytecount_of_rank.data();
+    assert_always(MPI_Gather(&rankbytecount, 1, MPI_INT64_T, bytecount_of_rank_data, 1, MPI_INT64_T, 0,
                              MPI_COMM_WORLD) == MPI_SUCCESS);
 
     if (globals::my_rank != 0) {

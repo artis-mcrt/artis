@@ -119,7 +119,7 @@ To split a long simulation across several queued jobs, run sn3d with `-w WALLTIM
 ### Output files
 Each job writes the following into its job folder, e.g. `job_from_ts0000`:
 - output_n-0.txt: a log file for each MPI rank n.
-- estimators_nnnn.out: the plasma conditions of each cell (temperatures, ionisation, heating and cooling rates) at each timestep. With the option `WRITE_ESTIMATORS_ALLRANKS_FILE`, sn3d writes the same text of all ranks into one file, estimators_allranks.out. `scripts/combine_estimator_files.py` makes that file from the files of the ranks.
+- estimators_nnnn.out: the plasma conditions of each cell (temperatures, ionisation, heating and cooling rates) at each timestep. With the option `WRITE_ESTIMATORS_ALLRANKS_FILE`, sn3d writes the same text of all ranks into one file, estimators_allranks.out. `scripts/combine_estimator_files.py` makes that file from the files of the ranks. Run the script with uv, e.g. `uv run artis/scripts/combine_estimator_files.py`. The script needs Python 3.14 or a later version, and uv gets that version from the metadata of the script.
 
 A run writes the following into the simulation folder:
 - packets/packets00_nnnn.out: the Monte Carlo packets from each rank, which exspec can turn into spectra and light curves again.

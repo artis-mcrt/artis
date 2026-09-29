@@ -12,7 +12,7 @@
 //                        = cooling_ff + cooling_fb + cooling_collisional + cooling_adiabatic + cooling_heatcapacity
 // for T_e. Only the heating_* and cooling_* members are terms in that balance. The dep_* members feed it (via
 // heating_dep), dep_frac_heating is computed from them, and the eps_*_ana members are reported to
-// estimators.out and used to set some dep_* values, but never enter the balance directly.
+// the estimator files and used to set some dep_* values, but never enter the balance directly.
 struct HeatingCoolingRates {
   double cooling_collisional{0};
   double cooling_fb{0};
