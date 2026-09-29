@@ -12,7 +12,8 @@ Do not combine the folder of a job that still runs. The combined file then holds
 When a file of a rank is newer than the combined file, the script combines the files again.
 
 The script combines a folder only when it holds the file of each rank with cells. modelgridrankassignments.out of
-the run folder gives these ranks. Without that file, the ranks of the files must start at 0 and have no gap.
+the run folder gives these ranks. Without that file, the ranks of the files must start at 0 and have no gap. The files
+of all the ranks must also hold the same timesteps.
 
 Run the script in the run folder, e.g. "uv run artis/scripts/combine_estimator_files.py". It then combines the files
 of each job_from_ts* folder. The arguments can also name the folders. The module compression.zstd needs Python 3.14
@@ -161,6 +162,7 @@ def combine_folder(folder: Path) -> None:
     with tempfile.TemporaryDirectory(dir=folder, prefix=".combine_estimators_") as tmpdirname:
         tmpdir = Path(tmpdirname)
         timesteps: set[int] = set()
+        timesteps_of_ranks: dict[int, set[int]] = {}
         for rank, rankfile in rankfiles.items():
             timesteps_of_rank: set[int] = set()
             for timestep, text in get_timestep_texts(rankfile):
@@ -171,7 +173,23 @@ def combine_folder(folder: Path) -> None:
                 with (tmpdir / f"timestep_{timestep:05d}.zst").open("ab") as timestep_file:
                     timestep_file.write(zstd.compress(text.encode("utf-8"), options=ZSTD_OPTIONS))
             timesteps |= timesteps_of_rank
+            timesteps_of_ranks[rank] = timesteps_of_rank
             print(f"  rank {rank}: {len(timesteps_of_rank)} timesteps")
+
+        # sn3d writes each timestep for all ranks together. A job that stopped between the writes of two ranks
+        # leaves files with different timesteps, and the combined file would then hold a timestep with some ranks only
+        if incomplete_timesteps := sorted(
+            timestep
+            for timestep in timesteps
+            if any(timestep not in rank_timesteps for rank_timesteps in timesteps_of_ranks.values())
+        ):
+            ranks_without = sorted(
+                rank
+                for rank, rank_timesteps in timesteps_of_ranks.items()
+                if any(ts not in rank_timesteps for ts in incomplete_timesteps)
+            )
+            msg = f"The files of the ranks {ranks_without} do not hold the timesteps {incomplete_timesteps}."
+            raise ValueError(msg)
 
         partialpath = tmpdir / f"{ALLRANKS_FILENAME}.zst"
         with partialpath.open("wb") as outfile:

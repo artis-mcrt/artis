@@ -30,8 +30,18 @@ find . -type d \( -name "*.slurm" -o -name "job_from_ts*" \) -print0 | while IFS
                     stale_allranks_file=$allranksfile
                 fi
             done
+            # A parquet cache that is older than a file of a rank does not hold the later timesteps, e.g. when the job
+            # wrote more timesteps after the conversion. The files of the ranks must then stay for a new conversion.
+            stale_cache=""
+            for cachefile in estimators_allranks.out.parquet* estimbatch*.parquet*; do
+                if [ -f "$cachefile" ] && [ -n "$(find . -maxdepth 1 -name 'estimators_[0-9]*.out*' -newer "$cachefile" -print -quit)" ]; then
+                    stale_cache=$cachefile
+                fi
+            done
             if [ -n "$stale_allranks_file" ]; then
                 echo "  $stale_allranks_file is older than a file of a rank. Combine the files of the ranks again. The script keeps the files."
+            elif [ -n "$stale_cache" ]; then
+                echo "  $stale_cache is older than a file of a rank. Read the estimators with artistools again. The script keeps the files."
             # artistools writes the cache estimators_allranks.out.parquet, and an earlier version wrote estimbatch*.parquet*
             elif (compgen -G 'estimators_allranks.out.parquet*' > /dev/null || compgen -G 'estimbatch00_*.parquet*' > /dev/null) && compgen -G 'estimators_0001.out*' > /dev/null; then
                 find . -mindepth 0 -name "estimators_[0-9]*.out*" -print | sort > $tmpdir/estimatorfilelist.txt
