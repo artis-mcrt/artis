@@ -46,6 +46,9 @@ ZSTD_OPTIONS = {zstd.CompressionParameter.compression_level: ZSTD_LEVEL, zstd.Co
 
 ALLRANKS_FILENAME = "estimators_allranks.out"
 
+# the errors of a compressed file that ends inside a frame, e.g. because a job stopped during a write
+COMPRESSION_ERRORS = (EOFError, zstd.ZstdError, lzma.LZMAError, gzip.BadGzipFile)
+
 # the order of the extensions that the readers use, e.g. find_estimator_file() of artistools
 RANKFILE_EXTENSIONS = ("", ".zst", ".gz", ".xz")
 
@@ -89,12 +92,16 @@ def get_npts_model(runfolder: Path) -> int | None:
     for extension in RANKFILE_EXTENSIONS:
         path = runfolder / f"modelgridrankassignments.out{extension}"
         if path.is_file():
-            with open_text(path) as assignmentfile:
-                return sum(
-                    int(columns[2])
-                    for columns in (line.split() for line in assignmentfile if not line.startswith("#"))
-                    if len(columns) >= 3
-                )
+            try:
+                with open_text(path) as assignmentfile:
+                    return sum(
+                        int(columns[2])
+                        for columns in (line.split() for line in assignmentfile if not line.startswith("#"))
+                        if len(columns) >= 3
+                    )
+            except COMPRESSION_ERRORS as err:
+                msg = f"{path}: the compressed file is not complete: {err}"
+                raise ValueError(msg) from err
     return None
 
 
@@ -120,7 +127,7 @@ def get_timestep_texts(path: Path) -> Iterator[tuple[int, str]]:
                     msg = f"{path}: the first line with content is not a timestep line: {line!r}"
                     raise ValueError(msg)
                 lines.append(line)
-    except (EOFError, zstd.ZstdError, lzma.LZMAError, gzip.BadGzipFile) as err:
+    except COMPRESSION_ERRORS as err:
         # e.g. a job that stopped during a write leaves a file that ends inside a compressed frame
         msg = f"{path}: the compressed file is not complete: {err}"
         raise ValueError(msg) from err
@@ -168,6 +175,13 @@ def combine_folder(folder: Path) -> None:
                     msg = f"{rankfile}: timestep {timestep} occurs in two separate parts of the file"
                     raise ValueError(msg)
                 timesteps_of_rank.add(timestep)
+                # sn3d writes an empty line after each cell, thus a text without it ends inside a cell
+                if not text.endswith("\n\n"):
+                    msg = (
+                        f"{rankfile}: timestep {timestep} does not end with the empty line after a cell."
+                        " The file is not complete, e.g. because the job stopped during a write."
+                    )
+                    raise ValueError(msg)
                 for line in text.splitlines():
                     if line.startswith("timestep "):
                         modelgridindex = int(line.split()[3])

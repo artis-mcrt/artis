@@ -43,12 +43,12 @@ find . -type d \( -name "*.slurm" -o -name "job_from_ts*" \) -print0 | while IFS
             elif [ -n "$stale_cache" ]; then
                 echo "  $stale_cache is older than a file of a rank. Read the estimators with artistools again. The script keeps the files."
             # artistools writes the cache estimators_allranks.out.parquet, and an earlier version wrote estimbatch*.parquet*
-            elif (compgen -G 'estimators_allranks.out.parquet*' > /dev/null || compgen -G 'estimbatch00_*.parquet*' > /dev/null) && compgen -G 'estimators_0001.out*' > /dev/null; then
+            elif (compgen -G 'estimators_allranks.out.parquet*' > /dev/null || compgen -G 'estimbatch00_*.parquet*' > /dev/null) && compgen -G 'estimators_[0-9]*.out*' > /dev/null; then
                 find . -mindepth 0 -name "estimators_[0-9]*.out*" -print | sort > $tmpdir/estimatorfilelist.txt
                 echo "  Creating tarball of estimators_allranks.tar"
                 tar -cf $tmpdir/estimators_allranks.tar --files-from $tmpdir/estimatorfilelist.txt && mv -v $tmpdir/estimators_allranks.tar . && rm -f $tmpdir/* && find . -mindepth 0 -name "estimators_[0-9]*.out*" -delete
             else
-                echo "  The folder has no parquet cache or no estimators_0001.out* file, so the script makes no tar file."
+                echo "  The folder has no parquet cache or no estimator file of a rank, so the script makes no tar file."
             fi
         fi
         cd - > /dev/null
