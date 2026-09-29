@@ -938,11 +938,13 @@ void setup_jobfolder() {
     // that e.g. a rerun with fewer ranks does not leave a mixture of new estimator files and stale ones from
     // ranks that no longer exist. Only exact matches of the generated filenames are removed.
     // The loop also removes the estimator file of all ranks, plain or compressed. It also removes the parquet caches
-    // of the estimators that artistools writes, e.g. estimators_allranks.out.parquet.tmp. A stale cache must not stay
-    // beside the new estimator files.
+    // of the estimators that artistools writes: estimators_allranks.out.parquet, and the batch caches
+    // estimbatch*.parquet* of an earlier artistools version. A stale cache must not stay beside the new estimator
+    // files.
     for (const auto& entry : std::filesystem::directory_iterator(globals::jobfolder, ec)) {
       const auto filename = entry.path().filename().string();
-      const bool is_estimator_parquet_cache = filename.starts_with("estimators") && filename.contains(".parquet");
+      const bool is_estimator_parquet_cache =
+          (filename.starts_with("estimators") || filename.starts_with("estimbatch")) && filename.contains(".parquet");
       if (is_rank_outfile_name(filename) || filename == ESTIMATORS_ALLRANKS_FILENAME ||
           filename == std::format("{}.zst", ESTIMATORS_ALLRANKS_FILENAME) || is_estimator_parquet_cache) {
         std::filesystem::remove(entry.path(), ec);
