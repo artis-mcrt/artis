@@ -943,8 +943,10 @@ void setup_jobfolder() {
     // removes only exact matches of these filenames.
     for (const auto& entry : std::filesystem::directory_iterator(globals::jobfolder, ec)) {
       const auto filename = entry.path().filename().string();
-      if (is_rank_outfile_name(filename) || is_estimator_allranks_or_cache_name(filename)) {
-        std::filesystem::remove(entry.path(), ec);
+      // a stale file that stays would mix with the new output, thus a failed removal stops the run
+      if ((is_rank_outfile_name(filename) || is_estimator_allranks_or_cache_name(filename)) &&
+          !std::filesystem::remove(entry.path(), ec) && ec) {
+        fatal_crash("could not remove '{}' from the job folder: {}", entry.path().string(), ec.message());
       }
     }
 

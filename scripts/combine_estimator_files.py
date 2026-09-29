@@ -11,9 +11,10 @@ frame, and the file starts with one empty frame, as sn3d writes it. The script k
 Do not combine the folder of a job that still runs. The combined file then holds only the timesteps up to that time.
 When a file of a rank is newer than the combined file, the script combines the files again.
 
-The script combines a folder only when it holds the file of each rank with cells. modelgridrankassignments.out of
-the run folder gives these ranks. Without that file, the ranks of the files must start at 0 and have no gap. The files
-of all the ranks must also hold the same timesteps.
+The script combines a folder only when its files hold each model cell once in each timestep. sn3d gives each rank a
+contiguous range of the cells, in the order of the ranks, so the cells of a timestep must be 0, 1, 2, ... in the order
+of the ranks. modelgridrankassignments.out of the run folder gives the number of model cells. Without that file, the
+script cannot find a missing file of the last rank. The files of all the ranks must also hold the same timesteps.
 
 Run the script in the run folder, e.g. "uv run artis/scripts/combine_estimator_files.py". It then combines the files
 of each job_from_ts* folder. The arguments can also name the folders. The module compression.zstd needs Python 3.14
@@ -79,20 +80,21 @@ def open_text(path: Path) -> t.TextIO:
     return path.open(encoding="utf-8")
 
 
-def get_ranks_with_cells(runfolder: Path) -> set[int] | None:
-    """Return the ranks that write an estimator file, or None when the run folder has no modelgridrankassignments.out.
+def get_npts_model(runfolder: Path) -> int | None:
+    """Return the number of model cells, or None when the run folder has no modelgridrankassignments.out.
 
-    sn3d writes the line "rank nstart ndo ndo_nonempty" for each rank. A rank with ndo > 0 writes the estimators.
+    sn3d writes this file again at the start of each job, with the line "rank nstart ndo ndo_nonempty" for each rank.
+    A job with a different number of ranks gives other ranks, but the sum of ndo is always the number of model cells.
     """
     for extension in RANKFILE_EXTENSIONS:
         path = runfolder / f"modelgridrankassignments.out{extension}"
         if path.is_file():
             with open_text(path) as assignmentfile:
-                return {
-                    int(columns[0])
+                return sum(
+                    int(columns[2])
                     for columns in (line.split() for line in assignmentfile if not line.startswith("#"))
-                    if len(columns) >= 3 and int(columns[2]) > 0
-                }
+                    if len(columns) >= 3
+                )
     return None
 
 
@@ -144,14 +146,9 @@ def combine_folder(folder: Path) -> None:
         print(f"{folder}: the folder has no estimator files of ranks.")
         return
 
-    # artistools uses a newer combined file instead of the files of the ranks.
-    # The combined file must thus hold the cells of each rank.
-    ranks_with_cells = get_ranks_with_cells(folder.resolve().parent)
-    if ranks_with_cells is None:
-        ranks_with_cells = set(range(max(rankfiles) + 1))
-    if missing_ranks := sorted(ranks_with_cells - rankfiles.keys()):
-        msg = f"The folder has no estimator file of the ranks {missing_ranks}."
-        raise ValueError(msg)
+    # artistools uses a newer combined file instead of the files of the ranks. The combined file must thus hold each
+    # model cell once in each timestep, and no cell of a stale file of a rank that the job did not have
+    npts_model = get_npts_model(folder.resolve().parent)
 
     print(f"{folder}: the script combines the estimator files of {len(rankfiles)} ranks...")
 
@@ -162,6 +159,8 @@ def combine_folder(folder: Path) -> None:
         tmpdir = Path(tmpdirname)
         timesteps: set[int] = set()
         timesteps_of_ranks: dict[int, set[int]] = {}
+        # the next cell that each timestep must hold, from the cells of the lower ranks
+        next_cell_of_timestep: dict[int, int] = {}
         for rank, rankfile in rankfiles.items():
             timesteps_of_rank: set[int] = set()
             for timestep, text in get_timestep_texts(rankfile):
@@ -169,6 +168,17 @@ def combine_folder(folder: Path) -> None:
                     msg = f"{rankfile}: timestep {timestep} occurs in two separate parts of the file"
                     raise ValueError(msg)
                 timesteps_of_rank.add(timestep)
+                for line in text.splitlines():
+                    if line.startswith("timestep "):
+                        modelgridindex = int(line.split()[3])
+                        expected_cell = next_cell_of_timestep.get(timestep, 0)
+                        if modelgridindex != expected_cell:
+                            msg = (
+                                f"{rankfile}: timestep {timestep} holds cell {modelgridindex}, but the lower ranks give"
+                                f" cell {expected_cell} as the next cell. A file of a rank is missing or stale."
+                            )
+                            raise ValueError(msg)
+                        next_cell_of_timestep[timestep] = expected_cell + 1
                 with (tmpdir / f"timestep_{timestep:05d}.zst").open("ab") as timestep_file:
                     timestep_file.write(zstd.compress(text.encode("utf-8"), options=ZSTD_OPTIONS))
             timesteps |= timesteps_of_rank
@@ -188,6 +198,17 @@ def combine_folder(folder: Path) -> None:
                 if any(ts not in rank_timesteps for ts in incomplete_timesteps)
             )
             msg = f"The files of the ranks {ranks_without} do not hold the timesteps {incomplete_timesteps}."
+            raise ValueError(msg)
+
+        if npts_model is not None and (
+            short_timesteps := sorted(
+                timestep for timestep, next_cell in next_cell_of_timestep.items() if next_cell != npts_model
+            )
+        ):
+            msg = (
+                f"The timesteps {short_timesteps} do not hold exactly the {npts_model} model cells, e.g. because"
+                " the file of the last rank is missing."
+            )
             raise ValueError(msg)
 
         partialpath = tmpdir / f"{ALLRANKS_FILENAME}.zst"
