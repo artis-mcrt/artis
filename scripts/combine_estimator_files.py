@@ -6,7 +6,11 @@
 
 sn3d writes the same text with WRITE_ESTIMATORS_ALLRANKS_FILE. The file holds the timesteps in their order, and in
 each timestep it holds the text of the ranks in their order. Each text of one rank and one timestep is one zstd
-frame, and the file starts with one empty frame, as sn3d writes it. The script keeps the files of the ranks.
+frame, and the file starts with one empty frame, as sn3d writes it.
+
+As zstd does with its source files, the script keeps the files of the ranks by default. With --rm, it removes the
+files of the ranks of a folder after a successful combination, i.e. when the combined file of that folder is complete
+and current. A folder with an error keeps its files of the ranks.
 
 Do not combine the folder of a job that still runs. The combined file then holds only the timesteps up to that time.
 The combined file gets the time of the newest file of a rank that the script read. A later write to a file of a rank
@@ -148,8 +152,8 @@ def get_timestep_texts(path: Path) -> Iterator[tuple[int, str]]:
         yield timestep, "".join(lines)
 
 
-def combine_folder(folder: Path) -> None:
-    """Write the combined estimator file of one folder."""
+def combine_folder(folder: Path) -> list[Path]:
+    """Write the combined estimator file of one folder, and return the files of the ranks that it holds."""
     rankfiles = get_rank_files(folder)
     outpath = folder / f"{ALLRANKS_FILENAME}.zst"
     # the readers take the plain file before the .zst file, thus a plain file is the combined file that they read
@@ -160,13 +164,13 @@ def combine_folder(folder: Path) -> None:
         # time holds no later text. artistools applies the same rule
         if all(rankfile.stat().st_mtime_ns <= existingpath.stat().st_mtime_ns for rankfile in rankfiles.values()):
             print(f"{folder}: {existingpath.name} exists already. The script does not change it.")
-            return
+            return list(rankfiles.values())
         # e.g. the script ran while the job still ran, and the job then wrote more timesteps
         print(f"{folder}: a file of a rank is newer than {existingpath.name}. The script combines the files again.")
 
     if not rankfiles:
         print(f"{folder}: the folder has no estimator files of ranks.")
-        return
+        return []
 
     # artistools uses a newer combined file instead of the files of the ranks. The combined file must thus hold each
     # model cell once in each timestep, and no cell of a stale file of a rank that the job did not have
@@ -261,6 +265,7 @@ def combine_folder(folder: Path) -> None:
         print(f"{folder}: removed the stale {plainpath.name}.")
 
     print(f"{folder}: wrote {outpath.name} with {len(timesteps)} timesteps.")
+    return list(rankfiles.values())
 
 
 def main() -> None:
@@ -268,6 +273,15 @@ def main() -> None:
     parser.add_argument(
         "folders", nargs="*", type=Path, help="The folders with the estimator files. The default is job_from_ts*."
     )
+    # the options work as the same options of zstd: the default keeps the source files
+    rmgroup = parser.add_mutually_exclusive_group()
+    rmgroup.add_argument(
+        "--rm",
+        action="store_true",
+        help="Remove the files of the ranks of a folder after a successful combination, i.e. when the combined file of"
+        " the folder is complete and current.",
+    )
+    rmgroup.add_argument("-k", "--keep", action="store_true", help="Keep the files of the ranks (the default).")
     args = parser.parse_args()
 
     folders: list[Path] = args.folders or sorted(folder for folder in Path().glob("job_from_ts*") if folder.is_dir())
@@ -282,7 +296,13 @@ def main() -> None:
             failedfolders.append(folder)
             continue
         try:
-            combine_folder(folder)
+            rankfiles = combine_folder(folder)
+            if rankfiles and args.rm:
+                for rankfile in rankfiles:
+                    rankfile.unlink()
+                print(f"{folder}: removed the {len(rankfiles)} estimator files of the ranks.")
+            elif rankfiles:
+                print(f"{folder}: kept the {len(rankfiles)} estimator files of the ranks. Give --rm to remove them.")
         except (OSError, ValueError) as err:
             print(f"{folder}: the script did not combine the folder. {err}", file=sys.stderr)
             failedfolders.append(folder)
