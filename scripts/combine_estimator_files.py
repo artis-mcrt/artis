@@ -268,6 +268,25 @@ def combine_folder(folder: Path) -> list[Path]:
     return list(rankfiles.values())
 
 
+def remove_rank_files(folder: Path, rankfiles: list[Path]) -> None:
+    """Remove the files of the ranks of a folder when its combined file holds all their text."""
+    combinedpath = next(
+        path for path in (folder / ALLRANKS_FILENAME, folder / f"{ALLRANKS_FILENAME}.zst") if path.exists()
+    )
+    # sn3d can add to a file of a rank during the combination. That file is then newer than the combined file, and it
+    # holds text that the combined file lacks
+    combined_mtime_ns = combinedpath.stat().st_mtime_ns
+    if newerfiles := [rankfile.name for rankfile in rankfiles if rankfile.stat().st_mtime_ns > combined_mtime_ns]:
+        msg = (
+            f"{', '.join(newerfiles)} changed after the combination, thus the script keeps the files of the ranks."
+            " Run the script again after the job ends."
+        )
+        raise ValueError(msg)
+    for rankfile in rankfiles:
+        rankfile.unlink()
+    print(f"{folder}: removed the {len(rankfiles)} estimator files of the ranks.")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument(
@@ -298,9 +317,7 @@ def main() -> None:
         try:
             rankfiles = combine_folder(folder)
             if rankfiles and args.rm:
-                for rankfile in rankfiles:
-                    rankfile.unlink()
-                print(f"{folder}: removed the {len(rankfiles)} estimator files of the ranks.")
+                remove_rank_files(folder, rankfiles)
             elif rankfiles:
                 print(f"{folder}: kept the {len(rankfiles)} estimator files of the ranks. Give --rm to remove them.")
         except (OSError, ValueError) as err:
