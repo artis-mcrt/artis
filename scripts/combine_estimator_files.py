@@ -9,7 +9,8 @@ each timestep it holds the text of the ranks in their order. Each text of one ra
 frame, and the file starts with one empty frame, as sn3d writes it. The script keeps the files of the ranks.
 
 Do not combine the folder of a job that still runs. The combined file then holds only the timesteps up to that time.
-When a file of a rank is newer than the combined file, the script combines the files again.
+The combined file gets the time of the newest file of a rank that the script read. A later write to a file of a rank
+thus makes that file newer, and the readers and this script then take the files of the ranks again.
 
 The script combines a folder only when its files hold each model cell once in each timestep. sn3d gives each rank a
 contiguous range of the cells, in the order of the ranks, so the cells of a timestep must be 0, 1, 2, ... in the order
@@ -24,6 +25,7 @@ or a later version, and uv gets that version from the metadata above.
 import argparse
 import gzip
 import lzma
+import os
 import re
 import shutil
 import sys
@@ -105,6 +107,17 @@ def get_npts_model(runfolder: Path) -> int | None:
     return None
 
 
+def get_timestep_and_cell(line: str, path: Path) -> tuple[int, int]:
+    """Return the timestep <n> and the model cell <mgi> of the line "timestep <n> modelgridindex <mgi> ..."."""
+    columns = line.split()
+    try:
+        return int(columns[1]), int(columns[3])
+    except (IndexError, ValueError) as err:
+        # e.g. a job that stopped during a write leaves a cut line at the end of the file
+        msg = f"{path}: the first line of a cell is not complete: {line!r}"
+        raise ValueError(msg) from err
+
+
 def get_timestep_texts(path: Path) -> Iterator[tuple[int, str]]:
     """Give the text of each timestep of a rank file, in the order of the file.
 
@@ -117,7 +130,7 @@ def get_timestep_texts(path: Path) -> Iterator[tuple[int, str]]:
         with open_text(path) as rankfile:
             for line in rankfile:
                 if line.startswith("timestep "):
-                    linetimestep = int(line.split()[1])
+                    linetimestep, _ = get_timestep_and_cell(line, path)
                     if linetimestep != timestep:
                         if timestep is not None:
                             yield timestep, "".join(lines)
@@ -143,7 +156,9 @@ def combine_folder(folder: Path) -> None:
     plainpath = folder / ALLRANKS_FILENAME
     existingpath = plainpath if plainpath.exists() else outpath if outpath.exists() else None
     if existingpath is not None:
-        if all(rankfile.stat().st_mtime < existingpath.stat().st_mtime for rankfile in rankfiles.values()):
+        # the combined file has the time of the newest file of a rank that it holds, thus a file of a rank with the same
+        # time holds no later text. artistools applies the same rule
+        if all(rankfile.stat().st_mtime_ns <= existingpath.stat().st_mtime_ns for rankfile in rankfiles.values()):
             print(f"{folder}: {existingpath.name} exists already. The script does not change it.")
             return
         # e.g. the script ran while the job still ran, and the job then wrote more timesteps
@@ -156,6 +171,10 @@ def combine_folder(folder: Path) -> None:
     # artistools uses a newer combined file instead of the files of the ranks. The combined file must thus hold each
     # model cell once in each timestep, and no cell of a stale file of a rank that the job did not have
     npts_model = get_npts_model(folder.resolve().parent)
+
+    # sn3d can add a timestep to the files of the ranks while the script runs, e.g. during the join below. The time of
+    # the text before the read goes to the combined file, thus such a write makes a file of a rank newer than it
+    text_mtime_ns = max(rankfile.stat().st_mtime_ns for rankfile in rankfiles.values())
 
     print(f"{folder}: the script combines the estimator files of {len(rankfiles)} ranks...")
 
@@ -184,7 +203,7 @@ def combine_folder(folder: Path) -> None:
                     raise ValueError(msg)
                 for line in text.splitlines():
                     if line.startswith("timestep "):
-                        modelgridindex = int(line.split()[3])
+                        _, modelgridindex = get_timestep_and_cell(line, rankfile)
                         expected_cell = next_cell_of_timestep.get(timestep, 0)
                         if modelgridindex != expected_cell:
                             msg = (
@@ -232,6 +251,7 @@ def combine_folder(folder: Path) -> None:
             for timestep in sorted(timesteps):
                 with (tmpdir / f"timestep_{timestep:05d}.zst").open("rb") as timestep_file:
                     shutil.copyfileobj(timestep_file, outfile, 1 << 24)
+        os.utime(partialpath, ns=(partialpath.stat().st_atime_ns, text_mtime_ns))
         # the rename puts a complete file at the name in one step
         partialpath.replace(outpath)
 
@@ -252,11 +272,15 @@ def main() -> None:
 
     folders: list[Path] = args.folders or sorted(folder for folder in Path().glob("job_from_ts*") if folder.is_dir())
     if not folders:
-        print("There is no job_from_ts* folder here. Give the folders as arguments.")
+        sys.exit("There is no job_from_ts* folder here. Give the folders as arguments.")
 
     # an error in one folder stops only that folder, and the exit status then shows the error
     failedfolders: list[Path] = []
     for folder in folders:
+        if not folder.is_dir():
+            print(f"{folder}: the folder does not exist.", file=sys.stderr)
+            failedfolders.append(folder)
+            continue
         try:
             combine_folder(folder)
         except (OSError, ValueError) as err:
