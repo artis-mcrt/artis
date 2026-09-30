@@ -148,7 +148,7 @@ jobs:
               run: |
                   # The simulation in one job writes estimators_allranks.out. The comparison step below compares it with
                   # the files of the ranks of the two jobs. The other output files must not change.
-                  (cd tests/${{ matrix.testname }}_onejob && source ../setupfuncs.sh && sedopt 'constexpr bool WRITE_ESTIMATORS_ALLRANKS_FILE.*' 'constexpr bool WRITE_ESTIMATORS_ALLRANKS_FILE = true;' && rm -f artisoptions.h.bak)
+                  (cd tests/${{ matrix.testname }}_onejob && source ../setupfuncs.sh && sedopt 'constexpr bool WRITE_ESTIMATORS_COMBINE_ALLRANKS.*' 'constexpr bool WRITE_ESTIMATORS_COMBINE_ALLRANKS = true;' && rm -f artisoptions.h.bak)
                   cp tests/${{ matrix.testname }}_onejob/artisoptions.h .
                   make REPRODUCIBLE=ON ZSTD=ON TESTMODE=${{ inputs.testmode }} MAX_NODE_SIZE=2 FASTMATH=OFF -j${{ steps.cpu-count.outputs.count }} sn3d
                   cp sn3d tests/${{ matrix.testname }}_onejob/

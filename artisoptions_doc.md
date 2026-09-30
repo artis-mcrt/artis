@@ -186,7 +186,7 @@ constexpr bool WRITE_ION_HEATING_COOLING_RATES;
 // rank compresses its own buffer into one zstd frame. The file thus holds the text of the timesteps in their order,
 // and in each timestep the text of the ranks in their order. scripts/combine_estimator_files.py makes the same text
 // from the files of the ranks.
-constexpr bool WRITE_ESTIMATORS_ALLRANKS_FILE;
+constexpr bool WRITE_ESTIMATORS_COMBINE_ALLRANKS;
 
 // Reject an NLTE solution with one of these faults:
 // - a population that is not finite;

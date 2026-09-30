@@ -73,7 +73,7 @@ namespace {
 std::chrono::steady_clock::time_point real_time_start;
 std::chrono::steady_clock::time_point packet_propagation_start_time;
 OutputFileStream estimators_file;
-// the estimator file of all ranks in the job folder, with WRITE_ESTIMATORS_ALLRANKS_FILE
+// the estimator file of all ranks in the job folder, with WRITE_ESTIMATORS_COMBINE_ALLRANKS
 AllRanksOutputFile estimators_allranks_file;
 
 struct CellCacheBacking {
@@ -794,7 +794,7 @@ auto do_timestep(const int nts, std::vector<Packet>& packets, const int walltime
 
   // Update the matter quantities in the grid for the new timestep.
 
-  if constexpr (WRITE_ESTIMATORS_ALLRANKS_FILE) {
+  if constexpr (WRITE_ESTIMATORS_COMBINE_ALLRANKS) {
     update_grid(estimators_allranks_file.rank_text(), nts, nts_prev, real_time_start);
     const auto time_write_estimators_start = std::chrono::steady_clock::now();
     estimators_allranks_file.write_all_ranks();
@@ -1194,11 +1194,11 @@ auto main(int argc, char* argv[]) -> int {
   globals::timestep = globals::timestep_initial;
 
   macroatom_open_file();
-  if constexpr (WRITE_ESTIMATORS_ALLRANKS_FILE) {
+  if constexpr (WRITE_ESTIMATORS_COMBINE_ALLRANKS) {
     estimators_allranks_file.open(get_jobfolder_filepath(ESTIMATORS_ALLRANKS_FILENAME));
   }
   if (ndo > 0) {
-    if constexpr (!WRITE_ESTIMATORS_ALLRANKS_FILE) {
+    if constexpr (!WRITE_ESTIMATORS_COMBINE_ALLRANKS) {
       assert_always(estimators_file.rdbuf() == nullptr);
       estimators_file = open_rank_outfile("estimators");
     }

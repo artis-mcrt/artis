@@ -668,7 +668,7 @@ inline void MPI_Reduce_safe(R&& data, MPI_Op op, const int root, MPI_Comm comm) 
   return false;
 }
 
-// the estimator file of all ranks in the job folder, with the option WRITE_ESTIMATORS_ALLRANKS_FILE
+// the estimator file of all ranks in the job folder, with the option WRITE_ESTIMATORS_COMBINE_ALLRANKS
 constexpr std::string_view ESTIMATORS_ALLRANKS_FILENAME = "estimators_allranks.out";
 
 // Exactly match the estimator file of all ranks, with or without a compression extension. Also match the parquet
