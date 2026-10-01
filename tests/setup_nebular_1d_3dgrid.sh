@@ -20,7 +20,7 @@ ln -s ../../ artis
 
 cp artis/artisoptions_nltenebular.h artisoptions.h
 
-sedopt "constexpr std::int64_t NUM_PACKETS.*" "constexpr std::int64_t NUM_PACKETS = 4'000'000;"
+sedopt "constexpr std::int64_t NUM_PACKETS.*" "constexpr std::int64_t NUM_PACKETS = 4e6;"
 
 sedopt 'constexpr std::optional<GridType> GRID_TYPE_OVERRIDE.*' 'constexpr std::optional<GridType> GRID_TYPE_OVERRIDE = GridType::CARTESIAN3D;'
 

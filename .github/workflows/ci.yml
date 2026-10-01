@@ -443,7 +443,7 @@ jobs:
                   source ./setup_kilonova_1d.sh
                   # this job has 2 ranks and the checksum jobs have 4, so this keeps the packets of each rank
                   cd kilonova_1d_testrun
-                  sedopt "constexpr std::int64_t NUM_PACKETS.*" "constexpr std::int64_t NUM_PACKETS = 160'000;"
+                  sedopt "constexpr std::int64_t NUM_PACKETS.*" "constexpr std::int64_t NUM_PACKETS = 1.6e5;"
                   rm -f artisoptions.h.bak
 
             - name: Compile
@@ -501,7 +501,7 @@ jobs:
                   source ./setup_kilonova_1d.sh
                   # this job has 2 ranks and the checksum jobs have 4, so this keeps the packets of each rank
                   cd kilonova_1d_testrun
-                  sedopt "constexpr std::int64_t NUM_PACKETS.*" "constexpr std::int64_t NUM_PACKETS = 160'000;"
+                  sedopt "constexpr std::int64_t NUM_PACKETS.*" "constexpr std::int64_t NUM_PACKETS = 1.6e5;"
                   rm -f artisoptions.h.bak
 
             - name: Compile
