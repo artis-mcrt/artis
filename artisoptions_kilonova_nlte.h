@@ -17,7 +17,7 @@
 
 #include "constants.h"
 
-constexpr std::int64_t NUM_PACKETS = 200'000'000;
+constexpr std::int64_t NUM_PACKETS = 2e8;
 
 constexpr std::optional<GridType> GRID_TYPE_OVERRIDE;
 constexpr int CUBOID_NCOORDGRID_X = 50;

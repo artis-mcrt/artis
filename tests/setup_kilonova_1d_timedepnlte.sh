@@ -40,7 +40,7 @@ setnlevelsmax 150
 
 # the 1D model has 25 cells and the 2D model had 128, so fewer packets give the same number of
 # packets for each cell
-sedopt "constexpr std::int64_t NUM_PACKETS.*" "constexpr std::int64_t NUM_PACKETS = 80'000;"
+sedopt "constexpr std::int64_t NUM_PACKETS.*" "constexpr std::int64_t NUM_PACKETS = 8e4;"
 
 sedopt 'constexpr int RATECOEFF_TABLESIZE.*' 'constexpr int RATECOEFF_TABLESIZE = 40;'
 

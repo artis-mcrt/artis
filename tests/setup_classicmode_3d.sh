@@ -21,7 +21,7 @@ ln -s ../../ artis
 cp artis/artisoptions_classic.h artisoptions.h
 
 
-sedopt "constexpr std::int64_t NUM_PACKETS.*" "constexpr std::int64_t NUM_PACKETS = 60'000;"
+sedopt "constexpr std::int64_t NUM_PACKETS.*" "constexpr std::int64_t NUM_PACKETS = 6e4;"
 
 sedopt 'constexpr bool VPKT_ON.*' 'constexpr bool VPKT_ON = true;'
 sedopt 'constexpr bool VPKT_WRITE_CONTRIBS.*' 'constexpr bool VPKT_WRITE_CONTRIBS = true;'

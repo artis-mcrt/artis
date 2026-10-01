@@ -26,7 +26,7 @@ ln -s ../../ artis
 
 cp artis/artisoptions_nltephotospheric.h artisoptions.h
 
-sedopt "constexpr std::int64_t NUM_PACKETS.*" "constexpr std::int64_t NUM_PACKETS = 1600;"
+sedopt "constexpr std::int64_t NUM_PACKETS.*" "constexpr std::int64_t NUM_PACKETS = 1.6e3;"
 
 sedopt 'constexpr std::optional<GridType> GRID_TYPE_OVERRIDE.*' 'constexpr std::optional<GridType> GRID_TYPE_OVERRIDE = GridType::SPHERICAL1D;'
 
