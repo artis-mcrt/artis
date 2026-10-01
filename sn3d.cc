@@ -893,7 +893,7 @@ void remove_previous_simulation_files() {
       R"((gridsave|packets|vspecpol|vpackets|vpkt_grid).*\.tmp|input(-newrun)?\.txt\.tmp|.*\.out(\..*)?|)"
       R"(output_[0-9]+-[0-9]+\.txt(\.zst|\.gz|\.xz)?|)"
       R"(exspec.*\.txt.*|.*\.slurm|job_from_ts[0-9]+|packets|vspecpol|vpackets|vpkt_grid|speclc_angle_res|)"
-      R"(bflist\.dat|ratecoeff\.dat|line_list\.txt|logfiles\.tar.*|out\.txt)"};
+      R"(bflist\.dat|ratecoeff\.dat|line_list\.txt|logfiles\.tar.*|out\.txt(\.zst)?)"};
   std::vector<std::filesystem::path> paths_to_remove;
   std::error_code ec;
   for (const auto& entry : std::filesystem::directory_iterator(".", ec)) {
