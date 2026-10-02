@@ -803,6 +803,24 @@ void read_vpktparameterfile() {
 
   printlnlog("vpkt.txt: Nspectra {} per observer", nspectraperobsdir);
 
+  if constexpr (VPKT_USE_EXPANSION_OPACITIES && EXPANSION_OPACITY_METHOD != ExpansionOpacityMethod::LINEBINNED) {
+    const auto* const method_name =
+        (EXPANSION_OPACITY_METHOD == ExpansionOpacityMethod::EXPANSION) ? "EXPANSION" : "LINEBINNEDCAPPED";
+    printlnlog("[warning] VPKT_USE_EXPANSION_OPACITIES uses EXPANSION_OPACITY_METHOD {}. Use LINEBINNED for vpkts.",
+               method_name);
+    printlnlog(
+        "[warning]   A vpkt that crosses a line with the Sobolev optical depth tau has the transmission exp(-tau).");
+    printlnlog(
+        "[warning]   The LINEBINNED weight is tau. The optical depth of a bin that the vpkt fully crosses is then the "
+        "sum of the tau of its lines, the same as with the line-by-line opacities.");
+    printlnlog(
+        "[warning]   The EXPANSION weight 1 - exp(-tau) and the LINEBINNEDCAPPED weight min(1, tau) add a maximum "
+        "of 1 to the optical depth for each line.");
+    printlnlog(
+        "[warning]   The vpkt spectra then have too little absorption in the lines with tau > 1, e.g. in the P Cygni "
+        "absorption troughs.");
+  }
+
   // Emission time window: a leading 1 restricts vpkts to the [tmin, tmax] (in days) that follow on the same
   // line, otherwise the compile-time VSPEC_TIMEMIN/VSPEC_TIMEMAX are used and the two values are ignored.
   int override_tminmax = 0;

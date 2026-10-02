@@ -355,7 +355,8 @@ constexpr bool BFCOOLING_USELEVELPOPNOTIONPOP;
 // thick. Not compatible with VPKT_ON.
 constexpr bool RPKT_USE_EXPANSION_OPACITIES;
 
-// Use expansion opacities instead of line-by-line opacities for the virtual packets.
+// Use expansion opacities instead of line-by-line opacities for the virtual packets. Use the LINEBINNED weight of
+// EXPANSION_OPACITY_METHOD with this option. With a different weight, sn3d writes a warning to the log.
 constexpr bool VPKT_USE_EXPANSION_OPACITIES;
 
 // The line weight in the expansion opacity of each wavelength bin of RPKT_USE_EXPANSION_OPACITIES,
