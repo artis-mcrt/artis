@@ -727,120 +727,6 @@ void map_modeltogrid_direct() {
   }
 }
 
-void read_elem_abundances() {
-  // barrier to make sure node master has set values in node shared memory
-  MPI_Barrier_allranks();
-  printlnlog("reading abundances.txt...");
-  const bool threedimensional = (get_modelgridtype() == GridType::CARTESIAN3D);
-
-  // abundances.txt holds one line for each model cell, also for an empty cell. Each line gives the cell number and
-  // then the mass fraction of each element from Z=1 upwards. The line can end after the last element that the
-  // model needs.
-
-  // the mass fraction arrays are in node-shared memory, so only the node leader of each node parses the file and
-  // writes the values (synchronised by the barrier below). The other ranks would just discard everything they read
-  if (globals::rank_in_node == 0) {
-    auto abundance_file = istream_required("abundances.txt");
-    std::string line;
-
-    // Every log line gets a timestamp and a flush, so a large 3D model must not warn per cell.
-    // The count gives one summary line after the loop instead.
-    int ncells_abund_unnormalised = 0;
-    constexpr int max_unnormalised_warnings = 10;
-
-    // loop over propagation cells for 3D models, or modelgrid cells
-    for (int mgi = 0; mgi < get_npts_model(); mgi++) {
-      assert_always(get_noncommentline(abundance_file, line));
-      auto remainder = std::string_view{line};
-
-      int cellnumberinput = -1;
-      assert_always(parse_next_token(remainder, cellnumberinput));
-      assert_always(cellnumberinput == mgi + first_input_cellid);
-
-      // the abundances.txt file specifies the elemental mass fractions for each model cell.
-      // A 1D or 2D file may hold values proportional to the mass fractions, e.g. element densities,
-      // because those get normalised below. A 3D file must hold true mass fractions, because the 3D
-      // path applies no normalisation.
-      // The abundances begin with hydrogen, helium, etc, going as far up the atomic numbers as required
-      double normfactor = 0.;
-      std::array<float, 150> elem_massfracs_in{};
-      double abund_in = 0.;
-      for (int elem_z_index = 0; elem_z_index < std::ssize(elem_massfracs_in); elem_z_index++) {
-        const int atomic_number = elem_z_index + 1;
-        if (!parse_next_token(remainder, abund_in)) {
-          // at least one element (hydrogen) should have been specified for nonempty cells
-          assert_always(atomic_number > 1 || get_numpropcells(mgi) == 0);
-          break;
-        }
-
-        if (abund_in < 0. || abund_in < std::numeric_limits<float>::min()) {
-          assert_always(abund_in > -1e-6);
-          abund_in = 0.;
-        }
-        elem_massfracs_in[elem_z_index] = static_cast<float>(abund_in);
-        normfactor += elem_massfracs_in[elem_z_index];
-      }
-
-      // parse_next_token() gives false at the end of the row and also for a token that is not a
-      // number, e.g. "nan". The loop above stops on both, so a bad token would silently zero every
-      // later element. Only whitespace may remain here.
-      remainder.remove_prefix(std::min(remainder.find_first_not_of(" \t\r"), remainder.size()));
-      if (!remainder.empty()) {
-        fatal_crash("read_elem_abundances: cell {} has an unreadable token at '{}'", cellnumberinput, remainder);
-      }
-
-      if (get_numpropcells(mgi) > 0) {
-        if (normfactor <= 0.) {
-          fatal_crash("read_elem_abundances: cell {} has a density above zero and no element mass fractions",
-                      cellnumberinput);
-        }
-        if (threedimensional) {
-          // a 3D file holds true mass fractions and gets no normalisation, so a sum far from one is
-          // a sign of a file that holds proportional values, e.g. densities
-          if (std::abs(normfactor - 1.) > 0.02) {
-            ncells_abund_unnormalised++;
-            if (ncells_abund_unnormalised <= max_unnormalised_warnings) {
-              printlnlog(
-                  "[warning] read_elem_abundances: 3D cell {} has element mass fractions that sum to {:g}. The values "
-                  "are used without normalisation.",
-                  cellnumberinput, normfactor);
-            }
-          }
-          normfactor = 1.;
-        }
-        const int nonemptymgi = get_nonemptymgi_of_mgi(mgi);
-
-        for (int element = 0; element < get_nelements(); element++) {
-          // set the mass fraction of each element that the atomic data includes
-          const int atomic_number = get_atomicnumber(element);
-          const auto elemmassfrac = static_cast<float>(elem_massfracs_in[atomic_number - 1] / normfactor);
-          assert_always(elemmassfrac >= 0.);
-
-          // read_ejecta_model() has already set the nuclide mass fractions. Check here, while
-          // the mass fractions are still exactly as the input files gave them, that abundances.txt gives the
-          // element at least as much mass as model.txt gives its tracked isotopes. Any later mapping rescale
-          // changes the nuclide mass fractions but not the elemental ones, so this cannot be tested afterwards.
-          // a small negative remainder is allowed for roundoff error
-          assert_always((elemmassfrac - get_elem_trackedisotope_massfracsum(mgi, get_atomicnumber(element))) >= -1e-2);
-
-          set_elem_massfrac(nonemptymgi, element, elemmassfrac);
-        }
-      }
-    }
-
-    if (ncells_abund_unnormalised > max_unnormalised_warnings) {
-      printlnlog(
-          "[warning] read_elem_abundances: {} cells in total have element mass fractions that do not sum to one. The "
-          "first {} are listed above.",
-          ncells_abund_unnormalised, max_unnormalised_warnings);
-    }
-  }
-
-  // barrier to make sure node master has set values in node shared memory
-  MPI_Barrier_allranks();
-  printlnlog("finished reading abundances.txt");
-}
-
 void parse_model_headerline(const std::string& line, std::vector<int>& zlist, std::vector<int>& alist,
                             std::vector<std::string>& colnames) {
   // custom header line
@@ -1082,6 +968,150 @@ void calc_modelinit_totmassnuclides() {
       mfegroup += mass_in_shell * get_ffegrp(mgi);
     }
   }
+}
+
+// Read the element mass fractions of each model cell with a density above zero. A cell with no mass in the
+// elements of compositiondata.txt gets zero density, so that the mapping makes it an empty cell. The node leader
+// returns the mass fractions in model cell order, and the other ranks return an empty vector.
+auto read_elem_abundances() -> std::vector<float> {
+  printlnlog("reading abundances.txt...");
+  const bool threedimensional = (get_modelgridtype() == GridType::CARTESIAN3D);
+  const int nelements = get_nelements();
+
+  // abundances.txt holds one line for each model cell, also for an empty cell. Each line gives the cell number and
+  // then the mass fraction of each element from Z=1 upwards. The line can end after the last element that the
+  // model needs.
+
+  // the density is in node-shared memory, so only the node leader of each node parses the file and
+  // writes the values (synchronised by the barrier below). The other ranks would just discard everything they read
+  std::vector<float> elem_massfracs_of_mgi;
+  int ncells_noincludedelements = 0;
+  if (globals::rank_in_node == 0) {
+    elem_massfracs_of_mgi.assign(static_cast<size_t>(get_npts_model()) * nelements, 0.F);
+    auto abundance_file = istream_required("abundances.txt");
+    std::string line;
+
+    // Every log line gets a timestamp and a flush, so a large 3D model must not warn per cell.
+    // The count gives one summary line after the loop instead.
+    int ncells_abund_unnormalised = 0;
+    double mass_noincludedelements = 0.;
+    constexpr int max_warnings = 10;
+
+    for (int mgi = 0; mgi < get_npts_model(); mgi++) {
+      assert_always(get_noncommentline(abundance_file, line));
+      auto remainder = std::string_view{line};
+
+      int cellnumberinput = -1;
+      assert_always(parse_next_token(remainder, cellnumberinput));
+      assert_always(cellnumberinput == mgi + first_input_cellid);
+
+      // the abundances.txt file specifies the elemental mass fractions for each model cell.
+      // A 1D or 2D file may hold values proportional to the mass fractions, e.g. element densities,
+      // because those get normalised below. A 3D file must hold true mass fractions, because the 3D
+      // path applies no normalisation.
+      // The abundances begin with hydrogen, helium, etc, going as far up the atomic numbers as required
+      double normfactor = 0.;
+      std::array<float, 150> elem_massfracs_in{};
+      double abund_in = 0.;
+      for (int elem_z_index = 0; elem_z_index < std::ssize(elem_massfracs_in); elem_z_index++) {
+        const int atomic_number = elem_z_index + 1;
+        if (!parse_next_token(remainder, abund_in)) {
+          // at least one element (hydrogen) should have been specified for nonempty cells
+          assert_always(atomic_number > 1 || get_rho_tmin(mgi) <= 0.);
+          break;
+        }
+
+        if (abund_in < 0. || abund_in < std::numeric_limits<float>::min()) {
+          assert_always(abund_in > -1e-6);
+          abund_in = 0.;
+        }
+        elem_massfracs_in[elem_z_index] = static_cast<float>(abund_in);
+        normfactor += elem_massfracs_in[elem_z_index];
+      }
+
+      // parse_next_token() gives false at the end of the row and also for a token that is not a
+      // number, e.g. "nan". The loop above stops on both, so a bad token would silently zero every
+      // later element. Only whitespace may remain here.
+      remainder.remove_prefix(std::min(remainder.find_first_not_of(" \t\r"), remainder.size()));
+      if (!remainder.empty()) {
+        fatal_crash("read_elem_abundances: cell {} has an unreadable token at '{}'", cellnumberinput, remainder);
+      }
+
+      if (get_rho_tmin(mgi) > 0.) {
+        if (normfactor > 0. && threedimensional && std::abs(normfactor - 1.) > 0.02) {
+          // a 3D file holds true mass fractions and gets no normalisation, so a sum far from one is
+          // a sign of a file that holds proportional values, e.g. densities
+          ncells_abund_unnormalised++;
+          if (ncells_abund_unnormalised <= max_warnings) {
+            printlnlog(
+                "[warning] read_elem_abundances: 3D cell {} has element mass fractions that sum to {:g}. The values "
+                "are used without normalisation.",
+                cellnumberinput, normfactor);
+          }
+        }
+        if (normfactor <= 0. || threedimensional) {
+          normfactor = 1.;
+        }
+
+        bool has_included_elements = false;
+
+        for (int element = 0; element < nelements; element++) {
+          // set the mass fraction of each element that the atomic data includes
+          const int atomic_number = get_atomicnumber(element);
+          const auto elemmassfrac = static_cast<float>(elem_massfracs_in[atomic_number - 1] / normfactor);
+          assert_always(elemmassfrac >= 0.);
+
+          // read_ejecta_model() has already set the nuclide mass fractions. Check here, while
+          // the mass fractions are still exactly as the input files gave them, that abundances.txt gives the
+          // element at least as much mass as model.txt gives its tracked isotopes. Any later mapping rescale
+          // changes the nuclide mass fractions but not the elemental ones, so this cannot be tested afterwards.
+          // a small negative remainder is allowed for roundoff error
+          assert_always((elemmassfrac - get_elem_trackedisotope_massfracsum(mgi, get_atomicnumber(element))) >= -1e-2);
+
+          elem_massfracs_of_mgi[(static_cast<size_t>(mgi) * nelements) + element] = elemmassfrac;
+          has_included_elements = has_included_elements || (elemmassfrac > 0.F);
+        }
+
+        if (!has_included_elements) {
+          // e.g. a mapped model gives zero abundances to a cell whose mass comes only from particles without
+          // nucleosynthesis data. Matter without the elements of compositiondata.txt has no opacity and no cooling
+          // processes.
+          ncells_noincludedelements++;
+          mass_noincludedelements += get_rho_tmin(mgi) * get_inputcellvolume(mgi);
+          if (ncells_noincludedelements <= max_warnings) {
+            printlnlog(
+                "[warning] read_elem_abundances: cell {} has density {:g} [g/cm3] at tmin and no mass in the "
+                "elements of compositiondata.txt. The cell becomes empty.",
+                cellnumberinput, get_rho_tmin(mgi));
+          }
+          set_rho_tmin(mgi, 0.);
+        }
+      }
+    }
+
+    if (ncells_abund_unnormalised > max_warnings) {
+      printlnlog(
+          "[warning] read_elem_abundances: {} cells in total have element mass fractions that do not sum to one. The "
+          "first {} are listed above.",
+          ncells_abund_unnormalised, max_warnings);
+    }
+    if (ncells_noincludedelements > 0) {
+      printlnlog(
+          "[warning] read_elem_abundances: {} cells with no mass in the elements of compositiondata.txt became "
+          "empty. They held {:.3e} [Msun].",
+          ncells_noincludedelements, mass_noincludedelements / MSUN);
+    }
+  }
+
+  // barrier to make sure node master has set values in node shared memory
+  MPI_Barrier_allranks();
+  MPI_Bcast_safe(ncells_noincludedelements, 0, globals::mpi_comm_node);
+  if (ncells_noincludedelements > 0) {
+    calc_modelinit_totmassnuclides();
+    printlnlog("Total input model mass without the cells that became empty: {:9.3e} [Msun]", mtot_input / MSUN);
+  }
+  printlnlog("finished reading abundances.txt");
+  return elem_massfracs_of_mgi;
 }
 
 void read_grid_restart_data(const int timestep) {
@@ -2405,6 +2435,9 @@ void init_grid() {
   }
   printlnlog("    total propagation cells: {}", ngrid);
 
+  // the mapping makes a cell with zero density empty, so it must come after this read
+  const auto elem_massfracs_of_mgi = read_elem_abundances();
+
   if (get_modelgridtype() == prop_gridtype) {
     if (get_modelgridtype() == GridType::CARTESIAN3D) {
       assert_always(ncoord_model[0] == ncoordgrid[0]);
@@ -2435,7 +2468,16 @@ void init_grid() {
 
   allocate_nonemptymodelcells();
 
-  read_elem_abundances();
+  if (globals::rank_in_node == 0) {
+    for (int nonemptymgi = 0; nonemptymgi < get_nonempty_npts_model(); nonemptymgi++) {
+      const int mgi = get_mgi_of_nonemptymgi(nonemptymgi);
+      for (int element = 0; element < get_nelements(); element++) {
+        set_elem_massfrac(nonemptymgi, element,
+                          elem_massfracs_of_mgi[(static_cast<size_t>(mgi) * get_nelements()) + element]);
+      }
+    }
+  }
+  MPI_Barrier_allranks();
 
   // when the model grid and the propagation grid differ, rescale the nuclide mass fractions so that the total mass
   // of each nuclide matches the input model again. Every propagation cell takes the model shell that its centre falls
