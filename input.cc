@@ -2069,7 +2069,8 @@ void read_parameterfile(std::span<Packet> packets) {
   assert_always(get_noncommentline(file, line));
   assert_always(std::istringstream{line} >> globals::optical_depth_is_thick >> globals::num_grey_timesteps);
   printlnlog(
-      "input: cells with Thomson optical depth > {:g} are treated in grey approximation for the first {} timesteps",
+      "input: cells with a radial grey optical depth to the outer boundary >= {:g} are treated in grey "
+      "approximation for the first {} timesteps",
       globals::optical_depth_is_thick, globals::num_grey_timesteps);
 
   assert_always(get_noncommentline(file, line));  // UNUSED max_bf_continua (all bf continua are always included)

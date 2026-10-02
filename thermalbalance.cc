@@ -35,7 +35,9 @@
 
 namespace {
 
-// Integrand to calculate the rate coefficient for bfheating.
+// Integrand to calculate the rate coefficient for bfheating. The stimulated recombination factor is the LTE value
+// at T_R. The photoionisation rate of integrand_corrphotoioncoeff_custom_radfield() in ratecoeff.cc uses the
+// departure ratio of the cell and T_e instead, so the two factors are different in an NLTE cell.
 auto integrand_bfheatingcoeff(const double nu, const double nu_edge, const int nonemptymgi, const float T_R,
                               const std::span<const float> photoion_xs) -> double {
   const float sigma_bf = photoionisation_crosssection_fromtable(photoion_xs, nu_edge, nu);

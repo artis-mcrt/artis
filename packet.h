@@ -126,7 +126,9 @@ struct Packet {
   double e_rf{0.};  // The energy the packet carries in the rest frame.
   int next_trans{-1};  // This keeps track of the next possible line interaction of a rpkt by storing
                        // its linelist index (to overcome numerical problems in propagating the rpkts).
-  int nscatterings{0};  // records number of electron scatterings a r-pkt undergone since it was emitted
+  // The number of electron scatterings of an r-packet since its last emission. A scattering in a thick cell and,
+  // with RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY, a line scattering also add one.
+  int nscatterings{0};
 
   // The process of the MOST RECENT emission, one of the two keys exspec decomposes the spectra by (see
   // trueemissiontype below). Overwritten by each emission rather than cleared when the packet re-enters the
@@ -139,7 +141,9 @@ struct Packet {
   float em_time{-1.};  // [s]
   int absorptiontype{0};  // records linelistindex of the last absorption
                           // or a negative absorption_type enum value
-  double absorptionfreq{};  // records nu_rf of packet at last absorption
+  // nu_rf of the packet at its last bound-bound absorption. A bound-free or a free-free absorption sets
+  // absorptiontype but does not change this value.
+  double absorptionfreq{};
   double stokes_q{0.};  // normalised Stokes q = Q/I
   double stokes_u{0.};  // normalised Stokes u = U/I
   // The last emission out of the THERMAL POOL. A k-packet emission sets it. Scatterings and macro-atom

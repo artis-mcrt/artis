@@ -110,12 +110,13 @@ constexpr bool DIPOLE;
 // Track the Stokes parameters and write specpol.out, emissionpol.out, and absorptionpol.out.
 constexpr bool POL_ON;
 
-// Enable the virtual packets that vpkt.txt sets up. This needs POL_ON.
+// Enable the virtual packets that vpkt.txt sets up. This needs POL_ON. A GPU build does not support this
+// option.
 constexpr bool VPKT_ON;
 
-// Write a line to a vpackets_<rank>.out file for each emission of a real packet in a thin cell whose virtual
-// packets escape in at least one observer direction of vpkt.txt. The line holds the arrival time, the frequency,
-// and the energy of the contribution to each direction. This needs VPKT_ON.
+// Write a line to the file vpackets/vpackets_<rank>.out for each emission of a real packet in a thin cell whose
+// virtual packets escape in at least one observer direction of vpkt.txt. The line holds the arrival time, the
+// frequency, and the energy of the contribution to each direction. This needs VPKT_ON.
 constexpr bool VPKT_WRITE_CONTRIBS;
 
 // The lower bound of the level populations, the ion populations, and the electron density nne [cm^-3]. A level
@@ -244,9 +245,13 @@ constexpr bool NLTE_USE_GTH_SOLVER;
 // The k-packets carry the same energy budget. Each time a k-packet selects a cooling process, its energy gets
 // the factor 1 - (c_adiabatic + c_heatcapacity) / heating of its cell, limited to [0, 100] (see kpkt.cc). A
 // cell without heating uses the factor 1. The factor applies in every timestep with a thermal balance, also
-// without this option. With this option, the
-// stored thermal energy also stays out of the radiation field. A gas that cools releases its stored energy
-// into the packets, and the factor is then above 1. The code removes no k-packet.
+// without this option. With this option, the stored thermal energy also stays out of the radiation field. A
+// gas that cools releases its stored energy into the packets, and the factor is then above 1. The code removes
+// no k-packet.
+//
+// The "cooling:" line of the estimators file does not contain c_heatcapacity, because that file keeps its
+// format. The heating and the cooling of that file therefore do not balance with this option. The rank log
+// gives c_heatcapacity and the k-packet energy factor of each cell.
 constexpr std::optional<int> NLTE_TIME_DEPENDENT_FIRST_TIMESTEP;
 
 // How the code deposits the energy of the non-thermal leptons.
@@ -314,6 +319,10 @@ constexpr bool KEEP_ESCAPED_GAMMAS;
 // - BARNES and WOLLAEGER use analytic thermalisation efficiencies (Barnes, Kasen, Wu & Martínez-Pinedo 2016,
 //   ApJ, 829, 110, doi:10.3847/0004-637X/829/2/110; Wollaeger, Korobkin, Fontes, Rosswog, Even & Fryer 2018,
 //   MNRAS, 478, 3298-3334, doi:10.1093/mnras/sty1018).
+//
+// The presets write "constexpr auto" for this option and for GAMMA_THERMALISATION_SCHEME, so that each line
+// stays within 120 columns. Keep that form, because the sedopt patterns of
+// tests/setup_kilonova_2d_barnesthermalisation.sh match it.
 constexpr ParticleThermalisationScheme PARTICLE_THERMALISATION_SCHEME;
 
 // The thermalisation of the gamma-ray photons. FREQUENCYDEPENDENT transports the gamma rays with the Monte

@@ -108,6 +108,9 @@ THREADLOCALONHOST CellWarningMarker ionfract_zeroed_warned;
           ? calculate_ionrecombcoeff(nonemptymgi, T_e, element, ion + 1, {.collisional_not_radiative = true})
           : 0.;
 
+  // nt_ionisation_ratecoeff() is the total non-thermal ionisation rate of the ion, which includes the channels
+  // that eject more than one electron. This balance applies all of it to ion -> ion + 1. The NLTE matrix
+  // distributes the channels with nt_ionisation_upperion_probability() instead.
   const double gamma_nt =
       (NT_SCHEME != NonThermalScheme::NT_OFF) ? nonthermal::nt_ionisation_ratecoeff(nonemptymgi, element, ion) : 0.;
 

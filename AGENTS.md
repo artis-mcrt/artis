@@ -250,12 +250,12 @@ The workflows in `.github/workflows/`:
 - `ci-checks.yml` runs the pre-commit hooks, clang-tidy, and cppcheck. It then
   compiles the code with each compiler of its matrix, and on macOS, with
   hipcc, and with nvc++. The GPU compilers build the classic and the nebular
-  presets with `STDPAR=ON GPU=ON`. The gcc, the clang, and the macOS jobs
-  also do the OpenMP builds, the STDPAR builds, and the builds of the remaining
-  presets. The options and the `if` conditions of these steps say which
-  compiler skips a build and which build uses `OPTIMIZE=OFF`. The gcc and the
-  clang jobs also build and run the unit tests, for the classic and for the
-  nebular preset.
+  presets with `STDPAR=ON GPU=ON`. The matrix entries with `extrabuilds: true`
+  and the macOS job also do the OpenMP builds, the STDPAR builds, and the
+  builds of the remaining presets. The options and the `if` conditions of these
+  steps say which compiler skips a build and which build uses `OPTIMIZE=OFF`.
+  The gcc and the clang jobs also build and run the unit tests, for the classic
+  and for the nebular preset.
 - `updatechecksums.yml` writes the reference checksums (see "Tests").
 - `depapprove.yml` enables auto-merge for the pull requests of Dependabot and
   of pre-commit-ci.

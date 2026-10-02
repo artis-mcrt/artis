@@ -252,6 +252,10 @@ void write_to_estimators_file(std::ostream& estimators_file, const int nonemptym
         }
       }
       std::println(estimators_file);
+      // This line keeps its label for artistools. Only an element with NLTE levels keeps the normalised Monte Carlo
+      // estimator here. For each other element, calculate_iongamma_per_gspop() has replaced it with the analytic
+      // radiative and collisional ionisation rate per ground level population, which includes corrphotoionrenorm
+      // (see iongamma_is_zero() in ratecoeff.cc).
       std::print(estimators_file, "gammaestimator     Z={:2d}", get_atomicnumber(element));
       for (int ion = 0; ion < nions - 1; ion++) {
         if (get_groundcontindex(element, ion) >= 0) {

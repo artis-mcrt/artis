@@ -2220,7 +2220,9 @@ void read_ejecta_model() {
           assert_always(fabs((cell_z_in / pos_z_mid) - 1) < 1e-3);
         }
       } else {
-        // columns: cell number, x midpoint, y midpoint, z midpoint, density
+        // columns: cell number, x minimum, y minimum, z minimum, density. The position columns hold the corner
+        // of the cell with the lowest coordinates. The check below permits a difference of half a cell width, so
+        // it cannot tell a file of cell midpoints from a file of cell corners.
         std::array<float, 3> cellpos_in{};
         float rho_model_in{NAN};
         assert_always(parse_next_token(remainder, cellnumberin) && parse_next_token(remainder, cellpos_in[0]) &&

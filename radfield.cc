@@ -585,7 +585,7 @@ void init() {
       radfieldfile.flush();
     }
 
-    const size_t mem_usage_bins = nonempty_npts_model * RADFIELDBINCOUNT * ((2 * sizeof(double)) + sizeof(int));
+    const size_t mem_usage_bins = nonempty_npts_model * RADFIELDBINCOUNT * 2 * sizeof(double);
     radfieldbins.resize(nonempty_npts_model);
 
     printlnlog("[info] mem_usage: radiation field bin accumulators for non-empty cells occupy {:.3f} MB",

@@ -61,9 +61,11 @@ constexpr int xcom_max_atomic_number = USE_XCOM_GAMMAPHOTOION ? 100 : 0;
 std::array<std::vector<ElementPhotoionData>, xcom_max_atomic_number> photoion_data;
 
 // Reference scales and thresholds [Hz] for the photoelectric and pair-production cross-section fits below
-// (the Compton path works from H * nu_cmf / ME / CLIGHT^2 instead). NB: slightly inconsistent with MEV / H
-// from constants.h, which gives 2.41805e+20 for 1 MeV. Kept as-is because changing them would shift results
-// and the stored regression checksums.
+// (the Compton path works from H * nu_cmf / ME / CLIGHT^2 instead). These values are slightly inconsistent
+// with the constants of constants.h, which give MEV / H = 2.41799e+20 Hz. With those constants, nu_1mev is
+// 0.99804 MeV, nu_1p022mev is 1.02001 MeV, and nu_1p5mev is 1.49707 MeV. pair_production() therefore gives
+// prob_gamma > 1 for a photon between 1.020 and 1.022 MeV, and that photon always becomes a 511 keV photon.
+// Keep the values, because a change shifts the results and the stored checksums.
 constexpr double nu_100kev = 2.41326e+19;
 constexpr double nu_1mev = 2.41326e+20;
 constexpr double nu_1p022mev = 2.46636e+20;  // electron-positron pair rest mass energy (pair production threshold)
