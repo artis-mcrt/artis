@@ -1,6 +1,7 @@
 #!/bin/bash -l
 #SBATCH --time=24:00:00
-#SBATCH --ntasks=2128
+##default is 19 * 112 = 2128 cores
+#SBATCH --nodes=19
 #SBATCH --ntasks-per-node=112
 #SBATCH --exclusive
 #SBATCH --cpus-per-task=1
