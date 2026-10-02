@@ -370,7 +370,7 @@ void set_initenergyq(const int modelgridindex, const float initenergyq) {
   std::array<double, max_atomic_number + 1> massfrac_sum_by_atomic_number{};
   for (int nucindex = 0; nucindex < decay::get_num_nuclides(); nucindex++) {
     const int atomic_number = decay::get_nuc_z(nucindex);
-    assert_testmodeonly(atomic_number >= 0 && atomic_number <= max_atomic_number);
+    assert_always(atomic_number >= 0 && atomic_number <= max_atomic_number);
     massfrac_sum_by_atomic_number[atomic_number] += get_modelinitnucmassfrac(mgi, nucindex);
   }
   return massfrac_sum_by_atomic_number;
