@@ -1069,7 +1069,8 @@ auto read_elem_abundances() -> std::vector<float> {
           assert_always((elemmassfrac - trackedisotope_massfracsum) >= -1e-2);
 
           elem_massfracs_of_mgi[(static_cast<size_t>(mgi) * nelements) + element] = elemmassfrac;
-          has_included_elements = has_included_elements || elemmassfrac > 0.F || trackedisotope_massfracsum > 0.;
+          has_included_elements = has_included_elements ||
+                                  (get_nions(element) > 0 && (elemmassfrac > 0.F || trackedisotope_massfracsum > 0.));
         }
 
         if (!has_included_elements) {
@@ -1083,7 +1084,10 @@ auto read_elem_abundances() -> std::vector<float> {
           for (int elem_z_index = 0; elem_z_index < std::ssize(elem_massfracs_in); elem_z_index++) {
             if (elem_massfracs_in[elem_z_index] > 0.F) {
               atomic_numbers_noatomicdata.insert(elem_z_index + 1);
-              elements_noatomicdata += std::format(" Z={} ({:.2e})", elem_z_index + 1, elem_massfracs_in[elem_z_index]);
+              if (ncells_noincludedelements <= max_warnings) {
+                elements_noatomicdata +=
+                    std::format(" Z={} ({:.2e})", elem_z_index + 1, elem_massfracs_in[elem_z_index]);
+              }
             }
           }
           if (ncells_noincludedelements <= max_warnings) {
