@@ -476,12 +476,20 @@ The code must compile with nvc++ and with hipcc, also with `STDPAR=ON GPU=ON`.
 - The numeric values of some enumerations are also part of that interface, e.g.
   `packet_type`, `absorption_type`, and the `EMTYPE_*` constants in `packet.h`.
   Do not renumber them.
+- A simulation uses two types of folder:
+  - The simulation folder is the top-level folder. It holds the input files and
+    the restart files. Each `tests/*_testrun` folder is a simulation folder.
+  - A job folder is a subfolder of the simulation folder. `sn3d` writes one job
+    folder in each Slurm job. "Run folder" is a synonym of "job folder".
+
+  Write "job folder" in the code and in the documentation. Do not use "run
+  folder" for the simulation folder.
 - `sn3d` writes one log file for each rank and thread
   (`output_<rank>-<thread>.txt`). The per-job files go into the job folder
   `job_from_ts<start timestep>`. The files of the whole simulation, e.g. the
   restart files, stay in the simulation folder, together with a symlink to the
-  log of rank 0. Rank 0 writes one line with the job folder to the standard output. The
-  standard output is otherwise quiet unless there is a crash.
+  log of rank 0. Rank 0 writes one line with the job folder to the standard
+  output. The standard output is otherwise quiet unless there is a crash.
 - The restart files (`gridsave_ts*.tmp` and the packet files) must only be
   consistent with the binary that wrote them. A resumed run uses the same
   `artisoptions.h` and the same source version as the run that wrote the
