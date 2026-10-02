@@ -908,7 +908,7 @@ void remove_previous_simulation_files() {
 }
 
 // Create the job folder, which gets its name from the start timestep of the job. Make an output_0-0.txt symlink in
-// the simulation folder that points to the rank-0 log of the current job. Then tail -f output_0-0.txt works.
+// the model folder that points to the rank-0 log of the current job. Then tail -f output_0-0.txt works.
 void setup_jobfolder() {
   const auto* const linkname = "output_0-0.txt";
 

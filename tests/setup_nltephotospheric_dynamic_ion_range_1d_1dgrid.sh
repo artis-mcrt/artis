@@ -4,13 +4,13 @@ set -x
 
 source ./setupfuncs.sh
 
-runfolder=nltephotospheric_dynamic_ion_range_1d_1dgrid_testrun
+modelpath=nltephotospheric_dynamic_ion_range_1d_1dgrid_testrun
 
 getatomicdata atomicdata_hefeconi_fe_i_to_vii.tar.xz
 
-mkdir -p $runfolder
+mkdir -p $modelpath
 
-cd $runfolder
+cd $modelpath
 
 rsync -av --exclude="recombrates.txt.zst" ../nebular_1d_3dgrid_inputfiles/ ./
 

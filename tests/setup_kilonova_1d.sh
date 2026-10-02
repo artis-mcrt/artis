@@ -4,13 +4,13 @@ set -x
 
 source ./setupfuncs.sh
 
-runfolder=kilonova_1d_testrun
+modelpath=kilonova_1d_testrun
 
 getatomicdata atomicdata_feconi.tar.xz
 
-mkdir -p $runfolder
+mkdir -p $modelpath
 
-cd $runfolder
+cd $modelpath
 
 tar -xf ../atomicdata_feconi.tar.xz --directory ./
 

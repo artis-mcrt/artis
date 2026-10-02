@@ -4,13 +4,13 @@ set -x
 
 source ./setupfuncs.sh
 
-runfolder=classicmode_1d_3dgrid_testrun
+modelpath=classicmode_1d_3dgrid_testrun
 
 getatomicdata atomicdata_classic.tar.xz
 
-mkdir -p $runfolder
+mkdir -p $modelpath
 
-cd $runfolder
+cd $modelpath
 
 tar -xf ../atomicdata_classic.tar.xz --directory ./
 

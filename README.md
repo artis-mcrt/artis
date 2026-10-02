@@ -48,7 +48,7 @@ An early version of the code is described in [Sim (2007), MNRAS, 375, 154-162, d
 The ARTIS source code is available under a [BSD 3-Clause license](https://github.com/artis-mcrt/artis/blob/main/LICENSE), which requires attribution and preservation of copyright notices on any substantial copies. If you find the ARTIS code useful in any way, we request that you cite us as described above and star the repository to help show impact in funding proposals.
 
 ## Setting up production runs on Linux
-We recommend retaining the exact source code and Git metadata within each simulation folder for future reference (i.e., don't just copy the executables).
+We recommend retaining the exact source code and Git metadata within each model folder for future reference (i.e., don't just copy the executables).
 
 Clone the source code repository from the release branch:
 ```sh
@@ -56,7 +56,7 @@ git clone --branch release https://github.com/artis-mcrt/artis.git
 cd artis
 ```
 
-To compile and run ARTIS, you will need a recent C++ compiler (gcc 14 or newer, Clang, nvc++, or hipcc) and an MPI library (e.g., Open MPI) that provides an `mpicxx` command. Usually, these are available on HPC clusters using module or spack commands. For systems that we use, look at the top of the relevant SLURM script in scripts/artis-*.sh to find compatible modules specifications. For Open MPI, set the C++ compiler using `export OMPI_CXX=g++`.
+To compile and run ARTIS, you will need a recent C++ compiler (gcc 14 or newer, Clang, nvc++, or hipcc) and an MPI library (e.g., Open MPI) that provides an `mpicxx` command. Usually, these are available on HPC clusters using module or spack commands. For systems that we use, look at the top of the relevant Slurm script in scripts/artis-*.sh to find compatible modules specifications. For Open MPI, set the C++ compiler using `export OMPI_CXX=g++`.
 
 Next, select an options preset. For example:
 ```sh
@@ -107,30 +107,30 @@ Every build writes the database again, so it stays current. It always uses the `
 For editing, the clangd language server is recommended (e.g., with the [VS Code plugin](https://marketplace.visualstudio.com/items?itemName=llvm-vs-code-extensions.vscode-clangd)).
 
 ### Running
-sn3d writes one line with the name of the job folder to the standard output, and then nothing more unless a crash occurs. Each MPI rank n writes a log file called output_n-0.txt into the job folder (see [Output files](#output-files)). sn3d keeps a symlink output_0-0.txt in the simulation folder that points to the log of rank 0. A local run might look something like this:
+sn3d writes one line with the name of the job folder to the standard output, and then nothing more unless a crash occurs. Each MPI rank n writes a log file called output_n-0.txt into the job folder (see [Output files](#output-files)). sn3d keeps a symlink output_0-0.txt in the model folder that points to the log of rank 0. A local run might look something like this:
 ```bash
 mpirun -np 8 ./sn3d&
 tail -f output_0-0.txt
 ```
 Press Ctrl+C to stop following the log file.
 
-To split a long simulation across several queued jobs, run sn3d with `-w WALLTIMELIMITHOURS`. When too little wall time remains to complete another timestep, the run finishes cleanly (writing the restart files and updating input.txt) and prints RESTART_NEEDED into the log, which the bundled cluster job scripts detect to submit a continuation job. The scripts pass the remaining SLURM allocation time automatically. Run `./sn3d -h` to list all command-line options.
+To split a long simulation across several queued jobs, run sn3d with `-w WALLTIMELIMITHOURS`. When too little wall time remains to complete another timestep, the run finishes cleanly (writing the restart files and updating input.txt) and prints RESTART_NEEDED into the log, which the bundled cluster job scripts detect to submit a continuation job. The scripts pass the remaining Slurm allocation time automatically. Run `./sn3d -h` to list all command-line options.
 
 ### Output files
 Each job writes the following into its job folder, e.g. `job_from_ts0000`:
 - output_n-0.txt: a log file for each MPI rank n.
 - estimators_nnnn.out: the plasma conditions of each cell (temperatures, ionisation, heating and cooling rates) at each timestep. With the option `WRITE_ESTIMATORS_COMBINE_ALLRANKS`, sn3d writes the same text of all ranks into one file, estimators_allranks.out. `scripts/combine_estimator_files.py` makes that file from the files of the ranks. As zstd does, the script keeps the files of the ranks, unless you give `--rm`. Run the script with uv, e.g. `uv run artis/scripts/combine_estimator_files.py`. The script needs Python 3.14 or a later version, and uv gets that version from the metadata of the script.
 
-A run writes the following into the simulation folder:
+A run writes the following into the model folder:
 - packets/packets00_nnnn.out: the Monte Carlo packets from each rank, which exspec can turn into spectra and light curves again.
 - light_curve.out, spec.out, and the other spectrum files that [Post-processing with exspec](#post-processing-with-exspec) lists: sn3d writes the light curves and spectra at each timestep, and the emission, absorption, and direction-resolved files at the last requested timestep.
 - deposition.out: the radioactive energy deposition rate as a function of time.
 - gridsave_ts*.tmp and packets_*_ts*.tmp: restart files that allow a later job to continue from the end of a timestep.
 
-sn3d writes the per-job output files (the rank log files and the estimators, nlte, radfield, and macroatom files) into a job folder. sn3d names the folder from the start timestep of the job, e.g. `job_from_ts0000` for a new simulation and `job_from_ts0008` for a job that resumes at timestep 8. Rank 0 writes the name of the job folder to the standard output, so the log of a Slurm job names its folder. A new simulation first removes the files of the previous simulation: the output files, the restart files, and the `job_from_ts*` and `*.slurm` folders. It removes the same files as `scripts/clean.sh`, except `slurm-*.out`, `machine.file.*`, and `core.*`, which can belong to the current job. sn3d writes the shared run-level files, including the restart files, to the simulation folder. It also keeps an `output_0-0.txt` symlink there that points to the rank-0 log of the current job.
+sn3d writes the per-job output files (the rank log files and the estimators, nlte, radfield, and macroatom files) into a job folder. sn3d names the folder from the start timestep of the job, e.g. `job_from_ts0000` for a new simulation and `job_from_ts0008` for a job that resumes at timestep 8. Rank 0 writes the name of the job folder to the standard output, so the log of a Slurm job names its folder. A new simulation first removes the files of the previous simulation: the output files, the restart files, and the `job_from_ts*` and `*.slurm` folders. It removes the same files as `scripts/clean.sh`, except `slurm-*.out`, `machine.file.*`, and `core.*`, which can belong to the current job. sn3d writes the files of the whole simulation, including the restart files, to the model folder. It also keeps an `output_0-0.txt` symlink there that points to the rank-0 log of the current job.
 
 ### Post-processing with exspec
-As well as sn3d, `make` builds exspec, which combines the packet files from all ranks into spectra and light curves. sn3d writes the same files itself, so exspec is necessary only to make them again from the packet files, e.g. after a change of MNUBINS or of the frequency range. Run it in the simulation folder with any number of ranks from one up to the number of packet files:
+As well as sn3d, `make` builds exspec, which combines the packet files from all ranks into spectra and light curves. sn3d writes the same files itself, so exspec is necessary only to make them again from the packet files, e.g. after a change of MNUBINS or of the frequency range. Run it in the model folder with any number of ranks from one up to the number of packet files:
 ```bash
 mpirun -np 8 ./exspec
 ```
@@ -153,7 +153,7 @@ source ./setup_kilonova_1d.sh   # creates tests/kilonova_1d_testrun/
 ## Bundled scripts
 - clean.sh: Remove all output files while keeping input files and resetting the simulation to the beginning. The script also removes the job_from_ts* folders of sn3d and the *.slurm folders of older versions.
 - sumcorehourslogs.py: Sum the core hours of all jobs from the output_0-0.txt log of each job. The script reads the summary in the last line of the log. For a job that stopped early, it estimates the core hours from the first and the last timestamp of the log.
-- sumcorehoursslurm.py: Calculate the summed core hours of all jobs from the slurm job output files.
+- sumcorehoursslurm.py: Calculate the summed core hours of all jobs from the Slurm job output files.
 
 ## Make options
 - TESTMODE=ON: Enable additional assertions and the address and undefined behaviour sanitizers.
@@ -170,7 +170,7 @@ source ./setup_kilonova_1d.sh   # creates tests/kilonova_1d_testrun/
 - PGO=GENERATE and PGO=USE: Profile-guided optimisation with gcc or clang. Build with GENERATE, run a representative simulation to collect profile data, then rebuild with USE.
 
 ## Input files
-These files go in the simulation folder, which should always contain the ARTIS source folder (or a symlink to it) named artis. The physics data bundled with the code (nuclear decay data, gamma-ray spectra, and the collisional ionisation and binding energy tables) is then found automatically in artis/data and does not need to be copied.
+These files go in the model folder, which should always contain the ARTIS source folder (or a symlink to it) named artis. The physics data bundled with the code (nuclear decay data, gamma-ray spectra, and the collisional ionisation and binding energy tables) is then found automatically in artis/data and does not need to be copied.
 
 A build with libzstd (see "Make options") also reads a text input file in zstd compressed form, e.g. model.txt.zst, transitiondata.txt.zst, or packets/packets00_0000.out.zst for exspec. The plain file has priority when both exist.
 

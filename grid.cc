@@ -2427,7 +2427,7 @@ auto get_ndo_nonempty(const int rank) -> int {
   return ranks_ndo_nonempty[rank];
 }
 
-// Initialise the propagation grid cells and associate them with modelgrid cells
+// Initialise the propagation cells and associate them with modelgrid cells
 void init_grid() {
   // The cells will be ordered by x then y, then z. Call a routine that
   // sets up the initial positions and widths of the cells.
@@ -2897,7 +2897,7 @@ DEVICE_FUNC void snap_pos_to_cell(Vec3d& pos, const double time, const int celli
             printlnlog(
                 "[error] a packet cannot reach any boundary of matter cell {}, because every boundary recedes faster "
                 "than light. The cell reaches from inside the escape surface to beyond the light speed, so the grid is "
-                "too coarse. Use more grid cells per axis.",
+                "too coarse. Use more propagation cells per axis.",
                 cellindex););
         assert_always(false);
       }

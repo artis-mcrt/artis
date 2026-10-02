@@ -50,8 +50,9 @@ constexpr auto get_packets_text_header() -> std::string {
   return header;
 }
 
-// Sample a grid cell (weighted by its cumulative energy in en_cumulative), then place packet pkt as a radioactive
-// pellet at a random position within that cell at t=tmin, assigning its decay time and initial rest-frame energy.
+// Sample a propagation cell (weighted by its cumulative energy in en_cumulative), then place packet pkt as a
+// radioactive pellet at a random position within that cell at t=tmin, and assign its decay time and initial
+// rest-frame energy.
 void place_pellet(const double e_cmf_per_packet, const std::span<const double> en_cumulative, const int pktnumber,
                   Packet& pkt, const std::span<const double> energy_per_massoftopnuc_decaypath) {
   const auto etot_simtime = en_cumulative.back();
@@ -117,7 +118,7 @@ void packet_init(std::span<Packet> packets) {
   double etot_simtime = 0.;
   for (int propcellindex = 0; propcellindex < grid::ngrid; propcellindex++) {
     const int mgi = grid::get_propcell_modelgridindex(propcellindex);
-    // some grid cells are empty
+    // some propagation cells are empty
     if (mgi >= 0) {
       const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(mgi);
       const auto initial_en_per_mass = INITIAL_PACKETS_ON ? grid::get_initenergyq(mgi) : 0.;

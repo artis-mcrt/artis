@@ -138,7 +138,7 @@ jobs:
                   cp sn3d tests/${{ matrix.testname }}_testrun/
                   cp exspec tests/${{ matrix.testname }}_testrun/
 
-            - name: Copy the run folder for a simulation in one job
+            - name: Copy the model folder for a simulation in one job
               if: matrix.testname == 'nebular_1d_3dgrid' && inputs.testmode != 'ON'
               working-directory: tests/
               run: cp -a ${{ matrix.testname }}_testrun ${{ matrix.testname }}_onejob
@@ -204,7 +204,7 @@ jobs:
                   else
                       echo "The step writes no marker. The sn3d job0 step did not succeed (${{ steps.run_job0.outcome }})."
                   fi
-                  # The comparison uses the stored file of the repository, and not the copy in the run folder.
+                  # The comparison uses the stored file of the repository, and not the copy in the model folder.
                   if [ -s "$RUNNER_TEMP/ref_md5_job0.txt" ]; then
                       diff "$RUNNER_TEMP/ref_md5_job0.txt" "$RUNNER_TEMP/new_md5_job0.txt"
                   else
@@ -287,7 +287,7 @@ jobs:
                   else
                       echo "The step writes no marker. A run step did not succeed (job0: ${{ steps.run_job0.outcome }}, job1: ${{ steps.run_job1.outcome }}, exspec: ${{ steps.run_exspec.outcome }})."
                   fi
-                  # The comparison uses the stored file of the repository, and not the copy in the run folder.
+                  # The comparison uses the stored file of the repository, and not the copy in the model folder.
                   if [ -s "$RUNNER_TEMP/ref_md5_final.txt" ]; then
                       diff "$RUNNER_TEMP/ref_md5_final.txt" "$RUNNER_TEMP/new_md5_final.txt"
                   else

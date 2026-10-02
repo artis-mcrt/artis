@@ -18,12 +18,12 @@ thus makes that file newer, and the readers and this script then take the files 
 
 The script combines a folder only when its files hold each model cell once in each timestep. sn3d gives each rank a
 contiguous range of the cells, in the order of the ranks, so the cells of a timestep must be 0, 1, 2, ... in the order
-of the ranks. modelgridrankassignments.out of the run folder gives the number of model cells. Without that file, the
-script cannot find a missing file of the last rank. The files of all the ranks must also hold the same timesteps.
+of the ranks. modelgridrankassignments.out of the model folder gives the number of model cells. Without that file,
+the script cannot find a missing file of the last rank. The files of all the ranks must also hold the same timesteps.
 
-Run the script in the run folder, e.g. "uv run artis/scripts/combine_estimator_files.py". It then combines the files
-of each job_from_ts* folder. The arguments can also name the folders. The module compression.zstd needs Python 3.14
-or a later version, and uv gets that version from the metadata above.
+Run the script in the model folder, e.g. "uv run artis/scripts/combine_estimator_files.py". It then combines the
+files of each job_from_ts* folder. The arguments can also name the folders. The module compression.zstd needs Python
+3.14 or a later version, and uv gets that version from the metadata above.
 """
 
 import argparse
@@ -89,14 +89,14 @@ def open_text(path: Path) -> t.TextIO:
     return path.open(encoding="utf-8")
 
 
-def get_npts_model(runfolder: Path) -> int | None:
-    """Return the number of model cells, or None when the run folder has no modelgridrankassignments.out.
+def get_npts_model(modelpath: Path) -> int | None:
+    """Return the number of model cells, or None when the model folder has no modelgridrankassignments.out.
 
     sn3d writes this file again at the start of each job, with the line "rank nstart ndo ndo_nonempty" for each rank.
     A job with a different number of ranks gives other ranks, but the sum of ndo is always the number of model cells.
     """
     for extension in RANKFILE_EXTENSIONS:
-        path = runfolder / f"modelgridrankassignments.out{extension}"
+        path = modelpath / f"modelgridrankassignments.out{extension}"
         if path.is_file():
             try:
                 with open_text(path) as assignmentfile:

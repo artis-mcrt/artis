@@ -147,7 +147,7 @@ class InputFileStream : public std::istream {
   fatal_crash("Could not open file '{}'", filename);
 }
 
-// True if the run folder holds the input file, in plain or in compressed form
+// True if the model folder holds the input file, in plain or in compressed form
 [[nodiscard]] inline auto inputfile_exists(const std::string_view filename) -> bool {
   return std::filesystem::exists(std::filesystem::path(filename)) ||
          std::filesystem::exists(std::filesystem::path(std::format("{}.zst", filename)));
