@@ -378,7 +378,7 @@ void set_initenergyq(const int modelgridindex, const float initenergyq) {
 // the one left over from the values everything downstream will use. read_elem_abundances() has already checked
 // that the input gives each element at least as much mass as its isotopes, so a negative remainder here is an
 // artefact of the rescale rather than bad input, and is clamped away.
-void set_untrackedstable_massfracs() {
+void set_untrackedstable_massfracs(std::span<const float> elem_massfracs_of_mgi) {
   if (globals::rank_in_node != 0) {
     return;
   }
@@ -386,7 +386,7 @@ void set_untrackedstable_massfracs() {
     const int mgi = get_mgi_of_nonemptymgi(nonemptymgi);
     for (int element = 0; element < get_nelements(); element++) {
       const int atomic_number = get_atomicnumber(element);
-      const double elem_massfrac = get_elem_massfrac(nonemptymgi, element);
+      const double elem_massfrac = elem_massfracs_of_mgi[(static_cast<size_t>(mgi) * get_nelements()) + element];
       const double massfrac_allisotopes = get_elem_trackedisotope_massfracsum(mgi, atomic_number);
 
       double massfrac_untrackedstable = elem_massfrac - massfrac_allisotopes;
@@ -727,53 +727,11 @@ void map_modeltogrid_direct() {
   }
 }
 
-auto get_inputcellvolume(const int mgi) -> double {
-  switch (get_modelgridtype()) {
-    case GridType::SPHERICAL1D: {
-      const double v_inner = (mgi == 0) ? 0. : vout_model[mgi - 1];
-      return (pow3(vout_model[mgi]) - pow3(v_inner)) * 4 * PI * pow3(globals::tmin) / 3.;
-    }
-
-    case GridType::CYLINDRICAL2D: {
-      const int n_r = mgi % ncoord_model[0];
-      const double delta_rcyl = globals::vmax * t_model / ncoord_model[0];
-      const double delta_z = 2. * globals::vmax * t_model / ncoord_model[1];
-      return pow3(globals::tmin / t_model) * delta_z * PI * (pow2((n_r + 1) * delta_rcyl) - pow2(n_r * delta_rcyl));
-    }
-
-    case GridType::CARTESIAN3D: {
-      // Assumes cells are cubes here - all same volume.
-      return pow3(2 * globals::vmax * globals::tmin) / (ncoordgrid[0] * ncoordgrid[1] * ncoordgrid[2]);
-    }
-  }
-
-  fatal_crash("Unknown model grid type {}", static_cast<int>(get_modelgridtype()));
-}
-
-void calc_modelinit_totmassnuclides() {
-  mtot_input = 0.;
-  mfegroup = 0.;
-
-  totmassnuclide.assign(decay::get_num_nuclides(), 0.);
-
-  for (int mgi = 0; mgi < get_npts_model(); mgi++) {
-    const double mass_in_shell = get_rho_tmin(mgi) * get_inputcellvolume(mgi);
-    if (mass_in_shell > 0) {
-      mtot_input += mass_in_shell;
-
-      for (int nucindex = 0; nucindex < decay::get_num_nuclides(); nucindex++) {
-        totmassnuclide[nucindex] += mass_in_shell * get_modelinitnucmassfrac(mgi, nucindex);
-      }
-
-      mfegroup += mass_in_shell * get_ffegrp(mgi);
-    }
-  }
-}
-
 // Read the element mass fractions of each model cell with a density above zero. A cell with no mass in the
-// elements of compositiondata.txt gets zero density, so that the mapping makes it an empty cell. The node leader
-// returns the mass fractions in model cell order, and the other ranks return an empty vector.
-auto read_elem_abundances() -> std::vector<float> {
+// elements of compositiondata.txt gets zero density, so that the mapping makes it an empty cell. Return the mass
+// fractions in model cell order (an empty vector on the ranks other than the node leader) and the number of
+// cells that became empty.
+auto read_elem_abundances() -> std::tuple<std::vector<float>, int> {
   printlnlog("reading abundances.txt...");
   const bool threedimensional = (get_modelgridtype() == GridType::CARTESIAN3D);
   const int nelements = get_nelements();
@@ -785,7 +743,7 @@ auto read_elem_abundances() -> std::vector<float> {
   // the density is in node-shared memory, so only the node leader of each node parses the file and
   // writes the values (synchronised by the barrier below). The other ranks would just discard everything they read
   std::vector<float> elem_massfracs_of_mgi;
-  int ncells_noincludedelements = 0;
+  int ncells_emptied = 0;
   if (globals::rank_in_node == 0) {
     elem_massfracs_of_mgi.assign(static_cast<size_t>(get_npts_model()) * nelements, 0.F);
     auto abundance_file = istream_required("abundances.txt");
@@ -794,8 +752,7 @@ auto read_elem_abundances() -> std::vector<float> {
     // Every log line gets a timestamp and a flush, so a large 3D model must not warn per cell.
     // The count gives one summary line after the loop instead.
     int ncells_abund_unnormalised = 0;
-    double mass_noincludedelements = 0.;
-    std::set<int> atomic_numbers_noatomicdata;  // elements with mass in the cells that became empty
+    std::set<int> atomic_numbers_without_atomic_data;  // elements with mass in the cells that became empty
     constexpr int max_warnings = 10;
 
     for (int mgi = 0; mgi < get_npts_model(); mgi++) {
@@ -852,7 +809,7 @@ auto read_elem_abundances() -> std::vector<float> {
           normfactor = 1.;
         }
 
-        bool has_included_elements = false;
+        bool has_mass_in_composition_elements = false;
 
         for (int element = 0; element < nelements; element++) {
           // set the mass fraction of each element that the atomic data includes
@@ -869,35 +826,31 @@ auto read_elem_abundances() -> std::vector<float> {
           assert_always((elemmassfrac - trackedisotope_massfracsum) >= -1e-2);
 
           elem_massfracs_of_mgi[(static_cast<size_t>(mgi) * nelements) + element] = elemmassfrac;
-          has_included_elements = has_included_elements ||
-                                  (get_nions(element) > 0 && (elemmassfrac > 0.F || trackedisotope_massfracsum > 0.));
+          has_mass_in_composition_elements =
+              has_mass_in_composition_elements ||
+              (get_nions(element) > 0 && (elemmassfrac > 0.F || trackedisotope_massfracsum > 0.));
         }
 
-        if (!has_included_elements) {
+        if (!has_mass_in_composition_elements) {
           // e.g. a mapped model gives zero abundances to a cell whose mass comes only from particles without
           // nucleosynthesis data. Matter without the elements of compositiondata.txt has no opacity and no cooling
           // processes.
-          ncells_noincludedelements++;
-          mass_noincludedelements += get_rho_tmin(mgi) * get_inputcellvolume(mgi);
+          ncells_emptied++;
           // every element with mass in this cell has no atomic data, so list them for the user
-          std::string elements_noatomicdata;
+          std::string elements_without_atomic_data;
           for (int elem_z_index = 0; elem_z_index < std::ssize(elem_massfracs_in); elem_z_index++) {
             if (elem_massfracs_in[elem_z_index] > 0.F) {
-              atomic_numbers_noatomicdata.insert(elem_z_index + 1);
-              if (ncells_noincludedelements <= max_warnings) {
-                elements_noatomicdata +=
-                    std::format(" Z={} ({:.2e})", elem_z_index + 1, elem_massfracs_in[elem_z_index]);
-              }
+              atomic_numbers_without_atomic_data.insert(elem_z_index + 1);
+              elements_without_atomic_data +=
+                  std::format(" Z={} ({:.2e})", elem_z_index + 1, elem_massfracs_in[elem_z_index]);
             }
           }
-          if (ncells_noincludedelements <= max_warnings) {
+          if (ncells_emptied <= max_warnings) {
             printlnlog(
                 "[warning] read_elem_abundances: cell {} has density {:g} [g/cm3] at tmin and no mass in the "
-                "elements of compositiondata.txt. The cell becomes empty. {}",
+                "elements of compositiondata.txt. The cell becomes empty. Elements with mass and no atomic data:{}",
                 cellnumberinput, get_rho_tmin(mgi),
-                elements_noatomicdata.empty()
-                    ? std::string{"abundances.txt gives no mass to any element."}
-                    : "abundances.txt gives mass to elements without atomic data:" + elements_noatomicdata);
+                elements_without_atomic_data.empty() ? " none" : elements_without_atomic_data);
           }
           set_rho_tmin(mgi, 0.);
         }
@@ -910,33 +863,23 @@ auto read_elem_abundances() -> std::vector<float> {
           "first {} are listed above.",
           ncells_abund_unnormalised, max_warnings);
     }
-    if (ncells_noincludedelements > 0) {
-      printlnlog(
-          "[warning] read_elem_abundances: {} cells with no mass in the elements of compositiondata.txt became "
-          "empty. They held {:.3e} [Msun].",
-          ncells_noincludedelements, mass_noincludedelements / MSUN);
-      if (!atomic_numbers_noatomicdata.empty()) {
-        std::string atomic_numbers_list;
-        for (const int atomic_number : atomic_numbers_noatomicdata) {
-          atomic_numbers_list += std::format(" {}", atomic_number);
-        }
-        printlnlog(
-            "[warning] read_elem_abundances: add atomic data for these elements to keep the mass of these cells. "
-            "Atomic numbers:{}",
-            atomic_numbers_list);
+    if (!atomic_numbers_without_atomic_data.empty()) {
+      std::string atomic_numbers_text;
+      for (const int atomic_number : atomic_numbers_without_atomic_data) {
+        atomic_numbers_text += std::format(" {}", atomic_number);
       }
+      printlnlog(
+          "[warning] read_elem_abundances: add atomic data for these elements to keep the mass of the cells that "
+          "became empty. Atomic numbers:{}",
+          atomic_numbers_text);
     }
   }
 
   // barrier to make sure node master has set values in node shared memory
   MPI_Barrier_allranks();
-  MPI_Bcast_safe(ncells_noincludedelements, 0, globals::mpi_comm_node);
-  if (ncells_noincludedelements > 0) {
-    calc_modelinit_totmassnuclides();
-    printlnlog("Total input model mass without the cells that became empty: {:9.3e} [Msun]", mtot_input / MSUN);
-  }
+  MPI_Bcast_safe(ncells_emptied, 0, globals::mpi_comm_node);
   printlnlog("finished reading abundances.txt");
-  return elem_massfracs_of_mgi;
+  return {std::move(elem_massfracs_of_mgi), ncells_emptied};
 }
 
 void parse_model_headerline(const std::string& line, std::vector<int>& zlist, std::vector<int>& alist,
@@ -1137,6 +1080,49 @@ auto read_model_columns(ModelFileReader& fmodel) -> std::tuple<std::vector<std::
       num_nuclides, npts_model, (initnucmassfrac_allcells.size() * sizeof(float)) / 1024. / 1024.);
 
   return {colnames, nucindexlist, one_line_per_cell};
+}
+
+auto get_inputcellvolume(const int mgi) -> double {
+  switch (get_modelgridtype()) {
+    case GridType::SPHERICAL1D: {
+      const double v_inner = (mgi == 0) ? 0. : vout_model[mgi - 1];
+      return (pow3(vout_model[mgi]) - pow3(v_inner)) * 4 * PI * pow3(globals::tmin) / 3.;
+    }
+
+    case GridType::CYLINDRICAL2D: {
+      const int n_r = mgi % ncoord_model[0];
+      const double delta_rcyl = globals::vmax * t_model / ncoord_model[0];
+      const double delta_z = 2. * globals::vmax * t_model / ncoord_model[1];
+      return pow3(globals::tmin / t_model) * delta_z * PI * (pow2((n_r + 1) * delta_rcyl) - pow2(n_r * delta_rcyl));
+    }
+
+    case GridType::CARTESIAN3D: {
+      // Assumes cells are cubes here - all same volume.
+      return pow3(2 * globals::vmax * globals::tmin) / (ncoordgrid[0] * ncoordgrid[1] * ncoordgrid[2]);
+    }
+  }
+
+  fatal_crash("Unknown model grid type {}", static_cast<int>(get_modelgridtype()));
+}
+
+void calc_modelinit_totmassnuclides() {
+  mtot_input = 0.;
+  mfegroup = 0.;
+
+  totmassnuclide.assign(decay::get_num_nuclides(), 0.);
+
+  for (int mgi = 0; mgi < get_npts_model(); mgi++) {
+    const double mass_in_shell = get_rho_tmin(mgi) * get_inputcellvolume(mgi);
+    if (mass_in_shell > 0) {
+      mtot_input += mass_in_shell;
+
+      for (int nucindex = 0; nucindex < decay::get_num_nuclides(); nucindex++) {
+        totmassnuclide[nucindex] += mass_in_shell * get_modelinitnucmassfrac(mgi, nucindex);
+      }
+
+      mfegroup += mass_in_shell * get_ffegrp(mgi);
+    }
+  }
 }
 
 void read_grid_restart_data(const int timestep) {
@@ -2461,7 +2447,15 @@ void init_grid() {
   printlnlog("    total propagation cells: {}", ngrid);
 
   // the mapping makes a cell with zero density empty, so it must come after this read
-  auto elem_massfracs_of_mgi = read_elem_abundances();
+  auto [elem_massfracs_of_mgi, ncells_emptied] = read_elem_abundances();
+  if (ncells_emptied > 0) {
+    const double mtot_input_with_emptied_cells = mtot_input;
+    calc_modelinit_totmassnuclides();
+    printlnlog(
+        "[warning] {} cells with no mass in the elements of compositiondata.txt became empty. They held {:.3e} "
+        "[Msun]. The total input model mass is now {:.3e} [Msun].",
+        ncells_emptied, (mtot_input_with_emptied_cells - mtot_input) / MSUN, mtot_input / MSUN);
+  }
 
   if (get_modelgridtype() == prop_gridtype) {
     if (get_modelgridtype() == GridType::CARTESIAN3D) {
@@ -2492,18 +2486,6 @@ void init_grid() {
   }
 
   allocate_nonemptymodelcells();
-
-  if (globals::rank_in_node == 0) {
-    for (int nonemptymgi = 0; nonemptymgi < get_nonempty_npts_model(); nonemptymgi++) {
-      const int mgi = get_mgi_of_nonemptymgi(nonemptymgi);
-      for (int element = 0; element < get_nelements(); element++) {
-        set_elem_massfrac(nonemptymgi, element,
-                          elem_massfracs_of_mgi[(static_cast<size_t>(mgi) * get_nelements()) + element]);
-      }
-    }
-  }
-  elem_massfracs_of_mgi = {};  // release the memory before the later allocations
-  MPI_Barrier_allranks();
 
   // when the model grid and the propagation grid differ, rescale the nuclide mass fractions so that the total mass
   // of each nuclide matches the input model again. Every propagation cell takes the model shell that its centre falls
@@ -2562,7 +2544,8 @@ void init_grid() {
 
   // the untracked stable remainder is whatever the rescaled isotopes leave of each element, so it can only be
   // worked out once the rescale above is done
-  set_untrackedstable_massfracs();
+  set_untrackedstable_massfracs(elem_massfracs_of_mgi);
+  elem_massfracs_of_mgi = std::vector<float>{};  // free the memory before the later allocations
   MPI_Barrier_node();
 
   radfield::init();
