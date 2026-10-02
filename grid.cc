@@ -995,6 +995,7 @@ auto read_elem_abundances() -> std::vector<float> {
     // The count gives one summary line after the loop instead.
     int ncells_abund_unnormalised = 0;
     double mass_noincludedelements = 0.;
+    std::set<int> atomic_numbers_noatomicdata;  // elements with mass in the cells that became empty
     constexpr int max_warnings = 10;
 
     for (int mgi = 0; mgi < get_npts_model(); mgi++) {
@@ -1078,11 +1079,22 @@ auto read_elem_abundances() -> std::vector<float> {
           // processes.
           ncells_noincludedelements++;
           mass_noincludedelements += get_rho_tmin(mgi) * get_inputcellvolume(mgi);
+          // every element with mass in this cell has no atomic data, so list them for the user
+          std::string elements_noatomicdata;
+          for (int elem_z_index = 0; elem_z_index < std::ssize(elem_massfracs_in); elem_z_index++) {
+            if (elem_massfracs_in[elem_z_index] > 0.F) {
+              atomic_numbers_noatomicdata.insert(elem_z_index + 1);
+              elements_noatomicdata += std::format(" Z={} ({:.2e})", elem_z_index + 1, elem_massfracs_in[elem_z_index]);
+            }
+          }
           if (ncells_noincludedelements <= max_warnings) {
             printlnlog(
                 "[warning] read_elem_abundances: cell {} has density {:g} [g/cm3] at tmin and no mass in the "
-                "elements of compositiondata.txt. The cell becomes empty.",
-                cellnumberinput, get_rho_tmin(mgi));
+                "elements of compositiondata.txt. The cell becomes empty. {}",
+                cellnumberinput, get_rho_tmin(mgi),
+                elements_noatomicdata.empty()
+                    ? std::string{"abundances.txt gives no mass to any element."}
+                    : "abundances.txt gives mass to elements without atomic data:" + elements_noatomicdata);
           }
           set_rho_tmin(mgi, 0.);
         }
@@ -1100,6 +1112,16 @@ auto read_elem_abundances() -> std::vector<float> {
           "[warning] read_elem_abundances: {} cells with no mass in the elements of compositiondata.txt became "
           "empty. They held {:.3e} [Msun].",
           ncells_noincludedelements, mass_noincludedelements / MSUN);
+      if (!atomic_numbers_noatomicdata.empty()) {
+        std::string atomic_numbers_list;
+        for (const int atomic_number : atomic_numbers_noatomicdata) {
+          atomic_numbers_list += std::format(" {}", atomic_number);
+        }
+        printlnlog(
+            "[warning] read_elem_abundances: add atomic data for these elements to keep the mass of these cells. "
+            "Atomic numbers:{}",
+            atomic_numbers_list);
+      }
     }
   }
 
