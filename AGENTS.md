@@ -312,6 +312,10 @@ The readers of this code are scientists, not only programmers. Give each
 function, variable, and type a name that says which physical quantity it holds.
 Do not name a thing after its role in an abstract algorithm.
 
+A name must explain itself. This rule is as important as a correct result,
+because a reader checks the physics through the names. It applies to every new
+name, also to a local variable, a counter, a flag, and a temporary string.
+
 - Name the quantity, not the position in a procedure. Write
   `get_log_te_nne_ionpops()` and not `get_outer_state()`. The first name says
   that the result holds the logarithms of T_e, of nne, and of the ion
@@ -327,6 +331,13 @@ Do not name a thing after its role in an abstract algorithm.
   `nne`, and `bf` are established here. A new short form is not.
 - The name must stay correct for a reader who does not know the algorithm. A
   comment that explains the name is a sign that the name is wrong.
+- Separate the words of a new name with underscores. Write
+  `atomic_numbers_without_atomic_data` and not `atomic_numbers_noatomicdata`.
+- Name a count or a flag after the condition that it tests. Write
+  `ncells_emptied` and `has_mass_in_composition_elements`, and not
+  `ncells_noincludedelements` and `has_included_elements`. "Included" does not
+  say where the element is included.
+- Prefer a long name that explains itself to a short name that needs a comment.
 
 ### Comments
 
@@ -555,5 +566,7 @@ Do the text edits first. They can make a finished compile out of date.
 5. Run clang-tidy on the files that you changed. CI stops on any diagnostic,
    and a gcc build does not find it.
 6. Check that no `DEVICE_FUNC` calls a logger (see "Logs and assertions").
+7. Read each new name in the diff again. Rename each name that does not explain
+   itself (see "Names").
 
 The default branch is `main`, and `release` is the production branch.
