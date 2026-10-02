@@ -482,8 +482,8 @@ The code must compile with nvc++ and with hipcc, also with `STDPAR=ON GPU=ON`.
   - A job folder is a subfolder of the simulation folder. `sn3d` writes one job
     folder in each Slurm job. "Run folder" is a synonym of "job folder".
 
-  Write "job folder" in the code and in the documentation. Do not use "run
-  folder" for the simulation folder.
+  Write "job folder" and not "run folder". Do not use either term for the
+  simulation folder.
 - `sn3d` writes one log file for each rank and thread
   (`output_<rank>-<thread>.txt`). The per-job files go into the job folder
   `job_from_ts<start timestep>`. The files of the whole simulation, e.g. the
