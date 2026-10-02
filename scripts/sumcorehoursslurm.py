@@ -11,13 +11,15 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Sum the core hours of the slurm logs in the given run folders.")
+    parser = argparse.ArgumentParser(
+        description="Sum the core hours of the slurm logs in the given simulation folders."
+    )
     parser.add_argument(
-        "runfolders",
+        "simulationfolders",
         nargs="*",
         type=Path,
         default=[Path()],
-        help="run folders to scan (default: the current folder)",
+        help="simulation folders to scan (default: the current folder)",
     )
     parser.add_argument(
         "--json",
@@ -27,7 +29,9 @@ def main() -> None:
     args = parser.parse_args()
 
     slurmoutfiles = sorted(
-        slurmoutfile for runfolder in args.runfolders for slurmoutfile in runfolder.glob("slurm-*.out")
+        slurmoutfile
+        for simulationfolder in args.simulationfolders
+        for slurmoutfile in simulationfolder.glob("slurm-*.out")
     )
     jobs: list[dict[str, Path | str | float | int | datetime]] = [
         {

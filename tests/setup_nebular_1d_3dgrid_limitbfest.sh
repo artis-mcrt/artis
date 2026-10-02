@@ -4,13 +4,13 @@ set -x
 
 source ./setupfuncs.sh
 
-runfolder=nebular_1d_3dgrid_limitbfest_testrun
+simulationfolder=nebular_1d_3dgrid_limitbfest_testrun
 
 getatomicdata atomicdata_feconi.tar.xz
 
-mkdir -p $runfolder
+mkdir -p $simulationfolder
 
-cd $runfolder
+cd $simulationfolder
 
 rsync -av ../nebular_1d_3dgrid_inputfiles/ ./
 
