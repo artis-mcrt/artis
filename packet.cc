@@ -51,8 +51,8 @@ constexpr auto get_packets_text_header() -> std::string {
 }
 
 // Sample a propagation cell (weighted by its cumulative energy in en_cumulative), then place packet pkt as a
-// radioactive pellet at a random position within that cell at t=tmin, assigning its decay time and initial rest-frame
-// energy.
+// radioactive pellet at a random position within that cell at t=tmin, and assign its decay time and initial
+// rest-frame energy.
 void place_pellet(const double e_cmf_per_packet, const std::span<const double> en_cumulative, const int pktnumber,
                   Packet& pkt, const std::span<const double> energy_per_massoftopnuc_decaypath) {
   const auto etot_simtime = en_cumulative.back();

@@ -490,8 +490,7 @@ auto do_rpkt_step(Packet& pkt, const double t2, ContinuumOpacity& chi_rpkt_cont)
   // draw random optical depth to next physical event
   const double tau_rnd = -std::log(static_cast<double>(rng_uniform_pos(get_rngstate(pkt))));
 
-  // Finding the distance to the crossing of the propagation cell boundaries.
-  // boundarydist is the boundary distance to the next propagation cell next_cellindex
+  // boundarydist is the distance to the boundary of the propagation cell, and next_cellindex is the cell behind it
   const auto [boundarydist, next_cellindex] = grid::boundary_distance(pkt.dir, pkt.pos, pkt.prop_time, pkt.cellindex);
 
   if (boundarydist == 0) {

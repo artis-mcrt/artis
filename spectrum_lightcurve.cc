@@ -393,7 +393,6 @@ void add_packet_to_spectra(const Packet& pkt, const int dirbin, Spectra& spectra
                            Spectra* spectra_U) {
   // Need to (1) decide which time bin to put it in and (2) which frequency bin.
 
-  // specific direction bins contain fewer packets than the full sphere, so must be normalised to match
   const double nu_min = spectra_I.nu_min;
   const double nu_max = spectra_I.nu_max;
   const double dlognu = spectra_I.dlognu;
@@ -403,6 +402,7 @@ void add_packet_to_spectra(const Packet& pkt, const int dirbin, Spectra& spectra
 
     const auto nnu = get_logbinindex(pkt.nu_rf, nu_min, dlognu, MNUBINS);
 
+    // a direction bin covers 1/MABINS of the full sphere, so its flux gets the factor MABINS
     const double solidanglefactor = (dirbin >= 0) ? MABINS : 1.;
     const double deltaE = pkt.e_rf / globals::timesteps[nts].width / spectra_I.delta_freq[nnu] / 4.e12 / PI / PARSEC /
                           PARSEC / globals::nprocs_exspec * solidanglefactor;
