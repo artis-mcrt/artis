@@ -1015,10 +1015,8 @@ auto read_elem_abundances() -> std::vector<float> {
       std::array<float, 150> elem_massfracs_in{};
       double abund_in = 0.;
       for (int elem_z_index = 0; elem_z_index < std::ssize(elem_massfracs_in); elem_z_index++) {
-        const int atomic_number = elem_z_index + 1;
         if (!parse_next_token(remainder, abund_in)) {
-          // at least one element (hydrogen) should have been specified for nonempty cells
-          assert_always(atomic_number > 1 || get_rho_tmin(mgi) <= 0.);
+          // a row with no values is a cell with no elements
           break;
         }
 
@@ -1067,10 +1065,11 @@ auto read_elem_abundances() -> std::vector<float> {
           // element at least as much mass as model.txt gives its tracked isotopes. Any later mapping rescale
           // changes the nuclide mass fractions but not the elemental ones, so this cannot be tested afterwards.
           // a small negative remainder is allowed for roundoff error
-          assert_always((elemmassfrac - get_elem_trackedisotope_massfracsum(mgi, get_atomicnumber(element))) >= -1e-2);
+          const double trackedisotope_massfracsum = get_elem_trackedisotope_massfracsum(mgi, atomic_number);
+          assert_always((elemmassfrac - trackedisotope_massfracsum) >= -1e-2);
 
           elem_massfracs_of_mgi[(static_cast<size_t>(mgi) * nelements) + element] = elemmassfrac;
-          has_included_elements = has_included_elements || (elemmassfrac > 0.F);
+          has_included_elements = has_included_elements || elemmassfrac > 0.F || trackedisotope_massfracsum > 0.;
         }
 
         if (!has_included_elements) {
@@ -2458,7 +2457,7 @@ void init_grid() {
   printlnlog("    total propagation cells: {}", ngrid);
 
   // the mapping makes a cell with zero density empty, so it must come after this read
-  const auto elem_massfracs_of_mgi = read_elem_abundances();
+  auto elem_massfracs_of_mgi = read_elem_abundances();
 
   if (get_modelgridtype() == prop_gridtype) {
     if (get_modelgridtype() == GridType::CARTESIAN3D) {
@@ -2499,6 +2498,7 @@ void init_grid() {
       }
     }
   }
+  elem_massfracs_of_mgi = {};  // release the memory before the later allocations
   MPI_Barrier_allranks();
 
   // when the model grid and the propagation grid differ, rescale the nuclide mass fractions so that the total mass
