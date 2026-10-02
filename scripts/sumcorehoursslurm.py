@@ -13,7 +13,7 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 def main() -> None:
     parser = argparse.ArgumentParser(description="Sum the core hours of the slurm logs in the given model folders.")
     parser.add_argument(
-        "modelfolders",
+        "modelpaths",
         nargs="*",
         type=Path,
         default=[Path()],
@@ -27,7 +27,7 @@ def main() -> None:
     args = parser.parse_args()
 
     slurmoutfiles = sorted(
-        slurmoutfile for modelfolder in args.modelfolders for slurmoutfile in modelfolder.glob("slurm-*.out")
+        slurmoutfile for modelpath in args.modelpaths for slurmoutfile in modelpath.glob("slurm-*.out")
     )
     jobs: list[dict[str, Path | str | float | int | datetime]] = [
         {

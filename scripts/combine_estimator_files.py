@@ -89,14 +89,14 @@ def open_text(path: Path) -> t.TextIO:
     return path.open(encoding="utf-8")
 
 
-def get_npts_model(modelfolder: Path) -> int | None:
+def get_npts_model(modelpath: Path) -> int | None:
     """Return the number of model cells, or None when the model folder has no modelgridrankassignments.out.
 
     sn3d writes this file again at the start of each job, with the line "rank nstart ndo ndo_nonempty" for each rank.
     A job with a different number of ranks gives other ranks, but the sum of ndo is always the number of model cells.
     """
     for extension in RANKFILE_EXTENSIONS:
-        path = modelfolder / f"modelgridrankassignments.out{extension}"
+        path = modelpath / f"modelgridrankassignments.out{extension}"
         if path.is_file():
             try:
                 with open_text(path) as assignmentfile:

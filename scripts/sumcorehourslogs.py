@@ -97,7 +97,7 @@ def read_loglines(logfile: Path) -> list[str]:
 def main() -> None:
     parser = argparse.ArgumentParser(description="Sum the core hours of the sn3d logs in the given model folders.")
     parser.add_argument(
-        "modelfolders",
+        "modelpaths",
         nargs="*",
         type=Path,
         default=[Path()],
@@ -114,8 +114,8 @@ def main() -> None:
     # a compressed log next to its plain copy holds the same content, so keep only the plain file.
     sn3dlogfiles = sorted(
         logfile
-        for modelfolder in args.modelfolders
-        for logfile in modelfolder.glob("**/output_0-0.txt*")
+        for modelpath in args.modelpaths
+        for logfile in modelpath.glob("**/output_0-0.txt*")
         if logfile.exists()
         and (
             logfile.name == "output_0-0.txt"
