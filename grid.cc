@@ -727,206 +727,6 @@ void map_modeltogrid_direct() {
   }
 }
 
-void parse_model_headerline(const std::string& line, std::vector<int>& zlist, std::vector<int>& alist,
-                            std::vector<std::string>& colnames) {
-  // custom header line
-  std::istringstream iss(line);
-  std::string token;
-
-  int columnindex = -1;
-
-  while (std::getline(iss, token, ' ')) {
-    if (std::ranges::all_of(token, isspace)) {  // skip whitespace tokens
-      continue;
-    }
-
-    columnindex++;
-
-    if (token == "#inputcellid") {
-      assert_always(columnindex == 0);
-    } else if (token == "velocity_outer") {
-      assert_always(columnindex == 1);
-    } else if (token == "vel_r_max_kmps") {
-      assert_always(columnindex == 1);
-    } else if (token.starts_with("pos_")) {
-      continue;
-    } else if (token == "logrho") {
-      // 1D models have log10(rho [g/cm3])
-      assert_always(columnindex == 2);
-      assert_always(get_modelgridtype() == GridType::SPHERICAL1D);
-    } else if (token == "rho") {
-      // 2D and 3D models have rho [g/cm3]
-      assert_always(get_modelgridtype() != GridType::SPHERICAL1D);
-      assert_always((columnindex == 4 && get_modelgridtype() == GridType::CARTESIAN3D) ||
-                    (columnindex == 3 && get_modelgridtype() == GridType::CYLINDRICAL2D));
-      continue;
-    } else if (token.starts_with("X_") && token != "X_Fegroup") {
-      colnames.push_back(token);
-      const int z = decay::get_nucstring_z(token.substr(2));  // + 2 skips the 'X_'
-      const int a = decay::get_nucstring_a(token.substr(2));
-      assert_always(z >= 0);
-      assert_always(a >= 0);
-      zlist.push_back(z);
-      alist.push_back(a);
-    } else {
-      colnames.push_back(token);
-      zlist.push_back(-1);
-      alist.push_back(-1);
-    }
-  }
-}
-
-auto get_token_count(std::string const& line) -> int {
-  std::string token;
-  int abundcolcount = 0;
-  auto ssline = std::istringstream{line};
-  while (std::getline(ssline, token, ' ')) {
-    if (!std::ranges::all_of(token, isspace)) {  // skip whitespace tokens
-      abundcolcount++;
-    }
-  }
-  return abundcolcount;
-}
-
-// The header probes of model.txt read ahead into the data lines. The cell reader takes those lines
-// first, so no reader seeks in the file, which a compressed file does not support.
-struct ModelFileReader {
-  InputFileStream file;
-  std::deque<std::string> lines_read_ahead;
-
-  auto getline(std::string& line) -> bool {
-    if (!lines_read_ahead.empty()) {
-      line = std::move(lines_read_ahead.front());
-      lines_read_ahead.pop_front();
-      return true;
-    }
-    return static_cast<bool>(std::getline(file, line));
-  }
-};
-
-void read_model_radioabundances(ModelFileReader& fmodel, std::string_view& remainder, const int mgi,
-                                const bool keepcell, const std::vector<std::string>& colnames,
-                                const std::vector<int>& nucindexlist, const bool one_line_per_cell) {
-  if (!one_line_per_cell) {
-    static std::string line;
-    assert_always(fmodel.getline(line));
-    remainder = std::string_view{line};
-  }
-
-  if (!keepcell) {
-    return;
-  }
-
-  for (auto i = 0Z; i < std::ssize(colnames); i++) {
-    double valuein = 0.;
-    assert_always(parse_next_token(remainder, valuein));  // a mass fraction or another column value, e.g. Ye or q
-
-    if (nucindexlist[i] >= 0) {
-      assert_testmodeonly(valuein <= 1.);
-      set_modelinitnucmassfrac(mgi, nucindexlist[i], static_cast<float>(valuein));
-    } else if (colnames[i] == "X_Fegroup") {
-      set_ffegrp(mgi, static_cast<float>(valuein));
-    } else if (colnames[i] == "cellYe" || colnames[i] == "Ye") {
-      set_initelectronfrac(mgi, static_cast<float>(valuein));
-    } else if (colnames[i] == "q") {
-      // The q column holds the trapped radiation energy per mass at t_model. It already includes the adiabatic
-      // losses before t_model. The energy of a comoving mass element falls as 1/t, so the value is scaled to tmin.
-      assert_always(valuein >= 0.);
-      set_initenergyq(mgi, static_cast<float>(valuein * t_model / globals::tmin));
-    } else if (colnames[i] == "tracercount") {
-      ;
-    } else {
-      // reported once after the model read (checking only mgi == 0 could miss it entirely if cell 0 is empty)
-      ignored_model_columns.insert(colnames[i]);
-    }
-  }
-  double valuein = 0.;
-  assert_always(!parse_next_token(remainder, valuein));  // should be no tokens left!
-}
-
-auto read_model_columns(ModelFileReader& fmodel) -> std::tuple<std::vector<std::string>, std::vector<int>, bool> {
-  std::vector<int> zlist;
-  std::vector<int> alist;
-  std::vector<std::string> colnames;
-
-  std::string line;
-  fmodel.getline(line);
-
-  std::string headerline;
-
-  const bool header_specified = lineiscommentonly(line);
-
-  if (header_specified) {
-    // line is the header
-    headerline = line;
-    fmodel.getline(line);
-  } else {
-    // line is not a comment, so it must be the first line of data
-    // add a default header for unlabelled columns
-    switch (get_modelgridtype()) {
-      case GridType::SPHERICAL1D:
-        headerline = "#inputcellid vel_r_max_kmps logrho";
-        break;
-      case GridType::CYLINDRICAL2D:
-        headerline = "#inputcellid pos_rcyl_mid pos_z_mid rho";
-        break;
-      case GridType::CARTESIAN3D:
-        headerline = "#inputcellid pos_x_min pos_y_min pos_z_min rho";
-        break;
-    }
-    headerline += " X_Fegroup X_Ni56 X_Co56 X_Fe52 X_Cr48";
-  }
-
-  int colcount = get_token_count(line);
-  const bool one_line_per_cell = (colcount >= get_token_count(headerline));
-
-  printlnlog("model.txt has {} line per cell format", one_line_per_cell ? "one" : "two");
-
-  std::string secondline;
-  if (!one_line_per_cell) {  // add columns from the second line
-    fmodel.getline(secondline);
-    colcount += get_token_count(secondline);
-  }
-
-  // the cell reader takes the lines of the first cell again
-  fmodel.lines_read_ahead.push_back(line);
-  if (!one_line_per_cell) {
-    fmodel.lines_read_ahead.push_back(secondline);
-  }
-
-  if (!header_specified && colcount > get_token_count(headerline)) {
-    headerline += " X_Ni57 X_Co57";
-  }
-
-  assert_always(colcount == get_token_count(headerline));
-
-  if (header_specified) {
-    printlnlog("model.txt has a header line.");
-  } else {
-    printlnlog("model.txt has no header line. Using default: {}", headerline);
-  }
-
-  parse_model_headerline(headerline, zlist, alist, colnames);
-
-  decay::init_nuclides(zlist, alist);
-
-  std::vector<int> nucindexlist(zlist.size());
-  for (auto i = 0Z; i < std::ssize(zlist); i++) {
-    nucindexlist[i] = (zlist[i] > 0) ? decay::get_nucindex(zlist[i], alist[i]) : -1;
-  }
-
-  assert_always(npts_model > 0);
-
-  const ptrdiff_t num_nuclides = decay::get_num_nuclides();
-
-  initnucmassfrac_allcells = MPI_shared_array<float>((npts_model + 1) * num_nuclides, 0.);
-  printlnlog(
-      "[info] mem_usage: input abundance data for {} nuclides for {} cells occupies {:.3f} MB (node shared memory)",
-      num_nuclides, npts_model, (initnucmassfrac_allcells.size() * sizeof(float)) / 1024. / 1024.);
-
-  return {colnames, nucindexlist, one_line_per_cell};
-}
-
 auto get_inputcellvolume(const int mgi) -> double {
   switch (get_modelgridtype()) {
     case GridType::SPHERICAL1D: {
@@ -1137,6 +937,206 @@ auto read_elem_abundances() -> std::vector<float> {
   }
   printlnlog("finished reading abundances.txt");
   return elem_massfracs_of_mgi;
+}
+
+void parse_model_headerline(const std::string& line, std::vector<int>& zlist, std::vector<int>& alist,
+                            std::vector<std::string>& colnames) {
+  // custom header line
+  std::istringstream iss(line);
+  std::string token;
+
+  int columnindex = -1;
+
+  while (std::getline(iss, token, ' ')) {
+    if (std::ranges::all_of(token, isspace)) {  // skip whitespace tokens
+      continue;
+    }
+
+    columnindex++;
+
+    if (token == "#inputcellid") {
+      assert_always(columnindex == 0);
+    } else if (token == "velocity_outer") {
+      assert_always(columnindex == 1);
+    } else if (token == "vel_r_max_kmps") {
+      assert_always(columnindex == 1);
+    } else if (token.starts_with("pos_")) {
+      continue;
+    } else if (token == "logrho") {
+      // 1D models have log10(rho [g/cm3])
+      assert_always(columnindex == 2);
+      assert_always(get_modelgridtype() == GridType::SPHERICAL1D);
+    } else if (token == "rho") {
+      // 2D and 3D models have rho [g/cm3]
+      assert_always(get_modelgridtype() != GridType::SPHERICAL1D);
+      assert_always((columnindex == 4 && get_modelgridtype() == GridType::CARTESIAN3D) ||
+                    (columnindex == 3 && get_modelgridtype() == GridType::CYLINDRICAL2D));
+      continue;
+    } else if (token.starts_with("X_") && token != "X_Fegroup") {
+      colnames.push_back(token);
+      const int z = decay::get_nucstring_z(token.substr(2));  // + 2 skips the 'X_'
+      const int a = decay::get_nucstring_a(token.substr(2));
+      assert_always(z >= 0);
+      assert_always(a >= 0);
+      zlist.push_back(z);
+      alist.push_back(a);
+    } else {
+      colnames.push_back(token);
+      zlist.push_back(-1);
+      alist.push_back(-1);
+    }
+  }
+}
+
+auto get_token_count(std::string const& line) -> int {
+  std::string token;
+  int abundcolcount = 0;
+  auto ssline = std::istringstream{line};
+  while (std::getline(ssline, token, ' ')) {
+    if (!std::ranges::all_of(token, isspace)) {  // skip whitespace tokens
+      abundcolcount++;
+    }
+  }
+  return abundcolcount;
+}
+
+// The header probes of model.txt read ahead into the data lines. The cell reader takes those lines
+// first, so no reader seeks in the file, which a compressed file does not support.
+struct ModelFileReader {
+  InputFileStream file;
+  std::deque<std::string> lines_read_ahead;
+
+  auto getline(std::string& line) -> bool {
+    if (!lines_read_ahead.empty()) {
+      line = std::move(lines_read_ahead.front());
+      lines_read_ahead.pop_front();
+      return true;
+    }
+    return static_cast<bool>(std::getline(file, line));
+  }
+};
+
+void read_model_radioabundances(ModelFileReader& fmodel, std::string_view& remainder, const int mgi,
+                                const bool keepcell, const std::vector<std::string>& colnames,
+                                const std::vector<int>& nucindexlist, const bool one_line_per_cell) {
+  if (!one_line_per_cell) {
+    static std::string line;
+    assert_always(fmodel.getline(line));
+    remainder = std::string_view{line};
+  }
+
+  if (!keepcell) {
+    return;
+  }
+
+  for (auto i = 0Z; i < std::ssize(colnames); i++) {
+    double valuein = 0.;
+    assert_always(parse_next_token(remainder, valuein));  // a mass fraction or another column value, e.g. Ye or q
+
+    if (nucindexlist[i] >= 0) {
+      assert_testmodeonly(valuein <= 1.);
+      set_modelinitnucmassfrac(mgi, nucindexlist[i], static_cast<float>(valuein));
+    } else if (colnames[i] == "X_Fegroup") {
+      set_ffegrp(mgi, static_cast<float>(valuein));
+    } else if (colnames[i] == "cellYe" || colnames[i] == "Ye") {
+      set_initelectronfrac(mgi, static_cast<float>(valuein));
+    } else if (colnames[i] == "q") {
+      // The q column holds the trapped radiation energy per mass at t_model. It already includes the adiabatic
+      // losses before t_model. The energy of a comoving mass element falls as 1/t, so the value is scaled to tmin.
+      assert_always(valuein >= 0.);
+      set_initenergyq(mgi, static_cast<float>(valuein * t_model / globals::tmin));
+    } else if (colnames[i] == "tracercount") {
+      ;
+    } else {
+      // reported once after the model read (checking only mgi == 0 could miss it entirely if cell 0 is empty)
+      ignored_model_columns.insert(colnames[i]);
+    }
+  }
+  double valuein = 0.;
+  assert_always(!parse_next_token(remainder, valuein));  // should be no tokens left!
+}
+
+auto read_model_columns(ModelFileReader& fmodel) -> std::tuple<std::vector<std::string>, std::vector<int>, bool> {
+  std::vector<int> zlist;
+  std::vector<int> alist;
+  std::vector<std::string> colnames;
+
+  std::string line;
+  fmodel.getline(line);
+
+  std::string headerline;
+
+  const bool header_specified = lineiscommentonly(line);
+
+  if (header_specified) {
+    // line is the header
+    headerline = line;
+    fmodel.getline(line);
+  } else {
+    // line is not a comment, so it must be the first line of data
+    // add a default header for unlabelled columns
+    switch (get_modelgridtype()) {
+      case GridType::SPHERICAL1D:
+        headerline = "#inputcellid vel_r_max_kmps logrho";
+        break;
+      case GridType::CYLINDRICAL2D:
+        headerline = "#inputcellid pos_rcyl_mid pos_z_mid rho";
+        break;
+      case GridType::CARTESIAN3D:
+        headerline = "#inputcellid pos_x_min pos_y_min pos_z_min rho";
+        break;
+    }
+    headerline += " X_Fegroup X_Ni56 X_Co56 X_Fe52 X_Cr48";
+  }
+
+  int colcount = get_token_count(line);
+  const bool one_line_per_cell = (colcount >= get_token_count(headerline));
+
+  printlnlog("model.txt has {} line per cell format", one_line_per_cell ? "one" : "two");
+
+  std::string secondline;
+  if (!one_line_per_cell) {  // add columns from the second line
+    fmodel.getline(secondline);
+    colcount += get_token_count(secondline);
+  }
+
+  // the cell reader takes the lines of the first cell again
+  fmodel.lines_read_ahead.push_back(line);
+  if (!one_line_per_cell) {
+    fmodel.lines_read_ahead.push_back(secondline);
+  }
+
+  if (!header_specified && colcount > get_token_count(headerline)) {
+    headerline += " X_Ni57 X_Co57";
+  }
+
+  assert_always(colcount == get_token_count(headerline));
+
+  if (header_specified) {
+    printlnlog("model.txt has a header line.");
+  } else {
+    printlnlog("model.txt has no header line. Using default: {}", headerline);
+  }
+
+  parse_model_headerline(headerline, zlist, alist, colnames);
+
+  decay::init_nuclides(zlist, alist);
+
+  std::vector<int> nucindexlist(zlist.size());
+  for (auto i = 0Z; i < std::ssize(zlist); i++) {
+    nucindexlist[i] = (zlist[i] > 0) ? decay::get_nucindex(zlist[i], alist[i]) : -1;
+  }
+
+  assert_always(npts_model > 0);
+
+  const ptrdiff_t num_nuclides = decay::get_num_nuclides();
+
+  initnucmassfrac_allcells = MPI_shared_array<float>((npts_model + 1) * num_nuclides, 0.);
+  printlnlog(
+      "[info] mem_usage: input abundance data for {} nuclides for {} cells occupies {:.3f} MB (node shared memory)",
+      num_nuclides, npts_model, (initnucmassfrac_allcells.size() * sizeof(float)) / 1024. / 1024.);
+
+  return {colnames, nucindexlist, one_line_per_cell};
 }
 
 void read_grid_restart_data(const int timestep) {
