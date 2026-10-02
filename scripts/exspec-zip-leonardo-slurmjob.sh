@@ -1,10 +1,10 @@
 #!/bin/bash -l
 #SBATCH --time=04:00:00
+#SBATCH --nodes=1
+#SBATCH --exclusive
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=8
-# the QOS permits 30800 MB for 8 CPUs, which is less than the node share of 4015 MB for each CPU
-#SBATCH --mem-per-cpu=3850M
-#SBATCH --partition=lrd_all_serial
+#SBATCH --cpus-per-task=112
+#SBATCH --partition=dcgp_usr_prod
 #SBATCH --qos=normal
 #SBATCH --account=EUHPC_R07_209
 #SBATCH --mail-type=ALL
