@@ -76,6 +76,8 @@ double mfegroup{0.};  // Total mass of Fe group elements in ejecta
 
 int first_input_cellid{-1};  // auto-determine first cell index in model.txt (usually 1 or 0)
 
+constexpr int max_atomic_number = 150;  // abundances.txt can give elements up to this atomic number
+
 // Initial co-ordinates of inner most corner of cell.
 std::array<std::vector<double>, 3> coord_pos_min_tmin{};
 
@@ -362,15 +364,16 @@ void set_initenergyq(const int modelgridindex, const float initenergyq) {
   modelgrid_input[modelgridindex].initenergyq = initenergyq;
 }
 
-// sum of the mass fractions of an element's tracked isotopes in a model cell
-[[nodiscard]] auto get_elem_trackedisotope_massfracsum(const int mgi, const int atomic_number) -> double {
-  double massfracsum = 0.;
+// sum of the mass fractions of the tracked isotopes of each element in a model cell, indexed by atomic number
+[[nodiscard]] auto get_tracked_isotope_massfrac_sum_by_atomic_number(const int mgi)
+    -> std::array<double, max_atomic_number + 1> {
+  std::array<double, max_atomic_number + 1> massfrac_sum_by_atomic_number{};
   for (int nucindex = 0; nucindex < decay::get_num_nuclides(); nucindex++) {
-    if (decay::get_nuc_z(nucindex) == atomic_number) {
-      massfracsum += get_modelinitnucmassfrac(mgi, nucindex);
-    }
+    const int atomic_number = decay::get_nuc_z(nucindex);
+    assert_testmodeonly(atomic_number >= 0 && atomic_number <= max_atomic_number);
+    massfrac_sum_by_atomic_number[atomic_number] += get_modelinitnucmassfrac(mgi, nucindex);
   }
-  return massfracsum;
+  return massfrac_sum_by_atomic_number;
 }
 
 // Split each element's mass fraction into its tracked isotopes and an untracked stable remainder, for every
@@ -384,10 +387,11 @@ void set_untrackedstable_massfracs(std::span<const float> elem_massfracs_of_mgi)
   }
   for (int nonemptymgi = 0; nonemptymgi < get_nonempty_npts_model(); nonemptymgi++) {
     const int mgi = get_mgi_of_nonemptymgi(nonemptymgi);
+    const auto tracked_isotope_massfrac_sum_by_atomic_number = get_tracked_isotope_massfrac_sum_by_atomic_number(mgi);
     for (int element = 0; element < get_nelements(); element++) {
       const int atomic_number = get_atomicnumber(element);
       const double elem_massfrac = elem_massfracs_of_mgi[(static_cast<size_t>(mgi) * get_nelements()) + element];
-      const double massfrac_allisotopes = get_elem_trackedisotope_massfracsum(mgi, atomic_number);
+      const double massfrac_allisotopes = tracked_isotope_massfrac_sum_by_atomic_number[atomic_number];
 
       double massfrac_untrackedstable = elem_massfrac - massfrac_allisotopes;
       if (massfrac_untrackedstable < 0.) {
@@ -769,7 +773,7 @@ auto read_elem_abundances() -> std::tuple<std::vector<float>, int> {
       // path applies no normalisation.
       // The abundances begin with hydrogen, helium, etc, going as far up the atomic numbers as required
       double normfactor = 0.;
-      std::array<float, 150> elem_massfracs_in{};
+      std::array<float, max_atomic_number> elem_massfracs_in{};
       double abund_in = 0.;
       for (int elem_z_index = 0; elem_z_index < std::ssize(elem_massfracs_in); elem_z_index++) {
         if (!parse_next_token(remainder, abund_in)) {
@@ -810,6 +814,8 @@ auto read_elem_abundances() -> std::tuple<std::vector<float>, int> {
         }
 
         bool has_mass_in_composition_elements = false;
+        const auto tracked_isotope_massfrac_sum_by_atomic_number =
+            get_tracked_isotope_massfrac_sum_by_atomic_number(mgi);
 
         for (int element = 0; element < nelements; element++) {
           // set the mass fraction of each element that the atomic data includes
@@ -822,13 +828,13 @@ auto read_elem_abundances() -> std::tuple<std::vector<float>, int> {
           // element at least as much mass as model.txt gives its tracked isotopes. Any later mapping rescale
           // changes the nuclide mass fractions but not the elemental ones, so this cannot be tested afterwards.
           // a small negative remainder is allowed for roundoff error
-          const double trackedisotope_massfracsum = get_elem_trackedisotope_massfracsum(mgi, atomic_number);
-          assert_always((elemmassfrac - trackedisotope_massfracsum) >= -1e-2);
+          const double tracked_isotope_massfrac_sum = tracked_isotope_massfrac_sum_by_atomic_number[atomic_number];
+          assert_always((elemmassfrac - tracked_isotope_massfrac_sum) >= -1e-2);
 
           elem_massfracs_of_mgi[(static_cast<size_t>(mgi) * nelements) + element] = elemmassfrac;
           has_mass_in_composition_elements =
               has_mass_in_composition_elements ||
-              (get_nions(element) > 0 && (elemmassfrac > 0.F || trackedisotope_massfracsum > 0.));
+              (get_nions(element) > 0 && (elemmassfrac > 0.F || tracked_isotope_massfrac_sum > 0.));
         }
 
         if (!has_mass_in_composition_elements) {
