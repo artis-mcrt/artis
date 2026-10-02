@@ -731,8 +731,8 @@ void transport_gamma(Packet& pkt, const double t2) {
   // Assign optical depth to next physical event. And start counter of optical depth for this path.
   const double tau_next = -std::log(static_cast<double>(rng_uniform_pos(get_rngstate(pkt))));
 
-  // Start by finding the distance to the crossing of the grid cell
-  // boundaries. boundarydist is the boundary distance and next_cellindex is the grid cell into which we pass.
+  // Start by finding the distance to the crossing of the propagation cell
+  // boundaries. boundarydist is the boundary distance and next_cellindex is the propagation cell into which we pass.
 
   const auto [boundarydist, next_cellindex] = grid::boundary_distance(pkt.dir, pkt.pos, pkt.prop_time, pkt.cellindex);
 

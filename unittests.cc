@@ -210,7 +210,7 @@ void test_escapedirectionbin() {
   const double sixsigma = 6. * std::sqrt(expected_count * (1. - (1. / MABINS)));
   const auto [mincount, maxcount] = std::ranges::minmax(bincounts);
   check(std::abs(mincount - expected_count) < sixsigma && std::abs(maxcount - expected_count) < sixsigma,
-        "isotropic directions fill all equal-solid-angle bins to within 6 sigma");
+        "isotropic directions fill all direction bins of equal solid angle to within 6 sigma");
 
   // Pin the azimuthal ordering that artistools depends on (see the comment in get_escapedirectionbin):
   // the bins NPHIBINS/2..(NPHIBINS - 1) cover phi = 0..pi in increasing order, and the bins

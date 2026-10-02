@@ -393,7 +393,7 @@ void add_packet_to_spectra(const Packet& pkt, const int dirbin, Spectra& spectra
                            Spectra* spectra_U) {
   // Need to (1) decide which time bin to put it in and (2) which frequency bin.
 
-  // specific angle bins contain fewer packets than the full sphere, so must be normalised to match
+  // specific direction bins contain fewer packets than the full sphere, so must be normalised to match
   const double nu_min = spectra_I.nu_min;
   const double nu_max = spectra_I.nu_max;
   const double dlognu = spectra_I.dlognu;

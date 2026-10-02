@@ -152,7 +152,7 @@ DEVICE_FUNC constexpr void set_pkt_restframe_from_cmf(Packet& pkt) {
   const double dirmag = vec_len(dir_in);
   const auto dir = Vec3d{dir_in[0] / dirmag, dir_in[1] / dirmag, dir_in[2] / dirmag};
 
-  // Angle resolved case: need to work out the correct angle bin
+  // Angle resolved case: need to work out the correct direction bin
   const double costheta = dot(dir, syn_dir);
   const int costhetabin = std::clamp(static_cast<int>((costheta + 1.0) * NCOSTHETABINS / 2.0), 0, NCOSTHETABINS - 1);
 

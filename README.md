@@ -56,7 +56,7 @@ git clone --branch release https://github.com/artis-mcrt/artis.git
 cd artis
 ```
 
-To compile and run ARTIS, you will need a recent C++ compiler (gcc 14 or newer, Clang, nvc++, or hipcc) and an MPI library (e.g., Open MPI) that provides an `mpicxx` command. Usually, these are available on HPC clusters using module or spack commands. For systems that we use, look at the top of the relevant SLURM script in scripts/artis-*.sh to find compatible modules specifications. For Open MPI, set the C++ compiler using `export OMPI_CXX=g++`.
+To compile and run ARTIS, you will need a recent C++ compiler (gcc 14 or newer, Clang, nvc++, or hipcc) and an MPI library (e.g., Open MPI) that provides an `mpicxx` command. Usually, these are available on HPC clusters using module or spack commands. For systems that we use, look at the top of the relevant Slurm script in scripts/artis-*.sh to find compatible modules specifications. For Open MPI, set the C++ compiler using `export OMPI_CXX=g++`.
 
 Next, select an options preset. For example:
 ```sh
@@ -114,7 +114,7 @@ tail -f output_0-0.txt
 ```
 Press Ctrl+C to stop following the log file.
 
-To split a long simulation across several queued jobs, run sn3d with `-w WALLTIMELIMITHOURS`. When too little wall time remains to complete another timestep, the run finishes cleanly (writing the restart files and updating input.txt) and prints RESTART_NEEDED into the log, which the bundled cluster job scripts detect to submit a continuation job. The scripts pass the remaining SLURM allocation time automatically. Run `./sn3d -h` to list all command-line options.
+To split a long simulation across several queued jobs, run sn3d with `-w WALLTIMELIMITHOURS`. When too little wall time remains to complete another timestep, the run finishes cleanly (writing the restart files and updating input.txt) and prints RESTART_NEEDED into the log, which the bundled cluster job scripts detect to submit a continuation job. The scripts pass the remaining Slurm allocation time automatically. Run `./sn3d -h` to list all command-line options.
 
 ### Output files
 Each job writes the following into its job folder, e.g. `job_from_ts0000`:
@@ -153,7 +153,7 @@ source ./setup_kilonova_1d.sh   # creates tests/kilonova_1d_testrun/
 ## Bundled scripts
 - clean.sh: Remove all output files while keeping input files and resetting the simulation to the beginning. The script also removes the job_from_ts* folders of sn3d and the *.slurm folders of older versions.
 - sumcorehourslogs.py: Sum the core hours of all jobs from the output_0-0.txt log of each job. The script reads the summary in the last line of the log. For a job that stopped early, it estimates the core hours from the first and the last timestamp of the log.
-- sumcorehoursslurm.py: Calculate the summed core hours of all jobs from the slurm job output files.
+- sumcorehoursslurm.py: Calculate the summed core hours of all jobs from the Slurm job output files.
 
 ## Make options
 - TESTMODE=ON: Enable additional assertions and the address and undefined behaviour sanitizers.

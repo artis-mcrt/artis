@@ -11,7 +11,7 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Sum the core hours of the slurm logs in the given model folders.")
+    parser = argparse.ArgumentParser(description="Sum the core hours of the Slurm logs in the given model folders.")
     parser.add_argument(
         "modelpaths",
         nargs="*",
@@ -129,7 +129,7 @@ def main() -> None:
         if "ntasks" in jobdict:
             job_ncores = int(str(jobdict["ntasks"])) * int(str(jobdict.get("cpus-per-task", "1")))
         else:
-            # a slurm log of an old job script logs ntasks only after a clean finish
+            # a Slurm log of an old job script logs ntasks only after a clean finish
             job_ncores = ncores
         run_finished = bool(jobdict.get("run_finished", False))
         time_run_start = jobdict.get("time_run_start")
@@ -179,7 +179,7 @@ def main() -> None:
             and isinstance(time_error, datetime)
             and time_error > time_run_start
         ):
-            # slurm can add a grace period after the time limit, so the elapsed time has no upper clamp
+            # Slurm can add a grace period after the time limit, so the elapsed time has no upper clamp
             elapsed_hours = (time_error - time_run_start).total_seconds() / 3600.0
             job_core_hours = elapsed_hours * job_ncores
             estimate = True

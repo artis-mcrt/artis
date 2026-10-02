@@ -88,7 +88,7 @@ void set_element_meanweight(std::ptrdiff_t nonemptymgi, int element, float meanw
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_t_model() -> double;
 // Three cell index spaces are used throughout ARTIS. They are all plain integers, so mixing them up compiles
 // cleanly but silently reads the wrong cell:
-//  - cellindex: propagation grid cell, [0, ngrid). The geometry packets move through; Packet::cellindex.
+//  - cellindex: propagation cell, [0, ngrid). The geometry packets move through; Packet::cellindex.
 //  - modelgridindex (mgi): input model grid cell, [0, get_npts_model()). Where the ejecta model file defines
 //    density and abundances. Several propagation cells can share one model cell (get_numpropcells()).
 //  - nonemptymgi: model cells containing matter, [0, get_nonempty_npts_model()). The per-cell physics arrays
