@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# only change the simulation folder if sn3d finished cleanly after the last timestep of the model. A run that
+# only change the model folder if sn3d finished cleanly after the last timestep of the model. A run that
 # stopped at an earlier timestep_finish needs its restart files to continue.
 if grep -qs "No need for restart" output_0-0.txt && grep -qs "sn3d finished" output_0-0.txt; then
   rm -f packets_*.tmp gridsave_*.tmp vspecpol_*.tmp vpkt_grid_*.tmp vpackets_*.tmp
@@ -19,10 +19,10 @@ if grep -qs "No need for restart" output_0-0.txt && grep -qs "sn3d finished" out
   ncpus=$(nproc)
 
   # 3D kilonova model.txt and abundances.txt can be huge, so compress txt files
-  # do maxdepth 1 first in case Slurm stops the job while zstd compresses the simulation folder
-  echo "$(date): zstd compresses the .txt files of the simulation folder"
+  # do maxdepth 1 first in case Slurm stops the job while zstd compresses the model folder
+  echo "$(date): zstd compresses the .txt files of the model folder"
   find . -maxdepth 1 -name '*.txt' ! -name "output_0-0.txt" -size +200k -print0 | sort -z | xargs -r0 -n1 -P"$ncpus" zstd -T1 -13 -v --rm -f
-  echo "$(date): zstd compresses the .out files of the simulation folder"
+  echo "$(date): zstd compresses the .out files of the model folder"
   find . -maxdepth 1 -name '*.out' ! -name "slurm-*.out" -size +200k -print0 | sort -z | xargs -r0 -n1 -P"$ncpus" zstd -T1 -13 -v --rm -f
 
   echo "$(date): zstd compresses the packet files"

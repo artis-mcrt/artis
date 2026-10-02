@@ -4,13 +4,13 @@ set -x
 
 source ./setupfuncs.sh
 
-simulationfolder=classicmode_1d_3dgrid_testrun
+modelfolder=classicmode_1d_3dgrid_testrun
 
 getatomicdata atomicdata_classic.tar.xz
 
-mkdir -p $simulationfolder
+mkdir -p $modelfolder
 
-cd $simulationfolder
+cd $modelfolder
 
 tar -xf ../atomicdata_classic.tar.xz --directory ./
 

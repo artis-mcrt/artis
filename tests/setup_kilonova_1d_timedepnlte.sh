@@ -4,13 +4,13 @@ set -x
 
 source ./setupfuncs.sh
 
-simulationfolder=kilonova_1d_timedepnlte_testrun
+modelfolder=kilonova_1d_timedepnlte_testrun
 
 getatomicdata atomicdata_sryzrlace.tar.zst
 
-mkdir -p $simulationfolder
+mkdir -p $modelfolder
 
-cd $simulationfolder
+cd $modelfolder
 
 # the model files of the kilonova_1d test. The atomic data archive supplies compositiondata.txt, and
 # the second rsync below supplies the input and checksum files of this test

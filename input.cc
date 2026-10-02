@@ -1900,7 +1900,7 @@ auto read_start_timestep_and_continue_flag() -> std::pair<int, bool> {
 // read input parameters from input.txt
 void read_parameterfile(std::span<Packet> packets) {
   // A new run writes a commented copy of input.txt to input-newrun.txt. If input.txt is missing, for example after
-  // a cleanup of the simulation folder, restore it from that copy so that the run can start again without manual steps.
+  // a cleanup of the model folder, restore it from that copy so that the run can start again without manual steps.
   if (globals::my_rank == 0 && !std::filesystem::exists("input.txt") && std::filesystem::exists("input-newrun.txt")) {
     printlog("input.txt is missing. Restoring input.txt from input-newrun.txt...");
     std::error_code ec;

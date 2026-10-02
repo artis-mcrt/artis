@@ -191,7 +191,7 @@ release, so this step needs the network. The script keeps the archive in
 
 These steps differ from a plain build and are easy to miss:
 
-- Build from the `artisoptions.h` of the simulation folder, not from the preset.
+- Build from the `artisoptions.h` of the model folder, not from the preset.
   Each setup script copies a preset and then changes some option values with
   `sedopt`.
   Remove your `artisoptions.h` before the copy, because `cp` writes through a
@@ -203,7 +203,7 @@ These steps differ from a plain build and are easy to miss:
   `sn3d` to read the restart files of the first run, and it sets a different
   range of timesteps.
 - Remove the `*.tmp` files before `exspec`, as the workflow does.
-- Run `python3 ../../scripts/mergeangleres.py` in the simulation folder
+- Run `python3 ../../scripts/mergeangleres.py` in the model folder
   after `exspec`. The script merges the direction bin files into
   `light_curve_res.out`, `spec_res.out`, and `specpol_res.out`. The tests with
   a 2D or a 3D model, e.g. `kilonova_2d`, have these files in
@@ -477,17 +477,17 @@ The code must compile with nvc++ and with hipcc, also with `STDPAR=ON GPU=ON`.
   `packet_type`, `absorption_type`, and the `EMTYPE_*` constants in `packet.h`.
   Do not renumber them.
 - A simulation uses two types of folder:
-  - The simulation folder is the top-level folder. It holds the input files and
-    the restart files. Each `tests/*_testrun` folder is a simulation folder.
-  - A job folder is a subfolder of the simulation folder. `sn3d` writes one job
+  - The model folder is the top-level folder. It holds the input files and
+    the restart files. Each `tests/*_testrun` folder is a model folder.
+  - A job folder is a subfolder of the model folder. `sn3d` writes one job
     folder in each Slurm job. "Run folder" is a synonym of "job folder".
 
   Write "job folder" and not "run folder". Do not use either term for the
-  simulation folder.
+  model folder.
 - `sn3d` writes one log file for each rank and thread
   (`output_<rank>-<thread>.txt`). The per-job files go into the job folder
   `job_from_ts<start timestep>`. The files of the whole simulation, e.g. the
-  restart files, stay in the simulation folder, together with a symlink to the
+  restart files, stay in the model folder, together with a symlink to the
   log of rank 0. Rank 0 writes one line with the job folder to the standard
   output. The standard output is otherwise quiet unless there is a crash.
 - The restart files (`gridsave_ts*.tmp` and the packet files) must only be
