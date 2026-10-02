@@ -44,9 +44,13 @@ static_assert(!RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.has_value() ||
 
 static_assert(!RPKT_USE_EXPANSION_OPACITIES || !VPKT_ON, "VPKT cannot be used with r-packet expansion opacities");
 
-// a line-by-line absorption has the weight 1 - exp(-tau), so a different weight must also apply to the absorption
-static_assert(EXPANSION_OPACITY_METHOD == ExpansionOpacityMethod::EXPANSION || RPKT_USE_EXPANSION_OPACITIES,
-              "LINEBINNEDCAPPED and LINEBINNED need RPKT_USE_EXPANSION_OPACITIES");
+// The thermal emission of RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY uses the bin weights. A line-by-line r-packet
+// absorbs the fraction 1 - exp(-tau) in each line, so the emission then needs the EXPANSION weight. The virtual
+// packets permit each weight, because they use the bins only for the optical depth.
+static_assert(EXPANSION_OPACITY_METHOD == ExpansionOpacityMethod::EXPANSION || RPKT_USE_EXPANSION_OPACITIES ||
+                  !RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.has_value(),
+              "LINEBINNEDCAPPED and LINEBINNED with RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY need "
+              "RPKT_USE_EXPANSION_OPACITIES");
 
 // the bin walk of RPKT_USE_EXPANSION_OPACITIES passes lines without the line estimators
 static_assert(!DETAILED_LINE_ESTIMATORS_ON || !RPKT_USE_EXPANSION_OPACITIES,

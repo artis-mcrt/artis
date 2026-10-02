@@ -411,7 +411,8 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
               // kappa_exp * rho = (1 / (c t)) * sum_lines (lambda_line / delta_lambda) * weight(tau_sobolev),
               // tabulated at t_gridstate (see EXPANSION_OPACITY_METHOD). The scaling to the packet time uses the
               // optically thin limit, where the weight is tau_sobolev and tau_sobolev ∝ t^-2, so kappa_exp * rho
-              // ∝ t^-3. A saturated line changes more slowly, but the bins do not keep the tau_sobolev of each
+              // ∝ t^-3. The LINEBINNED weight is tau_sobolev, so this scaling is exact for it. With the other
+              // weights, a saturated line changes more slowly, but the bins do not keep the tau_sobolev of each
               // line.
               const double chi_bb_expansionopac = kappa * grid::get_rho(nonemptymgi) * densityscalefactor *
                                                   get_expopac_pathfactor(t_future, next_bin_edge_nu, dnu_on_dl);
