@@ -145,8 +145,8 @@ auto calculate_chi_ffheat_nnionpart(int nonemptymgi) -> double;
 // EXPANSION_OPACITY_METHOD.
 // calculate_expansion_opacities() assumes the path c * t * dnu / nu, which is the path that
 // get_linedistance() gives with the first-order Doppler shift. The factor is the ratio of that path to the
-// relativistic one, which is the Doppler factor times the Lorentz factor. Give the same time that the
-// caller gives to get_linedistance() for the same bin.
+// relativistic one, which is the Doppler factor times the Lorentz factor. Give the time at which the packet
+// enters the bin.
 [[nodiscard]] constexpr auto get_expopac_pathfactor(const double prop_time, const double bin_edge_nu,
                                                     const double dnu_on_dl) -> double {
   if constexpr (USE_RELATIVISTIC_DOPPLER_SHIFT) {

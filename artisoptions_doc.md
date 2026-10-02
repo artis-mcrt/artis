@@ -366,10 +366,11 @@ constexpr bool VPKT_USE_EXPANSION_OPACITIES;
 // - LINEBINNEDCAPPED: min(1, tau), the line-binned opacity with a limit of 1 for each line.
 // - LINEBINNED: tau, the line-binned opacity (Fontes, Fryer, Hungerford, Wollaeger & Korobkin 2020, MNRAS, 493,
 //   4143-4171, doi:10.1093/mnras/staa485).
-// With RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY, LINEBINNEDCAPPED and LINEBINNED need RPKT_USE_EXPANSION_OPACITIES.
-// A line-by-line r-packet absorbs the fraction 1 - exp(-tau) in each line, so the thermal emission must then use
-// EXPANSION. For the virtual packets, LINEBINNED gives the line-by-line optical depth of a bin that the packet
-// fully crosses. EXPANSION and LINEBINNEDCAPPED give a smaller optical depth for a line with tau > 1.
+// With a nonzero RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY, LINEBINNEDCAPPED and LINEBINNED need
+// RPKT_USE_EXPANSION_OPACITIES. A line-by-line r-packet absorbs the fraction 1 - exp(-tau) in each line, so the
+// thermal emission must then use EXPANSION. For the virtual packets, LINEBINNED gives the line-by-line optical
+// depth of a bin that the packet fully crosses. EXPANSION and LINEBINNEDCAPPED give a smaller optical depth for a
+// line with tau > 1.
 constexpr ExpansionOpacityMethod EXPANSION_OPACITY_METHOD;
 
 // Replace the macroatom with a thermalisation probability P for each bound-bound absorption, and a scattering

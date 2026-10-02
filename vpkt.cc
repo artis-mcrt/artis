@@ -407,15 +407,19 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
               const auto next_bin_edge_nu = get_expopac_bin_nu_lower(binindex);
               const auto binedgedist = get_linedistance(t_future, nu_cmf, next_bin_edge_nu, dnu_on_dl);
 
+              // the time at which the vpkt enters this bin, or reaches it for the first time in this cell
+              const double t_bin_entry = t_future + (dist / CLIGHT_PROP);
+
               const auto kappa = expansionopacities[(nonemptymgi * expopac_nbins) + binindex];
               // kappa_exp * rho = (1 / (c t)) * sum_lines (lambda_line / delta_lambda) * weight(tau_sobolev),
-              // tabulated at t_gridstate (see EXPANSION_OPACITY_METHOD). The scaling to the packet time uses the
-              // optically thin limit, where the weight is tau_sobolev and tau_sobolev ∝ t^-2, so kappa_exp * rho
-              // ∝ t^-3. The LINEBINNED weight is tau_sobolev, so this scaling is exact for it. With the other
-              // weights, a saturated line changes more slowly, but the bins do not keep the tau_sobolev of each
-              // line.
-              const double chi_bb_expansionopac = kappa * grid::get_rho(nonemptymgi) * densityscalefactor *
-                                                  get_expopac_pathfactor(t_future, next_bin_edge_nu, dnu_on_dl);
+              // tabulated at t_gridstate (see EXPANSION_OPACITY_METHOD). The path through the bin is
+              // c * t_bin_entry * dnu / nu. The scaling of kappa_exp * rho to t_bin_entry uses the optically thin
+              // limit, where the weight is tau_sobolev and tau_sobolev ∝ t^-2, so kappa_exp * rho ∝ t^-3. The
+              // LINEBINNED weight is tau_sobolev, so the bin optical depth is then the sum of the tau_sobolev of
+              // its lines at t_bin_entry. With the other weights, a saturated line changes more slowly, but the
+              // bins do not keep the tau_sobolev of each line.
+              const double chi_bb_expansionopac = kappa * grid::get_rho(nonemptymgi) * pow3(t_gridstate / t_bin_entry) *
+                                                  get_expopac_pathfactor(t_bin_entry, next_bin_edge_nu, dnu_on_dl);
 
               const double tau_bin = chi_bb_expansionopac * (std::min(binedgedist, boundarydist) - dist);
               dist = std::min(binedgedist, boundarydist);
