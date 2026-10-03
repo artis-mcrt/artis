@@ -63,7 +63,9 @@ Next, select an options preset. For example:
 ln -s artisoptions_classic.h artisoptions.h
 ```
 
-You will likely want to change the number of packets of all ranks together (NUM_PACKETS). Use a text editor, e.g. `vim artisoptions.h`. Most presets have values for production runs with approximately 1000 ranks. The nltephotospheric preset has a much smaller value, so increase NUM_PACKETS for a production run with that preset. Each rank keeps its share of the packets in memory. Decrease NUM_PACKETS for a run with fewer ranks. The options are explained in [artisoptions_doc.md](https://github.com/artis-mcrt/artis/blob/main/artisoptions_doc.md).
+You will likely want to change the number of packets of all ranks together (NUM_PACKETS). Use a text editor, e.g. `vim artisoptions.h`. The options are explained in [artisoptions_doc.md](https://github.com/artis-mcrt/artis/blob/main/artisoptions_doc.md).
+
+Most presets have NUM_PACKETS values for production runs with approximately 1000 ranks. The nltephotospheric preset has a much smaller value. Increase NUM_PACKETS for a production run with that preset. Each rank keeps its share of the packets in memory. Decrease NUM_PACKETS for a run with fewer ranks.
 
 Next, compile with `make` and go up a level to the model folder:
 ```sh
@@ -141,7 +143,7 @@ It writes light_curve.out, spec.out, emission.out, emissiontrue.out, and absorpt
 To plot and analyse the output, use [artistools](https://github.com/artis-mcrt/artistools), a companion Python package for working with ARTIS light curves, spectra, and estimators.
 
 ### Testing
-Unit tests for the numeric and parsing helpers and for some physics functions, e.g. the Compton cross-section and the triangular solve of the Spencer-Fano matrix, are built and run with `make unittests && ./unittests` (CI runs them for the classic and NLTE nebular presets).
+The unit tests cover the numeric and parsing helpers and some physics functions, e.g. the Compton cross-section and the triangular solve of the Spencer-Fano matrix. Build and run them with `make unittests && ./unittests`. CI runs them for the classic and NLTE nebular presets.
 
 The tests folder contains eleven small end-to-end test models. Each tests/setup_*.sh script downloads the atomic data it needs and assembles a folder that is ready to run:
 ```sh
@@ -180,7 +182,7 @@ sn3d writes the final packet files of a job into the folder packets/, and the vi
 Run-time configuration with:
 - the random number seed, which must be a fixed value for reproducible runs
 - number of timesteps
-- the first and last timestep of this job. Normally the last timestep should be set to the number of timesteps: long simulations are split over resubmitted jobs by the wall-time mechanism (sn3d -w), which advances the start timestep on each restart but never the last one. Setting an earlier last timestep makes the simulation stop there (e.g. to inspect or post-process partial results) until input.txt is edited to continue. The last restart files of such a run hold the start of its last timestep, so the continuation job propagates that timestep again with new random numbers and writes its spectra and light curves again
+- the first and last timestep of this job. Normally the last timestep should be set to the number of timesteps: long simulations are split over resubmitted jobs by the wall-time mechanism (sn3d -w), which advances the start timestep on each restart but never the last one. Setting an earlier last timestep makes the simulation stop there (e.g. to inspect or post-process partial results) until input.txt is edited to continue. The last restart files of such a run hold the start of its last timestep. The continuation job therefore propagates that timestep again and writes its spectra and light curves again
 - the start and end time in days
 - whether the run continues from the restart files of a previous job
 - number of pure LTE timesteps
