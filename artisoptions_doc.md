@@ -133,7 +133,7 @@ constexpr bool PHIXS_CLASSIC_NO_INTERPOLATION;
 
 // Fit a dilute blackbody to each frequency bin of the radiation field, in addition to the fit of the whole
 // spectrum. The fit of the whole spectrum stays the fallback for a bin without a fit. Set USE_LUT_PHOTOION to
-// false with this option, because the tables assume a Planck function. Nothing checks this.
+// false with this option, because the tables assume a Planck function. A static_assert checks this.
 constexpr bool MULTIBIN_RADFIELD_MODEL_ON;
 
 // The number of bins, including the T_e superbin
