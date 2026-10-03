@@ -12,8 +12,8 @@ getatomicdata() {
 }
 
 # Replace each match of the pattern $1 in artisoptions.h with $2. Neither can contain a | character.
-# sed gives no error for a pattern that matches nothing. The test then runs with the default
-# value of the preset.
+# Stop the script if the pattern matches no line. sed alone gives no error for such a pattern, and
+# the test then runs with the default value of the preset.
 sedopt() {
     if ! grep -q -e "$1" artisoptions.h; then
         echo "[error] this pattern matches no line of artisoptions.h: $1" >&2

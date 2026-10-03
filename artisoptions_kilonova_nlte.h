@@ -1,5 +1,6 @@
-// A compile-time options preset: symlink or copy one of the artisoptions_*.h files to
-// artisoptions.h to select the run configuration. Every option is described in artisoptions_doc.md.
+// A compile-time options preset: symlink one of the artisoptions_*.h files to artisoptions.h to select
+// the run configuration. A copy through an existing symlink replaces the content of the tracked preset.
+// Every option is described in artisoptions_doc.md.
 //
 // A preset for kilonovae from about 2 to 100 days. It has:
 // - NLTE populations of Sr, Y, and Zr, and a Saha ionisation balance for the other elements;

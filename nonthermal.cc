@@ -620,8 +620,9 @@ void read_collion_data() {
       if (!any_data_matched) {
         const double ionpot_ev = get_ionpot(element, ion) / EV;
         printlnlog(
-            "No collisional ionisation data for Z={} ionstage {}. Using Lotz approximation with ionpot = {:g} [eV]", Z,
-            ionstage, ionpot_ev);
+            "No collisional ionisation data for Z={} ionstage {}. Using the Lotz formula with A = 1.33e-14 "
+            "[cm^2 eV^2] (the Lotz value is 4.5e-14) and ionpot = {:g} [eV]",
+            Z, ionstage, ionpot_ev);
 
         // shell occupancies of this ion from electron_shell_occupancy.txt
         const auto& shells_q = allions_shell_occupancies[get_uniqueionindex(element, ion)];
@@ -773,6 +774,9 @@ void set_axelrod_solution(const ptrdiff_t nonemptymgi) {
   return std::lerp(ybelow, yabove, (energy_ev - enbelow) / (enabove - enbelow));
 }
 
+// The cross section of an ion without a row in collion.txt. It has the form of the Lotz formula, but its
+// constant A is the value of A80, which is a factor of 3.4 below the Lotz value (see the comment in
+// get_oneoverw_approx_axelrod()).
 constexpr auto xs_ionisation_lotz(const double en_erg, const ShellParams& colliondata_ion, const int electronsinshell)
     -> double {
   const double ionpot = colliondata_ion.ionpot_ev * EV;
@@ -1553,8 +1557,8 @@ auto select_nt_ionisation(const int nonemptymgi, rngstate_type& rngstate) -> std
       }
     }
   }
-  fatal_crash("select_nt_ionisation: no ion selected in cell {}: ratesum {} zrand {} ratetotal {}", nonemptymgi,
-              ratesum, zrand, ratetotal);
+  fatal_crash("select_nt_ionisation: no ion selected in cell {}: ratesum {} zrand {} ratetotal {}",
+              grid::get_mgi_of_nonemptymgi(nonemptymgi), ratesum, zrand, ratetotal);
 }
 
 void analyse_sf_solution(const int nonemptymgi, const int timestep, const std::array<double, SFPTS>& yfunc,
@@ -2718,7 +2722,10 @@ void reset_stats() { nt_energy_deposited = 0.; }
 void print_stats(const double modelvolume, const double deltat) {
   const double deposition_rate_density_montecarlo = nt_energy_deposited / EV / modelvolume / deltat;
 
-  printlnlog("nt_energy_deposited = {:g} [eV/s/cm^3]", deposition_rate_density_montecarlo);
+  // nt_energy_deposited includes the gamma, lepton, alpha, and fission deposition. modelvolume includes the
+  // empty cells.
+  printlnlog("mean non-thermal deposition rate density over the model volume = {:g} [eV/s/cm^3]",
+             deposition_rate_density_montecarlo);
 }
 
 }  // namespace nonthermal
