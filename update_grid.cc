@@ -864,11 +864,13 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
         globals::colheatingestimator[nonemptymgi] *= estimator_normfactor;
       }
 
-      update_gamma_corrphotoionrenorm_bfheating_estimators(nonemptymgi, estimator_normfactor);
-
       // Get radiation field parameters (T_J, T_R, W, and bins if enabled) out of the
       // full-spectrum and binned J and nuJ estimators
       radfield::fit_parameters(nonemptymgi, nts);
+
+      // The renormalisation factors divide the Monte Carlo estimators by the analytic rates of the radiation field
+      // model. The rates of the next propagation use the new fit, so the factors must also use the new fit.
+      update_gamma_corrphotoionrenorm_bfheating_estimators(nonemptymgi, estimator_normfactor);
 
       solve_Te_nltepops(nonemptymgi, nts, nts_prev, heatingcoolingrates);
     }
