@@ -604,6 +604,15 @@ void read_collion_data() {
 
     colliondata.push_back(collionrow);
   }
+  // The loop above reads only the number of rows that the header gives, so a further row is an error.
+  // istream_required() looks in ./ and data/ before artis/data/, so an old copy in the model folder is the usual
+  // cause.
+  if (get_noncommentline(cifile, line)) {
+    fatal_crash(
+        "collion.txt has more rows than the count {} in its first line. Correct the count, or remove an old copy of "
+        "collion.txt from the model folder.",
+        colliondatacount);
+  }
   printlnlog("Stored {} of {} input shell cross sections", colliondata.size(), colliondatacount);
   for (int element = 0; element < get_nelements(); element++) {
     const int Z = get_atomicnumber(element);
