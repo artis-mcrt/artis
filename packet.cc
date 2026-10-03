@@ -48,7 +48,7 @@ auto get_packets_text_header() -> std::string {
       " originated_from_particlenotgamma trueem_posx trueem_posy trueem_posz trueem_time pellet_nucindex "
       "pellet_decaytype";
   if constexpr (SAMPLED_RPKT_EMISSIONS_PER_PACKET > 0) {
-    header += " nrpkt_emissions";
+    header += " ninteractions";
     for (int slot = 0; slot < SAMPLED_RPKT_EMISSIONS_PER_PACKET; slot++) {
       header += std::format(
           " sampled{0}_rpkt_emission_type sampled{0}_emissiontype sampled{0}_absorption_type "
@@ -252,7 +252,7 @@ auto read_text_packets(const std::string& filename) -> std::vector<Packet> {
     parse_column(pkt.pellet_decaytype);
 
     if constexpr (SAMPLED_RPKT_EMISSIONS_PER_PACKET > 0) {
-      parse_column(pkt.nrpkt_emissions);
+      parse_column(pkt.ninteractions);
       for (auto& sampled_rpkt_emission : pkt.sampled_rpkt_emissions) {
         int rpkt_emission_type_in = 0;
         parse_column(rpkt_emission_type_in);
@@ -306,7 +306,7 @@ void write_text_packets(const std::string& filename, const std::span<const Packe
     std::print(packets_file, " {:g} {:g} {:g}", pkt.trueem_pos[0], pkt.trueem_pos[1], pkt.trueem_pos[2]);
     std::print(packets_file, " {:g} {} {}", pkt.trueem_time, pkt.pellet_nucindex, pkt.pellet_decaytype);
     if constexpr (SAMPLED_RPKT_EMISSIONS_PER_PACKET > 0) {
-      std::print(packets_file, " {}", pkt.nrpkt_emissions);
+      std::print(packets_file, " {}", pkt.ninteractions);
       for (const auto& sampled_rpkt_emission : pkt.sampled_rpkt_emissions) {
         std::print(packets_file, " {} {} {} {:g}", std::to_underlying(sampled_rpkt_emission.type),
                    sampled_rpkt_emission.emissiontype, sampled_rpkt_emission.absorptiontype,

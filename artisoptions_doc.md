@@ -310,12 +310,12 @@ constexpr bool USE_CALCULATED_MEANATOMICWEIGHT;
 constexpr bool KEEP_ESCAPED_GAMMAS;
 
 // The number of r-packet emissions that each packet keeps as a uniform random sample of all of its r-packet
-// emissions. An r-packet emission is each event that emits the packet as an r-packet, and this includes the
-// scatterings of the r-packet. A gamma packet and a pellet decay give no r-packet emission. The packet files then get
-// the count of the r-packet emissions of each packet and one group of columns for each slot of the sample. Each
-// r-packet emission of a packet has the same probability to be in the sample, so a slot represents
-// nrpkt_emissions / min(nrpkt_emissions, SAMPLED_RPKT_EMISSIONS_PER_PACKET) r-packet emissions. Zero keeps no sample
-// and gives the packet files without these columns.
+// emissions. An r-packet emission is each event that emits the packet as an r-packet, and this includes each
+// scattering of an r-packet. The events of a gamma packet and the pellet decays are not r-packet emissions. A slot of
+// the sample holds the type of the r-packet emission, emissiontype, absorptiontype, absorptionfreq, the position, and
+// the time. The packet files get these columns for each slot, and the count of the r-packet emissions (ninteractions).
+// A slot represents ninteractions / min(ninteractions, SAMPLED_RPKT_EMISSIONS_PER_PACKET) r-packet emissions, and zero
+// gives the packet files without these columns.
 constexpr int SAMPLED_RPKT_EMISSIONS_PER_PACKET;
 
 // The thermalisation of the non-thermal particles (positrons, electrons, and alpha particles):

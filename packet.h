@@ -136,8 +136,10 @@ struct SampledRpktEmission {
   double absorptionfreq{};  // Packet::absorptionfreq at the emission
   float time{-1.};  // time of the emission [s]
   enum rpkt_emission_type type { RPKT_EMISSION_NONE };
-  int emissiontype{EMTYPE_NOTSET};  // Packet::emissiontype directly after the emission
-  int absorptiontype{0};  // Packet::absorptiontype at the emission
+  // Packet::emissiontype directly after the emission. A scattering does not change Packet::emissiontype, so a
+  // sampled scattering holds the emission type of the last emission before it.
+  int emissiontype{EMTYPE_NOTSET};
+  int absorptiontype{0};  // Packet::absorptiontype at the emission: the type of the last absorption before it
 
   auto operator<=>(const SampledRpktEmission& rhs) const = default;
 };
@@ -196,12 +198,13 @@ struct Packet {
   bool originated_from_particlenotgamma{false};  // first packet type after pellet decay
   int pellet_decaytype{-1};  // decay::DecayType value of the pellet decay, or -1 for the initial-energy channel
   int pellet_nucindex{-1};  // nuclide index of the decaying species
-  // The number of r-packet emissions of the packet since packet_init(), including the scatterings of the r-packet.
-  // The count stays 0 if SAMPLED_RPKT_EMISSIONS_PER_PACKET is 0.
-  int nrpkt_emissions{0};
+  // The number of interactions of the packet since packet_init(). An interaction is each emission of the packet as
+  // an r-packet, and this includes each scattering of an r-packet. The events of a gamma packet and the pellet decays
+  // do not add to the count. The count stays 0 if SAMPLED_RPKT_EMISSIONS_PER_PACKET is 0.
+  int ninteractions{0};
   // A uniform random sample without replacement of all the r-packet emissions of the packet. Each r-packet emission
-  // has the same probability min(1, SAMPLED_RPKT_EMISSIONS_PER_PACKET / nrpkt_emissions) to be in the sample. A slot
-  // of the sample thus represents nrpkt_emissions / min(nrpkt_emissions, SAMPLED_RPKT_EMISSIONS_PER_PACKET) r-packet
+  // has the same probability min(1, SAMPLED_RPKT_EMISSIONS_PER_PACKET / ninteractions) to be in the sample. A slot
+  // of the sample thus represents ninteractions / min(ninteractions, SAMPLED_RPKT_EMISSIONS_PER_PACKET) r-packet
   // emissions of the packet. The slots have no time order.
   std::array<SampledRpktEmission, SAMPLED_RPKT_EMISSIONS_PER_PACKET> sampled_rpkt_emissions{};
 
@@ -258,12 +261,12 @@ inline auto get_rngstate([[maybe_unused]] const Packet& packet) -> rngstate_type
 DEVICE_FUNC inline void sample_rpkt_emission(Packet& pkt, const enum rpkt_emission_type type) {
   if constexpr (SAMPLED_RPKT_EMISSIONS_PER_PACKET > 0) {
     assert_testmodeonly(pkt.type == TYPE_RPKT);
-    assert_testmodeonly(pkt.nrpkt_emissions < std::numeric_limits<int>::max());
-    pkt.nrpkt_emissions++;
+    assert_testmodeonly(pkt.ninteractions < std::numeric_limits<int>::max());
+    pkt.ninteractions++;
     // Packet::number is unique only inside one rank, so the key also contains the rank
     const std::uint64_t random_key = (static_cast<std::uint64_t>(static_cast<std::uint32_t>(globals::my_rank)) << 32U) |
                                      static_cast<std::uint32_t>(pkt.number);
-    const int slot = get_reservoir_sample_slot(pkt.nrpkt_emissions, SAMPLED_RPKT_EMISSIONS_PER_PACKET, random_key);
+    const int slot = get_reservoir_sample_slot(pkt.ninteractions, SAMPLED_RPKT_EMISSIONS_PER_PACKET, random_key);
     if (slot >= 0) {
       pkt.sampled_rpkt_emissions[slot] = SampledRpktEmission{
           .pos = pkt.pos,
