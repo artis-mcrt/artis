@@ -31,7 +31,9 @@ export PATH=/cosma/local/intel/oneAPI_2021.3.0/intelpython/python3.7/pkgs/zstd-1
 cd "${SLURM_SUBMIT_DIR:?}" || exit 1
 
 cd artis
-make sn3d || exit 1
+# Build exspec together with sn3d, so that exspec reads the packet files with the same source version.
+# The exspec job scripts can run exspec without a build.
+make sn3d exspec || exit 1
 cd ..
 
 echo "CPU type: $(c++ -march=native -Q --help=target | grep -- '-march=  ' | cut -f3)"
