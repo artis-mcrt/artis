@@ -62,6 +62,12 @@ constexpr double HCLIGHTOVERFOURPI = H * CLIGHT / (4 * PI);
 
 constexpr double H_ionpot = 13.5979996 * EV;
 
+// The constant A of the Lotz formula sigma = A q ln(E/I) / (E I) for the electron-impact ionisation cross section of
+// one shell, in the form with one parameter. Lotz (1967), Z. Phys., 206, 205-211, doi:10.1007/BF01325928.
+// Lotz gives this form for highly charged ions. A neutral atom or an ion of low charge needs three parameters for
+// each shell, so the value is less accurate for such an ion.
+constexpr double LOTZ_IONISATION_CONSTANT = 4.5e-14 * EV * EV;  // [cm^2 erg^2]
+
 // atomic units
 constexpr double A_BOHR_CM = 5.29177211e-9;  // Bohr radius [cm]
 constexpr double E_HARTREE = 4.35974472e-11;  // Hartree energy [erg]
