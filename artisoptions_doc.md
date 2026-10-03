@@ -259,8 +259,8 @@ constexpr std::optional<int> NLTE_TIME_DEPENDENT_FIRST_TIMESTEP;
 // NT_SPENCERFANO: the Spencer-Fano solution. It also gives the non-thermal excitation rates for the NLTE
 // population solver, the macroatom, and the NTLEPTON packets.
 // NT_AXELRODAPPROX: the work function approximation of Axelrod (1980, PhD thesis, University of California,
-// Santa Cruz). The energy fractions are then 0.03 for the ionisation and 0.97 for the heating, with no
-// excitation rates.
+// Santa Cruz). The ion balance gets the ionisation rates of that approximation, with no excitation rates. The
+// lepton packets deposit all of their energy as heat, and the thermal balance counts all of it as heat.
 constexpr NonThermalScheme NT_SCHEME;
 
 // The energy grid of the Spencer-Fano solution is not an option of artisoptions.h. SFPTS (the number of energy
