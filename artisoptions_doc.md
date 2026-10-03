@@ -309,6 +309,14 @@ constexpr bool USE_CALCULATED_MEANATOMICWEIGHT;
 // Keep the escaped gamma-ray packets in the packet files, and write gamma_light_curve.out and gamma_spec.out.
 constexpr bool KEEP_ESCAPED_GAMMAS;
 
+// The number of interactions that each packet keeps as a uniform random sample of all of its interactions. An
+// interaction is each event that sets the time of the last emission (em_time), and this includes the scatterings
+// and the pellet decays. The packet files then get the interaction count of each packet and one group of columns
+// for each slot of the sample. Each interaction of a packet has the same probability to be in the sample, so a slot
+// represents ninteractions / min(ninteractions, SAMPLED_INTERACTIONS_PER_PACKET) interactions. Zero keeps no
+// sample and gives the packet files without these columns.
+constexpr int SAMPLED_INTERACTIONS_PER_PACKET;
+
 // The thermalisation of the non-thermal particles (positrons, electrons, and alpha particles):
 // - INSTANTFULLDEPOSITION deposits the particle energy at once;
 // - TIMEDEPENDENT transports the particles with the Monte Carlo method;

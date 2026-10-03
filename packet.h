@@ -4,13 +4,17 @@
 #ifndef PACKET_H
 #define PACKET_H
 
+#include <array>
 #include <cmath>
 #include <cstdint>
+#include <limits>
 #include <span>
 #include <string>
 #include <vector>
 
+#include "artisoptions.h"
 #include "constants.h"
+#include "mpi_logging.h"
 
 // Packet state in the indivisible energy packet scheme of Lucy (2002), A&A, 384, 725-735,
 // doi:10.1051/0004-6361:20011756.
@@ -109,6 +113,40 @@ struct MacroAtomState {
   int activatingline{-99};
 };
 
+// The process of a sampled interaction (see Packet::sampled_interactions). An interaction is each event that sets
+// Packet::em_time. The values are written to packets*.out as sampled<slot>_interactiontype and parsed by artistools,
+// so they must not be renumbered.
+enum interaction_type : int {
+  INTERACTION_NONE = 0,  // an empty slot: the packet had fewer interactions than SAMPLED_INTERACTIONS_PER_PACKET
+  INTERACTION_PELLET_PARTICLE_DECAY = 1,  // a pellet decays to a non-thermal particle
+  INTERACTION_PELLET_GAMMA_DECAY = 2,  // a pellet decays to a gamma packet
+  INTERACTION_PAIR_ANNIHILATION_GAMMA = 3,  // a pair production gives a 511 keV gamma packet
+  INTERACTION_COMPTON_SCATTERING = 4,  // a gamma packet stays a gamma packet after a Compton scattering
+  INTERACTION_KPKT_EMISSION = 5,  // a k-packet emits an r-packet (free-free, free-bound, or blackbody)
+  INTERACTION_MACROATOM_BOUNDBOUND_EMISSION = 6,  // a radiative bound-bound deactivation of a macro-atom
+  INTERACTION_MACROATOM_BOUNDFREE_EMISSION = 7,  // a radiative recombination of a macro-atom
+  INTERACTION_ELECTRON_SCATTERING = 8,  // an electron scattering of an r-packet in a cell that is not thick
+  INTERACTION_THICKCELL_GREY_SCATTERING = 9,  // a grey event of an r-packet in a thick cell
+  // With RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY, a bound-bound event either scatters the r-packet at the same
+  // comoving frequency or redistributes the frequency thermally.
+  INTERACTION_BOUNDBOUND_SCATTERING = 10,
+  INTERACTION_BOUNDBOUND_THERMALISATION = 11,
+};
+
+static_assert(SAMPLED_INTERACTIONS_PER_PACKET >= 0);
+
+// The state of a packet directly after one interaction.
+struct SampledInteraction {
+  Vec3d pos{NAN, NAN, NAN};  // position of the interaction (x,y,z)
+  double absorptionfreq{};  // Packet::absorptionfreq at the interaction
+  float time{-1.};  // time of the interaction [s]
+  enum interaction_type type { INTERACTION_NONE };
+  int emissiontype{EMTYPE_NOTSET};  // Packet::emissiontype directly after the interaction
+  int absorptiontype{0};  // Packet::absorptiontype at the interaction
+
+  auto operator<=>(const SampledInteraction& rhs) const = default;
+};
+
 #include "random.h"
 
 struct Packet {
@@ -163,6 +201,14 @@ struct Packet {
   bool originated_from_particlenotgamma{false};  // first packet type after pellet decay
   int pellet_decaytype{-1};  // decay::DecayType value of the pellet decay, or -1 for the initial-energy channel
   int pellet_nucindex{-1};  // nuclide index of the decaying species
+  // The number of interactions of the packet since packet_init(). The count stays 0 if
+  // SAMPLED_INTERACTIONS_PER_PACKET is 0.
+  int ninteractions{0};
+  // A uniform random sample without replacement of all the interactions of the packet. Each interaction of the
+  // packet has the same probability min(1, SAMPLED_INTERACTIONS_PER_PACKET / ninteractions) to be in the sample.
+  // A slot of the sample thus represents ninteractions / min(ninteractions, SAMPLED_INTERACTIONS_PER_PACKET)
+  // interactions of the packet. The slots have no time order.
+  std::array<SampledInteraction, SAMPLED_INTERACTIONS_PER_PACKET> sampled_interactions{};
 
   auto operator<=>(const Packet& rhs) const = default;
 };
@@ -181,6 +227,57 @@ inline auto get_rngstate() -> rngstate_type& {
 
 inline auto get_rngstate([[maybe_unused]] const Packet& packet) -> rngstate_type& { return get_rngstate(); }
 #endif
+
+// Select the slot of a uniform sample of nslots items that item number nitems_seen (1-based) of a sequence goes into,
+// or give -1 if the sample does not keep the item. After the last item, each item of the sequence has the same
+// probability min(1, nslots / nitems_seen) to be in the sample. This is algorithm R of the reservoir sampling
+// (Vitter, J. S. 1985, ACM Transactions on Mathematical Software, 11, 37-57, doi:10.1145/3147.3165).
+//
+// The uniform random integer comes from a hash of random_key and nitems_seen, and not from the random generator of
+// the packets. The sample thus leaves the random sequence of the physics unchanged, and the sample of a packet is
+// reproducible in a multithreaded run. The hash is the SplitMix64 finaliser (Steele, G. L., Lea, D., & Flood, C. H.
+// 2014, Proceedings of the 2014 ACM International Conference on Object Oriented Programming Systems Languages &
+// Applications, 453-472, doi:10.1145/2660193.2660195). The multiplication and the shift map the hash to the range
+// [0, nitems_seen) (Lemire, D. 2019, ACM Transactions on Modeling and Computer Simulation, 29, 3:1-3:12,
+// doi:10.1145/3230636). The bias of that map is less than nitems_seen / 2^32.
+[[nodiscard]] constexpr DEVICE_FUNC auto get_reservoir_sample_slot(const int nitems_seen, const int nslots,
+                                                                   const std::uint64_t random_key) -> int {
+  if (nitems_seen <= nslots) {
+    return nitems_seen - 1;
+  }
+  const auto splitmix64_finaliser = [](std::uint64_t state) {
+    state += 0x9E3779B97F4A7C15ULL;
+    state = (state ^ (state >> 30U)) * 0xBF58476D1CE4E5B9ULL;
+    state = (state ^ (state >> 27U)) * 0x94D049BB133111EBULL;
+    return state ^ (state >> 31U);
+  };
+  const std::uint64_t hash =
+      splitmix64_finaliser(random_key ^ splitmix64_finaliser(static_cast<std::uint64_t>(nitems_seen)));
+  const auto random_index = static_cast<int>(((hash >> 32U) * static_cast<std::uint64_t>(nitems_seen)) >> 32U);
+  return (random_index < nslots) ? random_index : -1;
+}
+
+// Count the current interaction of the packet, and add it to Packet::sampled_interactions with the probability
+// that keeps the sample uniform. Call this after the interaction has set emissiontype, absorptiontype, and
+// absorptionfreq.
+DEVICE_FUNC inline void sample_interaction(Packet& pkt, const enum interaction_type type) {
+  if constexpr (SAMPLED_INTERACTIONS_PER_PACKET > 0) {
+    assert_testmodeonly(pkt.ninteractions < std::numeric_limits<int>::max());
+    pkt.ninteractions++;
+    // Packet::number is unique only inside one rank, so the key also contains the rank
+    const std::uint64_t random_key = (static_cast<std::uint64_t>(static_cast<std::uint32_t>(globals::my_rank)) << 32U) |
+                                     static_cast<std::uint32_t>(pkt.number);
+    const int slot = get_reservoir_sample_slot(pkt.ninteractions, SAMPLED_INTERACTIONS_PER_PACKET, random_key);
+    if (slot >= 0) {
+      pkt.sampled_interactions[slot] = SampledInteraction{.pos = pkt.pos,
+                                                          .absorptionfreq = pkt.absorptionfreq,
+                                                          .time = static_cast<float>(pkt.prop_time),
+                                                          .type = type,
+                                                          .emissiontype = pkt.emissiontype,
+                                                          .absorptiontype = pkt.absorptiontype};
+    }
+  }
+}
 
 void packet_init(std::span<Packet> packets);
 auto read_text_packets(const std::string& filename) -> std::vector<Packet>;

@@ -147,6 +147,8 @@ constexpr bool USE_CALCULATED_MEANATOMICWEIGHT = true;
 
 constexpr bool KEEP_ESCAPED_GAMMAS = false;
 
+constexpr int SAMPLED_INTERACTIONS_PER_PACKET = 0;
+
 constexpr TimeStepSizeMethod TIMESTEP_SIZE_METHOD = TimeStepSizeMethod::LOGARITHMIC;
 
 constexpr double FIXED_TIMESTEP_WIDTH = -1.;

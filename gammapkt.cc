@@ -470,6 +470,7 @@ void compton_scatter(Packet& pkt) {
     // as for the electron scattering of an r-packet, the last emission position is the last scattering
     pkt.em_pos = pkt.pos;
     pkt.em_time = static_cast<float>(pkt.prop_time);
+    sample_interaction(pkt, INTERACTION_COMPTON_SCATTERING);
   } else {
     // energy loss of the gamma becomes energy of the electron (needed to calculate time-dependent thermalisation rate)
     if constexpr (PARTICLE_THERMALISATION_SCHEME == ParticleThermalisationScheme::TIMEDEPENDENTWITHGAMMAPRODUCTS) {
@@ -725,6 +726,7 @@ void pair_production(Packet& pkt) {
 
     // Now give the gamma ray an isotropic direction and set the rest-frame quantities.
     emit_gamma_isotropic(pkt);
+    sample_interaction(pkt, INTERACTION_PAIR_ANNIHILATION_GAMMA);
   }
 }
 
@@ -967,6 +969,7 @@ DEVICE_FUNC void pellet_gamma_decay(Packet& pkt) {
   // Give the gamma ray an isotropic direction (isotropic emission in the cmf) and set the
   // rest-frame energy and frequency, recording that it's now a gamma ray.
   emit_gamma_isotropic(pkt);
+  sample_interaction(pkt, INTERACTION_PELLET_GAMMA_DECAY);
 }
 
 DEVICE_FUNC void do_gamma(Packet& pkt, const int nts, const double t2) {

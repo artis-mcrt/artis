@@ -227,6 +227,7 @@ void update_pellet(Packet& pkt, const int nts, const double t2) {
       }
       pkt.em_time = static_cast<float>(pkt.prop_time);
       pkt.absorptiontype = ABSTYPE_PELLET_PARTICLEDECAY;
+      sample_interaction(pkt, INTERACTION_PELLET_PARTICLE_DECAY);
     } else {
       // decay to gamma-ray packet
       atomicadd(globals::timesteps[nts].gamma_emission, pkt.e_cmf);

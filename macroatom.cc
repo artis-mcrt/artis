@@ -241,6 +241,7 @@ void do_macroatom_raddeexcitation(Packet& pkt, const int ionuniquelevelindexstar
   pkt.next_trans = lineindex + 1;
   pkt.emissiontype = lineindex;
   pkt.nscatterings = 0;
+  sample_interaction(pkt, INTERACTION_MACROATOM_BOUNDBOUND_EMISSION);
 }
 
 // get the level index of the lower ionisation stage after a randomly selected radiative recombination and update
@@ -290,6 +291,7 @@ void do_macroatom_raddeexcitation(Packet& pkt, const int ionuniquelevelindexstar
   pkt.next_trans = -1;  // continuum transition, no restrictions for further line interactions
   pkt.emissiontype = get_emtype_continuum(lowerionuniquelevelindexstart + lowerionlevel, selected_phixstargetindex);
   pkt.nscatterings = 0;
+  sample_interaction(pkt, INTERACTION_MACROATOM_BOUNDFREE_EMISSION);
   return lowerionlevel;
 }
 

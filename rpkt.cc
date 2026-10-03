@@ -385,6 +385,7 @@ void rpkt_event_continuum(Packet& pkt, ContinuumOpacity& chi_rpkt_cont) {
     // Electron scattering does not modify the last emission flag but it updates the last emission position
     pkt.em_pos = pkt.pos;
     pkt.em_time = static_cast<float>(pkt.prop_time);
+    sample_interaction(pkt, INTERACTION_ELECTRON_SCATTERING);
 
   } else if (chi_rnd < chi_escatter + chi_ff) {
     // ff: transform to k-pkt
@@ -567,6 +568,7 @@ auto do_rpkt_step(Packet& pkt, const double t2, ContinuumOpacity& chi_rpkt_cont)
 
       emit_rpkt(pkt);
       // Electron scattering does not modify the last emission flag but it updates the last emission position
+      sample_interaction(pkt, INTERACTION_THICKCELL_GREY_SCATTERING);
     } else if (!event_is_boundbound) {
       rpkt_event_continuum(pkt, chi_rpkt_cont);
     } else if constexpr (!RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.has_value()) {
@@ -606,6 +608,7 @@ auto do_rpkt_step(Packet& pkt, const double t2, ContinuumOpacity& chi_rpkt_cont)
         stats::increment(stats::Counter::RESONANCESCATTERINGS);
       }
       emit_rpkt(pkt);
+      sample_interaction(pkt, thermalise ? INTERACTION_BOUNDBOUND_THERMALISATION : INTERACTION_BOUNDBOUND_SCATTERING);
 
       // the thermal re-emission and the line scattering are isotropic in the comoving frame, not a dipole
       if constexpr (VPKT_ON) {

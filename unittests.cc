@@ -51,6 +51,7 @@
 #include "nltepop.h"
 #include "nonthermal.h"
 #include "outputfilestream.h"
+#include "packet.h"
 #include "radfield.h"
 #include "random.h"
 #include "rpkt.h"
@@ -360,6 +361,52 @@ void test_random_sampling() {
   check(unit_vectors, "get_rand_isotropic_unitvec returns unit vectors");
   check(std::abs(sum_mu / nsamples) < (6. / std::sqrt(3. * nsamples)), "isotropic <cos(theta)> is zero");
   check(std::abs((sum_musquared / nsamples) - (1. / 3.)) < 1e-3, "isotropic <cos^2(theta)> is 1/3");
+}
+
+void test_reservoir_sample_slot() {
+  std::println("get_reservoir_sample_slot...");
+  constexpr int nslots = 3;
+  constexpr int nitems = 20;
+  constexpr int nranks = 4;
+  constexpr int npackets_per_rank = 50000;
+
+  bool first_items_fill_slots_in_order = true;
+  bool all_slots_in_range = true;
+  // the number of sequences that keep each item in the final sample
+  std::array<int, nitems> sample_counts_of_item{};
+  for (int rank = 0; rank < nranks; rank++) {
+    for (int pktnumber = 0; pktnumber < npackets_per_rank; pktnumber++) {
+      // the same key as sample_interaction()
+      const std::uint64_t random_key =
+          (static_cast<std::uint64_t>(rank) << 32U) | static_cast<std::uint32_t>(pktnumber);
+      std::array<int, nslots> item_in_slot{};
+      for (int item = 0; item < nitems; item++) {
+        const int slot = get_reservoir_sample_slot(item + 1, nslots, random_key);
+        if (item < nslots) {
+          first_items_fill_slots_in_order = first_items_fill_slots_in_order && (slot == item);
+        }
+        if (slot >= 0 && slot < nslots) {
+          item_in_slot[slot] = item;
+        } else if (slot != -1) {
+          all_slots_in_range = false;
+        }
+      }
+      for (const int item : item_in_slot) {
+        sample_counts_of_item[item]++;
+      }
+    }
+  }
+  check(first_items_fill_slots_in_order, "get_reservoir_sample_slot puts the first items into the slots in order");
+  check(all_slots_in_range, "get_reservoir_sample_slot gives a slot in [0, nslots) or -1");
+
+  // each item is in the final sample with the probability nslots / nitems
+  constexpr double probability_in_sample = static_cast<double>(nslots) / nitems;
+  constexpr double nsequences = static_cast<double>(nranks) * npackets_per_rank;
+  constexpr double expected_count = nsequences * probability_in_sample;
+  const double sixsigma = 6. * std::sqrt(nsequences * probability_in_sample * (1. - probability_in_sample));
+  const auto [mincount, maxcount] = std::ranges::minmax(sample_counts_of_item);
+  check(std::abs(mincount - expected_count) < sixsigma && std::abs(maxcount - expected_count) < sixsigma,
+        "get_reservoir_sample_slot keeps each item with equal probability to within 6 sigma");
 }
 
 void test_planck() {
@@ -1415,6 +1462,7 @@ auto main() -> int {
   test_frame_transform();
   test_meridian();
   test_random_sampling();
+  test_reservoir_sample_slot();
   test_planck();
   test_bateman();
   test_compton();

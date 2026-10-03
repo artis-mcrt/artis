@@ -36,7 +36,7 @@
 namespace {
 
 // Build the whitespace-separated column header line written at the top of the packets*.out text file.
-constexpr auto get_packets_text_header() -> std::string {
+auto get_packets_text_header() -> std::string {
   std::string header;
   header =
       "#number where type_id posx posy posz dirx diry dirz tdecay e_cmf e_rf nu_cmf nu_rf escape_type_id escape_time "
@@ -47,6 +47,15 @@ constexpr auto get_packets_text_header() -> std::string {
   header +=
       " originated_from_particlenotgamma trueem_posx trueem_posy trueem_posz trueem_time pellet_nucindex "
       "pellet_decaytype";
+  if constexpr (SAMPLED_INTERACTIONS_PER_PACKET > 0) {
+    header += " ninteractions";
+    for (int slot = 0; slot < SAMPLED_INTERACTIONS_PER_PACKET; slot++) {
+      header += std::format(
+          " sampled{0}_interactiontype sampled{0}_emissiontype sampled{0}_absorption_type sampled{0}_absorption_freq "
+          "sampled{0}_posx sampled{0}_posy sampled{0}_posz sampled{0}_time",
+          slot);
+    }
+  }
   return header;
 }
 
@@ -186,8 +195,9 @@ auto read_text_packets(const std::string& filename) -> std::vector<Packet> {
     };
 
     // Take the three columns of a position of the last emission. A packet that did not yet emit carries NAN
-    // in em_pos, and a packet that returned to the thermal pool carries NAN in trueem_pos. These are the only
-    // columns of the file that hold the "nan" spelling. An inf stays an error here, as in every other column.
+    // in em_pos, and a packet that returned to the thermal pool carries NAN in trueem_pos. An empty slot of the
+    // sampled interactions also carries NAN. These are the only columns of the file that hold the "nan" spelling.
+    // An inf stays an error here, as in every other column.
     const auto parse_emission_position = [&remainder, &rowisvalid](Vec3d& position) {
       for (auto& component : position) {
         rowisvalid = rowisvalid && parse_next_token<true>(remainder, component);
@@ -240,6 +250,20 @@ auto read_text_packets(const std::string& filename) -> std::vector<Packet> {
     parse_column(pkt.pellet_nucindex);
     parse_column(pkt.pellet_decaytype);
 
+    if constexpr (SAMPLED_INTERACTIONS_PER_PACKET > 0) {
+      parse_column(pkt.ninteractions);
+      for (auto& sampled_interaction : pkt.sampled_interactions) {
+        int interactiontype_in = 0;
+        parse_column(interactiontype_in);
+        sampled_interaction.type = static_cast<enum interaction_type>(interactiontype_in);
+        parse_column(sampled_interaction.emissiontype);
+        parse_column(sampled_interaction.absorptiontype);
+        parse_column(sampled_interaction.absorptionfreq);
+        parse_emission_position(sampled_interaction.pos);
+        parse_column(sampled_interaction.time);
+      }
+    }
+
     // A row must hold every column of the header and no more. A short or corrupt row, e.g. from a partial
     // write on a full file system, otherwise leaves the remaining fields at their defaults. That would drop
     // the packet from the spectra (escape_type stays 0) with no diagnostic.
@@ -280,6 +304,16 @@ void write_text_packets(const std::string& filename, const std::span<const Packe
     std::print(packets_file, " {}", static_cast<int>(pkt.originated_from_particlenotgamma));
     std::print(packets_file, " {:g} {:g} {:g}", pkt.trueem_pos[0], pkt.trueem_pos[1], pkt.trueem_pos[2]);
     std::print(packets_file, " {:g} {} {}", pkt.trueem_time, pkt.pellet_nucindex, pkt.pellet_decaytype);
+    if constexpr (SAMPLED_INTERACTIONS_PER_PACKET > 0) {
+      std::print(packets_file, " {}", pkt.ninteractions);
+      for (const auto& sampled_interaction : pkt.sampled_interactions) {
+        std::print(packets_file, " {} {} {} {:g}", std::to_underlying(sampled_interaction.type),
+                   sampled_interaction.emissiontype, sampled_interaction.absorptiontype,
+                   sampled_interaction.absorptionfreq);
+        std::print(packets_file, " {:g} {:g} {:g} {:g}", sampled_interaction.pos[0], sampled_interaction.pos[1],
+                   sampled_interaction.pos[2], sampled_interaction.time);
+      }
+    }
     std::println(packets_file, "");
   }
   packets_file.close();
