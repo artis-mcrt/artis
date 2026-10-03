@@ -391,10 +391,12 @@ void rpkt_event_continuum(Packet& pkt, ContinuumOpacity& chi_rpkt_cont) {
     stats::increment(stats::Counter::K_STAT_FROM_FF);
     pkt.type = TYPE_KPKT;
     pkt.absorptiontype = ABSTYPE_FREEFREE;
+    pkt.absorptionfreq = pkt.nu_rf;
   } else if (chi_rnd < chi_escatter + chi_ff + chi_bf) {
     // bf: transform to k-pkt or activate macroatom corresponding to probabilities
 
     pkt.absorptiontype = ABSTYPE_BOUNDFREE;
+    pkt.absorptionfreq = pkt.nu_rf;
 
     // Determine in which continuum the bf-absorption occurs: the first continuum for which the
     // cumulative opacity exceeds a random fraction of the total (or the last one if none does).
