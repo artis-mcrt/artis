@@ -298,8 +298,7 @@ void write_to_estimators_file(std::ostream& estimators_file, const int nonemptym
   }
 }
 
-void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
-                       HeatingCoolingRates& heatingcoolingrates) {
+void solve_Te_nltepops(const int nonemptymgi, const int nts, HeatingCoolingRates& heatingcoolingrates) {
   const int mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
   // bfheating coefficients are needed for the T_e solver, but they only depend on the radiation field, which is fixed
   // during the iterations below
@@ -871,7 +870,7 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
       // full-spectrum and binned J and nuJ estimators
       radfield::fit_parameters(nonemptymgi, nts);
 
-      solve_Te_nltepops(nonemptymgi, nts, nts_prev, heatingcoolingrates);
+      solve_Te_nltepops(nonemptymgi, nts, heatingcoolingrates);
     }
     const auto temperature_corrections_duration =
         std::chrono::duration<double>(std::chrono::steady_clock::now() - sys_time_start_temperature_corrections)
