@@ -22,12 +22,9 @@ export UV_TOOL_DIR="$projectfolder/.local/share/uv/tools"
 export UV_TOOL_BIN_DIR="$projectfolder/.local/bin"
 export PATH="$PIXI_BIN_DIR:$UV_TOOL_BIN_DIR:$PATH"
 
-# See artis-leonardo-slurmjob.sh for the reason of the module and of the two exports.
+# See artis-leonardo-slurmjob.sh for the reason of the module.
 module load openmpi/4.1.6--gcc--12.2.0-cuda-12.2
 module list
-
-export OMPI_CXX=g++
-export LDFLAGS="-Wl,-rpath-link,/usr/lib64"
 
 cd "${SLURM_SUBMIT_DIR:?}" || exit 1
 
