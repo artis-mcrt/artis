@@ -604,6 +604,8 @@ void read_collion_data() {
 
     colliondata.push_back(collionrow);
   }
+  // A row count in the header that is smaller than the number of rows would skip the last rows without an error
+  assert_always(!get_noncommentline(cifile, line));
   printlnlog("Stored {} of {} input shell cross sections", colliondata.size(), colliondatacount);
   for (int element = 0; element < get_nelements(); element++) {
     const int Z = get_atomicnumber(element);
