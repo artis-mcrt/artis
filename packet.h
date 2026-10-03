@@ -126,8 +126,8 @@ struct Packet {
   double e_rf{0.};  // The energy the packet carries in the rest frame.
   int next_trans{-1};  // This keeps track of the next possible line interaction of a rpkt by storing
                        // its linelist index (to overcome numerical problems in propagating the rpkts).
-  // The number of electron scatterings of an r-packet since its last emission. A scattering in a thick cell and,
-  // with RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY, a line scattering also add one.
+  // The number of electron scatterings of an r-packet since its last emission. A grey scattering in a thick cell
+  // also adds one, because the grey opacity stands for the electron scattering there.
   int nscatterings{0};
 
   // The process of the MOST RECENT emission, one of the two keys exspec decomposes the spectra by (see
