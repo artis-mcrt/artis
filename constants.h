@@ -65,7 +65,8 @@ constexpr double H_ionpot = 13.5979996 * EV;
 // The constant A of the Lotz formula sigma = A q ln(E/I) / (E I) for the electron-impact ionisation cross section of
 // one shell, in the form with one parameter. Lotz (1967), Z. Phys., 206, 205-211, doi:10.1007/BF01325928.
 // Lotz gives this form for highly charged ions. A neutral atom or an ion of low charge needs three parameters for
-// each shell, so the value is less accurate for such an ion.
+// each shell, so the value is less accurate for such an ion. Axelrod (1980), PhD thesis, University of California,
+// Santa Cruz, used A = 1.33e-14 [cm^2 eV^2], which he normalised at 10 keV.
 constexpr double LOTZ_IONISATION_CONSTANT = 4.5e-14 * EV * EV;  // [cm^2 erg^2]
 
 // atomic units
