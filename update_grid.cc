@@ -379,9 +379,9 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
     const double prev_T_e = grid::Te_allcells[nonemptymgi];
     const auto sys_time_start_Te = std::chrono::steady_clock::now();
 
-    // Find T_e as solution for thermal balance. The adiabatic cooling uses the mid time of the previous timestep.
+    // Find T_e as solution for thermal balance. The adiabatic cooling uses the midpoint of the previous timestep.
     // estimator_normfactor in update_grid_cell() uses the volume at the same time. The densities of the cell use the
-    // mid time of the current timestep. A change of this time changes the results.
+    // midpoint of the current timestep. A change of this time changes the results.
     call_T_e_finder(nonemptymgi, globals::timesteps[nts_prev].mid, heatingcoolingrates, bfheatingcoeffs);
 
     const auto duration_solve_T_e =
@@ -874,8 +874,8 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
       // The renormalisation factors divide the Monte Carlo estimators by the analytic rates of the W and T_R that the
       // cell holds before fit_parameters(). Usually those values are the fit to the estimators of the timestep before
       // the previous timestep. With LTEPOP_EXCITATION_USE_TJ, the ion balance of an element without NLTE levels uses
-      // the Gamma that the function below stores with the same W and T_R. The other rates, e.g. those of the next
-      // propagation, multiply the factors by the rates of the new fit. A change of this order changes the results.
+      // the Gamma that the function below stores with the same W and T_R. The other rates, for example those of the
+      // next propagation, multiply the factors by the rates of the new fit. A change of this order changes the results.
       update_gamma_corrphotoionrenorm_bfheating_estimators(nonemptymgi, estimator_normfactor);
 
       // Get radiation field parameters (T_J, T_R, W, and bins if enabled) out of the
