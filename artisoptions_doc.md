@@ -320,8 +320,8 @@ constexpr bool KEEP_ESCAPED_GAMMAS;
 //   ApJ, 829, 110, doi:10.3847/0004-637X/829/2/110; Wollaeger, Korobkin, Fontes, Rosswog, Even & Fryer 2018,
 //   MNRAS, 478, 3298-3334, doi:10.1093/mnras/sty1018).
 //
-// The presets write "constexpr auto" for this option and for GAMMA_THERMALISATION_SCHEME, so that each line
-// stays within 120 columns. Keep that form, because the sedopt patterns of
+// The presets write "constexpr auto" for this option and for GAMMA_THERMALISATION_SCHEME. With the full type, the
+// line of this option is longer than 120 columns. Keep that form, because the sedopt patterns of
 // tests/setup_kilonova_2d_barnesthermalisation.sh match it.
 constexpr ParticleThermalisationScheme PARTICLE_THERMALISATION_SCHEME;
 
