@@ -695,7 +695,9 @@ void add_standard_nuclides() {
   nuclides.back().branchprobs[DECAYTYPE_ELECTRONCAPTURE] = 1. - 0.436;
   const double ni57_q_ec = 3.261697 * MEV;
   nuclides.back().endecay_q[DECAYTYPE_ELECTRONCAPTURE] = ni57_q_ec;
-  nuclides.back().endecay_q[DECAYTYPE_BETAPLUS] = ni57_q_ec - (2. * ME * CLIGHTSQUARED);
+  // the beta-plus decay releases Q_EC in total: the kinetic energy Q_EC - 2 m_e c^2 and the annihilation
+  // energy 2 m_e c^2 of the positron
+  nuclides.back().endecay_q[DECAYTYPE_BETAPLUS] = ni57_q_ec;
 
   // Ni56
   nuclides.push_back({.z = 28, .a = 56, .meanlife = 8.80 * DAY});
@@ -709,7 +711,9 @@ void add_standard_nuclides() {
   nuclides.back().branchprobs[DECAYTYPE_ELECTRONCAPTURE] = 1 - 0.19;
   const double co56_q_ec = 4.566645 * MEV;
   nuclides.back().endecay_q[DECAYTYPE_ELECTRONCAPTURE] = co56_q_ec;
-  nuclides.back().endecay_q[DECAYTYPE_BETAPLUS] = co56_q_ec - (2. * ME * CLIGHTSQUARED);
+  // the beta-plus decay releases Q_EC in total: the kinetic energy Q_EC - 2 m_e c^2 and the annihilation
+  // energy 2 m_e c^2 of the positron
+  nuclides.back().endecay_q[DECAYTYPE_BETAPLUS] = co56_q_ec;
 
   // Cr48
   nuclides.push_back({.z = 24, .a = 48, .meanlife = 1.29602 * DAY});
@@ -723,7 +727,9 @@ void add_standard_nuclides() {
   nuclides.back().endecay_positron = 0.290 * MEV;
   const double v48_q_ec = 4.014947 * MEV;
   nuclides.back().endecay_q[DECAYTYPE_ELECTRONCAPTURE] = v48_q_ec;
-  nuclides.back().endecay_q[DECAYTYPE_BETAPLUS] = v48_q_ec - (2. * ME * CLIGHTSQUARED);
+  // the beta-plus decay releases Q_EC in total: the kinetic energy Q_EC - 2 m_e c^2 and the annihilation
+  // energy 2 m_e c^2 of the positron
+  nuclides.back().endecay_q[DECAYTYPE_BETAPLUS] = v48_q_ec;
 
   // Co57
   nuclides.push_back({.z = 27, .a = 57, .meanlife = 392.03 * DAY});
