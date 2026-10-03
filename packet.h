@@ -142,8 +142,8 @@ struct Packet {
   float em_time{-1.};  // [s]
   int absorptiontype{0};  // records linelistindex of the last absorption
                           // or a negative absorption_type enum value
-  // nu_rf of the packet at its last bound-bound absorption. A bound-free or a free-free absorption sets
-  // absorptiontype but does not change this value.
+  // nu_rf of the r-packet at its last absorption. A gamma-ray absorption and a pellet decay come before the first
+  // r-packet absorption, so this value is 0 for them.
   double absorptionfreq{};
   double stokes_q{0.};  // normalised Stokes q = Q/I
   double stokes_u{0.};  // normalised Stokes u = U/I
