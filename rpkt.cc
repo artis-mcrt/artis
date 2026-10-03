@@ -44,9 +44,9 @@ static_assert(!RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.has_value() ||
 
 static_assert(!RPKT_USE_EXPANSION_OPACITIES || !VPKT_ON, "VPKT cannot be used with r-packet expansion opacities");
 
-// a line-by-line absorption has the weight 1 - exp(-tau), so a different weight must also apply to the absorption
-static_assert(EXPANSION_OPACITY_METHOD == ExpansionOpacityMethod::EXPANSION || RPKT_USE_EXPANSION_OPACITIES,
-              "LINEBINNEDCAPPED and LINEBINNED need RPKT_USE_EXPANSION_OPACITIES");
+static_assert(EXPANSION_OPACITY_METHOD == ExpansionOpacityMethod::EXPANSION || expopac_linebinned_weights_permitted,
+              "LINEBINNEDCAPPED and LINEBINNED with a nonzero RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY need "
+              "RPKT_USE_EXPANSION_OPACITIES");
 
 // the bin walk of RPKT_USE_EXPANSION_OPACITIES passes lines without the line estimators
 static_assert(!DETAILED_LINE_ESTIMATORS_ON || !RPKT_USE_EXPANSION_OPACITIES,
@@ -391,10 +391,12 @@ void rpkt_event_continuum(Packet& pkt, ContinuumOpacity& chi_rpkt_cont) {
     stats::increment(stats::Counter::K_STAT_FROM_FF);
     pkt.type = TYPE_KPKT;
     pkt.absorptiontype = ABSTYPE_FREEFREE;
+    pkt.absorptionfreq = pkt.nu_rf;
   } else if (chi_rnd < chi_escatter + chi_ff + chi_bf) {
     // bf: transform to k-pkt or activate macroatom corresponding to probabilities
 
     pkt.absorptiontype = ABSTYPE_BOUNDFREE;
+    pkt.absorptionfreq = pkt.nu_rf;
 
     // Determine in which continuum the bf-absorption occurs: the first continuum for which the
     // cumulative opacity exceeds a random fraction of the total (or the last one if none does).
@@ -599,9 +601,9 @@ auto do_rpkt_step(Packet& pkt, const double t2, ContinuumOpacity& chi_rpkt_cont)
         // re-emit rather than scatter, so that this event is not counted as an electron scattering
         pkt.nscatterings = 0;
       } else {
-        // pure scattering, so the packet keeps its comoving frequency in a new direction
-        pkt.nscatterings++;
-        stats::increment(stats::Counter::ELECTRON_SCATTERINGS);
+        // pure line scattering, so the packet keeps its comoving frequency in a new direction. nscatterings stays
+        // unchanged, because this event is not an electron scattering.
+        stats::increment(stats::Counter::RESONANCESCATTERINGS);
       }
       emit_rpkt(pkt);
 

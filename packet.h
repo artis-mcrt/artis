@@ -126,8 +126,9 @@ struct Packet {
   double e_rf{0.};  // The energy the packet carries in the rest frame.
   int next_trans{-1};  // This keeps track of the next possible line interaction of a rpkt by storing
                        // its linelist index (to overcome numerical problems in propagating the rpkts).
-  // The number of electron scatterings of an r-packet since its last emission. A scattering in a thick cell and,
-  // with RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY, a line scattering also add one.
+  // The number of electron scatterings of an r-packet since its last emission. A grey event in a thick cell also
+  // adds one, because the code treats it as a coherent scattering. The grey opacity (see RPKT_GREY_TYPE) includes
+  // the line opacity, so a grey event can also be a line interaction.
   int nscatterings{0};
 
   // The process of the MOST RECENT emission, one of the two keys exspec decomposes the spectra by (see
@@ -141,8 +142,8 @@ struct Packet {
   float em_time{-1.};  // [s]
   int absorptiontype{0};  // records linelistindex of the last absorption
                           // or a negative absorption_type enum value
-  // nu_rf of the packet at its last bound-bound absorption. A bound-free or a free-free absorption sets
-  // absorptiontype but does not change this value.
+  // nu_rf of the r-packet at its last absorption. A gamma-ray absorption and a pellet decay come before the first
+  // r-packet absorption, so this value is 0 for them.
   double absorptionfreq{};
   double stokes_q{0.};  // normalised Stokes q = Q/I
   double stokes_u{0.};  // normalised Stokes u = U/I

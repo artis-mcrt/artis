@@ -133,7 +133,7 @@ constexpr bool PHIXS_CLASSIC_NO_INTERPOLATION;
 
 // Fit a dilute blackbody to each frequency bin of the radiation field, in addition to the fit of the whole
 // spectrum. The fit of the whole spectrum stays the fallback for a bin without a fit. Set USE_LUT_PHOTOION to
-// false with this option, because the tables assume a Planck function. Nothing checks this.
+// false with this option, because the tables assume a Planck function. A static_assert checks this.
 constexpr bool MULTIBIN_RADFIELD_MODEL_ON;
 
 // The number of bins, including the T_e superbin
@@ -259,8 +259,8 @@ constexpr std::optional<int> NLTE_TIME_DEPENDENT_FIRST_TIMESTEP;
 // NT_SPENCERFANO: the Spencer-Fano solution. It also gives the non-thermal excitation rates for the NLTE
 // population solver, the macroatom, and the NTLEPTON packets.
 // NT_AXELRODAPPROX: the work function approximation of Axelrod (1980, PhD thesis, University of California,
-// Santa Cruz). The energy fractions are then 0.03 for the ionisation and 0.97 for the heating, with no
-// excitation rates.
+// Santa Cruz). The ion balance gets the ionisation rates of that approximation, with no excitation rates. The
+// lepton packets deposit all of their energy as heat, and the thermal balance counts all of it as heat.
 constexpr NonThermalScheme NT_SCHEME;
 
 // The energy grid of the Spencer-Fano solution is not an option of artisoptions.h. SFPTS (the number of energy
@@ -355,7 +355,9 @@ constexpr bool BFCOOLING_USELEVELPOPNOTIONPOP;
 // thick. Not compatible with VPKT_ON.
 constexpr bool RPKT_USE_EXPANSION_OPACITIES;
 
-// Use expansion opacities instead of line-by-line opacities for the virtual packets.
+// Use expansion opacities instead of line-by-line opacities for the virtual packets. Use the LINEBINNED weight of
+// EXPANSION_OPACITY_METHOD with this option. With a different weight, sn3d writes a warning to the log. LINEBINNED
+// needs an RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY of zero or no value (see EXPANSION_OPACITY_METHOD).
 constexpr bool VPKT_USE_EXPANSION_OPACITIES;
 
 // The line weight in the expansion opacity of each wavelength bin of RPKT_USE_EXPANSION_OPACITIES,
@@ -365,8 +367,11 @@ constexpr bool VPKT_USE_EXPANSION_OPACITIES;
 // - LINEBINNEDCAPPED: min(1, tau), the line-binned opacity with a limit of 1 for each line.
 // - LINEBINNED: tau, the line-binned opacity (Fontes, Fryer, Hungerford, Wollaeger & Korobkin 2020, MNRAS, 493,
 //   4143-4171, doi:10.1093/mnras/staa485).
-// LINEBINNEDCAPPED and LINEBINNED need RPKT_USE_EXPANSION_OPACITIES. A line-by-line absorption has the weight
-// 1 - exp(-tau), so the emission and the virtual packets must then use EXPANSION.
+// With a nonzero RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY, LINEBINNEDCAPPED and LINEBINNED need
+// RPKT_USE_EXPANSION_OPACITIES. A line-by-line r-packet absorbs the fraction 1 - exp(-tau) in each line, so the
+// thermal emission must then use EXPANSION. For the virtual packets, LINEBINNED gives nearly the line-by-line optical
+// depth of a bin that the packet fully crosses. EXPANSION and LINEBINNEDCAPPED give a smaller optical depth for a
+// line with tau > 1.
 constexpr ExpansionOpacityMethod EXPANSION_OPACITY_METHOD;
 
 // Replace the macroatom with a thermalisation probability P for each bound-bound absorption, and a scattering
