@@ -814,9 +814,10 @@ constexpr auto xs_ionisation_lotz(const double en_erg, const ShellParams& collio
       (electronsinshell / ionpot *
        (std::log(betasq * ME * pow2(CLIGHT) / 2.0 / ionpot) - std::log(1 - betasq) - betasq));
   if (part_sigma_shell > 0.) {
-    // The value of Lotz (see the reference above), A = 4.5e-14 [cm^2 eV^2]. A80 normalised A = 1.33e-14 [cm^2 eV^2] at
-    // 10 keV (see get_oneoverw_approx_axelrod()), but the energies near the threshold set the ionisation and heating
-    // fractions.
+    // A = 4.5e-14 [cm^2 eV^2] is the value of Lotz (see the reference above) for the form with one parameter. Lotz
+    // gives that form for highly charged ions. For a neutral atom or an ion of low charge, Lotz uses three parameters
+    // for each shell, and this code has no values for them. The cross section of such an ion is less accurate.
+    // A80 normalised A = 1.33e-14 [cm^2 eV^2] at 10 keV (see get_oneoverw_approx_axelrod()).
     constexpr double Aconst = 4.5e-14 * EV * EV;
     const double sigma = 2 * Aconst / ME / (betasq * pow2(CLIGHT)) * part_sigma_shell;
     assert_always(sigma >= 0);
@@ -1202,9 +1203,9 @@ auto get_nt_frac_excitation(const int nonemptymgi) -> float {
 // alternative to the Spencer-Fano solve.
 //
 // WARNING: this disagrees with the Spencer-Fano eff_ionpot by more than the approximation should explain. One
-// candidate is this function's own Aconst: it takes Axelrod's 10 keV-fitted A, where the value of Lotz, 3.4x
-// larger, suits the low energies that set the heating and ionisation fractions. xs_ionisation_lotz() uses the
-// value of Lotz. Treat the ions that use this estimate as uncertain.
+// candidate is this function's own Aconst: it takes Axelrod's 10 keV-fitted A. The value of Lotz for the form with
+// one parameter is 3.4x larger, and xs_ionisation_lotz() uses it. Treat the ions that use this estimate as
+// uncertain.
 auto get_oneoverw_approx_axelrod(const int element, const int ion, const int nonemptymgi) -> double {
   // Work in terms of 1/W since this is actually what we want. It is given by sigma/(Latom + Lelec).
   // We are going to start by taking all the high energy limits and ignoring Lelec, so that the
@@ -1225,8 +1226,8 @@ auto get_oneoverw_approx_axelrod(const int element, const int ion, const int non
   // A80 normalised the constant A = 1.33e-14 [cm^2 eV^2] at 10 keV to the mean of two cross section tabulations,
   // one of them McGuire (1977), Phys. Rev. A, 16, 62-72, doi:10.1103/PhysRevA.16.62. This reduces the accuracy of
   // the approximation at lower energies, which set the heating and ionisation fractions. The value of Lotz
-  // (1967), Z. Phys., 206, 205-211, doi:10.1007/BF01325928, A = 4.5e-14 [cm^2 eV^2], is a factor of 3.4 larger
-  // and suits those energies better.
+  // (1967), Z. Phys., 206, 205-211, doi:10.1007/BF01325928, for the form with one parameter is A = 4.5e-14
+  // [cm^2 eV^2], a factor of 3.4 larger.
   constexpr double Aconst = 1.33e-14 * EV * EV;
 
   return Aconst * binding / Zbar / (2 * PI * pow4(QE));
