@@ -133,7 +133,7 @@ constexpr bool USE_CALCULATED_MEANATOMICWEIGHT = false;
 
 constexpr bool KEEP_ESCAPED_GAMMAS = false;
 
-constexpr int SAMPLED_RPKT_EMISSIONS_PER_PACKET = 0;
+constexpr bool SAMPLE_RPKT_EMISSION = false;
 
 constexpr TimeStepSizeMethod TIMESTEP_SIZE_METHOD = TimeStepSizeMethod::LOGARITHMIC;
 

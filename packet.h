@@ -113,10 +113,10 @@ struct MacroAtomState {
   int activatingline{-99};
 };
 
-// The process of a sampled r-packet emission (see Packet::sampled_rpkt_emissions). The values are written to
-// packets*.out as sampled<slot>_rpkt_emission_type and parsed by artistools, so they must not be renumbered.
+// The process of a sampled r-packet emission (see Packet::sampled_rpkt_emission). The values are written to
+// packets*.out as sampled_rpkt_emission_type and parsed by artistools, so they must not be renumbered.
 enum rpkt_emission_type : int {
-  RPKT_EMISSION_NONE = 0,  // an empty slot: the packet had fewer r-packet emissions than the slots of the sample
+  RPKT_EMISSION_NONE = 0,  // no sample: the packet had no r-packet emission
   RPKT_EMISSION_KPKT = 1,  // a k-packet emits an r-packet (free-free, free-bound, or blackbody)
   RPKT_EMISSION_MACROATOM_BOUNDBOUND = 2,  // a radiative bound-bound deactivation of a macro-atom
   RPKT_EMISSION_MACROATOM_BOUNDFREE = 3,  // a radiative recombination of a macro-atom
@@ -127,8 +127,6 @@ enum rpkt_emission_type : int {
   RPKT_EMISSION_BOUNDBOUND_SCATTERING = 6,
   RPKT_EMISSION_BOUNDBOUND_THERMALISATION = 7,
 };
-
-static_assert(SAMPLED_RPKT_EMISSIONS_PER_PACKET >= 0);
 
 // The state of a packet directly after one r-packet emission.
 struct SampledRpktEmission {
@@ -198,15 +196,15 @@ struct Packet {
   bool originated_from_particlenotgamma{false};  // first packet type after pellet decay
   int pellet_decaytype{-1};  // decay::DecayType value of the pellet decay, or -1 for the initial-energy channel
   int pellet_nucindex{-1};  // nuclide index of the decaying species
-  // The number of interactions of the packet since packet_init(). An interaction is each emission of the packet as
-  // an r-packet, and this includes each scattering of an r-packet. The events of a gamma packet and the pellet decays
-  // do not add to the count. The count stays 0 if SAMPLED_RPKT_EMISSIONS_PER_PACKET is 0.
-  int ninteractions{0};
-  // A uniform random sample without replacement of all the r-packet emissions of the packet. Each r-packet emission
-  // has the same probability min(1, SAMPLED_RPKT_EMISSIONS_PER_PACKET / ninteractions) to be in the sample. A slot
-  // of the sample thus represents ninteractions / min(ninteractions, SAMPLED_RPKT_EMISSIONS_PER_PACKET) r-packet
-  // emissions of the packet. The slots have no time order.
-  std::array<SampledRpktEmission, SAMPLED_RPKT_EMISSIONS_PER_PACKET> sampled_rpkt_emissions{};
+  // The number of r-packet emissions of the packet since packet_init(). An r-packet emission is each emission of the
+  // packet as an r-packet, and this includes each scattering of an r-packet. The events of a gamma packet and the
+  // pellet decays do not add to the count. The count stays 0 if SAMPLE_RPKT_EMISSION is false.
+  int nrpkt_emissions{0};
+  // One r-packet emission of the packet, sampled with equal probability from all of its r-packet emissions. Each
+  // r-packet emission is the sample with the probability 1 / nrpkt_emissions, so the sample represents
+  // nrpkt_emissions r-packet emissions. The array has one element if SAMPLE_RPKT_EMISSION is true, and no element
+  // otherwise, so that the sample needs no memory without the option.
+  std::array<SampledRpktEmission, SAMPLE_RPKT_EMISSION ? 1 : 0> sampled_rpkt_emission{};
 
   auto operator<=>(const Packet& rhs) const = default;
 };
@@ -226,10 +224,10 @@ inline auto get_rngstate() -> rngstate_type& {
 inline auto get_rngstate([[maybe_unused]] const Packet& packet) -> rngstate_type& { return get_rngstate(); }
 #endif
 
-// Select the slot of a uniform sample of nslots items that item number nitems_seen (1-based) of a sequence goes into,
-// or give -1 if the sample does not keep the item. After the last item, each item of the sequence has the same
-// probability min(1, nslots / nitems_seen) to be in the sample. This is algorithm R of the reservoir sampling
-// (Vitter, J. S. 1985, ACM Transactions on Mathematical Software, 11, 37-57, doi:10.1145/3147.3165).
+// Decide if item number nitems_seen (1-based) of a sequence replaces the current sample of the sequence. The
+// probability of a replacement is 1 / nitems_seen. After the last item of a sequence of N items, each item is the
+// sample with the same probability 1 / N. This is the reservoir sampling with a reservoir of one item (Vitter, J. S.
+// 1985, ACM Transactions on Mathematical Software, 11, 37-57, doi:10.1145/3147.3165).
 //
 // The uniform random integer comes from a hash of random_key and nitems_seen, and not from the random generator of
 // the packets. The sample thus leaves the random sequence of the physics unchanged, and the sample of a packet is
@@ -238,10 +236,10 @@ inline auto get_rngstate([[maybe_unused]] const Packet& packet) -> rngstate_type
 // Applications, 453-472, doi:10.1145/2660193.2660195). The multiplication and the shift map the hash to the range
 // [0, nitems_seen) (Lemire, D. 2019, ACM Transactions on Modeling and Computer Simulation, 29, 3:1-3:12,
 // doi:10.1145/3230636). The bias of that map is less than nitems_seen / 2^32.
-[[nodiscard]] constexpr DEVICE_FUNC auto get_reservoir_sample_slot(const int nitems_seen, const int nslots,
-                                                                   const std::uint64_t random_key) -> int {
-  if (nitems_seen <= nslots) {
-    return nitems_seen - 1;
+[[nodiscard]] constexpr DEVICE_FUNC auto item_replaces_sample(const int nitems_seen, const std::uint64_t random_key)
+    -> bool {
+  if (nitems_seen <= 1) {
+    return true;
   }
   const auto splitmix64_finaliser = [](std::uint64_t state) {
     state += 0x9E3779B97F4A7C15ULL;
@@ -251,24 +249,23 @@ inline auto get_rngstate([[maybe_unused]] const Packet& packet) -> rngstate_type
   };
   const std::uint64_t hash =
       splitmix64_finaliser(random_key ^ splitmix64_finaliser(static_cast<std::uint64_t>(nitems_seen)));
-  const auto random_index = static_cast<int>(((hash >> 32U) * static_cast<std::uint64_t>(nitems_seen)) >> 32U);
-  return (random_index < nslots) ? random_index : -1;
+  const auto random_index = ((hash >> 32U) * static_cast<std::uint64_t>(nitems_seen)) >> 32U;
+  return random_index == 0;
 }
 
-// Count the current r-packet emission of the packet, and add it to Packet::sampled_rpkt_emissions with the
-// probability that keeps the sample uniform. Call this after the emission has set emissiontype, absorptiontype, and
+// Count the current r-packet emission of the packet, and make it Packet::sampled_rpkt_emission with the probability
+// that keeps the sample uniform. Call this after the emission has set emissiontype, absorptiontype, and
 // absorptionfreq.
 DEVICE_FUNC inline void sample_rpkt_emission(Packet& pkt, const enum rpkt_emission_type type) {
-  if constexpr (SAMPLED_RPKT_EMISSIONS_PER_PACKET > 0) {
+  if constexpr (SAMPLE_RPKT_EMISSION) {
     assert_testmodeonly(pkt.type == TYPE_RPKT);
-    assert_testmodeonly(pkt.ninteractions < std::numeric_limits<int>::max());
-    pkt.ninteractions++;
+    assert_testmodeonly(pkt.nrpkt_emissions < std::numeric_limits<int>::max());
+    pkt.nrpkt_emissions++;
     // Packet::number is unique only inside one rank, so the key also contains the rank
     const std::uint64_t random_key = (static_cast<std::uint64_t>(static_cast<std::uint32_t>(globals::my_rank)) << 32U) |
                                      static_cast<std::uint32_t>(pkt.number);
-    const int slot = get_reservoir_sample_slot(pkt.ninteractions, SAMPLED_RPKT_EMISSIONS_PER_PACKET, random_key);
-    if (slot >= 0) {
-      pkt.sampled_rpkt_emissions[slot] = SampledRpktEmission{
+    if (item_replaces_sample(pkt.nrpkt_emissions, random_key)) {
+      pkt.sampled_rpkt_emission[0] = SampledRpktEmission{
           .pos = pkt.pos,
           .absorptionfreq = pkt.absorptionfreq,
           .time = static_cast<float>(pkt.prop_time),

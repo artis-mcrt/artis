@@ -36,7 +36,7 @@
 namespace {
 
 // Build the whitespace-separated column header line written at the top of the packets*.out text file.
-auto get_packets_text_header() -> std::string {
+constexpr auto get_packets_text_header() -> std::string {
   std::string header;
   header =
       "#number where type_id posx posy posz dirx diry dirz tdecay e_cmf e_rf nu_cmf nu_rf escape_type_id escape_time "
@@ -47,15 +47,10 @@ auto get_packets_text_header() -> std::string {
   header +=
       " originated_from_particlenotgamma trueem_posx trueem_posy trueem_posz trueem_time pellet_nucindex "
       "pellet_decaytype";
-  if constexpr (SAMPLED_RPKT_EMISSIONS_PER_PACKET > 0) {
-    header += " ninteractions";
-    for (int slot = 0; slot < SAMPLED_RPKT_EMISSIONS_PER_PACKET; slot++) {
-      header += std::format(
-          " sampled{0}_rpkt_emission_type sampled{0}_emissiontype sampled{0}_absorption_type "
-          "sampled{0}_absorption_freq "
-          "sampled{0}_posx sampled{0}_posy sampled{0}_posz sampled{0}_time",
-          slot);
-    }
+  if constexpr (SAMPLE_RPKT_EMISSION) {
+    header +=
+        " nrpkt_emissions sampled_rpkt_emission_type sampled_emissiontype sampled_absorption_type "
+        "sampled_absorption_freq sampled_posx sampled_posy sampled_posz sampled_time";
   }
   return header;
 }
@@ -196,9 +191,9 @@ auto read_text_packets(const std::string& filename) -> std::vector<Packet> {
     };
 
     // Take the three columns of a position of the last emission. A packet that did not yet emit carries NAN
-    // in em_pos, and a packet that returned to the thermal pool carries NAN in trueem_pos. An empty slot of the
-    // sampled r-packet emissions also carries NAN. These are the only columns of the file that hold the "nan" spelling.
-    // An inf stays an error here, as in every other column.
+    // in em_pos, and a packet that returned to the thermal pool carries NAN in trueem_pos. A packet with no sampled
+    // r-packet emission carries NAN in sampled_posx, sampled_posy, and sampled_posz. These are the only columns of
+    // the file that hold the "nan" spelling. An inf stays an error here, as in every other column.
     const auto parse_emission_position = [&remainder, &rowisvalid](Vec3d& position) {
       for (auto& component : position) {
         rowisvalid = rowisvalid && parse_next_token<true>(remainder, component);
@@ -251,18 +246,17 @@ auto read_text_packets(const std::string& filename) -> std::vector<Packet> {
     parse_column(pkt.pellet_nucindex);
     parse_column(pkt.pellet_decaytype);
 
-    if constexpr (SAMPLED_RPKT_EMISSIONS_PER_PACKET > 0) {
-      parse_column(pkt.ninteractions);
-      for (auto& sampled_rpkt_emission : pkt.sampled_rpkt_emissions) {
-        int rpkt_emission_type_in = 0;
-        parse_column(rpkt_emission_type_in);
-        sampled_rpkt_emission.type = static_cast<enum rpkt_emission_type>(rpkt_emission_type_in);
-        parse_column(sampled_rpkt_emission.emissiontype);
-        parse_column(sampled_rpkt_emission.absorptiontype);
-        parse_column(sampled_rpkt_emission.absorptionfreq);
-        parse_emission_position(sampled_rpkt_emission.pos);
-        parse_column(sampled_rpkt_emission.time);
-      }
+    if constexpr (SAMPLE_RPKT_EMISSION) {
+      auto& sampled_rpkt_emission = pkt.sampled_rpkt_emission[0];
+      parse_column(pkt.nrpkt_emissions);
+      int rpkt_emission_type_in = 0;
+      parse_column(rpkt_emission_type_in);
+      sampled_rpkt_emission.type = static_cast<enum rpkt_emission_type>(rpkt_emission_type_in);
+      parse_column(sampled_rpkt_emission.emissiontype);
+      parse_column(sampled_rpkt_emission.absorptiontype);
+      parse_column(sampled_rpkt_emission.absorptionfreq);
+      parse_emission_position(sampled_rpkt_emission.pos);
+      parse_column(sampled_rpkt_emission.time);
     }
 
     // A row must hold every column of the header and no more. A short or corrupt row, e.g. from a partial
@@ -305,15 +299,13 @@ void write_text_packets(const std::string& filename, const std::span<const Packe
     std::print(packets_file, " {}", static_cast<int>(pkt.originated_from_particlenotgamma));
     std::print(packets_file, " {:g} {:g} {:g}", pkt.trueem_pos[0], pkt.trueem_pos[1], pkt.trueem_pos[2]);
     std::print(packets_file, " {:g} {} {}", pkt.trueem_time, pkt.pellet_nucindex, pkt.pellet_decaytype);
-    if constexpr (SAMPLED_RPKT_EMISSIONS_PER_PACKET > 0) {
-      std::print(packets_file, " {}", pkt.ninteractions);
-      for (const auto& sampled_rpkt_emission : pkt.sampled_rpkt_emissions) {
-        std::print(packets_file, " {} {} {} {:g}", std::to_underlying(sampled_rpkt_emission.type),
-                   sampled_rpkt_emission.emissiontype, sampled_rpkt_emission.absorptiontype,
-                   sampled_rpkt_emission.absorptionfreq);
-        std::print(packets_file, " {:g} {:g} {:g} {:g}", sampled_rpkt_emission.pos[0], sampled_rpkt_emission.pos[1],
-                   sampled_rpkt_emission.pos[2], sampled_rpkt_emission.time);
-      }
+    if constexpr (SAMPLE_RPKT_EMISSION) {
+      const auto& sampled_rpkt_emission = pkt.sampled_rpkt_emission[0];
+      std::print(packets_file, " {} {} {} {} {:g}", pkt.nrpkt_emissions, std::to_underlying(sampled_rpkt_emission.type),
+                 sampled_rpkt_emission.emissiontype, sampled_rpkt_emission.absorptiontype,
+                 sampled_rpkt_emission.absorptionfreq);
+      std::print(packets_file, " {:g} {:g} {:g} {:g}", sampled_rpkt_emission.pos[0], sampled_rpkt_emission.pos[1],
+                 sampled_rpkt_emission.pos[2], sampled_rpkt_emission.time);
     }
     std::println(packets_file, "");
   }
