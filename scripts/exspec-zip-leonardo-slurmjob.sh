@@ -31,10 +31,8 @@ export LDFLAGS="-Wl,-rpath-link,/usr/lib64"
 
 cd "${SLURM_SUBMIT_DIR:?}" || exit 1
 
-export MAKEFLAGS="--check-symlink-times --jobs=$(nproc)"
-cd artis
-make exspec || exit 1
-cd ..
+# Use the exspec that the sn3d job script built from the same source as sn3d. A build here could read
+# a newer checkout.
 
 echo "CPU type: $(c++ -march=native -Q --help=target | grep -- '-march=  ' | cut -f3)"
 
