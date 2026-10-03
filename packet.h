@@ -113,38 +113,33 @@ struct MacroAtomState {
   int activatingline{-99};
 };
 
-// The process of a sampled interaction (see Packet::sampled_interactions). An interaction is each event that sets
-// Packet::em_time. The values are written to packets*.out as sampled<slot>_interactiontype and parsed by artistools,
-// so they must not be renumbered.
-enum interaction_type : int {
-  INTERACTION_NONE = 0,  // an empty slot: the packet had fewer interactions than SAMPLED_INTERACTIONS_PER_PACKET
-  INTERACTION_PELLET_PARTICLE_DECAY = 1,  // a pellet decays to a non-thermal particle
-  INTERACTION_PELLET_GAMMA_DECAY = 2,  // a pellet decays to a gamma packet
-  INTERACTION_PAIR_ANNIHILATION_GAMMA = 3,  // a pair production gives a 511 keV gamma packet
-  INTERACTION_COMPTON_SCATTERING = 4,  // a gamma packet stays a gamma packet after a Compton scattering
-  INTERACTION_KPKT_EMISSION = 5,  // a k-packet emits an r-packet (free-free, free-bound, or blackbody)
-  INTERACTION_MACROATOM_BOUNDBOUND_EMISSION = 6,  // a radiative bound-bound deactivation of a macro-atom
-  INTERACTION_MACROATOM_BOUNDFREE_EMISSION = 7,  // a radiative recombination of a macro-atom
-  INTERACTION_ELECTRON_SCATTERING = 8,  // an electron scattering of an r-packet in a cell that is not thick
-  INTERACTION_THICKCELL_GREY_SCATTERING = 9,  // a grey event of an r-packet in a thick cell
+// The process of a sampled r-packet emission (see Packet::sampled_rpkt_emissions). The values are written to
+// packets*.out as sampled<slot>_rpkt_emission_type and parsed by artistools, so they must not be renumbered.
+enum rpkt_emission_type : int {
+  RPKT_EMISSION_NONE = 0,  // an empty slot: the packet had fewer r-packet emissions than the slots of the sample
+  RPKT_EMISSION_KPKT = 1,  // a k-packet emits an r-packet (free-free, free-bound, or blackbody)
+  RPKT_EMISSION_MACROATOM_BOUNDBOUND = 2,  // a radiative bound-bound deactivation of a macro-atom
+  RPKT_EMISSION_MACROATOM_BOUNDFREE = 3,  // a radiative recombination of a macro-atom
+  RPKT_EMISSION_ELECTRON_SCATTERING = 4,  // an electron scattering of an r-packet in a cell that is not thick
+  RPKT_EMISSION_THICKCELL_GREY_SCATTERING = 5,  // a grey event of an r-packet in a thick cell
   // With RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY, a bound-bound event either scatters the r-packet at the same
   // comoving frequency or redistributes the frequency thermally.
-  INTERACTION_BOUNDBOUND_SCATTERING = 10,
-  INTERACTION_BOUNDBOUND_THERMALISATION = 11,
+  RPKT_EMISSION_BOUNDBOUND_SCATTERING = 6,
+  RPKT_EMISSION_BOUNDBOUND_THERMALISATION = 7,
 };
 
-static_assert(SAMPLED_INTERACTIONS_PER_PACKET >= 0);
+static_assert(SAMPLED_RPKT_EMISSIONS_PER_PACKET >= 0);
 
-// The state of a packet directly after one interaction.
-struct SampledInteraction {
-  Vec3d pos{NAN, NAN, NAN};  // position of the interaction (x,y,z)
-  double absorptionfreq{};  // Packet::absorptionfreq at the interaction
-  float time{-1.};  // time of the interaction [s]
-  enum interaction_type type { INTERACTION_NONE };
-  int emissiontype{EMTYPE_NOTSET};  // Packet::emissiontype directly after the interaction
-  int absorptiontype{0};  // Packet::absorptiontype at the interaction
+// The state of a packet directly after one r-packet emission.
+struct SampledRpktEmission {
+  Vec3d pos{NAN, NAN, NAN};  // position of the emission (x,y,z)
+  double absorptionfreq{};  // Packet::absorptionfreq at the emission
+  float time{-1.};  // time of the emission [s]
+  enum rpkt_emission_type type { RPKT_EMISSION_NONE };
+  int emissiontype{EMTYPE_NOTSET};  // Packet::emissiontype directly after the emission
+  int absorptiontype{0};  // Packet::absorptiontype at the emission
 
-  auto operator<=>(const SampledInteraction& rhs) const = default;
+  auto operator<=>(const SampledRpktEmission& rhs) const = default;
 };
 
 #include "random.h"
@@ -201,14 +196,14 @@ struct Packet {
   bool originated_from_particlenotgamma{false};  // first packet type after pellet decay
   int pellet_decaytype{-1};  // decay::DecayType value of the pellet decay, or -1 for the initial-energy channel
   int pellet_nucindex{-1};  // nuclide index of the decaying species
-  // The number of interactions of the packet since packet_init(). The count stays 0 if
-  // SAMPLED_INTERACTIONS_PER_PACKET is 0.
-  int ninteractions{0};
-  // A uniform random sample without replacement of all the interactions of the packet. Each interaction of the
-  // packet has the same probability min(1, SAMPLED_INTERACTIONS_PER_PACKET / ninteractions) to be in the sample.
-  // A slot of the sample thus represents ninteractions / min(ninteractions, SAMPLED_INTERACTIONS_PER_PACKET)
-  // interactions of the packet. The slots have no time order.
-  std::array<SampledInteraction, SAMPLED_INTERACTIONS_PER_PACKET> sampled_interactions{};
+  // The number of r-packet emissions of the packet since packet_init(), including the scatterings of the r-packet.
+  // The count stays 0 if SAMPLED_RPKT_EMISSIONS_PER_PACKET is 0.
+  int nrpkt_emissions{0};
+  // A uniform random sample without replacement of all the r-packet emissions of the packet. Each r-packet emission
+  // has the same probability min(1, SAMPLED_RPKT_EMISSIONS_PER_PACKET / nrpkt_emissions) to be in the sample. A slot
+  // of the sample thus represents nrpkt_emissions / min(nrpkt_emissions, SAMPLED_RPKT_EMISSIONS_PER_PACKET) r-packet
+  // emissions of the packet. The slots have no time order.
+  std::array<SampledRpktEmission, SAMPLED_RPKT_EMISSIONS_PER_PACKET> sampled_rpkt_emissions{};
 
   auto operator<=>(const Packet& rhs) const = default;
 };
@@ -257,19 +252,20 @@ inline auto get_rngstate([[maybe_unused]] const Packet& packet) -> rngstate_type
   return (random_index < nslots) ? random_index : -1;
 }
 
-// Count the current interaction of the packet, and add it to Packet::sampled_interactions with the probability
-// that keeps the sample uniform. Call this after the interaction has set emissiontype, absorptiontype, and
+// Count the current r-packet emission of the packet, and add it to Packet::sampled_rpkt_emissions with the
+// probability that keeps the sample uniform. Call this after the emission has set emissiontype, absorptiontype, and
 // absorptionfreq.
-DEVICE_FUNC inline void sample_interaction(Packet& pkt, const enum interaction_type type) {
-  if constexpr (SAMPLED_INTERACTIONS_PER_PACKET > 0) {
-    assert_testmodeonly(pkt.ninteractions < std::numeric_limits<int>::max());
-    pkt.ninteractions++;
+DEVICE_FUNC inline void sample_rpkt_emission(Packet& pkt, const enum rpkt_emission_type type) {
+  if constexpr (SAMPLED_RPKT_EMISSIONS_PER_PACKET > 0) {
+    assert_testmodeonly(pkt.type == TYPE_RPKT);
+    assert_testmodeonly(pkt.nrpkt_emissions < std::numeric_limits<int>::max());
+    pkt.nrpkt_emissions++;
     // Packet::number is unique only inside one rank, so the key also contains the rank
     const std::uint64_t random_key = (static_cast<std::uint64_t>(static_cast<std::uint32_t>(globals::my_rank)) << 32U) |
                                      static_cast<std::uint32_t>(pkt.number);
-    const int slot = get_reservoir_sample_slot(pkt.ninteractions, SAMPLED_INTERACTIONS_PER_PACKET, random_key);
+    const int slot = get_reservoir_sample_slot(pkt.nrpkt_emissions, SAMPLED_RPKT_EMISSIONS_PER_PACKET, random_key);
     if (slot >= 0) {
-      pkt.sampled_interactions[slot] = SampledInteraction{
+      pkt.sampled_rpkt_emissions[slot] = SampledRpktEmission{
           .pos = pkt.pos,
           .absorptionfreq = pkt.absorptionfreq,
           .time = static_cast<float>(pkt.prop_time),

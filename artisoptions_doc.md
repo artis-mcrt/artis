@@ -309,13 +309,14 @@ constexpr bool USE_CALCULATED_MEANATOMICWEIGHT;
 // Keep the escaped gamma-ray packets in the packet files, and write gamma_light_curve.out and gamma_spec.out.
 constexpr bool KEEP_ESCAPED_GAMMAS;
 
-// The number of interactions that each packet keeps as a uniform random sample of all of its interactions. An
-// interaction is each event that sets the time of the last emission (em_time), and this includes the scatterings
-// and the pellet decays. The packet files then get the interaction count of each packet and one group of columns
-// for each slot of the sample. Each interaction of a packet has the same probability to be in the sample, so a slot
-// represents ninteractions / min(ninteractions, SAMPLED_INTERACTIONS_PER_PACKET) interactions. Zero keeps no
-// sample and gives the packet files without these columns.
-constexpr int SAMPLED_INTERACTIONS_PER_PACKET;
+// The number of r-packet emissions that each packet keeps as a uniform random sample of all of its r-packet
+// emissions. An r-packet emission is each event that emits the packet as an r-packet, and this includes the
+// scatterings of the r-packet. A gamma packet and a pellet decay give no r-packet emission. The packet files then get
+// the count of the r-packet emissions of each packet and one group of columns for each slot of the sample. Each
+// r-packet emission of a packet has the same probability to be in the sample, so a slot represents
+// nrpkt_emissions / min(nrpkt_emissions, SAMPLED_RPKT_EMISSIONS_PER_PACKET) r-packet emissions. Zero keeps no sample
+// and gives the packet files without these columns.
+constexpr int SAMPLED_RPKT_EMISSIONS_PER_PACKET;
 
 // The thermalisation of the non-thermal particles (positrons, electrons, and alpha particles):
 // - INSTANTFULLDEPOSITION deposits the particle energy at once;

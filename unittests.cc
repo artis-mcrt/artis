@@ -376,7 +376,7 @@ void test_reservoir_sample_slot() {
   std::array<int, nitems> sample_counts_of_item{};
   for (int rank = 0; rank < nranks; rank++) {
     for (int pktnumber = 0; pktnumber < npackets_per_rank; pktnumber++) {
-      // the same key as sample_interaction()
+      // the same key as sample_rpkt_emission()
       const std::uint64_t random_key =
           (static_cast<std::uint64_t>(rank) << 32U) | static_cast<std::uint32_t>(pktnumber);
       std::array<int, nslots> item_in_slot{};

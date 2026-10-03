@@ -286,7 +286,7 @@ DEVICE_FUNC void emit_thermal_rpkt(Packet& pkt, const int emissiontype) {
   pkt.trueem_pos = pkt.em_pos;
   pkt.trueem_time = pkt.em_time;
   pkt.nscatterings = 0;
-  sample_interaction(pkt, INTERACTION_KPKT_EMISSION);
+  sample_rpkt_emission(pkt, RPKT_EMISSION_KPKT);
   if constexpr (VPKT_ON) {
     vpkt::trace_vpkts(pkt, TYPE_KPKT);
   }
