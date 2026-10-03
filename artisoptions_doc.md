@@ -357,7 +357,7 @@ constexpr bool RPKT_USE_EXPANSION_OPACITIES;
 
 // Use expansion opacities instead of line-by-line opacities for the virtual packets. Use the LINEBINNED weight of
 // EXPANSION_OPACITY_METHOD with this option. With a different weight, sn3d writes a warning to the log. LINEBINNED
-// needs a RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY of zero or no value (see EXPANSION_OPACITY_METHOD).
+// needs an RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY of zero or no value (see EXPANSION_OPACITY_METHOD).
 constexpr bool VPKT_USE_EXPANSION_OPACITIES;
 
 // The line weight in the expansion opacity of each wavelength bin of RPKT_USE_EXPANSION_OPACITIES,
@@ -369,7 +369,7 @@ constexpr bool VPKT_USE_EXPANSION_OPACITIES;
 //   4143-4171, doi:10.1093/mnras/staa485).
 // With a nonzero RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY, LINEBINNEDCAPPED and LINEBINNED need
 // RPKT_USE_EXPANSION_OPACITIES. A line-by-line r-packet absorbs the fraction 1 - exp(-tau) in each line, so the
-// thermal emission must then use EXPANSION. For the virtual packets, LINEBINNED gives the line-by-line optical
+// thermal emission must then use EXPANSION. For the virtual packets, LINEBINNED gives nearly the line-by-line optical
 // depth of a bin that the packet fully crosses. EXPANSION and LINEBINNEDCAPPED give a smaller optical depth for a
 // line with tau > 1.
 constexpr ExpansionOpacityMethod EXPANSION_OPACITY_METHOD;
