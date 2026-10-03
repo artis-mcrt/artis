@@ -75,9 +75,12 @@ struct Nuclide {
   double endecay_gamma{0.};  // average energy per decay in gamma rays [erg]
   double endecay_alpha{0.};  // average energy per alpha decay in kinetic energy of alpha particles [erg]
   double endecay_fission{0.};  // average energy per fission decay in kinetic energy of fission fragments [erg]
+  // the energy release of each decay type, with the neutrinos [erg]. For a beta-plus decay, the value is Q_EC: the
+  // Q value plus the annihilation energy 2 m_e c^2 of the positron. For each other decay type, the value is the Q
+  // value (reactant minus product energy).
   std::array<double, DecayType::DECAYTYPE_COUNT> endecay_q = {
       0., 0., 0., 0., 0., 0.,
-  };  // Q-value (reactant minus product energy) for each decay type
+  };
   std::array<double, DecayType::DECAYTYPE_COUNT> branchprobs = {
       0., 0., 0., 0., 0., 0.,
   };  // branch probability of each decay type
