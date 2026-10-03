@@ -599,8 +599,8 @@ auto do_rpkt_step(Packet& pkt, const double t2, ContinuumOpacity& chi_rpkt_cont)
         // re-emit rather than scatter, so that this event is not counted as an electron scattering
         pkt.nscatterings = 0;
       } else {
-        // pure line scattering, so the packet keeps its comoving frequency in a new direction. nscatterings counts
-        // only the electron scatterings.
+        // pure line scattering, so the packet keeps its comoving frequency in a new direction. nscatterings stays
+        // unchanged, because this event is not an electron scattering.
         stats::increment(stats::Counter::RESONANCESCATTERINGS);
       }
       emit_rpkt(pkt);
