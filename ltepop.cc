@@ -256,20 +256,22 @@ void set_calculated_nne(const int nonemptymgi) {
 // Fallback for a cell in which every element is confined to its lowest included ion stage: put each element's whole
 // population in that stage and floor the higher stages at MINPOP. set_calculated_nne() then floors nne at MINNNE,
 // which keeps the collisional rates in the k-packet treatment finite so that packets are not lost there.
-// The NLTE solver sets the level populations of an element with NLTE levels, unless force_saha is true. This
-// function keeps those populations, as the normal branch of calculate_ion_balance_nne() does. A new ground level
-// population would not agree with the stored excited NLTE populations of the same ion.
+// The NLTE solver sets the level populations of a present element with NLTE levels, unless force_saha is true.
+// This function keeps those populations. A new ground level population would disagree with the stored excited
+// NLTE populations of the same ion. For an absent element, the NLTE solver resets only the excited populations, so
+// this function sets the ion populations of that element to zero.
 void set_groundlevelpops_neutral(const ptrdiff_t nonemptymgi, const bool force_saha) {
   if (neutralcell_warned.is_first_occurrence(nonemptymgi)) {
     printlnlog("[warning] set_groundlevelpops_neutral: only neutral ions in cell {} timestep {} (repeats suppressed)",
                grid::get_mgi_of_nonemptymgi(nonemptymgi), globals::timestep);
   }
   for (int element = 0; element < get_nelements(); element++) {
-    const bool already_set_by_nlte_solver = !force_saha && elem_has_nlte_levels(element);
-    if (already_set_by_nlte_solver) {
+    const auto nnelement = grid::get_elem_numberdens(nonemptymgi, element);
+    const bool is_present_nlte_element_without_forced_saha =
+        !force_saha && elem_has_nlte_levels(element) && nnelement > 0.;
+    if (is_present_nlte_element_without_forced_saha) {
       continue;
     }
-    const auto nnelement = grid::get_elem_numberdens(nonemptymgi, element);
     const int nions = get_nions(element);
     // Assign the species population to the neutral ion and set higher ions to MINPOP
     for (int ion = 0; ion < nions; ion++) {
