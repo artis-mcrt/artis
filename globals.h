@@ -109,8 +109,8 @@ struct TimeStep {
   double qdot_betaminus{0.};  // energy generation rate of the beta-minus decays (with neutrinos) [erg/s]
   double qdot_alpha{0.};  // energy generation rate of the alpha decays (with neutrinos) [erg/s]
   double qdot_spfission{0.};  // energy generation rate of the spontaneous fission decays (with neutrinos) [erg/s]
-  // energy generation rate of all decays (with neutrinos) [erg/s]. A beta-plus decay contributes Q_EC - 2 m_e c^2,
-  // without the positron annihilation energy.
+  // energy generation rate of all decays (with neutrinos) [erg/s]. A beta-plus decay contributes Q_EC, which
+  // includes the positron annihilation energy.
   double qdot_total{0.};
   ALIGNAS_AVOID_FALSE_SHARING int pellet_decays{0};  // Number of pellets that decay in this timestep.
 };
