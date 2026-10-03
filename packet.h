@@ -269,12 +269,14 @@ DEVICE_FUNC inline void sample_interaction(Packet& pkt, const enum interaction_t
                                      static_cast<std::uint32_t>(pkt.number);
     const int slot = get_reservoir_sample_slot(pkt.ninteractions, SAMPLED_INTERACTIONS_PER_PACKET, random_key);
     if (slot >= 0) {
-      pkt.sampled_interactions[slot] = SampledInteraction{.pos = pkt.pos,
-                                                          .absorptionfreq = pkt.absorptionfreq,
-                                                          .time = static_cast<float>(pkt.prop_time),
-                                                          .type = type,
-                                                          .emissiontype = pkt.emissiontype,
-                                                          .absorptiontype = pkt.absorptiontype};
+      pkt.sampled_interactions[slot] = SampledInteraction{
+          .pos = pkt.pos,
+          .absorptionfreq = pkt.absorptionfreq,
+          .time = static_cast<float>(pkt.prop_time),
+          .type = type,
+          .emissiontype = pkt.emissiontype,
+          .absorptiontype = pkt.absorptiontype,
+      };
     }
   }
 }
