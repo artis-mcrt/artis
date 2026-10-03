@@ -407,17 +407,13 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
               const auto next_bin_edge_nu = get_expopac_bin_nu_lower(binindex);
               const auto binedgedist = get_linedistance(t_future, nu_cmf, next_bin_edge_nu, dnu_on_dl);
 
-              // the time at which the vpkt enters this bin, or reaches it for the first time in this cell
               const double t_bin_entry = t_future + (dist / CLIGHT_PROP);
 
               const auto kappa = expansionopacities[(nonemptymgi * expopac_nbins) + binindex];
               // kappa_exp * rho = (1 / (c t)) * sum_lines (lambda_line / delta_lambda) * weight(tau_sobolev),
-              // tabulated at t_gridstate (see EXPANSION_OPACITY_METHOD). The path through the bin is
-              // c * t_bin_entry * dnu / nu. The scaling of kappa_exp * rho to t_bin_entry uses the optically thin
-              // limit, where the weight is tau_sobolev and tau_sobolev ∝ t^-2, so kappa_exp * rho ∝ t^-3. The
-              // LINEBINNED weight is tau_sobolev, so the bin optical depth is then the sum of the tau_sobolev of
-              // its lines at t_bin_entry. With the other weights, a saturated line changes more slowly, but the
-              // bins do not keep the tau_sobolev of each line.
+              // tabulated at t_gridstate (see EXPANSION_OPACITY_METHOD). With tau_sobolev ∝ t^-2, kappa_exp * rho
+              // ∝ t^-3. This scaling to t_bin_entry is exact for the LINEBINNED weight. For the other weights it is
+              // the optically thin limit, because the bins do not keep the tau_sobolev of each line.
               const double chi_bb_expansionopac = kappa * grid::get_rho(nonemptymgi) * pow3(t_gridstate / t_bin_entry) *
                                                   get_expopac_pathfactor(t_bin_entry, next_bin_edge_nu, dnu_on_dl);
 
@@ -808,10 +804,7 @@ void read_vpktparameterfile() {
   printlnlog("vpkt.txt: Nspectra {} per observer", nspectraperobsdir);
 
   if constexpr (VPKT_USE_EXPANSION_OPACITIES && EXPANSION_OPACITY_METHOD != ExpansionOpacityMethod::LINEBINNED) {
-    const auto* const method_name =
-        (EXPANSION_OPACITY_METHOD == ExpansionOpacityMethod::EXPANSION) ? "EXPANSION" : "LINEBINNEDCAPPED";
-    printlnlog("[warning] VPKT_USE_EXPANSION_OPACITIES uses EXPANSION_OPACITY_METHOD {}. Use LINEBINNED for vpkts.",
-               method_name);
+    printlnlog("[warning] VPKT_USE_EXPANSION_OPACITIES uses an EXPANSION_OPACITY_METHOD other than LINEBINNED.");
     printlnlog(
         "[warning]   A vpkt that crosses a line with the Sobolev optical depth tau has the transmission exp(-tau).");
     printlnlog(
@@ -823,6 +816,13 @@ void read_vpktparameterfile() {
     printlnlog(
         "[warning]   The vpkt spectra then have too little absorption in the lines with tau > 1, e.g. in the P Cygni "
         "absorption troughs.");
+    if constexpr (expopac_linebinned_weights_permitted) {
+      printlnlog("[warning]   Use LINEBINNED for vpkts.");
+    } else {
+      printlnlog(
+          "[warning]   LINEBINNED needs a RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY of zero or no value, because the "
+          "thermal emission uses the same bin weights.");
+    }
   }
 
   // Emission time window: a leading 1 restricts vpkts to the [tmin, tmax] (in days) that follow on the same

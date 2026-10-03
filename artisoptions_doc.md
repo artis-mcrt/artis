@@ -356,7 +356,8 @@ constexpr bool BFCOOLING_USELEVELPOPNOTIONPOP;
 constexpr bool RPKT_USE_EXPANSION_OPACITIES;
 
 // Use expansion opacities instead of line-by-line opacities for the virtual packets. Use the LINEBINNED weight of
-// EXPANSION_OPACITY_METHOD with this option. With a different weight, sn3d writes a warning to the log.
+// EXPANSION_OPACITY_METHOD with this option. With a different weight, sn3d writes a warning to the log. LINEBINNED
+// needs a RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY of zero or no value (see EXPANSION_OPACITY_METHOD).
 constexpr bool VPKT_USE_EXPANSION_OPACITIES;
 
 // The line weight in the expansion opacity of each wavelength bin of RPKT_USE_EXPANSION_OPACITIES,
