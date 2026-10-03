@@ -246,18 +246,21 @@ auto read_text_packets(const std::string& filename) -> std::vector<Packet> {
     parse_column(pkt.pellet_nucindex);
     parse_column(pkt.pellet_decaytype);
 
-    if constexpr (SAMPLE_RPKT_EMISSION) {
-      auto& sampled_rpkt_emission = pkt.sampled_rpkt_emission[0];
-      parse_column(pkt.nrpkt_emissions);
-      int rpkt_emission_type_in = 0;
-      parse_column(rpkt_emission_type_in);
-      sampled_rpkt_emission.type = static_cast<enum rpkt_emission_type>(rpkt_emission_type_in);
-      parse_column(sampled_rpkt_emission.emissiontype);
-      parse_column(sampled_rpkt_emission.absorptiontype);
-      parse_column(sampled_rpkt_emission.absorptionfreq);
-      parse_emission_position(sampled_rpkt_emission.pos);
-      parse_column(sampled_rpkt_emission.time);
-    }
+    // a generic lambda, so that the compiler does not check the body for a packet without the sample
+    const auto parse_rpkt_emission_sample = [&](auto& rpkt_emission_sample) {
+      if constexpr (SAMPLE_RPKT_EMISSION) {
+        parse_column(rpkt_emission_sample.nrpkt_emissions);
+        int rpkt_emission_type_in = 0;
+        parse_column(rpkt_emission_type_in);
+        rpkt_emission_sample.type = static_cast<enum rpkt_emission_type>(rpkt_emission_type_in);
+        parse_column(rpkt_emission_sample.emissiontype);
+        parse_column(rpkt_emission_sample.absorptiontype);
+        parse_column(rpkt_emission_sample.absorptionfreq);
+        parse_emission_position(rpkt_emission_sample.pos);
+        parse_column(rpkt_emission_sample.time);
+      }
+    };
+    parse_rpkt_emission_sample(pkt.rpkt_emission_sample);
 
     // A row must hold every column of the header and no more. A short or corrupt row, e.g. from a partial
     // write on a full file system, otherwise leaves the remaining fields at their defaults. That would drop
@@ -299,14 +302,17 @@ void write_text_packets(const std::string& filename, const std::span<const Packe
     std::print(packets_file, " {}", static_cast<int>(pkt.originated_from_particlenotgamma));
     std::print(packets_file, " {:g} {:g} {:g}", pkt.trueem_pos[0], pkt.trueem_pos[1], pkt.trueem_pos[2]);
     std::print(packets_file, " {:g} {} {}", pkt.trueem_time, pkt.pellet_nucindex, pkt.pellet_decaytype);
-    if constexpr (SAMPLE_RPKT_EMISSION) {
-      const auto& sampled_rpkt_emission = pkt.sampled_rpkt_emission[0];
-      std::print(packets_file, " {} {} {} {} {:g}", pkt.nrpkt_emissions, std::to_underlying(sampled_rpkt_emission.type),
-                 sampled_rpkt_emission.emissiontype, sampled_rpkt_emission.absorptiontype,
-                 sampled_rpkt_emission.absorptionfreq);
-      std::print(packets_file, " {:g} {:g} {:g} {:g}", sampled_rpkt_emission.pos[0], sampled_rpkt_emission.pos[1],
-                 sampled_rpkt_emission.pos[2], sampled_rpkt_emission.time);
-    }
+    // a generic lambda, so that the compiler does not check the body for a packet without the sample
+    const auto print_rpkt_emission_sample = [&packets_file](const auto& rpkt_emission_sample) {
+      if constexpr (SAMPLE_RPKT_EMISSION) {
+        std::print(packets_file, " {} {} {} {} {:g}", rpkt_emission_sample.nrpkt_emissions,
+                   std::to_underlying(rpkt_emission_sample.type), rpkt_emission_sample.emissiontype,
+                   rpkt_emission_sample.absorptiontype, rpkt_emission_sample.absorptionfreq);
+        std::print(packets_file, " {:g} {:g} {:g} {:g}", rpkt_emission_sample.pos[0], rpkt_emission_sample.pos[1],
+                   rpkt_emission_sample.pos[2], rpkt_emission_sample.time);
+      }
+    };
+    print_rpkt_emission_sample(pkt.rpkt_emission_sample);
     std::println(packets_file, "");
   }
   packets_file.close();

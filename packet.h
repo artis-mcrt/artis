@@ -4,12 +4,12 @@
 #ifndef PACKET_H
 #define PACKET_H
 
-#include <array>
 #include <cmath>
 #include <cstdint>
 #include <limits>
 #include <span>
 #include <string>
+#include <type_traits>
 #include <vector>
 
 #include "artisoptions.h"
@@ -113,8 +113,8 @@ struct MacroAtomState {
   int activatingline{-99};
 };
 
-// The process of a sampled r-packet emission (see Packet::sampled_rpkt_emission). The values are written to
-// packets*.out as sampled_rpkt_emission_type and parsed by artistools, so they must not be renumbered.
+// The process of a sampled r-packet emission (see RpktEmissionSample). The values are written to packets*.out as
+// sampled_rpkt_emission_type and parsed by artistools, so they must not be renumbered.
 enum rpkt_emission_type : int {
   RPKT_EMISSION_NONE = 0,  // no sample: the packet had no r-packet emission
   RPKT_EMISSION_KPKT = 1,  // a k-packet emits an r-packet (free-free, free-bound, or blackbody)
@@ -128,18 +128,29 @@ enum rpkt_emission_type : int {
   RPKT_EMISSION_BOUNDBOUND_THERMALISATION = 7,
 };
 
-// The state of a packet directly after one r-packet emission.
-struct SampledRpktEmission {
-  Vec3d pos{NAN, NAN, NAN};  // position of the emission (x,y,z)
-  double absorptionfreq{};  // Packet::absorptionfreq at the emission
-  float time{-1.};  // time of the emission [s]
+// The count of the r-packet emissions of a packet, and one of these emissions, sampled with equal probability from
+// all of them (see SAMPLE_RPKT_EMISSION). Each r-packet emission is the sample with the probability
+// 1 / nrpkt_emissions, so the sample represents nrpkt_emissions r-packet emissions.
+struct RpktEmissionSample {
+  // The number of r-packet emissions of the packet since packet_init(). An r-packet emission is each emission of the
+  // packet as an r-packet, and this includes each scattering of an r-packet. The events of a gamma packet and the
+  // pellet decays do not add to the count.
+  int nrpkt_emissions{0};
   enum rpkt_emission_type type { RPKT_EMISSION_NONE };
-  // Packet::emissiontype directly after the emission. A scattering does not change Packet::emissiontype, so a
-  // sampled scattering holds the emission type of the last emission before it.
+  // Packet::emissiontype directly after the sampled emission. A scattering does not change Packet::emissiontype, so
+  // a sampled scattering holds the emission type of the last emission before it.
   int emissiontype{EMTYPE_NOTSET};
-  int absorptiontype{0};  // Packet::absorptiontype at the emission: the type of the last absorption before it
+  int absorptiontype{0};  // Packet::absorptiontype at the sampled emission: the type of the last absorption before it
+  float time{-1.};  // time of the sampled emission [s]
+  Vec3d pos{NAN, NAN, NAN};  // position of the sampled emission (x,y,z)
+  double absorptionfreq{};  // Packet::absorptionfreq at the sampled emission
 
-  auto operator<=>(const SampledRpktEmission& rhs) const = default;
+  auto operator<=>(const RpktEmissionSample& rhs) const = default;
+};
+
+// The empty type of Packet::rpkt_emission_sample if SAMPLE_RPKT_EMISSION is false
+struct NoRpktEmissionSample {
+  auto operator<=>(const NoRpktEmissionSample& rhs) const = default;
 };
 
 #include "random.h"
@@ -196,15 +207,11 @@ struct Packet {
   bool originated_from_particlenotgamma{false};  // first packet type after pellet decay
   int pellet_decaytype{-1};  // decay::DecayType value of the pellet decay, or -1 for the initial-energy channel
   int pellet_nucindex{-1};  // nuclide index of the decaying species
-  // The number of r-packet emissions of the packet since packet_init(). An r-packet emission is each emission of the
-  // packet as an r-packet, and this includes each scattering of an r-packet. The events of a gamma packet and the
-  // pellet decays do not add to the count. The count stays 0 if SAMPLE_RPKT_EMISSION is false.
-  int nrpkt_emissions{0};
-  // One r-packet emission of the packet, sampled with equal probability from all of its r-packet emissions. Each
-  // r-packet emission is the sample with the probability 1 / nrpkt_emissions, so the sample represents
-  // nrpkt_emissions r-packet emissions. The array has one element if SAMPLE_RPKT_EMISSION is true, and no element
-  // otherwise, so that the sample needs no memory without the option.
-  std::array<SampledRpktEmission, SAMPLE_RPKT_EMISSION ? 1 : 0> sampled_rpkt_emission{};
+  // If SAMPLE_RPKT_EMISSION is false, this member has an empty type, and [[no_unique_address]] then lets it take no
+  // memory. The code that reads the members of the sample is a template, because the compiler checks the code for the
+  // empty type otherwise, also inside "if constexpr (SAMPLE_RPKT_EMISSION)".
+  [[no_unique_address]] std::conditional_t<SAMPLE_RPKT_EMISSION, RpktEmissionSample, NoRpktEmissionSample>
+      rpkt_emission_sample{};
 
   auto operator<=>(const Packet& rhs) const = default;
 };
@@ -253,25 +260,30 @@ inline auto get_rngstate([[maybe_unused]] const Packet& packet) -> rngstate_type
   return random_index == 0;
 }
 
-// Count the current r-packet emission of the packet, and make it Packet::sampled_rpkt_emission with the probability
-// that keeps the sample uniform. Call this after the emission has set emissiontype, absorptiontype, and
-// absorptionfreq.
-DEVICE_FUNC inline void sample_rpkt_emission(Packet& pkt, const enum rpkt_emission_type type) {
+// Count the current r-packet emission of the packet, and make it the sampled emission of Packet::rpkt_emission_sample
+// with the probability that keeps the sample uniform. Call this after the emission has set emissiontype,
+// absorptiontype, and absorptionfreq.
+// The function is a template, so that the compiler does not check the body for a packet without the sample (see
+// Packet::rpkt_emission_sample).
+template <typename PacketT>
+DEVICE_FUNC inline void sample_rpkt_emission(PacketT& pkt, const enum rpkt_emission_type type) {
   if constexpr (SAMPLE_RPKT_EMISSION) {
     assert_testmodeonly(pkt.type == TYPE_RPKT);
-    assert_testmodeonly(pkt.nrpkt_emissions < std::numeric_limits<int>::max());
-    pkt.nrpkt_emissions++;
+    auto& rpkt_emission_sample = pkt.rpkt_emission_sample;
+    assert_testmodeonly(rpkt_emission_sample.nrpkt_emissions < std::numeric_limits<int>::max());
+    rpkt_emission_sample.nrpkt_emissions++;
     // Packet::number is unique only inside one rank, so the key also contains the rank
     const std::uint64_t random_key = (static_cast<std::uint64_t>(static_cast<std::uint32_t>(globals::my_rank)) << 32U) |
                                      static_cast<std::uint32_t>(pkt.number);
-    if (item_replaces_sample(pkt.nrpkt_emissions, random_key)) {
-      pkt.sampled_rpkt_emission[0] = SampledRpktEmission{
-          .pos = pkt.pos,
-          .absorptionfreq = pkt.absorptionfreq,
-          .time = static_cast<float>(pkt.prop_time),
+    if (item_replaces_sample(rpkt_emission_sample.nrpkt_emissions, random_key)) {
+      rpkt_emission_sample = RpktEmissionSample{
+          .nrpkt_emissions = rpkt_emission_sample.nrpkt_emissions,
           .type = type,
           .emissiontype = pkt.emissiontype,
           .absorptiontype = pkt.absorptiontype,
+          .time = static_cast<float>(pkt.prop_time),
+          .pos = pkt.pos,
+          .absorptionfreq = pkt.absorptionfreq,
       };
     }
   }
