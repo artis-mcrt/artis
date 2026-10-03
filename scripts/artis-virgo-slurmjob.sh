@@ -43,7 +43,9 @@ export LDFLAGS="-Wl,-rpath-link,$mpi_rpath -Wl,-rpath,$PIXI_HOME/envs/gxx/lib"
 cd "${SLURM_SUBMIT_DIR:?}" || exit 1
 
 cd artis
-make sn3d || exit 1
+# Build exspec together with sn3d, so that exspec reads the packet files with the same source version.
+# The exspec job scripts can run exspec without a build.
+make sn3d exspec || exit 1
 cd ..
 
 echo "CPU type: $("$OMPI_CXX" -march=native -Q --help=target | grep -- '-march=  ' | cut -f3)"
