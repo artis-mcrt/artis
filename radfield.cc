@@ -51,6 +51,10 @@ static_assert(RADFIELDBINS_T_E_SUPERBIN_NU_MAX >= RADFIELDBINS_NU_MAX,
 static_assert(!DETAILED_BF_ESTIMATORS_ON || !USE_LUT_PHOTOION,
               "USE_LUT_PHOTOION must be false when DETAILED_BF_ESTIMATORS_ON is true");
 
+// the photoionisation tables assume a Planck radiation field, so they cannot use the fits of the bins
+static_assert(!MULTIBIN_RADFIELD_MODEL_ON || !USE_LUT_PHOTOION,
+              "USE_LUT_PHOTOION must be false when MULTIBIN_RADFIELD_MODEL_ON is true");
+
 std::vector<double> J_normfactor;
 
 struct RadFieldBinSolution {
