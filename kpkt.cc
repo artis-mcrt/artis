@@ -279,14 +279,13 @@ auto sample_planck_montecarlo(const double T, rngstate_type& rngstate) -> double
 // Emit the k-packet as an r-packet at pkt.nu_cmf. A thermal emission starts a new true emission record.
 DEVICE_FUNC void emit_thermal_rpkt(Packet& pkt, const int emissiontype) {
   assert_always(std::isfinite(pkt.nu_cmf));
-  emit_rpkt(pkt);
   pkt.next_trans = -1;
   pkt.emissiontype = emissiontype;
   pkt.trueemissiontype = emissiontype;
+  pkt.nscatterings = 0;
+  emit_rpkt(pkt, RPKT_EMISSION_KPKT);
   pkt.trueem_pos = pkt.em_pos;
   pkt.trueem_time = pkt.em_time;
-  pkt.nscatterings = 0;
-  sample_rpkt_emission(pkt, RPKT_EMISSION_KPKT);
   if constexpr (VPKT_ON) {
     vpkt::trace_vpkts(pkt, TYPE_KPKT);
   }

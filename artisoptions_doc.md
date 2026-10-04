@@ -312,8 +312,14 @@ constexpr bool KEEP_ESCAPED_GAMMAS;
 // Keep one r-packet emission of each packet, sampled with equal probability from all of the r-packet emissions of
 // the packet. An r-packet emission is each event that emits the packet as an r-packet, and this includes each
 // scattering of an r-packet. The events of a gamma packet and the pellet decays are not r-packet emissions. The
-// sample holds the type of the r-packet emission, emissiontype, absorptiontype, absorptionfreq, the position, and the
-// time. The packet files get these columns and the count of the r-packet emissions (nrpkt_emissions). The sample of a
+// sample holds these values of the r-packet emission:
+// - the type of the r-packet emission;
+// - emissiontype;
+// - absorptiontype;
+// - absorptionfreq;
+// - the position;
+// - the time.
+// The packet files get these columns and the count of the r-packet emissions (nrpkt_emissions). The sample of a
 // packet thus represents nrpkt_emissions r-packet emissions.
 constexpr bool SAMPLE_RPKT_EMISSION;
 

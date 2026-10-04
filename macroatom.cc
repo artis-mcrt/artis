@@ -234,14 +234,13 @@ void do_macroatom_raddeexcitation(Packet& pkt, const int ionuniquelevelindexstar
 
   stats::increment(stats::Counter::MA_STAT_DEACTIVATION_BB);
 
-  // emit the rpkt in a random direction
-  emit_rpkt(pkt);
-
   // the r-pkt can only interact with lines redder than the current one
   pkt.next_trans = lineindex + 1;
   pkt.emissiontype = lineindex;
   pkt.nscatterings = 0;
-  sample_rpkt_emission(pkt, RPKT_EMISSION_MACROATOM_BOUNDBOUND);
+
+  // emit the rpkt in a random direction
+  emit_rpkt(pkt, RPKT_EMISSION_MACROATOM_BOUNDBOUND);
 }
 
 // get the level index of the lower ionisation stage after a randomly selected radiative recombination and update
@@ -285,13 +284,11 @@ void do_macroatom_raddeexcitation(Packet& pkt, const int ionuniquelevelindexstar
 
   stats::increment(stats::Counter::MA_STAT_DEACTIVATION_FB);
 
-  // emit the packet in a random direction and set the emission flags
-  emit_rpkt(pkt);
-
+  // set the emission flags and emit the packet in a random direction
   pkt.next_trans = -1;  // continuum transition, no restrictions for further line interactions
   pkt.emissiontype = get_emtype_continuum(lowerionuniquelevelindexstart + lowerionlevel, selected_phixstargetindex);
   pkt.nscatterings = 0;
-  sample_rpkt_emission(pkt, RPKT_EMISSION_MACROATOM_BOUNDFREE);
+  emit_rpkt(pkt, RPKT_EMISSION_MACROATOM_BOUNDFREE);
   return lowerionlevel;
 }
 

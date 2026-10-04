@@ -224,9 +224,9 @@ constexpr std::string_view token_whitespace = " \t\r";
 // Return false if there is no token left or the token is not fully numeric.
 // Accepts the same number spellings as stream extraction: leading plus signs are allowed, magnitudes below the
 // range of T (or of double) read as zero, and out-of-range magnitudes are rejected.
-// ALLOW_NAN selects whether the nan spelling is a value or an error. Only packets*.out holds a nan, in the
-// emission positions of a packet that never emitted. No file of this code holds an inf, so an inf token is
-// always an error.
+// ALLOW_NAN selects whether the nan spelling is a value or an error. Only packets*.out holds a nan, in an
+// emission position that a packet does not have, e.g. em_pos of a packet that never emitted. No file of this code
+// holds an inf, so an inf token is always an error.
 template <bool ALLOW_NAN = false, typename T>
 [[nodiscard]] inline auto parse_next_token(std::string_view& remainder, T& value) -> bool {
   const auto tokenstart = remainder.find_first_not_of(token_whitespace);

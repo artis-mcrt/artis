@@ -369,26 +369,21 @@ void test_item_replaces_sample() {
   constexpr int nranks = 4;
   constexpr int npackets_per_rank = 50000;
 
-  bool first_item_replaces_sample = true;
   // the number of sequences that keep each item as the final sample
   std::array<int, nitems> sample_counts_of_item{};
   for (int rank = 0; rank < nranks; rank++) {
     for (int pktnumber = 0; pktnumber < npackets_per_rank; pktnumber++) {
-      // the same key as sample_rpkt_emission()
-      const std::uint64_t random_key =
-          (static_cast<std::uint64_t>(rank) << 32U) | static_cast<std::uint32_t>(pktnumber);
-      int sampled_item = -1;
-      for (int item = 0; item < nitems; item++) {
-        if (item_replaces_sample(item + 1, random_key)) {
+      const std::uint64_t rank_and_packet_number = get_rank_and_packet_number_key(rank, pktnumber);
+      // the first item is always the sample (see the static_assert after item_replaces_sample())
+      int sampled_item = 0;
+      for (int item = 1; item < nitems; item++) {
+        if (item_replaces_sample(item + 1, rank_and_packet_number)) {
           sampled_item = item;
-        } else if (item == 0) {
-          first_item_replaces_sample = false;
         }
       }
       sample_counts_of_item[sampled_item]++;
     }
   }
-  check(first_item_replaces_sample, "item_replaces_sample always takes the first item");
 
   // each item is the final sample with the probability 1 / nitems
   constexpr double probability_of_sample = 1. / nitems;

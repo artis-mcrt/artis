@@ -113,8 +113,8 @@ struct MacroAtomState {
   int activatingline{-99};
 };
 
-// The process of a sampled r-packet emission (see RpktEmissionSample). The values are written to packets*.out as
-// sampled_rpkt_emission_type and parsed by artistools, so they must not be renumbered.
+// The process of a sampled r-packet emission (see RpktEmissionSample). write_text_packets() writes the values to
+// packets*.out as sampled_rpkt_emission_type, and artistools reads them. Do not renumber the values.
 enum rpkt_emission_type : int {
   RPKT_EMISSION_NONE = 0,  // no sample: the packet had no r-packet emission
   RPKT_EMISSION_KPKT = 1,  // a k-packet emits an r-packet (free-free, free-bound, or blackbody)
@@ -132,8 +132,8 @@ enum rpkt_emission_type : int {
 // all of them (see SAMPLE_RPKT_EMISSION). Each r-packet emission is the sample with the probability
 // 1 / nrpkt_emissions, so the sample represents nrpkt_emissions r-packet emissions.
 struct RpktEmissionSample {
-  // The number of r-packet emissions of the packet since packet_init(). An r-packet emission is each emission of the
-  // packet as an r-packet, and this includes each scattering of an r-packet. The events of a gamma packet and the
+  // The count of the r-packet emissions of the packet since packet_init(). An r-packet emission is each emission of
+  // the packet as an r-packet, and this includes each scattering of an r-packet. The events of a gamma packet and the
   // pellet decays do not add to the count.
   int nrpkt_emissions{0};
   enum rpkt_emission_type type { RPKT_EMISSION_NONE };
@@ -236,49 +236,53 @@ inline auto get_rngstate([[maybe_unused]] const Packet& packet) -> rngstate_type
 // sample with the same probability 1 / N. This is the reservoir sampling with a reservoir of one item (Vitter, J. S.
 // 1985, ACM Transactions on Mathematical Software, 11, 37-57, doi:10.1145/3147.3165).
 //
-// The uniform random integer comes from a hash of random_key and nitems_seen, and not from the random generator of
-// the packets. The sample thus leaves the random sequence of the physics unchanged, and the sample of a packet is
-// reproducible in a multithreaded run. The hash is the SplitMix64 finaliser (Steele, G. L., Lea, D., & Flood, C. H.
-// 2014, Proceedings of the 2014 ACM International Conference on Object Oriented Programming Systems Languages &
-// Applications, 453-472, doi:10.1145/2660193.2660195). The multiplication and the shift map the hash to the range
-// [0, nitems_seen) (Lemire, D. 2019, ACM Transactions on Modeling and Computer Simulation, 29, 3:1-3:12,
-// doi:10.1145/3230636). The bias of that map is less than nitems_seen / 2^32.
-[[nodiscard]] constexpr DEVICE_FUNC auto item_replaces_sample(const int nitems_seen, const std::uint64_t random_key)
+// sequence_key identifies the sequence, e.g. the r-packet emissions of one packet. The uniform random integer comes
+// from a hash of sequence_key and nitems_seen, and not from the random generator of the packets. The sample thus
+// leaves the random sequence of the physics unchanged. The hash is the SplitMix64 finaliser utlrandom::_mix_seed()
+// (Steele, G. L., Lea, D., & Flood, C. H. 2014, ACM SIGPLAN Notices, 49, 453-472, doi:10.1145/2714064.2660195). The
+// multiplication and the shift map the hash to the range [0, nitems_seen) (Lemire, D. 2019, ACM Transactions on
+// Modeling and Computer Simulation, 29, 3:1-3:12, doi:10.1145/3230636). The bias of that map is less than
+// nitems_seen / 2^32.
+[[nodiscard]] constexpr DEVICE_FUNC auto item_replaces_sample(const int nitems_seen, const std::uint64_t sequence_key)
     -> bool {
   if (nitems_seen <= 1) {
     return true;
   }
-  const auto splitmix64_finaliser = [](std::uint64_t state) {
-    state += 0x9E3779B97F4A7C15ULL;
-    state = (state ^ (state >> 30U)) * 0xBF58476D1CE4E5B9ULL;
-    state = (state ^ (state >> 27U)) * 0x94D049BB133111EBULL;
-    return state ^ (state >> 31U);
-  };
-  const std::uint64_t hash =
-      splitmix64_finaliser(random_key ^ splitmix64_finaliser(static_cast<std::uint64_t>(nitems_seen)));
+  const auto hash = utlrandom::_mix_seed<std::uint64_t>(
+      sequence_key ^ utlrandom::_mix_seed<std::uint64_t>(static_cast<std::uint64_t>(nitems_seen)));
   const auto random_index = ((hash >> 32U) * static_cast<std::uint64_t>(nitems_seen)) >> 32U;
   return random_index == 0;
 }
+// the first item of each sequence is the sample
+static_assert(item_replaces_sample(1, 0) && item_replaces_sample(1, ~std::uint64_t{0}));
+
+// The sequence_key of the r-packet emissions of one packet for item_replaces_sample(). Packet::number is unique only
+// inside one rank, so the key holds the rank in the upper 32 bits and Packet::number in the lower 32 bits. The key
+// does not contain the random number seed. Two simulations with the same ranks and packet numbers thus make the same
+// replacement decisions, and their samples are not independent.
+[[nodiscard]] constexpr DEVICE_FUNC auto get_rank_and_packet_number_key(const int rank, const int pktnumber)
+    -> std::uint64_t {
+  return (static_cast<std::uint64_t>(static_cast<std::uint32_t>(rank)) << 32U) | static_cast<std::uint32_t>(pktnumber);
+}
+static_assert(get_rank_and_packet_number_key(3, 5) == ((std::uint64_t{3} << 32U) | 5U));
 
 // Count the current r-packet emission of the packet, and make it the sampled emission of Packet::rpkt_emission_sample
-// with the probability that keeps the sample uniform. Call this after the emission has set emissiontype,
-// absorptiontype, and absorptionfreq.
+// with the probability that keeps the sample uniform. emit_rpkt() and the electron scattering call this after the
+// code sets emissiontype, absorptiontype, and absorptionfreq for the emission.
 // The function is a template, so that the compiler does not check the body for a packet without the sample (see
 // Packet::rpkt_emission_sample).
 template <typename PacketT>
-DEVICE_FUNC inline void sample_rpkt_emission(PacketT& pkt, const enum rpkt_emission_type type) {
+DEVICE_FUNC inline void sample_rpkt_emission(PacketT& pkt, const enum rpkt_emission_type emission_process) {
   if constexpr (SAMPLE_RPKT_EMISSION) {
     assert_testmodeonly(pkt.type == TYPE_RPKT);
     auto& rpkt_emission_sample = pkt.rpkt_emission_sample;
     assert_testmodeonly(rpkt_emission_sample.nrpkt_emissions < std::numeric_limits<int>::max());
     rpkt_emission_sample.nrpkt_emissions++;
-    // Packet::number is unique only inside one rank, so the key also contains the rank
-    const std::uint64_t random_key = (static_cast<std::uint64_t>(static_cast<std::uint32_t>(globals::my_rank)) << 32U) |
-                                     static_cast<std::uint32_t>(pkt.number);
-    if (item_replaces_sample(rpkt_emission_sample.nrpkt_emissions, random_key)) {
+    if (item_replaces_sample(rpkt_emission_sample.nrpkt_emissions,
+                             get_rank_and_packet_number_key(globals::my_rank, pkt.number))) {
       rpkt_emission_sample = RpktEmissionSample{
           .nrpkt_emissions = rpkt_emission_sample.nrpkt_emissions,
-          .type = type,
+          .type = emission_process,
           .emissiontype = pkt.emissiontype,
           .absorptiontype = pkt.absorptiontype,
           .time = static_cast<float>(pkt.prop_time),

@@ -110,7 +110,7 @@ struct ContinuumOpacity {
 };
 
 DEVICE_FUNC void do_rpkt(Packet& pkt, double t2, ContinuumOpacity& chi_rpkt_cont);
-DEVICE_FUNC void emit_rpkt(Packet& pkt);
+DEVICE_FUNC void emit_rpkt(Packet& pkt, enum rpkt_emission_type emission_process);
 template <bool USECELLHISTANDUPDATEPHIXSLIST>
 void calculate_chi_rpkt_cont(double nu_cmf, ContinuumOpacity& chi_rpkt_cont, int nonemptymgi);
 extern template void calculate_chi_rpkt_cont<true>(double nu_cmf, ContinuumOpacity& chi_rpkt_cont, int nonemptymgi);

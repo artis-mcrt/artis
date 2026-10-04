@@ -566,9 +566,8 @@ auto do_rpkt_step(Packet& pkt, const double t2, ContinuumOpacity& chi_rpkt_cont)
       pkt.nscatterings++;
       stats::increment(stats::Counter::ELECTRON_SCATTERINGS);
 
-      emit_rpkt(pkt);
       // Electron scattering does not modify the last emission flag but it updates the last emission position
-      sample_rpkt_emission(pkt, RPKT_EMISSION_THICKCELL_GREY_SCATTERING);
+      emit_rpkt(pkt, RPKT_EMISSION_THICKCELL_GREY_SCATTERING);
     } else if (!event_is_boundbound) {
       rpkt_event_continuum(pkt, chi_rpkt_cont);
     } else if constexpr (!RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.has_value()) {
@@ -607,9 +606,7 @@ auto do_rpkt_step(Packet& pkt, const double t2, ContinuumOpacity& chi_rpkt_cont)
         // unchanged, because this event is not an electron scattering.
         stats::increment(stats::Counter::RESONANCESCATTERINGS);
       }
-      emit_rpkt(pkt);
-      sample_rpkt_emission(pkt,
-                           thermalise ? RPKT_EMISSION_BOUNDBOUND_THERMALISATION : RPKT_EMISSION_BOUNDBOUND_SCATTERING);
+      emit_rpkt(pkt, thermalise ? RPKT_EMISSION_BOUNDBOUND_THERMALISATION : RPKT_EMISSION_BOUNDBOUND_SCATTERING);
 
       // the thermal re-emission and the line scattering are isotropic in the comoving frame, not a dipole
       if constexpr (VPKT_ON) {
@@ -965,8 +962,9 @@ DEVICE_FUNC void do_rpkt(Packet& pkt, const double t2, ContinuumOpacity& chi_rpk
   }
 }
 
-// make the packet an r-pkt and set further flags
-DEVICE_FUNC void emit_rpkt(Packet& pkt) {
+// make the packet an r-pkt and set further flags. Set emissiontype, absorptiontype, and absorptionfreq before this
+// call. sample_rpkt_emission() records them, and emission_process, for this emission.
+DEVICE_FUNC void emit_rpkt(Packet& pkt, const enum rpkt_emission_type emission_process) {
   pkt.type = TYPE_RPKT;
 
   // Need to assign a new direction. Assume isotropic emission in the cmf
@@ -993,6 +991,7 @@ DEVICE_FUNC void emit_rpkt(Packet& pkt) {
 
   pkt.em_pos = pkt.pos;
   pkt.em_time = static_cast<float>(pkt.prop_time);
+  sample_rpkt_emission(pkt, emission_process);
 }
 
 template <bool USECELLHISTANDUPDATEPHIXSLIST>

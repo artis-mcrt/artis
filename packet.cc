@@ -184,16 +184,16 @@ auto read_text_packets(const std::string& filename) -> std::vector<Packet> {
     auto remainder = std::string_view{line};
     bool rowisvalid = true;
 
-    // Take the next column of the row. Every column except the two emission positions below is finite, so a
-    // "nan" there is a corrupt row and the strict parser rejects it.
+    // Take the next column of the row. Every column except the emission positions below is finite, so a "nan"
+    // there is a corrupt row and the strict parser rejects it.
     const auto parse_column = [&remainder, &rowisvalid](auto& value) {
       rowisvalid = rowisvalid && parse_next_token(remainder, value);
     };
 
-    // Take the three columns of a position of the last emission. A packet that did not yet emit carries NAN
-    // in em_pos, and a packet that returned to the thermal pool carries NAN in trueem_pos. A packet with no sampled
-    // r-packet emission carries NAN in sampled_posx, sampled_posy, and sampled_posz. These are the only columns of
-    // the file that hold the "nan" spelling. An inf stays an error here, as in every other column.
+    // Take the three columns of an emission position. A packet that did not yet emit carries NAN in em_pos, and a
+    // packet that returned to the thermal pool carries NAN in trueem_pos. A packet with no sampled r-packet emission
+    // carries NAN in sampled_posx, sampled_posy, and sampled_posz. These are the only columns of the file that hold
+    // the "nan" spelling. An inf stays an error here, as in every other column.
     const auto parse_emission_position = [&remainder, &rowisvalid](Vec3d& position) {
       for (auto& component : position) {
         rowisvalid = rowisvalid && parse_next_token<true>(remainder, component);
@@ -252,6 +252,11 @@ auto read_text_packets(const std::string& filename) -> std::vector<Packet> {
         parse_column(rpkt_emission_sample.nrpkt_emissions);
         int rpkt_emission_type_in = 0;
         parse_column(rpkt_emission_type_in);
+        // a packet has RPKT_EMISSION_NONE if and only if it has no r-packet emission
+        rowisvalid = rowisvalid && rpkt_emission_sample.nrpkt_emissions >= 0 &&
+                     rpkt_emission_type_in >= RPKT_EMISSION_NONE &&
+                     rpkt_emission_type_in <= RPKT_EMISSION_BOUNDBOUND_THERMALISATION &&
+                     ((rpkt_emission_sample.nrpkt_emissions == 0) == (rpkt_emission_type_in == RPKT_EMISSION_NONE));
         rpkt_emission_sample.type = static_cast<enum rpkt_emission_type>(rpkt_emission_type_in);
         parse_column(rpkt_emission_sample.emissiontype);
         parse_column(rpkt_emission_sample.absorptiontype);
