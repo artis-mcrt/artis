@@ -177,9 +177,9 @@ void read_gamma_tables() {
     }
   }
 
-  // 52Fe and 52Mn have no gamma-ray table, so their gamma energy deposits as a k-packet with these mean
-  // energies per decay. The .empty() test keeps the mean of an existing spectrum, because choose_gamma_ray()
-  // normalises the lines by that mean.
+  // 52Fe and 52Mn have no gamma-ray table, so their gamma energy deposits locally as a non-thermal lepton
+  // (see pellet_gamma_decay()) with these mean energies per decay. The .empty() test keeps the mean of an existing
+  // spectrum, because choose_gamma_ray() normalises the lines by that mean.
   if (decay::nuc_exists(26, 52) && gamma_spectra[decay::get_nucindex(26, 52)].empty()) {
     decay::set_nucdecayenergygamma(decay::get_nucindex(26, 52), 0.86 * MEV);  // Fe52
   }
