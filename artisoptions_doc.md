@@ -312,7 +312,8 @@ constexpr bool KEEP_ESCAPED_GAMMAS;
 // The thermalisation of the non-thermal particles (positrons, electrons, and alpha particles):
 // - INSTANTFULLDEPOSITION deposits the particle energy at once;
 // - TIMEDEPENDENT transports the particles with the Monte Carlo method;
-// - TIMEDEPENDENT_WITH_ADIABATIC_LOSS adds the adiabatic loss rate E/t to the collisional loss rate. Only the
+// - TIMEDEPENDENT_WITH_ADIABATIC_LOSS adds the adiabatic loss rate E (E + 2 m c^2) / ((E + m c^2) t) of the
+//   kinetic energy E to the collisional loss rate. This rate is 2E/t for a non-relativistic particle. Only the
 //   collisional share of the lost energy heats the gas;
 // - TIMEDEPENDENTWITHGAMMAPRODUCTS also transports the electrons and positrons from Compton scattering,
 //   photoelectric absorption, and pair production, instead of an instant deposition;

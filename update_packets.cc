@@ -100,10 +100,13 @@ void do_nonthermal_predeposit(Packet& pkt, const int nts, const double ts_end) {
     // doi:10.3847/0004-637X/829/2/110
     const double endot_collisional =
         (pkt.type == TYPE_NONTHERMAL_PREDEPOSIT_ALPHA) ? 5.e11 * MEV * rho : 4.e10 * MEV * rho;
-    // positive energy loss rate from adiabatic expansion in [erg/s], assuming homologous expansion
+    // Positive energy loss rate from adiabatic expansion in [erg/s]. In homologous expansion, the momentum of a free
+    // particle decreases as p ~ 1/t, so the kinetic energy E decreases at the rate E (E + 2 m c^2) / ((E + m c^2) t).
+    // This rate is 2 E / t for a non-relativistic particle and E / t for an ultra-relativistic particle.
+    const double particle_rest_energy = ((pkt.type == TYPE_NONTHERMAL_PREDEPOSIT_ALPHA) ? MALPHA : ME) * CLIGHTSQUARED;
     const double endot_adiabatic =
         (PARTICLE_THERMALISATION_SCHEME == ParticleThermalisationScheme::TIMEDEPENDENT_WITH_ADIABATIC_LOSS)
-            ? particle_en / ts
+            ? particle_en * (particle_en + (2 * particle_rest_energy)) / ((particle_en + particle_rest_energy) * ts)
             : 0.;
     const double endot = endot_collisional + endot_adiabatic;
 

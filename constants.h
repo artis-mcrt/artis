@@ -28,6 +28,7 @@ constexpr double MSUN = 1.98855e+33;  // Solar mass [g]
 constexpr double LSUN = 3.826e+33;  // Solar luminosity [erg/s]
 constexpr double MH = 1.67352e-24;  // Mass of hydrogen atom [g]
 constexpr double ME = 9.1093897e-28;  // Mass of free electron [g]
+constexpr double MALPHA = 6.6446573357e-24;  // Mass of an alpha particle [g]
 constexpr double QE = 4.80325E-10;  // elementary charge in cgs units [statcoulomb]
 constexpr double PI = std::numbers::pi;
 constexpr double EV = 1.6021772e-12;  // eV to ergs [erg/eV]
