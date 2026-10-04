@@ -216,6 +216,9 @@ struct NonThermalCellSolution {
 
   int timestep_last_solved = -1;  // the quantities above were calculated for this timestep
   float nneperion_when_solved{NAN};  // nne divided by the total ion density at the last solution
+  // The total ion density at the last solution. The degradation spectrum scales with the inverse of the density,
+  // so a stored excitation rate coefficient per deposition also does.
+  double nnion_tot_when_solved{NAN};
 };
 
 MPI_shared_array<NonThermalCellSolution> nt_solution;
@@ -715,6 +718,7 @@ void set_axelrod_solution(const ptrdiff_t nonemptymgi) {
   nt_solution[nonemptymgi].frac_excitation = 0.;
 
   nt_solution[nonemptymgi].nneperion_when_solved = -1.;
+  nt_solution[nonemptymgi].nnion_tot_when_solved = NAN;
   nt_solution[nonemptymgi].timestep_last_solved = -1;
 
   nt_solution[nonemptymgi].frac_excitations_list_size = 0;
@@ -2446,7 +2450,12 @@ DEVICE_FUNC auto nt_excitation_ratecoeff(const int nonemptymgi, const int lowerl
   }
 
   const double deposition_rate_density = get_ntlepton_deposition_rate_density(nonemptymgi);
-  const double ratecoeffperdeposition = ntexcitation->ratecoeffperdeposition;
+  // A kept solution of an earlier timestep (see SF_MAX_TIMESTEPS_BETWEEN_SOLUTIONS) has a different total ion
+  // density. The rate coefficient scales with the inverse of that density, as the ionisation rate coefficient in
+  // nt_ionisation_ratecoeff_sf() does.
+  // The ratio is exactly one for a solution of the current timestep. The product then equals the stored value.
+  const double nnion_tot_ratio = nt_solution[nonemptymgi].nnion_tot_when_solved / get_nnion_tot(nonemptymgi);
+  const double ratecoeffperdeposition = ntexcitation->ratecoeffperdeposition * nnion_tot_ratio;
 
   return ratecoeffperdeposition * deposition_rate_density;
 }
@@ -2597,6 +2606,7 @@ auto solve_spencerfano(const int nonemptymgi, const int timestep, const int iter
       SFPTS, SF_EMIN, SF_EMAX, modelgridindex, timestep, iteration, nne);
 
   nt_solution[nonemptymgi].nneperion_when_solved = static_cast<float>(nne_per_ion);
+  nt_solution[nonemptymgi].nnion_tot_when_solved = get_nnion_tot(nonemptymgi);
   nt_solution[nonemptymgi].timestep_last_solved = timestep;
 
   // only the upper triangle of the Spencer-Fano matrix is stored, with elements addressed via uppertriangular(i, j)
