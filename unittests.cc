@@ -83,6 +83,18 @@ void check_close(const double a, const double b, const double reltol, const std:
   check(pass, description);
 }
 
+// check that the count of each of a set of equally likely outcomes agrees with ntrials / counts.size() to within six
+// standard deviations of the binomial distribution
+void check_counts_of_equally_likely_outcomes(const std::span<const int> counts, const int ntrials,
+                                             const std::string_view description) {
+  const auto noutcomes = static_cast<double>(counts.size());
+  const double expected_count = static_cast<double>(ntrials) / noutcomes;
+  const double six_sigma = 6. * std::sqrt(expected_count * (1. - (1. / noutcomes)));
+  const auto [min_count, max_count] = std::ranges::minmax(counts);
+  check(std::abs(min_count - expected_count) < six_sigma && std::abs(max_count - expected_count) < six_sigma,
+        description);
+}
+
 void test_binindex_helpers() {
   std::println("bin index and log-grid helpers...");
   const double minvalue = 1e14;
@@ -207,11 +219,8 @@ void test_escapedirectionbin() {
   check(all_in_range, "escape direction bins are all within [0, MABINS)");
 
   // every bin covers an equal solid angle, so isotropic directions should fill them equally
-  constexpr double expected_count = static_cast<double>(ndirs) / MABINS;
-  const double sixsigma = 6. * std::sqrt(expected_count * (1. - (1. / MABINS)));
-  const auto [mincount, maxcount] = std::ranges::minmax(bincounts);
-  check(std::abs(mincount - expected_count) < sixsigma && std::abs(maxcount - expected_count) < sixsigma,
-        "isotropic directions fill all direction bins of equal solid angle to within 6 sigma");
+  check_counts_of_equally_likely_outcomes(
+      bincounts, ndirs, "isotropic directions fill all direction bins of equal solid angle to within 6 sigma");
 
   // Pin the azimuthal ordering that artistools depends on (see the comment in get_escapedirectionbin):
   // the bins NPHIBINS/2..(NPHIBINS - 1) cover phi = 0..pi in increasing order, and the bins
@@ -369,8 +378,7 @@ void test_item_replaces_sample() {
   constexpr int nranks = 4;
   constexpr int npackets_per_rank = 50000;
 
-  // the number of sequences that keep each item as the final sample
-  std::array<int, nitems> sample_counts_of_item{};
+  std::array<int, nitems> nsequences_with_final_sample_at_item{};
   for (int rank = 0; rank < nranks; rank++) {
     for (int pktnumber = 0; pktnumber < npackets_per_rank; pktnumber++) {
       const std::uint64_t rank_and_packet_number = get_rank_and_packet_number_key(rank, pktnumber);
@@ -381,18 +389,50 @@ void test_item_replaces_sample() {
           sampled_item = item;
         }
       }
-      sample_counts_of_item[sampled_item]++;
+      nsequences_with_final_sample_at_item[sampled_item]++;
     }
   }
 
   // each item is the final sample with the probability 1 / nitems
-  constexpr double probability_of_sample = 1. / nitems;
-  constexpr double nsequences = static_cast<double>(nranks) * npackets_per_rank;
-  constexpr double expected_count = nsequences * probability_of_sample;
-  const double sixsigma = 6. * std::sqrt(nsequences * probability_of_sample * (1. - probability_of_sample));
-  const auto [mincount, maxcount] = std::ranges::minmax(sample_counts_of_item);
-  check(std::abs(mincount - expected_count) < sixsigma && std::abs(maxcount - expected_count) < sixsigma,
-        "item_replaces_sample keeps each item with equal probability to within 6 sigma");
+  check_counts_of_equally_likely_outcomes(
+      nsequences_with_final_sample_at_item, nranks * npackets_per_rank,
+      "item_replaces_sample keeps each item with equal probability to within 6 sigma");
+}
+
+void test_sample_rpkt_emission() {
+  std::println("sample_rpkt_emission...");
+  // The test gives a separate RpktEmissionSample to sample_rpkt_emission(), so that every build tests the sample, also
+  // with SAMPLE_RPKT_EMISSION false.
+  Packet pkt{};
+  pkt.type = TYPE_RPKT;
+  pkt.number = 1234;
+  RpktEmissionSample rpkt_emission_sample{};
+  constexpr int nrpkt_emissions = 40;
+  const std::uint64_t rank_and_packet_number = get_rank_and_packet_number_key(globals::my_rank, pkt.number);
+  int sampled_emission_index = -1;
+  for (int emission_index = 0; emission_index < nrpkt_emissions; emission_index++) {
+    // each emission has different values, so the values of the sample show which emission it holds
+    pkt.emissiontype = emission_index;
+    pkt.absorptiontype = -emission_index;
+    pkt.absorptionfreq = 1e15 * (1 + emission_index);
+    pkt.prop_time = 1e6 * (1 + emission_index);
+    pkt.pos = {1e14 * emission_index, 2e14 * emission_index, 3e14 * emission_index};
+    const auto emission_process = (emission_index % 2 == 0) ? RPKT_EMISSION_KPKT : RPKT_EMISSION_ELECTRON_SCATTERING;
+    sample_rpkt_emission(rpkt_emission_sample, pkt, emission_process);
+    if (item_replaces_sample(emission_index + 1, rank_and_packet_number)) {
+      sampled_emission_index = emission_index;
+    }
+  }
+  check(rpkt_emission_sample.nrpkt_emissions == nrpkt_emissions, "sample_rpkt_emission counts each r-packet emission");
+  const auto expected_emission_process =
+      (sampled_emission_index % 2 == 0) ? RPKT_EMISSION_KPKT : RPKT_EMISSION_ELECTRON_SCATTERING;
+  check(rpkt_emission_sample.type == expected_emission_process &&
+            rpkt_emission_sample.emissiontype == sampled_emission_index &&
+            rpkt_emission_sample.absorptiontype == -sampled_emission_index &&
+            rpkt_emission_sample.absorptionfreq == 1e15 * (1 + sampled_emission_index) &&
+            rpkt_emission_sample.time == static_cast<float>(1e6 * (1 + sampled_emission_index)) &&
+            rpkt_emission_sample.pos[2] == 3e14 * sampled_emission_index,
+        "sample_rpkt_emission keeps the values of the emission that item_replaces_sample selects");
 }
 
 void test_planck() {
@@ -1449,6 +1489,7 @@ auto main() -> int {
   test_meridian();
   test_random_sampling();
   test_item_replaces_sample();
+  test_sample_rpkt_emission();
   test_planck();
   test_bateman();
   test_compton();

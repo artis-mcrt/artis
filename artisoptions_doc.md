@@ -313,7 +313,7 @@ constexpr bool KEEP_ESCAPED_GAMMAS;
 // the packet. An r-packet emission is each event that emits the packet as an r-packet, and this includes each
 // scattering of an r-packet. The events of a gamma packet and the pellet decays are not r-packet emissions. The
 // sample holds these values of the r-packet emission:
-// - the type of the r-packet emission;
+// - the process of the r-packet emission, a value of rpkt_emission_type in packet.h;
 // - emissiontype;
 // - absorptiontype;
 // - absorptionfreq;

@@ -6,7 +6,6 @@
 
 #include <cmath>
 #include <cstdint>
-#include <limits>
 #include <span>
 #include <string>
 #include <type_traits>
@@ -14,7 +13,6 @@
 
 #include "artisoptions.h"
 #include "constants.h"
-#include "mpi_logging.h"
 
 // Packet state in the indivisible energy packet scheme of Lucy (2002), A&A, 384, 725-735,
 // doi:10.1051/0004-6361:20011756.
@@ -128,6 +126,27 @@ enum rpkt_emission_type : int {
   RPKT_EMISSION_BOUNDBOUND_THERMALISATION = 7,
 };
 
+// Return true if value is a value of rpkt_emission_type. read_text_packets() stops at a row with a different value.
+// The switch has no default case, so the compiler warns (-Wswitch) about a new value of the enum that this function
+// does not accept.
+[[nodiscard]] constexpr auto is_valid_rpkt_emission_type(const int value) -> bool {
+  switch (static_cast<enum rpkt_emission_type>(value)) {
+    case RPKT_EMISSION_NONE:
+    case RPKT_EMISSION_KPKT:
+    case RPKT_EMISSION_MACROATOM_BOUNDBOUND:
+    case RPKT_EMISSION_MACROATOM_BOUNDFREE:
+    case RPKT_EMISSION_ELECTRON_SCATTERING:
+    case RPKT_EMISSION_THICKCELL_GREY_SCATTERING:
+    case RPKT_EMISSION_BOUNDBOUND_SCATTERING:
+    case RPKT_EMISSION_BOUNDBOUND_THERMALISATION:
+      return true;
+  }
+  return false;
+}
+static_assert(is_valid_rpkt_emission_type(RPKT_EMISSION_NONE) &&
+              is_valid_rpkt_emission_type(RPKT_EMISSION_BOUNDBOUND_THERMALISATION) &&
+              !is_valid_rpkt_emission_type(-1) && !is_valid_rpkt_emission_type(8));
+
 // The count of the r-packet emissions of a packet, and one of these emissions, sampled with equal probability from
 // all of them (see SAMPLE_RPKT_EMISSION). Each r-packet emission is the sample with the probability
 // 1 / nrpkt_emissions, so the sample represents nrpkt_emissions r-packet emissions.
@@ -203,13 +222,13 @@ struct Packet {
   enum packet_type escape_type {};  // In which form when escaped from the grid.
   float escape_time{-1};  // time at which is passes out of the grid [s]
   double tdecay{-1.};  // Time at which pellet decays
-  int number{-1};  // A unique number to identify the packet
+  int number{-1};  // the number of the packet, unique only inside one rank
   bool originated_from_particlenotgamma{false};  // first packet type after pellet decay
   int pellet_decaytype{-1};  // decay::DecayType value of the pellet decay, or -1 for the initial-energy channel
   int pellet_nucindex{-1};  // nuclide index of the decaying species
   // If SAMPLE_RPKT_EMISSION is false, this member has an empty type, and [[no_unique_address]] then lets it take no
-  // memory. The code that reads the members of the sample is a template, because the compiler checks the code for the
-  // empty type otherwise, also inside "if constexpr (SAMPLE_RPKT_EMISSION)".
+  // memory. The type of the member selects the overload of sample_rpkt_emission(), parse_rpkt_emission_sample(), and
+  // print_rpkt_emission_sample(). Every build thus compiles the code for the two types.
   [[no_unique_address]] std::conditional_t<SAMPLE_RPKT_EMISSION, RpktEmissionSample, NoRpktEmissionSample>
       rpkt_emission_sample{};
 
@@ -238,11 +257,11 @@ inline auto get_rngstate([[maybe_unused]] const Packet& packet) -> rngstate_type
 //
 // sequence_key identifies the sequence, e.g. the r-packet emissions of one packet. The uniform random integer comes
 // from a hash of sequence_key and nitems_seen, and not from the random generator of the packets. The sample thus
-// leaves the random sequence of the physics unchanged. The hash is the SplitMix64 finaliser utlrandom::_mix_seed()
-// (Steele, G. L., Lea, D., & Flood, C. H. 2014, ACM SIGPLAN Notices, 49, 453-472, doi:10.1145/2714064.2660195). The
-// multiplication and the shift map the hash to the range [0, nitems_seen) (Lemire, D. 2019, ACM Transactions on
-// Modeling and Computer Simulation, 29, 3:1-3:12, doi:10.1145/3230636). The bias of that map is less than
-// nitems_seen / 2^32.
+// leaves the random sequence of the physics unchanged. The hash is utlrandom::_mix_seed(), one step of the SplitMix64
+// generator (Steele, G. L., Lea, D., & Flood, C. H. 2014, ACM SIGPLAN Notices, 49, 453-472,
+// doi:10.1145/2714064.2660195). The multiplication and the shift map the hash to the range [0, nitems_seen) (Lemire, D.
+// 2019, ACM Transactions on Modeling and Computer Simulation, 29, 3:1-3:12, doi:10.1145/3230636). The relative bias of
+// that map is less than nitems_seen / 2^32.
 [[nodiscard]] constexpr DEVICE_FUNC auto item_replaces_sample(const int nitems_seen, const std::uint64_t sequence_key)
     -> bool {
   if (nitems_seen <= 1) {
@@ -265,33 +284,6 @@ static_assert(item_replaces_sample(1, 0) && item_replaces_sample(1, ~std::uint64
   return (static_cast<std::uint64_t>(static_cast<std::uint32_t>(rank)) << 32U) | static_cast<std::uint32_t>(pktnumber);
 }
 static_assert(get_rank_and_packet_number_key(3, 5) == ((std::uint64_t{3} << 32U) | 5U));
-
-// Count the current r-packet emission of the packet, and make it the sampled emission of Packet::rpkt_emission_sample
-// with the probability that keeps the sample uniform. emit_rpkt() and the electron scattering call this after the
-// code sets emissiontype, absorptiontype, and absorptionfreq for the emission.
-// The function is a template, so that the compiler does not check the body for a packet without the sample (see
-// Packet::rpkt_emission_sample).
-template <typename PacketT>
-DEVICE_FUNC inline void sample_rpkt_emission(PacketT& pkt, const enum rpkt_emission_type emission_process) {
-  if constexpr (SAMPLE_RPKT_EMISSION) {
-    assert_testmodeonly(pkt.type == TYPE_RPKT);
-    auto& rpkt_emission_sample = pkt.rpkt_emission_sample;
-    assert_testmodeonly(rpkt_emission_sample.nrpkt_emissions < std::numeric_limits<int>::max());
-    rpkt_emission_sample.nrpkt_emissions++;
-    if (item_replaces_sample(rpkt_emission_sample.nrpkt_emissions,
-                             get_rank_and_packet_number_key(globals::my_rank, pkt.number))) {
-      rpkt_emission_sample = RpktEmissionSample{
-          .nrpkt_emissions = rpkt_emission_sample.nrpkt_emissions,
-          .type = emission_process,
-          .emissiontype = pkt.emissiontype,
-          .absorptiontype = pkt.absorptiontype,
-          .time = static_cast<float>(pkt.prop_time),
-          .pos = pkt.pos,
-          .absorptionfreq = pkt.absorptionfreq,
-      };
-    }
-  }
-}
 
 void packet_init(std::span<Packet> packets);
 auto read_text_packets(const std::string& filename) -> std::vector<Packet>;
