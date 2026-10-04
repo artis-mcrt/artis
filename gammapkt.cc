@@ -961,6 +961,7 @@ DEVICE_FUNC void pellet_gamma_decay(Packet& pkt) {
     atomicadd(globals::timesteps[globals::timestep].gamma_dep_discrete, pkt.e_cmf);
     pkt.type = TYPE_NTLEPTON_DEPOSITED;
     pkt.absorptiontype = ABSTYPE_PELLET_NOGAMMASPEC;
+    stats::increment(stats::Counter::NT_STAT_FROM_GAMMA);
     return;
   }
 

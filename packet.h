@@ -21,7 +21,7 @@
 //   RADIOACTIVE_PELLET --(decay to gamma rays)--> GAMMA
 //                      --(decay to a lepton/alpha)--> NONTHERMAL_PREDEPOSIT_{BETAMINUS,BETAPLUS,ALPHA}
 //                      --(spontaneous fission)--> NTALPHA_FISPROD_DEPOSITED
-//                      --(decay with no gamma spectrum at all, e.g. the 52Fe chain)--> KPKT
+//                      --(decay with no gamma spectrum at all, e.g. the 52Fe chain)--> NTLEPTON_DEPOSITED
 //                      --(decayed before tmin, or carrying the model's initial energy)--> PRE_KPKT
 //   GAMMA --(Compton/photoelectric/pair production)--> NTLEPTON_DEPOSITED or a PREDEPOSIT type
 //         --(leaves the grid)--> ESCAPE
