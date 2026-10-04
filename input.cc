@@ -1357,7 +1357,7 @@ auto read_compositiondata() -> std::vector<int> {
         .anumber = atomicnumber,
         .lowest_ionstage = lowermost_ionstage,
         .uniqueionindexstart = uniqueionindex,
-        .initstablemeannucmass = static_cast<float>(mass_amu * MH),
+        .initstablemeannucmass = static_cast<float>(mass_amu * AMU),
     };
     uniqueionindex += nions_readin[element];
   }

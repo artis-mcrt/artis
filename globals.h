@@ -61,7 +61,7 @@ struct Element {
   int anumber{-1};  // Atomic number
   int lowest_ionstage{-1};  // ionisation stage (charge + 1) of ion 0 for this element
   int uniqueionindexstart{-1};  // uniqueionindex of the lowest ionisation stage of this element
-  float initstablemeannucmass = {0.};  // mean nuclear mass [g] of the element's stable component (mass_amu * MH)
+  float initstablemeannucmass = {0.};  // mean nuclear mass [g] of the element's stable component (mass_amu * AMU)
   bool has_nlte_levels{false};
 };
 

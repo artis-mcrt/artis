@@ -173,7 +173,7 @@ std::vector<bool> alldecaytypes_is_used;
   return nuclides[nucindex].branchprobs[decaytype];
 }
 
-[[nodiscard]] auto nucmass(int nucindex) -> double { return get_nuc_a(nucindex) * MH; }
+[[nodiscard]] auto nucmass(int nucindex) -> double { return get_nuc_a(nucindex) * AMU; }
 
 // get the nuclide array index from the atomic number and mass number
 [[nodiscard]] auto get_nucindex_or_neg_one(const int z, const int a) -> int {
@@ -702,13 +702,13 @@ void add_standard_nuclides() {
   // energy 2 m_e c^2 of the positron
   nuclides.back().endecay_q[DECAYTYPE_BETAPLUS] = ni57_q_ec;
 
-  // Ni56
-  nuclides.push_back({.z = 28, .a = 56, .meanlife = 8.80 * DAY});
+  // Ni56: the half-life 6.075 d of the Evaluated Nuclear Structure Data File (ENSDF) gives the mean life 8.7644 d
+  nuclides.push_back({.z = 28, .a = 56, .meanlife = 8.7644 * DAY});
   nuclides.back().branchprobs[DECAYTYPE_ELECTRONCAPTURE] = 1.;
   nuclides.back().endecay_q[DECAYTYPE_ELECTRONCAPTURE] = 2.132869 * MEV;
 
-  // Co56
-  nuclides.push_back({.z = 27, .a = 56, .meanlife = 113.7 * DAY});
+  // Co56: the half-life 77.236 d of ENSDF gives the mean life 111.428 d
+  nuclides.push_back({.z = 27, .a = 56, .meanlife = 111.428 * DAY});
   nuclides.back().endecay_positron = 0.63 * MEV;
   nuclides.back().branchprobs[DECAYTYPE_BETAPLUS] = 0.19;
   nuclides.back().branchprobs[DECAYTYPE_ELECTRONCAPTURE] = 1 - 0.19;
