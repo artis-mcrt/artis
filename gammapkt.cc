@@ -948,16 +948,18 @@ void init_gamma_data() {
   return gamma_spectra[nucindex].back().energy / H;
 }
 
-// convert a pellet to a gamma ray (or kpkt if no gamma spec loaded)
+// convert a pellet to a gamma ray (or to a deposited non-thermal lepton if no gamma spec loaded)
 DEVICE_FUNC void pellet_gamma_decay(Packet& pkt) {
-  // if no gamma spectra is known, then convert straight to kpkts (e.g., Fe52, Mn52)
+  // if no gamma spectra is known, then deposit the energy at once (e.g., Fe52, Mn52)
   if (pkt.nu_cmf < 0) {
-    // the energy deposits at once, so the estimators must count it like an absorbed gamma ray
+    // The energy deposits at once, so the estimators must count it like an absorbed gamma ray. The packet then
+    // also takes the path of an absorbed gamma ray, so that the non-thermal solver splits it into ionisation,
+    // excitation, and heating with the same fractions that it applies to the estimator.
     const int nonemptymgi = grid::get_propcell_nonemptymgi(pkt.cellindex);
     assert_always(nonemptymgi >= 0);
     atomicadd(globals::dep_estimator_gamma[nonemptymgi], pkt.e_cmf);
     atomicadd(globals::timesteps[globals::timestep].gamma_dep_discrete, pkt.e_cmf);
-    pkt.type = TYPE_KPKT;
+    pkt.type = TYPE_NTLEPTON_DEPOSITED;
     pkt.absorptiontype = ABSTYPE_PELLET_NOGAMMASPEC;
     return;
   }
