@@ -2509,9 +2509,10 @@ DEVICE_FUNC void do_ntlepton_deposit(Packet& pkt) {
     }
 
     // Route the excitation share of the deposition to macroatoms. Whatever is left over after the
-    // ionisation and excitation channels becomes a k-packet (heating) below, so the k-packet
-    // probability is 1 - frac_ionisation - frac_excitation, matching the frac_heating that
-    // analyse_sf_solution() stores and the T_e solver applies to the deposition rate.
+    // ionisation channel and the stored excitation list becomes a k-packet (heating) below. The stored
+    // list does not cover all of frac_excitation (see the note at the end of the loop). The k-packet
+    // probability can therefore be larger than 1 - frac_ionisation - frac_excitation, which is the
+    // frac_heating that analyse_sf_solution() stores and the T_e solver applies to the deposition rate.
     const double frac_excitation = get_nt_frac_excitation(nonemptymgi);
     if (zrand < (frac_ionisation + frac_excitation)) {
       zrand -= frac_ionisation;
