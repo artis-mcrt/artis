@@ -376,7 +376,8 @@ constexpr ExpansionOpacityMethod EXPANSION_OPACITY_METHOD;
 
 // Replace the macroatom with a thermalisation probability P for each bound-bound absorption, and a scattering
 // with probability 1 - P. Every k-packet in a cell that is not thick then emits a blackbody spectrum weighted
-// with the sum of P times the expansion opacity and the free-free opacity. The code therefore computes the
+// with the true absorption opacity. That opacity is the sum of P times the expansion opacity, the free-free
+// opacity, and the bound-free opacity of each continuum times 1 - nu_edge / nu. The code therefore computes the
 // expansion opacity bins also without RPKT_USE_EXPANSION_OPACITIES. A thick cell samples a plain Planck function.
 // No value keeps the macroatom.
 constexpr std::optional<float> RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY;
