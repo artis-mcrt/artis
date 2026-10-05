@@ -2581,9 +2581,9 @@ auto solve_spencerfano(const int nonemptymgi, const int timestep, const int iter
       "{:g} fracdiff {:g}",
       timestep, timestep_last_solved, nne_per_ion, nne_per_ion_last, nne_per_ion_fracdiff);
 
-  if (timestep_last_solved == timestep && nne_per_ion_fracdiff < NT_MAX_FRACDIFF_NNEPERION_BETWEEN_SOLUTIONS) {
+  if (timestep_last_solved == timestep && nne_per_ion_fracdiff < SF_RE_SOLVE_WITHIN_TIMESTEP_MIN_NNEPERION_FRACDIFF) {
     printlnlog("Keeping Spencer-Fano solution of timestep {} because x_e fracdiff {:g} < {:g}", timestep,
-               nne_per_ion_fracdiff, NT_MAX_FRACDIFF_NNEPERION_BETWEEN_SOLUTIONS);
+               nne_per_ion_fracdiff, SF_RE_SOLVE_WITHIN_TIMESTEP_MIN_NNEPERION_FRACDIFF);
 
     return false;
   }

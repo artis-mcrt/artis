@@ -271,7 +271,7 @@ constexpr NonThermalScheme NT_SCHEME;
 // A later iteration of the same timestep keeps that solution, unless nne per ion (nne divided by the total ion
 // density) changed by this fraction or more, e.g. 0.5 for 50 percent. A value of 0 gives a new solution at each
 // iteration.
-constexpr double NT_MAX_FRACDIFF_NNEPERION_BETWEEN_SOLUTIONS;
+constexpr double SF_RE_SOLVE_WITHIN_TIMESTEP_MIN_NNEPERION_FRACDIFF;
 
 // Include non-thermal excitation only from the lowest NTEXCITATION_MAXNLEVELS_LOWER levels of an ion and to
 // its lowest NTEXCITATION_MAXNLEVELS_UPPER levels, because these transitions slow the solver. A zero in either

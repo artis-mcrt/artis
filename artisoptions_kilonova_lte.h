@@ -109,7 +109,7 @@ constexpr std::optional<int> NLTE_TIME_DEPENDENT_FIRST_TIMESTEP = std::nullopt;
 
 constexpr NonThermalScheme NT_SCHEME = NonThermalScheme::NT_OFF;
 
-constexpr double NT_MAX_FRACDIFF_NNEPERION_BETWEEN_SOLUTIONS = 0.05;
+constexpr double SF_RE_SOLVE_WITHIN_TIMESTEP_MIN_NNEPERION_FRACDIFF = 0.05;
 
 constexpr int NTEXCITATION_MAXNLEVELS_LOWER = 5;
 constexpr int NTEXCITATION_MAXNLEVELS_UPPER = 250;
