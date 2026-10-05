@@ -271,12 +271,44 @@ auto get_possible_event_expansion_opacity(const int nonemptymgi, Packet& pkt, co
   return {std::numeric_limits<double>::max(), false};
 }
 
-// Set the position and the time of the last emission of an r-packet. Then count and sample the emission (see
-// SAMPLE_RPKT_EMISSION). emit_rpkt() and electron_scatter_rpkt() call this function once for each emission.
-DEVICE_FUNC void record_rpkt_emission(Packet& pkt, const enum rpkt_emission_type emission_process) {
+// Give an r-packet a new direction that is isotropic in the comoving frame, and set its rest-frame frequency and
+// energy. The packet is then unpolarised.
+DEVICE_FUNC void set_isotropic_cmf_direction(Packet& pkt) {
+  const auto dir_cmf = get_rand_isotropic_unitvec(get_rngstate(pkt));
+
+  // This direction is in the cmf - we want to convert it to the rest
+  // frame - use aberration of angles. We want to convert from cmf to
+  // rest so need -ve velocity.
+  const auto vel_vec = get_velocity(pkt.pos, -pkt.prop_time);
+  // negative time since we want the backwards transformation here
+
+  pkt.dir = angle_ab(dir_cmf, vel_vec);
+
+  // set the rest-frame energy and frequency
+
+  set_pkt_restframe_from_cmf(pkt);
+
+  if constexpr (POL_ON) {
+    // Reset to unpolarised
+    pkt.stokes_u = 0.;
+    pkt.stokes_q = 0.;
+  }
+}
+
+// Set the position and the time of the last emission of an r-packet to the current position and time. Each
+// r-packet emission sets them, also a scattering.
+DEVICE_FUNC void set_rpkt_em_pos_and_em_time(Packet& pkt) {
   pkt.em_pos = pkt.pos;
   pkt.em_time = static_cast<float>(pkt.prop_time);
-  sample_rpkt_emission(pkt.rpkt_emission_sample, pkt, emission_process);
+}
+
+// Scatter an r-packet in a direction that is isotropic in the comoving frame, at the same comoving frequency and
+// energy. A scattering keeps Packet::emissiontype, so it is not in the sample of the r-packet emissions (see
+// emit_rpkt()).
+DEVICE_FUNC void isotropic_scatter_rpkt(Packet& pkt) {
+  pkt.type = TYPE_RPKT;
+  set_isotropic_cmf_direction(pkt);
+  set_rpkt_em_pos_and_em_time(pkt);
 }
 
 // Scatter an r-packet off a free electron: sample the new direction in the comoving frame and transform
@@ -354,8 +386,9 @@ void electron_scatter_rpkt(Packet& pkt) {
 
   set_pkt_restframe_from_cmf(pkt);
 
-  // Electron scattering does not modify the last emission flag but it updates the last emission position
-  record_rpkt_emission(pkt, RPKT_EMISSION_ELECTRON_SCATTERING);
+  // An electron scattering keeps emissiontype, but it sets the position and the time of the last emission. It is not in
+  // the sample of the r-packet emissions (see emit_rpkt()).
+  set_rpkt_em_pos_and_em_time(pkt);
 }
 
 template <bool USECELLHISTANDUPDATEPHIXSLIST, bool SELECTCONTINUUM = false>
@@ -573,7 +606,7 @@ auto do_rpkt_step(Packet& pkt, const double t2, ContinuumOpacity& chi_rpkt_cont)
       stats::increment(stats::Counter::ELECTRON_SCATTERINGS);
 
       // the code treats the grey event as a coherent scattering, so the event keeps the emission type
-      emit_rpkt(pkt, pkt.emissiontype, RPKT_EMISSION_THICKCELL_GREY_SCATTERING);
+      isotropic_scatter_rpkt(pkt);
     } else if (!event_is_boundbound) {
       rpkt_event_continuum(pkt, chi_rpkt_cont);
     } else if constexpr (!RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.has_value()) {
@@ -607,12 +640,12 @@ auto do_rpkt_step(Packet& pkt, const double t2, ContinuumOpacity& chi_rpkt_cont)
         // re-emit rather than scatter, so that this event is not counted as an electron scattering
         pkt.nscatterings = 0;
 
-        emit_rpkt(pkt, EMTYPE_NOTSET, RPKT_EMISSION_BOUNDBOUND_THERMALISATION);
+        emit_rpkt(pkt, EMTYPE_NOTSET);
       } else {
         // pure line scattering, so the packet keeps its comoving frequency in a new direction. nscatterings stays
         // unchanged, because this event is not an electron scattering.
         stats::increment(stats::Counter::RESONANCESCATTERINGS);
-        emit_rpkt(pkt, pkt.emissiontype, RPKT_EMISSION_BOUNDBOUND_SCATTERING);
+        isotropic_scatter_rpkt(pkt);
       }
 
       // the thermal re-emission and the line scattering are isotropic in the comoving frame, not a dipole
@@ -970,67 +1003,34 @@ DEVICE_FUNC void do_rpkt(Packet& pkt, const double t2, ContinuumOpacity& chi_rpk
 }
 
 // Emit the packet as an r-packet with the emission type emissiontype in an isotropic direction of the comoving frame.
-// A scattering keeps the emission type of the packet, so the caller of a scattering gives pkt.emissiontype.
-DEVICE_FUNC void emit_rpkt(Packet& pkt, const int emissiontype, const enum rpkt_emission_type emission_process) {
+// No other function of the packet transport sets Packet::emissiontype, and this function samples each of these
+// emissions (see SAMPLE_RPKT_EMISSION). The sampled emissions are thus exactly the events that set emissiontype. A
+// scattering keeps emissiontype, so it calls isotropic_scatter_rpkt() or electron_scatter_rpkt() instead.
+DEVICE_FUNC void emit_rpkt(Packet& pkt, const int emissiontype) {
   pkt.type = TYPE_RPKT;
   pkt.emissiontype = emissiontype;
-
-  // Need to assign a new direction. Assume isotropic emission in the cmf
-
-  const auto dir_cmf = get_rand_isotropic_unitvec(get_rngstate(pkt));
-
-  // This direction is in the cmf - we want to convert it to the rest
-  // frame - use aberration of angles. We want to convert from cmf to
-  // rest so need -ve velocity.
-  const auto vel_vec = get_velocity(pkt.pos, -pkt.prop_time);
-  // negative time since we want the backwards transformation here
-
-  pkt.dir = angle_ab(dir_cmf, vel_vec);
-
-  // set the rest-frame energy and frequency
-
-  set_pkt_restframe_from_cmf(pkt);
-
-  if constexpr (POL_ON) {
-    // Reset to unpolarised
-    pkt.stokes_u = 0.;
-    pkt.stokes_q = 0.;
-  }
-
-  record_rpkt_emission(pkt, emission_process);
+  set_isotropic_cmf_direction(pkt);
+  set_rpkt_em_pos_and_em_time(pkt);
+  sample_rpkt_emission(pkt.rpkt_emission_sample, pkt);
 }
 
-DEVICE_FUNC void sample_rpkt_emission(RpktEmissionSample& rpkt_emission_sample, const Packet& pkt,
-                                      const enum rpkt_emission_type emission_process) {
+DEVICE_FUNC void sample_rpkt_emission(RpktEmissionSample& rpkt_emission_sample, const Packet& pkt) {
   assert_testmodeonly(pkt.type == TYPE_RPKT);
   assert_always(rpkt_emission_sample.nrpkt_emissions < std::numeric_limits<int>::max());
   rpkt_emission_sample.nrpkt_emissions++;
-  if (is_rpkt_scattering(emission_process)) {
-    rpkt_emission_sample.nrpkt_scatterings++;
-    return;
-  }
-  const int nrpkt_emissions_without_scatterings =
-      rpkt_emission_sample.nrpkt_emissions - rpkt_emission_sample.nrpkt_scatterings;
-  if (item_replaces_sample(nrpkt_emissions_without_scatterings,
+  if (item_replaces_sample(rpkt_emission_sample.nrpkt_emissions,
                            get_rank_and_packet_number_key(globals::my_rank, pkt.number))) {
     rpkt_emission_sample = RpktEmissionSample{
-        .e_cmf = pkt.e_cmf,
         .nrpkt_emissions = rpkt_emission_sample.nrpkt_emissions,
-        .nrpkt_scatterings = rpkt_emission_sample.nrpkt_scatterings,
-        .type = emission_process,
         .emissiontype = pkt.emissiontype,
         .absorptiontype = pkt.absorptiontype,
-        .time = pkt.em_time,
-        .pos = get_position_as_float(pkt.em_pos),
         .absorptionfreq = static_cast<float>(pkt.absorptionfreq),
-        .nu_rf = static_cast<float>(pkt.nu_rf),
     };
   }
 }
 
 DEVICE_FUNC void sample_rpkt_emission([[maybe_unused]] const NoRpktEmissionSample& rpkt_emission_sample,
-                                      [[maybe_unused]] const Packet& pkt,
-                                      [[maybe_unused]] const enum rpkt_emission_type emission_process) {}
+                                      [[maybe_unused]] const Packet& pkt) {}
 
 template <bool USECELLHISTANDUPDATEPHIXSLIST>
 void calculate_chi_rpkt_cont(const double nu_cmf, ContinuumOpacity& chi_rpkt_cont, const int nonemptymgi) {

@@ -110,17 +110,14 @@ struct ContinuumOpacity {
 };
 
 DEVICE_FUNC void do_rpkt(Packet& pkt, double t2, ContinuumOpacity& chi_rpkt_cont);
-DEVICE_FUNC void emit_rpkt(Packet& pkt, int emissiontype, enum rpkt_emission_type emission_process);
-// Count the current r-packet emission of pkt. If the emission is not a scattering, make it the sampled emission in
-// rpkt_emission_sample with the probability that keeps the sample uniform (see SAMPLE_RPKT_EMISSION). Before the
-// call, the caller sets pkt.em_pos and pkt.em_time to the position and the time of the emission, and sets the
-// rest-frame frequency and the energy that the packet has after the emission. rpkt_emission_sample is
+DEVICE_FUNC void emit_rpkt(Packet& pkt, int emissiontype);
+// Count the current r-packet emission of pkt, which sets emissiontype. Then make it the sampled emission in
+// rpkt_emission_sample with the probability that keeps the sample uniform (see SAMPLE_RPKT_EMISSION). Only
+// emit_rpkt() calls this function. Before the call, it sets emissiontype. rpkt_emission_sample is
 // pkt.rpkt_emission_sample, except in the unit tests.
-DEVICE_FUNC void sample_rpkt_emission(RpktEmissionSample& rpkt_emission_sample, const Packet& pkt,
-                                      enum rpkt_emission_type emission_process);
+DEVICE_FUNC void sample_rpkt_emission(RpktEmissionSample& rpkt_emission_sample, const Packet& pkt);
 // A packet without the sample (SAMPLE_RPKT_EMISSION is false) keeps no count and no sample.
-DEVICE_FUNC void sample_rpkt_emission(const NoRpktEmissionSample& rpkt_emission_sample, const Packet& pkt,
-                                      enum rpkt_emission_type emission_process);
+DEVICE_FUNC void sample_rpkt_emission(const NoRpktEmissionSample& rpkt_emission_sample, const Packet& pkt);
 template <bool USECELLHISTANDUPDATEPHIXSLIST>
 void calculate_chi_rpkt_cont(double nu_cmf, ContinuumOpacity& chi_rpkt_cont, int nonemptymgi);
 extern template void calculate_chi_rpkt_cont<true>(double nu_cmf, ContinuumOpacity& chi_rpkt_cont, int nonemptymgi);

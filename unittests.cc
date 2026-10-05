@@ -407,59 +407,29 @@ void test_sample_rpkt_emission() {
   pkt.type = TYPE_RPKT;
   pkt.number = 1234;
   RpktEmissionSample rpkt_emission_sample{};
-  // The sequence of the event types contains each type of emission, and it alternates a scattering with an emission
-  // that is not a scattering
-  constexpr std::array emission_processes{
-      RPKT_EMISSION_KPKT,
-      RPKT_EMISSION_ELECTRON_SCATTERING,
-      RPKT_EMISSION_MACROATOM_BOUNDBOUND,
-      RPKT_EMISSION_THICKCELL_GREY_SCATTERING,
-      RPKT_EMISSION_MACROATOM_BOUNDFREE,
-      RPKT_EMISSION_BOUNDBOUND_SCATTERING,
-      RPKT_EMISSION_BOUNDBOUND_THERMALISATION,
-      RPKT_EMISSION_ELECTRON_SCATTERING,
-  };
-  constexpr int nrpkt_emissions = 80;
+  constexpr int nrpkt_emissions = 40;
   const std::uint64_t rank_and_packet_number = get_rank_and_packet_number_key(globals::my_rank, pkt.number);
-  int nrpkt_scatterings = 0;
-  int sampled_emission_index_without_scatterings = -1;
+  int sampled_emission_index = -1;
   Packet pkt_at_sampled_emission{};
-  auto sampled_emission_process = RPKT_EMISSION_NONE;
   for (int emission_index = 0; emission_index < nrpkt_emissions; emission_index++) {
     // each emission has different values, so the values of the sample show which emission it holds
     pkt.emissiontype = emission_index;
     pkt.absorptiontype = -emission_index;
     pkt.absorptionfreq = 1e15 * (1 + emission_index);
-    pkt.nu_rf = 2e15 * (1 + emission_index);
-    pkt.e_cmf = 1e40 * (1 + emission_index);
-    pkt.em_time = static_cast<float>(1e6 * (1 + emission_index));
-    pkt.em_pos = {1e14 * emission_index, 2e14 * emission_index, 3e14 * emission_index};
-    const auto emission_process = emission_processes[emission_index % emission_processes.size()];
-    sample_rpkt_emission(rpkt_emission_sample, pkt, emission_process);
-    if (is_rpkt_scattering(emission_process)) {
-      nrpkt_scatterings++;
-    } else if (item_replaces_sample(emission_index + 1 - nrpkt_scatterings, rank_and_packet_number)) {
-      sampled_emission_index_without_scatterings = emission_index - nrpkt_scatterings;
+    sample_rpkt_emission(rpkt_emission_sample, pkt);
+    if (item_replaces_sample(emission_index + 1, rank_and_packet_number)) {
+      sampled_emission_index = emission_index;
       pkt_at_sampled_emission = pkt;
-      sampled_emission_process = emission_process;
     }
   }
   // The last check can find a sample that keeps the first emission or that changes at each emission. It can find these
-  // errors only if the selected emission is not the first or the last emission that is not a scattering.
-  check(sampled_emission_index_without_scatterings > 0 &&
-            sampled_emission_index_without_scatterings < nrpkt_emissions - nrpkt_scatterings - 1,
+  // errors only if the selected emission is not the first or the last emission.
+  check(sampled_emission_index > 0 && sampled_emission_index < nrpkt_emissions - 1,
         "the test selects an emission that is not the first and not the last");
-  check(rpkt_emission_sample.nrpkt_emissions == nrpkt_emissions &&
-            rpkt_emission_sample.nrpkt_scatterings == nrpkt_scatterings && nrpkt_scatterings == nrpkt_emissions / 2,
-        "sample_rpkt_emission counts each r-packet emission and each scattering");
-  check(!is_rpkt_scattering(sampled_emission_process) && rpkt_emission_sample.type == sampled_emission_process &&
-            rpkt_emission_sample.emissiontype == pkt_at_sampled_emission.emissiontype &&
+  check(rpkt_emission_sample.nrpkt_emissions == nrpkt_emissions, "sample_rpkt_emission counts each r-packet emission");
+  check(rpkt_emission_sample.emissiontype == pkt_at_sampled_emission.emissiontype &&
             rpkt_emission_sample.absorptiontype == pkt_at_sampled_emission.absorptiontype &&
-            rpkt_emission_sample.absorptionfreq == static_cast<float>(pkt_at_sampled_emission.absorptionfreq) &&
-            rpkt_emission_sample.nu_rf == static_cast<float>(pkt_at_sampled_emission.nu_rf) &&
-            rpkt_emission_sample.e_cmf == pkt_at_sampled_emission.e_cmf &&
-            rpkt_emission_sample.time == pkt_at_sampled_emission.em_time &&
-            rpkt_emission_sample.pos == get_position_as_float(pkt_at_sampled_emission.em_pos),
+            rpkt_emission_sample.absorptionfreq == static_cast<float>(pkt_at_sampled_emission.absorptionfreq),
         "sample_rpkt_emission keeps the values of the emission that item_replaces_sample selects");
 }
 

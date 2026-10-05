@@ -235,7 +235,7 @@ void do_macroatom_raddeexcitation(Packet& pkt, const int ionuniquelevelindexstar
   stats::increment(stats::Counter::MA_STAT_DEACTIVATION_BB);
 
   // emit the rpkt in a random direction
-  emit_rpkt(pkt, lineindex, RPKT_EMISSION_MACROATOM_BOUNDBOUND);
+  emit_rpkt(pkt, lineindex);
 
   // the r-pkt can only interact with lines redder than the current one
   pkt.next_trans = lineindex + 1;
@@ -284,8 +284,7 @@ void do_macroatom_raddeexcitation(Packet& pkt, const int ionuniquelevelindexstar
   stats::increment(stats::Counter::MA_STAT_DEACTIVATION_FB);
 
   // emit the packet in a random direction and set the emission flags
-  emit_rpkt(pkt, get_emtype_continuum(lowerionuniquelevelindexstart + lowerionlevel, selected_phixstargetindex),
-            RPKT_EMISSION_MACROATOM_BOUNDFREE);
+  emit_rpkt(pkt, get_emtype_continuum(lowerionuniquelevelindexstart + lowerionlevel, selected_phixstargetindex));
 
   pkt.next_trans = -1;  // continuum transition, no restrictions for further line interactions
   pkt.nscatterings = 0;
