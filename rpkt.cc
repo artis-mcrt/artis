@@ -347,7 +347,7 @@ void electron_scatter_rpkt(Packet& pkt) {
   set_pkt_restframe_from_cmf(pkt);
 }
 
-template <bool USECELLHISTANDUPDATEPHIXSLIST, bool SELECTCONTINUUM = false>
+template <bool USECELLHISTANDUPDATEPHIXSLIST, bool SELECTCONTINUUM = false, bool WEIGHT_BY_HEATING_FRACTION = false>
 auto calculate_chi_bf_gammacontr(int nonemptymgi, double nu, Phixslist& phixslist,
                                  double chi_bf_sum_selectionthreshold = 0.)
     -> std::conditional_t<SELECTCONTINUUM, int, double>;
@@ -678,11 +678,13 @@ auto calculate_chi_ffheating(const int nonemptymgi, const double nu, const bool 
 // window if it never does): rpkt_event_continuum() uses this to sample which continuum absorbs,
 // redoing the same summation as the opacity evaluation and stopping at the selected continuum.
 // In that mode nothing is written to the phixslist, so the estimator contributions keep the
-// values of the original evaluation.
-template <bool USECELLHISTANDUPDATEPHIXSLIST, bool SELECTCONTINUUM>
+// values of the original evaluation. With WEIGHT_BY_HEATING_FRACTION, each continuum has the weight
+// 1 - nu_edge / nu, which is the fraction of the absorbed energy that goes to the thermal pool.
+template <bool USECELLHISTANDUPDATEPHIXSLIST, bool SELECTCONTINUUM, bool WEIGHT_BY_HEATING_FRACTION>
 auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixslist& phixslist,
                                  const double chi_bf_sum_selectionthreshold)
     -> std::conditional_t<SELECTCONTINUUM, int, double> {
+  static_assert(!SELECTCONTINUUM || !WEIGHT_BY_HEATING_FRACTION);
   double chi_bf_sum = 0.;
   if constexpr (USECELLHISTANDUPDATEPHIXSLIST && !SELECTCONTINUUM &&
                 (USE_LUT_PHOTOION || USE_ION_BFHEATING_ESTIMATORS)) {
@@ -872,7 +874,11 @@ auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixsli
         }
       }
 
-      chi_bf_sum += nnlevel * sigma_contr;
+      if constexpr (WEIGHT_BY_HEATING_FRACTION) {
+        chi_bf_sum += nnlevel * sigma_contr * (1. - (nu_edge / nu));
+      } else {
+        chi_bf_sum += nnlevel * sigma_contr;
+      }
 
       if constexpr (SELECTCONTINUUM) {
         // the stimulated recombination correction can zero sigma_contr for a populated level, and
@@ -1099,7 +1105,13 @@ void calculate_expansion_opacities(const int nonemptymgi) {
     if constexpr (RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.has_value()) {
       const auto nu_upper = get_expopac_bin_nu_upper(binindex);
       const auto nu_mid = (nu_upper + nu_lower) / 2.;
-      const auto bin_kappa_cont = calculate_chi_ffheating(nonemptymgi, nu_mid, false) / rho;
+      // the thermal pool gets all of the free-free absorption and the heating fraction of the bound-free absorption
+      double chi_bf_heating = 0.;
+      if (globals::nbfcontinua > 0) {
+        Phixslist phixslist_unused{};
+        chi_bf_heating = calculate_chi_bf_gammacontr<false, false, true>(nonemptymgi, nu_mid, phixslist_unused);
+      }
+      const auto bin_kappa_cont = (calculate_chi_ffheating(nonemptymgi, nu_mid, false) + chi_bf_heating) / rho;
 
       const auto planck_val = radfield::planck(nu_mid, temperature);
       // only the thermalised fraction of the line absorption is a true absorption
