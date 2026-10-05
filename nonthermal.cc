@@ -2524,14 +2524,19 @@ DEVICE_FUNC void do_ntlepton_deposit(Packet& pkt) {
     // below, so the k-packet probability is 1 - frac_ionisation - frac_excitation. This is the frac_heating
     // that analyse_sf_solution() stores and the T_e solver applies to the deposition rate.
     const double frac_excitation = get_nt_frac_excitation(nonemptymgi);
+    // analyse_sf_solution() permits frac_ionisation + frac_excitation > 1 and then sets frac_heating to zero.
+    // zrand < 1 then reaches only the part 1 - frac_ionisation of the excitation share.
+    const double frac_excitation_reachable = std::min(frac_excitation, 1. - frac_ionisation);
     const auto ntexcitations = get_cell_ntexcitations(nonemptymgi);
     const double frac_excitation_of_stored_list = nt_solution[nonemptymgi].frac_excitation_of_stored_list;
-    if (zrand < (frac_ionisation + frac_excitation) && !ntexcitations.empty() && frac_excitation_of_stored_list > 0.) {
+    if (zrand < (frac_ionisation + frac_excitation) && frac_excitation_reachable > 0. && !ntexcitations.empty() &&
+        frac_excitation_of_stored_list > 0.) {
       // The stored list does not cover all of frac_excitation: analyse_sf_solution() truncates it to
       // MAX_NT_EXCITATIONS_STORED and excludes some transitions (e.g. Fe V, and ions below MIN_ION_OVER_NNTOT).
-      // Map zrand from [frac_ionisation, frac_ionisation + frac_excitation) to [0, frac_excitation_of_stored_list),
-      // so that the stored transitions get the whole excitation share in proportion to their frac_deposition.
-      zrand = (zrand - frac_ionisation) / frac_excitation * frac_excitation_of_stored_list;
+      // Map zrand from [frac_ionisation, frac_ionisation + frac_excitation_reachable) to
+      // [0, frac_excitation_of_stored_list), so that the stored transitions get the whole excitation share in
+      // proportion to their frac_deposition.
+      zrand = (zrand - frac_ionisation) / frac_excitation_reachable * frac_excitation_of_stored_list;
       for (ptrdiff_t excitationindex = 0; excitationindex < std::ssize(ntexcitations); excitationindex++) {
         const auto& ntexcitation = ntexcitations[excitationindex];
         const double frac_deposition_exc = ntexcitation.frac_deposition;
