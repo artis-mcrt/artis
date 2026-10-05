@@ -2509,9 +2509,10 @@ DEVICE_FUNC void do_ntlepton_deposit(Packet& pkt) {
     }
 
     // Route the excitation share of the deposition to macroatoms. Whatever is left over after the
-    // ionisation and excitation channels becomes a k-packet (heating) below, so the k-packet
-    // probability is 1 - frac_ionisation - frac_excitation, matching the frac_heating that
-    // analyse_sf_solution() stores and the T_e solver applies to the deposition rate.
+    // ionisation channel and the stored excitation list becomes a k-packet (heating) below. The stored
+    // list does not cover all of frac_excitation (see the note at the end of the loop). The k-packet
+    // probability can therefore be larger than 1 - frac_ionisation - frac_excitation, which is the
+    // frac_heating that analyse_sf_solution() stores and the T_e solver applies to the deposition rate.
     const double frac_excitation = get_nt_frac_excitation(nonemptymgi);
     if (zrand < (frac_ionisation + frac_excitation)) {
       zrand -= frac_ionisation;
@@ -2580,14 +2581,9 @@ auto solve_spencerfano(const int nonemptymgi, const int timestep, const int iter
       "{:g} fracdiff {:g}",
       timestep, timestep_last_solved, nne_per_ion, nne_per_ion_last, nne_per_ion_fracdiff);
 
-  if ((nne_per_ion_fracdiff < NT_MAX_FRACDIFF_NNEPERION_BETWEEN_SOLUTIONS) &&
-      (timestep - timestep_last_solved <= SF_MAX_TIMESTEPS_BETWEEN_SOLUTIONS) &&
-      timestep_last_solved > globals::num_lte_timesteps) {
-    printlnlog(
-        "Keeping Spencer-Fano solution from timestep {} because x_e fracdiff {:g} < {:g} and because timestep {} - {} "
-        "<= {}",
-        timestep_last_solved, nne_per_ion_fracdiff, NT_MAX_FRACDIFF_NNEPERION_BETWEEN_SOLUTIONS, timestep,
-        timestep_last_solved, SF_MAX_TIMESTEPS_BETWEEN_SOLUTIONS);
+  if (timestep_last_solved == timestep && nne_per_ion_fracdiff < SF_RE_SOLVE_WITHIN_TIMESTEP_MIN_NNEPERION_FRACDIFF) {
+    printlnlog("Keeping Spencer-Fano solution of timestep {} because x_e fracdiff {:g} < {:g}", timestep,
+               nne_per_ion_fracdiff, SF_RE_SOLVE_WITHIN_TIMESTEP_MIN_NNEPERION_FRACDIFF);
 
     return false;
   }

@@ -388,7 +388,7 @@ void set_untrackedstable_massfracs(std::span<const float> elem_massfracs_of_mgi)
   if (globals::rank_in_node != 0) {
     return;
   }
-  for (int nonemptymgi = 0; nonemptymgi < get_nonempty_npts_model(); nonemptymgi++) {
+  for (ptrdiff_t nonemptymgi = 0; nonemptymgi < get_nonempty_npts_model(); nonemptymgi++) {
     const int mgi = get_mgi_of_nonemptymgi(nonemptymgi);
     const auto tracked_isotope_massfrac_sum_by_atomic_number = get_tracked_isotope_massfrac_sum_by_atomic_number(mgi);
     for (int element = 0; element < get_nelements(); element++) {
