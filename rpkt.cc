@@ -53,7 +53,8 @@ static_assert(!DETAILED_LINE_ESTIMATORS_ON || !RPKT_USE_EXPANSION_OPACITIES,
               "DETAILED_LINE_ESTIMATORS_ON needs line-by-line r-packets");
 
 namespace {
-// cumulative integral over the bins of (line plus free-free kappa) times the Planck function, per non-empty cell
+// cumulative integral over the bins of the true absorption kappa times the Planck function, per non-empty cell.
+// kappa is P times the line kappa, plus the free-free kappa, plus the heating fraction of the bound-free kappa.
 MPI_shared_array<double> expansionopacity_planck_cumulative{};
 
 // The weight of a line with the Sobolev optical depth tau_line in the expansion opacity of its wavelength bin,
@@ -1108,8 +1109,9 @@ void calculate_expansion_opacities(const int nonemptymgi) {
       // the thermal pool gets all of the free-free absorption and the heating fraction of the bound-free absorption
       double chi_bf_heating = 0.;
       if (globals::nbfcontinua > 0) {
-        Phixslist phixslist_unused{};
-        chi_bf_heating = calculate_chi_bf_gammacontr<false, false, true>(nonemptymgi, nu_mid, phixslist_unused);
+        Phixslist phixslist_without_estimators{};
+        chi_bf_heating =
+            calculate_chi_bf_gammacontr<false, false, true>(nonemptymgi, nu_mid, phixslist_without_estimators);
       }
       const auto bin_kappa_cont = (calculate_chi_ffheating(nonemptymgi, nu_mid, false) + chi_bf_heating) / rho;
 
