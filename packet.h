@@ -8,8 +8,10 @@
 #include <cstdint>
 #include <span>
 #include <string>
+#include <type_traits>
 #include <vector>
 
+#include "artisoptions.h"
 #include "constants.h"
 
 // Packet state in the indivisible energy packet scheme of Lucy (2002), A&A, 384, 725-735,
@@ -109,6 +111,22 @@ struct MacroAtomState {
   int activatingline{-99};
 };
 
+// The type of a normalised Stokes parameter of Packet if POL_ON is false. Every packet is then unpolarised, so the
+// parameter reads as zero and ignores an assignment. The type is empty, and [[no_unique_address]] then lets the
+// member take no memory. Two members of the same empty type must have different addresses, so StokesSymbol gives
+// q and u different types. The conversion and the assignment let the code that uses the parameters compile for the
+// two values of POL_ON.
+template <char StokesSymbol>
+struct UnpolarisedStokesParameter {
+  // NOLINTNEXTLINE(*-explicit-constructor,hicpp-explicit-conversions)
+  constexpr operator double() const { return 0.; }
+  constexpr auto operator=(double /*stokes_parameter*/) -> UnpolarisedStokesParameter& { return *this; }
+  auto operator<=>(const UnpolarisedStokesParameter& rhs) const = default;
+};
+
+template <char StokesSymbol>
+using NormalisedStokesParameter = std::conditional_t<POL_ON, double, UnpolarisedStokesParameter<StokesSymbol>>;
+
 #include "random.h"
 
 struct Packet {
@@ -145,8 +163,8 @@ struct Packet {
   // nu_rf of the r-packet at its last absorption. A gamma-ray absorption and a pellet decay come before the first
   // r-packet absorption, so this value is 0 for them.
   double absorptionfreq{};
-  double stokes_q{0.};  // normalised Stokes q = Q/I
-  double stokes_u{0.};  // normalised Stokes u = U/I
+  [[no_unique_address]] NormalisedStokesParameter<'q'> stokes_q{};  // normalised Stokes q = Q/I
+  [[no_unique_address]] NormalisedStokesParameter<'u'> stokes_u{};  // normalised Stokes u = U/I
   // The last emission out of the THERMAL POOL. A k-packet emission sets it. Scatterings and macro-atom
   // deactivations keep it, so it gives the escaped energy to the place of thermalisation, not to the last
   // scattering. Each site that hands the packet from the thermal pool to a macro-atom sets it to EMTYPE_NOTSET,
