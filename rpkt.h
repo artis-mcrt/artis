@@ -111,10 +111,11 @@ struct ContinuumOpacity {
 
 DEVICE_FUNC void do_rpkt(Packet& pkt, double t2, ContinuumOpacity& chi_rpkt_cont);
 DEVICE_FUNC void emit_rpkt(Packet& pkt, int emissiontype, enum rpkt_emission_type emission_process);
-// Count the current r-packet emission of pkt. Then make it the sampled emission in rpkt_emission_sample with the
-// probability that keeps the sample uniform (see SAMPLE_RPKT_EMISSION). Before the call, the caller sets pkt.em_pos
-// and pkt.em_time to the position and the time of the emission. rpkt_emission_sample is pkt.rpkt_emission_sample,
-// except in the unit tests.
+// Count the current r-packet emission of pkt. If the emission is not a scattering, make it the sampled emission in
+// rpkt_emission_sample with the probability that keeps the sample uniform (see SAMPLE_RPKT_EMISSION). Before the
+// call, the caller sets pkt.em_pos and pkt.em_time to the position and the time of the emission, and sets the
+// rest-frame frequency and the energy that the packet has after the emission. rpkt_emission_sample is
+// pkt.rpkt_emission_sample, except in the unit tests.
 DEVICE_FUNC void sample_rpkt_emission(RpktEmissionSample& rpkt_emission_sample, const Packet& pkt,
                                       enum rpkt_emission_type emission_process);
 // A packet without the sample (SAMPLE_RPKT_EMISSION is false) keeps no count and no sample.

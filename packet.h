@@ -4,7 +4,9 @@
 #ifndef PACKET_H
 #define PACKET_H
 
+#include <array>
 #include <cmath>
+#include <cstddef>
 #include <cstdint>
 #include <span>
 #include <string>
@@ -111,10 +113,12 @@ struct MacroAtomState {
   int activatingline{-99};
 };
 
-// The event type of a sampled r-packet emission (see RpktEmissionSample). write_text_packets() writes the values to
-// packets*.out as sampled_rpkt_emission_type, and artistools reads them. Do not renumber the values.
+// The event type of an r-packet emission. emit_rpkt() and electron_scatter_rpkt() give it to sample_rpkt_emission(),
+// which counts the scatterings and samples only the other emissions (see RpktEmissionSample). write_text_packets()
+// writes the type of the sampled emission to packets*.out as sampled_rpkt_emission_type, and artistools reads it. Do
+// not renumber the values.
 enum rpkt_emission_type : int {
-  RPKT_EMISSION_NONE = 0,  // no sample: the packet had no r-packet emission
+  RPKT_EMISSION_NONE = 0,  // no sample: each r-packet emission of the packet was a scattering, or it had none
   RPKT_EMISSION_KPKT = 1,  // a k-packet emits an r-packet (free-free, free-bound, or blackbody)
   RPKT_EMISSION_MACROATOM_BOUNDBOUND = 2,  // a radiative bound-bound deactivation of a macro-atom
   RPKT_EMISSION_MACROATOM_BOUNDFREE = 3,  // a radiative recombination of a macro-atom
@@ -147,19 +151,49 @@ static_assert(is_valid_rpkt_emission_type(RPKT_EMISSION_NONE) &&
               is_valid_rpkt_emission_type(RPKT_EMISSION_BOUNDBOUND_THERMALISATION) &&
               !is_valid_rpkt_emission_type(-1) && !is_valid_rpkt_emission_type(8));
 
-// The count of the r-packet emissions of a packet, and one of these emissions, sampled with equal probability from
-// all of them (see SAMPLE_RPKT_EMISSION). Each r-packet emission is the sample with the probability
-// 1 / nrpkt_emissions, so the sample represents nrpkt_emissions r-packet emissions.
+// Return true if the r-packet emission is a scattering: the event keeps the comoving frequency and changes only the
+// direction. The switch has no default case, so the compiler warns (-Wswitch) about a new value of the enum.
+[[nodiscard]] constexpr auto is_rpkt_scattering(const enum rpkt_emission_type emission_process) -> bool {
+  switch (emission_process) {
+    case RPKT_EMISSION_ELECTRON_SCATTERING:
+    case RPKT_EMISSION_THICKCELL_GREY_SCATTERING:
+    case RPKT_EMISSION_BOUNDBOUND_SCATTERING:
+      return true;
+    case RPKT_EMISSION_NONE:
+    case RPKT_EMISSION_KPKT:
+    case RPKT_EMISSION_MACROATOM_BOUNDBOUND:
+    case RPKT_EMISSION_MACROATOM_BOUNDFREE:
+    case RPKT_EMISSION_BOUNDBOUND_THERMALISATION:
+      return false;
+  }
+  return false;
+}
+
+// Return the position with the float precision of the sampled r-packet emission (see RpktEmissionSample)
+[[nodiscard]] constexpr DEVICE_FUNC auto get_position_as_float(const Vec3d& position) -> std::array<float, 3> {
+  std::array<float, 3> position_as_float{};
+  for (std::size_t axis = 0; axis < position.size(); axis++) {
+    position_as_float[axis] = static_cast<float>(position[axis]);
+  }
+  return position_as_float;
+}
+
+// The counts of the r-packet emissions of a packet, and one of the emissions that are not scatterings, sampled with
+// equal probability from all of them (see SAMPLE_RPKT_EMISSION). Each emission that is not a scattering is the sample
+// with the probability 1 / (nrpkt_emissions - nrpkt_scatterings), so the sample represents that number of emissions.
+// The sample keeps the position and the frequencies as float, because the packet files have only six significant
+// digits. e_cmf stays a double, because a packet energy can be more than the maximum of a float.
 struct RpktEmissionSample {
-  int nrpkt_emissions{0};  // the count of the r-packet emissions of the packet since packet_init()
+  double e_cmf{0.};  // Packet::e_cmf directly after the sampled emission [erg]
+  int nrpkt_emissions{0};  // the count of the r-packet emissions of the packet since packet_init(), with scatterings
+  int nrpkt_scatterings{0};  // the count of the scatterings in nrpkt_emissions (see is_rpkt_scattering())
   enum rpkt_emission_type type { RPKT_EMISSION_NONE };
-  // Packet::emissiontype directly after the sampled emission. A scattering does not change Packet::emissiontype, so
-  // a sampled scattering holds the emission type of the last emission before it.
-  int emissiontype{EMTYPE_NOTSET};
+  int emissiontype{EMTYPE_NOTSET};  // Packet::emissiontype directly after the sampled emission
   int absorptiontype{0};  // Packet::absorptiontype at the sampled emission: the type of the last absorption before it
   float time{-1.};  // time of the sampled emission [s]
-  Vec3d pos{NAN, NAN, NAN};  // position of the sampled emission (x,y,z)
-  double absorptionfreq{};  // Packet::absorptionfreq at the sampled emission
+  std::array<float, 3> pos{NAN, NAN, NAN};  // position of the sampled emission (x,y,z) [cm]
+  float absorptionfreq{0.};  // Packet::absorptionfreq at the sampled emission [Hz]
+  float nu_rf{0.};  // Packet::nu_rf directly after the sampled emission: the emitted rest-frame frequency [Hz]
 
   auto operator<=>(const RpktEmissionSample& rhs) const = default;
 };

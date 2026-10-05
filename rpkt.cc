@@ -1005,16 +1005,25 @@ DEVICE_FUNC void sample_rpkt_emission(RpktEmissionSample& rpkt_emission_sample, 
   assert_testmodeonly(pkt.type == TYPE_RPKT);
   assert_always(rpkt_emission_sample.nrpkt_emissions < std::numeric_limits<int>::max());
   rpkt_emission_sample.nrpkt_emissions++;
-  if (item_replaces_sample(rpkt_emission_sample.nrpkt_emissions,
+  if (is_rpkt_scattering(emission_process)) {
+    rpkt_emission_sample.nrpkt_scatterings++;
+    return;
+  }
+  const int nrpkt_emissions_without_scatterings =
+      rpkt_emission_sample.nrpkt_emissions - rpkt_emission_sample.nrpkt_scatterings;
+  if (item_replaces_sample(nrpkt_emissions_without_scatterings,
                            get_rank_and_packet_number_key(globals::my_rank, pkt.number))) {
     rpkt_emission_sample = RpktEmissionSample{
+        .e_cmf = pkt.e_cmf,
         .nrpkt_emissions = rpkt_emission_sample.nrpkt_emissions,
+        .nrpkt_scatterings = rpkt_emission_sample.nrpkt_scatterings,
         .type = emission_process,
         .emissiontype = pkt.emissiontype,
         .absorptiontype = pkt.absorptiontype,
         .time = pkt.em_time,
-        .pos = pkt.em_pos,
-        .absorptionfreq = pkt.absorptionfreq,
+        .pos = get_position_as_float(pkt.em_pos),
+        .absorptionfreq = static_cast<float>(pkt.absorptionfreq),
+        .nu_rf = static_cast<float>(pkt.nu_rf),
     };
   }
 }

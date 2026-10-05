@@ -309,18 +309,22 @@ constexpr bool USE_CALCULATED_MEANATOMICWEIGHT;
 // Keep the escaped gamma-ray packets in the packet files, and write gamma_light_curve.out and gamma_spec.out.
 constexpr bool KEEP_ESCAPED_GAMMAS;
 
-// Keep one r-packet emission of each packet, sampled with equal probability from all of the r-packet emissions of
-// the packet. An r-packet emission is each event that emits the packet as an r-packet, and this includes each
-// scattering of an r-packet. The events of a gamma packet and the pellet decays are not r-packet emissions. The
+// Keep one r-packet emission of each packet, sampled with equal probability from the r-packet emissions of the
+// packet that are not scatterings. An r-packet emission is each event that emits the packet as an r-packet. The
+// events of a gamma packet and the pellet decays are not r-packet emissions. The packet counts its scatterings
+// (electron scatterings, grey events in a thick cell, and bound-bound scatterings), but it does not sample them. The
 // sample holds these values of the r-packet emission:
 // - the event type of the r-packet emission, a value of rpkt_emission_type in packet.h;
 // - emissiontype;
 // - absorptiontype;
 // - absorptionfreq;
 // - the position;
-// - the time.
-// The packet files get these columns and the count of the r-packet emissions (nrpkt_emissions). The sample of a
-// packet thus represents nrpkt_emissions r-packet emissions.
+// - the time;
+// - the emitted rest-frame frequency;
+// - the comoving-frame energy after the emission.
+// The packet files get these columns, the count of the r-packet emissions (nrpkt_emissions), and the count of the
+// scatterings in it (nrpkt_scatterings). The sample of a packet thus represents nrpkt_emissions - nrpkt_scatterings
+// r-packet emissions.
 constexpr bool SAMPLE_RPKT_EMISSION;
 
 // The thermalisation of the non-thermal particles (positrons, electrons, and alpha particles):
