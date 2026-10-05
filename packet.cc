@@ -92,36 +92,36 @@ void place_pellet(const double e_cmf_per_packet, const std::span<const double> e
   pkt.e_rf = pkt.e_cmf / dopplerfactor;
 }
 
+// Take the three columns of an emission position from the remainder of a row of packets*.out. A packet that did not
+// yet emit carries NAN in em_pos, a packet that returned to the thermal pool carries NAN in trueem_pos, and a packet
+// with no sampled r-packet emission carries NAN in the sampled position. These are the only columns of the file that
+// hold the "nan" spelling. An inf stays an error here, as in every other column.
+[[nodiscard]] auto parse_emission_position_columns(std::string_view& remainder, Vec3d& position) -> bool {
+  for (auto& component : position) {
+    if (!parse_next_token<true>(remainder, component)) {
+      return false;
+    }
+  }
+  return true;
+}
+
 // Take the columns of the sampled r-packet emission from the remainder of a row of packets*.out. Return false if a
 // column is missing or not valid.
 [[nodiscard]] auto parse_rpkt_emission_sample(std::string_view& remainder, RpktEmissionSample& rpkt_emission_sample)
     -> bool {
   int rpkt_emission_type_in = 0;
-  // a packet has RPKT_EMISSION_NONE if and only if it has no r-packet emission
-  const bool count_and_type_are_valid =
-      parse_next_token(remainder, rpkt_emission_sample.nrpkt_emissions) &&
-      parse_next_token(remainder, rpkt_emission_type_in) && rpkt_emission_sample.nrpkt_emissions >= 0 &&
-      is_valid_rpkt_emission_type(rpkt_emission_type_in) &&
-      ((rpkt_emission_sample.nrpkt_emissions == 0) == (rpkt_emission_type_in == RPKT_EMISSION_NONE));
-  if (!count_and_type_are_valid) {
-    return false;
-  }
+  const bool columns_are_valid = parse_next_token(remainder, rpkt_emission_sample.nrpkt_emissions) &&
+                                 parse_next_token(remainder, rpkt_emission_type_in) &&
+                                 parse_next_token(remainder, rpkt_emission_sample.emissiontype) &&
+                                 parse_next_token(remainder, rpkt_emission_sample.absorptiontype) &&
+                                 parse_next_token(remainder, rpkt_emission_sample.absorptionfreq) &&
+                                 parse_emission_position_columns(remainder, rpkt_emission_sample.pos) &&
+                                 parse_next_token(remainder, rpkt_emission_sample.time);
   rpkt_emission_sample.type = static_cast<enum rpkt_emission_type>(rpkt_emission_type_in);
-  bool sample_columns_are_valid = parse_next_token(remainder, rpkt_emission_sample.emissiontype) &&
-                                  parse_next_token(remainder, rpkt_emission_sample.absorptiontype) &&
-                                  parse_next_token(remainder, rpkt_emission_sample.absorptionfreq);
-  // a packet with no sample has NAN in the three columns of the position
-  for (auto& component : rpkt_emission_sample.pos) {
-    sample_columns_are_valid = sample_columns_are_valid && parse_next_token<true>(remainder, component);
-  }
-  return sample_columns_are_valid && parse_next_token(remainder, rpkt_emission_sample.time);
-}
-
-// A packet without the sample (SAMPLE_RPKT_EMISSION is false) has no columns of the sample
-[[nodiscard]] auto parse_rpkt_emission_sample([[maybe_unused]] const std::string_view& remainder,
-                                              [[maybe_unused]] const NoRpktEmissionSample& rpkt_emission_sample)
-    -> bool {
-  return true;
+  // a packet has RPKT_EMISSION_NONE if and only if it has no r-packet emission
+  return columns_are_valid && rpkt_emission_sample.nrpkt_emissions >= 0 &&
+         is_valid_rpkt_emission_type(rpkt_emission_type_in) &&
+         ((rpkt_emission_sample.nrpkt_emissions == 0) == (rpkt_emission_sample.type == RPKT_EMISSION_NONE));
 }
 
 // Write the columns of the sampled r-packet emission to a row of packets*.out
@@ -133,7 +133,13 @@ void print_rpkt_emission_sample(std::ostream& packets_file, const RpktEmissionSa
              rpkt_emission_sample.pos[2], rpkt_emission_sample.time);
 }
 
-// A packet without the sample (SAMPLE_RPKT_EMISSION is false) has no columns of the sample
+// A packet without the sample (SAMPLE_RPKT_EMISSION is false) has no columns of the sample, so these overloads read
+// and write nothing
+[[nodiscard]] auto parse_rpkt_emission_sample([[maybe_unused]] const std::string_view& remainder,
+                                              [[maybe_unused]] const NoRpktEmissionSample& rpkt_emission_sample)
+    -> bool {
+  return true;
+}
 void print_rpkt_emission_sample([[maybe_unused]] const std::ostream& packets_file,
                                 [[maybe_unused]] const NoRpktEmissionSample& rpkt_emission_sample) {}
 
@@ -230,20 +236,14 @@ auto read_text_packets(const std::string& filename) -> std::vector<Packet> {
     auto remainder = std::string_view{line};
     bool rowisvalid = true;
 
-    // Take the next column of the row. Every column except the emission positions below is finite, so a "nan"
-    // there is a corrupt row and the strict parser rejects it.
+    // Take the next column of the row. Every column except the emission positions (see
+    // parse_emission_position_columns()) is finite, so a "nan" there is a corrupt row and the strict parser rejects it.
     const auto parse_column = [&remainder, &rowisvalid](auto& value) {
       rowisvalid = rowisvalid && parse_next_token(remainder, value);
     };
 
-    // Take the three columns of an emission position. A packet that did not yet emit carries NAN in em_pos, and a
-    // packet that returned to the thermal pool carries NAN in trueem_pos. These columns and the position of the sampled
-    // r-packet emission (see parse_rpkt_emission_sample()) are the only columns of the file that hold the "nan"
-    // spelling. An inf stays an error here, as in every other column.
     const auto parse_emission_position = [&remainder, &rowisvalid](Vec3d& position) {
-      for (auto& component : position) {
-        rowisvalid = rowisvalid && parse_next_token<true>(remainder, component);
-      }
+      rowisvalid = rowisvalid && parse_emission_position_columns(remainder, position);
     };
 
     int pkt_type_in = 0;

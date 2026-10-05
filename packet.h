@@ -151,10 +151,7 @@ static_assert(is_valid_rpkt_emission_type(RPKT_EMISSION_NONE) &&
 // all of them (see SAMPLE_RPKT_EMISSION). Each r-packet emission is the sample with the probability
 // 1 / nrpkt_emissions, so the sample represents nrpkt_emissions r-packet emissions.
 struct RpktEmissionSample {
-  // The count of the r-packet emissions of the packet since packet_init(). An r-packet emission is each emission of
-  // the packet as an r-packet, and this includes each scattering of an r-packet. The events of a gamma packet and the
-  // pellet decays do not add to the count.
-  int nrpkt_emissions{0};
+  int nrpkt_emissions{0};  // the count of the r-packet emissions of the packet since packet_init()
   enum rpkt_emission_type type { RPKT_EMISSION_NONE };
   // Packet::emissiontype directly after the sampled emission. A scattering does not change Packet::emissiontype, so
   // a sampled scattering holds the emission type of the last emission before it.
@@ -264,15 +261,12 @@ inline auto get_rngstate([[maybe_unused]] const Packet& packet) -> rngstate_type
 // that map is less than nitems_seen / 2^32.
 [[nodiscard]] constexpr DEVICE_FUNC auto item_replaces_sample(const int nitems_seen, const std::uint64_t sequence_key)
     -> bool {
-  if (nitems_seen <= 1) {
-    return true;
-  }
   const auto hash = utlrandom::_mix_seed<std::uint64_t>(
       sequence_key ^ utlrandom::_mix_seed<std::uint64_t>(static_cast<std::uint64_t>(nitems_seen)));
   const auto random_index = ((hash >> 32U) * static_cast<std::uint64_t>(nitems_seen)) >> 32U;
   return random_index == 0;
 }
-// the first item of each sequence is the sample
+// the first item of each sequence is the sample, because the map gives 0 for nitems_seen = 1
 static_assert(item_replaces_sample(1, 0) && item_replaces_sample(1, ~std::uint64_t{0}));
 
 // The sequence_key of the r-packet emissions of one packet for item_replaces_sample(). Packet::number is unique only

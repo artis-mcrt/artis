@@ -272,7 +272,7 @@ auto get_possible_event_expansion_opacity(const int nonemptymgi, Packet& pkt, co
 }
 
 // Set the position and the time of the last emission of an r-packet, and count and sample the emission (see
-// SAMPLE_RPKT_EMISSION). The code calls this function once for each emission and each scattering of an r-packet.
+// SAMPLE_RPKT_EMISSION). emit_rpkt() and electron_scatter_rpkt() call this function once for each emission.
 DEVICE_FUNC void record_rpkt_emission(Packet& pkt, const enum rpkt_emission_type emission_process) {
   pkt.em_pos = pkt.pos;
   pkt.em_time = static_cast<float>(pkt.prop_time);
@@ -353,6 +353,9 @@ void electron_scatter_rpkt(Packet& pkt) {
   // set the rest-frame energy and frequency
 
   set_pkt_restframe_from_cmf(pkt);
+
+  // Electron scattering does not modify the last emission flag but it updates the last emission position
+  record_rpkt_emission(pkt, RPKT_EMISSION_ELECTRON_SCATTERING);
 }
 
 template <bool USECELLHISTANDUPDATEPHIXSLIST, bool SELECTCONTINUUM = false>
@@ -389,9 +392,6 @@ void rpkt_event_continuum(Packet& pkt, ContinuumOpacity& chi_rpkt_cont) {
     }
 
     electron_scatter_rpkt(pkt);
-
-    // Electron scattering does not modify the last emission flag but it updates the last emission position
-    record_rpkt_emission(pkt, RPKT_EMISSION_ELECTRON_SCATTERING);
 
   } else if (chi_rnd < chi_escatter + chi_ff) {
     // ff: transform to k-pkt
@@ -572,8 +572,7 @@ auto do_rpkt_step(Packet& pkt, const double t2, ContinuumOpacity& chi_rpkt_cont)
       pkt.nscatterings++;
       stats::increment(stats::Counter::ELECTRON_SCATTERINGS);
 
-      // The code treats the grey event as a coherent scattering, so the event keeps the emission type. emit_rpkt()
-      // sets the position and the time of the last emission.
+      // the code treats the grey event as a coherent scattering, so the event keeps the emission type
       emit_rpkt(pkt, pkt.emissiontype, RPKT_EMISSION_THICKCELL_GREY_SCATTERING);
     } else if (!event_is_boundbound) {
       rpkt_event_continuum(pkt, chi_rpkt_cont);
@@ -600,8 +599,8 @@ auto do_rpkt_step(Packet& pkt, const double t2, ContinuumOpacity& chi_rpkt_cont)
         // Thermal redistribution of frequency
         pkt.nu_cmf = sample_planck_times_expansion_opacity(nonemptymgi, get_rngstate(pkt));
         pkt.next_trans = -1;
-        // a thermal re-emission at a new frequency, so the packet no longer traces back to the previous emission
-        pkt.emissiontype = EMTYPE_NOTSET;
+        // a thermal re-emission at a new frequency, so the packet no longer traces back to the previous emission.
+        // emit_rpkt() below sets emissiontype to EMTYPE_NOTSET.
         pkt.trueemissiontype = EMTYPE_NOTSET;
         pkt.trueem_pos = {NAN, NAN, NAN};
         pkt.trueem_time = -1.;
@@ -613,8 +612,11 @@ auto do_rpkt_step(Packet& pkt, const double t2, ContinuumOpacity& chi_rpkt_cont)
         // unchanged, because this event is not an electron scattering.
         stats::increment(stats::Counter::RESONANCESCATTERINGS);
       }
-      emit_rpkt(pkt, pkt.emissiontype,
-                thermalise ? RPKT_EMISSION_BOUNDBOUND_THERMALISATION : RPKT_EMISSION_BOUNDBOUND_SCATTERING);
+      if (thermalise) {
+        emit_rpkt(pkt, EMTYPE_NOTSET, RPKT_EMISSION_BOUNDBOUND_THERMALISATION);
+      } else {
+        emit_rpkt(pkt, pkt.emissiontype, RPKT_EMISSION_BOUNDBOUND_SCATTERING);
+      }
 
       // the thermal re-emission and the line scattering are isotropic in the comoving frame, not a dipole
       if constexpr (VPKT_ON) {
@@ -971,8 +973,7 @@ DEVICE_FUNC void do_rpkt(Packet& pkt, const double t2, ContinuumOpacity& chi_rpk
 }
 
 // Emit the packet as an r-packet with the emission type emissiontype in an isotropic direction of the comoving frame.
-// A scattering keeps the emission type of the packet, so the caller of a scattering gives pkt.emissiontype. The
-// function sets emissiontype before record_rpkt_emission() records the emission.
+// A scattering keeps the emission type of the packet, so the caller of a scattering gives pkt.emissiontype.
 DEVICE_FUNC void emit_rpkt(Packet& pkt, const int emissiontype, const enum rpkt_emission_type emission_process) {
   pkt.type = TYPE_RPKT;
   pkt.emissiontype = emissiontype;
