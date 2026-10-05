@@ -128,6 +128,22 @@ constexpr auto all_taus_past_taumax(std::vector<double>& tau, const double tau_m
   return false;
 }
 
+// true if the union of the spectrum wavelength ranges covers the frequency interval [numin, numax]
+[[nodiscard]] auto nu_interval_is_in_spectrum_ranges(const double numin, const double numax) -> bool {
+  double nu_covered_up_to = numin;
+  bool extended = true;
+  while (nu_covered_up_to < numax && extended) {
+    extended = false;
+    for (int i = 0; i < nwavelengthranges; i++) {
+      if (vspec_numin_input[i] <= nu_covered_up_to && nu_covered_up_to < vspec_numax_input[i]) {
+        nu_covered_up_to = vspec_numax_input[i];
+        extended = true;
+      }
+    }
+  }
+  return nu_covered_up_to >= numax;
+}
+
 // Add an escaping virtual packet's Stokes I, Q and U contributions to the observer's time/frequency spectrum
 void add_to_vspecpol(const double nu_rf, const double e_rf, const double prob, const double q_rf, const double u_rf,
                      const int obsdirindex, const int opachoiceindex, const double t_arrive) {
@@ -959,6 +975,16 @@ void read_vpktparameterfile() {
     printlnlog("vpkt.txt: velocity grid time range tmin_grid {:g} [d] tmax_grid {:g} [d]", tmin_grid / DAY,
                tmax_grid / DAY);
 
+    // trace_vpkts() traces a virtual packet only inside the time window and the wavelength ranges of the
+    // spectra. A part of the velocity grid map outside them would get no packets, or only the packets that
+    // VPKT_WRITE_CONTRIBS selects by their absorption frequency.
+    if (tmin_grid < vspec_timemin_input || tmax_grid > vspec_timemax_input) {
+      fatal_crash(
+          "vpkt.txt velocity grid time range [{:g}, {:g}] [d] must be inside the time window [{:g}, {:g}] [d] of the "
+          "virtual packet spectra",
+          tmin_grid / DAY, tmax_grid / DAY, vspec_timemin_input / DAY, vspec_timemax_input / DAY);
+    }
+
     // Velocity grid map wavelength ranges: the number of intervals, then that many
     // (lambda_min, lambda_max) pairs in Angstroms
     assert_always(static_cast<bool>(input_file >> grid_nwavelengthranges));
@@ -984,6 +1010,13 @@ void read_vpktparameterfile() {
 
       nu_grid_max[i] = CLIGHT / (range_lambda_min * 1e-8);
       nu_grid_min[i] = CLIGHT / (range_lambda_max * 1e-8);
+
+      if (!nu_interval_is_in_spectrum_ranges(nu_grid_min[i], nu_grid_max[i])) {
+        fatal_crash(
+            "vpkt.txt velocity grid wavelength range {} [{:g}, {:g}] [Angstroms] must be inside the wavelength ranges "
+            "of the virtual packet spectra",
+            i, range_lambda_min, range_lambda_max);
+      }
 
       printlnlog("vpkt.txt:   velgrid range {} lambda [{:g}, {:g}] [Angstroms]", i, 1e8 * CLIGHT / nu_grid_max[i],
                  1e8 * CLIGHT / nu_grid_min[i]);
