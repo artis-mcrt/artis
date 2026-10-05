@@ -267,9 +267,10 @@ constexpr NonThermalScheme NT_SCHEME;
 // points) is in nonthermal.h, and SF_EMIN and SF_EMAX (the grid limits in eV) are at the top of nonthermal.cc.
 // They apply to every preset.
 
-// The code solves the Spencer-Fano equation at the first NLTE iteration of each timestep. A later iteration of
-// the same timestep keeps that solution, unless nne per ion (nne divided by the total ion density) changed by
-// this fraction or more, e.g. 0.5 for 50 percent. A value of 0 gives a new solution at each iteration.
+// After the LTE timesteps, the code solves the Spencer-Fano equation at the first NLTE iteration of each timestep.
+// A later iteration of the same timestep keeps that solution, unless nne per ion (nne divided by the total ion
+// density) changed by this fraction or more, e.g. 0.5 for 50 percent. A value of 0 gives a new solution at each
+// iteration.
 constexpr double NT_MAX_FRACDIFF_NNEPERION_BETWEEN_SOLUTIONS;
 
 // Include non-thermal excitation only from the lowest NTEXCITATION_MAXNLEVELS_LOWER levels of an ion and to
