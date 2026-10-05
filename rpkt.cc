@@ -54,7 +54,8 @@ static_assert(!DETAILED_LINE_ESTIMATORS_ON || !RPKT_USE_EXPANSION_OPACITIES,
 
 namespace {
 // cumulative integral over the bins of the true absorption kappa times the Planck function, per non-empty cell.
-// kappa is P times the line kappa, plus the free-free kappa, plus the heating fraction of the bound-free kappa.
+// kappa is RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY times the line kappa, plus the free-free kappa, plus the
+// heating fraction of the bound-free kappa.
 MPI_shared_array<double> expansionopacity_planck_cumulative{};
 
 // The weight of a line with the Sobolev optical depth tau_line in the expansion opacity of its wavelength bin,
@@ -875,11 +876,7 @@ auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixsli
         }
       }
 
-      if constexpr (WEIGHT_BY_HEATING_FRACTION) {
-        chi_bf_sum += nnlevel * sigma_contr * (1. - (nu_edge / nu));
-      } else {
-        chi_bf_sum += nnlevel * sigma_contr;
-      }
+      chi_bf_sum += nnlevel * sigma_contr * (WEIGHT_BY_HEATING_FRACTION ? 1. - (nu_edge / nu) : 1.);
 
       if constexpr (SELECTCONTINUUM) {
         // the stimulated recombination correction can zero sigma_contr for a populated level, and
