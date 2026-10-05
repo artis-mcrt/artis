@@ -93,9 +93,9 @@ void place_pellet(const double e_cmf_per_packet, const std::span<const double> e
 }
 
 // Take the three columns of an emission position from the remainder of a row of packets*.out. A packet that did not
-// yet emit carries NAN in em_pos, a packet that returned to the thermal pool carries NAN in trueem_pos, and a packet
-// with no sampled r-packet emission carries NAN in the sampled position. These are the only columns of the file that
-// hold the "nan" spelling. An inf stays an error here, as in every other column.
+// yet emit carries NAN in em_pos. A packet that returned to the thermal pool carries NAN in trueem_pos. A packet with
+// no sampled r-packet emission carries NAN in the sampled position. These are the only columns of the file that hold
+// the "nan" spelling. An inf stays an error here, as in every other column.
 [[nodiscard]] auto parse_emission_position_columns(std::string_view& remainder, Vec3d& position) -> bool {
   for (auto& component : position) {
     if (!parse_next_token<true>(remainder, component)) {

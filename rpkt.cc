@@ -271,7 +271,7 @@ auto get_possible_event_expansion_opacity(const int nonemptymgi, Packet& pkt, co
   return {std::numeric_limits<double>::max(), false};
 }
 
-// Set the position and the time of the last emission of an r-packet, and count and sample the emission (see
+// Set the position and the time of the last emission of an r-packet. Then count and sample the emission (see
 // SAMPLE_RPKT_EMISSION). emit_rpkt() and electron_scatter_rpkt() call this function once for each emission.
 DEVICE_FUNC void record_rpkt_emission(Packet& pkt, const enum rpkt_emission_type emission_process) {
   pkt.em_pos = pkt.pos;
@@ -599,22 +599,19 @@ auto do_rpkt_step(Packet& pkt, const double t2, ContinuumOpacity& chi_rpkt_cont)
         // Thermal redistribution of frequency
         pkt.nu_cmf = sample_planck_times_expansion_opacity(nonemptymgi, get_rngstate(pkt));
         pkt.next_trans = -1;
-        // a thermal re-emission at a new frequency, so the packet no longer traces back to the previous emission.
-        // emit_rpkt() below sets emissiontype to EMTYPE_NOTSET.
+        // a thermal re-emission at a new frequency, so the packet no longer traces back to the previous emission
         pkt.trueemissiontype = EMTYPE_NOTSET;
         pkt.trueem_pos = {NAN, NAN, NAN};
         pkt.trueem_time = -1.;
 
         // re-emit rather than scatter, so that this event is not counted as an electron scattering
         pkt.nscatterings = 0;
+
+        emit_rpkt(pkt, EMTYPE_NOTSET, RPKT_EMISSION_BOUNDBOUND_THERMALISATION);
       } else {
         // pure line scattering, so the packet keeps its comoving frequency in a new direction. nscatterings stays
         // unchanged, because this event is not an electron scattering.
         stats::increment(stats::Counter::RESONANCESCATTERINGS);
-      }
-      if (thermalise) {
-        emit_rpkt(pkt, EMTYPE_NOTSET, RPKT_EMISSION_BOUNDBOUND_THERMALISATION);
-      } else {
         emit_rpkt(pkt, pkt.emissiontype, RPKT_EMISSION_BOUNDBOUND_SCATTERING);
       }
 
@@ -1006,7 +1003,7 @@ DEVICE_FUNC void emit_rpkt(Packet& pkt, const int emissiontype, const enum rpkt_
 DEVICE_FUNC void sample_rpkt_emission(RpktEmissionSample& rpkt_emission_sample, const Packet& pkt,
                                       const enum rpkt_emission_type emission_process) {
   assert_testmodeonly(pkt.type == TYPE_RPKT);
-  assert_testmodeonly(rpkt_emission_sample.nrpkt_emissions < std::numeric_limits<int>::max());
+  assert_always(rpkt_emission_sample.nrpkt_emissions < std::numeric_limits<int>::max());
   rpkt_emission_sample.nrpkt_emissions++;
   if (item_replaces_sample(rpkt_emission_sample.nrpkt_emissions,
                            get_rank_and_packet_number_key(globals::my_rank, pkt.number))) {
@@ -1015,8 +1012,8 @@ DEVICE_FUNC void sample_rpkt_emission(RpktEmissionSample& rpkt_emission_sample, 
         .type = emission_process,
         .emissiontype = pkt.emissiontype,
         .absorptiontype = pkt.absorptiontype,
-        .time = static_cast<float>(pkt.prop_time),
-        .pos = pkt.pos,
+        .time = pkt.em_time,
+        .pos = pkt.em_pos,
         .absorptionfreq = pkt.absorptionfreq,
     };
   }

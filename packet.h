@@ -111,7 +111,7 @@ struct MacroAtomState {
   int activatingline{-99};
 };
 
-// The process of a sampled r-packet emission (see RpktEmissionSample). write_text_packets() writes the values to
+// The event type of a sampled r-packet emission (see RpktEmissionSample). write_text_packets() writes the values to
 // packets*.out as sampled_rpkt_emission_type, and artistools reads them. Do not renumber the values.
 enum rpkt_emission_type : int {
   RPKT_EMISSION_NONE = 0,  // no sample: the packet had no r-packet emission
@@ -273,9 +273,10 @@ static_assert(item_replaces_sample(1, 0) && item_replaces_sample(1, ~std::uint64
 // inside one rank, so the key holds the rank in the upper 32 bits and Packet::number in the lower 32 bits. The key
 // does not contain the random number seed. Two simulations with the same ranks and packet numbers thus make the same
 // replacement decisions, and their samples are not independent.
-[[nodiscard]] constexpr DEVICE_FUNC auto get_rank_and_packet_number_key(const int rank, const int pktnumber)
+[[nodiscard]] constexpr DEVICE_FUNC auto get_rank_and_packet_number_key(const int rank, const int packet_number)
     -> std::uint64_t {
-  return (static_cast<std::uint64_t>(static_cast<std::uint32_t>(rank)) << 32U) | static_cast<std::uint32_t>(pktnumber);
+  return (static_cast<std::uint64_t>(static_cast<std::uint32_t>(rank)) << 32U) |
+         static_cast<std::uint32_t>(packet_number);
 }
 static_assert(get_rank_and_packet_number_key(3, 5) == ((std::uint64_t{3} << 32U) | 5U));
 
