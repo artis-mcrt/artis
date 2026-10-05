@@ -702,12 +702,14 @@ void add_standard_nuclides() {
   // energy 2 m_e c^2 of the positron
   nuclides.back().endecay_q[DECAYTYPE_BETAPLUS] = ni57_q_ec;
 
-  // Ni56: the half-life 6.075 d of the Evaluated Nuclear Structure Data File (ENSDF) gives the mean life 8.7644 d
+  // Ni56: the half-life 6.075 d gives the mean life 8.7644 d. The half-lives of Ni56 and Co56 are from the
+  // evaluation for A = 56 of Huo Junde, Huo Su & Yang Dong (2011), Nucl. Data Sheets, 112, 1513-1645,
+  // doi:10.1016/j.nds.2011.04.004.
   nuclides.push_back({.z = 28, .a = 56, .meanlife = 8.7644 * DAY});
   nuclides.back().branchprobs[DECAYTYPE_ELECTRONCAPTURE] = 1.;
   nuclides.back().endecay_q[DECAYTYPE_ELECTRONCAPTURE] = 2.132869 * MEV;
 
-  // Co56: the half-life 77.236 d of ENSDF gives the mean life 111.428 d
+  // Co56: the half-life 77.236 d gives the mean life 111.428 d
   nuclides.push_back({.z = 27, .a = 56, .meanlife = 111.428 * DAY});
   nuclides.back().endecay_positron = 0.63 * MEV;
   nuclides.back().branchprobs[DECAYTYPE_BETAPLUS] = 0.19;
