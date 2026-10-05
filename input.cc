@@ -119,7 +119,7 @@ struct PhixsLevelBuilders {
 };
 
 constexpr auto inputlinecomments = std::array{
-    " 0: pre_zseed: specific random number seed if > 0 or random if negative",
+    " 0: pre_zseed: specific random number seed if > 0 or random if zero or negative",
     " 1: ntimesteps: number of timesteps",
     " 2: timestep_start timestep_finish: timestep number range start (inclusive) and stop (not inclusive)",
     " 3: tmin_days tmax_days: start and end times [day]",
