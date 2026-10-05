@@ -177,14 +177,15 @@ void read_gamma_tables() {
     }
   }
 
-  // 52Fe and 52Mn have no gamma-ray table, so their gamma energy deposits locally as a non-thermal lepton
-  // (see pellet_gamma_decay()) with these mean energies per decay. The .empty() test keeps the mean of an existing
-  // spectrum, because choose_gamma_ray() normalises the lines by that mean.
-  if (decay::nuc_exists(26, 52) && gamma_spectra[decay::get_nucindex(26, 52)].empty()) {
-    decay::set_nucdecayenergygamma(decay::get_nucindex(26, 52), 0.86 * MEV);  // Fe52
-  }
-  if (decay::nuc_exists(25, 52) && gamma_spectra[decay::get_nucindex(25, 52)].empty()) {
-    decay::set_nucdecayenergygamma(decay::get_nucindex(25, 52), 3.415 * MEV);  // Mn52
+  // 52Fe and 52Mn have no gamma-ray table and no gamma energy in the decay data, so they get these mean energies
+  // per decay. Each then gets a single line at that energy, as the other nuclides without a table do. The .empty()
+  // test keeps an existing spectrum, because choose_gamma_ray() normalises the lines by its mean.
+  for (const auto& [z, a, mean_gamma_energy] : {std::tuple{26, 52, 0.86 * MEV}, std::tuple{25, 52, 3.415 * MEV}}) {
+    if (decay::nuc_exists(z, a) && gamma_spectra[decay::get_nucindex(z, a)].empty()) {
+      decay::set_nucdecayenergygamma(decay::get_nucindex(z, a), mean_gamma_energy);
+      set_trivial_gamma_spectrum(decay::get_nucindex(z, a));
+      nuclides_without_table++;
+    }
   }
 
   printlnlog("[info] read gamma-ray line tables for {} nuclides", tables_found);
@@ -925,12 +926,9 @@ void init_gamma_data() {
 }
 
 [[nodiscard]] auto choose_gamma_ray(const int nucindex, rngstate_type& rngstate) -> double {
-  if (gamma_spectra[nucindex].empty()) {
-    const auto nuc_z = decay::get_nuc_z(nucindex);
-    const auto nuc_a = decay::get_nuc_a(nucindex);
-    assert_always((nuc_z == 26 && nuc_a == 52) || (nuc_z == 25 && nuc_a == 52));
-    return -1;
-  }
+  // read_gamma_tables() gives a spectrum to each nuclide with a gamma energy above zero, and a nuclide with zero
+  // gamma energy never emits a gamma ray
+  assert_always(!gamma_spectra[nucindex].empty());
 
   const double E_gamma = decay::nucdecayenergygamma(nucindex);  // Average energy per gamma line of a decay
 
@@ -948,23 +946,9 @@ void init_gamma_data() {
   return gamma_spectra[nucindex].back().energy / H;
 }
 
-// convert a pellet to a gamma ray (or to a deposited non-thermal lepton if no gamma spec loaded)
+// convert a pellet to a gamma ray
 DEVICE_FUNC void pellet_gamma_decay(Packet& pkt) {
-  // if no gamma spectra is known, then deposit the energy at once (e.g., Fe52, Mn52)
-  if (pkt.nu_cmf < 0) {
-    // The energy deposits at once, so the estimators must count it like an absorbed gamma ray. The packet then
-    // also takes the path of an absorbed gamma ray, so that the non-thermal solver splits it into ionisation,
-    // excitation, and heating with the same fractions that it applies to the estimator.
-    const int nonemptymgi = grid::get_propcell_nonemptymgi(pkt.cellindex);
-    assert_always(nonemptymgi >= 0);
-    atomicadd(globals::dep_estimator_gamma[nonemptymgi], pkt.e_cmf);
-    atomicadd(globals::timesteps[globals::timestep].gamma_dep_discrete, pkt.e_cmf);
-    pkt.type = TYPE_NTLEPTON_DEPOSITED;
-    pkt.absorptiontype = ABSTYPE_PELLET_NOGAMMASPEC;
-    stats::increment(stats::Counter::NT_STAT_FROM_GAMMA);
-    return;
-  }
-
+  assert_testmodeonly(pkt.nu_cmf > 0);
   assert_testmodeonly(pkt.prop_time == pkt.tdecay);
 
   // Give the gamma ray an isotropic direction (isotropic emission in the cmf) and set the
