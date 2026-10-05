@@ -112,9 +112,7 @@ struct MacroAtomState {
 };
 
 // The count of the r-packet emissions of a packet that set Packet::emissiontype, and one of these emissions, sampled
-// with equal probability from all of them (see SAMPLE_RPKT_EMISSION). The scatterings keep emissiontype, so they are
-// not in the count or the sample. Each counted emission is the sample with the probability 1 / nrpkt_emissions, so the
-// sample represents nrpkt_emissions emissions.
+// with equal probability (see SAMPLE_RPKT_EMISSION)
 struct RpktEmissionSample {
   // the count of the r-packet emissions of the packet since packet_init() that set Packet::emissiontype
   int nrpkt_emissions{0};

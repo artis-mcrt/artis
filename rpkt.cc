@@ -297,20 +297,14 @@ DEVICE_FUNC void set_isotropic_cmf_direction(Packet& pkt) {
   }
 }
 
-// Set the position and the time of the last emission of an r-packet to the current position and time. Each
-// r-packet emission sets them, also a scattering.
-DEVICE_FUNC void set_rpkt_em_pos_and_em_time(Packet& pkt) {
+// Scatter an r-packet in a direction that is isotropic in the comoving frame, at the same comoving frequency and
+// energy. A scattering keeps emissiontype (see emit_rpkt()), but it sets the position and the time of the last
+// emission.
+DEVICE_FUNC void isotropic_scatter_rpkt(Packet& pkt) {
+  assert_testmodeonly(pkt.type == TYPE_RPKT);
+  set_isotropic_cmf_direction(pkt);
   pkt.em_pos = pkt.pos;
   pkt.em_time = static_cast<float>(pkt.prop_time);
-}
-
-// Scatter an r-packet in a direction that is isotropic in the comoving frame, at the same comoving frequency and
-// energy. A scattering keeps Packet::emissiontype, so it is not in the sample of the r-packet emissions (see
-// emit_rpkt()).
-DEVICE_FUNC void isotropic_scatter_rpkt(Packet& pkt) {
-  pkt.type = TYPE_RPKT;
-  set_isotropic_cmf_direction(pkt);
-  set_rpkt_em_pos_and_em_time(pkt);
 }
 
 // Scatter an r-packet off a free electron: sample the new direction in the comoving frame and transform
@@ -388,9 +382,9 @@ void electron_scatter_rpkt(Packet& pkt) {
 
   set_pkt_restframe_from_cmf(pkt);
 
-  // An electron scattering keeps emissiontype, but it sets the position and the time of the last emission. It is not in
-  // the sample of the r-packet emissions (see emit_rpkt()).
-  set_rpkt_em_pos_and_em_time(pkt);
+  // a scattering keeps emissiontype (see emit_rpkt()), but it sets the position and the time of the last emission
+  pkt.em_pos = pkt.pos;
+  pkt.em_time = static_cast<float>(pkt.prop_time);
 }
 
 template <bool USECELLHISTANDUPDATEPHIXSLIST, bool SELECTCONTINUUM = false, bool WEIGHT_BY_HEATING_FRACTION = false>
@@ -1014,7 +1008,8 @@ DEVICE_FUNC void emit_rpkt(Packet& pkt, const int emissiontype) {
   pkt.type = TYPE_RPKT;
   pkt.emissiontype = emissiontype;
   set_isotropic_cmf_direction(pkt);
-  set_rpkt_em_pos_and_em_time(pkt);
+  pkt.em_pos = pkt.pos;
+  pkt.em_time = static_cast<float>(pkt.prop_time);
   sample_rpkt_emission(pkt.rpkt_emission_sample, pkt);
 }
 

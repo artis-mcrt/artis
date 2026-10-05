@@ -307,12 +307,9 @@ constexpr bool USE_CALCULATED_MEANATOMICWEIGHT;
 constexpr bool KEEP_ESCAPED_GAMMAS;
 
 // Keep one r-packet emission of each packet, sampled with equal probability from the r-packet emissions of the
-// packet that set emissiontype. An r-packet emission is each event that emits the packet as an r-packet. The events
-// of a gamma packet and the pellet decays are not r-packet emissions. A scattering (an electron scattering, a grey
-// event in a thick cell, or a bound-bound scattering) keeps emissiontype, so it is not in the sample or in the count.
-// The sample holds emissiontype, absorptiontype, and absorptionfreq of the r-packet emission. The packet files get
-// these columns and the count of the r-packet emissions that set emissiontype (nrpkt_emissions). The sample of a
-// packet thus represents nrpkt_emissions r-packet emissions.
+// packet that set emissiontype. A scattering keeps emissiontype, so it is not in the sample. The packet files get the
+// count of these emissions (nrpkt_emissions), and emissiontype, absorptiontype, and absorptionfreq of the sampled
+// emission. The sample of a packet thus represents nrpkt_emissions emissions.
 constexpr bool SAMPLE_RPKT_EMISSION;
 
 // The thermalisation of the non-thermal particles (positrons, electrons, and alpha particles):
