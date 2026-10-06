@@ -507,9 +507,9 @@ void compton_scatter(Packet& pkt) {
     // two species: an iron-group one with mass fraction ffegrp, and silicon for the remainder. The nuclide
     // number densities therefore use A = 56 for the iron group and A = 28 for silicon.
 
-    const double chi_cmf_si = sigma_cmf_si * (rho / MH / 28);
+    const double chi_cmf_si = sigma_cmf_si * (rho / AMU / 28);
 
-    const double chi_cmf_fe = sigma_cmf_fe * (rho / MH / 56);
+    const double chi_cmf_fe = sigma_cmf_fe * (rho / AMU / 56);
 
     return (chi_cmf_fe * ffegrp) + (chi_cmf_si * (1. - ffegrp));
   }
@@ -607,9 +607,9 @@ static_assert((get_sigma_pair_prod_factor(nu_1p5mev) - get_sigma_pair_prod_facto
   // multiply by the particle number density. As in get_chi_photo_electric_cmf(), the composition is
   // approximated as an iron-group species (A = 56) with mass fraction ffegrp plus silicon (A = 28).
 
-  const double chi_cmf_si = sigma_cmf_si * (rho / MH / 28);
+  const double chi_cmf_si = sigma_cmf_si * (rho / AMU / 28);
 
-  const double chi_cmf_fe = sigma_cmf_fe * (rho / MH / 56);
+  const double chi_cmf_fe = sigma_cmf_fe * (rho / AMU / 56);
 
   const double chi_cmf = (chi_cmf_fe * ffegrp) + (chi_cmf_si * (1. - ffegrp));
 
