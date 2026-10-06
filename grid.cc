@@ -1951,7 +1951,7 @@ void set_element_meanweight(const std::ptrdiff_t nonemptymgi, const int element,
 auto get_electronfrac(const int nonemptymgi) -> double {
   double nucleondens = 0.;
   for (int element = 0; element < get_nelements(); element++) {
-    nucleondens += get_elem_numberdens(nonemptymgi, element) * get_element_meanweight(nonemptymgi, element) / MH;
+    nucleondens += get_elem_numberdens(nonemptymgi, element) * get_element_meanweight(nonemptymgi, element) / AMU;
   }
   return get_nnetot(nonemptymgi) / nucleondens;
 }

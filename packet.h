@@ -23,7 +23,6 @@
 //   RADIOACTIVE_PELLET --(decay to gamma rays)--> GAMMA
 //                      --(decay to a lepton/alpha)--> NONTHERMAL_PREDEPOSIT_{BETAMINUS,BETAPLUS,ALPHA}
 //                      --(spontaneous fission)--> NTALPHA_FISPROD_DEPOSITED
-//                      --(decay with no gamma spectrum at all, e.g. the 52Fe chain)--> KPKT
 //                      --(decayed before tmin, or carrying the model's initial energy)--> PRE_KPKT
 //   GAMMA --(Compton/photoelectric/pair production)--> NTLEPTON_DEPOSITED or a PREDEPOSIT type
 //         --(leaves the grid)--> ESCAPE
@@ -90,7 +89,8 @@ enum absorption_type : int {
   ABSTYPE_GAMMA_COMPTON = -3,
   ABSTYPE_GAMMA_PHOTOELECTRIC = -4,
   ABSTYPE_GAMMA_PAIRPRODUCTION = -5,
-  ABSTYPE_PELLET_NOGAMMASPEC = -6,  // pellet decay with no known gamma spectrum (e.g. 52Fe chain)
+  // No code sets this value. It stays reserved, because the packet files contain these numbers.
+  ABSTYPE_PELLET_NOGAMMASPEC = -6,
   ABSTYPE_PELLET_BEFORESIMSTART = -7,  // pellet decayed before the onset of the simulation
   ABSTYPE_PELLET_PARTICLEDECAY = -10,  // pellet decay to non-thermal particle (beta+/-, alpha, fission fragment)
   // bound-bound absorption in a binned expansion opacity (RPKT_USE_EXPANSION_OPACITIES with
