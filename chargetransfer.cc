@@ -4,10 +4,9 @@
 //
 // The rates come from three sources:
 // - Published analytic fits for reactions with hydrogen and helium, in the fit form of
-//   Kingdon & Ferland (1996, ApJS, 106, 205-211, doi:10.1086/192335), hereafter KF96. The file
-//   data/chargetransfer.txt holds these fits, and its header names the sources. KF96 give no rate for
-//   the exothermic ionisation of Ca+, Sc+, and Ti+ by protons, so those reactions are absent from the
-//   file as well.
+//   Kingdon & Ferland (1996, ApJS, 106, 205-211, doi:10.1086/192335). The file
+//   data/chargetransfer.txt holds these fits, and its header names the sources. Kingdon & Ferland (1996) give no rate
+//   for the exothermic ionisation of Ca+, Sc+, and Ti+ by protons, so those reactions are absent from the file as well.
 // - A flat estimate for the other electron captures from a neutral donor by a singly charged ion.
 //   A singly charged ion has no Coulomb curve crossing, so the energy release does not predict the
 //   rate. The tabulated rates of such reactions with an energy release up to 4 eV spread from
@@ -15,7 +14,7 @@
 //   and a larger energy release gets the radiative floor.
 // - Landau-Zener estimates for the other electron captures from a neutral donor by an ion with a
 //   charge of two or more. The method is the Landau-Zener approach of Butler & Dalgarno (1980,
-//   ApJ, 241, 838-843, doi:10.1086/158395), hereafter BD80, which KF96 also used for their reactions
+//   ApJ, 241, 838-843, doi:10.1086/158395), which Kingdon & Ferland (1996) also used for their reactions
 //   without quantal data. Each level of the lower acceptor ion is one capture channel. The trajectory
 //   crosses the channels in sequence from the outside inwards and back, with the classical two-state
 //   mixing of Landau and Zener at each crossing, so the total transfer probability stays below one.
@@ -78,14 +77,14 @@ constexpr int LZ_THERMALNODES = 48;
 
 // keep only the crossing channels inside this radius window [Bohr radii]. Outside the window the
 // coupling makes the channel contribution negligible. Sterling & Stancil (2011), A&A, 535, A117,
-// doi:10.1051/0004-6361/201117584, hereafter SS11, name the range 5 to 15-20 Bohr radii as the
+// doi:10.1051/0004-6361/201117584, name the range 5 to 15-20 Bohr radii as the
 // favourable window.
 constexpr double LZ_RX_MIN_BOHR = 0.5;
 constexpr double LZ_RX_MAX_BOHR = 40.;
 
 // rate floor [cm3/s] from radiative charge transfer, which operates for every exoergic reaction
 // (Butler, Guberman & Dalgarno 1977, Phys. Rev. A, 16, 500-502, doi:10.1103/PhysRevA.16.500; adopted as a floor
-// by SS11)
+// by Sterling & Stancil 2011)
 constexpr double RADIATIVE_CT_FLOOR = 1e-14;
 
 // the flat estimate [cm3/s] for a capture by a singly charged ion with an energy release up to
@@ -97,7 +96,7 @@ struct CTReaction {
   int partner_element{-1};  // the ion that reacts with the owner ion of the list entry
   int partner_ion{-1};  // the partner ion before the reaction. The list role gives its product ion.
 
-  // KF96 fit parameters (a in cm3/s). Used when ratetable_index is negative.
+  // fit parameters of Kingdon & Ferland (1996) (a in cm3/s). Used when ratetable_index is negative.
   double a{0.};
   double b{0.};
   double c{0.};
@@ -170,13 +169,13 @@ auto reduced_mass_g(const int element_a, const int element_b) -> double {
   return ma * mb / (ma + mb);
 }
 
-// the crossing of one capture channel (BD80): the entrance channel (ion + neutral) is flat, and the
+// the crossing of one capture channel (Butler & Dalgarno 1980): the entrance channel (ion + neutral) is flat, and the
 // exit channel has the Coulomb repulsion of the two product ions minus the energy release. The
 // crossing sits where the repulsion equals the energy release, so rx = zeta / deltae with zeta the
-// product of the product ion charges. This is the zeroth-order crossing radius of BD80, which they
-// found accurate for most cases of interest. The adiabatic splitting at the crossing is the BD80 fit
-// dU = rx^2 exp(-alpha rx) hartree, with alpha = sqrt(2 IP) from the ionisation potential of the
-// neutral donor (BD80 give alpha = 1.0 for H and 1.34 for He, and state the sqrt(2 IP) rule).
+// product of the product ion charges. This is the zeroth-order crossing radius of Butler & Dalgarno (1980), which they
+// found accurate for most cases of interest. The adiabatic splitting at the crossing is the fit of Butler & Dalgarno
+// (1980) dU = rx^2 exp(-alpha rx) hartree, with alpha = sqrt(2 IP) from the ionisation potential of the neutral donor
+// (Butler & Dalgarno 1980 give alpha = 1.0 for H and 1.34 for He, and state the sqrt(2 IP) rule).
 auto make_lz_channel(const int ioncharge, const double deltae_erg, const double ip_donor_erg) -> LZChannel {
   // the crossing radius scales with (charge - 1) and needs an energy release
   assert_always(ioncharge >= 2);
@@ -185,7 +184,7 @@ auto make_lz_channel(const int ioncharge, const double deltae_erg, const double 
   const int zeta = ioncharge - 1;
   const double rx_au = zeta / deltae_au;
 
-  // slope difference of the two diabatic curves at the crossing (BD80 with their mu = 0)
+  // slope difference of the two diabatic curves at the crossing (Butler & Dalgarno 1980, with their mu = 0)
   const double dfdr_au = zeta / (rx_au * rx_au);
 
   const double alpha = std::sqrt(2. * ip_donor_erg / E_HARTREE);
