@@ -44,16 +44,18 @@ static_assert(!RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.has_value() ||
 
 static_assert(!RPKT_USE_EXPANSION_OPACITIES || !VPKT_ON, "VPKT cannot be used with r-packet expansion opacities");
 
-// a line-by-line absorption has the weight 1 - exp(-tau), so a different weight must also apply to the absorption
-static_assert(EXPANSION_OPACITY_METHOD == ExpansionOpacityMethod::EXPANSION || RPKT_USE_EXPANSION_OPACITIES,
-              "LINEBINNEDCAPPED and LINEBINNED need RPKT_USE_EXPANSION_OPACITIES");
+static_assert(EXPANSION_OPACITY_METHOD == ExpansionOpacityMethod::EXPANSION || expopac_linebinned_weights_permitted,
+              "LINEBINNEDCAPPED and LINEBINNED with a nonzero RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY need "
+              "RPKT_USE_EXPANSION_OPACITIES");
 
 // the bin walk of RPKT_USE_EXPANSION_OPACITIES passes lines without the line estimators
 static_assert(!DETAILED_LINE_ESTIMATORS_ON || !RPKT_USE_EXPANSION_OPACITIES,
               "DETAILED_LINE_ESTIMATORS_ON needs line-by-line r-packets");
 
 namespace {
-// cumulative integral over the bins of (line plus free-free kappa) times the Planck function, per non-empty cell
+// cumulative integral over the bins of the true absorption kappa times the Planck function, per non-empty cell.
+// kappa is RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY times the line kappa, plus the free-free kappa, plus the
+// heating fraction of the bound-free kappa.
 MPI_shared_array<double> expansionopacity_planck_cumulative{};
 
 // The weight of a line with the Sobolev optical depth tau_line in the expansion opacity of its wavelength bin,
@@ -347,7 +349,7 @@ void electron_scatter_rpkt(Packet& pkt) {
   set_pkt_restframe_from_cmf(pkt);
 }
 
-template <bool USECELLHISTANDUPDATEPHIXSLIST, bool SELECTCONTINUUM = false>
+template <bool USECELLHISTANDUPDATEPHIXSLIST, bool SELECTCONTINUUM = false, bool WEIGHT_BY_HEATING_FRACTION = false>
 auto calculate_chi_bf_gammacontr(int nonemptymgi, double nu, Phixslist& phixslist,
                                  double chi_bf_sum_selectionthreshold = 0.)
     -> std::conditional_t<SELECTCONTINUUM, int, double>;
@@ -391,10 +393,12 @@ void rpkt_event_continuum(Packet& pkt, ContinuumOpacity& chi_rpkt_cont) {
     stats::increment(stats::Counter::K_STAT_FROM_FF);
     pkt.type = TYPE_KPKT;
     pkt.absorptiontype = ABSTYPE_FREEFREE;
+    pkt.absorptionfreq = pkt.nu_rf;
   } else if (chi_rnd < chi_escatter + chi_ff + chi_bf) {
     // bf: transform to k-pkt or activate macroatom corresponding to probabilities
 
     pkt.absorptiontype = ABSTYPE_BOUNDFREE;
+    pkt.absorptionfreq = pkt.nu_rf;
 
     // Determine in which continuum the bf-absorption occurs: the first continuum for which the
     // cumulative opacity exceeds a random fraction of the total (or the last one if none does).
@@ -599,9 +603,9 @@ auto do_rpkt_step(Packet& pkt, const double t2, ContinuumOpacity& chi_rpkt_cont)
         // re-emit rather than scatter, so that this event is not counted as an electron scattering
         pkt.nscatterings = 0;
       } else {
-        // pure scattering, so the packet keeps its comoving frequency in a new direction
-        pkt.nscatterings++;
-        stats::increment(stats::Counter::ELECTRON_SCATTERINGS);
+        // pure line scattering, so the packet keeps its comoving frequency in a new direction. nscatterings stays
+        // unchanged, because this event is not an electron scattering.
+        stats::increment(stats::Counter::RESONANCESCATTERINGS);
       }
       emit_rpkt(pkt);
 
@@ -676,11 +680,13 @@ auto calculate_chi_ffheating(const int nonemptymgi, const double nu, const bool 
 // window if it never does): rpkt_event_continuum() uses this to sample which continuum absorbs,
 // redoing the same summation as the opacity evaluation and stopping at the selected continuum.
 // In that mode nothing is written to the phixslist, so the estimator contributions keep the
-// values of the original evaluation.
-template <bool USECELLHISTANDUPDATEPHIXSLIST, bool SELECTCONTINUUM>
+// values of the original evaluation. With WEIGHT_BY_HEATING_FRACTION, each continuum has the weight
+// 1 - nu_edge / nu, which is the fraction of the absorbed energy that goes to the thermal pool.
+template <bool USECELLHISTANDUPDATEPHIXSLIST, bool SELECTCONTINUUM, bool WEIGHT_BY_HEATING_FRACTION>
 auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixslist& phixslist,
                                  const double chi_bf_sum_selectionthreshold)
     -> std::conditional_t<SELECTCONTINUUM, int, double> {
+  static_assert(!SELECTCONTINUUM || !WEIGHT_BY_HEATING_FRACTION);
   double chi_bf_sum = 0.;
   if constexpr (USECELLHISTANDUPDATEPHIXSLIST && !SELECTCONTINUUM &&
                 (USE_LUT_PHOTOION || USE_ION_BFHEATING_ESTIMATORS)) {
@@ -870,7 +876,7 @@ auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixsli
         }
       }
 
-      chi_bf_sum += nnlevel * sigma_contr;
+      chi_bf_sum += nnlevel * sigma_contr * (WEIGHT_BY_HEATING_FRACTION ? 1. - (nu_edge / nu) : 1.);
 
       if constexpr (SELECTCONTINUUM) {
         // the stimulated recombination correction can zero sigma_contr for a populated level, and
@@ -1097,7 +1103,14 @@ void calculate_expansion_opacities(const int nonemptymgi) {
     if constexpr (RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.has_value()) {
       const auto nu_upper = get_expopac_bin_nu_upper(binindex);
       const auto nu_mid = (nu_upper + nu_lower) / 2.;
-      const auto bin_kappa_cont = calculate_chi_ffheating(nonemptymgi, nu_mid, false) / rho;
+      // the thermal pool gets all of the free-free absorption and the heating fraction of the bound-free absorption
+      double chi_bf_heating = 0.;
+      if (globals::nbfcontinua > 0) {
+        Phixslist phixslist_without_estimators{};
+        chi_bf_heating =
+            calculate_chi_bf_gammacontr<false, false, true>(nonemptymgi, nu_mid, phixslist_without_estimators);
+      }
+      const auto bin_kappa_cont = (calculate_chi_ffheating(nonemptymgi, nu_mid, false) + chi_bf_heating) / rho;
 
       const auto planck_val = radfield::planck(nu_mid, temperature);
       // only the thermalised fraction of the line absorption is a true absorption

@@ -55,9 +55,10 @@ jobs:
                         nebular_1d_3dgrid_limitbfest,
                         nltephotospheric_dynamic_ion_range_1d_1dgrid,
                     ]
-                # Test mode skips two tests. The three kilonova_2d_* tests each change one option of
-                # kilonova_2d, and together they reach every line and branch of kilonova_2d. The OpenMP and
-                # STDPAR jobs below run the kilonova_1d model, also in test mode.
+                # Test mode skips two tests. The three kilonova_2d_* tests use the same model as kilonova_2d,
+                # with different thermalisation and opacity options. They keep USE_LUT_PHOTOION false, and
+                # kilonova_2d sets it true. The OpenMP and STDPAR jobs below run the kilonova_1d model, which
+                # sets USE_LUT_PHOTOION true, also in test mode.
                 exclude:
                     - testname: ${{ inputs.testmode == 'ON' && 'kilonova_1d' || 'none' }}
                     - testname: ${{ inputs.testmode == 'ON' && 'kilonova_2d' || 'none' }}

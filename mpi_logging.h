@@ -738,6 +738,10 @@ template <typename R>
            std::is_trivially_copyable_v<std::ranges::range_value_t<R>>)
 inline void write_restart_array(FILE* file, R&& values) {
   const auto valuespan = std::span{std::forward<R>(values)};
+  // The data pointer of an empty array can be null, and fwrite() must not get a null pointer
+  if (valuespan.empty()) {
+    return;
+  }
   assert_always(std::fwrite(valuespan.data(), sizeof(valuespan[0]), valuespan.size(), file) == valuespan.size());
 }
 
@@ -747,6 +751,10 @@ template <typename R>
            !std::is_const_v<std::remove_reference_t<std::ranges::range_reference_t<R>>>)
 inline void read_restart_array(FILE* file, R&& values) {
   const auto valuespan = std::span{std::forward<R>(values)};
+  // The data pointer of an empty array can be null, and fread() must not get a null pointer
+  if (valuespan.empty()) {
+    return;
+  }
   const bool read_success =
       (std::fread(valuespan.data(), sizeof(valuespan[0]), valuespan.size(), file) == valuespan.size()) &&
       (std::ferror(file) == 0) && (std::feof(file) == 0);

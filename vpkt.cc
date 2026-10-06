@@ -128,6 +128,22 @@ constexpr auto all_taus_past_taumax(std::vector<double>& tau, const double tau_m
   return false;
 }
 
+// true if the union of the spectrum wavelength ranges covers the frequency interval [numin, numax]
+[[nodiscard]] auto nu_interval_is_in_spectrum_ranges(const double numin, const double numax) -> bool {
+  double nu_covered_up_to = numin;
+  bool extended = true;
+  while (nu_covered_up_to < numax && extended) {
+    extended = false;
+    for (int i = 0; i < nwavelengthranges; i++) {
+      if (vspec_numin_input[i] <= nu_covered_up_to && nu_covered_up_to < vspec_numax_input[i]) {
+        nu_covered_up_to = vspec_numax_input[i];
+        extended = true;
+      }
+    }
+  }
+  return nu_covered_up_to >= numax;
+}
+
 // Add an escaping virtual packet's Stokes I, Q and U contributions to the observer's time/frequency spectrum
 void add_to_vspecpol(const double nu_rf, const double e_rf, const double prob, const double q_rf, const double u_rf,
                      const int obsdirindex, const int opachoiceindex, const double t_arrive) {
@@ -407,17 +423,24 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
               const auto next_bin_edge_nu = get_expopac_bin_nu_lower(binindex);
               const auto binedgedist = get_linedistance(t_future, nu_cmf, next_bin_edge_nu, dnu_on_dl);
 
+              const double bin_path_end_dist = std::min(binedgedist, boundarydist);
+              const double t_bin_entry = t_future + (dist / CLIGHT_PROP);
+              const double t_bin_path_mid = t_future + ((dist + bin_path_end_dist) / 2. / CLIGHT_PROP);
+
               const auto kappa = expansionopacities[(nonemptymgi * expopac_nbins) + binindex];
               // kappa_exp * rho = (1 / (c t)) * sum_lines (lambda_line / delta_lambda) * weight(tau_sobolev),
-              // tabulated at t_gridstate (see EXPANSION_OPACITY_METHOD). The scaling to the packet time uses the
-              // optically thin limit, where the weight is tau_sobolev and tau_sobolev ∝ t^-2, so kappa_exp * rho
-              // ∝ t^-3. A saturated line changes more slowly, but the bins do not keep the tau_sobolev of each
-              // line.
-              const double chi_bb_expansionopac = kappa * grid::get_rho(nonemptymgi) * densityscalefactor *
-                                                  get_expopac_pathfactor(t_future, next_bin_edge_nu, dnu_on_dl);
+              // tabulated at t_gridstate (see EXPANSION_OPACITY_METHOD). With tau_sobolev ∝ t^-2, kappa_exp * rho
+              // ∝ t^-3. The vpkt reaches the line resonances of the bin at times between t_bin_entry and the end of
+              // the path. With the LINEBINNED weight, the t^-3 factor at t_bin_path_mid gives the sum of the
+              // line-by-line tau_sobolev with an error of second order in delta_lambda / lambda. For the other
+              // weights, the t^-3 factor is the optically thin limit, because the bins do not keep the tau_sobolev of
+              // each line.
+              const double chi_bb_expansionopac = kappa * grid::get_rho(nonemptymgi) *
+                                                  pow3(t_gridstate / t_bin_path_mid) *
+                                                  get_expopac_pathfactor(t_bin_entry, next_bin_edge_nu, dnu_on_dl);
 
-              const double tau_bin = chi_bb_expansionopac * (std::min(binedgedist, boundarydist) - dist);
-              dist = std::min(binedgedist, boundarydist);
+              const double tau_bin = chi_bb_expansionopac * (bin_path_end_dist - dist);
+              dist = bin_path_end_dist;
 
               for (int opacchoiceindex = 0; opacchoiceindex < nspectraperobsdir; opacchoiceindex++) {
                 assert_testmodeonly(opacityexclusions[opacchoiceindex] <=
@@ -802,6 +825,28 @@ void read_vpktparameterfile() {
 
   printlnlog("vpkt.txt: Nspectra {} per observer", nspectraperobsdir);
 
+  if constexpr (VPKT_USE_EXPANSION_OPACITIES && EXPANSION_OPACITY_METHOD != ExpansionOpacityMethod::LINEBINNED) {
+    printlnlog("[warning] VPKT_USE_EXPANSION_OPACITIES uses an EXPANSION_OPACITY_METHOD other than LINEBINNED.");
+    printlnlog(
+        "[warning]   A vpkt that crosses a line with the Sobolev optical depth tau has the transmission exp(-tau).");
+    printlnlog(
+        "[warning]   The LINEBINNED weight is tau. The optical depth of a bin that the vpkt fully crosses is then the "
+        "sum of the tau of its lines, nearly the same as with the line-by-line opacities.");
+    printlnlog(
+        "[warning]   The EXPANSION weight 1 - exp(-tau) and the LINEBINNEDCAPPED weight min(1, tau) add a maximum "
+        "of 1 to the optical depth for each line.");
+    printlnlog(
+        "[warning]   The vpkt spectra then have too little absorption in the lines with tau > 1, e.g. in the P Cygni "
+        "absorption troughs.");
+    if constexpr (expopac_linebinned_weights_permitted) {
+      printlnlog("[warning]   Use LINEBINNED for vpkts.");
+    } else {
+      printlnlog(
+          "[warning]   LINEBINNED needs an RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY of zero or no value, because the "
+          "thermal emission uses the same bin weights.");
+    }
+  }
+
   // Emission time window: a leading 1 restricts vpkts to the [tmin, tmax] (in days) that follow on the same
   // line, otherwise the compile-time VSPEC_TIMEMIN/VSPEC_TIMEMAX are used and the two values are ignored.
   int override_tminmax = 0;
@@ -930,6 +975,16 @@ void read_vpktparameterfile() {
     printlnlog("vpkt.txt: velocity grid time range tmin_grid {:g} [d] tmax_grid {:g} [d]", tmin_grid / DAY,
                tmax_grid / DAY);
 
+    // trace_vpkts() traces a virtual packet only inside the time window and the wavelength ranges of the
+    // spectra. A part of the velocity grid map outside them would get no packets, or only the packets that
+    // VPKT_WRITE_CONTRIBS selects by their absorption frequency.
+    if (tmin_grid < vspec_timemin_input || tmax_grid > vspec_timemax_input) {
+      fatal_crash(
+          "vpkt.txt velocity grid time range [{:g}, {:g}] [d] must be inside the time window [{:g}, {:g}] [d] of the "
+          "virtual packet spectra",
+          tmin_grid / DAY, tmax_grid / DAY, vspec_timemin_input / DAY, vspec_timemax_input / DAY);
+    }
+
     // Velocity grid map wavelength ranges: the number of intervals, then that many
     // (lambda_min, lambda_max) pairs in Angstroms
     assert_always(static_cast<bool>(input_file >> grid_nwavelengthranges));
@@ -955,6 +1010,13 @@ void read_vpktparameterfile() {
 
       nu_grid_max[i] = CLIGHT / (range_lambda_min * 1e-8);
       nu_grid_min[i] = CLIGHT / (range_lambda_max * 1e-8);
+
+      if (!nu_interval_is_in_spectrum_ranges(nu_grid_min[i], nu_grid_max[i])) {
+        fatal_crash(
+            "vpkt.txt velocity grid wavelength range {} [{:g}, {:g}] [Angstroms] must be inside the wavelength ranges "
+            "of the virtual packet spectra",
+            i, range_lambda_min, range_lambda_max);
+      }
 
       printlnlog("vpkt.txt:   velgrid range {} lambda [{:g}, {:g}] [Angstroms]", i, 1e8 * CLIGHT / nu_grid_max[i],
                  1e8 * CLIGHT / nu_grid_min[i]);

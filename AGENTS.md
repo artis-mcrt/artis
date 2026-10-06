@@ -250,12 +250,12 @@ The workflows in `.github/workflows/`:
 - `ci-checks.yml` runs the pre-commit hooks, clang-tidy, and cppcheck. It then
   compiles the code with each compiler of its matrix, and on macOS, with
   hipcc, and with nvc++. The GPU compilers build the classic and the nebular
-  presets with `STDPAR=ON GPU=ON`. The gcc, the clang, and the macOS jobs
-  also do the OpenMP builds, the STDPAR builds, and the builds of the remaining
-  presets. The options and the `if` conditions of these steps say which
-  compiler skips a build and which build uses `OPTIMIZE=OFF`. The gcc and the
-  clang jobs also build and run the unit tests, for the classic and for the
-  nebular preset.
+  presets with `STDPAR=ON GPU=ON`. The matrix entries with `extrabuilds: true`
+  and the macOS job also do the OpenMP builds, the STDPAR builds, and the
+  builds of the remaining presets. The options and the `if` conditions of these
+  steps say which compiler skips a build and which build uses `OPTIMIZE=OFF`.
+  The gcc and the clang jobs also build and run the unit tests, for the classic
+  and for the nebular preset.
 - `updatechecksums.yml` writes the reference checksums (see "Tests").
 - `depapprove.yml` enables auto-merge for the pull requests of Dependabot and
   of pre-commit-ci.
@@ -548,6 +548,16 @@ The code must compile with nvc++ and with hipcc, also with `STDPAR=ON GPU=ON`.
   construction of a `std::span` from a raw pointer. Enclose the `#include` or
   the construction in `#pragma clang unsafe_buffer_usage begin` and `end`. Most
   of the existing pragmas enclose an `#include`.
+
+## Review guidelines
+
+These rules apply to an automated review of a pull request, e.g. by Codex.
+
+- Do not comment that the checksums of the tests can change or must be
+  regenerated. CI compares the checksums and shows each mismatch. A maintainer
+  then regenerates them with `updatechecksums.yml` (see "Tests").
+- Do not comment that a stored checksum file comes from an older commit or
+  does not agree with a later change. The same CI step finds this.
 
 ## Pull requests
 

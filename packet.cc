@@ -156,7 +156,9 @@ void packet_init(std::span<Packet> packets) {
     pkt.e_cmf *= e_ratio;
     pkt.e_rf *= e_ratio;
   }
-  printlnlog("total energy that will be freed during simulation time: {:g} [erg]", e_cmf_total);
+  // With INITIAL_PACKETS_ON, update_pellet() later multiplies the energy of a pellet that decays before tmin by
+  // tdecay / tmin, so the energy that the simulation frees is smaller than this sum.
+  printlnlog("total energy of the pellets at their decay times: {:g} [erg]", e_cmf_total);
 }
 
 // read packets*.out text format file

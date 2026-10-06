@@ -388,7 +388,7 @@ void set_untrackedstable_massfracs(std::span<const float> elem_massfracs_of_mgi)
   if (globals::rank_in_node != 0) {
     return;
   }
-  for (int nonemptymgi = 0; nonemptymgi < get_nonempty_npts_model(); nonemptymgi++) {
+  for (ptrdiff_t nonemptymgi = 0; nonemptymgi < get_nonempty_npts_model(); nonemptymgi++) {
     const int mgi = get_mgi_of_nonemptymgi(nonemptymgi);
     const auto tracked_isotope_massfrac_sum_by_atomic_number = get_tracked_isotope_massfrac_sum_by_atomic_number(mgi);
     for (int element = 0; element < get_nelements(); element++) {
@@ -1951,7 +1951,7 @@ void set_element_meanweight(const std::ptrdiff_t nonemptymgi, const int element,
 auto get_electronfrac(const int nonemptymgi) -> double {
   double nucleondens = 0.;
   for (int element = 0; element < get_nelements(); element++) {
-    nucleondens += get_elem_numberdens(nonemptymgi, element) * get_element_meanweight(nonemptymgi, element) / MH;
+    nucleondens += get_elem_numberdens(nonemptymgi, element) * get_element_meanweight(nonemptymgi, element) / AMU;
   }
   return get_nnetot(nonemptymgi) / nucleondens;
 }
@@ -2220,7 +2220,9 @@ void read_ejecta_model() {
           assert_always(fabs((cell_z_in / pos_z_mid) - 1) < 1e-3);
         }
       } else {
-        // columns: cell number, x midpoint, y midpoint, z midpoint, density
+        // columns: cell number, x minimum, y minimum, z minimum, density. The position columns hold the corner
+        // of the cell with the lowest coordinates. The check below permits a difference of half a cell width, so
+        // it cannot tell a file of cell midpoints from a file of cell corners.
         std::array<float, 3> cellpos_in{};
         float rho_model_in{NAN};
         assert_always(parse_next_token(remainder, cellnumberin) && parse_next_token(remainder, cellpos_in[0]) &&

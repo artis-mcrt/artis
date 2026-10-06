@@ -51,6 +51,10 @@ static_assert(RADFIELDBINS_T_E_SUPERBIN_NU_MAX >= RADFIELDBINS_NU_MAX,
 static_assert(!DETAILED_BF_ESTIMATORS_ON || !USE_LUT_PHOTOION,
               "USE_LUT_PHOTOION must be false when DETAILED_BF_ESTIMATORS_ON is true");
 
+// the photoionisation tables assume a Planck radiation field, so they cannot use the fits of the bins
+static_assert(!MULTIBIN_RADFIELD_MODEL_ON || !USE_LUT_PHOTOION,
+              "USE_LUT_PHOTOION must be false when MULTIBIN_RADFIELD_MODEL_ON is true");
+
 std::vector<double> J_normfactor;
 
 struct RadFieldBinSolution {
@@ -585,7 +589,7 @@ void init() {
       radfieldfile.flush();
     }
 
-    const size_t mem_usage_bins = nonempty_npts_model * RADFIELDBINCOUNT * ((2 * sizeof(double)) + sizeof(int));
+    const size_t mem_usage_bins = nonempty_npts_model * RADFIELDBINCOUNT * 2 * sizeof(double);
     radfieldbins.resize(nonempty_npts_model);
 
     printlnlog("[info] mem_usage: radiation field bin accumulators for non-empty cells occupy {:.3f} MB",

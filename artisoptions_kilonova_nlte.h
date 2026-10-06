@@ -1,5 +1,6 @@
-// A compile-time options preset: symlink or copy one of the artisoptions_*.h files to
-// artisoptions.h to select the run configuration. Every option is described in artisoptions_doc.md.
+// A compile-time options preset: symlink one of the artisoptions_*.h files to artisoptions.h to select
+// the run configuration. A copy through an existing symlink replaces the content of the tracked preset.
+// Every option is described in artisoptions_doc.md.
 //
 // A preset for kilonovae from about 2 to 100 days. It has:
 // - NLTE populations of Sr, Y, and Zr, and a Saha ionisation balance for the other elements;
@@ -125,9 +126,7 @@ constexpr std::optional<int> NLTE_TIME_DEPENDENT_FIRST_TIMESTEP = std::nullopt;
 
 constexpr NonThermalScheme NT_SCHEME = NonThermalScheme::NT_SPENCERFANO;
 
-constexpr int SF_MAX_TIMESTEPS_BETWEEN_SOLUTIONS = 0;
-
-constexpr double NT_MAX_FRACDIFF_NNEPERION_BETWEEN_SOLUTIONS = 0.05;
+constexpr double SF_RE_SOLVE_WITHIN_TIMESTEP_MIN_NNEPERION_FRACDIFF = 0.05;
 
 constexpr int NTEXCITATION_MAXNLEVELS_LOWER = 5;
 constexpr int NTEXCITATION_MAXNLEVELS_UPPER = 250;

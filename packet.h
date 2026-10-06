@@ -21,7 +21,6 @@
 //   RADIOACTIVE_PELLET --(decay to gamma rays)--> GAMMA
 //                      --(decay to a lepton/alpha)--> NONTHERMAL_PREDEPOSIT_{BETAMINUS,BETAPLUS,ALPHA}
 //                      --(spontaneous fission)--> NTALPHA_FISPROD_DEPOSITED
-//                      --(decay with no gamma spectrum at all, e.g. the 52Fe chain)--> KPKT
 //                      --(decayed before tmin, or carrying the model's initial energy)--> PRE_KPKT
 //   GAMMA --(Compton/photoelectric/pair production)--> NTLEPTON_DEPOSITED or a PREDEPOSIT type
 //         --(leaves the grid)--> ESCAPE
@@ -88,7 +87,8 @@ enum absorption_type : int {
   ABSTYPE_GAMMA_COMPTON = -3,
   ABSTYPE_GAMMA_PHOTOELECTRIC = -4,
   ABSTYPE_GAMMA_PAIRPRODUCTION = -5,
-  ABSTYPE_PELLET_NOGAMMASPEC = -6,  // pellet decay with no known gamma spectrum (e.g. 52Fe chain)
+  // No code sets this value. It stays reserved, because the packet files contain these numbers.
+  ABSTYPE_PELLET_NOGAMMASPEC = -6,
   ABSTYPE_PELLET_BEFORESIMSTART = -7,  // pellet decayed before the onset of the simulation
   ABSTYPE_PELLET_PARTICLEDECAY = -10,  // pellet decay to non-thermal particle (beta+/-, alpha, fission fragment)
   // bound-bound absorption in a binned expansion opacity (RPKT_USE_EXPANSION_OPACITIES with
@@ -126,7 +126,10 @@ struct Packet {
   double e_rf{0.};  // The energy the packet carries in the rest frame.
   int next_trans{-1};  // This keeps track of the next possible line interaction of a rpkt by storing
                        // its linelist index (to overcome numerical problems in propagating the rpkts).
-  int nscatterings{0};  // records number of electron scatterings a r-pkt undergone since it was emitted
+  // The number of electron scatterings of an r-packet since its last emission. A grey event in a thick cell also
+  // adds one, because the code treats it as a coherent scattering. The grey opacity (see RPKT_GREY_TYPE) includes
+  // the line opacity, so a grey event can also be a line interaction.
+  int nscatterings{0};
 
   // The process of the MOST RECENT emission, one of the two keys exspec decomposes the spectra by (see
   // trueemissiontype below). Overwritten by each emission rather than cleared when the packet re-enters the
@@ -139,7 +142,9 @@ struct Packet {
   float em_time{-1.};  // [s]
   int absorptiontype{0};  // records linelistindex of the last absorption
                           // or a negative absorption_type enum value
-  double absorptionfreq{};  // records nu_rf of packet at last absorption
+  // nu_rf of the r-packet at its last absorption. A gamma-ray absorption and a pellet decay come before the first
+  // r-packet absorption, so this value is 0 for them.
+  double absorptionfreq{};
   double stokes_q{0.};  // normalised Stokes q = Q/I
   double stokes_u{0.};  // normalised Stokes u = U/I
   // The last emission out of the THERMAL POOL. A k-packet emission sets it. Scatterings and macro-atom
