@@ -388,7 +388,7 @@ void set_untrackedstable_massfracs(std::span<const float> elem_massfracs_of_mgi)
   if (globals::rank_in_node != 0) {
     return;
   }
-  for (int nonemptymgi = 0; nonemptymgi < get_nonempty_npts_model(); nonemptymgi++) {
+  for (ptrdiff_t nonemptymgi = 0; nonemptymgi < get_nonempty_npts_model(); nonemptymgi++) {
     const int mgi = get_mgi_of_nonemptymgi(nonemptymgi);
     const auto tracked_isotope_massfrac_sum_by_atomic_number = get_tracked_isotope_massfrac_sum_by_atomic_number(mgi);
     for (int element = 0; element < get_nelements(); element++) {
@@ -1951,7 +1951,7 @@ void set_element_meanweight(const std::ptrdiff_t nonemptymgi, const int element,
 auto get_electronfrac(const int nonemptymgi) -> double {
   double nucleondens = 0.;
   for (int element = 0; element < get_nelements(); element++) {
-    nucleondens += get_elem_numberdens(nonemptymgi, element) * get_element_meanweight(nonemptymgi, element) / MH;
+    nucleondens += get_elem_numberdens(nonemptymgi, element) * get_element_meanweight(nonemptymgi, element) / AMU;
   }
   return get_nnetot(nonemptymgi) / nucleondens;
 }

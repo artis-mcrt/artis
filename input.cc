@@ -119,7 +119,7 @@ struct PhixsLevelBuilders {
 };
 
 constexpr auto inputlinecomments = std::array{
-    " 0: pre_zseed: specific random number seed if > 0 or random if negative",
+    " 0: pre_zseed: specific random number seed if > 0 or random if zero or negative",
     " 1: ntimesteps: number of timesteps",
     " 2: timestep_start timestep_finish: timestep number range start (inclusive) and stop (not inclusive)",
     " 3: tmin_days tmax_days: start and end times [day]",
@@ -1054,12 +1054,19 @@ void read_autoion_data() {
 
           const auto lower_uniquelevelindex = get_uniquelevelindex(element, lowerion, lowerlevel);
 
-          temp_nautoiondowntrans[lower_uniquelevelindex] += 1;
-
           if (temp_allautoion_start[lower_uniquelevelindex] < 0) {
             //  this is the first autoionizing transition for this level, so set the start index
             temp_allautoion_start[lower_uniquelevelindex] = static_cast<int>(temp_allautoion.size());
+          } else if (temp_allautoion_start[lower_uniquelevelindex] + temp_nautoiondowntrans[lower_uniquelevelindex] !=
+                     std::ssize(temp_allautoion)) {
+            // the readers of allautoion take the transitions of a level as one block from its start index
+            fatal_crash(
+                "autoion.txt: Z={} ionstage {} level {} has a transition after the transitions of a different "
+                "level. Put the transitions of each level on consecutive lines",
+                Z, lowerionstage, lowerlevel_in);
           }
+
+          temp_nautoiondowntrans[lower_uniquelevelindex] += 1;
 
           temp_allautoion.push_back({
               .autoion_A = static_cast<float>(autoion_A),
@@ -1113,7 +1120,8 @@ void read_autoion_data() {
   // node-shared.
 
   if (have_autoion_file && globals::rank_in_node == 0) {
-    int nlevels_autoion_sum = 0;
+    // a level can have more than one autoionisation transition, so this sum can exceed the number of levels
+    ptrdiff_t nautoiondowntrans_sum = 0;
     for (int element = 0; element < get_nelements(); element++) {
       const int nions = get_nions(element);
       for (int ion = 0; ion < nions; ion++) {
@@ -1123,6 +1131,7 @@ void read_autoion_data() {
         for (int level = 0; level < nlevels; level++) {
           const auto level_is_autoionizing = get_nautoiondowntrans(element, ion, level) > 0;
 
+          nautoiondowntrans_sum += get_nautoiondowntrans(element, ion, level);
           if (level_is_autoionizing) {
             nlevels_autoion++;
             found_autoion_level = true;
@@ -1134,10 +1143,9 @@ void read_autoion_data() {
           }
         }
         globals::elements[element].ions[ion].nlevels_autoion = nlevels_autoion;
-        nlevels_autoion_sum += nlevels_autoion;
       }
     }
-    assert_always(nlevels_autoion_sum == nautoion_stored);
+    assert_always(nautoiondowntrans_sum == nautoion_stored);
   }
   MPI_Barrier_node();
 }
@@ -1357,7 +1365,7 @@ auto read_compositiondata() -> std::vector<int> {
         .anumber = atomicnumber,
         .lowest_ionstage = lowermost_ionstage,
         .uniqueionindexstart = uniqueionindex,
-        .initstablemeannucmass = static_cast<float>(mass_amu * MH),
+        .initstablemeannucmass = static_cast<float>(mass_amu * AMU),
     };
     uniqueionindex += nions_readin[element];
   }

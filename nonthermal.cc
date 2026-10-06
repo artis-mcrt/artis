@@ -213,6 +213,9 @@ struct NonThermalCellSolution {
   float frac_excitation = 0.;  // fraction of deposition energy going to excitation
 
   int frac_excitations_list_size = 0;
+  // The sum of frac_deposition over the stored excitation list. The list does not cover all of frac_excitation,
+  // because analyse_sf_solution() truncates it and excludes some ions.
+  double frac_excitation_of_stored_list = 0.;
 
   int timestep_last_solved = -1;  // the quantities above were calculated for this timestep
   float nneperion_when_solved{NAN};  // nne divided by the total ion density at the last solution
@@ -718,6 +721,7 @@ void set_axelrod_solution(const ptrdiff_t nonemptymgi) {
   nt_solution[nonemptymgi].timestep_last_solved = -1;
 
   nt_solution[nonemptymgi].frac_excitations_list_size = 0;
+  nt_solution[nonemptymgi].frac_excitation_of_stored_list = 0.;
 
   for (int uniqueionindex = 0; uniqueionindex < get_includedions(); uniqueionindex++) {
     auto& celliondata = get_cell_allions_data(nonemptymgi)[uniqueionindex];
@@ -1730,6 +1734,7 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const std::a
     }
   }
 
+  nt_solution[nonemptymgi].frac_excitation_of_stored_list = 0.;
   if (nt_excitations_stored > 0) {
     // sort by descending frac_deposition
     std::ranges::SORT_OR_STABLE_SORT(tmp_excitation_list, std::ranges::greater{},
@@ -1799,6 +1804,13 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const std::a
     // sort the excitation list by ascending alltransindex for fast lookup with a binary search
     std::ranges::SORT_OR_STABLE_SORT(get_cell_ntexcitations(nonemptymgi), std::ranges::less{},
                                      &NonThermalExcitation::alltransindex);
+
+    // sum in the order of the packet selection in do_ntlepton_deposit()
+    double frac_excitation_of_stored_list = 0.;
+    for (const auto& ntexcitation : get_cell_ntexcitations(nonemptymgi)) {
+      frac_excitation_of_stored_list += ntexcitation.frac_deposition;
+    }
+    nt_solution[nonemptymgi].frac_excitation_of_stored_list = frac_excitation_of_stored_list;
 
   }  // nt_excitations_stored > 0
 
@@ -2498,18 +2510,28 @@ DEVICE_FUNC void do_ntlepton_deposit(Packet& pkt) {
       return;
     }
 
-    // Route the excitation share of the deposition to macroatoms. Whatever is left over after the
-    // ionisation and excitation channels becomes a k-packet (heating) below, so the k-packet
-    // probability is 1 - frac_ionisation - frac_excitation, matching the frac_heating that
-    // analyse_sf_solution() stores and the T_e solver applies to the deposition rate.
+    // Route the excitation share of the deposition to macroatoms. The remainder becomes a k-packet (heating)
+    // below, so the k-packet probability is 1 - frac_ionisation - frac_excitation. This is the frac_heating
+    // that analyse_sf_solution() stores and the T_e solver applies to the deposition rate.
     const double frac_excitation = get_nt_frac_excitation(nonemptymgi);
-    if (zrand < (frac_ionisation + frac_excitation)) {
-      zrand -= frac_ionisation;
-      // now zrand is between zero and frac_excitation
-      // the selection algorithm is the same as for the ionisation transitions
-      for (const auto& ntexcitation : get_cell_ntexcitations(nonemptymgi)) {
+    // analyse_sf_solution() permits frac_ionisation + frac_excitation > 1 and then sets frac_heating to zero.
+    // zrand < 1 then reaches only the part 1 - frac_ionisation of the excitation share.
+    const double frac_excitation_reachable = std::min(frac_excitation, 1. - frac_ionisation);
+    const auto ntexcitations = get_cell_ntexcitations(nonemptymgi);
+    const double frac_excitation_of_stored_list = nt_solution[nonemptymgi].frac_excitation_of_stored_list;
+    if (zrand < (frac_ionisation + frac_excitation) && frac_excitation_reachable > 0. && !ntexcitations.empty() &&
+        frac_excitation_of_stored_list > 0.) {
+      // The stored list does not cover all of frac_excitation: analyse_sf_solution() truncates it to
+      // MAX_NT_EXCITATIONS_STORED and excludes some transitions (e.g. Fe V, and ions below MIN_ION_OVER_NNTOT).
+      // Map zrand from [frac_ionisation, frac_ionisation + frac_excitation_reachable) to
+      // [0, frac_excitation_of_stored_list), so that the stored transitions get the whole excitation share in
+      // proportion to their frac_deposition.
+      zrand = (zrand - frac_ionisation) / frac_excitation_reachable * frac_excitation_of_stored_list;
+      for (ptrdiff_t excitationindex = 0; excitationindex < std::ssize(ntexcitations); excitationindex++) {
+        const auto& ntexcitation = ntexcitations[excitationindex];
         const double frac_deposition_exc = ntexcitation.frac_deposition;
-        if (zrand < frac_deposition_exc) {
+        // the last transition also takes a zrand that the rounding of the sum puts above the list
+        if (zrand < frac_deposition_exc || excitationindex == std::ssize(ntexcitations) - 1) {
           const auto lineindex = globals::alltrans.lineindex[ntexcitation.alltransindex];
           const auto [element, ion, upper] =
               get_levelfromuniquelevelindex(globals::linelist.uniquelevelindex_upper[lineindex]);
@@ -2526,11 +2548,8 @@ DEVICE_FUNC void do_ntlepton_deposit(Packet& pkt) {
         }
         zrand -= frac_deposition_exc;
       }
-      // Reaching here means zrand landed in the part of frac_excitation that the stored list does not
-      // cover: the list is truncated to MAX_NT_EXCITATIONS_STORED and excludes some transitions (e.g.
-      // Fe V, and ions below MIN_ION_OVER_NNTOT), while frac_excitation counts every transition. That
-      // unresolved remainder falls through to a k-packet, i.e. it is treated as heating.
     }
+    // With frac_excitation > 0 but an empty stored list, the excitation share also becomes a k-packet.
   }
 
   pkt.type = TYPE_KPKT;
@@ -2571,14 +2590,9 @@ auto solve_spencerfano(const int nonemptymgi, const int timestep, const int iter
       "{:g} fracdiff {:g}",
       timestep, timestep_last_solved, nne_per_ion, nne_per_ion_last, nne_per_ion_fracdiff);
 
-  if ((nne_per_ion_fracdiff < NT_MAX_FRACDIFF_NNEPERION_BETWEEN_SOLUTIONS) &&
-      (timestep - timestep_last_solved <= SF_MAX_TIMESTEPS_BETWEEN_SOLUTIONS) &&
-      timestep_last_solved > globals::num_lte_timesteps) {
-    printlnlog(
-        "Keeping Spencer-Fano solution from timestep {} because x_e fracdiff {:g} < {:g} and because timestep {} - {} "
-        "<= {}",
-        timestep_last_solved, nne_per_ion_fracdiff, NT_MAX_FRACDIFF_NNEPERION_BETWEEN_SOLUTIONS, timestep,
-        timestep_last_solved, SF_MAX_TIMESTEPS_BETWEEN_SOLUTIONS);
+  if (timestep_last_solved == timestep && nne_per_ion_fracdiff < SF_RE_SOLVE_WITHIN_TIMESTEP_MIN_NNEPERION_FRACDIFF) {
+    printlnlog("Keeping Spencer-Fano solution of timestep {} because x_e fracdiff {:g} < {:g}", timestep,
+               nne_per_ion_fracdiff, SF_RE_SOLVE_WITHIN_TIMESTEP_MIN_NNEPERION_FRACDIFF);
 
     return false;
   }

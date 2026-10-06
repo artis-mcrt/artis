@@ -45,7 +45,7 @@ struct Ion {
   int nlevels{0};  // Number of levels for this ionisation stage
   int nlevels_excited_nlte{0};  // number of nlte levels for this ion
   int allnltelevelsindexstart{-1};  // index into nlte_pops array for first excited nlte level
-  int nlevels_ionising{0};  // Number of levels which have a bf-continuum
+  int nlevels_ionising{0};  // Number of levels with an energy below the ionisation potential (zero for the top ion)
   int maxrecombininglevel{-1};  // level index of the highest level with a non-zero recombination rate
   int nlevels_autoion{0};  // Number of levels that can autoionise
   int nlevels_groundterm{0};
@@ -61,7 +61,7 @@ struct Element {
   int anumber{-1};  // Atomic number
   int lowest_ionstage{-1};  // ionisation stage (charge + 1) of ion 0 for this element
   int uniqueionindexstart{-1};  // uniqueionindex of the lowest ionisation stage of this element
-  float initstablemeannucmass = {0.};  // mean nuclear mass [g] of the element's stable component (mass_amu * MH)
+  float initstablemeannucmass = {0.};  // mean nuclear mass [g] of the element's stable component (mass_amu * AMU)
   bool has_nlte_levels{false};
 };
 
