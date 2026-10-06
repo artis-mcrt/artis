@@ -549,6 +549,16 @@ The code must compile with nvc++ and with hipcc, also with `STDPAR=ON GPU=ON`.
   the construction in `#pragma clang unsafe_buffer_usage begin` and `end`. Most
   of the existing pragmas enclose an `#include`.
 
+## Review guidelines
+
+These rules apply to an automated review of a pull request, e.g. by Codex.
+
+- Do not comment that the checksums of the tests can change or must be
+  regenerated. CI compares the checksums and shows each mismatch. A maintainer
+  then regenerates them with `updatechecksums.yml` (see "Tests").
+- Do not comment that a stored checksum file comes from an older commit or
+  does not agree with a later change. The same CI step finds this.
+
 ## Pull requests
 
 - Make one pull request for one work item. Do not combine an unrelated fix

@@ -48,6 +48,12 @@ static_assert(get_expopac_bin_nu_upper(expopac_nbins - 1) > get_expopac_bin_nu_l
 constexpr bool expopac_bins_on = RPKT_USE_EXPANSION_OPACITIES || VPKT_USE_EXPANSION_OPACITIES ||
                                  RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.has_value();
 
+// The thermal emission of RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY uses the bin weights. A line-by-line r-packet
+// absorbs the fraction 1 - exp(-tau) in each line, so a thermal emission with a line term then needs the EXPANSION
+// weight. A probability of zero gives no line term.
+constexpr bool expopac_linebinned_weights_permitted =
+    RPKT_USE_EXPANSION_OPACITIES || RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.value_or(0.F) == 0.F;
+
 // kappa in cm^2/g for each bin of each non-empty cell
 inline MPI_shared_array<float> expansionopacities{};
 
@@ -145,8 +151,8 @@ auto calculate_chi_ffheat_nnionpart(int nonemptymgi) -> double;
 // EXPANSION_OPACITY_METHOD.
 // calculate_expansion_opacities() assumes the path c * t * dnu / nu, which is the path that
 // get_linedistance() gives with the first-order Doppler shift. The factor is the ratio of that path to the
-// relativistic one, which is the Doppler factor times the Lorentz factor. Give the same time that the
-// caller gives to get_linedistance() for the same bin.
+// relativistic one, which is the Doppler factor times the Lorentz factor. Give the time at the start of the path
+// through the bin.
 [[nodiscard]] constexpr auto get_expopac_pathfactor(const double prop_time, const double bin_edge_nu,
                                                     const double dnu_on_dl) -> double {
   if constexpr (USE_RELATIVISTIC_DOPPLER_SHIFT) {
