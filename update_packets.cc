@@ -100,14 +100,28 @@ void do_nonthermal_predeposit(Packet& pkt, const int nts, const double ts_end) {
     // doi:10.3847/0004-637X/829/2/110
     const double endot_collisional =
         (pkt.type == TYPE_NONTHERMAL_PREDEPOSIT_ALPHA) ? 5.e11 * MEV * rho : 4.e10 * MEV * rho;
-    // Positive energy loss rate from adiabatic expansion in [erg/s]. In homologous expansion, the momentum of a free
-    // particle decreases as p ~ 1/t, so the kinetic energy E decreases at the rate E (E + 2 m c^2) / ((E + m c^2) t).
-    // This rate is 2 E / t for a non-relativistic particle and E / t for an ultra-relativistic particle.
+    // Positive energy loss rate from adiabatic expansion in [erg/s]. E is the kinetic energy of one particle, m is its
+    // rest mass, and p and v are its momentum and its speed in the frame of the local gas. The steps are:
+    // 1. In homologous expansion, the gas at radius r has the velocity r / t. In a time dt, the particle moves a
+    //    distance v dt relative to the gas. The gas at the new position and time moves faster along the direction of
+    //    the particle by du = v dt / t. A change of frame by du decreases the momentum by (E + m c^2) du / c^2 =
+    //    p dt / t, because p = (E + m c^2) v / c^2. Thus dp/dt = -p / t, and p ~ 1/t.
+    // 2. The total energy E + m c^2 obeys (E + m c^2)^2 = (p c)^2 + (m c^2)^2. The derivative of this equation with
+    //    respect to time gives (E + m c^2) dE/dt = c^2 p dp/dt = -(p c)^2 / t.
+    // 3. From step 2, (p c)^2 = (E + m c^2)^2 - (m c^2)^2 = E (E + 2 m c^2).
+    // 4. Thus -dE/dt = E (E + 2 m c^2) / ((E + m c^2) t).
+    // This rate is 2 E / t for a non-relativistic particle (E << m c^2) and E / t for an ultra-relativistic particle
+    // (E >> m c^2). ASSUME_SIMPLE_FULLY_RELATIVISTIC_ALPHA_BETA_ADIABATIC_LOSS selects the limit E / t.
     const double particle_rest_energy = ((pkt.type == TYPE_NONTHERMAL_PREDEPOSIT_ALPHA) ? MALPHA : ME) * CLIGHTSQUARED;
-    const double endot_adiabatic =
-        (PARTICLE_THERMALISATION_SCHEME == ParticleThermalisationScheme::TIMEDEPENDENT_WITH_ADIABATIC_LOSS)
-            ? particle_en * (particle_en + (2 * particle_rest_energy)) / ((particle_en + particle_rest_energy) * ts)
-            : 0.;
+    const double endot_adiabatic = [&] {
+      if constexpr (PARTICLE_THERMALISATION_SCHEME != ParticleThermalisationScheme::TIMEDEPENDENT_WITH_ADIABATIC_LOSS) {
+        return 0.;
+      } else if constexpr (ASSUME_SIMPLE_FULLY_RELATIVISTIC_ALPHA_BETA_ADIABATIC_LOSS) {
+        return particle_en / ts;
+      } else {
+        return particle_en * (particle_en + (2 * particle_rest_energy)) / ((particle_en + particle_rest_energy) * ts);
+      }
+    }();
     const double endot = endot_collisional + endot_adiabatic;
 
     // time of deposition is the smaller out of (a) the time until which the particle loses all its energy according to
