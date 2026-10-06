@@ -62,7 +62,13 @@ sentences. It does not control the spelling variant here.
 
 When mentioning a scientific paper, always give the full reference:
 authors, year, journal, volume, page range, and DOI or arXiv ID. The
-title is optional. Do not use a bare author-year citation.
+title is optional.
+
+In a source file, give the full reference at the first mention of the
+paper in that file. A later mention in the same file can use the authors
+and the year, for example "Axelrod (1980)". Do not use a short form such
+as "A80" or "KF92". Do not use a bare author-year citation without the
+full reference in the same file, commit message, or pull request.
 
 ## Project overview
 
