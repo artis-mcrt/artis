@@ -111,12 +111,12 @@ void do_nonthermal_predeposit(Packet& pkt, const int nts, const double ts_end) {
     // 3. From step 2, (p c)^2 = (E + m c^2)^2 - (m c^2)^2 = E (E + 2 m c^2).
     // 4. Thus -dE/dt = E (E + 2 m c^2) / ((E + m c^2) t).
     // This rate is 2 E / t for a non-relativistic particle (E << m c^2) and E / t for an ultra-relativistic particle
-    // (E >> m c^2). ASSUME_SIMPLE_FULLY_RELATIVISTIC_ALPHA_BETA_ADIABATIC_LOSS selects the limit E / t.
+    // (E >> m c^2). PARTICLE_ADIABATIC_LOSS_ULTRARELATIVISTIC_LIMIT selects the limit E / t.
     const double particle_rest_energy = ((pkt.type == TYPE_NONTHERMAL_PREDEPOSIT_ALPHA) ? MALPHA : ME) * CLIGHTSQUARED;
     const double endot_adiabatic = [&] {
       if constexpr (PARTICLE_THERMALISATION_SCHEME != ParticleThermalisationScheme::TIMEDEPENDENT_WITH_ADIABATIC_LOSS) {
         return 0.;
-      } else if constexpr (ASSUME_SIMPLE_FULLY_RELATIVISTIC_ALPHA_BETA_ADIABATIC_LOSS) {
+      } else if constexpr (PARTICLE_ADIABATIC_LOSS_ULTRARELATIVISTIC_LIMIT) {
         return particle_en / ts;
       } else {
         return particle_en * (particle_en + (2 * particle_rest_energy)) / ((particle_en + particle_rest_energy) * ts);

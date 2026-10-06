@@ -156,7 +156,7 @@ constexpr bool USE_XCOM_GAMMAPHOTOION = false;
 constexpr auto PARTICLE_THERMALISATION_SCHEME = ParticleThermalisationScheme::INSTANTFULLDEPOSITION;
 
 // Use the ultra-relativistic limit E / t for the adiabatic loss rate of the non-thermal particles
-constexpr bool ASSUME_SIMPLE_FULLY_RELATIVISTIC_ALPHA_BETA_ADIABATIC_LOSS = false;
+constexpr bool PARTICLE_ADIABATIC_LOSS_ULTRARELATIVISTIC_LIMIT = false;
 
 constexpr auto GAMMA_THERMALISATION_SCHEME = GammaThermalisationScheme::FREQUENCYDEPENDENT;
 

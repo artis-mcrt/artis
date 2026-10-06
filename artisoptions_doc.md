@@ -317,7 +317,7 @@ constexpr bool SAMPLE_RPKT_EMISSION;
 // - TIMEDEPENDENT transports the particles with the Monte Carlo method;
 // - TIMEDEPENDENT_WITH_ADIABATIC_LOSS adds the adiabatic loss rate E (E + 2 m c^2) / ((E + m c^2) t) of the
 //   kinetic energy E to the collisional loss rate. This rate is 2E/t for a non-relativistic particle. Only the
-//   collisional share of the lost energy heats the gas. ASSUME_SIMPLE_FULLY_RELATIVISTIC_ALPHA_BETA_ADIABATIC_LOSS
+//   collisional share of the lost energy heats the gas. PARTICLE_ADIABATIC_LOSS_ULTRARELATIVISTIC_LIMIT
 //   selects the limit E/t;
 // - TIMEDEPENDENTWITHGAMMAPRODUCTS also transports the electrons and positrons from Compton scattering,
 //   photoelectric absorption, and pair production, instead of an instant deposition;
@@ -334,7 +334,7 @@ constexpr ParticleThermalisationScheme PARTICLE_THERMALISATION_SCHEME;
 // kinetic energy E of each non-thermal particle (positron, electron, or alpha particle). With false, the loss rate is
 // E (E + 2 m c^2) / ((E + m c^2) t), which is correct for each energy. The limit E / t is a factor of 2 too low for a
 // non-relativistic particle, for example an alpha particle from a radioactive decay.
-constexpr bool ASSUME_SIMPLE_FULLY_RELATIVISTIC_ALPHA_BETA_ADIABATIC_LOSS;
+constexpr bool PARTICLE_ADIABATIC_LOSS_ULTRARELATIVISTIC_LIMIT;
 
 // The thermalisation of the gamma-ray photons. FREQUENCYDEPENDENT transports the gamma rays with the Monte
 // Carlo method, with frequency-dependent opacities unless GAMMA_USE_KAPPA_GREY has a value. BARNES, WOLLAEGER,
