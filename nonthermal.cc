@@ -634,7 +634,7 @@ void read_collion_data() {
         printlnlog(
             "No collisional ionisation data for Z={} ionstage {}. Using the Lotz formula with A = {:g} [cm^2 eV^2] "
             "and ionpot = {:g} [eV]",
-            Z, ionstage, LOTZ_IONISATION_CONSTANT / EV / EV, ionpot_ev);
+            Z, ionstage, LOTZ_FORMULA_CONSTANT_A / EV / EV, ionpot_ev);
 
         // shell occupancies of this ion from electron_shell_occupancy.txt
         const auto& shells_q = allions_shell_occupancies[get_uniqueionindex(element, ion)];
@@ -788,7 +788,8 @@ void set_axelrod_solution(const ptrdiff_t nonemptymgi) {
 }
 
 // The cross section of an ion without a row in collion.txt. In the non-relativistic limit, it is the Lotz formula
-// sigma = A q ln(E/I) / (E I) for each shell.
+// sigma = A q ln(E/I) / (E I) for each shell. See LOTZ_FORMULA_CONSTANT_A in constants.h for the value of A and for
+// the extended form of Lotz for a neutral atom or an ion of low charge.
 constexpr auto xs_ionisation_lotz(const double en_erg, const ShellParams& colliondata_ion, const int electronsinshell)
     -> double {
   const double ionpot = colliondata_ion.ionpot_ev * EV;
@@ -818,7 +819,7 @@ constexpr auto xs_ionisation_lotz(const double en_erg, const ShellParams& collio
       (electronsinshell / ionpot *
        (std::log(betasq * ME * pow2(CLIGHT) / 2.0 / ionpot) - std::log(1 - betasq) - betasq));
   if (part_sigma_shell > 0.) {
-    const double sigma = 2 * LOTZ_IONISATION_CONSTANT / ME / (betasq * pow2(CLIGHT)) * part_sigma_shell;
+    const double sigma = 2 * LOTZ_FORMULA_CONSTANT_A / ME / (betasq * pow2(CLIGHT)) * part_sigma_shell;
     assert_always(sigma >= 0);
     return sigma;
   }
@@ -1200,7 +1201,10 @@ auto get_nt_frac_excitation(const int nonemptymgi) -> float {
 // limits, neglecting energy lost to free electrons. Used by nt_ionisation_ratecoeff_wfapprox() as the
 // alternative to the Spencer-Fano solve.
 //
-// WARNING: the high-energy limits make this an estimate only. Treat the ions that use it as uncertain.
+// WARNING: this disagrees with the Spencer-Fano eff_ionpot by more than the approximation should explain. One
+// candidate is the value of LOTZ_FORMULA_CONSTANT_A: Axelrod (1980) fitted it at 10 keV, but the value of Lotz, which
+// is 3.4 times larger, suits the low energies that set the heating and ionisation fractions. Treat the ions that use
+// this estimate as uncertain.
 auto get_oneoverw_approx_axelrod(const int element, const int ion, const int nonemptymgi) -> double {
   // Work in terms of 1/W since this is actually what we want. It is given by sigma/(Latom + Lelec).
   // We are going to start by taking all the high energy limits and ignoring Lelec, so that the
@@ -1219,9 +1223,9 @@ auto get_oneoverw_approx_axelrod(const int element, const int ion, const int non
 
   const double binding = get_sum_q_over_binding_energy(element, ion);
   // Axelrod (1980) normalised A = 1.33e-14 [cm^2 eV^2] at 10 keV to the mean of two cross section tabulations, one of
-  // them McGuire (1977), Phys. Rev. A, 16, 62-72, doi:10.1103/PhysRevA.16.62. The energies near the threshold set the
-  // heating and ionisation fractions, so this function uses the value of Lotz, as xs_ionisation_lotz() does.
-  return LOTZ_IONISATION_CONSTANT * binding / Zbar / (2 * PI * pow4(QE));
+  // them McGuire (1977), Phys. Rev. A, 16, 62-72, doi:10.1103/PhysRevA.16.62. This function uses the same value of A
+  // as xs_ionisation_lotz(). See LOTZ_FORMULA_CONSTANT_A in constants.h.
+  return LOTZ_FORMULA_CONSTANT_A * binding / Zbar / (2 * PI * pow4(QE));
 }
 
 // the fraction of deposited energy that goes into ionising electrons in a particular shell
