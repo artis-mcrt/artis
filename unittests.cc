@@ -407,11 +407,11 @@ void test_sample_rpkt_emission() {
   pkt.type = TYPE_RPKT;
   pkt.number = 1234;
   RpktEmissionSample rpkt_emission_sample{};
-  constexpr int nrpkt_emissions = 40;
+  constexpr int nemissiontype_updates = 40;
   const std::uint64_t rank_and_packet_number = get_rank_and_packet_number_key(globals::my_rank, pkt.number);
   int sampled_emission_index = -1;
   Packet pkt_at_sampled_emission{};
-  for (int emission_index = 0; emission_index < nrpkt_emissions; emission_index++) {
+  for (int emission_index = 0; emission_index < nemissiontype_updates; emission_index++) {
     // each emission has different values, so the values of the sample show which emission it holds
     pkt.emissiontype = emission_index;
     pkt.absorptiontype = -emission_index;
@@ -424,9 +424,10 @@ void test_sample_rpkt_emission() {
   }
   // The last check can find a sample that keeps the first emission or that changes at each emission. It can find these
   // errors only if the selected emission is not the first or the last emission.
-  check(sampled_emission_index > 0 && sampled_emission_index < nrpkt_emissions - 1,
+  check(sampled_emission_index > 0 && sampled_emission_index < nemissiontype_updates - 1,
         "the test selects an emission that is not the first and not the last");
-  check(rpkt_emission_sample.nrpkt_emissions == nrpkt_emissions, "sample_rpkt_emission counts each r-packet emission");
+  check(rpkt_emission_sample.nemissiontype_updates == nemissiontype_updates,
+        "sample_rpkt_emission counts each r-packet emission");
   check(rpkt_emission_sample.emissiontype == pkt_at_sampled_emission.emissiontype &&
             rpkt_emission_sample.absorptiontype == pkt_at_sampled_emission.absorptiontype &&
             rpkt_emission_sample.absorptionfreq == static_cast<float>(pkt_at_sampled_emission.absorptionfreq),

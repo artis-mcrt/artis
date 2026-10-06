@@ -49,7 +49,7 @@ constexpr auto get_packets_text_header() -> std::string {
       " originated_from_particlenotgamma trueem_posx trueem_posy trueem_posz trueem_time pellet_nucindex "
       "pellet_decaytype";
   if constexpr (SAMPLE_RPKT_EMISSION) {
-    header += " nrpkt_emissions sampled_emissiontype sampled_absorption_type sampled_absorption_freq";
+    header += " nemissiontype_updates sampled_emissiontype sampled_absorption_type sampled_absorption_freq";
   }
   return header;
 }
@@ -94,7 +94,7 @@ void place_pellet(const double e_cmf_per_packet, const std::span<const double> e
 // column is missing or not numeric.
 [[nodiscard]] auto parse_rpkt_emission_sample(std::string_view& remainder, RpktEmissionSample& rpkt_emission_sample)
     -> bool {
-  return parse_next_token(remainder, rpkt_emission_sample.nrpkt_emissions) &&
+  return parse_next_token(remainder, rpkt_emission_sample.nemissiontype_updates) &&
          parse_next_token(remainder, rpkt_emission_sample.emissiontype) &&
          parse_next_token(remainder, rpkt_emission_sample.absorptiontype) &&
          parse_next_token(remainder, rpkt_emission_sample.absorptionfreq);
@@ -102,8 +102,9 @@ void place_pellet(const double e_cmf_per_packet, const std::span<const double> e
 
 // Write the columns of the sampled r-packet emission to a row of packets*.out
 void print_rpkt_emission_sample(std::ostream& packets_file, const RpktEmissionSample& rpkt_emission_sample) {
-  std::print(packets_file, " {} {} {} {:g}", rpkt_emission_sample.nrpkt_emissions, rpkt_emission_sample.emissiontype,
-             rpkt_emission_sample.absorptiontype, rpkt_emission_sample.absorptionfreq);
+  std::print(packets_file, " {} {} {} {:g}", rpkt_emission_sample.nemissiontype_updates,
+             rpkt_emission_sample.emissiontype, rpkt_emission_sample.absorptiontype,
+             rpkt_emission_sample.absorptionfreq);
 }
 
 // A packet without the sample (SAMPLE_RPKT_EMISSION is false) has no columns of the sample, so these overloads read

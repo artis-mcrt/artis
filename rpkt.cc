@@ -1015,12 +1015,12 @@ DEVICE_FUNC void emit_rpkt(Packet& pkt, const int emissiontype) {
 
 DEVICE_FUNC void sample_rpkt_emission(RpktEmissionSample& rpkt_emission_sample, const Packet& pkt) {
   assert_testmodeonly(pkt.type == TYPE_RPKT);
-  assert_always(rpkt_emission_sample.nrpkt_emissions < std::numeric_limits<int>::max());
-  rpkt_emission_sample.nrpkt_emissions++;
-  if (item_replaces_sample(rpkt_emission_sample.nrpkt_emissions,
+  assert_always(rpkt_emission_sample.nemissiontype_updates < std::numeric_limits<int>::max());
+  rpkt_emission_sample.nemissiontype_updates++;
+  if (item_replaces_sample(rpkt_emission_sample.nemissiontype_updates,
                            get_rank_and_packet_number_key(globals::my_rank, pkt.number))) {
     rpkt_emission_sample = RpktEmissionSample{
-        .nrpkt_emissions = rpkt_emission_sample.nrpkt_emissions,
+        .nemissiontype_updates = rpkt_emission_sample.nemissiontype_updates,
         .emissiontype = pkt.emissiontype,
         .absorptiontype = pkt.absorptiontype,
         .absorptionfreq = static_cast<float>(pkt.absorptionfreq),

@@ -115,7 +115,7 @@ struct MacroAtomState {
 // with equal probability (see SAMPLE_RPKT_EMISSION)
 struct RpktEmissionSample {
   // the count of the r-packet emissions of the packet since packet_init() that set Packet::emissiontype
-  int nrpkt_emissions{0};
+  int nemissiontype_updates{0};
   int emissiontype{EMTYPE_NOTSET};  // Packet::emissiontype directly after the sampled emission
   int absorptiontype{0};  // Packet::absorptiontype at the sampled emission: the type of the last absorption before it
   // Packet::absorptionfreq at the sampled emission [Hz]. A float is sufficient, because the packet files have only

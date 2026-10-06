@@ -308,8 +308,8 @@ constexpr bool KEEP_ESCAPED_GAMMAS;
 
 // Keep one r-packet emission of each packet, sampled with equal probability from the r-packet emissions of the
 // packet that set emissiontype. A scattering keeps emissiontype, so it is not in the sample. The packet files get the
-// count of these emissions (nrpkt_emissions), and emissiontype, absorptiontype, and absorptionfreq of the sampled
-// emission. The sample of a packet thus represents nrpkt_emissions emissions.
+// count of these emissions (nemissiontype_updates), and emissiontype, absorptiontype, and absorptionfreq of the sampled
+// emission. The sample of a packet thus represents nemissiontype_updates emissions.
 constexpr bool SAMPLE_RPKT_EMISSION;
 
 // The thermalisation of the non-thermal particles (positrons, electrons, and alpha particles):
