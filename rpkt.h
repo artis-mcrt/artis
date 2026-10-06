@@ -110,7 +110,13 @@ struct ContinuumOpacity {
 };
 
 DEVICE_FUNC void do_rpkt(Packet& pkt, double t2, ContinuumOpacity& chi_rpkt_cont);
-DEVICE_FUNC void emit_rpkt(Packet& pkt);
+DEVICE_FUNC void emit_rpkt(Packet& pkt, int emissiontype);
+// Count the r-packet emission of pkt, and make it the sample with the probability that keeps the sample uniform (see
+// SAMPLE_RPKT_EMISSION). Only emit_rpkt() calls this function, with pkt.rpkt_emission_sample. The unit tests give a
+// separate sample.
+DEVICE_FUNC void sample_rpkt_emission(RpktEmissionSample& rpkt_emission_sample, const Packet& pkt);
+// A packet without the sample (SAMPLE_RPKT_EMISSION is false) keeps no count and no sample.
+DEVICE_FUNC void sample_rpkt_emission(const NoRpktEmissionSample& rpkt_emission_sample, const Packet& pkt);
 template <bool USECELLHISTANDUPDATEPHIXSLIST>
 void calculate_chi_rpkt_cont(double nu_cmf, ContinuumOpacity& chi_rpkt_cont, int nonemptymgi);
 extern template void calculate_chi_rpkt_cont<true>(double nu_cmf, ContinuumOpacity& chi_rpkt_cont, int nonemptymgi);

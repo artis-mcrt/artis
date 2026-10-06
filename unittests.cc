@@ -51,6 +51,7 @@
 #include "nltepop.h"
 #include "nonthermal.h"
 #include "outputfilestream.h"
+#include "packet.h"
 #include "radfield.h"
 #include "random.h"
 #include "rpkt.h"
@@ -80,6 +81,18 @@ void check_close(const double a, const double b, const double reltol, const std:
     std::println("  values: {:.15g} vs {:.15g} (reltol {:g})", a, b, reltol);
   }
   check(pass, description);
+}
+
+// check that the count of each of a set of equally likely outcomes agrees with ntrials / counts.size() to within six
+// standard deviations of the binomial distribution
+void check_counts_of_equally_likely_outcomes(const std::span<const int> counts, const int ntrials,
+                                             const std::string_view description) {
+  const auto noutcomes = static_cast<double>(counts.size());
+  const double expected_count = static_cast<double>(ntrials) / noutcomes;
+  const double six_sigma = 6. * std::sqrt(expected_count * (1. - (1. / noutcomes)));
+  const auto [min_count, max_count] = std::ranges::minmax(counts);
+  check(std::abs(min_count - expected_count) < six_sigma && std::abs(max_count - expected_count) < six_sigma,
+        description);
 }
 
 void test_binindex_helpers() {
@@ -206,11 +219,8 @@ void test_escapedirectionbin() {
   check(all_in_range, "escape direction bins are all within [0, MABINS)");
 
   // every bin covers an equal solid angle, so isotropic directions should fill them equally
-  constexpr double expected_count = static_cast<double>(ndirs) / MABINS;
-  const double sixsigma = 6. * std::sqrt(expected_count * (1. - (1. / MABINS)));
-  const auto [mincount, maxcount] = std::ranges::minmax(bincounts);
-  check(std::abs(mincount - expected_count) < sixsigma && std::abs(maxcount - expected_count) < sixsigma,
-        "isotropic directions fill all direction bins of equal solid angle to within 6 sigma");
+  check_counts_of_equally_likely_outcomes(
+      bincounts, ndirs, "isotropic directions fill all direction bins of equal solid angle to within 6 sigma");
 
   // Pin the azimuthal ordering that artistools depends on (see the comment in get_escapedirectionbin):
   // the bins NPHIBINS/2..(NPHIBINS - 1) cover phi = 0..pi in increasing order, and the bins
@@ -360,6 +370,68 @@ void test_random_sampling() {
   check(unit_vectors, "get_rand_isotropic_unitvec returns unit vectors");
   check(std::abs(sum_mu / nsamples) < (6. / std::sqrt(3. * nsamples)), "isotropic <cos(theta)> is zero");
   check(std::abs((sum_musquared / nsamples) - (1. / 3.)) < 1e-3, "isotropic <cos^2(theta)> is 1/3");
+}
+
+void test_item_replaces_sample() {
+  std::println("item_replaces_sample...");
+  constexpr int nitems = 20;
+  constexpr int nranks = 4;
+  constexpr int npackets_per_rank = 50000;
+
+  std::array<int, nitems> nsequences_with_final_sample_at_item{};
+  for (int rank = 0; rank < nranks; rank++) {
+    for (int packet_number = 0; packet_number < npackets_per_rank; packet_number++) {
+      const std::uint64_t rank_and_packet_number = get_rank_and_packet_number_key(rank, packet_number);
+      // the first item is always the sample (see the static_assert after item_replaces_sample())
+      int sampled_item = 0;
+      for (int item = 1; item < nitems; item++) {
+        if (item_replaces_sample(item + 1, rank_and_packet_number)) {
+          sampled_item = item;
+        }
+      }
+      nsequences_with_final_sample_at_item[sampled_item]++;
+    }
+  }
+
+  // each item is the final sample with the probability 1 / nitems
+  check_counts_of_equally_likely_outcomes(
+      nsequences_with_final_sample_at_item, nranks * npackets_per_rank,
+      "item_replaces_sample keeps each item with equal probability to within 6 sigma");
+}
+
+void test_sample_rpkt_emission() {
+  std::println("sample_rpkt_emission...");
+  // The test gives a separate RpktEmissionSample to sample_rpkt_emission(), so that every build tests the sample, also
+  // with SAMPLE_RPKT_EMISSION false.
+  Packet pkt{};
+  pkt.type = TYPE_RPKT;
+  pkt.number = 1234;
+  RpktEmissionSample rpkt_emission_sample{};
+  constexpr int nemissiontype_updates = 40;
+  const std::uint64_t rank_and_packet_number = get_rank_and_packet_number_key(globals::my_rank, pkt.number);
+  int sampled_emission_index = -1;
+  Packet pkt_at_sampled_emission{};
+  for (int emission_index = 0; emission_index < nemissiontype_updates; emission_index++) {
+    // each emission has different values, so the values of the sample show which emission it holds
+    pkt.emissiontype = emission_index;
+    pkt.absorptiontype = -emission_index;
+    pkt.absorptionfreq = 1e15 * (1 + emission_index);
+    sample_rpkt_emission(rpkt_emission_sample, pkt);
+    if (item_replaces_sample(emission_index + 1, rank_and_packet_number)) {
+      sampled_emission_index = emission_index;
+      pkt_at_sampled_emission = pkt;
+    }
+  }
+  // The last check can find a sample that keeps the first emission or that changes at each emission. It can find these
+  // errors only if the selected emission is not the first or the last emission.
+  check(sampled_emission_index > 0 && sampled_emission_index < nemissiontype_updates - 1,
+        "the test selects an emission that is not the first and not the last");
+  check(rpkt_emission_sample.nemissiontype_updates == nemissiontype_updates,
+        "sample_rpkt_emission counts each r-packet emission");
+  check(rpkt_emission_sample.emissiontype == pkt_at_sampled_emission.emissiontype &&
+            rpkt_emission_sample.absorptiontype == pkt_at_sampled_emission.absorptiontype &&
+            rpkt_emission_sample.absorptionfreq == static_cast<float>(pkt_at_sampled_emission.absorptionfreq),
+        "sample_rpkt_emission keeps the values of the emission that item_replaces_sample selects");
 }
 
 void test_planck() {
@@ -1415,6 +1487,8 @@ auto main() -> int {
   test_frame_transform();
   test_meridian();
   test_random_sampling();
+  test_item_replaces_sample();
+  test_sample_rpkt_emission();
   test_planck();
   test_bateman();
   test_compton();

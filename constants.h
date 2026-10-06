@@ -66,6 +66,22 @@ constexpr double HCLIGHTOVERFOURPI = H * CLIGHT / (4 * PI);
 
 constexpr double H_ionpot = 13.5979996 * EV;
 
+// The constant A of the Lotz formula sigma = A q ln(E/I) / (E I) for the electron-impact ionisation cross section of
+// one shell with q electrons and the binding energy I. All of the ARTIS code uses this one value of A.
+//
+// The value is that of Axelrod (1980), PhD thesis, University of California, Santa Cruz. He normalised
+// A = 1.33e-14 [cm^2 eV^2] at 10 keV to the mean of two cross section tabulations. The energies near the threshold set
+// the heating and ionisation fractions, and there this value is low.
+//
+// Lotz (1967), Z. Phys., 206, 205-211, doi:10.1007/BF01325928, gives A = 4.5e-14 [cm^2 eV^2] for the form with one
+// parameter. Lotz uses this form for highly charged ions. For a neutral atom or an ion of low charge, Lotz uses the
+// extended form with three parameters for each shell i:
+//   sigma = sum_i a_i q_i ln(E/I_i) / (E I_i) {1 - b_i exp[-c_i (E/I_i - 1)]}.
+// Lotz (1968), Z. Phys., 216, 241-247, doi:10.1007/BF01392963, gives a_i, b_i, and c_i for H to Ca, and Lotz (1969),
+// Z. Phys., 220, 466-472, doi:10.1007/BF01394789, gives them for Sc to Zn. A later change can use 4.5e-14 for the
+// highly charged ions and the extended form for the other ions.
+constexpr double LOTZ_FORMULA_CONSTANT_A = 1.33e-14 * EV * EV;  // [cm^2 erg^2]
+
 // atomic units
 constexpr double A_BOHR_CM = 5.29177211e-9;  // Bohr radius [cm]
 constexpr double E_HARTREE = 4.35974472e-11;  // Hartree energy [erg]
