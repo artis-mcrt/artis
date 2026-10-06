@@ -32,7 +32,7 @@ sedopt 'constexpr int RATECOEFF_TABLESIZE.*' 'constexpr int RATECOEFF_TABLESIZE 
 sedopt 'constexpr double MINTEMP.*' 'constexpr double MINTEMP = 1000.;'
 sedopt 'constexpr double MAXTEMP.*' 'constexpr double MAXTEMP = 20000.;'
 
-sedopt 'constexpr auto PARTICLE_THERMALISATION_SCHEME.*' 'constexpr auto PARTICLE_THERMALISATION_SCHEME = ParticleThermalisationScheme::BARNES;'
+sedopt 'ParticleThermalisationScheme::[A-Z_]*;' 'ParticleThermalisationScheme::BARNES;'
 
 sedopt 'constexpr auto GAMMA_THERMALISATION_SCHEME.*' 'constexpr auto GAMMA_THERMALISATION_SCHEME = GammaThermalisationScheme::BARNES;'
 

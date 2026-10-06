@@ -327,9 +327,10 @@ constexpr bool SAMPLE_RPKT_EMISSION;
 //   ApJ, 829, 110, doi:10.3847/0004-637X/829/2/110; Wollaeger, Korobkin, Fontes, Rosswog, Even & Fryer 2018,
 //   MNRAS, 478, 3298-3334, doi:10.1093/mnras/sty1018).
 //
-// The presets write "constexpr auto" for this option and for GAMMA_THERMALISATION_SCHEME. With the full type, the
-// line of this option is longer than 120 columns. Keep that form, because the sedopt patterns of
-// tests/setup_kilonova_2d_barnesthermalisation.sh match it.
+// The presets write "constexpr auto" for this option and for GAMMA_THERMALISATION_SCHEME. clang-format can put a long
+// value of this option on a second line. Thus the sedopt pattern of tests/setup_kilonova_2d_barnesthermalisation.sh
+// matches only the value "ParticleThermalisationScheme::...;". Keep "constexpr auto" for GAMMA_THERMALISATION_SCHEME,
+// because the sedopt pattern of that option matches the start of the line.
 constexpr ParticleThermalisationScheme PARTICLE_THERMALISATION_SCHEME;
 
 // The thermalisation of the gamma-ray photons. FREQUENCYDEPENDENT transports the gamma rays with the Monte
