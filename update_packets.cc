@@ -39,6 +39,12 @@
 
 namespace {
 
+// the particle thermalisation schemes that add an adiabatic loss rate to the collisional loss rate
+constexpr bool PARTICLE_THERMALISATION_HAS_ADIABATIC_LOSS =
+    PARTICLE_THERMALISATION_SCHEME == ParticleThermalisationScheme::TIMEDEPENDENT_WITH_ADIABATIC_LOSS ||
+    PARTICLE_THERMALISATION_SCHEME ==
+        ParticleThermalisationScheme::TIMEDEPENDENT_WITH_ADIABATIC_LOSS_ULTRARELATIVISTICLIMIT;
+
 void do_nonthermal_predeposit(Packet& pkt, const int nts, const double ts_end) {
   // handle deposition by non-thermal alpha and beta particles that are emitted from pellets and then
   // deposit some or all of their energy locally in the ejecta (possibly after some time delay).
@@ -87,8 +93,7 @@ void do_nonthermal_predeposit(Packet& pkt, const int nts, const double ts_end) {
     const double f_p = std::log1p(aux_term) / aux_term;
     deposit_or_escape(f_p);
   } else if constexpr (PARTICLE_THERMALISATION_SCHEME == ParticleThermalisationScheme::TIMEDEPENDENT ||
-                       PARTICLE_THERMALISATION_SCHEME ==
-                           ParticleThermalisationScheme::TIMEDEPENDENT_WITH_ADIABATIC_LOSS ||
+                       PARTICLE_THERMALISATION_HAS_ADIABATIC_LOSS ||
                        PARTICLE_THERMALISATION_SCHEME == ParticleThermalisationScheme::TIMEDEPENDENTWITHGAMMAPRODUCTS) {
     // local time-dependent absorption described by Shingles et al. (2023), ApJL, 954, L41,
     // doi:10.3847/2041-8213/acf29a
@@ -111,15 +116,16 @@ void do_nonthermal_predeposit(Packet& pkt, const int nts, const double ts_end) {
     // 3. From step 2, (p c)^2 = (E + m c^2)^2 - (m c^2)^2 = E (E + 2 m c^2).
     // 4. Thus -dE/dt = E (E + 2 m c^2) / ((E + m c^2) t).
     // This rate is 2 E / t for a non-relativistic particle (E << m c^2) and E / t for an ultra-relativistic particle
-    // (E >> m c^2). PARTICLE_ADIABATIC_LOSS_ULTRARELATIVISTIC_LIMIT selects the limit E / t.
+    // (E >> m c^2). TIMEDEPENDENT_WITH_ADIABATIC_LOSS_ULTRARELATIVISTICLIMIT uses the limit E / t.
     const double particle_rest_energy = ((pkt.type == TYPE_NONTHERMAL_PREDEPOSIT_ALPHA) ? MALPHA : ME) * CLIGHTSQUARED;
     const double endot_adiabatic = [&] {
-      if constexpr (PARTICLE_THERMALISATION_SCHEME != ParticleThermalisationScheme::TIMEDEPENDENT_WITH_ADIABATIC_LOSS) {
-        return 0.;
-      } else if constexpr (PARTICLE_ADIABATIC_LOSS_ULTRARELATIVISTIC_LIMIT) {
+      if constexpr (PARTICLE_THERMALISATION_SCHEME == ParticleThermalisationScheme::TIMEDEPENDENT_WITH_ADIABATIC_LOSS) {
+        return particle_en * (particle_en + (2 * particle_rest_energy)) / ((particle_en + particle_rest_energy) * ts);
+      } else if constexpr (PARTICLE_THERMALISATION_SCHEME ==
+                           ParticleThermalisationScheme::TIMEDEPENDENT_WITH_ADIABATIC_LOSS_ULTRARELATIVISTICLIMIT) {
         return particle_en / ts;
       } else {
-        return particle_en * (particle_en + (2 * particle_rest_energy)) / ((particle_en + particle_rest_energy) * ts);
+        return 0.;
       }
     }();
     const double endot = endot_collisional + endot_adiabatic;
@@ -149,7 +155,7 @@ void do_nonthermal_predeposit(Packet& pkt, const int nts, const double ts_end) {
 
     pkt.pos = vec_scale(pkt.pos, t_new / ts);
     pkt.prop_time = t_new;
-    if constexpr (PARTICLE_THERMALISATION_SCHEME == ParticleThermalisationScheme::TIMEDEPENDENT_WITH_ADIABATIC_LOSS) {
+    if constexpr (PARTICLE_THERMALISATION_HAS_ADIABATIC_LOSS) {
       if (absorbed) {
         // Only the collisional part of the energy loss heats the gas, so the packet gives up that
         // share of its energy and the remainder goes to the expansion.

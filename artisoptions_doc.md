@@ -317,8 +317,10 @@ constexpr bool SAMPLE_RPKT_EMISSION;
 // - TIMEDEPENDENT transports the particles with the Monte Carlo method;
 // - TIMEDEPENDENT_WITH_ADIABATIC_LOSS adds the adiabatic loss rate E (E + 2 m c^2) / ((E + m c^2) t) of the
 //   kinetic energy E to the collisional loss rate. This rate is 2E/t for a non-relativistic particle. Only the
-//   collisional share of the lost energy heats the gas. PARTICLE_ADIABATIC_LOSS_ULTRARELATIVISTIC_LIMIT
-//   selects the limit E/t;
+//   collisional share of the lost energy heats the gas;
+// - TIMEDEPENDENT_WITH_ADIABATIC_LOSS_ULTRARELATIVISTICLIMIT is the same as TIMEDEPENDENT_WITH_ADIABATIC_LOSS, but it
+//   uses the ultra-relativistic limit E/t of the adiabatic loss rate. This rate is a factor of 2 too low for a
+//   non-relativistic particle, for example an alpha particle from a radioactive decay;
 // - TIMEDEPENDENTWITHGAMMAPRODUCTS also transports the electrons and positrons from Compton scattering,
 //   photoelectric absorption, and pair production, instead of an instant deposition;
 // - BARNES and WOLLAEGER use analytic thermalisation efficiencies (Barnes, Kasen, Wu & Martínez-Pinedo 2016,
@@ -329,12 +331,6 @@ constexpr bool SAMPLE_RPKT_EMISSION;
 // line of this option is longer than 120 columns. Keep that form, because the sedopt patterns of
 // tests/setup_kilonova_2d_barnesthermalisation.sh match it.
 constexpr ParticleThermalisationScheme PARTICLE_THERMALISATION_SCHEME;
-
-// With TIMEDEPENDENT_WITH_ADIABATIC_LOSS, use the ultra-relativistic limit E / t for the adiabatic loss rate of the
-// kinetic energy E of each non-thermal particle (positron, electron, or alpha particle). With false, the loss rate is
-// E (E + 2 m c^2) / ((E + m c^2) t), which is correct for each energy. The limit E / t is a factor of 2 too low for a
-// non-relativistic particle, for example an alpha particle from a radioactive decay.
-constexpr bool PARTICLE_ADIABATIC_LOSS_ULTRARELATIVISTIC_LIMIT;
 
 // The thermalisation of the gamma-ray photons. FREQUENCYDEPENDENT transports the gamma rays with the Monte
 // Carlo method, with frequency-dependent opacities unless GAMMA_USE_KAPPA_GREY has a value. BARNES, WOLLAEGER,

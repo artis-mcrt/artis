@@ -155,8 +155,6 @@ constexpr bool USE_XCOM_GAMMAPHOTOION = false;
 
 constexpr auto PARTICLE_THERMALISATION_SCHEME = ParticleThermalisationScheme::INSTANTFULLDEPOSITION;
 
-constexpr bool PARTICLE_ADIABATIC_LOSS_ULTRARELATIVISTIC_LIMIT = false;
-
 constexpr auto GAMMA_THERMALISATION_SCHEME = GammaThermalisationScheme::FREQUENCYDEPENDENT;
 
 constexpr std::optional<double> GAMMA_USE_KAPPA_GREY;
