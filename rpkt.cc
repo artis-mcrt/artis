@@ -273,6 +273,40 @@ auto get_possible_event_expansion_opacity(const int nonemptymgi, Packet& pkt, co
   return {std::numeric_limits<double>::max(), false};
 }
 
+// Give an r-packet a new direction that is isotropic in the comoving frame, and set its rest-frame frequency and
+// energy. The packet is then unpolarised.
+DEVICE_FUNC void set_isotropic_cmf_direction(Packet& pkt) {
+  const auto dir_cmf = get_rand_isotropic_unitvec(get_rngstate(pkt));
+
+  // This direction is in the cmf - we want to convert it to the rest
+  // frame - use aberration of angles. We want to convert from cmf to
+  // rest so need -ve velocity.
+  const auto vel_vec = get_velocity(pkt.pos, -pkt.prop_time);
+  // negative time since we want the backwards transformation here
+
+  pkt.dir = angle_ab(dir_cmf, vel_vec);
+
+  // set the rest-frame energy and frequency
+
+  set_pkt_restframe_from_cmf(pkt);
+
+  if constexpr (POL_ON) {
+    // Reset to unpolarised
+    pkt.stokes_u = 0.;
+    pkt.stokes_q = 0.;
+  }
+}
+
+// Scatter an r-packet in a direction that is isotropic in the comoving frame, at the same comoving frequency and
+// energy. A scattering keeps emissiontype (see emit_rpkt()), but it sets the position and the time of the last
+// emission.
+DEVICE_FUNC void isotropic_scatter_rpkt(Packet& pkt) {
+  assert_testmodeonly(pkt.type == TYPE_RPKT);
+  set_isotropic_cmf_direction(pkt);
+  pkt.em_pos = pkt.pos;
+  pkt.em_time = static_cast<float>(pkt.prop_time);
+}
+
 // Scatter an r-packet off a free electron: sample the new direction in the comoving frame and transform
 // it back to the rest frame, also updating the Stokes parameters when POL_ON. The scattering is
 // coherent, so the comoving-frame frequency and energy are unchanged.
@@ -347,6 +381,10 @@ void electron_scatter_rpkt(Packet& pkt) {
   // set the rest-frame energy and frequency
 
   set_pkt_restframe_from_cmf(pkt);
+
+  // a scattering keeps emissiontype (see emit_rpkt()), but it sets the position and the time of the last emission
+  pkt.em_pos = pkt.pos;
+  pkt.em_time = static_cast<float>(pkt.prop_time);
 }
 
 template <bool USECELLHISTANDUPDATEPHIXSLIST, bool SELECTCONTINUUM = false, bool WEIGHT_BY_HEATING_FRACTION = false>
@@ -383,10 +421,6 @@ void rpkt_event_continuum(Packet& pkt, ContinuumOpacity& chi_rpkt_cont) {
     }
 
     electron_scatter_rpkt(pkt);
-
-    // Electron scattering does not modify the last emission flag but it updates the last emission position
-    pkt.em_pos = pkt.pos;
-    pkt.em_time = static_cast<float>(pkt.prop_time);
 
   } else if (chi_rnd < chi_escatter + chi_ff) {
     // ff: transform to k-pkt
@@ -567,8 +601,8 @@ auto do_rpkt_step(Packet& pkt, const double t2, ContinuumOpacity& chi_rpkt_cont)
       pkt.nscatterings++;
       stats::increment(stats::Counter::ELECTRON_SCATTERINGS);
 
-      emit_rpkt(pkt);
-      // Electron scattering does not modify the last emission flag but it updates the last emission position
+      // the code treats the grey event as a coherent scattering, so the event keeps the emission type
+      isotropic_scatter_rpkt(pkt);
     } else if (!event_is_boundbound) {
       rpkt_event_continuum(pkt, chi_rpkt_cont);
     } else if constexpr (!RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.has_value()) {
@@ -595,19 +629,20 @@ auto do_rpkt_step(Packet& pkt, const double t2, ContinuumOpacity& chi_rpkt_cont)
         pkt.nu_cmf = sample_planck_times_expansion_opacity(nonemptymgi, get_rngstate(pkt));
         pkt.next_trans = -1;
         // a thermal re-emission at a new frequency, so the packet no longer traces back to the previous emission
-        pkt.emissiontype = EMTYPE_NOTSET;
         pkt.trueemissiontype = EMTYPE_NOTSET;
         pkt.trueem_pos = {NAN, NAN, NAN};
         pkt.trueem_time = -1.;
 
         // re-emit rather than scatter, so that this event is not counted as an electron scattering
         pkt.nscatterings = 0;
+
+        emit_rpkt(pkt, EMTYPE_NOTSET);
       } else {
         // pure line scattering, so the packet keeps its comoving frequency in a new direction. nscatterings stays
         // unchanged, because this event is not an electron scattering.
         stats::increment(stats::Counter::RESONANCESCATTERINGS);
+        isotropic_scatter_rpkt(pkt);
       }
-      emit_rpkt(pkt);
 
       // the thermal re-emission and the line scattering are isotropic in the comoving frame, not a dipole
       if constexpr (VPKT_ON) {
@@ -965,35 +1000,36 @@ DEVICE_FUNC void do_rpkt(Packet& pkt, const double t2, ContinuumOpacity& chi_rpk
   }
 }
 
-// make the packet an r-pkt and set further flags
-DEVICE_FUNC void emit_rpkt(Packet& pkt) {
+// Emit the packet as an r-packet with the emission type emissiontype in an isotropic direction of the comoving frame.
+// No other function of the packet transport sets Packet::emissiontype, and this function samples each of these
+// emissions (see SAMPLE_RPKT_EMISSION). The sampled emissions are thus exactly the events that set emissiontype. A
+// scattering keeps emissiontype, so it calls isotropic_scatter_rpkt() or electron_scatter_rpkt() instead.
+DEVICE_FUNC void emit_rpkt(Packet& pkt, const int emissiontype) {
   pkt.type = TYPE_RPKT;
-
-  // Need to assign a new direction. Assume isotropic emission in the cmf
-
-  const auto dir_cmf = get_rand_isotropic_unitvec(get_rngstate(pkt));
-
-  // This direction is in the cmf - we want to convert it to the rest
-  // frame - use aberration of angles. We want to convert from cmf to
-  // rest so need -ve velocity.
-  const auto vel_vec = get_velocity(pkt.pos, -pkt.prop_time);
-  // negative time since we want the backwards transformation here
-
-  pkt.dir = angle_ab(dir_cmf, vel_vec);
-
-  // set the rest-frame energy and frequency
-
-  set_pkt_restframe_from_cmf(pkt);
-
-  if constexpr (POL_ON) {
-    // Reset to unpolarised
-    pkt.stokes_u = 0.;
-    pkt.stokes_q = 0.;
-  }
-
+  pkt.emissiontype = emissiontype;
+  set_isotropic_cmf_direction(pkt);
   pkt.em_pos = pkt.pos;
   pkt.em_time = static_cast<float>(pkt.prop_time);
+  sample_rpkt_emission(pkt.rpkt_emission_sample, pkt);
 }
+
+DEVICE_FUNC void sample_rpkt_emission(RpktEmissionSample& rpkt_emission_sample, const Packet& pkt) {
+  assert_testmodeonly(pkt.type == TYPE_RPKT);
+  assert_always(rpkt_emission_sample.nemissiontype_updates < std::numeric_limits<int>::max());
+  rpkt_emission_sample.nemissiontype_updates++;
+  if (item_replaces_sample(rpkt_emission_sample.nemissiontype_updates,
+                           get_rank_and_packet_number_key(globals::my_rank, pkt.number))) {
+    rpkt_emission_sample = RpktEmissionSample{
+        .nemissiontype_updates = rpkt_emission_sample.nemissiontype_updates,
+        .emissiontype = pkt.emissiontype,
+        .absorptiontype = pkt.absorptiontype,
+        .absorptionfreq = static_cast<float>(pkt.absorptionfreq),
+    };
+  }
+}
+
+DEVICE_FUNC void sample_rpkt_emission([[maybe_unused]] const NoRpktEmissionSample& rpkt_emission_sample,
+                                      [[maybe_unused]] const Packet& pkt) {}
 
 template <bool USECELLHISTANDUPDATEPHIXSLIST>
 void calculate_chi_rpkt_cont(const double nu_cmf, ContinuumOpacity& chi_rpkt_cont, const int nonemptymgi) {

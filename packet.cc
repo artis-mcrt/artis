@@ -11,6 +11,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <format>
+#include <ostream>
 #include <print>
 #include <ranges>
 #include <span>
@@ -47,6 +48,9 @@ constexpr auto get_packets_text_header() -> std::string {
   header +=
       " originated_from_particlenotgamma trueem_posx trueem_posy trueem_posz trueem_time pellet_nucindex "
       "pellet_decaytype";
+  if constexpr (SAMPLE_RPKT_EMISSION) {
+    header += " nemissiontype_updates sampled_emissiontype sampled_absorption_type sampled_absorption_freq";
+  }
   return header;
 }
 
@@ -63,7 +67,7 @@ void place_pellet(const double e_cmf_per_packet, const std::span<const double> e
   assert_always(cellindex < grid::ngrid);
 
   pkt.cellindex = cellindex;
-  pkt.number = pktnumber;  // record the packets number for debugging
+  pkt.number = pktnumber;  // unique only inside this rank (see get_rank_and_packet_number_key())
   pkt.prop_time = globals::tmin;
 
   pkt.pos = grid::get_propcell_random_xyz_position_tmin(cellindex, get_rngstate(pkt));
@@ -85,6 +89,33 @@ void place_pellet(const double e_cmf_per_packet, const std::span<const double> e
   const double dopplerfactor = calculate_doppler_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
   pkt.e_rf = pkt.e_cmf / dopplerfactor;
 }
+
+// Take the columns of the sampled r-packet emission from the remainder of a row of packets*.out. Return false if a
+// column is missing or not numeric.
+[[nodiscard]] auto parse_rpkt_emission_sample(std::string_view& remainder, RpktEmissionSample& rpkt_emission_sample)
+    -> bool {
+  return parse_next_token(remainder, rpkt_emission_sample.nemissiontype_updates) &&
+         parse_next_token(remainder, rpkt_emission_sample.emissiontype) &&
+         parse_next_token(remainder, rpkt_emission_sample.absorptiontype) &&
+         parse_next_token(remainder, rpkt_emission_sample.absorptionfreq);
+}
+
+// Write the columns of the sampled r-packet emission to a row of packets*.out
+void print_rpkt_emission_sample(std::ostream& packets_file, const RpktEmissionSample& rpkt_emission_sample) {
+  std::print(packets_file, " {} {} {} {:g}", rpkt_emission_sample.nemissiontype_updates,
+             rpkt_emission_sample.emissiontype, rpkt_emission_sample.absorptiontype,
+             rpkt_emission_sample.absorptionfreq);
+}
+
+// A packet without the sample (SAMPLE_RPKT_EMISSION is false) has no columns of the sample, so these overloads read
+// and write nothing
+[[nodiscard]] auto parse_rpkt_emission_sample([[maybe_unused]] const std::string_view& remainder,
+                                              [[maybe_unused]] const NoRpktEmissionSample& rpkt_emission_sample)
+    -> bool {
+  return true;
+}
+void print_rpkt_emission_sample([[maybe_unused]] const std::ostream& packets_file,
+                                [[maybe_unused]] const NoRpktEmissionSample& rpkt_emission_sample) {}
 
 }  // anonymous namespace
 
@@ -240,6 +271,8 @@ auto read_text_packets(const std::string& filename) -> std::vector<Packet> {
     parse_column(pkt.pellet_nucindex);
     parse_column(pkt.pellet_decaytype);
 
+    rowisvalid = rowisvalid && parse_rpkt_emission_sample(remainder, pkt.rpkt_emission_sample);
+
     // A row must hold every column of the header and no more. A short or corrupt row, e.g. from a partial
     // write on a full file system, otherwise leaves the remaining fields at their defaults. That would drop
     // the packet from the spectra (escape_type stays 0) with no diagnostic.
@@ -280,6 +313,7 @@ void write_text_packets(const std::string& filename, const std::span<const Packe
     std::print(packets_file, " {}", static_cast<int>(pkt.originated_from_particlenotgamma));
     std::print(packets_file, " {:g} {:g} {:g}", pkt.trueem_pos[0], pkt.trueem_pos[1], pkt.trueem_pos[2]);
     std::print(packets_file, " {:g} {} {}", pkt.trueem_time, pkt.pellet_nucindex, pkt.pellet_decaytype);
+    print_rpkt_emission_sample(packets_file, pkt.rpkt_emission_sample);
     std::println(packets_file, "");
   }
   packets_file.close();

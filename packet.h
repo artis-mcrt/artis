@@ -8,8 +8,10 @@
 #include <cstdint>
 #include <span>
 #include <string>
+#include <type_traits>
 #include <vector>
 
+#include "artisoptions.h"
 #include "constants.h"
 
 // Packet state in the indivisible energy packet scheme of Lucy (2002), A&A, 384, 725-735,
@@ -109,6 +111,25 @@ struct MacroAtomState {
   int activatingline{-99};
 };
 
+// The count of the r-packet emissions of a packet that set Packet::emissiontype, and one of these emissions, sampled
+// with equal probability (see SAMPLE_RPKT_EMISSION)
+struct RpktEmissionSample {
+  // the count of the r-packet emissions of the packet since packet_init() that set Packet::emissiontype
+  int nemissiontype_updates{0};
+  int emissiontype{EMTYPE_NOTSET};  // Packet::emissiontype directly after the sampled emission
+  int absorptiontype{0};  // Packet::absorptiontype at the sampled emission: the type of the last absorption before it
+  // Packet::absorptionfreq at the sampled emission [Hz]. A float is sufficient, because the packet files have only
+  // six significant digits.
+  float absorptionfreq{0.};
+
+  auto operator<=>(const RpktEmissionSample& rhs) const = default;
+};
+
+// The empty type of Packet::rpkt_emission_sample if SAMPLE_RPKT_EMISSION is false
+struct NoRpktEmissionSample {
+  auto operator<=>(const NoRpktEmissionSample& rhs) const = default;
+};
+
 #include "random.h"
 
 struct Packet {
@@ -159,10 +180,15 @@ struct Packet {
   enum packet_type escape_type {};  // In which form when escaped from the grid.
   float escape_time{-1};  // time at which is passes out of the grid [s]
   double tdecay{-1.};  // Time at which pellet decays
-  int number{-1};  // A unique number to identify the packet
+  int number{-1};  // the number of the packet, unique only inside one rank
   bool originated_from_particlenotgamma{false};  // first packet type after pellet decay
   int pellet_decaytype{-1};  // decay::DecayType value of the pellet decay, or -1 for the initial-energy channel
   int pellet_nucindex{-1};  // nuclide index of the decaying species
+  // If SAMPLE_RPKT_EMISSION is false, this member has an empty type, and [[no_unique_address]] then lets it take no
+  // memory. The type of the member selects the overload of sample_rpkt_emission(), parse_rpkt_emission_sample(), and
+  // print_rpkt_emission_sample(). Every build thus compiles the code for the two types.
+  [[no_unique_address]] std::conditional_t<SAMPLE_RPKT_EMISSION, RpktEmissionSample, NoRpktEmissionSample>
+      rpkt_emission_sample{};
 
   auto operator<=>(const Packet& rhs) const = default;
 };
@@ -181,6 +207,39 @@ inline auto get_rngstate() -> rngstate_type& {
 
 inline auto get_rngstate([[maybe_unused]] const Packet& packet) -> rngstate_type& { return get_rngstate(); }
 #endif
+
+// Decide if item number nitems_seen (1-based) of a sequence replaces the current sample of the sequence. The
+// probability of a replacement is 1 / nitems_seen. After the last item of a sequence of N items, each item is the
+// sample with the same probability 1 / N. This is the reservoir sampling with a reservoir of one item (Vitter, J. S.
+// 1985, ACM Transactions on Mathematical Software, 11, 37-57, doi:10.1145/3147.3165).
+//
+// sequence_key identifies the sequence, e.g. the r-packet emissions of one packet. The uniform random integer comes
+// from a hash of sequence_key and nitems_seen, and not from the random generator of the packets. The sample thus
+// leaves the random sequence of the physics unchanged. The hash is utlrandom::_mix_seed(), one step of the SplitMix64
+// generator (Steele, G. L., Lea, D., & Flood, C. H. 2014, ACM SIGPLAN Notices, 49, 453-472,
+// doi:10.1145/2714064.2660195). The multiplication and the shift map the hash to the range [0, nitems_seen) (Lemire, D.
+// 2019, ACM Transactions on Modeling and Computer Simulation, 29, 3:1-3:12, doi:10.1145/3230636). The relative bias of
+// that map is less than nitems_seen / 2^32.
+[[nodiscard]] constexpr DEVICE_FUNC auto item_replaces_sample(const int nitems_seen, const std::uint64_t sequence_key)
+    -> bool {
+  const auto hash = utlrandom::_mix_seed<std::uint64_t>(
+      sequence_key ^ utlrandom::_mix_seed<std::uint64_t>(static_cast<std::uint64_t>(nitems_seen)));
+  const auto random_index = ((hash >> 32U) * static_cast<std::uint64_t>(nitems_seen)) >> 32U;
+  return random_index == 0;
+}
+// the first item of each sequence is the sample, because the map gives 0 for nitems_seen = 1
+static_assert(item_replaces_sample(1, 0) && item_replaces_sample(1, ~std::uint64_t{0}));
+
+// The sequence_key of the r-packet emissions of one packet for item_replaces_sample(). Packet::number is unique only
+// inside one rank, so the key holds the rank in the upper 32 bits and Packet::number in the lower 32 bits. The key
+// does not contain the random number seed. Two simulations with the same ranks and packet numbers thus make the same
+// replacement decisions, and their samples are not independent.
+[[nodiscard]] constexpr DEVICE_FUNC auto get_rank_and_packet_number_key(const int rank, const int packet_number)
+    -> std::uint64_t {
+  return (static_cast<std::uint64_t>(static_cast<std::uint32_t>(rank)) << 32U) |
+         static_cast<std::uint32_t>(packet_number);
+}
+static_assert(get_rank_and_packet_number_key(3, 5) == ((std::uint64_t{3} << 32U) | 5U));
 
 void packet_init(std::span<Packet> packets);
 auto read_text_packets(const std::string& filename) -> std::vector<Packet>;
