@@ -416,6 +416,8 @@ void test_sample_rpkt_emission() {
     pkt.emissiontype = emission_index;
     pkt.absorptiontype = -emission_index;
     pkt.absorptionfreq = 1e15 * (1 + emission_index);
+    pkt.em_pos = {1e14 * emission_index, -2e14 * emission_index, 3e14 * emission_index};
+    pkt.em_time = static_cast<float>(1e5 * (1 + emission_index));
     sample_rpkt_emission(rpkt_emission_sample, pkt);
     if (item_replaces_sample(emission_index + 1, rank_and_packet_number)) {
       sampled_emission_index = emission_index;
@@ -430,7 +432,11 @@ void test_sample_rpkt_emission() {
         "sample_rpkt_emission counts each r-packet emission");
   check(rpkt_emission_sample.emissiontype == pkt_at_sampled_emission.emissiontype &&
             rpkt_emission_sample.absorptiontype == pkt_at_sampled_emission.absorptiontype &&
-            rpkt_emission_sample.absorptionfreq == static_cast<float>(pkt_at_sampled_emission.absorptionfreq),
+            rpkt_emission_sample.absorptionfreq == static_cast<float>(pkt_at_sampled_emission.absorptionfreq) &&
+            rpkt_emission_sample.em_pos[0] == static_cast<float>(pkt_at_sampled_emission.em_pos[0]) &&
+            rpkt_emission_sample.em_pos[1] == static_cast<float>(pkt_at_sampled_emission.em_pos[1]) &&
+            rpkt_emission_sample.em_pos[2] == static_cast<float>(pkt_at_sampled_emission.em_pos[2]) &&
+            rpkt_emission_sample.em_time == pkt_at_sampled_emission.em_time,
         "sample_rpkt_emission keeps the values of the emission that item_replaces_sample selects");
 }
 

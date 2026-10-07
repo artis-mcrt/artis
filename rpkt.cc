@@ -1024,6 +1024,13 @@ DEVICE_FUNC void sample_rpkt_emission(RpktEmissionSample& rpkt_emission_sample, 
         .emissiontype = pkt.emissiontype,
         .absorptiontype = pkt.absorptiontype,
         .absorptionfreq = static_cast<float>(pkt.absorptionfreq),
+        .em_pos =
+            {
+                static_cast<float>(pkt.em_pos[0]),
+                static_cast<float>(pkt.em_pos[1]),
+                static_cast<float>(pkt.em_pos[2]),
+            },
+        .em_time = pkt.em_time,
     };
   }
 }

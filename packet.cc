@@ -49,7 +49,9 @@ constexpr auto get_packets_text_header() -> std::string {
       " originated_from_particlenotgamma trueem_posx trueem_posy trueem_posz trueem_time pellet_nucindex "
       "pellet_decaytype";
   if constexpr (SAMPLE_RPKT_EMISSION) {
-    header += " nemissiontype_updates sampled_emissiontype sampled_absorption_type sampled_absorption_freq";
+    header +=
+        " nemissiontype_updates sampled_emissiontype sampled_absorption_type sampled_absorption_freq sampled_em_posx "
+        "sampled_em_posy sampled_em_posz sampled_em_time";
   }
   return header;
 }
@@ -90,14 +92,18 @@ void place_pellet(const double e_cmf_per_packet, const std::span<const double> e
   pkt.e_rf = pkt.e_cmf / dopplerfactor;
 }
 
-// Take the columns of the sampled r-packet emission from the remainder of a row of packets*.out. Return false if a
-// column is missing or not numeric.
+// Read the columns of the sampled r-packet emission from a row of packets*.out.
+// Return false if a column is absent or invalid. A packet without a sample has NAN in em_pos.
 [[nodiscard]] auto parse_rpkt_emission_sample(std::string_view& remainder, RpktEmissionSample& rpkt_emission_sample)
     -> bool {
   return parse_next_token(remainder, rpkt_emission_sample.nemissiontype_updates) &&
          parse_next_token(remainder, rpkt_emission_sample.emissiontype) &&
          parse_next_token(remainder, rpkt_emission_sample.absorptiontype) &&
-         parse_next_token(remainder, rpkt_emission_sample.absorptionfreq);
+         parse_next_token(remainder, rpkt_emission_sample.absorptionfreq) &&
+         parse_next_token<true>(remainder, rpkt_emission_sample.em_pos[0]) &&
+         parse_next_token<true>(remainder, rpkt_emission_sample.em_pos[1]) &&
+         parse_next_token<true>(remainder, rpkt_emission_sample.em_pos[2]) &&
+         parse_next_token(remainder, rpkt_emission_sample.em_time);
 }
 
 // Write the columns of the sampled r-packet emission to a row of packets*.out
@@ -105,6 +111,8 @@ void print_rpkt_emission_sample(std::ostream& packets_file, const RpktEmissionSa
   std::print(packets_file, " {} {} {} {:g}", rpkt_emission_sample.nemissiontype_updates,
              rpkt_emission_sample.emissiontype, rpkt_emission_sample.absorptiontype,
              rpkt_emission_sample.absorptionfreq);
+  std::print(packets_file, " {:g} {:g} {:g} {:g}", rpkt_emission_sample.em_pos[0], rpkt_emission_sample.em_pos[1],
+             rpkt_emission_sample.em_pos[2], rpkt_emission_sample.em_time);
 }
 
 // A packet without the sample (SAMPLE_RPKT_EMISSION is false) has no columns of the sample, so these overloads read
@@ -210,15 +218,15 @@ auto read_text_packets(const std::string& filename) -> std::vector<Packet> {
     auto remainder = std::string_view{line};
     bool rowisvalid = true;
 
-    // Take the next column of the row. Every column except the two emission positions below is finite, so a
-    // "nan" there is a corrupt row and the strict parser rejects it.
+    // Read the next column of the row. Only the emission positions can hold NAN.
+    // The parser rejects "nan" in all other columns.
     const auto parse_column = [&remainder, &rowisvalid](auto& value) {
       rowisvalid = rowisvalid && parse_next_token(remainder, value);
     };
 
-    // Take the three columns of a position of the last emission. A packet that did not yet emit carries NAN
-    // in em_pos, and a packet that returned to the thermal pool carries NAN in trueem_pos. These are the only
-    // columns of the file that hold the "nan" spelling. An inf stays an error here, as in every other column.
+    // Read the three columns of an emission position. A packet before its first emission has NAN in em_pos.
+    // A packet that returned to the thermal pool has NAN in trueem_pos.
+    // These columns and sampled_em_pos permit "nan". The parser rejects "inf" in every column.
     const auto parse_emission_position = [&remainder, &rowisvalid](Vec3d& position) {
       for (auto& component : position) {
         rowisvalid = rowisvalid && parse_next_token<true>(remainder, component);

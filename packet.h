@@ -4,6 +4,7 @@
 #ifndef PACKET_H
 #define PACKET_H
 
+#include <array>
 #include <cmath>
 #include <cstdint>
 #include <span>
@@ -118,9 +119,10 @@ struct RpktEmissionSample {
   int nemissiontype_updates{0};
   int emissiontype{EMTYPE_NOTSET};  // Packet::emissiontype directly after the sampled emission
   int absorptiontype{0};  // Packet::absorptiontype at the sampled emission: the type of the last absorption before it
-  // Packet::absorptionfreq at the sampled emission [Hz]. A float is sufficient, because the packet files have only
-  // six significant digits.
-  float absorptionfreq{0.};
+  // The float members are sufficient, because the packet files have only six significant digits.
+  float absorptionfreq{0.};  // Packet::absorptionfreq at the sampled emission [Hz]
+  std::array<float, 3> em_pos{NAN, NAN, NAN};  // Packet::em_pos of the sampled emission [cm]
+  float em_time{-1.};  // Packet::em_time of the sampled emission [s]
 
   auto operator<=>(const RpktEmissionSample& rhs) const = default;
 };
