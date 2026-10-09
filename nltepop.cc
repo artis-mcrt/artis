@@ -109,8 +109,8 @@ struct RateMatrices {
     output_rate_matrix(base_path, "rad_bf", rad_bf);
     output_rate_matrix(base_path, "coll_bf", coll_bf);
     output_rate_matrix(base_path, "ntcoll_bf", ntcoll_bf);
-    output_rate_matrix(base_path, "autoion", autoion);
-    output_rate_matrix(base_path, "chargetransfer", chargetransfer);
+    // output_rate_matrix(base_path, "autoion", autoion);
+    // output_rate_matrix(base_path, "chargetransfer", chargetransfer);
   }
 
   explicit RateMatrices(int max_nlte_dimension) {
@@ -1569,7 +1569,8 @@ auto nltepop_solve_matrix_with_ion_reduction(const int element, const int nonemp
 
     // Save matrices for every atomic number
     // if (globals::timestep == 6) {
-    if (/* atomic_number == 26 && */ globals::timestep == 39 && (nonemptymgi == 39 || nonemptymgi == 100)) {
+    if (/* atomic_number == 26 && */ globals::timestep == 39 &&
+        (nonemptymgi == 8 || nonemptymgi == 39 || nonemptymgi == 76 || nonemptymgi == 100)) {
       printlnlog("Writing rate matrices for Z={}, at timestep {} and nonemptymgi {}", atomic_number, globals::timestep,
                  nonemptymgi);
       rate_matrices.write_out_rate_matrices(atomic_number, nonemptymgi);
