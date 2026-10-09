@@ -668,6 +668,45 @@ inline void MPI_Reduce_safe(R&& data, MPI_Op op, const int root, MPI_Comm comm) 
   return false;
 }
 
+// the estimator file of all ranks in the job folder, with the option WRITE_ESTIMATORS_COMBINE_ALLRANKS
+constexpr std::string_view ESTIMATORS_ALLRANKS_FILENAME = "estimators_allranks.out";
+
+// Exactly match the estimator file of all ranks, with or without a compression extension. Also match the parquet
+// caches that artistools makes from the estimator files. The caches are estimators_allranks.out.parquet and the batch
+// caches of an earlier artistools version, e.g. estimbatch00_0000_0099.out.parquet.tmp.
+[[nodiscard]] inline auto is_estimator_allranks_or_cache_name(const std::string_view filename) -> bool {
+  const auto alldigits = [](const std::string_view str) {
+    return !str.empty() && std::ranges::all_of(str, [](const char c) { return c >= '0' && c <= '9'; });
+  };
+
+  if (filename.starts_with(ESTIMATORS_ALLRANKS_FILENAME)) {
+    const auto extension = filename.substr(ESTIMATORS_ALLRANKS_FILENAME.size());
+    return std::ranges::contains(std::array<std::string_view, 5>{"", ".zst", ".gz", ".xz", ".parquet"}, extension);
+  }
+
+  constexpr std::string_view batchprefix = "estimbatch";
+  constexpr std::string_view batchsuffix = ".out.parquet";
+  if (!filename.starts_with(batchprefix)) {
+    return false;
+  }
+  auto batchname = filename.substr(batchprefix.size());
+  if (batchname.ends_with(".tmp")) {
+    batchname.remove_suffix(std::string_view{".tmp"}.size());
+  }
+  if (!batchname.ends_with(batchsuffix)) {
+    return false;
+  }
+  batchname.remove_suffix(batchsuffix.size());
+
+  // the index of the batch, and the first and the last rank of the batch
+  const auto firstseparator = batchname.find('_');
+  const auto lastseparator = batchname.rfind('_');
+  return firstseparator != std::string_view::npos && lastseparator != firstseparator &&
+         alldigits(batchname.substr(0, firstseparator)) &&
+         alldigits(batchname.substr(firstseparator + 1, lastseparator - firstseparator - 1)) &&
+         alldigits(batchname.substr(lastseparator + 1));
+}
+
 [[nodiscard]] inline auto fopen_required(const std::string& filename, std::span<const char> mode) -> FILE* {
   if (mode[0] == 'r') {
     // search data folders in order to find file to read
@@ -699,6 +738,10 @@ template <typename R>
            std::is_trivially_copyable_v<std::ranges::range_value_t<R>>)
 inline void write_restart_array(FILE* file, R&& values) {
   const auto valuespan = std::span{std::forward<R>(values)};
+  // The data pointer of an empty array can be null, and fwrite() must not get a null pointer
+  if (valuespan.empty()) {
+    return;
+  }
   assert_always(std::fwrite(valuespan.data(), sizeof(valuespan[0]), valuespan.size(), file) == valuespan.size());
 }
 
@@ -708,6 +751,10 @@ template <typename R>
            !std::is_const_v<std::remove_reference_t<std::ranges::range_reference_t<R>>>)
 inline void read_restart_array(FILE* file, R&& values) {
   const auto valuespan = std::span{std::forward<R>(values)};
+  // The data pointer of an empty array can be null, and fread() must not get a null pointer
+  if (valuespan.empty()) {
+    return;
+  }
   const bool read_success =
       (std::fread(valuespan.data(), sizeof(valuespan[0]), valuespan.size(), file) == valuespan.size()) &&
       (std::ferror(file) == 0) && (std::feof(file) == 0);

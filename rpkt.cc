@@ -44,16 +44,18 @@ static_assert(!RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.has_value() ||
 
 static_assert(!RPKT_USE_EXPANSION_OPACITIES || !VPKT_ON, "VPKT cannot be used with r-packet expansion opacities");
 
-// a line-by-line absorption has the weight 1 - exp(-tau), so a different weight must also apply to the absorption
-static_assert(EXPANSION_OPACITY_METHOD == ExpansionOpacityMethod::EXPANSION || RPKT_USE_EXPANSION_OPACITIES,
-              "LINEBINNEDCAPPED and LINEBINNED need RPKT_USE_EXPANSION_OPACITIES");
+static_assert(EXPANSION_OPACITY_METHOD == ExpansionOpacityMethod::EXPANSION || expopac_linebinned_weights_permitted,
+              "LINEBINNEDCAPPED and LINEBINNED with a nonzero RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY need "
+              "RPKT_USE_EXPANSION_OPACITIES");
 
 // the bin walk of RPKT_USE_EXPANSION_OPACITIES passes lines without the line estimators
 static_assert(!DETAILED_LINE_ESTIMATORS_ON || !RPKT_USE_EXPANSION_OPACITIES,
               "DETAILED_LINE_ESTIMATORS_ON needs line-by-line r-packets");
 
 namespace {
-// cumulative integral over the bins of (line plus free-free kappa) times the Planck function, per non-empty cell
+// cumulative integral over the bins of the true absorption kappa times the Planck function, per non-empty cell.
+// kappa is RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY times the line kappa, plus the free-free kappa, plus the
+// heating fraction of the bound-free kappa.
 MPI_shared_array<double> expansionopacity_planck_cumulative{};
 
 // The weight of a line with the Sobolev optical depth tau_line in the expansion opacity of its wavelength bin,
@@ -271,6 +273,40 @@ auto get_possible_event_expansion_opacity(const int nonemptymgi, Packet& pkt, co
   return {std::numeric_limits<double>::max(), false};
 }
 
+// Give an r-packet a new direction that is isotropic in the comoving frame, and set its rest-frame frequency and
+// energy. The packet is then unpolarised.
+DEVICE_FUNC void set_isotropic_cmf_direction(Packet& pkt) {
+  const auto dir_cmf = get_rand_isotropic_unitvec(get_rngstate(pkt));
+
+  // This direction is in the cmf - we want to convert it to the rest
+  // frame - use aberration of angles. We want to convert from cmf to
+  // rest so need -ve velocity.
+  const auto vel_vec = get_velocity(pkt.pos, -pkt.prop_time);
+  // negative time since we want the backwards transformation here
+
+  pkt.dir = angle_ab(dir_cmf, vel_vec);
+
+  // set the rest-frame energy and frequency
+
+  set_pkt_restframe_from_cmf(pkt);
+
+  if constexpr (POL_ON) {
+    // Reset to unpolarised
+    pkt.stokes_u = 0.;
+    pkt.stokes_q = 0.;
+  }
+}
+
+// Scatter an r-packet in a direction that is isotropic in the comoving frame, at the same comoving frequency and
+// energy. A scattering keeps emissiontype (see emit_rpkt()), but it sets the position and the time of the last
+// emission.
+DEVICE_FUNC void isotropic_scatter_rpkt(Packet& pkt) {
+  assert_testmodeonly(pkt.type == TYPE_RPKT);
+  set_isotropic_cmf_direction(pkt);
+  pkt.em_pos = pkt.pos;
+  pkt.em_time = static_cast<float>(pkt.prop_time);
+}
+
 // Scatter an r-packet off a free electron: sample the new direction in the comoving frame and transform
 // it back to the rest frame, also updating the Stokes parameters when POL_ON. The scattering is
 // coherent, so the comoving-frame frequency and energy are unchanged.
@@ -345,9 +381,13 @@ void electron_scatter_rpkt(Packet& pkt) {
   // set the rest-frame energy and frequency
 
   set_pkt_restframe_from_cmf(pkt);
+
+  // a scattering keeps emissiontype (see emit_rpkt()), but it sets the position and the time of the last emission
+  pkt.em_pos = pkt.pos;
+  pkt.em_time = static_cast<float>(pkt.prop_time);
 }
 
-template <bool USECELLHISTANDUPDATEPHIXSLIST, bool SELECTCONTINUUM = false>
+template <bool USECELLHISTANDUPDATEPHIXSLIST, bool SELECTCONTINUUM = false, bool WEIGHT_BY_HEATING_FRACTION = false>
 auto calculate_chi_bf_gammacontr(int nonemptymgi, double nu, Phixslist& phixslist,
                                  double chi_bf_sum_selectionthreshold = 0.)
     -> std::conditional_t<SELECTCONTINUUM, int, double>;
@@ -382,19 +422,17 @@ void rpkt_event_continuum(Packet& pkt, ContinuumOpacity& chi_rpkt_cont) {
 
     electron_scatter_rpkt(pkt);
 
-    // Electron scattering does not modify the last emission flag but it updates the last emission position
-    pkt.em_pos = pkt.pos;
-    pkt.em_time = static_cast<float>(pkt.prop_time);
-
   } else if (chi_rnd < chi_escatter + chi_ff) {
     // ff: transform to k-pkt
     stats::increment(stats::Counter::K_STAT_FROM_FF);
     pkt.type = TYPE_KPKT;
     pkt.absorptiontype = ABSTYPE_FREEFREE;
+    pkt.absorptionfreq = pkt.nu_rf;
   } else if (chi_rnd < chi_escatter + chi_ff + chi_bf) {
     // bf: transform to k-pkt or activate macroatom corresponding to probabilities
 
     pkt.absorptiontype = ABSTYPE_BOUNDFREE;
+    pkt.absorptionfreq = pkt.nu_rf;
 
     // Determine in which continuum the bf-absorption occurs: the first continuum for which the
     // cumulative opacity exceeds a random fraction of the total (or the last one if none does).
@@ -490,8 +528,7 @@ auto do_rpkt_step(Packet& pkt, const double t2, ContinuumOpacity& chi_rpkt_cont)
   // draw random optical depth to next physical event
   const double tau_rnd = -std::log(static_cast<double>(rng_uniform_pos(get_rngstate(pkt))));
 
-  // Finding the distance to the crossing of the grid cell boundaries.
-  // boundarydist is the boundary distance to the next grid cell next_cellindex
+  // boundarydist is the distance to the boundary of the propagation cell, and next_cellindex is the cell behind it
   const auto [boundarydist, next_cellindex] = grid::boundary_distance(pkt.dir, pkt.pos, pkt.prop_time, pkt.cellindex);
 
   if (boundarydist == 0) {
@@ -564,8 +601,8 @@ auto do_rpkt_step(Packet& pkt, const double t2, ContinuumOpacity& chi_rpkt_cont)
       pkt.nscatterings++;
       stats::increment(stats::Counter::ELECTRON_SCATTERINGS);
 
-      emit_rpkt(pkt);
-      // Electron scattering does not modify the last emission flag but it updates the last emission position
+      // the code treats the grey event as a coherent scattering, so the event keeps the emission type
+      isotropic_scatter_rpkt(pkt);
     } else if (!event_is_boundbound) {
       rpkt_event_continuum(pkt, chi_rpkt_cont);
     } else if constexpr (!RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.has_value()) {
@@ -592,19 +629,20 @@ auto do_rpkt_step(Packet& pkt, const double t2, ContinuumOpacity& chi_rpkt_cont)
         pkt.nu_cmf = sample_planck_times_expansion_opacity(nonemptymgi, get_rngstate(pkt));
         pkt.next_trans = -1;
         // a thermal re-emission at a new frequency, so the packet no longer traces back to the previous emission
-        pkt.emissiontype = EMTYPE_NOTSET;
         pkt.trueemissiontype = EMTYPE_NOTSET;
         pkt.trueem_pos = {NAN, NAN, NAN};
         pkt.trueem_time = -1.;
 
         // re-emit rather than scatter, so that this event is not counted as an electron scattering
         pkt.nscatterings = 0;
+
+        emit_rpkt(pkt, EMTYPE_NOTSET);
       } else {
-        // pure scattering, so the packet keeps its comoving frequency in a new direction
-        pkt.nscatterings++;
-        stats::increment(stats::Counter::ELECTRON_SCATTERINGS);
+        // pure line scattering, so the packet keeps its comoving frequency in a new direction. nscatterings stays
+        // unchanged, because this event is not an electron scattering.
+        stats::increment(stats::Counter::RESONANCESCATTERINGS);
+        isotropic_scatter_rpkt(pkt);
       }
-      emit_rpkt(pkt);
 
       // the thermal re-emission and the line scattering are isotropic in the comoving frame, not a dipole
       if constexpr (VPKT_ON) {
@@ -677,11 +715,13 @@ auto calculate_chi_ffheating(const int nonemptymgi, const double nu, const bool 
 // window if it never does): rpkt_event_continuum() uses this to sample which continuum absorbs,
 // redoing the same summation as the opacity evaluation and stopping at the selected continuum.
 // In that mode nothing is written to the phixslist, so the estimator contributions keep the
-// values of the original evaluation.
-template <bool USECELLHISTANDUPDATEPHIXSLIST, bool SELECTCONTINUUM>
+// values of the original evaluation. With WEIGHT_BY_HEATING_FRACTION, each continuum has the weight
+// 1 - nu_edge / nu, which is the fraction of the absorbed energy that goes to the thermal pool.
+template <bool USECELLHISTANDUPDATEPHIXSLIST, bool SELECTCONTINUUM, bool WEIGHT_BY_HEATING_FRACTION>
 auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixslist& phixslist,
                                  const double chi_bf_sum_selectionthreshold)
     -> std::conditional_t<SELECTCONTINUUM, int, double> {
+  static_assert(!SELECTCONTINUUM || !WEIGHT_BY_HEATING_FRACTION);
   double chi_bf_sum = 0.;
   if constexpr (USECELLHISTANDUPDATEPHIXSLIST && !SELECTCONTINUUM &&
                 (USE_LUT_PHOTOION || USE_ION_BFHEATING_ESTIMATORS)) {
@@ -871,7 +911,7 @@ auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixsli
         }
       }
 
-      chi_bf_sum += nnlevel * sigma_contr;
+      chi_bf_sum += nnlevel * sigma_contr * (WEIGHT_BY_HEATING_FRACTION ? 1. - (nu_edge / nu) : 1.);
 
       if constexpr (SELECTCONTINUUM) {
         // the stimulated recombination correction can zero sigma_contr for a populated level, and
@@ -960,35 +1000,43 @@ DEVICE_FUNC void do_rpkt(Packet& pkt, const double t2, ContinuumOpacity& chi_rpk
   }
 }
 
-// make the packet an r-pkt and set further flags
-DEVICE_FUNC void emit_rpkt(Packet& pkt) {
+// Emit the packet as an r-packet with the emission type emissiontype in an isotropic direction of the comoving frame.
+// No other function of the packet transport sets Packet::emissiontype, and this function samples each of these
+// emissions (see SAMPLE_RPKT_EMISSION). The sampled emissions are thus exactly the events that set emissiontype. A
+// scattering keeps emissiontype, so it calls isotropic_scatter_rpkt() or electron_scatter_rpkt() instead.
+DEVICE_FUNC void emit_rpkt(Packet& pkt, const int emissiontype) {
   pkt.type = TYPE_RPKT;
-
-  // Need to assign a new direction. Assume isotropic emission in the cmf
-
-  const auto dir_cmf = get_rand_isotropic_unitvec(get_rngstate(pkt));
-
-  // This direction is in the cmf - we want to convert it to the rest
-  // frame - use aberration of angles. We want to convert from cmf to
-  // rest so need -ve velocity.
-  const auto vel_vec = get_velocity(pkt.pos, -pkt.prop_time);
-  // negative time since we want the backwards transformation here
-
-  pkt.dir = angle_ab(dir_cmf, vel_vec);
-
-  // set the rest-frame energy and frequency
-
-  set_pkt_restframe_from_cmf(pkt);
-
-  if constexpr (POL_ON) {
-    // Reset to unpolarised
-    pkt.stokes_u = 0.;
-    pkt.stokes_q = 0.;
-  }
-
+  pkt.emissiontype = emissiontype;
+  set_isotropic_cmf_direction(pkt);
   pkt.em_pos = pkt.pos;
   pkt.em_time = static_cast<float>(pkt.prop_time);
+  sample_rpkt_emission(pkt.rpkt_emission_sample, pkt);
 }
+
+DEVICE_FUNC void sample_rpkt_emission(RpktEmissionSample& rpkt_emission_sample, const Packet& pkt) {
+  assert_testmodeonly(pkt.type == TYPE_RPKT);
+  assert_always(rpkt_emission_sample.nemissiontype_updates < std::numeric_limits<int>::max());
+  rpkt_emission_sample.nemissiontype_updates++;
+  if (item_replaces_sample(rpkt_emission_sample.nemissiontype_updates,
+                           get_rank_and_packet_number_key(globals::my_rank, pkt.number))) {
+    rpkt_emission_sample = RpktEmissionSample{
+        .nemissiontype_updates = rpkt_emission_sample.nemissiontype_updates,
+        .emissiontype = pkt.emissiontype,
+        .absorptiontype = pkt.absorptiontype,
+        .absorptionfreq = static_cast<float>(pkt.absorptionfreq),
+        .em_pos =
+            {
+                static_cast<float>(pkt.em_pos[0]),
+                static_cast<float>(pkt.em_pos[1]),
+                static_cast<float>(pkt.em_pos[2]),
+            },
+        .em_time = pkt.em_time,
+    };
+  }
+}
+
+DEVICE_FUNC void sample_rpkt_emission([[maybe_unused]] const NoRpktEmissionSample& rpkt_emission_sample,
+                                      [[maybe_unused]] const Packet& pkt) {}
 
 template <bool USECELLHISTANDUPDATEPHIXSLIST>
 void calculate_chi_rpkt_cont(const double nu_cmf, ContinuumOpacity& chi_rpkt_cont, const int nonemptymgi) {
@@ -1098,7 +1146,14 @@ void calculate_expansion_opacities(const int nonemptymgi) {
     if constexpr (RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.has_value()) {
       const auto nu_upper = get_expopac_bin_nu_upper(binindex);
       const auto nu_mid = (nu_upper + nu_lower) / 2.;
-      const auto bin_kappa_cont = calculate_chi_ffheating(nonemptymgi, nu_mid, false) / rho;
+      // the thermal pool gets all of the free-free absorption and the heating fraction of the bound-free absorption
+      double chi_bf_heating = 0.;
+      if (globals::nbfcontinua > 0) {
+        Phixslist phixslist_without_estimators{};
+        chi_bf_heating =
+            calculate_chi_bf_gammacontr<false, false, true>(nonemptymgi, nu_mid, phixslist_without_estimators);
+      }
+      const auto bin_kappa_cont = (calculate_chi_ffheating(nonemptymgi, nu_mid, false) + chi_bf_heating) / rho;
 
       const auto planck_val = radfield::planck(nu_mid, temperature);
       // only the thermalised fraction of the line absorption is a true absorption

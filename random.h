@@ -165,7 +165,7 @@ constexpr auto generate_canonical_float(Gen& gen) noexcept(noexcept(gen())) -> f
   constexpr float mantissa_hex_32 = 0x1.0p-24F;  // == 2^-24, corresponds to 24 significant bits of float
 
   // Note 1: Note hexadecimal float literals, 'p' separates hex-base from the exponent
-  // Note 2: Floats have 'mantissa_size + 1' significant bits due to having a sign bit
+  // Note 2: Floats have 'mantissa_size + 1' significant bits due to the implicit leading bit of a normalised value
 
   static_assert(std::numeric_limits<float>::digits == 24, "Platform not supported, 'float' is expected to be 32-bit.");
   static_assert(prng_is_bit_uniform && sizeof(float) == 4 && sizeof(typename Gen::result_type) == 4);

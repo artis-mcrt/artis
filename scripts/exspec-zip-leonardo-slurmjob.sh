@@ -1,9 +1,9 @@
 #!/bin/bash -l
-#SBATCH --time=24:00:00
-#SBATCH --ntasks=1
-#SBATCH --ntasks-per-node=1
-#SBATCH --cpus-per-task=112
+#SBATCH --time=04:00:00
+#SBATCH --nodes=1
 #SBATCH --exclusive
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=112
 #SBATCH --partition=dcgp_usr_prod
 #SBATCH --qos=normal
 #SBATCH --account=EUHPC_R07_209
@@ -22,19 +22,14 @@ export UV_TOOL_DIR="$projectfolder/.local/share/uv/tools"
 export UV_TOOL_BIN_DIR="$projectfolder/.local/bin"
 export PATH="$PIXI_BIN_DIR:$UV_TOOL_BIN_DIR:$PATH"
 
-# See artis-leonardo-slurmjob.sh for the reason of the module and of the two exports.
+# See artis-leonardo-slurmjob.sh for the reason of the module.
 module load openmpi/4.1.6--gcc--12.2.0-cuda-12.2
 module list
 
-export OMPI_CXX=g++
-export LDFLAGS="-Wl,-rpath-link,/usr/lib64"
-
 cd "${SLURM_SUBMIT_DIR:?}" || exit 1
 
-export MAKEFLAGS="--check-symlink-times --jobs=$(nproc)"
-cd artis
-make exspec || exit 1
-cd ..
+# Use the exspec that the sn3d job script built from the same source as sn3d. A build here could read
+# a newer checkout.
 
 echo "CPU type: $(c++ -march=native -Q --help=target | grep -- '-march=  ' | cut -f3)"
 

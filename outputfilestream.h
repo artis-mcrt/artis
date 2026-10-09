@@ -4,22 +4,25 @@
 #ifndef OUTPUTFILESTREAM_H
 #define OUTPUTFILESTREAM_H
 
+#include <cstddef>
+#include <cstdint>
 #include <filesystem>
 #include <format>
 #include <fstream>
 #include <ios>
 #include <memory>
 #include <ostream>
+#include <span>
+#include <sstream>
 #include <streambuf>
 #include <string>
 #include <string_view>
 #include <system_error>
 #include <utility>
+#include <vector>
 
 #ifdef USE_ZSTD
-#include <cstddef>
 #include <iterator>
-#include <vector>
 
 #pragma clang unsafe_buffer_usage begin
 #include <zstd.h>
@@ -260,5 +263,121 @@ inline void remove_other_output_form(const std::string_view filename) {
 [[nodiscard]] inline auto open_rank_outfile(const std::string_view basename) -> OutputFileStream {
   return open_output_file(get_jobfolder_filepath(std::format("{}_{:04d}.out", basename, globals::my_rank)));
 }
+
+#ifdef USE_ZSTD
+// Compress the text into one zstd frame with a checksum. zstd decompresses a sequence of frames into the
+// sequence of their texts, so a file can hold the frames of many writers one after the other.
+[[nodiscard]] inline auto compress_to_zstd_frame(const std::string_view text, const int compression_level)
+    -> std::string {
+  const std::unique_ptr<ZSTD_CCtx, decltype(&ZSTD_freeCCtx)> cctx(ZSTD_createCCtx(), &ZSTD_freeCCtx);
+  assert_always(cctx != nullptr);
+  assert_always(ZSTD_isError(ZSTD_CCtx_setParameter(cctx.get(), ZSTD_c_compressionLevel, compression_level)) == 0U);
+  assert_always(ZSTD_isError(ZSTD_CCtx_setParameter(cctx.get(), ZSTD_c_checksumFlag, 1)) == 0U);
+  std::string frame(ZSTD_compressBound(text.size()), '\0');
+  const size_t framesize = ZSTD_compress2(cctx.get(), frame.data(), frame.size(), text.data(), text.size());
+  if (ZSTD_isError(framesize) != 0U) {
+    fatal_crash("zstd cannot compress the output: {}", ZSTD_getErrorName(framesize));
+  }
+  frame.resize(framesize);
+  // the bound of the compressed size can be much larger than the frame, which the caller keeps until its transfer ends
+  frame.shrink_to_fit();
+  return frame;
+}
+#endif
+
+// An output file of the job folder that holds the text of all ranks. Each rank writes into its own text buffer,
+// which rank_text() gives. write_all_ranks() then sends the text of each rank to rank 0, and rank 0 writes the
+// texts in the order of the ranks. In a build with libzstd, each rank compresses its own text into one zstd frame
+// before the send, so all ranks share the compression. Rank 0 keeps the text of only one other rank at a time.
+class AllRanksOutputFile {
+ public:
+  // Only rank 0 opens the file. In a build with libzstd, the file gets the extension .zst.
+  void open(const std::string_view filename) {
+    if (globals::my_rank != 0) {
+      return;
+    }
+    remove_other_output_form(filename);
+    const auto filepath = output_filepath(filename);
+    outfile.open(filepath, std::ios::out | std::ios::trunc | std::ios::binary);
+    if (!outfile.is_open()) {
+      fatal_crash("Could not open the output file '{}'", filepath);
+    }
+#ifdef USE_ZSTD
+    // The file starts with one empty frame. ZstdOutputBuffer::close() also writes one empty frame to a file with no
+    // content. A job that stops before its first write thus leaves a file that every zstd reader accepts.
+    const auto emptyframe = compress_to_zstd_frame({}, ZSTD_LEVEL_DEFAULT);
+    outfile.write(emptyframe.data(), static_cast<std::streamsize>(emptyframe.size()));
+    outfile.flush();
+    if (outfile.fail()) {
+      fatal_crash("Could not write to the output file '{}'", filepath);
+    }
+#endif
+  }
+
+  [[nodiscard]] auto rank_text() -> std::ostream& { return ranktext; }
+
+  // Write the text of all ranks to the file and clear the buffer of each rank. Every rank must call this function.
+  void write_all_ranks() {
+    // std::print does not throw, e.g. when the buffer cannot grow. It sets the bad state, and the text is then not
+    // complete.
+    if (ranktext.fail()) {
+      fatal_crash("A write to the text buffer of rank {} failed", globals::my_rank);
+    }
+#ifdef USE_ZSTD
+    auto rankbytes =
+        ranktext.view().empty() ? std::string{} : compress_to_zstd_frame(ranktext.view(), ZSTD_LEVEL_DEFAULT);
+#else
+    auto rankbytes = std::string(ranktext.view());
+#endif
+    ranktext.str({});
+    ranktext.clear();
+
+    const auto rankbytecount = static_cast<std::int64_t>(rankbytes.size());
+    std::vector<std::int64_t> bytecount_of_rank(globals::my_rank == 0 ? globals::nprocs : 0);
+    // with libstdc++, data() gives long* and not std::int64_t*, and the clang-tidy check of the MPI types then fails
+    std::int64_t* const bytecount_of_rank_data = bytecount_of_rank.data();
+    assert_always(MPI_Gather(&rankbytecount, 1, MPI_INT64_T, bytecount_of_rank_data, 1, MPI_INT64_T, 0,
+                             MPI_COMM_WORLD) == MPI_SUCCESS);
+
+    if (globals::my_rank != 0) {
+      transfer_bytes(std::span<char>{rankbytes}, 0, false);
+      return;
+    }
+
+    outfile.write(rankbytes.data(), static_cast<std::streamsize>(rankbytes.size()));
+    std::string receivedbytes;
+    for (int rank = 1; rank < globals::nprocs; rank++) {
+      receivedbytes.resize(static_cast<size_t>(bytecount_of_rank[static_cast<size_t>(rank)]));
+      transfer_bytes(std::span<char>{receivedbytes}, rank, true);
+      outfile.write(receivedbytes.data(), static_cast<std::streamsize>(receivedbytes.size()));
+    }
+    outfile.flush();
+    if (outfile.fail()) {
+      fatal_crash("Could not write to the output file of all ranks");
+    }
+  }
+
+ private:
+  // Send the bytes to the other rank or receive them from it. The MPI count is a 32-bit int, so the function sends a
+  // large text in chunks. MPI keeps the order of the messages between two ranks.
+  static void transfer_bytes(const std::span<char> bytes, const int otherrank, const bool receive) {
+    const auto nchunks = get_chunk_count(std::ssize(bytes), MPI_COUNT_MAX);
+    for (auto chunk = 0Z; chunk < nchunks; chunk++) {
+      const auto [chunkstart, chunksize] = get_range_chunk(std::ssize(bytes), nchunks, chunk);
+      const auto chunkbytes = bytes.subspan(static_cast<size_t>(chunkstart), static_cast<size_t>(chunksize));
+      const auto int_chunksize = static_cast<int>(chunkbytes.size());
+      if (receive) {
+        assert_always(MPI_Recv(chunkbytes.data(), int_chunksize, MPI_CHAR, otherrank, 0, MPI_COMM_WORLD,
+                               MPI_STATUS_IGNORE) == MPI_SUCCESS);
+      } else {
+        assert_always(MPI_Send(chunkbytes.data(), int_chunksize, MPI_CHAR, otherrank, 0, MPI_COMM_WORLD) ==
+                      MPI_SUCCESS);
+      }
+    }
+  }
+
+  std::ostringstream ranktext;
+  std::ofstream outfile;
+};
 
 #endif  // OUTPUTFILESTREAM_H

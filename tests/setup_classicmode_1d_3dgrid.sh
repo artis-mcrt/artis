@@ -4,13 +4,13 @@ set -x
 
 source ./setupfuncs.sh
 
-runfolder=classicmode_1d_3dgrid_testrun
+modelpath=classicmode_1d_3dgrid_testrun
 
 getatomicdata atomicdata_classic.tar.xz
 
-mkdir -p $runfolder
+mkdir -p $modelpath
 
-cd $runfolder
+cd $modelpath
 
 tar -xf ../atomicdata_classic.tar.xz --directory ./
 
@@ -20,7 +20,7 @@ ln -s ../../ artis
 
 cp artis/artisoptions_classic.h artisoptions.h
 
-sedopt "constexpr std::int64_t NUM_PACKETS.*" "constexpr std::int64_t NUM_PACKETS = 60'000;"
+sedopt "constexpr std::int64_t NUM_PACKETS.*" "constexpr std::int64_t NUM_PACKETS = 6e4;"
 
 sedopt 'constexpr std::optional<GridType> GRID_TYPE_OVERRIDE.*' 'constexpr std::optional<GridType> GRID_TYPE_OVERRIDE = GridType::CARTESIAN3D;'
 

@@ -4,13 +4,13 @@ set -x
 
 source ./setupfuncs.sh
 
-runfolder=classicmode_3d_testrun
+modelpath=classicmode_3d_testrun
 
 getatomicdata atomicdata_classic.tar.xz
 
-mkdir -p $runfolder
+mkdir -p $modelpath
 
-cd $runfolder
+cd $modelpath
 
 tar -xf ../atomicdata_classic.tar.xz --directory ./
 
@@ -21,7 +21,7 @@ ln -s ../../ artis
 cp artis/artisoptions_classic.h artisoptions.h
 
 
-sedopt "constexpr std::int64_t NUM_PACKETS.*" "constexpr std::int64_t NUM_PACKETS = 60'000;"
+sedopt "constexpr std::int64_t NUM_PACKETS.*" "constexpr std::int64_t NUM_PACKETS = 6e4;"
 
 sedopt 'constexpr bool VPKT_ON.*' 'constexpr bool VPKT_ON = true;'
 sedopt 'constexpr bool VPKT_WRITE_CONTRIBS.*' 'constexpr bool VPKT_WRITE_CONTRIBS = true;'

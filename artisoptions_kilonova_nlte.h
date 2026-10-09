@@ -1,5 +1,6 @@
-// A compile-time options preset: symlink or copy one of the artisoptions_*.h files to
-// artisoptions.h to select the run configuration. Every option is described in artisoptions_doc.md.
+// A compile-time options preset: symlink one of the artisoptions_*.h files to artisoptions.h to select
+// the run configuration. A copy through an existing symlink replaces the content of the tracked preset.
+// Every option is described in artisoptions_doc.md.
 //
 // A preset for kilonovae from about 2 to 100 days. It has:
 // - NLTE populations of Sr, Y, and Zr, and a Saha ionisation balance for the other elements;
@@ -17,7 +18,7 @@
 
 #include "constants.h"
 
-constexpr std::int64_t NUM_PACKETS = 200'000'000;
+constexpr std::int64_t NUM_PACKETS = 2e8;
 
 constexpr std::optional<GridType> GRID_TYPE_OVERRIDE;
 constexpr int CUBOID_NCOORDGRID_X = 50;
@@ -107,6 +108,8 @@ constexpr bool USE_ION_BFHEATING_ESTIMATORS = false;
 
 constexpr bool WRITE_ION_HEATING_COOLING_RATES = false;
 
+constexpr bool WRITE_ESTIMATORS_COMBINE_ALLRANKS = false;
+
 constexpr bool STRICT_POPULATION_CHECKING = true;
 
 constexpr bool NLTE_LIMIT_ION_STAGES_AFTER_FAILURE = true;
@@ -123,9 +126,7 @@ constexpr std::optional<int> NLTE_TIME_DEPENDENT_FIRST_TIMESTEP = std::nullopt;
 
 constexpr NonThermalScheme NT_SCHEME = NonThermalScheme::NT_SPENCERFANO;
 
-constexpr int SF_MAX_TIMESTEPS_BETWEEN_SOLUTIONS = 0;
-
-constexpr double NT_MAX_FRACDIFF_NNEPERION_BETWEEN_SOLUTIONS = 0.05;
+constexpr double SF_RE_SOLVE_WITHIN_TIMESTEP_MIN_NNEPERION_FRACDIFF = 0.05;
 
 constexpr int NTEXCITATION_MAXNLEVELS_LOWER = 5;
 constexpr int NTEXCITATION_MAXNLEVELS_UPPER = 250;
@@ -143,6 +144,8 @@ constexpr bool USE_RELATIVISTIC_DOPPLER_SHIFT = true;
 constexpr bool USE_CALCULATED_MEANATOMICWEIGHT = true;
 
 constexpr bool KEEP_ESCAPED_GAMMAS = false;
+
+constexpr bool SAMPLE_RPKT_EMISSION = false;
 
 constexpr TimeStepSizeMethod TIMESTEP_SIZE_METHOD = TimeStepSizeMethod::LOGARITHMIC;
 
@@ -164,7 +167,8 @@ constexpr RpktGreyType RPKT_GREY_TYPE = RpktGreyType::TANAKA2020_ELECTRONFRAC;
 
 constexpr bool USE_XCOM_GAMMAPHOTOION = false;
 
-constexpr auto PARTICLE_THERMALISATION_SCHEME = ParticleThermalisationScheme::TIMEDEPENDENT_WITH_ADIABATIC_LOSS;
+constexpr auto PARTICLE_THERMALISATION_SCHEME =
+    ParticleThermalisationScheme::TIMEDEPENDENT_WITH_ADIABATIC_LOSS_ULTRARELATIVISTICLIMIT;
 
 constexpr auto GAMMA_THERMALISATION_SCHEME = GammaThermalisationScheme::FREQUENCYDEPENDENT;
 

@@ -27,7 +27,11 @@ constexpr double H = 6.6260755e-27;  // Planck constant [erg s]
 constexpr double MSUN = 1.98855e+33;  // Solar mass [g]
 constexpr double LSUN = 3.826e+33;  // Solar luminosity [erg/s]
 constexpr double MH = 1.67352e-24;  // Mass of hydrogen atom [g]
+// Atomic mass unit, 1/12 of the mass of a C12 atom [g]. The value is from Tiesinga, Mohr, Newell & Taylor (2021),
+// Rev. Mod. Phys., 93, 025010, doi:10.1103/RevModPhys.93.025010 (CODATA 2018).
+constexpr double AMU = 1.66053906660e-24;
 constexpr double ME = 9.1093897e-28;  // Mass of free electron [g]
+constexpr double MALPHA = 6.6446573357e-24;  // Mass of an alpha particle [g]
 constexpr double QE = 4.80325E-10;  // elementary charge in cgs units [statcoulomb]
 constexpr double PI = std::numbers::pi;
 constexpr double EV = 1.6021772e-12;  // eV to ergs [erg/eV]
@@ -62,6 +66,22 @@ constexpr double HCLIGHTOVERFOURPI = H * CLIGHT / (4 * PI);
 
 constexpr double H_ionpot = 13.5979996 * EV;
 
+// The constant A of the Lotz formula sigma = A q ln(E/I) / (E I) for the electron-impact ionisation cross section of
+// one shell with q electrons and the binding energy I. All of the ARTIS code uses this one value of A.
+//
+// The value is that of Axelrod (1980), PhD thesis, University of California, Santa Cruz. He normalised
+// A = 1.33e-14 [cm^2 eV^2] at 10 keV to the mean of two cross section tabulations. The energies near the threshold set
+// the heating and ionisation fractions, and there this value is low.
+//
+// Lotz (1967), Z. Phys., 206, 205-211, doi:10.1007/BF01325928, gives A = 4.5e-14 [cm^2 eV^2] for the form with one
+// parameter. Lotz uses this form for highly charged ions. For a neutral atom or an ion of low charge, Lotz uses the
+// extended form with three parameters for each shell i:
+//   sigma = sum_i a_i q_i ln(E/I_i) / (E I_i) {1 - b_i exp[-c_i (E/I_i - 1)]}.
+// Lotz (1968), Z. Phys., 216, 241-247, doi:10.1007/BF01392963, gives a_i, b_i, and c_i for H to Ca, and Lotz (1969),
+// Z. Phys., 220, 466-472, doi:10.1007/BF01394789, gives them for Sc to Zn. A later change can use 4.5e-14 for the
+// highly charged ions and the extended form for the other ions.
+constexpr double LOTZ_FORMULA_CONSTANT_A = 1.33e-14 * EV * EV;  // [cm^2 erg^2]
+
 // atomic units
 constexpr double A_BOHR_CM = 5.29177211e-9;  // Bohr radius [cm]
 constexpr double E_HARTREE = 4.35974472e-11;  // Hartree energy [erg]
@@ -83,6 +103,7 @@ enum class ParticleThermalisationScheme {
   INSTANTFULLDEPOSITION,
   TIMEDEPENDENT,
   TIMEDEPENDENT_WITH_ADIABATIC_LOSS,
+  TIMEDEPENDENT_WITH_ADIABATIC_LOSS_ULTRARELATIVISTICLIMIT,
   TIMEDEPENDENTWITHGAMMAPRODUCTS,
   BARNES,
   WOLLAEGER,

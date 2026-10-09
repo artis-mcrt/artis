@@ -110,12 +110,13 @@ constexpr bool DIPOLE;
 // Track the Stokes parameters and write specpol.out, emissionpol.out, and absorptionpol.out.
 constexpr bool POL_ON;
 
-// Enable the virtual packets that vpkt.txt sets up. This needs POL_ON.
+// Enable the virtual packets that vpkt.txt sets up. This needs POL_ON. A GPU build does not support this
+// option.
 constexpr bool VPKT_ON;
 
-// Write a line to a vpackets_<rank>.out file for each emission of a real packet in a thin cell whose virtual
-// packets escape in at least one observer direction of vpkt.txt. The line holds the arrival time, the frequency,
-// and the energy of the contribution to each direction. This needs VPKT_ON.
+// Write a line to the file vpackets/vpackets_<rank>.out for each emission of a real packet in a thin cell whose
+// virtual packets escape in at least one observer direction of vpkt.txt. The line holds the arrival time, the
+// frequency, and the energy of the contribution to each direction. This needs VPKT_ON.
 constexpr bool VPKT_WRITE_CONTRIBS;
 
 // The lower bound of the level populations, the ion populations, and the electron density nne [cm^-3]. A level
@@ -132,7 +133,7 @@ constexpr bool PHIXS_CLASSIC_NO_INTERPOLATION;
 
 // Fit a dilute blackbody to each frequency bin of the radiation field, in addition to the fit of the whole
 // spectrum. The fit of the whole spectrum stays the fallback for a bin without a fit. Set USE_LUT_PHOTOION to
-// false with this option, because the tables assume a Planck function. Nothing checks this.
+// false with this option, because the tables assume a Planck function. A static_assert checks this.
 constexpr bool MULTIBIN_RADFIELD_MODEL_ON;
 
 // The number of bins, including the T_e superbin
@@ -179,6 +180,14 @@ constexpr bool USE_ION_BFHEATING_ESTIMATORS;
 // that it has in the free-free opacity. The per-ion collisional heating needs COL_HEAT_FROM_LEVELPOPS. A cell
 // without a thermal balance gets no per-ion values.
 constexpr bool WRITE_ION_HEATING_COOLING_RATES;
+
+// Write the estimators of all MPI ranks into one file of the job folder, estimators_allranks.out. Without this
+// option, each rank writes its own file estimators_<rank>.out. At each timestep, each rank writes the text of its
+// cells into a buffer, and rank 0 then writes the buffers in the order of the ranks. In a build with libzstd, each
+// rank compresses its own buffer into one zstd frame. The file thus holds the text of the timesteps in their order,
+// and in each timestep the text of the ranks in their order. scripts/combine_estimator_files.py makes the same text
+// from the files of the ranks.
+constexpr bool WRITE_ESTIMATORS_COMBINE_ALLRANKS;
 
 // Reject an NLTE solution with one of these faults:
 // - a population that is not finite;
@@ -236,9 +245,13 @@ constexpr bool NLTE_USE_GTH_SOLVER;
 // The k-packets carry the same energy budget. Each time a k-packet selects a cooling process, its energy gets
 // the factor 1 - (c_adiabatic + c_heatcapacity) / heating of its cell, limited to [0, 100] (see kpkt.cc). A
 // cell without heating uses the factor 1. The factor applies in every timestep with a thermal balance, also
-// without this option. With this option, the
-// stored thermal energy also stays out of the radiation field. A gas that cools releases its stored energy
-// into the packets, and the factor is then above 1. The code removes no k-packet.
+// without this option. With this option, the stored thermal energy also stays out of the radiation field. A
+// gas that cools releases its stored energy into the packets, and the factor is then above 1. The code removes
+// no k-packet.
+//
+// The "cooling:" line of the estimators file does not contain c_heatcapacity, because that file keeps its
+// format. The heating and the cooling of that file therefore do not balance with this option. The rank log
+// gives c_heatcapacity and the k-packet energy factor of each cell.
 constexpr std::optional<int> NLTE_TIME_DEPENDENT_FIRST_TIMESTEP;
 
 // How the code deposits the energy of the non-thermal leptons.
@@ -246,22 +259,19 @@ constexpr std::optional<int> NLTE_TIME_DEPENDENT_FIRST_TIMESTEP;
 // NT_SPENCERFANO: the Spencer-Fano solution. It also gives the non-thermal excitation rates for the NLTE
 // population solver, the macroatom, and the NTLEPTON packets.
 // NT_AXELRODAPPROX: the work function approximation of Axelrod (1980, PhD thesis, University of California,
-// Santa Cruz). The energy fractions are then 0.03 for the ionisation and 0.97 for the heating, with no
-// excitation rates.
+// Santa Cruz). The ion balance gets the ionisation rates of that approximation, with no excitation rates. The
+// lepton packets deposit all of their energy as heat, and the thermal balance counts all of it as heat.
 constexpr NonThermalScheme NT_SCHEME;
 
 // The energy grid of the Spencer-Fano solution is not an option of artisoptions.h. SFPTS (the number of energy
 // points) is in nonthermal.h, and SF_EMIN and SF_EMAX (the grid limits in eV) are at the top of nonthermal.cc.
 // They apply to every preset.
 
-// Reuse a Spencer-Fano solution for at most this many timesteps after the timestep of the solution. 0 reuses a
-// solution only within the NLTE iterations of the same timestep. A negative value solves at every iteration of
-// every timestep.
-constexpr int SF_MAX_TIMESTEPS_BETWEEN_SOLUTIONS;
-
-// A change of nne per ion (nne divided by the total ion density) since the last solution at or above this
-// fraction, e.g. 0.5 for 50 percent, also triggers a solution.
-constexpr double NT_MAX_FRACDIFF_NNEPERION_BETWEEN_SOLUTIONS;
+// After the LTE timesteps, the code solves the Spencer-Fano equation at the first NLTE iteration of each timestep.
+// A later iteration of the same timestep keeps that solution, unless nne per ion (nne divided by the total ion
+// density) changed by this fraction or more, e.g. 0.5 for 50 percent. A value of 0 gives a new solution at each
+// iteration.
+constexpr double SF_RE_SOLVE_WITHIN_TIMESTEP_MIN_NNEPERION_FRACDIFF;
 
 // Include non-thermal excitation only from the lowest NTEXCITATION_MAXNLEVELS_LOWER levels of an ion and to
 // its lowest NTEXCITATION_MAXNLEVELS_UPPER levels, because these transitions slow the solver. A zero in either
@@ -296,16 +306,36 @@ constexpr bool USE_CALCULATED_MEANATOMICWEIGHT;
 // Keep the escaped gamma-ray packets in the packet files, and write gamma_light_curve.out and gamma_spec.out.
 constexpr bool KEEP_ESCAPED_GAMMAS;
 
+// Keep one r-packet emission of each packet. Sample with equal probability from the emissions that set emissiontype.
+// A scattering keeps emissiontype and does not enter the sample.
+// The packet files get the count of these emissions (nemissiontype_updates) and these values of the sampled emission:
+// - emissiontype;
+// - absorptiontype;
+// - absorptionfreq;
+// - em_pos;
+// - em_time.
+// Each sample represents nemissiontype_updates emissions.
+constexpr bool SAMPLE_RPKT_EMISSION;
+
 // The thermalisation of the non-thermal particles (positrons, electrons, and alpha particles):
 // - INSTANTFULLDEPOSITION deposits the particle energy at once;
 // - TIMEDEPENDENT transports the particles with the Monte Carlo method;
-// - TIMEDEPENDENT_WITH_ADIABATIC_LOSS adds the adiabatic loss rate E/t to the collisional loss rate. Only the
+// - TIMEDEPENDENT_WITH_ADIABATIC_LOSS adds the adiabatic loss rate E (E + 2 m c^2) / ((E + m c^2) t) of the
+//   kinetic energy E to the collisional loss rate. This rate is 2E/t for a non-relativistic particle. Only the
 //   collisional share of the lost energy heats the gas;
+// - TIMEDEPENDENT_WITH_ADIABATIC_LOSS_ULTRARELATIVISTICLIMIT is the same as TIMEDEPENDENT_WITH_ADIABATIC_LOSS, but it
+//   uses the ultra-relativistic limit E/t of the adiabatic loss rate. This rate is a factor of 2 too low for a
+//   non-relativistic particle, for example an alpha particle from a radioactive decay;
 // - TIMEDEPENDENTWITHGAMMAPRODUCTS also transports the electrons and positrons from Compton scattering,
 //   photoelectric absorption, and pair production, instead of an instant deposition;
 // - BARNES and WOLLAEGER use analytic thermalisation efficiencies (Barnes, Kasen, Wu & Martínez-Pinedo 2016,
 //   ApJ, 829, 110, doi:10.3847/0004-637X/829/2/110; Wollaeger, Korobkin, Fontes, Rosswog, Even & Fryer 2018,
 //   MNRAS, 478, 3298-3334, doi:10.1093/mnras/sty1018).
+//
+// The presets write "constexpr auto" for this option and for GAMMA_THERMALISATION_SCHEME. clang-format can put a long
+// value of this option on a second line. Thus the sedopt pattern of tests/setup_kilonova_2d_barnesthermalisation.sh
+// matches only the value "ParticleThermalisationScheme::...;". Keep "constexpr auto" for GAMMA_THERMALISATION_SCHEME,
+// because the sedopt pattern of that option matches the start of the line.
 constexpr ParticleThermalisationScheme PARTICLE_THERMALISATION_SCHEME;
 
 // The thermalisation of the gamma-ray photons. FREQUENCYDEPENDENT transports the gamma rays with the Monte
@@ -338,7 +368,9 @@ constexpr bool BFCOOLING_USELEVELPOPNOTIONPOP;
 // thick. Not compatible with VPKT_ON.
 constexpr bool RPKT_USE_EXPANSION_OPACITIES;
 
-// Use expansion opacities instead of line-by-line opacities for the virtual packets.
+// Use expansion opacities instead of line-by-line opacities for the virtual packets. Use the LINEBINNED weight of
+// EXPANSION_OPACITY_METHOD with this option. With a different weight, sn3d writes a warning to the log. LINEBINNED
+// needs an RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY of zero or no value (see EXPANSION_OPACITY_METHOD).
 constexpr bool VPKT_USE_EXPANSION_OPACITIES;
 
 // The line weight in the expansion opacity of each wavelength bin of RPKT_USE_EXPANSION_OPACITIES,
@@ -348,13 +380,17 @@ constexpr bool VPKT_USE_EXPANSION_OPACITIES;
 // - LINEBINNEDCAPPED: min(1, tau), the line-binned opacity with a limit of 1 for each line.
 // - LINEBINNED: tau, the line-binned opacity (Fontes, Fryer, Hungerford, Wollaeger & Korobkin 2020, MNRAS, 493,
 //   4143-4171, doi:10.1093/mnras/staa485).
-// LINEBINNEDCAPPED and LINEBINNED need RPKT_USE_EXPANSION_OPACITIES. A line-by-line absorption has the weight
-// 1 - exp(-tau), so the emission and the virtual packets must then use EXPANSION.
+// With a nonzero RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY, LINEBINNEDCAPPED and LINEBINNED need
+// RPKT_USE_EXPANSION_OPACITIES. A line-by-line r-packet absorbs the fraction 1 - exp(-tau) in each line, so the
+// thermal emission must then use EXPANSION. For the virtual packets, LINEBINNED gives nearly the line-by-line optical
+// depth of a bin that the packet fully crosses. EXPANSION and LINEBINNEDCAPPED give a smaller optical depth for a
+// line with tau > 1.
 constexpr ExpansionOpacityMethod EXPANSION_OPACITY_METHOD;
 
 // Replace the macroatom with a thermalisation probability P for each bound-bound absorption, and a scattering
 // with probability 1 - P. Every k-packet in a cell that is not thick then emits a blackbody spectrum weighted
-// with the sum of P times the expansion opacity and the free-free opacity. The code therefore computes the
+// with the true absorption opacity. That opacity is the sum of P times the expansion opacity, the free-free
+// opacity, and the bound-free opacity of each continuum times 1 - nu_edge / nu. The code therefore computes the
 // expansion opacity bins also without RPKT_USE_EXPANSION_OPACITIES. A thick cell samples a plain Planck function.
 // No value keeps the macroatom.
 constexpr std::optional<float> RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY;

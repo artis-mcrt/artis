@@ -4,13 +4,13 @@ set -x
 
 source ./setupfuncs.sh
 
-runfolder=kilonova_2d_barnesthermalisation_testrun
+modelpath=kilonova_2d_barnesthermalisation_testrun
 
 getatomicdata atomicdata_feconi.tar.xz
 
-mkdir -p $runfolder
+mkdir -p $modelpath
 
-cd $runfolder
+cd $modelpath
 
 tar -xf ../atomicdata_feconi.tar.xz --directory ./
 
@@ -26,13 +26,13 @@ ln -s ../../ artis
 cp artis/artisoptions_kilonova_lte.h artisoptions.h
 
 
-sedopt "constexpr std::int64_t NUM_PACKETS.*" "constexpr std::int64_t NUM_PACKETS = 320'000;"
+sedopt "constexpr std::int64_t NUM_PACKETS.*" "constexpr std::int64_t NUM_PACKETS = 3.2e5;"
 
 sedopt 'constexpr int RATECOEFF_TABLESIZE.*' 'constexpr int RATECOEFF_TABLESIZE = 20;'
 sedopt 'constexpr double MINTEMP.*' 'constexpr double MINTEMP = 1000.;'
 sedopt 'constexpr double MAXTEMP.*' 'constexpr double MAXTEMP = 20000.;'
 
-sedopt 'constexpr auto PARTICLE_THERMALISATION_SCHEME.*' 'constexpr auto PARTICLE_THERMALISATION_SCHEME = ParticleThermalisationScheme::BARNES;'
+sedopt 'ParticleThermalisationScheme::[A-Z_]*;' 'ParticleThermalisationScheme::BARNES;'
 
 sedopt 'constexpr auto GAMMA_THERMALISATION_SCHEME.*' 'constexpr auto GAMMA_THERMALISATION_SCHEME = GammaThermalisationScheme::BARNES;'
 

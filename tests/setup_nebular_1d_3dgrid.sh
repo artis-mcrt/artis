@@ -4,13 +4,13 @@ set -x
 
 source ./setupfuncs.sh
 
-runfolder=nebular_1d_3dgrid_testrun
+modelpath=nebular_1d_3dgrid_testrun
 
 getatomicdata atomicdata_feconi.tar.xz
 
-mkdir -p $runfolder
+mkdir -p $modelpath
 
-cd $runfolder
+cd $modelpath
 
 rsync -av ../nebular_1d_3dgrid_inputfiles/ ./
 
@@ -20,7 +20,7 @@ ln -s ../../ artis
 
 cp artis/artisoptions_nltenebular.h artisoptions.h
 
-sedopt "constexpr std::int64_t NUM_PACKETS.*" "constexpr std::int64_t NUM_PACKETS = 4'000'000;"
+sedopt "constexpr std::int64_t NUM_PACKETS.*" "constexpr std::int64_t NUM_PACKETS = 4e6;"
 
 sedopt 'constexpr std::optional<GridType> GRID_TYPE_OVERRIDE.*' 'constexpr std::optional<GridType> GRID_TYPE_OVERRIDE = GridType::CARTESIAN3D;'
 

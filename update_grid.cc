@@ -252,6 +252,11 @@ void write_to_estimators_file(std::ostream& estimators_file, const int nonemptym
         }
       }
       std::println(estimators_file);
+      // This line keeps its label for artistools. In a cell with a thermal balance, only an element with NLTE levels
+      // keeps the normalised Monte Carlo estimator here. For each other element, the grid update replaces it with
+      // calculate_iongamma_per_gspop(), the analytic radiative and collisional ionisation rate per ground level
+      // population. That rate includes corrphotoionrenorm (see iongamma_is_zero() in ratecoeff.cc). In an LTE
+      // timestep and in a grey cell, every element keeps the normalised Monte Carlo estimator.
       std::print(estimators_file, "gammaestimator     Z={:2d}", get_atomicnumber(element));
       for (int ion = 0; ion < nions - 1; ion++) {
         if (get_groundcontindex(element, ion) >= 0) {
@@ -298,8 +303,7 @@ void write_to_estimators_file(std::ostream& estimators_file, const int nonemptym
   }
 }
 
-void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
-                       HeatingCoolingRates& heatingcoolingrates) {
+void solve_Te_nltepops(const int nonemptymgi, const int nts, HeatingCoolingRates& heatingcoolingrates) {
   const int mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
   // bfheating coefficients are needed for the T_e solver, but they only depend on the radiation field, which is fixed
   // during the iterations below
@@ -374,8 +378,9 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, const int nts_prev,
     const double prev_T_e = grid::Te_allcells[nonemptymgi];
     const auto sys_time_start_Te = std::chrono::steady_clock::now();
 
-    // Find T_e as solution for thermal balance
-    call_T_e_finder(nonemptymgi, globals::timesteps[nts_prev].mid, heatingcoolingrates, bfheatingcoeffs);
+    // Find T_e as solution for thermal balance. The densities of the cell are at the mid time of timestep nts, so
+    // the adiabatic cooling 3p/t uses the same time.
+    call_T_e_finder(nonemptymgi, globals::timesteps[nts].mid, heatingcoolingrates, bfheatingcoeffs);
 
     const auto duration_solve_T_e =
         std::chrono::duration<double>(std::chrono::steady_clock::now() - sys_time_start_Te).count();
@@ -864,13 +869,18 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
         globals::colheatingestimator[nonemptymgi] *= estimator_normfactor;
       }
 
+      // The renormalisation factors divide the Monte Carlo estimators by the analytic rates of the W and T_R that the
+      // cell holds before fit_parameters(). Usually those values are the fit to the estimators of the timestep before
+      // the previous timestep. With LTEPOP_EXCITATION_USE_TJ, the ion balance of an element without NLTE levels uses
+      // the Gamma that the function below stores with the same W and T_R. The other rates, for example those of the
+      // next propagation, multiply the factors by the rates of the new fit. A change of this order changes the results.
       update_gamma_corrphotoionrenorm_bfheating_estimators(nonemptymgi, estimator_normfactor);
 
       // Get radiation field parameters (T_J, T_R, W, and bins if enabled) out of the
       // full-spectrum and binned J and nuJ estimators
       radfield::fit_parameters(nonemptymgi, nts);
 
-      solve_Te_nltepops(nonemptymgi, nts, nts_prev, heatingcoolingrates);
+      solve_Te_nltepops(nonemptymgi, nts, heatingcoolingrates);
     }
     const auto temperature_corrections_duration =
         std::chrono::duration<double>(std::chrono::steady_clock::now() - sys_time_start_temperature_corrections)

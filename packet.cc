@@ -11,6 +11,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <format>
+#include <ostream>
 #include <print>
 #include <ranges>
 #include <span>
@@ -47,11 +48,17 @@ constexpr auto get_packets_text_header() -> std::string {
   header +=
       " originated_from_particlenotgamma trueem_posx trueem_posy trueem_posz trueem_time pellet_nucindex "
       "pellet_decaytype";
+  if constexpr (SAMPLE_RPKT_EMISSION) {
+    header +=
+        " nemissiontype_updates sampled_emissiontype sampled_absorption_type sampled_absorption_freq sampled_em_posx "
+        "sampled_em_posy sampled_em_posz sampled_em_time";
+  }
   return header;
 }
 
-// Sample a grid cell (weighted by its cumulative energy in en_cumulative), then place packet pkt as a radioactive
-// pellet at a random position within that cell at t=tmin, assigning its decay time and initial rest-frame energy.
+// Sample a propagation cell (weighted by its cumulative energy in en_cumulative), then place packet pkt as a
+// radioactive pellet at a random position within that cell at t=tmin, and assign its decay time and initial
+// rest-frame energy.
 void place_pellet(const double e_cmf_per_packet, const std::span<const double> en_cumulative, const int pktnumber,
                   Packet& pkt, const std::span<const double> energy_per_massoftopnuc_decaypath) {
   const auto etot_simtime = en_cumulative.back();
@@ -62,7 +69,7 @@ void place_pellet(const double e_cmf_per_packet, const std::span<const double> e
   assert_always(cellindex < grid::ngrid);
 
   pkt.cellindex = cellindex;
-  pkt.number = pktnumber;  // record the packets number for debugging
+  pkt.number = pktnumber;  // unique only inside this rank (see get_rank_and_packet_number_key())
   pkt.prop_time = globals::tmin;
 
   pkt.pos = grid::get_propcell_random_xyz_position_tmin(cellindex, get_rngstate(pkt));
@@ -84,6 +91,39 @@ void place_pellet(const double e_cmf_per_packet, const std::span<const double> e
   const double dopplerfactor = calculate_doppler_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
   pkt.e_rf = pkt.e_cmf / dopplerfactor;
 }
+
+// Read the columns of the sampled r-packet emission from a row of packets*.out.
+// Return false if a column is absent or invalid. A packet without a sample has NAN in em_pos.
+[[nodiscard]] auto parse_rpkt_emission_sample(std::string_view& remainder, RpktEmissionSample& rpkt_emission_sample)
+    -> bool {
+  return parse_next_token(remainder, rpkt_emission_sample.nemissiontype_updates) &&
+         parse_next_token(remainder, rpkt_emission_sample.emissiontype) &&
+         parse_next_token(remainder, rpkt_emission_sample.absorptiontype) &&
+         parse_next_token(remainder, rpkt_emission_sample.absorptionfreq) &&
+         parse_next_token<true>(remainder, rpkt_emission_sample.em_pos[0]) &&
+         parse_next_token<true>(remainder, rpkt_emission_sample.em_pos[1]) &&
+         parse_next_token<true>(remainder, rpkt_emission_sample.em_pos[2]) &&
+         parse_next_token(remainder, rpkt_emission_sample.em_time);
+}
+
+// Write the columns of the sampled r-packet emission to a row of packets*.out
+void print_rpkt_emission_sample(std::ostream& packets_file, const RpktEmissionSample& rpkt_emission_sample) {
+  std::print(packets_file, " {} {} {} {:g}", rpkt_emission_sample.nemissiontype_updates,
+             rpkt_emission_sample.emissiontype, rpkt_emission_sample.absorptiontype,
+             rpkt_emission_sample.absorptionfreq);
+  std::print(packets_file, " {:g} {:g} {:g} {:g}", rpkt_emission_sample.em_pos[0], rpkt_emission_sample.em_pos[1],
+             rpkt_emission_sample.em_pos[2], rpkt_emission_sample.em_time);
+}
+
+// A packet without the sample (SAMPLE_RPKT_EMISSION is false) has no columns of the sample, so these overloads read
+// and write nothing
+[[nodiscard]] auto parse_rpkt_emission_sample([[maybe_unused]] const std::string_view& remainder,
+                                              [[maybe_unused]] const NoRpktEmissionSample& rpkt_emission_sample)
+    -> bool {
+  return true;
+}
+void print_rpkt_emission_sample([[maybe_unused]] const std::ostream& packets_file,
+                                [[maybe_unused]] const NoRpktEmissionSample& rpkt_emission_sample) {}
 
 }  // anonymous namespace
 
@@ -117,7 +157,7 @@ void packet_init(std::span<Packet> packets) {
   double etot_simtime = 0.;
   for (int propcellindex = 0; propcellindex < grid::ngrid; propcellindex++) {
     const int mgi = grid::get_propcell_modelgridindex(propcellindex);
-    // some grid cells are empty
+    // some propagation cells are empty
     if (mgi >= 0) {
       const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(mgi);
       const auto initial_en_per_mass = INITIAL_PACKETS_ON ? grid::get_initenergyq(mgi) : 0.;
@@ -155,7 +195,9 @@ void packet_init(std::span<Packet> packets) {
     pkt.e_cmf *= e_ratio;
     pkt.e_rf *= e_ratio;
   }
-  printlnlog("total energy that will be freed during simulation time: {:g} [erg]", e_cmf_total);
+  // With INITIAL_PACKETS_ON, update_pellet() later multiplies the energy of a pellet that decays before tmin by
+  // tdecay / tmin, so the energy that the simulation frees is smaller than this sum.
+  printlnlog("total energy of the pellets at their decay times: {:g} [erg]", e_cmf_total);
 }
 
 // read packets*.out text format file
@@ -176,15 +218,15 @@ auto read_text_packets(const std::string& filename) -> std::vector<Packet> {
     auto remainder = std::string_view{line};
     bool rowisvalid = true;
 
-    // Take the next column of the row. Every column except the two emission positions below is finite, so a
-    // "nan" there is a corrupt row and the strict parser rejects it.
+    // Read the next column of the row. Only the emission positions can hold NAN.
+    // The parser rejects "nan" in all other columns.
     const auto parse_column = [&remainder, &rowisvalid](auto& value) {
       rowisvalid = rowisvalid && parse_next_token(remainder, value);
     };
 
-    // Take the three columns of a position of the last emission. A packet that did not yet emit carries NAN
-    // in em_pos, and a packet that returned to the thermal pool carries NAN in trueem_pos. These are the only
-    // columns of the file that hold the "nan" spelling. An inf stays an error here, as in every other column.
+    // Read the three columns of an emission position. A packet before its first emission has NAN in em_pos.
+    // A packet that returned to the thermal pool has NAN in trueem_pos.
+    // These columns and sampled_em_pos permit "nan". The parser rejects "inf" in every column.
     const auto parse_emission_position = [&remainder, &rowisvalid](Vec3d& position) {
       for (auto& component : position) {
         rowisvalid = rowisvalid && parse_next_token<true>(remainder, component);
@@ -237,6 +279,8 @@ auto read_text_packets(const std::string& filename) -> std::vector<Packet> {
     parse_column(pkt.pellet_nucindex);
     parse_column(pkt.pellet_decaytype);
 
+    rowisvalid = rowisvalid && parse_rpkt_emission_sample(remainder, pkt.rpkt_emission_sample);
+
     // A row must hold every column of the header and no more. A short or corrupt row, e.g. from a partial
     // write on a full file system, otherwise leaves the remaining fields at their defaults. That would drop
     // the packet from the spectra (escape_type stays 0) with no diagnostic.
@@ -277,6 +321,7 @@ void write_text_packets(const std::string& filename, const std::span<const Packe
     std::print(packets_file, " {}", static_cast<int>(pkt.originated_from_particlenotgamma));
     std::print(packets_file, " {:g} {:g} {:g}", pkt.trueem_pos[0], pkt.trueem_pos[1], pkt.trueem_pos[2]);
     std::print(packets_file, " {:g} {} {}", pkt.trueem_time, pkt.pellet_nucindex, pkt.pellet_decaytype);
+    print_rpkt_emission_sample(packets_file, pkt.rpkt_emission_sample);
     std::println(packets_file, "");
   }
   packets_file.close();

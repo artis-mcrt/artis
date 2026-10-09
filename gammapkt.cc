@@ -61,9 +61,11 @@ constexpr int xcom_max_atomic_number = USE_XCOM_GAMMAPHOTOION ? 100 : 0;
 std::array<std::vector<ElementPhotoionData>, xcom_max_atomic_number> photoion_data;
 
 // Reference scales and thresholds [Hz] for the photoelectric and pair-production cross-section fits below
-// (the Compton path works from H * nu_cmf / ME / CLIGHT^2 instead). NB: slightly inconsistent with MEV / H
-// from constants.h, which gives 2.41805e+20 for 1 MeV. Kept as-is because changing them would shift results
-// and the stored regression checksums.
+// (the Compton path works from H * nu_cmf / ME / CLIGHT^2 instead). These values are slightly inconsistent
+// with the constants of constants.h, which give MEV / H = 2.41799e+20 Hz. With those constants, nu_1mev is
+// 0.99804 MeV, nu_1p022mev is 1.02001 MeV, and nu_1p5mev is 1.49707 MeV. pair_production() therefore gives
+// prob_gamma > 1 for a photon between 1.020 and 1.022 MeV, and that photon always becomes a 511 keV photon.
+// Keep the values, because a change shifts the results and the stored checksums.
 constexpr double nu_100kev = 2.41326e+19;
 constexpr double nu_1mev = 2.41326e+20;
 constexpr double nu_1p022mev = 2.46636e+20;  // electron-positron pair rest mass energy (pair production threshold)
@@ -175,14 +177,15 @@ void read_gamma_tables() {
     }
   }
 
-  // 52Fe and 52Mn have no gamma-ray table, so their gamma energy deposits as a k-packet with these mean
-  // energies per decay. The .empty() test keeps the mean of an existing spectrum, because choose_gamma_ray()
-  // normalises the lines by that mean.
-  if (decay::nuc_exists(26, 52) && gamma_spectra[decay::get_nucindex(26, 52)].empty()) {
-    decay::set_nucdecayenergygamma(decay::get_nucindex(26, 52), 0.86 * MEV);  // Fe52
-  }
-  if (decay::nuc_exists(25, 52) && gamma_spectra[decay::get_nucindex(25, 52)].empty()) {
-    decay::set_nucdecayenergygamma(decay::get_nucindex(25, 52), 3.415 * MEV);  // Mn52
+  // 52Fe and 52Mn have no gamma-ray table and no gamma energy in the decay data, so they get these mean energies
+  // per decay. Each then gets a single line at that energy, as the other nuclides without a table do. The .empty()
+  // test keeps an existing spectrum, because choose_gamma_ray() normalises the lines by its mean.
+  for (const auto& [z, a, mean_gamma_energy] : {std::tuple{26, 52, 0.86 * MEV}, std::tuple{25, 52, 3.415 * MEV}}) {
+    if (decay::nuc_exists(z, a) && gamma_spectra[decay::get_nucindex(z, a)].empty()) {
+      decay::set_nucdecayenergygamma(decay::get_nucindex(z, a), mean_gamma_energy);
+      set_trivial_gamma_spectrum(decay::get_nucindex(z, a));
+      nuclides_without_table++;
+    }
   }
 
   printlnlog("[info] read gamma-ray line tables for {} nuclides", tables_found);
@@ -504,9 +507,9 @@ void compton_scatter(Packet& pkt) {
     // two species: an iron-group one with mass fraction ffegrp, and silicon for the remainder. The nuclide
     // number densities therefore use A = 56 for the iron group and A = 28 for silicon.
 
-    const double chi_cmf_si = sigma_cmf_si * (rho / MH / 28);
+    const double chi_cmf_si = sigma_cmf_si * (rho / AMU / 28);
 
-    const double chi_cmf_fe = sigma_cmf_fe * (rho / MH / 56);
+    const double chi_cmf_fe = sigma_cmf_fe * (rho / AMU / 56);
 
     return (chi_cmf_fe * ffegrp) + (chi_cmf_si * (1. - ffegrp));
   }
@@ -604,9 +607,9 @@ static_assert((get_sigma_pair_prod_factor(nu_1p5mev) - get_sigma_pair_prod_facto
   // multiply by the particle number density. As in get_chi_photo_electric_cmf(), the composition is
   // approximated as an iron-group species (A = 56) with mass fraction ffegrp plus silicon (A = 28).
 
-  const double chi_cmf_si = sigma_cmf_si * (rho / MH / 28);
+  const double chi_cmf_si = sigma_cmf_si * (rho / AMU / 28);
 
-  const double chi_cmf_fe = sigma_cmf_fe * (rho / MH / 56);
+  const double chi_cmf_fe = sigma_cmf_fe * (rho / AMU / 56);
 
   const double chi_cmf = (chi_cmf_fe * ffegrp) + (chi_cmf_si * (1. - ffegrp));
 
@@ -731,8 +734,7 @@ void transport_gamma(Packet& pkt, const double t2) {
   // Assign optical depth to next physical event. And start counter of optical depth for this path.
   const double tau_next = -std::log(static_cast<double>(rng_uniform_pos(get_rngstate(pkt))));
 
-  // Start by finding the distance to the crossing of the grid cell
-  // boundaries. boundarydist is the boundary distance and next_cellindex is the grid cell into which we pass.
+  // boundarydist is the distance to the boundary of the propagation cell, and next_cellindex is the cell behind it
 
   const auto [boundarydist, next_cellindex] = grid::boundary_distance(pkt.dir, pkt.pos, pkt.prop_time, pkt.cellindex);
 
@@ -924,12 +926,9 @@ void init_gamma_data() {
 }
 
 [[nodiscard]] auto choose_gamma_ray(const int nucindex, rngstate_type& rngstate) -> double {
-  if (gamma_spectra[nucindex].empty()) {
-    const auto nuc_z = decay::get_nuc_z(nucindex);
-    const auto nuc_a = decay::get_nuc_a(nucindex);
-    assert_always((nuc_z == 26 && nuc_a == 52) || (nuc_z == 25 && nuc_a == 52));
-    return -1;
-  }
+  // read_gamma_tables() gives a spectrum to each nuclide with a gamma energy above zero, and a nuclide with zero
+  // gamma energy never emits a gamma ray
+  assert_always(!gamma_spectra[nucindex].empty());
 
   const double E_gamma = decay::nucdecayenergygamma(nucindex);  // Average energy per gamma line of a decay
 
@@ -947,20 +946,9 @@ void init_gamma_data() {
   return gamma_spectra[nucindex].back().energy / H;
 }
 
-// convert a pellet to a gamma ray (or kpkt if no gamma spec loaded)
+// convert a pellet to a gamma ray
 DEVICE_FUNC void pellet_gamma_decay(Packet& pkt) {
-  // if no gamma spectra is known, then convert straight to kpkts (e.g., Fe52, Mn52)
-  if (pkt.nu_cmf < 0) {
-    // the energy deposits at once, so the estimators must count it like an absorbed gamma ray
-    const int nonemptymgi = grid::get_propcell_nonemptymgi(pkt.cellindex);
-    assert_always(nonemptymgi >= 0);
-    atomicadd(globals::dep_estimator_gamma[nonemptymgi], pkt.e_cmf);
-    atomicadd(globals::timesteps[globals::timestep].gamma_dep_discrete, pkt.e_cmf);
-    pkt.type = TYPE_KPKT;
-    pkt.absorptiontype = ABSTYPE_PELLET_NOGAMMASPEC;
-    return;
-  }
-
+  assert_testmodeonly(pkt.nu_cmf > 0);
   assert_testmodeonly(pkt.prop_time == pkt.tdecay);
 
   // Give the gamma ray an isotropic direction (isotropic emission in the cmf) and set the

@@ -4,13 +4,13 @@ set -x
 
 source ./setupfuncs.sh
 
-runfolder=kilonova_2d_expansionopac_testrun
+modelpath=kilonova_2d_expansionopac_testrun
 
 getatomicdata atomicdata_feconi.tar.xz
 
-mkdir -p $runfolder
+mkdir -p $modelpath
 
-cd $runfolder
+cd $modelpath
 
 tar -xf ../atomicdata_feconi.tar.xz --directory ./
 
@@ -25,7 +25,7 @@ ln -s ../../ artis
 cp artis/artisoptions_kilonova_lte.h artisoptions.h
 
 
-sedopt "constexpr std::int64_t NUM_PACKETS.*" "constexpr std::int64_t NUM_PACKETS = 320'000;"
+sedopt "constexpr std::int64_t NUM_PACKETS.*" "constexpr std::int64_t NUM_PACKETS = 3.2e5;"
 
 sedopt 'constexpr int RATECOEFF_TABLESIZE.*' 'constexpr int RATECOEFF_TABLESIZE = 20;'
 sedopt 'constexpr double MINTEMP.*' 'constexpr double MINTEMP = 1000.;'

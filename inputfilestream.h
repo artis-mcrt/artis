@@ -4,6 +4,7 @@
 #ifndef INPUTFILESTREAM_H
 #define INPUTFILESTREAM_H
 
+#include <algorithm>
 #include <cstddef>
 #include <filesystem>
 #include <format>
@@ -147,10 +148,14 @@ class InputFileStream : public std::istream {
   fatal_crash("Could not open file '{}'", filename);
 }
 
-// True if the run folder holds the input file, in plain or in compressed form
+// True if istream_required() can find the input file, in plain or in compressed form. The search
+// covers the same folders as istream_required(), so that an optional file is either read or absent.
 [[nodiscard]] inline auto inputfile_exists(const std::string_view filename) -> bool {
-  return std::filesystem::exists(std::filesystem::path(filename)) ||
-         std::filesystem::exists(std::filesystem::path(std::format("{}.zst", filename)));
+  return std::ranges::any_of(datafolders, [filename](const auto& datadir) {
+    const auto datafolderfilename = std::format("{}{}", datadir, filename);
+    return std::filesystem::exists(std::filesystem::path(datafolderfilename)) ||
+           std::filesystem::exists(std::filesystem::path(std::format("{}.zst", datafolderfilename)));
+  });
 }
 
 #endif  // INPUTFILESTREAM_H

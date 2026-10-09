@@ -4,7 +4,7 @@
 //
 // k-packets are the thermal-pool state of the indivisible energy packet scheme of Lucy (2002), A&A, 384,
 // 725-735, doi:10.1051/0004-6361:20011756, and Lucy (2003), A&A, 403, 261-275, doi:10.1051/0004-6361:20030357,
-// hereafter paper II, which macroatom.cc implements.
+// which macroatom.cc implements.
 
 #include "kpkt.h"
 
@@ -279,9 +279,8 @@ auto sample_planck_montecarlo(const double T, rngstate_type& rngstate) -> double
 // Emit the k-packet as an r-packet at pkt.nu_cmf. A thermal emission starts a new true emission record.
 DEVICE_FUNC void emit_thermal_rpkt(Packet& pkt, const int emissiontype) {
   assert_always(std::isfinite(pkt.nu_cmf));
-  emit_rpkt(pkt);
+  emit_rpkt(pkt, emissiontype);
   pkt.next_trans = -1;
-  pkt.emissiontype = emissiontype;
   pkt.trueemissiontype = emissiontype;
   pkt.trueem_pos = pkt.em_pos;
   pkt.trueem_time = pkt.em_time;
@@ -577,7 +576,7 @@ DEVICE_FUNC void do_kpkt(Packet& pkt, const double t2, const int nts) {
 
   if (rndcoolingtype == CoolingType::FREEFREE) {
     // The k-packet converts directly into a r-packet by free-free emission.
-    // Sample the comoving-frame frequency from the free-free emissivity (paper II, Sect. 5.4.3 eq. 41). The
+    // Sample the comoving-frame frequency from the free-free emissivity (Lucy 2003, Sect. 5.4.3 eq. 41). The
     // emissivity is treated as frequency-independent apart from its exp(-h nu / k T_e) factor, so nu is
     // exponentially distributed with mean k T_e / h and can be drawn by inverting the CDF.
     pkt.nu_cmf = -KB * T_e / H * std::log(static_cast<double>(rng_uniform_pos(get_rngstate(pkt))));
@@ -591,7 +590,7 @@ DEVICE_FUNC void do_kpkt(Packet& pkt, const double t2, const int nts) {
     const int phixstargetindex = coolinglist_phixstargetindex[i];
 
     // Sample the comoving-frame frequency from the energy distribution of this recombination continuum
-    // (paper II, Sect. 4.2.2), i.e. by inverting the CDF of the energy-weighted emissivity over the
+    // (Lucy 2003, Sect. 4.2.2), i.e. by inverting the CDF of the energy-weighted emissivity over the
     // continuum's frequency range.
     pkt.nu_cmf = select_continuum_nu(element, lowerion, lowerlevel, phixstargetindex, T_e, get_rngstate(pkt));
 

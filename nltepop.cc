@@ -246,11 +246,12 @@ auto get_nlte_vector_index(const int element, const int ion, const int level, co
               first_ion_used + nions_used - 1);
 }
 
-// log " ionstage {} level {}" or " ionstage {} superlevel" (no newline) identifying an NLTE vector index in a message
+// log " ionstage {} level {}" or " ionstage {} superlevel" (no newline) identifying an NLTE vector index in a message.
+// An autoionising level has its own index, also if it is not an NLTE level.
 void printlog_nlte_vector_index(const std::ptrdiff_t index, const int element, const int first_ion_used,
                                 const int nions_used) {
   const auto [ion, level] = get_ion_level_of_nlte_vector_index(index, element, first_ion_used, nions_used);
-  if (is_nlte(element, ion, level)) {
+  if (is_nlte(element, ion, level) || level_isautoionising(element, ion, level)) {
     printlog(" ionstage {} level {}", get_ionstage(element, ion), level);
   } else {
     printlog(" ionstage {} superlevel", get_ionstage(element, ion));

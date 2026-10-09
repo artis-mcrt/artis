@@ -1,13 +1,14 @@
 #!/bin/bash -l
 #SBATCH --time=24:00:00
-#SBATCH --ntasks=1792
+##default is 19 * 112 = 2128 cores
+#SBATCH --nodes=19
 #SBATCH --ntasks-per-node=112
 #SBATCH --exclusive
 #SBATCH --cpus-per-task=1
 #SBATCH --partition=dcgp_usr_prod
-#SBATCH --qos=normal
-##for nodes >= 17, ntasks >= 1904
-##SBATCH --qos=dcgp_qos_bprod
+#SBATCH --qos=dcgp_qos_bprod
+##for nodes < 17, ntasks >1904 use qos normal:
+##SBATCH --qos=normal
 #SBATCH --account=EUHPC_R07_209
 #SBATCH --mail-type=ALL
 
@@ -45,7 +46,9 @@ cd "${SLURM_SUBMIT_DIR:?}" || exit 1
 
 export MAKEFLAGS="--check-symlink-times --jobs=$(nproc)"
 cd artis
-make sn3d || exit 1
+# Build exspec together with sn3d, so that exspec reads the packet files with the same source version.
+# The exspec job scripts can run exspec without a build.
+make sn3d exspec || exit 1
 cd ..
 
 mpicxx --version

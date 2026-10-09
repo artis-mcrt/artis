@@ -71,12 +71,16 @@ jobs:
     compile:
         strategy:
             matrix:
+                # extrabuilds: do the OpenMP, the STDPAR, and the preset builds. gcc 14 and gcc 16 do them for gcc.
+                # presetoptimize: the OPTIMIZE option of the preset builds. The CI tests build every preset with
+                # g++-16 and the optimiser, with the options of each test. A preset changes the warnings of the
+                # optimiser, so the other compilers keep it.
                 compiler:
                     [
-                        {name: gcc, ver: 14},
-                        {name: gcc, ver: 15},
-                        {name: gcc, ver: 16},
-                        {name: clang, ver: 23},
+                        {name: gcc, ver: 14, extrabuilds: true, presetoptimize: 'ON'},
+                        {name: gcc, ver: 15, extrabuilds: false},
+                        {name: gcc, ver: 16, extrabuilds: true, presetoptimize: 'OFF'},
+                        {name: clang, ver: 23, extrabuilds: true, presetoptimize: 'ON'},
                     ]
             fail-fast: false
 
@@ -117,7 +121,7 @@ jobs:
                   sudo apt-get install -y --no-install-recommends openmpi-bin libopenmpi-dev libzstd-dev
 
             - name: Install TBB
-              if: matrix.compiler.name == 'gcc'
+              if: matrix.compiler.name == 'gcc' && matrix.compiler.extrabuilds
               run: |
                   sudo apt-get install -y --no-install-recommends libtbb-dev
 
@@ -132,16 +136,20 @@ jobs:
                   make -j$(nproc) unittests
                   ./unittests
 
+            # The OpenMP and STDPAR builds use OPTIMIZE=OFF, because the plain builds of each compiler check
+            # the warnings of the optimiser and the link with LTO.
             - name: Compile classic mode OPENMP=ON
+              if: matrix.compiler.extrabuilds
               run: |
                   make clean
-                  make OPENMP=ON -j$(nproc) sn3d exspec
+                  make OPENMP=ON OPTIMIZE=OFF -j$(nproc) sn3d exspec
 
             - name: Compile classic mode STDPAR=ON
+              if: matrix.compiler.extrabuilds
               run: |
                   cp -v -p artisoptions_classic.h artisoptions.h
                   make clean
-                  make STDPAR=ON -j$(nproc) sn3d exspec
+                  make STDPAR=ON OPTIMIZE=OFF -j$(nproc) sn3d exspec
 
             - name: Compile nebular mode
               run: |
@@ -155,23 +163,26 @@ jobs:
                   ./unittests
 
             - name: Compile nebular mode OPENMP=ON
+              if: matrix.compiler.extrabuilds
               run: |
                   cp -v -p artisoptions_nltenebular.h artisoptions.h
                   make clean
-                  make OPENMP=ON -j$(nproc) sn3d exspec
+                  make OPENMP=ON OPTIMIZE=OFF -j$(nproc) sn3d exspec
 
             - name: Compile nebular mode STDPAR=ON
+              if: matrix.compiler.extrabuilds
               run: |
                   cp -v -p artisoptions_nltenebular.h artisoptions.h
                   make clean
-                  make STDPAR=ON -j$(nproc) sn3d exspec
+                  make STDPAR=ON OPTIMIZE=OFF -j$(nproc) sn3d exspec
 
             - name: Compile all remaining option files
+              if: matrix.compiler.extrabuilds
               run: |
                   # no -p: a preserved (older) mtime would make the preset build look already up to date
                   for file in $(find . -name "artisoptions_*.h" ! -name "artisoptions_classic.h" ! -name "artisoptions_nltenebular.h"); do
                       cp -v "$file" artisoptions.h
-                      make -j$(nproc) sn3d
+                      make OPTIMIZE=${{ matrix.compiler.presetoptimize }} -j$(nproc) sn3d
                   done
 
     mac-clang:
@@ -219,17 +230,19 @@ jobs:
                   make clean
                   make -j$(nproc) sn3d exspec
 
+            # The OpenMP, the STDPAR, and the preset builds use OPTIMIZE=OFF. The plain builds check the link
+            # with LTO, and Ubuntu clang builds the presets with the optimiser. These builds add the libc++ headers.
             - name: LLVM Clang Compile classic mode OPENMP=ON
               run: |
                   make clean
-                  make OPENMP=ON -j$(nproc) sn3d exspec
+                  make OPENMP=ON OPTIMIZE=OFF -j$(nproc) sn3d exspec
 
             - name: LLVM Clang Compile classic mode STDPAR=ON
               run: |
                   clang++ -v
                   cp -v -p artisoptions_classic.h artisoptions.h
                   make clean
-                  make STDPAR=ON -j$(nproc) sn3d exspec
+                  make STDPAR=ON OPTIMIZE=OFF -j$(nproc) sn3d exspec
 
             - name: LLVM Clang Compile nebular mode
               run: |
@@ -241,20 +254,20 @@ jobs:
               run: |
                   cp -v -p artisoptions_nltenebular.h artisoptions.h
                   make clean
-                  make OPENMP=ON -j$(nproc) sn3d exspec
+                  make OPENMP=ON OPTIMIZE=OFF -j$(nproc) sn3d exspec
 
             - name: LLVM Clang Compile nebular mode STDPAR=ON
               run: |
                   cp -v -p artisoptions_nltenebular.h artisoptions.h
                   make clean
-                  make STDPAR=ON -j$(nproc) sn3d exspec
+                  make STDPAR=ON OPTIMIZE=OFF -j$(nproc) sn3d exspec
 
             - name: LLVM Clang Compile all remaining option files
               run: |
                   # no -p: a preserved (older) mtime would make the preset build look already up to date
                   for file in $(find . -name "artisoptions_*.h" ! -name "artisoptions_classic.h" ! -name "artisoptions_nltenebular.h"); do
                       cp -v "$file" artisoptions.h
-                      make -j$(nproc) sn3d
+                      make OPTIMIZE=OFF -j$(nproc) sn3d
                   done
 
     amd-rocm-hipcc:
@@ -392,9 +405,3 @@ jobs:
                   cp -v -p artisoptions_nltenebular.h artisoptions.h
                   make clean
                   make STDPAR=ON -j$(nproc) sn3d exspec
-
-            - name: Compile nebular mode
-              run: |
-                  cp -v -p artisoptions_nltenebular.h artisoptions.h
-                  make clean
-                  make -j$(nproc) sn3d exspec

@@ -55,6 +55,13 @@ jobs:
                         nebular_1d_3dgrid_limitbfest,
                         nltephotospheric_dynamic_ion_range_1d_1dgrid,
                     ]
+                # Test mode skips two tests. The three kilonova_2d_* tests use the same model as kilonova_2d,
+                # with different thermalisation and opacity options. They keep USE_LUT_PHOTOION false, and
+                # kilonova_2d sets it true. The OpenMP and STDPAR jobs below run the kilonova_1d model, which
+                # sets USE_LUT_PHOTOION true, also in test mode.
+                exclude:
+                    - testname: ${{ inputs.testmode == 'ON' && 'kilonova_1d' || 'none' }}
+                    - testname: ${{ inputs.testmode == 'ON' && 'kilonova_2d' || 'none' }}
             fail-fast: ${{ inputs.testmode == 'ON' }}
 
         runs-on: ubuntu-26.04-arm
@@ -132,10 +139,20 @@ jobs:
                   cp sn3d tests/${{ matrix.testname }}_testrun/
                   cp exspec tests/${{ matrix.testname }}_testrun/
 
-            - name: Copy the run folder for a simulation in one job
+            - name: Copy the model folder for a simulation in one job
               if: matrix.testname == 'nebular_1d_3dgrid' && inputs.testmode != 'ON'
               working-directory: tests/
               run: cp -a ${{ matrix.testname }}_testrun ${{ matrix.testname }}_onejob
+
+            - name: Compile sn3d with the estimator file of all ranks for the run in one job
+              if: matrix.testname == 'nebular_1d_3dgrid' && inputs.testmode != 'ON'
+              run: |
+                  # The simulation in one job writes estimators_allranks.out. The comparison step below compares it with
+                  # the files of the ranks of the two jobs. The other output files must not change.
+                  (cd tests/${{ matrix.testname }}_onejob && source ../setupfuncs.sh && sedopt 'constexpr bool WRITE_ESTIMATORS_COMBINE_ALLRANKS.*' 'constexpr bool WRITE_ESTIMATORS_COMBINE_ALLRANKS = true;' && rm -f artisoptions.h.bak)
+                  cp tests/${{ matrix.testname }}_onejob/artisoptions.h .
+                  make REPRODUCIBLE=ON ZSTD=ON TESTMODE=${{ inputs.testmode }} MAX_NODE_SIZE=2 FASTMATH=OFF -j${{ steps.cpu-count.outputs.count }} sn3d
+                  cp sn3d tests/${{ matrix.testname }}_onejob/
 
             - name: Run test job0 start
               id: run_job0
@@ -188,7 +205,7 @@ jobs:
                   else
                       echo "The step writes no marker. The sn3d job0 step did not succeed (${{ steps.run_job0.outcome }})."
                   fi
-                  # The comparison uses the stored file of the repository, and not the copy in the run folder.
+                  # The comparison uses the stored file of the repository, and not the copy in the model folder.
                   if [ -s "$RUNNER_TEMP/ref_md5_job0.txt" ]; then
                       diff "$RUNNER_TEMP/ref_md5_job0.txt" "$RUNNER_TEMP/new_md5_job0.txt"
                   else
@@ -271,12 +288,19 @@ jobs:
                   else
                       echo "The step writes no marker. A run step did not succeed (job0: ${{ steps.run_job0.outcome }}, job1: ${{ steps.run_job1.outcome }}, exspec: ${{ steps.run_exspec.outcome }})."
                   fi
-                  # The comparison uses the stored file of the repository, and not the copy in the run folder.
+                  # The comparison uses the stored file of the repository, and not the copy in the model folder.
                   if [ -s "$RUNNER_TEMP/ref_md5_final.txt" ]; then
                       diff "$RUNNER_TEMP/ref_md5_final.txt" "$RUNNER_TEMP/new_md5_final.txt"
                   else
                       echo "::warning::The repository has no results_md5_final.txt for ${{ matrix.testname }}. The step compares nothing."
                   fi
+
+            - name: Setup uv
+              uses: astral-sh/setup-uv@v10.2.0
+              if: always() && inputs.testmode != 'ON'
+              id: setup-uv
+              with:
+                enable-cache: "false"
 
             - name: Compare the two jobs with a simulation in one job
               if: always() && matrix.testname == 'nebular_1d_3dgrid' && inputs.testmode != 'ON'
@@ -299,6 +323,18 @@ jobs:
                       done) > "$RUNNER_TEMP/md5_${folder}.txt"
                   done
                   diff "$RUNNER_TEMP/md5_${{ matrix.testname }}_testrun.txt" "$RUNNER_TEMP/md5_${{ matrix.testname }}_onejob.txt"
+                  # The script combines the files of the ranks of each job on a copy of the job folder. Both jobs write
+                  # the timestep of the restart, and artistools keeps the text of the first job for that timestep.
+                  lastjobfolder=$(cd ../${{ matrix.testname }}_testrun && ls -d job_from_ts* | grep -v ts0000 | tail -n 1)
+                  restarttimestep=$((10#${lastjobfolder#job_from_ts}))
+                  for jobfolder in job_from_ts0000 "$lastjobfolder"; do
+                      cp -a "../${{ matrix.testname }}_testrun/${jobfolder}" "$RUNNER_TEMP/"
+                  done
+                  uv run ../../scripts/combine_estimator_files.py "$RUNNER_TEMP/job_from_ts0000" "$RUNNER_TEMP/${lastjobfolder}"
+                  (zstdcat "$RUNNER_TEMP/job_from_ts0000/estimators_allranks.out.zst"
+                   zstdcat "$RUNNER_TEMP/${lastjobfolder}/estimators_allranks.out.zst" | awk -v ts="$restarttimestep" '/^timestep /{keep = ($2 > ts)} keep') > "$RUNNER_TEMP/estimators_twojobs.txt"
+                  zstdcat job_from_ts0000/estimators_allranks.out.zst > "$RUNNER_TEMP/estimators_onejob.txt"
+                  cmp "$RUNNER_TEMP/estimators_twojobs.txt" "$RUNNER_TEMP/estimators_onejob.txt"
 
             - name: Prepare for next steps
               if: always()
@@ -321,13 +357,6 @@ jobs:
               with:
                   name: ${{ matrix.testname }}_inputfiles
                   path: tests/${{ matrix.testname }}_inputfiles/results_md5*
-
-            - name: Setup uv
-              uses: astral-sh/setup-uv@v10.2.0
-              if: always() && inputs.testmode != 'ON'
-              id: setup-uv
-              with:
-                enable-cache: "false"
 
             - name: Install artistools
               if: always() && inputs.testmode != 'ON'
@@ -415,7 +444,7 @@ jobs:
                   source ./setup_kilonova_1d.sh
                   # this job has 2 ranks and the checksum jobs have 4, so this keeps the packets of each rank
                   cd kilonova_1d_testrun
-                  sedopt "constexpr std::int64_t NUM_PACKETS.*" "constexpr std::int64_t NUM_PACKETS = 160'000;"
+                  sedopt "constexpr std::int64_t NUM_PACKETS.*" "constexpr std::int64_t NUM_PACKETS = 1.6e5;"
                   rm -f artisoptions.h.bak
 
             - name: Compile
@@ -473,7 +502,7 @@ jobs:
                   source ./setup_kilonova_1d.sh
                   # this job has 2 ranks and the checksum jobs have 4, so this keeps the packets of each rank
                   cd kilonova_1d_testrun
-                  sedopt "constexpr std::int64_t NUM_PACKETS.*" "constexpr std::int64_t NUM_PACKETS = 160'000;"
+                  sedopt "constexpr std::int64_t NUM_PACKETS.*" "constexpr std::int64_t NUM_PACKETS = 1.6e5;"
                   rm -f artisoptions.h.bak
 
             - name: Compile

@@ -1,6 +1,6 @@
 #!/bin/bash
-## SLURM META DIRECTIVES HERE DON'T WORK UNDER CENTOS VIRTUAL APPLICATION ENVIRONMENT
-## So they are located in artis-virgo-submit.sh as cmd-line parameters to sbatch
+## The #SBATCH directives do not work in the CentOS virtual application environment.
+## artis-virgo-submit.sh therefore gives them to sbatch as command-line options.
 
 export APPTAINER_CONTAINER="/cvmfs/vae.gsi.de/vae26/slurm-25-11/container/user_container-develop.sif"
 export APPTAINER_NAME="vae26-user_container"
@@ -43,7 +43,9 @@ export LDFLAGS="-Wl,-rpath-link,$mpi_rpath -Wl,-rpath,$PIXI_HOME/envs/gxx/lib"
 cd "${SLURM_SUBMIT_DIR:?}" || exit 1
 
 cd artis
-make sn3d || exit 1
+# Build exspec together with sn3d, so that exspec reads the packet files with the same source version.
+# The exspec job scripts can run exspec without a build.
+make sn3d exspec || exit 1
 cd ..
 
 echo "CPU type: $("$OMPI_CXX" -march=native -Q --help=target | grep -- '-march=  ' | cut -f3)"

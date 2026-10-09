@@ -62,7 +62,13 @@ sentences. It does not control the spelling variant here.
 
 When mentioning a scientific paper, always give the full reference:
 authors, year, journal, volume, page range, and DOI or arXiv ID. The
-title is optional. Do not use a bare author-year citation.
+title is optional.
+
+In a source file, give the full reference at the first mention of the
+paper in that file. A later mention in the same file can use the authors
+and the year, for example "Axelrod (1980)". Do not use a short form such
+as "A80" or "KF92". Do not use a bare author-year citation without the
+full reference in the same file, commit message, or pull request.
 
 ## Project overview
 
@@ -191,8 +197,9 @@ release, so this step needs the network. The script keeps the archive in
 
 These steps differ from a plain build and are easy to miss:
 
-- Build from the `artisoptions.h` of the run folder, not from the preset. Each
-  setup script copies a preset and then changes some option values with `sedopt`.
+- Build from the `artisoptions.h` of the model folder, not from the preset.
+  Each setup script copies a preset and then changes some option values with
+  `sedopt`.
   Remove your `artisoptions.h` before the copy, because `cp` writes through a
   symlink and replaces the content of the tracked preset.
 - Remove `input.txt` before the first run, as the workflow does. `sn3d` then
@@ -202,8 +209,8 @@ These steps differ from a plain build and are easy to miss:
   `sn3d` to read the restart files of the first run, and it sets a different
   range of timesteps.
 - Remove the `*.tmp` files before `exspec`, as the workflow does.
-- Run `python3 ../../scripts/mergeangleres.py` in the run folder after
-  `exspec`. The script merges the direction bin files into
+- Run `python3 ../../scripts/mergeangleres.py` in the model folder
+  after `exspec`. The script merges the direction bin files into
   `light_curve_res.out`, `spec_res.out`, and `specpol_res.out`. The tests with
   a 2D or a 3D model, e.g. `kilonova_2d`, have these files in
   `results_md5_final.txt`.
@@ -244,13 +251,17 @@ The workflows in `.github/workflows/`:
 - `cislowtestmode.yml` calls `ci.yml` again with `TESTMODE=ON`. The sanitizers
   and the extra assertions make this run slow, so `ci.yml` gives it a longer
   timeout. This workflow does not enforce the checksums, because both checksum
-  steps then continue after an error.
+  steps then continue after an error. It skips the tests that the `exclude`
+  list of the `ci.yml` matrix names, because other tests reach their code.
 - `ci-checks.yml` runs the pre-commit hooks, clang-tidy, and cppcheck. It then
   compiles the code with each compiler of its matrix, and on macOS, with
   hipcc, and with nvc++. The GPU compilers build the classic and the nebular
-  presets with `STDPAR=ON GPU=ON`. The gcc, the clang, and the macOS jobs
-  compile every remaining preset. The gcc and the clang jobs also build and run
-  the unit tests, for the classic and for the nebular preset.
+  presets with `STDPAR=ON GPU=ON`. The matrix entries with `extrabuilds: true`
+  and the macOS job also do the OpenMP builds, the STDPAR builds, and the
+  builds of the remaining presets. The options and the `if` conditions of these
+  steps say which compiler skips a build and which build uses `OPTIMIZE=OFF`.
+  The gcc and the clang jobs also build and run the unit tests, for the classic
+  and for the nebular preset.
 - `updatechecksums.yml` writes the reference checksums (see "Tests").
 - `depapprove.yml` enables auto-merge for the pull requests of Dependabot and
   of pre-commit-ci.
@@ -308,6 +319,10 @@ The readers of this code are scientists, not only programmers. Give each
 function, variable, and type a name that says which physical quantity it holds.
 Do not name a thing after its role in an abstract algorithm.
 
+A name must explain itself. This rule is as important as a correct result,
+because a reader checks the physics through the names. It applies to every new
+name, also to a local variable, a counter, a flag, and a temporary string.
+
 - Name the quantity, not the position in a procedure. Write
   `get_log_te_nne_ionpops()` and not `get_outer_state()`. The first name says
   that the result holds the logarithms of T_e, of nne, and of the ion
@@ -323,6 +338,13 @@ Do not name a thing after its role in an abstract algorithm.
   `nne`, and `bf` are established here. A new short form is not.
 - The name must stay correct for a reader who does not know the algorithm. A
   comment that explains the name is a sign that the name is wrong.
+- Separate the words of a new name with underscores. Write
+  `atomic_numbers_without_atomic_data` and not `atomic_numbers_noatomicdata`.
+- Name a count or a flag after the condition that it tests. Write
+  `ncells_emptied` and `has_mass_in_composition_elements`, and not
+  `ncells_noincludedelements` and `has_included_elements`. "Included" does not
+  say where the element is included.
+- Prefer a long name that explains itself to a short name that needs a comment.
 
 ### Comments
 
@@ -460,12 +482,20 @@ The code must compile with nvc++ and with hipcc, also with `STDPAR=ON GPU=ON`.
 - The numeric values of some enumerations are also part of that interface, e.g.
   `packet_type`, `absorption_type`, and the `EMTYPE_*` constants in `packet.h`.
   Do not renumber them.
+- A simulation uses two types of folder:
+  - The model folder is the top-level folder. It holds the input files and
+    the restart files. Each `tests/*_testrun` folder is a model folder.
+  - A job folder is a subfolder of the model folder. `sn3d` writes one job
+    folder in each Slurm job. "Run folder" is a synonym of "job folder".
+
+  Write "job folder" and not "run folder". Do not use either term for the
+  model folder.
 - `sn3d` writes one log file for each rank and thread
   (`output_<rank>-<thread>.txt`). The per-job files go into the job folder
-  `job_from_ts<start timestep>`. The run-level files, e.g. the restart
-  files, stay in the run folder, together with a symlink to the log of rank 0.
-  Rank 0 writes one line with the job folder to the standard output. The
-  standard output is otherwise quiet unless there is a crash.
+  `job_from_ts<start timestep>`. The files of the whole simulation, e.g. the
+  restart files, stay in the model folder, together with a symlink to the
+  log of rank 0. Rank 0 writes one line with the job folder to the standard
+  output. The standard output is otherwise quiet unless there is a crash.
 - The restart files (`gridsave_ts*.tmp` and the packet files) must only be
   consistent with the binary that wrote them. A resumed run uses the same
   `artisoptions.h` and the same source version as the run that wrote the
@@ -525,6 +555,16 @@ The code must compile with nvc++ and with hipcc, also with `STDPAR=ON GPU=ON`.
   the construction in `#pragma clang unsafe_buffer_usage begin` and `end`. Most
   of the existing pragmas enclose an `#include`.
 
+## Review guidelines
+
+These rules apply to an automated review of a pull request, e.g. by Codex.
+
+- Do not comment that the checksums of the tests can change or must be
+  regenerated. CI compares the checksums and shows each mismatch. A maintainer
+  then regenerates them with `updatechecksums.yml` (see "Tests").
+- Do not comment that a stored checksum file comes from an older commit or
+  does not agree with a later change. The same CI step finds this.
+
 ## Pull requests
 
 - Make one pull request for one work item. Do not combine an unrelated fix
@@ -551,5 +591,7 @@ Do the text edits first. They can make a finished compile out of date.
 5. Run clang-tidy on the files that you changed. CI stops on any diagnostic,
    and a gcc build does not find it.
 6. Check that no `DEVICE_FUNC` calls a logger (see "Logs and assertions").
+7. Read each new name in the diff again. Rename each name that does not explain
+   itself (see "Names").
 
 The default branch is `main`, and `release` is the production branch.

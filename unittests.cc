@@ -51,6 +51,7 @@
 #include "nltepop.h"
 #include "nonthermal.h"
 #include "outputfilestream.h"
+#include "packet.h"
 #include "radfield.h"
 #include "random.h"
 #include "rpkt.h"
@@ -80,6 +81,18 @@ void check_close(const double a, const double b, const double reltol, const std:
     std::println("  values: {:.15g} vs {:.15g} (reltol {:g})", a, b, reltol);
   }
   check(pass, description);
+}
+
+// check that the count of each of a set of equally likely outcomes agrees with ntrials / counts.size() to within six
+// standard deviations of the binomial distribution
+void check_counts_of_equally_likely_outcomes(const std::span<const int> counts, const int ntrials,
+                                             const std::string_view description) {
+  const auto noutcomes = static_cast<double>(counts.size());
+  const double expected_count = static_cast<double>(ntrials) / noutcomes;
+  const double six_sigma = 6. * std::sqrt(expected_count * (1. - (1. / noutcomes)));
+  const auto [min_count, max_count] = std::ranges::minmax(counts);
+  check(std::abs(min_count - expected_count) < six_sigma && std::abs(max_count - expected_count) < six_sigma,
+        description);
 }
 
 void test_binindex_helpers() {
@@ -206,11 +219,8 @@ void test_escapedirectionbin() {
   check(all_in_range, "escape direction bins are all within [0, MABINS)");
 
   // every bin covers an equal solid angle, so isotropic directions should fill them equally
-  constexpr double expected_count = static_cast<double>(ndirs) / MABINS;
-  const double sixsigma = 6. * std::sqrt(expected_count * (1. - (1. / MABINS)));
-  const auto [mincount, maxcount] = std::ranges::minmax(bincounts);
-  check(std::abs(mincount - expected_count) < sixsigma && std::abs(maxcount - expected_count) < sixsigma,
-        "isotropic directions fill all equal-solid-angle bins to within 6 sigma");
+  check_counts_of_equally_likely_outcomes(
+      bincounts, ndirs, "isotropic directions fill all direction bins of equal solid angle to within 6 sigma");
 
   // Pin the azimuthal ordering that artistools depends on (see the comment in get_escapedirectionbin):
   // the bins NPHIBINS/2..(NPHIBINS - 1) cover phi = 0..pi in increasing order, and the bins
@@ -360,6 +370,74 @@ void test_random_sampling() {
   check(unit_vectors, "get_rand_isotropic_unitvec returns unit vectors");
   check(std::abs(sum_mu / nsamples) < (6. / std::sqrt(3. * nsamples)), "isotropic <cos(theta)> is zero");
   check(std::abs((sum_musquared / nsamples) - (1. / 3.)) < 1e-3, "isotropic <cos^2(theta)> is 1/3");
+}
+
+void test_item_replaces_sample() {
+  std::println("item_replaces_sample...");
+  constexpr int nitems = 20;
+  constexpr int nranks = 4;
+  constexpr int npackets_per_rank = 50000;
+
+  std::array<int, nitems> nsequences_with_final_sample_at_item{};
+  for (int rank = 0; rank < nranks; rank++) {
+    for (int packet_number = 0; packet_number < npackets_per_rank; packet_number++) {
+      const std::uint64_t rank_and_packet_number = get_rank_and_packet_number_key(rank, packet_number);
+      // the first item is always the sample (see the static_assert after item_replaces_sample())
+      int sampled_item = 0;
+      for (int item = 1; item < nitems; item++) {
+        if (item_replaces_sample(item + 1, rank_and_packet_number)) {
+          sampled_item = item;
+        }
+      }
+      nsequences_with_final_sample_at_item[sampled_item]++;
+    }
+  }
+
+  // each item is the final sample with the probability 1 / nitems
+  check_counts_of_equally_likely_outcomes(
+      nsequences_with_final_sample_at_item, nranks * npackets_per_rank,
+      "item_replaces_sample keeps each item with equal probability to within 6 sigma");
+}
+
+void test_sample_rpkt_emission() {
+  std::println("sample_rpkt_emission...");
+  // The test gives a separate RpktEmissionSample to sample_rpkt_emission(), so that every build tests the sample, also
+  // with SAMPLE_RPKT_EMISSION false.
+  Packet pkt{};
+  pkt.type = TYPE_RPKT;
+  pkt.number = 1234;
+  RpktEmissionSample rpkt_emission_sample{};
+  constexpr int nemissiontype_updates = 40;
+  const std::uint64_t rank_and_packet_number = get_rank_and_packet_number_key(globals::my_rank, pkt.number);
+  int sampled_emission_index = -1;
+  Packet pkt_at_sampled_emission{};
+  for (int emission_index = 0; emission_index < nemissiontype_updates; emission_index++) {
+    // each emission has different values, so the values of the sample show which emission it holds
+    pkt.emissiontype = emission_index;
+    pkt.absorptiontype = -emission_index;
+    pkt.absorptionfreq = 1e15 * (1 + emission_index);
+    pkt.em_pos = {1e14 * emission_index, -2e14 * emission_index, 3e14 * emission_index};
+    pkt.em_time = static_cast<float>(1e5 * (1 + emission_index));
+    sample_rpkt_emission(rpkt_emission_sample, pkt);
+    if (item_replaces_sample(emission_index + 1, rank_and_packet_number)) {
+      sampled_emission_index = emission_index;
+      pkt_at_sampled_emission = pkt;
+    }
+  }
+  // The last check can find a sample that keeps the first emission or that changes at each emission. It can find these
+  // errors only if the selected emission is not the first or the last emission.
+  check(sampled_emission_index > 0 && sampled_emission_index < nemissiontype_updates - 1,
+        "the test selects an emission that is not the first and not the last");
+  check(rpkt_emission_sample.nemissiontype_updates == nemissiontype_updates,
+        "sample_rpkt_emission counts each r-packet emission");
+  check(rpkt_emission_sample.emissiontype == pkt_at_sampled_emission.emissiontype &&
+            rpkt_emission_sample.absorptiontype == pkt_at_sampled_emission.absorptiontype &&
+            rpkt_emission_sample.absorptionfreq == static_cast<float>(pkt_at_sampled_emission.absorptionfreq) &&
+            rpkt_emission_sample.em_pos[0] == static_cast<float>(pkt_at_sampled_emission.em_pos[0]) &&
+            rpkt_emission_sample.em_pos[1] == static_cast<float>(pkt_at_sampled_emission.em_pos[1]) &&
+            rpkt_emission_sample.em_pos[2] == static_cast<float>(pkt_at_sampled_emission.em_pos[2]) &&
+            rpkt_emission_sample.em_time == pkt_at_sampled_emission.em_time,
+        "sample_rpkt_emission keeps the values of the emission that item_replaces_sample selects");
 }
 
 void test_planck() {
@@ -860,6 +938,41 @@ void test_rank_outfile_name() {
   check(!match_none, "other filenames are never matched, so they cannot be deleted from a job folder");
 }
 
+void test_estimator_allranks_or_cache_name() {
+  std::println("names of the estimator file of all ranks and of the estimator caches...");
+  bool match_all = true;
+  for (const auto* const name : {
+           "estimators_allranks.out",
+           "estimators_allranks.out.zst",
+           "estimators_allranks.out.gz",
+           "estimators_allranks.out.xz",
+           "estimators_allranks.out.parquet",
+           "estimbatch00_0000_0099.out.parquet.tmp",
+           "estimbatch01_0100_0199.out.parquet",
+       }) {
+    match_all = match_all && is_estimator_allranks_or_cache_name(name);
+  }
+  check(match_all, "the function matches the estimator file of all ranks and the estimator caches of artistools");
+
+  bool match_none = false;
+  for (const auto* const name : {
+           "estimators_allranks.out.bak",
+           "estimators_allranks.out.zst.zst",
+           "estimators_allranks.txt",
+           "estimators_selection.parquet",
+           "estimators_0000.out",
+           "estimators_0000.out.parquet",
+           "estimbatch_notes.parquet",
+           "estimbatch00_0000.out.parquet.tmp",
+           "estimbatch00_0000_0099.out.parquet.bak",
+           "estimbatch00_00x0_0099.out.parquet.tmp",
+           ".estimators_allranks.out.parquet.replace-lock",
+       }) {
+    match_none = match_none || is_estimator_allranks_or_cache_name(name);
+  }
+  check(!match_none, "the function matches none of the other filenames");
+}
+
 void test_anderson_accelerator() {
   std::println("Anderson accelerator...");
   // linear map with the contraction factors 0.9 and -0.7, fixed point (10, 2)
@@ -1339,6 +1452,35 @@ void test_zstd_output_stream() {
   check(readback == text, "the compressed output file reads back as the written text");
   std::filesystem::remove(zstfilename);
 }
+
+// The estimator file of all ranks starts with one empty zstd frame, and then holds one frame from each rank with
+// text, one frame after the other. The file must read back as the texts of the frames in their order.
+void test_zstd_frame_sequence() {
+  std::println("zstd frame sequence...");
+  const std::string filename = "unittests_zstd_frames.txt";
+  const auto zstfilename = output_filepath(filename);
+  std::string text;
+  {
+    std::ofstream outfile(zstfilename, std::ios::out | std::ios::trunc | std::ios::binary);
+    const auto emptyframe = compress_to_zstd_frame({}, ZSTD_LEVEL_DEFAULT);
+    outfile.write(emptyframe.data(), static_cast<std::streamsize>(emptyframe.size()));
+    for (int rank = 0; rank < 5; rank++) {
+      std::string ranktext;
+      for (int cell = 0; cell < 1000; cell++) {
+        ranktext += std::format("timestep 3 modelgridindex {} Te {:.6e}\n\n", (rank * 1000) + cell, cell * 0.5);
+      }
+      text += ranktext;
+      const auto frame = compress_to_zstd_frame(ranktext, ZSTD_LEVEL_DEFAULT);
+      outfile.write(frame.data(), static_cast<std::streamsize>(frame.size()));
+    }
+    check(outfile.good(), "the frames go into the file without an error");
+  }
+
+  auto infile = istream_required(filename);
+  const auto readback = std::string(std::istreambuf_iterator<char>(infile), std::istreambuf_iterator<char>());
+  check(readback == text, "the sequence of frames reads back as the texts in their order");
+  std::filesystem::remove(zstfilename);
+}
 #endif
 
 }  // anonymous namespace
@@ -1351,6 +1493,8 @@ auto main() -> int {
   test_frame_transform();
   test_meridian();
   test_random_sampling();
+  test_item_replaces_sample();
+  test_sample_rpkt_emission();
   test_planck();
   test_bateman();
   test_compton();
@@ -1363,6 +1507,7 @@ auto main() -> int {
   test_count_groundterm_levels();
   test_calculate_timesteps();
   test_rank_outfile_name();
+  test_estimator_allranks_or_cache_name();
   test_gth_solver();
   test_anderson_accelerator();
   test_chargetransfer_helpers();
@@ -1373,6 +1518,7 @@ auto main() -> int {
 #ifdef USE_ZSTD
   test_zstd_input_stream();
   test_zstd_output_stream();
+  test_zstd_frame_sequence();
 #endif
 
   std::println("unit tests: {} of {} checks passed", checks_total - checks_failed, checks_total);

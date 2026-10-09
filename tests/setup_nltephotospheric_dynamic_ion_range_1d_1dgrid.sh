@@ -4,13 +4,13 @@ set -x
 
 source ./setupfuncs.sh
 
-runfolder=nltephotospheric_dynamic_ion_range_1d_1dgrid_testrun
+modelpath=nltephotospheric_dynamic_ion_range_1d_1dgrid_testrun
 
 getatomicdata atomicdata_hefeconi_fe_i_to_vii.tar.xz
 
-mkdir -p $runfolder
+mkdir -p $modelpath
 
-cd $runfolder
+cd $modelpath
 
 rsync -av --exclude="recombrates.txt.zst" ../nebular_1d_3dgrid_inputfiles/ ./
 
@@ -18,11 +18,15 @@ rsync --ignore-times -av ../nltephotospheric_dynamic_ion_range_1d_1dgrid_inputfi
 
 tar -xf ../atomicdata_hefeconi_fe_i_to_vii.tar.xz --directory .
 
+# The line walk of the r-packets over 3.7 million lines otherwise takes most of the run time. The NLTE
+# solver holds 101 levels of Fe II, so the limit also leaves a superlevel.
+setnlevelsmax 150
+
 ln -s ../../ artis
 
 cp artis/artisoptions_nltephotospheric.h artisoptions.h
 
-sedopt "constexpr std::int64_t NUM_PACKETS.*" "constexpr std::int64_t NUM_PACKETS = 1600;"
+sedopt "constexpr std::int64_t NUM_PACKETS.*" "constexpr std::int64_t NUM_PACKETS = 1.6e3;"
 
 sedopt 'constexpr std::optional<GridType> GRID_TYPE_OVERRIDE.*' 'constexpr std::optional<GridType> GRID_TYPE_OVERRIDE = GridType::SPHERICAL1D;'
 

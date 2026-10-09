@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+# /// script
+# requires-python = ">=3.11"
+# dependencies = ["zstandard"]
+# ///
 
 import argparse
 import hashlib
@@ -91,13 +95,13 @@ def read_loglines(logfile: Path) -> list[str]:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Sum the core hours of the sn3d logs in the given run folders.")
+    parser = argparse.ArgumentParser(description="Sum the core hours of the sn3d logs in the given model folders.")
     parser.add_argument(
-        "runfolders",
+        "modelpaths",
         nargs="*",
         type=Path,
         default=[Path()],
-        help="run folders to scan (default: the current folder)",
+        help="model folders to scan (default: the current folder)",
     )
     parser.add_argument(
         "--json",
@@ -110,8 +114,8 @@ def main() -> None:
     # a compressed log next to its plain copy holds the same content, so keep only the plain file.
     sn3dlogfiles = sorted(
         logfile
-        for runfolder in args.runfolders
-        for logfile in runfolder.glob("**/output_0-0.txt*")
+        for modelpath in args.modelpaths
+        for logfile in modelpath.glob("**/output_0-0.txt*")
         if logfile.exists()
         and (
             logfile.name == "output_0-0.txt"
@@ -139,7 +143,7 @@ def main() -> None:
         jobrows.append(jobrow)
         if verbose:
             print(f"{str(logfile) + ':':{col1width}s} ", end="")
-        # the run folder has a symlink to the rank-zero log of the newest job, and an old
+        # the model folder has a symlink to the rank-zero log of the newest job, and an old
         # artis version wrote a copy instead. The file identity finds the symlink, and the
         # hash of the full content finds the copy. Two different jobs never have equal
         # full logs, because their line timestamps differ, so both jobs stay counted.
