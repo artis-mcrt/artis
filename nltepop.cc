@@ -80,16 +80,15 @@ struct RateMatrices {
   std::vector<double> chargetransfer;
 
   void write_out_rate_matrices(const int atomic_number, const int mgi) {
-    printlnlog("before lambda");
+    // printlnlog("before lambda");
     auto output_rate_matrix = [&](std::string base_path, std::string name, std::vector<double> mat) {
-      FILE *output_file =
-          fopen_required(std::format("{}-{}.out", base_path, name), "wb");
+      FILE* output_file = fopen_required(std::format("{}-{}.out", base_path, name), "wb");
       std::fwrite(mat.data(), sizeof(double), mat.size(), output_file);
       std::fclose(output_file);
     };
-    printlnlog("after lambda");
+    // printlnlog("after lambda");
 
-    const std::string dir = std::format("./nlte-outputs/matrices/{}/{}/", globals::timestep, mgi);
+    const std::string dir = std::format("./rate-matrices/{}/{}/", globals::timestep, mgi);
     if (!std::filesystem::exists(dir)) {
       printlnlog("creating directory");
       std::filesystem::create_directories(dir);
@@ -1569,6 +1568,7 @@ auto nltepop_solve_matrix_with_ion_reduction(const int element, const int nonemp
     }
 
     // Save matrices for every atomic number
+    // if (globals::timestep == 6) {
     if (/* atomic_number == 26 && */ globals::timestep == 39 && (nonemptymgi == 39 || nonemptymgi == 100)) {
       printlnlog("Writing rate matrices for Z={}, at timestep {} and nonemptymgi {}", atomic_number, globals::timestep,
                  nonemptymgi);
