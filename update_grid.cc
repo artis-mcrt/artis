@@ -1062,10 +1062,6 @@ void update_grid(std::ostream& estimators_file, const int nts, const int nts_pre
 
       std::println(estimators_file);
     }
-    // one flush per timestep, so each compressed file ends a frame that a reader can decode
-    estimators_file.flush();
-    nltepop_flush_file();
-    radfield::flush_file();
   }
 
   globals::max_path_step = std::min(1.e35, globals::vmax * tmid / 10.);

@@ -39,7 +39,7 @@ namespace {
 // save to the macroatom_*.out file
 constexpr bool LOG_MACROATOM = false;
 
-OutputFileStream macroatom_file;
+JobFolderOutputFile macroatom_file;
 [[maybe_unused]] PaddedMutex macroatom_file_mutex;  // used on the host only
 
 [[nodiscard]] auto get_sum_internal_down_same_exceptlast(const std::span<double> allmacroatomictransitions,
@@ -438,11 +438,11 @@ DEVICE_FUNC void do_macroatom(Packet& pkt, const MacroAtomState& pktmastate) {
 
         if constexpr (LOG_MACROATOM) {
           // the lock and the stream exist on the host only
-          MY_IF_HOST([[maybe_unused]] const ScopedMutex lock{macroatom_file_mutex};
-                     std::println(macroatom_file, "{:d} {:d} {:d} {:d} {:d} {:d} {:d} {:d} {:.5e} {:.5e} {:.5e} {:.5e}",
-                                  globals::timestep, grid::get_mgi_of_nonemptymgi(nonemptymgi),
-                                  get_atomicnumber(element), get_ionstage(element, ion_in), get_ionstage(element, ion),
-                                  level_in, level, activatingline, nu_cmf_in, pkt.nu_cmf, nu_rf_in, pkt.nu_rf););
+          MY_IF_HOST([[maybe_unused]] const ScopedMutex lock{macroatom_file_mutex}; std::println(
+                         macroatom_file.stream(), "{:d} {:d} {:d} {:d} {:d} {:d} {:d} {:d} {:.5e} {:.5e} {:.5e} {:.5e}",
+                         globals::timestep, grid::get_mgi_of_nonemptymgi(nonemptymgi), get_atomicnumber(element),
+                         get_ionstage(element, ion_in), get_ionstage(element, ion), level_in, level, activatingline,
+                         nu_cmf_in, pkt.nu_cmf, nu_rf_in, pkt.nu_rf););
         }
 
         end_packet = true;
@@ -596,12 +596,12 @@ void macroatom_open_file() {
     return;
   }
 
-  macroatom_file = open_rank_outfile("macroatom");
-
-  std::println(macroatom_file,
-               "timestep modelgridindex Z ionstage_in ionstage_out level_in level_out activline"
-               " nu_cmf_in nu_cmf_out nu_rf_in nu_rf_out");
+  macroatom_file.open("macroatom", true,
+                      "timestep modelgridindex Z ionstage_in ionstage_out level_in level_out activline"
+                      " nu_cmf_in nu_cmf_out nu_rf_in nu_rf_out\n");
 }
+
+void macroatom_end_timestep_file() { macroatom_file.end_timestep(); }
 
 // The rate coefficients that follow are documented on their declarations in macroatom.h.
 [[gnu::pure]] [[nodiscard]] auto rad_excitation_ratecoeff(const int nonemptymgi, const double upper_statweight,

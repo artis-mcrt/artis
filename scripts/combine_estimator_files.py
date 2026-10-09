@@ -4,7 +4,7 @@
 # ///
 """Combine the estimator files of the ranks in each job folder into one file, estimators_allranks.out.zst.
 
-sn3d writes the same text with WRITE_ESTIMATORS_COMBINE_ALLRANKS. The file holds the timesteps in their order, and in
+sn3d writes the same text with WRITE_COMBINED_ALLRANK_OUT_FILES. The file holds the timesteps in their order, and in
 each timestep it holds the text of the ranks in their order. Each text of one rank and one timestep is one zstd
 frame, and the file starts with one empty frame, as sn3d writes it.
 

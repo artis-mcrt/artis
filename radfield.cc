@@ -111,7 +111,7 @@ std::vector<double> J;  // after normalisation: [ergs/s/sr/cm2/Hz]
 
 std::vector<double> nuJ;  // after normalisation: [ergs/s/sr/cm2]
 
-OutputFileStream radfieldfile;
+JobFolderOutputFile radfieldfile;
 
 constexpr auto get_bin_nu_upper(const int binindex) -> double {
   assert_testmodeonly(binindex >= 0);
@@ -488,7 +488,7 @@ void write_to_file(const int nonemptymgi, const int timestep) {
         J_nu_bar = prev_Jb_lu_normed[nonemptymgi][jblueindex].value;
       }
 
-      std::println(radfieldfile, "{:d} {:d} {:d} {:.5e} {:.5e} {:.3e} {:.3e} {:.3e} {:.1f} {:.5e}", timestep,
+      std::println(radfieldfile.stream(), "{:d} {:d} {:d} {:.5e} {:.5e} {:.3e} {:.3e} {:.3e} {:.1f} {:.5e}", timestep,
                    modelgridindex, binindex, nu_lower, nu_upper, nuJ_out, J_out, J_nu_bar, T_R, W);
     }
 #ifdef _OPENMP
@@ -582,12 +582,8 @@ void init() {
         RADFIELDBINCOUNT - 1, H * RADFIELDBINS_NU_MIN / EV, 1e8 * CLIGHT / RADFIELDBINS_NU_MIN,
         H * RADFIELDBINS_NU_MAX / EV, 1e8 * CLIGHT / RADFIELDBINS_NU_MAX, H * RADFIELDBINS_T_E_SUPERBIN_NU_MAX / EV,
         1e8 * CLIGHT / RADFIELDBINS_T_E_SUPERBIN_NU_MAX);
-    if (grid::get_ndo_nonempty(globals::my_rank) > 0) {
-      assert_always(radfieldfile.rdbuf() == nullptr);
-      radfieldfile = open_rank_outfile("radfield");
-      std::println(radfieldfile, "timestep modelgridindex bin_num nu_lower nu_upper nuJ J J_nu_avg T_R W");
-      radfieldfile.flush();
-    }
+    radfieldfile.open("radfield", grid::get_ndo_nonempty(globals::my_rank) > 0,
+                      "timestep modelgridindex bin_num nu_lower nu_upper nuJ J J_nu_avg T_R W\n");
 
     const size_t mem_usage_bins = nonempty_npts_model * RADFIELDBINCOUNT * 2 * sizeof(double);
     radfieldbins.resize(nonempty_npts_model);
@@ -760,7 +756,7 @@ DEVICE_FUNC auto radfield(const double nu, const int nonemptymgi) -> double {
   return grid::W_allcells[nonemptymgi] * planck(nu, grid::TR_allcells[nonemptymgi]);
 }
 
-void flush_file() { radfieldfile.flush(); }
+void end_timestep_file() { radfieldfile.end_timestep(); }
 
 // Fit the radiation field parameters of one cell to the estimators accumulated over the last timestep:
 // the full-spectrum diluted blackbody (W, T_R), and with MULTIBIN_RADFIELD_MODEL_ON a separate (W, T_R)

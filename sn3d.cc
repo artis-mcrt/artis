@@ -72,9 +72,7 @@ namespace {
 
 std::chrono::steady_clock::time_point real_time_start;
 std::chrono::steady_clock::time_point packet_propagation_start_time;
-OutputFileStream estimators_file;
-// the estimator file of all ranks in the job folder, with WRITE_ESTIMATORS_COMBINE_ALLRANKS
-AllRanksOutputFile estimators_allranks_file;
+JobFolderOutputFile estimators_file;
 
 struct CellCacheBacking {
   MPI_shared_array<double> cooling_contrib;
@@ -794,18 +792,14 @@ auto do_timestep(const int nts, std::vector<Packet>& packets, const int walltime
 
   // Update the matter quantities in the grid for the new timestep.
 
-  if constexpr (WRITE_ESTIMATORS_COMBINE_ALLRANKS) {
-    update_grid(estimators_allranks_file.rank_text(), nts, nts_prev, real_time_start);
-    const auto time_write_estimators_start = std::chrono::steady_clock::now();
-    estimators_allranks_file.write_all_ranks();
-    // the other ranks return after their own send, before rank 0 writes the file
-    printlnlog(
-        "timestep {}: time after {} (took {:.1f} seconds)", nts,
-        globals::my_rank == 0 ? "rank 0 wrote the estimators of all ranks" : "this rank sent its estimators to rank 0",
-        std::chrono::duration<double>(std::chrono::steady_clock::now() - time_write_estimators_start).count());
-  } else {
-    update_grid(estimators_file, nts, nts_prev, real_time_start);
-  }
+  update_grid(estimators_file.stream(), nts, nts_prev, real_time_start);
+  const auto time_write_grid_files_start = std::chrono::steady_clock::now();
+  estimators_file.end_timestep();
+  nltepop_end_timestep_file();
+  radfield::end_timestep_file();
+  // with WRITE_COMBINED_ALLRANK_OUT_FILES, the other ranks return after their own send, before rank 0 writes the files
+  printlnlog("timestep {}: time after the write of the estimators, nlte, and radfield files (took {:.1f} seconds)", nts,
+             std::chrono::duration<double>(std::chrono::steady_clock::now() - time_write_grid_files_start).count());
 
   const auto sys_time_start_communicate_grid = std::chrono::steady_clock::now();
 
@@ -834,6 +828,7 @@ auto do_timestep(const int nts, std::vector<Packet>& packets, const int walltime
     // Now process the packets.
 
     update_packets(nts, packets);
+    macroatom_end_timestep_file();
 
     // All the processes have their own versions of the estimators for this timestep now.
     // Since these are going to be needed in the next timestep, we will gather all the
@@ -938,13 +933,13 @@ void setup_jobfolder() {
 
     // clear out per-rank output files (and any leftover log symlink) from a previous run of this folder, so
     // that e.g. a rerun with fewer ranks does not leave a mixture of new estimator files and stale ones from
-    // ranks that no longer exist. The loop also removes the estimator file of all ranks and the parquet caches that
-    // artistools makes from the estimator files, so that no stale copy stays beside the new estimator files. The loop
-    // removes only exact matches of these filenames.
+    // ranks that no longer exist. The loop also removes the files of all ranks, e.g. estimators_allranks.out, and the
+    // parquet caches that artistools makes from the estimator files, so that no stale copy stays beside the new
+    // files. The loop removes only exact matches of these filenames.
     for (const auto& entry : std::filesystem::directory_iterator(globals::jobfolder, ec)) {
       const auto filename = entry.path().filename().string();
       // a stale file that stays would mix with the new output, thus a failed removal stops the run
-      if ((is_rank_outfile_name(filename) || is_estimator_allranks_or_cache_name(filename)) &&
+      if ((is_rank_outfile_name(filename) || is_allranks_outfile_or_cache_name(filename)) &&
           !std::filesystem::remove(entry.path(), ec) && ec) {
         fatal_crash("could not remove '{}' from the job folder: {}", entry.path().string(), ec.message());
       }
@@ -1194,18 +1189,9 @@ auto main(int argc, char* argv[]) -> int {
   globals::timestep = globals::timestep_initial;
 
   macroatom_open_file();
-  if constexpr (WRITE_ESTIMATORS_COMBINE_ALLRANKS) {
-    estimators_allranks_file.open(get_jobfolder_filepath(ESTIMATORS_ALLRANKS_FILENAME));
-  }
-  if (ndo > 0) {
-    if constexpr (!WRITE_ESTIMATORS_COMBINE_ALLRANKS) {
-      assert_always(estimators_file.rdbuf() == nullptr);
-      estimators_file = open_rank_outfile("estimators");
-    }
-
-    if (globals::total_nlte_levels > 0 && ndo_nonempty > 0) {
-      nltepop_open_file();
-    }
+  estimators_file.open("estimators", ndo > 0, "");
+  if (globals::total_nlte_levels > 0) {
+    nltepop_open_file();
   }
 
   // initialise or read in virtual packet spectra
