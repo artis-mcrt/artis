@@ -27,9 +27,9 @@ constexpr double H = 6.6260755e-27;  // Planck constant [erg s]
 constexpr double MSUN = 1.98855e+33;  // Solar mass [g]
 constexpr double LSUN = 3.826e+33;  // Solar luminosity [erg/s]
 constexpr double MH = 1.67352e-24;  // Mass of hydrogen atom [g]
-// Atomic mass unit, 1/12 of the mass of a C12 atom [g]. The value is from Tiesinga, Mohr, Newell & Taylor (2021),
-// Rev. Mod. Phys., 93, 025010, doi:10.1103/RevModPhys.93.025010 (CODATA 2018).
-constexpr double AMU = 1.66053906660e-24;
+// Atomic mass unit, 1/12 of the mass of a C12 atom [g]. The value is from Mohr, Newell, Taylor & Tiesinga (2025),
+// Rev. Mod. Phys., 97, 025002, doi:10.1103/RevModPhys.97.025002 (CODATA 2022).
+constexpr double AMU = 1.66053906892e-24;
 constexpr double ME = 9.1093897e-28;  // Mass of free electron [g]
 constexpr double MALPHA = 6.6446573357e-24;  // Mass of an alpha particle [g]
 constexpr double QE = 4.80325E-10;  // elementary charge in cgs units [statcoulomb]
