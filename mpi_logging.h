@@ -635,6 +635,10 @@ inline void MPI_Reduce_safe(R&& data, MPI_Op op, const int root, MPI_Comm comm) 
   return globals::jobfolder.empty() ? std::string(filename) : std::format("{}/{}", globals::jobfolder, filename);
 }
 
+// the basenames of the output files of the ranks in the job folder, e.g. estimators_0000.out and
+// estimators_allranks.out
+constexpr std::array<std::string_view, 4> JOBFOLDER_OUTFILE_BASENAMES{"estimators", "nlte", "radfield", "macroatom"};
+
 // exactly match the generated per-rank output filenames: output_<rank>-<thread>.txt and the
 // estimators/nlte/radfield/macroatom _<rank>.out files, with or without a compression extension. sn3d
 // writes the .out files as .zst, and exspec-after.sh compresses the logs.
@@ -658,9 +662,9 @@ inline void MPI_Reduce_safe(R&& data, MPI_Op op, const int root, MPI_Comm comm) 
   }
 
   if (filename.ends_with(".out")) {
-    for (const std::string_view prefix : {"estimators_", "nlte_", "radfield_", "macroatom_"}) {
-      if (filename.starts_with(prefix)) {
-        return alldigits(filename.substr(prefix.size(), filename.size() - prefix.size() - 4));
+    for (const auto basename : JOBFOLDER_OUTFILE_BASENAMES) {
+      if (filename.starts_with(basename) && filename.substr(basename.size()).starts_with('_')) {
+        return alldigits(filename.substr(basename.size() + 1, filename.size() - basename.size() - 5));
       }
     }
   }
@@ -668,20 +672,21 @@ inline void MPI_Reduce_safe(R&& data, MPI_Op op, const int root, MPI_Comm comm) 
   return false;
 }
 
-// the estimator file of all ranks in the job folder, with the option WRITE_ESTIMATORS_COMBINE_ALLRANKS
-constexpr std::string_view ESTIMATORS_ALLRANKS_FILENAME = "estimators_allranks.out";
-
-// Exactly match the estimator file of all ranks, with or without a compression extension. Also match the parquet
-// caches that artistools makes from the estimator files. The caches are estimators_allranks.out.parquet and the batch
-// caches of an earlier artistools version, e.g. estimbatch00_0000_0099.out.parquet.tmp.
-[[nodiscard]] inline auto is_estimator_allranks_or_cache_name(const std::string_view filename) -> bool {
+// Exactly match an output file of all ranks, e.g. estimators_allranks.out, with or without a compression extension.
+// Also match the parquet caches that artistools makes from the estimator files. The caches are
+// estimators_allranks.out.parquet and the batch caches of an earlier artistools version, e.g.
+// estimbatch00_0000_0099.out.parquet.tmp.
+[[nodiscard]] inline auto is_allranks_outfile_or_cache_name(const std::string_view filename) -> bool {
   const auto alldigits = [](const std::string_view str) {
     return !str.empty() && std::ranges::all_of(str, [](const char c) { return c >= '0' && c <= '9'; });
   };
 
-  if (filename.starts_with(ESTIMATORS_ALLRANKS_FILENAME)) {
-    const auto extension = filename.substr(ESTIMATORS_ALLRANKS_FILENAME.size());
-    return std::ranges::contains(std::array<std::string_view, 5>{"", ".zst", ".gz", ".xz", ".parquet"}, extension);
+  constexpr std::string_view allranks_suffix = "_allranks.out";
+  for (const auto basename : JOBFOLDER_OUTFILE_BASENAMES) {
+    if (filename.starts_with(basename) && filename.substr(basename.size()).starts_with(allranks_suffix)) {
+      const auto extension = filename.substr(basename.size() + allranks_suffix.size());
+      return std::ranges::contains(std::array<std::string_view, 5>{"", ".zst", ".gz", ".xz", ".parquet"}, extension);
+    }
   }
 
   constexpr std::string_view batchprefix = "estimbatch";

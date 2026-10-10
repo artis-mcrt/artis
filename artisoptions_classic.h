@@ -86,7 +86,7 @@ constexpr bool USE_ION_BFHEATING_ESTIMATORS = true;
 
 constexpr bool WRITE_ION_HEATING_COOLING_RATES = false;
 
-constexpr bool WRITE_ESTIMATORS_COMBINE_ALLRANKS = false;
+constexpr bool WRITE_COMBINED_ALLRANK_OUT_FILES = false;
 
 constexpr bool STRICT_POPULATION_CHECKING = false;
 

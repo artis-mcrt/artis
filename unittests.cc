@@ -938,8 +938,8 @@ void test_rank_outfile_name() {
   check(!match_none, "other filenames are never matched, so they cannot be deleted from a job folder");
 }
 
-void test_estimator_allranks_or_cache_name() {
-  std::println("names of the estimator file of all ranks and of the estimator caches...");
+void test_allranks_outfile_or_cache_name() {
+  std::println("names of the output files of all ranks and of the estimator caches...");
   bool match_all = true;
   for (const auto* const name : {
            "estimators_allranks.out",
@@ -947,18 +947,24 @@ void test_estimator_allranks_or_cache_name() {
            "estimators_allranks.out.gz",
            "estimators_allranks.out.xz",
            "estimators_allranks.out.parquet",
+           "nlte_allranks.out.zst",
+           "radfield_allranks.out",
+           "macroatom_allranks.out.zst",
            "estimbatch00_0000_0099.out.parquet.tmp",
            "estimbatch01_0100_0199.out.parquet",
        }) {
-    match_all = match_all && is_estimator_allranks_or_cache_name(name);
+    match_all = match_all && is_allranks_outfile_or_cache_name(name);
   }
-  check(match_all, "the function matches the estimator file of all ranks and the estimator caches of artistools");
+  check(match_all, "the function matches the output files of all ranks and the estimator caches of artistools");
 
   bool match_none = false;
   for (const auto* const name : {
            "estimators_allranks.out.bak",
            "estimators_allranks.out.zst.zst",
            "estimators_allranks.txt",
+           "nlte_allranks.out.bak",
+           "deposition_allranks.out",
+           "estimators_allranks_0000.out",
            "estimators_selection.parquet",
            "estimators_0000.out",
            "estimators_0000.out.parquet",
@@ -968,7 +974,7 @@ void test_estimator_allranks_or_cache_name() {
            "estimbatch00_00x0_0099.out.parquet.tmp",
            ".estimators_allranks.out.parquet.replace-lock",
        }) {
-    match_none = match_none || is_estimator_allranks_or_cache_name(name);
+    match_none = match_none || is_allranks_outfile_or_cache_name(name);
   }
   check(!match_none, "the function matches none of the other filenames");
 }
@@ -1507,7 +1513,7 @@ auto main() -> int {
   test_count_groundterm_levels();
   test_calculate_timesteps();
   test_rank_outfile_name();
-  test_estimator_allranks_or_cache_name();
+  test_allranks_outfile_or_cache_name();
   test_gth_solver();
   test_anderson_accelerator();
   test_chargetransfer_helpers();

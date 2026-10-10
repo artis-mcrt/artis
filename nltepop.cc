@@ -48,7 +48,7 @@ static_assert(STRICT_POPULATION_CHECKING_INVERSION_FACTOR_PRINTOUT_WARNING >= 1)
 static_assert(STRICT_POPULATION_CHECKING_INVERSION_FACTOR_PRINTOUT_WARNING <
               STRICT_POPULATION_CHECKING_INVERSION_FACTOR_SOLVER_FAIL);
 namespace {
-OutputFileStream nlte_file;
+JobFolderOutputFile nlte_file;
 
 // The state of the previous grid update for the time-dependent ionisation (see nltepop.h). Only nltepop.cc
 // reads and writes these two arrays.
@@ -1910,8 +1910,8 @@ DEVICE_FUNC auto superlevel_boltzmann(const int nonemptymgi, const int element, 
 }
 
 void nltepop_open_file() {
-  nlte_file = open_rank_outfile("nlte");
-  std::println(nlte_file, "timestep modelgridindex Z ionstage level n_LTE n_NLTE ion_popfrac");
+  nlte_file.open("nlte", grid::get_ndo_nonempty(globals::my_rank) > 0,
+                 "timestep modelgridindex Z ionstage level n_LTE n_NLTE ion_popfrac\n");
 }
 
 void nltepop_write_to_file(const int nonemptymgi, const int timestep) {
@@ -1919,6 +1919,7 @@ void nltepop_write_to_file(const int nonemptymgi, const int timestep) {
   if (globals::lte_iteration) {
     return;
   }
+  auto& nlte_stream = nlte_file.stream();
 
   for (int element = 0; element < get_nelements(); element++) {
     // An element without an NLTE solution holds the -1 markers, not populations. That is an element with no mass
@@ -1940,10 +1941,10 @@ void nltepop_write_to_file(const int nonemptymgi, const int timestep) {
         double nnlevellte = calculate_levelpop_boltzmann(nonemptymgi, element, ion, level);
         double nnlevelnlte{NAN};
 
-        std::print(nlte_file, "{} {} {} {} ", timestep, modelgridindex, get_atomicnumber(element),
+        std::print(nlte_stream, "{} {} {} {} ", timestep, modelgridindex, get_atomicnumber(element),
                    get_ionstage(element, ion));
         if (level <= nlevels_excited_nlte) {
-          std::print(nlte_file, "{} ", level);
+          std::print(nlte_stream, "{} ", level);
 
           if (level == 0) {
             nnlevelnlte = get_groundlevelpop(nonemptymgi, element, ion);
@@ -1956,7 +1957,7 @@ void nltepop_write_to_file(const int nonemptymgi, const int timestep) {
               get_nlte_superlevelpop_over_rho_over_slpartfunc(nonemptymgi, element, ion) * grid::get_rho(nonemptymgi);
 
           nnlevellte = 0;
-          std::print(nlte_file, "-1 ");
+          std::print(nlte_stream, "-1 ");
           for (int level_sl = nlevels_excited_nlte + 1; level_sl < get_nlevels(element, ion); level_sl++) {
             if (level_isinsuperlevel(element, ion, level_sl)) {
               nnlevellte += calculate_levelpop_boltzmann(nonemptymgi, element, ion, level_sl);
@@ -1966,13 +1967,13 @@ void nltepop_write_to_file(const int nonemptymgi, const int timestep) {
           nnlevelnlte = slpopfactor * superlevel_partfuncs[ion];
         }
 
-        std::println(nlte_file, "{:.5e} {:.5e} {:.5e}", nnlevellte, nnlevelnlte, nnlevelnlte / nnion);
+        std::println(nlte_stream, "{:.5e} {:.5e} {:.5e}", nnlevellte, nnlevelnlte, nnlevelnlte / nnion);
       }
     }
   }
 }
 
-void nltepop_flush_file() { nlte_file.flush(); }
+void nltepop_end_timestep_file() { nlte_file.end_timestep(); }
 
 // Scale the level populations of every ion of the element, so that each ion of ion_factors takes its
 // factor and the element keeps its abundance population. Each ion keeps its internal level

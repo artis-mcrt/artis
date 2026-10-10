@@ -181,13 +181,14 @@ constexpr bool USE_ION_BFHEATING_ESTIMATORS;
 // without a thermal balance gets no per-ion values.
 constexpr bool WRITE_ION_HEATING_COOLING_RATES;
 
-// Write the estimators of all MPI ranks into one file of the job folder, estimators_allranks.out. Without this
-// option, each rank writes its own file estimators_<rank>.out. At each timestep, each rank writes the text of its
-// cells into a buffer, and rank 0 then writes the buffers in the order of the ranks. In a build with libzstd, each
-// rank compresses its own buffer into one zstd frame. The file thus holds the text of the timesteps in their order,
-// and in each timestep the text of the ranks in their order. scripts/combine_estimator_files.py makes the same text
-// from the files of the ranks.
-constexpr bool WRITE_ESTIMATORS_COMBINE_ALLRANKS;
+// Write the text of all MPI ranks into one file of the job folder for each type of file: estimators_allranks.out,
+// nlte_allranks.out, radfield_allranks.out, and macroatom_allranks.out. Without this option, each rank writes its own
+// files, e.g. estimators_<rank>.out. At each timestep, each rank writes its text into a buffer, and rank 0 then writes
+// the buffers in the order of the ranks. In a build with libzstd, each rank compresses its own buffer into one zstd
+// frame. A file thus holds the text of the timesteps in their order, and in each timestep the text of the ranks in
+// their order. The nlte, radfield, and macroatom files start with one header line. scripts/combine_allrank_out_files.py
+// makes the same text from the files of the ranks.
+constexpr bool WRITE_COMBINED_ALLRANK_OUT_FILES;
 
 // Reject an NLTE solution with one of these faults:
 // - a population that is not finite;
