@@ -323,7 +323,7 @@ class JobFolderOutputFile {
     // file that every zstd reader accepts.
     const auto headerbytes = compress_to_zstd_frame(header, ZSTD_LEVEL_DEFAULT);
 #else
-    const auto headerbytes = header;
+    const auto& headerbytes = header;
 #endif
     allranksfile.write(headerbytes.data(), static_cast<std::streamsize>(headerbytes.size()));
     allranksfile.flush();
