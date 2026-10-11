@@ -648,10 +648,6 @@ auto write_nuclides_list() {
 // average energy per decay in the form of gamma rays [erg]
 [[nodiscard]] auto nucdecayenergygamma(const int nucindex) -> double { return nuclides[nucindex].endecay_gamma; }
 
-[[nodiscard]] auto nucdecayenergygamma(const int z, const int a) -> double {
-  return nucdecayenergygamma(get_nucindex(z, a));
-}
-
 // set average energy per decay in the form of gamma rays [erg]
 void set_nucdecayenergygamma(const int nucindex, const double value) { nuclides[nucindex].endecay_gamma = value; }
 
@@ -1113,7 +1109,6 @@ void init_nuclides(const std::span<const int> custom_zlist, const std::span<cons
 }
 
 [[nodiscard]] auto decaytype_is_used(const DecayType decaytype) -> bool {
-  assert_testmodeonly(!all_decaytypes.empty());
   assert_testmodeonly(decaytype >= 0);
   assert_testmodeonly(decaytype < DecayType::DECAYTYPE_COUNT);
   return alldecaytypes_is_used[decaytype];
@@ -1225,8 +1220,7 @@ auto calc_particle_injection_power_per_mass(const NucMassFracCoeffs& nuc_massfra
 [[nodiscard]] auto calc_ana_emission_power_per_mass(const NucMassFracCoeffs& nuc_massfrac_coeffs)
     -> AnaEmissionPowerPerMass {
   return {
-      .gamma = calc_power_per_source_mass(nuc_massfrac_coeffs,
-                                          [](const int nucindex) { return nucdecayenergygamma(nucindex); }),
+      .gamma = calc_power_per_source_mass(nuc_massfrac_coeffs, nucdecayenergygamma),
       .positron = calc_particle_injection_power_per_mass(nuc_massfrac_coeffs, DECAYTYPE_BETAPLUS),
       .electron = calc_particle_injection_power_per_mass(nuc_massfrac_coeffs, DECAYTYPE_BETAMINUS),
       .alpha = calc_particle_injection_power_per_mass(nuc_massfrac_coeffs, DECAYTYPE_ALPHA),
@@ -1461,9 +1455,6 @@ void setup_radioactive_pellet(const double e_cmf_per_packet, const int nonemptym
 
   // initial cell energy selected
   if (decaychannelindex >= num_decaypaths) {
-    assert_always(decaychannelindex == num_decaypaths);  // only one non-radioactive channel for now
-    assert_always(INITIAL_PACKETS_ON);
-
     pkt.prop_time = globals::tmin;
     pkt.tdecay = globals::tmin;
     pkt.type = TYPE_RADIOACTIVE_PELLET;

@@ -68,7 +68,7 @@ struct TempEnergyLevel {
   double epsilon{-1};  // Excitation energy of this level relative to the neutral ground level.
   int alltrans_startdown{};  // index into globals::alltrans for first down transition from this level
   int ndowntrans{0};  // Number of down transitions from this level
-  int nuptrans{0};  // Number of up transitions to this level
+  int nuptrans{0};  // Number of up transitions from this level
   float stat_weight{0.};  // statistical weight of this level
 
   [[nodiscard]] constexpr auto alltrans_startup() const -> int {
@@ -639,7 +639,7 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion,
         continue;
       }
 
-      // Make sure that we don't allow duplicate. In that case take only the lines first occurrence
+      // a second transition between the same two levels goes into the previous line
       const bool is_duplicate = (lowerlevel == prev_lower && level == prev_upper);
 
       // absorption oscillator strength f_lu from A_ul via f_lu = (g_u/g_l) * m_e c^3 / (8 pi^2 e^2 nu^2) * A_ul
@@ -901,7 +901,6 @@ void setup_phixs_list() {
 
   if (nbfcontinua > 0) {
     // indices above were temporary only. continuum index should be to the sorted list
-    MPI_Barrier_node();
     if (globals::rank_in_node == 0) {
       std::ranges::SORT_OR_STABLE_SORT(allcont, std::ranges::less{}, &TempPhotoionTransitionInput::nu_edge);
     }

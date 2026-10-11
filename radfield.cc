@@ -57,13 +57,6 @@ static_assert(!MULTIBIN_RADFIELD_MODEL_ON || !USE_LUT_PHOTOION,
 
 std::vector<double> J_normfactor;
 
-struct RadFieldBinSolution {
-  // these two parameters are used in the current timestep, but were calculated
-  // from the values of J and nuJ in the previous timestep
-  float W;  // dilution (scaling) factor
-  float T_R;  // radiation temperature
-};
-
 struct RadFieldBins {
   std::vector<double> J_raw;
   std::vector<double> nuJ_raw;
@@ -553,12 +546,7 @@ void init() {
         const auto lower_uniquelevelindex = globals::linelist.uniquelevelindex_lower[i];
         const int lowerlevel = lower_uniquelevelindex - ionuniquelevelindexstart;
 
-        bool addline = false;
         if (lowerlevel <= 15) {  // selection for detailed estimators (by lower-level index)
-          addline = true;
-        }
-
-        if (addline) {
           add_detailed_line(i);
         }
       }
@@ -595,7 +583,7 @@ void init() {
 
     radfieldbin_solutions_T_R = MPI_shared_array<float>(nonempty_npts_model * RADFIELDBINCOUNT);
 
-    const size_t mem_usage_bin_solutions = nonempty_npts_model * RADFIELDBINCOUNT * sizeof(RadFieldBinSolution);
+    const size_t mem_usage_bin_solutions = nonempty_npts_model * RADFIELDBINCOUNT * 2 * sizeof(float);
     printlnlog(
         "[info] mem_usage: radiation field bin solutions for non-empty cells occupy {:.3f} MB (node shared memory)",
         mem_usage_bin_solutions / 1024. / 1024.);

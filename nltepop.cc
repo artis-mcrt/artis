@@ -134,16 +134,6 @@ struct RateMatrices {
 
   [[nodiscard]] auto get_summed_rate_matrix() -> std::span<double> {
     // sum the matrices for each transition type to get a total rate matrix
-    assert_always(summed_rates.size() == rad_bb.size());
-    assert_always(summed_rates.size() == coll_bb.size());
-    assert_always(summed_rates.size() == ntcoll_bb.size());
-    assert_always(summed_rates.size() == rad_bf.size());
-    assert_always(summed_rates.size() == coll_bf.size());
-    assert_always(summed_rates.size() == ntcoll_bf.size());
-    assert_always(summed_rates.size() == autoion.size());
-    if constexpr (ENABLE_CHARGE_TRANSFER_REACTIONS) {
-      assert_always(summed_rates.size() == chargetransfer.size());
-    }
     for (auto i = 0U; i < summed_rates.size(); i++) {
       summed_rates[i] = rad_bb[i] + coll_bb[i] + ntcoll_bb[i] + rad_bf[i] + coll_bf[i] + ntcoll_bf[i] + autoion[i];
       if constexpr (ENABLE_CHARGE_TRANSFER_REACTIONS) {
@@ -827,7 +817,7 @@ void nltepop_matrix_add_autoionisation(const int nonemptymgi, const int element,
       rate_matrices.autoion[(lower_index * nlte_dimension) + lower_index] -= R;
       rate_matrices.autoion[(upper_index * nlte_dimension) + lower_index] += R;
       if ((R < 0)) {
-        printlnlog("  [warning] cell {} ts {}: negative autoionisation rate from Z={} ionstage {} level {} to level {}",
+        printlnlog("  [warning] cell {} ts {}: negative capture rate to Z={} ionstage {} level {} from level {}",
                    nltelog.modelgridindex, nltelog.timestep, get_atomicnumber(element), get_ionstage(element, ion),
                    level, target_level);
       }

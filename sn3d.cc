@@ -1054,7 +1054,7 @@ auto main(int argc, char* argv[]) -> int {
 #ifdef USE_SIMPSON_INTEGRATOR
   printlnlog("Simpson rule");
 #else
-  printlnlog("Boost Gauss-Kronrod quadrature");
+  printlnlog("Gauss-Kronrod quadrature");
 #endif
 
   if (!walltime_limit_hours_str.empty()) {

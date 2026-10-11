@@ -301,10 +301,8 @@ void read_recombrate_file() {
   while (get_noncommentline(recombrate_file, line)) {
     assert_always(std::stringstream(line) >> atomicnumber >> upperionstage >> tablerows);
     assert_always(tablerows >= 0);
-    RRCRow T_highestbelow = {.log_Te = 0, .rrc_low_n = 0, .rrc_total = 0};
-    RRCRow T_lowestabove = {.log_Te = 0, .rrc_low_n = 0, .rrc_total = 0};
-    T_highestbelow.log_Te = -1;
-    T_lowestabove.log_Te = -1;
+    RRCRow T_highestbelow = {.log_Te = -1, .rrc_low_n = 0, .rrc_total = 0};
+    RRCRow T_lowestabove = {.log_Te = -1, .rrc_low_n = 0, .rrc_total = 0};
     for (int i = 0; i < tablerows; i++) {
       RRCRow row{};
       // without these checks a truncated or malformed table would leave the previous line's values
@@ -439,8 +437,7 @@ void precalculate_ion_alpha_sp() {
     for (int tempindex = 0; tempindex < RATECOEFF_TABLESIZE; tempindex++) {
       const auto T_e = static_cast<float>(temperature_grid[tempindex]);
       for (int element = 0; element < get_nelements(); element++) {
-        const int nions = get_nions(element) - 1;
-        for (int ion = 0; ion < nions; ion++) {
+        for (int ion = 0; ion < get_nions(element) - 1; ion++) {
           const auto uniqueionindex = get_uniqueionindex(element, ion);
           const double alpha_sp = calculate_ionrecombcoeff(-1, T_e, element, ion + 1, options);
           assert_always(std::isfinite(alpha_sp) && alpha_sp >= 0.);
@@ -681,7 +678,7 @@ DEVICE_FUNC auto select_continuum_nu(int element, const int lowerion, const int 
 // population selected by options.norm (see IonRecombNorm) to get a rate
 auto calculate_ionrecombcoeff(const int nonemptymgi, const float T_e, const int element, const int upperion,
                               const IonRecombCoeffOptions options) -> double {
-  const auto [assume_lte, collisional_not_radiative, lower_superlevel_only, norm] = options;
+  const auto [assume_lte, lower_superlevel_only, norm] = options;
   if (upperion <= 0) {
     return 0.;
   }
@@ -703,22 +700,12 @@ auto calculate_ionrecombcoeff(const int nonemptymgi, const float T_e, const int 
     return calculate_levelpop(nonemptymgi, element, upperion, upper);
   };
 
-  // the rate coefficients below are divided by clumpednne again at alpha_level, so this factor cancels exactly in
-  // the radiative case. In the collisional case the rate goes as clumpednne^2, so one factor of clumpednne survives
-  // into the returned coefficient (see the clumping note in ltepop.cc's phi_rate_balance()).
+  // calc_alpha_level() divides by clumpednne again, so this factor cancels
   const auto clumpednne = (nonemptymgi >= 0) ? grid::get_clumpfactor(nonemptymgi) * grid::get_nne(nonemptymgi) : 1.F;
 
   // recombination coefficient per target level population for one (lower level, target) continuum
   const auto calc_alpha_level = [&](const int lower, const int phixstargetindex) -> double {
-    double recomb_coeff{};
-    if (collisional_not_radiative) {
-      const double epsilon_trans = get_phixs_threshold(element, lowerion, lower, phixstargetindex);
-      recomb_coeff =
-          col_recombination_ratecoeff(T_e, clumpednne, element, upperion, lower, phixstargetindex, epsilon_trans);
-    } else {
-      recomb_coeff = rad_recombination_ratecoeff(T_e, clumpednne, element, upperion, lower, phixstargetindex);
-    }
-    return recomb_coeff / clumpednne;
+    return rad_recombination_ratecoeff(T_e, clumpednne, element, upperion, lower, phixstargetindex) / clumpednne;
   };
 
   const int nlevels_ionising_lower = get_nlevels_ionising(element, lowerion);

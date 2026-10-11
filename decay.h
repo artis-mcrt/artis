@@ -139,7 +139,6 @@ void init_nuclides(std::span<const int> custom_zlist, std::span<const int> custo
 [[nodiscard]] auto get_nucindex(int z, int a) -> int;
 [[nodiscard]] auto nuc_exists(int z, int a) -> bool;
 [[nodiscard]] auto nucdecayenergygamma(int nucindex) -> double;
-[[nodiscard]] auto nucdecayenergygamma(int z, int a) -> double;
 void set_nucdecayenergygamma(int nucindex, double value);
 void update_abundances(int nonemptymgi_start, int nonemptymgi_count, const NucMassFracCoeffs& nuc_massfrac_coeffs);
 // the calc_energy_per_massoftopnuc_* functions return the decay energy per unit mass of the chain-top nuclide

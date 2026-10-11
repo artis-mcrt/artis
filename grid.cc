@@ -1301,16 +1301,11 @@ void setup_nstart_ndo() {
       nonempty_npts_model / nprocesses;  // integer division, minimum non-empty cells per process
   const auto n_remainder = nonempty_npts_model % nprocesses;
 
-  ranks_nstart.resize(nprocesses, -1);
-  ranks_nstart_nonempty.resize(nprocesses, -1);
-  ranks_ndo.resize(nprocesses, 0);
-  ranks_ndo_nonempty.resize(nprocesses, 0);
-
   // begin with no cell assignments
-  std::ranges::fill(ranks_nstart, 0);
-  std::ranges::fill(ranks_nstart_nonempty, 0);
-  std::ranges::fill(ranks_ndo, 0);
-  std::ranges::fill(ranks_ndo_nonempty, 0);
+  ranks_nstart.assign(nprocesses, 0);
+  ranks_nstart_nonempty.assign(nprocesses, 0);
+  ranks_ndo.assign(nprocesses, 0);
+  ranks_ndo_nonempty.assign(nprocesses, 0);
 
   if (nprocesses >= get_npts_model()) {
     // for convenience, rank == mgi when there is at least one rank per cell
@@ -2077,7 +2072,7 @@ void do_MPI_Bcast_nlte_solution_ranges(const ptrdiff_t nstart_nonempty, const pt
 void read_ejecta_model() {
   auto fmodel = ModelFileReader{.file = istream_required("model.txt"), .lines_read_ahead = {}};
   std::string line;
-  std::optional<GridType> detected_dim{};
+  std::optional<GridType> detected_model_type{};
 
   // two integers on the first line of the model file
   int npts_0 = 0;  // total model points for 1D/3D, and number of points in r for 2D
@@ -2090,7 +2085,7 @@ void read_ejecta_model() {
   }
   if (ssline >> npts_1) {
     // second number on the line for 2D means the line was n_r n_z
-    detected_dim = GridType::CYLINDRICAL2D;
+    detected_model_type = GridType::CYLINDRICAL2D;
     printlnlog("Detected 2D model");
     npts_model = static_cast<ptrdiff_t>(npts_0) * npts_1;
   } else {
@@ -2109,7 +2104,6 @@ void read_ejecta_model() {
   if (t_model > globals::tmin) {
     fatal_crash("The model snapshot time {} d is after tmin {} d", t_model_days, globals::tmin / DAY);
   }
-  assert_always(globals::tmin >= t_model);
 
   // if the next line is a single float, it is the vmax (so 2D or 3D)
   // otherwise, it is the first line of the model or a header comment (so 1D)
@@ -2120,22 +2114,19 @@ void read_ejecta_model() {
     if ((sslinevmax >> globals::vmax) && !(sslinevmax >> num_after_vmax)) {
       // single value on the line is a vmax, so 2D or 3D
       // if it's not already know to be 2D (based on n_r n_z line), then it's 3D
-      if (detected_dim != GridType::CYLINDRICAL2D) {
-        assert_always(!detected_dim.has_value());
-        detected_dim = GridType::CARTESIAN3D;
+      if (detected_model_type != GridType::CYLINDRICAL2D) {
+        detected_model_type = GridType::CARTESIAN3D;
         printlnlog("Detected 3D model");
       }
     }
   }
-  if (!detected_dim.has_value()) {
-    assert_always(!detected_dim.has_value());
-    detected_dim = GridType::SPHERICAL1D;
+  if (!detected_model_type.has_value()) {
+    detected_model_type = GridType::SPHERICAL1D;
     printlnlog("Detected 1D model");
     fmodel.lines_read_ahead.push_back(line);
   }
 
-  assert_always(detected_dim.has_value());
-  model_type = detected_dim;
+  model_type = detected_model_type;
 
   assert_always(modelgrid_input.empty());
   modelgrid_input = MPI_shared_array<ModelGridCellInput>(npts_model + 1, ModelGridCellInput{});

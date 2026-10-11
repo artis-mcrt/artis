@@ -83,7 +83,6 @@ void calculate_heating_rates(const int nonemptymgi, const float T_e, const float
   double C_deexc = 0.;
 
   double bfheating = 0.;
-  double ffheating = 0.;
 
   for (int element = 0; element < get_nelements(); element++) {
     // every heating term of an absent element is zero
@@ -109,9 +108,6 @@ void calculate_heating_rates(const int nonemptymgi, const float T_e, const float
     }
   }
 
-  // Free-free heating (from estimators)
-  ffheating = globals::ffheatingestimator[nonemptymgi];
-
   if constexpr (COL_HEAT_FROM_LEVELPOPS) {
     heatingcoolingrates.heating_collisional = C_deexc;
   } else {
@@ -121,7 +117,7 @@ void calculate_heating_rates(const int nonemptymgi, const float T_e, const float
   }
 
   heatingcoolingrates.heating_bf = bfheating;
-  heatingcoolingrates.heating_ff = ffheating;
+  heatingcoolingrates.heating_ff = globals::ffheatingestimator[nonemptymgi];
 }
 
 // Residual (total heating minus total cooling) of the thermal balance equation, as a function of T_e.

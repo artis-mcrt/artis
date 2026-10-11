@@ -196,7 +196,7 @@ struct Packet {
 };
 
 #ifdef GPU_ON
-constexpr DEVICE_FUNC auto get_rngstate([[maybe_unused]] Packet& packet) -> rngstate_type& { return packet.rngstate; }
+constexpr DEVICE_FUNC auto get_rngstate(Packet& packet) -> rngstate_type& { return packet.rngstate; }
 #else
 inline auto get_rngstate() -> rngstate_type& {
   // Every thread lazily seeds its own generator from a random source, so that OpenMP/stdpar worker

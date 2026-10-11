@@ -94,7 +94,6 @@ template <size_t VECDIM>
   // velocity of the comoving frame relative to the rest frame
   const auto vel_rf = get_velocity(pos_rf, prop_time);
 
-  assert_testmodeonly(dot(vel_rf, vel_rf) / CLIGHTSQUARED >= 0.);
   assert_testmodeonly(dot(vel_rf, vel_rf) / CLIGHTSQUARED < 1.);
 
   const double ndotv = dot(dir_rf, vel_rf);
@@ -102,8 +101,6 @@ template <size_t VECDIM>
 
   if constexpr (USE_RELATIVISTIC_DOPPLER_SHIFT) {
     const double betasq = dot(vel_rf, vel_rf) / CLIGHTSQUARED;
-    assert_testmodeonly(betasq >= 0.);  // v < c
-    assert_testmodeonly(betasq < 1.);  // v < c
     dopplerfactor = dopplerfactor / std::sqrt(1 - betasq);
   }
 

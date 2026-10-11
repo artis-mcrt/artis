@@ -234,8 +234,7 @@ auto get_possible_event_expansion_opacity(const int nonemptymgi, Packet& pkt, co
       pkt_bin_start.next_trans = (dist == 0.) ? pkt.next_trans : -1;
       double edist_after_bin = 0.;
       bool event_is_boundbound = false;
-      auto next_trans = -1;
-      std::tie(edist_after_bin, next_trans, event_is_boundbound) =
+      std::tie(edist_after_bin, std::ignore, event_is_boundbound) =
           get_possible_event(nonemptymgi, pkt_bin_start, chi_rpkt_cont, mastate, tau_rnd - tau,
                              std::numeric_limits<double>::max(), 0., dnu_on_dl, doppler, globals::linelist);
       dist = dist + edist_after_bin;
@@ -995,8 +994,6 @@ DEVICE_FUNC auto sample_planck_times_expansion_opacity(const int nonemptymgi, rn
 
 DEVICE_FUNC void do_rpkt(Packet& pkt, const double t2, ContinuumOpacity& chi_rpkt_cont) {
   while (do_rpkt_step(pkt, t2, chi_rpkt_cont)) {
-    {
-    }
   }
 }
 

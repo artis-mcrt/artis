@@ -184,20 +184,19 @@ void packet_init(std::span<Packet> packets) {
     place_pellet(e_cmf_per_packet, en_cumulative, n, packets[n], energy_per_massoftopnuc_decaypath);
   });
 
-  double e_cmf_total =
+  const double e_cmf_total =
       std::ranges::fold_left(packets, 0., [](const double sum, const Packet& p) { return sum + p.e_cmf; });
   const double e_ratio = etot_simtime / e_cmf_total;
   printlnlog("packet energy sum {:g} [erg] should be {:g} [erg], so normalisation factor is {:g}", e_cmf_total,
              etot_simtime, e_ratio);
   assert_always(std::isfinite(e_cmf_total));
-  e_cmf_total *= e_ratio;
   for (auto& pkt : packets) {
     pkt.e_cmf *= e_ratio;
     pkt.e_rf *= e_ratio;
   }
   // With INITIAL_PACKETS_ON, update_pellet() later multiplies the energy of a pellet that decays before tmin by
   // tdecay / tmin, so the energy that the simulation frees is smaller than this sum.
-  printlnlog("total energy of the pellets at their decay times: {:g} [erg]", e_cmf_total);
+  printlnlog("total energy of the pellets at their decay times: {:g} [erg]", etot_simtime);
 }
 
 // read packets*.out text format file

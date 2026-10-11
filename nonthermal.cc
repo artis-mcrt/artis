@@ -819,9 +819,7 @@ constexpr auto xs_ionisation_lotz(const double en_erg, const ShellParams& collio
       (electronsinshell / ionpot *
        (std::log(betasq * ME * pow2(CLIGHT) / 2.0 / ionpot) - std::log(1 - betasq) - betasq));
   if (part_sigma_shell > 0.) {
-    const double sigma = 2 * LOTZ_FORMULA_CONSTANT_A / ME / (betasq * pow2(CLIGHT)) * part_sigma_shell;
-    assert_always(sigma >= 0);
-    return sigma;
+    return 2 * LOTZ_FORMULA_CONSTANT_A / ME / (betasq * pow2(CLIGHT)) * part_sigma_shell;
   }
 
   return 0.;
@@ -895,8 +893,6 @@ auto get_xs_ionisation_vector(std::array<double, SFPTS>& xs_vec, const ShellPara
     return 0.;
   }
   assert_testmodeonly(J > 0);
-  assert_testmodeonly(e_p >= I);
-  assert_testmodeonly(e_s >= 0);
   assert_testmodeonly(std::isfinite(std::atan((e_p - I) / 2 / J)));
   return 1 / (J * std::atan((e_p - I) / 2 / J) * (1 + pow2(e_s / J)));
 }
