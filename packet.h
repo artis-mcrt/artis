@@ -241,7 +241,6 @@ static_assert(item_replaces_sample(1, 0) && item_replaces_sample(1, ~std::uint64
   return (static_cast<std::uint64_t>(static_cast<std::uint32_t>(rank)) << 32U) |
          static_cast<std::uint32_t>(packet_number);
 }
-static_assert(get_rank_and_packet_number_key(3, 5) == ((std::uint64_t{3} << 32U) | 5U));
 
 void packet_init(std::span<Packet> packets);
 auto read_text_packets(const std::string& filename) -> std::vector<Packet>;

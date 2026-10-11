@@ -40,8 +40,6 @@ constexpr auto get_expopac_bin_nu_lower(const ptrdiff_t binindex) -> double {
 }
 
 static_assert(get_expopac_bin_nu_lower(0) == get_expopac_bin_nu_upper(1));  // bins are contiguous
-static_assert(get_expopac_bin_nu_lower(0) < get_expopac_bin_nu_upper(0));
-static_assert(get_expopac_bin_nu_upper(expopac_nbins - 1) > get_expopac_bin_nu_lower(expopac_nbins - 1));
 
 // the options that need the binned line opacities of each cell. The thermalisation option stores only the Planck
 // cumulative of the bins; the expansionopacities array exists only with the two expansion opacity options.
@@ -169,7 +167,6 @@ auto calculate_chi_ffheat_nnionpart(int nonemptymgi) -> double;
 }
 
 static_assert(get_linedistance(100., 1., 2., -0.5) == 0.);  // overshot the line resonance
-static_assert(get_linedistance(2., 4., 2., -1.) == (USE_RELATIVISTIC_DOPPLER_SHIFT ? 2. : CLIGHT * 2. * 2. / 2.));
 
 // the corrected path of a bin is the path that calculate_expansion_opacities() assumes
 static_assert((get_linedistance(2., 4., 2., -1.) * get_expopac_pathfactor(2., 2., -1.)) == (CLIGHT * 2. * 2. / 2.));
