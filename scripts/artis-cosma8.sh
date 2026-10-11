@@ -57,7 +57,6 @@ fi
 if grep -q "RESTART_NEEDED" "output_0-0.txt"
 then
     sbatch -J "artis_${PWD##*/}" ./artis/scripts/artis-cosma8.sh
-    # sbatch $SLURM_JOB_NAME
 else
     # post-processing can remove restart files, so only queue it when no continuation job was submitted
     if ls packets/packets00_0000.out* > /dev/null 2>&1; then

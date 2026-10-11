@@ -25,7 +25,7 @@ on:
                 options: ['OFF', 'ON']
     workflow_call: # for triggering the full test mode
         inputs:
-            # test mode enables the santizers and additional assertions
+            # test mode enables the sanitizers and additional assertions
             testmode:
                 required: false
                 default: 'OFF'
@@ -463,8 +463,8 @@ jobs:
             - name: Compile
               run: |
                   cp tests/kilonova_1d_testrun/artisoptions.h .
-                  make OPENMP=ON TESTMODE=${{ inputs.testmode }} MAX_NODE_SIZE=2 FASTMATH=OFF -j$(nproc) sn3d exspec
-                  cp sn3d exspec tests/kilonova_1d_testrun/
+                  make OPENMP=ON TESTMODE=${{ inputs.testmode }} MAX_NODE_SIZE=2 FASTMATH=OFF -j$(nproc) sn3d
+                  cp sn3d tests/kilonova_1d_testrun/
 
             - name: Run test job0 with OpenMP threads
               working-directory: tests/kilonova_1d_testrun/
@@ -521,8 +521,8 @@ jobs:
             - name: Compile
               run: |
                   cp tests/kilonova_1d_testrun/artisoptions.h .
-                  make STDPAR=ON TESTMODE=${{ inputs.testmode }} MAX_NODE_SIZE=2 FASTMATH=OFF -j$(nproc) sn3d exspec
-                  cp sn3d exspec tests/kilonova_1d_testrun/
+                  make STDPAR=ON TESTMODE=${{ inputs.testmode }} MAX_NODE_SIZE=2 FASTMATH=OFF -j$(nproc) sn3d
+                  cp sn3d tests/kilonova_1d_testrun/
 
             - name: Run test job0 with stdpar threads
               working-directory: tests/kilonova_1d_testrun/
