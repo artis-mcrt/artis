@@ -57,7 +57,6 @@ if grep -qs "No need for restart" output_0-0.txt && grep -qs "sn3d finished" out
     uvx artistools lc --frompackets -plotvspecpol 0 || true
   fi
 
-  # convert estimators to parquet. On JUWELS, you might need to limit the number of processes to 16 in artistools/artistools/configuration.py
   uvx --from artistools -- python3 -c 'import artistools as at; at.estimators.scan_estimators()' || true
 
 else
