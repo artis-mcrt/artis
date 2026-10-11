@@ -121,7 +121,8 @@ To split a long simulation across several queued jobs, run sn3d with `-w WALLTIM
 ### Output files
 Each job writes the following into its job folder, e.g. `job_from_ts0000`:
 - output_n-0.txt: a log file for each MPI rank n.
-- estimators_nnnn.out: the plasma conditions of each cell (temperatures, ionisation, heating and cooling rates) at each timestep. With the option `WRITE_ESTIMATORS_COMBINE_ALLRANKS`, sn3d writes the same text of all ranks into one file, estimators_allranks.out. `scripts/combine_estimator_files.py` makes that file from the files of the ranks. As zstd does, the script keeps the files of the ranks, unless you give `--rm`. Run the script with uv, e.g. `uv run artis/scripts/combine_estimator_files.py`. The script needs Python 3.14 or a later version, and uv gets that version from the metadata of the script.
+- estimators_nnnn.out: the plasma conditions of each cell (temperatures, ionisation, heating and cooling rates) at each timestep.
+- estimators_allranks.out: with the option `WRITE_COMBINED_ALLRANK_OUT_FILES`, sn3d writes the text of all ranks into this one combined file. The option also gives a combined file for the nlte and the radfield files, e.g. nlte_allranks.out. With the constant LOG_MACROATOM in macroatom.cc, it also gives macroatom_allranks.out. `scripts/combine_allrank_out_files.py` makes the combined files from the files of the ranks, and it keeps the files of the ranks unless you give `--rm`. Run the script with uv, e.g. `uv run artis/scripts/combine_allrank_out_files.py`. The script needs Python 3.14 or a later version, and uv gets that version from the metadata of the script.
 
 A run writes the following into the model folder:
 - packets/packets00_nnnn.out: the Monte Carlo packets from each rank, which exspec can turn into spectra and light curves again.

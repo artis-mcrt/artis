@@ -4,9 +4,10 @@
 #define UPDATE_GRID_H
 
 #include <chrono>
-#include <ostream>
 
-void update_grid(std::ostream& estimators_file, int nts, int nts_prev,
+class JobFolderOutputFile;
+
+void update_grid(JobFolderOutputFile& estimators_file, int nts, int nts_prev,
                  std::chrono::steady_clock::time_point real_time_start);
 
 #endif  // UPDATE_GRID_H

@@ -30,6 +30,7 @@
 #include "mpi_logging.h"
 #include "nltepop.h"
 #include "nonthermal.h"
+#include "outputfilestream.h"
 #include "radfield.h"
 #include "ratecoeff.h"
 #include "rpkt.h"
@@ -976,7 +977,7 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
 }  // anonymous namespace
 
 //  update the matter quantities in the grid cells at the start of the new timestep.
-void update_grid(std::ostream& estimators_file, const int nts, const int nts_prev,
+void update_grid(JobFolderOutputFile& estimators_file, const int nts, const int nts_prev,
                  const std::chrono::steady_clock::time_point real_time_start) {
   const auto my_rank = globals::my_rank;
   const auto sys_time_start_update_grid = std::chrono::steady_clock::now();
@@ -1052,20 +1053,16 @@ void update_grid(std::ostream& estimators_file, const int nts, const int nts_pre
       if (nonemptymgi >= 0) {
         assert_always(nonemptymgi >= nstart_nonempty);
         assert_always(nonemptymgi < (nstart_nonempty + ndo_nonempty));
-        write_to_estimators_file(estimators_file, nonemptymgi, nts,
+        write_to_estimators_file(estimators_file.stream(), nonemptymgi, nts,
                                  heatingcoolingrates_thisrankcells.at(nonemptymgi - nstart_nonempty),
                                  nuc_massfrac_coeffs);
       } else {
         // modelgrid cells that are not represented in the simulation grid
-        std::println(estimators_file, "timestep {} modelgridindex {} EMPTYCELL", nts, mgi);
+        std::println(estimators_file.stream(), "timestep {} modelgridindex {} EMPTYCELL", nts, mgi);
       }
 
-      std::println(estimators_file);
+      std::println(estimators_file.stream());
     }
-    // one flush per timestep, so each compressed file ends a frame that a reader can decode
-    estimators_file.flush();
-    nltepop_flush_file();
-    radfield::flush_file();
   }
 
   globals::max_path_step = std::min(1.e35, globals::vmax * tmid / 10.);
@@ -1075,6 +1072,18 @@ void update_grid(std::ostream& estimators_file, const int nts, const int nts_pre
   const auto rank_process_time =
       std::chrono::duration<double>(time_update_grid_end_thisrank - sys_time_start_update_grid).count();
   printlnlog("timestep {}: finished update grid for rank {} (took {:.1f} seconds)", nts, my_rank, rank_process_time);
+
+  // Without WRITE_COMBINED_ALLRANK_OUT_FILES, this write before the barrier puts the timestep into the file of each
+  // rank, also when another rank stops in its grid update.
+  estimators_file.write_timestep_text();
+  nltepop_write_timestep_text();
+  radfield::write_timestep_text();
+  if constexpr (WRITE_COMBINED_ALLRANK_OUT_FILES) {
+    // the other ranks return after their own send, before rank 0 writes the combined files
+    printlnlog("timestep {}: time after {} (took {:.1f} seconds)", nts,
+               my_rank == 0 ? "rank 0 wrote the combined files" : "this rank sent its text to rank 0",
+               std::chrono::duration<double>(std::chrono::steady_clock::now() - time_update_grid_end_thisrank).count());
+  }
 
   MPI_Barrier_allranks();
   const auto time_update_grid_end_allranks = std::chrono::steady_clock::now();
