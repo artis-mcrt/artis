@@ -52,7 +52,7 @@ JobFolderOutputFile nlte_file;
 
 // The state of the previous grid update for the time-dependent ionisation (see nltepop.h). Only nltepop.cc
 // reads and writes these two arrays.
-MPI_shared_array<float> nnion_prev_allcells;  // ion population over the sum of the ion populations
+MPI_shared_array<float> ionfrac_prev_allcells;  // ion population over the sum of the ion populations
 MPI_shared_array<double> prev_solution_time_allcells;  // t_mid of the stored previous state, or -1 for none
 
 // context so that log messages from the NLTE solver helpers can identify the cell, timestep, and
@@ -1312,7 +1312,7 @@ auto can_remove_ion(const int element, const int ion, const int first_ion_used, 
 
   const int max_ion_used = first_ion_used + nions_used - 1;
   assert_always(ion == first_ion_used || ion == max_ion_used);
-  const std::string ionname = (ion == first_ion_used) ? "bottom" : "top";
+  const std::string ion_top_or_bottom = (ion == first_ion_used) ? "bottom" : "top";
 
   const int index_gs = get_nlte_vector_index(element, ion, 0, first_ion_used);
   const double ground_pop = popvec[index_gs];
@@ -1321,8 +1321,9 @@ auto can_remove_ion(const int element, const int ion, const int first_ion_used, 
     printlnlog(
         "  [warning] cell {} ts {}: {} ion (Z={} ionstage {}) ground state population too large to remove ion "
         "(ground_pop / nnelement) = ({}/{}) = {} > {}",
-        nltelog.modelgridindex, nltelog.timestep, ionname, get_atomicnumber(element), get_ionstage(element, ion),
-        ground_pop, nnelement, ground_pop / nnelement, NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION);
+        nltelog.modelgridindex, nltelog.timestep, ion_top_or_bottom, get_atomicnumber(element),
+        get_ionstage(element, ion), ground_pop, nnelement, ground_pop / nnelement,
+        NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION);
 
     return false;
   }
@@ -1338,8 +1339,9 @@ auto can_remove_ion(const int element, const int ion, const int first_ion_used, 
       printlnlog(
           "  [warning] cell {} ts {}: {} ion (Z={} ionstage {}) excited state (level {}) population too large to "
           "remove ion (nlte_excited_pop_{}_ion / nnelement) = ({}/{}) > ({})",
-          nltelog.modelgridindex, nltelog.timestep, ionname, get_atomicnumber(element), get_ionstage(element, ion),
-          level, ionname, levelpop, nnelement, NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION);
+          nltelog.modelgridindex, nltelog.timestep, ion_top_or_bottom, get_atomicnumber(element),
+          get_ionstage(element, ion), level, ion_top_or_bottom, levelpop, nnelement,
+          NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION);
       return false;
     }
   }
@@ -1353,8 +1355,9 @@ auto can_remove_ion(const int element, const int ion, const int first_ion_used, 
       printlnlog(
           "  [warning] cell {} ts {}: {} ion (Z={} ionstage {}) superlevel population too large to remove ion "
           "(superlevel_pop_{}_ion / nnelement) = ({:g}/{:g}) > ({:g})",
-          nltelog.modelgridindex, nltelog.timestep, ionname, get_atomicnumber(element), get_ionstage(element, ion),
-          ionname, superlevel_pop, nnelement, NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION);
+          nltelog.modelgridindex, nltelog.timestep, ion_top_or_bottom, get_atomicnumber(element),
+          get_ionstage(element, ion), ion_top_or_bottom, superlevel_pop, nnelement,
+          NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION);
       return false;
     }
   }
@@ -1362,7 +1365,7 @@ auto can_remove_ion(const int element, const int ion, const int first_ion_used, 
   printlnlog(
       "  Passed checks: removing {} ion from NLTE matrix and attempting re-solve (ionstage {}, ground pop {:g}, "
       "fabs(excited pops) sum {:g}, superlevel pop {:g}, nnelement {:g}) matrix",
-      ionname, get_ionstage(element, ion), ground_pop, nlte_excited_pop_sum, superlevel_pop, nnelement);
+      ion_top_or_bottom, get_ionstage(element, ion), ground_pop, nlte_excited_pop_sum, superlevel_pop, nnelement);
 
   return true;
 }
@@ -1382,7 +1385,7 @@ void nltepop_matrix_add_time_dependence(const int nonemptymgi, const int element
 
   double ionfrac_old_sum = 0.;
   for (int ion = first_ion_used; ion <= max_ion_used; ion++) {
-    ionfrac_old_sum += nnion_prev_allcells[get_cellionindex(nonemptymgi, element, ion)];
+    ionfrac_old_sum += ionfrac_prev_allcells[get_cellionindex(nonemptymgi, element, ion)];
   }
   if (ionfrac_old_sum <= 0.) {
     // a normal case for a decay daughter element that was absent at the previous grid update
@@ -1404,7 +1407,7 @@ void nltepop_matrix_add_time_dependence(const int nonemptymgi, const int element
       rate_matrix[(row * nlte_dimension) + col] -= 1. / dt;
     }
     const double nnion_old =
-        nnelement * nnion_prev_allcells[get_cellionindex(nonemptymgi, element, ion)] / ionfrac_old_sum;
+        nnelement * ionfrac_prev_allcells[get_cellionindex(nonemptymgi, element, ion)] / ionfrac_old_sum;
     balance_vector[row] = -nnion_old / dt;
   }
 }
@@ -2038,7 +2041,7 @@ auto nltepop_scale_ion_pops(const int nonemptymgi, const int element, const std:
 void nltepop_allocate_time_dependent_arrays() {
   // the construction of a shared array is collective over the node, so every rank calls this
   const auto nonempty_npts_model = static_cast<std::ptrdiff_t>(grid::get_nonempty_npts_model());
-  nnion_prev_allcells = MPI_shared_array<float>(nonempty_npts_model * get_includedions(), 0.);
+  ionfrac_prev_allcells = MPI_shared_array<float>(nonempty_npts_model * get_includedions(), 0.);
   Te_prev_allcells = MPI_shared_array<float>(nonempty_npts_model, 0.);
   prev_solution_time_allcells = MPI_shared_array<double>(nonempty_npts_model, -1.);
   solution_time_allcells = MPI_shared_array<double>(nonempty_npts_model, -1.);
@@ -2054,7 +2057,7 @@ void nltepop_store_previous_state(const int nonemptymgi) {
       nnelement_ionsum += get_nnion(nonemptymgi, element, ion);
     }
     for (int ion = 0; ion < nions; ion++) {
-      nnion_prev_allcells[get_cellionindex(nonemptymgi, element, ion)] =
+      ionfrac_prev_allcells[get_cellionindex(nonemptymgi, element, ion)] =
           (nnelement_ionsum > 0.) ? static_cast<float>(get_nnion(nonemptymgi, element, ion) / nnelement_ionsum) : 0.F;
     }
   }
@@ -2101,7 +2104,7 @@ auto get_nne_prev(const int nonemptymgi) -> double {
       continue;
     }
     for (int ion = 0; ion < get_nions(element); ion++) {
-      nne_prev += nnelement * nnion_prev_allcells[get_cellionindex(nonemptymgi, element, ion)] *
+      nne_prev += nnelement * ionfrac_prev_allcells[get_cellionindex(nonemptymgi, element, ion)] *
                   (get_ionstage(element, ion) - 1);
     }
   }

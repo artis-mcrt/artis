@@ -364,7 +364,7 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, HeatingCoolingRates
     const auto duration_solve_spencerfano =
         std::chrono::duration<double>(std::chrono::steady_clock::now() - sys_time_start_spencerfano).count();
 
-    const auto sys_time_start_partfuncs_or_gamma = std::chrono::steady_clock::now();
+    const auto sys_time_start_partfuncs = std::chrono::steady_clock::now();
     // with LTEPOP_EXCITATION_USE_TJ false, the T_e finder calculates these partition functions at each trial T_e
     if constexpr (LTEPOP_EXCITATION_USE_TJ) {
       for (int element = 0; element < get_nelements(); element++) {
@@ -373,8 +373,8 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, HeatingCoolingRates
         }
       }
     }
-    const auto duration_solve_partfuncs_or_gamma =
-        std::chrono::duration<double>(std::chrono::steady_clock::now() - sys_time_start_partfuncs_or_gamma).count();
+    const auto duration_solve_partfuncs =
+        std::chrono::duration<double>(std::chrono::steady_clock::now() - sys_time_start_partfuncs).count();
 
     const double prev_T_e = grid::Te_allcells[nonemptymgi];
     const auto sys_time_start_Te = std::chrono::steady_clock::now();
@@ -401,8 +401,7 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, HeatingCoolingRates
       printlnlog(
           "Grid solver cell {} timestep {}: time spent on: Spencer-Fano {:.1f}s, partfuncs/gamma {:.1f}s, T_e {:.1f}s, "
           "populations {:.1f}s",
-          mgi, nts, duration_solve_spencerfano, duration_solve_partfuncs_or_gamma, duration_solve_T_e,
-          duration_solve_pops);
+          mgi, nts, duration_solve_spencerfano, duration_solve_partfuncs, duration_solve_T_e, duration_solve_pops);
       break;  // no iteration is needed without nlte pops
     }
 
@@ -425,17 +424,17 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, HeatingCoolingRates
       }
       const auto log_state_solved = get_log_te_nne_ionpops(nonemptymgi, significant_ions);
       if (nlte_iter > 0) {
-        // the error that remains after a linear contraction with ratio rho is change * rho / (1 - rho). Each
+        // the error that remains after a linear contraction with a contraction ratio r is change * r / (1 - r). Each
         // component gets its own ratio, because the T_e finder limits the change of T_e to a factor of two per
         // pass. The ratio stays in [0.5, 0.95]. The estimate is then never below the change, and never above
         // 19 times the change. A small ratio can be a coincidence, e.g. after the clamp of the finder.
         // The grid held the injected state before this pass, so the changes are the residuals at that state.
         const std::array<double, 2> change{fracdiff_T_e, fracdiff_nne_prev};
-        std::array<double, 2> rho{};
+        std::array<double, 2> contraction_ratio{};
         double error_estimate = 0.;
         for (std::size_t i = 0; i < 2; i++) {
-          rho[i] = (change_prev[i] > 0.) ? std::clamp(change[i] / change_prev[i], 0.5, 0.95) : 0.5;
-          error_estimate = std::max(error_estimate, change[i] * rho[i] / (1. - rho[i]));
+          contraction_ratio[i] = (change_prev[i] > 0.) ? std::clamp(change[i] / change_prev[i], 0.5, 0.95) : 0.5;
+          error_estimate = std::max(error_estimate, change[i] * contraction_ratio[i] / (1. - contraction_ratio[i]));
         }
         if (!map_changed) {
           change_prev = change;  // a change across two maps is not a sample of the contraction
@@ -443,7 +442,7 @@ void solve_Te_nltepops(const int nonemptymgi, const int nts, HeatingCoolingRates
         printlnlog(
             "NLTE (Spencer-Fano/Te/pops) solver mgi {} timestep {} iteration {}: contraction ratio T_e {:g} nne {:g}, "
             "estimated error {:g}",
-            mgi, nts, nlte_iter, rho[0], rho[1], error_estimate);
+            mgi, nts, nlte_iter, contraction_ratio[0], contraction_ratio[1], error_estimate);
 
         // the test comes before the injection, so a converged cell keeps the plain map output and the
         // heating and cooling rates of its T_e. The charge transfer tests are from the previous pass.
@@ -916,12 +915,13 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
   const double grey_optical_depth_across_cell =
       grid::kappagrey_allcells[nonemptymgi] * grid::get_rho(nonemptymgi) * propcell_width * tratmid;
   // cube corners will have radial pos > rmax, so clamp to 0.
-  const double dist_to_obs = std::max(0., (globals::rmax * tratmid) - radial_pos);
+  const double dist_to_outer_boundary = std::max(0., (globals::rmax * tratmid) - radial_pos);
   const auto grey_optical_depth =
-      static_cast<float>(grid::kappagrey_allcells[nonemptymgi] * grid::get_rho(nonemptymgi) * dist_to_obs);
+      static_cast<float>(grid::kappagrey_allcells[nonemptymgi] * grid::get_rho(nonemptymgi) * dist_to_outer_boundary);
   printlnlog("modelgridindex {}, compton optical depth (/propgridcell) {:g}, grey optical depth (/propgridcell) {:g}",
              mgi, compton_optical_depth_across_cell, grey_optical_depth_across_cell);
-  printlnlog("radial_pos {:g}, distance_to_obs {:g}, tau_dist {:g}", radial_pos, dist_to_obs, grey_optical_depth);
+  printlnlog("radial_pos {:g}, dist_to_outer_boundary {:g}, tau_dist {:g}", radial_pos, dist_to_outer_boundary,
+             grey_optical_depth);
 
   grid::grey_depth_allcells[nonemptymgi] = grey_optical_depth;
 

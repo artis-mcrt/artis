@@ -763,14 +763,14 @@ void macroatom_write_timestep_text() { macroatom_file.write_timestep_text(); }
       // Van-Regemorter formula, Mihalas (1978), Stellar Atmospheres, 2nd ed., W. H. Freeman, eq. 5-75, p. 133
       constexpr double g_bar = 0.2;  // this should be read in from transitions data: it is 0.2 for transitions nl ->
                                      // n'l' and 0.7 for transitions nl -> nl'
-      // Gamma = max(g_bar, 0.276 * exp(eoverkt) * E1(eoverkt)), a crude approximation to the already
+      // gauntfac = max(g_bar, 0.276 * exp(eoverkt) * E1(eoverkt)), a crude approximation to the already
       // crude Van-Regemorter formula, with the exponential integral E1 replaced by its small-argument
       // expansion E1(x) ~ -EULERGAMMA - log(x)
       const double exp_eoverkt = std::exp(eoverkt);
 
-      const double Gamma = std::max(g_bar, 0.276 * exp_eoverkt * (-EULERGAMMA - std::log(eoverkt)));
+      const double gauntfac = std::max(g_bar, 0.276 * exp_eoverkt * (-EULERGAMMA - std::log(eoverkt)));
       return C_0 * clumpednne * std::sqrt(T_e) * 14.51039491 * trans_osc_strength * pow2(H_ionpot / epsilon_trans) *
-             eoverkt / exp_eoverkt * Gamma;
+             eoverkt / exp_eoverkt * gauntfac;
     }
 
     // forbidden transitions: magnetic dipole, electric quadrupole... Axelrod's approximation (thesis 1980),

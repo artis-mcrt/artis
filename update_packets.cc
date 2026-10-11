@@ -406,16 +406,15 @@ auto compare_packet_order(const Packet& p1, const Packet& p2, const double ts_en
   }
 
   // all packets in empty or thick cells can be grouped together since they don't use the cell cache
-  const int cellcachenonemptymgi1 = get_packet_cellcachegroupid(p1).value_or(-1);
-  const int cellcachenonemptymgi2 = get_packet_cellcachegroupid(p2).value_or(-1);
-  const auto rho1 = cellcachenonemptymgi1 >= 0 ? grid::get_rho(cellcachenonemptymgi1) : 0.0;
-  const auto rho2 = cellcachenonemptymgi2 >= 0 ? grid::get_rho(cellcachenonemptymgi2) : 0.0;
+  const int cellcachegroupid1 = get_packet_cellcachegroupid(p1).value_or(-1);
+  const int cellcachegroupid2 = get_packet_cellcachegroupid(p2).value_or(-1);
+  const auto rho1 = cellcachegroupid1 >= 0 ? grid::get_rho(cellcachegroupid1) : 0.0;
+  const auto rho2 = cellcachegroupid2 >= 0 ? grid::get_rho(cellcachegroupid2) : 0.0;
 
   // rho1 and rho2 are swapped here so that higher density cells are first (descending order of density)
   // nu_cmf 1 and 2 are also swapped so that higher energy packets are first (descending order of nu_cmf)
   // other fields are ascending order
-  return std::tie(rho2, cellcachenonemptymgi1, p1.type, p2.nu_cmf) <
-         std::tie(rho1, cellcachenonemptymgi2, p2.type, p1.nu_cmf);
+  return std::tie(rho2, cellcachegroupid1, p1.type, p2.nu_cmf) < std::tie(rho1, cellcachegroupid2, p2.type, p1.nu_cmf);
 }
 
 // fill the cellcache with values for the current cell

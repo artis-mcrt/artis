@@ -132,14 +132,14 @@ auto T_e_eqn_heating_minus_cooling(const double T_e, int nonemptymgi, const doub
                                    HeatingCoolingRates& heatingcoolingrates,
                                    const std::span<const double> bfheatingcoeffs, double& T_e_last_gamma_update,
                                    const bool force_gamma_update) -> double {
-  const auto fT_e = static_cast<float>(T_e);
+  const auto T_e_float = static_cast<float>(T_e);
   const bool update_gamma = force_gamma_update || std::abs(T_e - T_e_last_gamma_update) > 0.1 * T_e_last_gamma_update;
   if (update_gamma) {
     T_e_last_gamma_update = T_e;
   }
 
   // Set new T_e guess for the current cell and update populations
-  grid::Te_allcells[nonemptymgi] = fT_e;
+  grid::Te_allcells[nonemptymgi] = T_e_float;
 
   if constexpr (!LTEPOP_EXCITATION_USE_TJ) {
     for (int element = 0; element < get_nelements(); element++) {
@@ -166,7 +166,7 @@ auto T_e_eqn_heating_minus_cooling(const double T_e, int nonemptymgi, const doub
 
   // Then calculate heating and cooling rates
   kpkt::calculate_cooling_rates(nonemptymgi, &heatingcoolingrates);
-  calculate_heating_rates(nonemptymgi, fT_e, clumpfactor * nne, heatingcoolingrates, bfheatingcoeffs);
+  calculate_heating_rates(nonemptymgi, T_e_float, clumpfactor * nne, heatingcoolingrates, bfheatingcoeffs);
 
   const auto ntlepton_frac_heating = nonthermal::get_nt_frac_heating(nonemptymgi);
   const auto ntlepton_dep = nonthermal::get_ntlepton_deposition_rate_density(nonemptymgi);

@@ -628,32 +628,32 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion,
 
     ion_updowntranscount = 0;
     for (const auto& transition : iontransitiontable) {
-      const int level = transition.upper;
+      const int upperlevel = transition.upper;
       const int lowerlevel = transition.lower;
 
-      if ((lowerlevel >= nlevels) || (level >= nlevels)) {
+      if ((lowerlevel >= nlevels) || (upperlevel >= nlevels)) {
         continue;
       }
-      const double nu_trans = (ion_levels[level].epsilon - ion_levels[lowerlevel].epsilon) / H;
+      const double nu_trans = (ion_levels[upperlevel].epsilon - ion_levels[lowerlevel].epsilon) / H;
       if (!(nu_trans > 0)) {
         continue;
       }
 
       // a second transition between the same two levels goes into the previous line
-      const bool is_duplicate = (lowerlevel == prev_lower && level == prev_upper);
+      const bool is_duplicate = (lowerlevel == prev_lower && upperlevel == prev_upper);
 
       // absorption oscillator strength f_lu from A_ul via f_lu = (g_u/g_l) * m_e c^3 / (8 pi^2 e^2 nu^2) * A_ul
-      const auto g_ratio = static_cast<double>(ion_levels[level].stat_weight) / ion_levels[lowerlevel].stat_weight;
+      const auto g_ratio = static_cast<double>(ion_levels[upperlevel].stat_weight) / ion_levels[lowerlevel].stat_weight;
       const auto f_lu = static_cast<float>(g_ratio * ME * pow3(CLIGHT) / (8 * pow2(QE * nu_trans * PI)) * transition.A);
       assert_always(std::isfinite(f_lu));
 
       if (!is_duplicate) {
         prev_lower = lowerlevel;
-        prev_upper = level;
+        prev_upper = upperlevel;
         prev_lineindex = globals::nlines++;
 
-        const int nupperdowntrans = ion_levels[level].ndowntrans + 1;
-        ion_levels[level].ndowntrans = nupperdowntrans;
+        const int nupperdowntrans = ion_levels[upperlevel].ndowntrans + 1;
+        ion_levels[upperlevel].ndowntrans = nupperdowntrans;
 
         const int nloweruptrans = ion_levels[lowerlevel].nuptrans + 1;
         ion_levels[lowerlevel].nuptrans = nloweruptrans;
@@ -666,13 +666,13 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion,
               .einstein_A = transition.A,
               .elementindex = element,
               .ionindex = ion,
-              .upperlevelindex = level,
+              .upperlevelindex = upperlevel,
               .lowerlevelindex = lowerlevel,
           });
 
           // (each transition's index into the frequency-sorted linelist is set later by create_shared_alltranslist)
 
-          temp_alltranslist[ion_levels[level].alltrans_startdown + nupperdowntrans - 1] = {
+          temp_alltranslist[ion_levels[upperlevel].alltrans_startdown + nupperdowntrans - 1] = {
               .targetlevelindex = lowerlevel,
               .einstein_A = transition.A,
               .coll_str = transition.coll_str,
@@ -681,7 +681,7 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion,
           };
           const auto lowerstartup = ion_levels[lowerlevel].alltrans_startup();
           temp_alltranslist[lowerstartup + nloweruptrans - 1] = {
-              .targetlevelindex = level,
+              .targetlevelindex = upperlevel,
               .einstein_A = transition.A,
               .coll_str = transition.coll_str,
               .osc_strength = f_lu,
@@ -696,9 +696,9 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion,
 
         if ((temp_linelist[prev_lineindex].elementindex != element) ||
             (temp_linelist[prev_lineindex].ionindex != ion) ||
-            (temp_linelist[prev_lineindex].upperlevelindex != level) ||
+            (temp_linelist[prev_lineindex].upperlevelindex != upperlevel) ||
             (temp_linelist[prev_lineindex].lowerlevelindex != lowerlevel)) {
-          printlnlog("   element {} ion {} targetlevel {} level {}", element, ion, lowerlevel, level);
+          printlnlog("   element {} ion {} lowerlevel {} upperlevel {}", element, ion, lowerlevel, upperlevel);
           printlnlog("   duplicate of lineindex {}", prev_lineindex);
           printlnlog("   A_ul {:g}, coll_str {:g}", transition.A, transition.coll_str);
           printlnlog(
@@ -710,7 +710,7 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion,
         }
 
         auto& downtransition =
-            temp_alltranslist[ion_levels[level].alltrans_startdown + ion_levels[level].ndowntrans - 1];
+            temp_alltranslist[ion_levels[upperlevel].alltrans_startdown + ion_levels[upperlevel].ndowntrans - 1];
 
         assert_always(downtransition.targetlevelindex == lowerlevel);
 
@@ -723,7 +723,7 @@ void add_transitions_to_unsorted_linelist(const int element, const int ion,
         const auto lowerstartup = ion_levels[lowerlevel].alltrans_startup();
         auto& uptransition = temp_alltranslist[lowerstartup + ion_levels[lowerlevel].nuptrans - 1];
 
-        assert_always(uptransition.targetlevelindex == level);
+        assert_always(uptransition.targetlevelindex == upperlevel);
 
         uptransition.einstein_A += transition.A;
         uptransition.osc_strength += f_lu;

@@ -706,9 +706,9 @@ DEVICE_FUNC void update_estimators(const ptrdiff_t nonemptymgi, const double dis
     const int binindex = select_bin(nu_cmf);
 
     if (binindex >= 0) {
-      const auto mgibinindex = (nonemptymgi * RADFIELDBINCOUNT) + binindex;
-      atomicadd(radfieldbins.J_raw[mgibinindex], distance_e_cmf);
-      atomicadd(radfieldbins.nuJ_raw[mgibinindex], distance_e_cmf * nu_cmf);
+      const auto nonemptymgi_binindex = (nonemptymgi * RADFIELDBINCOUNT) + binindex;
+      atomicadd(radfieldbins.J_raw[nonemptymgi_binindex], distance_e_cmf);
+      atomicadd(radfieldbins.nuJ_raw[nonemptymgi_binindex], distance_e_cmf * nu_cmf);
     }
   }
 }
@@ -818,9 +818,9 @@ void fit_parameters(const int nonemptymgi, const int timestep) {
         W_bin = 0.;
       }
 
-      const auto mgibinindex = (static_cast<ptrdiff_t>(nonemptymgi) * RADFIELDBINCOUNT) + binindex;
-      radfieldbin_solutions_T_R[mgibinindex] = T_R_bin;
-      radfieldbin_solutions_W[mgibinindex] = W_bin;
+      const auto nonemptymgi_binindex = (static_cast<ptrdiff_t>(nonemptymgi) * RADFIELDBINCOUNT) + binindex;
+      radfieldbin_solutions_T_R[nonemptymgi_binindex] = T_R_bin;
+      radfieldbin_solutions_W[nonemptymgi_binindex] = W_bin;
     }
 
     if (count_T_R_min > 0 || count_T_R_max > 0) {
@@ -879,8 +879,9 @@ void normalise_bf_estimators(const int nts, const int nts_prev, const double del
           grid::get_modelcell_assocvolume_tmin(mgi) * pow3(globals::timesteps[nts_prev].mid / globals::tmin);
       const double estimator_normfactor = 1 / deltaV / deltat / globals::nprocs;
       for (int i = 0; i < bfestimcount; i++) {
-        const auto mgibfindex = (nonemptymgi * bfestimcount) + i;
-        prev_bfrate_normed[mgibfindex] = static_cast<float>(bfrate_raw[mgibfindex] * (estimator_normfactor / H));
+        const auto nonemptymgi_bfindex = (nonemptymgi * bfestimcount) + i;
+        prev_bfrate_normed[nonemptymgi_bfindex] =
+            static_cast<float>(bfrate_raw[nonemptymgi_bfindex] * (estimator_normfactor / H));
       }
     }
   }
