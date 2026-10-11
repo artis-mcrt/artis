@@ -54,13 +54,13 @@ cd ..
 mpicxx --version
 echo "CPU type: $(c++ -march=native -Q --help=target | grep -- '-march=  ' | cut -f3)"
 
-hoursleft=$(python ./artis/scripts/slurmjobhoursleft.py ${SLURM_JOB_ID})
+hoursleft=$(python3 ./artis/scripts/slurmjobhoursleft.py ${SLURM_JOB_ID})
 source ./artis/scripts/corehours-before.sh
 echo "$(date): before srun sn3d. hours left: $hoursleft"
 time srun --hint=nomultithread -- ./artis/sn3d -w $hoursleft
 srun_status=$?
 
-hoursleftafter=$(python ./artis/scripts/slurmjobhoursleft.py ${SLURM_JOB_ID})
+hoursleftafter=$(python3 ./artis/scripts/slurmjobhoursleft.py ${SLURM_JOB_ID})
 echo "$(date): after srun sn3d finished. hours left: $hoursleftafter"
 source ./artis/scripts/corehours-after.sh
 
