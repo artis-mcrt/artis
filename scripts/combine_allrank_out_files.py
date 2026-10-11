@@ -19,13 +19,20 @@ Do not combine the folder of a job that still runs. The combined file then holds
 The combined file gets the time of the newest file of a rank that the script read. A later write to a file of a rank
 thus makes that file newer, and the readers and this script then take the files of the ranks again.
 
-The script combines the files of one type only when they hold the cells in the order of sn3d. sn3d gives each rank
-a contiguous range of the cells, in the order of the ranks. The estimator files hold each model cell once in each
-timestep, so the cells of a timestep must be 0, 1, 2, ... in the order of the ranks. modelgridrankassignments.out of
-the model folder gives the number of model cells. Without that file, the script cannot find a missing estimator
-file of the last rank. The estimator files of all the ranks must also hold the same timesteps. The nlte and
-radfield files hold only some cells, so their cells must only increase over the ranks. The lines of the macroatom
-files have the order of the events, so the script does not check their cells.
+The script combines the files of one type only when the folder holds the file of each rank that writes one.
+modelgridrankassignments.out of the model folder gives these ranks:
+- each rank with cells writes an estimator file;
+- each rank with a cell that holds matter writes an nlte file and a radfield file;
+- each rank writes a macroatom file.
+sn3d writes modelgridrankassignments.out again at the start of each job. Each job of a simulation has the same number
+of ranks, so the file is correct for each job folder. Without that file, the script cannot find a missing file of a
+rank. An older file without the column ndo_nonempty gives no check of the nlte and radfield files.
+
+The script also checks the order of the cells. sn3d gives each rank a contiguous range of the cells, in the order of
+the ranks. The estimator files hold each model cell once in each timestep, so the cells of a timestep must be 0, 1,
+2, ... in the order of the ranks. The estimator files of all the ranks must also hold the same timesteps. The nlte
+and radfield files hold only some cells, so their cells must only increase over the ranks. The lines of the
+macroatom files have the order of the events, so the script does not check their cells.
 
 Run the script in the model folder, e.g. "uv run artis/scripts/combine_allrank_out_files.py". It then combines the
 files of each job_from_ts* folder. The arguments can also name the folders. The module compression.zstd needs Python
@@ -96,25 +103,39 @@ def open_text(path: Path) -> t.TextIO:
     return path.open(encoding="utf-8")
 
 
-def get_npts_model(modelpath: Path) -> int | None:
-    """Return the number of model cells, or None when the model folder has no modelgridrankassignments.out.
+def get_rank_assignments(modelpath: Path) -> list[tuple[int, ...]] | None:
+    """Return the numbers "rank nstart ndo ndo_nonempty" of each rank, or None without modelgridrankassignments.out.
 
-    sn3d writes this file again at the start of each job, with the line "rank nstart ndo ndo_nonempty" for each rank.
-    A job with a different number of ranks gives other ranks, but the sum of ndo is always the number of model cells.
+    sn3d writes this file again at the start of each job. An older file has no column ndo_nonempty.
     """
     for extension in RANKFILE_EXTENSIONS:
         path = modelpath / f"modelgridrankassignments.out{extension}"
         if path.is_file():
             try:
                 with open_text(path) as assignmentfile:
-                    return sum(
-                        int(columns[2])
-                        for columns in (line.split() for line in assignmentfile if not line.startswith("#"))
-                        if len(columns) >= 3
-                    )
+                    return [
+                        tuple(int(value) for value in line.split())
+                        for line in assignmentfile
+                        if line.strip() and not line.startswith("#")
+                    ]
             except COMPRESSION_ERRORS as err:
                 msg = f"{path}: the compressed file is not complete: {err}"
                 raise ValueError(msg) from err
+    return None
+
+
+def get_ranks_that_write(assignments: list[tuple[int, ...]], basename: str) -> set[int] | None:
+    """Return the ranks that write a file of the type, or None when the assignments do not tell it.
+
+    sn3d opens the estimator file of a rank with cells, the nlte and radfield files of a rank with a cell that holds
+    matter, and the macroatom file of each rank.
+    """
+    if basename == "macroatom":
+        return {assignment[0] for assignment in assignments}
+    if basename == "estimators":
+        return {assignment[0] for assignment in assignments if assignment[2] > 0}
+    if all(len(assignment) >= 4 for assignment in assignments):
+        return {assignment[0] for assignment in assignments if assignment[3] > 0}
     return None
 
 
@@ -251,9 +272,21 @@ def combine_files(folder: Path, basename: str) -> list[Path]:
         raise ValueError(msg)
     header = headers.pop()
 
-    # artistools uses a newer combined estimator file instead of the files of the ranks. That file must thus hold
-    # each model cell once in each timestep, and no cell of a stale file of a rank that the job did not have
-    npts_model = get_npts_model(folder.resolve().parent) if basename == "estimators" else None
+    # artistools uses a newer combined file instead of the files of the ranks. That file must thus hold the text of each
+    # rank that writes one, and the estimator file must hold each model cell once in each timestep
+    assignments = get_rank_assignments(folder.resolve().parent)
+    ranks_that_write = get_ranks_that_write(assignments, basename) if assignments is not None else None
+    if ranks_that_write is not None and (missingranks := sorted(ranks_that_write - rankfiles.keys())):
+        msg = (
+            f"The {basename} files of the ranks {missingranks} are missing. modelgridrankassignments.out of the"
+            " model folder shows that these ranks write one."
+        )
+        raise ValueError(msg)
+    npts_model = (
+        sum(assignment[2] for assignment in assignments)
+        if assignments is not None and basename == "estimators"
+        else None
+    )
 
     # sn3d can add a timestep to the files of the ranks while the script runs, e.g. during the join below. The time of
     # the text before the read goes to the combined file, thus such a write makes a file of a rank newer than it
