@@ -792,14 +792,7 @@ auto do_timestep(const int nts, std::vector<Packet>& packets, const int walltime
 
   // Update the matter quantities in the grid for the new timestep.
 
-  update_grid(estimators_file.stream(), nts, nts_prev, real_time_start);
-  const auto time_write_grid_files_start = std::chrono::steady_clock::now();
-  estimators_file.end_timestep();
-  nltepop_end_timestep_file();
-  radfield::end_timestep_file();
-  // with WRITE_COMBINED_ALLRANK_OUT_FILES, the other ranks return after their own send, before rank 0 writes the files
-  printlnlog("timestep {}: time after the write of the estimators, nlte, and radfield files (took {:.1f} seconds)", nts,
-             std::chrono::duration<double>(std::chrono::steady_clock::now() - time_write_grid_files_start).count());
+  update_grid(estimators_file, nts, nts_prev, real_time_start);
 
   const auto sys_time_start_communicate_grid = std::chrono::steady_clock::now();
 
@@ -828,7 +821,7 @@ auto do_timestep(const int nts, std::vector<Packet>& packets, const int walltime
     // Now process the packets.
 
     update_packets(nts, packets);
-    macroatom_end_timestep_file();
+    macroatom_write_timestep_text();
 
     // All the processes have their own versions of the estimators for this timestep now.
     // Since these are going to be needed in the next timestep, we will gather all the
@@ -933,7 +926,7 @@ void setup_jobfolder() {
 
     // clear out per-rank output files (and any leftover log symlink) from a previous run of this folder, so
     // that e.g. a rerun with fewer ranks does not leave a mixture of new estimator files and stale ones from
-    // ranks that no longer exist. The loop also removes the files of all ranks, e.g. estimators_allranks.out, and the
+    // ranks that no longer exist. The loop also removes the combined files, e.g. estimators_allranks.out, and the
     // parquet caches that artistools makes from the estimator files, so that no stale copy stays beside the new
     // files. The loop removes only exact matches of these filenames.
     for (const auto& entry : std::filesystem::directory_iterator(globals::jobfolder, ec)) {

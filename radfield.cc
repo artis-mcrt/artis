@@ -756,7 +756,7 @@ DEVICE_FUNC auto radfield(const double nu, const int nonemptymgi) -> double {
   return grid::W_allcells[nonemptymgi] * planck(nu, grid::TR_allcells[nonemptymgi]);
 }
 
-void end_timestep_file() { radfieldfile.end_timestep(); }
+void write_timestep_text() { radfieldfile.write_timestep_text(); }
 
 // Fit the radiation field parameters of one cell to the estimators accumulated over the last timestep:
 // the full-spectrum diluted blackbody (W, T_R), and with MULTIBIN_RADFIELD_MODEL_ON a separate (W, T_R)

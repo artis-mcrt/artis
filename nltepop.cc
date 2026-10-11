@@ -1973,7 +1973,7 @@ void nltepop_write_to_file(const int nonemptymgi, const int timestep) {
   }
 }
 
-void nltepop_end_timestep_file() { nlte_file.end_timestep(); }
+void nltepop_write_timestep_text() { nlte_file.write_timestep_text(); }
 
 // Scale the level populations of every ion of the element, so that each ion of ion_factors takes its
 // factor and the element keeps its abundance population. Each ion keeps its internal level

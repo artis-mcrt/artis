@@ -144,12 +144,12 @@ jobs:
               working-directory: tests/
               run: cp -a ${{ matrix.testname }}_testrun ${{ matrix.testname }}_onejob
 
-            - name: Compile sn3d with the output files of all ranks for the run in one job
+            - name: Compile sn3d with the combined output files for the run in one job
               if: matrix.testname == 'nebular_1d_3dgrid' && inputs.testmode != 'ON'
               run: |
                   # The simulation in one job writes estimators_allranks.out, nlte_allranks.out, and radfield_allranks.out.
-                  # The comparison step below compares them with the combined files of the ranks of the two jobs. The
-                  # other output files must not change.
+                  # The comparison step below compares them with the combined files that the script makes for the two
+                  # jobs. The other output files must not change.
                   (cd tests/${{ matrix.testname }}_onejob && source ../setupfuncs.sh && sedopt 'constexpr bool WRITE_COMBINED_ALLRANK_OUT_FILES.*' 'constexpr bool WRITE_COMBINED_ALLRANK_OUT_FILES = true;' && rm -f artisoptions.h.bak)
                   cp tests/${{ matrix.testname }}_onejob/artisoptions.h .
                   make REPRODUCIBLE=ON ZSTD=ON TESTMODE=${{ inputs.testmode }} MAX_NODE_SIZE=2 FASTMATH=OFF -j${{ steps.cpu-count.outputs.count }} sn3d
@@ -331,17 +331,19 @@ jobs:
                   for jobfolder in job_from_ts0000 "$lastjobfolder"; do
                       cp -a "../${{ matrix.testname }}_testrun/${jobfolder}" "$RUNNER_TEMP/"
                   done
+                  # the script needs modelgridrankassignments.out of the model folder to find a missing file of a rank
+                  cp "../${{ matrix.testname }}_testrun/modelgridrankassignments.out.zst" "$RUNNER_TEMP/"
                   uv run ../../scripts/combine_allrank_out_files.py "$RUNNER_TEMP/job_from_ts0000" "$RUNNER_TEMP/${lastjobfolder}"
                   # A cell of the estimators starts with the line "timestep <n> modelgridindex <mgi>". Each line of the
                   # nlte and radfield files starts with "<n> <mgi>", after the header line.
                   for basename in estimators nlte radfield; do
                       if [ "$basename" = estimators ]; then
-                          laterjobfilter='/^timestep /{keep = ($2 > ts)} keep'
+                          later_job_filter='/^timestep /{keep = ($2 > ts)} keep'
                       else
-                          laterjobfilter='NR > 1 && $1 > ts'
+                          later_job_filter='NR > 1 && $1 > ts'
                       fi
                       (zstdcat "$RUNNER_TEMP/job_from_ts0000/${basename}_allranks.out.zst"
-                       zstdcat "$RUNNER_TEMP/${lastjobfolder}/${basename}_allranks.out.zst" | awk -v ts="$restarttimestep" "$laterjobfilter") > "$RUNNER_TEMP/${basename}_twojobs.txt"
+                       zstdcat "$RUNNER_TEMP/${lastjobfolder}/${basename}_allranks.out.zst" | awk -v ts="$restarttimestep" "$later_job_filter") > "$RUNNER_TEMP/${basename}_twojobs.txt"
                       zstdcat "job_from_ts0000/${basename}_allranks.out.zst" > "$RUNNER_TEMP/${basename}_onejob.txt"
                       test -s "$RUNNER_TEMP/${basename}_onejob.txt"
                       cmp "$RUNNER_TEMP/${basename}_twojobs.txt" "$RUNNER_TEMP/${basename}_onejob.txt"

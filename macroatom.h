@@ -9,7 +9,7 @@
 #include "packet.h"
 
 void macroatom_open_file();
-void macroatom_end_timestep_file();
+void macroatom_write_timestep_text();
 
 // Follow an activated macro-atom through stochastic internal energy-flow transitions until it deactivates as an
 // r-packet or k-packet. Actions are selected in proportion to the local radiative, collisional, and non-thermal rates.

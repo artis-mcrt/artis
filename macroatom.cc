@@ -601,7 +601,7 @@ void macroatom_open_file() {
                       " nu_cmf_in nu_cmf_out nu_rf_in nu_rf_out\n");
 }
 
-void macroatom_end_timestep_file() { macroatom_file.end_timestep(); }
+void macroatom_write_timestep_text() { macroatom_file.write_timestep_text(); }
 
 // The rate coefficients that follow are documented on their declarations in macroatom.h.
 [[gnu::pure]] [[nodiscard]] auto rad_excitation_ratecoeff(const int nonemptymgi, const double upper_statweight,

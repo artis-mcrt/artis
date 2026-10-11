@@ -638,6 +638,7 @@ inline void MPI_Reduce_safe(R&& data, MPI_Op op, const int root, MPI_Comm comm) 
 // the basenames of the output files of the ranks in the job folder, e.g. estimators_0000.out and
 // estimators_allranks.out
 constexpr std::array<std::string_view, 4> JOBFOLDER_OUTFILE_BASENAMES{"estimators", "nlte", "radfield", "macroatom"};
+constexpr std::string_view ALLRANKS_OUTFILE_SUFFIX = "_allranks.out";
 
 // exactly match the generated per-rank output filenames: output_<rank>-<thread>.txt and the
 // estimators/nlte/radfield/macroatom _<rank>.out files, with or without a compression extension. sn3d
@@ -672,7 +673,7 @@ constexpr std::array<std::string_view, 4> JOBFOLDER_OUTFILE_BASENAMES{"estimator
   return false;
 }
 
-// Exactly match an output file of all ranks, e.g. estimators_allranks.out, with or without a compression extension.
+// Exactly match a combined output file, e.g. estimators_allranks.out, with or without a compression extension.
 // Also match the parquet caches that artistools makes from the estimator files. The caches are
 // estimators_allranks.out.parquet and the batch caches of an earlier artistools version, e.g.
 // estimbatch00_0000_0099.out.parquet.tmp.
@@ -681,10 +682,9 @@ constexpr std::array<std::string_view, 4> JOBFOLDER_OUTFILE_BASENAMES{"estimator
     return !str.empty() && std::ranges::all_of(str, [](const char c) { return c >= '0' && c <= '9'; });
   };
 
-  constexpr std::string_view allranks_suffix = "_allranks.out";
   for (const auto basename : JOBFOLDER_OUTFILE_BASENAMES) {
-    if (filename.starts_with(basename) && filename.substr(basename.size()).starts_with(allranks_suffix)) {
-      const auto extension = filename.substr(basename.size() + allranks_suffix.size());
+    if (filename.starts_with(basename) && filename.substr(basename.size()).starts_with(ALLRANKS_OUTFILE_SUFFIX)) {
+      const auto extension = filename.substr(basename.size() + ALLRANKS_OUTFILE_SUFFIX.size());
       return std::ranges::contains(std::array<std::string_view, 5>{"", ".zst", ".gz", ".xz", ".parquet"}, extension);
     }
   }

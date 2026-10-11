@@ -225,7 +225,8 @@ inline void remove_other_output_form(const std::string_view filename) {
   std::filesystem::remove(otherpath, ec);
 }
 
-// open an output file that stays plain in every build, e.g. input.txt, a log, or a restart file
+// open an output file without compression of the stream, e.g. input.txt, a log, a restart file, or a combined
+// file whose writer compresses each frame itself
 [[nodiscard]] inline auto open_uncompressed_output_file(const std::string_view filename) -> OutputFileStream {
   if (filename.empty()) {
     fatal_crash("Cannot open file with empty filename.");
@@ -259,12 +260,6 @@ inline void remove_other_output_form(const std::string_view filename) {
 #endif
 }
 
-// open a per-rank output file such as estimators_0000.out in the job folder. The file stays open over
-// the timesteps.
-[[nodiscard]] inline auto open_rank_outfile(const std::string_view basename) -> OutputFileStream {
-  return open_output_file(get_jobfolder_filepath(std::format("{}_{:04d}.out", basename, globals::my_rank)));
-}
-
 #ifdef USE_ZSTD
 // Compress the text into one zstd frame with a checksum. zstd decompresses a sequence of frames into the
 // sequence of their texts, so a file can hold the frames of many writers one after the other.
@@ -288,87 +283,90 @@ inline void remove_other_output_form(const std::string_view filename) {
 
 // An output file of the job folder for the text of the ranks, e.g. the estimators. Without the option
 // WRITE_COMBINED_ALLRANK_OUT_FILES, each rank writes its own file <basename>_<rank>.out. With the option, each rank
-// writes into its own text buffer. At the end of each timestep, rank 0 then writes the texts of all ranks into one file
+// writes into its own text buffer, and rank 0 then writes the texts of all ranks into the combined file
 // <basename>_allranks.out, in the order of the ranks. In a build with libzstd, each rank compresses its own text into
 // one zstd frame before the send, so all ranks share the compression. Rank 0 keeps the text of only one other rank at a
 // time.
 class JobFolderOutputFile {
  public:
-  // Every rank must call this function. rank_has_text tells if this rank writes text into the file. The header starts
-  // the file of each rank, or the file of all ranks.
+  // Call this function on every rank. rank_has_text tells if this rank writes text into the file. The header starts
+  // the file of each rank, or the combined file.
   void open(const std::string_view basename, const bool rank_has_text, const std::string_view header) {
-    is_open = true;
+    assert_always(!opened_on_every_rank);
+    opened_on_every_rank = true;
     if constexpr (!WRITE_COMBINED_ALLRANK_OUT_FILES) {
       if (rank_has_text) {
-        assert_always(rankfile.rdbuf() == nullptr);
-        rankfile = open_rank_outfile(basename);
-        rankfile << header;
+        const auto filename = get_jobfolder_filepath(std::format("{}_{:04d}.out", basename, globals::my_rank));
+        file_path = output_filepath(filename);
+        file = open_output_file(filename);
+        // the frame of the header is then complete, also when the job stops before its first timestep
+        file << header << std::flush;
       }
       return;
     }
 
+    const auto filename = get_jobfolder_filepath(std::format("{}{}", basename, ALLRANKS_OUTFILE_SUFFIX));
+    file_path = output_filepath(filename);
     if (globals::my_rank != 0) {
       return;
     }
-    const auto filename = get_jobfolder_filepath(std::format("{}_allranks.out", basename));
     remove_other_output_form(filename);
-    const auto filepath = output_filepath(filename);
-    allranksfile.open(filepath, std::ios::out | std::ios::trunc | std::ios::binary);
-    if (!allranksfile.is_open()) {
-      fatal_crash("Could not open the output file '{}'", filepath);
-    }
+    file = open_uncompressed_output_file(file_path);
 #ifdef USE_ZSTD
     // The file starts with the frame of the header. Without a header, this is an empty frame, as
     // ZstdOutputBuffer::close() writes to a file with no content. A job that stops before its first write thus leaves a
     // file that every zstd reader accepts.
-    const auto headerbytes = compress_to_zstd_frame(header, ZSTD_LEVEL_DEFAULT);
+    const auto header_bytes = compress_to_zstd_frame(header, ZSTD_LEVEL_DEFAULT);
 #else
-    const auto& headerbytes = header;
+    const auto& header_bytes = header;
 #endif
-    allranksfile.write(headerbytes.data(), static_cast<std::streamsize>(headerbytes.size()));
-    allranksfile.flush();
-    if (allranksfile.fail()) {
-      fatal_crash("Could not write to the output file '{}'", filepath);
+    file.write(header_bytes.data(), static_cast<std::streamsize>(header_bytes.size()));
+    if (!file.flush()) {
+      fatal_crash("Could not write to the output file '{}'", file_path);
     }
   }
 
   [[nodiscard]] auto stream() -> std::ostream& {
     if constexpr (WRITE_COMBINED_ALLRANK_OUT_FILES) {
-      return ranktext;
+      return rank_text;
     }
-    return rankfile;
+    return file;
   }
 
-  // Put the text of the timestep into the file. Every rank must call this function, because with the option
-  // WRITE_COMBINED_ALLRANK_OUT_FILES, each rank sends its text to rank 0.
-  void end_timestep() {
+  // Write the text of the timestep to the file. Call this function on every rank. With the option
+  // WRITE_COMBINED_ALLRANK_OUT_FILES, the call is collective, because each rank sends its text to rank 0.
+  void write_timestep_text() {
     if constexpr (!WRITE_COMBINED_ALLRANK_OUT_FILES) {
-      // one flush per timestep, so each compressed file ends a frame that a reader can decode
-      rankfile.flush();
+      // one flush per timestep, so each compressed file ends a frame that a reader can decode. A rank without text has
+      // no file
+      if (file.rdbuf() != nullptr && !file.flush()) {
+        fatal_crash("Could not write to the output file '{}'", file_path);
+      }
       return;
     }
-    // open() runs on every rank, so all ranks have the same value
-    if (is_open) {
+    // open() runs on every rank or on none, so every rank or no rank takes part in the collective write
+    if (opened_on_every_rank) {
       write_all_ranks();
     }
   }
 
  private:
-  // Write the text of all ranks to the file and clear the buffer of each rank. Every rank must call this function.
+  // Write the text of all ranks to the combined file and clear the buffer of each rank. Call this function on every
+  // rank.
   void write_all_ranks() {
     // std::print does not throw, e.g. when the buffer cannot grow. It sets the bad state, and the text is then not
     // complete.
-    if (ranktext.fail()) {
-      fatal_crash("A write to the text buffer of rank {} failed", globals::my_rank);
+    if (rank_text.fail()) {
+      fatal_crash("A write to the text buffer of rank {} for '{}' failed", globals::my_rank, file_path);
     }
 #ifdef USE_ZSTD
     auto rankbytes =
-        ranktext.view().empty() ? std::string{} : compress_to_zstd_frame(ranktext.view(), ZSTD_LEVEL_DEFAULT);
+        rank_text.view().empty() ? std::string{} : compress_to_zstd_frame(rank_text.view(), ZSTD_LEVEL_DEFAULT);
 #else
-    auto rankbytes = std::string(ranktext.view());
+    auto rankbytes = std::string(rank_text.view());
 #endif
-    ranktext.str({});
-    ranktext.clear();
+    rank_text.str({});
+    rank_text.clear();
 
     const auto rankbytecount = static_cast<std::int64_t>(rankbytes.size());
     std::vector<std::int64_t> bytecount_of_rank(globals::my_rank == 0 ? globals::nprocs : 0);
@@ -382,16 +380,15 @@ class JobFolderOutputFile {
       return;
     }
 
-    allranksfile.write(rankbytes.data(), static_cast<std::streamsize>(rankbytes.size()));
+    file.write(rankbytes.data(), static_cast<std::streamsize>(rankbytes.size()));
     std::string receivedbytes;
     for (int rank = 1; rank < globals::nprocs; rank++) {
       receivedbytes.resize(static_cast<size_t>(bytecount_of_rank[static_cast<size_t>(rank)]));
       transfer_bytes(std::span<char>{receivedbytes}, rank, true);
-      allranksfile.write(receivedbytes.data(), static_cast<std::streamsize>(receivedbytes.size()));
+      file.write(receivedbytes.data(), static_cast<std::streamsize>(receivedbytes.size()));
     }
-    allranksfile.flush();
-    if (allranksfile.fail()) {
-      fatal_crash("Could not write to the output file of all ranks");
+    if (!file.flush()) {
+      fatal_crash("Could not write to the output file '{}'", file_path);
     }
   }
 
@@ -413,12 +410,13 @@ class JobFolderOutputFile {
     }
   }
 
-  bool is_open{false};
-  // the file of this rank, without WRITE_COMBINED_ALLRANK_OUT_FILES
-  OutputFileStream rankfile;
-  // the text buffer of this rank and the file of all ranks on rank 0, with WRITE_COMBINED_ALLRANK_OUT_FILES
-  std::ostringstream ranktext;
-  std::ofstream allranksfile;
+  // open() ran on every rank, which the collective write needs
+  bool opened_on_every_rank{false};
+  // the file of this rank without WRITE_COMBINED_ALLRANK_OUT_FILES, or the combined file on rank 0 with the option
+  std::string file_path;
+  OutputFileStream file;
+  // the text of this rank in the timestep, with WRITE_COMBINED_ALLRANK_OUT_FILES
+  std::ostringstream rank_text;
 };
 
 #endif  // OUTPUTFILESTREAM_H

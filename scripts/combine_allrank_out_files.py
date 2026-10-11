@@ -2,22 +2,28 @@
 # /// script
 # requires-python = ">=3.14"
 # ///
-"""Combine the output files of the ranks in each job folder into one file of all ranks for each type of file.
+"""Combine the output files of the ranks in each job folder into one combined file for each type.
 
-The types are estimators, nlte, radfield, and macroatom. For example, the script combines nlte_0000.out,
-nlte_0001.out, ... into nlte_allranks.out.zst. sn3d writes the same files with WRITE_COMBINED_ALLRANK_OUT_FILES.
-A file of all ranks holds the header line of its type, then the timesteps in their order, and in each timestep the
-text of the ranks in their order. The estimator files have no header line. Each text of one rank and one timestep
-is one zstd frame, and the header line is the first frame, as sn3d writes it. Without a header, the first frame is
-empty.
+The script combines the files of the ranks of these types, e.g. nlte_0000.out, nlte_0001.out, ... into
+nlte_allranks.out.zst:
+- estimators;
+- nlte;
+- radfield;
+- macroatom.
 
-As zstd does with its source files, the script keeps the files of the ranks by default. With --rm, it removes the
-files of the ranks of one type after a successful combination, i.e. when the combined file of that type is complete
-and current. A type with an error keeps its files of the ranks.
+sn3d writes the same combined files with WRITE_COMBINED_ALLRANK_OUT_FILES. A combined file holds the header line of its
+type and then the timesteps in their order. Each timestep holds the text of the ranks in their order. The estimator
+files have no header line. Each text of one rank and one timestep is one zstd frame. The header line is the first frame,
+as sn3d writes it, and without a header the first frame is empty.
+
+As zstd does with its source files, the script keeps the files of the ranks by default. With --rm, the script combines
+the files again, and then removes the files of the ranks of each type with a successful combination. --rm needs
+modelgridrankassignments.out, because only that file shows that the folder holds the file of each rank. A type with an
+error keeps its files of the ranks.
 
 Do not combine the folder of a job that still runs. The combined file then holds only the timesteps up to that time.
 The combined file gets the time of the newest file of a rank that the script read. A later write to a file of a rank
-thus makes that file newer, and the readers and this script then take the files of the ranks again.
+thus makes that file newer. The readers and this script then take the files of the ranks again.
 
 The script combines the files of one type only when the folder holds the file of each rank that writes one.
 modelgridrankassignments.out of the model folder gives these ranks:
@@ -30,9 +36,11 @@ rank. An older file without the column ndo_nonempty gives no check of the nlte a
 
 The script also checks the order of the cells. sn3d gives each rank a contiguous range of the cells, in the order of
 the ranks. The estimator files hold each model cell once in each timestep, so the cells of a timestep must be 0, 1,
-2, ... in the order of the ranks. The estimator files of all the ranks must also hold the same timesteps. The nlte
-and radfield files hold only some cells, so their cells must only increase over the ranks. The lines of the
-macroatom files have the order of the events, so the script does not check their cells.
+2, ... in the order of the ranks. The estimator files of the ranks must also hold the same timesteps.
+
+The nlte and radfield files hold only some cells, and a rank can write its radfield cells in the order of its OpenMP
+threads. Thus each cell of these files must only come after the cells of the lower ranks. The lines of the macroatom
+files have the order of the events, so the script does not check their cells.
 
 Run the script in the model folder, e.g. "uv run artis/scripts/combine_allrank_out_files.py". It then combines the
 files of each job_from_ts* folder. The arguments can also name the folders. The module compression.zstd needs Python
@@ -40,14 +48,16 @@ files of each job_from_ts* folder. The arguments can also name the folders. The 
 """
 
 import argparse
+import contextlib
 import gzip
 import lzma
 import os
 import re
-import shutil
+import signal
 import sys
 import tempfile
 import typing as t
+import zlib
 from collections.abc import Iterator
 from pathlib import Path
 
@@ -66,8 +76,8 @@ ZSTD_OPTIONS = {zstd.CompressionParameter.compression_level: ZSTD_LEVEL, zstd.Co
 # the types of the output files of the ranks (JOBFOLDER_OUTFILE_BASENAMES in mpi_logging.h)
 BASENAMES = ("estimators", "nlte", "radfield", "macroatom")
 
-# the errors of a compressed file that ends inside a frame, e.g. because a job stopped during a write
-COMPRESSION_ERRORS = (EOFError, zstd.ZstdError, lzma.LZMAError, gzip.BadGzipFile)
+# the errors of a compressed file that is damaged or ends inside a frame, e.g. because a job stopped during a write
+COMPRESSION_ERRORS = (EOFError, zlib.error, zstd.ZstdError, lzma.LZMAError, gzip.BadGzipFile)
 
 # the order of the extensions that the readers use, e.g. find_estimator_file() of artistools
 RANKFILE_EXTENSIONS = ("", ".zst", ".gz", ".xz")
@@ -75,32 +85,34 @@ RANKFILE_EXTENSIONS = ("", ".zst", ".gz", ".xz")
 
 def get_rank_files(folder: Path, basename: str) -> dict[int, Path]:
     """Return the file of each rank in the folder for one type. A rank without text has no file."""
+    names = {path.name for path in folder.glob(f"{basename}_*.out*")}
     ranks = sorted(
         {
             int(match.group(1))
-            for path in folder.glob(f"{basename}_*.out*")
-            if (match := re.fullmatch(rf"{basename}_(\d+)\.out(?:\.zst|\.gz|\.xz)?", path.name))
+            for name in names
+            if (match := re.fullmatch(rf"{basename}_(\d+)\.out(?:\.zst|\.gz|\.xz)?", name))
         }
     )
     rankfiles: dict[int, Path] = {}
     for rank in ranks:
         for extension in RANKFILE_EXTENSIONS:
-            path = folder / f"{basename}_{rank:04d}.out{extension}"
-            if path.is_file():
-                rankfiles[rank] = path
+            if (name := f"{basename}_{rank:04d}.out{extension}") in names:
+                rankfiles[rank] = folder / name
                 break
     return rankfiles
 
 
-def open_text(path: Path) -> t.TextIO:
-    """Open a text file that is plain or compressed."""
-    if path.suffix == ".zst":
-        return zstd.open(path, "rt", encoding="utf-8")
-    if path.suffix == ".gz":
-        return gzip.open(path, "rt", encoding="utf-8")
-    if path.suffix == ".xz":
-        return lzma.open(path, "rt", encoding="utf-8")
-    return path.open(encoding="utf-8")
+@contextlib.contextmanager
+def open_text(path: Path) -> Iterator[t.TextIO]:
+    """Open a text file that is plain or compressed. A compressed file that is damaged or cut gives a ValueError."""
+    opener = {".zst": zstd.open, ".gz": gzip.open, ".xz": lzma.open}.get(path.suffix, open)
+    with opener(path, "rt", encoding="utf-8") as textfile:
+        try:
+            yield textfile
+        except COMPRESSION_ERRORS as err:
+            # e.g. a job that stopped during a write leaves a file that ends inside a compressed frame
+            msg = f"{path}: the compressed file is damaged or not complete: {err}"
+            raise ValueError(msg) from err
 
 
 def get_rank_assignments(modelpath: Path) -> list[tuple[int, ...]] | None:
@@ -111,16 +123,12 @@ def get_rank_assignments(modelpath: Path) -> list[tuple[int, ...]] | None:
     for extension in RANKFILE_EXTENSIONS:
         path = modelpath / f"modelgridrankassignments.out{extension}"
         if path.is_file():
-            try:
-                with open_text(path) as assignmentfile:
-                    return [
-                        tuple(int(value) for value in line.split())
-                        for line in assignmentfile
-                        if line.strip() and not line.startswith("#")
-                    ]
-            except COMPRESSION_ERRORS as err:
-                msg = f"{path}: the compressed file is not complete: {err}"
-                raise ValueError(msg) from err
+            with open_text(path) as assignments_file:
+                return [
+                    tuple(int(value) for value in line.split())
+                    for line in assignments_file
+                    if line.strip() and not line.startswith("#")
+                ]
     return None
 
 
@@ -139,146 +147,136 @@ def get_ranks_that_write(assignments: list[tuple[int, ...]], basename: str) -> s
     return None
 
 
-def get_header(path: Path, basename: str) -> str:
-    """Return the header line of a file of a rank, with its newline. The estimator files have no header line."""
+def read_header(textfile: t.TextIO, path: Path, basename: str) -> str:
+    """Read the header line of a file of a rank, with its newline. The estimator files have no header line."""
     if basename == "estimators":
         return ""
-    try:
-        with open_text(path) as rankfile:
-            header = rankfile.readline()
-    except COMPRESSION_ERRORS as err:
-        msg = f"{path}: the compressed file is not complete: {err}"
-        raise ValueError(msg) from err
+    header = textfile.readline()
     if not header.startswith("timestep modelgridindex ") or not header.endswith("\n"):
         msg = f"{path}: the first line is not the header line: {header!r}"
         raise ValueError(msg)
     return header
 
 
-def get_timestep_and_cell(line: str, path: Path, basename: str) -> tuple[int, int]:
-    """Return the timestep and the model cell of a line.
+def get_timestep_and_cell(line: str, path: Path, basename: str, ncolumns: int) -> tuple[int, int] | None:
+    """Return the timestep and the model cell of a line, or None for an estimator line that continues a cell.
 
     An estimator line that starts a cell is "timestep <n> modelgridindex <mgi> ...". Each line of the other types
-    starts with "<n> <mgi>".
+    starts with "<n> <mgi>" and has the columns of the header line.
     """
-    columns = line.split()
+    if basename == "estimators":
+        if not line.startswith("timestep "):
+            return None
+        # the values after the words "timestep" and "modelgridindex"
+        values = line.split(maxsplit=4)[1:4:2]
+    else:
+        values = line.split()
+        # a cut line, e.g. of a job that stopped during a write, has fewer columns than the header line
+        if len(values) != ncolumns or not line.endswith("\n"):
+            msg = f"{path}: the line does not have the {ncolumns} columns of the header line: {line!r}"
+            raise ValueError(msg)
     try:
-        if basename == "estimators":
-            return int(columns[1]), int(columns[3])
-        return int(columns[0]), int(columns[1])
+        return int(values[0]), int(values[1])
     except (IndexError, ValueError) as err:
-        # e.g. a job that stopped during a write leaves a cut line at the end of the file
         msg = f"{path}: the line is not complete: {line!r}"
         raise ValueError(msg) from err
 
 
-def get_line_timestep(line: str, path: Path, basename: str, ncolumns: int) -> int | None:
-    """Return the timestep of a line, or None for an estimator line that continues a cell."""
-    if basename == "estimators":
-        return get_timestep_and_cell(line, path, basename)[0] if line.startswith("timestep ") else None
-    # each line has the columns of the header line, thus a line with other columns is a cut line
-    if not line.endswith("\n") or len(line.split()) != ncolumns:
-        msg = f"{path}: the line does not have the {ncolumns} columns of the header line: {line!r}"
-        raise ValueError(msg)
-    return get_timestep_and_cell(line, path, basename)[0]
-
-
-def get_timestep_texts(path: Path, basename: str, header: str) -> Iterator[tuple[int, str]]:
-    """Give the text of each timestep of a file of a rank, in the order of the file.
+def get_timestep_texts(
+    textfile: t.TextIO, path: Path, basename: str, ncolumns: int
+) -> Iterator[tuple[int, str, list[int]]]:
+    """Give the text of each timestep of a file of a rank, in the order of the file, and the cells of the text.
 
     The text of a timestep continues to the first line of the next timestep. The text of an estimator timestep thus
-    holds the empty line after each cell.
+    holds the empty line after each cell. The cells hold the cell of each line that names one.
     """
-    ncolumns = len(header.split())
     timestep: int | None = None
     lines: list[str] = []
-    try:
-        with open_text(path) as rankfile:
-            if header:
-                rankfile.readline()
-            for line in rankfile:
-                linetimestep = get_line_timestep(line, path, basename, ncolumns)
-                if linetimestep is not None and linetimestep != timestep:
-                    if timestep is not None:
-                        yield timestep, "".join(lines)
-                    timestep = linetimestep
-                    lines = []
-                elif timestep is None and line.strip():
-                    msg = f"{path}: the first line with content is not a timestep line: {line!r}"
-                    raise ValueError(msg)
-                lines.append(line)
-    except COMPRESSION_ERRORS as err:
-        # e.g. a job that stopped during a write leaves a file that ends inside a compressed frame
-        msg = f"{path}: the compressed file is not complete: {err}"
-        raise ValueError(msg) from err
+    cells: list[int] = []
+    for line in textfile:
+        timestep_and_cell = get_timestep_and_cell(line, path, basename, ncolumns)
+        if timestep_and_cell is not None:
+            line_timestep, cell = timestep_and_cell
+            if line_timestep != timestep:
+                if timestep is not None:
+                    yield timestep, "".join(lines), cells
+                timestep = line_timestep
+                lines = []
+                cells = []
+            cells.append(cell)
+        elif timestep is None and line.strip():
+            msg = f"{path}: the first line with content is not a timestep line: {line!r}"
+            raise ValueError(msg)
+        lines.append(line)
     if timestep is not None:
-        yield timestep, "".join(lines)
+        yield timestep, "".join(lines), cells
 
 
 def check_cell_order(
-    text: str, timestep: int, path: Path, basename: str, last_cell_of_timestep: dict[int, int]
+    cells: list[int], timestep: int, path: Path, basename: str, highest_cell_of_timestep: dict[int, int]
 ) -> None:
-    """Check that the text of one rank and one timestep continues the cells of the lower ranks in the order of sn3d.
+    """Check that the cells of one rank and one timestep come after the cells of the lower ranks, as sn3d writes them.
 
-    last_cell_of_timestep holds the last cell of each timestep in the files of the lower ranks.
+    highest_cell_of_timestep holds the highest cell of each timestep in the files of the lower ranks.
     """
     if basename == "macroatom":
         return
-    last_cell_of_lower_ranks = last_cell_of_timestep.get(timestep, -1)
-    previous_cell = last_cell_of_lower_ranks
-    for line in text.splitlines():
-        if basename == "estimators" and not line.startswith("timestep "):
-            continue
-        _, cell = get_timestep_and_cell(line, path, basename)
-        if basename == "estimators":
-            # each cell once, in the order of the cells
-            cell_in_order = cell == previous_cell + 1
-        else:
-            # the lines of a cell together, in the order of the cells
-            cell_in_order = cell > last_cell_of_lower_ranks and cell >= previous_cell
+    highest_cell_of_lower_ranks = highest_cell_of_timestep.get(timestep, -1)
+    previous_cell = highest_cell_of_lower_ranks
+    for cell in cells:
+        # each estimator cell once, in the order of the cells. A rank can write its nlte and radfield cells in any order
+        cell_in_order = cell == previous_cell + 1 if basename == "estimators" else cell > highest_cell_of_lower_ranks
         if not cell_in_order:
             msg = (
-                f"{path}: timestep {timestep} holds cell {cell} after cell {previous_cell}, which is not the order of"
-                " sn3d. A file of a rank is missing or stale."
+                f"{path}: timestep {timestep} holds cell {cell} after cell {previous_cell}, and the lower ranks end at"
+                f" cell {highest_cell_of_lower_ranks}. This is not the order of sn3d. A file of a rank is missing or"
+                " stale."
             )
             raise ValueError(msg)
         previous_cell = cell
-    last_cell_of_timestep[timestep] = previous_cell
+    highest_cell_of_timestep[timestep] = max(cells)
 
 
-def combine_files(folder: Path, basename: str) -> list[Path]:
-    """Write the combined file of one type in one folder, and return the files of the ranks that it holds."""
-    rankfiles = get_rank_files(folder, basename)
+def combine_files(
+    folder: Path,
+    basename: str,
+    rankfiles: dict[int, Path],
+    assignments: list[tuple[int, ...]] | None,
+    before_removal: bool,
+) -> Path:
+    """Write the combined file of one type in one folder, and return its path.
+
+    The caller removes the files of the ranks after a call with before_removal. The function then combines the files
+    also when the combined file is current, and it needs the rank assignments to find a missing file of a rank.
+    """
+    ranks_that_write = get_ranks_that_write(assignments, basename) if assignments is not None else None
+    if before_removal and ranks_that_write is None:
+        msg = (
+            "--rm needs modelgridrankassignments.out of the model folder, because that file shows that the folder holds"
+            " the file of each rank. Run the script without --rm to combine the files."
+        )
+        raise ValueError(msg)
+
     allranks_filename = f"{basename}_allranks.out"
     outpath = folder / f"{allranks_filename}.zst"
     # the readers take the plain file before the .zst file, thus a plain file is the combined file that they read
     plainpath = folder / allranks_filename
     existingpath = plainpath if plainpath.exists() else outpath if outpath.exists() else None
-    if existingpath is not None:
+    if existingpath is not None and not before_removal:
+        existing_mtime_ns = existingpath.stat().st_mtime_ns
         # the combined file has the time of the newest file of a rank that it holds, thus a file of a rank with the same
         # time holds no later text. artistools applies the same rule to the estimators
-        if all(rankfile.stat().st_mtime_ns <= existingpath.stat().st_mtime_ns for rankfile in rankfiles.values()):
+        if all(rankfile.stat().st_mtime_ns <= existing_mtime_ns for rankfile in rankfiles.values()):
             print(f"{folder}: {existingpath.name} exists already. The script does not change it.")
-            return list(rankfiles.values())
+            return existingpath
         # e.g. the script ran while the job still ran, and the job then wrote more timesteps
         print(f"{folder}: a file of a rank is newer than {existingpath.name}. The script combines the files again.")
 
-    if not rankfiles:
-        return []
-
-    headers = {get_header(rankfile, basename) for rankfile in rankfiles.values()}
-    if len(headers) != 1:
-        msg = f"The {basename} files of the ranks have different header lines: {sorted(headers)}"
-        raise ValueError(msg)
-    header = headers.pop()
-
     # artistools uses a newer combined file instead of the files of the ranks. That file must thus hold the text of each
     # rank that writes one, and the estimator file must hold each model cell once in each timestep
-    assignments = get_rank_assignments(folder.resolve().parent)
-    ranks_that_write = get_ranks_that_write(assignments, basename) if assignments is not None else None
-    if ranks_that_write is not None and (missingranks := sorted(ranks_that_write - rankfiles.keys())):
+    if ranks_that_write is not None and (missing_ranks := sorted(ranks_that_write - rankfiles.keys())):
         msg = (
-            f"The {basename} files of the ranks {missingranks} are missing. modelgridrankassignments.out of the"
+            f"The {basename} files of the ranks {missing_ranks} are missing. modelgridrankassignments.out of the"
             " model folder shows that these ranks write one."
         )
         raise ValueError(msg)
@@ -294,32 +292,42 @@ def combine_files(folder: Path, basename: str) -> list[Path]:
 
     print(f"{folder}: the script combines the {basename} files of {len(rankfiles)} ranks...")
 
-    # Each timestep gets a temporary file, and the script adds the frame of each rank in the order of the ranks.
-    # The script then joins the temporary files in the order of the timesteps. The memory thus holds only
-    # the text of one rank and one timestep. Each write opens and closes its file, so few files are open at a time.
-    with tempfile.TemporaryDirectory(dir=folder, prefix=f".combine_{basename}_") as tmpdirname:
-        tmpdir = Path(tmpdirname)
-        timesteps: set[int] = set()
+    # The script writes the frame of each rank and timestep into one temporary file, in the order of the ranks. It then
+    # copies the frames of each timestep in the order of the timesteps. The memory thus holds only the text of one rank
+    # and one timestep.
+    with (
+        tempfile.TemporaryDirectory(dir=folder, prefix=f".combine_{basename}_") as tmpdirname,
+        (Path(tmpdirname) / "frames.zst").open("w+b") as frames_file,
+    ):
+        # the position and the size of the frame of each rank in each timestep, in the order of the ranks
+        frames_of_timestep: dict[int, list[tuple[int, int]]] = {}
         timesteps_of_ranks: dict[int, set[int]] = {}
-        last_cell_of_timestep: dict[int, int] = {}
+        highest_cell_of_timestep: dict[int, int] = {}
+        headers: set[str] = set()
         for rank, rankfile in rankfiles.items():
             timesteps_of_rank: set[int] = set()
-            for timestep, text in get_timestep_texts(rankfile, basename, header):
-                if timestep in timesteps_of_rank:
-                    msg = f"{rankfile}: timestep {timestep} occurs in two separate parts of the file"
+            with open_text(rankfile) as textfile:
+                headers.add(read_header(textfile, rankfile, basename))
+                if len(headers) != 1:
+                    msg = f"The {basename} files of the ranks have different header lines: {sorted(headers)}"
                     raise ValueError(msg)
-                timesteps_of_rank.add(timestep)
-                # sn3d writes an empty line after each cell, thus a text without it ends inside a cell
-                if basename == "estimators" and not text.endswith("\n\n"):
-                    msg = (
-                        f"{rankfile}: timestep {timestep} does not end with the empty line after a cell."
-                        " The file is not complete, e.g. because the job stopped during a write."
-                    )
-                    raise ValueError(msg)
-                check_cell_order(text, timestep, rankfile, basename, last_cell_of_timestep)
-                with (tmpdir / f"timestep_{timestep:05d}.zst").open("ab") as timestep_file:
-                    timestep_file.write(zstd.compress(text.encode("utf-8"), options=ZSTD_OPTIONS))
-            timesteps |= timesteps_of_rank
+                ncolumns = len(next(iter(headers)).split())
+                for timestep, text, cells in get_timestep_texts(textfile, rankfile, basename, ncolumns):
+                    if timestep in timesteps_of_rank:
+                        msg = f"{rankfile}: timestep {timestep} occurs in two separate parts of the file"
+                        raise ValueError(msg)
+                    timesteps_of_rank.add(timestep)
+                    # sn3d writes an empty line after each cell, thus a text without it ends inside a cell
+                    if basename == "estimators" and not text.endswith("\n\n"):
+                        msg = (
+                            f"{rankfile}: timestep {timestep} does not end with the empty line after a cell."
+                            " The file is not complete, e.g. because the job stopped during a write."
+                        )
+                        raise ValueError(msg)
+                    check_cell_order(cells, timestep, rankfile, basename, highest_cell_of_timestep)
+                    frame = zstd.compress(text.encode("utf-8"), options=ZSTD_OPTIONS)
+                    frames_of_timestep.setdefault(timestep, []).append((frames_file.tell(), len(frame)))
+                    frames_file.write(frame)
             timesteps_of_ranks[rank] = timesteps_of_rank
             print(f"  rank {rank}: {len(timesteps_of_rank)} timesteps")
 
@@ -329,7 +337,7 @@ def combine_files(folder: Path, basename: str) -> list[Path]:
         if basename == "estimators" and (
             incomplete_timesteps := sorted(
                 timestep
-                for timestep in timesteps
+                for timestep in frames_of_timestep
                 if any(timestep not in rank_timesteps for rank_timesteps in timesteps_of_ranks.values())
             )
         ):
@@ -343,7 +351,9 @@ def combine_files(folder: Path, basename: str) -> list[Path]:
 
         if npts_model is not None and (
             short_timesteps := sorted(
-                timestep for timestep, last_cell in last_cell_of_timestep.items() if last_cell + 1 != npts_model
+                timestep
+                for timestep, highest_cell in highest_cell_of_timestep.items()
+                if highest_cell + 1 != npts_model
             )
         ):
             msg = (
@@ -352,13 +362,14 @@ def combine_files(folder: Path, basename: str) -> list[Path]:
             )
             raise ValueError(msg)
 
-        partialpath = tmpdir / f"{allranks_filename}.zst"
+        partialpath = Path(tmpdirname) / f"{allranks_filename}.zst"
         with partialpath.open("wb") as outfile:
             # the frame of the header, or an empty frame, makes a valid zstd file also for a folder with no text
-            outfile.write(zstd.compress(header.encode("utf-8"), options=ZSTD_OPTIONS))
-            for timestep in sorted(timesteps):
-                with (tmpdir / f"timestep_{timestep:05d}.zst").open("rb") as timestep_file:
-                    shutil.copyfileobj(timestep_file, outfile, 1 << 24)
+            outfile.write(zstd.compress(headers.pop().encode("utf-8"), options=ZSTD_OPTIONS))
+            for timestep in sorted(frames_of_timestep):
+                for position, size in frames_of_timestep[timestep]:
+                    frames_file.seek(position)
+                    outfile.write(frames_file.read(size))
         os.utime(partialpath, ns=(partialpath.stat().st_atime_ns, text_mtime_ns))
         # the rename puts a complete file at the name in one step
         partialpath.replace(outpath)
@@ -368,28 +379,24 @@ def combine_files(folder: Path, basename: str) -> list[Path]:
         plainpath.unlink()
         print(f"{folder}: removed the stale {plainpath.name}.")
 
-    print(f"{folder}: wrote {outpath.name} with {len(timesteps)} timesteps.")
-    return list(rankfiles.values())
+    print(f"{folder}: wrote {outpath.name} with {len(frames_of_timestep)} timesteps.")
+    return outpath
 
 
-def remove_rank_files(folder: Path, basename: str, rankfiles: list[Path]) -> None:
+def remove_rank_files(basename: str, rankfiles: dict[int, Path], combined_path: Path) -> None:
     """Remove the files of the ranks of one type when the combined file holds all their text."""
-    allranks_filename = f"{basename}_allranks.out"
-    combinedpath = next(
-        path for path in (folder / allranks_filename, folder / f"{allranks_filename}.zst") if path.exists()
-    )
     # sn3d can add to a file of a rank during the combination. That file is then newer than the combined file, and it
     # holds text that the combined file lacks
-    combined_mtime_ns = combinedpath.stat().st_mtime_ns
-    if newerfiles := [rankfile.name for rankfile in rankfiles if rankfile.stat().st_mtime_ns > combined_mtime_ns]:
+    combined_mtime_ns = combined_path.stat().st_mtime_ns
+    if newer_files := [path.name for path in rankfiles.values() if path.stat().st_mtime_ns > combined_mtime_ns]:
         msg = (
-            f"{', '.join(newerfiles)} changed after the combination, thus the script keeps the files of the ranks."
+            f"{', '.join(newer_files)} changed after the combination, thus the script keeps the files of the ranks."
             " Run the script again after the job ends."
         )
         raise ValueError(msg)
-    for rankfile in rankfiles:
-        rankfile.unlink()
-    print(f"{folder}: removed the {len(rankfiles)} {basename} files of the ranks.")
+    for path in rankfiles.values():
+        path.unlink()
+    print(f"{combined_path.parent}: removed the {len(rankfiles)} {basename} files of the ranks.")
 
 
 def main() -> None:
@@ -402,8 +409,8 @@ def main() -> None:
     rmgroup.add_argument(
         "--rm",
         action="store_true",
-        help="Remove the files of the ranks of one type after a successful combination, i.e. when the combined file of"
-        " that type is complete and current.",
+        help="Combine the files again, and then remove the files of the ranks of each type with a successful"
+        " combination. This needs modelgridrankassignments.out of the model folder.",
     )
     rmgroup.add_argument("-k", "--keep", action="store_true", help="Keep the files of the ranks (the default).")
     args = parser.parse_args()
@@ -412,6 +419,10 @@ def main() -> None:
     if not folders:
         sys.exit("There is no job_from_ts* folder here. Give the folders as arguments.")
 
+    # sys.exit() ends the with statements, so a stop by a signal, e.g. at the time limit of Slurm, removes the
+    # temporary folder
+    signal.signal(signal.SIGTERM, lambda signum, _frame: sys.exit(128 + signum))
+
     # an error in one type of one folder stops only that type, and the exit status then shows the error
     failures: list[str] = []
     for folder in folders:
@@ -419,15 +430,29 @@ def main() -> None:
             print(f"{folder}: the folder does not exist.", file=sys.stderr)
             failures.append(str(folder))
             continue
-        if not any(get_rank_files(folder, basename) for basename in BASENAMES):
+        rankfiles_of_type = {basename: get_rank_files(folder, basename) for basename in BASENAMES}
+        if not any(rankfiles_of_type.values()):
             print(f"{folder}: the folder has no output files of ranks.")
             continue
-        for basename in BASENAMES:
+        try:
+            assignments = get_rank_assignments(folder.resolve().parent)
+        except (OSError, ValueError) as err:
+            print(f"{folder}: the script did not combine the files. {err}", file=sys.stderr)
+            failures.append(str(folder))
+            continue
+        if assignments is None:
+            print(
+                f"{folder}: the model folder has no modelgridrankassignments.out, thus the script cannot find a missing"
+                " file of a rank."
+            )
+        for basename, rankfiles in rankfiles_of_type.items():
+            if not rankfiles:
+                continue
             try:
-                rankfiles = combine_files(folder, basename)
-                if rankfiles and args.rm:
-                    remove_rank_files(folder, basename, rankfiles)
-                elif rankfiles:
+                combined_path = combine_files(folder, basename, rankfiles, assignments, before_removal=args.rm)
+                if args.rm:
+                    remove_rank_files(basename, rankfiles, combined_path)
+                else:
                     print(
                         f"{folder}: kept the {len(rankfiles)} {basename} files of the ranks. Give --rm to remove them."
                     )

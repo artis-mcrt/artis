@@ -939,7 +939,7 @@ void test_rank_outfile_name() {
 }
 
 void test_allranks_outfile_or_cache_name() {
-  std::println("names of the output files of all ranks and of the estimator caches...");
+  std::println("names of the combined output files and of the estimator caches...");
   bool match_all = true;
   for (const auto* const name : {
            "estimators_allranks.out",
@@ -955,7 +955,7 @@ void test_allranks_outfile_or_cache_name() {
        }) {
     match_all = match_all && is_allranks_outfile_or_cache_name(name);
   }
-  check(match_all, "the function matches the output files of all ranks and the estimator caches of artistools");
+  check(match_all, "the function matches the combined output files and the estimator caches of artistools");
 
   bool match_none = false;
   for (const auto* const name : {
@@ -1459,7 +1459,7 @@ void test_zstd_output_stream() {
   std::filesystem::remove(zstfilename);
 }
 
-// The estimator file of all ranks starts with one empty zstd frame, and then holds one frame from each rank with
+// The combined estimator file starts with one empty zstd frame, and then holds one frame from each rank with
 // text, one frame after the other. The file must read back as the texts of the frames in their order.
 void test_zstd_frame_sequence() {
   std::println("zstd frame sequence...");
