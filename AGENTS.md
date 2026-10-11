@@ -386,6 +386,9 @@ are the only defence.
   the log files, and the standard output stays quiet unless there is a crash.
 - Every log line gets a timestamp and a flush, so a log line in a hot loop is
   expensive.
+- Keep a `verbose` flag and the code that it controls, also when each caller
+  sets the flag to false. A developer sets the flag to true to examine a
+  calculation, so this code is not dead code.
 - Do not call the loggers in a `DEVICE_FUNC`. Their device branch does not
   compile with nvc++ or hipcc, and a local gcc or clang build does not find
   this. Put a diagnostic of a device function inside `MY_IF_HOST()`.
