@@ -430,10 +430,12 @@ auto antiderivative_of_radius_rcyl_z(const double rcyl, const double z) -> doubl
 // antiderivative of r dx dy dz over the Cartesian coordinates, where r = sqrt(x^2 + y^2 + z^2)
 auto antiderivative_of_radius_xyz(const double x, const double y, const double z) -> double {
   const double radius = std::sqrt(pow2(x) + pow2(y) + pow2(z));
-  // the log term of axis p has the factor q s (q^2 + s^2), which is zero where p + r is zero
+  // the log term of axis p has the factor q s (q^2 + s^2), which is zero where p + r is zero.
+  // For p < 0, p + r = (q^2 + s^2) / (r - p) avoids the cancellation of p and r.
   const auto log_term = [radius](const double p, const double q, const double s) {
     const double factor = q * s * (pow2(q) + pow2(s));
-    return (factor == 0.) ? 0. : factor * std::log(p + radius);
+    const double p_plus_radius = (p >= 0.) ? p + radius : (pow2(q) + pow2(s)) / (radius - p);
+    return (factor == 0.) ? 0. : factor * std::log(p_plus_radius);
   };
   // the atan term of axis p goes to zero where p is zero
   const auto atan_term = [radius](const double p, const double q, const double s) {
