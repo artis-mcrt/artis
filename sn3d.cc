@@ -207,7 +207,9 @@ void initialise_linestat_file() {
         // 9 significant digits are the full precision of a float32, which artistools uses for the wavelengths.
         // With 6 digits, the error is up to 0.05 Angstroms at 10000 Angstroms. That can change a wavelength label
         // that artistools rounds to the nearest Angstrom.
-        return std::to_chars(text.data(), std::to_address(text.end()), value, std::chars_format::general, 9);
+        // Scientific notation with 8 digits after the decimal point gives 9 significant digits and the same format
+        // for all wavelengths.
+        return std::to_chars(text.data(), std::to_address(text.end()), value, std::chars_format::scientific, 8);
       } else {
         return std::to_chars(text.data(), std::to_address(text.end()), value);
       }
