@@ -8,7 +8,7 @@ a246abbd0da96f4c1754679a4e85bf0f  gamma_light_curve.out
 201e861b96182f995b72b9d127a96255  gammalinelist.out
 7db21c856b5d2784b14eabfd22e5b837  grid.out
 12acf09f595fb1b9b70b92704339d302  light_curve.out
-e1498af74c00d694787bc84ea107c326  linestat.out
+b41b0fb22fd1f952df3e1d73b9d85ab7  linestat.out
 bc40edd64676f86b6ac2df0934e2ce9a  modelgridrankassignments.out
 5338f1a4d50ab0399542d9b08585af21  nuclides.out
 fc7c0367231e5a6bd2a2dd84730e5ec3  spec.out

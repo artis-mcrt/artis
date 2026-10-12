@@ -204,7 +204,10 @@ void initialise_linestat_file() {
     std::array<char, 32> text{};
     const auto [textend, ec] = [&]() {
       if constexpr (std::is_floating_point_v<decltype(value)>) {
-        return std::to_chars(text.data(), std::to_address(text.end()), value, std::chars_format::general, 6);
+        // 9 significant digits are the full precision of a float32, which artistools uses for the wavelengths.
+        // With 6 digits, the error is up to 0.05 Angstroms at 10000 Angstroms. That can change a wavelength label
+        // that artistools rounds to the nearest Angstrom.
+        return std::to_chars(text.data(), std::to_address(text.end()), value, std::chars_format::general, 9);
       } else {
         return std::to_chars(text.data(), std::to_address(text.end()), value);
       }
