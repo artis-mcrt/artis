@@ -485,6 +485,30 @@ auto get_cellradialposmean(const int cellindex) -> double {
                             (coord_bounds[2][1] - coord_bounds[2][0]));
 }
 
+// radius of the volume-weighted mean position of a propagation cell at time tmin, in the coordinates of the grid:
+// r for 1D, (rcyl, z) for 2D, and (x, y, z) for 3D. For a 3D cell, this is the radius of the cell centre.
+auto get_cellcentroid_radialpos(const int cellindex) -> double {
+  const auto prop_gridtype = get_propgridtype();
+  if (prop_gridtype == GridType::SPHERICAL1D) {
+    return get_cellradialposmean(cellindex);
+  }
+
+  if (prop_gridtype == GridType::CYLINDRICAL2D) {
+    const double rcyl_inner = get_cellcoordmin(cellindex, 0);
+    const double rcyl_outer = get_cellcoordmax(cellindex, 0);
+    const double rcyl_centroid =
+        2. / 3. * (pow3(rcyl_outer) - pow3(rcyl_inner)) / (pow2(rcyl_outer) - pow2(rcyl_inner));
+    const double z_mid = (get_cellcoordmin(cellindex, 1) + get_cellcoordmax(cellindex, 1)) / 2;
+    return std::sqrt(pow2(rcyl_centroid) + pow2(z_mid));
+  }
+
+  double lensquared = 0.;
+  for (int axis = 0; axis < 3; axis++) {
+    lensquared += pow2((get_cellcoordmin(cellindex, axis) + get_cellcoordmax(cellindex, axis)) / 2);
+  }
+  return std::sqrt(lensquared);
+}
+
 // volume averaged mean of the squared radius of a propagation cell. The kinetic energy sum needs the
 // mean of r^2, which is larger than the square of the mean radius that get_cellradialposmean() gives.
 auto get_cellradialposmeansquared(const int cellindex) -> double {
@@ -567,14 +591,14 @@ void allocate_nonemptymodelcells() {
   }
 
   for (int cellindex = 0; cellindex < ngrid; cellindex++) {
-    const auto cell_mean_radial_pos = get_cellradialposmean(cellindex);
+    const auto cell_centroid_radial_pos = get_cellcentroid_radialpos(cellindex);
 
     if constexpr (FORCE_SPHERICAL_ESCAPE_SURFACE) {
       propcell_outside_escape_surface[cellindex] =
           (get_cell_r_inner(cellindex, get_propgridtype()) > globals::rmax) ? 1 : 0;
     }
 
-    if (FORCE_SPHERICAL_ESCAPE_SURFACE && cell_mean_radial_pos > globals::vmax * globals::tmin) {
+    if (FORCE_SPHERICAL_ESCAPE_SURFACE && cell_centroid_radial_pos > globals::vmax * globals::tmin) {
       // for 1D models, the final shell outer v should already be at vmax
       assert_always(model_type != GridType::SPHERICAL1D || propcell_mgi[cellindex] < 0);
       if (const int mgi_blanked = get_propcell_modelgridindex(cellindex); track_blanked_mass && mgi_blanked >= 0) {
@@ -588,7 +612,7 @@ void allocate_nonemptymodelcells() {
       modelgrid_numpropcells[mgi] += 1;
       if (globals::rank_in_node == 0) {
         modelgrid_input[mgi].initial_radial_pos_sum =
-            static_cast<float>(modelgrid_input[mgi].initial_radial_pos_sum + cell_mean_radial_pos);
+            static_cast<float>(modelgrid_input[mgi].initial_radial_pos_sum + get_cellradialposmean(cellindex));
         modelgrid_input[mgi].initial_radial_pos_squared_sum += get_cellradialposmeansquared(cellindex);
       }
       assert_always(get_rho_tmin(mgi) > 0);
@@ -722,13 +746,13 @@ void allocate_nonemptymodelcells() {
 // Map 1D spherical model grid onto 3D Cartesian propagation grid
 void map_1dmodelto3dgrid() {
   for (int cellindex = 0; cellindex < ngrid; cellindex++) {
-    const double cell_mean_radial_vel = get_cellradialposmean(cellindex) / globals::tmin;
-    const int mgi = int_index_lowerbound(vout_model, cell_mean_radial_vel);
+    const double cell_centroid_radial_vel = get_cellcentroid_radialpos(cellindex) / globals::tmin;
+    const int mgi = int_index_lowerbound(vout_model, cell_centroid_radial_vel);
 
     if (mgi < get_npts_model() && modelgrid_input[mgi].rhoinit > 0) {
       set_propcell_modelgridindex(cellindex, mgi);
-      assert_always(vout_model[mgi] >= cell_mean_radial_vel);
-      assert_always((mgi > 0 ? vout_model[mgi - 1] : 0.0) <= cell_mean_radial_vel);
+      assert_always(vout_model[mgi] >= cell_centroid_radial_vel);
+      assert_always((mgi > 0 ? vout_model[mgi - 1] : 0.0) <= cell_centroid_radial_vel);
     } else {
       // corner cells outside of the outermost model shell are empty and so are any shells with zero density
       set_propcell_modelgridindex(cellindex, -1);
@@ -2540,9 +2564,9 @@ void init_grid() {
   allocate_nonemptymodelcells();
 
   // when the model grid and the propagation grid differ, rescale the nuclide mass fractions so that the total mass
-  // of each nuclide matches the input model again. Every propagation cell takes the one model cell that contains its
-  // mean radius (1D model) or its centre (2D model), so the volume associated with a model cell is a staircase
-  // approximation of the true volume and the mapped mass of each nuclide differs from the input.
+  // of each nuclide matches the input model again. Every propagation cell takes the model shell that its centre falls
+  // in, so the volume associated with a shell is a staircase approximation of the true shell volume and the
+  // mapped mass of each nuclide differs from the input.
   //
   // This has to happen before anything derives a quantity from the nuclide mass fractions, which is why it sits
   // ahead of set_untrackedstable_massfracs() (which subtracts them from the elemental mass fractions to get the
@@ -2551,11 +2575,11 @@ void init_grid() {
   // are still the ones they gave.
   //
   // Gated on the two geometries differing rather than on a particular pair of them, because every such mapping
-  // loses mass the same way: map_1dmodelto3dgrid() places a propagation cell by its volume-averaged mean radius,
-  // and map_2dmodelto3dgrid() places it by its centre. Only GRID_TYPE_OVERRIDE makes them differ; left alone,
-  // get_propgridtype() returns the model's own geometry and map_modeltogrid_direct() gives each model cell exactly its
-  // own volume, so there is no discretisation error to correct and the ratio would be one throughout. The "Total
-  // grid-mapped mass" line logged below shows the size of the discrepancy for any model.
+  // loses mass the same way: map_1dmodelto3dgrid() and map_2dmodelto3dgrid() both place a propagation cell by
+  // its centre. Only GRID_TYPE_OVERRIDE makes them differ; left alone, get_propgridtype() returns the model's
+  // own geometry and map_modeltogrid_direct() gives each model cell exactly its own volume, so there is no
+  // discretisation error to correct and the ratio would be one throughout. The "Total grid-mapped mass" line
+  // logged below shows the size of the discrepancy for any model.
   //
   // The mapped total includes the mass in the propagation cells that FORCE_SPHERICAL_ESCAPE_SURFACE
   // blanked. allocate_nonemptymodelcells() records that mass in totmassnuclide_blanked. The option
