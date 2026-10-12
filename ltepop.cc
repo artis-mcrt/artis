@@ -102,6 +102,11 @@ THREADLOCALONHOST CellWarningMarker ionfract_zeroed_warned;
   // total recombination coefficient per population of the photoionisation target level(s) of the upper ion,
   // applied here to the whole upper ion population in the usual nebular approximation
   const double Alpha_sp = get_ion_spontrecombcoeff(uniqueionindex, T_e);
+  constexpr bool include_collisional_recombination = false;
+  const double Col_rec =
+      include_collisional_recombination
+          ? calculate_ionrecombcoeff(nonemptymgi, T_e, element, ion + 1, {.collisional_not_radiative = true})
+          : 0.;
 
   // nt_ionisation_ratecoeff() is the total non-thermal ionisation rate of the ion, which includes the channels
   // that eject more than one electron. This balance applies all of it to ion -> ion + 1. The NLTE matrix
@@ -113,8 +118,10 @@ THREADLOCALONHOST CellWarningMarker ionfract_zeroed_warned;
   // numerator: recombination rate coefficient, i.e. rate per upper ion pop per nne [cm^3/s]
   // denominator: ionisation rate per lower ion pop [1/s]
   // With microclumping, recombining ions see the in-clump electron density (clumpfactor * nne), while phi is
-  // later multiplied by the volume-mean nne, so the clumping factor is applied here.
-  const double phi = grid::get_clumpfactor(nonemptymgi) * Alpha_sp / (Gamma_ion + gamma_nt);
+  // later multiplied by the volume-mean nne, so the clumping factor is applied here. This also gives collisional
+  // (three-body) recombination its full clumpfactor^2, since calculate_ionrecombcoeff() divides its
+  // clumpednne^2-scaled rate by clumpednne, leaving one factor of clumpfactor in Col_rec.
+  const double phi = grid::get_clumpfactor(nonemptymgi) * (Alpha_sp + Col_rec) / (Gamma_ion + gamma_nt);
   assert_always(phi > 0.);
 
   return phi;

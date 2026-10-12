@@ -678,7 +678,7 @@ DEVICE_FUNC auto select_continuum_nu(int element, const int lowerion, const int 
 // population selected by options.norm (see IonRecombNorm) to get a rate
 auto calculate_ionrecombcoeff(const int nonemptymgi, const float T_e, const int element, const int upperion,
                               const IonRecombCoeffOptions options) -> double {
-  const auto [assume_lte, lower_superlevel_only, norm] = options;
+  const auto [assume_lte, collisional_not_radiative, lower_superlevel_only, norm] = options;
   if (upperion <= 0) {
     return 0.;
   }
@@ -700,12 +700,22 @@ auto calculate_ionrecombcoeff(const int nonemptymgi, const float T_e, const int 
     return calculate_levelpop(nonemptymgi, element, upperion, upper);
   };
 
-  // calc_alpha_level() divides by clumpednne again, so this factor cancels
+  // the rate coefficients below are divided by clumpednne again at alpha_level, so this factor cancels exactly in
+  // the radiative case. In the collisional case the rate goes as clumpednne^2, so one factor of clumpednne survives
+  // into the returned coefficient (see the clumping note in ltepop.cc's phi_rate_balance()).
   const auto clumpednne = (nonemptymgi >= 0) ? grid::get_clumpfactor(nonemptymgi) * grid::get_nne(nonemptymgi) : 1.F;
 
   // recombination coefficient per target level population for one (lower level, target) continuum
   const auto calc_alpha_level = [&](const int lower, const int phixstargetindex) -> double {
-    return rad_recombination_ratecoeff(T_e, clumpednne, element, upperion, lower, phixstargetindex) / clumpednne;
+    double recomb_coeff{};
+    if (collisional_not_radiative) {
+      const double epsilon_trans = get_phixs_threshold(element, lowerion, lower, phixstargetindex);
+      recomb_coeff =
+          col_recombination_ratecoeff(T_e, clumpednne, element, upperion, lower, phixstargetindex, epsilon_trans);
+    } else {
+      recomb_coeff = rad_recombination_ratecoeff(T_e, clumpednne, element, upperion, lower, phixstargetindex);
+    }
+    return recomb_coeff / clumpednne;
   };
 
   const int nlevels_ionising_lower = get_nlevels_ionising(element, lowerion);

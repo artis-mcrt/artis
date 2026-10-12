@@ -41,6 +41,7 @@ enum class IonRecombNorm : std::uint8_t {
 
 struct IonRecombCoeffOptions {
   bool assume_lte = false;
+  bool collisional_not_radiative = false;
   bool lower_superlevel_only = false;
   IonRecombNorm norm = IonRecombNorm::IONPOP;
 };
