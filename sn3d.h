@@ -4,6 +4,7 @@
 #ifndef SN3D_H
 #define SN3D_H
 
+#include <sys/wait.h>
 #include <unistd.h>
 
 #include <algorithm>
@@ -29,7 +30,13 @@
 #include "mpi_logging.h"
 #include "outputfilestream.h"
 
-[[nodiscard]] inline auto is_pid_running(pid_t pid) -> bool { return (kill(pid, 0) == 0); }
+[[nodiscard]] inline auto is_pid_running(pid_t pid) -> bool {
+  while (waitpid(-1, nullptr, WNOHANG) > 0) {
+    // Wait for defunct....
+  }
+
+  return (kill(pid, 0) == 0);
+}
 
 inline void check_already_running() {
   if (globals::my_rank == 0) {
