@@ -117,8 +117,9 @@ std::vector<int> ranks_ndo_nonempty;
 struct ModelGridCellInput {
   float rhoinit = -1.;
   float ffegrp = 0.;
-  // a float. A double sum changes the mean radial position at rounding level and thus the results.
-  float initial_radial_pos_sum = 0.;
+  // sum of the midpoint radius per propagation cell. A double, because the sum runs over up to millions of
+  // propagation cells.
+  double initial_radial_pos_sum = 0.;
   // sum of the volume averaged r^2 per propagation cell, for the kinetic energy of the BARNES
   // thermalisation scheme. A double, because the sum runs over up to millions of propagation cells
   // with radii of ~1e15 cm.
@@ -419,33 +420,18 @@ void set_untrackedstable_massfracs(std::span<const float> elem_massfracs_of_mgi)
   }
 }
 
-// get the radial distance from the origin to the centre of the cell at time tmin
+// radius of the midpoint of a propagation cell at time tmin. The midpoint has the middle value of each grid
+// coordinate: r for 1D, (rcyl, z) for 2D, and (x, y, z) for 3D.
 auto get_cellradialposmid(const int cellindex) -> double {
-  const auto prop_gridtype = get_propgridtype();
-  if (prop_gridtype == GridType::SPHERICAL1D) {
-    // volume averaged mean radius is slightly complex for radial shells
-    const double r_inner = get_cellcoordmin(cellindex, 0);
-    const double r_outer = get_cellcoordmax(cellindex, 0);
-    return 3. / 4 * (pow4(r_outer) - pow4(r_inner)) / (pow3(r_outer) - pow3(r_inner));
+  double radius_squared = 0.;
+  for (int axis = 0; axis < get_ndim(get_propgridtype()); axis++) {
+    radius_squared += pow2((get_cellcoordmin(cellindex, axis) + get_cellcoordmax(cellindex, axis)) / 2);
   }
-
-  if (prop_gridtype == GridType::CYLINDRICAL2D) {
-    const double rcyl_mid = (get_cellcoordmin(cellindex, 0) + get_cellcoordmax(cellindex, 0)) / 2;
-    const double z_mid = (get_cellcoordmin(cellindex, 1) + get_cellcoordmax(cellindex, 1)) / 2;
-    return std::sqrt(pow2(rcyl_mid) + pow2(z_mid));
-  }
-
-  // cubic grid requires taking the length of the 3D position vector
-  double lensquared = 0.;
-  for (int axis = 0; axis < 3; axis++) {
-    lensquared += pow2((get_cellcoordmin(cellindex, axis) + get_cellcoordmax(cellindex, axis)) / 2);
-  }
-
-  return std::sqrt(lensquared);
+  return std::sqrt(radius_squared);
 }
 
 // volume averaged mean of the squared radius of a propagation cell. The kinetic energy sum needs the
-// mean of r^2, which is larger than the square of the mean radius that get_cellradialposmid() gives.
+// mean of r^2, which is larger than the square of the radius that get_cellradialposmid() gives.
 auto get_cellradialposmeansquared(const int cellindex) -> double {
   const auto prop_gridtype = get_propgridtype();
   if (prop_gridtype == GridType::SPHERICAL1D) {
@@ -546,8 +532,7 @@ void allocate_nonemptymodelcells() {
     if (mgi >= 0) {
       modelgrid_numpropcells[mgi] += 1;
       if (globals::rank_in_node == 0) {
-        modelgrid_input[mgi].initial_radial_pos_sum =
-            static_cast<float>(modelgrid_input[mgi].initial_radial_pos_sum + radial_pos_mid);
+        modelgrid_input[mgi].initial_radial_pos_sum += radial_pos_mid;
         modelgrid_input[mgi].initial_radial_pos_squared_sum += get_cellradialposmeansquared(cellindex);
       }
       assert_always(get_rho_tmin(mgi) > 0);
