@@ -117,8 +117,9 @@ std::vector<int> ranks_ndo_nonempty;
 struct ModelGridCellInput {
   float rhoinit = -1.;
   float ffegrp = 0.;
-  // a float. A double sum changes the mean radial position at rounding level and thus the results.
-  float initial_radial_pos_sum = 0.;
+  // sum of the volume averaged radius per propagation cell. A double, because the sum runs over up to millions of
+  // propagation cells.
+  double initial_radial_pos_sum = 0.;
   // sum of the volume averaged r^2 per propagation cell, for the kinetic energy of the BARNES
   // thermalisation scheme. A double, because the sum runs over up to millions of propagation cells
   // with radii of ~1e15 cm.
@@ -613,8 +614,7 @@ void allocate_nonemptymodelcells() {
     if (mgi >= 0) {
       modelgrid_numpropcells[mgi] += 1;
       if (globals::rank_in_node == 0) {
-        modelgrid_input[mgi].initial_radial_pos_sum =
-            static_cast<float>(modelgrid_input[mgi].initial_radial_pos_sum + get_cellradialposmean(cellindex));
+        modelgrid_input[mgi].initial_radial_pos_sum += get_cellradialposmean(cellindex);
         modelgrid_input[mgi].initial_radial_pos_squared_sum += get_cellradialposmeansquared(cellindex);
       }
       assert_always(get_rho_tmin(mgi) > 0);
