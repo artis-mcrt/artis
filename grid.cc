@@ -419,7 +419,7 @@ void set_untrackedstable_massfracs(std::span<const float> elem_massfracs_of_mgi)
   }
 }
 
-// antiderivative of r drcyl dz over the cylindrical coordinates (rcyl, z), where r = sqrt(rcyl^2 + z^2)
+// antiderivative of r rcyl drcyl dz over the cylindrical coordinates (rcyl, z), where r = sqrt(rcyl^2 + z^2)
 auto antiderivative_of_radius_rcyl_z(const double rcyl, const double z) -> double {
   const double radius = std::sqrt(pow2(rcyl) + pow2(z));
   // the asinh term goes to zero on the axis
@@ -2540,9 +2540,9 @@ void init_grid() {
   allocate_nonemptymodelcells();
 
   // when the model grid and the propagation grid differ, rescale the nuclide mass fractions so that the total mass
-  // of each nuclide matches the input model again. Every propagation cell takes the model shell that its centre falls
-  // in, so the volume associated with a shell is a staircase approximation of the true shell volume and the
-  // mapped mass of each nuclide differs from the input.
+  // of each nuclide matches the input model again. Every propagation cell takes the one model cell that contains its
+  // mean radius (1D model) or its centre (2D model), so the volume associated with a model cell is a staircase
+  // approximation of the true volume and the mapped mass of each nuclide differs from the input.
   //
   // This has to happen before anything derives a quantity from the nuclide mass fractions, which is why it sits
   // ahead of set_untrackedstable_massfracs() (which subtracts them from the elemental mass fractions to get the
@@ -2551,11 +2551,11 @@ void init_grid() {
   // are still the ones they gave.
   //
   // Gated on the two geometries differing rather than on a particular pair of them, because every such mapping
-  // loses mass the same way: map_1dmodelto3dgrid() and map_2dmodelto3dgrid() both place a propagation cell by
-  // its centre. Only GRID_TYPE_OVERRIDE makes them differ; left alone, get_propgridtype() returns the model's
-  // own geometry and map_modeltogrid_direct() gives each model cell exactly its own volume, so there is no
-  // discretisation error to correct and the ratio would be one throughout. The "Total grid-mapped mass" line
-  // logged below shows the size of the discrepancy for any model.
+  // loses mass the same way: map_1dmodelto3dgrid() places a propagation cell by its volume-averaged mean radius,
+  // and map_2dmodelto3dgrid() places it by its centre. Only GRID_TYPE_OVERRIDE makes them differ; left alone,
+  // get_propgridtype() returns the model's own geometry and map_modeltogrid_direct() gives each model cell exactly its
+  // own volume, so there is no discretisation error to correct and the ratio would be one throughout. The "Total
+  // grid-mapped mass" line logged below shows the size of the discrepancy for any model.
   //
   // The mapped total includes the mass in the propagation cells that FORCE_SPHERICAL_ESCAPE_SURFACE
   // blanked. allocate_nonemptymodelcells() records that mass in totmassnuclide_blanked. The option
