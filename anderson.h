@@ -23,7 +23,6 @@ class AndersonAccelerator {
  public:
   using State = std::array<double, MAXN>;
   static constexpr std::size_t max_depth = MAXDEPTH;
-  static constexpr std::size_t max_dimension = MAXN;
 
   explicit constexpr AndersonAccelerator(const std::size_t depth) : AndersonAccelerator(depth, MAXN) {}
 

@@ -212,7 +212,7 @@ struct NonThermalCellSolution {
   float frac_ionisation = 0.;  // fraction of deposition energy going to ionisation
   float frac_excitation = 0.;  // fraction of deposition energy going to excitation
 
-  int frac_excitations_list_size = 0;
+  int excitations_list_count = 0;
   // The sum of frac_deposition over the stored excitation list. The list does not cover all of frac_excitation,
   // because analyse_sf_solution() truncates it and excludes some ions.
   double frac_excitation_of_stored_list = 0.;
@@ -352,7 +352,7 @@ void read_binding_energies() {
 
 [[nodiscard]] auto get_cell_ntexcitations(const ptrdiff_t nonemptymgi) {
   return excitations_list_all_cells.subspan(nonemptymgi * nt_excitations_stored,
-                                            nt_solution[nonemptymgi].frac_excitations_list_size);
+                                            nt_solution[nonemptymgi].excitations_list_count);
 }
 
 [[nodiscard]] auto get_cell_allions_data(const ptrdiff_t nonemptymgi) {
@@ -720,7 +720,7 @@ void set_axelrod_solution(const ptrdiff_t nonemptymgi) {
   nt_solution[nonemptymgi].nneperion_when_solved = -1.;
   nt_solution[nonemptymgi].timestep_last_solved = -1;
 
-  nt_solution[nonemptymgi].frac_excitations_list_size = 0;
+  nt_solution[nonemptymgi].excitations_list_count = 0;
   nt_solution[nonemptymgi].frac_excitation_of_stored_list = 0.;
 
   for (int uniqueionindex = 0; uniqueionindex < get_includedions(); uniqueionindex++) {
@@ -819,9 +819,7 @@ constexpr auto xs_ionisation_lotz(const double en_erg, const ShellParams& collio
       (electronsinshell / ionpot *
        (std::log(betasq * ME * pow2(CLIGHT) / 2.0 / ionpot) - std::log(1 - betasq) - betasq));
   if (part_sigma_shell > 0.) {
-    const double sigma = 2 * LOTZ_FORMULA_CONSTANT_A / ME / (betasq * pow2(CLIGHT)) * part_sigma_shell;
-    assert_always(sigma >= 0);
-    return sigma;
+    return 2 * LOTZ_FORMULA_CONSTANT_A / ME / (betasq * pow2(CLIGHT)) * part_sigma_shell;
   }
 
   return 0.;
@@ -895,8 +893,6 @@ auto get_xs_ionisation_vector(std::array<double, SFPTS>& xs_vec, const ShellPara
     return 0.;
   }
   assert_testmodeonly(J > 0);
-  assert_testmodeonly(e_p >= I);
-  assert_testmodeonly(e_s >= 0);
   assert_testmodeonly(std::isfinite(std::atan((e_p - I) / 2 / J)));
   return 1 / (J * std::atan((e_p - I) / 2 / J) * (1 + pow2(e_s / J)));
 }
@@ -1753,14 +1749,14 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const std::a
       tmp_excitation_list.resize(nt_excitations_stored);
     }
 
-    nt_solution[nonemptymgi].frac_excitations_list_size = static_cast<int>(std::ssize(tmp_excitation_list));
+    nt_solution[nonemptymgi].excitations_list_count = static_cast<int>(std::ssize(tmp_excitation_list));
     std::ranges::copy(tmp_excitation_list, get_cell_ntexcitations(nonemptymgi).begin());
 
     const auto T_e = grid::Te_allcells[nonemptymgi];
     if (verbose) {
       printlnlog("  Top non-thermal excitation fractions (total excitations = {}):",
-                 nt_solution[nonemptymgi].frac_excitations_list_size);
-      const int ntransdisplayed = std::min(10, nt_solution[nonemptymgi].frac_excitations_list_size);
+                 nt_solution[nonemptymgi].excitations_list_count);
+      const int ntransdisplayed = std::min(10, nt_solution[nonemptymgi].excitations_list_count);
 
       for (int excitationindex = 0; excitationindex < ntransdisplayed; excitationindex++) {
         const auto& ntexc = tmp_excitation_list[excitationindex];
@@ -2700,8 +2696,8 @@ void read_restart_data(FILE* gridsave_file) {
     check_auger_probabilities(nonemptymgi);
 
     // gridsave file must not have been written with a larger per-cell excitation list capacity
-    assert_always(nt_solution[nonemptymgi].frac_excitations_list_size >= 0);
-    assert_always(nt_solution[nonemptymgi].frac_excitations_list_size <= nt_excitations_stored);
+    assert_always(nt_solution[nonemptymgi].excitations_list_count >= 0);
+    assert_always(nt_solution[nonemptymgi].excitations_list_count <= nt_excitations_stored);
     read_restart_array(gridsave_file, get_cell_ntexcitations(nonemptymgi));
   }
 }

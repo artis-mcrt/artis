@@ -375,8 +375,6 @@ void setup_coolinglist() {
 
       // check whether further ionisation stage available
       if (ion < (nions - 1)) {
-        // free-bound creation of r-pkt
-
         // collisional ionisation to higher ionisation stage
         for (int level = 0; level < nionisinglevels; level++) {
           const int nphixstargets = get_nphixstargets(element, ion, level);

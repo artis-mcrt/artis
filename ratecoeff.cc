@@ -301,10 +301,8 @@ void read_recombrate_file() {
   while (get_noncommentline(recombrate_file, line)) {
     assert_always(std::stringstream(line) >> atomicnumber >> upperionstage >> tablerows);
     assert_always(tablerows >= 0);
-    RRCRow T_highestbelow = {.log_Te = 0, .rrc_low_n = 0, .rrc_total = 0};
-    RRCRow T_lowestabove = {.log_Te = 0, .rrc_low_n = 0, .rrc_total = 0};
-    T_highestbelow.log_Te = -1;
-    T_lowestabove.log_Te = -1;
+    RRCRow T_highestbelow = {.log_Te = -1, .rrc_low_n = 0, .rrc_total = 0};
+    RRCRow T_lowestabove = {.log_Te = -1, .rrc_low_n = 0, .rrc_total = 0};
     for (int i = 0; i < tablerows; i++) {
       RRCRow row{};
       // without these checks a truncated or malformed table would leave the previous line's values
@@ -439,8 +437,7 @@ void precalculate_ion_alpha_sp() {
     for (int tempindex = 0; tempindex < RATECOEFF_TABLESIZE; tempindex++) {
       const auto T_e = static_cast<float>(temperature_grid[tempindex]);
       for (int element = 0; element < get_nelements(); element++) {
-        const int nions = get_nions(element) - 1;
-        for (int ion = 0; ion < nions; ion++) {
+        for (int ion = 0; ion < get_nions(element) - 1; ion++) {
           const auto uniqueionindex = get_uniqueionindex(element, ion);
           const double alpha_sp = calculate_ionrecombcoeff(-1, T_e, element, ion + 1, options);
           assert_always(std::isfinite(alpha_sp) && alpha_sp >= 0.);

@@ -296,8 +296,10 @@ void set_groundlevelpops_neutral(const ptrdiff_t nonemptymgi, const bool force_s
 
 // Solve for the free electron density nne in [0, nne_max] that makes the ion balance self-consistent, using the
 // TOMS 748 root-finder on the charge-conservation residual.
-auto find_converged_nne(const int nonemptymgi, double nne_max, const bool force_lte) -> float {
-  const auto f_nne = [nonemptymgi, force_lte](const double nne) { return nne_solution_f(nne, nonemptymgi, force_lte); };
+auto find_converged_nne(const int nonemptymgi, double nne_max, const bool force_saha) -> float {
+  const auto f_nne = [nonemptymgi, force_saha](const double nne) {
+    return nne_solution_f(nne, nonemptymgi, force_saha);
+  };
 
   constexpr double nne_min = 0.;
   const auto f_nne_min = f_nne(nne_min);

@@ -57,13 +57,6 @@ static_assert(!MULTIBIN_RADFIELD_MODEL_ON || !USE_LUT_PHOTOION,
 
 std::vector<double> J_normfactor;
 
-struct RadFieldBinSolution {
-  // these two parameters are used in the current timestep, but were calculated
-  // from the values of J and nuJ in the previous timestep
-  float W;  // dilution (scaling) factor
-  float T_R;  // radiation temperature
-};
-
 struct RadFieldBins {
   std::vector<double> J_raw;
   std::vector<double> nuJ_raw;
@@ -553,12 +546,7 @@ void init() {
         const auto lower_uniquelevelindex = globals::linelist.uniquelevelindex_lower[i];
         const int lowerlevel = lower_uniquelevelindex - ionuniquelevelindexstart;
 
-        bool addline = false;
         if (lowerlevel <= 15) {  // selection for detailed estimators (by lower-level index)
-          addline = true;
-        }
-
-        if (addline) {
           add_detailed_line(i);
         }
       }
@@ -595,7 +583,7 @@ void init() {
 
     radfieldbin_solutions_T_R = MPI_shared_array<float>(nonempty_npts_model * RADFIELDBINCOUNT);
 
-    const size_t mem_usage_bin_solutions = nonempty_npts_model * RADFIELDBINCOUNT * sizeof(RadFieldBinSolution);
+    const size_t mem_usage_bin_solutions = nonempty_npts_model * RADFIELDBINCOUNT * 2 * sizeof(float);
     printlnlog(
         "[info] mem_usage: radiation field bin solutions for non-empty cells occupy {:.3f} MB (node shared memory)",
         mem_usage_bin_solutions / 1024. / 1024.);
@@ -718,9 +706,9 @@ DEVICE_FUNC void update_estimators(const ptrdiff_t nonemptymgi, const double dis
     const int binindex = select_bin(nu_cmf);
 
     if (binindex >= 0) {
-      const auto mgibinindex = (nonemptymgi * RADFIELDBINCOUNT) + binindex;
-      atomicadd(radfieldbins.J_raw[mgibinindex], distance_e_cmf);
-      atomicadd(radfieldbins.nuJ_raw[mgibinindex], distance_e_cmf * nu_cmf);
+      const auto nonemptymgi_binindex = (nonemptymgi * RADFIELDBINCOUNT) + binindex;
+      atomicadd(radfieldbins.J_raw[nonemptymgi_binindex], distance_e_cmf);
+      atomicadd(radfieldbins.nuJ_raw[nonemptymgi_binindex], distance_e_cmf * nu_cmf);
     }
   }
 }
@@ -830,9 +818,9 @@ void fit_parameters(const int nonemptymgi, const int timestep) {
         W_bin = 0.;
       }
 
-      const auto mgibinindex = (static_cast<ptrdiff_t>(nonemptymgi) * RADFIELDBINCOUNT) + binindex;
-      radfieldbin_solutions_T_R[mgibinindex] = T_R_bin;
-      radfieldbin_solutions_W[mgibinindex] = W_bin;
+      const auto nonemptymgi_binindex = (static_cast<ptrdiff_t>(nonemptymgi) * RADFIELDBINCOUNT) + binindex;
+      radfieldbin_solutions_T_R[nonemptymgi_binindex] = T_R_bin;
+      radfieldbin_solutions_W[nonemptymgi_binindex] = W_bin;
     }
 
     if (count_T_R_min > 0 || count_T_R_max > 0) {
@@ -891,8 +879,9 @@ void normalise_bf_estimators(const int nts, const int nts_prev, const double del
           grid::get_modelcell_assocvolume_tmin(mgi) * pow3(globals::timesteps[nts_prev].mid / globals::tmin);
       const double estimator_normfactor = 1 / deltaV / deltat / globals::nprocs;
       for (int i = 0; i < bfestimcount; i++) {
-        const auto mgibfindex = (nonemptymgi * bfestimcount) + i;
-        prev_bfrate_normed[mgibfindex] = static_cast<float>(bfrate_raw[mgibfindex] * (estimator_normfactor / H));
+        const auto nonemptymgi_bfindex = (nonemptymgi * bfestimcount) + i;
+        prev_bfrate_normed[nonemptymgi_bfindex] =
+            static_cast<float>(bfrate_raw[nonemptymgi_bfindex] * (estimator_normfactor / H));
       }
     }
   }

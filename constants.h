@@ -211,7 +211,6 @@ constexpr bool cellcache_singleslot = true;
 // The nvc++ GPU job is the only build that instantiates the fallback, and it only compiles -- no test ever
 // runs it -- so these are its whole coverage. They step through each halving width of the binary search.
 static_assert(lowest_set_bit(1) == 0);
-static_assert(lowest_set_bit(2) == 1);
 static_assert(lowest_set_bit(0b1100) == 2);
 static_assert(lowest_set_bit(~UINT64_C(0)) == 0);
 static_assert(lowest_set_bit(UINT64_C(1) << 1U) == 1);

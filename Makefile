@@ -77,8 +77,8 @@ $(warning WARNING: Detected GCC version $(COMPILER_VERSION_NUMBER) but minimum s
 
 else ifneq '' '$(findstring nvc++,$(COMPILER_VERSION))'
 	COMPILER_NAME := nvhpc
-	# to use the pixi installed libstdc++
 	CXXFLAGS += -Minfo=accel
+	# to use the pixi installed libstdc++
 # 	CXXFLAGS += --gcc-toolchain=$(PWD)/.pixi/envs/default -Wl,-rpath,$(PWD)/.pixi/envs/default/lib
 
 	ifneq ($(GCCTOOLCHAIN),)
@@ -445,7 +445,6 @@ sn3d: $(BUILD_DIR)/sn3d compile_commands.json
 
 $(BUILD_DIR)/sn3dwhole: $(sn3d_files) $(wildcard *.h) Makefile
 	$(CXX) $(CXXFLAGS) $(sn3d_files) $(LDFLAGS) -o $(BUILD_DIR)/sn3dwhole
--include $(sn3d_dep)
 
 sn3dwhole: $(BUILD_DIR)/sn3dwhole compile_commands.json
 	rm -f sn3d && ln -s $(BUILD_DIR)/sn3dwhole sn3d
@@ -467,4 +466,4 @@ unittests: $(BUILD_DIR)/unittests compile_commands.json
 .PHONY: clean sn3d sn3dwhole exspec unittests check
 
 clean:
-	rm -rf sn3d exspec unittests build *.o *.d
+	rm -rf sn3d exspec unittests build

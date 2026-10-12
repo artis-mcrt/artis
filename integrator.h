@@ -23,12 +23,8 @@ constexpr auto simpson_integrator(const F& func_integrand, const double a, const
     // integral = deltax / 3 * (f(x_0) + 4 f(x_1) + 2 f(x_2) + ... + 4 f(x_{n-2}) + f(x_{n-1}))
     // The weights are 1, 4, 2, ..., 2, 4, 1. The division by 3 comes after the loop.
     double weight{1.};
-    if (i == 0 || i == (samplecount - 1)) {
-      weight = 1.;
-    } else if (i % 2 == 0) {
-      weight = 2.;
-    } else {
-      weight = 4.;
+    if (i > 0 && i < (samplecount - 1)) {
+      weight = (i % 2 == 0) ? 2. : 4.;
     }
 
     const double x = a + (deltax * i);

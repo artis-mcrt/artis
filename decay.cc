@@ -63,7 +63,7 @@ constexpr int Z_MAX = elsymbols.size() - 1;
 struct DecayDaughter {
   int z{-1};
   int a{-1};
-  double probability{0.};
+  double yield{0.};
 };
 
 struct Nuclide {
@@ -85,14 +85,13 @@ struct Nuclide {
       0., 0., 0., 0., 0., 0.,
   };  // branch probability of each decay type
 
-  // (Z, A, yield) of the fission daughters. The value held in DecayDaughter::probability is a yield
-  // rather than a probability: it is the expected number of these daughter nuclei produced per
-  // fission, so it sums over the daughters to the number of fragments per fission, not to one.
-  std::vector<DecayDaughter> fission_daughters_z_a_prob{};  // NOLINT(readability-redundant-member-init)
+  // (Z, A, yield) of the fission daughters. The yield is the expected number of these daughter nuclei per
+  // fission, so the sum over the daughters is the number of fragments per fission.
+  std::vector<DecayDaughter> fission_daughters{};  // NOLINT(readability-redundant-member-init)
 
   // expected number of daughter nuclei produced per decay, i.e. the sum of the daughter yields.
   // One for the single-daughter decays, and two for the binary fission of the tabulated nuclides
-  double decay_daughters_probsum{1.};
+  double decay_daughters_yield_sum{1.};
 };
 
 // a decay path follows the contribution of an initial nuclide abundance to the last nuclide of the path via
@@ -138,30 +137,30 @@ std::vector<bool> alldecaytypes_is_used;
           DecayDaughter{
               .z = z_parent - 2,
               .a = a_parent - 4,
-              .probability = 1.,
+              .yield = 1.,
           },
       };  // lose two protons and two neutrons (He4 handled separately)
     }
     case DecayType::DECAYTYPE_BETAPLUS:
     case DecayType::DECAYTYPE_ELECTRONCAPTURE: {
-      return {DecayDaughter{.z = z_parent - 1, .a = a_parent, .probability = 1.}};  // lose a proton, gain a neutron
+      return {DecayDaughter{.z = z_parent - 1, .a = a_parent, .yield = 1.}};  // lose a proton, gain a neutron
     }
     case DecayType::DECAYTYPE_BETAMINUS: {
-      return {DecayDaughter{.z = z_parent + 1, .a = a_parent, .probability = 1.}};  // lose a neutron, gain a proton
+      return {DecayDaughter{.z = z_parent + 1, .a = a_parent, .yield = 1.}};  // lose a neutron, gain a proton
     }
     case DecayType::DECAYTYPE_SPONTFISSION: {
       const auto nucindex = get_nucindex(z_parent, a_parent);
-      assert_always(!nuclides[nucindex].fission_daughters_z_a_prob.empty());
-      return nuclides[nucindex].fission_daughters_z_a_prob;
+      assert_always(!nuclides[nucindex].fission_daughters.empty());
+      return nuclides[nucindex].fission_daughters;
     }
     case DecayType::DECAYTYPE_NONE: {
-      return {DecayDaughter{.z = -1, .a = -1, .probability = 0.}};  // no daughter
+      return {DecayDaughter{.z = -1, .a = -1, .yield = 0.}};  // no daughter
     }
     case DecayType::DECAYTYPE_COUNT: {
       assert_always(false);
     }
   }
-  return {DecayDaughter{.z = -1, .a = -1, .probability = 0.}};  // no daughter
+  return {DecayDaughter{.z = -1, .a = -1, .yield = 0.}};  // no daughter
 }
 
 // Get the probability that a decay of decaytype occurs
@@ -249,11 +248,11 @@ void printout_nuclidemeanlife(const int z, const int a) {
   assert_testmodeonly(decaypath.decaytypes[secondlastindex] != DecayType::DECAYTYPE_NONE);
   assert_testmodeonly(decaypath.lambdas[secondlastindex] > 0.);
   assert_testmodeonly(decaypath.decaytypes.back() == DecayType::DECAYTYPE_NONE);
-  // Normalize decay energy by decay_daughters_probsum to properly distribute energy among probabilistic fission product
-  // outcomes. This avoids multiply counting the decay energy, since each daughter product will have it's own
+  // Normalize decay energy by decay_daughters_yield_sum to properly distribute energy among probabilistic fission
+  // product outcomes. This avoids multiply counting the decay energy, since each daughter product will have it's own
   // separate decaypath that differs only in the last nuclide.
   const auto nucindex = decaypath.nucindex[secondlastindex];
-  return nucdecayenergy(nucindex, decaypath.decaytypes[secondlastindex]) / nuclides[nucindex].decay_daughters_probsum;
+  return nucdecayenergy(nucindex, decaypath.decaytypes[secondlastindex]) / nuclides[nucindex].decay_daughters_yield_sum;
 }
 
 [[nodiscard]] auto get_str_decaytype(const DecayType decaytype) -> std::string_view {
@@ -353,7 +352,7 @@ void extend_lastdecaypath(std::vector<DecayPath>& localdecaypaths) {
       newdecaypath.nucindex.push_back(daughter_nucindex);
       newdecaypath.decaytypes.back() = decaytypeindex;  // replace the DECAYTYPE_NONE at end with this decay type
       newdecaypath.decaytypes.push_back(DecayType::DECAYTYPE_NONE);  // add new DECAYTYPE_NONE at end
-      newdecaypath.branchproduct *= get_nuc_decaybranchprob(end_nucindex, decaytypeindex) * daughter.probability;
+      newdecaypath.branchproduct *= get_nuc_decaybranchprob(end_nucindex, decaytypeindex) * daughter.yield;
       localdecaypaths.push_back(newdecaypath);
 
       extend_lastdecaypath(localdecaypaths);
@@ -397,7 +396,7 @@ auto find_decaypaths(const std::span<const int> custom_zlist, const std::span<co
             .nucindex = {startnucindex, get_nucindex(daughter.z, daughter.a)},
             .decaytypes = {decaytype, DecayType::DECAYTYPE_NONE},
             .lambdas = {},
-            .branchproduct = get_nuc_decaybranchprob(startnucindex, decaytype) * daughter.probability,
+            .branchproduct = get_nuc_decaybranchprob(startnucindex, decaytype) * daughter.yield,
         });
 
         extend_lastdecaypath(localdecaypaths);  // take this single step chain and find all descendants
@@ -647,10 +646,6 @@ auto write_nuclides_list() {
 
 // average energy per decay in the form of gamma rays [erg]
 [[nodiscard]] auto nucdecayenergygamma(const int nucindex) -> double { return nuclides[nucindex].endecay_gamma; }
-
-[[nodiscard]] auto nucdecayenergygamma(const int z, const int a) -> double {
-  return nucdecayenergygamma(get_nucindex(z, a));
-}
 
 // set average energy per decay in the form of gamma rays [erg]
 void set_nucdecayenergygamma(const int nucindex, const double value) { nuclides[nucindex].endecay_gamma = value; }
@@ -914,8 +909,8 @@ void read_fissionproduct_data() {
       // kinetic energy is deposited locally as heavy charged particles, so endecay_fission keeps the
       // value from fissiondecays.txt and only the total Q value is taken from this table.
       nuclides[nucindex].endecay_q[DECAYTYPE_SPONTFISSION] = q_fission_mev * MEV;
-      nuclides[nucindex].fission_daughters_z_a_prob.clear();
-      nuclides[nucindex].fission_daughters_z_a_prob.reserve(tablesize);
+      nuclides[nucindex].fission_daughters.clear();
+      nuclides[nucindex].fission_daughters.reserve(tablesize);
     }
 
     double daughter_yield_sum = 0.;
@@ -931,8 +926,7 @@ void read_fissionproduct_data() {
         // the table lists yields as a percentage per fission, so convert to the expected number of
         // these daughter nuclei produced per fission
         const double yield_per_fission = yieldpercent / 100.;
-        nuclides[nucindex].fission_daughters_z_a_prob.push_back(
-            {.z = daughter_z, .a = daughter_a, .probability = yield_per_fission});
+        nuclides[nucindex].fission_daughters.push_back({.z = daughter_z, .a = daughter_a, .yield = yield_per_fission});
         daughter_yield_sum += yield_per_fission;
       }
     }
@@ -941,7 +935,7 @@ void read_fissionproduct_data() {
       // fission of the tabulated nuclides. This also guards against a table in different units.
       assert_always(daughter_yield_sum > 1.9);
       assert_always(daughter_yield_sum < 2.1);
-      nuclides[nucindex].decay_daughters_probsum = daughter_yield_sum;
+      nuclides[nucindex].decay_daughters_yield_sum = daughter_yield_sum;
     }
   }
 }
@@ -1113,7 +1107,6 @@ void init_nuclides(const std::span<const int> custom_zlist, const std::span<cons
 }
 
 [[nodiscard]] auto decaytype_is_used(const DecayType decaytype) -> bool {
-  assert_testmodeonly(!all_decaytypes.empty());
   assert_testmodeonly(decaytype >= 0);
   assert_testmodeonly(decaytype < DecayType::DECAYTYPE_COUNT);
   return alldecaytypes_is_used[decaytype];
@@ -1225,8 +1218,7 @@ auto calc_particle_injection_power_per_mass(const NucMassFracCoeffs& nuc_massfra
 [[nodiscard]] auto calc_ana_emission_power_per_mass(const NucMassFracCoeffs& nuc_massfrac_coeffs)
     -> AnaEmissionPowerPerMass {
   return {
-      .gamma = calc_power_per_source_mass(nuc_massfrac_coeffs,
-                                          [](const int nucindex) { return nucdecayenergygamma(nucindex); }),
+      .gamma = calc_power_per_source_mass(nuc_massfrac_coeffs, nucdecayenergygamma),
       .positron = calc_particle_injection_power_per_mass(nuc_massfrac_coeffs, DECAYTYPE_BETAPLUS),
       .electron = calc_particle_injection_power_per_mass(nuc_massfrac_coeffs, DECAYTYPE_BETAMINUS),
       .alpha = calc_particle_injection_power_per_mass(nuc_massfrac_coeffs, DECAYTYPE_ALPHA),
@@ -1461,9 +1453,6 @@ void setup_radioactive_pellet(const double e_cmf_per_packet, const int nonemptym
 
   // initial cell energy selected
   if (decaychannelindex >= num_decaypaths) {
-    assert_always(decaychannelindex == num_decaypaths);  // only one non-radioactive channel for now
-    assert_always(INITIAL_PACKETS_ON);
-
     pkt.prop_time = globals::tmin;
     pkt.tdecay = globals::tmin;
     pkt.type = TYPE_RADIOACTIVE_PELLET;
