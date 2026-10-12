@@ -117,7 +117,7 @@ std::vector<int> ranks_ndo_nonempty;
 struct ModelGridCellInput {
   float rhoinit = -1.;
   float ffegrp = 0.;
-  // sum of the volume averaged radius per propagation cell. A double, because the sum runs over up to millions of
+  // sum of the midpoint radius per propagation cell. A double, because the sum runs over up to millions of
   // propagation cells.
   double initial_radial_pos_sum = 0.;
   // sum of the volume averaged r^2 per propagation cell, for the kinetic energy of the BARNES
@@ -420,100 +420,18 @@ void set_untrackedstable_massfracs(std::span<const float> elem_massfracs_of_mgi)
   }
 }
 
-// antiderivative of r rcyl drcyl dz over the cylindrical coordinates (rcyl, z), where r = sqrt(rcyl^2 + z^2)
-auto antiderivative_of_radius_rcyl_z(const double rcyl, const double z) -> double {
-  const double radius = std::sqrt(pow2(rcyl) + pow2(z));
-  // the asinh term goes to zero on the axis
-  const double asinh_term = (rcyl == 0.) ? 0. : 3. * pow4(rcyl) * std::asinh(z / rcyl);
-  return ((z * ((2. * pow2(z)) + (5. * pow2(rcyl))) * radius) + asinh_term) / 24.;
-}
-
-// antiderivative of r dx dy dz over the Cartesian coordinates, where r = sqrt(x^2 + y^2 + z^2)
-auto antiderivative_of_radius_xyz(const double x, const double y, const double z) -> double {
-  const double radius = std::sqrt(pow2(x) + pow2(y) + pow2(z));
-  // the log term of axis p has the factor q s (q^2 + s^2), which is zero where p + r is zero.
-  // For p < 0, p + r = (q^2 + s^2) / (r - p) avoids the cancellation of p and r.
-  const auto log_term = [radius](const double p, const double q, const double s) {
-    const double factor = q * s * (pow2(q) + pow2(s));
-    const double p_plus_radius = (p >= 0.) ? p + radius : (pow2(q) + pow2(s)) / (radius - p);
-    return (factor == 0.) ? 0. : factor * std::log(p_plus_radius);
-  };
-  // the atan term of axis p goes to zero where p is zero
-  const auto atan_term = [radius](const double p, const double q, const double s) {
-    return (p == 0.) ? 0. : pow4(p) * std::atan(q * s / (p * radius));
-  };
-  return (x * y * z * radius / 4.) + ((log_term(x, y, z) + log_term(y, z, x) + log_term(z, x, y)) / 6.) -
-         ((atan_term(x, y, z) + atan_term(y, z, x) + atan_term(z, x, y)) / 12.);
-}
-
-// volume averaged mean radius of a propagation cell at time tmin
-auto get_cellradialposmean(const int cellindex) -> double {
-  const auto prop_gridtype = get_propgridtype();
-  if (prop_gridtype == GridType::SPHERICAL1D) {
-    const double r_inner = get_cellcoordmin(cellindex, 0);
-    const double r_outer = get_cellcoordmax(cellindex, 0);
-    return 3. / 4 * (pow4(r_outer) - pow4(r_inner)) / (pow3(r_outer) - pow3(r_inner));
+// radius of the midpoint of a propagation cell at time tmin. The midpoint has the middle value of each grid
+// coordinate: r for 1D, (rcyl, z) for 2D, and (x, y, z) for 3D.
+auto get_cellradialposmid(const int cellindex) -> double {
+  double radius_squared = 0.;
+  for (int axis = 0; axis < get_ndim(get_propgridtype()); axis++) {
+    radius_squared += pow2((get_cellcoordmin(cellindex, axis) + get_cellcoordmax(cellindex, axis)) / 2);
   }
-
-  if (prop_gridtype == GridType::CYLINDRICAL2D) {
-    const double rcyl_inner = get_cellcoordmin(cellindex, 0);
-    const double rcyl_outer = get_cellcoordmax(cellindex, 0);
-    const double z_low = get_cellcoordmin(cellindex, 1);
-    const double z_high = get_cellcoordmax(cellindex, 1);
-    const double radius_integral =
-        antiderivative_of_radius_rcyl_z(rcyl_outer, z_high) - antiderivative_of_radius_rcyl_z(rcyl_outer, z_low) -
-        antiderivative_of_radius_rcyl_z(rcyl_inner, z_high) + antiderivative_of_radius_rcyl_z(rcyl_inner, z_low);
-    return radius_integral / ((pow2(rcyl_outer) - pow2(rcyl_inner)) / 2. * (z_high - z_low));
-  }
-
-  // sum the antiderivative over the eight corners of the cuboid, with the sign of each corner
-  const std::array<std::array<double, 2>, 3> coord_bounds{
-      {
-          {get_cellcoordmin(cellindex, 0), get_cellcoordmax(cellindex, 0)},
-          {get_cellcoordmin(cellindex, 1), get_cellcoordmax(cellindex, 1)},
-          {get_cellcoordmin(cellindex, 2), get_cellcoordmax(cellindex, 2)},
-      },
-  };
-  double radius_integral = 0.;
-  for (int ix = 0; ix < 2; ix++) {
-    for (int iy = 0; iy < 2; iy++) {
-      for (int iz = 0; iz < 2; iz++) {
-        const double corner_sign = ((ix + iy + iz) % 2 == 1) ? 1. : -1.;
-        radius_integral +=
-            corner_sign * antiderivative_of_radius_xyz(coord_bounds[0][ix], coord_bounds[1][iy], coord_bounds[2][iz]);
-      }
-    }
-  }
-  return radius_integral / ((coord_bounds[0][1] - coord_bounds[0][0]) * (coord_bounds[1][1] - coord_bounds[1][0]) *
-                            (coord_bounds[2][1] - coord_bounds[2][0]));
-}
-
-// radius of the volume-weighted mean position of a propagation cell at time tmin, in the coordinates of the grid:
-// r for 1D, (rcyl, z) for 2D, and (x, y, z) for 3D. For a 3D cell, this is the radius of the cell centre.
-auto get_cellcentroid_radialpos(const int cellindex) -> double {
-  const auto prop_gridtype = get_propgridtype();
-  if (prop_gridtype == GridType::SPHERICAL1D) {
-    return get_cellradialposmean(cellindex);
-  }
-
-  if (prop_gridtype == GridType::CYLINDRICAL2D) {
-    const double rcyl_inner = get_cellcoordmin(cellindex, 0);
-    const double rcyl_outer = get_cellcoordmax(cellindex, 0);
-    const double rcyl_centroid =
-        2. / 3. * (pow3(rcyl_outer) - pow3(rcyl_inner)) / (pow2(rcyl_outer) - pow2(rcyl_inner));
-    const double z_mid = (get_cellcoordmin(cellindex, 1) + get_cellcoordmax(cellindex, 1)) / 2;
-    return std::sqrt(pow2(rcyl_centroid) + pow2(z_mid));
-  }
-
-  double lensquared = 0.;
-  for (int axis = 0; axis < 3; axis++) {
-    lensquared += pow2((get_cellcoordmin(cellindex, axis) + get_cellcoordmax(cellindex, axis)) / 2);
-  }
-  return std::sqrt(lensquared);
+  return std::sqrt(radius_squared);
 }
 
 // volume averaged mean of the squared radius of a propagation cell. The kinetic energy sum needs the
-// mean of r^2, which is larger than the square of the mean radius that get_cellradialposmean() gives.
+// mean of r^2, which is larger than the square of the radius that get_cellradialposmid() gives.
 auto get_cellradialposmeansquared(const int cellindex) -> double {
   const auto prop_gridtype = get_propgridtype();
   if (prop_gridtype == GridType::SPHERICAL1D) {
@@ -594,14 +512,14 @@ void allocate_nonemptymodelcells() {
   }
 
   for (int cellindex = 0; cellindex < ngrid; cellindex++) {
-    const auto cell_centroid_radial_pos = get_cellcentroid_radialpos(cellindex);
+    const auto radial_pos_mid = get_cellradialposmid(cellindex);
 
     if constexpr (FORCE_SPHERICAL_ESCAPE_SURFACE) {
       propcell_outside_escape_surface[cellindex] =
           (get_cell_r_inner(cellindex, get_propgridtype()) > globals::rmax) ? 1 : 0;
     }
 
-    if (FORCE_SPHERICAL_ESCAPE_SURFACE && cell_centroid_radial_pos > globals::vmax * globals::tmin) {
+    if (FORCE_SPHERICAL_ESCAPE_SURFACE && radial_pos_mid > globals::vmax * globals::tmin) {
       // for 1D models, the final shell outer v should already be at vmax
       assert_always(model_type != GridType::SPHERICAL1D || propcell_mgi[cellindex] < 0);
       if (const int mgi_blanked = get_propcell_modelgridindex(cellindex); track_blanked_mass && mgi_blanked >= 0) {
@@ -614,7 +532,7 @@ void allocate_nonemptymodelcells() {
     if (mgi >= 0) {
       modelgrid_numpropcells[mgi] += 1;
       if (globals::rank_in_node == 0) {
-        modelgrid_input[mgi].initial_radial_pos_sum += get_cellradialposmean(cellindex);
+        modelgrid_input[mgi].initial_radial_pos_sum += radial_pos_mid;
         modelgrid_input[mgi].initial_radial_pos_squared_sum += get_cellradialposmeansquared(cellindex);
       }
       assert_always(get_rho_tmin(mgi) > 0);
@@ -748,13 +666,13 @@ void allocate_nonemptymodelcells() {
 // Map 1D spherical model grid onto 3D Cartesian propagation grid
 void map_1dmodelto3dgrid() {
   for (int cellindex = 0; cellindex < ngrid; cellindex++) {
-    const double cell_centroid_radial_vel = get_cellcentroid_radialpos(cellindex) / globals::tmin;
-    const int mgi = int_index_lowerbound(vout_model, cell_centroid_radial_vel);
+    const double cellvmid = get_cellradialposmid(cellindex) / globals::tmin;
+    const int mgi = int_index_lowerbound(vout_model, cellvmid);
 
     if (mgi < get_npts_model() && modelgrid_input[mgi].rhoinit > 0) {
       set_propcell_modelgridindex(cellindex, mgi);
-      assert_always(vout_model[mgi] >= cell_centroid_radial_vel);
-      assert_always((mgi > 0 ? vout_model[mgi - 1] : 0.0) <= cell_centroid_radial_vel);
+      assert_always(vout_model[mgi] >= cellvmid);
+      assert_always((mgi > 0 ? vout_model[mgi - 1] : 0.0) <= cellvmid);
     } else {
       // corner cells outside of the outermost model shell are empty and so are any shells with zero density
       set_propcell_modelgridindex(cellindex, -1);
