@@ -414,6 +414,8 @@ jobs:
               working-directory: tests/
               run: |
                   artistools plotspectra --frompackets -t ${{ startsWith(matrix.testname, 'kilonova_1d_timedepnlte') && '8.5' || '1.5' }} ${{ matrix.testname }}_testrun
+                  # the emission plot reads linelist.out, thus a change of its format fails here
+                  artistools plotspectra --frompackets --showemission -t ${{ startsWith(matrix.testname, 'kilonova_1d_timedepnlte') && '8.5' || '1.5' }} ${{ matrix.testname }}_testrun
 
             - name: Upload plot files
               if: always() && inputs.testmode != 'ON' && inputs.uploadoutputfiles == 'ON'
