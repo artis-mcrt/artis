@@ -184,8 +184,7 @@ void read_possible_yefile() {
 
     const int last_mgi = get_npts_model() - 1;
     int cells_set = 0;
-    int min_mgi = std::numeric_limits<int>::max();
-    int max_mgi = std::numeric_limits<int>::min();
+    bool has_first_or_last_cell = false;
     for (int n = 0; n < nlines_in; n++) {
       int cellnumberin = -1;
       float initelecfrac = 0.;
@@ -199,12 +198,11 @@ void read_possible_yefile() {
         fatal_crash("Ye.txt: cell {} is outside the model cell range [0..{}]. The cell ids of model.txt start at {}",
                     mgi, last_mgi, first_input_cellid);
       }
-      min_mgi = std::min(min_mgi, mgi);
-      max_mgi = std::max(max_mgi, mgi);
+      has_first_or_last_cell = has_first_or_last_cell || mgi == 0 || mgi == last_mgi;
       set_initelectronfrac(mgi, initelecfrac);
       cells_set++;
     }
-    if (cells_set > 0 && min_mgi != 0 && max_mgi != last_mgi) {
+    if (cells_set > 0 && !has_first_or_last_cell) {
       // A file with either boundary id would hit the out-of-range stop above under the other id
       // convention. A sparse file with neither boundary id gives no such confirmation, e.g. a
       // 1-based file for a 0-based model would read with a one-cell shift.
@@ -2226,7 +2224,7 @@ void read_ejecta_model() {
 
       if (mgi == 0) {
         first_input_cellid = cellnumberin;
-        printlnlog("first_input_cellid {}", first_input_cellid);
+        printlnlog("model.txt: autodetected cell numbering starting from {}", first_input_cellid);
         assert_always(first_input_cellid == 0 || first_input_cellid == 1);
       }
       assert_always(cellnumberin == mgi + first_input_cellid);
