@@ -20,7 +20,7 @@ def main() -> None:
 
     endtime = datetime.datetime.fromisoformat(strendtime)
     # squeue prints a local time without a timezone, so the current time must also be naive
-    total_sec = (endtime - datetime.datetime.now()).total_seconds()  # noqa: DTZ005
+    total_sec = (endtime - datetime.datetime.now()).total_seconds()
     print(total_sec / 3600)
 
 
