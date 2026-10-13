@@ -172,13 +172,15 @@ void read_phixs_data_table(std::istream& phixsfile, const int nphixspoints_input
                            size_t* mem_usage_phixs, const int phixs_file_version,
                            const PhixsLevelBuilders& levelbuilders) {
   std::string phixsline;
+  // phixsdata.txt always numbers the levels from 1. phixsdata_v2.txt uses the numbering of adata.txt
+  const int phixs_groundstate_index_in = (phixs_file_version == 1) ? 1 : groundstate_index_in;
   const auto phixstargetstart = static_cast<int>(tmpallphixstargets.size());
   const auto lowerionlower_uniquelevelindex = get_uniquelevelindex(element, lowerion, lowerlevel);
   assert_always(levelbuilders.phixstargetstart[lowerionlower_uniquelevelindex] == -1 ||
                 levelbuilders.phixstargetstart[lowerionlower_uniquelevelindex] == phixstargetstart);
   levelbuilders.phixstargetstart[lowerionlower_uniquelevelindex] = phixstargetstart;
   if (upperlevel_in >= 0) {  // file gives photoionisation to a single target state only
-    int upperlevel = upperlevel_in - groundstate_index_in;
+    int upperlevel = upperlevel_in - phixs_groundstate_index_in;
     assert_always(upperlevel >= 0);
     assert_always(levelbuilders.nphixstargets[lowerionlower_uniquelevelindex] == 0 ||
                   levelbuilders.nphixstargets[lowerionlower_uniquelevelindex] == 1);
@@ -209,7 +211,7 @@ void read_phixs_data_table(std::istream& phixsfile, const int nphixspoints_input
         double phixstargetprobability{NAN};
         assert_always(get_noncommentline(phixsfile, phixsline));
         assert_always(std::stringstream(phixsline) >> upperlevel_in >> phixstargetprobability);
-        const int upperlevel = upperlevel_in - groundstate_index_in;
+        const int upperlevel = upperlevel_in - phixs_groundstate_index_in;
         assert_always(upperlevel >= 0 && upperlevel < get_nlevels(element, upperion));
         assert_always(phixstargetprobability > 0);
         tmpallphixstargets.push_back({.probability = phixstargetprobability, .levelindex = upperlevel});
@@ -343,6 +345,7 @@ void read_phixs_file(const int phixs_file_version, std::vector<float>& tmpallphi
   std::string phixsline;
   std::istringstream ssline;
   auto mem_usage_phixs = 0ZU;
+  const int phixs_groundstate_index_in = (phixs_file_version == 1) ? 1 : groundstate_index_in;
 
   if (phixs_file_version == 1 && phixs_file_version_exists[2]) {
     printlnlog(
@@ -401,7 +404,7 @@ void read_phixs_file(const int phixs_file_version, std::vector<float>& tmpallphi
 
       const int upperion = upperionstage - get_ionstage(element, 0);
       const int lowerion = lowerionstage - get_ionstage(element, 0);
-      const int lowerlevel = lowerlevel_in - groundstate_index_in;
+      const int lowerlevel = lowerlevel_in - phixs_groundstate_index_in;
       assert_always(lowerlevel >= 0);
 
       // record the lowest level the file supplies a table for in each included ion, before any filtering on
@@ -1245,15 +1248,15 @@ void read_phixs_data() {
           if (ion_minphixslevel_infile[othv][uniqueionindex] == 0) {
             printlnlog(
                 "[warning] {}: Z={} ionstage {}: the file includes a cross-section for an excited level of this ion "
-                "but the ground state table comes from {}. Check that the two files use the same level numbering",
+                "but the ground state table comes from {}. Check the level numbering of both files",
                 phixsdata_filenames[v], get_atomicnumber(element), get_ionstage(element, ion),
                 phixsdata_filenames[othv]);
           } else {
             fatal_crash(
                 "{}: Z={} ionstage {}: the file includes a cross-section for an excited level of this ion but "
-                "none for the ground state. The phixs level numbering may not match the ground state index {} "
-                "detected from adata.txt",
-                phixsdata_filenames[v], get_atomicnumber(element), get_ionstage(element, ion), groundstate_index_in);
+                "none for the ground state. The level numbering of the file must start at {}",
+                phixsdata_filenames[v], get_atomicnumber(element), get_ionstage(element, ion),
+                (v == 1) ? 1 : groundstate_index_in);
           }
         }
       }
