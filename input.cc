@@ -981,7 +981,7 @@ void setup_phixs_list() {
              globals::bfestim_nu_edge.size());
 }
 
-void read_autoion_data(const std::span<const int> ion_nlevels_in_adata) {
+void read_autoion_data() {
   // filled in below and published as read-only globals::alllevels members (with no autoion.txt, the
   // initial values are published as-is)
   const auto uniquelevelcount = std::ssize(globals::alllevels.epsilon);
@@ -1014,6 +1014,9 @@ void read_autoion_data(const std::span<const int> ion_nlevels_in_adata) {
     // highest autoionising level of each included ion, with the level numbering of the file
     auto ion_max_autoionlevel_in = std::vector<int>(get_includedions(), -1);
 
+    // a level number 0 in any row shows that the file numbers the levels from 0
+    bool has_level_number_zero = false;
+
     while (get_noncommentline(autoionfile, autoionline)) {
       int Z = -1;
       int upperionstage = -1;
@@ -1029,6 +1032,7 @@ void read_autoion_data(const std::span<const int> ion_nlevels_in_adata) {
       assert_always(upperionstage >= 2);
       assert_always(lowerionstage >= 1);
       assert_always(lowerlevel_in >= 0 && upperlevel_in >= 0);
+      has_level_number_zero = has_level_number_zero || lowerlevel_in == 0 || upperlevel_in == 0;
 
       const int element = get_elementindex(Z);
 
@@ -1042,45 +1046,34 @@ void read_autoion_data(const std::span<const int> ion_nlevels_in_adata) {
           const auto lower_uniqueionindex = get_uniqueionindex(element, lowerion);
           ion_max_autoionlevel_in[lower_uniqueionindex] =
               std::max(ion_max_autoionlevel_in[lower_uniqueionindex], lowerlevel_in);
-          autoion_transitions_in.push_back({.element = element,
-                                            .lowerion = lowerion,
-                                            .upperion = upperion,
-                                            .lowerlevel_in = lowerlevel_in,
-                                            .upperlevel_in = upperlevel_in,
-                                            .autoion_A = autoion_A});
+          autoion_transitions_in.push_back({
+              .element = element,
+              .lowerion = lowerion,
+              .upperion = upperion,
+              .lowerlevel_in = lowerlevel_in,
+              .upperlevel_in = upperlevel_in,
+              .autoion_A = autoion_A,
+          });
         }
       }
     }
 
-    // The autoionising levels of an ion are a contiguous block that ends at the highest level of the ion in
-    // adata.txt. The highest autoionising level in the file therefore gives the first level index of the file.
-    int autoion_groundstate_index_in = -1;
+    const int autoion_groundstate_index_in = has_level_number_zero ? 0 : 1;
+    printlnlog("autoion.txt: autodetected level numbering starting from {}", autoion_groundstate_index_in);
+
+    // The autoionising levels of an ion are a contiguous block that ends at the highest level of the ion (asserted
+    // below). This check also stops a file whose numbering does not agree with the detected numbering.
     for (int uniqueionindex = 0; uniqueionindex < get_includedions(); uniqueionindex++) {
       const auto max_autoionlevel_in = ion_max_autoionlevel_in[uniqueionindex];
-      if (max_autoionlevel_in < 0) {
-        continue;  // the file has no transitions for this ion
-      }
       const auto [element, ion] = get_ionfromuniqueionindex(uniqueionindex);
-      const auto nlevels_in_adata = ion_nlevels_in_adata[uniqueionindex];
-      const auto ion_groundstate_index_in = max_autoionlevel_in - (nlevels_in_adata - 1);
-      if (ion_groundstate_index_in != 0 && ion_groundstate_index_in != 1) {
+      if (max_autoionlevel_in >= 0 &&
+          max_autoionlevel_in - autoion_groundstate_index_in != get_nlevels(element, ion) - 1) {
         fatal_crash(
-            "autoion.txt: Z={} ionstage {}: the highest autoionising level number {} is not the highest level of "
-            "the ion in adata.txt, which is level {} in 0-based or level {} in 1-based numbering",
-            get_atomicnumber(element), get_ionstage(element, ion), max_autoionlevel_in, nlevels_in_adata - 1,
-            nlevels_in_adata);
+            "autoion.txt: Z={} ionstage {}: the highest autoionising level {} is not the highest level {} of the ion. "
+            "The level numbering of autoion.txt starts at {}, because the file has {} level number 0",
+            get_atomicnumber(element), get_ionstage(element, ion), max_autoionlevel_in - autoion_groundstate_index_in,
+            get_nlevels(element, ion) - 1, autoion_groundstate_index_in, has_level_number_zero ? "a" : "no");
       }
-      if (autoion_groundstate_index_in >= 0 && ion_groundstate_index_in != autoion_groundstate_index_in) {
-        fatal_crash(
-            "autoion.txt: Z={} ionstage {}: the level numbering starts at {}, but it starts at {} for an ion "
-            "before it. All ions must use the same level numbering",
-            get_atomicnumber(element), get_ionstage(element, ion), ion_groundstate_index_in,
-            autoion_groundstate_index_in);
-      }
-      autoion_groundstate_index_in = ion_groundstate_index_in;
-    }
-    if (autoion_groundstate_index_in >= 0) {
-      printlnlog("autoion.txt: autodetected level numbering starting from {}", autoion_groundstate_index_in);
     }
 
     bool allautoion_levels_are_not_nlte = true;
@@ -1419,7 +1412,7 @@ auto read_compositiondata() -> std::vector<int> {
 void read_levels_and_transitions(std::vector<TempEnergyLevel>& temp_alllevels,
                                  std::vector<TempLineTransitionInput>& temp_linelist,
                                  std::vector<TempAllTransInput>& temp_alltranslist,
-                                 const std::vector<int>& nlevelsmax_readin, std::vector<int>& ion_nlevels_in_adata) {
+                                 const std::vector<int>& nlevelsmax_readin) {
   std::string line;
   std::istringstream ssline;
   globals::nlines = 0;
@@ -1467,7 +1460,6 @@ void read_levels_and_transitions(std::vector<TempEnergyLevel>& temp_alllevels,
       // optionally limit the top ion to one level and no transitions
       const int nlevelslimit = (SINGLE_LEVEL_TOP_ION && ion == (nions - 1)) ? 1 : nlevelsmax_readin[element];
       const int nlevelskept = (nlevelslimit < 0) ? nlevels_in_file : std::min(nlevelslimit, nlevels_in_file);
-      ion_nlevels_in_adata.push_back(nlevels_in_file);
 
       if (nlevels_in_file > nlevelskept) {
         printlnlog("[info] read_levels_and_transitions: reduce number of levels from {} to {} for Z {:2} ionstage {}",
@@ -1759,13 +1751,11 @@ void read_atomicdata_files() {
   std::vector<TempEnergyLevel> temp_alllevels;
   std::vector<TempLineTransitionInput> temp_linelist;
   std::vector<TempAllTransInput> temp_alltranslist;
-  std::vector<int> ion_nlevels_in_adata;  // the level count of each included ion in adata.txt (node leaders only)
 
   if (globals::rank_in_node == 0) {
     temp_linelist.reserve(1U << 22U);  // reserve initial space for 4 million lines to avoid too many reallocations
     temp_alltranslist.reserve(1U << 22U);
-    read_levels_and_transitions(temp_alllevels, temp_linelist, temp_alltranslist, nlevelsmax_readin,
-                                ion_nlevels_in_adata);
+    read_levels_and_transitions(temp_alllevels, temp_linelist, temp_alltranslist, nlevelsmax_readin);
   }
   MPI_Barrier_node();
 
@@ -1796,7 +1786,7 @@ void read_atomicdata_files() {
     }
   }
 
-  read_autoion_data(ion_nlevels_in_adata);
+  read_autoion_data();
   read_phixs_data();
   setup_phixs_list();
 }

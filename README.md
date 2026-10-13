@@ -214,7 +214,7 @@ Header:<br/>
 Level count rows of:<br/>
 `[level index] [energy in eV] [statistical weight] [level transition count] [level name or description]`
 
-The level indices start at 0 or at 1. sn3d finds the first index from the first level of adata.txt. transitiondata.txt and phixsdata_v2.txt must use the same numbering. phixsdata.txt always numbers the levels from 1. sn3d finds the first index of autoion.txt separately, from the highest autoionising level of each ion. That level must be the highest level of the ion in adata.txt. The log messages always give the 0-based level index.
+The level indices start at 0 or at 1. sn3d finds the first index from the first level of adata.txt. transitiondata.txt and phixsdata_v2.txt must use the same numbering. phixsdata.txt always numbers the levels from 1. sn3d finds the first index of autoion.txt separately: the numbering starts at 0 if a level number in the file is 0, and at 1 otherwise. The highest autoionising level of each ion must be the highest level of the ion. The log messages always give the 0-based level index.
 
 ### transitiondata.txt
 One block per ion consisting of:
