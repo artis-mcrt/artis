@@ -54,7 +54,7 @@ def main() -> None:
                         datepart = line.split(": before exspec")[0]
                     tokens = datepart.split()
                     try:
-                        jobdict["time_run_start"] = datetime.strptime(  # noqa: DTZ007
+                        jobdict["time_run_start"] = datetime.strptime(
                             " ".join(tokens[:4] + tokens[5:]), "%a %b %d %H:%M:%S %Y"
                         )
                         # the abbreviation resolves an ambiguous time in the repeated hour
