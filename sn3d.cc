@@ -197,7 +197,7 @@ void initialise_linelist_file() {
 
   // with tens of millions of lines, per-value std::print calls to the stream are slow (each one re-checks whether
   // the stream is a terminal), so format each value with std::to_chars into a buffer and write large chunks
-  std::string buffer = "#lambda_angstroms atomic_number ion_stage upper_level lower_level\n";
+  std::string buffer = "#lambda_angstroms atomic_number ion_stage upperlevelindex lowerlevelindex\n";
   constexpr auto flushsize = 1UZ << 22U;
   buffer.reserve(flushsize + 128);
   const auto append_value = [&buffer](const auto value, const char separator) {
@@ -217,7 +217,8 @@ void initialise_linelist_file() {
     buffer += separator;
   };
 
-  // one row for each line, in lineindex order. The levels start at 1 in each ion.
+  // one row for each line, in lineindex order. The level indices start at 0 in each ion, as the level argument of
+  // the functions in atomic.h
   for (int i = 0; i < globals::nlines; i++) {
     const int element = globals::linelist.elementindex[i];
     const int ion = globals::linelist.ionindex[i];
@@ -225,8 +226,8 @@ void initialise_linelist_file() {
     append_value(1e8 * CLIGHT / globals::linelist.nu[i], ' ');  // vacuum wavelength [Angstroms]
     append_value(get_atomicnumber(element), ' ');
     append_value(get_ionstage(element, ion), ' ');
-    append_value(globals::linelist.uniquelevelindex_upper[i] - ionuniquelevelindexstart + 1, ' ');
-    append_value(globals::linelist.uniquelevelindex_lower[i] - ionuniquelevelindexstart + 1, '\n');
+    append_value(globals::linelist.uniquelevelindex_upper[i] - ionuniquelevelindexstart, ' ');
+    append_value(globals::linelist.uniquelevelindex_lower[i] - ionuniquelevelindexstart, '\n');
     if (buffer.size() >= flushsize) {
       linelist_file.write(buffer.data(), static_cast<std::streamsize>(buffer.size()));
       buffer.clear();
