@@ -198,6 +198,8 @@ Required when virtual packets are enabled (VPKT_ON in artisoptions.h). Sets the 
 ### model.txt
 Grid parameters, cell densities and nuclear composition. The optional column `q` holds the trapped radiation energy per mass [erg/g] at the snapshot time of the model. The value must already include the adiabatic losses before the snapshot time. `INITIAL_PACKETS_ON` uses it for the initial temperature and for the initial packets.
 
+The cell ids start at 0 or at 1. sn3d finds the first id from the first cell of model.txt. abundances.txt and Ye.txt must use the same ids. The log messages always give the 0-based cell index.
+
 ### abundances.txt
 Required file with the per-cell elemental mass fractions, which include elements whose isotopic abundances are not given in model.txt.
 
@@ -211,6 +213,8 @@ Header:<br/>
 
 Level count rows of:<br/>
 `[level index] [energy in eV] [statistical weight] [level transition count] [level name or description]`
+
+The level indices start at 0 or at 1. sn3d finds the first index from the first level of adata.txt. transitiondata.txt and phixsdata_v2.txt must use the same numbering. phixsdata.txt always numbers the levels from 1. sn3d finds the first index of autoion.txt separately: the numbering starts at 0 if a level number in the file is 0, and at 1 otherwise. The highest autoionising level of each ion must be the highest level of the ion. The log messages always give the 0-based level index.
 
 ### transitiondata.txt
 One block per ion consisting of:

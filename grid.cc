@@ -182,10 +182,9 @@ void read_possible_yefile() {
     int nlines_in = 0;
     assert_always(static_cast<bool>(filein >> nlines_in));
 
-    const int last_input_cellid = get_npts_model() - 1 + first_input_cellid;
+    const int last_mgi = get_npts_model() - 1;
     int cells_set = 0;
-    int minid = std::numeric_limits<int>::max();
-    int maxid = std::numeric_limits<int>::min();
+    bool has_first_or_last_cell = false;
     for (int n = 0; n < nlines_in; n++) {
       int cellnumberin = -1;
       float initelecfrac = 0.;
@@ -193,25 +192,24 @@ void read_possible_yefile() {
       // Ye.txt uses the same cell ids as model.txt. read_ejecta_model() detects the id of the first
       // cell (0 or 1) and stores it in first_input_cellid before this function runs.
       const int mgi = cellnumberin - first_input_cellid;
-      if (mgi < 0 || mgi >= get_npts_model()) {
+      if (mgi < 0 || mgi > last_mgi) {
         // An out-of-range id is a sign of a cell id mismatch with model.txt. A silently shifted
         // electron fraction would give wrong grey opacities in every cell.
-        fatal_crash("Ye.txt: cell id {} is outside the model.txt id range [{}..{}]", cellnumberin, first_input_cellid,
-                    last_input_cellid);
+        fatal_crash("Ye.txt: cell {} is outside the model cell range [0..{}]. The cell ids of model.txt start at {}",
+                    mgi, last_mgi, first_input_cellid);
       }
-      minid = std::min(minid, cellnumberin);
-      maxid = std::max(maxid, cellnumberin);
+      has_first_or_last_cell = has_first_or_last_cell || mgi == 0 || mgi == last_mgi;
       set_initelectronfrac(mgi, initelecfrac);
       cells_set++;
     }
-    if (cells_set > 0 && minid != first_input_cellid && maxid != last_input_cellid) {
+    if (cells_set > 0 && !has_first_or_last_cell) {
       // A file with either boundary id would hit the out-of-range stop above under the other id
       // convention. A sparse file with neither boundary id gives no such confirmation, e.g. a
       // 1-based file for a 0-based model would read with a one-cell shift.
       printlnlog(
-          "[warning] Ye.txt holds neither the first cell id {} nor the last cell id {}, so the file cannot confirm "
+          "[warning] Ye.txt holds neither the first cell 0 nor the last cell {}, so the file cannot confirm "
           "that its ids follow model.txt",
-          first_input_cellid, last_input_cellid);
+          last_mgi);
     }
     printlnlog("Ye.txt: set the initial electron fraction for {} of {} model cells (ids follow model.txt, first id {})",
                cells_set, get_npts_model(), first_input_cellid);
@@ -782,7 +780,7 @@ auto read_elem_abundances() -> std::tuple<std::vector<float>, int> {
       // later element. Only whitespace may remain here.
       remainder.remove_prefix(std::min(remainder.find_first_not_of(" \t\r"), remainder.size()));
       if (!remainder.empty()) {
-        fatal_crash("read_elem_abundances: cell {} has an unreadable token at '{}'", cellnumberinput, remainder);
+        fatal_crash("read_elem_abundances: cell {} has an unreadable token at '{}'", mgi, remainder);
       }
 
       if (get_rho_tmin(mgi) > 0.) {
@@ -794,7 +792,7 @@ auto read_elem_abundances() -> std::tuple<std::vector<float>, int> {
             printlnlog(
                 "[warning] read_elem_abundances: 3D cell {} has element mass fractions that sum to {:g}. The values "
                 "are used without normalisation.",
-                cellnumberinput, normfactor);
+                mgi, normfactor);
           }
         }
         if (normfactor <= 0. || threedimensional) {
@@ -843,8 +841,7 @@ auto read_elem_abundances() -> std::tuple<std::vector<float>, int> {
             printlnlog(
                 "[warning] read_elem_abundances: cell {} has density {:g} [g/cm3] at tmin and no mass in the "
                 "elements of compositiondata.txt. The cell becomes empty. Elements with mass and no atomic data:{}",
-                cellnumberinput, get_rho_tmin(mgi),
-                elements_without_atomic_data.empty() ? " none" : elements_without_atomic_data);
+                mgi, get_rho_tmin(mgi), elements_without_atomic_data.empty() ? " none" : elements_without_atomic_data);
           }
           set_rho_tmin(mgi, 0.);
         }
@@ -2227,14 +2224,13 @@ void read_ejecta_model() {
 
       if (mgi == 0) {
         first_input_cellid = cellnumberin;
-        printlnlog("first_input_cellid {}", first_input_cellid);
+        printlnlog("model.txt: autodetected cell numbering starting from {}", first_input_cellid);
         assert_always(first_input_cellid == 0 || first_input_cellid == 1);
       }
       assert_always(cellnumberin == mgi + first_input_cellid);
 
       if (rho_tmodel < 0) {
-        fatal_crash("model.txt cell {} (inputcellid {}) has negative density {:g} [g/cm3] at t_model", mgi,
-                    cellnumberin, rho_tmodel);
+        fatal_crash("model.txt cell {} has negative density {:g} [g/cm3] at t_model", mgi, rho_tmodel);
       }
 
       const bool keepcell = (rho_tmodel > 0);
