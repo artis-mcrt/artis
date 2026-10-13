@@ -297,7 +297,7 @@ jobs:
                   fi
 
             - name: Setup uv
-              uses: astral-sh/setup-uv@v10.2.0
+              uses: astral-sh/setup-uv@v10.3.0
               if: always() && inputs.testmode != 'ON'
               id: setup-uv
               with:
