@@ -11,7 +11,7 @@ fc67c3476fa06fbf75a633e90ff46ff6  gamma_spec.out
 0c148f022f6cee0a63b9be6c63b0eb93  grid.out
 6dfbd413ec7b79e6560c4c019ffed679  light_curve.out
 904b7bae784509a73e91ad133c845bf2  light_curve_res.out
-602e1c6781e6a0528f75241e87870940  linestat.out
+aca7953d2492a7fa28a85dae131b1db1  linelist.out
 a909755ee86f2af38a9aea317f2f9987  modelgridrankassignments.out
 71f968bc58f3151bb6e39bc3b2b8902e  nuclides.out
 ec070140edeafb166f756921ba8b74d6  spec.out

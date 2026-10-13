@@ -6,7 +6,7 @@ e92d80e34460ecbfa9659d623982e766  deposition.out
 3e7aae2976eaf5caff3db2f8096dbdf2  gammalinelist.out
 a3e3cf9b6adeac882d182c06011c63e8  grid.out
 c83e57d47c44af0ed5ef2cc306e76de0  light_curve.out
-e68f1288ddfed500eab2880869e19f06  linestat.out
+1b25735e8efe816f80773e742c1499e1  linelist.out
 25a9dd224aa09e3ac10e091ad673223d  modelgridrankassignments.out
 71f968bc58f3151bb6e39bc3b2b8902e  nuclides.out
 5867dc3e4667dad8f139f9318f4f3eb3  spec.out
