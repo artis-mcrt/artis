@@ -185,77 +185,58 @@ void setup_cellcache() {
              mem_usage_cellcache / 1024. / 1024.);
 }
 
-void initialise_linestat_file() {
+void initialise_linelist_file() {
   if (globals::simulation_continued_from_saved) {
-    // only write linestat.out on the first run
+    // only write linelist.out on the first run
     return;
   }
 
   const auto time_start = std::chrono::steady_clock::now();
-  // the file has tens of millions of values in each row, so zstd gets worker threads
-  auto linestat_file = open_output_file("linestat.out", ZSTD_LEVEL_DEFAULT, 4);
+  // the file has tens of millions of rows, so zstd gets worker threads
+  auto linelist_file = open_output_file("linelist.out", ZSTD_LEVEL_DEFAULT, 4);
 
   // with tens of millions of lines, per-value std::print calls to the stream are slow (each one re-checks whether
   // the stream is a terminal), so format each value with std::to_chars into a buffer and write large chunks
-  std::string buffer;
+  std::string buffer = "#lambda_angstroms atomic_number ion_stage upper_level lower_level\n";
   constexpr auto flushsize = 1UZ << 22U;
-  buffer.reserve(flushsize + 64);
-  const auto append_value = [&linestat_file, &buffer](const auto value) {
+  buffer.reserve(flushsize + 128);
+  const auto append_value = [&buffer](const auto value, const char separator) {
     std::array<char, 32> text{};
     const auto [textend, ec] = [&]() {
       if constexpr (std::is_floating_point_v<decltype(value)>) {
         // 9 significant digits are the full precision of a float32, which artistools uses for the wavelengths.
         // With 6 digits, the error is up to 0.05 Angstroms at 10000 Angstroms. That can change a wavelength label
         // that artistools rounds to the nearest Angstrom.
-        // Scientific notation with 8 digits after the decimal point gives 9 significant digits and the same format
-        // for all wavelengths.
-        return std::to_chars(text.data(), std::to_address(text.end()), value, std::chars_format::scientific, 8);
+        return std::to_chars(text.data(), std::to_address(text.end()), value, std::chars_format::general, 9);
       } else {
         return std::to_chars(text.data(), std::to_address(text.end()), value);
       }
     }();
     assert_always(ec == std::errc{});
     buffer.append(text.data(), textend);
-    buffer += ' ';
-    if (buffer.size() >= flushsize) {
-      linestat_file.write(buffer.data(), static_cast<std::streamsize>(buffer.size()));
-      buffer.clear();
-    }
+    buffer += separator;
   };
 
+  // one row for each line, in lineindex order. The levels start at 1 in each ion.
   for (int i = 0; i < globals::nlines; i++) {
-    append_value(CLIGHT / globals::linelist.nu[i]);  // wavelength in cm
+    const int element = globals::linelist.elementindex[i];
+    const int ion = globals::linelist.ionindex[i];
+    const auto ionuniquelevelindexstart = get_ionuniquelevelindexstart(element, ion);
+    append_value(1e8 * CLIGHT / globals::linelist.nu[i], ' ');  // vacuum wavelength [Angstroms]
+    append_value(get_atomicnumber(element), ' ');
+    append_value(get_ionstage(element, ion), ' ');
+    append_value(globals::linelist.uniquelevelindex_upper[i] - ionuniquelevelindexstart + 1, ' ');
+    append_value(globals::linelist.uniquelevelindex_lower[i] - ionuniquelevelindexstart + 1, '\n');
+    if (buffer.size() >= flushsize) {
+      linelist_file.write(buffer.data(), static_cast<std::streamsize>(buffer.size()));
+      buffer.clear();
+    }
   }
-  buffer += '\n';
 
-  for (int i = 0; i < globals::nlines; i++) {
-    append_value(get_atomicnumber(globals::linelist.elementindex[i]));
-  }
-  buffer += '\n';
-
-  for (int i = 0; i < globals::nlines; i++) {
-    append_value(get_ionstage(globals::linelist.elementindex[i], globals::linelist.ionindex[i]));
-  }
-  buffer += '\n';
-
-  for (int i = 0; i < globals::nlines; i++) {
-    const auto ionuniquelevelindexstart =
-        get_ionuniquelevelindexstart(globals::linelist.elementindex[i], globals::linelist.ionindex[i]);
-    append_value(globals::linelist.uniquelevelindex_upper[i] - ionuniquelevelindexstart + 1);
-  }
-  buffer += '\n';
-
-  for (int i = 0; i < globals::nlines; i++) {
-    const auto ionuniquelevelindexstart =
-        get_ionuniquelevelindexstart(globals::linelist.elementindex[i], globals::linelist.ionindex[i]);
-    append_value(globals::linelist.uniquelevelindex_lower[i] - ionuniquelevelindexstart + 1);
-  }
-  buffer += '\n';
-
-  linestat_file.write(buffer.data(), static_cast<std::streamsize>(buffer.size()));
-  linestat_file.close();
-  assert_always(!linestat_file.fail());  // e.g. a full disk
-  printlnlog("wrote linestat.out with {} lines (took {:.1f} seconds)", globals::nlines,
+  linelist_file.write(buffer.data(), static_cast<std::streamsize>(buffer.size()));
+  linelist_file.close();
+  assert_always(!linelist_file.fail());  // e.g. a full disk
+  printlnlog("wrote linelist.out with {} lines (took {:.1f} seconds)", globals::nlines,
              std::chrono::duration<double>(std::chrono::steady_clock::now() - time_start).count());
 }
 
@@ -1133,7 +1114,7 @@ auto main(int argc, char* argv[]) -> int {
   grid::read_ejecta_model();
 
   if (globals::my_rank == 0) {
-    initialise_linestat_file();
+    initialise_linelist_file();
   }
 
   printlnlog("timesteps {}", globals::ntimesteps);

@@ -482,7 +482,7 @@ The code must compile with nvc++ and with hipcc, also with `STDPAR=ON GPU=ON`.
 ### Input and output files
 
 - The artistools Python package reads the output files. Do not change their
-  formats. Do not make them optional. `linestat.out` must stay
+  formats. Do not make them optional. `linelist.out` must stay
   byte-compatible. CI plots each test with artistools, so a change of a format
   fails CI there.
 - The numeric values of some enumerations are also part of that interface, e.g.
