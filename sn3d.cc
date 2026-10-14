@@ -1057,6 +1057,8 @@ auto main(int argc, char* argv[]) -> int {
 
   printlnlog("git status: {}", GIT_STATUS);
 
+  printlog("artisoptions.h without the comments:\n{}", ARTISOPTIONS_TEXT);
+
   printlnlog("sn3d compiled at {} on {}", __TIME__, __DATE__);
 
 #if defined TESTMODE && TESTMODE
@@ -1179,10 +1181,23 @@ auto main(int argc, char* argv[]) -> int {
 
   setup_cellcache();
 
+  const auto first_timestep_start_time = std::chrono::steady_clock::now();
   while (globals::timestep < globals::timestep_finish && !terminate_early) {
     MPI_Barrier_allranks();
 
     terminate_early = do_timestep(globals::timestep, packets, walltime_limit_seconds);
+
+    if (!terminate_early) {
+      const int timesteps_completed_in_run = globals::timestep + 1 - globals::timestep_initial;
+      const int requested_timesteps_remaining = globals::timestep_finish - globals::timestep - 1;
+      const double hours_in_run =
+          std::chrono::duration<double>(std::chrono::steady_clock::now() - first_timestep_start_time).count() / HOUR;
+      printlnlog(
+          "timestep {} is complete ({} of {} timesteps of the model). This run did {} timesteps in {:.2f} hours. The "
+          "estimate for the remaining {} requested timesteps is {:.2f} hours.",
+          globals::timestep, globals::timestep + 1, globals::ntimesteps, timesteps_completed_in_run, hours_in_run,
+          requested_timesteps_remaining, hours_in_run / timesteps_completed_in_run * requested_timesteps_remaining);
+    }
 
     globals::timestep++;
   }

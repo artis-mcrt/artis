@@ -50,6 +50,8 @@ auto main(int argc, char* argv[]) -> int {
 
   printlnlog("git status: {}", GIT_STATUS);
 
+  printlog("artisoptions.h without the comments:\n{}", ARTISOPTIONS_TEXT);
+
   printlnlog("exspec compiled at {} on {}", __TIME__, __DATE__);
 
 #if defined TESTMODE && TESTMODE

@@ -338,13 +338,16 @@ extern const char* const GIT_BRANCH = \"$(shell git symbolic-ref --short HEAD 2>
 extern const char* const GIT_STATUS = \"$(GIT_STATUS_TEXT)\";
 endef
 
+# artisoptions.h without the comment lines and the blank lines, as one C++ string literal for each line
+ARTISOPTIONS_TEXT_CMD := sed -e '/^[[:space:]]*\/\//d' -e '/^[[:space:]]*$$/d' -e 's/\\/\\\\/g' -e 's/"/\\"/g' -e 's/^/"/' -e 's/$$/\\n"/' artisoptions.h
+
 # the git metadata changes at almost every git operation. version.h declares the strings and stays
 # the same, and this generated file holds the definitions. Only this small file compiles again,
 # and not sn3d.cc and exspec.cc
-$(shell echo "$(version_cc)" > .version_tmp.cc)
+$(shell { echo "$(version_cc)"; echo 'extern const char* const ARTISOPTIONS_TEXT ='; $(ARTISOPTIONS_TEXT_CMD) 2> /dev/null; echo '"";'; } > .version_tmp.cc)
 $(shell test -f version.cc || touch version.cc)
 
-ifneq ($(shell cat version.cc),$(shell cat .version_tmp.cc))
+ifneq ($(shell cmp -s version.cc .version_tmp.cc || echo differ),)
   $(info updating version.cc)
   $(shell mv .version_tmp.cc version.cc)
 else
