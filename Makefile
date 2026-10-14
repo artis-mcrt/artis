@@ -15,6 +15,9 @@ ifneq ($(strip $(filter-out clean,$(if $(MAKECMDGOALS),$(MAKECMDGOALS),all))),)
       $(warning artisoptions.h is a symlink, but make was started without --check-symlink-times: switching presets with ln -sf may not trigger a rebuild. Recommended: export MAKEFLAGS="--check-symlink-times --jobs=$$(nproc)")
     endif
   endif
+  ifeq ($(shell command -v mpicxx 2> /dev/null),)
+    $(error mpicxx not found. Install an MPI library that supplies mpicxx, e.g. Open MPI, or load its module on a cluster. The job scripts in scripts/ show the modules of some clusters)
+  endif
 endif
 
 $(info mpicxx version: $(shell mpicxx --showme:version 2> /dev/null))
@@ -69,7 +72,7 @@ else ifneq (,$(or $(findstring g++,$(COMPILER_VERSION)),$(findstring gcc,$(COMPI
 	COMPILER_NAME := gcc
 	MIN_GCC_VERSION := 14
 	ifeq ($(shell expr $(firstword $(subst ., ,$(COMPILER_VERSION_NUMBER))) \< $(MIN_GCC_VERSION)),1)
-$(warning WARNING: Detected GCC version $(COMPILER_VERSION_NUMBER) but minimum supported version is $(MIN_GCC_VERSION))
+$(error gcc $(COMPILER_VERSION_NUMBER) is older than the minimum version $(MIN_GCC_VERSION). Load a newer gcc, or set OMPI_CXX to a newer g++ for Open MPI)
 	endif
 	CXXFLAGS += -Wno-psabi -Wno-interference-size
 # 	CXXFLAGS += -Wsuggest-attribute=pure -Wsuggest-attribute=const
