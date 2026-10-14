@@ -874,10 +874,14 @@ void read_vpktparameterfile() {
     fatal_crash("vpkt.txt emission time window [{:g}, {:g}] [d] is empty", vspec_timemin_input / DAY,
                 vspec_timemax_input / DAY);
   }
-  assert_always(vspec_timemin_input >= VSPEC_TIMEMIN);
-  assert_always(vspec_timemax_input <= VSPEC_TIMEMAX);
-  assert_always(vspec_timemin_input >= globals::tmin);
-  assert_always(vspec_timemax_input <= globals::tmax);
+  const double vspec_timemin_allowed = std::max(VSPEC_TIMEMIN, globals::tmin);
+  const double vspec_timemax_allowed = std::min(VSPEC_TIMEMAX, globals::tmax);
+  if (vspec_timemin_input < vspec_timemin_allowed || vspec_timemax_input > vspec_timemax_allowed) {
+    fatal_crash(
+        "vpkt.txt emission time window [{:g}, {:g}] [d] must be inside [max(VSPEC_TIMEMIN, tmin), min(VSPEC_TIMEMAX, "
+        "tmax)] = [{:g}, {:g}] [d]",
+        vspec_timemin_input / DAY, vspec_timemax_input / DAY, vspec_timemin_allowed / DAY, vspec_timemax_allowed / DAY);
+  }
 
   // Wavelength windows: a leading 1 selects custom ranges, followed by the number of ranges and then that
   // many (lambda_min, lambda_max) pairs in Angstroms. Otherwise a single range spanning the compile-time

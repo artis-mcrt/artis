@@ -1075,8 +1075,10 @@ auto main(int argc, char* argv[]) -> int {
       MAX_NODE_SIZE);
 #endif
 
-  // every rank needs a packet
-  assert_always(NUM_PACKETS >= globals::nprocs);
+  if (NUM_PACKETS < globals::nprocs) {
+    fatal_crash("NUM_PACKETS = {} is less than the {} ranks, but every rank needs a packet", NUM_PACKETS,
+                globals::nprocs);
+  }
   // the ranks share NUM_PACKETS equally, and the first ranks get one packet each of the remainder
   const auto [firstpktindex_thisrank, npkts_thisrank] = get_range_chunk(NUM_PACKETS, globals::nprocs, globals::my_rank);
   // packet_init() and Packet::number hold the packet index of a rank in an int
@@ -1094,7 +1096,11 @@ auto main(int argc, char* argv[]) -> int {
   read_parameterfile(packets);
 
   if (globals::simulation_continued_from_saved) {
-    assert_always(globals::nprocs_exspec == globals::nprocs);
+    if (globals::nprocs_exspec != globals::nprocs) {
+      fatal_crash(
+          "the restart files are from a run with {} ranks (nprocs_exspec in input.txt), but this run has {} ranks",
+          globals::nprocs_exspec, globals::nprocs);
+    }
   } else {
     // sn3d writes one packet file for each rank
     globals::nprocs_exspec = globals::nprocs;
