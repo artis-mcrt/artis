@@ -4,7 +4,8 @@
 
 # artisoptions.h is gitignored and must be supplied (normally as a symlink to a preset). Check up front
 # to give one actionable message rather than a compiler error per translation unit. 'make clean' is exempt
-ifneq ($(strip $(filter-out clean,$(if $(MAKECMDGOALS),$(MAKECMDGOALS),all))),)
+BUILD_GOALS := $(strip $(filter-out clean,$(if $(MAKECMDGOALS),$(MAKECMDGOALS),all)))
+ifneq ($(BUILD_GOALS),)
   ifeq ($(wildcard artisoptions.h),)
     $(error artisoptions.h not found. Select a compile-time option preset, e.g. 'ln -s artisoptions_classic.h artisoptions.h'. Symlinking (rather than copying) keeps it in sync when the preset changes. The options are documented in artisoptions_doc.md)
   endif
@@ -72,7 +73,9 @@ else ifneq (,$(or $(findstring g++,$(COMPILER_VERSION)),$(findstring gcc,$(COMPI
 	COMPILER_NAME := gcc
 	MIN_GCC_VERSION := 14
 	ifeq ($(shell expr $(firstword $(subst ., ,$(COMPILER_VERSION_NUMBER))) \< $(MIN_GCC_VERSION)),1)
+		ifneq ($(BUILD_GOALS),)
 $(error gcc $(COMPILER_VERSION_NUMBER) is older than the minimum version $(MIN_GCC_VERSION). Load a newer gcc, or set OMPI_CXX to a newer g++ for Open MPI)
+		endif
 	endif
 	CXXFLAGS += -Wno-psabi -Wno-interference-size
 # 	CXXFLAGS += -Wsuggest-attribute=pure -Wsuggest-attribute=const
