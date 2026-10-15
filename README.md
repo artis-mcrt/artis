@@ -60,12 +60,12 @@ cd artis
 
 To compile and run ARTIS, you will need a recent C++ compiler (gcc 14 or newer, Clang, nvc++, or hipcc) and an MPI library (e.g., Open MPI) that provides an `mpicxx` command. Usually, these are available on HPC clusters using module or spack commands. For systems that we use, look at the top of the relevant Slurm script in scripts/artis-*.sh to find compatible modules specifications. For Open MPI, set the C++ compiler using `export OMPI_CXX=g++`.
 
-Next, copy an options preset to artisoptions.h. For example:
+Next, symlink an options preset to artisoptions.h. For example:
 ```sh
-cp artisoptions_classic.h artisoptions.h
+ln -s artisoptions_classic.h artisoptions.h
 ```
 
-Edit the copy, not the preset. A symlink to a preset is useful for development, but an edit through the symlink changes the tracked preset. You will likely want to change the number of packets of all ranks together (NUM_PACKETS). Use a text editor, e.g. `vim artisoptions.h`. The options are explained in [artisoptions_doc.md](https://github.com/artis-mcrt/artis/blob/main/artisoptions_doc.md).
+You will likely want to change the number of packets of all ranks together (NUM_PACKETS). Use a text editor, e.g. `vim artisoptions.h`. The options are explained in [artisoptions_doc.md](https://github.com/artis-mcrt/artis/blob/main/artisoptions_doc.md).
 
 Most presets have NUM_PACKETS values for production runs with approximately 1000 ranks. The nltephotospheric preset has a much smaller value. Increase NUM_PACKETS for a production run with that preset. Each rank keeps its share of the packets in memory. Decrease NUM_PACKETS for a run with fewer ranks.
 
