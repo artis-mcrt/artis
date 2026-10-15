@@ -166,7 +166,7 @@ static_assert(std::string_view{inputlinecomments[inputline_timestep_range]}.star
 static_assert(std::string_view{inputlinecomments[inputline_continue_from_saved]}.starts_with("16:"));
 static_assert(std::string_view{inputlinecomments[inputline_nprocs_exspec]}.starts_with("21:"));
 
-// Read the next non-comment line of input.txt into the values. Stop the run if the line is absent or unreadable.
+// Read the next non-comment line of the file into the values. Stop the run if the line is absent or unreadable.
 template <typename... T>
 void read_inputtxt_line(std::istream& file, const std::string_view filename, const int noncomment_linenum,
                         T&... values) {
@@ -176,6 +176,18 @@ void read_inputtxt_line(std::istream& file, const std::string_view filename, con
   }
   if (!(std::istringstream{line} >> ... >> values)) {
     fatal_crash("{} has the unreadable text '{}' at line {}", filename, line, inputlinecomments[noncomment_linenum]);
+  }
+}
+
+// Stop the run if the timestep range of input.txt is not valid.
+void check_timestep_range(const std::string_view filename, const int ntimesteps, const int timestep_start,
+                          const int timestep_finish) {
+  if (timestep_start < 0 || timestep_start >= ntimesteps || timestep_start > timestep_finish ||
+      timestep_finish > ntimesteps) {
+    fatal_crash(
+        "{} gives timestep_start {} and timestep_finish {}, but they must obey 0 <= timestep_start < "
+        "ntimesteps = {} and timestep_start <= timestep_finish <= ntimesteps",
+        filename, timestep_start, timestep_finish, ntimesteps);
   }
 }
 
@@ -1486,7 +1498,8 @@ void read_levels_and_transitions(std::vector<TempEnergyLevel>& temp_alllevels,
 
         if (!get_noncommentline(adata, line)) {
           fatal_crash(
-              "adata.txt ends before ion Z={} ionstage {} of compositiondata.txt. The file must give the ions in the "
+              "adata.txt ends before the ion Z={} ionstage {} of compositiondata.txt. The file must give the ions in "
+              "the "
               "order of compositiondata.txt.",
               atomicnumber, ionstage);
         }
@@ -1540,7 +1553,8 @@ void read_levels_and_transitions(std::vector<TempEnergyLevel>& temp_alllevels,
         // get_noncommentline to skip over blank lines
         if (!get_noncommentline(ftransitiondata, line)) {
           fatal_crash(
-              "transitiondata.txt ends before ion Z={} ionstage {} of compositiondata.txt. The file must give the ions "
+              "transitiondata.txt ends before the ion Z={} ionstage {} of compositiondata.txt. The file must give the "
+              "ions "
               "in the order of compositiondata.txt.",
               atomicnumber, ionstage);
         }
@@ -1550,9 +1564,6 @@ void read_levels_and_transitions(std::vector<TempEnergyLevel>& temp_alllevels,
           fatal_crash("transitiondata.txt has an unreadable ion header line '{}'", line);
         }
       }
-
-      assert_always(transdata_Z_in == atomicnumber);
-      assert_always(transdata_ionstage_in == ionstage);
 
       printlnlog("transitiondata.txt: Z {} ionstage {} tottransitions {}", transdata_Z_in, transdata_ionstage_in,
                  ion_transition_count_in_file);
@@ -1970,13 +1981,7 @@ auto read_start_timestep_and_continue_flag() -> std::pair<int, bool> {
       } else if (noncomment_linenum == inputline_timestep_range) {
         read_inputtxt_line(file, filename, noncomment_linenum, timestep_initial, timestep_finish);
         // an invalid range must stop the run before a new simulation removes files
-        if (timestep_initial < 0 || timestep_initial >= ntimesteps || timestep_initial > timestep_finish ||
-            timestep_finish > ntimesteps) {
-          fatal_crash(
-              "{} gives timestep_start {} and timestep_finish {}, but they must obey 0 <= timestep_start < "
-              "ntimesteps = {} and timestep_start <= timestep_finish <= ntimesteps",
-              filename, timestep_initial, timestep_finish, ntimesteps);
-        }
+        check_timestep_range(filename, ntimesteps, timestep_initial, timestep_finish);
       } else if (noncomment_linenum == inputline_continue_from_saved) {
         read_inputtxt_line(file, filename, noncomment_linenum, continue_flag);
         if (continue_flag != 0 && continue_flag != 1) {
@@ -2008,10 +2013,12 @@ void read_parameterfile(std::span<Packet> packets) {
   // rank 0 creates input.txt before the other ranks open it
   MPI_Barrier_allranks();
 
-  auto file = istream_required("input.txt");
+  const std::string_view filename = "input.txt";
+  auto file = istream_required(filename);
+  int noncomment_linenum = 0;
 
   std::int64_t pre_zseed = -1;
-  read_inputtxt_line(file, "input.txt", 0, pre_zseed);
+  read_inputtxt_line(file, filename, noncomment_linenum++, pre_zseed);
 
   if (pre_zseed > 0) {
     printlnlog("input.txt specified random number seed is {}", pre_zseed);
@@ -2059,11 +2066,10 @@ void read_parameterfile(std::span<Packet> packets) {
 #endif
   }
 
-  read_inputtxt_line(file, "input.txt", inputline_ntimesteps, globals::ntimesteps);
-  assert_always(globals::ntimesteps > 0);
+  read_inputtxt_line(file, filename, noncomment_linenum++, globals::ntimesteps);
 
-  read_inputtxt_line(file, "input.txt", inputline_timestep_range, globals::timestep_initial, globals::timestep_finish);
-  assert_always(globals::timestep_initial >= 0);
+  read_inputtxt_line(file, filename, noncomment_linenum++, globals::timestep_initial, globals::timestep_finish);
+  check_timestep_range(filename, globals::ntimesteps, globals::timestep_initial, globals::timestep_finish);
   printlnlog("input: timestep_start {} timestep_finish {}", globals::timestep_initial, globals::timestep_finish);
   if (globals::timestep_finish < globals::ntimesteps) {
     printlnlog(
@@ -2071,13 +2077,10 @@ void read_parameterfile(std::span<Packet> packets) {
         "the start timestep but never timestep_finish, so continuing past it will require editing input.txt",
         globals::timestep_finish - 1, globals::ntimesteps - 1);
   }
-  assert_always(globals::timestep_initial < globals::ntimesteps);
-  assert_always(globals::timestep_initial <= globals::timestep_finish);
-  assert_always(globals::timestep_finish <= globals::ntimesteps);
 
   double tmin_days = 0.;
   double tmax_days = 0.;
-  read_inputtxt_line(file, "input.txt", 3, tmin_days, tmax_days);
+  read_inputtxt_line(file, filename, noncomment_linenum++, tmin_days, tmax_days);
   if (tmin_days <= 0 || tmin_days >= tmax_days) {
     fatal_crash("input.txt gives tmin_days {:g} and tmax_days {:g}, but they must obey 0 < tmin_days < tmax_days",
                 tmin_days, tmax_days);
@@ -2086,13 +2089,13 @@ void read_parameterfile(std::span<Packet> packets) {
   globals::tmax = tmax_days * DAY;
 
   // lines 4 to 15 are UNUSED
-  for (int noncomment_linenum = 4; noncomment_linenum < inputline_continue_from_saved; noncomment_linenum++) {
-    read_inputtxt_line(file, "input.txt", noncomment_linenum);
+  while (noncomment_linenum < inputline_continue_from_saved) {
+    read_inputtxt_line(file, filename, noncomment_linenum++);
   }
 
   // Do we start a new simulation or, continue another one?
   int continue_flag = 0;
-  read_inputtxt_line(file, "input.txt", inputline_continue_from_saved, continue_flag);
+  read_inputtxt_line(file, filename, noncomment_linenum++, continue_flag);
   // a run from timestep zero cannot resume from a saved point (the same rule as read_start_timestep_and_continue_flag)
   globals::simulation_continued_from_saved = (continue_flag == 1 && globals::timestep_initial > 0);
   if (globals::simulation_continued_from_saved) {
@@ -2102,10 +2105,10 @@ void read_parameterfile(std::span<Packet> packets) {
   }
 
   // UNUSED rfcut parameter (kept for backward-compatible input parsing)
-  read_inputtxt_line(file, "input.txt", 17);
+  read_inputtxt_line(file, filename, noncomment_linenum++);
 
   // Sets the number of initial LTE timesteps for NLTE runs
-  read_inputtxt_line(file, "input.txt", 18, globals::num_lte_timesteps);
+  read_inputtxt_line(file, filename, noncomment_linenum++, globals::num_lte_timesteps);
   if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
     // the bins are fitted only after the LTE timesteps, and radfield() reads them from this timestep
     if (globals::num_lte_timesteps > FIRST_NLTE_RADFIELD_TIMESTEP) {
@@ -2140,22 +2143,24 @@ void read_parameterfile(std::span<Packet> packets) {
   }
 
   // Set up initial grey approximation?
-  read_inputtxt_line(file, "input.txt", 19, globals::optical_depth_is_thick, globals::num_grey_timesteps);
+  read_inputtxt_line(file, filename, noncomment_linenum++, globals::optical_depth_is_thick,
+                     globals::num_grey_timesteps);
   printlnlog(
       "input: cells with a radial grey optical depth to the outer boundary >= {:g} are treated in grey "
       "approximation for the first {} timesteps",
       globals::optical_depth_is_thick, globals::num_grey_timesteps);
 
-  read_inputtxt_line(file, "input.txt", 20);  // UNUSED max_bf_continua (all bf continua are always included)
+  read_inputtxt_line(file, filename,
+                     noncomment_linenum++);  // UNUSED max_bf_continua (all bf continua are always included)
 
   // for exspec: read number of MPI tasks
-  read_inputtxt_line(file, "input.txt", inputline_nprocs_exspec, globals::nprocs_exspec);
+  read_inputtxt_line(file, filename, noncomment_linenum++, globals::nprocs_exspec);
 
   // UNUSED: Extract line-of-sight dependent information of last emission for spectrum_res
-  read_inputtxt_line(file, "input.txt", 22);
+  read_inputtxt_line(file, filename, noncomment_linenum++);
 
   // UNUSED: kpkt diffusion parameters: now set in kpkt.cc
-  read_inputtxt_line(file, "input.txt", 23);
+  read_inputtxt_line(file, filename, noncomment_linenum++);
 }
 
 // Write input.txt again with the standard comments and the number of packet files. For nts >= 0, input.txt makes the

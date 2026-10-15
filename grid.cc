@@ -892,26 +892,24 @@ void parse_model_headerline(const std::string& line, std::vector<int>& zlist, st
 
     columnindex++;
 
-    bool column_position_valid = true;
+    // -1 for a column that this model type cannot have
+    int required_columnindex = columnindex;
     if (token == "#inputcellid") {
-      column_position_valid = (columnindex == 0);
+      required_columnindex = 0;
     } else if (token == "velocity_outer" || token == "vel_r_max_kmps") {
-      column_position_valid = (columnindex == 1);
+      required_columnindex = 1;
     } else if (token.starts_with("pos_")) {
       continue;
     } else if (token == "logrho") {
       // 1D models have log10(rho [g/cm3])
-      column_position_valid = (columnindex == 2 && get_modelgridtype() == GridType::SPHERICAL1D);
+      required_columnindex = (get_modelgridtype() == GridType::SPHERICAL1D) ? 2 : -1;
     } else if (token == "rho") {
-      // 2D and 3D models have rho [g/cm3]
-      column_position_valid = (columnindex == 4 && get_modelgridtype() == GridType::CARTESIAN3D) ||
-                              (columnindex == 3 && get_modelgridtype() == GridType::CYLINDRICAL2D);
+      // 2D and 3D models have rho [g/cm3] after the cell id and the position columns
+      required_columnindex = (get_modelgridtype() == GridType::SPHERICAL1D) ? -1 : get_ndim(get_modelgridtype()) + 1;
     } else if (token.starts_with("X_") && token != "X_Fegroup") {
       colnames.push_back(token);
       const int z = decay::get_nucstring_z(token.substr(2));  // + 2 skips the 'X_'
       const int a = decay::get_nucstring_a(token.substr(2));
-      assert_always(z >= 0);
-      assert_always(a >= 0);
       zlist.push_back(z);
       alist.push_back(a);
     } else {
@@ -920,9 +918,13 @@ void parse_model_headerline(const std::string& line, std::vector<int>& zlist, st
       alist.push_back(-1);
     }
 
-    if (!column_position_valid) {
-      fatal_crash("model.txt header line has the column {} at index {}, which is not valid for a {}D model", token,
-                  columnindex, get_ndim(get_modelgridtype()));
+    if (required_columnindex < 0) {
+      fatal_crash("the model.txt header line has the column {}, but a {}D model cannot have this column", token,
+                  get_ndim(get_modelgridtype()));
+    }
+    if (columnindex != required_columnindex) {
+      fatal_crash("the model.txt header line has the column {} at index {}, but the required index is {}", token,
+                  columnindex, required_columnindex);
     }
   }
 }
@@ -997,7 +999,7 @@ void read_model_radioabundances(ModelFileReader& fmodel, std::string_view& remai
   }
   double valuein = 0.;
   if (parse_next_token(remainder, valuein)) {
-    fatal_crash("model.txt cell {} has more values than the header line has columns", mgi);
+    fatal_crash("model.txt cell {} has more values than the header has columns", mgi);
   }
 }
 
@@ -1056,7 +1058,8 @@ auto read_model_columns(ModelFileReader& fmodel) -> std::tuple<std::vector<std::
   }
 
   if (colcount != get_token_count(headerline)) {
-    fatal_crash("model.txt cell 0 has {} values, but the header line '{}' has {} columns", colcount, headerline,
+    fatal_crash("model.txt cell 0 has {} values, but the {} '{}' has {} columns", colcount,
+                header_specified ? "header line" : "default header for a file without a header line", headerline,
                 get_token_count(headerline));
   }
 
@@ -1148,8 +1151,8 @@ void read_grid_restart_data(const int timestep) {
   read_restart_values(gridsave_file, ntimesteps_in, nprocs_in, tmin_in, tmax_in, timestep_in, nonempty_npts_model_in,
                       nelements_in, includedions_in, nbfcontinua_ground_in);
   if (ntimesteps_in != globals::ntimesteps || nprocs_in != globals::nprocs) {
-    fatal_crash("the run that wrote {} had {} timesteps and {} ranks, but this run has {} timesteps and {} ranks",
-                filename, ntimesteps_in, nprocs_in, globals::ntimesteps, globals::nprocs);
+    fatal_crash("{} has {} timesteps and {} ranks, but this simulation has {} timesteps and {} ranks", filename,
+                ntimesteps_in, nprocs_in, globals::ntimesteps, globals::nprocs);
   }
   // the saved per-timestep energies belong to the time grid of the run that wrote the file
   if (tmin_in != globals::tmin || tmax_in != globals::tmax) {
@@ -2202,7 +2205,7 @@ void read_ejecta_model() {
               parse_next_token(remainder, cell_z_in) && parse_next_token(remainder, rho_tmodel))) {
           fatal_crash(
               "model.txt cell {}: expected at least 4 values (inputcellid pos_rcyl_mid pos_z_mid rho) but could not "
-              "parse line: {}",
+              "parse the line: {}",
               mgi, line);
         }
 
@@ -2239,7 +2242,7 @@ void read_ejecta_model() {
               parse_next_token(remainder, rho_model_in))) {
           fatal_crash(
               "model.txt cell {}: expected at least 5 values (inputcellid pos_x_min pos_y_min pos_z_min rho) but "
-              "could not parse line: {}",
+              "could not parse the line: {}",
               mgi, line);
         }
         rho_tmodel = rho_model_in;

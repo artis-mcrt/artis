@@ -678,7 +678,7 @@ auto get_nucstring_a(const std::string& strnuc) -> int {
 
   const int a = std::atoi(strmassnum.c_str());
   if (a <= 0) {
-    fatal_crash("Could not read a mass number from the nuclide string '{}'", strnuc);
+    fatal_crash("could not read a mass number from the nuclide string '{}'", strnuc);
   }
   return a;
 }
@@ -776,7 +776,7 @@ void read_betaminus_decaydata() {
     }
     if (Q_betadecay_mev > 0.) {
       if (nuc_exists(z, a)) {
-        fatal_crash("betaminusdecays.txt: nuclide Z={} A={} already has decay data", z, a);
+        fatal_crash("betaminusdecays.txt: the nuclide Z={} A={} already has decay data", z, a);
       }
       nuclides.push_back({.z = z, .a = a, .meanlife = tau_sec});
       nuclides.back().branchprobs[DECAYTYPE_BETAMINUS] = 1.;
@@ -887,7 +887,7 @@ void read_spontfission_decaydata() {
       fatal_crash("fissiondecays.txt has an unreadable line '{}'", line);
     }
     if (nuc_exists(z_in, a_in)) {
-      fatal_crash("fissiondecays.txt: nuclide Z={} A={} already has decay data", z_in, a_in);
+      fatal_crash("fissiondecays.txt: the nuclide Z={} A={} already has decay data", z_in, a_in);
     }
     nuclides.push_back({.z = z_in, .a = a_in, .meanlife = tau_sec});
     nuclides.back().branchprobs[DECAYTYPE_SPONTFISSION] = 1.;

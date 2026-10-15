@@ -871,14 +871,15 @@ void read_vpktparameterfile() {
   }
 
   if (!(vspec_timemin_input < vspec_timemax_input)) {
-    fatal_crash("vpkt.txt emission time window [{:g}, {:g}] [d] is empty", vspec_timemin_input / DAY,
+    fatal_crash("the emission time window of vpkt.txt [{:g}, {:g}] [d] is empty", vspec_timemin_input / DAY,
                 vspec_timemax_input / DAY);
   }
   const double vspec_timemin_allowed = std::max(VSPEC_TIMEMIN, globals::tmin);
   const double vspec_timemax_allowed = std::min(VSPEC_TIMEMAX, globals::tmax);
   if (vspec_timemin_input < vspec_timemin_allowed || vspec_timemax_input > vspec_timemax_allowed) {
     fatal_crash(
-        "vpkt.txt emission time window [{:g}, {:g}] [d] must be inside [max(VSPEC_TIMEMIN, tmin), min(VSPEC_TIMEMAX, "
+        "the emission time window of vpkt.txt [{:g}, {:g}] [d] must be inside [max(VSPEC_TIMEMIN, tmin), "
+        "min(VSPEC_TIMEMAX, "
         "tmax)] = [{:g}, {:g}] [d]",
         vspec_timemin_input / DAY, vspec_timemax_input / DAY, vspec_timemin_allowed / DAY, vspec_timemax_allowed / DAY);
   }

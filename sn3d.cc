@@ -1097,9 +1097,8 @@ auto main(int argc, char* argv[]) -> int {
 
   if (globals::simulation_continued_from_saved) {
     if (globals::nprocs_exspec != globals::nprocs) {
-      fatal_crash(
-          "the restart files are from a run with {} ranks (nprocs_exspec in input.txt), but this run has {} ranks",
-          globals::nprocs_exspec, globals::nprocs);
+      fatal_crash("the restart files have {} ranks (nprocs_exspec in input.txt), but this simulation has {} ranks",
+                  globals::nprocs_exspec, globals::nprocs);
     }
   } else {
     // sn3d writes one packet file for each rank
