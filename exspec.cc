@@ -14,9 +14,9 @@
 #include <filesystem>
 #include <format>
 #include <functional>
-#include <ranges>
 #include <span>
-#include <string_view>
+#include <sstream>
+#include <string>
 #include <vector>
 
 #pragma clang unsafe_buffer_usage begin
@@ -52,9 +52,10 @@ auto main(int argc, char* argv[]) -> int {
 
   printlnlog("git status: {}", GIT_STATUS);
 
-  for (const auto option_line : std::views::split(ARTISOPTIONS_LINES, '\n')) {
+  std::istringstream option_lines{std::string{ARTISOPTIONS_LINES}};
+  for (std::string option_line; std::getline(option_lines, option_line);) {
     if (!option_line.empty()) {
-      printlnlog("artisoptions.h: {}", std::string_view{option_line});
+      printlnlog("artisoptions.h: {}", option_line);
     }
   }
 
