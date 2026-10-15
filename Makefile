@@ -71,7 +71,8 @@ define GET_ARCH_CMD
 endef
 	CPU_ARCH := $(shell $(GET_ARCH_CMD))
 
-else ifneq (,$(or $(findstring g++,$(COMPILER_VERSION)),$(findstring gcc,$(COMPILER_VERSION))))
+# a gcc that is installed as c++ reports "c++ (GCC)"
+else ifneq (,$(or $(findstring g++,$(COMPILER_VERSION)),$(findstring gcc,$(COMPILER_VERSION)),$(findstring (GCC),$(COMPILER_VERSION))))
 	COMPILER_NAME := gcc
 	MIN_GCC_VERSION := 14
 	ifeq ($(shell expr $(firstword $(subst ., ,$(COMPILER_VERSION_NUMBER))) \< $(MIN_GCC_VERSION)),1)
