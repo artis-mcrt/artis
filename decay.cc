@@ -678,7 +678,7 @@ auto get_nucstring_a(const std::string& strnuc) -> int {
 
   const int a = std::atoi(strmassnum.c_str());
   if (a <= 0) {
-    fatal_crash("could not read a mass number from the nuclide string '{}'", strnuc);
+    fatal_crash("the nuclide string '{}' must end with a positive mass number", strnuc);
   }
   return a;
 }
