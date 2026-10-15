@@ -1213,8 +1213,8 @@ void read_phixs_data() {
   // just in case the file system was faulty and the ranks disagree on the existence of the files
   MPI_Allreduce_safe(phixs_file_version_exists, MPI_LOR, MPI_COMM_WORLD);
   if (!phixs_file_version_exists[1] && !phixs_file_version_exists[2]) {
-    fatal_crash("found neither {} nor {}, but at least one of them is necessary", phixsdata_filenames[1],
-                phixsdata_filenames[2]);
+    fatal_crash("the photoionisation data needs {} or {}. Put one of these files in the model folder.",
+                phixsdata_filenames[1], phixsdata_filenames[2]);
   }
   if (phixs_file_version_exists[1] && phixs_file_version_exists[2]) {
     printlnlog(
@@ -1380,7 +1380,10 @@ auto read_compositiondata() -> std::vector<int> {
   // ranges below, and abundances from the model file.
   int T_preset = 0;
   int homogeneous_abundances = 0;
-  if (!(compositiondata >> T_preset >> homogeneous_abundances) || T_preset != 0 || homogeneous_abundances != 0) {
+  if (!(compositiondata >> T_preset >> homogeneous_abundances)) {
+    fatal_crash("compositiondata.txt has no readable T_preset and homogeneous_abundances after the number of elements");
+  }
+  if (T_preset != 0 || homogeneous_abundances != 0) {
     fatal_crash(
         "compositiondata.txt gives T_preset {} and homogeneous_abundances {} after the number of elements, but both "
         "must be 0",
@@ -1405,15 +1408,20 @@ auto read_compositiondata() -> std::vector<int> {
     }
     printlnlog("compositiondata.txt: Z {} nions {} lowermost {} uppermost {} nlevelsmax {}", atomicnumber,
                nions_readin[element], lowermost_ionstage, uppermost_ionstage, nlevelsmax_readin[element]);
-    if (atomicnumber <= 0 || nions_readin[element] < 0 ||
-        (nions_readin[element] > 0 && nions_readin[element] != (uppermost_ionstage - lowermost_ionstage + 1)) ||
-        !(uniformabundance >= 0) || !(mass_amu > 0)) {
+    if (atomicnumber <= 0 || !(mass_amu > 0)) {
+      fatal_crash("compositiondata.txt element {} has Z {} and mass {:g}, but both must be positive", element,
+                  atomicnumber, mass_amu);
+    }
+    if (nions_readin[element] < 0 ||
+        (nions_readin[element] > 0 && nions_readin[element] != (uppermost_ionstage - lowermost_ionstage + 1))) {
       fatal_crash(
-          "compositiondata.txt element {} has Z {} nions {} lowermost ionstage {} uppermost ionstage {} abundance "
-          "{:g} mass {:g}. The values must obey Z > 0, nions = 0 or nions = uppermost - lowermost + 1, abundance >= "
-          "0, and mass > 0.",
-          element, atomicnumber, nions_readin[element], lowermost_ionstage, uppermost_ionstage, uniformabundance,
-          mass_amu);
+          "compositiondata.txt element {} has nions {}, but it must be 0 or uppermost ionstage {} - lowermost ionstage "
+          "{} + 1",
+          element, nions_readin[element], uppermost_ionstage, lowermost_ionstage);
+    }
+    if (!(uniformabundance >= 0)) {
+      fatal_crash("compositiondata.txt element {} has the abundance {:g}, but it must be 0 or more", element,
+                  uniformabundance);
     }
 
     globals::elements[element] = {
@@ -1965,14 +1973,14 @@ auto read_start_timestep_and_continue_flag() -> std::pair<int, bool> {
         if (timestep_initial < 0 || timestep_initial >= ntimesteps || timestep_initial > timestep_finish ||
             timestep_finish > ntimesteps) {
           fatal_crash(
-              "input.txt gives timestep_start {} and timestep_finish {}, but they must obey 0 <= timestep_start < "
+              "{} gives timestep_start {} and timestep_finish {}, but they must obey 0 <= timestep_start < "
               "ntimesteps = {} and timestep_start <= timestep_finish <= ntimesteps",
-              timestep_initial, timestep_finish, ntimesteps);
+              filename, timestep_initial, timestep_finish, ntimesteps);
         }
       } else if (noncomment_linenum == inputline_continue_from_saved) {
         read_inputtxt_line(file, filename, noncomment_linenum, continue_flag);
         if (continue_flag != 0 && continue_flag != 1) {
-          fatal_crash("input.txt gives simulation_continued_from_saved {}, but it must be 0 or 1", continue_flag);
+          fatal_crash("{} gives simulation_continued_from_saved {}, but it must be 0 or 1", filename, continue_flag);
         }
       } else {
         read_inputtxt_line(file, filename, noncomment_linenum);

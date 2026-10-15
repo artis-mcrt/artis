@@ -1148,8 +1148,8 @@ void read_grid_restart_data(const int timestep) {
   read_restart_values(gridsave_file, ntimesteps_in, nprocs_in, tmin_in, tmax_in, timestep_in, nonempty_npts_model_in,
                       nelements_in, includedions_in, nbfcontinua_ground_in);
   if (ntimesteps_in != globals::ntimesteps || nprocs_in != globals::nprocs) {
-    fatal_crash("{} was written with {} timesteps and {} ranks, but this run has {} timesteps and {} ranks", filename,
-                ntimesteps_in, nprocs_in, globals::ntimesteps, globals::nprocs);
+    fatal_crash("the run that wrote {} had {} timesteps and {} ranks, but this run has {} timesteps and {} ranks",
+                filename, ntimesteps_in, nprocs_in, globals::ntimesteps, globals::nprocs);
   }
   // the saved per-timestep energies belong to the time grid of the run that wrote the file
   if (tmin_in != globals::tmin || tmax_in != globals::tmax) {
