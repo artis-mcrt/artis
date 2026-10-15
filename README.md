@@ -50,7 +50,7 @@ The ARTIS source code is available under a [BSD 3-Clause license](https://github
 ## Setting up production runs on Linux
 Each simulation has its own model folder. Keep the source code and the git metadata in a subfolder `artis` of the model folder, not only the executables. The code then finds its data files in `artis/data`.
 
-Make the model folder, and clone the release branch into it:
+Make the model folder. Then clone the release branch into it:
 ```sh
 mkdir mymodel
 cd mymodel
@@ -146,7 +146,7 @@ To plot and analyse the output, use [artistools](https://github.com/artis-mcrt/a
 ### Testing
 The unit tests cover the numeric and parsing helpers and some physics functions, e.g. the Compton cross-section and the triangular solve of the Spencer-Fano matrix. Build and run them with `make unittests && ./unittests`. CI runs them for the classic and NLTE nebular presets.
 
-The tests folder contains eleven small end-to-end test models. Each tests/setup_*.sh script downloads the atomic data it needs and makes a model folder with the input files and an artisoptions.h for the test. Build the programs from that artisoptions.h, and copy them into the model folder:
+The tests folder contains eleven small end-to-end test models. Each tests/setup_*.sh script downloads the atomic data it needs and makes a model folder with the input files and an artisoptions.h for the test. Build the programs from that artisoptions.h. Then copy them into the model folder:
 ```sh
 cd tests
 source ./setup_kilonova_1d.sh   # creates tests/kilonova_1d_testrun/
@@ -159,7 +159,7 @@ cd tests/kilonova_1d_testrun
 rm -f input.txt
 mpirun -np 4 ./sn3d
 ```
-Remove your artisoptions.h before the copy, because `cp` writes through a symlink and changes the tracked preset. Remove input.txt before a new run, because an input.txt of an earlier run continues that run. sn3d then restores input.txt from input-newrun.txt. The steps of the test job in [ci.yml](.github/workflows/ci.yml) also show the resume run and the exspec run.
+Remove your artisoptions.h before the copy. The `cp` command writes through a symlink and changes the tracked preset. Remove input.txt before a new run. An input.txt of an earlier run makes sn3d continue that run. Without input.txt, sn3d restores it from input-newrun.txt. The steps of the test job in [ci.yml](.github/workflows/ci.yml) also show the resume run and the exspec run.
 
 [CI](.github/workflows/ci.yml) runs all of these on every push. It builds with `REPRODUCIBLE=ON FASTMATH=OFF MAX_NODE_SIZE=2` and compares md5 checksums of the output files against reference checksums stored in the tests/*_inputfiles folders. A change that legitimately alters the numerical results therefore needs new reference checksums, which maintainers regenerate using the "Update checksums" workflow. CI also compiles every artisoptions_*.h preset with gcc and clang, and the classic and NLTE nebular presets additionally with Apple Clang, nvc++, and hipcc (including the GPU code paths).
 
@@ -179,9 +179,9 @@ The scripts folder contains:
 - mergeangleres.py: Merge the files of the direction bins into light_curve_res.out, spec_res.out, and specpol_res.out.
 - combine_allrank_out_files.py: Make the combined files of all ranks (see [Output files](#output-files)).
 - filterpacketsescapedrpkt.py: Remove all packets except the escaped r-packets from the packet files. Without `-f`, the script only shows what it would remove.
-- tar_rm_logs.sh: Archive the log files of the ranks into logfiles.tar.zst, and remove them, except output_0-0.txt.
+- tar_rm_logs.sh: The script archives the log files of the ranks into logfiles.tar.zst. It then removes them, except output_0-0.txt.
 - rsyncnooutput.sh: Copy a model folder with rsync, without the output files.
-- aliases.sh: Shell aliases for Slurm and the MAKEFLAGS setting. Replace the placeholder email address in the file with your address, and then source the file from your .bashrc. The Leonardo and Virgo submit scripts send the Slurm messages to that address.
+- aliases.sh: Shell aliases for Slurm and the MAKEFLAGS setting. Replace the placeholder email address in the file with your address. Then source the file from your .bashrc. The Leonardo and Virgo submit scripts send the Slurm messages to that address.
 - clean.sh: Remove all output files while keeping input files and resetting the simulation to the beginning. The script also removes the job_from_ts* folders of sn3d and the *.slurm folders of older versions.
 - sumcorehourslogs.py: Sum the core hours of all jobs from the output_0-0.txt log of each job. The script reads the summary in the last line of the log. For a job that stopped early, it estimates the core hours from the first and the last timestamp of the log.
 - sumcorehoursslurm.py: Calculate the summed core hours of all jobs from the Slurm job output files.
