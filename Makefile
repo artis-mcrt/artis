@@ -4,9 +4,10 @@
 
 # artisoptions.h is gitignored and must be supplied (normally as a symlink to a preset). Check up front
 # to give one actionable message rather than a compiler error per translation unit. 'make clean' is exempt
-ifneq ($(strip $(filter-out clean,$(if $(MAKECMDGOALS),$(MAKECMDGOALS),all))),)
+BUILD_GOALS := $(strip $(filter-out clean,$(if $(MAKECMDGOALS),$(MAKECMDGOALS),all)))
+ifneq ($(BUILD_GOALS),)
   ifeq ($(wildcard artisoptions.h),)
-    $(error artisoptions.h not found. Select a compile-time option preset, e.g. 'ln -s artisoptions_classic.h artisoptions.h'. Symlinking (rather than copying) keeps it in sync when the preset changes. The options are documented in artisoptions_doc.md)
+    $(error make cannot find artisoptions.h. Symlink a compile-time option preset to artisoptions.h, e.g. 'ln -s artisoptions_classic.h artisoptions.h'. The symlink follows the changes of the preset. artisoptions_doc.md documents the options)
   endif
   # without --check-symlink-times ('L' in the first dashless word of MAKEFLAGS), make compares timestamps
   # through the symlink, so a preset switch via ln -sf may not trigger a rebuild
@@ -27,7 +28,12 @@ $(foreach option,TESTMODE REPRODUCIBLE GPU OPENMP STDPAR FASTMATH OPTIMIZE ZSTD,
     $(error bad value for $(option) option. Should be ON or OFF)))
 
 CXX := mpicxx
-COMPILER_VERSION := $(shell $(CXX) --version)
+COMPILER_VERSION := $(shell $(CXX) --version 2> /dev/null)
+ifneq ($(BUILD_GOALS),)
+  ifeq ($(strip $(COMPILER_VERSION)),)
+    $(error make cannot run '$(CXX) --version'. Install an MPI library that supplies mpicxx, e.g. Open MPI. On a cluster, load the module of the MPI library. The job scripts in scripts/ show the modules of some clusters. With Open MPI, OMPI_CXX must name an installed compiler)
+  endif
+endif
 COMPILER_VERSION_NUMBER := $(shell $(CXX) -dumpfullversion -dumpversion | head -n1)
 $(info $(COMPILER_VERSION))
 CXX_STD := c++26
@@ -65,11 +71,14 @@ define GET_ARCH_CMD
 endef
 	CPU_ARCH := $(shell $(GET_ARCH_CMD))
 
-else ifneq (,$(or $(findstring g++,$(COMPILER_VERSION)),$(findstring gcc,$(COMPILER_VERSION))))
+# a gcc with the command name c++ can report "c++ (Ubuntu ...)", but it always reports the Free Software Foundation
+else ifneq (,$(or $(findstring g++,$(COMPILER_VERSION)),$(findstring gcc,$(COMPILER_VERSION)),$(findstring Free Software Foundation,$(COMPILER_VERSION))))
 	COMPILER_NAME := gcc
 	MIN_GCC_VERSION := 14
 	ifeq ($(shell expr $(firstword $(subst ., ,$(COMPILER_VERSION_NUMBER))) \< $(MIN_GCC_VERSION)),1)
-$(warning WARNING: Detected GCC version $(COMPILER_VERSION_NUMBER) but minimum supported version is $(MIN_GCC_VERSION))
+		ifneq ($(BUILD_GOALS),)
+$(error gcc $(COMPILER_VERSION_NUMBER) is older than the minimum version $(MIN_GCC_VERSION). Load a newer gcc. With Open MPI, you can also set OMPI_CXX to a newer g++)
+		endif
 	endif
 	CXXFLAGS += -Wno-psabi -Wno-interference-size
 # 	CXXFLAGS += -Wsuggest-attribute=pure -Wsuggest-attribute=const

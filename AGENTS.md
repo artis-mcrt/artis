@@ -103,8 +103,9 @@ compatible with C++23. The Makefile builds three programs from the same sources:
 - `scripts/`: the job scripts for HPC clusters and some helper tools.
 - `third_party/`: a pruned copy of Eigen (see `third_party/eigenversion.txt`).
   Do not edit it and do not lint it.
-- `pixi.toml`: a conda-forge environment with Open MPI and gcc. `pixi run make`
-  is the quickest way to get a toolchain that works.
+- `pixi.toml`: a conda-forge environment with gcc. The MPI library comes from
+  the system. `pixi run make` is the quickest way to get a toolchain that
+  works.
 
 The repository has no `CONTRIBUTING.md`, no `docs/` folder, and no template for
 a pull request or an issue.
