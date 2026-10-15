@@ -2204,8 +2204,8 @@ void read_ejecta_model() {
         if (!(parse_next_token(remainder, cellnumberin) && parse_next_token(remainder, cell_r_in) &&
               parse_next_token(remainder, cell_z_in) && parse_next_token(remainder, rho_tmodel))) {
           fatal_crash(
-              "model.txt cell {}: expected at least 4 values (inputcellid pos_rcyl_mid pos_z_mid rho) but could not "
-              "parse the line: {}",
+              "model.txt cell {} must start with 4 numbers (inputcellid pos_rcyl_mid pos_z_mid rho), but the line is: "
+              "{}",
               mgi, line);
         }
 
@@ -2241,8 +2241,8 @@ void read_ejecta_model() {
               parse_next_token(remainder, cellpos_in[1]) && parse_next_token(remainder, cellpos_in[2]) &&
               parse_next_token(remainder, rho_model_in))) {
           fatal_crash(
-              "model.txt cell {}: expected at least 5 values (inputcellid pos_x_min pos_y_min pos_z_min rho) but "
-              "could not parse the line: {}",
+              "model.txt cell {} must start with 5 numbers (inputcellid pos_x_min pos_y_min pos_z_min rho), but the "
+              "line is: {}",
               mgi, line);
         }
         rho_tmodel = rho_model_in;
