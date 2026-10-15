@@ -17,7 +17,7 @@ ifneq ($(BUILD_GOALS),)
     endif
   endif
   ifeq ($(shell command -v mpicxx 2> /dev/null),)
-    $(error mpicxx not found. Install an MPI library that supplies mpicxx, e.g. Open MPI, or load its module on a cluster. The job scripts in scripts/ show the modules of some clusters)
+    $(error mpicxx not found. Install an MPI library that supplies mpicxx, e.g. Open MPI. On a cluster, load the module of the MPI library. The job scripts in scripts/ show the modules of some clusters)
   endif
 endif
 
@@ -74,7 +74,7 @@ else ifneq (,$(or $(findstring g++,$(COMPILER_VERSION)),$(findstring gcc,$(COMPI
 	MIN_GCC_VERSION := 14
 	ifeq ($(shell expr $(firstword $(subst ., ,$(COMPILER_VERSION_NUMBER))) \< $(MIN_GCC_VERSION)),1)
 		ifneq ($(BUILD_GOALS),)
-$(error gcc $(COMPILER_VERSION_NUMBER) is older than the minimum version $(MIN_GCC_VERSION). Load a newer gcc, or set OMPI_CXX to a newer g++ for Open MPI)
+$(error gcc $(COMPILER_VERSION_NUMBER) is older than the minimum version $(MIN_GCC_VERSION). Load a newer gcc. With Open MPI, you can also set OMPI_CXX to a newer g++)
 		endif
 	endif
 	CXXFLAGS += -Wno-psabi -Wno-interference-size
