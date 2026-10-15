@@ -870,18 +870,20 @@ void read_vpktparameterfile() {
         vspec_timemin_input / DAY, vspec_timemax_input / DAY);
   }
 
+  const std::string_view vspec_time_window_source =
+      (override_tminmax == 1) ? "vpkt.txt" : "VSPEC_TIMEMIN and VSPEC_TIMEMAX";
   if (!(vspec_timemin_input < vspec_timemax_input)) {
-    fatal_crash("the emission time window of vpkt.txt [{:g}, {:g}] [d] is empty", vspec_timemin_input / DAY,
-                vspec_timemax_input / DAY);
+    fatal_crash("the emission time window [{:g}, {:g}] [d] of {} is empty", vspec_timemin_input / DAY,
+                vspec_timemax_input / DAY, vspec_time_window_source);
   }
   const double vspec_timemin_allowed = std::max(VSPEC_TIMEMIN, globals::tmin);
   const double vspec_timemax_allowed = std::min(VSPEC_TIMEMAX, globals::tmax);
   if (vspec_timemin_input < vspec_timemin_allowed || vspec_timemax_input > vspec_timemax_allowed) {
     fatal_crash(
-        "the emission time window of vpkt.txt [{:g}, {:g}] [d] must be inside [max(VSPEC_TIMEMIN, tmin), "
-        "min(VSPEC_TIMEMAX, "
+        "the emission time window [{:g}, {:g}] [d] of {} must be inside [max(VSPEC_TIMEMIN, tmin), min(VSPEC_TIMEMAX, "
         "tmax)] = [{:g}, {:g}] [d]",
-        vspec_timemin_input / DAY, vspec_timemax_input / DAY, vspec_timemin_allowed / DAY, vspec_timemax_allowed / DAY);
+        vspec_timemin_input / DAY, vspec_timemax_input / DAY, vspec_time_window_source, vspec_timemin_allowed / DAY,
+        vspec_timemax_allowed / DAY);
   }
 
   // Wavelength windows: a leading 1 selects custom ranges, followed by the number of ranges and then that
