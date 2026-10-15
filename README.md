@@ -95,7 +95,7 @@ On macOS, it's recommended that you install homebrew llvm to get clang-format, c
 ```sh
 brew install llvm open-mpi prek
 ```
-On Linux, `pixi run make` builds with a gcc from conda-forge (see pixi.toml). The MPI library must come from the system, e.g. from a module on a cluster.
+On Linux, `pixi run make` builds with a gcc from conda-forge (see pixi.toml). The MPI library must come from the system, e.g. from a module on a cluster. To use the gcc of pixi for the make commands below, start `pixi shell` first.
 
 Install the pre-commit hooks, select a preset, and generate a compilation database for clang tools:
 ```sh
@@ -181,7 +181,7 @@ The scripts folder contains:
 - filterpacketsescapedrpkt.py: Remove all packets except the escaped r-packets from the packet files. Without `-f`, the script only shows what it would remove.
 - tar_rm_logs.sh: Archive the log files of the ranks into logfiles.tar.zst, and remove them, except output_0-0.txt.
 - rsyncnooutput.sh: Copy a model folder with rsync, without the output files.
-- aliases.sh: Shell aliases for Slurm and the MAKEFLAGS setting. Source it from your .bashrc.
+- aliases.sh: Shell aliases for Slurm and the MAKEFLAGS setting. Replace the placeholder email address in the file with your address, and then source the file from your .bashrc. The Leonardo and Virgo submit scripts send the Slurm messages to that address.
 - clean.sh: Remove all output files while keeping input files and resetting the simulation to the beginning. The script also removes the job_from_ts* folders of sn3d and the *.slurm folders of older versions.
 - sumcorehourslogs.py: Sum the core hours of all jobs from the output_0-0.txt log of each job. The script reads the summary in the last line of the log. For a job that stopped early, it estimates the core hours from the first and the last timestamp of the log.
 - sumcorehoursslurm.py: Calculate the summed core hours of all jobs from the Slurm job output files.
