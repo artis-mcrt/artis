@@ -97,7 +97,7 @@ brew install llvm open-mpi prek
 ```
 On Linux, `pixi run make` builds with a gcc from conda-forge (see pixi.toml). The MPI library must come from the system, e.g. from a module on a cluster. To use the gcc of pixi for the make commands below, start `pixi shell` first.
 
-Install the pre-commit hooks, select a preset, and generate a compilation database for clang tools:
+Run the commands below. They install the pre-commit hooks, select a preset, and make a compilation database for the clang tools:
 ```sh
 prek install
 ln -s artisoptions_nltenebular.h artisoptions.h
