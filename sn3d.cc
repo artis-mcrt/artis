@@ -1057,8 +1057,10 @@ auto main(int argc, char* argv[]) -> int {
 
   printlnlog("git status: {}", GIT_STATUS);
 
-  for (const char* const option_line : ARTISOPTIONS_LINES) {
-    printlnlog("artisoptions.h: {}", option_line);
+  for (const auto option_line : std::views::split(ARTISOPTIONS_LINES, '\n')) {
+    if (!option_line.empty()) {
+      printlnlog("artisoptions.h: {}", std::string_view{option_line});
+    }
   }
 
   printlnlog("sn3d compiled at {} on {}", __TIME__, __DATE__);
@@ -1183,22 +1185,21 @@ auto main(int argc, char* argv[]) -> int {
 
   setup_cellcache();
 
-  const auto first_timestep_start_time = std::chrono::steady_clock::now();
   while (globals::timestep < globals::timestep_finish && !terminate_early) {
     MPI_Barrier_allranks();
 
+    const auto timestep_start_time = std::chrono::steady_clock::now();
     terminate_early = do_timestep(globals::timestep, packets, walltime_limit_seconds);
 
     if (!terminate_early) {
-      const int timesteps_completed_in_run = globals::timestep + 1 - globals::timestep_initial;
       const int requested_timesteps_remaining = globals::timestep_finish - globals::timestep - 1;
-      const double hours_in_run =
-          std::chrono::duration<double>(std::chrono::steady_clock::now() - first_timestep_start_time).count() / HOUR;
+      const double timestep_hours =
+          std::chrono::duration<double>(std::chrono::steady_clock::now() - timestep_start_time).count() / HOUR;
       printlnlog(
-          "timestep {} is complete ({} of {} timesteps of the model). This run did {} timesteps in {:.2f} hours. The "
-          "estimate for the remaining {} requested timesteps is {:.2f} hours.",
-          globals::timestep, globals::timestep + 1, globals::ntimesteps, timesteps_completed_in_run, hours_in_run,
-          requested_timesteps_remaining, hours_in_run / timesteps_completed_in_run * requested_timesteps_remaining);
+          "timestep {} is complete ({} of {} timesteps of the model) after {:.2f} hours. If each timestep takes this "
+          "time, the remaining {} requested timesteps take {:.2f} hours.",
+          globals::timestep, globals::timestep + 1, globals::ntimesteps, timestep_hours, requested_timesteps_remaining,
+          timestep_hours * requested_timesteps_remaining);
     }
 
     globals::timestep++;

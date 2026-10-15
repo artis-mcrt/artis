@@ -338,15 +338,18 @@ extern const char* const GIT_BRANCH = \"$(shell git symbolic-ref --short HEAD 2>
 extern const char* const GIT_STATUS = \"$(GIT_STATUS_TEXT)\";
 endef
 
-# the lines of artisoptions.h without the comment lines, the preprocessor lines, and the blank lines, as C++ string
-# literals
-ARTISOPTIONS_LINES_CMD := sed -e '/^[[:space:]]*\/\//d' -e '/^[[:space:]]*\#/d' -e '/^[[:space:]]*$$/d' -e 's/\\/\\\\/g' -e 's/"/\\"/g' -e 's/^/"/' -e 's/$$/",/' artisoptions.h
+# the lines of artisoptions.h without the comment lines, the preprocessor lines, the blank lines, and the carriage
+# returns. A raw string literal holds them, so no character needs an escape. LC_ALL=C stops BSD sed at no byte.
+ARTISOPTIONS_LINES_CMD := tr -d '\r' < artisoptions.h | LC_ALL=C sed -e '/^[[:space:]]*\/\//d' -e '/^[[:space:]]*\#/d' -e '/^[[:space:]]*$$/d'
 
 # the git metadata changes at almost every git operation. version.h declares the strings and stays
 # the same, and this generated file holds the definitions. Only this small file compiles again,
 # and not sn3d.cc and exspec.cc
-$(shell { printf '\043include <array>\n\043include <span>\n'; echo "$(version_cc)"; echo 'namespace {'; echo 'constexpr std::array artisoptions_lines{'; $(ARTISOPTIONS_LINES_CMD) 2> /dev/null; echo '};'; echo '}  // anonymous namespace'; echo 'extern const std::span<const char* const> ARTISOPTIONS_LINES{artisoptions_lines};'; } > .version_tmp.cc)
-$(shell test -f version.cc || touch version.cc)
+$(shell { printf '\043include <string_view>\n'; \
+  echo "$(version_cc)"; \
+  printf 'extern const std::string_view ARTISOPTIONS_LINES = R"artisoptions\050\n'; \
+  { $(ARTISOPTIONS_LINES_CMD); } 2> /dev/null; \
+  printf '\051artisoptions";\n'; } > .version_tmp.cc)
 
 ifneq ($(shell cmp -s version.cc .version_tmp.cc || echo differ),)
   $(info updating version.cc)

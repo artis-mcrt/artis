@@ -14,7 +14,9 @@
 #include <filesystem>
 #include <format>
 #include <functional>
+#include <ranges>
 #include <span>
+#include <string_view>
 #include <vector>
 
 #pragma clang unsafe_buffer_usage begin
@@ -50,8 +52,10 @@ auto main(int argc, char* argv[]) -> int {
 
   printlnlog("git status: {}", GIT_STATUS);
 
-  for (const char* const option_line : ARTISOPTIONS_LINES) {
-    printlnlog("artisoptions.h: {}", option_line);
+  for (const auto option_line : std::views::split(ARTISOPTIONS_LINES, '\n')) {
+    if (!option_line.empty()) {
+      printlnlog("artisoptions.h: {}", std::string_view{option_line});
+    }
   }
 
   printlnlog("exspec compiled at {} on {}", __TIME__, __DATE__);
