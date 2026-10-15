@@ -50,7 +50,9 @@ auto main(int argc, char* argv[]) -> int {
 
   printlnlog("git status: {}", GIT_STATUS);
 
-  printlog("artisoptions.h without the comments:\n{}", ARTISOPTIONS_TEXT);
+  for (const char* const option_line : ARTISOPTIONS_LINES) {
+    printlnlog("artisoptions.h: {}", option_line);
+  }
 
   printlnlog("exspec compiled at {} on {}", __TIME__, __DATE__);
 

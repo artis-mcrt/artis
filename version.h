@@ -6,9 +6,11 @@
 #ifndef VERSION_H
 #define VERSION_H
 
+#include <span>
+
 extern const char* const GIT_VERSION;
 extern const char* const GIT_BRANCH;
 extern const char* const GIT_STATUS;
-extern const char* const ARTISOPTIONS_TEXT;
+extern const std::span<const char* const> ARTISOPTIONS_LINES;
 
 #endif  // VERSION_H
