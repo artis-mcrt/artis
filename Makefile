@@ -71,7 +71,7 @@ define GET_ARCH_CMD
 endef
 	CPU_ARCH := $(shell $(GET_ARCH_CMD))
 
-# a gcc with the command name c++ can report "c++ (GCC)" or "c++ (Ubuntu ...)", but always the copyright of the FSF
+# a gcc with the command name c++ can report "c++ (Ubuntu ...)", but it always reports the Free Software Foundation
 else ifneq (,$(or $(findstring g++,$(COMPILER_VERSION)),$(findstring gcc,$(COMPILER_VERSION)),$(findstring Free Software Foundation,$(COMPILER_VERSION))))
 	COMPILER_NAME := gcc
 	MIN_GCC_VERSION := 14
