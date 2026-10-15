@@ -95,7 +95,7 @@ On macOS, it's recommended that you install homebrew llvm to get clang-format, c
 ```sh
 brew install llvm open-mpi pkgconf zstd prek
 ```
-On Linux, `pixi run make` builds with a gcc from conda-forge (see pixi.toml). The MPI library must come from the system, e.g. from a module on a cluster. To use the gcc of pixi for the make commands below, start `pixi shell` first. If the link stops with undefined references from the MPI library, export LDFLAGS with `-Wl,-rpath-link` and the library folder of the MPI library. The job scripts for Leonardo and Virgo show examples.
+On Linux, `pixi run make` builds with a gcc from conda-forge (see pixi.toml). The MPI library must come from the system, e.g. from a module on a cluster. To use the gcc of pixi for the make commands below, start `pixi shell` first. The link can stop with undefined references from the MPI library. Then export LDFLAGS with `-Wl,-rpath-link` and the library folder of the MPI library. The job scripts for Leonardo and Virgo show examples.
 
 Run the commands below. They install the pre-commit hooks, select a preset, and make a compilation database for the clang tools:
 ```sh
@@ -159,7 +159,13 @@ cd tests/kilonova_1d_testrun
 rm -f input.txt
 mpirun -np 4 ./sn3d
 ```
-Remove your artisoptions.h before the copy. The `cp` command writes through a symlink and changes the tracked preset. Remove input.txt before a new run. An input.txt of an earlier run makes sn3d continue that run. Without input.txt, sn3d restores it from input-newrun.txt. The make options are the options of CI. The test input files are zstd compressed, so the build needs libzstd. After the test, symlink your preset to artisoptions.h again with `ln -sf`, because the test copy is still there. The steps of the test job in [ci.yml](.github/workflows/ci.yml) also show the resume run and the exspec run.
+Remove your artisoptions.h before the copy. The `cp` command writes through a symlink and changes the tracked preset. Remove input.txt before a new run. An input.txt of an earlier run makes sn3d continue that run. Without input.txt, sn3d restores it from input-newrun.txt. The make options are the options of CI. The test input files are zstd compressed, so the build needs libzstd. The steps of the test job in [ci.yml](.github/workflows/ci.yml) also show the resume run and the exspec run.
+
+After the test, go back to the repository folder. Then replace the test copy of artisoptions.h with the symlink to your preset:
+```sh
+cd ../..
+ln -sf artisoptions_nltenebular.h artisoptions.h
+```
 
 [CI](.github/workflows/ci.yml) runs all of these on every push. It builds with `REPRODUCIBLE=ON FASTMATH=OFF MAX_NODE_SIZE=2` and compares md5 checksums of the output files against reference checksums stored in the tests/*_inputfiles folders. A change that legitimately alters the numerical results therefore needs new reference checksums, which maintainers regenerate using the "Update checksums" workflow. CI also compiles every artisoptions_*.h preset with gcc and clang, and the classic and NLTE nebular presets additionally with Apple Clang, nvc++, and hipcc (including the GPU code paths).
 
