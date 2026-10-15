@@ -347,13 +347,21 @@ extern const char* const GIT_BRANCH = \"$(shell git symbolic-ref --short HEAD 2>
 extern const char* const GIT_STATUS = \"$(GIT_STATUS_TEXT)\";
 endef
 
+# the lines of artisoptions.h without the comment lines, the preprocessor lines, the blank lines, and the carriage
+# returns. A raw string literal holds them, so no character needs an escape. With LC_ALL=C, BSD tr and sed accept
+# every byte.
+ARTISOPTIONS_LINES_CMD := LC_ALL=C tr -d '\r' < artisoptions.h | LC_ALL=C sed -e '/^[[:space:]]*\/\//d' -e '/^[[:space:]]*\#/d' -e '/^[[:space:]]*$$/d'
+
 # the git metadata changes at almost every git operation. version.h declares the strings and stays
 # the same, and this generated file holds the definitions. Only this small file compiles again,
 # and not sn3d.cc and exspec.cc
-$(shell echo "$(version_cc)" > .version_tmp.cc)
-$(shell test -f version.cc || touch version.cc)
+$(shell { printf '\043include <string_view>\n'; \
+  echo "$(version_cc)"; \
+  printf 'extern const std::string_view ARTISOPTIONS_LINES = R"artisoptions\050\n'; \
+  { $(ARTISOPTIONS_LINES_CMD); } 2> /dev/null; \
+  printf '\051artisoptions";\n'; } > .version_tmp.cc)
 
-ifneq ($(shell cat version.cc),$(shell cat .version_tmp.cc))
+ifneq ($(shell cmp -s version.cc .version_tmp.cc || echo differ),)
   $(info updating version.cc)
   $(shell mv .version_tmp.cc version.cc)
 else

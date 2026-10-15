@@ -37,6 +37,7 @@
 #include <ranges>
 #endif
 #include <span>
+#include <sstream>
 #include <vector>
 
 #pragma clang unsafe_buffer_usage begin
@@ -1057,6 +1058,13 @@ auto main(int argc, char* argv[]) -> int {
 
   printlnlog("git status: {}", GIT_STATUS);
 
+  std::istringstream option_lines{std::string{ARTISOPTIONS_LINES}};
+  for (std::string option_line; std::getline(option_lines, option_line);) {
+    if (!option_line.empty()) {
+      printlnlog("artisoptions.h: {}", option_line);
+    }
+  }
+
   printlnlog("sn3d compiled at {} on {}", __TIME__, __DATE__);
 
 #if defined TESTMODE && TESTMODE
@@ -1187,7 +1195,19 @@ auto main(int argc, char* argv[]) -> int {
   while (globals::timestep < globals::timestep_finish && !terminate_early) {
     MPI_Barrier_allranks();
 
+    const auto timestep_start_time = std::chrono::steady_clock::now();
     terminate_early = do_timestep(globals::timestep, packets, walltime_limit_seconds);
+
+    if (!terminate_early) {
+      const int requested_timesteps_remaining = globals::timestep_finish - globals::timestep - 1;
+      const double timestep_hours =
+          std::chrono::duration<double>(std::chrono::steady_clock::now() - timestep_start_time).count() / HOUR;
+      printlnlog(
+          "timestep {} is complete ({} of {} timesteps of the model) after {:.2f} hours. If each timestep takes this "
+          "time, the remaining {} requested timesteps take {:.2f} hours.",
+          globals::timestep, globals::timestep + 1, globals::ntimesteps, timestep_hours, requested_timesteps_remaining,
+          timestep_hours * requested_timesteps_remaining);
+    }
 
     globals::timestep++;
   }

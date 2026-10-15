@@ -15,6 +15,8 @@
 #include <format>
 #include <functional>
 #include <span>
+#include <sstream>
+#include <string>
 #include <vector>
 
 #pragma clang unsafe_buffer_usage begin
@@ -49,6 +51,13 @@ auto main(int argc, char* argv[]) -> int {
   printlnlog("git version: {}", GIT_VERSION);
 
   printlnlog("git status: {}", GIT_STATUS);
+
+  std::istringstream option_lines{std::string{ARTISOPTIONS_LINES}};
+  for (std::string option_line; std::getline(option_lines, option_line);) {
+    if (!option_line.empty()) {
+      printlnlog("artisoptions.h: {}", option_line);
+    }
+  }
 
   printlnlog("exspec compiled at {} on {}", __TIME__, __DATE__);
 
