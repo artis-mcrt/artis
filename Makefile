@@ -7,7 +7,7 @@
 BUILD_GOALS := $(strip $(filter-out clean,$(if $(MAKECMDGOALS),$(MAKECMDGOALS),all)))
 ifneq ($(BUILD_GOALS),)
   ifeq ($(wildcard artisoptions.h),)
-    $(error artisoptions.h not found. Select a compile-time option preset, e.g. 'ln -s artisoptions_classic.h artisoptions.h'. Symlinking (rather than copying) keeps it in sync when the preset changes. The options are documented in artisoptions_doc.md)
+    $(error make cannot find artisoptions.h. For a production run, copy a compile-time option preset to artisoptions.h, e.g. 'cp artisoptions_classic.h artisoptions.h'. For development, symlink a preset, e.g. 'ln -s artisoptions_classic.h artisoptions.h'. A symlink follows the changes of the preset. artisoptions_doc.md documents the options)
   endif
   # without --check-symlink-times ('L' in the first dashless word of MAKEFLAGS), make compares timestamps
   # through the symlink, so a preset switch via ln -sf may not trigger a rebuild
@@ -15,9 +15,6 @@ ifneq ($(BUILD_GOALS),)
     ifeq (,$(findstring L,$(filter-out -%,$(firstword $(MAKEFLAGS)))))
       $(warning artisoptions.h is a symlink, but make was started without --check-symlink-times: switching presets with ln -sf may not trigger a rebuild. Recommended: export MAKEFLAGS="--check-symlink-times --jobs=$$(nproc)")
     endif
-  endif
-  ifeq ($(shell command -v mpicxx 2> /dev/null),)
-    $(error mpicxx not found. Install an MPI library that supplies mpicxx, e.g. Open MPI. On a cluster, load the module of the MPI library. The job scripts in scripts/ show the modules of some clusters)
   endif
 endif
 
@@ -32,6 +29,11 @@ $(foreach option,TESTMODE REPRODUCIBLE GPU OPENMP STDPAR FASTMATH OPTIMIZE ZSTD,
 
 CXX := mpicxx
 COMPILER_VERSION := $(shell $(CXX) --version)
+ifneq ($(BUILD_GOALS),)
+  ifeq ($(strip $(COMPILER_VERSION)),)
+    $(error make cannot run '$(CXX) --version'. Install an MPI library that supplies mpicxx, e.g. Open MPI. On a cluster, load the module of the MPI library. The job scripts in scripts/ show the modules of some clusters. With Open MPI, OMPI_CXX must name an installed compiler)
+  endif
+endif
 COMPILER_VERSION_NUMBER := $(shell $(CXX) -dumpfullversion -dumpversion | head -n1)
 $(info $(COMPILER_VERSION))
 CXX_STD := c++26
