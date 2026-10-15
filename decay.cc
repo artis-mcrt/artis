@@ -677,7 +677,9 @@ auto get_nucstring_a(const std::string& strnuc) -> int {
   const std::string strmassnum = strnuc.substr(i);
 
   const int a = std::atoi(strmassnum.c_str());
-  assert_always(a > 0);
+  if (a <= 0) {
+    fatal_crash("the nuclide string '{}' must end with a positive mass number", strnuc);
+  }
   return a;
 }
 
@@ -769,10 +771,13 @@ void read_betaminus_decaydata() {
     double e_elec_mev = 0.;
     double e_neutrino = 0.;
     double tau_sec = 0.;
-    assert_always(std::stringstream(line) >> a >> z >> Q_betadecay_mev >> e_gamma_mev >> e_elec_mev >> e_neutrino >>
-                  tau_sec);
+    if (!(std::stringstream(line) >> a >> z >> Q_betadecay_mev >> e_gamma_mev >> e_elec_mev >> e_neutrino >> tau_sec)) {
+      fatal_crash("betaminusdecays.txt has an unreadable line '{}'", line);
+    }
     if (Q_betadecay_mev > 0.) {
-      assert_always(!nuc_exists(z, a));
+      if (nuc_exists(z, a)) {
+        fatal_crash("betaminusdecays.txt: the nuclide Z={} A={} already has decay data", z, a);
+      }
       nuclides.push_back({.z = z, .a = a, .meanlife = tau_sec});
       nuclides.back().branchprobs[DECAYTYPE_BETAMINUS] = 1.;
       nuclides.back().endecay_q[DECAYTYPE_BETAMINUS] = Q_betadecay_mev * MEV;
@@ -805,14 +810,18 @@ void read_alpha_decaydata() {
     double e_alpha_mev = 0.;
     double e_gamma_mev = 0.;
     double e_beta_mev = 0.;
-    assert_always(std::stringstream(line) >> a >> z >> branch_alpha >> branch_beta >> halflife >> Q_alphadecay_mev >>
-                  Q_betadecay_mev >> e_alpha_mev >> e_gamma_mev >> e_beta_mev);
+    if (!(std::stringstream(line) >> a >> z >> branch_alpha >> branch_beta >> halflife >> Q_alphadecay_mev >>
+          Q_betadecay_mev >> e_alpha_mev >> e_gamma_mev >> e_beta_mev)) {
+      fatal_crash("alphadecays.txt has an unreadable line '{}'", line);
+    }
 
     const bool keeprow = ((branch_alpha > 0. || branch_beta > 0.) && halflife > 0.);
     if (keeprow) {
       // one row per nuclide: the branching ratios below are divided out of the tabulated energies
       // in place, so a second row for the same nuclide would apply that division twice
-      assert_always(!seen_z_a.contains({z, a}));
+      if (seen_z_a.contains({z, a})) {
+        fatal_crash("alphadecays.txt has more than one row for Z={} A={}", z, a);
+      }
       seen_z_a.insert({z, a});
       const double tau_sec = halflife / std::numbers::ln2;
       int alphanucindex = -1;
@@ -873,9 +882,13 @@ void read_spontfission_decaydata() {
     double z1 = 0.;
     double z2 = 0.;
     double tau_sec = 0.;
-    assert_always(std::stringstream(line) >> a_in >> z_in >> q_fission_mev >> e_gamma_mev >> e_1_mev >> e_2_mev >> m1 >>
-                  m2 >> z1 >> z2 >> tau_sec);
-    assert_always(!nuc_exists(z_in, a_in));
+    if (!(std::stringstream(line) >> a_in >> z_in >> q_fission_mev >> e_gamma_mev >> e_1_mev >> e_2_mev >> m1 >> m2 >>
+          z1 >> z2 >> tau_sec)) {
+      fatal_crash("fissiondecays.txt has an unreadable line '{}'", line);
+    }
+    if (nuc_exists(z_in, a_in)) {
+      fatal_crash("fissiondecays.txt: the nuclide Z={} A={} already has decay data", z_in, a_in);
+    }
     nuclides.push_back({.z = z_in, .a = a_in, .meanlife = tau_sec});
     nuclides.back().branchprobs[DECAYTYPE_SPONTFISSION] = 1.;
     nuclides.back().endecay_q[DECAYTYPE_SPONTFISSION] = q_fission_mev * MEV;
@@ -933,8 +946,14 @@ void read_fissionproduct_data() {
     if (keep_table) {
       // the yields sum to the number of fragments produced per fission, which is two for the binary
       // fission of the tabulated nuclides. This also guards against a table in different units.
-      assert_always(daughter_yield_sum > 1.9);
-      assert_always(daughter_yield_sum < 2.1);
+      // a NaN sum is also outside the range
+      const bool yield_sum_near_two = (daughter_yield_sum > 1.9 && daughter_yield_sum < 2.1);
+      if (!yield_sum_near_two) {
+        fatal_crash(
+            "fissionproducts_GEF_100keV.txt: the yields of Z={} A={} sum to {:g} nuclei for each fission, but the sum "
+            "must be near 2",
+            z_parent, a_parent, daughter_yield_sum);
+      }
       nuclides[nucindex].decay_daughters_yield_sum = daughter_yield_sum;
     }
   }

@@ -746,12 +746,16 @@ auto read_elem_abundances() -> std::tuple<std::vector<float>, int> {
     constexpr int max_warnings = 10;
 
     for (int mgi = 0; mgi < get_npts_model(); mgi++) {
-      assert_always(get_noncommentline(abundance_file, line));
+      if (!get_noncommentline(abundance_file, line)) {
+        fatal_crash("abundances.txt ends before cell {} of the {} cells of model.txt", mgi, get_npts_model());
+      }
       auto remainder = std::string_view{line};
 
       int cellnumberinput = -1;
-      assert_always(parse_next_token(remainder, cellnumberinput));
-      assert_always(cellnumberinput == mgi + first_input_cellid);
+      if (!parse_next_token(remainder, cellnumberinput) || cellnumberinput != mgi + first_input_cellid) {
+        fatal_crash("abundances.txt cell {} must start with the cell id {} as in model.txt, but the line is '{}'", mgi,
+                    mgi + first_input_cellid, line);
+      }
 
       // the abundances.txt file specifies the elemental mass fractions for each model cell.
       // A 1D or 2D file may hold values proportional to the mass fractions, e.g. element densities,
@@ -888,36 +892,39 @@ void parse_model_headerline(const std::string& line, std::vector<int>& zlist, st
 
     columnindex++;
 
+    // -1 for a column that this model type cannot have
+    int required_columnindex = columnindex;
     if (token == "#inputcellid") {
-      assert_always(columnindex == 0);
-    } else if (token == "velocity_outer") {
-      assert_always(columnindex == 1);
-    } else if (token == "vel_r_max_kmps") {
-      assert_always(columnindex == 1);
+      required_columnindex = 0;
+    } else if (token == "velocity_outer" || token == "vel_r_max_kmps") {
+      required_columnindex = 1;
     } else if (token.starts_with("pos_")) {
       continue;
     } else if (token == "logrho") {
       // 1D models have log10(rho [g/cm3])
-      assert_always(columnindex == 2);
-      assert_always(get_modelgridtype() == GridType::SPHERICAL1D);
+      required_columnindex = (get_modelgridtype() == GridType::SPHERICAL1D) ? 2 : -1;
     } else if (token == "rho") {
-      // 2D and 3D models have rho [g/cm3]
-      assert_always(get_modelgridtype() != GridType::SPHERICAL1D);
-      assert_always((columnindex == 4 && get_modelgridtype() == GridType::CARTESIAN3D) ||
-                    (columnindex == 3 && get_modelgridtype() == GridType::CYLINDRICAL2D));
-      continue;
+      // 2D and 3D models have rho [g/cm3] after the cell id and the position columns
+      required_columnindex = (get_modelgridtype() == GridType::SPHERICAL1D) ? -1 : get_ndim(get_modelgridtype()) + 1;
     } else if (token.starts_with("X_") && token != "X_Fegroup") {
       colnames.push_back(token);
       const int z = decay::get_nucstring_z(token.substr(2));  // + 2 skips the 'X_'
       const int a = decay::get_nucstring_a(token.substr(2));
-      assert_always(z >= 0);
-      assert_always(a >= 0);
       zlist.push_back(z);
       alist.push_back(a);
     } else {
       colnames.push_back(token);
       zlist.push_back(-1);
       alist.push_back(-1);
+    }
+
+    if (required_columnindex < 0) {
+      fatal_crash("the model.txt header line has the column {}, but a {}D model cannot have this column", token,
+                  get_ndim(get_modelgridtype()));
+    }
+    if (columnindex != required_columnindex) {
+      fatal_crash("the model.txt header line has the column {} at index {}, but the required index is {}", token,
+                  columnindex, required_columnindex);
     }
   }
 }
@@ -955,7 +962,9 @@ void read_model_radioabundances(ModelFileReader& fmodel, std::string_view& remai
                                 const std::vector<int>& nucindexlist, const bool one_line_per_cell) {
   if (!one_line_per_cell) {
     static std::string line;
-    assert_always(fmodel.getline(line));
+    if (!fmodel.getline(line)) {
+      fatal_crash("model.txt ends before the second line of cell {}", mgi);
+    }
     remainder = std::string_view{line};
   }
 
@@ -964,8 +973,10 @@ void read_model_radioabundances(ModelFileReader& fmodel, std::string_view& remai
   }
 
   for (auto i = 0Z; i < std::ssize(colnames); i++) {
-    double valuein = 0.;
-    assert_always(parse_next_token(remainder, valuein));  // a mass fraction or another column value, e.g. Ye or q
+    double valuein = 0.;  // a mass fraction or another column value, e.g. Ye or q
+    if (!parse_next_token(remainder, valuein)) {
+      fatal_crash("model.txt cell {} has no readable value for the column {}", mgi, colnames[i]);
+    }
 
     if (nucindexlist[i] >= 0) {
       assert_testmodeonly(valuein <= 1.);
@@ -987,7 +998,9 @@ void read_model_radioabundances(ModelFileReader& fmodel, std::string_view& remai
     }
   }
   double valuein = 0.;
-  assert_always(!parse_next_token(remainder, valuein));  // should be no tokens left!
+  if (parse_next_token(remainder, valuein)) {
+    fatal_crash("model.txt cell {} has more values than the header has columns", mgi);
+  }
 }
 
 auto read_model_columns(ModelFileReader& fmodel) -> std::tuple<std::vector<std::string>, std::vector<int>, bool> {
@@ -1044,7 +1057,11 @@ auto read_model_columns(ModelFileReader& fmodel) -> std::tuple<std::vector<std::
     headerline += " X_Ni57 X_Co57";
   }
 
-  assert_always(colcount == get_token_count(headerline));
+  if (colcount != get_token_count(headerline)) {
+    fatal_crash("model.txt cell 0 has {} values, but the {} '{}' has {} columns", colcount,
+                header_specified ? "header line" : "default header for a file without a header line", headerline,
+                get_token_count(headerline));
+  }
 
   if (header_specified) {
     printlnlog("model.txt has a header line.");
@@ -1133,14 +1150,18 @@ void read_grid_restart_data(const int timestep) {
   int nbfcontinua_ground_in = -1;
   read_restart_values(gridsave_file, ntimesteps_in, nprocs_in, tmin_in, tmax_in, timestep_in, nonempty_npts_model_in,
                       nelements_in, includedions_in, nbfcontinua_ground_in);
-  assert_always(ntimesteps_in == globals::ntimesteps);
-  assert_always(nprocs_in == globals::nprocs);
+  if (ntimesteps_in != globals::ntimesteps || nprocs_in != globals::nprocs) {
+    fatal_crash("{} has {} timesteps and {} ranks, but this simulation has {} timesteps and {} ranks", filename,
+                ntimesteps_in, nprocs_in, globals::ntimesteps, globals::nprocs);
+  }
   // the saved per-timestep energies belong to the time grid of the run that wrote the file
   if (tmin_in != globals::tmin || tmax_in != globals::tmax) {
     fatal_crash("{} was written with tmin {:g} tmax {:g} but input.txt gives tmin {:g} tmax {:g}", filename, tmin_in,
                 tmax_in, globals::tmin, globals::tmax);
   }
-  assert_always(timestep_in == timestep);
+  if (timestep_in != timestep) {
+    fatal_crash("{} holds timestep {}, but the expected timestep is {}", filename, timestep_in, timestep);
+  }
   if (nonempty_npts_model_in != get_nonempty_npts_model() || nelements_in != get_nelements() ||
       includedions_in != get_includedions() || nbfcontinua_ground_in != globals::nbfcontinua_ground) {
     fatal_crash(
@@ -2129,7 +2150,9 @@ void read_ejecta_model() {
     ncoord_model[0] = static_cast<int>(round(std::cbrt(npts_model)));
     ncoord_model[1] = ncoord_model[0];
     ncoord_model[2] = ncoord_model[0];
-    assert_always(static_cast<ptrdiff_t>(ncoord_model[0]) * ncoord_model[1] * ncoord_model[2] == npts_model);
+    if (static_cast<ptrdiff_t>(ncoord_model[0]) * ncoord_model[1] * ncoord_model[2] != npts_model) {
+      fatal_crash("model.txt: a 3D model needs a cube number of cells, but it has {} cells", npts_model);
+    }
     // for a 3D input model, the propagation cells will match the input cells exactly
     ncoordgrid = ncoord_model;
     ngrid = npts_model;
@@ -2169,28 +2192,44 @@ void read_ejecta_model() {
         vout_model[mgi] = vout_kmps * 1.e5;
         // the velocity grid is binary searched by int_index_lowerbound(), so it has to increase
         // outwards. Without this check a non-monotonic model.txt gives silently wrong cell lookups.
-        assert_always(mgi == 0 || vout_model[mgi] > vout_model[mgi - 1]);
+        if (mgi > 0 && !(vout_model[mgi] > vout_model[mgi - 1])) {
+          fatal_crash("model.txt cell {} has vel_r_max_kmps {:g}, but it must be larger than {:g} of the cell before",
+                      mgi, vout_kmps, vout_model[mgi - 1] / 1.e5);
+        }
         rho_tmodel = (log_rho > -90) ? pow(10., log_rho) : 0.;
       } else if (get_modelgridtype() == GridType::CYLINDRICAL2D) {
         // columns: cell number, r midpoint, z midpoint, density
         float cell_r_in{NAN};
         float cell_z_in{NAN};
-        assert_always(parse_next_token(remainder, cellnumberin) && parse_next_token(remainder, cell_r_in) &&
-                      parse_next_token(remainder, cell_z_in) && parse_next_token(remainder, rho_tmodel));
+        if (!(parse_next_token(remainder, cellnumberin) && parse_next_token(remainder, cell_r_in) &&
+              parse_next_token(remainder, cell_z_in) && parse_next_token(remainder, rho_tmodel))) {
+          fatal_crash(
+              "model.txt cell {} must start with 4 numbers (inputcellid pos_rcyl_mid pos_z_mid rho), but the line is: "
+              "{}",
+              mgi, line);
+        }
 
         const int n_rcyl = (mgi % ncoord_model[0]);
         const double pos_r_cyl_mid = (n_rcyl + 0.5) * globals::vmax * t_model / ncoord_model[0];
-        assert_always(fabs((cell_r_in / pos_r_cyl_mid) - 1) < 1e-3);
+        if (!(fabs((cell_r_in / pos_r_cyl_mid) - 1) < 1e-3)) {
+          fatal_crash("model.txt cell {} has pos_rcyl_mid {:g}, but the expected value is {:g}", mgi, cell_r_in,
+                      pos_r_cyl_mid);
+        }
         const int n_z = (mgi / ncoord_model[0]);
         if (((2 * n_z) + 1) == ncoord_model[1]) {
           // an odd number of z rows puts the middle row at the origin, where a relative comparison
           // has nothing to divide by. Compare against the cell size instead. The row is identified
           // from the integer index rather than by testing the coordinate against zero, because the
           // expression below is not required to evaluate to exactly zero under -ffast-math.
-          assert_always(fabs(cell_z_in) < (1e-3 * globals::vmax * t_model / ncoord_model[1]));
+          if (!(fabs(cell_z_in) < (1e-3 * globals::vmax * t_model / ncoord_model[1]))) {
+            fatal_crash("model.txt cell {} has pos_z_mid {:g}, but the expected value is 0", mgi, cell_z_in);
+          }
         } else {
           const double pos_z_mid = globals::vmax * t_model * (-1 + (2 * (n_z + 0.5) / ncoord_model[1]));
-          assert_always(fabs((cell_z_in / pos_z_mid) - 1) < 1e-3);
+          if (!(fabs((cell_z_in / pos_z_mid) - 1) < 1e-3)) {
+            fatal_crash("model.txt cell {} has pos_z_mid {:g}, but the expected value is {:g}", mgi, cell_z_in,
+                        pos_z_mid);
+          }
         }
       } else {
         // columns: cell number, x minimum, y minimum, z minimum, density. The position columns hold the corner
@@ -2198,9 +2237,14 @@ void read_ejecta_model() {
         // it cannot tell a file of cell midpoints from a file of cell corners.
         std::array<float, 3> cellpos_in{};
         float rho_model_in{NAN};
-        assert_always(parse_next_token(remainder, cellnumberin) && parse_next_token(remainder, cellpos_in[0]) &&
-                      parse_next_token(remainder, cellpos_in[1]) && parse_next_token(remainder, cellpos_in[2]) &&
-                      parse_next_token(remainder, rho_model_in));
+        if (!(parse_next_token(remainder, cellnumberin) && parse_next_token(remainder, cellpos_in[0]) &&
+              parse_next_token(remainder, cellpos_in[1]) && parse_next_token(remainder, cellpos_in[2]) &&
+              parse_next_token(remainder, rho_model_in))) {
+          fatal_crash(
+              "model.txt cell {} must start with 5 numbers (inputcellid pos_x_min pos_y_min pos_z_min rho), but the "
+              "line is: {}",
+              mgi, line);
+        }
         rho_tmodel = rho_model_in;
 
         // cell coordinates in the 3D model.txt file are sometimes reordered by the scaling script
@@ -2225,9 +2269,14 @@ void read_ejecta_model() {
       if (mgi == 0) {
         first_input_cellid = cellnumberin;
         printlnlog("model.txt: autodetected cell numbering starting from {}", first_input_cellid);
-        assert_always(first_input_cellid == 0 || first_input_cellid == 1);
+        if (first_input_cellid != 0 && first_input_cellid != 1) {
+          fatal_crash("model.txt: the first cell id is {}, but it must be 0 or 1", first_input_cellid);
+        }
       }
-      assert_always(cellnumberin == mgi + first_input_cellid);
+      if (cellnumberin != mgi + first_input_cellid) {
+        fatal_crash("model.txt cell {} has the cell id {}, but the expected id is {}", mgi, cellnumberin,
+                    mgi + first_input_cellid);
+      }
 
       if (rho_tmodel < 0) {
         fatal_crash("model.txt cell {} has negative density {:g} [g/cm3] at t_model", mgi, rho_tmodel);

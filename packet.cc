@@ -335,7 +335,10 @@ void read_packet_restart_file(const int timestep, std::vector<Packet>& packets) 
   std::int64_t packet_count_in_file = 0;
   read_restart_values(packets_file.get(), packet_count_in_file);
   assert_always(packet_count_in_file >= 0);
-  assert_always(packet_count_in_file <= std::ssize(packets));
+  if (packet_count_in_file > std::ssize(packets)) {
+    fatal_crash("{} holds {} packets, but the share of this rank of NUM_PACKETS = {} is only {} packets", filename,
+                packet_count_in_file, NUM_PACKETS, std::ssize(packets));
+  }
   reserve_resize(packets, packet_count_in_file);
   read_restart_array(packets_file.get(), packets);
 #ifndef GPU_ON
