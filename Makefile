@@ -7,7 +7,7 @@
 BUILD_GOALS := $(strip $(filter-out clean,$(if $(MAKECMDGOALS),$(MAKECMDGOALS),all)))
 ifneq ($(BUILD_GOALS),)
   ifeq ($(wildcard artisoptions.h),)
-    $(error make cannot find artisoptions.h. For a production run, copy a compile-time option preset to artisoptions.h, e.g. 'cp artisoptions_classic.h artisoptions.h'. For development, symlink a preset, e.g. 'ln -s artisoptions_classic.h artisoptions.h'. A symlink follows the changes of the preset. artisoptions_doc.md documents the options)
+    $(error make cannot find artisoptions.h. Symlink a compile-time option preset to artisoptions.h, e.g. 'ln -s artisoptions_classic.h artisoptions.h'. The symlink follows the changes of the preset. artisoptions_doc.md documents the options)
   endif
   # without --check-symlink-times ('L' in the first dashless word of MAKEFLAGS), make compares timestamps
   # through the symlink, so a preset switch via ln -sf may not trigger a rebuild
