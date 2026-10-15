@@ -339,8 +339,9 @@ extern const char* const GIT_STATUS = \"$(GIT_STATUS_TEXT)\";
 endef
 
 # the lines of artisoptions.h without the comment lines, the preprocessor lines, the blank lines, and the carriage
-# returns. A raw string literal holds them, so no character needs an escape. LC_ALL=C stops BSD sed at no byte.
-ARTISOPTIONS_LINES_CMD := tr -d '\r' < artisoptions.h | LC_ALL=C sed -e '/^[[:space:]]*\/\//d' -e '/^[[:space:]]*\#/d' -e '/^[[:space:]]*$$/d'
+# returns. A raw string literal holds them, so no character needs an escape. With LC_ALL=C, BSD tr and sed accept
+# every byte.
+ARTISOPTIONS_LINES_CMD := LC_ALL=C tr -d '\r' < artisoptions.h | LC_ALL=C sed -e '/^[[:space:]]*\/\//d' -e '/^[[:space:]]*\#/d' -e '/^[[:space:]]*$$/d'
 
 # the git metadata changes at almost every git operation. version.h declares the strings and stays
 # the same, and this generated file holds the definitions. Only this small file compiles again,
