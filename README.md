@@ -95,7 +95,7 @@ On macOS, it's recommended that you install homebrew llvm to get clang-format, c
 ```sh
 brew install llvm open-mpi prek
 ```
-On Linux, `pixi run make` builds with a gcc and an Open MPI from conda-forge (see pixi.toml). On a cluster, use the MPI library of the cluster instead.
+On Linux, `pixi run make` builds with a gcc from conda-forge (see pixi.toml). The MPI library must come from the system, e.g. from a module on a cluster.
 
 Install the pre-commit hooks, select a preset, and generate a compilation database for clang tools:
 ```sh
@@ -103,8 +103,8 @@ prek install
 ln -s artisoptions_nltenebular.h artisoptions.h
 make TESTMODE=ON compile_commands.json
 ```
-Add `export MAKEFLAGS="--check-symlink-times --jobs=$(nproc)"` to your shell startup file. Without `--check-symlink-times`, make does not rebuild after a change of the symlink to a different preset.
 Every build writes the database again, so it stays current. It always uses the `TESTMODE=ON` flags, so that the clang tools check the assertions of the test mode.
+Add `export MAKEFLAGS="--check-symlink-times --jobs=$(getconf _NPROCESSORS_ONLN)"` to your shell startup file. The `getconf` command works on Linux and on macOS. Without `--check-symlink-times`, make does not rebuild after a change of the symlink to a different preset.
 For editing, the clangd language server is recommended (e.g., with the [VS Code plugin](https://marketplace.visualstudio.com/items?itemName=llvm-vs-code-extensions.vscode-clangd)).
 
 ### Running
@@ -156,23 +156,29 @@ cp tests/kilonova_1d_testrun/artisoptions.h .
 make sn3d exspec
 cp -L sn3d exspec tests/kilonova_1d_testrun/
 cd tests/kilonova_1d_testrun
+rm -f input.txt
 mpirun -np 4 ./sn3d
 ```
-Remove your artisoptions.h before the copy, because `cp` writes through a symlink and changes the tracked preset. The steps of the test job in [ci.yml](.github/workflows/ci.yml) also show the resume run and the exspec run.
+Remove your artisoptions.h before the copy, because `cp` writes through a symlink and changes the tracked preset. Remove input.txt before a new run, because an input.txt of an earlier run continues that run. sn3d then restores input.txt from input-newrun.txt. The steps of the test job in [ci.yml](.github/workflows/ci.yml) also show the resume run and the exspec run.
 
 [CI](.github/workflows/ci.yml) runs all of these on every push. It builds with `REPRODUCIBLE=ON FASTMATH=OFF MAX_NODE_SIZE=2` and compares md5 checksums of the output files against reference checksums stored in the tests/*_inputfiles folders. A change that legitimately alters the numerical results therefore needs new reference checksums, which maintainers regenerate using the "Update checksums" workflow. CI also compiles every artisoptions_*.h preset with gcc and clang, and the classic and NLTE nebular presets additionally with Apple Clang, nvc++, and hipcc (including the GPU code paths).
 
 ## Bundled scripts
 The scripts folder contains:
 - artis-\<cluster\>.sh: the Slurm job scripts of sn3d for the clusters that we use. A job submits the next job until the simulation is complete, and then submits the post-processing job. On Leonardo and Virgo, artis-\<cluster\>-submit.sh submits artis-\<cluster\>-slurmjob.sh.
-- exspec-zip-\<cluster\>.sh: the post-processing job. It runs run-exspec-if-needed.sh and then exspec-after.sh.
+- exspec-zip-\<cluster\>.sh: the post-processing job. It runs run-exspec-if-needed.sh and then exspec-after.sh. On Leonardo and Virgo, exspec-zip-\<cluster\>-submit.sh submits exspec-zip-\<cluster\>-slurmjob.sh.
 - run-exspec-if-needed.sh: Run exspec if emission.out is absent.
-- exspec-after.sh: After the last timestep of the model, remove the restart files, merge the direction-resolved files with mergeangleres.py, compress the large text files with zstd, and archive the logs with tar_rm_logs.sh. It then converts the packets and the estimators to parquet with artistools.
+- exspec-after.sh: After the last timestep of the model, the script does these steps:
+  - It removes the restart files.
+  - It merges the direction-resolved files with mergeangleres.py.
+  - It compresses the large text files with zstd.
+  - It archives the logs with tar_rm_logs.sh.
+  - It converts the packets and the estimators to parquet with artistools.
 - corehours-before.sh and corehours-after.sh: The job scripts source these files to log the CPU allocation, the wall time, and the core hours.
 - slurmjobhoursleft.py: Print the hours that remain in a Slurm job. The job scripts give this value to `sn3d -w`.
 - mergeangleres.py: Merge the files of the direction bins into light_curve_res.out, spec_res.out, and specpol_res.out.
 - combine_allrank_out_files.py: Make the combined files of all ranks (see [Output files](#output-files)).
-- filterpacketsescapedrpkt.py: Remove all packets except the escaped r-packets from the packet files.
+- filterpacketsescapedrpkt.py: Remove all packets except the escaped r-packets from the packet files. Without `-f`, the script only shows what it would remove.
 - tar_rm_logs.sh: Archive the log files of the ranks into logfiles.tar.zst, and remove them, except output_0-0.txt.
 - rsyncnooutput.sh: Copy a model folder with rsync, without the output files.
 - aliases.sh: Shell aliases for Slurm and the MAKEFLAGS setting. Source it from your .bashrc.
