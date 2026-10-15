@@ -28,7 +28,7 @@ $(foreach option,TESTMODE REPRODUCIBLE GPU OPENMP STDPAR FASTMATH OPTIMIZE ZSTD,
     $(error bad value for $(option) option. Should be ON or OFF)))
 
 CXX := mpicxx
-COMPILER_VERSION := $(shell $(CXX) --version)
+COMPILER_VERSION := $(shell $(CXX) --version 2> /dev/null)
 ifneq ($(BUILD_GOALS),)
   ifeq ($(strip $(COMPILER_VERSION)),)
     $(error make cannot run '$(CXX) --version'. Install an MPI library that supplies mpicxx, e.g. Open MPI. On a cluster, load the module of the MPI library. The job scripts in scripts/ show the modules of some clusters. With Open MPI, OMPI_CXX must name an installed compiler)
@@ -71,8 +71,8 @@ define GET_ARCH_CMD
 endef
 	CPU_ARCH := $(shell $(GET_ARCH_CMD))
 
-# a gcc with the command name c++ reports "c++ (GCC)"
-else ifneq (,$(or $(findstring g++,$(COMPILER_VERSION)),$(findstring gcc,$(COMPILER_VERSION)),$(findstring (GCC),$(COMPILER_VERSION))))
+# a gcc with the command name c++ can report "c++ (GCC)" or "c++ (Ubuntu ...)", but always the copyright of the FSF
+else ifneq (,$(or $(findstring g++,$(COMPILER_VERSION)),$(findstring gcc,$(COMPILER_VERSION)),$(findstring Free Software Foundation,$(COMPILER_VERSION))))
 	COMPILER_NAME := gcc
 	MIN_GCC_VERSION := 14
 	ifeq ($(shell expr $(firstword $(subst ., ,$(COMPILER_VERSION_NUMBER))) \< $(MIN_GCC_VERSION)),1)
