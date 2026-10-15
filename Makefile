@@ -338,8 +338,9 @@ extern const char* const GIT_BRANCH = \"$(shell git symbolic-ref --short HEAD 2>
 extern const char* const GIT_STATUS = \"$(GIT_STATUS_TEXT)\";
 endef
 
-# the lines of artisoptions.h without the comment lines and the blank lines, as C++ string literals
-ARTISOPTIONS_LINES_CMD := sed -e '/^[[:space:]]*\/\//d' -e '/^[[:space:]]*$$/d' -e 's/\\/\\\\/g' -e 's/"/\\"/g' -e 's/^/"/' -e 's/$$/",/' artisoptions.h
+# the lines of artisoptions.h without the comment lines, the preprocessor lines, and the blank lines, as C++ string
+# literals
+ARTISOPTIONS_LINES_CMD := sed -e '/^[[:space:]]*\/\//d' -e '/^[[:space:]]*\#/d' -e '/^[[:space:]]*$$/d' -e 's/\\/\\\\/g' -e 's/"/\\"/g' -e 's/^/"/' -e 's/$$/",/' artisoptions.h
 
 # the git metadata changes at almost every git operation. version.h declares the strings and stays
 # the same, and this generated file holds the definitions. Only this small file compiles again,

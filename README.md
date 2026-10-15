@@ -116,7 +116,7 @@ tail -f output_0-0.txt
 ```
 Press Ctrl+C to stop following the log file.
 
-The log of rank 0 starts with the git version and the content of artisoptions.h without the comments. After each timestep, it gives the progress of the model and an estimate of the time for the remaining requested timesteps.
+The log of rank 0 starts with the git version and the content of artisoptions.h without the comments and the preprocessor lines. After each timestep, it gives the progress of the model and an estimate of the time for the remaining requested timesteps.
 
 To split a long simulation across several queued jobs, run sn3d with `-w WALLTIMELIMITHOURS`. When too little wall time remains to complete another timestep, the run finishes cleanly (writing the restart files and updating input.txt) and prints RESTART_NEEDED into the log, which the bundled cluster job scripts detect to submit a continuation job. The scripts pass the remaining Slurm allocation time automatically. Run `./sn3d -h` to list all command-line options.
 
