@@ -946,7 +946,9 @@ void read_fissionproduct_data() {
     if (keep_table) {
       // the yields sum to the number of fragments produced per fission, which is two for the binary
       // fission of the tabulated nuclides. This also guards against a table in different units.
-      if (daughter_yield_sum <= 1.9 || daughter_yield_sum >= 2.1) {
+      // a NaN sum is also outside the range
+      const bool yield_sum_near_two = (daughter_yield_sum > 1.9 && daughter_yield_sum < 2.1);
+      if (!yield_sum_near_two) {
         fatal_crash(
             "fissionproducts_GEF_100keV.txt: the yields of Z={} A={} sum to {:g} nuclei for each fission, but the sum "
             "must be near 2",

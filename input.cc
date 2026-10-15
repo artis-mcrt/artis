@@ -168,13 +168,14 @@ static_assert(std::string_view{inputlinecomments[inputline_nprocs_exspec]}.start
 
 // Read the next non-comment line of input.txt into the values. Stop the run if the line is absent or unreadable.
 template <typename... T>
-void read_inputtxt_line(std::istream& file, const int noncomment_linenum, T&... values) {
+void read_inputtxt_line(std::istream& file, const std::string_view filename, const int noncomment_linenum,
+                        T&... values) {
   std::string line;
   if (!get_noncommentline(file, line)) {
-    fatal_crash("input.txt ends before line {}", inputlinecomments[noncomment_linenum]);
+    fatal_crash("{} ends before line {}", filename, inputlinecomments[noncomment_linenum]);
   }
   if (!(std::istringstream{line} >> ... >> values)) {
-    fatal_crash("input.txt has the unreadable text '{}' at line {}", line, inputlinecomments[noncomment_linenum]);
+    fatal_crash("{} has the unreadable text '{}' at line {}", filename, line, inputlinecomments[noncomment_linenum]);
   }
 }
 
@@ -1953,12 +1954,13 @@ auto read_start_timestep_and_continue_flag() -> std::pair<int, bool> {
     int timestep_finish = 0;
     // read_parameterfile() restores input.txt from input-newrun.txt under the same condition
     const bool use_newrun_copy = !std::filesystem::exists("input.txt") && std::filesystem::exists("input-newrun.txt");
-    auto file = istream_required(use_newrun_copy ? "input-newrun.txt" : "input.txt");
+    const std::string_view filename = use_newrun_copy ? "input-newrun.txt" : "input.txt";
+    auto file = istream_required(filename);
     for (int noncomment_linenum = 0; noncomment_linenum <= inputline_continue_from_saved; noncomment_linenum++) {
       if (noncomment_linenum == inputline_ntimesteps) {
-        read_inputtxt_line(file, noncomment_linenum, ntimesteps);
+        read_inputtxt_line(file, filename, noncomment_linenum, ntimesteps);
       } else if (noncomment_linenum == inputline_timestep_range) {
-        read_inputtxt_line(file, noncomment_linenum, timestep_initial, timestep_finish);
+        read_inputtxt_line(file, filename, noncomment_linenum, timestep_initial, timestep_finish);
         // an invalid range must stop the run before a new simulation removes files
         if (timestep_initial < 0 || timestep_initial >= ntimesteps || timestep_initial > timestep_finish ||
             timestep_finish > ntimesteps) {
@@ -1968,12 +1970,12 @@ auto read_start_timestep_and_continue_flag() -> std::pair<int, bool> {
               timestep_initial, timestep_finish, ntimesteps);
         }
       } else if (noncomment_linenum == inputline_continue_from_saved) {
-        read_inputtxt_line(file, noncomment_linenum, continue_flag);
+        read_inputtxt_line(file, filename, noncomment_linenum, continue_flag);
         if (continue_flag != 0 && continue_flag != 1) {
           fatal_crash("input.txt gives simulation_continued_from_saved {}, but it must be 0 or 1", continue_flag);
         }
       } else {
-        read_inputtxt_line(file, noncomment_linenum);
+        read_inputtxt_line(file, filename, noncomment_linenum);
       }
     }
   }
@@ -2001,7 +2003,7 @@ void read_parameterfile(std::span<Packet> packets) {
   auto file = istream_required("input.txt");
 
   std::int64_t pre_zseed = -1;
-  read_inputtxt_line(file, 0, pre_zseed);
+  read_inputtxt_line(file, "input.txt", 0, pre_zseed);
 
   if (pre_zseed > 0) {
     printlnlog("input.txt specified random number seed is {}", pre_zseed);
@@ -2049,10 +2051,10 @@ void read_parameterfile(std::span<Packet> packets) {
 #endif
   }
 
-  read_inputtxt_line(file, inputline_ntimesteps, globals::ntimesteps);
+  read_inputtxt_line(file, "input.txt", inputline_ntimesteps, globals::ntimesteps);
   assert_always(globals::ntimesteps > 0);
 
-  read_inputtxt_line(file, inputline_timestep_range, globals::timestep_initial, globals::timestep_finish);
+  read_inputtxt_line(file, "input.txt", inputline_timestep_range, globals::timestep_initial, globals::timestep_finish);
   assert_always(globals::timestep_initial >= 0);
   printlnlog("input: timestep_start {} timestep_finish {}", globals::timestep_initial, globals::timestep_finish);
   if (globals::timestep_finish < globals::ntimesteps) {
@@ -2067,7 +2069,7 @@ void read_parameterfile(std::span<Packet> packets) {
 
   double tmin_days = 0.;
   double tmax_days = 0.;
-  read_inputtxt_line(file, 3, tmin_days, tmax_days);
+  read_inputtxt_line(file, "input.txt", 3, tmin_days, tmax_days);
   if (tmin_days <= 0 || tmin_days >= tmax_days) {
     fatal_crash("input.txt gives tmin_days {:g} and tmax_days {:g}, but they must obey 0 < tmin_days < tmax_days",
                 tmin_days, tmax_days);
@@ -2077,12 +2079,12 @@ void read_parameterfile(std::span<Packet> packets) {
 
   // lines 4 to 15 are UNUSED
   for (int noncomment_linenum = 4; noncomment_linenum < inputline_continue_from_saved; noncomment_linenum++) {
-    read_inputtxt_line(file, noncomment_linenum);
+    read_inputtxt_line(file, "input.txt", noncomment_linenum);
   }
 
   // Do we start a new simulation or, continue another one?
   int continue_flag = 0;
-  read_inputtxt_line(file, inputline_continue_from_saved, continue_flag);
+  read_inputtxt_line(file, "input.txt", inputline_continue_from_saved, continue_flag);
   // a run from timestep zero cannot resume from a saved point (the same rule as read_start_timestep_and_continue_flag)
   globals::simulation_continued_from_saved = (continue_flag == 1 && globals::timestep_initial > 0);
   if (globals::simulation_continued_from_saved) {
@@ -2092,10 +2094,10 @@ void read_parameterfile(std::span<Packet> packets) {
   }
 
   // UNUSED rfcut parameter (kept for backward-compatible input parsing)
-  read_inputtxt_line(file, 17);
+  read_inputtxt_line(file, "input.txt", 17);
 
   // Sets the number of initial LTE timesteps for NLTE runs
-  read_inputtxt_line(file, 18, globals::num_lte_timesteps);
+  read_inputtxt_line(file, "input.txt", 18, globals::num_lte_timesteps);
   if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
     // the bins are fitted only after the LTE timesteps, and radfield() reads them from this timestep
     if (globals::num_lte_timesteps > FIRST_NLTE_RADFIELD_TIMESTEP) {
@@ -2130,22 +2132,22 @@ void read_parameterfile(std::span<Packet> packets) {
   }
 
   // Set up initial grey approximation?
-  read_inputtxt_line(file, 19, globals::optical_depth_is_thick, globals::num_grey_timesteps);
+  read_inputtxt_line(file, "input.txt", 19, globals::optical_depth_is_thick, globals::num_grey_timesteps);
   printlnlog(
       "input: cells with a radial grey optical depth to the outer boundary >= {:g} are treated in grey "
       "approximation for the first {} timesteps",
       globals::optical_depth_is_thick, globals::num_grey_timesteps);
 
-  read_inputtxt_line(file, 20);  // UNUSED max_bf_continua (all bf continua are always included)
+  read_inputtxt_line(file, "input.txt", 20);  // UNUSED max_bf_continua (all bf continua are always included)
 
   // for exspec: read number of MPI tasks
-  read_inputtxt_line(file, inputline_nprocs_exspec, globals::nprocs_exspec);
+  read_inputtxt_line(file, "input.txt", inputline_nprocs_exspec, globals::nprocs_exspec);
 
   // UNUSED: Extract line-of-sight dependent information of last emission for spectrum_res
-  read_inputtxt_line(file, 22);
+  read_inputtxt_line(file, "input.txt", 22);
 
   // UNUSED: kpkt diffusion parameters: now set in kpkt.cc
-  read_inputtxt_line(file, 23);
+  read_inputtxt_line(file, "input.txt", 23);
 }
 
 // Write input.txt again with the standard comments and the number of packet files. For nts >= 0, input.txt makes the
