@@ -590,8 +590,7 @@ Do the text edits first. They can make a finished compile out of date.
 
 1. Add a new compile-time option to every `artisoptions_*.h` preset and to
    `artisoptions_doc.md`. Put it under the same heading and at the same
-   position in each file. The pre-commit hook `check-artisoptions-order`
-   compares the order.
+   position in each file.
 2. Search `tests/setup_*.sh` and `.github/workflows/ci.yml` for the name of an
    option that you renamed or reformatted. Those files change option lines with
    `sedopt` from `tests/setupfuncs.sh` and an exact text match. The pattern also
