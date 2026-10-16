@@ -1,4 +1,4 @@
-#!/bin/bash -x
+#!/bin/bash -l
 #SBATCH --ntasks=1024
 #SBATCH --ntasks-per-node=128
 #SBATCH --time=24:00:00
@@ -17,8 +17,14 @@ module list
 
 cd "${SLURM_SUBMIT_DIR:?}" || exit 1
 
-echo "CPU type: $(c++ -march=native -Q --help=target | grep -- '-march=  ' | cut -f3)"
+export MAKEFLAGS="--check-symlink-times --jobs=$(nproc)"
+cd artis
+# Build exspec together with sn3d, so that exspec reads the packet files with the same source version.
+# The exspec job scripts can run exspec without a build.
+make sn3d exspec || exit 1
+cd ..
 
+echo "CPU type: $(c++ -march=native -Q --help=target | grep -- '-march=  ' | cut -f3)"
 
 hoursleft=$(python3 ./artis/scripts/slurmjobhoursleft.py ${SLURM_JOB_ID})
 source ./artis/scripts/corehours-before.sh
@@ -35,12 +41,8 @@ if [ $mpirun_status -ne 0 ]; then
     exit $mpirun_status
 fi
 
-if grep -q "RESTART_NEEDED" "output_0-0.txt"
-then
-    sbatch ./artis/scripts/artis-kelvin2.sh
-else
-    # post-processing can remove restart files, so only queue it when no continuation job was submitted
-    if ls packets/packets00_0000.out* > /dev/null 2>&1; then
-        sbatch ./artis/scripts/exspec-zip-kelvin2.sh
-    fi
+if grep -qs "RESTART_NEEDED" output_0-0.txt; then
+    sbatch -J "${PWD##*/}" ${EMAIL:+--mail-user="$EMAIL"} -- artis/scripts/artis-kelvin2.sh
+elif ls packets/packets00_0000.out* > /dev/null 2>&1; then
+    sbatch -J "exspec_${PWD##*/}" ${EMAIL:+--mail-user="$EMAIL"} -- artis/scripts/exspec-zip-kelvin2.sh
 fi

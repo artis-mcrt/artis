@@ -1,5 +1,4 @@
-#!/bin/bash
-
+#!/bin/bash -l
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=128
 #SBATCH --ntasks-per-node=1
@@ -18,6 +17,9 @@ module load apps/python3/3.12.4/gcc-14.1.0
 module list
 
 cd "${SLURM_SUBMIT_DIR:?}" || exit 1
+
+# Use the exspec that the sn3d job script built from the same source as sn3d. A build here could read
+# a newer checkout.
 
 echo "CPU type: $(c++ -march=native -Q --help=target | grep -- '-march=  ' | cut -f3)"
 

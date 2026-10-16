@@ -1,5 +1,4 @@
 #!/bin/bash -l
-
 #SBATCH --ntasks 960
 ##SBATCH --ntasks 1024
 ##SBATCH --ntasks 1920
@@ -10,8 +9,6 @@
 #SBATCH --account=dp033
 ##SBATCH --account=dp385
 #SBATCH --exclusive
-#SBATCH -o slurm-%J.out
-#SBATCH -e slurm-%J.out
 #SBATCH --mail-type=ALL
 ##SBATCH --mail-user=f.callan@qub.ac.uk
 ##SBATCH --mail-user=luke.shingles@gmail.com
@@ -26,10 +23,9 @@ module load python
 
 module list
 
-export PATH=/cosma/local/intel/oneAPI_2021.3.0/intelpython/python3.7/pkgs/zstd-1.4.5-h2daa505_0/bin:$PATH
-
 cd "${SLURM_SUBMIT_DIR:?}" || exit 1
 
+export MAKEFLAGS="--check-symlink-times --jobs=$(nproc)"
 cd artis
 # Build exspec together with sn3d, so that exspec reads the packet files with the same source version.
 # The exspec job scripts can run exspec without a build.
@@ -37,7 +33,6 @@ make sn3d exspec || exit 1
 cd ..
 
 echo "CPU type: $(c++ -march=native -Q --help=target | grep -- '-march=  ' | cut -f3)"
-
 
 hoursleft=$(python3 ./artis/scripts/slurmjobhoursleft.py ${SLURM_JOB_ID})
 source ./artis/scripts/corehours-before.sh
@@ -54,12 +49,8 @@ if [ $mpirun_status -ne 0 ]; then
     exit $mpirun_status
 fi
 
-if grep -q "RESTART_NEEDED" "output_0-0.txt"
-then
-    sbatch -J "artis_${PWD##*/}" ./artis/scripts/artis-cosma8.sh
-else
-    # post-processing can remove restart files, so only queue it when no continuation job was submitted
-    if ls packets/packets00_0000.out* > /dev/null 2>&1; then
-        sbatch -J "exspec_${PWD##*/}" ./artis/scripts/exspec-zip-cosma8.sh
-    fi
+if grep -qs "RESTART_NEEDED" output_0-0.txt; then
+    sbatch -J "${PWD##*/}" ${EMAIL:+--mail-user="$EMAIL"} -- artis/scripts/artis-cosma8.sh
+elif ls packets/packets00_0000.out* > /dev/null 2>&1; then
+    sbatch -J "exspec_${PWD##*/}" ${EMAIL:+--mail-user="$EMAIL"} -- artis/scripts/exspec-zip-cosma8.sh
 fi
