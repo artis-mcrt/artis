@@ -93,7 +93,7 @@ constexpr bool USE_ION_BFHEATING_ESTIMATORS = false;
 
 constexpr bool WRITE_ION_HEATING_COOLING_RATES = false;
 
-constexpr bool WRITE_COMBINED_ALLRANK_OUT_FILES = false;
+constexpr bool WRITE_COMBINED_ALLRANK_OUT_FILES = true;
 
 constexpr bool STRICT_POPULATION_CHECKING = true;
 
@@ -105,7 +105,7 @@ constexpr float STRICT_POPULATION_CHECKING_INVERSION_FACTOR_PRINTOUT_WARNING = 2
 
 constexpr double NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION = 1e-9;
 
-constexpr bool NLTE_USE_GTH_SOLVER = false;
+constexpr bool NLTE_USE_GTH_SOLVER = true;
 
 constexpr std::optional<int> NLTE_TIME_DEPENDENT_FIRST_TIMESTEP = std::nullopt;
 
