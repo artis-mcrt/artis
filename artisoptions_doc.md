@@ -136,19 +136,21 @@ constexpr bool PHIXS_CLASSIC_NO_INTERPOLATION;
 // false with this option, because the tables assume a Planck function. A static_assert checks this.
 constexpr bool MULTIBIN_RADFIELD_MODEL_ON;
 
-// The number of bins, including the T_e superbin
+// The number of bins, including the T_e superbin. The code uses this value only with MULTIBIN_RADFIELD_MODEL_ON.
 constexpr int RADFIELDBINCOUNT;
 
 // The first timestep at which radfield() reads the binned radiation field. It must be at or after the first
-// NLTE timestep.
+// NLTE timestep. The code uses this value only with MULTIBIN_RADFIELD_MODEL_ON.
 constexpr int FIRST_NLTE_RADFIELD_TIMESTEP;
 
-// The frequency range of the regular bins [Hz], e.g. CLIGHT / (lambda[Angstrom] * 1e-8)
+// The frequency range of the regular bins [Hz], e.g. CLIGHT / (lambda[Angstrom] * 1e-8). The code uses these
+// values only with MULTIBIN_RADFIELD_MODEL_ON.
 constexpr double RADFIELDBINS_NU_MIN;
 constexpr double RADFIELDBINS_NU_MAX;
 
 // The upper frequency of the T_e superbin, the last bin above RADFIELDBINS_NU_MAX. The temperature of this bin
-// is the electron temperature of the cell. Only its dilution factor comes from the fit.
+// is the electron temperature of the cell. Only its dilution factor comes from the fit. The code uses this value
+// only with MULTIBIN_RADFIELD_MODEL_ON.
 constexpr double RADFIELDBINS_T_E_SUPERBIN_NU_MAX;
 
 // Store the Jb_lu estimators of the lines that radfield::init() selects. This needs RPKT_USE_BINNED_OPACITIES
@@ -158,10 +160,11 @@ constexpr bool DETAILED_LINE_ESTIMATORS_ON;
 // Store the detailed bound-free rate estimators. This needs USE_LUT_PHOTOION false.
 constexpr bool DETAILED_BF_ESTIMATORS_ON;
 
-// Select the continua that the detailed bound-free estimators track. Only used with DETAILED_BF_ESTIMATORS_ON.
+// Select the continua that the detailed bound-free estimators track. The code uses this function only with
+// DETAILED_BF_ESTIMATORS_ON.
 constexpr bool LEVEL_HAS_BFEST(int element_z, int ionstage, int level);
 
-// Use the detailed bound-free estimators from this timestep on, inclusive. Only used with
+// Use the detailed bound-free estimators from this timestep on, inclusive. The code uses this value only with
 // DETAILED_BF_ESTIMATORS_ON.
 constexpr int DETAILED_BF_ESTIMATORS_USEFROMTIMESTEP;
 
@@ -212,10 +215,12 @@ constexpr bool STRICT_POPULATION_CHECKING;
 constexpr bool NLTE_LIMIT_ION_STAGES_AFTER_FAILURE;
 
 // The population of a level per statistical weight, relative to the same ratio of the ground level, above
-// which STRICT_POPULATION_CHECKING rejects the solution
+// which STRICT_POPULATION_CHECKING rejects the solution. The code uses this value only with
+// STRICT_POPULATION_CHECKING.
 constexpr float STRICT_POPULATION_CHECKING_INVERSION_FACTOR_SOLVER_FAIL;
 
-// The same ratio above which the solver logs a warning
+// The same ratio above which the solver logs a warning. The code uses this value only with
+// STRICT_POPULATION_CHECKING.
 constexpr float STRICT_POPULATION_CHECKING_INVERSION_FACTOR_PRINTOUT_WARNING;
 
 // NLTE_LIMIT_ION_STAGES_AFTER_FAILURE removes an ion only when its ground population, each NLTE excited
@@ -278,28 +283,31 @@ constexpr NonThermalScheme NT_SCHEME;
 // A later iteration of the same timestep keeps that solution, unless nne per ion (nne divided by the total ion
 // density) changed by this fraction or more, e.g. 0.5 for 50 percent. A value of 0 gives a new solution at each
 // iteration.
+// The code uses this value only with NT_SPENCERFANO.
 constexpr double SF_RE_SOLVE_WITHIN_TIMESTEP_MIN_NNEPERION_FRACDIFF;
 
 // Include non-thermal excitation only from the lowest NTEXCITATION_MAXNLEVELS_LOWER levels of an ion and to
 // its lowest NTEXCITATION_MAXNLEVELS_UPPER levels, because these transitions slow the solver. A zero in either
-// value includes no transition.
+// value includes no transition. The code uses these values only with NT_SPENCERFANO.
 constexpr int NTEXCITATION_MAXNLEVELS_LOWER;
 constexpr int NTEXCITATION_MAXNLEVELS_UPPER;
 
 // The number of stored non-thermal excitation rates. The solver keeps the transitions with the largest
 // deposition fractions. A transition outside the list gets no excitation rate, and an NTLEPTON packet that
-// selects one becomes a k-packet.
+// selects one becomes a k-packet. The code uses this value only with NT_SPENCERFANO.
 constexpr int MAX_NT_EXCITATIONS_STORED;
 
 // Divide by the valence shell potential of the ion, instead of the potential of each shell, in the effective
-// ionisation potential and the ionisation rates. Not compatible with NT_MAX_AUGER_ELECTRONS above zero.
+// ionisation potential and the ionisation rates. Not compatible with NT_MAX_AUGER_ELECTRONS above zero. The code
+// uses this option only with NT_SPENCERFANO.
 constexpr bool NT_USE_VALENCE_IONPOTENTIAL;
 
 // The maximum number of Auger electrons that one impact ionisation releases, from the shell probabilities.
-// Zero gives one electron per ionisation.
+// Zero gives one electron per ionisation. The code uses this value only with NT_SPENCERFANO.
 constexpr int NT_MAX_AUGER_ELECTRONS;
 
-// Add the source term of the Auger electrons to the Spencer-Fano equation.
+// Add the source term of the Auger electrons to the Spencer-Fano equation. The code uses this option only with
+// NT_SPENCERFANO.
 constexpr bool SF_AUGER_CONTRIBUTION_ON;
 
 // Use the full relativistic Doppler factor instead of the first-order 1 - n.v/c. The line resonance distance
@@ -357,11 +365,12 @@ constexpr GammaThermalisationScheme GAMMA_THERMALISATION_SCHEME;
 // timesteps must be below the total number of timesteps, or the run stops.
 constexpr TimeStepSizeMethod TIMESTEP_SIZE_METHOD;
 
-// The maximum width of a constant timestep [days], for the hybrid schemes. The code divides the constant
-// interval into equal timesteps of at most this width.
+// The maximum width of a constant timestep [days]. The code divides the constant interval into equal timesteps of
+// at most this width. The code uses this value only with LOGARITHMIC_THEN_CONSTANT and CONSTANT_THEN_LOGARITHMIC.
 constexpr double FIXED_TIMESTEP_WIDTH;
 
-// The time of the change between the two schemes [days], for the hybrid schemes
+// The time of the change between the two schemes [days]. The code uses this value only with
+// LOGARITHMIC_THEN_CONSTANT and CONSTANT_THEN_LOGARITHMIC.
 constexpr double TIMESTEP_TRANSITION_TIME;
 
 // The bound-free cooling coefficient of each (level, target) continuum is per population of the target level of
@@ -377,7 +386,8 @@ constexpr bool RPKT_USE_BINNED_OPACITIES;
 
 // Use binned opacities instead of line-by-line opacities for the virtual packets. Use the LINEBINNED weight of
 // BINNED_OPACITY_METHOD with this option. With a different weight, sn3d writes a warning to the log. LINEBINNED
-// needs an RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY of zero or no value (see BINNED_OPACITY_METHOD).
+// needs an RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY of zero or no value (see BINNED_OPACITY_METHOD). This needs
+// VPKT_ON.
 constexpr bool VPKT_USE_BINNED_OPACITIES;
 
 // The line weight in the binned opacity of each wavelength bin of RPKT_USE_BINNED_OPACITIES,
@@ -415,11 +425,13 @@ constexpr RpktGreyType RPKT_GREY_TYPE;
 
 // Use the XCOM table for the gamma-ray photoelectric absorption instead of the Si and Fe power laws of
 // Ambwani & Sutherland 1988, ApJ, 325, 820-827, doi:10.1086/166052, eq. 2, after Veigele 1973, Atomic Data and
-// Nuclear Data Tables, 5, 51-111, doi:10.1016/S0092-640X(73)80015-4.
+// Nuclear Data Tables, 5, 51-111, doi:10.1016/S0092-640X(73)80015-4. The code uses this option only with the
+// FREQUENCYDEPENDENT GAMMA_THERMALISATION_SCHEME.
 constexpr bool USE_XCOM_GAMMAPHOTOION;
 
 // Replace the frequency-dependent gamma-ray opacity with this grey opacity [cm^2/g]. No value keeps the
-// frequency-dependent opacity.
+// frequency-dependent opacity. The code uses this value only with the FREQUENCYDEPENDENT
+// GAMMA_THERMALISATION_SCHEME.
 constexpr std::optional<double> GAMMA_USE_KAPPA_GREY;
 
 // Include the charge transfer reactions in the NLTE population solver. The published fits come from
@@ -448,6 +460,7 @@ constexpr bool USE_MICROCLUMPING;
 
 // The clumping factor of a cell from the time and the radial velocity. The code passes
 // globals::timesteps[nts].mid and grid::get_modelcell_mean_radial_pos_tmin(mgi) / globals::tmin [cm/s]. The
-// result must be finite and at least 1. A value of 1 means no clumping.
+// result must be finite and at least 1. A value of 1 means no clumping. The code uses this function only with
+// USE_MICROCLUMPING.
 constexpr float clumping_factor(double tmid, double rad_vel);
 ```
