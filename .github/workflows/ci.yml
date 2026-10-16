@@ -348,6 +348,13 @@ jobs:
                   name: ${{ matrix.testname }}_inputfiles
                   path: tests/${{ matrix.testname }}_inputfiles/results_md5*
 
+            - name: Setup uv
+              uses: astral-sh/setup-uv@v10.3.0
+              if: always() && inputs.testmode != 'ON'
+              id: setup-uv
+              with:
+                enable-cache: "false"
+
             - name: Install artistools
               if: always() && inputs.testmode != 'ON'
               run: |
