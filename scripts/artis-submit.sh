@@ -8,7 +8,6 @@ case "$host_fqdn" in
     *.cosma.*) cluster=cosma8 ;;
     *kelvin*) cluster=kelvin2 ;;
     *.leonardo.local) cluster=leonardo ;;
-    *meluxina* | *.lxp.lu) cluster=meluxina ;;
     ccsub* | lxbk* | *.gsi.de) cluster=virgo ;;
     *)
         echo "artis-submit.sh: no cluster has the host name '$host_fqdn'. Submit the job script of your cluster with sbatch." >&2
