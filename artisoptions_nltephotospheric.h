@@ -139,7 +139,7 @@ constexpr double FIXED_TIMESTEP_WIDTH = -1.;
 
 constexpr double TIMESTEP_TRANSITION_TIME = -1.;
 
-constexpr bool BFCOOLING_USELEVELPOPNOTIONPOP = false;
+constexpr bool BFCOOLING_USELEVELPOPNOTIONPOP = true;
 
 constexpr bool RPKT_USE_EXPANSION_OPACITIES = false;
 
