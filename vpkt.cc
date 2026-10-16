@@ -838,7 +838,8 @@ void read_vpktparameterfile() {
     printlnlog(
         "[warning]   The vpkt spectra then have too little absorption in the lines with tau > {}, e.g. in the P Cygni "
         "absorption troughs.",
-        BINNED_OPACITY_LINE_WEIGHT == BinnedOpacityLineWeight::LINEBINNEDCAPPED ? BINNED_OPACITY_LINE_WEIGHT_CAP : 1.);
+        BINNED_OPACITY_LINE_WEIGHT == BinnedOpacityLineWeight::LINEBINNEDCAPPED ? LINE_BINNED_OPACITY_LINE_TAU_CAP
+                                                                                : 1.);
     if constexpr (expopac_linebinned_weights_permitted) {
       printlnlog("[warning]   Use LINEBINNED for vpkts.");
     } else {
