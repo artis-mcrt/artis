@@ -34,15 +34,15 @@ sedopt 'constexpr int NLTE_TE_NNE_MAXITER.*' 'constexpr int NLTE_TE_NNE_MAXITER 
 
 perl -0777 -i -pe 'my $n = s|^constexpr int ION_NLEVELS_EXCITED_NLTE\(int element_z, int ionstage\) \{.*?^\}$|constexpr int ION_NLEVELS_EXCITED_NLTE(int element_z, int ionstage) {\n  if (element_z == 26 && ionstage == 2) {\n    return 100;\n  }\n  return 50;\n}|ms; die "[error] the pattern for ION_NLEVELS_EXCITED_NLTE did not match once\n" unless $n == 1;' artisoptions.h
 
-sedopt 'constexpr int NLEVELS_REQUIRETRANSITIONS(int element_z, int ionstage) {.*}' 'constexpr int NLEVELS_REQUIRETRANSITIONS(int element_z, int ionstage) { return (element_z < 20) ? 20 : 40; }'
+perl -0777 -i -pe 'my $n = s|^constexpr int NLEVELS_ADD_MISSING_COLLISIONAL_TRANSITIONS\(int element_z, int ionstage\) \{.*?^\}$|constexpr int NLEVELS_ADD_MISSING_COLLISIONAL_TRANSITIONS(int element_z, int ionstage) {\n  return (element_z < 20) ? 20 : 40;\n}|ms; die "[error] the pattern for NLEVELS_ADD_MISSING_COLLISIONAL_TRANSITIONS did not match once\n" unless $n == 1;' artisoptions.h
 
 sedopt 'constexpr int RATECOEFF_TABLESIZE.*' 'constexpr int RATECOEFF_TABLESIZE = 40;'
 
-sedopt 'constexpr int FIRST_NLTE_RADFIELD_TIMESTEP.*' 'constexpr int FIRST_NLTE_RADFIELD_TIMESTEP = 4;'
+sedopt 'constexpr int FIRST_BINNED_RADFIELD_TIMESTEP.*' 'constexpr int FIRST_BINNED_RADFIELD_TIMESTEP = 4;'
 
 sedopt 'constexpr int RADFIELDBINCOUNT.*' 'constexpr int RADFIELDBINCOUNT = 24;'
 
-sedopt 'constexpr int DETAILED_BF_ESTIMATORS_USEFROMTIMESTEP.*' 'constexpr int DETAILED_BF_ESTIMATORS_USEFROMTIMESTEP = 4;'
+sedopt 'constexpr int DETAILED_BF_ESTIMATORS_FIRST_TIMESTEP.*' 'constexpr int DETAILED_BF_ESTIMATORS_FIRST_TIMESTEP = 4;'
 
 sedopt 'constexpr bool KEEP_ESCAPED_GAMMAS.*' 'constexpr bool KEEP_ESCAPED_GAMMAS = true;'
 

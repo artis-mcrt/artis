@@ -652,7 +652,7 @@ void allocate_nonemptymodelcells() {
 
   globals::ffheatingestimator.assign(nonempty_npts_model, 0.);
 
-  globals::colheatingestimator.assign(COL_HEAT_FROM_LEVELPOPS ? 0 : nonempty_npts_model, 0.);
+  globals::colheatingestimator.assign(COLLISIONAL_HEATING_FROM_LEVELPOPS ? 0 : nonempty_npts_model, 0.);
 
   MPI_Barrier_allranks();
 

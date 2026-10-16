@@ -598,7 +598,7 @@ void mpi_reduce_estimators(const int nts) {
   const int nonempty_npts_model = grid::get_nonempty_npts_model();
   radfield::reduce_estimators();
   MPI_Allreduce_safe(globals::ffheatingestimator, MPI_SUM, MPI_COMM_WORLD);
-  if constexpr (!COL_HEAT_FROM_LEVELPOPS) {
+  if constexpr (!COLLISIONAL_HEATING_FROM_LEVELPOPS) {
     MPI_Allreduce_safe(globals::colheatingestimator, MPI_SUM, MPI_COMM_WORLD);
   }
 

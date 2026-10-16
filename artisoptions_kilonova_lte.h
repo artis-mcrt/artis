@@ -37,15 +37,15 @@ constexpr bool FORCE_SAHA_ION_BALANCE(int element_z) {
   return true;
 }
 
-constexpr bool SINGLE_LEVEL_TOP_ION = false;
+constexpr bool TOP_ION_GROUND_LEVEL_ONLY = false;
 
-constexpr int NLEVELS_REQUIRETRANSITIONS(int element_z, int ionstage) {
+constexpr int NLEVELS_ADD_MISSING_COLLISIONAL_TRANSITIONS(int element_z, int ionstage) {
   return ((element_z == 26 || element_z == 28) && ionstage >= 1) ? 80 : 0;
 }
 
 constexpr bool UNIFORM_PELLET_ENERGIES = true;
 
-constexpr bool COL_HEAT_FROM_LEVELPOPS = true;
+constexpr bool COLLISIONAL_HEATING_FROM_LEVELPOPS = true;
 constexpr bool INITIAL_PACKETS_ON = true;
 
 constexpr int RATECOEFF_TABLESIZE = 200;
@@ -71,7 +71,7 @@ constexpr bool MULTIBIN_RADFIELD_MODEL_ON = false;
 
 constexpr int RADFIELDBINCOUNT = 256;
 
-constexpr int FIRST_NLTE_RADFIELD_TIMESTEP = 6;
+constexpr int FIRST_BINNED_RADFIELD_TIMESTEP = 6;
 
 constexpr double RADFIELDBINS_NU_MIN = (CLIGHT / 40000e-8);
 constexpr double RADFIELDBINS_NU_MAX = (CLIGHT / 1085e-8);
@@ -83,7 +83,7 @@ constexpr bool DETAILED_BF_ESTIMATORS_ON = false;
 
 constexpr bool LEVEL_HAS_BFEST(int element_z, int ionstage, int level) { return false; }
 
-constexpr int DETAILED_BF_ESTIMATORS_USEFROMTIMESTEP = 6;
+constexpr int DETAILED_BF_ESTIMATORS_FIRST_TIMESTEP = 6;
 
 constexpr bool USE_LUT_PHOTOION = false;
 
@@ -136,7 +136,7 @@ constexpr double FIXED_TIMESTEP_WIDTH = -1.;
 
 constexpr double TIMESTEP_TRANSITION_TIME = -1.;
 
-constexpr bool BFCOOLING_USELEVELPOPNOTIONPOP = false;
+constexpr bool BFCOOLING_USE_TARGET_LEVELPOP = false;
 
 constexpr bool RPKT_USE_BINNED_OPACITIES = false;
 

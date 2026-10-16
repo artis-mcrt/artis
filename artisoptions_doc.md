@@ -69,12 +69,12 @@ constexpr bool LTEPOP_EXCITATION_USE_TJ;
 constexpr bool FORCE_SAHA_ION_BALANCE(int element_z);
 
 // Keep only one level, and no transition, for the highest ion stage of each element.
-constexpr bool SINGLE_LEVEL_TOP_ION;
+constexpr bool TOP_ION_GROUND_LEVEL_ONLY;
 
 // Add a collisional transition with no radiative rate between each of the lowest n levels and every other level
 // of the ion where the data has none. A level without a transition has no NLTE solution. Return zero for no
 // added transitions.
-constexpr int NLEVELS_REQUIRETRANSITIONS(int element_z, int ionstage);
+constexpr int NLEVELS_ADD_MISSING_COLLISIONAL_TRANSITIONS(int element_z, int ionstage);
 
 // True: every pellet gets the same energy, and the decay time of each pellet is a sample of the decay curve.
 // False: the decay times are uniform between the first decay time and tmax, and the energy of each pellet
@@ -83,7 +83,7 @@ constexpr bool UNIFORM_PELLET_ENERGIES;
 
 // Sum the collisional de-excitation heating from the level populations instead of the Monte Carlo estimator.
 // The estimator also holds the collisional recombination heating. The sum does not.
-constexpr bool COL_HEAT_FROM_LEVELPOPS;
+constexpr bool COLLISIONAL_HEATING_FROM_LEVELPOPS;
 
 // Seed the cells at tmin with k-packets that carry the decay energy from t_model to tmin and the snapshot
 // energy at t_model (the q column of model.txt [erg/g]). The q value already includes the adiabatic losses
@@ -141,7 +141,7 @@ constexpr int RADFIELDBINCOUNT;
 
 // The first timestep at which radfield() reads the binned radiation field. It must be at or after the first
 // NLTE timestep. The code uses this value only with MULTIBIN_RADFIELD_MODEL_ON.
-constexpr int FIRST_NLTE_RADFIELD_TIMESTEP;
+constexpr int FIRST_BINNED_RADFIELD_TIMESTEP;
 
 // The frequency range of the regular bins [Hz], e.g. CLIGHT / (lambda[Angstrom] * 1e-8). The code uses these
 // values only with MULTIBIN_RADFIELD_MODEL_ON.
@@ -166,7 +166,7 @@ constexpr bool LEVEL_HAS_BFEST(int element_z, int ionstage, int level);
 
 // Use the detailed bound-free estimators from this timestep on, inclusive. The code uses this value only with
 // DETAILED_BF_ESTIMATORS_ON.
-constexpr int DETAILED_BF_ESTIMATORS_USEFROMTIMESTEP;
+constexpr int DETAILED_BF_ESTIMATORS_FIRST_TIMESTEP;
 
 // Take the photoionisation rate coefficient from a table for a Planck radiation field, instead of an integral
 // over the radiation field of the cell. The table value gets the dilution factor W of the cell and the ratio of
@@ -180,8 +180,8 @@ constexpr bool USE_ION_BFHEATING_ESTIMATORS;
 // Write the heating and the cooling rate of each ion to the estimators file, in addition to the totals. A
 // bound-free term belongs to the lower ion of the continuum, and a collisional term belongs to the ion that
 // holds the level. The free-free heating estimator holds no per-ion information, so each ion gets the share
-// that it has in the free-free opacity. The per-ion collisional heating needs COL_HEAT_FROM_LEVELPOPS. A cell
-// without a thermal balance gets no per-ion values.
+// that it has in the free-free opacity. The per-ion collisional heating needs COLLISIONAL_HEATING_FROM_LEVELPOPS. A
+// cell without a thermal balance gets no per-ion values.
 constexpr bool WRITE_ION_HEATING_COOLING_RATES;
 
 // Write the text of all MPI ranks into one combined file of the job folder for each of these types:
@@ -378,7 +378,7 @@ constexpr double TIMESTEP_TRANSITION_TIME;
 // of that target level. False (classic ARTIS) multiplies it by the population of the whole upper ion. A level
 // with several targets then shares the ion population among them by their LTE fractions, and a level with one
 // target gets the whole ion population.
-constexpr bool BFCOOLING_USELEVELPOPNOTIONPOP;
+constexpr bool BFCOOLING_USE_TARGET_LEVELPOP;
 
 // Use binned opacities instead of line-by-line opacities for the real packets in the cells that are not
 // thick. Not compatible with VPKT_ON.

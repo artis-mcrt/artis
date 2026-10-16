@@ -56,17 +56,17 @@ perl -0777 -i -pe 'my $n = s|^constexpr int ION_NLEVELS_EXCITED_NLTE\(int elemen
 
 perl -0777 -i -pe 'my $n = s|^constexpr bool FORCE_SAHA_ION_BALANCE\(int element_z\) \{.*?^\}$|constexpr bool FORCE_SAHA_ION_BALANCE(int element_z) { return false; }|ms; die "[error] the pattern for FORCE_SAHA_ION_BALANCE did not match once\n" unless $n == 1;' artisoptions.h
 
-perl -0777 -i -pe 'my $n = s|^constexpr int NLEVELS_REQUIRETRANSITIONS\(int element_z, int ionstage\) \{.*?^\}$|constexpr int NLEVELS_REQUIRETRANSITIONS(int element_z, int ionstage) { return 10; }|ms; die "[error] the pattern for NLEVELS_REQUIRETRANSITIONS did not match once\n" unless $n == 1;' artisoptions.h
+perl -0777 -i -pe 'my $n = s|^constexpr int NLEVELS_ADD_MISSING_COLLISIONAL_TRANSITIONS\(int element_z, int ionstage\) \{.*?^\}$|constexpr int NLEVELS_ADD_MISSING_COLLISIONAL_TRANSITIONS(int element_z, int ionstage) { return 10; }|ms; die "[error] the pattern for NLEVELS_ADD_MISSING_COLLISIONAL_TRANSITIONS did not match once\n" unless $n == 1;' artisoptions.h
 
-sedopt 'constexpr bool COL_HEAT_FROM_LEVELPOPS.*' 'constexpr bool COL_HEAT_FROM_LEVELPOPS = true;'
+sedopt 'constexpr bool COLLISIONAL_HEATING_FROM_LEVELPOPS.*' 'constexpr bool COLLISIONAL_HEATING_FROM_LEVELPOPS = true;'
 sedopt 'constexpr double MINTEMP.*' 'constexpr double MINTEMP = 500.;'
 sedopt 'constexpr double MAXTEMP.*' 'constexpr double MAXTEMP = 100000.;'
 sedopt 'constexpr bool MULTIBIN_RADFIELD_MODEL_ON.*' 'constexpr bool MULTIBIN_RADFIELD_MODEL_ON = true;'
 sedopt 'constexpr bool DETAILED_BF_ESTIMATORS_ON.*' 'constexpr bool DETAILED_BF_ESTIMATORS_ON = true;'
 sedopt 'constexpr bool LEVEL_HAS_BFEST.*' 'constexpr bool LEVEL_HAS_BFEST(int element_z, int ionstage, int level) { return true; }'
 
-sedopt 'constexpr int FIRST_NLTE_RADFIELD_TIMESTEP.*' 'constexpr int FIRST_NLTE_RADFIELD_TIMESTEP = 2;'
-sedopt 'constexpr int DETAILED_BF_ESTIMATORS_USEFROMTIMESTEP.*' 'constexpr int DETAILED_BF_ESTIMATORS_USEFROMTIMESTEP = 2;'
+sedopt 'constexpr int FIRST_BINNED_RADFIELD_TIMESTEP.*' 'constexpr int FIRST_BINNED_RADFIELD_TIMESTEP = 2;'
+sedopt 'constexpr int DETAILED_BF_ESTIMATORS_FIRST_TIMESTEP.*' 'constexpr int DETAILED_BF_ESTIMATORS_FIRST_TIMESTEP = 2;'
 
 sedopt 'constexpr bool NLTE_USE_GTH_SOLVER.*' 'constexpr bool NLTE_USE_GTH_SOLVER = false;'
 

@@ -30,9 +30,9 @@ sedopt 'constexpr int RATECOEFF_TABLESIZE.*' 'constexpr int RATECOEFF_TABLESIZE 
 sedopt 'constexpr double MINTEMP.*' 'constexpr double MINTEMP = 2000.;'
 sedopt 'constexpr double MAXTEMP.*' 'constexpr double MAXTEMP = 10000.;'
 
-sedopt 'constexpr int FIRST_NLTE_RADFIELD_TIMESTEP.*' 'constexpr int FIRST_NLTE_RADFIELD_TIMESTEP = 7;'
+sedopt 'constexpr int FIRST_BINNED_RADFIELD_TIMESTEP.*' 'constexpr int FIRST_BINNED_RADFIELD_TIMESTEP = 7;'
 
-sedopt 'constexpr int DETAILED_BF_ESTIMATORS_USEFROMTIMESTEP.*' 'constexpr int DETAILED_BF_ESTIMATORS_USEFROMTIMESTEP = 7;'
+sedopt 'constexpr int DETAILED_BF_ESTIMATORS_FIRST_TIMESTEP.*' 'constexpr int DETAILED_BF_ESTIMATORS_FIRST_TIMESTEP = 7;'
 
 sedopt 'constexpr bool SF_AUGER_CONTRIBUTION_ON.*' 'constexpr bool SF_AUGER_CONTRIBUTION_ON = false;'
 
