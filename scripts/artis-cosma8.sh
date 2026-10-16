@@ -55,12 +55,8 @@ if [ $mpirun_status -ne 0 ]; then
     exit $mpirun_status
 fi
 
-if grep -q "RESTART_NEEDED" "output_0-0.txt"
-then
+if grep -qs "RESTART_NEEDED" output_0-0.txt; then
     sbatch -J "${PWD##*/}" ${EMAIL:+--mail-user="$EMAIL"} -- artis/scripts/artis-cosma8.sh
-else
-    # post-processing can remove restart files, so only queue it when no continuation job was submitted
-    if ls packets/packets00_0000.out* > /dev/null 2>&1; then
-        sbatch -J "exspec_${PWD##*/}" ${EMAIL:+--mail-user="$EMAIL"} -- artis/scripts/exspec-zip-cosma8.sh
-    fi
+elif ls packets/packets00_0000.out* > /dev/null 2>&1; then
+    sbatch -J "exspec_${PWD##*/}" ${EMAIL:+--mail-user="$EMAIL"} -- artis/scripts/exspec-zip-cosma8.sh
 fi
