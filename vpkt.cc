@@ -826,7 +826,7 @@ void read_vpktparameterfile() {
   printlnlog("vpkt.txt: Nspectra {} per observer", nspectraperobsdir);
 
   if constexpr (VPKT_USE_BINNED_OPACITIES && BINNED_OPACITY_METHOD.line_weight != BinnedOpacityMethod::LINEBINNED) {
-    printlnlog("[warning] VPKT_USE_BINNED_OPACITIES uses an BINNED_OPACITY_METHOD other than LINEBINNED.");
+    printlnlog("[warning] VPKT_USE_BINNED_OPACITIES uses a BINNED_OPACITY_METHOD other than LINEBINNED.");
     printlnlog(
         "[warning]   A vpkt that crosses a line with the Sobolev optical depth tau has the transmission exp(-tau).");
     printlnlog(
@@ -836,8 +836,11 @@ void read_vpktparameterfile() {
         "[warning]   The EXPANSION weight 1 - exp(-tau) adds a maximum of 1 to the optical depth for each line, and "
         "the LINEBINNEDCAPPED weight min(cap, tau) adds a maximum of the cap.");
     printlnlog(
-        "[warning]   The vpkt spectra then have too little absorption in the lines with tau > 1, e.g. in the P Cygni "
-        "absorption troughs.");
+        "[warning]   The vpkt spectra then have too little absorption in the lines with tau > {}, e.g. in the P Cygni "
+        "absorption troughs.",
+        BINNED_OPACITY_METHOD.line_weight == BinnedOpacityMethod::LINEBINNEDCAPPED
+            ? BINNED_OPACITY_METHOD.line_weight_cap
+            : 1.);
     if constexpr (expopac_linebinned_weights_permitted) {
       printlnlog("[warning]   Use LINEBINNED for vpkts.");
     } else {
