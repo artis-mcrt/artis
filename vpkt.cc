@@ -818,7 +818,7 @@ void read_vpktparameterfile() {
       // The first number should be equal to zero!
       assert_always(opacityexclusions[0] == 0);  // The first spectrum should allow for all opacities (exclude[i]=0)
       assert_always(opacityexclusions[opacchoiceindex] <= 0 ||
-                    !VPKT_USE_BINNED_OPACITIES);  // expansion opacities include all elements, so cannot be used
+                    !VPKT_USE_BINNED_OPACITIES);  // binned opacities include all elements, so cannot be used
                                                   // with custom lists that exclude some elements
     }
   }
@@ -832,14 +832,18 @@ void read_vpktparameterfile() {
     printlnlog(
         "[warning]   The LINEBINNED weight is tau. The optical depth of a bin that the vpkt fully crosses is then the "
         "sum of the tau of its lines, nearly the same as with the line-by-line opacities.");
+    if constexpr (BINNED_OPACITY_LINE_WEIGHT == BinnedOpacityLineWeight::EXPANSION) {
+      printlnlog(
+          "[warning]   The EXPANSION weight 1 - exp(-tau) adds a maximum of 1 to the optical depth of each line.");
+    } else {
+      printlnlog(
+          "[warning]   The LINEBINNEDCAPPED weight min(LINE_BINNED_CAPPED_TAU_MAX, tau) adds a maximum of {} to the "
+          "optical depth of each line.",
+          LINE_BINNED_CAPPED_TAU_MAX);
+    }
     printlnlog(
-        "[warning]   The EXPANSION weight 1 - exp(-tau) adds a maximum of 1 to the optical depth for each line, and "
-        "the LINEBINNEDCAPPED weight min(LINE_BINNED_CAPPED_TAU_MAX, tau) adds a maximum of "
-        "LINE_BINNED_CAPPED_TAU_MAX = {}.",
-        LINE_BINNED_CAPPED_TAU_MAX);
-    printlnlog(
-        "[warning]   The vpkt spectra then have too little absorption in the lines with a larger tau, e.g. in the P "
-        "Cygni absorption troughs.");
+        "[warning]   The vpkt spectra then have too little absorption in the lines with a tau above that maximum, e.g. "
+        "in the P Cygni absorption troughs.");
     if constexpr (expopac_linebinned_weights_permitted) {
       printlnlog("[warning]   Use LINEBINNED for vpkts.");
     } else {

@@ -42,7 +42,7 @@ static_assert(!RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.has_value() ||
                   RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.value() <= 1.,
               "RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY must <= 1.0 if set");
 
-static_assert(!RPKT_USE_BINNED_OPACITIES || !VPKT_ON, "VPKT cannot be used with r-packet expansion opacities");
+static_assert(!RPKT_USE_BINNED_OPACITIES || !VPKT_ON, "RPKT_USE_BINNED_OPACITIES is not compatible with VPKT_ON");
 
 static_assert(BINNED_OPACITY_LINE_WEIGHT == BinnedOpacityLineWeight::EXPANSION || expopac_linebinned_weights_permitted,
               "LINEBINNEDCAPPED and LINEBINNED with a nonzero RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY need "
@@ -614,7 +614,7 @@ auto do_rpkt_step(Packet& pkt, const double t2, ContinuumOpacity& chi_rpkt_cont)
 
       do_macroatom(pkt, pktmastate);
     } else {
-      // with expansion opacities, the event comes from a binned opacity and pktmastate holds no
+      // with binned opacities, the event comes from a bin and pktmastate holds no
       // activating line, so the absorption type gets the sentinel for a binned absorption
       pkt.absorptiontype = RPKT_USE_BINNED_OPACITIES ? ABSTYPE_BOUNDBOUND_EXPANSIONOPACITY : pktmastate.activatingline;
       pkt.absorptionfreq = pkt.nu_rf;

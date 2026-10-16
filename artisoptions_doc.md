@@ -402,7 +402,7 @@ constexpr bool DIPOLE;
 constexpr bool POL_ON;
 
 // Use the full relativistic Doppler factor instead of the first-order 1 - n.v/c. The line resonance distance
-// and the walk over the expansion opacity bins then use a linear interpolation of the frequency along the path.
+// and the walk over the binned opacities then use a linear interpolation of the frequency along the path.
 constexpr bool USE_RELATIVISTIC_DOPPLER_SHIFT;
 
 // Use binned opacities instead of line-by-line opacities for the real packets in the cells that are not
@@ -430,9 +430,9 @@ constexpr double LINE_BINNED_CAPPED_TAU_MAX;
 
 // Replace the macroatom with a thermalisation probability P for each bound-bound absorption, and a scattering
 // with probability 1 - P. Every k-packet in a cell that is not thick then emits a blackbody spectrum weighted
-// with the true absorption opacity. That opacity is the sum of P times the expansion opacity, the free-free
+// with the true absorption opacity. That opacity is the sum of P times the binned line opacity, the free-free
 // opacity, and the bound-free opacity of each continuum times 1 - nu_edge / nu. The code therefore computes the
-// expansion opacity bins also without RPKT_USE_BINNED_OPACITIES. A thick cell samples a plain Planck function.
+// binned opacities also without RPKT_USE_BINNED_OPACITIES. A thick cell samples a plain Planck function.
 // No value keeps the macroatom.
 constexpr std::optional<float> RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY;
 

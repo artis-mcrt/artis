@@ -2334,8 +2334,8 @@ static_assert(TIMESTEP_SIZE_METHOD == TimeStepSizeMethod::LOGARITHMIC_THEN_CONST
               "TIMESTEP_SIZE_METHOD");
 
 // calculate the timestep grid: ntimesteps entries with start, mid, and width set, plus a zero-width
-// entry holding the end time. tmin and tmax are in seconds; the fixed width and transition time of the
-// hybrid methods are in days
+// entry holding the end time. tmin and tmax are in seconds; the maximum width of a constant timestep and the
+// transition time of the hybrid methods are in days
 auto calculate_timesteps(const TimeStepSizeMethod method, const double tmin, const double tmax, const int ntimesteps,
                          const std::optional<double> constant_max_width_days,
                          const std::optional<double> transition_time_days) -> std::vector<globals::TimeStep> {
