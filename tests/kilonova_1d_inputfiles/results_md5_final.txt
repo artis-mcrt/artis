@@ -13,10 +13,7 @@ bc40edd64676f86b6ac2df0934e2ce9a  modelgridrankassignments.out
 5338f1a4d50ab0399542d9b08585af21  nuclides.out
 fc7c0367231e5a6bd2a2dd84730e5ec3  spec.out
 a351f1711fecd60c023d0ba7332092db  timesteps.out
-5bb61b047ce106d9ae363c6095f3393e  job_from_ts0008/estimators_0000.out
-c150d643b6950ad6c1dfb7623a5eec53  job_from_ts0008/estimators_0001.out
-d79f8dd72e08bbdc046ef019ed0e3906  job_from_ts0008/estimators_0002.out
-745a653a8d84fdf4999df5137fe46455  job_from_ts0008/estimators_0003.out
+b110abda107e5dde1c65145947386c6e  job_from_ts0008/estimators_allranks.out
 e76da77df00e089b0234d9821b092211  packets/packets00_0000.out
 9fd0d8aca813ac3ecba22e73a84091d7  packets/packets00_0001.out
 e8b439ee24427a05144236da7337bd40  packets/packets00_0002.out
