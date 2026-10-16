@@ -83,6 +83,8 @@ sbatch artis/scripts/artis-cosma8.sh
 
 On Leonardo and Virgo, run `artis/scripts/artis-<cluster>-submit.sh` in place of `sbatch`. The Virgo submit script holds the rank count. These two scripts take the email address for the Slurm messages from the EMAIL environment variable (see scripts/aliases.sh).
 
+On each of these clusters, `artis/scripts/artis-submit.sh` finds the cluster from the host name and submits the applicable job script. Run it in the model folder in place of `sbatch`.
+
 The job scripts resubmit themselves until the simulation is finished and then queue a post-processing job (scripts/exspec-zip-*.sh) that merges and compresses the output files. sn3d writes the spectra and light curves itself, so this job runs exspec only if emission.out is absent. The post-processing job also converts the packets and estimator files to parquet format with [artistools](https://github.com/artis-mcrt/artistools), which it installs automatically using uv. See [Post-processing with exspec](#post-processing-with-exspec) below for what exspec does.
 
 ## Setting up for development
@@ -180,6 +182,7 @@ ln -s artisoptions_nltenebular.h artisoptions.h
 ## Bundled scripts
 The scripts folder contains:
 - artis-\<cluster\>.sh: the Slurm job scripts of sn3d for the clusters that we use. On Leonardo and Virgo, artis-\<cluster\>-submit.sh submits artis-\<cluster\>-slurmjob.sh.
+- artis-submit.sh: it finds the cluster from the host name and submits the sn3d job script of that cluster.
 - exspec-zip-\<cluster\>.sh: the post-processing job. It runs run-exspec-if-needed.sh and then exspec-after.sh. On Leonardo and Virgo, exspec-zip-\<cluster\>-submit.sh submits exspec-zip-\<cluster\>-slurmjob.sh.
 - run-exspec-if-needed.sh: Run exspec if emission.out is absent.
 - exspec-after.sh: After the last timestep of the model, the script does these steps:
