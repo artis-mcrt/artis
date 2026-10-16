@@ -44,10 +44,10 @@ fi
 
 if grep -q "RESTART_NEEDED" "output_0-0.txt"
 then
-    sbatch ./artis/scripts/artis-kelvin2.sh
+    sbatch -J "${PWD##*/}" ${EMAIL:+--mail-user="$EMAIL"} -- artis/scripts/artis-kelvin2.sh
 else
     # post-processing can remove restart files, so only queue it when no continuation job was submitted
     if ls packets/packets00_0000.out* > /dev/null 2>&1; then
-        sbatch ./artis/scripts/exspec-zip-kelvin2.sh
+        sbatch -J "exspec_${PWD##*/}" ${EMAIL:+--mail-user="$EMAIL"} -- artis/scripts/exspec-zip-kelvin2.sh
     fi
 fi

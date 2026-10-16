@@ -56,10 +56,10 @@ fi
 
 if grep -q "RESTART_NEEDED" "output_0-0.txt"
 then
-    sbatch -J "artis_${PWD##*/}" ./artis/scripts/artis-cosma8.sh
+    sbatch -J "${PWD##*/}" ${EMAIL:+--mail-user="$EMAIL"} -- artis/scripts/artis-cosma8.sh
 else
     # post-processing can remove restart files, so only queue it when no continuation job was submitted
     if ls packets/packets00_0000.out* > /dev/null 2>&1; then
-        sbatch -J "exspec_${PWD##*/}" ./artis/scripts/exspec-zip-cosma8.sh
+        sbatch -J "exspec_${PWD##*/}" ${EMAIL:+--mail-user="$EMAIL"} -- artis/scripts/exspec-zip-cosma8.sh
     fi
 fi
