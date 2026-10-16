@@ -86,7 +86,7 @@ constexpr bool MULTIBIN_RADFIELD_MODEL_ON = false;
 
 constexpr int RADFIELDBINCOUNT = 256;
 
-constexpr int FIRST_BINNED_RADFIELD_TIMESTEP = 6;
+constexpr int MULTIBIN_RADFIELD_FIRST_TIMESTEP = 6;
 
 constexpr double RADFIELDBINS_NU_MIN = (CLIGHT / 40000e-8);
 

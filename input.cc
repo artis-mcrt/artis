@@ -2111,11 +2111,11 @@ void read_parameterfile(std::span<Packet> packets) {
   read_inputtxt_line(file, filename, noncomment_linenum++, globals::num_lte_timesteps);
   if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
     // the bins are fitted only after the LTE timesteps, and radfield() reads them from this timestep
-    if (globals::num_lte_timesteps > FIRST_BINNED_RADFIELD_TIMESTEP) {
+    if (globals::num_lte_timesteps > MULTIBIN_RADFIELD_FIRST_TIMESTEP) {
       fatal_crash(
           "input.txt gives num_lte_timesteps {}, but MULTIBIN_RADFIELD_MODEL_ON needs num_lte_timesteps <= "
-          "FIRST_BINNED_RADFIELD_TIMESTEP = {}",
-          globals::num_lte_timesteps, FIRST_BINNED_RADFIELD_TIMESTEP);
+          "MULTIBIN_RADFIELD_FIRST_TIMESTEP = {}",
+          globals::num_lte_timesteps, MULTIBIN_RADFIELD_FIRST_TIMESTEP);
     }
   }
   printlnlog("input: doing the first {} timesteps in LTE", globals::num_lte_timesteps);

@@ -562,7 +562,8 @@ void init() {
   }
 
   if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
-    printlnlog("The multibin radiation field is being used from timestep {} onwards.", FIRST_BINNED_RADFIELD_TIMESTEP);
+    printlnlog("The multibin radiation field is being used from timestep {} onwards.",
+               MULTIBIN_RADFIELD_FIRST_TIMESTEP);
 
     printlnlog(
         "Initialising multibin radiation field with {} bins from ({:.2f} [eV], {:6.1f} [A]) to ({:.2f} [eV], "
@@ -728,7 +729,7 @@ DEVICE_FUNC void update_lineestimator(const int nonemptymgi, const int lineindex
 // mean intensity J_nu [ergs/s/sr/cm2/Hz]
 DEVICE_FUNC auto radfield(const double nu, const int nonemptymgi) -> double {
   if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
-    if (globals::timestep >= FIRST_BINNED_RADFIELD_TIMESTEP) {
+    if (globals::timestep >= MULTIBIN_RADFIELD_FIRST_TIMESTEP) {
       const int binindex = select_bin(nu);
       if (binindex < 0) {
         return 0.;

@@ -141,7 +141,7 @@ constexpr int RADFIELDBINCOUNT;
 
 // The first timestep at which radfield() reads the binned radiation field. It must be at or after the first
 // NLTE timestep. The code uses this value only with MULTIBIN_RADFIELD_MODEL_ON.
-constexpr int FIRST_BINNED_RADFIELD_TIMESTEP;
+constexpr int MULTIBIN_RADFIELD_FIRST_TIMESTEP;
 
 // The frequency range of the regular bins [Hz], e.g. CLIGHT / (lambda[Angstrom] * 1e-8). The code uses these
 // values only with MULTIBIN_RADFIELD_MODEL_ON.

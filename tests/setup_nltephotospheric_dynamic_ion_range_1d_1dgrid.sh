@@ -38,7 +38,7 @@ perl -0777 -i -pe 'my $n = s|^constexpr int NLEVELS_ADD_MISSING_COLLISIONAL_TRAN
 
 sedopt 'constexpr int RATECOEFF_TABLESIZE.*' 'constexpr int RATECOEFF_TABLESIZE = 40;'
 
-sedopt 'constexpr int FIRST_BINNED_RADFIELD_TIMESTEP.*' 'constexpr int FIRST_BINNED_RADFIELD_TIMESTEP = 4;'
+sedopt 'constexpr int MULTIBIN_RADFIELD_FIRST_TIMESTEP.*' 'constexpr int MULTIBIN_RADFIELD_FIRST_TIMESTEP = 4;'
 
 sedopt 'constexpr int RADFIELDBINCOUNT.*' 'constexpr int RADFIELDBINCOUNT = 24;'
 

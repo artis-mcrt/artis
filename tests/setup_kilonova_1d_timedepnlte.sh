@@ -65,7 +65,7 @@ sedopt 'constexpr bool MULTIBIN_RADFIELD_MODEL_ON.*' 'constexpr bool MULTIBIN_RA
 sedopt 'constexpr bool DETAILED_BF_ESTIMATORS_ON.*' 'constexpr bool DETAILED_BF_ESTIMATORS_ON = true;'
 sedopt 'constexpr bool LEVEL_HAS_BFEST.*' 'constexpr bool LEVEL_HAS_BFEST(int element_z, int ionstage, int level) { return true; }'
 
-sedopt 'constexpr int FIRST_BINNED_RADFIELD_TIMESTEP.*' 'constexpr int FIRST_BINNED_RADFIELD_TIMESTEP = 2;'
+sedopt 'constexpr int MULTIBIN_RADFIELD_FIRST_TIMESTEP.*' 'constexpr int MULTIBIN_RADFIELD_FIRST_TIMESTEP = 2;'
 sedopt 'constexpr int DETAILED_BF_ESTIMATORS_FIRST_TIMESTEP.*' 'constexpr int DETAILED_BF_ESTIMATORS_FIRST_TIMESTEP = 2;'
 
 sedopt 'constexpr bool NLTE_USE_GTH_SOLVER.*' 'constexpr bool NLTE_USE_GTH_SOLVER = false;'
