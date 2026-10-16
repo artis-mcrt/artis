@@ -825,7 +825,7 @@ void test_calculate_timesteps() {
   };
 
   {
-    const auto ts = calculate_timesteps(TimeStepSizeMethod::LOGARITHMIC, tmin, tmax, nts, -1., -1.);
+    const auto ts = calculate_timesteps(TimeStepSizeMethod::LOGARITHMIC, tmin, tmax, nts, std::nullopt, std::nullopt);
     check(grid_is_valid(ts, nts, tmin, tmax), "logarithmic grid is contiguous from tmin to tmax");
     bool constant_ratio = true;
     for (int n = 1; n < nts; n++) {
@@ -835,7 +835,7 @@ void test_calculate_timesteps() {
     check(constant_ratio, "logarithmic timesteps have a constant start-time ratio");
   }
   {
-    const auto ts = calculate_timesteps(TimeStepSizeMethod::CONSTANT, tmin, tmax, nts, -1., -1.);
+    const auto ts = calculate_timesteps(TimeStepSizeMethod::CONSTANT, tmin, tmax, nts, std::nullopt, std::nullopt);
     check(grid_is_valid(ts, nts, tmin, tmax), "constant grid is contiguous from tmin to tmax");
     bool equal_widths = true;
     for (int n = 0; n < nts; n++) {
@@ -866,7 +866,7 @@ void test_calculate_timesteps() {
     check(fixed_head, "constant-then-logarithmic grid starts with the fixed-width steps");
   }
   {
-    const auto ts = calculate_timesteps(TimeStepSizeMethod::LOGARITHMIC, tmin, tmax, 1, -1., -1.);
+    const auto ts = calculate_timesteps(TimeStepSizeMethod::LOGARITHMIC, tmin, tmax, 1, std::nullopt, std::nullopt);
     check(grid_is_valid(ts, 1, tmin, tmax), "a single logarithmic timestep covers the whole time range");
   }
 }

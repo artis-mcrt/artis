@@ -1,7 +1,35 @@
 ```c++
+// --- Packets and timesteps ---
+
 // The number of energy packets of all MPI ranks together. Each rank gets an equal share, and the first ranks also
 // get one packet each of the remainder. The OpenMP threads of a rank share the packets of that rank.
 constexpr std::int64_t NUM_PACKETS;
+
+// Seed the cells at tmin with k-packets that carry the decay energy from t_model to tmin and the snapshot
+// energy at t_model (the q column of model.txt [erg/g]). The q value already includes the adiabatic losses
+// before t_model. The expansion from the decay time to tmin, and from t_model to tmin for q, reduces each energy.
+constexpr bool INITIAL_PACKETS_ON;
+
+// True: every pellet gets the same energy, and the decay time of each pellet is a sample of the decay curve.
+// False: the decay times are uniform between the first decay time and tmax, and the energy of each pellet
+// follows the decay power at its time.
+constexpr bool UNIFORM_PELLET_ENERGIES;
+
+// The timestep scheme: LOGARITHMIC, CONSTANT, LOGARITHMIC_THEN_CONSTANT, or CONSTANT_THEN_LOGARITHMIC. The two
+// hybrid schemes need TIMESTEP_SIZE_CONSTANT_MAX_WIDTH_DAYS and TIMESTEP_SIZE_TRANSITION_TIME_DAYS. The number of
+// constant timesteps must be below the total number of timesteps, or the run stops.
+constexpr TimeStepSizeMethod TIMESTEP_SIZE_METHOD;
+
+// The maximum width of a constant timestep in days. The code divides the constant interval into equal timesteps of
+// at most this width. LOGARITHMIC_THEN_CONSTANT and CONSTANT_THEN_LOGARITHMIC need a value, and the other schemes
+// need no value.
+constexpr std::optional<double> TIMESTEP_SIZE_CONSTANT_MAX_WIDTH_DAYS;
+
+// The time of the change between the two schemes in days. LOGARITHMIC_THEN_CONSTANT and CONSTANT_THEN_LOGARITHMIC
+// need a value, and the other schemes need no value.
+constexpr std::optional<double> TIMESTEP_SIZE_TRANSITION_TIME_DAYS;
+
+// --- Grid and composition ---
 
 // Set GridType::CARTESIAN3D to map a 1D or a 2D model onto a 3D Cartesian grid. No value keeps the grid type of
 // model.txt. GridType::SPHERICAL1D and GridType::CYLINDRICAL2D are valid only when they equal the grid type of
@@ -17,6 +45,74 @@ constexpr int CUBOID_NCOORDGRID_Z;
 // On a 2D cylindrical or a 3D Cartesian grid, empty every propagation cell with a centre outside the sphere of
 // radius vmax * tmin. A packet that enters a cell with an inner corner outside the sphere escapes at once.
 constexpr bool FORCE_SPHERICAL_ESCAPE_SURFACE;
+
+// Convert a mass fraction to a number density with the mean atomic mass of the nuclear composition of the cell,
+// including the stable component, instead of the mass in compositiondata.txt.
+constexpr bool USE_CALCULATED_MEANATOMICWEIGHT;
+
+// Multiply these rates by the clumping factor of the cell:
+// - collisional excitation, de-excitation, ionisation, and recombination;
+// - radiative and stimulated recombination, and collisional capture;
+// - free-free heating and cooling, and bound-free cooling;
+// - the charge transfer reactions;
+// - the photoionisation equilibrium of the elements without NLTE levels. The Saha balance is unaffected.
+// With USE_LUT_PHOTOION, the stimulated recombination correction inside the tabulated photoionisation
+// coefficients cannot include the clumping factor of the cell. The stimulated recombination then gets the factor
+// through the direct bound-free integrals and through the departure ratios of the packet opacity.
+constexpr bool USE_MICROCLUMPING;
+
+// The clumping factor of a cell from the time and the radial velocity. The code passes
+// globals::timesteps[nts].mid and grid::get_modelcell_mean_radial_pos_tmin(mgi) / globals::tmin [cm/s]. The
+// result must be finite and at least 1. A value of 1 means no clumping. The code uses this function only with
+// USE_MICROCLUMPING.
+constexpr float MICROCLUMPING_FACTOR(double tmid, double rad_vel);
+
+// --- Atomic data and limits ---
+
+// Keep only one level, and no transition, for the highest ion stage of each element.
+constexpr bool TOP_ION_GROUND_LEVEL_ONLY;
+
+// Take the photoionisation cross section from the table point at or below the frequency, as classic ARTIS did,
+// instead of a linear interpolation.
+constexpr bool PHIXS_CLASSIC_NO_INTERPOLATION;
+
+// The number of temperature points of the rate coefficient tables, spaced in log T between MINTEMP and MAXTEMP.
+constexpr int RATECOEFF_TABLESIZE;
+
+// The limits [K] of T_e, T_J, the initial temperature, and the T_R of the whole spectrum. The code clamps them
+// into this range. The rate coefficient tables cover this range, and the accelerator rejects a step outside it.
+// The bins of the radiation field have their own T_R limits in radfield.cc.
+constexpr double MINTEMP;
+constexpr double MAXTEMP;
+
+// The temperature [K] at which the code calibrates the total recombination rate of each ion to
+// recombrates.txt, if that file exists.
+constexpr double RECOMBCALIBRATION_T_ELEC;
+
+// The lower bound of the level populations, the ion populations, and the electron density nne [cm^-3]. A level
+// population from the NLTE solver has no lower bound, and an absent element has zero population.
+constexpr double MINPOP;
+
+// --- Ionisation and excitation ---
+
+// The number of excited levels of the ion in full NLTE. The ground state and the superlevel do not count.
+constexpr int ION_NLEVELS_EXCITED_NLTE(int element_z, int ionstage);
+
+// Add a collisional transition with no radiative rate between each of the lowest n levels and every other level
+// of the ion where the data has none. A level without a transition has no NLTE solution. Return zero for no
+// added transitions.
+constexpr int NLEVELS_ADD_MISSING_COLLISIONAL_TRANSITIONS(int element_z, int ionstage);
+
+// Use the radiation temperature T_J instead of T_e in the Boltzmann factor of the excitation, also for the
+// sublevels of a superlevel. With false, the T_e finder also recomputes the photoionisation rates of the ground
+// continua of the elements without NLTE levels when T_e moves by more than 10 percent.
+constexpr bool LTEPOP_EXCITATION_USE_TJ;
+
+// Force the Saha ionisation balance of an element. The NLTE solver replaces the ground level row of each ion
+// above the lowest solved ion with the Saha constraint, and the elements without NLTE levels use the Saha phi
+// function. The element then gets no charge transfer reaction, no time-dependent ionisation term, and always
+// the LU solver.
+constexpr bool FORCE_SAHA_ION_BALANCE(int element_z);
 
 // The largest iteration number of the NLTE/Te/Spencer-Fano loop of a cell. The first pass is iteration 0, so a
 // cell makes at most NLTE_TE_NNE_MAXITER + 1 passes.
@@ -53,179 +149,6 @@ constexpr bool NLTE_TE_NNE_USE_ANDERSON_ACCEL;
 // the larger one counts. A pass with a changed map skips the estimate. With the charge transfer reactions or
 // the acceleration, the same value is the tolerance of the ion population test.
 constexpr double NLTE_TE_NNE_RELTOL;
-
-// The number of excited levels of the ion in full NLTE. The ground state and the superlevel do not count.
-constexpr int ION_NLEVELS_EXCITED_NLTE(int element_z, int ionstage);
-
-// Use the radiation temperature T_J instead of T_e in the Boltzmann factor of the excitation, also for the
-// sublevels of a superlevel. With false, the T_e finder also recomputes the photoionisation rates of the ground
-// continua of the elements without NLTE levels when T_e moves by more than 10 percent.
-constexpr bool LTEPOP_EXCITATION_USE_TJ;
-
-// Force the Saha ionisation balance of an element. The NLTE solver replaces the ground level row of each ion
-// above the lowest solved ion with the Saha constraint, and the elements without NLTE levels use the Saha phi
-// function. The element then gets no charge transfer reaction, no time-dependent ionisation term, and always
-// the LU solver.
-constexpr bool FORCE_SAHA_ION_BALANCE(int element_z);
-
-// Keep only one level, and no transition, for the highest ion stage of each element.
-constexpr bool TOP_ION_GROUND_LEVEL_ONLY;
-
-// Add a collisional transition with no radiative rate between each of the lowest n levels and every other level
-// of the ion where the data has none. A level without a transition has no NLTE solution. Return zero for no
-// added transitions.
-constexpr int NLEVELS_ADD_MISSING_COLLISIONAL_TRANSITIONS(int element_z, int ionstage);
-
-// True: every pellet gets the same energy, and the decay time of each pellet is a sample of the decay curve.
-// False: the decay times are uniform between the first decay time and tmax, and the energy of each pellet
-// follows the decay power at its time.
-constexpr bool UNIFORM_PELLET_ENERGIES;
-
-// Sum the collisional de-excitation heating from the level populations instead of the Monte Carlo estimator.
-// The estimator also holds the collisional recombination heating. The sum does not.
-constexpr bool COLLISIONAL_HEATING_FROM_LEVELPOPS;
-
-// Seed the cells at tmin with k-packets that carry the decay energy from t_model to tmin and the snapshot
-// energy at t_model (the q column of model.txt [erg/g]). The q value already includes the adiabatic losses
-// before t_model. The expansion from the decay time to tmin, and from t_model to tmin for q, reduces each energy.
-constexpr bool INITIAL_PACKETS_ON;
-
-// The number of temperature points of the rate coefficient tables, spaced in log T between MINTEMP and MAXTEMP.
-constexpr int RATECOEFF_TABLESIZE;
-
-// The limits [K] of T_e, T_J, the initial temperature, and the T_R of the whole spectrum. The code clamps them
-// into this range. The rate coefficient tables cover this range, and the accelerator rejects a step outside it.
-// The bins of the radiation field have their own T_R limits in radfield.cc.
-constexpr double MINTEMP;
-constexpr double MAXTEMP;
-
-// The temperature [K] at which the code calibrates the total recombination rate of each ion to
-// recombrates.txt, if that file exists.
-constexpr double RECOMBCALIBRATION_T_ELEC;
-
-// Sample the electron scattering direction of a real packet from the dipole phase function. False gives
-// isotropic scattering. A virtual packet always uses the dipole function.
-constexpr bool DIPOLE;
-
-// Track the Stokes parameters and write specpol.out, emissionpol.out, and absorptionpol.out.
-constexpr bool POL_ON;
-
-// Enable the virtual packets that vpkt.txt sets up. This needs POL_ON. A GPU build does not support this
-// option.
-constexpr bool VPKT_ON;
-
-// Write a line to the file vpackets/vpackets_<rank>.out for each emission of a real packet in a thin cell whose
-// virtual packets escape in at least one observer direction of vpkt.txt. The line holds the arrival time, the
-// frequency, and the energy of the contribution to each direction. This needs VPKT_ON.
-constexpr bool VPKT_WRITE_CONTRIBS;
-
-// The lower bound of the level populations, the ion populations, and the electron density nne [cm^-3]. A level
-// population from the NLTE solver has no lower bound, and an absent element has zero population.
-constexpr double MINPOP;
-
-// The frequency limits of the UVOIR spectra and of the blackbody sampling of a k-packet [Hz]
-constexpr double NU_MIN_R;
-constexpr double NU_MAX_R;
-
-// Take the photoionisation cross section from the table point at or below the frequency, as classic ARTIS did,
-// instead of a linear interpolation.
-constexpr bool PHIXS_CLASSIC_NO_INTERPOLATION;
-
-// Fit a dilute blackbody to each frequency bin of the radiation field, in addition to the fit of the whole
-// spectrum. The fit of the whole spectrum stays the fallback for a bin without a fit. Set USE_LUT_PHOTOION to
-// false with this option, because the tables assume a Planck function. A static_assert checks this.
-constexpr bool MULTIBIN_RADFIELD_MODEL_ON;
-
-// The number of bins, including the T_e superbin. The code uses this value only with MULTIBIN_RADFIELD_MODEL_ON.
-constexpr int RADFIELDBINCOUNT;
-
-// The first timestep at which radfield() reads the binned radiation field. It must be at or after the first
-// NLTE timestep. The code uses this value only with MULTIBIN_RADFIELD_MODEL_ON.
-constexpr int MULTIBIN_RADFIELD_FIRST_TIMESTEP;
-
-// The frequency range of the regular bins [Hz], e.g. CLIGHT / (lambda[Angstrom] * 1e-8). The code uses these
-// values only with MULTIBIN_RADFIELD_MODEL_ON.
-constexpr double RADFIELDBINS_NU_MIN;
-constexpr double RADFIELDBINS_NU_MAX;
-
-// The upper frequency of the T_e superbin, the last bin above RADFIELDBINS_NU_MAX. The temperature of this bin
-// is the electron temperature of the cell. Only its dilution factor comes from the fit. The code uses this value
-// only with MULTIBIN_RADFIELD_MODEL_ON.
-constexpr double RADFIELDBINS_T_E_SUPERBIN_NU_MAX;
-
-// Store the Jb_lu estimators of the lines that radfield::init() selects. This needs RPKT_USE_BINNED_OPACITIES
-// false.
-constexpr bool DETAILED_LINE_ESTIMATORS_ON;
-
-// Store the detailed bound-free rate estimators. This needs USE_LUT_PHOTOION false.
-constexpr bool DETAILED_BF_ESTIMATORS_ON;
-
-// Select the continua that the detailed bound-free estimators track. The code uses this function only with
-// DETAILED_BF_ESTIMATORS_ON.
-constexpr bool LEVEL_HAS_BFEST(int element_z, int ionstage, int level);
-
-// Use the detailed bound-free estimators from this timestep on, inclusive. The code uses this value only with
-// DETAILED_BF_ESTIMATORS_ON.
-constexpr int DETAILED_BF_ESTIMATORS_FIRST_TIMESTEP;
-
-// Take the photoionisation rate coefficient from a table for a Planck radiation field, instead of an integral
-// over the radiation field of the cell. The table value gets the dilution factor W of the cell and the ratio of
-// the Monte Carlo estimator to the blackbody rate of the nearest ground continuum.
-constexpr bool USE_LUT_PHOTOION;
-
-// Store a bound-free heating estimator for each ground continuum. Multiply the analytic bound-free heating of
-// each level by the ratio of the estimator to the analytic rate of the nearest ground continuum.
-constexpr bool USE_ION_BFHEATING_ESTIMATORS;
-
-// Write the heating and the cooling rate of each ion to the estimators file, in addition to the totals. A
-// bound-free term belongs to the lower ion of the continuum, and a collisional term belongs to the ion that
-// holds the level. The free-free heating estimator holds no per-ion information, so each ion gets the share
-// that it has in the free-free opacity. The per-ion collisional heating needs COLLISIONAL_HEATING_FROM_LEVELPOPS. A
-// cell without a thermal balance gets no per-ion values.
-constexpr bool WRITE_ION_HEATING_COOLING_RATES;
-
-// Write the text of all MPI ranks into one combined file of the job folder for each of these types:
-// - estimators_allranks.out;
-// - nlte_allranks.out;
-// - radfield_allranks.out;
-// - macroatom_allranks.out, only with the constant LOG_MACROATOM in macroatom.cc. Each rank then keeps the
-//   macroatom lines of a whole timestep in memory.
-// Without this option, each rank writes its own files, e.g. estimators_<rank>.out. At each timestep, each rank writes
-// its text into a buffer, and rank 0 then writes the buffers in the order of the ranks. In a build with libzstd, each
-// rank compresses its own buffer into one zstd frame. A combined file thus holds the timesteps in their order, and in
-// each timestep the text of the ranks in their order.
-//
-// The nlte, radfield, and macroatom files start with one header line. scripts/combine_allrank_out_files.py makes the
-// same combined files from the files of the ranks.
-constexpr bool WRITE_COMBINED_ALLRANK_OUT_FILES;
-
-// Reject an NLTE solution with one of these faults:
-// - a population that is not finite;
-// - a ground population below MINPOP;
-// - a population below -MINPOP;
-// - a population inversion above STRICT_POPULATION_CHECKING_INVERSION_FACTOR_SOLVER_FAIL.
-// Without this option, the solver replaces a negative population with the Boltzmann population. That
-// population can be much larger, and a partition function can then overflow.
-constexpr bool STRICT_POPULATION_CHECKING;
-
-// After a failed NLTE solution of an element, remove the highest ion, or the lowest ion when the highest ion
-// cannot go, and solve again. An ion can go only when its population is small (see
-// NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION). Without this option, or when no ion can go,
-// the whole element falls back to LTE.
-constexpr bool NLTE_LIMIT_ION_STAGES_AFTER_FAILURE;
-
-// The population of a level per statistical weight, relative to the same ratio of the ground level, above
-// which STRICT_POPULATION_CHECKING rejects the solution. The code uses this value only with
-// STRICT_POPULATION_CHECKING.
-constexpr float STRICT_POPULATION_CHECKING_INVERSION_FACTOR_SOLVER_FAIL;
-
-// The same ratio above which the solver logs a warning. The code uses this value only with
-// STRICT_POPULATION_CHECKING.
-constexpr float STRICT_POPULATION_CHECKING_INVERSION_FACTOR_PRINTOUT_WARNING;
-
-// NLTE_LIMIT_ION_STAGES_AFTER_FAILURE removes an ion only when its ground population, each NLTE excited
-// population, and its superlevel population are each below this fraction of the element population.
-constexpr double NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION;
 
 // Solve the NLTE rate matrix with the Grassmann-Taksar-Heyman (GTH) state elimination instead of the LU
 // decomposition with a normalisation row. The rate matrix is the transpose of a Markov chain generator. GTH
@@ -265,6 +188,117 @@ constexpr bool NLTE_USE_GTH_SOLVER;
 // format. The heating and the cooling of that file therefore do not balance with this option. The rank log
 // gives c_heatcapacity and the k-packet energy factor of each cell.
 constexpr std::optional<int> NLTE_TIME_DEPENDENT_FIRST_TIMESTEP;
+
+// Reject an NLTE solution with one of these faults:
+// - a population that is not finite;
+// - a ground population below MINPOP;
+// - a population below -MINPOP;
+// - a population inversion above STRICT_POPULATION_CHECKING_INVERSION_FACTOR_SOLVER_FAIL.
+// Without this option, the solver replaces a negative population with the Boltzmann population. That
+// population can be much larger, and a partition function can then overflow.
+constexpr bool STRICT_POPULATION_CHECKING;
+
+// The population of a level per statistical weight, relative to the same ratio of the ground level, above
+// which STRICT_POPULATION_CHECKING rejects the solution. The code uses this value only with
+// STRICT_POPULATION_CHECKING.
+constexpr float STRICT_POPULATION_CHECKING_INVERSION_FACTOR_SOLVER_FAIL;
+
+// The same ratio above which the solver logs a warning. The code uses this value only with
+// STRICT_POPULATION_CHECKING.
+constexpr float STRICT_POPULATION_CHECKING_INVERSION_FACTOR_PRINTOUT_WARNING;
+
+// After a failed NLTE solution of an element, remove the highest ion, or the lowest ion when the highest ion
+// cannot go, and solve again. An ion can go only when its population is small (see
+// NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION). Without this option, or when no ion can go,
+// the whole element falls back to LTE.
+constexpr bool NLTE_LIMIT_ION_STAGES_AFTER_FAILURE;
+
+// NLTE_LIMIT_ION_STAGES_AFTER_FAILURE removes an ion only when its ground population, each NLTE excited
+// population, and its superlevel population are each below this fraction of the element population.
+constexpr double NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION;
+
+// Include the charge transfer reactions in the NLTE population solver. The published fits come from
+// data/chargetransfer.txt, which holds reactions with hydrogen and helium. The code estimates the other electron
+// captures from a neutral donor at startup (see chargetransfer.cc). A singly charged ion gets a flat rate of
+// 1e-12 cm3/s, the median of the tabulated rates, for an energy release up to 4 eV. Above 4 eV it gets the
+// radiative floor of 1e-14 cm3/s. An ion with a charge of two or more gets a multichannel Landau-Zener
+// estimate, with the levels of the lower ion as the capture channels.
+//
+// The reverse rates come from detailed balance. The rates enter the NLTE rate matrix as per-ion coefficients
+// between neighbouring ion stages. A reaction is active only when both elements have NLTE levels and a free
+// ionisation balance. Both sides of the reaction then get their transition, and the total ionic charge stays
+// constant. The solver adds no reaction heat to the thermal balance.
+constexpr bool ENABLE_CHARGE_TRANSFER_REACTIONS;
+
+// --- Heating and cooling ---
+
+// Sum the collisional de-excitation heating from the level populations instead of the Monte Carlo estimator.
+// The estimator also holds the collisional recombination heating. The sum does not.
+constexpr bool COLLISIONAL_HEATING_FROM_LEVELPOPS;
+
+// The bound-free cooling coefficient of each (level, target) continuum is per population of the target level of
+// the upper ion, like the spontaneous recombination coefficient alpha_sp. True multiplies it by the population
+// of that target level. False (classic ARTIS) multiplies it by the population of the whole upper ion. A level
+// with several targets then shares the ion population among them by their LTE fractions, and a level with one
+// target gets the whole ion population.
+constexpr bool BFCOOLING_USE_TARGET_LEVELPOP;
+
+// Store a bound-free heating estimator for each ground continuum. Multiply the analytic bound-free heating of
+// each level by the ratio of the estimator to the analytic rate of the nearest ground continuum.
+constexpr bool USE_ION_BFHEATING_ESTIMATORS;
+
+// Write the heating and the cooling rate of each ion to the estimators file, in addition to the totals. A
+// bound-free term belongs to the lower ion of the continuum, and a collisional term belongs to the ion that
+// holds the level. The free-free heating estimator holds no per-ion information, so each ion gets the share
+// that it has in the free-free opacity. The per-ion collisional heating needs COLLISIONAL_HEATING_FROM_LEVELPOPS. A
+// cell without a thermal balance gets no per-ion values.
+constexpr bool WRITE_ION_HEATING_COOLING_RATES;
+
+// --- Radiation field and estimators ---
+
+// Take the photoionisation rate coefficient from a table for a Planck radiation field, instead of an integral
+// over the radiation field of the cell. The table value gets the dilution factor W of the cell and the ratio of
+// the Monte Carlo estimator to the blackbody rate of the nearest ground continuum.
+constexpr bool USE_LUT_PHOTOION;
+
+// Fit a dilute blackbody to each frequency bin of the radiation field, in addition to the fit of the whole
+// spectrum. The fit of the whole spectrum stays the fallback for a bin without a fit. Set USE_LUT_PHOTOION to
+// false with this option, because the tables assume a Planck function. A static_assert checks this.
+constexpr bool MULTIBIN_RADFIELD_MODEL_ON;
+
+// The number of bins, including the T_e superbin. The code uses this value only with MULTIBIN_RADFIELD_MODEL_ON.
+constexpr int RADFIELDBINCOUNT;
+
+// The first timestep at which radfield() reads the binned radiation field. It must be at or after the first
+// NLTE timestep. The code uses this value only with MULTIBIN_RADFIELD_MODEL_ON.
+constexpr int MULTIBIN_RADFIELD_FIRST_TIMESTEP;
+
+// The frequency range of the regular bins [Hz], e.g. CLIGHT / (lambda[Angstrom] * 1e-8). The code uses these
+// values only with MULTIBIN_RADFIELD_MODEL_ON.
+constexpr double RADFIELDBINS_NU_MIN;
+constexpr double RADFIELDBINS_NU_MAX;
+
+// The upper frequency of the T_e superbin, the last bin above RADFIELDBINS_NU_MAX. The temperature of this bin
+// is the electron temperature of the cell. Only its dilution factor comes from the fit. The code uses this value
+// only with MULTIBIN_RADFIELD_MODEL_ON.
+constexpr double RADFIELDBINS_T_E_SUPERBIN_NU_MAX;
+
+// Store the Jb_lu estimators of the lines that radfield::init() selects. This needs RPKT_USE_BINNED_OPACITIES
+// false.
+constexpr bool DETAILED_LINE_ESTIMATORS_ON;
+
+// Store the detailed bound-free rate estimators. This needs USE_LUT_PHOTOION false.
+constexpr bool DETAILED_BF_ESTIMATORS_ON;
+
+// Select the continua that the detailed bound-free estimators track. The code uses this function only with
+// DETAILED_BF_ESTIMATORS_ON.
+constexpr bool DETAILED_BF_ESTIMATORS_LEVEL_SELECTED(int element_z, int ionstage, int level);
+
+// Use the detailed bound-free estimators from this timestep on, inclusive. The code uses this value only with
+// DETAILED_BF_ESTIMATORS_ON.
+constexpr int DETAILED_BF_ESTIMATORS_FIRST_TIMESTEP;
+
+// --- Non-thermal particles ---
 
 // How the code deposits the energy of the non-thermal leptons.
 // NT_OFF: no non-thermal ionisation.
@@ -310,28 +344,6 @@ constexpr int NT_MAX_AUGER_ELECTRONS;
 // NT_SPENCERFANO.
 constexpr bool SF_AUGER_CONTRIBUTION_ON;
 
-// Use the full relativistic Doppler factor instead of the first-order 1 - n.v/c. The line resonance distance
-// and the walk over the expansion opacity bins then use a linear interpolation of the frequency along the path.
-constexpr bool USE_RELATIVISTIC_DOPPLER_SHIFT;
-
-// Convert a mass fraction to a number density with the mean atomic mass of the nuclear composition of the cell,
-// including the stable component, instead of the mass in compositiondata.txt.
-constexpr bool USE_CALCULATED_MEANATOMICWEIGHT;
-
-// Keep the escaped gamma-ray packets in the packet files, and write gamma_light_curve.out and gamma_spec.out.
-constexpr bool KEEP_ESCAPED_GAMMAS;
-
-// Keep one r-packet emission of each packet. Sample with equal probability from the emissions that set emissiontype.
-// A scattering keeps emissiontype and does not enter the sample.
-// The packet files get the count of these emissions (nemissiontype_updates) and these values of the sampled emission:
-// - emissiontype;
-// - absorptiontype;
-// - absorptionfreq;
-// - em_pos;
-// - em_time.
-// Each sample represents nemissiontype_updates emissions.
-constexpr bool SAMPLE_RPKT_EMISSION;
-
 // The thermalisation of the non-thermal particles (positrons, electrons, and alpha particles):
 // - INSTANTFULLDEPOSITION deposits the particle energy at once;
 // - TIMEDEPENDENT transports the particles with the Monte Carlo method;
@@ -353,6 +365,8 @@ constexpr bool SAMPLE_RPKT_EMISSION;
 // because the sedopt pattern of that option matches the start of the line.
 constexpr ParticleThermalisationScheme PARTICLE_THERMALISATION_SCHEME;
 
+// --- Gamma rays ---
+
 // The thermalisation of the gamma-ray photons. FREQUENCYDEPENDENT transports the gamma rays with the Monte
 // Carlo method, with frequency-dependent opacities unless GAMMA_USE_KAPPA_GREY has a value. BARNES, WOLLAEGER,
 // and GUTTMAN deposit a fraction of the gamma energy at once, from an analytic thermalisation efficiency. See
@@ -360,35 +374,40 @@ constexpr ParticleThermalisationScheme PARTICLE_THERMALISATION_SCHEME;
 // MNRAS, 533, 994-1011, doi:10.1093/mnras/stae1795.
 constexpr GammaThermalisationScheme GAMMA_THERMALISATION_SCHEME;
 
-// The timestep scheme: LOGARITHMIC, CONSTANT, LOGARITHMIC_THEN_CONSTANT, or CONSTANT_THEN_LOGARITHMIC. The two
-// hybrid schemes need FIXED_TIMESTEP_WIDTH and TIMESTEP_TRANSITION_TIME, both in days. The number of constant
-// timesteps must be below the total number of timesteps, or the run stops.
-constexpr TimeStepSizeMethod TIMESTEP_SIZE_METHOD;
+// Use the XCOM table for the gamma-ray photoelectric absorption instead of the Si and Fe power laws of
+// Ambwani & Sutherland 1988, ApJ, 325, 820-827, doi:10.1086/166052, eq. 2, after Veigele 1973, Atomic Data and
+// Nuclear Data Tables, 5, 51-111, doi:10.1016/S0092-640X(73)80015-4. The code uses this option only with the
+// FREQUENCYDEPENDENT GAMMA_THERMALISATION_SCHEME.
+constexpr bool GAMMA_USE_XCOM_PHOTOION;
 
-// The maximum width of a constant timestep [days]. The code divides the constant interval into equal timesteps of
-// at most this width. The code uses this value only with LOGARITHMIC_THEN_CONSTANT and CONSTANT_THEN_LOGARITHMIC.
-constexpr double FIXED_TIMESTEP_WIDTH;
+// Replace the frequency-dependent gamma-ray opacity with this grey opacity [cm^2/g]. No value keeps the
+// frequency-dependent opacity. The code uses this value only with the FREQUENCYDEPENDENT
+// GAMMA_THERMALISATION_SCHEME.
+constexpr std::optional<double> GAMMA_USE_KAPPA_GREY;
 
-// The time of the change between the two schemes [days]. The code uses this value only with
-// LOGARITHMIC_THEN_CONSTANT and CONSTANT_THEN_LOGARITHMIC.
-constexpr double TIMESTEP_TRANSITION_TIME;
+// Keep the escaped gamma-ray packets in the packet files, and write gamma_light_curve.out and gamma_spec.out.
+constexpr bool KEEP_ESCAPED_GAMMAS;
 
-// The bound-free cooling coefficient of each (level, target) continuum is per population of the target level of
-// the upper ion, like the spontaneous recombination coefficient alpha_sp. True multiplies it by the population
-// of that target level. False (classic ARTIS) multiplies it by the population of the whole upper ion. A level
-// with several targets then shares the ion population among them by their LTE fractions, and a level with one
-// target gets the whole ion population.
-constexpr bool BFCOOLING_USE_TARGET_LEVELPOP;
+// --- Real packets ---
+
+// The frequency limits of the UVOIR spectra and of the blackbody sampling of a k-packet [Hz]
+constexpr double NU_MIN_R;
+constexpr double NU_MAX_R;
+
+// Sample the electron scattering direction of a real packet from the dipole phase function. False gives
+// isotropic scattering. A virtual packet always uses the dipole function.
+constexpr bool DIPOLE;
+
+// Track the Stokes parameters and write specpol.out, emissionpol.out, and absorptionpol.out.
+constexpr bool POL_ON;
+
+// Use the full relativistic Doppler factor instead of the first-order 1 - n.v/c. The line resonance distance
+// and the walk over the expansion opacity bins then use a linear interpolation of the frequency along the path.
+constexpr bool USE_RELATIVISTIC_DOPPLER_SHIFT;
 
 // Use binned opacities instead of line-by-line opacities for the real packets in the cells that are not
 // thick. Not compatible with VPKT_ON.
 constexpr bool RPKT_USE_BINNED_OPACITIES;
-
-// Use binned opacities instead of line-by-line opacities for the virtual packets. Set BINNED_OPACITY_LINE_WEIGHT to
-// LINEBINNED with this option. With a different weight, sn3d writes a warning to the log. LINEBINNED needs an
-// RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY of zero or no value (see BINNED_OPACITY_LINE_WEIGHT). This needs
-// VPKT_ON.
-constexpr bool VPKT_USE_BINNED_OPACITIES;
 
 // The line weight in the binned opacity of each wavelength bin of RPKT_USE_BINNED_OPACITIES,
 // VPKT_USE_BINNED_OPACITIES, and RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY. A line with the Sobolev optical
@@ -427,44 +446,48 @@ constexpr std::optional<float> RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY;
 //   recomputes this opacity at each timestep.
 constexpr RpktGreyType RPKT_GREY_TYPE;
 
-// Use the XCOM table for the gamma-ray photoelectric absorption instead of the Si and Fe power laws of
-// Ambwani & Sutherland 1988, ApJ, 325, 820-827, doi:10.1086/166052, eq. 2, after Veigele 1973, Atomic Data and
-// Nuclear Data Tables, 5, 51-111, doi:10.1016/S0092-640X(73)80015-4. The code uses this option only with the
-// FREQUENCYDEPENDENT GAMMA_THERMALISATION_SCHEME.
-constexpr bool USE_XCOM_GAMMAPHOTOION;
+// Keep one r-packet emission of each packet. Sample with equal probability from the emissions that set emissiontype.
+// A scattering keeps emissiontype and does not enter the sample.
+// The packet files get the count of these emissions (nemissiontype_updates) and these values of the sampled emission:
+// - emissiontype;
+// - absorptiontype;
+// - absorptionfreq;
+// - em_pos;
+// - em_time.
+// Each sample represents nemissiontype_updates emissions.
+constexpr bool SAMPLE_RPKT_EMISSION;
 
-// Replace the frequency-dependent gamma-ray opacity with this grey opacity [cm^2/g]. No value keeps the
-// frequency-dependent opacity. The code uses this value only with the FREQUENCYDEPENDENT
-// GAMMA_THERMALISATION_SCHEME.
-constexpr std::optional<double> GAMMA_USE_KAPPA_GREY;
+// --- Virtual packets ---
 
-// Include the charge transfer reactions in the NLTE population solver. The published fits come from
-// data/chargetransfer.txt, which holds reactions with hydrogen and helium. The code estimates the other electron
-// captures from a neutral donor at startup (see chargetransfer.cc). A singly charged ion gets a flat rate of
-// 1e-12 cm3/s, the median of the tabulated rates, for an energy release up to 4 eV. Above 4 eV it gets the
-// radiative floor of 1e-14 cm3/s. An ion with a charge of two or more gets a multichannel Landau-Zener
-// estimate, with the levels of the lower ion as the capture channels.
+// Enable the virtual packets that vpkt.txt sets up. This needs POL_ON. A GPU build does not support this
+// option.
+constexpr bool VPKT_ON;
+
+// Write a line to the file vpackets/vpackets_<rank>.out for each emission of a real packet in a thin cell whose
+// virtual packets escape in at least one observer direction of vpkt.txt. The line holds the arrival time, the
+// frequency, and the energy of the contribution to each direction. This needs VPKT_ON.
+constexpr bool VPKT_WRITE_CONTRIBS;
+
+// Use binned opacities instead of line-by-line opacities for the virtual packets. Set BINNED_OPACITY_LINE_WEIGHT to
+// LINEBINNED with this option. With a different weight, sn3d writes a warning to the log. LINEBINNED needs an
+// RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY of zero or no value (see BINNED_OPACITY_LINE_WEIGHT). This needs
+// VPKT_ON.
+constexpr bool VPKT_USE_BINNED_OPACITIES;
+
+// --- Output files ---
+
+// Write the text of all MPI ranks into one combined file of the job folder for each of these types:
+// - estimators_allranks.out;
+// - nlte_allranks.out;
+// - radfield_allranks.out;
+// - macroatom_allranks.out, only with the constant LOG_MACROATOM in macroatom.cc. Each rank then keeps the
+//   macroatom lines of a whole timestep in memory.
+// Without this option, each rank writes its own files, e.g. estimators_<rank>.out. At each timestep, each rank writes
+// its text into a buffer, and rank 0 then writes the buffers in the order of the ranks. In a build with libzstd, each
+// rank compresses its own buffer into one zstd frame. A combined file thus holds the timesteps in their order, and in
+// each timestep the text of the ranks in their order.
 //
-// The reverse rates come from detailed balance. The rates enter the NLTE rate matrix as per-ion coefficients
-// between neighbouring ion stages. A reaction is active only when both elements have NLTE levels and a free
-// ionisation balance. Both sides of the reaction then get their transition, and the total ionic charge stays
-// constant. The solver adds no reaction heat to the thermal balance.
-constexpr bool ENABLE_CHARGE_TRANSFER_REACTIONS;
-
-// Multiply these rates by the clumping factor of the cell:
-// - collisional excitation, de-excitation, ionisation, and recombination;
-// - radiative and stimulated recombination, and collisional capture;
-// - free-free heating and cooling, and bound-free cooling;
-// - the charge transfer reactions;
-// - the photoionisation equilibrium of the elements without NLTE levels. The Saha balance is unaffected.
-// With USE_LUT_PHOTOION, the stimulated recombination correction inside the tabulated photoionisation
-// coefficients cannot include the clumping factor of the cell. The stimulated recombination then gets the factor
-// through the direct bound-free integrals and through the departure ratios of the packet opacity.
-constexpr bool USE_MICROCLUMPING;
-
-// The clumping factor of a cell from the time and the radial velocity. The code passes
-// globals::timesteps[nts].mid and grid::get_modelcell_mean_radial_pos_tmin(mgi) / globals::tmin [cm/s]. The
-// result must be finite and at least 1. A value of 1 means no clumping. The code uses this function only with
-// USE_MICROCLUMPING.
-constexpr float clumping_factor(double tmid, double rad_vel);
+// The nlte, radfield, and macroatom files start with one header line. scripts/combine_allrank_out_files.py makes the
+// same combined files from the files of the ranks.
+constexpr bool WRITE_COMBINED_ALLRANK_OUT_FILES;
 ```

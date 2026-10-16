@@ -36,7 +36,7 @@ sedopt 'constexpr int DETAILED_BF_ESTIMATORS_FIRST_TIMESTEP.*' 'constexpr int DE
 
 sedopt 'constexpr bool SF_AUGER_CONTRIBUTION_ON.*' 'constexpr bool SF_AUGER_CONTRIBUTION_ON = false;'
 
-sedopt 'constexpr bool LEVEL_HAS_BFEST.*' 'constexpr bool LEVEL_HAS_BFEST(int element_z, int ionstage, int level) { return level <= ION_NLEVELS_EXCITED_NLTE(element_z, ionstage); }'
+sedopt 'constexpr bool DETAILED_BF_ESTIMATORS_LEVEL_SELECTED.*' 'constexpr bool DETAILED_BF_ESTIMATORS_LEVEL_SELECTED(int element_z, int ionstage, int level) { return level <= ION_NLEVELS_EXCITED_NLTE(element_z, ionstage); }'
 
 rm -f artisoptions.h.bak
 

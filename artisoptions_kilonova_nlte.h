@@ -18,47 +18,41 @@
 
 #include "constants.h"
 
+// --- Packets and timesteps ---
+
 constexpr std::int64_t NUM_PACKETS = 2e8;
 
-constexpr std::optional<GridType> GRID_TYPE_OVERRIDE;
-constexpr int CUBOID_NCOORDGRID_X = 50;
-constexpr int CUBOID_NCOORDGRID_Y = 50;
-constexpr int CUBOID_NCOORDGRID_Z = 50;
-constexpr bool FORCE_SPHERICAL_ESCAPE_SURFACE = false;
-
-constexpr int NLTE_TE_NNE_MAXITER = 30;
-
-constexpr bool NLTE_TE_NNE_USE_ANDERSON_ACCEL = true;
-
-constexpr double NLTE_TE_NNE_RELTOL = 0.01;
-
-constexpr int ION_NLEVELS_EXCITED_NLTE(int element_z, int ionstage) {
-  if (element_z == 38 || element_z == 39 || element_z == 40) {
-    return 250;
-  }
-  return 0;
-}
-
-constexpr bool LTEPOP_EXCITATION_USE_TJ = false;
-
-constexpr bool FORCE_SAHA_ION_BALANCE(int element_z) {
-  if (element_z == 38 || element_z == 39 || element_z == 40) {
-    return false;
-  }
-  return true;
-}
-
-constexpr bool TOP_ION_GROUND_LEVEL_ONLY = false;
-
-constexpr int NLEVELS_ADD_MISSING_COLLISIONAL_TRANSITIONS(int element_z, int ionstage) {
-  // add 2 for the ground state and first level in the superlevel
-  return ION_NLEVELS_EXCITED_NLTE(element_z, ionstage) + 2;
-}
+constexpr bool INITIAL_PACKETS_ON = true;
 
 constexpr bool UNIFORM_PELLET_ENERGIES = true;
 
-constexpr bool COLLISIONAL_HEATING_FROM_LEVELPOPS = false;
-constexpr bool INITIAL_PACKETS_ON = true;
+constexpr TimeStepSizeMethod TIMESTEP_SIZE_METHOD = TimeStepSizeMethod::LOGARITHMIC;
+
+constexpr std::optional<double> TIMESTEP_SIZE_CONSTANT_MAX_WIDTH_DAYS;
+
+constexpr std::optional<double> TIMESTEP_SIZE_TRANSITION_TIME_DAYS;
+
+// --- Grid and composition ---
+
+constexpr std::optional<GridType> GRID_TYPE_OVERRIDE;
+
+constexpr int CUBOID_NCOORDGRID_X = 50;
+constexpr int CUBOID_NCOORDGRID_Y = 50;
+constexpr int CUBOID_NCOORDGRID_Z = 50;
+
+constexpr bool FORCE_SPHERICAL_ESCAPE_SURFACE = false;
+
+constexpr bool USE_CALCULATED_MEANATOMICWEIGHT = true;
+
+constexpr bool USE_MICROCLUMPING = false;
+
+constexpr float MICROCLUMPING_FACTOR([[maybe_unused]] double tmid, [[maybe_unused]] double rad_vel) { return 1.; }
+
+// --- Atomic data and limits ---
+
+constexpr bool TOP_ION_GROUND_LEVEL_ONLY = false;
+
+constexpr bool PHIXS_CLASSIC_NO_INTERPOLATION = false;
 
 // Pognan, Grumer, Jerkstrand & Wanajo (2023), MNRAS, 526, 5220-5248, doi:10.1093/mnras/stad3106, find
 // temperatures that rise with time. The temperatures go from about 4000 K at 5 days to 35000 K in the
@@ -69,18 +63,61 @@ constexpr double MAXTEMP = 150000.;
 
 constexpr double RECOMBCALIBRATION_T_ELEC = 6000.;
 
-constexpr bool DIPOLE = false;
-constexpr bool POL_ON = false;
-
-constexpr bool VPKT_ON = false;
-constexpr bool VPKT_WRITE_CONTRIBS = false;
-
 constexpr double MINPOP = 1e-40;
 
-constexpr double NU_MIN_R = 1e13;
-constexpr double NU_MAX_R = 5e16;
+// --- Ionisation and excitation ---
 
-constexpr bool PHIXS_CLASSIC_NO_INTERPOLATION = false;
+constexpr int ION_NLEVELS_EXCITED_NLTE(int element_z, int ionstage) {
+  if (element_z == 38 || element_z == 39 || element_z == 40) {
+    return 250;
+  }
+  return 0;
+}
+
+constexpr int NLEVELS_ADD_MISSING_COLLISIONAL_TRANSITIONS(int element_z, int ionstage) {
+  // add 2 for the ground state and first level in the superlevel
+  return ION_NLEVELS_EXCITED_NLTE(element_z, ionstage) + 2;
+}
+
+constexpr bool LTEPOP_EXCITATION_USE_TJ = false;
+
+constexpr bool FORCE_SAHA_ION_BALANCE(int element_z) { return element_z < 38 || element_z > 40; }
+
+constexpr int NLTE_TE_NNE_MAXITER = 30;
+
+constexpr bool NLTE_TE_NNE_USE_ANDERSON_ACCEL = true;
+
+constexpr double NLTE_TE_NNE_RELTOL = 0.01;
+
+constexpr bool NLTE_USE_GTH_SOLVER = true;
+
+constexpr std::optional<int> NLTE_TIME_DEPENDENT_FIRST_TIMESTEP = std::nullopt;
+
+constexpr bool STRICT_POPULATION_CHECKING = true;
+
+constexpr float STRICT_POPULATION_CHECKING_INVERSION_FACTOR_SOLVER_FAIL = 50.;
+
+constexpr float STRICT_POPULATION_CHECKING_INVERSION_FACTOR_PRINTOUT_WARNING = 2.;
+
+constexpr bool NLTE_LIMIT_ION_STAGES_AFTER_FAILURE = true;
+
+constexpr double NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION = 1e-9;
+
+constexpr bool ENABLE_CHARGE_TRANSFER_REACTIONS = false;
+
+// --- Heating and cooling ---
+
+constexpr bool COLLISIONAL_HEATING_FROM_LEVELPOPS = false;
+
+constexpr bool BFCOOLING_USE_TARGET_LEVELPOP = false;
+
+constexpr bool USE_ION_BFHEATING_ESTIMATORS = false;
+
+constexpr bool WRITE_ION_HEATING_COOLING_RATES = false;
+
+// --- Radiation field and estimators ---
+
+constexpr bool USE_LUT_PHOTOION = false;
 
 constexpr bool MULTIBIN_RADFIELD_MODEL_ON = false;
 
@@ -89,7 +126,6 @@ constexpr int RADFIELDBINCOUNT = 256;
 constexpr int MULTIBIN_RADFIELD_FIRST_TIMESTEP = 6;
 
 constexpr double RADFIELDBINS_NU_MIN = (CLIGHT / 40000e-8);
-
 constexpr double RADFIELDBINS_NU_MAX = (CLIGHT / 1085e-8);
 
 constexpr double RADFIELDBINS_T_E_SUPERBIN_NU_MAX = (CLIGHT / 10e-8);
@@ -98,31 +134,11 @@ constexpr bool DETAILED_LINE_ESTIMATORS_ON = false;
 
 constexpr bool DETAILED_BF_ESTIMATORS_ON = false;
 
-constexpr bool LEVEL_HAS_BFEST(int element_z, int ionstage, int level) { return false; }
+constexpr bool DETAILED_BF_ESTIMATORS_LEVEL_SELECTED(int element_z, int ionstage, int level) { return false; }
 
 constexpr int DETAILED_BF_ESTIMATORS_FIRST_TIMESTEP = 6;
 
-constexpr bool USE_LUT_PHOTOION = false;
-
-constexpr bool USE_ION_BFHEATING_ESTIMATORS = false;
-
-constexpr bool WRITE_ION_HEATING_COOLING_RATES = false;
-
-constexpr bool WRITE_COMBINED_ALLRANK_OUT_FILES = true;
-
-constexpr bool STRICT_POPULATION_CHECKING = true;
-
-constexpr bool NLTE_LIMIT_ION_STAGES_AFTER_FAILURE = true;
-
-constexpr float STRICT_POPULATION_CHECKING_INVERSION_FACTOR_SOLVER_FAIL = 50.;
-
-constexpr float STRICT_POPULATION_CHECKING_INVERSION_FACTOR_PRINTOUT_WARNING = 2.;
-
-constexpr double NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION = 1e-9;
-
-constexpr bool NLTE_USE_GTH_SOLVER = true;
-
-constexpr std::optional<int> NLTE_TIME_DEPENDENT_FIRST_TIMESTEP = std::nullopt;
+// --- Non-thermal particles ---
 
 constexpr NonThermalScheme NT_SCHEME = NonThermalScheme::NT_SPENCERFANO;
 
@@ -139,25 +155,31 @@ constexpr int NT_MAX_AUGER_ELECTRONS = 2;
 
 constexpr bool SF_AUGER_CONTRIBUTION_ON = true;
 
-constexpr bool USE_RELATIVISTIC_DOPPLER_SHIFT = true;
+constexpr auto PARTICLE_THERMALISATION_SCHEME =
+    ParticleThermalisationScheme::TIMEDEPENDENT_WITH_ADIABATIC_LOSS_ULTRARELATIVISTICLIMIT;
 
-constexpr bool USE_CALCULATED_MEANATOMICWEIGHT = true;
+// --- Gamma rays ---
+
+constexpr auto GAMMA_THERMALISATION_SCHEME = GammaThermalisationScheme::FREQUENCYDEPENDENT;
+
+constexpr bool GAMMA_USE_XCOM_PHOTOION = false;
+
+constexpr std::optional<double> GAMMA_USE_KAPPA_GREY;
 
 constexpr bool KEEP_ESCAPED_GAMMAS = false;
 
-constexpr bool SAMPLE_RPKT_EMISSION = false;
+// --- Real packets ---
 
-constexpr TimeStepSizeMethod TIMESTEP_SIZE_METHOD = TimeStepSizeMethod::LOGARITHMIC;
+constexpr double NU_MIN_R = 1e13;
+constexpr double NU_MAX_R = 5e16;
 
-constexpr double FIXED_TIMESTEP_WIDTH = -1.;
+constexpr bool DIPOLE = false;
 
-constexpr double TIMESTEP_TRANSITION_TIME = -1.;
+constexpr bool POL_ON = false;
 
-constexpr bool BFCOOLING_USE_TARGET_LEVELPOP = false;
+constexpr bool USE_RELATIVISTIC_DOPPLER_SHIFT = true;
 
 constexpr bool RPKT_USE_BINNED_OPACITIES = false;
-
-constexpr bool VPKT_USE_BINNED_OPACITIES = false;
 
 constexpr BinnedOpacityLineWeight BINNED_OPACITY_LINE_WEIGHT = BinnedOpacityLineWeight::EXPANSION;
 
@@ -167,20 +189,19 @@ constexpr std::optional<float> RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY;
 
 constexpr RpktGreyType RPKT_GREY_TYPE = RpktGreyType::TANAKA2020_ELECTRONFRAC;
 
-constexpr bool USE_XCOM_GAMMAPHOTOION = false;
+constexpr bool SAMPLE_RPKT_EMISSION = false;
 
-constexpr auto PARTICLE_THERMALISATION_SCHEME =
-    ParticleThermalisationScheme::TIMEDEPENDENT_WITH_ADIABATIC_LOSS_ULTRARELATIVISTICLIMIT;
+// --- Virtual packets ---
 
-constexpr auto GAMMA_THERMALISATION_SCHEME = GammaThermalisationScheme::FREQUENCYDEPENDENT;
+constexpr bool VPKT_ON = false;
 
-constexpr std::optional<double> GAMMA_USE_KAPPA_GREY;
+constexpr bool VPKT_WRITE_CONTRIBS = false;
 
-constexpr bool ENABLE_CHARGE_TRANSFER_REACTIONS = false;
+constexpr bool VPKT_USE_BINNED_OPACITIES = false;
 
-constexpr bool USE_MICROCLUMPING = false;
+// --- Output files ---
 
-constexpr float clumping_factor([[maybe_unused]] double tmid, [[maybe_unused]] double rad_vel) { return 1.; }
+constexpr bool WRITE_COMBINED_ALLRANK_OUT_FILES = true;
 
 // NOLINTEND(modernize-use-trailing-return-type,misc-unused-parameters)
 #endif  // ARTISOPTIONS_H

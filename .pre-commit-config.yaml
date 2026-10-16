@@ -44,6 +44,12 @@ repos:
             exclude: ^(third_party/)
     - repo: local
       hooks:
+          - id: check-artisoptions-order
+            name: check the order of the artisoptions options
+            entry: python scripts/check_artisoptions_order.py
+            language: python
+            pass_filenames: false
+            files: '^(artisoptions_.*\.h|artisoptions_doc\.md)$'
           - id: make
             name: make
             entry: make -j OPTIMIZE=OFF

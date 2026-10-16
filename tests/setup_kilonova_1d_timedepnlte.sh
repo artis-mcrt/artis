@@ -54,7 +54,7 @@ sedopt 'constexpr int NLTE_TE_NNE_MAXITER.*' 'constexpr int NLTE_TE_NNE_MAXITER 
 # levels on both sides. Keep at least one element at zero, or the test loses the hybrid mode.
 perl -0777 -i -pe 'my $n = s|^constexpr int ION_NLEVELS_EXCITED_NLTE\(int element_z, int ionstage\) \{.*?^\}$|constexpr int ION_NLEVELS_EXCITED_NLTE(int element_z, int ionstage) { return (element_z == 58) ? 0 : 20; }|ms; die "[error] the pattern for ION_NLEVELS_EXCITED_NLTE did not match once\n" unless $n == 1;' artisoptions.h
 
-perl -0777 -i -pe 'my $n = s|^constexpr bool FORCE_SAHA_ION_BALANCE\(int element_z\) \{.*?^\}$|constexpr bool FORCE_SAHA_ION_BALANCE(int element_z) { return false; }|ms; die "[error] the pattern for FORCE_SAHA_ION_BALANCE did not match once\n" unless $n == 1;' artisoptions.h
+sedopt 'constexpr bool FORCE_SAHA_ION_BALANCE(int element_z) {.*}' 'constexpr bool FORCE_SAHA_ION_BALANCE(int element_z) { return false; }'
 
 perl -0777 -i -pe 'my $n = s|^constexpr int NLEVELS_ADD_MISSING_COLLISIONAL_TRANSITIONS\(int element_z, int ionstage\) \{.*?^\}$|constexpr int NLEVELS_ADD_MISSING_COLLISIONAL_TRANSITIONS(int element_z, int ionstage) { return 10; }|ms; die "[error] the pattern for NLEVELS_ADD_MISSING_COLLISIONAL_TRANSITIONS did not match once\n" unless $n == 1;' artisoptions.h
 
@@ -63,7 +63,7 @@ sedopt 'constexpr double MINTEMP.*' 'constexpr double MINTEMP = 500.;'
 sedopt 'constexpr double MAXTEMP.*' 'constexpr double MAXTEMP = 100000.;'
 sedopt 'constexpr bool MULTIBIN_RADFIELD_MODEL_ON.*' 'constexpr bool MULTIBIN_RADFIELD_MODEL_ON = true;'
 sedopt 'constexpr bool DETAILED_BF_ESTIMATORS_ON.*' 'constexpr bool DETAILED_BF_ESTIMATORS_ON = true;'
-sedopt 'constexpr bool LEVEL_HAS_BFEST.*' 'constexpr bool LEVEL_HAS_BFEST(int element_z, int ionstage, int level) { return true; }'
+sedopt 'constexpr bool DETAILED_BF_ESTIMATORS_LEVEL_SELECTED.*' 'constexpr bool DETAILED_BF_ESTIMATORS_LEVEL_SELECTED(int element_z, int ionstage, int level) { return true; }'
 
 sedopt 'constexpr int MULTIBIN_RADFIELD_FIRST_TIMESTEP.*' 'constexpr int MULTIBIN_RADFIELD_FIRST_TIMESTEP = 2;'
 sedopt 'constexpr int DETAILED_BF_ESTIMATORS_FIRST_TIMESTEP.*' 'constexpr int DETAILED_BF_ESTIMATORS_FIRST_TIMESTEP = 2;'

@@ -18,6 +18,7 @@
 #include <istream>
 #include <iterator>
 #include <limits>
+#include <optional>
 #include <print>
 #include <ranges>
 #include <span>
@@ -980,9 +981,9 @@ void setup_phixs_list() {
     if (globals::rank_in_node == 0) {
       for (int i = 0; i < nbfcontinua; i++) {
         if (DETAILED_BF_ESTIMATORS_ON &&
-            LEVEL_HAS_BFEST(get_atomicnumber(globals::allcont.element[i]),
-                            get_ionstage(globals::allcont.element[i], globals::allcont.ion[i]),
-                            globals::allcont.level[i])) {
+            DETAILED_BF_ESTIMATORS_LEVEL_SELECTED(get_atomicnumber(globals::allcont.element[i]),
+                                                  get_ionstage(globals::allcont.element[i], globals::allcont.ion[i]),
+                                                  globals::allcont.level[i])) {
           allcont_bfestimindex[i] = static_cast<int>(temp_bfestim_nu_edge.size());
           temp_bfestim_nu_edge.push_back(globals::allcont.nu_edge[i]);
         } else {
@@ -2318,19 +2319,26 @@ void read_atomicdata() {
   }
 }
 
-// the pure timestep schemes ignore these two values, and the presets ship them as -1.
+// the pure timestep schemes need no value, and the hybrid schemes need both values
 static_assert(TIMESTEP_SIZE_METHOD == TimeStepSizeMethod::LOGARITHMIC ||
                   TIMESTEP_SIZE_METHOD == TimeStepSizeMethod::CONSTANT ||
-                  (FIXED_TIMESTEP_WIDTH > 0. && TIMESTEP_TRANSITION_TIME > 0.),
-              "The hybrid TIMESTEP_SIZE_METHOD options require FIXED_TIMESTEP_WIDTH and TIMESTEP_TRANSITION_TIME "
-              "(both in days) to be set to positive values");
+                  (TIMESTEP_SIZE_CONSTANT_MAX_WIDTH_DAYS.value_or(0.) > 0. &&
+                   TIMESTEP_SIZE_TRANSITION_TIME_DAYS.value_or(0.) > 0.),
+              "The hybrid TIMESTEP_SIZE_METHOD options need positive values of TIMESTEP_SIZE_CONSTANT_MAX_WIDTH_DAYS "
+              "and TIMESTEP_SIZE_TRANSITION_TIME_DAYS");
+static_assert(TIMESTEP_SIZE_METHOD == TimeStepSizeMethod::LOGARITHMIC_THEN_CONSTANT ||
+                  TIMESTEP_SIZE_METHOD == TimeStepSizeMethod::CONSTANT_THEN_LOGARITHMIC ||
+                  (!TIMESTEP_SIZE_CONSTANT_MAX_WIDTH_DAYS.has_value() &&
+                   !TIMESTEP_SIZE_TRANSITION_TIME_DAYS.has_value()),
+              "TIMESTEP_SIZE_CONSTANT_MAX_WIDTH_DAYS and TIMESTEP_SIZE_TRANSITION_TIME_DAYS need a hybrid "
+              "TIMESTEP_SIZE_METHOD");
 
 // calculate the timestep grid: ntimesteps entries with start, mid, and width set, plus a zero-width
 // entry holding the end time. tmin and tmax are in seconds; the fixed width and transition time of the
 // hybrid methods are in days
 auto calculate_timesteps(const TimeStepSizeMethod method, const double tmin, const double tmax, const int ntimesteps,
-                         const double fixed_timestep_width_days, const double timestep_transition_time_days)
-    -> std::vector<globals::TimeStep> {
+                         const std::optional<double> constant_max_width_days,
+                         const std::optional<double> transition_time_days) -> std::vector<globals::TimeStep> {
   auto timesteps = std::vector<globals::TimeStep>(ntimesteps + 1);
 
   // fill nts_count timesteps from index nts_first with logarithmic spacing from t_start to t_end
@@ -2368,10 +2376,11 @@ auto calculate_timesteps(const TimeStepSizeMethod method, const double tmin, con
     }
 
     case TimeStepSizeMethod::LOGARITHMIC_THEN_CONSTANT: {
-      const double t_transition = timestep_transition_time_days * DAY;
+      assert_always(transition_time_days.has_value() && constant_max_width_days.has_value());
+      const double t_transition = *transition_time_days * DAY;
       assert_always(t_transition > tmin);
       assert_always(t_transition < tmax);
-      const int nts_fixed = ceil((tmax - t_transition) / (fixed_timestep_width_days * DAY));
+      const int nts_fixed = ceil((tmax - t_transition) / (*constant_max_width_days * DAY));
       assert_always(nts_fixed > 0);
       assert_always(nts_fixed < ntimesteps);
       const int nts_log = ntimesteps - nts_fixed;
@@ -2383,10 +2392,11 @@ auto calculate_timesteps(const TimeStepSizeMethod method, const double tmin, con
     }
 
     case TimeStepSizeMethod::CONSTANT_THEN_LOGARITHMIC: {
-      const double t_transition = timestep_transition_time_days * DAY;
+      assert_always(transition_time_days.has_value() && constant_max_width_days.has_value());
+      const double t_transition = *transition_time_days * DAY;
       assert_always(t_transition > tmin);
       assert_always(t_transition < tmax);
-      const int nts_fixed = ceil((t_transition - tmin) / (fixed_timestep_width_days * DAY));
+      const int nts_fixed = ceil((t_transition - tmin) / (*constant_max_width_days * DAY));
       assert_always(nts_fixed > 0);
       assert_always(nts_fixed < ntimesteps);
       // NOLINTBEGIN(readability-suspicious-call-argument)
@@ -2423,7 +2433,7 @@ void setup_timesteps() {
   // globals::ntimesteps is the number of timesteps
 
   globals::timesteps = calculate_timesteps(TIMESTEP_SIZE_METHOD, globals::tmin, globals::tmax, globals::ntimesteps,
-                                           FIXED_TIMESTEP_WIDTH, TIMESTEP_TRANSITION_TIME);
+                                           TIMESTEP_SIZE_CONSTANT_MAX_WIDTH_DAYS, TIMESTEP_SIZE_TRANSITION_TIME_DAYS);
 
   if constexpr (NLTE_TIME_DEPENDENT_FIRST_TIMESTEP.has_value()) {
     // the backward Euler error of the time-dependent equations is first order in width/mid

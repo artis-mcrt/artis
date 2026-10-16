@@ -56,7 +56,7 @@ struct ElementPhotoionData {
 };
 
 // the XCOM table covers Z = 1..xcom_max_atomic_number (indexed by Z - 1)
-constexpr int xcom_max_atomic_number = USE_XCOM_GAMMAPHOTOION ? 100 : 0;
+constexpr int xcom_max_atomic_number = GAMMA_USE_XCOM_PHOTOION ? 100 : 0;
 
 std::array<std::vector<ElementPhotoionData>, xcom_max_atomic_number> photoion_data;
 
@@ -493,7 +493,7 @@ void compton_scatter(Packet& pkt) {
     return GAMMA_USE_KAPPA_GREY.value() * rho;
   }
 
-  if constexpr (!USE_XCOM_GAMMAPHOTOION) {
+  if constexpr (!GAMMA_USE_XCOM_PHOTOION) {
     // Cross sections from equation 2 of Ambwani & Sutherland (1988), ApJ, 325, 820-827, doi:10.1086/166052, after
     // Veigele (1973), Atomic Data and Nuclear Data Tables, 5, 51-111, doi:10.1016/S0092-640X(73)80015-4
 
@@ -917,7 +917,7 @@ void guttman_thermalisation(Packet& pkt) {
 
 void init_gamma_data() {
   init_gamma_linelist();
-  if constexpr (USE_XCOM_GAMMAPHOTOION) {
+  if constexpr (GAMMA_USE_XCOM_PHOTOION) {
     init_xcom_photoion_data();
   }
 }
