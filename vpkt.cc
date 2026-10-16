@@ -834,11 +834,12 @@ void read_vpktparameterfile() {
         "sum of the tau of its lines, nearly the same as with the line-by-line opacities.");
     printlnlog(
         "[warning]   The EXPANSION weight 1 - exp(-tau) adds a maximum of 1 to the optical depth for each line, and "
-        "the LINEBINNEDCAPPED weight min(cap, tau) adds a maximum of the cap.");
+        "the LINEBINNEDCAPPED weight min(BINNED_OPACITY_LINE_TAU_CAP, tau) adds a maximum of "
+        "BINNED_OPACITY_LINE_TAU_CAP = {}.",
+        BINNED_OPACITY_LINE_TAU_CAP);
     printlnlog(
-        "[warning]   The vpkt spectra then have too little absorption in the lines with tau > {}, e.g. in the P Cygni "
-        "absorption troughs.",
-        BINNED_OPACITY_LINE_WEIGHT == BinnedOpacityLineWeight::LINEBINNEDCAPPED ? BINNED_OPACITY_LINE_TAU_CAP : 1.);
+        "[warning]   The vpkt spectra then have too little absorption in the lines with a larger tau, e.g. in the P "
+        "Cygni absorption troughs.");
     if constexpr (expopac_linebinned_weights_permitted) {
       printlnlog("[warning]   Use LINEBINNED for vpkts.");
     } else {
