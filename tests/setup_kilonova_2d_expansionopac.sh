@@ -31,7 +31,7 @@ sedopt 'constexpr int RATECOEFF_TABLESIZE.*' 'constexpr int RATECOEFF_TABLESIZE 
 sedopt 'constexpr double MINTEMP.*' 'constexpr double MINTEMP = 1000.;'
 sedopt 'constexpr double MAXTEMP.*' 'constexpr double MAXTEMP = 20000.;'
 
-sedopt 'constexpr bool RPKT_USE_EXPANSION_OPACITIES.*' 'constexpr bool RPKT_USE_EXPANSION_OPACITIES = true;'
+sedopt 'constexpr bool RPKT_USE_BINNED_OPACITIES.*' 'constexpr bool RPKT_USE_BINNED_OPACITIES = true;'
 sedopt 'constexpr std::optional<float> RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.*' 'constexpr std::optional<float> RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY = 1.;'
 
 sedopt 'constexpr bool KEEP_ESCAPED_GAMMAS.*' 'constexpr bool KEEP_ESCAPED_GAMMAS = true;'

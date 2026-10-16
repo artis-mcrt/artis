@@ -155,11 +155,11 @@ constexpr double TIMESTEP_TRANSITION_TIME = -1.;
 
 constexpr bool BFCOOLING_USELEVELPOPNOTIONPOP = false;
 
-constexpr bool RPKT_USE_EXPANSION_OPACITIES = false;
+constexpr bool RPKT_USE_BINNED_OPACITIES = false;
 
-constexpr bool VPKT_USE_EXPANSION_OPACITIES = false;
+constexpr bool VPKT_USE_BINNED_OPACITIES = false;
 
-constexpr ExpansionOpacityMethod EXPANSION_OPACITY_METHOD = ExpansionOpacityMethod::EXPANSION;
+constexpr BinnedOpacityMethod BINNED_OPACITY_METHOD{BinnedOpacityMethod::EXPANSION};
 
 constexpr std::optional<float> RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY;
 

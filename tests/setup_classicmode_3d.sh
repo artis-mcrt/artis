@@ -25,7 +25,7 @@ sedopt "constexpr std::int64_t NUM_PACKETS.*" "constexpr std::int64_t NUM_PACKET
 
 sedopt 'constexpr bool VPKT_ON.*' 'constexpr bool VPKT_ON = true;'
 sedopt 'constexpr bool VPKT_WRITE_CONTRIBS.*' 'constexpr bool VPKT_WRITE_CONTRIBS = true;'
-sedopt 'constexpr bool VPKT_USE_EXPANSION_OPACITIES.*' 'constexpr bool VPKT_USE_EXPANSION_OPACITIES = true;'
+sedopt 'constexpr bool VPKT_USE_BINNED_OPACITIES.*' 'constexpr bool VPKT_USE_BINNED_OPACITIES = true;'
 
 sedopt 'constexpr bool KEEP_ESCAPED_GAMMAS.*' 'constexpr bool KEEP_ESCAPED_GAMMAS = true;'
 

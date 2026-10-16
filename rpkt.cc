@@ -42,15 +42,18 @@ static_assert(!RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.has_value() ||
                   RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.value() <= 1.,
               "RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY must <= 1.0 if set");
 
-static_assert(!RPKT_USE_EXPANSION_OPACITIES || !VPKT_ON, "VPKT cannot be used with r-packet expansion opacities");
+static_assert(!RPKT_USE_BINNED_OPACITIES || !VPKT_ON, "VPKT cannot be used with r-packet expansion opacities");
 
-static_assert(EXPANSION_OPACITY_METHOD == ExpansionOpacityMethod::EXPANSION || expopac_linebinned_weights_permitted,
+static_assert(BINNED_OPACITY_METHOD.line_weight == BinnedOpacityMethod::EXPANSION ||
+                  expopac_linebinned_weights_permitted,
               "LINEBINNEDCAPPED and LINEBINNED with a nonzero RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY need "
-              "RPKT_USE_EXPANSION_OPACITIES");
+              "RPKT_USE_BINNED_OPACITIES");
 
-// the bin walk of RPKT_USE_EXPANSION_OPACITIES passes lines without the line estimators
-static_assert(!DETAILED_LINE_ESTIMATORS_ON || !RPKT_USE_EXPANSION_OPACITIES,
+// the bin walk of RPKT_USE_BINNED_OPACITIES passes lines without the line estimators
+static_assert(!DETAILED_LINE_ESTIMATORS_ON || !RPKT_USE_BINNED_OPACITIES,
               "DETAILED_LINE_ESTIMATORS_ON needs line-by-line r-packets");
+
+static_assert(BINNED_OPACITY_METHOD.line_weight_cap > 0., "the line_weight_cap of BINNED_OPACITY_METHOD must be > 0");
 
 namespace {
 // cumulative integral over the bins of the true absorption kappa times the Planck function, per non-empty cell.
@@ -59,13 +62,13 @@ namespace {
 MPI_shared_array<double> expansionopacity_planck_cumulative{};
 
 // The weight of a line with the Sobolev optical depth tau_line in the expansion opacity of its wavelength bin,
-// kappa = sum of (lambda / delta_lambda) * weight / (c t rho). EXPANSION_OPACITY_METHOD selects the weight.
+// kappa = sum of (lambda / delta_lambda) * weight / (c t rho). BINNED_OPACITY_METHOD selects the weight.
 [[nodiscard]] DEVICE_FUNC auto get_binned_opacity_line_weight(const double tau_line) -> double {
-  if constexpr (EXPANSION_OPACITY_METHOD == ExpansionOpacityMethod::EXPANSION) {
+  if constexpr (BINNED_OPACITY_METHOD.line_weight == BinnedOpacityMethod::EXPANSION) {
     return -std::expm1(-tau_line);
-  } else if constexpr (EXPANSION_OPACITY_METHOD == ExpansionOpacityMethod::LINEBINNEDCAPPED) {
+  } else if constexpr (BINNED_OPACITY_METHOD.line_weight == BinnedOpacityMethod::LINEBINNEDCAPPED) {
     // this argument order keeps a NaN
-    return std::min(tau_line, 1.);
+    return std::min(tau_line, BINNED_OPACITY_METHOD.line_weight_cap);
   } else {
     return tau_line;
   }
@@ -575,7 +578,7 @@ auto do_rpkt_step(Packet& pkt, const double t2, ContinuumOpacity& chi_rpkt_cont)
     // makes each event distance infinite or NaN, so the packet moves to the abort distance with no event.
     if (!std::isfinite(dnu_on_dl) || (dnu_on_dl >= 0.)) [[unlikely]] {
       edist = std::numeric_limits<double>::max();
-    } else if constexpr (RPKT_USE_EXPANSION_OPACITIES) {
+    } else if constexpr (RPKT_USE_BINNED_OPACITIES) {
       std::tie(edist, event_is_boundbound) = get_possible_event_expansion_opacity(
           nonemptymgi, pkt, chi_rpkt_cont, pktmastate, tau_rnd, nu_cmf_abort, dnu_on_dl, doppler);
       // the bin walk passes lines without a line position, so the next step searches from nu_cmf
@@ -614,8 +617,7 @@ auto do_rpkt_step(Packet& pkt, const double t2, ContinuumOpacity& chi_rpkt_cont)
     } else {
       // with expansion opacities, the event comes from a binned opacity and pktmastate holds no
       // activating line, so the absorption type gets the sentinel for a binned absorption
-      pkt.absorptiontype =
-          RPKT_USE_EXPANSION_OPACITIES ? ABSTYPE_BOUNDBOUND_EXPANSIONOPACITY : pktmastate.activatingline;
+      pkt.absorptiontype = RPKT_USE_BINNED_OPACITIES ? ABSTYPE_BOUNDBOUND_EXPANSIONOPACITY : pktmastate.activatingline;
       pkt.absorptionfreq = pkt.nu_rf;
 
       // Probability based thermalisation (i.e. redistribution of the packet frequency) or scattering
@@ -962,7 +964,7 @@ void allocate_expansionopacities() {
   const auto nonempty_npts_model = grid::get_nonempty_npts_model();
 
   assert_always(expansionopacities.empty());
-  if constexpr (RPKT_USE_EXPANSION_OPACITIES || VPKT_USE_EXPANSION_OPACITIES) {
+  if constexpr (RPKT_USE_BINNED_OPACITIES || VPKT_USE_BINNED_OPACITIES) {
     expansionopacities = MPI_shared_array<float>(nonempty_npts_model * expopac_nbins);
   }
 
@@ -1071,7 +1073,7 @@ template void calculate_chi_rpkt_cont<false>(const double nu_cmf, ContinuumOpaci
 void MPI_Bcast_binned_opacities(const ptrdiff_t nstart_nonempty, const ptrdiff_t ndo_nonempty, const int root_node_id) {
   if (globals::rank_in_node == 0) {
     assert_always(nstart_nonempty >= 0);
-    if constexpr (RPKT_USE_EXPANSION_OPACITIES || VPKT_USE_EXPANSION_OPACITIES) {
+    if constexpr (RPKT_USE_BINNED_OPACITIES || VPKT_USE_BINNED_OPACITIES) {
       MPI_Bcast_safe(expansionopacities.subspan(nstart_nonempty * expopac_nbins, ndo_nonempty * expopac_nbins),
                      root_node_id, globals::mpi_comm_internode);
     }
@@ -1086,7 +1088,7 @@ void MPI_Bcast_binned_opacities(const ptrdiff_t nstart_nonempty, const ptrdiff_t
 
 // Calculate the binned expansion opacities of one cell: within each frequency bin, the Sobolev optical
 // depths of all lines are combined into a single effective opacity for the bin. Called when
-// RPKT_USE_EXPANSION_OPACITIES or VPKT_USE_EXPANSION_OPACITIES replaces the line-by-line opacity for
+// RPKT_USE_BINNED_OPACITIES or VPKT_USE_BINNED_OPACITIES replaces the line-by-line opacity for
 // r-packets or virtual packets, and also when RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY is set.
 void calculate_expansion_opacities(const int nonemptymgi) {
   const auto rho = grid::get_rho(nonemptymgi);
@@ -1136,7 +1138,7 @@ void calculate_expansion_opacities(const int nonemptymgi) {
     const auto bin_kappa_bb = static_cast<float>(1. / (CLIGHT * t_mid * rho) * bin_linesum);
     assert_always(std::isfinite(bin_kappa_bb));
 
-    if constexpr (RPKT_USE_EXPANSION_OPACITIES || VPKT_USE_EXPANSION_OPACITIES) {
+    if constexpr (RPKT_USE_BINNED_OPACITIES || VPKT_USE_BINNED_OPACITIES) {
       expansionopacities[(nonemptymgi * expopac_nbins) + binindex] = bin_kappa_bb;
     }
 

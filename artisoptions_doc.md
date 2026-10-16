@@ -151,7 +151,7 @@ constexpr double RADFIELDBINS_NU_MAX;
 // is the electron temperature of the cell. Only its dilution factor comes from the fit.
 constexpr double RADFIELDBINS_T_E_SUPERBIN_NU_MAX;
 
-// Store the Jb_lu estimators of the lines that radfield::init() selects. This needs RPKT_USE_EXPANSION_OPACITIES
+// Store the Jb_lu estimators of the lines that radfield::init() selects. This needs RPKT_USE_BINNED_OPACITIES
 // false.
 constexpr bool DETAILED_LINE_ESTIMATORS_ON;
 
@@ -371,34 +371,35 @@ constexpr double TIMESTEP_TRANSITION_TIME;
 // target gets the whole ion population.
 constexpr bool BFCOOLING_USELEVELPOPNOTIONPOP;
 
-// Use expansion opacities instead of line-by-line opacities for the real packets in the cells that are not
+// Use binned opacities instead of line-by-line opacities for the real packets in the cells that are not
 // thick. Not compatible with VPKT_ON.
-constexpr bool RPKT_USE_EXPANSION_OPACITIES;
+constexpr bool RPKT_USE_BINNED_OPACITIES;
 
-// Use expansion opacities instead of line-by-line opacities for the virtual packets. Use the LINEBINNED weight of
-// EXPANSION_OPACITY_METHOD with this option. With a different weight, sn3d writes a warning to the log. LINEBINNED
-// needs an RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY of zero or no value (see EXPANSION_OPACITY_METHOD).
-constexpr bool VPKT_USE_EXPANSION_OPACITIES;
+// Use binned opacities instead of line-by-line opacities for the virtual packets. Use the LINEBINNED weight of
+// BINNED_OPACITY_METHOD with this option. With a different weight, sn3d writes a warning to the log. LINEBINNED
+// needs an RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY of zero or no value (see BINNED_OPACITY_METHOD).
+constexpr bool VPKT_USE_BINNED_OPACITIES;
 
-// The line weight in the expansion opacity of each wavelength bin of RPKT_USE_EXPANSION_OPACITIES,
-// VPKT_USE_EXPANSION_OPACITIES, and RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY. A line with the Sobolev optical
+// The line weight in the binned opacity of each wavelength bin of RPKT_USE_BINNED_OPACITIES,
+// VPKT_USE_BINNED_OPACITIES, and RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY. A line with the Sobolev optical
 // depth tau adds (lambda / delta_lambda) * weight to the sum of its bin:
 // - EXPANSION: 1 - exp(-tau) (Eastman & Pinto 1993, ApJ, 412, 731-751, doi:10.1086/172957).
-// - LINEBINNEDCAPPED: min(1, tau), the line-binned opacity with a limit of 1 for each line.
+// - LINEBINNEDCAPPED: min(cap, tau), the line-binned opacity with a limit for each line. The second value sets
+//   the cap, and the default is 1, e.g. BINNED_OPACITY_METHOD{BinnedOpacityMethod::LINEBINNEDCAPPED, 5.}.
 // - LINEBINNED: tau, the line-binned opacity (Fontes, Fryer, Hungerford, Wollaeger & Korobkin 2020, MNRAS, 493,
 //   4143-4171, doi:10.1093/mnras/staa485).
 // With a nonzero RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY, LINEBINNEDCAPPED and LINEBINNED need
-// RPKT_USE_EXPANSION_OPACITIES. A line-by-line r-packet absorbs the fraction 1 - exp(-tau) in each line, so the
+// RPKT_USE_BINNED_OPACITIES. A line-by-line r-packet absorbs the fraction 1 - exp(-tau) in each line, so the
 // thermal emission must then use EXPANSION. For the virtual packets, LINEBINNED gives nearly the line-by-line optical
 // depth of a bin that the packet fully crosses. EXPANSION and LINEBINNEDCAPPED give a smaller optical depth for a
-// line with tau > 1.
-constexpr ExpansionOpacityMethod EXPANSION_OPACITY_METHOD;
+// line with tau > 1 or tau > cap.
+constexpr BinnedOpacityMethod BINNED_OPACITY_METHOD;
 
 // Replace the macroatom with a thermalisation probability P for each bound-bound absorption, and a scattering
 // with probability 1 - P. Every k-packet in a cell that is not thick then emits a blackbody spectrum weighted
 // with the true absorption opacity. That opacity is the sum of P times the expansion opacity, the free-free
 // opacity, and the bound-free opacity of each continuum times 1 - nu_edge / nu. The code therefore computes the
-// expansion opacity bins also without RPKT_USE_EXPANSION_OPACITIES. A thick cell samples a plain Planck function.
+// expansion opacity bins also without RPKT_USE_BINNED_OPACITIES. A thick cell samples a plain Planck function.
 // No value keeps the macroatom.
 constexpr std::optional<float> RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY;
 
