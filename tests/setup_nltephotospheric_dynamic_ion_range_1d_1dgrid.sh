@@ -46,6 +46,9 @@ sedopt 'constexpr int DETAILED_BF_ESTIMATORS_USEFROMTIMESTEP.*' 'constexpr int D
 
 sedopt 'constexpr bool KEEP_ESCAPED_GAMMAS.*' 'constexpr bool KEEP_ESCAPED_GAMMAS = true;'
 
+# This test covers the output files of each rank.
+sedopt 'constexpr bool WRITE_COMBINED_ALLRANK_OUT_FILES.*' 'constexpr bool WRITE_COMBINED_ALLRANK_OUT_FILES = false;'
+
 rm -f artisoptions.h.bak
 
 cd -

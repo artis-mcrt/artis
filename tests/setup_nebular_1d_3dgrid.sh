@@ -34,9 +34,6 @@ sedopt 'constexpr int DETAILED_BF_ESTIMATORS_USEFROMTIMESTEP.*' 'constexpr int D
 
 sedopt 'constexpr bool WRITE_ION_HEATING_COOLING_RATES.*' 'constexpr bool WRITE_ION_HEATING_COOLING_RATES = true;'
 
-# CI compares the files of each rank from two jobs with the combined files from one job.
-sedopt 'constexpr bool WRITE_COMBINED_ALLRANK_OUT_FILES.*' 'constexpr bool WRITE_COMBINED_ALLRANK_OUT_FILES = false;'
-
 rm -f artisoptions.h.bak
 
 cd -
