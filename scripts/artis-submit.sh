@@ -6,7 +6,6 @@ host_fqdn=$(hostname -f 2>/dev/null || hostname)
 
 case "$host_fqdn" in
     *.cosma.*) cluster=cosma8 ;;
-    *.juwels*) cluster=juwels ;;
     *kelvin*) cluster=kelvin2 ;;
     *.leonardo.local) cluster=leonardo ;;
     *meluxina* | *.lxp.lu) cluster=meluxina ;;
