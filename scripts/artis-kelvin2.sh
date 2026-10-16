@@ -17,6 +17,13 @@ module list
 
 cd "${SLURM_SUBMIT_DIR:?}" || exit 1
 
+export MAKEFLAGS="--check-symlink-times --jobs=$(nproc)"
+cd artis
+# Build exspec together with sn3d, so that exspec reads the packet files with the same source version.
+# The exspec job scripts can run exspec without a build.
+make sn3d exspec || exit 1
+cd ..
+
 echo "CPU type: $(c++ -march=native -Q --help=target | grep -- '-march=  ' | cut -f3)"
 
 

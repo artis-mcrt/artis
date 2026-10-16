@@ -19,6 +19,9 @@ module list
 
 cd "${SLURM_SUBMIT_DIR:?}" || exit 1
 
+# Use the exspec that the sn3d job script built from the same source as sn3d. A build here could read
+# a newer checkout.
+
 echo "CPU type: $(c++ -march=native -Q --help=target | grep -- '-march=  ' | cut -f3)"
 
 source ./artis/scripts/corehours-before.sh
