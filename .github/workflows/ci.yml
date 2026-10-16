@@ -144,17 +144,6 @@ jobs:
               working-directory: tests/
               run: cp -a ${{ matrix.testname }}_testrun ${{ matrix.testname }}_onejob
 
-            - name: Compile sn3d with the combined output files for the run in one job
-              if: matrix.testname == 'nebular_1d_3dgrid' && inputs.testmode != 'ON'
-              run: |
-                  # The simulation in one job writes estimators_allranks.out, nlte_allranks.out, and radfield_allranks.out.
-                  # The comparison step below compares them with the combined files that the script makes for the two
-                  # jobs. The other output files must not change.
-                  (cd tests/${{ matrix.testname }}_onejob && source ../setupfuncs.sh && sedopt 'constexpr bool WRITE_COMBINED_ALLRANK_OUT_FILES.*' 'constexpr bool WRITE_COMBINED_ALLRANK_OUT_FILES = true;' && rm -f artisoptions.h.bak)
-                  cp tests/${{ matrix.testname }}_onejob/artisoptions.h .
-                  make REPRODUCIBLE=ON ZSTD=ON TESTMODE=${{ inputs.testmode }} MAX_NODE_SIZE=2 FASTMATH=OFF -j${{ steps.cpu-count.outputs.count }} sn3d
-                  cp sn3d tests/${{ matrix.testname }}_onejob/
-
             - name: Run test job0 start
               id: run_job0
               if: always()
@@ -296,13 +285,6 @@ jobs:
                       echo "::warning::The repository has no results_md5_final.txt for ${{ matrix.testname }}. The step compares nothing."
                   fi
 
-            - name: Setup uv
-              uses: astral-sh/setup-uv@v10.3.0
-              if: always() && inputs.testmode != 'ON'
-              id: setup-uv
-              with:
-                enable-cache: "false"
-
             - name: Compare the two jobs with a simulation in one job
               if: always() && matrix.testname == 'nebular_1d_3dgrid' && inputs.testmode != 'ON'
               working-directory: tests/${{ matrix.testname }}_onejob
@@ -324,16 +306,11 @@ jobs:
                       done) > "$RUNNER_TEMP/md5_${folder}.txt"
                   done
                   diff "$RUNNER_TEMP/md5_${{ matrix.testname }}_testrun.txt" "$RUNNER_TEMP/md5_${{ matrix.testname }}_onejob.txt"
-                  # The script combines the files of the ranks of each job on a copy of the job folder. Both jobs write
-                  # the timestep of the restart, and artistools keeps the text of the first job for that timestep.
-                  lastjobfolder=$(cd ../${{ matrix.testname }}_testrun && ls -d job_from_ts* | grep -v ts0000 | tail -n 1)
+                  # Both jobs write the timestep of the restart, and artistools keeps the text of the first job for that
+                  # timestep.
+                  twojobsfolder=../${{ matrix.testname }}_testrun
+                  lastjobfolder=$(cd "$twojobsfolder" && ls -d job_from_ts* | grep -v ts0000 | tail -n 1)
                   restarttimestep=$((10#${lastjobfolder#job_from_ts}))
-                  for jobfolder in job_from_ts0000 "$lastjobfolder"; do
-                      cp -a "../${{ matrix.testname }}_testrun/${jobfolder}" "$RUNNER_TEMP/"
-                  done
-                  # the script needs modelgridrankassignments.out of the model folder to find a missing file of a rank
-                  cp "../${{ matrix.testname }}_testrun/modelgridrankassignments.out.zst" "$RUNNER_TEMP/"
-                  uv run ../../scripts/combine_allrank_out_files.py "$RUNNER_TEMP/job_from_ts0000" "$RUNNER_TEMP/${lastjobfolder}"
                   # A cell of the estimators starts with the line "timestep <n> modelgridindex <mgi>". Each line of the
                   # nlte and radfield files starts with "<n> <mgi>", after the header line.
                   for basename in estimators nlte radfield; do
@@ -342,8 +319,8 @@ jobs:
                       else
                           later_job_filter='NR > 1 && $1 > ts'
                       fi
-                      (zstdcat "$RUNNER_TEMP/job_from_ts0000/${basename}_allranks.out.zst"
-                       zstdcat "$RUNNER_TEMP/${lastjobfolder}/${basename}_allranks.out.zst" | awk -v ts="$restarttimestep" "$later_job_filter") > "$RUNNER_TEMP/${basename}_twojobs.txt"
+                      (zstdcat "${twojobsfolder}/job_from_ts0000/${basename}_allranks.out.zst"
+                       zstdcat "${twojobsfolder}/${lastjobfolder}/${basename}_allranks.out.zst" | awk -v ts="$restarttimestep" "$later_job_filter") > "$RUNNER_TEMP/${basename}_twojobs.txt"
                       zstdcat "job_from_ts0000/${basename}_allranks.out.zst" > "$RUNNER_TEMP/${basename}_onejob.txt"
                       test -s "$RUNNER_TEMP/${basename}_onejob.txt"
                       cmp "$RUNNER_TEMP/${basename}_twojobs.txt" "$RUNNER_TEMP/${basename}_onejob.txt"
@@ -370,6 +347,13 @@ jobs:
               with:
                   name: ${{ matrix.testname }}_inputfiles
                   path: tests/${{ matrix.testname }}_inputfiles/results_md5*
+
+            - name: Setup uv
+              uses: astral-sh/setup-uv@v10.3.0
+              if: always() && inputs.testmode != 'ON'
+              id: setup-uv
+              with:
+                enable-cache: "false"
 
             - name: Install artistools
               if: always() && inputs.testmode != 'ON'
