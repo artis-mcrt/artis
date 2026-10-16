@@ -384,9 +384,9 @@ constexpr bool BFCOOLING_USELEVELPOPNOTIONPOP;
 // thick. Not compatible with VPKT_ON.
 constexpr bool RPKT_USE_BINNED_OPACITIES;
 
-// Use binned opacities instead of line-by-line opacities for the virtual packets. Use the LINEBINNED weight of
-// BINNED_OPACITY_METHOD with this option. With a different weight, sn3d writes a warning to the log. LINEBINNED
-// needs an RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY of zero or no value (see BINNED_OPACITY_METHOD). This needs
+// Use binned opacities instead of line-by-line opacities for the virtual packets. Set BINNED_OPACITY_LINE_WEIGHT to
+// LINEBINNED with this option. With a different weight, sn3d writes a warning to the log. LINEBINNED needs an
+// RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY of zero or no value (see BINNED_OPACITY_LINE_WEIGHT). This needs
 // VPKT_ON.
 constexpr bool VPKT_USE_BINNED_OPACITIES;
 
@@ -394,16 +394,20 @@ constexpr bool VPKT_USE_BINNED_OPACITIES;
 // VPKT_USE_BINNED_OPACITIES, and RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY. A line with the Sobolev optical
 // depth tau adds (lambda / delta_lambda) * weight to the sum of its bin:
 // - EXPANSION: 1 - exp(-tau) (Eastman & Pinto 1993, ApJ, 412, 731-751, doi:10.1086/172957).
-// - LINEBINNEDCAPPED: min(cap, tau), the line-binned opacity with a limit for each line. The second value sets
-//   the cap, and the default is 1, e.g. BINNED_OPACITY_METHOD{BinnedOpacityMethod::LINEBINNEDCAPPED, 5.}.
+// - LINEBINNEDCAPPED: min(BINNED_OPACITY_LINE_WEIGHT_CAP, tau), the line-binned opacity with a limit for each
+//   line.
 // - LINEBINNED: tau, the line-binned opacity (Fontes, Fryer, Hungerford, Wollaeger & Korobkin 2020, MNRAS, 493,
 //   4143-4171, doi:10.1093/mnras/staa485).
 // With a nonzero RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY, LINEBINNEDCAPPED and LINEBINNED need
 // RPKT_USE_BINNED_OPACITIES. A line-by-line r-packet absorbs the fraction 1 - exp(-tau) in each line, so the
 // thermal emission must then use EXPANSION. For the virtual packets, LINEBINNED gives nearly the line-by-line optical
-// depth of a bin that the packet fully crosses. EXPANSION and LINEBINNEDCAPPED give a smaller optical depth for a
-// line with tau > 1 or tau > cap.
-constexpr BinnedOpacityMethod BINNED_OPACITY_METHOD;
+// depth of a bin that the packet fully crosses. EXPANSION gives a smaller optical depth for a line with tau > 1, and
+// LINEBINNEDCAPPED for a line with tau > BINNED_OPACITY_LINE_WEIGHT_CAP.
+constexpr BinnedOpacityLineWeight BINNED_OPACITY_LINE_WEIGHT;
+
+// The limit of the weight of each line for LINEBINNEDCAPPED, e.g. 1. It must be above zero. The code uses this
+// value only with LINEBINNEDCAPPED.
+constexpr double BINNED_OPACITY_LINE_WEIGHT_CAP;
 
 // Replace the macroatom with a thermalisation probability P for each bound-bound absorption, and a scattering
 // with probability 1 - P. Every k-packet in a cell that is not thick then emits a blackbody spectrum weighted

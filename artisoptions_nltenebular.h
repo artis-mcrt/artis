@@ -144,7 +144,9 @@ constexpr bool RPKT_USE_BINNED_OPACITIES = false;
 
 constexpr bool VPKT_USE_BINNED_OPACITIES = false;
 
-constexpr BinnedOpacityMethod BINNED_OPACITY_METHOD{BinnedOpacityMethod::EXPANSION};
+constexpr BinnedOpacityLineWeight BINNED_OPACITY_LINE_WEIGHT = BinnedOpacityLineWeight::EXPANSION;
+
+constexpr double BINNED_OPACITY_LINE_WEIGHT_CAP = 1.;
 
 constexpr std::optional<float> RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY;
 

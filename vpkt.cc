@@ -429,7 +429,7 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
 
               const auto kappa = expansionopacities[(nonemptymgi * expopac_nbins) + binindex];
               // kappa_exp * rho = (1 / (c t)) * sum_lines (lambda_line / delta_lambda) * weight(tau_sobolev),
-              // tabulated at t_gridstate (see BINNED_OPACITY_METHOD). With tau_sobolev ∝ t^-2, kappa_exp * rho
+              // tabulated at t_gridstate (see BINNED_OPACITY_LINE_WEIGHT). With tau_sobolev ∝ t^-2, kappa_exp * rho
               // ∝ t^-3. The vpkt reaches the line resonances of the bin at times between t_bin_entry and the end of
               // the path. With the LINEBINNED weight, the t^-3 factor at t_bin_path_mid gives the sum of the
               // line-by-line tau_sobolev with an error of second order in delta_lambda / lambda. For the other
@@ -825,8 +825,8 @@ void read_vpktparameterfile() {
 
   printlnlog("vpkt.txt: Nspectra {} per observer", nspectraperobsdir);
 
-  if constexpr (VPKT_USE_BINNED_OPACITIES && BINNED_OPACITY_METHOD.line_weight != BinnedOpacityMethod::LINEBINNED) {
-    printlnlog("[warning] VPKT_USE_BINNED_OPACITIES uses a BINNED_OPACITY_METHOD other than LINEBINNED.");
+  if constexpr (VPKT_USE_BINNED_OPACITIES && BINNED_OPACITY_LINE_WEIGHT != BinnedOpacityLineWeight::LINEBINNED) {
+    printlnlog("[warning] VPKT_USE_BINNED_OPACITIES uses a BINNED_OPACITY_LINE_WEIGHT other than LINEBINNED.");
     printlnlog(
         "[warning]   A vpkt that crosses a line with the Sobolev optical depth tau has the transmission exp(-tau).");
     printlnlog(
@@ -838,9 +838,7 @@ void read_vpktparameterfile() {
     printlnlog(
         "[warning]   The vpkt spectra then have too little absorption in the lines with tau > {}, e.g. in the P Cygni "
         "absorption troughs.",
-        BINNED_OPACITY_METHOD.line_weight == BinnedOpacityMethod::LINEBINNEDCAPPED
-            ? BINNED_OPACITY_METHOD.line_weight_cap
-            : 1.);
+        BINNED_OPACITY_LINE_WEIGHT == BinnedOpacityLineWeight::LINEBINNEDCAPPED ? BINNED_OPACITY_LINE_WEIGHT_CAP : 1.);
     if constexpr (expopac_linebinned_weights_permitted) {
       printlnlog("[warning]   Use LINEBINNED for vpkts.");
     } else {

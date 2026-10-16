@@ -44,8 +44,7 @@ static_assert(!RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.has_value() ||
 
 static_assert(!RPKT_USE_BINNED_OPACITIES || !VPKT_ON, "VPKT cannot be used with r-packet expansion opacities");
 
-static_assert(BINNED_OPACITY_METHOD.line_weight == BinnedOpacityMethod::EXPANSION ||
-                  expopac_linebinned_weights_permitted,
+static_assert(BINNED_OPACITY_LINE_WEIGHT == BinnedOpacityLineWeight::EXPANSION || expopac_linebinned_weights_permitted,
               "LINEBINNEDCAPPED and LINEBINNED with a nonzero RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY need "
               "RPKT_USE_BINNED_OPACITIES");
 
@@ -53,7 +52,7 @@ static_assert(BINNED_OPACITY_METHOD.line_weight == BinnedOpacityMethod::EXPANSIO
 static_assert(!DETAILED_LINE_ESTIMATORS_ON || !RPKT_USE_BINNED_OPACITIES,
               "DETAILED_LINE_ESTIMATORS_ON needs line-by-line r-packets");
 
-static_assert(BINNED_OPACITY_METHOD.line_weight_cap > 0., "the line_weight_cap of BINNED_OPACITY_METHOD must be > 0");
+static_assert(BINNED_OPACITY_LINE_WEIGHT_CAP > 0., "BINNED_OPACITY_LINE_WEIGHT_CAP must be > 0");
 
 namespace {
 // cumulative integral over the bins of the true absorption kappa times the Planck function, per non-empty cell.
@@ -62,13 +61,13 @@ namespace {
 MPI_shared_array<double> expansionopacity_planck_cumulative{};
 
 // The weight of a line with the Sobolev optical depth tau_line in the expansion opacity of its wavelength bin,
-// kappa = sum of (lambda / delta_lambda) * weight / (c t rho). BINNED_OPACITY_METHOD selects the weight.
+// kappa = sum of (lambda / delta_lambda) * weight / (c t rho). BINNED_OPACITY_LINE_WEIGHT selects the weight.
 [[nodiscard]] DEVICE_FUNC auto get_binned_opacity_line_weight(const double tau_line) -> double {
-  if constexpr (BINNED_OPACITY_METHOD.line_weight == BinnedOpacityMethod::EXPANSION) {
+  if constexpr (BINNED_OPACITY_LINE_WEIGHT == BinnedOpacityLineWeight::EXPANSION) {
     return -std::expm1(-tau_line);
-  } else if constexpr (BINNED_OPACITY_METHOD.line_weight == BinnedOpacityMethod::LINEBINNEDCAPPED) {
+  } else if constexpr (BINNED_OPACITY_LINE_WEIGHT == BinnedOpacityLineWeight::LINEBINNEDCAPPED) {
     // this argument order keeps a NaN
-    return std::min(tau_line, BINNED_OPACITY_METHOD.line_weight_cap);
+    return std::min(tau_line, BINNED_OPACITY_LINE_WEIGHT_CAP);
   } else {
     return tau_line;
   }

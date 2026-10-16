@@ -152,7 +152,7 @@ auto calculate_chi_ffheat_nnionpart(int nonemptymgi) -> double;
 
 // Get the correction of a binned expansion opacity for the path that sweeps the bin. The packet crosses
 // each line of the bin once, so the bin optical depth must equal the sum of the line weights of
-// BINNED_OPACITY_METHOD.
+// BINNED_OPACITY_LINE_WEIGHT.
 // calculate_expansion_opacities() assumes the path c * t * dnu / nu, which is the path that
 // get_linedistance() gives with the first-order Doppler shift. The factor is the ratio of that path to the
 // relativistic one, which is the Doppler factor times the Lorentz factor. Give the time at the start of the path

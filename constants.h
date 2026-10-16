@@ -111,15 +111,7 @@ enum class ParticleThermalisationScheme {
 
 enum class RpktGreyType { FEGROUP_APPROX, TANAKA2020_ELECTRONFRAC, JUST2022_TEMP_LANTHANIDEFRAC };
 
-// the line weight of the binned opacities. line_weight_cap applies to LINEBINNEDCAPPED only.
-struct BinnedOpacityMethod {
-  enum LineWeight { EXPANSION, LINEBINNEDCAPPED, LINEBINNED };
-  LineWeight line_weight;
-  double line_weight_cap;
-
-  constexpr explicit BinnedOpacityMethod(const LineWeight weight, const double weight_cap = 1.)
-      : line_weight(weight), line_weight_cap(weight_cap) {}
-};
+enum class BinnedOpacityLineWeight { EXPANSION, LINEBINNEDCAPPED, LINEBINNED };
 
 // how the code handles the energy that the non-thermal leptons deposit
 // NT_OFF: no non-thermal ionisation
