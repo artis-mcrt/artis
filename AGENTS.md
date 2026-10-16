@@ -201,7 +201,7 @@ These steps differ from a plain build and are easy to miss:
 
 - Build from the `artisoptions.h` of the model folder, not from the preset.
   Each setup script copies a preset and then changes some option values with
-  `sedopt`.
+  `setoption` from `tests/setupfuncs.sh`.
   Remove your `artisoptions.h` before the copy, because `cp` writes through a
   symlink and replaces the content of the tracked preset.
 - Remove `input.txt` before the first run, as the workflow does. `sn3d` then
@@ -592,10 +592,10 @@ Do the text edits first. They can make a finished compile out of date.
    `artisoptions_doc.md`. Put it under the same heading and at the same
    position in each file.
 2. Search `tests/setup_*.sh` and `.github/workflows/ci.yml` for the name of an
-   option that you renamed or reformatted. Those files change option lines with
-   `sedopt` from `tests/setupfuncs.sh` and an exact text match. The pattern also
-   contains the type, e.g. `constexpr int`. `sedopt` stops the setup script if
-   the pattern matches nothing, and the test then fails in CI.
+   option that you renamed. Those files change options with `setoption` from
+   `tests/setupfuncs.sh`, which finds the option by its name. `setoption` stops
+   the setup script unless the name matches exactly one statement, and the test
+   then fails in CI.
 3. Run `prek run --all-files` and correct every message.
 4. Run `make OPTIMIZE=OFF unittests && ./unittests` if `unittests.cc` calls a
    function that you changed.

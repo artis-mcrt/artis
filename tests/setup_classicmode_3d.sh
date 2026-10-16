@@ -20,16 +20,13 @@ ln -s ../../ artis
 
 cp artis/artisoptions_classic.h artisoptions.h
 
+setoption NUM_PACKETS '6e4'
 
-sedopt "constexpr std::int64_t NUM_PACKETS.*" "constexpr std::int64_t NUM_PACKETS = 6e4;"
+setoption VPKT_ON 'true'
+setoption VPKT_WRITE_CONTRIBS 'true'
+setoption VPKT_USE_BINNED_OPACITIES 'true'
 
-sedopt 'constexpr bool VPKT_ON.*' 'constexpr bool VPKT_ON = true;'
-sedopt 'constexpr bool VPKT_WRITE_CONTRIBS.*' 'constexpr bool VPKT_WRITE_CONTRIBS = true;'
-sedopt 'constexpr bool VPKT_USE_BINNED_OPACITIES.*' 'constexpr bool VPKT_USE_BINNED_OPACITIES = true;'
-
-sedopt 'constexpr bool KEEP_ESCAPED_GAMMAS.*' 'constexpr bool KEEP_ESCAPED_GAMMAS = true;'
-
-rm -f artisoptions.h.bak
+setoption KEEP_ESCAPED_GAMMAS 'true'
 
 cd -
 

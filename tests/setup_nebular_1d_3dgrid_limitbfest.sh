@@ -22,23 +22,21 @@ ln -s ../../ artis
 
 cp artis/artisoptions_nltenebular.h artisoptions.h
 
-sedopt "constexpr std::int64_t NUM_PACKETS.*" "constexpr std::int64_t NUM_PACKETS = 4e6;"
+setoption NUM_PACKETS '4e6'
 
-sedopt 'constexpr std::optional<GridType> GRID_TYPE_OVERRIDE.*' 'constexpr std::optional<GridType> GRID_TYPE_OVERRIDE = GridType::CARTESIAN3D;'
+setoption GRID_TYPE_OVERRIDE 'GridType::CARTESIAN3D'
 
-sedopt 'constexpr int RATECOEFF_TABLESIZE.*' 'constexpr int RATECOEFF_TABLESIZE = 20;'
-sedopt 'constexpr double MINTEMP.*' 'constexpr double MINTEMP = 2000.;'
-sedopt 'constexpr double MAXTEMP.*' 'constexpr double MAXTEMP = 10000.;'
+setoption RATECOEFF_TABLESIZE '20'
+setoption MINTEMP '2000.'
+setoption MAXTEMP '10000.'
 
-sedopt 'constexpr int MULTIBIN_RADFIELD_FIRST_TIMESTEP.*' 'constexpr int MULTIBIN_RADFIELD_FIRST_TIMESTEP = 7;'
+setoption MULTIBIN_RADFIELD_FIRST_TIMESTEP '7'
 
-sedopt 'constexpr int DETAILED_BF_ESTIMATORS_FIRST_TIMESTEP.*' 'constexpr int DETAILED_BF_ESTIMATORS_FIRST_TIMESTEP = 7;'
+setoption DETAILED_BF_ESTIMATORS_FIRST_TIMESTEP '7'
 
-sedopt 'constexpr bool SF_AUGER_CONTRIBUTION_ON.*' 'constexpr bool SF_AUGER_CONTRIBUTION_ON = false;'
+setoption SF_AUGER_CONTRIBUTION_ON 'false'
 
-sedopt 'constexpr bool DETAILED_BF_ESTIMATORS_LEVEL_SELECTED.*' 'constexpr bool DETAILED_BF_ESTIMATORS_LEVEL_SELECTED(int element_z, int ionstage, int level) { return level <= ION_NLEVELS_EXCITED_NLTE(element_z, ionstage); }'
-
-rm -f artisoptions.h.bak
+setoption DETAILED_BF_ESTIMATORS_LEVEL_SELECTED '{ return level <= ION_NLEVELS_EXCITED_NLTE(element_z, ionstage); }'
 
 cd -
 

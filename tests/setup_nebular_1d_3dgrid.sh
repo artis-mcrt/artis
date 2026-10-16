@@ -20,21 +20,19 @@ ln -s ../../ artis
 
 cp artis/artisoptions_nltenebular.h artisoptions.h
 
-sedopt "constexpr std::int64_t NUM_PACKETS.*" "constexpr std::int64_t NUM_PACKETS = 4e6;"
+setoption NUM_PACKETS '4e6'
 
-sedopt 'constexpr std::optional<GridType> GRID_TYPE_OVERRIDE.*' 'constexpr std::optional<GridType> GRID_TYPE_OVERRIDE = GridType::CARTESIAN3D;'
+setoption GRID_TYPE_OVERRIDE 'GridType::CARTESIAN3D'
 
-sedopt 'constexpr int RATECOEFF_TABLESIZE.*' 'constexpr int RATECOEFF_TABLESIZE = 20;'
-sedopt 'constexpr double MINTEMP.*' 'constexpr double MINTEMP = 2000.;'
-sedopt 'constexpr double MAXTEMP.*' 'constexpr double MAXTEMP = 10000.;'
+setoption RATECOEFF_TABLESIZE '20'
+setoption MINTEMP '2000.'
+setoption MAXTEMP '10000.'
 
-sedopt 'constexpr int MULTIBIN_RADFIELD_FIRST_TIMESTEP.*' 'constexpr int MULTIBIN_RADFIELD_FIRST_TIMESTEP = 7;'
+setoption MULTIBIN_RADFIELD_FIRST_TIMESTEP '7'
 
-sedopt 'constexpr int DETAILED_BF_ESTIMATORS_FIRST_TIMESTEP.*' 'constexpr int DETAILED_BF_ESTIMATORS_FIRST_TIMESTEP = 7;'
+setoption DETAILED_BF_ESTIMATORS_FIRST_TIMESTEP '7'
 
-sedopt 'constexpr bool WRITE_ION_HEATING_COOLING_RATES.*' 'constexpr bool WRITE_ION_HEATING_COOLING_RATES = true;'
-
-rm -f artisoptions.h.bak
+setoption WRITE_ION_HEATING_COOLING_RATES 'true'
 
 cd -
 
