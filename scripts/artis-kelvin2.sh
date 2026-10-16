@@ -1,4 +1,4 @@
-#!/bin/bash -x
+#!/bin/bash -l
 #SBATCH --ntasks=1024
 #SBATCH --ntasks-per-node=128
 #SBATCH --time=24:00:00
@@ -25,7 +25,6 @@ make sn3d exspec || exit 1
 cd ..
 
 echo "CPU type: $(c++ -march=native -Q --help=target | grep -- '-march=  ' | cut -f3)"
-
 
 hoursleft=$(python3 ./artis/scripts/slurmjobhoursleft.py ${SLURM_JOB_ID})
 source ./artis/scripts/corehours-before.sh

@@ -1,5 +1,4 @@
 #!/bin/bash -l
-
 #SBATCH --ntasks 960
 ##SBATCH --ntasks 1024
 ##SBATCH --ntasks 1920
@@ -10,8 +9,6 @@
 #SBATCH --account=dp033
 ##SBATCH --account=dp385
 #SBATCH --exclusive
-#SBATCH -o slurm-%J.out
-#SBATCH -e slurm-%J.out
 #SBATCH --mail-type=ALL
 ##SBATCH --mail-user=f.callan@qub.ac.uk
 ##SBATCH --mail-user=luke.shingles@gmail.com
@@ -26,8 +23,6 @@ module load python
 
 module list
 
-export PATH=/cosma/local/intel/oneAPI_2021.3.0/intelpython/python3.7/pkgs/zstd-1.4.5-h2daa505_0/bin:$PATH
-
 cd "${SLURM_SUBMIT_DIR:?}" || exit 1
 
 export MAKEFLAGS="--check-symlink-times --jobs=$(nproc)"
@@ -38,7 +33,6 @@ make sn3d exspec || exit 1
 cd ..
 
 echo "CPU type: $(c++ -march=native -Q --help=target | grep -- '-march=  ' | cut -f3)"
-
 
 hoursleft=$(python3 ./artis/scripts/slurmjobhoursleft.py ${SLURM_JOB_ID})
 source ./artis/scripts/corehours-before.sh

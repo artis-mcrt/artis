@@ -1,5 +1,4 @@
 #!/bin/bash -l
-
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=32
 # the memory of a node (1030000 MB) divided by its 128 CPUs
@@ -8,8 +7,6 @@
 #SBATCH --partition=cosma8-serial
 #SBATCH --account=dp033
 ##SBATCH --account=dp385
-#SBATCH -o slurm-%J.out
-#SBATCH -e slurm-%J.out
 #SBATCH --mail-type=ALL
 ##SBATCH --mail-user=f.callan@qub.ac.uk
 ##SBATCH --mail-user=luke.shingles@gmail.com
@@ -24,9 +21,10 @@ module load python
 
 module list
 
-export PATH=/cosma/local/intel/oneAPI_2021.3.0/intelpython/python3.7/pkgs/zstd-1.4.5-h2daa505_0/bin:$PATH
-
 cd "${SLURM_SUBMIT_DIR:?}" || exit 1
+
+# Use the exspec that the sn3d job script built from the same source as sn3d. A build here could read
+# a newer checkout.
 
 echo "CPU type: $(c++ -march=native -Q --help=target | grep -- '-march=  ' | cut -f3)"
 

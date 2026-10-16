@@ -40,7 +40,6 @@ cd "${SLURM_SUBMIT_DIR:?}" || exit 1
 
 echo "CPU type: $("$OMPI_CXX" -march=native -Q --help=target | grep -- '-march=  ' | cut -f3)"
 
-
 source ./artis/scripts/corehours-before.sh
 echo "$(date): before exspec"
 
