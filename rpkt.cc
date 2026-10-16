@@ -52,7 +52,7 @@ static_assert(BINNED_OPACITY_LINE_WEIGHT == BinnedOpacityLineWeight::EXPANSION |
 static_assert(!DETAILED_LINE_ESTIMATORS_ON || !RPKT_USE_BINNED_OPACITIES,
               "DETAILED_LINE_ESTIMATORS_ON needs line-by-line r-packets");
 
-static_assert(LINE_BINNED_OPACITY_LINE_TAU_CAP > 0., "LINE_BINNED_OPACITY_LINE_TAU_CAP must be > 0");
+static_assert(BINNED_OPACITY_LINE_TAU_CAP > 0., "BINNED_OPACITY_LINE_TAU_CAP must be > 0");
 
 namespace {
 // cumulative integral over the bins of the true absorption kappa times the Planck function, per non-empty cell.
@@ -67,7 +67,7 @@ MPI_shared_array<double> expansionopacity_planck_cumulative{};
     return -std::expm1(-tau_line);
   } else if constexpr (BINNED_OPACITY_LINE_WEIGHT == BinnedOpacityLineWeight::LINEBINNEDCAPPED) {
     // this argument order keeps a NaN
-    return std::min(tau_line, LINE_BINNED_OPACITY_LINE_TAU_CAP);
+    return std::min(tau_line, BINNED_OPACITY_LINE_TAU_CAP);
   } else {
     return tau_line;
   }
