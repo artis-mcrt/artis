@@ -22,6 +22,11 @@ fi
 
 echo "submit.sh: host name '$host_fqdn' is on the cluster $cluster"
 
+if [ -z "$EMAIL" ]; then
+    echo "submit.sh: WARNING: EMAIL is not set, so Slurm sends its messages to the default address of the cluster." >&2
+    echo "submit.sh: Add a line like 'export EMAIL=your_email_address' to your .bashrc." >&2
+fi
+
 # Some clusters have a submit script, because sbatch must get the options on the command line.
 if [ -f "artis/scripts/artis-$cluster-submit.sh" ]; then
     source "artis/scripts/artis-$cluster-submit.sh"
