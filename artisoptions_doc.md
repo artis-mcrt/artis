@@ -15,18 +15,18 @@ constexpr bool INITIAL_PACKETS_ON;
 // follows the decay power at its time.
 constexpr bool UNIFORM_PELLET_ENERGIES;
 
-// The timestep scheme: LOGARITHMIC, CONSTANT, LOGARITHMIC_THEN_CONSTANT, or CONSTANT_THEN_LOGARITHMIC. The two
-// hybrid schemes need TIMESTEP_SIZE_CONSTANT_MAX_WIDTH_DAYS and TIMESTEP_SIZE_TRANSITION_TIME_DAYS. The number of
-// constant timesteps must be below the total number of timesteps, or the run stops.
+// The timestep scheme: LOGARITHMIC, CONSTANT, LOGARITHMIC_THEN_CONSTANT, or CONSTANT_THEN_LOGARITHMIC. The last two
+// are the hybrid schemes. They need TIMESTEP_SIZE_CONSTANT_MAX_WIDTH_DAYS and TIMESTEP_SIZE_TRANSITION_TIME_DAYS. The
+// number of constant timesteps must be below the total number of timesteps, or the run stops.
 constexpr TimeStepSizeMethod TIMESTEP_SIZE_METHOD;
 
 // The maximum width of a constant timestep in days. The code divides the constant interval into equal timesteps of
-// at most this width. LOGARITHMIC_THEN_CONSTANT and CONSTANT_THEN_LOGARITHMIC need a value, and the other schemes
-// need no value.
+// at most this width. The hybrid schemes need a positive value. With the other schemes, a value gives a compile
+// error.
 constexpr std::optional<double> TIMESTEP_SIZE_CONSTANT_MAX_WIDTH_DAYS;
 
-// The time of the change between the two schemes in days. LOGARITHMIC_THEN_CONSTANT and CONSTANT_THEN_LOGARITHMIC
-// need a value, and the other schemes need no value.
+// The time of the change between the two schemes in days. The hybrid schemes need a value between tmin and tmax
+// of input.txt. With the other schemes, a value gives a compile error.
 constexpr std::optional<double> TIMESTEP_SIZE_TRANSITION_TIME_DAYS;
 
 // --- Grid and composition ---
@@ -63,7 +63,7 @@ constexpr bool USE_MICROCLUMPING;
 
 // The clumping factor of a cell from the time and the radial velocity. The code passes
 // globals::timesteps[nts].mid and grid::get_modelcell_mean_radial_pos_tmin(mgi) / globals::tmin [cm/s]. The
-// result must be finite and at least 1. A value of 1 means no clumping. The code uses this function only with
+// result must be finite and at least 1. A value of 1 means no clumping. This function has an effect only with
 // USE_MICROCLUMPING.
 constexpr float MICROCLUMPING_FACTOR(double tmid, double rad_vel);
 
@@ -199,11 +199,11 @@ constexpr std::optional<int> NLTE_TIME_DEPENDENT_FIRST_TIMESTEP;
 constexpr bool STRICT_POPULATION_CHECKING;
 
 // The population of a level per statistical weight, relative to the same ratio of the ground level, above
-// which STRICT_POPULATION_CHECKING rejects the solution. The code uses this value only with
+// which STRICT_POPULATION_CHECKING rejects the solution. This value has an effect only with
 // STRICT_POPULATION_CHECKING.
 constexpr float STRICT_POPULATION_CHECKING_INVERSION_FACTOR_SOLVER_FAIL;
 
-// The same ratio above which the solver logs a warning. The code uses this value only with
+// The same ratio above which the solver logs a warning. This value has an effect only with
 // STRICT_POPULATION_CHECKING.
 constexpr float STRICT_POPULATION_CHECKING_INVERSION_FACTOR_PRINTOUT_WARNING;
 
@@ -266,20 +266,20 @@ constexpr bool USE_LUT_PHOTOION;
 // false with this option, because the tables assume a Planck function. A static_assert checks this.
 constexpr bool MULTIBIN_RADFIELD_MODEL_ON;
 
-// The number of bins, including the T_e superbin. The code uses this value only with MULTIBIN_RADFIELD_MODEL_ON.
+// The number of bins, including the T_e superbin. This value has an effect only with MULTIBIN_RADFIELD_MODEL_ON.
 constexpr int RADFIELDBINCOUNT;
 
 // The first timestep at which radfield() reads the binned radiation field. It must be at or after the first
-// NLTE timestep. The code uses this value only with MULTIBIN_RADFIELD_MODEL_ON.
+// NLTE timestep. This value has an effect only with MULTIBIN_RADFIELD_MODEL_ON.
 constexpr int MULTIBIN_RADFIELD_FIRST_TIMESTEP;
 
-// The frequency range of the regular bins [Hz], e.g. CLIGHT / (lambda[Angstrom] * 1e-8). The code uses these
-// values only with MULTIBIN_RADFIELD_MODEL_ON.
+// The frequency range of the regular bins [Hz], e.g. CLIGHT / (lambda[Angstrom] * 1e-8). These values have an
+// effect only with MULTIBIN_RADFIELD_MODEL_ON.
 constexpr double RADFIELDBINS_NU_MIN;
 constexpr double RADFIELDBINS_NU_MAX;
 
 // The upper frequency of the T_e superbin, the last bin above RADFIELDBINS_NU_MAX. The temperature of this bin
-// is the electron temperature of the cell. Only its dilution factor comes from the fit. The code uses this value
+// is the electron temperature of the cell. Only its dilution factor comes from the fit. This value has an effect
 // only with MULTIBIN_RADFIELD_MODEL_ON.
 constexpr double RADFIELDBINS_T_E_SUPERBIN_NU_MAX;
 
@@ -290,11 +290,11 @@ constexpr bool DETAILED_LINE_ESTIMATORS_ON;
 // Store the detailed bound-free rate estimators. This needs USE_LUT_PHOTOION false.
 constexpr bool DETAILED_BF_ESTIMATORS_ON;
 
-// Select the continua that the detailed bound-free estimators track. The code uses this function only with
+// Select the continua that the detailed bound-free estimators track. This function has an effect only with
 // DETAILED_BF_ESTIMATORS_ON.
 constexpr bool DETAILED_BF_ESTIMATORS_LEVEL_SELECTED(int element_z, int ionstage, int level);
 
-// Use the detailed bound-free estimators from this timestep on, inclusive. The code uses this value only with
+// Use the detailed bound-free estimators from this timestep on, inclusive. This value has an effect only with
 // DETAILED_BF_ESTIMATORS_ON.
 constexpr int DETAILED_BF_ESTIMATORS_FIRST_TIMESTEP;
 
@@ -317,30 +317,30 @@ constexpr NonThermalScheme NT_SCHEME;
 // A later iteration of the same timestep keeps that solution, unless nne per ion (nne divided by the total ion
 // density) changed by this fraction or more, e.g. 0.5 for 50 percent. A value of 0 gives a new solution at each
 // iteration.
-// The code uses this value only with NT_SPENCERFANO.
+// This value has an effect only with NT_SPENCERFANO.
 constexpr double SF_RE_SOLVE_WITHIN_TIMESTEP_MIN_NNEPERION_FRACDIFF;
 
 // Include non-thermal excitation only from the lowest NTEXCITATION_MAXNLEVELS_LOWER levels of an ion and to
 // its lowest NTEXCITATION_MAXNLEVELS_UPPER levels, because these transitions slow the solver. A zero in either
-// value includes no transition. The code uses these values only with NT_SPENCERFANO.
+// value includes no transition. These values have an effect only with NT_SPENCERFANO.
 constexpr int NTEXCITATION_MAXNLEVELS_LOWER;
 constexpr int NTEXCITATION_MAXNLEVELS_UPPER;
 
 // The number of stored non-thermal excitation rates. The solver keeps the transitions with the largest
 // deposition fractions. A transition outside the list gets no excitation rate, and an NTLEPTON packet that
-// selects one becomes a k-packet. The code uses this value only with NT_SPENCERFANO.
+// selects one becomes a k-packet. This value has an effect only with NT_SPENCERFANO.
 constexpr int MAX_NT_EXCITATIONS_STORED;
 
 // Divide by the valence shell potential of the ion, instead of the potential of each shell, in the effective
-// ionisation potential and the ionisation rates. Not compatible with NT_MAX_AUGER_ELECTRONS above zero. The code
-// uses this option only with NT_SPENCERFANO.
+// ionisation potential and the ionisation rates. Not compatible with NT_MAX_AUGER_ELECTRONS above zero. This option
+// has an effect only with NT_SPENCERFANO.
 constexpr bool NT_USE_VALENCE_IONPOTENTIAL;
 
 // The maximum number of Auger electrons that one impact ionisation releases, from the shell probabilities.
-// Zero gives one electron per ionisation. The code uses this value only with NT_SPENCERFANO.
+// Zero gives one electron per ionisation. This value has an effect only with NT_SPENCERFANO.
 constexpr int NT_MAX_AUGER_ELECTRONS;
 
-// Add the source term of the Auger electrons to the Spencer-Fano equation. The code uses this option only with
+// Add the source term of the Auger electrons to the Spencer-Fano equation. This option has an effect only with
 // NT_SPENCERFANO.
 constexpr bool SF_AUGER_CONTRIBUTION_ON;
 
@@ -376,13 +376,12 @@ constexpr GammaThermalisationScheme GAMMA_THERMALISATION_SCHEME;
 
 // Use the XCOM table for the gamma-ray photoelectric absorption instead of the Si and Fe power laws of
 // Ambwani & Sutherland 1988, ApJ, 325, 820-827, doi:10.1086/166052, eq. 2, after Veigele 1973, Atomic Data and
-// Nuclear Data Tables, 5, 51-111, doi:10.1016/S0092-640X(73)80015-4. The code uses this option only with the
-// FREQUENCYDEPENDENT GAMMA_THERMALISATION_SCHEME.
+// Nuclear Data Tables, 5, 51-111, doi:10.1016/S0092-640X(73)80015-4. This option needs the FREQUENCYDEPENDENT
+// GAMMA_THERMALISATION_SCHEME.
 constexpr bool GAMMA_USE_XCOM_PHOTOION;
 
 // Replace the frequency-dependent gamma-ray opacity with this grey opacity [cm^2/g]. No value keeps the
-// frequency-dependent opacity. The code uses this value only with the FREQUENCYDEPENDENT
-// GAMMA_THERMALISATION_SCHEME.
+// frequency-dependent opacity. A value needs the FREQUENCYDEPENDENT GAMMA_THERMALISATION_SCHEME.
 constexpr std::optional<double> GAMMA_USE_KAPPA_GREY;
 
 // Keep the escaped gamma-ray packets in the packet files, and write gamma_light_curve.out and gamma_spec.out.
@@ -420,17 +419,18 @@ constexpr bool RPKT_USE_BINNED_OPACITIES;
 // With a nonzero RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY, LINEBINNEDCAPPED and LINEBINNED need
 // RPKT_USE_BINNED_OPACITIES. A line-by-line r-packet absorbs the fraction 1 - exp(-tau) in each line, so the
 // thermal emission must then use EXPANSION. For the virtual packets, LINEBINNED gives nearly the line-by-line optical
-// depth of a bin that the packet fully crosses. EXPANSION gives a smaller optical depth for a line with tau > 1, and
-// LINEBINNEDCAPPED for a line with tau > LINE_BINNED_CAPPED_TAU_MAX.
+// depth of a bin that the packet fully crosses. EXPANSION gives a smaller optical depth for every line, and the
+// largest difference for a line with tau > 1. LINEBINNEDCAPPED gives a smaller optical depth for a line with
+// tau > LINE_BINNED_CAPPED_TAU_MAX.
 constexpr BinnedOpacityLineWeight BINNED_OPACITY_LINE_WEIGHT;
 
 // The limit of the Sobolev optical depth tau of each line in the LINEBINNEDCAPPED weight, e.g. 1. It must be above
-// zero. The code uses this value only with LINEBINNEDCAPPED.
+// zero. This value has an effect only with LINEBINNEDCAPPED.
 constexpr double LINE_BINNED_CAPPED_TAU_MAX;
 
 // Replace the macroatom with a thermalisation probability P for each bound-bound absorption, and a scattering
 // with probability 1 - P. Every k-packet in a cell that is not thick then emits a blackbody spectrum weighted
-// with the true absorption opacity. That opacity is the sum of P times the binned line opacity, the free-free
+// with the true absorption opacity. That opacity is the sum of P times the binned opacity, the free-free
 // opacity, and the bound-free opacity of each continuum times 1 - nu_edge / nu. The code therefore computes the
 // binned opacities also without RPKT_USE_BINNED_OPACITIES. A thick cell samples a plain Planck function.
 // No value keeps the macroatom.

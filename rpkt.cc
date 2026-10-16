@@ -60,7 +60,7 @@ namespace {
 // heating fraction of the bound-free kappa.
 MPI_shared_array<double> expansionopacity_planck_cumulative{};
 
-// The weight of a line with the Sobolev optical depth tau_line in the expansion opacity of its wavelength bin,
+// The weight of a line with the Sobolev optical depth tau_line in the binned opacity of its wavelength bin,
 // kappa = sum of (lambda / delta_lambda) * weight / (c t rho). BINNED_OPACITY_LINE_WEIGHT selects the weight.
 [[nodiscard]] DEVICE_FUNC auto get_binned_opacity_line_weight(const double tau_line) -> double {
   if constexpr (BINNED_OPACITY_LINE_WEIGHT == BinnedOpacityLineWeight::EXPANSION) {
@@ -190,12 +190,12 @@ auto get_possible_event_expansion_opacity(const int nonemptymgi, Packet& pkt, co
   assert_always(get_cellcache(nonemptymgi).nonemptymgi == nonemptymgi);
   double dist = 0.;
   double tau = 0.;
-  // -1 means below the wavelength grid, in which case there is continuum opacity but no expansion opacity
+  // -1 means below the wavelength grid, in which case there is continuum opacity but no binned opacity
   const auto binindex_start =
       std::max(get_linearbinindex(1e8 * CLIGHT / nu_cmf, expopac_lambdamin, expopac_deltalambda), -1Z);
 
   for (auto binindex = binindex_start; binindex < expopac_nbins; binindex++) {
-    // binindex could be -1, in which case we have only the continuum opacity and no expansion opacity
+    // binindex could be -1, in which case we have only the continuum opacity and no binned opacity
     const auto next_bin_edge_nu = (binindex < 0) ? get_expopac_bin_nu_upper(0) : get_expopac_bin_nu_lower(binindex);
     const auto binedgedist = get_linedistance(prop_time, nu_cmf, next_bin_edge_nu, dnu_on_dl);
 
@@ -263,10 +263,10 @@ auto get_possible_event_expansion_opacity(const int nonemptymgi, Packet& pkt, co
     }
   }
 
-  // no more expansion-opacity bins (the packet is redshifting past the red end of the wavelength
+  // no more binned opacity bins (the packet is redshifting past the red end of the wavelength
   // grid), but the continuum processes (electron scattering, bound-free, free-free) still provide
   // opacity, so sample the remaining optical depth against them (cf. the vpkt tracer, which adds
-  // the continuum opacity independently of the expansion-opacity bin range)
+  // the continuum opacity independently of the binned opacity range)
   const double chi_cont = chi_rpkt_cont.total() * doppler;
   if (chi_cont > 0.) {
     return {dist + ((tau_rnd - tau) / chi_cont), false};
@@ -973,7 +973,7 @@ void allocate_expansionopacities() {
   }
 }
 
-// return a randomly chosen frequency with a distribution of Planck function times the expansion opacity
+// return a randomly chosen frequency with a distribution of Planck function times the binned opacity
 DEVICE_FUNC auto sample_planck_times_expansion_opacity(const int nonemptymgi, rngstate_type& rngstate) -> double {
   assert_testmodeonly(RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.has_value());
 
@@ -1068,7 +1068,7 @@ template void calculate_chi_rpkt_cont<true>(const double nu_cmf, ContinuumOpacit
 template void calculate_chi_rpkt_cont<false>(const double nu_cmf, ContinuumOpacity& chi_rpkt_cont,
                                              const int nonemptymgi);
 
-// broadcast the binned expansion opacities of the cells that belong to the root rank to all node leaders
+// broadcast the binned opacities of the cells that belong to the root rank to all node leaders
 void MPI_Bcast_binned_opacities(const ptrdiff_t nstart_nonempty, const ptrdiff_t ndo_nonempty, const int root_node_id) {
   if (globals::rank_in_node == 0) {
     assert_always(nstart_nonempty >= 0);
@@ -1085,7 +1085,7 @@ void MPI_Bcast_binned_opacities(const ptrdiff_t nstart_nonempty, const ptrdiff_t
   }
 }
 
-// Calculate the binned expansion opacities of one cell: within each frequency bin, the Sobolev optical
+// Calculate the binned opacities of one cell: within each frequency bin, the Sobolev optical
 // depths of all lines are combined into a single effective opacity for the bin. Called when
 // RPKT_USE_BINNED_OPACITIES or VPKT_USE_BINNED_OPACITIES replaces the line-by-line opacity for
 // r-packets or virtual packets, and also when RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY is set.
@@ -1095,7 +1095,7 @@ void calculate_expansion_opacities(const int nonemptymgi) {
   const auto sys_time_start_calc = std::chrono::steady_clock::now();
   const auto temperature = grid::Te_allcells[nonemptymgi];
 
-  printlog("calculating expansion opacities for cell {}...", grid::get_mgi_of_nonemptymgi(nonemptymgi));
+  printlog("calculating binned opacities for cell {}...", grid::get_mgi_of_nonemptymgi(nonemptymgi));
 
   const auto t_mid = globals::timesteps[globals::timestep].mid;
 

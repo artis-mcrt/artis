@@ -151,7 +151,7 @@ auto calculate_chi_ffheat_nnionpart(int nonemptymgi) -> double;
   return CLIGHT * prop_time * delta_nu / nu_trans;
 }
 
-// Get the correction of a binned expansion opacity for the path that sweeps the bin. The packet crosses
+// Get the correction of a binned opacity for the path that sweeps the bin. The packet crosses
 // each line of the bin once, so the bin optical depth must equal the sum of the line weights of
 // BINNED_OPACITY_LINE_WEIGHT.
 // calculate_expansion_opacities() assumes the path c * t * dnu / nu, which is the path that

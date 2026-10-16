@@ -55,6 +55,12 @@ struct ElementPhotoionData {
   double sigma_xcom;  // cross section in barns/atom
 };
 
+// the analytic thermalisation schemes do not transport the gamma rays, so they use neither option
+static_assert(
+    GAMMA_THERMALISATION_SCHEME == GammaThermalisationScheme::FREQUENCYDEPENDENT ||
+        (!GAMMA_USE_KAPPA_GREY.has_value() && !GAMMA_USE_XCOM_PHOTOION),
+    "GAMMA_USE_KAPPA_GREY and GAMMA_USE_XCOM_PHOTOION need the FREQUENCYDEPENDENT GAMMA_THERMALISATION_SCHEME");
+
 // the XCOM table covers Z = 1..xcom_max_atomic_number (indexed by Z - 1)
 constexpr int xcom_max_atomic_number = GAMMA_USE_XCOM_PHOTOION ? 100 : 0;
 

@@ -2324,18 +2324,15 @@ static_assert(TIMESTEP_SIZE_METHOD == TimeStepSizeMethod::LOGARITHMIC ||
                   TIMESTEP_SIZE_METHOD == TimeStepSizeMethod::CONSTANT ||
                   (TIMESTEP_SIZE_CONSTANT_MAX_WIDTH_DAYS.value_or(0.) > 0. &&
                    TIMESTEP_SIZE_TRANSITION_TIME_DAYS.value_or(0.) > 0.),
-              "The hybrid TIMESTEP_SIZE_METHOD options need positive values of TIMESTEP_SIZE_CONSTANT_MAX_WIDTH_DAYS "
+              "The hybrid timestep schemes need positive values of TIMESTEP_SIZE_CONSTANT_MAX_WIDTH_DAYS "
               "and TIMESTEP_SIZE_TRANSITION_TIME_DAYS");
 static_assert(TIMESTEP_SIZE_METHOD == TimeStepSizeMethod::LOGARITHMIC_THEN_CONSTANT ||
                   TIMESTEP_SIZE_METHOD == TimeStepSizeMethod::CONSTANT_THEN_LOGARITHMIC ||
                   (!TIMESTEP_SIZE_CONSTANT_MAX_WIDTH_DAYS.has_value() &&
                    !TIMESTEP_SIZE_TRANSITION_TIME_DAYS.has_value()),
-              "TIMESTEP_SIZE_CONSTANT_MAX_WIDTH_DAYS and TIMESTEP_SIZE_TRANSITION_TIME_DAYS need a hybrid "
-              "TIMESTEP_SIZE_METHOD");
+              "TIMESTEP_SIZE_CONSTANT_MAX_WIDTH_DAYS and TIMESTEP_SIZE_TRANSITION_TIME_DAYS need a hybrid timestep "
+              "scheme");
 
-// calculate the timestep grid: ntimesteps entries with start, mid, and width set, plus a zero-width
-// entry holding the end time. tmin and tmax are in seconds; the maximum width of a constant timestep and the
-// transition time of the hybrid methods are in days
 auto calculate_timesteps(const TimeStepSizeMethod method, const double tmin, const double tmax, const int ntimesteps,
                          const std::optional<double> constant_max_width_days,
                          const std::optional<double> transition_time_days) -> std::vector<globals::TimeStep> {

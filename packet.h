@@ -47,7 +47,7 @@ enum packet_type : int {
   // Normally destroyed by sampling a cooling channel, but do_kpkt() advances the packet by a small fraction of
   // the timestep first, so a k-packet can also survive to the next timestep. In optically thick cells, and
   // whenever RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY is set, that selection is skipped and
-  // do_kpkt_blackbody() re-emits immediately: from a Planck function weighted by the expansion opacity when the
+  // do_kpkt_blackbody() re-emits immediately: from a Planck function weighted by the binned opacity when the
   // option is set and the cell is not thick, and from a plain Planck function otherwise.
   TYPE_KPKT = 12,
 
