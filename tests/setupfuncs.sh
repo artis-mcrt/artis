@@ -14,13 +14,16 @@ getatomicdata() {
 # Set the option $1 of artisoptions.h to $2. For a value option, $2 is the new value, e.g. 'true' or '1e5', and the
 # option keeps its type. For a function option, $2 is the new body with its braces, on one line or on more lines.
 # The option name finds the statement, so the line layout of the preset is not important. Stop the script unless the
-# name matches exactly one statement.
+# name matches exactly one statement and the form of $2 agrees with the type of the option.
 setoption() {
     if ! OPTION_NAME="$1" OPTION_VALUE="$2" perl -0777 -i -pe '
         my $name = quotemeta $ENV{OPTION_NAME};
         my $value = $ENV{OPTION_VALUE};
-        my $count = s/^(constexpr\b[^;{=\n]*?\b$name\b)(?:(\s*\([^)]*\)\s*)(\{(?:[^{}]++|(?3))*\})|\s*(?:=[^;]*)?;)/defined $2 ? "$1$2$value" : "$1 = $value;"/gme || 0;
+        my $is_function;
+        my $count = s/^(constexpr\b[^;{=\n]*?\b$name\b)(?:(\s*\([^)]*\)\s*)(\{(?:[^{}]++|(?3))*\})|\s*(?:=[^;]*)?;)/($is_function = defined $2) ? "$1$2$value" : "$1 = $value;"/gme || 0;
         die "[error] the option $ENV{OPTION_NAME} matches $count statements of artisoptions.h, not one\n" unless $count == 1;
+        die "[error] the value of the option $ENV{OPTION_NAME} must be a body in braces for a function and a plain value otherwise\n"
+            if !$is_function != !($value =~ /^\{.*\}\z/s);
     ' artisoptions.h; then
         exit 1
     fi

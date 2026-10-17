@@ -592,10 +592,10 @@ Do the text edits first. They can make a finished compile out of date.
    `artisoptions_doc.md`. Put it under the same heading and at the same
    position in each file.
 2. Search `tests/setup_*.sh` and `.github/workflows/ci.yml` for the name of an
-   option that you renamed. Those files change options with `setoption` from
-   `tests/setupfuncs.sh`, which finds the option by its name. `setoption` stops
-   the setup script unless the name matches exactly one statement, and the test
-   then fails in CI.
+   option that you renamed or removed. Those files change options with
+   `setoption` from `tests/setupfuncs.sh`, which finds the option by its name.
+   `setoption` stops the setup script unless the name matches exactly one
+   statement, and the test then fails in CI.
 3. Run `prek run --all-files` and correct every message.
 4. Run `make OPTIMIZE=OFF unittests && ./unittests` if `unittests.cc` calls a
    function that you changed.

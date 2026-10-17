@@ -372,7 +372,7 @@ constexpr GammaThermalisationScheme GAMMA_THERMALISATION_SCHEME;
 // Use the XCOM table for the gamma-ray photoelectric absorption instead of the Si and Fe power laws of
 // Ambwani & Sutherland 1988, ApJ, 325, 820-827, doi:10.1086/166052, eq. 2, after Veigele 1973, Atomic Data and
 // Nuclear Data Tables, 5, 51-111, doi:10.1016/S0092-640X(73)80015-4. This option needs the FREQUENCYDEPENDENT
-// GAMMA_THERMALISATION_SCHEME.
+// GAMMA_THERMALISATION_SCHEME and no value of GAMMA_USE_KAPPA_GREY.
 constexpr bool GAMMA_USE_XCOM_PHOTOION;
 
 // Replace the frequency-dependent gamma-ray opacity with this grey opacity [cm^2/g]. No value keeps the

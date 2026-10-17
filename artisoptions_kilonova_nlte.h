@@ -155,12 +155,12 @@ constexpr int NT_MAX_AUGER_ELECTRONS = 2;
 
 constexpr bool SF_AUGER_CONTRIBUTION_ON = true;
 
-constexpr auto PARTICLE_THERMALISATION_SCHEME =
+constexpr ParticleThermalisationScheme PARTICLE_THERMALISATION_SCHEME =
     ParticleThermalisationScheme::TIMEDEPENDENT_WITH_ADIABATIC_LOSS_ULTRARELATIVISTICLIMIT;
 
 // --- Gamma rays ---
 
-constexpr auto GAMMA_THERMALISATION_SCHEME = GammaThermalisationScheme::FREQUENCYDEPENDENT;
+constexpr GammaThermalisationScheme GAMMA_THERMALISATION_SCHEME = GammaThermalisationScheme::FREQUENCYDEPENDENT;
 
 constexpr bool GAMMA_USE_XCOM_PHOTOION = false;
 
