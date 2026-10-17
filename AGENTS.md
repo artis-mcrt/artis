@@ -201,7 +201,7 @@ These steps differ from a plain build and are easy to miss:
 
 - Build from the `artisoptions.h` of the model folder, not from the preset.
   Each setup script copies a preset and then changes some option values with
-  `sedopt`.
+  `setoption` from `tests/setupfuncs.sh`.
   Remove your `artisoptions.h` before the copy, because `cp` writes through a
   symlink and replaces the content of the tracked preset.
 - Remove `input.txt` before the first run, as the workflow does. `sn3d` then
@@ -314,6 +314,25 @@ test (see "Input and output files").
   `CLAUDE.md` is a symlink to `AGENTS.md`.
 
 ## Code conventions
+
+### Methods
+
+The users of ARTIS must understand what the code does, because they must
+check and describe the method of their results. Make each method clear:
+
+- Give each option that selects a method a name that says which method it
+  selects. Describe the method in `artisoptions_doc.md`, with its formula and
+  its reference where they exist.
+- Give each enumerator of a method option the name of its method, e.g.
+  `EXPANSION`, `LINEBINNEDCAPPED`, and `LINEBINNED` of
+  `BINNED_OPACITY_LINE_WEIGHT`.
+- Cite the journal article of a method where one exists (see "References").
+- Write a log line when the code uses a different method for a cell, e.g. a
+  fallback to LTE. A user must not find a change of method only in the source.
+- Put each choice of method that a user can make into `artisoptions.h`. A
+  local `constexpr bool` switch (see "Logs and assertions") is only for a
+  developer.
+- Log each automatic choice of method that the code makes.
 
 ### Names
 
@@ -589,12 +608,13 @@ These rules apply to an automated review of a pull request, e.g. by Codex.
 Do the text edits first. They can make a finished compile out of date.
 
 1. Add a new compile-time option to every `artisoptions_*.h` preset and to
-   `artisoptions_doc.md`.
+   `artisoptions_doc.md`. Put it under the same heading and at the same
+   position in each file.
 2. Search `tests/setup_*.sh` and `.github/workflows/ci.yml` for the name of an
-   option that you renamed or reformatted. Those files change option lines with
-   `sedopt` from `tests/setupfuncs.sh` and an exact text match. The pattern also
-   contains the type, e.g. `constexpr int`. `sedopt` stops the setup script if
-   the pattern matches nothing, and the test then fails in CI.
+   option that you renamed or removed. Those files change options with
+   `setoption` from `tests/setupfuncs.sh`, which finds the option by its name.
+   `setoption` stops the setup script unless the name matches exactly one
+   statement, and the test then fails in CI.
 3. Run `prek run --all-files` and correct every message.
 4. Run `make OPTIMIZE=OFF unittests && ./unittests` if `unittests.cc` calls a
    function that you changed.

@@ -42,15 +42,16 @@ constexpr auto get_expopac_bin_nu_lower(const ptrdiff_t binindex) -> double {
 static_assert(get_expopac_bin_nu_lower(0) == get_expopac_bin_nu_upper(1));  // bins are contiguous
 
 // the options that need the binned line opacities of each cell. The thermalisation option stores only the Planck
-// cumulative of the bins; the expansionopacities array exists only with the two expansion opacity options.
-constexpr bool expopac_bins_on = RPKT_USE_EXPANSION_OPACITIES || VPKT_USE_EXPANSION_OPACITIES ||
-                                 RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.has_value();
+// cumulative of the bins; the expansionopacities array exists only with RPKT_USE_BINNED_OPACITIES or
+// VPKT_USE_BINNED_OPACITIES.
+constexpr bool expopac_bins_on =
+    RPKT_USE_BINNED_OPACITIES || VPKT_USE_BINNED_OPACITIES || RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.has_value();
 
 // The thermal emission of RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY uses the bin weights. A line-by-line r-packet
 // absorbs the fraction 1 - exp(-tau) in each line, so a thermal emission with a line term then needs the EXPANSION
 // weight. A probability of zero gives no line term.
 constexpr bool expopac_linebinned_weights_permitted =
-    RPKT_USE_EXPANSION_OPACITIES || RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.value_or(0.F) == 0.F;
+    RPKT_USE_BINNED_OPACITIES || RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.value_or(0.F) == 0.F;
 
 // kappa in cm^2/g for each bin of each non-empty cell
 inline MPI_shared_array<float> expansionopacities{};
@@ -150,9 +151,9 @@ auto calculate_chi_ffheat_nnionpart(int nonemptymgi) -> double;
   return CLIGHT * prop_time * delta_nu / nu_trans;
 }
 
-// Get the correction of a binned expansion opacity for the path that sweeps the bin. The packet crosses
+// Get the correction of a binned opacity for the path that sweeps the bin. The packet crosses
 // each line of the bin once, so the bin optical depth must equal the sum of the line weights of
-// EXPANSION_OPACITY_METHOD.
+// BINNED_OPACITY_LINE_WEIGHT.
 // calculate_expansion_opacities() assumes the path c * t * dnu / nu, which is the path that
 // get_linedistance() gives with the first-order Doppler shift. The factor is the ratio of that path to the
 // relativistic one, which is the Doppler factor times the Lorentz factor. Give the time at the start of the path

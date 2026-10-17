@@ -234,7 +234,7 @@ void write_to_estimators_file(std::ostream& estimators_file, const int nonemptym
     if (WRITE_ION_HEATING_COOLING_RATES && !heatingcoolingrates.cooling_ff_ion.empty()) {
       // the bound-free terms belong to the lower ion of each continuum, so the top ion has none
       print_perion_line("heating_bf", element, nions - 1, heatingcoolingrates.heating_bf_ion);
-      if constexpr (COL_HEAT_FROM_LEVELPOPS) {
+      if constexpr (COLLISIONAL_HEATING_FROM_LEVELPOPS) {
         print_perion_line("heating_coll", element, nions, heatingcoolingrates.heating_coll_ion);
       }
       print_perion_line("heating_ff", element, nions, heatingcoolingrates.heating_ff_ion);
@@ -788,7 +788,7 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
   // Update clumping factors
   if constexpr (USE_MICROCLUMPING) {
     const double rad_vel = grid::get_modelcell_mean_radial_pos_tmin(mgi) / globals::tmin;
-    const float clumpfactor = clumping_factor(tmid, rad_vel);
+    const float clumpfactor = MICROCLUMPING_FACTOR(tmid, rad_vel);
 
     grid::set_clumpfactor(nonemptymgi, clumpfactor);
   }
@@ -865,7 +865,7 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
       radfield::normalise_nuJ(nonemptymgi, estimator_normfactor_over4pi);
 
       globals::ffheatingestimator[nonemptymgi] *= estimator_normfactor;
-      if constexpr (!COL_HEAT_FROM_LEVELPOPS) {
+      if constexpr (!COLLISIONAL_HEATING_FROM_LEVELPOPS) {
         globals::colheatingestimator[nonemptymgi] *= estimator_normfactor;
       }
 

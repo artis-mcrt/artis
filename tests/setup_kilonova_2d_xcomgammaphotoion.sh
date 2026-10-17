@@ -24,18 +24,15 @@ ln -s ../../ artis
 
 cp artis/artisoptions_kilonova_lte.h artisoptions.h
 
+setoption NUM_PACKETS '3.2e5'
 
-sedopt "constexpr std::int64_t NUM_PACKETS.*" "constexpr std::int64_t NUM_PACKETS = 3.2e5;"
+setoption RATECOEFF_TABLESIZE '20'
+setoption MINTEMP '1000.'
+setoption MAXTEMP '20000.'
 
-sedopt 'constexpr int RATECOEFF_TABLESIZE.*' 'constexpr int RATECOEFF_TABLESIZE = 20;'
-sedopt 'constexpr double MINTEMP.*' 'constexpr double MINTEMP = 1000.;'
-sedopt 'constexpr double MAXTEMP.*' 'constexpr double MAXTEMP = 20000.;'
+setoption GAMMA_USE_XCOM_PHOTOION 'true'
 
-sedopt 'constexpr bool USE_XCOM_GAMMAPHOTOION.*' 'constexpr bool USE_XCOM_GAMMAPHOTOION = true;'
-
-sedopt 'constexpr bool KEEP_ESCAPED_GAMMAS.*' 'constexpr bool KEEP_ESCAPED_GAMMAS = true;'
-
-rm -f artisoptions.h.bak
+setoption KEEP_ESCAPED_GAMMAS 'true'
 
 cd -
 

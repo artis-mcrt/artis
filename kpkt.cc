@@ -172,7 +172,7 @@ auto calculate_cooling_rates_ion(const int nonemptymgi, const int element, const
       // lowest-energy target so that they cannot all underflow. Single-target levels get the whole ion population.
       [[maybe_unused]] double targetweight_sum = 0.;
       [[maybe_unused]] double E_target_min = 0.;
-      if constexpr (!BFCOOLING_USELEVELPOPNOTIONPOP) {
+      if constexpr (!BFCOOLING_USE_TARGET_LEVELPOP) {
         if (nphixstargets > 1) {
           E_target_min = std::numeric_limits<double>::max();
           for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
@@ -189,7 +189,7 @@ auto calculate_cooling_rates_ion(const int nonemptymgi, const int element, const
 
       for (int phixstargetindex = 0; phixstargetindex < nphixstargets; phixstargetindex++) {
         const double pop = [&] {
-          if constexpr (BFCOOLING_USELEVELPOPNOTIONPOP) {
+          if constexpr (BFCOOLING_USE_TARGET_LEVELPOP) {
             const int upperlevel = get_phixsupperlevel(uniquelevelindex, phixstargetindex);
             return update_cellcache_contribs ? get_cellcache_levelpop(nonemptymgi, element, ion + 1, upperlevel)
                                              : calculate_levelpop(nonemptymgi, element, ion + 1, upperlevel);

@@ -107,7 +107,7 @@ auto gammacorr_integrand(const double nu, const double nu_edge, const float temp
 // against the Saha factor multiplied in by precalculate_rate_coefficient_integrals(), which also applies
 // 4 pi * phixstargetprobability. The resulting bfcooling_coeffs [erg cm^3 s^-1] are, like alpha_sp, normalised per
 // population of the upper ion's *target level*: cooling rate density = coeff * n_targetlevel * n_e. kpkt.cc uses
-// the target level population when BFCOOLING_USELEVELPOPNOTIONPOP is true and the whole upper ion population when
+// the target level population when BFCOOLING_USE_TARGET_LEVELPOP is true and the whole upper ion population when
 // it is false (shared among a level's targets by their LTE fractions when the level has more than one target).
 auto bfcooling_integrand(const double nu_minus_nu_edge, const double nu_edge, const float T_e,
                          const std::span<const float> photoion_xs) -> double {
@@ -835,7 +835,7 @@ DEVICE_FUNC auto get_corrphotoioncoeff(const int element, const int ion, const i
       use_cellcache ? get_cellcache(nonemptymgi).allphixstargets_corrphotoioncoeff[allphixstargetindex] : -1;
 
   if (!use_cellcache || gammacorr < 0) {
-    if (DETAILED_BF_ESTIMATORS_ON && globals::timestep >= DETAILED_BF_ESTIMATORS_USEFROMTIMESTEP) {
+    if (DETAILED_BF_ESTIMATORS_ON && globals::timestep >= DETAILED_BF_ESTIMATORS_FIRST_TIMESTEP) {
       gammacorr = radfield::get_bfrate_estimator(element, ion, level, phixstargetindex, nonemptymgi);
       // gammacorr will be -1 if no estimators available
     }

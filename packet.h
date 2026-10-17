@@ -47,7 +47,7 @@ enum packet_type : int {
   // Normally destroyed by sampling a cooling channel, but do_kpkt() advances the packet by a small fraction of
   // the timestep first, so a k-packet can also survive to the next timestep. In optically thick cells, and
   // whenever RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY is set, that selection is skipped and
-  // do_kpkt_blackbody() re-emits immediately: from a Planck function weighted by the expansion opacity when the
+  // do_kpkt_blackbody() re-emits immediately: from a Planck function weighted by the binned opacity when the
   // option is set and the cell is not thick, and from a plain Planck function otherwise.
   TYPE_KPKT = 12,
 
@@ -94,7 +94,7 @@ enum absorption_type : int {
   ABSTYPE_PELLET_NOGAMMASPEC = -6,
   ABSTYPE_PELLET_BEFORESIMSTART = -7,  // pellet decayed before the onset of the simulation
   ABSTYPE_PELLET_PARTICLEDECAY = -10,  // pellet decay to non-thermal particle (beta+/-, alpha, fission fragment)
-  // bound-bound absorption in a binned expansion opacity (RPKT_USE_EXPANSION_OPACITIES with
+  // bound-bound absorption in a binned opacity (RPKT_USE_BINNED_OPACITIES with
   // RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY), so no single line index is known
   ABSTYPE_BOUNDBOUND_EXPANSIONOPACITY = -11,
 };

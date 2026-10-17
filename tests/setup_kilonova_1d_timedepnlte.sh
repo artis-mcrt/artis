@@ -26,7 +26,6 @@ ln -s ../../ artis
 
 cp artis/artisoptions_kilonova_nlte.h artisoptions.h
 
-
 # Scale the model to a typical kilonova: ten times the mass and one third of the velocity of the
 # kilonova_1d model, which gives 0.044 Msun below 0.16 c. The shape of the density profile does not
 # change. The model then holds the density of a 0.05 Msun kilonova below 0.15 c to inside 13 percent
@@ -40,43 +39,41 @@ setnlevelsmax 150
 
 # the 1D model has 25 cells and the 2D model had 128, so fewer packets give the same number of
 # packets for each cell
-sedopt "constexpr std::int64_t NUM_PACKETS.*" "constexpr std::int64_t NUM_PACKETS = 8e4;"
+setoption NUM_PACKETS '8e4'
 
-sedopt 'constexpr int RATECOEFF_TABLESIZE.*' 'constexpr int RATECOEFF_TABLESIZE = 40;'
+setoption RATECOEFF_TABLESIZE '40'
 
 # a few near-vacuum cells reach NLTE_TE_NNE_MAXITER in every timestep, so this limit keeps the run time of the test low
-sedopt 'constexpr int NLTE_TE_NNE_MAXITER.*' 'constexpr int NLTE_TE_NNE_MAXITER = 10;'
+setoption NLTE_TE_NNE_MAXITER '10'
 
 # element_z == 58 is cerium. This test gives cerium no NLTE level, so that it tests the hybrid mode:
 # the NLTE solver holds Sr, Y, Zr, and La, and calculate_ion_balance_nne() holds cerium with the
 # photoionisation balance. The mode covers the ion balance of both kinds of element in one cell, the
 # sum of the electron contributions, and the rule of chargetransfer.cc that a reaction needs NLTE
 # levels on both sides. Keep at least one element at zero, or the test loses the hybrid mode.
-perl -0777 -i -pe 'my $n = s|^constexpr int ION_NLEVELS_EXCITED_NLTE\(int element_z, int ionstage\) \{.*?^\}$|constexpr int ION_NLEVELS_EXCITED_NLTE(int element_z, int ionstage) { return (element_z == 58) ? 0 : 20; }|ms; die "[error] the pattern for ION_NLEVELS_EXCITED_NLTE did not match once\n" unless $n == 1;' artisoptions.h
+setoption ION_NLEVELS_EXCITED_NLTE '{ return (element_z == 58) ? 0 : 20; }'
 
-perl -0777 -i -pe 'my $n = s|^constexpr bool FORCE_SAHA_ION_BALANCE\(int element_z\) \{.*?^\}$|constexpr bool FORCE_SAHA_ION_BALANCE(int element_z) { return false; }|ms; die "[error] the pattern for FORCE_SAHA_ION_BALANCE did not match once\n" unless $n == 1;' artisoptions.h
+setoption FORCE_SAHA_ION_BALANCE '{ return false; }'
 
-perl -0777 -i -pe 'my $n = s|^constexpr int NLEVELS_REQUIRETRANSITIONS\(int element_z, int ionstage\) \{.*?^\}$|constexpr int NLEVELS_REQUIRETRANSITIONS(int element_z, int ionstage) { return 10; }|ms; die "[error] the pattern for NLEVELS_REQUIRETRANSITIONS did not match once\n" unless $n == 1;' artisoptions.h
+setoption NLEVELS_ADD_MISSING_COLLISIONAL_TRANSITIONS '{ return 10; }'
 
-sedopt 'constexpr bool COL_HEAT_FROM_LEVELPOPS.*' 'constexpr bool COL_HEAT_FROM_LEVELPOPS = true;'
-sedopt 'constexpr double MINTEMP.*' 'constexpr double MINTEMP = 500.;'
-sedopt 'constexpr double MAXTEMP.*' 'constexpr double MAXTEMP = 100000.;'
-sedopt 'constexpr bool MULTIBIN_RADFIELD_MODEL_ON.*' 'constexpr bool MULTIBIN_RADFIELD_MODEL_ON = true;'
-sedopt 'constexpr bool DETAILED_BF_ESTIMATORS_ON.*' 'constexpr bool DETAILED_BF_ESTIMATORS_ON = true;'
-sedopt 'constexpr bool LEVEL_HAS_BFEST.*' 'constexpr bool LEVEL_HAS_BFEST(int element_z, int ionstage, int level) { return true; }'
+setoption COLLISIONAL_HEATING_FROM_LEVELPOPS 'true'
+setoption MINTEMP '500.'
+setoption MAXTEMP '100000.'
+setoption MULTIBIN_RADFIELD_MODEL_ON 'true'
+setoption DETAILED_BF_ESTIMATORS_ON 'true'
+setoption DETAILED_BF_ESTIMATORS_LEVEL_SELECTED '{ return true; }'
 
-sedopt 'constexpr int FIRST_NLTE_RADFIELD_TIMESTEP.*' 'constexpr int FIRST_NLTE_RADFIELD_TIMESTEP = 2;'
-sedopt 'constexpr int DETAILED_BF_ESTIMATORS_USEFROMTIMESTEP.*' 'constexpr int DETAILED_BF_ESTIMATORS_USEFROMTIMESTEP = 2;'
+setoption MULTIBIN_RADFIELD_FIRST_TIMESTEP '2'
+setoption DETAILED_BF_ESTIMATORS_FIRST_TIMESTEP '2'
 
-sedopt 'constexpr bool NLTE_USE_GTH_SOLVER.*' 'constexpr bool NLTE_USE_GTH_SOLVER = false;'
+setoption NLTE_USE_GTH_SOLVER 'false'
 
-sedopt 'constexpr std::optional<int> NLTE_TIME_DEPENDENT_FIRST_TIMESTEP.*' 'constexpr std::optional<int> NLTE_TIME_DEPENDENT_FIRST_TIMESTEP = 3;'
+setoption NLTE_TIME_DEPENDENT_FIRST_TIMESTEP '3'
 
-sedopt 'constexpr bool ENABLE_CHARGE_TRANSFER_REACTIONS.*' 'constexpr bool ENABLE_CHARGE_TRANSFER_REACTIONS = true;'
+setoption ENABLE_CHARGE_TRANSFER_REACTIONS 'true'
 
-sedopt 'constexpr bool KEEP_ESCAPED_GAMMAS.*' 'constexpr bool KEEP_ESCAPED_GAMMAS = true;'
-
-rm -f artisoptions.h.bak
+setoption KEEP_ESCAPED_GAMMAS 'true'
 
 cd -
 

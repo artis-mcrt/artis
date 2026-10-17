@@ -51,7 +51,7 @@ struct HeatingCoolingRates {
   // The per-ion breakdown of the rates above, indexed by uniqueionindex. WRITE_ION_HEATING_COOLING_RATES
   // fills them once for each cell after the thermal balance solution, and the estimators file reports them.
   // They stay empty without that option and for a cell that gets no solution, e.g. a grey cell.
-  // heating_coll_ion also stays empty without COL_HEAT_FROM_LEVELPOPS, because the estimator that then gives
+  // heating_coll_ion also stays empty without COLLISIONAL_HEATING_FROM_LEVELPOPS, because the estimator that then gives
   // heating_collisional holds no per-ion information.
   std::vector<double> heating_bf_ion;
   std::vector<double> heating_coll_ion;

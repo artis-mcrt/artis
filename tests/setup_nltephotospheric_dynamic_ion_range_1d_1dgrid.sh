@@ -26,30 +26,35 @@ ln -s ../../ artis
 
 cp artis/artisoptions_nltephotospheric.h artisoptions.h
 
-sedopt "constexpr std::int64_t NUM_PACKETS.*" "constexpr std::int64_t NUM_PACKETS = 1.6e3;"
+setoption NUM_PACKETS '1.6e3'
 
-sedopt 'constexpr std::optional<GridType> GRID_TYPE_OVERRIDE.*' 'constexpr std::optional<GridType> GRID_TYPE_OVERRIDE = GridType::SPHERICAL1D;'
+setoption GRID_TYPE_OVERRIDE 'GridType::SPHERICAL1D'
 
-sedopt 'constexpr int NLTE_TE_NNE_MAXITER.*' 'constexpr int NLTE_TE_NNE_MAXITER = 2;'
+setoption NLTE_TE_NNE_MAXITER '2'
 
-perl -0777 -i -pe 'my $n = s|^constexpr int ION_NLEVELS_EXCITED_NLTE\(int element_z, int ionstage\) \{.*?^\}$|constexpr int ION_NLEVELS_EXCITED_NLTE(int element_z, int ionstage) {\n  if (element_z == 26 && ionstage == 2) {\n    return 100;\n  }\n  return 50;\n}|ms; die "[error] the pattern for ION_NLEVELS_EXCITED_NLTE did not match once\n" unless $n == 1;' artisoptions.h
+setoption ION_NLEVELS_EXCITED_NLTE '{
+  if (element_z == 26 && ionstage == 2) {
+    return 100;
+  }
+  return 50;
+}'
 
-sedopt 'constexpr int NLEVELS_REQUIRETRANSITIONS(int element_z, int ionstage) {.*}' 'constexpr int NLEVELS_REQUIRETRANSITIONS(int element_z, int ionstage) { return (element_z < 20) ? 20 : 40; }'
+setoption NLEVELS_ADD_MISSING_COLLISIONAL_TRANSITIONS '{
+  return (element_z < 20) ? 20 : 40;
+}'
 
-sedopt 'constexpr int RATECOEFF_TABLESIZE.*' 'constexpr int RATECOEFF_TABLESIZE = 40;'
+setoption RATECOEFF_TABLESIZE '40'
 
-sedopt 'constexpr int FIRST_NLTE_RADFIELD_TIMESTEP.*' 'constexpr int FIRST_NLTE_RADFIELD_TIMESTEP = 4;'
+setoption MULTIBIN_RADFIELD_FIRST_TIMESTEP '4'
 
-sedopt 'constexpr int RADFIELDBINCOUNT.*' 'constexpr int RADFIELDBINCOUNT = 24;'
+setoption RADFIELDBINCOUNT '24'
 
-sedopt 'constexpr int DETAILED_BF_ESTIMATORS_USEFROMTIMESTEP.*' 'constexpr int DETAILED_BF_ESTIMATORS_USEFROMTIMESTEP = 4;'
+setoption DETAILED_BF_ESTIMATORS_FIRST_TIMESTEP '4'
 
-sedopt 'constexpr bool KEEP_ESCAPED_GAMMAS.*' 'constexpr bool KEEP_ESCAPED_GAMMAS = true;'
+setoption KEEP_ESCAPED_GAMMAS 'true'
 
 # This test covers the output files of each rank.
-sedopt 'constexpr bool WRITE_COMBINED_ALLRANK_OUT_FILES.*' 'constexpr bool WRITE_COMBINED_ALLRANK_OUT_FILES = false;'
-
-rm -f artisoptions.h.bak
+setoption WRITE_COMBINED_ALLRANK_OUT_FILES 'false'
 
 cd -
 
