@@ -322,17 +322,17 @@ check and describe the method of their results. Make each method clear:
 
 - Give each option that selects a method a name that says which method it
   selects. Describe the method in `artisoptions_doc.md`, with its formula and
-  its reference where they exist.
+  its reference where they exist (see "References").
 - Give each enumerator of a method option the name of its method, e.g.
   `EXPANSION`, `LINEBINNEDCAPPED`, and `LINEBINNED` of
   `BINNED_OPACITY_LINE_WEIGHT`.
-- Cite the journal article of a method where one exists (see "References").
-- Write a log line when the code uses a different method for a cell, e.g. a
-  fallback to LTE. A user must not find a change of method only in the source.
-- Put each choice of method that a user can make into `artisoptions.h`. A
-  local `constexpr bool` switch (see "Logs and assertions") is only for a
-  developer.
-- Log each automatic choice of method that the code makes.
+- Put a choice of method for a user into `artisoptions.h` or `input.txt`. A
+  local `constexpr bool` switch (see "Logs and assertions") is for a developer
+  only.
+- Log each automatic change of method that you add, e.g. a fallback to LTE for
+  a cell. A user must not find a change of method only in the source. Write the
+  log line in the host code, at most once for each cell and timestep, e.g. in
+  the grid update. Do not call a logger in a `DEVICE_FUNC` or for each packet.
 
 ### Names
 
@@ -412,7 +412,7 @@ are the only defence.
   calculation, so this code is not dead code.
 - Keep a local `constexpr bool` switch, e.g. `include_collisional_recombination`,
   and the code that it controls, also when the switch is false. The switch is a
-  compile-time configuration option, so this code is not dead code.
+  developer setting at compile time, so this code is not dead code.
 - Do not call the loggers in a `DEVICE_FUNC`. Their device branch does not
   compile with nvc++ or hipcc, and a local gcc or clang build does not find
   this. Put a diagnostic of a device function inside `MY_IF_HOST()`.
@@ -611,10 +611,9 @@ Do the text edits first. They can make a finished compile out of date.
    `artisoptions_doc.md`. Put it under the same heading and at the same
    position in each file.
 2. Search `tests/setup_*.sh` and `.github/workflows/ci.yml` for the name of an
-   option that you renamed or removed. Those files change options with
-   `setoption` from `tests/setupfuncs.sh`, which finds the option by its name.
-   `setoption` stops the setup script unless the name matches exactly one
-   statement, and the test then fails in CI.
+   option that you renamed or removed, or whose type or form you changed. Those
+   files change options with `setoption` from `tests/setupfuncs.sh`. The comment
+   of `setoption` says when it stops the setup script.
 3. Run `prek run --all-files` and correct every message.
 4. Run `make OPTIMIZE=OFF unittests && ./unittests` if `unittests.cc` calls a
    function that you changed.

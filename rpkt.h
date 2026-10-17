@@ -123,7 +123,7 @@ extern template void calculate_chi_rpkt_cont<false>(double nu_cmf, ContinuumOpac
 [[nodiscard]] DEVICE_FUNC auto sample_planck_times_expansion_opacity(int nonemptymgi, rngstate_type& rngstate)
     -> double;
 void allocate_expansionopacities();
-// Convert Sobolev line optical depths in each wavelength bin into an expansion mass opacity. When requested, also
+// Convert Sobolev line optical depths in each wavelength bin into a binned mass opacity. When requested, also
 // construct the Planck-weighted cumulative distribution used to sample thermal re-emission frequencies.
 // Eastman & Pinto (1993), ApJ, 412, 731-751, doi:10.1086/172957; Karp, Lasher, Chan & Salpeter (1977), ApJ, 214,
 // 161-178, doi:10.1086/155241.

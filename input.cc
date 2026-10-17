@@ -2319,7 +2319,7 @@ void read_atomicdata() {
   }
 }
 
-// the pure timestep schemes need no value, and the hybrid schemes need both values
+// the hybrid timestep schemes need both values, and the other schemes need no value
 static_assert(TIMESTEP_SIZE_METHOD == TimeStepSizeMethod::LOGARITHMIC ||
                   TIMESTEP_SIZE_METHOD == TimeStepSizeMethod::CONSTANT ||
                   (TIMESTEP_SIZE_CONSTANT_MAX_WIDTH_DAYS.value_or(0.) > 0. &&
@@ -2377,13 +2377,13 @@ auto calculate_timesteps(const TimeStepSizeMethod method, const double tmin, con
       const double t_transition = *transition_time_days * DAY;
       assert_always(t_transition > tmin);
       assert_always(t_transition < tmax);
-      const int nts_fixed = ceil((tmax - t_transition) / (*constant_max_width_days * DAY));
-      assert_always(nts_fixed > 0);
-      assert_always(nts_fixed < ntimesteps);
-      const int nts_log = ntimesteps - nts_fixed;
+      const int nts_constant = ceil((tmax - t_transition) / (*constant_max_width_days * DAY));
+      assert_always(nts_constant > 0);
+      assert_always(nts_constant < ntimesteps);
+      const int nts_log = ntimesteps - nts_constant;
       // NOLINTBEGIN(readability-suspicious-call-argument)
       fill_logarithmic(0, nts_log, tmin, t_transition);
-      fill_constant(nts_log, nts_fixed, t_transition, (tmax - t_transition) / nts_fixed);
+      fill_constant(nts_log, nts_constant, t_transition, (tmax - t_transition) / nts_constant);
       // NOLINTEND(readability-suspicious-call-argument)
       break;
     }
@@ -2393,12 +2393,12 @@ auto calculate_timesteps(const TimeStepSizeMethod method, const double tmin, con
       const double t_transition = *transition_time_days * DAY;
       assert_always(t_transition > tmin);
       assert_always(t_transition < tmax);
-      const int nts_fixed = ceil((t_transition - tmin) / (*constant_max_width_days * DAY));
-      assert_always(nts_fixed > 0);
-      assert_always(nts_fixed < ntimesteps);
+      const int nts_constant = ceil((t_transition - tmin) / (*constant_max_width_days * DAY));
+      assert_always(nts_constant > 0);
+      assert_always(nts_constant < ntimesteps);
       // NOLINTBEGIN(readability-suspicious-call-argument)
-      fill_constant(0, nts_fixed, tmin, (t_transition - tmin) / nts_fixed);
-      fill_logarithmic(nts_fixed, ntimesteps - nts_fixed, t_transition, tmax);
+      fill_constant(0, nts_constant, tmin, (t_transition - tmin) / nts_constant);
+      fill_logarithmic(nts_constant, ntimesteps - nts_constant, t_transition, tmax);
       // NOLINTEND(readability-suspicious-call-argument)
       break;
     }

@@ -218,11 +218,13 @@ constexpr bool NLTE_LIMIT_ION_STAGES_AFTER_FAILURE;
 constexpr double NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION;
 
 // Include the charge transfer reactions in the NLTE population solver. The published fits come from
-// data/chargetransfer.txt, which holds reactions with hydrogen and helium. The code estimates the other electron
+// data/chargetransfer.txt, which holds reactions with hydrogen and helium (Kingdon & Ferland 1996, ApJS, 106, 205-211,
+// doi:10.1086/192335). The code estimates the other electron
 // captures from a neutral donor at startup (see chargetransfer.cc). A singly charged ion gets a flat rate of
 // 1e-12 cm3/s, the median of the tabulated rates, for an energy release up to 4 eV. Above 4 eV it gets the
 // radiative floor of 1e-14 cm3/s. An ion with a charge of two or more gets a multichannel Landau-Zener
-// estimate, with the levels of the lower ion as the capture channels.
+// estimate (Butler & Dalgarno 1980, ApJ, 241, 838-843, doi:10.1086/158395), with the levels of the lower ion as the
+// capture channels.
 //
 // The reverse rates come from detailed balance. The rates enter the NLTE rate matrix as per-ion coefficients
 // between neighbouring ion stages. A reaction is active only when both elements have NLTE levels and a free
@@ -262,7 +264,8 @@ constexpr bool WRITE_ION_HEATING_COOLING_RATES;
 constexpr bool USE_LUT_PHOTOION;
 
 // Fit a dilute blackbody to each frequency bin of the radiation field, in addition to the fit of the whole
-// spectrum. The fit of the whole spectrum stays the fallback for a bin without a fit. Set USE_LUT_PHOTOION to
+// spectrum (Shingles et al. 2020, MNRAS, 492, 2029-2043, section 2.2, doi:10.1093/mnras/stz3412). The fit of the whole
+// spectrum stays the fallback for a bin without a fit. Set USE_LUT_PHOTOION to
 // false with this option, because the tables assume a Planck function. A static_assert checks this.
 constexpr bool MULTIBIN_RADFIELD_MODEL_ON;
 
@@ -302,8 +305,9 @@ constexpr int DETAILED_BF_ESTIMATORS_FIRST_TIMESTEP;
 
 // How the code deposits the energy of the non-thermal leptons.
 // NT_OFF: no non-thermal ionisation.
-// NT_SPENCERFANO: the Spencer-Fano solution. It also gives the non-thermal excitation rates for the NLTE
-// population solver, the macroatom, and the NTLEPTON packets.
+// NT_SPENCERFANO: the Spencer-Fano solution (Kozma & Fransson 1992, ApJ, 390, 602-621, doi:10.1086/171311;
+// Shingles et al. 2020, MNRAS, 492, 2029-2043, section 2.5, doi:10.1093/mnras/stz3412). It also gives the non-thermal
+// excitation rates for the NLTE population solver, the macroatom, and the NTLEPTON packets.
 // NT_AXELRODAPPROX: the work function approximation of Axelrod (1980, PhD thesis, University of California,
 // Santa Cruz). The ion balance gets the ionisation rates of that approximation, with no excitation rates. The
 // lepton packets deposit all of their energy as heat, and the thermal balance counts all of it as heat.
@@ -367,6 +371,11 @@ constexpr ParticleThermalisationScheme PARTICLE_THERMALISATION_SCHEME;
 // and GUTTMAN deposit a fraction of the gamma energy at once, from an analytic thermalisation efficiency. See
 // PARTICLE_THERMALISATION_SCHEME for the first two references. GUTTMAN: Guttman, Shenhar, Sarkar & Waxman 2024,
 // MNRAS, 533, 994-1011, doi:10.1093/mnras/stae1795.
+//
+// The deposited fraction is 1 - exp(-tau). BARNES takes tau = (t_ineff / t)^2, with t_ineff from the ejecta mass and
+// the mean ejecta velocity. WOLLAEGER takes the radial optical depth to the edge of the grid of a grey opacity of
+// 0.1 cm^2/g. GUTTMAN takes the mean over 100 random directions of 1 - exp(-tau) with a grey opacity of
+// 0.03 cm^2/g. These opacities are constants in gammapkt.cc, and no option changes them.
 constexpr GammaThermalisationScheme GAMMA_THERMALISATION_SCHEME;
 
 // Use the XCOM table for the gamma-ray photoelectric absorption instead of the Si and Fe power laws of
@@ -407,19 +416,20 @@ constexpr bool RPKT_USE_BINNED_OPACITIES;
 // VPKT_USE_BINNED_OPACITIES, and RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY. A line with the Sobolev optical
 // depth tau adds (lambda / delta_lambda) * weight to the sum of its bin:
 // - EXPANSION: 1 - exp(-tau) (Eastman & Pinto 1993, ApJ, 412, 731-751, doi:10.1086/172957).
-// - LINEBINNEDCAPPED: min(LINE_BINNED_CAPPED_TAU_MAX, tau), the line-binned opacity with a limit for each
+// - LINEBINNEDCAPPED: min(LINE_BINNED_CAPPED_TAU_MAX, tau), the line-binned opacity with a maximum for each
 //   line.
 // - LINEBINNED: tau, the line-binned opacity (Fontes, Fryer, Hungerford, Wollaeger & Korobkin 2020, MNRAS, 493,
 //   4143-4171, doi:10.1093/mnras/staa485).
 // With a nonzero RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY, LINEBINNEDCAPPED and LINEBINNED need
 // RPKT_USE_BINNED_OPACITIES. A line-by-line r-packet absorbs the fraction 1 - exp(-tau) in each line, so the
-// thermal emission must then use EXPANSION. For the virtual packets, LINEBINNED gives nearly the line-by-line optical
-// depth of a bin that the packet fully crosses. EXPANSION gives a smaller optical depth for every line, and the
-// largest difference for a line with tau > 1. LINEBINNEDCAPPED gives a smaller optical depth for a line with
-// tau > LINE_BINNED_CAPPED_TAU_MAX.
+// thermal emission must then use EXPANSION.
+//
+// For the virtual packets, LINEBINNED gives nearly the line-by-line optical depth of a bin that the packet fully
+// crosses. EXPANSION gives a smaller optical depth for every line, and the largest difference for a line with
+// tau > 1. LINEBINNEDCAPPED gives a smaller optical depth for a line with tau > LINE_BINNED_CAPPED_TAU_MAX.
 constexpr BinnedOpacityLineWeight BINNED_OPACITY_LINE_WEIGHT;
 
-// The limit of the Sobolev optical depth tau of each line in the LINEBINNEDCAPPED weight, e.g. 1. It must be above
+// The maximum of the Sobolev optical depth tau of each line in the LINEBINNEDCAPPED weight, e.g. 1. It must be above
 // zero. This value has an effect only with LINEBINNEDCAPPED.
 constexpr double LINE_BINNED_CAPPED_TAU_MAX;
 

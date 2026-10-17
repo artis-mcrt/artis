@@ -973,7 +973,7 @@ void allocate_expansionopacities() {
   }
 }
 
-// return a randomly chosen frequency with a distribution of Planck function times the binned opacity
+// return a randomly chosen frequency with a distribution of Planck function times the true absorption opacity
 DEVICE_FUNC auto sample_planck_times_expansion_opacity(const int nonemptymgi, rngstate_type& rngstate) -> double {
   assert_testmodeonly(RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.has_value());
 
@@ -1085,7 +1085,7 @@ void MPI_Bcast_binned_opacities(const ptrdiff_t nstart_nonempty, const ptrdiff_t
   }
 }
 
-// Calculate the binned opacities of one cell: within each frequency bin, the Sobolev optical
+// Calculate the binned opacities of one cell: within each wavelength bin, the Sobolev optical
 // depths of all lines are combined into a single effective opacity for the bin. Called when
 // RPKT_USE_BINNED_OPACITIES or VPKT_USE_BINNED_OPACITIES replaces the line-by-line opacity for
 // r-packets or virtual packets, and also when RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY is set.
