@@ -1,9 +1,9 @@
 # Helpers for the setup scripts of the end-to-end tests. The setup scripts source this file.
 # CI sources the setup scripts from bash, and a local run uses zsh, so the file must work in both.
 
-# The release that supplies the atomic data archives. The cache keys of ci.yml hold
-# the hash of this file, so a new tag gives a new cache.
-ATOMICDATA_RELEASE=v2026.5.15
+# The release that supplies the atomic data archives. The cache keys of ci.yml hold the hash of
+# atomic_data_release.txt, so a new tag gives a new cache.
+ATOMICDATA_RELEASE=$(cat atomic_data_release.txt)
 
 getatomicdata() {
     if [ ! -f "$1" ]; then
@@ -20,6 +20,9 @@ getatomicdata() {
 # - the name matches exactly one statement;
 # - $2 is a body in braces for a function option.
 setoption() {
+    # set -x of the setup scripts would print the whole perl program for each call
+    local xtrace_was_on=0
+    case $- in *x*) xtrace_was_on=1; set +x ;; esac
     if [ $# -ne 2 ] || [ -z "$2" ]; then
         echo "[error] setoption needs an option name and a value" >&2
         exit 1
@@ -39,6 +42,7 @@ setoption() {
         echo "[error] setoption could not set $1 in artisoptions.h" >&2
         exit 1
     fi
+    if [ "$xtrace_was_on" = 1 ]; then set -x; fi
 }
 
 # Set the maximum number of levels of each ion (column 5 of compositiondata.txt) to $1 for every element.

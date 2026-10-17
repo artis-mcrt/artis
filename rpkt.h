@@ -41,11 +41,12 @@ constexpr auto get_expopac_bin_nu_lower(const ptrdiff_t binindex) -> double {
 
 static_assert(get_expopac_bin_nu_lower(0) == get_expopac_bin_nu_upper(1));  // bins are contiguous
 
-// the options that need the binned line opacities of each cell. The thermalisation option stores only the Planck
-// cumulative of the bins; the expansionopacities array exists only with RPKT_USE_BINNED_OPACITIES or
-// VPKT_USE_BINNED_OPACITIES.
-constexpr bool expopac_bins_on =
-    RPKT_USE_BINNED_OPACITIES || VPKT_USE_BINNED_OPACITIES || RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.has_value();
+// the options that read the expansionopacities array of each cell
+constexpr bool expansionopacities_array_on = RPKT_USE_BINNED_OPACITIES || VPKT_USE_BINNED_OPACITIES;
+
+// the options that need the binned opacities of each cell. The thermalisation option stores only the Planck
+// cumulative of the bins.
+constexpr bool expopac_bins_on = expansionopacities_array_on || RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY.has_value();
 
 // The thermal emission of RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY uses the bin weights. A line-by-line r-packet
 // absorbs the fraction 1 - exp(-tau) in each line, so a thermal emission with a line term then needs the EXPANSION

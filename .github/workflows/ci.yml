@@ -95,9 +95,9 @@ jobs:
               id: cache-testatomicdata
               with:
                   path: tests/atomicdata_feconi.tar.xz
-                  # setupfuncs.sh names the release of the archives, so a new release gives a new cache.
+                  # atomic_data_release.txt names the release of the archives, so a new release gives a new cache.
                   # The setup script downloads nothing when the folder holds an archive.
-                  key: atomicdata_feconi-${{ hashFiles('tests/setupfuncs.sh') }}
+                  key: atomicdata_feconi-${{ hashFiles('tests/atomic_data_release.txt') }}
 
             - name: Cache test atomic data classic
               if: ${{ startsWith(matrix.testname, 'classicmode') }}
@@ -105,7 +105,7 @@ jobs:
               id: cache-testatomicdata-classic
               with:
                   path: tests/atomicdata_classic.tar.xz
-                  key: atomicdata_classic-${{ hashFiles('tests/setupfuncs.sh') }}
+                  key: atomicdata_classic-${{ hashFiles('tests/atomic_data_release.txt') }}
 
             - name: Cache test atomic data nltephotospheric
               if: ${{ startsWith(matrix.testname, 'nltephotospheric') }}
@@ -113,7 +113,7 @@ jobs:
               id: cache-testatomicdata-nltephotospheric
               with:
                   path: tests/atomicdata_hefeconi_fe_i_to_vii.tar.xz
-                  key: atomicdata_hefeconi_fe_i_to_vii-${{ hashFiles('tests/setupfuncs.sh') }}
+                  key: atomicdata_hefeconi_fe_i_to_vii-${{ hashFiles('tests/atomic_data_release.txt') }}
 
             - name: Cache test atomic data kilonova_1d_timedepnlte
               if: ${{ startsWith(matrix.testname, 'kilonova_1d_timedepnlte') }}
@@ -121,7 +121,7 @@ jobs:
               id: cache-testatomicdata-sryzrlace
               with:
                   path: tests/atomicdata_sryzrlace.tar.zst
-                  key: atomicdata_sryzrlace-${{ hashFiles('tests/setupfuncs.sh') }}
+                  key: atomicdata_sryzrlace-${{ hashFiles('tests/atomic_data_release.txt') }}
 
             - name: Download/extract test data
               working-directory: tests/
@@ -435,7 +435,7 @@ jobs:
               id: cache-testatomicdata
               with:
                   path: tests/atomicdata_feconi.tar.xz
-                  key: atomicdata_feconi-${{ hashFiles('tests/setupfuncs.sh') }}
+                  key: atomicdata_feconi-${{ hashFiles('tests/atomic_data_release.txt') }}
 
             - name: Download/extract test data
               working-directory: tests/
@@ -492,7 +492,7 @@ jobs:
               id: cache-testatomicdata
               with:
                   path: tests/atomicdata_feconi.tar.xz
-                  key: atomicdata_feconi-${{ hashFiles('tests/setupfuncs.sh') }}
+                  key: atomicdata_feconi-${{ hashFiles('tests/atomic_data_release.txt') }}
 
             - name: Download/extract test data
               working-directory: tests/

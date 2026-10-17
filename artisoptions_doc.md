@@ -15,9 +15,13 @@ constexpr bool INITIAL_PACKETS_ON;
 // follows the decay power at its time.
 constexpr bool UNIFORM_PELLET_ENERGIES;
 
-// The timestep scheme: LOGARITHMIC, CONSTANT, LOGARITHMIC_THEN_CONSTANT, or CONSTANT_THEN_LOGARITHMIC. The last two
-// are the hybrid schemes. They need TIMESTEP_SIZE_CONSTANT_MAX_WIDTH_DAYS and TIMESTEP_SIZE_TRANSITION_TIME_DAYS. The
-// number of constant timesteps must be below the total number of timesteps, or the run stops.
+// The timestep scheme:
+// - LOGARITHMIC;
+// - CONSTANT;
+// - LOGARITHMIC_THEN_CONSTANT, a hybrid scheme;
+// - CONSTANT_THEN_LOGARITHMIC, a hybrid scheme.
+// The hybrid schemes need TIMESTEP_SIZE_CONSTANT_MAX_WIDTH_DAYS and TIMESTEP_SIZE_TRANSITION_TIME_DAYS. The number of
+// constant timesteps must be below the total number of timesteps, or the run stops.
 constexpr TimeStepSizeMethod TIMESTEP_SIZE_METHOD;
 
 // The maximum width of a constant timestep in days. The code divides the constant interval into equal timesteps of
@@ -118,11 +122,12 @@ constexpr bool FORCE_SAHA_ION_BALANCE(int element_z);
 // cell makes at most NLTE_TE_NNE_MAXITER + 1 passes.
 constexpr int NLTE_TE_NNE_MAXITER;
 
-// Anderson acceleration of the NLTE/Te/Spencer-Fano iteration. The iteration maps the state of one pass to the
-// state of the next pass. The state holds the logarithms of the electron temperature, of the electron density,
-// and of the population of each significant ion (see NLTE_SIGNIFICANT_ION_FRACTION in nltepop.h). The charge
-// transfer reactions move population between two elements and hold nne, so the ion populations make that mode
-// visible to the accelerator. update_grid.cc sets the maximum number of ions in the state and the maximum depth.
+// Anderson acceleration (Anderson 1965, Journal of the ACM, 12, 547-560, doi:10.1145/321296.321305) of the
+// NLTE/Te/Spencer-Fano iteration. The iteration maps the state of one pass to the state of the next pass. The state
+// holds the logarithms of the electron temperature, of the electron density, and of the population of each significant
+// ion (see NLTE_SIGNIFICANT_ION_FRACTION in nltepop.h). The charge transfer reactions move population between two
+// elements and hold nne, so the ion populations make that mode visible to the accelerator. update_grid.cc sets the
+// maximum number of ions in the state and the maximum depth.
 //
 // With the acceleration on, the accelerator combines the last iterates so that the residual of the combination
 // is minimal. The next pass then starts from that combination. False keeps the plain successive substitution.
@@ -150,13 +155,13 @@ constexpr bool NLTE_TE_NNE_USE_ANDERSON_ACCEL;
 // the acceleration, the same value is the tolerance of the ion population test.
 constexpr double NLTE_TE_NNE_RELTOL;
 
-// Solve the NLTE rate matrix with the Grassmann-Taksar-Heyman (GTH) state elimination instead of the LU
-// decomposition with a normalisation row. The rate matrix is the transpose of a Markov chain generator. GTH
-// never reads the diagonal and makes no subtraction, so each population gets a relative accuracy, also when the
-// populations span many orders of magnitude. GTH needs no equilibration, no balance vector, and no iterative
-// refinement. An element with FORCE_SAHA_ION_BALANCE or a time-dependent timestep (see
-// NLTE_TIME_DEPENDENT_FIRST_TIMESTEP) uses the LU solver, because the Saha rows and the time term break the
-// generator structure. The steady-state timesteps still use GTH.
+// Solve the NLTE rate matrix with the Grassmann-Taksar-Heyman (GTH) state elimination (Grassmann, Taksar & Heyman 1985,
+// Operations Research, 33, 1107-1116, doi:10.1287/opre.33.5.1107) instead of the LU decomposition with a normalisation
+// row. The rate matrix is the transpose of a Markov chain generator. GTH never reads the diagonal and makes no
+// subtraction, so each population gets a relative accuracy, also when the populations span many orders of magnitude.
+// GTH needs no equilibration, no balance vector, and no iterative refinement. An element with FORCE_SAHA_ION_BALANCE or
+// a time-dependent timestep (see NLTE_TIME_DEPENDENT_FIRST_TIMESTEP) uses the LU solver, because the Saha rows and the
+// time term break the generator structure. The steady-state timesteps still use GTH.
 constexpr bool NLTE_USE_GTH_SOLVER;
 
 // Solve the ionisation balance and the thermal balance with a time term from this timestep on, as the SUMO code

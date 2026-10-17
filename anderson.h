@@ -1,6 +1,7 @@
-// Anderson acceleration of a fixed-point iteration x = G(x) for a small state vector (see
-// NLTE_TE_NNE_USE_ANDERSON_ACCEL). The accelerator keeps the last map outputs and their residuals. It
-// combines them so that the residual of the combination is minimal in the least-squares sense.
+// Anderson acceleration (Anderson 1965, Journal of the ACM, 12, 547-560, doi:10.1145/321296.321305) of a fixed-point
+// iteration x = G(x) for a small state vector (see NLTE_TE_NNE_USE_ANDERSON_ACCEL). The accelerator keeps the last map
+// outputs and their residuals. It combines them so that the residual of the combination is minimal in the least-squares
+// sense.
 
 #ifndef ANDERSON_H
 #define ANDERSON_H

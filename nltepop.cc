@@ -1697,14 +1697,14 @@ auto get_nlte_solution_range(const int nonemptymgi, const int element) -> std::p
           grid::get_elements_uppermost_ion(nonemptymgi, element)};
 }
 
-// Grassmann-Taksar-Heyman (GTH) state-elimination solve for the stationary distribution of the continuous-time
-// Markov chain whose generator is stored transposed in the NLTE rate matrix layout, i.e. rate_matrix[(to * n) +
-// from] with n = vec_x.size(). The off-diagonal rates must be finite (the caller checks this) and non-negative.
-// Only sums, products, and divisions of the rates are used
-// and the diagonal is never read, so there is no subtractive cancellation and assembly rounding in the
-// column sums cannot affect the result. Small negative autoionisation off-diagonals (warned about during
-// assembly) only weaken that guarantee locally; any resulting invalid populations are policed by the caller.
-// rate_matrix is overwritten. On success, returns std::nullopt and fills vec_x with the stationary distribution
+// Grassmann-Taksar-Heyman (GTH) state-elimination solve (Grassmann, Taksar & Heyman 1985, Operations Research, 33,
+// 1107-1116, doi:10.1287/opre.33.5.1107) for the stationary distribution of the continuous-time Markov chain whose
+// generator is stored transposed in the NLTE rate matrix layout, i.e. rate_matrix[(to * n) + from] with n =
+// vec_x.size(). The off-diagonal rates must be finite (the caller checks this) and non-negative. Only sums, products,
+// and divisions of the rates are used and the diagonal is never read, so there is no subtractive cancellation and
+// assembly rounding in the column sums cannot affect the result. Small negative autoionisation off-diagonals (warned
+// about during assembly) only weaken that guarantee locally; any resulting invalid populations are policed by the
+// caller. rate_matrix is overwritten. On success, returns std::nullopt and fills vec_x with the stationary distribution
 // normalised to a sum of one. On failure, returns the index of a state whose departure rate into the remaining
 // chain is zero (a reducible matrix) or not finite, and leaves vec_x untouched. An infinite rate that reaches an
 // inflow sum in the back-substitution gives a non-finite population, which the caller's validity check rejects.

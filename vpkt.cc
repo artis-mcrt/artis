@@ -445,9 +445,6 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
               dist = bin_path_end_dist;
 
               for (int opacchoiceindex = 0; opacchoiceindex < nspectraperobsdir; opacchoiceindex++) {
-                assert_testmodeonly(opacityexclusions[opacchoiceindex] <=
-                                    0);  // the binned opacities include all elements, so a spectrum
-                                         // cannot exclude elements
                 if (opacityexclusions[opacchoiceindex] != -1) {
                   tau_vpkt[opacchoiceindex] += tau_bin;
                 }

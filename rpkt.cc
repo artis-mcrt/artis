@@ -963,7 +963,7 @@ void allocate_expansionopacities() {
   const auto nonempty_npts_model = grid::get_nonempty_npts_model();
 
   assert_always(expansionopacities.empty());
-  if constexpr (RPKT_USE_BINNED_OPACITIES || VPKT_USE_BINNED_OPACITIES) {
+  if constexpr (expansionopacities_array_on) {
     expansionopacities = MPI_shared_array<float>(nonempty_npts_model * expopac_nbins);
   }
 
@@ -1072,7 +1072,7 @@ template void calculate_chi_rpkt_cont<false>(const double nu_cmf, ContinuumOpaci
 void MPI_Bcast_binned_opacities(const ptrdiff_t nstart_nonempty, const ptrdiff_t ndo_nonempty, const int root_node_id) {
   if (globals::rank_in_node == 0) {
     assert_always(nstart_nonempty >= 0);
-    if constexpr (RPKT_USE_BINNED_OPACITIES || VPKT_USE_BINNED_OPACITIES) {
+    if constexpr (expansionopacities_array_on) {
       MPI_Bcast_safe(expansionopacities.subspan(nstart_nonempty * expopac_nbins, ndo_nonempty * expopac_nbins),
                      root_node_id, globals::mpi_comm_internode);
     }
@@ -1137,7 +1137,7 @@ void calculate_expansion_opacities(const int nonemptymgi) {
     const auto bin_kappa_bb = static_cast<float>(1. / (CLIGHT * t_mid * rho) * bin_linesum);
     assert_always(std::isfinite(bin_kappa_bb));
 
-    if constexpr (RPKT_USE_BINNED_OPACITIES || VPKT_USE_BINNED_OPACITIES) {
+    if constexpr (expansionopacities_array_on) {
       expansionopacities[(nonemptymgi * expopac_nbins) + binindex] = bin_kappa_bb;
     }
 
