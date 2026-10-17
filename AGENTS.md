@@ -315,6 +315,22 @@ test (see "Input and output files").
 
 ## Code conventions
 
+### Methods
+
+The users of ARTIS must understand what the code does, because they must
+check and describe the method of their results. Make each method clear:
+
+- Give each compile-time option a name that says which method it selects.
+  Write the method, its formula, and the reference in `artisoptions_doc.md`.
+- Give each enumerator of a method option the name of its method, e.g.
+  `EXPANSION`, `LINEBINNEDCAPPED`, and `LINEBINNED` of
+  `BINNED_OPACITY_LINE_WEIGHT`.
+- Cite the journal article of a method where one exists (see "References").
+- Write a log line when the code uses a different method for a cell, e.g. a
+  fallback to LTE. A user must not find a change of method only in the source.
+- Do not add a hidden switch or an automatic choice of method. Make it an
+  option, or log the choice.
+
 ### Names
 
 The readers of this code are scientists, not only programmers. Give each
