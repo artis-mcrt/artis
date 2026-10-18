@@ -767,7 +767,7 @@ auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixsli
         std::ranges::lower_bound(globals::bfestim_nu_edge.first(phixslist.bfestimend), nu / last_phixs_nuovernuedge) -
         globals::bfestim_nu_edge.begin());
 
-    if constexpr (DETAILED_BF_ESTIMATORS_ON) {
+    if constexpr (DETAILED_BF_ESTIMATORS_FIRST_TIMESTEP.has_value()) {
       // only the contributing continua write below, so clear the rest of the window here. This window
       // holds exactly the continua of [allcontbegin, allcontend) that have an estimator index.
       std::ranges::fill(
@@ -905,7 +905,8 @@ auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixsli
         }
       }
 
-      if constexpr (USECELLHISTANDUPDATEPHIXSLIST && !SELECTCONTINUUM && DETAILED_BF_ESTIMATORS_ON) {
+      if constexpr (USECELLHISTANDUPDATEPHIXSLIST && !SELECTCONTINUUM &&
+                    DETAILED_BF_ESTIMATORS_FIRST_TIMESTEP.has_value()) {
         if (allcont_bfestimindex[i] >= 0) {
           phixslist.gamma_contr[allcont_bfestimindex[i]] = sigma_contr;
         }

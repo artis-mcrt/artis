@@ -89,9 +89,7 @@ constexpr float STRICT_POPULATION_CHECKING_INVERSION_FACTOR_SOLVER_FAIL = 50.;
 
 constexpr float STRICT_POPULATION_CHECKING_INVERSION_FACTOR_PRINTOUT_WARNING = 2.;
 
-constexpr bool NLTE_LIMIT_ION_STAGES_AFTER_FAILURE = true;
-
-constexpr double NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION = 1e-9;
+constexpr std::optional<double> NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION = 1e-9;
 
 constexpr bool ENABLE_CHARGE_TRANSFER_REACTIONS = false;
 
@@ -109,11 +107,9 @@ constexpr bool WRITE_ION_HEATING_COOLING_RATES = false;
 
 constexpr bool USE_LUT_PHOTOION = false;
 
-constexpr bool MULTIBIN_RADFIELD_MODEL_ON = true;
+constexpr std::optional<int> MULTIBIN_RADFIELD_FIRST_TIMESTEP = 12;
 
 constexpr int RADFIELDBINCOUNT = 256;
-
-constexpr int MULTIBIN_RADFIELD_FIRST_TIMESTEP = 12;
 
 constexpr double RADFIELDBINS_NU_MIN = (CLIGHT / 40000e-8);
 constexpr double RADFIELDBINS_NU_MAX = (CLIGHT / 1085e-8);
@@ -122,14 +118,12 @@ constexpr double RADFIELDBINS_T_E_SUPERBIN_NU_MAX = (CLIGHT / 10e-8);
 
 constexpr bool DETAILED_LINE_ESTIMATORS_ON = false;
 
-constexpr bool DETAILED_BF_ESTIMATORS_ON = true;
+constexpr std::optional<int> DETAILED_BF_ESTIMATORS_FIRST_TIMESTEP = 13;
 
 constexpr bool DETAILED_BF_ESTIMATORS_LEVEL_SELECTED(int element_z, int ionstage, int level) {
   // To only BF estimators for NLTE levels:
   return level <= ION_NLEVELS_EXCITED_NLTE(element_z, ionstage);
 }
-
-constexpr int DETAILED_BF_ESTIMATORS_FIRST_TIMESTEP = 13;
 
 // --- Non-thermal particles ---
 

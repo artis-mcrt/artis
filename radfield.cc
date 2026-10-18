@@ -48,12 +48,12 @@ constexpr double bins_T_R_max = 250000;
 static_assert(RADFIELDBINS_T_E_SUPERBIN_NU_MAX >= RADFIELDBINS_NU_MAX,
               "The T_e superbin upper boundary must be greater than or equal to the upper boundary of the other bins");
 
-static_assert(!DETAILED_BF_ESTIMATORS_ON || !USE_LUT_PHOTOION,
-              "USE_LUT_PHOTOION must be false when DETAILED_BF_ESTIMATORS_ON is true");
+static_assert(!DETAILED_BF_ESTIMATORS_FIRST_TIMESTEP.has_value() || !USE_LUT_PHOTOION,
+              "USE_LUT_PHOTOION must be false when DETAILED_BF_ESTIMATORS_FIRST_TIMESTEP has a value");
 
 // the photoionisation tables assume a Planck radiation field, so they cannot use the fits of the bins
-static_assert(!MULTIBIN_RADFIELD_MODEL_ON || !USE_LUT_PHOTOION,
-              "USE_LUT_PHOTOION must be false when MULTIBIN_RADFIELD_MODEL_ON is true");
+static_assert(!MULTIBIN_RADFIELD_FIRST_TIMESTEP.has_value() || !USE_LUT_PHOTOION,
+              "USE_LUT_PHOTOION must be false when MULTIBIN_RADFIELD_FIRST_TIMESTEP has a value");
 
 std::vector<double> J_normfactor;
 
@@ -92,7 +92,7 @@ std::vector<std::vector<Jb_lu_estimator>> Jb_lu_raw{};  // unnormalised estimato
 MPI_shared_array<float> prev_bfrate_normed{};  // values from the previous timestep
 std::vector<double> bfrate_raw;  // unnormalised estimators for the current timestep
 
-// for DETAILED_BF_ESTIMATORS_ON: maps an index into the allphixstargets arrays (the
+// for the detailed bf estimators: maps an index into the allphixstargets arrays (the
 // element/ion/level/phixstargetindex ordering) to the same continuum's index in the nu_edge-sorted
 // globals::allcont arrays. Built in init() as the inverse of the sort permutation from setup_phixs_list().
 MPI_shared_array<int> allcontindex_of_allphixstargetindex{};
@@ -205,7 +205,7 @@ auto get_bin_T_R(const std::ptrdiff_t nonemptymgi, const int binindex) -> float 
 
 void update_bfestimators(const ptrdiff_t nonemptymgi, const double distance_e_cmf, const double nu_cmf,
                          const Phixslist& phixslist) {
-  assert_testmodeonly(DETAILED_BF_ESTIMATORS_ON);
+  assert_testmodeonly(DETAILED_BF_ESTIMATORS_FIRST_TIMESTEP.has_value());
 
   // No doppler factor: like J, the photoionisation rate coefficient is a comoving-frame volume estimator, and the
   // frame conversion is already fully accounted for by e_cmf and evaluating sigma_bf at nu_cmf (consistent with the
@@ -439,7 +439,7 @@ auto get_allcontindex(const int element, const int lowerion, const int lower, co
 }
 
 void write_to_file(const int nonemptymgi, const int timestep) {
-  assert_always(MULTIBIN_RADFIELD_MODEL_ON);
+  assert_always(MULTIBIN_RADFIELD_FIRST_TIMESTEP.has_value());
   const int modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
 #ifdef _OPENMP
 #pragma omp critical(out_file)
@@ -554,16 +554,16 @@ void init() {
     printlnlog("There are {} lines with detailed Jblue_lu estimators.", detailed_linecount);
   }
 
-  printlog("DETAILED_BF_ESTIMATORS {}", DETAILED_BF_ESTIMATORS_ON ? "ON" : "OFF");
-  if constexpr (DETAILED_BF_ESTIMATORS_ON) {
-    printlnlog(" from timestep {}", DETAILED_BF_ESTIMATORS_FIRST_TIMESTEP);
+  printlog("DETAILED_BF_ESTIMATORS {}", DETAILED_BF_ESTIMATORS_FIRST_TIMESTEP.has_value() ? "ON" : "OFF");
+  if constexpr (DETAILED_BF_ESTIMATORS_FIRST_TIMESTEP.has_value()) {
+    printlnlog(" from timestep {}", *DETAILED_BF_ESTIMATORS_FIRST_TIMESTEP);
   } else {
     printlnlog("");
   }
 
-  if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
+  if constexpr (MULTIBIN_RADFIELD_FIRST_TIMESTEP.has_value()) {
     printlnlog("The multibin radiation field is being used from timestep {} onwards.",
-               MULTIBIN_RADFIELD_FIRST_TIMESTEP);
+               *MULTIBIN_RADFIELD_FIRST_TIMESTEP);
 
     printlnlog(
         "Initialising multibin radiation field with {} bins from ({:.2f} [eV], {:6.1f} [A]) to ({:.2f} [eV], "
@@ -592,7 +592,7 @@ void init() {
     printlnlog("The radiation field model is a full-spectrum fit to a single dilute blackbody TR & W.");
   }
 
-  if constexpr (DETAILED_BF_ESTIMATORS_ON) {
+  if constexpr (DETAILED_BF_ESTIMATORS_FIRST_TIMESTEP.has_value()) {
     if (globals::nbfcontinua > 0) {
       // build the O(1) lookup used by get_allcontindex(): for each continuum in the nu_edge-sorted
       // allcont list, record its position under the allphixstargets (element/ion/level/target) ordering
@@ -626,7 +626,7 @@ void init() {
 
   zero_estimators();
 
-  if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
+  if constexpr (MULTIBIN_RADFIELD_FIRST_TIMESTEP.has_value()) {
     MPI_Barrier_node();
     if (globals::rank_in_node == 0) {
       std::ranges::fill(radfieldbin_solutions_W, -1.);
@@ -674,7 +674,7 @@ void zero_estimators() {
   std::ranges::fill(nuJ, 0.0);
   std::ranges::fill(bfrate_raw, 0.0);
 
-  if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
+  if constexpr (MULTIBIN_RADFIELD_FIRST_TIMESTEP.has_value()) {
     std::ranges::fill(radfieldbins.J_raw, 0.0);
     std::ranges::fill(radfieldbins.nuJ_raw, 0.0);
   }
@@ -699,11 +699,11 @@ DEVICE_FUNC void update_estimators(const ptrdiff_t nonemptymgi, const double dis
     return;
   }
 
-  if constexpr (DETAILED_BF_ESTIMATORS_ON) {
+  if constexpr (DETAILED_BF_ESTIMATORS_FIRST_TIMESTEP.has_value()) {
     update_bfestimators(nonemptymgi, distance_e_cmf, nu_cmf, phixslist);
   }
 
-  if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
+  if constexpr (MULTIBIN_RADFIELD_FIRST_TIMESTEP.has_value()) {
     const int binindex = select_bin(nu_cmf);
 
     if (binindex >= 0) {
@@ -728,8 +728,8 @@ DEVICE_FUNC void update_lineestimator(const int nonemptymgi, const int lineindex
 
 // mean intensity J_nu [ergs/s/sr/cm2/Hz]
 DEVICE_FUNC auto radfield(const double nu, const int nonemptymgi) -> double {
-  if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
-    if (globals::timestep >= MULTIBIN_RADFIELD_FIRST_TIMESTEP) {
+  if constexpr (MULTIBIN_RADFIELD_FIRST_TIMESTEP.has_value()) {
+    if (globals::timestep >= *MULTIBIN_RADFIELD_FIRST_TIMESTEP) {
       const int binindex = select_bin(nu);
       if (binindex < 0) {
         return 0.;
@@ -748,11 +748,11 @@ DEVICE_FUNC auto radfield(const double nu, const int nonemptymgi) -> double {
 void write_timestep_text() { radfieldfile.write_timestep_text(); }
 
 // Fit the radiation field parameters of one cell to the estimators accumulated over the last timestep:
-// the full-spectrum diluted blackbody (W, T_R), and with MULTIBIN_RADFIELD_MODEL_ON a separate (W, T_R)
-// per frequency bin.
+// the full-spectrum diluted blackbody (W, T_R), and with a value of MULTIBIN_RADFIELD_FIRST_TIMESTEP a separate (W,
+// T_R) per frequency bin.
 void fit_parameters(const int nonemptymgi, const int timestep) {
   set_params_fullspec(nonemptymgi, timestep);
-  if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
+  if constexpr (MULTIBIN_RADFIELD_FIRST_TIMESTEP.has_value()) {
     assert_always(J_normfactor[nonemptymgi] >= 0.);
 
     double J_bin_sum = 0.;
@@ -839,7 +839,7 @@ void set_J_normfactor(const int nonemptymgi, const double normfactor) { J_normfa
 
 // A cell without a bin fit in this timestep must not keep the fit of an older timestep
 void invalidate_bin_fits(const int nonemptymgi) {
-  if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
+  if constexpr (MULTIBIN_RADFIELD_FIRST_TIMESTEP.has_value()) {
     std::ranges::fill(radfieldbin_solutions_W.span().subspan(static_cast<ptrdiff_t>(nonemptymgi) * RADFIELDBINCOUNT,
                                                              RADFIELDBINCOUNT),
                       -1.);
@@ -894,7 +894,7 @@ void normalise_bf_estimators(const int nts, const int nts_prev, const double del
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_bfrate_estimator(const int element, const int lowerion,
                                                                   const int lower, const int phixstargetindex,
                                                                   const int nonemptymgi) -> double {
-  if constexpr (DETAILED_BF_ESTIMATORS_ON) {
+  if constexpr (DETAILED_BF_ESTIMATORS_FIRST_TIMESTEP.has_value()) {
     const int allcontindex = get_allcontindex(element, lowerion, lower, phixstargetindex);
     if (allcontindex >= 0) {
       const auto bfestimindex = globals::allcont.bfestimindex[allcontindex];
@@ -938,7 +938,7 @@ void reduce_estimators() {
   MPI_Allreduce_safe(J, MPI_SUM, MPI_COMM_WORLD);
   MPI_Allreduce_safe(nuJ, MPI_SUM, MPI_COMM_WORLD);
 
-  if constexpr (DETAILED_BF_ESTIMATORS_ON) {
+  if constexpr (DETAILED_BF_ESTIMATORS_FIRST_TIMESTEP.has_value()) {
     // reduce all ranks on each node first, then reduce the node leaders
     // then broadcast the final result to all ranks on each node
     // this seems necessary to avoid congestion compared to a single MPI_Allreduce when using many ranks per node
@@ -949,7 +949,7 @@ void reduce_estimators() {
     MPI_Bcast_safe(bfrate_raw, 0, globals::mpi_comm_node);
   }
 
-  if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
+  if constexpr (MULTIBIN_RADFIELD_FIRST_TIMESTEP.has_value()) {
     const auto sys_time_start_reduction = std::chrono::steady_clock::now();
     printlog("Reducing binned radiation field estimators");
 
@@ -983,7 +983,7 @@ void do_MPI_Bcast(const ptrdiff_t nstart_nonempty, const ptrdiff_t ndo_nonempty,
                   const int root_node_id) {
   MPI_Bcast_safe(std::span{J_normfactor}.subspan(nstart_nonempty, ndo_nonempty), root, MPI_COMM_WORLD);
 
-  if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
+  if constexpr (MULTIBIN_RADFIELD_FIRST_TIMESTEP.has_value()) {
     if (globals::rank_in_node == 0) {
       MPI_Bcast_safe(
           radfieldbin_solutions_W.subspan(nstart_nonempty * RADFIELDBINCOUNT, ndo_nonempty * RADFIELDBINCOUNT),
@@ -1009,14 +1009,14 @@ void write_restart_data(FILE* gridsave_file) {
 
   write_restart_values(gridsave_file, 30490824);  // special number marking the beginning of radfield data
 
-  if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
+  if constexpr (MULTIBIN_RADFIELD_FIRST_TIMESTEP.has_value()) {
     write_restart_values(gridsave_file, RADFIELDBINCOUNT, RADFIELDBINS_NU_MIN, RADFIELDBINS_NU_MAX, bins_T_R_min,
                          bins_T_R_max);
     write_restart_array(gridsave_file, radfieldbin_solutions_W);
     write_restart_array(gridsave_file, radfieldbin_solutions_T_R);
   }
 
-  if constexpr (DETAILED_BF_ESTIMATORS_ON) {
+  if constexpr (DETAILED_BF_ESTIMATORS_FIRST_TIMESTEP.has_value()) {
     write_restart_values(gridsave_file, globals::nbfcontinua, static_cast<int>(std::ssize(globals::bfestim_nu_edge)));
     write_restart_array(gridsave_file, prev_bfrate_normed);
   }
@@ -1038,7 +1038,7 @@ void read_restart_data(FILE* gridsave_file) {
   read_restart_values(gridsave_file, code_check);
   assert_always(code_check == 30490824);
 
-  if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
+  if constexpr (MULTIBIN_RADFIELD_FIRST_TIMESTEP.has_value()) {
     int bincount_in = 0;
     double nu_min_in{NAN};
     double nu_max_in{NAN};
@@ -1057,7 +1057,7 @@ void read_restart_data(FILE* gridsave_file) {
     read_restart_array(gridsave_file, radfieldbin_solutions_T_R);
   }
 
-  if constexpr (DETAILED_BF_ESTIMATORS_ON) {
+  if constexpr (DETAILED_BF_ESTIMATORS_FIRST_TIMESTEP.has_value()) {
     int nbfcontinua_in = 0;
     int bfestimcount_in = 0;
     read_restart_values(gridsave_file, nbfcontinua_in, bfestimcount_in);

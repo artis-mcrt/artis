@@ -19,9 +19,8 @@ DEVICE_FUNC void update_estimators(ptrdiff_t nonemptymgi, double distance_e_cmf,
 DEVICE_FUNC void update_lineestimator(int nonemptymgi, int lineindex, double increment);
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto radfield(double nu, int nonemptymgi) -> double;
 // Fit the radiation field of one cell: the full-spectrum dilute blackbody (W, T_R), and with
-// MULTIBIN_RADFIELD_MODEL_ON one (W, T_R) per bin. T_R of a bin comes from the ratio nuJ/J, then W from J. The top
-// superbin uses T_e.
-// Shingles et al. (2020), MNRAS, 492, 2029-2043, Section 2.2.2, doi:10.1093/mnras/stz3412.
+// MULTIBIN_RADFIELD_FIRST_TIMESTEP one (W, T_R) per bin. T_R of a bin comes from the ratio nuJ/J, then W from J. The
+// top superbin uses T_e. Shingles et al. (2020), MNRAS, 492, 2029-2043, Section 2.2.2, doi:10.1093/mnras/stz3412.
 void fit_parameters(int nonemptymgi, int timestep);
 void write_timestep_text();
 void set_J_normfactor(int nonemptymgi, double normfactor);

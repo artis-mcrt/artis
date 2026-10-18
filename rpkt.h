@@ -61,7 +61,7 @@ struct Phixslist {
   // for either USE_LUT_PHOTOION = true or USE_ION_BFHEATING_ESTIMATORS = true. Size =
   // nbfcontinua_ground
   std::span<double> groundcont_gamma_contr;
-  // needed for DETAILED_BF_ESTIMATORS_ON. Size = bfestimcount
+  // needed for the detailed bf estimators. Size = bfestimcount
   std::span<double> gamma_contr;
   // window of bfestim entries covered by the last opacity evaluation. The default is the empty window
   // rather than a negative "not set yet" sentinel, so the bounds are always a valid range (they are used
@@ -225,7 +225,7 @@ static_assert(closest_transition(8., 4, test_closest_transition_linelist_nu) == 
 // [[gnu::pure]] but defined in another translation unit, so LICM cannot lift it over a loop that stores.
 [[gnu::pure]] [[nodiscard]] inline auto keep_this_cont(const int element, const int ion, const int level,
                                                        const int nonemptymgi, const float nnetot) -> bool {
-  if constexpr (DETAILED_BF_ESTIMATORS_ON) {
+  if constexpr (DETAILED_BF_ESTIMATORS_FIRST_TIMESTEP.has_value()) {
     return grid::get_elem_massfrac(nonemptymgi, element) > 0;
   }
   return ((get_nnion(nonemptymgi, element, ion) / nnetot > 1.e-6) || (level == 0));

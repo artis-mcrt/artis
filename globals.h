@@ -285,7 +285,7 @@ struct CellCache {
   // held separately
   // and packed because it is what calculate_chi_bf_gammacontr() scans across the whole window on every
   // evaluation: with only ~11% of continua contributing in a typical cell (classic; the
-  // DETAILED_BF_ESTIMATORS_ON presets keep nearly all of them), packing lets that scan clear a whole word
+  // presets with detailed bf estimators keep nearly all of them), packing lets that scan clear a whole word
   // of absent species per test.
   std::span<std::uint64_t> allcont_keepbits;
   std::span<double> chi_ff_nnionpart;  // single element per cell (stored as a span to allow shared backing)

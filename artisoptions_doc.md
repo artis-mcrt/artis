@@ -213,14 +213,10 @@ constexpr float STRICT_POPULATION_CHECKING_INVERSION_FACTOR_SOLVER_FAIL;
 constexpr float STRICT_POPULATION_CHECKING_INVERSION_FACTOR_PRINTOUT_WARNING;
 
 // After a failed NLTE solution of an element, remove the highest ion, or the lowest ion when the highest ion
-// cannot go, and solve again. An ion can go only when its population is small (see
-// NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION). Without this option, or when no ion can go,
+// cannot go, and solve again. An ion can go only when its ground population, each NLTE excited population, and its
+// superlevel population are each below this fraction of the element population. With no value, or when no ion can go,
 // the whole element falls back to LTE.
-constexpr bool NLTE_LIMIT_ION_STAGES_AFTER_FAILURE;
-
-// NLTE_LIMIT_ION_STAGES_AFTER_FAILURE removes an ion only when its ground population, each NLTE excited
-// population, and its superlevel population are each below this fraction of the element population.
-constexpr double NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION;
+constexpr std::optional<double> NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION;
 
 // Include the charge transfer reactions in the NLTE population solver. The published fits come from
 // data/chargetransfer.txt, which holds reactions with hydrogen and helium (Kingdon & Ferland 1996, ApJS, 106, 205-211,
@@ -268,43 +264,38 @@ constexpr bool WRITE_ION_HEATING_COOLING_RATES;
 // the Monte Carlo estimator to the blackbody rate of the nearest ground continuum.
 constexpr bool USE_LUT_PHOTOION;
 
-// Fit a dilute blackbody to each frequency bin of the radiation field, in addition to the fit of the whole
-// spectrum (Shingles et al. 2020, MNRAS, 492, 2029-2043, section 2.2, doi:10.1093/mnras/stz3412). The fit of the whole
-// spectrum stays the fallback for a bin without a fit. Set USE_LUT_PHOTOION to
-// false with this option, because the tables assume a Planck function. A static_assert checks this.
-constexpr bool MULTIBIN_RADFIELD_MODEL_ON;
+// Fit a dilute blackbody to each frequency bin of the radiation field, in addition to the fit of the whole spectrum
+// (Shingles et al. 2020, MNRAS, 492, 2029-2043, section 2.2, doi:10.1093/mnras/stz3412). The value is the first
+// timestep at which radfield() reads the fits of the bins, and it must be at or after the first NLTE timestep. The fit
+// of the whole spectrum stays the fallback for a bin without a fit. No value turns off the fits of the bins. A value
+// needs USE_LUT_PHOTOION false, because the tables assume a Planck function. A static_assert checks this.
+constexpr std::optional<int> MULTIBIN_RADFIELD_FIRST_TIMESTEP;
 
-// The number of bins, including the T_e superbin. This value has an effect only with MULTIBIN_RADFIELD_MODEL_ON.
+// The number of bins, including the T_e superbin. This value has an effect only with a value of
+// MULTIBIN_RADFIELD_FIRST_TIMESTEP.
 constexpr int RADFIELDBINCOUNT;
 
-// The first timestep at which radfield() reads the binned radiation field. It must be at or after the first
-// NLTE timestep. This value has an effect only with MULTIBIN_RADFIELD_MODEL_ON.
-constexpr int MULTIBIN_RADFIELD_FIRST_TIMESTEP;
-
 // The frequency range of the regular bins [Hz], e.g. CLIGHT / (lambda[Angstrom] * 1e-8). These values have an
-// effect only with MULTIBIN_RADFIELD_MODEL_ON.
+// effect only with a value of MULTIBIN_RADFIELD_FIRST_TIMESTEP.
 constexpr double RADFIELDBINS_NU_MIN;
 constexpr double RADFIELDBINS_NU_MAX;
 
 // The upper frequency of the T_e superbin, the last bin above RADFIELDBINS_NU_MAX. The temperature of this bin
 // is the electron temperature of the cell. Only its dilution factor comes from the fit. This value has an effect
-// only with MULTIBIN_RADFIELD_MODEL_ON.
+// only with a value of MULTIBIN_RADFIELD_FIRST_TIMESTEP.
 constexpr double RADFIELDBINS_T_E_SUPERBIN_NU_MAX;
 
 // Store the Jb_lu estimators of the lines that radfield::init() selects. This needs RPKT_USE_BINNED_OPACITIES
 // false.
 constexpr bool DETAILED_LINE_ESTIMATORS_ON;
 
-// Store the detailed bound-free rate estimators. This needs USE_LUT_PHOTOION false.
-constexpr bool DETAILED_BF_ESTIMATORS_ON;
+// Store the detailed bound-free rate estimators, and use them from this timestep on, inclusive. No value turns off the
+// detailed estimators. A value needs USE_LUT_PHOTOION false.
+constexpr std::optional<int> DETAILED_BF_ESTIMATORS_FIRST_TIMESTEP;
 
-// Select the continua that the detailed bound-free estimators track. This function has an effect only with
-// DETAILED_BF_ESTIMATORS_ON.
+// Select the continua that the detailed bound-free estimators track. This function has an effect only with a
+// value of DETAILED_BF_ESTIMATORS_FIRST_TIMESTEP.
 constexpr bool DETAILED_BF_ESTIMATORS_LEVEL_SELECTED(int element_z, int ionstage, int level);
-
-// Use the detailed bound-free estimators from this timestep on, inclusive. This value has an effect only with
-// DETAILED_BF_ESTIMATORS_ON.
-constexpr int DETAILED_BF_ESTIMATORS_FIRST_TIMESTEP;
 
 // --- Non-thermal particles ---
 

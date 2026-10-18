@@ -980,7 +980,7 @@ void setup_phixs_list() {
     std::vector<double> temp_bfestim_nu_edge;
     if (globals::rank_in_node == 0) {
       for (int i = 0; i < nbfcontinua; i++) {
-        if (DETAILED_BF_ESTIMATORS_ON &&
+        if (DETAILED_BF_ESTIMATORS_FIRST_TIMESTEP.has_value() &&
             DETAILED_BF_ESTIMATORS_LEVEL_SELECTED(get_atomicnumber(globals::allcont.element[i]),
                                                   get_ionstage(globals::allcont.element[i], globals::allcont.ion[i]),
                                                   globals::allcont.level[i])) {
@@ -2110,13 +2110,13 @@ void read_parameterfile(std::span<Packet> packets) {
 
   // Sets the number of initial LTE timesteps for NLTE runs
   read_inputtxt_line(file, filename, noncomment_linenum++, globals::num_lte_timesteps);
-  if constexpr (MULTIBIN_RADFIELD_MODEL_ON) {
+  if constexpr (MULTIBIN_RADFIELD_FIRST_TIMESTEP.has_value()) {
     // the bins are fitted only after the LTE timesteps, and radfield() reads them from this timestep
-    if (globals::num_lte_timesteps > MULTIBIN_RADFIELD_FIRST_TIMESTEP) {
+    if (globals::num_lte_timesteps > *MULTIBIN_RADFIELD_FIRST_TIMESTEP) {
       fatal_crash(
-          "input.txt gives num_lte_timesteps {}, but MULTIBIN_RADFIELD_MODEL_ON needs num_lte_timesteps <= "
+          "input.txt gives num_lte_timesteps {}, but the multibin radiation field needs num_lte_timesteps <= "
           "MULTIBIN_RADFIELD_FIRST_TIMESTEP = {}",
-          globals::num_lte_timesteps, MULTIBIN_RADFIELD_FIRST_TIMESTEP);
+          globals::num_lte_timesteps, *MULTIBIN_RADFIELD_FIRST_TIMESTEP);
     }
   }
   printlnlog("input: doing the first {} timesteps in LTE", globals::num_lte_timesteps);

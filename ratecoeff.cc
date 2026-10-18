@@ -835,12 +835,13 @@ DEVICE_FUNC auto get_corrphotoioncoeff(const int element, const int ion, const i
       use_cellcache ? get_cellcache(nonemptymgi).allphixstargets_corrphotoioncoeff[allphixstargetindex] : -1;
 
   if (!use_cellcache || gammacorr < 0) {
-    if (DETAILED_BF_ESTIMATORS_ON && globals::timestep >= DETAILED_BF_ESTIMATORS_FIRST_TIMESTEP) {
+    if (DETAILED_BF_ESTIMATORS_FIRST_TIMESTEP.has_value() &&
+        globals::timestep >= *DETAILED_BF_ESTIMATORS_FIRST_TIMESTEP) {
       gammacorr = radfield::get_bfrate_estimator(element, ion, level, phixstargetindex, nonemptymgi);
       // gammacorr will be -1 if no estimators available
     }
 
-    if (!DETAILED_BF_ESTIMATORS_ON || gammacorr < 0) {
+    if (!DETAILED_BF_ESTIMATORS_FIRST_TIMESTEP.has_value() || gammacorr < 0) {
       if constexpr (!USE_LUT_PHOTOION) {
         gammacorr =
             calculate_corrphotoioncoeff_integral(element, ion, level, phixstargetindex, nonemptymgi, use_cellcache);
