@@ -12,6 +12,7 @@
 #include <istream>
 #include <limits>
 #include <memory>
+#include <optional>
 #include <span>
 #include <string>
 #include <string_view>
@@ -29,12 +30,12 @@ void read_parameterfile(std::span<Packet> packets);
 void update_parameterfile(int nts);
 void setup_timesteps();
 
-// calculate the timestep grid: ntimesteps entries with start, mid, and width set, plus a zero-width
-// entry holding the end time. tmin and tmax are in seconds; the fixed width and transition time of the
-// hybrid methods are in days
+// calculate the timestep grid: ntimesteps entries with start, mid, and width set, and a zero-width entry that
+// holds the end time. tmin and tmax are in seconds. The maximum width of a constant timestep and the transition
+// time of the hybrid schemes are in days.
 [[nodiscard]] auto calculate_timesteps(TimeStepSizeMethod method, double tmin, double tmax, int ntimesteps,
-                                       double fixed_timestep_width_days, double timestep_transition_time_days)
-    -> std::vector<globals::TimeStep>;
+                                       std::optional<double> constant_max_width_days,
+                                       std::optional<double> transition_time_days) -> std::vector<globals::TimeStep>;
 
 // Count the levels in the ground term of an ion. The ground term is the multiplet with the lowest energy.
 // The caller gives the level energies and the statistical weights in the sequence of increasing energy.

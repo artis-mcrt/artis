@@ -206,7 +206,7 @@ void write_to_estimators_file(std::ostream& estimators_file, const int nonemptym
 
     // if we have bound-free estimators, we might want to compare how gamma_R would be if we used the radiation field
     // model instead
-    if constexpr (DETAILED_BF_ESTIMATORS_ON) {
+    if constexpr (DETAILED_BF_ESTIMATORS_FIRST_TIMESTEP.has_value()) {
       std::print(estimators_file, "gamma_R_integral   Z={:2d}", get_atomicnumber(element));
       for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++) {
         std::print(estimators_file, "              ");
@@ -234,7 +234,7 @@ void write_to_estimators_file(std::ostream& estimators_file, const int nonemptym
     if (WRITE_ION_HEATING_COOLING_RATES && !heatingcoolingrates.cooling_ff_ion.empty()) {
       // the bound-free terms belong to the lower ion of each continuum, so the top ion has none
       print_perion_line("heating_bf", element, nions - 1, heatingcoolingrates.heating_bf_ion);
-      if constexpr (COL_HEAT_FROM_LEVELPOPS) {
+      if constexpr (COLLISIONAL_HEATING_FROM_LEVELPOPS) {
         print_perion_line("heating_coll", element, nions, heatingcoolingrates.heating_coll_ion);
       }
       print_perion_line("heating_ff", element, nions, heatingcoolingrates.heating_ff_ion);
@@ -788,7 +788,7 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
   // Update clumping factors
   if constexpr (USE_MICROCLUMPING) {
     const double rad_vel = grid::get_modelcell_mean_radial_pos_tmin(mgi) / globals::tmin;
-    const float clumpfactor = clumping_factor(tmid, rad_vel);
+    const float clumpfactor = MICROCLUMPING_FACTOR(tmid, rad_vel);
 
     grid::set_clumpfactor(nonemptymgi, clumpfactor);
   }
@@ -865,7 +865,7 @@ void update_grid_cell(const int nonemptymgi, const int nts, const int nts_prev, 
       radfield::normalise_nuJ(nonemptymgi, estimator_normfactor_over4pi);
 
       globals::ffheatingestimator[nonemptymgi] *= estimator_normfactor;
-      if constexpr (!COL_HEAT_FROM_LEVELPOPS) {
+      if constexpr (!COLLISIONAL_HEATING_FROM_LEVELPOPS) {
         globals::colheatingestimator[nonemptymgi] *= estimator_normfactor;
       }
 
@@ -1002,7 +1002,7 @@ void update_grid(JobFolderOutputFile& estimators_file, const int nts, const int 
   // nts_prev is the previous timestep, unless this is timestep zero
   const double deltat = globals::timesteps[nts_prev].width;
 
-  if constexpr (DETAILED_BF_ESTIMATORS_ON) {
+  if constexpr (DETAILED_BF_ESTIMATORS_FIRST_TIMESTEP.has_value()) {
     radfield::normalise_bf_estimators(nts, nts_prev, deltat);
   }
 

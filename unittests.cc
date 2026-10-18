@@ -825,7 +825,7 @@ void test_calculate_timesteps() {
   };
 
   {
-    const auto ts = calculate_timesteps(TimeStepSizeMethod::LOGARITHMIC, tmin, tmax, nts, -1., -1.);
+    const auto ts = calculate_timesteps(TimeStepSizeMethod::LOGARITHMIC, tmin, tmax, nts, std::nullopt, std::nullopt);
     check(grid_is_valid(ts, nts, tmin, tmax), "logarithmic grid is contiguous from tmin to tmax");
     bool constant_ratio = true;
     for (int n = 1; n < nts; n++) {
@@ -835,7 +835,7 @@ void test_calculate_timesteps() {
     check(constant_ratio, "logarithmic timesteps have a constant start-time ratio");
   }
   {
-    const auto ts = calculate_timesteps(TimeStepSizeMethod::CONSTANT, tmin, tmax, nts, -1., -1.);
+    const auto ts = calculate_timesteps(TimeStepSizeMethod::CONSTANT, tmin, tmax, nts, std::nullopt, std::nullopt);
     check(grid_is_valid(ts, nts, tmin, tmax), "constant grid is contiguous from tmin to tmax");
     bool equal_widths = true;
     for (int n = 0; n < nts; n++) {
@@ -844,29 +844,29 @@ void test_calculate_timesteps() {
     check(equal_widths, "constant timesteps have equal widths");
   }
   {
-    // 2 to 30 days logarithmic, then 1-day fixed steps to 50 days
+    // 2 to 30 days logarithmic, then 1-day constant steps to 50 days
     const auto ts = calculate_timesteps(TimeStepSizeMethod::LOGARITHMIC_THEN_CONSTANT, tmin, tmax, nts, 1., 30.);
     check(grid_is_valid(ts, nts, tmin, tmax), "logarithmic-then-constant grid is contiguous from tmin to tmax");
-    // ceil((50 - 30) / 1) = 20 fixed steps at the end
-    bool fixed_tail = true;
+    // ceil((50 - 30) / 1) = 20 constant steps at the end
+    bool constant_tail = true;
     for (int n = nts - 20; n < nts; n++) {
-      fixed_tail = fixed_tail && std::abs((ts[n].width / DAY) - 1.) < 1e-10;
+      constant_tail = constant_tail && std::abs((ts[n].width / DAY) - 1.) < 1e-10;
     }
-    check(fixed_tail, "logarithmic-then-constant grid ends with the fixed-width steps");
+    check(constant_tail, "logarithmic-then-constant grid ends with the constant steps");
   }
   {
-    // 1-day fixed steps from 2 to 30 days, then logarithmic to 50 days
+    // 1-day constant steps from 2 to 30 days, then logarithmic to 50 days
     const auto ts = calculate_timesteps(TimeStepSizeMethod::CONSTANT_THEN_LOGARITHMIC, tmin, tmax, nts, 1., 30.);
     check(grid_is_valid(ts, nts, tmin, tmax), "constant-then-logarithmic grid is contiguous from tmin to tmax");
-    // ceil((30 - 2) / 1) = 28 fixed steps at the start
-    bool fixed_head = true;
+    // ceil((30 - 2) / 1) = 28 constant steps at the start
+    bool constant_head = true;
     for (int n = 0; n < 28; n++) {
-      fixed_head = fixed_head && std::abs((ts[n].width / DAY) - 1.) < 1e-10;
+      constant_head = constant_head && std::abs((ts[n].width / DAY) - 1.) < 1e-10;
     }
-    check(fixed_head, "constant-then-logarithmic grid starts with the fixed-width steps");
+    check(constant_head, "constant-then-logarithmic grid starts with the constant steps");
   }
   {
-    const auto ts = calculate_timesteps(TimeStepSizeMethod::LOGARITHMIC, tmin, tmax, 1, -1., -1.);
+    const auto ts = calculate_timesteps(TimeStepSizeMethod::LOGARITHMIC, tmin, tmax, 1, std::nullopt, std::nullopt);
     check(grid_is_valid(ts, 1, tmin, tmax), "a single logarithmic timestep covers the whole time range");
   }
 }

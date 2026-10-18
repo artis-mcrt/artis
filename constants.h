@@ -111,7 +111,7 @@ enum class ParticleThermalisationScheme {
 
 enum class RpktGreyType { FEGROUP_APPROX, TANAKA2020_ELECTRONFRAC, JUST2022_TEMP_LANTHANIDEFRAC };
 
-enum class ExpansionOpacityMethod { EXPANSION, LINEBINNEDCAPPED, LINEBINNED };
+enum class BinnedOpacityLineWeight { EXPANSION, LINEBINNEDCAPPED, LINEBINNED };
 
 // how the code handles the energy that the non-thermal leptons deposit
 // NT_OFF: no non-thermal ionisation

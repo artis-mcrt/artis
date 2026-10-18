@@ -1300,7 +1300,8 @@ constexpr double RELATIVE_RESIDUAL_WARN_TOLERANCE = 1e-8;
 }
 
 auto can_remove_ion(const int element, const int ion, const int first_ion_used, const int nions_used,
-                    const double nnelement, std::span<const double> popvec) -> bool {
+                    const double nnelement, std::span<const double> popvec, const double max_levelpop_over_elementpop)
+    -> bool {
   if (nions_used <= 1) {
     // can't remove an ion if there is only one ion stage used in the NLTE matrix
     printlnlog(
@@ -1316,14 +1317,13 @@ auto can_remove_ion(const int element, const int ion, const int first_ion_used, 
 
   const int index_gs = get_nlte_vector_index(element, ion, 0, first_ion_used);
   const double ground_pop = popvec[index_gs];
-  if (ground_pop / nnelement > NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION) {
+  if (ground_pop / nnelement > max_levelpop_over_elementpop) {
     // ground pop relative to the element population must not exceed the limit
     printlnlog(
         "  [warning] cell {} ts {}: {} ion (Z={} ionstage {}) ground state population too large to remove ion "
         "(ground_pop / nnelement) = ({}/{}) = {} > {}",
         nltelog.modelgridindex, nltelog.timestep, ion_top_or_bottom, get_atomicnumber(element),
-        get_ionstage(element, ion), ground_pop, nnelement, ground_pop / nnelement,
-        NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION);
+        get_ionstage(element, ion), ground_pop, nnelement, ground_pop / nnelement, max_levelpop_over_elementpop);
 
     return false;
   }
@@ -1335,13 +1335,12 @@ auto can_remove_ion(const int element, const int ion, const int first_ion_used, 
     const int index_level = get_nlte_vector_index(element, ion, level, first_ion_used);
     const double levelpop = popvec[index_level];
     nlte_excited_pop_sum += fabs(levelpop);
-    if (levelpop / nnelement > NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION) {
+    if (levelpop / nnelement > max_levelpop_over_elementpop) {
       printlnlog(
           "  [warning] cell {} ts {}: {} ion (Z={} ionstage {}) excited state (level {}) population too large to "
           "remove ion (nlte_excited_pop_{}_ion / nnelement) = ({}/{}) > ({})",
           nltelog.modelgridindex, nltelog.timestep, ion_top_or_bottom, get_atomicnumber(element),
-          get_ionstage(element, ion), level, ion_top_or_bottom, levelpop, nnelement,
-          NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION);
+          get_ionstage(element, ion), level, ion_top_or_bottom, levelpop, nnelement, max_levelpop_over_elementpop);
       return false;
     }
   }
@@ -1351,13 +1350,12 @@ auto can_remove_ion(const int element, const int ion, const int first_ion_used, 
     // superlevel populations relative to the total element population must not exceed the limit
     const int index_superlevel = get_nlte_vector_index(element, ion, nlevels_nlte_excited + 1, first_ion_used);
     superlevel_pop = popvec[index_superlevel];
-    if (superlevel_pop / nnelement > NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION) {
+    if (superlevel_pop / nnelement > max_levelpop_over_elementpop) {
       printlnlog(
           "  [warning] cell {} ts {}: {} ion (Z={} ionstage {}) superlevel population too large to remove ion "
           "(superlevel_pop_{}_ion / nnelement) = ({:g}/{:g}) > ({:g})",
           nltelog.modelgridindex, nltelog.timestep, ion_top_or_bottom, get_atomicnumber(element),
-          get_ionstage(element, ion), ion_top_or_bottom, superlevel_pop, nnelement,
-          NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION);
+          get_ionstage(element, ion), ion_top_or_bottom, superlevel_pop, nnelement, max_levelpop_over_elementpop);
       return false;
     }
   }
@@ -1413,7 +1411,7 @@ void nltepop_matrix_add_time_dependence(const int nonemptymgi, const int element
 }
 
 // Assemble and solve the NLTE rate matrix, retrying with a reduced range of ion stages when the
-// solve fails and NLTE_LIMIT_ION_STAGES_AFTER_FAILURE allows an edge ion to be removed.
+// solve fails and NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION allows an edge ion to be removed.
 // Return whether a solution was found and the range of ions included in it.
 // Both solver paths normalise the solution so that the sum over every matrix slot equals the element number
 // density: the LU path through its replaced zeroth matrix row, the GTH path by scaling its unit-sum stationary
@@ -1530,16 +1528,18 @@ auto nltepop_solve_matrix_with_ion_reduction(const int element, const int nonemp
             "successfully solved NLTE matrix when reducing ions used for element to Z={} ionstage={} to ionstage={}",
             atomic_number, get_ionstage(element, first_ion_used), get_ionstage(element, max_ion_used));
       }
-    } else if constexpr (NLTE_LIMIT_ION_STAGES_AFTER_FAILURE) {
+    } else if constexpr (NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION.has_value()) {
       printlnlog("  [warning] cell {} ts {}: NLTE matrix solution failed for element Z={} using ionstage {} to {}",
                  nltelog.modelgridindex, nltelog.timestep, atomic_number, get_ionstage(element, first_ion_used),
                  get_ionstage(element, max_ion_used));
 
-      if (can_remove_ion(element, max_ion_used, first_ion_used, nions_used, nnelement, popvec)) {
+      if (can_remove_ion(element, max_ion_used, first_ion_used, nions_used, nnelement, popvec,
+                         *NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION)) {
         // we can remove the top ion from the solution
         nions_used--;
         matrix_solve_required = true;
-      } else if (can_remove_ion(element, first_ion_used, first_ion_used, nions_used, nnelement, popvec)) {
+      } else if (can_remove_ion(element, first_ion_used, first_ion_used, nions_used, nnelement, popvec,
+                                *NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION)) {
         // we can remove the bottom ion from the solution
         first_ion_used++;
         nions_used--;
@@ -1697,14 +1697,14 @@ auto get_nlte_solution_range(const int nonemptymgi, const int element) -> std::p
           grid::get_elements_uppermost_ion(nonemptymgi, element)};
 }
 
-// Grassmann-Taksar-Heyman (GTH) state-elimination solve for the stationary distribution of the continuous-time
-// Markov chain whose generator is stored transposed in the NLTE rate matrix layout, i.e. rate_matrix[(to * n) +
-// from] with n = vec_x.size(). The off-diagonal rates must be finite (the caller checks this) and non-negative.
-// Only sums, products, and divisions of the rates are used
-// and the diagonal is never read, so there is no subtractive cancellation and assembly rounding in the
-// column sums cannot affect the result. Small negative autoionisation off-diagonals (warned about during
-// assembly) only weaken that guarantee locally; any resulting invalid populations are policed by the caller.
-// rate_matrix is overwritten. On success, returns std::nullopt and fills vec_x with the stationary distribution
+// Grassmann-Taksar-Heyman (GTH) state-elimination solve (Grassmann, Taksar & Heyman 1985, Operations Research, 33,
+// 1107-1116, doi:10.1287/opre.33.5.1107) for the stationary distribution of the continuous-time Markov chain whose
+// generator is stored transposed in the NLTE rate matrix layout, i.e. rate_matrix[(to * n) + from] with n =
+// vec_x.size(). The off-diagonal rates must be finite (the caller checks this) and non-negative. Only sums, products,
+// and divisions of the rates are used and the diagonal is never read, so there is no subtractive cancellation and
+// assembly rounding in the column sums cannot affect the result. Small negative autoionisation off-diagonals (warned
+// about during assembly) only weaken that guarantee locally; any resulting invalid populations are policed by the
+// caller. rate_matrix is overwritten. On success, returns std::nullopt and fills vec_x with the stationary distribution
 // normalised to a sum of one. On failure, returns the index of a state whose departure rate into the remaining
 // chain is zero (a reducible matrix) or not finite, and leaves vec_x untouched. An infinite rate that reaches an
 // inflow sum in the back-substitution gives a non-finite population, which the caller's validity check rejects.

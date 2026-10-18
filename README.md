@@ -14,7 +14,7 @@ ARTIS is a 3D radiative transfer code that uses Monte Carlo methods with indivis
 ARTIS simulates ejecta in 1D spherical, 2D cylindrical, and 3D Cartesian coordinates, enabling the study of asymmetric explosions and geometry-dependent observables such as polarisation that are inaccessible to 1D codes.
 
 ### Physics fidelity
-- **Line-by-line opacities**: In the default mode, ARTIS uses individual line opacities (Sobolev), with optional support for binned expansion opacities.
+- **Line-by-line opacities**: In the default mode, ARTIS uses individual line opacities (Sobolev), with optional support for binned opacities.
 - **Macroatom radiative transfer**: the Lucy macroatom scheme self-consistently propagates packets through absorption, fluorescence, and multi-level de-excitation, capturing line-to-line energy redistribution without simplification. This can also be disabled in favour of simplified thermalisation/scattering ratio treatment.
 - **Non-LTE level populations**: statistical-equilibrium non-LTE populations are solved alongside a multibin radiation field model and trajectory-based photoionisation estimators for accurate ionisation and excitation.
 - **Non-thermal physics**: a detailed Spencer-Fano solver ([Spencer & Fano 1954, Phys. Rev., 93, 1172-1181, doi:10.1103/PhysRev.93.1172](https://ui.adsabs.harvard.edu/abs/1954PhRv...93.1172S/abstract)), following [Kozma & Fransson (1992), ApJ, 390, 602-621, doi:10.1086/171311](https://ui.adsabs.harvard.edu/abs/1992ApJ...390..602K/abstract), tracks the thermalization of fast electrons from radioactive decays and their contributions to ionisation and excitation rates.

@@ -47,6 +47,8 @@ static_assert(!VPKT_ON || POL_ON,
 
 static_assert(!VPKT_WRITE_CONTRIBS || VPKT_ON, "VPKT_WRITE_CONTRIBS does nothing without VPKT_ON");
 
+static_assert(!VPKT_USE_BINNED_OPACITIES || VPKT_ON, "VPKT_USE_BINNED_OPACITIES does nothing without VPKT_ON");
+
 #ifdef GPU_ON
 // the vpkt code keeps thread-local buffers and writes files from the packet loop
 static_assert(!VPKT_ON, "VPKT_ON is not supported in a GPU build");
@@ -232,7 +234,7 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
   const double t_start = rpkt.prop_time;
   double t_future = t_start;
 
-  // The cell's material state (level populations, rho, and the binned expansion opacities) was calculated
+  // The cell's material state (level populations, rho, and the binned opacities) was calculated
   // for the middle of the current timestep, so t_gridstate is the reference time when scaling those
   // quantities to the packet's own time as it propagates outwards through the expanding ejecta.
   const double t_gridstate = globals::timesteps[globals::timestep].mid;
@@ -398,13 +400,13 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
 
         return true;
       };
-      if constexpr (VPKT_USE_EXPANSION_OPACITIES) {
-        // -1 means below the wavelength grid, in which case there is continuum opacity but no expansion opacity
+      if constexpr (VPKT_USE_BINNED_OPACITIES) {
+        // -1 means below the wavelength grid, in which case there is continuum opacity but no binned opacity
         const auto binindex_start =
             std::max(get_linearbinindex(1e8 * CLIGHT / nu_cmf, expopac_lambdamin, expopac_deltalambda), -1Z);
 
         if (nu_cmf_decreases && binindex_start < expopac_nbins) {
-          // trace line-by-line from nu_cmf to the next bin edge, because the expansion opacity bin at nu_cmf includes
+          // trace line-by-line from nu_cmf to the next bin edge, because the binned opacity at nu_cmf includes
           // lines with nu > nu_cmf
           const auto first_bin_edge_nu =
               (binindex_start < 0) ? get_expopac_bin_nu_upper(0) : get_expopac_bin_nu_lower(binindex_start);
@@ -418,7 +420,7 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
           double dist = line_by_line_limit;
 
           if (dist < boundarydist) {
-            // continue with expansion opacities for subsequent full bins
+            // continue with the binned opacities for the next full bins
             for (auto binindex = binindex_start + 1; binindex < expopac_nbins; binindex++) {
               const auto next_bin_edge_nu = get_expopac_bin_nu_lower(binindex);
               const auto binedgedist = get_linedistance(t_future, nu_cmf, next_bin_edge_nu, dnu_on_dl);
@@ -429,7 +431,7 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
 
               const auto kappa = expansionopacities[(nonemptymgi * expopac_nbins) + binindex];
               // kappa_exp * rho = (1 / (c t)) * sum_lines (lambda_line / delta_lambda) * weight(tau_sobolev),
-              // tabulated at t_gridstate (see EXPANSION_OPACITY_METHOD). With tau_sobolev ∝ t^-2, kappa_exp * rho
+              // tabulated at t_gridstate (see BINNED_OPACITY_LINE_WEIGHT). With tau_sobolev ∝ t^-2, kappa_exp * rho
               // ∝ t^-3. The vpkt reaches the line resonances of the bin at times between t_bin_entry and the end of
               // the path. With the LINEBINNED weight, the t^-3 factor at t_bin_path_mid gives the sum of the
               // line-by-line tau_sobolev with an error of second order in delta_lambda / lambda. For the other
@@ -443,9 +445,6 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
               dist = bin_path_end_dist;
 
               for (int opacchoiceindex = 0; opacchoiceindex < nspectraperobsdir; opacchoiceindex++) {
-                assert_testmodeonly(opacityexclusions[opacchoiceindex] <=
-                                    0);  // expansion opacities include all elements, so cannot
-                                         // be used with custom lists that exclude some elements
                 if (opacityexclusions[opacchoiceindex] != -1) {
                   tau_vpkt[opacchoiceindex] += tau_bin;
                 }
@@ -818,26 +817,33 @@ void read_vpktparameterfile() {
       // The first number should be equal to zero!
       assert_always(opacityexclusions[0] == 0);  // The first spectrum should allow for all opacities (exclude[i]=0)
       assert_always(opacityexclusions[opacchoiceindex] <= 0 ||
-                    !VPKT_USE_EXPANSION_OPACITIES);  // expansion opacities include all elements, so cannot be used
-                                                     // with custom lists that exclude some elements
+                    !VPKT_USE_BINNED_OPACITIES);  // the binned opacities include all elements, so a spectrum
+                                                  // cannot exclude elements
     }
   }
 
   printlnlog("vpkt.txt: Nspectra {} per observer", nspectraperobsdir);
 
-  if constexpr (VPKT_USE_EXPANSION_OPACITIES && EXPANSION_OPACITY_METHOD != ExpansionOpacityMethod::LINEBINNED) {
-    printlnlog("[warning] VPKT_USE_EXPANSION_OPACITIES uses an EXPANSION_OPACITY_METHOD other than LINEBINNED.");
+  if constexpr (VPKT_USE_BINNED_OPACITIES && BINNED_OPACITY_LINE_WEIGHT != BinnedOpacityLineWeight::LINEBINNED) {
+    printlnlog("[warning] VPKT_USE_BINNED_OPACITIES uses a BINNED_OPACITY_LINE_WEIGHT other than LINEBINNED.");
     printlnlog(
         "[warning]   A vpkt that crosses a line with the Sobolev optical depth tau has the transmission exp(-tau).");
     printlnlog(
         "[warning]   The LINEBINNED weight is tau. The optical depth of a bin that the vpkt fully crosses is then the "
         "sum of the tau of its lines, nearly the same as with the line-by-line opacities.");
-    printlnlog(
-        "[warning]   The EXPANSION weight 1 - exp(-tau) and the LINEBINNEDCAPPED weight min(1, tau) add a maximum "
-        "of 1 to the optical depth for each line.");
-    printlnlog(
-        "[warning]   The vpkt spectra then have too little absorption in the lines with tau > 1, e.g. in the P Cygni "
-        "absorption troughs.");
+    if constexpr (BINNED_OPACITY_LINE_WEIGHT == BinnedOpacityLineWeight::EXPANSION) {
+      printlnlog(
+          "[warning]   The EXPANSION weight 1 - exp(-tau) is smaller than tau for each line, with a maximum of 1.");
+      printlnlog(
+          "[warning]   The vpkt spectra then have too little absorption in all lines, and most in the lines with "
+          "tau > 1, e.g. in the P Cygni absorption troughs.");
+    } else {
+      printlnlog("[warning]   The LINEBINNEDCAPPED weight min(LINE_BINNED_CAPPED_TAU_MAX, tau) has a maximum of {}.",
+                 LINE_BINNED_CAPPED_TAU_MAX);
+      printlnlog(
+          "[warning]   The vpkt spectra then have too little absorption in the lines with a tau above that maximum, "
+          "e.g. in the P Cygni absorption troughs.");
+    }
     if constexpr (expopac_linebinned_weights_permitted) {
       printlnlog("[warning]   Use LINEBINNED for vpkts.");
     } else {

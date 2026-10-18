@@ -43,7 +43,8 @@ void nltepop_reset_cell(int nonemptymgi);
 // iteration. The ion reduction removes only an ion below the smaller limit. A reduced range
 // therefore counts as a change only when it takes a significant ion.
 constexpr double NLTE_SIGNIFICANT_ION_FRACTION = 1e-4;
-static_assert(NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION < NLTE_SIGNIFICANT_ION_FRACTION);
+static_assert(NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION.value_or(0.) <
+              NLTE_SIGNIFICANT_ION_FRACTION);
 [[nodiscard]] auto elem_has_nlte_solution(int nonemptymgi, int element) -> bool;
 // The ion range of the last NLTE matrix solution of the element in the cell, as the lowermost and the
 // uppermost solved ion (see grid.h). The range is {-1, -1} before the first solve and after a fallback

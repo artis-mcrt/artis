@@ -90,7 +90,7 @@ void calculate_heating_rates(const int nonemptymgi, const float T_e, const float
       continue;
     }
     const int nions = get_nions(element);
-    if constexpr (COL_HEAT_FROM_LEVELPOPS) {
+    if constexpr (COLLISIONAL_HEATING_FROM_LEVELPOPS) {
       for (int ion = 0; ion < nions; ion++) {
         C_deexc += get_heating_ion_coll_deexc(nonemptymgi, element, ion, T_e, clumpednne);
       }
@@ -108,11 +108,11 @@ void calculate_heating_rates(const int nonemptymgi, const float T_e, const float
     }
   }
 
-  if constexpr (COL_HEAT_FROM_LEVELPOPS) {
+  if constexpr (COLLISIONAL_HEATING_FROM_LEVELPOPS) {
     heatingcoolingrates.heating_collisional = C_deexc;
   } else {
     // from Monte Carlo estimators, which accumulate collisional recombination heating as well as
-    // the collisional de-excitation heating that the COL_HEAT_FROM_LEVELPOPS branch above sums analytically
+    // the collisional de-excitation heating that the COLLISIONAL_HEATING_FROM_LEVELPOPS branch above sums analytically
     heatingcoolingrates.heating_collisional = globals::colheatingestimator.at(nonemptymgi);
   }
 
@@ -247,7 +247,7 @@ void calculate_ion_heating_cooling_rates(const int nonemptymgi, HeatingCoolingRa
   heatingcoolingrates.cooling_ff_ion.assign(nincludedions, 0.);
   heatingcoolingrates.cooling_fb_ion.assign(nincludedions, 0.);
   heatingcoolingrates.cooling_coll_ion.assign(nincludedions, 0.);
-  if constexpr (COL_HEAT_FROM_LEVELPOPS) {
+  if constexpr (COLLISIONAL_HEATING_FROM_LEVELPOPS) {
     heatingcoolingrates.heating_coll_ion.assign(nincludedions, 0.);
   }
 
@@ -273,7 +273,7 @@ void calculate_ion_heating_cooling_rates(const int nonemptymgi, HeatingCoolingRa
       heatingcoolingrates.heating_bf_ion[uniqueionindex] = bfheating_ion;
     }
 
-    if constexpr (COL_HEAT_FROM_LEVELPOPS) {
+    if constexpr (COLLISIONAL_HEATING_FROM_LEVELPOPS) {
       heatingcoolingrates.heating_coll_ion[uniqueionindex] =
           get_heating_ion_coll_deexc(nonemptymgi, element, ion, T_e, clumpednne);
     }
