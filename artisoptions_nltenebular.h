@@ -99,7 +99,7 @@ constexpr bool ENABLE_CHARGE_TRANSFER_REACTIONS = false;
 
 constexpr bool COLLISIONAL_HEATING_FROM_LEVELPOPS = true;
 
-constexpr bool BFCOOLING_USE_TARGET_LEVELPOP = true;
+constexpr bool BFCOOLING_USELEVELPOPNOTIONPOP = true;
 
 constexpr bool USE_ION_BFHEATING_ESTIMATORS = false;
 

@@ -248,7 +248,7 @@ constexpr bool COLLISIONAL_HEATING_FROM_LEVELPOPS;
 // of that target level. False (classic ARTIS) multiplies it by the population of the whole upper ion. A level
 // with several targets then shares the ion population among them by their LTE fractions, and a level with one
 // target gets the whole ion population.
-constexpr bool BFCOOLING_USE_TARGET_LEVELPOP;
+constexpr bool BFCOOLING_USELEVELPOPNOTIONPOP;
 
 // Store a bound-free heating estimator for each ground continuum. Multiply the analytic bound-free heating of
 // each level by the ratio of the estimator to the analytic rate of the nearest ground continuum.
