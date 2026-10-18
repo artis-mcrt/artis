@@ -74,7 +74,7 @@ constexpr float MICROCLUMPING_FACTOR(double tmid, double rad_vel);
 // --- Atomic data and limits ---
 
 // Keep only one level, and no transition, for the highest ion stage of each element.
-constexpr bool TOP_ION_GROUND_LEVEL_ONLY;
+constexpr bool SINGLE_LEVEL_TOP_ION;
 
 // Take the photoionisation cross section from the table point at or below the frequency, as classic ARTIS did,
 // instead of a linear interpolation.

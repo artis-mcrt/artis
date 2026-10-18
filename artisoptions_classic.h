@@ -44,7 +44,7 @@ constexpr float MICROCLUMPING_FACTOR([[maybe_unused]] double tmid, [[maybe_unuse
 
 // --- Atomic data and limits ---
 
-constexpr bool TOP_ION_GROUND_LEVEL_ONLY = true;
+constexpr bool SINGLE_LEVEL_TOP_ION = true;
 
 constexpr bool PHIXS_CLASSIC_NO_INTERPOLATION = true;
 
