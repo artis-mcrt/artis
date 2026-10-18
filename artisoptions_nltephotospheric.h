@@ -166,12 +166,6 @@ constexpr bool POL_ON = false;
 
 constexpr bool USE_RELATIVISTIC_DOPPLER_SHIFT = false;
 
-constexpr bool RPKT_USE_BINNED_OPACITIES = false;
-
-constexpr BinnedOpacityLineWeight BINNED_OPACITY_LINE_WEIGHT = BinnedOpacityLineWeight::EXPANSION;
-
-constexpr double LINE_BINNED_CAPPED_TAU_MAX = 1.;
-
 constexpr std::optional<float> RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY;
 
 constexpr RpktGreyType RPKT_GREY_TYPE = RpktGreyType::FEGROUP_APPROX;
@@ -184,7 +178,15 @@ constexpr bool VPKT_ON = false;
 
 constexpr bool VPKT_WRITE_CONTRIBS = false;
 
+// --- Binned opacities ---
+
+constexpr bool RPKT_USE_BINNED_OPACITIES = false;
+
 constexpr bool VPKT_USE_BINNED_OPACITIES = false;
+
+constexpr BinnedOpacityLineWeight BINNED_OPACITY_LINE_WEIGHT = BinnedOpacityLineWeight::EXPANSION;
+
+constexpr double LINE_BINNED_CAPPED_TAU_MAX = 1.;
 
 // --- Output files ---
 
