@@ -45,7 +45,7 @@ repos:
             entry: pyrefly check --config scripts/pyrefly.toml
             language: python
             language_version: python3.14
-            additional_dependencies: [pyrefly==1.4.0, ty==0.0.89, artistools, zstandard]
+            additional_dependencies: [pyrefly==1.4.0, ty==0.0.89, zstandard]
             pass_filenames: false
             require_serial: true
             files: ^scripts/(.*\.py|pyrefly\.toml)$
@@ -54,7 +54,7 @@ repos:
             entry: ty check --config-file scripts/ty.toml scripts
             language: python
             language_version: python3.14
-            additional_dependencies: [pyrefly==1.4.0, ty==0.0.89, artistools, zstandard]
+            additional_dependencies: [pyrefly==1.4.0, ty==0.0.89, zstandard]
             pass_filenames: false
             require_serial: true
             files: ^scripts/(.*\.py|ty\.toml)$

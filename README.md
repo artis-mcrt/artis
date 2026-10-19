@@ -148,7 +148,7 @@ exspec reads the same input.txt, model, and atomic data files as sn3d, so it mus
 
 It writes light_curve.out, spec.out, emission.out, emissiontrue.out, and absorption.out, plus gamma_light_curve.out and gamma_spec.out when KEEP_ESCAPED_GAMMAS is set, and specpol.out, emissionpol.out and absorptionpol.out when POL_ON is set. Direction-resolved versions of these go in the speclc_angle_res folder.
 
-To plot and analyse the output, use [artistools](https://github.com/artis-mcrt/artistools), a companion Python package for working with ARTIS light curves, spectra, and estimators.
+To plot and analyse the output, use [artistools](https://github.com/artis-mcrt/artistools), a companion Python package for working with ARTIS light curves, spectra, and estimators. `artistools filterpackets` removes each packet except the escaped r-packets from the packet files, which makes the files smaller.
 
 ### Testing
 The unit tests cover the numeric and parsing helpers and some physics functions, e.g. the Compton cross-section and the triangular solve of the Spencer-Fano matrix. Build and run them with `make unittests && ./unittests`. CI runs them for the classic and NLTE nebular presets.
@@ -195,7 +195,6 @@ The scripts folder contains:
 - slurmjobhoursleft.py: Print the hours that remain in a Slurm job. The job scripts give this value to `sn3d -w`.
 - mergeangleres.py: Merge the files of the direction bins into light_curve_res.out, spec_res.out, and specpol_res.out.
 - combine_allrank_out_files.py: Make the combined files of all ranks (see [Output files](#output-files)).
-- filterpacketsescapedrpkt.py: Remove all packets except the escaped r-packets from the packet files. Without `-f`, the script only shows the number of packets to remove.
 - tar_rm_logs.sh: The script archives the log files of the ranks into logfiles.tar.zst. It then removes them, except output_0-0.txt.
 - rsyncnooutput.sh: Copy a model folder with rsync, without the output files.
 - aliases.sh: Shell aliases for Slurm and the MAKEFLAGS setting. Replace the placeholder email address in the file with your address. Then source the file from your .bashrc.

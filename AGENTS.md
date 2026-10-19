@@ -314,8 +314,8 @@ test (see "Input and output files").
   rules, pyrefly with the strict preset, and ty. `scripts/ruff.toml`,
   `scripts/pyrefly.toml`, and `scripts/ty.toml` hold the settings. Keep them
   equal to `pyproject.toml` of artistools. The hook environment of the type
-  checkers installs artistools and zstandard, which the scripts import. Add a
-  new dependency of a script to that list.
+  checkers installs zstandard, which `sumcorehourslogs.py` imports. Add a new
+  dependency of a script to that list.
 
 ## Code conventions
 
