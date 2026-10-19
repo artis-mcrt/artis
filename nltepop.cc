@@ -1237,7 +1237,7 @@ constexpr double RELATIVE_RESIDUAL_WARN_TOLERANCE = 1e-8;
   auto eigen_vec_residual = Eigen::Map<Eigen::VectorX<double>>(vec_residual.data(), nlte_dimension);
   auto eigen_vec_correction = Eigen::Map<Eigen::VectorX<double>>(vec_correction.data(), nlte_dimension);
 
-  const int maxiterations = globals::timestep == 39 ? 1 : 10;
+  const int maxiterations = globals::timestep == globals::timestep_finish - 1 ? 1 : 10;
   double error_best = -1.;
   int iteration_best = -1;  // 1-based pass that produced vec_x_best (pass 1 is the unrefined LU solution)
   for (int iteration = 0; iteration < maxiterations; iteration++) {
