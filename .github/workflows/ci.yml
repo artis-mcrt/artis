@@ -232,12 +232,6 @@ jobs:
               run: |
                   zstdcat deposition.out.zst
 
-            - name: Show CPU core time
-              if: always()
-              working-directory: tests/${{ matrix.testname }}_testrun/
-              run: |
-                  python3 ../../scripts/sumcorehourslogs.py
-
             - name: Run exspec
               id: run_exspec
               if: always()
@@ -359,6 +353,12 @@ jobs:
               if: always() && inputs.testmode != 'ON'
               run: |
                   uv tool install artistools@latest
+
+            - name: Show CPU core time
+              if: always() && inputs.testmode != 'ON'
+              working-directory: tests/${{ matrix.testname }}_testrun/
+              run: |
+                  artistools corehours .
 
             - name: Plot light curve
               if: always() && inputs.testmode != 'ON'

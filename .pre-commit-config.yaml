@@ -36,8 +36,8 @@ repos:
             files: ^scripts/.*\.py$
           - id: ruff-format
             files: ^scripts/.*\.py$
-    # the type checkers and their versions agree with artistools. The environment has the dependencies of the scripts,
-    # so that the checkers can resolve the imports. The hooks share this environment
+    # the type checkers and their versions agree with artistools. A dependency of a script goes into the environment of
+    # both hooks, so that the checkers can resolve its imports. The hooks share this environment
     - repo: local
       hooks:
           - id: pyrefly
@@ -45,7 +45,7 @@ repos:
             entry: pyrefly check --config scripts/pyrefly.toml
             language: python
             language_version: python3.14
-            additional_dependencies: [pyrefly==1.4.0, ty==0.0.89, zstandard]
+            additional_dependencies: [pyrefly==1.4.0, ty==0.0.89]
             pass_filenames: false
             require_serial: true
             files: ^scripts/(.*\.py|pyrefly\.toml)$
@@ -54,7 +54,7 @@ repos:
             entry: ty check --config-file scripts/ty.toml scripts
             language: python
             language_version: python3.14
-            additional_dependencies: [pyrefly==1.4.0, ty==0.0.89, zstandard]
+            additional_dependencies: [pyrefly==1.4.0, ty==0.0.89]
             pass_filenames: false
             require_serial: true
             files: ^scripts/(.*\.py|ty\.toml)$

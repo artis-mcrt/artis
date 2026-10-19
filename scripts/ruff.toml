@@ -53,13 +53,8 @@ unfixable = [
 ]
 
 [lint.per-file-ignores]
-# these scripts run squeue and zstd, which the job scripts and the clusters supply
+# this script runs squeue, which the clusters supply
 "slurmjobhoursleft.py" = ["suspicious-subprocess-import", "subprocess-without-shell-equals-true"]
-"sumcorehourslogs.py" = [
-    "suspicious-subprocess-import",
-    "subprocess-without-shell-equals-true",
-    "start-process-with-partial-path",
-]
 
 [lint.flake8-import-conventions.extend-aliases]
 "artistools" = "at"

@@ -148,7 +148,7 @@ exspec reads the same input.txt, model, and atomic data files as sn3d, so it mus
 
 It writes light_curve.out, spec.out, emission.out, emissiontrue.out, and absorption.out, plus gamma_light_curve.out and gamma_spec.out when KEEP_ESCAPED_GAMMAS is set, and specpol.out, emissionpol.out and absorptionpol.out when POL_ON is set. Direction-resolved versions of these go in the speclc_angle_res folder.
 
-To plot and analyse the output, use [artistools](https://github.com/artis-mcrt/artistools), a companion Python package for working with ARTIS light curves, spectra, and estimators. `artistools filterpackets` removes each packet except the escaped r-packets from the packet files, which makes the files smaller.
+To plot and analyse the output, use [artistools](https://github.com/artis-mcrt/artistools), a companion Python package for working with ARTIS light curves, spectra, and estimators. `artistools filterpackets` removes each packet except the escaped r-packets from the packet files, which makes the files smaller. `artistools corehours` sums the core hours of the jobs from the output_0-0.txt log of each job.
 
 ### Testing
 The unit tests cover the numeric and parsing helpers and some physics functions, e.g. the Compton cross-section and the triangular solve of the Spencer-Fano matrix. Build and run them with `make unittests && ./unittests`. CI runs them for the classic and NLTE nebular presets.
@@ -199,7 +199,6 @@ The scripts folder contains:
 - rsyncnooutput.sh: Copy a model folder with rsync, without the output files.
 - aliases.sh: Shell aliases for Slurm and the MAKEFLAGS setting. Replace the placeholder email address in the file with your address. Then source the file from your .bashrc.
 - clean.sh: Remove all output files while keeping input files and resetting the simulation to the beginning. The script also removes the job_from_ts* folders of sn3d and the *.slurm folders of older versions.
-- sumcorehourslogs.py: Sum the core hours of all jobs from the output_0-0.txt log of each job. The script reads the summary in the last line of the log. For a job that stopped early, it estimates the core hours from the first and the last timestamp of the log.
 - sumcorehoursslurm.py: Calculate the summed core hours of all jobs from the Slurm job output files.
 
 ## Make options
