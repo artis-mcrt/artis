@@ -1219,6 +1219,7 @@ auto main(int argc, char* argv[]) -> int {
     MPI_Barrier_allranks();
 
     terminate_early = do_timestep(globals::timestep, packets, walltime_limit_seconds);
+    terminate_early = terminate_early || globals::timestep == 40;
 
     globals::timestep++;
   }
