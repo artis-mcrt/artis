@@ -3,6 +3,7 @@
 # requires-python = ">=3.11"
 # dependencies = ["zstandard"]
 # ///
+"""Sum the core hours of the sn3d logs in the model folders."""
 
 import argparse
 import hashlib
@@ -79,35 +80,24 @@ def read_loglines(logfile: Path) -> list[str]:
     if logfile.suffix == ".zst":
         if zstandard is None:
             try:
-                proc = subprocess.run(
-                    ["zstd", "-dc", str(logfile)],
-                    check=True,
-                    capture_output=True,
-                    text=True,
-                )
+                proc = subprocess.run(["zstd", "-dc", str(logfile)], check=True, capture_output=True, text=True)
             except (FileNotFoundError, subprocess.CalledProcessError):
                 return []
             return proc.stdout.splitlines()
         with zstandard.open(logfile, "rt", encoding="utf-8") as flog:
-            return flog.readlines()
+            loglines: list[str] = flog.readlines()
+        return loglines
     with logfile.open("rt", encoding="utf-8") as flog:
         return flog.readlines()
 
 
 def main() -> None:
+    """Print the core hours of each sn3d job and the sums."""
     parser = argparse.ArgumentParser(description="Sum the core hours of the sn3d logs in the given model folders.")
     parser.add_argument(
-        "modelpaths",
-        nargs="*",
-        type=Path,
-        default=[Path()],
-        help="model folders to scan (default: the current folder)",
+        "modelpaths", nargs="*", type=Path, default=[Path()], help="model folders to scan (default: the current folder)"
     )
-    parser.add_argument(
-        "--json",
-        action="store_true",
-        help="write the results as JSON instead of a table",
-    )
+    parser.add_argument("--json", action="store_true", help="write the results as JSON instead of a table")
     args = parser.parse_args()
 
     # exists() is False for a symlink to a removed log, so this filter skips a stale symlink.

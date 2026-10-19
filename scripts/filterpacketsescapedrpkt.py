@@ -3,6 +3,7 @@
 # requires-python = ">=3.14"
 # dependencies = ["artistools"]
 # ///
+"""Remove each packet from the packet files, except the escaped r-packets. The filter makes the files smaller."""
 
 import argparse
 import sys
@@ -18,6 +19,7 @@ GLOB_PATTERN = "**/packets/packets00_*.out*"
 
 
 def get_type_escapetype(line: str, type_id_index: int, escape_type_id_index: int) -> tuple[str, str]:
+    """Give the type_id and the escape_type_id of a packet line."""
     # the columns after escape_type_id stay in one string. A packet line has more than 30 columns,
     # and this function reads two of them.
     linesplit = line.split(maxsplit=escape_type_id_index + 1)
@@ -55,6 +57,7 @@ def find_packets_files(paths: list[Path]) -> list[Path]:
 
 
 def main() -> None:
+    """Show or do the filter of each packet file."""
     assert sys.version_info >= (3, 14), "This script requires Python 3.14 or higher."
     import compression.zstd
 
@@ -120,14 +123,8 @@ def main() -> None:
             total_size_out += (1 - removed_fraction) * size_in
             continue
 
-        fileout_rpkt = Path(
-            *filein.parts[:-1],
-            filein.parts[-1].removesuffix(".zst") + ".zst",
-        )
-        fileout_rpkt_temp = Path(
-            *fileout_rpkt.parts[:-1],
-            f"{fileout_rpkt.parts[-1]}.partial.tmp.nosync",
-        )
+        fileout_rpkt = Path(*filein.parts[:-1], filein.parts[-1].removesuffix(".zst") + ".zst")
+        fileout_rpkt_temp = Path(*fileout_rpkt.parts[:-1], f"{fileout_rpkt.parts[-1]}.partial.tmp.nosync")
         print("  filtering rpkts...", end="", flush=True)
 
         with compression.zstd.open(fileout_rpkt_temp, "wt", level=12) as foutrpkt:

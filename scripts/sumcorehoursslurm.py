@@ -2,38 +2,33 @@
 # /// script
 # requires-python = ">=3.11"
 # ///
+"""Sum the core hours of the Slurm logs in the model folders."""
 
 import argparse
+import contextlib
 import json
-from datetime import UTC, datetime
+import time
+from datetime import datetime
+from datetime import UTC
 from pathlib import Path
-from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+from zoneinfo import ZoneInfo
+from zoneinfo import ZoneInfoNotFoundError
 
 
 def main() -> None:
+    """Print the core hours of each Slurm job and the sums."""
     parser = argparse.ArgumentParser(description="Sum the core hours of the Slurm logs in the given model folders.")
     parser.add_argument(
-        "modelpaths",
-        nargs="*",
-        type=Path,
-        default=[Path()],
-        help="model folders to scan (default: the current folder)",
+        "modelpaths", nargs="*", type=Path, default=[Path()], help="model folders to scan (default: the current folder)"
     )
-    parser.add_argument(
-        "--json",
-        action="store_true",
-        help="write the results as JSON instead of a table",
-    )
+    parser.add_argument("--json", action="store_true", help="write the results as JSON instead of a table")
     args = parser.parse_args()
 
     slurmoutfiles = sorted(
         slurmoutfile for modelpath in args.modelpaths for slurmoutfile in modelpath.glob("slurm-*.out")
     )
-    jobs: list[dict[str, Path | str | float | int | datetime]] = [
-        {
-            "slurmoutfile": slurmoutfile,
-            "jobid": str(slurmoutfile.name).removeprefix("slurm-").removesuffix(".out"),
-        }
+    jobs: list[dict[str, Path | str | float | int | datetime | time.struct_time]] = [
+        {"slurmoutfile": slurmoutfile, "jobid": str(slurmoutfile.name).removeprefix("slurm-").removesuffix(".out")}
         for slurmoutfile in slurmoutfiles
     ]
 
@@ -53,19 +48,18 @@ def main() -> None:
                         jobdict["exspec_started"] = True
                         datepart = line.split(": before exspec")[0]
                     tokens = datepart.split()
-                    try:
-                        jobdict["time_run_start"] = datetime.strptime(
+                    # a shell trace line or a different date format gives no start time
+                    with contextlib.suppress(ValueError):
+                        # the timezone of the log is attached later
+                        jobdict["time_run_start"] = time.strptime(
                             " ".join(tokens[:4] + tokens[5:]), "%a %b %d %H:%M:%S %Y"
                         )
                         # the abbreviation resolves an ambiguous time in the repeated hour
                         jobdict["tzabbrev"] = tokens[4]
-                    except ValueError:
-                        # a shell trace line or a different date format gives no start time
-                        pass
                 if "after srun sn3d" in line or "after exspec finished" in line:
                     jobdict["run_finished"] = True
                 if "error:" in line:
-                    # example: "[2026-08-17T21:26:39.005] error: *** JOB 12401250 ... CANCELLED AT 2026-08-17T21:26:39 ..."
+                    # example: "[2026-08-17T21:26:39.005] error: *** JOB 12401250 ... CANCELLED AT 2026-08-17T21:26:39"
                     # the bracketed timestamp is absent on some clusters, so also read the CANCELLED AT time
                     timestr = None
                     if line.startswith("["):
@@ -73,21 +67,17 @@ def main() -> None:
                     elif " CANCELLED AT " in line:
                         timestr = line.split(" CANCELLED AT ")[1].split()[0]
                     if timestr is not None:
-                        try:
+                        # a bracketed line from another tool has no timestamp
+                        with contextlib.suppress(ValueError):
                             jobdict["time_error"] = datetime.fromisoformat(timestr)
-                        except ValueError:
-                            # a bracketed line from another tool has no timestamp
-                            pass
-                if line.startswith(
-                    (
-                        "ntasks:",
-                        "cpus-per-task:",
-                        "nodes:",
-                        "timezone:",
-                        "wallclock hrs:",
-                        "CPU core hrs:",
-                    )
-                ):
+                if line.startswith((
+                    "ntasks:",
+                    "cpus-per-task:",
+                    "nodes:",
+                    "timezone:",
+                    "wallclock hrs:",
+                    "CPU core hrs:",
+                )):
                     for var_val in line.split(" -> "):
                         var, _, val = var_val.strip().partition(": ")
                         if val:
@@ -132,36 +122,37 @@ def main() -> None:
             # a Slurm log of an old job script logs ntasks only after a clean finish
             job_ncores = ncores
         run_finished = bool(jobdict.get("run_finished", False))
-        time_run_start = jobdict.get("time_run_start")
+        struct_time_run_start = jobdict.get("time_run_start")
         time_error = jobdict.get("time_error")
-        if isinstance(time_run_start, datetime) and isinstance(time_error, datetime):
+        elapsed_hours: float | None = None
+        if isinstance(struct_time_run_start, time.struct_time) and isinstance(time_error, datetime):
             # attach the logged timezone to a naive time.
             # an aware pair then subtracts correctly across a daylight-saving change.
+            tzone: ZoneInfo | None = None
             tzname = jobdict.get("timezone")
             if isinstance(tzname, str):
-                try:
+                # an unknown timezone name keeps the times naive
+                with contextlib.suppress(ZoneInfoNotFoundError, ValueError):
                     tzone = ZoneInfo(tzname)
-                    if time_run_start.tzinfo is None:
-                        time_run_start = time_run_start.replace(tzinfo=tzone)
-                        # a start in the repeated hour of a daylight-saving change is ambiguous.
-                        # the abbreviation from the date line selects the correct fold.
-                        tzabbrev = jobdict.get("tzabbrev")
-                        if isinstance(tzabbrev, str) and time_run_start.tzname() != tzabbrev:
-                            time_fold1 = time_run_start.replace(fold=1)
-                            if time_fold1.tzname() == tzabbrev:
-                                time_run_start = time_fold1
-                    if time_error.tzinfo is None:
-                        time_error = time_error.replace(tzinfo=tzone)
-                except (ZoneInfoNotFoundError, ValueError):
-                    # an unknown timezone name keeps the times naive
-                    pass
-            if (time_run_start.tzinfo is None) != (time_error.tzinfo is None):
-                # a naive time and an aware time have no valid difference
-                time_error = None
-            elif time_run_start.tzinfo is not None and time_error.tzinfo is not None:
-                # convert to UTC. A subtraction of two times with one shared tzinfo ignores the offsets.
-                time_run_start = time_run_start.astimezone(UTC)
-                time_error = time_error.astimezone(UTC)
+            time_run_start = datetime(*struct_time_run_start[:6], tzinfo=tzone)
+            if tzone is not None:
+                # a start in the repeated hour of a daylight-saving change is ambiguous.
+                # the abbreviation from the date line selects the correct fold.
+                tzabbrev = jobdict.get("tzabbrev")
+                if isinstance(tzabbrev, str) and time_run_start.tzname() != tzabbrev:
+                    time_fold1 = time_run_start.replace(fold=1)
+                    if time_fold1.tzname() == tzabbrev:
+                        time_run_start = time_fold1
+                if time_error.tzinfo is None:
+                    time_error = time_error.replace(tzinfo=tzone)
+            # a naive time and an aware time have no valid difference
+            if (time_run_start.tzinfo is None) == (time_error.tzinfo is None):
+                if time_run_start.tzinfo is not None:
+                    # convert to UTC. A subtraction of two times with one shared tzinfo ignores the offsets.
+                    time_run_start = time_run_start.astimezone(UTC)
+                    time_error = time_error.astimezone(UTC)
+                if time_error > time_run_start:
+                    elapsed_hours = (time_error - time_run_start).total_seconds() / 3600.0
 
         job_core_hours: float | None = None
         estimate = False
@@ -172,15 +163,12 @@ def main() -> None:
                 job_core_hours = None
         if (
             job_core_hours is None
-            and (sn3d_started or exspec_started)
+            and jobtype != "unknown"
             and not run_finished
             and job_ncores is not None
-            and isinstance(time_run_start, datetime)
-            and isinstance(time_error, datetime)
-            and time_error > time_run_start
+            and elapsed_hours is not None
         ):
             # Slurm can add a grace period after the time limit, so the elapsed time has no upper clamp
-            elapsed_hours = (time_error - time_run_start).total_seconds() / 3600.0
             job_core_hours = elapsed_hours * job_ncores
             estimate = True
 
@@ -204,14 +192,12 @@ def main() -> None:
             # a started sn3d job without a time value makes the wallclock sum incomplete
             wallclock_complete = False
             node_hours_complete = False
-        jobrows.append(
-            {
-                "slurmoutfile": str(jobdict["slurmoutfile"]),
-                "jobtype": jobtype,
-                "core_hours": job_core_hours,
-                "estimate": estimate,
-            }
-        )
+        jobrows.append({
+            "slurmoutfile": str(jobdict["slurmoutfile"]),
+            "jobtype": jobtype,
+            "core_hours": job_core_hours,
+            "estimate": estimate,
+        })
 
         if verbose:
             progname = "exspec" if jobtype == "exspec" else "sn3d"

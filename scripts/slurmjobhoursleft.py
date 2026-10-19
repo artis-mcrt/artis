@@ -2,25 +2,24 @@
 # /// script
 # requires-python = ">=3.11"
 # ///
+"""Print the hours that remain before the time limit of a Slurm job. Usage: slurmjobhoursleft.py JOBID."""
 
-import datetime
+import datetime as dt
 import subprocess
 import sys
 
 
 def main() -> None:
-    # usage:
-    # python3 slurmjobhoursleft.py [JOBID]
-
+    """Print the hours between now and the end time that squeue gives for the job."""
     assert len(sys.argv) == 2
     jobid = int(sys.argv[1])
-    cmd = f"squeue -j {jobid} --noheader --Format EndTime"
-    cmdendtime = subprocess.run(cmd, capture_output=True, shell=True, check=True, text=True)
+    cmd = ["squeue", "-j", str(jobid), "--noheader", "--Format", "EndTime"]
+    cmdendtime = subprocess.run(cmd, capture_output=True, check=True, text=True)
     strendtime = cmdendtime.stdout.strip()
 
-    endtime = datetime.datetime.fromisoformat(strendtime)
-    # squeue prints a local time without a timezone, so the current time must also be naive
-    total_sec = (endtime - datetime.datetime.now()).total_seconds()
+    # squeue prints a local time without a timezone. astimezone() attaches the local timezone to both times
+    endtime = dt.datetime.fromisoformat(strendtime).astimezone()
+    total_sec = (endtime - dt.datetime.now().astimezone()).total_seconds()
     print(total_sec / 3600)
 
 

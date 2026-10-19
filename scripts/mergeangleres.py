@@ -2,6 +2,7 @@
 # /// script
 # requires-python = ">=3.11"
 # ///
+"""Merge the files of the direction bins into light_curve_res.out, spec_res.out, and specpol_res.out."""
 
 import re
 from pathlib import Path
@@ -15,6 +16,7 @@ def resfilepath(basefolder: Path | str, fileprefix: str, abin: int) -> Path:
 
 
 def get_mabins() -> int:
+    """Give the number of direction bins."""
     # one output file per direction bin (MABINS = NPHIBINS * NCOSTHETABINS), with the expected count
     # parsed from the spectrum_lightcurve.h of the source folder that this script belongs to
     spectrum_lightcurve_h = (Path(__file__).resolve().parent.parent / "spectrum_lightcurve.h").read_text(
@@ -28,6 +30,7 @@ def get_mabins() -> int:
 
 
 def main() -> None:
+    """Merge the files of the direction bins in the current folder and in speclc_angle_res."""
     mabins = get_mabins()
     for basefolder in [Path(), Path("speclc_angle_res")]:
         if not basefolder.is_dir():
