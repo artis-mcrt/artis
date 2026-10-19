@@ -743,7 +743,7 @@ void save_grid_and_packets(const int nts, std::vector<Packet>& packets) {
   // wait until every process writes its new packets files, then delete the old set
   MPI_Barrier_allranks();
 
-  if (globals::my_rank == 0) {
+  if (globals::my_rank == 0 && globals::timestep != globals::timestep_finish - 1) {
     const auto filename_prev_gridsave = std::format("gridsave_ts{}.tmp", nts - 1);
     if (std::filesystem::remove(filename_prev_gridsave)) {
       printlnlog("deleted {}", filename_prev_gridsave);
@@ -751,9 +751,11 @@ void save_grid_and_packets(const int nts, std::vector<Packet>& packets) {
   }
 
   // delete temp packets files from previous timestep now that all restart data for the new timestep is available
-  const auto filename_prev_packetstmp = std::format("packets_{:04d}_ts{:d}.tmp", globals::my_rank, nts - 1);
-  if (std::filesystem::remove(filename_prev_packetstmp)) {
-    printlnlog("deleted {}", filename_prev_packetstmp);
+  if (globals::timestep != globals::timestep_finish - 1) {
+    const auto filename_prev_packetstmp = std::format("packets_{:04d}_ts{:d}.tmp", globals::my_rank, nts - 1);
+    if (std::filesystem::remove(filename_prev_packetstmp)) {
+      printlnlog("deleted {}", filename_prev_packetstmp);
+    }
   }
 
   vpkt::remove_temp_vpkt_file(nts - 1, globals::my_rank);
@@ -1217,6 +1219,7 @@ auto main(int argc, char* argv[]) -> int {
     MPI_Barrier_allranks();
 
     terminate_early = do_timestep(globals::timestep, packets, walltime_limit_seconds);
+    terminate_early = terminate_early || globals::timestep == 40;
 
     globals::timestep++;
   }
