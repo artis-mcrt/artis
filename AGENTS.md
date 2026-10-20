@@ -306,12 +306,16 @@ test (see "Input and output files").
   `// cppcheck-suppress <id>` comment. That comment works because the command
   has `--inline-suppr`.
 - The pre-commit hooks (`.pre-commit-config.yaml`, run with `prek`) apply
-  clang-format, ruff for the Python scripts in `scripts/`, more than a dozen
-  whitespace and file checks, and a `make OPTIMIZE=OFF` compile.
-  `scripts/ruff.toml` sets the limit of 120 columns for those scripts.
-  `prek run --all-files` runs all of them. CI runs the same hooks but skips
-  the compile. One check finds a destroyed symlink, which is important here:
-  `CLAUDE.md` is a symlink to `AGENTS.md`.
+  clang-format, more than a dozen whitespace and file checks, and a
+  `make OPTIMIZE=OFF` compile. `prek run --all-files` runs all of them. CI runs
+  the same hooks but skips the compile. One check finds a destroyed symlink,
+  which is important here: `CLAUDE.md` is a symlink to `AGENTS.md`.
+- The Python scripts in `scripts/` get the checks of artistools: ruff with all
+  rules, pyrefly with the strict preset, and ty. `scripts/ruff.toml`,
+  `scripts/pyrefly.toml`, and `scripts/ty.toml` hold the settings. Keep them
+  equal to `pyproject.toml` of artistools. The scripts use only the standard
+  library. Add a new dependency of a script to the `additional_dependencies`
+  of both type-check hooks, so that the checkers can resolve its imports.
 
 ## Code conventions
 

@@ -2,26 +2,30 @@
 # /// script
 # requires-python = ">=3.11"
 # ///
+"""Print the hours that remain before the time limit of a Slurm job. Usage: slurmjobhoursleft.py JOBID."""
 
-import datetime
+import datetime as dt
 import subprocess
 import sys
 
 
-def main() -> None:
-    # usage:
-    # python3 slurmjobhoursleft.py [JOBID]
+def get_hours_left(strendtime: str, now: dt.datetime) -> float:
+    """Give the hours from now to the end time that squeue prints. now must be an aware local time."""
+    # squeue prints a local time without a timezone. In the repeated hour of a daylight-saving change, such a time has
+    # two meanings. The job still runs, so its end is the first meaning after now
+    endtime_naive = dt.datetime.fromisoformat(strendtime)
+    endtimes = sorted({endtime_naive.replace(fold=fold).astimezone() for fold in (0, 1)})
+    endtime = next((endtime for endtime in endtimes if endtime > now), endtimes[-1])
+    return (endtime - now).total_seconds() / 3600
 
+
+def main() -> None:
+    """Print the hours between now and the end time that squeue gives for the job."""
     assert len(sys.argv) == 2
     jobid = int(sys.argv[1])
-    cmd = f"squeue -j {jobid} --noheader --Format EndTime"
-    cmdendtime = subprocess.run(cmd, capture_output=True, shell=True, check=True, text=True)
-    strendtime = cmdendtime.stdout.strip()
-
-    endtime = datetime.datetime.fromisoformat(strendtime)
-    # squeue prints a local time without a timezone, so the current time must also be naive
-    total_sec = (endtime - datetime.datetime.now()).total_seconds()
-    print(total_sec / 3600)
+    cmd = ["squeue", "-j", str(jobid), "--noheader", "--Format", "EndTime"]
+    cmdendtime = subprocess.run(cmd, capture_output=True, check=True, text=True)
+    print(get_hours_left(cmdendtime.stdout.strip(), dt.datetime.now().astimezone()))
 
 
 if __name__ == "__main__":

@@ -1,2 +1,77 @@
-# the C++ code uses 120 columns (.clang-format), so the Python scripts use the same limit
+# The rules agree with the ruff configuration of artistools (pyproject.toml), except for the rules that only apply to
+# the artistools package. The C++ code uses 120 columns (.clang-format), so the Python scripts use the same limit
 line-length = 120
+fix = true
+preview = true
+# the oldest requires-python of the scripts. Some cluster nodes run the scripts with an older python3
+target-version = "py311"
+
+[format]
+skip-magic-trailing-comma = true
+preview = true
+docstring-code-format = true
+
+[lint]
+select = ["ALL"]
+ignore = [
+    "any-type",
+    "complex-structure",
+    "missing-trailing-comma",
+    "missing-copyright-notice",
+    "incorrect-blank-line-before-class",
+    "multi-line-summary-second-line",
+    "docstring-missing-returns",
+    "docstring-missing-yields",
+    "docstring-missing-exception",
+    "commented-out-code",
+    "boolean-type-hint-positional-argument",
+    "boolean-default-value-positional-argument",
+    "invalid-function-name",
+    "invalid-argument-name",
+    "non-lowercase-variable-in-function",
+    "import-outside-top-level",
+    "too-many-locals",
+    "too-many-positional-arguments",
+    "too-many-nested-blocks",
+    "too-many-return-statements",
+    "too-many-branches",
+    "too-many-arguments",
+    "too-many-statements",
+    "magic-value-comparison",
+    "float-equality-comparison",
+    "assert",
+    "print",
+    # a script is a file to run, not a module to import
+    "implicit-namespace-package",
+]
+unfixable = [
+    "commented-out-code", # (will just delete it!)
+    "unused-import",      # (can be annoying to have import disappear while editing)
+    "unused-variable",
+    "expr-or-true",
+    "expr-and-false",
+]
+
+[lint.per-file-ignores]
+# this script runs squeue, which the clusters supply
+"slurmjobhoursleft.py" = ["suspicious-subprocess-import", "subprocess-without-shell-equals-true"]
+
+[lint.flake8-import-conventions.extend-aliases]
+"artistools" = "at"
+"numpy.typing" = "npt"
+"polars" = "pl"
+"typing" = "t"
+
+[lint.flake8-import-conventions]
+# the code reads these modules through their aliases, e.g. `t.Any`
+banned-from = ["numpy", "typing"]
+
+[lint.flake8-tidy-imports]
+ban-relative-imports = "all"
+
+[lint.flake8-type-checking]
+strict = true
+
+[lint.isort]
+force-single-line = true
+order-by-type = false

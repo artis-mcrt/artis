@@ -1,0 +1,17 @@
+# The rules agree with the ty configuration of artistools (pyproject.toml)
+[environment]
+# the newest requires-python of the scripts sets the version of the standard library
+python-version = "3.14"
+
+[rules]
+# these rules are off by default
+blanket-ignore-comment = "error"
+disjoint-cast = "error"
+dynamic-function-decorator-return = "error"
+invalid-legacy-positional-parameter = "error"
+invalid-mutable-override = "error"
+missing-override-decorator = "error"
+missing-type-argument = "error"
+possibly-missing-attribute = "error"
+possibly-missing-import = "error"
+unsupported-dynamic-base = "error"

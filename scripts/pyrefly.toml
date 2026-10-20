@@ -1,0 +1,54 @@
+# The checks agree with the pyrefly configuration of artistools (pyproject.toml). Each script holds its requirements
+# in its inline metadata. The newest requires-python of the scripts sets the version of the standard library
+preset = "strict"
+python-version = "3.14"
+
+[errors]
+unbound-name = false
+# the strict preset leaves these kinds off
+empty-body = true
+implicit-abstract-class = true
+implicit-import = true
+implicit-reexport = true
+implicitly-defined-attribute = true
+incompatible-comparison = true
+invalid-abstract-method = true
+invalid-cast = true
+missing-super-call = true
+no-any-return-explicit = true
+no-any-return-implicit = true
+non-exhaustive-match-open-type = true
+not-required-key-access = true
+protocol-implicitly-defined-attribute = true
+string-as-iterable = true
+unannotated-protocol-member = true
+unannotated-return = true
+unimported-directive = true
+uninitialized-instance-variable = true
+unknown-attribute-type = true
+unknown-return-type = true
+unsupported-dynamic-base = true
+unsupported-operation = true
+untyped-class-decorator = true
+untyped-function-decorator = true
+untyped-namedtuple = true
+unused-type-ignore = true
+# these kinds are warnings by default, and a warning does not stop CI
+assert-type-unspellable-subtype = "error"
+attribute-assign-on-never = "error"
+deprecated = "error"
+division-by-zero = "error"
+invalid-decorator = "error"
+misplaced-ignore = "error"
+missing-attribute-patch-target = "error"
+name-mismatch = "error"
+non-convergent-recursion = "error"
+non-exhaustive-match = "error"
+redundant-cast = "error"
+redundant-condition = "error"
+unnecessary-type-conversion = "error"
+unreachable = "error"
+unreachable-match-case = "error"
+unresolvable-dunder-all = "error"
+useless-overload-body = "error"
+variance-mismatch = "error"

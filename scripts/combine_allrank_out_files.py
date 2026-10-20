@@ -58,6 +58,7 @@ import sys
 import tempfile
 import typing as t
 import zlib
+from collections.abc import Generator
 from collections.abc import Iterator
 from pathlib import Path
 
@@ -71,7 +72,10 @@ except ImportError:
 
 # the zstd level of sn3d (ZSTD_LEVEL_DEFAULT in outputfilestream.h)
 ZSTD_LEVEL = 9
-ZSTD_OPTIONS = {zstd.CompressionParameter.compression_level: ZSTD_LEVEL, zstd.CompressionParameter.checksum_flag: 1}
+ZSTD_OPTIONS: dict[int, int] = {
+    zstd.CompressionParameter.compression_level: ZSTD_LEVEL,
+    zstd.CompressionParameter.checksum_flag: 1,
+}
 
 # the types of the output files of the ranks (JOBFOLDER_OUTFILE_BASENAMES in mpi_logging.h)
 BASENAMES = ("estimators", "nlte", "radfield", "macroatom")
@@ -86,13 +90,11 @@ RANKFILE_EXTENSIONS = ("", ".zst", ".gz", ".xz")
 def get_rank_files(folder: Path, basename: str) -> dict[int, Path]:
     """Return the file of each rank in the folder for one type. A rank without text has no file."""
     names = {path.name for path in folder.glob(f"{basename}_*.out*")}
-    ranks = sorted(
-        {
-            int(match.group(1))
-            for name in names
-            if (match := re.fullmatch(rf"{basename}_(\d+)\.out(?:\.zst|\.gz|\.xz)?", name))
-        }
-    )
+    ranks = sorted({
+        int(match.group(1))
+        for name in names
+        if (match := re.fullmatch(rf"{basename}_(\d+)\.out(?:\.zst|\.gz|\.xz)?", name))
+    })
     rankfiles: dict[int, Path] = {}
     for rank in ranks:
         for extension in RANKFILE_EXTENSIONS:
@@ -103,7 +105,7 @@ def get_rank_files(folder: Path, basename: str) -> dict[int, Path]:
 
 
 @contextlib.contextmanager
-def open_text(path: Path) -> Iterator[t.TextIO]:
+def open_text(path: Path) -> Generator[t.TextIO]:
     """Open a text file that is plain or compressed. A compressed file that is damaged or cut gives a ValueError."""
     opener = {".zst": zstd.open, ".gz": gzip.open, ".xz": lzma.open}.get(path.suffix, open)
     with opener(path, "rt", encoding="utf-8") as textfile:
@@ -400,6 +402,7 @@ def remove_rank_files(basename: str, rankfiles: dict[int, Path], combined_path: 
 
 
 def main() -> None:
+    """Combine the files of the ranks in each folder."""
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument(
         "folders", nargs="*", type=Path, help="The folders with the files of the ranks. The default is job_from_ts*."
