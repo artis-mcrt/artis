@@ -37,7 +37,7 @@ if grep -qs "No need for restart" output_0-0.txt && grep -qs "sn3d finished" out
   echo "$(date): tar_rm_logs.sh archives the log files"
   ./artis/scripts/tar_rm_logs.sh
 
-  echo "$(date): artistools converts the output files to parquet"
+  echo "$(date): artistools makes the parquet caches of the output files"
   export PATH="$(pwd)/../uv/bin:$PATH"
   export PATH="$HOME/.local/bin/:$PATH"
   if ! command -v uv >/dev/null 2>&1
@@ -49,15 +49,8 @@ if grep -qs "No need for restart" output_0-0.txt && grep -qs "sn3d finished" out
   fi
   uv tool install -U artistools@latest
 
-  # convert packets to parquet for fast reading
-  uvx artistools lc --frompackets || true
-
-  if [ -f vpkt.txt ]; then
-    # convert virtual packets to parquet
-    uvx artistools lc --frompackets -plotvspecpol 0 || true
-  fi
-
-  uvx --from artistools -- python3 -c 'import artistools as at; at.estimators.scan_estimators()' || true
+  # the caches of the input model, the line list, the estimators, the packets, and the virtual packets
+  uvx artistools cache make . || true
 
 else
   echo "sn3d did not finish cleanly after the last timestep of the model, so exspec-after.sh changes no file"

@@ -190,7 +190,7 @@ The scripts folder contains:
   - It merges the direction-resolved files with mergeangleres.py.
   - It compresses the large text files with zstd.
   - It archives the logs with tar_rm_logs.sh.
-  - It converts the packets and the estimators to parquet with artistools.
+  - It makes the parquet caches of artistools with `artistools cache make`, e.g. of the estimators and the packets.
 - corehours-before.sh and corehours-after.sh: The job scripts source these files to log the CPU allocation, the wall time, and the core hours.
 - slurmjobhoursleft.py: Print the hours that remain in a Slurm job. The job scripts give this value to `sn3d -w`.
 - mergeangleres.py: Merge the files of the direction bins into light_curve_res.out, spec_res.out, and specpol_res.out.
