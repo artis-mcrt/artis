@@ -105,13 +105,6 @@ void read_gamma_spectrum(const int nucindex, const std::string& filename) {
     E_gamma_avg += en_mev * MEV * prob;
   }
 
-  const double E_gamma_decaydata = decay::nucdecayenergygamma(nucindex);
-  if (E_gamma_decaydata > 0. && std::abs((E_gamma_avg / E_gamma_decaydata) - 1.) > 0.02) {
-    printlnlog(
-        "[warning] {}: the gamma lines sum to {:.4f} MeV per decay, but the decay data give {:.4f} MeV. The line sum "
-        "replaces the decay data value.",
-        filename, E_gamma_avg / MEV, E_gamma_decaydata / MEV);
-  }
   decay::set_nucdecayenergygamma(nucindex, E_gamma_avg);
 }
 
