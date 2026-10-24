@@ -2138,9 +2138,13 @@ void read_parameterfile(std::span<Packet> packets) {
   }
 
   if constexpr (USE_ION_BFHEATING_ESTIMATORS) {
-    printlnlog("bfheating coefficients are calculated from LTE values and bfheatingestimator.");
+    printlnlog(
+        "bfheating coefficients are calculated from the radiation field with the stimulated recombination factor of "
+        "the cell departure ratio and T_e, and renormalised with bfheatingestimator.");
   } else {
-    printlnlog("bfheating coefficients are calculated directly from the radiation field without bfheatingestimator.");
+    printlnlog(
+        "bfheating coefficients are calculated from the radiation field with the stimulated recombination factor of "
+        "the cell departure ratio and T_e, without bfheatingestimator.");
   }
 
   // Set up initial grey approximation?

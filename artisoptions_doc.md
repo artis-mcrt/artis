@@ -247,7 +247,9 @@ constexpr bool COLLISIONAL_HEATING_FROM_LEVELPOPS;
 constexpr bool BFCOOLING_USELEVELPOPNOTIONPOP;
 
 // Store a bound-free heating estimator for each ground continuum. Multiply the analytic bound-free heating of
-// each level by the ratio of the estimator to the analytic rate of the nearest ground continuum.
+// each level by the ratio of the estimator to the analytic rate of the nearest ground continuum. The analytic
+// bound-free heating has the stimulated recombination factor 1 - b exp(-h (nu - nu_edge) / (k T_e)) of the
+// photoionisation rate, where b is the modified departure ratio of the continuum in the cell.
 constexpr bool USE_ION_BFHEATING_ESTIMATORS;
 
 // Write the heating and the cooling rate of each ion to the estimators file, in addition to the totals. A
