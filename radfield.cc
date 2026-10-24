@@ -853,6 +853,12 @@ void invalidate_bin_fits(const int nonemptymgi) {
   for (int i = 0; i < detailed_linecount; i++) {
     prev_Jb_lu_normed[nonemptymgi][i] = {.value = 0., .contribcount = -1};
   }
+  if (detailed_linecount > 0) {
+    printlnlog(
+        "[info] cell {} has no line estimators of timestep {}, so the macro-atom uses the radiation field model for "
+        "its {} detailed lines until the cell has new estimators",
+        grid::get_mgi_of_nonemptymgi(nonemptymgi), globals::timestep, detailed_linecount);
+  }
 }
 
 void normalise_J(const int nonemptymgi, const double estimator_normfactor_over4pi) {

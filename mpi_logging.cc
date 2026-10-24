@@ -33,14 +33,18 @@ bool outputstartofline = true;
 OutputFileStream output_file;
 
 // End the run of every rank. MPI_Abort() stops the other ranks, which otherwise wait in their next collective call
-// until the wall time ends.
+// until the wall time ends. MPI_Init() gives no thread support, so only the main thread can call MPI_Abort().
 [[noreturn]] void abort_run() noexcept {
   int mpi_initialized = 0;
   MPI_Initialized(&mpi_initialized);
   int mpi_finalized = 0;
   MPI_Finalized(&mpi_finalized);
   if (mpi_initialized != 0 && mpi_finalized == 0) {
-    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+    int is_main_thread = 0;
+    MPI_Is_thread_main(&is_main_thread);
+    if (is_main_thread != 0) {
+      MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+    }
   }
   std::abort();
 }
