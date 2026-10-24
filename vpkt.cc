@@ -2,8 +2,8 @@
 // packets are launched toward predefined observer directions and their optical-depth-weighted
 // energies are accumulated into viewing-angle-dependent (and optionally polarised) spectra.
 //
-// The virtual-packet scheme and the polarised radiative transfer it feeds are described by
-// Bulla, Sim & Kromer (2015), MNRAS, 450, 967-981, doi:10.1093/mnras/stv657.
+// Bulla, Sim & Kromer (2015), MNRAS, 450, 967-981, doi:10.1093/mnras/stv657, describe the virtual-packet scheme
+// and the polarised radiative transfer it feeds.
 
 #include "vpkt.h"
 
@@ -204,8 +204,9 @@ void add_to_vpkt_grid(const double nu_rf, const double e_rf, const double prob, 
   // Bin size
 
   // vgrid cell (can be different to propagation cell size)
-  const int ny = static_cast<int>((globals::vmax - vref1) / (2 * globals::vmax / VGRID_NY));
-  const int nz = static_cast<int>((globals::vmax - vref2) / (2 * globals::vmax / VGRID_NZ));
+  // the division can round up to the bin count for a velocity within rounding of -vmax
+  const int ny = std::min(static_cast<int>((globals::vmax - vref1) / (2 * globals::vmax / VGRID_NY)), VGRID_NY - 1);
+  const int nz = std::min(static_cast<int>((globals::vmax - vref2) / (2 * globals::vmax / VGRID_NZ)), VGRID_NZ - 1);
 
   // Add contribution
   if (nu_rf > nu_grid_min[wlbin] && nu_rf < nu_grid_max[wlbin]) {
@@ -286,7 +287,7 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
     if (mgi < 0) {
       next_trans = -1;
     } else if (boundarydist > 0) {
-      const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(mgi);
+      const auto nonemptymgi = grid::get_propcell_nonemptymgi(cellindex);
       const auto doppler = calculate_doppler_nucmf_on_nurf(vpktpos, obsdir, t_future);
       calculate_chi_rpkt_cont<false>(nu_cmf, chi_vpkt_cont, nonemptymgi);
 
@@ -485,7 +486,7 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
       cellindex = next_cellindex;
       mgi = grid::get_propcell_modelgridindex(cellindex);
       if (mgi >= 0) {
-        const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(mgi);
+        const auto nonemptymgi = grid::get_propcell_nonemptymgi(cellindex);
 
         // kill vpkt with pass through a thick cell
         if (grid::thick_allcells[nonemptymgi] != grid::CellThickness::THIN) {

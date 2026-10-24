@@ -2,8 +2,8 @@
 // (full-spectrum and binned J_nu, plus detailed bound-bound Jb_lu estimators) and fits diluted
 // blackbodies (W, T_R) per cell and per frequency bin for use in the photoionisation and heating rates.
 //
-// The multibin radiation field model and the photoionisation, bound-bound, and heating estimators
-// are described by Shingles et al. (2020), MNRAS, 492, 2029-2043, section 2.2, doi:10.1093/mnras/stz3412.
+// Shingles et al. (2020), MNRAS, 492, 2029-2043, section 2.2, doi:10.1093/mnras/stz3412, describe the multibin
+// radiation field model and the photoionisation, bound-bound, and heating estimators.
 
 #include "radfield.h"
 
@@ -15,6 +15,7 @@
 #include <cstdlib>
 #include <format>
 #include <iterator>
+#include <optional>
 #include <print>
 #include <span>
 #include <utility>
@@ -661,10 +662,14 @@ auto get_Jblueindex(const int lineindex) -> int {
   return -1;
 }
 
-auto get_Jb_lu(const int nonemptymgi, const int jblueindex) -> double {
+auto get_Jb_lu(const int nonemptymgi, const int jblueindex) -> std::optional<double> {
   assert_always(jblueindex >= 0);
   assert_always(jblueindex < detailed_linecount);
-  return prev_Jb_lu_normed[nonemptymgi][jblueindex].value;
+  const auto& estimator = prev_Jb_lu_normed[nonemptymgi][jblueindex];
+  if (estimator.contribcount < 0) {
+    return std::nullopt;
+  }
+  return estimator.value;
 }
 
 // clear the estimators before a timestep
@@ -843,6 +848,10 @@ void invalidate_bin_fits(const int nonemptymgi) {
     std::ranges::fill(radfieldbin_solutions_W.span().subspan(static_cast<ptrdiff_t>(nonemptymgi) * RADFIELDBINCOUNT,
                                                              RADFIELDBINCOUNT),
                       -1.);
+  }
+  // the grey transport collects no line estimators, so a zero here is no measurement
+  for (int i = 0; i < detailed_linecount; i++) {
+    prev_Jb_lu_normed[nonemptymgi][i] = {.value = 0., .contribcount = -1};
   }
 }
 
