@@ -139,7 +139,7 @@ constexpr ParticleThermalisationScheme PARTICLE_THERMALISATION_SCHEME =
 
 constexpr GammaThermalisationScheme GAMMA_THERMALISATION_SCHEME = GammaThermalisationScheme::FREQUENCYDEPENDENT;
 
-constexpr bool GAMMA_USE_XCOM_PHOTOION = false;
+constexpr bool GAMMA_OPACITY_FROM_COMPOSITION = false;
 
 constexpr std::optional<double> GAMMA_USE_KAPPA_GREY;
 

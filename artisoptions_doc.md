@@ -381,7 +381,7 @@ constexpr GammaThermalisationScheme GAMMA_THERMALISATION_SCHEME;
 // production cross section of each element is the Z^2 fit of the same equation of Ambwani & Sutherland (1988). Each
 // sum covers only the elements of compositiondata.txt. This option needs the FREQUENCYDEPENDENT
 // GAMMA_THERMALISATION_SCHEME and no value of GAMMA_USE_KAPPA_GREY.
-constexpr bool GAMMA_USE_XCOM_PHOTOION;
+constexpr bool GAMMA_OPACITY_FROM_COMPOSITION;
 
 // Replace the frequency-dependent gamma-ray opacity with this grey opacity [cm^2/g]. No value keeps the
 // frequency-dependent opacity. A value needs the FREQUENCYDEPENDENT GAMMA_THERMALISATION_SCHEME.
