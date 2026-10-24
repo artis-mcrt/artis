@@ -2385,28 +2385,37 @@ DEVICE_FUNC auto nt_ionisation_maxupperion(const int element, const int lowerion
 }
 
 DEVICE_FUNC auto nt_random_upperion(const int nonemptymgi, const int element, const int lowerion,
-                                    const bool energyweighted, rngstate_type& rngstate) -> int {
+                                    const bool weight_by_ionisation_energy, rngstate_type& rngstate) -> int {
   assert_testmodeonly(lowerion < get_nions(element) - 1);
   if (NT_SCHEME == NonThermalScheme::NT_SPENCERFANO && NT_MAX_AUGER_ELECTRONS > 0) {
-    const double zrand = rng_uniform(rngstate);
+    const int maxupperion = nt_ionisation_maxupperion(element, lowerion);
+    // ion_ntion_energyrate() and the NLTE solver give each upper ion the ionisation probability times the
+    // energy from the ground level of lowerion to the ground level of upperion
+    const auto upperion_weight = [&](const int upperion) {
+      const double probability = nt_ionisation_upperion_probability(nonemptymgi, element, lowerion, upperion, false);
+      return weight_by_ionisation_energy ? probability * (epsilon(element, upperion, 0) - epsilon(element, lowerion, 0))
+                                         : probability;
+    };
 
-    double prob_sum = 0.;
-    for (int upperion = lowerion + 1; upperion <= nt_ionisation_maxupperion(element, lowerion); upperion++) {
-      prob_sum += nt_ionisation_upperion_probability(nonemptymgi, element, lowerion, upperion, energyweighted);
+    double weight_total = 0.;
+    for (int upperion = lowerion + 1; upperion <= maxupperion; upperion++) {
+      weight_total += upperion_weight(upperion);
+    }
+    assert_always(weight_total > 0.);
+
+    const double zrand_weight = rng_uniform(rngstate) * weight_total;
+    double weight_sum = 0.;
+    for (int upperion = lowerion + 1; upperion <= maxupperion; upperion++) {
+      weight_sum += upperion_weight(upperion);
 
       // Strict comparison ensures that zrand == 0 skips leading zero-probability outcomes.
-      if (zrand < prob_sum) {
+      if (zrand_weight < weight_sum) {
         return upperion;
       }
     }
 
-    // the channel probabilities are stored as floats and the tabulated Auger yields are only
-    // normalised to about one part in a thousand, so a draw very close to one can fall past the end
-    // of the cumulative sum. Absorb that small deficit into the highest reachable ion rather than
-    // failing the whole run, but still reject a distribution that is badly wrong rather than
-    // silently returning the top ion for every draw.
-    assert_always(prob_sum > 0.99);
-    return nt_ionisation_maxupperion(element, lowerion);
+    // a rounding error can put the draw past the end of the cumulative sum
+    return maxupperion;
   }
   return lowerion + 1;
 }
