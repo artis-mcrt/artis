@@ -2389,8 +2389,9 @@ DEVICE_FUNC auto nt_random_upperion(const int nonemptymgi, const int element, co
   assert_testmodeonly(lowerion < get_nions(element) - 1);
   if (NT_SCHEME == NonThermalScheme::NT_SPENCERFANO && NT_MAX_AUGER_ELECTRONS > 0) {
     const int maxupperion = nt_ionisation_maxupperion(element, lowerion);
-    // ion_ntion_energyrate() and the NLTE solver give each upper ion the ionisation probability times the
-    // energy from the ground level of lowerion to the ground level of upperion
+    // The NLTE solver gives each upper ion the rate Y_nt times the ionisation probability. ion_ntion_energyrate()
+    // multiplies that rate by the energy from the ground level of lowerion to the ground level of upperion, so the
+    // packet draw uses the probability times that energy.
     const auto upperion_weight = [&](const int upperion) {
       const double probability = nt_ionisation_upperion_probability(nonemptymgi, element, lowerion, upperion, false);
       return weight_by_ionisation_energy ? probability * (epsilon(element, upperion, 0) - epsilon(element, lowerion, 0))
