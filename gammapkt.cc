@@ -607,6 +607,15 @@ static_assert((get_sigma_pair_prod_factor(nu_1p5mev) - get_sigma_pair_prod_facto
 
   const double sigma_factor = get_sigma_pair_prod_factor(nu_cmf);
 
+  if constexpr (GAMMA_USE_XCOM_PHOTOION) {
+    // the cross section of an element is sigma_factor * Z^2 * 1e-27 cm^2, so the sum uses the composition of the cell
+    double nn_Zsquared_sum = 0.;
+    for (int element = 0; element < get_nelements(); element++) {
+      nn_Zsquared_sum += grid::get_elem_numberdens(nonemptymgi, element) * pow2(get_atomicnumber(element));
+    }
+    return std::max(sigma_factor * 1e-27 * nn_Zsquared_sum, 0.);
+  }
+
   const double sigma_cmf_si = sigma_factor * 196.e-27;
 
   const double sigma_cmf_fe = sigma_factor * 784.e-27;
