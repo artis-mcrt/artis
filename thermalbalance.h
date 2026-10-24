@@ -69,8 +69,10 @@ struct HeatingCoolingRates {
   }
 };
 
+// bfheatingcoeffs is a buffer of get_includedlevels() values. It holds the bound-free heating coefficients of the
+// final T_e when the function returns.
 void call_T_e_finder(int nonemptymgi, double t_current, HeatingCoolingRates& heatingcoolingrates,
-                     std::span<const double> bfheatingcoeffs);
+                     std::span<double> bfheatingcoeffs);
 void calculate_ion_heating_cooling_rates(int nonemptymgi, HeatingCoolingRates& heatingcoolingrates,
                                          std::span<const double> bfheatingcoeffs);
 auto calculate_bfheatingcoeff(int element, int ion, int level, int phixstargetindex, int nonemptymgi) -> double;
