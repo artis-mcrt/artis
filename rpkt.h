@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cmath>
 #include <cstddef>
 #include <functional>
 #include <memory>
@@ -20,26 +21,50 @@
 #include "packet.h"
 #include "random.h"
 
+// The wavelength bins [Angstrom] of the binned opacities. The upper edge of each bin is expopac_lambdaratio times its
+// lower edge, so every bin has the same width in velocity. The bins cover the wavelengths of the r-packet spectra
+// up to 1 / NU_MIN_R.
 constexpr double expopac_lambdamin = 60.;
-constexpr double expopac_lambdamax = 40000.;
-constexpr double expopac_deltalambda = 20.;
-constexpr auto expopac_nbins = static_cast<ptrdiff_t>((expopac_lambdamax - expopac_lambdamin) / expopac_deltalambda);
+constexpr double expopac_lambdamax = 1e8 * CLIGHT / NU_MIN_R;
+constexpr double expopac_lambdaratio = 1.004;
+constexpr auto expopac_nbins = [] {
+  ptrdiff_t nbins = 0;
+  double lambda_lower = expopac_lambdamin;
+  while (lambda_lower < expopac_lambdamax) {
+    lambda_lower *= expopac_lambdaratio;
+    nbins++;
+  }
+  return nbins;
+}();
 
 // wavelength bins are ordered by ascending wavelength (descending frequency)
 
-constexpr auto get_expopac_bin_nu_upper(const ptrdiff_t binindex) -> double {
-  const auto binindex_f64 = static_cast<double>(binindex);
-  const auto lambda_lower = expopac_lambdamin + (binindex_f64 * expopac_deltalambda);
-  return 1e8 * CLIGHT / lambda_lower;
+[[nodiscard]] DEVICE_FUNC inline auto get_expopac_bin_lambda_lower(const ptrdiff_t binindex) -> double {
+  return expopac_lambdamin * std::pow(expopac_lambdaratio, static_cast<double>(binindex));
 }
 
-constexpr auto get_expopac_bin_nu_lower(const ptrdiff_t binindex) -> double {
-  const auto binindexplusone_f64 = static_cast<double>(binindex + 1);
-  const auto lambda_upper = expopac_lambdamin + (binindexplusone_f64 * expopac_deltalambda);
-  return 1e8 * CLIGHT / lambda_upper;
+[[nodiscard]] DEVICE_FUNC inline auto get_expopac_bin_nu_upper(const ptrdiff_t binindex) -> double {
+  return 1e8 * CLIGHT / get_expopac_bin_lambda_lower(binindex);
 }
 
-static_assert(get_expopac_bin_nu_lower(0) == get_expopac_bin_nu_upper(1));  // bins are contiguous
+[[nodiscard]] DEVICE_FUNC inline auto get_expopac_bin_nu_lower(const ptrdiff_t binindex) -> double {
+  return 1e8 * CLIGHT / get_expopac_bin_lambda_lower(binindex + 1);
+}
+
+// Get the bin of a wavelength [Angstrom]. The result is -1 below the grid and expopac_nbins or more above it.
+[[nodiscard]] DEVICE_FUNC inline auto get_expopac_binindex(const double lambda) -> ptrdiff_t {
+  if (lambda < expopac_lambdamin) {
+    return -1;
+  }
+  auto binindex = static_cast<ptrdiff_t>(std::log(lambda / expopac_lambdamin) / std::log(expopac_lambdaratio));
+  // the rounding of the logarithm can give a neighbour bin, so the bin edges decide
+  if (lambda < get_expopac_bin_lambda_lower(binindex)) {
+    binindex--;
+  } else if (lambda >= get_expopac_bin_lambda_lower(binindex + 1)) {
+    binindex++;
+  }
+  return binindex;
+}
 
 // the options that read the expansionopacities array of each cell
 constexpr bool expansionopacities_array_on = RPKT_USE_BINNED_OPACITIES || VPKT_USE_BINNED_OPACITIES;

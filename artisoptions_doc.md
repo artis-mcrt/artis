@@ -447,7 +447,8 @@ constexpr bool VPKT_WRITE_CONTRIBS;
 // --- Binned opacities ---
 
 // Use binned opacities instead of line-by-line opacities for the real packets in the cells that are not
-// thick. Not compatible with VPKT_ON.
+// thick. Not compatible with VPKT_ON. The bins span 60 Angstroms to the wavelength of NU_MIN_R. The upper edge of
+// each bin is 1.004 times its lower edge, so each bin has a width of 1200 km/s in velocity (see rpkt.h).
 constexpr bool RPKT_USE_BINNED_OPACITIES;
 
 // Use binned opacities instead of line-by-line opacities for the virtual packets. Set BINNED_OPACITY_LINE_WEIGHT to

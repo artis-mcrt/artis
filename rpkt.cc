@@ -191,8 +191,7 @@ auto get_possible_event_expansion_opacity(const int nonemptymgi, Packet& pkt, co
   double dist = 0.;
   double tau = 0.;
   // -1 means below the wavelength grid, in which case there is continuum opacity but no binned opacity
-  const auto binindex_start =
-      std::max(get_linearbinindex(1e8 * CLIGHT / nu_cmf, expopac_lambdamin, expopac_deltalambda), -1Z);
+  const auto binindex_start = get_expopac_binindex(1e8 * CLIGHT / nu_cmf);
 
   for (auto binindex = binindex_start; binindex < expopac_nbins; binindex++) {
     // binindex could be -1, in which case we have only the continuum opacity and no binned opacity
@@ -1121,6 +1120,7 @@ void calculate_expansion_opacities(const int nonemptymgi) {
   for (auto binindex = 0Z; binindex < expopac_nbins; binindex++) {
     double bin_linesum = 0.;
     const auto nu_lower = get_expopac_bin_nu_lower(binindex);
+    const auto bin_deltalambda = get_expopac_bin_lambda_lower(binindex + 1) - get_expopac_bin_lambda_lower(binindex);
 
     while (lineindex < globals::nlines && globals::linelist.nu[lineindex] >= nu_lower) {
       const double n_l = levelpops[globals::linelist.uniquelevelindex_lower[lineindex]];
@@ -1131,7 +1131,7 @@ void calculate_expansion_opacities(const int nonemptymgi) {
                        HCLIGHTOVERFOURPI * t_mid,
                    0.);
       const auto linelambda = 1e8 * CLIGHT / globals::linelist.nu[lineindex];
-      bin_linesum += (linelambda / expopac_deltalambda) * get_binned_opacity_line_weight(tau_line);
+      bin_linesum += (linelambda / bin_deltalambda) * get_binned_opacity_line_weight(tau_line);
       lineindex++;
     }
     // opacity in units of [cm^2/g]

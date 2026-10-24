@@ -402,8 +402,7 @@ auto trace_vpkt_direction(const Packet& rpkt, const double t_arrive, const doubl
       };
       if constexpr (VPKT_USE_BINNED_OPACITIES) {
         // -1 means below the wavelength grid, in which case there is continuum opacity but no binned opacity
-        const auto binindex_start =
-            std::max(get_linearbinindex(1e8 * CLIGHT / nu_cmf, expopac_lambdamin, expopac_deltalambda), -1Z);
+        const auto binindex_start = get_expopac_binindex(1e8 * CLIGHT / nu_cmf);
 
         if (nu_cmf_decreases && binindex_start < expopac_nbins) {
           // trace line-by-line from nu_cmf to the next bin edge, because the binned opacity at nu_cmf includes
