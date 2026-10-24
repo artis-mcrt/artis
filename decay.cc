@@ -685,8 +685,8 @@ auto get_nucstring_a(const std::string& strnuc) -> int {
 
 namespace {
 
-// add the standard set of nuclides for the classical double-decay chains (56Ni, 57Ni, 48Cr,
-// and 52Fe parents) with hardcoded decay data
+// add the standard set of nuclides for the classical double-decay chains (56Ni, 57Ni, 48Cr, 52Fe, and 44Ti
+// parents) and 26Al with hardcoded decay data
 void add_standard_nuclides() {
   // Ni57
   nuclides.push_back({.z = 28, .a = 57, .meanlife = 51.36 * HOUR});
@@ -747,6 +747,38 @@ void add_standard_nuclides() {
   nuclides.push_back({.z = 25, .a = 52, .meanlife = 0.0211395 * DAY});
   nuclides.back().branchprobs[DECAYTYPE_ELECTRONCAPTURE] = 1.;
   nuclides.back().endecay_q[DECAYTYPE_ELECTRONCAPTURE] = 5.085870 * MEV;
+
+  // Ti44, Sc44, and Al26: the half-lives, branching ratios, Q values, and mean positron energies are from the
+  // evaluations of Chen & Singh (2023), Nucl. Data Sheets, 190, 1-318, doi:10.1016/j.nds.2023.06.001 (A = 44) and of
+  // Basunia & Hurst (2016), Nucl. Data Sheets, 134, 1-148, doi:10.1016/j.nds.2016.04.001 (A = 26). A year of the
+  // evaluations is 365.2422 days.
+
+  // Ti44: the half-life 59.1 y
+  nuclides.push_back({.z = 22, .a = 44, .meanlife = 59.1 * 365.2422 * DAY / std::numbers::ln2});
+  nuclides.back().branchprobs[DECAYTYPE_ELECTRONCAPTURE] = 1.;
+  nuclides.back().endecay_q[DECAYTYPE_ELECTRONCAPTURE] = 0.267449 * MEV;
+
+  // Sc44: the half-life 4.0420 h
+  nuclides.push_back({.z = 21, .a = 44, .meanlife = 4.0420 * HOUR / std::numbers::ln2});
+  nuclides.back().endecay_positron = 0.6302 * MEV;
+  nuclides.back().branchprobs[DECAYTYPE_BETAPLUS] = 0.94278;
+  nuclides.back().branchprobs[DECAYTYPE_ELECTRONCAPTURE] = 1. - 0.94278;
+  const double sc44_q_ec = 3.652695 * MEV;
+  nuclides.back().endecay_q[DECAYTYPE_ELECTRONCAPTURE] = sc44_q_ec;
+  // the beta-plus decay releases Q_EC in total: the kinetic energy Q_EC - 2 m_e c^2 and the annihilation
+  // energy 2 m_e c^2 of the positron
+  nuclides.back().endecay_q[DECAYTYPE_BETAPLUS] = sc44_q_ec;
+
+  // Al26: the half-life 7.17e5 y
+  nuclides.push_back({.z = 13, .a = 26, .meanlife = 7.17e5 * 365.2422 * DAY / std::numbers::ln2});
+  nuclides.back().endecay_positron = 0.54329 * MEV;
+  nuclides.back().branchprobs[DECAYTYPE_BETAPLUS] = 0.8173;
+  nuclides.back().branchprobs[DECAYTYPE_ELECTRONCAPTURE] = 1. - 0.8173;
+  const double al26_q_ec = 4.004405 * MEV;
+  nuclides.back().endecay_q[DECAYTYPE_ELECTRONCAPTURE] = al26_q_ec;
+  // the beta-plus decay releases Q_EC in total: the kinetic energy Q_EC - 2 m_e c^2 and the annihilation
+  // energy 2 m_e c^2 of the positron
+  nuclides.back().endecay_q[DECAYTYPE_BETAPLUS] = al26_q_ec;
 }
 
 // add the nuclides with beta-minus decay data from betaminusdecays.txt

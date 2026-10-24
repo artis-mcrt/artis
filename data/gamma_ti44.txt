@@ -1,0 +1,6 @@
+# Source: ENSDF evaluation of Chen & Singh (2023), Nucl. Data Sheets, 190, 1-318, doi:10.1016/j.nds.2023.06.001,
+# from the IAEA LiveChart of Nuclides. Columns: energy [MeV], photons per decay. X-rays are omitted.
+3
+0.0678679  0.93
+0.0783234  0.968
+0.14622  0.00092
