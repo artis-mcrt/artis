@@ -153,29 +153,20 @@ To plot and analyse the output, use [artistools](https://github.com/artis-mcrt/a
 ### Testing
 The unit tests cover the numeric and parsing helpers and some physics functions, e.g. the Compton cross-section and the triangular solve of the Spencer-Fano matrix. Build and run them with `make unittests && ./unittests`. CI runs them for the classic and NLTE nebular presets.
 
-The tests folder contains eleven small end-to-end test models. Each tests/setup_*.sh script downloads the atomic data it needs and makes a model folder with the input files and an artisoptions.h for the test. Build the programs from that artisoptions.h. Then copy them into the model folder:
+The tests folder contains eleven small end-to-end test models. tests/runtest.sh runs one of them:
 ```sh
-cd tests
-source ./setup_kilonova_1d.sh   # creates tests/kilonova_1d_testrun/
-cd ..
-rm -f artisoptions.h
-cp tests/kilonova_1d_testrun/artisoptions.h .
-make REPRODUCIBLE=ON MAX_NODE_SIZE=2 ZSTD=ON sn3d exspec
-cp -L sn3d exspec tests/kilonova_1d_testrun/
-cd tests/kilonova_1d_testrun
-rm -f input.txt
-mpirun -np 4 ./sn3d
+tests/runtest.sh kilonova_1d
 ```
-Remove your artisoptions.h before the copy. The `cp` command writes through a symlink and changes the tracked preset. Remove input.txt before a new run. An input.txt of an earlier run makes sn3d continue that run. Without input.txt, sn3d restores it from input-newrun.txt.
+The test job of [ci.yml](.github/workflows/ci.yml) calls the same script. The script does these steps:
+1. It removes the model folder tests/kilonova_1d_testrun of an earlier run. Then it runs tests/setup_kilonova_1d.sh, which downloads the atomic data of the test and makes the model folder again with the input files and an artisoptions.h for the test.
+2. It builds sn3d and exspec from that artisoptions.h with the make options of CI, and copies them into the model folder. During the build, the artisoptions.h symlink in the repository folder points to the options of the test. The script then restores your symlink.
+3. It starts a new simulation and compares the checksums of the output files with tests/kilonova_1d_inputfiles/results_md5_job0.txt.
+4. It resumes the simulation from the restart files, and then runs exspec.
+5. It compares the checksums of the output files with results_md5_final.txt.
 
-The make options are the options of CI. The test input files are zstd compressed, so the build needs libzstd. The steps of the test job in [ci.yml](.github/workflows/ci.yml) also show the resume run and the exspec run.
+The script stops at the first step that fails. To run only one step, give the name of the step after the name of the test, e.g. `tests/runtest.sh kilonova_1d resume`. Run `tests/runtest.sh` without arguments to see the names of the tests and the steps. With `TESTMODE=ON` in the environment, the build has the sanitizers and the extra assertions.
 
-After the test, go back to the repository folder. Then replace the test copy of artisoptions.h with the symlink to your preset:
-```sh
-cd ../..
-rm artisoptions.h
-ln -s artisoptions_nltenebular.h artisoptions.h
-```
+The script needs Open MPI, libzstd, and the zstd and md5sum commands, because the test input files are zstd compressed. The script writes the checksums of the run into the model folder, e.g. tests/kilonova_1d_testrun/results_md5_job0.txt. A different compiler or CPU type can give checksums that differ from the stored checksums.
 
 [CI](.github/workflows/ci.yml) runs all of these on every push. It builds with `REPRODUCIBLE=ON FASTMATH=OFF MAX_NODE_SIZE=2` and compares md5 checksums of the output files against reference checksums stored in the tests/*_inputfiles folders. A change that legitimately alters the numerical results therefore needs new reference checksums, which maintainers regenerate using the "Update checksums" workflow. CI also compiles every artisoptions_*.h preset with gcc and clang, and the classic and NLTE nebular presets additionally with Apple Clang, nvc++, and hipcc (including the GPU code paths).
 

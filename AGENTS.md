@@ -98,8 +98,8 @@ compatible with C++23. The Makefile builds three programs from the same sources:
   in a single fenced C++ block.
 - `data/`: the physics data that comes with the code, e.g. the decay data and
   the gamma spectra.
-- `tests/`: the setups of the end-to-end tests (`setup_*.sh` and the related
-  `*_inputfiles/` folders).
+- `tests/`: the end-to-end tests. `runtest.sh` runs one test from its setup
+  script (`setup_*.sh`) and its input folder (`*_inputfiles/`).
 - `scripts/`: the job scripts for HPC clusters and some helper tools.
 - `third_party/`: a pruned copy of Eigen (see `third_party/eigenversion.txt`).
   Do not edit it and do not lint it.
@@ -161,7 +161,8 @@ Points that surprise a new agent:
 - `TESTMODE=ON` adds the sanitizers, the extra assertions, and the hardened
   modes of the standard library. A run then needs
   `ASAN_OPTIONS=detect_stack_use_after_return=1:detect_leaks=0` and, for Open
-  MPI, `OMPI_MCA_memory=^patcher`.
+  MPI, `OMPI_MCA_memory=^patcher`. `tests/runtest.sh` sets both when
+  `TESTMODE=ON` is in the environment.
 - `GCCTOOLCHAIN` selects the gcc toolchain of nvc++. The Makefile has fallbacks
   for some known hosts, so this option is not always necessary. CI sets it in
   the environment.
@@ -188,8 +189,9 @@ reference files in `tests/<testname>_inputfiles/`. Each test has two of them:
 `results_md5_job0.txt` and `results_md5_final.txt`. CI is the test bed. Commit
 and push early, and let CI run the full matrix.
 
-To repeat one test locally, do the steps of the test job in
-`.github/workflows/ci.yml`. Use `nebular_1d_3dgrid` as the default test. It
+To repeat one test locally, run `tests/runtest.sh <testname>`. The test job in
+`.github/workflows/ci.yml` calls the same script for each step. Use
+`nebular_1d_3dgrid` as the default test. It
 builds the nebular preset with the NLTE populations, the non-thermal solver,
 and the detailed bound-free estimators on a 3D grid, so it covers the physics
 that most changes touch. The `kilonova_1d` test is faster, but it uses the LTE
@@ -197,29 +199,39 @@ preset. The setup script downloads about 15 MB of atomic data from a GitHub
 release, so this step needs the network. The script keeps the archive in
 `tests/`, and a later run of the script uses that copy.
 
-These steps differ from a plain build and are easy to miss:
+The script does these steps in order. To run only one step, give its name as
+the second argument.
 
-- Build from the `artisoptions.h` of the model folder, not from the preset.
-  Each setup script copies a preset and then changes some option values with
-  `setoption` from `tests/setupfuncs.sh`.
-  Remove your `artisoptions.h` before the copy, because `cp` writes through a
-  symlink and replaces the content of the tracked preset.
-- Remove `input.txt` before the first run, as the workflow does. `sn3d` then
-  restores it from `input-newrun.txt`. After a run, `input.txt` holds the
+- `setup` removes the model folder `tests/<testname>_testrun` and runs
+  `tests/setup_<testname>.sh`. That script copies a preset and then changes
+  some option values with `setoption` from `tests/setupfuncs.sh`.
+- `build` points the `artisoptions.h` symlink to the options of the model
+  folder and builds with the make options of CI. It then restores the symlink
+  and copies `sn3d` and `exspec` into the model folder. It stops if
+  `artisoptions.h` is not a symlink.
+- `job0` removes `input.txt` and starts a new simulation. `sn3d` then restores
+  `input.txt` from `input-newrun.txt`. After a run, `input.txt` holds the
   values that continue that run.
-- Copy `input-resume.txt` to `input.txt` before the resume run. That file tells
-  `sn3d` to read the restart files of the first run, and it sets a different
-  range of timesteps.
-- Remove the `*.tmp` files before `exspec`, as the workflow does.
-- Run `python3 ../../scripts/mergeangleres.py` in the model folder
-  after `exspec`. The script merges the direction bin files into
+- `checksums_job0` writes `results_md5_job0.txt` into the model folder and
+  compares it with the reference file.
+- `resume` copies `input-resume.txt` to `input.txt` and runs `sn3d`. That file
+  tells `sn3d` to read the restart files of the first run, and it sets a
+  different range of timesteps.
+- `exspec` removes the `*.tmp` files, runs `exspec`, and then runs
+  `scripts/mergeangleres.py`. That script merges the direction bin files into
   `light_curve_res.out`, `spec_res.out`, and `specpol_res.out`. The tests with
   a 2D or a 3D model, e.g. `kilonova_2d`, have these files in
   `results_md5_final.txt`.
+- `checksums_final` writes `results_md5_final.txt` into the model folder and
+  compares it with the reference file.
+
+Change a step of a test in `tests/runtest.sh`, not in `ci.yml`. The workflow
+adds only the marker files for `updatechecksums.yml`, the comparison with a
+simulation in one job, and the steps that show or upload the results.
 
 CI builds with libzstd, so the output files are `.zst`. The checksum steps of
-`ci.yml` pipe each output file through `zstdcat` and `md5sum` and write the
-checksum under the plain name. `results_md5_job0.txt` holds the files of the
+`tests/runtest.sh` pipe each output file through `zstdcat` and `md5sum` and
+write the checksum under the plain name. `results_md5_job0.txt` holds the files of the
 first job, and `results_md5_final.txt` the files of the resume run and of
 `exspec`. The log files stay outside both sets, because their names do not match.
 CI also compares the lists of file names, so a missing or an extra output file
