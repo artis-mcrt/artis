@@ -36,7 +36,7 @@ void init();
 auto solve_spencerfano(int nonemptymgi, int timestep, int iteration) -> bool;
 [[nodiscard]] DEVICE_FUNC auto nt_ionisation_ratecoeff(int nonemptymgi, int element, int ion) -> double;
 [[nodiscard]] DEVICE_FUNC auto nt_ionisation_upperion_probability(int nonemptymgi, int element, int lowerion,
-                                                                  int upperion, bool energyweighted) -> double;
+                                                                  int upperion) -> double;
 [[nodiscard]] DEVICE_FUNC auto nt_ionisation_maxupperion(int element, int lowerion) -> int;
 [[nodiscard]] DEVICE_FUNC auto nt_random_upperion(int nonemptymgi, int element, int lowerion,
                                                   bool weight_by_ionisation_energy, rngstate_type& rngstate) -> int;

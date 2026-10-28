@@ -201,8 +201,6 @@ struct NonThermalSolutionIon {
   // probability that one ionisation of this ion will produce n Auger electrons.
   // items sum to 1.0 for a given ion
   std::array<float, NT_MAX_AUGER_ELECTRONS + 1> prob_num_auger{};
-  // like prob_num_auger, but energy weighted. items sum to 1.0 for an ion
-  std::array<float, NT_MAX_AUGER_ELECTRONS + 1> ionenfrac_num_auger{};
 };
 
 MPI_shared_array<NonThermalSolutionIon> ion_data_all_cells{};
@@ -365,22 +363,14 @@ auto get_auger_probability(const ptrdiff_t nonemptymgi, const int element, const
   return get_cell_allions_data(nonemptymgi)[uniqueionindex].prob_num_auger[naugerelec];
 }
 
-auto get_ion_auger_enfrac(const ptrdiff_t nonemptymgi, const int element, const int ion, const int naugerelec) {
-  assert_always(naugerelec <= NT_MAX_AUGER_ELECTRONS);
-  const int uniqueionindex = get_uniqueionindex(element, ion);
-  return get_cell_allions_data(nonemptymgi)[uniqueionindex].ionenfrac_num_auger[naugerelec];
-}
-
 void check_auger_probabilities(const ptrdiff_t nonemptymgi) {
   bool problem_found = false;
 
   for (int element = 0; element < get_nelements(); element++) {
     for (int ion = 0; ion < get_nions(element) - 1; ion++) {
       double prob_sum = 0.;
-      double ionenfrac_sum = 0.;
       for (int a = 0; a <= NT_MAX_AUGER_ELECTRONS; a++) {
         prob_sum += get_auger_probability(nonemptymgi, element, ion, a);
-        ionenfrac_sum += get_ion_auger_enfrac(nonemptymgi, element, ion, a);
       }
 
       if (fabs(prob_sum - 1.0) > 0.001) {
@@ -390,19 +380,6 @@ void check_auger_probabilities(const ptrdiff_t nonemptymgi) {
             prob_sum, grid::get_mgi_of_nonemptymgi(nonemptymgi), get_atomicnumber(element), get_ionstage(element, ion));
         for (int a = 0; a <= NT_MAX_AUGER_ELECTRONS; a++) {
           printlog(" {}:{:g}", a, get_auger_probability(nonemptymgi, element, ion, a));
-        }
-        printlnlog("");
-        problem_found = true;
-      }
-
-      if (fabs(ionenfrac_sum - 1.0) > 0.001) {
-        printlog(
-            "[error] Auger energy fractions sum to {:g} (expected 1.0 +/- 0.001) for cell {} Z={} ionstage {}: "
-            "enfrac(n_Auger):",
-            ionenfrac_sum, grid::get_mgi_of_nonemptymgi(nonemptymgi), get_atomicnumber(element),
-            get_ionstage(element, ion));
-        for (int a = 0; a <= NT_MAX_AUGER_ELECTRONS; a++) {
-          printlog(" {}:{:g}", a, get_ion_auger_enfrac(nonemptymgi, element, ion, a));
         }
         printlnlog("");
         problem_found = true;
@@ -729,12 +706,9 @@ void set_axelrod_solution(const ptrdiff_t nonemptymgi) {
 
     std::ranges::fill(celliondata.prob_num_auger, 0.);
     celliondata.prob_num_auger[0] = 1.;
-    std::ranges::fill(celliondata.ionenfrac_num_auger, 0.);
-    celliondata.ionenfrac_num_auger[0] = 1.;
 
     const auto [element, ion] = get_ionfromuniqueionindex(uniqueionindex);
     assert_always(fabs(get_auger_probability(nonemptymgi, element, ion, 0) - 1.0) < 1e-3);
-    assert_always(fabs(get_ion_auger_enfrac(nonemptymgi, element, ion, 0) - 1.0) < 1e-3);
   }
   check_auger_probabilities(nonemptymgi);
 }
@@ -1314,13 +1288,10 @@ auto calculate_eff_ionpot_auger_rates(const int nonemptymgi, const int element, 
   // where eta is the fraction of the deposition energy going into ionisation of the ion or shell
 
   std::array<double, NT_MAX_AUGER_ELECTRONS + 1> eta_nauger_ionise_over_ionpot_sum{};
-  std::array<double, NT_MAX_AUGER_ELECTRONS + 1> eta_nauger_ionise_sum{};
   auto& celliondata = get_cell_allions_data(nonemptymgi)[uniqueionindex];
   std::ranges::fill(celliondata.prob_num_auger, 0.);
-  std::ranges::fill(celliondata.ionenfrac_num_auger, 0.);
 
   double eta_over_ionpot_sum = 0.;
-  double eta_sum = 0.;
   double frac_ionisation_ion = 0.;
   double ionpot_valence = -1;
   int matching_nlsubshell_count = 0;
@@ -1329,7 +1300,6 @@ auto calculate_eff_ionpot_auger_rates(const int nonemptymgi, const int element, 
       matching_nlsubshell_count++;
       const double frac_ionisation_shell =
           calculate_nt_frac_ionisation_shell(nonemptymgi, element, ion, collionrow, yfunc);
-      eta_sum += frac_ionisation_shell;
       // with SF_AUGER_CONTRIBUTION_ON, the mean Auger energy per ionisation is re-injected into the
       // electron pool and gets counted in the heating/excitation fractions, so only the net energy
       // removed per ionisation (shell potential minus Auger energy) counts as ionisation here.
@@ -1353,9 +1323,8 @@ auto calculate_eff_ionpot_auger_rates(const int nonemptymgi, const int element, 
 
       eta_over_ionpot_sum += eta_over_ionpot;
 
-      for (auto a = 0Z; a < std::ssize(eta_nauger_ionise_sum); a++) {
+      for (auto a = 0Z; a < std::ssize(eta_nauger_ionise_over_ionpot_sum); a++) {
         eta_nauger_ionise_over_ionpot_sum[a] += eta_over_ionpot * collionrow.prob_num_auger[a];
-        eta_nauger_ionise_sum[a] += frac_ionisation_shell * collionrow.prob_num_auger[a];
       }
     }
   }
@@ -1371,30 +1340,24 @@ auto calculate_eff_ionpot_auger_rates(const int nonemptymgi, const int element, 
         {
           celliondata.prob_num_auger[a] =
               static_cast<float>(eta_nauger_ionise_over_ionpot_sum[a] / eta_over_ionpot_sum);
-          celliondata.ionenfrac_num_auger[a] = static_cast<float>(eta_nauger_ionise_sum[a] / eta_sum);
         } else {
           // the following ensures that multiple ionisations can't send you to an ion stage that is not in
           // the model. Send it to the highest ion stage instead
           const int a_replace = topion - ion - 1;
           celliondata.prob_num_auger.at(a_replace) = static_cast<float>(
               celliondata.prob_num_auger.at(a_replace) + (eta_nauger_ionise_over_ionpot_sum[a] / eta_over_ionpot_sum));
-          celliondata.ionenfrac_num_auger.at(a_replace) =
-              static_cast<float>(celliondata.ionenfrac_num_auger.at(a_replace) + (eta_nauger_ionise_sum[a] / eta_sum));
 
           celliondata.prob_num_auger[a] = 0;
-          celliondata.ionenfrac_num_auger[a] = 0.;
         }
       }
     } else {
       // the top ion cannot be ionised further; keep the documented invariant that the
       // probabilities sum to one (matching set_axelrod_solution())
       celliondata.prob_num_auger[0] = 1.;
-      celliondata.ionenfrac_num_auger[0] = 1.;
     }
   } else {
     const int a = 0;
     celliondata.prob_num_auger[a] = 1.;
-    celliondata.ionenfrac_num_auger[a] = 1.;
   }
 
   // read_collion_data() gives every ion with a bound electron at least one shell row
@@ -1512,7 +1475,7 @@ auto ion_ntion_energyrate(const int nonemptymgi, const int element, const int lo
   double enrate = 0.;
   const auto maxupperion = nt_ionisation_maxupperion(element, lowerion);
   for (int upperion = lowerion + 1; upperion <= maxupperion; upperion++) {
-    const double upperionprobfrac = nt_ionisation_upperion_probability(nonemptymgi, element, lowerion, upperion, false);
+    const double upperionprobfrac = nt_ionisation_upperion_probability(nonemptymgi, element, lowerion, upperion);
     const double epsilon_trans = epsilon(element, upperion, 0) - epsilon(element, lowerion, 0);
     enrate += nnlowerion * upperionprobfrac * epsilon_trans;
   }
@@ -1704,7 +1667,7 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const std::a
         }
         double prob_sum = 0.;
         for (int upperion = ion + 1; upperion <= nt_ionisation_maxupperion(element, ion); upperion++) {
-          const double probability = nt_ionisation_upperion_probability(nonemptymgi, element, ion, upperion, false);
+          const double probability = nt_ionisation_upperion_probability(nonemptymgi, element, ion, upperion);
           prob_sum += probability;
           if (probability > 0. && verbose) {
             printlog(" {}: {:.3f}", get_ionstage(element, upperion), probability);
@@ -1714,20 +1677,21 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const std::a
                       (nt_ionisation_ratecoeff_sf(nonemptymgi, element, ion) < 1e-20));
 
         if (verbose) {
+          // the fractions of the ionisation energy that the packet draw of nt_random_upperion() uses
           printlnlog("");
           printlog("         enfrac to ionstage:");
-        }
-        double enfrac_sum = 0.;
-        for (int upperion = ion + 1; upperion <= nt_ionisation_maxupperion(element, ion); upperion++) {
-          const double probability = nt_ionisation_upperion_probability(nonemptymgi, element, ion, upperion, true);
-          enfrac_sum += probability;
-          if (probability > 0. && verbose) {
-            printlog(" {}: {:.3f}", get_ionstage(element, upperion), probability);
+          double ionisation_energy_sum = 0.;
+          for (int upperion = ion + 1; upperion <= nt_ionisation_maxupperion(element, ion); upperion++) {
+            ionisation_energy_sum += nt_ionisation_upperion_probability(nonemptymgi, element, ion, upperion) *
+                                     (epsilon(element, upperion, 0) - epsilon(element, ion, 0));
           }
-        }
-        assert_always(fabs(enfrac_sum - 1.0) <= 1e-2 ||
-                      (nt_ionisation_ratecoeff_sf(nonemptymgi, element, ion) < 1e-20));
-        if (verbose) {
+          for (int upperion = ion + 1; upperion <= nt_ionisation_maxupperion(element, ion); upperion++) {
+            const double enfrac = nt_ionisation_upperion_probability(nonemptymgi, element, ion, upperion) *
+                                  (epsilon(element, upperion, 0) - epsilon(element, ion, 0)) / ionisation_energy_sum;
+            if (enfrac > 0.) {
+              printlog(" {}: {:.3f}", get_ionstage(element, upperion), enfrac);
+            }
+          }
           printlnlog("");
         }
       }
@@ -2334,7 +2298,7 @@ auto get_nt_frac_heating(const int nonemptymgi) -> float {
 }
 
 DEVICE_FUNC auto nt_ionisation_upperion_probability(const int nonemptymgi, const int element, const int lowerion,
-                                                    const int upperion, const bool energyweighted) -> double {
+                                                    const int upperion) -> double {
   assert_always(upperion > lowerion);
   assert_always(upperion < get_nions(element));
   assert_always(upperion <= nt_ionisation_maxupperion(element, lowerion));
@@ -2343,25 +2307,14 @@ DEVICE_FUNC auto nt_ionisation_upperion_probability(const int nonemptymgi, const
     const int uniqueionindex = get_uniqueionindex(element, lowerion);
     const auto& cell_ion_data = get_cell_allions_data(nonemptymgi)[uniqueionindex];
     if (numaugerelec < NT_MAX_AUGER_ELECTRONS) {
-      if (energyweighted) {
-        return cell_ion_data.ionenfrac_num_auger[numaugerelec];
-      }
       return cell_ion_data.prob_num_auger[numaugerelec];
     }
     if (numaugerelec == NT_MAX_AUGER_ELECTRONS) {
       double prob_remaining = 1.;
       for (int a = 0; a < NT_MAX_AUGER_ELECTRONS; a++) {
-        if (energyweighted) {
-          prob_remaining -= cell_ion_data.ionenfrac_num_auger[a];
-        } else {
-          prob_remaining -= cell_ion_data.prob_num_auger[a];
-        }
+        prob_remaining -= cell_ion_data.prob_num_auger[a];
       }
-      if (energyweighted) {
-        assert_always(fabs(prob_remaining - cell_ion_data.ionenfrac_num_auger[numaugerelec]) < 0.001);
-      } else {
-        assert_always(fabs(prob_remaining - cell_ion_data.prob_num_auger[numaugerelec]) < 0.001);
-      }
+      assert_always(fabs(prob_remaining - cell_ion_data.prob_num_auger[numaugerelec]) < 0.001);
       return prob_remaining;
     }
 
@@ -2388,35 +2341,28 @@ DEVICE_FUNC auto nt_random_upperion(const int nonemptymgi, const int element, co
                                     const bool weight_by_ionisation_energy, rngstate_type& rngstate) -> int {
   assert_testmodeonly(lowerion < get_nions(element) - 1);
   if (NT_SCHEME == NonThermalScheme::NT_SPENCERFANO && NT_MAX_AUGER_ELECTRONS > 0) {
-    const int maxupperion = nt_ionisation_maxupperion(element, lowerion);
-    // The NLTE solver gives each upper ion the rate Y_nt times the ionisation probability. ion_ntion_energyrate()
-    // multiplies that rate by the energy from the ground level of lowerion to the ground level of upperion, so the
-    // packet draw uses the probability times that energy.
-    const auto upperion_weight = [&](const int upperion) {
-      const double probability = nt_ionisation_upperion_probability(nonemptymgi, element, lowerion, upperion, false);
-      return weight_by_ionisation_energy ? probability * (epsilon(element, upperion, 0) - epsilon(element, lowerion, 0))
-                                         : probability;
-    };
-
-    double weight_total = 0.;
-    for (int upperion = lowerion + 1; upperion <= maxupperion; upperion++) {
-      weight_total += upperion_weight(upperion);
-    }
-    assert_always(weight_total > 0.);
-
-    const double zrand_weight = rng_uniform(rngstate) * weight_total;
+    // With weight_by_ionisation_energy, the weight of an upper ion is its ionisation probability times its ionisation
+    // energy. That energy goes from the ground level of lowerion to the ground level of upperion, as in
+    // ion_ntion_energyrate(). Without it, the weight is the ionisation probability alone.
+    const int nupperions = nt_ionisation_maxupperion(element, lowerion) - lowerion;
+    std::array<double, NT_MAX_AUGER_ELECTRONS + 1> cumulative_weight_by_numaugerelec{};
     double weight_sum = 0.;
-    for (int upperion = lowerion + 1; upperion <= maxupperion; upperion++) {
-      weight_sum += upperion_weight(upperion);
-
-      // Strict comparison ensures that zrand == 0 skips leading zero-probability outcomes.
-      if (zrand_weight < weight_sum) {
-        return upperion;
-      }
+    for (int numaugerelec = 0; numaugerelec < nupperions; numaugerelec++) {
+      const int upperion = lowerion + 1 + numaugerelec;
+      const double probability = nt_ionisation_upperion_probability(nonemptymgi, element, lowerion, upperion);
+      weight_sum += weight_by_ionisation_energy
+                        ? probability * (epsilon(element, upperion, 0) - epsilon(element, lowerion, 0))
+                        : probability;
+      cumulative_weight_by_numaugerelec[numaugerelec] = weight_sum;
     }
+    assert_always(weight_sum > 0.);
 
-    // a rounding error can put the draw past the end of the cumulative sum
-    return maxupperion;
+    // the first upper ion whose cumulative weight is above the draw, so a draw of zero skips the zero weights
+    const double zrand_weight = rng_uniform(rngstate) * weight_sum;
+    const int numaugerelec =
+        std::min(int_index_upperbound(std::span{cumulative_weight_by_numaugerelec}.first(nupperions), zrand_weight),
+                 nupperions - 1);
+    return lowerion + 1 + numaugerelec;
   }
   return lowerion + 1;
 }
