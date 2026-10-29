@@ -685,8 +685,8 @@ auto get_nucstring_a(const std::string& strnuc) -> int {
 
 namespace {
 
-// add the standard set of nuclides for the classical double-decay chains (56Ni, 57Ni, 48Cr, 52Fe, and 44Ti
-// parents) and 26Al with hardcoded decay data
+// add the standard set of nuclides for the classical double-decay chains (56Ni, 57Ni, 48Cr,
+// and 52Fe parents) with hardcoded decay data
 void add_standard_nuclides() {
   // Ni57
   nuclides.push_back({.z = 28, .a = 57, .meanlife = 51.36 * HOUR});
@@ -747,7 +747,11 @@ void add_standard_nuclides() {
   nuclides.push_back({.z = 25, .a = 52, .meanlife = 0.0211395 * DAY});
   nuclides.back().branchprobs[DECAYTYPE_ELECTRONCAPTURE] = 1.;
   nuclides.back().endecay_q[DECAYTYPE_ELECTRONCAPTURE] = 5.085870 * MEV;
+}
 
+// add the electron capture and beta-plus emitters that no decay data file has. They are not standard nuclides, which
+// are the nuclides of the fixed columns of the old model.txt format.
+void add_electroncapture_betaplus_nuclides() {
   // Ti44, Sc44, and Al26: the half-lives, branching ratios, Q values, and mean positron energies are from the
   // evaluations of Chen & Singh (2023), Nucl. Data Sheets, 190, 1-318, doi:10.1016/j.nds.2023.06.001 (A = 44) and of
   // Basunia & Hurst (2016), Nucl. Data Sheets, 134, 1-148, doi:10.1016/j.nds.2016.04.001 (A = 26). A year of the
@@ -1091,6 +1095,8 @@ void init_nuclides(const std::span<const int> custom_zlist, const std::span<cons
   // deliberately a copy, not a reference: the decay-data readers below add further nuclides
   // cppcheck-suppress redundantCopyLocalConst
   const auto standard_nuclides = nuclides;
+
+  add_electroncapture_betaplus_nuclides();
 
   read_betaminus_decaydata();
   read_alpha_decaydata();
