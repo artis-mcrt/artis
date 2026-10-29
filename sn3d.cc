@@ -931,6 +931,7 @@ void setup_jobfolder() {
     std::filesystem::remove(linkname, ec);
     std::filesystem::create_symlink(linktarget, linkname, ec);
     if (ec) {
+      // the log files are not open yet, so the warning goes to the standard error stream
       std::println(stderr, "[warning] could not create symlink '{}' to '{}': {}", linkname, linktarget, ec.message());
     }
   }

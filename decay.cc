@@ -2,8 +2,8 @@
 // (Bateman equation solutions), and the energy release rates and decay-time sampling used to
 // set up the radioactive energy pellets.
 //
-// The alpha, beta, and fission decay treatment for kilonovae is described by Shingles et al.
-// (2023), ApJL, 954, L41, doi:10.3847/2041-8213/acf29a.
+// Shingles et al. (2023), ApJL, 954, L41, doi:10.3847/2041-8213/acf29a, describe the alpha, beta, and fission
+// decay treatment for kilonovae.
 
 #include "decay.h"
 

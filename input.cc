@@ -200,8 +200,11 @@ void read_phixs_data_table(std::istream& phixsfile, const int nphixspoints_input
   std::string phixsline;
   const auto phixstargetstart = static_cast<int>(tmpallphixstargets.size());
   const auto lowerionlower_uniquelevelindex = get_uniquelevelindex(element, lowerion, lowerlevel);
-  assert_always(levelbuilders.phixstargetstart[lowerionlower_uniquelevelindex] == -1 ||
-                levelbuilders.phixstargetstart[lowerionlower_uniquelevelindex] == phixstargetstart);
+  if (levelbuilders.phixstargetstart[lowerionlower_uniquelevelindex] != -1 &&
+      levelbuilders.phixstargetstart[lowerionlower_uniquelevelindex] != phixstargetstart) {
+    fatal_crash("Z={} ionstage {} level {} has a photoionisation table in both phixsdata files",
+                get_atomicnumber(element), get_ionstage(element, lowerion), lowerlevel);
+  }
   levelbuilders.phixstargetstart[lowerionlower_uniquelevelindex] = phixstargetstart;
   if (upperlevel_in >= 0) {  // file gives photoionisation to a single target state only
     int upperlevel = upperlevel_in - phixs_groundstate_index_in;
@@ -215,7 +218,13 @@ void read_phixs_data_table(std::istream& phixsfile, const int nphixspoints_input
       upperlevel = 0;
     }
     // a target level above the levels kept from compositiondata.txt would index the level block of the next ion
-    assert_always(upperlevel < get_nlevels(element, upperion));
+    if (upperlevel >= get_nlevels(element, upperion)) {
+      fatal_crash(
+          "Z={} ionstage {} level {} photoionises to level {} of ionstage {}, but compositiondata.txt keeps only {} "
+          "levels of that ion",
+          get_atomicnumber(element), get_ionstage(element, lowerion), lowerlevel, upperlevel,
+          get_ionstage(element, upperion), get_nlevels(element, upperion));
+    }
 
     tmpallphixstargets.push_back({.probability = 1., .levelindex = upperlevel});
   } else {  // upperlevel < 0, indicating that a table of upper levels and their probabilities will follow
@@ -236,7 +245,13 @@ void read_phixs_data_table(std::istream& phixsfile, const int nphixspoints_input
         assert_always(get_noncommentline(phixsfile, phixsline));
         assert_always(std::stringstream(phixsline) >> upperlevel_in >> phixstargetprobability);
         const int upperlevel = upperlevel_in - phixs_groundstate_index_in;
-        assert_always(upperlevel >= 0 && upperlevel < get_nlevels(element, upperion));
+        if (upperlevel < 0 || upperlevel >= get_nlevels(element, upperion)) {
+          fatal_crash(
+              "Z={} ionstage {} level {} photoionises to level {} of ionstage {}, but compositiondata.txt keeps only "
+              "{} levels of that ion",
+              get_atomicnumber(element), get_ionstage(element, lowerion), lowerlevel, upperlevel,
+              get_ionstage(element, upperion), get_nlevels(element, upperion));
+        }
         assert_always(phixstargetprobability > 0);
         tmpallphixstargets.push_back({.probability = phixstargetprobability, .levelindex = upperlevel});
 
@@ -1387,6 +1402,9 @@ auto read_compositiondata() -> std::vector<int> {
   if (!(compositiondata >> nelements_in)) {
     fatal_crash("compositiondata.txt must start with the number of elements");
   }
+  if (nelements_in <= 0) {
+    fatal_crash("compositiondata.txt gives {} elements, but the count must be positive", nelements_in);
+  }
   globals::elements.resize(nelements_in);
 
   // Unused fields that the compositiondata.txt format still carries: ion stages come from the per-element
@@ -1875,11 +1893,10 @@ void write_bflist_file() {
           // get_bflistindex_from_emtype_continuum() decodes an emission type back into a bflist index
           const int et_oflevel = get_emtype_continuum(element, ion, level, phixstargetindex);
           if (et != et_oflevel) {
-            printlnlog(
-                "[error] write_bflist_file: Z={} ionstage {} level {} target {} has the emission type {}, but "
-                "position {} in bflist gives the emission type {}",
+            fatal_crash(
+                "write_bflist_file: Z={} ionstage {} level {} target {} has the emission type {}, but position {} in "
+                "bflist gives the emission type {}",
                 get_atomicnumber(element), get_ionstage(element, ion), level, phixstargetindex, et_oflevel, i, et);
-            assert_always(false);
           }
 
           // check the we don't overload the same packet emission type numbers
