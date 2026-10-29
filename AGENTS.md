@@ -209,7 +209,9 @@ the second argument.
 - `build` moves your `artisoptions.h` aside and makes a symlink to the options
   of the model folder. It builds with the make options of CI and copies `sn3d`
   and `exspec` into the model folder. Then it moves your `artisoptions.h` back.
-  The move keeps the timestamp, so your next build compiles nothing again.
+  The move keeps the timestamp, so a build in a different build folder
+  compiles nothing again. The step gives the objects of the test build an old
+  timestamp, so a later build in that build folder compiles them again.
 - `job0` removes `input.txt` and starts a new simulation. `sn3d` then restores
   `input.txt` from `input-newrun.txt`. After a run, `input.txt` holds the
   values that continue that run.

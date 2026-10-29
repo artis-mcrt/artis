@@ -84,6 +84,8 @@ case $step in
         make --check-symlink-times --jobs="$(getconf _NPROCESSORS_ONLN)" REPRODUCIBLE=ON ZSTD=ON TESTMODE="$testmode" \
             MAX_NODE_SIZE=2 FASTMATH=OFF sn3d exspec
         cp -L sn3d exspec "$modelpath/"
+        # the objects hold the test options, so a later build in this build folder must compile them again
+        touch -t 200001010000 "$(dirname "$(readlink sn3d)")"/*.o
         ;;
 
     job0)
