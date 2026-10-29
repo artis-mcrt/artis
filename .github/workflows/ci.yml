@@ -69,6 +69,7 @@ jobs:
         name: ${{ matrix.testname }}
         env:
             OMPI_MCA_memory: ${{ inputs.testmode == 'ON' && '^patcher' || '' }}
+            TESTMODE: ${{ inputs.testmode }}
 
         steps:
             - uses: actions/checkout@v7
@@ -83,11 +84,9 @@ jobs:
                   sudo apt-get install -y --no-install-recommends g++-16 openmpi-bin libopenmpi-dev libzstd-dev zstd
 
             - name: Show CPU type and core count
-              id: cpu-count
               run: |
                   g++ -march=native -Q --help=target | grep -- '-march=  ' | cut -f3
                   python3 -c 'import multiprocessing; print(f"CPU count: {multiprocessing.cpu_count()}")'
-                  echo "count=$(python3 -c 'import multiprocessing; print(multiprocessing.cpu_count())')" >> $GITHUB_OUTPUT
 
             - name: Cache test atomic data
               if: ${{ !startsWith(matrix.testname, 'classicmode') && !startsWith(matrix.testname, 'nltephotospheric') && matrix.testname != 'kilonova_1d_timedepnlte' }}
@@ -123,21 +122,15 @@ jobs:
                   path: tests/atomicdata_sryzrlace.tar.zst
                   key: atomicdata_sryzrlace-${{ hashFiles('tests/atomic_data_release.txt') }}
 
+            # tests/runtest.sh holds the commands of each step of a test
             - name: Download/extract test data
-              working-directory: tests/
-              run: |
-                  source ./setup_${{ matrix.testname }}.sh
+              run: tests/runtest.sh ${{ matrix.testname }} setup
 
             - name: cat artisoptions.h
-              run: |
-                  cp tests/${{ matrix.testname }}_testrun/artisoptions.h .
-                  cat artisoptions.h
+              run: cat tests/${{ matrix.testname }}_testrun/artisoptions.h
 
             - name: Compile
-              run: |
-                  make REPRODUCIBLE=ON ZSTD=ON TESTMODE=${{ inputs.testmode }} MAX_NODE_SIZE=2 FASTMATH=OFF -j${{ steps.cpu-count.outputs.count }} sn3d exspec
-                  cp sn3d tests/${{ matrix.testname }}_testrun/
-                  cp exspec tests/${{ matrix.testname }}_testrun/
+              run: tests/runtest.sh ${{ matrix.testname }} build
 
             - name: Copy the model folder for a simulation in one job
               if: matrix.testname == 'nebular_1d_3dgrid' && inputs.testmode != 'ON'
@@ -147,10 +140,7 @@ jobs:
             - name: Run test job0 start
               id: run_job0
               if: always()
-              working-directory: tests/${{ matrix.testname }}_testrun/
-              run: |
-                  rm -f input.txt
-                  time mpirun -np 4 --oversubscribe --mca osc ^ucx --mca mpi_yield_when_idle 1 ./sn3d
+              run: tests/runtest.sh ${{ matrix.testname }} job0
 
             - name: cat job0 estimators
               if: always()
@@ -166,54 +156,27 @@ jobs:
             - name: Checksum job0 output files
               if: always()
               continue-on-error: ${{ inputs.testmode == 'ON' }}
-              working-directory: tests/${{ matrix.testname }}_testrun
               run: |
-                  # The marker file shows that the run step succeeded and that md5sum wrote the
+                  # The marker file shows that the run step succeeded and that the script wrote the
                   # full checksum file. The "Update checksums" workflow accepts only an artifact
-                  # with the markers. A checksum mismatch below still permits the marker, because
+                  # with the markers. A checksum mismatch still permits the marker, because
                   # the mismatch is the reason to update the stored checksums.
-                  # The output files stay compressed. The checksums are of the decompressed content under the
-                  # plain name, in the output format of md5sum, so that the reference files keep their form.
-                  # set -e stops the step when zstdcat fails on a file that is not complete, and pipefail
-                  # gives a pipeline the status of the command that failed, not of the last one.
-                  set -eo pipefail
-                  reffile=../${{ matrix.testname }}_inputfiles/results_md5_job0.txt
-                  # -s tests that the file exists and is not empty
-                  if [ -s "$reffile" ]; then cp "$reffile" "$RUNNER_TEMP/ref_md5_job0.txt"; fi
-                  # nullglob makes a pattern that matches nothing expand to nothing, e.g. for a test that
-                  # writes no virtual packet files or no direction bin files
-                  shopt -s nullglob
-                  for zstfile in *.out.zst job_from_ts0000/*.out.zst packets/*.out.zst vpackets/*.out.zst vspecpol/*.out.zst vpkt_grid/*.out.zst speclc_angle_res/*.zst; do
-                      # md5sum names its input "-" when it reads a pipe. sed puts the plain name, i.e. the
-                      # name without the .zst extension, in its place
-                      zstdcat "$zstfile" | md5sum | sed "s|  -$|  ${zstfile%.zst}|"
-                  done | tee "$RUNNER_TEMP/new_md5_job0.txt"
-                  shopt -u nullglob
-                  cp "$RUNNER_TEMP/new_md5_job0.txt" "$reffile"
-                  if [ "${{ steps.run_job0.outcome }}" = "success" ]; then
-                      touch "$reffile.complete"
-                  else
-                      echo "The step writes no marker. The sn3d job0 step did not succeed (${{ steps.run_job0.outcome }})."
+                  checksums_status=0
+                  tests/runtest.sh ${{ matrix.testname }} checksums_job0 || checksums_status=$?
+                  if [ -f tests/${{ matrix.testname }}_testrun/results_md5_job0.txt ]; then
+                      cp tests/${{ matrix.testname }}_testrun/results_md5_job0.txt tests/${{ matrix.testname }}_inputfiles/
+                      if [ "${{ steps.run_job0.outcome }}" = "success" ]; then
+                          touch tests/${{ matrix.testname }}_inputfiles/results_md5_job0.txt.complete
+                      else
+                          echo "The step writes no marker. The sn3d job0 step did not succeed (${{ steps.run_job0.outcome }})."
+                      fi
                   fi
-                  # The comparison uses the stored file of the repository, and not the copy in the model folder.
-                  if [ -s "$RUNNER_TEMP/ref_md5_job0.txt" ]; then
-                      diff "$RUNNER_TEMP/ref_md5_job0.txt" "$RUNNER_TEMP/new_md5_job0.txt"
-                  else
-                      echo "::warning::The repository has no results_md5_job0.txt for ${{ matrix.testname }}. The step compares nothing."
-                  fi
+                  exit "$checksums_status"
 
             - name: Run test job1 resume
               id: run_job1
               if: always()
-              working-directory: tests/${{ matrix.testname }}_testrun/
-              run: |
-                  cp input-resume.txt input.txt
-                  time mpirun -np 4 --oversubscribe --mca osc ^ucx --mca mpi_yield_when_idle 1 ./sn3d
-
-            - name: Remove restart files
-              if: always()
-              working-directory: tests/${{ matrix.testname }}_testrun/
-              run: rm -f ./*.tmp
+              run: tests/runtest.sh ${{ matrix.testname }} resume
 
             - name: cat job1 estimators
               if: always()
@@ -235,11 +198,7 @@ jobs:
             - name: Run exspec
               id: run_exspec
               if: always()
-              working-directory: tests/${{ matrix.testname }}_testrun/
-              run: |
-                  ls -l packets/
-                  time mpirun -np 2 --oversubscribe --mca osc ^ucx ./exspec
-                  python3 ../../scripts/mergeangleres.py
+              run: tests/runtest.sh ${{ matrix.testname }} exspec
 
             - name: cat exspec log
               if: always()
@@ -249,35 +208,19 @@ jobs:
             - name: Checksum job1 output files
               if: always()
               continue-on-error: ${{ inputs.testmode == 'ON' }}
-              working-directory: tests/${{ matrix.testname }}_testrun
               run: |
-                  # The marker file shows that the run steps succeeded and that md5sum wrote the
-                  # full checksum file. The "Update checksums" workflow accepts only an artifact
-                  # with the markers. A checksum mismatch below still permits the marker, because
-                  # the mismatch is the reason to update the stored checksums.
-                  # The commands are those of the job0 checksum step, with the job folder of the resume run.
-                  set -eo pipefail
-                  reffile=../${{ matrix.testname }}_inputfiles/results_md5_final.txt
-                  if [ -s "$reffile" ]; then cp "$reffile" "$RUNNER_TEMP/ref_md5_final.txt"; fi
-                  # the job folder with the highest start timestep is the one of the resume run
-                  lastjobfolder=$(ls -d job_from_ts* | grep -v ts0000 | tail -n 1)
-                  shopt -s nullglob
-                  for zstfile in *.out.zst "$lastjobfolder"/*.out.zst packets/*.out.zst vpackets/*.out.zst vspecpol/*.out.zst vpkt_grid/*.out.zst speclc_angle_res/*.zst; do
-                      zstdcat "$zstfile" | md5sum | sed "s|  -$|  ${zstfile%.zst}|"
-                  done | tee "$RUNNER_TEMP/new_md5_final.txt"
-                  shopt -u nullglob
-                  cp "$RUNNER_TEMP/new_md5_final.txt" "$reffile"
-                  if [ "${{ steps.run_job0.outcome }}" = "success" ] && [ "${{ steps.run_job1.outcome }}" = "success" ] && [ "${{ steps.run_exspec.outcome }}" = "success" ]; then
-                      touch "$reffile.complete"
-                  else
-                      echo "The step writes no marker. A run step did not succeed (job0: ${{ steps.run_job0.outcome }}, job1: ${{ steps.run_job1.outcome }}, exspec: ${{ steps.run_exspec.outcome }})."
+                  # The marker has the rules of the job0 checksum step, and it needs all three run steps.
+                  checksums_status=0
+                  tests/runtest.sh ${{ matrix.testname }} checksums_final || checksums_status=$?
+                  if [ -f tests/${{ matrix.testname }}_testrun/results_md5_final.txt ]; then
+                      cp tests/${{ matrix.testname }}_testrun/results_md5_final.txt tests/${{ matrix.testname }}_inputfiles/
+                      if [ "${{ steps.run_job0.outcome }}" = "success" ] && [ "${{ steps.run_job1.outcome }}" = "success" ] && [ "${{ steps.run_exspec.outcome }}" = "success" ]; then
+                          touch tests/${{ matrix.testname }}_inputfiles/results_md5_final.txt.complete
+                      else
+                          echo "The step writes no marker. A run step did not succeed (job0: ${{ steps.run_job0.outcome }}, job1: ${{ steps.run_job1.outcome }}, exspec: ${{ steps.run_exspec.outcome }})."
+                      fi
                   fi
-                  # The comparison uses the stored file of the repository, and not the copy in the model folder.
-                  if [ -s "$RUNNER_TEMP/ref_md5_final.txt" ]; then
-                      diff "$RUNNER_TEMP/ref_md5_final.txt" "$RUNNER_TEMP/new_md5_final.txt"
-                  else
-                      echo "::warning::The repository has no results_md5_final.txt for ${{ matrix.testname }}. The step compares nothing."
-                  fi
+                  exit "$checksums_status"
 
             - name: Compare the two jobs with a simulation in one job
               if: always() && matrix.testname == 'nebular_1d_3dgrid' && inputs.testmode != 'ON'
