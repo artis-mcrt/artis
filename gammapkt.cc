@@ -748,7 +748,7 @@ void transport_gamma(Packet& pkt, const double t2) {
   // The opacity functions give comoving-frame coefficients. Multiply by the Doppler factor to get rest-frame
   // coefficients.
   const int mgi = grid::get_propcell_modelgridindex(pkt.cellindex);
-  const auto nonemptymgi = (mgi >= 0) ? grid::get_nonemptymgi_of_mgi(mgi) : -1;
+  const auto nonemptymgi = grid::get_propcell_nonemptymgi(pkt.cellindex);
 
   const auto doppler = calculate_doppler_nucmf_on_nurf(pkt.pos, pkt.dir, pkt.prop_time);
   const double ffegrp = (mgi >= 0) ? grid::get_ffegrp(mgi) : 0.;
@@ -985,9 +985,8 @@ DEVICE_FUNC void do_gamma(Packet& pkt, const int nts, const double t2) {
 
     if constexpr (GAMMA_THERMALISATION_SCHEME != GammaThermalisationScheme::FREQUENCYDEPENDENT) {
       // no transport, so the path-based gamma deposition estimator won't get updated unless we do it here
-      const int mgi = grid::get_propcell_modelgridindex(pkt.cellindex);
-      if (mgi >= 0) {  // empty cells have no deposition estimator
-        const int nonemptymgi = grid::get_nonemptymgi_of_mgi(mgi);
+      const int nonemptymgi = grid::get_propcell_nonemptymgi(pkt.cellindex);
+      if (nonemptymgi >= 0) {  // empty cells have no deposition estimator
         atomicadd(globals::dep_estimator_gamma[nonemptymgi], pkt.e_cmf);
       }
     }
