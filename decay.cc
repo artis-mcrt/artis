@@ -967,12 +967,6 @@ void add_custom_and_daughter_nuclides(const std::span<const int> custom_zlist,
 
   // add any extra nuclides that were specified but not in the decay data files
   for (const auto [z, a] : std::views::zip(custom_zlist, custom_alist)) {
-    if (z >= 0 && !nuc_exists(z, a)) {
-      printlnlog(
-          "[warning] the model gives the mass fraction of {}{}, but no decay data file has this nuclide. It stays "
-          "stable and releases no decay energy.",
-          get_elname(z), a);
-    }
     nuclides_ensure_list.insert({z, a});
   }
 
