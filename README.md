@@ -159,7 +159,7 @@ tests/runtest.sh kilonova_1d
 ```
 The test job of [ci.yml](.github/workflows/ci.yml) calls the same script. The script does these steps:
 1. It removes the model folder tests/kilonova_1d_testrun of an earlier run. Then it runs tests/setup_kilonova_1d.sh, which downloads the atomic data of the test and makes the model folder again with the input files and an artisoptions.h for the test.
-2. It builds sn3d and exspec from that artisoptions.h with the make options of CI, and copies them into the model folder. During the build, the artisoptions.h symlink in the repository folder points to the options of the test. The script then restores your symlink.
+2. It builds sn3d and exspec from that artisoptions.h with the make options of CI, and copies them into the model folder. During the build, artisoptions.h in the repository folder is a symlink to the options of the test. The script then moves your artisoptions.h back with its timestamp, so your next build compiles nothing again.
 3. It starts a new simulation and compares the checksums of the output files with tests/kilonova_1d_inputfiles/results_md5_job0.txt.
 4. It resumes the simulation from the restart files, and then runs exspec.
 5. It compares the checksums of the output files with results_md5_final.txt.

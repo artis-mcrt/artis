@@ -146,9 +146,10 @@ Points that surprise a new agent:
 - Each option adds a suffix to the name of the build folder, so different
   option sets coexist. A new option that changes `CXXFLAGS` must also add a
   suffix to `BUILD_DIR`.
-- The name of the build folder does not contain the preset. A change of preset
-  therefore needs `make clean`, and CI does this before nearly every preset
-  compile.
+- The name of the build folder does not contain the preset, so a change of
+  preset must compile all objects again. Make does this for a new symlink with
+  `--check-symlink-times`. A copy that keeps the old timestamp, e.g. from
+  `cp -p`, needs `make clean`. CI does this before nearly every preset compile.
 - The Makefile decides how the options interact, e.g. `REPRODUCIBLE=ON` with
   `FASTMATH`, and `OPENMP=ON` with `STDPAR=ON`. Read the Makefile for the rule.
 - The build uses `-Werror` for all compilers except nvc++.
@@ -205,15 +206,16 @@ the second argument.
 - `setup` removes the model folder `tests/<testname>_testrun` and runs
   `tests/setup_<testname>.sh`. That script copies a preset and then changes
   some option values with `setoption` from `tests/setupfuncs.sh`.
-- `build` points the `artisoptions.h` symlink to the options of the model
-  folder and builds with the make options of CI. It then restores the symlink
-  and copies `sn3d` and `exspec` into the model folder. It stops if
-  `artisoptions.h` is not a symlink.
+- `build` moves your `artisoptions.h` aside and makes a symlink to the options
+  of the model folder. It builds with the make options of CI and copies `sn3d`
+  and `exspec` into the model folder. Then it moves your `artisoptions.h` back.
+  The move keeps the timestamp, so your next build compiles nothing again.
 - `job0` removes `input.txt` and starts a new simulation. `sn3d` then restores
   `input.txt` from `input-newrun.txt`. After a run, `input.txt` holds the
   values that continue that run.
 - `checksums_job0` writes `results_md5_job0.txt` into the model folder and
-  compares it with the reference file.
+  compares it with the reference file. Run it only directly after `job0`,
+  because the resume run changes the output files.
 - `resume` copies `input-resume.txt` to `input.txt` and runs `sn3d`. That file
   tells `sn3d` to read the restart files of the first run, and it sets a
   different range of timesteps.

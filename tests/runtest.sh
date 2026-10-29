@@ -25,7 +25,7 @@ Without a step, the script runs these steps in order. It stops at the first step
   setup            remove tests/<testname>_testrun and make it again with tests/setup_<testname>.sh
   build            build sn3d and exspec from the artisoptions.h of the model folder, and copy them into it
   job0             start a new simulation
-  checksums_job0   compare the checksums of the output files with results_md5_job0.txt
+  checksums_job0   compare the checksums of the output files with results_md5_job0.txt (only directly after job0)
   resume           resume the simulation from the restart files
   exspec           remove the restart files, then run exspec and scripts/mergeangleres.py
   checksums_final  compare the checksums of the output files with results_md5_final.txt
@@ -68,16 +68,19 @@ case $step in
 
     build)
         cd "$repopath"
-        if [ -L artisoptions.h ]; then
-            previous_options=$(readlink artisoptions.h)
-            trap 'ln -sf "$previous_options" artisoptions.h' EXIT
-        elif [ -e artisoptions.h ]; then
-            echo "[error] artisoptions.h is not a symlink. Rename it, because the build replaces it with a symlink." >&2
+        saved_options=artisoptions.h.saved_by_runtest
+        if [ -L "$saved_options" ] || [ -e "$saved_options" ]; then
+            echo "[error] An earlier test did not restore $saved_options. Rename it to artisoptions.h." >&2
             exit 1
+        fi
+        # mv keeps the timestamp, so a later build of your own options does not compile everything again
+        if [ -L artisoptions.h ] || [ -e artisoptions.h ]; then
+            mv artisoptions.h "$saved_options"
+            trap 'mv -f "$saved_options" artisoptions.h' EXIT
         else
             trap 'rm -f artisoptions.h' EXIT
         fi
-        ln -sf "tests/${testname}_testrun/artisoptions.h" artisoptions.h
+        ln -s "tests/${testname}_testrun/artisoptions.h" artisoptions.h
         make --check-symlink-times --jobs="$(getconf _NPROCESSORS_ONLN)" REPRODUCIBLE=ON ZSTD=ON TESTMODE="$testmode" \
             MAX_NODE_SIZE=2 FASTMATH=OFF sn3d exspec
         cp -L sn3d exspec "$modelpath/"
@@ -107,17 +110,18 @@ case $step in
     checksums_job0 | checksums_final)
         cd "$modelpath"
         checksum_set=${step#checksums_}
+        checksumfile=results_md5_${checksum_set}.txt
+        # The file in the model folder exists only if md5sum wrote the full list. The setup step copies the
+        # reference file into the model folder, so this removal comes first.
+        rm -f "$checksumfile" "$checksumfile.part"
         if [ "$checksum_set" = job0 ]; then
             jobfolder=job_from_ts0000
         else
             # the job folder with the highest start timestep is the one of the resume run
             jobfolder=$(ls -d job_from_ts* | grep -v ts0000 | tail -n 1)
         fi
-        checksumfile=results_md5_${checksum_set}.txt
         reffile="$testsdir/${testname}_inputfiles/$checksumfile"
         # The checksums are of the decompressed content under the plain name, in the output format of md5sum.
-        # The file in the model folder exists only if md5sum wrote the full list.
-        rm -f "$checksumfile" "$checksumfile.part"
         shopt -s nullglob
         for zstfile in *.out.zst "$jobfolder"/*.out.zst packets/*.out.zst vpackets/*.out.zst vspecpol/*.out.zst \
             vpkt_grid/*.out.zst speclc_angle_res/*.zst; do
