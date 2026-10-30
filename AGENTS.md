@@ -260,14 +260,15 @@ Without these, ask a maintainer to start the workflow.
    crash and no failed assertion.
 3. Make sure that only the tests that the change must affect have different
    checksums.
-4. Start the workflow from `main`. Give the branch of the pull request as the
-   input. The workflow gets a token with write access, so only the reviewed
-   version on `main` runs. The first command prints the URL of the new run, and
-   the URL ends with the run ID. The second command waits until the run is
-   complete and fails if the run fails.
+4. Start the workflow with the branch of the pull request as the input. Without
+   `--ref`, `gh` runs the reviewed version of the workflow on `main`. The
+   workflow gets a token with write access, so it runs only from `main`. The
+   first command prints the URL of the new run, and the URL ends with the run
+   ID. The second command waits until the run is complete and fails if the run
+   fails.
 
    ```sh
-   gh workflow run updatechecksums.yml --ref main -f branch=<branch>
+   gh workflow run updatechecksums.yml -f branch=<branch>
    gh run watch <run ID> --exit-status
    ```
 
