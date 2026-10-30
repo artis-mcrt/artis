@@ -251,7 +251,9 @@ For such a change, a checksum mismatch is an error in the change. Find and
 correct the cause. Do not regenerate the checksums.
 
 If a change alters the numerical results for a good reason, regenerate the
-stored checksums yourself with the `updatechecksums.yml` workflow:
+stored checksums yourself with the `updatechecksums.yml` workflow. This needs
+write access to the repository, and the branch must be in `artis-mcrt/artis`.
+Without these, ask a maintainer to start the workflow.
 
 1. Wait until the CI run of the head commit is complete.
 2. Make sure that each failed test job failed only at a checksum step, with no
@@ -264,11 +266,18 @@ stored checksums yourself with the `updatechecksums.yml` workflow:
    gh workflow run updatechecksums.yml --ref <branch>
    ```
 
-The workflow takes the checksums from the newest finished CI run of the branch,
-and it pushes a commit with them. The run does not have to be of the head
-commit, if the later commits do not change the results. Say in the commit
-message and in the pull request that you expect the results to change, and name
-the tests that change.
+5. Read the log of the workflow. Make sure that it selected the artifact of the
+   head commit.
+6. Make sure that the CI run of the commit with the new checksums passes.
+
+The workflow takes the checksums from the nearest commit in the history of the
+branch head that has a complete artifact, and it pushes a commit with them. A
+crash or a failed assertion in a test job leaves the artifact incomplete. The
+workflow then takes an older commit and gives only a warning. An older commit is
+correct only if the later commits do not change the results.
+
+Say in the commit message and in the pull request that you expect the results to
+change. Name the tests that change.
 
 A new end-to-end test must run in CI in about ten minutes or less. Every push
 runs the full matrix.

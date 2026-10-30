@@ -37,8 +37,8 @@ jobs:
                   BRANCH: ${{ github.ref_name }}
                   HEAD_SHA: ${{ github.sha }}
               run: |
-                  # The artifact does not have to come from the branch head. The maintainer
-                  # confirms that the later commits do not change the results.
+                  # The artifact does not have to come from the branch head. The person who starts
+                  # the workflow confirms that the later commits do not change the results.
                   # The API filters on the artifact name only. jq then filters the branch.
                   # The step keeps every artifact of a commit, because a failed re-run can
                   # add an incomplete artifact next to a valid one. The next step checks the
