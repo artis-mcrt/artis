@@ -12,7 +12,10 @@ brew install llvm open-mpi pkgconf zstd coreutils
 
 `tests/runtest.sh` needs the `md5sum` command of coreutils for the next step.
 
-On Linux, get a compiler and an MPI library from your package manager, from a module, or from pixi. [Installation](installation.md) gives the detail and the version that the build needs.
+On Linux, get a compiler and an MPI library from your package manager, from a module, or from pixi. The next step
+also needs libzstd and the `zstd` command, because `tests/runtest.sh` builds with `ZSTD=ON` and reads the compressed
+output files. The package of the library is `libzstd-dev` on Debian and Ubuntu, and `libzstd-devel` on Fedora.
+[Installation](installation.md) gives the detail and the version that the build needs.
 
 ## 2. Clone the repository
 
@@ -35,9 +38,9 @@ This is the quickest complete simulation of the repository. The script does thes
 4. It runs a new simulation, resumes it from the restart files, and then runs `exspec`.
 5. It compares the checksums of the output files with the stored reference checksums.
 
-A different compiler or CPU type can give checksums that differ from the stored checksums. The simulation is still
-valid, but the script stops at step 5, before the resume run and `exspec`. Run the remaining steps by name to get the
-complete result:
+A different compiler or CPU type can give checksums that differ from the stored checksums. Examine a mismatch first
+as a real change of the results, and let CI give the decision. The script stops at step 5, before the resume run and
+`exspec`. To get the complete result of a mismatch that you accept, run the remaining steps by name:
 
 ```sh
 tests/runtest.sh kilonova_1d resume
@@ -70,8 +73,9 @@ artistools plotspectra -t 1 tests/kilonova_1d_testrun
 `artistools check` gives one row for each check of the results, so it is the quickest test that a run deserves trust.
 It gives a warning for this test model, because the reduced atomic data and the low packet count limit its accuracy.
 
-`plotspectra` needs a time in days (`-t`). The test runs only the first ten of twenty timesteps, so the spectra are
-valid up to about 1.7 days.
+`plotspectra` needs a time in days (`-t`). artistools accepts only the times at which the whole model can have sent
+light to the observer. The ejecta of this model reach 0.48 c, so that range ends at about 1.7 days, although the model
+runs to 10 days. `--plotinvalidpart` draws the later times anyway.
 
 ## 5. Make your own model folder
 

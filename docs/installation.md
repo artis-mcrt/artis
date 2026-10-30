@@ -57,6 +57,6 @@ make
 Symlink the preset. Do not copy it. The symlink keeps `artisoptions.h` correct when the preset changes, e.g. after a change of branch.
 :::
 
-`make` builds `sn3d` and `exspec`. It puts the objects in `build/<configuration>/` and makes `sn3d`, `exspec`, and `unittests` in the repository root symlinks to that folder. Each option adds a suffix to the name of the build folder, so different option sets coexist. Each symlink points to the most recent build of any configuration, so look at the symlink before you copy a binary. Copy a binary with `cp -L` from the repository root.
+`make` builds `sn3d` and `exspec`. It puts the objects in `build/<configuration>/` and makes `sn3d`, `exspec`, and `unittests` in the repository root symlinks to that folder. Each make option adds a suffix to the name of the build folder, so different sets of make options coexist. The name holds no preset, so a change of the preset must compile every object again. `--check-symlink-times` in `MAKEFLAGS` makes make see that change. Each symlink points to the most recent build of any configuration, so look at the symlink before you copy a binary. Copy a binary with `cp -L` from the repository root.
 
 [Make options](makeoptions.md) lists the options of `make`.
