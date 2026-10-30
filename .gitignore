@@ -28,3 +28,4 @@ compile_commands.json
 boost*.tar.gz
 pixi.lock
 __pycache__/
+docs/_build/

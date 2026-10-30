@@ -90,9 +90,9 @@ cd ..
 
 [Option presets](presets.md) says what each preset is for.
 
-!!! note
-
-    `artisoptions.h` is a symlink, so an editor changes the preset file of your clone. That is the intended workflow, because each model folder keeps its own clone of the source. Do not replace the symlink with a copy.
+:::{note}
+`artisoptions.h` is a symlink, so an editor changes the preset file of your clone. That is the intended workflow, because each model folder keeps its own clone of the source. Do not replace the symlink with a copy.
+:::
 
 The preset has a value of `NUM_PACKETS` for about 1000 MPI ranks. A laptop needs a much smaller value. Change it in `artis/artisoptions.h`:
 

@@ -50,13 +50,15 @@ The Makefile builds three programs from the same sources. `sn3d.cc`, `exspec.cc`
 
 ## Documentation
 
-This site comes from the `docs/` folder. [Read the Docs](https://readthedocs.org/) builds it with
-[MkDocs](https://www.mkdocs.org/) on each push, and `.readthedocs.yaml` holds that configuration. To build the site
-locally:
+This site comes from the `docs/` folder. The pages are [MyST](https://myst-parser.readthedocs.io/) Markdown, and
+[Read the Docs](https://readthedocs.org/) builds them with [Sphinx](https://www.sphinx-doc.org/) on each push.
+`docs/conf.py` and `.readthedocs.yaml` hold that configuration. To build the site locally:
 
 ```sh
-uv run --with-requirements docs/requirements.txt mkdocs serve
+uv run --with-requirements docs/requirements.txt sphinx-build -W --keep-going docs docs/_build/html
 ```
+
+`-W` makes a warning an error, as CI and Read the Docs do. Open `docs/_build/html/index.html` to read the result.
 
 `docs/options.md` is generated. `scripts/make_options_docs.py` writes it from `artisoptions_doc.md` and the
 `artisoptions_*.h` presets, and a pre-commit hook runs the script. Change the comment of the option in

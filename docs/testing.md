@@ -44,10 +44,10 @@ The script needs Open MPI, libzstd, and the zstd and md5sum commands, because th
 compressed. It writes the checksums of the run into the model folder, e.g.
 `tests/kilonova_1d_testrun/results_md5_job0.txt`.
 
-!!! note
-
-    A different compiler or CPU type can give checksums that differ from the stored checksums. CI makes the reference
-    checksums on an arm64 runner with g++-16, so a local mismatch is not by itself an error.
+:::{note}
+A different compiler or CPU type can give checksums that differ from the stored checksums. CI makes the reference
+checksums on an arm64 runner with g++-16, so a local mismatch is not by itself an error.
+:::
 
 ## Continuous integration
 

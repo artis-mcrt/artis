@@ -53,9 +53,9 @@ make
 
 [Option presets](presets.md) says what each preset is for, and [Compile-time options](options.md) describes every option.
 
-!!! warning
-
-    Symlink the preset. Do not copy it. The symlink keeps `artisoptions.h` correct when the preset changes, e.g. after a change of branch.
+:::{warning}
+Symlink the preset. Do not copy it. The symlink keeps `artisoptions.h` correct when the preset changes, e.g. after a change of branch.
+:::
 
 `make` builds `sn3d` and `exspec`. It puts the objects in `build/<configuration>/` and makes `sn3d`, `exspec`, and `unittests` in the repository root symlinks to that folder. Each option adds a suffix to the name of the build folder, so different option sets coexist. Each symlink points to the most recent build of any configuration, so look at the symlink before you copy a binary. Copy a binary with `cp -L` from the repository root.
 

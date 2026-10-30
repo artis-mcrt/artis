@@ -1,7 +1,5 @@
 # ARTIS
 
-<img src="artislogo.png" alt="ARTIS logo" width="280" />
-
 ARTIS is a 3D radiative transfer code that uses Monte Carlo methods with indivisible energy packets ([Lucy 2002, A&A, 384, 725-735, doi:10.1051/0004-6361:20011756](https://ui.adsabs.harvard.edu/abs/2002A%26A...384..725L/abstract)) for ejecta in homologous (ballistic) expansion such as supernovae and kilonovae. The code is designed for high performance on modern HPC clusters, with a focus on physics fidelity and multi-dimensional geometry.
 
 New users start with the [Quickstart](quickstart.md). It gives a first simulation and a plot on a laptop.
@@ -66,3 +64,45 @@ The ARTIS source code is available under a [BSD 3-Clause license](https://github
 
 - Open an [issue](https://github.com/artis-mcrt/artis/issues) for a defect or a question about the code.
 - The log file of rank 0 holds the git version and the compile-time options of the run. Give both in an issue.
+
+:::{toctree}
+:caption: Getting started
+:maxdepth: 1
+:hidden:
+
+quickstart
+installation
+presets
+data
+:::
+
+:::{toctree}
+:caption: Running a simulation
+:maxdepth: 1
+:hidden:
+
+running
+clusters
+outputfiles
+exspec
+:::
+
+:::{toctree}
+:caption: Reference
+:maxdepth: 1
+:hidden:
+
+options
+inputfiles
+makeoptions
+scripts
+:::
+
+:::{toctree}
+:caption: Development
+:maxdepth: 1
+:hidden:
+
+development
+testing
+:::

@@ -98,11 +98,12 @@ compatible with C++23. The Makefile builds three programs from the same sources:
   in a single fenced C++ block.
 - `data/`: the physics data that comes with the code, e.g. the decay data and
   the gamma spectra.
-- `docs/`: the pages of the documentation site, which Read the Docs builds with
-  MkDocs (`mkdocs.yml` and `.readthedocs.yaml`). `docs/options.md` is
-  generated, so change `artisoptions_doc.md` instead.
-  `scripts/make_options_docs.py` writes the page, and a pre-commit hook runs
-  that script. README.md keeps the overview and links to the site.
+- `docs/`: the pages of the documentation site. They are MyST Markdown, and
+  Read the Docs builds them with Sphinx (`docs/conf.py` and
+  `.readthedocs.yaml`). `docs/options.md` is generated, so change
+  `artisoptions_doc.md` instead. `scripts/make_options_docs.py` writes the
+  page, and a pre-commit hook runs that script. README.md keeps the overview
+  and links to the site.
 - `tests/`: the end-to-end tests. `runtest.sh` runs one test from its setup
   script (`setup_*.sh`) and its input folder (`*_inputfiles/`).
 - `scripts/`: the job scripts for HPC clusters and some helper tools.

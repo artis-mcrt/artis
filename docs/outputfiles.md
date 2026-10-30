@@ -48,10 +48,10 @@ A run writes these files into the model folder:
 
 `sn3d` also keeps an `output_0-0.txt` symlink in the model folder that points to the rank-0 log of the current job.
 
-!!! warning
-
-    A restart file must only be consistent with the binary that wrote it. A resumed run needs the same
-    `artisoptions.h` and the same source version as the run that wrote the files.
+:::{warning}
+A restart file must only be consistent with the binary that wrote it. A resumed run needs the same
+`artisoptions.h` and the same source version as the run that wrote the files.
+:::
 
 ## A new simulation removes the files of the previous one
 

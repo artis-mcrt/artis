@@ -13,12 +13,12 @@ ARTIS is a 3D radiative transfer code that uses Monte Carlo methods with indivis
 
 The full documentation is at [artis.readthedocs.io](https://artis.readthedocs.io/). It comes from the [docs](docs) folder of this repository.
 
-- [Quickstart](https://artis.readthedocs.io/en/latest/quickstart/): a first simulation and a plot on a laptop.
-- [Installation](https://artis.readthedocs.io/en/latest/installation/): the compiler, the MPI library, and the build.
-- [Option presets](https://artis.readthedocs.io/en/latest/presets/) and [Compile-time options](https://artis.readthedocs.io/en/latest/options/): the physics of the run.
-- [Atomic and model data](https://artis.readthedocs.io/en/latest/data/): the data that a simulation reads.
-- [Runs on a cluster](https://artis.readthedocs.io/en/latest/clusters/): the Slurm job scripts and the wall-time mechanism.
-- [Development setup](https://artis.readthedocs.io/en/latest/development/) and [Testing](https://artis.readthedocs.io/en/latest/testing/): the tools, the linters, and the tests.
+- [Quickstart](https://artis.readthedocs.io/en/latest/quickstart.html): a first simulation and a plot on a laptop.
+- [Installation](https://artis.readthedocs.io/en/latest/installation.html): the compiler, the MPI library, and the build.
+- [Option presets](https://artis.readthedocs.io/en/latest/presets.html) and [Compile-time options](https://artis.readthedocs.io/en/latest/options.html): the physics of the run.
+- [Atomic and model data](https://artis.readthedocs.io/en/latest/data.html): the data that a simulation reads.
+- [Runs on a cluster](https://artis.readthedocs.io/en/latest/clusters.html): the Slurm job scripts and the wall-time mechanism.
+- [Development setup](https://artis.readthedocs.io/en/latest/development.html) and [Testing](https://artis.readthedocs.io/en/latest/testing.html): the tools, the linters, and the tests.
 
 ## Quickstart
 
@@ -28,7 +28,7 @@ cd artis
 tests/runtest.sh kilonova_1d
 ```
 
-This builds the code and runs a small 1D kilonova model in two jobs, and then post-processes the packets with `exspec`. The [Quickstart](https://artis.readthedocs.io/en/latest/quickstart/) page describes the steps and makes a model folder of your own. The build needs gcc 14 or a later version, clang, nvc++, or hipcc, and an MPI library that supplies `mpicxx`.
+This builds the code and runs a small 1D kilonova model in two jobs, and then post-processes the packets with `exspec`. The [Quickstart](https://artis.readthedocs.io/en/latest/quickstart.html) page describes the steps and makes a model folder of your own. The build needs gcc 14 or a later version, clang, nvc++, or hipcc, and an MPI library that supplies `mpicxx`.
 
 ## Key features
 
