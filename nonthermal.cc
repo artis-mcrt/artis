@@ -201,6 +201,10 @@ struct NonThermalSolutionIon {
   // probability that one ionisation of this ion will produce n Auger electrons.
   // items sum to 1.0 for a given ion
   std::array<float, NT_MAX_AUGER_ELECTRONS + 1> prob_num_auger{};
+
+  // the fraction of the deposition energy that ionises this ion with n Auger electrons, without the recycled Auger
+  // energy. The sum over n and over the ions of the cell is frac_ionisation.
+  std::array<float, NT_MAX_AUGER_ELECTRONS + 1> frac_deposition_ionisation_by_numaugerelec{};
 };
 
 MPI_shared_array<NonThermalSolutionIon> ion_data_all_cells{};
@@ -706,6 +710,7 @@ void set_axelrod_solution(const ptrdiff_t nonemptymgi) {
 
     std::ranges::fill(celliondata.prob_num_auger, 0.);
     celliondata.prob_num_auger[0] = 1.;
+    std::ranges::fill(celliondata.frac_deposition_ionisation_by_numaugerelec, 0.);
 
     const auto [element, ion] = get_ionfromuniqueionindex(uniqueionindex);
     assert_always(fabs(get_auger_probability(nonemptymgi, element, ion, 0) - 1.0) < 1e-3);
@@ -1288,6 +1293,7 @@ auto calculate_eff_ionpot_auger_rates(const int nonemptymgi, const int element, 
   // where eta is the fraction of the deposition energy going into ionisation of the ion or shell
 
   std::array<double, NT_MAX_AUGER_ELECTRONS + 1> eta_nauger_ionise_over_ionpot_sum{};
+  std::array<double, NT_MAX_AUGER_ELECTRONS + 1> frac_deposition_ionisation_by_numaugerelec{};
   auto& celliondata = get_cell_allions_data(nonemptymgi)[uniqueionindex];
   std::ranges::fill(celliondata.prob_num_auger, 0.);
 
@@ -1309,6 +1315,10 @@ auto calculate_eff_ionpot_auger_rates(const int nonemptymgi, const int element, 
                                              ? frac_ionisation_shell * collionrow.en_auger_ev / collionrow.ionpot_ev
                                              : 0.;
       frac_ionisation_ion += frac_ionisation_shell - frac_auger_recycled;
+      for (auto a = 0Z; a < std::ssize(frac_deposition_ionisation_by_numaugerelec); a++) {
+        frac_deposition_ionisation_by_numaugerelec[a] +=
+            (frac_ionisation_shell - frac_auger_recycled) * collionrow.prob_num_auger[a];
+      }
       const double ionpot_shell = collionrow.ionpot_ev * EV;
 
       if (ionpot_valence < 0) {
@@ -1358,6 +1368,17 @@ auto calculate_eff_ionpot_auger_rates(const int nonemptymgi, const int element, 
   } else {
     const int a = 0;
     celliondata.prob_num_auger[a] = 1.;
+  }
+
+  // the top ion is not ionised, and a channel past the top ion goes to the top ion, as for prob_num_auger
+  const int topion = get_nions(element) - 1;
+  std::ranges::fill(celliondata.frac_deposition_ionisation_by_numaugerelec, 0.);
+  if (ion < topion) {
+    for (int a = 0; a <= NT_MAX_AUGER_ELECTRONS; a++) {
+      const int upperion = std::min(ion + 1 + a, topion);
+      celliondata.frac_deposition_ionisation_by_numaugerelec[upperion - ion - 1] +=
+          static_cast<float>(frac_deposition_ionisation_by_numaugerelec[a]);
+    }
   }
 
   // read_collion_data() gives every ion with a bound electron at least one shell row
@@ -1469,62 +1490,34 @@ auto calculate_nt_excitation_ratecoeff_perdeposition(const std::array<double, SF
   return y_xs_de / E_init_ev / EV;
 }
 
-// Return the energy rate [erg/cm3/s] going toward non-thermal ionisation of lowerion
-auto ion_ntion_energyrate(const int nonemptymgi, const int element, const int lowerion) -> double {
-  const double nnlowerion = get_nnion(nonemptymgi, element, lowerion);
-  double enrate = 0.;
-  const auto maxupperion = nt_ionisation_maxupperion(element, lowerion);
-  for (int upperion = lowerion + 1; upperion <= maxupperion; upperion++) {
-    const double upperionprobfrac = nt_ionisation_upperion_probability(nonemptymgi, element, lowerion, upperion);
-    const double epsilon_trans = epsilon(element, upperion, 0) - epsilon(element, lowerion, 0);
-    enrate += nnlowerion * upperionprobfrac * epsilon_trans;
-  }
-
-  const double gamma_nt = nt_ionisation_ratecoeff(nonemptymgi, element, lowerion);
-  return gamma_nt * enrate;
-}
-
-// Return the energy rate density [erg/cm3/s] going toward non-thermal ionisation in a cell
-auto get_ntion_energyrate(const int nonemptymgi) -> double {
-  double ratetotal = 0.;
-  for (int ielement = 0; ielement < get_nelements(); ielement++) {
-    const int nions = get_nions(ielement);
-    for (int ilowerion = 0; ilowerion < nions - 1; ilowerion++) {
-      ratetotal += ion_ntion_energyrate(nonemptymgi, ielement, ilowerion);
-    }
-  }
-  return ratetotal;
-}
-
-// select an ion to ionise, weighted by each ion's non-thermal ionisation energy rate. Returns {-1, -1}
-// if no ion can be selected because the total rate is zero (the caller then deposits the packet as heat).
+// Select an ion to ionise, weighted by the fraction of the deposition energy that ionises each ion in the
+// Spencer-Fano solution. Returns {-1, -1} if no ion can be selected because the cell has no Spencer-Fano solution
+// (the caller then deposits the packet as heat).
 auto select_nt_ionisation(const int nonemptymgi, rngstate_type& rngstate) -> std::tuple<int, int> {
-  const double ratetotal = get_ntion_energyrate(nonemptymgi);
+  const auto cell_ion_data = get_cell_allions_data(nonemptymgi);
+  const auto frac_deposition_ionisation_of_ion = [](const NonThermalSolutionIon& iondata) {
+    return std::ranges::fold_left(iondata.frac_deposition_ionisation_by_numaugerelec, 0., std::plus<>());
+  };
+  const double frac_deposition_ionisation_total = std::ranges::fold_left(
+      cell_ion_data | std::views::transform(frac_deposition_ionisation_of_ion), 0., std::plus<>());
 
-  if (!(ratetotal > 0.)) {
-    // No ion has a non-zero non-thermal ionisation energy rate. This happens when the cell's deposition
-    // rate density is zero (nt_ionisation_ratecoeff is then zero everywhere), e.g. a cell reached by
-    // energy for the first time this timestep, whose stored deposition rate is still from the previous
-    // (dark) timestep. Signal that no ion can be selected.
+  if (!(frac_deposition_ionisation_total > 0.)) {
     return {-1, -1};
   }
 
   const double zrand = rng_uniform(rngstate);
 
-  // select based on the calculated energy going to ionisation for each ion
-  double ratesum = 0.;
-  for (int ielement = 0; ielement < get_nelements(); ielement++) {
-    const int nions = get_nions(ielement);
-    for (int ilowerion = 0; ilowerion < nions - 1; ilowerion++) {
-      ratesum += ion_ntion_energyrate(nonemptymgi, ielement, ilowerion);
-      // Strict comparison ensures that zrand == 0 skips leading ions with zero rate.
-      if (ratesum > zrand * ratetotal) {
-        return {ielement, ilowerion};
-      }
+  double frac_deposition_ionisation_sum = 0.;
+  for (int uniqueionindex = 0; uniqueionindex < std::ssize(cell_ion_data); uniqueionindex++) {
+    frac_deposition_ionisation_sum += frac_deposition_ionisation_of_ion(cell_ion_data[uniqueionindex]);
+    // Strict comparison ensures that zrand == 0 skips leading ions with zero energy.
+    if (frac_deposition_ionisation_sum > zrand * frac_deposition_ionisation_total) {
+      return get_ionfromuniqueionindex(uniqueionindex);
     }
   }
-  fatal_crash("select_nt_ionisation: no ion selected in cell {}: ratesum {} zrand {} ratetotal {}",
-              grid::get_mgi_of_nonemptymgi(nonemptymgi), ratesum, zrand, ratetotal);
+  fatal_crash("select_nt_ionisation: no ion selected in cell {}: sum {} zrand {} total {}",
+              grid::get_mgi_of_nonemptymgi(nonemptymgi), frac_deposition_ionisation_sum, zrand,
+              frac_deposition_ionisation_total);
 }
 
 void analyse_sf_solution(const int nonemptymgi, const int timestep, const std::array<double, SFPTS>& yfunc,
@@ -1540,6 +1533,11 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const std::a
   // node-shared memory
   THREADLOCALONHOST std::vector<NonThermalExcitation> tmp_excitation_list;
   tmp_excitation_list.clear();
+
+  // the loop below skips the ions without population, so these keep no ionisation energy of an earlier solution
+  for (auto& iondata : get_cell_allions_data(nonemptymgi)) {
+    std::ranges::fill(iondata.frac_deposition_ionisation_by_numaugerelec, 0.);
+  }
 
   for (int element = 0; element < get_nelements(); element++) {
     const int Z = get_atomicnumber(element);
@@ -1677,17 +1675,14 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const std::a
                       (nt_ionisation_ratecoeff_sf(nonemptymgi, element, ion) < 1e-20));
 
         if (verbose) {
-          // the fractions of the ionisation energy that the packet draw of nt_random_upperion() uses
+          // the fractions of the ionisation energy of the ion that the packet draw of nt_random_upperion() uses
           printlnlog("");
           printlog("         enfrac to ionstage:");
-          double ionisation_energy_sum = 0.;
+          const auto& frac_deposition_ionisation_by_numaugerelec =
+              get_cell_allions_data(nonemptymgi)[get_uniqueionindex(element, ion)]
+                  .frac_deposition_ionisation_by_numaugerelec;
           for (int upperion = ion + 1; upperion <= nt_ionisation_maxupperion(element, ion); upperion++) {
-            ionisation_energy_sum += nt_ionisation_upperion_probability(nonemptymgi, element, ion, upperion) *
-                                     (epsilon(element, upperion, 0) - epsilon(element, ion, 0));
-          }
-          for (int upperion = ion + 1; upperion <= nt_ionisation_maxupperion(element, ion); upperion++) {
-            const double enfrac = nt_ionisation_upperion_probability(nonemptymgi, element, ion, upperion) *
-                                  (epsilon(element, upperion, 0) - epsilon(element, ion, 0)) / ionisation_energy_sum;
+            const double enfrac = frac_deposition_ionisation_by_numaugerelec[upperion - ion - 1] / frac_ionisation_ion;
             if (enfrac > 0.) {
               printlog(" {}: {:.3f}", get_ionstage(element, upperion), enfrac);
             }
@@ -2341,18 +2336,19 @@ DEVICE_FUNC auto nt_random_upperion(const int nonemptymgi, const int element, co
                                     const bool weight_by_ionisation_energy, rngstate_type& rngstate) -> int {
   assert_testmodeonly(lowerion < get_nions(element) - 1);
   if (NT_SCHEME == NonThermalScheme::NT_SPENCERFANO && NT_MAX_AUGER_ELECTRONS > 0) {
-    // With weight_by_ionisation_energy, the weight of an upper ion is its ionisation probability times its ionisation
-    // energy. That energy goes from the ground level of lowerion to the ground level of upperion, as in
-    // ion_ntion_energyrate(). Without it, the weight is the ionisation probability alone.
+    // With weight_by_ionisation_energy, the weight of an upper ion is the fraction of the deposition energy that
+    // ionises lowerion to upperion in the Spencer-Fano solution, as in select_nt_ionisation(). Without it, the weight
+    // is the ionisation probability alone.
+    const auto& frac_deposition_ionisation_by_numaugerelec =
+        get_cell_allions_data(nonemptymgi)[get_uniqueionindex(element, lowerion)]
+            .frac_deposition_ionisation_by_numaugerelec;
     const int nupperions = nt_ionisation_maxupperion(element, lowerion) - lowerion;
     std::array<double, NT_MAX_AUGER_ELECTRONS + 1> cumulative_weight_by_numaugerelec{};
     double weight_sum = 0.;
     for (int numaugerelec = 0; numaugerelec < nupperions; numaugerelec++) {
-      const int upperion = lowerion + 1 + numaugerelec;
-      const double probability = nt_ionisation_upperion_probability(nonemptymgi, element, lowerion, upperion);
-      weight_sum += weight_by_ionisation_energy
-                        ? probability * (epsilon(element, upperion, 0) - epsilon(element, lowerion, 0))
-                        : probability;
+      weight_sum += weight_by_ionisation_energy ? frac_deposition_ionisation_by_numaugerelec[numaugerelec]
+                                                : nt_ionisation_upperion_probability(nonemptymgi, element, lowerion,
+                                                                                     lowerion + 1 + numaugerelec);
       cumulative_weight_by_numaugerelec[numaugerelec] = weight_sum;
     }
     assert_always(weight_sum > 0.);
@@ -2435,10 +2431,8 @@ DEVICE_FUNC void do_ntlepton_deposit(Packet& pkt) {
     // until we end and select transition_ij when zrand < dep_frac_transition_ij
 
     // Gate on the stored fraction so the channel split below matches the partition the T_e solver assumes (see
-    // the k-packet probability note further down). Do not substitute the live get_ntion_energyrate() over the
-    // deposition rate, tempting though it is given that select_nt_ionisation() just below picks the ion from
-    // those same live rates: it is a different estimator and does not sum with frac_excitation to give
-    // frac_heating. The ion choice is a separate, internally renormalised draw, so it need not agree here.
+    // the k-packet probability note further down). select_nt_ionisation() and nt_random_upperion() then divide
+    // this fraction between the ionisation channels of the Spencer-Fano solution.
     const double frac_ionisation = get_nt_frac_ionisation(nonemptymgi);
 
     if (zrand < frac_ionisation) {
@@ -2458,7 +2452,8 @@ DEVICE_FUNC void do_ntlepton_deposit(Packet& pkt) {
         return;
       }
 
-      // No ion could be selected because the deposition rate density is zero. Deposit the packet as heat
+      // No ion could be selected because the cell has no Spencer-Fano solution, e.g. because the deposition rate
+      // density was zero at the last grid update. Deposit the packet as heat
       // rather than falling through to the excitation block below, where the outer zrand (< frac_ionisation)
       // would be an invalid position in the excitation list.
       pkt.type = TYPE_KPKT;
