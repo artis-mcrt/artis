@@ -36,10 +36,10 @@ void init();
 auto solve_spencerfano(int nonemptymgi, int timestep, int iteration) -> bool;
 [[nodiscard]] DEVICE_FUNC auto nt_ionisation_ratecoeff(int nonemptymgi, int element, int ion) -> double;
 [[nodiscard]] DEVICE_FUNC auto nt_ionisation_upperion_probability(int nonemptymgi, int element, int lowerion,
-                                                                  int upperion, bool energyweighted) -> double;
+                                                                  int upperion) -> double;
 [[nodiscard]] DEVICE_FUNC auto nt_ionisation_maxupperion(int element, int lowerion) -> int;
-[[nodiscard]] DEVICE_FUNC auto nt_random_upperion(int nonemptymgi, int element, int lowerion, bool energyweighted,
-                                                  rngstate_type& rngstate) -> int;
+[[nodiscard]] DEVICE_FUNC auto nt_random_upperion(int nonemptymgi, int element, int lowerion,
+                                                  bool weight_by_ionisation_energy, rngstate_type& rngstate) -> int;
 void calculate_deposition_rate_density(int nonemptymgi, HeatingCoolingRates& heatingcoolingrates,
                                        const decay::AnaEmissionPowerPerMass& emission_power_per_mass);
 // deposition rate density [erg/s/cm3] of the non-thermal leptons handled by the Spencer-Fano solver, i.e.
