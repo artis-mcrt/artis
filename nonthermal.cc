@@ -735,7 +735,7 @@ void set_axelrod_solution(const ptrdiff_t nonemptymgi) {
 // The exclusive row limit of the Auger electron source term of a shell: the rows [0, limit) lie
 // below the mean Auger electron energy and receive the source. The limit is 0 for a shell that
 // injects nothing, and SFPTS when the Auger energy is above the top of the grid, because every row
-// is then below it. calculate_eff_ionpot_auger_rates() subtracts the recycled Auger energy from the
+// is then below it. calculate_ionisation_channels_of_ion() subtracts the recycled Auger energy from the
 // ionisation fraction only when this limit is positive, so the two sites must use this same function.
 [[nodiscard]] constexpr auto get_auger_rowstopindex(const ShellParams& collionrow) -> int {
   if (!SF_AUGER_CONTRIBUTION_ON || collionrow.en_auger_ev <= 0.) {
@@ -1274,11 +1274,15 @@ auto calculate_nt_ionisation_ratecoeff(const int nonemptymgi, const int element,
   return yscalefactor * y_xs_de;
 }
 
-// Equation 12 of Kozma & Fransson (1992), except modified to be a sum over all shells of an ion (the per-shell
-// ionisation fractions are equation 11 of Shingles et al. 2020). Return the fraction of the deposition energy that
-// ionises the ion, without the recycled Auger energy.
-auto calculate_eff_ionpot_auger_rates(const int nonemptymgi, const int element, const int ion,
-                                      const std::array<double, SFPTS>& yfunc) -> double {
+// Store the ionisation channels of the ion from the Spencer-Fano solution. A channel is a count of Auger electrons.
+// The function stores:
+// - the effective ionisation potential, from equation 12 of Kozma & Fransson (1992) as a sum over all shells of
+//   the ion (the per-shell ionisation fractions are equation 11 of Shingles et al. 2020);
+// - the probability of each channel;
+// - the fraction of the deposition energy for each channel.
+// Return the fraction of the deposition energy that ionises the ion, without the recycled Auger energy.
+auto calculate_ionisation_channels_of_ion(const int nonemptymgi, const int element, const int ion,
+                                          const std::array<double, SFPTS>& yfunc) -> double {
   const int Z = get_atomicnumber(element);
   const int ionstage = get_ionstage(element, ion);
   const int uniqueionindex = get_uniqueionindex(element, ion);
@@ -1340,8 +1344,8 @@ auto calculate_eff_ionpot_auger_rates(const int nonemptymgi, const int element, 
 
       eta_over_ionpot_sum += eta_over_ionpot;
 
-      for (auto a = 0Z; a < std::ssize(eta_nauger_ionise_over_ionpot_sum); a++) {
-        eta_nauger_ionise_over_ionpot_sum[a] += eta_over_ionpot * collionrow.prob_num_auger[a];
+      for (int numaugerelec = 0; numaugerelec <= NT_MAX_AUGER_ELECTRONS; numaugerelec++) {
+        eta_nauger_ionise_over_ionpot_sum[numaugerelec] += eta_over_ionpot * collionrow.prob_num_auger[numaugerelec];
       }
     }
   }
@@ -1351,20 +1355,21 @@ auto calculate_eff_ionpot_auger_rates(const int nonemptymgi, const int element, 
     const int topion = nions - 1;
     if (ion < topion)  // don't try to ionise the top ion
     {
-      for (int a = 0; a <= NT_MAX_AUGER_ELECTRONS; a++) {
-        const int upperion = ion + 1 + a;
+      for (int numaugerelec = 0; numaugerelec <= NT_MAX_AUGER_ELECTRONS; numaugerelec++) {
+        const int upperion = ion + 1 + numaugerelec;
         if (upperion <= topion)  // not too many Auger electrons to exceed the top ion of this element
         {
-          celliondata.prob_num_auger[a] =
-              static_cast<float>(eta_nauger_ionise_over_ionpot_sum[a] / eta_over_ionpot_sum);
+          celliondata.prob_num_auger[numaugerelec] =
+              static_cast<float>(eta_nauger_ionise_over_ionpot_sum[numaugerelec] / eta_over_ionpot_sum);
         } else {
           // the following ensures that multiple ionisations can't send you to an ion stage that is not in
           // the model. Send it to the highest ion stage instead
-          const int a_replace = topion - ion - 1;
-          celliondata.prob_num_auger.at(a_replace) = static_cast<float>(
-              celliondata.prob_num_auger.at(a_replace) + (eta_nauger_ionise_over_ionpot_sum[a] / eta_over_ionpot_sum));
+          const int numaugerelec_to_topion = topion - ion - 1;
+          celliondata.prob_num_auger.at(numaugerelec_to_topion) =
+              static_cast<float>(celliondata.prob_num_auger.at(numaugerelec_to_topion) +
+                                 (eta_nauger_ionise_over_ionpot_sum[numaugerelec] / eta_over_ionpot_sum));
 
-          celliondata.prob_num_auger[a] = 0;
+          celliondata.prob_num_auger[numaugerelec] = 0;
         }
       }
     } else {
@@ -1373,8 +1378,7 @@ auto calculate_eff_ionpot_auger_rates(const int nonemptymgi, const int element, 
       celliondata.prob_num_auger[0] = 1.;
     }
   } else {
-    const int a = 0;
-    celliondata.prob_num_auger[a] = 1.;
+    celliondata.prob_num_auger[0] = 1.;
   }
 
   // the top ion is not ionised, and a channel past the top ion goes to the top ion, as for prob_num_auger
@@ -1598,7 +1602,7 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const std::a
         printlnlog("    nnion/nntot: {:g}", nnion / nntot);
       }
 
-      const double frac_ionisation_ion = calculate_eff_ionpot_auger_rates(nonemptymgi, element, ion, yfunc);
+      const double frac_ionisation_ion = calculate_ionisation_channels_of_ion(nonemptymgi, element, ion, yfunc);
 
       // do not ionise the top ion
       if (ion < nions - 1) {
@@ -1712,18 +1716,6 @@ void analyse_sf_solution(const int nonemptymgi, const int timestep, const std::a
                       (nt_ionisation_ratecoeff_sf(nonemptymgi, element, ion) < 1e-20));
 
         if (verbose) {
-          // the fractions of the ionisation energy of the ion that the packet draw of nt_random_upperion() uses
-          printlnlog("");
-          printlog("         enfrac to ionstage:");
-          const auto& frac_deposition_ionisation_by_numaugerelec =
-              get_cell_allions_data(nonemptymgi)[get_uniqueionindex(element, ion)]
-                  .frac_deposition_ionisation_by_numaugerelec;
-          for (int upperion = ion + 1; upperion <= nt_ionisation_maxupperion(element, ion); upperion++) {
-            const double enfrac = frac_deposition_ionisation_by_numaugerelec[upperion - ion - 1] / frac_ionisation_ion;
-            if (enfrac > 0.) {
-              printlog(" {}: {:.3f}", get_ionstage(element, upperion), enfrac);
-            }
-          }
           printlnlog("");
         }
       }
