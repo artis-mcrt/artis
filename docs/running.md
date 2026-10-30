@@ -28,7 +28,7 @@ writes the restart files and updates `input.txt`. The bundled cluster job script
 continuation job, and they pass the remaining Slurm allocation time automatically (see
 [Runs on a cluster](clusters.md)).
 
-Run `./sn3d -h` to list all command-line options.
+Run `artis/sn3d -h` to list all command-line options.
 
 ## The ranks and the threads
 

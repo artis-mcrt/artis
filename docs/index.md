@@ -35,11 +35,11 @@ ARTIS simulates ejecta in 1D spherical, 2D cylindrical, and 3D Cartesian coordin
 
 ## The three programs
 
-`make` builds three programs from the same sources:
+The Makefile builds three programs from the same sources. `make` builds the first two:
 
 - `sn3d` does the radiative transfer over a sequence of timesteps. It writes the spectra, the light curves, and the packet files.
 - `exspec` combines the packet files into spectra and light curves again. [Post-processing with exspec](exspec.md) describes when you need it.
-- `unittests` runs the unit tests (see [Testing](testing.md)).
+- `unittests` runs the unit tests. `make unittests` builds it (see [Testing](testing.md)).
 
 [artistools](https://github.com/artis-mcrt/artistools) is a companion Python package that plots and analyses the output files.
 

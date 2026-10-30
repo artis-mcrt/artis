@@ -40,8 +40,8 @@ The script stops at the first step that fails. To run only one step, give the na
 test, e.g. `tests/runtest.sh kilonova_1d resume`. With `TESTMODE=ON` in the environment, the build has the sanitizers
 and the extra assertions.
 
-The script needs Open MPI, libzstd, and the zstd and md5sum commands, because the test input files are zstd
-compressed. It writes the checksums of the run into the model folder, e.g.
+The script needs Open MPI and libzstd. It also calls these commands: `zstd`, `md5sum`, `curl`, `perl`, `rsync`,
+and `tar`. The test input files are zstd compressed, and the setup step downloads and unpacks the atomic data. It writes the checksums of the run into the model folder, e.g.
 `tests/kilonova_1d_testrun/results_md5_job0.txt`.
 
 :::{note}
