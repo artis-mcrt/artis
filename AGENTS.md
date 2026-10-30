@@ -260,15 +260,27 @@ Without these, ask a maintainer to start the workflow.
    crash and no failed assertion.
 3. Make sure that only the tests that the change must affect have different
    checksums.
-4. Start the workflow on the branch of the pull request:
+4. Make sure that the branch does not change the workflow file. The workflow
+   runs in the version of the branch, and it gets a token with write access. If
+   the command below fails, ask a maintainer to start the workflow.
+
+   ```sh
+   git diff --quiet origin/main...<branch> -- .github/workflows/updatechecksums.yml
+   ```
+
+5. Start the workflow on the branch of the pull request. The first command
+   prints the URL of the new run, and the URL ends with the run ID. The second
+   command waits until the run is complete and fails if the run fails.
 
    ```sh
    gh workflow run updatechecksums.yml --ref <branch>
+   gh run watch <run ID> --exit-status
    ```
 
-5. Read the log of the workflow. Make sure that it selected the artifact of the
+6. If the run fails, read its log and correct the cause.
+7. Read the log of the workflow. Make sure that it selected the artifact of the
    head commit.
-6. Make sure that the CI run of the commit with the new checksums passes.
+8. Make sure that the CI run of the commit with the new checksums passes.
 
 The workflow takes the checksums from the nearest commit in the history of the
 branch head that has a complete artifact, and it pushes a commit with them. A
