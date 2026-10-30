@@ -98,8 +98,8 @@ compatible with C++23. The Makefile builds three programs from the same sources:
   in a single fenced C++ block.
 - `data/`: the physics data that comes with the code, e.g. the decay data and
   the gamma spectra.
-- `tests/`: the setups of the end-to-end tests (`setup_*.sh` and the related
-  `*_inputfiles/` folders).
+- `tests/`: the end-to-end tests. `runtest.sh` runs one test from its setup
+  script (`setup_*.sh`) and its input folder (`*_inputfiles/`).
 - `scripts/`: the job scripts for HPC clusters and some helper tools.
 - `third_party/`: a pruned copy of Eigen (see `third_party/eigenversion.txt`).
   Do not edit it and do not lint it.
@@ -146,9 +146,10 @@ Points that surprise a new agent:
 - Each option adds a suffix to the name of the build folder, so different
   option sets coexist. A new option that changes `CXXFLAGS` must also add a
   suffix to `BUILD_DIR`.
-- The name of the build folder does not contain the preset. A change of preset
-  therefore needs `make clean`, and CI does this before nearly every preset
-  compile.
+- The name of the build folder does not contain the preset, so a change of
+  preset must compile all objects again. Make does this for a new symlink with
+  `--check-symlink-times`. A copy that keeps the old timestamp, e.g. from
+  `cp -p`, needs `make clean`. CI does this before nearly every preset compile.
 - The Makefile decides how the options interact, e.g. `REPRODUCIBLE=ON` with
   `FASTMATH`, and `OPENMP=ON` with `STDPAR=ON`. Read the Makefile for the rule.
 - The build uses `-Werror` for all compilers except nvc++.
@@ -161,7 +162,8 @@ Points that surprise a new agent:
 - `TESTMODE=ON` adds the sanitizers, the extra assertions, and the hardened
   modes of the standard library. A run then needs
   `ASAN_OPTIONS=detect_stack_use_after_return=1:detect_leaks=0` and, for Open
-  MPI, `OMPI_MCA_memory=^patcher`.
+  MPI, `OMPI_MCA_memory=^patcher`. `tests/runtest.sh` sets both when
+  `TESTMODE=ON` is in the environment.
 - `GCCTOOLCHAIN` selects the gcc toolchain of nvc++. The Makefile has fallbacks
   for some known hosts, so this option is not always necessary. CI sets it in
   the environment.
@@ -188,8 +190,9 @@ reference files in `tests/<testname>_inputfiles/`. Each test has two of them:
 `results_md5_job0.txt` and `results_md5_final.txt`. CI is the test bed. Commit
 and push early, and let CI run the full matrix.
 
-To repeat one test locally, do the steps of the test job in
-`.github/workflows/ci.yml`. Use `nebular_1d_3dgrid` as the default test. It
+To repeat one test locally, run `tests/runtest.sh <testname>`. The test job in
+`.github/workflows/ci.yml` calls the same script for each step. Use
+`nebular_1d_3dgrid` as the default test. It
 builds the nebular preset with the NLTE populations, the non-thermal solver,
 and the detailed bound-free estimators on a 3D grid, so it covers the physics
 that most changes touch. The `kilonova_1d` test is faster, but it uses the LTE
@@ -197,29 +200,42 @@ preset. The setup script downloads about 15 MB of atomic data from a GitHub
 release, so this step needs the network. The script keeps the archive in
 `tests/`, and a later run of the script uses that copy.
 
-These steps differ from a plain build and are easy to miss:
+The script does these steps in order. To run only one step, give its name as
+the second argument.
 
-- Build from the `artisoptions.h` of the model folder, not from the preset.
-  Each setup script copies a preset and then changes some option values with
-  `setoption` from `tests/setupfuncs.sh`.
-  Remove your `artisoptions.h` before the copy, because `cp` writes through a
-  symlink and replaces the content of the tracked preset.
-- Remove `input.txt` before the first run, as the workflow does. `sn3d` then
-  restores it from `input-newrun.txt`. After a run, `input.txt` holds the
+- `setup` removes the model folder `tests/<testname>_testrun` and runs
+  `tests/setup_<testname>.sh`. That script copies a preset and then changes
+  some option values with `setoption` from `tests/setupfuncs.sh`.
+- `build` moves your `artisoptions.h` aside and makes a symlink to the options
+  of the model folder. It builds with the make options of CI and copies `sn3d`
+  and `exspec` into the model folder. Then it moves your `artisoptions.h` back.
+  The move keeps the timestamp, so a build in a different build folder
+  compiles nothing again. The step gives the objects of the test build an old
+  timestamp, so a later build in that build folder compiles them again.
+- `job0` removes `input.txt` and starts a new simulation. `sn3d` then restores
+  `input.txt` from `input-newrun.txt`. After a run, `input.txt` holds the
   values that continue that run.
-- Copy `input-resume.txt` to `input.txt` before the resume run. That file tells
-  `sn3d` to read the restart files of the first run, and it sets a different
-  range of timesteps.
-- Remove the `*.tmp` files before `exspec`, as the workflow does.
-- Run `python3 ../../scripts/mergeangleres.py` in the model folder
-  after `exspec`. The script merges the direction bin files into
+- `checksums_job0` writes `results_md5_job0.txt` into the model folder and
+  compares it with the reference file. Run it only directly after `job0`,
+  because the resume run changes the output files.
+- `resume` copies `input-resume.txt` to `input.txt` and runs `sn3d`. That file
+  tells `sn3d` to read the restart files of the first run, and it sets a
+  different range of timesteps.
+- `exspec` removes the `*.tmp` files, runs `exspec`, and then runs
+  `scripts/mergeangleres.py`. That script merges the direction bin files into
   `light_curve_res.out`, `spec_res.out`, and `specpol_res.out`. The tests with
   a 2D or a 3D model, e.g. `kilonova_2d`, have these files in
   `results_md5_final.txt`.
+- `checksums_final` writes `results_md5_final.txt` into the model folder and
+  compares it with the reference file.
+
+Change a step of a test in `tests/runtest.sh`, not in `ci.yml`. The workflow
+adds only the marker files for `updatechecksums.yml`, the comparison with a
+simulation in one job, and the steps that show or upload the results.
 
 CI builds with libzstd, so the output files are `.zst`. The checksum steps of
-`ci.yml` pipe each output file through `zstdcat` and `md5sum` and write the
-checksum under the plain name. `results_md5_job0.txt` holds the files of the
+`tests/runtest.sh` pipe each output file through `zstdcat` and `md5sum` and
+write the checksum under the plain name. `results_md5_job0.txt` holds the files of the
 first job, and `results_md5_final.txt` the files of the resume run and of
 `exspec`. The log files stay outside both sets, because their names do not match.
 CI also compares the lists of file names, so a missing or an extra output file
@@ -231,12 +247,44 @@ with a different gcc version, but no test covers that. Examine a local mismatch
 as a real change of the results first. Let CI give the decision.
 
 A change that must not alter the results must give identical checksums in CI.
-If a change alters the numerical results for a good reason, the stored
-checksums must be regenerated. Only a maintainer can do this, with the
-`updatechecksums.yml` workflow. That workflow takes the checksums from a
-finished CI run. The run does not have to be of the head commit, if the later
-commits do not change the results. Say in the commit message and in the pull
-request that you expect the results to change.
+For such a change, a checksum mismatch is an error in the change. Find and
+correct the cause. Do not regenerate the checksums.
+
+If a change alters the numerical results for a good reason, regenerate the
+stored checksums yourself with the `updatechecksums.yml` workflow. This needs
+write access to the repository, and the branch must be in `artis-mcrt/artis`.
+Without these, ask a maintainer to start the workflow.
+
+1. Wait until the CI run of the head commit is complete.
+2. Make sure that each failed test job failed only at a checksum step, with no
+   crash and no failed assertion.
+3. Make sure that only the tests that the change must affect have different
+   checksums.
+4. Start the workflow with the branch of the pull request as the input. Without
+   `--ref`, `gh` runs the reviewed version of the workflow on `main`. The
+   workflow gets a token with write access, so it runs only from `main`. The
+   first command prints the URL of the new run, and the URL ends with the run
+   ID. The second command waits until the run is complete and fails if the run
+   fails.
+
+   ```sh
+   gh workflow run updatechecksums.yml -f branch=<branch>
+   gh run watch <run ID> --exit-status
+   ```
+
+5. If the run fails, read its log and correct the cause.
+6. Read the log of the workflow. Make sure that it selected the artifact of the
+   head commit.
+7. Make sure that the CI run of the commit with the new checksums passes.
+
+The workflow takes the checksums from the nearest commit in the history of the
+branch head that has a complete artifact, and it pushes a commit with them. A
+crash or a failed assertion in a test job leaves the artifact incomplete. The
+workflow then takes an older commit and gives only a warning. An older commit is
+correct only if the later commits do not change the results.
+
+Say in the commit message and in the pull request that you expect the results to
+change. Name the tests that change.
 
 A new end-to-end test must run in CI in about ten minutes or less. Every push
 runs the full matrix.
@@ -264,7 +312,8 @@ The workflows in `.github/workflows/`:
   steps say which compiler skips a build and which build uses `OPTIMIZE=OFF`.
   The gcc and the clang jobs also build and run the unit tests, for the classic
   and for the nebular preset.
-- `updatechecksums.yml` writes the reference checksums (see "Tests").
+- `updatechecksums.yml` writes the reference checksums of a branch (see
+  "Tests"). It runs only from `main`, and it takes the branch as an input.
 - `depapprove.yml` enables auto-merge for the pull requests of Dependabot and
   of pre-commit-ci.
 - `copilot-setup-steps.yml` runs when you change that file, or when you start
@@ -593,8 +642,9 @@ The code must compile with nvc++ and with hipcc, also with `STDPAR=ON GPU=ON`.
 These rules apply to an automated review of a pull request, e.g. by Codex.
 
 - Do not comment that the checksums of the tests can change or must be
-  regenerated. CI compares the checksums and shows each mismatch. A maintainer
-  then regenerates them with `updatechecksums.yml` (see "Tests").
+  regenerated. CI compares the checksums and shows each mismatch. The author of
+  the pull request then regenerates them with `updatechecksums.yml` (see
+  "Tests").
 - Do not comment that a stored checksum file comes from an older commit or
   does not agree with a later change. The same CI step finds this.
 
@@ -606,6 +656,8 @@ These rules apply to an automated review of a pull request, e.g. by Codex.
   checksums that a local build does not cover.
 - Say in the commit message and in the pull request when you expect the
   numerical results to change. Otherwise the checksums must stay identical.
+- After a change of the results, regenerate the checksums yourself with
+  `updatechecksums.yml` (see "Tests").
 
 ## Before you commit
 
