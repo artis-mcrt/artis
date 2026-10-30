@@ -1350,46 +1350,25 @@ auto calculate_ionisation_channels_of_ion(const int nonemptymgi, const int eleme
     }
   }
 
-  if (NT_MAX_AUGER_ELECTRONS > 0 && matching_nlsubshell_count > 0 && eta_over_ionpot_sum > 0.) {
-    const int nions = get_nions(element);
-    const int topion = nions - 1;
-    if (ion < topion)  // don't try to ionise the top ion
-    {
-      for (int numaugerelec = 0; numaugerelec <= NT_MAX_AUGER_ELECTRONS; numaugerelec++) {
-        const int upperion = ion + 1 + numaugerelec;
-        if (upperion <= topion)  // not too many Auger electrons to exceed the top ion of this element
-        {
-          celliondata.prob_num_auger[numaugerelec] =
-              static_cast<float>(eta_nauger_ionise_over_ionpot_sum[numaugerelec] / eta_over_ionpot_sum);
-        } else {
-          // the following ensures that multiple ionisations can't send you to an ion stage that is not in
-          // the model. Send it to the highest ion stage instead
-          const int numaugerelec_to_topion = topion - ion - 1;
-          celliondata.prob_num_auger.at(numaugerelec_to_topion) =
-              static_cast<float>(celliondata.prob_num_auger.at(numaugerelec_to_topion) +
-                                 (eta_nauger_ionise_over_ionpot_sum[numaugerelec] / eta_over_ionpot_sum));
-
-          celliondata.prob_num_auger[numaugerelec] = 0;
-        }
-      }
-    } else {
-      // the top ion cannot be ionised further; keep the documented invariant that the
-      // probabilities sum to one (matching set_axelrod_solution())
-      celliondata.prob_num_auger[0] = 1.;
-    }
-  } else {
-    celliondata.prob_num_auger[0] = 1.;
-  }
-
-  // the top ion is not ionised, and a channel past the top ion goes to the top ion, as for prob_num_auger
+  // The top ion is not ionised. A channel past the top ion goes to the top ion, because the model has no higher ion.
   const int topion = get_nions(element) - 1;
+  const bool has_auger_probabilities = NT_MAX_AUGER_ELECTRONS > 0 && eta_over_ionpot_sum > 0.;
   std::array<float, NT_MAX_AUGER_ELECTRONS + 1> frac_deposition_ionisation_by_numaugerelec{};
   if (ion < topion) {
     for (int numaugerelec = 0; numaugerelec <= NT_MAX_AUGER_ELECTRONS; numaugerelec++) {
-      const int upperion = std::min(ion + 1 + numaugerelec, topion);
-      frac_deposition_ionisation_by_numaugerelec[upperion - ion - 1] +=
+      const int numaugerelec_within_top_ion = std::min(ion + 1 + numaugerelec, topion) - ion - 1;
+      if (has_auger_probabilities) {
+        celliondata.prob_num_auger[numaugerelec_within_top_ion] =
+            static_cast<float>(celliondata.prob_num_auger[numaugerelec_within_top_ion] +
+                               (eta_nauger_ionise_over_ionpot_sum[numaugerelec] / eta_over_ionpot_sum));
+      }
+      frac_deposition_ionisation_by_numaugerelec[numaugerelec_within_top_ion] +=
           static_cast<float>(frac_deposition_ionisation_by_numaugerelec_before_top_ion_limit[numaugerelec]);
     }
+  }
+  if (ion == topion || !has_auger_probabilities) {
+    // the probabilities sum to one also without ionisation, as in set_axelrod_solution()
+    celliondata.prob_num_auger[0] = 1.;
   }
   celliondata.frac_deposition_ionisation_by_numaugerelec = frac_deposition_ionisation_by_numaugerelec;
 
