@@ -1310,19 +1310,21 @@ auto calculate_eff_ionpot_auger_rates(const int nonemptymgi, const int element, 
       // energy) counts as ionisation here. This is the Auger energy that sfmatrix_add_ionisation() injects for each
       // count of Auger electrons. It is zero when the matrix injects no source, which get_auger_rowstopindex()
       // decides for both sites.
-      for (auto a = 0Z; a < std::ssize(frac_deposition_ionisation_by_numaugerelec_before_top_ion_limit); a++) {
+      for (int numaugerelec = 0; numaugerelec <= NT_MAX_AUGER_ELECTRONS; numaugerelec++) {
         double en_auger_injected_ev = 0.;
         if (get_auger_rowstopindex(collionrow) > 0) {
           if constexpr (SF_AUGER_CONTRIBUTION_DISTRIBUTE_EN) {
-            en_auger_injected_ev = (a > 0) ? collionrow.en_auger_ev / (1. - collionrow.prob_num_auger[0]) : 0.;
+            en_auger_injected_ev =
+                (numaugerelec > 0) ? collionrow.en_auger_ev / (1. - collionrow.prob_num_auger[0]) : 0.;
           } else {
             en_auger_injected_ev = collionrow.en_auger_ev;
           }
         }
         // the packet draws need a channel energy that is not negative
         assert_always(en_auger_injected_ev <= collionrow.ionpot_ev);
-        frac_deposition_ionisation_by_numaugerelec_before_top_ion_limit[a] +=
-            frac_ionisation_shell * collionrow.prob_num_auger[a] * (1. - en_auger_injected_ev / collionrow.ionpot_ev);
+        frac_deposition_ionisation_by_numaugerelec_before_top_ion_limit[numaugerelec] +=
+            frac_ionisation_shell * collionrow.prob_num_auger[numaugerelec] *
+            (1. - (en_auger_injected_ev / collionrow.ionpot_ev));
       }
       const double ionpot_shell = collionrow.ionpot_ev * EV;
 
@@ -1379,10 +1381,10 @@ auto calculate_eff_ionpot_auger_rates(const int nonemptymgi, const int element, 
   const int topion = get_nions(element) - 1;
   std::array<float, NT_MAX_AUGER_ELECTRONS + 1> frac_deposition_ionisation_by_numaugerelec{};
   if (ion < topion) {
-    for (int a = 0; a <= NT_MAX_AUGER_ELECTRONS; a++) {
-      const int upperion = std::min(ion + 1 + a, topion);
+    for (int numaugerelec = 0; numaugerelec <= NT_MAX_AUGER_ELECTRONS; numaugerelec++) {
+      const int upperion = std::min(ion + 1 + numaugerelec, topion);
       frac_deposition_ionisation_by_numaugerelec[upperion - ion - 1] +=
-          static_cast<float>(frac_deposition_ionisation_by_numaugerelec_before_top_ion_limit[a]);
+          static_cast<float>(frac_deposition_ionisation_by_numaugerelec_before_top_ion_limit[numaugerelec]);
     }
   }
   celliondata.frac_deposition_ionisation_by_numaugerelec = frac_deposition_ionisation_by_numaugerelec;
