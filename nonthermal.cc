@@ -2306,22 +2306,9 @@ DEVICE_FUNC auto nt_ionisation_upperion_probability(const int nonemptymgi, const
   assert_always(upperion < get_nions(element));
   assert_always(upperion <= nt_ionisation_maxupperion(element, lowerion));
   if (NT_SCHEME == NonThermalScheme::NT_SPENCERFANO && NT_MAX_AUGER_ELECTRONS > 0) {
-    const int numaugerelec = upperion - lowerion - 1;  // number of Auger electrons to go from lowerin to upper ion
+    const int numaugerelec = upperion - lowerion - 1;
     const int uniqueionindex = get_uniqueionindex(element, lowerion);
-    const auto& cell_ion_data = get_cell_allions_data(nonemptymgi)[uniqueionindex];
-    if (numaugerelec < NT_MAX_AUGER_ELECTRONS) {
-      return cell_ion_data.prob_num_auger[numaugerelec];
-    }
-    if (numaugerelec == NT_MAX_AUGER_ELECTRONS) {
-      double prob_remaining = 1.;
-      for (int a = 0; a < NT_MAX_AUGER_ELECTRONS; a++) {
-        prob_remaining -= cell_ion_data.prob_num_auger[a];
-      }
-      assert_always(fabs(prob_remaining - cell_ion_data.prob_num_auger[numaugerelec]) < 0.001);
-      return prob_remaining;
-    }
-
-    return 0.;
+    return get_cell_allions_data(nonemptymgi)[uniqueionindex].prob_num_auger[numaugerelec];
   }
   return (upperion == lowerion + 1) ? 1.0 : 0.;
 }
