@@ -35,7 +35,16 @@ This is the quickest complete simulation of the repository. The script does thes
 4. It runs a new simulation, resumes it from the restart files, and then runs `exspec`.
 5. It compares the checksums of the output files with the stored reference checksums.
 
-A different compiler or CPU type can give checksums that differ from the stored checksums. The simulation is still valid. [Testing](testing.md) describes the steps and the reference checksums.
+A different compiler or CPU type can give checksums that differ from the stored checksums. The simulation is still
+valid, but the script stops at step 5, before the resume run and `exspec`. Run the remaining steps by name to get the
+complete result:
+
+```sh
+tests/runtest.sh kilonova_1d resume
+tests/runtest.sh kilonova_1d exspec
+```
+
+[Testing](testing.md) describes the steps and the reference checksums.
 
 The repository has eleven test models. `tests/runtest.sh` without arguments lists them.
 
@@ -66,12 +75,15 @@ valid up to about 1.7 days.
 
 ## 5. Make your own model folder
 
-Each simulation has its own model folder. Keep the source code in a subfolder `artis` of it. The code then finds its physics data in `artis/data`. The commands below make a model folder from the input files of the test model:
+Each simulation has its own model folder. Keep the source code in a subfolder `artis` of it. The code then finds its
+physics data in `artis/data`. The commands below make a model folder from the input files of the test model. Run the
+first command in the clone of step 2, so that the symlink points at it:
 
 ```sh
+artispath=$(pwd)
 mkdir ~/mymodel
 cd ~/mymodel
-ln -s ~/artis artis
+ln -s "$artispath" artis
 tar -xf artis/tests/atomicdata_feconi.tar.xz
 rsync -a --exclude 'results_md5_*' artis/tests/kilonova_1d_inputfiles/ ./
 cp input-newrun.txt input.txt

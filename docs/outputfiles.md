@@ -17,13 +17,15 @@ is necessary. The logs, `input.txt`, and the restart files stay plain. Every fil
 Each job writes these files into its job folder:
 
 - `output_n-0.txt`: a log file for each MPI rank n.
-- `estimators_nnnn.out`: the plasma conditions of each cell (temperatures, ionisation, heating and cooling rates) at
-  each timestep.
-- `estimators_allranks.out`: with the option `WRITE_COMBINED_ALLRANK_OUT_FILES`, `sn3d` writes the text of all ranks
-  into this one combined file. The option also gives a combined file for the nlte and the radfield files, e.g.
-  `nlte_allranks.out`. With the constant `LOG_MACROATOM` in `macroatom.cc`, it also gives `macroatom_allranks.out`.
-  `scripts/combine_allrank_out_files.py` makes the combined files from the files of the ranks, and it keeps the files
-  of the ranks unless you give `--rm`. Run the script with uv, e.g. `uv run artis/scripts/combine_allrank_out_files.py`.
+- the estimators of each cell at each timestep: the temperatures, the ionisation, and the heating and cooling rates.
+  The option `WRITE_COMBINED_ALLRANK_OUT_FILES` selects one of two forms, and every preset sets the option:
+    - with the option, `sn3d` writes the text of all ranks into one combined file, `estimators_allranks.out`;
+    - without the option, each rank writes its own file, `estimators_nnnn.out`.
+
+    The option gives the same choice for the nlte and the radfield files, e.g. `nlte_allranks.out`. With the constant
+    `LOG_MACROATOM` in `macroatom.cc`, it also gives `macroatom_allranks.out`.
+    `scripts/combine_allrank_out_files.py` makes the combined files from the files of the ranks, and it keeps the
+    files of the ranks unless you give `--rm`. Run the script with uv, e.g. `uv run artis/scripts/combine_allrank_out_files.py`.
   The script needs Python 3.14 or a later version, and uv gets that version from the metadata of the script.
 
 ## The files of the whole simulation
