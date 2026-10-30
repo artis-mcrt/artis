@@ -49,6 +49,19 @@ jobs:
                   # include directories, so clang-tidy needs only the libc++ header path.
                   run-clang-tidy -extra-arg=-nostdinc++ -extra-arg=-isystem"$LIBCXX"
 
+    docs:
+        name: Build the documentation
+        runs-on: ubuntu-26.04-arm
+        steps:
+            - uses: actions/checkout@v7
+
+            - name: Install uv
+              uses: astral-sh/setup-uv@v10.3.2
+
+            - name: Build the site
+              # --strict makes a warning an error, e.g. a link to a page that the site does not hold
+              run: uv run --with-requirements docs/requirements.txt mkdocs build --strict
+
     cppcheck:
         name: Lint with cppcheck
         runs-on: ubuntu-26.04-arm
