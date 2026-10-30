@@ -5,11 +5,33 @@ permissions:
     actions: read
 on:
     workflow_dispatch:
+        inputs:
+            branch:
+                description: The branch that gets the new checksums. Start the workflow from the default branch.
+                required: true
+                type: string
 
 jobs:
     updatechecksums:
+        # The job gets a token with write access, so only the reviewed version on the default branch runs.
+        # The branch input is data: the job reads its checksum files and pushes a commit to it.
+        if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
         runs-on: ubuntu-latest
         steps:
+            - name: Check the target branch
+              env:
+                  TARGET_BRANCH: ${{ inputs.branch }}
+                  DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+              run: |
+                  if ! git check-ref-format --branch "$TARGET_BRANCH" > /dev/null 2>&1; then
+                      echo "::error::'${TARGET_BRANCH}' is not a valid branch name."
+                      exit 1
+                  fi
+                  if [ "$TARGET_BRANCH" = "$DEFAULT_BRANCH" ] || [ "$TARGET_BRANCH" = release ]; then
+                      echo "::error::The workflow does not change the checksums of ${TARGET_BRANCH}. Give the branch of a pull request."
+                      exit 1
+                  fi
+
             - name: Check checksum update token
               env:
                   CHECKSUM_PUSH_TOKEN: ${{ secrets.GH_TOKEN }}
@@ -27,15 +49,20 @@ jobs:
                   # environment variable that the gh CLI reads in the steps below. Those deliberately keep the
                   # job's own github.token, which is all the read-only API calls there need.
                   token: ${{ secrets.GH_TOKEN }}
+                  ref: ${{ inputs.branch }}
                   # The find step reads the full history for the ancestor checks.
                   fetch-depth: 0
+
+            - name: Find the head commit of the target branch
+              id: branchhead
+              run: echo "head_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
             - name: Find latest CI checksums artifact for this branch
               id: findartifact
               env:
                   GH_TOKEN: ${{ github.token }}
-                  BRANCH: ${{ github.ref_name }}
-                  HEAD_SHA: ${{ github.sha }}
+                  BRANCH: ${{ inputs.branch }}
+                  HEAD_SHA: ${{ steps.branchhead.outputs.head_sha }}
               run: |
                   # The artifact does not have to come from the branch head. The person who starts
                   # the workflow confirms that the later commits do not change the results.
@@ -74,7 +101,7 @@ jobs:
               id: getartifact
               env:
                   GH_TOKEN: ${{ github.token }}
-                  HEAD_SHA: ${{ github.sha }}
+                  HEAD_SHA: ${{ steps.branchhead.outputs.head_sha }}
               run: |
                   # An artifact of an old commit can disagree with the current set of tests.
                   # An artifact of a run with failed jobs can hold stale or partial checksum files,
@@ -143,7 +170,8 @@ jobs:
                   SOURCE_SHA: ${{ steps.getartifact.outputs.source_sha }}
                   RUN_ID: ${{ steps.getartifact.outputs.run_id }}
                   AHEAD: ${{ steps.getartifact.outputs.ahead }}
-                  HEAD_SHA: ${{ github.sha }}
+                  HEAD_SHA: ${{ steps.branchhead.outputs.head_sha }}
+                  TARGET_BRANCH: ${{ inputs.branch }}
               run: |
                   git add tests/*_inputfiles/results_md5*.txt
                   if git diff --cached --quiet; then
@@ -159,4 +187,4 @@ jobs:
                       commitargs+=(-m "The source commit is ${AHEAD} commits before the branch head ${HEAD_SHA}.")
                   fi
                   git commit "${commitargs[@]}"
-                  git push origin "HEAD:refs/heads/${GITHUB_REF_NAME}"
+                  git push origin "HEAD:refs/heads/${TARGET_BRANCH}"
