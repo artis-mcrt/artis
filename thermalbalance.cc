@@ -33,6 +33,10 @@
 #include "ratecoeff.h"
 #include "sn3d.h"
 
+// the photoionisation tables use the LTE factor at T_R, so the photoionisation rate would not agree with the heating
+static_assert(!BFHEATING_USE_DEPARTURE_RATIO_AND_TE_NOT_LTE_TR || !USE_LUT_PHOTOION,
+              "USE_LUT_PHOTOION must be false when BFHEATING_USE_DEPARTURE_RATIO_AND_TE_NOT_LTE_TR is true");
+
 namespace {
 
 // Integrand to calculate the rate coefficient for bfheating. With
