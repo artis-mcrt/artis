@@ -250,6 +250,19 @@ constexpr bool BFCOOLING_USELEVELPOPNOTIONPOP;
 // each level by the ratio of the estimator to the analytic rate of the nearest ground continuum.
 constexpr bool USE_ION_BFHEATING_ESTIMATORS;
 
+// Select the stimulated recombination factor of the analytic bound-free heating.
+// - false: the LTE factor 1 - exp(-h nu / (k T_R)). The heating coefficients depend only on the radiation field,
+//   so the grid update calculates them once for each cell.
+// - true: the factor 1 - b exp(-h (nu - nu_edge) / (k T_e)) of the photoionisation rate, where b is the modified
+//   departure ratio n_upper nne Phi(T_e) / n_lower of the continuum and Phi is the Saha factor without its
+//   exponential. The heating rate and the photoionisation rate of a continuum then agree in an NLTE cell. With
+//   BFCOOLING_USELEVELPOPNOTIONPOP, the net heating also equals the recombination cooling in LTE at T_e (Mihalas
+//   1978, Stellar Atmospheres, 2nd ed., W. H. Freeman, San Francisco). The factor depends on T_e and on the
+//   populations, so the T_e solver calculates the heating coefficients at each trial T_e, and the grid update is
+//   slower. This value needs USE_LUT_PHOTOION false, because the photoionisation tables use the LTE factor at T_R.
+//   A static_assert checks this.
+constexpr bool BFHEATING_USE_DEPARTURE_RATIO_AND_TE_NOT_LTE_TR;
+
 // Write the heating and the cooling rate of each ion to the estimators file, in addition to the totals. A
 // bound-free term belongs to the lower ion of the continuum, and a collisional term belongs to the ion that
 // holds the level. The free-free heating estimator holds no per-ion information, so each ion gets the share

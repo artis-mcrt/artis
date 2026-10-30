@@ -480,21 +480,8 @@ auto calculate_corrphotoioncoeff_integral(const int element, const int ion, cons
   const auto T_e = grid::Te_allcells[nonemptymgi];
 
   // stimulated recombination is negative photoionisation
-  const double nnlevel = use_cellcache ? get_cellcache_levelpop(nonemptymgi, loweruniquelevelindex)
-                                       : calculate_levelpop(nonemptymgi, element, ion, level);
-  const auto clumpednne = grid::get_nne(nonemptymgi) * grid::get_clumpfactor(nonemptymgi);
-
-  const int upperionlevel = get_phixsupperlevel(loweruniquelevelindex, phixstargetindex);
-  const auto upperuniquelevelindex = get_uniquelevelindex(element, ion + 1, upperionlevel);
-  const double modified_sahafact =
-      SAHACONST * stat_weight(loweruniquelevelindex) / stat_weight(upperuniquelevelindex) * std::pow(T_e, -1.5);
-  const double nnupperionlevel = use_cellcache ? get_cellcache_levelpop(nonemptymgi, upperuniquelevelindex)
-                                               : calculate_levelpop(nonemptymgi, element, ion + 1, upperionlevel);
-
-  double modified_departure_ratio = nnlevel > 0. ? nnupperionlevel / nnlevel * clumpednne * modified_sahafact : 1.;
-  if (!std::isfinite(modified_departure_ratio)) {
-    modified_departure_ratio = 0.;
-  }
+  const double modified_departure_ratio =
+      calculate_modified_departure_ratio(nonemptymgi, element, ion, level, phixstargetindex, use_cellcache);
 
   double error = 0.;
   const auto photoion_xs = get_phixs_table(loweruniquelevelindex);
@@ -531,6 +518,29 @@ template <typename T, typename U>
 }
 
 }  // anonymous namespace
+
+// The ratio n_upper * nne * Phi(T_e) / n_lower of a photoionisation continuum, where Phi is the Saha factor without
+// its exponential. The stimulated recombination factor of the continuum is then
+// 1 - modified_departure_ratio * exp(-h (nu - nu_edge) / (k T_e)), which is 1 - exp(-h nu / (k T_e)) in LTE at T_e.
+auto calculate_modified_departure_ratio(const int nonemptymgi, const int element, const int ion, const int level,
+                                        const int phixstargetindex, const bool use_cellcache) -> double {
+  const auto loweruniquelevelindex = get_uniquelevelindex(element, ion, level);
+  const auto T_e = grid::Te_allcells[nonemptymgi];
+  const double nnlevel = use_cellcache ? get_cellcache_levelpop(nonemptymgi, loweruniquelevelindex)
+                                       : calculate_levelpop(nonemptymgi, element, ion, level);
+  const auto clumpednne = grid::get_nne(nonemptymgi) * grid::get_clumpfactor(nonemptymgi);
+
+  const int upperionlevel = get_phixsupperlevel(loweruniquelevelindex, phixstargetindex);
+  const auto upperuniquelevelindex = get_uniquelevelindex(element, ion + 1, upperionlevel);
+  const double modified_sahafact =
+      SAHACONST * stat_weight(loweruniquelevelindex) / stat_weight(upperuniquelevelindex) * std::pow(T_e, -1.5);
+  const double nnupperionlevel = use_cellcache ? get_cellcache_levelpop(nonemptymgi, upperuniquelevelindex)
+                                               : calculate_levelpop(nonemptymgi, element, ion + 1, upperionlevel);
+
+  const double modified_departure_ratio =
+      nnlevel > 0. ? nnupperionlevel / nnlevel * clumpednne * modified_sahafact : 1.;
+  return std::isfinite(modified_departure_ratio) ? modified_departure_ratio : 0.;
+}
 
 void setup_photoion_luts() {
   assert_always(globals::nbfcontinua > 0);

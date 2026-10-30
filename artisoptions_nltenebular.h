@@ -101,6 +101,8 @@ constexpr bool BFCOOLING_USELEVELPOPNOTIONPOP = true;
 
 constexpr bool USE_ION_BFHEATING_ESTIMATORS = false;
 
+constexpr bool BFHEATING_USE_DEPARTURE_RATIO_AND_TE_NOT_LTE_TR = false;
+
 constexpr bool WRITE_ION_HEATING_COOLING_RATES = false;
 
 // --- Radiation field and estimators ---

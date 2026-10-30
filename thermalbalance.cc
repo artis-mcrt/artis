@@ -33,15 +33,25 @@
 #include "ratecoeff.h"
 #include "sn3d.h"
 
+// the photoionisation tables use the LTE factor at T_R, so the photoionisation rate would not agree with the heating
+static_assert(!BFHEATING_USE_DEPARTURE_RATIO_AND_TE_NOT_LTE_TR || !USE_LUT_PHOTOION,
+              "USE_LUT_PHOTOION must be false when BFHEATING_USE_DEPARTURE_RATIO_AND_TE_NOT_LTE_TR is true");
+
 namespace {
 
-// Integrand to calculate the rate coefficient for bfheating. The stimulated recombination factor is the LTE value
-// at T_R. The photoionisation rate of integrand_corrphotoioncoeff_custom_radfield() in ratecoeff.cc uses the
-// departure ratio of the cell and T_e instead, so the two factors are different in an NLTE cell.
+// Integrand to calculate the rate coefficient for bfheating. With
+// BFHEATING_USE_DEPARTURE_RATIO_AND_TE_NOT_LTE_TR, the stimulated recombination factor is the factor of
+// integrand_corrphotoioncoeff_custom_radfield() in ratecoeff.cc, so the photoionisation rate and the heating rate of a
+// continuum agree. Otherwise it is the LTE value at T_R.
 auto integrand_bfheatingcoeff(const double nu, const double nu_edge, const int nonemptymgi, const float T_R,
+                              const float T_e, const double modified_departure_ratio,
                               const std::span<const float> photoion_xs) -> double {
   const float sigma_bf = photoionisation_crosssection_fromtable(photoion_xs, nu_edge, nu);
 
+  if constexpr (BFHEATING_USE_DEPARTURE_RATIO_AND_TE_NOT_LTE_TR) {
+    const double stimfactor = std::max(0., 1. - (modified_departure_ratio * exp(-HOVERKB * (nu - nu_edge) / T_e)));
+    return sigma_bf * (1 - (nu_edge / nu)) * radfield::radfield(nu, nonemptymgi) * stimfactor;
+  }
   return sigma_bf * (1 - (nu_edge / nu)) * radfield::radfield(nu, nonemptymgi) * (1 - exp(-HOVERKB * nu / T_R));
 }
 
@@ -129,9 +139,8 @@ void calculate_heating_rates(const int nonemptymgi, const float T_e, const float
 // last calculation. It also calculates them when force_gamma_update is set. It calculates the partition functions of
 // these elements at every T_e.
 auto T_e_eqn_heating_minus_cooling(const double T_e, int nonemptymgi, const double t_current,
-                                   HeatingCoolingRates& heatingcoolingrates,
-                                   const std::span<const double> bfheatingcoeffs, double& T_e_last_gamma_update,
-                                   const bool force_gamma_update) -> double {
+                                   HeatingCoolingRates& heatingcoolingrates, const std::span<double> bfheatingcoeffs,
+                                   double& T_e_last_gamma_update, const bool force_gamma_update) -> double {
   const auto T_e_float = static_cast<float>(T_e);
   const bool update_gamma = force_gamma_update || std::abs(T_e - T_e_last_gamma_update) > 0.1 * T_e_last_gamma_update;
   if (update_gamma) {
@@ -166,6 +175,9 @@ auto T_e_eqn_heating_minus_cooling(const double T_e, int nonemptymgi, const doub
 
   // Then calculate heating and cooling rates
   kpkt::calculate_cooling_rates(nonemptymgi, &heatingcoolingrates);
+  if constexpr (BFHEATING_USE_DEPARTURE_RATIO_AND_TE_NOT_LTE_TR) {
+    calculate_bfheatingcoeffs(nonemptymgi, bfheatingcoeffs);
+  }
   calculate_heating_rates(nonemptymgi, T_e_float, clumpfactor * nne, heatingcoolingrates, bfheatingcoeffs);
 
   const auto ntlepton_frac_heating = nonthermal::get_nt_frac_heating(nonemptymgi);
@@ -219,8 +231,15 @@ auto calculate_bfheatingcoeff(const int element, const int ion, const int level,
   const double nu_max_phixs = nu_threshold * last_phixs_nuovernuedge;  // nu of the uppermost point in the phixs table
   const auto photoion_xs = get_phixs_table(element, ion, level);
   const auto T_R = grid::TR_allcells[nonemptymgi];
+  const auto T_e = grid::Te_allcells[nonemptymgi];
+  const double modified_departure_ratio =
+      BFHEATING_USE_DEPARTURE_RATIO_AND_TE_NOT_LTE_TR
+          ? calculate_modified_departure_ratio(nonemptymgi, element, ion, level, phixstargetindex, false)
+          : 1.;
   auto bfheating = integrator(
-      [&](const double nu) { return integrand_bfheatingcoeff(nu, nu_threshold, nonemptymgi, T_R, photoion_xs); },
+      [&](const double nu) {
+        return integrand_bfheatingcoeff(nu, nu_threshold, nonemptymgi, T_R, T_e, modified_departure_ratio, photoion_xs);
+      },
       nu_threshold, nu_max_phixs, epsrel, &error);
 
   bfheating *= FOURPI * get_phixsprobability(element, ion, level, phixstargetindex);
@@ -296,9 +315,10 @@ void calculate_ion_heating_cooling_rates(const int nonemptymgi, HeatingCoolingRa
   }
 }
 
-// Calculate the bound-free heating coefficient of every level in a cell. These depend only on the radiation
-// field, not on T_e or the populations, so they are computed once per cell and reused at every T_e that the
-// temperature solver tries.
+// Calculate the bound-free heating coefficient of every level in a cell. With
+// BFHEATING_USE_DEPARTURE_RATIO_AND_TE_NOT_LTE_TR, the stimulated recombination factor depends on T_e and on
+// the populations, so the temperature solver calls this at every trial T_e. Otherwise the coefficients depend only on
+// the radiation field, and solve_Te_nltepops() calls this once for each cell.
 void calculate_bfheatingcoeffs(int nonemptymgi, std::span<double> bfheatingcoeffs) {
   assert_always(std::ssize(bfheatingcoeffs) == get_includedlevels());
   for (int element = 0; element < get_nelements(); element++) {
@@ -334,7 +354,7 @@ void calculate_bfheatingcoeffs(int nonemptymgi, std::span<double> bfheatingcoeff
 // bound that the residual points to. The function then limits the change from the T_e before this call to a
 // factor of two in each direction. solve_Te_nltepops() calls it once in each pass.
 void call_T_e_finder(const int nonemptymgi, const double t_current, HeatingCoolingRates& heatingcoolingrates,
-                     const std::span<const double> bfheatingcoeffs) {
+                     const std::span<double> bfheatingcoeffs) {
   const int modelgridindex = grid::get_mgi_of_nonemptymgi(nonemptymgi);
   const double T_e_old = grid::Te_allcells[nonemptymgi];
   double T_e_last_gamma_update = 0.;  // zero, so that the first trial calculates the ionisation rates
