@@ -81,8 +81,9 @@ constexpr double nu_1mev = 2.41326e+20;
 constexpr double nu_1p022mev = 2.46636e+20;  // electron-positron pair rest mass energy (pair production threshold)
 constexpr double nu_1p5mev = 3.61990e+20;
 
-void read_gamma_spectrum(const int nucindex, const std::string& filename) {
-  // read the gamma ray lines and store the average energy in gamma rays per nuclear decay
+// Read the gamma-ray lines of a nuclide and store the average energy in gamma rays per decay. Return true if the
+// function added a line for the energy that the table misses.
+auto read_gamma_spectrum(const int nucindex, const std::string& filename) -> bool {
   auto gammafile = istream_required(filename);
   std::string line;
   assert_always(get_noncommentline(gammafile, line));
@@ -105,7 +106,17 @@ void read_gamma_spectrum(const int nucindex, const std::string& filename) {
     E_gamma_avg += en_mev * MEV * prob;
   }
 
+  // The decay data give all electromagnetic radiation of one decay, and a line table can miss lines and X-rays. One
+  // more line then carries the missing energy, as set_trivial_gamma_spectrum() does for a nuclide without a table. A
+  // table can also hold the lines of a short-lived isomer of the daughter, e.g. Ba-137m in the table of Cs-137. The
+  // decay data of the parent exclude these lines, so a larger line sum stays.
+  const double E_gamma_decaydata = decay::nucdecayenergygamma(nucindex);
+  if (E_gamma_decaydata > 1.02 * E_gamma_avg) {
+    gamma_spectra[nucindex].push_back({.energy = E_gamma_decaydata - E_gamma_avg, .probability = 1.});
+    return true;
+  }
   decay::set_nucdecayenergygamma(nucindex, E_gamma_avg);
+  return false;
 }
 
 void set_trivial_gamma_spectrum(const int nucindex) {
@@ -139,6 +150,7 @@ auto get_datafolder_filenames() -> std::array<std::unordered_set<std::string>, d
 void read_gamma_tables() {
   const auto folderfiles = get_datafolder_filenames();
   int tables_found = 0;
+  int tables_with_missing_energy = 0;
   int nuclides_without_table = 0;
   for (int nucindex = 0; nucindex < decay::get_num_nuclides(); nucindex++) {
     gamma_spectra[nucindex].clear();
@@ -163,7 +175,9 @@ void read_gamma_tables() {
         if (folderfiles[folderindex].contains(filename)) {
           tablefound = true;
           tables_found++;
-          read_gamma_spectrum(nucindex, std::format("{}{}", datafolders[folderindex], filename));
+          if (read_gamma_spectrum(nucindex, std::format("{}{}", datafolders[folderindex], filename))) {
+            tables_with_missing_energy++;
+          }
           break;
         }
       }
@@ -199,6 +213,12 @@ void read_gamma_tables() {
   }
 
   printlnlog("[info] read gamma-ray line tables for {} nuclides", tables_found);
+  if (tables_with_missing_energy > 0) {
+    printlnlog(
+        "[info] the gamma-ray lines of {} nuclides carry less than the decay data energy, so each of these nuclides "
+        "gets one more line at the missing energy",
+        tables_with_missing_energy);
+  }
   if (nuclides_without_table > 0) {
     printlnlog(
         "[info] no gamma-ray line table found for {} nuclides with non-zero gamma decay energy, so a single line "
