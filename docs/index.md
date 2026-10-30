@@ -62,11 +62,12 @@ The ARTIS source code is available under a [BSD 3-Clause license](https://github
 
 ## Support
 
-The authors give ARTIS as it is. They do not promise to correct a defect, and they do not promise to answer a
-question. They accept a [pull request](https://github.com/artis-mcrt/artis/pulls) sometimes.
+No one is employed specifically to maintain ARTIS. The developers improve the code when their own research needs it.
+Thus ARTIS comes as it is, and the developers do not promise to correct a defect or to answer a question.
 
-You can open an [issue](https://github.com/artis-mcrt/artis/issues), but it can stay without an answer. The log file
-of rank 0 holds the git version and the compile-time options of the run. Give both in an issue.
+They accept a [pull request](https://github.com/artis-mcrt/artis/pulls) sometimes. You can open an
+[issue](https://github.com/artis-mcrt/artis/issues), but it can stay without an answer. The log file of rank 0 holds
+the git version and the compile-time options of the run. Give both in an issue.
 
 :::{toctree}
 :caption: Getting started
