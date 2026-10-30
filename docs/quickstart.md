@@ -14,7 +14,7 @@ brew install llvm open-mpi pkgconf zstd coreutils
 
 On Linux, get a compiler and an MPI library from your package manager, from a module, or from pixi. The next step
 also needs libzstd and the `zstd` command, because `tests/runtest.sh` builds with `ZSTD=ON` and reads the compressed
-output files. The package of the library is `libzstd-dev` on Debian and Ubuntu, and `libzstd-devel` on Fedora.
+output files. The package of the library is `libzstd-dev` on Debian and Ubuntu, and `libzstd-devel` on Fedora. The scripts of the test also call `curl`, `perl`, `rsync`, and `tar`, and step 5 below calls `rsync` and `tar` again.
 [Installation](installation.md) gives the detail and the version that the build needs.
 
 ## 2. Clone the repository

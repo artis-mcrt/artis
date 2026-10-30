@@ -138,8 +138,9 @@ symlink and the flag is absent. A copied `artisoptions.h` gets no such warning.
 authority. `make OPTIMIZE=OFF` is the quickest test that everything compiles. The other targets
 are `unittests`, `check` (clang-tidy), `sn3dwhole`, and `clean`.
 
-`make` puts the objects in `build/<configuration>/` and makes `sn3d`, `exspec`,
-and `unittests` in the repository root symlinks to that folder. Each symlink
+`make` puts the objects in `build/<configuration>/` and makes a symlink in the
+repository root to each program that it builds. The default target builds
+`sn3d` and `exspec`, so `unittests` gets its symlink from `make unittests`. Each symlink
 points to the most recent build of any configuration. Look at the symlink
 before you copy a binary or start a run. Copy a binary with `cp -L` from the
 repository root. A stale build folder of an older compiler otherwise gives a
