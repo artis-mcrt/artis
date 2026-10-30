@@ -58,15 +58,15 @@ struct ElementPhotoionData {
 // the analytic thermalisation schemes do not transport the gamma rays, so they use neither option
 static_assert(
     GAMMA_THERMALISATION_SCHEME == GammaThermalisationScheme::FREQUENCYDEPENDENT ||
-        (!GAMMA_USE_KAPPA_GREY.has_value() && !GAMMA_USE_XCOM_PHOTOION),
-    "GAMMA_USE_KAPPA_GREY and GAMMA_USE_XCOM_PHOTOION need the FREQUENCYDEPENDENT GAMMA_THERMALISATION_SCHEME");
+        (!GAMMA_USE_KAPPA_GREY.has_value() && !GAMMA_OPACITY_FROM_COMPOSITION),
+    "GAMMA_USE_KAPPA_GREY and GAMMA_OPACITY_FROM_COMPOSITION need the FREQUENCYDEPENDENT GAMMA_THERMALISATION_SCHEME");
 
 // the grey opacity replaces the photoelectric opacity of the XCOM table
-static_assert(!GAMMA_USE_XCOM_PHOTOION || !GAMMA_USE_KAPPA_GREY.has_value(),
-              "GAMMA_USE_XCOM_PHOTOION does nothing with a value of GAMMA_USE_KAPPA_GREY");
+static_assert(!GAMMA_OPACITY_FROM_COMPOSITION || !GAMMA_USE_KAPPA_GREY.has_value(),
+              "GAMMA_OPACITY_FROM_COMPOSITION does nothing with a value of GAMMA_USE_KAPPA_GREY");
 
 // the XCOM table covers Z = 1..xcom_max_atomic_number (indexed by Z - 1)
-constexpr int xcom_max_atomic_number = GAMMA_USE_XCOM_PHOTOION ? 100 : 0;
+constexpr int xcom_max_atomic_number = GAMMA_OPACITY_FROM_COMPOSITION ? 100 : 0;
 
 std::array<std::vector<ElementPhotoionData>, xcom_max_atomic_number> photoion_data;
 
@@ -503,7 +503,7 @@ void compton_scatter(Packet& pkt) {
     return GAMMA_USE_KAPPA_GREY.value() * rho;
   }
 
-  if constexpr (!GAMMA_USE_XCOM_PHOTOION) {
+  if constexpr (!GAMMA_OPACITY_FROM_COMPOSITION) {
     // Cross sections from equation 2 of Ambwani & Sutherland (1988), ApJ, 325, 820-827, doi:10.1086/166052, after
     // Veigele (1973), Atomic Data and Nuclear Data Tables, 5, 51-111, doi:10.1016/S0092-640X(73)80015-4
 
@@ -606,6 +606,15 @@ static_assert((get_sigma_pair_prod_factor(nu_1p5mev) - get_sigma_pair_prod_facto
   }
 
   const double sigma_factor = get_sigma_pair_prod_factor(nu_cmf);
+
+  if constexpr (GAMMA_OPACITY_FROM_COMPOSITION) {
+    // the cross section of an element is sigma_factor * Z^2 * 1e-27 cm^2, so the sum uses the composition of the cell
+    double nn_Zsquared_sum = 0.;
+    for (int element = 0; element < get_nelements(); element++) {
+      nn_Zsquared_sum += grid::get_elem_numberdens(nonemptymgi, element) * pow2(get_atomicnumber(element));
+    }
+    return std::max(sigma_factor * 1e-27 * nn_Zsquared_sum, 0.);
+  }
 
   const double sigma_cmf_si = sigma_factor * 196.e-27;
 
@@ -927,7 +936,7 @@ void guttman_thermalisation(Packet& pkt) {
 
 void init_gamma_data() {
   init_gamma_linelist();
-  if constexpr (GAMMA_USE_XCOM_PHOTOION) {
+  if constexpr (GAMMA_OPACITY_FROM_COMPOSITION) {
     init_xcom_photoion_data();
   }
 }

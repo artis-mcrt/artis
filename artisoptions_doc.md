@@ -374,11 +374,14 @@ constexpr ParticleThermalisationScheme PARTICLE_THERMALISATION_SCHEME;
 // 0.03 cm^2/g. These opacities are constants in gammapkt.cc, and no option changes them.
 constexpr GammaThermalisationScheme GAMMA_THERMALISATION_SCHEME;
 
-// Use the XCOM table for the gamma-ray photoelectric absorption instead of the Si and Fe power laws of
-// Ambwani & Sutherland 1988, ApJ, 325, 820-827, doi:10.1086/166052, eq. 2, after Veigele 1973, Atomic Data and
-// Nuclear Data Tables, 5, 51-111, doi:10.1016/S0092-640X(73)80015-4. This option needs the FREQUENCYDEPENDENT
+// Use the composition of the cell for the gamma-ray absorption. Without this option, the cell is a mix of Si and Fe
+// with the mass fraction of the iron group. The option uses the XCOM table for the photoelectric absorption instead
+// of the Si and Fe power laws of Ambwani & Sutherland 1988, ApJ, 325, 820-827, doi:10.1086/166052, eq. 2, after
+// Veigele 1973, Atomic Data and Nuclear Data Tables, 5, 51-111, doi:10.1016/S0092-640X(73)80015-4. The pair
+// production cross section of each element is the Z^2 fit of the same equation of Ambwani & Sutherland (1988). Each
+// sum covers only the elements of compositiondata.txt. This option needs the FREQUENCYDEPENDENT
 // GAMMA_THERMALISATION_SCHEME and no value of GAMMA_USE_KAPPA_GREY.
-constexpr bool GAMMA_USE_XCOM_PHOTOION;
+constexpr bool GAMMA_OPACITY_FROM_COMPOSITION;
 
 // Replace the frequency-dependent gamma-ray opacity with this grey opacity [cm^2/g]. No value keeps the
 // frequency-dependent opacity. A value needs the FREQUENCYDEPENDENT GAMMA_THERMALISATION_SCHEME.

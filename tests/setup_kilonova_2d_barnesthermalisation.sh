@@ -34,6 +34,9 @@ setoption PARTICLE_THERMALISATION_SCHEME 'ParticleThermalisationScheme::BARNES'
 
 setoption GAMMA_THERMALISATION_SCHEME 'GammaThermalisationScheme::BARNES'
 
+# the composition-dependent gamma opacity needs the FREQUENCYDEPENDENT scheme
+setoption GAMMA_OPACITY_FROM_COMPOSITION 'false'
+
 setoption KEEP_ESCAPED_GAMMAS 'true'
 
 cd -
