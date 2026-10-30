@@ -1,0 +1,892 @@
+# Compile-time options
+
+`artisoptions.h` holds the compile-time options of a run. It is a symlink to one of the `artisoptions_*.h` presets.
+[Option presets](presets.md) says what each preset is for, and [Installation](installation.md) says how to select one.
+
+A change of an option needs a new build. The log file of rank 0 holds the options of the run, so the log of a finished
+simulation shows the values that gave its results.
+
+This page lists every option of the presets, with the value of each preset. `std::optional` options with no value are
+empty, e.g. `GRID_TYPE_OVERRIDE` keeps the grid type of `model.txt`.
+
+## Packets and timesteps
+
+### NUM_PACKETS
+
+`std::int64_t NUM_PACKETS`
+
+The number of energy packets of all MPI ranks together. Each rank gets an equal share, and the first ranks also get one packet each of the remainder. The OpenMP threads of a rank share the packets of that rank.
+
+**Preset values:** classic `5e8`, kilonova_lte `2e8`, kilonova_nlte `2e8`, nltenebular `1e9`, nltephotospheric `9.6e6`
+
+### INITIAL_PACKETS_ON
+
+`bool INITIAL_PACKETS_ON`
+
+Seed the cells at tmin with k-packets that carry the decay energy from t_model to tmin and the snapshot energy at t_model (the q column of model.txt [erg/g]). The q value already includes the adiabatic losses before t_model. The expansion from the decay time to tmin, and from t_model to tmin for q, reduces each energy.
+
+**Preset values:** classic `true`, kilonova_lte `true`, kilonova_nlte `true`, nltenebular `false`, nltephotospheric `true`
+
+### UNIFORM_PELLET_ENERGIES
+
+`bool UNIFORM_PELLET_ENERGIES`
+
+True: every pellet gets the same energy, and the decay time of each pellet is a sample of the decay curve. False: the decay times are uniform between the first decay time and tmax, and the energy of each pellet follows the decay power at its time.
+
+**Every preset:** `true`
+
+### TIMESTEP_SIZE_METHOD
+
+`TimeStepSizeMethod TIMESTEP_SIZE_METHOD`
+
+The timestep scheme:
+
+- LOGARITHMIC;
+
+- CONSTANT;
+
+- LOGARITHMIC_THEN_CONSTANT, a hybrid scheme;
+
+- CONSTANT_THEN_LOGARITHMIC, a hybrid scheme. The hybrid schemes need TIMESTEP_SIZE_CONSTANT_MAX_WIDTH_DAYS and TIMESTEP_SIZE_TRANSITION_TIME_DAYS. The number of constant timesteps must be below the total number of timesteps, or the run stops.
+
+**Every preset:** `TimeStepSizeMethod::LOGARITHMIC`
+
+### TIMESTEP_SIZE_CONSTANT_MAX_WIDTH_DAYS
+
+`std::optional<double> TIMESTEP_SIZE_CONSTANT_MAX_WIDTH_DAYS`
+
+The maximum width of a constant timestep in days. The code divides the constant interval into equal timesteps of at most this width. The hybrid schemes need a positive value. With the other schemes, a value gives a compile error.
+
+**Every preset:** `no value`
+
+### TIMESTEP_SIZE_TRANSITION_TIME_DAYS
+
+`std::optional<double> TIMESTEP_SIZE_TRANSITION_TIME_DAYS`
+
+The time of the change between the two schemes in days. The hybrid schemes need a value between tmin and tmax of input.txt. With the other schemes, a value gives a compile error.
+
+**Every preset:** `no value`
+
+## Grid and composition
+
+### GRID_TYPE_OVERRIDE
+
+`std::optional<GridType> GRID_TYPE_OVERRIDE`
+
+Set GridType::CARTESIAN3D to map a 1D or a 2D model onto a 3D Cartesian grid. No value keeps the grid type of model.txt. GridType::SPHERICAL1D and GridType::CYLINDRICAL2D are valid only when they equal the grid type of model.txt. Any other combination stops the run.
+
+**Every preset:** `no value`
+
+### CUBOID_NCOORDGRID_X
+
+`int CUBOID_NCOORDGRID_X`
+
+The size of the 3D Cartesian grid for a 1D or a 2D model. A 3D model.txt sets the size, and the code ignores these values.
+
+**Preset values:** classic `100`, kilonova_lte `50`, kilonova_nlte `50`, nltenebular `50`, nltephotospheric `50`
+
+### CUBOID_NCOORDGRID_Y
+
+`int CUBOID_NCOORDGRID_Y`
+
+The size of the 3D Cartesian grid for a 1D or a 2D model. A 3D model.txt sets the size, and the code ignores these values.
+
+**Preset values:** classic `100`, kilonova_lte `50`, kilonova_nlte `50`, nltenebular `50`, nltephotospheric `50`
+
+### CUBOID_NCOORDGRID_Z
+
+`int CUBOID_NCOORDGRID_Z`
+
+The size of the 3D Cartesian grid for a 1D or a 2D model. A 3D model.txt sets the size, and the code ignores these values.
+
+**Preset values:** classic `100`, kilonova_lte `50`, kilonova_nlte `50`, nltenebular `50`, nltephotospheric `50`
+
+### FORCE_SPHERICAL_ESCAPE_SURFACE
+
+`bool FORCE_SPHERICAL_ESCAPE_SURFACE`
+
+On a 2D cylindrical or a 3D Cartesian grid, empty every propagation cell with a centre outside the sphere of radius vmax * tmin. A packet that enters a cell with an inner corner outside the sphere escapes at once.
+
+**Every preset:** `false`
+
+### USE_CALCULATED_MEANATOMICWEIGHT
+
+`bool USE_CALCULATED_MEANATOMICWEIGHT`
+
+Convert a mass fraction to a number density with the mean atomic mass of the nuclear composition of the cell, including the stable component, instead of the mass in compositiondata.txt.
+
+**Preset values:** classic `false`, kilonova_lte `true`, kilonova_nlte `true`, nltenebular `false`, nltephotospheric `false`
+
+### USE_MICROCLUMPING
+
+`bool USE_MICROCLUMPING`
+
+Multiply these rates by the clumping factor of the cell:
+
+- collisional excitation, de-excitation, ionisation, and recombination;
+
+- radiative and stimulated recombination, and collisional capture;
+
+- free-free heating and cooling, and bound-free cooling;
+
+- the charge transfer reactions;
+
+- the photoionisation equilibrium of the elements without NLTE levels. The Saha balance is unaffected. With USE_LUT_PHOTOION, the stimulated recombination correction inside the tabulated photoionisation coefficients cannot include the clumping factor of the cell. The stimulated recombination then gets the factor through the direct bound-free integrals and through the departure ratios of the packet opacity.
+
+**Every preset:** `false`
+
+### MICROCLUMPING_FACTOR
+
+`float MICROCLUMPING_FACTOR(double tmid, double rad_vel)`
+
+The clumping factor of a cell from the time and the radial velocity. The code passes globals::timesteps[nts].mid and grid::get_modelcell_mean_radial_pos_tmin(mgi) / globals::tmin [cm/s]. The result must be finite and at least 1. A value of 1 means no clumping. This function has an effect only with USE_MICROCLUMPING.
+
+**Every preset:** `{ return 1.; }`
+
+## Atomic data and limits
+
+### SINGLE_LEVEL_TOP_ION
+
+`bool SINGLE_LEVEL_TOP_ION`
+
+Keep only one level, and no transition, for the highest ion stage of each element.
+
+**Preset values:** classic `true`, kilonova_lte `false`, kilonova_nlte `false`, nltenebular `false`, nltephotospheric `false`
+
+### PHIXS_CLASSIC_NO_INTERPOLATION
+
+`bool PHIXS_CLASSIC_NO_INTERPOLATION`
+
+Take the photoionisation cross section from the table point at or below the frequency, as classic ARTIS did, instead of a linear interpolation.
+
+**Preset values:** classic `true`, kilonova_lte `false`, kilonova_nlte `false`, nltenebular `false`, nltephotospheric `false`
+
+### RATECOEFF_TABLESIZE
+
+`int RATECOEFF_TABLESIZE`
+
+The number of temperature points of the rate coefficient tables, spaced in log T between MINTEMP and MAXTEMP.
+
+**Preset values:** classic `100`, kilonova_lte `200`, kilonova_nlte `200`, nltenebular `100`, nltephotospheric `100`
+
+### MINTEMP
+
+`double MINTEMP`
+
+The limits [K] of T_e, T_J, the initial temperature, and the T_R of the whole spectrum. The code clamps them into this range. The rate coefficient tables cover this range, and the accelerator rejects a step outside it. The bins of the radiation field have their own T_R limits in radfield.cc.
+
+**Preset values:** classic `3500.`, kilonova_lte `500.`, kilonova_nlte `3000.`, nltenebular `1000.`, nltephotospheric `3500.`
+
+### MAXTEMP
+
+`double MAXTEMP`
+
+The limits [K] of T_e, T_J, the initial temperature, and the T_R of the whole spectrum. The code clamps them into this range. The rate coefficient tables cover this range, and the accelerator rejects a step outside it. The bins of the radiation field have their own T_R limits in radfield.cc.
+
+**Preset values:** classic `140000.`, kilonova_lte `150000.`, kilonova_nlte `150000.`, nltenebular `30000.`, nltephotospheric `140000.`
+
+### RECOMBCALIBRATION_T_ELEC
+
+`double RECOMBCALIBRATION_T_ELEC`
+
+The temperature [K] at which the code calibrates the total recombination rate of each ion to recombrates.txt, if that file exists.
+
+**Every preset:** `6000.`
+
+### MINPOP
+
+`double MINPOP`
+
+The lower bound of the level populations, the ion populations, and the electron density nne [cm^-3]. A level population from the NLTE solver has no lower bound, and an absent element has zero population.
+
+**Preset values:** classic `1e-30`, kilonova_lte `1e-40`, kilonova_nlte `1e-40`, nltenebular `1e-40`, nltephotospheric `1e-40`
+
+## Ionisation and excitation
+
+### ION_NLEVELS_EXCITED_NLTE
+
+`int ION_NLEVELS_EXCITED_NLTE(int element_z, int ionstage)`
+
+The number of excited levels of the ion in full NLTE. The ground state and the superlevel do not count.
+
+**Preset values:**
+
+classic
+
+```c++
+{ return 0; }
+```
+
+kilonova_lte
+
+```c++
+{ return 0; }
+```
+
+kilonova_nlte
+
+```c++
+{ if (element_z == 38 || element_z == 39 || element_z == 40) { return 250; } return 0; }
+```
+
+nltenebular
+
+```c++
+{ if (element_z == 26 && ionstage == 2) { return 197; } return 80; }
+```
+
+nltephotospheric
+
+```c++
+{ if (element_z < 20) { return 100; } return 200; }
+```
+
+### NLEVELS_ADD_MISSING_COLLISIONAL_TRANSITIONS
+
+`int NLEVELS_ADD_MISSING_COLLISIONAL_TRANSITIONS(int element_z, int ionstage)`
+
+Add a collisional transition with no radiative rate between each of the lowest n levels and every other level of the ion where the data has none. A level without a transition has no NLTE solution. Return zero for no added transitions.
+
+**Preset values:**
+
+classic
+
+```c++
+{ return 0; }
+```
+
+kilonova_lte
+
+```c++
+{ return ((element_z == 26 || element_z == 28) && ionstage >= 1) ? 80 : 0; }
+```
+
+kilonova_nlte
+
+```c++
+{ // add 2 for the ground state and first level in the superlevel return ION_NLEVELS_EXCITED_NLTE(element_z, ionstage) + 2; }
+```
+
+nltenebular
+
+```c++
+{ return ((element_z == 26 || element_z == 28) && ionstage >= 1) ? 80 : 0; }
+```
+
+nltephotospheric
+
+```c++
+{ return (element_z < 20) ? 100 : 200; }
+```
+
+### LTEPOP_EXCITATION_USE_TJ
+
+`bool LTEPOP_EXCITATION_USE_TJ`
+
+Use the radiation temperature T_J instead of T_e in the Boltzmann factor of the excitation, also for the sublevels of a superlevel. With false, the T_e finder also recomputes the photoionisation rates of the ground continua of the elements without NLTE levels when T_e moves by more than 10 percent.
+
+**Preset values:** classic `true`, kilonova_lte `false`, kilonova_nlte `false`, nltenebular `false`, nltephotospheric `false`
+
+### FORCE_SAHA_ION_BALANCE
+
+`bool FORCE_SAHA_ION_BALANCE(int element_z)`
+
+Force the Saha ionisation balance of an element. The NLTE solver replaces the ground level row of each ion above the lowest solved ion with the Saha constraint, and the elements without NLTE levels use the Saha phi function. The element then gets no charge transfer reaction, no time-dependent ionisation term, and always the LU solver.
+
+**Preset values:**
+
+classic
+
+```c++
+{ return false; }
+```
+
+kilonova_lte
+
+```c++
+{ return element_z < 38 || element_z > 40; }
+```
+
+kilonova_nlte
+
+```c++
+{ return element_z < 38 || element_z > 40; }
+```
+
+nltenebular
+
+```c++
+{ return false; }
+```
+
+nltephotospheric
+
+```c++
+{ return false; }
+```
+
+### NLTE_TE_NNE_MAXITER
+
+`int NLTE_TE_NNE_MAXITER`
+
+The largest iteration number of the NLTE/Te/Spencer-Fano loop of a cell. The first pass is iteration 0, so a cell makes at most NLTE_TE_NNE_MAXITER + 1 passes.
+
+**Every preset:** `30`
+
+### NLTE_TE_NNE_USE_ANDERSON_ACCEL
+
+`bool NLTE_TE_NNE_USE_ANDERSON_ACCEL`
+
+Anderson acceleration (Anderson 1965, Journal of the ACM, 12, 547-560, doi:10.1145/321296.321305) of the NLTE/Te/Spencer-Fano iteration. The iteration maps the state of one pass to the state of the next pass. The state holds the logarithms of the electron temperature, of the electron density, and of the population of each significant ion (see NLTE_SIGNIFICANT_ION_FRACTION in nltepop.h). The charge transfer reactions move population between two elements and hold nne, so the ion populations make that mode visible to the accelerator. update_grid.cc sets the maximum number of ions in the state and the maximum depth.
+
+With the acceleration on, the accelerator combines the last iterates so that the residual of the combination is minimal. The next pass then starts from that combination. False keeps the plain successive substitution.
+
+The accelerator forgets its history when an element falls back to LTE or changes its solved ion range, because the map is then discontinuous. It also forgets its history when the set of significant ions changes, because the state is then different. A new non-thermal solution also clears the history. The loop rejects five kinds of step:
+
+- a step outside [MINTEMP, MAXTEMP];
+
+- a step with an electron density below MINPOP;
+
+- a step with an electron density above the total electron density of the cell;
+
+- a step with an ion population below MINPOP or above the population of its element;
+
+- a step away from the map output that is larger than twice the residual. The convergence test comes before the injection, so a converged cell keeps the output of a plain pass. A cell that reaches NLTE_TE_NNE_MAXITER also ends with a plain pass.
+
+**Preset values:** classic `false`, kilonova_lte `true`, kilonova_nlte `true`, nltenebular `false`, nltephotospheric `false`
+
+### NLTE_TE_NNE_RELTOL
+
+`double NLTE_TE_NNE_RELTOL`
+
+The relative tolerance of the NLTE/Te/Spencer-Fano iteration for T_e and nne. Without the acceleration, the loop stops when the change of each value between two passes is at or below the tolerance. With the acceleration, the loop also needs an estimate of the remaining error at or below the tolerance.
+
+The estimate is change * rho / (1 - rho), where rho is the ratio of the last two changes of that value, limited to [0.5, 0.95]. The first sample after a reset uses rho = 0.5. T_e and nne each get an estimate, and the larger one counts. A pass with a changed map skips the estimate. With the charge transfer reactions or the acceleration, the same value is the tolerance of the ion population test.
+
+**Preset values:** classic `0.04`, kilonova_lte `0.01`, kilonova_nlte `0.01`, nltenebular `0.04`, nltephotospheric `0.04`
+
+### NLTE_USE_GTH_SOLVER
+
+`bool NLTE_USE_GTH_SOLVER`
+
+Solve the NLTE rate matrix with the Grassmann-Taksar-Heyman (GTH) state elimination (Grassmann, Taksar & Heyman 1985, Operations Research, 33, 1107-1116, doi:10.1287/opre.33.5.1107) instead of the LU decomposition with a normalisation row. The rate matrix is the transpose of a Markov chain generator. GTH never reads the diagonal and makes no subtraction, so each population gets a relative accuracy, also when the populations span many orders of magnitude. GTH needs no equilibration, no balance vector, and no iterative refinement. An element with FORCE_SAHA_ION_BALANCE or a time-dependent timestep (see NLTE_TIME_DEPENDENT_FIRST_TIMESTEP) uses the LU solver, because the Saha rows and the time term break the generator structure. The steady-state timesteps still use GTH.
+
+**Preset values:** classic `false`, kilonova_lte `true`, kilonova_nlte `true`, nltenebular `true`, nltephotospheric `false`
+
+### NLTE_TIME_DEPENDENT_FIRST_TIMESTEP
+
+`std::optional<int> NLTE_TIME_DEPENDENT_FIRST_TIMESTEP`
+
+Solve the ionisation balance and the thermal balance with a time term from this timestep on, as the SUMO code does (Pognan, Jerkstrand & Grumer 2022, MNRAS, 510, 3806-3837, doi:10.1093/mnras/stab3674, eqs. 8 and 17). No value keeps the statistical equilibrium and the steady-state thermal balance for the whole run. With a value, the ion populations of each NLTE element and the electron temperature of each cell with a thermal balance get a backward Euler term from the previous grid update. The excitation inside each ion stays in statistical equilibrium.
+
+The solver stores the ion populations as fractions of the element population and rebuilds the previous nne from these fractions and the current element densities. The expansion and the radioactive decay then add no terms, and a decay daughter atom takes the current ionisation distribution of its element. A cell without a previous solution uses the steady-state equations for one timestep. This applies to the first NLTE timestep of the cell, to the timestep after an LTE or thick timestep, and to an element that fell back to LTE.
+
+A time-dependent timestep always uses the LU solver, because the time term breaks the generator structure that NLTE_USE_GTH_SOLVER needs. Elements with FORCE_SAHA_ION_BALANCE and elements without NLTE levels keep their equilibrium ionisation balance. The error of the backward Euler step is first order in width/mid. Keep width/mid at 0.1 or less.
+
+The k-packets carry the same energy budget. Each time a k-packet selects a cooling process, its energy gets the factor 1 - (c_adiabatic + c_heatcapacity) / heating of its cell, limited to [0, 100] (see kpkt.cc). A cell without heating uses the factor 1. The factor applies in every timestep with a thermal balance, also without this option. With this option, the stored thermal energy also stays out of the radiation field. A gas that cools releases its stored energy into the packets, and the factor is then above 1. The code removes no k-packet.
+
+The "cooling:" line of the estimators file does not contain c_heatcapacity, because that file keeps its format. The heating and the cooling of that file therefore do not balance with this option. The rank log gives c_heatcapacity and the k-packet energy factor of each cell.
+
+**Every preset:** `std::nullopt`
+
+### STRICT_POPULATION_CHECKING
+
+`bool STRICT_POPULATION_CHECKING`
+
+Reject an NLTE solution with one of these faults:
+
+- a population that is not finite;
+
+- a ground population below MINPOP;
+
+- a population below -MINPOP;
+
+- a population inversion above STRICT_POPULATION_CHECKING_INVERSION_FACTOR_SOLVER_FAIL. Without this option, the solver replaces a negative population with the Boltzmann population. That population can be much larger, and a partition function can then overflow.
+
+**Preset values:** classic `false`, kilonova_lte `true`, kilonova_nlte `true`, nltenebular `true`, nltephotospheric `true`
+
+### STRICT_POPULATION_CHECKING_INVERSION_FACTOR_SOLVER_FAIL
+
+`float STRICT_POPULATION_CHECKING_INVERSION_FACTOR_SOLVER_FAIL`
+
+The population of a level per statistical weight, relative to the same ratio of the ground level, above which STRICT_POPULATION_CHECKING rejects the solution. This value has an effect only with STRICT_POPULATION_CHECKING.
+
+**Preset values:** classic `1000.`, kilonova_lte `50.`, kilonova_nlte `50.`, nltenebular `50.`, nltephotospheric `50.`
+
+### STRICT_POPULATION_CHECKING_INVERSION_FACTOR_PRINTOUT_WARNING
+
+`float STRICT_POPULATION_CHECKING_INVERSION_FACTOR_PRINTOUT_WARNING`
+
+The same ratio above which the solver logs a warning. This value has an effect only with STRICT_POPULATION_CHECKING.
+
+**Preset values:** classic `10.`, kilonova_lte `2.`, kilonova_nlte `2.`, nltenebular `2.`, nltephotospheric `2.`
+
+### NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION
+
+`std::optional<double> NLTE_LIMIT_ION_STAGES_MAX_LEVELPOP_OVER_ELEMENTPOP_REMOVE_ION`
+
+After a failed NLTE solution of an element, remove the highest ion, or the lowest ion when the highest ion cannot go, and solve again. An ion can go only when its ground population, each NLTE excited population, and its superlevel population are each below this fraction of the element population. With no value, or when no ion can go, the whole element falls back to LTE.
+
+**Preset values:** classic `no value`, kilonova_lte `1e-9`, kilonova_nlte `1e-9`, nltenebular `1e-9`, nltephotospheric `1e-9`
+
+### ENABLE_CHARGE_TRANSFER_REACTIONS
+
+`bool ENABLE_CHARGE_TRANSFER_REACTIONS`
+
+Include the charge transfer reactions in the NLTE population solver. The published fits come from data/chargetransfer.txt, which holds reactions with hydrogen and helium (Kingdon & Ferland 1996, ApJS, 106, 205-211, doi:10.1086/192335). The code estimates the other electron captures from a neutral donor at startup (see chargetransfer.cc). A singly charged ion gets a flat rate of 1e-12 cm3/s, the median of the tabulated rates, for an energy release up to 4 eV. Above 4 eV it gets the radiative floor of 1e-14 cm3/s. An ion with a charge of two or more gets a multichannel Landau-Zener estimate (Butler & Dalgarno 1980, ApJ, 241, 838-843, doi:10.1086/158395), with the levels of the lower ion as the capture channels.
+
+The reverse rates come from detailed balance. The rates enter the NLTE rate matrix as per-ion coefficients between neighbouring ion stages. A reaction is active only when both elements have NLTE levels and a free ionisation balance. Both sides of the reaction then get their transition, and the total ionic charge stays constant. The solver adds no reaction heat to the thermal balance.
+
+**Every preset:** `false`
+
+## Heating and cooling
+
+### COLLISIONAL_HEATING_FROM_LEVELPOPS
+
+`bool COLLISIONAL_HEATING_FROM_LEVELPOPS`
+
+Sum the collisional de-excitation heating from the level populations instead of the Monte Carlo estimator. The estimator also holds the collisional recombination heating. The sum does not.
+
+**Preset values:** classic `false`, kilonova_lte `true`, kilonova_nlte `false`, nltenebular `true`, nltephotospheric `true`
+
+### BFCOOLING_USELEVELPOPNOTIONPOP
+
+`bool BFCOOLING_USELEVELPOPNOTIONPOP`
+
+The bound-free cooling coefficient of each (level, target) continuum is per population of the target level of the upper ion, like the spontaneous recombination coefficient alpha_sp. True multiplies it by the population of that target level. False (classic ARTIS) multiplies it by the population of the whole upper ion. A level with several targets then shares the ion population among them by their LTE fractions, and a level with one target gets the whole ion population.
+
+**Preset values:** classic `false`, kilonova_lte `false`, kilonova_nlte `false`, nltenebular `true`, nltephotospheric `true`
+
+### USE_ION_BFHEATING_ESTIMATORS
+
+`bool USE_ION_BFHEATING_ESTIMATORS`
+
+Store a bound-free heating estimator for each ground continuum. Multiply the analytic bound-free heating of each level by the ratio of the estimator to the analytic rate of the nearest ground continuum.
+
+**Preset values:** classic `true`, kilonova_lte `false`, kilonova_nlte `false`, nltenebular `false`, nltephotospheric `false`
+
+### WRITE_ION_HEATING_COOLING_RATES
+
+`bool WRITE_ION_HEATING_COOLING_RATES`
+
+Write the heating and the cooling rate of each ion to the estimators file, in addition to the totals. A bound-free term belongs to the lower ion of the continuum, and a collisional term belongs to the ion that holds the level. The free-free heating estimator holds no per-ion information, so each ion gets the share that it has in the free-free opacity. The per-ion collisional heating needs COLLISIONAL_HEATING_FROM_LEVELPOPS. A cell without a thermal balance gets no per-ion values.
+
+**Every preset:** `false`
+
+## Radiation field and estimators
+
+### USE_LUT_PHOTOION
+
+`bool USE_LUT_PHOTOION`
+
+Take the photoionisation rate coefficient from a table for a Planck radiation field, instead of an integral over the radiation field of the cell. The table value gets the dilution factor W of the cell and the ratio of the Monte Carlo estimator to the blackbody rate of the nearest ground continuum.
+
+**Preset values:** classic `true`, kilonova_lte `false`, kilonova_nlte `false`, nltenebular `false`, nltephotospheric `false`
+
+### MULTIBIN_RADFIELD_FIRST_TIMESTEP
+
+`std::optional<int> MULTIBIN_RADFIELD_FIRST_TIMESTEP`
+
+Fit a dilute blackbody to each frequency bin of the radiation field, in addition to the fit of the whole spectrum (Shingles et al. 2020, MNRAS, 492, 2029-2043, section 2.2, doi:10.1093/mnras/stz3412). The value is the first timestep at which radfield() reads the fits of the bins, and it must be at or after the first NLTE timestep. The fit of the whole spectrum stays the fallback for a bin without a fit. No value turns off the fits of the bins. A value needs USE_LUT_PHOTOION false, because the tables assume a Planck function. A static_assert checks this.
+
+**Preset values:** classic `no value`, kilonova_lte `no value`, kilonova_nlte `no value`, nltenebular `12`, nltephotospheric `12`
+
+### RADFIELDBINCOUNT
+
+`int RADFIELDBINCOUNT`
+
+The number of bins, including the T_e superbin. This value has an effect only with a value of MULTIBIN_RADFIELD_FIRST_TIMESTEP.
+
+**Every preset:** `256`
+
+### RADFIELDBINS_NU_MIN
+
+`double RADFIELDBINS_NU_MIN`
+
+The frequency range of the regular bins [Hz], e.g. CLIGHT / (lambda[Angstrom] * 1e-8). These values have an effect only with a value of MULTIBIN_RADFIELD_FIRST_TIMESTEP.
+
+**Every preset:** `(CLIGHT / 40000e-8)`
+
+### RADFIELDBINS_NU_MAX
+
+`double RADFIELDBINS_NU_MAX`
+
+The frequency range of the regular bins [Hz], e.g. CLIGHT / (lambda[Angstrom] * 1e-8). These values have an effect only with a value of MULTIBIN_RADFIELD_FIRST_TIMESTEP.
+
+**Every preset:** `(CLIGHT / 1085e-8)`
+
+### RADFIELDBINS_T_E_SUPERBIN_NU_MAX
+
+`double RADFIELDBINS_T_E_SUPERBIN_NU_MAX`
+
+The upper frequency of the T_e superbin, the last bin above RADFIELDBINS_NU_MAX. The temperature of this bin is the electron temperature of the cell. Only its dilution factor comes from the fit. This value has an effect only with a value of MULTIBIN_RADFIELD_FIRST_TIMESTEP.
+
+**Every preset:** `(CLIGHT / 10e-8)`
+
+### DETAILED_LINE_ESTIMATORS_ON
+
+`bool DETAILED_LINE_ESTIMATORS_ON`
+
+Store the Jb_lu estimators of the lines that radfield::init() selects. This needs RPKT_USE_BINNED_OPACITIES false.
+
+**Every preset:** `false`
+
+### DETAILED_BF_ESTIMATORS_FIRST_TIMESTEP
+
+`std::optional<int> DETAILED_BF_ESTIMATORS_FIRST_TIMESTEP`
+
+Store the detailed bound-free rate estimators, and use them from this timestep on, inclusive. No value turns off the detailed estimators. A value needs USE_LUT_PHOTOION false.
+
+**Preset values:** classic `no value`, kilonova_lte `no value`, kilonova_nlte `no value`, nltenebular `13`, nltephotospheric `13`
+
+### DETAILED_BF_ESTIMATORS_LEVEL_SELECTED
+
+`bool DETAILED_BF_ESTIMATORS_LEVEL_SELECTED(int element_z, int ionstage, int level)`
+
+Select the continua that the detailed bound-free estimators track. This function has an effect only with a value of DETAILED_BF_ESTIMATORS_FIRST_TIMESTEP.
+
+**Preset values:**
+
+classic
+
+```c++
+{ return false; }
+```
+
+kilonova_lte
+
+```c++
+{ return false; }
+```
+
+kilonova_nlte
+
+```c++
+{ return false; }
+```
+
+nltenebular
+
+```c++
+{ return true; }
+```
+
+nltephotospheric
+
+```c++
+{ // To only BF estimators for NLTE levels: return level <= ION_NLEVELS_EXCITED_NLTE(element_z, ionstage); }
+```
+
+## Non-thermal particles
+
+### NT_SCHEME
+
+`NonThermalScheme NT_SCHEME`
+
+How the code deposits the energy of the non-thermal leptons. NT_OFF: no non-thermal ionisation. NT_SPENCERFANO: the Spencer-Fano solution (Kozma & Fransson 1992, ApJ, 390, 602-621, doi:10.1086/171311; Shingles et al. 2020, MNRAS, 492, 2029-2043, section 2.5, doi:10.1093/mnras/stz3412). It also gives the non-thermal excitation rates for the NLTE population solver, the macroatom, and the NTLEPTON packets. NT_AXELRODAPPROX: the work function approximation of Axelrod (1980, PhD thesis, University of California, Santa Cruz). The ion balance gets the ionisation rates of that approximation, with no excitation rates. The lepton packets deposit all of their energy as heat, and the thermal balance counts all of it as heat.
+
+**Preset values:** classic `NonThermalScheme::NT_OFF`, kilonova_lte `NonThermalScheme::NT_OFF`, kilonova_nlte `NonThermalScheme::NT_SPENCERFANO`, nltenebular `NonThermalScheme::NT_SPENCERFANO`, nltephotospheric `NonThermalScheme::NT_SPENCERFANO`
+
+### SF_RE_SOLVE_WITHIN_TIMESTEP_MIN_NNEPERION_FRACDIFF
+
+`double SF_RE_SOLVE_WITHIN_TIMESTEP_MIN_NNEPERION_FRACDIFF`
+
+After the LTE timesteps, the code solves the Spencer-Fano equation at the first NLTE iteration of each timestep. A later iteration of the same timestep keeps that solution, unless nne per ion (nne divided by the total ion density) changed by this fraction or more, e.g. 0.5 for 50 percent. A value of 0 gives a new solution at each iteration. This value has an effect only with NT_SPENCERFANO.
+
+**Every preset:** `0.05`
+
+### NTEXCITATION_MAXNLEVELS_LOWER
+
+`int NTEXCITATION_MAXNLEVELS_LOWER`
+
+Include non-thermal excitation only from the lowest NTEXCITATION_MAXNLEVELS_LOWER levels of an ion and to its lowest NTEXCITATION_MAXNLEVELS_UPPER levels, because these transitions slow the solver. A zero in either value includes no transition. These values have an effect only with NT_SPENCERFANO.
+
+**Every preset:** `5`
+
+### NTEXCITATION_MAXNLEVELS_UPPER
+
+`int NTEXCITATION_MAXNLEVELS_UPPER`
+
+Include non-thermal excitation only from the lowest NTEXCITATION_MAXNLEVELS_LOWER levels of an ion and to its lowest NTEXCITATION_MAXNLEVELS_UPPER levels, because these transitions slow the solver. A zero in either value includes no transition. These values have an effect only with NT_SPENCERFANO.
+
+**Every preset:** `250`
+
+### MAX_NT_EXCITATIONS_STORED
+
+`int MAX_NT_EXCITATIONS_STORED`
+
+The number of stored non-thermal excitation rates. The solver keeps the transitions with the largest deposition fractions. A transition outside the list gets no excitation rate, and an NTLEPTON packet that selects one becomes a k-packet. This value has an effect only with NT_SPENCERFANO.
+
+**Every preset:** `25000`
+
+### NT_USE_VALENCE_IONPOTENTIAL
+
+`bool NT_USE_VALENCE_IONPOTENTIAL`
+
+Divide by the valence shell potential of the ion, instead of the potential of each shell, in the effective ionisation potential and the ionisation rates. Not compatible with NT_MAX_AUGER_ELECTRONS above zero. This option has an effect only with NT_SPENCERFANO.
+
+**Every preset:** `false`
+
+### NT_MAX_AUGER_ELECTRONS
+
+`int NT_MAX_AUGER_ELECTRONS`
+
+The maximum number of Auger electrons that one impact ionisation releases, from the shell probabilities. Zero gives one electron per ionisation. This value has an effect only with NT_SPENCERFANO.
+
+**Every preset:** `2`
+
+### SF_AUGER_CONTRIBUTION_ON
+
+`bool SF_AUGER_CONTRIBUTION_ON`
+
+Add the source term of the Auger electrons to the Spencer-Fano equation. This option has an effect only with NT_SPENCERFANO.
+
+**Every preset:** `true`
+
+### PARTICLE_THERMALISATION_SCHEME
+
+`ParticleThermalisationScheme PARTICLE_THERMALISATION_SCHEME`
+
+The thermalisation of the non-thermal particles (positrons, electrons, and alpha particles):
+
+- INSTANTFULLDEPOSITION deposits the particle energy at once;
+
+- TIMEDEPENDENT transports the particles with the Monte Carlo method;
+
+- TIMEDEPENDENT_WITH_ADIABATIC_LOSS adds the adiabatic loss rate E (E + 2 m c^2) / ((E + m c^2) t) of the kinetic energy E to the collisional loss rate. This rate is 2E/t for a non-relativistic particle. Only the collisional share of the lost energy heats the gas;
+
+- TIMEDEPENDENT_WITH_ADIABATIC_LOSS_ULTRARELATIVISTICLIMIT is the same as TIMEDEPENDENT_WITH_ADIABATIC_LOSS, but it uses the ultra-relativistic limit E/t of the adiabatic loss rate. This rate is a factor of 2 too low for a non-relativistic particle, for example an alpha particle from a radioactive decay;
+
+- TIMEDEPENDENTWITHGAMMAPRODUCTS also transports the electrons and positrons from Compton scattering, photoelectric absorption, and pair production, instead of an instant deposition;
+
+- BARNES and WOLLAEGER use analytic thermalisation efficiencies (Barnes, Kasen, Wu & Martínez-Pinedo 2016, ApJ, 829, 110, doi:10.3847/0004-637X/829/2/110; Wollaeger, Korobkin, Fontes, Rosswog, Even & Fryer 2018, MNRAS, 478, 3298-3334, doi:10.1093/mnras/sty1018).
+
+**Preset values:**
+
+classic
+
+```c++
+ParticleThermalisationScheme::INSTANTFULLDEPOSITION
+```
+
+kilonova_lte
+
+```c++
+ParticleThermalisationScheme::TIMEDEPENDENT_WITH_ADIABATIC_LOSS_ULTRARELATIVISTICLIMIT
+```
+
+kilonova_nlte
+
+```c++
+ParticleThermalisationScheme::TIMEDEPENDENT_WITH_ADIABATIC_LOSS_ULTRARELATIVISTICLIMIT
+```
+
+nltenebular
+
+```c++
+ParticleThermalisationScheme::INSTANTFULLDEPOSITION
+```
+
+nltephotospheric
+
+```c++
+ParticleThermalisationScheme::INSTANTFULLDEPOSITION
+```
+
+## Gamma rays
+
+### GAMMA_THERMALISATION_SCHEME
+
+`GammaThermalisationScheme GAMMA_THERMALISATION_SCHEME`
+
+The thermalisation of the gamma-ray photons. FREQUENCYDEPENDENT transports the gamma rays with the Monte Carlo method, with frequency-dependent opacities unless GAMMA_USE_KAPPA_GREY has a value. BARNES, WOLLAEGER, and GUTTMAN deposit a fraction of the gamma energy at once, from an analytic thermalisation efficiency. See PARTICLE_THERMALISATION_SCHEME for the first two references. GUTTMAN: Guttman, Shenhar, Sarkar & Waxman 2024, MNRAS, 533, 994-1011, doi:10.1093/mnras/stae1795.
+
+The deposited fraction is 1 - exp(-tau). BARNES takes tau = (t_ineff / t)^2, with t_ineff from the ejecta mass and the mean ejecta velocity. WOLLAEGER takes the radial optical depth to the edge of the grid of a grey opacity of 0.1 cm^2/g. GUTTMAN takes the mean over 100 random directions of 1 - exp(-tau) with a grey opacity of 0.03 cm^2/g. These opacities are constants in gammapkt.cc, and no option changes them.
+
+**Every preset:** `GammaThermalisationScheme::FREQUENCYDEPENDENT`
+
+### GAMMA_USE_XCOM_PHOTOION
+
+`bool GAMMA_USE_XCOM_PHOTOION`
+
+Use the XCOM table for the gamma-ray photoelectric absorption instead of the Si and Fe power laws of Ambwani & Sutherland 1988, ApJ, 325, 820-827, doi:10.1086/166052, eq. 2, after Veigele 1973, Atomic Data and Nuclear Data Tables, 5, 51-111, doi:10.1016/S0092-640X(73)80015-4. This option needs the FREQUENCYDEPENDENT GAMMA_THERMALISATION_SCHEME and no value of GAMMA_USE_KAPPA_GREY.
+
+**Every preset:** `false`
+
+### GAMMA_USE_KAPPA_GREY
+
+`std::optional<double> GAMMA_USE_KAPPA_GREY`
+
+Replace the frequency-dependent gamma-ray opacity with this grey opacity [cm^2/g]. No value keeps the frequency-dependent opacity. A value needs the FREQUENCYDEPENDENT GAMMA_THERMALISATION_SCHEME.
+
+**Every preset:** `no value`
+
+### KEEP_ESCAPED_GAMMAS
+
+`bool KEEP_ESCAPED_GAMMAS`
+
+Keep the escaped gamma-ray packets in the packet files, and write gamma_light_curve.out and gamma_spec.out.
+
+**Every preset:** `false`
+
+## Real packets
+
+### NU_MIN_R
+
+`double NU_MIN_R`
+
+The frequency limits of the UVOIR spectra and of the blackbody sampling of a k-packet [Hz]
+
+**Preset values:** classic `1e14`, kilonova_lte `1e13`, kilonova_nlte `1e13`, nltenebular `1e13`, nltephotospheric `1e13`
+
+### NU_MAX_R
+
+`double NU_MAX_R`
+
+The frequency limits of the UVOIR spectra and of the blackbody sampling of a k-packet [Hz]
+
+**Preset values:** classic `5e15`, kilonova_lte `5e16`, kilonova_nlte `5e16`, nltenebular `5e15`, nltephotospheric `5e15`
+
+### DIPOLE
+
+`bool DIPOLE`
+
+Sample the electron scattering direction of a real packet from the dipole phase function. False gives isotropic scattering. A virtual packet always uses the dipole function.
+
+**Preset values:** classic `true`, kilonova_lte `false`, kilonova_nlte `false`, nltenebular `false`, nltephotospheric `false`
+
+### POL_ON
+
+`bool POL_ON`
+
+Track the Stokes parameters and write specpol.out, emissionpol.out, and absorptionpol.out.
+
+**Preset values:** classic `true`, kilonova_lte `false`, kilonova_nlte `false`, nltenebular `false`, nltephotospheric `false`
+
+### USE_RELATIVISTIC_DOPPLER_SHIFT
+
+`bool USE_RELATIVISTIC_DOPPLER_SHIFT`
+
+Use the full relativistic Doppler factor instead of the first-order 1 - n.v/c. The line resonance distance and the walk over the binned opacities then use a linear interpolation of the frequency along the path.
+
+**Preset values:** classic `false`, kilonova_lte `true`, kilonova_nlte `true`, nltenebular `false`, nltephotospheric `false`
+
+### RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY
+
+`std::optional<float> RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY`
+
+Replace the macroatom with a thermalisation probability P for each bound-bound absorption, and a scattering with probability 1 - P. Every k-packet in a cell that is not thick then emits a blackbody spectrum weighted with the true absorption opacity. That opacity is the sum of P times the binned opacity, the free-free opacity, and the bound-free opacity of each continuum times 1 - nu_edge / nu. The code therefore computes the binned opacities also without RPKT_USE_BINNED_OPACITIES. A thick cell samples a plain Planck function. No value keeps the macroatom.
+
+**Every preset:** `no value`
+
+### RPKT_GREY_TYPE
+
+`RpktGreyType RPKT_GREY_TYPE`
+
+The grey opacity of a thick cell:
+
+- FEGROUP_APPROX: 0.1 cm^2/g times (0.9 X + 0.1) / (0.9 <X> + 0.1), where X is the initial Fe-group mass fraction of the cell and <X> is the mean of the model;
+
+- TANAKA2020_ELECTRONFRAC: a fit to the electron fraction Y_e (Tanaka, Kato, Gaigalas & Kawaguchi 2020, MNRAS, 496, 1369-1392, doi:10.1093/mnras/staa1576);
+
+- JUST2022_TEMP_LANTHANIDEFRAC: a fit to the temperature and the lanthanide fraction (Just, Kullmann, Goriely, Bauswein, Janka & Collins 2022, MNRAS, 510, 2820-2840, doi:10.1093/mnras/stab3327). The code recomputes this opacity at each timestep.
+
+**Preset values:** classic `RpktGreyType::FEGROUP_APPROX`, kilonova_lte `RpktGreyType::TANAKA2020_ELECTRONFRAC`, kilonova_nlte `RpktGreyType::TANAKA2020_ELECTRONFRAC`, nltenebular `RpktGreyType::FEGROUP_APPROX`, nltephotospheric `RpktGreyType::FEGROUP_APPROX`
+
+### SAMPLE_RPKT_EMISSION
+
+`bool SAMPLE_RPKT_EMISSION`
+
+Keep one r-packet emission of each packet. Sample with equal probability from the emissions that set emissiontype. A scattering keeps emissiontype and does not enter the sample. The packet files get the count of these emissions (nemissiontype_updates) and these values of the sampled emission:
+
+- emissiontype;
+
+- absorptiontype;
+
+- absorptionfreq;
+
+- em_pos;
+
+- em_time. Each sample represents nemissiontype_updates emissions.
+
+**Every preset:** `false`
+
+## Virtual packets
+
+### VPKT_ON
+
+`bool VPKT_ON`
+
+Enable the virtual packets that vpkt.txt sets up. This needs POL_ON. A GPU build does not support this option.
+
+**Every preset:** `false`
+
+### VPKT_WRITE_CONTRIBS
+
+`bool VPKT_WRITE_CONTRIBS`
+
+Write a line to the file vpackets/vpackets_<rank>.out for each emission of a real packet in a thin cell whose virtual packets escape in at least one observer direction of vpkt.txt. The line holds the arrival time, the frequency, and the energy of the contribution to each direction. This needs VPKT_ON.
+
+**Every preset:** `false`
+
+## Binned opacities
+
+### RPKT_USE_BINNED_OPACITIES
+
+`bool RPKT_USE_BINNED_OPACITIES`
+
+Use binned opacities instead of line-by-line opacities for the real packets in the cells that are not thick. Not compatible with VPKT_ON. The bins span 60 to 40000 Angstroms in steps of 20 Angstroms (see rpkt.h). A line outside this range adds to no bin, so the binned opacities give it no opacity.
+
+**Every preset:** `false`
+
+### VPKT_USE_BINNED_OPACITIES
+
+`bool VPKT_USE_BINNED_OPACITIES`
+
+Use binned opacities instead of line-by-line opacities for the virtual packets. Set BINNED_OPACITY_LINE_WEIGHT to LINEBINNED with this option. With a different weight, sn3d writes a warning to the log. LINEBINNED needs an RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY of zero or no value (see BINNED_OPACITY_LINE_WEIGHT). This needs VPKT_ON.
+
+**Every preset:** `false`
+
+### BINNED_OPACITY_LINE_WEIGHT
+
+`BinnedOpacityLineWeight BINNED_OPACITY_LINE_WEIGHT`
+
+The line weight in the binned opacity of each wavelength bin of RPKT_USE_BINNED_OPACITIES, VPKT_USE_BINNED_OPACITIES, and RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY. A line with the Sobolev optical depth tau adds (lambda / delta_lambda) * weight to the sum of its bin:
+
+- EXPANSION: 1 - exp(-tau) (Eastman & Pinto 1993, ApJ, 412, 731-751, doi:10.1086/172957).
+
+- LINEBINNEDCAPPED: min(LINE_BINNED_CAPPED_TAU_MAX, tau), the line-binned opacity with a maximum for each line.
+
+- LINEBINNED: tau, the line-binned opacity (Fontes, Fryer, Hungerford, Wollaeger & Korobkin 2020, MNRAS, 493, 4143-4171, doi:10.1093/mnras/staa485). With a nonzero RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY, LINEBINNEDCAPPED and LINEBINNED need RPKT_USE_BINNED_OPACITIES. A line-by-line r-packet absorbs the fraction 1 - exp(-tau) in each line, so the thermal emission must then use EXPANSION.
+
+For the virtual packets, LINEBINNED gives nearly the line-by-line optical depth of a bin that the packet fully crosses. EXPANSION gives a smaller optical depth for every line, and the largest difference for a line with tau > 1. LINEBINNEDCAPPED gives a smaller optical depth for a line with tau > LINE_BINNED_CAPPED_TAU_MAX.
+
+**Every preset:** `BinnedOpacityLineWeight::EXPANSION`
+
+### LINE_BINNED_CAPPED_TAU_MAX
+
+`double LINE_BINNED_CAPPED_TAU_MAX`
+
+The maximum of the Sobolev optical depth tau of each line in the LINEBINNEDCAPPED weight, e.g. 1. It must be above zero. This value has an effect only with LINEBINNEDCAPPED.
+
+**Every preset:** `1.`
+
+## Output files
+
+### WRITE_COMBINED_ALLRANK_OUT_FILES
+
+`bool WRITE_COMBINED_ALLRANK_OUT_FILES`
+
+Write the text of all MPI ranks into one combined file of the job folder for each of these types:
+
+- estimators_allranks.out;
+
+- nlte_allranks.out;
+
+- radfield_allranks.out;
+
+- macroatom_allranks.out, only with the constant LOG_MACROATOM in macroatom.cc. Each rank then keeps the macroatom lines of a whole timestep in memory. Without this option, each rank writes its own files, e.g. estimators_<rank>.out. At each timestep, each rank writes its text into a buffer, and rank 0 then writes the buffers in the order of the ranks. In a build with libzstd, each rank compresses its own buffer into one zstd frame. A combined file thus holds the timesteps in their order, and in each timestep the text of the ranks in their order.
+
+The nlte, radfield, and macroatom files start with one header line. scripts/combine_allrank_out_files.py makes the same combined files from the files of the ranks.
+
+**Every preset:** `true`
