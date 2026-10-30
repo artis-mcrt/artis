@@ -1491,33 +1491,52 @@ auto calculate_nt_excitation_ratecoeff_perdeposition(const std::array<double, SF
 }
 
 // Select an ion to ionise, weighted by the fraction of the deposition energy that ionises each ion in the
-// Spencer-Fano solution. Returns {-1, -1} if no ion can be selected because the cell has no Spencer-Fano solution
-// (the caller then deposits the packet as heat).
+// Spencer-Fano solution. A cell without a Spencer-Fano solution has the Axelrod fractions and only single
+// ionisations. The weight of an ion is then its ionisation rate with the work per ion pair, times the energy from its
+// ground level to the ground level of the next ion. Returns {-1, -1} if every weight is zero, e.g. because the
+// deposition rate density is zero (the caller then deposits the packet as heat).
 auto select_nt_ionisation(const int nonemptymgi, rngstate_type& rngstate) -> std::tuple<int, int> {
   const auto cell_ion_data = get_cell_allions_data(nonemptymgi);
   const auto frac_deposition_ionisation_of_ion = [](const NonThermalSolutionIon& iondata) {
     return std::ranges::fold_left(iondata.frac_deposition_ionisation_by_numaugerelec, 0., std::plus<>());
   };
-  const double frac_deposition_ionisation_total = std::ranges::fold_left(
-      cell_ion_data | std::views::transform(frac_deposition_ionisation_of_ion), 0., std::plus<>());
+  const bool has_spencerfano_ionisation_energies = std::ranges::any_of(
+      cell_ion_data, [&](const auto& iondata) { return frac_deposition_ionisation_of_ion(iondata) > 0.; });
 
-  if (!(frac_deposition_ionisation_total > 0.)) {
+  const auto ionisation_energy_weight = [&](const int uniqueionindex) -> double {
+    if (has_spencerfano_ionisation_energies) {
+      return frac_deposition_ionisation_of_ion(cell_ion_data[uniqueionindex]);
+    }
+    const auto [element, ion] = get_ionfromuniqueionindex(uniqueionindex);
+    if (ion >= get_nions(element) - 1) {
+      return 0.;
+    }
+    return get_nnion(nonemptymgi, element, ion) * nt_ionisation_ratecoeff_wfapprox(nonemptymgi, element, ion) *
+           (epsilon(element, ion + 1, 0) - epsilon(element, ion, 0));
+  };
+
+  double ionisation_energy_weight_total = 0.;
+  for (int uniqueionindex = 0; uniqueionindex < std::ssize(cell_ion_data); uniqueionindex++) {
+    ionisation_energy_weight_total += ionisation_energy_weight(uniqueionindex);
+  }
+
+  if (!(ionisation_energy_weight_total > 0.)) {
     return {-1, -1};
   }
 
   const double zrand = rng_uniform(rngstate);
 
-  double frac_deposition_ionisation_sum = 0.;
+  double ionisation_energy_weight_sum = 0.;
   for (int uniqueionindex = 0; uniqueionindex < std::ssize(cell_ion_data); uniqueionindex++) {
-    frac_deposition_ionisation_sum += frac_deposition_ionisation_of_ion(cell_ion_data[uniqueionindex]);
-    // Strict comparison ensures that zrand == 0 skips leading ions with zero energy.
-    if (frac_deposition_ionisation_sum > zrand * frac_deposition_ionisation_total) {
+    ionisation_energy_weight_sum += ionisation_energy_weight(uniqueionindex);
+    // Strict comparison ensures that zrand == 0 skips leading ions with zero weight.
+    if (ionisation_energy_weight_sum > zrand * ionisation_energy_weight_total) {
       return get_ionfromuniqueionindex(uniqueionindex);
     }
   }
   fatal_crash("select_nt_ionisation: no ion selected in cell {}: sum {} zrand {} total {}",
-              grid::get_mgi_of_nonemptymgi(nonemptymgi), frac_deposition_ionisation_sum, zrand,
-              frac_deposition_ionisation_total);
+              grid::get_mgi_of_nonemptymgi(nonemptymgi), ionisation_energy_weight_sum, zrand,
+              ionisation_energy_weight_total);
 }
 
 void analyse_sf_solution(const int nonemptymgi, const int timestep, const std::array<double, SFPTS>& yfunc,
@@ -2338,17 +2357,25 @@ DEVICE_FUNC auto nt_random_upperion(const int nonemptymgi, const int element, co
   if (NT_SCHEME == NonThermalScheme::NT_SPENCERFANO && NT_MAX_AUGER_ELECTRONS > 0) {
     // With weight_by_ionisation_energy, the weight of an upper ion is the fraction of the deposition energy that
     // ionises lowerion to upperion in the Spencer-Fano solution, as in select_nt_ionisation(). Without it, the weight
-    // is the ionisation probability alone.
+    // is the ionisation probability alone. A cell without a Spencer-Fano solution has no such energies, and its
+    // ionisation probabilities give only single ionisations, as in select_nt_ionisation().
     const auto& frac_deposition_ionisation_by_numaugerelec =
         get_cell_allions_data(nonemptymgi)[get_uniqueionindex(element, lowerion)]
             .frac_deposition_ionisation_by_numaugerelec;
     const int nupperions = nt_ionisation_maxupperion(element, lowerion) - lowerion;
+    bool use_spencerfano_ionisation_energies = false;
+    for (int numaugerelec = 0; numaugerelec < nupperions; numaugerelec++) {
+      if (weight_by_ionisation_energy && frac_deposition_ionisation_by_numaugerelec[numaugerelec] > 0.) {
+        use_spencerfano_ionisation_energies = true;
+      }
+    }
     std::array<double, NT_MAX_AUGER_ELECTRONS + 1> cumulative_weight_by_numaugerelec{};
     double weight_sum = 0.;
     for (int numaugerelec = 0; numaugerelec < nupperions; numaugerelec++) {
-      weight_sum += weight_by_ionisation_energy ? frac_deposition_ionisation_by_numaugerelec[numaugerelec]
-                                                : nt_ionisation_upperion_probability(nonemptymgi, element, lowerion,
-                                                                                     lowerion + 1 + numaugerelec);
+      weight_sum +=
+          use_spencerfano_ionisation_energies
+              ? frac_deposition_ionisation_by_numaugerelec[numaugerelec]
+              : nt_ionisation_upperion_probability(nonemptymgi, element, lowerion, lowerion + 1 + numaugerelec);
       cumulative_weight_by_numaugerelec[numaugerelec] = weight_sum;
     }
     assert_always(weight_sum > 0.);
@@ -2452,8 +2479,8 @@ DEVICE_FUNC void do_ntlepton_deposit(Packet& pkt) {
         return;
       }
 
-      // No ion could be selected because the cell has no Spencer-Fano solution, e.g. because the deposition rate
-      // density was zero at the last grid update. Deposit the packet as heat
+      // No ion could be selected because every weight is zero, e.g. because the deposition rate density was zero
+      // at the last grid update. Deposit the packet as heat
       // rather than falling through to the excitation block below, where the outer zrand (< frac_ionisation)
       // would be an invalid position in the excitation list.
       pkt.type = TYPE_KPKT;
