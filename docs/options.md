@@ -226,19 +226,34 @@ kilonova_lte
 kilonova_nlte
 
 ```c++
-{ if (element_z == 38 || element_z == 39 || element_z == 40) { return 250; } return 0; }
+{
+  if (element_z == 38 || element_z == 39 || element_z == 40) {
+    return 250;
+  }
+  return 0;
+}
 ```
 
 nltenebular
 
 ```c++
-{ if (element_z == 26 && ionstage == 2) { return 197; } return 80; }
+{
+  if (element_z == 26 && ionstage == 2) {
+    return 197;
+  }
+  return 80;
+}
 ```
 
 nltephotospheric
 
 ```c++
-{ if (element_z < 20) { return 100; } return 200; }
+{
+  if (element_z < 20) {
+    return 100;
+  }
+  return 200;
+}
 ```
 
 ### NLEVELS_ADD_MISSING_COLLISIONAL_TRANSITIONS
@@ -258,25 +273,34 @@ classic
 kilonova_lte
 
 ```c++
-{ return ((element_z == 26 || element_z == 28) && ionstage >= 1) ? 80 : 0; }
+{
+  return ((element_z == 26 || element_z == 28) && ionstage >= 1) ? 80 : 0;
+}
 ```
 
 kilonova_nlte
 
 ```c++
-{ // add 2 for the ground state and first level in the superlevel return ION_NLEVELS_EXCITED_NLTE(element_z, ionstage) + 2; }
+{
+  // add 2 for the ground state and first level in the superlevel
+  return ION_NLEVELS_EXCITED_NLTE(element_z, ionstage) + 2;
+}
 ```
 
 nltenebular
 
 ```c++
-{ return ((element_z == 26 || element_z == 28) && ionstage >= 1) ? 80 : 0; }
+{
+  return ((element_z == 26 || element_z == 28) && ionstage >= 1) ? 80 : 0;
+}
 ```
 
 nltephotospheric
 
 ```c++
-{ return (element_z < 20) ? 100 : 200; }
+{
+  return (element_z < 20) ? 100 : 200;
+}
 ```
 
 ### LTEPOP_EXCITATION_USE_TJ
@@ -574,7 +598,10 @@ nltenebular
 nltephotospheric
 
 ```c++
-{ // To only BF estimators for NLTE levels: return level <= ION_NLEVELS_EXCITED_NLTE(element_z, ionstage); }
+{
+  // To only BF estimators for NLTE levels:
+  return level <= ION_NLEVELS_EXCITED_NLTE(element_z, ionstage);
+}
 ```
 
 ## Non-thermal particles

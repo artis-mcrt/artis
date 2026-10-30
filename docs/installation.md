@@ -19,10 +19,10 @@ export OMPI_CXX=g++
 Install the LLVM tools, Open MPI, and the other dependencies with homebrew:
 
 ```sh
-brew install llvm open-mpi pkgconf zstd prek
+brew install llvm open-mpi pkgconf zstd coreutils prek
 ```
 
-The homebrew LLVM gives clang, clang-format, clang-tidy, and the clangd language server.
+The homebrew LLVM gives clang, clang-format, clang-tidy, and the clangd language server. coreutils gives the `md5sum` command, which the end-to-end tests need (see [Testing](testing.md)).
 
 ## Linux
 

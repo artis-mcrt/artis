@@ -7,8 +7,10 @@ This page gives a first simulation, a check of the results, and a plot. Everythi
 On macOS:
 
 ```sh
-brew install llvm open-mpi pkgconf zstd
+brew install llvm open-mpi pkgconf zstd coreutils
 ```
+
+`tests/runtest.sh` needs the `md5sum` command of coreutils for the next step.
 
 On Linux, get a compiler and an MPI library from your package manager, from a module, or from pixi. [Installation](installation.md) gives the detail and the version that the build needs.
 
@@ -70,10 +72,13 @@ Each simulation has its own model folder. Keep the source code in a subfolder `a
 mkdir ~/mymodel
 cd ~/mymodel
 ln -s ~/artis artis
-rsync -a --exclude 'results_md5_*' artis/tests/kilonova_1d_inputfiles/ ./
 tar -xf artis/tests/atomicdata_feconi.tar.xz
+rsync -a --exclude 'results_md5_*' artis/tests/kilonova_1d_inputfiles/ ./
 cp input-newrun.txt input.txt
 ```
+
+The archive and the input folder both hold a `compositiondata.txt`. The archive comes first, so the file of the test
+model wins, as it does in the test. That file keeps ten elements, and the file of the archive keeps three.
 
 For a production run, clone the repository into the model folder in place of the symlink (see [Runs on a cluster](clusters.md)).
 

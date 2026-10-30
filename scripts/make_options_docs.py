@@ -111,7 +111,8 @@ def parse_doc(text: str) -> list[Group]:
 def find_preset_value(preset_text: str, name: str) -> str | None:
     """Give the value that a preset sets for the option, "" for a declaration with no value, or None when absent.
 
-    The value of a function option is its body with the braces. The result holds no line break.
+    The value of a function option is its body with the braces, and it keeps its line breaks. A body that holds a
+    comment needs them, because one line would put the code after the "//" of the comment.
     """
     match = re.search(rf"^constexpr\b[^;{{=\n]*?\b{re.escape(name)}\b", preset_text, re.MULTILINE)
     if match is None:
@@ -132,7 +133,7 @@ def find_preset_value(preset_text: str, name: str) -> str | None:
         for end, character in enumerate(preset_text[position:], start=position):
             depth += {"{": 1, "}": -1}.get(character, 0)
             if depth == 0:
-                return " ".join(preset_text[position : end + 1].split())
+                return preset_text[position : end + 1]
         message = f"the body of the function option {name} has no closing brace"
         raise ValueError(message)
     if preset_text[position] == "=":
@@ -150,9 +151,10 @@ def preset_values(presets: dict[str, str], option: Option) -> list[str]:
         message = f"the presets {', '.join(missing)} declare no option {option.name}"
         raise ValueError(message)
     shown = {preset: value or "no value" for preset, value in values.items()}
-    if len(set(shown.values())) == 1:
+    one_line = all("\n" not in value for value in shown.values())
+    if len(set(shown.values())) == 1 and one_line:
         return [f"**Every preset:** `{next(iter(shown.values()))}`"]
-    if all(len(value) <= 40 for value in shown.values()):
+    if one_line and all(len(value) <= 40 for value in shown.values()):
         return ["**Preset values:** " + ", ".join(f"{preset} `{value}`" for preset, value in shown.items())]
     blocks: list[str] = ["**Preset values:**"]
     blocks.extend(f"{preset}\n\n```c++\n{value}\n```" for preset, value in shown.items())
