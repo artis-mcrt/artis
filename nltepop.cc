@@ -3,8 +3,8 @@
 // for all levels of all ions of an element and solves for the level populations. With
 // NLTE_TIME_DEPENDENT_FIRST_TIMESTEP, the ion populations get a backward Euler time term.
 //
-// The NLTE ionisation and population solver is described by Shingles et al. (2020), MNRAS, 492,
-// 2029-2043, section 2.3, doi:10.1093/mnras/stz3412.
+// Shingles et al. (2020), MNRAS, 492, 2029-2043, section 2.3, doi:10.1093/mnras/stz3412, describe the NLTE
+// ionisation and population solver.
 
 #include <algorithm>
 #include <chrono>

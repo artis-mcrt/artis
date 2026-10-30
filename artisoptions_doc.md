@@ -447,7 +447,8 @@ constexpr bool VPKT_WRITE_CONTRIBS;
 // --- Binned opacities ---
 
 // Use binned opacities instead of line-by-line opacities for the real packets in the cells that are not
-// thick. Not compatible with VPKT_ON.
+// thick. Not compatible with VPKT_ON. The bins span 60 to 40000 Angstroms in steps of 20 Angstroms (see
+// rpkt.h). A line outside this range adds to no bin, so the binned opacities give it no opacity.
 constexpr bool RPKT_USE_BINNED_OPACITIES;
 
 // Use binned opacities instead of line-by-line opacities for the virtual packets. Set BINNED_OPACITY_LINE_WEIGHT to

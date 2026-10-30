@@ -1905,13 +1905,14 @@ DEVICE_FUNC auto get_modelgridtype() -> GridType {
 
 // get the index in the list of non-empty cells for a given model grid cell
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_nonemptymgi_of_mgi(const int mgi) -> int {
-  assert_testmodeonly(get_nonempty_npts_model() > 0);
-  assert_testmodeonly(mgi >= 0);
-  assert_testmodeonly(mgi < get_npts_model());
+  assert_always(get_nonempty_npts_model() > 0);
+  assert_always(mgi >= 0);
+  assert_always(mgi < get_npts_model());
 
+  // the only test for an empty model cell, so an optimised build must also stop here
   const int nonemptymgi = nonemptymgi_of_mgi[mgi];
-  assert_testmodeonly(nonemptymgi >= 0);
-  assert_testmodeonly(nonemptymgi < get_nonempty_npts_model());
+  assert_always(nonemptymgi >= 0);
+  assert_always(nonemptymgi < get_nonempty_npts_model());
 
   return nonemptymgi;
 }
@@ -2034,9 +2035,10 @@ void do_MPI_Bcast_nlte_solution_ranges(const ptrdiff_t nstart_nonempty, const pt
     }
 
     case RpktGreyType::JUST2022_TEMP_LANTHANIDEFRAC: {
-      // grey opacity used in Just+2022, https://ui.adsabs.harvard.edu/abs/2022MNRAS.510.2820J/abstract
-      // kappa is a simple analytic function of temperature and lanthanide mass fraction
-      // adapted to best fit lightcurves from Kasen+2017 in ALCAR simulations
+      // grey opacity of Just, Kullmann, Goriely, Bauswein, Janka & Collins (2022), MNRAS, 510, 2820-2840,
+      // doi:10.1093/mnras/stab3327. kappa is a simple analytic function of temperature and lanthanide mass fraction,
+      // adapted to best fit the light curves of Kasen, Metzger, Barnes, Quataert & Ramirez-Ruiz (2017), Nature, 551,
+      // 80-84, doi:10.1038/nature24453, in ALCAR simulations
       const double T_rad = TR_allcells[nonemptymgi];
       double X_lan = 0.;
       for (int element = 0; element < get_nelements(); element++) {
@@ -2420,33 +2422,25 @@ void write_grid_restart_data(const int timestep) {
 
 // get lowest modelgridindex assigned to this rank (for update_grid and output files)
 auto get_nstart(const int rank) -> int {
-  if (ranks_ndo.empty()) {
-    setup_nstart_ndo();
-  }
+  assert_testmodeonly(!ranks_ndo.empty());
   return ranks_nstart[rank];
 }
 
 // get lowest nonemptymgi assigned to this rank (for update_grid and output files)
 auto get_nstart_nonempty(const int rank) -> int {
-  if (ranks_ndo.empty()) {
-    setup_nstart_ndo();
-  }
+  assert_testmodeonly(!ranks_ndo.empty());
   return ranks_nstart_nonempty[rank];
 }
 
 // get the count of modelgridindices assigned to this rank (for update_grid and output files)
 auto get_ndo(const int rank) -> int {
-  if (ranks_ndo.empty()) {
-    setup_nstart_ndo();
-  }
+  assert_testmodeonly(!ranks_ndo.empty());
   return ranks_ndo[rank];
 }
 
 // get the count of nonemptymgi assigned to this rank (for update_grid and output files)
 auto get_ndo_nonempty(const int rank) -> int {
-  if (ranks_ndo.empty()) {
-    setup_nstart_ndo();
-  }
+  assert_testmodeonly(!ranks_ndo.empty());
   return ranks_ndo_nonempty[rank];
 }
 
@@ -2518,6 +2512,9 @@ void init_grid() {
   }
 
   allocate_nonemptymodelcells();
+
+  // the rank ranges need the count of the non-empty cells
+  setup_nstart_ndo();
 
   // when the model grid and the propagation grid differ, rescale the nuclide mass fractions so that the total mass
   // of each nuclide matches the input model again. Every propagation cell takes the model shell that its centre falls
@@ -2675,18 +2672,14 @@ DEVICE_FUNC void snap_pos_to_cell(Vec3d& pos, const double time, const int celli
   // dir * CLIGHT_PROP converted from xyz to grid coordinates
   const auto pktvelgridcoord = get_gridcoords_vel_from_xyz_pos_dir(pos, dir, pktposgridcoord, prop_gridtype);
 
-  const auto [cellcoordidx, cellcoordmin, cellcoordmax] = [cellindex, prop_gridtype] {
-    auto _cellcoordidx = std::array<int, 3>{};
-    auto _cellcoordmin = std::array<double, 3>{};
-    auto _cellcoordmax = std::array<double, 3>{};
-    for (int d = 0; d < get_ndim(prop_gridtype); d++) {
-      _cellcoordidx[d] = get_cellcoordindex(cellindex, d);
-
-      _cellcoordmin[d] = get_cellcoordmin(cellindex, d);
-      _cellcoordmax[d] = get_cellcoordmax(cellindex, d);
-    }
-    return std::make_tuple(_cellcoordidx, _cellcoordmin, _cellcoordmax);
-  }();
+  std::array<int, 3> cellcoordidx{};
+  std::array<double, 3> cellcoordmin{};
+  std::array<double, 3> cellcoordmax{};
+  for (int d = 0; d < get_ndim(prop_gridtype); d++) {
+    cellcoordidx[d] = get_cellcoordindex(cellindex, d);
+    cellcoordmin[d] = get_cellcoordmin(cellindex, d);
+    cellcoordmax[d] = get_cellcoordmax(cellindex, d);
+  }
 
   {
     for (int d = 0; d < get_ndim(prop_gridtype); d++) {
@@ -2698,7 +2691,7 @@ DEVICE_FUNC void snap_pos_to_cell(Vec3d& pos, const double time, const int celli
 
       if constexpr (TESTMODE) {
         bool isoutside_error = false;
-        [[maybe_unused]] double delta = 0.;
+        double delta = 0.;
         if (pos_component_vel_relative_to_flow) {
           // check if packet pos is above cell max while moving in the positive direction relative to the grid flow
           const double boundaryposmax = cellcoordmax[d] / globals::tmin * tstart;
@@ -2712,16 +2705,12 @@ DEVICE_FUNC void snap_pos_to_cell(Vec3d& pos, const double time, const int celli
         }
 
         if (isoutside_error) {
-          MY_IF_HOST(
-              printlnlog("[error] timestep {}: packet outside coord {} {}{} boundary of cell {} by delta {:g}. vel "
-                         "{:g} initpos "
-                         "{:g} cellcoordmin {:g} cellcoordmax {:g} dir [{:g}, {:g}, {:g}] tmin {:g} s tstart {:g} s",
-                         globals::timestep, d, pos_component_vel_relative_to_flow ? '+' : '-',
-                         get_coordlabel(prop_gridtype, d), cellindex, delta, pktvelgridcoord[d], pktposgridcoord[d],
-                         cellcoordmin[d] / globals::tmin * tstart, cellcoordmax[d] / globals::tmin * tstart, dir[0],
-                         dir[1], dir[2], globals::tmin, tstart););
-
-          assert_always(!isoutside_error);
+          fatal_crash(
+              "timestep {}: packet outside coord {} {}{} boundary of cell {} by delta {:g}. vel {:g} initpos {:g} "
+              "cellcoordmin {:g} cellcoordmax {:g} dir [{:g}, {:g}, {:g}] tmin {:g} s tstart {:g} s",
+              globals::timestep, d, pos_component_vel_relative_to_flow ? '+' : '-', get_coordlabel(prop_gridtype, d),
+              cellindex, delta, pktvelgridcoord[d], pktposgridcoord[d], cellcoordmin[d] / globals::tmin * tstart,
+              cellcoordmax[d] / globals::tmin * tstart, dir[0], dir[1], dir[2], globals::tmin, tstart);
         }
       }
     }
@@ -2916,13 +2905,11 @@ DEVICE_FUNC void snap_pos_to_cell(Vec3d& pos, const double time, const int celli
       // packets only when the cell diagonal spans from below vmax to above CLIGHT, so a finer
       // grid removes this stop.
       if (get_propcell_modelgridindex(cellindex) >= 0) {
-        MY_IF_HOST(
-            printlnlog(
-                "[error] a packet cannot reach any boundary of matter cell {}, because every boundary recedes faster "
-                "than light. The cell reaches from inside the escape surface to beyond the light speed, so the grid is "
-                "too coarse. Use more propagation cells per axis.",
-                cellindex););
-        assert_always(false);
+        fatal_crash(
+            "a packet cannot reach any boundary of matter cell {}, because every boundary recedes faster than light. "
+            "The cell reaches from inside the escape surface to beyond the light speed, so the grid is too coarse. Use "
+            "more propagation cells per axis.",
+            cellindex);
       }
 
       const double r_surface = globals::rmax * tstart / globals::tmin;
