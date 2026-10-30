@@ -247,12 +247,28 @@ with a different gcc version, but no test covers that. Examine a local mismatch
 as a real change of the results first. Let CI give the decision.
 
 A change that must not alter the results must give identical checksums in CI.
-If a change alters the numerical results for a good reason, the stored
-checksums must be regenerated. Only a maintainer can do this, with the
-`updatechecksums.yml` workflow. That workflow takes the checksums from a
-finished CI run. The run does not have to be of the head commit, if the later
-commits do not change the results. Say in the commit message and in the pull
-request that you expect the results to change.
+For such a change, a checksum mismatch is an error in the change. Find and
+correct the cause. Do not regenerate the checksums.
+
+If a change alters the numerical results for a good reason, regenerate the
+stored checksums yourself with the `updatechecksums.yml` workflow:
+
+1. Wait until the CI run of the head commit is complete.
+2. Make sure that each failed test job failed only at a checksum step, with no
+   crash and no failed assertion.
+3. Make sure that only the tests that the change must affect have different
+   checksums.
+4. Start the workflow on the branch of the pull request:
+
+   ```sh
+   gh workflow run updatechecksums.yml --ref <branch>
+   ```
+
+The workflow takes the checksums from the newest finished CI run of the branch,
+and it pushes a commit with them. The run does not have to be of the head
+commit, if the later commits do not change the results. Say in the commit
+message and in the pull request that you expect the results to change, and name
+the tests that change.
 
 A new end-to-end test must run in CI in about ten minutes or less. Every push
 runs the full matrix.
@@ -609,8 +625,9 @@ The code must compile with nvc++ and with hipcc, also with `STDPAR=ON GPU=ON`.
 These rules apply to an automated review of a pull request, e.g. by Codex.
 
 - Do not comment that the checksums of the tests can change or must be
-  regenerated. CI compares the checksums and shows each mismatch. A maintainer
-  then regenerates them with `updatechecksums.yml` (see "Tests").
+  regenerated. CI compares the checksums and shows each mismatch. The author of
+  the pull request then regenerates them with `updatechecksums.yml` (see
+  "Tests").
 - Do not comment that a stored checksum file comes from an older commit or
   does not agree with a later change. The same CI step finds this.
 
@@ -622,6 +639,8 @@ These rules apply to an automated review of a pull request, e.g. by Codex.
   checksums that a local build does not cover.
 - Say in the commit message and in the pull request when you expect the
   numerical results to change. Otherwise the checksums must stay identical.
+- After a change of the results, regenerate the checksums yourself with
+  `updatechecksums.yml` (see "Tests").
 
 ## Before you commit
 
