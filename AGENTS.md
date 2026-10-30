@@ -247,12 +247,44 @@ with a different gcc version, but no test covers that. Examine a local mismatch
 as a real change of the results first. Let CI give the decision.
 
 A change that must not alter the results must give identical checksums in CI.
-If a change alters the numerical results for a good reason, the stored
-checksums must be regenerated. Only a maintainer can do this, with the
-`updatechecksums.yml` workflow. That workflow takes the checksums from a
-finished CI run. The run does not have to be of the head commit, if the later
-commits do not change the results. Say in the commit message and in the pull
-request that you expect the results to change.
+For such a change, a checksum mismatch is an error in the change. Find and
+correct the cause. Do not regenerate the checksums.
+
+If a change alters the numerical results for a good reason, regenerate the
+stored checksums yourself with the `updatechecksums.yml` workflow. This needs
+write access to the repository, and the branch must be in `artis-mcrt/artis`.
+Without these, ask a maintainer to start the workflow.
+
+1. Wait until the CI run of the head commit is complete.
+2. Make sure that each failed test job failed only at a checksum step, with no
+   crash and no failed assertion.
+3. Make sure that only the tests that the change must affect have different
+   checksums.
+4. Start the workflow with the branch of the pull request as the input. Without
+   `--ref`, `gh` runs the reviewed version of the workflow on `main`. The
+   workflow gets a token with write access, so it runs only from `main`. The
+   first command prints the URL of the new run, and the URL ends with the run
+   ID. The second command waits until the run is complete and fails if the run
+   fails.
+
+   ```sh
+   gh workflow run updatechecksums.yml -f branch=<branch>
+   gh run watch <run ID> --exit-status
+   ```
+
+5. If the run fails, read its log and correct the cause.
+6. Read the log of the workflow. Make sure that it selected the artifact of the
+   head commit.
+7. Make sure that the CI run of the commit with the new checksums passes.
+
+The workflow takes the checksums from the nearest commit in the history of the
+branch head that has a complete artifact, and it pushes a commit with them. A
+crash or a failed assertion in a test job leaves the artifact incomplete. The
+workflow then takes an older commit and gives only a warning. An older commit is
+correct only if the later commits do not change the results.
+
+Say in the commit message and in the pull request that you expect the results to
+change. Name the tests that change.
 
 A new end-to-end test must run in CI in about ten minutes or less. Every push
 runs the full matrix.
@@ -280,7 +312,8 @@ The workflows in `.github/workflows/`:
   steps say which compiler skips a build and which build uses `OPTIMIZE=OFF`.
   The gcc and the clang jobs also build and run the unit tests, for the classic
   and for the nebular preset.
-- `updatechecksums.yml` writes the reference checksums (see "Tests").
+- `updatechecksums.yml` writes the reference checksums of a branch (see
+  "Tests"). It runs only from `main`, and it takes the branch as an input.
 - `depapprove.yml` enables auto-merge for the pull requests of Dependabot and
   of pre-commit-ci.
 - `copilot-setup-steps.yml` runs when you change that file, or when you start
@@ -609,8 +642,9 @@ The code must compile with nvc++ and with hipcc, also with `STDPAR=ON GPU=ON`.
 These rules apply to an automated review of a pull request, e.g. by Codex.
 
 - Do not comment that the checksums of the tests can change or must be
-  regenerated. CI compares the checksums and shows each mismatch. A maintainer
-  then regenerates them with `updatechecksums.yml` (see "Tests").
+  regenerated. CI compares the checksums and shows each mismatch. The author of
+  the pull request then regenerates them with `updatechecksums.yml` (see
+  "Tests").
 - Do not comment that a stored checksum file comes from an older commit or
   does not agree with a later change. The same CI step finds this.
 
@@ -622,6 +656,8 @@ These rules apply to an automated review of a pull request, e.g. by Codex.
   checksums that a local build does not cover.
 - Say in the commit message and in the pull request when you expect the
   numerical results to change. Otherwise the checksums must stay identical.
+- After a change of the results, regenerate the checksums yourself with
+  `updatechecksums.yml` (see "Tests").
 
 ## Before you commit
 
