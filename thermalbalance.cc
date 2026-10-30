@@ -35,16 +35,20 @@
 
 namespace {
 
-// Integrand to calculate the rate coefficient for bfheating. The stimulated recombination factor is the factor of
+// Integrand to calculate the rate coefficient for bfheating. With
+// BFHEATING_USE_DEPARTURE_RATIO_AND_TE_NOT_LTE_TR, the stimulated recombination factor is the factor of
 // integrand_corrphotoioncoeff_custom_radfield() in ratecoeff.cc, so the photoionisation rate and the heating rate of a
-// continuum agree.
-auto integrand_bfheatingcoeff(const double nu, const double nu_edge, const int nonemptymgi, const float T_e,
-                              const double modified_departure_ratio, const std::span<const float> photoion_xs)
-    -> double {
+// continuum agree. Otherwise it is the LTE value at T_R.
+auto integrand_bfheatingcoeff(const double nu, const double nu_edge, const int nonemptymgi, const float T_R,
+                              const float T_e, const double modified_departure_ratio,
+                              const std::span<const float> photoion_xs) -> double {
   const float sigma_bf = photoionisation_crosssection_fromtable(photoion_xs, nu_edge, nu);
-  const double stimfactor = std::max(0., 1. - (modified_departure_ratio * exp(-HOVERKB * (nu - nu_edge) / T_e)));
 
-  return sigma_bf * (1 - (nu_edge / nu)) * radfield::radfield(nu, nonemptymgi) * stimfactor;
+  if constexpr (BFHEATING_USE_DEPARTURE_RATIO_AND_TE_NOT_LTE_TR) {
+    const double stimfactor = std::max(0., 1. - (modified_departure_ratio * exp(-HOVERKB * (nu - nu_edge) / T_e)));
+    return sigma_bf * (1 - (nu_edge / nu)) * radfield::radfield(nu, nonemptymgi) * stimfactor;
+  }
+  return sigma_bf * (1 - (nu_edge / nu)) * radfield::radfield(nu, nonemptymgi) * (1 - exp(-HOVERKB * nu / T_R));
 }
 
 // Sum the thermal heating rate from collisional de-excitations over all levels of a single ion (the energy given
@@ -167,7 +171,9 @@ auto T_e_eqn_heating_minus_cooling(const double T_e, int nonemptymgi, const doub
 
   // Then calculate heating and cooling rates
   kpkt::calculate_cooling_rates(nonemptymgi, &heatingcoolingrates);
-  calculate_bfheatingcoeffs(nonemptymgi, bfheatingcoeffs);
+  if constexpr (BFHEATING_USE_DEPARTURE_RATIO_AND_TE_NOT_LTE_TR) {
+    calculate_bfheatingcoeffs(nonemptymgi, bfheatingcoeffs);
+  }
   calculate_heating_rates(nonemptymgi, T_e_float, clumpfactor * nne, heatingcoolingrates, bfheatingcoeffs);
 
   const auto ntlepton_frac_heating = nonthermal::get_nt_frac_heating(nonemptymgi);
@@ -220,12 +226,15 @@ auto calculate_bfheatingcoeff(const int element, const int ion, const int level,
   const double nu_threshold = (1. / H) * E_threshold;
   const double nu_max_phixs = nu_threshold * last_phixs_nuovernuedge;  // nu of the uppermost point in the phixs table
   const auto photoion_xs = get_phixs_table(element, ion, level);
+  const auto T_R = grid::TR_allcells[nonemptymgi];
   const auto T_e = grid::Te_allcells[nonemptymgi];
   const double modified_departure_ratio =
-      calculate_modified_departure_ratio(nonemptymgi, element, ion, level, phixstargetindex, false);
+      BFHEATING_USE_DEPARTURE_RATIO_AND_TE_NOT_LTE_TR
+          ? calculate_modified_departure_ratio(nonemptymgi, element, ion, level, phixstargetindex, false)
+          : 1.;
   auto bfheating = integrator(
       [&](const double nu) {
-        return integrand_bfheatingcoeff(nu, nu_threshold, nonemptymgi, T_e, modified_departure_ratio, photoion_xs);
+        return integrand_bfheatingcoeff(nu, nu_threshold, nonemptymgi, T_R, T_e, modified_departure_ratio, photoion_xs);
       },
       nu_threshold, nu_max_phixs, epsrel, &error);
 
@@ -302,8 +311,10 @@ void calculate_ion_heating_cooling_rates(const int nonemptymgi, HeatingCoolingRa
   }
 }
 
-// Calculate the bound-free heating coefficient of every level in a cell. The stimulated recombination factor
-// depends on T_e and on the populations, so the temperature solver calls this at every trial T_e.
+// Calculate the bound-free heating coefficient of every level in a cell. With
+// BFHEATING_USE_DEPARTURE_RATIO_AND_TE_NOT_LTE_TR, the stimulated recombination factor depends on T_e and on
+// the populations, so the temperature solver calls this at every trial T_e. Otherwise the coefficients depend only on
+// the radiation field, and solve_Te_nltepops() calls this once for each cell.
 void calculate_bfheatingcoeffs(int nonemptymgi, std::span<double> bfheatingcoeffs) {
   assert_always(std::ssize(bfheatingcoeffs) == get_includedlevels());
   for (int element = 0; element < get_nelements(); element++) {
