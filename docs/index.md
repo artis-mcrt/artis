@@ -60,10 +60,13 @@ An early version of the code is described in [Sim (2007), MNRAS, 375, 154-162, d
 
 The ARTIS source code is available under a [BSD 3-Clause license](https://github.com/artis-mcrt/artis/blob/main/LICENSE), which requires attribution and preservation of copyright notices on any substantial copies. If you find the ARTIS code useful in any way, we request that you cite us as described above and star the repository to help show impact in funding proposals.
 
-## Getting help
+## Support
 
-- Open an [issue](https://github.com/artis-mcrt/artis/issues) for a defect or a question about the code.
-- The log file of rank 0 holds the git version and the compile-time options of the run. Give both in an issue.
+The authors give ARTIS as it is. They do not promise to correct a defect, and they do not promise to answer a
+question. They accept a [pull request](https://github.com/artis-mcrt/artis/pulls) sometimes.
+
+You can open an [issue](https://github.com/artis-mcrt/artis/issues), but it can stay without an answer. The log file
+of rank 0 holds the git version and the compile-time options of the run. Give both in an issue.
 
 :::{toctree}
 :caption: Getting started
