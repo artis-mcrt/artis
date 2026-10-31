@@ -12,8 +12,9 @@ brew install llvm open-mpi pkgconf zstd coreutils
 
 `tests/runtest.sh` needs the `md5sum` command of coreutils for the next step.
 
-On Linux, get a compiler and an MPI library from your package manager, from a module, or from pixi.
-[Installation](installation.md) gives the detail and the version that the build needs.
+On Linux, get a compiler and Open MPI from your package manager, from a module, or from pixi.
+[Installation](installation.md) gives the detail and the version that the build needs. `tests/runtest.sh` gives
+`mpirun` the options `--oversubscribe` and `--mca`, which only Open MPI accepts.
 
 The next step also needs libzstd, because `tests/runtest.sh` builds with `ZSTD=ON` and reads the compressed output
 files. The package of the library is `libzstd-dev` on Debian and Ubuntu, and `libzstd-devel` on Fedora. The scripts

@@ -3,7 +3,7 @@
 ## What the build needs
 
 - A C++ compiler: gcc 14 or a later version, clang, nvc++, or hipcc.
-- An MPI library that supplies an `mpicxx` command, e.g. Open MPI.
+- An MPI library that supplies an `mpicxx` command, e.g. Open MPI. The end-to-end tests need Open MPI itself, because `tests/runtest.sh` gives `mpirun` the options `--oversubscribe` and `--mca` (see [Testing](testing.md)).
 - libzstd. A build with the library reads and writes zstd compressed files (see [Input files](inputfiles.md)). A build without it stops at the end-to-end tests, because `tests/runtest.sh` builds with `ZSTD=ON` and the test input files are compressed.
 
 The build needs no other program. On an HPC cluster, a module or a spack command gives the compiler and the MPI library. For the clusters that we use, the top of the Slurm script in `scripts/artis-*.sh` names the modules that work.

@@ -10,9 +10,9 @@ option into a subsection with its type, its description, and the value of each p
 declaration after it becomes a note at the top of its section.
 
 The script reads the presets that the repository tracks, so an untracked preset of your own stays out of the page.
-It also checks that the presets and artisoptions_doc.md name the same options. A missing or an extra option stops the
-script, because the page would then describe options that no preset sets. The check covers every tracked preset, also
-a preset that PRESETS_NOT_ON_PAGE names.
+It also checks that the presets and artisoptions_doc.md name the same options, in both directions. An option that the
+doc does not describe, and an option that a preset does not declare, both stop the script. Both checks cover every
+tracked preset, also a preset that PRESETS_NOT_ON_PAGE keeps off the page.
 
 The script gives the status 0 when it wrote the page or when the page was already current, and 1 for an error. The
 pre-commit hook fails when the script changes the page, so that the commit holds the new content.
@@ -209,13 +209,16 @@ def find_preset_value(preset_text: str, name: str) -> str | None:
 
 
 def preset_values(presets: dict[str, str], option: Option) -> list[str]:
-    """Give the markdown blocks that hold the value of the option in each preset."""
+    """Give the markdown blocks that hold the value of the option in each preset of the page.
+
+    Every tracked preset must declare the option, also a preset that PRESETS_NOT_ON_PAGE keeps off the page.
+    """
     values = {preset: find_preset_value(text, option.name) for preset, text in presets.items()}
     missing = sorted(preset for preset, value in values.items() if value is None)
     if missing:
         message = f"the presets {', '.join(missing)} declare no option {option.name}"
         raise ValueError(message)
-    shown = {preset: value or "no value" for preset, value in values.items()}
+    shown = {preset: value or "no value" for preset, value in values.items() if preset not in PRESETS_NOT_ON_PAGE}
     one_line = all("\n" not in value for value in shown.values())
     if len(set(shown.values())) == 1 and one_line:
         return [f"**Every preset:** `{next(iter(shown.values()))}`"]
@@ -280,8 +283,7 @@ def build_page() -> tuple[str, int, int]:
     if untracked:
         message = f"PRESETS_NOT_ON_PAGE names {', '.join(untracked)}, which the repository does not track"
         raise ValueError(message)
-    shown = {preset: text for preset, text in presets.items() if preset not in PRESETS_NOT_ON_PAGE}
-    return make_page(groups, shown), len(documented), len(shown)
+    return make_page(groups, presets), len(documented), len(presets) - len(PRESETS_NOT_ON_PAGE)
 
 
 def main() -> int:
