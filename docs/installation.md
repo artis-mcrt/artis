@@ -2,6 +2,7 @@
 
 ## What the build needs
 
+- git and make.
 - A C++ compiler: gcc 14 or a later version, clang, nvc++, or hipcc.
 - An MPI library that supplies an `mpicxx` command, e.g. Open MPI. The end-to-end tests need Open MPI itself, because `tests/runtest.sh` gives `mpirun` the options `--oversubscribe` and `--mca` (see [Testing](testing.md)).
 - libzstd. A build with the library reads and writes zstd compressed files (see [Input files](inputfiles.md)). A build without it stops at the end-to-end tests, because `tests/runtest.sh` builds with `ZSTD=ON` and the test input files are compressed.
@@ -59,6 +60,6 @@ Symlink the preset. Do not copy it. The symlink keeps `artisoptions.h` correct w
 
 `make` builds `sn3d` and `exspec`. It puts the objects in `build/<configuration>/` and makes a symlink in the repository root to each program that it builds. `make unittests` builds the third program and makes its symlink (see [Testing](testing.md)).
 
-Each make option adds a suffix to the name of the build folder, so different sets of make options coexist. The name holds no preset, so a change of the preset must compile every object again. `--check-symlink-times` in `MAKEFLAGS` makes make see that change. Each symlink points to the most recent build of any configuration. Look at the symlink before you copy a binary. Copy a binary with `cp -L` from the repository root.
+Each make option of [Make options](makeoptions.md) adds a suffix to the name of the build folder, so different sets of make options coexist. `GCCTOOLCHAIN` is the exception, so run `make clean` after you change its value. The name holds no preset, so a change of the preset must compile every object again. `--check-symlink-times` in `MAKEFLAGS` makes make see that change. Each symlink points to the most recent build of any configuration. Look at the symlink before you copy a binary. Copy a binary with `cp -L` from the repository root.
 
 [Make options](makeoptions.md) lists the options of `make`.

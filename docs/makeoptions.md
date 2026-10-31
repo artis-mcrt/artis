@@ -21,7 +21,9 @@ The Makefile finds libzstd with pkg-config or with a link of `-lzstd`. A build w
 input file, e.g. `model.txt.zst`, when the plain file is absent, and it writes the output files compressed (see
 [Input files](inputfiles.md)). `ZSTD=ON` stops the build if the library is absent.
 
-Each option adds a suffix to the name of the build folder, so different option sets coexist in `build/`.
+Each option of the table above adds a suffix to the name of the build folder, so different option sets coexist in
+`build/`. `GCCTOOLCHAIN` is the exception. It changes `CXXFLAGS` but not the name of the folder, so make keeps the
+objects of the previous toolchain. Run `make clean` after you change its value.
 
 ## The targets
 
