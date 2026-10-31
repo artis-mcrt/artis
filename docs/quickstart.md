@@ -66,7 +66,15 @@ The repository has eleven test models. `tests/runtest.sh` without arguments list
 
 The model folder `tests/kilonova_1d_testrun` now holds the output files, e.g. `light_curve.out.zst` and `spec.out.zst`. [Output files](outputfiles.md) describes each one.
 
-[artistools](https://github.com/artis-mcrt/artistools) plots and analyses them. Install it with [uv](https://docs.astral.sh/uv/):
+[artistools](https://github.com/artis-mcrt/artistools) plots and analyses them. It needs
+[uv](https://docs.astral.sh/uv/), which section 1 does not install:
+
+```sh
+brew install uv                                  # macOS
+curl -LsSf https://astral.sh/uv/install.sh | sh  # Linux
+```
+
+Then install artistools:
 
 ```sh
 uv tool install artistools

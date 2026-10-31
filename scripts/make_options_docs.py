@@ -45,8 +45,8 @@ PAGE_HEADER = """# Compile-time options
 A change of an option needs a new build. The log file of rank 0 holds the options of the run, so the log of a finished
 simulation shows the values that gave its results.
 
-This page lists every option of the presets, with the value of each preset. `std::optional` options with no value are
-empty, e.g. `GRID_TYPE_OVERRIDE` keeps the grid type of `model.txt`.
+This page lists every option, with the value of each preset of [Option presets](presets.md). `std::optional` options
+with no value are empty, e.g. `GRID_TYPE_OVERRIDE` keeps the grid type of `model.txt`.
 """
 
 

@@ -1,8 +1,8 @@
 # Option presets
 
-`artisoptions.h` holds the compile-time options of a run (see [Compile-time options](options.md)). The repository has
-four presets of these options. Each preset is a complete set of values for one type of simulation. Select one with a
-symlink:
+`artisoptions.h` holds the compile-time options of a run (see [Compile-time options](options.md)). It is a symlink to
+one of the `artisoptions_*.h` presets, and each preset is a complete set of values for one type of simulation. This
+page describes the presets of the four types below. Select one with a symlink:
 
 ```sh
 ln -s artisoptions_nltenebular.h artisoptions.h
