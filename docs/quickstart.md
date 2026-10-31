@@ -1,0 +1,167 @@
+# Quickstart
+
+This page gives a first simulation, a check of the results, and a plot. Everything here runs on a laptop. The test model takes a few minutes on four cores.
+
+## 1. Install a compiler and MPI
+
+On macOS:
+
+```sh
+brew install llvm open-mpi pkgconf zstd coreutils
+```
+
+`tests/runtest.sh` needs the `md5sum` command of coreutils for the next step.
+
+On Linux, get a compiler, Open MPI, git, and make from your package manager, from a module, or from pixi.
+[Installation](installation.md) gives the detail and the version that the build needs. `tests/runtest.sh` gives
+`mpirun` the options `--oversubscribe` and `--mca`, which only Open MPI accepts.
+
+The next step also needs libzstd, because `tests/runtest.sh` builds with `ZSTD=ON` and reads the compressed output
+files. The package of the library is `libzstd-dev` on Debian and Ubuntu, and `libzstd-devel` on Fedora. The scripts
+of the test, and the model folder of section 5 below, call these commands:
+
+- `zstd` and `md5sum`, for the compressed files and for the checksums;
+- `curl`, `tar`, and `xz`, for the atomic data;
+- `python3`, `perl`, and `rsync`.
+
+## 2. Clone the repository
+
+```sh
+git clone https://github.com/artis-mcrt/artis.git
+cd artis
+```
+
+## 3. Run a test model
+
+```sh
+tests/runtest.sh kilonova_1d
+```
+
+This is the quickest complete simulation of the repository. The script does these steps:
+
+1. It downloads the atomic data of the test (about 15 MB) into `tests/` and keeps the archive for a later run.
+2. It makes the model folder `tests/kilonova_1d_testrun` with the input files and an `artisoptions.h` for the test.
+3. It builds `sn3d` and `exspec`, and copies them into the model folder.
+4. It starts a new simulation.
+5. It compares the checksums of the output files with `results_md5_job0.txt`.
+6. It resumes the simulation from the restart files, and then runs `exspec`.
+7. It compares the checksums again with `results_md5_final.txt`.
+
+A different compiler or CPU type can give checksums that differ from the stored checksums. Examine a mismatch first
+as a real change of the results. Let CI give the decision. The script stops at the step that finds the mismatch, so
+a mismatch at step 5 leaves the resume run and `exspec` undone. To get the complete result of a mismatch that you
+accept, run the remaining steps by name:
+
+```sh
+tests/runtest.sh kilonova_1d resume
+tests/runtest.sh kilonova_1d exspec
+```
+
+The comparison of step 7 then differs for the same reason. [Testing](testing.md) describes the steps and the
+reference checksums.
+
+The repository has eleven test models. `tests/runtest.sh` without arguments lists them.
+
+## 4. Look at the results
+
+The model folder `tests/kilonova_1d_testrun` now holds the output files, e.g. `light_curve.out.zst` and `spec.out.zst`. [Output files](outputfiles.md) describes each one.
+
+[artistools](https://github.com/artis-mcrt/artistools) plots and analyses them. It needs
+[uv](https://docs.astral.sh/uv/), which section 1 does not install:
+
+```sh
+brew install uv                                  # macOS
+curl -LsSf https://astral.sh/uv/install.sh | sh  # Linux
+```
+
+Then install artistools:
+
+```sh
+uv tool install artistools
+```
+
+Then describe the model, check the results, and plot them:
+
+```sh
+artistools describe tests/kilonova_1d_testrun
+artistools check tests/kilonova_1d_testrun
+artistools plotlightcurves tests/kilonova_1d_testrun
+artistools plotspectra -t 1 tests/kilonova_1d_testrun
+```
+
+`artistools check` gives one row for each check of the results, so it is the quickest test that a run deserves trust.
+It gives a warning for this test model, because the reduced atomic data and the low packet count limit its accuracy.
+
+`plotspectra` needs a time in days (`-t`). artistools accepts only the times at which the whole model can have sent
+light to the observer. The ejecta of this model reach 0.48 c, so that range ends at about 1.7 days, although the model
+runs to 10 days. `--plotinvalidpart` draws the later times anyway.
+
+## 5. Make your own model folder
+
+Each simulation has its own model folder. Keep the source code in a subfolder `artis` of it. The code then finds its
+physics data in `artis/data`. The commands below make a model folder from the input files of the test model. Run the
+first command in the clone of step 2, so that the symlink points at it:
+
+```sh
+artispath=$(pwd)
+mkdir ~/mymodel
+cd ~/mymodel
+ln -s "$artispath" artis
+tar -xf artis/tests/atomicdata_feconi.tar.xz
+rsync -a --exclude 'results_md5_*' artis/tests/kilonova_1d_inputfiles/ ./
+cp input-newrun.txt input.txt
+```
+
+The archive and the input folder both hold a `compositiondata.txt`. The archive comes first, so the file of the test
+model has priority, as it does in the test. That file keeps ten elements, and the file of the archive keeps three.
+
+For a production run, clone the repository into the model folder in place of the symlink (see [Runs on a cluster](clusters.md)).
+
+The atomic data of the test covers only a few elements, with few levels. [Atomic and model data](data.md) says where a larger dataset and other models come from.
+
+Now select the compile-time options and build:
+
+```sh
+cd artis
+ln -s artisoptions_kilonova_lte.h artisoptions.h
+make
+cd ..
+```
+
+[Option presets](presets.md) says what each preset is for.
+
+:::{note}
+`artisoptions.h` is a symlink, so an editor changes the preset file of your clone. That is the intended workflow, because each model folder keeps its own clone of the source. Do not replace the symlink with a copy.
+:::
+
+The preset has a value of `NUM_PACKETS` for about 1000 MPI ranks. A laptop needs a much smaller value. Change it in `artis/artisoptions.h`:
+
+```c++
+constexpr std::int64_t NUM_PACKETS = 1e6;
+```
+
+Also set the range of the timesteps in `input.txt`. The line with the comment `#  2: timestep_start
+timestep_finish` holds the first and the last timestep of the job. The stop value is not inclusive, so the test runs
+the first nine of twenty timesteps. Change that line to run the whole model:
+
+```text
+000 020                  #  2: timestep_start timestep_finish: ...
+```
+
+Then build again and run:
+
+```sh
+cd artis && make && cd ..
+mpirun -np 4 artis/sn3d &
+tail -F output_0-0.txt
+```
+
+`sn3d` writes one line with the name of the job folder to the standard output, and then nothing more unless a crash occurs. Each rank writes its own log file. `output_0-0.txt` in the model folder is a symlink to the log of rank 0, and `tail -F` waits until `sn3d` makes it. Press Ctrl+C to stop following the log file.
+
+[Running sn3d](running.md) describes the command-line options, the logs, and the restart of a long run.
+
+## Next steps
+
+- [Option presets](presets.md) and [Compile-time options](options.md): the physics of the run.
+- [Input files](inputfiles.md): the format of `model.txt`, `abundances.txt`, and the atomic data files.
+- [Runs on a cluster](clusters.md): the Slurm job scripts and the wall-time mechanism.

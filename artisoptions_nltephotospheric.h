@@ -1,3 +1,9 @@
+// The NLTE photospheric preset: the photospheric phase of a supernova with the NLTE populations, the Spencer-Fano
+// solver, and the multibin radiation field model. The preset keeps 100 excited levels for each ion below calcium and
+// 200 for the heavier ions. NUM_PACKETS is much smaller than in the other presets, so a production run needs a
+// larger value. The test
+// nltephotospheric_dynamic_ion_range_1d_1dgrid uses this preset.
+//
 // A compile-time options preset: symlink one of the artisoptions_*.h files to artisoptions.h to select
 // the run configuration. A copy through an existing symlink replaces the content of the tracked preset.
 // Every option is described in artisoptions_doc.md.

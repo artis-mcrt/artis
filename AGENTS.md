@@ -98,6 +98,12 @@ compatible with C++23. The Makefile builds three programs from the same sources:
   in a single fenced C++ block.
 - `data/`: the physics data that comes with the code, e.g. the decay data and
   the gamma spectra.
+- `docs/`: the pages of the documentation site. They are MyST Markdown, and
+  Read the Docs builds them with Sphinx (`docs/conf.py` and
+  `.readthedocs.yaml`). `docs/options.md` is generated, so change
+  `artisoptions_doc.md` instead. `scripts/make_options_docs.py` writes the
+  page, and a pre-commit hook runs that script. README.md keeps the overview
+  and links to the site.
 - `tests/`: the end-to-end tests. `runtest.sh` runs one test from its setup
   script (`setup_*.sh`) and its input folder (`*_inputfiles/`).
 - `scripts/`: the job scripts for HPC clusters and some helper tools.
@@ -107,8 +113,8 @@ compatible with C++23. The Makefile builds three programs from the same sources:
   the system. `pixi run make` is the quickest way to get a toolchain that
   works.
 
-The repository has no `CONTRIBUTING.md`, no `docs/` folder, and no template for
-a pull request or an issue.
+The repository has no `CONTRIBUTING.md` and no template for a pull request or
+an issue.
 
 ## Build
 
@@ -128,12 +134,13 @@ timestamp through the symlink without `--check-symlink-times`, so a change of
 preset then starts no rebuild. The Makefile warns you if `artisoptions.h` is a
 symlink and the flag is absent. A copied `artisoptions.h` gets no such warning.
 
-README.md lists the make options, and the Makefile is the authority. `make
-OPTIMIZE=OFF` is the quickest test that everything compiles. The other targets
+`docs/makeoptions.md` lists the make options, and the Makefile is the
+authority. `make OPTIMIZE=OFF` is the quickest test that everything compiles. The other targets
 are `unittests`, `check` (clang-tidy), `sn3dwhole`, and `clean`.
 
-`make` puts the objects in `build/<configuration>/` and makes `sn3d`, `exspec`,
-and `unittests` in the repository root symlinks to that folder. Each symlink
+`make` puts the objects in `build/<configuration>/` and makes a symlink in the
+repository root to each program that it builds. The default target builds
+`sn3d` and `exspec`, so `unittests` gets its symlink from `make unittests`. Each symlink
 points to the most recent build of any configuration. Look at the symlink
 before you copy a binary or start a run. Copy a binary with `cp -L` from the
 repository root. A stale build folder of an older compiler otherwise gives a
@@ -665,7 +672,9 @@ Do the text edits first. They can make a finished compile out of date.
 
 1. Add a new compile-time option to every `artisoptions_*.h` preset and to
    `artisoptions_doc.md`. Put it under the same heading and at the same
-   position in each file.
+   position in each file. Then run `scripts/make_options_docs.py`, which writes
+   `docs/options.md` again. The pre-commit hook runs the script and stops when
+   a preset holds an option that `artisoptions_doc.md` does not describe.
 2. Search `tests/setup_*.sh` and `.github/workflows/ci.yml` for the name of an
    option that you renamed or removed, or whose type or form you changed. Those
    files change options with `setoption` from `tests/setupfuncs.sh`. The comment
