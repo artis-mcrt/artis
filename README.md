@@ -28,7 +28,7 @@ cd artis
 tests/runtest.sh kilonova_1d
 ```
 
-This builds the code and runs a small 1D kilonova model in two jobs, and then post-processes the packets with `exspec`. The [Quickstart](https://artis-mcrt.readthedocs.io/en/latest/quickstart.html) page describes the steps and makes a model folder of your own. The build needs gcc 14 or a later version, clang, nvc++, or hipcc, and an MPI library that supplies `mpicxx`.
+This builds the code and runs a small 1D kilonova model in two jobs, and then post-processes the packets with `exspec`. The [Quickstart](https://artis-mcrt.readthedocs.io/en/latest/quickstart.html) page describes the steps and makes a model folder of your own. The build needs gcc 14 or a later version, clang, nvc++, or hipcc, and an MPI library that supplies `mpicxx`. The command above also needs libzstd, `zstd`, `md5sum`, `curl`, `tar`, `python3`, `perl`, and `rsync`. [Installation](https://artis-mcrt.readthedocs.io/en/latest/installation.html) gives the package of each system.
 
 ## Key features
 
