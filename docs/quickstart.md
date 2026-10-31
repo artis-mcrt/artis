@@ -12,10 +12,16 @@ brew install llvm open-mpi pkgconf zstd coreutils
 
 `tests/runtest.sh` needs the `md5sum` command of coreutils for the next step.
 
-On Linux, get a compiler and an MPI library from your package manager, from a module, or from pixi. The next step
-also needs libzstd and the `zstd` command, because `tests/runtest.sh` builds with `ZSTD=ON` and reads the compressed
-output files. The package of the library is `libzstd-dev` on Debian and Ubuntu, and `libzstd-devel` on Fedora. The scripts of the test also call `curl`, `perl`, `rsync`, and `tar`, and step 5 below calls `rsync` and `tar` again.
+On Linux, get a compiler and an MPI library from your package manager, from a module, or from pixi.
 [Installation](installation.md) gives the detail and the version that the build needs.
+
+The next step also needs libzstd, because `tests/runtest.sh` builds with `ZSTD=ON` and reads the compressed output
+files. The package of the library is `libzstd-dev` on Debian and Ubuntu, and `libzstd-devel` on Fedora. The scripts
+of the test, and the model folder of section 5 below, call these commands:
+
+- `zstd` and `md5sum`, for the compressed files and for the checksums;
+- `curl` and `tar`, for the atomic data;
+- `python3`, `perl`, and `rsync`.
 
 ## 2. Clone the repository
 
@@ -35,19 +41,23 @@ This is the quickest complete simulation of the repository. The script does thes
 1. It downloads the atomic data of the test (about 15 MB) into `tests/` and keeps the archive for a later run.
 2. It makes the model folder `tests/kilonova_1d_testrun` with the input files and an `artisoptions.h` for the test.
 3. It builds `sn3d` and `exspec`, and copies them into the model folder.
-4. It runs a new simulation, resumes it from the restart files, and then runs `exspec`.
-5. It compares the checksums of the output files with the stored reference checksums.
+4. It starts a new simulation.
+5. It compares the checksums of the output files with `results_md5_job0.txt`.
+6. It resumes the simulation from the restart files, and then runs `exspec`.
+7. It compares the checksums again with `results_md5_final.txt`.
 
 A different compiler or CPU type can give checksums that differ from the stored checksums. Examine a mismatch first
-as a real change of the results, and let CI give the decision. The script stops at step 5, before the resume run and
-`exspec`. To get the complete result of a mismatch that you accept, run the remaining steps by name:
+as a real change of the results. Let CI give the decision. The script stops at the step that finds the mismatch, so
+a mismatch at step 5 leaves the resume run and `exspec` undone. To get the complete result of a mismatch that you
+accept, run the remaining steps by name:
 
 ```sh
 tests/runtest.sh kilonova_1d resume
 tests/runtest.sh kilonova_1d exspec
 ```
 
-[Testing](testing.md) describes the steps and the reference checksums.
+The comparison of step 7 then differs for the same reason. [Testing](testing.md) describes the steps and the
+reference checksums.
 
 The repository has eleven test models. `tests/runtest.sh` without arguments lists them.
 
@@ -94,7 +104,7 @@ cp input-newrun.txt input.txt
 ```
 
 The archive and the input folder both hold a `compositiondata.txt`. The archive comes first, so the file of the test
-model wins, as it does in the test. That file keeps ten elements, and the file of the archive keeps three.
+model has priority, as it does in the test. That file keeps ten elements, and the file of the archive keeps three.
 
 For a production run, clone the repository into the model folder in place of the symlink (see [Runs on a cluster](clusters.md)).
 
@@ -121,7 +131,9 @@ The preset has a value of `NUM_PACKETS` for about 1000 MPI ranks. A laptop needs
 constexpr std::int64_t NUM_PACKETS = 1e6;
 ```
 
-Also set the range of the timesteps in `input.txt`. Line 2 holds the first and the last timestep of the job. The test runs only the first ten of twenty timesteps, so change that line to run the whole model:
+Also set the range of the timesteps in `input.txt`. The line with the comment `#  2: timestep_start
+timestep_finish` holds the first and the last timestep of the job. The stop value is not inclusive, so the test runs
+the first nine of twenty timesteps. Change that line to run the whole model:
 
 ```text
 000 020                  #  2: timestep_start timestep_finish: ...

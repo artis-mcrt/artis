@@ -1,7 +1,7 @@
 # Input files
 
 These files go in the model folder, which should always contain the ARTIS source folder (or a symlink to it) named
-`artis`. The physics data that comes with the code is then found automatically in `artis/data` and needs no copy (see
+`artis`. The code then finds the physics data that comes with it in `artis/data`, and you copy nothing (see
 [Atomic and model data](data.md)).
 
 A build with libzstd also reads a text input file in zstd compressed form, e.g. `model.txt.zst`,

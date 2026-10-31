@@ -60,9 +60,9 @@ uv run --with-requirements docs/requirements.txt sphinx-build -W --keep-going do
 
 `-W` makes a warning an error, as CI and Read the Docs do. Open `docs/_build/html/index.html` to read the result.
 
-`docs/options.md` is generated. `scripts/make_options_docs.py` writes it from `artisoptions_doc.md` and the
-`artisoptions_*.h` presets, and a pre-commit hook runs the script. Change the comment of the option in
-`artisoptions_doc.md`, not the generated page.
+`scripts/make_options_docs.py` writes `docs/options.md` from `artisoptions_doc.md` and the `artisoptions_*.h`
+presets, and a pre-commit hook runs the script. Change the comment of the option in `artisoptions_doc.md`, not the
+generated page.
 
 ## A new compile-time option
 

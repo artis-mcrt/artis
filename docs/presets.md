@@ -61,9 +61,14 @@ The test `kilonova_1d_timedepnlte` uses this preset.
 
 The nebular phase of a supernova, as
 [Shingles et al. (2020), MNRAS, 492, 2029-2043, doi:10.1093/mnras/stz3412](https://ui.adsabs.harvard.edu/abs/2020MNRAS.492.2029S/abstract)
-describes the method. The preset has the NLTE populations (197 excited levels of Fe II, and 80 of the other ions), the
-Spencer-Fano solver, the multibin radiation field model from timestep 12, and the detailed bound-free estimators from
-timestep 13. `MAXTEMP` is low, and the cells get no initial packets.
+describes the method. The preset has these methods:
+
+- the NLTE populations, with 197 excited levels of Fe II and 80 of each other ion;
+- the Spencer-Fano solver;
+- the multibin radiation field model from timestep 12;
+- the detailed bound-free estimators from timestep 13.
+
+`MAXTEMP` is low, and the cells get no initial packets.
 
 The tests `nebular_1d_3dgrid` and `nebular_1d_3dgrid_limitbfest` use this preset. `nebular_1d_3dgrid` covers the
 physics that most changes touch, so it is the default test for a change of the code.
@@ -71,7 +76,6 @@ physics that most changes touch, so it is the default test for a change of the c
 ## nltephotospheric
 
 The photospheric phase of a supernova with the NLTE populations, the Spencer-Fano solver, and the multibin radiation
-field model. The preset keeps 100 excited levels for each ion below calcium and 200 for the heavier ions. `MAXTEMP` is
-high for the hot early ejecta.
+field model. The preset keeps 100 excited levels for each ion below calcium and 200 for the heavier ions.
 
 The test `nltephotospheric_dynamic_ion_range_1d_1dgrid` uses this preset.

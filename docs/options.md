@@ -47,7 +47,9 @@ The timestep scheme:
 
 - LOGARITHMIC_THEN_CONSTANT, a hybrid scheme;
 
-- CONSTANT_THEN_LOGARITHMIC, a hybrid scheme. The hybrid schemes need TIMESTEP_SIZE_CONSTANT_MAX_WIDTH_DAYS and TIMESTEP_SIZE_TRANSITION_TIME_DAYS. The number of constant timesteps must be below the total number of timesteps, or the run stops.
+- CONSTANT_THEN_LOGARITHMIC, a hybrid scheme.
+
+The hybrid schemes need TIMESTEP_SIZE_CONSTANT_MAX_WIDTH_DAYS and TIMESTEP_SIZE_TRANSITION_TIME_DAYS. The number of constant timesteps must be below the total number of timesteps, or the run stops.
 
 **Every preset:** `TimeStepSizeMethod::LOGARITHMIC`
 
@@ -131,7 +133,9 @@ Multiply these rates by the clumping factor of the cell:
 
 - the charge transfer reactions;
 
-- the photoionisation equilibrium of the elements without NLTE levels. The Saha balance is unaffected. With USE_LUT_PHOTOION, the stimulated recombination correction inside the tabulated photoionisation coefficients cannot include the clumping factor of the cell. The stimulated recombination then gets the factor through the direct bound-free integrals and through the departure ratios of the packet opacity.
+- the photoionisation equilibrium of the elements without NLTE levels. The Saha balance is unaffected.
+
+With USE_LUT_PHOTOION, the stimulated recombination correction inside the tabulated photoionisation coefficients cannot include the clumping factor of the cell. The stimulated recombination then gets the factor through the direct bound-free integrals and through the departure ratios of the packet opacity.
 
 **Every preset:** `false`
 
@@ -375,7 +379,9 @@ The accelerator forgets its history when an element falls back to LTE or changes
 
 - a step with an ion population below MINPOP or above the population of its element;
 
-- a step away from the map output that is larger than twice the residual. The convergence test comes before the injection, so a converged cell keeps the output of a plain pass. A cell that reaches NLTE_TE_NNE_MAXITER also ends with a plain pass.
+- a step away from the map output that is larger than twice the residual.
+
+The convergence test comes before the injection, so a converged cell keeps the output of a plain pass. A cell that reaches NLTE_TE_NNE_MAXITER also ends with a plain pass.
 
 **Preset values:** classic `false`, kilonova_lte `true`, kilonova_nlte `true`, nltenebular `false`, nltephotospheric `false`
 
@@ -425,7 +431,9 @@ Reject an NLTE solution with one of these faults:
 
 - a population below -MINPOP;
 
-- a population inversion above STRICT_POPULATION_CHECKING_INVERSION_FACTOR_SOLVER_FAIL. Without this option, the solver replaces a negative population with the Boltzmann population. That population can be much larger, and a partition function can then overflow.
+- a population inversion above STRICT_POPULATION_CHECKING_INVERSION_FACTOR_SOLVER_FAIL.
+
+Without this option, the solver replaces a negative population with the Boltzmann population. That population can be much larger, and a partition function can then overflow.
 
 **Preset values:** classic `false`, kilonova_lte `true`, kilonova_nlte `true`, nltenebular `true`, nltephotospheric `true`
 
@@ -605,6 +613,8 @@ nltephotospheric
 ```
 
 ## Non-thermal particles
+
+The energy grid of the Spencer-Fano solution is not an option of artisoptions.h. SFPTS (the number of energy points) is in nonthermal.h, and SF_EMIN and SF_EMAX (the grid limits in eV) are at the top of nonthermal.cc. They apply to every preset.
 
 ### NT_SCHEME
 
@@ -812,7 +822,7 @@ Replace the macroatom with a thermalisation probability P for each bound-bound a
 
 The grey opacity of a thick cell:
 
-- FEGROUP_APPROX: 0.1 cm^2/g times (0.9 X + 0.1) / (0.9 <X> + 0.1), where X is the initial Fe-group mass fraction of the cell and <X> is the mean of the model;
+- FEGROUP_APPROX: 0.1 cm^2/g times (0.9 X + 0.1) / (0.9 \<X> + 0.1), where X is the initial Fe-group mass fraction of the cell and \<X> is the mean of the model;
 
 - TANAKA2020_ELECTRONFRAC: a fit to the electron fraction Y_e (Tanaka, Kato, Gaigalas & Kawaguchi 2020, MNRAS, 496, 1369-1392, doi:10.1093/mnras/staa1576);
 
@@ -834,7 +844,9 @@ Keep one r-packet emission of each packet. Sample with equal probability from th
 
 - em_pos;
 
-- em_time. Each sample represents nemissiontype_updates emissions.
+- em_time.
+
+Each sample represents nemissiontype_updates emissions.
 
 **Every preset:** `false`
 
@@ -852,7 +864,7 @@ Enable the virtual packets that vpkt.txt sets up. This needs POL_ON. A GPU build
 
 `bool VPKT_WRITE_CONTRIBS`
 
-Write a line to the file vpackets/vpackets_<rank>.out for each emission of a real packet in a thin cell whose virtual packets escape in at least one observer direction of vpkt.txt. The line holds the arrival time, the frequency, and the energy of the contribution to each direction. This needs VPKT_ON.
+Write a line to the file vpackets/vpackets_\<rank>.out for each emission of a real packet in a thin cell whose virtual packets escape in at least one observer direction of vpkt.txt. The line holds the arrival time, the frequency, and the energy of the contribution to each direction. This needs VPKT_ON.
 
 **Every preset:** `false`
 
@@ -884,7 +896,9 @@ The line weight in the binned opacity of each wavelength bin of RPKT_USE_BINNED_
 
 - LINEBINNEDCAPPED: min(LINE_BINNED_CAPPED_TAU_MAX, tau), the line-binned opacity with a maximum for each line.
 
-- LINEBINNED: tau, the line-binned opacity (Fontes, Fryer, Hungerford, Wollaeger & Korobkin 2020, MNRAS, 493, 4143-4171, doi:10.1093/mnras/staa485). With a nonzero RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY, LINEBINNEDCAPPED and LINEBINNED need RPKT_USE_BINNED_OPACITIES. A line-by-line r-packet absorbs the fraction 1 - exp(-tau) in each line, so the thermal emission must then use EXPANSION.
+- LINEBINNED: tau, the line-binned opacity (Fontes, Fryer, Hungerford, Wollaeger & Korobkin 2020, MNRAS, 493, 4143-4171, doi:10.1093/mnras/staa485).
+
+With a nonzero RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY, LINEBINNEDCAPPED and LINEBINNED need RPKT_USE_BINNED_OPACITIES. A line-by-line r-packet absorbs the fraction 1 - exp(-tau) in each line, so the thermal emission must then use EXPANSION.
 
 For the virtual packets, LINEBINNED gives nearly the line-by-line optical depth of a bin that the packet fully crosses. EXPANSION gives a smaller optical depth for every line, and the largest difference for a line with tau > 1. LINEBINNEDCAPPED gives a smaller optical depth for a line with tau > LINE_BINNED_CAPPED_TAU_MAX.
 
@@ -912,7 +926,9 @@ Write the text of all MPI ranks into one combined file of the job folder for eac
 
 - radfield_allranks.out;
 
-- macroatom_allranks.out, only with the constant LOG_MACROATOM in macroatom.cc. Each rank then keeps the macroatom lines of a whole timestep in memory. Without this option, each rank writes its own files, e.g. estimators_<rank>.out. At each timestep, each rank writes its text into a buffer, and rank 0 then writes the buffers in the order of the ranks. In a build with libzstd, each rank compresses its own buffer into one zstd frame. A combined file thus holds the timesteps in their order, and in each timestep the text of the ranks in their order.
+- macroatom_allranks.out, only with the constant LOG_MACROATOM in macroatom.cc. Each rank then keeps the macroatom lines of a whole timestep in memory.
+
+Without this option, each rank writes its own files, e.g. estimators_\<rank>.out. At each timestep, each rank writes its text into a buffer, and rank 0 then writes the buffers in the order of the ranks. In a build with libzstd, each rank compresses its own buffer into one zstd frame. A combined file thus holds the timesteps in their order, and in each timestep the text of the ranks in their order.
 
 The nlte, radfield, and macroatom files start with one header line. scripts/combine_allrank_out_files.py makes the same combined files from the files of the ranks.
 

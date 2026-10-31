@@ -4,7 +4,7 @@
 
 - A C++ compiler: gcc 14 or a later version, clang, nvc++, or hipcc.
 - An MPI library that supplies an `mpicxx` command, e.g. Open MPI.
-- Optionally libzstd. A build with the library reads and writes zstd compressed files (see [Input files](inputfiles.md)).
+- libzstd. A build with the library reads and writes zstd compressed files (see [Input files](inputfiles.md)). A build without it stops at the end-to-end tests, because `tests/runtest.sh` builds with `ZSTD=ON` and the test input files are compressed.
 
 The build needs no other program. On an HPC cluster, a module or a spack command gives the compiler and the MPI library. For the clusters that we use, the top of the Slurm script in `scripts/artis-*.sh` names the modules that work.
 
@@ -57,6 +57,8 @@ make
 Symlink the preset. Do not copy it. The symlink keeps `artisoptions.h` correct when the preset changes, e.g. after a change of branch.
 :::
 
-`make` builds `sn3d` and `exspec`. It puts the objects in `build/<configuration>/` and makes a symlink in the repository root to each program that it builds. `make unittests` builds the third program and makes its symlink (see [Testing](testing.md)). Each make option adds a suffix to the name of the build folder, so different sets of make options coexist. The name holds no preset, so a change of the preset must compile every object again. `--check-symlink-times` in `MAKEFLAGS` makes make see that change. Each symlink points to the most recent build of any configuration, so look at the symlink before you copy a binary. Copy a binary with `cp -L` from the repository root.
+`make` builds `sn3d` and `exspec`. It puts the objects in `build/<configuration>/` and makes a symlink in the repository root to each program that it builds. `make unittests` builds the third program and makes its symlink (see [Testing](testing.md)).
+
+Each make option adds a suffix to the name of the build folder, so different sets of make options coexist. The name holds no preset, so a change of the preset must compile every object again. `--check-symlink-times` in `MAKEFLAGS` makes make see that change. Each symlink points to the most recent build of any configuration. Look at the symlink before you copy a binary. Copy a binary with `cp -L` from the repository root.
 
 [Make options](makeoptions.md) lists the options of `make`.

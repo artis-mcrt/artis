@@ -40,18 +40,25 @@ The script stops at the first step that fails. To run only one step, give the na
 test, e.g. `tests/runtest.sh kilonova_1d resume`. With `TESTMODE=ON` in the environment, the build has the sanitizers
 and the extra assertions.
 
-The script needs Open MPI and libzstd. It also calls these commands: `zstd`, `md5sum`, `curl`, `perl`, `rsync`,
-and `tar`. The test input files are zstd compressed, and the setup step downloads and unpacks the atomic data. It writes the checksums of the run into the model folder, e.g.
+The script needs Open MPI and libzstd. It also calls these commands:
+
+- `zstd` and `md5sum`, because the test input files are zstd compressed;
+- `curl` and `tar`, because the setup step downloads and unpacks the atomic data;
+- `python3`, for `scripts/mergeangleres.py` of the `exspec` step;
+- `perl` and `rsync`, for the setup step.
+
+The script writes the checksums of the run into the model folder, e.g.
 `tests/kilonova_1d_testrun/results_md5_job0.txt`.
 
 :::{note}
-A different compiler or CPU type can give checksums that differ from the stored checksums. CI makes the reference
-checksums on an arm64 runner with g++-16, so a local mismatch is not by itself an error.
+CI makes the reference checksums on an arm64 runner with g++-16, so a different compiler or CPU type can give
+different checksums. Examine a local mismatch first as a real change of the results. Let CI give the decision. For a
+change that must not alter the results, a mismatch in CI is an error in the change.
 :::
 
 ## Continuous integration
 
-CI runs on every push. It builds with `REPRODUCIBLE=ON FASTMATH=OFF MAX_NODE_SIZE=2` and compares md5 checksums of the
+CI runs on every push. It builds with `REPRODUCIBLE=ON ZSTD=ON FASTMATH=OFF MAX_NODE_SIZE=2` and compares md5 checksums of the
 output files with the reference checksums in the `tests/*_inputfiles` folders. It also compiles every
 `artisoptions_*.h` preset with gcc and clang, and the classic and the NLTE nebular presets additionally with Apple
 Clang, nvc++, and hipcc, including the GPU code paths. CI installs artistools and plots the output of each test, so a

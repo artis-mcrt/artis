@@ -16,7 +16,7 @@ A simulation reads three sets of data:
 - the gamma-ray spectrum of each nuclide;
 - the collisional ionisation and Auger tables;
 - the electron binding energies;
-- the charge transfer reaction rates.
+- the rates of the charge transfer reactions.
 
 Keep the source code in a subfolder `artis` of the model folder. The code then finds these files in `artis/data`, and
 you copy nothing.
