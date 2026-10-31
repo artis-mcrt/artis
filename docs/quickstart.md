@@ -20,7 +20,7 @@ files. The package of the library is `libzstd-dev` on Debian and Ubuntu, and `li
 of the test, and the model folder of section 5 below, call these commands:
 
 - `zstd` and `md5sum`, for the compressed files and for the checksums;
-- `curl` and `tar`, for the atomic data;
+- `curl`, `tar`, and `xz`, for the atomic data;
 - `python3`, `perl`, and `rsync`.
 
 ## 2. Clone the repository
@@ -144,10 +144,10 @@ Then build again and run:
 ```sh
 cd artis && make && cd ..
 mpirun -np 4 artis/sn3d &
-tail -f output_0-0.txt
+tail -F output_0-0.txt
 ```
 
-`sn3d` writes one line with the name of the job folder to the standard output, and then nothing more unless a crash occurs. Each rank writes its own log file. `output_0-0.txt` in the model folder is a symlink to the log of rank 0. Press Ctrl+C to stop following the log file.
+`sn3d` writes one line with the name of the job folder to the standard output, and then nothing more unless a crash occurs. Each rank writes its own log file. `output_0-0.txt` in the model folder is a symlink to the log of rank 0, and `tail -F` waits until `sn3d` makes it. Press Ctrl+C to stop following the log file.
 
 [Running sn3d](running.md) describes the command-line options, the logs, and the restart of a long run.
 

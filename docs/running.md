@@ -4,17 +4,17 @@ Run `sn3d` in the model folder. A local run with eight MPI ranks looks like this
 
 ```sh
 mpirun -np 8 artis/sn3d &
-tail -f output_0-0.txt
+tail -F output_0-0.txt
 ```
 
-Press Ctrl+C to stop following the log file.
+`tail -F` waits until `sn3d` makes the log file. Press Ctrl+C to stop following it.
 
 ## The logs
 
 `sn3d` writes one line with the name of the job folder to the standard output, and then nothing more unless a crash
-occurs. Each MPI rank n writes a log file called `output_n-0.txt` into the job folder (see
-[Output files](outputfiles.md)). `sn3d` keeps a symlink `output_0-0.txt` in the model folder that points to the log of
-rank 0.
+occurs. Each MPI rank n writes a log file `output_n-t.txt` into the job folder, where t is the thread of that rank (see
+[Output files](outputfiles.md)). A run without threads writes only the files of thread 0. `sn3d` keeps a symlink
+`output_0-0.txt` in the model folder that points to the log of rank 0 and thread 0.
 
 The log of rank 0 starts with the git version and the content of `artisoptions.h` without the comment lines, the
 preprocessor lines, and the blank lines. After each timestep, it gives the progress of the model and an estimate of the

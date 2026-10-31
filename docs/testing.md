@@ -43,7 +43,7 @@ and the extra assertions.
 The script needs Open MPI and libzstd. It also calls these commands:
 
 - `zstd` and `md5sum`, because the test input files are zstd compressed;
-- `curl` and `tar`, because the setup step downloads and unpacks the atomic data;
+- `curl`, `tar`, and `xz`, because the setup step downloads and unpacks the atomic data;
 - `python3`, for `scripts/mergeangleres.py` of the `exspec` step;
 - `perl` and `rsync`, for the setup step.
 

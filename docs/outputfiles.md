@@ -16,7 +16,8 @@ is necessary. The logs, `input.txt`, and the restart files stay plain. Every fil
 
 Each job writes these files into its job folder:
 
-- `output_n-0.txt`: a log file for each MPI rank n.
+- `output_n-t.txt`: a log file for each MPI rank n and each thread t of that rank. A run without threads writes
+  only the files of thread 0.
 - the estimators of each cell at each timestep: the temperatures, the ionisation, and the heating and cooling rates.
   The option `WRITE_COMBINED_ALLRANK_OUT_FILES` selects one of two forms, and every preset sets the option:
     - with the option, `sn3d` writes the text of all ranks into one combined file, `estimators_allranks.out`;
