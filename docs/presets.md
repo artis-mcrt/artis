@@ -1,7 +1,7 @@
 # Option presets
 
 `artisoptions.h` holds the compile-time options of a run (see [Compile-time options](options.md)). The repository has
-five presets of these options. Each preset is a complete set of values for one type of simulation. Select one with a
+four presets of these options. Each preset is a complete set of values for one type of simulation. Select one with a
 symlink:
 
 ```sh
@@ -19,7 +19,6 @@ Start from the preset that is nearest to your simulation, and then change the op
 | --- | --- | --- | --- | --- | --- |
 | `classic` | Type Ia supernova | photospheric | LTE excitation, tabulated photoionisation | off | instant |
 | `kilonova_lte` | kilonova | all | LTE | off | time dependent |
-| `kilonova_nlte` | kilonova | all | NLTE for Sr, Y, and Zr | Spencer-Fano | time dependent |
 | `nltenebular` | supernova | nebular | NLTE, multibin radiation field | Spencer-Fano | instant |
 | `nltephotospheric` | supernova | photospheric | NLTE, multibin radiation field | Spencer-Fano | instant |
 
@@ -49,13 +48,6 @@ late ejecta. The frequency range of the r-packets reaches further into the ultra
 The tests `kilonova_1d`, `kilonova_2d`, `kilonova_2d_expansionopac`, `kilonova_2d_barnesthermalisation`, and
 `kilonova_2d_xcomgammaphotoion` use this preset. `kilonova_1d` is the quickest test of the repository, so the
 [Quickstart](quickstart.md) uses it.
-
-## kilonova_nlte
-
-The same kilonova setup as `kilonova_lte`, and additionally the NLTE populations of strontium, yttrium, and zirconium
-(250 excited levels each) and the Spencer-Fano solver for the non-thermal electrons.
-
-The test `kilonova_1d_timedepnlte` uses this preset.
 
 ## nltenebular
 

@@ -11,7 +11,8 @@ declaration after it becomes a note at the top of its section.
 
 The script reads the presets that the repository tracks, so an untracked preset of your own stays out of the page.
 It also checks that the presets and artisoptions_doc.md name the same options. A missing or an extra option stops the
-script, because the page would then describe options that no preset sets.
+script, because the page would then describe options that no preset sets. The check covers every tracked preset, also
+a preset that PRESETS_NOT_ON_PAGE names.
 
 The script gives the status 0 when it wrote the page or when the page was already current, and 1 for an error. The
 pre-commit hook fails when the script changes the page, so that the commit holds the new content.
@@ -26,6 +27,9 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DOC_PATH = REPO_ROOT / "artisoptions_doc.md"
 PAGE_PATH = REPO_ROOT / "docs" / "options.md"
+
+# the presets that the page leaves out, because they are work in progress and their values will change
+PRESETS_NOT_ON_PAGE = ("kilonova_nlte",)
 
 GROUP_PATTERN = re.compile(r"^// --- (.+?) ---$")
 COMMENT_PATTERN = re.compile(r"^//(.*)$")
@@ -272,7 +276,12 @@ def build_page() -> tuple[str, int, int]:
     groups = parse_doc(DOC_PATH.read_text(encoding="utf-8"))
     documented = {option.name for group in groups for option in group.options}
     check_every_option_documented(presets, documented)
-    return make_page(groups, presets), len(documented), len(presets)
+    untracked = sorted(set(PRESETS_NOT_ON_PAGE) - presets.keys())
+    if untracked:
+        message = f"PRESETS_NOT_ON_PAGE names {', '.join(untracked)}, which the repository does not track"
+        raise ValueError(message)
+    shown = {preset: text for preset, text in presets.items() if preset not in PRESETS_NOT_ON_PAGE}
+    return make_page(groups, shown), len(documented), len(shown)
 
 
 def main() -> int:
