@@ -58,7 +58,7 @@ change that must not alter the results, a mismatch in CI is an error in the chan
 
 ## Continuous integration
 
-CI runs on every push. It builds with `REPRODUCIBLE=ON ZSTD=ON FASTMATH=OFF MAX_NODE_SIZE=2` and compares md5 checksums of the
+CI runs on every push, except on a branch whose name starts with `classic`. It builds with `REPRODUCIBLE=ON ZSTD=ON FASTMATH=OFF MAX_NODE_SIZE=2` and compares md5 checksums of the
 output files with the reference checksums in the `tests/*_inputfiles` folders. It also compiles every
 `artisoptions_*.h` preset with gcc and clang, and the classic and the NLTE nebular presets additionally with Apple
 Clang, nvc++, and hipcc, including the GPU code paths. CI installs artistools and plots the output of each test, so a

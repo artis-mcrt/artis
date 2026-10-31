@@ -29,7 +29,7 @@ ARTIS simulates ejecta in 1D spherical, 2D cylindrical, and 3D Cartesian coordin
 
 ### Software engineering practices
 
-- **Continuous integration**: each push to a branch of this repository, and each entry of the merge queue, starts the [GitHub Actions CI](https://github.com/artis-mcrt/artis/actions/workflows/ci.yml). It compiles the code with every supported compiler and compares the checksums of the end-to-end tests, so a regression does not reach the main branch. A pull request from a fork gets no automatic run.
+- **Continuous integration**: each push to a branch of this repository, except a branch whose name starts with `classic`, and each entry of the merge queue, starts the [GitHub Actions CI](https://github.com/artis-mcrt/artis/actions/workflows/ci.yml). It compiles the code with every supported compiler and compares the checksums of the end-to-end tests, so a regression does not reach the main branch. A pull request from a fork gets no automatic run.
 - **Static analysis and linting**: the project is configured for clang-tidy, clang-format, and cppcheck, enforcing consistent style and catching common C++ pitfalls at compile time rather than at runtime.
 - **Address and undefined-behaviour sanitizers**: the `TESTMODE=ON` build flag enables ASan and UBSan, providing runtime detection of memory errors and undefined behaviour during development.
 
