@@ -2,7 +2,7 @@
 
 As well as `sn3d`, `make` builds `exspec`, which combines the packet files from all ranks into spectra and light
 curves. `sn3d` writes the same files itself, so `exspec` is necessary only to make them again from the packet files,
-e.g. after a change of `MNUBINS` or of the frequency range.
+e.g. after a change of the frequency range or of the `MNUBINS` bin count of `spectrum_lightcurve.cc`.
 
 Run it in the model folder with any number of ranks from one up to the number of packet files:
 

@@ -55,8 +55,8 @@ On Leonardo and Virgo, run `artis/scripts/artis-<cluster>-submit.sh` in place of
 holds the rank count. These two scripts take the email address for the Slurm messages from the `EMAIL` environment
 variable (see `scripts/aliases.sh`).
 
-On each of these clusters, `artis/scripts/submit.sh` finds the cluster from the host name and submits the applicable
-job script. Run it in the model folder in place of `sbatch`.
+On Cosma8, Kelvin2, Leonardo, and Virgo, `artis/scripts/submit.sh` finds the cluster from the host name and submits
+the applicable job script. Run it in the model folder in place of `sbatch`.
 
 ## What the job scripts do
 
