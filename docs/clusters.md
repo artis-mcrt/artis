@@ -3,12 +3,12 @@
 Each simulation has its own model folder. Keep the source code and the git metadata in a subfolder `artis` of the model
 folder, not only the executables. The code then finds its data files in `artis/data`.
 
-Make the model folder. Then clone the release branch into it:
+Make the model folder. Then clone the default branch `main` into it:
 
 ```sh
 mkdir mymodel
 cd mymodel
-git clone --branch release https://github.com/artis-mcrt/artis.git
+git clone https://github.com/artis-mcrt/artis.git
 cd artis
 ```
 
