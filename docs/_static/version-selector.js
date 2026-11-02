@@ -8,7 +8,11 @@ document.addEventListener("readthedocs-addons-data-ready", (event) => {
   }
   const versions = event.detail.data().versions;
   const list = selector.querySelector("select");
-  for (const version of versions.active) {
+  // a hidden version and a build of a pull request stay out of the active versions, so the list needs the current one
+  const shown = versions.active.some((version) => version.slug === versions.current.slug)
+    ? versions.active
+    : [versions.current, ...versions.active];
+  for (const version of shown) {
     const entry = document.createElement("option");
     entry.value = version.urls.documentation;
     entry.text = version.slug;

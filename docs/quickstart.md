@@ -74,6 +74,13 @@ brew install uv                                  # macOS
 curl -LsSf https://astral.sh/uv/install.sh | sh  # Linux
 ```
 
+The Linux installer puts `uv` and the tools of `uv` in `~/.local/bin`. It adds that folder to the profile of your
+shell, but the current shell needs it too:
+
+```sh
+source "$HOME/.local/bin/env"  # Linux
+```
+
 Then install artistools:
 
 ```sh
