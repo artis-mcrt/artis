@@ -35,6 +35,10 @@ A run writes these files into the model folder:
 
 - `packets/packets00_nnnn.out`: the Monte Carlo packets from each rank, which `exspec` can turn into spectra and light
   curves again.
+- the files of the virtual packets, which a run with `VPKT_ON` writes at the last requested timestep:
+    - `vspecpol/vspecpol_nnnn.out`: the spectrum of each observer direction, with the Stokes parameters I, Q, and U;
+    - `vpkt_grid/vpkt_grid_nnnn.out`: the emission over the velocity grid, when `vpkt.txt` switches that map on;
+    - `vpackets/vpackets_nnnn.out`: one row for each contribution of a virtual packet, with `VPKT_WRITE_CONTRIBS`.
 - `light_curve.out`, `spec.out`, and the other spectrum files that [Post-processing with exspec](exspec.md) lists:
   `sn3d` writes the light curves and spectra at each timestep, and the emission, absorption, and direction-resolved
   files at the last requested timestep.
@@ -54,7 +58,8 @@ A run writes these files into the model folder:
     - `gammalinelist.out`: each gamma line of each nuclide, with its energy in MeV and its probability;
     - `bflist.out`: each bound-free continuum, with its ion, its lower level, and its upper level.
 - `gridsave_ts*.tmp` and `packets_*_ts*.tmp`: restart files that hold the state at the start of a timestep, after its
-  grid update. A later job continues from that timestep and propagates its packets.
+  grid update. A later job continues from that timestep and propagates its packets. A run with `VPKT_ON` also
+  writes `vspecpol_nnnn_ts*.tmp` files of this type.
 
 `sn3d` also keeps an `output_0-0.txt` symlink in the model folder that points to the rank-0 log of the current job.
 
