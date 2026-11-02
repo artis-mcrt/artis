@@ -8,8 +8,9 @@ A simulation uses two types of folder:
   folder from the start timestep of the job, e.g. `job_from_ts0000` for a new simulation and `job_from_ts0008` for a
   job that resumes at timestep 8. Rank 0 writes the name of the folder to the standard output.
 
-A build with libzstd writes each `.out` file zstd compressed, e.g. `spec.out.zst`, so that no separate compression step
-is necessary. The logs, `input.txt`, and the restart files stay plain. Every file gets zstd level 9.
+A build with libzstd writes each `.out` file zstd compressed, e.g. `spec.out.zst`, so that no separate compression
+step is necessary. The logs, `input.txt`, `artis.pid`, `syn_dir.txt`, and the restart files stay plain. Every file
+gets zstd level 9.
 [artistools](https://github.com/artis-mcrt/artistools) reads both forms.
 
 ## The files of each job
@@ -26,7 +27,8 @@ Each job writes these files into its job folder:
     The option gives the same choice for the nlte and the radfield files, e.g. `nlte_allranks.out`. With the constant
     `LOG_MACROATOM` in `macroatom.cc`, it also gives `macroatom_allranks.out`.
     `scripts/combine_allrank_out_files.py` makes the combined files from the files of the ranks, and it keeps the
-    files of the ranks unless you give `--rm`. Run the script with uv, e.g. `uv run artis/scripts/combine_allrank_out_files.py`.
+    files of the ranks unless you give `--rm`. Run the script with uv, e.g.
+    `uv run artis/scripts/combine_allrank_out_files.py`.
   The script needs Python 3.14 or a later version, and uv gets that version from the metadata of the script.
 
 ## The files of the whole simulation
@@ -57,9 +59,13 @@ A run writes these files into the model folder:
     - `nuclides.out`: each nuclide of the decay network, with its proton number and its mass number;
     - `gammalinelist.out`: each gamma line of each nuclide, with its energy in MeV and its probability;
     - `bflist.out`: each bound-free continuum, with its ion, its lower level, and its upper level.
+- `syn_dir.txt`: the unit vector of the theta = 0 direction of the direction bins. The code keeps the value `0 0 1`.
+- `artis.pid`: the process id of rank 0 and the path of the model folder. `sn3d` and `exspec` stop when this file
+  names a process that still runs in the same folder, and each program removes the file at the end.
 - `gridsave_ts*.tmp` and `packets_*_ts*.tmp`: restart files that hold the state at the start of a timestep, after its
   grid update. A later job continues from that timestep and propagates its packets. A run with `VPKT_ON` also
-  writes `vspecpol_nnnn_ts*.tmp` files of this type.
+  writes `vspecpol_nnnn_ts*.tmp`. The velocity grid map adds `vpkt_grid_nnnn_ts*.tmp`, and `VPKT_WRITE_CONTRIBS`
+  adds `vpackets_nnnn_ts*.tmp`. A resumed run reads all of them.
 
 `sn3d` also keeps an `output_0-0.txt` symlink in the model folder that points to the rank-0 log of the current job.
 
