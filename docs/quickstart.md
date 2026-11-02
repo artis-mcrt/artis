@@ -138,10 +138,14 @@ cd ..
 [Option presets](presets.md) says what each preset is for.
 
 :::{note}
-`artisoptions.h` is a symlink, so an editor changes the preset file of your clone. That is the intended workflow, because each model folder keeps its own clone of the source. Do not replace the symlink with a copy.
+`artisoptions.h` is a symlink, so an editor changes the preset file of your clone. Do not replace the symlink with a
+copy. The `artis` folder of this section is a symlink to the clone of step 2, so the edit changes a tracked file
+there. `git status` shows the change, and `git restore artisoptions_kilonova_lte.h` removes it. Each model folder
+that shares this clone gets the same options. Give a model folder its own clone when it needs its own options.
 :::
 
-The preset has a value of `NUM_PACKETS` for about 1000 MPI ranks. A laptop needs a much smaller value. Change it in `artis/artisoptions.h`:
+The preset has a value of `NUM_PACKETS` for about 1000 MPI ranks. A laptop needs a much smaller value. Change it in
+`artis/artisoptions.h`:
 
 ```c++
 constexpr std::int64_t NUM_PACKETS = 1e6;
