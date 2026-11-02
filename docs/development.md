@@ -50,8 +50,9 @@ The Makefile builds three programs from the same sources. `sn3d.cc`, `exspec.cc`
 
 ## Documentation
 
-This site comes from the `docs/` folder. The pages are [MyST](https://myst-parser.readthedocs.io/) Markdown, and
-[Read the Docs](https://readthedocs.org/) builds them with [Sphinx](https://www.sphinx-doc.org/) on each push.
+This site comes from the `docs/` folder. The pages are [MyST](https://myst-parser.readthedocs.io/en/latest/)
+Markdown, and [Read the Docs](https://about.readthedocs.com/) builds them with
+[Sphinx](https://www.sphinx-doc.org/en/master/) on each push.
 `docs/conf.py` and `.readthedocs.yaml` hold that configuration. To build the site locally:
 
 ```sh
