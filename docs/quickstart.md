@@ -74,8 +74,7 @@ brew install uv                                  # macOS
 curl -LsSf https://astral.sh/uv/install.sh | sh  # Linux
 ```
 
-The Linux installer puts `uv` and the tools of `uv` in `~/.local/bin`. It adds that folder to the profile of your
-shell, but the current shell needs it too:
+The Linux installer adds `uv` to the profile of your shell, but the current shell needs it too:
 
 ```sh
 source "$HOME/.local/bin/env"  # Linux
@@ -85,7 +84,11 @@ Then install artistools:
 
 ```sh
 uv tool install artistools
+export PATH="$(uv tool dir --bin):$PATH"
 ```
+
+`uv` puts the executable of a tool in a folder of its own, which the standard path of macOS and of Linux does not
+hold. The export gives that folder to the current shell. `uv tool update-shell` adds it to the profile of your shell.
 
 Then describe the model, check the results, and plot them:
 

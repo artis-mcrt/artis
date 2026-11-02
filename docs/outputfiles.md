@@ -46,6 +46,13 @@ A run writes these files into the model folder:
   the vacuum wavelength in Angstroms, the atomic number, the ion stage, the upper level index, and the lower level
   index. The level indices start at 0 in each ion. Each later row is one line, in the order of the line index that the
   emission and absorption codes of the packets use. Only the first job of a simulation writes this file.
+- the reference tables of the setup, which rank 0 writes:
+    - `timesteps.out`: each timestep, with its start, its midpoint, and its width in days;
+    - `grid.out`: each propagation cell that holds matter, with its model cell;
+    - `modelgridrankassignments.out`: the first model cell and the cell count of each rank;
+    - `nuclides.out`: each nuclide of the decay network, with its proton number and its mass number;
+    - `gammalinelist.out`: each gamma line of each nuclide, with its energy in MeV and its probability;
+    - `bflist.out`: each bound-free continuum, with its ion, its lower level, and its upper level.
 - `gridsave_ts*.tmp` and `packets_*_ts*.tmp`: restart files that hold the state at the start of a timestep, after its
   grid update. A later job continues from that timestep and propagates its packets.
 
