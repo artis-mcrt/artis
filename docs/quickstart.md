@@ -99,6 +99,18 @@ artistools plotlightcurves tests/kilonova_1d_testrun
 artistools plotspectra -t 1 tests/kilonova_1d_testrun
 ```
 
+:::{figure} images/lightcurve.png
+:alt: The light curve of the test model
+
+The light curve that `plotlightcurves` gives. The test model uses few packets, so the curve is noisy.
+:::
+
+:::{figure} images/spectrum.png
+:alt: The spectrum of the test model at one day
+
+The spectrum that `plotspectra -t 1` gives.
+:::
+
 `artistools check` gives one row for each check of the results, so it is the quickest test that a run deserves trust.
 It gives a warning for this test model, because the reduced atomic data and the low packet count limit its accuracy.
 
