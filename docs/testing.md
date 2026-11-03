@@ -64,6 +64,9 @@ output files with the reference checksums in the `tests/*_inputfiles` folders. I
 Clang, nvc++, and hipcc, including the GPU code paths. CI installs artistools and plots the output of each test, so a
 change of an output format fails CI there.
 
+Once each week, a separate workflow builds the site with the `linkcheck` builder of Sphinx and tests every link.
+`linkcheck_ignore` of `docs/conf.py` holds the pages that give the status 405 to an automated request.
+
 A change that must not alter the numerical results has to give identical checksums. For such a change, a mismatch is an
 error in the change. A change that alters the results for a good reason needs new reference checksums, which the
 "Update checksums" workflow writes.

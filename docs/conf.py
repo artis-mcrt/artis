@@ -16,6 +16,9 @@ myst_enable_extensions = ["colon_fence"]
 # make an anchor for each heading down to level 3, so that a link can point at one option of options.md
 myst_heading_anchors = 3
 
+# ADS gives the status 405 to an automated request, so the weekly link check skips the pages of the abstracts
+linkcheck_ignore = [r"https://ui\.adsabs\.harvard\.edu/abs/"]
+
 # the canonical link of a page names the version that a search engine must show, so that the versions of the site do
 # not compete with each other
 html_baseurl = os.environ.get("READTHEDOCS_CANONICAL_URL", "")
