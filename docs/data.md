@@ -59,6 +59,9 @@ curl -fLO https://github.com/artis-mcrt/artis/releases/download/v2026.5.15/atomi
 tar --zstd -xf atomicdata_shinglesetal2022.tar.zst
 ```
 
+GNU tar calls the `zstd` command for a `.zst` archive. The package of the library, e.g. `libzstd-dev`, supplies no such
+command, so install the package `zstd` as well.
+
 The dataset holds 41 ions of the 11 elements of a Type Ia model:
 
 - C I to C IV, O I to O IV, Si I to Si IV, S I to S IV, Ar I to Ar IV, and Ca I to Ca IV;
