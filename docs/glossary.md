@@ -9,8 +9,8 @@ estimator
   ranks. The grid update of the next timestep reads them.
 
 gamma packet
-  A packet that holds the gamma rays of one decay. It gives its energy to the gas by Compton scattering, by
-  photoelectric absorption, or by pair production. It can also escape.
+  A packet that holds the energy of its pellet as gamma rays. It gives that energy to the gas by Compton scattering,
+  by photoelectric absorption, or by pair production. It can also escape.
 
 job folder
   The subfolder `job_from_ts<n>` that `sn3d` writes in one Slurm job, where n is the first timestep of that job. It
@@ -19,7 +19,9 @@ job folder
 k-packet
   A packet of thermal kinetic energy. The code adds the cooling rate of each process of the cell, which are the
   free-free emission, the free-bound emission, the collisional excitation, and the collisional ionisation. It then
-  samples one of these channels, which converts the k-packet into radiation or into a macro atom.
+  samples one of these channels, which converts the k-packet into radiation or into a macro atom. A k-packet also
+  loses energy, because the diffusion step takes the adiabatic loss of the radiation, and the thermal balance of the
+  cell gives the share that becomes radiation.
 
 macro atom
   The state of a packet between an absorption and the next emission. The macro atom makes internal radiative and
@@ -35,12 +37,13 @@ model grid cell
   share one model grid cell. The code calls its index `modelgridindex`, or `mgi`.
 
 packet
-  An indivisible energy packet. Each packet holds a fixed energy in the comoving frame, and `sn3d` follows it until it
-  escapes or the simulation ends. Lucy (2002), A&A, 384, 725-735, doi:10.1051/0004-6361:20011756 describes the method.
+  An indivisible energy packet. The code never splits a packet, and `sn3d` follows it until it escapes or the
+  simulation ends. Some events change the comoving energy of a packet, e.g. the adiabatic loss of a k-packet. Lucy (2002), A&A, 384, 725-735, doi:10.1051/0004-6361:20011756 describes the method.
 
 pellet
-  The first state of a packet. The pellet holds the energy of a radioactive decay, and it moves with the ejecta until
-  its decay time. The decay then makes a gamma packet or a packet of particles.
+  The first state of a packet. Each pellet holds the same energy, which is the decay energy of the whole model divided
+  by the number of packets. The pellet moves with the ejecta until the time of its decay. The decay then makes a gamma
+  packet, or a packet of positrons, electrons, alpha particles, or fission fragments.
 
 preset
   One of the `artisoptions_*.h` files. Each preset holds the compile-time options for one type of model. See

@@ -5,16 +5,22 @@
 
 ## The packets
 
-ARTIS uses indivisible energy packets (Lucy (2002), A&A, 384, 725-735, doi:10.1051/0004-6361:20011756). Each packet
-holds a fixed energy in the comoving frame. A packet changes its type, but it keeps that energy:
+ARTIS uses indivisible energy packets (Lucy (2002), A&A, 384, 725-735, doi:10.1051/0004-6361:20011756). The code
+never splits a packet, so the number of packets stays the same through the run. A packet changes its type as its
+energy changes its form:
 
-- a pellet holds the energy of one radioactive decay, and it moves with the ejecta until its decay time;
-- the decay makes a gamma packet, or a packet of alpha particles, beta particles, or positrons;
+- each pellet holds the same energy, which is the decay energy of the whole model divided by the number of packets.
+  A pellet moves with the ejecta until the time of its decay.
+  [INITIAL_PACKETS_ON](options.md#initial_packets_on) adds the initial energy of the cells to that sum;
+- the decay makes a gamma packet, or a packet of positrons, electrons, alpha particles, or fission fragments;
 - a gamma packet gives its energy to the gas by Compton scattering, by photoelectric absorption, or by pair
   production;
 - the energy of a fast lepton goes to the heating, the ionisation, and the excitation of the gas. The Spencer-Fano
-  solver gives the three fractions (see [NT_SCHEME](options.md#nt_scheme));
-- a k-packet holds thermal energy. A cooling channel of the cell converts it into radiation or into a macro atom;
+  solver gives the three fractions (see [NT_SCHEME](options.md#nt_scheme)). The fission fragments give all of their
+  energy to the heating;
+- a k-packet holds thermal energy. A cooling channel of the cell converts it into radiation or into a macro atom. A
+  k-packet also loses energy: the diffusion step takes the adiabatic loss of the radiation, and the thermal balance
+  of the cell gives the share that becomes radiation;
 - a macro atom makes internal transitions until it emits radiation or becomes a k-packet again;
 - an r-packet is ultraviolet, optical, or infrared radiation. It moves until it reaches a line, a continuum
   absorption, or an electron scattering.

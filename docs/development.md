@@ -7,7 +7,13 @@ git clone https://github.com/artis-mcrt/artis.git
 cd artis
 ```
 
-[Installation](installation.md) gives the compiler and the MPI library that the build needs.
+[Installation](installation.md) gives the compiler and the MPI library that the build needs. The hooks below need
+`prek`, which the homebrew command of that page installs. On Linux, install it with your package manager or with
+[uv](https://docs.astral.sh/uv/):
+
+```sh
+uv tool install prek
+```
 
 Then install the pre-commit hooks, select a preset, and make a compilation database for the clang tools:
 
