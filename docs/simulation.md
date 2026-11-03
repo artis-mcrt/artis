@@ -11,7 +11,9 @@ ends. A packet changes its type as its energy changes its form:
 
 - each pellet holds the same energy, which is the decay energy of the whole model divided by the number of packets.
   A pellet moves with the ejecta until the time of its decay.
-  [INITIAL_PACKETS_ON](options.md#initial_packets_on) adds the initial energy of the cells to that sum;
+  [INITIAL_PACKETS_ON](options.md#initial_packets_on) adds the initial energy of the cells to that sum. With
+  [UNIFORM_PELLET_ENERGIES](options.md#uniform_pellet_energies) false, the decay times are uniform instead, and the
+  energy of each pellet follows the decay power at its own time;
 - the decay makes a gamma packet, or a packet of positrons, electrons, alpha particles, or fission fragments;
 - a gamma packet gives its energy to the gas by Compton scattering, by photoelectric absorption, or by pair
   production;

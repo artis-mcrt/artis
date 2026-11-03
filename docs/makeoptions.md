@@ -11,7 +11,7 @@ The Makefile is the authority for these options and for the way that they intera
 | `GPU=ON` | Required to compile for GPUs. It works around incompatible function calls and uses a Simpson-rule integrator in place of Gauss-Kronrod. |
 | `GCCTOOLCHAIN=path` | With nvc++, select the gcc toolchain at that path. The Makefile has fallbacks for some known hosts, so this option is not always necessary. |
 | `GPUARCH=N` | With nvc++ and `GPU=ON`, compile for compute capability N, e.g. `GPUARCH=80`, in place of the GPU of the host. A host that has no GPU needs this option to get a defined target. |
-| `OPENMP=ON` | Parallelise with OpenMP threads within each MPI rank. This cannot be combined with `STDPAR`. |
+| `OPENMP=ON` | Parallelise with OpenMP threads within each MPI rank. This cannot be combined with `STDPAR`. The Makefile gives the OpenMP flags to gcc, clang, and nvc++ only, so a build with hipcc gets no threads. |
 | `STDPAR=ON` | Parallelise with C++ standard library parallel algorithms, either on multicore CPUs or, together with `GPU=ON`, on GPUs. |
 | `OPTIMIZE=OFF` | Compile without optimisation. This is the quickest way to check that everything still compiles. |
 | `ZSTD=OFF` | Build without libzstd. |

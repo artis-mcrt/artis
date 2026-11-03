@@ -38,12 +38,15 @@ model grid cell
 
 packet
   An indivisible energy packet. The code never splits a packet, and `sn3d` follows it until it escapes or the
-  simulation ends. Some events change the comoving energy of a packet, e.g. the adiabatic loss of a k-packet. Lucy (2002), A&A, 384, 725-735, doi:10.1051/0004-6361:20011756 describes the method.
+  simulation ends. Some events change the comoving energy of a packet, e.g. the adiabatic loss of a k-packet. Lucy
+  (2002), A&A, 384, 725-735, doi:10.1051/0004-6361:20011756 describes the method.
 
 pellet
-  The first state of a packet. Each pellet holds the same energy, which is the decay energy of the whole model divided
-  by the number of packets. The pellet moves with the ejecta until the time of its decay. The decay then makes a gamma
-  packet, or a packet of positrons, electrons, alpha particles, or fission fragments.
+  The first state of a packet. Each pellet holds the same energy by default, which is the decay energy of the whole
+  model divided by the number of packets, and the decay time of each pellet is a sample of the decay curve
+  ([UNIFORM_PELLET_ENERGIES](options.md#uniform_pellet_energies)). The pellet moves with the ejecta until the time of
+  its decay. The decay then makes a gamma packet, or a packet of positrons, electrons, alpha particles, or fission
+  fragments.
 
 preset
   One of the `artisoptions_*.h` files. Each preset holds the compile-time options for one type of model. See
