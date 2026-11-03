@@ -85,6 +85,9 @@ the same position in each file. CI finds the presets with a glob, so a missing p
 
 ## More for contributors
 
+[CONTRIBUTING.md](https://github.com/artis-mcrt/artis/blob/main/CONTRIBUTING.md) gives the steps of a change, from
+the branch to the pull request.
+
 [AGENTS.md](https://github.com/artis-mcrt/artis/blob/main/AGENTS.md) holds the conventions of the code: the names, the
 comments, the three cell index spaces, the logs and the assertions, the shared state, the reproducible results, and the
 portability to GPUs. It also describes the workflow of a pull request.

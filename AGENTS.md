@@ -113,8 +113,10 @@ compatible with C++23. The Makefile builds three programs from the same sources:
   the system. `pixi run make` is the quickest way to get a toolchain that
   works.
 
-The repository has no `CONTRIBUTING.md` and no template for a pull request or
-an issue.
+`CONTRIBUTING.md` gives the steps of a change for a human contributor. It
+holds no fact that this file does not hold. `.github/pull_request_template.md`
+is the template of a pull request, and `.github/ISSUE_TEMPLATE/` holds the two
+issue forms.
 
 ## Build
 
@@ -325,6 +327,9 @@ The workflows in `.github/workflows/`:
   of pre-commit-ci.
 - `copilot-setup-steps.yml` runs when you change that file, or when you start
   it by hand.
+- `linkcheck.yml` builds the site with the `linkcheck` builder once each week.
+  `linkcheck_ignore` of `docs/conf.py` holds the pages that give the status 405
+  to an automated request.
 
 The first three run on each push, except on a `classic*` branch. Your code
 must therefore compile with each of these compilers, and also on the paths for
