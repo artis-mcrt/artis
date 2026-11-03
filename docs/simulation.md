@@ -6,8 +6,8 @@
 ## The packets
 
 ARTIS uses indivisible energy packets (Lucy (2002), A&A, 384, 725-735, doi:10.1051/0004-6361:20011756). The code
-never splits a packet, so the number of packets stays the same through the run. A packet changes its type as its
-energy changes its form:
+never splits a packet into smaller packets, and it follows each packet until the packet escapes or the simulation
+ends. A packet changes its type as its energy changes its form:
 
 - each pellet holds the same energy, which is the decay energy of the whole model divided by the number of packets.
   A pellet moves with the ejecta until the time of its decay.

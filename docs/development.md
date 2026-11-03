@@ -13,7 +13,11 @@ cd artis
 
 ```sh
 uv tool install prek
+export PATH="$(uv tool dir --bin):$PATH"
 ```
+
+`uv` puts the executable of a tool in a folder of its own, which the standard path does not hold. The export gives
+that folder to the current shell, and `uv tool update-shell` adds it to the profile of your shell.
 
 Then install the pre-commit hooks, select a preset, and make a compilation database for the clang tools:
 
