@@ -9,7 +9,7 @@ project = "ARTIS"
 author = "The ARTIS authors"
 project_copyright = "The ARTIS authors. BSD 3-Clause license"
 
-extensions = ["myst_parser", "sphinx_copybutton"]
+extensions = ["myst_parser", "sphinx_copybutton", "sphinxext.opengraph"]
 
 # colon_fence gives a directive in ::: fences, which a Markdown editor reads more easily than a backtick fence.
 myst_enable_extensions = ["colon_fence"]
@@ -22,6 +22,10 @@ linkcheck_ignore = [r"https://ui\.adsabs\.harvard\.edu/abs/"]
 # the canonical link of a page names the version that a search engine must show, so that the versions of the site do
 # not compete with each other
 html_baseurl = os.environ.get("READTHEDOCS_CANONICAL_URL", "")
+
+# sphinxext-opengraph writes the preview card that a chat application or a social network shows for a link to a page.
+# The card holds the title of the page, the first lines of the text, and the logo. matplotlib draws it.
+ogp_site_url = html_baseurl
 
 templates_path = ["_templates"]
 html_static_path = ["_static"]

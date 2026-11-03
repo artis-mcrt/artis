@@ -7,7 +7,7 @@
 
 <img src="data/artislogo.png" alt="ARTIS logo" width="280" />
 
-ARTIS is a 3D Monte Carlo radiative transfer code for ejecta in homologous expansion, e.g. supernovae and kilonovae. It follows indivisible energy packets ([Lucy 2002, A&A, 384, 725-735, doi:10.1051/0004-6361:20011756](https://ui.adsabs.harvard.edu/abs/2002A%26A...384..725L/abstract)) through the ejecta and gives the light curves and the spectra. The code runs on an HPC cluster with MPI, and it also runs on a laptop.
+ARTIS is a 3D Monte Carlo radiative transfer code for ejecta in homologous expansion, e.g. supernovae and kilonovae. It follows indivisible energy packets through the ejecta, and it gives the light curves and the spectra. [Lucy (2002), A&A, 384, 725-735, doi:10.1051/0004-6361:20011756](https://ui.adsabs.harvard.edu/abs/2002A%26A...384..725L/abstract) describes the packets. The code runs on an HPC cluster with MPI, and it also runs on a laptop.
 
 ## Documentation
 
