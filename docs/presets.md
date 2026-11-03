@@ -62,6 +62,8 @@ describes the method. The preset has these methods:
 
 `MAXTEMP` is low, and the cells get no initial packets.
 
+[Atomic and model data](data.md) names the dataset for a production run with this preset.
+
 The tests `nebular_1d_3dgrid` and `nebular_1d_3dgrid_limitbfest` use this preset. `nebular_1d_3dgrid` covers the
 physics that most changes touch, so it is the default test for a change of the code.
 

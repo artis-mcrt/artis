@@ -50,7 +50,28 @@ production run.
 
 ### A database for a production run
 
-The maintainers will publish the full atomic databases. Until then, ask them for a database in an
+For the nebular phase of a Type Ia supernova, use the dataset of
+[Shingles et al. (2022), MNRAS, 512, 6150-6163, doi:10.1093/mnras/stac902](https://ui.adsabs.harvard.edu/abs/2022MNRAS.512.6150S/abstract).
+It comes from the same release as the datasets of the tests. Download it into the model folder and unpack it there:
+
+```sh
+curl -fLO https://github.com/artis-mcrt/artis/releases/download/v2026.5.15/atomicdata_shinglesetal2022.tar.zst
+tar --zstd -xf atomicdata_shinglesetal2022.tar.zst
+```
+
+The dataset holds 41 ions of the 11 elements of a Type Ia model:
+
+- C I to C IV, O I to O IV, Si I to Si IV, S I to S IV, Ar I to Ar IV, and Ca I to Ca IV;
+- Ne I to Ne III, and Mg I to Mg II;
+- Fe I to Fe V, Co II to Co IV, and Ni II to Ni V.
+
+Use it with the `nltenebular` preset of [Option presets](presets.md). The dataset also holds `recombrates.txt`, so the
+code calibrates the recombination rate of each ion at `RECOMBCALIBRATION_T_ELEC`.
+
+Column 5 of its `compositiondata.txt` is -1, so a run reads every level of each ion. Put a level count there for a
+quicker run. A build without libzstd reads no compressed input file, so decompress each `.zst` file of the archive.
+
+The maintainers will publish the databases of the other model types. Until then, ask them for a database in an
 [issue](https://github.com/artis-mcrt/artis/issues).
 
 [artisatomic](https://github.com/artis-mcrt/artisatomic) converts atomic data of several published sources into the
