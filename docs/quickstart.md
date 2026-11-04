@@ -8,10 +8,11 @@ On macOS:
 
 ```sh
 brew install llvm open-mpi pkgconf zstd coreutils
+export PATH="$(brew --prefix coreutils)/libexec/gnubin:$PATH"
 ```
 
-`tests/runtest.sh` needs the `md5sum` command of macOS for the next step, and the `nproc` command of coreutils for
-the build.
+`tests/runtest.sh` needs the `md5sum` command of the next step. Homebrew installs that command as `gmd5sum`, and the
+`gnubin` folder of the export holds it under the plain name.
 
 On Linux, get a compiler, Open MPI, git, and make from your package manager, from a module, or from pixi.
 [Installation](installation.md) gives the detail and the version that the build needs. `tests/runtest.sh` gives

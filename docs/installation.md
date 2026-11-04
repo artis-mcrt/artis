@@ -26,16 +26,16 @@ Install the LLVM tools, Open MPI, and the other dependencies with homebrew:
 brew install llvm lld libomp open-mpi pkgconf zstd coreutils prek
 ```
 
-The homebrew LLVM gives clang, clang-format, clang-tidy, and the clangd language server. Homebrew keeps them out of
-the standard path, so put that folder first:
+Homebrew keeps the LLVM tools and the GNU tools of coreutils out of the standard path, so put their two folders
+first:
 
 ```sh
-export PATH="$(brew --prefix llvm)/bin:$PATH"
+export PATH="$(brew --prefix llvm)/bin:$(brew --prefix coreutils)/libexec/gnubin:$PATH"
 ```
 
-coreutils gives the `nproc` command of the parallel build. It gives `md5sum` as `gmd5sum`, so the end-to-end tests
-(see [Testing](testing.md)) need the `md5sum` of macOS itself, or the folder
-`$(brew --prefix coreutils)/libexec/gnubin` on the path.
+The homebrew LLVM gives clang, clang-format, clang-tidy, and the clangd language server. coreutils gives the `nproc`
+command of the parallel build, and it gives `md5sum`, which the end-to-end tests call (see [Testing](testing.md)).
+Homebrew installs that command as `gmd5sum`, and the `gnubin` folder of the export holds it under the plain name.
 
 ## Linux
 
