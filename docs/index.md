@@ -42,7 +42,7 @@ and the spectrum of each observer direction (see [Output files](outputfiles.md))
 - **MPI.** A run can use many hundreds of ranks over many nodes. The ranks of one node share the large read-mostly
   arrays through MPI shared-memory windows, so each node holds one copy of the atomic data.
 - **Threads and GPUs.** `OPENMP=ON` adds OpenMP threads inside each rank with gcc, clang, or nvc++, and `STDPAR=ON`
-  adds threads with the parallel algorithms of the standard library. `STDPAR=ON GPU=ON` builds for a GPU with nvc++
+  gives the loops to the parallel algorithms of the standard library. `STDPAR=ON GPU=ON` builds for a GPU with nvc++
   or with hipcc (see [Make options](makeoptions.md)).
 - **The order of the packets.** Before each timestep, the code sorts the packets by cell. The packets of one cell then
   run together and read the same cache entries.

@@ -12,7 +12,7 @@ The Makefile is the authority for these options and for the way that they intera
 | `GCCTOOLCHAIN=path` | With nvc++, select the gcc toolchain at that path. The Makefile has fallbacks for some known hosts, so this option is not always necessary. |
 | `GPUARCH=N` | With nvc++ and `GPU=ON`, compile for compute capability N, e.g. `GPUARCH=80`, in place of the GPU of the host. A host that has no GPU needs this option to get a defined target. |
 | `OPENMP=ON` | Parallelise with OpenMP threads within each MPI rank. This cannot be combined with `STDPAR`. The Makefile gives the OpenMP flags to gcc, clang, and nvc++ only, so a build with hipcc gets no threads. |
-| `STDPAR=ON` | Parallelise with C++ standard library parallel algorithms, either on multicore CPUs or, together with `GPU=ON`, on GPUs. A build with gcc links `-ltbb`, so it needs the TBB library (see [Installation](installation.md)). |
+| `STDPAR=ON` | Give the loops to the parallel algorithms of the standard library, on the CPU cores or, together with `GPU=ON`, on a GPU. The Makefile gives nvc++ the flag `-stdpar=multicore` and links `-ltbb` for gcc, so these two compilers use the CPU cores. With clang or hipcc, the threads depend on the parallel backend of the standard library, which can run the algorithms in one thread. gcc needs the TBB library (see [Installation](installation.md)). |
 | `OPTIMIZE=OFF` | Compile without optimisation. This is the quickest way to check that everything still compiles. |
 | `ZSTD=OFF` | Build without libzstd. |
 | `PGO=GENERATE`, `PGO=USE` | Profile-guided optimisation with gcc or clang. Build with `GENERATE`, run a representative simulation to collect profile data, then build again with `USE`. |
