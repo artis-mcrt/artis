@@ -1,8 +1,19 @@
 # Post-processing with exspec
 
-As well as `sn3d`, `make` builds `exspec`, which combines the packet files from all ranks into spectra and light
-curves. `sn3d` writes the same files itself, so `exspec` is necessary only to make them again from the packet files,
-e.g. after a change of the frequency range or of the `MNUBINS` bin count of `spectrum_lightcurve.cc`.
+:::{note}
+`exspec` is optional. `sn3d` writes the light curves and the spectra itself, so a standard simulation needs no
+post-processing.
+:::
+
+`make` builds `exspec` together with `sn3d`. It combines the packet files of all ranks into spectra and light curves,
+with the same code that `sn3d` uses, so it gives the same files. Two situations need it:
+
+- You want the files again with other settings, e.g. after a change of the frequency range or of the `MNUBINS` bin
+  count of `spectrum_lightcurve.cc`. You then build the code again and run `exspec`, and you need no new simulation.
+- The simulation stopped before its last requested timestep. `sn3d` writes the light curves and the spectra at each
+  timestep, but it writes `emission.out`, `emissiontrue.out`, `absorption.out`, and the direction-resolved files
+  only at the last requested timestep. `scripts/run-exspec-if-needed.sh` tests for `emission.out`, and it runs
+  `exspec` in that case.
 
 Run it in the model folder with any number of ranks from one up to the number of packet files:
 
