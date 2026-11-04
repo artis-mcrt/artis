@@ -10,7 +10,8 @@ On macOS:
 brew install llvm open-mpi pkgconf zstd coreutils
 ```
 
-`tests/runtest.sh` needs the `md5sum` command of coreutils for the next step.
+`tests/runtest.sh` needs the `md5sum` command of macOS for the next step, and the `nproc` command of coreutils for
+the build.
 
 On Linux, get a compiler, Open MPI, git, and make from your package manager, from a module, or from pixi.
 [Installation](installation.md) gives the detail and the version that the build needs. `tests/runtest.sh` gives
@@ -56,6 +57,8 @@ accept, run the remaining steps by name:
 tests/runtest.sh kilonova_1d resume
 tests/runtest.sh kilonova_1d exspec
 ```
+
+The `exspec` step removes the restart files, so run `resume` again only after a new `job0` step.
 
 The comparison of step 7 then differs for the same reason. [Testing](testing.md) describes the steps and the
 reference checksums.

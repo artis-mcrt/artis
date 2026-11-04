@@ -22,7 +22,7 @@ Make compares the timestamps through a symlink, so a new symlink starts no rebui
 timestamp of the symlink itself:
 
 ```sh
-export MAKEFLAGS="--check-symlink-times --jobs=$(nproc)"
+export MAKEFLAGS="--check-symlink-times --jobs=$(nproc 2>/dev/null || sysctl -n hw.ncpu)"
 ```
 
 The build warns you when `artisoptions.h` is a symlink and the flag is absent. A copy gets no such warning, which is
@@ -47,7 +47,7 @@ points at the most recent build of any configuration. Look at the symlink before
 
 ## The run
 
-### The photoionisation data needs phixsdata_v2.txt or phixsdata.txt
+### The photoionisation data needs phixsdata.txt or phixsdata_v2.txt
 
 The model folder holds no photoionisation file. [Atomic and model data](data.md) gives the datasets and the download
 command. A run also needs `adata.txt`, `transitiondata.txt`, and `compositiondata.txt`.

@@ -22,7 +22,7 @@ Start from the preset that is nearest to your simulation, and then change the op
 | `nltenebular` | supernova | nebular | NLTE, multibin radiation field | Spencer-Fano | instant |
 | `nltephotospheric` | supernova | photospheric | NLTE, multibin radiation field | Spencer-Fano | instant |
 
-Each preset holds a value of `NUM_PACKETS` for a production run with approximately 1000 MPI ranks. The
+Most presets hold a value of `NUM_PACKETS` for a production run with approximately 1000 MPI ranks. The
 `nltephotospheric` preset has a much smaller value. Change the value for your rank count, because each rank keeps its
 share of the packets in memory.
 

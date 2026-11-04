@@ -33,7 +33,7 @@ these steps:
    nothing again, and a build with the make options of the test compiles all objects again.
 3. It starts a new simulation and compares the checksums of the output files with
    `tests/kilonova_1d_inputfiles/results_md5_job0.txt`.
-4. It resumes the simulation from the restart files, and then runs `exspec`.
+4. It resumes the simulation from the restart files. It then removes the restart files and runs `exspec`.
 5. It compares the checksums of the output files with `results_md5_final.txt`.
 
 The script stops at the first step that fails. To run only one step, give the name of the step after the name of the

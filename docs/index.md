@@ -27,8 +27,9 @@ and the spectrum of each observer direction (see [Output files](outputfiles.md))
   ([ION_NLEVELS_EXCITED_NLTE](options.md#ion_nlevels_excited_nlte)), together with a multibin radiation field model
   and detailed bound-free estimators
   ([DETAILED_BF_ESTIMATORS_FIRST_TIMESTEP](options.md#detailed_bf_estimators_first_timestep)).
-- **Non-thermal particles.** A Spencer-Fano solver gives the heating, the ionisation, and the excitation by the fast
-  leptons of the decays ([NT_SCHEME](options.md#nt_scheme)).
+- **Non-thermal particles.** A Spencer-Fano solver ([Spencer & Fano (1954), Phys. Rev., 93, 1172-1181,
+  doi:10.1103/PhysRev.93.1172](https://ui.adsabs.harvard.edu/abs/1954PhRv...93.1172S/abstract)) gives the heating, the
+  ionisation, and the excitation by the fast leptons of the decays ([NT_SCHEME](options.md#nt_scheme)).
 - **Nuclear decays.** The decay network holds the alpha, the beta, and the fission decays, and the particles
   thermalise over time ([PARTICLE_THERMALISATION_SCHEME](options.md#particle_thermalisation_scheme)).
 - **Polarisation.** The code follows the Stokes parameters of the real packets and of the virtual packets

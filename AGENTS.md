@@ -1,7 +1,8 @@
 # AGENTS.md
 
-Guidance for the AI coding agents that work on ARTIS. See [README.md](README.md)
-for the full description of the project.
+Guidance for the AI coding agents that work on ARTIS. The pages of `docs/`
+describe the project, and [README.md](README.md) gives the overview and the
+links to the documentation site.
 
 This file names where a fact lives. It does not copy the fact. If an exact
 value matters, read it from the Makefile, from `.github/workflows/`, or from
@@ -113,8 +114,10 @@ compatible with C++23. The Makefile builds three programs from the same sources:
   the system. `pixi run make` is the quickest way to get a toolchain that
   works.
 
-`CONTRIBUTING.md` gives the steps of a change for a human contributor. It
-holds no fact that this file does not hold. `.github/pull_request_template.md`
+`CONTRIBUTING.md` gives the steps of a change for a human contributor, in a
+shorter form than this file. It also names when to open an issue first, and it
+says that a pull request from a fork gets no automatic run.
+`.github/pull_request_template.md`
 is the template of a pull request, and `.github/ISSUE_TEMPLATE/` holds the two
 issue forms.
 
@@ -312,8 +315,9 @@ The workflows in `.github/workflows/`:
   timeout. This workflow does not enforce the checksums, because both checksum
   steps then continue after an error. It skips the tests that the `exclude`
   list of the `ci.yml` matrix names, because other tests reach their code.
-- `ci-checks.yml` runs the pre-commit hooks, clang-tidy, and cppcheck. It then
-  compiles the code with each compiler of its matrix, and on macOS, with
+- `ci-checks.yml` runs the pre-commit hooks, clang-tidy, and cppcheck, and it
+  builds the documentation site with `-W`, so a broken cross-reference stops
+  the job. It then compiles the code with each compiler of its matrix, and on macOS, with
   hipcc, and with nvc++. The GPU compilers build the classic and the nebular
   presets with `STDPAR=ON GPU=ON`. The matrix entries with `extrabuilds: true`
   and the macOS job also do the OpenMP builds, the STDPAR builds, and the
@@ -680,10 +684,12 @@ Do the text edits first. They can make a finished compile out of date.
    position in each file. Then run `scripts/make_options_docs.py`, which writes
    `docs/options.md` again. The pre-commit hook runs the script and stops when
    a preset holds an option that `artisoptions_doc.md` does not describe.
-2. Search `tests/setup_*.sh` and `.github/workflows/ci.yml` for the name of an
-   option that you renamed or removed, or whose type or form you changed. Those
-   files change options with `setoption` from `tests/setupfuncs.sh`. The comment
-   of `setoption` says when it stops the setup script.
+2. Search `tests/setup_*.sh`, `.github/workflows/ci.yml`, and `docs/` for the
+   name of an option that you renamed or removed, or whose type or form you
+   changed. The test files change options with `setoption` from
+   `tests/setupfuncs.sh`, and the comment of `setoption` says when it stops the
+   setup script. The pages of `docs/` name about twenty options by hand, and
+   `scripts/make_options_docs.py` rewrites none of them.
 3. Run `prek run --all-files` and correct every message.
 4. Run `make OPTIMIZE=OFF unittests && ./unittests` if `unittests.cc` calls a
    function that you changed.

@@ -37,8 +37,9 @@ make
 cd ..
 ```
 
-Then make sure that the model folder holds a full set of input files: `model.txt`, `abundances.txt`, and an atomic
-database (see [Atomic and model data](data.md)). Configure the timesteps in `input.txt` (see
+Then make sure that the model folder holds a full set of input files: `model.txt`, `abundances.txt`, an atomic
+database (see [Atomic and model data](data.md)), and `input.txt`. Only `sn3d` writes `input.txt`, so copy a
+template, e.g. `tests/classicmode_3d_inputfiles/input-newrun.txt`. Then configure the timesteps in it (see
 [Input files](inputfiles.md)).
 
 ## Submit the job

@@ -17,11 +17,12 @@ Run-time configuration with:
 
 - the random number seed, which must be a fixed value for reproducible runs;
 - the number of timesteps;
-- the first and last timestep of this job. Normally the last timestep should be set to the number of timesteps. Long
-  simulations are split over resubmitted jobs by the wall-time mechanism (`sn3d -w`), which advances the start timestep
-  on each restart but never the last one. An earlier last timestep makes the simulation stop there, e.g. to inspect or
-  post-process partial results, until `input.txt` is edited to continue. The last restart files of such a run hold the
-  start of its last timestep. The continuation job therefore propagates that timestep again and writes its spectra and
+- the first timestep of this job and the stop timestep, which the job does not run. Give the number of timesteps as
+  the stop value for the whole model. Long
+  simulations run in several jobs, and the wall-time mechanism (`sn3d -w`) advances the start timestep at each
+  restart and keeps the stop value. A smaller stop value makes the simulation stop earlier, e.g. to examine the
+  partial results, until you edit `input.txt` to continue. The last restart files of such a run hold the start of its
+  last timestep. The continuation job therefore propagates that timestep again and writes its spectra and
   light curves again. `sn3d` writes the restart files at the start of each timestep after the first timestep of the
   job, so give a job at least two timesteps. A job of one timestep writes no restart files;
 - the start and end time in days;

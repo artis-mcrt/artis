@@ -6,8 +6,9 @@
 - A C++ compiler: gcc 14 or a later version, clang, nvc++, or hipcc.
 - An MPI library that supplies an `mpicxx` command, e.g. Open MPI. The end-to-end tests need Open MPI itself, because `tests/runtest.sh` gives `mpirun` the options `--oversubscribe` and `--mca` (see [Testing](testing.md)).
 - libzstd. A build with the library reads and writes zstd compressed files (see [Input files](inputfiles.md)). A build without it stops at the end-to-end tests, because `tests/runtest.sh` builds with `ZSTD=ON` and the test input files are compressed.
-
 - The TBB library, but only for a build with `STDPAR=ON` and gcc. The Makefile then links `-ltbb`. The package is `libtbb-dev` on Debian and Ubuntu. The other compilers need no such library.
+- The OpenMP runtime library, but only for a build with `OPENMP=ON` and clang. The Makefile then links `-lomp`. The
+  package is `libomp` with homebrew and `libomp-dev` on Debian and Ubuntu.
 
 The build needs no other program. [uv](https://docs.astral.sh/uv/) is separate from the build. It gives artistools and runs the Python helper scripts of `scripts/`. On an HPC cluster, a module or a spack command gives the compiler and the MPI library. For the clusters that we use, the top of the Slurm script in `scripts/artis-*.sh` names the modules that work.
 
@@ -22,10 +23,19 @@ export OMPI_CXX=g++
 Install the LLVM tools, Open MPI, and the other dependencies with homebrew:
 
 ```sh
-brew install llvm open-mpi pkgconf zstd coreutils prek
+brew install llvm lld libomp open-mpi pkgconf zstd coreutils prek
 ```
 
-The homebrew LLVM gives clang, clang-format, clang-tidy, and the clangd language server. coreutils gives the `md5sum` command, which the end-to-end tests need (see [Testing](testing.md)).
+The homebrew LLVM gives clang, clang-format, clang-tidy, and the clangd language server. Homebrew keeps them out of
+the standard path, so put that folder first:
+
+```sh
+export PATH="$(brew --prefix llvm)/bin:$PATH"
+```
+
+coreutils gives the `nproc` command of the parallel build. It gives `md5sum` as `gmd5sum`, so the end-to-end tests
+(see [Testing](testing.md)) need the `md5sum` of macOS itself, or the folder
+`$(brew --prefix coreutils)/libexec/gnubin` on the path.
 
 ## Linux
 

@@ -34,9 +34,9 @@ html_js_files = ["version-selector.js"]
 
 html_theme = "furo"
 html_title = "ARTIS"
-# the logo is the tracked image of data/, because a zip archive of the repository holds no symlink
-html_logo = "../data/artislogo.png"
-html_favicon = "../data/artislogo.png"
+# _static holds a small copy of data/artislogo.png. The full image is 441 KB, and each page loads the logo.
+html_logo = "_static/artislogo.png"
+html_favicon = "_static/favicon.png"
 html_copy_source = False
 html_show_sourcelink = False
 

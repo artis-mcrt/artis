@@ -66,7 +66,7 @@ Markdown, and [Read the Docs](https://about.readthedocs.com/) builds them with
 `docs/conf.py` and `.readthedocs.yaml` hold that configuration. To build the site locally:
 
 ```sh
-uv run --with-requirements docs/requirements.txt sphinx-build -W --keep-going docs docs/_build/html
+uv run --python 3.14 --with-requirements docs/requirements.txt sphinx-build -W --keep-going docs docs/_build/html
 ```
 
 `-W` makes a warning an error, as CI and Read the Docs do. Open `docs/_build/html/index.html` to read the result.

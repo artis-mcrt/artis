@@ -6,7 +6,8 @@ A simulation uses two types of folder:
   simulation.
 - A job folder is a subfolder of the model folder. `sn3d` writes one job folder in each Slurm job. `sn3d` names the
   folder from the start timestep of the job, e.g. `job_from_ts0000` for a new simulation and `job_from_ts0008` for a
-  job that resumes at timestep 8. Rank 0 writes the name of the folder to the standard output.
+  job that resumes at timestep 8. Rank 0 writes the name of the folder to the standard output, so the log of a Slurm
+  job names its folder.
 
 A build with libzstd writes each `.out` file zstd compressed, e.g. `spec.out.zst`, so that no separate compression
 step is necessary. The logs, `input.txt`, `artis.pid`, `syn_dir.txt`, and the restart files stay plain. Every file
@@ -42,8 +43,8 @@ A run writes these files into the model folder:
     - `vpkt_grid/vpkt_grid_nnnn.out`: the emission over the velocity grid, when `vpkt.txt` switches that map on;
     - `vpackets/vpackets_nnnn.out`: one row for each contribution of a virtual packet, with `VPKT_WRITE_CONTRIBS`.
 - `light_curve.out`, `spec.out`, and the other spectrum files that [Post-processing with exspec](exspec.md) lists:
-  `sn3d` writes the light curves and spectra at each timestep, and the emission, absorption, and direction-resolved
-  files at the last requested timestep.
+  `sn3d` writes the light curves and spectra at each timestep, and the emission and absorption files at the last
+  requested timestep. A 2D or a 3D model also gives the direction-resolved files there.
 - `deposition.out`: the radioactive energy deposition rate as a function of time. The columns of the deposited
   luminosities come from the Monte Carlo estimators, also when `PARTICLE_THERMALISATION_SCHEME` is
   `INSTANTFULLDEPOSITION` and the heating of the cells uses the analytic emission rates. For a beta-plus decay, the
@@ -76,9 +77,9 @@ A restart file must only be consistent with the binary that wrote it. A resumed 
 
 ## A new simulation removes the files of the previous one
 
-A new simulation first removes the output files, the restart files, and the `job_from_ts*` and `*.slurm` folders of the
-previous simulation. It removes the same files as `scripts/clean.sh`, except `slurm-*.out`, `machine.file.*`, and
-`core.*`, which can belong to the current job.
+A new simulation first removes the output files, the restart files, the `job_from_ts*` folders, and the `*.slurm`
+job scripts of the previous simulation. It removes the same files as `scripts/clean.sh`, except `slurm-*.out`,
+`machine.file.*`, and `core.*`, which can belong to the current job.
 
 ## Plotting and analysis
 

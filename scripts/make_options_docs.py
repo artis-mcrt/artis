@@ -32,7 +32,7 @@ PAGE_PATH = REPO_ROOT / "docs" / "options.md"
 PRESETS_NOT_ON_PAGE = ("kilonova_nlte",)
 
 GROUP_PATTERN = re.compile(r"^// --- (.+?) ---$")
-COMMENT_PATTERN = re.compile(r"^//(.*)$")
+COMMENT_PATTERN = re.compile(r"^\s*//(.*)$")
 DECLARATION_PATTERN = re.compile(r"^constexpr\s+(.+?)\s*\b([A-Z][A-Z0-9_]*)\b\s*(\([^)]*\))?\s*;$")
 # the name of an option of a preset, before its value, its body, or its semicolon
 PRESET_OPTION_PATTERN = re.compile(r"^constexpr\s+.*?\b([A-Z][A-Z0-9_]*)\b\s*[(;={]", re.MULTILINE)
@@ -123,6 +123,10 @@ def parse_doc(text: str) -> list[Group]:
             )
             comment_has_option = True
         elif comment_match and not group_match:
+            if comment_has_option:
+                # a comment block after a declaration starts the description of the next option
+                comment_lines = []
+                comment_has_option = False
             text_of_line = comment_match.group(1)
             comment_lines.append(text_of_line.removeprefix(" "))
         else:
@@ -133,6 +137,8 @@ def parse_doc(text: str) -> list[Group]:
             comment_has_option = False
             if group_match:
                 groups.append(Group(group_match.group(1), [], []))
+    if comment_lines and not comment_has_option and groups:
+        groups[-1].notes.extend(comment_to_markdown(comment_lines))
     return groups
 
 

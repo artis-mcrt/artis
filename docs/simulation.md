@@ -9,7 +9,8 @@ ARTIS uses indivisible energy packets (Lucy (2002), A&A, 384, 725-735, doi:10.10
 never splits a packet into smaller packets, and it follows each packet until the packet escapes or the simulation
 ends. A packet changes its type as its energy changes its form:
 
-- each pellet holds the same energy, which is the decay energy of the whole model divided by the number of packets.
+- each pellet holds the same energy, which is the decay energy of the whole model between the first and the last
+  time of the simulation, divided by the number of packets.
   A pellet moves with the ejecta until the time of its decay.
   [INITIAL_PACKETS_ON](options.md#initial_packets_on) adds the initial energy of the cells to that sum. With
   [UNIFORM_PELLET_ENERGIES](options.md#uniform_pellet_energies) false, the decay times are uniform instead, and the
@@ -18,9 +19,10 @@ ends. A packet changes its type as its energy changes its form:
 - a gamma packet gives its energy to the gas by Compton scattering, by photoelectric absorption, or by pair
   production;
 - the energy of a fast lepton goes to the heating, the ionisation, and the excitation of the gas. The Spencer-Fano
-  solver gives the three fractions (see [NT_SCHEME](options.md#nt_scheme)). The fission fragments give all of their
-  energy to the heating;
-- a k-packet holds thermal energy. A cooling channel of the cell converts it into radiation or into a macro atom. A
+  solver gives the three fractions (see [NT_SCHEME](options.md#nt_scheme)). The alpha particles and the fission
+  fragments give all of their energy to the heating, so they need no such solution;
+- a k-packet holds thermal energy. A cooling channel of the cell converts it into radiation or into a macro atom. In
+  an optically thick cell, the k-packet emits an r-packet from a Planck function instead. A
   k-packet also loses energy: the diffusion step takes the adiabatic loss of the radiation, and the thermal balance
   of the cell gives the share that becomes radiation;
 - a macro atom makes internal transitions until it emits radiation or becomes a k-packet again;
@@ -49,7 +51,8 @@ contain matter, because an empty cell needs no solution.
 2. **The exchange of the cell state.** The ranks send their cells to the other ranks. Every rank then holds the whole
    grid, because a packet of any rank can enter any cell.
 3. **The restart files.** From the second timestep of a job, `sn3d` writes the grid and the packets and updates
-   `input.txt`. It then tests the remaining wall time, and it stops cleanly when too little time remains.
+   `input.txt`. A run with the `-w` option then tests the remaining wall time, and it stops cleanly when too little
+   time remains.
 4. **The propagation.** Each rank moves its own packets to the end of the timestep.
 5. **The estimators.** `sn3d` adds the estimators of all ranks, so that each rank holds the complete sums.
 6. **The output.** `sn3d` writes the deposition, the light curves, and the spectra. At the last requested timestep it
