@@ -37,4 +37,6 @@ rank keeps its share in memory, so the rank count and `NUM_PACKETS` together set
 
 The ranks on one node share the large read-mostly arrays, e.g. the atomic data, through MPI shared-memory windows. A
 run with `OPENMP=ON` or with `STDPAR=ON` adds threads inside each rank (see [Make options](makeoptions.md)). A
-multithreaded run gives no reproducible results, because each thread seeds its own random generator.
+multithreaded run gives no reproducible results, because each thread seeds its own random generator. A run with
+`STDPAR=ON GPU=ON` is different. The parallel algorithms then run on a GPU and not on the threads of the rank, and
+each packet holds its own generator state.

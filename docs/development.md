@@ -19,6 +19,9 @@ export PATH="$(uv tool dir --bin):$PATH"
 `uv` puts the executable of a tool in a folder of its own, which the standard path does not hold. The export gives
 that folder to the current shell, and `uv tool update-shell` adds it to the profile of your shell.
 
+The hooks also need python3, version 3.11 or a later version, because `scripts/make_options_docs.py` runs as one of
+them.
+
 Then install the pre-commit hooks, select a preset, and make a compilation database for the clang tools:
 
 ```sh
