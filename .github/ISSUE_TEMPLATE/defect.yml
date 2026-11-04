@@ -1,0 +1,44 @@
+---
+name: Report a defect
+description: Report a crash, a wrong result, or a build error.
+body:
+    - type: markdown
+      attributes:
+          value: |
+              The log file of rank 0 starts with the git version and with the compile-time options of the run.
+              Give both below, because a result depends on the options.
+    - type: textarea
+      id: what-happened
+      attributes:
+          label: What happened
+          description: Say what you expected and what the code did.
+      validations:
+          required: true
+    - type: textarea
+      id: steps
+      attributes:
+          label: The steps
+          description: Give the commands, the preset, and the model that give the defect again.
+      validations:
+          required: true
+    - type: textarea
+      id: version
+      attributes:
+          label: The version and the options
+          description: Give the first lines of the log of rank 0 (output_0-0.txt).
+          render: text
+      validations:
+          required: true
+    - type: input
+      id: system
+      attributes:
+          label: The compiler and the MPI library
+          placeholder: g++ 16.1, Open MPI 5.0.9, Ubuntu 26.04
+      validations:
+          required: true
+    - type: textarea
+      id: message
+      attributes:
+          label: The message
+          description: Give the message of the crash or of the compiler.
+          render: text

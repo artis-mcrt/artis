@@ -1,0 +1,17 @@
+/* the version selector of the sidebar, with the colours of the search field above it */
+.version-selector {
+  padding: 0 var(--sidebar-item-spacing-horizontal) var(--sidebar-item-spacing-vertical);
+  font-size: var(--sidebar-item-font-size);
+  color: var(--color-sidebar-caption-text);
+}
+
+.version-selector select {
+  width: 100%;
+  margin-top: 0.25rem;
+  padding: 0.25rem;
+  font: inherit;
+  color: var(--color-sidebar-search-foreground);
+  background-color: var(--color-sidebar-search-background);
+  border: 1px solid var(--color-sidebar-search-border);
+  border-radius: 0.25rem;
+}

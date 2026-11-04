@@ -49,6 +49,20 @@ jobs:
                   # include directories, so clang-tidy needs only the libc++ header path.
                   run-clang-tidy -extra-arg=-nostdinc++ -extra-arg=-isystem"$LIBCXX"
 
+    docs:
+        name: Build the documentation
+        runs-on: ubuntu-26.04-arm
+        steps:
+            - uses: actions/checkout@v7
+
+            - name: Install uv
+              uses: astral-sh/setup-uv@v10.3.2
+
+            - name: Build the site
+              # -W makes a warning an error, e.g. a link to a page that the site does not hold
+              # the python version agrees with .readthedocs.yaml, so that both builds give the same warnings
+              run: uv run --python 3.14 --with-requirements docs/requirements.txt sphinx-build -W --keep-going docs docs/_build/html
+
     cppcheck:
         name: Lint with cppcheck
         runs-on: ubuntu-26.04-arm
