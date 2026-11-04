@@ -22,7 +22,8 @@ Run-time configuration with:
   on each restart but never the last one. An earlier last timestep makes the simulation stop there, e.g. to inspect or
   post-process partial results, until `input.txt` is edited to continue. The last restart files of such a run hold the
   start of its last timestep. The continuation job therefore propagates that timestep again and writes its spectra and
-  light curves again;
+  light curves again. `sn3d` writes the restart files at the start of each timestep after the first timestep of the
+  job, so give a job at least two timesteps. A job of one timestep writes no restart files;
 - the start and end time in days;
 - whether the run continues from the restart files of a previous job;
 - the number of pure LTE timesteps;
