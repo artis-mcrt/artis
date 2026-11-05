@@ -173,7 +173,8 @@ More rules for the cells:
   negative boundary. `sn3d` calculates the midpoint of each cell from `vmax` and `t_model`, and it stops if a value
   of the file differs by more than 0.1 percent.
 - The cells of a 3D model go through the x index first, then the y index, and then the z index. `sn3d` compares the
-  positions with the values that it calculates from `vmax` and `t_model`. A difference gives a warning in the log.
+  positions with the values that it calculates from `vmax` and `t_model`. A difference of more than half of a cell
+  width gives a warning in the log.
 - `sn3d` finds the first cell id from the first cell of `model.txt`. `abundances.txt` and `Ye.txt` must use the same
   ids. The log messages always give the 0-based cell index.
 - The value of the column `q` must already include the adiabatic losses before `t_model`. `INITIAL_PACKETS_ON` uses
@@ -315,7 +316,7 @@ Then each table of `phixsdata_v2.txt` has this layout:
 - An upper level index of 0 or more gives one target level. The table then has no row with the number of target
   levels and no rows of target levels.
 - A negative upper level index, e.g. -1, gives a list of target levels. The probabilities of the target levels must
-  sum to 1, and each target level must occur only once.
+  sum to 1, and each target level must occur only once. Each probability must be above 0.
 - Each target level must be a level that the run keeps for the upper ion. A target above the level limit of
   `compositiondata.txt` stops the run. An upper ion with one level from `SINGLE_LEVEL_TOP_ION` is the exception.
 - `sn3d` reads the threshold energy and does not use it. The threshold comes from the level energies of `adata.txt`.
@@ -327,7 +328,8 @@ Each table of `phixsdata.txt` has this layout:
 <energy above the threshold> <cross-section in megabarns>
 ```
 
-- The second line occurs once for each point. The energy is in units of 13.6 eV.
+- The second line occurs once for each point, and a table must have one point or more. The energy is in units of
+  13.6 eV.
 - The first energy must be 0, which is the threshold, and the energies must increase. `sn3d` uses the first
   cross-section at the threshold, and it does not read the energy of that point.
 - The level indices of `phixsdata.txt` always start at 1.
@@ -356,7 +358,7 @@ lines.
 | 3 | one value for each direction | The azimuthal angle phi of each direction in degrees. |
 | 4 | flag, and optional values | With the flag 1, the number of spectra for each observer follows, and then one opacity value for each spectrum. The number must be 1 or more. With a different flag, each observer gets one spectrum with the full opacity. |
 | 5 | `flag tmin_days tmax_days` | With the flag 1, the virtual packets must arrive between these two times in days. With a different flag, the range is from `VSPEC_TIMEMIN` to `VSPEC_TIMEMAX` of `vpkt.h`, but the two values must stay. |
-| 6 | flag, and optional values | With the flag 1, the number of wavelength ranges follows, and then the lowest and the highest wavelength of each range in Angstroms. With a different flag, the range is from `VSPEC_NUMIN` to `VSPEC_NUMAX` of `vpkt.h`. |
+| 6 | flag, and optional values | With the flag 1, the number of wavelength ranges follows, and then the lowest and the highest wavelength of each range in Angstroms. The number must be 1 or more. With a different flag, the range is from `VSPEC_NUMIN` to `VSPEC_NUMAX` of `vpkt.h`. |
 | 7 | `flag optical_depth_is_thick_vpkt` | With the flag 1, a cell with a grey optical depth above this value sends no virtual packets. With a different flag, the value of `input.txt` applies, but the value must stay. With the flag 1, the value must be above 0. |
 | 8 | `tau_max_vpkt` | The code stops a virtual packet when its optical depth is larger than this value in every spectrum. The value must be above 0. |
 | 9 | flag | A value that is not 0 switches on the velocity grid map. |
