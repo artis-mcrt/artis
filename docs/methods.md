@@ -67,7 +67,8 @@ which preset selects which mode.
 
 The first `num_lte_timesteps` timesteps of `input.txt` solve the ionisation balance in local thermodynamic equilibrium
 (LTE). After these timesteps, an element without NLTE levels gets a photoionisation equilibrium for its ions and
-Boltzmann populations for its levels.
+Boltzmann populations for its levels. An element that [FORCE_SAHA_ION_BALANCE](options.md#force_saha_ion_balance)
+selects keeps the Saha ionisation balance. The kilonova preset selects each element except Sr, Y, and Zr.
 
 - Options:
     - [LTEPOP_EXCITATION_USE_TJ](options.md#ltepop_excitation_use_tj) selects the temperature of the Boltzmann
@@ -137,7 +138,8 @@ balance, and the log of its rank has a warning (see [Troubleshooting](troublesho
 The packets add to the estimators of the radiation field of each cell that they enter. The grid update fits a dilute
 blackbody to the full spectrum of each cell, with a dilution factor W and a radiation temperature T_R. With the
 multibin model, it also fits a dilute blackbody to each frequency bin. The rates of the photoionisation and of the
-bound-free heating use these fits.
+bound-free heating use these fits, except for a continuum with a detailed bound-free estimator (see the next
+section).
 
 - Options:
     - [MULTIBIN_RADFIELD_FIRST_TIMESTEP](options.md#multibin_radfield_first_timestep) sets the first timestep that
@@ -241,10 +243,11 @@ r-packet in a thick cell gets a grey opacity, and a k-packet there emits an r-pa
 
 ## The polarisation and the virtual packets
 
-The code follows the Stokes parameters of the packets. At each emission and scattering event of a real packet, it
-also sends virtual packets towards the observer directions of `vpkt.txt`. The energy of each virtual packet gets the
-weight of its optical depth to the observer. The sum gives the spectrum of each direction with less noise than the
-real packets give.
+The code follows the Stokes parameters of the packets. At an emission or a scattering event of a real packet, it
+also sends virtual packets towards the observer directions of `vpkt.txt`. An event in a cell with the grey opacity
+sends none, and `vpkt.txt` gives the range of the arrival times and the wavelength ranges of the events that send
+them. The energy of each virtual packet gets the weight of its optical depth to the observer. The sum gives the
+spectrum of each direction with less noise than the real packets give.
 
 - Options: [POL_ON](options.md#pol_on), [VPKT_ON](options.md#vpkt_on), and
   [VPKT_WRITE_CONTRIBS](options.md#vpkt_write_contribs).
