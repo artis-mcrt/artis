@@ -310,6 +310,15 @@ is not complete:
 - The NLTE solver does not accept a solution that is not finite ([#488](https://github.com/artis-mcrt/artis/pull/488)).
 - The index of the NLTE population array has 64 bits. Before, a model whose number of cells with matter times its
   number of NLTE levels reached 2^31 wrote populations into the wrong cell ([#557](https://github.com/artis-mcrt/artis/pull/557)).
+- The index of the mass fractions of the stable nuclides also has 64 bits, for a model whose number of cells with
+  matter times its number of elements reaches 2^31 ([#664](https://github.com/artis-mcrt/artis/pull/664)).
+- With `PARTICLE_THERMALISATION_SCHEME = TIMEDEPENDENTWITHGAMMAPRODUCTS`, the electron or the positron of a pair
+  production gets the correct kinetic energy (commit [9bf695e4](https://github.com/artis-mcrt/artis/commit/9bf695e4)).
+- With `RPKT_USE_BINNED_OPACITIES`, an r-packet step that is too short to change the comoving frequency does not
+  stop the run (commit [263b6241](https://github.com/artis-mcrt/artis/commit/263b6241)).
+- With OpenMP or standard parallelism threads and `DETAILED_LINE_ESTIMATORS_ON`, the threads do not lose a
+  contribution to a line estimator ([#430](https://github.com/artis-mcrt/artis/pull/430)).
+- The upper boundary of a cell is exactly equal to the lower boundary of the next cell ([#400](https://github.com/artis-mcrt/artis/pull/400)).
 
 ### Input files
 
@@ -472,6 +481,16 @@ The presets:
 - A build for an Nvidia GPU completes a run. Three corrections removed crashes in the list of the photoionisation
   cross-sections, in the state of each packet, and in the memory of the packet update ([#412](https://github.com/artis-mcrt/artis/pull/412), [#413](https://github.com/artis-mcrt/artis/pull/413),
   [#416](https://github.com/artis-mcrt/artis/pull/416)).
+- A build for a GPU keeps a cache for each cell with matter ([#414](https://github.com/artis-mcrt/artis/pull/414)), and the ranks of a node share one copy
+  of these caches ([#427](https://github.com/artis-mcrt/artis/pull/427)).
+- The Spencer-Fano solver needs half of the memory for its matrix. A build with the default fast-math option gives
+  results that differ at the rounding level ([#504](https://github.com/artis-mcrt/artis/pull/504)).
+- The bound-free opacity is faster: a nebular model needed 7.5 percent less wall time, and a classic model ran
+  2.26 times faster ([#513](https://github.com/artis-mcrt/artis/pull/513), [#514](https://github.com/artis-mcrt/artis/pull/514), [#518](https://github.com/artis-mcrt/artis/pull/518)). The first of these changes the results at the rounding level.
+- A run starts with an MPI library that does not obey the alignment hint of the shared memory ([#583](https://github.com/artis-mcrt/artis/pull/583)).
+- clang and hipcc build on a host with more than one gcc installation ([#563](https://github.com/artis-mcrt/artis/pull/563)).
+- `sn3d` and `exspec` find a process that still runs in a model folder whose path holds a space
+  (commit [4bec60c5](https://github.com/artis-mcrt/artis/commit/4bec60c5)).
 - `scripts/clean.sh` and the start of a new simulation also remove `out.txt.zst` ([#643](https://github.com/artis-mcrt/artis/pull/643)).
 - A failed assertion or a fatal error stops all ranks at once. Before, the other ranks could wait until the end of
   the wall time ([#708](https://github.com/artis-mcrt/artis/pull/708)).
@@ -504,6 +523,9 @@ The presets:
     - A job script stops when `SLURM_SUBMIT_DIR` has no value, e.g. when you run it by hand. Before, it changed to
       the home folder and worked there ([#604](https://github.com/artis-mcrt/artis/pull/604)).
     - `exspec-after.sh` starts one zstd process for each file, which makes the compression faster ([#587](https://github.com/artis-mcrt/artis/pull/587)).
+    - A job stops when the build fails, so it does not start an older binary (commit [21463aa2](https://github.com/artis-mcrt/artis/commit/21463aa2)). A job submits
+      nothing when `sn3d` gives an error status (commit [cedf9f70](https://github.com/artis-mcrt/artis/commit/cedf9f70)).
+    - The `exspec` jobs of COSMA8 and Leonardo use the serial partitions ([#641](https://github.com/artis-mcrt/artis/pull/641)).
     - The Leonardo cluster has job scripts (commit
       [3cf00789](https://github.com/artis-mcrt/artis/commit/3cf00789)).
     - `scripts/run-exspec-if-needed.sh` runs `exspec` only when `emission.out` is absent (commit
