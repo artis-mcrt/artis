@@ -46,23 +46,24 @@ A run writes these files into the model folder:
     - `vspecpol/vspecpol_nnnn.out`: the spectrum of each observer direction, with the Stokes parameters I, Q, and U;
     - `vpkt_grid/vpkt_grid_nnnn.out`: the emission over the velocity grid, when `vpkt.txt` switches that map on;
     - `vpackets/vpackets_nnnn.out`: one row for each contribution of a virtual packet, with `VPKT_WRITE_CONTRIBS`.
-- `light_curve.out`, `spec.out`, and the other spectrum files that [Post-processing with exspec](exspec.md) lists:
-  `sn3d` writes the light curves and spectra at each timestep, and the emission and absorption files at the last
-  requested timestep. A 2D or a 3D model also gives the direction-resolved files there.
+- `light_curve.out`, `spec.out`, and the other spectrum files that [Post-processing with exspec](exspec.md) lists.
+  `sn3d` writes the light curves and spectra at each timestep. It writes the emission and absorption files at the
+  last requested timestep. A 2D or a 3D model also gives the direction-resolved files there.
 - `deposition.out`: the radioactive energy deposition rate as a function of time. The columns of the deposited
   luminosities come from the Monte Carlo estimators, also when `PARTICLE_THERMALISATION_SCHEME` is
   `INSTANTFULLDEPOSITION` and the heating of the cells uses the analytic emission rates. For a beta-plus decay, the
   `Qdot_ana_erg/s/g` column uses the energy Q_EC, which includes the annihilation of the positron.
-- `linelist.out`: the list of the atomic lines. The first row is a header that starts with "#" and names the columns:
-  the vacuum wavelength in Angstroms, the atomic number, the ion stage, the upper level index, and the lower level
-  index. The level indices start at 0 in each ion. Each later row is one line, in the order of the line index that the
+- `linelist.out`: the list of the atomic lines. The first row is a header that starts with "#" and names the
+  columns. They are the vacuum wavelength in Angstroms, the atomic number, the ion stage, the upper level index, and
+  the lower level index. The level indices start at 0 in each ion. Each later row is one line, in the order of the line index that the
   emission and absorption codes of the packets use. Only the first job of a simulation writes this file.
 - the reference tables of the setup, which rank 0 writes:
     - `timesteps.out`: each timestep, with its start, its midpoint, and its width in days;
     - `grid.out`: each propagation cell that holds matter, with its model cell;
     - `modelgridrankassignments.out`: the first model cell and the cell count of each rank;
     - `nuclides.out`: each nuclide of the decay network, with its proton number and its mass number;
-    - `gammalinelist.out`: each gamma line of each nuclide, with its energy in MeV and its probability;
+    - `gammalinelist.out`: each gamma line of each nuclide, with its energy in MeV and its number of photons for
+      each decay;
     - `bflist.out`: each bound-free continuum, with its ion, its lower level, and its upper level.
 - `syn_dir.txt`: the unit vector of the theta = 0 direction of the direction bins. The code keeps the value `0 0 1`.
 - `artis.pid`: the process id of rank 0 and the path of the model folder. `sn3d` and `exspec` stop when this file
@@ -205,7 +206,7 @@ ion stage and a value, e.g. `2: 4.685e+05`:
 | `gamma_NT` | The non-thermal ionisation rate coefficient [1/s]. Only a run with a non-thermal solver has this line. |
 | `corrphotoionrenorm` | The renormalisation factor of the tabulated photoionisation coefficient of each ion stage. Only a run with `USE_LUT_PHOTOION` has this line. |
 | `gammaestimator` | The ionisation rate of each ion stage, divided by the population of its ground level [1/s]. Only a run with `USE_LUT_PHOTOION` has this line. |
-| `heating_bf`, `heating_coll`, `heating_ff`, `cooling_ff`, `cooling_fb`, `cooling_coll` | The heating and the cooling rate of each ion [erg/s/cm^3]. Only a run with `WRITE_ION_HEATING_COOLING_RATES` has these lines. |
+| `heating_bf`, `heating_coll`, `heating_ff`, `cooling_ff`, `cooling_fb`, `cooling_coll` | The heating and the cooling rate of each ion [erg/s/cm^3]. Only a run with `WRITE_ION_HEATING_COOLING_RATES` has these lines, and a cell with the grey opacity has none of them. `heating_bf` and `cooling_fb` have no value for the highest ion stage. `heating_coll` also needs `COLLISIONAL_HEATING_FROM_LEVELPOPS`. |
 | `emission_ana:` | The emission rate of the gamma rays and of each particle type [erg/s/cm^3], from the decay data and the abundances. |
 | `deposition:` | The deposition rate of the gamma rays and of each particle type [erg/s/cm^3]. |
 | `heating:` | The free-free, the bound-free, and the collisional heating rate, and the heating rate of the deposition [erg/s/cm^3]. `heating_dep/total_dep` is the fraction of the deposition that heats the gas. |
@@ -259,7 +260,7 @@ the rank. A run without `KEEP_ESCAPED_GAMMAS` writes no rows for the escaped gam
 | `type_id` | The type of the packet (see the table below). |
 | `posx`, `posy`, `posz` | The position. |
 | `dirx`, `diry`, `dirz` | The direction, as a unit vector. |
-| `tdecay` | The decay time of the pellet. |
+| `tdecay` | The decay time of the pellet. A packet of the initial energy of the cells holds the start time of the model, and no nuclide decays then. |
 | `e_cmf`, `e_rf` | The energy in the comoving frame and in the rest frame. |
 | `nu_cmf`, `nu_rf` | The frequency in the comoving frame and in the rest frame. For a pellet and for a packet of particles, `nu_cmf` holds the energy divided by the Planck constant, and `nu_rf` has no meaning. |
 | `escape_type_id` | The type of the packet when it escaped, or 0. |

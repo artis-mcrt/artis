@@ -1,8 +1,9 @@
 # Input files
 
-Put these files in the model folder. The model folder must also contain the ARTIS source folder, or a symlink to it,
-with the name `artis`. The code then finds the physics data that comes with it in `artis/data`, and you copy nothing
-(see [Atomic and model data](data.md)).
+Put these files in the model folder. Keep the ARTIS source folder, or a symlink to it, in the model folder with the
+name `artis`. The code looks for an input file in the model folder, then in `data/`, and then in `artis/data/`. It
+thus finds the physics data that comes with the source, and you copy nothing (see
+[Atomic and model data](data.md)).
 
 A build with libzstd also reads a text input file in zstd compressed form, e.g. `model.txt.zst`,
 `transitiondata.txt.zst`, or `packets/packets00_0000.out.zst` for `exspec`. The plain file has priority when both
@@ -393,10 +394,11 @@ An optional file with recombination rate coefficients. With this file, `sn3d` sc
 cross-sections of each ion, so that its recombination rate coefficient at the temperature
 `RECOMBCALIBRATION_T_ELEC` agrees with the file. The file can have comment lines.
 
-`sn3d` makes no calibration in two conditions, and the log says so:
+The calibration has two limits, and the log gives the result for each ion:
 
-- the atomic data gives a recombination rate coefficient of the ion that is not positive;
-- for the low-n levels, the necessary factor is below 0.05, or it is 2.0 or more.
+- `sn3d` makes no calibration of an ion whose recombination rate coefficient from the atomic data is not positive.
+- `sn3d` does not scale the low-n levels if the necessary factor is below 0.05, or if it is 2.0 or more. It then
+  still makes the calibration to the total rate coefficient.
 
 The file has one block for each ion:
 
@@ -429,6 +431,7 @@ transition:
   level number in the file is 0, and at 1 otherwise.
 - The autoionising levels of an ion must be one block of levels with no gap, and the block must end at the highest
   level of the ion.
+- The autoionising levels of the file must all be NLTE levels, or none of them must be an NLTE level.
 
 ## gridcontributions.txt
 
