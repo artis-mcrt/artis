@@ -487,6 +487,11 @@ The presets:
   of these caches ([#427](https://github.com/artis-mcrt/artis/pull/427)).
 - The Spencer-Fano solver needs half of the memory for its matrix. A build with the default fast-math option gives
   results that differ at the rounding level ([#504](https://github.com/artis-mcrt/artis/pull/504)).
+- The fill of the NLTE rate matrix is 24 percent faster ([#511](https://github.com/artis-mcrt/artis/pull/511)), and the construction of the Spencer-Fano
+  matrix is 19 percent faster ([#521](https://github.com/artis-mcrt/artis/pull/521)), both for the nebular test model.
+- The elapsed times of the log come from a clock that a change of the system time does not alter, and they have one
+  decimal place of a second ([#388](https://github.com/artis-mcrt/artis/pull/388)).
+- The log of a Spencer-Fano solution is shorter by default ([#376](https://github.com/artis-mcrt/artis/pull/376)).
 - The bound-free opacity is faster: a nebular model needed 7.5 percent less wall time, and a classic model ran
   2.26 times faster ([#513](https://github.com/artis-mcrt/artis/pull/513), [#514](https://github.com/artis-mcrt/artis/pull/514), [#518](https://github.com/artis-mcrt/artis/pull/518)). The first of these changes the results at the rounding level.
 - A run starts with an MPI library that does not obey the alignment hint of the shared memory ([#583](https://github.com/artis-mcrt/artis/pull/583)).
@@ -501,7 +506,9 @@ The presets:
 - Only one rank of each node reads the gamma-ray line tables, and each rank reads the names of a data folder only
   once. A run with many ranks on a parallel file system thus starts faster (commit [451a43d2](https://github.com/artis-mcrt/artis/commit/451a43d2)).
 - Some log messages are correct now: the unit of the non-thermal deposition rate, the name of the mean wavelength
-  of the radiation field, and the list of the ion stages in a build with OpenMP threads ([#474](https://github.com/artis-mcrt/artis/pull/474)).
+  of the radiation field, and the list of the ion stages in a build with OpenMP threads ([#474](https://github.com/artis-mcrt/artis/pull/474)). Three more
+  pull requests corrected the printout of the NLTE solver ([#397](https://github.com/artis-mcrt/artis/pull/397)), some labels of the log ([#647](https://github.com/artis-mcrt/artis/pull/647)), and the
+  label of an autoionising level that is not an NLTE level ([#665](https://github.com/artis-mcrt/artis/pull/665)).
 - The build needs no GSL library, and the make option `EIGEN=OFF` is gone
   ([#489](https://github.com/artis-mcrt/artis/pull/489)). Two small headers replace the copy of Boost.Math
   ([#505](https://github.com/artis-mcrt/artis/pull/505)).
@@ -576,6 +583,7 @@ Released on 2026-05-15. See the [release on GitHub](https://github.com/artis-mcr
 - Three changes of the arithmetic, with no change of the method
   ([#284](https://github.com/artis-mcrt/artis/pull/284), [#350](https://github.com/artis-mcrt/artis/pull/350),
   [#359](https://github.com/artis-mcrt/artis/pull/359)). *Tests: all.*
+- The angle calculations use `atan2`, which changes the frame transformation at the rounding level ([#351](https://github.com/artis-mcrt/artis/pull/351)).
 
 ### Input and output files
 
@@ -583,6 +591,8 @@ Released on 2026-05-15. See the [release on GitHub](https://github.com/artis-mcr
   ([#317](https://github.com/artis-mcrt/artis/pull/317)).
 - `input.txt`: the lines of the grey opacity for the gamma rays, of the opacity choice, and of `rho_crit_para` have
   no effect. Compile-time options replace them ([#337](https://github.com/artis-mcrt/artis/pull/337)).
+- `input.txt`: the two diffusion values of the k-packets on line 23 have no effect. Constants of `kpkt.cc` replace
+  them ([#336](https://github.com/artis-mcrt/artis/pull/336)).
 - `deposition.out`: the total deposition includes the spontaneous fission
   ([#292](https://github.com/artis-mcrt/artis/pull/292)).
 - The light curve files hold no unused extra data ([#310](https://github.com/artis-mcrt/artis/pull/310)).
@@ -634,6 +644,8 @@ Released on 2026-02-17. See the [release on GitHub](https://github.com/artis-mcr
   `make BOOST=OFF EIGEN=OFF` selects the GSL code. *Tests: all.*
 - The `nltenebular` preset removes unimportant ion stages from the NLTE solver and tests for population inversions
   ([#290](https://github.com/artis-mcrt/artis/pull/290)). *Tests: nebular.*
+- With `FASTMATH=OFF`, Eigen also uses no fast-math code ([#289](https://github.com/artis-mcrt/artis/pull/289)). *Tests: `nebular_1d_3dgrid`,
+  nltephotospheric.*
 
 ### Input files
 
@@ -677,6 +689,7 @@ Released on 2025-11-11. See the [release on GitHub](https://github.com/artis-mcr
 
 - The abundances of the stable nuclei that have a column in `model.txt` are correct
   ([#238](https://github.com/artis-mcrt/artis/pull/238)). *Tests: kilonova.*
+- Atomic data with autoionising levels and no superlevel gets the correct level indices ([#228](https://github.com/artis-mcrt/artis/pull/228)).
 - A standard nuclide that the input composition does not give, e.g. Ni57 or Co57, gets an abundance of zero. Before,
   the value was not initialised (commit [03d1131e](https://github.com/artis-mcrt/artis/commit/03d1131e)).
 - The expansion opacity subtracts the stimulated emission, as the line-by-line mode does
@@ -704,3 +717,5 @@ Released on 2025-11-11. See the [release on GitHub](https://github.com/artis-mcr
 
 - The MPI calls divide an array with more items than the largest 32-bit integer into parts, so a large model can
   run ([#240](https://github.com/artis-mcrt/artis/pull/240)).
+- Different ranks write the spectrum files at the same time ([#235](https://github.com/artis-mcrt/artis/pull/235)).
+- Only the first rank of each node reads `adata.txt` and `transitiondata.txt` ([#245](https://github.com/artis-mcrt/artis/pull/245)).
