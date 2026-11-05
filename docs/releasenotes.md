@@ -499,7 +499,12 @@ The presets:
   run stops ([#566](https://github.com/artis-mcrt/artis/pull/566)).
 - The bound-free opacity is faster: a nebular model needed 7.5 percent less wall time, and a classic model ran
   2.26 times faster ([#513](https://github.com/artis-mcrt/artis/pull/513), [#514](https://github.com/artis-mcrt/artis/pull/514), [#518](https://github.com/artis-mcrt/artis/pull/518)). The first of these changes the results at the rounding level.
-- A run starts with an MPI library that does not obey the alignment hint of the shared memory ([#583](https://github.com/artis-mcrt/artis/pull/583)).
+- A run starts with an MPI library that does not obey the alignment hint of the shared memory ([#583](https://github.com/artis-mcrt/artis/pull/583)). A
+  shared array of a run with one rank on a node also has the alignment of 128 bytes ([#585](https://github.com/artis-mcrt/artis/pull/585)).
+- A build with the default fast-math option gives results that differ at the rounding level after a change of the
+  sums of the recombination rates ([#524](https://github.com/artis-mcrt/artis/pull/524)).
+- A `TESTMODE=ON` run writes and reads an empty restart array with no message of the sanitizer
+  (commit [471abde7](https://github.com/artis-mcrt/artis/commit/471abde7)).
 - clang and hipcc build on a host with more than one gcc installation ([#563](https://github.com/artis-mcrt/artis/pull/563)).
 - `sn3d` and `exspec` find a process that still runs in a model folder whose path holds a space
   (commit [4bec60c5](https://github.com/artis-mcrt/artis/commit/4bec60c5)).
@@ -707,10 +712,12 @@ Released on 2025-11-11. See the [release on GitHub](https://github.com/artis-mcr
 - The nuclide list holds all daughter nuclei ([#257](https://github.com/artis-mcrt/artis/pull/257)), and the decay
   solver has a new structure ([#258](https://github.com/artis-mcrt/artis/pull/258)). *Tests: all.*
 - The decay network has the spontaneous fission of Cf254, with the option `DECAY_SPONTFISSION_ON`
-  ([#261](https://github.com/artis-mcrt/artis/pull/261)).
+  ([#261](https://github.com/artis-mcrt/artis/pull/261)). The estimator files and the restart files hold its
+  deposition (commit [9f304ce4](https://github.com/artis-mcrt/artis/commit/9f304ce4)).
 
 ### Output files
 
+- `sn3d` writes the angle-averaged spectra and the light curve after each timestep (commit [26c2beaa](https://github.com/artis-mcrt/artis/commit/26c2beaa)).
 - The packet files hold the position of the true emission (`trueem_pos`) in place of the true emission velocity
   ([#227](https://github.com/artis-mcrt/artis/pull/227)).
 - The estimator files give the isotopic abundances in the order of the mass number
@@ -727,3 +734,5 @@ Released on 2025-11-11. See the [release on GitHub](https://github.com/artis-mcr
   run ([#240](https://github.com/artis-mcrt/artis/pull/240)).
 - Different ranks write the spectrum files at the same time ([#235](https://github.com/artis-mcrt/artis/pull/235)).
 - Only the first rank of each node reads `adata.txt` and `transitiondata.txt` ([#245](https://github.com/artis-mcrt/artis/pull/245)).
+- `exspec-after.sh` removes the temporary `vspecpol` files and moves the data of the virtual packet grid
+  ([#255](https://github.com/artis-mcrt/artis/pull/255)).
