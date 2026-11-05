@@ -272,6 +272,27 @@ is not complete:
 - A photoionisation or a bound-free heating rate of zero does not stop the run. The renormalisation factor of the
   estimator is then 1, with a warning in the log ([#496](https://github.com/artis-mcrt/artis/pull/496)).
 - The sample of a decay time completes for a decay chain with a very long mean lifetime, e.g. U238 ([#579](https://github.com/artis-mcrt/artis/pull/579)).
+- A virtual packet takes only the continuum opacity over a path that is too short to change its comoving frequency.
+  Before, it added every remaining line ([#575](https://github.com/artis-mcrt/artis/pull/575)).
+- With `RPKT_USE_BINNED_OPACITIES` and no `RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY`, the search for a line
+  inside an opacity bin uses the time of the packet. Before, it used the midpoint of the timestep ([#571](https://github.com/artis-mcrt/artis/pull/571)).
+- With `USE_MICROCLUMPING`, the ionisation balance of an element without NLTE levels uses the electron density
+  inside the clumps ([#476](https://github.com/artis-mcrt/artis/pull/476)).
+- With atomic data in which two ions have the same ground threshold, each ion gets its own photoionisation and
+  bound-free heating estimators. Such a dataset now stops the run at the start ([#554](https://github.com/artis-mcrt/artis/pull/554)).
+- A cell in which every element has only its lowest ion stage keeps the NLTE populations of an element with an NLTE
+  solution ([#651](https://github.com/artis-mcrt/artis/pull/651)).
+- The ion list of a cell keeps the ions that the non-thermal ionisation can make when the cell has lepton
+  deposition and no gamma-ray deposition, e.g. in a kilonova model ([#503](https://github.com/artis-mcrt/artis/pull/503)).
+- The number of levels in the ground term of an ion comes from the rules of LS coupling. Before, an inverted 3P
+  ground term counted as one level, e.g. for O I, Ne III, S I, and Ar III ([#533](https://github.com/artis-mcrt/artis/pull/533)).
+- The Grassmann-Taksar-Heyman solver stops its rescue loop after eight passes. Before, a rate that was not finite
+  made the loop run without end ([#498](https://github.com/artis-mcrt/artis/pull/498)).
+- A sample of a gamma-ray line, of a non-thermal ionisation target, of an Auger outcome, or of a collisional
+  transition does not select an outcome with zero weight ([#463](https://github.com/artis-mcrt/artis/pull/463)).
+- The Lotz cross-section gets the energy in the correct unit for the heating below the Spencer-Fano energy grid
+  ([#405](https://github.com/artis-mcrt/artis/pull/405)).
+- `GAMMA_THERMALISATION_SCHEME = GUTTMAN` has a corrected calculation ([#446](https://github.com/artis-mcrt/artis/pull/446)).
 
 ### Input files
 
@@ -334,6 +355,10 @@ is not complete:
 - The spectrum files have no space at the end of a line ([#387](https://github.com/artis-mcrt/artis/pull/387),
   [#599](https://github.com/artis-mcrt/artis/pull/599)).
 - The packet files:
+    - with `RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY` below 1, `nscatterings` does not count a line scattering
+      ([#657](https://github.com/artis-mcrt/artis/pull/657));
+    - `exspec` reads each column of a row that holds `nan`, and a row with too many columns stops the run
+      ([#580](https://github.com/artis-mcrt/artis/pull/580));
     - they have no `stokes_i` column ([#386](https://github.com/artis-mcrt/artis/pull/386));
     - the absorption frequency also belongs to a free-free or a bound-free absorption
       ([#656](https://github.com/artis-mcrt/artis/pull/656)), and to a thermal redistribution
@@ -424,6 +449,10 @@ The presets:
 ### Build, programs, and scripts
 
 - The default branch has the name `main`. Its old name was `develop`.
+- A build for an Nvidia GPU completes a run. Three corrections removed crashes in the list of the photoionisation
+  cross-sections, in the state of each packet, and in the memory of the packet update ([#412](https://github.com/artis-mcrt/artis/pull/412), [#413](https://github.com/artis-mcrt/artis/pull/413),
+  [#416](https://github.com/artis-mcrt/artis/pull/416)).
+- `scripts/clean.sh` and the start of a new simulation also remove `out.txt.zst` ([#643](https://github.com/artis-mcrt/artis/pull/643)).
 - The build needs no GSL library, and the make option `EIGEN=OFF` is gone
   ([#489](https://github.com/artis-mcrt/artis/pull/489)). Two small headers replace the copy of Boost.Math
   ([#505](https://github.com/artis-mcrt/artis/pull/505)).
