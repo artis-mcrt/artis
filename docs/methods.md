@@ -85,8 +85,8 @@ selects keeps the Saha ionisation balance. The kilonova preset selects each elem
 
 ### The NLTE populations
 
-The solver puts the radiative rates, the collisional rates, and the non-thermal ionisation rates of all the levels of
-all the ions of an element into one rate matrix. The solution of the statistical equilibrium gives the level
+The solver puts the radiative rates, the collisional rates, and the non-thermal ionisation and excitation rates of
+all the levels of all the ions of an element into one rate matrix. The solution of the statistical equilibrium gives the level
 populations. Each ion has a ground level and a number of excited levels in full NLTE. An ion with more levels above
 them also has one superlevel for those levels. An autoionising level is not in the superlevel, and it keeps its own
 row in the matrix. The cell repeats the solutions of the populations, of T_e, and of the
@@ -133,8 +133,9 @@ LTE. The log of the rank has a warning for each fallback to LTE.
 
 A cell in an LTE timestep, and a cell with the grey opacity, have no thermal balance. The code sets their T_e to the
 temperature of the mean intensity. The first timestep of a new simulation is different: each cell keeps its initial
-temperature, which the code calculates from the trapped energy of the decays before the start time. For each other
-cell, the code solves heating = cooling for the electron
+temperature. The code calculates it from the energy of the decays between the snapshot time of `model.txt` and the
+midpoint of the first timestep, and from the `q` column of `model.txt`. It takes all of that energy as trapped in
+the cell. For each other cell, the code solves heating = cooling for the electron
 temperature. The heating rates are the bound-free
 heating, the free-free heating, the collisional de-excitation, and the non-thermal heating. The cooling rates are
 the free-free, the free-bound, and the collisional cooling, and the adiabatic cooling of the expansion. From the
@@ -226,8 +227,16 @@ in one of three ways:
 
 The fragments of a spontaneous fission are an exception. They always deposit all of their energy at once, as heat.
 
-- Options: [PARTICLE_THERMALISATION_SCHEME](options.md#particle_thermalisation_scheme) selects the instant
-  deposition, a transport with the Monte Carlo method, or an analytic thermalisation efficiency.
+- Options: [PARTICLE_THERMALISATION_SCHEME](options.md#particle_thermalisation_scheme) selects the method:
+    - `INSTANTFULLDEPOSITION` deposits the energy at once.
+    - `TIMEDEPENDENT` transports the particles with the Monte Carlo method.
+    - `TIMEDEPENDENT_WITH_ADIABATIC_LOSS` adds the adiabatic loss of the kinetic energy to the collisional loss. Only
+      the collisional share of the lost energy heats the gas.
+    - `TIMEDEPENDENT_WITH_ADIABATIC_LOSS_ULTRARELATIVISTICLIMIT` uses the rate E/t for the adiabatic loss. The
+      kilonova preset selects this value.
+    - `TIMEDEPENDENTWITHGAMMAPRODUCTS` also transports the electrons and the positrons that the interactions of the
+      gamma rays make.
+    - `BARNES` and `WOLLAEGER` use an analytic thermalisation efficiency.
 - References:
     - the decays and the time-dependent thermalisation: Shingles et al. (2023), ApJL, 954, L41,
       doi:10.3847/2041-8213/acf29a;
