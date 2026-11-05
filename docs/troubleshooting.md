@@ -104,7 +104,7 @@ another compiler can give other values, and no test covers that case. Push the b
 ## The log
 
 `sn3d` writes one log file for each rank into the job folder, and `output_0-0.txt` in the model folder is a symlink
-to the log of rank 0 (see [Running sn3d](running.md)). Each line starts with the time in UTC. A rank writes the
+to the log of rank 0 (see [Running sn3d](running.md)). Each line starts with the time in Coordinated Universal Time (UTC). A rank writes the
 messages of the cells that it updates, so the message about a cell can be in the log of a rank other than rank 0.
 
 ### The tags of the log lines

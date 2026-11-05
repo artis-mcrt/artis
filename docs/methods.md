@@ -87,7 +87,8 @@ selects keeps the Saha ionisation balance. The kilonova preset selects each elem
 The solver puts the radiative rates, the collisional rates, and the non-thermal ionisation rates of all the levels of
 all the ions of an element into one rate matrix. The solution of the statistical equilibrium gives the level
 populations. Each ion has a ground level and a number of excited levels in full NLTE. An ion with more levels above
-them also has one superlevel for those levels. The cell repeats the solutions of the populations, of T_e, and of the
+them also has one superlevel for those levels. An autoionising level is not in the superlevel, and it keeps its own
+row in the matrix. The cell repeats the solutions of the populations, of T_e, and of the
 non-thermal electrons until T_e and the electron density change by less than a tolerance. The iteration also stops
 after [NLTE_TE_NNE_MAXITER](options.md#nlte_te_nne_maxiter) passes. The cell then keeps the last solution, and the
 log of the rank has a message with the text `failed to converge`.
@@ -281,8 +282,9 @@ spectrum of each direction with less noise than the real packets give.
 
 The binned opacities replace the line-by-line opacities with one opacity for each wavelength bin. Each line adds a
 weight to the sum of its bin, and an option selects the weight from the Sobolev optical depth of the line. A
-thermalisation probability for each bound-bound absorption can replace the macro atom. The absorbed energy then
-becomes a k-packet with that probability, and the packet scatters with the remaining probability.
+thermalisation probability for each bound-bound absorption can replace the macro atom. With that probability, the
+packet is emitted again at once as an r-packet with a new frequency from the thermal emission of the cell. It does
+not become a k-packet. With the remaining probability, the packet scatters and keeps its comoving frequency.
 
 - Options:
     - [RPKT_USE_BINNED_OPACITIES](options.md#rpkt_use_binned_opacities) and
