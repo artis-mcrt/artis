@@ -186,6 +186,7 @@ To continue after the short run, set `timestep_finish` in `input.txt` to the num
 again. `input.txt` already holds the start timestep and the continuation flag. The new job propagates the last
 timestep of the short run again (see [Input files](inputfiles.md)).
 
-For a run in several jobs, `sn3d -w` tests the remaining wall time at each timestep (see [Running sn3d](running.md)).
+For a run in several jobs, `sn3d -w WALLTIMELIMITHOURS` tests the remaining wall time at each timestep (see
+[Running sn3d](running.md)).
 A job then needs wall time for at least two timesteps, because `sn3d` writes the restart files from the second
 timestep of a job.

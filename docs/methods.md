@@ -124,7 +124,10 @@ LTE. The log of the rank has a warning for each fallback to LTE.
 ### The thermal balance
 
 The code solves heating = cooling for the electron temperature of each cell. The heating rates are the bound-free
-heating, the free-free heating, the collisional de-excitation, and the non-thermal heating. The code keeps T_e
+heating, the free-free heating, the collisional de-excitation, and the non-thermal heating. The cooling rates are
+the free-free, the free-bound, and the collisional cooling, and the adiabatic cooling of the expansion. From the
+timestep of [NLTE_TIME_DEPENDENT_FIRST_TIMESTEP](options.md#nlte_time_dependent_first_timestep), the cooling also
+holds the change of the thermal energy of the gas in the timestep. The code keeps T_e
 between [MINTEMP](options.md#mintemp) and [MAXTEMP](options.md#maxtemp). A cell at one of these limits has no thermal
 balance, and the log of its rank has a warning (see [Troubleshooting](troubleshooting.md#the-log)).
 
@@ -196,7 +199,8 @@ alternative. It gives ionisation rates and no excitation rates.
 
 ## The decays and the thermalisation of the particles
 
-The decay network holds the alpha, the beta, and the fission decays. The code gets the abundance of each nuclide at
+The decay network holds the alpha decays, the beta-minus decays, the beta-plus decays, the electron captures, and
+the spontaneous fission decays. The code gets the abundance of each nuclide at
 each time from the solutions of the Bateman equation. The `data` folder of the repository holds the decay data and
 the gamma-ray lines of each nuclide (see [Atomic and model data](data.md)). The decay particles deposit their energy
 at once, or the code transports them and they lose their energy over time.
