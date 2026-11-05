@@ -14,7 +14,7 @@ exist.
 
 | File | Necessary | Content |
 | --- | --- | --- |
-| [input.txt](#inputtxt) | yes | the run-time parameters |
+| [input.txt](#inputtxt) | yes, or `input-newrun.txt` | the run-time parameters |
 | [model.txt](#modeltxt) | yes | the grid, the densities, and the nuclide mass fractions |
 | [abundances.txt](#abundancestxt) | yes | the element mass fractions of each cell |
 | [compositiondata.txt](#compositiondatatxt) | yes | the elements, the ion stages, and the level counts of the run |
@@ -26,7 +26,7 @@ exist.
 | [recombrates.txt](#recombratestxt) | no | the recombination rate coefficients for the calibration |
 | [autoion.txt](#autoiontxt) | no | the autoionisation rates |
 | [gridcontributions.txt](#gridcontributionstxt) | no | `sn3d` does not read this file |
-| [gamma_*.txt](#the-gamma-ray-line-files) | in `artis/data` | the gamma-ray lines of each nuclide |
+| [gamma_*.txt](#the-gamma-ray-line-files) | for six nuclides | the gamma-ray lines of each nuclide, which come with the source in `artis/data` |
 
 In the layouts of this page, `<name>` is a value that you supply. Where this page says that a file can have comment
 lines, `sn3d` ignores each blank line and each line whose first character that is not a space is `#`.
@@ -204,6 +204,7 @@ the mass fractions, e.g. element densities. For a 3D model, `sn3d` uses the valu
 whose values do not sum to 1 within 2 percent gets a warning in the log.
 
 The mass fraction of an element must not be less than the sum of the mass fractions of its nuclides in `model.txt`.
+`sn3d` permits a difference of 0.01 for the rounding of the values.
 A cell with a density, but with no mass in the elements of `compositiondata.txt` that have ions, becomes an empty
 cell. An element with `nions` 0 does not keep the cell. The log gets a warning that names the elements of that cell.
 
@@ -225,7 +226,7 @@ file has one row for each element:
 | Column | Meaning |
 | --- | --- |
 | `Z` | The atomic number, which must be above 0. |
-| `nions` | The number of ion stages. With the value 0, the element has no ions, and the code keeps only its nuclide abundances. |
+| `nions` | The number of ion stages, which must not be negative. With the value 0, the element has no ions, and the code keeps only its nuclide abundances. |
 | lowest ion stage | The lowest ion stage of the run. The ion stage 1 is the neutral atom. |
 | highest ion stage | The highest ion stage of the run. For an element with ions, `nions` must be equal to the highest ion stage - the lowest ion stage + 1. An element with `nions` 0 has no such rule. |
 | `nlevelsmax` | The maximum number of levels that the code reads for each ion of the element. A negative value reads every level. The value 0 stops the run for an element with ions. With `SINGLE_LEVEL_TOP_ION`, the highest ion stage keeps one level. |
@@ -330,7 +331,7 @@ Then each table of `phixsdata_v2.txt` has this layout:
 - An upper level index of 0 or more gives one target level. The table then has no row with the number of target
   levels and no rows of target levels.
 - A negative upper level index, e.g. -1, gives a list of target levels. The probabilities of the target levels must
-  sum to 1, and each target level must occur only once. Each probability must be above 0.
+  sum to 1 within 0.01, and each target level must occur only once. Each probability must be above 0.
 - Each target level must be a level that the run keeps for the upper ion. A target above the level limit of
   `compositiondata.txt` stops the run. An upper ion with one level from `SINGLE_LEVEL_TOP_ION` is the exception.
 - `sn3d` reads the threshold energy and does not use it. The threshold comes from the level energies of `adata.txt`.
