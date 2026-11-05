@@ -22,7 +22,7 @@ exist.
 | [transitiondata.txt](#transitiondatatxt) | yes | the lines of each ion |
 | [phixsdata_v2.txt or phixsdata.txt](#phixsdata_v2txt-and-phixsdatatxt) | one of them | the photoionisation cross-sections |
 | [vpkt.txt](#vpkttxt) | with `VPKT_ON` | the observer directions of the virtual packets |
-| [Ye.txt](#yetxt) | no | the electron fraction of each cell |
+| [Ye.txt](#yetxt) | with `RPKT_GREY_TYPE = TANAKA2020_ELECTRONFRAC`, if `model.txt` has no `Ye` column | the electron fraction of each cell |
 | [recombrates.txt](#recombratestxt) | no | the recombination rate coefficients for the calibration |
 | [autoion.txt](#autoiontxt) | no | the autoionisation rates |
 | [gridcontributions.txt](#gridcontributionstxt) | no | `sn3d` does not read this file |
@@ -316,6 +316,8 @@ Then each table of `phixsdata_v2.txt` has this layout:
   levels and no rows of target levels.
 - A negative upper level index, e.g. -1, gives a list of target levels. The probabilities of the target levels must
   sum to 1, and each target level must occur only once.
+- Each target level must be a level that the run keeps for the upper ion. A target above the level limit of
+  `compositiondata.txt` stops the run. An upper ion with one level from `SINGLE_LEVEL_TOP_ION` is the exception.
 - `sn3d` reads the threshold energy and does not use it. The threshold comes from the level energies of `adata.txt`.
 
 Each table of `phixsdata.txt` has this layout:
@@ -380,7 +382,8 @@ spectra.
 ## Ye.txt
 
 An optional file with the electron fraction of the cells. It replaces the values of the `Ye` column of `model.txt`.
-The file can have no comment lines.
+With `RPKT_GREY_TYPE = TANAKA2020_ELECTRONFRAC`, each cell with matter needs an electron fraction from this file or
+from that column, or the run stops. The file can have no comment lines.
 
 ```text
 <number of rows>
@@ -428,6 +431,7 @@ transition:
 ```
 
 - The lower level is the level that autoionises. The upper level is the level of the ion that the transition makes.
+  The upper ion stage must be higher than the lower ion stage.
 - Put the transitions of each lower level on consecutive lines.
 - `sn3d` finds the first level index of `autoion.txt` separately from `adata.txt`: the numbering starts at 0 if a
   level number in the file is 0, and at 1 otherwise.

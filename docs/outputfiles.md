@@ -115,8 +115,10 @@ Stokes parameters I, Q, and U. Only a run with `POL_ON` writes `specpol.out`, `e
 
 ### The emission and absorption files
 
-`emission.out`, `emissiontrue.out`, and `absorption.out` divide the flux of `spec.out` between the atomic processes.
-They have no header, no frequency column, and no time column.
+`emission.out` and `emissiontrue.out` divide the flux of `spec.out` between the atomic processes of the last
+emission. `absorption.out` gives the flux of the escaped packets for each process of their last absorption, in the
+frequency bin of that absorption. Its columns therefore do not divide the flux of the same bin of `spec.out`. The
+files have no header, no frequency column, and no time column.
 
 - The files have one row for each frequency bin and each timestep of the model. The rows of all timesteps of the
   first frequency bin come first, then the rows of the second bin. The timesteps after the last complete timestep
