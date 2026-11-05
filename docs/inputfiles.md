@@ -357,8 +357,8 @@ lines.
 | 4 | flag, and optional values | With the flag 1, the number of spectra for each observer follows, and then one opacity value for each spectrum. With a different flag, each observer gets one spectrum with the full opacity. |
 | 5 | `flag tmin_days tmax_days` | With the flag 1, the virtual packets must arrive between these two times in days. With a different flag, the range is from `VSPEC_TIMEMIN` to `VSPEC_TIMEMAX` of `vpkt.h`, but the two values must stay. |
 | 6 | flag, and optional values | With the flag 1, the number of wavelength ranges follows, and then the lowest and the highest wavelength of each range in Angstroms. With a different flag, the range is from `VSPEC_NUMIN` to `VSPEC_NUMAX` of `vpkt.h`. |
-| 7 | `flag optical_depth_is_thick_vpkt` | With the flag 1, a cell with a grey optical depth above this value sends no virtual packets. With a different flag, the value of `input.txt` applies, but the value must stay. |
-| 8 | `tau_max_vpkt` | The code stops a virtual packet when its optical depth is larger than this value in every spectrum. |
+| 7 | `flag optical_depth_is_thick_vpkt` | With the flag 1, a cell with a grey optical depth above this value sends no virtual packets. With a different flag, the value of `input.txt` applies, but the value must stay. With the flag 1, the value must be above 0. |
+| 8 | `tau_max_vpkt` | The code stops a virtual packet when its optical depth is larger than this value in every spectrum. The value must be above 0. |
 | 9 | flag | A value that is not 0 switches on the velocity grid map. |
 | 10 | `tmin_grid_days tmax_grid_days` | Only with the velocity grid map: the time range of the map in days. |
 | 11 | number, and the ranges | Only with the velocity grid map: the number of wavelength ranges of the map, and then the lowest and the highest wavelength of each range in Angstroms. |
@@ -382,8 +382,8 @@ spectra.
 ## Ye.txt
 
 An optional file with the electron fraction of the cells. It replaces the values of the `Ye` column of `model.txt`.
-With `RPKT_GREY_TYPE = TANAKA2020_ELECTRONFRAC`, each cell with matter needs an electron fraction from this file or
-from that column, or the run stops. The file can have no comment lines.
+Each value must be in the range from 0 to 1. With `RPKT_GREY_TYPE = TANAKA2020_ELECTRONFRAC`, each cell with matter
+needs an electron fraction above 0 from this file or from that column, or the run stops. The file can have no comment lines.
 
 ```text
 <number of rows>

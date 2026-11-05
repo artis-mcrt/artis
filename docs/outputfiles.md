@@ -116,7 +116,8 @@ Stokes parameters I, Q, and U. Only a run with `POL_ON` writes `specpol.out`, `e
 ### The emission and absorption files
 
 `emission.out` and `emissiontrue.out` divide the flux of `spec.out` between the atomic processes of the last
-emission. `absorption.out` gives the flux of the escaped packets for each process of their last absorption, in the
+emission. A packet whose last emission has no process is in `spec.out` and in neither of these two files, e.g.
+after a thermalisation with `RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY`. `absorption.out` gives the flux of the escaped packets for each process of their last absorption, in the
 frequency bin of that absorption. Its columns therefore do not divide the flux of the same bin of `spec.out`. The
 files have no header, no frequency column, and no time column.
 
@@ -233,8 +234,8 @@ NLTE solution:
 | `ion_popfrac` | `n_NLTE` divided by the number density of the ion. |
 
 The LTE timesteps write no rows. In the other timesteps, an element without an NLTE solution in a cell has no rows
-for that cell. This is an element with no mass in the cell, an element that fell back to LTE, and each element of a
-cell with the grey opacity.
+for that cell. This is an element with no NLTE levels, an element with no mass in the cell, an element that fell
+back to LTE, and each element of a cell with the grey opacity.
 
 ### The radfield files
 
