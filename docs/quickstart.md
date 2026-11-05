@@ -4,6 +4,28 @@ This page gives a first simulation, a check of the results, and a plot. Everythi
 
 ## 1. Install a compiler and MPI
 
+Use pixi, or install the programs with the package manager of your system.
+
+### With pixi
+
+[pixi](https://pixi.sh) installs each program that sections 3 and 5 need, on Linux and on macOS. Install it, and then
+start a new terminal:
+
+```sh
+curl -fsSL https://pixi.sh/install.sh | sh
+```
+
+After the clone of section 2, start a shell of the `laptop` environment in the clone:
+
+```sh
+pixi shell -e laptop
+```
+
+Do the later sections in that shell. macOS also needs the command line tools of Xcode, which `xcode-select --install`
+installs. They also supply git. [Installation](installation.md#pixi-on-a-laptop) gives the limits of this environment.
+
+### Without pixi
+
 On macOS:
 
 ```sh
@@ -14,7 +36,7 @@ export PATH="$(brew --prefix coreutils)/libexec/gnubin:$PATH"
 `tests/runtest.sh` needs the `md5sum` command of the next step. Homebrew installs that command as `gmd5sum`, and the
 `gnubin` folder of the export holds it under the plain name.
 
-On Linux, get a compiler, Open MPI, git, and make from your package manager, from a module, or from pixi.
+On Linux, get a compiler, Open MPI, git, and make from your package manager or from a module.
 [Installation](installation.md) gives the detail and the version that the build needs. `tests/runtest.sh` gives
 `mpirun` the options `--oversubscribe` and `--mca`, which only Open MPI accepts.
 

@@ -18,9 +18,38 @@ With Open MPI, select the compiler with an environment variable:
 export OMPI_CXX=g++
 ```
 
+## pixi on a laptop
+
+[pixi](https://pixi.sh) installs a compiler, Open MPI, libzstd, and each command that the end-to-end tests call. It
+needs no other package manager, and it works on Linux (x86-64) and on macOS (Apple silicon). Install pixi, and then
+start a new terminal:
+
+```sh
+curl -fsSL https://pixi.sh/install.sh | sh
+```
+
+In the clone of the repository, start a shell of the `laptop` environment:
+
+```sh
+pixi shell -e laptop
+```
+
+The first start downloads the packages into the `.pixi` folder of the clone. The shell then holds `mpicxx`, `mpirun`,
+`make`, and the other commands, so the commands of this site work in it without a change.
+`pixi run -e laptop <command>` runs one command in the environment, e.g.
+`pixi run -e laptop tests/runtest.sh kilonova_1d`.
+
+- The environment uses gcc on Linux and clang on macOS.
+- macOS also needs the command line tools of Xcode, because they hold the system headers. `xcode-select --install`
+  installs them.
+- On Linux, keep the clone in a path without a space. The gcc of conda-forge does not work in a path that holds a
+  space.
+- Do not use the `laptop` environment on an HPC cluster. Its Open MPI does not have the network support of the
+  cluster, so use the MPI library of the cluster there (see [Linux](#linux)).
+
 ## macOS
 
-Install the LLVM tools, Open MPI, and the other dependencies with homebrew:
+Without pixi, install the LLVM tools, Open MPI, and the other dependencies with homebrew:
 
 ```sh
 brew install llvm lld libomp open-mpi pkgconf zstd coreutils prek
@@ -39,7 +68,9 @@ Homebrew installs that command as `gmd5sum`, and the `gnubin` folder of the expo
 
 ## Linux
 
-`pixi run make` builds with a gcc from conda-forge (see `pixi.toml`):
+Get the compiler, the MPI library, and libzstd from your package manager or, on a cluster, from a module. The default
+environment of pixi is an alternative source of the compiler only. `pixi run make` builds with its gcc from
+conda-forge (see `pixi.toml`):
 
 - The MPI library must come from the system, e.g. from a module on a cluster.
 - To use the gcc of pixi for the commands below, start `pixi shell` first.

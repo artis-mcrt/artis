@@ -30,7 +30,7 @@ cd artis
 tests/runtest.sh kilonova_1d
 ```
 
-This builds the code and runs a small 1D kilonova model in two jobs, and then post-processes the packets with `exspec`. The [Quickstart](https://artis-mcrt.readthedocs.io/en/latest/quickstart.html) page describes the steps and makes a model folder of your own. The build needs git, make, a C++ compiler (gcc 14 or a later version, clang, nvc++, or hipcc), and an MPI library that supplies `mpicxx`. The command above needs Open MPI, because it gives `mpirun` the options `--oversubscribe` and `--mca`. It also needs libzstd, `zstd`, `md5sum`, `curl`, `tar`, `xz`, `python3`, `perl`, and `rsync`. [Installation](https://artis-mcrt.readthedocs.io/en/latest/installation.html) gives the package of each system.
+This builds the code and runs a small 1D kilonova model in two jobs, and then post-processes the packets with `exspec`. The [Quickstart](https://artis-mcrt.readthedocs.io/en/latest/quickstart.html) page describes the steps and makes a model folder of your own. The build needs git, make, a C++ compiler (gcc 14 or a later version, clang, nvc++, or hipcc), and an MPI library that supplies `mpicxx`. The command above needs Open MPI, because it gives `mpirun` the options `--oversubscribe` and `--mca`. It also needs libzstd, `zstd`, `md5sum`, `curl`, `tar`, `xz`, `python3`, `perl`, and `rsync`. [Installation](https://artis-mcrt.readthedocs.io/en/latest/installation.html) gives the package of each system. [pixi](https://pixi.sh) installs all of them except git, on Linux and on macOS: `pixi run -e laptop tests/runtest.sh kilonova_1d`.
 
 ## Key features
 

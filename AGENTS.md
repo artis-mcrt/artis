@@ -110,9 +110,12 @@ compatible with C++23. The Makefile builds three programs from the same sources:
 - `scripts/`: the job scripts for HPC clusters and some helper tools.
 - `third_party/`: a pruned copy of Eigen (see `third_party/eigenversion.txt`).
   Do not edit it and do not lint it.
-- `pixi.toml`: a conda-forge environment with gcc. The MPI library comes from
-  the system. `pixi run make` is the quickest way to get a toolchain that
-  works.
+- `pixi.toml`: two conda-forge environments. The default environment holds only
+  gcc, and the MPI library comes from the system. `pixi run make` is the
+  quickest way to get a toolchain that works on a cluster. The `laptop`
+  environment adds Open MPI, libzstd, and each command that `tests/runtest.sh`
+  calls, for a machine without an MPI library:
+  `pixi run -e laptop tests/runtest.sh kilonova_1d`. It uses clang on macOS.
 
 `CONTRIBUTING.md` gives the steps of a change for a human contributor, in a
 shorter form than this file. It also names when to open an issue first, and it

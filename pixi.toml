@@ -1,7 +1,7 @@
 [workspace]
 channels = ["conda-forge"]
 name = "artis"
-platforms = ["linux-64"]
+platforms = ["linux-64", "osx-arm64"]
 version = "0.1.0"
 
 [tasks.make]
@@ -17,3 +17,37 @@ gxx = ">=16.1.0"
 [activation.env]
 OMPI_CXX = "g++"
 # OMPI_CXX = "clang++"
+
+# The laptop environment is for a machine that has no MPI library of its own. It adds Open MPI, libzstd, and each
+# command that tests/runtest.sh calls: pixi run -e laptop tests/runtest.sh kilonova_1d
+# Do not use it on an HPC cluster. Its Open MPI does not have the network support of the cluster.
+[feature.laptop.dependencies]
+coreutils = ">=9.5"
+curl = ">=8"
+make = ">=4.4"
+openmpi = ">=5.0.8"
+openmpi-mpicxx = ">=5.0.8"
+perl = ">=5.32"
+pkg-config = ">=0.29"
+python = ">=3.11"
+rsync = ">=3.2"
+tar = ">=1.34"
+xz = ">=5.4"
+zstd = ">=1.5"
+
+# The compiler packages of conda-forge set these flags, and the Makefile needs none of them. They hold the path of
+# the environment without quotes, so a path with a space stops the build.
+[feature.laptop.activation.env]
+CPPFLAGS = ""
+CXXFLAGS = ""
+LDFLAGS = ""
+
+# macOS has no CI job for gcc, so the laptop environment uses clang there
+[feature.laptop.target.osx-arm64.dependencies]
+clangxx = ">=23.1"
+
+[feature.laptop.target.osx-arm64.activation.env]
+OMPI_CXX = "clang++"
+
+[environments]
+laptop = ["laptop"]

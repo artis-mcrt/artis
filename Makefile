@@ -448,7 +448,7 @@ else ifeq ($(CDB_CXX),)
 	@echo '$@: "$(CXX) -show" does not name the compiler, so make writes no compilation database'
 else
 	@CDB_CXX='$(CDB_CXX)' CDB_FLAGS='$(CDB_INCFLAGS) $(CDB_CXXFLAGS)' CDB_SRC='$(CDB_SRC)' \
-		$(CDB_PYTHON) -c 'import json,os,shlex,sys; args=[os.environ["CDB_CXX"],*shlex.split(os.environ["CDB_FLAGS"])]; json.dump([{"directory":os.getcwd(),"arguments":[*args,"-c",src],"file":src} for src in os.environ["CDB_SRC"].split()],sys.stdout,indent=1)' > $@.tmp || exit 1
+		'$(CDB_PYTHON)' -c 'import json,os,shlex,sys; args=[os.environ["CDB_CXX"],*shlex.split(os.environ["CDB_FLAGS"])]; json.dump([{"directory":os.getcwd(),"arguments":[*args,"-c",src],"file":src} for src in os.environ["CDB_SRC"].split()],sys.stdout,indent=1)' > $@.tmp || exit 1
 	@if cmp -s $@.tmp $@; then rm -f $@.tmp; else mv $@.tmp $@; echo '$@: $(words $(CDB_SRC)) entries for $(CDB_CXX)'; fi
 endif
 
