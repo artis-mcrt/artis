@@ -232,7 +232,8 @@ A change of a preset value alters the results of each run that uses the preset w
 
 #### Corrections that changed no test
 
-These corrections alter the results only for some models or some option values:
+These corrections alter the results, or let a run complete, only for some models or some option values. The list
+is not complete:
 
 - The sample of a free-bound emission frequency stays inside the cross-section table
   ([#460](https://github.com/artis-mcrt/artis/pull/460)).
@@ -254,6 +255,23 @@ These corrections alter the results only for some models or some option values:
   ([#654](https://github.com/artis-mcrt/artis/pull/654)).
 - With `RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY`, the thermal emission includes the bound-free heating opacity
   ([#673](https://github.com/artis-mcrt/artis/pull/673)).
+- With `RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY`, a blackbody emission, a thermal redistribution, and a line
+  scattering each start virtual packets. A pre-k-packet in a thin cell also starts them ([#619](https://github.com/artis-mcrt/artis/pull/619)).
+- The virtual packet spectra hold only the flux inside the wavelength ranges of `vpkt.txt`. The restart files of the
+  virtual packets have the full precision, so the spectra do not depend on the division of a run into jobs
+  ([#556](https://github.com/artis-mcrt/artis/pull/556)).
+- With `NLTE_TIME_DEPENDENT_FIRST_TIMESTEP`, a k-packet that becomes radiation gets the radiative share of the
+  thermal balance of its cell ([#537](https://github.com/artis-mcrt/artis/pull/537)).
+- The recombination coefficient of an element without NLTE levels is correct for a photoionisation with more than
+  one target level, and for calibrated data with one target level ([#529](https://github.com/artis-mcrt/artis/pull/529)).
+- The Ni ions with the ion stages 23 to 28 get the collisional ionisation fits of `collion.txt`. Before, the code
+  did not read the last ten rows of that file ([#649](https://github.com/artis-mcrt/artis/pull/649)).
+- The Compton deposition of a gamma packet below approximately 5 keV keeps its precision ([#467](https://github.com/artis-mcrt/artis/pull/467)).
+- A GPU build with more than one rank gives each rank its own packet seeds. Before, neighbouring ranks had most of
+  their seeds in common ([#481](https://github.com/artis-mcrt/artis/pull/481)).
+- A photoionisation or a bound-free heating rate of zero does not stop the run. The renormalisation factor of the
+  estimator is then 1, with a warning in the log ([#496](https://github.com/artis-mcrt/artis/pull/496)).
+- The sample of a decay time completes for a decay chain with a very long mean lifetime, e.g. U238 ([#579](https://github.com/artis-mcrt/artis/pull/579)).
 
 ### Input files
 
@@ -285,6 +303,10 @@ These corrections alter the results only for some models or some option values:
 - A velocity grid map of `vpkt.txt` with a time range or a wavelength range outside the ranges of the spectra stops
   the run. Before, such a map was empty or biased ([#667](https://github.com/artis-mcrt/artis/pull/667)).
   *Tests: `classicmode_1d_3dgrid`.*
+- `sn3d` finds an optional input file in `data/` and in `artis/data/`, as it finds a required file, e.g. `Ye.txt`,
+  `recombrates.txt`, and `autoion.txt` ([#662](https://github.com/artis-mcrt/artis/pull/662)).
+- `autoion.txt` can give more than one transition for one level. The rows of one level must come together, or the
+  run stops ([#663](https://github.com/artis-mcrt/artis/pull/663)).
 - A level of `adata.txt` with an energy below the energy of the previous level gives a warning in the log. The
   check came with [#567](https://github.com/artis-mcrt/artis/pull/567).
 
@@ -303,6 +325,8 @@ These corrections alter the results only for some models or some option values:
   ([#682](https://github.com/artis-mcrt/artis/pull/682)). *Tests: all.*
 - `linelist.out` replaces `linestat.out`. It has one row for each line, a header row, and 0-based level indices
   ([#683](https://github.com/artis-mcrt/artis/pull/683)). The wavelengths keep the nine significant digits.
+- A file error during the write of the restart files stops the run. `sn3d` then keeps `input.txt` and the restart
+  files of the timestep before ([#578](https://github.com/artis-mcrt/artis/pull/578)).
 - With [WRITE_COMBINED_ALLRANK_OUT_FILES](options.md#write_combined_allrank_out_files), the estimator, nlte, and
   radfield files of all ranks go into one file each, e.g. `estimators_allranks.out`. Every preset sets the option
   ([#642](https://github.com/artis-mcrt/artis/pull/642), [#678](https://github.com/artis-mcrt/artis/pull/678),
