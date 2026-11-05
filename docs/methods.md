@@ -146,7 +146,8 @@ heating, the free-free heating, the collisional de-excitation, and the non-therm
 from a Monte Carlo estimator, which also holds the collisional recombination heating. The cooling rates are
 the free-free, the free-bound, and the collisional cooling, and the adiabatic cooling of the expansion. From the
 timestep of [NLTE_TIME_DEPENDENT_FIRST_TIMESTEP](options.md#nlte_time_dependent_first_timestep), the cooling also
-holds the change of the thermal energy of the gas in the timestep. The code keeps T_e
+holds the change of the thermal energy of the gas in the timestep. This term has the same condition as the time
+term of the ion populations: the cell needs a complete NLTE solution from the timestep before. The code keeps T_e
 between [MINTEMP](options.md#mintemp) and [MAXTEMP](options.md#maxtemp). A cell at one of these limits has no thermal
 balance, and the log of its rank has a warning (see [Troubleshooting](troubleshooting.md#the-log)).
 
