@@ -93,7 +93,8 @@ lengths in cm, the energies in erg, and the frequencies in Hz, unless a differen
 | 2 | The luminosity of the escaped r-packets in the rest frame [L_sun]. The time of a packet is its arrival time at the observer. |
 | 3 | The luminosity of the escaped r-packets in the comoving frame [L_sun]. The time of a packet is its escape time multiplied by sqrt(1 - (`vmax`/c)^2), without the light travel time. |
 
-`gamma_light_curve.out` has the same columns for the escaped gamma packets.
+`gamma_light_curve.out` has the same columns for the escaped gamma packets. Only a run with `KEEP_ESCAPED_GAMMAS`
+writes it.
 
 ### The spectra
 
@@ -105,8 +106,10 @@ spacing from `NU_MIN_R` to `NU_MAX_R`.
 - The flux is F_nu [erg/s/cm^2/Hz] for an observer at a distance of 1 Mpc. A packet goes into the timestep of its
   arrival time at the observer.
 
-`gamma_spec.out` has the same layout for the escaped gamma packets, with the frequency range of the gamma rays.
-`specpol.out` has the timestep columns three times in sequence, for the Stokes parameters I, Q, and U.
+`gamma_spec.out` has the same layout for the escaped gamma packets, with the frequency range of the gamma rays. Only
+a run with `KEEP_ESCAPED_GAMMAS` writes it. `specpol.out` has the timestep columns three times in sequence, for the
+Stokes parameters I, Q, and U. Only a run with `POL_ON` writes `specpol.out`, `emissionpol.out`, and
+`absorptionpol.out`.
 
 ### The emission and absorption files
 
@@ -261,13 +264,13 @@ the rank. A run without `KEEP_ESCAPED_GAMMAS` writes no rows for the escaped gam
 | `emissiontype` | The process of the last emission (see below). |
 | `trueemissiontype` | The process of the last emission from the thermal energy of the gas. |
 | `em_posx`, `em_posy`, `em_posz` | The position of the last emission. An electron scattering also sets the position, and the Compton scattering of a gamma packet sets the position and `em_time`. |
-| `absorption_type`, `absorption_freq` | The process and the rest-frame frequency of the last absorption (see below). |
+| `absorption_type`, `absorption_freq` | The process of the last absorption (see below), and the rest-frame frequency of the last absorption of an r-packet. `absorption_freq` is 0 until an r-packet absorption sets it. |
 | `nscatterings` | The number of electron scatterings since the last emission. An event in a cell with the grey opacity also adds one. |
 | `em_time` | The time of the last emission. |
 | `stokes_q`, `stokes_u` | The Stokes parameters Q/I and U/I. Only a run with `POL_ON` has these columns. |
 | `originated_from_particlenotgamma` | 1 if the decay of the pellet made a particle, and 0 if it made a gamma ray. The initial energy of the cells also holds 0, and its `pellet_decaytype` is -1. |
 | `trueem_posx`, `trueem_posy`, `trueem_posz`, `trueem_time` | The position and the time of the last emission from the thermal energy of the gas. |
-| `pellet_nucindex` | The nuclide of the pellet decay, as the index of `nuclides.out`. |
+| `pellet_nucindex` | The nuclide of the pellet decay, as the index of `nuclides.out`, or -1 for the initial energy of the cells. |
 | `pellet_decaytype` | The decay type: 0 alpha, 1 electron capture, 2 beta-plus, 3 beta-minus, 5 spontaneous fission. The value -1 is the initial energy of the cells. |
 
 A run with `SAMPLE_RPKT_EMISSION` adds the columns of the sampled emission: `nemissiontype_updates`,
@@ -343,7 +346,7 @@ whose virtual packet escaped in one direction or more:
 | `emissiontype`, `trueemissiontype`, `absorption_type`, `absorption_freq` | The values of the real packet, as in the packet files. |
 | `dir<n>_t_arrive_d` | The arrival time [days] of the virtual packet of observer direction n, or -1 if it did not escape. |
 | `dir<n>_nu_rf` | The rest-frame frequency of that virtual packet, or -1. |
-| `dir<n>_e_rf_<m>` | The rest-frame energy of that virtual packet times its escape probability for spectrum m, or 0. |
+| `dir<n>_e_rf_<m>` | The rest-frame energy of that virtual packet for spectrum m, multiplied by the probability per unit solid angle of the direction to the observer and by exp(-tau), or 0. |
 
 ### The reference tables
 

@@ -198,8 +198,8 @@ the mass fractions, e.g. element densities. For a 3D model, `sn3d` uses the valu
 whose values do not sum to 1 within 2 percent gets a warning in the log.
 
 The mass fraction of an element must not be less than the sum of the mass fractions of its nuclides in `model.txt`.
-A cell with a density, but with no mass in the elements of `compositiondata.txt`, becomes an empty cell. The log gets
-a warning that names the elements of that cell.
+A cell with a density, but with no mass in the elements of `compositiondata.txt` that have ions, becomes an empty
+cell. An element with `nions` 0 does not keep the cell. The log gets a warning that names the elements of that cell.
 
 ## compositiondata.txt
 
@@ -284,7 +284,8 @@ The code finds the format of each block from the number of columns in its first 
 
 ## phixsdata_v2.txt and phixsdata.txt
 
-These files hold the photoionisation cross-sections. A run needs one of them, and it can read both. `phixsdata_v2.txt`
+These files hold the photoionisation cross-sections. A run needs one of them, and it can read both. A level must
+then have its table in only one of the two files. `phixsdata_v2.txt`
 has the same frequency grid for every table, and `phixsdata.txt` has an energy table for each level.
 `phixsdata.txt` can have comment lines. `phixsdata_v2.txt` can have them only before the header line of a table and
 before a target line, and not before the grid values or between the cross-section values.
@@ -420,7 +421,8 @@ transition:
 - Put the transitions of each lower level on consecutive lines.
 - `sn3d` finds the first level index of `autoion.txt` separately from `adata.txt`: the numbering starts at 0 if a
   level number in the file is 0, and at 1 otherwise.
-- The highest autoionising level of each ion must be the highest level of the ion.
+- The autoionising levels of an ion must be one block of levels with no gap, and the block must end at the highest
+  level of the ion.
 
 ## gridcontributions.txt
 
