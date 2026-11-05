@@ -1098,7 +1098,8 @@ void init(const int nts, const bool continued_from_saved) {
     const auto filename = std::format("vpackets_{:04d}_ts{}.tmp", globals::my_rank, nts + 1);
 
     if (continued_from_saved) {
-      const auto filename_prev = std::format("vpackets_{:04d}_ts{}.tmp", globals::my_rank, nts);
+      const auto filename_prev =
+          std::format("{}vpackets_{:04d}_ts{}.tmp", globals::path_to_modelfolder, globals::my_rank, nts);
       printlnlog("Copying {} to {}", filename_prev, filename);
       std::filesystem::copy_file(filename_prev, filename, std::filesystem::copy_options::overwrite_existing);
     } else {
