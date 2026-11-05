@@ -61,7 +61,7 @@ A run writes these files into the model folder:
     - `timesteps.out`: each timestep, with its start, its midpoint, and its width in days;
     - `grid.out`: each propagation cell that holds matter, with its model cell;
     - `modelgridrankassignments.out`: the first model cell and the cell count of each rank;
-    - `nuclides.out`: each nuclide of the decay network, with its proton number and its mass number;
+    - `nuclides.out`: each nuclide of the decay network, with its atomic number and its mass number;
     - `gammalinelist.out`: each gamma line of each nuclide, with its energy in MeV and its number of photons for
       each decay;
     - `bflist.out`: each bound-free continuum, with its ion, its lower level, and its upper level.
@@ -138,8 +138,10 @@ files have no header, no frequency column, and no time column.
 
 ### The direction-resolved files
 
-The `speclc_angle_res` folder holds one file for each of the 100 direction bins, e.g. `spec_res_00.out` to
-`spec_res_99.out`. Each file has the layout of the file for all directions, e.g. `spec_res_07.out` has the layout
+The `speclc_angle_res` folder holds one file of each type for each of the 100 direction bins, e.g.
+`spec_res_00.out` to `spec_res_99.out`. The types are `light_curve_res`, `spec_res`, `emission_res`,
+`emissiontrue_res`, and `absorption_res`. A run with `POL_ON` adds `specpol_res`, `emissionpol_res`, and
+`absorptionpol_res`. Each file has the layout of the file for all directions, e.g. `spec_res_07.out` has the layout
 of `spec.out`. The values are for an observer in that direction, as if the emission were the same in all directions.
 
 The number of a direction bin is 10 times its cos(theta) bin plus its phi bin. The polar angle theta is relative to
@@ -230,7 +232,9 @@ NLTE solution:
 | `n_NLTE` | The number density of the level from the NLTE solution [cm^-3]. |
 | `ion_popfrac` | `n_NLTE` divided by the number density of the ion. |
 
-The LTE timesteps write no rows.
+The LTE timesteps write no rows. In the other timesteps, an element without an NLTE solution in a cell has no rows
+for that cell. This is an element with no mass in the cell, an element that fell back to LTE, and each element of a
+cell with the grey opacity.
 
 ### The radfield files
 
