@@ -400,7 +400,8 @@ spectra.
 ## Ye.txt
 
 An optional file with the electron fraction of the cells. It replaces the values of the `Ye` column of `model.txt`.
-Each value must be in the range from 0 to 1. With `RPKT_GREY_TYPE = TANAKA2020_ELECTRONFRAC`, each cell with matter
+Each value must be in the range from 0 to 1, and `sn3d` accepts a value up to 1.001 for the rounding. With
+`RPKT_GREY_TYPE = TANAKA2020_ELECTRONFRAC`, each cell with matter
 needs an electron fraction above 0 from this file or from that column, or the run stops. The file can have no comment lines.
 
 ```text

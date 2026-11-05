@@ -303,10 +303,10 @@ the rank. A run without `KEEP_ESCAPED_GAMMAS` writes no rows for the escaped gam
 | `escape_time` | The time when the packet left the grid, or -1. |
 | `emissiontype` | The process of the last emission (see below). |
 | `trueemissiontype` | The process of the last emission from the thermal energy of the gas. |
-| `em_posx`, `em_posy`, `em_posz` | The position of the last emission. An electron scattering also sets the position, and the Compton scattering of a gamma packet sets the position and `em_time`. The position is `nan` for a pellet, and for a packet of particles from a pellet decay, which sets only `em_time`. |
+| `em_posx`, `em_posy`, `em_posz` | The position of the last emission. A scattering of an r-packet and the Compton scattering of a gamma packet also set the position and `em_time`. The position is `nan` for a pellet, and for a packet of particles from a pellet decay, which sets only `em_time`. |
 | `absorption_type`, `absorption_freq` | The process of the last absorption (see below), and the rest-frame frequency of the last absorption of an r-packet. `absorption_freq` is 0 until an r-packet absorption sets it. |
 | `nscatterings` | The number of electron scatterings since the last emission. An event in a cell with the grey opacity also adds one. |
-| `em_time` | The time of the last emission. |
+| `em_time` | The time of the last emission, or of the last scattering. |
 | `stokes_q`, `stokes_u` | The Stokes parameters Q/I and U/I. Only a run with `POL_ON` has these columns. |
 | `originated_from_particlenotgamma` | 1 if the decay of the pellet made a particle, and 0 if it made a gamma ray. The initial energy of the cells also holds 0, and its `pellet_decaytype` is -1. |
 | `trueem_posx`, `trueem_posy`, `trueem_posz`, `trueem_time` | The position and the time of the last emission from the thermal energy of the gas. A packet with no such emission holds `nan` in the position and -1 in the time. |
@@ -378,9 +378,10 @@ spectra of the first direction come first.
 one row for each cell of the velocity grid, which has `VGRID_NY` times `VGRID_NZ` cells. The block of the first
 wavelength range of the first observer direction comes first. Each row holds the two velocity
 coordinates of the cell [cm/s] in the plane at a right angle to the observer direction. Then it holds three sums
-over the virtual packets, for Stokes I, Q, and U. Each virtual packet adds its rest-frame energy [erg], multiplied by
-the probability per unit solid angle of the direction to the observer and by exp(-tau). The values have no factor of
-4 pi.
+over the virtual packets, for Stokes I, Q, and U.
+
+Each virtual packet adds its rest-frame energy [erg], multiplied by the probability per unit solid angle of the
+direction to the observer and by exp(-tau). The values have no factor of 4 pi.
 
 `vpackets_nnnn.out` has a header row that starts with `#`. Then it has one row for each event of a real packet
 whose virtual packet escaped in one direction or more:
