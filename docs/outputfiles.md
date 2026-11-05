@@ -205,7 +205,7 @@ ion stage and a value, e.g. `2: 4.685e+05`:
 | `gamma_R_integral` | The same coefficient from the radiation field model, without the bound-free estimators. Only a run with `DETAILED_BF_ESTIMATORS_FIRST_TIMESTEP` has this line. |
 | `gamma_NT` | The non-thermal ionisation rate coefficient [1/s]. Only a run with a non-thermal solver has this line. |
 | `corrphotoionrenorm` | The renormalisation factor of the tabulated photoionisation coefficient of each ion stage. Only a run with `USE_LUT_PHOTOION` has this line. |
-| `gammaestimator` | The ionisation rate of each ion stage, divided by the population of its ground level [1/s]. Only a run with `USE_LUT_PHOTOION` has this line. |
+| `gammaestimator` | The ionisation rate of each ion stage, divided by the population of its ground level [1/s]. Only a run with `USE_LUT_PHOTOION` has this line. This line and `corrphotoionrenorm` hold only the ion stages with a photoionisation from the ground level, and they have no value for the highest ion stage. |
 | `heating_bf`, `heating_coll`, `heating_ff`, `cooling_ff`, `cooling_fb`, `cooling_coll` | The heating and the cooling rate of each ion [erg/s/cm^3]. Only a run with `WRITE_ION_HEATING_COOLING_RATES` has these lines, and a cell with the grey opacity has none of them. `heating_bf` and `cooling_fb` have no value for the highest ion stage. `heating_coll` also needs `COLLISIONAL_HEATING_FROM_LEVELPOPS`. |
 | `emission_ana:` | The emission rate of the gamma rays and of each particle type [erg/s/cm^3], from the decay data and the abundances. |
 | `deposition:` | The deposition rate of the gamma rays and of each particle type [erg/s/cm^3]. |

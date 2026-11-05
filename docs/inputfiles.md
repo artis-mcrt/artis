@@ -326,6 +326,8 @@ Each table of `phixsdata.txt` has this layout:
 ```
 
 - The second line occurs once for each point. The energy is in units of 13.6 eV.
+- The first energy must be 0, which is the threshold, and the energies must increase. `sn3d` uses the first
+  cross-section at the threshold, and it does not read the energy of that point.
 - The level indices of `phixsdata.txt` always start at 1.
 - Each table must have the ground level of the upper ion as its only target level.
 - `sn3d` interpolates each table onto a grid of 100 points with an increment of 0.1. If the run also reads
