@@ -170,7 +170,8 @@ is the electron temperature of the cell, and only its dilution factor comes from
 photoionisation and of the
 bound-free heating use these fits. The photoionisation rate of a continuum with a detailed bound-free estimator is
 the exception (see the next section). The bound-free heating of that continuum still uses the fits. A cell in an LTE timestep, and a cell with the grey opacity, get no fit. The code then sets T_R to the
-temperature of the mean intensity, and W to 1.
+temperature of the mean intensity, and W to 1. In the first timestep of a new simulation, T_R is the initial
+temperature of the cell (see [the thermal balance](#the-thermal-balance)).
 
 - Options:
     - [MULTIBIN_RADFIELD_FIRST_TIMESTEP](options.md#multibin_radfield_first_timestep) sets the first timestep that
