@@ -133,12 +133,13 @@ A 3D model has a Cartesian grid of cubes:
 
 The lines before the cells:
 
+- Each number of cells must be 1 or more.
 - The file can have comment lines before the number of cells and before `t_model`.
 - `t_model` is the snapshot time of the model, which must be above 0. The densities and the positions of the file
   apply at this time.
 - `vmax` is the velocity of the outer boundary of the grid. Put this line directly after the line of `t_model`. A 1D
-  model has no such line, and its `vmax` is the outer velocity of the last cell. `vmax` must be less than the speed
-  of light.
+  model has no such line, and its `vmax` is the outer velocity of the last cell. `vmax` must be above 0 and
+  less than the speed of light.
 - The corners of a 2D or a 3D grid move faster than `vmax`. The corner velocity is `vmax` times the square root of 2
   for a cylindrical grid, and `vmax` times the square root of 3 for a Cartesian grid. `sn3d` stops if that velocity
   is not less than the speed of light, unless the run has `FORCE_SPHERICAL_ESCAPE_SURFACE`.
@@ -240,6 +241,8 @@ The header of a block:
 ```text
 <Z> <ion stage> <number of levels> <ionisation energy in eV>
 ```
+
+The ionisation energy must not be negative.
 
 Then one row for each level:
 
@@ -466,7 +469,8 @@ The gamma-ray lines of each nuclide are in the `data` folder of the repository. 
 <energy in MeV> <number of photons for each decay>
 ```
 
-The second line occurs once for each gamma-ray line. A nuclide without a file, but with a gamma-ray energy in its
+The second line occurs once for each gamma-ray line. The energy and the number of photons must not be negative,
+and `sn3d` does no check of these values. A nuclide without a file, but with a gamma-ray energy in its
 decay data, gets one line at that energy. These nuclides are an exception, and the run stops when one of them is in
 the run and has no file:
 

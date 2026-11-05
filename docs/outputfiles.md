@@ -213,7 +213,7 @@ above zero in the cell:
 | `gamma_NT` | The non-thermal ionisation rate coefficient [1/s]. Only a run with a non-thermal solver has this line. |
 | `corrphotoionrenorm` | The renormalisation factor of the tabulated photoionisation coefficient of each ion stage. Only a run with `USE_LUT_PHOTOION` has this line. |
 | `gammaestimator` | The ionisation rate of each ion stage, divided by the population of its ground level [1/s]. Only a run with `USE_LUT_PHOTOION` has this line. This line and `corrphotoionrenorm` hold only the ion stages with a photoionisation from the ground level, and they have no value for the highest ion stage. |
-| `heating_bf`, `heating_coll`, `heating_ff`, `cooling_ff`, `cooling_fb`, `cooling_coll` | The heating and the cooling rate of each ion [erg/s/cm^3]. Only a run with `WRITE_ION_HEATING_COOLING_RATES` has these lines, and a cell with the grey opacity has none of them. `heating_bf` and `cooling_fb` have no value for the highest ion stage. `heating_coll` also needs `COLLISIONAL_HEATING_FROM_LEVELPOPS`. |
+| `heating_bf`, `heating_coll`, `heating_ff`, `cooling_ff`, `cooling_fb`, `cooling_coll` | The heating and the cooling rate of each ion [erg/s/cm^3]. Only a run with `WRITE_ION_HEATING_COOLING_RATES` has these lines. A cell with no thermal balance in the grid update has none of them: a cell in an LTE timestep, a cell with the grey opacity, and each cell in the first timestep of a job. `heating_bf` and `cooling_fb` have no value for the highest ion stage. `heating_coll` also needs `COLLISIONAL_HEATING_FROM_LEVELPOPS`. |
 | `emission_ana:` | The emission rate of the gamma rays and of each particle type [erg/s/cm^3], from the decay data and the abundances. |
 | `deposition:` | The deposition rate of the gamma rays and of each particle type [erg/s/cm^3]. |
 | `heating:` | The free-free, the bound-free, and the collisional heating rate, and the heating rate of the deposition [erg/s/cm^3]. `heating_dep/total_dep` is the fraction of the deposition that heats the gas. |
@@ -266,17 +266,17 @@ the line in `J_nu_avg`. Its other values are -1.
 
 `macroatom_allranks.out` is a file for a developer, which only a build with the constant `LOG_MACROATOM` of
 `macroatom.cc` writes. It has a header row and then one row for each radiative de-excitation that ends a macro
-atom:
+atom. The table gives the columns in the sequence of the file:
 
 | Column | Meaning |
 | --- | --- |
 | `timestep`, `modelgridindex` | The timestep and the model cell, both from 0. |
 | `Z` | The atomic number. |
-| `ionstage_in`, `level_in` | The ion stage and the level index of the macro atom at its activation. |
-| `ionstage_out`, `level_out` | The ion stage and the level index of the macro atom at the de-excitation. |
+| `ionstage_in`, `ionstage_out` | The ion stage of the macro atom at its activation, and at the de-excitation. |
+| `level_in`, `level_out` | The level index of the macro atom at its activation, and at the de-excitation. |
 | `activline` | The line index of the absorption that activated the macro atom, or a negative value for another activation. |
-| `nu_cmf_in`, `nu_rf_in` | The frequency of the packet at the activation, in the comoving frame and in the rest frame [Hz]. |
-| `nu_cmf_out`, `nu_rf_out` | The frequency of the packet after the de-excitation, in the comoving frame and in the rest frame [Hz]. |
+| `nu_cmf_in`, `nu_cmf_out` | The frequency of the packet in the comoving frame [Hz], at the activation and after the de-excitation. |
+| `nu_rf_in`, `nu_rf_out` | The frequency of the packet in the rest frame [Hz], at the activation and after the de-excitation. |
 
 ### The packet files
 
@@ -342,6 +342,7 @@ The values of `absorption_type`:
 | -1 | free-free absorption |
 | -2 | bound-free absorption |
 | -3, -4, -5 | Compton scattering, photoelectric absorption, and pair production of a gamma ray |
+| -6 | a reserved value of older packet files, for a pellet with no gamma-ray spectrum. The current code does not set it. |
 | -7 | a pellet that decayed before the start time of the model, or the initial energy of the cells |
 | -10 | a pellet decay to a particle |
 | -11 | a bound-bound absorption in a binned opacity, which has no line index |
