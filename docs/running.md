@@ -35,7 +35,8 @@ An error in an input file then stops the check, and not a job that waited in the
 The check works in the folder `inputcheck` of the model folder, and it changes no other file of the model folder. The
 folder holds the log of each rank, e.g. `inputcheck/output_0-0.txt`, with the `mem_usage` lines for the memory of the
 arrays. It also holds the files that a simulation writes before its first timestep, e.g. `timesteps.out`. Each check
-removes the folder of the check before it. A new simulation and `scripts/clean.sh` remove the folder too.
+removes the folder of the check before it, so run only one check at a time in a model folder. A new simulation and
+`scripts/clean.sh` remove the folder too.
 
 A check differs from a run in these points:
 
