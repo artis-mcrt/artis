@@ -674,6 +674,10 @@ These rules apply to an automated review of a pull request, e.g. by Codex.
   numerical results to change. Otherwise the checksums must stay identical.
 - After a change of the results, regenerate the checksums yourself with
   `updatechecksums.yml` (see "Tests").
+- Add an entry to the first section of `docs/releasenotes.md` for a change
+  that a user sees. Such a change alters the numerical results, a file
+  format, an option, a preset, a program, or a script. Give the link to the
+  pull request, and name the tests that change.
 
 ## Before you commit
 

@@ -146,6 +146,7 @@ inputfiles
 makeoptions
 scripts
 glossary
+releasenotes
 :::
 
 :::{toctree}

@@ -59,3 +59,5 @@ reproducible results, and the portability to GPUs.
 
   The workflow needs write access to the repository, and the branch must be in `artis-mcrt/artis`. Ask a maintainer
   when you have neither.
+- Add an entry to the first section of `docs/releasenotes.md` for a change that a user sees. Such a change alters the
+  numerical results, a file format, an option, a preset, a program, or a script.

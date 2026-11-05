@@ -20,6 +20,7 @@ The full documentation is at [artis-mcrt.readthedocs.io](https://artis-mcrt.read
 - [Atomic and model data](https://artis-mcrt.readthedocs.io/en/latest/data.html): the data that a simulation reads.
 - [Runs on a cluster](https://artis-mcrt.readthedocs.io/en/latest/clusters.html): the Slurm job scripts and the wall-time mechanism.
 - [Troubleshooting](https://artis-mcrt.readthedocs.io/en/latest/troubleshooting.html): the messages that stop a build or a run.
+- [Release notes](https://artis-mcrt.readthedocs.io/en/latest/releasenotes.html): the changes of the results, the files, and the options in each release.
 - [Development setup](https://artis-mcrt.readthedocs.io/en/latest/development.html) and [Testing](https://artis-mcrt.readthedocs.io/en/latest/testing.html): the tools, the linters, and the tests.
 
 ## Quickstart
