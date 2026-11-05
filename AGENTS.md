@@ -313,6 +313,8 @@ The workflows in `.github/workflows/`:
   job and compares the outputs with the outputs of the two jobs. Two more jobs
   run one model with `OPENMP=ON` and with `STDPAR=ON`. These two jobs compare
   no checksums (see "Reproducible results").
+  One job runs `kilonova_1d` on x86-64 in the `laptop` environment of
+  `pixi.toml`.
 - `cislowtestmode.yml` calls `ci.yml` again with `TESTMODE=ON`. The sanitizers
   and the extra assertions make this run slow, so `ci.yml` gives it a longer
   timeout. This workflow does not enforce the checksums, because both checksum

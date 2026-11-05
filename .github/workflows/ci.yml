@@ -462,6 +462,32 @@ jobs:
               working-directory: tests/kilonova_1d_testrun/
               run: cat job_from_ts0000/output_0-0.txt
 
+    # The laptop environment of pixi.toml must supply each program that a first run needs. pixi.toml has no
+    # platform for arm64 Linux, so this job uses an x86-64 runner.
+    pixi_laptop:
+        if: inputs.testmode != 'ON'
+        runs-on: ubuntu-26.04
+        timeout-minutes: 40
+        name: kilonova_1d_pixi_laptop
+        steps:
+            - uses: actions/checkout@v7
+              with:
+                  fetch-depth: 0
+
+            - uses: prefix-dev/setup-pixi@v0.11.3
+              with:
+                  environments: laptop
+                  cache: false
+
+            - name: Cache test atomic data
+              uses: actions/cache@v6
+              with:
+                  path: tests/atomicdata_feconi.tar.xz
+                  key: atomicdata_feconi-${{ hashFiles('tests/atomic_data_release.txt') }}
+
+            - name: Run the test in the laptop environment
+              run: pixi run -e laptop tests/runtest.sh kilonova_1d
+
     combine_checksums:
         needs: testmodels
         if: always() && inputs.testmode != 'ON'
