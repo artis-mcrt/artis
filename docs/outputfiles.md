@@ -234,8 +234,12 @@ NLTE solution:
 | `ion_popfrac` | `n_NLTE` divided by the number density of the ion. |
 
 The LTE timesteps write no rows. In the other timesteps, an element without an NLTE solution in a cell has no rows
-for that cell. This is an element with no NLTE levels, an element with no mass in the cell, an element that fell
-back to LTE, and each element of a cell with the grey opacity.
+for that cell:
+
+- an element with no NLTE levels;
+- an element with no mass in the cell;
+- an element that fell back to LTE;
+- each element of a cell with the grey opacity.
 
 ### The radfield files
 
@@ -347,8 +351,9 @@ spectra of the first direction come first.
 - The time bins and the frequency bins have a logarithmic spacing. `VSPEC_TIMEBINS`, `VSPEC_TIMEMIN`,
   `VSPEC_TIMEMAX`, `VSPEC_NUBINS`, `VSPEC_NUMIN`, and `VSPEC_NUMAX` of `vpkt.h` set them.
 
-`vpkt_grid_nnnn.out` has one row for each cell of the velocity grid, which has `VGRID_NY` times `VGRID_NZ` cells.
-The rows of the first wavelength range of the first observer direction come first. Each row holds the two velocity
+`vpkt_grid_nnnn.out` has one block for each observer direction and each wavelength range of the map. A block has
+one row for each cell of the velocity grid, which has `VGRID_NY` times `VGRID_NZ` cells. The block of the first
+wavelength range of the first observer direction comes first. Each row holds the two velocity
 coordinates of the cell [cm/s] in the plane at a right angle to the observer direction. Then it holds three sums
 over the virtual packets, for Stokes I, Q, and U. Each virtual packet adds its rest-frame energy [erg], multiplied by
 the probability per unit solid angle of the direction to the observer and by exp(-tau). The values have no factor of

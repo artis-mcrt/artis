@@ -41,7 +41,7 @@ The line numbers of this table count only the lines that are not comment lines, 
 
 | Line | Values | Meaning |
 | --- | --- | --- |
-| 0 | `pre_zseed` | The seed of the random number generator. A positive value is the seed. For zero or a negative value, `sn3d` makes a random seed. Reproducible results need a fixed seed, and a build with `REPRODUCIBLE=ON` stops without a positive value. |
+| 0 | `pre_zseed` | The seed of the random number generator. A positive value is the seed. For zero or a negative value, `sn3d` makes a random seed. Reproducible results need a fixed seed, and a build with `REPRODUCIBLE=ON` stops without a positive value. In a build for a CPU, the seed plus 13 times the rank number times the thread count must fit in an unsigned 32-bit integer. |
 | 1 | `ntimesteps` | The number of timesteps of the model. |
 | 2 | `timestep_start timestep_finish` | The first timestep of this job, and the stop timestep. The job does not run the stop timestep. |
 | 3 | `tmin_days tmax_days` | The start time and the end time of the model in days. |
@@ -351,7 +351,7 @@ lines.
 
 | Sequence | Values | Meaning |
 | --- | --- | --- |
-| 1 | `nobsdirections` | The number of observer directions. |
+| 1 | `nobsdirections` | The number of observer directions, which must be 1 or more. |
 | 2 | one value for each direction | The cosine of the polar angle theta of each direction, from -1 to 1. |
 | 3 | one value for each direction | The azimuthal angle phi of each direction in degrees. |
 | 4 | flag, and optional values | With the flag 1, the number of spectra for each observer follows, and then one opacity value for each spectrum. With a different flag, each observer gets one spectrum with the full opacity. |
