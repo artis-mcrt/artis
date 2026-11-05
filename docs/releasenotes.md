@@ -293,6 +293,23 @@ is not complete:
 - The Lotz cross-section gets the energy in the correct unit for the heating below the Spencer-Fano energy grid
   ([#405](https://github.com/artis-mcrt/artis/pull/405)).
 - `GAMMA_THERMALISATION_SCHEME = GUTTMAN` has a corrected calculation ([#446](https://github.com/artis-mcrt/artis/pull/446)).
+- With `RPKT_USE_BINNED_OPACITIES` and no `RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY`, a packet finds its position
+  in the line list again from its comoving frequency after a step through the opacity bins ([#597](https://github.com/artis-mcrt/artis/pull/597)).
+- A cell with only neutral ions keeps an electron density above zero in a build with the default fast-math option.
+  Before, the next k-packet of such a cell stopped the run ([#628](https://github.com/artis-mcrt/artis/pull/628)).
+- A model with Cu XX or Zn VIII reads its row of the Auger table. Before, such a model stopped the run ([#588](https://github.com/artis-mcrt/artis/pull/588)).
+- The stored list of the non-thermal excitations holds no transition of an ion whose excitation fraction is above 1
+  or not finite ([#458](https://github.com/artis-mcrt/artis/pull/458)).
+- A packet that moves exactly along the z axis of a 2D cylindrical grid finds each cell boundary ([#477](https://github.com/artis-mcrt/artis/pull/477)).
+- The transition table of an ion uses a stable sort, so duplicate rows of `transitiondata.txt` keep the sequence
+  of the file ([#622](https://github.com/artis-mcrt/artis/pull/622)).
+- For a 2D model on a Cartesian grid, the code also rescales the nuclide abundances to keep the mass of each
+  nuclide ([#502](https://github.com/artis-mcrt/artis/pull/502)).
+- With `ENABLE_CHARGE_TRANSFER_REACTIONS` and no Anderson acceleration, the iteration of a cell does not stop on a
+  pass that changed the ion range of an element ([#558](https://github.com/artis-mcrt/artis/pull/558)).
+- The NLTE solver does not accept a solution that is not finite ([#488](https://github.com/artis-mcrt/artis/pull/488)).
+- The index of the NLTE population array has 64 bits. Before, a model whose number of cells with matter times its
+  number of NLTE levels reached 2^31 wrote populations into the wrong cell ([#557](https://github.com/artis-mcrt/artis/pull/557)).
 
 ### Input files
 
@@ -311,6 +328,8 @@ is not complete:
 - `sn3d` sets the `nprocs_exspec` line of `input.txt` at the start of a new simulation
   ([#611](https://github.com/artis-mcrt/artis/pull/611)). Line 20 (`max_bf_continua`) has no effect
   ([#526](https://github.com/artis-mcrt/artis/pull/526)).
+- A `recombrates.txt` that is not complete, or that has an unreadable row, stops the run. Before, the reader kept
+  the values of the row before ([#483](https://github.com/artis-mcrt/artis/pull/483)).
 - An invalid input stops the run with a message that names the file and the values
   ([#701](https://github.com/artis-mcrt/artis/pull/701)). Some examples of the new checks:
     - a cell count or a snapshot time of `model.txt` that is not positive, and an electron fraction outside 0 to 1
@@ -346,6 +365,7 @@ is not complete:
   ([#682](https://github.com/artis-mcrt/artis/pull/682)). *Tests: all.*
 - `linelist.out` replaces `linestat.out`. It has one row for each line, a header row, and 0-based level indices
   ([#683](https://github.com/artis-mcrt/artis/pull/683)). The wavelengths keep the nine significant digits.
+- `sn3d` replaces `deposition.out` in one step, and a failure of that step stops the run ([#534](https://github.com/artis-mcrt/artis/pull/534)).
 - A file error during the write of the restart files stops the run. `sn3d` then keeps `input.txt` and the restart
   files of the timestep before ([#578](https://github.com/artis-mcrt/artis/pull/578)).
 - With [WRITE_COMBINED_ALLRANK_OUT_FILES](options.md#write_combined_allrank_out_files), the estimator, nlte, and
@@ -453,6 +473,10 @@ The presets:
   cross-sections, in the state of each packet, and in the memory of the packet update ([#412](https://github.com/artis-mcrt/artis/pull/412), [#413](https://github.com/artis-mcrt/artis/pull/413),
   [#416](https://github.com/artis-mcrt/artis/pull/416)).
 - `scripts/clean.sh` and the start of a new simulation also remove `out.txt.zst` ([#643](https://github.com/artis-mcrt/artis/pull/643)).
+- A failed assertion or a fatal error stops all ranks at once. Before, the other ranks could wait until the end of
+  the wall time ([#708](https://github.com/artis-mcrt/artis/pull/708)).
+- The start of a run with a large model is faster. A model with 125000 cells needed 35 s in place of 151 s to read
+  its input files ([#493](https://github.com/artis-mcrt/artis/pull/493)).
 - The build needs no GSL library, and the make option `EIGEN=OFF` is gone
   ([#489](https://github.com/artis-mcrt/artis/pull/489)). Two small headers replace the copy of Boost.Math
   ([#505](https://github.com/artis-mcrt/artis/pull/505)).
@@ -477,6 +501,9 @@ The presets:
       ([#526](https://github.com/artis-mcrt/artis/pull/526)), and they build `exspec` together with `sn3d`
       ([#648](https://github.com/artis-mcrt/artis/pull/648)).
     - The job scripts log the core hours of each job ([#547](https://github.com/artis-mcrt/artis/pull/547)).
+    - A job script stops when `SLURM_SUBMIT_DIR` has no value, e.g. when you run it by hand. Before, it changed to
+      the home folder and worked there ([#604](https://github.com/artis-mcrt/artis/pull/604)).
+    - `exspec-after.sh` starts one zstd process for each file, which makes the compression faster ([#587](https://github.com/artis-mcrt/artis/pull/587)).
     - The Leonardo cluster has job scripts (commit
       [3cf00789](https://github.com/artis-mcrt/artis/commit/3cf00789)).
     - `scripts/run-exspec-if-needed.sh` runs `exspec` only when `emission.out` is absent (commit
