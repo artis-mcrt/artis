@@ -29,8 +29,9 @@ these steps:
    input files and an `artisoptions.h` for the test.
 2. It builds `sn3d` and `exspec` from that `artisoptions.h` with the make options of CI, and copies them into the model
    folder. During the build, `artisoptions.h` in the repository folder is a symlink to the options of the test. The
-   script then moves your `artisoptions.h` back with its timestamp. A later build with other make options then compiles
-   nothing again, and a build with the make options of the test compiles all objects again.
+   script then moves your `artisoptions.h` back. The options of the test have their own build folder, so a later build
+   of your own options compiles nothing again, and a second run of the same test also compiles nothing again. The
+   `sn3d` and `exspec` symlinks of the repository folder then point at the build of the test.
 3. It starts a new simulation and compares the checksums of the output files with
    `tests/kilonova_1d_inputfiles/results_md5_job0.txt`.
 4. It resumes the simulation from the restart files. It then removes the restart files and runs `exspec`.

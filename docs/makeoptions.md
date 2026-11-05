@@ -25,6 +25,12 @@ Each option of the table above adds a suffix to the name of the build folder, so
 `build/`. `GCCTOOLCHAIN` is the exception. It changes `CXXFLAGS` but not the name of the folder, so make keeps the
 objects of the previous toolchain. Run `make clean` after you change its value.
 
+The name of the build folder ends with `_options` and a checksum of the content of `artisoptions.h`, so the builds of
+different presets coexist too. A change of the preset or of an option value compiles every object in a new build
+folder, and a change back to an earlier content compiles nothing again. The timestamp of `artisoptions.h` has no
+effect. Each edit of an option keeps the build folder of the old value, so run `make clean` when `build/` becomes
+large.
+
 ## The targets
 
 - `make` builds `sn3d` and `exspec`.
@@ -32,4 +38,5 @@ objects of the previous toolchain. Run `make clean` after you change its value.
 - `make check` runs clang-tidy over all three programs.
 - `make compile_commands.json` writes the compilation database for the clang tools.
 - `make sn3dwhole` builds `sn3d` with one compiler command over all the sources, in place of one object file for each source. The `sn3d` symlink then points at that binary.
-- `make clean` removes the build folder and the three program symlinks.
+- `make clean` removes all build folders and the three program symlinks.
+- `make help` prints one line for each target and each option. It needs no `artisoptions.h` and no compiler.

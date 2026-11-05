@@ -50,10 +50,10 @@ Homebrew installs that command as `gmd5sum`, and the `gnubin` folder of the expo
 Add this line to your shell startup file:
 
 ```sh
-export MAKEFLAGS="--check-symlink-times --jobs=$(nproc 2>/dev/null || sysctl -n hw.ncpu)"
+export MAKEFLAGS="--jobs=$(nproc 2>/dev/null || sysctl -n hw.ncpu)"
 ```
 
-macOS has no `nproc` command, so the `sysctl` command gives the processor count there. Without `--check-symlink-times`, make does not rebuild after a change of the symlink to a different preset.
+macOS has no `nproc` command, so the `sysctl` command gives the processor count there.
 
 ## Select a preset and build
 
@@ -72,6 +72,10 @@ Symlink the preset. Do not copy it. The symlink keeps `artisoptions.h` correct w
 
 `make` builds `sn3d` and `exspec`. It puts the objects in `build/<configuration>/` and makes a symlink in the repository root to each program that it builds. `make unittests` builds the third program and makes its symlink (see [Testing](testing.md)).
 
-Each make option of [Make options](makeoptions.md) adds a suffix to the name of the build folder, so different sets of make options coexist. `GCCTOOLCHAIN` is the exception, so run `make clean` after you change its value. The name holds no preset, so a change of the preset must compile every object again. `--check-symlink-times` in `MAKEFLAGS` makes make see that change. Each symlink points to the most recent build of any configuration. Look at the symlink before you copy a binary. Copy a binary with `cp -L` from the repository root.
+Each make option of [Make options](makeoptions.md) adds a suffix to the name of the build folder, so different sets of make options coexist. `GCCTOOLCHAIN` is the exception, so run `make clean` after you change its value. The name also ends with a checksum of the content of `artisoptions.h`, so the builds of different presets coexist too. A change of the preset or of an option value compiles every object in a new build folder. A change back to an earlier preset compiles nothing again.
 
-[Make options](makeoptions.md) lists the options of `make`.
+Each edit of an option keeps the build folder of the old value. `make clean` removes all build folders.
+
+Each symlink points to the most recent build of any configuration. Look at the symlink before you copy a binary. Copy a binary with `cp -L` from the repository root.
+
+`make help` prints one line for each target and each option of `make`, and [Make options](makeoptions.md) describes them.
