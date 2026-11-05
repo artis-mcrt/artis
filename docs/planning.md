@@ -58,7 +58,7 @@ all or for a part of the range. `timesteps.out` lists the start, the midpoint, a
 Each timestep has one grid update, one propagation of all the packets, and one set of output (see
 [How a simulation works](simulation.md)). Thus the timestep count sets these properties:
 
-- the number of grid updates and of restart files;
+- the number of grid updates and of writes of the restart files;
 - the time resolution of `spec.out` and of `light_curve.out`, because `sn3d` writes one spectrum for each timestep;
 - the number of iterations of the gas state. The grid update of a timestep uses the estimators of the timestep
   before it, so the gas state needs some timesteps to follow a change.
@@ -71,9 +71,10 @@ that ratio is above 0.1.
 
 The time range also sets how the packets divide over the time:
 
-- Each pellet holds the same energy, and its decay time is a sample of the decay curve between the first and the
-  last time of the simulation (see [UNIFORM_PELLET_ENERGIES](options.md#uniform_pellet_energies)). A longer time
-  range thus gives each interval of time a smaller share of the packets.
+- With [UNIFORM_PELLET_ENERGIES](options.md#uniform_pellet_energies) true, which every preset has, each pellet
+  holds the same energy. Its decay time is a sample of the decay curve between the first and the last time of the
+  simulation. With the value false, the decay times are uniform, and the energy of each pellet follows the decay
+  power at its time. In both modes, a longer time range gives each interval of time a smaller share of the packets.
 - [INITIAL_PACKETS_ON](options.md#initial_packets_on) gives a share of the packets to the energy that the ejecta
   hold at `tmin_days`.
 

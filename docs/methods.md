@@ -36,8 +36,15 @@ through the lines one after the other. The continuum opacity is the sum of the b
 
 ## The macro atom and the k-packets
 
-After an absorption, a macro atom makes internal radiative and collisional transitions between the levels and the
-ions. It stops when it emits an r-packet or becomes a k-packet. A k-packet holds thermal energy. The code adds the
+A macro atom makes internal radiative and collisional transitions between the levels and the ions. It stops when it
+emits an r-packet or becomes a k-packet. Each type of absorption has its own result:
+
+- In the default mode, an absorption in a line activates a macro atom.
+- A bound-free absorption activates a macro atom with the probability nu_edge / nu, where nu_edge is the threshold
+  frequency of the continuum. It makes a k-packet otherwise.
+- A free-free absorption makes a k-packet.
+
+A k-packet holds thermal energy. The code adds the
 cooling rate of each process of the cell, and it samples one of them. That process converts the k-packet into
 radiation or into a macro atom. The cooling processes are the free-free emission, the free-bound emission, the
 collisional excitation, and the collisional ionisation.
@@ -76,9 +83,11 @@ Boltzmann populations for its levels.
 
 The solver puts the radiative rates, the collisional rates, and the non-thermal ionisation rates of all the levels of
 all the ions of an element into one rate matrix. The solution of the statistical equilibrium gives the level
-populations. Each ion has a ground level, a number of excited levels in full NLTE, and one superlevel for the levels
-above them. The cell repeats the solutions of the populations, of T_e, and of the non-thermal electrons until T_e and
-the electron density change by less than a tolerance.
+populations. Each ion has a ground level and a number of excited levels in full NLTE. An ion with more levels above
+them also has one superlevel for those levels. The cell repeats the solutions of the populations, of T_e, and of the
+non-thermal electrons until T_e and the electron density change by less than a tolerance. The iteration also stops
+after [NLTE_TE_NNE_MAXITER](options.md#nlte_te_nne_maxiter) passes. The cell then keeps the last solution, and the
+log of the rank has a message with the text `failed to converge`.
 
 If the solution of an element fails, the solver removes one ion and solves again, or the element falls back to
 LTE. The log of the rank has a warning for each fallback to LTE.
@@ -89,7 +98,7 @@ LTE. The log of the rank has a warning for each fallback to LTE.
     - [NLEVELS_ADD_MISSING_COLLISIONAL_TRANSITIONS](options.md#nlevels_add_missing_collisional_transitions) adds
       collisional transitions where the data has none.
     - [NLTE_USE_GTH_SOLVER](options.md#nlte_use_gth_solver) selects the Grassmann-Taksar-Heyman state elimination
-      in place of the LU decomposition.
+      in place of the lower-upper (LU) decomposition.
     - [NLTE_TE_NNE_MAXITER](options.md#nlte_te_nne_maxiter), [NLTE_TE_NNE_RELTOL](options.md#nlte_te_nne_reltol),
       and [NLTE_TE_NNE_USE_ANDERSON_ACCEL](options.md#nlte_te_nne_use_anderson_accel) control the iteration of
       the cell.
@@ -106,7 +115,7 @@ LTE. The log of the rank has a warning for each fallback to LTE.
       doi:10.1287/opre.33.5.1107;
     - the acceleration of the iteration: Anderson (1965), Journal of the ACM, 12, 547-560,
       doi:10.1145/321296.321305;
-    - the time term: Pognan, Jerkstrand & Grumer (2022), MNRAS, 510, 3806-3837, eqs. 8 and 17,
+    - the time term: Pognan, Jerkstrand & Grumer (2022), MNRAS, 510, 3806-3837, equations 8 and 17,
       doi:10.1093/mnras/stab3674;
     - the charge transfer reactions: Kingdon & Ferland (1996), ApJS, 106, 205-211, doi:10.1086/192335 and Butler &
       Dalgarno (1980), ApJ, 241, 838-843, doi:10.1086/158395.

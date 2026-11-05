@@ -83,7 +83,7 @@ columns:
 3. the lowest ion stage, where 1 is the neutral atom;
 4. the highest ion stage;
 5. the maximum number of levels of each ion, or -1 for all the levels of `adata.txt`;
-6. a value that the code does not use;
+6. a value that the code does not use, but that must be zero or positive;
 7. the mean atomic mass of the element in atomic mass units.
 
 The file of this dataset thus selects Fe I to Fe V, Co II to Co IV, and Ni II to Ni V, with at most 500 levels for
