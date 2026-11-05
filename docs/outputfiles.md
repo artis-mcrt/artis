@@ -144,7 +144,8 @@ The number of a direction bin is 10 times its cos(theta) bin plus its phi bin. T
 the z axis, and the cos(theta) bin 0 starts at cos(theta) = -1. The phi bins do not follow the azimuthal angle phi in
 sequence. The bins 0 to 4 go from 2 pi down to pi, and the bins 5 to 9 go from 0 up to pi.
 
-`light_curve_res.out`, `spec_res.out`, and `specpol_res.out` hold the content of the files of all direction bins, one
+`scripts/mergeangleres.py` makes `light_curve_res.out`, `spec_res.out`, and `specpol_res.out`. `sn3d` and `exspec`
+write only the files of the direction bins. A merged file holds the content of the files of all direction bins, one
 after the other in the sequence of the bin numbers. Only a run with `POL_ON` has `specpol_res.out`.
 
 ### deposition.out
@@ -196,7 +197,8 @@ timestep 0 modelgridindex 1 titeration 0 TR 17366.9 Te 17366.9 W 1 TJ 17366.9 gr
 An empty cell has only the line `timestep <n> modelgridindex <n> EMPTYCELL`.
 
 The other lines of a block start with a label. A line for an element has `Z=<atomic number>` and then pairs of an
-ion stage and a value, e.g. `2: 4.685e+05`:
+ion stage and a value, e.g. `2: 4.685e+05`. A block has these lines only for the elements with a mass fraction
+above zero in the cell:
 
 | Label | Meaning |
 | --- | --- |
@@ -318,12 +320,14 @@ The values of `absorption_type`:
 
 ### The virtual packet files
 
-Each rank writes its own files, and each file holds only the virtual packets of that rank. The two types of file
-have different normalisations:
+Each rank writes its own files, and each file holds only the virtual packets of that rank. The types of file have
+different normalisations:
 
 - A `vspecpol` file holds the share of its rank, so the sum over the files of all ranks gives the result.
 - A `vpkt_grid` file has no division by the rank count, and the packets of each rank hold the energy of the whole
   model. The mean over the files of all ranks therefore gives the result.
+- The energies of a `vpackets` file have no division by the rank count either. Divide their sum over all ranks by
+  the rank count.
 
 `vspecpol_nnnn.out` has one block for each observer direction and each spectrum of that direction. The blocks of the
 spectra of the first direction come first.
