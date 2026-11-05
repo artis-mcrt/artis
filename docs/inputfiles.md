@@ -371,7 +371,7 @@ The opacity value of a spectrum removes one part of the opacity along the path o
 
 The ranges have limits. The time range of the spectra must be inside the range from `VSPEC_TIMEMIN` to
 `VSPEC_TIMEMAX` and inside the time range of the model. The wavelength ranges of the spectra must be inside the
-range from `VSPEC_NUMIN` to `VSPEC_NUMAX`. The ranges of the velocity grid map must be inside the ranges of the
+range that the frequencies `VSPEC_NUMAX` and `VSPEC_NUMIN` of `vpkt.h` give, which is 3500 to 10000 Angstroms. The ranges of the velocity grid map must be inside the ranges of the
 spectra.
 
 ## Ye.txt

@@ -26,7 +26,8 @@ Each job writes these files into its job folder:
 - the estimators of each cell at each timestep: the temperatures, the ionisation, and the heating and cooling rates.
   The option `WRITE_COMBINED_ALLRANK_OUT_FILES` selects one of two forms, and every preset sets the option:
     - with the option, `sn3d` writes the text of all ranks into one combined file, `estimators_allranks.out`;
-    - without the option, each rank writes its own file, `estimators_nnnn.out`.
+    - without the option, each rank writes its own file, `estimators_nnnn.out`. A rank that updates no cell writes
+      no file.
 
     The option gives the same choice for the nlte and the radfield files, e.g. `nlte_allranks.out`. With the constant
     `LOG_MACROATOM` in `macroatom.cc`, it also gives `macroatom_allranks.out`.
@@ -199,7 +200,7 @@ ion stage and a value, e.g. `2: 4.685e+05`:
 | Label | Meaning |
 | --- | --- |
 | `populations` | The number density of each ion stage [cm^-3]. `SUM` is the number density of the element. Then each nuclide of the element has its number density, and `<element>_otherstable` is the density of the stable nuclides that `model.txt` does not give. |
-| `gamma_R` | The photoionisation rate coefficient of each ion stage [1/s]. |
+| `gamma_R` | The photoionisation rate coefficient of each ion stage [1/s]. This line, `gamma_R_integral`, and `gamma_NT` have no value for the highest ion stage of the element. |
 | `gamma_R_integral` | The same coefficient from the radiation field model, without the bound-free estimators. Only a run with `DETAILED_BF_ESTIMATORS_FIRST_TIMESTEP` has this line. |
 | `gamma_NT` | The non-thermal ionisation rate coefficient [1/s]. Only a run with a non-thermal solver has this line. |
 | `corrphotoionrenorm` | The renormalisation factor of the tabulated photoionisation coefficient of each ion stage. Only a run with `USE_LUT_PHOTOION` has this line. |
@@ -229,7 +230,8 @@ The LTE timesteps write no rows.
 ### The radfield files
 
 Only a run with `MULTIBIN_RADFIELD_FIRST_TIMESTEP` writes a radfield file. It has a header row and then one row for
-each bin of the radiation field model:
+each bin of the radiation field model. A cell in an LTE timestep, and a cell with the grey opacity, have no rows,
+because they get no fit.
 
 | Column | Meaning |
 | --- | --- |
@@ -264,7 +266,7 @@ the rank. A run without `KEEP_ESCAPED_GAMMAS` writes no rows for the escaped gam
 | `escape_time` | The time when the packet left the grid, or -1. |
 | `emissiontype` | The process of the last emission (see below). |
 | `trueemissiontype` | The process of the last emission from the thermal energy of the gas. |
-| `em_posx`, `em_posy`, `em_posz` | The position of the last emission. An electron scattering also sets the position, and the Compton scattering of a gamma packet sets the position and `em_time`. |
+| `em_posx`, `em_posy`, `em_posz` | The position of the last emission. An electron scattering also sets the position, and the Compton scattering of a gamma packet sets the position and `em_time`. The position is `nan` for a pellet, and for a packet of particles from a pellet decay, which sets only `em_time`. |
 | `absorption_type`, `absorption_freq` | The process of the last absorption (see below), and the rest-frame frequency of the last absorption of an r-packet. `absorption_freq` is 0 until an r-packet absorption sets it. |
 | `nscatterings` | The number of electron scatterings since the last emission. An event in a cell with the grey opacity also adds one. |
 | `em_time` | The time of the last emission. |
