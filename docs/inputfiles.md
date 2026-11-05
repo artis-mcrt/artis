@@ -251,7 +251,9 @@ Then one row for each level:
 - The statistical weight of each level that the run keeps must be above 0.
 - `sn3d` reads the number of transitions, and it does not use it. The level name is optional, because `sn3d` does
   not read the text after the four values.
-- A level with an energy below the energy of the level before gives a warning in the log.
+- Give the levels of an ion in the sequence of their energy. A level with an energy below the energy of the level
+  before gives a warning in the log, and the run continues.
+- An ion that the run keeps must have one level or more.
 
 The level indices start at 0 or at 1, and they must increase by one for each level of an ion. `sn3d` finds the
 first index from the first level of `adata.txt`. `transitiondata.txt` and `phixsdata_v2.txt` must use the same
@@ -278,6 +280,7 @@ Then one row for each transition:
 - A positive collision strength is the effective collision strength of the transition. If the collision strength is
   not available, the value is -1.0 for a permitted transition and -2.0 for a forbidden transition.
 - The forbidden flag is 1 for a forbidden transition and 0 for a permitted transition.
+- An A value must not be negative. `sn3d` does no check of this value.
 - The rows of a block can have no comment lines between them.
 
 The code also accepts an older format of four columns, without the collision strength and the forbidden flag:

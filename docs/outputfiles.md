@@ -262,6 +262,22 @@ The row of the full spectrum (`bin_num` -1) holds 0 in `nu_lower`, in `nu_upper`
 line with a detailed estimator holds the frequency of the line in `nu_lower` and in `nu_upper`, and the estimator of
 the line in `J_nu_avg`. Its other values are -1.
 
+### The macroatom file
+
+`macroatom_allranks.out` is a file for a developer, which only a build with the constant `LOG_MACROATOM` of
+`macroatom.cc` writes. It has a header row and then one row for each radiative de-excitation that ends a macro
+atom:
+
+| Column | Meaning |
+| --- | --- |
+| `timestep`, `modelgridindex` | The timestep and the model cell, both from 0. |
+| `Z` | The atomic number. |
+| `ionstage_in`, `level_in` | The ion stage and the level index of the macro atom at its activation. |
+| `ionstage_out`, `level_out` | The ion stage and the level index of the macro atom at the de-excitation. |
+| `activline` | The line index of the absorption that activated the macro atom, or a negative value for another activation. |
+| `nu_cmf_in`, `nu_rf_in` | The frequency of the packet at the activation, in the comoving frame and in the rest frame [Hz]. |
+| `nu_cmf_out`, `nu_rf_out` | The frequency of the packet after the de-excitation, in the comoving frame and in the rest frame [Hz]. |
+
 ### The packet files
 
 A packet file has a header row that starts with `#` and names the columns. Then it has one row for each packet of
