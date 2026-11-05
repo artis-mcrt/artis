@@ -134,7 +134,8 @@ A 3D model has a Cartesian grid of cubes:
 The lines before the cells:
 
 - The file can have comment lines before the number of cells and before `t_model`.
-- `t_model` is the snapshot time of the model. The densities and the positions of the file apply at this time.
+- `t_model` is the snapshot time of the model, which must be above 0. The densities and the positions of the file
+  apply at this time.
 - `vmax` is the velocity of the outer boundary of the grid. Put this line directly after the line of `t_model`. A 1D
   model has no such line, and its `vmax` is the outer velocity of the last cell. `vmax` must be less than the speed
   of light.
@@ -157,11 +158,11 @@ The columns of each cell:
 | `logrho` | 1D | The base-10 logarithm of the density [g/cm^3] at `t_model`. A value of -90 or less gives an empty cell. |
 | `pos_rcyl_mid`, `pos_z_mid` | 2D | The midpoint of the cell [cm] at `t_model`. |
 | `pos_x_min`, `pos_y_min`, `pos_z_min` | 3D | The corner of the cell with the lowest coordinates [cm] at `t_model`. |
-| `rho` | 2D, 3D | The density [g/cm^3] at `t_model`. A value of zero gives an empty cell. |
+| `rho` | 2D, 3D | The density [g/cm^3] at `t_model`. A value of zero gives an empty cell, and a negative value stops the run. |
 | `X_Fegroup` | all | The mass fraction of the iron-group elements. |
 | `X_<nuclide>` | all | The mass fraction of one nuclide at `t_model`, e.g. `X_Ni56`. The name has the element symbol and the mass number. |
 | `Ye` or `cellYe` | all | The electron fraction. |
-| `q` | all | The trapped radiation energy per mass [erg/g] at `t_model`. |
+| `q` | all | The trapped radiation energy per mass [erg/g] at `t_model`. The value must not be negative. |
 | `tracercount` | all | `sn3d` reads this column and does not use it. |
 
 More rules for the cells:
@@ -215,7 +216,8 @@ files. The file can have comment lines, and the code ignores the text to the rig
 <Z> <nions> <lowest ion stage> <highest ion stage> <nlevelsmax> <abundance> <mass>
 ```
 
-The second value and the third value are unused and must be 0. Then the file has one row for each element:
+The number of elements must be 1 or more. The second value and the third value are unused and must be 0. Then the
+file has one row for each element:
 
 | Column | Meaning |
 | --- | --- |
@@ -246,6 +248,7 @@ Then one row for each level:
 ```
 
 - The energy of a level is relative to the ground level of the ion.
+- The statistical weight of each level that the run keeps must be above 0.
 - `sn3d` reads the number of transitions, and it does not use it. The level name is optional, because `sn3d` does
   not read the text after the four values.
 - A level with an energy below the energy of the level before gives a warning in the log.
@@ -333,6 +336,7 @@ Each table of `phixsdata.txt` has this layout:
 - The first energy must be 0, which is the threshold, and the energies must increase. `sn3d` uses the first
   cross-section at the threshold, and it does not read the energy of that point.
 - The level indices of `phixsdata.txt` always start at 1.
+- A cross-section must not be negative, in `phixsdata.txt` and in `phixsdata_v2.txt`.
 - Each table must have the ground level of the upper ion as its only target level.
 - `sn3d` interpolates each table onto a grid of 100 points with an increment of 0.1. If the run also reads
   `phixsdata_v2.txt`, the grid of that file applies. Above the last point of a table, the cross-section decreases
@@ -363,7 +367,7 @@ lines.
 | 8 | `tau_max_vpkt` | The code stops a virtual packet when its optical depth is larger than this value in every spectrum. The value must be above 0. |
 | 9 | flag | A value that is not 0 switches on the velocity grid map. |
 | 10 | `tmin_grid_days tmax_grid_days` | Only with the velocity grid map: the time range of the map in days. |
-| 11 | number, and the ranges | Only with the velocity grid map: the number of wavelength ranges of the map, and then the lowest and the highest wavelength of each range in Angstroms. |
+| 11 | number, and the ranges | Only with the velocity grid map: the number of wavelength ranges of the map, and then the lowest and the highest wavelength of each range in Angstroms. The number must be 1 or more. |
 
 The opacity value of a spectrum removes one part of the opacity along the path of the virtual packets:
 
