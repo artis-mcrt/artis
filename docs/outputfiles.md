@@ -91,16 +91,16 @@ lengths in cm, the energies in erg, and the frequencies in Hz, unless a differen
 | --- | --- |
 | 1 | The midpoint of the timestep [days]. |
 | 2 | The luminosity of the escaped r-packets in the rest frame [L_sun]. The time of a packet is its arrival time at the observer. |
-| 3 | The luminosity of the escaped r-packets in the comoving frame [L_sun]. The time of a packet is its escape time, without the light travel time. |
+| 3 | The luminosity of the escaped r-packets in the comoving frame [L_sun]. The time of a packet is its escape time multiplied by sqrt(1 - (`vmax`/c)^2), without the light travel time. |
 
 `gamma_light_curve.out` has the same columns for the escaped gamma packets.
 
 ### The spectra
 
-`spec.out` has one row for each of the 1000 frequency bins. The bins have a logarithmic spacing from `NU_MIN_R` to
-`NU_MAX_R`.
+`spec.out` has one header row, and then one row for each of the 1000 frequency bins. The bins have a logarithmic
+spacing from `NU_MIN_R` to `NU_MAX_R`.
 
-- The first row holds a 0, and then the midpoint of each complete timestep [days].
+- The header row holds a 0, and then the midpoint of each complete timestep [days].
 - Each other row holds the middle frequency of a bin, and then the flux of each timestep.
 - The flux is F_nu [erg/s/cm^2/Hz] for an observer at a distance of 1 Mpc. A packet goes into the timestep of its
   arrival time at the observer.
@@ -258,9 +258,10 @@ the rank. A run without `KEEP_ESCAPED_GAMMAS` writes no rows for the escaped gam
 | `escape_time` | The time when the packet left the grid, or -1. |
 | `emissiontype` | The process of the last emission (see below). |
 | `trueemissiontype` | The process of the last emission from the thermal energy of the gas. |
-| `em_posx`, `em_posy`, `em_posz`, `em_time` | The position and the time of the last emission. An electron scattering also sets the position. |
+| `em_posx`, `em_posy`, `em_posz` | The position of the last emission. An electron scattering also sets the position. |
 | `absorption_type`, `absorption_freq` | The process and the rest-frame frequency of the last absorption (see below). |
 | `nscatterings` | The number of electron scatterings since the last emission. |
+| `em_time` | The time of the last emission. |
 | `stokes_q`, `stokes_u` | The Stokes parameters Q/I and U/I. Only a run with `POL_ON` has these columns. |
 | `originated_from_particlenotgamma` | 1 if the decay of the pellet made a particle, and 0 if it made a gamma ray. |
 | `trueem_posx`, `trueem_posy`, `trueem_posz`, `trueem_time` | The position and the time of the last emission from the thermal energy of the gas. |
@@ -284,7 +285,7 @@ The values of `type_id` and of `escape_type_id`:
 | 24 | energy of alpha particles or fission fragments after the deposition |
 | 32 | escaped packet |
 | 100 | pellet |
-| 120 | energy from before the start time of the model |
+| 120 | energy of a pellet that decayed before the start time of the model, or the initial energy of the cells with `INITIAL_PACKETS_ON` |
 
 The values of `emissiontype` and of `trueemissiontype`:
 
@@ -298,18 +299,22 @@ The values of `absorption_type`:
 
 | Value | Process |
 | --- | --- |
-| 0 or more | a line, with the same index as an emission type |
+| 0 or more | a line, with the same index as an emission type. A packet that had no absorption also holds 0. |
 | -1 | free-free absorption |
 | -2 | bound-free absorption |
 | -3, -4, -5 | Compton scattering, photoelectric absorption, and pair production of a gamma ray |
-| -7 | a pellet that decayed before the start time of the model |
+| -7 | a pellet that decayed before the start time of the model, or the initial energy of the cells |
 | -10 | a pellet decay to a particle |
 | -11 | a bound-bound absorption in a binned opacity, which has no line index |
 
 ### The virtual packet files
 
-Each rank writes its own files, and each file holds only the contribution of that rank. For the `vspecpol` and the
-`vpkt_grid` files, the sum over the files of all ranks gives the result.
+Each rank writes its own files, and each file holds only the virtual packets of that rank. The two types of file
+have different normalisations:
+
+- A `vspecpol` file holds the share of its rank, so the sum over the files of all ranks gives the result.
+- A `vpkt_grid` file has no division by the rank count, and the packets of each rank hold the energy of the whole
+  model. The mean over the files of all ranks therefore gives the result.
 
 `vspecpol_nnnn.out` has one block for each observer direction and each spectrum of that direction. The blocks of the
 spectra of the first direction come first.

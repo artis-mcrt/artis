@@ -137,6 +137,9 @@ The lines before the cells:
 - `vmax` is the velocity of the outer boundary of the grid. Put this line directly after the line of `t_model`. A 1D
   model has no such line, and its `vmax` is the outer velocity of the last cell. `vmax` must be less than the speed
   of light.
+- The corners of a 2D or a 3D grid move faster than `vmax`. The corner velocity is `vmax` times the square root of 2
+  for a cylindrical grid, and `vmax` times the square root of 3 for a Cartesian grid. `sn3d` stops if that velocity
+  is not less than the speed of light, unless the run has `FORCE_SPHERICAL_ESCAPE_SURFACE`.
 - The number of cells of a 3D model must be a cube number, because the grid has the same number of cells on each axis.
 - The header line names the columns. It is optional. The columns of the cell id, the position, and the density must
   have the names and the sequence of the layouts above. The column `velocity_outer` is a second name for
