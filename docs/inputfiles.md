@@ -220,7 +220,7 @@ The second value and the third value are unused and must be 0. Then the file has
 | `Z` | The atomic number. |
 | `nions` | The number of ion stages. With the value 0, the element has no ions, and the code keeps only its nuclide abundances. |
 | lowest ion stage | The lowest ion stage of the run. The ion stage 1 is the neutral atom. |
-| highest ion stage | The highest ion stage of the run. `nions` must be equal to the highest ion stage - the lowest ion stage + 1. |
+| highest ion stage | The highest ion stage of the run. For an element with ions, `nions` must be equal to the highest ion stage - the lowest ion stage + 1. An element with `nions` 0 has no such rule. |
 | `nlevelsmax` | The maximum number of levels that the code reads for each ion of the element. A negative value reads every level. With `SINGLE_LEVEL_TOP_ION`, the highest ion stage keeps one level. |
 | abundance | Unused. The value must be 0 or more. |
 | mass | The mean mass of the stable nuclides of the element in atomic mass units. |
@@ -248,8 +248,9 @@ Then one row for each level:
   not read the text after the four values.
 - A level with an energy below the energy of the level before gives a warning in the log.
 
-The level indices start at 0 or at 1. `sn3d` finds the first index from the first level of `adata.txt`.
-`transitiondata.txt` and `phixsdata_v2.txt` must use the same numbering. `phixsdata.txt` always numbers the levels
+The level indices start at 0 or at 1, and they must increase by one for each level of an ion. `sn3d` finds the
+first index from the first level of `adata.txt`. `transitiondata.txt` and `phixsdata_v2.txt` must use the same
+numbering. `phixsdata.txt` always numbers the levels
 from 1. The log messages always give the 0-based level index.
 
 ## transitiondata.txt
@@ -353,7 +354,7 @@ lines.
 | 6 | flag, and optional values | With the flag 1, the number of wavelength ranges follows, and then the lowest and the highest wavelength of each range in Angstroms. With a different flag, the range is from `VSPEC_NUMIN` to `VSPEC_NUMAX` of `vpkt.h`. |
 | 7 | `flag optical_depth_is_thick_vpkt` | With the flag 1, a cell with a grey optical depth above this value sends no virtual packets. With a different flag, the value of `input.txt` applies, but the value must stay. |
 | 8 | `tau_max_vpkt` | The code stops a virtual packet when its optical depth is larger than this value in every spectrum. |
-| 9 | flag | 1 switches on the velocity grid map. |
+| 9 | flag | A value that is not 0 switches on the velocity grid map. |
 | 10 | `tmin_grid_days tmax_grid_days` | Only with the velocity grid map: the time range of the map in days. |
 | 11 | number, and the ranges | Only with the velocity grid map: the number of wavelength ranges of the map, and then the lowest and the highest wavelength of each range in Angstroms. |
 
@@ -449,3 +450,6 @@ the run and has no file:
 - Ni56 and Co56;
 - Cr48 and V48;
 - Ni57 and Co57.
+
+Fe52 and Mn52 have no file and no gamma-ray energy in the decay data. Without a file, they get one line each, at
+0.86 MeV and at 3.415 MeV.
