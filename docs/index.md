@@ -121,6 +121,7 @@ quickstart
 installation
 presets
 data
+example
 :::
 
 :::{toctree}
@@ -129,6 +130,8 @@ data
 :hidden:
 
 simulation
+methods
+planning
 running
 clusters
 outputfiles
