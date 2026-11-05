@@ -50,8 +50,9 @@ radiation or into a macro atom. The cooling processes are the free-free emission
 collisional excitation, and the collisional ionisation.
 
 - Options: [RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY](options.md#rpkt_boundbound_thermalisation_probability)
-  replaces the macro atom when it has a value (see
-  [the binned opacities](#the-binned-opacities-and-the-thermalisation-probability)).
+  replaces the macro atom for an absorption in a line when it has a value (see
+  [the binned opacities](#the-binned-opacities-and-the-thermalisation-probability)). A bound-free absorption and the
+  collisional cooling of a k-packet then still activate a macro atom.
 - References: Lucy (2002), A&A, 384, 725-735, doi:10.1051/0004-6361:20011756 and Lucy (2003), A&A, 403, 261-275,
   doi:10.1051/0004-6361:20030357.
 
@@ -89,6 +90,10 @@ them also has one superlevel for those levels. The cell repeats the solutions of
 non-thermal electrons until T_e and the electron density change by less than a tolerance. The iteration also stops
 after [NLTE_TE_NNE_MAXITER](options.md#nlte_te_nne_maxiter) passes. The cell then keeps the last solution, and the
 log of the rank has a message with the text `failed to converge`.
+
+From the timestep of [NLTE_TIME_DEPENDENT_FIRST_TIMESTEP](options.md#nlte_time_dependent_first_timestep), the
+equations of the ion populations have a time term. The ion populations are then not in a statistical equilibrium,
+but the level populations inside each ion are. These solutions always use the lower-upper (LU) decomposition.
 
 If the solution of an element fails, the solver removes one ion and solves again, or the element falls back to
 LTE. The log of the rank has a warning for each fallback to LTE.
@@ -212,6 +217,8 @@ in one of three ways:
 - With an analytic thermalisation efficiency, a packet of particles deposits its energy at once with the probability
   of that efficiency. If not, the packet escapes and deposits nothing.
 
+The fragments of a spontaneous fission are an exception. They always deposit all of their energy at once, as heat.
+
 - Options: [PARTICLE_THERMALISATION_SCHEME](options.md#particle_thermalisation_scheme) selects the instant
   deposition, a transport with the Monte Carlo method, or an analytic thermalisation efficiency.
 - References:
@@ -258,7 +265,8 @@ r-packet in a thick cell gets a grey opacity, and a k-packet there emits an r-pa
 The code follows the Stokes parameters of the packets. At an emission or a scattering event of a real packet, it
 also sends virtual packets towards the observer directions of `vpkt.txt`. An event in a cell with the grey opacity
 sends none, and `vpkt.txt` gives the range of the arrival times and the wavelength ranges of the events that send
-them. The energy of each virtual packet gets the weight of its optical depth to the observer. The sum gives the
+them. `vpkt.txt` can also give a limit of the grey optical depth. A cell above that limit sends no virtual packet,
+also after the timesteps of the grey opacity. The energy of each virtual packet gets the weight of its optical depth to the observer. The sum gives the
 spectrum of each direction with less noise than the real packets give.
 
 - Options: [POL_ON](options.md#pol_on), [VPKT_ON](options.md#vpkt_on), and

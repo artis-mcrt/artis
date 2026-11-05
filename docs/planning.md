@@ -157,7 +157,9 @@ Measure the cost with a short run before you ask for the full allocation:
 1. Set `timestep_finish` to a small value, so that the job stops early. Give a stop value that is after the first
    timesteps of the section above. A timestep in LTE solves no NLTE populations and no Spencer-Fano equation, so it
    does not show the time of a later timestep.
-2. Use the same number of ranks on each node as the full run. The memory of a node depends on it.
+2. Use the same number of ranks on each node as the full run. The memory of a node depends on it. Each rank holds
+   `NUM_PACKETS` divided by the total rank count, so a run with fewer ranks holds more packets in each rank. Use the
+   total rank count of the full run, or scale the `mem_usage` line of the packets.
 3. Run `sn3d`, and read the log of rank 0.
 
 The log gives these values:
