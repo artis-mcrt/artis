@@ -25,6 +25,9 @@ The entries use these names for the groups of tests:
 - timedepnlte: `kilonova_1d_timedepnlte`;
 - all: every end-to-end test of that time.
 
+Each entry gives the current name of a test. The names of the 2D kilonova tests held the word `2dgrid` before
+[#346](https://github.com/artis-mcrt/artis/pull/346), e.g. `kilonova_2d_2dgrid_expansionopac`.
+
 :::{warning}
 A restart file must only be consistent with the binary that wrote it. A simulation in progress cannot continue with
 a newer version of the code. Complete the simulation with the version that started it.
@@ -49,8 +52,16 @@ The `main` branch holds these changes. No release holds them at this time.
   *Tests: kilonova, nltephotospheric.*
 - The code reads the values of the fission product table as yields in percent for each fission
   ([#480](https://github.com/artis-mcrt/artis/pull/480)). *Tests: kilonova.*
-- The standard nuclides Ni57, Ni56, Co56, Cr48, V48, Co57, Fe52, and Mn52 get their total decay Q-values
-  ([#448](https://github.com/artis-mcrt/artis/pull/448)). *Tests: all.*
+- These standard nuclides get their total decay Q-values ([#448](https://github.com/artis-mcrt/artis/pull/448)).
+  *Tests: all.*
+    - Ni57;
+    - Ni56;
+    - Co56;
+    - Cr48;
+    - V48;
+    - Co57;
+    - Fe52;
+    - Mn52.
 - The mean life of Ni57 has the correct unit conversion ([#447](https://github.com/artis-mcrt/artis/pull/447)).
   *Tests: `classicmode_3d`, kilonova.*
 - Fe52 and Mn52 get one gamma-ray line each. Before, their pellets deposited the energy locally
@@ -207,7 +218,7 @@ A change of a preset value alters the results of each run that uses the preset w
   `kilonova_2d_expansionopac`, `kilonova_2d_xcomgammaphotoion`.*
 - `nltenebular` uses `NLTE_USE_GTH_SOLVER = true` ([#703](https://github.com/artis-mcrt/artis/pull/703)).
   *Tests: nebular.*
-- The NLTE presets use `BFCOOLING_USELEVELPOPNOTIONPOP = true`
+- `nltenebular` and `nltephotospheric` use `BFCOOLING_USELEVELPOPNOTIONPOP = true`
   ([#704](https://github.com/artis-mcrt/artis/pull/704)). *Tests: nebular, nltephotospheric.*
 - The T_e solver has a fractional accuracy of 1e-3 in every preset
   ([#543](https://github.com/artis-mcrt/artis/pull/543)). *Tests: classic.*
@@ -417,11 +428,12 @@ Released on 2026-05-15. See the [release on GitHub](https://github.com/artis-mcr
 
 ### The numerical results
 
-- Four rate integrals have a new integration variable or a new form, so that they give no non-finite result: the
-  radiative recombination coefficient ([#303](https://github.com/artis-mcrt/artis/pull/303)), the bound-free
-  cooling coefficient ([#307](https://github.com/artis-mcrt/artis/pull/307)), the departure ratio
-  ([#314](https://github.com/artis-mcrt/artis/pull/314)), and the collisional recombination coefficient
-  ([#315](https://github.com/artis-mcrt/artis/pull/315)). *Tests: classic, nebular, nltephotospheric.*
+- Four rate integrals have a new integration variable or a new form, so that they give no non-finite result.
+  *Tests: classic, nebular, nltephotospheric.*
+    - the radiative recombination coefficient ([#303](https://github.com/artis-mcrt/artis/pull/303));
+    - the bound-free cooling coefficient ([#307](https://github.com/artis-mcrt/artis/pull/307));
+    - the departure ratio ([#314](https://github.com/artis-mcrt/artis/pull/314));
+    - the collisional recombination coefficient ([#315](https://github.com/artis-mcrt/artis/pull/315)).
 - The packets of each cell run together, so that a gamma packet does not reset the cell cache
   ([#305](https://github.com/artis-mcrt/artis/pull/305)). *Tests: all.*
 - The bound-free heating has no lookup table. The code integrates with the radiation temperature of the cell
@@ -429,7 +441,7 @@ Released on 2026-05-15. See the [release on GitHub](https://github.com/artis-mcr
 - The multibin radiation field model uses analytic series for the Planck integrals
   ([#320](https://github.com/artis-mcrt/artis/pull/320)). *Tests: nebular, nltephotospheric.*
 - The interpolation of the XCOM photoelectric cross-section is correct
-  ([#306](https://github.com/artis-mcrt/artis/pull/306)). *Tests: `kilonova_2d_2dgrid_xcomgammaphotoion`.*
+  ([#306](https://github.com/artis-mcrt/artis/pull/306)). *Tests: `kilonova_2d_xcomgammaphotoion`.*
 - A build with `POL_ON = false` does no polarisation calculation
   ([#342](https://github.com/artis-mcrt/artis/pull/342)). *Tests: kilonova, nebular, nltephotospheric.*
 - The kilonova preset has the spontaneous fission ([#343](https://github.com/artis-mcrt/artis/pull/343)). The code
@@ -545,7 +557,7 @@ Released on 2025-11-11. See the [release on GitHub](https://github.com/artis-mcr
 - A standard nuclide that the input composition does not give, e.g. Ni57 or Co57, gets an abundance of zero. Before,
   the value was not initialised (commit [03d1131e](https://github.com/artis-mcrt/artis/commit/03d1131e)).
 - The expansion opacity subtracts the stimulated emission, as the line-by-line mode does
-  ([#232](https://github.com/artis-mcrt/artis/pull/232)). *Tests: `kilonova_2d_2dgrid_expansionopac`.*
+  ([#232](https://github.com/artis-mcrt/artis/pull/232)). *Tests: `kilonova_2d_expansionopac`.*
 - A pellet selects the frequency of its gamma ray when the code makes the packet
   ([#246](https://github.com/artis-mcrt/artis/pull/246)). *Tests: all.*
 - The nuclide list holds all daughter nuclei ([#257](https://github.com/artis-mcrt/artis/pull/257)), and the decay
