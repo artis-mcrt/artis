@@ -215,7 +215,9 @@ A change of a preset value alters the results of each run that uses the preset w
 
 - `kilonova_lte` uses `PARTICLE_THERMALISATION_SCHEME = TIMEDEPENDENT_WITH_ADIABATIC_LOSS`
   ([#562](https://github.com/artis-mcrt/artis/pull/562)). *Tests: `kilonova_1d`, `kilonova_2d`,
-  `kilonova_2d_expansionopac`, `kilonova_2d_xcomgammaphotoion`.*
+  `kilonova_2d_expansionopac`, `kilonova_2d_xcomgammaphotoion`.* The preset now has the value
+  `TIMEDEPENDENT_WITH_ADIABATIC_LOSS_ULTRARELATIVISTICLIMIT`, which keeps the adiabatic loss rate of that change
+  ([#669](https://github.com/artis-mcrt/artis/pull/669)).
 - `nltenebular` uses `NLTE_USE_GTH_SOLVER = true` ([#703](https://github.com/artis-mcrt/artis/pull/703)).
   *Tests: nebular.*
 - `nltenebular` and `nltephotospheric` use `BFCOOLING_USELEVELPOPNOTIONPOP = true`
@@ -244,6 +246,10 @@ These corrections alter the results only for some models or some option values:
   ([#590](https://github.com/artis-mcrt/artis/pull/590)) in its first thin timestep.
 - A bound-free absorption divides the energy between the ionisation and the thermal pool at the frequency of the
   packet, with a limit of one for the ratio ([#572](https://github.com/artis-mcrt/artis/pull/572)).
+- With `PARTICLE_THERMALISATION_SCHEME = TIMEDEPENDENT_WITH_ADIABATIC_LOSS`, the heating rate and the energy that a
+  particle packet deposits are correct for the adiabatic loss
+  ([#482](https://github.com/artis-mcrt/artis/pull/482)). The adiabatic loss rate of that value is now relativistic,
+  with the mass of the particle ([#669](https://github.com/artis-mcrt/artis/pull/669)).
 - With `NT_SCHEME = NT_AXELRODAPPROX`, the thermal balance counts all of the lepton deposition as heat
   ([#654](https://github.com/artis-mcrt/artis/pull/654)).
 - With `RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY`, the thermal emission includes the bound-free heating opacity
@@ -276,6 +282,9 @@ These corrections alter the results only for some models or some option values:
       that the ion does not have ([#569](https://github.com/artis-mcrt/artis/pull/569));
     - a change of `tmin_days` or `tmax_days` before a resume run
       ([#569](https://github.com/artis-mcrt/artis/pull/569)).
+- A velocity grid map of `vpkt.txt` with a time range or a wavelength range outside the ranges of the spectra stops
+  the run. Before, such a map was empty or biased ([#667](https://github.com/artis-mcrt/artis/pull/667)).
+  *Tests: `classicmode_1d_3dgrid`.*
 - A level of `adata.txt` with an energy below the energy of the previous level gives a warning in the log. The
   check came with [#567](https://github.com/artis-mcrt/artis/pull/567).
 
@@ -290,8 +299,10 @@ These corrections alter the results only for some models or some option values:
 - `sn3d` writes all of the spectrum files that `exspec` writes, e.g. `specpol.out` and `gamma_spec.out`
   ([#598](https://github.com/artis-mcrt/artis/pull/598)). The emission and absorption files hold every timestep of
   the model ([#625](https://github.com/artis-mcrt/artis/pull/625)).
+- The wavelengths of `linestat.out` have nine significant digits in place of six
+  ([#682](https://github.com/artis-mcrt/artis/pull/682)). *Tests: all.*
 - `linelist.out` replaces `linestat.out`. It has one row for each line, a header row, and 0-based level indices
-  ([#683](https://github.com/artis-mcrt/artis/pull/683)).
+  ([#683](https://github.com/artis-mcrt/artis/pull/683)). The wavelengths keep the nine significant digits.
 - With [WRITE_COMBINED_ALLRANK_OUT_FILES](options.md#write_combined_allrank_out_files), the estimator, nlte, and
   radfield files of all ranks go into one file each, e.g. `estimators_allranks.out`. Every preset sets the option
   ([#642](https://github.com/artis-mcrt/artis/pull/642), [#678](https://github.com/artis-mcrt/artis/pull/678),
@@ -338,8 +349,9 @@ New options:
 | [WRITE_COMBINED_ALLRANK_OUT_FILES](options.md#write_combined_allrank_out_files) | one output file for all ranks | [#642](https://github.com/artis-mcrt/artis/pull/642), [#678](https://github.com/artis-mcrt/artis/pull/678) |
 | [SAMPLE_RPKT_EMISSION](options.md#sample_rpkt_emission) | one sampled r-packet emission of each packet | [#661](https://github.com/artis-mcrt/artis/pull/661) |
 
-[PARTICLE_THERMALISATION_SCHEME](options.md#particle_thermalisation_scheme) has the new value
-`TIMEDEPENDENT_WITH_ADIABATIC_LOSS` ([#393](https://github.com/artis-mcrt/artis/pull/393)).
+[PARTICLE_THERMALISATION_SCHEME](options.md#particle_thermalisation_scheme) has the new values
+`TIMEDEPENDENT_WITH_ADIABATIC_LOSS` ([#393](https://github.com/artis-mcrt/artis/pull/393)) and
+`TIMEDEPENDENT_WITH_ADIABATIC_LOSS_ULTRARELATIVISTICLIMIT` ([#669](https://github.com/artis-mcrt/artis/pull/669)).
 
 Options with a new name or a new form:
 
