@@ -23,7 +23,8 @@ the types of the packets.
 
 An r-packet moves until it reaches a line, a continuum absorption, or an electron scattering. The default mode gives
 each line its own Sobolev optical depth. The expansion of the ejecta shifts the comoving frequency of the packet
-through the lines one after the other. The continuum opacity is the sum of the bound-free and the free-free opacities.
+through the lines one after the other. The continuum opacity is the sum of the electron scattering, the
+bound-free, and the free-free opacities.
 
 - Options:
     - [USE_RELATIVISTIC_DOPPLER_SHIFT](options.md#use_relativistic_doppler_shift) selects the full Doppler factor.
@@ -267,8 +268,9 @@ r-packet in a thick cell gets a grey opacity, and a k-packet there emits an r-pa
 
 ## The polarisation and the virtual packets
 
-The code follows the Stokes parameters of the packets. At an emission or a scattering event of a real packet, it
-also sends virtual packets towards the observer directions of `vpkt.txt`. An event in a cell with the grey opacity
+With [POL_ON](options.md#pol_on), the code follows the Stokes parameters of the packets. With
+[VPKT_ON](options.md#vpkt_on), it also sends virtual packets towards the observer directions of `vpkt.txt` at an
+emission or a scattering event of a real packet. An event in a cell with the grey opacity
 sends none, and `vpkt.txt` gives the range of the arrival times and the wavelength ranges of the events that send
 them. `vpkt.txt` can also give a limit of the grey optical depth. A cell above that limit sends no virtual packet,
 also after the timesteps of the grey opacity. The energy of each virtual packet gets the weight of its optical depth to the observer. The sum gives the

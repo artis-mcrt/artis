@@ -98,7 +98,8 @@ The first timesteps of a run use approximations:
   each thick cell at each timestep.
 - [MULTIBIN_RADFIELD_FIRST_TIMESTEP](options.md#multibin_radfield_first_timestep) and
   [DETAILED_BF_ESTIMATORS_FIRST_TIMESTEP](options.md#detailed_bf_estimators_first_timestep) give the first timestep
-  of two methods. `num_lte_timesteps` must be at or below `MULTIBIN_RADFIELD_FIRST_TIMESTEP`, or the run stops.
+  of two methods. When `MULTIBIN_RADFIELD_FIRST_TIMESTEP` has a value, `num_lte_timesteps` must be at or below it,
+  or the run stops.
 
 The gas state changes after each of these points. The example page shows the electron temperature of a cell against
 the timestep, and how many timesteps the solution needs to become stable there. Make the same plot for your model.
