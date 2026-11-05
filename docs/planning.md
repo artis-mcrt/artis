@@ -32,7 +32,8 @@ Simulation propagates 2500000 packets on this rank (total 1e+07 with nprocs 4)
 ```
 
 These lines come from the run of [Example: a nebular spectrum](example.md), where one packet takes 240 bytes. The
-size depends on the build, e.g. a GPU build adds the state of the random generator to each packet, so read the value
+size depends on the build, e.g. a build for a graphics processing unit (GPU) adds the state of the random generator
+to each packet, so read the value
 from your log.
 
 At the start of each timestep after the first timestep of a job, each rank writes its packets to a restart file,
@@ -123,8 +124,9 @@ The memory of a node has two parts. The `mem_usage` lines with the text `(node s
 ranks of one node share, so a node holds one copy of them. Each rank holds its own copy of the other arrays and of
 its packets.
 
-A resumed run needs the same rank count as the run that wrote the restart files. `NUM_PACKETS` must be at or above
-the rank count. [Running sn3d](running.md) describes the threads.
+A resumed run needs the same rank count as the run that wrote the restart files. It also needs the same binary, and
+thus the same `NUM_PACKETS`, because the restart files hold the packets of the first job. `NUM_PACKETS` must be at
+or above the rank count. [Running sn3d](running.md) describes the threads.
 
 ## The grid
 
@@ -148,8 +150,9 @@ levels, the lines, and the bound-free transitions of each ion after it reads the
 
 [ION_NLEVELS_EXCITED_NLTE](options.md#ion_nlevels_excited_nlte) sets the number of excited levels of each ion in
 full NLTE. The NLTE solver puts these levels of all the ions of an element into one rate matrix. The matrix also has
-a row for the ground level of each ion, and a row for the superlevel of each ion that has one. The option thus sets
-most of the size of that matrix. The log gives the sum over all ions:
+a row for the ground level of each ion, a row for the superlevel of each ion that has one, and a row for each
+autoionising level that is not an NLTE level. The option thus sets most of the size of that matrix. The log gives
+the sum of the excited NLTE levels and of the superlevels over all ions:
 
 ```text
 [info] Total NLTE levels: 1008, of which 11 are superlevels
