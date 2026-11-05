@@ -139,7 +139,8 @@ The packets add to the estimators of the radiation field of each cell that they 
 blackbody to the full spectrum of each cell, with a dilution factor W and a radiation temperature T_R. With the
 multibin model, it also fits a dilute blackbody to each frequency bin. The rates of the photoionisation and of the
 bound-free heating use these fits, except for a continuum with a detailed bound-free estimator (see the next
-section).
+section). A cell in an LTE timestep, and a cell with the grey opacity, get no fit. The code then sets T_R to the
+temperature of the mean intensity, and W to 1.
 
 - Options:
     - [MULTIBIN_RADFIELD_FIRST_TIMESTEP](options.md#multibin_radfield_first_timestep) sets the first timestep that

@@ -273,8 +273,8 @@ time of 220 days is in that range, and it is after the timestep at which T_e of 
   supernova.
 - **The packets and the ranks.** The noise of a spectrum decreases with the number of packets. Section 4 changed
   `NUM_PACKETS` in the preset file to 1e7, so set the value for your run again.
-  `git restore artisoptions_nltenebular.h` gives the value of the repository, which is for approximately 1000 MPI
-  ranks on a cluster (see [Runs on a cluster](clusters.md)).
+  In the model folder, `git -C artis restore artisoptions_nltenebular.h` gives the value of the repository, which is
+  for approximately 1000 MPI ranks on a cluster (see [Runs on a cluster](clusters.md)).
 - **The timesteps.** [Plan a simulation](planning.md) says what the timestep count, the time range, and the first
   timesteps set, and how you measure the cost of a run.
 - **The checks.** Examine each warning of `artistools check`. Make sure that T_e of each cell is between the limits
