@@ -126,17 +126,18 @@ runs to 10 days. `--plotinvalidpart` draws the later times anyway.
 
 Each simulation has its own model folder. Keep the source code in a subfolder `artis` of it. The code then finds its
 physics data in `artis/data`. The commands below make a model folder from the input files of the test model. Run the
-first command in the clone of step 2, so that the symlink points at it:
+first command in the clone of step 2:
 
 ```sh
-artispath=$(pwd)
-mkdir ~/mymodel
+scripts/new-model-folder.sh --symlink ~/mymodel
 cd ~/mymodel
-ln -s "$artispath" artis
 tar -xf artis/tests/atomicdata_feconi.tar.xz
 rsync -a --exclude 'results_md5_*' artis/tests/kilonova_1d_inputfiles/ ./
 cp input-newrun.txt input.txt
 ```
+
+The script makes the folder, a symlink `artis` to the clone, and an `input.txt` from `scripts/input-template.txt`.
+The last command replaces that `input.txt` with the file of the test model.
 
 The archive and the input folder both hold a `compositiondata.txt`. The archive comes first, so the file of the test
 model has priority, as it does in the test. That file keeps ten elements, and the file of the archive keeps three.

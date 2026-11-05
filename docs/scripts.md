@@ -28,8 +28,13 @@ The `scripts` folder holds the job scripts of the clusters that we use and some 
 - `tar_rm_logs.sh`: the script archives the log files of the ranks into `logfiles.tar.zst`. It then removes them,
   except `output_0-0.txt`.
 - `rsyncnooutput.sh`: copy a model folder with rsync, without the output files.
-- `aliases.sh`: shell aliases for Slurm and the `MAKEFLAGS` setting. Replace the placeholder email address in the file
-  with your address. Then source the file from your `.bashrc`.
+- `new-model-folder.sh`: make a model folder with the ARTIS source in its subfolder `artis` and an `input.txt` from
+  `input-template.txt`. The script clones the repository, or with `--symlink` it makes a symlink to the source that
+  holds the script.
+- `input-template.txt`: an `input.txt` with a comment on each line. It holds the values of the `classicmode_3d` test,
+  with a timestep range that covers the whole model.
+- `aliases.sh`: shell aliases for Slurm and the `MAKEFLAGS` setting. Source the file from your `.bashrc`. The file
+  sets no `EMAIL`, so export your address in your `.bashrc` too.
 - `clean.sh`: remove all output files, keep the input files, and reset the simulation to the beginning. The script also
   removes the `job_from_ts*` folders of `sn3d` and the `*.slurm` folders of older versions.
 - `sumcorehoursslurm.py`: calculate the summed core hours of all jobs from the Slurm job output files.
