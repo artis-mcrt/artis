@@ -96,7 +96,10 @@ log of the rank has a message with the text `failed to converge`.
 
 From the timestep of [NLTE_TIME_DEPENDENT_FIRST_TIMESTEP](options.md#nlte_time_dependent_first_timestep), the
 equations of the ion populations have a time term. The ion populations are then not in a statistical equilibrium,
-but the level populations inside each ion are. These solutions always use the lower-upper (LU) decomposition.
+but the level populations inside each ion are. These solutions always use the lower-upper (LU) decomposition. The
+time term needs a complete NLTE solution of the cell from the timestep before. A cell without one keeps the
+equations with no time term for that timestep, e.g. after an LTE timestep, after the grey opacity, or after a
+fallback to LTE.
 
 If the solution of an element fails, the solver removes one ion and solves again, or the element falls back to
 LTE. The log of the rank has a warning for each fallback to LTE.
@@ -134,10 +137,13 @@ LTE. The log of the rank has a warning for each fallback to LTE.
 A cell in an LTE timestep, and a cell with the grey opacity, have no thermal balance. The code sets their T_e to the
 temperature of the mean intensity. The first timestep of a new simulation is different: each cell keeps its initial
 temperature. The code calculates it from the energy of the decays between the snapshot time of `model.txt` and the
-midpoint of the first timestep, and from the `q` column of `model.txt`. It takes all of that energy as trapped in
+midpoint of the first timestep. With [INITIAL_PACKETS_ON](options.md#initial_packets_on), it adds the energy of the
+`q` column of `model.txt`. It takes all of that energy as trapped in
 the cell. For each other cell, the code solves heating = cooling for the electron
 temperature. The heating rates are the bound-free
-heating, the free-free heating, the collisional de-excitation, and the non-thermal heating. The cooling rates are
+heating, the free-free heating, the collisional de-excitation, and the non-thermal heating. Without
+[COLLISIONAL_HEATING_FROM_LEVELPOPS](options.md#collisional_heating_from_levelpops), the collisional heating comes
+from a Monte Carlo estimator, which also holds the collisional recombination heating. The cooling rates are
 the free-free, the free-bound, and the collisional cooling, and the adiabatic cooling of the expansion. From the
 timestep of [NLTE_TIME_DEPENDENT_FIRST_TIMESTEP](options.md#nlte_time_dependent_first_timestep), the cooling also
 holds the change of the thermal energy of the gas in the timestep. The code keeps T_e
@@ -153,7 +159,9 @@ balance, and the log of its rank has a warning (see [Troubleshooting](troublesho
 
 The packets add to the estimators of the radiation field of each cell that they enter. The grid update fits a dilute
 blackbody to the full spectrum of each cell, with a dilution factor W and a radiation temperature T_R. With the
-multibin model, it also fits a dilute blackbody to each frequency bin. The rates of the photoionisation and of the
+multibin model, it also fits a dilute blackbody to each frequency bin. The last bin is an exception: its temperature
+is the electron temperature of the cell, and only its dilution factor comes from the fit. The rates of the
+photoionisation and of the
 bound-free heating use these fits. The photoionisation rate of a continuum with a detailed bound-free estimator is
 the exception (see the next section). The bound-free heating of that continuum still uses the fits. A cell in an LTE timestep, and a cell with the grey opacity, get no fit. The code then sets T_R to the
 temperature of the mean intensity, and W to 1.
@@ -191,7 +199,8 @@ The fast leptons of the decays lose their energy to the heating, the ionisation,
 Spencer-Fano solver finds the energy spectrum of these electrons on a uniform energy grid. The spectrum gives the
 three fractions of the deposited energy, and the non-thermal ionisation and excitation rates for the NLTE solver.
 With [SF_AUGER_CONTRIBUTION_ON](options.md#sf_auger_contribution_on), the equation also has the source term of the
-Auger electrons. The work function approximation is the alternative. It gives ionisation rates and no excitation rates.
+Auger electrons. The work function approximation is the alternative. It gives ionisation rates and no excitation
+rates, and the thermal balance then counts all of the deposited lepton energy as heat.
 
 - Options:
     - [NT_SCHEME](options.md#nt_scheme) selects the Spencer-Fano solution, the work function approximation, or no
