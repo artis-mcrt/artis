@@ -321,6 +321,7 @@ is not complete:
 - With OpenMP or standard parallelism threads and `DETAILED_LINE_ESTIMATORS_ON`, the threads do not lose a
   contribution to a line estimator ([#430](https://github.com/artis-mcrt/artis/pull/430)).
 - The upper boundary of a cell is exactly equal to the lower boundary of the next cell ([#400](https://github.com/artis-mcrt/artis/pull/400)).
+- The velocity coordinates of the virtual packet grid keep their precision (commit [9393165c](https://github.com/artis-mcrt/artis/commit/9393165c)).
 
 ### Input files
 
@@ -501,6 +502,8 @@ The presets:
   2.26 times faster ([#513](https://github.com/artis-mcrt/artis/pull/513), [#514](https://github.com/artis-mcrt/artis/pull/514), [#518](https://github.com/artis-mcrt/artis/pull/518)). The first of these changes the results at the rounding level.
 - A run starts with an MPI library that does not obey the alignment hint of the shared memory ([#583](https://github.com/artis-mcrt/artis/pull/583)). A
   shared array of a run with one rank on a node also has the alignment of 128 bytes ([#585](https://github.com/artis-mcrt/artis/pull/585)).
+- Each rank of a node fills its own part of a new shared array, so the memory pages are near the ranks that read
+  them. Before, rank 0 filled each array (commit [e0dae2ae](https://github.com/artis-mcrt/artis/commit/e0dae2ae)).
 - A build with the default fast-math option gives results that differ at the rounding level after a change of the
   sums of the recombination rates ([#524](https://github.com/artis-mcrt/artis/pull/524)).
 - A `TESTMODE=ON` run writes and reads an empty restart array with no message of the sanitizer
@@ -546,6 +549,8 @@ The presets:
     - A job script stops when `SLURM_SUBMIT_DIR` has no value, e.g. when you run it by hand. Before, it changed to
       the home folder and worked there ([#604](https://github.com/artis-mcrt/artis/pull/604)).
     - `exspec-after.sh` starts one zstd process for each file, which makes the compression faster ([#587](https://github.com/artis-mcrt/artis/pull/587)).
+    - `exspec-after.sh` and `tar_rm_logs.sh` do not go into the `artis` folder. Before, they compressed data files
+      of the source there (commit [edf0cd4d](https://github.com/artis-mcrt/artis/commit/edf0cd4d)).
     - A job stops when the build fails, so it does not start an older binary (commit [21463aa2](https://github.com/artis-mcrt/artis/commit/21463aa2)). A job submits
       nothing when `sn3d` gives an error status (commit [cedf9f70](https://github.com/artis-mcrt/artis/commit/cedf9f70)).
     - The `exspec` jobs of COSMA8 and Leonardo use the serial partitions ([#641](https://github.com/artis-mcrt/artis/pull/641)).
@@ -555,7 +560,8 @@ The presets:
       [3cf00789](https://github.com/artis-mcrt/artis/commit/3cf00789)). The `sn3d` job asks for 19 nodes with 112
       ranks each (commits [f33a2353](https://github.com/artis-mcrt/artis/commit/f33a2353), [28dfe096](https://github.com/artis-mcrt/artis/commit/28dfe096), and [48252f96](https://github.com/artis-mcrt/artis/commit/48252f96)).
     - The Virgo job scripts build with the gcc of pixi, which they install when it is absent
-      (commit [cc5b1823](https://github.com/artis-mcrt/artis/commit/cc5b1823)).
+      (commit [cc5b1823](https://github.com/artis-mcrt/artis/commit/cc5b1823)). The Virgo submit script selects the nodes with AMD EPYC 9654 processors
+      (commit [dec9e1bb](https://github.com/artis-mcrt/artis/commit/dec9e1bb)).
     - `scripts/run-exspec-if-needed.sh` runs `exspec` only when `emission.out` is absent (commit
       [379bf44d](https://github.com/artis-mcrt/artis/commit/379bf44d)).
 - `artistools filterpackets` and `artistools corehours` replace the scripts `filterpacketsescapedrpkt.py` and
@@ -602,6 +608,7 @@ Released on 2026-05-15. See the [release on GitHub](https://github.com/artis-mcr
 
 - `sn3d` does not read or write `ratecoeff.dat`. It calculates the rate integrals at the start of each run
   ([#317](https://github.com/artis-mcrt/artis/pull/317)).
+- Only rank 0 writes `gammalinelist.out` (commit [ef3ee4f7](https://github.com/artis-mcrt/artis/commit/ef3ee4f7)).
 - `input.txt`: the lines of the grey opacity for the gamma rays, of the opacity choice, and of `rho_crit_para` have
   no effect. Compile-time options replace them ([#337](https://github.com/artis-mcrt/artis/pull/337)).
 - `input.txt`: the two diffusion values of the k-packets on line 23 have no effect. Constants of `kpkt.cc` replace
@@ -681,6 +688,8 @@ Released on 2026-01-08. See the [release on GitHub](https://github.com/artis-mcr
 
 - `data/` holds gamma-ray tables for the alpha and the beta decays
   ([#273](https://github.com/artis-mcrt/artis/pull/273)). *Tests: kilonova.*
+- The mean lives of U234, U235, U236, and U238 in `data/betaminusdecays.txt` are correct
+  (commit [770235f7](https://github.com/artis-mcrt/artis/commit/770235f7)).
 
 ## v2026.01.05
 
@@ -718,6 +727,8 @@ Released on 2025-11-11. See the [release on GitHub](https://github.com/artis-mcr
 ### Output files
 
 - `sn3d` writes the angle-averaged spectra and the light curve after each timestep (commit [26c2beaa](https://github.com/artis-mcrt/artis/commit/26c2beaa)).
+- The direction-resolved light curve files hold the luminosity in the comoving frame for each direction bin
+  (commit [7d7c77e7](https://github.com/artis-mcrt/artis/commit/7d7c77e7)). *Tests: `classicmode_3d` and the 2D kilonova tests.*
 - The packet files hold the position of the true emission (`trueem_pos`) in place of the true emission velocity
   ([#227](https://github.com/artis-mcrt/artis/pull/227)).
 - The estimator files give the isotopic abundances in the order of the mass number
