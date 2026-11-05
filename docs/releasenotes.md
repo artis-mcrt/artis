@@ -308,6 +308,8 @@ is not complete:
 - With `ENABLE_CHARGE_TRANSFER_REACTIONS` and no Anderson acceleration, the iteration of a cell does not stop on a
   pass that changed the ion range of an element ([#558](https://github.com/artis-mcrt/artis/pull/558)).
 - The NLTE solver does not accept a solution that is not finite ([#488](https://github.com/artis-mcrt/artis/pull/488)).
+- A rate matrix that is not finite makes the NLTE solver go to its recovery, e.g. with a smaller ion range. Before,
+  an assertion stopped the run ([#486](https://github.com/artis-mcrt/artis/pull/486)).
 - The index of the NLTE population array has 64 bits. Before, a model whose number of cells with matter times its
   number of NLTE levels reached 2^31 wrote populations into the wrong cell ([#557](https://github.com/artis-mcrt/artis/pull/557)).
 - The index of the mass fractions of the stable nuclides also has 64 bits, for a model whose number of cells with
@@ -496,6 +498,10 @@ The presets:
   the wall time ([#708](https://github.com/artis-mcrt/artis/pull/708)).
 - The start of a run with a large model is faster. A model with 125000 cells needed 35 s in place of 151 s to read
   its input files ([#493](https://github.com/artis-mcrt/artis/pull/493)).
+- Only one rank of each node reads the gamma-ray line tables, and each rank reads the names of a data folder only
+  once. A run with many ranks on a parallel file system thus starts faster (commit [451a43d2](https://github.com/artis-mcrt/artis/commit/451a43d2)).
+- Some log messages are correct now: the unit of the non-thermal deposition rate, the name of the mean wavelength
+  of the radiation field, and the list of the ion stages in a build with OpenMP threads ([#474](https://github.com/artis-mcrt/artis/pull/474)).
 - The build needs no GSL library, and the make option `EIGEN=OFF` is gone
   ([#489](https://github.com/artis-mcrt/artis/pull/489)). Two small headers replace the copy of Boost.Math
   ([#505](https://github.com/artis-mcrt/artis/pull/505)).
@@ -526,6 +532,8 @@ The presets:
     - A job stops when the build fails, so it does not start an older binary (commit [21463aa2](https://github.com/artis-mcrt/artis/commit/21463aa2)). A job submits
       nothing when `sn3d` gives an error status (commit [cedf9f70](https://github.com/artis-mcrt/artis/commit/cedf9f70)).
     - The `exspec` jobs of COSMA8 and Leonardo use the serial partitions ([#641](https://github.com/artis-mcrt/artis/pull/641)).
+    - The Virgo submit scripts give Slurm the address `<user>@gsi.de` when `EMAIL` has no value
+      (commit [aa55fc23](https://github.com/artis-mcrt/artis/commit/aa55fc23)).
     - The Leonardo cluster has job scripts (commit
       [3cf00789](https://github.com/artis-mcrt/artis/commit/3cf00789)).
     - `scripts/run-exspec-if-needed.sh` runs `exspec` only when `emission.out` is absent (commit
@@ -609,6 +617,7 @@ Released on 2026-05-15. See the [release on GitHub](https://github.com/artis-mcr
 - The integration and the root finder always use Boost.Math, or the Simpson rule in a GPU build. The GSL versions are
   gone ([#348](https://github.com/artis-mcrt/artis/pull/348)).
 - The build needs gcc 14 or a later version ([#363](https://github.com/artis-mcrt/artis/pull/363)).
+- A `TESTMODE=ON` build on an Apple M4 processor has a compiler flag that prevents a rare crash ([#327](https://github.com/artis-mcrt/artis/pull/327)).
 - The job scripts run `./artis/sn3d` directly, without a symlink in the model folder
   ([#347](https://github.com/artis-mcrt/artis/pull/347)).
 
@@ -690,3 +699,8 @@ Released on 2025-11-11. See the [release on GitHub](https://github.com/artis-mcr
 
 - `RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY` is a `std::optional<float>`
   ([#226](https://github.com/artis-mcrt/artis/pull/226)).
+
+### Build, programs, and scripts
+
+- The MPI calls divide an array with more items than the largest 32-bit integer into parts, so a large model can
+  run ([#240](https://github.com/artis-mcrt/artis/pull/240)).
