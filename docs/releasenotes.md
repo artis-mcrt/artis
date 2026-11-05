@@ -491,7 +491,12 @@ The presets:
   matrix is 19 percent faster ([#521](https://github.com/artis-mcrt/artis/pull/521)), both for the nebular test model.
 - The elapsed times of the log come from a clock that a change of the system time does not alter, and they have one
   decimal place of a second ([#388](https://github.com/artis-mcrt/artis/pull/388)).
-- The log of a Spencer-Fano solution is shorter by default ([#376](https://github.com/artis-mcrt/artis/pull/376)).
+- The log of a Spencer-Fano solution is shorter by default ([#376](https://github.com/artis-mcrt/artis/pull/376)). Its `frac_sum` warning has a tolerance of
+  0.2 percent in place of 2 percent ([#499](https://github.com/artis-mcrt/artis/pull/499)).
+- At the last timestep, the log has one line for each group of direction bin files, and not one line for each file
+  (commit [9288b670](https://github.com/artis-mcrt/artis/commit/9288b670)).
+- When a k-packet finds no cooling process, the log gives the cell, the timestep, the ion, and the rates before the
+  run stops ([#566](https://github.com/artis-mcrt/artis/pull/566)).
 - The bound-free opacity is faster: a nebular model needed 7.5 percent less wall time, and a classic model ran
   2.26 times faster ([#513](https://github.com/artis-mcrt/artis/pull/513), [#514](https://github.com/artis-mcrt/artis/pull/514), [#518](https://github.com/artis-mcrt/artis/pull/518)). The first of these changes the results at the rounding level.
 - A run starts with an MPI library that does not obey the alignment hint of the shared memory ([#583](https://github.com/artis-mcrt/artis/pull/583)).
@@ -542,7 +547,10 @@ The presets:
     - The Virgo submit scripts give Slurm the address `<user>@gsi.de` when `EMAIL` has no value
       (commit [aa55fc23](https://github.com/artis-mcrt/artis/commit/aa55fc23)).
     - The Leonardo cluster has job scripts (commit
-      [3cf00789](https://github.com/artis-mcrt/artis/commit/3cf00789)).
+      [3cf00789](https://github.com/artis-mcrt/artis/commit/3cf00789)). The `sn3d` job asks for 19 nodes with 112
+      ranks each (commits [f33a2353](https://github.com/artis-mcrt/artis/commit/f33a2353), [28dfe096](https://github.com/artis-mcrt/artis/commit/28dfe096), and [48252f96](https://github.com/artis-mcrt/artis/commit/48252f96)).
+    - The Virgo job scripts build with the gcc of pixi, which they install when it is absent
+      (commit [cc5b1823](https://github.com/artis-mcrt/artis/commit/cc5b1823)).
     - `scripts/run-exspec-if-needed.sh` runs `exspec` only when `emission.out` is absent (commit
       [379bf44d](https://github.com/artis-mcrt/artis/commit/379bf44d)).
 - `artistools filterpackets` and `artistools corehours` replace the scripts `filterpacketsescapedrpkt.py` and
