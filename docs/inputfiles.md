@@ -424,7 +424,7 @@ The calibration has two limits, and the log gives the result for each ion:
 - `sn3d` does not scale the low-n levels if the necessary factor is below 0.05, or if it is 2.0 or more. It then
   still makes the calibration to the total rate coefficient.
 
-The file has one block for each ion:
+The file has one block for each ion that it calibrates. An ion with no block gets no calibration:
 
 ```text
 <Z> <upper ion stage> <number of rows>
@@ -461,8 +461,13 @@ transition:
 ## gridcontributions.txt
 
 `sn3d` does not read this file. [artistools](https://github.com/artis-mcrt/artistools) writes it together with a
-kilonova model, and it gives the contribution of each tracer particle to each cell. The files of the tests have the
-columns `particleid`, `cellindex`, `frac_of_cellmass`, and `frac_of_cellmass_includemissing`.
+kilonova model, and it gives the contribution of each tracer particle to each cell. The files of the tests have these
+columns:
+
+- `particleid`;
+- `cellindex`;
+- `frac_of_cellmass`;
+- `frac_of_cellmass_includemissing`.
 
 ## The gamma-ray line files
 

@@ -146,10 +146,17 @@ files have no header, no frequency column, and no time column.
 ### The direction-resolved files
 
 The `speclc_angle_res` folder holds one file of each type for each of the 100 direction bins, e.g.
-`spec_res_00.out` to `spec_res_99.out`. The types are `light_curve_res`, `spec_res`, `emission_res`,
-`emissiontrue_res`, and `absorption_res`. A run with `POL_ON` adds `specpol_res`, `emissionpol_res`, and
-`absorptionpol_res`. Each file has the layout of the file for all directions, e.g. `spec_res_07.out` has the layout
-of `spec.out`. The values are for an observer in that direction, as if the emission were the same in all directions.
+`spec_res_00.out` to `spec_res_99.out`. The types are:
+
+- `light_curve_res`;
+- `spec_res`;
+- `emission_res`;
+- `emissiontrue_res`;
+- `absorption_res`.
+
+A run with `POL_ON` adds `specpol_res`, `emissionpol_res`, and `absorptionpol_res`. Each file has the layout of the
+file for all directions, e.g. `spec_res_07.out` has the layout of `spec.out`. The values are for an observer in that
+direction, as if the emission were the same in all directions.
 
 The number of a direction bin is 10 times its cos(theta) bin plus its phi bin. The polar angle theta is relative to
 the z axis, and the cos(theta) bin 0 starts at cos(theta) = -1. The phi bins do not follow the azimuthal angle phi in
@@ -313,9 +320,13 @@ the rank. A run without `KEEP_ESCAPED_GAMMAS` writes no rows for the escaped gam
 | `pellet_nucindex` | The nuclide of the pellet decay, as the index of `nuclides.out`, or -1 for the initial energy of the cells. |
 | `pellet_decaytype` | The decay type: 0 alpha, 1 electron capture, 2 beta-plus, 3 beta-minus, 5 spontaneous fission. The value -1 is the initial energy of the cells. |
 
-A run with `SAMPLE_RPKT_EMISSION` adds the columns of the sampled emission: `nemissiontype_updates`,
-`sampled_emissiontype`, `sampled_absorption_type`, `sampled_absorption_freq`, `sampled_em_posx`, `sampled_em_posy`,
-`sampled_em_posz`, and `sampled_em_time`.
+A run with `SAMPLE_RPKT_EMISSION` adds the columns of the sampled emission:
+
+- `nemissiontype_updates`;
+- `sampled_emissiontype`;
+- `sampled_absorption_type` and `sampled_absorption_freq`;
+- `sampled_em_posx`, `sampled_em_posy`, and `sampled_em_posz`;
+- `sampled_em_time`.
 
 The values of `type_id` and of `escape_type_id`:
 
