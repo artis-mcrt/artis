@@ -2,8 +2,8 @@
 
 This page takes a small model through a complete non-LTE (NLTE) run in the nebular phase. It makes the model folder,
 limits the levels of the atomic data, sets the options and the timesteps, follows the run, checks the results, and
-plots a spectrum. Do the [Quickstart](quickstart.md) first, because it installs the compiler, the MPI library, and
-artistools.
+plots a spectrum. Do the [Quickstart](quickstart.md) first, because it installs the compiler, the Message Passing
+Interface (MPI) library, and artistools.
 
 The simulation of this page took 75 seconds with four ranks on a laptop (Apple M4).
 

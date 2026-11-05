@@ -146,9 +146,10 @@ levels, the lines, and the bound-free transitions of each ion after it reads the
 [info]  in total 12 ions, 5263 levels (4262 ionising), 519292 lines, 14780 photoionisation transitions
 ```
 
-[ION_NLEVELS_EXCITED_NLTE](options.md#ion_nlevels_excited_nlte) sets the number of levels of each ion in full NLTE.
-The NLTE solver puts all these levels of all the ions of an element into one rate matrix, so the value sets the
-size of that matrix. The log gives the sum over all ions:
+[ION_NLEVELS_EXCITED_NLTE](options.md#ion_nlevels_excited_nlte) sets the number of excited levels of each ion in
+full NLTE. The NLTE solver puts these levels of all the ions of an element into one rate matrix. The matrix also has
+a row for the ground level of each ion, and a row for the superlevel of each ion that has one. The option thus sets
+most of the size of that matrix. The log gives the sum over all ions:
 
 ```text
 [info] Total NLTE levels: 1008, of which 11 are superlevels

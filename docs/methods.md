@@ -110,7 +110,9 @@ LTE. The log of the rank has a warning for each fallback to LTE.
     - [NLEVELS_ADD_MISSING_COLLISIONAL_TRANSITIONS](options.md#nlevels_add_missing_collisional_transitions) adds
       collisional transitions where the data has none.
     - [NLTE_USE_GTH_SOLVER](options.md#nlte_use_gth_solver) selects the Grassmann-Taksar-Heyman state elimination
-      in place of the lower-upper (LU) decomposition.
+      in place of the lower-upper (LU) decomposition. An element that
+      [FORCE_SAHA_ION_BALANCE](options.md#force_saha_ion_balance) selects, and a solution with the time term, always
+      use the LU decomposition.
     - [NLTE_TE_NNE_MAXITER](options.md#nlte_te_nne_maxiter), [NLTE_TE_NNE_RELTOL](options.md#nlte_te_nne_reltol),
       and [NLTE_TE_NNE_USE_ANDERSON_ACCEL](options.md#nlte_te_nne_use_anderson_accel) control the iteration of
       the cell.
@@ -205,7 +207,8 @@ rates, and the thermal balance then counts all of the deposited lepton energy as
 
 - Options:
     - [NT_SCHEME](options.md#nt_scheme) selects the Spencer-Fano solution, the work function approximation, or no
-      non-thermal ionisation.
+      non-thermal ionisation. With no non-thermal ionisation, the run also has no non-thermal excitation, and all of
+      the deposited lepton energy heats the gas.
     - [SF_RE_SOLVE_WITHIN_TIMESTEP_MIN_NNEPERION_FRACDIFF](options.md#sf_re_solve_within_timestep_min_nneperion_fracdiff)
       controls a new solution inside a timestep.
     - [NTEXCITATION_MAXNLEVELS_LOWER](options.md#ntexcitation_maxnlevels_lower),
