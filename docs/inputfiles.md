@@ -94,7 +94,7 @@ The LTE timesteps and the grey cells:
   `num_grey_timesteps`.
 
 At the start of a new simulation, `sn3d` writes `input.txt` again with a comment on each line and with the value of
-`nprocs_exspec`, and it keeps the same content in `input-newrun.txt`. If `input.txt` is absent at the start of a run,
+`nprocs_exspec`. It keeps the same content in `input-newrun.txt`. If `input.txt` is absent at the start of a run,
 rank 0 restores it from `input-newrun.txt`.
 
 ## model.txt
@@ -224,7 +224,7 @@ The second value and the third value are unused and must be 0. Then the file has
 | highest ion stage | The highest ion stage of the run. For an element with ions, `nions` must be equal to the highest ion stage - the lowest ion stage + 1. An element with `nions` 0 has no such rule. |
 | `nlevelsmax` | The maximum number of levels that the code reads for each ion of the element. A negative value reads every level. The value 0 stops the run for an element with ions. With `SINGLE_LEVEL_TOP_ION`, the highest ion stage keeps one level. |
 | abundance | Unused. The value must be 0 or more. |
-| mass | The mean mass of the stable nuclides of the element in atomic mass units. |
+| mass | The mean mass of the stable nuclides of the element in atomic mass units. The value must be above 0. |
 
 ## adata.txt
 
@@ -299,8 +299,8 @@ before a target line, and not before the grid values or between the cross-sectio
 <NPHIXSNUINCREMENT>
 ```
 
-Point number i of a table, from 0, has the frequency nu_edge (1 + i `NPHIXSNUINCREMENT`), where nu_edge is the
-threshold frequency of the level.
+Both values must be above 0. Point number i of a table, from 0, has the frequency nu_edge (1 + i
+`NPHIXSNUINCREMENT`), where nu_edge is the threshold frequency of the level.
 
 Then each table of `phixsdata_v2.txt` has this layout:
 
@@ -354,7 +354,7 @@ lines.
 | 1 | `nobsdirections` | The number of observer directions, which must be 1 or more. |
 | 2 | one value for each direction | The cosine of the polar angle theta of each direction, from -1 to 1. |
 | 3 | one value for each direction | The azimuthal angle phi of each direction in degrees. |
-| 4 | flag, and optional values | With the flag 1, the number of spectra for each observer follows, and then one opacity value for each spectrum. With a different flag, each observer gets one spectrum with the full opacity. |
+| 4 | flag, and optional values | With the flag 1, the number of spectra for each observer follows, and then one opacity value for each spectrum. The number must be 1 or more. With a different flag, each observer gets one spectrum with the full opacity. |
 | 5 | `flag tmin_days tmax_days` | With the flag 1, the virtual packets must arrive between these two times in days. With a different flag, the range is from `VSPEC_TIMEMIN` to `VSPEC_TIMEMAX` of `vpkt.h`, but the two values must stay. |
 | 6 | flag, and optional values | With the flag 1, the number of wavelength ranges follows, and then the lowest and the highest wavelength of each range in Angstroms. With a different flag, the range is from `VSPEC_NUMIN` to `VSPEC_NUMAX` of `vpkt.h`. |
 | 7 | `flag optical_depth_is_thick_vpkt` | With the flag 1, a cell with a grey optical depth above this value sends no virtual packets. With a different flag, the value of `input.txt` applies, but the value must stay. With the flag 1, the value must be above 0. |
