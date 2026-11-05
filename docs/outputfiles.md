@@ -143,7 +143,7 @@ the z axis, and the cos(theta) bin 0 starts at cos(theta) = -1. The phi bins do 
 sequence. The bins 0 to 4 go from 2 pi down to pi, and the bins 5 to 9 go from 0 up to pi.
 
 `light_curve_res.out`, `spec_res.out`, and `specpol_res.out` hold the content of the files of all direction bins, one
-after the other in the sequence of the bin numbers.
+after the other in the sequence of the bin numbers. Only a run with `POL_ON` has `specpol_res.out`.
 
 ### deposition.out
 
@@ -212,7 +212,8 @@ ion stage and a value, e.g. `2: 4.685e+05`:
 
 ### The nlte files
 
-An nlte file has a header row and then one row for each level of the NLTE solution:
+A run with no NLTE levels writes no nlte file. An nlte file has a header row and then one row for each level of the
+NLTE solution:
 
 | Column | Meaning |
 | --- | --- |

@@ -221,7 +221,7 @@ The second value and the third value are unused and must be 0. Then the file has
 | `nions` | The number of ion stages. With the value 0, the element has no ions, and the code keeps only its nuclide abundances. |
 | lowest ion stage | The lowest ion stage of the run. The ion stage 1 is the neutral atom. |
 | highest ion stage | The highest ion stage of the run. For an element with ions, `nions` must be equal to the highest ion stage - the lowest ion stage + 1. An element with `nions` 0 has no such rule. |
-| `nlevelsmax` | The maximum number of levels that the code reads for each ion of the element. A negative value reads every level. With `SINGLE_LEVEL_TOP_ION`, the highest ion stage keeps one level. |
+| `nlevelsmax` | The maximum number of levels that the code reads for each ion of the element. A negative value reads every level. The value 0 stops the run for an element with ions. With `SINGLE_LEVEL_TOP_ION`, the highest ion stage keeps one level. |
 | abundance | Unused. The value must be 0 or more. |
 | mass | The mean mass of the stable nuclides of the element in atomic mass units. |
 
@@ -392,6 +392,11 @@ cells.
 An optional file with recombination rate coefficients. With this file, `sn3d` scales the photoionisation
 cross-sections of each ion, so that its recombination rate coefficient at the temperature
 `RECOMBCALIBRATION_T_ELEC` agrees with the file. The file can have comment lines.
+
+`sn3d` makes no calibration in two conditions, and the log says so:
+
+- the atomic data gives a recombination rate coefficient of the ion that is not positive;
+- for the low-n levels, the necessary factor is below 0.05, or it is 2.0 or more.
 
 The file has one block for each ion:
 
