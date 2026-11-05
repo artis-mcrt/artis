@@ -109,6 +109,8 @@ the rank n and the thread t. `output_0-0.txt` in the model folder is a symlink t
 the messages of the cells that it updates, so the message about a cell can be in the log of a different rank or
 thread.
 
+This section uses LTE for the local thermodynamic equilibrium, and NLTE for a state that is not in LTE.
+
 ### The tags of the log lines
 
 Some lines have a tag after the time:

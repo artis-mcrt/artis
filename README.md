@@ -14,7 +14,7 @@ ARTIS is a 3D Monte Carlo radiative transfer code for ejecta in homologous expan
 The full documentation is at [artis-mcrt.readthedocs.io](https://artis-mcrt.readthedocs.io/). It comes from the [docs](docs) folder of this repository.
 
 - [Quickstart](https://artis-mcrt.readthedocs.io/en/latest/quickstart.html): a first simulation and a plot on a laptop.
-- [Example: a nebular spectrum](https://artis-mcrt.readthedocs.io/en/latest/example.html): a complete NLTE run of a small model, with the checks and a spectrum.
+- [Example: a nebular spectrum](https://artis-mcrt.readthedocs.io/en/latest/example.html): a complete run of a small model with non-LTE (NLTE) populations, with the checks and a spectrum.
 - [How a simulation works](https://artis-mcrt.readthedocs.io/en/latest/simulation.html): the packets, the two grids, and the timestep loop.
 - [Methods and references](https://artis-mcrt.readthedocs.io/en/latest/methods.html): each method, its options, and its reference.
 - [Plan a simulation](https://artis-mcrt.readthedocs.io/en/latest/planning.html): what sets the cost and the memory of a run, and how you measure them.

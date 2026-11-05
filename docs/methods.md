@@ -90,7 +90,10 @@ all the levels of all the ions of an element into one rate matrix. The solution 
 populations. Each ion has a ground level and a number of excited levels in full NLTE. An ion with more levels above
 them also has one superlevel for those levels. An autoionising level is not in the superlevel, and it keeps its own
 row in the matrix. The cell repeats the solutions of the populations, of T_e, and of the
-non-thermal electrons until T_e and the electron density change by less than a tolerance. The iteration also stops
+non-thermal electrons until T_e and the electron density change by less than a tolerance. With
+[NLTE_TE_NNE_USE_ANDERSON_ACCEL](options.md#nlte_te_nne_use_anderson_accel), the iteration also needs an estimate of
+the remaining error below the tolerance, and it tests the change of the populations of the significant ions. The
+iteration also stops
 after [NLTE_TE_NNE_MAXITER](options.md#nlte_te_nne_maxiter) passes. The cell then keeps the last solution, and the
 log of the rank has a message with the text `failed to converge`.
 
