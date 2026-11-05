@@ -38,9 +38,10 @@ At the start of each timestep after the first timestep of a job, each rank write
 files of the previous timestep only after all the ranks have written the new files, so the model folder holds two
 sets for a short time.
 
-The escaped packets of a timestep make the spectrum of that timestep, so their number sets the noise of the
-spectrum. The relative noise of a sum of N packets of equal energy is 1/sqrt(N). The log of each rank gives the
-count for that rank:
+The spectrum of a timestep holds the escaped packets that arrive at the observer in that timestep, so their number
+sets the noise of the spectrum. The relative noise of a sum of N packets of equal energy is 1/sqrt(N). The log of
+each rank gives the packets that escaped during the propagation of a timestep. This count is only a guide, because
+the light travel time moves a packet to the timestep of its arrival:
 
 ```text
 During timestep 33 on MPI process 0, 47523 pellets decayed and 49411 packets escaped. (t=220.124 [d])

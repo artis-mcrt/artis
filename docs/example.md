@@ -90,8 +90,9 @@ The file of this dataset thus selects Fe I to Fe V, Co II to Co IV, and Ni II to
 each ion. `adata.txt` holds up to 2823 levels for an ion (Fe II). A run reads only the lowest levels up to the limit,
 and only the lines between these levels.
 
-A lower limit gives a quicker run with less memory, and it also changes the results, because the run then has fewer
-lines. This table gives the memory lines of the log (see section 7) and the wall time for three limits. Each row is a
+A lower limit gives a quicker run with less memory, and it also changes the results. The run then has fewer lines,
+and it has no photoionisation from the levels above the limit. The run stops at the start if a kept level
+photoionises to a level of the upper ion that is above the limit. This table gives the memory lines of the log (see section 7) and the wall time for three limits. Each row is a
 run of this model with four ranks, 20 timesteps, and 2e6 packets.
 
 | Column 5 | Line list | Transition lists | Cell cache | Wall time |

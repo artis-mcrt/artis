@@ -31,6 +31,7 @@ through the lines one after the other. The continuum opacity is the sum of the b
       photoionisation cross section.
     - [DIPOLE](options.md#dipole) selects the direction of an electron scattering.
     - [NU_MIN_R](options.md#nu_min_r) and [NU_MAX_R](options.md#nu_max_r) set the frequency limits of the spectra.
+      They also limit the frequency that a k-packet samples from a Planck function, so they change the transport.
 - The alternatives are the [binned opacities](#the-binned-opacities-and-the-thermalisation-probability) and the
   [grey opacity of a thick cell](#the-grey-opacity-of-a-thick-cell).
 
@@ -172,8 +173,10 @@ The photoionisation rate coefficient of a level comes from one of three sources:
   ([DETAILED_BF_ESTIMATORS_FIRST_TIMESTEP](options.md#detailed_bf_estimators_first_timestep) and
   [DETAILED_BF_ESTIMATORS_LEVEL_SELECTED](options.md#detailed_bf_estimators_level_selected)).
 
-If the model folder holds `recombrates.txt`, the code calibrates the total recombination rate of each ion to that file
-at the temperature [RECOMBCALIBRATION_T_ELEC](options.md#recombcalibration_t_elec).
+If the model folder holds `recombrates.txt`, the code calibrates the total recombination rate of an ion to that file
+at the temperature [RECOMBCALIBRATION_T_ELEC](options.md#recombcalibration_t_elec). An ion gets no calibration when
+the file has no block for it, when the file gives a negative rate, or when the atomic data gives no recombination
+for it. The log gives the result for each ion (see [Input files](inputfiles.md)).
 
 - Reference: Shingles et al. (2020), MNRAS, 492, 2029-2043, section 2.2, doi:10.1093/mnras/stz3412.
 
@@ -232,7 +235,8 @@ The fragments of a spontaneous fission are an exception. They always deposit all
 
 A gamma packet gives its energy to the gas by Compton scattering, by photoelectric absorption, or by pair production.
 Every preset transports the gamma packets with frequency-dependent opacities. The alternatives are a grey opacity
-and an analytic thermalisation efficiency, which deposits a fraction of the gamma energy at once.
+and an analytic thermalisation efficiency. With that efficiency, a gamma packet deposits all of its energy at once
+with the probability of the efficiency, and it escapes if not.
 
 - Options:
     - [GAMMA_THERMALISATION_SCHEME](options.md#gamma_thermalisation_scheme) selects the transport or an analytic
