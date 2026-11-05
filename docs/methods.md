@@ -123,7 +123,9 @@ LTE. The log of the rank has a warning for each fallback to LTE.
 
 ### The thermal balance
 
-The code solves heating = cooling for the electron temperature of each cell. The heating rates are the bound-free
+A cell in an LTE timestep, and a cell with the grey opacity, have no thermal balance. The code sets their T_e to the
+temperature of the mean intensity. For each other cell, the code solves heating = cooling for the electron
+temperature. The heating rates are the bound-free
 heating, the free-free heating, the collisional de-excitation, and the non-thermal heating. The cooling rates are
 the free-free, the free-bound, and the collisional cooling, and the adiabatic cooling of the expansion. From the
 timestep of [NLTE_TIME_DEPENDENT_FIRST_TIMESTEP](options.md#nlte_time_dependent_first_timestep), the cooling also
@@ -175,8 +177,8 @@ at the temperature [RECOMBCALIBRATION_T_ELEC](options.md#recombcalibration_t_ele
 The fast leptons of the decays lose their energy to the heating, the ionisation, and the excitation of the gas. The
 Spencer-Fano solver finds the energy spectrum of these electrons on a uniform energy grid. The spectrum gives the
 three fractions of the deposited energy, and the non-thermal ionisation and excitation rates for the NLTE solver.
-The source term of the Auger electrons is an addition to the equation. The work function approximation is the
-alternative. It gives ionisation rates and no excitation rates.
+With [SF_AUGER_CONTRIBUTION_ON](options.md#sf_auger_contribution_on), the equation also has the source term of the
+Auger electrons. The work function approximation is the alternative. It gives ionisation rates and no excitation rates.
 
 - Options:
     - [NT_SCHEME](options.md#nt_scheme) selects the Spencer-Fano solution, the work function approximation, or no
@@ -203,7 +205,12 @@ The decay network holds the alpha decays, the beta-minus decays, the beta-plus d
 the spontaneous fission decays. The code gets the abundance of each nuclide at
 each time from the solutions of the Bateman equation. The `data` folder of the repository holds the decay data and
 the gamma-ray lines of each nuclide (see [Atomic and model data](data.md)). The decay particles deposit their energy
-at once, or the code transports them and they lose their energy over time.
+in one of three ways:
+
+- They deposit all of their energy at once.
+- The code transports them, and they lose their energy over time.
+- With an analytic thermalisation efficiency, a packet of particles deposits its energy at once with the probability
+  of that efficiency. If not, the packet escapes and deposits nothing.
 
 - Options: [PARTICLE_THERMALISATION_SCHEME](options.md#particle_thermalisation_scheme) selects the instant
   deposition, a transport with the Monte Carlo method, or an analytic thermalisation efficiency.
