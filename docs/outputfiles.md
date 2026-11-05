@@ -401,7 +401,7 @@ whose virtual packet escaped in one direction or more:
 | `modelgridrankassignments.out` | A header row, and then one row for each rank: the rank, its first model cell, its cell count, and its count of cells with matter. |
 | `nuclides.out` | A header row, and then the nuclide index, the atomic number, and the mass number of each nuclide. |
 | `gammalinelist.out` | A header row, and then one row for each gamma-ray line in the sequence of the energy. The columns are the line index, the nuclide index, the atomic number, and the mass number. Then come the index of the line in its nuclide, the energy [MeV], and the number of photons for each decay. |
-| `bflist.out` | The number of bound-free continua, and then one row for each continuum: its index, the element index, the ion index, the lower level index, and the level index of the upper ion. All of them start at 0. |
+| `bflist.out` | The number of bound-free continua, and then one row for each continuum. The first three columns are its index, the element index, and the ion index. Then come the lower level index and the level index of the upper ion. All of them start at 0. |
 
 ## A new simulation removes the files of the previous one
 

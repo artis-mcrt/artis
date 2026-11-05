@@ -196,7 +196,8 @@ The file has one row for each cell of `model.txt`, also for an empty cell, in th
 ```
 
 The values start at hydrogen and continue through the atomic numbers. A row can end after the last element that the
-model needs.
+model needs. A value must not be negative. `sn3d` sets a negative value above -1e-6 to 0, and a value at or below
+that limit stops the run.
 
 For a 1D or a 2D model, `sn3d` divides the values of each cell by their sum, so the values can also be proportional to
 the mass fractions, e.g. element densities. For a 3D model, `sn3d` uses the values without normalisation. A 3D cell
