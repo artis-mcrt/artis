@@ -425,8 +425,8 @@ The file has one block for each ion:
 - The second line occurs once for each row. `rrc_low_n` is the rate coefficient to the low-n levels, and `rrc_total`
   is the total rate coefficient, both in cm^3/s.
 - `sn3d` interpolates each rate coefficient between the two rows around `RECOMBCALIBRATION_T_ELEC`. It makes no
-  calibration with a result that is negative. Give a negative value in both of these rows for a rate coefficient that
-  is not available, because a negative value in only one row can give a positive result.
+  calibration with a result that is negative. For a rate coefficient that is not available, give a negative value in
+  both of these rows. A negative value in only one row can give a positive result.
 - The rows of an ion that the run uses must include a temperature below and a temperature above
   `RECOMBCALIBRATION_T_ELEC`.
 
