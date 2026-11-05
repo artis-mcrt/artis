@@ -241,7 +241,8 @@ back to LTE, and each element of a cell with the grey opacity.
 
 Only a run with `MULTIBIN_RADFIELD_FIRST_TIMESTEP` writes a radfield file. It has a header row and then one row for
 each bin of the radiation field model. A cell in an LTE timestep, and a cell with the grey opacity, have no rows,
-because they get no fit.
+because they get no fit. The first timestep of each job also has no rows, because the grid update of that timestep
+makes no fit.
 
 | Column | Meaning |
 | --- | --- |
