@@ -509,6 +509,10 @@ The presets:
 - A `TESTMODE=ON` run writes and reads an empty restart array with no message of the sanitizer
   (commit [471abde7](https://github.com/artis-mcrt/artis/commit/471abde7)).
 - clang and hipcc build on a host with more than one gcc installation ([#563](https://github.com/artis-mcrt/artis/pull/563)).
+- A build with nvc++ compiles a source file again after a change of a header that the file includes, e.g. of
+  `artisoptions.h`. Before, the Makefile wrote no dependency files for nvc++ ([#528](https://github.com/artis-mcrt/artis/pull/528)).
+- A run with `sn3d -w` starts a timestep only if the remaining wall time is at least 1.5 times the time of the last
+  propagation and grid update, plus 120 s. For the last requested timestep, the addition is 900 s ([#598](https://github.com/artis-mcrt/artis/pull/598)).
 - `sn3d` and `exspec` find a process that still runs in a model folder whose path holds a space
   (commit [4bec60c5](https://github.com/artis-mcrt/artis/commit/4bec60c5)).
 - `scripts/clean.sh` and the start of a new simulation also remove `out.txt.zst` ([#643](https://github.com/artis-mcrt/artis/pull/643)).
@@ -562,7 +566,7 @@ The presets:
     - The Virgo job scripts build with the gcc of pixi, which they install when it is absent
       (commit [cc5b1823](https://github.com/artis-mcrt/artis/commit/cc5b1823)). The Virgo submit script selects the nodes with AMD EPYC 9654 processors
       (commit [dec9e1bb](https://github.com/artis-mcrt/artis/commit/dec9e1bb)).
-    - `scripts/run-exspec-if-needed.sh` runs `exspec` only when `emission.out` is absent (commit
+    - `scripts/run-exspec-if-needed.sh` runs `exspec` only when `emission.out` and `emission.out.zst` are absent (commit
       [379bf44d](https://github.com/artis-mcrt/artis/commit/379bf44d)).
 - `artistools filterpackets` and `artistools corehours` replace the scripts `filterpacketsescapedrpkt.py` and
   `sumcorehourslogs.py` ([#707](https://github.com/artis-mcrt/artis/pull/707)). `scripts/movefiles.sh` is gone,
