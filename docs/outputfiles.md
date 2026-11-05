@@ -137,7 +137,7 @@ of `spec.out`. The values are for an observer in that direction, as if the emiss
 
 The number of a direction bin is 10 times its cos(theta) bin plus its phi bin. The polar angle theta is relative to
 the z axis, and the cos(theta) bin 0 starts at cos(theta) = -1. The phi bins do not follow the azimuthal angle phi in
-sequence: the bins 0 to 4 go from 2 pi down to pi, and the bins 5 to 9 go from 0 up to pi.
+sequence. The bins 0 to 4 go from 2 pi down to pi, and the bins 5 to 9 go from 0 up to pi.
 
 `light_curve_res.out`, `spec_res.out`, and `specpol_res.out` hold the content of the files of all direction bins, one
 after the other in the sequence of the bin numbers.
@@ -249,20 +249,20 @@ the rank. A run without `KEEP_ESCAPED_GAMMAS` writes no rows for the escaped gam
 | Column | Meaning |
 | --- | --- |
 | `number` | The number of the packet, which is unique only inside one rank. |
-| `where` | The index of the propagation cell of the packet. `grid.out` gives the model cell. |
+| `where` | The index of the propagation cell of the packet. `grid.out` gives the model cell. An empty propagation cell has no row in `grid.out`. |
 | `type_id` | The type of the packet (see the table below). |
 | `posx`, `posy`, `posz` | The position. |
 | `dirx`, `diry`, `dirz` | The direction, as a unit vector. |
 | `tdecay` | The decay time of the pellet. |
 | `e_cmf`, `e_rf` | The energy in the comoving frame and in the rest frame. |
-| `nu_cmf`, `nu_rf` | The frequency in the comoving frame and in the rest frame. |
+| `nu_cmf`, `nu_rf` | The frequency in the comoving frame and in the rest frame. For a pellet and for a packet of particles, `nu_cmf` holds the energy divided by the Planck constant, and `nu_rf` has no meaning. |
 | `escape_type_id` | The type of the packet when it escaped, or 0. |
 | `escape_time` | The time when the packet left the grid, or -1. |
 | `emissiontype` | The process of the last emission (see below). |
 | `trueemissiontype` | The process of the last emission from the thermal energy of the gas. |
-| `em_posx`, `em_posy`, `em_posz` | The position of the last emission. An electron scattering also sets the position. |
+| `em_posx`, `em_posy`, `em_posz` | The position of the last emission. An electron scattering also sets the position, and the Compton scattering of a gamma packet sets the position and `em_time`. |
 | `absorption_type`, `absorption_freq` | The process and the rest-frame frequency of the last absorption (see below). |
-| `nscatterings` | The number of electron scatterings since the last emission. |
+| `nscatterings` | The number of electron scatterings since the last emission. An event in a cell with the grey opacity also adds one. |
 | `em_time` | The time of the last emission. |
 | `stokes_q`, `stokes_u` | The Stokes parameters Q/I and U/I. Only a run with `POL_ON` has these columns. |
 | `originated_from_particlenotgamma` | 1 if the decay of the pellet made a particle, and 0 if it made a gamma ray. The initial energy of the cells also holds 0, and its `pellet_decaytype` is -1. |
@@ -330,8 +330,10 @@ spectra of the first direction come first.
 
 `vpkt_grid_nnnn.out` has one row for each cell of the velocity grid, which has `VGRID_NY` times `VGRID_NZ` cells.
 The rows of the first wavelength range of the first observer direction come first. Each row holds the two velocity
-coordinates of the cell [cm/s] in the plane at a right angle to the observer direction. Then it holds the energy
-[erg] of the virtual packets for Stokes I, Q, and U.
+coordinates of the cell [cm/s] in the plane at a right angle to the observer direction. Then it holds three sums
+over the virtual packets, for Stokes I, Q, and U. Each virtual packet adds its rest-frame energy [erg], multiplied by
+the probability per unit solid angle of the direction to the observer and by exp(-tau). The values have no factor of
+4 pi.
 
 `vpackets_nnnn.out` has a header row that starts with `#`. Then it has one row for each event of a real packet
 whose virtual packet escaped in one direction or more:

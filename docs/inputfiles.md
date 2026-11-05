@@ -221,7 +221,7 @@ The second value and the third value are unused and must be 0. Then the file has
 | `nions` | The number of ion stages. With the value 0, the element has no ions, and the code keeps only its nuclide abundances. |
 | lowest ion stage | The lowest ion stage of the run. The ion stage 1 is the neutral atom. |
 | highest ion stage | The highest ion stage of the run. `nions` must be equal to the highest ion stage - the lowest ion stage + 1. |
-| `nlevelsmax` | The maximum number of levels that the code reads for each ion of the element. A negative value reads every level. |
+| `nlevelsmax` | The maximum number of levels that the code reads for each ion of the element. A negative value reads every level. With `SINGLE_LEVEL_TOP_ION`, the highest ion stage keeps one level. |
 | abundance | Unused. The value must be 0 or more. |
 | mass | The mean mass of the stable nuclides of the element in atomic mass units. |
 
@@ -244,7 +244,8 @@ Then one row for each level:
 ```
 
 - The energy of a level is relative to the ground level of the ion.
-- `sn3d` reads the number of transitions and the level name, and it does not use them.
+- `sn3d` reads the number of transitions, and it does not use it. The level name is optional, because `sn3d` does
+  not read the text after the four values.
 - A level with an energy below the energy of the level before gives a warning in the log.
 
 The level indices start at 0 or at 1. `sn3d` finds the first index from the first level of `adata.txt`.
@@ -440,4 +441,9 @@ The gamma-ray lines of each nuclide are in the `data` folder of the repository. 
 ```
 
 The second line occurs once for each gamma-ray line. A nuclide without a file, but with a gamma-ray energy in its
-decay data, gets one line at that energy.
+decay data, gets one line at that energy. These nuclides are an exception, and the run stops when one of them is in
+the run and has no file:
+
+- Ni56 and Co56;
+- Cr48 and V48;
+- Ni57 and Co57.
