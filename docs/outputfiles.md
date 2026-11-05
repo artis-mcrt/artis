@@ -167,8 +167,9 @@ gram of the model.
 
 ### The estimator files
 
-An estimator file is free text. It has one block for each timestep and each model cell. The first line of a block
-has pairs of a name and a value:
+An estimator file is free text. It has one block for each timestep and each model cell. The file of one rank,
+`estimators_nnnn.out`, holds only the cells that the rank updates, and the combined file holds the cells of all
+ranks. The first line of a block has pairs of a name and a value:
 
 ```text
 timestep 0 modelgridindex 1 titeration 0 TR 17366.9 Te 17366.9 W 1 TJ 17366.9 grey_depth 667.454 thick 1 nne 2.05621e+08 Ye 0.434379 tdays    0.43
@@ -236,8 +237,9 @@ each bin of the radiation field model:
 | `J_nu_avg` | `J` divided by the width of the bin [erg/s/cm^2/sr/Hz]. |
 | `T_R`, `W` | The temperature [K] and the dilution factor of the diluted blackbody of the bin. |
 
-The row of a line with a detailed estimator holds the frequency of the line in `nu_lower` and in `nu_upper`, and the
-estimator of the line in `J_nu_avg`. Its other values are -1.
+The row of the full spectrum (`bin_num` -1) holds 0 in `nu_lower`, in `nu_upper`, and in `J_nu_avg`. The row of a
+line with a detailed estimator holds the frequency of the line in `nu_lower` and in `nu_upper`, and the estimator of
+the line in `J_nu_avg`. Its other values are -1.
 
 ### The packet files
 
@@ -263,7 +265,7 @@ the rank. A run without `KEEP_ESCAPED_GAMMAS` writes no rows for the escaped gam
 | `nscatterings` | The number of electron scatterings since the last emission. |
 | `em_time` | The time of the last emission. |
 | `stokes_q`, `stokes_u` | The Stokes parameters Q/I and U/I. Only a run with `POL_ON` has these columns. |
-| `originated_from_particlenotgamma` | 1 if the decay of the pellet made a particle, and 0 if it made a gamma ray. |
+| `originated_from_particlenotgamma` | 1 if the decay of the pellet made a particle, and 0 if it made a gamma ray. The initial energy of the cells also holds 0, and its `pellet_decaytype` is -1. |
 | `trueem_posx`, `trueem_posy`, `trueem_posz`, `trueem_time` | The position and the time of the last emission from the thermal energy of the gas. |
 | `pellet_nucindex` | The nuclide of the pellet decay, as the index of `nuclides.out`. |
 | `pellet_decaytype` | The decay type: 0 alpha, 1 electron capture, 2 beta-plus, 3 beta-minus, 5 spontaneous fission. The value -1 is the initial energy of the cells. |
@@ -349,7 +351,7 @@ whose virtual packet escaped in one direction or more:
 | `grid.out` | The propagation cell index and the model cell index of each propagation cell that holds matter. |
 | `modelgridrankassignments.out` | A header row, and then one row for each rank: the rank, its first model cell, its cell count, and its count of cells with matter. |
 | `nuclides.out` | A header row, and then the nuclide index, the atomic number, and the mass number of each nuclide. |
-| `gammalinelist.out` | A header row, and then one row for each gamma-ray line in the sequence of the energy: the line index, the nuclide index, the atomic number, the mass number, the index of the line in its nuclide, the energy [MeV], and the number of photons for each decay. |
+| `gammalinelist.out` | A header row, and then one row for each gamma-ray line in the sequence of the energy. The columns are the line index, the nuclide index, the atomic number, and the mass number. Then come the index of the line in its nuclide, the energy [MeV], and the number of photons for each decay. |
 | `bflist.out` | The number of bound-free continua, and then one row for each continuum: its index, the element index, the ion index, the lower level index, and the level index of the upper ion. All of them start at 0. |
 
 ## A new simulation removes the files of the previous one

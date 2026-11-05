@@ -284,8 +284,9 @@ The code finds the format of each block from the number of columns in its first 
 ## phixsdata_v2.txt and phixsdata.txt
 
 These files hold the photoionisation cross-sections. A run needs one of them, and it can read both. `phixsdata_v2.txt`
-has the same frequency grid for every table, and `phixsdata.txt` has an energy table for each level. Both files can
-have comment lines.
+has the same frequency grid for every table, and `phixsdata.txt` has an energy table for each level.
+`phixsdata.txt` can have comment lines. `phixsdata_v2.txt` can have them only before the header line of a table and
+before a target line, and not before the grid values or between the cross-section values.
 
 `phixsdata_v2.txt` starts with the grid:
 
@@ -399,7 +400,9 @@ The file has one block for each ion:
 - The upper ion stage is the ion stage that recombines.
 - The second line occurs once for each row. `rrc_low_n` is the rate coefficient to the low-n levels, and `rrc_total`
   is the total rate coefficient, both in cm^3/s.
-- A negative rate coefficient means that the value is not available, and `sn3d` then makes no calibration with it.
+- `sn3d` interpolates each rate coefficient between the two rows around `RECOMBCALIBRATION_T_ELEC`. It makes no
+  calibration with a result that is negative. Give a negative value in both of these rows for a rate coefficient that
+  is not available, because a negative value in only one row can give a positive result.
 - The rows of an ion that the run uses must include a temperature below and a temperature above
   `RECOMBCALIBRATION_T_ELEC`.
 
