@@ -6,6 +6,8 @@ model. [Example: a nebular spectrum](example.md) shows the effect of some of the
 
 ## The values
 
+This page uses LTE for the local thermodynamic equilibrium, and NLTE for a state that is not in LTE.
+
 | Value | Where | What it sets |
 | --- | --- | --- |
 | `NUM_PACKETS` | `artisoptions.h` | the memory of the packets, the work of the propagation, and the noise |

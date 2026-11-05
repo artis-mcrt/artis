@@ -132,7 +132,9 @@ LTE. The log of the rank has a warning for each fallback to LTE.
 ### The thermal balance
 
 A cell in an LTE timestep, and a cell with the grey opacity, have no thermal balance. The code sets their T_e to the
-temperature of the mean intensity. For each other cell, the code solves heating = cooling for the electron
+temperature of the mean intensity. The first timestep of a new simulation is different: each cell keeps its initial
+temperature, which the code calculates from the trapped energy of the decays before the start time. For each other
+cell, the code solves heating = cooling for the electron
 temperature. The heating rates are the bound-free
 heating, the free-free heating, the collisional de-excitation, and the non-thermal heating. The cooling rates are
 the free-free, the free-bound, and the collisional cooling, and the adiabatic cooling of the expansion. From the
@@ -151,8 +153,8 @@ balance, and the log of its rank has a warning (see [Troubleshooting](troublesho
 The packets add to the estimators of the radiation field of each cell that they enter. The grid update fits a dilute
 blackbody to the full spectrum of each cell, with a dilution factor W and a radiation temperature T_R. With the
 multibin model, it also fits a dilute blackbody to each frequency bin. The rates of the photoionisation and of the
-bound-free heating use these fits, except for a continuum with a detailed bound-free estimator (see the next
-section). A cell in an LTE timestep, and a cell with the grey opacity, get no fit. The code then sets T_R to the
+bound-free heating use these fits. The photoionisation rate of a continuum with a detailed bound-free estimator is
+the exception (see the next section). The bound-free heating of that continuum still uses the fits. A cell in an LTE timestep, and a cell with the grey opacity, get no fit. The code then sets T_R to the
 temperature of the mean intensity, and W to 1.
 
 - Options:
