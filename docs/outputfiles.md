@@ -54,8 +54,14 @@ A run writes these files into the model folder:
   `INSTANTFULLDEPOSITION` and the heating of the cells uses the analytic emission rates. For a beta-plus decay, the
   `Qdot_ana_erg/s/g` column uses the energy Q_EC, which includes the annihilation of the positron.
 - `linelist.out`: the list of the atomic lines. The first row is a header that starts with "#" and names the
-  columns. They are the vacuum wavelength in Angstroms, the atomic number, the ion stage, the upper level index, and
-  the lower level index. The level indices start at 0 in each ion. Each later row is one line, in the order of the line index that the
+  columns:
+    - the vacuum wavelength in Angstroms;
+    - the atomic number;
+    - the ion stage;
+    - the upper level index;
+    - the lower level index.
+
+  The level indices start at 0 in each ion. Each later row is one line, in the order of the line index that the
   emission and absorption codes of the packets use. Only the first job of a simulation writes this file.
 - the reference tables of the setup, which rank 0 writes:
     - `timesteps.out`: each timestep, with its start, its midpoint, and its width in days;
@@ -213,7 +219,7 @@ above zero in the cell:
 | `gamma_NT` | The non-thermal ionisation rate coefficient [1/s]. Only a run with a non-thermal solver has this line. |
 | `corrphotoionrenorm` | The renormalisation factor of the tabulated photoionisation coefficient of each ion stage. Only a run with `USE_LUT_PHOTOION` has this line. |
 | `gammaestimator` | The ionisation rate of each ion stage, divided by the population of its ground level [1/s]. Only a run with `USE_LUT_PHOTOION` has this line. This line and `corrphotoionrenorm` hold only the ion stages with a photoionisation from the ground level, and they have no value for the highest ion stage. |
-| `heating_bf`, `heating_coll`, `heating_ff`, `cooling_ff`, `cooling_fb`, `cooling_coll` | The heating and the cooling rate of each ion [erg/s/cm^3]. Only a run with `WRITE_ION_HEATING_COOLING_RATES` has these lines. A cell with no thermal balance in the grid update has none of them: a cell in an LTE timestep, a cell with the grey opacity, and each cell in the first timestep of a job. `heating_bf` and `cooling_fb` have no value for the highest ion stage. `heating_coll` also needs `COLLISIONAL_HEATING_FROM_LEVELPOPS`. |
+| `heating_bf`, `heating_coll`, `heating_ff`, `cooling_ff`, `cooling_fb`, `cooling_coll` | The heating and the cooling rate of each ion [erg/s/cm^3]. Only a run with `WRITE_ION_HEATING_COOLING_RATES` has these lines. A cell with no thermal balance in the grid update has none of them. This is a cell in an LTE timestep, a cell with the grey opacity, and each cell in the first timestep of a job. `heating_bf` and `cooling_fb` have no value for the highest ion stage. `heating_coll` also needs `COLLISIONAL_HEATING_FROM_LEVELPOPS`. |
 | `emission_ana:` | The emission rate of the gamma rays and of each particle type [erg/s/cm^3], from the decay data and the abundances. |
 | `deposition:` | The deposition rate of the gamma rays and of each particle type [erg/s/cm^3]. |
 | `heating:` | The free-free, the bound-free, and the collisional heating rate, and the heating rate of the deposition [erg/s/cm^3]. `heating_dep/total_dep` is the fraction of the deposition that heats the gas. |

@@ -160,8 +160,8 @@ The columns of each cell:
 | `pos_rcyl_mid`, `pos_z_mid` | 2D | The midpoint of the cell [cm] at `t_model`. |
 | `pos_x_min`, `pos_y_min`, `pos_z_min` | 3D | The corner of the cell with the lowest coordinates [cm] at `t_model`. |
 | `rho` | 2D, 3D | The density [g/cm^3] at `t_model`. A value of zero gives an empty cell, and a negative value stops the run. |
-| `X_Fegroup` | all | The mass fraction of the iron-group elements. |
-| `X_<nuclide>` | all | The mass fraction of one nuclide at `t_model`, e.g. `X_Ni56`. The name has the element symbol and the mass number. |
+| `X_Fegroup` | all | The mass fraction of the iron-group elements. The value must be in the range from 0 to 1, as each `X_<nuclide>` value. |
+| `X_<nuclide>` | all | The mass fraction of one nuclide at `t_model`, e.g. `X_Ni56`. The name has the element symbol and the mass number. The value must be in the range from 0 to 1. `sn3d` sets a negative value above -1e-6 to 0, and a value below that limit stops the run. |
 | `Ye` or `cellYe` | all | The electron fraction. |
 | `q` | all | The trapped radiation energy per mass [erg/g] at `t_model`. The value must not be negative. |
 | `tracercount` | all | `sn3d` reads this column and does not use it. |
@@ -173,7 +173,8 @@ More rules for the cells:
   holds the other columns.
 - The cells of a 2D model go through the r index first and then through the z index. The z midpoints start at the
   negative boundary. `sn3d` calculates the midpoint of each cell from `vmax` and `t_model`, and it stops if a value
-  of the file differs by more than 0.1 percent.
+  of the file differs by more than 0.1 percent. A model with an odd number of z cells has a middle row at z = 0.
+  For that row, the limit is 0.1 percent of `vmax` times `t_model` divided by the number of z cells.
 - The cells of a 3D model go through the x index first, then the y index, and then the z index. `sn3d` compares the
   positions with the values that it calculates from `vmax` and `t_model`. A difference of more than half of a cell
   width gives a warning in the log.
@@ -222,7 +223,7 @@ file has one row for each element:
 
 | Column | Meaning |
 | --- | --- |
-| `Z` | The atomic number. |
+| `Z` | The atomic number, which must be above 0. |
 | `nions` | The number of ion stages. With the value 0, the element has no ions, and the code keeps only its nuclide abundances. |
 | lowest ion stage | The lowest ion stage of the run. The ion stage 1 is the neutral atom. |
 | highest ion stage | The highest ion stage of the run. For an element with ions, `nions` must be equal to the highest ion stage - the lowest ion stage + 1. An element with `nions` 0 has no such rule. |
@@ -273,6 +274,8 @@ The header of a block:
 <Z> <ion stage> <number of transitions>
 ```
 
+The number of transitions can be 0, and it must not be negative.
+
 Then one row for each transition:
 
 ```text
@@ -322,6 +325,7 @@ Then each table of `phixsdata_v2.txt` has this layout:
 ```
 
 - The lower level is the level that absorbs the photon. The upper ion stage must be the lower ion stage + 1.
+- A list of target levels must have one target level or more.
 - An upper level index of 0 or more gives one target level. The table then has no row with the number of target
   levels and no rows of target levels.
 - A negative upper level index, e.g. -1, gives a list of target levels. The probabilities of the target levels must
