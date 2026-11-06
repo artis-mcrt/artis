@@ -143,20 +143,30 @@ LTE. The log of the rank has a warning for each fallback to LTE.
 
 A cell in an LTE timestep, and a cell with the grey opacity, have no thermal balance. The code sets their T_e to the
 temperature of the mean intensity. The first timestep of a new simulation is different: each cell keeps its initial
-temperature. The code calculates it from the energy of the decays between the snapshot time of `model.txt` and the
-midpoint of the first timestep. With [INITIAL_PACKETS_ON](options.md#initial_packets_on), it adds the energy of the
-`q` column of `model.txt`. It takes all of that energy as trapped in
-the cell. For each other cell, the code solves heating = cooling for the electron
-temperature. The heating rates are the bound-free
-heating, the free-free heating, the collisional de-excitation, and the non-thermal heating. Without
+temperature.
+
+The code calculates the initial temperature from the energy of the decays between the snapshot time of `model.txt`
+and the midpoint of the first timestep. With [INITIAL_PACKETS_ON](options.md#initial_packets_on), it adds the energy
+of the `q` column of `model.txt`. It takes all of that energy as radiation that stays in the cell. That radiation
+loses energy to the expansion in proportion to 1/t. A decay at the time `t_decay` thus keeps the fraction
+`t_decay / t_mid` of its energy at the midpoint `t_mid` of the first timestep. The `q` energy keeps the fraction
+`t_model / t_mid`, where `t_model` is the snapshot time.
+
+For each other cell, the code solves heating = cooling for the electron temperature. The heating rates are the
+bound-free heating, the free-free heating, the collisional de-excitation, and the non-thermal heating. With
+[USE_ION_BFHEATING_ESTIMATORS](options.md#use_ion_bfheating_estimators), a Monte Carlo estimator corrects the
+bound-free heating (see [the radiation field model](#the-radiation-field-model)). Without
 [COLLISIONAL_HEATING_FROM_LEVELPOPS](options.md#collisional_heating_from_levelpops), the collisional heating comes
-from a Monte Carlo estimator, which also holds the collisional recombination heating. The cooling rates are
-the free-free, the free-bound, and the collisional cooling, and the adiabatic cooling of the expansion. From the
-timestep of [NLTE_TIME_DEPENDENT_FIRST_TIMESTEP](options.md#nlte_time_dependent_first_timestep), the cooling also
-holds the change of the thermal energy of the gas in the timestep. This term has the same condition as the time
-term of the ion populations: the cell needs a complete NLTE solution from the timestep before. The code keeps T_e
-between [MINTEMP](options.md#mintemp) and [MAXTEMP](options.md#maxtemp). A cell at one of these limits has no thermal
-balance, and the log of its rank has a warning (see [Troubleshooting](troubleshooting.md#the-log)).
+from a Monte Carlo estimator, which also holds the collisional recombination heating.
+
+The cooling rates are the free-free, the free-bound, and the collisional cooling, and the adiabatic cooling of the
+expansion. From the timestep of [NLTE_TIME_DEPENDENT_FIRST_TIMESTEP](options.md#nlte_time_dependent_first_timestep),
+the cooling also holds the change of the thermal energy of the gas in the timestep. This term has the same condition as the time
+term of the ion populations: the cell needs a complete NLTE solution from the timestep before.
+
+The code keeps T_e between [MINTEMP](options.md#mintemp) and [MAXTEMP](options.md#maxtemp). A cell at one of these
+limits has no thermal balance, and the log of its rank has a warning (see
+[Troubleshooting](troubleshooting.md#the-log)).
 
 - Options: [COLLISIONAL_HEATING_FROM_LEVELPOPS](options.md#collisional_heating_from_levelpops),
   [BFCOOLING_USELEVELPOPNOTIONPOP](options.md#bfcooling_uselevelpopnotionpop),
@@ -168,12 +178,21 @@ balance, and the log of its rank has a warning (see [Troubleshooting](troublesho
 The packets add to the estimators of the radiation field of each cell that they enter. The grid update fits a dilute
 blackbody to the full spectrum of each cell, with a dilution factor W and a radiation temperature T_R. With the
 multibin model, it also fits a dilute blackbody to each frequency bin. The last bin is an exception: its temperature
-is the electron temperature of the cell, and only its dilution factor comes from the fit. The rates of the
-photoionisation and of the
-bound-free heating use these fits. The photoionisation rate of a continuum with a detailed bound-free estimator is
-the exception (see the next section). The bound-free heating of that continuum still uses the fits. A cell in an LTE timestep, and a cell with the grey opacity, get no fit. The code then sets T_R to the
-temperature of the mean intensity, and W to 1. In the first timestep of a new simulation, T_R is the initial
-temperature of the cell (see [the thermal balance](#the-thermal-balance)).
+is the electron temperature of the cell, and only its dilution factor comes from the fit.
+
+The rates of the photoionisation and of the bound-free heating use these fits. The photoionisation rate of a
+continuum with a detailed bound-free estimator is an exception (see the next section). The bound-free heating of
+that continuum still uses the fits.
+
+[USE_ION_BFHEATING_ESTIMATORS](options.md#use_ion_bfheating_estimators) is a second exception, and the classic preset
+sets it. The packets then add to a Monte Carlo estimator of the bound-free heating of each ground continuum. The
+code divides that estimator by the bound-free heating of the same continuum from the fits. It multiplies the
+bound-free heating of each level from the fits by this ratio of the ground continuum with the nearest threshold. If
+the heating from the fits is zero, the ratio becomes 1 and the log has a warning.
+
+A cell in an LTE timestep, and a cell with the grey opacity, get no fit. The code then sets T_R to the temperature
+of the mean intensity, and W to 1. In the first timestep of a new simulation, T_R is the initial temperature of the
+cell (see [the thermal balance](#the-thermal-balance)).
 
 - Options:
     - [MULTIBIN_RADFIELD_FIRST_TIMESTEP](options.md#multibin_radfield_first_timestep) sets the first timestep that
@@ -246,7 +265,11 @@ they get one line at 0.86 MeV and at 3.415 MeV. The decay particles deposit thei
 - With an analytic thermalisation efficiency, a packet of particles deposits its energy at once with the probability
   of that efficiency. If not, the packet escapes and deposits nothing.
 
-The fragments of a spontaneous fission are an exception. They always deposit all of their energy at once, as heat.
+The fragments of a spontaneous fission are an exception. They always deposit all of their energy at once.
+
+The deposited energy of the alpha particles and of the fission fragments is heat only. The packet becomes a
+k-packet, and its energy does not go into the Spencer-Fano solution. The deposited energy of the electrons and of
+the positrons goes to the non-thermal electrons (see [the non-thermal electrons](#the-non-thermal-electrons)).
 
 - Options: [PARTICLE_THERMALISATION_SCHEME](options.md#particle_thermalisation_scheme) selects the method:
     - `INSTANTFULLDEPOSITION` deposits the energy at once.
