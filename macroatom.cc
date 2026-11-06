@@ -13,6 +13,7 @@
 #include <format>
 #include <functional>
 #include <numeric>
+#include <optional>
 #include <print>
 #include <span>
 
@@ -625,7 +626,10 @@ void macroatom_write_timestep_text() { macroatom_file.write_timestep_text(); }
       // check for a detailed line flux estimator to replace the binned/blackbody radiation field estimate
       const int jblueindex = radfield::get_Jblueindex(globals::alltrans.lineindex[alltransindex]);
       if (jblueindex >= 0) {
-        return R_over_J_nu * radfield::get_Jb_lu(nonemptymgi, jblueindex);
+        // a cell that was thick has no estimator, so its lines use the radiation field model below
+        if (const auto Jb_lu = radfield::get_Jb_lu(nonemptymgi, jblueindex); Jb_lu.has_value()) {
+          return R_over_J_nu * *Jb_lu;
+        }
       }
     }
 

@@ -1,7 +1,8 @@
 # AGENTS.md
 
-Guidance for the AI coding agents that work on ARTIS. See [README.md](README.md)
-for the full description of the project.
+Guidance for the AI coding agents that work on ARTIS. The pages of `docs/`
+describe the project, and [README.md](README.md) gives the overview and the
+links to the documentation site.
 
 This file names where a fact lives. It does not copy the fact. If an exact
 value matters, read it from the Makefile, from `.github/workflows/`, or from
@@ -98,6 +99,12 @@ compatible with C++23. The Makefile builds three programs from the same sources:
   in a single fenced C++ block.
 - `data/`: the physics data that comes with the code, e.g. the decay data and
   the gamma spectra.
+- `docs/`: the pages of the documentation site. They are MyST Markdown, and
+  Read the Docs builds them with Sphinx (`docs/conf.py` and
+  `.readthedocs.yaml`). `docs/options.md` is generated, so change
+  `artisoptions_doc.md` instead. `scripts/make_options_docs.py` writes the
+  page, and a pre-commit hook runs that script. README.md keeps the overview
+  and links to the site.
 - `tests/`: the end-to-end tests. `runtest.sh` runs one test from its setup
   script (`setup_*.sh`) and its input folder (`*_inputfiles/`).
 - `scripts/`: the job scripts for HPC clusters and some helper tools.
@@ -107,8 +114,12 @@ compatible with C++23. The Makefile builds three programs from the same sources:
   the system. `pixi run make` is the quickest way to get a toolchain that
   works.
 
-The repository has no `CONTRIBUTING.md`, no `docs/` folder, and no template for
-a pull request or an issue.
+`CONTRIBUTING.md` gives the steps of a change for a human contributor, in a
+shorter form than this file. It also names when to open an issue first, and it
+says that a pull request from a fork gets no automatic run.
+`.github/pull_request_template.md`
+is the template of a pull request, and `.github/ISSUE_TEMPLATE/` holds the two
+issue forms.
 
 ## Build
 
@@ -117,23 +128,22 @@ that supplies `mpicxx`. With Open MPI, select the compiler with
 `export OMPI_CXX=g++`. The build needs no other program.
 
 ```sh
-export MAKEFLAGS="--check-symlink-times --jobs=$(nproc)"
+export MAKEFLAGS="--jobs=$(nproc)"
 ln -s artisoptions_classic.h artisoptions.h   # required, gitignored
 make                                          # builds sn3d and exspec
 ```
 
 Symlink the preset instead of a copy. The symlink keeps `artisoptions.h`
-correct when the preset changes, e.g. after a change of branch. Make reads the
-timestamp through the symlink without `--check-symlink-times`, so a change of
-preset then starts no rebuild. The Makefile warns you if `artisoptions.h` is a
-symlink and the flag is absent. A copied `artisoptions.h` gets no such warning.
+correct when the preset changes, e.g. after a change of branch.
 
-README.md lists the make options, and the Makefile is the authority. `make
-OPTIMIZE=OFF` is the quickest test that everything compiles. The other targets
-are `unittests`, `check` (clang-tidy), `sn3dwhole`, and `clean`.
+`docs/makeoptions.md` lists the make options, and the Makefile is the
+authority. `make OPTIMIZE=OFF` is the quickest test that everything compiles. The other targets
+are `unittests`, `check` (clang-tidy), `sn3dwhole`, `clean`, and `help`. `make help` prints
+one line for each target and each make option, and it needs no `artisoptions.h` and no compiler.
 
-`make` puts the objects in `build/<configuration>/` and makes `sn3d`, `exspec`,
-and `unittests` in the repository root symlinks to that folder. Each symlink
+`make` puts the objects in `build/<configuration>/` and makes a symlink in the
+repository root to each program that it builds. The default target builds
+`sn3d` and `exspec`, so `unittests` gets its symlink from `make unittests`. Each symlink
 points to the most recent build of any configuration. Look at the symlink
 before you copy a binary or start a run. Copy a binary with `cp -L` from the
 repository root. A stale build folder of an older compiler otherwise gives a
@@ -146,10 +156,13 @@ Points that surprise a new agent:
 - Each option adds a suffix to the name of the build folder, so different
   option sets coexist. A new option that changes `CXXFLAGS` must also add a
   suffix to `BUILD_DIR`.
-- The name of the build folder does not contain the preset, so a change of
-  preset must compile all objects again. Make does this for a new symlink with
-  `--check-symlink-times`. A copy that keeps the old timestamp, e.g. from
-  `cp -p`, needs `make clean`. CI does this before nearly every preset compile.
+- The name of the build folder ends with `_options` and a checksum of the
+  content of `artisoptions.h`, so the builds of different presets coexist. A
+  change of the preset or of an option value compiles all objects in a new
+  build folder, and a change back to an earlier content compiles nothing. The
+  timestamp of `artisoptions.h` has no effect, so a symlink and a copy give the
+  same build. Each edit of an option keeps the build folder of the old value,
+  and `make clean` removes all build folders.
 - The Makefile decides how the options interact, e.g. `REPRODUCIBLE=ON` with
   `FASTMATH`, and `OPENMP=ON` with `STDPAR=ON`. Read the Makefile for the rule.
 - The build uses `-Werror` for all compilers except nvc++.
@@ -167,10 +180,10 @@ Points that surprise a new agent:
 - `GCCTOOLCHAIN` selects the gcc toolchain of nvc++. The Makefile has fallbacks
   for some known hosts, so this option is not always necessary. CI sets it in
   the environment.
-- The Makefile writes `version.cc` from the git metadata and from
-  `artisoptions.h`, but only when the content changes. `sn3d` and `exspec` log
-  these strings. `version.cc` is gitignored, and `version.h` is a tracked file
-  that declares the strings. Keep the definitions in `version.cc`.
+- The Makefile writes `version.cc` into the build folder from the git metadata
+  and from `artisoptions.h`, but only when the content changes. `sn3d` and
+  `exspec` log these strings. `version.h` is a tracked file that declares the
+  strings. Keep the definitions in `version.cc`.
   The git metadata changes at almost every git operation, so a definition in
   the header makes `sn3d.cc` and `exspec.cc` compile again each time.
 
@@ -209,9 +222,13 @@ the second argument.
 - `build` moves your `artisoptions.h` aside and makes a symlink to the options
   of the model folder. It builds with the make options of CI and copies `sn3d`
   and `exspec` into the model folder. Then it moves your `artisoptions.h` back.
-  The move keeps the timestamp, so a build in a different build folder
-  compiles nothing again. The step gives the objects of the test build an old
-  timestamp, so a later build in that build folder compiles them again.
+  The test options have their own build folder, so a later build of your own
+  options compiles nothing again. A second run of the same test also compiles
+  nothing again. The `sn3d` and `exspec` symlinks of the repository root then
+  point to the build of the test.
+- `inputcheck` copies `input-newrun.txt` to `input.txt` and runs `sn3d -c`,
+  which reads the input and runs no timestep. The step fails if the check
+  changes a file of the model folder outside the folder `inputcheck`.
 - `job0` removes `input.txt` and starts a new simulation. `sn3d` then restores
   `input.txt` from `input-newrun.txt`. After a run, `input.txt` holds the
   values that continue that run.
@@ -220,7 +237,8 @@ the second argument.
   because the resume run changes the output files.
 - `resume` copies `input-resume.txt` to `input.txt` and runs `sn3d`. That file
   tells `sn3d` to read the restart files of the first run, and it sets a
-  different range of timesteps.
+  different range of timesteps. Before the run, the step does the same check
+  with `sn3d -c` as `inputcheck`, which here also reads the restart files.
 - `exspec` removes the `*.tmp` files, runs `exspec`, and then runs
   `scripts/mergeangleres.py`. That script merges the direction bin files into
   `light_curve_res.out`, `spec_res.out`, and `specpol_res.out`. The tests with
@@ -247,12 +265,44 @@ with a different gcc version, but no test covers that. Examine a local mismatch
 as a real change of the results first. Let CI give the decision.
 
 A change that must not alter the results must give identical checksums in CI.
-If a change alters the numerical results for a good reason, the stored
-checksums must be regenerated. Only a maintainer can do this, with the
-`updatechecksums.yml` workflow. That workflow takes the checksums from a
-finished CI run. The run does not have to be of the head commit, if the later
-commits do not change the results. Say in the commit message and in the pull
-request that you expect the results to change.
+For such a change, a checksum mismatch is an error in the change. Find and
+correct the cause. Do not regenerate the checksums.
+
+If a change alters the numerical results for a good reason, regenerate the
+stored checksums yourself with the `updatechecksums.yml` workflow. This needs
+write access to the repository, and the branch must be in `artis-mcrt/artis`.
+Without these, ask a maintainer to start the workflow.
+
+1. Wait until the CI run of the head commit is complete.
+2. Make sure that each failed test job failed only at a checksum step, with no
+   crash and no failed assertion.
+3. Make sure that only the tests that the change must affect have different
+   checksums.
+4. Start the workflow with the branch of the pull request as the input. Without
+   `--ref`, `gh` runs the reviewed version of the workflow on `main`. The
+   workflow gets a token with write access, so it runs only from `main`. The
+   first command prints the URL of the new run, and the URL ends with the run
+   ID. The second command waits until the run is complete and fails if the run
+   fails.
+
+   ```sh
+   gh workflow run updatechecksums.yml -f branch=<branch>
+   gh run watch <run ID> --exit-status
+   ```
+
+5. If the run fails, read its log and correct the cause.
+6. Read the log of the workflow. Make sure that it selected the artifact of the
+   head commit.
+7. Make sure that the CI run of the commit with the new checksums passes.
+
+The workflow takes the checksums from the nearest commit in the history of the
+branch head that has a complete artifact, and it pushes a commit with them. A
+crash or a failed assertion in a test job leaves the artifact incomplete. The
+workflow then takes an older commit and gives only a warning. An older commit is
+correct only if the later commits do not change the results.
+
+Say in the commit message and in the pull request that you expect the results to
+change. Name the tests that change.
 
 A new end-to-end test must run in CI in about ten minutes or less. Every push
 runs the full matrix.
@@ -271,8 +321,9 @@ The workflows in `.github/workflows/`:
   timeout. This workflow does not enforce the checksums, because both checksum
   steps then continue after an error. It skips the tests that the `exclude`
   list of the `ci.yml` matrix names, because other tests reach their code.
-- `ci-checks.yml` runs the pre-commit hooks, clang-tidy, and cppcheck. It then
-  compiles the code with each compiler of its matrix, and on macOS, with
+- `ci-checks.yml` runs the pre-commit hooks, clang-tidy, and cppcheck, and it
+  builds the documentation site with `-W`, so a broken cross-reference stops
+  the job. It then compiles the code with each compiler of its matrix, and on macOS, with
   hipcc, and with nvc++. The GPU compilers build the classic and the nebular
   presets with `STDPAR=ON GPU=ON`. The matrix entries with `extrabuilds: true`
   and the macOS job also do the OpenMP builds, the STDPAR builds, and the
@@ -280,11 +331,15 @@ The workflows in `.github/workflows/`:
   steps say which compiler skips a build and which build uses `OPTIMIZE=OFF`.
   The gcc and the clang jobs also build and run the unit tests, for the classic
   and for the nebular preset.
-- `updatechecksums.yml` writes the reference checksums (see "Tests").
+- `updatechecksums.yml` writes the reference checksums of a branch (see
+  "Tests"). It runs only from `main`, and it takes the branch as an input.
 - `depapprove.yml` enables auto-merge for the pull requests of Dependabot and
   of pre-commit-ci.
 - `copilot-setup-steps.yml` runs when you change that file, or when you start
   it by hand.
+- `linkcheck.yml` builds the site with the `linkcheck` builder once each week.
+  `linkcheck_ignore` of `docs/conf.py` holds the pages that give the status 405
+  to an automated request.
 
 The first three run on each push, except on a `classic*` branch. Your code
 must therefore compile with each of these compilers, and also on the paths for
@@ -609,8 +664,9 @@ The code must compile with nvc++ and with hipcc, also with `STDPAR=ON GPU=ON`.
 These rules apply to an automated review of a pull request, e.g. by Codex.
 
 - Do not comment that the checksums of the tests can change or must be
-  regenerated. CI compares the checksums and shows each mismatch. A maintainer
-  then regenerates them with `updatechecksums.yml` (see "Tests").
+  regenerated. CI compares the checksums and shows each mismatch. The author of
+  the pull request then regenerates them with `updatechecksums.yml` (see
+  "Tests").
 - Do not comment that a stored checksum file comes from an older commit or
   does not agree with a later change. The same CI step finds this.
 
@@ -622,6 +678,8 @@ These rules apply to an automated review of a pull request, e.g. by Codex.
   checksums that a local build does not cover.
 - Say in the commit message and in the pull request when you expect the
   numerical results to change. Otherwise the checksums must stay identical.
+- After a change of the results, regenerate the checksums yourself with
+  `updatechecksums.yml` (see "Tests").
 
 ## Before you commit
 
@@ -629,11 +687,15 @@ Do the text edits first. They can make a finished compile out of date.
 
 1. Add a new compile-time option to every `artisoptions_*.h` preset and to
    `artisoptions_doc.md`. Put it under the same heading and at the same
-   position in each file.
-2. Search `tests/setup_*.sh` and `.github/workflows/ci.yml` for the name of an
-   option that you renamed or removed, or whose type or form you changed. Those
-   files change options with `setoption` from `tests/setupfuncs.sh`. The comment
-   of `setoption` says when it stops the setup script.
+   position in each file. Then run `scripts/make_options_docs.py`, which writes
+   `docs/options.md` again. The pre-commit hook runs the script and stops when
+   a preset holds an option that `artisoptions_doc.md` does not describe.
+2. Search `tests/setup_*.sh`, `.github/workflows/ci.yml`, and `docs/` for the
+   name of an option that you renamed or removed, or whose type or form you
+   changed. The test files change options with `setoption` from
+   `tests/setupfuncs.sh`, and the comment of `setoption` says when it stops the
+   setup script. The pages of `docs/` name about twenty options by hand, and
+   `scripts/make_options_docs.py` rewrites none of them.
 3. Run `prek run --all-files` and correct every message.
 4. Run `make OPTIMIZE=OFF unittests && ./unittests` if `unittests.cc` calls a
    function that you changed.

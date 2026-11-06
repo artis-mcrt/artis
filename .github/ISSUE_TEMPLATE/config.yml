@@ -1,0 +1,6 @@
+---
+blank_issues_enabled: true
+contact_links:
+    - name: The documentation
+      url: https://artis-mcrt.readthedocs.io/
+      about: The quickstart, the options, the input files, the output files, and the troubleshooting page.

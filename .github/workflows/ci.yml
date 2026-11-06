@@ -137,6 +137,9 @@ jobs:
               working-directory: tests/
               run: cp -a ${{ matrix.testname }}_testrun ${{ matrix.testname }}_onejob
 
+            - name: Check the input
+              run: tests/runtest.sh ${{ matrix.testname }} inputcheck
+
             - name: Run test job0 start
               id: run_job0
               if: always()
@@ -286,7 +289,7 @@ jobs:
                   path: tests/${{ matrix.testname }}_inputfiles/results_md5*
 
             - name: Setup uv
-              uses: astral-sh/setup-uv@v10.3.2
+              uses: astral-sh/setup-uv@v10.3.3
               if: always() && inputs.testmode != 'ON'
               id: setup-uv
               with:
@@ -428,7 +431,7 @@ jobs:
                   echo "CXX=g++-16" >> $GITHUB_ENV
                   echo "OMPI_CXX=g++-16" >> $GITHUB_ENV
                   sudo apt-get update
-                  sudo apt-get install -y --no-install-recommends g++-16 openmpi-bin libopenmpi-dev libtbb-dev
+                  sudo apt-get install -y --no-install-recommends g++-16 openmpi-bin libopenmpi-dev libtbb-dev libzstd-dev
 
             - name: Cache test atomic data
               uses: actions/cache@v6

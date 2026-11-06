@@ -6,6 +6,7 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdio>
+#include <optional>
 
 #include "constants.h"
 #include "rpkt.h"
@@ -29,7 +30,8 @@ void normalise_J(int nonemptymgi, double estimator_normfactor_over4pi);
 void normalise_nuJ(int nonemptymgi, double estimator_normfactor_over4pi);
 [[nodiscard]] auto get_T_J_from_J(int nonemptymgi) -> float;
 [[nodiscard]] auto get_Jblueindex(int lineindex) -> int;
-[[nodiscard]] auto get_Jb_lu(int nonemptymgi, int jblueindex) -> double;
+// The detailed line estimator of the last timestep, or no value for a cell that was thick and collected none
+[[nodiscard]] auto get_Jb_lu(int nonemptymgi, int jblueindex) -> std::optional<double>;
 void reduce_estimators();
 void do_MPI_Bcast(ptrdiff_t nstart_nonempty, ptrdiff_t ndo_nonempty, int root, int root_node_id);
 void write_restart_data(FILE* gridsave_file);

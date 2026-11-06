@@ -142,22 +142,24 @@ void write_to_estimators_file(std::ostream& estimators_file, const int nonemptym
     nltepop_write_to_file(nonemptymgi, timestep);
   }
 
-  // Write one line of per-ion values in the format of the gamma_R line, e.g.
-  // "cooling_ff         Z=26  1: 3.242e-03  2: 1.171e-01". values_allions holds one value for every ion of
-  // every element, and nions_towrite selects how many of this element's ions the line reports.
+  // Write one line of per-ion values, e.g. "cooling_ff         Z=26  1: 3.242e-03  2: 1.171e-01". value_of_ion
+  // gives the value of an ion index, and nions_towrite selects how many of this element's ions the line reports.
   const auto print_perion_line = [&estimators_file](const std::string_view label, const int element,
-                                                    const int nions_towrite,
-                                                    const std::span<const double> values_allions) {
+                                                    const int nions_towrite, const auto& value_of_ion) {
     std::print(estimators_file, "{:<18} Z={:2d}", label, get_atomicnumber(element));
     // add spaces for missing lowest ion stages to match other elements
     for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++) {
       std::print(estimators_file, "              ");
     }
     for (int ion = 0; ion < nions_towrite; ion++) {
-      std::print(estimators_file, "  {}: {:9.3e}", get_ionstage(element, ion),
-                 values_allions[get_uniqueionindex(element, ion)]);
+      std::print(estimators_file, "  {}: {:9.3e}", get_ionstage(element, ion), value_of_ion(ion));
     }
     std::println(estimators_file);
+  };
+
+  // the value of an ion in an array that uniqueionindex indexes, e.g. the per-ion heating and cooling rates
+  const auto value_of_uniqueion = [](const int element, const std::span<const double> values_allions) {
+    return [element, values_allions](const int ion) { return values_allions[get_uniqueionindex(element, ion)]; };
   };
 
   // thread_local lets us reuse this allocation for every cell on each CPU thread
@@ -194,53 +196,38 @@ void write_to_estimators_file(std::ostream& estimators_file, const int nonemptym
       continue;
     }
 
-    std::print(estimators_file, "gamma_R            Z={:2d}", get_atomicnumber(element));
-    for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++) {
-      std::print(estimators_file, "              ");
-    }
-    for (int ion = 0; ion < nions - 1; ion++) {
-      std::print(estimators_file, "  {}: {:9.3e}", get_ionstage(element, ion),
-                 calculate_iongamma_per_ionpop(nonemptymgi, element, ion, false, false));
-    }
-    std::println(estimators_file);
+    print_perion_line("gamma_R", element, nions - 1, [&](const int ion) {
+      return calculate_iongamma_per_ionpop(nonemptymgi, element, ion, false, false);
+    });
 
     // if we have bound-free estimators, we might want to compare how gamma_R would be if we used the radiation field
     // model instead
     if constexpr (DETAILED_BF_ESTIMATORS_FIRST_TIMESTEP.has_value()) {
-      std::print(estimators_file, "gamma_R_integral   Z={:2d}", get_atomicnumber(element));
-      for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++) {
-        std::print(estimators_file, "              ");
-      }
-      for (int ion = 0; ion < nions - 1; ion++) {
-        std::print(estimators_file, "  {}: {:9.3e}", get_ionstage(element, ion),
-                   calculate_iongamma_per_ionpop(nonemptymgi, element, ion, false, true));
-      }
-      std::println(estimators_file);
+      print_perion_line("gamma_R_integral", element, nions - 1, [&](const int ion) {
+        return calculate_iongamma_per_ionpop(nonemptymgi, element, ion, false, true);
+      });
     }
 
     if (NT_SCHEME != NonThermalScheme::NT_OFF) {
-      std::print(estimators_file, "gamma_NT           Z={:2d}", get_atomicnumber(element));
-      for (int ionstage = 1; ionstage < get_ionstage(element, 0); ionstage++) {
-        std::print(estimators_file, "              ");
-      }
-      for (int ion = 0; ion < nions - 1; ion++) {
-        const double Y_nt = nonthermal::nt_ionisation_ratecoeff(nonemptymgi, element, ion);
-        std::print(estimators_file, "  {}: {:9.3e}", get_ionstage(element, ion), Y_nt);
-      }
-      std::println(estimators_file);
+      print_perion_line("gamma_NT", element, nions - 1,
+                        [&](const int ion) { return nonthermal::nt_ionisation_ratecoeff(nonemptymgi, element, ion); });
     }
 
     // a cell that gets no thermal balance solution, e.g. a grey cell, has no per-ion rates to report
     if (WRITE_ION_HEATING_COOLING_RATES && !heatingcoolingrates.cooling_ff_ion.empty()) {
       // the bound-free terms belong to the lower ion of each continuum, so the top ion has none
-      print_perion_line("heating_bf", element, nions - 1, heatingcoolingrates.heating_bf_ion);
+      print_perion_line("heating_bf", element, nions - 1,
+                        value_of_uniqueion(element, heatingcoolingrates.heating_bf_ion));
       if constexpr (COLLISIONAL_HEATING_FROM_LEVELPOPS) {
-        print_perion_line("heating_coll", element, nions, heatingcoolingrates.heating_coll_ion);
+        print_perion_line("heating_coll", element, nions,
+                          value_of_uniqueion(element, heatingcoolingrates.heating_coll_ion));
       }
-      print_perion_line("heating_ff", element, nions, heatingcoolingrates.heating_ff_ion);
-      print_perion_line("cooling_ff", element, nions, heatingcoolingrates.cooling_ff_ion);
-      print_perion_line("cooling_fb", element, nions - 1, heatingcoolingrates.cooling_fb_ion);
-      print_perion_line("cooling_coll", element, nions, heatingcoolingrates.cooling_coll_ion);
+      print_perion_line("heating_ff", element, nions, value_of_uniqueion(element, heatingcoolingrates.heating_ff_ion));
+      print_perion_line("cooling_ff", element, nions, value_of_uniqueion(element, heatingcoolingrates.cooling_ff_ion));
+      print_perion_line("cooling_fb", element, nions - 1,
+                        value_of_uniqueion(element, heatingcoolingrates.cooling_fb_ion));
+      print_perion_line("cooling_coll", element, nions,
+                        value_of_uniqueion(element, heatingcoolingrates.cooling_coll_ion));
     }
 
     if (USE_LUT_PHOTOION && globals::nbfcontinua_ground > 0) {

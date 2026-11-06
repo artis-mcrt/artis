@@ -24,8 +24,12 @@ def main() -> None:
     assert len(sys.argv) == 2
     jobid = int(sys.argv[1])
     cmd = ["squeue", "-j", str(jobid), "--noheader", "--Format", "EndTime"]
-    cmdendtime = subprocess.run(cmd, capture_output=True, check=True, text=True)
-    print(get_hours_left(cmdendtime.stdout.strip(), dt.datetime.now().astimezone()))
+    try:
+        cmdendtime = subprocess.run(cmd, capture_output=True, check=True, text=True)
+        print(get_hours_left(cmdendtime.stdout.strip(), dt.datetime.now().astimezone()))
+    except (subprocess.CalledProcessError, ValueError) as err:
+        # the job script then runs sn3d without a wall time limit
+        sys.exit(f"slurmjobhoursleft.py: squeue gave no end time for job {jobid}: {err}")
 
 
 if __name__ == "__main__":

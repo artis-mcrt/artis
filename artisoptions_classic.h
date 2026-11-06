@@ -1,3 +1,9 @@
+// The classic preset: Type Ia supernovae in the photospheric phase, as Kromer & Sim (2009), MNRAS, 398, 1809-1826,
+// doi:10.1111/j.1365-2966.2009.15256.x describes the method. The preset uses the tabulated photoionisation
+// coefficients, LTE excitation with the radiation temperature, one level for the top ion, and no non-thermal solver.
+// Polarisation is on, and a scattered packet gets a dipole distribution. The tests classicmode_1d_3dgrid and
+// classicmode_3d use this preset.
+//
 // A compile-time options preset: symlink one of the artisoptions_*.h files to artisoptions.h to select
 // the run configuration. A copy through an existing symlink replaces the content of the tracked preset.
 // Every option is described in artisoptions_doc.md.

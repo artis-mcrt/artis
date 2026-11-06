@@ -100,7 +100,7 @@ void set_element_meanweight(std::ptrdiff_t nonemptymgi, int element, float meanw
 [[gnu::pure]] [[nodiscard]] DEVICE_FUNC auto get_cellindex_from_pos(const Vec3d& pos, double time) -> int;
 void read_ejecta_model();
 void write_grid_restart_data(int timestep);
-// the first call sets up the rank ranges, so these functions are not pure
+// init_grid() sets up the rank ranges of the grid update and the output files
 [[nodiscard]] auto get_nstart(int rank) -> int;
 [[nodiscard]] auto get_nstart_nonempty(int rank) -> int;
 [[nodiscard]] auto get_ndo(int rank) -> int;

@@ -159,7 +159,7 @@ void packet_init(std::span<Packet> packets) {
     const int mgi = grid::get_propcell_modelgridindex(propcellindex);
     // some propagation cells are empty
     if (mgi >= 0) {
-      const auto nonemptymgi = grid::get_nonemptymgi_of_mgi(mgi);
+      const auto nonemptymgi = grid::get_propcell_nonemptymgi(propcellindex);
       const auto initial_en_per_mass = INITIAL_PACKETS_ON ? grid::get_initenergyq(mgi) : 0.;
 
       etot_simtime += grid::get_propcell_volume_tmin(propcellindex) * grid::get_rho_tmin(mgi) *

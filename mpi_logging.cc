@@ -10,6 +10,10 @@
 #include <print>
 #include <string_view>
 
+#pragma clang unsafe_buffer_usage begin
+#include <mpi.h>
+#pragma clang unsafe_buffer_usage end
+
 #include "constants.h"
 #include "outputfilestream.h"
 
@@ -27,6 +31,23 @@ bool outputstartofline = true;
 #endif
 
 OutputFileStream output_file;
+
+// End the run of every rank. MPI_Abort() stops the other ranks, which otherwise wait in their next collective call
+// until the wall time ends. MPI_Init() gives no thread support, so only the main thread can call MPI_Abort().
+[[noreturn]] void abort_run() noexcept {
+  int mpi_initialized = 0;
+  MPI_Initialized(&mpi_initialized);
+  int mpi_finalized = 0;
+  MPI_Finalized(&mpi_finalized);
+  if (mpi_initialized != 0 && mpi_finalized == 0) {
+    int is_main_thread = 0;
+    MPI_Is_thread_main(&is_main_thread);
+    if (is_main_thread != 0) {
+      MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+    }
+  }
+  std::abort();
+}
 
 // Prepend an ISO-8601 timestamp when starting a new output line.
 void print_line_start() noexcept {
@@ -61,7 +82,8 @@ DEVICE_FUNC void report_assert_failure(const char* file, const int line, const c
                  expr, func);
     output_file.flush();
   } std::println(std::cerr, "\n[rank {}] {}:{}: failed assertion `{}` in function {}", globals::my_rank, file, line,
-                 expr, func););
+                 expr, func);
+             abort_run(););
 }
 
 void report_fatal_error_and_abort(const char* file, const int line, const char* func, const char* message) noexcept {
@@ -70,5 +92,5 @@ void report_fatal_error_and_abort(const char* file, const int line, const char* 
     output_file.flush();
   }
   std::println(std::cerr, "\n[rank {}] [error] {}:{} in {}: {}", globals::my_rank, file, line, func, message);
-  std::abort();
+  abort_run();
 }

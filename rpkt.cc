@@ -234,14 +234,12 @@ auto get_possible_event_expansion_opacity(const int nonemptymgi, Packet& pkt, co
       pkt_bin_start.prop_time = prop_time;
       // at the start of the path the packet keeps its line position, so the line that emitted it is excluded
       pkt_bin_start.next_trans = (dist == 0.) ? pkt.next_trans : -1;
-      double edist_after_bin = 0.;
-      bool event_is_boundbound = false;
-      std::tie(edist_after_bin, std::ignore, event_is_boundbound) =
+      // the line position after the bin is unused, because the next step searches from nu_cmf
+      const auto [edist_after_bin, next_trans_after_bin, event_is_boundbound] =
           get_possible_event(nonemptymgi, pkt_bin_start, chi_rpkt_cont, mastate, tau_rnd - tau,
                              std::numeric_limits<double>::max(), 0., dnu_on_dl, doppler, globals::linelist);
-      dist = dist + edist_after_bin;
 
-      return {dist, event_is_boundbound};
+      return {dist + edist_after_bin, event_is_boundbound};
     }
 
     tau += chi_tot * binedgedist;
@@ -339,11 +337,13 @@ void electron_scatter_rpkt(Packet& pkt) {
       phisc = 2 * PI * rng_uniform(get_rngstate(pkt));
 
       // NB: the rotational matrix R here is chosen in the clockwise direction ("+").
-      // In Bulla+2015 equation (10) and (12) refer to the specific case shown in Fig.2 where the angle i2
+      // In Bulla, Sim & Kromer (2015), MNRAS, 450, 967-981, doi:10.1093/mnras/stv657, equations (10) and (12)
+      // refer to the specific case shown in Fig.2 where the angle i2
       // is measured in the counter-clockwise direction. Therefore we use the clockwise rotation matrix but
       // with -i1. Here, instead, we calculate the angle in the clockwise direction from 0 to 2PI.
-      // For instance, the i1 angle in Fig.2 of Bulla+2015 corresponds to 2PI-i1 here.
-      // NB2: the i1 and i2 angles computed in the code (before and after scattering) are instead as in Bulla+2015
+      // For instance, the i1 angle in Fig.2 of Bulla et al. (2015) corresponds to 2PI-i1 here.
+      // NB2: the i1 and i2 angles computed in the code (before and after scattering) are instead as in Bulla et al.
+      // (2015)
       p = (musquared + 1) + ((musquared - 1) * ((cos(2 * phisc) * q_i_cmf) + (sin(2 * phisc) * u_i_cmf)));
 
       // generate a number between 0 and the maximum of the previous function (2)
@@ -842,12 +842,8 @@ auto calculate_chi_bf_gammacontr(const int nonemptymgi, const double nu, Phixsli
       // atomic accesses (plain loads and stores in a serial build) making that well-defined. Each cached
       // value must also be usable on its own, so the slow path below never infers the validity of one
       // cached entry from the other.
-      const double stimfactor_edgepart = [&] {
-        if constexpr (USECELLHISTANDUPDATEPHIXSLIST) {
-          return atomicload(cacheslot.allcont_stimfactor_edgepart[i]);
-        }
-        return -1.;
-      }();
+      const double stimfactor_edgepart =
+          USECELLHISTANDUPDATEPHIXSLIST ? atomicload(cacheslot.allcont_stimfactor_edgepart[i]) : -1.;
 
       double stimfactor{};
       if (stimfactor_edgepart >= 0. && stimfactor_split_usable) [[likely]] {

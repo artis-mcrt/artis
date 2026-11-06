@@ -447,7 +447,8 @@ constexpr bool VPKT_WRITE_CONTRIBS;
 // --- Binned opacities ---
 
 // Use binned opacities instead of line-by-line opacities for the real packets in the cells that are not
-// thick. Not compatible with VPKT_ON.
+// thick. Not compatible with VPKT_ON. The bins span 60 to 40000 Angstroms in steps of 20 Angstroms (see
+// rpkt.h). A line outside this range adds to no bin, so the binned opacities give it no opacity.
 constexpr bool RPKT_USE_BINNED_OPACITIES;
 
 // Use binned opacities instead of line-by-line opacities for the virtual packets. Set BINNED_OPACITY_LINE_WEIGHT to
@@ -485,10 +486,11 @@ constexpr double LINE_BINNED_CAPPED_TAU_MAX;
 // - radfield_allranks.out;
 // - macroatom_allranks.out, only with the constant LOG_MACROATOM in macroatom.cc. Each rank then keeps the
 //   macroatom lines of a whole timestep in memory.
-// Without this option, each rank writes its own files, e.g. estimators_<rank>.out. At each timestep, each rank writes
-// its text into a buffer, and rank 0 then writes the buffers in the order of the ranks. In a build with libzstd, each
-// rank compresses its own buffer into one zstd frame. A combined file thus holds the timesteps in their order, and in
-// each timestep the text of the ranks in their order.
+// At each timestep, each rank writes its text into a buffer, and rank 0 then writes the buffers in the order of the
+// ranks. In a build with libzstd, each rank compresses its own buffer into one zstd frame. A combined file thus holds
+// the timesteps in their order, and in each timestep the text of the ranks in their order.
+// Without this option, each rank writes its own file, e.g. estimators_<rank>.out, and it writes its text directly
+// into that file.
 //
 // The nlte, radfield, and macroatom files start with one header line. scripts/combine_allrank_out_files.py makes the
 // same combined files from the files of the ranks.

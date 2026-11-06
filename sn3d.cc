@@ -869,7 +869,7 @@ void remove_previous_simulation_files() {
       R"((gridsave|packets|vspecpol|vpackets|vpkt_grid).*\.tmp|input(-newrun)?\.txt\.tmp|.*\.out(\..*)?|)"
       R"(output_[0-9]+-[0-9]+\.txt(\.zst|\.gz|\.xz)?|)"
       R"(exspec.*\.txt.*|.*\.slurm|job_from_ts[0-9]+|packets|vspecpol|vpackets|vpkt_grid|speclc_angle_res|)"
-      R"(bflist\.dat|ratecoeff\.dat|line_list\.txt|logfiles\.tar.*|out\.txt(\.zst)?)"};
+      R"(bflist\.dat|ratecoeff\.dat|line_list\.txt|logfiles\.tar.*|out\.txt(\.zst)?|inputcheck)"};
   std::vector<std::filesystem::path> paths_to_remove;
   std::error_code ec;
   for (const auto& entry : std::filesystem::directory_iterator(".", ec)) {
@@ -931,6 +931,7 @@ void setup_jobfolder() {
     std::filesystem::remove(linkname, ec);
     std::filesystem::create_symlink(linktarget, linkname, ec);
     if (ec) {
+      // the log files are not open yet, so the warning goes to the standard error stream
       std::println(stderr, "[warning] could not create symlink '{}' to '{}': {}", linkname, linktarget, ec.message());
     }
   }
@@ -938,8 +939,32 @@ void setup_jobfolder() {
   MPI_Barrier_allranks();
 }
 
+// An input check works in the folder inputcheck of the model folder, so that it changes no other file there.
+void enter_inputcheck_folder() {
+  const auto* const foldername = "inputcheck";
+  std::error_code ec;
+  if (globals::my_rank == 0) {
+    std::filesystem::remove_all(foldername, ec);
+    if (!ec) {
+      std::filesystem::create_directory(foldername, ec);
+    }
+    if (ec) {
+      fatal_crash("could not make an empty folder '{}': {}", foldername, ec.message());
+    }
+    std::println("input check: sn3d writes into the folder '{}' and changes no other file of the model folder",
+                 foldername);
+  }
+  MPI_Barrier_allranks();
+  std::filesystem::current_path(foldername, ec);
+  if (ec) {
+    fatal_crash("could not change to the folder '{}': {}", foldername, ec.message());
+  }
+  globals::path_to_modelfolder = "../";
+}
+
 void print_options_help(std::FILE* stream, const char* progname) {
-  std::println(stream, "Usage: {} [-w WALLTIMELIMITHOURS] [-h]", progname);
+  std::println(stream, "Usage: {} [-c] [-w WALLTIMELIMITHOURS] [-h]", progname);
+  std::println(stream, "  -c                     check the input files in the folder inputcheck, and run no timestep");
   std::println(stream, "  -w WALLTIMELIMITHOURS  finish cleanly (writing restart files) before this much wall time");
   std::println(stream, "  -h                     print this help and exit");
 }
@@ -961,10 +986,11 @@ auto main(int argc, char* argv[]) -> int {
   globals::setup_mpi_vars();
 
   int walltime_limit_seconds = -1;
+  bool check_inputs_only = false;
 
   std::string walltime_limit_hours_str;
   int opt = 0;
-  while ((opt = getopt(argc, argv, "hw:")) != -1) {  // NOLINT(concurrency-mt-unsafe,misc-include-cleaner)
+  while ((opt = getopt(argc, argv, "chw:")) != -1) {  // NOLINT(concurrency-mt-unsafe,misc-include-cleaner)
     if (opt == 'h') {
       if (globals::my_rank == 0) {
         print_options_help(stdout, argv[0]);  // NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic)
@@ -972,7 +998,9 @@ auto main(int argc, char* argv[]) -> int {
       MPI_Finalize();
       std::exit(EXIT_SUCCESS);  // NOLINT(concurrency-mt-unsafe)
     }
-    if (opt == 'w') {
+    if (opt == 'c') {
+      check_inputs_only = true;
+    } else if (opt == 'w') {
       char* parse_end = nullptr;
       const float walltime_limit_hours = strtof(optarg, &parse_end);  // NOLINT(misc-include-cleaner)
       if (parse_end == optarg || *parse_end != '\0' || !std::isfinite(walltime_limit_hours) ||
@@ -992,6 +1020,10 @@ auto main(int argc, char* argv[]) -> int {
       print_options_help(stderr, argv[0]);  // NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic)
       fatal_crash("unknown command line option");
     }
+  }
+
+  if (check_inputs_only) {
+    enter_inputcheck_folder();
   }
 
   check_already_running();
@@ -1098,7 +1130,8 @@ auto main(int argc, char* argv[]) -> int {
   printlnlog("[info] mem_usage: packets occupy {:.3f} MB", npkts_thisrank * sizeof(Packet) / 1024. / 1024.);
 
   std::vector<Packet> packets;
-  reserve_resize(packets, npkts_thisrank);
+  // an input check of a new simulation places one pellet, so that a low rank count needs little memory
+  reserve_resize(packets, check_inputs_only ? 1 : npkts_thisrank);
 
   // Read in parameters from input.txt
   read_parameterfile(packets);
@@ -1191,6 +1224,23 @@ auto main(int argc, char* argv[]) -> int {
   vpkt::init(globals::timestep, globals::simulation_continued_from_saved);
 
   setup_cellcache();
+
+  if (check_inputs_only) {
+    if (globals::simulation_continued_from_saved) {
+      reserve_resize(packets, npkts_thisrank);
+      read_packet_restart_file(globals::timestep, packets);
+    } else {
+      printlnlog("The input check placed only one pellet for each rank.");
+    }
+    MPI_Barrier_allranks();
+    printlnlog("The input check is complete. sn3d stops before timestep {}.", globals::timestep);
+    if (globals::my_rank == 0) {
+      std::println("input check: complete");
+    }
+    MPI_Finalize();
+    std::filesystem::remove("artis.pid");
+    return 0;
+  }
 
   while (globals::timestep < globals::timestep_finish && !terminate_early) {
     MPI_Barrier_allranks();
