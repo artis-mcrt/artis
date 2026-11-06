@@ -28,6 +28,9 @@ setoption NUM_PACKETS '6e4'
 
 setoption GRID_TYPE_OVERRIDE 'GridType::CARTESIAN3D'
 
+setoption VPKT_ON 'true'
+setoption VPKT_WRITE_CONTRIBS 'true'
+
 setoption INITIAL_PACKETS_ON 'false'
 setoption THERMAL_ENERGY_INPUT_FROM_FILES 'true'
 
