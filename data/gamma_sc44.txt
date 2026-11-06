@@ -1,11 +1,8 @@
-# Source: ENSDF evaluation of Chen & Singh (2023), Nucl. Data Sheets, 190, 1-318, doi:10.1016/j.nds.2023.06.001,
-# from the IAEA LiveChart of Nuclides. Columns: energy [MeV], photons per decay. X-rays are omitted.
-# The 0.511 MeV line is the annihilation of the positron of the beta-plus branch.
 7
-0.511  1.88556
-1.157022  0.998867
-1.499449  0.00909
-2.14433  3.7e-05
-2.15084  1.1e-05
-2.65648  0.001119
-3.30135  1.4e-05
+0.511  1.8856
+1.157  0.9989
+1.499  0.0091
+2.144  0.0000
+2.151  0.0000
+2.656  0.0011
+3.301  0.0000
