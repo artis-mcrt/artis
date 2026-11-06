@@ -32,9 +32,10 @@ these steps:
    script then moves your `artisoptions.h` back. The options of the test have their own build folder, so a later build
    of your own options compiles nothing again, and a second run of the same test also compiles nothing again. The
    `sn3d` and `exspec` symlinks of the repository folder then point at the build of the test.
-3. It starts a new simulation and compares the checksums of the output files with
-   `tests/kilonova_1d_inputfiles/results_md5_job0.txt`.
-4. It resumes the simulation from the restart files. It then removes the restart files and runs `exspec`.
+3. It checks the input with `sn3d -c` (see [Running sn3d](running.md)). Then it starts a new simulation and compares
+   the checksums of the output files with `tests/kilonova_1d_inputfiles/results_md5_job0.txt`.
+4. It checks the input and the restart files with `sn3d -c`, and it resumes the simulation from the restart files. It
+   then removes the restart files and runs `exspec`.
 5. It compares the checksums of the output files with `results_md5_final.txt`.
 
 The script stops at the first step that fails. To run only one step, give the name of the step after the name of the

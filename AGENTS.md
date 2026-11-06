@@ -226,6 +226,9 @@ the second argument.
   options compiles nothing again. A second run of the same test also compiles
   nothing again. The `sn3d` and `exspec` symlinks of the repository root then
   point to the build of the test.
+- `inputcheck` copies `input-newrun.txt` to `input.txt` and runs `sn3d -c`,
+  which reads the input and runs no timestep. The step fails if the check
+  changes a file of the model folder outside the folder `inputcheck`.
 - `job0` removes `input.txt` and starts a new simulation. `sn3d` then restores
   `input.txt` from `input-newrun.txt`. After a run, `input.txt` holds the
   values that continue that run.
@@ -234,7 +237,8 @@ the second argument.
   because the resume run changes the output files.
 - `resume` copies `input-resume.txt` to `input.txt` and runs `sn3d`. That file
   tells `sn3d` to read the restart files of the first run, and it sets a
-  different range of timesteps.
+  different range of timesteps. Before the run, the step does the same check
+  with `sn3d -c` as `inputcheck`, which here also reads the restart files.
 - `exspec` removes the `*.tmp` files, runs `exspec`, and then runs
   `scripts/mergeangleres.py`. That script merges the direction bin files into
   `light_curve_res.out`, `spec_res.out`, and `specpol_res.out`. The tests with

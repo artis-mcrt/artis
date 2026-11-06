@@ -2062,7 +2062,7 @@ void read_parameterfile(std::span<Packet> packets) {
     // follow identical histories because the grid state that they see is rank-invariant.
     const auto [firstpktindex_thisrank, npkts_thisrank] =
         get_range_chunk(NUM_PACKETS, globals::nprocs, globals::my_rank);
-    assert_always(std::ssize(packets) == npkts_thisrank);
+    assert_always(std::ssize(packets) <= npkts_thisrank);
     const auto rank_seed_base = static_cast<std::uint64_t>(pre_zseed + firstpktindex_thisrank);
     for (auto packetnumber = 0ZU; packetnumber < std::size(packets); packetnumber++) {
       get_rngstate(packets[packetnumber]).seed64(rank_seed_base + packetnumber);
