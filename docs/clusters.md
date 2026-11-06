@@ -3,13 +3,22 @@
 Each simulation has its own model folder. Keep the source code and the git metadata in a subfolder `artis` of the model
 folder, not only the executables. The code then finds its data files in `artis/data`.
 
-Make the model folder. Then clone the default branch `main` into it:
+Make the model folder. Then clone the default branch `main` into it, and copy the template of `input.txt`:
 
 ```sh
 mkdir mymodel
 cd mymodel
 git clone https://github.com/artis-mcrt/artis.git
+cp artis/scripts/input-template.txt input.txt
 cd artis
+```
+
+`scripts/new-model-folder.sh` of a clone that you have does the same steps, e.g. from a model folder next to the new
+one:
+
+```sh
+artis/scripts/new-model-folder.sh ../mymodel
+cd ../mymodel/artis
 ```
 
 An HPC cluster gives the compiler and the MPI library through a module or a spack command. For the systems that we use,
@@ -38,9 +47,9 @@ cd ..
 ```
 
 Then make sure that the model folder holds a full set of input files: `model.txt`, `abundances.txt`, an atomic
-database (see [Atomic and model data](data.md)), and `input.txt`. Only `sn3d` writes `input.txt`, so copy a
-template, e.g. `tests/classicmode_3d_inputfiles/input-newrun.txt`. Then configure the timesteps in it (see
-[Input files](inputfiles.md)).
+database (see [Atomic and model data](data.md)), and `input.txt`. The `input.txt` of the template holds the values of
+a test model. Set its lines 1 to 3, 18, and 19 for your model: the timesteps, the times, and the LTE and grey
+timesteps (see [Input files](inputfiles.md)).
 
 ## Submit the job
 
@@ -54,7 +63,7 @@ sbatch artis/scripts/artis-cosma8.sh
 
 On Leonardo and Virgo, run `artis/scripts/artis-<cluster>-submit.sh` in place of `sbatch`. The Virgo submit script
 holds the rank count. These two scripts take the email address for the Slurm messages from the `EMAIL` environment
-variable (see `scripts/aliases.sh`).
+variable. Export it in your `.bashrc`.
 
 On Cosma8, Kelvin2, Leonardo, and Virgo, `artis/scripts/submit.sh` finds the cluster from the host name and submits
 the applicable job script. Run it in the model folder in place of `sbatch`.

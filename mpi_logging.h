@@ -57,6 +57,10 @@ inline int node_id{-1};
 // the job folder of sn3d, which receives the per-rank output files; empty means the current directory
 inline std::string jobfolder;
 
+// The path from the working folder to the model folder, with a final slash. It is empty unless sn3d does an input
+// check, which works in a subfolder of the model folder.
+inline std::string path_to_modelfolder;
+
 inline void setup_mpi_vars() {
   MPI_Comm_rank(MPI_COMM_WORLD, &globals::my_rank);
   MPI_Comm_size(MPI_COMM_WORLD, &globals::nprocs);
@@ -716,7 +720,7 @@ constexpr std::string_view ALLRANKS_OUTFILE_SUFFIX = "_allranks.out";
   if (mode[0] == 'r') {
     // search data folders in order to find file to read
     for (const auto& datadir : datafolders) {
-      const auto datafolderfilename = std::format("{}{}", datadir, filename);
+      const auto datafolderfilename = std::format("{}{}{}", globals::path_to_modelfolder, datadir, filename);
       auto* file = std::fopen(datafolderfilename.c_str(), mode.data());
       if (file != nullptr) {
         return file;

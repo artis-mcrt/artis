@@ -131,20 +131,18 @@ that supplies `mpicxx`. With Open MPI, select the compiler with
 `export OMPI_CXX=g++`. The build needs no other program.
 
 ```sh
-export MAKEFLAGS="--check-symlink-times --jobs=$(nproc)"
+export MAKEFLAGS="--jobs=$(nproc)"
 ln -s artisoptions_classic.h artisoptions.h   # required, gitignored
 make                                          # builds sn3d and exspec
 ```
 
 Symlink the preset instead of a copy. The symlink keeps `artisoptions.h`
-correct when the preset changes, e.g. after a change of branch. Make reads the
-timestamp through the symlink without `--check-symlink-times`, so a change of
-preset then starts no rebuild. The Makefile warns you if `artisoptions.h` is a
-symlink and the flag is absent. A copied `artisoptions.h` gets no such warning.
+correct when the preset changes, e.g. after a change of branch.
 
 `docs/makeoptions.md` lists the make options, and the Makefile is the
 authority. `make OPTIMIZE=OFF` is the quickest test that everything compiles. The other targets
-are `unittests`, `check` (clang-tidy), `sn3dwhole`, and `clean`.
+are `unittests`, `check` (clang-tidy), `sn3dwhole`, `clean`, and `help`. `make help` prints
+one line for each target and each make option, and it needs no `artisoptions.h` and no compiler.
 
 `make` puts the objects in `build/<configuration>/` and makes a symlink in the
 repository root to each program that it builds. The default target builds
@@ -161,10 +159,13 @@ Points that surprise a new agent:
 - Each option adds a suffix to the name of the build folder, so different
   option sets coexist. A new option that changes `CXXFLAGS` must also add a
   suffix to `BUILD_DIR`.
-- The name of the build folder does not contain the preset, so a change of
-  preset must compile all objects again. Make does this for a new symlink with
-  `--check-symlink-times`. A copy that keeps the old timestamp, e.g. from
-  `cp -p`, needs `make clean`. CI does this before nearly every preset compile.
+- The name of the build folder ends with `_options` and a checksum of the
+  content of `artisoptions.h`, so the builds of different presets coexist. A
+  change of the preset or of an option value compiles all objects in a new
+  build folder, and a change back to an earlier content compiles nothing. The
+  timestamp of `artisoptions.h` has no effect, so a symlink and a copy give the
+  same build. Each edit of an option keeps the build folder of the old value,
+  and `make clean` removes all build folders.
 - The Makefile decides how the options interact, e.g. `REPRODUCIBLE=ON` with
   `FASTMATH`, and `OPENMP=ON` with `STDPAR=ON`. Read the Makefile for the rule.
 - The build uses `-Werror` for all compilers except nvc++.
@@ -182,10 +183,10 @@ Points that surprise a new agent:
 - `GCCTOOLCHAIN` selects the gcc toolchain of nvc++. The Makefile has fallbacks
   for some known hosts, so this option is not always necessary. CI sets it in
   the environment.
-- The Makefile writes `version.cc` from the git metadata and from
-  `artisoptions.h`, but only when the content changes. `sn3d` and `exspec` log
-  these strings. `version.cc` is gitignored, and `version.h` is a tracked file
-  that declares the strings. Keep the definitions in `version.cc`.
+- The Makefile writes `version.cc` into the build folder from the git metadata
+  and from `artisoptions.h`, but only when the content changes. `sn3d` and
+  `exspec` log these strings. `version.h` is a tracked file that declares the
+  strings. Keep the definitions in `version.cc`.
   The git metadata changes at almost every git operation, so a definition in
   the header makes `sn3d.cc` and `exspec.cc` compile again each time.
 
@@ -224,9 +225,13 @@ the second argument.
 - `build` moves your `artisoptions.h` aside and makes a symlink to the options
   of the model folder. It builds with the make options of CI and copies `sn3d`
   and `exspec` into the model folder. Then it moves your `artisoptions.h` back.
-  The move keeps the timestamp, so a build in a different build folder
-  compiles nothing again. The step gives the objects of the test build an old
-  timestamp, so a later build in that build folder compiles them again.
+  The test options have their own build folder, so a later build of your own
+  options compiles nothing again. A second run of the same test also compiles
+  nothing again. The `sn3d` and `exspec` symlinks of the repository root then
+  point to the build of the test.
+- `inputcheck` copies `input-newrun.txt` to `input.txt` and runs `sn3d -c`,
+  which reads the input and runs no timestep. The step fails if the check
+  changes a file of the model folder outside the folder `inputcheck`.
 - `job0` removes `input.txt` and starts a new simulation. `sn3d` then restores
   `input.txt` from `input-newrun.txt`. After a run, `input.txt` holds the
   values that continue that run.
@@ -235,7 +240,8 @@ the second argument.
   because the resume run changes the output files.
 - `resume` copies `input-resume.txt` to `input.txt` and runs `sn3d`. That file
   tells `sn3d` to read the restart files of the first run, and it sets a
-  different range of timesteps.
+  different range of timesteps. Before the run, the step does the same check
+  with `sn3d -c` as `inputcheck`, which here also reads the restart files.
 - `exspec` removes the `*.tmp` files, runs `exspec`, and then runs
   `scripts/mergeangleres.py`. That script merges the direction bin files into
   `light_curve_res.out`, `spec_res.out`, and `specpol_res.out`. The tests with

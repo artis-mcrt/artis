@@ -14,12 +14,15 @@ ARTIS is a 3D Monte Carlo radiative transfer code for ejecta in homologous expan
 The full documentation is at [artis-mcrt.readthedocs.io](https://artis-mcrt.readthedocs.io/). It comes from the [docs](docs) folder of this repository.
 
 - [Quickstart](https://artis-mcrt.readthedocs.io/en/latest/quickstart.html): a first simulation and a plot on a laptop.
+- [Example: a nebular spectrum](https://artis-mcrt.readthedocs.io/en/latest/example.html): a complete run of a small model with non-LTE (NLTE) populations, with the checks and a spectrum.
 - [How a simulation works](https://artis-mcrt.readthedocs.io/en/latest/simulation.html): the packets, the two grids, and the timestep loop.
+- [Methods and references](https://artis-mcrt.readthedocs.io/en/latest/methods.html): each method, its options, and its reference.
+- [Plan a simulation](https://artis-mcrt.readthedocs.io/en/latest/planning.html): what sets the cost and the memory of a run, and how you measure them.
 - [Installation](https://artis-mcrt.readthedocs.io/en/latest/installation.html): the compiler, the MPI library, and the build.
 - [Option presets](https://artis-mcrt.readthedocs.io/en/latest/presets.html) and [Compile-time options](https://artis-mcrt.readthedocs.io/en/latest/options.html): the physics of the run.
 - [Atomic and model data](https://artis-mcrt.readthedocs.io/en/latest/data.html): the data that a simulation reads.
 - [Runs on a cluster](https://artis-mcrt.readthedocs.io/en/latest/clusters.html): the Slurm job scripts and the wall-time mechanism.
-- [Troubleshooting](https://artis-mcrt.readthedocs.io/en/latest/troubleshooting.html): the messages that stop a build or a run.
+- [Troubleshooting](https://artis-mcrt.readthedocs.io/en/latest/troubleshooting.html): the messages that stop a build or a run, and the warnings of the log.
 - [Development setup](https://artis-mcrt.readthedocs.io/en/latest/development.html) and [Testing](https://artis-mcrt.readthedocs.io/en/latest/testing.html): the tools, the linters, and the tests.
 
 ## Quickstart

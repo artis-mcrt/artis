@@ -24,9 +24,10 @@ Usage: tests/runtest.sh <testname> [step]
 Without a step, the script runs these steps in order. It stops at the first step that fails.
   setup            remove tests/<testname>_testrun and make it again with tests/setup_<testname>.sh
   build            build sn3d and exspec from the artisoptions.h of the model folder, and copy them into it
+  inputcheck       check the input of the new simulation with sn3d -c
   job0             start a new simulation
   checksums_job0   compare the checksums of the output files with results_md5_job0.txt (only directly after job0)
-  resume           resume the simulation from the restart files
+  resume           check the input and the restart files with sn3d -c, then resume the simulation
   exspec           remove the restart files, then run exspec and scripts/mergeangleres.py
   checksums_final  compare the checksums of the output files with results_md5_final.txt
 
@@ -50,9 +51,26 @@ if [ "$step" != all ] && [ "$step" != setup ] && [ ! -d "$modelpath" ]; then
     exit 1
 fi
 
+# Run the input check of sn3d with $1 ranks. The check must change no file of the model folder outside its own
+# folder inputcheck.
+run_inputcheck() {
+    list_modelfolder_files() { find . -path ./inputcheck -prune -o ! -type d -print | sort; }
+    local files_before files_changed time_before
+    files_before=$(list_modelfolder_files)
+    time_before=$(mktemp)
+    "${mpirun_command[@]}" -np "$1" ./sn3d -c
+    files_changed=$(find . -path ./inputcheck -prune -o ! -type d -newer "$time_before" -print)
+    rm -f "$time_before"
+    if [ "$files_before" != "$(list_modelfolder_files)" ] || [ -n "$files_changed" ]; then
+        echo "[error] The input check changed the model folder: $files_changed" >&2
+        exit 1
+    fi
+    rm -rf inputcheck
+}
+
 case $step in
     all)
-        for step_name in setup build job0 checksums_job0 resume exspec checksums_final; do
+        for step_name in setup build inputcheck job0 checksums_job0 resume exspec checksums_final; do
             if ! "${BASH_SOURCE[0]}" "$testname" "$step_name"; then
                 echo "[error] The step $step_name of the test $testname failed." >&2
                 exit 1
@@ -73,7 +91,7 @@ case $step in
             echo "[error] An earlier test did not restore $saved_options. Rename it to artisoptions.h." >&2
             exit 1
         fi
-        # mv keeps the timestamp, so a later build of your own options does not compile everything again
+        # the build folder of the test options has its own name, so your own build compiles nothing again
         if [ -L artisoptions.h ] || [ -e artisoptions.h ]; then
             mv artisoptions.h "$saved_options"
             trap 'mv -f "$saved_options" artisoptions.h' EXIT
@@ -81,11 +99,16 @@ case $step in
             trap 'rm -f artisoptions.h' EXIT
         fi
         ln -s "tests/${testname}_testrun/artisoptions.h" artisoptions.h
-        make --check-symlink-times --jobs="$(getconf _NPROCESSORS_ONLN)" REPRODUCIBLE=ON ZSTD=ON TESTMODE="$testmode" \
+        make --jobs="$(getconf _NPROCESSORS_ONLN)" REPRODUCIBLE=ON ZSTD=ON TESTMODE="$testmode" \
             MAX_NODE_SIZE=2 FASTMATH=OFF sn3d exspec
         cp -L sn3d exspec "$modelpath/"
-        # the objects hold the test options, so a later build in this build folder must compile them again
-        touch -t 200001010000 "$(dirname "$(readlink sn3d)")"/*.o
+        ;;
+
+    inputcheck)
+        cd "$modelpath"
+        # the check reads input.txt, and it does not restore an absent input.txt from input-newrun.txt
+        cp input-newrun.txt input.txt
+        run_inputcheck 2
         ;;
 
     job0)
@@ -98,6 +121,8 @@ case $step in
     resume)
         cd "$modelpath"
         cp input-resume.txt input.txt
+        # the check of a resumed simulation needs the rank count of the simulation
+        run_inputcheck 4
         time "${mpirun_command[@]}" -np 4 ./sn3d
         ;;
 

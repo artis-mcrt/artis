@@ -66,7 +66,7 @@ This is the quickest complete simulation of the repository. The script does thes
 1. It downloads the atomic data of the test (about 15 MB) into `tests/` and keeps the archive for a later run.
 2. It makes the model folder `tests/kilonova_1d_testrun` with the input files and an `artisoptions.h` for the test.
 3. It builds `sn3d` and `exspec`, and copies them into the model folder.
-4. It starts a new simulation.
+4. It checks the input with `sn3d -c`, and then it starts a new simulation.
 5. It compares the checksums of the output files with `results_md5_job0.txt`.
 6. It resumes the simulation from the restart files, and then runs `exspec`.
 7. It compares the checksums again with `results_md5_final.txt`.
@@ -148,17 +148,18 @@ runs to 10 days. `--plotinvalidpart` draws the later times anyway.
 
 Each simulation has its own model folder. Keep the source code in a subfolder `artis` of it. The code then finds its
 physics data in `artis/data`. The commands below make a model folder from the input files of the test model. Run the
-first command in the clone of step 2, so that the symlink points at it:
+first command in the clone of step 2:
 
 ```sh
-artispath=$(pwd)
-mkdir ~/mymodel
+scripts/new-model-folder.sh --symlink ~/mymodel
 cd ~/mymodel
-ln -s "$artispath" artis
 tar -xf artis/tests/atomicdata_feconi.tar.xz
 rsync -a --exclude 'results_md5_*' artis/tests/kilonova_1d_inputfiles/ ./
 cp input-newrun.txt input.txt
 ```
+
+The script makes the folder, a symlink `artis` to the clone, and an `input.txt` from `scripts/input-template.txt`.
+The last command replaces that `input.txt` with the file of the test model.
 
 The archive and the input folder both hold a `compositiondata.txt`. The archive comes first, so the file of the test
 model has priority, as it does in the test. That file keeps ten elements, and the file of the archive keeps three.
