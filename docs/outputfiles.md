@@ -371,6 +371,7 @@ The values of `absorption_type`:
 | -7 | a pellet that decayed before the start time of the model, or the initial energy of the cells |
 | -10 | a pellet decay to a particle |
 | -11 | a bound-bound absorption in a binned opacity, which has no line index |
+| -12 | a pellet release of the input energy of `THERMAL_ENERGY_INPUT_FROM_FILES` as heat |
 
 ### The virtual packet files
 

@@ -288,6 +288,16 @@ the positrons goes to the non-thermal electrons (see [the non-thermal electrons]
       doi:10.3847/0004-637X/829/2/110 and Wollaeger, Korobkin, Fontes, Rosswog, Even & Fryer (2018), MNRAS, 478,
       3298-3334, doi:10.1093/mnras/sty1018.
 
+## An energy source from input files
+
+With [THERMAL_ENERGY_INPUT_FROM_FILES](options.md#thermal_energy_input_from_files), two input files replace the
+decay energy. [energydistribution.txt](inputfiles.md#energydistributiontxt) gives the energy of each model cell, and
+[energyrate.txt](inputfiles.md#energyratetxt) gives the cumulative fraction of that energy that the cells release
+by each time. Each pellet samples its cell from the cell energies and its release time from that fraction. At the
+release time, the pellet becomes a k-packet in its cell, so all of the energy heats the gas. No gamma ray and no
+particle comes from this source. The thermal balance adds the release rate of the timestep to the heating. The
+nuclides of `model.txt` still decay and change the composition, but their decay energy goes into no packet.
+
 ## The gamma rays
 
 A gamma packet gives its energy to the gas by Compton scattering, by photoelectric absorption, or by pair production.

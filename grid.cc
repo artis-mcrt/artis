@@ -40,6 +40,7 @@
 #include "atomic.h"
 #include "constants.h"
 #include "decay.h"
+#include "energyinput.h"
 #include "globals.h"
 #include "input.h"
 #include "inputfilestream.h"
@@ -127,6 +128,8 @@ struct ModelGridCellInput {
   float initelectronfrac = -1.;  // Ye: electrons (or protons) per nucleon. Negative until the input sets it
   // q: the trapped radiation energy per mass [erg/g], scaled from t_model to tmin (INITIAL_PACKETS_ON)
   float initenergyq = 0.;
+  // the energy that energydistribution.txt gives to the cell [erg] (THERMAL_ENERGY_INPUT_FROM_FILES)
+  double thermal_input_energy = 0.;
 };
 MPI_shared_array<ModelGridCellInput> modelgrid_input{};
 
@@ -213,6 +216,60 @@ void read_possible_yefile() {
     }
     printlnlog("Ye.txt: set the initial electron fraction for {} of {} model cells (ids follow model.txt, first id {})",
                cells_set, get_npts_model(), first_input_cellid);
+  }
+  MPI_Barrier_allranks();
+}
+
+// Read energydistribution.txt: the energy of each model cell [erg] for THERMAL_ENERGY_INPUT_FROM_FILES. The cell ids
+// follow model.txt.
+void read_thermal_input_energy_file() {
+  // the energies are written to node-shared memory, so only the node leaders read the file
+  // (synchronised by the barrier below)
+  double total_energy = 0.;
+  if (globals::rank_in_node == 0) {
+    auto filein = istream_required("energydistribution.txt");
+    int nrows = 0;
+    if (!(filein >> nrows) || nrows < 1 || nrows > get_npts_model()) {
+      fatal_crash("energydistribution.txt: the first line must give a number of rows in [1, {}]", get_npts_model());
+    }
+
+    const int last_mgi = get_npts_model() - 1;
+    auto mgi_has_energy_row = std::vector<bool>(get_npts_model(), false);
+    for (int row = 0; row < nrows; row++) {
+      int cellnumberin = -1;
+      double cell_energy = 0.;
+      if (!(filein >> cellnumberin >> cell_energy)) {
+        fatal_crash("energydistribution.txt: row {} of {} must give a cell id and an energy [erg]", row + 1, nrows);
+      }
+      const int mgi = cellnumberin - first_input_cellid;
+      if (mgi < 0 || mgi > last_mgi) {
+        fatal_crash(
+            "energydistribution.txt: cell {} is outside the model cell range [0..{}]. The cell ids of model.txt "
+            "start at {}",
+            mgi, last_mgi, first_input_cellid);
+      }
+      if (mgi_has_energy_row[mgi]) {
+        fatal_crash("energydistribution.txt: cell id {} has more than one row", cellnumberin);
+      }
+      mgi_has_energy_row[mgi] = true;
+      if (!std::isfinite(cell_energy) || cell_energy < 0.) {
+        fatal_crash("energydistribution.txt: the energy {:g} [erg] of cell id {} must be finite and not negative",
+                    cell_energy, cellnumberin);
+      }
+      if (cell_energy > 0. && get_rho_tmin(mgi) <= 0.) {
+        fatal_crash("energydistribution.txt: cell id {} has the energy {:g} [erg], but model.txt gives it no mass",
+                    cellnumberin, cell_energy);
+      }
+      modelgrid_input[mgi].thermal_input_energy = cell_energy;
+      total_energy += cell_energy;
+    }
+    if (total_energy <= 0.) {
+      fatal_crash("energydistribution.txt: the total energy of the cells must be positive");
+    }
+    printlnlog(
+        "energydistribution.txt: {} of {} model cells have a row (ids follow model.txt, first id {}). The total "
+        "energy is {:g} [erg].",
+        nrows, get_npts_model(), first_input_cellid, total_energy);
   }
   MPI_Barrier_allranks();
 }
@@ -1250,16 +1307,25 @@ void assign_initial_temperatures() {
        nonemptymgi += globals::node_nprocs) {
     const int mgi = get_mgi_of_nonemptymgi(nonemptymgi);
 
-    // Both energies refer to ts0_tmid. The model file gives q at t_model with the adiabatic losses before t_model
-    // already applied, and the reader scaled it to tmin. The 1/t law of a comoving mass element takes it from
-    // tmin to ts0_tmid. The decay term counts the decays between t_model and ts0_tmid, and a decay at t_decay
-    // keeps t_decay / ts0_tmid of its energy under the same law.
-    const auto q = INITIAL_PACKETS_ON ? (get_initenergyq(mgi) * globals::tmin / ts0_tmid) : 0.;
-    const double decayedenergy_per_mass =
-        decay::get_modelcell_endecay_per_mass(nonemptymgi, endecay_per_massoftopnuc) + q;
+    float T_initial = 0.;
+    if constexpr (THERMAL_ENERGY_INPUT_FROM_FILES) {
+      // the input energy that the cell releases before ts0_tmid, after the expansion losses
+      const double radiation_energy_density = get_thermal_input_energy(mgi) *
+                                              energyinput::get_released_fraction_after_expansion(ts0_tmid) /
+                                              (get_modelcell_assocvolume_tmin(mgi) * pow3(ts0_tmid / globals::tmin));
+      T_initial = static_cast<float>(std::pow(CLIGHT / 4 / STEBO * radiation_energy_density, 1. / 4.));
+    } else {
+      // Both energies refer to ts0_tmid. The model file gives q at t_model with the adiabatic losses before t_model
+      // already applied, and the reader scaled it to tmin. The 1/t law of a comoving mass element takes it from
+      // tmin to ts0_tmid. The decay term counts the decays between t_model and ts0_tmid, and a decay at t_decay
+      // keeps t_decay / ts0_tmid of its energy under the same law.
+      const auto q = INITIAL_PACKETS_ON ? (get_initenergyq(mgi) * globals::tmin / ts0_tmid) : 0.;
+      const double decayedenergy_per_mass =
+          decay::get_modelcell_endecay_per_mass(nonemptymgi, endecay_per_massoftopnuc) + q;
 
-    auto T_initial = static_cast<float>(std::pow(
-        CLIGHT / 4 / STEBO * pow3(globals::tmin / ts0_tmid) * get_rho_tmin(mgi) * decayedenergy_per_mass, 1. / 4.));
+      T_initial = static_cast<float>(std::pow(
+          CLIGHT / 4 / STEBO * pow3(globals::tmin / ts0_tmid) * get_rho_tmin(mgi) * decayedenergy_per_mass, 1. / 4.));
+    }
 
     assert_always(std::isfinite(T_initial));
     if (T_initial < MINTEMP) {
@@ -1960,6 +2026,11 @@ DEVICE_FUNC auto get_initenergyq(const int modelgridindex) -> double {
   return modelgrid_input[modelgridindex].initenergyq;
 }
 
+// the energy of the model cell from energydistribution.txt [erg] (THERMAL_ENERGY_INPUT_FROM_FILES)
+auto get_thermal_input_energy(const int modelgridindex) -> double {
+  return modelgrid_input[modelgridindex].thermal_input_energy;
+}
+
 [[nodiscard]] auto get_elements_uppermost_ion(const std::ptrdiff_t nonemptymgi, const int element) -> int {
   const auto uppermost_ion = elements_uppermost_ion_allcells[(nonemptymgi * get_nelements()) + element];
   assert_testmodeonly(uppermost_ion >= -1);  // -1 before the first ion balance of the element in the cell
@@ -2362,6 +2433,11 @@ void read_ejecta_model() {
   }
 
   read_possible_yefile();
+
+  if constexpr (THERMAL_ENERGY_INPUT_FROM_FILES) {
+    read_thermal_input_energy_file();
+    energyinput::read_release_table();
+  }
 }
 
 void write_grid_restart_data(const int timestep) {

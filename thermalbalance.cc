@@ -173,10 +173,13 @@ auto T_e_eqn_heating_minus_cooling(const double T_e, int nonemptymgi, const doub
   const auto ntalpha_dep = heatingcoolingrates.dep_alpha;
   // spontaneous fission fragments deposit as pure heating via k-packets (like alpha particles)
   const auto ntspfission_dep = heatingcoolingrates.dep_spfission;
-  heatingcoolingrates.heating_dep = (ntlepton_dep * ntlepton_frac_heating) + ntalpha_dep + ntspfission_dep;
+  // the input energy of THERMAL_ENERGY_INPUT_FROM_FILES is pure heating
+  const auto thermal_input_dep = heatingcoolingrates.dep_thermal_input;
+  heatingcoolingrates.heating_dep =
+      (ntlepton_dep * ntlepton_frac_heating) + ntalpha_dep + ntspfission_dep + thermal_input_dep;
   heatingcoolingrates.dep_frac_heating =
-      ((ntalpha_dep + ntspfission_dep) > 0)
-          ? heatingcoolingrates.heating_dep / (ntlepton_dep + ntalpha_dep + ntspfission_dep)
+      ((ntalpha_dep + ntspfission_dep + thermal_input_dep) > 0)
+          ? heatingcoolingrates.heating_dep / (ntlepton_dep + ntalpha_dep + ntspfission_dep + thermal_input_dep)
           : ntlepton_frac_heating;
 
   // Adiabatic cooling p dV/dt per unit volume. Homologous expansion gives V proportional to t^3, so this

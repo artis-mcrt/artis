@@ -24,6 +24,7 @@
 #include "artisoptions.h"
 #include "constants.h"
 #include "decay.h"
+#include "energyinput.h"
 #include "globals.h"
 #include "grid.h"
 #include "input.h"
@@ -79,9 +80,12 @@ void place_pellet(const double e_cmf_per_packet, const std::span<const double> e
   assert_always(grid::get_cellindex_from_pos(pkt.pos, pkt.prop_time) == cellindex);
 #endif
 
-  const auto nonemptymgi = grid::get_propcell_nonemptymgi(cellindex);
-
-  decay::setup_radioactive_pellet(e_cmf_per_packet, nonemptymgi, pkt, energy_per_massoftopnuc_decaypath);
+  if constexpr (THERMAL_ENERGY_INPUT_FROM_FILES) {
+    energyinput::setup_thermal_input_pellet(e_cmf_per_packet, pkt);
+  } else {
+    const auto nonemptymgi = grid::get_propcell_nonemptymgi(cellindex);
+    decay::setup_radioactive_pellet(e_cmf_per_packet, nonemptymgi, pkt, energy_per_massoftopnuc_decaypath);
+  }
 
   // initial e_rf is probably never needed (e_rf is set at pellet decay time), but we
   // might as well give it a correct value since this code is fast and runs only once
@@ -134,12 +138,14 @@ void packet_init(std::span<Packet> packets) {
 
   printlnlog("INITIAL_PACKETS_ON is {}", INITIAL_PACKETS_ON ? "true" : "false");
 
-  // the total decay energy from t_model to t_inf, for the log only. The pellets share etot_simtime below.
-  const double etot_tmodel_tinf = decay::get_global_etot_tmodel_tinf();
+  if constexpr (!THERMAL_ENERGY_INPUT_FROM_FILES) {
+    // the total decay energy from t_model to t_inf, for the log only. The pellets share etot_simtime below.
+    const double etot_tmodel_tinf = decay::get_global_etot_tmodel_tinf();
 
-  printlnlog("etot {:g} [erg] (t_model to t_inf)", etot_tmodel_tinf);
+    printlnlog("etot {:g} [erg] (t_model to t_inf)", etot_tmodel_tinf);
 
-  printlnlog("e_cmf per packet (t_model to t_inf) {:g} [erg]", etot_tmodel_tinf / std::ssize(packets));
+    printlnlog("e_cmf per packet (t_model to t_inf) {:g} [erg]", etot_tmodel_tinf / std::ssize(packets));
+  }
 
   const auto energy_per_massoftopnuc_decaypath = decay::calc_energy_per_massoftopnuc_decaypath();
 
@@ -154,18 +160,37 @@ void packet_init(std::span<Packet> packets) {
   // the cumulative energy of the propagation cells, for the sampling of the pellet cell
   auto en_cumulative = std::vector<double>(grid::ngrid);
 
+  // the pellets of THERMAL_ENERGY_INPUT_FROM_FILES release their energy up to tmax
+  const double thermal_input_fraction_before_tmax =
+      THERMAL_ENERGY_INPUT_FROM_FILES ? energyinput::get_cumulative_fraction_released(globals::tmax) : 0.;
+
   double etot_simtime = 0.;
   for (int propcellindex = 0; propcellindex < grid::ngrid; propcellindex++) {
     const int mgi = grid::get_propcell_modelgridindex(propcellindex);
     // some propagation cells are empty
     if (mgi >= 0) {
-      const auto nonemptymgi = grid::get_propcell_nonemptymgi(propcellindex);
-      const auto initial_en_per_mass = INITIAL_PACKETS_ON ? grid::get_initenergyq(mgi) : 0.;
+      if constexpr (THERMAL_ENERGY_INPUT_FROM_FILES) {
+        // the energy of a model cell goes to its propagation cells by volume
+        etot_simtime += grid::get_thermal_input_energy(mgi) * thermal_input_fraction_before_tmax *
+                        grid::get_propcell_volume_tmin(propcellindex) / grid::get_modelcell_assocvolume_tmin(mgi);
+      } else {
+        const auto nonemptymgi = grid::get_propcell_nonemptymgi(propcellindex);
+        const auto initial_en_per_mass = INITIAL_PACKETS_ON ? grid::get_initenergyq(mgi) : 0.;
 
-      etot_simtime += grid::get_propcell_volume_tmin(propcellindex) * grid::get_rho_tmin(mgi) *
-                      (cell_endecay_per_mass[nonemptymgi] + initial_en_per_mass);
+        etot_simtime += grid::get_propcell_volume_tmin(propcellindex) * grid::get_rho_tmin(mgi) *
+                        (cell_endecay_per_mass[nonemptymgi] + initial_en_per_mass);
+      }
     }
     en_cumulative[propcellindex] = etot_simtime;
+  }
+  if constexpr (THERMAL_ENERGY_INPUT_FROM_FILES) {
+    printlnlog(
+        "THERMAL_ENERGY_INPUT_FROM_FILES: the cells with matter release {:g} [erg] before tmax, a fraction {:g} of "
+        "their energy",
+        etot_simtime, thermal_input_fraction_before_tmax);
+    if (etot_simtime <= 0.) {
+      fatal_crash("THERMAL_ENERGY_INPUT_FROM_FILES: the cells with matter release no energy before tmax");
+    }
   }
   assert_always(etot_simtime > 0);
 

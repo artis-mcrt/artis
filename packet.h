@@ -97,6 +97,7 @@ enum absorption_type : int {
   // bound-bound absorption in a binned opacity (RPKT_USE_BINNED_OPACITIES with
   // RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY), so no single line index is known
   ABSTYPE_BOUNDBOUND_EXPANSIONOPACITY = -11,
+  ABSTYPE_PELLET_THERMALINPUT = -12,  // pellet release of the input energy as heat (THERMAL_ENERGY_INPUT_FROM_FILES)
 };
 
 // The state a macro-atom is activated in. Local to a do_macroatom() call, not part of the packet's
@@ -184,7 +185,8 @@ struct Packet {
   double tdecay{-1.};  // Time at which pellet decays
   int number{-1};  // the number of the packet, unique only inside one rank
   bool originated_from_particlenotgamma{false};  // first packet type after pellet decay
-  int pellet_decaytype{-1};  // decay::DecayType value of the pellet decay, or -1 for the initial-energy channel
+  // decay::DecayType value of the pellet decay, or -1 for the initial-energy channel and the input energy
+  int pellet_decaytype{-1};
   int pellet_nucindex{-1};  // nuclide index of the decaying species
   // If SAMPLE_RPKT_EMISSION is false, this member has an empty type, and [[no_unique_address]] then lets it take no
   // memory. The type of the member selects the overload of sample_rpkt_emission(), parse_rpkt_emission_sample(), and

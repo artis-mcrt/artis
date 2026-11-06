@@ -22,6 +22,8 @@ exist.
 | [transitiondata.txt](#transitiondatatxt) | yes | the lines of each ion |
 | [phixsdata_v2.txt or phixsdata.txt](#phixsdata_v2txt-and-phixsdatatxt) | one of them | the photoionisation cross-sections |
 | [vpkt.txt](#vpkttxt) | with `VPKT_ON` | the observer directions of the virtual packets |
+| [energydistribution.txt](#energydistributiontxt) | with `THERMAL_ENERGY_INPUT_FROM_FILES` | the energy of each model cell |
+| [energyrate.txt](#energyratetxt) | with `THERMAL_ENERGY_INPUT_FROM_FILES` | the cumulative fraction of the cell energies that the cells release by each time |
 | [Ye.txt](#yetxt) | with `RPKT_GREY_TYPE = TANAKA2020_ELECTRONFRAC`, if `model.txt` has no `Ye` column | the electron fraction of each cell |
 | [recombrates.txt](#recombratestxt) | no | the recombination rate coefficients for the calibration |
 | [autoion.txt](#autoiontxt) | no | the autoionisation rates |
@@ -399,6 +401,46 @@ The ranges have limits. The time range of the spectra must be inside the range f
 `VSPEC_TIMEMAX` and inside the time range of the model. The wavelength ranges of the spectra must be inside the
 range that the frequencies `VSPEC_NUMAX` and `VSPEC_NUMIN` of `vpkt.h` give, which is 3500 to 10000 Angstroms. The ranges of the velocity grid map must be inside the ranges of the
 spectra.
+
+## energydistribution.txt
+
+With `THERMAL_ENERGY_INPUT_FROM_FILES`, this file gives the energy of each model cell in erg. The file can have no
+comment lines.
+
+```text
+<number of rows>
+<cell id> <energy [erg]>
+```
+
+The second line occurs once for each row. The cell ids are the ids of `model.txt`, also for a 2D or a 3D model. A
+cell with no row gets no energy. The energy of a model cell goes to its propagation cells by volume. The run stops
+for each of these errors:
+
+- the number of rows is less than 1 or more than the number of model cells;
+- a cell id is outside the range of `model.txt`, or it has more than one row;
+- an energy is negative or not finite;
+- a cell with no mass in `model.txt` has energy;
+- the total energy is 0.
+
+## energyrate.txt
+
+With `THERMAL_ENERGY_INPUT_FROM_FILES`, this file gives the cumulative fraction F of the cell energies that the cells
+release by each time. The fraction is the same for all cells. The file can have no comment lines.
+
+```text
+<number of rows>
+<time [d]> <cumulative fraction released>
+```
+
+The second line occurs once for each row. Between two rows, F is linear in the time. Before the first row, F is 0,
+so the fraction of the first row is a release at the time of that row. After the last row, F is 1.
+
+- The times must be positive, and each time must be greater than the time of the previous row.
+- The fractions must be in the range from 0 to 1, and each fraction must not be less than the previous fraction.
+- The last fraction must be within 0.001 of 1. `sn3d` divides all fractions by the last fraction.
+
+The pellets release only the energy up to tmax. A release before tmin becomes a blackbody r-packet at tmin, and it
+keeps the share tdecay / tmin of its energy, as for a decay before tmin.
 
 ## Ye.txt
 

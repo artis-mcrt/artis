@@ -15,6 +15,16 @@ constexpr bool INITIAL_PACKETS_ON;
 // follows the decay power at its time.
 constexpr bool UNIFORM_PELLET_ENERGIES;
 
+// True: two input files give the energy source, and the radioactive decays give no energy. energydistribution.txt
+// gives the energy of each model cell [erg]. energyrate.txt gives the cumulative fraction F(t) of that energy that
+// the cells release by the time t. F is linear in t between the rows. Each pellet samples its cell from the cell
+// energies and its release time from F, up to tmax. At the release time, the pellet becomes a k-packet in its cell.
+// A release before tmin keeps tdecay / tmin of its energy, as for a decay. The thermal balance adds the analytic
+// release rate of the timestep as heating. The nuclides of model.txt still decay and change the composition. Their
+// eps_*_ana rates in deposition.out and in the estimators files still give their decay power, but no packet carries
+// it. Requires INITIAL_PACKETS_ON = false and UNIFORM_PELLET_ENERGIES = true.
+constexpr bool THERMAL_ENERGY_INPUT_FROM_FILES;
+
 // The timestep scheme:
 // - LOGARITHMIC;
 // - CONSTANT;
