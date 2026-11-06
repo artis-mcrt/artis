@@ -155,12 +155,12 @@ The columns of each cell:
 | Column | Model | Meaning |
 | --- | --- | --- |
 | `#inputcellid` | all | The cell id. The ids start at 0 or at 1, and they increase by one for each cell. |
-| `vel_r_max_kmps` | 1D | The velocity of the outer boundary of the shell [km/s]. Each value must be larger than the value of the cell before. |
+| `vel_r_max_kmps` | 1D | The velocity of the outer boundary of the shell [km/s]. Each value must be larger than the value of the cell before. The first value must be above 0, and `sn3d` does no check of it. |
 | `logrho` | 1D | The base-10 logarithm of the density [g/cm^3] at `t_model`. A value of -90 or less gives an empty cell. |
 | `pos_rcyl_mid`, `pos_z_mid` | 2D | The midpoint of the cell [cm] at `t_model`. |
 | `pos_x_min`, `pos_y_min`, `pos_z_min` | 3D | The corner of the cell with the lowest coordinates [cm] at `t_model`. |
 | `rho` | 2D, 3D | The density [g/cm^3] at `t_model`. A value of zero gives an empty cell, and a negative value stops the run. |
-| `X_Fegroup` | all | The mass fraction of the iron-group elements. The value must be in the range from 0 to 1, as each `X_<nuclide>` value. |
+| `X_Fegroup` | all | The mass fraction of the iron-group elements. The value must not be above 1.001, which permits a rounding error. `sn3d` treats a negative value as it treats a negative `X_<nuclide>` value. |
 | `X_<nuclide>` | all | The mass fraction of one nuclide at `t_model`, e.g. `X_Ni56`. The name has the element symbol and the mass number. The value must be in the range from 0 to 1. `sn3d` sets a negative value above -1e-6 to 0, and a value below that limit stops the run. |
 | `Ye` or `cellYe` | all | The electron fraction. |
 | `q` | all | The trapped radiation energy per mass [erg/g] at `t_model`. The value must not be negative. |
@@ -225,7 +225,7 @@ file has one row for each element:
 
 | Column | Meaning |
 | --- | --- |
-| `Z` | The atomic number, which must be above 0. |
+| `Z` | The atomic number, which must be in the range from 1 to 118. |
 | `nions` | The number of ion stages, which must not be negative. With the value 0, the element has no ions, and the code keeps only its nuclide abundances. |
 | lowest ion stage | The lowest ion stage of the run. The ion stage 1 is the neutral atom. |
 | highest ion stage | The highest ion stage of the run. For an element with ions, `nions` must be equal to the highest ion stage - the lowest ion stage + 1. An element with `nions` 0 has no such rule. |
@@ -285,8 +285,9 @@ Then one row for each transition:
 ```
 
 - The lower level index must be less than the upper level index.
-- A positive collision strength is the effective collision strength of the transition. If the collision strength is
-  not available, the value is -1.0 for a permitted transition and -2.0 for a forbidden transition.
+- A collision strength of zero or above is the effective collision strength of the transition. The value zero gives
+  a collisional rate of zero. If the collision strength is not available, the value is -1.0 for a permitted transition
+  and -2.0 for a forbidden transition.
 - The forbidden flag is 1 for a forbidden transition and 0 for a permitted transition.
 - An A value must not be negative. `sn3d` does no check of this value.
 - The rows of a block can have no comment lines between them.
@@ -457,6 +458,7 @@ transition:
 - The autoionising levels of an ion must be one block of levels with no gap, and the block must end at the highest
   level of the ion.
 - The autoionising levels of the file must all be NLTE levels, or none of them must be an NLTE level.
+- The A value must not be negative. `sn3d` does no check of this value.
 
 ## gridcontributions.txt
 
@@ -481,7 +483,8 @@ The gamma-ray lines of each nuclide are in the `data` folder of the repository. 
 <energy in MeV> <number of photons for each decay>
 ```
 
-The second line occurs once for each gamma-ray line. The energy and the number of photons must not be negative,
+The number of lines must not be negative. The second line occurs once for each gamma-ray line. The energy and the
+number of photons must not be negative,
 and `sn3d` does no check of these values. A nuclide without a file, but with a gamma-ray energy in its
 decay data, gets one line at that energy. These nuclides are an exception, and the run stops when one of them is in
 the run and has no file:
