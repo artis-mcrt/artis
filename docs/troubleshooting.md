@@ -139,7 +139,7 @@ the run continues to its end:
 
 | Start of the message | Meaning |
 | --- | --- |
-| `Z=... ionstage ... nlevels_groundterm ... phixstargetlevels(ion-1) ...` | A check of the atomic data at the start. The number of levels in the ground term of the ion is different from the number of target levels of the photoionisation from the ground level of the lower ion. |
+| `Z=... ionstage ... nlevels_groundterm ... phixstargetlevels(ion-1) ...` | A check of the atomic data at the start. It compares the number of levels in the ground term of the ion with the number of target levels of the photoionisation from the ground level of the lower ion. The two numbers are different. |
 | `Z=... ionstage ... shellnum ... en_auger_ev is ... Setting to zero.` | The Auger energy of a shell is negative or not finite after the correction of the data table, and the code uses zero. |
 | `cell ... ts ... bin ...: W ... too high or non-finite ...; continuing with W ... at T_R_max` | The fit of one bin of the multibin radiation field gave a dilution factor that is above 1e4 or not finite. The code then uses the maximum temperature of the bins for that bin. |
 | `timestep ... cell ...: Some bin T_R values were clamped.` | The fit of some bins gave a temperature at the lower or the upper limit of the bins. |

@@ -59,7 +59,7 @@ comment line of `model.txt` gives the source of the cells: cells 70, 100, and 12
 | 1 | 10260 | Si 0.496, S 0.284, Ni 0.066, Fe 0.060 |
 | 2 | 12415 | Si 0.467, S 0.253, O 0.190 |
 
-The cell ids of `model.txt` start at 1. The log messages and artistools give the 0-based cell index, as this table
+The cell identifiers of `model.txt` start at 1. The log messages and artistools give the 0-based cell index, as this table
 does.
 
 ## 3. Limit the levels of the atomic data
