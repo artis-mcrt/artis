@@ -44,7 +44,7 @@ This is the quickest complete simulation of the repository. The script does thes
 1. It downloads the atomic data of the test (about 15 MB) into `tests/` and keeps the archive for a later run.
 2. It makes the model folder `tests/kilonova_1d_testrun` with the input files and an `artisoptions.h` for the test.
 3. It builds `sn3d` and `exspec`, and copies them into the model folder.
-4. It starts a new simulation.
+4. It checks the input with `sn3d -c`, and then it starts a new simulation.
 5. It compares the checksums of the output files with `results_md5_job0.txt`.
 6. It resumes the simulation from the restart files, and then runs `exspec`.
 7. It compares the checksums again with `results_md5_final.txt`.

@@ -20,6 +20,35 @@ The log of rank 0 starts with the git version and the content of `artisoptions.h
 preprocessor lines, and the blank lines. After each timestep, it gives the progress of the model and an estimate of the
 time for the remaining requested timesteps. The estimate uses the duration of the last timestep.
 
+## Check the input before a job
+
+Run `sn3d` with the option `-c` before you submit a job. The check reads the input files as a run does, and it stops
+before the first timestep:
+
+```sh
+mpirun -np 4 artis/sn3d -c
+```
+
+An error in an input file then stops the check, and not a job that waited in the queue. `sn3d` writes
+`input check: complete` to the standard output when it finds no error.
+
+The check works in the folder `inputcheck` of the model folder, and it changes no other file of the model folder. The
+folder holds the log of each rank, e.g. `inputcheck/output_0-0.txt`, with the `mem_usage` lines for the memory of the
+arrays. It also holds the files that a simulation writes before its first timestep, e.g. `timesteps.out`. Each check
+removes the folder of the check before it, so run only one check at a time in a model folder. A new simulation and
+`scripts/clean.sh` remove the folder too.
+
+A check differs from a run in these points:
+
+- The check needs `input.txt`. A run restores an absent `input.txt` from `input-newrun.txt`, but the check does not.
+- The check of a new simulation places only one pellet for each rank. A low rank count is thus sufficient, e.g. on a
+  login node. The `mem_usage` line of the packets gives the share of one rank for the rank count of the check. The
+  arrays that the ranks of a node share have the size that they have in the run.
+- The check of a resumed simulation needs the rank count of the simulation, because each rank has its own restart
+  files. Each rank reads its restart files of the start timestep, so this check needs the memory of the run.
+- With `VPKT_WRITE_CONTRIBS`, the check of a resumed simulation copies the `vpackets` restart file of each rank into
+  the folder `inputcheck`.
+
 ## A simulation in several jobs
 
 To split a long simulation across several queued jobs, run `sn3d` with `-w WALLTIMELIMITHOURS`. When too little wall
