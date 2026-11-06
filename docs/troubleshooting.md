@@ -180,4 +180,8 @@ data.
   element failed in one cell, and that element gets LTE populations there. Examine the populations of the cell when
   the warning occurs at many timesteps.
 - `timestep ... has a width of ... times its midpoint time`: the time-dependent ionisation and thermal balance need a
-  ratio of 0.1 or less. Increase the timestep count.
+  ratio of 0.1 or less. The warning gives the first timestep above that ratio. Increase the timestep count, unless
+  that timestep is in the constant segment of a hybrid scheme of
+  [TIMESTEP_SIZE_METHOD](options.md#timestep_size_method). For such a timestep, decrease
+  [TIMESTEP_SIZE_CONSTANT_MAX_WIDTH_DAYS](options.md#timestep_size_constant_max_width_days). The constant segment
+  then takes more of the timestep count, so increase the timestep count also.

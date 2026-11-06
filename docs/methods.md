@@ -237,8 +237,9 @@ rates, and the thermal balance then counts all of the deposited lepton energy as
 The decay network holds the alpha decays, the beta-minus decays, the beta-plus decays, the electron captures, and
 the spontaneous fission decays. The code gets the abundance of each nuclide at
 each time from the solutions of the Bateman equation. The `data` folder of the repository holds the decay data and
-the gamma-ray lines of each nuclide (see [Atomic and model data](data.md)). The decay particles deposit their energy
-in one of three ways:
+the gamma-ray line tables of some nuclides (see [Atomic and model data](data.md)). A nuclide with gamma-ray energy in
+the decay data and no table gets one line at its mean gamma-ray energy for each decay. Fe52 and Mn52 have neither, so
+they get one line at 0.86 MeV and at 3.415 MeV. The decay particles deposit their energy in one of three ways:
 
 - They deposit all of their energy at once.
 - The code transports them, and they lose their energy over time.
@@ -304,7 +305,19 @@ With [POL_ON](options.md#pol_on), the code follows the Stokes parameters of the 
 emission or a scattering event of a real packet. An event in a cell with the grey opacity
 sends none, and `vpkt.txt` gives the range of the arrival times and the wavelength ranges of the events that send
 them. `vpkt.txt` can also give a limit of the grey optical depth. A cell above that limit sends no virtual packet,
-also after the timesteps of the grey opacity. The energy of each virtual packet gets the weight of its optical depth to the observer. The sum gives the
+also after the timesteps of the grey opacity.
+
+Each virtual packet adds its rest-frame energy to the spectrum of its direction with the weight `pn * exp(-tau)`.
+`tau` is the optical depth from the event to the observer. `pn` is the probability for each unit of solid angle that
+the event sends the packet in the observer direction:
+
+- An emission is isotropic in the comoving frame, so `pn` is `1 / (4 pi)`.
+- An electron scattering event has the dipole phase function, so `pn` is
+  `3 / (16 pi) * (1 + mu^2 + (mu^2 - 1) * q)`. `mu` is the cosine of the scattering angle, and `q` is the Stokes
+  parameter Q/I of the packet in the scattering plane.
+
+The code divides `pn` by the square of the Doppler factor `nu_cmf / nu_rf` of the observer direction. That factor
+transforms the solid angle from the comoving frame to the rest frame. The sum of the virtual packets gives the
 spectrum of each direction with less noise than the real packets give.
 
 - Options: [POL_ON](options.md#pol_on), [VPKT_ON](options.md#vpkt_on), and

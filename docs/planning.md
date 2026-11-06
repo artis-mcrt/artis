@@ -121,9 +121,10 @@ Each rank does two types of work in each timestep:
 The ranks wait for each other after the grid update and after the propagation. The slowest rank therefore sets the
 time of a timestep. `artistools plotlogfiles <model folder>` plots the time that each rank took.
 
-The memory of a node has two parts. The `mem_usage` lines with the text `(node shared memory)` are arrays that the
-ranks of one node share, so a node holds one copy of them. Each rank holds its own copy of the other arrays and of
-its packets.
+The memory of a node has two parts. The ranks of one node share most of the large arrays, so a node holds one copy
+of them. Most `mem_usage` lines of these arrays have the text `(node shared memory)`. Some shared arrays have a line
+without that text, e.g. the photoionisation tables, the cooling list, and the non-thermal excitations. Each rank holds
+its own packets and its own accumulators of the estimators, e.g. the radiation field bin accumulators.
 
 A resumed run needs the same rank count as the run that wrote the restart files. It also needs the same binary, and
 thus the same `NUM_PACKETS`, because the restart files hold the packets of the first job. `NUM_PACKETS` must be at
@@ -151,8 +152,8 @@ levels, the lines, and the bound-free transitions of each ion after it reads the
 
 [ION_NLEVELS_EXCITED_NLTE](options.md#ion_nlevels_excited_nlte) sets the number of excited levels of each ion in
 full NLTE. The NLTE solver puts these levels of all the ions of an element into one rate matrix. The matrix also has
-a row for the ground level of each ion, a row for the superlevel of each ion that has one, and a row for each
-autoionising level that is not an NLTE level. The option thus sets most of the size of that matrix. The log gives
+a row for the ground level of each ion and a row for the superlevel of each ion that has one. Each autoionising
+level that is not an NLTE level also gets a row. The option thus sets most of the size of that matrix. The log gives
 the sum of the excited NLTE levels and of the superlevels over all ions:
 
 ```text
