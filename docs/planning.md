@@ -43,8 +43,9 @@ sets for a short time.
 
 The spectrum of a timestep holds the escaped packets that arrive at the observer in that timestep, so their number
 sets the noise of the spectrum. The relative noise of a sum of N packets of equal energy is 1/sqrt(N). The log of
-each rank gives the packets that escaped during the propagation of a timestep. This count is only a guide, because
-the light travel time moves a packet to the timestep of its arrival:
+each rank gives the packets that escaped during the propagation of a timestep. This count is only a guide. It
+counts each type of escaped packet, also the gamma packets, and the spectrum holds only the r-packets. The light
+travel time also moves a packet to the timestep of its arrival:
 
 ```text
 During timestep 33 on MPI process 0, 47523 pellets decayed and 49411 packets escaped. (t=220.124 [d])

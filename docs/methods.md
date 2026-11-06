@@ -28,8 +28,9 @@ bound-free, and the free-free opacities.
 
 - Options:
     - [USE_RELATIVISTIC_DOPPLER_SHIFT](options.md#use_relativistic_doppler_shift) selects the full Doppler factor.
-    - [PHIXS_CLASSIC_NO_INTERPOLATION](options.md#phixs_classic_no_interpolation) selects the table lookup of the
-      photoionisation cross section.
+    - [PHIXS_CLASSIC_NO_INTERPOLATION](options.md#phixs_classic_no_interpolation) takes the photoionisation cross
+      section from the table point at or below the frequency. Without it, the code interpolates between two table
+      points.
     - [DIPOLE](options.md#dipole) selects the direction of an electron scattering.
     - [NU_MIN_R](options.md#nu_min_r) and [NU_MAX_R](options.md#nu_max_r) set the frequency limits of the spectra.
       They also limit the frequency that a k-packet samples from a Planck function, so they change the transport.
@@ -202,7 +203,8 @@ for it. The log gives the result for each ion (see [Input files](inputfiles.md))
 
 ## The non-thermal electrons
 
-The fast leptons of the decays lose their energy to the heating, the ionisation, and the excitation of the gas. The
+The deposited energy of the gamma rays, of the positrons, and of the electrons makes fast leptons. These leptons
+lose their energy to the heating, the ionisation, and the excitation of the gas. The
 Spencer-Fano solver finds the energy spectrum of these electrons on a uniform energy grid. The spectrum gives the
 three fractions of the deposited energy, and the non-thermal ionisation and excitation rates for the NLTE solver.
 With [SF_AUGER_CONTRIBUTION_ON](options.md#sf_auger_contribution_on), the equation also has the source term of the
