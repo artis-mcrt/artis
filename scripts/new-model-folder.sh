@@ -27,6 +27,11 @@ fi
 
 mkdir -p "$model_folder"
 
+if [ "$(cd "$model_folder" && pwd -P)" = "$artis_source" ]; then
+    echo "$0: '$model_folder' is the folder of the ARTIS source, so the script changes nothing." >&2
+    exit 1
+fi
+
 if $symlink_source; then
     ln -s "$artis_source" "$model_folder/artis"
 else
@@ -42,8 +47,8 @@ fi
 cat << EOF
 
 The model folder '$model_folder' is ready. The next steps:
-  1. Select a preset and build:
-       cd '$model_folder/artis' && ln -s artisoptions_<preset>.h artisoptions.h && make
+  1. Select a preset and build, e.g. with the classic preset:
+       cd '$model_folder/artis' && ln -s artisoptions_classic.h artisoptions.h && make
   2. Put model.txt, abundances.txt, and an atomic database into '$model_folder'.
   3. Set lines 1 to 3, 18, and 19 of '$model_folder/input.txt' for your model.
      They hold the timesteps, the times, and the LTE and grey timesteps.
