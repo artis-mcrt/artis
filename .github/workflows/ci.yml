@@ -137,6 +137,9 @@ jobs:
               working-directory: tests/
               run: cp -a ${{ matrix.testname }}_testrun ${{ matrix.testname }}_onejob
 
+            - name: Check the input
+              run: tests/runtest.sh ${{ matrix.testname }} inputcheck
+
             - name: Run test job0 start
               id: run_job0
               if: always()
@@ -286,7 +289,7 @@ jobs:
                   path: tests/${{ matrix.testname }}_inputfiles/results_md5*
 
             - name: Setup uv
-              uses: astral-sh/setup-uv@v10.3.2
+              uses: astral-sh/setup-uv@v10.3.3
               if: always() && inputs.testmode != 'ON'
               id: setup-uv
               with:

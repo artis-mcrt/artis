@@ -720,7 +720,7 @@ void nltepop_matrix_add_nt_ionisation(const int nonemptymgi, const int element, 
 
   for (int upperion = ion + 1; upperion <= nonthermal::nt_ionisation_maxupperion(element, ion); upperion++) {
     const double Y_nt_thisupperion =
-        Y_nt * nonthermal::nt_ionisation_upperion_probability(nonemptymgi, element, ion, upperion, false);
+        Y_nt * nonthermal::nt_ionisation_upperion_probability(nonemptymgi, element, ion, upperion);
 
     if (Y_nt_thisupperion > 0.) {
       // ensure if upperion here is past the upper ion used in the NLTE matrix the rates

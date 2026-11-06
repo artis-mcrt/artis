@@ -124,7 +124,7 @@ class InputFileStream : public std::istream {
   }
 
   for (const auto& datadir : datafolders) {
-    const auto datafolderfilename = std::format("{}{}", datadir, filename);
+    const auto datafolderfilename = std::format("{}{}{}", globals::path_to_modelfolder, datadir, filename);
     auto filebuf = std::make_unique<std::filebuf>();
     if (filebuf->open(datafolderfilename, std::ios::in) != nullptr) {
       return InputFileStream(std::move(filebuf));
@@ -152,7 +152,7 @@ class InputFileStream : public std::istream {
 // covers the same folders as istream_required(), so that an optional file is either read or absent.
 [[nodiscard]] inline auto inputfile_exists(const std::string_view filename) -> bool {
   return std::ranges::any_of(datafolders, [filename](const auto& datadir) {
-    const auto datafolderfilename = std::format("{}{}", datadir, filename);
+    const auto datafolderfilename = std::format("{}{}{}", globals::path_to_modelfolder, datadir, filename);
     return std::filesystem::exists(std::filesystem::path(datafolderfilename)) ||
            std::filesystem::exists(std::filesystem::path(std::format("{}.zst", datafolderfilename)));
   });

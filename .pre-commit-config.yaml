@@ -30,7 +30,7 @@ repos:
           - id: trailing-whitespace
             exclude: ^(third_party/)
     - repo: https://github.com/astral-sh/ruff-pre-commit
-      rev: v0.17.2
+      rev: v0.17.3
       hooks:
           - id: ruff-check
             files: ^scripts/.*\.py$
@@ -66,6 +66,12 @@ repos:
             exclude: ^(third_party/)
     - repo: local
       hooks:
+          - id: options-docs
+            name: options docs
+            entry: scripts/make_options_docs.py
+            language: system
+            pass_filenames: false
+            files: '^(artisoptions_.*\.h|artisoptions_doc\.md|docs/options\.md|scripts/make_options_docs\.py)$'
           - id: make
             name: make
             entry: make -j OPTIMIZE=OFF

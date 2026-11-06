@@ -1,0 +1,22 @@
+---
+name: Check the links
+permissions:
+  contents: read
+on:
+    schedule:
+        - cron: 0 6 * * 1
+    workflow_dispatch:
+
+jobs:
+    linkcheck:
+        name: Check the links of the documentation
+        runs-on: ubuntu-26.04-arm
+        steps:
+            - uses: actions/checkout@v7
+
+            - name: Install uv
+              uses: astral-sh/setup-uv@v10.3.3
+
+            - name: Check every link of the site
+              # the python version agrees with .readthedocs.yaml, so that both builds give the same result
+              run: uv run --python 3.14 --with-requirements docs/requirements.txt sphinx-build -b linkcheck docs docs/_build/linkcheck

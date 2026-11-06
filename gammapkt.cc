@@ -124,7 +124,8 @@ auto get_datafolder_filenames() -> std::array<std::unordered_set<std::string>, d
   for (size_t folderindex = 0; folderindex < datafolders.size(); folderindex++) {
     // an absent folder gives no entry and no error, which is correct here
     std::error_code direrror;
-    for (const auto& entry : std::filesystem::directory_iterator(datafolders[folderindex], direrror)) {
+    const auto folderpath = std::format("{}{}", globals::path_to_modelfolder, datafolders[folderindex]);
+    for (const auto& entry : std::filesystem::directory_iterator(folderpath, direrror)) {
       auto filename = entry.path().filename().string();
       // istream_required() opens the compressed file under the plain name
       if (filename.ends_with(".zst")) {
