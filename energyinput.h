@@ -3,6 +3,8 @@
 #ifndef ENERGYINPUT_H
 #define ENERGYINPUT_H
 
+#include <utility>
+
 #include "packet.h"
 
 namespace energyinput {
@@ -20,8 +22,12 @@ void read_release_table();
 // The release rate of the cell energy over the timestep nts, per volume at the midpoint [erg/s/cm^3].
 [[nodiscard]] auto get_release_rate_density(int nonemptymgi, int nts) -> double;
 
-// Give the pellet pkt the energy e_cmf_per_packet and a release time that samples the cumulative fraction, up to
-// tmax.
+// The times [s] between which the pellets release the cell energy: from tmin, or with INITIAL_PACKETS_ON from 0, to
+// tmax. With INITIAL_PACKETS_ON, the release before tmin seeds the cells at tmin.
+[[nodiscard]] auto get_pellet_release_time_range() -> std::pair<double, double>;
+
+// Give the pellet pkt the energy e_cmf_per_packet and a release time that samples the cumulative fraction in the
+// range of get_pellet_release_time_range().
 void setup_thermal_input_pellet(double e_cmf_per_packet, Packet& pkt);
 
 }  // namespace energyinput

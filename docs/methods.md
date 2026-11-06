@@ -294,7 +294,8 @@ With [THERMAL_ENERGY_INPUT_FROM_FILES](options.md#thermal_energy_input_from_file
 decay energy. [energydistribution.txt](inputfiles.md#energydistributiontxt) gives the energy of each model cell, and
 [energyrate.txt](inputfiles.md#energyratetxt) gives the cumulative fraction of that energy that the cells release
 by each time. Each pellet samples its cell from the cell energies and its release time from that fraction. At the
-release time, the pellet becomes a k-packet in its cell, so all of the energy heats the gas. No gamma ray and no
+release time, the pellet becomes a k-packet in its cell, so all of the energy heats the gas. With
+[INITIAL_PACKETS_ON](options.md#initial_packets_on), the energy released before tmin seeds the cells at tmin. No gamma ray and no
 particle comes from this source. The thermal balance adds the release rate of the timestep to the heating. The
 nuclides of `model.txt` still decay and change the composition, but their decay energy goes into no packet.
 

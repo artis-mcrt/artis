@@ -439,8 +439,10 @@ so the fraction of the first row is a release at the time of that row. After the
 - The fractions must be in the range from 0 to 1, and each fraction must not be less than the previous fraction.
 - The last fraction must be within 0.001 of 1. `sn3d` divides all fractions by the last fraction.
 
-The pellets release only the energy up to tmax. A release before tmin becomes a blackbody r-packet at tmin, and it
-keeps the share tdecay / tmin of its energy, as for a decay before tmin.
+The pellets release the energy from tmin to tmax. With `INITIAL_PACKETS_ON`, they also release the energy before
+tmin. Such a release becomes a blackbody r-packet at tmin, and it keeps the share tdecay / tmin of its energy, as for
+a decay before tmin. The initial temperatures always include the energy that the cells release before the first
+timestep.
 
 ## Ye.txt
 

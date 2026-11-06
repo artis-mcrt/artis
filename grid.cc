@@ -225,7 +225,6 @@ void read_possible_yefile() {
 void read_thermal_input_energy_file() {
   // the energies are written to node-shared memory, so only the node leaders read the file
   // (synchronised by the barrier below)
-  double total_energy = 0.;
   if (globals::rank_in_node == 0) {
     auto filein = istream_required("energydistribution.txt");
     int nrows = 0;
@@ -235,6 +234,7 @@ void read_thermal_input_energy_file() {
 
     const int last_mgi = get_npts_model() - 1;
     auto mgi_has_energy_row = std::vector<bool>(get_npts_model(), false);
+    double total_energy = 0.;
     for (int row = 0; row < nrows; row++) {
       int cellnumberin = -1;
       double cell_energy = 0.;

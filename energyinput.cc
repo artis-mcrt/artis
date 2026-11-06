@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
+#include <utility>
 #include <vector>
 
 #pragma clang unsafe_buffer_usage begin
@@ -25,8 +26,6 @@
 
 namespace energyinput {
 
-static_assert(!THERMAL_ENERGY_INPUT_FROM_FILES || !INITIAL_PACKETS_ON,
-              "THERMAL_ENERGY_INPUT_FROM_FILES requires INITIAL_PACKETS_ON = false");
 static_assert(!THERMAL_ENERGY_INPUT_FROM_FILES || UNIFORM_PELLET_ENERGIES,
               "THERMAL_ENERGY_INPUT_FROM_FILES requires UNIFORM_PELLET_ENERGIES = true");
 
@@ -132,9 +131,16 @@ auto get_release_rate_density(const int nonemptymgi, const int nts) -> double {
   return grid::get_thermal_input_energy(mgi) * fraction_released_in_timestep / timestep.width / volume_tmid;
 }
 
+auto get_pellet_release_time_range() -> std::pair<double, double> {
+  return {INITIAL_PACKETS_ON ? 0. : globals::tmin, globals::tmax};
+}
+
 void setup_thermal_input_pellet(const double e_cmf_per_packet, Packet& pkt) {
-  // the inverse of F at a uniform sample of [0, F(tmax))
-  const double fraction_sample = rng_uniform(get_rngstate(pkt)) * get_cumulative_fraction_released(globals::tmax);
+  // the inverse of F at a uniform sample of [F(first release time), F(tmax))
+  const auto [first_release_time, last_release_time] = get_pellet_release_time_range();
+  const double fraction_first = get_cumulative_fraction_released(first_release_time);
+  const double fraction_sample =
+      std::lerp(fraction_first, get_cumulative_fraction_released(last_release_time), rng_uniform(get_rngstate(pkt)));
 
   // the first row with a fraction above the sample
   const auto row = index_upperbound(cumulative_fractions_released, fraction_sample);
@@ -148,6 +154,8 @@ void setup_thermal_input_pellet(const double e_cmf_per_packet, Packet& pkt) {
         (cumulative_fractions_released[row] - cumulative_fractions_released[row - 1]);
     pkt.tdecay = std::lerp(release_times[row - 1], release_times[row], fraction_of_row_interval);
   }
+  // a sample on a plateau of F that starts before the first release time
+  pkt.tdecay = std::max(pkt.tdecay, first_release_time);
 
   pkt.type = TYPE_RADIOACTIVE_PELLET;
   pkt.e_cmf = e_cmf_per_packet;
