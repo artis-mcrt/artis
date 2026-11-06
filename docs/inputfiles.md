@@ -57,7 +57,7 @@ The line numbers of this table count only the lines that are not comment lines, 
 | 13 | | Unused (`opacity_case`). |
 | 14 | | Unused (`rho_crit_para`). |
 | 15 | | Unused (`debug_packet`). |
-| 16 | `simulation_continued_from_saved` | 0 starts a new simulation. 1 continues from the restart files of a previous job. With `timestep_start` 0, the run is always a new simulation. |
+| 16 | `simulation_continued_from_saved` | The value must be 0 or 1. 0 starts a new simulation. 1 continues from the restart files of a previous job. With `timestep_start` 0, the run is always a new simulation. |
 | 17 | | Unused (`rfcut`). |
 | 18 | `num_lte_timesteps` | The number of timesteps at the start of the model that use LTE populations. The value must be 1 or more. |
 | 19 | `optical_depth_is_thick num_grey_timesteps` | The condition for the grey opacity treatment of a cell (see below). |
@@ -433,6 +433,7 @@ The file has one block for each ion that it calibrates. An ion with no block get
 ```
 
 - The upper ion stage is the ion stage that recombines.
+- The number of rows can be 0, and it must not be negative.
 - The second line occurs once for each row. `rrc_low_n` is the rate coefficient to the low-n levels, and `rrc_total`
   is the total rate coefficient, both in cm^3/s.
 - `sn3d` interpolates each rate coefficient between the two rows around `RECOMBCALIBRATION_T_ELEC`. It makes no
