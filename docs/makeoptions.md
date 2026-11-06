@@ -31,6 +31,9 @@ folder, and a change back to an earlier content compiles nothing again. The time
 effect. Each edit of an option keeps the build folder of the old value, so run `make clean` when `build/` becomes
 large.
 
+Do not change `artisoptions.h` during a build. Make then stops with an error and removes the object, because that
+object does not belong in the build folder. Run `make` again.
+
 ## The targets
 
 - `make` builds `sn3d` and `exspec`.

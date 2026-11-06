@@ -41,8 +41,9 @@ help:
 ifneq ($(MAKECMDGOALS),help)
 
 # artisoptions.h is gitignored and must be supplied (normally as a symlink to a preset). Check up front
-# to give one actionable message rather than a compiler error per translation unit. 'make clean' is exempt
-BUILD_GOALS := $(strip $(filter-out clean,$(if $(MAKECMDGOALS),$(MAKECMDGOALS),all)))
+# to give one actionable message rather than a compiler error per translation unit. 'make clean' and 'make help'
+# are exempt
+BUILD_GOALS := $(strip $(filter-out clean help,$(if $(MAKECMDGOALS),$(MAKECMDGOALS),all)))
 ifneq ($(BUILD_GOALS),)
   ifeq ($(wildcard artisoptions.h),)
     $(error make cannot find artisoptions.h. Symlink a compile-time option preset to artisoptions.h, e.g. 'ln -s artisoptions_classic.h artisoptions.h'. The symlink follows the changes of the preset. artisoptions_doc.md documents the options)
@@ -332,7 +333,8 @@ endif
 
 # The checksum of the content of artisoptions.h, which cksum reads through a symlink. The builds of different
 # presets then coexist, and a change of the preset or of an option value compiles all objects in a new folder.
-BUILD_DIR := $(BUILD_DIR)_options$(firstword $(shell cksum artisoptions.h 2> /dev/null))
+ARTISOPTIONS_CHECKSUM := $(firstword $(shell cksum artisoptions.h 2> /dev/null))
+BUILD_DIR := $(BUILD_DIR)_options$(ARTISOPTIONS_CHECKSUM)
 
 # profile-guided optimisation (gcc and clang):
 #   1. build with 'make PGO=GENERATE', then run a representative simulation to collect profile data
@@ -449,8 +451,11 @@ all: sn3d exspec
 
 # The name of the build folder holds the checksum of artisoptions.h, so an object needs no comparison with the
 # timestamp of that file. The sed command removes the file from the prerequisites that the compiler wrote.
+# An object from a different content of artisoptions.h must not stay in this folder, so the recipe compares the
+# checksum again after the compile.
 $(BUILD_DIR)/%.o: %.cc Makefile
 	$(CXX) $(CXXFLAGS) -c $< -o $@ || exit 1
+	@set -- $$(cksum artisoptions.h); [ "$$1" = "$(ARTISOPTIONS_CHECKSUM)" ] || { rm -f $@; echo "error: artisoptions.h changed during the build. Run make again" >&2; exit 1; }
 	if [ -f $(@:.o=.d) ]; then sed -i.bak -e 's| artisoptions\.h | |' -e 's| artisoptions\.h$$||' $(@:.o=.d) && rm -f $(@:.o=.d).bak; fi
 
 $(BUILD_DIR)/version.o: $(VERSION_CC) Makefile
