@@ -316,7 +316,7 @@ the rank. A run without `KEEP_ESCAPED_GAMMAS` writes no rows for the escaped gam
 | `em_time` | The time of the last emission, or of the last scattering. |
 | `stokes_q`, `stokes_u` | The Stokes parameters Q/I and U/I. Only a run with `POL_ON` has these columns. |
 | `originated_from_particlenotgamma` | 1 if the decay of the pellet made a particle, and 0 if it made a gamma ray. The initial energy of the cells also holds 0, and its `pellet_decaytype` is -1. |
-| `trueem_posx`, `trueem_posy`, `trueem_posz`, `trueem_time` | The position and the time of the last emission from the thermal energy of the gas. A packet with no such emission holds `nan` in the position and -1 in the time. |
+| `trueem_posx`, `trueem_posy`, `trueem_posz`, `trueem_time` | The position and the time of the last emission from the thermal energy of the gas. A packet with no such emission holds `nan` in the position. Its time is then -1, or the time of an earlier emission that a later collisional or non-thermal event removed. Use the position to find such a packet. |
 | `pellet_nucindex` | The nuclide of the pellet decay, as the index of `nuclides.out`, or -1 for the initial energy of the cells. |
 | `pellet_decaytype` | The decay type of the pellet, as a value of the list below. The value -1 is the initial energy of the cells. |
 

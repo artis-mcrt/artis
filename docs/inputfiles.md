@@ -144,9 +144,10 @@ The lines before the cells:
   for a cylindrical grid, and `vmax` times the square root of 3 for a Cartesian grid. `sn3d` stops if that velocity
   is not less than the speed of light, unless the run has `FORCE_SPHERICAL_ESCAPE_SURFACE`.
 - The number of cells of a 3D model must be a cube number, because the grid has the same number of cells on each axis.
-- The header line names the columns. It is optional. The columns of the cell id, the position, and the density must
-  have the names and the sequence of the layouts above. The column `velocity_outer` is a second name for
-  `vel_r_max_kmps`. `sn3d` accepts each column name that starts with `pos_` as a position column.
+- The header line names the columns. It is optional. The columns of the cell id, the 1D velocity, and the density
+  must have the names and the column positions of the layouts above. The column `velocity_outer` is a second name for
+  `vel_r_max_kmps`. The position columns are between the cell id and the density. `sn3d` accepts each name that
+  starts with `pos_` for them, and it does not read the axis from the name.
 - A file without a header line gets the columns of the layouts above. A row with two more values gets `X_Ni57` and
   `X_Co57` as the last two columns.
 
@@ -175,9 +176,10 @@ More rules for the cells:
   negative boundary. `sn3d` calculates the midpoint of each cell from `vmax` and `t_model`, and it stops if a value
   of the file differs by more than 0.1 percent. A model with an odd number of z cells has a middle row at z = 0.
   For that row, the limit is 0.1 percent of `vmax` times `t_model` divided by the number of z cells.
-- The cells of a 3D model go through the x index first, then the y index, and then the z index. `sn3d` compares the
-  positions with the values that it calculates from `vmax` and `t_model`. A difference of more than half of a cell
-  width gives a warning in the log.
+- The cells of a 3D model go through the x index first, then the y index, and then the z index. The three position
+  values of a row can have the sequence x, y, z or the sequence z, y, x. `sn3d` compares the positions in both
+  sequences with the values that it calculates from `vmax` and `t_model`. If each sequence has a difference of more
+  than half of a cell width, the log has a warning.
 - `sn3d` finds the first cell id from the first cell of `model.txt`. `abundances.txt` and `Ye.txt` must use the same
   ids. The log messages always give the 0-based cell index.
 - The value of the column `q` must already include the adiabatic losses before `t_model`. `INITIAL_PACKETS_ON` uses
@@ -227,8 +229,8 @@ file has one row for each element:
 | --- | --- |
 | `Z` | The atomic number, which must be in the range from 1 to 118. |
 | `nions` | The number of ion stages, which must not be negative. With the value 0, the element has no ions, and the code keeps only its nuclide abundances. |
-| lowest ion stage | The lowest ion stage of the run. The ion stage 1 is the neutral atom. |
-| highest ion stage | The highest ion stage of the run. For an element with ions, `nions` must be equal to the highest ion stage - the lowest ion stage + 1. An element with `nions` 0 has no such rule. |
+| lowest ion stage | The lowest ion stage of the run. The ion stage 1 is the neutral atom, so the value must be 1 or more. `sn3d` does no check of this limit. |
+| highest ion stage | The highest ion stage of the run. The value must not be above `Z` + 1, which is the bare nucleus, and `sn3d` does no check of this limit. For an element with ions, `nions` must be equal to the highest ion stage - the lowest ion stage + 1. An element with `nions` 0 has no such rule. |
 | `nlevelsmax` | The maximum number of levels that the code reads for each ion of the element. A negative value reads every level. The value 0 stops the run for an element with ions. With `SINGLE_LEVEL_TOP_ION`, the highest ion stage keeps one level. |
 | abundance | Unused. The value must be 0 or more. |
 | mass | The mean mass of the stable nuclides of the element in atomic mass units. The value must be above 0. |
@@ -411,7 +413,8 @@ needs an electron fraction above 0 from this file or from that column, or the ru
 ```
 
 The second line occurs once for each row. The cell ids are the ids of `model.txt`. The file can hold a subset of the
-cells.
+cells. The number of rows can be 0, and it must not be negative. With a negative number, `sn3d` reads no row and gives
+no error.
 
 ## recombrates.txt
 
