@@ -1,3 +1,8 @@
+// The kilonova NLTE preset: the kilonova setup of artisoptions_kilonova_lte.h, and additionally the NLTE
+// populations of strontium, yttrium, and zirconium and the Spencer-Fano solver for the non-thermal electrons.
+// Shingles et al. (2023), ApJL, 954, L41, doi:10.3847/2041-8213/acf29a describes the decay and the thermalisation.
+// The test kilonova_1d_timedepnlte uses this preset.
+//
 // A compile-time options preset: symlink one of the artisoptions_*.h files to artisoptions.h to select
 // the run configuration. A copy through an existing symlink replaces the content of the tracked preset.
 // Every option is described in artisoptions_doc.md.

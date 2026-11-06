@@ -1,3 +1,9 @@
+// The kilonova LTE preset: kilonovae in LTE, as Shingles et al. (2023), ApJL, 954, L41, doi:10.3847/2041-8213/acf29a
+// describes the decay and the thermalisation. The preset has the time-dependent thermalisation of the decay
+// particles, a grey opacity from a fit to the electron fraction, the relativistic Doppler shift, and a low MINTEMP
+// for the late ejecta. The tests kilonova_1d, kilonova_2d, kilonova_2d_expansionopac,
+// kilonova_2d_barnesthermalisation, and kilonova_2d_xcomgammaphotoion use this preset.
+//
 // A compile-time options preset: symlink one of the artisoptions_*.h files to artisoptions.h to select
 // the run configuration. A copy through an existing symlink replaces the content of the tracked preset.
 // Every option is described in artisoptions_doc.md.

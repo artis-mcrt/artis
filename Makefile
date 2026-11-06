@@ -1,20 +1,52 @@
 # it's recommended that you add the following to your startup script:
-# export MAKEFLAGS="--check-symlink-times --jobs=$(nproc)"
+# export MAKEFLAGS="--jobs=$(nproc)"
 .DEFAULT_GOAL := all
 
+define HELP_TEXT
+Usage: make [OPTION=value ...] [target ...]
+
+Targets:
+  all                    build sn3d and exspec (the default target)
+  sn3d, exspec           build one program
+  unittests              build the unit tests
+  sn3dwhole              build sn3d with one compiler command for all sources
+  check                  run clang-tidy on all sources
+  compile_commands.json  write the compilation database for the clang tools
+  clean                  remove all build folders and the program symlinks
+  help                   show this text
+
+Options:
+  TESTMODE=ON            add the sanitizers and the extra assertions
+  OPTIMIZE=OFF           compile without optimisation, which is the quickest compile test
+  FASTMATH=OFF           keep the floating-point operations of the source
+  REPRODUCIBLE=ON        use stable sorts and FASTMATH=OFF
+  OPENMP=ON              add OpenMP threads in each MPI rank
+  STDPAR=ON              use the parallel algorithms of the standard library
+  GPU=ON                 compile for a GPU, together with STDPAR=ON
+  GPUARCH=N              with nvc++ and GPU=ON, compile for the compute capability N
+  GCCTOOLCHAIN=path      with nvc++, use the gcc toolchain at that path
+  ZSTD=ON, ZSTD=OFF      stop without libzstd, or build without it. The default uses libzstd if make finds it
+  MAX_NODE_SIZE=N        limit the ranks that share memory to N for each node
+  PGO=GENERATE, PGO=USE  profile-guided optimisation with gcc or clang
+
+docs/makeoptions.md describes each option. artisoptions.h holds the compile-time options of the physics.
+endef
+
+# this target needs no artisoptions.h and no compiler, so the rest of the file is for the other targets
+.PHONY: help
+help:
+	$(info $(HELP_TEXT))
+	@:
+
+ifneq ($(MAKECMDGOALS),help)
+
 # artisoptions.h is gitignored and must be supplied (normally as a symlink to a preset). Check up front
-# to give one actionable message rather than a compiler error per translation unit. 'make clean' is exempt
-BUILD_GOALS := $(strip $(filter-out clean,$(if $(MAKECMDGOALS),$(MAKECMDGOALS),all)))
+# to give one actionable message rather than a compiler error per translation unit. 'make clean' and 'make help'
+# are exempt
+BUILD_GOALS := $(strip $(filter-out clean help,$(if $(MAKECMDGOALS),$(MAKECMDGOALS),all)))
 ifneq ($(BUILD_GOALS),)
   ifeq ($(wildcard artisoptions.h),)
     $(error make cannot find artisoptions.h. Symlink a compile-time option preset to artisoptions.h, e.g. 'ln -s artisoptions_classic.h artisoptions.h'. The symlink follows the changes of the preset. artisoptions_doc.md documents the options)
-  endif
-  # without --check-symlink-times ('L' in the first dashless word of MAKEFLAGS), make compares timestamps
-  # through the symlink, so a preset switch via ln -sf may not trigger a rebuild
-  ifneq ($(shell test -L artisoptions.h && echo is_symlink),)
-    ifeq (,$(findstring L,$(filter-out -%,$(firstword $(MAKEFLAGS)))))
-      $(warning artisoptions.h is a symlink, but make was started without --check-symlink-times: switching presets with ln -sf may not trigger a rebuild. Recommended: export MAKEFLAGS="--check-symlink-times --jobs=$$(nproc)")
-    endif
   endif
 endif
 
@@ -116,7 +148,8 @@ endif
 $(info detected compiler is $(COMPILER_NAME) $(COMPILER_VERSION_NUMBER))
 $(info detected CPU is $(CPU_ARCH))
 
-# Use a custom build directory for each combination of compiler, CPU architecture, and options to avoid conflicts and ensure that the correct binaries are used
+# Use a custom build directory for each combination of compiler, CPU architecture, make options, and content of
+# artisoptions.h to avoid conflicts and ensure that the correct binaries are used
 BUILD_DIR = build/$(COMPILER_NAME)-$(COMPILER_VERSION_NUMBER)_$(CPU_ARCH)
 
 # -UNDEBUG keeps assert_always() active when the environment CXXFLAGS holds -DNDEBUG
@@ -298,6 +331,11 @@ else
 	endif
 endif
 
+# The checksum of the content of artisoptions.h, which cksum reads through a symlink. The builds of different
+# presets then coexist, and a change of the preset or of an option value compiles all objects in a new folder.
+ARTISOPTIONS_CHECKSUM := $(firstword $(shell cksum artisoptions.h 2> /dev/null))
+BUILD_DIR := $(BUILD_DIR)_options$(ARTISOPTIONS_CHECKSUM)
+
 # profile-guided optimisation (gcc and clang):
 #   1. build with 'make PGO=GENERATE', then run a representative simulation to collect profile data
 #      (written into the build directory)
@@ -352,25 +390,28 @@ endef
 # every byte.
 ARTISOPTIONS_LINES_CMD := LC_ALL=C tr -d '\r' < artisoptions.h | LC_ALL=C sed -e '/^[[:space:]]*\/\//d' -e '/^[[:space:]]*\#/d' -e '/^[[:space:]]*$$/d'
 
+$(shell mkdir -p $(BUILD_DIR))
+$(info build directory: $(BUILD_DIR))
+
 # the git metadata changes at almost every git operation. version.h declares the strings and stays
 # the same, and this generated file holds the definitions. Only this small file compiles again,
-# and not sn3d.cc and exspec.cc
+# and not sn3d.cc and exspec.cc. The file is in the build folder, because it holds the options of that folder.
+VERSION_CC := $(BUILD_DIR)/version.cc
 $(shell { printf '\043include <string_view>\n'; \
   echo "$(version_cc)"; \
   printf 'extern const std::string_view ARTISOPTIONS_LINES = R"artisoptions\050\n'; \
   { $(ARTISOPTIONS_LINES_CMD); } 2> /dev/null; \
-  printf '\051artisoptions";\n'; } > .version_tmp.cc)
+  printf '\051artisoptions";\n'; } > $(VERSION_CC).tmp)
 
-ifneq ($(shell cmp -s version.cc .version_tmp.cc || echo differ),)
-  $(info updating version.cc)
-  $(shell mv .version_tmp.cc version.cc)
+ifneq ($(shell cmp -s $(VERSION_CC) $(VERSION_CC).tmp || echo differ),)
+  $(info updating $(VERSION_CC))
+  $(shell mv $(VERSION_CC).tmp $(VERSION_CC))
 else
-  $(shell rm .version_tmp.cc)
+  $(shell rm $(VERSION_CC).tmp)
 endif
 
-# the sources of all three programs. sn3d.cc, exspec.cc, and unittests.cc have main() defined, so
-# they are not here. Add a new source file to this list. A wildcard is not correct here, because
-# make caches the content of the directory and does not find a version.cc that this run made
+# the sources of all three programs, without the generated version.cc. sn3d.cc, exspec.cc, and unittests.cc
+# have main() defined, so they are not here. Add a new source file to this list.
 common_files := \
 	chargetransfer.cc \
 	decay.cc \
@@ -392,28 +433,32 @@ common_files := \
 	thermalbalance.cc \
 	update_grid.cc \
 	update_packets.cc \
-	version.cc \
 	vpkt.cc
 
 sn3d_files = $(common_files) sn3d.cc
-sn3d_objects = $(addprefix $(BUILD_DIR)/,$(sn3d_files:.cc=.o))
+sn3d_objects = $(addprefix $(BUILD_DIR)/,$(sn3d_files:.cc=.o) version.o)
 sn3d_dep = $(sn3d_objects:%.o=%.d)
 
 exspec_files = $(common_files) exspec.cc
-exspec_objects = $(addprefix $(BUILD_DIR)/,$(exspec_files:.cc=.o))
+exspec_objects = $(addprefix $(BUILD_DIR)/,$(exspec_files:.cc=.o) version.o)
 exspec_dep = $(exspec_objects:%.o=%.d)
 
 unittests_files = $(common_files) unittests.cc
-unittests_objects = $(addprefix $(BUILD_DIR)/,$(unittests_files:.cc=.o))
+unittests_objects = $(addprefix $(BUILD_DIR)/,$(unittests_files:.cc=.o) version.o)
 unittests_dep = $(unittests_objects:%.o=%.d)
-
-$(shell mkdir -p $(BUILD_DIR))
-$(info build directory: $(BUILD_DIR))
 
 all: sn3d exspec
 
-# artisoptions.h is explicit so the most consequential header dependency does not rely on .d generation
-$(BUILD_DIR)/%.o: %.cc artisoptions.h Makefile
+# The name of the build folder holds the checksum of artisoptions.h, so an object needs no comparison with the
+# timestamp of that file. The sed command removes the file from the prerequisites that the compiler wrote.
+# An object from a different content of artisoptions.h must not stay in this folder, so the recipe compares the
+# checksum again after the compile.
+$(BUILD_DIR)/%.o: %.cc Makefile
+	$(CXX) $(CXXFLAGS) -c $< -o $@ || exit 1
+	@set -- $$(cksum artisoptions.h); [ "$$1" = "$(ARTISOPTIONS_CHECKSUM)" ] || { rm -f $@; echo "error: artisoptions.h changed during the build. Run make again" >&2; exit 1; }
+	if [ -f $(@:.o=.d) ]; then sed -i.bak -e 's| artisoptions\.h | |' -e 's| artisoptions\.h$$||' $(@:.o=.d) && rm -f $(@:.o=.d).bak; fi
+
+$(BUILD_DIR)/version.o: $(VERSION_CC) Makefile
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 # runs the same check as CI, over sn3d, exspec, and unittests
@@ -460,8 +505,8 @@ $(BUILD_DIR)/sn3d: $(sn3d_objects)
 sn3d: $(BUILD_DIR)/sn3d compile_commands.json
 	rm -f sn3d && ln -s $(BUILD_DIR)/sn3d sn3d
 
-$(BUILD_DIR)/sn3dwhole: $(sn3d_files) $(wildcard *.h) Makefile
-	$(CXX) $(CXXFLAGS) $(sn3d_files) $(LDFLAGS) -o $(BUILD_DIR)/sn3dwhole
+$(BUILD_DIR)/sn3dwhole: $(sn3d_files) $(VERSION_CC) $(wildcard *.h) Makefile
+	$(CXX) $(CXXFLAGS) $(sn3d_files) $(VERSION_CC) $(LDFLAGS) -o $(BUILD_DIR)/sn3dwhole
 
 sn3dwhole: $(BUILD_DIR)/sn3dwhole compile_commands.json
 	rm -f sn3d && ln -s $(BUILD_DIR)/sn3dwhole sn3d
@@ -484,3 +529,5 @@ unittests: $(BUILD_DIR)/unittests compile_commands.json
 
 clean:
 	rm -rf sn3d exspec unittests build
+
+endif

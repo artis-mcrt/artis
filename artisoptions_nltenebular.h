@@ -1,3 +1,8 @@
+// The NLTE nebular preset: the nebular phase of a supernova, as Shingles et al. (2020), MNRAS, 492, 2029-2043,
+// doi:10.1093/mnras/stz3412 describes the method. The preset has the NLTE populations, the Spencer-Fano solver, the
+// multibin radiation field model, and the detailed bound-free estimators. The tests nebular_1d_3dgrid and
+// nebular_1d_3dgrid_limitbfest use this preset. nebular_1d_3dgrid covers the physics that most changes touch.
+//
 // A compile-time options preset: symlink one of the artisoptions_*.h files to artisoptions.h to select
 // the run configuration. A copy through an existing symlink replaces the content of the tracked preset.
 // Every option is described in artisoptions_doc.md.

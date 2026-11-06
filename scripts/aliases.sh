@@ -4,7 +4,8 @@ export MAKEFLAGS="--check-symlink-times --jobs=$(nproc)"
 alias squeueu="squeue --user=$USER --format=\"%.9i %.10P %.8T %.12M %22N %5D %4C %j\""
 alias qstatu="squeueu"
 
-export EMAIL="my.address@gmail.com"
+# The job scripts give this address to Slurm for its messages. Set it in your .bashrc:
+# export EMAIL="your_email_address"
 
 # enqueue with a job name set to the current directory name
 alias qsub='sbatch --job-name="${PWD##*/}" ${EMAIL:+--mail-user="$EMAIL"}'

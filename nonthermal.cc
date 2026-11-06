@@ -2448,6 +2448,7 @@ DEVICE_FUNC void do_ntlepton_deposit(Packet& pkt) {
         stats::increment(stats::Counter::INTERACTIONS);
         pkt.trueemissiontype = EMTYPE_NOTSET;
         pkt.trueem_pos = {NAN, NAN, NAN};
+        pkt.trueem_time = -1.;
 
         stats::increment(stats::Counter::NT_STAT_TO_IONISATION);
 
@@ -2494,6 +2495,7 @@ DEVICE_FUNC void do_ntlepton_deposit(Packet& pkt) {
           stats::increment(stats::Counter::INTERACTIONS);
           pkt.trueemissiontype = EMTYPE_NOTSET;
           pkt.trueem_pos = {NAN, NAN, NAN};
+          pkt.trueem_time = -1.;
 
           stats::increment(stats::Counter::NT_STAT_TO_EXCITATION);
 

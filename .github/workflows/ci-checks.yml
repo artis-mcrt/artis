@@ -49,6 +49,20 @@ jobs:
                   # include directories, so clang-tidy needs only the libc++ header path.
                   run-clang-tidy -extra-arg=-nostdinc++ -extra-arg=-isystem"$LIBCXX"
 
+    docs:
+        name: Build the documentation
+        runs-on: ubuntu-26.04-arm
+        steps:
+            - uses: actions/checkout@v7
+
+            - name: Install uv
+              uses: astral-sh/setup-uv@v10.3.3
+
+            - name: Build the site
+              # -W makes a warning an error, e.g. a link to a page that the site does not hold
+              # the python version agrees with .readthedocs.yaml, so that both builds give the same warnings
+              run: uv run --python 3.14 --with-requirements docs/requirements.txt sphinx-build -W --keep-going docs docs/_build/html
+
     cppcheck:
         name: Lint with cppcheck
         runs-on: ubuntu-26.04-arm
@@ -128,7 +142,6 @@ jobs:
             - name: Compile classic mode
               run: |
                   cp -v -p artisoptions_classic.h artisoptions.h
-                  make clean
                   make -j$(nproc) sn3d exspec
 
             - name: Build and run unit tests (classic mode)
@@ -141,20 +154,17 @@ jobs:
             - name: Compile classic mode OPENMP=ON
               if: matrix.compiler.extrabuilds
               run: |
-                  make clean
                   make OPENMP=ON OPTIMIZE=OFF -j$(nproc) sn3d exspec
 
             - name: Compile classic mode STDPAR=ON
               if: matrix.compiler.extrabuilds
               run: |
                   cp -v -p artisoptions_classic.h artisoptions.h
-                  make clean
                   make STDPAR=ON OPTIMIZE=OFF -j$(nproc) sn3d exspec
 
             - name: Compile nebular mode
               run: |
                   cp -v -p artisoptions_nltenebular.h artisoptions.h
-                  make clean
                   make -j$(nproc) sn3d exspec
 
             - name: Build and run unit tests (nebular mode)
@@ -166,20 +176,17 @@ jobs:
               if: matrix.compiler.extrabuilds
               run: |
                   cp -v -p artisoptions_nltenebular.h artisoptions.h
-                  make clean
                   make OPENMP=ON OPTIMIZE=OFF -j$(nproc) sn3d exspec
 
             - name: Compile nebular mode STDPAR=ON
               if: matrix.compiler.extrabuilds
               run: |
                   cp -v -p artisoptions_nltenebular.h artisoptions.h
-                  make clean
                   make STDPAR=ON OPTIMIZE=OFF -j$(nproc) sn3d exspec
 
             - name: Compile all remaining option files
               if: matrix.compiler.extrabuilds
               run: |
-                  # no -p: a preserved (older) mtime would make the preset build look already up to date
                   for file in $(find . -name "artisoptions_*.h" ! -name "artisoptions_classic.h" ! -name "artisoptions_nltenebular.h"); do
                       cp -v "$file" artisoptions.h
                       make OPTIMIZE=${{ matrix.compiler.presetoptimize }} -j$(nproc) sn3d
@@ -207,13 +214,11 @@ jobs:
             - name: Apple Clang Compile classic mode
               run: |
                   cp -v -p artisoptions_classic.h artisoptions.h
-                  make clean
                   make -j$(nproc) sn3d exspec
 
             - name: Apple Clang Compile nebular mode
               run: |
                   cp -v -p artisoptions_nltenebular.h artisoptions.h
-                  make clean
                   make -j$(nproc) sn3d exspec
 
             - name: Install LLVM
@@ -227,6 +232,7 @@ jobs:
             - name: LLVM Clang Compile classic mode
               run: |
                   cp -v -p artisoptions_classic.h artisoptions.h
+                  # the two clang compilers can have the same version, and the build folder then has the same name
                   make clean
                   make -j$(nproc) sn3d exspec
 
@@ -234,37 +240,31 @@ jobs:
             # with LTO, and Ubuntu clang builds the presets with the optimiser. These builds add the libc++ headers.
             - name: LLVM Clang Compile classic mode OPENMP=ON
               run: |
-                  make clean
                   make OPENMP=ON OPTIMIZE=OFF -j$(nproc) sn3d exspec
 
             - name: LLVM Clang Compile classic mode STDPAR=ON
               run: |
                   clang++ -v
                   cp -v -p artisoptions_classic.h artisoptions.h
-                  make clean
                   make STDPAR=ON OPTIMIZE=OFF -j$(nproc) sn3d exspec
 
             - name: LLVM Clang Compile nebular mode
               run: |
                   cp -v -p artisoptions_nltenebular.h artisoptions.h
-                  make clean
                   make -j$(nproc) sn3d exspec
 
             - name: LLVM Clang Compile nebular mode OPENMP=ON
               run: |
                   cp -v -p artisoptions_nltenebular.h artisoptions.h
-                  make clean
                   make OPENMP=ON OPTIMIZE=OFF -j$(nproc) sn3d exspec
 
             - name: LLVM Clang Compile nebular mode STDPAR=ON
               run: |
                   cp -v -p artisoptions_nltenebular.h artisoptions.h
-                  make clean
                   make STDPAR=ON OPTIMIZE=OFF -j$(nproc) sn3d exspec
 
             - name: LLVM Clang Compile all remaining option files
               run: |
-                  # no -p: a preserved (older) mtime would make the preset build look already up to date
                   for file in $(find . -name "artisoptions_*.h" ! -name "artisoptions_classic.h" ! -name "artisoptions_nltenebular.h"); do
                       cp -v "$file" artisoptions.h
                       make OPTIMIZE=OFF -j$(nproc) sn3d
@@ -306,7 +306,6 @@ jobs:
             - name: Compile classic mode STDPAR=ON GPU=ON
               run: |
                   cp -v -p artisoptions_classic.h artisoptions.h
-                  make clean
                   # ZSTD=ON stops the build if the probe does not find libzstd, so the job compiles the
                   # zstd code with this compiler
                   make STDPAR=ON GPU=ON ZSTD=ON -j$(nproc) sn3d exspec
@@ -314,13 +313,11 @@ jobs:
             - name: Compile nebular mode STDPAR=ON GPU=ON
               run: |
                   cp -v -p artisoptions_nltenebular.h artisoptions.h
-                  make clean
                   make STDPAR=ON GPU=ON ZSTD=ON -j$(nproc) sn3d exspec
 
             - name: Compile nebular mode
               run: |
                   cp -v -p artisoptions_nltenebular.h artisoptions.h
-                  make clean
                   make -j$(nproc) sn3d exspec
 
     nvidia-nvhpc:
@@ -389,7 +386,6 @@ jobs:
             - name: Compile classic mode STDPAR=ON GPU=ON
               run: |
                   cp -v -p artisoptions_classic.h artisoptions.h
-                  make clean
                   # ZSTD=ON stops the build if the probe does not find libzstd, so the job compiles the
                   # zstd code with this compiler
                   make STDPAR=ON GPU=ON GPUARCH=80 ZSTD=ON -j$(nproc) sn3d exspec
@@ -397,11 +393,9 @@ jobs:
             - name: Compile nebular mode STDPAR=ON GPU=ON
               run: |
                   cp -v -p artisoptions_nltenebular.h artisoptions.h
-                  make clean
                   make STDPAR=ON GPU=ON GPUARCH=80 ZSTD=ON -j$(nproc) sn3d exspec
 
             - name: Compile nebular mode STDPAR=ON
               run: |
                   cp -v -p artisoptions_nltenebular.h artisoptions.h
-                  make clean
                   make STDPAR=ON -j$(nproc) sn3d exspec

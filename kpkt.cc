@@ -636,6 +636,7 @@ DEVICE_FUNC void do_kpkt(Packet& pkt, const double t2, const int nts) {
 
     pkt.trueemissiontype = EMTYPE_NOTSET;
     pkt.trueem_pos = {NAN, NAN, NAN};
+    pkt.trueem_time = -1.;
 
     do_macroatom(pkt, {.element = element, .ion = ion, .level = upper, .activatingline = -99});
   } else if (rndcoolingtype == CoolingType::COLLION) {
@@ -649,6 +650,7 @@ DEVICE_FUNC void do_kpkt(Packet& pkt, const double t2, const int nts) {
 
     pkt.trueemissiontype = EMTYPE_NOTSET;
     pkt.trueem_pos = {NAN, NAN, NAN};
+    pkt.trueem_time = -1.;
 
     do_macroatom(pkt, {.element = element, .ion = upperion, .level = upper, .activatingline = -99});
   } else if constexpr (TESTMODE) {
