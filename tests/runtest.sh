@@ -73,7 +73,7 @@ case $step in
             echo "[error] An earlier test did not restore $saved_options. Rename it to artisoptions.h." >&2
             exit 1
         fi
-        # mv keeps the timestamp, so a later build of your own options does not compile everything again
+        # the build folder of the test options has its own name, so your own build compiles nothing again
         if [ -L artisoptions.h ] || [ -e artisoptions.h ]; then
             mv artisoptions.h "$saved_options"
             trap 'mv -f "$saved_options" artisoptions.h' EXIT
@@ -81,11 +81,9 @@ case $step in
             trap 'rm -f artisoptions.h' EXIT
         fi
         ln -s "tests/${testname}_testrun/artisoptions.h" artisoptions.h
-        make --check-symlink-times --jobs="$(getconf _NPROCESSORS_ONLN)" REPRODUCIBLE=ON ZSTD=ON TESTMODE="$testmode" \
+        make --jobs="$(getconf _NPROCESSORS_ONLN)" REPRODUCIBLE=ON ZSTD=ON TESTMODE="$testmode" \
             MAX_NODE_SIZE=2 FASTMATH=OFF sn3d exspec
         cp -L sn3d exspec "$modelpath/"
-        # the objects hold the test options, so a later build in this build folder must compile them again
-        touch -t 200001010000 "$(dirname "$(readlink sn3d)")"/*.o
         ;;
 
     job0)

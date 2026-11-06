@@ -16,17 +16,10 @@ ln -s artisoptions_classic.h artisoptions.h
 [Option presets](presets.md) says what each preset is for. Use a symlink and not a copy, because the symlink follows
 each change of the preset file.
 
-### A change of the preset compiles nothing again
+### The build folder is large
 
-Make compares the timestamps through a symlink, so a new symlink starts no rebuild. Give make the flag that reads the
-timestamp of the symlink itself:
-
-```sh
-export MAKEFLAGS="--check-symlink-times --jobs=$(nproc 2>/dev/null || sysctl -n hw.ncpu)"
-```
-
-The build warns you when `artisoptions.h` is a symlink and the flag is absent. A copy gets no such warning, which is
-the second reason for the symlink. After a copy with the old timestamp, e.g. from `cp -p`, run `make clean`.
+Each set of make options and each content of `artisoptions.h` has its own folder in `build/`. An edit of an option
+value makes a new build folder and keeps the old one. `make clean` removes all build folders and the program symlinks.
 
 ### make cannot run 'mpicxx --version'
 
@@ -41,9 +34,10 @@ The build needs gcc 14 or a later version. Load a newer gcc. With Open MPI you c
 ### The binary does not hold your change
 
 `make` puts the objects in `build/<configuration>/` and makes a symlink in the repository root to each program. Each
-option adds a suffix to the name of the build folder, so the builds of different options stay apart. The symlink
-points at the most recent build of any configuration. Look at the symlink before you copy a binary, and copy it with
-`cp -L` from the repository root. A build folder of an older compiler otherwise gives you the old binary.
+make option adds a suffix to the name of the build folder, and the name ends with a checksum of the content of
+`artisoptions.h`, so the builds of different options stay apart. The symlink points at the most recent build of any
+configuration, e.g. at the build of a test after `tests/runtest.sh`. Look at the symlink before you copy a binary, and
+copy it with `cp -L` from the repository root. A build folder of an older compiler otherwise gives you the old binary.
 
 ## The run
 
