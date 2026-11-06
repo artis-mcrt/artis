@@ -30,7 +30,7 @@ setoption RATECOEFF_TABLESIZE '20'
 setoption MINTEMP '1000.'
 setoption MAXTEMP '20000.'
 
-setoption GAMMA_USE_XCOM_PHOTOION 'true'
+setoption GAMMA_OPACITY_FROM_COMPOSITION 'true'
 
 setoption KEEP_ESCAPED_GAMMAS 'true'
 
