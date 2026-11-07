@@ -2459,7 +2459,7 @@ void read_ejecta_model() {
 
   // cppcheck-suppress [incorrectLogicOperator,oppositeExpression]
   constexpr bool q_column_has_effect = INITIAL_PACKETS_ON && !THERMAL_ENERGY_INPUT_FROM_FILES;
-  if (!q_column_has_effect && std::ranges::contains(colnames, "q")) {
+  if (!q_column_has_effect && std::ranges::contains(colnames, std::string{"q"})) {
     printlnlog(
         "[warning] model.txt has a q column, but it has no effect. Only INITIAL_PACKETS_ON = true with "
         "THERMAL_ENERGY_INPUT_FROM_FILES = false uses q.");
