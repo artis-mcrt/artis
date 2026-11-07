@@ -1,13 +1,13 @@
 // The energy source of THERMAL_ENERGY_INPUT_FROM_FILES. grid.cc reads the energy of each model cell from
 // energydistribution.txt. This file reads energyrate.txt, the cumulative fraction F(t) of the cell energies that the
-// cells release by the time t. F is linear in t between the rows of the file.
+// model cells release by the time t. F is linear in t between the rows of the file.
 
 #include "energyinput.h"
 
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
-#include <utility>
+#include <istream>
 #include <vector>
 
 #pragma clang unsafe_buffer_usage begin
@@ -68,6 +68,9 @@ void read_release_table() {
             fraction, row + 1);
       }
     }
+    if (!(filein >> std::ws).eof()) {
+      fatal_crash("energyrate.txt: the file has more data than the {} rows of the first line", nrows);
+    }
 
     // a table with rounded values can end slightly below 1
     const double last_fraction = cumulative_fractions_released.back();
@@ -77,7 +80,7 @@ void read_release_table() {
     for (auto& fraction : cumulative_fractions_released) {
       fraction /= last_fraction;
     }
-    printlnlog("energyrate.txt: {} rows from {:g} to {:g} [d]. The fractions are divided by the last fraction {:g}.",
+    printlnlog("energyrate.txt: {} rows from {:g} to {:g} [d]. sn3d divides the fractions by the last fraction {:g}.",
                nrows, release_times.front() / DAY, release_times.back() / DAY, last_fraction);
   }
 
@@ -88,38 +91,40 @@ void read_release_table() {
   MPI_Bcast_safe(cumulative_fractions_released, 0, MPI_COMM_WORLD);
 }
 
-auto get_cumulative_fraction_released(const double t) -> double {
+auto get_cumulative_fraction_released(const double time_after_explosion) -> double {
   assert_always(!release_times.empty());
-  if (t < release_times.front()) {
+  if (time_after_explosion < release_times.front()) {
     return 0.;
   }
-  if (t >= release_times.back()) {
+  if (time_after_explosion >= release_times.back()) {
     return cumulative_fractions_released.back();
   }
 
-  // the first row with a time after t. The time t lies between this row and the previous row.
-  const auto row = index_upperbound(release_times, t);
-  const double fraction_of_row_interval = (t - release_times[row - 1]) / (release_times[row] - release_times[row - 1]);
+  // the first row with a time after time_after_explosion, which lies between this row and the previous row
+  const auto row = index_upperbound(release_times, time_after_explosion);
+  const double fraction_of_row_interval =
+      (time_after_explosion - release_times[row - 1]) / (release_times[row] - release_times[row - 1]);
   return std::lerp(cumulative_fractions_released[row - 1], cumulative_fractions_released[row],
                    fraction_of_row_interval);
 }
 
-auto get_released_fraction_after_expansion(const double t) -> double {
+auto get_released_fraction_after_expansion(const double time_after_explosion) -> double {
   assert_always(!release_times.empty());
-  if (t < release_times.front()) {
+  if (time_after_explosion < release_times.front()) {
     return 0.;
   }
 
-  // the integral of t' dF(t') from 0 to t. The fraction of the first row is a release at the time of that row.
+  // the integral of t' dF(t') from 0 to time_after_explosion. The fraction of the first row is a release at the time
+  // of that row.
   double integral_release_time_dF = cumulative_fractions_released.front() * release_times.front();
-  for (std::size_t row = 1; row < release_times.size() && release_times[row - 1] < t; row++) {
+  for (std::size_t row = 1; row < release_times.size() && release_times[row - 1] < time_after_explosion; row++) {
     const double t_low = release_times[row - 1];
-    const double t_high = std::min(release_times[row], t);
+    const double t_high = std::min(release_times[row], time_after_explosion);
     const double dF_dt = (cumulative_fractions_released[row] - cumulative_fractions_released[row - 1]) /
                          (release_times[row] - release_times[row - 1]);
     integral_release_time_dF += dF_dt * ((t_high * t_high) - (t_low * t_low)) / 2.;
   }
-  return integral_release_time_dF / t;
+  return integral_release_time_dF / time_after_explosion;
 }
 
 auto get_release_rate_density(const int nonemptymgi, const int nts) -> double {
@@ -131,19 +136,20 @@ auto get_release_rate_density(const int nonemptymgi, const int nts) -> double {
   return grid::get_thermal_input_energy(mgi) * fraction_released_in_timestep / timestep.width / volume_tmid;
 }
 
-auto get_pellet_release_time_range() -> std::pair<double, double> {
-  return {INITIAL_PACKETS_ON ? 0. : globals::tmin, globals::tmax};
+auto get_fraction_released_by_pellets() -> double {
+  return get_cumulative_fraction_released(globals::tmax) -
+         get_cumulative_fraction_released(INITIAL_PACKETS_ON ? 0. : globals::tmin);
 }
 
 void setup_thermal_input_pellet(const double e_cmf_per_packet, Packet& pkt) {
   // the inverse of F at a uniform sample of [F(first release time), F(tmax))
-  const auto [first_release_time, last_release_time] = get_pellet_release_time_range();
-  const double fraction_first = get_cumulative_fraction_released(first_release_time);
+  const double first_release_time = INITIAL_PACKETS_ON ? 0. : globals::tmin;
   const double fraction_sample =
-      std::lerp(fraction_first, get_cumulative_fraction_released(last_release_time), rng_uniform(get_rngstate(pkt)));
+      std::lerp(get_cumulative_fraction_released(first_release_time), get_cumulative_fraction_released(globals::tmax),
+                rng_uniform(get_rngstate(pkt)));
 
-  // the first row with a fraction above the sample
-  const auto row = index_upperbound(cumulative_fractions_released, fraction_sample);
+  // the first row with a fraction at or above the sample. A rounded sample can be the last fraction, 1.
+  const auto row = index_lowerbound(cumulative_fractions_released, fraction_sample);
   assert_always(row < std::ssize(cumulative_fractions_released));
   if (row == 0) {
     // the release of the fraction of the first row at the time of that row
@@ -154,11 +160,13 @@ void setup_thermal_input_pellet(const double e_cmf_per_packet, Packet& pkt) {
         (cumulative_fractions_released[row] - cumulative_fractions_released[row - 1]);
     pkt.tdecay = std::lerp(release_times[row - 1], release_times[row], fraction_of_row_interval);
   }
-  // a sample on a plateau of F that starts before the first release time
-  pkt.tdecay = std::max(pkt.tdecay, first_release_time);
+  // A sample on a plateau of F can give a time before the first release time. A release at the first release time
+  // itself would take the path of a release before tmin, so the release time stays after it.
+  pkt.tdecay = std::max(pkt.tdecay, std::nextafter(first_release_time, globals::tmax));
 
   pkt.type = TYPE_RADIOACTIVE_PELLET;
   pkt.e_cmf = e_cmf_per_packet;
+  pkt.nu_cmf = e_cmf_per_packet / H;
   pkt.pellet_nucindex = -1;
   pkt.pellet_decaytype = -1;
   pkt.originated_from_particlenotgamma = false;

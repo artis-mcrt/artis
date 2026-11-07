@@ -97,7 +97,7 @@ enum absorption_type : int {
   // bound-bound absorption in a binned opacity (RPKT_USE_BINNED_OPACITIES with
   // RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY), so no single line index is known
   ABSTYPE_BOUNDBOUND_EXPANSIONOPACITY = -11,
-  ABSTYPE_PELLET_THERMALINPUT = -12,  // pellet release of the input energy as heat (THERMAL_ENERGY_INPUT_FROM_FILES)
+  ABSTYPE_PELLET_THERMAL_INPUT = -12,  // pellet release of the input energy as heat (THERMAL_ENERGY_INPUT_FROM_FILES)
 };
 
 // The state a macro-atom is activated in. Local to a do_macroatom() call, not part of the packet's

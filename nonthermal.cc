@@ -2260,13 +2260,7 @@ void calculate_deposition_rate_density(const int nonemptymgi, HeatingCoolingRate
   heatingcoolingrates.eps_spfission_ana =
       rho * decay::get_modelcell_decaypower_per_mass(nonemptymgi, emission_power_per_mass.spfission);
 
-  if constexpr (THERMAL_ENERGY_INPUT_FROM_FILES) {
-    // the input files replace the decay energy, so no decay particle deposits energy. The eps_*_ana rates above
-    // still give the decay power of the model nuclides.
-    heatingcoolingrates.dep_positron = 0.;
-    heatingcoolingrates.dep_electron = 0.;
-    heatingcoolingrates.dep_alpha = 0.;
-  } else if constexpr (PARTICLE_THERMALISATION_SCHEME == ParticleThermalisationScheme::INSTANTFULLDEPOSITION) {
+  if constexpr (PARTICLE_THERMALISATION_SCHEME == ParticleThermalisationScheme::INSTANTFULLDEPOSITION) {
     // for instant full deposition, the deposition rate is the same as the emission rate, which we know analytically
     // without Monte Carlo noise (although strictly, it should be an integral from the timestep start to the end divided
     // by timestep duration instead of the instantaneous rate at tmid)
@@ -2281,7 +2275,7 @@ void calculate_deposition_rate_density(const int nonemptymgi, HeatingCoolingRate
   }
 
   // spontaneous fission contribution is always treated as instant deposition
-  heatingcoolingrates.dep_spfission = THERMAL_ENERGY_INPUT_FROM_FILES ? 0. : heatingcoolingrates.eps_spfission_ana;
+  heatingcoolingrates.dep_spfission = heatingcoolingrates.eps_spfission_ana;
 
   ntlepton_deposition_rate_density_all_cells[nonemptymgi] =
       (heatingcoolingrates.dep_gamma + heatingcoolingrates.dep_positron + heatingcoolingrates.dep_electron);

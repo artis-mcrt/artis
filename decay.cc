@@ -1204,7 +1204,10 @@ auto calc_power_per_source_mass(const NucMassFracCoeffs& nuc_massfrac_coeffs, co
   auto power_per_source_mass = std::vector<double>(num_nuclides);
   for (int nucindex = 0; nucindex < num_nuclides; nucindex++) {
     const double meanlife = get_meanlife(nucindex);
-    power_per_currentmass[nucindex] = (meanlife > 0.) ? nucenergyperdecay(nucindex) / meanlife / nucmass(nucindex) : 0.;
+    // with THERMAL_ENERGY_INPUT_FROM_FILES, the decays give no energy, so all analytic decay powers are zero
+    power_per_currentmass[nucindex] = (meanlife > 0. && !THERMAL_ENERGY_INPUT_FROM_FILES)
+                                          ? nucenergyperdecay(nucindex) / meanlife / nucmass(nucindex)
+                                          : 0.;
     power_per_source_mass[nucindex] = power_per_currentmass[nucindex] * nuc_massfrac_coeffs.nuc_survivingfrac[nucindex];
   }
 

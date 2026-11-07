@@ -23,7 +23,7 @@ exist.
 | [phixsdata_v2.txt or phixsdata.txt](#phixsdata_v2txt-and-phixsdatatxt) | one of them | the photoionisation cross-sections |
 | [vpkt.txt](#vpkttxt) | with `VPKT_ON` | the observer directions of the virtual packets |
 | [energydistribution.txt](#energydistributiontxt) | with `THERMAL_ENERGY_INPUT_FROM_FILES` | the energy of each model cell |
-| [energyrate.txt](#energyratetxt) | with `THERMAL_ENERGY_INPUT_FROM_FILES` | the cumulative fraction of the cell energies that the cells release by each time |
+| [energyrate.txt](#energyratetxt) | with `THERMAL_ENERGY_INPUT_FROM_FILES` | the cumulative fraction of the cell energies that the model cells release by each time |
 | [Ye.txt](#yetxt) | with `RPKT_GREY_TYPE = TANAKA2020_ELECTRONFRAC`, if `model.txt` has no `Ye` column | the electron fraction of each cell |
 | [recombrates.txt](#recombratestxt) | no | the recombination rate coefficients for the calibration |
 | [autoion.txt](#autoiontxt) | no | the autoionisation rates |
@@ -408,24 +408,27 @@ With `THERMAL_ENERGY_INPUT_FROM_FILES`, this file gives the energy of each model
 comment lines.
 
 ```text
-<number of rows>
+<number of model cells>
 <cell id> <energy [erg]>
 ```
 
-The second line occurs once for each row. The cell ids are the ids of `model.txt`, also for a 2D or a 3D model. A
-cell with no row gets no energy. The energy of a model cell goes to its propagation cells by volume. The run stops
-for each of these errors:
+The second line occurs once for each model cell. The cell ids are the ids of `model.txt`, also for a 2D or a 3D
+model. The energy of a model cell goes to its propagation cells by volume. A model cell with no propagation cell,
+e.g. a small inner shell of a 1D model on a 3D grid, keeps its energy out of the simulation, and the log gives that
+energy. With `FORCE_SPHERICAL_ESCAPE_SURFACE`, the blanked share of a model cell also leaves the simulation. The run
+stops for each of these errors:
 
-- the number of rows is less than 1 or more than the number of model cells;
+- the first line does not give the number of model cells of `model.txt`;
 - a cell id is outside the range of `model.txt`, or it has more than one row;
 - an energy is negative or not finite;
-- a cell with no mass in `model.txt` has energy;
+- a model cell with no mass in `model.txt` or in the elements of `compositiondata.txt` has energy;
+- the file has more data than the rows of the first line;
 - the total energy is 0.
 
 ## energyrate.txt
 
-With `THERMAL_ENERGY_INPUT_FROM_FILES`, this file gives the cumulative fraction F of the cell energies that the cells
-release by each time. The fraction is the same for all cells. The file can have no comment lines.
+With `THERMAL_ENERGY_INPUT_FROM_FILES`, this file gives the cumulative fraction F of the cell energies that the model
+cells release by each time. The fraction is the same for all model cells. The file can have no comment lines.
 
 ```text
 <number of rows>
@@ -438,11 +441,12 @@ so the fraction of the first row is a release at the time of that row. After the
 - The times must be positive, and each time must be greater than the time of the previous row.
 - The fractions must be in the range from 0 to 1, and each fraction must not be less than the previous fraction.
 - The last fraction must be within 0.001 of 1. `sn3d` divides all fractions by the last fraction.
+- The file must have no more data than the rows of the first line.
 
 The pellets release the energy from tmin to tmax. With `INITIAL_PACKETS_ON`, they also release the energy before
 tmin. Such a release becomes a blackbody r-packet at tmin, and it keeps the share tdecay / tmin of its energy, as for
-a decay before tmin. The initial temperatures always include the energy that the cells release before the first
-timestep.
+a decay before tmin. The initial temperatures come only from the energy that the model cells release before the
+midpoint of the first timestep, with any value of `INITIAL_PACKETS_ON`.
 
 ## Ye.txt
 

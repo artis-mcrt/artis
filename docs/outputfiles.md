@@ -176,7 +176,7 @@ gram of the model.
 | --- | --- |
 | `ts` | The timestep number. |
 | `tmid_days`, `tmid_s` | The midpoint of the timestep in days and in seconds. |
-| `total_dep_Lsun` | The deposition of the gamma rays, the positrons, the electrons, the alpha particles, and the fission fragments together. |
+| `total_dep_Lsun` | The deposition of the gamma rays, the positrons, the electrons, the alpha particles, and the fission fragments together. With `THERMAL_ENERGY_INPUT_FROM_FILES`, it also contains the input energy that the pellets release as heat. |
 | `gammadep_Lsun` | The deposition of the gamma rays, from the paths of the packets. |
 | `gammadep_discrete_Lsun` | The deposition of the gamma rays, from the absorption events of the packets. |
 | `positrondep_Lsun`, `elecdep_Lsun`, `alphadep_Lsun` | The deposition of the positrons, the electrons, and the alpha particles, from the paths of the packets. |
@@ -185,7 +185,7 @@ gram of the model.
 | `eps_gamma_Lsun`, `eps_elec_Lsun`, `eps_alpha_Lsun` | The emission of gamma-ray energy, and of the kinetic energy of the electrons and of the alpha particles, from the decays of the pellets. |
 | `eps_positron_ana_Lsun`, `eps_elec_ana_Lsun`, `eps_alpha_ana_Lsun` | The emission of the kinetic energy of the positrons, the electrons, and the alpha particles, from the decay data and the abundances at the midpoint. |
 | `eps_spfission_ana_Lsun` | The emission of the energy of the fission fragments, from the decay data and the abundances. Only a model with spontaneous fission has this column. |
-| `eps_erg/s/g` | The emission of the pellets in gamma rays and in all particles. |
+| `eps_erg/s/g` | The emission of the pellets in gamma rays and in all particles. With `THERMAL_ENERGY_INPUT_FROM_FILES`, it is the input energy that the pellets release. |
 | `Qdot_betaminus_ana_erg/s/g`, `Qdotalpha_ana_erg/s/g`, `Qdotspfission_ana_erg/s/g` | The energy generation rate of one decay type, with the energy of the neutrinos, from the decay data and the abundances. Only a model with spontaneous fission has the fission column. |
 | `Qdot_ana_erg/s/g` | The energy generation rate of all decay types, with the energy of the neutrinos. |
 
@@ -228,7 +228,7 @@ above zero in the cell:
 | `gammaestimator` | The ionisation rate of each ion stage, divided by the population of its ground level [1/s]. Only a run with `USE_LUT_PHOTOION` has this line. This line and `corrphotoionrenorm` hold only the ion stages with a photoionisation from the ground level, and they have no value for the highest ion stage. |
 | `heating_bf`, `heating_coll`, `heating_ff`, `cooling_ff`, `cooling_fb`, `cooling_coll` | The heating and the cooling rate of each ion [erg/s/cm^3]. Only a run with `WRITE_ION_HEATING_COOLING_RATES` has these lines. A cell with no thermal balance in the grid update has none of them. This is a cell in an LTE timestep, a cell with the grey opacity, and each cell in the first timestep of a job. `heating_bf` and `cooling_fb` have no value for the highest ion stage. `heating_coll` also needs `COLLISIONAL_HEATING_FROM_LEVELPOPS`. |
 | `emission_ana:` | The emission rate of the gamma rays and of each particle type [erg/s/cm^3], from the decay data and the abundances. |
-| `deposition:` | The deposition rate of the gamma rays and of each particle type [erg/s/cm^3]. |
+| `deposition:` | The deposition rate of the gamma rays and of each particle type [erg/s/cm^3]. With `THERMAL_ENERGY_INPUT_FROM_FILES`, the field `thermalinput` gives the analytic release rate of the input energy. |
 | `heating:` | The free-free, the bound-free, and the collisional heating rate, and the heating rate of the deposition [erg/s/cm^3]. `heating_dep/total_dep` is the fraction of the deposition that heats the gas. |
 | `cooling:` | The free-free, the free-bound, the collisional, and the adiabatic cooling rate [erg/s/cm^3]. |
 
@@ -315,10 +315,10 @@ the rank. A run without `KEEP_ESCAPED_GAMMAS` writes no rows for the escaped gam
 | `nscatterings` | The number of electron scatterings since the last emission. An event in a cell with the grey opacity also adds one. |
 | `em_time` | The time of the last emission, or of the last scattering. |
 | `stokes_q`, `stokes_u` | The Stokes parameters Q/I and U/I. Only a run with `POL_ON` has these columns. |
-| `originated_from_particlenotgamma` | 1 if the decay of the pellet made a particle, and 0 if it made a gamma ray. The initial energy of the cells also holds 0, and its `pellet_decaytype` is -1. |
+| `originated_from_particlenotgamma` | 1 if the decay of the pellet made a particle, and 0 if it made a gamma ray. The initial energy of the cells and the input energy of `THERMAL_ENERGY_INPUT_FROM_FILES` also hold 0, and their `pellet_decaytype` is -1. |
 | `trueem_posx`, `trueem_posy`, `trueem_posz`, `trueem_time` | The position and the time of the last emission from the thermal energy of the gas. A packet with no such emission holds `nan` in the position and -1 in the time. |
-| `pellet_nucindex` | The nuclide of the pellet decay, as the index of `nuclides.out`, or -1 for the initial energy of the cells. |
-| `pellet_decaytype` | The decay type of the pellet, as a value of the list below. The value -1 is the initial energy of the cells. |
+| `pellet_nucindex` | The nuclide of the pellet decay, as the index of `nuclides.out`, or -1 for the initial energy of the cells and for the input energy of `THERMAL_ENERGY_INPUT_FROM_FILES`. |
+| `pellet_decaytype` | The decay type of the pellet, as a value of the list below. The value -1 is the initial energy of the cells, or the input energy of `THERMAL_ENERGY_INPUT_FROM_FILES`. |
 
 The values of `pellet_decaytype`:
 

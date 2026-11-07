@@ -275,6 +275,9 @@ void write_to_estimators_file(std::ostream& estimators_file, const int nonemptym
   if (any_fission) {
     std::print(estimators_file, " spfission {:11.5e}", heatingcoolingrates.dep_spfission);
   }
+  if constexpr (THERMAL_ENERGY_INPUT_FROM_FILES) {
+    std::print(estimators_file, " thermalinput {:11.5e}", heatingcoolingrates.dep_thermal_input);
+  }
   std::println(estimators_file);
 
   std::print(estimators_file,

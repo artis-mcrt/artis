@@ -230,8 +230,9 @@ void update_pellet(Packet& pkt, const int nts, const double t2) {
 
     if constexpr (THERMAL_ENERGY_INPUT_FROM_FILES) {
       // the input energy heats the gas of the cell
+      atomicadd(globals::timesteps[nts].thermal_input_release, pkt.e_cmf);
       pkt.type = TYPE_KPKT;
-      pkt.absorptiontype = ABSTYPE_PELLET_THERMALINPUT;
+      pkt.absorptiontype = ABSTYPE_PELLET_THERMAL_INPUT;
     } else if (pkt.originated_from_particlenotgamma) {
       // decay to non-thermal particle
       if (pkt.pellet_decaytype == decay::DECAYTYPE_BETAPLUS) {

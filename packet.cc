@@ -147,26 +147,30 @@ void packet_init(std::span<Packet> packets) {
     printlnlog("e_cmf per packet (t_model to t_inf) {:g} [erg]", etot_tmodel_tinf / std::ssize(packets));
   }
 
-  const auto energy_per_massoftopnuc_decaypath = decay::calc_energy_per_massoftopnuc_decaypath();
-
-  // decay energy per unit ejecta mass of each model cell (computed once per model cell, since many propagation
-  // cells can map to the same model cell)
-  auto cell_endecay_per_mass = std::vector<double>(grid::get_nonempty_npts_model());
-  for (int nonemptymgi = 0; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
-    cell_endecay_per_mass[nonemptymgi] =
-        decay::get_modelcell_endecay_per_mass(nonemptymgi, energy_per_massoftopnuc_decaypath);
-  }
-
-  // the cumulative energy of the propagation cells, for the sampling of the pellet cell
-  auto en_cumulative = std::vector<double>(grid::ngrid);
+  // the decay data of the pellets, which THERMAL_ENERGY_INPUT_FROM_FILES does not use
+  const auto energy_per_massoftopnuc_decaypath =
+      THERMAL_ENERGY_INPUT_FROM_FILES ? std::vector<double>{} : decay::calc_energy_per_massoftopnuc_decaypath();
 
   // the fraction of the cell energy of THERMAL_ENERGY_INPUT_FROM_FILES that the pellets release
-  double thermal_input_fraction_released_by_pellets = 0.;
-  if constexpr (THERMAL_ENERGY_INPUT_FROM_FILES) {
-    const auto [first_release_time, last_release_time] = energyinput::get_pellet_release_time_range();
-    thermal_input_fraction_released_by_pellets = energyinput::get_cumulative_fraction_released(last_release_time) -
-                                                 energyinput::get_cumulative_fraction_released(first_release_time);
+  const double thermal_input_fraction_released_by_pellets =
+      THERMAL_ENERGY_INPUT_FROM_FILES ? energyinput::get_fraction_released_by_pellets() : 0.;
 
+  // the pellet energy per unit ejecta mass of each model cell (computed once per model cell, since many propagation
+  // cells can map to the same model cell): the decay energy, or the input energy that the pellets release
+  auto cell_pellet_energy_per_mass = std::vector<double>(grid::get_nonempty_npts_model());
+  for (int nonemptymgi = 0; nonemptymgi < grid::get_nonempty_npts_model(); nonemptymgi++) {
+    if constexpr (THERMAL_ENERGY_INPUT_FROM_FILES) {
+      const int mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
+      cell_pellet_energy_per_mass[nonemptymgi] = grid::get_thermal_input_energy(mgi) *
+                                                 thermal_input_fraction_released_by_pellets /
+                                                 (grid::get_rho_tmin(mgi) * grid::get_modelcell_assocvolume_tmin(mgi));
+    } else {
+      cell_pellet_energy_per_mass[nonemptymgi] =
+          decay::get_modelcell_endecay_per_mass(nonemptymgi, energy_per_massoftopnuc_decaypath);
+    }
+  }
+
+  if constexpr (THERMAL_ENERGY_INPUT_FROM_FILES) {
     // a model cell can have no propagation cell, e.g. a small inner shell of a 1D model on a 3D grid
     double energy_of_cells_without_propagation_cell = 0.;
     double energy_of_all_cells = 0.;
@@ -182,37 +186,36 @@ void packet_init(std::span<Packet> packets) {
         energy_of_cells_without_propagation_cell, energy_of_cells_without_propagation_cell / energy_of_all_cells);
   }
 
+  // the cumulative energy of the propagation cells, for the sampling of the pellet cell
+  auto en_cumulative = std::vector<double>(grid::ngrid);
+
   double etot_simtime = 0.;
   for (int propcellindex = 0; propcellindex < grid::ngrid; propcellindex++) {
     const int mgi = grid::get_propcell_modelgridindex(propcellindex);
     // some propagation cells are empty
     if (mgi >= 0) {
-      if constexpr (THERMAL_ENERGY_INPUT_FROM_FILES) {
-        // the energy of a model cell goes to its propagation cells by volume
-        etot_simtime += grid::get_thermal_input_energy(mgi) * thermal_input_fraction_released_by_pellets *
-                        grid::get_propcell_volume_tmin(propcellindex) / grid::get_modelcell_assocvolume_tmin(mgi);
-      } else {
-        const auto nonemptymgi = grid::get_propcell_nonemptymgi(propcellindex);
-        const auto initial_en_per_mass = INITIAL_PACKETS_ON ? grid::get_initenergyq(mgi) : 0.;
+      const auto nonemptymgi = grid::get_propcell_nonemptymgi(propcellindex);
+      // the q column of model.txt has no effect with THERMAL_ENERGY_INPUT_FROM_FILES
+      const auto initial_en_per_mass =
+          (INITIAL_PACKETS_ON && !THERMAL_ENERGY_INPUT_FROM_FILES) ? grid::get_initenergyq(mgi) : 0.;
 
-        etot_simtime += grid::get_propcell_volume_tmin(propcellindex) * grid::get_rho_tmin(mgi) *
-                        (cell_endecay_per_mass[nonemptymgi] + initial_en_per_mass);
-      }
+      etot_simtime += grid::get_propcell_volume_tmin(propcellindex) * grid::get_rho_tmin(mgi) *
+                      (cell_pellet_energy_per_mass[nonemptymgi] + initial_en_per_mass);
     }
     en_cumulative[propcellindex] = etot_simtime;
   }
   if constexpr (THERMAL_ENERGY_INPUT_FROM_FILES) {
-    printlnlog(
-        "THERMAL_ENERGY_INPUT_FROM_FILES: the pellets release {:g} [erg], a fraction {:g} of the cell energy, from {} "
-        "to tmax",
-        etot_simtime, thermal_input_fraction_released_by_pellets, INITIAL_PACKETS_ON ? "0" : "tmin");
+    printlnlog("THERMAL_ENERGY_INPUT_FROM_FILES: the pellets release a fraction {:g} of the cell energy",
+               thermal_input_fraction_released_by_pellets);
     if (etot_simtime <= 0.) {
       fatal_crash("THERMAL_ENERGY_INPUT_FROM_FILES: the cells release no energy in the time range of the pellets");
     }
   }
   assert_always(etot_simtime > 0);
 
-  constexpr auto strtimelow{INITIAL_PACKETS_ON ? "tmodel" : "tmin"};
+  // the pellets of THERMAL_ENERGY_INPUT_FROM_FILES with INITIAL_PACKETS_ON release from the first row of energyrate.txt
+  constexpr auto strtimelow_with_initial_packets{THERMAL_ENERGY_INPUT_FROM_FILES ? "0" : "tmodel"};
+  constexpr auto strtimelow{INITIAL_PACKETS_ON ? strtimelow_with_initial_packets : "tmin"};
   printlnlog("etot ({} to tmax) {:g} [erg]", strtimelow, etot_simtime);
 
   // So energy per pellet is:
