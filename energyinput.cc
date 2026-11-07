@@ -91,6 +91,13 @@ void read_release_table() {
           "table has no release between these times.",
           release_times.front() / DAY, grid::get_t_model() / DAY);
     }
+
+    const double fraction_released_by_pellets = get_fraction_released_by_pellets();
+    if (fraction_released_by_pellets <= 0.) {
+      fatal_crash("energyrate.txt: the cells release no energy in the time range of the pellets");
+    }
+    printlnlog("energyrate.txt: the pellets release a fraction {:g} of the cell energies",
+               fraction_released_by_pellets);
   }
 
   MPI_Bcast_safe(nrows, 0, MPI_COMM_WORLD);

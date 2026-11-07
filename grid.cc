@@ -615,23 +615,16 @@ void allocate_nonemptymodelcells() {
       }
     }
 
+    // the blanked volume removes its share of the input energy, as it removes its share of the mass
     if constexpr (THERMAL_ENERGY_INPUT_FROM_FILES) {
-      // The blanked share of the input energy leaves the simulation, as the blanked mass does. Only the node leaders
-      // read and write the node-shared energies, and the barrier below synchronises the ranks.
       if (globals::rank_in_node == 0) {
-        double blanked_thermal_input_energy = 0.;
         for (int mgi = 0; mgi < get_npts_model(); mgi++) {
           if (blanked_assocvolume[mgi] > 0.) {
             const double remaining_assocvolume = get_modelcell_assocvolume_tmin(mgi);
-            const double remaining_volume_fraction =
+            modelgrid_input[mgi].thermal_input_energy *=
                 remaining_assocvolume / (remaining_assocvolume + blanked_assocvolume[mgi]);
-            blanked_thermal_input_energy +=
-                modelgrid_input[mgi].thermal_input_energy * (1. - remaining_volume_fraction);
-            modelgrid_input[mgi].thermal_input_energy *= remaining_volume_fraction;
           }
         }
-        printlnlog("THERMAL_ENERGY_INPUT_FROM_FILES: the blanked propagation cells remove {:g} [erg] of input energy",
-                   blanked_thermal_input_energy);
       }
     }
   }

@@ -170,22 +170,6 @@ void packet_init(std::span<Packet> packets) {
     }
   }
 
-  if constexpr (THERMAL_ENERGY_INPUT_FROM_FILES) {
-    // a model cell can have no propagation cell, e.g. a small inner shell of a 1D model on a 3D grid
-    double energy_of_cells_without_propagation_cell = 0.;
-    double energy_of_all_cells = 0.;
-    for (int mgi = 0; mgi < grid::get_npts_model(); mgi++) {
-      energy_of_all_cells += grid::get_thermal_input_energy(mgi);
-      if (grid::get_numpropcells(mgi) == 0) {
-        energy_of_cells_without_propagation_cell += grid::get_thermal_input_energy(mgi);
-      }
-    }
-    printlnlog(
-        "THERMAL_ENERGY_INPUT_FROM_FILES: the model cells with no propagation cell have {:g} [erg], a fraction {:g} "
-        "of the energy of energydistribution.txt. No pellet carries this energy.",
-        energy_of_cells_without_propagation_cell, energy_of_cells_without_propagation_cell / energy_of_all_cells);
-  }
-
   // the cumulative energy of the propagation cells, for the sampling of the pellet cell
   auto en_cumulative = std::vector<double>(grid::ngrid);
 
@@ -201,13 +185,6 @@ void packet_init(std::span<Packet> packets) {
                       (cell_pellet_energy_per_mass[nonemptymgi] + initial_en_per_mass);
     }
     en_cumulative[propcellindex] = etot_simtime;
-  }
-  if constexpr (THERMAL_ENERGY_INPUT_FROM_FILES) {
-    printlnlog("THERMAL_ENERGY_INPUT_FROM_FILES: the pellets release a fraction {:g} of the cell energy",
-               thermal_input_fraction_released_by_pellets);
-    if (etot_simtime <= 0.) {
-      fatal_crash("THERMAL_ENERGY_INPUT_FROM_FILES: the cells release no energy in the time range of the pellets");
-    }
   }
   assert_always(etot_simtime > 0);
 
