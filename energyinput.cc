@@ -82,6 +82,15 @@ void read_release_table() {
     }
     printlnlog("energyrate.txt: {} rows from {:g} to {:g} [d]. sn3d divides the fractions by the last fraction {:g}.",
                nrows, release_times.front() / DAY, release_times.back() / DAY, last_fraction);
+
+    // The decay energy starts at the snapshot time of model.txt. A table that starts later has no release between
+    // that time and its first row, and its first fraction is a release at the time of the first row.
+    if (release_times.front() > grid::get_t_model() * (1. + 1e-6)) {
+      printlnlog(
+          "[warning] energyrate.txt: the first row at {:g} [d] is after the snapshot time {:g} [d] of model.txt. The "
+          "table has no release between these times.",
+          release_times.front() / DAY, grid::get_t_model() / DAY);
+    }
   }
 
   MPI_Bcast_safe(nrows, 0, MPI_COMM_WORLD);
