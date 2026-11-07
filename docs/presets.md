@@ -35,7 +35,7 @@ radiation temperature (`LTEPOP_EXCITATION_USE_TJ`), one level for the top ion, a
 is on, and the packets get a dipole scattering distribution. The 3D grid of a 1D or a 2D model has 100 cells per
 coordinate.
 
-The tests `classicmode_1d_3dgrid` and `classicmode_3d` use this preset.
+The tests `classicmode_1d_3dgrid`, `classicmode_1d_3dgrid_thermalinput`, and `classicmode_3d` use this preset.
 
 ## kilonova_lte
 

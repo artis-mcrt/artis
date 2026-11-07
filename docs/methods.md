@@ -152,6 +152,10 @@ loses energy to the expansion in proportion to 1/t. A decay at the time `t_decay
 `t_decay / t_mid` of its energy at the midpoint `t_mid` of the first timestep. The `q` energy keeps the fraction
 `t_model / t_mid`, where `t_model` is the snapshot time.
 
+With [THERMAL_ENERGY_INPUT_FROM_FILES](options.md#thermal_energy_input_from_files), the input energy that the cell
+releases before `t_mid` replaces both energies. A release at the time `t` keeps the fraction `t / t_mid` of its
+energy.
+
 For each other cell, the code solves heating = cooling for the electron temperature. The heating rates are the
 bound-free heating, the free-free heating, the collisional de-excitation, and the non-thermal heating. With
 [USE_ION_BFHEATING_ESTIMATORS](options.md#use_ion_bfheating_estimators), a Monte Carlo estimator corrects the
@@ -287,6 +291,21 @@ the positrons goes to the non-thermal electrons (see [the non-thermal electrons]
     - the analytic efficiencies: Barnes, Kasen, Wu & Martínez-Pinedo (2016), ApJ, 829, 110,
       doi:10.3847/0004-637X/829/2/110 and Wollaeger, Korobkin, Fontes, Rosswog, Even & Fryer (2018), MNRAS, 478,
       3298-3334, doi:10.1093/mnras/sty1018.
+
+## An energy source from input files
+
+With [THERMAL_ENERGY_INPUT_FROM_FILES](options.md#thermal_energy_input_from_files), two input files replace the
+decay energy. [energydistribution.txt](inputfiles.md#energydistributiontxt) gives the energy of each model cell, and
+[energyrate.txt](inputfiles.md#energyratetxt) gives the cumulative fraction of that energy that the model cells
+release by each time. Each pellet samples its propagation cell from these energies and its release time from that
+fraction. At the release time, the pellet becomes a k-packet in its propagation cell, so all of the energy heats the
+gas.
+
+With [INITIAL_PACKETS_ON](options.md#initial_packets_on), the energy released before tmin seeds the cells at tmin.
+No gamma ray and no particle comes from this source. The thermal balance adds the release rate of the timestep to
+the heating. The nuclides of `model.txt` still decay and change the composition, but their decay energy goes into no
+packet. The initial temperature of a cell comes from the input energy that the cell releases before the midpoint of
+the first timestep, with the same expansion loss as for a decay.
 
 ## The gamma rays
 

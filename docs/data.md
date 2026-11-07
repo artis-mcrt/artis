@@ -40,7 +40,7 @@ The end-to-end tests download a reduced dataset from a release of this repositor
 
 | Archive | Elements | Tests |
 | --- | --- | --- |
-| `atomicdata_classic.tar.xz` | the classic dataset, with cross-sections in the v1 format | `classicmode_1d_3dgrid`, `classicmode_3d` |
+| `atomicdata_classic.tar.xz` | the classic dataset, with cross-sections in the v1 format | `classicmode_1d_3dgrid`, `classicmode_1d_3dgrid_thermalinput`, `classicmode_3d` |
 | `atomicdata_feconi.tar.xz` | Fe, Co, Ni | `kilonova_1d`, `kilonova_2d*`, `nebular_1d_3dgrid*` |
 | `atomicdata_hefeconi_fe_i_to_vii.tar.xz` | He, Fe, Co, Ni, with Fe I to Fe VII | `nltephotospheric_dynamic_ion_range_1d_1dgrid` |
 | `atomicdata_sryzrlace.tar.zst` | Sr, Y, Zr, La, Ce | `kilonova_1d_timedepnlte` |
