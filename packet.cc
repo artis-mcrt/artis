@@ -184,6 +184,21 @@ void packet_init(std::span<Packet> packets) {
         "THERMAL_ENERGY_INPUT_FROM_FILES: the model cells with no propagation cell have {:g} [erg], a fraction {:g} "
         "of the energy of energydistribution.txt. No pellet carries this energy.",
         energy_of_cells_without_propagation_cell, energy_of_cells_without_propagation_cell / energy_of_all_cells);
+
+    // A table that starts too late gives too little energy before tmin for the initial state of the cells
+    const auto& first_timestep = globals::timesteps[0];
+    const double energy_released_before_tmin =
+        energy_of_all_cells * energyinput::get_cumulative_fraction_released(globals::tmin);
+    const double energy_released_in_first_timestep =
+        energy_of_all_cells *
+        (energyinput::get_cumulative_fraction_released(first_timestep.start + first_timestep.width) -
+         energyinput::get_cumulative_fraction_released(first_timestep.start));
+    if (energy_released_before_tmin <= energy_released_in_first_timestep) {
+      printlnlog(
+          "[warning] THERMAL_ENERGY_INPUT_FROM_FILES: the model cells release {:g} [erg] before tmin, which is not "
+          "more than the {:g} [erg] that they release in timestep 0. energyrate.txt can start too late.",
+          energy_released_before_tmin, energy_released_in_first_timestep);
+    }
   }
 
   // the cumulative energy of the propagation cells, for the sampling of the pellet cell

@@ -446,7 +446,8 @@ so the fraction of the first row is a release at the time of that row. After the
 The pellets release the energy from tmin to tmax. With `INITIAL_PACKETS_ON`, they also release the energy before
 tmin. Such a release becomes a blackbody r-packet at tmin, and it keeps the share tdecay / tmin of its energy, as for
 a decay before tmin. The initial temperatures come only from the energy that the model cells release before the
-midpoint of the first timestep, with any value of `INITIAL_PACKETS_ON`.
+midpoint of the first timestep, with any value of `INITIAL_PACKETS_ON`. The log gives a warning if the model cells release no more energy
+before tmin than in the first timestep, because the table then can start too late.
 
 ## Ye.txt
 
