@@ -353,6 +353,10 @@ int first_negative_massfrac_a = -1;
 // names of model.txt columns that were not recognised, reported after the model read
 std::set<std::string> ignored_model_columns;
 
+// only the initial packets use the q column of model.txt, and THERMAL_ENERGY_INPUT_FROM_FILES replaces their energy
+// cppcheck-suppress [incorrectLogicOperator,oppositeExpression]
+constexpr bool q_column_has_effect = INITIAL_PACKETS_ON && !THERMAL_ENERGY_INPUT_FROM_FILES;
+
 void count_negative_input_massfrac(const int modelgridindex, const int z, const int a, const double massfrac) {
   n_negative_input_massfrac++;
   most_negative_input_massfrac = std::min(most_negative_input_massfrac, massfrac);
@@ -1071,7 +1075,9 @@ void read_model_radioabundances(ModelFileReader& fmodel, std::string_view& remai
       // The q column holds the trapped radiation energy per mass at t_model. It already includes the adiabatic
       // losses before t_model. The energy of a comoving mass element falls as 1/t, so the value is scaled to tmin.
       assert_always(valuein >= 0.);
-      set_initenergyq(mgi, static_cast<float>(valuein * t_model / globals::tmin));
+      if constexpr (q_column_has_effect) {
+        set_initenergyq(mgi, static_cast<float>(valuein * t_model / globals::tmin));
+      }
     } else if (colnames[i] == "tracercount") {
       ;
     } else {
@@ -2457,8 +2463,6 @@ void read_ejecta_model() {
     printlnlog("");
   }
 
-  // cppcheck-suppress [incorrectLogicOperator,oppositeExpression]
-  constexpr bool q_column_has_effect = INITIAL_PACKETS_ON && !THERMAL_ENERGY_INPUT_FROM_FILES;
   if (!q_column_has_effect && std::ranges::contains(colnames, std::string{"q"})) {
     printlnlog(
         "[warning] model.txt has a q column, but it has no effect. Only INITIAL_PACKETS_ON = true with "

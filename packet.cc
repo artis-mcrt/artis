@@ -189,17 +189,13 @@ void packet_init(std::span<Packet> packets) {
   // the cumulative energy of the propagation cells, for the sampling of the pellet cell
   auto en_cumulative = std::vector<double>(grid::ngrid);
 
-  // the q column of model.txt has no effect with THERMAL_ENERGY_INPUT_FROM_FILES
-  // cppcheck-suppress [incorrectLogicOperator,oppositeExpression]
-  constexpr bool pellets_include_q_energy = INITIAL_PACKETS_ON && !THERMAL_ENERGY_INPUT_FROM_FILES;
-
   double etot_simtime = 0.;
   for (int propcellindex = 0; propcellindex < grid::ngrid; propcellindex++) {
     const int mgi = grid::get_propcell_modelgridindex(propcellindex);
     // some propagation cells are empty
     if (mgi >= 0) {
       const auto nonemptymgi = grid::get_propcell_nonemptymgi(propcellindex);
-      const auto initial_en_per_mass = pellets_include_q_energy ? grid::get_initenergyq(mgi) : 0.;
+      const auto initial_en_per_mass = INITIAL_PACKETS_ON ? grid::get_initenergyq(mgi) : 0.;
 
       etot_simtime += grid::get_propcell_volume_tmin(propcellindex) * grid::get_rho_tmin(mgi) *
                       (cell_pellet_energy_per_mass[nonemptymgi] + initial_en_per_mass);
