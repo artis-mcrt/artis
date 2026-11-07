@@ -354,7 +354,6 @@ int first_negative_massfrac_a = -1;
 std::set<std::string> ignored_model_columns;
 
 // only the initial packets use the q column of model.txt, and THERMAL_ENERGY_INPUT_FROM_FILES replaces their energy
-// cppcheck-suppress [incorrectLogicOperator,oppositeExpression]
 constexpr bool q_column_has_effect = INITIAL_PACKETS_ON && !THERMAL_ENERGY_INPUT_FROM_FILES;
 
 void count_negative_input_massfrac(const int modelgridindex, const int z, const int a, const double massfrac) {
