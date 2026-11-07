@@ -185,7 +185,8 @@ More rules for the cells:
 - `sn3d` finds the first cell id from the first cell of `model.txt`. `abundances.txt` and `Ye.txt` must use the same
   ids. The log messages always give the 0-based cell index.
 - The value of the column `q` must already include the adiabatic losses before `t_model`. `INITIAL_PACKETS_ON` uses
-  the column for the initial temperature and for the initial packets.
+  the column for the initial temperature and for the initial packets. With `INITIAL_PACKETS_ON = false` or with
+  `THERMAL_ENERGY_INPUT_FROM_FILES = true`, the column has no effect, and the log gives a warning.
 - A column with a different name gets a warning in the log, and `sn3d` does not use it.
 
 ## abundances.txt
