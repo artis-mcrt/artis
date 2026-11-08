@@ -24,6 +24,9 @@ void setup_photoion_luts();
 [[nodiscard]] auto get_corrphotoioncoeff_ana(int element, int ion, int level, int phixstargetindex, float T_R)
     -> double;
 
+[[nodiscard]] auto calculate_modified_departure_ratio(int nonemptymgi, int element, int ion, int level,
+                                                      int phixstargetindex, bool use_cellcache) -> double;
+
 [[nodiscard]] auto iongamma_is_zero(int nonemptymgi, int element, int ion) -> bool;
 
 [[nodiscard]] auto calculate_iongamma_per_gspop(int nonemptymgi, int element, int ion) -> double;

@@ -293,17 +293,19 @@ void write_to_estimators_file(std::ostream& estimators_file, const int nonemptym
 
 void solve_Te_nltepops(const int nonemptymgi, const int nts, HeatingCoolingRates& heatingcoolingrates) {
   const int mgi = grid::get_mgi_of_nonemptymgi(nonemptymgi);
-  // bfheating coefficients are needed for the T_e solver, but they only depend on the radiation field, which is fixed
-  // during the iterations below
-  printlog("calculate_bfheatingcoeffs for timestep {} cell {}...", nts, mgi);
-  const auto sys_time_start_calculate_bfheatingcoeffs = std::chrono::steady_clock::now();
   THREADLOCALONHOST auto bfheatingcoeffs = std::vector<double>(get_includedlevels());
+  if constexpr (!BFHEATING_USE_DEPARTURE_RATIO_AND_TE_NOT_LTE_TR) {
+    // bfheating coefficients are needed for the T_e solver, but they only depend on the radiation field, which is
+    // fixed during the iterations below
+    printlog("calculate_bfheatingcoeffs for timestep {} cell {}...", nts, mgi);
+    const auto sys_time_start_calculate_bfheatingcoeffs = std::chrono::steady_clock::now();
 
-  calculate_bfheatingcoeffs(nonemptymgi, bfheatingcoeffs);
-  const auto bfheating_duration =
-      std::chrono::duration<double>(std::chrono::steady_clock::now() - sys_time_start_calculate_bfheatingcoeffs)
-          .count();
-  printlnlog("took {:.1f} seconds", bfheating_duration);
+    calculate_bfheatingcoeffs(nonemptymgi, bfheatingcoeffs);
+    const auto bfheating_duration =
+        std::chrono::duration<double>(std::chrono::steady_clock::now() - sys_time_start_calculate_bfheatingcoeffs)
+            .count();
+    printlnlog("took {:.1f} seconds", bfheating_duration);
+  }
 
   // Anderson acceleration of the outer iteration (see NLTE_TE_NNE_USE_ANDERSON_ACCEL). The state is
   // (log T_e, log nne, log nnion of each significant ion) as the element solves use it. Its map output is
