@@ -271,8 +271,8 @@ correct the cause. Do not regenerate the checksums.
 If a change alters the numerical results for a good reason, regenerate the
 stored checksums yourself with the `updatechecksums.yml` workflow. This needs
 write access to the repository, and the branch must be in `artis-mcrt/artis`.
-Without these, ask a maintainer to start the workflow. If all of the CI tests
-pass, the stored checksums are correct, so do not start the workflow.
+Without these, ask a maintainer to start the workflow. Do not start the workflow
+if all of the CI tests pass. The stored checksums are then correct.
 
 1. Wait until the CI run of the head commit is complete.
 2. Make sure that each failed test job failed only at a checksum step, with no
