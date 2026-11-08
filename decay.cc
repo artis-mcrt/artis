@@ -749,6 +749,22 @@ void add_standard_nuclides() {
   nuclides.back().endecay_q[DECAYTYPE_ELECTRONCAPTURE] = 5.085870 * MEV;
 }
 
+// add the electron capture and beta-plus emitters that no decay data file has. They are not standard nuclides, which
+// are the nuclides of the fixed columns of the old model.txt format.
+void add_electroncapture_betaplus_nuclides() {
+  // Sc44: the half-life 4.0420 h. The values are from the evaluation of Chen & Singh (2023), Nucl. Data Sheets, 190,
+  // 1-318, doi:10.1016/j.nds.2023.06.001.
+  nuclides.push_back({.z = 21, .a = 44, .meanlife = 4.0420 * HOUR / std::numbers::ln2});
+  nuclides.back().endecay_positron = 0.6302 * MEV;
+  nuclides.back().branchprobs[DECAYTYPE_BETAPLUS] = 0.94278;
+  nuclides.back().branchprobs[DECAYTYPE_ELECTRONCAPTURE] = 1. - 0.94278;
+  const double sc44_q_ec = 3.652695 * MEV;
+  nuclides.back().endecay_q[DECAYTYPE_ELECTRONCAPTURE] = sc44_q_ec;
+  // the beta-plus decay releases Q_EC in total: the kinetic energy Q_EC - 2 m_e c^2 and the annihilation
+  // energy 2 m_e c^2 of the positron
+  nuclides.back().endecay_q[DECAYTYPE_BETAPLUS] = sc44_q_ec;
+}
+
 // add the nuclides with beta-minus decay data from betaminusdecays.txt
 void read_betaminus_decaydata() {
   auto fbetaminus = istream_required("betaminusdecays.txt");
@@ -1059,6 +1075,8 @@ void init_nuclides(const std::span<const int> custom_zlist, const std::span<cons
   // deliberately a copy, not a reference: the decay-data readers below add further nuclides
   // cppcheck-suppress redundantCopyLocalConst
   const auto standard_nuclides = nuclides;
+
+  add_electroncapture_betaplus_nuclides();
 
   read_betaminus_decaydata();
   read_alpha_decaydata();
