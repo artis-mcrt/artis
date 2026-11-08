@@ -43,7 +43,7 @@ fi
 if [ -e "$model_folder/input.txt" ] || [ -L "$model_folder/input.txt" ]; then
     echo "The script keeps the input.txt of '$model_folder'."
 else
-    cp "$artis_source/scripts/input-template.txt" "$model_folder/input.txt"
+    cp "$model_folder/artis/scripts/input-template.txt" "$model_folder/input.txt"
 fi
 
 if [ -e "$model_folder/artis/artisoptions.h" ] || [ -L "$model_folder/artis/artisoptions.h" ]; then

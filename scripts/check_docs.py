@@ -6,7 +6,7 @@
 
 The script makes three checks:
 
-- each option of the help text of the Makefile is on docs/makeoptions.md;
+- the help text of the Makefile and the table of docs/makeoptions.md have the same options;
 - each log message that docs/troubleshooting.md quotes is in the source;
 - the table of docs/inputfiles.md has the lines of inputlinecomments in input.cc, with the same unused lines.
 
@@ -24,16 +24,20 @@ DOCS_PATH = REPO_ROOT / "docs"
 MIN_QUOTED_FRAGMENT_LENGTH = 12
 
 
-def find_make_options_without_docs() -> list[str]:
-    """Give a message for each option of the help text of the Makefile that docs/makeoptions.md does not name."""
+def find_make_option_differences() -> list[str]:
+    """Give a message for each option that only the Makefile help or only docs/makeoptions.md names."""
     makefile = (REPO_ROOT / "Makefile").read_text(encoding="utf-8")
     help_match = re.search(r"^define HELP_TEXT$(.*?)^endef$", makefile, re.MULTILINE | re.DOTALL)
     if help_match is None:
         return ["Makefile: the definition of HELP_TEXT is absent"]
     options_text = help_match.group(1).partition("Options:")[2]
-    option_names = set(re.findall(r"\b([A-Z_]+)=", options_text))
+    names_in_help = set(re.findall(r"\b([A-Z_]+)=", options_text))
     page = (DOCS_PATH / "makeoptions.md").read_text(encoding="utf-8")
-    return [f"docs/makeoptions.md does not name {name}" for name in sorted(option_names) if f"`{name}=" not in page]
+    first_table_cells = re.findall(r"^\| (`.*?) \|", page, re.MULTILINE)
+    names_on_page = {name for cell in first_table_cells for name in re.findall(r"`([A-Z_]+)=", cell)}
+    return [
+        f"the Makefile help and docs/makeoptions.md differ on {name}" for name in sorted(names_in_help ^ names_on_page)
+    ]
 
 
 def read_source_with_joined_literals() -> str:
@@ -90,7 +94,7 @@ def main() -> int:
     """Run the checks, and give the status 1 for a difference."""
     source = read_source_with_joined_literals()
     errors = [
-        *find_make_options_without_docs(),
+        *find_make_option_differences(),
         *find_quoted_messages_not_in_source(source),
         *find_input_line_differences(source),
     ]

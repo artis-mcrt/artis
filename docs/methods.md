@@ -26,7 +26,8 @@ $$
 - $N_\mathrm{rank}$ is the number of packets of the rank, so each rank holds the energy of the whole model.
 - $V$ and $\rho$ are the volume and the density of a {term}`propagation cell`.
 - $e_\mathrm{decay}$ is the decay energy per unit mass of the cell in the time range of the simulation.
-- $q$ is the `q` column of `model.txt`. It is zero without [INITIAL_PACKETS_ON](options.md#initial_packets_on).
+- $q$ is the `q` column of `model.txt`, multiplied by $t_\mathrm{model} / t_\mathrm{min}$ for the adiabatic loss. It is
+  zero without [INITIAL_PACKETS_ON](options.md#initial_packets_on).
 
 The code selects a cell in proportion to its energy, and then a decay chain. With
 [UNIFORM_PELLET_ENERGIES](options.md#uniform_pellet_energies), it adds one exponential sample of the mean lifetime for
