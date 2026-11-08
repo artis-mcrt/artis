@@ -31,7 +31,7 @@ make TESTMODE=ON compile_commands.json
 ```
 
 Every build writes the database again, so it stays current. It always uses the `TESTMODE=ON` flags, so that the clang
-tools check the assertions of the test mode. For editing, the clangd language server is recommended, e.g. with the
+tools check the assertions of the test mode. Use the clangd language server to edit the code, e.g. with the
 [VS Code plugin](https://marketplace.visualstudio.com/items?itemName=llvm-vs-code-extensions.vscode-clangd).
 
 ## The three programs

@@ -15,9 +15,9 @@ the types of the packets.
 
 - Options: [NUM_PACKETS](options.md#num_packets), [UNIFORM_PELLET_ENERGIES](options.md#uniform_pellet_energies),
   and [INITIAL_PACKETS_ON](options.md#initial_packets_on).
-- References: Lucy (2002), A&A, 384, 725-735, doi:10.1051/0004-6361:20011756 describes the packets. An early version
-  of the code is described in Sim (2007), MNRAS, 375, 154-162, doi:10.1111/j.1365-2966.2006.11271.x and Kromer & Sim
-  (2009), MNRAS, 398, 1809-1826, doi:10.1111/j.1365-2966.2009.15256.x.
+- References: Lucy (2002), A&A, 384, 725-735, doi:10.1051/0004-6361:20011756 describes the packets. Sim (2007),
+  MNRAS, 375, 154-162, doi:10.1111/j.1365-2966.2006.11271.x and Kromer & Sim (2009), MNRAS, 398, 1809-1826,
+  doi:10.1111/j.1365-2966.2009.15256.x describe an early version of the code.
 
 ## The opacity of the r-packets
 

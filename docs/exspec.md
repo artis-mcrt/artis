@@ -10,7 +10,7 @@ with the same code that `sn3d` uses, so it gives the same files. It reads the pa
 writes at the last requested timestep. A simulation that stopped earlier has no packet files, and `exspec` then gives
 nothing. Two situations need `exspec`:
 
-- You want the files again with other settings, e.g. after a change of the frequency range or of the `MNUBINS` bin
+- You need the files again with other settings, e.g. after a change of the frequency range or of the `MNUBINS` bin
   count of `spectrum_lightcurve.cc`. You then build the code again and run `exspec`, and you need no new simulation.
 - The model folder holds the packet files but no spectra, e.g. from a run of an older version of ARTIS.
   `scripts/run-exspec-if-needed.sh` runs `exspec` when `emission.out` is absent.

@@ -43,8 +43,9 @@ copy it with `cp -L` from the repository root. A build folder of an older compil
 
 ### The photoionisation data needs phixsdata.txt or phixsdata_v2.txt
 
-The model folder holds no photoionisation file. [Atomic and model data](data.md) gives the datasets and the download
-command. A run also needs `adata.txt`, `transitiondata.txt`, and `compositiondata.txt`.
+The model folder holds no photoionisation file. [Atomic and model data](data.md) gives the datasets. The datasets of
+the tests hold such a file, but the archive for a production run does not. A run also needs `adata.txt`,
+`transitiondata.txt`, and `compositiondata.txt`.
 
 ### Not enough slots available
 

@@ -74,16 +74,16 @@ output files.
 
 ## Citing ARTIS
 
-We maintain a list of [papers that use ARTIS](https://ui.adsabs.harvard.edu/user/libraries/g5NyA9gKT5KdDFLY6SixWg) and
-[papers that use ARTIS with non-LTE enabled](https://ui.adsabs.harvard.edu/user/libraries/CX8fnPInSu2q1rAE4wWQrg).
+ADS holds a list of [papers that use ARTIS](https://ui.adsabs.harvard.edu/user/libraries/g5NyA9gKT5KdDFLY6SixWg) and a
+list of [papers that use ARTIS with non-LTE enabled](https://ui.adsabs.harvard.edu/user/libraries/CX8fnPInSu2q1rAE4wWQrg).
 
 If you use ARTIS, please cite it using the [DOI from Zenodo](https://zenodo.org/records/18670358).
 
-An early version of the code is described in [Sim (2007), MNRAS, 375, 154-162,
+These papers describe an early version of the code: [Sim (2007), MNRAS, 375, 154-162,
 doi:10.1111/j.1365-2966.2006.11271.x](https://ui.adsabs.harvard.edu/abs/2007MNRAS.375..154S/abstract) and
 [Kromer & Sim (2009), MNRAS, 398, 1809-1826,
-doi:10.1111/j.1365-2966.2009.15256.x](https://ui.adsabs.harvard.edu/abs/2009MNRAS.398.1809K/abstract). Some specific
-features are described in:
+doi:10.1111/j.1365-2966.2009.15256.x](https://ui.adsabs.harvard.edu/abs/2009MNRAS.398.1809K/abstract). These papers describe
+specific features:
 
 - Polarisation and virtual packets: [Bulla, Sim & Kromer (2015), MNRAS, 450, 967-981,
   doi:10.1093/mnras/stv657](https://ui.adsabs.harvard.edu/abs/2015MNRAS.450..967B/abstract)

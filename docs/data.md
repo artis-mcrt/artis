@@ -59,6 +59,12 @@ curl -fLO https://github.com/artis-mcrt/artis/releases/download/v2026.5.15/atomi
 tar --zstd -xf atomicdata_shinglesetal2022.tar.zst
 ```
 
+:::{warning}
+This archive holds no `phixsdata.txt` and no `phixsdata_v2.txt`, so a run with only this archive stops when it reads
+the atomic data. Ask the maintainers for the photoionisation data in an
+[issue](https://github.com/artis-mcrt/artis/issues).
+:::
+
 GNU tar calls the `zstd` command for a `.zst` archive. The package of the library, e.g. `libzstd-dev`, supplies no such
 command, so install the package `zstd` as well.
 
@@ -86,9 +92,10 @@ A run needs two model files, and some runs need more:
 
 - `model.txt`: the grid, the density of each cell, and the nuclear composition;
 - `abundances.txt`: the elemental mass fractions of each cell;
-- `Ye.txt` and `gridcontributions.txt`: the electron fraction and the tracer particle contributions of a kilonova
-  model;
+- `Ye.txt`: the electron fraction of a kilonova model;
 - `recombrates.txt`: the tabulated recombination rates, e.g. for the nebular test.
+
+artistools also writes `gridcontributions.txt` for a kilonova model, but `sn3d` does not read that file.
 
 The `tests/*_inputfiles` folders hold small models of each type: 1D spherical, 2D cylindrical, and 3D Cartesian. They
 are the quickest examples of the format.
