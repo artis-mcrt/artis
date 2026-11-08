@@ -146,7 +146,7 @@ the run continues to its end:
 The same three tests also write the warnings below. The run continues, but each of these warnings says that a
 temperature is at [MINTEMP](options.md#mintemp) or at [MAXTEMP](options.md#maxtemp), and not at its solution:
 
-- `get_T_J_from_J: ... Clamping to MINTEMP` or `Clamping to MAXTEMP`, and `temperature {term}`estimator` T_R = ... Setting T_R
+- `get_T_J_from_J: ... Clamping to MINTEMP` or `Clamping to MAXTEMP`, and `temperature estimator T_R = ... Setting T_R
   = T_min!`: a radiation temperature is outside the range of the two limits.
 - `call_T_e_finder: cooling bigger than heating at lower T_e boundary ... T_e forced to be MINTEMP`: the cell has no
   thermal balance in the range, because the cooling is larger than the heating at both limits.

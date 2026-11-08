@@ -14,11 +14,11 @@ Run this command in a clone of the repository, and go to the new folder:
 ```sh
 scripts/new-model-folder.sh --symlink ~/ownmodel
 cd ~/ownmodel
-tar -xf artis/tests/atomicdata_feconi.tar.xz
+curl -fLO https://github.com/artis-mcrt/artis/releases/download/v2026.5.15/atomicdata_feconi.tar.xz
+tar -xf atomicdata_feconi.tar.xz
 ```
 
-`tests/runtest.sh` downloads that archive (see [Quickstart](quickstart.md)). The archive holds Fe, Co, and Ni, so the
-model can hold only these elements. A cell with mass only in other elements becomes an empty cell.
+The archive holds Fe, Co, and Ni, so the model can hold only these elements. A cell with mass only in other elements becomes an empty cell.
 
 ## 2. Write the model files
 

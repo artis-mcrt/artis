@@ -47,10 +47,12 @@ def read_source_with_joined_literals() -> str:
 def find_quoted_messages_not_in_source(source: str) -> list[str]:
     """Give a message for each part of a log message of docs/troubleshooting.md that the source does not hold."""
     page = (DOCS_PATH / "troubleshooting.md").read_text(encoding="utf-8")
-    quoted_section = page[page.index("### Warnings that the tests also give") :]
+    quoted_section = re.sub(r"\{term\}`[^`]*`", "", page[page.index("### Warnings that the tests also give") :])
+    code_spans = (" ".join(code_span.split()) for code_span in re.findall(r"`([^`]*)`", quoted_section))
     errors: list[str] = []
-    for quoted_message in re.findall(r"`([^`]*\.\.\.[^`]*)`", quoted_section):
-        for fragment in " ".join(quoted_message.split()).split("..."):
+    # a quoted log message has more than one word. A command also has more than one word, and it starts with artistools.
+    for quoted_message in (span for span in code_spans if " " in span and not span.startswith("artistools ")):
+        for fragment in quoted_message.split("..."):
             stripped_fragment = fragment.strip(" :;.")
             if len(stripped_fragment) >= MIN_QUOTED_FRAGMENT_LENGTH and stripped_fragment not in source:
                 errors.append(f"docs/troubleshooting.md quotes text that the source does not hold: {stripped_fragment}")
@@ -74,11 +76,13 @@ def find_input_line_differences(source: str) -> list[str]:
             errors.append(f"input line {source_line} of input.cc has the number {page_line} in docs/inputfiles.md")
         if comment.startswith("UNUSED") != (not value_names.strip()):
             errors.append(f"input line {source_line}: input.cc and docs/inputfiles.md differ on whether it is unused")
-        errors.extend(
-            f"input line {source_line}: input.cc does not name {name}"
-            for name in value_names.strip("` ").split()
-            if name not in comment
-        )
+        if not comment.startswith("UNUSED"):
+            names_in_source = set(comment.partition(":")[0].split())
+            names_on_page = set(value_names.strip("` ").split())
+            errors.extend(
+                f"input line {source_line}: docs/inputfiles.md and input.cc differ on {name}"
+                for name in sorted(names_in_source ^ names_on_page)
+            )
     return errors
 
 
