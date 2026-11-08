@@ -34,7 +34,7 @@ On a different Linux system, get the same packages from your package manager or 
 `mpirun` the options `--oversubscribe` and `--mca`, which only Open MPI accepts.
 
 The next step needs libzstd, because `tests/runtest.sh` builds with `ZSTD=ON` and reads the compressed output files.
-The scripts of the test, and the model folder of section 5 below, call these commands:
+The scripts of the test, and the {term}`model folder` of section 5 below, call these commands:
 
 - `zstd` and `md5sum`, for the compressed files and for the checksums;
 - `curl`, `tar`, and `xz`, for the atomic data;
@@ -60,7 +60,7 @@ This is the quickest complete simulation of the repository. The script does thes
 3. It builds `sn3d` and `exspec`, and copies them into the model folder.
 4. It checks the input with `sn3d -c`, and then it starts a new simulation.
 5. It compares the checksums of the output files with `results_md5_job0.txt`.
-6. It resumes the simulation from the restart files, and then runs `exspec`.
+6. It resumes the simulation from the {term}`restart files <restart file>`, and then runs `exspec`.
 7. It compares the checksums again with `results_md5_final.txt`.
 
 A different compiler or CPU type can give checksums that differ from the stored checksums. Examine a mismatch first
@@ -169,7 +169,7 @@ make
 cd ..
 ```
 
-[Option presets](presets.md) says what each preset is for.
+[Option presets](presets.md) says what each {term}`preset` is for.
 
 :::{note}
 `artisoptions.h` is a symlink, so an editor changes the preset file of your clone. Do not replace the symlink with a
@@ -178,14 +178,14 @@ there. `git status` shows the change, and `git restore artisoptions_kilonova_lte
 that shares this clone gets the same options. Give a model folder its own clone when it needs its own options.
 :::
 
-The preset has a value of `NUM_PACKETS` for about 1000 MPI ranks. A laptop needs a much smaller value. Change it in
+The preset has a value of `NUM_PACKETS` for about 1000 MPI {term}`ranks <rank>`. A laptop needs a much smaller value. Change it in
 `artis/artisoptions.h`:
 
 ```c++
 constexpr std::int64_t NUM_PACKETS = 1e6;
 ```
 
-Also set the range of the timesteps in `input.txt`. The line with the comment `#  2: timestep_start
+Also set the range of the {term}`timesteps <timestep>` in `input.txt`. The line with the comment `#  2: timestep_start
 timestep_finish` holds the first and the last timestep of the job. The stop value is not inclusive, so the test runs
 the first nine of twenty timesteps. Change that line to run the whole model:
 
@@ -201,7 +201,7 @@ mpirun -np 4 artis/sn3d &
 tail -F output_0-0.txt
 ```
 
-`sn3d` writes one line with the name of the job folder to the standard output, and then nothing more unless a crash occurs. Each rank writes its own log file. `output_0-0.txt` in the model folder is a symlink to the log of rank 0, and `tail -F` waits until `sn3d` makes it. Press Ctrl+C to stop following the log file.
+`sn3d` writes one line with the name of the {term}`job folder` to the standard output, and then nothing more unless a crash occurs. Each rank writes its own log file. `output_0-0.txt` in the model folder is a symlink to the log of rank 0, and `tail -F` waits until `sn3d` makes it. Press Ctrl+C to stop following the log file.
 
 [Running sn3d](running.md) describes the command-line options, the logs, and the restart of a long run.
 

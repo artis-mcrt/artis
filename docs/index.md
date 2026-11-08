@@ -5,7 +5,12 @@ It follows indivisible energy packets through the ejecta, and it gives the light
 [Lucy (2002), A&A, 384, 725-735, doi:10.1051/0004-6361:20011756](https://ui.adsabs.harvard.edu/abs/2002A%26A...384..725L/abstract)
 describes the packets, and [How a simulation works](simulation.md) describes the method of ARTIS.
 
-New users start with the [Quickstart](quickstart.md). It gives a first simulation and a plot on a laptop.
+Go to the page for your task:
+
+- **A first run.** The [Quickstart](quickstart.md) gives a first simulation and a plot on a laptop.
+- **A production run.** Start with [Make your own model](ownmodel.md), [Plan a simulation](planning.md), and
+  [Runs on a cluster](clusters.md). Then use [Analyse the results](analysis.md).
+- **A change of the code.** Start with [Development setup](development.md) and the [Code map](codemap.md).
 
 ## Key features
 
@@ -122,6 +127,7 @@ installation
 presets
 data
 example
+ownmodel
 :::
 
 :::{toctree}
@@ -136,6 +142,7 @@ running
 clusters
 outputfiles
 exspec
+analysis
 troubleshooting
 :::
 
@@ -157,5 +164,6 @@ glossary
 :hidden:
 
 development
+codemap
 testing
 :::

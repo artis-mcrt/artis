@@ -6,7 +6,7 @@ A simulation reads three sets of data:
 2. an atomic database;
 3. a model of the ejecta.
 
-[Input files](inputfiles.md) gives the format of each file. All of them go in the model folder.
+[Input files](inputfiles.md) gives the format of each file. All of them go in the {term}`model folder`.
 
 ## The physics data of the repository
 
@@ -74,7 +74,7 @@ The dataset holds 41 ions of the 11 elements of a Type Ia model:
 - Ne I to Ne III, and Mg I to Mg II;
 - Fe I to Fe V, Co II to Co IV, and Ni II to Ni V.
 
-Use it with the `nltenebular` preset of [Option presets](presets.md). The dataset also holds `recombrates.txt`, so the
+Use it with the `nltenebular` {term}`preset` of [Option presets](presets.md). The dataset also holds `recombrates.txt`, so the
 code calibrates the recombination rate of each ion at `RECOMBCALIBRATION_T_ELEC`.
 
 Column 5 of its `compositiondata.txt` is -1, so a run reads every level of each ion. Put a level count there for a
