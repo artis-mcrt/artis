@@ -10,7 +10,7 @@ never splits a packet into smaller packets, and it follows each packet until the
 ends. A packet changes its type as its energy changes its form:
 
 - each pellet holds the same energy, which is the decay energy of the whole model between the first and the last
-  time of the simulation, divided by the number of packets.
+  time of the simulation, divided by the number of packets of the rank.
   A pellet moves with the ejecta until the time of its decay.
   [INITIAL_PACKETS_ON](options.md#initial_packets_on) adds the initial energy of the cells to that sum. With
   [UNIFORM_PELLET_ENERGIES](options.md#uniform_pellet_energies) false, the decay times are uniform instead, and the
@@ -29,6 +29,26 @@ ends. A packet changes its type as its energy changes its form:
 - an r-packet is ultraviolet, optical, or infrared radiation. It moves until it reaches a line, a continuum
   absorption, or an electron scattering.
 
+The diagram gives the changes of the packet type. A gamma packet and an r-packet can also escape:
+
+```{mermaid}
+flowchart TD
+    pellet["pellet"] -->|"decay"| gamma["gamma packet"]
+    pellet -->|"decay, with transport"| particle["packet of positrons, electrons, or alpha particles"]
+    pellet -->|"decay, instant deposition"| deposited["deposited energy"]
+    gamma -->|"Compton, photoelectric, pair production"| deposited
+    particle -->|"energy loss"| deposited
+    deposited -->|"heating"| kpkt["k-packet"]
+    deposited -->|"ionisation, excitation"| ma["macro atom"]
+    kpkt -->|"collisional cooling"| ma
+    ma -->|"collisional"| kpkt
+    kpkt -->|"free-free, free-bound"| rpkt["r-packet"]
+    ma -->|"radiative"| rpkt
+    rpkt -->|"line, bound-free"| ma
+    rpkt -->|"free-free, bound-free"| kpkt
+    rpkt -->|"leaves the grid"| escape["escaped packet"]
+```
+
 An r-packet that leaves the grid escapes. The escaped packets make the light curves and the spectra. With
 [VPKT_ON](options.md#vpkt_on), the code also sends virtual packets towards fixed observer directions, which gives the
 spectrum of each direction with less noise.
@@ -44,6 +64,20 @@ contain matter, because an empty cell needs no solution.
 ## The timestep loop
 
 `sn3d` repeats these steps for each timestep:
+
+```{mermaid}
+flowchart TD
+    update["1. grid update of the cells of each rank"] --> exchange["2. the ranks exchange the cell state"]
+    exchange --> restart["3. restart files, from the second timestep of a job"]
+    restart --> wall{"-w: enough wall time?"}
+    wall -->|"no"| stop["job stops with RESTART_NEEDED"]
+    wall -->|"yes"| propagate["4. propagation of the packets of each rank"]
+    propagate --> estimators["5. the ranks sum the estimators"]
+    estimators --> output["6. output of the timestep"]
+    output --> next{"last requested timestep?"}
+    next -->|"no"| update
+    next -->|"yes"| packets["packet files, then the job ends"]
+```
 
 1. **The grid update.** Each rank solves the state of its own model grid cells. The solution gives the electron
    temperature, the ion and level populations, and the opacities, and it uses the estimators of the previous

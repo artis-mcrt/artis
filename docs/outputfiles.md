@@ -9,6 +9,25 @@ A simulation uses two types of folder:
   job that resumes at timestep 8. Rank 0 writes the name of the folder to the standard output, so the log of a Slurm
   job names its folder.
 
+A model folder after two jobs has this layout:
+
+```text
+mymodel/                              the model folder
+├── artis/                            the source code and the programs
+├── input.txt, input-newrun.txt       the run parameters
+├── model.txt, abundances.txt         the model of the ejecta
+├── adata.txt, transitiondata.txt, phixsdata_v2.txt, compositiondata.txt
+├── spec.out.zst, light_curve.out.zst, deposition.out.zst, ...
+├── output_0-0.txt                    a symlink to the log of rank 0
+├── packets/                          the packet files of the last requested timestep
+├── job_from_ts0000/                  the job folder of the first job
+│   ├── output_0-0.txt, output_1-0.txt, ...
+│   └── estimators_allranks.out.zst
+└── job_from_ts0008/                  the job folder of the second job
+```
+
+During a run, the model folder also holds the restart files `gridsave_ts*.tmp` and `packets_*_ts*.tmp`.
+
 A build with libzstd writes each `.out` file zstd compressed, e.g. `spec.out.zst`, so that no separate compression
 step is necessary. The logs, `input.txt`, `artis.pid`, `syn_dir.txt`, and the restart files stay plain. Every file
 gets zstd level 9.

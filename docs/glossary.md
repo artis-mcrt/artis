@@ -44,8 +44,8 @@ packet
 
 pellet
   The first state of a packet. Each pellet holds the same energy by default, which is the decay energy of the whole
-  model between the first and the last time of the simulation, divided by the number of packets, and the decay time of
-  each pellet is a sample of the decay curve ([UNIFORM_PELLET_ENERGIES](options.md#uniform_pellet_energies)). The pellet
+  model between the first and the last time of the simulation, divided by the number of packets of the rank. The decay
+  time of each pellet is a sample of the decay curve ([UNIFORM_PELLET_ENERGIES](options.md#uniform_pellet_energies)). The pellet
   moves with the ejecta until the time of its decay. The decay then makes a gamma packet, or a packet of positrons,
   electrons, alpha particles, or fission fragments.
 
