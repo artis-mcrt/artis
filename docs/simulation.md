@@ -37,6 +37,7 @@ flowchart TD
     pellet -->|"decay, with transport"| particle["packet of positrons, electrons, or alpha particles"]
     pellet -->|"decay, instant deposition"| deposited["deposited energy"]
     gamma -->|"Compton, photoelectric, pair production"| deposited
+    gamma -->|"Compton scattering, pair annihilation"| gamma
     particle -->|"energy loss"| deposited
     deposited -->|"heating"| kpkt["k-packet"]
     deposited -->|"ionisation, excitation"| ma["macro atom"]
