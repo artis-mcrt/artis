@@ -3,12 +3,13 @@
 Each simulation has its own {term}`model folder`. Keep the source code and the git metadata in a subfolder `artis` of the model
 folder, not only the executables. The code then finds its data files in `artis/data`.
 
-Make the model folder. Then clone the default branch `main` into it, and copy the template of `input.txt`:
+A production run uses the branch `release`. Make the model folder. Then clone that branch into it, and copy the
+template of `input.txt`:
 
 ```sh
 mkdir mymodel
 cd mymodel
-git clone https://github.com/artis-mcrt/artis.git
+git clone --branch release https://github.com/artis-mcrt/artis.git
 cp artis/scripts/input-template.txt input.txt
 cd artis
 ```

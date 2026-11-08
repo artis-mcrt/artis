@@ -29,7 +29,7 @@ The `scripts` folder holds the job scripts of the clusters that we use and some 
   except `output_0-0.txt`.
 - `rsyncnooutput.sh`: copy a {term}`model folder` with rsync, without the output files.
 - `new-model-folder.sh`: make a model folder with the ARTIS source in its subfolder `artis` and an `input.txt` from
-  `input-template.txt`. The script clones the repository, or with `--symlink` it makes a symlink to the source that
+  `input-template.txt`. The script clones the branch `release`, or with `--symlink` it makes a symlink to the source that
   holds the script.
 - `input-template.txt`: an `input.txt` with a comment on each line. It holds the values of the `classicmode_3d` test,
   with a timestep range that covers the whole model.

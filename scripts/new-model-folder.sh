@@ -12,7 +12,7 @@ fi
 
 if [ $# -ne 1 ] || [ "${1#-}" != "$1" ]; then
     echo "Usage: $0 [--symlink] <model folder>" >&2
-    echo "  The script clones the ARTIS repository into <model folder>/artis." >&2
+    echo "  The script clones the branch release of ARTIS into <model folder>/artis." >&2
     echo "  With --symlink, it makes a symlink to this copy of the source instead." >&2
     exit 1
 fi
@@ -37,13 +37,13 @@ if $symlink_source; then
     ln -s "$artis_source" "$model_folder/artis"
 else
     # git runs in the source folder, so that a relative URL of origin gives the same repository as there
-    git -C "$artis_source" clone "$(git -C "$artis_source" remote get-url origin)" "$model_folder_absolute/artis"
+    git -C "$artis_source" clone --branch release "$(git -C "$artis_source" remote get-url origin)" "$model_folder_absolute/artis"
 fi
 
 if [ -e "$model_folder/input.txt" ] || [ -L "$model_folder/input.txt" ]; then
     echo "The script keeps the input.txt of '$model_folder'."
 else
-    cp "$model_folder/artis/scripts/input-template.txt" "$model_folder/input.txt"
+    cp "$artis_source/scripts/input-template.txt" "$model_folder/input.txt"
 fi
 
 if [ -e "$model_folder/artis/artisoptions.h" ] || [ -L "$model_folder/artis/artisoptions.h" ]; then
