@@ -74,9 +74,6 @@ code calibrates the recombination rate of each ion at `RECOMBCALIBRATION_T_ELEC`
 Column 5 of its `compositiondata.txt` is -1, so a run reads every level of each ion. Put a level count there for a
 quicker run. A build without libzstd reads no compressed input file, so decompress each `.zst` file of the archive.
 
-The maintainers will publish the databases of the other model types. Until then, ask them for a database in an
-[issue](https://github.com/artis-mcrt/artis/issues).
-
 [artisatomic](https://github.com/artis-mcrt/artisatomic) converts atomic data of several published sources into the
 ARTIS format. The `atomic_data_logs` folder of each archive holds the log of that conversion for each ion.
 

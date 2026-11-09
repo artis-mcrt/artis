@@ -108,9 +108,7 @@ that you cite us as described above and star the repository to help show impact 
 No one is employed specifically to maintain ARTIS. The developers improve the code when their own research needs it.
 Thus ARTIS comes as it is, and the developers do not promise to correct a defect or to answer a question.
 
-They accept a [pull request](https://github.com/artis-mcrt/artis/pulls) sometimes. You can open an
-[issue](https://github.com/artis-mcrt/artis/issues), but it can stay without an answer. The log file of rank 0 holds
-the git version and the compile-time options of the run. Give both in an issue.
+They accept a [pull request](https://github.com/artis-mcrt/artis/pulls) sometimes.
 
 :::{toctree}
 :caption: Getting started
