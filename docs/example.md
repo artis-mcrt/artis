@@ -1,11 +1,11 @@
 # Example: a nebular spectrum
 
-This page takes a small model through a complete non-LTE (NLTE) run in the nebular phase. It makes the model folder,
-limits the levels of the atomic data, sets the options and the timesteps, follows the run, checks the results, and
+This page takes a small model through a complete non-LTE ({term}`NLTE`) run in the nebular phase. It makes the {term}`model folder`,
+limits the levels of the atomic data, sets the options and the {term}`timesteps <timestep>`, follows the run, checks the results, and
 plots a spectrum. Do the [Quickstart](quickstart.md) first, because it installs the compiler, the Message Passing
 Interface (MPI) library, and artistools.
 
-The simulation of this page took 75 seconds with four ranks on a laptop (Apple M4).
+The simulation of this page took 75 seconds with four {term}`ranks <rank>` on a laptop (Apple M4).
 
 :::{note}
 The example uses the model and the atomic data of the `nebular_1d_3dgrid` test, so that every step runs on a laptop.
@@ -105,7 +105,7 @@ Keep the value 500 for this example. To change the limit, write the new number i
 
 ## 4. Select the options
 
-Symlink the NLTE nebular preset:
+Symlink the NLTE nebular {term}`preset`:
 
 ```sh
 cd artis
@@ -128,7 +128,7 @@ Two values of the preset are important for the timesteps of the next section:
 - [MULTIBIN_RADFIELD_FIRST_TIMESTEP](options.md#multibin_radfield_first_timestep) is 12. From that timestep, the
   rates use the fit of each frequency bin of the radiation field.
 - [DETAILED_BF_ESTIMATORS_FIRST_TIMESTEP](options.md#detailed_bf_estimators_first_timestep) is 13. From that
-  timestep, the photoionisation rates use the detailed bound-free estimators.
+  timestep, the photoionisation rates use the detailed bound-free {term}`estimators <estimator>`.
 
 ## 5. Set the timesteps
 
@@ -148,7 +148,7 @@ Keep the other lines. Two of them set the first timesteps:
 0.0 4                    # 19: optical_depth_is_thick num_grey_timesteps
 ```
 
-The first four timesteps solve the gas state in LTE, and every cell is thick in these timesteps, because the limit
+The first four timesteps solve the gas state in {term}`LTE`, and every cell is thick in these timesteps, because the limit
 of the optical depth is 0. [Plan a simulation](planning.md) describes each of these values.
 
 ## 6. Build and run
@@ -159,7 +159,7 @@ mpirun -np 4 artis/sn3d &
 tail -F output_0-0.txt
 ```
 
-`sn3d` writes the name of the job folder to the standard output. `tail -F` then shows the log of rank 0. Press
+`sn3d` writes the name of the {term}`job folder` to the standard output. `tail -F` then shows the log of rank 0. Press
 Ctrl+C to stop following it.
 
 ## 7. Follow the run

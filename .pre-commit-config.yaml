@@ -71,7 +71,13 @@ repos:
             entry: scripts/make_options_docs.py
             language: system
             pass_filenames: false
-            files: '^(artisoptions_.*\.h|artisoptions_doc\.md|docs/options\.md|scripts/make_options_docs\.py)$'
+            files: '^(artisoptions_.*\.h|artisoptions_doc\.md|docs/options\.md|docs/presets\.md|scripts/make_options_docs\.py)$'
+          - id: docs-check
+            name: docs check
+            entry: scripts/check_docs.py
+            language: system
+            pass_filenames: false
+            files: '^(Makefile|.*\.(cc|h)|docs/(makeoptions|troubleshooting|inputfiles)\.md|scripts/check_docs\.py)$'
           - id: make
             name: make
             entry: make -j OPTIMIZE=OFF

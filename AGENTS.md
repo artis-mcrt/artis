@@ -59,6 +59,9 @@ Keep the British spellings that this repository uses, e.g. "parallelised" and
 "normalise". STE controls the choice of words and the structure of the
 sentences. It does not control the spelling variant here.
 
+Do not tell a reader of the documentation to contact the developers, e.g. to
+ask a question or to open an issue for help. The developers give no support.
+
 ## References
 
 When mentioning a scientific paper, always give the full reference:
@@ -101,9 +104,11 @@ compatible with C++23. The Makefile builds three programs from the same sources:
   the gamma spectra.
 - `docs/`: the pages of the documentation site. They are MyST Markdown, and
   Read the Docs builds them with Sphinx (`docs/conf.py` and
-  `.readthedocs.yaml`). `docs/options.md` is generated, so change
-  `artisoptions_doc.md` instead. `scripts/make_options_docs.py` writes the
-  page, and a pre-commit hook runs that script. README.md keeps the overview
+  `.readthedocs.yaml`). `docs/options.md` and the comparison table of
+  `docs/presets.md` are generated, so change `artisoptions_doc.md` instead.
+  `scripts/make_options_docs.py` writes them, and a pre-commit hook runs that
+  script. `scripts/check_docs.py` compares the make options, the quoted log
+  messages, and the `input.txt` table of `docs/` with the source. README.md keeps the overview
   and links to the site.
 - `tests/`: the end-to-end tests. `runtest.sh` runs one test from its setup
   script (`setup_*.sh`) and its input folder (`*_inputfiles/`).
@@ -118,8 +123,8 @@ compatible with C++23. The Makefile builds three programs from the same sources:
 shorter form than this file. It also names when to open an issue first, and it
 says that a pull request from a fork gets no automatic run.
 `.github/pull_request_template.md`
-is the template of a pull request, and `.github/ISSUE_TEMPLATE/` holds the two
-issue forms.
+is the template of a pull request, and `.github/ISSUE_TEMPLATE/` holds the
+form to report a defect.
 
 ## Build
 
@@ -681,6 +686,13 @@ These rules apply to an automated review of a pull request, e.g. by Codex.
   numerical results to change. Otherwise the checksums must stay identical.
 - After a change of the results, regenerate the checksums yourself with
   `updatechecksums.yml` (see "Tests").
+- If a pull request changes `docs/` or `artisoptions_doc.md`, start its text
+  with this line and put the number of the pull request in both places. Read
+  the Docs builds this preview for each pull request.
+
+  ```text
+  Preview the documentation: https://artis-mcrt--<number>.org.readthedocs.build/en/<number>/
+  ```
 
 ## Before you commit
 

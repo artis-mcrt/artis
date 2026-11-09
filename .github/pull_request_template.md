@@ -1,3 +1,7 @@
+<!-- Keep the next line only if the change edits docs/ or artisoptions_doc.md. Replace NUMBER with the number of the
+pull request. -->
+Preview the documentation: https://artis-mcrt--NUMBER.org.readthedocs.build/en/NUMBER/
+
 ## What this change does
 
 <!-- Say what the change does and why. -->

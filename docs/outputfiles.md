@@ -2,12 +2,31 @@
 
 A simulation uses two types of folder:
 
-- The model folder is the top-level folder. It holds the input files, the restart files, and the files of the whole
+- The {term}`model folder` is the top-level folder. It holds the input files, the {term}`restart files <restart file>`, and the files of the whole
   simulation.
-- A job folder is a subfolder of the model folder. `sn3d` writes one job folder in each Slurm job. `sn3d` names the
-  folder from the start timestep of the job, e.g. `job_from_ts0000` for a new simulation and `job_from_ts0008` for a
+- A {term}`job folder` is a subfolder of the model folder. `sn3d` writes one job folder in each Slurm job. `sn3d` names the
+  folder from the start {term}`timestep` of the job, e.g. `job_from_ts0000` for a new simulation and `job_from_ts0008` for a
   job that resumes at timestep 8. Rank 0 writes the name of the folder to the standard output, so the log of a Slurm
   job names its folder.
+
+A model folder after two jobs has this layout:
+
+```text
+mymodel/                              the model folder
+├── artis/                            the source code and the programs
+├── input.txt, input-newrun.txt       the run parameters
+├── model.txt, abundances.txt         the model of the ejecta
+├── adata.txt, transitiondata.txt, phixsdata_v2.txt, compositiondata.txt
+├── spec.out.zst, light_curve.out.zst, deposition.out.zst, ...
+├── output_0-0.txt                    a symlink to the log of rank 0
+├── packets/                          the packet files of the last requested timestep
+├── job_from_ts0000/                  the job folder of the first job
+│   ├── output_0-0.txt, output_1-0.txt, ...
+│   └── estimators_allranks.out.zst
+└── job_from_ts0008/                  the job folder of the second job
+```
+
+During a run, the model folder also holds the restart files `gridsave_ts*.tmp` and `packets_*_ts*.tmp`.
 
 A build with libzstd writes each `.out` file zstd compressed, e.g. `spec.out.zst`, so that no separate compression
 step is necessary. The logs, `input.txt`, `artis.pid`, `syn_dir.txt`, and the restart files stay plain. Every file
@@ -21,10 +40,10 @@ columns and the units of each file.
 
 Each job writes these files into its job folder:
 
-- `output_n-t.txt`: a log file for each MPI rank n and each thread t of that rank. A run without threads writes
+- `output_n-t.txt`: a log file for each MPI {term}`rank` n and each thread t of that rank. A run without threads writes
   only the files of thread 0.
-- the estimators of each cell at each timestep: the temperatures, the ionisation, and the heating and cooling rates.
-  The option `WRITE_COMBINED_ALLRANK_OUT_FILES` selects one of two forms, and every preset sets the option:
+- the {term}`estimators <estimator>` of each cell at each timestep: the temperatures, the ionisation, and the heating and cooling rates.
+  The option `WRITE_COMBINED_ALLRANK_OUT_FILES` selects one of two forms, and every {term}`preset` sets the option:
     - with the option, `sn3d` writes the text of all ranks into one combined file, `estimators_allranks.out`;
     - without the option, each rank writes its own file, `estimators_nnnn.out`. A rank that updates no cell writes
       no file.
@@ -42,7 +61,7 @@ A run writes these files into the model folder:
 
 - `packets/packets00_nnnn.out`: the Monte Carlo packets from each rank, which `exspec` can turn into spectra and light
   curves again.
-- the files of the virtual packets, which a run with `VPKT_ON` writes at the last requested timestep:
+- the files of the {term}`virtual packets <virtual packet>`, which a run with `VPKT_ON` writes at the last requested timestep:
     - `vspecpol/vspecpol_nnnn.out`: the spectrum of each observer direction, with the Stokes parameters I, Q, and U;
     - `vpkt_grid/vpkt_grid_nnnn.out`: the emission over the velocity grid, when `vpkt.txt` switches that map on;
     - `vpackets/vpackets_nnnn.out`: one row for each contribution of a virtual packet, with `VPKT_WRITE_CONTRIBS`.
@@ -65,7 +84,7 @@ A run writes these files into the model folder:
   emission and absorption codes of the packets use. Only the first job of a simulation writes this file.
 - the reference tables of the setup, which rank 0 writes:
     - `timesteps.out`: each timestep, with its start, its midpoint, and its width in days;
-    - `grid.out`: each propagation cell that holds matter, with its model cell;
+    - `grid.out`: each {term}`propagation cell` that holds matter, with its model cell;
     - `modelgridrankassignments.out`: the first model cell and the cell count of each rank;
     - `nuclides.out`: each nuclide of the decay network, with its atomic number and its mass number;
     - `gammalinelist.out`: each gamma line of each nuclide, with its energy in MeV and its number of photons for
@@ -101,7 +120,7 @@ lengths in cm, the energies in erg, and the frequencies in Hz, unless a differen
 | 2 | The luminosity of the escaped r-packets in the rest frame [L_sun]. The time of a packet is its arrival time at the observer. |
 | 3 | The luminosity of the escaped r-packets in the comoving frame [L_sun]. The time of a packet is its escape time multiplied by sqrt(1 - (`vmax`/c)^2), without the light travel time. |
 
-`gamma_light_curve.out` has the same columns for the escaped gamma packets. Only a run with `KEEP_ESCAPED_GAMMAS`
+`gamma_light_curve.out` has the same columns for the escaped {term}`gamma packets <gamma packet>`. Only a run with `KEEP_ESCAPED_GAMMAS`
 writes it.
 
 ### The spectra
@@ -123,7 +142,7 @@ Stokes parameters I, Q, and U. Only a run with `POL_ON` writes `specpol.out`, `e
 
 `emission.out` and `emissiontrue.out` divide the flux of `spec.out` between the atomic processes of the last
 emission. A packet whose last emission has no process is in `spec.out` and in neither of these two files, e.g.
-after a thermalisation with `RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY`. `absorption.out` gives the flux of the escaped packets for each process of their last absorption, in the
+after a {term}`thermalisation` with `RPKT_BOUNDBOUND_THERMALISATION_PROBABILITY`. `absorption.out` gives the flux of the escaped packets for each process of their last absorption, in the
 frequency bin of that absorption. Its columns therefore do not divide the flux of the same bin of `spec.out`. The
 files have no header, no frequency column, and no time column.
 
@@ -137,7 +156,7 @@ files have no header, no frequency column, and no time column.
 - `emission.out` has a first group of ion columns for the bound-bound emission, a second group for the bound-free
   emission, and then one column for the free-free emission. The process is the last emission of the packet.
 - `emissiontrue.out` has the same columns. The process is the last emission of the packet from the thermal energy
-  of the gas, so a later scattering or macro atom event does not change it.
+  of the gas, so a later scattering or {term}`macro atom` event does not change it.
 - `absorption.out` has one group of ion columns. A packet goes into the frequency bin of its last absorption, and
   into the column of the ion of that line. Only a bound-bound absorption gives a value.
 - `emissionpol.out` and `absorptionpol.out` hold, for each frequency bin, the rows of Stokes I for all timesteps,
@@ -234,7 +253,7 @@ above zero in the cell:
 
 ### The nlte files
 
-A run with no NLTE levels writes no nlte file. An nlte file has a header row and then one row for each level of the
+A run with no {term}`NLTE` levels writes no nlte file. An nlte file has a header row and then one row for each level of the
 NLTE solution:
 
 | Column | Meaning |
@@ -246,13 +265,13 @@ NLTE solution:
 | `n_NLTE` | The number density of the level from the NLTE solution [cm^-3]. |
 | `ion_popfrac` | `n_NLTE` divided by the number density of the ion. |
 
-The LTE timesteps write no rows. In the other timesteps, an element without an NLTE solution in a cell has no rows
+The {term}`LTE` timesteps write no rows. In the other timesteps, an element without an NLTE solution in a cell has no rows
 for that cell:
 
 - an element with no NLTE levels;
 - an element with no mass in the cell;
 - an element that fell back to LTE;
-- each element of a cell with the grey opacity.
+- each element of a cell with the {term}`grey opacity`.
 
 ### The radfield files
 
@@ -441,5 +460,7 @@ artistools plotspectra -t <days> <model folder>
 artistools plotestimators <model folder>
 ```
 
-`artistools filterpackets` removes each packet except the escaped r-packets from the packet files, which makes the
+[Analyse the results](analysis.md) gives the commands for each task.
+
+`artistools filterpackets` removes each packet except the escaped {term}`r-packets <r-packet>` from the packet files, which makes the
 files smaller. `artistools corehours` sums the core hours of the jobs from the `output_0-0.txt` log of each job.

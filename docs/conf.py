@@ -9,10 +9,11 @@ project = "ARTIS"
 author = "The ARTIS authors"
 project_copyright = "The ARTIS authors. BSD 3-Clause license"
 
-extensions = ["myst_parser", "sphinx_copybutton", "sphinxext.opengraph"]
+extensions = ["myst_parser", "sphinx_copybutton", "sphinxext.opengraph", "sphinxcontrib.mermaid"]
 
 # colon_fence gives a directive in ::: fences, which a Markdown editor reads more easily than a backtick fence.
-myst_enable_extensions = ["colon_fence"]
+# dollarmath gives the equations of methods.md.
+myst_enable_extensions = ["colon_fence", "dollarmath"]
 # make an anchor for each heading down to level 3, so that a link can point at one option of options.md
 myst_heading_anchors = 3
 

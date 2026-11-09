@@ -1,6 +1,6 @@
 # Running sn3d
 
-Run `sn3d` in the model folder. A local run with eight MPI ranks looks like this:
+Run `sn3d` in the {term}`model folder`. A local run with eight MPI {term}`ranks <rank>` looks like this:
 
 ```sh
 mpirun -np 8 artis/sn3d &
@@ -11,13 +11,13 @@ tail -F output_0-0.txt
 
 ## The logs
 
-`sn3d` writes one line with the name of the job folder to the standard output, and then nothing more unless a crash
+`sn3d` writes one line with the name of the {term}`job folder` to the standard output, and then nothing more unless a crash
 occurs. Each MPI rank n writes a log file `output_n-t.txt` into the job folder, where t is the thread of that rank (see
 [Output files](outputfiles.md)). A run without threads writes only the files of thread 0. `sn3d` keeps a symlink
 `output_0-0.txt` in the model folder that points to the log of rank 0 and thread 0.
 
 The log of rank 0 starts with the git version and the content of `artisoptions.h` without the comment lines, the
-preprocessor lines, and the blank lines. After each timestep, it gives the progress of the model and an estimate of the
+preprocessor lines, and the blank lines. After each {term}`timestep`, it gives the progress of the model and an estimate of the
 time for the remaining requested timesteps. The estimate uses the duration of the last timestep.
 
 ## Check the input before a job
@@ -41,11 +41,11 @@ removes the folder of the check before it, so run only one check at a time in a 
 A check differs from a run in these points:
 
 - The check needs `input.txt`. A run restores an absent `input.txt` from `input-newrun.txt`, but the check does not.
-- The check of a new simulation places only one pellet for each rank. A low rank count is thus sufficient, e.g. on a
+- The check of a new simulation places only one {term}`pellet` for each rank. A low rank count is thus sufficient, e.g. on a
   login node. The `mem_usage` line of the packets gives the share of one rank for the rank count of the check. The
   arrays that the ranks of a node share have the size that they have in the run.
 - The check of a resumed simulation needs the rank count of the simulation, because each rank has its own restart
-  files. Each rank reads its restart files of the start timestep, so this check needs the memory of the run.
+  files. Each rank reads its {term}`restart files <restart file>` of the start timestep, so this check needs the memory of the run.
 - With `VPKT_WRITE_CONTRIBS`, the check of a resumed simulation copies the `vpackets` restart file of each rank into
   the folder `inputcheck`.
 

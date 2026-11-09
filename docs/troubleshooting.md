@@ -1,13 +1,13 @@
 # Troubleshooting
 
-This page gives the messages that stop a build or a run, and what each one needs. The log file of rank 0 holds the git
-version and the compile-time options of a run, so give both in an [issue](https://github.com/artis-mcrt/artis/issues).
+This page gives the messages that stop a build or a run, and what each one needs. The log file of {term}`rank` 0 holds the git
+version and the compile-time options of a run.
 
 ## The build
 
 ### make cannot find artisoptions.h
 
-The build needs an `artisoptions.h` in the repository root, and git does not track that file. Symlink a preset to it:
+The build needs an `artisoptions.h` in the repository root, and git does not track that file. Symlink a {term}`preset` to it:
 
 ```sh
 ln -s artisoptions_classic.h artisoptions.h
@@ -33,18 +33,17 @@ The build needs gcc 14 or a later version. Load a newer gcc. With Open MPI you c
 
 ### The binary does not hold your change
 
-`make` puts the objects in `build/<configuration>/` and makes a symlink in the repository root to each program. Each
-make option adds a suffix to the name of the build folder, and the name ends with a checksum of the content of
-`artisoptions.h`, so the builds of different options stay apart. The symlink points at the most recent build of any
-configuration, e.g. at the build of a test after `tests/runtest.sh`. Look at the symlink before you copy a binary, and
-copy it with `cp -L` from the repository root. A build folder of an older compiler otherwise gives you the old binary.
+The symlink of each program points at the most recent build of any configuration, e.g. at the build of a test after
+`tests/runtest.sh`. Look at the symlink before you copy a binary, and copy it with `cp -L` from the repository root.
+A build folder of an older compiler otherwise gives you the old binary. [Make options](makeoptions.md) describes the
+names of the build folders.
 
 ## The run
 
 ### The photoionisation data needs phixsdata.txt or phixsdata_v2.txt
 
-The model folder holds no photoionisation file. [Atomic and model data](data.md) gives the datasets and the download
-command. A run also needs `adata.txt`, `transitiondata.txt`, and `compositiondata.txt`.
+The {term}`model folder` holds no photoionisation file. [Atomic and model data](data.md) gives the datasets, and each dataset holds such a
+file. A run also needs `adata.txt`, `transitiondata.txt`, and `compositiondata.txt`.
 
 ### Not enough slots available
 
@@ -65,7 +64,7 @@ export OMPI_MCA_memory='^patcher'
 ### The log ends with RESTART_NEEDED
 
 This is the clean end of a job, and not an error. `sn3d` writes that text when too little wall time remains for
-another timestep. It then writes the restart files and updates `input.txt`, so that the next job continues the
+another {term}`timestep`. It then writes the {term}`restart files <restart file>` and updates `input.txt`, so that the next job continues the
 simulation. The job scripts of `scripts/` search the log for the text and submit the next job. See
 [Running sn3d](running.md).
 
@@ -97,13 +96,11 @@ another compiler can give other values, and no test covers that case. Push the b
 
 ## The log
 
-`sn3d` writes one log file for each rank and each thread into the job folder, with the name `output_n-t.txt` for
+`sn3d` writes one log file for each rank and each thread into the {term}`job folder`, with the name `output_n-t.txt` for
 the rank n and the thread t. `output_0-0.txt` in the model folder is a symlink to the log of rank 0 and thread 0
 (see [Running sn3d](running.md)). Each line starts with the time in Coordinated Universal Time (UTC). A rank writes
 the messages of the cells that it updates, so the message about a cell can be in the log of a different rank or
 thread.
-
-This section uses LTE for the local thermodynamic equilibrium, and NLTE for a state that is not in LTE.
 
 ### The tags of the log lines
 
