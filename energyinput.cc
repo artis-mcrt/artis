@@ -109,7 +109,8 @@ void read_release_table() {
 
 auto get_cumulative_fraction_released(const double time_after_explosion) -> double {
   assert_always(!release_times.empty());
-  if (time_after_explosion < release_times.front()) {
+  // the release of the fraction of the first row occurs just after the time of that row, e.g. inside the first timestep
+  if (time_after_explosion <= release_times.front()) {
     return 0.;
   }
   if (time_after_explosion >= release_times.back()) {
