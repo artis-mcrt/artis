@@ -683,6 +683,13 @@ These rules apply to an automated review of a pull request, e.g. by Codex.
   numerical results to change. Otherwise the checksums must stay identical.
 - After a change of the results, regenerate the checksums yourself with
   `updatechecksums.yml` (see "Tests").
+- If a pull request changes `docs/` or `artisoptions_doc.md`, start its text
+  with this line and put the number of the pull request in both places. Read
+  the Docs builds this preview for each pull request.
+
+  ```text
+  Preview the documentation: https://artis-mcrt--<number>.org.readthedocs.build/en/<number>/
+  ```
 
 ## Before you commit
 
