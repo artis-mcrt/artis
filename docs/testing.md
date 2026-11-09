@@ -28,10 +28,8 @@ these steps:
    `tests/setup_kilonova_1d.sh`, which downloads the atomic data of the test and makes the model folder again with the
    input files and an `artisoptions.h` for the test.
 2. It builds `sn3d` and `exspec` from that `artisoptions.h` with the make options of CI, and copies them into the model
-   folder. During the build, `artisoptions.h` in the repository folder is a symlink to the options of the test. The
-   script then moves your `artisoptions.h` back. The options of the test have their own build folder, so a later build
-   of your own options compiles nothing again, and a second run of the same test also compiles nothing again. The
-   `sn3d` and `exspec` symlinks of the repository folder then point at the build of the test.
+   folder. Your own `artisoptions.h` stays as it is. The `sn3d` and `exspec` symlinks of the repository folder then
+   point at the build of the test.
 3. It checks the input with `sn3d -c` (see [Running sn3d](running.md)). Then it starts a new simulation and compares
    the checksums of the output files with `tests/kilonova_1d_inputfiles/results_md5_job0.txt`.
 4. It checks the input and the restart files with `sn3d -c`, and it resumes the simulation from the restart files. It
@@ -40,7 +38,26 @@ these steps:
 
 The script stops at the first step that fails. To run only one step, give the name of the step after the name of the
 test, e.g. `tests/runtest.sh kilonova_1d resume`. With `TESTMODE=ON` in the environment, the build has the sanitizers
-and the extra assertions.
+and the extra assertions. The script then sets the two variables that a run of such a build needs:
+
+```sh
+export ASAN_OPTIONS=detect_stack_use_after_return=1:detect_leaks=0
+export OMPI_MCA_memory='^patcher'
+```
+
+Each test uses one preset and a reduced atomic dataset from a release of this repository.
+`tests/atomic_data_release.txt` names the release, and `tests/setupfuncs.sh` holds the download command.
+
+| Tests | Preset | Archive | Elements |
+| --- | --- | --- | --- |
+| `classicmode_1d_3dgrid`, `classicmode_3d` | `classic` | `atomicdata_classic.tar.xz` | the classic dataset, with cross-sections in the v1 format |
+| `kilonova_1d`, `kilonova_2d*` | `kilonova_lte` | `atomicdata_feconi.tar.xz` | Fe, Co, Ni |
+| `nebular_1d_3dgrid*` | `nltenebular` | `atomicdata_feconi.tar.xz` | Fe, Co, Ni |
+| `nltephotospheric_dynamic_ion_range_1d_1dgrid` | `nltephotospheric` | `atomicdata_hefeconi_fe_i_to_vii.tar.xz` | He, Fe, Co, Ni, with Fe I to Fe VII |
+| `kilonova_1d_timedepnlte` | `kilonova_nlte` | `atomicdata_sryzrlace.tar.zst` | Sr, Y, Zr, La, Ce |
+
+`kilonova_1d` is the quickest test. `nebular_1d_3dgrid` covers the physics that most changes touch, so it is the
+default test for a change of the code.
 
 The script needs Open MPI and libzstd. It also calls these commands:
 
@@ -67,7 +84,6 @@ Clang, nvc++, and hipcc, including the GPU code paths. CI installs artistools an
 change of an output format fails CI there.
 
 Once each week, a separate workflow builds the site with the `linkcheck` builder of Sphinx and tests every link.
-`linkcheck_ignore` of `docs/conf.py` holds the pages that give the status 405 to an automated request.
 
 A change that must not alter the numerical results has to give identical checksums. For such a change, a mismatch is an
 error in the change. A change that alters the results for a good reason needs new reference checksums, which the

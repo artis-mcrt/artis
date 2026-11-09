@@ -50,17 +50,6 @@ command. A run also needs `adata.txt`, `transitiondata.txt`, and `compositiondat
 Open MPI stops when the rank count is higher than the core count of the machine. Give `mpirun` the option
 `--oversubscribe`, as `tests/runtest.sh` does.
 
-### A run with TESTMODE=ON crashes in the MPI library
-
-A build with `TESTMODE=ON` has the sanitizers, so a run needs two settings:
-
-```sh
-export ASAN_OPTIONS=detect_stack_use_after_return=1:detect_leaks=0
-export OMPI_MCA_memory='^patcher'
-```
-
-`tests/runtest.sh` sets both when `TESTMODE=ON` is in the environment.
-
 ### The log ends with RESTART_NEEDED
 
 This is the clean end of a job, and not an error. `sn3d` writes that text when too little wall time remains for
@@ -87,12 +76,6 @@ job, because it continues the simulation.
 
 artistools accepts only the times at which the whole model can have sent light to the observer. The fastest ejecta set
 that limit, so the limit is earlier than the last timestep of the run. `--plotinvalidpart` draws the later times.
-
-### The checksums of a local test differ from the reference files
-
-Continuous integration makes the reference checksums on an arm64 runner with one gcc version. Another CPU type or
-another compiler can give other values, and no test covers that case. Push the branch and let CI decide. See
-[Testing](testing.md).
 
 ## The log
 
@@ -125,10 +108,9 @@ and to the standard error, which a Slurm job puts into its output file. The mess
 `artistools logsummary <model folder>` counts each kind of warning in the logs of rank 0, with the first and the last
 timestep of each kind.
 
-### Warnings that the tests also give
+### Warnings that most runs give
 
-The first job of the tests `classicmode_1d_3dgrid`, `kilonova_1d`, and `nebular_1d_3dgrid` writes these warnings, and
-the run continues to its end:
+The run continues after each of these warnings:
 
 | Start of the message | Meaning |
 | --- | --- |
@@ -140,11 +122,9 @@ the run continues to its end:
 | `frac_sum is ..., but should be 1.0` | The three fractions of the Spencer-Fano solution do not sum to 1. The code sets the heating fraction to 1 minus the two other fractions, with the limits 0 and 1. If the two other fractions sum to more than 1, the heating fraction is 0 and the sum stays above 1. |
 | `cell ... timestep ...: B_planck(T_e=...) peak at ... is outside the radiation field frequency range` | The Planck function of the electron temperature has its peak outside the range from [NU_MIN_R](options.md#nu_min_r) to [NU_MAX_R](options.md#nu_max_r). |
 | `calculate_ionfractions: ... non-finite ionfract set to zero` | An ion fraction of the ionisation balance was not finite, and the code uses zero for that ion. |
-| `Compiled with MAX_NODE_SIZE ...` | The build has the make option `MAX_NODE_SIZE`, which the tests use. |
-
 ### Warnings of the temperature limits
 
-The same three tests also write the warnings below. The run continues, but each of these warnings says that a
+The run also continues after the warnings below, but each of these warnings says that a
 temperature is at [MINTEMP](options.md#mintemp) or at [MAXTEMP](options.md#maxtemp), and not at its solution:
 
 - `get_T_J_from_J: ... Clamping to MINTEMP` or `Clamping to MAXTEMP`, and `temperature estimator T_R = ... Setting T_R
