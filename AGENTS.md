@@ -123,8 +123,8 @@ compatible with C++23. The Makefile builds three programs from the same sources:
 shorter form than this file. It also names when to open an issue first, and it
 says that a pull request from a fork gets no automatic run.
 `.github/pull_request_template.md`
-is the template of a pull request, and `.github/ISSUE_TEMPLATE/` holds the two
-issue forms.
+is the template of a pull request, and `.github/ISSUE_TEMPLATE/` holds the
+form to report a defect.
 
 ## Build
 
