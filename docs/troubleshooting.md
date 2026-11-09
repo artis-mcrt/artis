@@ -42,9 +42,8 @@ names of the build folders.
 
 ### The photoionisation data needs phixsdata.txt or phixsdata_v2.txt
 
-The {term}`model folder` holds no photoionisation file. [Atomic and model data](data.md) gives the datasets. The datasets of
-the tests hold such a file, but the archive for a production run does not. A run also needs `adata.txt`,
-`transitiondata.txt`, and `compositiondata.txt`.
+The {term}`model folder` holds no photoionisation file. [Atomic and model data](data.md) gives the datasets, and each dataset holds such a
+file. A run also needs `adata.txt`, `transitiondata.txt`, and `compositiondata.txt`.
 
 ### Not enough slots available
 

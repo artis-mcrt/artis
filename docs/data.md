@@ -59,12 +59,6 @@ curl -fLO https://github.com/artis-mcrt/artis/releases/download/v2026.5.15/atomi
 tar --zstd -xf atomicdata_shinglesetal2022.tar.zst
 ```
 
-:::{warning}
-This archive holds no `phixsdata.txt` and no `phixsdata_v2.txt`, so a run with only this archive stops when it reads
-the atomic data. Ask the maintainers for the photoionisation data in an
-[issue](https://github.com/artis-mcrt/artis/issues).
-:::
-
 GNU tar calls the `zstd` command for a `.zst` archive. The package of the library, e.g. `libzstd-dev`, supplies no such
 command, so install the package `zstd` as well.
 
